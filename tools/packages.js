@@ -53,7 +53,7 @@ _.extend(Library.prototype, {
         loadedPackages[name] = self.packageSearchOptions.preloadedPackages[name];
       } else {
         var pkg = new Package;
-        if (pkg.initFromLocalPackages(name, self.packageSearchOptions)) {
+        if (pkg.initFromLocalPackages(name, self)) {
           loadedPackages[name] = pkg;
         } else if (self.packageSearchOptions.releaseManifest) {
           pkg.initFromWarehouse(
@@ -72,7 +72,7 @@ _.extend(Library.prototype, {
   getForApp: function (app_dir, ignore_files) {
     var self = this;
     var pkg = new Package;
-    pkg.initFromAppDir(app_dir, ignore_files || [], self.packageSearchOptions);
+    pkg.initFromAppDir(app_dir, ignore_files || [], self);
     return pkg;
   },
 
@@ -523,9 +523,9 @@ _.extend(Package.prototype, {
   // - GITCHECKOUTOFMETEOR/packages
   // - $PACKAGE_DIRS (colon-separated)
   // @returns {Boolean} was the package found in any local package sets?
-  initFromLocalPackages: function (name, packageSearchOptions) {
+  initFromLocalPackages: function (name, library) {
     var self = this;
-    var packageDir = (new Library(packageSearchOptions)).directoryForLocalPackage(name);
+    var packageDir = library.directoryForLocalPackage(name);
     if (packageDir) {
       self.initFromPackageDir(name, packageDir);
       return true;
@@ -542,15 +542,15 @@ _.extend(Package.prototype, {
     self.inWarehouse = true;
   },
 
-  initFromAppDir: function (app_dir, ignore_files, packageSearchOptions) {
+  initFromAppDir: function (app_dir, ignore_files, library) {
     var self = this;
     self.name = null;
     self.source_root = app_dir;
     self.serve_root = path.sep;
 
     var sources_except = function (role, where, except, tests) {
-      var allSources = self._scan_for_sources(role, where, ignore_files || [],
-                                              packageSearchOptions);
+      var allSources = self._scanForSources(role, where, ignore_files || [],
+                                              library);
       var withoutAppPackages = _.reject(allSources, function (sourcePath) {
         // Skip files that are in app packages. (Directories named "packages"
         // lower in the tree are OK.)
@@ -607,7 +607,7 @@ _.extend(Package.prototype, {
   // provided source files to the package dependencies. Sets fields
   // such as dependencies, exports, boundary, prelinkFiles, and
   // resources. Idempotent.
-  ensureCompiled: function (packageSearchOptions) {
+  ensureCompiled: function (library) {
     var self = this;
     var isApp = ! self.name;
 
@@ -673,8 +673,7 @@ _.extend(Package.prototype, {
 
         _.each(self.sources[role][where], function (relPath) {
           var ext = path.extname(relPath).substr(1);
-          var handler = self._getSourceHandler(role, where, ext,
-                                               packageSearchOptions);
+          var handler = self._getSourceHandler(role, where, ext, library);
           var contents = fs.readFileSync(path.join(self.source_root, relPath));
           self.dependencyFileShas[relPath] = bundler.sha1(contents);
 
@@ -731,15 +730,13 @@ _.extend(Package.prototype, {
   //
   // role should be 'use' or 'test'
   // where should be 'client' or 'server'
-  _scan_for_sources: function (role, where, ignore_files,
-                               packageSearchOptions) {
+  _scanForSources: function (role, where, ignore_files, library) {
     var self = this;
 
     // find everything in tree, sorted depth-first alphabetically.
     var file_list =
       files.file_list_sync(self.source_root,
-                           self.registeredExtensions(role, where,
-                                                     packageSearchOptions));
+                           self.registeredExtensions(role, where, library));
     file_list = _.reject(file_list, function (file) {
       return _.any(ignore_files || [], function (pattern) {
         return file.match(pattern);
@@ -807,12 +804,12 @@ _.extend(Package.prototype, {
   // this.uses, so should only be called once that has been set.
   //
   // 'role' should be 'use' or 'test'. 'where' should be 'client' or 'server'.
-  registeredExtensions: function (role, where, packageSearchOptions) {
+  registeredExtensions: function (role, where, library) {
     var self = this;
     var ret = _.keys(self.extensions);
 
     _.each(self.uses[role][where], function (pkgName) {
-      var pkg = new Library(packageSearchOptions).get(pkgName);
+      var pkg = library.get(pkgName);
       ret = _.union(ret, _.keys(pkg.extensions));
     });
 
@@ -823,7 +820,7 @@ _.extend(Package.prototype, {
   // found in this package. We'll use handlers that are defined in
   // this package and in its immediate dependencies. ('extension'
   // should be the extension of the file without a leading dot.)
-  _getSourceHandler: function (role, where, extension, packageSearchOptions) {
+  _getSourceHandler: function (role, where, extension, library) {
     var self = this;
     var candidates = [];
 
@@ -832,7 +829,7 @@ _.extend(Package.prototype, {
 
     var seen = {};
     _.each(self.uses[role][where], function (pkgName) {
-      var otherPkg = new Library(packageSearchOptions).get(pkgName);
+      var otherPkg = library.get(pkgName);
       if (extension in otherPkg.extensions)
         candidates.push(otherPkg.extensions[extension]);
     });

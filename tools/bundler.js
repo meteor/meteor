@@ -274,7 +274,7 @@ _.extend(Bundle.prototype, {
       // ** from the package plus the output of running the JavaScript
       // ** linker.
 
-      slice.pkg.ensureCompiled(self.library.packageSearchOptions);
+      slice.pkg.ensureCompiled(self.library);
       var resources = _.clone(slice.pkg.resources[slice.role][slice.where]);
 
       var isApp = ! slice.pkg.name;
@@ -291,7 +291,7 @@ _.extend(Bundle.prototype, {
         var otherPkg = self.getPackage(otherPkgName);
         if (otherPkg.name && ! slice.pkg.unordered[otherPkg.name]) {
           // make sure otherPkg.exports is valid
-          otherPkg.ensureCompiled(self.library.packageSearchOptions);
+          otherPkg.ensureCompiled(self.library);
           _.each(otherPkg.exports.use[slice.where], function (symbol) {
             imports[symbol] = otherPkg.name;
           });
@@ -430,7 +430,7 @@ _.extend(Bundle.prototype, {
       if (! slice.pkg.name) {
         var exts =
           slice.pkg.registeredExtensions(slice.role, slice.where,
-                                         self.library.packageSearchOptions);
+                                         self.library);
         ret = _.union(ret, exts);
       }
     });
