@@ -881,7 +881,7 @@ Fiber(function () {
           // have a trailing slash.
           var packageDir = path.resolve(p);
           var packageName = path.basename(packageDir);
-          context.library.preload(packageName, packageDir);
+          context.library.override(packageName, packageDir);
           return packageName;
         });
       }

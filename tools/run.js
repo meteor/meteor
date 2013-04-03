@@ -319,7 +319,7 @@ var kill_server = function (handle) {
 //   directory (eg, the --settings file)
 // on_change is only fired once
 var DependencyWatcher = function (
-    deps, app_dir, relativeFiles, packageSearchOptions, on_change) {
+    deps, app_dir, relativeFiles, library, on_change) {
   var self = this;
 
   self.app_dir = app_dir;
@@ -354,9 +354,7 @@ var DependencyWatcher = function (
     // warehouse, since only changes to local ones need to cause an app to
     // reload. Notably, the app will *not* reload the first time a local package
     // is created which overrides an installed package.
-    var localPackageDir =
-      (new library.Library(packageSearchOptions)).
-      directoryForLocalPackage(pkg);
+    var localPackageDir = library.directoryForLocalPackage(pkg);
     if (localPackageDir) {
       _.each(deps.packages[pkg], function (file) {
         self.specific_files[path.join(localPackageDir, file)] = true;
@@ -651,7 +649,7 @@ exports.run = function (context, options) {
       }
 
       watcher = new DependencyWatcher(deps_info, context.appDir, relativeFiles,
-                                      context.packageSearchOptions,
+                                      context.library,
                                       function () {
         if (Status.crashing)
           log_to_clients({'system': "=> Modified -- restarting."});
@@ -691,6 +689,9 @@ exports.run = function (context, options) {
     }
 
     server_log = [];
+
+    // Make the library reload packages, in case they've changed
+    context.library.flush();
 
     var errors = bundler.bundle(context.appDir, bundle_path, bundleOpts);
 
