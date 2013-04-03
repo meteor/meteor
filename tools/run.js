@@ -635,7 +635,7 @@ exports.run = function (context, options) {
     minify: options.minify,
     testPackages: options.testPackages,
     releaseStamp: context.releaseVersion,
-    packageSearchOptions: context.packageSearchOptions
+    library: new packages.Library(context.packageSearchOptions)
   };
 
   var start_watching = function () {

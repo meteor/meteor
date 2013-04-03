@@ -702,22 +702,23 @@ _.extend(Bundle.prototype, {
  *                  used as a stamp (eg Meteor.release). The package
  *                  search path is configured with packageSearchOptions.
  *
- * - packageSearchOptions: see packages.js. NOTE: if there's an appDir here,
- *   it's used for package searching but it is NOT the appDir that we bundle!
- *   So for "meteor test-packages" in an app, appDir is the test-runner-app but
- *   packageSearchOptions.appDir is the app the user is in.
+ * - library : Package library to use to fetch any required
+ *   packages. NOTE: if there's an appDir here, it's used for package
+ *   searching but it is NOT the appDir that we bundle!  So for
+ *   "meteor test-packages" in an app, appDir is the test-runner-app
+ *   but packageSearchOptions.appDir is the app the user is in.
  */
 exports.bundle = function (app_dir, output_path, options) {
   if (!options)
     throw new Error("Must pass options");
   if (!options.nodeModulesMode)
     throw new Error("Must pass options.nodeModulesMode");
-  if (!options.packageSearchOptions)
-    throw new Error("Must pass options.packageSearchOptions.");
+  if (!options.library)
+    throw new Error("Must pass options.library");
   if (!options.releaseStamp)
-    throw new Error("Must pass options.releaseStamp or 'none'.");
+    throw new Error("Must pass options.releaseStamp or 'none'");
 
-  var library = new packages.Library(options.packageSearchOptions || {});
+  var library = options.library;
 
   try {
     // Create a bundle and set up package search path
