@@ -11,23 +11,10 @@ var fs = require('fs');
 // Under the hood, packages in the library (/package/foo), and user
 // applications, are both Packages -- they are just represented
 // differently on disk.
-//
-// To create a package object from a package in the library:
-//   var pkg = new Package;
-//   pkg.init_from_library(name);
-//
-// To create a package object from an app directory:
-//   var pkg = new Package;
-//   pkg.initFromAppDir(app_dir, ignore_files, packageSearchOptions);
 
-// In general in this file, `packageSearchOptions` means an optional object with
-// keys (all optional):
-//    - `releaseManifest` (a parsed release manifest)
-//    - `appDir` (directory which may contain a `packages` subdir)
-//    - `preloadedPackages` (a map from package name to Package, used when
-//       specifying particular dirs to test-packages)
-
-
+// Options:
+//  - `releaseManifest` (a parsed release manifest)
+//  - `appDir` (directory which may contain a `packages` subdir)
 // XXX XXX as implemented, it reads the environment and the current
 // directory. It shouldn't do that. Those should ultimately be ctor
 // arguments or something.
@@ -49,7 +36,7 @@ _.extend(Library.prototype, {
   // contains its source.
   preload: function (packageName, packageDir) {
     var self = this;
-    var pkg = new Package;
+    var pkg = new Package(self);
     pkg.initFromPackageDir(name, packageDir);
     self.preloadedPackages[packageName] = pkg;
   },
@@ -85,7 +72,7 @@ _.extend(Library.prototype, {
     // - APP/packages
     // - GITCHECKOUTOFMETEOR/packages
     // - $PACKAGE_DIRS (colon-separated)
-    var pkg = new Package;
+    var pkg = new Package(self);
     var packageDir = self.directoryForLocalPackage(name);
     if (packageDir) {
       pkg.initFromPackageDir(name, packageDir);
@@ -109,8 +96,8 @@ _.extend(Library.prototype, {
   // ignore when scanning for source files.)
   getForApp: function (app_dir, ignore_files) {
     var self = this;
-    var pkg = new Package;
-    pkg.initFromAppDir(app_dir, ignore_files || [], self);
+    var pkg = new Package(self);
+    pkg.initFromAppDir(app_dir, ignore_files || []);
     return pkg;
   },
 
@@ -195,7 +182,7 @@ _.extend(Library.prototype, {
 
 
 var next_package_id = 1;
-var Package = function () {
+var Package = function (library) {
   var self = this;
 
   // Fields set by init_*:
@@ -207,6 +194,10 @@ var Package = function () {
   // the package is reloaded, it will get a different id the second
   // time)
   self.id = next_package_id++;
+
+  // Package library that should be used to resolve this package's
+  // dependencies
+  self.library = library;
 
   // package metadata, from describe()
   self.metadata = {};
@@ -556,15 +547,14 @@ _.extend(Package.prototype, {
     });
   },
 
-  initFromAppDir: function (app_dir, ignore_files, library) {
+  initFromAppDir: function (app_dir, ignore_files) {
     var self = this;
     self.name = null;
     self.source_root = app_dir;
     self.serve_root = path.sep;
 
     var sources_except = function (role, where, except, tests) {
-      var allSources = self._scanForSources(role, where, ignore_files || [],
-                                              library);
+      var allSources = self._scanForSources(role, where, ignore_files || []);
       var withoutAppPackages = _.reject(allSources, function (sourcePath) {
         // Skip files that are in app packages. (Directories named "packages"
         // lower in the tree are OK.)
@@ -621,7 +611,7 @@ _.extend(Package.prototype, {
   // provided source files to the package dependencies. Sets fields
   // such as dependencies, exports, boundary, prelinkFiles, and
   // resources. Idempotent.
-  ensureCompiled: function (library) {
+  ensureCompiled: function () {
     var self = this;
     var isApp = ! self.name;
 
@@ -687,7 +677,7 @@ _.extend(Package.prototype, {
 
         _.each(self.sources[role][where], function (relPath) {
           var ext = path.extname(relPath).substr(1);
-          var handler = self._getSourceHandler(role, where, ext, library);
+          var handler = self._getSourceHandler(role, where, ext);
           var contents = fs.readFileSync(path.join(self.source_root, relPath));
           self.dependencyFileShas[relPath] = bundler.sha1(contents);
 
@@ -744,13 +734,13 @@ _.extend(Package.prototype, {
   //
   // role should be 'use' or 'test'
   // where should be 'client' or 'server'
-  _scanForSources: function (role, where, ignore_files, library) {
+  _scanForSources: function (role, where, ignore_files) {
     var self = this;
 
     // find everything in tree, sorted depth-first alphabetically.
     var file_list =
       files.file_list_sync(self.source_root,
-                           self.registeredExtensions(role, where, library));
+                           self.registeredExtensions(role, where));
     file_list = _.reject(file_list, function (file) {
       return _.any(ignore_files || [], function (pattern) {
         return file.match(pattern);
@@ -818,12 +808,12 @@ _.extend(Package.prototype, {
   // this.uses, so should only be called once that has been set.
   //
   // 'role' should be 'use' or 'test'. 'where' should be 'client' or 'server'.
-  registeredExtensions: function (role, where, library) {
+  registeredExtensions: function (role, where) {
     var self = this;
     var ret = _.keys(self.extensions);
 
     _.each(self.uses[role][where], function (pkgName) {
-      var pkg = library.get(pkgName);
+      var pkg = self.library.get(pkgName);
       ret = _.union(ret, _.keys(pkg.extensions));
     });
 
@@ -834,7 +824,7 @@ _.extend(Package.prototype, {
   // found in this package. We'll use handlers that are defined in
   // this package and in its immediate dependencies. ('extension'
   // should be the extension of the file without a leading dot.)
-  _getSourceHandler: function (role, where, extension, library) {
+  _getSourceHandler: function (role, where, extension) {
     var self = this;
     var candidates = [];
 
@@ -843,7 +833,7 @@ _.extend(Package.prototype, {
 
     var seen = {};
     _.each(self.uses[role][where], function (pkgName) {
-      var otherPkg = library.get(pkgName);
+      var otherPkg = self.library.get(pkgName);
       if (extension in otherPkg.extensions)
         candidates.push(otherPkg.extensions[extension]);
     });
