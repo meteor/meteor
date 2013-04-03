@@ -35,6 +35,8 @@ var Library = function (options) {
   var self = this;
   options = options || {};
 
+  self.loadedPackages = {};
+
   self.preloadedPackages = {};
   self.releaseManifest = options.releaseManifest;
   self.appDir = options.appDir;
@@ -47,11 +49,20 @@ _.extend(Library.prototype, {
   // contains its source.
   preload: function (packageName, packageDir) {
     var self = this;
-    self.preloadedPackages[packageName] =
-      packages.loadFromDir(packageName, packageDir);
+    var pkg = new Package;
+    pkg.initFromPackageDir(name, packageDir);
+    self.preloadedPackages[packageName] = pkg;
   },
 
-  // get a package by name. also maps package objects to themselves.
+  // force reload of all packages (does not affect preloaded packages:
+  // they are still in effect and are not reloaded)
+  flush: function () {
+    var self = this;
+    self.loadedPackages = {};
+  },
+
+  // get a package by name. also maps package objects to
+  // themselves. throw an exception if the package can't be loaded.
   // load order is:
   // - APP_DIR/packages
   // - PACKAGE_DIRS
@@ -61,22 +72,36 @@ _.extend(Library.prototype, {
     var self = this;
     if (name instanceof Package)
       return name;
-    if (!(name in loadedPackages)) {
-      if (self.preloadedPackages && name in self.preloadedPackages) {
-        loadedPackages[name] = self.preloadedPackages[name];
-      } else {
-        var pkg = new Package;
-        if (pkg.initFromLocalPackages(name, self)) {
-          loadedPackages[name] = pkg;
-        } else if (self.releaseManifest) {
-          pkg.initFromWarehouse(
-            name, self.releaseManifest.packages[name]);
-          loadedPackages[name] = pkg;
-        }
-      }
+
+    // Packages overridden with preload()
+    if (name in self.preloadedPackages)
+      return self.preloadedPackages[name];
+
+    // Packages cached from previous calls
+    if (name in self.loadedPackages)
+      return self.loadedPackages[name];
+
+    // Try local packages:
+    // - APP/packages
+    // - GITCHECKOUTOFMETEOR/packages
+    // - $PACKAGE_DIRS (colon-separated)
+    var pkg = new Package;
+    var packageDir = self.directoryForLocalPackage(name);
+    if (packageDir) {
+      pkg.initFromPackageDir(name, packageDir);
+      return (self.loadedPackages[name] = pkg);
     }
 
-    return loadedPackages[name];
+    // Try the release
+    var version = self.releaseManifest && self.releaseManifest.packages[name];
+    if (version) {
+      pkg.initFromPackageDir(name, path.join(warehouse.getWarehouseDir(),
+                                             'packages', name, version));
+      pkg.inWarehouse = true;
+      return (self.loadedPackages[name] = pkg);
+    }
+
+    throw new Error("Package not available: " + name);
   },
 
   // get a package that represents an app. (ignore_files is optional
@@ -256,10 +281,10 @@ var Package = function () {
   self.sources = null;
   self.forceExports = null;
 
-  // Are we in the warehouse? (Set to true by initFromWarehouse.) Used to skip
-  // npm re-scans.
+  // Are we in the warehouse? Used to skip npm re-scans.
   // XXX this is probably connected to isCompiled; it was originally created on
   // a different branch from isCompiled
+  // XXX NOTE: this is set by Library reaching into us
   self.inWarehouse = false;
 
   // functions that can be called when the package is scanned --
@@ -529,30 +554,6 @@ _.extend(Package.prototype, {
         self.uses[role][where] = output;
       });
     });
-  },
-
-  // Searches:
-  // - APP/packages
-  // - GITCHECKOUTOFMETEOR/packages
-  // - $PACKAGE_DIRS (colon-separated)
-  // @returns {Boolean} was the package found in any local package sets?
-  initFromLocalPackages: function (name, library) {
-    var self = this;
-    var packageDir = library.directoryForLocalPackage(name);
-    if (packageDir) {
-      self.initFromPackageDir(name, packageDir);
-      return true;
-    } else {
-      return false;
-    }
-  },
-
-  initFromWarehouse: function (name, version) {
-    var self = this;
-    self.initFromPackageDir(
-      name,
-      path.join(warehouse.getWarehouseDir(), 'packages', name, version));
-    self.inWarehouse = true;
   },
 
   initFromAppDir: function (app_dir, ignore_files, library) {
@@ -864,24 +865,10 @@ _.extend(Package.prototype, {
   }
 });
 
-var loadedPackages = {};
-
 var packages = exports;
 _.extend(exports, {
 
   Library: Library,
-
-  // load a package directly from a directory. don't cache.
-  loadFromDir: function(name, packageDir) {
-    var pkg = new Package;
-    pkg.initFromPackageDir(name, packageDir);
-    return pkg;
-  },
-
-  // force reload of all packages
-  flush: function () {
-    loadedPackages = {};
-  },
 
   // returns a pretty list suitable for showing to the user. input is
   // a list of package objects, each of which must have a name (not be

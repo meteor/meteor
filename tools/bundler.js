@@ -722,7 +722,7 @@ exports.bundle = function (app_dir, output_path, options) {
 
   try {
     // Create a bundle and set up package search path
-    packages.flush();
+    library.flush(); // XXX why? maybe better to just create a new library?
     var bundle = new Bundle({
       releaseStamp: options.releaseStamp,
       library: library
