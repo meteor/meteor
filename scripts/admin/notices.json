@@ -34,6 +34,9 @@
     "release": "0.6.0-rc7"
   },
   {
+    "release": "0.6.0-rc8"
+  },
+  {
     "release": "0.6.0",
     "notices": [
         "Variables declared with `var` at the outermost level of a JavaScript",
