@@ -1,8 +1,6 @@
 // This is a magic collection that fails its writes on the server when
 // the selector (or inserted document) contains fail: true.
 
-(function () {
-//var Future = __meteor_bootstrap__.require('fibers/future');
 var TRANSFORMS = {};
 if (Meteor.isServer) {
   Meteor.methods({
@@ -150,7 +148,7 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
 
   // sleep function from fibers docs.
   var sleep = function(ms) {
-    var Fiber = __meteor_bootstrap__.require('fibers');
+    var Fiber = Npm.require('fibers');
     var fiber = Fiber.current;
     setTimeout(function() {
       fiber.run();
@@ -819,6 +817,3 @@ testAsyncMulti('mongo-livedata - specified _id', [
     }));
   }
 ]);
-
-
-})();

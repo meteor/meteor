@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "mongodb": {
+      "version": "1.2.13",
+      "from": "mongodb@1.2.13",
+      "dependencies": {
+        "bson": {
+          "version": "0.1.8",
+          "from": "bson@0.1.8"
+        }
+      }
+    }
+  }
+}

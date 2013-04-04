@@ -1270,8 +1270,11 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: {b: 12}}, {$rename: {'a.b': 'x'}}, {a: {}, x: 12}); // tested
   modify({a: {b: 12}}, {$rename: {'a.b': 'q.r'}}, {a: {}, q: {r: 12}});
   modify({a: {b: 12}}, {$rename: {'a.b': 'q.2.r'}}, {a: {}, q: {2: {r: 12}}});
+  // Opera weirdly reorders the output. But what it does tends to be close
+  // enough.
   modify({a: {b: 12}, q: {}}, {$rename: {'a.b': 'q.2.r'}},
-         {a: {}, q: {2: {r: 12}}});
+         (typeof opera === 'undefined' ? {a: {}, q: {2: {r: 12}}}
+                                       : {q: {2: {r: 12}}, a: {}}));
   exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2'}}); // tested
   exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2.r'}}); // tested
   test.expect_fail();

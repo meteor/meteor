@@ -17,10 +17,8 @@
 // Browser support is IE 8+ and all modern browsers, with the caveat
 // that `-moz-box-sizing` in Firefox is considered to have some
 // buggy or non-compliant behavior.  For example, min/max-width/height
-// may not interact correctly.  Box-sizing is thus not a feature to
-// base a major layout system around.
-//
-// See https://bugzilla.mozilla.org/show_bug.cgi?id=243412.
+// may not interact correctly. See
+// https://bugzilla.mozilla.org/show_bug.cgi?id=243412.
 .box-sizing-by-border () {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
@@ -39,7 +37,7 @@
 .display-inline-block () {
   display: inline-block;
 
-  // IE 7 hacks:
+  // IE 7 hacks (disabled)
   //*display: inline;
   //*zoom: 1;
 }
@@ -417,9 +415,11 @@
   background-color: rgba(0, 0, 0, 0.7);
 }
 
-input[type=text], input[type=email], input[type=password] {
-  padding: 4px;
-  border: 1px solid #999;
-  border-radius: 3px;
-  line-height: 1;
+#login-buttons, .accounts-dialog {
+  input[type=text], input[type=email], input[type=password] {
+    padding: 4px;
+    border: 1px solid #999;
+    border-radius: 3px;
+    line-height: 1;
+  }
 }

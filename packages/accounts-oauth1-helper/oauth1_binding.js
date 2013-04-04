@@ -1,5 +1,5 @@
-var crypto = __meteor_bootstrap__.require("crypto");
-var querystring = __meteor_bootstrap__.require("querystring");
+var crypto = Npm.require("crypto");
+var querystring = Npm.require("querystring");
 
 // An OAuth1 wrapper around http calls which helps get tokens and
 // takes care of HTTP headers

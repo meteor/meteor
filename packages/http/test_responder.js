@@ -1,5 +1,3 @@
-(function () {
-
 var TEST_RESPONDER_ROUTE = "/http_test_responder";
 
 var respond = function(req, res) {
@@ -22,7 +20,7 @@ var respond = function(req, res) {
     res.end("REDIRECT TO FOO");
     return;
   } else if (req.url.slice(0,6) === "/login") {
-    var connect = __meteor_bootstrap__.require('connect');
+    var connect = Npm.require('connect');
     var username = 'meteor';
     // get password from query string
     var password = req.url.slice(7);
@@ -81,5 +79,3 @@ var run_responder = function() {
 };
 
 run_responder();
-
-})();

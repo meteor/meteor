@@ -1,6 +1,3 @@
-
-(function () {
-
 var regexEscape = function (str) {
   return str.replace(/[\][^$\\.*+?(){}|]/g, '\\$&');
 };
@@ -421,5 +418,3 @@ JSLexer.prettyOffset = function (code, pos) {
   var lineNum = codeUpToPos.replace(/[^\n]+/g, '').length + 1; // 1-based
   return "line " + lineNum + ", offset " + indexInLine;
 };
-
-})();

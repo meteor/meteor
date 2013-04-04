@@ -1,5 +1,3 @@
-(function () {
-
 /******************************************************************************/
 /* TestCaseResults                                                            */
 /******************************************************************************/
@@ -493,5 +491,3 @@ Meteor._debugTest = function (cookie, onReport, onComplete) {
   var testRun = TestManager.createRun(onReport);
   testRun.debug(cookie, onComplete);
 };
-
-})();

@@ -1,4 +1,3 @@
-(function(){
 /**
  * Provide a synchronous Collection API using fibers, backed by
  * MongoDB.  This is only for use on the server, and mostly identical
@@ -8,10 +7,10 @@
  * these outside of a fiber they will explode!
  */
 
-var path = __meteor_bootstrap__.require('path');
-var MongoDB = __meteor_bootstrap__.require('mongodb');
-var Fiber = __meteor_bootstrap__.require('fibers');
-var Future = __meteor_bootstrap__.require(path.join('fibers', 'future'));
+var path = Npm.require('path');
+var MongoDB = Npm.require('mongodb');
+var Fiber = Npm.require('fibers');
+var Future = Npm.require(path.join('fibers', 'future'));
 
 var replaceNames = function (filter, thing) {
   if (typeof thing === "object") {
@@ -85,20 +84,31 @@ var replaceTypes = function (document, atomTransformer) {
 
 _Mongo = function (url) {
   var self = this;
-
   self.collection_queue = [];
-
   self._liveResultsSets = {};
 
-  // Set autoReconnect on Mongo URLs by default.
-  if (!(/[\?&]autoReconnect/.test(url))) {
-    if (/\?/.test(url))
-      url += '&autoReconnect=true';
-    else
-      url += '?autoReconnect=true';
+  var options = {db: {safe: true}};
+
+  // Set autoReconnect to true, unless passed on the URL. Why someone
+  // would want to set autoReconnect to false, I'm not really sure, but
+  // keeping this for backwards compatibility for now.
+  if (!(/[\?&]auto_?[rR]econnect=/.test(url))) {
+    options.server = {auto_reconnect: true};
   }
 
-  MongoDB.connect(url, {db: {safe: true}}, function(err, db) {
+  // Disable the native parser by default, unless specifically enabled
+  // in the mongo URL.
+  // - The native driver can cause errors which normally would be
+  //   thrown, caught, and handled into segfaults that take down the
+  //   whole app.
+  // - Binary modules don't yet work when you bundle and move the bundle
+  //   to a different platform (aka deploy)
+  // We should revisit this after binary npm module support lands.
+  if (!(/[\?&]native_?[pP]arser=/.test(url))) {
+    options.db.native_parser = false;
+  }
+
+  MongoDB.connect(url, options, function(err, db) {
     if (err)
       throw err;
     self.db = db;
@@ -248,6 +258,14 @@ _Mongo.prototype.update = function (collection_name, selector, mod, options) {
     throw e;
   }
 
+  // explicit safety check. null and undefined can crash the mongo
+  // driver. Although the node driver and minimongo do 'support'
+  // non-object modifier in that they don't crash, they are not
+  // meaningful operations and do not do anything. Defensively throw an
+  // error here.
+  if (!mod || typeof mod !== 'object')
+    throw new Error("Invalid modifier. Modifier must be an object.");
+
   var write = self._maybeBeginWrite();
 
   if (!options) options = {};
@@ -313,6 +331,27 @@ _Mongo.prototype._ensureIndex = function (collectionName, index, options) {
     }
     // XXX do we have to bindEnv or Fiber.run this callback?
     collection.ensureIndex(index, options, function (err, indexName) {
+      if (err) {
+        future.throw(err);
+        return;
+      }
+      future.ret();
+    });
+  });
+  future.wait();
+};
+_Mongo.prototype._dropIndex = function (collectionName, index) {
+  var self = this;
+
+  // This function is only used by test code, not within a method, so we don't
+  // interact with the write fence.
+  var future = new Future;
+  self._withCollection(collectionName, function (err, collection) {
+    if (err) {
+      future.throw(err);
+      return;
+    }
+    collection.dropIndex(index, function (err) {
       if (err) {
         future.throw(err);
         return;
@@ -907,4 +946,3 @@ _.extend(LiveResultsSet.prototype, {
 _.extend(Meteor, {
   _Mongo: _Mongo
 });
-})();

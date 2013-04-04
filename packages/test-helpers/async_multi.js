@@ -109,7 +109,7 @@ _.extend(ExpectationManager.prototype, {
   }
 });
 
-var testAsyncMulti = function (name, funcs) {
+/*global*/ testAsyncMulti = function (name, funcs) {
   // XXX Tests on remote browsers are _slow_. We need a better solution.
   var timeout = 180000;
 

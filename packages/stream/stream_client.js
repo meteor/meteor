@@ -139,7 +139,7 @@ _.extend(Meteor._Stream.prototype, {
   status: function () {
     var self = this;
     if (self.status_listeners)
-      Deps.depend(self.status_listeners);
+      self.status_listeners.depend();
     return self.current_status;
   },
 

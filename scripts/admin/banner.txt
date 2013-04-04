@@ -1,0 +1,13 @@
+************************************************************
+**                                                        **
+**  Announcing Meteor 0.6.0                               **
+**  ---------------------------                           **
+**                                                        **
+**  Thanks for helping test release candidates for 0.6.0! **
+**  Meteor 0.6.0 is actually out now and will be          **
+**  downloaded in the background.                         **
+**                                                        **
+**  Update this project to Meteor 0.6.0 with              **
+**  'meteor update'.                                      **
+**                                                        **
+************************************************************

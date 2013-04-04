@@ -126,3 +126,10 @@ body {
     text-decoration: underline;
     cursor: pointer;
 }
+
+.in-progress {
+    position: absolute;
+    padding-left: 10px;
+    top: 10px;
+    z-index: 2;
+}

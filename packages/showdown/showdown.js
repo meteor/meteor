@@ -64,7 +64,8 @@
 //
 // Showdown namespace
 //
-var Showdown = {};
+// METEOR CHANGE: remove "var" so that this isn't file-local.
+Showdown = {};
 
 //
 // converter

@@ -2,12 +2,14 @@ Package.describe({
   summary: "The dynamic stylesheet language."
 });
 
-var less = require('less');
-var fs = require('fs');
-var path = require('path');
+Npm.depends({less: '1.3.3'});
 
 Package.register_extension(
   "less", function (bundle, source_path, serve_path, where) {
+    var less = Npm.require('less');
+    var fs = Npm.require('fs');
+    var path = Npm.require('path');
+
     serve_path = serve_path + '.css';
 
     var contents = fs.readFileSync(source_path, 'utf8');

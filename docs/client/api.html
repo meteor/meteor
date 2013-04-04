@@ -16,8 +16,14 @@ on the client, just on the server, or *Anywhere*.
 
 On a server, the function will run as soon as the server process is
 finished starting. On a client, the function will run as soon as the DOM
-is ready and any `<body>` templates from your `.html` files have been
-put on the screen.
+is ready.
+
+The `startup` callbacks are called in the same order as the calls to
+`Meteor.startup` were made.
+
+On a client, `startup` callbacks from smart packages will be called
+first, followed by `<body>` templates from your `.html` files,
+followed by your application code.
 
     // On server startup, if the database is empty, create some initial data.
     if (Meteor.isServer) {
@@ -31,6 +37,8 @@ put on the screen.
 {{> api_box absoluteUrl}}
 
 {{> api_box settings}}
+
+{{> api_box release}}
 
 <h2 id="publishandsubscribe"><span>Publish and subscribe</span></h2>
 
@@ -52,7 +60,6 @@ cursors.
 {{#warning}}
 If you return multiple cursors in an array, they currently must all be from
 different collections. We hope to lift this restriction in a future release.
-cursors.
 {{/warning}}
 
     // server: publish the rooms collection, minus secret info.
@@ -831,7 +838,7 @@ current version of the document from the database, without the
 proposed update.) Return `true` to permit the change.
 
 `fieldNames` is an array of the (top-level) fields in `doc` that the
-client wants to mody, for example
+client wants to modify, for example
 `['name',`&nbsp;`'score']`. `modifier` is the raw Mongo modifier that
 the client wants to execute, for example `{$set: {'name.first':
 "Alice"}, $inc: {score: 1}}`.
@@ -1806,12 +1813,6 @@ new event handlers in addition to the existing ones.
 See [Event Maps](#eventmaps) for a detailed description of the event
 map format and how event handling works in Meteor.
 
-{{#note}}
-This syntax replaces the previous syntax: `Template.myTemplate.events = {...}`,
-but for now, the old syntax still works.
-{{/note}}
-
-
 {{> api_box template_helpers}}
 
 Each template has a local dictionary of helpers that are made available to it,
@@ -2356,6 +2357,9 @@ computation that is rerun, allowing new ones to be established.  See
 [`Meteor.subscribe`](#meteor_subscribe) for more information about
 subscriptions and reactivity.
 
+If the initial run of an autorun throws an exception, the computation
+is automatically stopped and won't be rerun.
+
 {{> api_box deps_flush }}
 
 Normally, when you make changes (like writing to the database),
@@ -2392,7 +2396,7 @@ computation.
 {{> api_box deps_nonreactive }}
 
 Calls `func()` with `Deps.currentComputation` temporarily set to
-`null`.  If `func` accesses reactive data sources, these data sources 
+`null`.  If `func` accesses reactive data sources, these data sources
 will never cause a rerun of the enclosing computation.
 
 {{> api_box deps_active }}
@@ -2405,7 +2409,7 @@ whether they are being accessed reactively or not.
 It's very rare to need to access `currentComputation` directly.  The
 current computation is used implicitly by
 [`Deps.active`](#deps_active) (which tests whether there is one),
-[`Deps.depend`](#deps_depend) (which registers that it depends on a
+[`dependency.depend()`](#dependency_depend) (which registers that it depends on a
 dependency), and [`Deps.onInvalidate`](#deps_oninvalidate) (which
 registers a callback with it).
 
@@ -2422,15 +2426,6 @@ guaranteed to be called at a time when there are no invalidated
 computations that need rerunning.  This means that if an `afterFlush`
 function invalidates a computation, that computation will be rerun
 before any other `afterFlush` functions are called.
-
-{{> api_box deps_depend }}
-
-`Deps.depend` is used in reactive data source implementations as the
-primary way to record the fact that a Dependency is being accessed from
-some computation.  If there is a current computation, it becomes a
-dependent of the Dependency, while the Dependency becomes a dependency of
-the computation.  Calls
-[`dependency.addDependent()`](#dependency_adddependent).
 
 <h2 id="deps_computation"><span>Deps.Computation</span></h2>
 
@@ -2545,10 +2540,10 @@ accompanied by a Dependency object that tracks the computations that depend
 on it, as in this example:
 
     var weather = "sunny";
-    var weatherDeps = new Deps.Dependency;
+    var weatherDep = new Deps.Dependency;
 
     var getWeather = function () {
-      Deps.depend(weatherDeps);
+      weatherDep.depend()
       return weather;
     };
 
@@ -2556,12 +2551,12 @@ on it, as in this example:
       weather = w;
       // (could add logic here to only call changed()
       // if the new value is different from the old)
-      weatherDeps.changed();
+      weatherDep.changed();
     };
 
 This example implements a weather data source with a simple getter and
 setter.  The getter records that the current computation depends on
-the `weatherDeps` dependency using `Deps.depend`, while the setter
+the `weatherDep` dependency using `depend()`, while the setter
 signals the dependency to invalidate all dependent computations by
 calling `changed()`.
 
@@ -2577,7 +2572,7 @@ current computation is made to depend on an internal Dependency that
 does not change if the weather goes from, say, "rainy" to "cloudy".
 
 Conceptually, the only two things a Dependency can do are gain a
-dependent (typically via `Deps.depend`) and change.
+dependent and change.
 
 A Dependency's dependent computations are always valid (they have
 `invalidated === false`).  If a dependent is invalidated at any time,
@@ -2586,14 +2581,10 @@ removed.
 
 {{> api_box dependency_changed }}
 
-{{> api_box dependency_adddependent }}
+{{> api_box dependency_depend }}
 
-In almost all cases, you want to declare a dependency of the current
-computation and should use `Deps.depend(dependency)` instead,
-which calls `dependency.addDependent(null)`.
-
-Computations added as dependents of the Dependency will be removed
-immediately if they are ever invalidated or stopped.
+`dep.depend()` is used in reactive data source implementations to record
+the fact that `dep` is being accessed from the current computation.
 
 {{> api_box dependency_hasdependents }}
 

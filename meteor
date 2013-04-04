@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.2.23
+BUNDLE_VERSION=0.3.0
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -27,6 +27,7 @@ elif [ "$UNAME" = "Linux" ] ; then
         exit 1
     fi
 fi
+PLATFORM="${UNAME}_${ARCH}"
 
 # Find the script dir, following one level of symlink. Note that symlink
 # can be relative or absolute. Too bad 'readlink -f' is not portable.
@@ -44,23 +45,23 @@ function install_dev_bundle {
     set -e
     trap "echo Failed to install dependency kit." EXIT
 
-    TARBALL="dev_bundle_${UNAME}_${ARCH}_${BUNDLE_VERSION}.tar.gz"
-    TMPDIR="$SCRIPT_DIR/dev_bundle.xxx"
+    TARBALL="dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz"
+    BUNDLE_TMPDIR="$SCRIPT_DIR/dev_bundle.xxx"
 
-    rm -rf "$TMPDIR"
-    mkdir "$TMPDIR"
+    rm -rf "$BUNDLE_TMPDIR"
+    mkdir "$BUNDLE_TMPDIR"
 
     if [ -f "$SCRIPT_DIR/$TARBALL" ] ; then
         echo "Skipping download and installing kit from $SCRIPT_DIR/$TARBALL"
-        tar -xzf "$SCRIPT_DIR/$TARBALL" -C "$TMPDIR"
+        tar -xzf "$SCRIPT_DIR/$TARBALL" -C "$BUNDLE_TMPDIR"
     else
-        curl -# https://d3sqy0vbqsdhku.cloudfront.net/$TARBALL | tar -xzf - -C "$TMPDIR"
-        test -x "${TMPDIR}/bin/node" # bomb out if it didn't work, eg no net
+        curl -# https://d3sqy0vbqsdhku.cloudfront.net/$TARBALL | tar -xzf - -C "$BUNDLE_TMPDIR"
+        test -x "${BUNDLE_TMPDIR}/bin/node" # bomb out if it didn't work, eg no net
     fi
 
     # Delete old dev bundle and rename the new one on top of it.
     rm -rf "$SCRIPT_DIR/dev_bundle"
-    mv "$TMPDIR" "$SCRIPT_DIR/dev_bundle"
+    mv "$BUNDLE_TMPDIR" "$SCRIPT_DIR/dev_bundle"
 
     echo "Installed dependency kit v${BUNDLE_VERSION} in dev_bundle."
     echo
@@ -83,11 +84,11 @@ if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
     fi
 
     DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
-    METEOR="$SCRIPT_DIR/app/meteor/meteor.js"
+    METEOR="$SCRIPT_DIR/tools/meteor.js"
 else
     # In an install
     DEV_BUNDLE=$(dirname "$SCRIPT_DIR")
-    METEOR="$DEV_BUNDLE/app/meteor/meteor.js"
+    METEOR="$DEV_BUNDLE/tools/meteor.js"
 fi
 
 

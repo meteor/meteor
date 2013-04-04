@@ -38,7 +38,7 @@ var ADJACENCIES = [
 ];
 
 // generate a new random selection of letters.
-var new_board = function () {
+new_board = function () {
   var board = [];
   var i;
 
@@ -62,7 +62,7 @@ var new_board = function () {
 // board.  each path is an array of board positions 0-15.  a valid
 // path can use each position only once, and each position must be
 // adjacent to the previous position.
-var paths_for_word = function (board, word) {
+paths_for_word = function (board, word) {
   var valid_paths = [];
 
   var check_path = function (word, path, positions_to_try) {

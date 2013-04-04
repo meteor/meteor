@@ -2,7 +2,7 @@ Tinytest.add('deps - run', function (test) {
   var d = new Deps.Dependency;
   var x = 0;
   var handle = Deps.autorun(function (handle) {
-    Deps.depend(d);
+    d.depend();
     ++x;
   });
   test.equal(x, 1);
@@ -26,7 +26,7 @@ Tinytest.add('deps - run', function (test) {
   test.equal(x, 3);
 
   Deps.autorun(function (internalHandle) {
-    Deps.depend(d);
+    d.depend();
     ++x;
     if (x == 6)
       internalHandle.stop();
@@ -63,22 +63,22 @@ Tinytest.add("deps - nested run", function (test) {
   var buf = "";
 
   var c1 = Deps.autorun(function () {
-    Deps.depend(a);
+    a.depend();
     buf += 'a';
     Deps.autorun(function () {
-      Deps.depend(b);
+      b.depend();
       buf += 'b';
       Deps.autorun(function () {
-        Deps.depend(c);
+        c.depend();
         buf += 'c';
         var c2 = Deps.autorun(function () {
-          Deps.depend(d);
+          d.depend();
           buf += 'd';
           Deps.autorun(function () {
-            Deps.depend(e);
+            e.depend();
             buf += 'e';
             Deps.autorun(function () {
-              Deps.depend(f);
+              f.depend();
               buf += 'f';
             });
           });

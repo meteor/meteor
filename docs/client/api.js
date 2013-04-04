@@ -66,6 +66,19 @@ Template.api.settings = {
           "`Meteor.settings.public` will also be available on the client."]
 };
 
+Template.api.release = {
+  id: "meteor_release",
+  name: "Meteor.release",
+  locus: "Server and client",
+  descr: ["`Meteor.release` is a string containing the name of the " +
+          "[release](#meteorupdate) with which the project was built (for " +
+          "example, `\"" +
+          // Put the current release in the docs as the example)
+          (Meteor.release ? Meteor.release : '0.6.0') +
+          "\"`). It is `undefined` if the project was built using a git " +
+          "checkout of Meteor."]
+};
+
 Template.api.ejsonParse = {
   id: "ejson_parse",
   name: "EJSON.parse(str)",
@@ -812,18 +825,6 @@ Template.api.deps_afterflush = {
   ]
 };
 
-Template.api.deps_depend = {
-  id: "deps_depend",
-  name: "Deps.depend(dependency)",
-  locus: "Client",
-  descr: ["Declares that the current computation depends on `dependency`.  The current computation, if there is one, becomes a dependent of `dependency`, meaning it will be invalidated and rerun the next time `dependency` changes.", "Returns `true` if this results in `dependency` gaining a new dependent (or `false` if this relationship already exists or there is no current computation)."],
-  args: [
-    {name: "dependency",
-     type: "Deps.Dependency",
-     descr: "The dependency for this computation to depend on."}
-  ]
-};
-
 Template.api.computation_stop = {
   id: "computation_stop",
   name: "<em>computation</em>.stop()",
@@ -878,15 +879,15 @@ Template.api.dependency_changed = {
   descr: ["Invalidate all dependent computations immediately and remove them as dependents."]
 };
 
-Template.api.dependency_adddependent = {
-  id: "dependency_adddependent",
-  name: "<em>dependency</em>.addDependent(computation)",
+Template.api.dependency_depend = {
+  id: "dependency_depend",
+  name: "<em>dependency</em>.depend([fromComputation])",
   locus: "Client",
-  descr: ["Adds `computation` as a dependent of this Dependency, recording the fact that the computation depends on this Dependency.", "Returns true if the computation was not already a dependent of this Dependency."],
+  descr: ["Declares that the current computation (or `fromComputation` if given) depends on `dependency`.  The computation will be invalidated the next time `dependency` changes.", "If there is no current computation and `depend()` is called with no arguments, it does nothing and returns false.", "Returns true if the computation is a new dependent of `dependency` rather than an existing one."],
   args: [
-    {name: "computation",
+    {name: "fromComputation",
      type: "Deps.Computation",
-     descr: "The computation to add, or `null` to use the current computation (in which case there must be a current computation)."}
+     descr: "An optional computation declared to depend on `dependency` instead of the current computation."}
   ]
 };
 

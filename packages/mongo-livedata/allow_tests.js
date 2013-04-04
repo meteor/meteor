@@ -1,9 +1,87 @@
-(function () {
-
 if (Meteor.isServer) {
   // Set up allow/deny rules for test collections
-  Meteor.methods({
-    setUpAllowTestsCollections: function (nonce, idGeneration) {
+
+  var allowCollections = {};
+
+  // We create the collections in the publisher (instead of using a method or
+  // something) because if we made them with a method, we'd need to follow the
+  // method with some subscribes, and it's possible that the method call would
+  // be delayed by a wait method and the subscribe messages would be sent before
+  // it and fail due to the collection not yet existing. So we are very hacky
+  // and use a publish.
+  Meteor.publish("allowTests", function (nonce, idGeneration) {
+    var cursors = [];
+    var needToConfigure = undefined;
+
+    // helper for defining a collection. we are careful to create just one
+    // Meteor.Collection even if the sub body is rerun, by caching them.
+    var defineCollection = function(name, insecure, transform) {
+      var fullName = name + idGeneration + nonce;
+
+      var collection;
+      if (_.has(allowCollections, fullName)) {
+        collection = allowCollections[fullName];
+        if (needToConfigure === true)
+          throw new Error("collections inconsistently exist");
+        needToConfigure = false;
+      } else {
+        collection = new Meteor.Collection(
+          fullName, {idGeneration: idGeneration, transform: transform});
+        allowCollections[fullName] = collection;
+        if (needToConfigure === false)
+          throw new Error("collections inconsistently don't exist");
+        needToConfigure = true;
+        collection._insecure = insecure;
+        var m = {};
+        m["clear-collection-" + fullName] = function() {
+          collection.remove({});
+        };
+        Meteor.methods(m);
+      }
+
+      cursors.push(collection.find());
+      return collection;
+    };
+
+    var insecureCollection = defineCollection(
+      "collection-insecure", true /*insecure*/);
+    // totally locked down collection
+    var lockedDownCollection = defineCollection(
+      "collection-locked-down", false /*insecure*/);
+    // resticted collection with same allowed modifications, both with and
+    // without the `insecure` package
+    var restrictedCollectionDefaultSecure = defineCollection(
+      "collection-restrictedDefaultSecure", false /*insecure*/);
+    var restrictedCollectionDefaultInsecure = defineCollection(
+      "collection-restrictedDefaultInsecure", true /*insecure*/);
+    var restrictedCollectionForUpdateOptionsTest = defineCollection(
+      "collection-restrictedForUpdateOptionsTest", true /*insecure*/);
+    var restrictedCollectionForPartialAllowTest = defineCollection(
+      "collection-restrictedForPartialAllowTest", true /*insecure*/);
+    var restrictedCollectionForPartialDenyTest = defineCollection(
+      "collection-restrictedForPartialDenyTest", true /*insecure*/);
+    var restrictedCollectionForFetchTest = defineCollection(
+      "collection-restrictedForFetchTest", true /*insecure*/);
+    var restrictedCollectionForFetchAllTest = defineCollection(
+      "collection-restrictedForFetchAllTest", true /*insecure*/);
+    var restrictedCollectionWithTransform = defineCollection(
+      "withTransform", false, function (doc) {
+        return doc.a;
+      });
+
+    if (needToConfigure) {
+      restrictedCollectionWithTransform.allow({
+        insert: function (userId, doc) {
+          return doc.foo === "foo";
+        },
+        update: function (userId, doc) {
+          return doc.foo === "foo";
+        },
+        remove: function (userId, doc) {
+          return doc.bar === "bar";
+        }
+      });
+
       // two calls to allow to verify that either validator is sufficient.
       var allows = [{
         insert: function(userId, doc) {
@@ -43,65 +121,6 @@ if (Meteor.isServer) {
           return -1 !== _.indexOf(fields, 'verySecret');
         }
       }];
-
-
-      // helper for defining a collection, subscribing to it, and defining
-      // a method to clear it
-      var defineCollection = function(name, insecure, transform) {
-        var fullName = name + idGeneration + nonce;
-        var collection = new Meteor.Collection(
-          fullName, {idGeneration: idGeneration, transform: transform});
-        collection._insecure = insecure;
-
-        Meteor.publish("collection-" + fullName, function() {
-          return collection.find();
-        });
-
-        var m = {};
-        m["clear-collection-" + fullName] = function() {
-          collection.remove({});
-        };
-        Meteor.methods(m);
-        return collection;
-      };
-
-      var insecureCollection = defineCollection(
-        "collection-insecure", true /*insecure*/);
-      // totally locked down collection
-      var lockedDownCollection = defineCollection(
-        "collection-locked-down", false /*insecure*/);
-      // resticted collection with same allowed modifications, both with and
-      // without the `insecure` package
-      var restrictedCollectionDefaultSecure = defineCollection(
-        "collection-restrictedDefaultSecure", false /*insecure*/);
-      var restrictedCollectionDefaultInsecure = defineCollection(
-        "collection-restrictedDefaultInsecure", true /*insecure*/);
-      var restrictedCollectionForUpdateOptionsTest = defineCollection(
-        "collection-restrictedForUpdateOptionsTest", true /*insecure*/);
-      var restrictedCollectionForPartialAllowTest = defineCollection(
-        "collection-restrictedForPartialAllowTest", true /*insecure*/);
-      var restrictedCollectionForPartialDenyTest = defineCollection(
-        "collection-restrictedForPartialDenyTest", true /*insecure*/);
-      var restrictedCollectionForFetchTest = defineCollection(
-        "collection-restrictedForFetchTest", true /*insecure*/);
-      var restrictedCollectionForFetchAllTest = defineCollection(
-        "collection-restrictedForFetchAllTest", true /*insecure*/);
-      var restrictedCollectionWithTransform = defineCollection(
-        "withTransform", false, function (doc) {
-          return doc.a;
-        });
-
-      restrictedCollectionWithTransform.allow({
-        insert: function (userId, doc) {
-          return doc.foo === "foo";
-        },
-        update: function (userId, doc) {
-          return doc.foo === "foo";
-        },
-        remove: function (userId, doc) {
-          return doc.bar === "bar";
-        }
-      });
 
       _.each([
         restrictedCollectionDefaultSecure,
@@ -168,6 +187,8 @@ if (Meteor.isServer) {
         update: function() { return true; }
       });
     }
+
+    return cursors;
   });
 }
 
@@ -180,7 +201,7 @@ if (Meteor.isClient) {
     // Tell the server to make, configure, and publish a set of collections unique
     // to our test run. Since the method does not unblock, this will complete
     // running on the server before anything else happens.
-    Meteor.call('setUpAllowTestsCollections', nonce, idGeneration);
+    Meteor.subscribe('allowTests', nonce, idGeneration);
 
     // helper for defining a collection, subscribing to it, and defining
     // a method to clear it
@@ -188,8 +209,6 @@ if (Meteor.isClient) {
       var fullName = name + idGeneration + nonce;
       var collection = new Meteor.Collection(
         fullName, {idGeneration: idGeneration, transform: transform});
-
-      Meteor.subscribe("collection-" + fullName);
 
       collection.callClearMethod = function (callback) {
         Meteor.call("clear-collection-" + fullName, callback);
@@ -395,6 +414,30 @@ if (Meteor.isClient) {
             {$set: {updated: true}},
             expect(function (err, res) {
               test.isFalse(err);
+              test.equal(collection.find({updated: true}).count(), 2);
+            }));
+        },
+        // update with replacement operator not allowed, and has nice error.
+        function (test, expect) {
+          collection.update(
+            {_id: id2},
+            {_id: id2, updated: true},
+            expect(function (err, res) {
+              test.equal(err.error, 403);
+              test.matches(err.reason, /In a restricted/);
+              // unchanged
+              test.equal(collection.find({updated: true}).count(), 2);
+            }));
+        },
+        // update with rename operator not allowed, and has nice error.
+        function (test, expect) {
+          collection.update(
+            {_id: id2},
+            {$rename: {updated: 'asdf'}},
+            expect(function (err, res) {
+              test.equal(err.error, 403);
+              test.matches(err.reason, /not allowed/);
+              // unchanged
               test.equal(collection.find({updated: true}).count(), 2);
             }));
         },
@@ -728,5 +771,3 @@ if (Meteor.isServer) {
   });
 }
 
-
-}) ();

@@ -1,4 +1,5 @@
 .DS_Store
+/.meteor
 *~
 /dev_bundle
 /dev_bundle*.tar.gz
@@ -12,3 +13,4 @@
 TAGS
 *.log
 *.out
+npm-debug.log
