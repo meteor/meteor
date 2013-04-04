@@ -92,13 +92,12 @@ var deployToServer = function (app_dir, bundleOptions, deployOptions) {
 
   process.stdout.write('Deploying to ' + site + '.  Bundling...\n');
   var bundler = require('./bundler.js');
-  var errors = bundler.bundle(app_dir, bundle_path, bundleOptions);
-  if (errors) {
+  var bundleResult = bundler.bundle(app_dir, bundle_path, bundleOptions);
+  if (bundleResult.errors) {
     process.stdout.write("\n\nErrors prevented deploying:\n");
-    _.each(errors, function (e) {
+    _.each(bundleResult.errors, function (e) {
       process.stdout.write(e + "\n");
     });
-    files.rm_recursive(build_dir);
     process.exit(1);
   }
 

@@ -15,8 +15,8 @@ var library = new library.Library();
 console.log("nodeModules: 'skip'");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', minify: true, library: library});
-  assert.strictEqual(errors, undefined, errors && errors[0]);
+  var result = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', minify: true, library: library});
+  assert.strictEqual(result.errors, false, errors && errors[0]);
 
   // sanity check -- main.js has expected contents.
   assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8").trim(),
@@ -37,8 +37,8 @@ assert.doesNotThrow(function () {
 console.log("nodeModules: 'skip', no minify");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', minify: false, releaseStamp: 'none', library: library});
-  assert.strictEqual(errors, undefined);
+  var result = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', minify: false, releaseStamp: 'none', library: library});
+  assert.strictEqual(result.errors, false);
 
   // sanity check -- main.js has expected contents.
   assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8").trim(),
@@ -55,9 +55,9 @@ assert.doesNotThrow(function () {
 console.log("nodeModules: 'skip', no minify, testPackages: ['meteor']");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(
+  var result = bundler.bundle(
     emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', minify: false, testPackages: ['meteor'], releaseStamp: 'none', library: library});
-  assert.strictEqual(errors, undefined);
+  assert.strictEqual(result.errors, false);
 
   // sanity check -- main.js has expected contents.
   assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8").trim(),
@@ -70,8 +70,8 @@ assert.doesNotThrow(function () {
 console.log("nodeModules: 'copy'");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'copy', releaseStamp: 'none', library: library});
-  assert.strictEqual(errors, undefined);
+  var result = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'copy', releaseStamp: 'none', library: library});
+  assert.strictEqual(result.errors, false);
 
   // sanity check -- main.js has expected contents.
   assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8").trim(),
@@ -85,8 +85,8 @@ assert.doesNotThrow(function () {
 console.log("nodeModules: 'symlink'");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'symlink', releaseStamp: 'none', library: library});
-  assert.strictEqual(errors, undefined);
+  var result = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'symlink', releaseStamp: 'none', library: library});
+  assert.strictEqual(result.errors, false);
 
   // sanity check -- main.js has expected contents.
   assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8").trim(),

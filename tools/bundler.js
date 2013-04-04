@@ -133,8 +133,9 @@ var Bundle = function (options) {
   self.head = [];
   self.body = [];
 
-  // list of errors encountered while bundling. array of string.
-  self.errors = [];
+  // Files and paths used by the bundle, in the format returned by
+  // bundle().dependencyInfo.
+  self.dependencyInfo = null;
 };
 
 _.extend(Bundle.prototype, {
@@ -437,15 +438,17 @@ _.extend(Bundle.prototype, {
   },
 
   // nodeModulesMode should be "skip", "symlink", or "copy"
+  // computes self.dependencyInfo
   write_to_directory: function (output_path, project_dir, nodeModulesMode) {
     var self = this;
     var app_json = {};
-    var dependencies_json = {core: [], app: [], packages: {}, hashes: {}};
     var is_app = files.is_app_dir(project_dir);
 
+    self.dependencyInfo = {core: [], app: [], packages: {}, hashes: {}};
+
     if (is_app) {
-      dependencies_json.app.push(path.join('.meteor', 'packages'));
-      dependencies_json.app.push(path.join('.meteor', 'release'));
+      self.dependencyInfo.app.push(path.join('.meteor', 'packages'));
+      self.dependencyInfo.app.push(path.join('.meteor', 'release'));
     }
 
     // --- Set up build area ---
@@ -464,7 +467,7 @@ _.extend(Bundle.prototype, {
     files.cp_r(path.join(__dirname, 'server'),
                path.join(build_path, 'server'), {ignore: ignore_files});
     // XXX we don't do content-based dependency watching for these files
-    dependencies_json.core.push('server');
+    self.dependencyInfo.core.push('server');
 
     // --- Third party dependencies ---
 
@@ -514,13 +517,13 @@ _.extend(Bundle.prototype, {
           var filepath = path.join(build_path, 'static', fs_relative_path);
           var contents = fs.readFileSync(filepath);
           var hash = sha1(contents);
-          dependencies_json.hashes[
+          self.dependencyInfo.hashes[
             path.join(project_dir, 'public', fs_relative_path)] = hash;
           addClientFileToManifest(fs_relative_path, contents, 'static', false,
                                   undefined, hash);
         });
       }
-      dependencies_json.app.push('public');
+      self.dependencyInfo.app.push('public');
     }
 
     // Add cache busting query param if needed, and
@@ -600,7 +603,7 @@ _.extend(Bundle.prototype, {
       where: 'internal',
       hash: sha1(app_html)
     });
-    dependencies_json.core.push(path.join('tools', 'app.html.in'));
+    self.dependencyInfo.core.push(path.join('tools', 'app.html.in'));
 
     // --- Documentation, and running from the command line ---
 
@@ -627,22 +630,22 @@ _.extend(Bundle.prototype, {
 
     app_json.manifest = self.manifest;
 
-    dependencies_json.extensions = self._app_extensions();
-    dependencies_json.exclude = _.pluck(ignore_files, 'source');
-    dependencies_json.packages = {};
+    self.dependencyInfo.extensions = self._app_extensions();
+    self.dependencyInfo.exclude = _.pluck(ignore_files, 'source');
+    self.dependencyInfo.packages = {};
     _.each(_.values(self.slices), function (slice) {
       // Data for the mtime dependency watcher. We only record data here for
       // packages, not apps, since apps watch the whole directory for added
       // files.
       if (slice.pkg.name) {
-        dependencies_json.packages[slice.pkg.name] = _.union(
-          dependencies_json.packages[slice.pkg.name] || [],
+        self.dependencyInfo.packages[slice.pkg.name] = _.union(
+          self.dependencyInfo.packages[slice.pkg.name] || [],
           _.keys(slice.pkg.dependencyFileShas)
         );
       }
       // Data for the contents dependency watcher check.
       _.each(slice.pkg.dependencyFileShas, function (sha, relPath) {
-        dependencies_json.hashes[
+        self.dependencyInfo.hashes[
           path.join(slice.pkg.source_root, relPath)] = sha;
       });
     });
@@ -652,8 +655,6 @@ _.extend(Bundle.prototype, {
 
     fs.writeFileSync(path.join(build_path, 'app.json'),
                      JSON.stringify(app_json, null, 2));
-    fs.writeFileSync(path.join(build_path, 'dependencies.json'),
-                     JSON.stringify(dependencies_json, null, 2));
 
     // --- Move into place ---
 
@@ -675,11 +676,23 @@ _.extend(Bundle.prototype, {
  * version is *not* read from the app's .meteor/release file. Instead,
  * it must be passed in as an option.
  *
- * Returns undefined on success. On failure, returns an array of
- * strings, the error messages. On failure, a bundle will still be
- * written to output_path. It is probably broken, but it is supposed
- * to contain correct dependency information, so you can tell when to
- * try bundling again.
+ * Returns an object with keys:
+ * - errors: An array of strings, or falsy if bundling succeeded.
+ * - dependencyInfo: Information about files and paths that were
+ *   inputs into the bundle and that we may wish to monitor for
+ *   changes if we are developing interactively.
+ *    - extensions: list of extensions registered for user code, with dots]
+ *    - packages: map from package name to list of paths relative to the package
+ *    - core: paths relative to 'app' in meteor tree
+ *    - app: paths relative to top of app tree
+ *    - exclude: list of regexps for files to ignore (everywhere)
+ *    (for 'core' and 'apps', if a directory is given, you should
+ *    monitor everything in the subtree under it minus the stuff that
+ *    matches exclude, and if it doesn't exist yet, you should watch
+ *    for it to appear)
+ *
+ * On failure ('errors' is truthy), no bundle will be output (in fact,
+ * output_path will have been removed if it existed.)
  *
  * options include:
  * - minify : minify the CSS and JS assets
@@ -749,9 +762,14 @@ exports.bundle = function (app_dir, output_path, options) {
     // Write to disk
     bundle.write_to_directory(output_path, app_dir, options.nodeModulesMode);
 
-    if (bundle.errors.length)
-      return bundle.errors;
+    return {
+      errors: false,
+      dependencyInfo: bundle.dependencyInfo
+    };
   } catch (err) {
-    return ["Exception while bundling application:\n" + (err.stack || err)];
+    files.rm_recursive(output_path);
+    return {
+      errors: ["Exception while bundling application:\n" + (err.stack || err)]
+    };
   }
 };

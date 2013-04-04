@@ -133,8 +133,8 @@ console.log("app that uses gcd - clean run");
 assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0'});
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: library});
-  assert.strictEqual(errors, undefined, errors && errors[0]);
+  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: library});
+  assert.strictEqual(result.errors, false, errors && errors[0]);
   _assertCorrectPackageNpmDir({gcd: '0.0.0'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0'});
 });
@@ -142,8 +142,8 @@ assert.doesNotThrow(function () {
 console.log("app that uses gcd - no changes, running again");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: library});
-  assert.strictEqual(errors, undefined, errors && errors[0]);
+  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: library});
+  assert.strictEqual(result.errors, false, errors && errors[0]);
   _assertCorrectPackageNpmDir({gcd: '0.0.0'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0'});
 });
@@ -169,10 +169,10 @@ assert.doesNotThrow(function () {
       assert.fail("shouldn't be installing specific npm packages: " + args[1]);
     return bareExecFileSync(file, args, opts);
   };
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: library});
+  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: library});
   meteorNpm._execFileSync = bareExecFileSync;
 
-  assert.strictEqual(errors, undefined, errors && errors[0]);
+  assert.strictEqual(result.errors, false, errors && errors[0]);
   _assertCorrectPackageNpmDir({gcd: '0.0.0'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0'});
 });
@@ -182,8 +182,8 @@ console.log("app that uses gcd - add mime and semver");
 assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: library});
-  assert.strictEqual(errors, undefined, errors && errors[0]);
+  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: library});
+  assert.strictEqual(result.errors, false, errors && errors[0]);
   _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
 });
@@ -198,8 +198,8 @@ assert.doesNotThrow(function () {
   files.rm_recursive(nodeModulesMimeDir);
   assert(!fs.existsSync(path.join(nodeModulesMimeDir)));
 
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: library});
-  assert.strictEqual(errors, undefined, errors && errors[0]);
+  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: library});
+  assert.strictEqual(result.errors, false, errors && errors[0]);
   _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
 });
@@ -208,8 +208,8 @@ console.log("app that uses gcd - upgrade mime, remove semver");
 assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0', mime: '1.2.8'});
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: library});
-  assert.strictEqual(errors, undefined, errors && errors[0]);
+  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: library});
+  assert.strictEqual(result.errors, false, errors && errors[0]);
   _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.8'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0', mime: '1.2.8'});
 });
@@ -218,7 +218,7 @@ console.log("app that uses gcd - try downgrading mime to non-existant version");
 assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0', mime: '0.1.2'});
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: library});
+  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: library});
   assert.strictEqual(errors.length, 1);
   assert(/version not found/.test(errors[0]));
   _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.8'}); // shouldn't've changed
@@ -228,8 +228,8 @@ console.log("app that uses gcd - downgrade mime to an existant version");
 assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0', mime: '1.2.7'});
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: library});
-  assert.strictEqual(errors, undefined, errors && errors[0]);
+  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: library});
+  assert.strictEqual(result.errors, false, errors && errors[0]);
 
   _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0', mime: '1.2.7'});
@@ -241,8 +241,8 @@ assert.doesNotThrow(function () {
   var deps = {gzippo: 'https://github.com/meteor/gzippo/tarball/1e4b955439abc643879ae264b28a761521818f3b'};
   updateTestPackage(deps);
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: library});
-  assert.strictEqual(errors, undefined, errors && errors[0]);
+  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: library});
+  assert.strictEqual(result.errors, false, errors && errors[0]);
   _assertCorrectPackageNpmDir(deps);
   _assertCorrectBundleNpmContents(tmpOutputDir, deps);
   // Check that a string introduced by our fork is in the source.

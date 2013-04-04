@@ -606,18 +606,17 @@ Fiber(function () {
       var output_path = path.resolve(argv._[0]); // get absolute path
 
       var bundler = require(path.join(__dirname, 'bundler.js'));
-      var errors = bundler.bundle(context.appDir, bundle_path, {
+      var bundleResult = bundler.bundle(context.appDir, bundle_path, {
         nodeModulesMode: 'copy',
         minify: true,  // XXX allow --debug
         releaseStamp: context.releaseVersion,
         library: context.library
       });
-      if (errors) {
+      if (bundleResult.errors) {
         process.stdout.write("Errors prevented bundling:\n");
-        _.each(errors, function (e) {
+        _.each(bundleResult.errors, function (e) {
           process.stdout.write(e + "\n");
         });
-        files.rm_recursive(buildDir);
         process.exit(1);
       }
 
