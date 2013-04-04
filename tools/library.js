@@ -38,7 +38,7 @@ _.extend(Library.prototype, {
   },
 
   // force reload of all packages
-  flush: function () {
+  refresh: function () {
     var self = this;
     self.loadedPackages = {};
   },

@@ -446,7 +446,7 @@ exports.run = function (context, options) {
     serverLog = [];
 
     // Make the library reload packages, in case they've changed
-    context.library.flush();
+    context.library.refresh();
 
     // Bundle up the app
     var bundleResult = bundler.bundle(context.appDir, bundlePath, bundleOpts);

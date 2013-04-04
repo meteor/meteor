@@ -19,7 +19,7 @@ var updateTestPackage = function(npmDependencies) {
   // we need at least one server file, otherwise we don't bother copying
   // the gcd module into the bundle.
   fs.writeFileSync(path.join(testPackageDir, 'dummy.js'), "");
-  lib.flush();
+  lib.refresh();
 };
 
 process.env.PACKAGE_DIRS = tmpPackageDirContainer;
