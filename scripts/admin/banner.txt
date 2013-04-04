@@ -1,16 +1,13 @@
 ************************************************************
 **                                                        **
-**  Announcing Meteor 0.6.0-rc7                           **
+**  Announcing Meteor 0.6.0                               **
 **  ---------------------------                           **
 **                                                        **
-**  Once 0.6.0 is out, release candidates won't have      **
-**  these silly banners --- only real releases will!      **
-**  But 0.6.0 is not out yet! But it will be soon!        **
-**  As long as we don't find any pesky bugs during QA...  **
+**  Thanks for helping test release candidates for 0.6.0! **
+**  Meteor 0.6.0 is actually out now and will be          **
+**  downloaded in the background.                         **
 **                                                        **
-**  Meteor 0.6.0-rc7 will be downloaded in the            **
-**  background.                                           **
-**  Update this project to Meteor 0.6.0-rc7 with          **
+**  Update this project to Meteor 0.6.0 with              **
 **  'meteor update'.                                      **
 **                                                        **
 ************************************************************
