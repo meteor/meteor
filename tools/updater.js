@@ -19,7 +19,6 @@ exports.getManifest = function () {
   return files.getUrl({url: manifestUrl, json: true});
 };
 
-
 exports.startUpdateChecks = function (context) {
   var updateCheck = inFiber(function () {
     var manifest = null;
