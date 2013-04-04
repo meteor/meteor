@@ -65,9 +65,10 @@ var log_callbacks = function (operations) {
 
 // XXX test shared structure in all MM entrypoints
 Tinytest.add("minimongo - basics", function (test) {
-  var c = new LocalCollection();
+  var c = new LocalCollection(),
+      fluffyKitten_id;
 
-  c.insert({type: "kitten", name: "fluffy"});
+  fluffyKitten_id = c.insert({type: "kitten", name: "fluffy"});
   c.insert({type: "kitten", name: "snookums"});
   c.insert({type: "cryptographer", name: "alice"});
   c.insert({type: "cryptographer", name: "bob"});
@@ -77,6 +78,7 @@ Tinytest.add("minimongo - basics", function (test) {
   test.equal(c.find({type: "cryptographer"}).count(), 3);
   test.length(c.find({type: "kitten"}).fetch(), 2);
   test.length(c.find({type: "cryptographer"}).fetch(), 3);
+  test.equal(fluffyKitten_id, c.findOne({type: "kitten", name: "fluffy"})._id);
 
   c.remove({name: "cara"});
   test.equal(c.find().count(), 4);
