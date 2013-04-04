@@ -1,7 +1,7 @@
 if (Meteor.isServer) {
   // XXX namespacing
   var path = Npm.require('path');
-  var Fiber = Npm.require(path.join('fibers'));
+  var Fiber = Npm.require('fibers');
   var Future = Npm.require(path.join('fibers', 'future'));
 }
 
@@ -604,8 +604,6 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // to do a RPC, so we use the return value of the stub as our return
     // value.
 
-    // XXX: The stub stuff used to be in an isClient block; I don't know why.
-    // Check with Nick or Geoff
     var enclosing = Meteor._CurrentInvocation.get();
     var alreadyInSimulation = enclosing && enclosing.isSimulation;
 
@@ -717,9 +715,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
       methodInvoker.sendMessage();
 
     // If we're using the default callback on the server,
-    // synchronously return the result from the remote host.
+    // block waiting for the result.
     if (future) {
-      return future;
+      return future.wait();
     }
     return undefined;
   },
