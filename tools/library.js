@@ -11,20 +11,30 @@ var fs = require('fs');
 // differently on disk.
 
 // Options:
-//  - `releaseManifest` (a parsed release manifest)
-//  - `appDir` (directory which may contain a `packages` subdir)
-// XXX XXX as implemented, it reads the environment and the current
-// directory. It shouldn't do that. Those should ultimately be ctor
-// arguments or something.
+// - releaseManifest: a parsed release manifest
+// - localPackageDirs: array of directories to search before checking
+//   the manifest and the warehouse. Directories that don't exist (or
+//   paths that aren't directories) will be silently ignored.
 var Library = function (options) {
   var self = this;
   options = options || {};
 
-  self.loadedPackages = {};
-
-  self.overrides = {}; // package name to package directory
   self.releaseManifest = options.releaseManifest;
-  self.appDir = options.appDir;
+
+  // Trim down localPackageDirs to just those that actually exist (and
+  // that are actually directories)
+  self.localPackageDirs = _.filter(options.localPackageDirs, function (dir) {
+      try {
+        // use stat rather than lstat since symlink to dir is OK
+        var stats = fs.statSync(dir);
+      } catch (e) {
+        return false;
+      }
+      return stats.isDirectory();
+    });
+
+  self.loadedPackages = {};
+  self.overrides = {}; // package name to package directory
 };
 
 _.extend(Library.prototype, {
@@ -37,21 +47,28 @@ _.extend(Library.prototype, {
     self.overrides[packageName] = packageDir
   },
 
-  // force reload of all packages
+  // Force reload of all packages. See description at get().
   refresh: function () {
     var self = this;
     self.loadedPackages = {};
   },
 
-  // get a package by name. also maps package objects to
-  // themselves. throw an exception if the package can't be loaded.
-  // load order is:
-  // - APP_DIR/packages
-  // - PACKAGE_DIRS
-  // - METEOR_DIR/packages (if in a git checkout)
-  // - warehouse (if options.releaseManifest passed)
-  get: function (name) {
+  // Given a package name as a string, retrieve a Package object. If
+  // throwOnError is true, the default, throw an error if the package
+  // can't be found. (If false is passed for throwOnError, then return
+  // null if the package can't be found.)
+  //
+  // Searches overrides first, then any localPackageDirs you have
+  // provided, then the manifest/warehouse if provided.
+  //
+  // get() caches the packages it returns, meaning if you call
+  // get('foo') and later foo changes on disk, you won't see the
+  // changes. To flush the package cache and force all of the packages
+  // to be reloaded the next time get() is called for them, see
+  // refresh().
+  get: function (name, throwOnError) {
     var self = this;
+    var packageDir, fromWarehouse = false;
 
     // Passed a Package?
     if (name instanceof packages.Package)
@@ -61,18 +78,49 @@ _.extend(Library.prototype, {
     if (name in self.loadedPackages)
       return self.loadedPackages[name];
 
-    // Need to load it from disk
-    var packageDir = self.findPackage(name);
-    if (! packageDir)
-      throw new Error("Package not available: " + name);
+    // If there's an override for this package, use that without
+    // looking at any other options.
+    if (name in self.overrides)
+      packageDir = self.overrides[name];
 
+    // Try local directories ('packages' subdirectory in an app,
+    // PACKAGE_DIRS environment variable, git checkout.)
+    if (! packageDir) {
+      for (var i = 0; i < self.localPackageDirs.length; ++i) {
+        var packageDir = path.join(self.localPackageDirs[i], name);
+        if (fs.existsSync(path.join(packageDir, 'package.js')))
+          break;
+        packageDir = null;
+      }
+    }
+
+    // Try the Meteor distribution, if we have one.
+    var version = self.releaseManifest && self.releaseManifest.packages[name];
+    if (! packageDir && version) {
+      var packageDir = path.join(warehouse.getWarehouseDir(),
+                                 'packages', name, version);
+      if (! fs.existsSync(packageDir))
+        throw new Error("Package missing from warehouse: " + name +
+                        " version " + version);
+      fromWarehouse = true;
+    }
+
+    if (! packageDir) {
+      if (throwOnError === false)
+        return null;
+      throw new Error("Package not available: " + name);
+    }
+
+    // Load package from disk
     var pkg = new packages.Package(self);
     pkg.initFromPackageDir(name, packageDir);
+    pkg.inWarehouse = fromWarehouse;
     self.loadedPackages[name] = pkg;
+
     return pkg;
   },
 
-  // get a package that represents an app. (ignoreFiles is optional
+  // Get a package that represents an app. (ignoreFiles is optional
   // and if given, it should be an array of regexps for filenames to
   // ignore when scanning for source files.)
   getForApp: function (appDir, ignoreFiles) {
@@ -82,109 +130,31 @@ _.extend(Library.prototype, {
     return pkg;
   },
 
-  // get all packages available. options are appDir and releaseManifest.
-  //
-  // returns {Object} maps name to Package
+  // Get all packages available. Returns a map from the package name
+  // to a Package object.
   list: function () {
     var self = this;
-    var list = {};
+    var names = [];
 
-    _.each(self._localPackageDirs(), function (dir) {
-      _.each(fs.readdirSync(dir), function (name) {
-        if (files.is_package_dir(path.join(dir, name))) {
-          if (!list[name]) // earlier directories get precedent
-            list[name] = self.get(name);
-        }
-      });
+    names = _.keys(self.overrides);
+
+    _.each(self.localPackageDirs, function (dir) {
+      names = _.union(names, fs.readdirSync(dir));
     });
 
     if (self.releaseManifest) {
-      _.each(self.releaseManifest.packages, function(version, name) {
-        // don't even look for packages if they've already been
-        // overridden (though this `if` isn't necessary for
-        // correctness, since `packages.get` looks for packages in the
-        // override directories first anyways)
-        if (!list[name])
-          list[name] = self.get(name);
-      });
+      names = _.union(names, _.keys(self.releaseManifest.packages));
     }
 
-    return list;
-  },
-
-  // Return the directory for a package, or null if no such package
-  // can be found.
-  findPackage: function (name) {
-    var self = this;
-
-    // Try overrides
-    if (name in self.overrides)
-      return self.overrides[name];
-
-    // Try local directories
-    var localDir = self.directoryForLocalPackage(name);
-    if (localDir)
-      return localDir;
-
-    // Try the release
-    var version = self.releaseManifest && self.releaseManifest.packages[name];
-    if (version) {
-      var pathInWarehouse = path.join(warehouse.getWarehouseDir(),
-                                      'packages', name, version);
-      if (! fs.existsSync(pathInWarehouse))
-        throw new Error("Package missing from warehouse: " + name +
-                        " version " + version);
-      return pathInWarehouse;
-    }
-
-    // Not found
-    return null;
-  },
-
-  // for a package that exists in localPackageDirs, find the directory
-  // in which it exists.
-  // XXX does this need to be absolute?
-  directoryForLocalPackage: function (name) {
-    var self = this;
-    var searchDirs = self._localPackageDirs();
-    for (var i = 0; i < searchDirs.length; ++i) {
-      var packageDir = path.join(searchDirs[i], name);
-      if (fs.existsSync(path.join(packageDir, 'package.js')))
-        return packageDir;
-    }
-    return undefined;
-  },
-
-  _localPackageDirs: function () {
-    var self = this;
-    var packageDirs = [];
-
-    // If we're running from an app (as opposed to a global-level "meteor
-    // test-packages"), use app packages.
-    if (self.appDir)
-      packageDirs.push(path.join(self.appDir, 'packages'));
-
-    // Next, search $PACKAGE_DIRS.
-    if (process.env.PACKAGE_DIRS)
-      packageDirs.push.apply(packageDirs, process.env.PACKAGE_DIRS.split(':'));
-
-    // If we're running out of a git checkout of meteor, use the packages from
-    // the git tree.
-    if (!files.usesWarehouse())
-      packageDirs.push(path.join(files.getCurrentToolsDir(), 'packages'));
-
-    // Only return directories that exist.
-    return _.filter(packageDirs, function (dir) {
-      try {
-        // use stat rather than lstat since symlink to dir is OK
-        var stats = fs.statSync(dir);
-      } catch (e) {
-        return false;
-      }
-      return stats.isDirectory();
+    var ret = {};
+    _.each(names, function (name) {
+      var pkg = self.get(name, false);
+      if (pkg)
+        ret[name] = pkg;
     });
-  }
 
+    return ret;
+  }
 });
 
 var library = exports;

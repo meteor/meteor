@@ -86,8 +86,26 @@ Fiber(function () {
           "Please check to make sure that you are online.");
       }
     }
+
+    var localPackageDirs = [];
+    if (context.appDir)
+      // If we're running from an app (as opposed to a global-level
+      // "meteor test-packages"), use app packages.
+      localPackageDirs.push(path.join(context.appDir, 'packages'));
+
+    // Let the user provide additional package directories to search
+    // in PACKAGE_DIRS (colon-separated.)
+    if (process.env.PACKAGE_DIRS)
+      localPackageDirs.push.apply(packageDirs,
+                                  process.env.PACKAGE_DIRS.split(':'));
+
+    // If we're running out of a git checkout of meteor, use the packages from
+    // the git tree.
+    if (!files.usesWarehouse())
+      localPackageDirs.push(path.join(files.getCurrentToolsDir(), 'packages'));
+
     context.library = new library.Library({
-      appDir: context.appDir,
+      localPackageDirs: localPackageDirs,
       releaseManifest: context.releaseManifest
     });
   };
