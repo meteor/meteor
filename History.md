@@ -10,6 +10,8 @@
   installed simultaneously; apps are pinned to specific Meteor releases.
   All `meteor` commands accept a `--release` argument to specify which release
   to use; `meteor update` changes what release the app is pinned to.
+  Inside an app, the name of the release is available at `Meteor.release`.
+  When running Meteor directly from a git checkout, the release is ignored.
 
 * Variables declared with `var` at the outermost level of a JavaScript
   source file are now private to that file. Remove the `var` to share
@@ -61,7 +63,7 @@
   whitelisted list of modifier operators.
 
 Patches contributed by GitHub users awwx, blackcoat, cmather, estark37,
-mquandalle, Primigenus, raix, timhaines.
+mquandalle, Primigenus, raix, reustle, and timhaines.
 
 
 ## v0.5.9

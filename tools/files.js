@@ -128,8 +128,6 @@ _.extend(exports, {
     // XXX once we are done with the transition to engine, this should
     // change to: `return fs.existsSync(path.join(filepath, '.meteor',
     // 'release'))`
-    //   (though we'll have to start putting release files in the examples
-    //    directories at that point)
 
     // .meteor/packages can be a directory, if .meteor is a warehouse
     // directory.  since installing meteor initializes a warehouse at

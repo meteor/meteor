@@ -437,6 +437,13 @@ _.extend(exports, {
   // in which it exists.
   // XXX does this need to be absolute?
   directoryForLocalPackage: function (name, packageSearchOptions) {
+    // Make sure that if we're using meteor test-packages to test a package in a
+    // random spot, that we watch it for dependencies.
+    if (packageSearchOptions && packageSearchOptions.preloadedPackages &&
+        name in packageSearchOptions.preloadedPackages) {
+      return packageSearchOptions.preloadedPackages[name].source_root;
+    }
+
     var searchDirs = packages._localPackageDirs(packageSearchOptions);
     for (var i = 0; i < searchDirs.length; ++i) {
       var packageDir = path.join(searchDirs[i], name);

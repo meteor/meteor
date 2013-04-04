@@ -66,6 +66,19 @@ Template.api.settings = {
           "`Meteor.settings.public` will also be available on the client."]
 };
 
+Template.api.release = {
+  id: "meteor_release",
+  name: "Meteor.release",
+  locus: "Server and client",
+  descr: ["`Meteor.release` is a string containing the name of the " +
+          "[release](#meteorupdate) with which the project was built (for " +
+          "example, `\"" +
+          // Put the current release in the docs as the example)
+          (Meteor.release ? Meteor.release : '0.6.0') +
+          "\"`). It is `undefined` if the project was built using a git " +
+          "checkout of Meteor."]
+};
+
 Template.api.ejsonParse = {
   id: "ejson_parse",
   name: "EJSON.parse(str)",

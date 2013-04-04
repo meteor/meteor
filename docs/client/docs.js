@@ -106,7 +106,8 @@ var toc = [
       "Meteor.isServer",
       "Meteor.startup",
       "Meteor.absoluteUrl",
-      "Meteor.settings"
+      "Meteor.settings",
+      "Meteor.release"
     ],
 
     "Publish and subscribe", [

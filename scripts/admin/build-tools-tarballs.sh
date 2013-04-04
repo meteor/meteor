@@ -24,7 +24,7 @@ mkdir -p "$OUTDIR"
 
 TOOLS_TARBALL="$OUTDIR/meteor-tools-${TOOLS_VERSION}-${PLATFORM}.tar.gz"
 echo "Tarring tools to: $TOOLS_TARBALL"
-tar -C "$TOOLS_TMPDIR" --exclude .meteor/local -czf "$TOOLS_TARBALL" "$TOOLS_VERSION"
+$TAR -C "$TOOLS_TMPDIR" --exclude .meteor/local -czf "$TOOLS_TARBALL" "$TOOLS_VERSION"
 
 # A hacky (?) way to pass $TOOLS_VERSION back into build-release.sh
 echo $TOOLS_VERSION > $TOPDIR/.tools_version

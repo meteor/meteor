@@ -88,11 +88,17 @@ var anyWithPrefix = function(s3, prefix) {
   return !_.isEmpty(files.Body.ListBucketResult.Contents);
 };
 
-var copyFilesWithPrefix = function (s3, prefix, destDir) {
+var copy3FilesWithPrefix = function (s3, prefix, destDir) {
   var artifacts = s3.ListObjects({
     BucketName: "com.meteor.warehouse",
     Prefix: prefix
   }).Body.ListBucketResult.Contents;
+
+  // We support 3 platforms.
+  if (artifacts.length !== 3)
+    throw new Error("Expected three artifacts with prefix " + prefix +
+                    ", found " + artifacts.length);
+
 
   parallelEach(artifacts, function (artifact) {
     var sourceKey = artifact.Key;
@@ -125,7 +131,7 @@ var publishTools = function(s3, gitSha, version) {
     console.log("publishing");
   }
 
-  copyFilesWithPrefix(
+  copy3FilesWithPrefix(
     s3, ["unpublished", gitSha, "meteor-tools-"].join("/"), destDir);
 };
 
@@ -145,7 +151,7 @@ var publishPackage = function(s3, gitSha, name, version) {
     publishedArtifacts.push("package " + name + " version " + version);
     console.log(packageHeader + "publishing");
   }
-  copyFilesWithPrefix(s3, sourcePrefix, destDir);
+  copy3FilesWithPrefix(s3, sourcePrefix, destDir);
 };
 
 // publish the release manifest, copying from
