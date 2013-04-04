@@ -63,7 +63,7 @@
   whitelisted list of modifier operators.
 
 Patches contributed by GitHub users awwx, blackcoat, cmather, estark37,
-mquandalle, Primigenus, raix, timhaines.
+mquandalle, Primigenus, raix, reustle, and timhaines.
 
 
 ## v0.5.9
