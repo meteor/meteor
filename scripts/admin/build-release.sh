@@ -23,7 +23,7 @@ export PLATFORM="${UNAME}_${ARCH}"
 # Because neither /usr/bin/tar nor /usr/bin/gnutar on Mac appear to have this
 # flag or an equivalent. And we don't care too much about AFS support on Mac
 # anyway.)
-if [ "$UNAME" = "Linux" ];
+if [ "$UNAME" = "Linux" ]; then
   TAR="tar --hard-dereference"
 else
   TAR=tar
