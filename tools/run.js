@@ -8,6 +8,7 @@ var httpProxy = require('http-proxy');
 
 var files = require('./files.js');
 var library = require('./library.js');
+var watch = require('./watch.js');
 var project = require('./project.js');
 var updater = require('./updater.js');
 var bundler = require('./bundler.js');
@@ -218,7 +219,7 @@ var logToClients = function (msg) {
 // onExit
 // [onListen]
 // [nodeOptions]
-// [settingsFile]
+// [settings]
 
 var startServer = function (options) {
   // environment
@@ -233,12 +234,10 @@ var startServer = function (options) {
   env.PORT = options.innerPort;
   env.MONGO_URL = options.mongoUrl;
   env.ROOT_URL = env.ROOT_URL || ('http://localhost:' + options.outerPort);
-  if (options.settingsFile) {
-    // Re-read the settings file each time we call startServer.
-    var settings = exports.getSettings(options.settingsFile);
-    if (settings)
-      env.METEOR_SETTINGS = settings;
-  }
+  if (options.settings)
+    env.METEOR_SETTINGS = options.settings;
+  else
+    delete env.METEOR_SETTINGS;
 
   var nodeOptions = _.clone(options.nodeOptions);
   nodeOptions.push(path.join(options.bundlePath, 'main.js'));
@@ -311,243 +310,6 @@ var killServer = function (handle) {
   clearInterval(handle.timer);
 };
 
-////////// Watching dependencies  //////////
-
-// deps is the data from dependencies.json in the bundle
-// appDir is the root of the app
-// relativeFiles are any other files to watch, relative to the current
-//   directory (eg, the --settings file)
-// onChange is only fired once
-var DependencyWatcher = function (
-    deps, appDir, relativeFiles, library, onChange) {
-  var self = this;
-
-  self.appDir = appDir;
-  self.onChange = onChange;
-  self.watches = {}; // path => unwatch function with no arguments
-  self.lastContents = {}; // path => last contents (array of filenames)
-  self.mtimes = {}; // path => last seen mtime
-
-  // If a file is under a sourceDir, and has one of the
-  // sourceExtensions, then it's interesting.
-  self.sourceDirs = [self.appDir];
-  self.sourceExtensions = deps.extensions || [];
-
-  // Any file under a bulkDir is interesting. (bulkDirs may also
-  // contain individual files)
-  self.bulkDirs = [];
-  // If we're running from a git checkout, we reload when "core" files like
-  // server.js change.
-  if (!files.usesWarehouse()) {
-    _.each(deps.core || [], function (filepath) {
-      self.bulkDirs.push(path.join(files.getCurrentToolsDir(), filepath));
-    });
-  }
-  _.each(deps.app || [], function (filepath) {
-    self.bulkDirs.push(path.join(self.appDir, filepath));
-  });
-
-  // Additional list of specific files that are interesting.
-  self.specificFiles = {};
-  for (var pkg in (deps.packages || {})) {
-    // We only watch for changes in local packages, rather than ones in the
-    // warehouse, since only changes to local ones need to cause an app to
-    // reload. Notably, the app will *not* reload the first time a local package
-    // is created which overrides an installed package.
-    var localPackageDir = library.directoryForLocalPackage(pkg);
-    if (localPackageDir) {
-      _.each(deps.packages[pkg], function (file) {
-        self.specificFiles[path.join(localPackageDir, file)] = true;
-      });
-    }
-  };
-
-  _.each(relativeFiles, function (file) {
-    self.specificFiles[file] = true;
-  });
-
-  // Things that are never interesting.
-  self.excludePatterns = _.map((deps.exclude || []), function (pattern) {
-    return new RegExp(pattern);
-  });
-  self.excludePaths = [
-    path.join(appDir, '.meteor', 'local'),
-    // For app packages, we only watch files explicitly used by the package (in
-    // specificFiles)
-    path.join(appDir, 'packages')
-  ];
-
-  // Start monitoring
-  _.each(_.union(self.sourceDirs, self.bulkDirs, _.keys(self.specificFiles)),
-         _.bind(self._scan, self, true));
-
-  // mtime scans are great and relatively efficient, but they have a couple of
-  // issues. One is that they only detect changes in mtimes from the start of
-  // dependency watching, not from the actual bundled file, so if bundling is
-  // slow and somebody edits a file after it's used by the bundler but before
-  // the DependencyWatcher is created, we'll miss it. An even worse problem is
-  // that on OSX HFS+, mtime resolution is only one second, so if a file is
-  // written twice in a second the bundler might get the first version and never
-  // notice the second change! So, in a second, we'll do a one-time scan to
-  // check the hash of each file against what the bundler told us we should see.
-  //
-  // This will still miss files that are newly added during bundling, and there
-  // are also race conditions where the bundler may calculate some hashes via a
-  // separate read than the read that actually was used in bundling... but it's
-  // close.
-  setTimeout(function() {
-    _.each(deps.hashes, function (hash, filepath) {
-      fs.readFile(filepath, function (error, contents) {
-        // Fire if the file was deleted or changed contents.
-        if (error || bundler.sha1(contents) !== hash)
-          self._fire();
-      });
-    });
-  }, 1000);
-};
-
-_.extend(DependencyWatcher.prototype, {
-  // stop monitoring
-  destroy: function () {
-    var self = this;
-    self.onChange = null;
-    for (var filepath in self.watches)
-      self.watches[filepath](); // unwatch
-    self.watches = {};
-  },
-
-  _fire: function () {
-    var self = this;
-    if (self.onChange) {
-      var f = self.onChange;
-      self.onChange = null;
-      f();
-      self.destroy();
-    }
-  },
-
-  // initial is true on the inital scan, to suppress notifications
-  _scan: function (initial, filepath) {
-    var self = this;
-
-    if (self._isExcluded(filepath))
-      return false;
-
-    try {
-      var stats = fs.lstatSync(filepath);
-    } catch (e) {
-      // doesn't exist -- leave stats undefined
-    }
-
-    // '+' is necessary to coerce the mtimes from date objects to ints
-    // (unix times) so they can be conveniently tested for equality
-    if (stats && +stats.mtime === +self.mtimes[filepath])
-      // We already know about this file and it hasn't actually
-      // changed. Probably its atime changed.
-      return;
-
-    // If an interesting file has changed, fire!
-    var isInteresting = self._isInteresting(filepath);
-    if (!initial && isInteresting) {
-      self._fire();
-      return;
-    }
-
-    if (!stats) {
-      // A directory (or an uninteresting file) was removed
-      var unwatch = self.watches[filepath];
-      unwatch && unwatch();
-      delete self.watches[filepath];
-      delete self.lastContents[filepath];
-      delete self.mtimes[filepath];
-      return;
-    }
-
-    // If we're seeing this file or directory for the first time,
-    // monitor it if necessary
-    if (!(filepath in self.watches) &&
-        (isInteresting || stats.isDirectory())) {
-      if (!stats.isDirectory()) {
-        // Intentionally not using fs.watch since it doesn't play well with
-        // vim (https://github.com/joyent/node/issues/3172)
-        fs.watchFile(filepath, {interval: 500}, // poll a lot!
-                     _.bind(self._scan, self, false, filepath));
-        self.watches[filepath] = function() { fs.unwatchFile(filepath); };
-      } else {
-        // fs.watchFile doesn't work for directories (as tested on ubuntu)
-        var watch = fs.watch(filepath, {interval: 500}, // poll a lot!
-                     _.bind(self._scan, self, false, filepath));
-        self.watches[filepath] = function() { watch.close(); };
-      }
-      self.mtimes[filepath] = stats.mtime;
-    }
-
-    // If a directory, recurse into any new files it contains. (We
-    // don't need to check for removed files here, since if we care
-    // about a file, we'll already be monitoring it)
-    if (stats.isDirectory()) {
-      var oldContents = self.lastContents[filepath] || [];
-      var newContents = fs.readdirSync(filepath);
-      var added = _.difference(newContents, oldContents);
-
-      self.lastContents[filepath] = newContents;
-      _.each(added, function (child) {
-        self._scan(initial, path.join(filepath, child));
-      });
-    }
-  },
-
-  // Should we even bother to scan/recurse into this file?
-  _isExcluded: function (filepath) {
-    var self = this;
-
-    // Files we're specifically being asked to scan are never excluded. For
-    // example, files from app packages (that are actually pulled in by their
-    // package.js) are not excluded, but the app packages directory itself is
-    // (so that other files in package directories aren't watched).
-    if (filepath in self.specificFiles)
-      return false;
-
-    if (_.indexOf(self.excludePaths, filepath) !== -1)
-      return true;
-
-    var excludedByPattern = _.any(self.excludePatterns, function (regexp) {
-      return path.basename(filepath).match(regexp);
-    });
-
-    return excludedByPattern;
-  },
-
-  // Should we fire if this file changes?
-  _isInteresting: function (filepath) {
-    var self = this;
-
-    if (self._isExcluded(filepath))
-      return false;
-
-    var inAnyDir = function (dirs) {
-      return _.any(dirs, function (dir) {
-        return filepath.slice(0, dir.length) === dir;
-      });
-    };
-
-    // Specific, individual files that we want to monitor
-    if (filepath in self.specificFiles)
-      return true;
-
-    // Source files
-    if (inAnyDir(self.sourceDirs) &&
-        files.findExtension(self.sourceExtensions, filepath))
-      return true;
-
-    // Other directories and files that are included
-    if (inAnyDir(self.bulkDirs))
-      return true;
-
-    return false;
-  }
-});
-
 ///////////////////////////////////////////////////////////////////////////////
 
 // Also used by "meteor deploy" in meteor.js.
@@ -576,7 +338,7 @@ exports.getSettings = function (filename) {
 
 // This function never returns and will call process.exit() if it
 // can't continue. If you change this, remember to call
-// watcher.destroy() as appropriate.
+// watcher.stop() as appropriate.
 //
 // context is as created in meteor.js.
 // options include: port, minify, once, settingsFile, testPackages
@@ -638,22 +400,18 @@ exports.run = function (context, options) {
       return;
 
     if (watcher)
-      watcher.destroy();
+      watcher.stop();
 
-    var relativeFiles;
-    if (options.settingsFile) {
-      relativeFiles = [options.settingsFile];
-    }
-
-    var onChange = function () {
-      if (Status.crashing)
-        logToClients({'system': "=> Modified -- restarting."});
-      Status.reset();
-      restartServer();
-    };
-
-    watcher = new DependencyWatcher(dependencyInfo, context.appDir,
-                                    relativeFiles, context.library, onChange);
+    watcher = new watch.Watcher({
+      files: dependencyInfo.files,
+      directories: dependencyInfo.directories,
+      onChange: function () {
+        if (Status.crashing)
+          logToClients({'system': "=> Modified -- restarting."});
+        Status.reset();
+        restartServer();
+      }
+    });
   };
 
   // Using `inFiber` since bundling can yield when loading a manifest
@@ -690,9 +448,9 @@ exports.run = function (context, options) {
     // Make the library reload packages, in case they've changed
     context.library.flush();
 
+    // Bundle up the app
     var bundleResult = bundler.bundle(context.appDir, bundlePath, bundleOpts);
-    startWatching(bundleResult.dependencyInfo);
-
+    var dependencyInfo = bundleResult.dependencyInfo;
     if (bundleResult.errors) {
       logToClients({stdout: "=> Errors prevented startup:\n"});
       _.each(bundleResult.errors, function (e) {
@@ -703,10 +461,52 @@ exports.run = function (context, options) {
       return;
     }
 
+    // Read the settings file, if any
+    var settings = null;
+    if (options.settingsFile) {
+      settings = exports.getSettings(options.settingsFile);
+
+      // 'getSettings' will collapse any amount of whitespace down to
+      // the empty string, so to get the sha1 for change monitoring,
+      // we need to reread the file, which creates a tiny race
+      // condition (not a big enough deal to care about right now.)
+      var settingsHash =
+        bundler.sha1(fs.readFileSync(options.settingsFile, "utf8"));
+
+      // Reload if the setting file changes
+      dependencyInfo.files[path.resolve(options.settingsFile)] =
+        settingsHash;
+    }
+
+    // If using a warehouse, don't do dependency monitoring on any of
+    // the files that are in the warehouse. You should not be editing
+    // those files directly.
+    if (files.usesWarehouse()) {
+      var warehouseDir = path.resolve(warehouse.getWarehouseDir());
+      var filterKeys = function (obj) {
+        _.each(_.keys(obj), function (k) {
+          k = path.resolve(k);
+          if (warehouseDir.length <= k.length &&
+              k.substr(0, warehouseDir.length) === warehouseDir)
+            delete obj[k];
+        });
+      };
+      filterKeys(dependencyInfo.files);
+      filterKeys(dependencyInfo.directories);
+    }
+
+    // Start watching for changes for files. There's no hurry to call
+    // this, since dependencyInfo contains a snapshot of the state of
+    // the world at the time of bundling, in the form of hashes and
+    // lists of matching files in each directory.
+    startWatching(dependencyInfo);
+
+    // Start the server
     Status.running = true;
 
     if (firstRun) {
-      process.stdout.write("=> Meteor server running on: http://localhost:" + outerPort + "/\n");
+      process.stdout.write("=> Meteor server running on: http://localhost:" +
+                           outerPort + "/\n");
       firstRun = false;
       lastThingThatPrintedWasRestartMessage = false;
     } else {
@@ -745,7 +545,7 @@ exports.run = function (context, options) {
         requestQueue = [];
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
-      settingsFile: options.settingsFile
+      settings: settings
     });
   });
 

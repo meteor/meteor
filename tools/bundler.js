@@ -20,16 +20,6 @@
 //       "size": size in bytes
 //       "hash": sha1 hash of the contents
 //     }
-// /dependencies.json: files to monitor for changes in development mode
-//  - extensions [list of extensions registered for user code, with dots]
-//  - packages [map from package name to list of paths relative to the package]
-//  - core [paths relative to 'app' in meteor tree]
-//  - app [paths relative to top of app tree]
-//  - exclude [list of regexps for files to ignore (everywhere)]
-//  (for 'core' and 'apps', if a directory is given, you should
-//  monitor everything in the subtree under it minus the stuff that
-//  matches exclude, and if it doesn't exist yet, you should watch for
-//  it to appear)
 //
 // The application launcher is expected to execute /main.js with node, setting
 // various environment variables (such as PORT and MONGO_URL). The enclosed node
@@ -39,7 +29,6 @@ var path = require('path');
 var files = require(path.join(__dirname, 'files.js'));
 var packages = require(path.join(__dirname, 'packages.js'));
 var linker = require(path.join(__dirname, 'linker.js'));
-var warehouse = require(path.join(__dirname, 'warehouse.js'));
 var crypto = require('crypto');
 var fs = require('fs');
 var uglify = require('uglify-js');
@@ -437,6 +426,18 @@ _.extend(Bundle.prototype, {
     return ret;
   },
 
+  _addDependency: function (filePath, hash, onlyIfExists) {
+    var self = this;
+    filePath = path.resolve(filePath);
+
+    if (onlyIfExists && ! fs.existsSync(filePath))
+      return;
+
+    if (! hash)
+      hash = sha1(fs.readFileSync(filePath));
+    self.dependencyInfo.files[filePath] = hash;
+  },
+
   // nodeModulesMode should be "skip", "symlink", or "copy"
   // computes self.dependencyInfo
   writeToDirectory: function (outputPath, projectDir, nodeModulesMode) {
@@ -444,18 +445,20 @@ _.extend(Bundle.prototype, {
     var appJson = {};
     var isApp = files.is_app_dir(projectDir);
 
-    self.dependencyInfo = {core: [], app: [], packages: {}, hashes: {}};
+    self.dependencyInfo = {files: {}, directories: {}};
 
     if (isApp) {
-      self.dependencyInfo.app.push(path.join('.meteor', 'packages'));
-      self.dependencyInfo.app.push(path.join('.meteor', 'release'));
+      self._addDependency(path.join(projectDir, '.meteor', 'packages'));
+      // Not sure why 'release' doesn't exist in a test run, but roll with it
+      self._addDependency(path.join(projectDir, '.meteor', 'release'), null,
+                          true);
     }
 
     // --- Set up build area ---
 
     // foo/bar => foo/.build.bar
     var buildPath = path.join(path.dirname(outputPath),
-                               '.build.' + path.basename(outputPath));
+                              '.build.' + path.basename(outputPath));
 
     // XXX cleaner error handling. don't make the humans read an
     // exception (and, make suitable for use in automated systems)
@@ -464,10 +467,16 @@ _.extend(Bundle.prototype, {
 
     // --- Core runner code ---
 
-    files.cp_r(path.join(__dirname, 'server'),
-               path.join(buildPath, 'server'), {ignore: ignoreFiles});
-    // XXX we don't do content-based dependency watching for these files
-    self.dependencyInfo.core.push('server');
+    var serverPath = path.join(__dirname, 'server');
+    var copied = files.cp_r(serverPath, path.join(buildPath, 'server'),
+                            {ignore: ignoreFiles});
+    _.each(copied, function (relPath) {
+      self._addDependency(path.join(serverPath, relPath));
+    });
+    self.dependencyInfo.directories[serverPath] = {
+      include: [/.?/],
+      exclude: ignoreFiles
+    };
 
     // --- Third party dependencies ---
 
@@ -508,22 +517,28 @@ _.extend(Bundle.prototype, {
     };
 
     if (isApp) {
-      if (fs.existsSync(path.join(projectDir, 'public'))) {
-        var copied =
-          files.cp_r(path.join(projectDir, 'public'),
-                     path.join(buildPath, 'static'), {ignore: ignoreFiles});
+      var publicDir = path.join(projectDir, 'public');
 
-        _.each(copied, function (fsRelativePath) {
-          var filepath = path.join(buildPath, 'static', fsRelativePath);
+      if (fs.existsSync(publicDir)) {
+        var copied =
+          files.cp_r(publicDir, path.join(buildPath, 'static'),
+                     {ignore: ignoreFiles});
+
+        _.each(copied, function (relPath) {
+          var filepath = path.join(publicDir, relPath);
           var contents = fs.readFileSync(filepath);
           var hash = sha1(contents);
-          self.dependencyInfo.hashes[
-            path.join(projectDir, 'public', fsRelativePath)] = hash;
-          addClientFileToManifest(fsRelativePath, contents, 'static', false,
+
+          self._addDependency(filepath, hash);
+          addClientFileToManifest(relPath, contents, 'static', false,
                                   undefined, hash);
         });
       }
-      self.dependencyInfo.app.push('public');
+
+      self.dependencyInfo.directories[publicDir] = {
+        include: [/.?/],
+        exclude: ignoreFiles
+      };
     }
 
     // Add cache busting query param if needed, and
@@ -603,7 +618,7 @@ _.extend(Bundle.prototype, {
       where: 'internal',
       hash: sha1(appHtml)
     });
-    self.dependencyInfo.core.push(path.join('tools', 'app.html.in'));
+    self._addDependency(path.join(__dirname, 'app.html.in'));
 
     // --- Documentation, and running from the command line ---
 
@@ -626,29 +641,34 @@ _.extend(Bundle.prototype, {
 "\n" +
 "Find out more about Meteor at meteor.com.\n");
 
+    // --- Source file dependencies ---
+
+    _.each(_.values(self.slices), function (slice) {
+      _.extend(self.dependencyInfo.files, slice.pkg.dependencyFileShas);
+    });
+
+    if (isApp) {
+      // Include files in the app that match any file extension
+      // handled by any package that the app uses
+      self.dependencyInfo.directories[path.resolve(projectDir)] = {
+        include: _.map(self._appExtensions(), function (ext) {
+          return new RegExp('\\.' + ext.slice(1) + "$");
+        }),
+        exclude: ignoreFiles
+      };
+      // Exclude the packages directory in an app, since packages
+      // explicitly call out the files they use
+      self.dependencyInfo.directories[path.resolve(projectDir, 'packages')] = {
+        exclude: [/.?/]
+      };
+      // Exclude .meteor/local and everything under it
+      self.dependencyInfo.directories[
+        path.resolve(projectDir, '.meteor', 'local')] = { exclude: [/.?/] };
+    }
+
     // --- Metadata ---
 
     appJson.manifest = self.manifest;
-
-    self.dependencyInfo.extensions = self._appExtensions();
-    self.dependencyInfo.exclude = _.pluck(ignoreFiles, 'source');
-    self.dependencyInfo.packages = {};
-    _.each(_.values(self.slices), function (slice) {
-      // Data for the mtime dependency watcher. We only record data here for
-      // packages, not apps, since apps watch the whole directory for added
-      // files.
-      if (slice.pkg.name) {
-        self.dependencyInfo.packages[slice.pkg.name] = _.union(
-          self.dependencyInfo.packages[slice.pkg.name] || [],
-          _.keys(slice.pkg.dependencyFileShas)
-        );
-      }
-      // Data for the contents dependency watcher check.
-      _.each(slice.pkg.dependencyFileShas, function (sha, relPath) {
-        self.dependencyInfo.hashes[
-          path.join(slice.pkg.sourceRoot, relPath)] = sha;
-      });
-    });
 
     if (self.releaseStamp && self.releaseStamp !== 'none')
       appJson.release = self.releaseStamp;
@@ -680,16 +700,8 @@ _.extend(Bundle.prototype, {
  * - errors: An array of strings, or falsy if bundling succeeded.
  * - dependencyInfo: Information about files and paths that were
  *   inputs into the bundle and that we may wish to monitor for
- *   changes if we are developing interactively.
- *    - extensions: list of extensions registered for user code, with dots]
- *    - packages: map from package name to list of paths relative to the package
- *    - core: paths relative to 'app' in meteor tree
- *    - app: paths relative to top of app tree
- *    - exclude: list of regexps for files to ignore (everywhere)
- *    (for 'core' and 'apps', if a directory is given, you should
- *    monitor everything in the subtree under it minus the stuff that
- *    matches exclude, and if it doesn't exist yet, you should watch
- *    for it to appear)
+ *   changes when developing interactively. It has two keys, 'files'
+ *   and 'directories', in the format expected by watch.Watcher.
  *
  * On failure ('errors' is truthy), no bundle will be output (in fact,
  * outputPath will have been removed if it existed.)

@@ -188,6 +188,18 @@ var Package = function (library) {
 };
 
 _.extend(Package.prototype, {
+  // Add a dependency (in the sense of dependencyFileShas) on a
+  // file. If hash is supplied it should be the sha1 of the file
+  // contents. If omitted it will be computed. relPath will be
+  // resolved to an absolute path (relative to self.sourceRoot.)
+  _addDependency: function (relPath, contents) {
+    var self = this;
+    var absPath = path.resolve(self.sourceRoot, relPath);
+    if (! contents)
+      contents = fs.readFileSync(absPath);
+    self.dependencyFileShas[absPath] = bundler.sha1(contents);
+  },
+
   // loads a package's package.js file into memory, using
   // runInThisContext. Wraps the contents of package.js in a closure,
   // supplying pseudo-globals 'Package' and 'Npm'.
@@ -218,8 +230,7 @@ _.extend(Package.prototype, {
     // steer clear
     var func = require('vm').runInThisContext(wrapped, fullpath, true);
     func(self.packageFacade, self.npmFacade);
-
-    self.dependencyFileShas['package.js'] = bundler.sha1(code);
+    self._addDependency("package.js", code);
 
     // source files used
     var sources = {use: {client: [], server: []},
@@ -402,9 +413,7 @@ _.extend(Package.prototype, {
                     'spark', 'templating', 'startup', 'past'];
     packages = _.union(packages, project.get_packages(appDir));
     // XXX this read has a race with the actual read that is used
-    var packagesFile = path.join(appDir, '.meteor', 'packages');
-    self.dependencyFileShas[path.join('.meteor', 'packages')] =
-      bundler.sha1(fs.readFileSync(packagesFile));
+    self._addDependency(path.join(appDir, '.meteor', 'packages'));
 
     _.each(["use", "test"], function (role) {
       _.each(["client", "server"], function (where) {
@@ -502,10 +511,11 @@ _.extend(Package.prototype, {
         };
 
         _.each(self.sources[role][where], function (relPath) {
+          var absPath = path.resolve(self.sourceRoot, relPath);
           var ext = path.extname(relPath).substr(1);
           var handler = self._getSourceHandler(role, where, ext);
-          var contents = fs.readFileSync(path.join(self.sourceRoot, relPath));
-          self.dependencyFileShas[relPath] = bundler.sha1(contents);
+          var contents = fs.readFileSync(absPath);
+          self._addDependency(absPath, contents);
 
           if (! handler) {
             // If we don't have an extension handler, serve this file
