@@ -48,7 +48,7 @@ var _ = require('underscore');
 var project = require(path.join(__dirname, 'project.js'));
 
 // files to ignore when bundling. node has no globs, so use regexps
-var ignore_files = [
+var ignoreFiles = [
     /~$/, /^\.#/, /^#.*#$/,
     /^\.DS_Store$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/,
     /^\.meteor$/, /* avoids scanning N^2 files when bundling all packages */
@@ -115,7 +115,7 @@ var Bundle = function (options) {
 
   // Map from environment, to path name (server relative), to contents
   // of file as buffer.
-  self.files = {client: {}, client_cacheable: {}, server: {}};
+  self.files = {client: {}, clientCacheable: {}, server: {}};
 
   // See description of the manifest at the top.
   // Note that in contrast to self.js etc., the manifest only includes
@@ -355,7 +355,7 @@ _.extend(Bundle.prototype, {
       var contents = new Buffer(finalCode);
       var hash = sha1(contents);
       var name = '/' + hash + '.' + type;
-      self.files.client_cacheable[name] = contents;
+      self.files.clientCacheable[name] = contents;
       self.manifest.push({
         path: 'static_cacheable' + name,
         where: 'client',
@@ -369,10 +369,10 @@ _.extend(Bundle.prototype, {
 
     /// Javascript
     var codeParts = [];
-    _.each(self.js.client, function (js_path) {
-      codeParts.push(self.files.client[js_path].toString('utf8'));
+    _.each(self.js.client, function (jsPath) {
+      codeParts.push(self.files.client[jsPath].toString('utf8'));
 
-      delete self.files.client[js_path];
+      delete self.files.client[jsPath];
     });
     self.js.client = [];
 
@@ -383,18 +383,18 @@ _.extend(Bundle.prototype, {
     addFile('js', finalCode);
 
     /// CSS
-    var css_concat = "";
-    _.each(self.css, function (css_path) {
-      var css_data = self.files.client[css_path];
-      css_concat = css_concat + "\n" +  css_data.toString('utf8');
+    var cssConcat = "";
+    _.each(self.css, function (cssPath) {
+      var cssData = self.files.client[cssPath];
+      cssConcat = cssConcat + "\n" + cssData.toString('utf8');
 
-      delete self.files.client[css_path];
+      delete self.files.client[cssPath];
     });
     self.css = [];
 
-    var final_css = cleanCSS.process(css_concat);
+    var finalCss = cleanCSS.process(cssConcat);
 
-    addFile('css', final_css);
+    addFile('css', finalCss);
   },
 
   _clientUrlsFor: function (type) {
@@ -407,7 +407,7 @@ _.extend(Bundle.prototype, {
     );
   },
 
-  _generate_app_html: function () {
+  _generateAppHtml: function () {
     var self = this;
 
     // XXX we don't do content-based dependency watching for this file
@@ -423,7 +423,7 @@ _.extend(Bundle.prototype, {
 
   // The extensions registered by the application package, if
   // any. Kind of a hack.
-  _app_extensions: function () {
+  _appExtensions: function () {
     var self = this;
     var ret = [];
 
@@ -439,14 +439,14 @@ _.extend(Bundle.prototype, {
 
   // nodeModulesMode should be "skip", "symlink", or "copy"
   // computes self.dependencyInfo
-  write_to_directory: function (output_path, project_dir, nodeModulesMode) {
+  writeToDirectory: function (outputPath, projectDir, nodeModulesMode) {
     var self = this;
-    var app_json = {};
-    var is_app = files.is_app_dir(project_dir);
+    var appJson = {};
+    var isApp = files.is_app_dir(projectDir);
 
     self.dependencyInfo = {core: [], app: [], packages: {}, hashes: {}};
 
-    if (is_app) {
+    if (isApp) {
       self.dependencyInfo.app.push(path.join('.meteor', 'packages'));
       self.dependencyInfo.app.push(path.join('.meteor', 'release'));
     }
@@ -454,18 +454,18 @@ _.extend(Bundle.prototype, {
     // --- Set up build area ---
 
     // foo/bar => foo/.build.bar
-    var build_path = path.join(path.dirname(output_path),
-                               '.build.' + path.basename(output_path));
+    var buildPath = path.join(path.dirname(outputPath),
+                               '.build.' + path.basename(outputPath));
 
     // XXX cleaner error handling. don't make the humans read an
     // exception (and, make suitable for use in automated systems)
-    files.rm_recursive(build_path);
-    files.mkdir_p(build_path, 0755);
+    files.rm_recursive(buildPath);
+    files.mkdir_p(buildPath, 0755);
 
     // --- Core runner code ---
 
     files.cp_r(path.join(__dirname, 'server'),
-               path.join(build_path, 'server'), {ignore: ignore_files});
+               path.join(buildPath, 'server'), {ignore: ignoreFiles});
     // XXX we don't do content-based dependency watching for these files
     self.dependencyInfo.core.push('server');
 
@@ -473,16 +473,16 @@ _.extend(Bundle.prototype, {
 
     if (nodeModulesMode === "symlink")
       fs.symlinkSync(path.join(files.get_dev_bundle(), 'lib', 'node_modules'),
-                     path.join(build_path, 'server', 'node_modules'));
+                     path.join(buildPath, 'server', 'node_modules'));
     else if (nodeModulesMode === "copy")
       files.cp_r(path.join(files.get_dev_bundle(), 'lib', 'node_modules'),
-                 path.join(build_path, 'server', 'node_modules'),
-                 {ignore: ignore_files});
+                 path.join(buildPath, 'server', 'node_modules'),
+                 {ignore: ignoreFiles});
     else
       /* nodeModulesMode === "skip" */;
 
     fs.writeFileSync(
-      path.join(build_path, 'server', '.bundle_version.txt'),
+      path.join(buildPath, 'server', '.bundle_version.txt'),
       fs.readFileSync(
         path.join(files.get_dev_bundle(), '.bundle_version.txt')));
 
@@ -507,19 +507,19 @@ _.extend(Bundle.prototype, {
       });
     };
 
-    if (is_app) {
-      if (fs.existsSync(path.join(project_dir, 'public'))) {
+    if (isApp) {
+      if (fs.existsSync(path.join(projectDir, 'public'))) {
         var copied =
-          files.cp_r(path.join(project_dir, 'public'),
-                     path.join(build_path, 'static'), {ignore: ignore_files});
+          files.cp_r(path.join(projectDir, 'public'),
+                     path.join(buildPath, 'static'), {ignore: ignoreFiles});
 
-        _.each(copied, function (fs_relative_path) {
-          var filepath = path.join(build_path, 'static', fs_relative_path);
+        _.each(copied, function (fsRelativePath) {
+          var filepath = path.join(buildPath, 'static', fsRelativePath);
           var contents = fs.readFileSync(filepath);
           var hash = sha1(contents);
           self.dependencyInfo.hashes[
-            path.join(project_dir, 'public', fs_relative_path)] = hash;
-          addClientFileToManifest(fs_relative_path, contents, 'static', false,
+            path.join(projectDir, 'public', fsRelativePath)] = hash;
+          addClientFileToManifest(fsRelativePath, contents, 'static', false,
                                   undefined, hash);
         });
       }
@@ -530,8 +530,8 @@ _.extend(Bundle.prototype, {
     // add to manifest.
     var processClientCode = function (type, file) {
       var contents, url, hash;
-      if (file in self.files.client_cacheable) {
-        contents = self.files.client_cacheable[file];
+      if (file in self.files.clientCacheable) {
+        contents = self.files.clientCacheable[file];
         url = file;
       }
       else if (file in self.files.client) {
@@ -539,7 +539,7 @@ _.extend(Bundle.prototype, {
         // cache busting query parameter.
         contents = self.files.client[file];
         delete self.files.client[file];
-        self.files.client_cacheable[file] = contents;
+        self.files.clientCacheable[file] = contents;
         hash = sha1(contents);
         url = file + '?' + hash;
       }
@@ -553,34 +553,34 @@ _.extend(Bundle.prototype, {
     _.each(self.css,       function (file) { processClientCode('css', file); });
 
     // -- Client code --
-    for (var rel_path in self.files.client) {
-      var full_path = path.join(build_path, 'static', rel_path);
-      files.mkdir_p(path.dirname(full_path), 0755);
-      fs.writeFileSync(full_path, self.files.client[rel_path]);
-      addClientFileToManifest(rel_path, self.files.client[rel_path], 'static', false);
+    for (var relPath in self.files.client) {
+      var fullPath = path.join(buildPath, 'static', relPath);
+      files.mkdir_p(path.dirname(fullPath), 0755);
+      fs.writeFileSync(fullPath, self.files.client[relPath]);
+      addClientFileToManifest(relPath, self.files.client[relPath], 'static', false);
     }
 
     // -- Client cache forever code --
-    for (var rel_path in self.files.client_cacheable) {
-      var full_path = path.join(build_path, 'static_cacheable', rel_path);
-      files.mkdir_p(path.dirname(full_path), 0755);
-      fs.writeFileSync(full_path, self.files.client_cacheable[rel_path]);
+    for (var relPath in self.files.clientCacheable) {
+      var fullPath = path.join(buildPath, 'static_cacheable', relPath);
+      files.mkdir_p(path.dirname(fullPath), 0755);
+      fs.writeFileSync(fullPath, self.files.clientCacheable[relPath]);
     }
 
-    app_json.load = [];
-    files.mkdir_p(path.join(build_path, 'app'), 0755);
-    for (var rel_path in self.files.server) {
-      var path_in_bundle = path.join('app', rel_path);
-      var full_path = path.join(build_path, path_in_bundle);
-      files.mkdir_p(path.dirname(full_path), 0755);
-      fs.writeFileSync(full_path, self.files.server[rel_path]);
-      app_json.load.push(path_in_bundle);
+    appJson.load = [];
+    files.mkdir_p(path.join(buildPath, 'app'), 0755);
+    for (var relPath in self.files.server) {
+      var pathInBundle = path.join('app', relPath);
+      var fullPath = path.join(buildPath, pathInBundle);
+      files.mkdir_p(path.dirname(fullPath), 0755);
+      fs.writeFileSync(fullPath, self.files.server[relPath]);
+      appJson.load.push(pathInBundle);
     }
 
     // `node_modules` directories for packages
     _.each(self.nodeModulesDirs, function (sourceNodeModulesDir, packageName) {
-      files.mkdir_p(path.join(build_path, 'npm'));
-      var buildModulesPath = path.join(build_path, 'npm', packageName);
+      files.mkdir_p(path.join(buildPath, 'npm'));
+      var buildModulesPath = path.join(buildPath, 'npm', packageName);
       // XXX we should consider supporting bundle time-only npm dependencies
       // which don't need to be pushed to the server.
       if (nodeModulesMode === 'symlink') {
@@ -596,21 +596,21 @@ _.extend(Bundle.prototype, {
       }
     });
 
-    var app_html = self._generate_app_html();
-    fs.writeFileSync(path.join(build_path, 'app.html'), app_html);
+    var appHtml = self._generateAppHtml();
+    fs.writeFileSync(path.join(buildPath, 'app.html'), appHtml);
     self.manifest.push({
       path: 'app.html',
       where: 'internal',
-      hash: sha1(app_html)
+      hash: sha1(appHtml)
     });
     self.dependencyInfo.core.push(path.join('tools', 'app.html.in'));
 
     // --- Documentation, and running from the command line ---
 
-    fs.writeFileSync(path.join(build_path, 'main.js'),
+    fs.writeFileSync(path.join(buildPath, 'main.js'),
 "require('./server/server.js');\n");
 
-    fs.writeFileSync(path.join(build_path, 'README'),
+    fs.writeFileSync(path.join(buildPath, 'README'),
 "This is a Meteor application bundle. It has only one dependency,\n" +
 "node.js (with the 'fibers' package). To run the application:\n" +
 "\n" +
@@ -628,10 +628,10 @@ _.extend(Bundle.prototype, {
 
     // --- Metadata ---
 
-    app_json.manifest = self.manifest;
+    appJson.manifest = self.manifest;
 
-    self.dependencyInfo.extensions = self._app_extensions();
-    self.dependencyInfo.exclude = _.pluck(ignore_files, 'source');
+    self.dependencyInfo.extensions = self._appExtensions();
+    self.dependencyInfo.exclude = _.pluck(ignoreFiles, 'source');
     self.dependencyInfo.packages = {};
     _.each(_.values(self.slices), function (slice) {
       // Data for the mtime dependency watcher. We only record data here for
@@ -646,21 +646,21 @@ _.extend(Bundle.prototype, {
       // Data for the contents dependency watcher check.
       _.each(slice.pkg.dependencyFileShas, function (sha, relPath) {
         self.dependencyInfo.hashes[
-          path.join(slice.pkg.source_root, relPath)] = sha;
+          path.join(slice.pkg.sourceRoot, relPath)] = sha;
       });
     });
 
     if (self.releaseStamp && self.releaseStamp !== 'none')
-      app_json.release = self.releaseStamp;
+      appJson.release = self.releaseStamp;
 
-    fs.writeFileSync(path.join(build_path, 'app.json'),
-                     JSON.stringify(app_json, null, 2));
+    fs.writeFileSync(path.join(buildPath, 'app.json'),
+                     JSON.stringify(appJson, null, 2));
 
     // --- Move into place ---
 
     // XXX cleaner error handling (no exceptions)
-    files.rm_recursive(output_path);
-    fs.renameSync(build_path, output_path);
+    files.rm_recursive(outputPath);
+    fs.renameSync(buildPath, outputPath);
   }
 
 });
@@ -670,8 +670,8 @@ _.extend(Bundle.prototype, {
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
- * Take the Meteor app in project_dir, and compile it into a bundle at
- * output_path. output_path will be created if it doesn't exist (it
+ * Take the Meteor app in projectDir, and compile it into a bundle at
+ * outputPath. outputPath will be created if it doesn't exist (it
  * will be a directory), and removed if it does exist. The release
  * version is *not* read from the app's .meteor/release file. Instead,
  * it must be passed in as an option.
@@ -692,7 +692,7 @@ _.extend(Bundle.prototype, {
  *    for it to appear)
  *
  * On failure ('errors' is truthy), no bundle will be output (in fact,
- * output_path will have been removed if it existed.)
+ * outputPath will have been removed if it existed.)
  *
  * options include:
  * - minify : minify the CSS and JS assets
@@ -719,7 +719,7 @@ _.extend(Bundle.prototype, {
  *   "meteor test-packages" in an app, appDir is the test-runner-app
  *   but library.appDir is the app the user is in.
  */
-exports.bundle = function (app_dir, output_path, options) {
+exports.bundle = function (appDir, outputPath, options) {
   if (!options)
     throw new Error("Must pass options");
   if (!options.nodeModulesMode)
@@ -739,7 +739,7 @@ exports.bundle = function (app_dir, output_path, options) {
     });
 
     // Create a Package object that represents the app
-    var app = library.getForApp(app_dir, ignore_files);
+    var app = library.getForApp(appDir, ignoreFiles);
 
     // Populate the list of slices to load
     bundle.determineLoadOrder({
@@ -760,14 +760,14 @@ exports.bundle = function (app_dir, output_path, options) {
       bundle.minify();
 
     // Write to disk
-    bundle.write_to_directory(output_path, app_dir, options.nodeModulesMode);
+    bundle.writeToDirectory(outputPath, appDir, options.nodeModulesMode);
 
     return {
       errors: false,
       dependencyInfo: bundle.dependencyInfo
     };
   } catch (err) {
-    files.rm_recursive(output_path);
+    files.rm_recursive(outputPath);
     return {
       errors: ["Exception while bundling application:\n" + (err.stack || err)]
     };

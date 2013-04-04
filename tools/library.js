@@ -72,13 +72,13 @@ _.extend(Library.prototype, {
     return pkg;
   },
 
-  // get a package that represents an app. (ignore_files is optional
+  // get a package that represents an app. (ignoreFiles is optional
   // and if given, it should be an array of regexps for filenames to
   // ignore when scanning for source files.)
-  getForApp: function (app_dir, ignore_files) {
+  getForApp: function (appDir, ignoreFiles) {
     var self = this;
     var pkg = new packages.Package(self);
-    pkg.initFromAppDir(app_dir, ignore_files || []);
+    pkg.initFromAppDir(appDir, ignoreFiles || []);
     return pkg;
   },
 
@@ -195,7 +195,7 @@ _.extend(exports, {
   // returns a pretty list suitable for showing to the user. input is
   // a list of package objects, each of which must have a name (not be
   // an application package.)
-  format_list: function (pkgs) {
+  formatList: function (pkgs) {
     var longest = '';
     _.each(pkgs, function (pkg) {
       if (pkg.name.length > longest.length)

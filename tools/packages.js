@@ -7,19 +7,19 @@ var meteorNpm = require('./meteor_npm.js');
 var linker = require(path.join(__dirname, 'linker.js'));
 var fs = require('fs');
 
-var next_package_id = 1;
+var nextPackageId = 1;
 var Package = function (library) {
   var self = this;
 
   // Fields set by init_*:
   // name: package name, or null for an app pseudo-package or collection
-  // source_root: base directory for resolving source files, null for collection
-  // serve_root: base directory for serving files, null for collection
+  // sourceRoot: base directory for resolving source files, null for collection
+  // serveRoot: base directory for serving files, null for collection
 
   // A unique ID (guaranteed to not be reused in this process -- if
   // the package is reloaded, it will get a different id the second
   // time)
-  self.id = next_package_id++;
+  self.id = nextPackageId++;
 
   // Package library that should be used to resolve this package's
   // dependencies
@@ -148,7 +148,7 @@ var Package = function (library) {
     // the top-level meteor.js script rather than the location of
     // package.js
     _require: function(filename) {
-      return require(path.join(self.source_root, filename));
+      return require(path.join(self.sourceRoot, filename));
     }
   };
 
@@ -172,7 +172,7 @@ var Package = function (library) {
     },
 
     require: function (name) {
-      var nodeModuleDir = path.join(self.source_root, '.npm', 'node_modules', name);
+      var nodeModuleDir = path.join(self.sourceRoot, '.npm', 'node_modules', name);
       if (fs.existsSync(nodeModuleDir)) {
         return require(nodeModuleDir);
       } else {
@@ -194,10 +194,10 @@ _.extend(Package.prototype, {
   initFromPackageDir: function (name, dir) {
     var self = this;
     self.name = name;
-    self.source_root = dir;
-    self.serve_root = path.join(path.sep, 'packages', name);
+    self.sourceRoot = dir;
+    self.serveRoot = path.join(path.sep, 'packages', name);
 
-    if (!fs.existsSync(self.source_root))
+    if (!fs.existsSync(self.sourceRoot))
       throw new Error("The package named " + self.name + " does not exist.");
 
     // We use string concatenation to load package.js rather than
@@ -205,7 +205,7 @@ _.extend(Package.prototype, {
     // package API (such as supporting Package.on_use rather than
     // something like Package.current().on_use)
 
-    var fullpath = path.join(self.source_root, 'package.js');
+    var fullpath = path.join(self.sourceRoot, 'package.js');
     var code = fs.readFileSync(fullpath);
     // \n is necessary in case final line is a //-comment
     var wrapped = "(function(Package,Npm){" + code.toString() + "\n})";
@@ -373,25 +373,25 @@ _.extend(Package.prototype, {
     });
   },
 
-  initFromAppDir: function (app_dir, ignore_files) {
+  initFromAppDir: function (appDir, ignoreFiles) {
     var self = this;
     self.name = null;
-    self.source_root = app_dir;
-    self.serve_root = path.sep;
+    self.sourceRoot = appDir;
+    self.serveRoot = path.sep;
 
-    var sources_except = function (role, where, except, tests) {
-      var allSources = self._scanForSources(role, where, ignore_files || []);
+    var sourcesExcept = function (role, where, except, tests) {
+      var allSources = self._scanForSources(role, where, ignoreFiles || []);
       var withoutAppPackages = _.reject(allSources, function (sourcePath) {
         // Skip files that are in app packages. (Directories named "packages"
         // lower in the tree are OK.)
         return sourcePath.match(/^packages\//);
       });
-      var withoutExceptDir = _.reject(withoutAppPackages, function (source_path) {
-        return (path.sep + source_path + path.sep).indexOf(path.sep + except + path.sep) !== -1;
+      var withoutExceptDir = _.reject(withoutAppPackages, function (sourcePath) {
+        return (path.sep + sourcePath + path.sep).indexOf(path.sep + except + path.sep) !== -1;
       });
-      return _.filter(withoutExceptDir, function (source_path) {
-        var is_test = ((path.sep + source_path + path.sep).indexOf(path.sep + 'tests' + path.sep) !== -1);
-        return is_test === (!!tests);
+      return _.filter(withoutExceptDir, function (sourcePath) {
+        var isTest = ((path.sep + sourcePath + path.sep).indexOf(path.sep + 'tests' + path.sep) !== -1);
+        return isTest === (!!tests);
       });
     };
 
@@ -400,9 +400,9 @@ _.extend(Package.prototype, {
     // XXX remove and make everyone explicitly declare all dependencies
     var packages = ['meteor', 'deps', 'session', 'livedata', 'mongo-livedata',
                     'spark', 'templating', 'startup', 'past'];
-    packages = _.union(packages, project.get_packages(app_dir));
+    packages = _.union(packages, project.get_packages(appDir));
     // XXX this read has a race with the actual read that is used
-    var packagesFile = path.join(app_dir, '.meteor', 'packages');
+    var packagesFile = path.join(appDir, '.meteor', 'packages');
     self.dependencyFileShas[path.join('.meteor', 'packages')] =
       bundler.sha1(fs.readFileSync(packagesFile));
 
@@ -421,11 +421,11 @@ _.extend(Package.prototype, {
 
     self.sources = {
       use: {
-        client: sources_except("use", "client", "server"),
-        server: sources_except("use", "server", "client")
+        client: sourcesExcept("use", "client", "server"),
+        server: sourcesExcept("use", "server", "client")
       }, test: {
-        client: sources_except("test", "client", "server", true),
-        server: sources_except("test", "server", "client", true)
+        client: sourcesExcept("test", "client", "server", true),
+        server: sourcesExcept("test", "server", "client", true)
       }
     };
     self.forceExports = {use: {client: [], server: []},
@@ -467,7 +467,7 @@ _.extend(Package.prototype, {
          * "body".)
          */
         var add_resource = function (options) {
-          var source_file = options.source_file || options.path;
+          var sourceFile = options.source_file || options.path;
 
           var data;
           if (options.data) {
@@ -478,9 +478,9 @@ _.extend(Package.prototype, {
               data = new Buffer(data, 'utf8');
             }
           } else {
-            if (!source_file)
+            if (!sourceFile)
               throw new Error("Need either source_file or data");
-            data = fs.readFileSync(source_file);
+            data = fs.readFileSync(sourceFile);
           }
 
           if (options.where && options.where !== where)
@@ -504,7 +504,7 @@ _.extend(Package.prototype, {
         _.each(self.sources[role][where], function (relPath) {
           var ext = path.extname(relPath).substr(1);
           var handler = self._getSourceHandler(role, where, ext);
-          var contents = fs.readFileSync(path.join(self.source_root, relPath));
+          var contents = fs.readFileSync(path.join(self.sourceRoot, relPath));
           self.dependencyFileShas[relPath] = bundler.sha1(contents);
 
           if (! handler) {
@@ -513,15 +513,15 @@ _.extend(Package.prototype, {
             resources.push({
               type: "static",
               data: contents,
-              servePath: path.join(self.serve_root, relPath)
+              servePath: path.join(self.serveRoot, relPath)
             });
             return;
           }
 
           handler({add_resource: add_resource},
                   // XXX take contents instead of a path
-                  path.join(self.source_root, relPath),
-                  path.join(self.serve_root, relPath),
+                  path.join(self.sourceRoot, relPath),
+                  path.join(self.serveRoot, relPath),
                   where);
         });
 
@@ -552,27 +552,27 @@ _.extend(Package.prototype, {
     self.isCompiled = true;
   },
 
-  // Find all files under this.source_root that have an extension we
+  // Find all files under this.sourceRoot that have an extension we
   // recognize, and return them as a list of paths relative to
-  // source_root. Ignore files that match a regexp in the ignore_files
+  // sourceRoot. Ignore files that match a regexp in the ignoreFiles
   // array, if given. As a special case (ugh), push all html files to
   // the head of the list.
   //
   // role should be 'use' or 'test'
   // where should be 'client' or 'server'
-  _scanForSources: function (role, where, ignore_files) {
+  _scanForSources: function (role, where, ignoreFiles) {
     var self = this;
 
     // find everything in tree, sorted depth-first alphabetically.
-    var file_list =
-      files.file_list_sync(self.source_root,
+    var fileList =
+      files.file_list_sync(self.sourceRoot,
                            self.registeredExtensions(role, where));
-    file_list = _.reject(file_list, function (file) {
-      return _.any(ignore_files || [], function (pattern) {
+    fileList = _.reject(fileList, function (file) {
+      return _.any(ignoreFiles || [], function (pattern) {
         return file.match(pattern);
       });
     });
-    file_list.sort(files.sort);
+    fileList.sort(files.sort);
 
     // XXX HUGE HACK --
     // push html (template) files ahead of everything else. this is
@@ -583,20 +583,20 @@ _.extend(Package.prototype, {
     // should probably have a way to request this treatment (load
     // order depedency tags?) .. who knows.
     var htmls = [];
-    _.each(file_list, function (filename) {
+    _.each(fileList, function (filename) {
       if (path.extname(filename) === '.html') {
         htmls.push(filename);
-        file_list = _.reject(file_list, function (f) { return f === filename;});
+        fileList = _.reject(fileList, function (f) { return f === filename;});
       }
     });
-    file_list = htmls.concat(file_list);
+    fileList = htmls.concat(fileList);
 
-    // now make everything relative to source_root
-    var prefix = self.source_root;
+    // now make everything relative to sourceRoot
+    var prefix = self.sourceRoot;
     if (prefix[prefix.length - 1] !== path.sep)
       prefix += path.sep;
 
-    return file_list.map(function (abs) {
+    return fileList.map(function (abs) {
       if (path.relative(prefix, abs).match(/\.\./))
         // XXX audit to make sure it works in all possible symlink
         // scenarios
@@ -626,7 +626,7 @@ _.extend(Package.prototype, {
   },
 
   npmDir: function () {
-    return path.join(this.source_root, '.npm');
+    return path.join(this.sourceRoot, '.npm');
   },
 
   // Return a list of all of the extension that indicate source files
