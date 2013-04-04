@@ -1,42 +1,5 @@
 [
   {
-    "release": "0.6.0-alpha1"
-  },
-  {
-    "release": "0.6.0-alpha2"
-  },
-  {
-    "release": "0.6.0-alpha3"
-  },
-  {
-    "release": "0.6.0-alpha4",
-    "notices": [
-        "Made 'meteor run' more sensitive to file changes during bundler",
-        "runs. Let glasser know if you see any strange behavior related",
-        "to server restarts!"
-    ]
-  },
-  {
-    "release": "0.6.0-rc1"
-  },
-  {
-    "release": "0.6.0-rc2"
-  },
-  {
-    "release": "0.6.0-rc3",
-    "notices": [
-        "This notice is printed when you upgrade an app to 0.6.0-rc3.",
-        "It's not very useful to anybody who isn't testing that",
-        "the message is printed. But somebody is!"
-    ]
-  },
-  {
-    "release": "0.6.0-rc7"
-  },
-  {
-    "release": "0.6.0-rc8"
-  },
-  {
     "release": "0.6.0",
     "notices": [
         "Variables declared with `var` at the outermost level of a JavaScript",

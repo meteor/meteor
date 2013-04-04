@@ -159,10 +159,9 @@ var writeGlobalManifest = function (blessedReleaseName, banner) {
       }
     },
     // The rest is entirely for the sake of pre-Engine Meteor.
-    // XXX update to 0.6.0 when we're ready to release, then NEVER CHANGE AGAIN.
-    version: "0.5.9",
-    deb_version: "0.5.9-1",
-    rpm_version: "0.5.9-1",
+    version: "0.6.0",
+    deb_version: "0.6.0-1",
+    rpm_version: "0.6.0-1",
     urlbase: "https://d3sqy0vbqsdhku.cloudfront.net"
   };
 
