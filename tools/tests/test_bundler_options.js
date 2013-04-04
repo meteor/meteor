@@ -10,13 +10,13 @@ var emptyAppDir = path.join(__dirname, 'empty-app');
 /// TESTS
 ///
 
-var library = new library.Library();
+var lib = new library.Library();
 
 console.log("nodeModules: 'skip'");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
-  var result = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', minify: true, library: library});
-  assert.strictEqual(result.errors, false, errors && errors[0]);
+  var result = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', minify: true, library: lib});
+  assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
 
   // sanity check -- main.js has expected contents.
   assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8").trim(),
@@ -25,7 +25,7 @@ assert.doesNotThrow(function () {
   assert(!fs.existsSync(path.join(tmpOutputDir, "server", "node_modules")));
   // yes package node_modules directory
   assert(fs.lstatSync(path.join(
-    tmpOutputDir, "app", "packages", "livedata", "node_modules"))
+    tmpOutputDir, "npm", "livedata"))
          .isDirectory());
 
   // verify that contents are minified
@@ -37,7 +37,7 @@ assert.doesNotThrow(function () {
 console.log("nodeModules: 'skip', no minify");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
-  var result = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', minify: false, releaseStamp: 'none', library: library});
+  var result = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', minify: false, releaseStamp: 'none', library: lib});
   assert.strictEqual(result.errors, false);
 
   // sanity check -- main.js has expected contents.
@@ -56,7 +56,7 @@ console.log("nodeModules: 'skip', no minify, testPackages: ['meteor']");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
   var result = bundler.bundle(
-    emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', minify: false, testPackages: ['meteor'], releaseStamp: 'none', library: library});
+    emptyAppDir, tmpOutputDir, {nodeModulesMode: 'skip', minify: false, testPackages: ['meteor'], releaseStamp: 'none', library: lib});
   assert.strictEqual(result.errors, false);
 
   // sanity check -- main.js has expected contents.
@@ -64,13 +64,13 @@ assert.doesNotThrow(function () {
                      "require('./server/server.js');");
   // verify that tests for the meteor package are included
   var appHtml = fs.readFileSync(path.join(tmpOutputDir, "app.html"));
-  assert(/src=\"\/packages\/meteor\/url_tests.js/.test(appHtml));
+  assert(/src=\"\/package-tests\/meteor.js/.test(appHtml));
 });
 
 console.log("nodeModules: 'copy'");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
-  var result = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'copy', releaseStamp: 'none', library: library});
+  var result = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'copy', releaseStamp: 'none', library: lib});
   assert.strictEqual(result.errors, false);
 
   // sanity check -- main.js has expected contents.
@@ -85,7 +85,7 @@ assert.doesNotThrow(function () {
 console.log("nodeModules: 'symlink'");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
-  var result = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'symlink', releaseStamp: 'none', library: library});
+  var result = bundler.bundle(emptyAppDir, tmpOutputDir, {nodeModulesMode: 'symlink', releaseStamp: 'none', library: lib});
   assert.strictEqual(result.errors, false);
 
   // sanity check -- main.js has expected contents.
@@ -98,6 +98,6 @@ assert.doesNotThrow(function () {
 
   // package node_modules directory also a symlink
   assert(fs.lstatSync(path.join(
-    tmpOutputDir, "app", "packages", "livedata", "node_modules"))
+    tmpOutputDir, "npm", "livedata"))
          .isSymbolicLink());
 });
