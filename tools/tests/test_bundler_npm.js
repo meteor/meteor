@@ -252,8 +252,8 @@ console.log("bundle multiple apps in parallel using a meteor package dependent o
 // against parallel bundling.  this happens if you are running more
 // than one app at once using a certain package and that package is
 // updated.
-// XXX This doesn't pass if it has to remove a module! eg, move the gzippo test
-//     that is below to above this one. It will fail!
+// (Note that it still can fail if the _renameAlmostAtomically fails due to its
+//  lack of atomicity, but this is relatively rare.)
 assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0', mime: '1.2.7'});
   // rm -rf .npm/node_modules, to make sure installing modules takes some time

@@ -130,8 +130,8 @@ Fiber(function () {
     if (context.appDir) {
       // XXX this is an inelegant place to put these checks, but it is pretty
       // accurate for now: "all the commands that need an app and don't do
-      // something special with releases" (ie, everything but create, help,
-      // logs, mongo SITE, test-packages, and deploy -D).
+      // something special with releases" (ie, everything but create, update,
+      // help, logs, mongo SITE, test-packages, and deploy -D).
       if (!files.usesWarehouse() && context.appReleaseVersion !== 'none') {
         console.log(
           "=> Running Meteor from a checkout -- overrides project version (%s)",
