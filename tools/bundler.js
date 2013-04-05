@@ -1,29 +1,109 @@
-// Bundle contents:
-// main.js [run to start the server]
-// /static [served by node for now]
-// /static_cacheable [cache-forever files, served by node for now]
-// /server [XXX split out into a package]
-//   server.js, .... [contents of tools/server]
-//   node_modules [for now, contents of (dev_bundle)/lib/node_modules]
-// /app.html
-// /app [user code]
-// /app.json: [data for server.js]
-//  - load [list of files to load, relative to root, presumably under /app]
-//  - manifest [list of resources in load order, each consists of an object]:
-//     {
-//       "path": relative path of file in the bundle, normalized to use forward slashes
-//       "where": "client", "internal"  [could also be "server" in future]
-//       "type": "js", "css", or "static"
-//       "cacheable": (client) boolean, is it safe to ask the browser to cache this file
-//       "url": (client) relative url to download the resource, includes cache
-//              busting param if used
-//       "size": size in bytes
-//       "hash": sha1 hash of the contents
-//     }
+// == Site Archive (*.star) file layout (subject to rapid change) ==
 //
-// The application launcher is expected to execute /main.js with node, setting
-// various environment variables (such as PORT and MONGO_URL). The enclosed node
-// application is expected to do the rest, including serving /static.
+// /star.json
+//
+//  - builtBy: human readable banner (eg, "Meteor 0.6.0")
+//
+//  - programs: array of programs in the star, each an object:
+//    - name: short name for program
+//    - arch: architecture that this program targets. Currently it is
+//            "client" or "server" but in the future this will change
+//            to something like "browser.w3c" or "darwin.x86_64".
+//    - path: directory (relative to star.json) containing this program
+//
+// /README: human readable instructions
+//
+// /main.js: script that can be run in node.js to start the site
+//   running in standalone mode (after setting appropriate environment
+//   variables as documented in README)
+//
+// /server/.bundle_version.txt: contains the dev_bundle version that
+//   legacy (read: current) Galaxy version read in order to set
+//   NODE_PATH to point to arch-specific builds of binary node modules
+//   (primarily this is for node-fibers)
+//
+//
+// Conventionally programs will be located at /programs/<name>, but
+// really the build tool can lay out the star however it wants.
+//
+//
+// == Format of a program when arch is "client" ==
+//
+// Standard:
+//
+// /app.json
+//
+//  - page: path to the template for the HTML to serve when a browser
+//    loads a page that is part of the application. In the file
+//    ##HTML_ATTRIBUTES## and ##RUNTIME_CONFIG## will be replaced with
+//    appropriate values at runtime.
+//
+//  - manifest: array of resources to serve with HTTP, each an object:
+//    - path: path of file relative to app.json
+//    - where: "client"
+//    - type: "js", "css", or "static"
+//    - cacheable: is it safe to ask the browser to cache this file (boolean)
+//    - url: relative url to download the resource, includes cache busting
+//        parameter when used
+//    - size: size of file in bytes
+//    - hash: sha1 hash of the file contents
+//    Additionally there will be an entry with where equal to
+//    "internal", path equal to page (above), and hash equal to the
+//    sha1 of page (before replacements.) Currently this is used to
+//    trigger HTML5 appcache reloads at the right time (if the
+//    'appcache' package is being used.)
+//
+//  - static: a path, relative to app.json, to a directory. If the
+//    server is too dumb to read 'manifest', it can just serve all of
+//    the files in this directory (with a relatively short cache
+//    expiry time.)
+//    XXX do not use this. It will go away soon.
+//
+//  - static_cacheable: just like 'static' but resources that can be
+//    cached aggressively (cacheable: true in the manifest)
+//    XXX do not use this. It will go away soon.
+//
+// Convention:
+//
+// page is 'app.html', static is 'static', and staticCacheable is
+// 'static_cacheable'.
+//
+//
+// == Format of a program when arch is "server" ==
+//
+// Standard:
+//
+// /app.json:
+//
+//  - load: array with each item describing a JS file to load at startup:
+//    - path: path of file, relative to app.json
+//    - node_modules: if Npm.require is called from this file, this is
+//      the path (relative to app.json) of the directory that should
+//      be search for npm modules
+//
+//  - client: the client program that should be served up by HTTP,
+//    expressed as a path (relative to app.json) to the *client's*
+//    app.json.
+//
+//  - config: additional framework-specific configuration. currently:
+//    - meteorRelease: the value to use for Meteor.release, if any
+//
+// /server.js: script to run inside node.js to start the program
+//   XXX Subject to change! This will likely go away in favor of a
+//   shell script (allowing us to represent types of programs that
+//   don't use or depend on node)
+//
+// Convention:
+//
+// /app/*: source code of the (server part of the) app
+// /packages/foo.js: the (linked) source code for package foo
+// /package-tests/foo.js: the (linked) source code for foo's tests
+// /npm/foo: node_modules for package foo. may be symlinked if
+// developing locally.
+//
+// /node_modules: node_modules needed for server.js. omitted if
+// deploying (see .bundle_version.txt above), copied if bundling,
+// symlinked if developing locally.
 
 var path = require('path');
 var files = require(path.join(__dirname, 'files.js'));
@@ -50,6 +130,13 @@ var sha1 = exports.sha1 = function (contents) {
   return hash.digest('hex');
 };
 
+// http://davidshariff.com/blog/javascript-inheritance-patterns/
+var inherits = function (child, parent) {
+  var tmp = function () {};
+  tmp.prototype = parent.prototype;
+  child.prototype = new tmp;
+  child.prototype.constructor = child;
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Slice
@@ -72,97 +159,189 @@ var Slice = function (pkg, role, where) {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// Bundle
+// File
 ///////////////////////////////////////////////////////////////////////////////
 
-// options to include:
-//
-// - releaseStamp: the Meteor release name to write into the bundle metadata
-// - library: tells you how to find packages
-var Bundle = function (options) {
+// Allowed options:
+// - data: contents of the file as a Buffer
+// - cacheable
+var File = function (options) {
   var self = this;
+
+  if (options.data && ! (options.data instanceof Buffer)) {
+    throw new Error('File contents must be provided as a Buffer');
+  }
+
+  // The absolute path in the filesystem from which we loaded (or will
+  // load) this file (null if the file does not correspond to one on
+  // disk.)
+  self.sourcePath = null;
+
+  // Where this file is intended to reside within the target's
+  // filesystem.
+  self.targetPath = null;
+
+  // The URL at which this file is intended to be served, relative to
+  // the base URL at which the target is being served (ignored if this
+  // file is not intended to be served over HTTP.)
+  self.url = null
+
+  // Is this file guaranteed to never change, so that we can let it be
+  // cached forever? Only makes sense of self.url is set.
+  self.cacheable = options.cacheable || false;
+
+  // The node_modules directory that Npm.require() should search when
+  // called from inside this file, given as a path in the target's
+  // filesystem. Only works in the "server" architecture.
+  self.nodeModulesTargetPath = null;
+
+  self._contents = options.data || null; // contents, if known, as a Buffer
+  self._hash = null; // hash, if known, as a hex string
+};
+
+_.extend(File.prototype, {
+  hash: function () {
+    var self = this;
+    if (! self._hash)
+      self._hash = sha1(self.contents());
+    return self._hash;
+  },
+
+  // Omit encoding to get a buffer, or provide something like 'utf8'
+  // to get a string
+  contents: function (encoding) {
+    var self = this;
+    if (! self._contents) {
+      if (! self.sourcePath)
+        throw new Error("Have neither contents nor sourcePath for file");
+    }
+
+    return encoding ? self._contents : self._contents.toString(encoding);
+  },
+
+  size: function () {
+    var self = this;
+    return self.contents().length;
+  },
+
+  // Set the URL of this file to "/<hash><suffix>". suffix will
+  // typically be used to pick a reasonable extension. Also set
+  // cacheable to true, since the file's name is now derived from its
+  // contents.
+  setUrlToHash: function (suffix) {
+    var self = this;
+    self.url = "/" + self.hash() + suffix;
+    self.cacheable = true;
+  },
+
+  // Append "?<hash>" to the URL and mark the file as cacheable.
+  addCacheBuster: function () {
+    var self = this;
+    if (! self.url)
+      throw new Error("File must have a URL");
+    if (self.cacheable)
+      return; // eg, already got setUrlToHash
+    if (/\?/.test(self.url))
+      throw new Error("URL already has a query string");
+    self.url += "?" + self.hash();
+    self.cacheable = true;
+  },
+
+  // Make `bundle` depend on this file for the purpose of automatic
+  // reload.
+  addDependencyToBundle: function (bundle) {
+    var self = this;
+    if (! self.sourcePath)
+      throw new Error("Don't know sourcePath");
+    self.bundle._addDependency(self.sourcePath, self.hash());
+  },
+
+  // Given a relative path like 'a/b/c' (where '/' is this system's
+  // path component separator), produce a URL that always starts with
+  // a forward slash and that uses a literal forward slash as the
+  // component separator.
+  setUrlFromRelPath: function (relPath) {
+    var self = this
+    var url = relPath.split(path.sep).join('/');
+
+    if (url.charAt(0) !== '/')
+      url = '/' + url;
+
+    self.url = url;
+  }
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// Target
+///////////////////////////////////////////////////////////////////////////////
+
+var Target = function (name, bundle, options) {
+  var self = this;
+
+  // Bundle that contains this target.
+  self.bundle = bundle;
+
+  // A name for this target.
+  self.name = name;
+
+  // Path of this target in the bundle, relative to the root of the bundle.
+  self.pathInBundle = path.join('programs', self.name);
+
+  // Should be "client" or "server" for now, but soon we will get rid
+  // of that and instead have something more like "browser.w3c" or
+  // "nodejs.linux.i686".
+  self.arch = options.arch;
 
   // All of the Slices that are to go into this bundle, in the order
   // that they are to be loaded.
   self.slices = [];
 
-  // meteor release version
-  self.releaseStamp = options.releaseStamp;
-
-  // search configuration for package.get()
-  self.library = options.library;
-
-  // map from environment, to list of filenames
-  self.js = {client: [], server: []};
-
-  // list of filenames
-  self.css = [];
-
-  // images and other static files added from packages
-  // map from environment, to list of filenames
-  self.static = {client: [], server: []};
-
-  // Map from environment, to path name (server relative), to contents
-  // of file as buffer.
-  self.files = {client: {}, clientCacheable: {}, server: {}};
-
-  // See description of the manifest at the top.
-  // Note that in contrast to self.js etc., the manifest only includes
-  // files which are in the final bundler output: for example, if code
-  // is minified, the manifest includes the minify output file but not
-  // the individual input files that were combined.
-  self.manifest = [];
-
-  // these directories are copied (cp -r) or symlinked into the
-  // bundle. maps target path (server relative) to source directory on
-  // disk
-  self.nodeModulesDirs = {};
-
-  // list of segments of additional HTML for <head>/<body>
-  self.head = [];
-  self.body = [];
-
-  // Files and paths used by the bundle, in the format returned by
-  // bundle().dependencyInfo.
-  self.dependencyInfo = null;
+  // JavaScript files. List of File. They will be loaded at startup in
+  // the order given.
+  self.js = [];
 };
 
-_.extend(Bundle.prototype, {
+_.extend(Target.prototype, {
   // Determine the packages to load, create Slices for
   // them, put them in load order, save in slices.
   //
-  // contents is a map from role ('use' or 'test') to environment
-  // ('client' or 'server') to an array of either package names or
-  // actual Package objects.
+  // contents is a map from role ('use' or 'test') to an array of
+  // either package names or actual Package objects.
   determineLoadOrder: function (contents) {
     var self = this;
 
     // Package slices being used. Map from a role string (eg, "use" or
-    // "test") to "client" or "server" to a package id to a Slice.
-    var sliceIndex = {use: {client: {}, server: {}},
-                    test: {client: {}, server: {}}};
+    // "test") to a package id to a Slice.
+    var sliceIndex = {use: {}, test: {}};
     var slicesUnordered = [];
 
+    var get = function (packageOrPackageName) {
+      var pkg = self.bundle.library.get(packageOrPackageName);
+      if (! pkg) {
+        console.error("Package not found: " + packageOrPackageName);
+        process.exit(1);
+      }
+      return pkg;
+    };
+
     // Ensure that slices exist for a package and its dependencies.
-    var add = function (pkg, role, where) {
-      if (sliceIndex[role][where][pkg.id])
+    var add = function (pkg, role) {
+      if (sliceIndex[role][pkg.id])
         return;
-      var slice = new Slice(pkg, role, where);
-      sliceIndex[role][where][pkg.id] = slice;
+      var slice = new Slice(pkg, role, self.arch);
+      sliceIndex[role][pkg.id] = slice;
       slicesUnordered.push(slice);
-      _.each(pkg.uses[role][where], function (usedPkgName) {
-        var usedPkg = self.getPackage(usedPkgName);
-        add(usedPkg, "use", where);
+      _.each(pkg.uses[role][self.arch], function (usedPkgName) {
+        var usedPkg = get(usedPkgName);
+        add(usedPkg, "use");
       });
     };
 
     // Add the provided roots and all of their dependencies.
-    _.each(contents, function (whereToArray, role) {
-      _.each(whereToArray, function (packageList, where) {
-        _.each(packageList, function (packageOrPackageName) {
-          var pkg = self.getPackage(packageOrPackageName);
-          add(pkg, role, where);
-        });
+    _.each(contents, function (packageList, role) {
+      _.each(packageList, function (packageOrPackageName) {
+        var pkg = get(packageOrPackageName);
+        add(pkg, role);
       });
     });
 
@@ -172,7 +351,7 @@ _.extend(Bundle.prototype, {
     // before X in the ordering. Raises an exception iff there is no
     // such ordering (due to circular dependency.)
     var id = function (slice) {
-      return slice.role + ":" + slice.where + ":" + slice.pkg.id;
+      return slice.role + ":" + slice.pkg.id;
     };
 
     var done = {};
@@ -197,11 +376,11 @@ _.extend(Bundle.prototype, {
         if (done[id(slice)])
           return;
 
-        _.each(slice.pkg.uses[slice.role][slice.where], function (usedPkgName) {
+        _.each(slice.pkg.uses[slice.role][self.arch], function (usedPkgName) {
           if (slice.pkg.name && slice.pkg.unordered[usedPkgName])
             return;
-          var usedPkg = self.getPackage(usedPkgName);
-          var usedSlice = sliceIndex.use[slice.where][usedPkg.id];
+          var usedPkg = get(usedPkgName);
+          var usedSlice = sliceIndex.use[usedPkg.id];
           if (! usedSlice)
             throw new Error("Missing slice?");
           if (onStack[id(usedSlice)]) {
@@ -221,37 +400,6 @@ _.extend(Bundle.prototype, {
     }
   },
 
-  prepNodeModules: function () {
-    var self = this;
-    var seen = {};
-    _.each(self.slices, function (slice) {
-      // Bring npm dependencies up to date. One day this will probably
-      // grow into a full-fledged package build step.
-      if (slice.pkg.npmDependencies && ! seen[slice.pkg.id]) {
-        seen[slice.pkg.id] = true;
-        slice.pkg.installNpmDependencies();
-        self.bundleNodeModules(slice.pkg);
-      }
-    });
-  },
-
-  getPackage: function (packageOrPackageName) {
-    var self = this;
-    var pkg = self.library.get(packageOrPackageName);
-    if (! pkg) {
-      console.error("Package not found: " + packageOrPackageName);
-      process.exit(1);
-    }
-    return pkg;
-  },
-
-  // map a package's generated node_modules directory to the package
-  // directory within the bundle
-  bundleNodeModules: function (pkg) {
-    var nodeModulesPath = path.join(pkg.npmDir(), 'node_modules');
-    this.nodeModulesDirs[pkg.name] = nodeModulesPath;
-  },
-
   // Sort the packages in dependency order, then, package by package,
   // write their resources into the bundle (which includes running the
   // JavaScript linker.)
@@ -265,7 +413,7 @@ _.extend(Bundle.prototype, {
       // ** linker.
 
       slice.pkg.ensureCompiled();
-      var resources = _.clone(slice.pkg.resources[slice.role][slice.where]);
+      var resources = _.clone(slice.pkg.resources[slice.role][self.arch]);
 
       var isApp = ! slice.pkg.name;
       // Compute imports by merging the exports of all of the
@@ -277,12 +425,12 @@ _.extend(Bundle.prototype, {
       // in JavaScript.) Note that in the case of conflicting
       // symbols, later packages get precedence.
       var imports = {}; // map from symbol to supplying package name
-      _.each(_.values(slice.pkg.uses[slice.role][slice.where]), function (otherPkgName){
-        var otherPkg = self.getPackage(otherPkgName);
+      _.each(_.values(slice.pkg.uses[slice.role][self.arch]), function (otherPkgName){
+        var otherPkg = self.bundle.library.get(otherPkgName);
         if (otherPkg.name && ! slice.pkg.unordered[otherPkg.name]) {
           // make sure otherPkg.exports is valid
           otherPkg.ensureCompiled();
-          _.each(otherPkg.exports.use[slice.where], function (symbol) {
+          _.each(otherPkg.exports.use[self.arch], function (symbol) {
             imports[symbol] = otherPkg.name;
           });
         }
@@ -292,8 +440,8 @@ _.extend(Bundle.prototype, {
       var files = linker.link({
         imports: imports,
         useGlobalNamespace: isApp,
-        prelinkFiles: slice.pkg.prelinkFiles[slice.role][slice.where],
-        boundary: slice.pkg.boundary[slice.role][slice.where]
+        prelinkFiles: slice.pkg.prelinkFiles[slice.role][self.arch],
+        boundary: slice.pkg.boundary[slice.role][self.arch]
       });
 
       // Add each output as a resource
@@ -305,13 +453,10 @@ _.extend(Bundle.prototype, {
         });
       });
 
-      // ** Emit the resources
+      // Emit the resources
       _.each(resources, function (resource) {
-        if (resource.type === "js") {
-          self.files[slice.where][resource.servePath] = resource.data;
-          self.js[slice.where].push(resource.servePath);
-        } else if (resource.type === "css") {
-          if (slice.where !== "client")
+        if (_.contains(["js", "css", "static"], resource.type)) {
+          if (resource.type === "css" && self.arch !== "client")
             // XXX might be nice to throw an error here, but then we'd
             // have to make it so that packages.js ignores css files
             // that appear in the server directories in an app tree
@@ -320,119 +465,396 @@ _.extend(Bundle.prototype, {
             // meteor.js?
             return;
 
-          self.files[slice.where][resource.servePath] = resource.data;
-          self.css.push(resource.servePath);
-        } else if (resource.type === "static") {
-          self.files[slice.where][resource.servePath] = resource.data;
-          self.static[slice.where].push(resource.servePath);
-        } else if (resource.type === "head" || resource.type === "body") {
-          if (slice.where !== "client")
+          var f = new File({
+            data: resource.data,
+            cacheable: false
+          });
+
+          if (self.arch === "client")
+            f.setUrlFromRelPath(resource.servePath);
+          else {
+            // XXX hack
+            if (resource.servePath.match(/^\/packages\//) ||
+                resource.servePath.match(/^\/package-tests\//))
+              f.targetPath = resource.servePath;
+            else
+              f.targetPath = path.join('/app', resource.servePath);
+          }
+
+          if (self.arch === "server" && resource.type === "js" && ! isApp)
+            f.nodeModulesTargetPath = path.join('/npm', slice.pkg.name);
+
+          self[resource.type].push(f);
+          return;
+        }
+
+        if (_.contains(["head", "body"], resource.type)) {
+          if (self.arch !== "client")
             throw new Error("HTML segments can only go to the client");
           self[resource.type].push(resource.data);
-        } else {
-          throw new Error("Unknown type " + resource.type);
+          return;
+        }
+
+        throw new Error("Unknown type " + resource.type);
+      });
+
+      // Depend on the source files that produced these
+      // resources. (Since the dependencyInfo.directories should be
+      // disjoint, it should be OK to merge them this way.)
+      _.extend(self.bundle.dependencyInfo.files,
+               slice.pkg.dependencyInfo.files);
+      _.extend(self.bundle.dependencyInfo.directories,
+               slice.pkg.dependencyInfo.directories);
+    });
+  },
+
+  // Minify the JS in this target
+  minifyJs: function () {
+    var self = this;
+
+    var allJs = _.map(self.js, function (file) {
+      return file.contents('utf8');
+    }).join('\n;\n');
+
+    allJs = uglify.minify(allJs, {
+      fromString: true,
+      compress: {drop_debugger: false}
+    }).code;
+
+    self.js = [new File({ data: new Buffer(allJs) })];
+    self.js[0].setUrlToHash(".js");
+  },
+
+  // For each resource of the given type, make it cacheable by adding
+  // a query string to the URL based on its hash.
+  addCacheBusters: function (type) {
+    var self = this;
+    _.each(self[type], function (file) {
+      file.addCacheBuster();
+    });
+  }
+});
+
+
+//////////////////// ClientTarget ////////////////////
+
+var ClientTarget = function (name, bundle, options) {
+  var self = this;
+  Target.apply(this, arguments);
+
+  // CSS files. List of File. Applicable only on 'client'
+  // architecture. They will be loaded at page load in the order
+  // given.
+  self.css = [];
+
+  // Static assets to serve with HTTP. List of File. Applicable only
+  // on 'client' architecture.
+  self.static = [];
+
+  // List of segments of additional HTML for <head>/<body>. Only for
+  // "client" arch.
+  self.head = [];
+  self.body = [];
+};
+
+inherits(ClientTarget, Target);
+
+_.extend(ClientTarget.prototype, {
+  // Minify the JS in this target
+  minifyCss: function () {
+    var self = this;
+
+    var allCss = _.map(self.css, function (file) {
+      return file.contents('utf8');
+    }).join('\n');
+
+    allCss = cleanCSS.process(allCss);
+
+    self.css = [new File({ data: new Buffer(allCss) })];
+    self.css[0].setUrlToHash(".css");
+  },
+
+  // Add all of the files in a directory `rootDir` (and its
+  // subdirectories) as static assets. `rootDir` should be an absolute
+  // path. Only makes sense on clients. If provided, exclude is an
+  // array of filename regexps to exclude. If provided, assetPath is a
+  // prefix to use when computing the path for each file in the
+  // client's asset tree.
+  addAssetDir: function (rootDir, exclude, assetPathPrefix) {
+    var self = this;
+    exclude = exclude || [];
+
+    if (self.arch !== "client")
+      throw new Error("Only clients can have assets");
+
+    self.bundle.dependencyInfo.directories[dir] = {
+      include: [/.?/],
+      exclude: exclude
+    };
+
+    var walk = function (dir, assetPath) {
+      _.each(fs.readdirSync(dir), function (item) {
+        // Skip excluded files
+        var matchesAnExclude = _.any(exclude, function (pattern) {
+          return item.match(pattern);
+        });
+        if (matchesAnExclude)
+          return;
+
+        var absPath = path.resolve(dir, item);
+        assetPath = path.join(dir, item);
+        if (fs.statSync(absPath).isDirectory()) {
+          walk(absPath, assetPath);
+          return;
+        }
+
+        var f = new File({ sourcePath: absPath });
+        f.setUrlFromRelPath(assetPath);
+        f.addDependencyToBundle(self.bundle);
+        self.static.push(f);
+      });
+    };
+
+    walk(rootDir, assetPathPrefix || '');
+  },
+
+  assignTargetPaths: function () {
+    var self = this;
+    _.each(["js", "css", "static"], function (type) {
+      _.each(self[type], function (file) {
+        if (! file.targetPath) {
+          if (! file.url)
+            throw new Error("Client file with no URL?");
+
+          var parts = file.url.replace(/\?.*$/, '').split('/').slice(1);
+          parts.unshift(file.cacheable ? "static_cacheable" : "static");
+          file.targetPath = path.sep + path.join.apply(path, parts);
         }
       });
     });
   },
 
-  // Minify the bundle
-  minify: function () {
+  generateHtmlBoilerplate: function () {
     var self = this;
 
-    var addFile = function (type, finalCode) {
-      var contents = new Buffer(finalCode);
-      var hash = sha1(contents);
-      var name = '/' + hash + '.' + type;
-      self.files.clientCacheable[name] = contents;
-      self.manifest.push({
-        path: 'static_cacheable' + name,
-        where: 'client',
-        type: type,
-        cacheable: true,
-        url: name,
-        size: contents.length,
-        hash: hash
-      });
-    };
+    var templatePath = path.join(__dirname, "app.html.in");
+    var template = fs.readFileSync(templatePath);
+    self.bundle._addDependency(templatePath, sha1(template));
 
-    /// Javascript
-    var codeParts = [];
-    _.each(self.js.client, function (jsPath) {
-      codeParts.push(self.files.client[jsPath].toString('utf8'));
-
-      delete self.files.client[jsPath];
-    });
-    self.js.client = [];
-
-    var combinedCode = codeParts.join('\n;\n');
-    var finalCode = uglify.minify(
-      combinedCode, {fromString: true, compress: {drop_debugger: false}}).code;
-
-    addFile('js', finalCode);
-
-    /// CSS
-    var cssConcat = "";
-    _.each(self.css, function (cssPath) {
-      var cssData = self.files.client[cssPath];
-      cssConcat = cssConcat + "\n" + cssData.toString('utf8');
-
-      delete self.files.client[cssPath];
-    });
-    self.css = [];
-
-    var finalCss = cleanCSS.process(cssConcat);
-
-    addFile('css', finalCss);
-  },
-
-  _clientUrlsFor: function (type) {
-    var self = this;
-    return _.pluck(
-      _.filter(self.manifest, function (resource) {
-        return resource.where === 'client' && resource.type === type;
-      }),
-      'url'
-    );
-  },
-
-  _generateAppHtml: function () {
-    var self = this;
-
-    // XXX we don't do content-based dependency watching for this file
-    var template = fs.readFileSync(path.join(__dirname, "app.html.in"));
     var f = require('handlebars').compile(template.toString());
     return f({
-      scripts: self._clientUrlsFor('js'),
+      scripts: _.pluck(self.js, 'url'),
+      stylesheets: _.pluck(self.css, 'url'),
       head_extra: self.head.join('\n'),
-      body_extra: self.body.join('\n'),
-      stylesheets: self._clientUrlsFor('css')
+      body_extra: self.body.join('\n')
     });
   },
 
-  // The extensions registered by the application package, if
-  // any. Kind of a hack.
-  _appExtensions: function () {
+  // Output the finished target to disk
+  write: function (outputPath) {
     var self = this;
-    var ret = [];
+    var manifest = [];
+
+    // Resources served via HTTP
+    _.each(["js", "css", "static"], function (type) {
+      _.each(self[type], function (file) {
+
+        if (! file.targetPath)
+          throw new Error("No targetPath?");
+
+        var writePath = path.join(outputPath, file.targetPath);
+        files.mkdir_p(path.dirname(writePath), 0755);
+        fs.writeFileSync(writePath, file.contents());
+
+        manifest.push({
+          path: file.targetPath,
+          where: "client",
+          type: type,
+          cacheable: file.cacheable,
+          url: file.url,
+          size: file.size(),
+          hash: file.hash()
+        });
+      });
+    });
+
+    // HTML boilerplate (the HTML served to make the client load the
+    // JS and CSS files and start the app)
+    var htmlBoilerplate = self.generateHtmlBoilerplate();
+    fs.writeFileSync(path.join(outputPath, 'app.html'), htmlBoilerplate);
+    manifest.push({
+      path: 'app.html',
+      where: 'internal',
+      hash: sha1(htmlBoilerplate)
+    });
+
+    // Control file
+    var json = {
+      manifest: manifest,
+      page: 'app.html',
+
+      // XXX the following are for use by 'legacy' (read: current)
+      // server.js implementations which aren't smart enough to read
+      // the manifest and instead want all of the resources in a
+      // directory together so they can just point gzippo at it. we
+      // should remove this and make the server work from the
+      // manifest.
+      static: 'static',
+      staticCacheable: 'static_cacheable'
+    };
+    fs.writeFileSync(path.join(outputPath, 'app.json'),
+                     JSON.stringify(json, null, 2));
+  }
+});
+
+
+//////////////////// ServerTarget ////////////////////
+
+var ServerTarget = function (name, bundle, options) {
+  var self = this;
+  Target.apply(this, arguments);
+
+  // These directories are copied (cp -r) or symlinked into the
+  // bundle. Map from targetPath (path in the Target's filesystem) to
+  // sourcePath (absolute path in the local filesystem.)
+  self.nodeModulesDirs = {};
+
+  // The ClientTarget that we will serve.
+  self.clientTarget = options.clientTarget;
+};
+
+inherits(ServerTarget, Target);
+
+_.extend(ServerTarget.prototype, {
+  // Output the finished target to disk
+  write: function (outputPath, nodeModulesMode) {
+    var self = this;
+
+    // JavaScript sources
+    _.each(self.js, function (file) {
+      if (! file.targetPath)
+        throw new Error("No targetPath?");
+
+      var writePath = path.join(outputPath, file.targetPath);
+      files.mkdir_p(path.dirname(writePath), 0755);
+      fs.writeFileSync(writePath, file.contents());
+    });
+
+    // Server driver
+    var serverPath = path.join(__dirname, 'server');
+    var copied = files.cp_r(serverPath, outputPath, {ignore: ignoreFiles});
+    _.each(copied, function (relPath) {
+      self.bundle._addDependency(path.join(serverPath, relPath));
+    });
+    self.bundle.dependencyInfo.directories[serverPath] = {
+      include: [/.?/],
+      exclude: ignoreFiles
+    };
+
+    // Main, architecture-dependent node_modules from the dependency
+    // kit. This one is copied in 'meteor bundle', symlinked in
+    // 'meteor run', and omitted by 'meteor deploy' (Galaxy provides a
+    // version that's appropriate for the server architecture.)
+
+    var devBundleNodeModules =
+      path.join(files.get_dev_bundle(), 'lib', 'node_modules');
+    if (nodeModulesMode === "symlink")
+      fs.symlinkSync(devBundleNodeModules,
+                     path.join(outputPath, 'node_modules'));
+    else if (nodeModulesMode === "copy")
+      files.cp_r(devBundleNodeModules,
+                 path.join(outputPath, 'node_modules'),
+                 {ignore: ignoreFiles});
+    else
+      /* nodeModulesMode === "skip" */;
+
+    // Extra user-defined arch-independent node_module. 'meteor
+    // bundle' and 'meteor deploy' copy them, and 'meteor run'
+    // symlinks them. (XXX Note that this doesn't work for
+    // arch-specific packages. They'll just break if you deploy to a
+    // different arch than you built on. We'll get to that Soon
+    // Enough!)
+
+    // XXX we should consider supporting bundle time-only npm
+    // dependencies which don't need to be pushed to the server.
 
     _.each(self.slices, function (slice) {
-      if (! slice.pkg.name) {
-        var exts = slice.pkg.registeredExtensions(slice.role, slice.where);
-        ret = _.union(ret, exts);
+      if (slice.pkg.npmDependencies) {
+        // Make sure the right stuff is installed. This is slow and
+        // should move to a separate package build step. However, the
+        // Package object has code that will make sure we at least
+        // only do it once per package.
+        slice.pkg.installNpmDependencies();
+
+        // Copy the package's npm dependencies into the bundle.
+        var sourcePath = path.join(slice.pkg.npmDir(), 'node_modules');
+        var targetPath = path.join(outputPath, 'npm', slice.pkg.name);
+        if (fs.existsSync(targetPath))
+          // We already did this package (eg, we've used the package
+          // in both a "use" and a "test" role)
+          return;
+
+        files.mkdir_p(path.dirname(targetPath));
+        if (nodeModulesMode === "symlink")
+          fs.symlinkSync(sourcePath, targetPath);
+        else
+          files.cp_r(sourcePath, targetPath);
       }
     });
 
-    return ret;
-  },
+    // Control file
+    var release =
+      self.bundle.releaseStamp && self.bundle.releaseStamp !== "none" ?
+      self.bundle.releaseStamp : undefined;
+    var json = {
+      load: _.map(self.js, function (file) {
+        return {
+          path: file.targetPath,
+          node_modules: file.nodeModulesTargetPath || undefined
+        };
+      }),
+      client: path.join(path.relative(self.pathInBundle,
+                                      self.clientTarget.pathInBundle),
+                        'app.json'),
+      config: {
+        meteorRelease: release
+      }
+    };
+    fs.writeFileSync(path.join(outputPath, 'app.json'),
+                     JSON.stringify(json, null, 2));
+  }
+});
 
-  _addDependency: function (filePath, hash, onlyIfExists) {
+
+///////////////////////////////////////////////////////////////////////////////
+// Bundle
+///////////////////////////////////////////////////////////////////////////////
+
+// options to include:
+//
+// - releaseStamp: the Meteor release name to write into the bundle metadata
+// - library: tells you how to find packages
+var Bundle = function (options) {
+  var self = this;
+
+  // meteor release version
+  self.releaseStamp = options.releaseStamp;
+
+  // search configuration for package.get()
+  self.library = options.library;
+
+  // all of the targets that are part of this bundle
+  self.targets = [];
+
+  // Files and paths used by the bundle, in the format returned by
+  // bundle().dependencyInfo.
+  self.dependencyInfo = {files: {}, directories: {}};
+};
+
+_.extend(Bundle.prototype, {
+  _addDependency: function (filePath, hash) {
     var self = this;
     filePath = path.resolve(filePath);
-
-    if (onlyIfExists && ! fs.existsSync(filePath))
-      return;
-
     if (! hash)
       hash = sha1(fs.readFileSync(filePath));
     self.dependencyInfo.files[filePath] = hash;
@@ -440,19 +862,10 @@ _.extend(Bundle.prototype, {
 
   // nodeModulesMode should be "skip", "symlink", or "copy"
   // computes self.dependencyInfo
-  writeToDirectory: function (outputPath, projectDir, nodeModulesMode) {
+  write: function (outputPath, projectDir, nodeModulesMode) {
     var self = this;
     var appJson = {};
     var isApp = files.is_app_dir(projectDir);
-
-    self.dependencyInfo = {files: {}, directories: {}};
-
-    if (isApp) {
-      self._addDependency(path.join(projectDir, '.meteor', 'packages'));
-      // Not sure why 'release' doesn't exist in a test run, but roll with it
-      self._addDependency(path.join(projectDir, '.meteor', 'release'), null,
-                          true);
-    }
 
     // --- Set up build area ---
 
@@ -465,165 +878,28 @@ _.extend(Bundle.prototype, {
     files.rm_recursive(buildPath);
     files.mkdir_p(buildPath, 0755);
 
-    // --- Core runner code ---
-
-    var serverPath = path.join(__dirname, 'server');
-    var copied = files.cp_r(serverPath, path.join(buildPath, 'server'),
-                            {ignore: ignoreFiles});
-    _.each(copied, function (relPath) {
-      self._addDependency(path.join(serverPath, relPath));
+    // Write out each target
+    _.each(self.targets, function (target) {
+      target.write(path.join(buildPath, target.pathInBundle),
+                   nodeModulesMode);
     });
-    self.dependencyInfo.directories[serverPath] = {
-      include: [/.?/],
-      exclude: ignoreFiles
-    };
 
-    // --- Third party dependencies ---
-
-    if (nodeModulesMode === "symlink")
-      fs.symlinkSync(path.join(files.get_dev_bundle(), 'lib', 'node_modules'),
-                     path.join(buildPath, 'server', 'node_modules'));
-    else if (nodeModulesMode === "copy")
-      files.cp_r(path.join(files.get_dev_bundle(), 'lib', 'node_modules'),
-                 path.join(buildPath, 'server', 'node_modules'),
-                 {ignore: ignoreFiles});
-    else
-      /* nodeModulesMode === "skip" */;
-
+    // Tell Galaxy what version of the dependency kit we're using, so
+    // it can load the right modules. (Include this even if we copied
+    // or symlinked a node_modules, since that's probably enough for
+    // it to work in spite of the presence of node_modules for the
+    // wrong arch.) The place we stash this is grody for temporary
+    // reasons of backwards compatibility.
+    files.mkdir_p(path.join(buildPath, "server", 0755));
     fs.writeFileSync(
       path.join(buildPath, 'server', '.bundle_version.txt'),
       fs.readFileSync(
         path.join(files.get_dev_bundle(), '.bundle_version.txt')));
 
-    // --- Static assets ---
 
-    var addClientFileToManifest = function (filepath, contents, type, cacheable, url, hash) {
-      if (! contents instanceof Buffer)
-        throw new Error('contents must be a Buffer');
-      var normalized = filepath.split(path.sep).join('/');
-      if (normalized.charAt(0) === '/')
-        normalized = normalized.substr(1);
-      self.manifest.push({
-        // path is normalized to use forward slashes
-        path: (cacheable ? 'static_cacheable' : 'static') + '/' + normalized,
-        where: 'client',
-        type: type,
-        cacheable: cacheable,
-        url: url || '/' + normalized,
-        // contents is a Buffer and so correctly gives us the size in bytes
-        size: contents.length,
-        hash: hash || sha1(contents)
-      });
-    };
-
-    if (isApp) {
-      var publicDir = path.join(projectDir, 'public');
-
-      if (fs.existsSync(publicDir)) {
-        var copied =
-          files.cp_r(publicDir, path.join(buildPath, 'static'),
-                     {ignore: ignoreFiles});
-
-        _.each(copied, function (relPath) {
-          var filepath = path.join(publicDir, relPath);
-          var contents = fs.readFileSync(filepath);
-          var hash = sha1(contents);
-
-          self._addDependency(filepath, hash);
-          addClientFileToManifest(relPath, contents, 'static', false,
-                                  undefined, hash);
-        });
-      }
-
-      self.dependencyInfo.directories[publicDir] = {
-        include: [/.?/],
-        exclude: ignoreFiles
-      };
-    }
-
-    // Add cache busting query param if needed, and
-    // add to manifest.
-    var processClientCode = function (type, file) {
-      var contents, url, hash;
-      if (file in self.files.clientCacheable) {
-        contents = self.files.clientCacheable[file];
-        url = file;
-      }
-      else if (file in self.files.client) {
-        // Client css and js becomes cacheable with the addition of the
-        // cache busting query parameter.
-        contents = self.files.client[file];
-        delete self.files.client[file];
-        self.files.clientCacheable[file] = contents;
-        hash = sha1(contents);
-        url = file + '?' + hash;
-      }
-      else
-        throw new Error('unable to find file: ' + file);
-
-      addClientFileToManifest(file, contents, type, true, url, hash);
-    };
-
-    _.each(self.js.client, function (file) { processClientCode('js',  file); });
-    _.each(self.css,       function (file) { processClientCode('css', file); });
-
-    // -- Client code --
-    for (var relPath in self.files.client) {
-      var fullPath = path.join(buildPath, 'static', relPath);
-      files.mkdir_p(path.dirname(fullPath), 0755);
-      fs.writeFileSync(fullPath, self.files.client[relPath]);
-      addClientFileToManifest(relPath, self.files.client[relPath], 'static', false);
-    }
-
-    // -- Client cache forever code --
-    for (var relPath in self.files.clientCacheable) {
-      var fullPath = path.join(buildPath, 'static_cacheable', relPath);
-      files.mkdir_p(path.dirname(fullPath), 0755);
-      fs.writeFileSync(fullPath, self.files.clientCacheable[relPath]);
-    }
-
-    appJson.load = [];
-    files.mkdir_p(path.join(buildPath, 'app'), 0755);
-    for (var relPath in self.files.server) {
-      var pathInBundle = path.join('app', relPath);
-      var fullPath = path.join(buildPath, pathInBundle);
-      files.mkdir_p(path.dirname(fullPath), 0755);
-      fs.writeFileSync(fullPath, self.files.server[relPath]);
-      appJson.load.push(pathInBundle);
-    }
-
-    // `node_modules` directories for packages
-    _.each(self.nodeModulesDirs, function (sourceNodeModulesDir, packageName) {
-      files.mkdir_p(path.join(buildPath, 'npm'));
-      var buildModulesPath = path.join(buildPath, 'npm', packageName);
-      // XXX we should consider supporting bundle time-only npm dependencies
-      // which don't need to be pushed to the server.
-      if (nodeModulesMode === 'symlink') {
-        // if we symlink the dev_bundle, also symlink individual package
-        // node_modules.
-        fs.symlinkSync(sourceNodeModulesDir, buildModulesPath);
-      } else {
-        // otherwise, copy them. if we're skipping the dev_bundle
-        // modules (eg for deploy) we still need the per-package
-        // modules.
-        // XXX this breaks arch-specific modules. oh well.
-        files.cp_r(sourceNodeModulesDir, buildModulesPath);
-      }
-    });
-
-    var appHtml = self._generateAppHtml();
-    fs.writeFileSync(path.join(buildPath, 'app.html'), appHtml);
-    self.manifest.push({
-      path: 'app.html',
-      where: 'internal',
-      hash: sha1(appHtml)
-    });
-    self._addDependency(path.join(__dirname, 'app.html.in'));
-
-    // --- Documentation, and running from the command line ---
-
+    // Affordances for standalone use
     fs.writeFileSync(path.join(buildPath, 'main.js'),
-"require('./server/server.js');\n");
+"require('./programs/server/server.js');\n");
 
     fs.writeFileSync(path.join(buildPath, 'README'),
 "This is a Meteor application bundle. It has only one dependency,\n" +
@@ -641,48 +917,29 @@ _.extend(Bundle.prototype, {
 "\n" +
 "Find out more about Meteor at meteor.com.\n");
 
-    // --- Source file dependencies ---
+    // Control file
+    // XXX not currently including the release in the bundle in a
+    // machine-readable format. is that a bad idea?
+    var json = {
+      version: "1",
+      builtBy: "Meteor" + (self.releaseStamp && self.releaseStamp !== "none" ?
+                           " " + self.releaseStamp : ""),
+      programs: _.map(self.targets, function (target) {
+        return {
+          name: target.name,
+          arch: target.arch,
+          path: target.pathInBundle
+        }
+      })
+    };
+    fs.writeFileSync(path.join(buildPath, 'star.json'),
+                     JSON.stringify(json, null, 2));
 
-    _.each(_.values(self.slices), function (slice) {
-      _.extend(self.dependencyInfo.files, slice.pkg.dependencyFileShas);
-    });
-
-    if (isApp) {
-      // Include files in the app that match any file extension
-      // handled by any package that the app uses
-      self.dependencyInfo.directories[path.resolve(projectDir)] = {
-        include: _.map(self._appExtensions(), function (ext) {
-          return new RegExp('\\.' + ext.slice(1) + "$");
-        }),
-        exclude: ignoreFiles
-      };
-      // Exclude the packages directory in an app, since packages
-      // explicitly call out the files they use
-      self.dependencyInfo.directories[path.resolve(projectDir, 'packages')] = {
-        exclude: [/.?/]
-      };
-      // Exclude .meteor/local and everything under it
-      self.dependencyInfo.directories[
-        path.resolve(projectDir, '.meteor', 'local')] = { exclude: [/.?/] };
-    }
-
-    // --- Metadata ---
-
-    appJson.manifest = self.manifest;
-
-    if (self.releaseStamp && self.releaseStamp !== 'none')
-      appJson.release = self.releaseStamp;
-
-    fs.writeFileSync(path.join(buildPath, 'app.json'),
-                     JSON.stringify(appJson, null, 2));
-
-    // --- Move into place ---
-
+    // Move into place
     // XXX cleaner error handling (no exceptions)
     files.rm_recursive(outputPath);
     fs.renameSync(buildPath, outputPath);
   }
-
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -750,29 +1007,46 @@ exports.bundle = function (appDir, outputPath, options) {
       library: library
     });
 
+    // Create targets
+    var client = new ClientTarget("client", bundle, { arch: "client" });
+    var server = new ServerTarget("server", bundle, { arch: "server",
+                                                      clientTarget: client });
+    bundle.targets = [client, server];
+
     // Create a Package object that represents the app
     var app = library.getForApp(appDir, ignoreFiles);
 
     // Populate the list of slices to load
-    bundle.determineLoadOrder({
-      use: {client: [app], server: [app]},
-      test: {client: options.testPackages || [],
-             server: options.testPackages || []}
-    });
-
-    // Process npm modules
-    bundle.prepNodeModules();
+    client.determineLoadOrder({use: [app], test: options.testPackages || []});
+    server.determineLoadOrder({use: [app], test: options.testPackages || []});
 
     // Link JavaScript, put resources in load order, and copy them to
     // the bundle
-    bundle.emitResources();
+    client.emitResources();
+    server.emitResources();
 
-    // Minify, if requested
-    if (options.minify)
-      bundle.minify();
+    // Minify, if requested (only the client)
+    if (options.minify) {
+      client.minifyJs();
+      client.minifyCss();
+    }
+
+    // Add assets from /public directory
+    // XXX this should probably be part of the appDir reader
+    if (files.is_app_dir(appDir)) { /* XXX what is this checking? */
+      var publicDir = path.join(appDir, 'public');
+      if (fs.existsSync(publicDir))
+        client.addAssetDir(publicDir, ignoreFiles);
+    }
+
+    // Make client-side CSS and JS assets cacheable forever, by adding
+    // a query string with a cache-busting hash.
+    client.addCacheBusters("js");
+    client.addCacheBusters("css");
 
     // Write to disk
-    bundle.writeToDirectory(outputPath, appDir, options.nodeModulesMode);
+    client.assignTargetPaths();
+    bundle.write(outputPath, appDir, options.nodeModulesMode);
 
     return {
       errors: false,

@@ -83,8 +83,7 @@ _.extend(Library.prototype, {
     if (name in self.overrides)
       packageDir = self.overrides[name];
 
-    // Try local directories ('packages' subdirectory in an app,
-    // PACKAGE_DIRS environment variable, git checkout.)
+    // Try localPackageDirs
     if (! packageDir) {
       for (var i = 0; i < self.localPackageDirs.length; ++i) {
         var packageDir = path.join(self.localPackageDirs[i], name);

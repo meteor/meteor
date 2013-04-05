@@ -96,7 +96,7 @@ Fiber(function () {
     // Let the user provide additional package directories to search
     // in PACKAGE_DIRS (colon-separated.)
     if (process.env.PACKAGE_DIRS)
-      localPackageDirs.push.apply(packageDirs,
+      localPackageDirs.push.apply(localPackageDirs,
                                   process.env.PACKAGE_DIRS.split(':'));
 
     // If we're running out of a git checkout of meteor, use the packages from

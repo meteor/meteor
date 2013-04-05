@@ -24,18 +24,18 @@ if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
 // Keepalives so that when the outer server dies unceremoniously and
 // doesn't kill us, we quit ourselves. A little gross, but better than
 // pidfiles.
-var init_keepalive = function () {
-  var keepalive_count = 0;
+var initKeepalive = function () {
+  var keepaliveCount = 0;
 
   process.stdin.on('data', function (data) {
-    keepalive_count = 0;
+    keepaliveCount = 0;
   });
 
   process.stdin.resume();
 
   setInterval(function () {
-    keepalive_count ++;
-    if (keepalive_count >= 3) {
+    keepaliveCount ++;
+    if (keepaliveCount >= 3) {
       console.log("Failed to receive keepalive! Exiting.");
       process.exit(1);
     }
@@ -105,31 +105,14 @@ var categorizeRequest = function (req) {
   };
 };
 
-
-
-
-// add any runtime configuration options needed to app_html
-var runtime_config = function (app_html) {
-  var insert = '';
-  if (typeof __meteor_runtime_config__ === 'undefined')
-    return app_html;
-
-  app_html = app_html.replace(
-    "// ##RUNTIME_CONFIG##",
-    "__meteor_runtime_config__ = " +
-      JSON.stringify(__meteor_runtime_config__) + ";");
-
-  return app_html;
-};
-
-var htmlAttributes = function (app_html, request) {
+var htmlAttributes = function (template, request) {
   var attributes = '';
   _.each(__meteor_bootstrap__.htmlAttributeHooks || [], function (hook) {
     var attribute = hook(request);
     if (attribute !== null && attribute !== undefined && attribute !== '')
       attributes += ' ' + attribute;
   });
-  return app_html.replace('##HTML_ATTRIBUTES##', attributes);
+  return template.replace('##HTML_ATTRIBUTES##', attributes);
 };
 
 // Serve app HTML for this URL?
@@ -156,7 +139,16 @@ var appUrl = function (url) {
 }
 
 var run = function () {
-  var bundle_dir = path.join(__dirname, '..');
+  var serverDir = __dirname;
+
+  // read our control file
+  var serverJson =
+    JSON.parse(fs.readFileSync(path.join(serverDir, 'app.json'), 'utf8'));
+
+  // read the control for the client we'll be serving up
+  var clientJsonPath = path.join(serverDir, serverJson.client);
+  var clientDir = path.dirname(clientJsonPath);
+  var clientJson = JSON.parse(fs.readFileSync(clientJsonPath, 'utf8'));
 
   // check environment
   var port = process.env.PORT ? parseInt(process.env.PORT) : 80;
@@ -167,17 +159,19 @@ var run = function () {
 
   // webserver
   var app = connect.createServer();
-  var static_cacheable_path = path.join(bundle_dir, 'static_cacheable');
-  if (fs.existsSync(static_cacheable_path))
+
+  var staticCacheablePath = path.join(clientDir, clientJson.staticCacheable);
+  if (staticCacheablePath)
     // cacheable files are files that should never change. Typically
     // named by their hash (eg meteor bundled js and css files).
     // cache them ~forever (1yr)
     //
     // 'root' option is to work around an issue in connect/gzippo.
     // See https://github.com/meteor/meteor/pull/852
-    app.use(gzippo.staticGzip(static_cacheable_path,
+    app.use(gzippo.staticGzip(staticCacheablePath,
                               {clientMaxAge: 1000 * 60 * 60 * 24 * 365,
                                root: '/'}));
+
   // cache non-cacheable file anyway. This isn't really correct, as
   // users can change the files and changes won't propogate
   // immediately. However, if we don't cache them, browsers will
@@ -186,22 +180,23 @@ var run = function () {
   // bust caches. That way we can both get good caching behavior and
   // allow users to change assets without delay.
   // https://github.com/meteor/meteor/issues/773
-  app.use(gzippo.staticGzip(path.join(bundle_dir, 'static'),
-                            {clientMaxAge: 1000 * 60 * 60 * 24,
-                             root: '/'}));
-
-  // read bundle config file
-  var info_raw =
-    fs.readFileSync(path.join(bundle_dir, 'app.json'), 'utf8');
-  var info = JSON.parse(info_raw);
-  var bundle = {manifest: info.manifest, root: bundle_dir};
+  var staticPath = path.join(clientDir, clientJson.static);
+  if (staticPath)
+    app.use(gzippo.staticGzip(staticPath,
+                              {clientMaxAge: 1000 * 60 * 60 * 24,
+                               root: '/'}));
 
   // start up app
   __meteor_bootstrap__ = {
     startup_hooks: [],
     app: app,
     // metadata about this bundle
-    bundle: bundle,
+    // XXX this could use some refactoring to better distinguish
+    // server and client
+    bundle: {
+      manifest: clientJson.manifest,
+      root: clientDir
+    },
     // function that takes a connect `req` object and returns a summary
     // object with information about the request. See
     // #BrowserIdentifcation
@@ -216,38 +211,30 @@ var run = function () {
   };
 
   __meteor_runtime_config__ = {};
-  if (info.release) {
-    __meteor_runtime_config__.meteorRelease = info.release;
+  if (serverJson.config && serverJson.config.release) {
+    __meteor_runtime_config__.meteorRelease = serverJson.config.release;
   }
 
   Fiber(function () {
     // (put in a fiber to let Meteor.db operations happen during loading)
 
     // load app code
-    _.each(info.load, function (filename) {
-      var code = fs.readFileSync(path.join(bundle_dir, filename));
+    _.each(serverJson.load, function (fileInfo) {
+      var code = fs.readFileSync(path.join(serverDir, fileInfo.path));
 
-      // even though the npm packages are correctly placed in
-      // node_modules/ relative to the package source, we can't just
-      // use standard `require` because packages are loaded using
-      // runInThisContext. see #runInThisContext
       var Npm = {
         // require an npm module used by your package, or one from the
         // dev bundle if you are in an app or your package isn't using
         // said npm module
-        require: function(name) {
-          var filePathParts = filename.split(path.sep);
-          // XXX it's weird that we're dependent on the dir structure
-          if (!(filePathParts[0] === 'app'
-                && (filePathParts[1] === 'packages'
-                    || filePathParts[1] === 'package-tests'))) {
-            return require(name); // current no support for npm outside packages. load from dev bundle only
+        require: function (name) {
+          if (! fileInfo.node_modules) {
+            // current no support for npm outside packages. load from
+            // dev bundle only
+            return require(name);
           }
-          var packageName = filePathParts[2].replace(/\.js$/, '');
-          var nodeModuleDir = path.join(
-            __dirname,
-            '..', // get out of server
-            'npm', packageName, name);
+
+          var nodeModuleDir =
+            path.join(__dirname, fileInfo.node_modules, name);
 
           if (fs.existsSync(nodeModuleDir)) {
             return require(nodeModuleDir);
@@ -255,6 +242,11 @@ var run = function () {
           try {
             return require(name);
           } catch (e) {
+            // Try to guess the package name so we can print a nice
+            // error message
+            var filePathParts = fileInfo.path.split(path.sep);
+            var packageName = filePathParts[2].replace(/\.js$/, '');
+
             // XXX better message
             throw new Error(
               "Can't find npm module '" + name +
@@ -265,8 +257,7 @@ var run = function () {
       };
       // \n is necessary in case final line is a //-comment
       var wrapped = "(function(Npm){" + code + "\n})";
-      // See #runInThisContext
-      //
+
       // it's tempting to run the code in a new context so we can
       // precisely control the enviroment the user code sees. but,
       // this is harder than it looks. you get a situation where []
@@ -279,7 +270,7 @@ var run = function () {
       // runIn[Foo]Context that causes it to print out a descriptive
       // error message on parse error. it's what require() uses to
       // generate its errors.
-      var func = require('vm').runInThisContext(wrapped, filename, true);
+      var func = require('vm').runInThisContext(wrapped, fileInfo.path, true);
       // Setting `this` to `global` allows you to do a top-level
       // "this.foo = " to define global variables when using "use strict"
       // (http://es5.github.io/#x15.3.4.4); this is the only way to do
@@ -291,9 +282,12 @@ var run = function () {
     // Actually serve HTML. This happens after user code, so that
     // packages can insert connect middlewares and update
     // __meteor_runtime_config__
-    var app_html = fs.readFileSync(path.join(bundle_dir, 'app.html'), 'utf8');
-
-    app_html = runtime_config(app_html);
+    var boilerplateHtmlPath = path.join(clientDir, clientJson.page);
+    var boilerplateHtml =
+      fs.readFileSync(boilerplateHtmlPath, 'utf8').replace(
+        "// ##RUNTIME_CONFIG##",
+        "__meteor_runtime_config__ = " +
+          JSON.stringify(__meteor_runtime_config__) + ";");
 
     app.use(function (req, res, next) {
       if (! appUrl(req.url))
@@ -303,7 +297,7 @@ var run = function () {
 
       res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
 
-      var requestSpecificHtml = htmlAttributes(app_html, request);
+      var requestSpecificHtml = htmlAttributes(boilerplateHtml, request);
       res.write(requestSpecificHtml);
       res.end();
     });
@@ -326,7 +320,7 @@ var run = function () {
   }).run();
 
   if (argv.keepalive)
-    init_keepalive();
+    initKeepalive();
 };
 
 run();

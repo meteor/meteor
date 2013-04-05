@@ -47,10 +47,10 @@ var Package = function (library) {
   // package name to true.
   self.unordered = {};
 
-  // Files that we want to monitor for changes in development mode, such as
-  // source files and package.js. Maps relative paths to the SHA of file
-  // contents. Set only after ensureCompiled().
-  self.dependencyFileShas = {};
+  // Files and directories that we want to monitor for changes in
+  // development mode, such as source files and package.js, in the
+  // format accepted by watch.Watcher.
+  self.dependencyInfo = { files: {}, directories: {} };
 
   // All symbols exported from the JavaScript code in this
   // package. Map from role to where to array of string symbol (eg
@@ -103,6 +103,10 @@ var Package = function (library) {
   // a different branch from isCompiled
   // XXX NOTE: this is set by Library reaching into us
   self.inWarehouse = false;
+
+  // True if we've run installNpmDependencies. (It's slow and there's
+  // no need to do it more than once.)
+  self.npmUpdated = false;
 
   // functions that can be called when the package is scanned --
   // visible as `Package` when package.js is executed
@@ -188,16 +192,20 @@ var Package = function (library) {
 };
 
 _.extend(Package.prototype, {
-  // Add a dependency (in the sense of dependencyFileShas) on a
+  // Add a dependency (in the sense of dependencyInfo) on a
   // file. If hash is supplied it should be the sha1 of the file
   // contents. If omitted it will be computed. relPath will be
   // resolved to an absolute path (relative to self.sourceRoot.)
-  _addDependency: function (relPath, contents) {
+  _addDependency: function (relPath, contents, onlyIfExists) {
     var self = this;
     var absPath = path.resolve(self.sourceRoot, relPath);
+
+    if (onlyIfExists && ! fs.existsSync(absPath))
+      return;
+
     if (! contents)
       contents = fs.readFileSync(absPath);
-    self.dependencyFileShas[absPath] = bundler.sha1(contents);
+    self.dependencyInfo.files[absPath] = bundler.sha1(contents);
   },
 
   // loads a package's package.js file into memory, using
@@ -414,6 +422,7 @@ _.extend(Package.prototype, {
     packages = _.union(packages, project.get_packages(appDir));
     // XXX this read has a race with the actual read that is used
     self._addDependency(path.join(appDir, '.meteor', 'packages'));
+    self._addDependency(path.join(appDir, '.meteor', 'release'), null, true);
 
     _.each(["use", "test"], function (role) {
       _.each(["client", "server"], function (where) {
@@ -439,6 +448,32 @@ _.extend(Package.prototype, {
     };
     self.forceExports = {use: {client: [], server: []},
                          test: {client: [], server: []}};
+
+    // Directories to monitor for new files
+    var allExts = [];
+    _.each(["use", "test"], function (role) {
+      _.each(["client", "server"], function (where) {
+        allExts = _.union(allExts, self.registeredExtensions(role, where));
+      });
+    });
+
+    self.dependencyInfo.directories[path.resolve(appDir)] = {
+      include: _.map(allExts, function (ext) {
+        return new RegExp('\\.' + ext.slice(1) + "$");
+      }),
+      exclude: ignoreFiles
+    };
+    // Inside the packages directory, only look for new packages
+    // (which we can detect by the appearance of a package.js file.)
+    // Other than that, packages explicitly call out the files they
+    // use.
+    self.dependencyInfo.directories[path.resolve(appDir, 'packages')] = {
+      include: [ /^package\.js$/ ],
+      exclude: ignoreFiles
+    };
+    // Exclude .meteor/local and everything under it.
+    self.dependencyInfo.directories[
+      path.resolve(appDir, '.meteor', 'local')] = { exclude: [/.?/] };
   },
 
   // Process all source files through the appropriate handlers and run
@@ -621,18 +656,26 @@ _.extend(Package.prototype, {
   // @param npmDependencies {Object} eg {gcd: "0.0.0", tar: "0.1.14"}
   installNpmDependencies: function(quiet) {
     var self = this;
+
     // Nothing to do if there's no Npm.depends().
     if (!self.npmDependencies)
       return;
+
     // Warehouse packages come with their NPM dependencies and are read-only.
     if (self.inWarehouse)
       return;
+
+    // No need to do it more than once.
+    if (self.npmUpdated)
+      return;
+
     // go through a specialized npm dependencies update process, ensuring we
     // don't get new versions of any (sub)dependencies. this process also runs
     // mostly safely multiple times in parallel (which could happen if you have
     // two apps running locally using the same package)
     meteorNpm.updateDependencies(
       self.name, self.npmDir(), self.npmDependencies, quiet);
+    self.npmUpdated = true;
   },
 
   npmDir: function () {

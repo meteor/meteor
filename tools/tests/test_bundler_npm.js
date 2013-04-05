@@ -6,6 +6,13 @@ var meteorNpm = require(path.join(__dirname, '..', 'meteor_npm.js'));
 var tmpPackageDirContainer = tmpDir();
 var testPackageDir = path.join(tmpPackageDirContainer, 'test-package');
 
+lib = new library.Library({
+  localPackageDirs: [
+    tmpPackageDirContainer,
+    path.join(files.getCurrentToolsDir(), 'packages')
+  ]
+});
+
 var updateTestPackage = function(npmDependencies) {
   if (!fs.existsSync(testPackageDir))
     fs.mkdirSync(testPackageDir);
@@ -100,9 +107,9 @@ var _assertCorrectPackageNpmDir = function(deps) {
 var _assertCorrectBundleNpmContents = function(bundleDir, deps) {
   // sanity check -- main.js has expected contents.
   assert.strictEqual(fs.readFileSync(path.join(bundleDir, "main.js"), "utf8").trim(),
-                     "require('./server/server.js');");
+                     "require('./programs/server/server.js');");
 
-  var bundledPackageNodeModulesDir = path.join(bundleDir, 'npm', 'test-package');
+  var bundledPackageNodeModulesDir = path.join(bundleDir, 'programs', 'server', 'npm', 'test-package');
 
   // bundle actually has the npm modules
   _.each(deps, function(version, name) {
@@ -127,8 +134,6 @@ var looksInstalled = function (nodeModulesDir, name) {
 ///
 /// TESTS
 ///
-
-var lib = new library.Library();
 
 console.log("app that uses gcd - clean run");
 assert.doesNotThrow(function () {
@@ -158,6 +163,7 @@ assert.doesNotThrow(function () {
   assert(fs.existsSync(path.join(nodeModulesDir)));
   files.rm_recursive(nodeModulesDir);
   assert(!fs.existsSync(path.join(nodeModulesDir)));
+  lib.refresh();
 
   // while bundling, verify that we don't call `npm install
   // name@version unnecessarily` -- calling `npm install` is enough,
@@ -199,6 +205,7 @@ assert.doesNotThrow(function () {
   files.rm_recursive(nodeModulesMimeDir);
   assert(!fs.existsSync(path.join(nodeModulesMimeDir)));
 
+  lib.refresh();
   var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: lib});
   assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
   _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
