@@ -42,14 +42,19 @@ _.extend(Meteor.__RoutePolicyConstructor.prototype, {
     return null;
   },
 
-  checkUrlPrefix: function (urlPrefix) {
+  checkUrlPrefix: function (urlPrefix, type) {
     var self = this;
+
     if (urlPrefix.charAt(0) !== '/')
       return 'a route URL prefix must begin with a slash';
+
     if (urlPrefix === '/')
       return 'a route URL prefix cannot be /';
-    if (self.urlPrefixTypes[urlPrefix] && self.urlPrefixTypes[urlPrefix] !== type)
-      return 'the route URL prefix ' + urlPrefix + ' has already been declared to be of type ' + type;
+
+    var existingType = self.urlPrefixTypes[urlPrefix];
+    if (existingType && existingType !== type)
+      return 'the route URL prefix ' + urlPrefix + ' has already been declared to be of type ' + existingType;
+
     return null;
   },
 
@@ -73,7 +78,7 @@ _.extend(Meteor.__RoutePolicyConstructor.prototype, {
   declare: function (urlPrefix, type) {
     var self = this;
     var problem = self.checkType(type) ||
-                  self.checkUrlPrefix(urlPrefix) ||
+                  self.checkUrlPrefix(urlPrefix, type) ||
                   self.checkForConflictWithStatic(urlPrefix, type);
     if (problem)
       throw new Error(problem);
