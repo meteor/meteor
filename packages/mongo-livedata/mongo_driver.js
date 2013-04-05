@@ -170,7 +170,7 @@ _Mongo.prototype._maybeBeginWrite = function () {
 // well-defined -- a write "has been made" if it's returned, and an
 // observer "has been notified" if its callback has returned.
 
-_Mongo.prototype.insert = function (collection_name, document) {
+_Mongo.prototype.insert = function (collection_name, document, options) {
   var self = this;
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
@@ -187,7 +187,10 @@ _Mongo.prototype.insert = function (collection_name, document) {
                       {safe: true}, future.resolver());
     future.wait();
     // XXX We don't have to run this on error, right?
-    Meteor.refresh({collection: collection_name, id: document._id});
+    var invalidationKey = {collection: collection_name, id: document._id};
+    if (options && options._invalidationKey)
+      _.extend(invalidationKey, options._invalidationKey);
+    Meteor.refresh(invalidationKey);
   } finally {
     write.committed();
   }
@@ -195,9 +198,12 @@ _Mongo.prototype.insert = function (collection_name, document) {
 
 // Cause queries that may be affected by the selector to poll in this write
 // fence.
-_Mongo.prototype._refresh = function (collectionName, selector) {
+_Mongo.prototype._refresh = function (collectionName, selector,
+                                      invalidationKey) {
   var self = this;
   var refreshKey = {collection: collectionName};
+  if (invalidationKey)
+    _.extend(refreshKey, invalidationKey);
   // If we know which documents we're removing, don't poll queries that are
   // specific to other documents. (Note that multiple notifications here should
   // not cause multiple polls, since all our listener is doing is enqueueing a
@@ -212,7 +218,7 @@ _Mongo.prototype._refresh = function (collectionName, selector) {
   }
 };
 
-_Mongo.prototype.remove = function (collection_name, selector) {
+_Mongo.prototype.remove = function (collection_name, selector, options) {
   var self = this;
 
   if (collection_name === "___meteor_failure_test_collection") {
@@ -230,7 +236,8 @@ _Mongo.prototype.remove = function (collection_name, selector) {
                       {safe: true}, future.resolver());
     future.wait();
     // XXX We don't have to run this on error, right?
-    self._refresh(collection_name, selector);
+    self._refresh(collection_name, selector,
+                  options && options._invalidationKey);
   } finally {
     write.committed();
   }
@@ -267,7 +274,7 @@ _Mongo.prototype.update = function (collection_name, selector, mod, options) {
                       replaceTypes(mod, replaceMeteorAtomWithMongo),
                       mongoOpts, future.resolver());
     future.wait();
-    self._refresh(collection_name, selector);
+    self._refresh(collection_name, selector, options._invalidationKey);
   } finally {
     write.committed();
   }
@@ -662,6 +669,8 @@ var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
     self._stopCallbacks.push(function () { listener.stop(); });
   };
   var key = {collection: cursorDescription.collectionName};
+  if (self._cursorDescription.options._invalidationKey)
+    _.extend(key, self._cursorDescription.options._invalidationKey);
   var specificIds = LocalCollection._idsMatchedBySelector(
     cursorDescription.selector);
   if (specificIds) {
