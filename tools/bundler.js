@@ -376,62 +376,18 @@ _.extend(Target.prototype, {
     }
   },
 
-  // Sort the packages in dependency order, then, package by package,
-  // write their resources into the bundle (which includes running the
+  // Sort the slices in dependency order, then, slice by slice, write
+  // their resources into the bundle (which includes running the
   // JavaScript linker.)
   emitResources: function () {
     var self = this;
 
     // Copy their resources into the bundle in order
     _.each(self.slices, function (slice) {
-      // ** Get the final resource list. It's the static resources
-      // ** from the package plus the output of running the JavaScript
-      // ** linker.
-
-      slice.ensureCompiled();
-      var resources = _.clone(slice.resources);
-
       var isApp = ! slice.pkg.name;
-      // Compute imports by merging the exports of all of the
-      // packages we use. To be eligible to supply an import, a
-      // slice must presently (a) be named (the app can't supply
-      // exports, at least for now); (b) have the "use" role (you
-      // can't import symbols from tests and such, primarily
-      // because we don't have a good way to name non-"use" roles
-      // in JavaScript.) Note that in the case of conflicting
-      // symbols, later packages get precedence.
-      var imports = {}; // map from symbol to supplying package name
-      _.each(_.values(slice.uses), function (u) {
-        if (! u.unordered) {
-          var otherSlice =
-            self.bundle.library.get(u.name).getSlice("use", self.arch);
-          // make sure otherSlice.exports is valid
-          otherSlice.ensureCompiled();
-          _.each(otherSlice.exports, function (symbol) {
-            imports[symbol] = otherSlice.pkg.name;
-          });
-        }
-      });
-
-      // Phase 2 link
-      var files = linker.link({
-        imports: imports,
-        useGlobalNamespace: isApp,
-        prelinkFiles: slice.prelinkFiles,
-        boundary: slice.boundary
-      });
-
-      // Add each output as a resource
-      _.each(files, function (file) {
-        resources.push({
-          type: "js",
-          data: new Buffer(file.source, 'utf8'),
-          servePath: file.servePath
-        });
-      });
 
       // Emit the resources
-      _.each(resources, function (resource) {
+      _.each(slice.getResources(), function (resource) {
         if (_.contains(["js", "css", "static"], resource.type)) {
           if (resource.type === "css" && self.arch !== "client")
             // XXX might be nice to throw an error here, but then we'd

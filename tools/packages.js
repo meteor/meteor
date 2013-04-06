@@ -31,7 +31,7 @@ var scanForSources = function (rootPath, extensions, ignoreFiles) {
   //
   // maybe all of the templates should go in one file? packages
   // should probably have a way to request this treatment (load
-  // order depedency tags?) .. who knows.
+  // order dependency tags?) .. who knows.
   var htmls = [];
   _.each(fileList, function (filename) {
     if (path.extname(filename) === '.html') {
@@ -130,14 +130,14 @@ var Slice = function (pkg, role, arch, options) {
 
   // All symbols exported from the JavaScript code in this
   // package. Array of string symbol (eg "Foo", "Bar.baz".) Set only
-  // after ensureCompiled().
+  // after _ensureCompiled().
   self.exports = null;
 
   // Prelink output. 'boundary' is a magic cookie used for inserting
   // imports. 'prelinkFiles' is the partially linked JavaScript
   // code. Both of these are inputs into the final link phase, which
   // inserts the final JavaScript resources into 'resources'. Set only
-  // after ensureCompiled().
+  // after _ensureCompiled().
   self.boundary = null;
   self.prelinkFiles = null;
 
@@ -157,13 +157,13 @@ var Slice = function (pkg, role, arch, options) {
   // to be served. Interpretation varies by type. For example, always
   // honored for "static", ignored for "head" and "body", sometimes
   // honored for CSS but ignored if we are concatenating. Set only
-  // after ensureCompiled().
+  // after _ensureCompiled().
   self.resources = null;
 };
 
 _.extend(Slice.prototype, {
   // Add more source files. 'sources' is an array of paths. Cannot be
-  // called after ensureCompiled().
+  // called after _ensureCompiled().
   addSources: function (sources) {
     var self = this;
     if (self.isCompiled)
@@ -176,7 +176,7 @@ _.extend(Slice.prototype, {
   // provided source files to the package dependencies. Sets fields
   // such as dependencies, exports, boundary, prelinkFiles, and
   // resources. Idempotent.
-  ensureCompiled: function () {
+  _ensureCompiled: function () {
     var self = this;
     var isApp = ! self.pkg.name;
 
@@ -285,6 +285,57 @@ _.extend(Slice.prototype, {
     self.exports = results.exports;
     self.resources = resources;
     self.isCompiled = true;
+  },
+
+  // Get the resources that this function contributes to a bundle, in
+  // the same format as self.resources as documented above. This
+  // includes static assets and fully linked JavaScript.
+  //
+  // It is when you call this function that we read our dependent
+  // packages and commit to whatever versions of them we currently
+  // have in the library -- at least for the purpose of imports, which
+  // is resolved at bundle time. (On the other hand, when it comes to
+  // the extension handlers we'll use, we previously commited to those
+  // versions at package build ('compile') time.)
+  getResources: function () {
+    var self = this;
+    self._ensureCompiled();
+
+    // Compute imports by merging the exports of all of the packages
+    // we use. Note that in the case of conflicting symbols, later
+    // packages get precedence.
+    var imports = {}; // map from symbol to supplying package name
+    _.each(_.values(self.uses), function (u) {
+      if (! u.unordered) {
+        var otherSlice =
+          self.pkg.library.get(u.name).getSlice("use", self.arch);
+        // make sure otherSlice.exports is valid
+        otherSlice._ensureCompiled();
+        _.each(otherSlice.exports, function (symbol) {
+          imports[symbol] = otherSlice.pkg.name;
+        });
+      }
+    });
+
+    // Phase 2 link
+    var isApp = ! self.pkg.name;
+    var files = linker.link({
+      imports: imports,
+      useGlobalNamespace: isApp,
+      prelinkFiles: self.prelinkFiles,
+      boundary: self.boundary
+    });
+
+    // Add each output as a resource
+    var jsResources = _.map(files, function (file) {
+      return {
+        type: "js",
+        data: new Buffer(file.source, 'utf8'),
+        servePath: file.servePath
+      };
+    });
+
+    return _.union(self.resources, jsResources); // union preserves order
   },
 
   // Return a list of all of the extension that indicate source files
