@@ -304,13 +304,19 @@ _.extend(Target.prototype, {
   // Determine the packages to load, create Slices for
   // them, put them in load order, save in slices.
   //
-  // contents is a map from role ('use' or 'test') to an array of
-  // either package names or actual Package objects.
-  determineLoadOrder: function (contents) {
+  // options include:
+  // - packages: an array of packages whose default slices should be
+  //   included
+  // - test: an array of packages whose test slices should be included
+  //
+  // In both cases you can pass either package names or Package
+  // objects.
+  determineLoadOrder: function (options) {
     var self = this;
+    var library = self.bundle.library;
 
     var get = function (packageOrPackageName) {
-      var pkg = self.bundle.library.get(packageOrPackageName);
+      var pkg = library.get(packageOrPackageName);
       if (! pkg) {
         console.error("Package not found: " + packageOrPackageName);
         process.exit(1);
@@ -324,12 +330,17 @@ _.extend(Target.prototype, {
     var onStack = {}; // Slices that we're in the process of adding
 
     // Find the roots
-    _.each(contents, function (packageList, role) {
-      _.each(packageList, function (packageOrPackageName) {
-        var pkg = get(packageOrPackageName);
-        var slice = pkg.getSlice(role, self.arch);
-        needed[slice.id] = slice;
-      });
+    var rootSlices =
+      _.flatten([
+        _.map(options.packages || [], function (pkg) {
+          return get(pkg).getDefaultSlices(self.arch);
+        }),
+        _.map(options.test || [], function (pkg) {
+          return get(pkg).getTestSlices(self.arch);
+        })
+      ]);
+    _.each(rootSlices, function (slice) {
+      needed[slice.id] = slice;
     });
 
     // Set self.slices to be all of the roots, plus all of their
@@ -354,19 +365,20 @@ _.extend(Target.prototype, {
           return;
 
         _.each(slice.uses, function (u) {
-          var usedSlice = get(u.name).getSlice("use", self.arch);
-          if (slice.pkg.name && u.unordered) {
-            needed[usedSlice.id] = usedSlice;
-            return;
-          }
-          if (onStack[usedSlice.id]) {
-            console.error("fatal: circular dependency between packages " +
-                          slice.pkg.name + " and " + usedSlice.pkg.name);
-            process.exit(1);
-          }
-          onStack[usedSlice.id] = true;
-          add(usedSlice);
-          delete onStack[usedSlice.id];
+          _.each(library.getSlices(u.spec, self.arch), function (usedSlice) {
+            if (u.unordered) {
+              needed[usedSlice.id] = usedSlice;
+              return;
+            }
+            if (onStack[usedSlice.id]) {
+              console.error("fatal: circular dependency between packages " +
+                            slice.pkg.name + " and " + usedSlice.pkg.name);
+              process.exit(1);
+            }
+            onStack[usedSlice.id] = true;
+            add(usedSlice);
+            delete onStack[usedSlice.id];
+          });
         });
         self.slices.push(slice);
         done[slice.id] = true;
@@ -407,8 +419,7 @@ _.extend(Target.prototype, {
             f.setUrlFromRelPath(resource.servePath);
           else {
             // XXX hack
-            if (resource.servePath.match(/^\/packages\//) ||
-                resource.servePath.match(/^\/package-tests\//))
+            if (resource.servePath.match(/^\/packages\//))
               f.targetPath = resource.servePath;
             else
               f.targetPath = path.join('/app', resource.servePath);
@@ -724,8 +735,8 @@ _.extend(ServerTarget.prototype, {
         var sourcePath = path.join(slice.pkg.npmDir(), 'node_modules');
         var targetPath = path.join(outputPath, 'npm', slice.pkg.name);
         if (fs.existsSync(targetPath))
-          // We already did this package (eg, we've used the package
-          // in both a "use" and a "test" role)
+          // We already did this package (probably we included
+          // multiple slices of the package)
           return;
 
         files.mkdir_p(path.dirname(targetPath));
@@ -951,8 +962,14 @@ exports.bundle = function (appDir, outputPath, options) {
     var app = library.getForApp(appDir, ignoreFiles);
 
     // Populate the list of slices to load
-    client.determineLoadOrder({use: [app], test: options.testPackages || []});
-    server.determineLoadOrder({use: [app], test: options.testPackages || []});
+    client.determineLoadOrder({
+      packages: [app],
+      test: options.testPackages || []
+    });
+    server.determineLoadOrder({
+      packages: [app],
+      test: options.testPackages || []
+    });
 
     // Link JavaScript, put resources in load order, and copy them to
     // the bundle

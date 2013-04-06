@@ -129,6 +129,31 @@ _.extend(Library.prototype, {
     return pkg;
   },
 
+  // Given a slice set spec -- either a package name like "ddp", or a
+  // particular slice within the package like "ddp.client" -- return
+  // the list of matching slices (as an array of Slice objects) for a
+  // given architecture.
+  getSlices: function (spec, arch) {
+    var self = this;
+    var parts = spec.split('.');
+
+    if (parts.length === 1) {
+      var pkg = self.get(parts[0], true);
+      return pkg.getDefaultSlices(arch);
+    }
+
+    else if (parts.length === 2) {
+      var pkg = self.get(parts[0], true);
+      return [pkg.getSingleSlice(parts[1], arch)];
+    }
+
+    else {
+      // XXX figure out if this is user-visible and if so, improve the
+      // message
+      throw new Error("Bad slice spec");
+    }
+  },
+
   // Get all packages available. Returns a map from the package name
   // to a Package object.
   list: function () {

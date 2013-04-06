@@ -8,7 +8,7 @@ var linker = require(path.join(__dirname, 'linker.js'));
 var fs = require('fs');
 
 // Find all files under `rootPath` that have an extension in
-// `extensions` (an array of extensions INCLUDING leading dot), and
+// `extensions` (an array of extensions without leading dot), and
 // return them as a list of paths relative to sourceRoot. Ignore files
 // that match a regexp in the ignoreFiles array, if given. As a
 // special case (ugh), push all html files to the head of the list.
@@ -60,7 +60,8 @@ var scanForSources = function (rootPath, extensions, ignoreFiles) {
 ///////////////////////////////////////////////////////////////////////////////
 
 // Options:
-// - sliceName [required]
+// - name [required]
+// - arch [required]
 // - uses
 // - sources
 // - forceExport
@@ -68,49 +69,31 @@ var scanForSources = function (rootPath, extensions, ignoreFiles) {
 //
 // Do not include the source files in dependencyInfo. They will be
 // added at compile time when the sources are actually read.
-var Slice = function (pkg, role, arch, options) {
+var Slice = function (pkg, options) {
   var self = this;
   self.pkg = pkg;
 
-  // Unique ID for this slice. Unique across all slices of all
-  // packages, but constant across reloads of this slice.
-  self.id = pkg.id + ":" + options.sliceName;
-
-  // "use" in the normal case (this object represents the instance of
-  // a package in a bundle), or "test" if this instead represents an
-  // instance of the package's tests.
-  self.role = role;
+  // Name for this slice. For example, the "client" in "ddp.client"
+  // (which, NB, we might load on server arches.)
+  self.sliceName = options.name;
 
   // "client" or "server"
-  self.arch = arch;
+  self.arch = options.arch;
 
-  // Name for this slice that is unique within the package
-  self.sliceName = options.sliceName;
+  // Unique ID for this slice. Unique across all slices of all
+  // packages, but constant across reloads of this slice.
+  self.id = pkg.id + "." + options.name + "@" + self.arch;
 
   // Packages used. The ordering is significant only for determining
-  // import symbol priority (it doesn't affect load order.) A given
-  // package should occur only once in the array. (However,
-  // options.uses may contain duplicates, which will be resolved by
-  // keeping the rightmost entry and merging the options.)
-  // Each element in the array has keys:
-  // - name: the name of the package as a string
+  // import symbol priority (it doesn't affect load order), and a
+  // given package could appear more than once in the list, so code
+  // that consumes this value will need to guard appropriately. Each
+  // element in the array has keys:
+  // - spec: either 'packagename' or 'packagename.slicename'
   // - unordered: If true, we don't want the package's imports and we
   //   don't want to force the package to load before us. We just want
   //   to ensure that it loads if we load.
-  self.uses = [];
-  var seen = {};
-  if (options.uses) {
-    for (var i = options.uses.length - 1; i >= 0; i--) {
-      var already = seen[options.uses[i].name];
-      if (already)
-        _.extend(already, options.uses[i]);
-      else {
-        var clone = _.clone(options.uses[i]);
-        self.uses.push(clone);
-        seen[options.uses[i].name] = clone;
-      }
-    }
-  }
+  self.uses = options.uses;
 
   // This slice's source files. Array of paths.
   self.sources = options.sources || [];
@@ -125,7 +108,7 @@ var Slice = function (pkg, role, arch, options) {
   self.dependencyInfo = options.dependencyInfo ||
     { files: {}, directories: {} };
 
-  // Has this package been compiled?
+  // Has this slice been compiled?
   self.isCompiled = false;
 
   // All symbols exported from the JavaScript code in this
@@ -264,16 +247,12 @@ _.extend(Slice.prototype, {
     });
 
     // Phase 1 link
-    var servePathForRole = {
-      use: "/packages/",
-      test: "/package-tests/"
-    };
-
     var results = linker.prelink({
       inputFiles: js,
       useGlobalNamespace: isApp,
       combinedServePath: isApp ? null :
-        servePathForRole[self.role] + self.pkg.name + ".js",
+        "/packages/" + self.pkg.name +
+        (self.sliceName === "main" ? "" : ("." + self.sliceName)) + ".js",
       // XXX report an error if there is a package called global-imports
       importStubServePath: '/packages/global-imports.js',
       name: self.pkg.name || null,
@@ -299,6 +278,7 @@ _.extend(Slice.prototype, {
   // versions at package build ('compile') time.)
   getResources: function () {
     var self = this;
+    var library = self.pkg.library;
     self._ensureCompiled();
 
     // Compute imports by merging the exports of all of the packages
@@ -307,12 +287,11 @@ _.extend(Slice.prototype, {
     var imports = {}; // map from symbol to supplying package name
     _.each(_.values(self.uses), function (u) {
       if (! u.unordered) {
-        var otherSlice =
-          self.pkg.library.get(u.name).getSlice("use", self.arch);
-        // make sure otherSlice.exports is valid
-        otherSlice._ensureCompiled();
-        _.each(otherSlice.exports, function (symbol) {
-          imports[symbol] = otherSlice.pkg.name;
+        _.each(library.getSlices(u.spec, self.arch), function (otherSlice) {
+          otherSlice._ensureCompiled(); // make sure otherSlice.exports is valid
+          _.each(otherSlice.exports, function (symbol) {
+            imports[symbol] = otherSlice.pkg.name;
+          });
         });
       }
     });
@@ -338,53 +317,55 @@ _.extend(Slice.prototype, {
     return _.union(self.resources, jsResources); // union preserves order
   },
 
+  // Get all extensions handlers registered in this slice, as a map
+  // from extension (no leading dot) to handler function. Throws an
+  // exception if two packages are registered for the same extension.
+  _allHandlers: function () {
+    var self = this;
+    var ret = {};
+
+    // XXX we used to include our own extensions only if we were the
+    // "use" role. now we include them everywhere because we don't
+    // have a special "use" role anymore. it's not totally clear to me
+    // what the correct behavior should be -- we need to resolve
+    // whether we think about extensions as being global to a package
+    // or particular to a slice.
+    _.extend(ret, self.pkg.extensions);
+
+    _.each(self.uses, function (u) {
+      var otherPkg = self.pkg.library.get(u.spec.split('.')[0]);
+      _.each(otherPkg.extensions, function (handler, ext) {
+        if (ext in ret && ret[ext] !== handler)
+          // XXX do something more graceful than printing a stack
+          // trace and exiting!! we have higher standards than that!
+          throw new Error("Conflict: two packages included in " +
+                          (self.pkg.name || "your app") + ", " +
+                          (ret[ext].pkg.name || "your app") + " and " +
+                          (otherPkg.name || "your app") + ", " +
+                          "are both trying to handle ." + ext);
+        ret[ext] = handler;
+      });
+    });
+
+    return ret;
+  },
+
   // Return a list of all of the extension that indicate source files
-  // for this slice, INCLUDING leading dots. Computed based on
+  // for this slice, not including leading dots. Computed based on
   // this.uses, so should only be called once that has been set.
   registeredExtensions: function () {
     var self = this;
-    var ret = _.keys(self.pkg.extensions);
-
-    _.each(self.uses, function (u) {
-      var pkg = self.pkg.library.get(u.name);
-      ret = _.union(ret, _.keys(pkg.extensions));
-    });
-
-    return _.map(ret, function (x) {return "." + x;});
+    return _.keys(self._allHandlers());
   },
 
-  // Find the function that should be used to handle a source file
-  // for this slice. We'll use handlers that are defined in
-  // this package and in its immediate dependencies. ('extension'
-  // should be the extension of the file without a leading dot.)
+  // Find the function that should be used to handle a source file for
+  // this slice, or return null if there isn't one. We'll use handlers
+  // that are defined in this package and in its immediate
+  // dependencies. ('extension' should be the extension of the file
+  // without a leading dot.)
   _getSourceHandler: function (extension) {
     var self = this;
-    var candidates = [];
-
-    if (self.role === "use" && extension in self.pkg.extensions)
-      candidates.push(self.pkg.extensions[extension]);
-
-    var seen = {};
-    _.each(self.uses, function (u) {
-      var otherPkg = self.pkg.library.get(u.name);
-      if (extension in otherPkg.extensions)
-        candidates.push(otherPkg.extensions[extension]);
-    });
-
-    // XXX do something more graceful than printing a stack trace and
-    // exiting!! we have higher standards than that!
-
-    if (!candidates.length)
-      return null;
-
-    if (candidates.length > 1)
-      // XXX improve error message (eg, name the packages involved)
-      // and make it clear that it's not a global conflict, but just
-      // among this package's dependencies
-      throw new Error("Conflict: two packages are both trying " +
-                      "to handle ." + extension);
-
-    return candidates[0];
+    return (self._allHandlers())[extension] || null;
   }
 });
 
@@ -440,19 +421,60 @@ var Package = function (library) {
   // True if we've run installNpmDependencies. (It's slow and there's
   // no need to do it more than once.)
   self.npmUpdated = false;
+
+  // Map from an arch to the list of slice names that should be
+  // included by default if this package is used without specifying a
+  // slice (eg, as "ddp" rather than "ddp.server").
+  self.defaultSlices = {};
+
+  // Map from an arch to the list of slice names that should be
+  // included when this package is tested.
+  self.testSlices = {};
 };
 
 _.extend(Package.prototype, {
-  // Return the slice of the package to use for a give role ('use' or
-  // 'test') and architecture (right now 'client' and 'server', but in
-  // the future these will be real architectures), or null if that
-  // packages can't be loaded under these circumstances.
-  getSlice: function (role, arch) {
+  // Return the slice of the package to use for a given slice name
+  // (eg, 'main' or 'test') and architecture (right now 'client' and
+  // 'server', but in the future these will be real architectures), or
+  // throw an exception if that packages can't be loaded under these
+  // circumstances.
+  getSingleSlice: function (name, arch) {
     var self = this;
 
-    return _.find(self.slices, function (slice) {
-      return slice.role === role && slice.arch === arch;
-    }) || null;
+    var ret = _.find(self.slices, function (slice) {
+      return slice.sliceName === name && slice.arch === arch;
+    });
+
+    if (! ret) {
+      // XXX need improvement. The user should get a graceful error
+      // message, not an exception, and all of this talk of slices an
+      // architectures is likely to be confusing/overkill in many
+      // contexts.
+      throw new Error((self.name || "This app") +
+                      " does not have a slice named '" + name +
+                      "' that runs on architecture '" + arch + "'");
+    }
+
+    return ret;
+  },
+
+  // Return the slices that should be used on a given arch if the
+  // package is named without any qualifiers (eg, 'ddp' rather than
+  // 'ddp.client').
+  getDefaultSlices: function (arch) {
+    var self = this;
+    return _.map(self.defaultSlices[arch], function (name) {
+      return self.getSingleSlice(name, arch);
+    });
+  },
+
+  // Return the slices that should be used to test the package on a
+  // given arch.
+  getTestSlices: function (arch) {
+    var self = this;
+    return _.map(self.testSlices[arch], function (name) {
+      return self.getSingleSlice(name, arch);
+    });
   },
 
   // loads a package's package.js file into memory, using
@@ -507,6 +529,7 @@ _.extend(Package.prototype, {
         roleHandlers.test = f;
       },
 
+      // extension doesn't contain a dot
       register_extension: function (extension, callback) {
         if (_.has(self.extensions, extension))
           throw new Error("This package has already registered a handler for " +
@@ -623,8 +646,8 @@ _.extend(Package.prototype, {
                 if (options.role && options.role !== "use")
                   throw new Error("Role override is no longer supported");
                 uses[role][arch].push({
-                  name: name,
-                  unordered: options.unordered
+                  spec: name,
+                  unordered: options.unordered || false
                 });
               });
             });
@@ -682,17 +705,30 @@ _.extend(Package.prototype, {
     _.each(["use", "test"], function (role) {
       _.each(["client", "server"], function (arch) {
         // Everything depends on the package 'meteor', which sets up
-        // the basic environment) (except 'meteor' itself)
-        if (! (name === "meteor" && role === "use"))
-          uses[role][arch].unshift({ name: "meteor" });
+        // the basic environment) (except 'meteor' itself).
+        if (! (name === "meteor" && role === "use")) {
+          // Don't add the dependency if one already exists. This
+          // allows the package to create an unordered dependency and
+          // override the one that we'd add here. This is necessary to
+          // resolve the circular dependency between meteor and
+          // underscore (underscore depends weakly on meteor; it just
+          // needs the .js extension handler.)
+          var alreadyDependsOnMeteor =
+            !! _.find(uses[role][arch], function (u) {
+              return u.spec === "meteor";
+            });
+          if (! alreadyDependsOnMeteor)
+            uses[role][arch].unshift({ spec: "meteor" });
+        }
 
         // We need to create a separate (non ===) copy of
         // dependencyInfo for each slice.
         var dependencyInfo = { files: {}, directories: {} };
         dependencyInfo.files[packageJsPath] = packageJsHash;
 
-        self.slices.push(new Slice(self, role, arch, {
-          sliceName: (role !== "use" ? role + "-" : "") + arch,
+        self.slices.push(new Slice(self, {
+          name: ({ use: "main", test: "tests" })[role],
+          arch: arch,
           uses: uses[role][arch],
           sources: sources[role][arch],
           forceExport: forceExport[role][arch],
@@ -700,6 +736,10 @@ _.extend(Package.prototype, {
         }));
       });
     });
+
+    // Default slices
+    self.defaultSlices = { client: ['main'], server: ['main'] };
+    self.testSlices = { client: ['tests'], server: ['tests'] };
   },
 
   initFromAppDir: function (appDir, ignoreFiles) {
@@ -719,10 +759,11 @@ _.extend(Package.prototype, {
         project.get_packages(appDir));
 
       // Create slice
-      var slice = new Slice(self, "use", arch, {
-        sliceName: arch,
+      var slice = new Slice(self, {
+        name: "app",
+        arch: arch,
         uses: _.map(names, function (name) {
-          return { name: name }
+          return { spec: name }
         })
       });
       self.slices.push(slice);
@@ -769,7 +810,7 @@ _.extend(Package.prototype, {
       // Directories to monitor for new files
       slice.dependencyInfo.directories[appDir] = {
         include: _.map(slice.registeredExtensions(), function (ext) {
-          return new RegExp('\\.' + ext.slice(1) + "$");
+          return new RegExp('\\.' + ext + "$");
         }),
         exclude: ignoreFiles
       };
@@ -787,6 +828,8 @@ _.extend(Package.prototype, {
       slice.dependencyInfo.directories[
         path.resolve(appDir, '.meteor', 'local')] = { exclude: [/.?/] };
     });
+
+    self.defaultSlices = { client: ['app'], server: ['app'] };
   },
 
   // Called when this package wants to ensure certain npm dependencies

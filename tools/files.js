@@ -64,10 +64,10 @@ _.extend(exports, {
     return true;
   },
 
-  // Returns true if this is a file we should monitor.
-  // Iterate over all the interesting files, applying 'func' to each
-  // file path. 'extensions' is an array of extensions to include (eg
-  // ['.html', '.js'])
+  // Returns true if this is a file we should monitor.  Iterate over
+  // all the interesting files, applying 'func' to each file
+  // path. 'extensions' is an array of extensions to include, without
+  // leading dots (eg ['html', 'js'])
   file_list_async: function (filepath, extensions, func) {
     if (!files.pre_filter(filepath)) { return; }
     fs.stat(filepath, function(err, stats) {
@@ -111,12 +111,13 @@ _.extend(exports, {
     return ret;
   },
 
-  // given a list of extensions and a path, return the file extension
-  // provided in the list. If it doesn't find it, return null.
+  // given a list of extensions (no leading dots) and a path, return
+  // the file extension provided in the list. If it doesn't find it,
+  // return null.
   findExtension: function (extensions, filepath) {
     var len = filepath.length;
     for (var i = 0; i < extensions.length; ++i) {
-      var ext = extensions[i];
+      var ext = "." + extensions[i];
       if (filepath.indexOf(ext, len - ext.length) !== -1){
         return ext;
       }
