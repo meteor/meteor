@@ -7,72 +7,143 @@ var meteorNpm = require('./meteor_npm.js');
 var linker = require(path.join(__dirname, 'linker.js'));
 var fs = require('fs');
 
-var nextPackageId = 1;
-var Package = function (library) {
+// Find all files under `rootPath` that have an extension in
+// `extensions` (an array of extensions INCLUDING leading dot), and
+// return them as a list of paths relative to sourceRoot. Ignore files
+// that match a regexp in the ignoreFiles array, if given. As a
+// special case (ugh), push all html files to the head of the list.
+var scanForSources = function (rootPath, extensions, ignoreFiles) {
   var self = this;
 
-  // Fields set by init_*:
-  // name: package name, or null for an app pseudo-package or collection
-  // sourceRoot: base directory for resolving source files, null for collection
-  // serveRoot: base directory for serving files, null for collection
+  // find everything in tree, sorted depth-first alphabetically.
+  var fileList = files.file_list_sync(rootPath, extensions);
+  fileList = _.reject(fileList, function (file) {
+    return _.any(ignoreFiles || [], function (pattern) {
+      return file.match(pattern);
+    });
+  });
+  fileList.sort(files.sort);
 
-  // A unique ID (guaranteed to not be reused in this process -- if
-  // the package is reloaded, it will get a different id the second
-  // time)
-  self.id = nextPackageId++;
+  // XXX HUGE HACK --
+  // push html (template) files ahead of everything else. this is
+  // important because the user wants to be able to say
+  // Template.foo.events = { ... }
+  //
+  // maybe all of the templates should go in one file? packages
+  // should probably have a way to request this treatment (load
+  // order depedency tags?) .. who knows.
+  var htmls = [];
+  _.each(fileList, function (filename) {
+    if (path.extname(filename) === '.html') {
+      htmls.push(filename);
+      fileList = _.reject(fileList, function (f) { return f === filename;});
+    }
+  });
+  fileList = htmls.concat(fileList);
 
-  // Package library that should be used to resolve this package's
-  // dependencies
-  self.library = library;
+  // now make everything relative to rootPath
+  var prefix = rootPath;
+  if (prefix[prefix.length - 1] !== path.sep)
+    prefix += path.sep;
 
-  // package metadata, from describe()
-  self.metadata = {};
+  return fileList.map(function (abs) {
+    if (path.relative(prefix, abs).match(/\.\./))
+      // XXX audit to make sure it works in all possible symlink
+      // scenarios
+      throw new Error("internal error: source file outside of parent?");
+    return abs.substr(prefix.length);
+  });
+};
 
-  self.roleHandlers = {use: null, test: null};
-  self.npmDependencies = null;
+///////////////////////////////////////////////////////////////////////////////
+// Slice
+///////////////////////////////////////////////////////////////////////////////
 
-  // registered source file handlers
-  self.extensions = {};
+// Options:
+// - sliceName [required]
+// - uses
+// - sources
+// - forceExport
+// - dependencyInfo
+//
+// Do not include the source files in dependencyInfo. They will be
+// added at compile time when the sources are actually read.
+var Slice = function (pkg, role, arch, options) {
+  var self = this;
+  self.pkg = pkg;
 
-  // Packages used. Map from role to where to array of package name
-  // (string.) The ordering in the array is significant only for
-  // determining import symbol priority (it doesn't affect load
-  // order.) A given package name should occur only once in a given
-  // array.
-  self.uses = {use: {client: [], server: []},
-               test: {client: [], server: []}};
+  // Unique ID for this slice. Unique across all slices of all
+  // packages, but constant across reloads of this slice.
+  self.id = pkg.id + ":" + options.sliceName;
 
-  // packages dependencies against which we are unordered (we don't
-  // mind if they load after us, as long as they load.) map from
-  // package name to true.
-  self.unordered = {};
+  // "use" in the normal case (this object represents the instance of
+  // a package in a bundle), or "test" if this instead represents an
+  // instance of the package's tests.
+  self.role = role;
+
+  // "client" or "server"
+  self.arch = arch;
+
+  // Name for this slice that is unique within the package
+  self.sliceName = options.sliceName;
+
+  // Packages used. The ordering is significant only for determining
+  // import symbol priority (it doesn't affect load order.) A given
+  // package should occur only once in the array. (However,
+  // options.uses may contain duplicates, which will be resolved by
+  // keeping the rightmost entry and merging the options.)
+  // Each element in the array has keys:
+  // - name: the name of the package as a string
+  // - unordered: If true, we don't want the package's imports and we
+  //   don't want to force the package to load before us. We just want
+  //   to ensure that it loads if we load.
+  self.uses = [];
+  var seen = {};
+  if (options.uses) {
+    for (var i = options.uses.length - 1; i >= 0; i--) {
+      var already = seen[options.uses[i].name];
+      if (already)
+        _.extend(already, options.uses[i]);
+      else {
+        var clone = _.clone(options.uses[i]);
+        self.uses.push(clone);
+        seen[options.uses[i].name] = clone;
+      }
+    }
+  }
+
+  // This slice's source files. Array of paths.
+  self.sources = options.sources || [];
+
+  // Symbols that this slice should export even if @export directives
+  // don't appear in the source code. List of symbols (as strings.)
+  self.forceExport = options.forceExport || [];
 
   // Files and directories that we want to monitor for changes in
   // development mode, such as source files and package.js, in the
   // format accepted by watch.Watcher.
-  self.dependencyInfo = { files: {}, directories: {} };
+  self.dependencyInfo = options.dependencyInfo ||
+    { files: {}, directories: {} };
+
+  // Has this package been compiled?
+  self.isCompiled = false;
 
   // All symbols exported from the JavaScript code in this
-  // package. Map from role to where to array of string symbol (eg
-  // "Foo", "Bar.baz".) Set only after ensureCompiled().
-  self.exports = {use: {client: [], server: []},
-                  test: {client: [], server: []}};
+  // package. Array of string symbol (eg "Foo", "Bar.baz".) Set only
+  // after ensureCompiled().
+  self.exports = null;
 
   // Prelink output. 'boundary' is a magic cookie used for inserting
   // imports. 'prelinkFiles' is the partially linked JavaScript
   // code. Both of these are inputs into the final link phase, which
-  // inserts the final JavaScript resources into 'resources'. All of
-  // them are maps from role to where to the actual value. Set only
+  // inserts the final JavaScript resources into 'resources'. Set only
   // after ensureCompiled().
-  self.boundary = {use: {client: null, server: null},
-                   test: {client: null, server: null}};
-  self.prelinkFiles = {use: {client: null, server: null},
-                       test: {client: null, server: null}};
+  self.boundary = null;
+  self.prelinkFiles = null;
 
-  // All of the data provided by this package for eventual inclusion
-  // in the bundle, other than JavaScript that still needs to be fed
-  // through the final link stage.. A map from where to role to a list
-  // of objects with these keys:
+  // All of the data provided for eventual inclusion in the bundle,
+  // other than JavaScript that still needs to be fed through the
+  // final link stage. A list of objects with these keys:
   //
   // type: "js", "css", "head", "body", "static"
   //
@@ -87,16 +158,227 @@ var Package = function (library) {
   // honored for "static", ignored for "head" and "body", sometimes
   // honored for CSS but ignored if we are concatenating. Set only
   // after ensureCompiled().
-  self.resources = {use: {client: null, server: null},
-                    test: {client: null, server: null}};
+  self.resources = null;
+};
 
-  // Has this package been compiled?
-  self.isCompiled = false;
+_.extend(Slice.prototype, {
+  // Add more source files. 'sources' is an array of paths. Cannot be
+  // called after ensureCompiled().
+  addSources: function (sources) {
+    var self = this;
+    if (self.isCompiled)
+      throw new Error("Too late to add sources");
+    self.sources = self.sources.concat(sources);
+  },
 
-  // Metadata that is read from package.js and is then input to the
-  // compiler.
-  self.sources = null;
-  self.forceExports = null;
+  // Process all source files through the appropriate handlers and run
+  // the prelink phase on any resulting JavaScript. Also add all
+  // provided source files to the package dependencies. Sets fields
+  // such as dependencies, exports, boundary, prelinkFiles, and
+  // resources. Idempotent.
+  ensureCompiled: function () {
+    var self = this;
+    var isApp = ! self.pkg.name;
+
+    if (self.isCompiled)
+      return;
+
+    var resources = [];
+    var js = [];
+
+    /**
+     * In the legacy extension API, this is the ultimate low-level
+     * entry point to add data to the bundle.
+     *
+     * type: "js", "css", "head", "body", "static"
+     *
+     * path: the (absolute) path at which the file will be
+     * served. ignored in the case of "head" and "body".
+     *
+     * source_file: the absolute path to read the data from. if
+     * path is set, will default based on that. overridden by
+     * data.
+     *
+     * data: the data to send. overrides source_file if
+     * present. you must still set path (except for "head" and
+     * "body".)
+     */
+    var add_resource = function (options) {
+      var sourceFile = options.source_file || options.path;
+
+      var data;
+      if (options.data) {
+        data = options.data;
+        if (!(data instanceof Buffer)) {
+          if (!(typeof data === "string"))
+            throw new Error("Bad type for data");
+          data = new Buffer(data, 'utf8');
+        }
+      } else {
+        if (!sourceFile)
+          throw new Error("Need either source_file or data");
+        data = fs.readFileSync(sourceFile);
+      }
+
+      if (options.where && options.where !== self.arch)
+        throw new Error("'where' is deprecated here and if provided " +
+                        "must be '" + self.arch + "'");
+
+      if (options.type === "js") {
+        js.push({
+          source: data.toString('utf8'),
+          servePath: options.path
+        });
+      } else {
+        resources.push({
+          type: options.type,
+          data: data,
+          servePath: options.path
+        });
+      }
+    };
+
+    _.each(self.sources, function (relPath) {
+      var absPath = path.resolve(self.pkg.sourceRoot, relPath);
+      var ext = path.extname(relPath).substr(1);
+      var handler = self._getSourceHandler(ext);
+      var contents = fs.readFileSync(absPath);
+      self.dependencyInfo.files[absPath] = bundler.sha1(contents);
+
+      if (! handler) {
+        // If we don't have an extension handler, serve this file
+        // as a static resource.
+        resources.push({
+          type: "static",
+          data: contents,
+          servePath: path.join(self.pkg.serveRoot, relPath)
+        });
+        return;
+      }
+
+      handler({add_resource: add_resource},
+              // XXX take contents instead of a path
+              path.join(self.pkg.sourceRoot, relPath),
+              path.join(self.pkg.serveRoot, relPath),
+              self.arch);
+    });
+
+    // Phase 1 link
+    var servePathForRole = {
+      use: "/packages/",
+      test: "/package-tests/"
+    };
+
+    var results = linker.prelink({
+      inputFiles: js,
+      useGlobalNamespace: isApp,
+      combinedServePath: isApp ? null :
+        servePathForRole[self.role] + self.pkg.name + ".js",
+      // XXX report an error if there is a package called global-imports
+      importStubServePath: '/packages/global-imports.js',
+      name: self.pkg.name || null,
+      forceExport: self.forceExport
+    });
+
+    self.prelinkFiles = results.files;
+    self.boundary = results.boundary;
+    self.exports = results.exports;
+    self.resources = resources;
+    self.isCompiled = true;
+  },
+
+  // Return a list of all of the extension that indicate source files
+  // for this slice, INCLUDING leading dots. Computed based on
+  // this.uses, so should only be called once that has been set.
+  registeredExtensions: function () {
+    var self = this;
+    var ret = _.keys(self.pkg.extensions);
+
+    _.each(self.uses, function (u) {
+      var pkg = self.pkg.library.get(u.name);
+      ret = _.union(ret, _.keys(pkg.extensions));
+    });
+
+    return _.map(ret, function (x) {return "." + x;});
+  },
+
+  // Find the function that should be used to handle a source file
+  // for this slice. We'll use handlers that are defined in
+  // this package and in its immediate dependencies. ('extension'
+  // should be the extension of the file without a leading dot.)
+  _getSourceHandler: function (extension) {
+    var self = this;
+    var candidates = [];
+
+    if (self.role === "use" && extension in self.pkg.extensions)
+      candidates.push(self.pkg.extensions[extension]);
+
+    var seen = {};
+    _.each(self.uses, function (u) {
+      var otherPkg = self.pkg.library.get(u.name);
+      if (extension in otherPkg.extensions)
+        candidates.push(otherPkg.extensions[extension]);
+    });
+
+    // XXX do something more graceful than printing a stack trace and
+    // exiting!! we have higher standards than that!
+
+    if (!candidates.length)
+      return null;
+
+    if (candidates.length > 1)
+      // XXX improve error message (eg, name the packages involved)
+      // and make it clear that it's not a global conflict, but just
+      // among this package's dependencies
+      throw new Error("Conflict: two packages are both trying " +
+                      "to handle ." + extension);
+
+    return candidates[0];
+  }
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// Packages
+///////////////////////////////////////////////////////////////////////////////
+
+var nextPackageId = 1;
+var Package = function (library) {
+  var self = this;
+
+  // Fields set by init_*:
+  // name: package name, or null for an app pseudo-package or collection
+  // sourceRoot: base directory for resolving source files, null for collection
+  // serveRoot: base directory for serving files, null for collection
+
+  // A unique ID (guaranteed to not be reused in this process -- if
+  // the package is reloaded, it will get a different id the second
+  // time)
+  self.id = nextPackageId++;
+
+  // The path from which this package was loaded
+  self.sourceRoot = null;
+
+  // XXX needs docs
+  self.serveRoot = null;
+
+  // Package library that should be used to resolve this package's
+  // dependencies
+  self.library = library;
+
+  // Package metadata. Keys are 'summary' and 'internal'.
+  self.metadata = {};
+
+  // npm packages used by this package. Map from npm package name to
+  // npm version (as a string)
+  self.npmDependencies = null;
+
+  // File handler extensions defined by this package. Map from file
+  // extension to the handler function.
+  self.extensions = {};
+
+  // Available editions/subpackages ("slices") of this package. Array
+  // of Slice.
+  self.slices = [];
 
   // Are we in the warehouse? Used to skip npm re-scans.
   // XXX this is probably connected to isCompiled; it was originally created on
@@ -107,105 +389,19 @@ var Package = function (library) {
   // True if we've run installNpmDependencies. (It's slow and there's
   // no need to do it more than once.)
   self.npmUpdated = false;
-
-  // functions that can be called when the package is scanned --
-  // visible as `Package` when package.js is executed
-  self.packageFacade = {
-    // keys
-    // - summary: for 'meteor list'
-    // - internal: if true, hide in list
-    // - environments: optional
-    //   (1) if present, if depended on in an environment not on this
-    //       list, then throw an error
-    //   (2) if present, these are also the environments that will be
-    //       used when an application uses the package (since it can't
-    //       specify environments.) if not present, apps will use
-    //       [''], which is suitable for a package that doesn't care
-    //       where it's loaded (like livedata.)
-    describe: function (metadata) {
-      _.extend(self.metadata, metadata);
-    },
-
-    on_use: function (f) {
-      if (self.roleHandlers.use)
-        throw new Error("A package may have only one on_use handler");
-      self.roleHandlers.use = f;
-    },
-
-    on_test: function (f) {
-      if (self.roleHandlers.test)
-        throw new Error("A package may have only one on_test handler");
-      self.roleHandlers.test = f;
-    },
-
-    register_extension: function (extension, callback) {
-      if (_.has(self.extensions, extension))
-        throw new Error("This package has already registered a handler for " +
-                        extension);
-      self.extensions[extension] = callback;
-    },
-
-    // Same as node's default `require` but is relative to the
-    // package's directory. Regular `require` doesn't work well
-    // because we read the package.js file and `runInThisContext` it
-    // separately as a string.  This means that paths are relative to
-    // the top-level meteor.js script rather than the location of
-    // package.js
-    _require: function(filename) {
-      return require(path.join(self.sourceRoot, filename));
-    }
-  };
-
-  // npm functions that can be called when the package is scanned --
-  // visible `Npm` when package.js is executed
-  self.npmFacade = {
-    depends: function (npmDependencies) {
-      if (self.npmDependencies)
-        throw new Error("Can only call `Npm.depends` once in package " + self.name + ".");
-      if (typeof npmDependencies !== 'object')
-        throw new Error("The argument to Npm.depends should look like: {gcd: '0.0.0'}");
-
-      // don't allow npm fuzzy versions so that there is complete
-      // consistency when deploying a meteor app
-      //
-      // XXX use something like seal or lockdown to have *complete* confidence
-      // we're running the same code?
-      meteorNpm.ensureOnlyExactVersions(npmDependencies);
-
-      self.npmDependencies = npmDependencies;
-    },
-
-    require: function (name) {
-      var nodeModuleDir = path.join(self.sourceRoot, '.npm', 'node_modules', name);
-      if (fs.existsSync(nodeModuleDir)) {
-        return require(nodeModuleDir);
-      } else {
-        try {
-          return require(name); // from the dev bundle
-        } catch (e) {
-          throw new Error("Can't find npm module '" + name + "'. Did you forget to call 'Npm.depends'?");
-        }
-      }
-    }
-  };
-
 };
 
 _.extend(Package.prototype, {
-  // Add a dependency (in the sense of dependencyInfo) on a
-  // file. If hash is supplied it should be the sha1 of the file
-  // contents. If omitted it will be computed. relPath will be
-  // resolved to an absolute path (relative to self.sourceRoot.)
-  _addDependency: function (relPath, contents, onlyIfExists) {
+  // Return the slice of the package to use for a give role ('use' or
+  // 'test') and architecture (right now 'client' and 'server', but in
+  // the future these will be real architectures), or null if that
+  // packages can't be loaded under these circumstances.
+  getSlice: function (role, arch) {
     var self = this;
-    var absPath = path.resolve(self.sourceRoot, relPath);
 
-    if (onlyIfExists && ! fs.existsSync(absPath))
-      return;
-
-    if (! contents)
-      contents = fs.readFileSync(absPath);
-    self.dependencyInfo.files[absPath] = bundler.sha1(contents);
+    return _.find(self.slices, function (slice) {
+      return slice.role === role && slice.arch === arch;
+    }) || null;
   },
 
   // loads a package's package.js file into memory, using
@@ -220,13 +416,11 @@ _.extend(Package.prototype, {
     if (!fs.existsSync(self.sourceRoot))
       throw new Error("The package named " + self.name + " does not exist.");
 
-    // We use string concatenation to load package.js rather than
-    // directly `require`ing it because that allows us to simplify the
-    // package API (such as supporting Package.on_use rather than
-    // something like Package.current().on_use)
+    var roleHandlers = {use: null, test: null};
 
-    var fullpath = path.join(self.sourceRoot, 'package.js');
-    var code = fs.readFileSync(fullpath);
+    var packageJsPath = path.join(self.sourceRoot, 'package.js');
+    var code = fs.readFileSync(packageJsPath);
+    var packageJsHash = bundler.sha1(code);
     // \n is necessary in case final line is a //-comment
     var wrapped = "(function(Package,Npm){" + code.toString() + "\n})";
     // See #runInThisContext
@@ -236,9 +430,80 @@ _.extend(Package.prototype, {
     // come out of runInNewContext have bizarro antimatter
     // prototype chains and break 'instanceof Array'. for now,
     // steer clear
-    var func = require('vm').runInThisContext(wrapped, fullpath, true);
-    func(self.packageFacade, self.npmFacade);
-    self._addDependency("package.js", code);
+    var func = require('vm').runInThisContext(wrapped, packageJsPath, true);
+    func({
+      // == 'Package' object visible in package.js ==
+
+      // Set package metadata. Options:
+      // - summary: for 'meteor list'
+      // - internal: if true, hide in list
+      // There used to be a third option documented here,
+      // 'environments', but it was never implemented and no package
+      // ever used it.
+      describe: function (options) {
+        _.extend(self.metadata, options);
+      },
+
+      on_use: function (f) {
+        if (roleHandlers.use)
+          throw new Error("A package may have only one on_use handler");
+        roleHandlers.use = f;
+      },
+
+      on_test: function (f) {
+        if (roleHandlers.test)
+          throw new Error("A package may have only one on_test handler");
+        roleHandlers.test = f;
+      },
+
+      register_extension: function (extension, callback) {
+        if (_.has(self.extensions, extension))
+          throw new Error("This package has already registered a handler for " +
+                          extension);
+        self.extensions[extension] = callback;
+      },
+
+      // Same as node's default `require` but is relative to the
+      // package's directory. Regular `require` doesn't work well
+      // because we read the package.js file and `runInThisContext` it
+      // separately as a string.  This means that paths are relative
+      // to the top-level meteor.js script rather than the location of
+      // package.js
+      _require: function(filename) {
+        return require(path.join(self.sourceRoot, filename));
+      }
+    }, {
+      // == 'Npm' object visible in package.js ==
+      depends: function (npmDependencies) {
+        if (self.npmDependencies)
+          throw new Error("Can only call `Npm.depends` once in package " +
+                          self.name + ".");
+
+        // don't allow npm fuzzy versions so that there is complete
+        // consistency when deploying a meteor app
+        //
+        // XXX use something like seal or lockdown to have *complete*
+        // confidence we're running the same code?
+        meteorNpm.ensureOnlyExactVersions(npmDependencies);
+
+        self.npmDependencies = npmDependencies;
+      },
+
+      require: function (name) {
+        var nodeModuleDir = path.join(self.sourceRoot,
+                                      '.npm', 'node_modules', name);
+        if (fs.existsSync(nodeModuleDir)) {
+          return require(nodeModuleDir);
+        } else {
+          try {
+            return require(name); // from the dev bundle
+          } catch (e) {
+            throw new Error("Can't find npm module '" + name +
+                            "'. Did you forget to call 'Npm.depends'?");
+          }
+        }
+      }
+    });
 
     // source files used
     var sources = {use: {client: [], server: []},
@@ -247,6 +512,10 @@ _.extend(Package.prototype, {
     // symbols force-exported
     var forceExport = {use: {client: [], server: []},
                        test: {client: [], server: []}};
+
+    // packages used (keys are 'name' and 'unordered')
+    var uses = {use: {client: [], server: []},
+                test: {client: [], server: []}};
 
     // For this old-style, on_use/on_test/where-based package, figure
     // out its dependencies by calling its on_xxx functions and seeing
@@ -264,8 +533,8 @@ _.extend(Package.prototype, {
     // exist in the field, if not every single
     // one. #OldStylePackageSupport
     _.each(["use", "test"], function (role) {
-      if (self.roleHandlers[role]) {
-        self.roleHandlers[role]({
+      if (roleHandlers[role]) {
+        roleHandlers[role]({
           // Called when this package wants to make another package be
           // used. Can also take literal package objects, if you have
           // anonymous packages you want to use (eg, app packages)
@@ -299,12 +568,13 @@ _.extend(Package.prototype, {
               where = where ? [where] : ["client", "server"];
 
             _.each(names, function (name) {
-              _.each(where, function (w) {
+              _.each(where, function (arch) {
                 if (options.role && options.role !== "use")
                   throw new Error("Role override is no longer supported");
-                self.uses[role][w].push(name);
-                if (options.unordered)
-                  self.unordered[name] = true;
+                uses[role][arch].push({
+                  name: name,
+                  unordered: options.unordered
+                });
               });
             });
           },
@@ -320,8 +590,8 @@ _.extend(Package.prototype, {
               where = where ? [where] : [];
 
             _.each(paths, function (path) {
-              _.each(where, function (w) {
-                sources[role][w].push(path);
+              _.each(where, function (arch) {
+                sources[role][arch].push(path);
               });
             });
           },
@@ -341,8 +611,8 @@ _.extend(Package.prototype, {
               where = where ? [where] : [];
 
             _.each(symbols, function (symbol) {
-              _.each(where, function (w) {
-                forceExport[role][w].push(symbol);
+              _.each(where, function (arch) {
+                forceExport[role][arch].push(symbol);
               });
             });
           },
@@ -350,303 +620,121 @@ _.extend(Package.prototype, {
             throw new Error("api.error(), ironically, is no longer supported");
           },
           registered_extensions: function () {
-            throw new Error("api.registered_extensions() is no longer supported");
+            throw new Error(
+              "api.registered_extensions() is no longer supported");
           }
         });
       }
     });
 
-    // Also, everything depends on the package 'meteor', which sets up
-    // the basic environment) (except 'meteor' itself)
+    // Create slices
     _.each(["use", "test"], function (role) {
-      _.each(["client", "server"], function (where) {
+      _.each(["client", "server"], function (arch) {
+        // Everything depends on the package 'meteor', which sets up
+        // the basic environment) (except 'meteor' itself)
         if (! (name === "meteor" && role === "use"))
-          self.uses[role][where].unshift("meteor");
-      });
-    });
+          uses[role][arch].unshift({ name: "meteor" });
 
-    self._uniquifyPackages();
-    self.sources = sources;
-    self.forceExports = forceExport;
-  },
+        // We need to create a separate (non ===) copy of
+        // dependencyInfo for each slice.
+        var dependencyInfo = { files: {}, directories: {} };
+        dependencyInfo.files[packageJsPath] = packageJsHash;
 
-  // If a package appears twice in a 'self.uses' list, keep only the
-  // rightmost instance.
-  _uniquifyPackages: function () {
-    var self = this;
-
-    _.each(["use", "test"], function (role) {
-      _.each(["client", "server"], function (where) {
-        var input = self.uses[role][where];
-        var output = [];
-
-        var seen = {};
-        for (var i = input.length - 1; i >= 0; i--) {
-          if (! seen[input[i]])
-            output.unshift(input[i]);
-          seen[input[i]] = true;
-        }
-
-        self.uses[role][where] = output;
+        self.slices.push(new Slice(self, role, arch, {
+          sliceName: (role !== "use" ? role + "-" : "") + arch,
+          uses: uses[role][arch],
+          sources: sources[role][arch],
+          forceExport: forceExport[role][arch],
+          dependencyInfo: dependencyInfo
+        }));
       });
     });
   },
 
   initFromAppDir: function (appDir, ignoreFiles) {
     var self = this;
+    appDir = path.resolve(appDir);
     self.name = null;
     self.sourceRoot = appDir;
     self.serveRoot = path.sep;
 
-    var sourcesExcept = function (role, where, except, tests) {
-      var allSources = self._scanForSources(role, where, ignoreFiles || []);
+    _.each(["client", "server"], function (arch) {
+      // Determine used packages
+      var names = _.union(
+          // standard client packages for the classic meteor stack.
+          // XXX remove and make everyone explicitly declare all dependencies
+          ['meteor', 'deps', 'session', 'livedata', 'mongo-livedata',
+           'spark', 'templating', 'startup', 'past'],
+        project.get_packages(appDir));
+
+      // Create slice
+      var slice = new Slice(self, "use", arch, {
+        sliceName: arch,
+        uses: _.map(names, function (name) {
+          return { name: name }
+        })
+      });
+      self.slices.push(slice);
+
+      // Watch control files for changes
+      // XXX this read has a race with the actual read that is used
+      _.each([path.join(appDir, '.meteor', 'packages'),
+              path.join(appDir, '.meteor', 'releases')], function (p) {
+                if (fs.existsSync(p)) {
+                  slice.dependencyInfo.files[p] =
+                    bundler.sha1(fs.readFileSync(p));
+                }
+              });
+
+      // Determine source files
+      var allSources = scanForSources(
+        self.sourceRoot, slice.registeredExtensions(),
+        ignoreFiles || []);
+
       var withoutAppPackages = _.reject(allSources, function (sourcePath) {
         // Skip files that are in app packages. (Directories named "packages"
         // lower in the tree are OK.)
         return sourcePath.match(/^packages\//);
       });
-      var withoutExceptDir = _.reject(withoutAppPackages, function (sourcePath) {
-        return (path.sep + sourcePath + path.sep).indexOf(path.sep + except + path.sep) !== -1;
-      });
-      return _.filter(withoutExceptDir, function (sourcePath) {
-        var isTest = ((path.sep + sourcePath + path.sep).indexOf(path.sep + 'tests' + path.sep) !== -1);
-        return isTest === (!!tests);
-      });
-    };
 
-    // standard client packages (for now), for the classic meteor
-    // stack.
-    // XXX remove and make everyone explicitly declare all dependencies
-    var packages = ['meteor', 'deps', 'session', 'livedata', 'mongo-livedata',
-                    'spark', 'templating', 'startup', 'past'];
-    packages = _.union(packages, project.get_packages(appDir));
-    // XXX this read has a race with the actual read that is used
-    self._addDependency(path.join(appDir, '.meteor', 'packages'));
-    self._addDependency(path.join(appDir, '.meteor', 'release'), null, true);
-
-    _.each(["use", "test"], function (role) {
-      _.each(["client", "server"], function (where) {
-        // Note that technically to match the historical behavior, we
-        // should include a dependency of the 'test' role of the
-        // package on the 'use' role. But we don't have a way to do
-        // that, since these are strings and this package is
-        // anonymous. But this shouldn't matter since this form of app
-        // testing never actually shipped.
-        self.uses[role][where] = packages;
-      });
-    });
-    self._uniquifyPackages();
-
-    self.sources = {
-      use: {
-        client: sourcesExcept("use", "client", "server"),
-        server: sourcesExcept("use", "server", "client")
-      }, test: {
-        client: sourcesExcept("test", "client", "server", true),
-        server: sourcesExcept("test", "server", "client", true)
-      }
-    };
-    self.forceExports = {use: {client: [], server: []},
-                         test: {client: [], server: []}};
-
-    // Directories to monitor for new files
-    var allExts = [];
-    _.each(["use", "test"], function (role) {
-      _.each(["client", "server"], function (where) {
-        allExts = _.union(allExts, self.registeredExtensions(role, where));
-      });
-    });
-
-    self.dependencyInfo.directories[path.resolve(appDir)] = {
-      include: _.map(allExts, function (ext) {
-        return new RegExp('\\.' + ext.slice(1) + "$");
-      }),
-      exclude: ignoreFiles
-    };
-    // Inside the packages directory, only look for new packages
-    // (which we can detect by the appearance of a package.js file.)
-    // Other than that, packages explicitly call out the files they
-    // use.
-    self.dependencyInfo.directories[path.resolve(appDir, 'packages')] = {
-      include: [ /^package\.js$/ ],
-      exclude: ignoreFiles
-    };
-    // Exclude .meteor/local and everything under it.
-    self.dependencyInfo.directories[
-      path.resolve(appDir, '.meteor', 'local')] = { exclude: [/.?/] };
-  },
-
-  // Process all source files through the appropriate handlers and run
-  // the prelink phase on any resulting JavaScript. Also add all
-  // provided source files to the package dependencies. Sets fields
-  // such as dependencies, exports, boundary, prelinkFiles, and
-  // resources. Idempotent.
-  ensureCompiled: function () {
-    var self = this;
-    var isApp = ! self.name;
-
-    if (self.isCompiled)
-      return;
-
-    _.each(["use", "test"], function (role) {
-      _.each(["client", "server"], function (where) {
-        var resources = [];
-        var js = [];
-
-        /**
-         * In the legacy extension API, this is the ultimate low-level
-         * entry point to add data to the bundle.
-         *
-         * type: "js", "css", "head", "body", "static"
-         *
-         * path: the (absolute) path at which the file will be
-         * served. ignored in the case of "head" and "body".
-         *
-         * source_file: the absolute path to read the data from. if
-         * path is set, will default based on that. overridden by
-         * data.
-         *
-         * data: the data to send. overrides source_file if
-         * present. you must still set path (except for "head" and
-         * "body".)
-         */
-        var add_resource = function (options) {
-          var sourceFile = options.source_file || options.path;
-
-          var data;
-          if (options.data) {
-            data = options.data;
-            if (!(data instanceof Buffer)) {
-              if (!(typeof data === "string"))
-                throw new Error("Bad type for data");
-              data = new Buffer(data, 'utf8');
-            }
-          } else {
-            if (!sourceFile)
-              throw new Error("Need either source_file or data");
-            data = fs.readFileSync(sourceFile);
-          }
-
-          if (options.where && options.where !== where)
-            throw new Error("'where' is deprecated here and if provided " +
-                            "must be '" + where + "'");
-
-          if (options.type === "js") {
-            js.push({
-              source: data.toString('utf8'),
-              servePath: options.path
-            });
-          } else {
-            resources.push({
-              type: options.type,
-              data: data,
-              servePath: options.path
-            });
-          }
-        };
-
-        _.each(self.sources[role][where], function (relPath) {
-          var absPath = path.resolve(self.sourceRoot, relPath);
-          var ext = path.extname(relPath).substr(1);
-          var handler = self._getSourceHandler(role, where, ext);
-          var contents = fs.readFileSync(absPath);
-          self._addDependency(absPath, contents);
-
-          if (! handler) {
-            // If we don't have an extension handler, serve this file
-            // as a static resource.
-            resources.push({
-              type: "static",
-              data: contents,
-              servePath: path.join(self.serveRoot, relPath)
-            });
-            return;
-          }
-
-          handler({add_resource: add_resource},
-                  // XXX take contents instead of a path
-                  path.join(self.sourceRoot, relPath),
-                  path.join(self.serveRoot, relPath),
-                  where);
+      var otherArch = (arch === "server") ? "client" : "server";
+      var withoutOtherArch =
+        _.reject(withoutAppPackages, function (sourcePath) {
+          return (path.sep + sourcePath + path.sep).indexOf(
+            path.sep + otherArch + path.sep) !== -1;
         });
 
-        // Phase 1 link
-        var servePathForRole = {
-          use: "/packages/",
-          test: "/package-tests/"
-        };
-
-        var results = linker.prelink({
-          inputFiles: js,
-          useGlobalNamespace: isApp,
-          combinedServePath: isApp ? null :
-            servePathForRole[role] + self.name + ".js",
-          // XXX report an error if there is a package called global-imports
-          importStubServePath: '/packages/global-imports.js',
-          name: self.name || null,
-          forceExport: self.forceExports[role][where]
+      var tests = false; /* for now */
+      var withoutOtherRole =
+        _.reject(withoutOtherArch, function (sourcePath) {
+          var isTest =
+            ((path.sep + sourcePath + path.sep).indexOf(
+              path.sep + 'tests' + path.sep) !== -1);
+          return isTest !== (!!tests);
         });
 
-        self.prelinkFiles[role][where] = results.files;
-        self.boundary[role][where] = results.boundary;
-        self.exports[role][where] = results.exports;
-        self.resources[role][where] = resources;
-      });
-    });
+      slice.addSources(withoutOtherRole);
 
-    self.isCompiled = true;
-  },
+      // Directories to monitor for new files
+      slice.dependencyInfo.directories[appDir] = {
+        include: _.map(slice.registeredExtensions(), function (ext) {
+          return new RegExp('\\.' + ext.slice(1) + "$");
+        }),
+        exclude: ignoreFiles
+      };
 
-  // Find all files under this.sourceRoot that have an extension we
-  // recognize, and return them as a list of paths relative to
-  // sourceRoot. Ignore files that match a regexp in the ignoreFiles
-  // array, if given. As a special case (ugh), push all html files to
-  // the head of the list.
-  //
-  // role should be 'use' or 'test'
-  // where should be 'client' or 'server'
-  _scanForSources: function (role, where, ignoreFiles) {
-    var self = this;
+      // Inside the packages directory, only look for new packages
+      // (which we can detect by the appearance of a package.js file.)
+      // Other than that, packages explicitly call out the files they
+      // use.
+      slice.dependencyInfo.directories[path.resolve(appDir, 'packages')] = {
+        include: [ /^package\.js$/ ],
+        exclude: ignoreFiles
+      };
 
-    // find everything in tree, sorted depth-first alphabetically.
-    var fileList =
-      files.file_list_sync(self.sourceRoot,
-                           self.registeredExtensions(role, where));
-    fileList = _.reject(fileList, function (file) {
-      return _.any(ignoreFiles || [], function (pattern) {
-        return file.match(pattern);
-      });
-    });
-    fileList.sort(files.sort);
-
-    // XXX HUGE HACK --
-    // push html (template) files ahead of everything else. this is
-    // important because the user wants to be able to say
-    // Template.foo.events = { ... }
-    //
-    // maybe all of the templates should go in one file? packages
-    // should probably have a way to request this treatment (load
-    // order depedency tags?) .. who knows.
-    var htmls = [];
-    _.each(fileList, function (filename) {
-      if (path.extname(filename) === '.html') {
-        htmls.push(filename);
-        fileList = _.reject(fileList, function (f) { return f === filename;});
-      }
-    });
-    fileList = htmls.concat(fileList);
-
-    // now make everything relative to sourceRoot
-    var prefix = self.sourceRoot;
-    if (prefix[prefix.length - 1] !== path.sep)
-      prefix += path.sep;
-
-    return fileList.map(function (abs) {
-      if (path.relative(prefix, abs).match(/\.\./))
-        // XXX audit to make sure it works in all possible symlink
-        // scenarios
-        throw new Error("internal error: source file outside of parent?");
-      return abs.substr(prefix.length);
+      // Exclude .meteor/local and everything under it.
+      slice.dependencyInfo.directories[
+        path.resolve(appDir, '.meteor', 'local')] = { exclude: [/.?/] };
     });
   },
 
@@ -675,62 +763,12 @@ _.extend(Package.prototype, {
     // two apps running locally using the same package)
     meteorNpm.updateDependencies(
       self.name, self.npmDir(), self.npmDependencies, quiet);
+
     self.npmUpdated = true;
   },
 
   npmDir: function () {
     return path.join(this.sourceRoot, '.npm');
-  },
-
-  // Return a list of all of the extension that indicate source files
-  // inside this package, INCLUDING leading dots. Computed based on
-  // this.uses, so should only be called once that has been set.
-  //
-  // 'role' should be 'use' or 'test'. 'where' should be 'client' or 'server'.
-  registeredExtensions: function (role, where) {
-    var self = this;
-    var ret = _.keys(self.extensions);
-
-    _.each(self.uses[role][where], function (pkgName) {
-      var pkg = self.library.get(pkgName);
-      ret = _.union(ret, _.keys(pkg.extensions));
-    });
-
-    return _.map(ret, function (x) {return "." + x;});
-  },
-
-  // Find the function that should be used to handle a source file
-  // found in this package. We'll use handlers that are defined in
-  // this package and in its immediate dependencies. ('extension'
-  // should be the extension of the file without a leading dot.)
-  _getSourceHandler: function (role, where, extension) {
-    var self = this;
-    var candidates = [];
-
-    if (role === "use" && extension in self.extensions)
-      candidates.push(self.extensions[extension]);
-
-    var seen = {};
-    _.each(self.uses[role][where], function (pkgName) {
-      var otherPkg = self.library.get(pkgName);
-      if (extension in otherPkg.extensions)
-        candidates.push(otherPkg.extensions[extension]);
-    });
-
-    // XXX do something more graceful than printing a stack trace and
-    // exiting!! we have higher standards than that!
-
-    if (!candidates.length)
-      return null;
-
-    if (candidates.length > 1)
-      // XXX improve error message (eg, name the packages involved)
-      // and make it clear that it's not a global conflict, but just
-      // among this package's dependencies
-      throw new Error("Conflict: two packages are both trying " +
-                      "to handle ." + extension);
-
-    return candidates[0];
   }
 });
 

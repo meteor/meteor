@@ -2,14 +2,23 @@
 //
 // /star.json
 //
+//  - version: "1" for this format
+//
 //  - builtBy: human readable banner (eg, "Meteor 0.6.0")
 //
 //  - programs: array of programs in the star, each an object:
-//    - name: short name for program
+//    - name: short, unique name for program, for referring to it
+//      programmatically
 //    - arch: architecture that this program targets. Currently it is
 //            "client" or "server" but in the future this will change
 //            to something like "browser.w3c" or "darwin.x86_64".
 //    - path: directory (relative to star.json) containing this program
+//
+//    XXX in the future this will also contain instructions for
+//    mounting packages into the namespace of each program, and
+//    possibly for mounting programs on top of each other (this would
+//    be the principled mechanism by which a server program could read
+//    a client program so it can server it)
 //
 // /README: human readable instructions
 //
@@ -22,6 +31,11 @@
 //   NODE_PATH to point to arch-specific builds of binary node modules
 //   (primarily this is for node-fibers)
 //
+// XXX in the future one program (which must be a server-type
+// architecture) will be designated as the 'init' program. The
+// container will call it with arguments to signal app lifecycle
+// events like 'start' and 'stop'.
+//
 //
 // Conventionally programs will be located at /programs/<name>, but
 // really the build tool can lay out the star however it wants.
@@ -32,6 +46,8 @@
 // Standard:
 //
 // /app.json
+//
+//  - version: "1" for this format
 //
 //  - page: path to the template for the HTML to serve when a browser
 //    loads a page that is part of the application. In the file
@@ -73,6 +89,16 @@
 //
 // Standard:
 //
+// /server.js: script to run inside node.js to start the program
+//
+// XXX Subject to change! This will likely change to a shell script
+// (allowing us to represent types of programs that don't use or
+// depend on node) -- or in fact, rather than have anything fixed here
+// at all, star.json just contains a path to a program to run, which
+// can be anything than can be exec()'d.
+//
+// Convention:
+//
 // /app.json:
 //
 //  - load: array with each item describing a JS file to load at startup:
@@ -87,13 +113,6 @@
 //
 //  - config: additional framework-specific configuration. currently:
 //    - meteorRelease: the value to use for Meteor.release, if any
-//
-// /server.js: script to run inside node.js to start the program
-//   XXX Subject to change! This will likely go away in favor of a
-//   shell script (allowing us to represent types of programs that
-//   don't use or depend on node)
-//
-// Convention:
 //
 // /app/*: source code of the (server part of the) app
 // /packages/foo.js: the (linked) source code for package foo
@@ -136,26 +155,6 @@ var inherits = function (child, parent) {
   tmp.prototype = parent.prototype;
   child.prototype = new tmp;
   child.prototype.constructor = child;
-};
-
-///////////////////////////////////////////////////////////////////////////////
-// Slice
-///////////////////////////////////////////////////////////////////////////////
-
-// Holds the resources that a package is contributing to a bundle, for
-// a particular role ('use' or 'test') and a particular where
-// ('client' or 'server').
-var Slice = function (pkg, role, where) {
-  var self = this;
-  self.pkg = pkg;
-
-  // "use" in the normal case (this object represents the instance of
-  // a package in a bundle), or "test" if this instead represents an
-  // instance of the package's tests.
-  self.role = role;
-
-  // "client" or "server"
-  self.where = where;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -310,11 +309,6 @@ _.extend(Target.prototype, {
   determineLoadOrder: function (contents) {
     var self = this;
 
-    // Package slices being used. Map from a role string (eg, "use" or
-    // "test") to a package id to a Slice.
-    var sliceIndex = {use: {}, test: {}};
-    var slicesUnordered = [];
-
     var get = function (packageOrPackageName) {
       var pkg = self.bundle.library.get(packageOrPackageName);
       if (! pkg) {
@@ -324,79 +318,61 @@ _.extend(Target.prototype, {
       return pkg;
     };
 
-    // Ensure that slices exist for a package and its dependencies.
-    var add = function (pkg, role) {
-      if (sliceIndex[role][pkg.id])
-        return;
-      var slice = new Slice(pkg, role, self.arch);
-      sliceIndex[role][pkg.id] = slice;
-      slicesUnordered.push(slice);
-      _.each(pkg.uses[role][self.arch], function (usedPkgName) {
-        var usedPkg = get(usedPkgName);
-        add(usedPkg, "use");
-      });
-    };
+    // Each of these are map from slice.id to Slice
+    var needed = {}; // Slices that we still need to add
+    var done = {}; // Slices that are already in self.slices
+    var onStack = {}; // Slices that we're in the process of adding
 
-    // Add the provided roots and all of their dependencies.
+    // Find the roots
     _.each(contents, function (packageList, role) {
       _.each(packageList, function (packageOrPackageName) {
         var pkg = get(packageOrPackageName);
-        add(pkg, role);
+        var slice = pkg.getSlice(role, self.arch);
+        needed[slice.id] = slice;
       });
     });
 
-    // Take unorderedSlices as input, put it in order, and save it to
-    // self.slices. "In order" means that if X depends on (uses) Y,
-    // and that relationship is not marked as unordered, Y appears
-    // before X in the ordering. Raises an exception iff there is no
-    // such ordering (due to circular dependency.)
-    var id = function (slice) {
-      return slice.role + ":" + slice.pkg.id;
-    };
-
-    var done = {};
-    var remaining = {};
-    var onStack = {};
-    _.each(slicesUnordered, function (slice) {
-      remaining[id(slice)] = slice;
-    });
-
+    // Set self.slices to be all of the roots, plus all of their
+    // dependencies, in the correct load order. "Load order" means
+    // that if X depends on (uses) Y, and that relationship is not
+    // marked as unordered, Y appears before X in the ordering. Raises
+    // an exception iff there is no such ordering (due to circular
+    // dependency.)
     while (true) {
-      // Get an arbitrary package from those that remain, or break if
+      // Get an arbitrary slice from those that remain, or break if
       // none remain
-      var first = undefined;
-      for (first in remaining)
+      var first = null;
+      for (first in needed) break;
+      if (! first)
         break;
-      if (first === undefined)
-        break;
-      first = remaining[first];
+      first = needed[first];
 
-      // Emit that package and all of its dependencies
-      var load = function (slice) {
-        if (done[id(slice)])
+      // Add its strong dependencies to the order, then add it. Add
+      // its weak dependencies to the list of things to add later.
+      var add = function (slice) {
+        if (done[slice.id])
           return;
 
-        _.each(slice.pkg.uses[slice.role][self.arch], function (usedPkgName) {
-          if (slice.pkg.name && slice.pkg.unordered[usedPkgName])
+        _.each(slice.uses, function (u) {
+          var usedSlice = get(u.name).getSlice("use", self.arch);
+          if (slice.pkg.name && u.unordered) {
+            needed[usedSlice.id] = usedSlice;
             return;
-          var usedPkg = get(usedPkgName);
-          var usedSlice = sliceIndex.use[usedPkg.id];
-          if (! usedSlice)
-            throw new Error("Missing slice?");
-          if (onStack[id(usedSlice)]) {
+          }
+          if (onStack[usedSlice.id]) {
             console.error("fatal: circular dependency between packages " +
                           slice.pkg.name + " and " + usedSlice.pkg.name);
             process.exit(1);
           }
-          onStack[id(usedSlice)] = true;
-          load(usedSlice);
-          delete onStack[id(usedSlice)];
+          onStack[usedSlice.id] = true;
+          add(usedSlice);
+          delete onStack[usedSlice.id];
         });
         self.slices.push(slice);
-        done[id(slice)] = true;
-        delete remaining[id(slice)];
+        done[slice.id] = true;
+        delete needed[slice.id];
       };
-      load(first);
+      add(first);
     }
   },
 
@@ -412,8 +388,8 @@ _.extend(Target.prototype, {
       // ** from the package plus the output of running the JavaScript
       // ** linker.
 
-      slice.pkg.ensureCompiled();
-      var resources = _.clone(slice.pkg.resources[slice.role][self.arch]);
+      slice.ensureCompiled();
+      var resources = _.clone(slice.resources);
 
       var isApp = ! slice.pkg.name;
       // Compute imports by merging the exports of all of the
@@ -425,13 +401,14 @@ _.extend(Target.prototype, {
       // in JavaScript.) Note that in the case of conflicting
       // symbols, later packages get precedence.
       var imports = {}; // map from symbol to supplying package name
-      _.each(_.values(slice.pkg.uses[slice.role][self.arch]), function (otherPkgName){
-        var otherPkg = self.bundle.library.get(otherPkgName);
-        if (otherPkg.name && ! slice.pkg.unordered[otherPkg.name]) {
-          // make sure otherPkg.exports is valid
-          otherPkg.ensureCompiled();
-          _.each(otherPkg.exports.use[self.arch], function (symbol) {
-            imports[symbol] = otherPkg.name;
+      _.each(_.values(slice.uses), function (u) {
+        if (! u.unordered) {
+          var otherSlice =
+            self.bundle.library.get(u.name).getSlice("use", self.arch);
+          // make sure otherSlice.exports is valid
+          otherSlice.ensureCompiled();
+          _.each(otherSlice.exports, function (symbol) {
+            imports[symbol] = otherSlice.pkg.name;
           });
         }
       });
@@ -440,8 +417,8 @@ _.extend(Target.prototype, {
       var files = linker.link({
         imports: imports,
         useGlobalNamespace: isApp,
-        prelinkFiles: slice.pkg.prelinkFiles[slice.role][self.arch],
-        boundary: slice.pkg.boundary[slice.role][self.arch]
+        prelinkFiles: slice.prelinkFiles,
+        boundary: slice.boundary
       });
 
       // Add each output as a resource
@@ -502,9 +479,9 @@ _.extend(Target.prototype, {
       // resources. (Since the dependencyInfo.directories should be
       // disjoint, it should be OK to merge them this way.)
       _.extend(self.bundle.dependencyInfo.files,
-               slice.pkg.dependencyInfo.files);
+               slice.dependencyInfo.files);
       _.extend(self.bundle.dependencyInfo.directories,
-               slice.pkg.dependencyInfo.directories);
+               slice.dependencyInfo.directories);
     });
   },
 
@@ -690,6 +667,7 @@ _.extend(ClientTarget.prototype, {
 
     // Control file
     var json = {
+      version: "1",
       manifest: manifest,
       page: 'app.html',
 

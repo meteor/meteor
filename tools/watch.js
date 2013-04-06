@@ -55,7 +55,9 @@ var _ = require('underscore');
 // Options may include
 // - files: see self.files comment below
 // - directories: see self.directories comment below
-// - onChange: the function to call when the first change is detected
+// - onChange: the function to call when the first change is detected.
+//   received one argument, the absolute path to a changed or removed
+//   file (potentially not the only one that changed or was removed)
 //
 var Watcher = function (options) {
   var self = this;
@@ -132,14 +134,14 @@ _.extend(Watcher.prototype, {
         // Fire only if the contents of the file actually changed (eg,
         // maybe just its atime changed)
         if (self._checkFileChanged(absPath))
-          self._fire();
+          self._fire(absPath);
       });
       self.fileWatches.push(absPath);
 
       // Check for the case where by the time we created the watch,
       // the file had already changed from the sha we were provided.
       if (self._checkFileChanged(absPath))
-        self._fire();
+        self._fire(absPath);
     });
 
     // One second later, check the files again, because fs.watchFile
@@ -152,7 +154,7 @@ _.extend(Watcher.prototype, {
     setTimeout(function () {
       _.each(self.files, function (hash, absPath) {
         if (self._checkFileChanged(absPath))
-          self._fire();
+          self._fire(absPath);
       });
     }, 1000);
   },
@@ -247,7 +249,7 @@ _.extend(Watcher.prototype, {
         if (! isDirectory) {
           if (! (addedPath in self.files))
             // Found a newly added file that we care about.
-            self._fire();
+            self._fire(absPath);
         } else {
           // Found a subdirectory that we care to monitor.
           self._watchDirectory(addedPath);
@@ -277,14 +279,14 @@ _.extend(Watcher.prototype, {
     }
   },
 
-  _fire: function () {
+  _fire: function (changedFile) {
     var self = this;
 
     if (self.stopped)
       return;
 
     self.stop();
-    self.onChange();
+    self.onChange(changedFile);
   },
 
   stop: function () {
