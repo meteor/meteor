@@ -397,7 +397,7 @@ var reportResults = function(results) {
     countDeps.changed();
   }
 
-  _.defer(_throttled_update);
+  _throttled_update();
 };
 
 // forget all of the events for a particular test
@@ -417,5 +417,4 @@ var forgetEvents = function (results) {
 
 var _throttled_update = _.throttle(function() {
   resultsDeps.changed();
-  Deps.flush();
-}, 500);
+}, 1000);
