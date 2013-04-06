@@ -35,7 +35,7 @@ Handlebars._default_helpers = {
   },
   'each': function (data, options) {
     var parentData = this;
-    if (data && data.length > 0)
+    if (data && Object.keys(data).length > 0)
       return _.map(data, function(x, i) {
         // infer a branch key from the data
         var branch = ((x && x._id) || (typeof x === 'string' ? x : null) ||
