@@ -2,8 +2,12 @@
 // was served from.
 var ddpUrl = '/';
 if (typeof __meteor_runtime_config__ !== "undefined") {
-  if (__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL)
+  if (__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL) {
     ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
+  } else if (__meteor_runtime_config__.ROOT_URL) {
+    ddpUrl = '/' +
+      __meteor_runtime_config__.ROOT_URL.split(/\/+/).slice(2).join('/');
+  }
 }
 
 _.extend(Meteor, {
