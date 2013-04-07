@@ -1,6 +1,11 @@
 
 ## vNEXT
 
+* Correct NPM behavior in packages in case there is a `node_modules` directory
+  somewhere above the app directory. #927
+
+Patches contributed by GitHub user andreas-karlsson.
+
 ## v0.6.0
 
 * Meteor has a brand new distribution system! In this new system, code-named
