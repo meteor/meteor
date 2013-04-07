@@ -56,7 +56,7 @@ var Status = {
       self.exitNow();
       return;
     }
-    log_to_clients({'exit': "Your application is crashing. Waiting for file change."});
+    log_to_clients({'exit': "=> Your application is crashing. Waiting for file change."});
     this.crashing = true;
   },
 
@@ -273,9 +273,9 @@ var start_server = function (options) {
 
   proc.on('exit', function (code, signal) {
     if (signal) {
-      log_to_clients({'exit': 'Exited from signal: ' + signal});
+      log_to_clients({'exit': '=> Exited from signal: ' + signal});
     } else {
-      log_to_clients({'exit': 'Exited with code: ' + code});
+      log_to_clients({'exit': '=> Exited with code: ' + code});
     }
 
     options.onExit(code);
@@ -709,7 +709,7 @@ exports.run = function (context, options) {
       deps_info = JSON.parse(deps_raw.toString());
 
     if (errors) {
-      log_to_clients({stdout: "Errors prevented startup:\n"});
+      log_to_clients({stdout: "=> Errors prevented startup:\n"});
       _.each(errors, function (e) {
         log_to_clients({stdout: e + "\n"});
       });

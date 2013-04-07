@@ -112,6 +112,8 @@ var Package = function () {
     depends: function (npmDependencies) {
       if (self.npmDependencies)
         throw new Error("Can only call `Npm.depends` once in package " + self.name + ".");
+      if (typeof npmDependencies !== 'object')
+        throw new Error("The argument to Npm.depends should look like: {gcd: '0.0.0'}");
 
       // don't allow npm fuzzy versions so that there is complete
       // consistency when deploying a meteor app

@@ -3,6 +3,7 @@
     "mailcomposer": {
       "version": "0.1.15",
       "from": "mailcomposer@0.1.15",
+      "resolved": "https://registry.npmjs.org/mailcomposer/-/mailcomposer-0.1.15.tgz",
       "dependencies": {
         "mimelib-noiconv": {
           "version": "0.1.9",
@@ -13,6 +14,7 @@
     "simplesmtp": {
       "version": "0.1.25",
       "from": "simplesmtp@0.1.25",
+      "resolved": "https://registry.npmjs.org/simplesmtp/-/simplesmtp-0.1.25.tgz",
       "dependencies": {
         "rai": {
           "version": "0.1.7",
