@@ -84,6 +84,10 @@ _.extend(exports, {
     self._tmpDirs.push(newPackageNpmDir); // keep track so that we can remove them on process exit
     fs.mkdirSync(newPackageNpmDir);
 
+    // create node_modules -- prevent npm install from installing
+    // to an existing node_modules dir higher up in the filesystem
+    fs.mkdirSync(path.join(newPackageNpmDir, 'node_modules'));
+
     // create .gitignore -- node_modules shouldn't be in git since we
     // recreate it as needed by using `npm install`. since we use `npm
     // shrinkwrap` we're guaranteed to have the same version installed
