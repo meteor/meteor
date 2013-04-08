@@ -3,11 +3,11 @@
 <head>
     <meta charset="utf-8">
     <title>roles&#x2F;roles_server.js - The meteor-roles API</title>
-    <link rel="stylesheet" href="http:&#x2F;&#x2F;yui.yahooapis.com&#x2F;3.7.0&#x2F;build&#x2F;cssgrids&#x2F;cssgrids-min.css">
+    <link rel="stylesheet" href="http:&#x2F;&#x2F;yui.yahooapis.com&#x2F;3.8.0&#x2F;build&#x2F;cssgrids&#x2F;cssgrids-min.css">
     <link rel="stylesheet" href="..&#x2F;assets/vendor/prettify/prettify-min.css">
     <link rel="stylesheet" href="..&#x2F;assets/css/main.css" id="site_styles">
     <link rel="shortcut icon" type="image/png" href="..&#x2F;assets/favicon.png">
-    <script src="http:&#x2F;&#x2F;yui.yahooapis.com&#x2F;combo?3.7.0&#x2F;build&#x2F;yui&#x2F;yui-min.js"></script>
+    <script src="http:&#x2F;&#x2F;yui.yahooapis.com&#x2F;combo?3.8.0&#x2F;build&#x2F;yui&#x2F;yui-min.js"></script>
 </head>
 <body class="yui3-skin-sam">
 
@@ -104,14 +104,14 @@ if (!Meteor.roles) {
   Meteor.roles._ensureIndex(&#x27;name&#x27;, {unique: 1})
 }
 
-Meteor.publish(&#x27;_roles_own_user_roles&#x27;, function () {
+
+&#x2F;**
+ * Always publish logged-in user&#x27;s roles so client-side
+ * checks can work.
+ *&#x2F;
+Meteor.publish(null, function () {
   var userId = this.userId,
       fields = {roles:1}
-
-  if (!userId) {
-    this.complete()
-    return
-  }
 
   return Meteor.users.find({_id:userId}, {fields: fields})
 })
