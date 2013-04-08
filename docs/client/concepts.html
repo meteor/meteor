@@ -117,6 +117,8 @@ the need to implement individual RPC endpoints, manually cache data on
 the client to avoid slow roundtrips to the server, and carefully
 orchestrate invalidation messages to every client as data changes.
 
+<img src="/collections_diagram.png"/>
+
 In Meteor, the client and server share the same database API.  The same
 exact application code &mdash; like validators and computed properties &mdash; can
 often run in both places.  But while code running on the server has
