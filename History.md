@@ -6,9 +6,9 @@
 * Correct NPM behavior in packages in case there is a `node_modules` directory
   somewhere above the app directory. #927
 
-* Small bug fix in the low-level `routepolicy` package
+* Small bug fix in the low-level `routepolicy` package.
 
-Patches contributed by GitHub users andreas-karlsson, awwx.
+Patches contributed by GitHub users andreas-karlsson and awwx.
 
 ## v0.6.0
 
