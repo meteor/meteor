@@ -4,6 +4,11 @@ meteor-roles
 Roles-based authorization package for Meteor - compatible with built-in accounts package.
 
 <br />
+### Contributors
+
+Thanks to [@mcrider](https://github.com/mcrider)!
+
+<br />
 
 ### Example App
 
