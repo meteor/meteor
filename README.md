@@ -159,12 +159,16 @@ To serve documentation locally:
 
 
 To run tests: 
-  1. install [Meteorite][1]
-  2. ```cd meteor-roles/roles```
-  3. ```mrt```
-  4. point browser at http://localhost:3000/
+  1. ```cd meteor-roles```
+  2. ```meteor test-packages ./roles```
+  3. point browser at http://localhost:3000/
 
-_NOTE_: If you see an error message regarding **'roles package does not exist'** that means you are trying to run 'mrt' in the wrong directory.  See step 2.
+_NOTE_: If you see an error message regarding **"The package named roles does not exist"** that means you are either:
+  a) in the wrong directory or 
+  b) left off the './' in front of 'roles' in step 2.  
+  
+Step 2 needs to be run in the main 'meteor-roles' directory and the './' is needed because otherwise Meteor only looks in directories named 'packages'.
+
 
 
 

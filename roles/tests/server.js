@@ -36,275 +36,314 @@
     })
   }
 
-  Tinytest.add('can create and delete roles', function (test) {
-    reset()
+  Tinytest.add(
+    'roles - can create and delete roles', 
+    function (test) {
+      reset()
 
-    Roles.createRole('test1')
-    test.equal(Meteor.roles.findOne().name, 'test1')
+      Roles.createRole('test1')
+      test.equal(Meteor.roles.findOne().name, 'test1')
 
-    Roles.createRole('test2')
-    test.equal(Meteor.roles.findOne({'name':'test2'}).name, 'test2')
+      Roles.createRole('test2')
+      test.equal(Meteor.roles.findOne({'name':'test2'}).name, 'test2')
 
-    test.equal(Meteor.roles.find().count(), 2)
+      test.equal(Meteor.roles.find().count(), 2)
 
-    Roles.deleteRole('test1')
-    test.equal(typeof Meteor.roles.findOne({'name':'test1'}), 'undefined')
+      Roles.deleteRole('test1')
+      test.equal(typeof Meteor.roles.findOne({'name':'test1'}), 'undefined')
 
-    Roles.deleteRole('test2')
-    test.equal(typeof Meteor.roles.findOne(), 'undefined')
-  })
-
-  Tinytest.add('can\'t create duplicate roles', function (test) {
-    reset()
-
-    Roles.createRole('test1')
-    test.throws(function () {Roles.createRole('test1')})
-  })
-
-  Tinytest.add('can check if user is in role', function (test) {
-    reset()
-
-    Meteor.users.update(
-      {"_id":users.eve}, 
-      {$addToSet: { roles: { $each: ['admin', 'user'] } } }
-    )
-    testUser(test, 'eve', ['admin', 'user'])
-  })
-
-  Tinytest.add('can check if non-existant user is in role', function (test) {
-    reset()
-
-    _.each(roles, function (role) {
-      Roles.createRole(role)
+      Roles.deleteRole('test2')
+      test.equal(typeof Meteor.roles.findOne(), 'undefined')
     })
 
-    test.isFalse(Roles.userIsInRole('1', 'admin'))
-  })
+  Tinytest.add(
+    'roles - can\'t create duplicate roles', 
+    function (test) {
+      reset()
 
-  Tinytest.add('can check user in role via object', function (test) {
-    var user 
-
-    reset()
-
-    _.each(roles, function (role) {
-      Roles.createRole(role)
+      Roles.createRole('test1')
+      test.throws(function () {Roles.createRole('test1')})
     })
 
-    Roles.addUsersToRoles(users.eve, ['admin', 'user'])
-    user = Meteor.users.findOne({_id:users.eve})
+  Tinytest.add(
+    'roles - can check if user is in role', 
+    function (test) {
+      reset()
 
-    test.isTrue(Roles.userIsInRole(user, 'admin'))
-  })
-
-  Tinytest.add('userIsInRole returns false when user is null', function (test) {
-    var user 
-
-    reset()
-
-    _.each(roles, function (role) {
-      Roles.createRole(role)
+      Meteor.users.update(
+        {"_id":users.eve}, 
+        {$addToSet: { roles: { $each: ['admin', 'user'] } } }
+      )
+      testUser(test, 'eve', ['admin', 'user'])
     })
 
-    user = null
+  Tinytest.add(
+    'roles - can check if non-existant user is in role', 
+    function (test) {
+      reset()
 
-    test.isFalse(Roles.userIsInRole(user, 'admin'))
-  })
+      _.each(roles, function (role) {
+        Roles.createRole(role)
+      })
 
-  Tinytest.add('can check user against several roles at once', function (test) {
-    var user 
-
-    reset()
-
-    _.each(roles, function (role) {
-      Roles.createRole(role)
+      test.isFalse(Roles.userIsInRole('1', 'admin'))
     })
 
-    Roles.addUsersToRoles(users.eve, ['admin', 'user'])
-    user = Meteor.users.findOne({_id:users.eve})
+  Tinytest.add(
+    'roles - can check user in role via object', 
+    function (test) {
+      var user 
 
-    test.isTrue(Roles.userIsInRole(user, ['editor','admin']))
-  })
+      reset()
 
-  Tinytest.add('can add individual users to roles', function (test) {
-    reset() 
+      _.each(roles, function (role) {
+        Roles.createRole(role)
+      })
 
-    _.each(roles, function (role) {
-      Roles.createRole(role)
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'])
+      user = Meteor.users.findOne({_id:users.eve})
+
+      test.isTrue(Roles.userIsInRole(user, 'admin'))
     })
 
-    Roles.addUsersToRoles(users.eve, ['admin', 'user'])
+  Tinytest.add(
+    'roles - userIsInRole returns false when user is null', 
+    function (test) {
+      var user 
 
-    testUser(test, 'eve', ['admin', 'user'])
-    testUser(test, 'bob', [])
-    testUser(test, 'joe', [])
+      reset()
 
-    Roles.addUsersToRoles(users.joe, ['editor', 'user'])
+      _.each(roles, function (role) {
+        Roles.createRole(role)
+      })
 
-    testUser(test, 'eve', ['admin', 'user'])
-    testUser(test, 'bob', [])
-    testUser(test, 'joe', ['editor', 'user'])
-  })
-  Tinytest.add('can add user to roles multiple times', function (test) {
-    reset() 
+      user = null
 
-    _.each(roles, function (role) {
-      Roles.createRole(role)
+      test.isFalse(Roles.userIsInRole(user, 'admin'))
     })
 
-    Roles.addUsersToRoles(users.eve, ['admin', 'user'])
-    Roles.addUsersToRoles(users.eve, ['admin', 'user'])
+  Tinytest.add(
+    'roles - can check user against several roles at once', 
+    function (test) {
+      var user 
 
-    testUser(test, 'eve', ['admin', 'user'])
-    testUser(test, 'bob', [])
-    testUser(test, 'joe', [])
-  })
+      reset()
 
-  Tinytest.add('can add multiple users to roles', function (test) {
-    reset() 
+      _.each(roles, function (role) {
+        Roles.createRole(role)
+      })
 
-    _.each(roles, function (role) {
-      Roles.createRole(role)
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'])
+      user = Meteor.users.findOne({_id:users.eve})
+
+      test.isTrue(Roles.userIsInRole(user, ['editor','admin']))
     })
 
-    Roles.addUsersToRoles([users.eve, users.bob], ['admin', 'user'])
+  Tinytest.add(
+    'roles - can add individual users to roles', 
+    function (test) {
+      reset() 
 
-    testUser(test, 'eve', ['admin', 'user'])
-    testUser(test, 'bob', ['admin', 'user'])
-    testUser(test, 'joe', [])
+      _.each(roles, function (role) {
+        Roles.createRole(role)
+      })
 
-    Roles.addUsersToRoles([users.bob, users.joe], ['editor', 'user'])
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'])
 
-    testUser(test, 'eve', ['admin', 'user'])
-    testUser(test, 'bob', ['admin', 'editor', 'user'])
-    testUser(test, 'joe', ['editor', 'user'])
-  })
+      testUser(test, 'eve', ['admin', 'user'])
+      testUser(test, 'bob', [])
+      testUser(test, 'joe', [])
 
-  Tinytest.add('can\'t add non-exist user to role', function (test) {
-    reset()
+      Roles.addUsersToRoles(users.joe, ['editor', 'user'])
 
-    _.each(roles, function (role) {
-      Roles.createRole(role)
+      testUser(test, 'eve', ['admin', 'user'])
+      testUser(test, 'bob', [])
+      testUser(test, 'joe', ['editor', 'user'])
     })
 
-    Roles.addUsersToRoles(['1'], ['admin'])
-    test.equal(Meteor.users.findOne({_id:'1'}), undefined)
-  })
+  Tinytest.add(
+    'roles - can add user to roles multiple times', 
+    function (test) {
+      reset() 
 
-  Tinytest.add('can remove individual users from roles', function (test) {
-    reset() 
+      _.each(roles, function (role) {
+        Roles.createRole(role)
+      })
 
-    _.each(roles, function (role) {
-      Roles.createRole(role)
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'])
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'])
+
+      testUser(test, 'eve', ['admin', 'user'])
+      testUser(test, 'bob', [])
+      testUser(test, 'joe', [])
     })
 
-    // remove user role - one user
-    Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'])
-    testUser(test, 'eve', ['editor', 'user'])
-    testUser(test, 'bob', ['editor', 'user'])
-    Roles.removeUsersFromRoles(users.eve, ['user'])
-    testUser(test, 'eve', ['editor'])
-    testUser(test, 'bob', ['editor', 'user'])
-  })
-  Tinytest.add('can remove user from roles multiple times', function (test) {
-    reset() 
+  Tinytest.add(
+    'roles - can add multiple users to roles', 
+    function (test) {
+      reset() 
 
-    _.each(roles, function (role) {
-      Roles.createRole(role)
+      _.each(roles, function (role) {
+        Roles.createRole(role)
+      })
+
+      Roles.addUsersToRoles([users.eve, users.bob], ['admin', 'user'])
+
+      testUser(test, 'eve', ['admin', 'user'])
+      testUser(test, 'bob', ['admin', 'user'])
+      testUser(test, 'joe', [])
+
+      Roles.addUsersToRoles([users.bob, users.joe], ['editor', 'user'])
+
+      testUser(test, 'eve', ['admin', 'user'])
+      testUser(test, 'bob', ['admin', 'editor', 'user'])
+      testUser(test, 'joe', ['editor', 'user'])
     })
 
-    // remove user role - one user
-    Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'])
-    testUser(test, 'eve', ['editor', 'user'])
-    testUser(test, 'bob', ['editor', 'user'])
-    Roles.removeUsersFromRoles(users.eve, ['user'])
-    testUser(test, 'eve', ['editor'])
-    testUser(test, 'bob', ['editor', 'user'])
+  Tinytest.add(
+    'roles - can\'t add non-exist user to role', 
+    function (test) {
+      reset()
 
-    // try remove again
-    Roles.removeUsersFromRoles(users.eve, ['user'])
-    testUser(test, 'eve', ['editor'])
-  })
+      _.each(roles, function (role) {
+        Roles.createRole(role)
+      })
 
-  Tinytest.add('can remove multiple users from roles', function (test) {
-    reset() 
-
-    _.each(roles, function (role) {
-      Roles.createRole(role)
+      Roles.addUsersToRoles(['1'], ['admin'])
+      test.equal(Meteor.users.findOne({_id:'1'}), undefined)
     })
 
-    // remove user role - two users
-    Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'])
-    testUser(test, 'eve', ['editor', 'user'])
-    testUser(test, 'bob', ['editor', 'user'])
+  Tinytest.add(
+    'roles - can remove individual users from roles', 
+    function (test) {
+      reset() 
 
-    test.isFalse(Roles.userIsInRole(users.joe, 'admin'))
-    Roles.addUsersToRoles([users.bob, users.joe], ['admin', 'user'])
-    testUser(test, 'bob', ['admin', 'user', 'editor'])
-    testUser(test, 'joe', ['admin', 'user'])
-    Roles.removeUsersFromRoles([users.bob, users.joe], ['admin'])
-    testUser(test, 'bob', ['user', 'editor'])
-    testUser(test, 'joe', ['user'])
-  })
+      _.each(roles, function (role) {
+        Roles.createRole(role)
+      })
 
-  Tinytest.add('can\'t create role with empty names', function (test) {
-    reset() 
+      // remove user role - one user
+      Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'])
+      testUser(test, 'eve', ['editor', 'user'])
+      testUser(test, 'bob', ['editor', 'user'])
+      Roles.removeUsersFromRoles(users.eve, ['user'])
+      testUser(test, 'eve', ['editor'])
+      testUser(test, 'bob', ['editor', 'user'])
+    })
+  Tinytest.add(
+    'roles - can remove user from roles multiple times',
+    function (test) {
+      reset() 
 
-    Roles.createRole('')
-    Roles.createRole(null)
+      _.each(roles, function (role) {
+        Roles.createRole(role)
+      })
 
-    test.equal(Meteor.roles.find().count(), 0)
+      // remove user role - one user
+      Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'])
+      testUser(test, 'eve', ['editor', 'user'])
+      testUser(test, 'bob', ['editor', 'user'])
+      Roles.removeUsersFromRoles(users.eve, ['user'])
+      testUser(test, 'eve', ['editor'])
+      testUser(test, 'bob', ['editor', 'user'])
 
-    Roles.createRole(' ')
-    test.equal(Meteor.roles.find().count(), 0)
-  })
-
-  Tinytest.add('can get all roles for user', function (test) {
-    reset()
-    _.each(roles, function (role) {
-      Roles.createRole(role)
+      // try remove again
+      Roles.removeUsersFromRoles(users.eve, ['user'])
+      testUser(test, 'eve', ['editor'])
     })
 
-    Roles.addUsersToRoles([users.eve], ['admin', 'user'])
-    test.equal(Roles.getRolesForUser(users.eve), ['admin', 'user'])
-  })
+  Tinytest.add(
+    'roles - can remove multiple users from roles', 
+    function (test) {
+      reset() 
 
-  Tinytest.add('can\'t get roles for non-existant user', function (test) {
-    reset()
-    _.each(roles, function (role) {
-      Roles.createRole(role)
+      _.each(roles, function (role) {
+        Roles.createRole(role)
+      })
+
+      // remove user role - two users
+      Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'])
+      testUser(test, 'eve', ['editor', 'user'])
+      testUser(test, 'bob', ['editor', 'user'])
+
+      test.isFalse(Roles.userIsInRole(users.joe, 'admin'))
+      Roles.addUsersToRoles([users.bob, users.joe], ['admin', 'user'])
+      testUser(test, 'bob', ['admin', 'user', 'editor'])
+      testUser(test, 'joe', ['admin', 'user'])
+      Roles.removeUsersFromRoles([users.bob, users.joe], ['admin'])
+      testUser(test, 'bob', ['user', 'editor'])
+      testUser(test, 'joe', ['user'])
     })
 
-    test.equal(Roles.getRolesForUser('1'), undefined)
-  })
+  Tinytest.add(
+    'roles - can\'t create role with empty names', 
+    function (test) {
+      reset() 
 
-  Tinytest.add('can get all roles', function (test) {
-    reset()
-    _.each(roles, function (role) {
-      Roles.createRole(role)
+      Roles.createRole('')
+      Roles.createRole(null)
+
+      test.equal(Meteor.roles.find().count(), 0)
+
+      Roles.createRole(' ')
+      test.equal(Meteor.roles.find().count(), 0)
     })
 
-    // compare roles, sorted alphabetically
-    var expected = roles,
-        actual = _.pluck(Roles.getAllRoles().fetch(), 'name')
+  Tinytest.add(
+    'roles - can get all roles for user', 
+    function (test) {
+      reset()
+      _.each(roles, function (role) {
+        Roles.createRole(role)
+      })
 
-    test.equal(actual, expected)
-  })
-
-
-  Tinytest.add('can get all users in role', function (test) {
-    reset()
-    _.each(roles, function (role) {
-      Roles.createRole(role)
+      Roles.addUsersToRoles([users.eve], ['admin', 'user'])
+      test.equal(Roles.getRolesForUser(users.eve), ['admin', 'user'])
     })
 
-    Roles.addUsersToRoles([users.eve, users.joe], ['admin', 'user'])
-    Roles.addUsersToRoles([users.bob, users.joe], ['editor'])
+  Tinytest.add(
+    'roles - can\'t get roles for non-existant user', 
+    function (test) {
+      reset()
+      _.each(roles, function (role) {
+        Roles.createRole(role)
+      })
 
-    var expected = [users.eve, users.joe],
-        actual = _.pluck(Roles.getUsersInRole('admin').fetch(), '_id')
+      test.equal(Roles.getRolesForUser('1'), undefined)
+    })
 
-    // order may be different so check difference instead of equality
-    test.equal(_.difference(actual, expected), [])
-  })
+  Tinytest.add(
+    'roles - can get all roles', 
+    function (test) {
+      reset()
+      _.each(roles, function (role) {
+        Roles.createRole(role)
+      })
+
+      // compare roles, sorted alphabetically
+      var expected = roles,
+          actual = _.pluck(Roles.getAllRoles().fetch(), 'name')
+
+      test.equal(actual, expected)
+    })
+
+
+  Tinytest.add(
+    'roles - can get all users in role', 
+    function (test) {
+      reset()
+      _.each(roles, function (role) {
+        Roles.createRole(role)
+      })
+
+      Roles.addUsersToRoles([users.eve, users.joe], ['admin', 'user'])
+      Roles.addUsersToRoles([users.bob, users.joe], ['editor'])
+
+      var expected = [users.eve, users.joe],
+          actual = _.pluck(Roles.getUsersInRole('admin').fetch(), '_id')
+
+      // order may be different so check difference instead of equality
+      test.equal(_.difference(actual, expected), [])
+    })
 
 }());
