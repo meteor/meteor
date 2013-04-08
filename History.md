@@ -1,10 +1,14 @@
 
 ## vNEXT
 
+## v0.6.1
+
 * Correct NPM behavior in packages in case there is a `node_modules` directory
   somewhere above the app directory. #927
 
-Patches contributed by GitHub user andreas-karlsson.
+* Small bug fix in the low-level `routepolicy` package
+
+Patches contributed by GitHub users andreas-karlsson, awwx.
 
 ## v0.6.0
 

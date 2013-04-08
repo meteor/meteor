@@ -6,5 +6,8 @@
         "source file are now private to that file. Remove the `var` to share",
         "a value between files."
     ]
+  },
+  {
+    "release": "0.6.1",
   }
 ]
