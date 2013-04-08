@@ -129,13 +129,23 @@ Roles.addUsersToRoles = function (users, roles) {
   })
 
   // update all users, adding to roles set
-  _.each(users, function (user) {
+  if (Meteor.isClient) {
+    _.each(users, function (user) {
+      // Iterate over each user to fulfill Meteor's 'one update per ID' policy
+      Meteor.users.update(
+        {       _id: user },
+        { $addToSet: { roles: { $each: roles } } },
+        {     multi: true }
+      )
+    })
+  } else {
+    // On the server we can leverage MongoDB's $in operator for performance
     Meteor.users.update(
-      {       _id: user },
+      {       _id: { $in: users } },
       { $addToSet: { roles: { $each: roles } } },
       {     multi: true }
     )
-  })
+  }
 }
 
 /**
@@ -154,13 +164,23 @@ Roles.removeUsersFromRoles = function (users, roles) {
   if (!_.isArray(roles)) roles = [roles]
 
   // update all users, remove from roles set
-  _.each(users, function (user) {
+  if (Meteor.isClient) {
+    // Iterate over each user to fulfill Meteor's 'one update per ID' policy
+    _.each(users, function (user) {
+      Meteor.users.update(
+        {      _id: user },
+        { $pullAll: { roles: roles } },
+        {    multi: true}
+      )
+    })
+  } else {
+    // On the server we can leverage MongoDB's $in operator for performance
     Meteor.users.update(
-      {       _id: user },
-      { $addToSet: { roles: { $each: roles } } },
-      {     multi: true }
+      {      _id: {   $in: users } },
+      { $pullAll: { roles: roles } },
+      {    multi: true}
     )
-  })
+  }
 }
 
 /**
