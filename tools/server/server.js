@@ -279,7 +279,11 @@ var run = function () {
       // error message on parse error. it's what require() uses to
       // generate its errors.
       var func = require('vm').runInThisContext(wrapped, filename, true);
-      func(Npm);
+      // Setting `this` to `global` allows you to do a top-level
+      // "this.foo = " to define global variables when using "use strict"
+      // (http://es5.github.io/#x15.3.4.4); this is the only way to do
+      // it in CoffeeScript.
+      func.call(global, Npm);
     });
 
 
