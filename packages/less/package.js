@@ -6,41 +6,57 @@ Npm.depends({less: '1.3.3'});
 
 Package.register_extension(
   "less", function (bundle, source_path, serve_path, where) {
-    var less = Npm.require('less');
     var fs = Npm.require('fs');
     var path = Npm.require('path');
+    var less = Npm.require('less');
 
-    serve_path = serve_path + '.css';
+    var render = function(lessContent, lastError){
+      
+      // If the dependency isn't found, try to search a `.lessimport` file
+      if(typeof lastError !== "undefined" && lastError.indexOf("wasn't found.") !== -1){
+        fileToImport = lastError.split("'")[1];
+        fileToImport = fileToImport.replace(".less", "")
+        lessContent = lessContent.replace(fileToImport, fileToImport + ".lessimport");
+      }
 
-    var contents = fs.readFileSync(source_path, 'utf8');
+      try {
+        less.render(lessContent, {
+          // Use fs.readFileSync to process @imports. This is the bundler, so
+          // that's not going to cause concurrency issues, and it means that (a)
+          // we don't have to use Futures and (b) errors thrown by bugs in less
+          // actually get caught.
+          syncImport: true,
+          paths: [path.resolve(source_path, '..')] // for @import
+        }, function(error, content) {
 
-    try {
-      less.render(contents.toString('utf8'), {
-        // Use fs.readFileSync to process @imports. This is the bundler, so
-        // that's not going to cause concurrency issues, and it means that (a)
-        // we don't have to use Futures and (b) errors thrown by bugs in less
-        // actually get caught.
-        syncImport: true,
-        paths: [path.resolve(source_path, '..')] // for @import
-      }, function (err, css) {
-        if (err) {
-          bundle.error(source_path + ": Less compiler error: " + err.message);
-          return;
-        }
-
-        bundle.add_resource({
-          type: "css",
-          path: serve_path,
-          data: new Buffer(css),
-          where: where
+          if(error !== null && error !== lastError) {
+            render(lessContent, error);
+          } else if(!! content) {
+            bundle.add_resource({
+              type: "css",
+              path: serve_path + ".css",
+              data: new Buffer(content),
+              where: where
+            });
+          } else {
+            bundle.error(source_path + ": Less compiler error: " + error);
+          }
         });
-      });
-    } catch (e) {
-      // less.render() is supposed to report any errors via its
-      // callback. But sometimes, it throws them instead. This is
-      // probably a bug in less. Be prepared for either behavior.
-      bundle.error(source_path + ": Less compiler error: " + e.message);
-    }
+      
+      } catch (error) {
+        // less.render() is supposed to report any errors via its
+        // callback. But sometimes, it throws them instead. This is
+        // probably a bug in less. Be prepared for either behavior.
+        if (error.message !== lastError) {
+          render(lessContent, error.message);
+        } else {
+          bundle.error(source_path + ": Less compiler error: " + error.message);
+        }
+      }
+    };
+
+    var contents = fs.readFileSync(source_path, 'utf8').toString('utf8');
+    render(contents);
   }
 );
 
