@@ -129,11 +129,13 @@ Roles.addUsersToRoles = function (users, roles) {
   })
 
   // update all users, adding to roles set
-  Meteor.users.update(
-    {       _id: { $in: users } },
-    { $addToSet: { roles: { $each: roles } } },
-    {     multi: true }
-  )
+  _.each(users, function (user) {
+    Meteor.users.update(
+      {       _id: user },
+      { $addToSet: { roles: { $each: roles } } },
+      {     multi: true }
+    )
+  })
 }
 
 /**
@@ -152,11 +154,13 @@ Roles.removeUsersFromRoles = function (users, roles) {
   if (!_.isArray(roles)) roles = [roles]
 
   // update all users, remove from roles set
-  Meteor.users.update(
-    {      _id: {   $in: users } },
-    { $pullAll: { roles: roles } },
-    {    multi: true}
-  )
+  _.each(users, function (user) {
+    Meteor.users.update(
+      {       _id: user },
+      { $addToSet: { roles: { $each: roles } } },
+      {     multi: true }
+    )
+  })
 }
 
 /**
