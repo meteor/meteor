@@ -247,6 +247,11 @@ pjax.updateTabState = function (src) {
     } else {
         tab = Y.one('#classdocs .api-class-tab.' + defaultTab);
 
+        // When the `defaultTab` node isn't found, `localStorage` is stale.
+        if (!tab && defaultTab !== 'index') {
+            tab = Y.one('#classdocs .api-class-tab.index');
+        }
+
         if (classTabView.get('rendered')) {
             Y.Widget.getByNode(tab).set('selected', 1);
         } else {
@@ -278,7 +283,8 @@ pjax.updateVisibility = function () {
 pjax.handleClasses = function (req, res, next) {
     var status = res.ioResponse.status;
 
-    if (status >= 200 && status < 300) {
+    // Handles success and local filesystem XHRs.
+    if (!status || (status >= 200 && status < 300)) {
         pjax.initClassTabView();
     }
 
@@ -288,7 +294,8 @@ pjax.handleClasses = function (req, res, next) {
 pjax.handleFiles = function (req, res, next) {
     var status = res.ioResponse.status;
 
-    if (status >= 200 && status < 300) {
+    // Handles success and local filesystem XHRs.
+    if (!status || (status >= 200 && status < 300)) {
         pjax.initLineNumbers();
     }
 

@@ -42,7 +42,7 @@
             "namespaces": {},
             "tag": "module",
             "file": "roles/roles_client.js",
-            "line": 5,
+            "line": 3,
             "description": "Convenience functions for use on client.\n\nNOTE: You must restrict user actions on the server-side; any\nclient-side checks are strictly for convenience and must not be\ntrusted."
         },
         "Roles": {
@@ -79,7 +79,7 @@
     "classitems": [
         {
             "file": "roles/roles_client.js",
-            "line": 25,
+            "line": 23,
             "description": "Handlebars helper to check if current user is in at least one\nof the target roles.  For use in client-side templates.",
             "itemtype": "method",
             "name": "isInRole",
@@ -163,7 +163,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 139,
+            "line": 151,
             "description": "Remove users from roles",
             "itemtype": "method",
             "name": "removeUsersFromRoles",
@@ -184,7 +184,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 162,
+            "line": 186,
             "description": "Check if user is in role",
             "itemtype": "method",
             "name": "userIsInRole",
@@ -209,7 +209,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 202,
+            "line": 226,
             "description": "Retrieve users roles",
             "itemtype": "method",
             "name": "getRolesForUser",
@@ -229,7 +229,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 218,
+            "line": 242,
             "description": "Retrieve all existing roles",
             "itemtype": "method",
             "name": "getAllRoles",
@@ -242,7 +242,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 228,
+            "line": 252,
             "description": "Retrieve all users who are in target role",
             "itemtype": "method",
             "name": "getUsersInRole",
@@ -266,6 +266,13 @@
             "description": "Roles collection documents consist only of an id and a role name.\n  ex: { _id:<uuid>, name: \"admin\" }",
             "class": "",
             "module": "Roles"
+        },
+        {
+            "file": "roles/roles_server.js",
+            "line": 16,
+            "description": "Always publish logged-in user's roles so client-side\nchecks can work.",
+            "class": "",
+            "module": "Roles"
         }
     ],
     "warnings": [
@@ -276,6 +283,10 @@
         {
             "message": "Missing item type\nRoles collection documents consist only of an id and a role name.\n  ex: { _id:<uuid>, name: \"admin\" }",
             "line": " roles/roles_server.js:4"
+        },
+        {
+            "message": "Missing item type\nAlways publish logged-in user's roles so client-side\nchecks can work.",
+            "line": " roles/roles_server.js:16"
         }
     ]
 }

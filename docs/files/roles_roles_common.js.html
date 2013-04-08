@@ -3,11 +3,11 @@
 <head>
     <meta charset="utf-8">
     <title>roles&#x2F;roles_common.js - The meteor-roles API</title>
-    <link rel="stylesheet" href="http:&#x2F;&#x2F;yui.yahooapis.com&#x2F;3.7.0&#x2F;build&#x2F;cssgrids&#x2F;cssgrids-min.css">
+    <link rel="stylesheet" href="http:&#x2F;&#x2F;yui.yahooapis.com&#x2F;3.8.0&#x2F;build&#x2F;cssgrids&#x2F;cssgrids-min.css">
     <link rel="stylesheet" href="..&#x2F;assets/vendor/prettify/prettify-min.css">
     <link rel="stylesheet" href="..&#x2F;assets/css/main.css" id="site_styles">
     <link rel="shortcut icon" type="image/png" href="..&#x2F;assets/favicon.png">
-    <script src="http:&#x2F;&#x2F;yui.yahooapis.com&#x2F;combo?3.7.0&#x2F;build&#x2F;yui&#x2F;yui-min.js"></script>
+    <script src="http:&#x2F;&#x2F;yui.yahooapis.com&#x2F;combo?3.8.0&#x2F;build&#x2F;yui&#x2F;yui-min.js"></script>
 </head>
 <body class="yui3-skin-sam">
 
@@ -221,11 +221,23 @@ Roles.addUsersToRoles = function (users, roles) {
   })
 
   &#x2F;&#x2F; update all users, adding to roles set
-  Meteor.users.update(
-    {       _id: { $in: users } },
-    { $addToSet: { roles: { $each: roles } } },
-    {     multi: true }
-  )
+  if (Meteor.isClient) {
+    _.each(users, function (user) {
+      &#x2F;&#x2F; Iterate over each user to fulfill Meteor&#x27;s &#x27;one update per ID&#x27; policy
+      Meteor.users.update(
+        {       _id: user },
+        { $addToSet: { roles: { $each: roles } } },
+        {     multi: true }
+      )
+    })
+  } else {
+    &#x2F;&#x2F; On the server we can leverage MongoDB&#x27;s $in operator for performance
+    Meteor.users.update(
+      {       _id: { $in: users } },
+      { $addToSet: { roles: { $each: roles } } },
+      {     multi: true }
+    )
+  }
 }
 
 &#x2F;**
@@ -244,11 +256,23 @@ Roles.removeUsersFromRoles = function (users, roles) {
   if (!_.isArray(roles)) roles = [roles]
 
   &#x2F;&#x2F; update all users, remove from roles set
-  Meteor.users.update(
-    {      _id: {   $in: users } },
-    { $pullAll: { roles: roles } },
-    {    multi: true}
-  )
+  if (Meteor.isClient) {
+    &#x2F;&#x2F; Iterate over each user to fulfill Meteor&#x27;s &#x27;one update per ID&#x27; policy
+    _.each(users, function (user) {
+      Meteor.users.update(
+        {      _id: user },
+        { $pullAll: { roles: roles } },
+        {    multi: true}
+      )
+    })
+  } else {
+    &#x2F;&#x2F; On the server we can leverage MongoDB&#x27;s $in operator for performance
+    Meteor.users.update(
+      {      _id: {   $in: users } },
+      { $pullAll: { roles: roles } },
+      {    multi: true}
+    )
+  }
 }
 
 &#x2F;**
