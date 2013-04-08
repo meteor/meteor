@@ -62,6 +62,19 @@ _.extend(exports, {
     var newPackageNpmDir = packageNpmDir + '-new-' + self._randomToken();
 
     try {
+      // v0.6.0 had a bug that could cause .npm directories to be
+      // created without npm-shrinkwrap.json
+      // (https://github.com/meteor/meteor/pull/927). Running your app
+      // in that state causes consistent "Corrupted .npm directory"
+      // errors.
+      //
+      // If you've reached that state, delete the empty directory and
+      // proceed.
+      if (fs.existsSync(packageNpmDir) &&
+          !fs.existsSync(path.join(packageNpmDir, 'npm-shrinkwrap.json'))) {
+        files.rm_recursive(packageNpmDir);
+      }
+
       if (fs.existsSync(packageNpmDir)) {
         // we already nave a .npm directory. update it appropriately with some ceremony involving:
         // `npm install`, `npm install name@version`, `npm shrinkwrap`
@@ -83,6 +96,10 @@ _.extend(exports, {
     var self = this;
     self._tmpDirs.push(newPackageNpmDir); // keep track so that we can remove them on process exit
     fs.mkdirSync(newPackageNpmDir);
+
+    // create node_modules -- prevent npm install from installing
+    // to an existing node_modules dir higher up in the filesystem
+    fs.mkdirSync(path.join(newPackageNpmDir, 'node_modules'));
 
     // create .gitignore -- node_modules shouldn't be in git since we
     // recreate it as needed by using `npm install`. since we use `npm

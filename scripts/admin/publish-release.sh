@@ -6,7 +6,7 @@ DIR="$(pwd)"
 METEOR_DIR="$(pwd)/../.."
 
 if [ $# -gt 2 ]; then
-  echo "usage: publish-release.sh [GIT-REV] [RELEASE-NAME]"
+  echo "usage: publish-release.sh [GIT-REV [RELEASE-NAME]]"
   exit 1
 fi
 
