@@ -336,11 +336,16 @@ var Bundle = function () {
             // On the client, wrap each file in a closure, to give it a separate
             // scope (eg, file-level vars are file-scoped). On the server, this
             // is done in server/server.js to inject the Npm symbol.
+            //
+            // The ".call(this)" allows you to do a top-level "this.foo = "
+            // to define global variables when using "use strict"
+            // (http://es5.github.io/#x15.3.4.4); this is the only way to do
+            // it in CoffeeScript.
             if (w === "client") {
               wrapped = Buffer.concat([
                 new Buffer("(function(){ "),
                 data,
-                new Buffer("\n})();\n")]);
+                new Buffer("\n}).call(this);\n")]);
             }
             self.files[w][options.path] = wrapped;
             self.js[w].push(options.path);
