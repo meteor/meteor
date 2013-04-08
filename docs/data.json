@@ -163,7 +163,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 141,
+            "line": 151,
             "description": "Remove users from roles",
             "itemtype": "method",
             "name": "removeUsersFromRoles",
@@ -184,7 +184,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 166,
+            "line": 186,
             "description": "Check if user is in role",
             "itemtype": "method",
             "name": "userIsInRole",
@@ -209,7 +209,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 206,
+            "line": 226,
             "description": "Retrieve users roles",
             "itemtype": "method",
             "name": "getRolesForUser",
@@ -229,7 +229,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 222,
+            "line": 242,
             "description": "Retrieve all existing roles",
             "itemtype": "method",
             "name": "getAllRoles",
@@ -242,7 +242,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 232,
+            "line": 252,
             "description": "Retrieve all users who are in target role",
             "itemtype": "method",
             "name": "getUsersInRole",
