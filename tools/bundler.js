@@ -47,6 +47,10 @@ var cleanCSS = require('clean-css');
 var _ = require('underscore');
 var project = require(path.join(__dirname, 'project.js'));
 
+var ROOT_URL = process.env.ROOT_URL ?
+  require('url').parse( process.env.ROOT_URL )
+  : null;
+
 // files to ignore when bundling. node has no globs, so use regexps
 var ignore_files = [
     /~$/, /^\.#/, /^#.*#$/,
@@ -529,12 +533,14 @@ _.extend(Bundle.prototype, {
 
   _clientUrlsFor: function (type) {
     var self = this;
-    return _.pluck(
-      _.filter(self.manifest, function (resource) {
-        return resource.where === 'client' && resource.type === type;
-      }),
-      'url'
-    );
+    var pathname = ROOT_URL ? ROOT_URL.pathname : '';
+    
+    return _.reduce(self.manifest, function (memo,resource) {
+      if ( resource.where === 'client' && resource.type === type ) {
+        memo.push( pathname + resource.url );
+      }
+      return memo;
+    }, []);
   },
 
   _generate_app_html: function () {
