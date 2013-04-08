@@ -1,13 +1,79 @@
 
 ## vNEXT
 
-* {{#each}} helper can now iterate over falsy values without throwing an
+## v0.6.1
+
+* Correct NPM behavior in packages in case there is a `node_modules` directory
+  somewhere above the app directory. #927
+
+* Small bug fix in the low-level `routepolicy` package.
+
+Patches contributed by GitHub users andreas-karlsson and awwx.
+
+## v0.6.0
+
+* Meteor has a brand new distribution system! In this new system, code-named
+  Engine, packages are downloaded individually and on demand. All of the
+  packages in each official Meteor release are prefetched and cached so you can
+  still use Meteor while offline. You can have multiple releases of Meteor
+  installed simultaneously; apps are pinned to specific Meteor releases.
+  All `meteor` commands accept a `--release` argument to specify which release
+  to use; `meteor update` changes what release the app is pinned to.
+  Inside an app, the name of the release is available at `Meteor.release`.
+  When running Meteor directly from a git checkout, the release is ignored.
+
+* Variables declared with `var` at the outermost level of a JavaScript
+  source file are now private to that file. Remove the `var` to share
+  a value between files.
+
+* Meteor now supports any x86 (32- or 64-bit) Linux system, not just those which
+  use Debian or RedHat package management.
+
+* Apps may contain packages inside a top-level directory named `packages`.
+
+* Packages may depend on [NPM modules](https://npmjs.org), using the new
+  `Npm.depends` directive in their `package.js` file. (Note: if the NPM module
+  has architecture-specific binary components, bundles built with `meteor
+  bundle` or `meteor deploy` will contain the components as built for the
+  developer's platform and may not run on other platforms.)
+
+* Meteor's internal package tests (as well as tests you add to your app's
+  packages with the unsupported `Tinytest` framework) are now run with the new
+  command `meteor test-packages`.
+
+* `{{#each}}` helper can now iterate over falsey values without throwing an
   exception. #815, #801
+
+* `{{#with}}` helper now only includes its block if its argument is not falsey,
+  and runs an `{{else}}` block if provided if the argument is falsey. #770, #866
 
 * Twitter login now stores profile_image_url and profile_image_url_https
   attributes in the user.services.twitter namespace. #788
 
-Patches contributed by GitHub users raix, blackcoat, timhaines
+* Allow packages to register file extensions with dots in the filename.
+
+* When calling `this.changed` in a publish function, it is no longer an error to
+  clear a field which was never set. #850
+
+* Deps API
+  * Add `dep.depend()`, deprecate `Deps.depend(dep)` and
+    `dep.addDependent()`.
+  * If first run of `Deps.autorun` throws an exception, stop it and don't
+    rerun.  This prevents a Spark exception when template rendering fails
+    ("Can't call 'firstNode' of undefined").
+  * If an exception is thrown during `Deps.flush` with no stack, the
+    message is logged instead. #822
+
+* When connecting to MongoDB, use the JavaScript BSON parser unless specifically
+  requested in `MONGO_URL`; the native BSON parser sometimes segfaults. (Meteor
+  only started using the native parser in 0.5.8.)
+
+* Calls to the `update` collection function in untrusted code may only use a
+  whitelisted list of modifier operators.
+
+Patches contributed by GitHub users awwx, blackcoat, cmather, estark37,
+mquandalle, Primigenus, raix, reustle, and timhaines.
+
 
 ## v0.5.9
 

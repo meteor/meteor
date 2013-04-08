@@ -1092,3 +1092,10 @@ Tinytest.add('templating - each falsy Issue #801', function (test) {
   var frag = Meteor.render(Template.test_template_issue801);
   test.equal(canonicalizeHtml(DomUtils.fragmentToHtml(frag)), "12null");
 });
+
+Tinytest.add('templating - with falsy Issue #770', function (test) {
+  Template.test_template_issue770.value1 = function () { return "abc"; };
+  Template.test_template_issue770.value2 = function () { return false; };
+  var frag = Meteor.render(Template.test_template_issue770);
+  test.equal(canonicalizeHtml(DomUtils.fragmentToHtml(frag)), "abcxxxabc");
+});

@@ -36,6 +36,15 @@ Accounts.oauth.registerService = function (name, version, handleOauthRequest) {
   };
 };
 
+// For test cleanup only. (Mongo has a limit as to how many indexes it can have
+// per collection.)
+Accounts.oauth._unregisterService = function (name) {
+  delete Accounts.oauth._services[name];
+  var index = {};
+  index['services.' + name + '.id'] = 1;
+  Meteor.users._dropIndex(index);
+};
+
 // When we get an incoming OAuth http request we complete the oauth
 // handshake, account and token setup before responding.  The
 // results are stored in this map which is then read when the login

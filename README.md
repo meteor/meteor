@@ -52,17 +52,26 @@ download a pre-build version).
 
     ./meteor --help
 
-After installing, you can read the docs locally. The `/docs` directory is a
+From your checkout, you can read the docs locally. The `/docs` directory is a
 meteor application, so simply change into the `/docs` directory and launch
 the app:
 
 	cd docs/
 	meteor
 
-You'll then be able to read the docs locally in your browser at `http://localhost:3000/`
+You'll then be able to read the docs locally in your browser at
+`http://localhost:3000/`
 
 Note that if you run Meteor from a git checkout, you cannot pin apps to specific
 Meteor releases or run using different Meteor releases using `--release`.
+
+## Uninstalling Meteor
+
+Aside from a short launcher shell script, Meteor installs itself inside your
+home directory. To uninstall Meteor, run:
+
+    rm -rf ~/.meteor/
+    sudo rm /usr/local/bin/meteor
 
 ## Developer Resources
 
@@ -76,4 +85,4 @@ Building an application with Meteor?
 Interested in contributing to Meteor?
 
 * Core framework design mailing list: https://groups.google.com/group/meteor-core
-* Contribution guidelines: https://github.com/meteor/meteor/wiki
+* Contribution guidelines: https://github.com/meteor/meteor/tree/devel/Contributing.md

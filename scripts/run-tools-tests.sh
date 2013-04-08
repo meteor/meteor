@@ -5,7 +5,7 @@ cd `dirname $0`
 METEOR_DIR=`pwd`/..
 # Die with message on failure, print commands being executed
 trap 'echo FAILED' EXIT
-set -e -x
+set -e -u -x
 
 # linux mktemp requires at least 3 X's in the last component.
 make_temp_dir() {
@@ -18,10 +18,14 @@ TEST_TMPDIR=$(make_temp_dir meteor-installed-cli-tests)
 TOOLS_DIR="$TEST_TMPDIR/tools-tree"
 TARGET_DIR="$TOOLS_DIR" admin/build-tools-tree.sh
 
-export TEST_WAREHOUSE_DIR=$(make_temp_dir meteor-installed-cli-tests-warehouse) # run with empty warehouse
+# Create a warehouse.
+export METEOR_WAREHOUSE_DIR=$(make_temp_dir meteor-installed-cli-tests-warehouse)
+# Download a bootstrap tarball into it. (launch-meteor recreates the directory.)
+rmdir "$METEOR_WAREHOUSE_DIR"
+admin/launch-meteor --version  # downloads the bootstrap tarball
 export METEOR_DIR="$TOOLS_DIR/bin"
 ./cli-test.sh
-unset TEST_WAREHOUSE_DIR
+unset METEOR_WAREHOUSE_DIR
 unset METEOR_DIR
 
 

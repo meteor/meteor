@@ -355,3 +355,11 @@
 <template name="test_template_issue801">
 {{#each values}}{{this}}{{/each}}
 </template>
+
+<!-- Test for issue #770 - falsy value for with -->
+<template name="test_template_issue770">
+{{# with value1}}{{this}}{{else}}xxx{{/with}}
+{{# with value2}}{{this}}{{else}}xxx{{/with}}
+{{# with value1}}{{this}}{{/with}}
+{{# with value2}}{{this}}{{/with}}
+</template>

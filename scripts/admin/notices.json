@@ -1,10 +1,13 @@
 [
   {
     "release": "0.6.0",
-    "tagline": "The engine!",
-    "changes": [
-      "Use 'Npm.require' instead of '__meteor_bootstrap__.require'",
-      "more..."
+    "notices": [
+        "Variables declared with `var` at the outermost level of a JavaScript",
+        "source file are now private to that file. Remove the `var` to share",
+        "a value between files."
     ]
+  },
+  {
+    "release": "0.6.1"
   }
 ]

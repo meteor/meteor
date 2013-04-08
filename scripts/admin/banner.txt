@@ -1,0 +1,3 @@
+=> Meteor 0.6.1 released: Fixes "Corrupted .npm directory" error.
+   This is being downloaded in the background. Update your project
+   to Meteor 0.6.1 by running 'meteor update'.

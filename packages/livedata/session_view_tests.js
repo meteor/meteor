@@ -375,3 +375,19 @@ Tinytest.add('livedata - sessionview - weird key names', function (test) {
   v.changed('A',  "A1", {constructor: 'bla'});
   v.expectResult({fun: 'changed', id: 'A1', changed: {constructor: 'bla'}});
 });
+
+Tinytest.add('livedata - sessionview - clear undefined value', function (test) {
+  var v = newView(test);
+
+  v.added("A", "A1", {field: "value"});
+  v.expectResult({fun: 'added', id: "A1", fields: {field: "value"}});
+  v.expectNoResult();
+
+  v.changed("A", "A1", {field: undefined});
+  v.expectResult({fun: 'changed', id: 'A1', changed: {field: undefined}});
+  v.expectNoResult();
+
+  v.changed("A", "A1", {field: undefined});
+  v.expectNoResult();
+
+});

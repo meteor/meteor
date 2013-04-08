@@ -5,6 +5,9 @@
 # It does not set up the top-level springboard file in
 # ~/.meteor/tools or the ~/.meteor/meteor symlink.
 
+set -e
+set -u
+
 cd `dirname $0`/../..
 
 if [ "$TARGET_DIR" == "" ] ; then
@@ -22,7 +25,7 @@ fi
 echo "Setting up tools tree in $TARGET_DIR"
 
 # make sure dev bundle exists before trying to install
-./meteor --version 2>&1 | grep Unreleased
+./meteor --get-ready
 
 function CPR {
     tar -c --exclude .meteor/local "$1" | tar -x -C "$2"

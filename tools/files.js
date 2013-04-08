@@ -16,7 +16,8 @@ var fstream = require('fstream');
 
 var cleanup = require('./cleanup.js');
 
-var files = module.exports = {
+var files = exports;
+_.extend(exports, {
   // A sort comparator to order files into load order.
   sort: function (a, b) {
     // main.* loaded last
@@ -85,7 +86,7 @@ var files = module.exports = {
                                   extensions, func);
           });
         });
-      } else if (_.indexOf(extensions, path.extname(filepath)) !== -1) {
+      } else if (files.findExtension(extensions, filepath)) {
         func(filepath);
       }
     });
@@ -101,11 +102,24 @@ var files = module.exports = {
         ret = ret.concat(files.file_list_sync(
           path.join(filepath, fileName), extensions));
       });
-    } else if (_.indexOf(extensions, path.extname(filepath)) !== -1) {
+    } else if (files.findExtension(extensions, filepath)) {
       ret.push(filepath);
     }
 
     return ret;
+  },
+
+  // given a list of extensions and a path, return the file extension
+  // provided in the list. If it doesn't find it, return null.
+  findExtension: function (extensions, filepath) {
+    var len = filepath.length;
+    for (var i = 0; i < extensions.length; ++i) {
+      var ext = extensions[i];
+      if (filepath.indexOf(ext, len - ext.length) !== -1){
+        return ext;
+      }
+    }
+    return null;
   },
 
   // given a path, returns true if it is a meteor application (has a
@@ -114,8 +128,6 @@ var files = module.exports = {
     // XXX once we are done with the transition to engine, this should
     // change to: `return fs.existsSync(path.join(filepath, '.meteor',
     // 'release'))`
-    //   (though we'll have to start putting release files in the examples
-    //    directories at that point)
 
     // .meteor/packages can be a directory, if .meteor is a warehouse
     // directory.  since installing meteor initializes a warehouse at
@@ -198,13 +210,13 @@ var files = module.exports = {
     return false;
   },
 
-  // False if we are using a warehouse: either installed Meteor, or the test
-  // hook $TEST_WAREHOUSE_DIR is set. Otherwise true (we're in a git checkout
-  // and just using packages from the checkout).
+  // True if we are using a warehouse: either installed Meteor, or if
+  // $METEOR_WAREHOUSE_DIR is set. Otherwise false (we're in a git checkout and
+  // just using packages from the checkout).
   usesWarehouse: function () {
     // Test hook: act like we're "installed" using a non-homedir warehouse
     // directory.
-    if (process.env.TEST_WAREHOUSE_DIR)
+    if (process.env.METEOR_WAREHOUSE_DIR)
       return true;
     else
       return !files.in_checkout();
@@ -264,6 +276,30 @@ var files = module.exports = {
       fs.rmdirSync(p);
     } else
       fs.unlinkSync(p);
+  },
+
+  // Makes all files in a tree read-only.
+  makeTreeReadOnly: function (p) {
+    try {
+      // the l in lstat is critical -- we want to ignore symbolic links
+      var stat = fs.lstatSync(p);
+    } catch (e) {
+      if (e.code == "ENOENT")
+        return;
+      throw e;
+    }
+
+    if (stat.isDirectory()) {
+      _.each(fs.readdirSync(p), function (file) {
+        files.makeTreeReadOnly(path.join(p, file));
+      });
+    }
+    if (stat.isFile()) {
+      var permissions = stat.mode & 0777;
+      var readOnlyPermissions = permissions & 0555;
+      if (permissions !== readOnlyPermissions)
+        fs.chmodSync(p, readOnlyPermissions);
+    }
   },
 
   // like mkdir -p. if it returns true, the item is a directory (even
@@ -380,7 +416,7 @@ var files = module.exports = {
   // Takes a buffer containing `.tar.gz` data and extracts the archive into a
   // destination directory. destPath should not exist yet, and the archive
   // should contain a single top-level directory, which will be renamed
-  // atomically to destPath.
+  // atomically to destPath. The entire tree will be made readonly.
   extractTarGz: function (buffer, destPath) {
     var parentDir = path.dirname(destPath);
     var tempDir = path.join(parentDir, '.tmp' + files._randomToken());
@@ -413,7 +449,9 @@ var files = module.exports = {
       throw new Error(
         "Extracted archive '" + tempDir + "' should only contain one entry");
 
-    fs.renameSync(path.join(tempDir, topLevelOfArchive[0]), destPath);
+    var extractDir = path.join(tempDir, topLevelOfArchive[0]);
+    files.makeTreeReadOnly(extractDir);
+    fs.renameSync(extractDir, destPath);
     fs.rmdirSync(tempDir);
   },
 
@@ -425,6 +463,22 @@ var files = module.exports = {
       tar.Pack()).pipe(zlib.createGzip());
   },
 
+  // Tar-gzips a directory into a tarball on disk, synchronously.
+  // The tar archive will contain a top-level directory named after dirPath.
+  createTarball: function (dirPath, tarball) {
+    var future = new Future;
+    var out = fs.createWriteStream(tarball);
+    out.on('error', function (err) {
+      future.throw(err);
+    });
+    out.on('close', function () {
+      future.return();
+    });
+
+    files.createTarGzStream(dirPath).pipe(out);
+    future.wait();
+  },
+
   // A synchronous wrapper around request(...) that returns the response "body"
   // or throws.
   getUrl: function (urlOrOptions, callback) {
@@ -433,17 +487,23 @@ var files = module.exports = {
     // "response".
     request(urlOrOptions, function (error, response, body) {
       if (error)
-        future.throw(error);
+        future.throw(new files.OfflineError(error));
+      else if (response.statusCode >= 400 && response.statusCode < 600)
+        future.throw(response);
       else
         future.return(body);
     });
     return future.wait();
   },
 
+  OfflineError: function (error) {
+    this.error = error;
+  },
+
   _randomToken: function() {
     return (Math.random() * 0x100000000 + 1).toString(36);
   }
-};
+});
 
 
 var tempDirs = [];

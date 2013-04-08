@@ -2,27 +2,29 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
   var http = Npm.require('http');
   var foobookId = Random.id();
   var state = Random.id();
+  var serviceName = Random.id();
 
-  if (!Accounts.loginServiceConfiguration.findOne({service: 'foobook'}))
-    Accounts.loginServiceConfiguration.insert({service: 'foobook'});
-  Accounts.foobook = {};
+  Accounts.loginServiceConfiguration.insert({service: serviceName});
+  Accounts[serviceName] = {};
 
   try {
-    // register a fake login service - foobook
-    Accounts.oauth.registerService("foobook", 2, function (query) {
+    // register a fake login service
+    Accounts.oauth.registerService(serviceName, 2, function (query) {
       return {serviceData: {id: foobookId}};
     });
 
     // simulate logging in using foobook
     var req = {method: "POST",
-               url: "/_oauth/foobook?close",
+               url: "/_oauth/" + serviceName + "?close",
                query: {state: state}};
     Accounts.oauth._middleware(req, new http.ServerResponse(req));
 
     // verify that a user is created
-    var user = Meteor.users.findOne({"services.foobook.id": foobookId});
+    var selector = {};
+    selector["services." + serviceName + ".id"] = foobookId;
+    var user = Meteor.users.findOne(selector);
     test.notEqual(user, undefined);
-    test.equal(user.services.foobook.id, foobookId);
+    test.equal(user.services[serviceName].id, foobookId);
 
     // and that that user has a login token
     test.equal(user.services.resume.loginTokens.length, 1);
@@ -35,7 +37,7 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
     test.equal(
       Accounts.oauth._loginResultForState[state].token, token);
   } finally {
-    delete Accounts.oauth._services.foobook;
+    Accounts.oauth._unregisterService(serviceName);
   }
 });
 
@@ -44,14 +46,14 @@ Tinytest.add("oauth2 - error in user creation", function (test) {
   var http = Npm.require('http');
   var state = Random.id();
   var failbookId = Random.id();
+  var serviceName = Random.id();
 
-  if (!Accounts.loginServiceConfiguration.findOne({service: 'failbook'}))
-    Accounts.loginServiceConfiguration.insert({service: 'failbook'});
-  Accounts.failbook = {};
+  Accounts.loginServiceConfiguration.insert({service: serviceName});
+  Accounts[serviceName] = {};
 
   try {
     // register a failing login service
-    Accounts.oauth.registerService("failbook", 2, function (query) {
+    Accounts.oauth.registerService(serviceName, 2, function (query) {
       return {
         serviceData: {
           id: failbookId
@@ -71,12 +73,14 @@ Tinytest.add("oauth2 - error in user creation", function (test) {
     // simulate logging in with failure
     Meteor._suppress_log(1);
     var req = {method: "POST",
-               url: "/_oauth/failbook?close",
+               url: "/_oauth/" + serviceName + "?close",
                query: {state: state}};
     Accounts.oauth._middleware(req, new http.ServerResponse(req));
 
     // verify that a user is not created
-    var user = Meteor.users.findOne({"services.failbook.id": failbookId});
+    var selector = {};
+    selector["services." + serviceName + ".id"] = failbookId;
+    var user = Meteor.users.findOne(selector);
     test.equal(user, undefined);
 
     // verify an error is stored in login state
@@ -87,7 +91,7 @@ Tinytest.add("oauth2 - error in user creation", function (test) {
       Meteor.apply('login', [{oauth: {version: 2, state: state}}]);
     });
   } finally {
-    delete Accounts.oauth._services.failbook;
+    Accounts.oauth._unregisterService(serviceName);
   }
 });
 

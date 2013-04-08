@@ -1298,7 +1298,7 @@ Tinytest.addAsync("livedata connection - version negotiation requires renegotiat
   });
 });
 
-Tinytest.addAsync("livedata connection - version negotiation fails",
+Tinytest.addAsync("livedata connection - version negotiation error",
                   function (test, onComplete) {
   var connection = new Meteor._LivedataConnection("/", {
     reloadWithOutstanding: true,
@@ -1467,7 +1467,7 @@ Tinytest.add("livedata stub - reconnect double wait method", function (test) {
                  {msg: 'method', method: 'lastMethod', params: [], id: '*'});
 });
 
-Tinytest.add("livedata stub - subscribe failure", function (test) {
+Tinytest.add("livedata stub - subscribe errors", function (test) {
   var stream = new Meteor._StubStream();
   var conn = newConnection(stream);
 

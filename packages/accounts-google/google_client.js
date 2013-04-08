@@ -3,6 +3,8 @@ Meteor.loginWithGoogle = function (options, callback) {
   if (!callback && typeof options === 'function') {
     callback = options;
     options = {};
+  } else if (!options) {
+    options = {};
   }
 
   var config = Accounts.loginServiceConfiguration.findOne({service: 'google'});
@@ -16,7 +18,7 @@ Meteor.loginWithGoogle = function (options, callback) {
   // always need this to get user id from google.
   var requiredScope = ['https://www.googleapis.com/auth/userinfo.profile'];
   var scope = ['https://www.googleapis.com/auth/userinfo.email'];
-  if (options && options.requestPermissions)
+  if (options.requestPermissions)
     scope = options.requestPermissions;
   scope = _.union(scope, requiredScope);
   var flatScope = _.map(scope, encodeURIComponent).join('+');

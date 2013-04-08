@@ -27,6 +27,7 @@ testAsyncMulti("accounts emails - reset password flow", [
   },
   function (test, expect) {
     Meteor.call("getInterceptedEmails", email1, expect(function (error, result) {
+      test.equal(error, undefined);
       test.notEqual(result, undefined);
       test.equal(result.length, 2); // the first is the email verification
       var content = result[1];
@@ -65,7 +66,7 @@ testAsyncMulti("accounts emails - reset password flow", [
 
 var getVerifyEmailToken = function (email, test, expect) {
   Meteor.call("getInterceptedEmails", email, expect(function (error, result) {
-    test.isFalse(error);
+    test.equal(error, undefined);
     test.notEqual(result, undefined);
     test.equal(result.length, 1);
     var content = result[0];
@@ -157,6 +158,7 @@ testAsyncMulti("accounts emails - verify email flow", [
 
 var getEnrollAccountToken = function (email, test, expect) {
   Meteor.call("getInterceptedEmails", email, expect(function (error, result) {
+    test.equal(error, undefined);
     test.notEqual(result, undefined);
     test.equal(result.length, 1);
     var content = result[0];

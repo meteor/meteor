@@ -26,6 +26,7 @@
 //  - core [paths relative to 'app' in meteor tree]
 //  - app [paths relative to top of app tree]
 //  - exclude [list of regexps for files to ignore (everywhere)]
+//  - hashes [SHA1 hashes of all files read by the bundler]
 //  (for 'core' and 'apps', if a directory is given, you should
 //  monitor everything in the subtree under it minus the stuff that
 //  matches exclude, and if it doesn't exist yet, you should watch for
@@ -53,6 +54,13 @@ var ignore_files = [
     /^\.meteor$/, /* avoids scanning N^2 files when bundling all packages */
     /^\.git$/ /* often has too many files to watch */
 ];
+
+
+var sha1 = exports.sha1 = function (contents) {
+  var hash = crypto.createHash('sha1');
+  hash.update(contents);
+  return hash.digest('hex');
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // PackageBundlingInfo
@@ -84,6 +92,11 @@ var PackageBundlingInfo = function (pkg, bundle) {
   self.dependencies = {};
   if (pkg.name)
     self.dependencies['package.js'] = true;
+
+  // Set if we've installed NPM modules on this package during this
+  // bundling. Used to ensure that we only refresh NPM modules once per package
+  // per bundling run.
+  self.installedNpmModules = false;
 
   // the API available from on_use / on_test handlers
   self.api = {
@@ -182,11 +195,20 @@ _.extend(PackageBundlingInfo.prototype, {
       return;
     self.files[where][rel_path] = true;
 
-    var ext = path.extname(rel_path).substr(1);
-    var handler = self.get_source_handler(ext);
+    var sourcePath = path.join(self.pkg.source_root, rel_path);
+    var fileContents = fs.readFileSync(sourcePath);
+    // XXX for registered extensions, this hash has a race with the actual
+    // file contents re-read in the handler.
+    self.bundle.inputFileHashes[sourcePath] = sha1(fileContents);
+
+    var ext = files.findExtension(self.api.registered_extensions(), rel_path);
+    // substr to remove the dot to translate between the with-dot world
+    // of registered_extensions and the without dot world of
+    // get_source_handler. This could use some API beautification.
+    var handler = ext && self.get_source_handler(ext.substr(1));
     if (handler) {
       handler(self.bundle.api,
-              path.join(self.pkg.source_root, rel_path),
+              sourcePath,
               path.join(self.pkg.serve_root, rel_path),
               where);
     } else {
@@ -195,7 +217,7 @@ _.extend(PackageBundlingInfo.prototype, {
       self.bundle.api.add_resource({
         type: "static",
         path: path.join(self.pkg.serve_root, rel_path),
-        data: fs.readFileSync(path.join(self.pkg.source_root, rel_path)),
+        data: fileContents,
         where: where
       });
     }
@@ -257,6 +279,10 @@ var Bundle = function () {
   // list of errors encountered while bundling. array of string.
   self.errors = [];
 
+  // A map from absolute path to SHA1 of all files read by this bundle. Used for
+  // dependency watching in the runner.
+  self.inputFileHashes = {};
+
   // the API available from register_extension handlers
   self.api = {
     /**
@@ -310,15 +336,11 @@ var Bundle = function () {
             // On the client, wrap each file in a closure, to give it a separate
             // scope (eg, file-level vars are file-scoped). On the server, this
             // is done in server/server.js to inject the Npm symbol.
-            //
-            // The ".call(this)" allows you to do a top-level "this.foo = " to
-            // define global variables; this is the only way to do it in
-            // CoffeeScript.
             if (w === "client") {
               wrapped = Buffer.concat([
-                new Buffer("(function(){"),
+                new Buffer("(function(){ "),
                 data,
-                new Buffer("\n}).call(this);\n")]);
+                new Buffer("\n})();\n")]);
             }
             self.files[w][options.path] = wrapped;
             self.js[w].push(options.path);
@@ -370,10 +392,19 @@ _.extend(Bundle.prototype, {
     return bundlingInfo;
   },
 
-  _hash: function (contents) {
-    var hash = crypto.createHash('sha1');
-    hash.update(contents);
-    return hash.digest('hex');
+  _maybeUpdateNpmDependencies: function (pkg, inst) {
+    var self = this;
+    if (pkg.npmDependencies) {
+      // If the package isn't in the warehouse, maybe update the NPM
+      // dependencies. (Warehouse packages shouldn't change after they're
+      // installed, so we skip this slow step.) Also, we only do this once per
+      // package per bundling run.
+      if (!pkg.inWarehouse && !inst.installedNpmModules) {
+        pkg.installNpmDependencies();
+        inst.installedNpmModules = true;
+      }
+      self.bundleNodeModules(pkg);
+    }
   },
 
   // Call to add a package to this bundle
@@ -383,6 +414,9 @@ _.extend(Bundle.prototype, {
   use: function (pkg, where, from) {
     var self = this;
     var inst = self._get_bundling_info_for_package(pkg);
+
+    // Get the hash of package.js or .meteor/packages.
+    _.extend(self.inputFileHashes, pkg.metadataFileHashes);
 
     if (from)
       from.using[pkg.id] = inst;
@@ -405,10 +439,7 @@ _.extend(Bundle.prototype, {
     // XXX detect circular dependencies and print an error. (not sure
     // what the current code will do)
 
-    if (pkg.npmDependencies) {
-      pkg.installNpmDependencies();
-      self.bundleNodeModules(pkg);
-    }
+    self._maybeUpdateNpmDependencies(pkg, inst);
 
     if (pkg.on_use_handler)
       pkg.on_use_handler(inst.api, where);
@@ -431,10 +462,7 @@ _.extend(Bundle.prototype, {
     // XXX we might want to support npm modules that are only used in
     // tests. one example is stream-buffers as used in the email
     // package
-    if (pkg.npmDependencies) {
-      pkg.installNpmDependencies();
-      self.bundleNodeModules(pkg);
-    }
+    self._maybeUpdateNpmDependencies(pkg, inst);
 
     if (inst.pkg.on_test_handler)
       inst.pkg.on_test_handler(inst.api);
@@ -455,7 +483,7 @@ _.extend(Bundle.prototype, {
 
     var addFile = function (type, finalCode) {
       var contents = new Buffer(finalCode);
-      var hash = self._hash(contents);
+      var hash = sha1(contents);
       var name = '/' + hash + '.' + type;
       self.files.client_cacheable[name] = contents;
       self.manifest.push({
@@ -512,7 +540,9 @@ _.extend(Bundle.prototype, {
   _generate_app_html: function () {
     var self = this;
 
-    var template = fs.readFileSync(path.join(__dirname, "app.html.in"));
+    var appHtmlPath = path.join(__dirname, "app.html.in");
+    var template = fs.readFileSync(appHtmlPath);
+    self.inputFileHashes[appHtmlPath] = sha1(template);
     var f = require('handlebars').compile(template.toString());
     return f({
       scripts: self._clientUrlsFor('js'),
@@ -587,7 +617,7 @@ _.extend(Bundle.prototype, {
 
     // --- Static assets ---
 
-    var addClientFileToManifest = function (filepath, contents, type, cacheable, url) {
+    var addClientFileToManifest = function (filepath, contents, type, cacheable, url, hash) {
       if (! contents instanceof Buffer)
         throw new Error('contents must be a Buffer');
       var normalized = filepath.split(path.sep).join('/');
@@ -602,10 +632,10 @@ _.extend(Bundle.prototype, {
         url: url || '/' + normalized,
         // contents is a Buffer and so correctly gives us the size in bytes
         size: contents.length,
-        hash: self._hash(contents)
+        hash: hash || sha1(contents)
       });
     };
-        
+
     if (is_app) {
       if (fs.existsSync(path.join(project_dir, 'public'))) {
         var copied =
@@ -615,7 +645,10 @@ _.extend(Bundle.prototype, {
         _.each(copied, function (fs_relative_path) {
           var filepath = path.join(build_path, 'static', fs_relative_path);
           var contents = fs.readFileSync(filepath);
-          addClientFileToManifest(fs_relative_path, contents, 'static', false);
+          var hash = sha1(contents);
+          self.inputFileHashes[path.join(project_dir, 'public', fs_relative_path)]
+            = hash;
+          addClientFileToManifest(fs_relative_path, contents, 'static', false, undefined, hash);
         });
       }
       dependencies_json.app.push('public');
@@ -635,7 +668,7 @@ _.extend(Bundle.prototype, {
         contents = self.files.client[file];
         delete self.files.client[file];
         self.files.client_cacheable[file] = contents;
-        url = file + '?' + self._hash(contents)
+        url = file + '?' + sha1(contents)
       }
       else
         throw new Error('unable to find file: ' + file);
@@ -700,7 +733,7 @@ _.extend(Bundle.prototype, {
     self.manifest.push({
       path: 'app.html',
       where: 'internal',
-      hash: self._hash(app_html)
+      hash: sha1(app_html)
     });
     dependencies_json.core.push(path.join('tools', 'app.html.in'));
 
@@ -740,6 +773,8 @@ _.extend(Bundle.prototype, {
       }
     }
 
+    dependencies_json.hashes = self.inputFileHashes;
+
     if (self.releaseStamp && self.releaseStamp !== 'none')
       app_json.release = self.releaseStamp;
 
@@ -775,7 +810,7 @@ _.extend(Bundle.prototype, {
  * try bundling again.
  *
  * options include:
- * - noMinify : don't minify the assets
+ * - minify : minify the CSS and JS assets
  *
  * - nodeModulesMode : decide on how to create the bundle's
  *   node_modules directory. one of:
@@ -826,7 +861,7 @@ exports.bundle = function (app_dir, output_path, options) {
     }
 
     // Minify, if requested
-    if (!options.noMinify)
+    if (options.minify)
       bundle.minify();
 
     // Write to disk

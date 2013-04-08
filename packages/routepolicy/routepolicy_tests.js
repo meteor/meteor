@@ -1,4 +1,4 @@
-Tinytest.add("routepolicy", function (test) {
+Tinytest.add("routepolicy - declare", function (test) {
   var policy = new Meteor.__RoutePolicyConstructor();
 
   policy.declare('/sockjs/', 'network');
@@ -47,5 +47,25 @@ Tinytest.add("routepolicy - static conflicts", function (test) {
   test.equal(
     policy.checkForConflictWithStatic('/bigphoto.jpg', 'static-online', manifest),
     null
+  );
+});
+
+Tinytest.add("routepolicy - checkUrlPrefix", function (test) {
+  var policy = new Meteor.__RoutePolicyConstructor();
+  policy.declare('/sockjs/', 'network');
+
+  test.equal(
+    policy.checkUrlPrefix('foo/bar', 'network'),
+    "a route URL prefix must begin with a slash"
+  );
+
+  test.equal(
+    policy.checkUrlPrefix('/', 'network'),
+    "a route URL prefix cannot be /"
+  );
+
+  test.equal(
+    policy.checkUrlPrefix('/sockjs/', 'static-online'),
+    "the route URL prefix /sockjs/ has already been declared to be of type network"
   );
 });

@@ -2,6 +2,8 @@ var path = require('path');
 var _ = require('underscore');
 var files = require('./files.js');
 var warehouse = require('./warehouse.js');
+var bundler = require('./bundler.js');
+var project = require('./project.js');
 var meteorNpm = require('./meteor_npm.js');
 var fs = require('fs');
 
@@ -47,6 +49,14 @@ var Package = function () {
 
   // registered source file handlers
   self.extensions = {};
+
+  // Are we in the warehouse? (Set to true by initFromWarehouse.) Used to skip
+  // npm re-scans.
+  self.inWarehouse = false;
+
+  // Files that define the structure of this package. Used by dependency
+  // scanner.
+  self.metadataFileHashes = {};
 
   // functions that can be called when the package is scanned --
   // visible as `Package` when package.js is executed
@@ -102,6 +112,8 @@ var Package = function () {
     depends: function (npmDependencies) {
       if (self.npmDependencies)
         throw new Error("Can only call `Npm.depends` once in package " + self.name + ".");
+      if (typeof npmDependencies !== 'object')
+        throw new Error("The argument to Npm.depends should look like: {gcd: '0.0.0'}");
 
       // don't allow npm fuzzy versions so that there is complete
       // consistency when deploying a meteor app
@@ -148,9 +160,10 @@ _.extend(Package.prototype, {
     // something like Package.current().on_use)
 
     var fullpath = path.join(self.source_root, 'package.js');
-    var code = fs.readFileSync(fullpath).toString();
+    var code = fs.readFileSync(fullpath);
+    self.metadataFileHashes[fullpath] = bundler.sha1(code);
     // \n is necessary in case final line is a //-comment
-    var wrapped = "(function(Package,Npm){" + code + "\n})";
+    var wrapped = "(function(Package,Npm){" + code.toString() + "\n})";
     // See #runInThisContext
     //
     // XXX it'd be nice to runInNewContext so that the package
@@ -184,6 +197,7 @@ _.extend(Package.prototype, {
     self.initFromPackageDir(
       name,
       path.join(warehouse.getWarehouseDir(), 'packages', name, version));
+    self.inWarehouse = true;
   },
 
   init_from_app_dir: function (app_dir, ignore_files) {
@@ -217,7 +231,11 @@ _.extend(Package.prototype, {
       // 'standard meteor stuff' like minimongo.
       api.use(['deps', 'session', 'livedata', 'mongo-livedata', 'spark',
                'templating', 'startup', 'past']);
-      api.use(require(path.join(__dirname, 'project.js')).get_packages(app_dir));
+      // XXX this read has a race with the actual read that is used
+      var packagesFile = path.join(app_dir, '.meteor', 'packages');
+      self.metadataFileHashes[packagesFile] =
+        bundler.sha1(fs.readFileSync(packagesFile));
+      api.use(project.get_packages(app_dir));
 
       // -- Source files --
       api.add_files(sources_except(api, "server"), "client");
@@ -286,11 +304,13 @@ _.extend(Package.prototype, {
   // @param npmDependencies {Object} eg {gcd: "0.0.0", tar: "0.1.14"}
   installNpmDependencies: function(quiet) {
     if (this.npmDependencies) {
-      // go through a specialized npm dependencies update process, ensuring
-      // we don't get new versions of any (sub)dependencies. this process
-      // also runs safely multiple times in parallel (which could happen if you
+      // go through a specialized npm dependencies update process, ensuring we
+      // don't get new versions of any (sub)dependencies. this process also runs
+      // mostly safely multiple times in parallel (which could happen if you
       // have two apps running locally using the same package)
-      meteorNpm.updateDependencies(this.name, this.npmDir(), this.npmDependencies, quiet);
+      meteorNpm.updateDependencies(
+        this.name, this.npmDir(),
+        this.npmDependencies, quiet, this.inWarehouse);
     }
   },
 
@@ -301,7 +321,8 @@ _.extend(Package.prototype, {
 
 var loadedPackages = {};
 
-var packages = module.exports = {
+var packages = exports;
+_.extend(exports, {
 
   // get a package by name. also maps package objects to themselves.
   // load order is:
@@ -418,6 +439,13 @@ var packages = module.exports = {
   // in which it exists.
   // XXX does this need to be absolute?
   directoryForLocalPackage: function (name, packageSearchOptions) {
+    // Make sure that if we're using meteor test-packages to test a package in a
+    // random spot, that we watch it for dependencies.
+    if (packageSearchOptions && packageSearchOptions.preloadedPackages &&
+        name in packageSearchOptions.preloadedPackages) {
+      return packageSearchOptions.preloadedPackages[name].source_root;
+    }
+
     var searchDirs = packages._localPackageDirs(packageSearchOptions);
     for (var i = 0; i < searchDirs.length; ++i) {
       var packageDir = path.join(searchDirs[i], name);
@@ -456,4 +484,4 @@ var packages = module.exports = {
       return stats.isDirectory();
     });
   }
-};
+});

@@ -7,7 +7,7 @@ TOPDIR=$(pwd)
 
 # download dev bundle if we don't have it already
 if [ ! -d dev_bundle ] ; then
-    ./meteor --version
+    ./meteor --get-ready
 fi
 
 cd "$ORIGDIR"

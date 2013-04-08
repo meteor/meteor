@@ -22,12 +22,22 @@ cleanup.onExit(function () {
   });
 });
 
-var meteorNpm = module.exports = {
+var meteorNpm = exports;
+_.extend(exports, {
   _tmpDirs: [],
 
+  _isGitHubTarball: function (x) {
+    return /^https:\/\/github.com\/.*\/tarball\/[0-9a-f]{40}/.test(x);
+  },
+
   ensureOnlyExactVersions: function(npmDependencies) {
+    var self = this;
     _.each(npmDependencies, function(version, name) {
-      if (!semver.valid(version))
+      // We want a given version of a smart package (package.js +
+      // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
+      // don't want anything too vague. For now, we support semvers and github
+      // tarballs pointing at an exact commit.
+      if (!semver.valid(version) && !self._isGitHubTarball(version))
         throw new Error(
           "Must declare exact version of npm package dependency: " + name + '@' + version);
     });
@@ -39,7 +49,10 @@ var meteorNpm = module.exports = {
   //
   // @param npmDependencies {Object} dependencies that should be installed,
   //     eg {tar: '0.1.6', gcd: '0.0.0'}
-  updateDependencies: function(packageName, packageNpmDir, npmDependencies, quiet) {
+  updateDependencies: function(packageName,
+                               packageNpmDir,
+                               npmDependencies,
+                               quiet) {
     var self = this;
 
     // we make sure to put it beside the original package dir so that
@@ -47,21 +60,24 @@ var meteorNpm = module.exports = {
     // randomize the name, in case we're bundling this package
     // multiple times in parallel.
     var newPackageNpmDir = packageNpmDir + '-new-' + self._randomToken();
-    self._tmpDirs.push(newPackageNpmDir); // keep track so that we can remove them on process exit
-    fs.mkdirSync(newPackageNpmDir);
-
-    // create .gitignore -- node_modules shouldn't be in git since we
-    // recreate it as needed by using `npm install`. since we use `npm
-    // shrinkwrap` we're guaranteed to have the same version installed
-    // each time.
-    fs.writeFileSync(
-      path.join(newPackageNpmDir, '.gitignore'),
-      ['node_modules', ''/*git diff complains without trailing newline*/].join('\n'));
 
     try {
+      // v0.6.0 had a bug that could cause .npm directories to be
+      // created without npm-shrinkwrap.json
+      // (https://github.com/meteor/meteor/pull/927). Running your app
+      // in that state causes consistent "Corrupted .npm directory"
+      // errors.
+      //
+      // If you've reached that state, delete the empty directory and
+      // proceed.
+      if (fs.existsSync(packageNpmDir) &&
+          !fs.existsSync(path.join(packageNpmDir, 'npm-shrinkwrap.json'))) {
+        files.rm_recursive(packageNpmDir);
+      }
+
       if (fs.existsSync(packageNpmDir)) {
         // we already nave a .npm directory. update it appropriately with some ceremony involving:
-        // `npm install`, `npm install name@version`, `npm prune`, `npm shrinkwrap`
+        // `npm install`, `npm install name@version`, `npm shrinkwrap`
         self._updateExistingNpmDirectory(
           packageName, newPackageNpmDir, packageNpmDir, npmDependencies, quiet);
       } else {
@@ -74,6 +90,24 @@ var meteorNpm = module.exports = {
         files.rm_recursive(newPackageNpmDir);
       self._tmpDirs = _.without(self._tmpDirs, newPackageNpmDir);
     }
+  },
+
+  _makeNewPackageNpmDir: function (newPackageNpmDir) {
+    var self = this;
+    self._tmpDirs.push(newPackageNpmDir); // keep track so that we can remove them on process exit
+    fs.mkdirSync(newPackageNpmDir);
+
+    // create node_modules -- prevent npm install from installing
+    // to an existing node_modules dir higher up in the filesystem
+    fs.mkdirSync(path.join(newPackageNpmDir, 'node_modules'));
+
+    // create .gitignore -- node_modules shouldn't be in git since we
+    // recreate it as needed by using `npm install`. since we use `npm
+    // shrinkwrap` we're guaranteed to have the same version installed
+    // each time.
+    fs.writeFileSync(
+      path.join(newPackageNpmDir, '.gitignore'),
+      ['node_modules', ''/*git diff complains without trailing newline*/].join('\n'));
   },
 
   _updateExistingNpmDirectory: function(
@@ -89,48 +123,60 @@ var meteorNpm = module.exports = {
 
     var installedDependencies = self._installedDependencies(packageNpmDir);
 
-    // don't do npm work unnecessarily
-    if (!_.isEqual(installedDependencies, npmDependencies)) {
-      if (!quiet)
-        self._logUpdateDependencies(packageName, npmDependencies);
+    // If we already have the right things installed, life is good.
+    if (_.isEqual(installedDependencies, npmDependencies))
+      return;
 
-      // copy over npm-shrinkwrap.json
+    if (!quiet)
+      self._logUpdateDependencies(packageName, npmDependencies);
+
+    var shrinkwrappedDependenciesTree =
+          self._shrinkwrappedDependenciesTree(packageNpmDir);
+    var shrinkwrappedDependencies = self._treeToDependencies(
+      shrinkwrappedDependenciesTree);
+    var preservedShrinkwrap = {dependencies: {}};
+    _.each(shrinkwrappedDependencies, function (version, name) {
+      if (npmDependencies[name] === version) {
+        // We're not changing this dependency, so copy over its shrinkwrap.
+        preservedShrinkwrap.dependencies[name] =
+          shrinkwrappedDependenciesTree.dependencies[name];
+      }
+    });
+
+    self._makeNewPackageNpmDir(newPackageNpmDir);
+
+    if (!_.isEmpty(preservedShrinkwrap.dependencies)) {
+      // There are some unchanged packages here. Install from shrinkwrap.
       fs.writeFileSync(path.join(newPackageNpmDir, 'npm-shrinkwrap.json'),
-                       fs.readFileSync(path.join(packageNpmDir, 'npm-shrinkwrap.json')));
+                       JSON.stringify(preservedShrinkwrap, null, /*legible*/2));
 
-      // construct package.json
-      self._constructPackageJson(packageName, newPackageNpmDir, npmDependencies);
+      // construct a matching package.json to make `npm install` happy
+      self._constructPackageJson(packageName, newPackageNpmDir,
+                                 self._treeToDependencies(preservedShrinkwrap));
 
       // `npm install`
       self._installFromShrinkwrap(newPackageNpmDir);
 
-      // remove ununsed packages
-      self._prune(newPackageNpmDir);
-
-      // delete package.json
+      // delete package.json and npm-shrinkwrap.json
       fs.unlinkSync(path.join(newPackageNpmDir, 'package.json'));
-
-      // we've just installed the shrinkwrapped packages. get the new
-      // list of installed dependencies
-      var newInstalledDependencies = self._installedDependencies(newPackageNpmDir);
-
-      // `npm install name@version` for modules that need updating
-      _.each(npmDependencies, function(version, name) {
-        if (newInstalledDependencies[name] !== version) {
-          self._installNpmModule(name, version, newPackageNpmDir);
-        }
-      });
-
-      // if we had no installed dependencies to begin with, *DON'T*
-      // shrinkwrap. this is important so that we can pin versions of
-      // deep dependencies to tarballs, e.g.
-      // https://github.com/meteor/js-bson/tarball/master
-      if (!_.isEmpty(installedDependencies)) {
-        self._shrinkwrap(newPackageNpmDir);
-      }
-      self._createReadme(newPackageNpmDir);
-      self._renameAlmostAtomically(newPackageNpmDir, packageNpmDir);
+      fs.unlinkSync(path.join(newPackageNpmDir, 'npm-shrinkwrap.json'));
     }
+
+    // we may have just installed the shrinkwrapped packages. but let's not
+    // trust that it actually worked: let's do the rest based on what we
+    // actually have installed now.
+    var newInstalledDependencies = self._installedDependencies(newPackageNpmDir);
+
+    // `npm install name@version` for modules that need updating
+    _.each(npmDependencies, function(version, name) {
+      if (newInstalledDependencies[name] !== version) {
+        self._installNpmModule(name, version, newPackageNpmDir);
+      }
+    });
+
+    self._shrinkwrap(newPackageNpmDir);
+    self._createReadme(newPackageNpmDir);
+    self._renameAlmostAtomically(newPackageNpmDir, packageNpmDir);
   },
 
   _createFreshNpmDirectory: function(
@@ -140,6 +186,7 @@ var meteorNpm = module.exports = {
     if (!quiet)
       self._logUpdateDependencies(packageName, npmDependencies);
 
+    self._makeNewPackageNpmDir(newPackageNpmDir);
     // install dependencies
     _.each(npmDependencies, function(version, name) {
       self._installNpmModule(name, version, newPackageNpmDir);
@@ -199,16 +246,26 @@ var meteorNpm = module.exports = {
     var self = this;
     var oldPackageNpmDir = packageNpmDir + '-old-' + self._randomToken();;
 
-    if (fs.existsSync(packageNpmDir)) {
+    // Get rid of old dir, if it exists.
+    var movedOldDir = true;
+    try {
       fs.renameSync(packageNpmDir, oldPackageNpmDir);
-      fs.renameSync(newPackageNpmDir, packageNpmDir);
-      files.rm_recursive(oldPackageNpmDir);
-    } else {
-      fs.renameSync(newPackageNpmDir, packageNpmDir);
+    } catch (e) {
+      if (e.code !== 'ENOENT')
+        throw e;
+      movedOldDir = false;
     }
+
+    // Now rename the directory.
+    fs.renameSync(newPackageNpmDir, packageNpmDir);
+
+    // ... and delete the old one.
+    if (movedOldDir)
+      files.rm_recursive(oldPackageNpmDir);
   },
 
-  // Runs `npm ls --json`.
+  // Gets a JSON object from `npm ls --json` (_installedDependenciesTree) or
+  // `npm-shrinkwrap.json` (_shrinkwrappedDependenciesTree).
   //
   // @returns {Object} eg {
   //   "name": "packages",
@@ -230,27 +287,56 @@ var meteorNpm = module.exports = {
                          ["ls", "--json"],
                          {cwd: dir}).stdout);
   },
+  _shrinkwrappedDependenciesTree: function(dir) {
+    var shrinkwrapFile = fs.readFileSync(path.join(dir, 'npm-shrinkwrap.json'));
+    return JSON.parse(shrinkwrapFile);
+  },
 
-  // map the structure returned from `npm ls` into the structure of
-  // npmDependencies (e.g. {gcd: '0.0.0'}), so that they can be
-  // diffed.
-  _installedDependencies: function(dir) {
+  // Maps a "dependency object" (a thing you find in `npm ls --json` or
+  // npm-shrinkwrap.json with keys like "version" and "from") to the canonical
+  // version that matches what users put in the `Npm.depends` clause.  ie,
+  // either the version or the tarball URL.
+  _canonicalVersion: function (depObj) {
+    var self = this;
+    if (self._isGitHubTarball(depObj.from))
+      return depObj.from;
+    else
+      return depObj.version;
+  },
+
+  // map the structure returned from `npm ls` or shrinkwrap.json into the
+  // structure of npmDependencies (e.g. {gcd: '0.0.0'}), so that they can be
+  // diffed. This only returns top-level dependencies.
+  _treeToDependencies: function (tree) {
     var self = this;
     return _.object(
       _.map(
-        self._installedDependenciesTree(dir).dependencies, function(properties, name) {
-          return [name, properties.version];
+        tree.dependencies, function(properties, name) {
+          return [name, self._canonicalVersion(properties)];
         }));
+  },
+
+  _installedDependencies: function(dir) {
+    var self = this;
+    return self._treeToDependencies(self._installedDependenciesTree(dir));
+  },
+
+  _shrinkwrappedDependencies: function (dir) {
+    var self = this;
+    return self._treeToDependencies(self._shrinkwrappedDependenciesTree(dir));
   },
 
   _installNpmModule: function(name, version, dir) {
     this._ensureConnected();
 
+    var installArg = this._isGitHubTarball(version)
+          ? version : (name + "@" + version);
+
     // We don't use npm.commands.install since we couldn't
     // figure out how to silence all output (specifically the
     // installed tree which is printed out with `console.log`)
     this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
-                       ["install", name + "@" + version],
+                       ["install", installArg],
                        {cwd: dir});
   },
 
@@ -277,13 +363,6 @@ var meteorNpm = module.exports = {
     }
   },
 
-  // `npm prune`
-  _prune: function(dir) {
-    this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
-                       ["prune"],
-                       {cwd: dir});
-  },
-
   // `npm shrinkwrap`
   _shrinkwrap: function(dir) {
     // We don't use npm.commands.shrinkwrap for two reasons:
@@ -297,14 +376,12 @@ var meteorNpm = module.exports = {
   },
 
   _logUpdateDependencies: function(packageName, npmDependencies) {
-    var npmDependenciesStr = _.map(npmDependencies, function(version, name) {
-      return name + '@' + version;
-    }).join(', ');
-    console.log(packageName + ': updating npm dependencies -- ' + npmDependenciesStr + '...');
+    console.log('%s: updating npm dependencies -- %s...',
+                packageName, _.keys(npmDependencies).join(', '));
   },
 
   _randomToken: function() {
     return (Math.random() * 0x100000000 + 1).toString(36);
   }
-};
+});
 

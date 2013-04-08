@@ -10,7 +10,7 @@
 # export DH_VERBOSE=1
 
 # NOTE: $TARBALL comes from exported env in build script:
-#  meteor/admin/build-release.sh
+#  meteor/scripts/admin/upgrade-to-engine/build-fake-release.sh
 override_dh_prep:
 	if [ ! -f "$(TARBALL)" ] ; then echo "Can't find TARBALL: $(TARBALL)" ; exit 1 ; fi
 	mkdir -p debian/tmp/usr/lib

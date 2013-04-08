@@ -172,8 +172,12 @@ var run = function () {
     // cacheable files are files that should never change. Typically
     // named by their hash (eg meteor bundled js and css files).
     // cache them ~forever (1yr)
+    //
+    // 'root' option is to work around an issue in connect/gzippo.
+    // See https://github.com/meteor/meteor/pull/852
     app.use(gzippo.staticGzip(static_cacheable_path,
-                              {clientMaxAge: 1000 * 60 * 60 * 24 * 365}));
+                              {clientMaxAge: 1000 * 60 * 60 * 24 * 365,
+                               root: '/'}));
   // cache non-cacheable file anyway. This isn't really correct, as
   // users can change the files and changes won't propogate
   // immediately. However, if we don't cache them, browsers will
@@ -183,7 +187,8 @@ var run = function () {
   // allow users to change assets without delay.
   // https://github.com/meteor/meteor/issues/773
   app.use(gzippo.staticGzip(path.join(bundle_dir, 'static'),
-                            {clientMaxAge: 1000 * 60 * 60 * 24}));
+                            {clientMaxAge: 1000 * 60 * 60 * 24,
+                             root: '/'}));
 
   // read bundle config file
   var info_raw =

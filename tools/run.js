@@ -8,6 +8,7 @@ var httpProxy = require('http-proxy');
 
 var files = require('./files.js');
 var packages = require('./packages.js');
+var project = require('./project.js');
 var updater = require('./updater.js');
 var bundler = require('./bundler.js');
 var mongo_runner = require('./mongo_runner.js');
@@ -16,6 +17,7 @@ var warehouse = require("./warehouse.js");
 
 var _ = require('underscore');
 var inFiber = require('./fiber-helpers.js').inFiber;
+var Future = require('fibers/future');
 
 ////////// Globals //////////
 //XXX: Refactor to not have globals anymore?
@@ -54,7 +56,7 @@ var Status = {
       self.exitNow();
       return;
     }
-    log_to_clients({'exit': "Your application is crashing. Waiting for file change."});
+    log_to_clients({'exit': "=> Your application is crashing. Waiting for file change."});
     this.crashing = true;
   },
 
@@ -215,7 +217,6 @@ var log_to_clients = function (msg) {
 // mongoURL
 // onExit
 // [onListen]
-// [onStdio]
 // [nodeOptions]
 // [settingsFile]
 
@@ -259,7 +260,6 @@ var start_server = function (options) {
     if (data.length != originalLength)
       options.onListen && options.onListen();
     if (data) {
-      options.onStdio && options.onStdio();
       log_to_clients({stdout: data});
     }
   });
@@ -267,16 +267,15 @@ var start_server = function (options) {
   proc.stderr.setEncoding('utf8');
   proc.stderr.on('data', function (data) {
     if (data) {
-      options.onStdio && options.onStdio();
       log_to_clients({stderr: data});
     }
   });
 
   proc.on('exit', function (code, signal) {
     if (signal) {
-      log_to_clients({'exit': 'Exited from signal: ' + signal});
+      log_to_clients({'exit': '=> Exited from signal: ' + signal});
     } else {
-      log_to_clients({'exit': 'Exited with code: ' + code});
+      log_to_clients({'exit': '=> Exited with code: ' + code});
     }
 
     options.onExit(code);
@@ -337,9 +336,13 @@ var DependencyWatcher = function (
   // Any file under a bulk_dir is interesting. (bulk_dirs may also
   // contain individual files)
   self.bulk_dirs = [];
-  _.each(deps.core || [], function (filepath) {
-    self.bulk_dirs.push(path.join(files.getCurrentToolsDir(), filepath));
-  });
+  // If we're running from a git checkout, we reload when "core" files like
+  // server.js change.
+  if (!files.usesWarehouse()) {
+    _.each(deps.core || [], function (filepath) {
+      self.bulk_dirs.push(path.join(files.getCurrentToolsDir(), filepath));
+    });
+  }
   _.each(deps.app || [], function (filepath) {
     self.bulk_dirs.push(path.join(self.app_dir, filepath));
   });
@@ -378,16 +381,50 @@ var DependencyWatcher = function (
   // Start monitoring
   _.each(_.union(self.source_dirs, self.bulk_dirs, _.keys(self.specific_files)),
          _.bind(self._scan, self, true));
+
+  // mtime scans are great and relatively efficient, but they have a couple of
+  // issues. One is that they only detect changes in mtimes from the start of
+  // dependency watching, not from the actual bundled file, so if bundling is
+  // slow and somebody edits a file after it's used by the bundler but before
+  // the DependencyWatcher is created, we'll miss it. An even worse problem is
+  // that on OSX HFS+, mtime resolution is only one second, so if a file is
+  // written twice in a second the bundler might get the first version and never
+  // notice the second change! So, in a second, we'll do a one-time scan to
+  // check the hash of each file against what the bundler told us we should see.
+  //
+  // This will still miss files that are newly added during bundling, and there
+  // are also race conditions where the bundler may calculate some hashes via a
+  // separate read than the read that actually was used in bundling... but it's
+  // close.
+  setTimeout(function() {
+    _.each(deps.hashes, function (hash, filepath) {
+      fs.readFile(filepath, function (error, contents) {
+        // Fire if the file was deleted or changed contents.
+        if (error || bundler.sha1(contents) !== hash)
+          self._fire();
+      });
+    });
+  }, 1000);
 };
 
 _.extend(DependencyWatcher.prototype, {
   // stop monitoring
   destroy: function () {
     var self = this;
-    self.on_change = function () {};
+    self.on_change = null;
     for (var filepath in self.watches)
       self.watches[filepath](); // unwatch
     self.watches = {};
+  },
+
+  _fire: function () {
+    var self = this;
+    if (self.on_change) {
+      var f = self.on_change;
+      self.on_change = null;
+      f();
+      self.destroy();
+    }
   },
 
   // initial is true on the inital scan, to suppress notifications
@@ -413,8 +450,7 @@ _.extend(DependencyWatcher.prototype, {
     // If an interesting file has changed, fire!
     var is_interesting = self._is_interesting(filepath);
     if (!initial && is_interesting) {
-      self.on_change();
-      self.destroy();
+      self._fire();
       return;
     }
 
@@ -502,7 +538,7 @@ _.extend(DependencyWatcher.prototype, {
 
     // Source files
     if (in_any_dir(self.source_dirs) &&
-        _.indexOf(self.source_extensions, path.extname(filepath)) !== -1)
+        files.findExtension(self.source_extensions, filepath))
       return true;
 
     // Other directories and files that are included
@@ -512,61 +548,6 @@ _.extend(DependencyWatcher.prototype, {
     return false;
   }
 });
-
-////////// Upgrade check //////////
-
-// XXX this should move to main meteor command-line, probably?
-var start_update_checks = function (context) {
-  var update_check = inFiber(function () { // 'inFiber' to ensure we don't delay launching the app
-    var manifest = null;
-    try {
-      manifest = updater.getManifest();
-    } catch (e) {
-      // Ignore error (eg, offline), but still do the "can we update this app
-      // with a locally available release" check.
-    }
-
-    if (!files.usesWarehouse())
-      return;
-
-    // XXX in the future support release channels other than stable
-    var manifestLatestRelease =
-          manifest && manifest.releases && manifest.releases.stable;
-    var localLatestRelease = warehouse.latestRelease();
-    if (manifestLatestRelease && manifestLatestRelease !== localLatestRelease) {
-      console.log("////////////////////////////////////////");
-      console.log("////////////////////////////////////////");
-      console.log();
-      console.log("Meteor release " + manifestLatestRelease + " released. We'll download it now.");
-      console.log("To update your app, run 'meteor update' from within its directory.");
-      console.log();
-      console.log("////////////////////////////////////////");
-      console.log("////////////////////////////////////////");
-      try {
-        warehouse.fetchLatestRelease(true /* background */);
-      } catch (e) {
-        // just don't die
-      }
-      return;
-    }
-    // We don't need to do a global update (or we're not online), but do we
-    // need to update this app?
-    // XXX this probably shouldn't happen if you pass --release
-    if (localLatestRelease !== context.releaseVersion) {
-      console.log("////////////////////////////////////////");
-      console.log("////////////////////////////////////////");
-      console.log();
-      console.log("Your app is running Meteor release " + context.releaseVersion + ", but you have");
-      console.log("release " + localLatestRelease + " installed.");
-      console.log("To update your app, run 'meteor update' from within its directory.");
-      console.log();
-      console.log("////////////////////////////////////////");
-      console.log("////////////////////////////////////////");
-    }
-  });
-  setInterval(update_check, 12*60*60*1000); // twice a day
-  update_check(); // and now.
-};
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -599,7 +580,7 @@ exports.getSettings = function (filename) {
 // watcher.destroy() as appropriate.
 //
 // context is as created in meteor.js.
-// options include: port, noMinify, once, settingsFile, testPackages
+// options include: port, minify, once, settingsFile, testPackages
 exports.run = function (context, options) {
   var outer_port = options.port || 3000;
   var inner_port = outer_port + 1;
@@ -609,8 +590,6 @@ exports.run = function (context, options) {
   var mongo_url = process.env.MONGO_URL ||
         ("mongodb://127.0.0.1:" + mongo_port + "/meteor");
   var firstRun = true;
-  var lastThingThatPrintedWasRestartMessage;
-  var silentRuns = 0;
 
   var deps_info = null;
   var warned_about_no_deps_info = false;
@@ -618,13 +597,41 @@ exports.run = function (context, options) {
   var server_handle;
   var watcher;
 
+  var lastThingThatPrintedWasRestartMessage = false;
+  var silentRuns = 0;
+
+  // Hijack process.stdout and process.stderr so that whenever anything is
+  // written to one of them, if the last thing we printed as the "Meteor server
+  // restarted" message with no newline, we (a) print that newline and (b)
+  // remember that *something* was printed (and so we shouldn't try to erase and
+  // rewrite the line on the next restart).
+  var realStdoutWrite = process.stdout.write;
+  var realStderrWrite = process.stderr.write;
+  // Call this function before printing anything to stdout or stderr.
+  var onStdio = function () {
+    if (lastThingThatPrintedWasRestartMessage) {
+      realStdoutWrite.call(process.stdout, "\n");
+      lastThingThatPrintedWasRestartMessage = false;
+      silentRuns = 0;
+    }
+  };
+  process.stdout.write = function () {
+    onStdio();
+    return realStdoutWrite.apply(process.stdout, arguments);
+  };
+  process.stderr.write = function () {
+    onStdio();
+    return realStderrWrite.apply(process.stderr, arguments);
+  };
+
+
   if (options.once) {
     Status.shouldRestart = false;
   }
 
   var bundleOpts = {
-    noMinify: options.noMinify,
     nodeModulesMode: 'symlink',
+    minify: options.minify,
     testPackages: options.testPackages,
     releaseStamp: context.releaseVersion,
     packageSearchOptions: context.packageSearchOptions
@@ -661,6 +668,27 @@ exports.run = function (context, options) {
     if (server_handle)
       kill_server(server_handle);
 
+    // If the user did not specify a --release on the command line, and
+    // simultaneously runs `meteor update` during this run, just exit and let
+    // them restart the run. (We can do something fancy like allowing this to
+    // work if the tools version didn't change, or even springboarding if the
+    // tools version does change, but this (which prevents weird errors) is a
+    // start.)
+    // (Make sure that we don't hit this test for "meteor test-packages",
+    // though; there's not a real app to update there!)
+    if (files.usesWarehouse() && !context.userReleaseOverride &&
+        !options.testPackages) {
+      var newAppRelease = project.getMeteorReleaseVersion(context.appDir) ||
+            warehouse.latestRelease();
+      if (newAppRelease !== context.appReleaseVersion) {
+        console.error("Your app has been updated to Meteor %s from " +
+                      "Meteor %s.\nRestart meteor to use the new release.",
+                      newAppRelease,
+                      context.appReleaseVersion);
+        process.exit(1);
+      }
+    }
+
     server_log = [];
 
     var errors = bundler.bundle(context.appDir, bundle_path, bundleOpts);
@@ -681,7 +709,7 @@ exports.run = function (context, options) {
       deps_info = JSON.parse(deps_raw.toString());
 
     if (errors) {
-      log_to_clients({stdout: "Errors prevented startup:\n"});
+      log_to_clients({stdout: "=> Errors prevented startup:\n"});
       _.each(errors, function (e) {
         log_to_clients({stdout: e + "\n"});
       });
@@ -713,12 +741,12 @@ exports.run = function (context, options) {
         // The last run was not the "Running on: " run, and it didn't print
         // anything. So the last thing that printed was the restart message.
         // Overwrite it.
-        process.stdout.write('\r');
+        realStdoutWrite.call(process.stdout, '\r');
       }
-      process.stdout.write("=> Meteor server restarted");
+      realStdoutWrite.call(process.stdout, "=> Meteor server restarted");
       if (lastThingThatPrintedWasRestartMessage) {
         ++silentRuns;
-        process.stdout.write(" (x" + (silentRuns+1) + ")");
+        realStdoutWrite.call(process.stdout, " (x" + (silentRuns+1) + ")");
       }
       lastThingThatPrintedWasRestartMessage = true;
     }
@@ -742,13 +770,6 @@ exports.run = function (context, options) {
         Status.listening = true;
         _.each(request_queue, function (f) { f(); });
         request_queue = [];
-      },
-      onStdio: function () {
-        if (lastThingThatPrintedWasRestartMessage) {
-          process.stdout.write("\n");
-          lastThingThatPrintedWasRestartMessage = false;
-          silentRuns = 0;
-        }
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
       settingsFile: options.settingsFile
@@ -808,7 +829,7 @@ exports.run = function (context, options) {
       process.stdout.write("Initializing mongo database... this may take a moment.\n");
     }, 3000);
 
-    start_update_checks(context);
+    updater.startUpdateChecks(context);
     launch();
   });
 };

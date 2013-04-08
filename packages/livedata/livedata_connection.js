@@ -495,7 +495,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
         if (!_.has(self._subscriptions, id))
           return false;
         var record = self._subscriptions[id];
-        record.readyDeps && Deps.depend(record.readyDeps);
+        record.readyDeps && record.readyDeps.depend();
         return record.ready;
       }
     };
@@ -787,7 +787,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
   userId: function () {
     var self = this;
     if (self._userIdDeps)
-      Deps.depend(self._userIdDeps);
+      self._userIdDeps.depend();
     return self._userId;
   },
 
