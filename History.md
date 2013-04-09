@@ -5,7 +5,10 @@
 
 * Prevent observe callbacks from affecting the arguments to identical observes. #855
 
-Patches contributed by GitHub users andreas-karlsson and jacott.
+* Upgrade d3 from 2.x to 3.1.4. See
+  https://github.com/mbostock/d3/wiki/Upgrading-to-3.0 for compatibility notes.
+
+Patches contributed by GitHub users andreas-karlsson, jacott, and joshuaconner.
 
 ## v0.6.1
 
