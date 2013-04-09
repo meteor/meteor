@@ -624,6 +624,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
       try {
         var ret = Meteor._CurrentInvocation.withValue(invocation,function () {
           if (Meteor.isServer) {
+            // Unless we later prove that behavior is correct if stubs can
+            // yield, assume stubs can't yield on the server.
             return Meteor._noYieldsAllowed(function () {
               return stub.apply(invocation, EJSON.clone(args));
             });
