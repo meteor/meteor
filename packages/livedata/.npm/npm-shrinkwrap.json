@@ -13,6 +13,11 @@
           "from": "faye-websocket@0.4.0"
         }
       }
+    },
+    "websocket": {
+      "version": "1.0.7",
+      "from": "https://registry.npmjs.org/websocket/-/websocket-1.0.7.tgz",
+      "resolved": "https://registry.npmjs.org/websocket/-/websocket-1.0.7.tgz"
     }
   }
 }

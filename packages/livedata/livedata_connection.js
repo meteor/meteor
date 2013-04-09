@@ -1,5 +1,7 @@
 if (Meteor.isServer) {
   // XXX namespacing
+  var path = Npm.require('path');
+  var Fiber = Npm.require('fibers');
   var Future = Npm.require(path.join('fibers', 'future'));
 }
 
@@ -31,7 +33,7 @@ Meteor._LivedataConnection = function (url, options) {
   if (typeof url === "object") {
     self._stream = url;
   } else {
-    self._stream = new Meteor._Stream(url);
+    self._stream = new Meteor._DdpClientStream(url);
   }
 
   self._lastSessionId = null;
@@ -160,7 +162,7 @@ Meteor._LivedataConnection = function (url, options) {
   self._userIdDeps = (typeof Deps !== "undefined") && new Deps.Dependency;
 
   // Block auto-reload while we're waiting for method responses.
-  if (!options.reloadWithOutstanding) {
+  if (Meteor._reload && !options.reloadWithOutstanding) {
     Meteor._reload.onMigrate(function (retry) {
       if (!self._readyToMigrate()) {
         if (self._retryMigrate)
@@ -173,7 +175,7 @@ Meteor._LivedataConnection = function (url, options) {
     });
   }
 
-  self._stream.on('message', function (raw_msg) {
+  var onMessage = function (raw_msg) {
     try {
       var msg = Meteor._parseDDP(raw_msg);
     } catch (e) {
@@ -212,9 +214,9 @@ Meteor._LivedataConnection = function (url, options) {
       self._livedata_error(msg);
     else
       Meteor._debug("discarding unknown livedata message type", msg);
-  });
+  };
 
-  self._stream.on('reset', function () {
+  var onReset = function () {
     // Send a connect message at the beginning of the stream.
     // NOTE: reset is called even on the first connection, so this is
     // the only place we send this message.
@@ -267,9 +269,18 @@ Meteor._LivedataConnection = function (url, options) {
         params: sub.params
       });
     });
-  });
+  };
 
-  if (options.reloadOnUpdate) {
+  if (Meteor.isServer) {
+    self._stream.on('message', Meteor.bindEnvironment(onMessage, Meteor._debug));
+    self._stream.on('reset', Meteor.bindEnvironment(onReset, Meteor._debug));
+  } else {
+    self._stream.on('message', onMessage);
+    self._stream.on('reset', onReset);
+  }
+
+
+  if (Meteor._reload && options.reloadOnUpdate) {
     self._stream.on('update_available', function () {
       // Start trying to migrate to a new version. Until all packages
       // signal that they're ready for a migration, the app will
@@ -277,6 +288,7 @@ Meteor._LivedataConnection = function (url, options) {
       Meteor._reload.reload();
     });
   }
+
 };
 
 // A MethodInvoker manages sending a method to the server and calling the user's
@@ -580,73 +592,72 @@ _.extend(Meteor._LivedataConnection.prototype, {
       };
     })();
 
-    if (Meteor.isClient) {
-      // If on a client, run the stub, if we have one. The stub is
-      // supposed to make some temporary writes to the database to
-      // give the user a smooth experience until the actual result of
-      // executing the method comes back from the server (whereupon
-      // the temporary writes to the database will be reversed during
-      // the beginUpdate/endUpdate process.)
-      //
-      // Normally, we ignore the return value of the stub (even if it
-      // is an exception), in favor of the real return value from the
-      // server. The exception is if the *caller* is a stub. In that
-      // case, we're not going to do a RPC, so we use the return value
-      // of the stub as our return value.
-      var enclosing = Meteor._CurrentInvocation.get();
-      var alreadyInSimulation = enclosing && enclosing.isSimulation;
+    // Run the stub, if we have one. The stub is supposed to make some
+    // temporary writes to the database to give the user a smooth experience
+    // until the actual result of executing the method comes back from the
+    // server (whereupon the temporary writes to the database will be reversed
+    // during the beginUpdate/endUpdate process.)
+    //
+    // Normally, we ignore the return value of the stub (even if it is an
+    // exception), in favor of the real return value from the server. The
+    // exception is if the *caller* is a stub. In that case, we're not going
+    // to do a RPC, so we use the return value of the stub as our return
+    // value.
 
-      var stub = self._methodHandlers[name];
-      if (stub) {
-        var setUserId = function(userId) {
-          self.setUserId(userId);
-        };
-        var invocation = new Meteor._MethodInvocation({
-          isSimulation: true,
-          userId: self.userId(), setUserId: setUserId,
-          sessionData: self._sessionData
+    var enclosing = Meteor._CurrentInvocation.get();
+    var alreadyInSimulation = enclosing && enclosing.isSimulation;
+
+    var stub = self._methodHandlers[name];
+    if (stub) {
+      var setUserId = function(userId) {
+        self.setUserId(userId);
+      };
+      var invocation = new Meteor._MethodInvocation({
+        isSimulation: true,
+        userId: self.userId(), setUserId: setUserId,
+        sessionData: self._sessionData
+      });
+
+      if (!alreadyInSimulation)
+        self._saveOriginals();
+
+      try {
+        var ret = Meteor._CurrentInvocation.withValue(invocation,function () {
+          return stub.apply(invocation, EJSON.clone(args));
         });
-
-        if (!alreadyInSimulation)
-          self._saveOriginals();
-
-        try {
-          var ret = Meteor._CurrentInvocation.withValue(invocation,function () {
-            return stub.apply(invocation, EJSON.clone(args));
-          });
-        }
-        catch (e) {
-          var exception = e;
-        }
-
-        if (!alreadyInSimulation)
-          self._retrieveAndStoreOriginals(methodId());
+      }
+      catch (e) {
+        var exception = e;
       }
 
-      // If we're in a simulation, stop and return the result we have,
-      // rather than going on to do an RPC. If there was no stub,
-      // we'll end up returning undefined.
-      if (alreadyInSimulation) {
-        if (callback) {
-          callback(exception, ret);
-          return undefined;
-        }
-        if (exception)
-          throw exception;
-        return ret;
-      }
-
-      // If an exception occurred in a stub, and we're ignoring it
-      // because we're doing an RPC and want to use what the server
-      // returns instead, log it so the developer knows.
-      //
-      // Tests can set the 'expected' flag on an exception so it won't
-      // go to log.
-      if (exception && !exception.expected) {
-        Meteor._debug("Exception while simulating the effect of invoking '" +
-                      name + "'", exception, exception.stack);
-      }
+      if (!alreadyInSimulation)
+        self._retrieveAndStoreOriginals(methodId());
     }
+
+    // If we're in a simulation, stop and return the result we have,
+    // rather than going on to do an RPC. If there was no stub,
+    // we'll end up returning undefined.
+    if (alreadyInSimulation) {
+      if (callback) {
+        callback(exception, ret);
+        return undefined;
+      }
+      if (exception)
+        throw exception;
+      return ret;
+    }
+
+    // If an exception occurred in a stub, and we're ignoring it
+    // because we're doing an RPC and want to use what the server
+    // returns instead, log it so the developer knows.
+    //
+    // Tests can set the 'expected' flag on an exception so it won't
+    // go to log.
+    if (exception && !exception.expected) {
+      Meteor._debug("Exception while simulating the effect of invoking '" +
+                    name + "'", exception, exception.stack);
+    }
+
 
     // At this point we're definitely doing an RPC, and we're going to
     // return the value of the RPC to the caller.
@@ -662,11 +673,13 @@ _.extend(Meteor._LivedataConnection.prototype, {
         // On the server, make the function synchronous.
         var future = new Future;
         callback = function (err, result) {
-          future['return']([err, result]);
+          if (err)
+            future['throw'](err);
+          else
+            future['return'](result);
         };
       }
     }
-
     // Send the RPC. Note that on the client, it is important that the
     // stub have finished before we send the RPC, so that we know we have
     // a complete list of which local documents the stub wrote.
@@ -702,12 +715,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
       methodInvoker.sendMessage();
 
     // If we're using the default callback on the server,
-    // synchronously return the result from the remote host.
+    // block waiting for the result.
     if (future) {
-      var outcome = future.wait();
-      if (outcome[0])
-        throw outcome[0];
-      return outcome[1];
+      return future.wait();
     }
     return undefined;
   },

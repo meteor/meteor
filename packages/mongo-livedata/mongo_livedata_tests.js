@@ -817,3 +817,55 @@ testAsyncMulti('mongo-livedata - specified _id', [
     }));
   }
 ]);
+
+
+if (Meteor.isServer) {
+  (function () {
+    var id = Random.id();
+
+    var C = new Meteor.Collection("ServerMinimongo_" + id);
+    var miniC;
+
+    C.insert({a: 0, b: 1});
+    C.insert({a: 0, b: 2});
+    C.insert({a: 1, b: 3});
+
+    Meteor.publish(id, function () {
+      return C.find({a: 0});
+    });
+
+    var conn;
+    testAsyncMulti("mongo-livedata - minimongo on server to server connection", [
+      function (test, expect) {
+        conn = Meteor.connect(Meteor.absoluteUrl());
+        Meteor.setTimeout(expect(function () {
+          test.isTrue(conn.status().connected, "Not connected");
+        }), 500);
+      },
+
+      function (test, expect) {
+        if (conn.status().connected) {
+          miniC = new Meteor.Collection("ServerMinimongo_" + id, {
+            manager: conn
+          });
+          var exp = expect(function (err) {
+            test.isFalse(err);
+          });
+          conn.subscribe(id, {
+            onError: exp,
+            onReady: exp
+          });
+        }
+      },
+
+      function (test, expect) {
+        if (miniC) {
+          var contents = miniC.find().fetch();
+          test.equal(contents.length, 2);
+          test.equal(contents[0].a, 0);
+        }
+      }
+    ]);
+  })();
+
+}

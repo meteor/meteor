@@ -597,6 +597,69 @@ if (Meteor.isClient) {
     ]);
 }
 
+
+if (Meteor.isServer) {
+  Meteor.methods({
+    "s2s": function (arg) {
+      return "s2s " + arg;
+    }
+  });
+}
+(function () {
+  var conn;
+  testAsyncMulti("livedata - connect works from both client and server", [
+    function (test, expect) {
+      conn = Meteor.connect(Meteor.absoluteUrl());
+      Meteor.setTimeout(expect(function () {
+        test.isTrue(conn.status().connected, "Not connected");
+      }), 500);
+    },
+
+    function (test, expect) {
+      if (conn.status().connected) {
+        conn.call('s2s', 'foo', expect(function (err, res) {
+          if (err)
+            throw err;
+          test.equal(res, "s2s foo");
+        }));
+      }
+    }
+  ]);
+})();
+
+if (Meteor.isServer) {
+  (function () {
+    var conn;
+    testAsyncMulti("livedata - method call on server blocks in a fiber way", [
+      function (test, expect) {
+        conn = Meteor.connect(Meteor.absoluteUrl());
+        Meteor.setTimeout(expect(function () {
+          test.isTrue(conn.status().connected, "Not connected");
+        }), 500);
+      },
+
+      function (test, expect) {
+        if (conn.status().connected) {
+          test.equal(conn.call('s2s', 'foo'), "s2s foo");
+        }
+      }
+    ]);
+  })();
+}
+
+(function () {
+  var conn;
+  testAsyncMulti("livedata - connect fails to unknown place", [
+    function (test, expect) {
+      conn = Meteor.connect("example.com");
+      Meteor.setTimeout(expect(function () {
+        test.isFalse(conn.status().connected, "Not connected");
+      }), 500);
+    }
+  ]);
+})();
+
+
 // XXX some things to test in greater detail:
 // staying in simulation mode
 // time warp
