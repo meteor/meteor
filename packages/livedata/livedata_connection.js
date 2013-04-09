@@ -624,7 +624,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
       try {
         var ret = Meteor._CurrentInvocation.withValue(invocation,function () {
           if (Meteor.isServer) {
-            // Because saveOriginals and retreiveOriginals aren't reentrant,
+            // Because saveOriginals and retrieveOriginals aren't reentrant,
             // don't allow stubs to yield.
             return Meteor._noYieldsAllowed(function () {
               return stub.apply(invocation, EJSON.clone(args));
