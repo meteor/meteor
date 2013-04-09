@@ -8,12 +8,13 @@ var WebSocketClient = Npm.require('websocket').client;
 //   "http://subdomain.meteor.com/" or "/" or
 //   "ddp+sockjs://foo-**.meteor.com/sockjs"
 //
-// -> Unlike the client, we require something of the form 'mysite.com',
-// which we will map to 'ws(s)://mysite.com/websocket'
+// We do some rewriting of the URL to eventually make it "ws://" or "wss://",
+// whatever was passed in.  At the very least, what Meteor.absoluteUrl() returns
+// us should work.
 //
-// We don't do any heartbeating. (The logic that did this in sockjs
-// was removed, because it used a built-in sockjs mechanism. We could
-// do it with WebSocket ping frames or with DDP-level messages.)
+// We don't do any heartbeating. (The logic that did this in sockjs was removed,
+// because it used a built-in sockjs mechanism. We could do it with WebSocket
+// ping frames or with DDP-level messages.)
 Meteor._DdpClientStream = function (endpoint) {
   var self = this;
 

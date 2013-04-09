@@ -5,8 +5,8 @@ Tinytest.add("stream - status", function (test) {
   test.equal(typeof status, "object");
   test.isTrue(status.status);
   // Make sure backward-compatiblity names are defined.
-  test.equal(status.retryCount, status.retry_count);
-  test.equal(status.retryTime, status.retry_time);
+  test.equal(status.retryCount, status.retryCount);
+  test.equal(status.retryTime, status.retryTime);
 });
 
 testAsyncMulti("stream - reconnect", [

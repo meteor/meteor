@@ -108,9 +108,7 @@ _.extend(Meteor._DdpClientStream.prototype, {
     self.currentStatus = {
       status: "connecting",
       connected: false,
-      retryCount: 0,
-      // XXX Backwards compatibility only. Remove this before 1.0.
-      retry_count: 0
+      retryCount: 0
     };
 
 
@@ -147,8 +145,6 @@ _.extend(Meteor._DdpClientStream.prototype, {
       clearTimeout(self.retryTimer);
     self.retryTimer = null;
     self.currentStatus.retryCount -= 1; // don't count manual retries
-    // XXX Backwards compatibility only. Remove this before 1.0.
-    self.currentStatus.retry_count = self.currentStatus.retryCount;
     self._retryNow();
   },
 
@@ -164,8 +160,6 @@ _.extend(Meteor._DdpClientStream.prototype, {
     self.currentStatus = {
       status: "failed",
       connected: false,
-      retryCount: 0,
-      // XXX Backwards compatibility only. Remove this before 1.0.
       retryCount: 0
     };
     if (optionalErrorMessage)
@@ -208,8 +202,6 @@ _.extend(Meteor._DdpClientStream.prototype, {
     self.currentStatus.status = "waiting";
     self.currentStatus.connected = false;
     self.currentStatus.retryTime = (new Date()).getTime() + timeout;
-    // XXX Backwards compatibility only. Remove this before 1.0.
-    self.currentStatus.retry_time = self.currentStatus.retryTime;
     self.statusChanged();
   },
 
@@ -220,13 +212,9 @@ _.extend(Meteor._DdpClientStream.prototype, {
       return;
 
     self.currentStatus.retryCount += 1;
-    // XXX Backwards compatibility only. Remove this before 1.0.
-    self.currentStatus.retry_count = self.currentStatus.retryCount;
     self.currentStatus.status = "connecting";
     self.currentStatus.connected = false;
     delete self.currentStatus.retryTime;
-    // XXX Backwards compatibility only. Remove this before 1.0.
-    delete self.currentStatus.retry_time;
     self.statusChanged();
 
     self._launchConnection();

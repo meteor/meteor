@@ -627,6 +627,26 @@ if (Meteor.isServer) {
   ]);
 })();
 
+if (Meteor.isServer) {
+  (function () {
+    var conn;
+    testAsyncMulti("livedata - method call on server blocks in a fiber way", [
+      function (test, expect) {
+        conn = Meteor.connect(Meteor.absoluteUrl());
+        Meteor.setTimeout(expect(function () {
+          test.isTrue(conn.status().connected, "Not connected");
+        }), 500);
+      },
+
+      function (test, expect) {
+        if (conn.status().connected) {
+          test.equal(conn.call('s2s', 'foo'), "s2s foo");
+        }
+      }
+    ]);
+  })();
+}
+
 (function () {
   var conn;
   testAsyncMulti("livedata - connect fails to unknown place", [

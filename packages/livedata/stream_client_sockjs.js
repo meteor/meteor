@@ -75,8 +75,6 @@ _.extend(Meteor._DdpClientStream.prototype, {
     self.currentStatus.status = "connected";
     self.currentStatus.connected = true;
     self.currentStatus.retryCount = 0;
-    // XXX Backwards compatibility only. Remove before 1.0.
-    self.currentStatus.retry_count = self.currentStatus.retryCount;
     self.statusChanged();
 
     // fire resets. This must come after status change so that clients

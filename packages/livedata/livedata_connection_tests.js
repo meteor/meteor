@@ -1,5 +1,4 @@
 
-var identity = function () {return arguments;};
 var newConnection = function (stream) {
   // Some of these tests leave outstanding methods with no result yet
   // returned. This should not block us from re-running tests when sources
@@ -276,7 +275,7 @@ Tinytest.add("livedata stub - this", function (test) {
   }});
 
   // should throw no exceptions
-  conn.call('test_this', identity);
+  conn.call('test_this', _.identity);
   // satisfy method, quiesce connection
   var message = JSON.parse(stream.sent.shift());
   test.equal(message, {msg: 'method', method: 'test_this',
@@ -399,7 +398,7 @@ Tinytest.add("livedata stub - mutating method args", function (test) {
     arg.foo = 42;
   }});
 
-  conn.call('mutateArgs', {foo: 50}, identity);
+  conn.call('mutateArgs', {foo: 50}, _.identity);
 
   // Method should be called with original arg, not mutated arg.
   var message = JSON.parse(stream.sent.shift());
@@ -451,7 +450,7 @@ Tinytest.add("livedata stub - methods calling methods", function (test) {
   var o = observeCursor(test, coll.find());
 
   // call method.
-  conn.call('do_something', identity);
+  conn.call('do_something', _.identity);
 
   // see we only send message for outer methods
   var message = JSON.parse(stream.sent.shift());
@@ -560,8 +559,8 @@ Tinytest.add("livedata stub - reconnect", function (test) {
     methodCallbackFired = true;
   });
 
-  conn.apply('do_something_else', [], {wait: true}, identity);
-  conn.apply('do_something_later', [], identity);
+  conn.apply('do_something_else', [], {wait: true}, _.identity);
+  conn.apply('do_something_later', [], _.identity);
 
   test.isFalse(methodCallbackFired);
 
@@ -922,7 +921,7 @@ Tinytest.add("livedata stub - multiple stubs same doc", function (test) {
   test.equal(coll.find().count(), 0);
 
   // Call the insert method.
-  conn.call('insertSomething', identity);
+  conn.call('insertSomething', _.identity);
   // Stub write is visible.
   test.equal(coll.find({foo: 'bar'}).count(), 1);
   var stubWrittenId = coll.findOne({foo: 'bar'})._id;
@@ -934,7 +933,7 @@ Tinytest.add("livedata stub - multiple stubs same doc", function (test) {
   test.equal(stream.sent.length, 0);
 
   // Call update method.
-  conn.call('updateIt', stubWrittenId, identity);
+  conn.call('updateIt', stubWrittenId, _.identity);
   // This stub write is visible too.
   test.equal(coll.find().count(), 1);
   test.equal(coll.findOne(stubWrittenId),
@@ -1003,11 +1002,11 @@ Tinytest.add("livedata stub - unsent methods don't block quiescence", function (
   test.equal(coll.find().count(), 0);
 
   // Call a random method (no-op)
-  conn.call('no-op', identity);
+  conn.call('no-op', _.identity);
   // Call a wait method
-  conn.apply('no-op', [], {wait: true}, identity);
+  conn.apply('no-op', [], {wait: true}, _.identity);
   // Call a method with a stub that writes.
-  conn.call('insertSomething', identity);
+  conn.call('insertSomething', _.identity);
 
 
   // Stub write is visible.
@@ -1247,15 +1246,15 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
   conn.methods({do_something: function (x) {}});
 
   conn.onReconnect = function() {
-    conn.apply('do_something', ['reconnect zero'], identity);
-    conn.apply('do_something', ['reconnect one'], identity);
-    conn.apply('do_something', ['reconnect two'], {wait: true}, identity);
-    conn.apply('do_something', ['reconnect three'], identity);
+    conn.apply('do_something', ['reconnect zero'], _.identity);
+    conn.apply('do_something', ['reconnect one'], _.identity);
+    conn.apply('do_something', ['reconnect two'], {wait: true}, _.identity);
+    conn.apply('do_something', ['reconnect three'], _.identity);
   };
 
-  conn.apply('do_something', ['one'], identity);
-  conn.apply('do_something', ['two'], {wait: true}, identity);
-  conn.apply('do_something', ['three'], identity);
+  conn.apply('do_something', ['one'], _.identity);
+  conn.apply('do_something', ['two'], {wait: true}, _.identity);
+  conn.apply('do_something', ['three'], _.identity);
 
   // reconnect
   stream.sent = [];
@@ -1332,15 +1331,15 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
   conn.methods({do_something: function (x) {}});
 
   conn.onReconnect = function() {
-    conn.apply('do_something', ['reconnect one'], identity);
-    conn.apply('do_something', ['reconnect two'], identity);
-    conn.apply('do_something', ['reconnect three'], identity);
+    conn.apply('do_something', ['reconnect one'], _.identity);
+    conn.apply('do_something', ['reconnect two'], _.identity);
+    conn.apply('do_something', ['reconnect three'], _.identity);
   };
 
-  conn.apply('do_something', ['one'], identity);
-  conn.apply('do_something', ['two'], {wait: true}, identity);
-  conn.apply('do_something', ['three'], {wait: true}, identity);
-  conn.apply('do_something', ['four'], identity);
+  conn.apply('do_something', ['one'], _.identity);
+  conn.apply('do_something', ['two'], {wait: true}, _.identity);
+  conn.apply('do_something', ['three'], {wait: true}, _.identity);
+  conn.apply('do_something', ['four'], _.identity);
 
   // reconnect
   stream.sent = [];
@@ -1376,10 +1375,10 @@ Tinytest.add("livedata connection - onReconnect with sent messages", function(te
   conn.methods({do_something: function (x) {}});
 
   conn.onReconnect = function() {
-    conn.apply('do_something', ['login'], {wait: true}, identity);
+    conn.apply('do_something', ['login'], {wait: true}, _.identity);
   };
 
-  conn.apply('do_something', ['one'], identity);
+  conn.apply('do_something', ['one'], _.identity);
 
   // initial connect
   stream.sent = [];
@@ -1469,7 +1468,7 @@ Tinytest.add("livedata stub - reconnect double wait method", function (test) {
   // Call another method. It should be delivered immediately. This is a
   // regression test for a case where it never got delivered because there was
   // an empty block in _outstandingMethodBlocks blocking it from being sent.
-  conn.call('lastMethod', identity);
+  conn.call('lastMethod', _.identity);
   testGotMessage(test, stream,
                  {msg: 'method', method: 'lastMethod', params: [], id: '*'});
 });
@@ -1529,7 +1528,7 @@ Tinytest.add("livedata stub - stubs before connected", function (test) {
   test.length(stream.sent, 0);
 
   // Insert a document. The stub updates "conn" directly.
-  coll.insert({_id: "foo", bar: 42}, identity);
+  coll.insert({_id: "foo", bar: 42}, _.identity);
   test.equal(coll.find().count(), 1);
   test.equal(coll.findOne(), {_id: "foo", bar: 42});
   // It also sends the method message.
