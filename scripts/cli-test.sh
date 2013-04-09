@@ -3,11 +3,23 @@
 # NOTE: by default this tests the working copy, not the installed
 # meteor.  To test the installed meteor, pass in --global. To test a
 # version of meteor installed in a specific directory, set the
-# METEOR_WAREHOUSE_DIR environment variable.
+# METEOR_TOOLS_TREE_DIR and METEOR_WAREHOUSE_DIR environment variable.
+
+set -e -x
 
 cd `dirname $0`/..
 
-METEOR="$(pwd)/meteor"
+echo "FOO $METEOR_TOOLS_TREE_DIR"
+
+# METEOR_TOOLS_TREE_DIR is set in run-tools-tests.sh in order to test
+# running an installed version of Meteor (though notably without
+# testing springboarding, which is separately tested by
+# tools-springboard-test.sh)
+if [ -z "$METEOR_TOOLS_TREE_DIR" ]; then
+    METEOR="`pwd`/meteor"
+else
+    METEOR="$METEOR_TOOLS_TREE_DIR/bin/meteor"
+fi
 
 if [ -z "$NODE" ]; then
     NODE="$(pwd)/scripts/node.sh"
@@ -42,13 +54,12 @@ OUTPUT="$TEST_TMPDIR/output"
 trap 'echo "[...]"; tail -25 $OUTPUT; echo FAILED ; rm -rf "$TEST_TMPDIR" >/dev/null 2>&1' EXIT
 
 cd "$TEST_TMPDIR"
-set -e -x
 
 
 ## Begin actual tests
 
 if [ -n "$INSTALLED_METEOR" ]; then
-    if [ -n "$TEST_RELEASE" ]; then 
+    if [ -n "$TEST_RELEASE" ]; then
         $METEOR --version | grep $TEST_RELEASE >> $OUTPUT
     else
         $METEOR --version >> $OUTPUT
