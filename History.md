@@ -1,6 +1,9 @@
 
 ## vNEXT
 
+* `Spiderable.userAgentRegExps` can now be modified to change what user agents
+  are treated as spiders by the `spiderable` package.
+
 * Return the inserted documented ID from LocalCollection.insert. #908
 
 * Prevent observe callbacks from affecting the arguments to identical observes. #855
