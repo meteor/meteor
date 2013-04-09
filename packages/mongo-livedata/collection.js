@@ -110,7 +110,6 @@ Meteor.Collection = function (name, options) {
           return;
         } else if (msg.msg === 'added') {
           if (doc) {
-            debugger;
             throw new Error("Expected not to find a document already present for an add");
           }
           self._collection.insert(_.extend({_id: mongoId}, msg.fields));

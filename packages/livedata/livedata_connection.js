@@ -623,7 +623,13 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
       try {
         var ret = Meteor._CurrentInvocation.withValue(invocation,function () {
-          return stub.apply(invocation, EJSON.clone(args));
+          if (Meteor.isServer) {
+            return Meteor._noYieldsAllowed(function () {
+              return stub.apply(invocation, EJSON.clone(args));
+            });
+          } else {
+            return stub.apply(invocation, EJSON.clone(args));
+          }
         });
       }
       catch (e) {
