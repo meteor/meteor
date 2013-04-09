@@ -1,9 +1,11 @@
 
 ## vNEXT
 
+* Return the inserted documented ID from LocalCollection.insert. #908
+
 * Prevent observe callbacks from affecting the arguments to identical observes. #855
 
-Patches contributed by GitHub users andreas-karlsson.
+Patches contributed by GitHub users andreas-karlsson and jacott.
 
 ## v0.6.1
 
