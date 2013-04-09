@@ -80,14 +80,7 @@ _.extend(Meteor._DdpClientStream.prototype, {
     // how long to wait until we declare the connection attempt
     // failed.
     self.CONNECT_TIMEOUT = 10000;
-    // how long between hearing heartbeat from the server until we declare
-    // the connection dead. heartbeats come every 25s (stream_server.js)
-    //
-    // NOTE: this is a workaround until sockjs detects heartbeats on the
-    // client automatically.
-    // https://github.com/sockjs/sockjs-client/issues/67
-    // https://github.com/sockjs/sockjs-node/issues/68
-    self.HEARTBEAT_TIMEOUT = 60000;
+
 
     // time for initial reconnect attempt.
     self.RETRY_BASE_TIMEOUT = 1000;
