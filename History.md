@@ -1,6 +1,10 @@
 
 ## vNEXT
 
+* Prevent observe callbacks from affecting the arguments to identical observes. #855
+
+Patches contributed by GitHub users andreas-karlsson.
+
 ## v0.6.1
 
 * Correct NPM behavior in packages in case there is a `node_modules` directory
