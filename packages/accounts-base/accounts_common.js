@@ -11,9 +11,13 @@ if (!Accounts._options) {
 //     client signups.
 // - forbidClientAccountCreation {Boolean}
 //     Do not allow clients to create accounts directly.
+// - failedLoginAttempts {Integer}
+//     Number of failed login attempts before locking account. Set to zero to disable.
+// - lockedAccountTimePeriod {Integer}
+//     When an account is locked, the cooldown time (in miliseconds)
 Accounts.config = function(options) {
   // validate option keys
-  var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation"];
+  var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation", "failedLoginAttempts", "lockedAccountTimePeriod"];
   _.each(_.keys(options), function (key) {
     if (!_.contains(VALID_KEYS, key)) {
       throw new Error("Accounts.config: Invalid key: " + key);

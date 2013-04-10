@@ -294,24 +294,49 @@ Accounts.registerLoginHandler(function (options) {
   if (!options.srp.M)
     throw new Meteor.Error(400, "Must pass M in options.srp");
 
-  // we're always called from within a 'login' method, so this should
-  // be safe.
   var currentInvocation = Meteor._CurrentInvocation.get();
   var serialized = currentInvocation._sessionData.srpChallenge;
-  if (!serialized || serialized.M !== options.srp.M)
-    throw new Meteor.Error(403, "Incorrect password");
-  // Only can use challenges once.
-  delete currentInvocation._sessionData.srpChallenge;
 
   var userId = serialized.userId;
   var user = Meteor.users.findOne(userId);
+  if(Accounts._options.failedLoginAttempts && typeof user.flood === "undefined") {
+    user.flood = { attempts : 0, last : 0 };
+  }
+  
+  if(Accounts._options.failedLoginAttempts &&
+     user.flood.attempts >= Accounts._options.failedLoginAttempts &&
+     user.flood.last > Date.now() - Accounts._options.lockedAccountTimePeriod)
+  	throw new Meteor.Error(403, "Too many login attempts");
+  
+  // reset the user.flood properties if we are past the lockout period.
+  if(Accounts._options.failedLoginAttempts &&
+     user.flood.last < Date.now() - Accounts._options.lockedAccountTimePeriod)
+       user.flood = { attempts : 0, last : 0 };
+  
+  // we're always called from within a 'login' method, so this should
+  // be safe.
+  if (!serialized || serialized.M !== options.srp.M) {
+    if(Accounts._options.failedLoginAttempts) {
+	    user.flood.attempts++;
+	    user.flood.last = Date.now();
+	    Meteor.users.update(userId, {$set : { flood : user.flood }});
+	  }
+    throw new Meteor.Error(403, "Incorrect password");
+  }
+  // Only can use challenges once.
+  delete currentInvocation._sessionData.srpChallenge;
+
+  user = Meteor.users.findOne(userId);
   // Was the user deleted since the start of this challenge?
   if (!user)
     throw new Meteor.Error(403, "User not found");
   var stampedLoginToken = Accounts._generateStampedLoginToken();
   Meteor.users.update(
     userId, {$push: {'services.resume.loginTokens': stampedLoginToken}});
-
+  if(Accounts._options.failedLoginAttempts) {
+    Meteor.users.update(
+    	userId, {$set : { flood : { attempts : 0, last : 0 } }});
+  }
   return {token: stampedLoginToken.token, id: userId, HAMK: serialized.HAMK};
 });
 
