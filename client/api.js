@@ -57,7 +57,7 @@ Template.api.absoluteUrl = {
 Template.api.settings = {
   id: "meteor_settings",
   name: "Meteor.settings",
-  locus: "Server and client",
+  locus: "Anywhere",
   descr: ["`Meteor.settings` contains any deployment-specific options that were " +
           "provided using the `--settings` option for `meteor run` or `meteor deploy`. " +
           "If you provide the `--settings` option, `Meteor.settings` will be the " +
@@ -69,7 +69,7 @@ Template.api.settings = {
 Template.api.release = {
   id: "meteor_release",
   name: "Meteor.release",
-  locus: "Server and client",
+  locus: "Anywhere",
   descr: ["`Meteor.release` is a string containing the name of the " +
           "[release](#meteorupdate) with which the project was built (for " +
           "example, `\"" +
