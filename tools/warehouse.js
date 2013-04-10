@@ -356,7 +356,7 @@ _.extend(warehouse, {
       fs.writeFileSync(warehouse.getToolsFreshFile(toolsVersion), '');
   },
 
-  printNotices: function(fromRelease, toRelease) {
+  printNotices: function(fromRelease, toRelease, packages) {
     var noticesPath = path.join(
       warehouse.getWarehouseDir(), 'releases', toRelease + '.notices.json');
 
@@ -377,9 +377,20 @@ _.extend(warehouse, {
       // We want to print the notices for releases newer than fromRelease, and
       // we always want to print toRelease even if we're updating from something
       // that's not in the notices file at all.
-      if (record.notices &&
-          (foundFromRelease || record.release === toRelease)) {
-        noticesToPrint.push(record);
+      if (foundFromRelease || record.release === toRelease) {
+        var noticesForRelease = record.notices || [];
+        _.each(record.packageNotices, function (lines, pkgName) {
+          if (_.contains(packages, pkgName)) {
+            if (!_.isEmpty(noticesForRelease))
+              noticesForRelease.push('');
+            noticesForRelease.push.apply(noticesForRelease, lines);
+          }
+        });
+
+        if (!_.isEmpty(noticesForRelease)) {
+          noticesToPrint.push({release: record.release,
+                               notices: noticesForRelease});
+        }
       }
       // Nothing newer than toRelease.
       if (record.release === toRelease)
