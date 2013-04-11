@@ -151,3 +151,23 @@ _.extend(ExpectationManager.prototype, {
     runNext();
   });
 };
+
+/*global*/
+
+pollUntil = function (expect, f, timeout, step) {
+  step = step || 100;
+  var expectation = expect(true);
+  var start = (new Date()).valueOf();
+  var helper = function () {
+    if (f()) {
+      expectation(true);
+      return;
+    }
+    if (start + timeout < (new Date()).valueOf()) {
+      expectation(false);
+      return;
+    }
+    Meteor.setTimeout(helper, step);
+  };
+  helper();
+};

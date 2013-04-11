@@ -836,9 +836,9 @@ if (Meteor.isServer) {
         });
 
         self.conn = Meteor.connect(Meteor.absoluteUrl());
-        Meteor.setTimeout(expect(function () {
-          test.isTrue(self.conn.status().connected, "Not connected");
-        }), 500);
+        pollUntil(expect, function () {
+          return self.conn.status().connected;
+        }, 10000);
       },
 
       function (test, expect) {
