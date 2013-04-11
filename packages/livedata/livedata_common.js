@@ -122,15 +122,18 @@ Meteor._CurrentInvocation = new Meteor.EnvironmentVariable;
 Meteor.Error = function (error, reason, details) {
   var self = this;
 
-  // Meteor.Error is defined on both client and server, but it only
-  // has a stack trace on the server. Luckily, Error.captureStackTrace
-  // achieves this on V8. Googling and experimentation found no way to
-  // capture stack traces on all browsers, so it seems that this is
-  // not a viable general pattern for creating custom Error
-  // classes. If we need to do that, we'd probably be best off setting
-  // a 'type' property on the Error object instead.
-  if (Error.captureStackTrace)
+  // Ensure we get a proper stack trace in most Javascript environments
+  if (Error.captureStackTrace) {
+    // V8 environments (Chrome and Node.js)
     Error.captureStackTrace(self, Meteor.Error);
+  } else {
+    // Firefox
+    var e = new Error;
+    e.__proto__ = Meteor.Error.prototype;
+    if (e instanceof Meteor.Error)
+      self = e;
+  }
+  // Safari magically works.
 
   // Currently, a numeric code, likely similar to a HTTP code (eg,
   // 404, 500). That is likely to change though.
@@ -155,6 +158,8 @@ Meteor.Error = function (error, reason, details) {
     self.message = self.reason + ' [' + self.error + ']';
   else
     self.message = '[' + self.error + ']';
+
+  return self;
 };
 
 // http://davidshariff.com/blog/javascript-inheritance-patterns/

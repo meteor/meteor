@@ -21,6 +21,7 @@ var failure = function (test, code, reason) {
 
 Tinytest.add("livedata - Meteor.Error", function (test) {
   var error = new Meteor.Error(123, "kittens", "puppies");
+  test.instanceOf(error, Meteor.Error);
   test.instanceOf(error, Error);
   test.equal(error.error, 123);
   test.equal(error.reason, "kittens");
