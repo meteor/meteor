@@ -5,6 +5,9 @@ if (!Accounts._options) {
   Accounts._options = {};
 }
 
+// Set up config for the accounts system. Call this on both the client
+// and the server.
+//
 // @param options {Object} an object with fields:
 // - sendVerificationEmail {Boolean}
 //     Send email address verification emails to new users created from

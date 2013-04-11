@@ -1,4 +1,29 @@
-// To be used as the local storage key
+// This file deals with storing a login token and user id in the
+// browser's localStorage facility. It polls local storage every few
+// seconds to synchronize login state between multiple tabs in the same
+// browser.
+
+// Login with a Meteor access token. This is the only public function
+// here.
+Meteor.loginWithToken = function (token, callback) {
+  Accounts.callLoginMethod({
+    methodArguments: [{resume: token}],
+    userCallback: callback});
+};
+
+// Semi-internal API. Call this function to re-enable auto login after
+// if it was disabled at startup.
+Accounts._enableAutoLogin = function () {
+  Accounts._preventAutoLogin = false;
+  Accounts._pollStoredLoginToken();
+};
+
+
+///
+/// STORING
+///
+
+// Key names to use in localStorage
 var loginTokenKey = "Meteor.loginToken";
 var userIdKey = "Meteor.userId";
 
@@ -36,13 +61,10 @@ Accounts._storedUserId = function() {
   return localStorage.getItem(userIdKey);
 };
 
-// Login with a Meteor access token
-//
-Meteor.loginWithToken = function (token, callback) {
-  Accounts.callLoginMethod({
-    methodArguments: [{resume: token}],
-    userCallback: callback});
-};
+
+///
+/// AUTO-LOGIN
+///
 
 if (!Accounts._preventAutoLogin) {
   // Immediately try to log in via local storage, so that any DDP
@@ -79,13 +101,6 @@ Accounts._pollStoredLoginToken = function() {
       Meteor.logout();
   }
   Accounts._lastLoginTokenWhenPolled = currentLoginToken;
-};
-
-// Semi-internal API. Call this function to re-enable auto login after
-// if it was disabled at startup.
-Accounts._enableAutoLogin = function () {
-  Accounts._preventAutoLogin = false;
-  Accounts._pollStoredLoginToken();
 };
 
 setInterval(Accounts._pollStoredLoginToken, 3000);

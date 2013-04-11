@@ -1,3 +1,7 @@
+///
+/// CURRENT USER
+///
+
 // This is reactive.
 Meteor.userId = function () {
   return Meteor.default_connection.userId();
@@ -26,6 +30,10 @@ Meteor.user = function () {
     return null;
   return Meteor.users.findOne(userId);
 };
+
+///
+/// LOGIN METHODS
+///
 
 // Call a login method on the server.
 //
@@ -165,19 +173,12 @@ Meteor.logout = function (callback) {
   });
 };
 
-// If we're using Handlebars, register the {{currentUser}} and
-// {{loggingIn}} global helpers.
-if (typeof Handlebars !== 'undefined') {
-  Handlebars.registerHelper('currentUser', function () {
-    return Meteor.user();
-  });
-  Handlebars.registerHelper('loggingIn', function () {
-    return Meteor.loggingIn();
-  });
-}
+///
+/// LOGIN SERVICES
+///
 
-// XXX this can be simplified if we merge in
-// https://github.com/meteor/meteor/pull/273
+// XXX this can be simplified using the new reactive 'ready' flag on
+// subscription handles.
 var loginServicesConfigured = false;
 var loginServicesConfiguredDeps = new Deps.Dependency;
 Meteor.subscribe("meteor.loginServiceConfiguration", function () {
@@ -197,3 +198,19 @@ Accounts.loginServicesConfigured = function () {
   loginServicesConfiguredDeps.depend();
   return false;
 };
+
+///
+/// HANDLEBARS HELPERS
+///
+
+// If we're using Handlebars, register the {{currentUser}} and
+// {{loggingIn}} global helpers.
+if (typeof Handlebars !== 'undefined') {
+  Handlebars.registerHelper('currentUser', function () {
+    return Meteor.user();
+  });
+  Handlebars.registerHelper('loggingIn', function () {
+    return Meteor.loggingIn();
+  });
+}
+

@@ -1,4 +1,4 @@
-var connect = Npm.require("connect");
+var connect = Npm.require("connect"); // XXX unused?
 
 // connect middleware
 Accounts.oauth2._handleRequest = function (service, query, res) {

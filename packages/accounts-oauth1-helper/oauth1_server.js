@@ -1,4 +1,4 @@
-var connect = Npm.require("connect");
+var connect = Npm.require("connect"); // XXX unused?
 
 // A place to store request tokens pending verification
 Accounts.oauth1._requestTokens = {};
