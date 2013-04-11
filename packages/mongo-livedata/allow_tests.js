@@ -10,6 +10,8 @@ if (Meteor.isServer) {
   // it and fail due to the collection not yet existing. So we are very hacky
   // and use a publish.
   Meteor.publish("allowTests", function (nonce, idGeneration) {
+    check(nonce, String);
+    check(idGeneration, String);
     var cursors = [];
     var needToConfigure = undefined;
 

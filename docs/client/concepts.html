@@ -168,6 +168,7 @@ case is to publish a database query.
 
     // server: publish all messages for a given room
     Meteor.publish("messages", function (roomId) {
+      check(roomId, String);
       return Messages.find({room: roomId});
     });
 

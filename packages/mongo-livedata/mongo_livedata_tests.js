@@ -5,6 +5,12 @@ var TRANSFORMS = {};
 if (Meteor.isServer) {
   Meteor.methods({
     createInsecureCollection: function (name, options) {
+      check(name, String);
+      check(options, Match.Optional({
+        transformName: Match.Optional(String),
+        idGeneration: Match.Optional(String)
+      }));
+
       if (options && options.transformName) {
         options.transform = TRANSFORMS[options.transformName];
       }

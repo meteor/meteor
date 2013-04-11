@@ -10,6 +10,8 @@ if (Meteor.settings &&
 
 Meteor.methods({
   report: function (reports) {
+    // XXX Could do a more precise validation here; reports are complex!
+    check(reports, [Object]);
     if (url) {
       Meteor.http.post(url, {
         data: reports

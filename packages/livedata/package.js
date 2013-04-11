@@ -7,7 +7,7 @@ Npm.depends({sockjs: "0.3.4",
              websocket: "1.0.7"});
 
 Package.on_use(function (api) {
-  api.use(['random', 'ejson', 'json', 'underscore', 'deps', 'logging'],
+  api.use(['random', 'ejson', 'json', 'underscore', 'deps', 'logging', 'check'],
           ['client', 'server']);
 
   // Transport

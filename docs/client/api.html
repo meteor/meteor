@@ -76,6 +76,7 @@ different collections. We hope to lift this restriction in a future release.
 
     // publish dependent documents and simulate joins
     Meteor.publish("roomAndMessages", function (roomId) {
+      check(roomId, String);
       return [
         Rooms.find({_id: roomId}, {fields: {secretInfo: 0}}),
         Messages.find({roomId: roomId})
@@ -98,6 +99,7 @@ Example:
     // server: publish the current size of a collection
     Meteor.publish("counts-by-room", function (roomId) {
       var self = this;
+      check(roomId, String);
       var count = 0;
       var initializing = true;
       var handle = Messages.find({roomId: roomId}).observeChanges({
@@ -242,6 +244,8 @@ Example:
 
     Meteor.methods({
       foo: function (arg1, arg2) {
+        check(arg1, String);
+        check(arg2, [Number]);
         // .. do stuff ..
         if (you want to throw an error)
           throw new Meteor.Error(404, "Can't find my pants");
@@ -318,11 +322,14 @@ will allow the N+1th invocation to start running in a new fiber.
 
 {{> api_box error}}
 
-If you want to return an error from a method, throw an exception.
-Methods can throw any kind of exception.  But `Meteor.Error` is the only
-kind of error that a server will send to the client.  If a method
-function throws a different exception, then it will be mapped to
-`Meteor.Error(500, "Internal server error")` on the wire.
+If you want to return an error from a method, throw an exception.  Methods can
+throw any kind of exception.  But `Meteor.Error` is the only kind of error that
+a server will send to the client. If a method function throws a different
+exception, then it will be mapped to a sanitized version on the
+wire. Specifically, if the `sanitizedError` field on the thrown error is set to
+a `Meteor.Error`, then that error will be sent to the client. Otherwise, if no
+sanitized version is available, the client gets
+`Meteor.Error(500, 'Internal server error')`.
 
 {{> api_box meteor_call}}
 
@@ -2755,6 +2762,7 @@ Contents of the result object:
 Example server method:
 
     Meteor.methods({checkTwitter: function (userId) {
+      check(userId, String);
       this.unblock();
       var result = Meteor.http.call("GET", "http://api.twitter.com/xyz",
                                     {params: {user: userId}});
@@ -2811,6 +2819,8 @@ by spammers.)
     // In your server code: define a method that the client can call
     Meteor.methods({
       sendEmail: function (to, from, subject, text) {
+        check([to, from, subject, text], [String]);
+
         // Let other method calls from the same client start running,
         // without waiting for the email sending to complete.
         this.unblock();

@@ -96,6 +96,7 @@ paths_for_word = function (board, word) {
 
 Meteor.methods({
   score_word: function (word_id) {
+    check(word_id, String);
     var word = Words.findOne(word_id);
     var game = Games.findOne(word.game_id);
 
@@ -129,12 +130,15 @@ if (Meteor.isServer) {
 
   // publish single games
   Meteor.publish('games', function (id) {
+    check(id, String);
     return Games.find({_id: id});
   });
 
   // publish all my words and opponents' words that the server has
   // scored as good.
   Meteor.publish('words', function (game_id, player_id) {
+    check(game_id, String);
+    check(player_id, String);
     return Words.find({$or: [{game_id: game_id, state: 'good'},
                              {player_id: player_id}]});
   });

@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use('random', ['client', 'server']);
+  api.use(['random', 'check'], ['client', 'server']);
   api.add_files(['biginteger.js', 'sha256.js', 'srp.js'],
                 ['client', 'server']);
 });
