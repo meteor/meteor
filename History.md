@@ -1,6 +1,11 @@
 
 ## vNEXT
 
+* Better stack traces for Meteor.Error.
+
+* Unbreak Meteor when running from a home directory with spaces.
+  http://stackoverflow.com/questions/15970272/cant-properly-install-meteor-0-6-1
+
 * `Spiderable.userAgentRegExps` can now be modified to change what user agents
   are treated as spiders by the `spiderable` package.
 
