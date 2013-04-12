@@ -1,7 +1,7 @@
 var path = require('path');
 var _ = require('underscore');
 var files = require('./files.js');
-var bundler = require('./bundler.js');
+var Builder = require('./builder.js');
 var project = require('./project.js');
 var meteorNpm = require('./meteor_npm.js');
 var linker = require(path.join(__dirname, 'linker.js'));
@@ -139,8 +139,9 @@ var Slice = function (pkg, options) {
   // servePath: The (absolute) path at which the resource would prefer
   // to be served. Interpretation varies by type. For example, always
   // honored for "static", ignored for "head" and "body", sometimes
-  // honored for CSS but ignored if we are concatenating. Set only
-  // after _ensureCompiled().
+  // honored for CSS but ignored if we are concatenating.
+  //
+  // Set only after _ensureCompiled().
   self.resources = null;
 };
 
@@ -226,7 +227,7 @@ _.extend(Slice.prototype, {
       var ext = path.extname(relPath).substr(1);
       var handler = self._getSourceHandler(ext);
       var contents = fs.readFileSync(absPath);
-      self.dependencyInfo.files[absPath] = bundler.sha1(contents);
+      self.dependencyInfo.files[absPath] = Builder.sha1(contents);
 
       if (! handler) {
         // If we don't have an extension handler, serve this file
@@ -493,7 +494,7 @@ _.extend(Package.prototype, {
 
     var packageJsPath = path.join(self.sourceRoot, 'package.js');
     var code = fs.readFileSync(packageJsPath);
-    var packageJsHash = bundler.sha1(code);
+    var packageJsHash = Builder.sha1(code);
     // \n is necessary in case final line is a //-comment
     var wrapped = "(function(Package,Npm){" + code.toString() + "\n})";
     // See #runInThisContext
@@ -534,7 +535,10 @@ _.extend(Package.prototype, {
         if (_.has(self.extensions, extension))
           throw new Error("This package has already registered a handler for " +
                           extension);
-        self.extensions[extension] = callback;
+        self.extensions[extension] = function (/* arguments */) {
+          self.installNpmDependencies();
+          return callback.apply(this, arguments);
+        };
       },
 
       // Same as node's default `require` but is relative to the
@@ -774,7 +778,7 @@ _.extend(Package.prototype, {
               path.join(appDir, '.meteor', 'releases')], function (p) {
                 if (fs.existsSync(p)) {
                   slice.dependencyInfo.files[p] =
-                    bundler.sha1(fs.readFileSync(p));
+                    Builder.sha1(fs.readFileSync(p));
                 }
               });
 

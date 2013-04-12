@@ -12,6 +12,7 @@ var watch = require('./watch.js');
 var project = require('./project.js');
 var updater = require('./updater.js');
 var bundler = require('./bundler.js');
+var Builder = require('./builder.js');
 var mongo_runner = require('./mongo_runner.js');
 var mongoExitCodes = require('./mongo_exit_codes.js');
 var warehouse = require("./warehouse.js");
@@ -471,7 +472,7 @@ exports.run = function (context, options) {
       // we need to reread the file, which creates a tiny race
       // condition (not a big enough deal to care about right now.)
       var settingsHash =
-        bundler.sha1(fs.readFileSync(options.settingsFile, "utf8"));
+        Builder.sha1(fs.readFileSync(options.settingsFile, "utf8"));
 
       // Reload if the setting file changes
       dependencyInfo.files[path.resolve(options.settingsFile)] =

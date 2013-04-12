@@ -143,7 +143,7 @@ var run = function () {
 
   // read our control file
   var serverJson =
-    JSON.parse(fs.readFileSync(path.join(serverDir, 'app.json'), 'utf8'));
+    JSON.parse(fs.readFileSync(path.join(serverDir, 'program.json'), 'utf8'));
 
   // read the control for the client we'll be serving up
   var clientJsonPath = path.join(serverDir, serverJson.client);

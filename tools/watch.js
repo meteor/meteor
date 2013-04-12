@@ -52,6 +52,12 @@ var _ = require('underscore');
 // detected. Likewise if A exists and is then deleted it will be
 // detected.)
 //
+// XXX This should be reengineered so that dependency information from
+// multiple sources can be easily merged in a generic way. Possibly in
+// this new model subdirectories would be allowed in include/exclude
+// patterns, and multiple directory rules would be OR'd rather than
+// taking the most specific rule.
+//
 // Options may include
 // - files: see self.files comment below
 // - directories: see self.directories comment below
