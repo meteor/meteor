@@ -27,7 +27,7 @@ Meteor._DdpClientStream = function (endpoint) {
   // spammy log message when deployed to another architecture. Delaying the
   // require means you only get the log message if you're actually using the
   // feature.
-  self.client = new Npm.require('websocket').client;
+  self.client = new (Npm.require('websocket').client)();
   self.endpoint = endpoint;
   self.currentConnection = null;
 
