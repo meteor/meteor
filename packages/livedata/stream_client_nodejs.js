@@ -1,9 +1,3 @@
-// WebSocket-Node https://github.com/Worlize/WebSocket-Node
-// Chosen because it can run without native components. It has a
-// somewhat idiosyncratic API. We may want to use 'ws' instead in the
-// future.
-var WebSocketClient = Npm.require('websocket').client;
-
 // @param endpoint {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or
 //   "ddp+sockjs://foo-**.meteor.com/sockjs"
@@ -18,7 +12,22 @@ var WebSocketClient = Npm.require('websocket').client;
 Meteor._DdpClientStream = function (endpoint) {
   var self = this;
 
-  self.client = new WebSocketClient;
+  // WebSocket-Node https://github.com/Worlize/WebSocket-Node
+  // Chosen because it can run without native components. It has a
+  // somewhat idiosyncratic API. We may want to use 'ws' instead in the
+  // future.
+  //
+  // Since server-to-server DDP is still an experimental feature, we only
+  // require the module if we actually create a server-to-server
+  // connection. This is a minor efficiency improvement, but moreover: while
+  // 'websocket' doesn't require native components, it tries to use some
+  // optional native components and prints a warning if it can't load
+  // them. Since native components in packages don't work when transferred to
+  // other architectures yet, this means that require('websocket') prints a
+  // spammy log message when deployed to another architecture. Delaying the
+  // require means you only get the log message if you're actually using the
+  // feature.
+  self.client = new Npm.require('websocket').client;
   self.endpoint = endpoint;
   self.currentConnection = null;
 
