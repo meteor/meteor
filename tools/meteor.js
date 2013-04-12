@@ -249,8 +249,10 @@ Fiber(function () {
             .describe('example', 'Example template to use.')
             .boolean('list')
             .describe('list', 'Show list of available examples.')
+            .boolean('convert')
+            .describe('convert', 'Convert specified directory into a meteor app.')
             .usage(
-              "Usage: meteor create [--release <release>] <name>\n" +
+              "Usage: meteor create [--release <release>] <name> [--convert]\n" +
                 "       meteor create [--release <release>] --example <example_name> [<name>]\n" +
                 "       meteor create --list\n" +
                 "\n" +
@@ -261,10 +263,14 @@ Fiber(function () {
                 "option, or the latest available version if the option is not specified.\n" +
                 "\n" +
                 "You can pass --example to start off with a copy of one of the Meteor\n" +
-                "sample applications. Use --list to see the available examples.");
+                "sample applications. Use --list to see the available examples.\n" +
+                "\n" +
+                "You can also use --convert, which will convert the specified directory\n" +
+                "into a Meteor app, instead of creating a complete app.");
 
       var new_argv = opt.argv;
       var appPath;
+      var skel = 'skel';
 
       var example_dir = path.join(__dirname, '..', 'examples');
       var examples = _.reject(fs.readdirSync(example_dir), function (e) {
@@ -275,6 +281,16 @@ Fiber(function () {
         appPath = argv._[0];
       } else if (argv._.length === 0 && new_argv.example) {
         appPath = new_argv.example;
+      }
+
+      if (new_argv['convert'] && argv._.length === 1) {
+        if (! fs.existsSync(appPath)) {
+          process.stderr.write(appPath + ': Doesn\'t exist\n' );
+          process.stderr.write('Create an app with \'meteor create <name>\'.\n');
+          process.exit(1);
+        }
+        appPath = path.join(appPath, '.meteor');
+        skel = path.join(skel, '.meteor');
       }
 
       if (new_argv['list']) {
@@ -318,7 +334,7 @@ Fiber(function () {
           });
         }
       } else {
-        files.cp_r(path.join(__dirname, 'skel'), appPath, {
+        files.cp_r(path.join(__dirname, skel), appPath, {
           transform_filename: function (f) {
             return transform(f);
           },
@@ -334,6 +350,11 @@ Fiber(function () {
 
       // Use the global release version, so that it isn't influenced by the
       // release version of the app dir you happen to be inside now.
+      if (new_argv['convert']) {
+        var temp = appPath.split(path.sep);
+        temp = _.reject(temp, function (str) { return str === '.meteor'; });
+        appPath = temp.join(path.sep);
+      }
       project.writeMeteorReleaseVersion(appPath, context.globalReleaseVersion);
 
       process.stderr.write(appPath + ": created");
