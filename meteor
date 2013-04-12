@@ -32,9 +32,9 @@ PLATFORM="${UNAME}_${ARCH}"
 # Find the script dir, following one level of symlink. Note that symlink
 # can be relative or absolute. Too bad 'readlink -f' is not portable.
 ORIG_DIR=$(pwd)
-cd $(dirname "$0")
-if [ -L "$(basename $0)" ] ; then
-    cd $(dirname $(readlink $(basename "$0") ) )
+cd "$(dirname "$0")"
+if [ -L "$(basename "$0")" ] ; then
+    cd "$(dirname $(readlink $(basename "$0") ) )"
 fi
 SCRIPT_DIR=$(pwd -P)
 cd "$ORIG_DIR"
