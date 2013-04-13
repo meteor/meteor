@@ -1,17 +1,32 @@
 
 ## vNEXT
 
-* `Spiderable.userAgentRegExps` can now be modified to change what user agents
-  are treated as spiders by the `spiderable` package.
+* Better stack traces for `Meteor.Error`.
 
-* Return the inserted documented ID from LocalCollection.insert. #908
+* Add per-package upgrade notices to `meteor update`.
 
-* Prevent observe callbacks from affecting the arguments to identical observes. #855
+* Experimental server-to-server DDP support: `Meteor.connect` on the
+  server will connect to a remote DDP endpoint via WebSockets. Method
+  calls should work fine, but subscriptions and minimongo on the server
+  are still a work in progress.
 
 * Upgrade d3 from 2.x to 3.1.4. See
   https://github.com/mbostock/d3/wiki/Upgrading-to-3.0 for compatibility notes.
 
-Patches contributed by GitHub users andreas-karlsson, jacott, and joshuaconner.
+* Return the inserted documented ID from `LocalCollection.insert`. #908
+
+* `Spiderable.userAgentRegExps` can now be modified to change what user agents
+  are treated as spiders by the `spiderable` package.
+
+* Prevent observe callbacks from affecting the arguments to identical
+  observes. #855
+
+* Fix meteor command line tool when run from a home directory with
+  spaces in its name.
+
+Patches contributed by GitHub users andreas-karlsson, jacott,
+joshuaconner, and timhaines.
+
 
 ## v0.6.1
 
@@ -21,6 +36,7 @@ Patches contributed by GitHub users andreas-karlsson, jacott, and joshuaconner.
 * Small bug fix in the low-level `routepolicy` package.
 
 Patches contributed by GitHub users andreas-karlsson and awwx.
+
 
 ## v0.6.0
 

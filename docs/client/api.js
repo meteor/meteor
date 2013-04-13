@@ -140,6 +140,13 @@ Template.api.ejsonNewBinary = {
   descr: ["Allocate a new buffer of binary data that EJSON can serialize."]
 },
 
+Template.api.ejsonIsBinary = {
+  id: "ejson_is_binary",
+  name: "EJSON.isBinary(x)",
+  locus: "Anywhere",
+  descr: ["Returns true if `x` is a buffer of binary data, as returned from [`EJSON.newBinary`](#ejson_new_binary)."]
+},
+
 Template.api.ejsonAddType = {
   id: "ejson_add_type",
   name: "EJSON.addType(name, factory)",
