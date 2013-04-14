@@ -2,6 +2,12 @@ Accounts.oauth.registerService('weibo', 2, function(query) {
 
   var response = getTokenResponse(query);
   var uid = parseInt(response.uid, 10);
+
+  // different parts of weibo's api seem to expect numbers, or strings
+  // for uid. let's make sure they're both the same.
+  if (response.uid !== uid + "")
+    throw new Error("Expected 'uid' to parse to an integer: " + JSON.stringify(response));
+
   var identity = getIdentity(response.access_token, uid);
 
   return {
@@ -41,8 +47,8 @@ var getTokenResponse = function (query) {
                     "HTTP Error " + result.statusCode + ": " + result.content);
   }
 
-  // result.headers["content-type"] is 'text/plain;charset=UTF-8', so the http
-  // package doesn't automatically populate result.data
+  // result.headers["content-type"] is 'text/plain;charset=UTF-8', so
+  // the http package doesn't automatically populate result.data
   result.data = JSON.parse(result.content);
 
   if (result.data.error) { // if the http response was a json object with an error attribute
