@@ -1,6 +1,9 @@
 
 ## vNEXT
 
+* Better errors with misconfigured OAuth services. See
+  http://stackoverflow.com/questions/13437174/meteor-oauth-exception-while-invoking-method-login
+
 * Better stack traces for `Meteor.Error`.
 
 * Add per-package upgrade notices to `meteor update`.
