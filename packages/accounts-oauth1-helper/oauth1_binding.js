@@ -124,10 +124,8 @@ OAuth1Binding.prototype._call = function(method, url, headers, params) {
   });
 
   if (response.error) {
-    Meteor._debug('Error sending OAuth1 HTTP call', response.content, method, url, params, authString);
-    if (response.statusCode) response.error.statusCode = response.statusCode;
-    if (response.data) response.error.data = response.data;
-    throw response.error;
+    throw new Error("Failed to send OAuth1 http request to " + url + ". " +
+                    "HTTP Error " + response.statusCode + ": " + response.content);
   }
 
   return response;

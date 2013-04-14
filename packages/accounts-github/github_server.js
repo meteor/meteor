@@ -20,25 +20,35 @@ var getAccessToken = function (query) {
     throw new Accounts.ConfigError("Service not configured");
 
   var result = Meteor.http.post(
-    "https://github.com/login/oauth/access_token", {headers: {Accept: 'application/json'}, params: {
-      code: query.code,
-      client_id: config.clientId,
-      client_secret: config.secret,
-      redirect_uri: Meteor.absoluteUrl("_oauth/github?close"),
-      state: query.state
-    }});
-  if (result.error) // if the http response was an error
-    throw result.error;
-  if (result.data.error) // if the http response was a json object with an error attribute
-    throw result.data;
-  return result.data.access_token;
+    "https://github.com/login/oauth/access_token", {
+      headers: {Accept: 'application/json'},
+      params: {
+        code: query.code,
+        client_id: config.clientId,
+        client_secret: config.secret,
+        redirect_uri: Meteor.absoluteUrl("_oauth/github?close"),
+        state: query.state
+      }
+    });
+
+  if (result.error) { // if the http response was an error
+    throw new Error("Failed to complete OAuth handshake with GitHub. " +
+                    "HTTP Error " + result.statusCode + ": " + result.content);
+  } else if (result.data.error) { // if the http response was a json object with an error attribute
+    throw new Error("Failed to complete OAuth handshake with GitHub. " + result.data.error);
+  } else {
+    return result.data.access_token;
+  }
 };
 
 var getIdentity = function (accessToken) {
   var result = Meteor.http.get(
     "https://api.github.com/user",
     {params: {access_token: accessToken}});
-  if (result.error)
-    throw result.error;
-  return result.data;
+  if (result.error) {
+    throw new Error("Failed to fetch identity from GitHub. " +
+                    "HTTP Error " + result.statusCode + ": " + result.content);
+  } else {
+    return result.data;
+  }
 };
