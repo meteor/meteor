@@ -6,7 +6,10 @@ Accounts.oauth.registerService('weibo', 2, function(query) {
 
   return {
     serviceData: {
-      id: uid,
+      // We used to store this as a string, so keep it this way rather than
+      // add complexity to Account.updateOrCreateUserFromExternalService or
+      // force a database migration
+      id: uid + "",
       accessToken: response.access_token,
       screenName: identity.screen_name,
       expiresAt: (+new Date) + (1000 * response.expires_in)
