@@ -129,9 +129,6 @@ Accounts.oauth._middleware = function (req, res, next) {
     if (req.query.state && err instanceof Error)
       Accounts.oauth._loginResultForState[req.query.state] = err;
 
-    // also log to the server console, so the developer sees it.
-    Meteor._debug("Exception in oauth request handler", err);
-
     // XXX the following is actually wrong. if someone wants to
     // redirect rather than close once we are done with the OAuth
     // flow, as supported by
