@@ -765,8 +765,8 @@ Tinytest.add("templating - events", function (test) {
   div = OnscreenDiv(Meteor.render(tmpl));
   clickElement(DomUtils.find(div.node(), 'u'));
   test.equal(buf.length, 2);
-  test.isTrue(buf.indexOf('a') > -1);
-  test.isTrue(buf.indexOf('b') > -1);
+  test.isTrue(_.contains(buf, 'a'));
+  test.isTrue(_.contains(buf, 'b'));
   div.kill();
   Meteor.flush();
 });
