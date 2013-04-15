@@ -1,17 +1,20 @@
+var withCurrentInvocation = function (f) {
+  if (Meteor._CurrentInvocation) {
+    if (Meteor._CurrentInvocation.get() && Meteor._CurrentInvocation.get().isSimulation)
+      throw new Error("Can't set timers inside simulations");
+    return function () { Meteor._CurrentInvocation.withValue(null, f); };
+  }
+  else
+    return f;
+};
+
 _.extend(Meteor, {
   // Meteor.setTimeout and Meteor.setInterval callbacks scheduled
   // inside a server method are not part of the method invocation and
   // should clear out the CurrentInvocation environment variable.
 
   setTimeout: function (f, duration) {
-    if (Meteor._CurrentInvocation) {
-      if (Meteor._CurrentInvocation.get() && Meteor._CurrentInvocation.get().isSimulation)
-        throw new Error("Can't set timers inside simulations");
-
-      var f_with_ci = f;
-      f = function () { Meteor._CurrentInvocation.withValue(null, f_with_ci); };
-    }
-
+    f = withCurrentInvocation(f);
     return setTimeout(Meteor.bindEnvironment(f, function (e) {
       // XXX report nicely (or, should we catch it at all?)
       Meteor._debug("Exception from setTimeout callback:", e.stack);
@@ -19,14 +22,7 @@ _.extend(Meteor, {
   },
 
   setInterval: function (f, duration) {
-    if (Meteor._CurrentInvocation) {
-      if (Meteor._CurrentInvocation.get() && Meteor._CurrentInvocation.get().isSimulation)
-        throw new Error("Can't set timers inside simulations");
-
-      var f_with_ci = f;
-      f = function () { Meteor._CurrentInvocation.withValue(null, f_with_ci); };
-    }
-
+    f = withCurrentInvocation(f);
     return setInterval(Meteor.bindEnvironment(f, function (e) {
       // XXX report nicely (or, should we catch it at all?)
       Meteor._debug("Exception from setInterval callback:", e);
