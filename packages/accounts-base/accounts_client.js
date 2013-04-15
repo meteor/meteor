@@ -177,26 +177,13 @@ Meteor.logout = function (callback) {
 /// LOGIN SERVICES
 ///
 
-// XXX this can be simplified using the new reactive 'ready' flag on
-// subscription handles.
-var loginServicesConfigured = false;
-var loginServicesConfiguredDeps = new Deps.Dependency;
-Meteor.subscribe("meteor.loginServiceConfiguration", function () {
-  loginServicesConfigured = true;
-  loginServicesConfiguredDeps.changed();
-});
+var loginServicesHandle = Meteor.subscribe("meteor.loginServiceConfiguration");
 
-// A reactive function returning whether the
-// loginServiceConfiguration subscription is ready. Used by
-// accounts-ui to hide the login button until we have all the
-// configuration loaded
+// A reactive function returning whether the loginServiceConfiguration
+// subscription is ready. Used by accounts-ui to hide the login button
+// until we have all the configuration loaded
 Accounts.loginServicesConfigured = function () {
-  if (loginServicesConfigured)
-    return true;
-
-  // not yet complete, save the context for invalidation once we are.
-  loginServicesConfiguredDeps.depend();
-  return false;
+  return loginServicesHandle.ready();
 };
 
 ///
