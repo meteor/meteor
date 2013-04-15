@@ -1,20 +1,5 @@
-Accounts.createUser = function (options, callback) {
-  options = _.clone(options); // we'll be modifying options
-
-  if (!options.password)
-    throw new Error("Must set options.password");
-  var verifier = Meteor._srp.generateVerifier(options.password);
-  // strip old password, replacing with the verifier object
-  delete options.password;
-  options.srp = verifier;
-
-  Accounts.callLoginMethod({
-    methodName: 'createUser',
-    methodArguments: [options],
-    userCallback: callback
-  });
-};
-
+// Attempt to log in with a password.
+//
 // @param selector {String|Object} One of the following:
 //   - {username: (username)}
 //   - {email: (email)}
@@ -59,7 +44,31 @@ Meteor.loginWithPassword = function (selector, password, callback) {
 };
 
 
-// @param oldPassword {String|null}
+// Attempt to log in as a new user.
+Accounts.createUser = function (options, callback) {
+  options = _.clone(options); // we'll be modifying options
+
+  if (!options.password)
+    throw new Error("Must set options.password");
+  var verifier = Meteor._srp.generateVerifier(options.password);
+  // strip old password, replacing with the verifier object
+  delete options.password;
+  options.srp = verifier;
+
+  Accounts.callLoginMethod({
+    methodName: 'createUser',
+    methodArguments: [options],
+    userCallback: callback
+  });
+};
+
+
+
+// Change password. Must be logged in.
+//
+// @param oldPassword {String|null} By default servers no longer allow
+//   changing password without the old password, but they could so we
+//   support passing no password to the server and letting it decide.
 // @param newPassword {String}
 // @param callback {Function(error|undefined)}
 Accounts.changePassword = function (oldPassword, newPassword, callback) {

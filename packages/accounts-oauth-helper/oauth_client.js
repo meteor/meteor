@@ -54,6 +54,7 @@ var openCenteredPopup = function(url, width, height) {
         ? window.outerWidth : document.body.clientWidth;
   var outerHeight = typeof window.outerHeight !== 'undefined'
         ? window.outerHeight : (document.body.clientHeight - 22);
+  // XXX what is the 22?
 
   // Use `outerWidth - width` and `outerHeight - height` for help in
   // positioning the popup centered relative to the current window
