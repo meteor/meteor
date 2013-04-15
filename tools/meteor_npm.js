@@ -407,9 +407,18 @@ _.extend(exports, {
     // We don't use npm.commands.install since we couldn't
     // figure out how to silence all output (specifically the
     // installed tree which is printed out with `console.log`)
+    //
+    // We use --force, because the NPM cache is broken! See
+    // https://github.com/isaacs/npm/issues/3265 Basically, switching back and
+    // forth between a tarball fork of version X and the real version X can
+    // confuse NPM. But the main reason to use tarball URLs is to get a fork of
+    // the latest version with some fix, so it's easy to trigger this! So
+    // instead, always use --force. (Even with --force, we still WRITE to the
+    // cache, so we can corrupt the cache for other invocations of npm... ah
+    // well.)
     var result =
       this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
-                         ["install", installArg],
+                         ["install", "--force", installArg],
                          {cwd: dir});
 
     if (! result.success) {
@@ -436,10 +445,11 @@ _.extend(exports, {
 
     this._ensureConnected();
 
-    // `npm install`, which reads npm-shrinkwrap.json
+    // `npm install`, which reads npm-shrinkwrap.json.  See above for why
+    // --force.
     var result =
       this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
-                         ["install"], {cwd: dir});
+                         ["install", "--force"], {cwd: dir});
 
 
     if (! result.success) {
