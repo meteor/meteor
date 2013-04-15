@@ -502,6 +502,9 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
       m[self._prefix + method] = function (/* ... */) {
         try {
           if (this.isSimulation) {
+            if (Meteor.isServer)
+              return;
+
             // In a client simulation, you can do any mutation (even with a
             // complex selector).
             self._collection[method].apply(

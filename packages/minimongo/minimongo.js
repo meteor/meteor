@@ -10,6 +10,8 @@
 LocalCollection = function () {
   this.docs = {}; // _id -> document (also containing id)
 
+  this._observeQueue = new Meteor._SynchronousQueue();
+
   this.next_qid = 1; // live query id generator
 
   // qid -> live query object. keys:
@@ -259,21 +261,29 @@ _.extend(LocalCollection.Cursor.prototype, {
     // wrap callbacks we were passed. callbacks only fire when not paused and
     // are never undefined (except that query.moved is undefined for unordered
     // callbacks).
-    var if_not_paused = function (f) {
+
+    // furthermore, callbacks enqueue until the operation we're working on is
+    // done.
+    var wrapCallback = function (f) {
       if (!f)
         return function () {};
       return function (/*args*/) {
-        if (!self.collection.paused)
-          f.apply(this, arguments);
+        var collection = this;
+        var args = arguments;
+        if (!self.collection.paused) {
+          self.collection._observeQueue.queueTask(function () {
+            f.apply(collection, args);
+          });
+        }
       };
     };
-    query.added = if_not_paused(options.added);
-    query.changed = if_not_paused(options.changed);
-    query.removed = if_not_paused(options.removed);
+    query.added = wrapCallback(options.added);
+    query.changed = wrapCallback(options.changed);
+    query.removed = wrapCallback(options.removed);
     if (ordered) {
-      query.moved = if_not_paused(options.moved);
-      query.addedBefore = if_not_paused(options.addedBefore);
-      query.movedBefore = if_not_paused(options.movedBefore);
+      query.moved = wrapCallback(options.moved);
+      query.addedBefore = wrapCallback(options.addedBefore);
+      query.movedBefore = wrapCallback(options.movedBefore);
     }
 
     if (!options._suppress_initial && !self.collection.paused) {
@@ -305,6 +315,7 @@ _.extend(LocalCollection.Cursor.prototype, {
         handle.stop();
       });
     }
+    self.collection._observeQueue.flush();
 
     return handle;
   }
@@ -427,7 +438,7 @@ LocalCollection.prototype.insert = function (doc) {
     if (self.queries[qid])
       LocalCollection._recomputeResults(self.queries[qid]);
   });
-
+  self._observeQueue.flush();
   return doc._id;
 };
 
@@ -484,6 +495,7 @@ LocalCollection.prototype.remove = function (selector) {
     if (query)
       LocalCollection._recomputeResults(query);
   });
+  self._observeQueue.flush();
 };
 
 // XXX atomicity: if multi is true, and one modification fails, do
@@ -526,6 +538,7 @@ LocalCollection.prototype.update = function (selector, mod, options) {
       LocalCollection._recomputeResults(query,
                                         qidToOriginalResults[qid]);
   });
+  self._observeQueue.flush();
 };
 
 LocalCollection.prototype._modifyAndNotify = function (
@@ -755,6 +768,7 @@ LocalCollection.prototype.pauseObservers = function () {
 // database. Note that this is not just replaying all the changes that
 // happened during the pause, it is a smarter 'coalesced' diff.
 LocalCollection.prototype.resumeObservers = function () {
+  var self = this;
   // No-op if not paused.
   if (!this.paused)
     return;
@@ -764,13 +778,14 @@ LocalCollection.prototype.resumeObservers = function () {
   this.paused = false;
 
   for (var qid in this.queries) {
-    var query = this.queries[qid];
+    var query = self.queries[qid];
     // Diff the current results against the snapshot and send to observers.
     // pass the query object for its observer callbacks.
     LocalCollection._diffQueryChanges(
       query.ordered, query.results_snapshot, query.results, query);
     query.results_snapshot = null;
   }
+  self._observeQueue.flush();
 };
 
 
