@@ -1282,17 +1282,10 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
   ]);
 });
 
-var getSelfConnectionUrl = function () {
-  if (Meteor.isClient) {
-    return "/";
-  } else {
-    return Meteor.absoluteUrl();
-  }
-};
 
 Tinytest.addAsync("livedata connection - version negotiation requires renegotiating",
                   function (test, onComplete) {
-  var connection = new Meteor._LivedataConnection(getSelfConnectionUrl(), {
+  var connection = new Meteor._LivedataConnection(Meteor.absoluteUrl(), {
     reloadWithOutstanding: true,
     supportedDDPVersions: ["garbled", Meteor._SUPPORTED_DDP_VERSIONS[0]],
     onConnectionFailure: function () { test.fail(); onComplete(); },
@@ -1306,7 +1299,7 @@ Tinytest.addAsync("livedata connection - version negotiation requires renegotiat
 
 Tinytest.addAsync("livedata connection - version negotiation error",
                   function (test, onComplete) {
-  var connection = new Meteor._LivedataConnection(getSelfConnectionUrl(), {
+  var connection = new Meteor._LivedataConnection(Meteor.absoluteUrl(), {
     reloadWithOutstanding: true,
     supportedDDPVersions: ["garbled", "more garbled"],
     onConnectionFailure: function () {
