@@ -8,25 +8,24 @@ var withCurrentInvocation = function (f) {
     return f;
 };
 
+var bindAndCatch = function (context, f) {
+  return Meteor.bindEnvironment(withCurrentInvocation(f), function (e) {
+    // XXX report nicely (or, should we catch it at all?)
+    Meteor._debug("Exception from " + context + ":", e);
+  });
+};
+
 _.extend(Meteor, {
   // Meteor.setTimeout and Meteor.setInterval callbacks scheduled
   // inside a server method are not part of the method invocation and
   // should clear out the CurrentInvocation environment variable.
 
   setTimeout: function (f, duration) {
-    f = withCurrentInvocation(f);
-    return setTimeout(Meteor.bindEnvironment(f, function (e) {
-      // XXX report nicely (or, should we catch it at all?)
-      Meteor._debug("Exception from setTimeout callback:", e.stack);
-    }), duration);
+    return setTimeout(bindAndCatch("setTimeout callback", f), duration);
   },
 
   setInterval: function (f, duration) {
-    f = withCurrentInvocation(f);
-    return setInterval(Meteor.bindEnvironment(f, function (e) {
-      // XXX report nicely (or, should we catch it at all?)
-      Meteor._debug("Exception from setInterval callback:", e);
-    }), duration);
+    return setInterval(bindAndCatch("setInterval callback", f), duration);
   },
 
   clearInterval: function(x) {
