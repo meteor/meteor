@@ -1,4 +1,5 @@
 var connect = Npm.require("connect");
+var Fiber = Npm.require('fibers');
 
 Meteor._routePolicy.declare('/_oauth/', 'network');
 
@@ -53,7 +54,8 @@ Accounts.oauth._unregisterService = function (name) {
 // XXX we should periodically clear old entries
 Accounts.oauth._loginResultForState = {};
 
-// Listen to calls to `login` with an oauth option set
+// Listen to calls to `login` with an oauth option set. This is where
+// users actually get logged in to meteor via oauth.
 Accounts.registerLoginHandler(function (options) {
   if (!options.oauth)
     return undefined; // don't handle
@@ -79,7 +81,6 @@ Accounts.registerLoginHandler(function (options) {
     return result;
 });
 
-var Fiber = Npm.require('fibers');
 // Listen to incoming OAuth http requests
 __meteor_bootstrap__.app
   .use(connect.query())
@@ -129,9 +130,6 @@ Accounts.oauth._middleware = function (req, res, next) {
     if (req.query.state && err instanceof Error)
       Accounts.oauth._loginResultForState[req.query.state] = err;
 
-    // also log to the server console, so the developer sees it.
-    Meteor._debug("Exception in oauth request handler", err);
-
     // XXX the following is actually wrong. if someone wants to
     // redirect rather than close once we are done with the OAuth
     // flow, as supported by
@@ -152,7 +150,6 @@ Accounts.oauth._middleware = function (req, res, next) {
 // @returns {String|null} e.g. "facebook", or null if this isn't an
 // oauth request
 var oauthServiceName = function (req) {
-
   // req.url will be "/_oauth/<service name>?<action>"
   var barePath = req.url.substring(0, req.url.indexOf('?'));
   var splitPath = barePath.split('/');

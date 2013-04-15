@@ -1,7 +1,9 @@
 
 ## vNEXT
 
-* Better stack traces for `Meteor.Error`.
+* Better error reporting:
+  * Capture real stack traces for `Meteor.Error`.
+  * Report better errors with misconfigured OAuth services.
 
 * Add per-package upgrade notices to `meteor update`.
 
@@ -13,7 +15,11 @@
 * Upgrade d3 from 2.x to 3.1.4. See
   https://github.com/mbostock/d3/wiki/Upgrading-to-3.0 for compatibility notes.
 
+* Allow CoffeeScript to set global variables when using `use strict`. #933
+
 * Return the inserted documented ID from `LocalCollection.insert`. #908
+
+* Add Weibo token expiration time to `services.weibo.expiresAt`.
 
 * `Spiderable.userAgentRegExps` can now be modified to change what user agents
   are treated as spiders by the `spiderable` package.
@@ -24,7 +30,7 @@
 * Fix meteor command line tool when run from a home directory with
   spaces in its name.
 
-Patches contributed by GitHub users andreas-karlsson, jacott,
+Patches contributed by GitHub users andreas-karlsson, awwx, jacott,
 joshuaconner, and timhaines.
 
 

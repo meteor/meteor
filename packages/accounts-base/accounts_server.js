@@ -1,84 +1,7 @@
 ///
-/// LOGIN HANDLERS
-///
-
-Meteor.methods({
-  // @returns {Object|null}
-  //   If successful, returns {token: reconnectToken, id: userId}
-  //   If unsuccessful (for example, if the user closed the oauth login popup),
-  //     returns null
-  login: function(options) {
-    var result = tryAllLoginHandlers(options);
-    if (result !== null)
-      this.setUserId(result.id);
-    return result;
-  },
-
-  logout: function() {
-    this.setUserId(null);
-  }
-});
-
-Accounts._loginHandlers = [];
-
-// Try all of the registered login handlers until one of them doesn't return
-// `undefined`, meaning it handled this call to `login`. Return that return
-// value, which ought to be a {id/token} pair.
-var tryAllLoginHandlers = function (options) {
-  var result = undefined;
-
-  _.find(Accounts._loginHandlers, function(handler) {
-
-    var maybeResult = handler(options);
-    if (maybeResult !== undefined) {
-      result = maybeResult;
-      return true;
-    } else {
-      return false;
-    }
-  });
-
-  if (result === undefined) {
-    throw new Meteor.Error(400, "Unrecognized options for login request");
-  } else {
-    return result;
-  }
-};
-
-// @param handler {Function} A function that receives an options object
-// (as passed as an argument to the `login` method) and returns one of:
-// - `undefined`, meaning don't handle;
-// - {id: userId, token: *}, if the user logged in successfully.
-// - throw an error, if the user failed to log in.
-Accounts.registerLoginHandler = function(handler) {
-  Accounts._loginHandlers.push(handler);
-};
-
-// support reconnecting using a meteor login token
-Accounts._generateStampedLoginToken = function () {
-  return {token: Random.id(), when: +(new Date)};
-};
-
-Accounts.registerLoginHandler(function(options) {
-  if (options.resume) {
-    var user = Meteor.users.findOne(
-      {"services.resume.loginTokens.token": options.resume});
-    if (!user)
-      throw new Meteor.Error(403, "Couldn't find login token");
-
-    return {
-      token: options.resume,
-      id: user._id
-    };
-  } else {
-    return undefined;
-  }
-});
-
-
-///
 /// CURRENT USER
 ///
+
 Meteor.userId = function () {
   // This function only works if called inside a method. In theory, it
   // could also be called from publish statements, since they also
@@ -101,6 +24,97 @@ Meteor.user = function () {
     return null;
   return Meteor.users.findOne(userId);
 };
+
+///
+/// LOGIN HANDLERS
+///
+
+// The main entry point for auth packages to hook in to login.
+//
+// @param handler {Function} A function that receives an options object
+// (as passed as an argument to the `login` method) and returns one of:
+// - `undefined`, meaning don't handle;
+// - {id: userId, token: *}, if the user logged in successfully.
+// - throw an error, if the user failed to log in.
+Accounts.registerLoginHandler = function(handler) {
+  Accounts._loginHandlers.push(handler);
+};
+
+// list of all registered handlers.
+Accounts._loginHandlers = [];
+
+
+// Try all of the registered login handlers until one of them doesn'
+// return `undefined`, meaning it handled this call to `login`. Return
+// that return value, which ought to be a {id/token} pair.
+var tryAllLoginHandlers = function (options) {
+  var result = undefined;
+
+  _.find(Accounts._loginHandlers, function(handler) {
+
+    var maybeResult = handler(options);
+    if (maybeResult !== undefined) {
+      result = maybeResult;
+      return true;
+    } else {
+      return false;
+    }
+  });
+
+  if (result === undefined) {
+    throw new Meteor.Error(400, "Unrecognized options for login request");
+  } else {
+    return result;
+  }
+};
+
+
+// Actual methods for login and logout. This is the entry point for
+// clients to actually log in.
+Meteor.methods({
+  // @returns {Object|null}
+  //   If successful, returns {token: reconnectToken, id: userId}
+  //   If unsuccessful (for example, if the user closed the oauth login popup),
+  //     returns null
+  login: function(options) {
+    var result = tryAllLoginHandlers(options);
+    if (result !== null)
+      this.setUserId(result.id);
+    return result;
+  },
+
+  logout: function() {
+    this.setUserId(null);
+  }
+});
+
+///
+/// RECONNECT TOKENS
+///
+/// support reconnecting using a meteor login token
+
+// Login handler for resume tokens.
+Accounts.registerLoginHandler(function(options) {
+  if (!options.resume)
+    return undefined;
+
+  var user = Meteor.users.findOne({
+    "services.resume.loginTokens.token": ""+options.resume
+  });
+  if (!user)
+    throw new Meteor.Error(403, "Couldn't find login token");
+
+  return {
+    token: options.resume,
+    id: user._id
+  };
+});
+
+// Semi-public. Used by other login methods to generate tokens.
+Accounts._generateStampedLoginToken = function () {
+  return {token: Random.id(), when: +(new Date)};
+};
+
 
 ///
 /// CREATE USER HOOKS
