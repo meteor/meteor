@@ -50,7 +50,7 @@ if [ ! -x "$METEOR_WAREHOUSE_DIR/meteor" ]; then
   fi
 
   if [ "$UNAME" = "Darwin" ] ; then
-    if [ "i386" != $(uname -p) -o "1" != $(sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0) ] ; then
+    if [ "i386" != "$(uname -p)" -o "1" != "$(sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0)" ] ; then
       # Can't just test uname -m = x86_64, because Snow Leopard can
       # return other values.
       echo "Only 64-bit Intel processors are supported at this time." 1>&2
@@ -71,7 +71,7 @@ if [ ! -x "$METEOR_WAREHOUSE_DIR/meteor" ]; then
   ROOT_URL="$(curl -s --fail $BOOTSTRAP_URL)"
   TARBALL_URL="${ROOT_URL}/meteor-bootstrap-${PLATFORM}.tar.gz"
 
-  INSTALL_TMPDIR="$(dirname $METEOR_WAREHOUSE_DIR)/.meteor-install-tmp"
+  INSTALL_TMPDIR="$(dirname "$METEOR_WAREHOUSE_DIR")/.meteor-install-tmp"
   rm -rf "$INSTALL_TMPDIR"
   mkdir "$INSTALL_TMPDIR"
   if [ -n "$USER" ]; then
