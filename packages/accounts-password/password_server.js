@@ -191,6 +191,20 @@ Accounts.setPassword = function (userId, newPassword) {
 /// RESETTING VIA EMAIL
 ///
 
+// Method called by a user to request a password reset email. This is
+// the start of the reset process.
+Meteor.methods({forgotPassword: function (options) {
+  var email = options.email;
+  if (!email)
+    throw new Meteor.Error(400, "Need to set options.email");
+
+  var user = Meteor.users.findOne({"emails.address": email});
+  if (!user)
+    throw new Meteor.Error(403, "User not found");
+
+  Accounts.sendResetPasswordEmail(user._id, email);
+}});
+
 // send the user an email with a link that when opened allows the user
 // to set a new password, without the old password.
 Accounts.sendResetPasswordEmail = function (userId, email) {
@@ -227,6 +241,9 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
 // a link that when opened both marks their email as verified and forces them
 // to choose their password. The email must be one of the addresses in the
 // user's emails field, or undefined to pick the first email automatically.
+//
+// This is not called automatically, it must be called manually if you
+// want to use enrollment emails.
 Accounts.sendEnrollmentEmail = function (userId, email) {
   // XXX refactor! This is basically identical to sendResetPasswordEmail.
 
@@ -423,31 +440,29 @@ var createUser = function (options) {
 };
 
 // method for create user. Requests come from the client.
-Meteor.methods({
-  createUser: function (options) {
-    options = _.clone(options);
-    options.generateLoginToken = true;
-    if (Accounts._options.forbidClientAccountCreation)
-      throw new Meteor.Error(403, "Signups forbidden");
+Meteor.methods({createUser: function (options) {
+  options = _.clone(options);
+  options.generateLoginToken = true;
+  if (Accounts._options.forbidClientAccountCreation)
+    throw new Meteor.Error(403, "Signups forbidden");
 
-    // Create user. result contains id and token.
-    var result = createUser(options);
-    // safety belt. createUser is supposed to throw on error. send 500 error
-    // instead of sending a verification email with empty userid.
-    if (!result.id)
-      throw new Error("createUser failed to insert new user");
+  // Create user. result contains id and token.
+  var result = createUser(options);
+  // safety belt. createUser is supposed to throw on error. send 500 error
+  // instead of sending a verification email with empty userid.
+  if (!result.id)
+    throw new Error("createUser failed to insert new user");
 
-    // If `Accounts._options.sendVerificationEmail` is set, register
-    // a token to verify the user's primary email, and send it to
-    // that address.
-    if (options.email && Accounts._options.sendVerificationEmail)
-      Accounts.sendVerificationEmail(result.id, options.email);
+  // If `Accounts._options.sendVerificationEmail` is set, register
+  // a token to verify the user's primary email, and send it to
+  // that address.
+  if (options.email && Accounts._options.sendVerificationEmail)
+    Accounts.sendVerificationEmail(result.id, options.email);
 
-    // client gets logged in as the new user afterwards.
-    this.setUserId(result.id);
-    return result;
-  }
-});
+  // client gets logged in as the new user afterwards.
+  this.setUserId(result.id);
+  return result;
+}});
 
 // Create user directly on the server.
 //
