@@ -2,7 +2,6 @@
 // (to use a polyfill in the browser, for example).
 Meteor._setImmediateImpl =
   this.setImmediate ||
-  (Meteor.isServer && process.nextTick) ||
   function (f) {
     // Older Firefox will pass an argument to the setTimeout callback
     // function, indicating the "actual lateness." It's non-standard,
