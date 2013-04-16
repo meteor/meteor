@@ -209,8 +209,6 @@ HTML5.BOOLEAN_ATTRIBUTES = {
   'output': ['disabled', 'readonly']
 };
 
-HTML5.ENTITIES = require('html5-entities');
-
 HTML5.ENCODINGS = [
   'ansi_x3.4-1968',
   'iso-ir-6',

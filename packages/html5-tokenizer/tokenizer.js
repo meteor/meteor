@@ -13,6 +13,8 @@ var last = function (array) {
   return array[array.length - 1];
 };
 
+HTML5.debug = function () {};
+
 var ENTITY_KEYS = keys(HTML5.ENTITIES);
 
 var t = HTML5.Tokenizer = function HTML5Tokenizer(input, document, tree) {
