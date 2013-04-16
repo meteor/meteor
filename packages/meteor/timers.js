@@ -1,3 +1,15 @@
+// Allow a smart package to override the setImmediate implementation
+// (to use a polyfill in the browser, for example).
+Meteor._setImmediateImpl =
+  this.setImmediate ||
+  (Meteor.isServer && process.nextTick) ||
+  function (f) {
+    // Older Firefox will pass an argument to the setTimeout callback
+    // function, indicating the "actual lateness." It's non-standard,
+    // so standardize on not having it.
+    setTimeout(function () {f();}, 0);
+  };
+
 var withCurrentInvocation = function (f) {
   if (Meteor._CurrentInvocation) {
     if (Meteor._CurrentInvocation.get() && Meteor._CurrentInvocation.get().isSimulation)
@@ -36,16 +48,11 @@ _.extend(Meteor, {
     return clearTimeout(x);
   },
 
-  // won't be necessary once we clobber the global setTimeout
-  //
   // XXX consider making this guarantee ordering of defer'd callbacks, like
   // Deps.afterFlush or Node's nextTick (in practice). Then tests can do:
   //    callSomethingThatDefersSomeWork();
   //    Meteor.defer(expect(somethingThatValidatesThatTheWorkHappened));
   defer: function (f) {
-    // Older Firefox will pass an argument to the setTimeout callback
-    // function, indicating the "actual lateness." It's non-standard,
-    // so for defer, standardize on not having it.
-    Meteor.setTimeout(function () {f();}, 0);
+    Meteor._setImmediateImpl(bindAndCatch("defer callback", f));
   }
 });
