@@ -31,6 +31,10 @@ Package.register_extension("coffee", coffeescript_handler);
 Package.register_extension("litcoffee", coffeescript_handler);
 
 Package.on_test(function (api) {
-  api.add_files(['coffeescript_tests.coffee', 'litcoffeescript_tests.litcoffee', 'coffeescript_tests.js'],
-                ['client', 'server']);
+  api.add_files([
+    'coffeescript_tests.coffee',
+    'coffeescript_strict_tests.coffee',
+    'litcoffeescript_tests.litcoffee',
+    'coffeescript_tests.js'
+  ], ['client', 'server']);
 });

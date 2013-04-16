@@ -1,5 +1,3 @@
-var connect = Npm.require("connect");
-
 // A place to store request tokens pending verification
 Accounts.oauth1._requestTokens = {};
 

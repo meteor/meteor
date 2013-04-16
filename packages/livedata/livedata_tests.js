@@ -21,6 +21,7 @@ var failure = function (test, code, reason) {
 
 Tinytest.add("livedata - Meteor.Error", function (test) {
   var error = new Meteor.Error(123, "kittens", "puppies");
+  test.instanceOf(error, Meteor.Error);
   test.instanceOf(error, Error);
   test.equal(error.error, 123);
   test.equal(error.reason, "kittens");
@@ -596,6 +597,71 @@ if (Meteor.isClient) {
       }
     ]);
 }
+
+
+if (Meteor.isServer) {
+  Meteor.methods({
+    "s2s": function (arg) {
+      return "s2s " + arg;
+    }
+  });
+}
+(function () {
+  testAsyncMulti("livedata - connect works from both client and server", [
+    function (test, expect) {
+      var self = this;
+      self.conn = Meteor.connect(Meteor.absoluteUrl());
+      pollUntil(expect, function () {
+        return self.conn.status().connected;
+      }, 10000);
+    },
+
+    function (test, expect) {
+      var self = this;
+      if (self.conn.status().connected) {
+        self.conn.call('s2s', 'foo', expect(function (err, res) {
+          if (err)
+            throw err;
+          test.equal(res, "s2s foo");
+        }));
+      }
+    }
+  ]);
+})();
+
+if (Meteor.isServer) {
+  (function () {
+    testAsyncMulti("livedata - method call on server blocks in a fiber way", [
+      function (test, expect) {
+        var self = this;
+        self.conn = Meteor.connect(Meteor.absoluteUrl());
+        pollUntil(expect, function () {
+          return self.conn.status().connected;
+        }, 10000);
+      },
+
+      function (test, expect) {
+        var self = this;
+        if (self.conn.status().connected) {
+          test.equal(self.conn.call('s2s', 'foo'), "s2s foo");
+        }
+      }
+    ]);
+  })();
+}
+
+(function () {
+  testAsyncMulti("livedata - connect fails to unknown place", [
+    function (test, expect) {
+      var self = this;
+      self.conn = Meteor.connect("example.com");
+      Meteor.setTimeout(expect(function () {
+        test.isFalse(self.conn.status().connected, "Not connected");
+      }), 500);
+    }
+  ]);
+})();
+
 
 // XXX some things to test in greater detail:
 // staying in simulation mode

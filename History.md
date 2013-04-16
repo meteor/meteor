@@ -1,14 +1,53 @@
 
 ## vNEXT
 
+## v0.6.2
+
+* Better error reporting:
+  * Capture real stack traces for `Meteor.Error`.
+  * Report better errors with misconfigured OAuth services.
+
+* Add per-package upgrade notices to `meteor update`.
+
+* Experimental server-to-server DDP support: `Meteor.connect` on the
+  server will connect to a remote DDP endpoint via WebSockets. Method
+  calls should work fine, but subscriptions and minimongo on the server
+  are still a work in progress.
+
+* Upgrade d3 from 2.x to 3.1.4. See
+  https://github.com/mbostock/d3/wiki/Upgrading-to-3.0 for compatibility notes.
+
+* Allow CoffeeScript to set global variables when using `use strict`. #933
+
+* Return the inserted documented ID from `LocalCollection.insert`. #908
+
+* Add Weibo token expiration time to `services.weibo.expiresAt`.
+
+* `Spiderable.userAgentRegExps` can now be modified to change what user agents
+  are treated as spiders by the `spiderable` package.
+
+* Prevent observe callbacks from affecting the arguments to identical
+  observes. #855
+
+* Fix meteor command line tool when run from a home directory with
+  spaces in its name. If you previously installed meteor release 0.6.0
+  or 0.6.1 you'll need to uninstall and reinstall meteor to support
+  users with spaces in their usernames (see
+  https://github.com/meteor/meteor/blob/master/README.md#uninstalling-meteor)
+
+Patches contributed by GitHub users andreas-karlsson, awwx, jacott,
+joshuaconner, and timhaines.
+
+
 ## v0.6.1
 
 * Correct NPM behavior in packages in case there is a `node_modules` directory
   somewhere above the app directory. #927
 
-* Small bug fix in the low-level `routepolicy` package
+* Small bug fix in the low-level `routepolicy` package.
 
-Patches contributed by GitHub users andreas-karlsson, awwx.
+Patches contributed by GitHub users andreas-karlsson and awwx.
+
 
 ## v0.6.0
 

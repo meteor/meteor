@@ -1,5 +1,3 @@
-var connect = Npm.require("connect");
-
 // connect middleware
 Accounts.oauth2._handleRequest = function (service, query, res) {
   // check if user authorized access

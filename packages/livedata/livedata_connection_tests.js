@@ -1,3 +1,4 @@
+
 var newConnection = function (stream) {
   // Some of these tests leave outstanding methods with no result yet
   // returned. This should not block us from re-running tests when sources
@@ -260,12 +261,12 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   test.equal(actualIds, expectedIds);
 });
 
+
 Tinytest.add("livedata stub - this", function (test) {
   var stream = new Meteor._StubStream();
   var conn = newConnection(stream);
 
   startAndConnect(test, stream);
-
   conn.methods({test_this: function() {
     test.isTrue(this.isSimulation);
     // XXX Backwards compatibility only. Remove this before 1.0.
@@ -274,8 +275,7 @@ Tinytest.add("livedata stub - this", function (test) {
   }});
 
   // should throw no exceptions
-  conn.call('test_this');
-
+  conn.call('test_this', _.identity);
   // satisfy method, quiesce connection
   var message = JSON.parse(stream.sent.shift());
   test.equal(message, {msg: 'method', method: 'test_this',
@@ -286,7 +286,6 @@ Tinytest.add("livedata stub - this", function (test) {
   stream.receive({msg: 'updated', 'methods': [message.id]});
 
 });
-
 
 Tinytest.add("livedata stub - methods", function (test) {
   var stream = new Meteor._StubStream();
@@ -399,7 +398,7 @@ Tinytest.add("livedata stub - mutating method args", function (test) {
     arg.foo = 42;
   }});
 
-  conn.call('mutateArgs', {foo: 50});
+  conn.call('mutateArgs', {foo: 50}, _.identity);
 
   // Method should be called with original arg, not mutated arg.
   var message = JSON.parse(stream.sent.shift());
@@ -428,7 +427,6 @@ var observeCursor = function (test, cursor) {
   };
 };
 
-
 // method calls another method in simulation. see not sent.
 Tinytest.add("livedata stub - methods calling methods", function (test) {
   var stream = new Meteor._StubStream();
@@ -452,7 +450,7 @@ Tinytest.add("livedata stub - methods calling methods", function (test) {
   var o = observeCursor(test, coll.find());
 
   // call method.
-  conn.call('do_something');
+  conn.call('do_something', _.identity);
 
   // see we only send message for outer methods
   var message = JSON.parse(stream.sent.shift());
@@ -492,7 +490,6 @@ Tinytest.add("livedata stub - methods calling methods", function (test) {
 
   o.stop();
 });
-
 
 Tinytest.add("livedata stub - method call before connect", function (test) {
   var stream = new Meteor._StubStream;
@@ -561,8 +558,9 @@ Tinytest.add("livedata stub - reconnect", function (test) {
   conn.call('do_something', function () {
     methodCallbackFired = true;
   });
-  conn.apply('do_something_else', [], {wait: true});
-  conn.apply('do_something_later', []);
+
+  conn.apply('do_something_else', [], {wait: true}, _.identity);
+  conn.apply('do_something_later', [], _.identity);
 
   test.isFalse(methodCallbackFired);
 
@@ -640,6 +638,7 @@ Tinytest.add("livedata stub - reconnect", function (test) {
 
   o.stop();
 });
+
 
 Tinytest.add("livedata stub - reconnect method which only got result", function (test) {
   var stream = new Meteor._StubStream;
@@ -900,7 +899,6 @@ Tinytest.add("livedata stub - reconnect method which only got data", function (t
   o.stop();
 });
 
-
 Tinytest.add("livedata stub - multiple stubs same doc", function (test) {
   var stream = new Meteor._StubStream;
   var conn = newConnection(stream);
@@ -923,7 +921,7 @@ Tinytest.add("livedata stub - multiple stubs same doc", function (test) {
   test.equal(coll.find().count(), 0);
 
   // Call the insert method.
-  conn.call('insertSomething');
+  conn.call('insertSomething', _.identity);
   // Stub write is visible.
   test.equal(coll.find({foo: 'bar'}).count(), 1);
   var stubWrittenId = coll.findOne({foo: 'bar'})._id;
@@ -935,7 +933,7 @@ Tinytest.add("livedata stub - multiple stubs same doc", function (test) {
   test.equal(stream.sent.length, 0);
 
   // Call update method.
-  conn.call('updateIt', stubWrittenId);
+  conn.call('updateIt', stubWrittenId, _.identity);
   // This stub write is visible too.
   test.equal(coll.find().count(), 1);
   test.equal(coll.findOne(stubWrittenId),
@@ -1004,11 +1002,11 @@ Tinytest.add("livedata stub - unsent methods don't block quiescence", function (
   test.equal(coll.find().count(), 0);
 
   // Call a random method (no-op)
-  conn.call('no-op');
+  conn.call('no-op', _.identity);
   // Call a wait method
-  conn.apply('no-op', [], {wait: true});
+  conn.apply('no-op', [], {wait: true}, _.identity);
   // Call a method with a stub that writes.
-  conn.call('insertSomething');
+  conn.call('insertSomething', _.identity);
 
 
   // Stub write is visible.
@@ -1248,15 +1246,15 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
   conn.methods({do_something: function (x) {}});
 
   conn.onReconnect = function() {
-    conn.apply('do_something', ['reconnect zero']);
-    conn.apply('do_something', ['reconnect one']);
-    conn.apply('do_something', ['reconnect two'], {wait: true});
-    conn.apply('do_something', ['reconnect three']);
+    conn.apply('do_something', ['reconnect zero'], _.identity);
+    conn.apply('do_something', ['reconnect one'], _.identity);
+    conn.apply('do_something', ['reconnect two'], {wait: true}, _.identity);
+    conn.apply('do_something', ['reconnect three'], _.identity);
   };
 
-  conn.apply('do_something', ['one']);
-  conn.apply('do_something', ['two'], {wait: true});
-  conn.apply('do_something', ['three']);
+  conn.apply('do_something', ['one'], _.identity);
+  conn.apply('do_something', ['two'], {wait: true}, _.identity);
+  conn.apply('do_something', ['three'], _.identity);
 
   // reconnect
   stream.sent = [];
@@ -1284,9 +1282,10 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
   ]);
 });
 
+
 Tinytest.addAsync("livedata connection - version negotiation requires renegotiating",
                   function (test, onComplete) {
-  var connection = new Meteor._LivedataConnection("/", {
+  var connection = new Meteor._LivedataConnection(Meteor.absoluteUrl(), {
     reloadWithOutstanding: true,
     supportedDDPVersions: ["garbled", Meteor._SUPPORTED_DDP_VERSIONS[0]],
     onConnectionFailure: function () { test.fail(); onComplete(); },
@@ -1300,7 +1299,7 @@ Tinytest.addAsync("livedata connection - version negotiation requires renegotiat
 
 Tinytest.addAsync("livedata connection - version negotiation error",
                   function (test, onComplete) {
-  var connection = new Meteor._LivedataConnection("/", {
+  var connection = new Meteor._LivedataConnection(Meteor.absoluteUrl(), {
     reloadWithOutstanding: true,
     supportedDDPVersions: ["garbled", "more garbled"],
     onConnectionFailure: function () {
@@ -1325,15 +1324,15 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
   conn.methods({do_something: function (x) {}});
 
   conn.onReconnect = function() {
-    conn.apply('do_something', ['reconnect one']);
-    conn.apply('do_something', ['reconnect two']);
-    conn.apply('do_something', ['reconnect three']);
+    conn.apply('do_something', ['reconnect one'], _.identity);
+    conn.apply('do_something', ['reconnect two'], _.identity);
+    conn.apply('do_something', ['reconnect three'], _.identity);
   };
 
-  conn.apply('do_something', ['one']);
-  conn.apply('do_something', ['two'], {wait: true});
-  conn.apply('do_something', ['three'], {wait: true});
-  conn.apply('do_something', ['four']);
+  conn.apply('do_something', ['one'], _.identity);
+  conn.apply('do_something', ['two'], {wait: true}, _.identity);
+  conn.apply('do_something', ['three'], {wait: true}, _.identity);
+  conn.apply('do_something', ['four'], _.identity);
 
   // reconnect
   stream.sent = [];
@@ -1369,10 +1368,10 @@ Tinytest.add("livedata connection - onReconnect with sent messages", function(te
   conn.methods({do_something: function (x) {}});
 
   conn.onReconnect = function() {
-    conn.apply('do_something', ['login'], {wait: true});
+    conn.apply('do_something', ['login'], {wait: true}, _.identity);
   };
 
-  conn.apply('do_something', ['one']);
+  conn.apply('do_something', ['one'], _.identity);
 
   // initial connect
   stream.sent = [];
@@ -1462,7 +1461,7 @@ Tinytest.add("livedata stub - reconnect double wait method", function (test) {
   // Call another method. It should be delivered immediately. This is a
   // regression test for a case where it never got delivered because there was
   // an empty block in _outstandingMethodBlocks blocking it from being sent.
-  conn.call('lastMethod');
+  conn.call('lastMethod', _.identity);
   testGotMessage(test, stream,
                  {msg: 'method', method: 'lastMethod', params: [], id: '*'});
 });
@@ -1522,7 +1521,7 @@ Tinytest.add("livedata stub - stubs before connected", function (test) {
   test.length(stream.sent, 0);
 
   // Insert a document. The stub updates "conn" directly.
-  coll.insert({_id: "foo", bar: 42});
+  coll.insert({_id: "foo", bar: 42}, _.identity);
   test.equal(coll.find().count(), 1);
   test.equal(coll.findOne(), {_id: "foo", bar: 42});
   // It also sends the method message.

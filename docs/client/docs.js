@@ -288,6 +288,7 @@ var toc = [
       {name: "EJSON.equals", id: "ejson_equals"},
       {name: "EJSON.clone", id: "ejson_clone"},
       {name: "EJSON.newBinary", id: "ejson_new_binary"},
+      {name: "EJSON.isBinary", id: "ejson_is_binary"},
       {name: "EJSON.addType", id: "ejson_add_type"},
       [
         {instance: "instance", id: "ejson_type_clone", name: "clone"},

@@ -115,7 +115,7 @@ Meteor.http.call = function(method, url, options, callback) {
       Meteor.http._populateData(response);
 
       if (res.statusCode >= 400)
-        error = new Error("failed");
+        error = new Error("Failed [" + res.statusCode + "]");
     }
 
     callback(error, response);

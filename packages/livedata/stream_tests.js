@@ -5,8 +5,8 @@ Tinytest.add("stream - status", function (test) {
   test.equal(typeof status, "object");
   test.isTrue(status.status);
   // Make sure backward-compatiblity names are defined.
-  test.equal(status.retryCount, status.retry_count);
-  test.equal(status.retryTime, status.retry_time);
+  test.equal(status.retryCount, status.retryCount);
+  test.equal(status.retryTime, status.retryTime);
 });
 
 testAsyncMulti("stream - reconnect", [
@@ -35,9 +35,9 @@ testAsyncMulti("stream - reconnect", [
 
 Tinytest.add("stream - sockjs urls are computed correctly", function(test) {
   var testHasSockjsUrl = function(raw, expectedSockjsUrl) {
-    var actual = Meteor._Stream._toSockjsUrl(raw);
+    var actual = Meteor._DdpClientStream._toSockjsUrl(raw);
     if (expectedSockjsUrl instanceof RegExp)
-      test.isTrue(actual.match(expectedSockjsUrl));
+      test.isTrue(actual.match(expectedSockjsUrl), actual);
     else
       test.equal(actual, expectedSockjsUrl);
   };

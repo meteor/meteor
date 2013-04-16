@@ -5,6 +5,15 @@ if (!Accounts._options) {
   Accounts._options = {};
 }
 
+// Set up config for the accounts system. Call this on both the client
+// and the server.
+//
+// XXX we should add some enforcement that this is called on both the
+// client and the server. Otherwise, a user can
+// 'forbidClientAccountCreation' only on the client and while it looks
+// like their app is secure, the server will still accept createUser
+// calls. https://github.com/meteor/meteor/issues/828
+//
 // @param options {Object} an object with fields:
 // - sendVerificationEmail {Boolean}
 //     Send email address verification emails to new users created from

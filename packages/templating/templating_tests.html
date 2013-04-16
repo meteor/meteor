@@ -356,10 +356,7 @@
 {{#each values}}{{this}}{{/each}}
 </template>
 
-<!-- Test for issue #770 - falsy value for with -->
+<!-- Test for issue #770 - falsy value for with. (newlines break this test on IE8) -->
 <template name="test_template_issue770">
-{{# with value1}}{{this}}{{else}}xxx{{/with}}
-{{# with value2}}{{this}}{{else}}xxx{{/with}}
-{{# with value1}}{{this}}{{/with}}
-{{# with value2}}{{this}}{{/with}}
+{{# with value1}}{{this}}{{else}}xxx{{/with}}{{# with value2}}{{this}}{{else}}xxx{{/with}}{{# with value1}}{{this}}{{/with}}{{# with value2}}{{this}}{{/with}}
 </template>

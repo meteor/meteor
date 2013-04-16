@@ -457,7 +457,8 @@ Fiber(function () {
                   path.basename(context.appDir), context.releaseVersion);
 
       // Print any notices relevant to this upgrade.
-      warehouse.printNotices(appRelease, context.releaseVersion);
+      var packages = project.get_packages(context.appDir);
+      warehouse.printNotices(appRelease, context.releaseVersion, packages);
     }
   });
 

@@ -3,5 +3,5 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.add_files('d3.v2.js', 'client');
+  api.add_files('d3.v3.js', 'client');
 });

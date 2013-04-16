@@ -34,6 +34,7 @@ Package.on_use(function (api, where) {
   api.add_files('server_environment.js', 'server');
   api.add_files('helpers.js', ['client', 'server']);
   api.add_files('timers.js', ['client', 'server']);
+  api.add_files('errors.js', ['client', 'server']);
   api.add_files('fiber_helpers.js', 'server');
 
   // dynamic variables, bindEnvironment

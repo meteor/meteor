@@ -44,9 +44,12 @@ var getTokenResponse = function (query) {
       }
     });
 
-  if (result.error)
-    throw result.error;
   var response = result.content;
+
+  if (result.error) {
+    throw new Error("Failed to complete OAuth handshake with Facebook. " +
+                    "HTTP Error " + result.statusCode + ": " + response);
+  }
 
   // Errors come back as JSON but success looks like a query encoded
   // in a url
@@ -60,7 +63,7 @@ var getTokenResponse = function (query) {
   }
 
   if (error_response) {
-    throw new Meteor.Error(500, "Error trying to get access token from Facebook", error_response);
+    throw new Error("Failed to complete OAuth handshake with Facebook. " + response);
   } else {
     // Success!  Extract the facebook access token and expiration
     // time from the response
@@ -68,8 +71,10 @@ var getTokenResponse = function (query) {
     var fbAccessToken = parsedResponse.access_token;
     var fbExpires = parsedResponse.expires;
 
-    if (!fbAccessToken)
-      throw new Meteor.Error(500, "Couldn't find access token in HTTP response.");
+    if (!fbAccessToken) {
+      throw new Error("Failed to complete OAuth handshake with facebook " +
+                      "-- can't find access token in HTTP response. " + response);
+    }
     return {
       accessToken: fbAccessToken,
       expiresIn: fbExpires
@@ -81,7 +86,10 @@ var getIdentity = function (accessToken) {
   var result = Meteor.http.get("https://graph.facebook.com/me", {
     params: {access_token: accessToken}});
 
-  if (result.error)
-    throw result.error;
-  return result.data;
+  if (result.error) {
+    throw new Error("Failed to fetch identity from Facebook. " +
+                    "HTTP Error " + result.statusCode + ": " + result.content);
+  } else {
+    return result.data;
+  }
 };

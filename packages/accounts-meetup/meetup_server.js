@@ -26,20 +26,24 @@ var getAccessToken = function (query) {
       redirect_uri: Meteor.absoluteUrl("_oauth/meetup?close"),
       state: query.state
     }});
-  if (result.error) // if the http response was an error
-    throw result.error;
-  if (result.data.error) // if the http response was a json object with an error attribute
-    throw result.data;
-
-  return result.data.access_token;
+  if (result.error) { // if the http response was an error
+    throw new Error("Failed to complete OAuth handshake with Meetup. " +
+                    "HTTP Error " + result.statusCode + ": " + result.content);
+  } else if (result.data.error) { // if the http response was a json object with an error attribute
+    throw new Error("Failed to complete OAuth handshake with Meetup. " + result.data.error);
+  } else {
+    return result.data.access_token;
+  }
 };
 
 var getIdentity = function (accessToken) {
   var result = Meteor.http.get(
     "https://secure.meetup.com/2/members",
     {params: {member_id: 'self', access_token: accessToken}});
-  if (result.error)
-    throw result.error;
-
-  return result.data.results && result.data.results[0];
+  if (result.error) {
+    throw new Error("Failed to fetch identity from Meetup. " +
+                    "HTTP Error " + result.statusCode + ": " + result.content);
+  } else {
+    return result.data.results && result.data.results[0];
+  }
 };
