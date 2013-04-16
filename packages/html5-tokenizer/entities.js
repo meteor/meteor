@@ -1,4 +1,6 @@
-module.exports = {
+HTML5 = (typeof HTML5 === 'undefined' ? {} : HTML5);
+
+HTML5.ENTITIES = {
   "AElig": "\u00C6",
   "AElig;": "\u00C6",
   "AMP": "&",

@@ -1,5 +1,3 @@
-require('../core-upgrade');
-var HTML5 = require('../html5');
 var events = require('events');
 var Buffer = require('./buffer').Buffer;
 var Models = HTML5.Models;

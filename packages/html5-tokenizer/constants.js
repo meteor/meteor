@@ -1,4 +1,4 @@
-var HTML5 = require('../html5');
+HTML5 = (typeof HTML5 === 'undefined' ? {} : HTML5);
 
 HTML5.CONTENT_MODEL_FLAGS = [
   'PCDATA',
