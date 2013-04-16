@@ -502,8 +502,6 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
       m[self._prefix + method] = function (/* ... */) {
         try {
           if (this.isSimulation) {
-            if (Meteor.isServer)
-              return;
 
             // In a client simulation, you can do any mutation (even with a
             // complex selector).
@@ -548,7 +546,8 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
         }
       };
     });
-    self._manager.methods(m);
+    if (Meteor.isClient || self._manager === Meteor.default_server)
+      self._manager.methods(m);
   }
 };
 

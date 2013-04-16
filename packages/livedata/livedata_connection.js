@@ -683,8 +683,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
         callback = function (err, result) {
           if (err)
             future['throw'](err);
-          else
+          else {
             future['return'](result);
+          }
         };
       }
     }

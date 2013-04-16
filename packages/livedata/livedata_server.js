@@ -32,7 +32,7 @@ _.extend(Meteor._SessionDocumentView.prototype, {
 
     // It's okay to clear fields that didn't exist. No need to throw
     // an error.
-    if (!precedenceList) 
+    if (!precedenceList)
       return;
 
     var removedValue = undefined;
@@ -423,6 +423,8 @@ _.extend(Meteor._LivedataSession.prototype, {
   // It should be a JSON object (it will be stringified.)
   send: function (msg) {
     var self = this;
+    if (Meteor._printSentDDP)
+      Meteor._debug("Sent DDP", Meteor._stringifyDDP(msg));
     if (self.socket)
       self.socket.send(Meteor._stringifyDDP(msg));
     else

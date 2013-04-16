@@ -826,8 +826,12 @@ if (Meteor.isServer) {
       var self = this;
       Meteor._debug("connection setup");
       self.id = Random.id();
-      var C = new Meteor.Collection("ServerMinimongo_" + self.id);
-
+      var C = self.C = new Meteor.Collection("ServerMinimongo_" + self.id);
+      C.allow({
+        insert: function () {return true;},
+        update: function () {return true;},
+        remove: function () {return true;}
+      });
       C.insert({a: 0, b: 1});
       C.insert({a: 0, b: 2});
       C.insert({a: 1, b: 3});
@@ -864,6 +868,16 @@ if (Meteor.isServer) {
         test.equal(contents.length, 2);
         test.equal(contents[0].a, 0);
       }
+    },
+
+    function (test, expect) {
+      var self = this;
+      if (!self.miniC)
+        return;
+      self.miniC.insert({a:0, b:3});
+      var contents = self.miniC.find({b:3}).fetch();
+      test.equal(contents.length, 1);
+      test.equal(contents[0].a, 0);
     }
   ]);
 
