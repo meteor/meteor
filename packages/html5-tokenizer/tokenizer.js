@@ -9,6 +9,10 @@ function keys(h) {
   return r;
 }
 
+var last = function (array) {
+  return array[array.length - 1];
+};
+
 var ENTITY_KEYS = keys(HTML5.ENTITIES);
 
 var t = HTML5.Tokenizer = function HTML5Tokenizer(input, document, tree) {
@@ -20,6 +24,8 @@ var t = HTML5.Tokenizer = function HTML5Tokenizer(input, document, tree) {
   var script_buffer = null;
   var content_model = Models.PCDATA;
   var source;
+
+  tree = tree || {open_elements: []};
 
   function data_state(buffer) {
     var c = buffer.char();
@@ -268,9 +274,9 @@ var t = HTML5.Tokenizer = function HTML5Tokenizer(input, document, tree) {
   function process_entity_in_attribute(buffer) {
     var entity = consume_entity(buffer);
     if (entity) {
-      current_token.data.last().nodeValue += entity;
+      last(current_token.data).nodeValue += entity;
     } else {
-      current_token.data.last().nodeValue += '&';
+      last(current_token.data).nodeValue += '&';
     }
   }
 
@@ -442,7 +448,7 @@ var t = HTML5.Tokenizer = function HTML5Tokenizer(input, document, tree) {
     } else if (data == '=') {
       newState(before_attribute_value_state);
     } else if (HTML5.ASCII_LETTERS_R.test(data)) {
-      current_token.data.last().nodeName += data + buffer.matchWhile(HTML5.ASCII_LETTERS);
+      last(current_token.data).nodeName += data + buffer.matchWhile(HTML5.ASCII_LETTERS);
       leavingThisState = false;
     } else if (data == '>') {
       // XXX If we emit here the attributes are converted to a dict
@@ -457,10 +463,10 @@ var t = HTML5.Tokenizer = function HTML5Tokenizer(input, document, tree) {
       }
     } else if (data == "'" || data == '"') {
       parse_error("invalid-character-in-attribute-name");
-      current_token.data.last().nodeName += data;
+      last(current_token.data).nodeName += data;
       leavingThisState = false;
     } else {
-      current_token.data.last().nodeName += data;
+      last(current_token.data).nodeName += data;
       leavingThisState = false;
     }
 
@@ -469,7 +475,7 @@ var t = HTML5.Tokenizer = function HTML5Tokenizer(input, document, tree) {
       // start tag token is emitted so values can still be safely appended
       // to attributes, but we do want to report the parse error in time.
       if (this.lowercase_attr_name) {
-	current_token.data.last().nodeName = current_token.data.last().nodeName.toLowerCase();
+	last(current_token.data).nodeName = last(current_token.data).nodeName.toLowerCase();
       }
       for (var k in current_token.data.slice(0, -1)) {
 	// FIXME this is a fucking mess.
@@ -527,10 +533,10 @@ var t = HTML5.Tokenizer = function HTML5Tokenizer(input, document, tree) {
       emit_current_token();
     } else if (data == '=') {
       parse_error("equals-in-unquoted-attribute-value");
-      current_token.data.last().nodeValue += data;
+      last(current_token.data).nodeValue += data;
       newState(attribute_value_unquoted_state);
     } else {
-      current_token.data.last().nodeValue += data;
+      last(current_token.data).nodeValue += data;
       newState(attribute_value_unquoted_state);
     }
 
@@ -549,7 +555,7 @@ var t = HTML5.Tokenizer = function HTML5Tokenizer(input, document, tree) {
     } else {
       var s = buffer.matchUntil('["&]');
       if (s !== HTML5.EOF) data = data + s;
-      current_token.data.last().nodeValue += data;
+      last(current_token.data).nodeValue += data;
     }
     return true;
   }
@@ -564,7 +570,7 @@ var t = HTML5.Tokenizer = function HTML5Tokenizer(input, document, tree) {
     } else if (data == '&') {
       process_entity_in_attribute(buffer);
     } else {
-      current_token.data.last().nodeValue += data + buffer.matchUntil("['&]");
+      last(current_token.data).nodeValue += data + buffer.matchUntil("['&]");
     }
     return true;
   }
@@ -583,7 +589,7 @@ var t = HTML5.Tokenizer = function HTML5Tokenizer(input, document, tree) {
       emit_current_token();
     } else if (data == '"' || data == "'" || data == '=') {
       parse_error("unexpected-character-in-unquoted-attribute-value");
-      current_token.data.last().nodeValue += data;
+      last(current_token.data).nodeValue += data;
     } else {
       var o = buffer.matchUntil("["+ HTML5.SPACE_CHARACTERS_IN + '&<>' +"]");
       if (o === HTML5.EOF) {
@@ -592,7 +598,7 @@ var t = HTML5.Tokenizer = function HTML5Tokenizer(input, document, tree) {
       }
       // Commit here since this state is re-enterable and its outcome won't change with more data.
       buffer.commit();
-      current_token.data.last().nodeValue += data + o;
+      last(current_token.data).nodeValue += data + o;
     }
     return true;
   }
@@ -667,7 +673,7 @@ var t = HTML5.Tokenizer = function HTML5Tokenizer(input, document, tree) {
       if (chars.toUpperCase() == 'DOCTYPE') {
 	current_token = {type: 'Doctype', name: '', publicId: null, systemId: null, correct: true};
 	newState(doctype_state);
-      } else if (tree.open_elements.last() && tree.open_elements.last().namespace && chars == '[CDATA[') {
+      } else if (last(tree.open_elements) && last(tree.open_elements).namespace && chars == '[CDATA[') {
 	newState(cdata_section_state);
       } else {
 	parse_error("expected-dashes-or-doctype");
