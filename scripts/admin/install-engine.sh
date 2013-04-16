@@ -26,7 +26,7 @@ set -u
 # Let's display everything on stderr.
 exec 1>&2
 
-UNAME=`uname`
+UNAME=$(uname)
 if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
     echo "Sorry, this OS is not supported yet."
     exit 1
@@ -35,7 +35,7 @@ fi
 
 if [ "$UNAME" = "Darwin" ] ; then
   ### OSX ###
-  if [ "i386" != `uname -p` -o "1" != `sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0` ] ; then
+  if [ "i386" != "$(uname -p)" -o "1" != "$(sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0)" ] ; then
     # Can't just test uname -m = x86_64, because Snow Leopard can
     # return other values.
     echo "Only 64-bit Intel processors are supported at this time."
@@ -44,7 +44,7 @@ if [ "$UNAME" = "Darwin" ] ; then
   ARCH="x86_64"
 elif [ "$UNAME" = "Linux" ] ; then
   ### Linux ###
-  ARCH=`uname -m`
+  ARCH=$(uname -m)
   if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
     echo "Unable architecture: $ARCH"
     echo "Meteor only supports i686 and x86_64 for now."

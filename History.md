@@ -1,6 +1,8 @@
 
 ## vNEXT
 
+## v0.6.2
+
 * Better error reporting:
   * Capture real stack traces for `Meteor.Error`.
   * Report better errors with misconfigured OAuth services.
@@ -28,7 +30,10 @@
   observes. #855
 
 * Fix meteor command line tool when run from a home directory with
-  spaces in its name.
+  spaces in its name. If you previously installed meteor release 0.6.0
+  or 0.6.1 you'll need to uninstall and reinstall meteor to support
+  users with spaces in their usernames (see
+  https://github.com/meteor/meteor/blob/master/README.md#uninstalling-meteor)
 
 Patches contributed by GitHub users andreas-karlsson, awwx, jacott,
 joshuaconner, and timhaines.
