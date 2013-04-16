@@ -32,11 +32,17 @@ $(document).on('touchstart.dropdown.data-api', '.dropdown-menu', function (e) {
 // Subscriptions
 //
 
-// secrets
-Meteor.subscribe('secrets');
+Deps.autorun(function () {
+  // register dependency on user so subscriptions
+  // will update once user has logged in
+  var user = Meteor.user();
 
-// users, for manage-users page
-Meteor.subscribe('users');
+  // secrets
+  Meteor.subscribe('secrets');
+
+  // users, for manage-users page
+  Meteor.subscribe('users');
+});
 
 
 
