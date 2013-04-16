@@ -1,6 +1,8 @@
 
 ## vNEXT
 
+## v0.6.2
+
 * Better error reporting:
   * Capture real stack traces for `Meteor.Error`.
   * Report better errors with misconfigured OAuth services.
