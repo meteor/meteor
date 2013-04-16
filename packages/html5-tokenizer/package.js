@@ -7,7 +7,7 @@ Package.on_use(function (api, where) {
 
   api.add_files(['entities.js', 'constants.js', 'buffer.js',
                  'events.js', 'tokenizer.js',
-                 'html5-tokenizer.js'], where);
+                 'html5_tokenizer.js'], where);
 });
 
 Package.on_test(function (api) {
