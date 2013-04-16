@@ -1,6 +1,5 @@
-var events = require('events');
-var Buffer = require('./buffer').Buffer;
 var Models = HTML5.Models;
+var events = toyevents;
 
 function keys(h) {
   var r = [];
@@ -14,7 +13,7 @@ var ENTITY_KEYS = keys(HTML5.ENTITIES);
 
 var t = HTML5.Tokenizer = function HTML5Tokenizer(input, document, tree) {
   var state;
-  var buffer = new Buffer();
+  var buffer = new HTML5.Buffer();
   var escapeFlag = false;
   var lastFourChars = '';
   var current_token = null;
