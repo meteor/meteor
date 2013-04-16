@@ -8,18 +8,22 @@ HTML5Tokenizer = {
     });
     tokenizer.tokenize();
     return tokens;
-  },
-  tokenizeIncremental: function (tokenFunc) {
-    var emitter = new toyevents.EventEmitter();
-    var tokenizer = new HTML5.Tokenizer(emitter);
-    tokenizer.addListener('token', tokenFunc);
-    return {
-      add: function (str) {
-        emitter.emit('data', str);
-      },
-      finish: function () {
-        emitter.emit('end');
-      }
-    };
   }
+  // Incremental tokenization turns out not to be useful
+  // for inspecting intermediate tokenizer state, just
+  // for async streaming.
+  //
+  // tokenizeIncremental: function (tokenFunc) {
+  //   var emitter = new toyevents.EventEmitter();
+  //   var tokenizer = new HTML5.Tokenizer(emitter);
+  //   tokenizer.addListener('token', tokenFunc);
+  //   return {
+  //     add: function (str) {
+  //       emitter.emit('data', str);
+  //     },
+  //     finish: function () {
+  //       emitter.emit('end');
+  //     }
+  //   };
+  // }
 };
