@@ -421,50 +421,51 @@ Meteor.Collection.ObjectID = LocalCollection._ObjectID;
 // call all of them if it is able to make a decision without calling them all
 // (so don't include side effects).
 
-(function () {
-  var addValidator = function(allowOrDeny, options) {
-    // validate keys
-    var VALID_KEYS = ['insert', 'update', 'remove', 'fetch', 'transform'];
-    _.each(_.keys(options), function (key) {
-      if (!_.contains(VALID_KEYS, key))
-        throw new Error(allowOrDeny + ": Invalid key: " + key);
-    });
+if (Meteor.isServer) { // ACLs only run on the server.
+  (function () {
+    var addValidator = function(allowOrDeny, options) {
+      // validate keys
+      var VALID_KEYS = ['insert', 'update', 'remove', 'fetch', 'transform'];
+      _.each(_.keys(options), function (key) {
+        if (!_.contains(VALID_KEYS, key))
+          throw new Error(allowOrDeny + ": Invalid key: " + key);
+      });
 
-    var self = this;
-    self._restricted = true;
+      var self = this;
+      self._restricted = true;
 
-    _.each(['insert', 'update', 'remove'], function (name) {
-      if (options[name]) {
-        if (!(options[name] instanceof Function)) {
-          throw new Error(allowOrDeny + ": Value for `" + name + "` must be a function");
+      _.each(['insert', 'update', 'remove'], function (name) {
+        if (options[name]) {
+          if (!(options[name] instanceof Function)) {
+            throw new Error(allowOrDeny + ": Value for `" + name + "` must be a function");
+          }
+          if (self._transform)
+            options[name].transform = self._transform;
+          if (options.transform)
+            options[name].transform = Deps._makeNonreactive(options.transform);
+          self._validators[name][allowOrDeny].push(options[name]);
         }
-        if (self._transform)
-          options[name].transform = self._transform;
-        if (options.transform)
-          options[name].transform = Deps._makeNonreactive(options.transform);
-        self._validators[name][allowOrDeny].push(options[name]);
+      });
+
+      // Only update the fetch fields if we're passed things that affect
+      // fetching. This way allow({}) and allow({insert: f}) don't result in
+      // setting fetchAllFields
+      if (options.update || options.remove || options.fetch) {
+        if (options.fetch && !(options.fetch instanceof Array)) {
+          throw new Error(allowOrDeny + ": Value for `fetch` must be an array");
+        }
+        self._updateFetch(options.fetch);
       }
-    });
+    };
 
-    // Only update the fetch fields if we're passed things that affect
-    // fetching. This way allow({}) and allow({insert: f}) don't result in
-    // setting fetchAllFields
-    if (options.update || options.remove || options.fetch) {
-      if (options.fetch && !(options.fetch instanceof Array)) {
-        throw new Error(allowOrDeny + ": Value for `fetch` must be an array");
-      }
-      self._updateFetch(options.fetch);
-    }
-  };
-
-  Meteor.Collection.prototype.allow = function(options) {
-    addValidator.call(this, 'allow', options);
-  };
-  Meteor.Collection.prototype.deny = function(options) {
-    addValidator.call(this, 'deny', options);
-  };
-})();
-
+    Meteor.Collection.prototype.allow = function(options) {
+      addValidator.call(this, 'allow', options);
+    };
+    Meteor.Collection.prototype.deny = function(options) {
+      addValidator.call(this, 'deny', options);
+    };
+  })();
+}
 
 Meteor.Collection.prototype._defineMutationMethods = function() {
   var self = this;
