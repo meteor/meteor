@@ -52,6 +52,12 @@ var _ = require('underscore');
 // detected. Likewise if A exists and is then deleted it will be
 // detected.)
 //
+// To do a "one-shot" (to see if any files have been modified,
+// compared to the dependencies, at a particular point in time, just
+// create a Watcher and see if your onChange function was called
+// before the Watcher constructor changed. (Then call stop() as
+// usual.)
+//
 // XXX This should be reengineered so that dependency information from
 // multiple sources can be easily merged in a generic way. Possibly in
 // this new model subdirectories would be allowed in include/exclude
@@ -108,6 +114,14 @@ var Watcher = function (options) {
   self.fileWatches = []; // array of paths
   self.directoryWatches = {}; // map from path to watch object
 
+  // We track all of the currently active timers so that we can cancel
+  // them at stop() time. This stops the process from hanging at
+  // shutdown until all of the timers have fired.. An alternate
+  // approach would be to use the unref() timer handle method present
+  // in modern node.
+  var nextTimerId = 1;
+  self.timers = {}; // map from arbitrary number (nextTimerId) to timer handle
+
   self._startFileWatches();
   _.each(self.rules, function (rule) {
     self._watchDirectory(rule.dir);
@@ -157,7 +171,12 @@ _.extend(Watcher.prototype, {
     // up the watch, but then the file change before the clock rolls
     // over to the next second, and fs.watchFile doesn't notice and
     // doesn't call us back. #WorkAroundLowPrecisionMtimes
-    setTimeout(function () {
+    var timerId = self.nextTimerId++;
+    self.timers[timerId] = setTimeout(function () {
+      delete self.timers[timerId];
+      if (self.stopped)
+        return;
+
       _.each(self.files, function (hash, absPath) {
         if (self._checkFileChanged(absPath))
           self._fire(absPath);
@@ -267,8 +286,11 @@ _.extend(Watcher.prototype, {
         // but then scan it again one secord later just to make sure
         // that we haven't missed any changes. See commentary at
         // #WorkAroundLowPrecisionMtimes
-        setTimeout(function () {
-          scanDirectory(true);
+        var timerId = self.nextTimerId++;
+        self.timers[timerId] = setTimeout(function () {
+          delete self.timers[timerId];
+          if (! self.stopped)
+            scanDirectory(true);
         }, 1000);
       }
     };
@@ -298,6 +320,11 @@ _.extend(Watcher.prototype, {
   stop: function () {
     var self = this;
     self.stopped = true;
+
+    // Clean up timers
+    _.each(self.timers, function (timer, id) {
+      clearTimeout(timer);
+    });
 
     // Clean up file watches
     _.each(self.fileWatches, function (absPath) {
