@@ -82,13 +82,17 @@ different collections. We hope to lift this restriction in a future release.
       ];
     });
 
-Otherwise, the publish function should call the functions
+Additionally the publish functions can call the functions
 [`added`](#publish_added) (when a new document is added to the published record
 set), [`changed`](#publish_changed) (when some fields on a document in the
 record set are changed or cleared), and [`removed`](#publish_removed) (when
 documents are removed from the published record set) to inform subscribers about
 documents.  These methods are provided by `this` in your publish function.
 
+{{#warning}}
+You can use these methods in a publish function that also returns cursors, but only for
+ collections that you're not returning cursors for.
+{{/warning}}
 
 
 <!-- TODO discuss ready -->
