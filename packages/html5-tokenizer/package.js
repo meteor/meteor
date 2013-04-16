@@ -8,7 +8,8 @@ Npm.depends({'html5': "0.3.10"});
 Package.on_use(function (api, where) {
   where = where || ['client', 'server'];
 
-  api.add_files(['entities.js', 'constants.js', 'tokenizer.js'], where);
+  api.add_files(['entities.js', 'constants.js', 'buffer.js',
+                 'tokenizer.js'], where);
 });
 
 Package.on_test(function (api) {
