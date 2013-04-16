@@ -410,6 +410,7 @@ exports.run = function (context, options) {
         if (Status.crashing)
           logToClients({'system': "=> Modified -- restarting."});
         Status.reset();
+        context.library.refresh(); // pick up changes to packages
         restartServer();
       }
     });
@@ -445,9 +446,6 @@ exports.run = function (context, options) {
     }
 
     serverLog = [];
-
-    // Make the library reload packages, in case they've changed
-    context.library.refresh();
 
     // Bundle up the app
     var bundleResult = bundler.bundle(context.appDir, bundlePath, bundleOpts);
