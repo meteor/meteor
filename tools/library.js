@@ -68,7 +68,8 @@ _.extend(Library.prototype, {
   // refresh().
   get: function (name, throwOnError) {
     var self = this;
-    var packageDir, fromWarehouse = false;
+    var packageDir;
+    var fromWarehouse = false;
 
     // Passed a Package?
     if (name instanceof packages.Package)
@@ -112,9 +113,51 @@ _.extend(Library.prototype, {
 
     // Load package from disk
     var pkg = new packages.Package(self);
-    pkg.initFromPackageDir(name, packageDir);
-    pkg.inWarehouse = fromWarehouse;
-    self.loadedPackages[name] = pkg;
+    if (fs.existsSync(path.join(packageDir, 'unipackage.json'))) {
+      // It's an already-built package
+      pkg.initFromUnipackage(name, packageDir);
+      self.loadedPackages[name] = pkg;
+    } else {
+      // It's a source tree
+      var buildDir = path.join(packageDir, '.build');
+      if (fs.existsSync(buildDir) &&
+          pkg.initFromUnipackage(name, buildDir,
+                                 { onlyIfUpToDate: ! fromWarehouse })) {
+        // We already had a build and it was up to date.
+        self.loadedPackages[name] = pkg;
+      } else {
+        // Either we didn't have a build, or it was out of date (and
+        // as a transitional matter until the only thing the warehouse
+        // contains is unipackages, we don't do an up-to-date check on
+        // warehouse packages, for efficiency.) Build the package.
+        //
+        // As a temporary, transitional optimization, assume that any
+        // source trees in the warehouse have already had their npm
+        // dependencies fetched. The 0.6.0 installer does this
+        // (rather, it downloads packages that already have their npm
+        // dependencies inside of them), and during the transitional
+        // period where we still have source trees in the warehouse
+        // AND the unipackage format can't handle packages with
+        // extensions, this will reduce startup time.
+        pkg.initFromPackageDir(name, packageDir,
+                               { skipNpmUpdate: fromWarehouse });
+
+        // We need to go ahead and put it in the package list without
+        // waiting until we've finished saving it. That's because
+        // saveAsUnipackage calls _ensureCompiled which might end up
+        // recursively get()ing itself to retrieve its handlers
+        // (because if it has a test slice, it probably uses the main
+        // slice.)
+        self.loadedPackages[name] = pkg;
+
+        if (pkg.canBeSavedAsUnipackage()) {
+          // Save it, for a fast load next time
+          files.add_to_gitignore(packageDir, '.build*');
+          pkg.saveAsUnipackage(buildDir);
+        }
+      }
+    }
+
 
     return pkg;
   },

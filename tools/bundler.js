@@ -421,7 +421,8 @@ _.extend(Target.prototype, {
               f.targetPath = path.join('/app', resource.servePath);
           }
 
-          if (self.arch === "server" && resource.type === "js" && ! isApp)
+          if (self.arch === "server" && resource.type === "js" && ! isApp &&
+              slice.nodeModulesPath)
             f.nodeModulesTargetPath = path.join('/npm', slice.pkg.name,
                                                 slice.sliceName);
 
@@ -742,16 +743,10 @@ _.extend(ServerTarget.prototype, {
     // dependencies which don't need to be pushed to the server.
 
     _.each(self.slices, function (slice) {
-      if (slice.pkg.npmDependencies) {
-        // Make sure the right stuff is installed. This is slow and
-        // should move to a separate package build step. However, the
-        // Package object has code that will make sure we at least
-        // only do it once per package.
-        slice.pkg.installNpmDependencies();
-
+      if (slice.nodeModulesPath) {
         // Copy the package's npm dependencies into the bundle.
         builder.copyDirectory({
-          from: path.join(slice.pkg.npmDir(), 'node_modules'),
+          from: slice.nodeModulesPath,
           to: path.join('/npm', slice.pkg.name, slice.sliceName),
           depend: false
         });

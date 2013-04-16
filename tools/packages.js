@@ -1,6 +1,7 @@
 var path = require('path');
 var _ = require('underscore');
 var files = require('./files.js');
+var watch = require('./watch.js');
 var Builder = require('./builder.js');
 var project = require('./project.js');
 var meteorNpm = require('./meteor_npm.js');
@@ -66,11 +67,13 @@ var scanForSources = function (rootPath, extensions, ignoreFiles) {
 // - sources
 // - forceExport
 // - dependencyInfo
+// - nodeModulesPath
 //
 // Do not include the source files in dependencyInfo. They will be
 // added at compile time when the sources are actually read.
 var Slice = function (pkg, options) {
   var self = this;
+  options = options || {};
   self.pkg = pkg;
 
   // Name for this slice. For example, the "client" in "ddp.client"
@@ -95,11 +98,13 @@ var Slice = function (pkg, options) {
   //   to ensure that it loads if we load.
   self.uses = options.uses;
 
-  // This slice's source files. Array of paths.
+  // This slice's source files. Array of paths. Empty if loaded from
+  // unipackage.
   self.sources = options.sources || [];
 
   // Symbols that this slice should export even if @export directives
   // don't appear in the source code. List of symbols (as strings.)
+  // Empty if loaded from unipackage.
   self.forceExport = options.forceExport || [];
 
   // Files and directories that we want to monitor for changes in
@@ -117,10 +122,11 @@ var Slice = function (pkg, options) {
   self.exports = null;
 
   // Prelink output. 'boundary' is a magic cookie used for inserting
-  // imports. 'prelinkFiles' is the partially linked JavaScript
-  // code. Both of these are inputs into the final link phase, which
-  // inserts the final JavaScript resources into 'resources'. Set only
-  // after _ensureCompiled().
+  // imports. 'prelinkFiles' is the partially linked JavaScript code
+  // (an array of objects with keys 'source' and 'servePath', both
+  // strings -- see prelink() in linker.js) Both of these are inputs
+  // into the final link phase, which inserts the final JavaScript
+  // resources into 'resources'. Set only after _ensureCompiled().
   self.boundary = null;
   self.prelinkFiles = null;
 
@@ -143,6 +149,11 @@ var Slice = function (pkg, options) {
   //
   // Set only after _ensureCompiled().
   self.resources = null;
+
+  // Absolute path to the node_modules directory to use at runtime to
+  // resolve Npm.require() calls in this slice. null if this slice
+  // does not have a node_modules.
+  self.nodeModulesPath = options.nodeModulesPath;
 };
 
 _.extend(Slice.prototype, {
@@ -388,10 +399,12 @@ var Package = function (library) {
   // time)
   self.id = nextPackageId++;
 
-  // The path from which this package was loaded
+  // The path from which this package was loaded. null if loaded from
+  // unipackage.
   self.sourceRoot = null;
 
   // XXX needs docs
+  // null if loaded from unipackage
   self.serveRoot = null;
 
   // Package library that should be used to resolve this package's
@@ -401,10 +414,6 @@ var Package = function (library) {
   // Package metadata. Keys are 'summary' and 'internal'.
   self.metadata = {};
 
-  // npm packages used by this package. Map from npm package name to
-  // npm version (as a string)
-  self.npmDependencies = null;
-
   // File handler extensions defined by this package. Map from file
   // extension to the handler function.
   self.extensions = {};
@@ -412,16 +421,6 @@ var Package = function (library) {
   // Available editions/subpackages ("slices") of this package. Array
   // of Slice.
   self.slices = [];
-
-  // Are we in the warehouse? Used to skip npm re-scans.
-  // XXX this is probably connected to isCompiled; it was originally created on
-  // a different branch from isCompiled
-  // XXX NOTE: this is set by Library reaching into us
-  self.inWarehouse = false;
-
-  // True if we've run installNpmDependencies. (It's slow and there's
-  // no need to do it more than once.)
-  self.npmUpdated = false;
 
   // Map from an arch to the list of slice names that should be
   // included by default if this package is used without specifying a
@@ -478,11 +477,27 @@ _.extend(Package.prototype, {
     });
   },
 
+  // This is called on all packages at Meteor install time so they can
+  // do any prep work necessary for the user's first Meteor run to be
+  // fast, for example fetching npm dependencies. Currently thanks to
+  // refactorings there's nothing to do here.
+  // XXX remove?
+  preheat: function () {
+  },
+
   // loads a package's package.js file into memory, using
   // runInThisContext. Wraps the contents of package.js in a closure,
   // supplying pseudo-globals 'Package' and 'Npm'.
-  initFromPackageDir: function (name, dir) {
+  //
+  // options:
+  // - skipNpmUpdate: if true, don't refresh .npm/node_modules (for
+  //   packages that use Npm.depend). Only use this when you are
+  //   certain that .npm/node_modules was previously created by some
+  //   other means, and you're certain that the package's Npm.depend
+  //   instructions haven't changed since then.
+  initFromPackageDir: function (name, dir, options) {
     var self = this;
+    options = options || {};
     self.name = name;
     self.sourceRoot = dir;
     self.serveRoot = path.join(path.sep, 'packages', name);
@@ -491,6 +506,7 @@ _.extend(Package.prototype, {
       throw new Error("The package named " + self.name + " does not exist.");
 
     var roleHandlers = {use: null, test: null};
+    var npmDependencies = null;
 
     var packageJsPath = path.join(self.sourceRoot, 'package.js');
     var code = fs.readFileSync(packageJsPath);
@@ -536,7 +552,6 @@ _.extend(Package.prototype, {
           throw new Error("This package has already registered a handler for " +
                           extension);
         self.extensions[extension] = function (/* arguments */) {
-          self.installNpmDependencies();
           return callback.apply(this, arguments);
         };
       },
@@ -552,10 +567,14 @@ _.extend(Package.prototype, {
       }
     }, {
       // == 'Npm' object visible in package.js ==
-      depends: function (npmDependencies) {
-        if (self.npmDependencies)
+      depends: function (_npmDependencies) {
+        // XXX make npmDependencies be per slice, so that production
+        // doesn't have to ship all of the npm modules used by test
+        // code
+        if (npmDependencies)
           throw new Error("Can only call `Npm.depends` once in package " +
                           self.name + ".");
+        npmDependencies = _npmDependencies;
 
         // don't allow npm fuzzy versions so that there is complete
         // consistency when deploying a meteor app
@@ -563,8 +582,6 @@ _.extend(Package.prototype, {
         // XXX use something like seal or lockdown to have *complete*
         // confidence we're running the same code?
         meteorNpm.ensureOnlyExactVersions(npmDependencies);
-
-        self.npmDependencies = npmDependencies;
       },
 
       require: function (name) {
@@ -705,6 +722,22 @@ _.extend(Package.prototype, {
       }
     });
 
+    // Grab any npm dependencies. Keep them in a cache in the package
+    // source directory so we don't have to do this from scratch on
+    // every build.
+    var nodeModulesPath = null;
+    if (npmDependencies && ! options.skipNpmUpdate) {
+      // go through a specialized npm dependencies update process,
+      // ensuring we don't get new versions of any
+      // (sub)dependencies. this process also runs mostly safely
+      // multiple times in parallel (which could happen if you have
+      // two apps running locally using the same package)
+      var packageNpmDir =
+        path.resolve(path.join(self.sourceRoot, '.npm'));
+      meteorNpm.updateDependencies(name, packageNpmDir, npmDependencies);
+      nodeModulesPath = path.join(packageNpmDir, 'node_modules');
+    }
+
     // Create slices
     _.each(["use", "test"], function (role) {
       _.each(["client", "server"], function (arch) {
@@ -736,7 +769,9 @@ _.extend(Package.prototype, {
           uses: uses[role][arch],
           sources: sources[role][arch],
           forceExport: forceExport[role][arch],
-          dependencyInfo: dependencyInfo
+          dependencyInfo: dependencyInfo,
+          nodeModulesPath: arch !== "server" ? undefined :
+            (nodeModulesPath || undefined)
         }));
       });
     });
@@ -836,37 +871,301 @@ _.extend(Package.prototype, {
     self.defaultSlices = { client: ['app'], server: ['app'] };
   },
 
-  // Called when this package wants to ensure certain npm dependencies
-  // are installed for use within server code.
-  //
-  // @param npmDependencies {Object} eg {gcd: "0.0.0", tar: "0.1.14"}
-  installNpmDependencies: function(quiet) {
+  // options:
+  // - onlyIfUpToDate: if true, then first check the unipackage's
+  //   dependencies (if present) to see if it's up to date. If not,
+  //   return false without loading the package. Otherwise return
+  //   true. (If onlyIfUpToDate is not passed, always return true.)
+  initFromUnipackage: function (name, dir, options) {
     var self = this;
+    options = options || {};
 
-    // Nothing to do if there's no Npm.depends().
-    if (!self.npmDependencies)
-      return;
+    var mainJson =
+      JSON.parse(fs.readFileSync(path.join(dir, 'unipackage.json')));
 
-    // Warehouse packages come with their NPM dependencies and are read-only.
-    if (self.inWarehouse)
-      return;
+    if (mainJson.version !== "1")
+      throw new Error("Unsupported unipackage version: " +
+                      JSON.stringify(mainJson.version));
 
-    // No need to do it more than once.
-    if (self.npmUpdated)
-      return;
+    // XXX should comprehensively sanitize (eg, typecheck) everything
+    // read from json files
 
-    // go through a specialized npm dependencies update process, ensuring we
-    // don't get new versions of any (sub)dependencies. this process also runs
-    // mostly safely multiple times in parallel (which could happen if you have
-    // two apps running locally using the same package)
-    meteorNpm.updateDependencies(
-      self.name, self.npmDir(), self.npmDependencies, quiet);
+    // Read the dependency info (if present), and make the strings
+    // back into regexps
+    var dependencies = mainJson.dependencies;
+    _.each(dependencies.directories, function (d) {
+      _.each(["include", "exclude"], function (k) {
+        d[k] = _.map(d[k], function (s) {
+          return new RegExp(s);
+        });
+      });
+    });
 
-    self.npmUpdated = true;
+    // If we're supposed to check the dependencies, go ahead and do so
+    if (options.onlyIfUpToDate) {
+      var isUpToDate = true;
+      var watcher = new watch.Watcher({
+        files: dependencies.files,
+        directories: dependencies.directories,
+        onChange: function () {
+          isUpToDate = false;
+        }
+      });
+      watcher.stop();
+
+      if (! isUpToDate)
+        return false;
+    }
+
+    self.name = name;
+    self.metadata = {
+      summary: mainJson.summary,
+      internal: mainJson.internal
+    };
+    self.defaultSlices = mainJson.defaultSlices;
+    self.testSlices = mainJson.testSlices;
+
+    _.each(mainJson.slices, function (sliceMeta) {
+      // aggressively sanitize path (don't let it escape to parent
+      // directory)
+      if (sliceMeta.path.match(/\.\./))
+        throw new Error("bad path in unipackage");
+      var sliceJson = JSON.parse(
+        fs.readFileSync(path.join(dir, sliceMeta.path)));
+      var sliceBasePath = path.dirname(path.join(dir, sliceMeta.path));
+
+      if (sliceJson.version !== "1")
+        throw new Error("Unsupported unipackage slice version: " +
+                        JSON.stringify(sliceJson.version));
+
+      var nodeModulesPath = null;
+      if (sliceJson.node_modules) {
+        if (sliceJson.node_modules.match(/\.\./))
+          throw new Error("bad node_modules path in unipackage");
+        nodeModulesPath = path.join(sliceBasePath, sliceJson.node_modules);
+      }
+
+      var slice = new Slice(self, {
+        name: sliceMeta.name,
+        arch: sliceMeta.arch,
+        dependencyInfo: dependencies,
+        nodeModulesPath: nodeModulesPath,
+        uses: _.map(sliceJson.uses, function (u) {
+          return {
+            spec: u['package'] + (u.slice ? "." + u.slice : ""),
+            unordered: u.unordered
+          };
+        })
+      });
+
+      slice.isCompiled = true;
+      slice.exports = sliceJson.exports || [];
+      slice.boundary = sliceJson.boundary;
+      slice.prelinkFiles = [];
+      slice.resources = [];
+
+      _.each(sliceJson.resources, function (resource) {
+        if (resource.file.match(/\.\./))
+          throw new Error("bad resource file path in unipackage");
+
+        var fd = fs.openSync(path.join(sliceBasePath, resource.file), "r");
+        var data = new Buffer(resource.length);
+        var count = fs.readSync(fd, data, 0, resource.length, resource.offset);
+        if (count !== resource.length)
+          throw new Error("couldn't read entire resource");
+
+        if (resource.type === "prelink") {
+          slice.prelinkFiles.push({
+            source: data.toString('utf8'),
+            servePath: resource.servePath
+          });
+        } else if (_.contains(["head", "body", "css", "js", "static"],
+                              resource.type)) {
+          slice.resources.push({
+            type: resource.type,
+            data: data,
+            servePath: resource.servePath || undefined
+          });
+        } else
+          throw new Error("bad resource type in unipackage: " +
+                          JSON.stringify(resource.type));
+      });
+
+      self.slices.push(slice);
+    });
+
+    return true;
   },
 
-  npmDir: function () {
-    return path.join(this.sourceRoot, '.npm');
+  // True if this package can be saved as a unipackage
+  canBeSavedAsUnipackage: function () {
+    var self = this;
+    return _.keys(self.extensions || []).length === 0;
+  },
+
+  saveAsUnipackage: function (outputPath) {
+    var self = this;
+    var builder = new Builder({ outputPath: outputPath });
+
+    if (! self.canBeSavedAsUnipackage())
+      throw new Error("This package can not yet be saved as a unipackage");
+
+    try {
+
+      var mainJson = {
+        version: "1",
+        summary: self.metadata.summary,
+        internal: self.metadata.internal,
+        dependencies: { files: {}, directories: {} },
+        slices: [],
+        defaultSlices: self.defaultSlices,
+        testSlices: self.testSlices
+      };
+
+      builder.reserve("unipackage.json");
+      builder.reserve("node_modules", { directory: true });
+      builder.reserve("head");
+      builder.reserve("body");
+
+      _.each(self.slices, function (slice) {
+        slice._ensureCompiled();
+
+        // Make up a filename for this slice
+        var baseSliceName =
+          (slice.sliceName === "main" ? "" : (slice.sliceName + ".")) +
+          slice.arch;
+        var sliceDir =
+          builder.generateFilename(baseSliceName, { directory: true });
+        var sliceJsonFile =
+          builder.generateFilename(baseSliceName + ".json");
+
+        mainJson.slices.push({
+          name: slice.sliceName,
+          arch: slice.arch,
+          path: sliceJsonFile
+        });
+
+        // Merge slice dependencies
+        // XXX is naive merge sufficient here?
+        _.extend(mainJson.dependencies.files,
+                 slice.dependencyInfo.files);
+        _.extend(mainJson.dependencies.directories,
+                 slice.dependencyInfo.directories);
+
+        // Construct slice metadata
+        var sliceJson = {
+          version: "1",
+          exports: slice.exports,
+          uses: _.map(slice.uses, function (u) {
+            var specParts = u.spec.split('.');
+            if (specParts.length > 2)
+              throw new Error("Bad package spec: " + u.spec);
+            return {
+              'package': specParts[0],
+              slice: specParts[1] || undefined,
+              unordered: u.unordered || undefined
+            };
+          }),
+          node_modules: slice.nodeModulesPath ? 'node_modules' : undefined,
+          resources: [],
+          boundary: slice.boundary
+        };
+
+        // Output 'head', 'body' resources nicely
+        var concat = {head: [], body: []};
+        var offset = {head: 0, body: 0};
+        _.each(slice.resources, function (resource) {
+          if (_.contains(["head", "body"], resource.type)) {
+            if (concat[resource.type].length) {
+              concat[resource.type].push(new Buffer("\n", "utf8"));
+              offset[resource.type]++;
+            }
+            if (! (resource.data instanceof Buffer))
+              throw new Error("Resource data must be a Buffer");
+            sliceJson.resources.push({
+              type: resource.type,
+              file: path.join(sliceDir, resource.type),
+              length: resource.data.length,
+              offset: offset[resource.type]
+            });
+            concat[resource.type].push(resource.data);
+            offset[resource.type] += resource.data.length;
+          }
+        });
+        _.each(concat, function (parts, type) {
+          if (parts.length) {
+            builder.write(path.join(sliceDir, type), {
+              data: Buffer.concat(concat[type], offset[type])
+            });
+          }
+        });
+
+        // Output other resources each to their own file
+        _.each(slice.resources, function (resource) {
+          if (_.contains(["head", "body"], resource.type))
+            return; // already did this one
+
+          var resourcePath = builder.generateFilename(
+            path.join(sliceDir, resource.servePath));
+
+          builder.write(resourcePath, { data: resource.data });
+          sliceJson.resources.push({
+            type: resource.type,
+            file: resourcePath,
+            length: resource.data.length,
+            offset: 0,
+            servePath: resource.servePath || undefined
+          });
+        });
+
+        // Output prelink resources
+        _.each(slice.prelinkFiles, function (file) {
+          var resourcePath = builder.generateFilename(
+            path.join(sliceDir, file.servePath));
+          var data = new Buffer(file.source, 'utf8');
+
+          builder.write(resourcePath, {
+            data: data
+          });
+
+          sliceJson.resources.push({
+            type: 'prelink',
+            file: resourcePath,
+            length: data.length,
+            offset: 0,
+            servePath: file.servePath || undefined
+          });
+        });
+
+        // If slice has included node_modules, copy them in
+        if (slice.nodeModulesPath) {
+          builder.copyDirectory({
+            from: slice.nodeModulesPath,
+            to: 'node_modules',
+            depend: false
+          });
+        }
+
+        // Control file for slice
+        builder.writeJson(sliceJsonFile, sliceJson);
+      });
+
+      // Prep dependencies for serialization by turning regexps into
+      // strings
+      _.each(mainJson.dependencies.directories, function (d) {
+        _.each(["include", "exclude"], function (k) {
+          d[k] = _.map(d[k], function (r) {
+            return r.sources;
+          });
+        });
+      });
+
+      builder.writeJson("unipackage.json", mainJson);
+      builder.complete();
+    } catch (e) {
+      builder.abort();
+      throw e;
+    }
   }
 });
 
