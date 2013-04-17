@@ -10,8 +10,11 @@ var packageDot = function (name) {
 };
 
 var generateBoundary = function () {
-  // XXX we really want to call Random.id() here but we don't yet have
-  // infrastructure for including Meteor packages into the tools.
+  // In a perfect world we would call Packages.random.Random.id().
+  // But we can't do that this is part of the code that is used to
+  // compile and load packages. So let it slide for now and provide a
+  // version based on (the completely non-cryptographic) Math.random,
+  // which is good enough for this particular application.
   var alphabet = "23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz";
   var digits = [];
   for (var i = 0; i < 17; i++) {

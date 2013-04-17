@@ -1030,6 +1030,14 @@ Fiber(function () {
     if (!files.in_checkout() && !process.env.METEOR_TEST_NO_SPRINGBOARD)
       toolsSpringboard();
 
+    // Load any needed unipackages
+    require('./unipackage.js').load({
+      library: context.library,
+      packages: ['random'], // add any unipackages here
+      release: context.releaseVersion
+      ,
+    });
+
     if (argv['get-ready']) {
       getReady();
       return;

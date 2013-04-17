@@ -205,8 +205,8 @@ _.extend(Builder.prototype, {
   },
 
   // Add relPath to the list of "already taken" paths in the
-  // bundle. This will cause writeFile, when in sanitize mode, to
-  // never pick this filename (and will prevent files that from being
+  // bundle. This will cause write, when in sanitize mode, to never
+  // pick this filename (and will prevent files that from being
   // written that would conflict with paths that we are expecting to
   // be directories.) Calling this twice on the same relPath will
   // given an exception.

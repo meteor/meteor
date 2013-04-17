@@ -153,6 +153,24 @@ var inherits = function (child, parent) {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+// NodeModulesDirectory
+///////////////////////////////////////////////////////////////////////////////
+
+// Represents a node_modules directory that we need to copy into the
+// bundle or otherwise make available at runtime.
+var NodeModulesDirectory = function (options) {
+  var self = this;
+
+  // The absolute path (on local disk at build time) to a directory
+  // that contains the built node_modules to use.
+  self.sourcePath = options.sourcePath;
+
+  // The path (relative to the bundle root) where we would preferably
+  // like the node_modules to be output (essentially cosmetic.)
+  self.preferredBundlePath = options.bundlePath;
+};
+
+///////////////////////////////////////////////////////////////////////////////
 // File
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -185,9 +203,10 @@ var File = function (options) {
   self.cacheable = options.cacheable || false;
 
   // The node_modules directory that Npm.require() should search when
-  // called from inside this file, given as a path in the target's
-  // filesystem. Only works in the "server" architecture.
-  self.nodeModulesTargetPath = null;
+  // called from inside this file, given as a NodeModulesDirectory, or
+  // null if Npm.depend() is not in effect for this file. Only works
+  // in the "server" architecture.
+  self.nodeModulesDirectory = null;
 
   self._contents = options.data || null; // contents, if known, as a Buffer
   self._hash = null; // hash, if known, as a hex string
@@ -294,6 +313,12 @@ var Target = function (name, options) {
   // Files and paths used by this target, in the format used by
   // watch.Watcher.
   self.dependencyInfo = {files: {}, directories: {}};
+
+  // node_modules directories that we need to copy into the target (or
+  // otherwise make available at runtime.) A map from an absolute path
+  // on disk (NodeModulesDirectory.sourcePath) to a
+  // NodeModulesDirectory object that we have created to represent it.
+  self.nodeModulesDirectories = {};
 };
 
 _.extend(Target.prototype, {
@@ -301,24 +326,16 @@ _.extend(Target.prototype, {
   // them, put them in load order, save in slices.
   //
   // options include:
-  // - packages: an array of packages whose default slices should be
-  //   included
-  // - test: an array of packages whose test slices should be included
-  //
-  // In both cases you can pass either package names or Package
-  // objects.
+  // - packages: an array of packages (or, properly speaking, slices)
+  //   to include. Each element should either be a Package object or a
+  //   package name as a string (to include that package's default
+  //   slices for this arch, or a string of the form 'package.slice'
+  //   to include a particular named slice from a particular package.
+  // - test: an array of packages (as Package objects or as name
+  //   strings) whose test slices should be included
   determineLoadOrder: function (options) {
     var self = this;
     var library = self.library;
-
-    var get = function (packageOrPackageName) {
-      var pkg = library.get(packageOrPackageName);
-      if (! pkg) {
-        console.error("Package not found: " + packageOrPackageName);
-        process.exit(1);
-      }
-      return pkg;
-    };
 
     // Each of these are map from slice.id to Slice
     var needed = {}; // Slices that we still need to add
@@ -328,11 +345,15 @@ _.extend(Target.prototype, {
     // Find the roots
     var rootSlices =
       _.flatten([
-        _.map(options.packages || [], function (pkg) {
-          return get(pkg).getDefaultSlices(self.arch);
+        _.map(options.packages || [], function (p) {
+          if (typeof p === "string")
+            return library.getSlices(p, self.arch);
+          else
+            return pkg.getDefaultSlices(self.arch);
         }),
-        _.map(options.test || [], function (pkg) {
-          return get(pkg).getTestSlices(self.arch);
+        _.map(options.test || [], function (p) {
+          var pkg = (p === "string" ? library.get(p) : p);
+          return p.getTestSlices(self.arch);
         })
       ]);
     _.each(rootSlices, function (slice) {
@@ -422,9 +443,18 @@ _.extend(Target.prototype, {
           }
 
           if (self.arch === "server" && resource.type === "js" && ! isApp &&
-              slice.nodeModulesPath)
-            f.nodeModulesTargetPath = path.join('/npm', slice.pkg.name,
-                                                slice.sliceName);
+              slice.nodeModulesPath) {
+            var nmd = self.nodeModulesDirectories[slice.nodeModulesPath];
+            if (! nmd) {
+              nmd = new NodeModulesDirectory({
+                sourcePath: slice.nodeModulesPath,
+                preferredBundlePath: path.join('/npm', slice.pkg.name,
+                                               slice.sliceName)
+              });
+              self.nodeModulesDirectories[slice.nodeModulesPath] = nmd;
+            }
+            f.nodeModulesDirectory = nmd;
+          }
 
           self[resource.type].push(f);
           return;
@@ -671,11 +701,6 @@ var ServerTarget = function (name, options) {
   var self = this;
   Target.apply(this, arguments);
 
-  // These directories are copied (cp -r) or symlinked into the
-  // bundle. Map from targetPath (path in the Target's filesystem) to
-  // sourcePath (absolute path in the local filesystem.)
-  self.nodeModulesDirs = {};
-
   self.clientTarget = options.clientTarget;
   self.releaseStamp = options.releaseStamp;
 };
@@ -698,6 +723,14 @@ _.extend(ServerTarget.prototype, {
       }
     };
 
+    // Finalize choice of paths for node_modules directories -- These
+    // paths are no longer just "preferred"; they are the final paths
+    // that we will use
+    _.each(self.nodeModulesDirectories, function (nmd) {
+      nmd.preferredBundlePath =
+        builder.generateFilename(nmd.preferredBundlePath, { directory: true });
+    });
+
     // JavaScript sources
     _.each(self.js, function (file) {
       if (! file.targetPath)
@@ -707,7 +740,8 @@ _.extend(ServerTarget.prototype, {
 
       json.load.push({
         path: file.targetPath,
-        node_modules: file.nodeModulesTargetPath || undefined
+        node_modules: file.nodeModulesDirectory ?
+          file.nodeModulesDirectory.preferredBundlePath : undefined
       });
     });
 
@@ -732,7 +766,7 @@ _.extend(ServerTarget.prototype, {
       });
     }
 
-    // Extra user-defined arch-independent node_module. 'meteor
+    // Extra user-defined arch-independent node_modules. 'meteor
     // bundle' and 'meteor deploy' copy them, and 'meteor run'
     // symlinks them. (XXX Note that this doesn't work for
     // arch-specific packages. They'll just break if you deploy to a
@@ -742,15 +776,12 @@ _.extend(ServerTarget.prototype, {
     // XXX we should consider supporting bundle time-only npm
     // dependencies which don't need to be pushed to the server.
 
-    _.each(self.slices, function (slice) {
-      if (slice.nodeModulesPath) {
-        // Copy the package's npm dependencies into the bundle.
-        builder.copyDirectory({
-          from: slice.nodeModulesPath,
-          to: path.join('/npm', slice.pkg.name, slice.sliceName),
-          depend: false
-        });
-      }
+    _.each(self.nodeModulesDirectories, function (nmd) {
+      builder.copyDirectory({
+        from: nmd.sourcePath,
+        to: nmd.preferredBundlePath,
+        depend: false
+      });
     });
 
     // Control file
@@ -758,6 +789,54 @@ _.extend(ServerTarget.prototype, {
   }
 });
 
+
+//////////////////// InProcessTarget ////////////////////
+
+var InProcessTarget = function (name, options) {
+  var self = this;
+  Target.apply(this, arguments);
+};
+
+inherits(InProcessTarget, Target);
+
+_.extend(InProcessTarget.prototype, {
+  // Load all of the JavaScript in this target into the current process
+  load: function (builder, nodeModulesMode) {
+    var self = this;
+
+    // Eval each JavaScript file, providing a 'Npm' symbol in the same
+    // way that the server environment would
+    _.each(self.js, function (file) {
+      var Npm = {
+        require: function (name) {
+          if (! file.nodeModulesDirectory) {
+            // No Npm.depends associated with this package
+            return require(name);
+          }
+
+          var nodeModuleDir =
+            path.join(file.nodeModulesDirectory.sourcePath, name);
+
+          if (fs.existsSync(nodeModuleDir)) {
+            return require(nodeModuleDir);
+          }
+          try {
+            return require(name);
+          } catch (e) {
+            throw new Error("Can't load npm module '" + name +
+                            "' while loading " + file.targetPath +
+                            ". Check your Npm.depends().'");
+          }
+        }
+      };
+      // \n is necessary in case final line is a //-comment
+      var wrapped = "(function(Npm){" +
+        file.contents().toString('utf8') + "\n})";
+      var func = require('vm').runInThisContext(wrapped, file.targetPath, true);
+      func(Npm);
+    });
+  }
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // writeSiteArchive
@@ -985,4 +1064,19 @@ exports.bundle = function (appDir, outputPath, options) {
       errors: ["Exception while bundling application:\n" + (err.stack || err)]
     };
   }
+};
+
+// Public entry point is unipackage.load, but for now it shares a lot
+// of innards with the bundler (this possibly will get factored out at
+// some point) so the implementation is here
+exports._load = function (library, packages) {
+  var target = new InProcessTarget("load", {
+    library: library,
+    arch: "server"
+  });
+
+  target.determineLoadOrder({ packages: packages });
+  target.emitResources();
+  // I love it when a plan comes together
+  target.load();
 };
