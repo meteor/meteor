@@ -1033,9 +1033,8 @@ Fiber(function () {
     // Load any needed unipackages
     require('./unipackage.js').load({
       library: context.library,
-      packages: ['random'], // add any unipackages here
+      packages: [], // add any unipackages here
       release: context.releaseVersion
-      ,
     });
 
     if (argv['get-ready']) {
