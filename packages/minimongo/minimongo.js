@@ -315,7 +315,7 @@ _.extend(LocalCollection.Cursor.prototype, {
         handle.stop();
       });
     }
-    self.collection._observeQueue.flush();
+    self.collection._observeQueue.drain();
 
     return handle;
   }
@@ -438,7 +438,7 @@ LocalCollection.prototype.insert = function (doc) {
     if (self.queries[qid])
       LocalCollection._recomputeResults(self.queries[qid]);
   });
-  self._observeQueue.flush();
+  self._observeQueue.drain();
   return doc._id;
 };
 
@@ -495,7 +495,7 @@ LocalCollection.prototype.remove = function (selector) {
     if (query)
       LocalCollection._recomputeResults(query);
   });
-  self._observeQueue.flush();
+  self._observeQueue.drain();
 };
 
 // XXX atomicity: if multi is true, and one modification fails, do
@@ -538,7 +538,7 @@ LocalCollection.prototype.update = function (selector, mod, options) {
       LocalCollection._recomputeResults(query,
                                         qidToOriginalResults[qid]);
   });
-  self._observeQueue.flush();
+  self._observeQueue.drain();
 };
 
 LocalCollection.prototype._modifyAndNotify = function (
@@ -785,7 +785,7 @@ LocalCollection.prototype.resumeObservers = function () {
       query.ordered, query.results_snapshot, query.results, query);
     query.results_snapshot = null;
   }
-  self._observeQueue.flush();
+  self._observeQueue.drain();
 };
 
 

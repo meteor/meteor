@@ -58,6 +58,15 @@ _.extend(Meteor._SynchronousQueue.prototype, {
     self.runTask(function () {});
   },
 
+  drain: function () {
+    var self = this;
+    if (!self.safeToRunTask())
+      return;
+    while (!_.isEmpty(self._tasks)) {
+      self.flush();
+    }
+  },
+
   safeToRunTask: function () {
     var self = this;
     return !self._running;

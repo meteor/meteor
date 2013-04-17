@@ -89,6 +89,15 @@ _.extend(Meteor._SynchronousQueue.prototype, {
     return Fiber.current && self._currentTaskFiber !== Fiber.current;
   },
 
+  drain: function () {
+    var self = this;
+    if (!self.safeToRunTask())
+      return;
+    while (!_.isEmpty(self._taskHandles)) {
+      self.flush();
+    }
+  },
+
   _scheduleRun: function () {
     var self = this;
 
