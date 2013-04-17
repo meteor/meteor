@@ -17,15 +17,19 @@ Meteor._SynchronousQueue = function () {
 _.extend(Meteor._SynchronousQueue.prototype, {
   runTask: function (task) {
     var self = this;
+    if (!self.safeToRunTask())
+      throw new Error("Could not synchronously run a task from a running task");
     self._tasks.push(task);
+    var tasks = self._tasks;
+    self._tasks = [];
     self._running = true;
     try {
-      while (!_.isEmpty(self._tasks)) {
-        var t = self._tasks.shift();
+      while (!_.isEmpty(tasks)) {
+        var t = tasks.shift();
         try {
           t();
         } catch (e) {
-          if (_.isEmpty(self._tasks)) {
+          if (_.isEmpty(tasks)) {
             // this was the last task, that is, the one we're calling runTask
             // for.
             throw e;
@@ -41,7 +45,12 @@ _.extend(Meteor._SynchronousQueue.prototype, {
 
   queueTask: function (task) {
     var self = this;
+    var wasEmpty = _.isEmpty(self._tasks);
     self._tasks.push(task);
+    // Intentionally not using Meteor.setTimeout, because it doesn't like runing
+    // in stubs for now.
+    if (wasEmpty)
+      setTimeout(_.bind(self.flush, self), 0);
   },
 
   flush: function () {
@@ -49,12 +58,8 @@ _.extend(Meteor._SynchronousQueue.prototype, {
     self.runTask(function () {});
   },
 
-  taskRunning: function () {
-    var self = this;
-    return self._running;
-  },
-
   safeToRunTask: function () {
-    return true;
+    var self = this;
+    return !self._running;
   }
 });
