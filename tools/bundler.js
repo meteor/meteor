@@ -167,7 +167,7 @@ var NodeModulesDirectory = function (options) {
 
   // The path (relative to the bundle root) where we would preferably
   // like the node_modules to be output (essentially cosmetic.)
-  self.preferredBundlePath = options.bundlePath;
+  self.preferredBundlePath = options.preferredBundlePath;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -349,11 +349,11 @@ _.extend(Target.prototype, {
           if (typeof p === "string")
             return library.getSlices(p, self.arch);
           else
-            return pkg.getDefaultSlices(self.arch);
+            return p.getDefaultSlices(self.arch);
         }),
         _.map(options.test || [], function (p) {
-          var pkg = (p === "string" ? library.get(p) : p);
-          return p.getTestSlices(self.arch);
+          var pkg = (typeof p === "string" ? library.get(p) : p);
+          return pkg.getTestSlices(self.arch);
         })
       ]);
     _.each(rootSlices, function (slice) {

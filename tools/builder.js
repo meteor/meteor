@@ -340,15 +340,15 @@ _.extend(Builder.prototype, {
 
   // Returns a new Builder-compatible object that works just like a
   // Builder, but interprets all paths relative to 'relPath', a path
-  // relative to the bundle root.
+  // relative to the bundle root which should not start with a '/'.
   //
   // The sub-builder returned does not have all Builder methods (for
   // example, complete() wouldn't make sense) and you should not rely
-  // on it beig instanceof Builder.
+  // on it being instanceof Builder.
   enter: function (relPath) {
     var self = this;
-    var methods = ["write", "writeJson", "reserve", "copyDirectory",
-                   "enter"];
+    var methods = ["write", "writeJson", "reserve", "generateFilename",
+                   "copyDirectory", "enter"];
     var ret = {};
 
     _.each(methods, function (method) {
@@ -366,7 +366,20 @@ _.extend(Builder.prototype, {
           args[0].to = path.join(relPath, args[0].to);
         }
 
-        return self[method].apply(self, args);
+        var ret = self[method].apply(self, args);
+
+        if (method === "generateFilename") {
+          // fix up the returned path to be relative to the
+          // sub-bundle, not the parent bundle
+          if (ret.substr(0, 1) === '/')
+            ret = ret.substr(1);
+          if (ret.substr(0, relPath.length) !== relPath)
+            throw new Error("generateFilename returned path outside of " +
+                            "sub-bundle?");
+          ret = ret.substr(relPath.length);
+        }
+
+        return ret;
       };
     });
 
