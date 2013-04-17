@@ -122,7 +122,8 @@ _.extend(Library.prototype, {
       var buildDir = path.join(packageDir, '.build');
       if (fs.existsSync(buildDir) &&
           pkg.initFromUnipackage(name, buildDir,
-                                 { onlyIfUpToDate: ! fromWarehouse })) {
+                                 { onlyIfUpToDate: ! fromWarehouse,
+                                   buildOfPath: packageDir })) {
         // We already had a build and it was up to date.
         self.loadedPackages[name] = pkg;
       } else {
@@ -153,7 +154,7 @@ _.extend(Library.prototype, {
         if (pkg.canBeSavedAsUnipackage()) {
           // Save it, for a fast load next time
           files.add_to_gitignore(packageDir, '.build*');
-          pkg.saveAsUnipackage(buildDir);
+          pkg.saveAsUnipackage(buildDir, { buildOfPath: packageDir });
         }
       }
     }

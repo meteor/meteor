@@ -879,6 +879,12 @@ _.extend(Package.prototype, {
   //   dependencies (if present) to see if it's up to date. If not,
   //   return false without loading the package. Otherwise return
   //   true. (If onlyIfUpToDate is not passed, always return true.)
+  // - buildOfPath: If present, the source directory (as an absolute
+  //   path on local disk) of which we think this unipackage is a
+  //   build. If it's not (it was copied from somewhere else), we
+  //   consider it not up to date (in the sense of onlyIfUpToDate) so
+  //   that we can rebuild it and correct the absolute paths in the
+  //   dependency information.
   initFromUnipackage: function (name, dir, options) {
     var self = this;
     options = options || {};
@@ -906,6 +912,20 @@ _.extend(Package.prototype, {
 
     // If we're supposed to check the dependencies, go ahead and do so
     if (options.onlyIfUpToDate) {
+      if (options.buildOfPath &&
+          (mainJson.buildOfPath !== options.buildOfPath)) {
+        // This catches the case where you copy a source tree that had
+        // a .build directory and then modify a file. Without this
+        // check you won't see a rebuild (even if you stop and restart
+        // meteor), at least not until you modify the *original*
+        // copies of the source files, because that is still where all
+        // of the dependency info points.
+        console.log("fail",
+                    mainJson.buildOfPath,
+                    path.resolve(dir));
+        return false;
+      }
+
       var isUpToDate = true;
       var watcher = new watch.Watcher({
         files: dependencies.files,
@@ -1006,7 +1026,13 @@ _.extend(Package.prototype, {
     return _.keys(self.extensions || []).length === 0;
   },
 
-  saveAsUnipackage: function (outputPath) {
+  // options:
+  //
+  // - buildOfPath: Optional. The absolute path on local disk of the
+  //   directory that was built to produce this package. Used as part
+  //   of the dependency info to detect builds that were moved and
+  //   then modified.
+  saveAsUnipackage: function (outputPath, options) {
     var self = this;
     var builder = new Builder({ outputPath: outputPath });
 
@@ -1020,6 +1046,7 @@ _.extend(Package.prototype, {
         summary: self.metadata.summary,
         internal: self.metadata.internal,
         dependencies: { files: {}, directories: {} },
+        buildOfPath: options.buildOfPath || undefined,
         slices: [],
         defaultSlices: self.defaultSlices,
         testSlices: self.testSlices
