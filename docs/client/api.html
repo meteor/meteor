@@ -2273,6 +2273,49 @@ sub-template.
 
 {{/api_box_inline}}
 
+<h2 id="match"><span>Match</span></h2>
+
+Meteor methods and publish functions take arbitrary [EJSON](#ejson) types as
+arguments, but most arguments are expected to be of a particular type. Meteor's
+`check` package is a lightweight library for checking that arguments and other
+values are of the expected type.
+
+XXX EXAMPLE HERE
+
+{{> api_box check}}
+
+If the match fails, `check` throws a `Match.Error` describing how it failed. If
+this error gets sent over the wire to the client, it will appear only as
+`Meteor.Error(400, "Match Failed")`; the failure details will be written to the
+server logs but not revealed to the client.
+
+{{> api_box match_test}}
+
+{{#api_box_inline matchpatterns}}
+
+The following patterns can be used as pattern arguments to `check` and `Match.test`:
+
+
+<dl>
+{{#dtdd "<code>String</code>, <code>Number</code>, <code>Boolean</code>, <code>undefined</code>, <code>null</code>"}}
+Matches a primitive of the given type.
+{{/dtdd}}
+
+{{#dtdd "<code>Match.Any</code>"}}
+Matches any value.
+{{/dtdd}}
+
+{{#dtdd "A constructor function"}}
+Matches any element that is an instance of that type. For example, `Date`.
+{{/dtdd}}
+
+{{#dtdd "[<em>pattern</em>]"}}
+A one-element array matches an array of elements, each of which match the 
+{{/dtdd}}
+
+</dl>
+
+{{/api_box_inline}}
 
 <h2 id="timers"><span>Timers</span></h2>
 

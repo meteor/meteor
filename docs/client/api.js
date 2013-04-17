@@ -1357,6 +1357,49 @@ Template.api.accounts_emailTemplates = {
 
 
 
+Template.api.check = {
+  id: "check",
+  name: "check(value, pattern)",
+  locus: "Anywhere",
+  descr: ["Checks that a value matches a [pattern](#matchpatterns). If the value does not match the pattern, throws a `Match.Error`."],
+  args: [
+    {
+      name: "value",
+      type: "Any",
+      descr: "The value to check"
+    },
+    {
+      name: "pattern",
+      type: "Match pattern",
+      descr: "The [pattern](#matchpatterns) to match `value` against"
+    }
+  ]
+};
+
+Template.api.match_test = {
+  id: "match_test",
+  name: "Match.test(value, pattern)",
+  locus: "Anywhere",
+  descr: ["Returns true if the value matches the [pattern](#matchpatterns)."],
+  args: [
+    {
+      name: "value",
+      type: "Any",
+      descr: "The value to check"
+    },
+    {
+      name: "pattern",
+      type: "Match pattern",
+      descr: "The [pattern](#matchpatterns) to match `value` against"
+    }
+  ]
+};
+
+Template.api.matchpatterns = {
+  id: "matchpatterns",
+  name: "Match patterns"
+};
+
 Template.api.setTimeout = {
   id: "meteor_settimeout",
   name: "Meteor.setTimeout(func, delay)",
