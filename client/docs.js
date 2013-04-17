@@ -242,6 +242,12 @@ var toc = [
       {name: "Reactivity isolation", style: "noncode", id: "isolate"}
      ],
 
+    "Match", [
+      "check",
+      "Match.test",
+      {name: "Match patterns", style: "noncode"}
+    ],
+
     "Timers", [
       "Meteor.setTimeout",
       "Meteor.setInterval",
