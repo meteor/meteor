@@ -153,8 +153,7 @@ testAsyncMulti = function (name, funcs) {
   });
 };
 
-/*global*/
-
+// @export pollUntil
 pollUntil = function (expect, f, timeout, step) {
   step = step || 100;
   var expectation = expect(true);
