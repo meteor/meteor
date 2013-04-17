@@ -840,6 +840,7 @@ var t = HTML5.Tokenizer = function HTML5Tokenizer(input, document, tree) {
     } else {
       current_token.name += data.toLowerCase();
     }
+    buffer.commit();
     return true;
   }
 
