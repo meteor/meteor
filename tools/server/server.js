@@ -188,7 +188,6 @@ var run = function () {
 
   // start up app
   __meteor_bootstrap__ = {
-    startup_hooks: [],
     app: app,
     // metadata about this bundle
     // XXX this could use some refactoring to better distinguish
