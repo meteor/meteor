@@ -123,7 +123,7 @@ Spacebars.parseStacheTag = function (inputString, pos) {
     return arg;
   };
 
-  // scan an argument; must succeed
+  // scan an argument; succeeds or errors
   var scanArg = function (notKeyword) {
     // all args have `type` and possibly `key`
     var tok = scanToken();
@@ -226,11 +226,325 @@ Spacebars.parseStacheTag = function (inputString, pos) {
     }
   }
 
+  tag.charPos = startPos;
   tag.charLength = pos - startPos;
   return tag;
 };
 
+var randomLetters = function () {
+  var letters = "abcdefghijklmnopqrstuvwxyz";
+  var str = '';
+  for (var i = 0; i < 10; ++i)
+    str += Random.choice(letters);
+  return str;
+};
+
+var tokenizeHtml = function (html, preString, postString, tagInfoGetter) {
+  var tokens = HTML5Tokenizer.tokenize(html);
+
+  var out = [];
+
+  var noStache = function (chrs, customMessage) {
+    if (! chrs)
+      return chrs;
+
+    var extracted = extractTags(chrs);
+    if (typeof extracted === "string")
+      return chrs;
+
+    for (var i = 0; i < extracted.length; i++)
+      if (extracted[i].id)
+        throw new Error((customMessage ||
+                         "Can't use a stache tag at this position " +
+                         "in an HTML tag") + ", at " +
+                        tagInfoGetter(extracted[i].id).prettyOffset());
+    return chrs;
+  };
+
+  var extractTags = function (str) {
+    if (! str)
+      return '';
+
+    var buf = [];
+    var lastPos = 0;
+    var pos;
+    while ((pos = str.indexOf(preString, lastPos)) >= 0) {
+      if (pos > lastPos)
+        buf.push(str.slice(lastPos, pos));
+      var idStart = pos + preString.length;
+      var idEnd = str.indexOf(postString, idStart);
+      if (idEnd < 0)
+        throw new Error("error extracting tags"); // shouldn't happen
+      var x;
+      buf.push(x = {id: str.slice(idStart, idEnd)});
+      x.ref = tagInfoGetter(x.id).ref();
+      lastPos = idEnd + postString.length;
+    }
+    if (lastPos < str.length)
+      buf.push(str.slice(lastPos));
+
+    if (buf.length === 1 && typeof buf[0] === "string")
+      return buf[0];
+
+    return buf;
+  };
+
+  for (var i = 0; i < tokens.length; i++) {
+    var tok = tokens[i];
+    if (tok.type === 'Characters') {
+      var s = tok.data;
+      // combine multiple adjacent "Characters"
+      while (tokens[i+1] && tokens[i+1].type === 'Characters') {
+        tok = tokens[++i];
+        s += tok.data;
+      }
+      out.push({type: 'Characters',
+                data: extractTags(s)});
+    } else if (tok.type === 'SpaceCharacters') {
+      out.push({type: 'SpaceCharacters',
+                data: tok.data});
+    } else if (tok.type === 'EndTag') {
+      out.push({type: 'EndTag',
+                name: extractTags(tok.name)});
+    } else if (tok.type === 'Doctype') {
+      out.push({type: 'DocType',
+                name: noStache(tok.name),
+                correct: tok.correct,
+                publicId: noStache(tok.publicId),
+                systemId: noStache(tok.systemId)});
+    } else if (tok.type === 'Comment') {
+      out.push({type: 'Comment',
+                data: extractTags(tok.data)});
+    } else if (tok.type === 'StartTag') {
+      out.push({ type: 'StartTag',
+                 name: extractTags(tok.name),
+                 data: _.map(tok.data, function (kv) {
+                   return { nodeName: extractTags(kv.nodeName),
+                            nodeValue: extractTags(kv.nodeValue) };
+                 }) });
+    } else {
+      // ignore (ParseError, EOF)
+    }
+  }
+
+  return out;
+};
 
 Spacebars.parse = function (inputString) {
+  // first, scan for all the stache tags
 
+  var stacheTags = [];
+
+  var pos = 0;
+  while (pos < inputString.length) {
+    pos = inputString.indexOf('{{', pos);
+    if (pos < 0) {
+      pos = inputString.length;
+    } else {
+      var tag = Spacebars.parseStacheTag(inputString, pos);
+      stacheTags.push(tag);
+      pos += tag.charLength;
+    }
+  }
+
+  // now build a tree where block contents put into an object
+  // with `type:'block'`.  Also check that tags match.
+
+  var parseBlock = function (openTagIndex) {
+    var isTopLevel = (openTagIndex < 0);
+    var block = {
+      type: 'block',
+      isBlock: true,
+      openTag: null,
+      elseTag: null,
+      closeTag: null,
+      bodyChildren: [], // tags and blocks
+      elseChildren: []
+    };
+    var children = block.bodyChildren; // repointed to elseChildren later
+    if (! isTopLevel)
+      block.openTag = stacheTags[openTagIndex];
+
+
+    for (var i = (isTopLevel ? 0 : openTagIndex + 1);
+         i < stacheTags.length && ! block.closeTag;
+         i++) {
+
+      var t = stacheTags[i];
+      if (t.type === 'BLOCKOPEN') {
+        // recurse
+        var b = parseBlock(i);
+        children.push(b);
+        while (stacheTags[i] !== b.closeTag)
+          i++;
+      } else if (t.type === 'BLOCKCLOSE') {
+        if (isTopLevel)
+          throw new Error("Unexpected close tag `" +t.name + "` at " +
+                          prettyOffset(inputString, t.charPos));
+        if (t.name !== block.openTag.name)
+          throw new Error("Close tag at " +
+                          prettyOffset(inputString, t.charPos) +
+                          " doesn't match `" + block.openTag.name +
+                          "`, found `" + t.name + "`");
+        block.closeTag = t;
+      } else if (t.type === 'ELSE') {
+        if (isTopLevel)
+          throw new Error("Unexpected `{{else}}` at " +
+                          prettyOffset(inputString, t.charPos));
+        if (block.elseTag)
+          throw new Error("Duplicate `{{else}}` at " +
+                          prettyOffset(inputString, t.charPos));
+        block.elseTag = t;
+        children = block.elseChildren;
+      } else {
+        children.push(t);
+      }
+    }
+
+    if (! isTopLevel && ! block.closeTag)
+      throw new Error("Unclosed `" + block.openTag.name +
+                      "` tag at top level");
+
+    return block;
+  };
+
+  // get a tree of all the stache tags as a top-level "block"
+  // whose bodyChildren are the sub-blocks and other non-block
+  // stache tags.
+  var tree = parseBlock(-1);
+
+  var preString = randomLetters();
+  var postString = randomLetters();
+  var nextId = 1;
+
+  var tagEnd = function (t) { return t.charPos + t.charLength; };
+
+  var idLookup = {};
+
+  var tagInfoGetter = function (id) {
+    var t = idLookup[id];
+    return {
+      prettyOffset: function () {
+        return t ? prettyOffset(
+          inputString, (t.isBlock ? t.openTag : t).charPos) :
+        "(unknown)";
+      },
+      ref: function () {
+        return t;
+      }
+    };
+  };
+
+  var tokenizeBlock = function (block) {
+    // replace all child tags and blocks in the HTML with random
+    // identifiers!
+
+    var isTopLevel = ! block.openTag;
+    var hasElse = !! block.elseTag;
+
+    var getTokens = function (children, startPos, endPos) {
+      var html = '';
+      var pos = startPos;
+      _.each(children, function (t) {
+        html += inputString.slice(
+          pos, (t.isBlock ? t.openTag : t).charPos);
+        idLookup[nextId] = t;
+        html += preString + (nextId++) + postString;
+        pos = tagEnd(t.isBlock ? t.closeTag : t);
+
+        if (t.isBlock)
+          tokenizeBlock(t); // recurse
+      });
+      html += inputString.slice(pos, endPos);
+
+      return tokenizeHtml(html, preString, postString,
+                          tagInfoGetter);
+    };
+
+    var bodyStart = (isTopLevel ? 0 : tagEnd(block.openTag));
+    var bodyEnd = (isTopLevel ? inputString.length :
+                   (hasElse ? block.elseTag.charPos :
+                    block.closeTag.charPos));
+
+    block.bodyTokens = getTokens(block.bodyChildren, bodyStart, bodyEnd);
+
+    if (hasElse) {
+      var elseStart = tagEnd(block.elseTag);
+      var elseEnd = block.closeTag.charPos;
+
+      block.elseTokens = getTokens(block.elseChildren, elseStart, elseEnd);
+    }
+  };
+
+  tokenizeBlock(tree);
+
+  return tree;
+};
+
+var toJSLiteral = function (obj) {
+  // http://timelessrepo.com/json-isnt-a-javascript-subset
+  return (JSON.stringify(obj)
+          .replace(/\u2028/g, '\\u2028')
+          .replace(/\u2029/g, '\\u2029'));
+};
+
+var tagLiteral = function (tag) {
+  var lit = _.extend({}, tag);
+  delete lit.charPos;
+  delete lit.charLength;
+  return toJSLiteral(lit);
+};
+
+Spacebars.compile = function (inputString) {
+  var tree;
+  if (typeof inputString === 'object') {
+    tree = inputString; // allow passing parse tree
+  } else {
+    tree = Spacebars.parse(inputString);
+  }
+
+  var interpolate = function (strOrArray, indent) {
+    if (typeof strOrArray === "string")
+      return toJSLiteral(strOrArray);
+
+    var parts = [];
+    _.each(strOrArray, function (strOrTagRef) {
+      if (typeof strOrTagRef === "string") {
+        parts.push(toJSLiteral(strOrTagRef));
+      } else {
+        var tagOrBlock = strOrTagRef.ref;
+        if (tagOrBlock.isBlock) {
+          var block = tagOrBlock;
+          parts.push('env.tag(' + tagLiteral(block.openTag) +
+                     ', ' + tokensToFunc(block.bodyTokens, indent) +
+                     (block.elseTag ? ', ' +
+                      tokensToFunc(block.elseTokens, indent)
+                      : '') + ')');
+        } else {
+          var tag = tagOrBlock;
+          parts.push('env.tag(' + tagLiteral(tag) + ')');
+        }
+      }
+    });
+
+    return parts.join('+');
+  };
+
+  var tokensToFunc = function (tokens, indent) {
+    var oldIndent = indent || '';
+    indent = oldIndent + '  ';
+    var js = 'function (html, env) {\n';
+    _.each(tokens, function (t) {
+      switch (t.type) {
+      case 'Characters':
+        js += indent + 'html.text(' + interpolate(t.data, indent) +');\n';
+        break;
+        // XXX more types go here
+      }
+    });
+    js += oldIndent + '}';
+    return js;
+  };
+
+  return tokensToFunc(tree.bodyTokens);
 };
