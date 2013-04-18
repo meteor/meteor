@@ -75,6 +75,8 @@ var Optional = function (pattern) {
 };
 
 var OneOf = function (choices) {
+  if (_.isEmpty(choices))
+    throw new Error("Must provide at least one choice to Match.OneOf");
   this.choices = choices;
 };
 

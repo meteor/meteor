@@ -2278,9 +2278,27 @@ sub-template.
 Meteor methods and publish functions take arbitrary [EJSON](#ejson) types as
 arguments, but most arguments are expected to be of a particular type. Meteor's
 `check` package is a lightweight library for checking that arguments and other
-values are of the expected type.
+values are of the expected type. For example:
 
-XXX EXAMPLE HERE
+    Meteor.publish("chats-in-room", function (roomId) {
+      // We wouldn't want a user to be able to pass an arbitrary
+      // selector object like {$ne: null} here.
+      check(roomId, String);
+      return Chats.find({room: roomId});
+    });
+    Meteor.methods({m: function (x, y) {
+      // x must be an object, and can have keys other than
+      // data and timestamps.
+      check(x, Match.ObjectIncluding({
+        // Required binary buffer.
+        data: Match.Where(EJSON.isBinary),
+        // Optional, but if present must be an array of dates.
+        timestamps: Match.Optional([Date])
+      }));
+      // If y is provided, it must be an array of objects with
+      // exactly these two keys.
+      check(y, Match.Optional([{a: String, b: Boolean}]));
+    }});
 
 {{> api_box check}}
 
@@ -2297,22 +2315,63 @@ The following patterns can be used as pattern arguments to `check` and `Match.te
 
 
 <dl>
-{{#dtdd "<code>String</code>, <code>Number</code>, <code>Boolean</code>, <code>undefined</code>, <code>null</code>"}}
-Matches a primitive of the given type.
-{{/dtdd}}
-
 {{#dtdd "<code>Match.Any</code>"}}
 Matches any value.
 {{/dtdd}}
 
-{{#dtdd "A constructor function"}}
-Matches any element that is an instance of that type. For example, `Date`.
+{{#dtdd "<code>String</code>, <code>Number</code>, <code>Boolean</code>, <code>undefined</code>, <code>null</code>"}}
+Matches a primitive of the given type.
 {{/dtdd}}
 
-{{#dtdd "[<em>pattern</em>]"}}
-A one-element array matches an array of elements, each of which match the 
+{{#dtdd "<code>[<em>pattern</em>]</code>"}}
+A one-element array matches an array of elements, each of which match
+*pattern*. For example, `[Number]` matches a (possibly empty) array of numbers;
+`[Match.Any]` matches any array.
 {{/dtdd}}
 
+{{#dtdd "<code>{<em>key1</em>: <em>pattern1</em>, <em>key2</em>: <em>pattern2</em>, ...}</code>"}}
+Matches an Object with the given keys, with values matching the given patterns.
+If any *pattern* is a `Match.Optional`, that key does not need to exist
+in the object. The value may not contain any keys not listed in the pattern.
+The value must be a plain Object with no special prototype.
+{{/dtdd}}
+
+{{#dtdd "<code>Match.ObjectIncluding({<em>key1</em>: <em>pattern1</em>, <em>key2</em>: <em>pattern2</em>, ...})</code>"}}
+Matches an Object with the given keys; the value may also have other keys
+with arbitrary values.
+{{/dtdd}}
+
+{{#dtdd "<code>Object</code>"}}
+Matches any plain Object with any keys; equivalent to
+`Match.ObjectIncluding({})`.
+{{/dtdd}}
+
+{{#dtdd "<code>Match.Optional(<em>pattern</em>)</code>"}}
+Matches either `undefined` or something that matches *pattern*.
+{{/dtdd}}
+
+{{#dtdd "<code>Match.OneOf(<em>pattern1</em>, <em>pattern2</em>, ...)</code>"}}
+Matches any value that matches at least one of the provided patterns.
+{{/dtdd}}
+
+{{#dtdd "Any constructor function (eg, <code>Date</code>)"}}
+Matches any element that is an instance of that type.
+{{/dtdd}}
+
+{{#dtdd "<code>Match.Where(<em>condition</em>)</code>"}}
+Calls the function *condition* with the value as the argument. If *condition*
+returns true, this matches. If *condition* throws a `Match.Error` or returns
+false, this fails. If *condition* throws any other error, that error is thrown
+from the call to `check` or `Match.test`. Examples:
+
+    check(buffer, Match.Where(EJSON.isBinary));
+
+    NonEmptyString = Match.Where(function (x) {
+      validate(x, String);
+      return x.length > 0;
+    }
+    check(arg, NonEmptyString);
+{{/dtdd}}
 </dl>
 
 {{/api_box_inline}}
