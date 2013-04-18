@@ -92,6 +92,33 @@ _.extend(exports, {
     }
   },
 
+  // Return true if all of a package's npm dependencies are portable
+  // (that is, if the node_modules can be copied anywhere and we'd
+  // expect it to work, rather than containing native extensions that
+  // were built just for our architecture), else
+  // false. updateDependencies should first be used to bring
+  // packageNpmDir up to date.
+  dependenciesArePortable: function (packageNpmDir) {
+    // We use a simple heuristic: we check to see if a package (or any
+    // of its transitive depedencies) contains any *.node files. .node
+    // is the extension that signals to Node that it should load a
+    // file as a shared object rather than as JavaScript. This should
+    // handle nearly all cases.
+
+    var search = function (dir) {
+      return _.find(fs.readdirSync(dir), function (itemName) {
+        if (itemName.match(/\.node$/)) {
+          return true;
+        }
+        var item = path.join(dir, itemName);
+        if (fs.statSync(item).isDirectory())
+          return search(item);
+      }) || false;
+    };
+
+    return ! search(path.join(packageNpmDir, 'node_modules'));
+  },
+
   _makeNewPackageNpmDir: function (newPackageNpmDir) {
     var self = this;
     self._tmpDirs.push(newPackageNpmDir); // keep track so that we can remove them on process exit

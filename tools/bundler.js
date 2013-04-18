@@ -778,16 +778,10 @@ _.extend(ServerTarget.prototype, {
       });
     }
 
-    // Extra user-defined arch-independent node_modules. 'meteor
-    // bundle' and 'meteor deploy' copy them, and 'meteor run'
-    // symlinks them. (XXX Note that this doesn't work for
-    // arch-specific packages. They'll just break if you deploy to a
-    // different arch than you built on. We'll get to that Soon
-    // Enough!)
-
-    // XXX we should consider supporting bundle time-only npm
-    // dependencies which don't need to be pushed to the server.
-
+    // Extra node_modules resources from the packages. 'meteor bundle'
+    // and 'meteor deploy' copy them, and 'meteor run' symlinks
+    // them. If these contain arch-specific code then the target will
+    // end up having an appropriately specific arch.
     _.each(self.nodeModulesDirectories, function (nmd) {
       builder.copyDirectory({
         from: nmd.sourcePath,

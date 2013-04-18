@@ -526,6 +526,7 @@ _.extend(Package.prototype, {
   //   instructions haven't changed since then.
   initFromPackageDir: function (name, dir, options) {
     var self = this;
+    var isPortable = true;
     options = options || {};
     self.name = name;
     self.sourceRoot = dir;
@@ -758,21 +759,28 @@ _.extend(Package.prototype, {
     // source directory so we don't have to do this from scratch on
     // every build.
     var nodeModulesPath = null;
-    if (npmDependencies && ! options.skipNpmUpdate) {
-      // go through a specialized npm dependencies update process,
-      // ensuring we don't get new versions of any
-      // (sub)dependencies. this process also runs mostly safely
-      // multiple times in parallel (which could happen if you have
-      // two apps running locally using the same package)
+    if (npmDependencies) {
       var packageNpmDir =
         path.resolve(path.join(self.sourceRoot, '.npm'));
-      meteorNpm.updateDependencies(name, packageNpmDir, npmDependencies);
+
+      if (! options.skipNpmUpdate) {
+        // go through a specialized npm dependencies update process,
+        // ensuring we don't get new versions of any
+        // (sub)dependencies. this process also runs mostly safely
+        // multiple times in parallel (which could happen if you have
+        // two apps running locally using the same package)
+        meteorNpm.updateDependencies(name, packageNpmDir, npmDependencies);
+      }
+
       nodeModulesPath = path.join(packageNpmDir, 'node_modules');
+      if (! meteorNpm.dependenciesArePortable(packageNpmDir))
+        isPortable = false;
     }
 
     // Create slices
+    var nativeArch = isPortable ? "native" : archinfo.host();
     _.each(["use", "test"], function (role) {
-      _.each(["browser", "native"], function (arch) {
+      _.each(["browser", nativeArch], function (arch) {
         var where = (arch === "browser") ? "client" : "server";
 
         // Everything depends on the package 'meteor', which sets up
@@ -804,8 +812,7 @@ _.extend(Package.prototype, {
           sources: sources[role][where],
           forceExport: forceExport[role][where],
           dependencyInfo: dependencyInfo,
-          nodeModulesPath: arch !== "native" ? undefined :
-            (nodeModulesPath || undefined)
+          nodeModulesPath: arch === nativeArch && nodeModulesPath || undefined
         }));
       });
     });
