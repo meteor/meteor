@@ -36,6 +36,7 @@ Package.on_use(function (api, where) {
   api.add_files('timers.js', ['client', 'server']);
   api.add_files('errors.js', ['client', 'server']);
   api.add_files('fiber_helpers.js', 'server');
+  api.add_files('fiber_stubs_client.js', 'client');
 
   // dynamic variables, bindEnvironment
   // XXX move into a separate package?
