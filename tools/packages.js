@@ -936,12 +936,17 @@ _.extend(Package.prototype, {
       throw new Error("Unsupported unipackage version: " +
                       JSON.stringify(mainJson.version));
 
+    var buildInfoPath = path.join(dir, 'buildinfo.json');
+    var buildInfoJson = fs.existsSync(buildInfoPath) ?
+      JSON.parse(fs.readFileSync(buildInfoPath)) : {};
+
     // XXX should comprehensively sanitize (eg, typecheck) everything
     // read from json files
 
     // Read the dependency info (if present), and make the strings
     // back into regexps
-    var dependencies = mainJson.dependencies;
+    var dependencies = buildInfoJson.dependencies ||
+      { files: {}, directories: {} };
     _.each(dependencies.directories, function (d) {
       _.each(["include", "exclude"], function (k) {
         d[k] = _.map(d[k], function (s) {
@@ -953,7 +958,7 @@ _.extend(Package.prototype, {
     // If we're supposed to check the dependencies, go ahead and do so
     if (options.onlyIfUpToDate) {
       if (options.buildOfPath &&
-          (mainJson.buildOfPath !== options.buildOfPath)) {
+          (buildInfoJson.buildOfPath !== options.buildOfPath)) {
         // This catches the case where you copy a source tree that had
         // a .build directory and then modify a file. Without this
         // check you won't see a rebuild (even if you stop and restart
@@ -1082,14 +1087,18 @@ _.extend(Package.prototype, {
         version: "1",
         summary: self.metadata.summary,
         internal: self.metadata.internal,
-        dependencies: { files: {}, directories: {} },
-        buildOfPath: options.buildOfPath || undefined,
         slices: [],
         defaultSlices: self.defaultSlices,
         testSlices: self.testSlices
       };
 
+      var buildInfoJson = {
+        dependencies: { files: {}, directories: {} },
+        source: options.buildOfPath || undefined,
+      };
+
       builder.reserve("unipackage.json");
+      builder.reserve("buildinfo.json");
       builder.reserve("node_modules", { directory: true });
       builder.reserve("head");
       builder.reserve("body");
@@ -1114,9 +1123,9 @@ _.extend(Package.prototype, {
 
         // Merge slice dependencies
         // XXX is naive merge sufficient here?
-        _.extend(mainJson.dependencies.files,
+        _.extend(buildInfoJson.dependencies.files,
                  slice.dependencyInfo.files);
-        _.extend(mainJson.dependencies.directories,
+        _.extend(buildInfoJson.dependencies.directories,
                  slice.dependencyInfo.directories);
 
         // Construct slice metadata
@@ -1219,7 +1228,7 @@ _.extend(Package.prototype, {
 
       // Prep dependencies for serialization by turning regexps into
       // strings
-      _.each(mainJson.dependencies.directories, function (d) {
+      _.each(buildInfoJson.dependencies.directories, function (d) {
         _.each(["include", "exclude"], function (k) {
           d[k] = _.map(d[k], function (r) {
             return r.sources;
@@ -1228,6 +1237,7 @@ _.extend(Package.prototype, {
       });
 
       builder.writeJson("unipackage.json", mainJson);
+      builder.writeJson("buildinfo.json", buildInfoJson);
       builder.complete();
     } catch (e) {
       builder.abort();
