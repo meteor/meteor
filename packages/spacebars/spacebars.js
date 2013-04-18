@@ -307,7 +307,7 @@ var tokenizeHtml = function (html, preString, postString, tagInfoGetter) {
                 data: extractTags(s)});
     } else if (tok.type === 'EndTag') {
       out.push({type: 'EndTag',
-                name: extractTags(tok.name)});
+                name: noStache(tok.name)});
     } else if (tok.type === 'Doctype') {
       out.push({type: 'DocType',
                 name: noStache(tok.name),
@@ -319,7 +319,7 @@ var tokenizeHtml = function (html, preString, postString, tagInfoGetter) {
                 data: extractTags(tok.data)});
     } else if (tok.type === 'StartTag') {
       out.push({ type: 'StartTag',
-                 name: extractTags(tok.name),
+                 name: noStache(tok.name),
                  data: _.map(tok.data, function (kv) {
                    return { nodeName: extractTags(kv.nodeName),
                             nodeValue: extractTags(kv.nodeValue) };
