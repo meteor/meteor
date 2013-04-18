@@ -102,14 +102,13 @@ _.extend(exports, {
     // We use a simple heuristic: we check to see if a package (or any
     // of its transitive depedencies) contains any *.node files. .node
     // is the extension that signals to Node that it should load a
-    // file as a shared object rather than as JavaScript. This should
-    // handle nearly all cases.
+    // file as a shared object rather than as JavaScript, so this
+    // should work in the vast majority of cases.
 
     var search = function (dir) {
       return _.find(fs.readdirSync(dir), function (itemName) {
-        if (itemName.match(/\.node$/)) {
+        if (itemName.match(/\.node$/))
           return true;
-        }
         var item = path.join(dir, itemName);
         if (fs.statSync(item).isDirectory())
           return search(item);
