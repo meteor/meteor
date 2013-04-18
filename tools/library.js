@@ -222,6 +222,78 @@ _.extend(Library.prototype, {
     });
 
     return ret;
+  },
+
+  // Rebuild all source packages in our search paths -- even including
+  // any source packages in the warehouse. (Perhaps we shouldn't
+  // include the warehouse since it's supposed to be immutable.. or
+  // maybe if the warehouse wants to be immutable perhaps it shouldn't
+  // include source packages. This is intended primarily for
+  // convenience when developing the package build code.)
+  //
+  // This will force the rebuild even of packages that are
+  // shadowed. However, for now, it's undefined whether shadowed
+  // packages are rebuilt (eg, if you have two packages named 'foo' in
+  // your search path, both of them will have their builds deleted but
+  // only the visible one might get rebuilt immediately.)
+  rebuildAll: function () {
+    var self = this;
+    // XXX refactor to combine logic with list()? important difference
+    // here is that we want shadowed packages too
+    var all = {}; // map from path to name
+
+    // Assemble a list of all packages
+    _.each(self.overrides, function (packageDir, name) {
+      all[packageDir] = name;
+    });
+
+    _.each(self.localPackageDirs, function (dir) {
+      var subdirs = fs.readdirSync(dir);
+      _.each(subdirs, function (subdir) {
+        var packageDir = path.resolve(dir, subdir);
+        all[packageDir] = subdir;
+      });
+    });
+
+    _.each(self.releaseManifest || {}, function (name, version) {
+      var packageDir = path.join(warehouse.getWarehouseDir(),
+                                 'packages', name, version);
+      all[packageDir] = name;
+    });
+
+    // Delete any that are source packages with builds.
+    var count = 0;
+    _.each(_.keys(all), function (packageDir) {
+      var isRealPackage = true;
+      try {
+        if (! fs.statSync(packageDir).isDirectory())
+          isRealPackage = false;
+      } catch (e) {
+        // stat failed -- path doesn't exist
+        isRealPackage = false;
+      }
+
+      if (! isRealPackage) {
+        delete all[packageDir];
+        return;
+      }
+
+      var buildDir = path.join(packageDir, '.build');
+      files.rm_recursive(buildDir);
+    });
+
+    // Now reload them, forcing a rebuild. We have to do this in two
+    // passes because otherwise we might end up rebuilding a package
+    // and then immediately deleting it.
+    self.refresh();
+    _.each(all, function (name, packageDir) {
+      // Tolerate missing packages. This can happen because our crude
+      // logic above misdetects an empty directory as a package.
+      if (self.get(name, /* throwOnError */ false))
+        count ++;
+    });
+
+    console.log("Rebuilt", count, "packages.");
   }
 });
 

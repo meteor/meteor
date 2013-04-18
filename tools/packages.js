@@ -5,6 +5,7 @@ var watch = require('./watch.js');
 var Builder = require('./builder.js');
 var project = require('./project.js');
 var meteorNpm = require('./meteor_npm.js');
+var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require(path.join(__dirname, 'linker.js'));
 var fs = require('fs');
 
@@ -80,7 +81,8 @@ var Slice = function (pkg, options) {
   // (which, NB, we might load on server arches.)
   self.sliceName = options.name;
 
-  // "client" or "server"
+  // The architecture (fully or partially qualified) that can use this
+  // slice.
   self.arch = options.arch;
 
   // Unique ID for this slice. Unique across all slices of all
@@ -181,6 +183,12 @@ _.extend(Slice.prototype, {
     var resources = [];
     var js = [];
 
+    // In the old extension API, there is a 'where' parameter that
+    // conflates architecture and slice name and can be either
+    // "client" or "server".
+    var clientOrServer =
+      self.arch.match(/^browser\.?/) ? "client" : "server";
+
     /**
      * In the legacy extension API, this is the ultimate low-level
      * entry point to add data to the bundle.
@@ -215,9 +223,9 @@ _.extend(Slice.prototype, {
         data = fs.readFileSync(sourceFile);
       }
 
-      if (options.where && options.where !== self.arch)
+      if (options.where && options.where !== clientOrServer)
         throw new Error("'where' is deprecated here and if provided " +
-                        "must be '" + self.arch + "'");
+                        "must be '" + clientOrServer + "'");
 
       if (options.type === "js") {
         js.push({
@@ -255,7 +263,7 @@ _.extend(Slice.prototype, {
               // XXX take contents instead of a path
               path.join(self.pkg.sourceRoot, relPath),
               path.join(self.pkg.serveRoot, relPath),
-              self.arch);
+              clientOrServer);
     });
 
     // Phase 1 link
@@ -282,16 +290,23 @@ _.extend(Slice.prototype, {
   // the same format as self.resources as documented above. This
   // includes static assets and fully linked JavaScript.
   //
+  // @param bundleArch The architecture targeted by the bundle. Might
+  // be more specific than self.arch.
+  //
   // It is when you call this function that we read our dependent
   // packages and commit to whatever versions of them we currently
   // have in the library -- at least for the purpose of imports, which
   // is resolved at bundle time. (On the other hand, when it comes to
   // the extension handlers we'll use, we previously commited to those
   // versions at package build ('compile') time.)
-  getResources: function () {
+  getResources: function (bundleArch) {
     var self = this;
     var library = self.pkg.library;
     self._ensureCompiled();
+
+    if (! archinfo.matches(bundleArch, self.arch))
+      throw new Error("slice of arch '" + self.arch + "' does not support '" +
+                      bundleArch + "'?");
 
     // Compute imports by merging the exports of all of the packages
     // we use. Note that in the case of conflicting symbols, later
@@ -299,7 +314,7 @@ _.extend(Slice.prototype, {
     var imports = {}; // map from symbol to supplying package name
     _.each(_.values(self.uses), function (u) {
       if (! u.unordered) {
-        _.each(library.getSlices(u.spec, self.arch), function (otherSlice) {
+        _.each(library.getSlices(u.spec, bundleArch), function (otherSlice) {
           otherSlice._ensureCompiled(); // make sure otherSlice.exports is valid
           _.each(otherSlice.exports, function (symbol) {
             imports[symbol] = otherSlice.pkg.name;
@@ -424,28 +439,28 @@ var Package = function (library) {
 
   // Map from an arch to the list of slice names that should be
   // included by default if this package is used without specifying a
-  // slice (eg, as "ddp" rather than "ddp.server").
+  // slice (eg, as "ddp" rather than "ddp.server"). The most specific
+  // arch will be used.
   self.defaultSlices = {};
 
   // Map from an arch to the list of slice names that should be
-  // included when this package is tested.
+  // included when this package is tested. The most specific arch will
+  // be used.
   self.testSlices = {};
 };
 
 _.extend(Package.prototype, {
   // Return the slice of the package to use for a given slice name
-  // (eg, 'main' or 'test') and architecture (right now 'client' and
-  // 'server', but in the future these will be real architectures), or
-  // throw an exception if that packages can't be loaded under these
-  // circumstances.
+  // (eg, 'main' or 'test') and target architecture (eg,
+  // 'native.linux.x86_64' or 'browser'), or throw an exception if
+  // that packages can't be loaded under these circumstances.
   getSingleSlice: function (name, arch) {
     var self = this;
 
-    var ret = _.find(self.slices, function (slice) {
-      return slice.sliceName === name && slice.arch === arch;
-    });
+    var chosenArch = archinfo.mostSpecificMatch(
+      arch, _.pluck(_.where(self.slices, { sliceName: name }), 'arch'));
 
-    if (! ret) {
+    if (! chosenArch) {
       // XXX need improvement. The user should get a graceful error
       // message, not an exception, and all of this talk of slices an
       // architectures is likely to be confusing/overkill in many
@@ -455,7 +470,7 @@ _.extend(Package.prototype, {
                       "' that runs on architecture '" + arch + "'");
     }
 
-    return ret;
+    return _.where(self.slices, { sliceName: name, arch: chosenArch })[0];
   },
 
   // Return the slices that should be used on a given arch if the
@@ -463,7 +478,14 @@ _.extend(Package.prototype, {
   // 'ddp.client').
   getDefaultSlices: function (arch) {
     var self = this;
-    return _.map(self.defaultSlices[arch], function (name) {
+
+    var chosenArch = archinfo.mostSpecificMatch(arch,
+                                                _.keys(self.defaultSlices));
+    if (! chosenArch)
+      throw new Error((self.name || "This app") +
+                      " is not compatible with architecture '" + arch + "'");
+
+    return _.map(self.defaultSlices[chosenArch], function (name) {
       return self.getSingleSlice(name, arch);
     });
   },
@@ -472,7 +494,14 @@ _.extend(Package.prototype, {
   // given arch.
   getTestSlices: function (arch) {
     var self = this;
-    return _.map(self.testSlices[arch], function (name) {
+
+    var chosenArch = archinfo.mostSpecificMatch(arch,
+                                                _.keys(self.testSlices));
+    if (! chosenArch)
+      throw new Error((self.name || "This app") +
+                      " does not have tests for architecture " + arch + "'");
+
+    return _.map(self.testSlices[chosenArch], function (name) {
       return self.getSingleSlice(name, arch);
     });
   },
@@ -666,10 +695,10 @@ _.extend(Package.prototype, {
               where = where ? [where] : ["client", "server"];
 
             _.each(names, function (name) {
-              _.each(where, function (arch) {
+              _.each(where, function (w) {
                 if (options.role && options.role !== "use")
                   throw new Error("Role override is no longer supported");
-                uses[role][arch].push({
+                uses[role][w].push({
                   spec: name,
                   unordered: options.unordered || false
                 });
@@ -688,8 +717,8 @@ _.extend(Package.prototype, {
               where = where ? [where] : [];
 
             _.each(paths, function (path) {
-              _.each(where, function (arch) {
-                sources[role][arch].push(path);
+              _.each(where, function (w) {
+                sources[role][w].push(path);
               });
             });
           },
@@ -709,8 +738,8 @@ _.extend(Package.prototype, {
               where = where ? [where] : [];
 
             _.each(symbols, function (symbol) {
-              _.each(where, function (arch) {
-                forceExport[role][arch].push(symbol);
+              _.each(where, function (w) {
+                forceExport[role][w].push(symbol);
               });
             });
           },
@@ -743,7 +772,9 @@ _.extend(Package.prototype, {
 
     // Create slices
     _.each(["use", "test"], function (role) {
-      _.each(["client", "server"], function (arch) {
+      _.each(["browser", "native"], function (arch) {
+        var where = (arch === "browser") ? "client" : "server";
+
         // Everything depends on the package 'meteor', which sets up
         // the basic environment) (except 'meteor' itself).
         if (! (name === "meteor" && role === "use")) {
@@ -754,11 +785,11 @@ _.extend(Package.prototype, {
           // underscore (underscore depends weakly on meteor; it just
           // needs the .js extension handler.)
           var alreadyDependsOnMeteor =
-            !! _.find(uses[role][arch], function (u) {
+            !! _.find(uses[role][where], function (u) {
               return u.spec === "meteor";
             });
           if (! alreadyDependsOnMeteor)
-            uses[role][arch].unshift({ spec: "meteor" });
+            uses[role][where].unshift({ spec: "meteor" });
         }
 
         // We need to create a separate (non ===) copy of
@@ -769,19 +800,19 @@ _.extend(Package.prototype, {
         self.slices.push(new Slice(self, {
           name: ({ use: "main", test: "tests" })[role],
           arch: arch,
-          uses: uses[role][arch],
-          sources: sources[role][arch],
-          forceExport: forceExport[role][arch],
+          uses: uses[role][where],
+          sources: sources[role][where],
+          forceExport: forceExport[role][where],
           dependencyInfo: dependencyInfo,
-          nodeModulesPath: arch !== "server" ? undefined :
+          nodeModulesPath: arch !== "native" ? undefined :
             (nodeModulesPath || undefined)
         }));
       });
     });
 
     // Default slices
-    self.defaultSlices = { client: ['main'], server: ['main'] };
-    self.testSlices = { client: ['tests'], server: ['tests'] };
+    self.defaultSlices = { browser: ['main'], 'native': ['main'] };
+    self.testSlices = { browser: ['tests'], 'native': ['tests'] };
   },
 
   initFromAppDir: function (appDir, ignoreFiles) {
@@ -791,7 +822,7 @@ _.extend(Package.prototype, {
     self.sourceRoot = appDir;
     self.serveRoot = path.sep;
 
-    _.each(["client", "server"], function (arch) {
+    _.each(["client", "server"], function (sliceName) {
       // Determine used packages
       var names = _.union(
           // standard client packages for the classic meteor stack.
@@ -800,9 +831,11 @@ _.extend(Package.prototype, {
            'spark', 'templating', 'startup', 'past'],
         project.get_packages(appDir));
 
+      var arch = sliceName === "server" ? "native" : "browser";
+
       // Create slice
       var slice = new Slice(self, {
-        name: "app",
+        name: sliceName,
         arch: arch,
         uses: _.map(names, function (name) {
           return { spec: name }
@@ -831,16 +864,16 @@ _.extend(Package.prototype, {
         return sourcePath.match(/^packages\//);
       });
 
-      var otherArch = (arch === "server") ? "client" : "server";
-      var withoutOtherArch =
+      var otherSliceName = (sliceName === "server") ? "client" : "server";
+      var withoutOtherSlice =
         _.reject(withoutAppPackages, function (sourcePath) {
           return (path.sep + sourcePath + path.sep).indexOf(
-            path.sep + otherArch + path.sep) !== -1;
+            path.sep + otherSliceName + path.sep) !== -1;
         });
 
       var tests = false; /* for now */
       var withoutOtherRole =
-        _.reject(withoutOtherArch, function (sourcePath) {
+        _.reject(withoutOtherSlice, function (sourcePath) {
           var isTest =
             ((path.sep + sourcePath + path.sep).indexOf(
               path.sep + 'tests' + path.sep) !== -1);
@@ -871,7 +904,7 @@ _.extend(Package.prototype, {
         path.resolve(appDir, '.meteor', 'local')] = { exclude: [/.?/] };
     });
 
-    self.defaultSlices = { client: ['app'], server: ['app'] };
+    self.defaultSlices = { browser: ['client'], 'native': ['server'] };
   },
 
   // options:
@@ -920,9 +953,6 @@ _.extend(Package.prototype, {
         // meteor), at least not until you modify the *original*
         // copies of the source files, because that is still where all
         // of the dependency info points.
-        console.log("fail",
-                    mainJson.buildOfPath,
-                    path.resolve(dir));
         return false;
       }
 

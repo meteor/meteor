@@ -24,7 +24,7 @@ Fiber(function () {
 
   var usage = function() {
     process.stdout.write(
-      "Usage: meteor [--version] [--release <release>] [--help] <command> [<args>]\n" +
+      "Usage: meteor [--version] [--arch] [--release <release>] [--help] <command> [<args>]\n" +
         "\n" +
         "With no arguments, 'meteor' runs the project in the current\n" +
         "directory in local development mode. You can run it from the root\n" +
@@ -34,7 +34,7 @@ Fiber(function () {
         "\n" +
         "Commands:\n");
     _.each(Commands, function (cmd) {
-      if (cmd.help) {
+      if (cmd.help && ! cmd.hidden) {
         var name = cmd.name + "                ".substr(cmd.name.length);
         process.stdout.write("   " + name + cmd.help + "\n");
       }
@@ -943,6 +943,30 @@ Fiber(function () {
     }
   });
 
+  Commands.push({
+    name: "rebuild-all",
+    help: "Rebuild all packages",
+    hidden: true,
+    func: function (argv) {
+      if (argv.help || argv._.length !== 0) {
+        process.stdout.write(
+"Usage: meteor rebuild-all\n" +
+"\n" +
+"Rebuild all source packages in the library. This includes packages found\n" +
+"through the PACKAGE_DIRS environment variable, local packages in the \n" +
+"current application, and packages in the warehouse (but only those in the\n" +
+"currently effective Meteor release.) It doesn't include any packages for\n" +
+"which we don't have the source.\n" +
+"\n" +
+"You should never need to use this command. It is intended for use while\n" +
+"debugging the Meteor packaging tools themselves.\n");
+        process.exit(1);
+      }
+
+      context.library.rebuildAll();
+    }
+  });
+
   // Prints a message if $METEOR_TOOLS_DEBUG is set.
   // XXX We really should have a better logging system.
   var toolsDebugMessage = function (msg) {
@@ -995,6 +1019,13 @@ Fiber(function () {
     process.exit(0);
   };
 
+  // Implements --arch.
+  var printArch = function () {
+    var archinfo = require('./archinfo.js');
+    console.log(archinfo.host());
+    process.exit(0);
+  };
+
   // Implements "meteor --get-ready", which you run to ensure that your
   // checkout's Meteor is "complete" (dev bundle downloaded and all NPM modules
   // installed).
@@ -1016,6 +1047,7 @@ Fiber(function () {
           .boolean("h")
           .boolean("help")
           .boolean("version")
+          .boolean("arch")
           .boolean("debug");
 
     var argv = optimist.argv;
@@ -1049,6 +1081,11 @@ Fiber(function () {
 
     if (argv.version) {
       printVersion();
+      return;
+    }
+
+    if (argv.arch) {
+      printArch();
       return;
     }
 

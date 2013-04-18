@@ -9,9 +9,8 @@
 //  - programs: array of programs in the star, each an object:
 //    - name: short, unique name for program, for referring to it
 //      programmatically
-//    - arch: architecture that this program targets. Currently it is
-//            "client" or "server" but in the future this will change
-//            to something like "browser.w3c" or "darwin.x86_64".
+//    - arch: architecture that this program targets. Something like
+//            "native", "native.linux.x86_64", or "browser.w3c".
 //    - path: directory (relative to star.json) containing this program
 //
 //    XXX in the future this will also contain instructions for
@@ -41,7 +40,7 @@
 // really the build tool can lay out the star however it wants.
 //
 //
-// == Format of a program when arch is "client" ==
+// == Format of a program when arch is "browser.*" ==
 //
 // Standard:
 //
@@ -85,7 +84,7 @@
 // 'static_cacheable'.
 //
 //
-// == Format of a program when arch is "server" ==
+// == Format of a program when arch is "native.*" ==
 //
 // Standard:
 //
@@ -129,6 +128,7 @@ var files = require(path.join(__dirname, 'files.js'));
 var packages = require(path.join(__dirname, 'packages.js'));
 var linker = require(path.join(__dirname, 'linker.js'));
 var Builder = require(path.join(__dirname, 'builder.js'));
+var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var fs = require('fs');
 var uglify = require('uglify-js');
 var cleanCSS = require('clean-css');
@@ -297,9 +297,7 @@ var Target = function (name, options) {
   // Path of this target in the bundle, relative to the root of the bundle.
   self.pathInBundle = path.join('programs', self.name);
 
-  // Should be "client" or "server" for now, but soon we will get rid
-  // of that and instead have something more like "browser.w3c" or
-  // "nodejs.linux.i686".
+  // Something like "browser.w3c" or "native" or "native.osx.x86_64"
   self.arch = options.arch;
 
   // All of the Slices that are to go into this target, in the order
@@ -411,14 +409,17 @@ _.extend(Target.prototype, {
   emitResources: function () {
     var self = this;
 
+    var isBrowser = archinfo.matches(self.arch, "browser");
+    var isNative = archinfo.matches(self.arch, "native");
+
     // Copy their resources into the bundle in order
     _.each(self.slices, function (slice) {
       var isApp = ! slice.pkg.name;
 
       // Emit the resources
-      _.each(slice.getResources(), function (resource) {
+      _.each(slice.getResources(self.arch), function (resource) {
         if (_.contains(["js", "css", "static"], resource.type)) {
-          if (resource.type === "css" && self.arch !== "client")
+          if (resource.type === "css" && ! isBrowser)
             // XXX might be nice to throw an error here, but then we'd
             // have to make it so that packages.js ignores css files
             // that appear in the server directories in an app tree
@@ -432,9 +433,9 @@ _.extend(Target.prototype, {
             cacheable: false
           });
 
-          if (self.arch === "client")
+          if (isBrowser)
             f.setUrlFromRelPath(resource.servePath);
-          else {
+          else if (isNative) {
             // XXX hack
             if (resource.servePath.match(/^\/packages\//))
               f.targetPath = resource.servePath;
@@ -442,7 +443,7 @@ _.extend(Target.prototype, {
               f.targetPath = path.join('/app', resource.servePath);
           }
 
-          if (self.arch === "server" && resource.type === "js" && ! isApp &&
+          if (isNative && resource.type === "js" && ! isApp &&
               slice.nodeModulesPath) {
             var nmd = self.nodeModulesDirectories[slice.nodeModulesPath];
             if (! nmd) {
@@ -461,8 +462,8 @@ _.extend(Target.prototype, {
         }
 
         if (_.contains(["head", "body"], resource.type)) {
-          if (self.arch !== "client")
-            throw new Error("HTML segments can only go to the client");
+          if (! isBrowser)
+            throw new Error("HTML segments can only go to the browser");
           self[resource.type].push(resource.data);
           return;
         }
@@ -511,6 +512,17 @@ _.extend(Target.prototype, {
   getDependencyInfo: function () {
     var self = this;
     return self.dependencyInfo;
+  },
+
+  // Return the most inclusive architecture with which this target is
+  // compatible. For example, if we set out to build a
+  // 'native.linux.x86_64' version of this target (by passing that as
+  // the 'arch' argument to the constructor), but ended up not
+  // including anything that was specific to Linux, the return value
+  // would be 'native'.
+  mostCompatibleArch: function () {
+    var self = this;
+    return archinfo.leastSpecificDescription(_.pluck(self.slices, 'arch'));
   }
 
 });
@@ -522,19 +534,19 @@ var ClientTarget = function (name, options) {
   var self = this;
   Target.apply(this, arguments);
 
-  // CSS files. List of File. Applicable only on 'client'
-  // architecture. They will be loaded at page load in the order
-  // given.
+  // CSS files. List of File. They will be loaded at page load in the
+  // order given.
   self.css = [];
 
-  // Static assets to serve with HTTP. List of File. Applicable only
-  // on 'client' architecture.
+  // Static assets to serve with HTTP. List of File.
   self.static = [];
 
-  // List of segments of additional HTML for <head>/<body>. Only for
-  // "client" arch.
+  // List of segments of additional HTML for <head>/<body>.
   self.head = [];
   self.body = [];
+
+  if (! archinfo.matches(self.arch, "browser"))
+    throw new Error("ClientTarget targeting something that isn't a browser?");
 };
 
 inherits(ClientTarget, Target);
@@ -563,9 +575,6 @@ _.extend(ClientTarget.prototype, {
   addAssetDir: function (rootDir, exclude, assetPathPrefix) {
     var self = this;
     exclude = exclude || [];
-
-    if (self.arch !== "client")
-      throw new Error("Only clients can have assets");
 
     self.dependencyInfo.directories[dir] = {
       include: [/.?/],
@@ -703,6 +712,9 @@ var ServerTarget = function (name, options) {
 
   self.clientTarget = options.clientTarget;
   self.releaseStamp = options.releaseStamp;
+
+  if (! archinfo.matches(self.arch, "native"))
+    throw new Error("ServerTarget targeting something that isn't a server?");
 };
 
 inherits(ServerTarget, Target);
@@ -795,6 +807,9 @@ _.extend(ServerTarget.prototype, {
 var InProcessTarget = function (name, options) {
   var self = this;
   Target.apply(this, arguments);
+
+  if (! archinfo.matches(self.arch, "native"))
+    throw new Error("InProcessTarget targeting something incompatible?");
 };
 
 inherits(InProcessTarget, Target);
@@ -871,7 +886,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
       target.write(builder.enter(target.pathInBundle), options.nodeModulesMode);
       json.programs.push({
         name: target.name,
-        arch: target.arch,
+        arch: target.mostCompatibleArch(),
         path: target.pathInBundle
       });
     });
@@ -1001,11 +1016,11 @@ exports.bundle = function (appDir, outputPath, options) {
     // Create targets
     var client = new ClientTarget("client", {
       library: library,
-      arch: "client"
+      arch: "browser"
     });
     var server = new ServerTarget("server", {
       library: library,
-      arch: "server",
+      arch: archinfo.host(),
       clientTarget: client,
       releaseStamp: options.releaseStamp
     });
@@ -1072,7 +1087,7 @@ exports.bundle = function (appDir, outputPath, options) {
 exports._load = function (library, packages) {
   var target = new InProcessTarget("load", {
     library: library,
-    arch: "server"
+    arch: archinfo.host()
   });
 
   target.determineLoadOrder({ packages: packages });

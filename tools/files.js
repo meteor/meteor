@@ -8,6 +8,7 @@ var fs = require("fs");
 var path = require('path');
 var os = require('os');
 var util = require('util');
+var child_process = require("child_process");
 var _ = require('underscore');
 var zlib = require("zlib");
 var tar = require("tar");
@@ -532,6 +533,34 @@ _.extend(exports, {
       else
         future.return(body);
     });
+    return future.wait();
+  },
+
+  // Run a program synchronously and, assuming it returns success (0),
+  // return whatever it wrote to stdout, as a string. Otherwise (if it
+  // did not exit gracefully and return 0) return null. As node has
+  // chosen not to provide a synchronous binding of wait(2), this
+  // function must be called from inside a fiber.
+  //
+  // `command` is the command to run. (We use node's
+  // child_process.execFile, which appears to take the liberty of
+  // searching your path using some mechanism.) Any additional
+  // arguments should be strings and will be passed as arguments to
+  // `command`. It is not necessary to pass `command` twice to set
+  // argv[0] as it is with the traditional POSIX execl(2).
+  //
+  // XXX 'files' is not the ideal place for this but it'll do for now
+  run: function (command /*, arguments */) {
+    var Future = require('fibers/future');
+    var future = new Future;
+    var args = _.toArray(arguments).slice(1);
+
+    child_process.execFile(
+      command, args, {}, function (error, stdout, stderr) {
+        if (! (error === null || error.code === 0))
+          future.return(null);
+        future.return(stdout);
+      });
     return future.wait();
   },
 
