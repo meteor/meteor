@@ -78,20 +78,19 @@ Spacebars.parseStacheTag = function (inputString, pos) {
     return name;
   };
 
-  var scanPathArg = function () {
+  var scanPath = function () {
     var segments = [];
-    var arg = { type: 'PATH', segments: segments };
-    // PATH arg can also have: { ofThis: true }
+    // Initial empty string in segments means `this` or `.`.
     var dots;
 
     // handle `.` and `./`, disallow `..`
     if ((dots = run(/^\.+/))) {
       if (dots.length > 1)
         error("`..` is not supported");
-      arg.ofThis = true;
+      segments.push('');
       // only thing that can follow a `.` is a `/`
       if (! run(/^\//))
-        return arg;
+        return segments;
     }
 
     while (true) {
@@ -100,12 +99,15 @@ Spacebars.parseStacheTag = function (inputString, pos) {
         var seg = run(/^[\s\S]*?\]/);
         if (! seg)
           error("Unterminated path segment");
-        segments.push(seg.slice(0, -1));
+        seg = seg.slice(0, -1);
+        if (! seg && ! segments.length)
+          error("Path can't start with empty string");
+        segments.push(seg);
       } else {
         var id = scanIdentifier();
-        if (id === 'this' && ! segments.length && ! arg.ofThis) {
+        if (id === 'this' && ! segments.length) {
           // initial `this`
-          arg.ofThis = true;
+          segments.push('');
         } else {
           segments.push(id);
         }
@@ -120,7 +122,7 @@ Spacebars.parseStacheTag = function (inputString, pos) {
         error("`.` is only allowed at start of path");
     }
 
-    return arg;
+    return segments;
   };
 
   // scan an argument; succeeds or errors
@@ -131,17 +133,17 @@ Spacebars.parseStacheTag = function (inputString, pos) {
     var text = tok.text();
 
     if (/^[\.\[]/.test(str) && tokType !== 'NUMBER')
-      return scanPathArg();
+      return ['PATH', scanPath()];
 
     if (tokType === 'BOOLEAN') {
       advance(text.length);
-      return { type: 'BOOLEAN', value: Boolean(tok.text()) };
+      return ['BOOLEAN', Boolean(tok.text())];
     } else if (tokType === 'NULL') {
       advance(text.length);
-      return { type: 'NULL' };
+      return ['NULL', null];
     } else if (tokType === 'NUMBER') {
       advance(text.length);
-      return { type: 'NUMBER', value: Number(tok.text()) };
+      return ['NUMBER', Number(tok.text())];
     } else if (tokType === 'STRING') {
       advance(text.length);
       // single quote to double quote
@@ -149,7 +151,7 @@ Spacebars.parseStacheTag = function (inputString, pos) {
         text = '"' + text.slice(1, -1) + '"';
       // replace line continuations with `\n`
       text = text.replace(/[\r\n\u000A\u000D\u2028\u2029]/g, 'n');
-      return { type: 'STRING', value: JSON.parse(text) };
+      return ['STRING', JSON.parse(text)];
     } else if (tokType === 'IDENTIFIER' || tokType === 'KEYWORD') {
       if ((! notKeyword) &&
           /^\s*=/.test(str.slice(text.length))) {
@@ -158,10 +160,10 @@ Spacebars.parseStacheTag = function (inputString, pos) {
         run(/^\s*=\s*/);
         // recurse to scan value, disallowing a second `=`.
         var arg = scanArg(true);
-        arg.key = text;
+        arg.push(text); // add third element for key
         return arg;
       }
-      return scanPathArg();
+      return ['PATH', scanPath()];
     } else {
       expected('identifier, number, string, boolean, or null');
     }
@@ -205,7 +207,7 @@ Spacebars.parseStacheTag = function (inputString, pos) {
     if (type === 'INCLUSION' || type === 'BLOCKOPEN')
       tag.name = scanDottedIdentifier();
     else
-      tag.path = scanPathArg();
+      tag.path = scanPath();
     tag.args = [];
     while (true) {
       run(/^\s*/);
@@ -291,18 +293,18 @@ var tokenizeHtml = function (html, preString, postString, tagInfoGetter) {
 
   for (var i = 0; i < tokens.length; i++) {
     var tok = tokens[i];
-    if (tok.type === 'Characters') {
+    if (tok.type === 'Characters' ||
+        tok.type === 'SpaceCharacters') {
       var s = tok.data;
       // combine multiple adjacent "Characters"
-      while (tokens[i+1] && tokens[i+1].type === 'Characters') {
+      while (tokens[i+1] &&
+             (tokens[i+1].type === 'Characters' ||
+              tokens[i+1].type === 'SpaceCharacters')) {
         tok = tokens[++i];
         s += tok.data;
       }
       out.push({type: 'Characters',
                 data: extractTags(s)});
-    } else if (tok.type === 'SpaceCharacters') {
-      out.push({type: 'SpaceCharacters',
-                data: tok.data});
     } else if (tok.type === 'EndTag') {
       out.push({type: 'EndTag',
                 name: extractTags(tok.name)});
@@ -515,14 +517,36 @@ Spacebars.compile = function (inputString) {
         var tagOrBlock = strOrTagRef.ref;
         if (tagOrBlock.isBlock) {
           var block = tagOrBlock;
-          parts.push('env.tag(' + tagLiteral(block.openTag) +
+          var openTag = block.openTag;
+          parts.push('env.blockHelper(' + toJSLiteral(openTag.name) +
+                     ', ' + toJSLiteral(openTag.args) +
                      ', ' + tokensToFunc(block.bodyTokens, indent) +
                      (block.elseTag ? ', ' +
                       tokensToFunc(block.elseTokens, indent)
                       : '') + ')');
         } else {
           var tag = tagOrBlock;
-          parts.push('env.tag(' + tagLiteral(tag) + ')');
+          switch (tag.type) {
+          case 'COMMENT':
+            // nothing to do
+            break;
+          case 'INCLUSION':
+            parts.push('env.include(' + toJSLiteral(tag.name) +
+                       (tag.args.length ? ', ' +toJSLiteral(tag.args) : '') +
+                       ')');
+            break;
+          case 'DOUBLE': // fall through
+          case 'TRIPLE':
+            parts.push('env.' +
+                       (tag.type === 'DOUBLE' ? 'dstache' : 'tstache') +
+                       '(' + toJSLiteral(tag.path) +
+                       (tag.args.length ? ', ' + toJSLiteral(tag.args) : '') +
+                       ')');
+            break;
+          default:
+            throw new Error("Unknown stache tag type: " + tag.type);
+            //parts.push('env.tag(' + tagLiteral(tag) + ')');
+          }
         }
       }
     });
@@ -539,7 +563,27 @@ Spacebars.compile = function (inputString) {
       case 'Characters':
         js += indent + 'html.text(' + interpolate(t.data, indent) +');\n';
         break;
-        // XXX more types go here
+      case 'StartTag':
+        js += indent + 'html.open(' + interpolate(t.name, indent) +
+          (t.data.length ? ', [' + _.map(t.data, function (kv) {
+            return '[' + interpolate(kv.nodeName, indent) + ', ' +
+              interpolate(kv.nodeValue, indent) + ']';
+          }).join(', ') + ']' : '') + ');\n';
+        break;
+      case 'EndTag':
+        js += indent + 'html.close(' + interpolate(t.name, indent) + ');\n';
+        break;
+      case 'Comment':
+        js += indent + 'html.comment(' + interpolate(t.name, indent) + ');\n';
+        break;
+      case 'DocType':
+        js += indent + 'html.doctype(' + toJSLiteral(t.name) + ', ' +
+          toJSLiteral({correct: t.correct, publicId: t.publicId,
+                       systemId: t.systemId}) + ');\n';
+        break;
+      default:
+        throw new Error("Unexpected token type: " + t.type);
+        break;
       }
     });
     js += oldIndent + '}';

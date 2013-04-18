@@ -21,14 +21,11 @@ Tinytest.add("spacebars - stache tags", function (test) {
       delete result.charLength;
       test.equal(result, expected);
     }
-  }
+  };
 
-  run('{{foo}}', {type: 'DOUBLE', path: {type: 'PATH', segments: ['foo']},
-                  args: []});
-  run('{{foo3}}', {type: 'DOUBLE', path: {type: 'PATH', segments: ['foo3']},
-                   args: []});
-  run('{{{foo}}}', {type: 'TRIPLE', path: {type: 'PATH', segments: ['foo']},
-                    args: []});
+  run('{{foo}}', {type: 'DOUBLE', path: ['foo'], args: []});
+  run('{{foo3}}', {type: 'DOUBLE', path: ['foo3'], args: []});
+  run('{{{foo}}}', {type: 'TRIPLE', path: ['foo'], args: []});
   run('{{{foo}}', "Expected `}}}`");
   run('{{{foo', "Expected");
   run('{{foo', "Expected");
@@ -42,9 +39,7 @@ Tinytest.add("spacebars - stache tags", function (test) {
   run('{{else}}', {type: 'ELSE'});
   run('{{ else }}', {type: 'ELSE'});
   run('{{else x}}', "Expected");
-  run('{{else_x}}', {type: 'DOUBLE', path: {type: 'PATH',
-                                            segments: ['else_x']},
-                     args: []});
+  run('{{else_x}}', {type: 'DOUBLE', path: ['else_x'], args: []});
   run('{{/if}}', {type: 'BLOCKCLOSE', name: 'if'});
   run('{{ / if }}', {type: 'BLOCKCLOSE', name: 'if'});
   run('{{/if x}}', "Expected");
@@ -57,44 +52,38 @@ Tinytest.add("spacebars - stache tags", function (test) {
 
 
 
-  run('{{foo 3}}', {type: 'DOUBLE', path: {type: 'PATH', segments: ['foo']},
-                    args: [{type: 'NUMBER', value: 3}]});
-  run('{{ foo  3 }}', {type: 'DOUBLE', path: {type: 'PATH',
-                                              segments: ['foo']},
-                       args: [{type: 'NUMBER', value: 3}]});
-  run('{{#foo 3}}', {type: 'BLOCKOPEN', name: 'foo',
-                     args: [{type: 'NUMBER', value: 3}]});
+  run('{{foo 3}}', {type: 'DOUBLE', path: ['foo'], args: [['NUMBER', 3]]});
+  run('{{ foo  3 }}', {type: 'DOUBLE', path: ['foo'], args: [['NUMBER', 3]]});
+  run('{{#foo 3}}', {type: 'BLOCKOPEN', name: 'foo', args: [['NUMBER', 3]]});
   run('{{ # foo  3 }}', {type: 'BLOCKOPEN', name: 'foo',
-                         args: [{type: 'NUMBER', value: 3}]});
-  run('{{>foo 3}}', {type: 'INCLUSION', name: 'foo',
-                     args: [{type: 'NUMBER', value: 3}]});
+                         args: [['NUMBER', 3]]});
+  run('{{>foo 3}}', {type: 'INCLUSION', name: 'foo', args: [['NUMBER', 3]]});
   run('{{ > foo  3 }}', {type: 'INCLUSION', name: 'foo',
-                         args: [{type: 'NUMBER', value: 3}]});
-  run('{{{foo 3}}}', {type: 'TRIPLE', path: {type: 'PATH',
-                                             segments: ['foo']},
-                      args: [{type: 'NUMBER', value: 3}]});
+                         args: [['NUMBER', 3]]});
+  run('{{{foo 3}}}', {type: 'TRIPLE', path: ['foo'], args: [['NUMBER', 3]]});
 
   run('{{foo bar baz=qux x3=. ./foo foo/bar a.b.c}}',
-      {type: 'DOUBLE', path: {type: 'PATH', segments: ['foo']},
-       args: [{type: 'PATH', segments: ['bar']},
-              {type: 'PATH', segments: ['qux'], key: 'baz'},
-              {type: 'PATH', segments: [], ofThis: true, key: 'x3'},
-              {type: 'PATH', segments: ['foo'], ofThis: true},
-              {type: 'PATH', segments: ['foo', 'bar']},
-              {type: 'PATH', segments: ['a', 'b', 'c']}]});
+      {type: 'DOUBLE', path: ['foo'],
+       args: [['PATH', ['bar']],
+              ['PATH', ['qux'], 'baz'],
+              ['PATH', [''], 'x3'],
+              ['PATH', ['', 'foo']],
+              ['PATH', ['foo', 'bar']],
+              ['PATH', ['a', 'b', 'c']]]});
 
   run('{{{x 0.3 [0].[3] .4 ./[4]}}}',
-      {type: 'TRIPLE', path: {type: 'PATH', segments: ['x']},
-       args: [{type: 'NUMBER', value: 0.3},
-              {type: 'PATH', segments: ['0', '3']},
-              {type: 'NUMBER', value: .4},
-              {type: 'PATH', segments: ['4'], ofThis: true}]});
+      {type: 'TRIPLE', path: ['x'],
+       args: [['NUMBER', 0.3],
+              ['PATH', ['0', '3']],
+              ['NUMBER', .4],
+              ['PATH', ['', '4']]]});
 
-  run('{{# foo this this.x null}}',
+  run('{{# foo this this.x null z=null}}',
       {type: 'BLOCKOPEN', name: 'foo',
-       args: [{type: 'PATH', segments: [], ofThis: true},
-              {type: 'PATH', segments: ['x'], ofThis: true},
-              {type: 'NULL'}]});
+       args: [['PATH', ['']],
+              ['PATH', ['', 'x']],
+              ['NULL', null],
+              ['NULL', null, 'z']]});
 
   run('{{foo ..}}', "`..` is not supported");
   run('{{foo x/..}}', "`..` is not supported");
@@ -103,4 +92,6 @@ Tinytest.add("spacebars - stache tags", function (test) {
   run('{{#a.b.c}}', {type: 'BLOCKOPEN', name: 'a.b.c', args: []});
   run('{{> a.b.c}}', {type: 'INCLUSION', name: 'a.b.c', args: []});
 
+  run('{{foo.[]/[]}}', {type: 'DOUBLE', path: ['foo', '', ''], args: []});
+  run('{{[].foo}}', "Path can't start with empty string");
 });
