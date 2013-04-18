@@ -1439,13 +1439,12 @@ current user with:
                                {fields: {'other': 1, 'things': 1}});
     });
 
-If the `autopublish` package is installed, the `username` and `profile` fields
-for all users are published to all clients. To publish specific fields from all
-users:
-
-    Meteor.publish("allUserData", function () {
-      return Meteor.users.find({}, {fields: {'nested.things': 1}});
-    });
+If the `autopublish` package is installed, many subfields of
+`services` are also published.  If the `autopublish` package is
+installed, many subfields of `services` are also published for the
+current user.  Some subfields of `services` also published for
+other login services, such as their Facebook ID (under
+`services.facebook.id`).
 
 Users are by default allowed to specify their own `profile` field with
 [`Accounts.createUser`](#accounts_createuser) and modify it with
