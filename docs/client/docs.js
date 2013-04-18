@@ -319,8 +319,9 @@ var toc = [
 
   "Packages", [ [
     "accounts-ui",
-    "appcache",
     "amplify",
+    "appcache",
+    "audit-argument-checks",
     "backbone",
     "bootstrap",
     "coffeescript",
