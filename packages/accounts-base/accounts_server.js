@@ -289,14 +289,27 @@ Meteor.publish(null, function() {
   }
 }, /*suppress autopublish warning*/{is_auto: true});
 
-// If autopublish is on, publish these user fields.  These are added
-// to by the various accounts packages (eg accounts-google). We can't
-// implement this by running multiple publish functions since DDP only
-// merges only across top-level fields, not subfields (such as
-// 'services.facebook.accessToken')
+// If autopublish is on, publish these user fields. Login service
+// packages (eg accounts-google) add to these by calling
+// Accounts.addAutopublishFields Notably, this isn't implemented with
+// multiple publishes since DDP only merges only across top-level
+// fields, not subfields (such as 'services.facebook.accessToken')
 Accounts._autopublishFields = {
   loggedInUser: ['profile', 'username', 'emails'],
-  allUsers: ['profile', 'username']
+  otherUsers: ['profile', 'username']
+};
+
+// Add to the list of fields or subfields to be automatically
+// published if autopublish is on
+//
+// @param opts {Object} with:
+//   - forLoggedInUser {Array} Array of fields published to the logged-in user
+//   - forOtherUsers {Array} Array of fields published to users that aren't logged in
+Accounts.addAutopublishFields = function(opts) {
+  Accounts._autopublishFields.loggedInUser.push.apply(
+    Accounts._autopublishFields.loggedInUser, opts.forLoggedInUser);
+  Accounts._autopublishFields.otherUsers.push.apply(
+    Accounts._autopublishFields.otherUsers, opts.forOtherUsers);
 };
 
 Meteor.default_server.onAutopublish(function () {
@@ -308,9 +321,13 @@ Meteor.default_server.onAutopublish(function () {
   };
 
   Meteor.default_server.publish(null, function () {
-    return Meteor.users.find(
-      {_id: this.userId},
-      {fields: toFieldSelector(Accounts._autopublishFields.loggedInUser)});
+    if (this.userId) {
+      return Meteor.users.find(
+        {_id: this.userId},
+        {fields: toFieldSelector(Accounts._autopublishFields.loggedInUser)});
+    } else {
+      return null;
+    }
   }, /*suppress autopublish warning*/{is_auto: true});
 
   // XXX this publish is neither dedup-able nor is it optimized by our
@@ -320,9 +337,15 @@ Meteor.default_server.onAutopublish(function () {
   // instead write a manual publish function which filters out fields
   // based on 'this.userId'.
   Meteor.default_server.publish(null, function () {
+    var selector;
+    if (this.userId)
+      selector = {_id: {$ne: this.userId}};
+    else
+      selector = {};
+
     return Meteor.users.find(
-      {_id: {$ne: this.userId}},
-      {fields: toFieldSelector(Accounts._autopublishFields.allUsers)});
+      selector,
+      {fields: toFieldSelector(Accounts._autopublishFields.otherUsers)});
   }, /*suppress autopublish warning*/{is_auto: true});
 });
 

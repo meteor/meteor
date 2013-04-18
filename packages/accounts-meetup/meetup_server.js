@@ -1,7 +1,11 @@
-// with autopublish on: publish all fields to the logged in user;
-// only the user's meetup user id
-Accounts._autopublishFields.loggedInUser.push('services.meetup');
-Accounts._autopublishFields.allUsers.push('services.meetup.id');
+Accounts.addAutopublishFields({
+  // publish all fields including access token, which can legitimately
+  // be used from the client (if transmitted over ssl or on
+  // localhost). http://www.meetup.com/meetup_api/auth/#oauth2implicit
+  forLoggedInUser: ['services.meetup'],
+  forOtherUsers: ['services.meetup.id']
+});
+
 
 Accounts.oauth.registerService('meetup', 2, function(query) {
 

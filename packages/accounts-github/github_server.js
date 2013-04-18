@@ -1,7 +1,10 @@
-// with autopublish on: publish all fields to the logged in user;
-// only the user's github username to others
-Accounts._autopublishFields.loggedInUser.push('services.github');
-Accounts._autopublishFields.allUsers.push('services.github.username');
+Accounts.addAutopublishFields({
+  // not sure whether the github api can be used from the browser,
+  // thus not sure if we should be sending access tokens; but we do it
+  // for all other oauth2 providers, and it may come in handy.
+  forLoggedInUser: ['services.github'],
+  forOtherUsers: ['services.github.username']
+});
 
 Accounts.oauth.registerService('github', 2, function(query) {
 

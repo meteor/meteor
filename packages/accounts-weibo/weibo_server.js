@@ -1,7 +1,9 @@
-// with autopublish on: publish all fields to the logged in user;
-// only the user's weibo screen name to others
-Accounts._autopublishFields.loggedInUser.push('services.weibo');
-Accounts._autopublishFields.allUsers.push('services.weibo.screenName');
+Accounts.addAutopublishFields({
+  // publish all fields including access token, which can legitimately
+  // be used from the client (if transmitted over ssl or on localhost)
+  forLoggedInUser: ['services.weibo'],
+  forOtherUsers: ['services.weibo.screenName']
+});
 
 Accounts.oauth.registerService('weibo', 2, function(query) {
 

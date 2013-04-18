@@ -1,8 +1,22 @@
-// with autopublish on: publish all fields to the logged in user;
-// only the user's google id and public picture to others
-Accounts._autopublishFields.loggedInUser.push('services.google');
-Accounts._autopublishFields.allUsers.push('services.google.id');
-Accounts._autopublishFields.allUsers.push('services.google.picture');
+// https://developers.google.com/accounts/docs/OAuth2Login#userinfocall
+var whitelisted = ['id', 'email', 'verified_email', 'name', 'given_name',
+                   'family_name', 'picture', 'locale', 'timezone', 'gender'];
+
+Accounts.addAutopublishFields({
+  forLoggedInUser: _.map(
+    // publish access token since it can be used from the client (if
+    // transmitted over ssl or on
+    // localhost). https://developers.google.com/accounts/docs/OAuth2UserAgent
+    // refresh token probably shouldn't be sent down.
+    whitelisted.concat(['accessToken', 'expiresAt']), // don't publish refresh token
+    function (subfield) { return 'services.google.' + subfield; }),
+
+  forOtherUsers: _.map(
+    // even with autopublish, no legitimate web app should be
+    // publishing all users' emails
+    _.without(whitelisted, 'email', 'verified_email'),
+    function (subfield) { return 'services.google.' + subfield; })
+});
 
 Accounts.oauth.registerService('google', 2, function(query) {
 
@@ -16,7 +30,6 @@ Accounts.oauth.registerService('google', 2, function(query) {
   };
 
   // include all fields from google
-  // https://developers.google.com/accounts/docs/OAuth2Login#userinfocall
   var whitelisted = ['id', 'email', 'verified_email', 'name', 'given_name',
       'family_name', 'picture', 'locale', 'timezone', 'gender'];
 
