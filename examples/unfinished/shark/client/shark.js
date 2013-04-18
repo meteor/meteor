@@ -34,7 +34,7 @@ DebugComponent = Component.extend({
 LI = DebugComponent.extend({
   build: function (frag) {
     var li = document.createElement('LI');
-    li.appendChild(document.createTextNode(this.args.text));
+    li.appendChild(document.createTextNode(this.getArg('text')));
     frag.appendChild(li);
     this.setBounds(li);
     this.textNode = li.firstChild;
@@ -44,7 +44,7 @@ LI = DebugComponent.extend({
       this.textNode.nodeValue = args.text;
   },
   toHtml: function () {
-    return "<li>" + escapeForHtml(this.args.text) + "</li>";
+    return "<li>" + escapeForHtml(this.getArg('text')) + "</li>";
   }
 });
 
@@ -132,7 +132,7 @@ Each = DebugComponent.extend({
   items: new OrderedDict(idStringify),
   init: function () {
     var self = this;
-    var cursor = self.args.list; // XXX support arrays too
+    var cursor = self.getArg('list'); // XXX support arrays too
     var items = self.items;
 
     // Templates should have access to data and methods added by the
@@ -230,7 +230,7 @@ Each = DebugComponent.extend({
   },
 
   itemAddedBefore: function (id, doc, beforeId) {
-    var bodyClass = this.args.bodyClass;
+    var bodyClass = this.getArg('bodyClass');
     var comp = new bodyClass({data: doc});
     this.addItemChild(id, comp);
 
@@ -245,8 +245,8 @@ Each = DebugComponent.extend({
   itemRemoved: function (id) {
     if (this.items.size() === 1) {
       // making empty
-      var elseClass = this.args.elseClass || EmptyComponent;
-      var comp = new elseClass({data: this.args.data});
+      var elseClass = this.getArg('elseClass') || EmptyComponent;
+      var comp = new elseClass({data: this.getArg('data')});
       this.addChild('else', comp);
 
       if (this.isBuilt) {
@@ -270,8 +270,8 @@ Each = DebugComponent.extend({
     this.getItemChild(id).update({data: doc});
   },
   initiallyEmpty: function () {
-    var elseClass = this.args.elseClass || EmptyComponent;
-    this.addChild('else', new elseClass({data: this.args.data}));
+    var elseClass = this.getArg('elseClass') || EmptyComponent;
+    this.addChild('else', new elseClass({data: this.getArg('data')}));
   },
 
   build: function (frag) {
@@ -294,7 +294,7 @@ Each = DebugComponent.extend({
 
 MyLI = DebugComponent.extend({
   init: function () {
-    this.setChild('1', LI, {text: this.args.data.text || ''});
+    this.setChild('1', LI, {text: this.getArg('data').text || ''});
   },
   build: function (frag) {
     var c = this.children['1'];

@@ -7,3 +7,5 @@ autopublish
 insecure
 preserve-inputs
 ui
+html5-tokenizer
+spacebars

@@ -12,7 +12,8 @@ Component = function (args) {
   this._fragment = null; // DocumentFragment, if built; empty when attached
   this._uniqueIdCounter = 1;
 
-  this.args = args;
+  this._args = args;
+  this._argDeps = {};
 };
 
 _.extend(Component.prototype, {
@@ -221,9 +222,34 @@ _.extend(Component.prototype, {
 
     this.dom.end = end;
   },
+  getArg: function (argName) {
+    var dep = (this._argDeps.hasOwnProperty(argName) ?
+               this._argDeps[argName] :
+               (this._argDeps[argName] = new Deps.Dependency));
+    dep.depend();
+    return this._args[argName];
+  },
   update: function (args) {
-    var oldArgs = this.args;
-    this.args = args;
+    var oldArgs = this._args;
+    this._args = args;
+
+    var argDeps = this._argDeps;
+
+    for (var k in args) {
+      if (args.hasOwnProperty(k) &&
+          argDeps.hasOwnProperty(k) &&
+          ! EJSON.equal(args[k], oldArgs[k])) {
+        argDeps[k].invalidate();
+        delete oldArgs[k];
+      }
+    }
+    for (var k in oldArgs) {
+      if (oldArgs.hasOwnProperty(k) &&
+          argDeps.hasOwnProperty(k)) {
+        argDeps[k].invalidate();
+      }
+    }
+
     this.updated(args, oldArgs);
   },
   findOne: function (selector) { return this.dom.findOne(selector); },

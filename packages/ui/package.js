@@ -3,6 +3,8 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
+  api.use('underscore', 'client');
+
   api.add_files(['chunk.js', 'component.js'], 'client');
 });
 
