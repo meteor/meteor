@@ -1,5 +1,10 @@
 var querystring = Npm.require('querystring');
 
+// with autopublish on: publish all fields to the logged in user;
+// only the user's facebook id to others
+Accounts._autopublishFields.loggedInUser.push('services.facebook');
+Accounts._autopublishFields.allUsers.push('services.facebook.id');
+
 Accounts.oauth.registerService('facebook', 2, function(query) {
 
   var response = getTokenResponse(query);

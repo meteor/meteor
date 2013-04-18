@@ -280,22 +280,50 @@ Accounts.updateOrCreateUserFromExternalService = function(
 
 // Publish the current user's record to the client.
 Meteor.publish(null, function() {
-  if (this.userId)
+  if (this.userId) {
     return Meteor.users.find(
       {_id: this.userId},
       {fields: {profile: 1, username: 1, emails: 1}});
-  else {
+  } else {
     return null;
   }
-}, {is_auto: true});
+}, /*suppress autopublish warning*/{is_auto: true});
 
-// If autopublish is on, also publish everyone else's user record.
+// If autopublish is on, publish these user fields.  These are added
+// to by the various accounts packages (eg accounts-google). We can't
+// implement this by running multiple publish functions since DDP only
+// merges only across top-level fields, not subfields (such as
+// 'services.facebook.accessToken')
+Accounts._autopublishFields = {
+  loggedInUser: ['profile', 'username', 'emails'],
+  allUsers: ['profile', 'username']
+};
+
 Meteor.default_server.onAutopublish(function () {
-  var handler = function () {
-    return Meteor.users.find(
-      {}, {fields: {profile: 1, username: 1}});
+  // ['profile', 'username'] -> {profile: 1, username: 1}
+  var toFieldSelector = function(fields) {
+    return _.object(_.map(fields, function(field) {
+      return [field, 1];
+    }));
   };
-  Meteor.default_server.publish(null, handler, {is_auto: true});
+
+  Meteor.default_server.publish(null, function () {
+    return Meteor.users.find(
+      {_id: this.userId},
+      {fields: toFieldSelector(Accounts._autopublishFields.loggedInUser)});
+  }, /*suppress autopublish warning*/{is_auto: true});
+
+  // XXX this publish is neither dedup-able nor is it optimized by our
+  // special treatment of queries on a specific _id. Therefore this
+  // will have O(n^2) run-time performance every time a user document
+  // is changed (eg someone logging in). If this is a problem, we can
+  // instead write a manual publish function which filters out fields
+  // based on 'this.userId'.
+  Meteor.default_server.publish(null, function () {
+    return Meteor.users.find(
+      {_id: {$ne: this.userId}},
+      {fields: toFieldSelector(Accounts._autopublishFields.allUsers)});
+  }, /*suppress autopublish warning*/{is_auto: true});
 });
 
 // Publish all login service configuration fields other than secret.

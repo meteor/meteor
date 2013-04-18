@@ -1,3 +1,8 @@
+// with autopublish on: publish all fields to the logged in user;
+// only the user's meetup user id
+Accounts._autopublishFields.loggedInUser.push('services.meetup');
+Accounts._autopublishFields.allUsers.push('services.meetup.id');
+
 Accounts.oauth.registerService('meetup', 2, function(query) {
 
   var accessToken = getAccessToken(query);
