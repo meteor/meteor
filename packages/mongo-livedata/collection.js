@@ -546,6 +546,9 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
         }
       };
     });
+    // Minimongo on the server gets no stubs; instead, by default
+    // it wait()s until its result is ready, yielding.
+    // This matches the behavior of macromongo on the server better.
     if (Meteor.isClient || self._manager === Meteor.default_server)
       self._manager.methods(m);
   }

@@ -268,11 +268,11 @@ _.extend(LocalCollection.Cursor.prototype, {
       if (!f)
         return function () {};
       return function (/*args*/) {
-        var collection = this;
+        var context = this;
         var args = arguments;
         if (!self.collection.paused) {
           self.collection._observeQueue.queueTask(function () {
-            f.apply(collection, args);
+            f.apply(context, args);
           });
         }
       };
@@ -315,6 +315,8 @@ _.extend(LocalCollection.Cursor.prototype, {
         handle.stop();
       });
     }
+    // run the observe callbacks resulting from the initial contents
+    // before we leave the observe.
     self.collection._observeQueue.drain();
 
     return handle;

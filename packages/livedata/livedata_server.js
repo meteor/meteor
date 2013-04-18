@@ -342,6 +342,8 @@ _.extend(Meteor._LivedataSession.prototype, {
     self.socket = socket;
     self.last_connect_time = +(new Date);
     _.each(self.out_queue, function (msg) {
+      if (Meteor._printSentDDP)
+        Meteor._debug("Sent DDP", Meteor._stringifyDDP(msg));
       self.socket.send(Meteor._stringifyDDP(msg));
     });
     self.out_queue = [];
@@ -1015,6 +1017,9 @@ Meteor._LivedataServer = function () {
     };
 
     socket.on('data', function (raw_msg) {
+      if (Meteor._printReceivedDDP) {
+        Meteor._debug("Received DDP", raw_msg);
+      }
       try {
         try {
           var msg = Meteor._parseDDP(raw_msg);
