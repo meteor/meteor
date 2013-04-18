@@ -1,6 +1,7 @@
 // with autopublish on: publish all fields to the logged in user;
-// only the user's public picture to others
+// only the user's google id and public picture to others
 Accounts._autopublishFields.loggedInUser.push('services.google');
+Accounts._autopublishFields.allUsers.push('services.google.id');
 Accounts._autopublishFields.allUsers.push('services.google.picture');
 
 Accounts.oauth.registerService('google', 2, function(query) {
