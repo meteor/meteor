@@ -2281,23 +2281,21 @@ arguments, but most arguments are expected to be of a particular type. Meteor's
 values are of the expected type. For example:
 
     Meteor.publish("chats-in-room", function (roomId) {
-      // We wouldn't want a user to be able to pass an arbitrary
-      // selector object like {$ne: null} here.
+      // Make sure roomId is a string, not an arbitrary mongo selector object.
       check(roomId, String);
       return Chats.find({room: roomId});
     });
-    Meteor.methods({m: function (x, y) {
-      // x must be an object, and can have keys other than
-      // data and timestamps.
-      check(x, Match.ObjectIncluding({
-        // Required binary buffer.
-        data: Match.Where(EJSON.isBinary),
-        // Optional, but if present must be an array of dates.
-        timestamps: Match.Optional([Date])
-      }));
-      // If y is provided, it must be an array of objects with
-      // exactly these two keys.
-      check(y, Match.Optional([{a: String, b: Boolean}]));
+
+    Meteor.methods({addChat: function (roomId, message) {
+      check(roomId, String);
+      check(message, {
+        text: String,
+        timestamp: Date,
+        // Optional, but if present must be an array of strings.
+        tags: Match.Optional([String])
+      });
+
+      // ... do something with the message ...
     }});
 
 {{> api_box check}}
@@ -2367,7 +2365,7 @@ from the call to `check` or `Match.test`. Examples:
     check(buffer, Match.Where(EJSON.isBinary));
 
     NonEmptyString = Match.Where(function (x) {
-      validate(x, String);
+      check(x, String);
       return x.length > 0;
     }
     check(arg, NonEmptyString);
