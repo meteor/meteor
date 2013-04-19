@@ -1,8 +1,6 @@
 // This is a magic collection that fails its writes on the server when
 // the selector (or inserted document) contains fail: true.
 
-(function () {
-//var Future = __meteor_bootstrap__.require('fibers/future');
 var TRANSFORMS = {};
 if (Meteor.isServer) {
   Meteor.methods({
@@ -150,7 +148,7 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
 
   // sleep function from fibers docs.
   var sleep = function(ms) {
-    var Fiber = __meteor_bootstrap__.require('fibers');
+    var Fiber = Npm.require('fibers');
     var fiber = Fiber.current;
     setTimeout(function() {
       fiber.run();
@@ -821,4 +819,53 @@ testAsyncMulti('mongo-livedata - specified _id', [
 ]);
 
 
-})();
+if (Meteor.isServer) {
+  (function () {
+
+    testAsyncMulti("mongo-livedata - minimongo on server to server connection", [
+      function (test, expect) {
+        var self = this;
+        self.id = Random.id();
+        var C = new Meteor.Collection("ServerMinimongo_" + self.id);
+
+        C.insert({a: 0, b: 1});
+        C.insert({a: 0, b: 2});
+        C.insert({a: 1, b: 3});
+        Meteor.publish(self.id, function () {
+          return C.find({a: 0});
+        });
+
+        self.conn = Meteor.connect(Meteor.absoluteUrl());
+        pollUntil(expect, function () {
+          return self.conn.status().connected;
+        }, 10000);
+      },
+
+      function (test, expect) {
+        var self = this;
+        if (self.conn.status().connected) {
+          self.miniC = new Meteor.Collection("ServerMinimongo_" + self.id, {
+            manager: self.conn
+          });
+          var exp = expect(function (err) {
+            test.isFalse(err);
+          });
+          self.conn.subscribe(self.id, {
+            onError: exp,
+            onReady: exp
+          });
+        }
+      },
+
+      function (test, expect) {
+        var self = this;
+        if (self.miniC) {
+          var contents = self.miniC.find().fetch();
+          test.equal(contents.length, 2);
+          test.equal(contents[0].a, 0);
+        }
+      }
+    ]);
+  })();
+
+}

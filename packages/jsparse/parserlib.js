@@ -1,7 +1,5 @@
 ///// TOKENIZER AND PARSER COMBINATORS
 
-(function () {
-
 // XXX track line/col position, for errors and maybe token info
 
 var isArray = function (obj) {
@@ -260,5 +258,3 @@ Parsers.lazy = function (expecting, parserFunc) {
     return inner.parse(t);
   });
 };
-
-})();

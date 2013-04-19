@@ -1,5 +1,5 @@
 
-var html_scanner = {
+/*global*/ html_scanner = {
   // Scan a template file for <head>, <body>, and <template>
   // tags and extract their contents.
   //

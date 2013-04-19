@@ -2,11 +2,12 @@ Package.describe({
   summary: "Javascript dialect with fewer braces and semicolons"
 });
 
-var coffee = require('coffee-script');
-var fs = require('fs');
-var path = require('path');
+Npm.depends({"coffee-script": "1.5.0"});
 
 var coffeescript_handler = function(bundle, source_path, serve_path, where) {
+  var fs = Npm.require('fs');
+  var path = Npm.require('path');
+  var coffee = Npm.require('coffee-script');
   serve_path = serve_path + '.js';
 
   var contents = fs.readFileSync(source_path);
@@ -30,6 +31,10 @@ Package.register_extension("coffee", coffeescript_handler);
 Package.register_extension("litcoffee", coffeescript_handler);
 
 Package.on_test(function (api) {
-  api.add_files(['coffeescript_tests.coffee', 'litcoffeescript_tests.litcoffee', 'coffeescript_tests.js'],
-                ['client', 'server']);
+  api.add_files([
+    'coffeescript_tests.coffee',
+    'coffeescript_strict_tests.coffee',
+    'litcoffeescript_tests.litcoffee',
+    'coffeescript_tests.js'
+  ], ['client', 'server']);
 });

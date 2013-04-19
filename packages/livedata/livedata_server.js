@@ -1,12 +1,9 @@
-var Fiber = __meteor_bootstrap__.require('fibers');
+var Fiber = Npm.require('fibers');
 
 // This file contains classes:
 // * LivedataSession - The server's connection to a single DDP client
 // * LivedataSubscription - A single subscription for a single client
 // * LivedataServer - An entire server that may talk to > 1 client.  A DDP endpoint.
-
-(function () {
-
 
 // Represents a single document in a SessionCollectionView
 Meteor._SessionDocumentView = function () {
@@ -32,9 +29,12 @@ _.extend(Meteor._SessionDocumentView.prototype, {
     if (key === "_id")
       return;
     var precedenceList = self.dataByKey[key];
-    if (!precedenceList) {
-      throw new Error("Could not find field to clear " + key);
-    }
+
+    // It's okay to clear fields that didn't exist. No need to throw
+    // an error.
+    if (!precedenceList) 
+      return;
+
     var removedValue = undefined;
     for (var i = 0; i < precedenceList.length; i++) {
       var precedence = precedenceList[i];
@@ -999,7 +999,7 @@ Meteor._LivedataServer = function () {
 
   self.sessions = {}; // map from id to session
 
-  self.stream_server = new Meteor._StreamServer;
+  self.stream_server = new Meteor._DdpStreamServer;
 
   self.stream_server.register(function (socket) {
     // socket implements the SockJSConnection interface
@@ -1318,6 +1318,3 @@ var wrapInternalException = function (exception, context) {
     Meteor._debug("Exception " + context, exception.stack);
   return new Meteor.Error(500, "Internal server error");
 };
-
-
-})();

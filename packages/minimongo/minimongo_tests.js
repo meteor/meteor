@@ -65,9 +65,10 @@ var log_callbacks = function (operations) {
 
 // XXX test shared structure in all MM entrypoints
 Tinytest.add("minimongo - basics", function (test) {
-  var c = new LocalCollection();
+  var c = new LocalCollection(),
+      fluffyKitten_id;
 
-  c.insert({type: "kitten", name: "fluffy"});
+  fluffyKitten_id = c.insert({type: "kitten", name: "fluffy"});
   c.insert({type: "kitten", name: "snookums"});
   c.insert({type: "cryptographer", name: "alice"});
   c.insert({type: "cryptographer", name: "bob"});
@@ -77,6 +78,7 @@ Tinytest.add("minimongo - basics", function (test) {
   test.equal(c.find({type: "cryptographer"}).count(), 3);
   test.length(c.find({type: "kitten"}).fetch(), 2);
   test.length(c.find({type: "cryptographer"}).fetch(), 3);
+  test.equal(fluffyKitten_id, c.findOne({type: "kitten", name: "fluffy"})._id);
 
   c.remove({name: "cara"});
   test.equal(c.find().count(), 4);
@@ -1270,8 +1272,11 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: {b: 12}}, {$rename: {'a.b': 'x'}}, {a: {}, x: 12}); // tested
   modify({a: {b: 12}}, {$rename: {'a.b': 'q.r'}}, {a: {}, q: {r: 12}});
   modify({a: {b: 12}}, {$rename: {'a.b': 'q.2.r'}}, {a: {}, q: {2: {r: 12}}});
+  // Opera weirdly reorders the output. But what it does tends to be close
+  // enough.
   modify({a: {b: 12}, q: {}}, {$rename: {'a.b': 'q.2.r'}},
-         {a: {}, q: {2: {r: 12}}});
+         (typeof opera === 'undefined' ? {a: {}, q: {2: {r: 12}}}
+                                       : {q: {2: {r: 12}}, a: {}}));
   exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2'}}); // tested
   exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2.r'}}); // tested
   test.expect_fail();

@@ -1,8 +1,6 @@
 // manager, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
 
-(function () {
-
 Meteor.Collection = function (name, options) {
   var self = this;
   if (options && options.methods) {
@@ -112,7 +110,6 @@ Meteor.Collection = function (name, options) {
           return;
         } else if (msg.msg === 'added') {
           if (doc) {
-            debugger;
             throw new Error("Expected not to find a document already present for an add");
           }
           self._collection.insert(_.extend({_id: mongoId}, msg.fields));
@@ -381,6 +378,12 @@ Meteor.Collection.prototype._ensureIndex = function (index, options) {
     throw new Error("Can only call _ensureIndex on server collections");
   self._collection._ensureIndex(index, options);
 };
+Meteor.Collection.prototype._dropIndex = function (index) {
+  var self = this;
+  if (!self._collection._dropIndex)
+    throw new Error("Can only call _dropIndex on server collections");
+  self._collection._dropIndex(index);
+};
 
 Meteor.Collection.ObjectID = LocalCollection._ObjectID;
 
@@ -517,7 +520,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
             if (self._validators[method].allow.length === 0) {
               throw new Meteor.Error(
                 403, "Access denied. No allow validators set on restricted " +
-                  "collection.");
+                  "collection for method '" + method + "'.");
             }
 
             var validatedMethodName =
@@ -618,6 +621,9 @@ Meteor.Collection.prototype._validatedUpdate = function(
     if (op.charAt(0) !== '$') {
       throw new Meteor.Error(
         403, "Access denied. In a restricted collection you can only update documents, not replace them. Use a Mongo update operator, such as '$set'.");
+    } else if (!_.has(ALLOWED_UPDATE_OPERATIONS, op)) {
+      throw new Meteor.Error(
+        403, "Access denied. Operator " + op + " not allowed in a restricted collection.");
     } else {
       _.each(_.keys(params), function (field) {
         // treat dotted fields as if they are replacing their
@@ -679,6 +685,17 @@ Meteor.Collection.prototype._validatedUpdate = function(
     self._collection, selector, mutator, options);
 };
 
+// Only allow these operations in validated updates. Specifically
+// whitelist operations, rather than blacklist, so new complex
+// operations that are added aren't automatically allowed. A complex
+// operation is one that does more than just modify its target
+// field. For now this contains all update operations except '$rename'.
+// http://docs.mongodb.org/manual/reference/operators/#update
+var ALLOWED_UPDATE_OPERATIONS = {
+  $inc:1, $set:1, $unset:1, $addToSet:1, $pop:1, $pullAll:1, $pull:1,
+  $pushAll:1, $push:1, $bit:1
+};
+
 // Simulate a mongo `remove` operation while validating access control
 // rules. See #ValidatedChange
 Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
@@ -717,5 +734,3 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
 
   self._collection.remove.call(self._collection, selector);
 };
-
-})();

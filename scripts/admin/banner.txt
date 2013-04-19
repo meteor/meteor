@@ -1,0 +1,6 @@
+=> Meteor 0.6.2 released: Better error reporting, D3.js version 3,
+   experimental server-to-server DDP, and many bugfixes.
+   See https://github.com/meteor/meteor/blob/devel/History.md for details.
+
+   This is being downloaded in the background. Update your project
+   to Meteor 0.6.2 by running 'meteor update'.

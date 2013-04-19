@@ -1,5 +1,3 @@
-(function () {
-
 var makeCollection = function () {
   if (Meteor.isServer)
     return new Meteor.Collection(Random.id());
@@ -50,6 +48,35 @@ _.each ([{added:'added', forceOrdered: true},
   });
 });
 
+Tinytest.addAsync("observeChanges - callback isolation", function (test, onComplete) {
+  var c = makeCollection();
+  withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, function (logger) {
+    var handles = [];
+    var cursor = c.find();
+    handles.push(cursor.observeChanges(logger));
+    // fields-tampering observer
+    handles.push(cursor.observeChanges({
+      added: function(id, fields) {
+        fields.apples = 'green';
+      },
+      changed: function(id, fields) {
+        fields.apples = 'green';
+      },
+    }));
+
+    var fooid = c.insert({apples: "ok"});
+    logger.expectResult("added", [fooid, {apples: "ok"}]);
+    
+    c.update(fooid, {apples: "not ok"})
+    logger.expectResult("changed", [fooid, {apples: "not ok"}]);
+    
+    test.equal(c.findOne(fooid).apples, "not ok");
+
+    _.each(handles, function(handle) { handle.stop(); });
+    onComplete();
+  });
+
+});
 
 Tinytest.addAsync("observeChanges - single id - initial adds", function (test, onComplete) {
   var c = makeCollection();
@@ -167,5 +194,3 @@ Tinytest.addAsync("observeChanges - unordered - enters and exits result set thro
   onComplete();
   });
 });
-
-})();

@@ -13,7 +13,7 @@
 // var R = [new] ReactiveVar([initialValue])
 
 
-var ReactiveVar = function(initialValue) {
+ReactiveVar = function(initialValue) {
   if (! (this instanceof ReactiveVar))
     return new ReactiveVar(initialValue);
 
@@ -23,7 +23,7 @@ var ReactiveVar = function(initialValue) {
 };
 
 ReactiveVar.prototype.get = function() {
-  Deps.depend(this._deps);
+  this._deps.depend();
   return this._value;
 };
 

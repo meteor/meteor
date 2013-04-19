@@ -4,7 +4,7 @@
 // bundle-time on the server, not in the client. (though I'd like to
 // support both..)
 
-var path = require('path');
+var path = Npm.require('path');
 
 Package.describe({
   summary: "Syntax highlighting of code, from Google"

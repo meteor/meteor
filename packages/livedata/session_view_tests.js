@@ -52,6 +52,25 @@ Tinytest.add('livedata - sessionview - exists reveal', function (test) {
   v.expectNoResult();
 });
 
+Tinytest.add('livedata - sessionview - added a second field in another sub', function (test) {
+  var v = newView(test);
+
+  v.added("A", "A1", {a: "foo"});
+  v.expectResult({fun: 'added', id: "A1", fields: {a: "foo"}});
+  v.expectNoResult();
+
+  v.added("B", "A1", {a: "foo", b: "bar"});
+  v.expectResult({fun: 'changed', 'id': "A1", changed: {b: "bar"}});
+
+  v.removed("A", "A1");
+  v.expectNoResult();
+
+  v.removed("B", "A1");
+  v.expectResult({fun: 'removed', id: "A1"});
+  v.expectNoResult();
+});
+
+
 Tinytest.add('livedata - sessionview - field reveal', function (test) {
   var v = newView(test);
 
@@ -355,4 +374,20 @@ Tinytest.add('livedata - sessionview - weird key names', function (test) {
 
   v.changed('A',  "A1", {constructor: 'bla'});
   v.expectResult({fun: 'changed', id: 'A1', changed: {constructor: 'bla'}});
+});
+
+Tinytest.add('livedata - sessionview - clear undefined value', function (test) {
+  var v = newView(test);
+
+  v.added("A", "A1", {field: "value"});
+  v.expectResult({fun: 'added', id: "A1", fields: {field: "value"}});
+  v.expectNoResult();
+
+  v.changed("A", "A1", {field: undefined});
+  v.expectResult({fun: 'changed', id: 'A1', changed: {field: undefined}});
+  v.expectNoResult();
+
+  v.changed("A", "A1", {field: undefined});
+  v.expectNoResult();
+
 });

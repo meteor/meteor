@@ -1,4 +1,3 @@
-(function () {
 Meteor._SUPPORTED_DDP_VERSIONS = [ 'pre1' ];
 
 Meteor._MethodInvocation = function (options) {
@@ -120,26 +119,32 @@ Meteor._CurrentInvocation = new Meteor.EnvironmentVariable;
 // The DDP client manually puts these into Meteor.Error objects. (We don't use
 // EJSON.addType here because the type is determined by location in the
 // protocol, not text on the wire.)
-Meteor.Error = function (error, reason, details) {
-  var self = this;
+Meteor.Error = Meteor.makeErrorType(
+  "Meteor.Error",
+  function (error, reason, details) {
+    var self = this;
 
-  // Currently, a numeric code, likely similar to a HTTP code (eg,
-  // 404, 500). That is likely to change though.
-  self.error = error;
+    // Currently, a numeric code, likely similar to a HTTP code (eg,
+    // 404, 500). That is likely to change though.
+    self.error = error;
 
-  // Optional: A short human-readable summary of the error. Not
-  // intended to be shown to end users, just developers. ("Not Found",
-  // "Internal Server Error")
-  self.reason = reason;
+    // Optional: A short human-readable summary of the error. Not
+    // intended to be shown to end users, just developers. ("Not Found",
+    // "Internal Server Error")
+    self.reason = reason;
 
-  // Optional: Additional information about the error, say for
-  // debugging. It might be a (textual) stack trace if the server is
-  // willing to provide one. The corresponding thing in HTTP would be
-  // the body of a 404 or 500 response. (The difference is that we
-  // never expect this to be shown to end users, only developers, so
-  // it doesn't need to be pretty.)
-  self.details = details;
-};
+    // Optional: Additional information about the error, say for
+    // debugging. It might be a (textual) stack trace if the server is
+    // willing to provide one. The corresponding thing in HTTP would be
+    // the body of a 404 or 500 response. (The difference is that we
+    // never expect this to be shown to end users, only developers, so
+    // it doesn't need to be pretty.)
+    self.details = details;
 
-Meteor.Error.prototype = new Error;
-})();
+    // This is what gets displayed at the top of a stack trace. Current
+    // format is "[404]" (if no reason is set) or "File not found [404]"
+    if (self.reason)
+      self.message = self.reason + ' [' + self.error + ']';
+    else
+      self.message = '[' + self.error + ']';
+  });

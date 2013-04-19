@@ -1,5 +1,3 @@
-(function() {
-
 // URL prefix for tests to talk to
 var _XHR_URL_PREFIX = "/http_test_responder";
 var url_prefix = function () {
@@ -358,5 +356,3 @@ testAsyncMulti("httpcall - params", [
 // - cookies?
 // - human-readable error reason/cause?
 // - data parse error
-
-})();

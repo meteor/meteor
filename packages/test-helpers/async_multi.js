@@ -109,12 +109,13 @@ _.extend(ExpectationManager.prototype, {
   }
 });
 
-var testAsyncMulti = function (name, funcs) {
+/*global*/ testAsyncMulti = function (name, funcs) {
   // XXX Tests on remote browsers are _slow_. We need a better solution.
   var timeout = 180000;
 
   Tinytest.addAsync(name, function (test, onComplete) {
     var remaining = _.clone(funcs);
+    var context = {};
 
     var runNext = function () {
       var func = remaining.shift();
@@ -135,7 +136,7 @@ var testAsyncMulti = function (name, funcs) {
         }, timeout);
 
         try {
-          func(test, _.bind(em.expect, em));
+          func.apply(context, [test, _.bind(em.expect, em)]);
         } catch (exception) {
           if (em.cancel())
             test.exception(exception);
@@ -151,3 +152,22 @@ var testAsyncMulti = function (name, funcs) {
   });
 };
 
+/*global*/
+
+pollUntil = function (expect, f, timeout, step) {
+  step = step || 100;
+  var expectation = expect(true);
+  var start = (new Date()).valueOf();
+  var helper = function () {
+    if (f()) {
+      expectation(true);
+      return;
+    }
+    if (start + timeout < (new Date()).valueOf()) {
+      expectation(false);
+      return;
+    }
+    Meteor.setTimeout(helper, step);
+  };
+  helper();
+};

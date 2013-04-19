@@ -6,8 +6,6 @@
 
 Spark._checkIECompliance = true;
 
-(function () {
-
 // Tests can use {preserve: idNameLabels} or renderWithPreservation
 // to cause any element with an id or name to be preserved.  This effect
 // is similar to what the preserve-inputs package does, though it applies
@@ -3887,5 +3885,3 @@ Tinytest.add("spark - update defunct range", function (test) {
   test.equal(R.numListeners(), 0);
 
 });
-
-})();

@@ -1,4 +1,7 @@
-METEOR_VERSION = "0.5.9";
+Template.headline.release = function () {
+  return Meteor.release || "(checkout)";
+};
+
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -6,6 +9,9 @@ Meteor.startup(function () {
   // colors. Just turn it off for now. We'll fix it and turn it on
   // later.
   // prettyPrint();
+
+  //mixpanel tracking
+  mixpanel.track('docs');
 
   // returns a jQuery object suitable for setting scrollTop to
   // scroll the page, either directly for via animate()
@@ -70,6 +76,8 @@ Meteor.startup(function () {
     evt.preventDefault();
     var sel = $(this).attr('href');
     scrollToSection(sel);
+
+    mixpanel.track('docs_navigate_' + sel);
   });
 
   // Make external links open in a new tab.
@@ -77,7 +85,7 @@ Meteor.startup(function () {
 });
 
 var toc = [
-  {name: "Meteor " + METEOR_VERSION, id: "top"}, [
+  {name: "Meteor " + Template.headline.release(), id: "top"}, [
     "Quick start",
     "Seven principles",
     "Resources"
@@ -98,7 +106,8 @@ var toc = [
       "Meteor.isServer",
       "Meteor.startup",
       "Meteor.absoluteUrl",
-      "Meteor.settings"
+      "Meteor.settings",
+      "Meteor.release"
     ],
 
     "Publish and subscribe", [
@@ -248,7 +257,6 @@ var toc = [
       "Deps.currentComputation",
       "Deps.onInvalidate",
       "Deps.afterFlush",
-      "Deps.depend",
       "Deps.Computation", [
         {instance: "computation", name: "stop", id: "computation_stop"},
         {instance: "computation", name: "invalidate", id: "computation_invalidate"},
@@ -259,7 +267,7 @@ var toc = [
       ],
       "Deps.Dependency", [
         {instance: "dependency", name: "changed", id: "dependency_changed"},
-        {instance: "dependency", name: "addDependent", id: "dependency_adddependent"},
+        {instance: "dependency", name: "depend", id: "dependency_depend"},
         {instance: "dependency", name: "hasDependents", id: "dependency_hasdependents"}
       ]
     ],
@@ -280,6 +288,7 @@ var toc = [
       {name: "EJSON.equals", id: "ejson_equals"},
       {name: "EJSON.clone", id: "ejson_clone"},
       {name: "EJSON.newBinary", id: "ejson_new_binary"},
+      {name: "EJSON.isBinary", id: "ejson_is_binary"},
       {name: "EJSON.addType", id: "ejson_add_type"},
       [
         {instance: "instance", id: "ejson_type_clone", name: "clone"},

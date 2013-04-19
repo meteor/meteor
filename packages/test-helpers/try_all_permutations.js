@@ -31,7 +31,7 @@
 // try_all_permutations([X], [A, B], [Y])
 // try_all_permutations(X, [A, B], Y)
 
-var try_all_permutations = function () {
+try_all_permutations = function () {
   var args = Array.prototype.slice.call(arguments);
 
   var current_set = 0;

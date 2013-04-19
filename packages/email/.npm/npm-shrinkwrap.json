@@ -1,0 +1,35 @@
+{
+  "dependencies": {
+    "mailcomposer": {
+      "version": "0.1.15",
+      "from": "mailcomposer@0.1.15",
+      "resolved": "https://registry.npmjs.org/mailcomposer/-/mailcomposer-0.1.15.tgz",
+      "dependencies": {
+        "mimelib-noiconv": {
+          "version": "0.1.9",
+          "from": "mimelib-noiconv@0.1.9"
+        }
+      }
+    },
+    "simplesmtp": {
+      "version": "0.1.25",
+      "from": "simplesmtp@0.1.25",
+      "resolved": "https://registry.npmjs.org/simplesmtp/-/simplesmtp-0.1.25.tgz",
+      "dependencies": {
+        "rai": {
+          "version": "0.1.7",
+          "from": "rai@0.1.7"
+        },
+        "xoauth2": {
+          "version": "0.1.6",
+          "from": "https://registry.npmjs.org/xoauth2/-/xoauth2-0.1.6.tgz",
+          "resolved": "https://registry.npmjs.org/xoauth2/-/xoauth2-0.1.6.tgz"
+        }
+      }
+    },
+    "stream-buffers": {
+      "version": "0.2.3",
+      "from": "stream-buffers@0.2.3"
+    }
+  }
+}

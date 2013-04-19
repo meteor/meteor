@@ -4,8 +4,6 @@
 //  - object literal trailing comma
 //  - object literal get/set
 
-(function () {
-
 var expecting = Parser.expecting;
 
 var assertion = Parsers.assertion;
@@ -838,5 +836,3 @@ JSParser.prototype.getSyntaxTree = function () {
 
   return program.parse(this);
 };
-
-})();

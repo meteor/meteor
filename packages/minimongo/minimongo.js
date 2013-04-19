@@ -1,5 +1,3 @@
-(function () {
-
 // XXX type checking on selectors (graceful error if malformed)
 
 // LocalCollection: a set of documents that supports queries and modifiers.
@@ -376,7 +374,7 @@ LocalCollection.Cursor.prototype._depend = function (changers) {
 
   if (Deps.active) {
     var v = new Deps.Dependency;
-    Deps.depend(v);
+    v.depend();
     var notifyChange = _.bind(v.changed, v);
 
     var options = {_suppress_initial: true};
@@ -429,6 +427,8 @@ LocalCollection.prototype.insert = function (doc) {
     if (self.queries[qid])
       LocalCollection._recomputeResults(self.queries[qid]);
   });
+
+  return doc._id;
 };
 
 LocalCollection.prototype.remove = function (selector) {
@@ -948,4 +948,3 @@ LocalCollection._observeOrderedFromObserveChanges =
   suppressed = false;
   return handle;
 };
-})();

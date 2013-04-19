@@ -1,0 +1,32 @@
+
+* { padding: 0; margin: 0; }
+
+#main {
+  margin: 50px;
+  text-align: center;
+  font-size: 24px;
+}
+
+.msgDiv {
+  margin: 30px;
+}
+
+a {
+  padding: 5px;
+  background: #ddd;
+}
+
+#readme {
+  margin: 20px;
+  border: 1px solid #ccc;
+  width: 500px;
+}
+
+p {
+  margin: 16px;
+}
+
+ul {
+  margin: 16px;
+  padding-left: 30px;
+}

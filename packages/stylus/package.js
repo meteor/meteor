@@ -2,12 +2,14 @@ Package.describe({
   summary: 'Expressive, dynamic, robust CSS.'
 });
 
-var stylus = require('stylus');
-var nib = require('nib');
-var fs = require('fs');
+Npm.depends({stylus: "0.30.1", nib: "0.8.2"});
 
 Package.register_extension(
   'styl', function(bundle, source_path, serve_path, where) {
+    var stylus = Npm.require('stylus');
+    var nib = Npm.require('nib');
+    var fs = Npm.require('fs');
+
     serve_path = serve_path + '.css';
 
     var contents = fs.readFileSync(source_path);

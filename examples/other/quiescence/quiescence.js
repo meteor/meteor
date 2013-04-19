@@ -30,7 +30,7 @@ if (Meteor.isServer) {
     }
   });
 
-  var Fiber = __meteor_bootstrap__.require('fibers');
+  var Fiber = Npm.require('fibers');
 
   var sleep = function (ms) {
     var fiber = Fiber.current;
