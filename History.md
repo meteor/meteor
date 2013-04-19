@@ -1,6 +1,8 @@
 
 ## vNEXT
 
+* With `autopublish` on, publish many useful fields on `Meteor.users`.
+
 ## v0.6.2
 
 * Better error reporting:
