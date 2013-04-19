@@ -279,9 +279,8 @@ with statements like `check(username, String)` or
 `check(office, {building: String, room: Number})`. The `check` call will
 throw an error if its argument is of an unexpected type.
 
-If you like using `check` to validate your input, Meteor also provides an easy
-way to make sure that all of your methods and publish functions validate all of
-their arguments. Just run
+Meteor also provides an easy way to make sure that all of your methods
+and publish functions validate all of their arguments. Just run
 <code>meteor add [audit-argument-checks](#auditargumentchecks)</code> and any
 method or publish function which skips `check`ing any of its arguments will fail
 with an exception.
