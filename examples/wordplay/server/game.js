@@ -1,7 +1,7 @@
 ////////// Server only logic //////////
 
 Meteor.methods({
-  start_new_game: function (evt) {
+  start_new_game: function () {
     // create a new game w/ fresh board
     var game_id = Games.insert({board: new_board(),
                                 clock: 120});
@@ -49,6 +49,7 @@ Meteor.methods({
 
 
   keepalive: function (player_id) {
+    check(player_id, String);
     Players.update({_id: player_id},
                   {$set: {last_keepalive: (new Date()).getTime(),
                           idle: false}});

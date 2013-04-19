@@ -32,6 +32,12 @@ Meteor._srp.generateVerifier = function (password, options) {
   };
 };
 
+// For use with check().
+Meteor._srp.matchVerifier = {
+  identity: String,
+  salt: String,
+  verifier: String
+};
 
 
 /**

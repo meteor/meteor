@@ -42,16 +42,27 @@ attending = function (party) {
   return (_.groupBy(party.rsvps, 'rsvp').yes || []).length;
 };
 
+var NonEmptyString = Match.Where(function (x) {
+  check(x, String);
+  return x.length !== 0;
+});
+
+var Coordinate = Match.Where(function (x) {
+  check(x, Number);
+  return x >= 0 && x <= 1;
+});
+
 Meteor.methods({
   // options should include: title, description, x, y, public
   createParty: function (options) {
-    options = options || {};
-    if (! (typeof options.title === "string" && options.title.length &&
-           typeof options.description === "string" &&
-           options.description.length &&
-           typeof options.x === "number" && options.x >= 0 && options.x <= 1 &&
-           typeof options.y === "number" && options.y >= 0 && options.y <= 1))
-      throw new Meteor.Error(400, "Required parameter missing");
+    check(options, {
+      title: NonEmptyString,
+      description: NonEmptyString,
+      x: Coordinate,
+      y: Coordinate,
+      public: Match.Optional(Boolean)
+    });
+
     if (options.title.length > 100)
       throw new Meteor.Error(413, "Title too long");
     if (options.description.length > 1000)
@@ -72,6 +83,8 @@ Meteor.methods({
   },
 
   invite: function (partyId, userId) {
+    check(partyId, String);
+    check(userId, String);
     var party = Parties.findOne(partyId);
     if (! party || party.owner !== this.userId)
       throw new Meteor.Error(404, "No such party");
@@ -100,6 +113,8 @@ Meteor.methods({
   },
 
   rsvp: function (partyId, rsvp) {
+    check(partyId, String);
+    check(rsvp, String);
     if (! this.userId)
       throw new Meteor.Error(403, "You must be logged in to RSVP");
     if (! _.contains(['yes', 'no', 'maybe'], rsvp))

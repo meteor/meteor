@@ -48,24 +48,14 @@ Accounts._loginHandlers = [];
 // return `undefined`, meaning it handled this call to `login`. Return
 // that return value, which ought to be a {id/token} pair.
 var tryAllLoginHandlers = function (options) {
-  var result = undefined;
-
-  _.find(Accounts._loginHandlers, function(handler) {
-
-    var maybeResult = handler(options);
-    if (maybeResult !== undefined) {
-      result = maybeResult;
-      return true;
-    } else {
-      return false;
-    }
-  });
-
-  if (result === undefined) {
-    throw new Meteor.Error(400, "Unrecognized options for login request");
-  } else {
-    return result;
+  for (var i = 0; i < Accounts._loginHandlers.length; ++i) {
+    var handler = Accounts._loginHandlers[i];
+    var result = handler(options);
+    if (result !== undefined)
+      return result;
   }
+
+  throw new Meteor.Error(400, "Unrecognized options for login request");
 };
 
 
@@ -77,6 +67,9 @@ Meteor.methods({
   //   If unsuccessful (for example, if the user closed the oauth login popup),
   //     returns null
   login: function(options) {
+    // Login handlers should really also check whatever field they look at in
+    // options, but we don't enforce it.
+    check(options, Object);
     var result = tryAllLoginHandlers(options);
     if (result !== null)
       this.setUserId(result.id);
@@ -98,6 +91,7 @@ Accounts.registerLoginHandler(function(options) {
   if (!options.resume)
     return undefined;
 
+  check(options.resume, String);
   var user = Meteor.users.findOne({
     "services.resume.loginTokens.token": ""+options.resume
   });
@@ -312,7 +306,8 @@ Meteor.publish("meteor.loginServiceConfiguration", function () {
 // Allow a one-time configuration for a login service. Modifications
 // to this collection are also allowed in insecure mode.
 Meteor.methods({
-  "configureLoginService": function(options) {
+  "configureLoginService": function (options) {
+    check(options, Match.ObjectIncluding({service: String}));
     // Don't let random users configure a service we haven't added yet (so
     // that when we do later add it, it's set up with their configuration
     // instead of ours).

@@ -500,6 +500,8 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
 
     _.each(['insert', 'update', 'remove'], function (method) {
       m[self._prefix + method] = function (/* ... */) {
+        // All the methods do their own validation, instead of using check().
+        check(arguments, [Match.Any]);
         try {
           if (this.isSimulation) {
 

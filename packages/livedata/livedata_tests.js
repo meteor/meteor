@@ -350,7 +350,7 @@ if (Meteor.isClient) {
 
       Meteor.subscribe("objectsWithUsers", expect(function() {
         expectMessages(1, 0, ["owned by none"]);
-        Meteor.apply("setUserId", [1], {wait: true}, afterFirstSetUserId);
+        Meteor.apply("setUserId", ["1"], {wait: true}, afterFirstSetUserId);
       }));
 
       var afterFirstSetUserId = expect(function() {
@@ -358,7 +358,7 @@ if (Meteor.isClient) {
           "owned by one - a",
           "owned by one/two - a",
           "owned by one/two - b"]);
-        Meteor.apply("setUserId", [2], {wait: true}, afterSecondSetUserId);
+        Meteor.apply("setUserId", ["2"], {wait: true}, afterSecondSetUserId);
       });
 
       var afterSecondSetUserId = expect(function() {
@@ -367,7 +367,7 @@ if (Meteor.isClient) {
           "owned by one/two - b",
           "owned by two - a",
           "owned by two - b"]);
-        Meteor.apply("setUserId", [2], {wait: true}, afterThirdSetUserId);
+        Meteor.apply("setUserId", ["2"], {wait: true}, afterThirdSetUserId);
       });
 
       var afterThirdSetUserId = expect(function() {
@@ -383,11 +383,11 @@ if (Meteor.isClient) {
     }, function(test, expect) {
       var key = Random.id();
       Meteor.subscribe("recordUserIdOnStop", key);
-      Meteor.apply("setUserId", [100], {wait: true}, expect(function () {}));
-      Meteor.apply("setUserId", [101], {wait: true}, expect(function () {}));
+      Meteor.apply("setUserId", ["100"], {wait: true}, expect(function () {}));
+      Meteor.apply("setUserId", ["101"], {wait: true}, expect(function () {}));
       Meteor.call("userIdWhenStopped", key, expect(function (err, result) {
         test.isFalse(err);
-        test.equal(result, 100);
+        test.equal(result, "100");
       }));
     }
   ]);
@@ -406,6 +406,7 @@ if (Meteor.isServer) {
 };
 Meteor.methods({
   "livedata/setup" : function (id) {
+    check(id, String);
     if (Meteor.isServer) {
       pubHandles[id] = {};
       Meteor.publish("pub1"+id, function () {
@@ -420,6 +421,7 @@ Meteor.methods({
     }
   },
   "livedata/pub1go" : function (id) {
+    check(id, String);
     if (Meteor.isServer) {
 
       pubHandles[id].pub1.added("MultiPubCollection" + id, "foo", {a: "aa"});
@@ -428,6 +430,7 @@ Meteor.methods({
     return 0;
   },
   "livedata/pub2go" : function (id) {
+    check(id, String);
     if (Meteor.isServer) {
       pubHandles[id].pub2.added("MultiPubCollection" + id , "foo", {b: "bb"});
       return 2;
@@ -602,6 +605,7 @@ if (Meteor.isClient) {
 if (Meteor.isServer) {
   Meteor.methods({
     "s2s": function (arg) {
+      check(arg, String);
       return "s2s " + arg;
     }
   });

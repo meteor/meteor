@@ -622,6 +622,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
         self._saveOriginals();
 
       try {
+        // Note that unlike in the corresponding server code, we never audit
+        // that stubs check() their arguments.
         var ret = Meteor._CurrentInvocation.withValue(invocation,function () {
           if (Meteor.isServer) {
             // Because saveOriginals and retrieveOriginals aren't reentrant,
