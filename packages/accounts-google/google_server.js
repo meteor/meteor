@@ -29,10 +29,6 @@ Accounts.oauth.registerService('google', 2, function(query) {
     expiresAt: (+new Date) + (1000 * response.expiresIn)
   };
 
-  // include all fields from google
-  var whitelisted = ['id', 'email', 'verified_email', 'name', 'given_name',
-      'family_name', 'picture', 'locale', 'timezone', 'gender'];
-
   var fields = _.pick(identity, whitelisted);
   _.extend(serviceData, fields);
 
