@@ -694,21 +694,42 @@ LocalCollection._findInOrderedResults = function (query, doc) {
   throw Error("object missing from query");
 };
 
+//This binary search puts a value between any equal values, and the first 
+//lesser value.  This is to match the previous insertion behaviour of comparing
+//each element and inserting it as soon as it compares less than the
+//encountered value.
+LocalCollection._binarySearch = function (cmp, array, value) {
+  if (array.length == 0) return 0;
+  lower = 0;
+  upper = array.length - 1;
+
+  while (lower <= upper) {
+    idx = Math.floor( (lower + upper) / 2 );
+    comparison = cmp(value, array[idx]);
+    //console.log("lower:"+lower + " upper:" + upper + " idx:"+idx +" c:"+comparison);
+    if (lower == upper) {
+      if (comparison >= 0) idx++;
+      return idx;
+    }
+
+    if ( comparison < 0 )
+      upper = idx;
+    else
+      lower = idx + 1;
+  }
+
+  return idx;
+}
+
 LocalCollection._insertInSortedList = function (cmp, array, value) {
   if (array.length === 0) {
     array.push(value);
     return 0;
   }
 
-  for (var i = 0; i < array.length; i++) {
-    if (cmp(value, array[i]) < 0) {
-      array.splice(i, 0, value);
-      return i;
-    }
-  }
-
-  array.push(value);
-  return array.length - 1;
+  idx = LocalCollection._binarySearch (cmp, array, value)
+  array.splice(idx, 0, value);
+  return idx;
 };
 
 // To track what documents are affected by a piece of code, call saveOriginals()
