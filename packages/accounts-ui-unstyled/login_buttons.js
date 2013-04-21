@@ -110,6 +110,8 @@ Accounts._loginButtons.displayName = function () {
     return user.username;
   if (user.emails && user.emails[0] && user.emails[0].address)
     return user.emails[0].address;
+  if (user.services && user.services.google && user.services.google.email)
+    return user.services.google.email
 
   return '';
 };
