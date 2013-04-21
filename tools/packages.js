@@ -404,15 +404,16 @@ var nextPackageId = 1;
 var Package = function (library) {
   var self = this;
 
-  // Fields set by init_*:
-  // name: package name, or null for an app pseudo-package or collection
-  // sourceRoot: base directory for resolving source files, null for collection
-  // serveRoot: base directory for serving files, null for collection
-
   // A unique ID (guaranteed to not be reused in this process -- if
   // the package is reloaded, it will get a different id the second
   // time)
   self.id = nextPackageId++;
+
+  // The name of the package, or null for an app pseudo-package or
+  // collection. The package's exports will reside in Package.<name>.
+  // When it is null it is linked like an application instead of like
+  // a package.
+  self.name = null;
 
   // The path from which this package was loaded. null if loaded from
   // unipackage.
@@ -512,6 +513,45 @@ _.extend(Package.prototype, {
   // refactorings there's nothing to do here.
   // XXX remove?
   preheat: function () {
+  },
+
+  // Programmatically create a package from scratch. For now, cannot
+  // create browser packages.
+  //
+  // Options:
+  // - sliceName
+  // - use
+  // - sources
+  // - npmDependencies
+  // - npmDir
+  initFromOptions: function (name, options) {
+    var self = this;
+    self.name = name;
+
+    var isPortable = true;
+    var nodeModulesPath = null;
+    if (options.npmDependencies) {
+      meteorNpm.ensureOnlyExactVersions(option.npmDependencies);
+      meteorNpm.updateDependencies(name, options.npmDir,
+                                   options.npmDependencies);
+      if (! meteorNpm.dependenciesArePortable(options.npmDir))
+        isPortable = false;
+      nodeModulesPath = path.join(options.npmDir, 'node_modules');
+    }
+
+    var arch = isPortable ? "native" : archinfo.host();
+    var slice = new Slice(self, {
+      name: options.sliceName,
+      arch: arch,
+      uses: _.map(["meteor"].concat(options.use || []), function (spec) {
+        return { spec: spec }
+      }),
+      sources: options.sources || [],
+      nodeModulesPath: nodeModulesPath
+    });
+    self.slices.push(slice);
+
+    self.defaultSlices = {'native': [options.sliceName]};
   },
 
   // loads a package's package.js file into memory, using

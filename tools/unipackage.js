@@ -4,20 +4,12 @@ var bundler = require('./bundler.js');
 
 // Load unipackages into the currently running node.js process. Use
 // this to use unipackages (such as the DDP client) from command-line
-// tools (such as 'meteor'.) The package's exports will be available
-// as usual in Package.packagename. They will not be copied into your
-// scope.
-//
-// Currently this may only be called once. This is because in the
-// future we want to support packages that have portions that are
-// conditionally included (whether slices like 'ddp.server', or units
-// like an individual function in DomUtils) and the only way to add
-// symbols to package's namespace once it's been initially set up is
-// to use eval. We're not quite ready to sign up for eval because we'd
-// first want to see how much that usage of it frustrates the
-// JIT. (It's also because we currently go through the motions of
-// setting up a 'proper' server environment and running any startup
-// hooks -- this may or may not be the right call.)
+// tools (such as 'meteor'.) The requested packages will be loaded
+// together will all of their dependencies, and each time you call
+// this function you load another, distinct copy of all of the
+// packages. The return value is an object that maps package name to
+// package exports (that is, it is the Package object from inside the
+// sandbox created for the newly loaded packages.)
 //
 // Options:
 // - library: The Library to use to retrieve packages and their
@@ -28,11 +20,18 @@ var bundler = require('./bundler.js');
 //   pass into the app with __meteor_runtime_config__ (essentially
 //   this determines what Meteor.release will return within the loaded
 //   environment)
+//
+// Example usage:
+//   var Meteor = require('./unipackage.js').load({
+//     library: context.library,
+//     packages: ['livedata'],
+//     release: context.releaseVersion
+//   }).meteor.Meteor;
+//   var reverse = Meteor.connect('reverse.meteor.com');
+//   console.log(reverse.call('reverse', 'hello world'));
 
 var load = function (options) {
   options = options || {};
-  if (typeof __meteor_bootstrap__ !== "undefined")
-    throw new Error("unipackage.load may only be called once");
   if (! (options.library instanceof library.Library))
     throw new Error("unipackage.load requires a library");
 
@@ -40,14 +39,22 @@ var load = function (options) {
   // are specific to the HTTP server.) Kind of a hack. I suspect this
   // will get refactored before too long. Note that
   // __meteor_bootstrap__.require is no longer provided.
-  __meteor_bootstrap__ = { startup_hooks: [] };
-  __meteor_runtime_config__ = { meteorRelease: options.release };
+  var env = {
+    __meteor_bootstrap__: { startup_hooks: [] },
+    __meteor_runtime_config__: { meteorRelease: options.release }
+  };
 
   // Load the code
-  bundler._load(options.library, options.packages || []);
+  var plugin = bundler.buildPlugin({
+    library: options.library,
+    use: options.packages || []
+  });
+  var ret = plugin.load(env);
 
   // Run any user startup hooks.
-  _.each(__meteor_bootstrap__.startup_hooks, function (x) { x(); });
+  _.each(env.__meteor_bootstrap__.startup_hooks, function (x) { x(); });
+
+  return ret;
 };
 
 var unipackage = exports;
