@@ -1353,8 +1353,7 @@ var wrapInternalException = function (exception, context) {
   // tests can set the 'expected' flag on an exception so it won't go to the
   // server log
   if (!exception.expected)
-    Meteor._debug("Exception " + context, exception.toString(),
-                  exception.stack);
+    Meteor._debug("Exception " + context, exception.stack);
 
   return new Meteor.Error(500, "Internal server error");
 };
