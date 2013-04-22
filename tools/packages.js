@@ -1,4 +1,5 @@
 var path = require('path');
+var os = require('os');
 var _ = require('underscore');
 var files = require('./files.js');
 var watch = require('./watch.js');
@@ -183,64 +184,6 @@ _.extend(Slice.prototype, {
     var resources = [];
     var js = [];
 
-    // In the old extension API, there is a 'where' parameter that
-    // conflates architecture and slice name and can be either
-    // "client" or "server".
-    var clientOrServer =
-      self.arch.match(/^browser\.?/) ? "client" : "server";
-
-    /**
-     * In the legacy extension API, this is the ultimate low-level
-     * entry point to add data to the bundle.
-     *
-     * type: "js", "css", "head", "body", "static"
-     *
-     * path: the (absolute) path at which the file will be
-     * served. ignored in the case of "head" and "body".
-     *
-     * source_file: the absolute path to read the data from. if
-     * path is set, will default based on that. overridden by
-     * data.
-     *
-     * data: the data to send. overrides source_file if
-     * present. you must still set path (except for "head" and
-     * "body".)
-     */
-    var add_resource = function (options) {
-      var sourceFile = options.source_file || options.path;
-
-      var data;
-      if (options.data) {
-        data = options.data;
-        if (!(data instanceof Buffer)) {
-          if (!(typeof data === "string"))
-            throw new Error("Bad type for data");
-          data = new Buffer(data, 'utf8');
-        }
-      } else {
-        if (!sourceFile)
-          throw new Error("Need either source_file or data");
-        data = fs.readFileSync(sourceFile);
-      }
-
-      if (options.where && options.where !== clientOrServer)
-        throw new Error("'where' is deprecated here and if provided " +
-                        "must be '" + clientOrServer + "'");
-
-      if (options.type === "js") {
-        js.push({
-          source: data.toString('utf8'),
-          servePath: options.path
-        });
-      } else {
-        resources.push({
-          type: options.type,
-          data: data,
-          servePath: options.path
-        });
-      }
-    };
-
     _.each(self.sources, function (relPath) {
       var absPath = path.resolve(self.pkg.sourceRoot, relPath);
       var ext = path.extname(relPath).substr(1);
@@ -249,21 +192,148 @@ _.extend(Slice.prototype, {
       self.dependencyInfo.files[absPath] = Builder.sha1(contents);
 
       if (! handler) {
-        // If we don't have an extension handler, serve this file
-        // as a static resource.
-        resources.push({
-          type: "static",
-          data: contents,
-          servePath: path.join(self.pkg.serveRoot, relPath)
-        });
+        // If we don't have an extension handler, serve this file as a
+        // static resource on the client, or ignore it on the server.
+        //
+        // XXX This is pretty confusing, especially if you've
+        // accidentally forgotten a plugin -- revisit?
+        if (archinfo.matches(self.arch, "browser")) {
+          resources.push({
+            type: "static",
+            data: contents,
+            servePath: path.join(self.pkg.serveRoot, relPath)
+          });
+        }
         return;
       }
 
-      handler({add_resource: add_resource},
-              // XXX take contents instead of a path
-              path.join(self.pkg.sourceRoot, relPath),
-              path.join(self.pkg.serveRoot, relPath),
-              clientOrServer);
+      // This object is called a #CompileStep and it's the interface
+      // to plugins that define new source file handlers (eg,
+      // Coffeescript.)
+      //
+      // Fields on CompileStep:
+      //
+      // - arch: the architecture for which we are building
+      // - inputSize: total number of bytes in the input file
+      // - inputPath: the filename and (relative) path of the input
+      //   file, eg, "foo.js". We don't provide a way to get the full
+      //   path because you're not supposed to read the file directly
+      //   off of disk. Instead you should call read(). That way we
+      //   can ensure that the version of the file that you use is
+      //   exactly the one that is recorded in the dependency
+      //   information.
+      // - rootOutputPath: on browser targets, for resources such as
+      //   stylesheet and static assets, this is the root URL that
+      //   will get prepended to the paths you pick for your output
+      //   files so that you get your own namespace, for example
+      //   '/packages/foo'.
+      // - read(n): read from the input file. If n is given it should
+      //   be an integer, and you will receive the next n bytes of the
+      //   file as a Buffer. If n is omitted you get the rest of the
+      //   file.
+      // - appendDocument({ section: "head", data: "my markup" })
+      //   Browser targets only. Add markup to the "head" or "body"
+      //   section of the document.
+      // - addStylesheet({ path: "my/stylesheet.css", data: "my css" })
+      //   Browser targets only. Add a stylesheet to the
+      //   document. 'path' is a requested URL for the stylesheet that
+      //   may or may not ultimately be honored. (Meteor will add
+      //   appropriate tags to cause the stylesheet to be loaded. It
+      //   will be subject to any stylesheet processing stages in
+      //   effect, such as minification.)
+      // - addJavaScript({ path: "my/program.js", data: "my code" })
+      //   Add JavaScript code, which will be namespaced into this
+      //   package's environment (eg, it will see only the exports of
+      //   this package's imports), and which will be subject to
+      //   minification and so forth. Again, 'path' is merely a hint
+      //   that may or may not be honored.
+      // - addAsset({ path: "my/image.png", data: Buffer })
+      //   Browser targets only. Add a file to serve as-is over HTTP.
+      //   This time `data` is a Buffer rather than a string. It will
+      //   be served at the exact path you request (concatenated with
+      //   rootOutputPath.)
+      //
+      // XXX for now, these handlers must only generate portable code
+      // (code that isn't dependent on the arch, other than 'browser'
+      // vs 'native') -- they can look at the arch that is provided
+      // but they can't rely on the running on that particular arch
+      // (in the end, an arch-specific slice will be emitted only if
+      // there are native node modules.) Obviously this should
+      // change. A first step would be a setOutputArch() function
+      // analogous to what we do with native node modules, but maybe
+      // what we want is the ability to ask the plugin ahead of time
+      // how specific it would like to force builds to be.
+      //
+      // XXX we handle encodings in a rather cavalier way and I
+      // suspect we effectively end up assuming utf8. We can do better
+      // than that!
+      //
+      // XXX addAsset probably wants to be able to set MIME type and
+      // also control any manifest field we deem relevant (if any)
+      //
+      // XXX Some handlers process languages that have the concept of
+      // include files. These are problematic because we need to
+      // somehow instrument them to get the names and hashs of all of
+      // the files that they read for dependency tracking purposes. We
+      // don't have an API for that yet, so for now we provide a
+      // workaround, which is that _fullInputPath contains the full
+      // absolute path to the input files, which allows such a plugin
+      // to set up its include search path. It's then on its own for
+      // registering dependencies (for now..)
+      var readOffset = 0;
+      var compileStep = {
+        inputSize: contents.length,
+        inputPath: relPath,
+        _fullInputPath: absPath, // avoid, see above..
+        rootOutputPath: self.pkg.serveRoot,
+        arch: self.arch,
+        read: function (n) {
+          if (n === undefined || readOffset + n > contents.length)
+            n = contents.length - readOffset;
+          var ret = contents.slice(readOffset, readOffset + n);
+          readOffset += n;
+          return ret;
+        },
+        appendDocument: function (options) {
+          if (! archinfo.matches(self.arch, "browser"))
+            throw new Error("Document sections can only be emitted to " +
+                            "browser targets");
+          if (options.section !== "head" && options.section !== "body")
+            throw new Error("'section' must be 'head' or 'body'");
+          resources.push({
+            type: options.section,
+            data: new Buffer(options.data, 'utf8')
+          });
+        },
+        addStylesheet: function (options) {
+          if (! archinfo.matches(self.arch, "browser"))
+            throw new Error("Stylesheets can only be emitted to " +
+                            "browser targets");
+          resources.push({
+            type: "css",
+            data: new Buffer(options.data, 'utf8'),
+            servePath: options.path
+          });
+        },
+        addJavaScript: function (options) {
+          js.push({
+            source: options.data,
+            servePath: options.path
+          });
+        },
+        addAsset: function (options) {
+          if (! archinfo.matches(self.arch, "browser"))
+            throw new Error("Sorry, currently, static assets can only be " +
+                            "emitted to browser targets");
+          resources.push({
+            type: "static",
+            data: options.data,
+            servePath: options.path
+          });
+        }
+      };
+
+      handler(compileStep);
     });
 
     // Phase 1 link
@@ -357,11 +427,17 @@ _.extend(Slice.prototype, {
     // what the correct behavior should be -- we need to resolve
     // whether we think about extensions as being global to a package
     // or particular to a slice.
-    _.extend(ret, self.pkg.extensions);
+    self.pkg._ensurePluginsInitialized();
+    _.extend(ret, self.pkg.sourceHandlers);
+    _.extend(ret, self.pkg.legacyExtensionHandlers);
 
     _.each(self.uses, function (u) {
       var otherPkg = self.pkg.library.get(u.spec.split('.')[0]);
-      _.each(otherPkg.extensions, function (handler, ext) {
+      otherPkg._ensurePluginsInitialized();
+      var all = _.extend({}, otherPkg.sourceHandlers);
+      _.extend(all, otherPkg.legacyExtensionHandlers);
+
+      _.each(all, function (handler, ext) {
         if (ext in ret && ret[ext] !== handler)
           // XXX do something more graceful than printing a stack
           // trace and exiting!! we have higher standards than that!
@@ -432,7 +508,7 @@ var Package = function (library) {
 
   // File handler extensions defined by this package. Map from file
   // extension to the handler function.
-  self.extensions = {};
+  self.legacyExtensionHandlers = {};
 
   // Available editions/subpackages ("slices") of this package. Array
   // of Slice.
@@ -448,6 +524,18 @@ var Package = function (library) {
   // included when this package is tested. The most specific arch will
   // be used.
   self.testSlices = {};
+
+  // Plugins in this package. Map from plugin name to bundler.Plugin.
+  self.plugins = {};
+
+  // True if plugins have been initialized (if
+  // _ensurePluginsInitialized has been called)
+  self._pluginsInitialized = false;
+
+  // Source file handlers registered by plugins. Map from extension
+  // (without a dot) to a handler function that takes a
+  // CompileStep. Valid only when _pluginsInitialized is true.
+  self.sourceHandlers = null;
 };
 
 _.extend(Package.prototype, {
@@ -515,6 +603,35 @@ _.extend(Package.prototype, {
   preheat: function () {
   },
 
+  // If this package has plugins, initialize them (run the startup
+  // code in them so that they register their extensions.) Idempotent.
+  _ensurePluginsInitialized: function () {
+    var self = this;
+    if (self._pluginsInitialized)
+      return;
+
+    var Plugin = {
+      // 'extension' is a file extension without a dot (eg 'js', 'coffee')
+      //
+      // 'handler' is a function that takes a single argument, a
+      // CompileStep (#CompileStep)
+      registerSourceHandler: function (extension, handler) {
+        if (extension in self.sourceHandlers)
+          throw new Error("Package " + self.name + " defines two " +
+                          "source handlers for the same extension ('." +
+                          extension + "')");
+        self.sourceHandlers[extension] = handler;
+      }
+    };
+
+    self.sourceHandlers = [];
+    _.each(self.plugins, function (plugin) {
+      plugin.load({Plugin: Plugin});
+    });
+
+    self._pluginsInitialized = true;
+  },
+
   // Programmatically create a package from scratch. For now, cannot
   // create browser packages.
   //
@@ -578,6 +695,10 @@ _.extend(Package.prototype, {
     var roleHandlers = {use: null, test: null};
     var npmDependencies = null;
 
+    // Plugins defined by this package. Array of object each with the
+    // same keys as the options to _transitional_registerBuildPlugin.
+    var plugins = [];
+
     var packageJsPath = path.join(self.sourceRoot, 'package.js');
     var code = fs.readFileSync(packageJsPath);
     var packageJsHash = Builder.sha1(code);
@@ -618,11 +739,108 @@ _.extend(Package.prototype, {
 
       // extension doesn't contain a dot
       register_extension: function (extension, callback) {
-        if (_.has(self.extensions, extension))
+        if (_.has(self.legacyExtensionHandlers, extension))
           throw new Error("This package has already registered a handler for " +
                           extension);
-        self.extensions[extension] = function (/* arguments */) {
-          return callback.apply(this, arguments);
+        self.legacyExtensionHandlers[extension] = function (compileStep) {
+
+          // In the old extension API, there is a 'where' parameter
+          // that conflates architecture and slice name and can be
+          // either "client" or "server".
+          var clientOrServer = archinfo.matches(compileStep.arch, "browser") ?
+            "client" : "server";
+
+          var api = {
+            /**
+             * In the legacy extension API, this is the ultimate low-level
+             * entry point to add data to the bundle.
+             *
+             * type: "js", "css", "head", "body", "static"
+             *
+             * path: the (absolute) path at which the file will be
+             * served. ignored in the case of "head" and "body".
+             *
+             * source_file: the absolute path to read the data from. if
+             * path is set, will default based on that. overridden by
+             * data.
+             *
+             * data: the data to send. overrides source_file if
+             * present. you must still set path (except for "head" and
+             * "body".)
+             */
+            add_resource: function (options) {
+              var sourceFile = options.source_file || options.path;
+
+              var data;
+              if (options.data) {
+                data = options.data;
+                if (!(data instanceof Buffer)) {
+                  if (!(typeof data === "string"))
+                    throw new Error("Bad type for data");
+                  data = new Buffer(data, 'utf8');
+                }
+              } else {
+                if (!sourceFile)
+                  throw new Error("Need either source_file or data");
+                data = fs.readFileSync(sourceFile);
+              }
+
+              if (options.where && options.where !== clientOrServer)
+                throw new Error("'where' is deprecated here and if provided " +
+                                "must be '" + clientOrServer + "'");
+
+              var relPath = path.relative(compileStep.rootOutputPath,
+                                          options.path);
+
+
+              if (options.type === "js")
+                compileStep.addJavaScript({ path: relPath,
+                                            data: data.toString('utf8') });
+              else if (options.type === "head" || options.type === "body")
+                compileStep.appendDocument({ section: options.type,
+                                             data: data.toString('utf8') });
+              else if (options.type === "css")
+                compileStep.addStylesheet({ path: relPath,
+                                            data: data.toString('utf8') });
+              else if (options.type === "static")
+                compileStep.addAsset({ path: relPath, data: data });
+            },
+
+            error: function (message) {
+              // XXX this isn't very good. improve it (but in the new
+              // API, not this legacy API)
+              throw new Error("Error while running '" + name + "' plugin: " +
+                              message);
+            }
+          };
+
+          // old-school extension can only take the input as a file on
+          // disk, so write it out to a temporary file for them. take
+          // care to preserve the original extension since some legacy
+          // plugins depend on that (coffeescript.) Also (sigh) put it
+          // in the same directory as the original file so that
+          // relative paths work for include files, for plugins that
+          // care about that.
+          var tmpdir = path.resolve(path.dirname(compileStep._fullInputPath));
+          do {
+            var tempFilePath =
+              path.join(tmpdir, "build" +
+                        Math.floor(Math.random() * 1000000) +
+                        "." + path.basename(compileStep.inputPath));
+          } while (fs.existsSync(tempFilePath));
+          var tempFile = fs.openSync(tempFilePath, "wx");
+          var data = compileStep.read();
+          fs.writeSync(tempFile, data, 0, data.length);
+          fs.closeSync(tempFile);
+
+          try {
+            callback(api, tempFilePath,
+                     path.join(compileStep.rootOutputPath,
+                               compileStep.inputPath),
+                     clientOrServer);
+          } finally {
+            fs.unlinkSync(tempFilePath);
+          }
         };
       },
 
@@ -634,6 +852,30 @@ _.extend(Package.prototype, {
       // package.js
       _require: function(filename) {
         return require(path.join(self.sourceRoot, filename));
+      },
+
+      // Define a plugin. A plugin extends the build process for
+      // targets that use this package. For example, a Coffeescript
+      // compiler would be a plugin. A plugin is its own little
+      // program, with its own set of source files, used packages, and
+      // npm dependencies.
+      //
+      // This is an experimental API and for now you should assume
+      // that it will change frequently and radically. For maximum R&D
+      // velocity and for the good of the platform, we will push
+      // changes that break your packages. You've been warned.
+      //
+      // Options:
+      // - name: a name for this plugin. required (cosmetic -- string)
+      // - use: package to use for the plugin (names, as strings)
+      // - sources: sources for the plugin (array of string)
+      // - npmDependencies: map from npm package name to required
+      //   version (string)
+      _transitional_registerBuildPlugin: function (options) {
+        if (! (name in options))
+          throw new Error("Bulid plugins require a name");
+        // XXX further type checking
+        plugins.push(options);
       }
     }, {
       // == 'Npm' object visible in package.js ==
@@ -860,6 +1102,27 @@ _.extend(Package.prototype, {
     // Default slices
     self.defaultSlices = { browser: ['main'], 'native': ['main'] };
     self.testSlices = { browser: ['tests'], 'native': ['tests'] };
+
+    // Build plugins
+    _.each(plugins, function (plugin) {
+      if (plugin.name in self.plugins)
+        throw new Error("Two plugins have the same name: '" +
+                        plugin.name + "'");
+      if (plugin.name.match(/\.\./) || plugin.name.match(/[\\\/]/))
+        throw new Error("Bad plugin name");
+
+      self.plugins[plugin.name] = bundler.buildPlugin({
+        library: self.library,
+        use: plugin.use,
+        sources: plugin.sources,
+        npmDependencies: plugin.npmDependencies,
+        // Plugins have their own npm dependencies separate from the
+        // rest of the package, so they need their own separate npm
+        // shrinkwrap and cache state.
+        npmDir: path.resolve(path.join(self.sourceRoot, '.npm', 'plugin',
+                                       plugin.name))
+      });
+    });
   },
 
   initFromAppDir: function (appDir, ignoreFiles) {
@@ -1099,13 +1362,33 @@ _.extend(Package.prototype, {
       self.slices.push(slice);
     });
 
+    _.each(mainJson.plugins, function (pluginMeta) {
+      if (pluginMeta.path.match(/\.\./))
+        throw new Error("bad path in unipackage");
+      var plugin = bundler.readPlugin(pluginMeta.path);
+      // XXX would be nice to refactor so we don't have to manually
+      // bash the arch in here
+      plugin.arch = pluginMeta.arch;
+
+      // XXX should refactor so that we can have plugins of multiple
+      // different arches happily coexisting in memory, to match
+      // slices. If this becomes a problem before we have a chance to
+      // refactor, could just ignore plugins for arches that we don't
+      // support, if we are careful to not then try to write out the
+      // package and expect them to be intact..
+      if (pluginMeta.name in self.plugins)
+        throw new Error("Implementation limitation: this program " +
+                        "cannot yet handle fat plugins, sorry");
+      self.plugins[pluginMeta.name] = plugin;
+    });
+
     return true;
   },
 
   // True if this package can be saved as a unipackage
   canBeSavedAsUnipackage: function () {
     var self = this;
-    return _.keys(self.extensions || []).length === 0;
+    return _.keys(self.legacyExtensionHandlers || []).length === 0;
   },
 
   // options:
@@ -1129,7 +1412,8 @@ _.extend(Package.prototype, {
         internal: self.metadata.internal,
         slices: [],
         defaultSlices: self.defaultSlices,
-        testSlices: self.testSlices
+        testSlices: self.testSlices,
+        plugins: []
       };
 
       var buildInfoJson = {
@@ -1143,6 +1427,7 @@ _.extend(Package.prototype, {
       builder.reserve("head");
       builder.reserve("body");
 
+      // Slices
       _.each(self.slices, function (slice) {
         slice._ensureCompiled();
 
@@ -1264,6 +1549,19 @@ _.extend(Package.prototype, {
 
         // Control file for slice
         builder.writeJson(sliceJsonFile, sliceJson);
+      });
+
+      // Plugins
+      _.each(self.plugins, function (plugin, name) {
+        var pluginDir =
+          builder.generateFilename('plugin.' + name + '.' + plugin.arch,
+                                   { directory: true });
+        plugin.write(builder.enter(pluginDir));
+        mainJson.plugins.push({
+          name: name,
+          arch: plugin.arch,
+          path: pluginDir
+        });
       });
 
       // Prep dependencies for serialization by turning regexps into

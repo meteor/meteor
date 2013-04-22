@@ -18,12 +18,18 @@ Package.register_extension(
 
 Package.register_extension(
   "css", function (bundle, source_path, serve_path, where) {
-    bundle.add_resource({
-      type: "css",
-      path: serve_path,
-      source_file: source_path,
-      where: where
-    });
+    if (where === "client") {
+      bundle.add_resource({
+        type: "css",
+        path: serve_path,
+        source_file: source_path,
+        where: where
+      });
+    }
+
+    // XXX in the future, might be better to emit some kind of a
+    // warning if a stylesheet is included on the server, rather than
+    // silently ignoring it
   }
 );
 

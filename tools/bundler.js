@@ -22,8 +22,8 @@
 //  - plugins: array of plugins in the star, each an object:
 //    - name: short, unique name for plugin, for referring to it
 //      programmatically
-//    - arch: typically 'js' (for a portable plugin) or eg
-//      'js.linux.x86_64' for one that include native node_modules
+//    - arch: typically 'native' (for a portable plugin) or eg
+//      'native.linux.x86_64' for one that include native node_modules
 //    - path: directory (relative to star.json) containing this plugin
 //
 // /README: human readable instructions
@@ -869,6 +869,9 @@ var Plugin = function () {
   // on disk (NodeModulesDirectory.sourcePath) to a
   // NodeModulesDirectory object that we have created to represent it.
   self.nodeModulesDirectories = {};
+
+  // Architecture required by this plugin
+  self.arch = null;
 };
 
 _.extend(Plugin.prototype, {
@@ -1001,6 +1004,7 @@ _.extend(PluginTarget.prototype, {
     });
 
     ret.nodeModulesDirectories = self.nodeModulesDirectories;
+    ret.arch = self.mostCompatibleArch();
 
     return ret;
   }
@@ -1310,4 +1314,13 @@ exports.buildPlugin = function (options) {
   target.determineLoadOrder({ packages: [pkg] });
   target.emitResources();
   return target.toPlugin();
+};
+
+// Load a Plugin from disk (that was previously written by calling
+// write() on a Plugin.) `dir` is the directory that contains the
+// plugin.
+exports.readPlugin = function (dir) {
+  var ret = new Plugin;
+  Plugin.initFromDisk(dir);
+  return ret;
 };
