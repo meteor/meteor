@@ -57,13 +57,13 @@ Meteor.http.call = function(method, url, options, callback) {
 
   ////////// Callback wrapping //////////
 
-  // wrap callback to always return a result object, and always
-  // have an 'error' property in result
+  // wrap callback to add a 'response' property on an error, in case
+  // we have both (http 4xx/5xx error, which has a response payload)
   callback = (function(callback) {
-    return function(error, result) {
-      result = result || {};
-      result.error = error;
-      callback(error, result);
+    return function(error, response) {
+      if (error && response)
+        error.response = response;
+      callback(error, response);
     };
   })(callback);
 

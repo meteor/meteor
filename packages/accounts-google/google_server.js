@@ -53,39 +53,39 @@ var getTokens = function (query) {
   if (!config)
     throw new Accounts.ConfigError("Service not configured");
 
-  var result = Meteor.http.post(
-    "https://accounts.google.com/o/oauth2/token", {params: {
-      code: query.code,
-      client_id: config.clientId,
-      client_secret: config.secret,
-      redirect_uri: Meteor.absoluteUrl("_oauth/google?close"),
-      grant_type: 'authorization_code'
-    }});
-
-
-  if (result.error) { // if the http response was an error
+  var response;
+  try {
+    response = Meteor.http.post(
+      "https://accounts.google.com/o/oauth2/token", {params: {
+        code: query.code,
+        client_id: config.clientId,
+        client_secret: config.secret,
+        redirect_uri: Meteor.absoluteUrl("_oauth/google?close"),
+        grant_type: 'authorization_code'
+      }});
+  } catch (err) {
     throw new Error("Failed to complete OAuth handshake with Google. " +
-                    "HTTP Error " + result.statusCode + ": " + result.content);
-  } else if (result.data.error) { // if the http response was a json object with an error attribute
-    throw new Error("Failed to complete OAuth handshake with Google. " + result.data.error);
+                    err + (err.response ? ": " + err.response.content : ""));
+  }
+
+  if (response.data.error) { // if the http response was a json object with an error attribute
+    throw new Error("Failed to complete OAuth handshake with Google. " + response.data.error);
   } else {
     return {
-      accessToken: result.data.access_token,
-      refreshToken: result.data.refresh_token,
-      expiresIn: result.data.expires_in
+      accessToken: response.data.access_token,
+      refreshToken: response.data.refresh_token,
+      expiresIn: response.data.expires_in
     };
   }
 };
 
 var getIdentity = function (accessToken) {
-  var result = Meteor.http.get(
-    "https://www.googleapis.com/oauth2/v1/userinfo",
-    {params: {access_token: accessToken}});
-
-  if (result.error) {
+  try {
+    return Meteor.http.get(
+      "https://www.googleapis.com/oauth2/v1/userinfo",
+      {params: {access_token: accessToken}}).data;
+  } catch (err) {
     throw new Error("Failed to fetch identity from Google. " +
-                    "HTTP Error " + result.statusCode + ": " + result.content);
-  } else {
-    return result.data;
+                    err + (err.response ? ": " + err.response.content : ""));
   }
 };

@@ -2826,12 +2826,13 @@ standard `x-www-form-urlencoded` content type, unless the `content`
 or `data` option is used to specify a body, in which case the
 parameters will be appended to the URL instead.
 
-The callback receives two arguments, `error` and `result`.  The `error`
-argument will contain an Error if the request fails in any way,
-including a network error, time-out, or an HTTP status code in the 400
-or 500 range.  The result object is always
-defined. When run in synchronous mode, the `result` is returned from the
-function, and the `error` value is a stored as a property in `result`.
+The callback receives two arguments, `error` and `result`.  The
+`error` argument will contain an Error if the request fails in any
+way, including a network error, time-out, or an HTTP status code in
+the 400 or 500 range.  In case of a 4xx/5xx HTTP status code, the
+`response` property on `error` matches the contents of the result
+object.  When run in synchronous mode, either `result` is returned
+from the function, or `error` is thrown.
 
 Contents of the result object:
 
@@ -2852,11 +2853,6 @@ Contents of the result object:
 <dt><span class="name">headers</span>
   <span class="type">Object</span></dt>
 <dd>A dictionary of HTTP headers from the response.</dd>
-
-<dt><span class="name">error</span>
-  <span class="type">Error</span></dt>
-<dd>Error object if the request failed. Matches the <code>error</code> callback parameter.</dd>
-
 
 </dl>
 

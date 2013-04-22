@@ -37,6 +37,16 @@ Accounts.oauth.registerService('facebook', 2, function(query) {
   };
 });
 
+// checks whether a string parses as JSON
+var isJSON = function (str) {
+  try {
+    JSON.parse(str);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
 // returns an object containing:
 // - accessToken
 // - expiresIn: lifetime of token in seconds
@@ -45,63 +55,51 @@ var getTokenResponse = function (query) {
   if (!config)
     throw new Accounts.ConfigError("Service not configured");
 
-  // Request an access token
-  var result = Meteor.http.get(
-    "https://graph.facebook.com/oauth/access_token", {
-      params: {
-        client_id: config.appId,
-        redirect_uri: Meteor.absoluteUrl("_oauth/facebook?close"),
-        client_secret: config.secret,
-        code: query.code
-      }
-    });
-
-  var response = result.content;
-
-  if (result.error) {
-    throw new Error("Failed to complete OAuth handshake with Facebook. " +
-                    "HTTP Error " + result.statusCode + ": " + response);
-  }
-
-  // Errors come back as JSON but success looks like a query encoded
-  // in a url
-  var error_response;
+  var responseContent;
   try {
-    // Just try to parse so that we know if we failed or not,
-    // while storing the parsed results
-    error_response = JSON.parse(response);
-  } catch (e) {
-    error_response = null;
+    // Request an access token
+    responseContent = Meteor.http.get(
+      "https://graph.facebook.com/oauth/access_token", {
+        params: {
+          client_id: config.appId,
+          redirect_uri: Meteor.absoluteUrl("_oauth/facebook?close"),
+          client_secret: config.secret,
+          code: query.code
+        }
+      }).content;
+  } catch (err) {
+    throw new Error("Failed to complete OAuth handshake with Facebook. " +
+                    err + (err.response ? ": " + err.response.content : ""));
   }
 
-  if (error_response) {
-    throw new Error("Failed to complete OAuth handshake with Facebook. " + response);
-  } else {
-    // Success!  Extract the facebook access token and expiration
-    // time from the response
-    var parsedResponse = querystring.parse(response);
-    var fbAccessToken = parsedResponse.access_token;
-    var fbExpires = parsedResponse.expires;
-
-    if (!fbAccessToken) {
-      throw new Error("Failed to complete OAuth handshake with facebook " +
-                      "-- can't find access token in HTTP response. " + response);
-    }
-    return {
-      accessToken: fbAccessToken,
-      expiresIn: fbExpires
-    };
+  // If 'responseContent' parses as JSON, it is an error.
+  // XXX which facebook error causes this behvaior?
+  if (isJSON(responseContent)) {
+    throw new Error("Failed to complete OAuth handshake with Facebook. " + responseContent);
   }
+
+  // Success!  Extract the facebook access token and expiration
+  // time from the response
+  var parsedResponse = querystring.parse(responseContent);
+  var fbAccessToken = parsedResponse.access_token;
+  var fbExpires = parsedResponse.expires;
+
+  if (!fbAccessToken) {
+    throw new Error("Failed to complete OAuth handshake with facebook " +
+                    "-- can't find access token in HTTP response. " + responseContent);
+  }
+  return {
+    accessToken: fbAccessToken,
+    expiresIn: fbExpires
+  };
 };
 
 var getIdentity = function (accessToken) {
-  var result = Meteor.http.get("https://graph.facebook.com/me", {
-    params: {access_token: accessToken}});
-
-  if (result.error) {
+  try {
+    return Meteor.http.get("https://graph.facebook.com/me", {
+      params: {access_token: accessToken}}).data;
+  } catch (err) {
     throw new Error("Failed to fetch identity from Facebook. " +
-                    "HTTP Error " + result.statusCode + ": " + result.content);
-  } else {
-    return result.data;
+                    err + (err.response ? ": " + err.response.content : ""));
   }
 };
