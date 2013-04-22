@@ -3,105 +3,48 @@ Package.describe({
   internal: true
 });
 
-var fs = Npm.require('fs');
-var path = Npm.require('path');
+// Today, this package is closely intertwined with Handlebars, meaning
+// that other templating systems will need to duplicate this logic. In
+// the future, perhaps we should have the concept of a template system
+// registry and a default templating system, ideally per-package.
 
-// XXX For now, the Handlebars compilation and evaluation logic has
-// been folded into this package, because we are de-supporting load
-// order dependencies between package.js files, so that we can run a
-// package build step and have it not require all of the package's
-// dependencies to be present. We'll be able to split Handlebars back
-// out into a separate file again once we've moved extension code out
-// of package.js and into its own well-defined execution environment
-// that can require other packages. At that point we will also want to
-// have the concept of a template system registry and a default
-// templating system, ideally per-package.
+Package._transitional_registerBuildPlugin({
+  name: "compileTemplates",
+  use: ['underscore', 'handlebars'],
+  sources: [
+    'plugin/html_scanner.js',
+    'plugin/compile-templates.js'
+  ]
+});
 
 Package.on_use(function (api) {
   // XXX would like to do the following only when the first html file
-  // is encountered.. shouldn't be very hard, we just need a way to
-  // get at 'api' from a register_extension handler
+  // is encountered
 
-  api.use(['underscore', 'spark'], 'client');
+  api.use(['underscore', 'spark', 'handlebars'], 'client');
 
   // provides the runtime logic to instantiate our templates
   api.add_files('deftemplate.js', 'client');
 
   // html_scanner.js emits client code that calls Meteor.startup
   api.use('startup', 'client');
-
-  // XXX should only be sent if we have handlebars templates in the app..
-  api.add_files('evaluate-handlebars.js', 'client');
-  api.add_files('parse-handlebars.js', 'server'); // needed on server for tests
 });
-
-Package._require('parse-handlebars.js'); // needed at bundle time
-
-Package.register_extension(
-  "html", function (bundle, source_path, serve_path, where) {
-    if (where !== "client")
-      // XXX might be nice to throw an error here, but then we'd have
-      // to make it so that packages.js ignores html files that appear
-      // in the server directories in an app tree.. or, it might be
-      // nice to make html files actually work on the server (against
-      // jsdom or something)
-      return;
-
-    // XXX the way we deal with encodings here is sloppy .. should get
-    // religion on that
-    var contents = fs.readFileSync(source_path);
-
-    var html_scanner = Package._require('html_scanner.js');
-    var results = html_scanner.scan(contents.toString('utf8'), source_path);
-
-    if (results.head)
-      bundle.add_resource({
-        type: "head",
-        data: results.head,
-        where: where
-      });
-
-    if (results.body)
-      bundle.add_resource({
-        type: "body",
-        data: results.body,
-        where: where
-      });
-
-    if (results.js) {
-      var path_part = path.dirname(serve_path);
-      if (path_part === '.')
-        path_part = '';
-      if (path_part.length && path_part !== path.sep)
-        path_part = path_part + path.sep;
-      var ext = path.extname(source_path);
-      var basename = path.basename(serve_path, ext);
-      serve_path = path_part + "template." + basename + ".js";
-
-      bundle.add_resource({
-        type: "js",
-        where: where,
-        path: serve_path,
-        data: results.js
-      });
-    }
-  }
-);
 
 Package.on_test(function (api) {
   api.use('tinytest');
   api.use('htmljs');
   api.use('templating');
   api.use('handlebars');
+  api.use('underscore');
   api.use(['test-helpers', 'domutils', 'session', 'deps',
-           'underscore', 'spark', 'minimongo'], 'client');
+           'spark', 'minimongo'], 'client');
   api.use('handlebars', 'server');
   api.add_files([
     'templating_tests.js',
     'templating_tests.html'
   ], 'client');
   api.add_files([
-    'html_scanner.js',
-    'scanner_tests.js'
+    'plugin/html_scanner.js',
+    'scanner_tests.js',
   ], 'server');
 });

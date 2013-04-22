@@ -1,3 +1,4 @@
+// @export html_scanner
 html_scanner = {
   // Scan a template file for <head>, <body>, and <template>
   // tags and extract their contents.
@@ -151,3 +152,8 @@ html_scanner = {
     }
   }
 };
+
+// If we are running at bundle time, set module.exports.
+// For unit testing in server environment, don't.
+if (typeof module !== 'undefined')
+  module.exports = html_scanner;
