@@ -1261,7 +1261,7 @@ _.extend(Package.prototype, {
     // If we're supposed to check the dependencies, go ahead and do so
     if (options.onlyIfUpToDate) {
       if (options.buildOfPath &&
-          (buildInfoJson.buildOfPath !== options.buildOfPath)) {
+          (buildInfoJson.source !== options.buildOfPath)) {
         // This catches the case where you copy a source tree that had
         // a .build directory and then modify a file. Without this
         // check you won't see a rebuild (even if you stop and restart
