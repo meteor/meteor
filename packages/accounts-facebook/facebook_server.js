@@ -37,6 +37,16 @@ Accounts.oauth.registerService('facebook', 2, function(query) {
   };
 });
 
+// checks whether a string parses as JSON
+var isJSON = function (str) {
+  try {
+    JSON.parse(str);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
 // returns an object containing:
 // - accessToken
 // - expiresIn: lifetime of token in seconds
@@ -63,22 +73,10 @@ var getTokenResponse = function (query) {
   }
 
   // If 'responseContent' parses as JSON, it is an error.
-  (function () {
-    // Errors come back as JSON but success looks like a query encoded
-    // in a url
-    var errorResponse;
-    try {
-      // Just try to parse so that we know if we failed or not,
-      // while storing the parsed results
-      errorResponse = JSON.parse(responseContent);
-    } catch (e) {
-      errorResponse = null;
-    }
-
-    if (errorResponse) {
-      throw new Error("Failed to complete OAuth handshake with Facebook. " + responseContent);
-    }
-  })();
+  // XXX which facebook error causes this behvaior?
+  if (isJSON(responseContent)) {
+    throw new Error("Failed to complete OAuth handshake with Facebook. " + responseContent);
+  }
 
   // Success!  Extract the facebook access token and expiration
   // time from the response
