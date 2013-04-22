@@ -3,6 +3,9 @@
 
 * With `autopublish` on, publish many useful fields on `Meteor.users`.
 
+* When using the `http` package on the server synchronously, errors
+  are thrown rather than passed in `result.error`
+
 ## v0.6.2
 
 * Better error reporting:
