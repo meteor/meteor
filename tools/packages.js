@@ -706,7 +706,7 @@ _.extend(Package.prototype, {
     var isPortable = true;
     var nodeModulesPath = null;
     if (options.npmDependencies) {
-      meteorNpm.ensureOnlyExactVersions(option.npmDependencies);
+      meteorNpm.ensureOnlyExactVersions(options.npmDependencies);
       meteorNpm.updateDependencies(name, options.npmDir,
                                    options.npmDependencies);
       if (! meteorNpm.dependenciesArePortable(options.npmDir))

@@ -1,6 +1,7 @@
 // XXX namespacing -- find a better home for these?
 
-if (__meteor_runtime_config__.meteorRelease)
+if (typeof __meteor_runtime_config__ === 'object' &&
+    __meteor_runtime_config__.meteorRelease)
   Meteor.release = __meteor_runtime_config__.meteorRelease;
 
 _.extend(Meteor, {

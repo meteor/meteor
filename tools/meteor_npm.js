@@ -121,7 +121,7 @@ _.extend(exports, {
   _makeNewPackageNpmDir: function (newPackageNpmDir) {
     var self = this;
     self._tmpDirs.push(newPackageNpmDir); // keep track so that we can remove them on process exit
-    fs.mkdirSync(newPackageNpmDir);
+    files.mkdir_p(newPackageNpmDir);
 
     // create node_modules -- prevent npm install from installing
     // to an existing node_modules dir higher up in the filesystem
