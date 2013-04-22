@@ -159,7 +159,6 @@ _.extend(Library.prototype, {
       }
     }
 
-
     return pkg;
   },
 

@@ -3,6 +3,7 @@ var os = require('os');
 var _ = require('underscore');
 var files = require('./files.js');
 var watch = require('./watch.js');
+var bundler = require('./bundler.js');
 var Builder = require('./builder.js');
 var project = require('./project.js');
 var meteorNpm = require('./meteor_npm.js');
@@ -300,6 +301,8 @@ _.extend(Slice.prototype, {
                             "browser targets");
           if (options.section !== "head" && options.section !== "body")
             throw new Error("'section' must be 'head' or 'body'");
+          if (typeof options.data !== "string")
+            throw new Error("'data' option to appendDocument must be a string");
           resources.push({
             type: options.section,
             data: new Buffer(options.data, 'utf8')
@@ -309,6 +312,8 @@ _.extend(Slice.prototype, {
           if (! archinfo.matches(self.arch, "browser"))
             throw new Error("Stylesheets can only be emitted to " +
                             "browser targets");
+          if (typeof options.data !== "string")
+            throw new Error("'data' option to addStylesheet must be a string");
           resources.push({
             type: "css",
             data: new Buffer(options.data, 'utf8'),
@@ -316,6 +321,8 @@ _.extend(Slice.prototype, {
           });
         },
         addJavaScript: function (options) {
+          if (typeof options.data !== "string")
+            throw new Error("'data' option to addJavaScript must be a string");
           js.push({
             source: options.data,
             servePath: options.path
@@ -325,6 +332,8 @@ _.extend(Slice.prototype, {
           if (! archinfo.matches(self.arch, "browser"))
             throw new Error("Sorry, currently, static assets can only be " +
                             "emitted to browser targets");
+          if (! (options.data instanceof Buffer))
+            throw new Error("'data' option to addAsset must be a Buffer");
           resources.push({
             type: "static",
             data: options.data,
@@ -347,6 +356,22 @@ _.extend(Slice.prototype, {
       importStubServePath: '/packages/global-imports.js',
       name: self.pkg.name || null,
       forceExport: self.forceExport
+    });
+
+    // Add dependencies on the source code to any plugins that we
+    // could have used (we need to depend even on plugins that we
+    // didn't use, because if they were changed they might become
+    // relevant to us)
+    //
+    // XXX I guess they're probably properly disjoint since plugins
+    // probably include only file dependencies? Anyway it would be a
+    // strange situation if plugin source directories overlapped with
+    // other parts of your app
+    _.each(self._activePluginPackages(), function (otherPkg) {
+      _.extend(self.dependencyInfo.files,
+               otherPkg.pluginDependencyInfo.files);
+      _.extend(self.dependencyInfo.directories,
+               otherPkg.pluginDependencyInfo.directories);
     });
 
     self.prelinkFiles = results.files;
@@ -414,12 +439,10 @@ _.extend(Slice.prototype, {
     return _.union(self.resources, jsResources); // union preserves order
   },
 
-  // Get all extensions handlers registered in this slice, as a map
-  // from extension (no leading dot) to handler function. Throws an
-  // exception if two packages are registered for the same extension.
-  _allHandlers: function () {
+  // Return an array of all plugins that are active in this slice, as
+  // a list of Packages.
+  _activePluginPackages: function () {
     var self = this;
-    var ret = {};
 
     // XXX we used to include our own extensions only if we were the
     // "use" role. now we include them everywhere because we don't
@@ -427,13 +450,38 @@ _.extend(Slice.prototype, {
     // what the correct behavior should be -- we need to resolve
     // whether we think about extensions as being global to a package
     // or particular to a slice.
-    self.pkg._ensurePluginsInitialized();
-    _.extend(ret, self.pkg.sourceHandlers);
-    _.extend(ret, self.pkg.legacyExtensionHandlers);
+    var ret = [self.pkg];
 
     _.each(self.uses, function (u) {
-      var otherPkg = self.pkg.library.get(u.spec.split('.')[0]);
-      otherPkg._ensurePluginsInitialized();
+      ret.push(self.pkg.library.get(u.spec.split('.')[0]));
+    });
+
+    _.each(ret, function (pkg) {
+      pkg._ensurePluginsInitialized();
+    });
+
+    return ret;
+  },
+
+  // Get all extensions handlers registered in this slice, as a map
+  // from extension (no leading dot) to handler function. Throws an
+  // exception if two packages are registered for the same extension.
+  _allHandlers: function () {
+    var self = this;
+    var ret = {};
+
+    // We provide a hardcoded handler for *.js files.. since plugins
+    // are written in JavaScript we have to start somewhere.
+    _.extend(ret, {
+      js: function (compileStep) {
+        compileStep.addJavaScript({
+          data: compileStep.read().toString('utf8'),
+          path: compileStep.inputPath
+        });
+      }
+    });
+
+    _.each(self._activePluginPackages(), function (otherPkg) {
       var all = _.extend({}, otherPkg.sourceHandlers);
       _.extend(all, otherPkg.legacyExtensionHandlers);
 
@@ -527,6 +575,11 @@ var Package = function (library) {
 
   // Plugins in this package. Map from plugin name to bundler.Plugin.
   self.plugins = {};
+
+  // Dependencies for any plugins in this package
+  // XXX Refactor so that slice and plugin dependencies are handled by
+  // the same mechanism.
+  self.pluginDependencyInfo = { files: {}, directories: {} };
 
   // True if plugins have been initialized (if
   // _ensurePluginsInitialized has been called)
@@ -635,6 +688,11 @@ _.extend(Package.prototype, {
   // Programmatically create a package from scratch. For now, cannot
   // create browser packages.
   //
+  // Unlike user-facing methods of creating a package
+  // (initFromPackageDir, initFromAppDir) this does not implicitly add
+  // a dependency on the 'meteor' package. If you want such a
+  // dependency then you must add it yourself.
+  //
   // Options:
   // - sliceName
   // - use
@@ -660,7 +718,7 @@ _.extend(Package.prototype, {
     var slice = new Slice(self, {
       name: options.sliceName,
       arch: arch,
-      uses: _.map(["meteor"].concat(options.use || []), function (spec) {
+      uses: _.map(options.use || [], function (spec) {
         return { spec: spec }
       }),
       sources: options.sources || [],
@@ -791,8 +849,6 @@ _.extend(Package.prototype, {
 
               var relPath = path.relative(compileStep.rootOutputPath,
                                           options.path);
-
-
               if (options.type === "js")
                 compileStep.addJavaScript({ path: relPath,
                                             data: data.toString('utf8') });
@@ -861,9 +917,10 @@ _.extend(Package.prototype, {
       // npm dependencies.
       //
       // This is an experimental API and for now you should assume
-      // that it will change frequently and radically. For maximum R&D
-      // velocity and for the good of the platform, we will push
-      // changes that break your packages. You've been warned.
+      // that it will change frequently and radically (thus the
+      // '_transitional_'.) For maximum R&D velocity and for the good
+      // of the platform, we will push changes that break your
+      // packages that use this API. You've been warned.
       //
       // Options:
       // - name: a name for this plugin. required (cosmetic -- string)
@@ -872,8 +929,8 @@ _.extend(Package.prototype, {
       // - npmDependencies: map from npm package name to required
       //   version (string)
       _transitional_registerBuildPlugin: function (options) {
-        if (! (name in options))
-          throw new Error("Bulid plugins require a name");
+        if (! ('name' in options))
+          throw new Error("Build plugins require a name");
         // XXX further type checking
         plugins.push(options);
       }
@@ -1111,10 +1168,12 @@ _.extend(Package.prototype, {
       if (plugin.name.match(/\.\./) || plugin.name.match(/[\\\/]/))
         throw new Error("Bad plugin name");
 
-      self.plugins[plugin.name] = bundler.buildPlugin({
+      var buildResult = bundler.buildPlugin({
         library: self.library,
         use: plugin.use,
-        sources: plugin.sources,
+        sources: _.map(plugin.sources, function (p) {
+          return path.join(dir, p);
+        }),
         npmDependencies: plugin.npmDependencies,
         // Plugins have their own npm dependencies separate from the
         // rest of the package, so they need their own separate npm
@@ -1122,6 +1181,19 @@ _.extend(Package.prototype, {
         npmDir: path.resolve(path.join(self.sourceRoot, '.npm', 'plugin',
                                        plugin.name))
       });
+
+      if (buildResult.dependencyInfo) {
+        // Merge plugin dependencies
+        // XXX is naive merge sufficient here? should be, because
+        // plugins can't (for now) contain directory dependencies?
+        _.extend(self.pluginDependencyInfo.files,
+                 buildResult.dependencyInfo.files);
+        _.extend(self.pluginDependencyInfo.directories,
+                 buildResult.dependencyInfo.directories);
+      }
+
+      self.plugins[plugin.name] = buildResult.plugin;
+
     });
   },
 
@@ -1365,7 +1437,7 @@ _.extend(Package.prototype, {
     _.each(mainJson.plugins, function (pluginMeta) {
       if (pluginMeta.path.match(/\.\./))
         throw new Error("bad path in unipackage");
-      var plugin = bundler.readPlugin(pluginMeta.path);
+      var plugin = bundler.readPlugin(path.join(dir, pluginMeta.path));
       // XXX would be nice to refactor so we don't have to manually
       // bash the arch in here
       plugin.arch = pluginMeta.arch;

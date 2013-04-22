@@ -940,8 +940,8 @@ _.extend(Plugin.prototype, {
       load: _.map(self.jsToLoad, function (item) {
         return {
           targetPath: item.targetPath,
-          source: new Buffer(item.source, 'utf8'),
-          nodeModulesDirectory: file.nodeModulesDirectory
+          data: new Buffer(item.source, 'utf8'),
+          nodeModulesDirectory: item.nodeModulesDirectory
         };
       }),
       nodeModulesDirectories: self.nodeModulesDirectories
@@ -1275,9 +1275,16 @@ exports.bundle = function (appDir, outputPath, options) {
   }
 };
 
-// Return a Plugin object. It can either be loaded into memory with
+// Make a Plugin object. It can either be loaded into memory with
 // load(), which returns the `Package` object inside the plugin's
 // namespace, or saved to disk with write(builder).
+//
+// Returns an object with keys:
+// - plugin: The created Plugin object.
+// - dependencyInfo: Source file dependency info (see bundle().)
+//
+// XXX return an 'errors' key for symmetry with bundle(), rather than
+// letting exceptions escape?
 //
 // options:
 // - library: required. the Library for resolving package dependencies
@@ -1313,7 +1320,11 @@ exports.buildPlugin = function (options) {
 
   target.determineLoadOrder({ packages: [pkg] });
   target.emitResources();
-  return target.toPlugin();
+
+  return {
+    plugin: target.toPlugin(),
+    dependencyInfo: target.getDependencyInfo()
+  };
 };
 
 // Load a Plugin from disk (that was previously written by calling
@@ -1321,6 +1332,6 @@ exports.buildPlugin = function (options) {
 // plugin.
 exports.readPlugin = function (dir) {
   var ret = new Plugin;
-  Plugin.initFromDisk(dir);
+  ret.initFromDisk(dir);
   return ret;
 };
