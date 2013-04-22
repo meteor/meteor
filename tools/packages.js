@@ -281,6 +281,10 @@ _.extend(Slice.prototype, {
       // absolute path to the input files, which allows such a plugin
       // to set up its include search path. It's then on its own for
       // registering dependencies (for now..)
+      //
+      // XXX in the future we should give plugins an easy and clean
+      // way to return errors (that could go in an overall list of
+      // errors experienced across all files)
       var readOffset = 0;
       var compileStep = {
         inputSize: contents.length,

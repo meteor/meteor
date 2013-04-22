@@ -13,7 +13,8 @@ var handler = function (compileStep) {
   try {
     var output = coffee.compile(source, options);
   } catch (e) {
-    return bundle.error(e.message);
+    // XXX better error handling, once the Plugin interface support it
+    throw new Error(e.message);
   }
 
   compileStep.addJavaScript({

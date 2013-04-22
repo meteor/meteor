@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "less": {
+      "version": "1.3.3",
+      "from": "less@1.3.3",
+      "resolved": "https://registry.npmjs.org/less/-/less-1.3.3.tgz",
+      "dependencies": {
+        "ycssmin": {
+          "version": "1.0.1",
+          "from": "ycssmin@>=1.0.1"
+        }
+      }
+    }
+  }
+}
