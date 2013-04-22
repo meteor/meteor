@@ -64,12 +64,7 @@ Meteor.http.call = function(method, url, options, callback) {
   if (! callback) {
     // Sync mode
     fut = new Future;
-    callback = function(error, result) {
-      if (error)
-        fut.throw(error);
-      else
-        fut.ret(result);
-    };
+    callback = fut.resolver(); // throw errors, return results
   } else {
     // Async mode
     // re-enter user code in a Fiber
