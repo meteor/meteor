@@ -138,9 +138,9 @@ _.extend(Meteor._DdpClientStream.prototype, {
       Meteor._DdpClientStream._toSockjsUrl(self.rawUrl),
       undefined, {
         debug: false, protocols_whitelist: [
-          // only allow polling protocols. no websockets or streaming.
-          // streaming makes safari spin, and websockets hurt chrome.
-          'xdr-polling', 'xhr-polling', 'iframe-xhr-polling', 'jsonp-polling'
+          // only allow polling protocols. no streaming.  streaming
+          // makes safari spin.
+          'websocket', 'xdr-polling', 'xhr-polling', 'iframe-xhr-polling', 'jsonp-polling'
         ]});
     self.socket.onmessage = function (data) {
       self._heartbeat_received();
