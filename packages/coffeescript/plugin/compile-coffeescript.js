@@ -19,7 +19,9 @@ var handler = function (compileStep) {
 
   compileStep.addJavaScript({
     path: compileStep.inputPath + ".js",
-    data: output
+    sourcePath: compileStep.inputPath,
+    data: output,
+    lineForLine: false
   });
 };
 

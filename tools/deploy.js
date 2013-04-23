@@ -11,6 +11,7 @@ var qs = require('querystring');
 var path = require('path');
 var files = require('./files.js');
 var warehouse = require('./warehouse.js');
+var buildmessage = require('./buildmessage.js');
 var _ = require('underscore');
 var keypress = require('keypress');
 var child_process = require('child_process');
@@ -95,9 +96,7 @@ var deployToServer = function (app_dir, bundleOptions, deployOptions) {
   var bundleResult = bundler.bundle(app_dir, bundle_path, bundleOptions);
   if (bundleResult.errors) {
     process.stdout.write("\n\nErrors prevented deploying:\n");
-    _.each(bundleResult.errors, function (e) {
-      process.stdout.write(e + "\n");
-    });
+    process.stdout.write(bundleresult.errors.formatMessages());
     process.exit(1);
   }
 

@@ -46,6 +46,7 @@ var load = function (options) {
 
   // Load the code
   var plugin = bundler.buildPlugin({
+    name: "load",
     library: options.library,
     use: options.packages || []
   });

@@ -156,6 +156,7 @@ var packages = require(path.join(__dirname, 'packages.js'));
 var linker = require(path.join(__dirname, 'linker.js'));
 var Builder = require(path.join(__dirname, 'builder.js'));
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
+var buildmessage = require('./buildmessage.js');
 var fs = require('fs');
 var uglify = require('uglify-js');
 var cleanCSS = require('clean-css');
@@ -408,9 +409,10 @@ _.extend(Target.prototype, {
               return;
             }
             if (onStack[usedSlice.id]) {
-              console.error("fatal: circular dependency between packages " +
-                            slice.pkg.name + " and " + usedSlice.pkg.name);
-              process.exit(1);
+              buildmessage.error("circular dependency between packages " +
+                                 slice.pkg.name + " and " + usedSlice.pkg.name);
+              // recover by not enforcing one of the depedencies
+              return;
             }
             onStack[usedSlice.id] = true;
             add(usedSlice);
@@ -679,7 +681,7 @@ _.extend(ClientTarget.prototype, {
         // directories)
         var contents = file.contents();
         if (! (contents instanceof Buffer))
-          throw new Error("contents not a Buffer");
+          throw new Error("contents not a Buffer?");
         builder.write(file.targetPath, { data: file.contents() });
 
         manifest.push({
@@ -895,7 +897,11 @@ _.extend(Plugin.prototype, {
     // Eval each JavaScript file, providing a 'Npm' symbol in the same
     // way that the server environment would, and a 'Package' symbol
     // so the plugin has its own private universe of loaded packages
+    var failed = false;
     _.each(self.jsToLoad, function (item) {
+      if (failed)
+        return;
+
       var env = _.extend({
         Package: ret,
         Npm: {
@@ -922,11 +928,18 @@ _.extend(Plugin.prototype, {
         }
       }, bindings || {});
 
-      // \n is necessary in case final line is a //-comment
-      var wrapped = "(function(" + _.keys(env).join(",") + "){" +
-        item.source + "\n})";
-      var func = require('vm').runInThisContext(wrapped, item.targetPath, true);
-      func.apply({}, _.values(env));
+      try {
+        // XXX Get the actual source file path -- item.targetPath is
+        // not actually correct (it's the path in the bundle rather
+        // than in the source tree.) Moreover, we need to do source
+        // mapping.
+        files.runJavaScript(item.source, item.targetPath, env);
+      } catch (e) {
+        buildmessage.exception(e);
+        // Recover by skipping the rest of the load
+        failed = true;
+        return;
+      }
     });
 
     return ret;
@@ -1153,7 +1166,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
  * it must be passed in as an option.
  *
  * Returns an object with keys:
- * - errors: An array of strings, or falsy if bundling succeeded.
+ * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
  * - dependencyInfo: Information about files and paths that were
  *   inputs into the bundle and that we may wish to monitor for
  *   changes when developing interactively. It has two keys, 'files'
@@ -1203,7 +1216,11 @@ exports.bundle = function (appDir, outputPath, options) {
                             options.releaseStamp !== "none" ?
                             " " + options.releaseStamp : "");
 
-  try {
+  var success = false;
+  var dependencyInfo = { files: {}, directories: {} };
+  var messages = buildmessage.capture({
+    title: "building the application"
+  }, function () {
     // Create targets
     var client = new ClientTarget({
       library: library,
@@ -1259,20 +1276,21 @@ exports.bundle = function (appDir, outputPath, options) {
 
     // Write to disk
     client.assignTargetPaths();
-    var dependencyInfo = writeSiteArchive(targets, outputPath, {
+    dependencyInfo = writeSiteArchive(targets, outputPath, {
       nodeModulesMode: options.nodeModulesMode,
       builtBy: builtBy
     });
 
-    return {
-      errors: false,
-      dependencyInfo: dependencyInfo
-    };
-  } catch (err) {
-    return {
-      errors: ["Exception while bundling application:\n" + (err.stack || err)]
-    };
-  }
+    success = true;
+  });
+
+  if (success && messages.hasMessages())
+    success = false; // there were errors
+
+  return {
+    errors: success ? false : messages,
+    dependencyInfo: dependencyInfo
+  } ;
 };
 
 // Make a Plugin object. It can either be loaded into memory with
@@ -1288,30 +1306,42 @@ exports.bundle = function (appDir, outputPath, options) {
 //
 // options:
 // - library: required. the Library for resolving package dependencies
+// - name: required. a name for this plugin (cosmetic, but will appear
+//   in, eg, error messages.)
 // - use: list of packages to use in the plugin, as strings (foo or foo.bar)
 // - sources: source files to use (paths on local disk)
+// - sourceRoot: path relative to which sources should be
+//   interpreted. please set it to something reasonable so that any error
+//   messages will look pretty.
 // - npmDependencies: map from npm package name to required version
 // - npmDir: where to keep the npm cache and npm version shrinkwrap
 //   info. required if npmDependencies present.
+//
+// XXX currently any symbols exported by the plugin will get mapped
+// into 'Package.<plugin name>' within the plugin, so name should not
+// be the name of any package that is included (directly or
+// transitively) in the plugin build. obviously this is unfortunate.
+// It would be nice to have a way to say "make this package anonymous"
+// without also saying "make its namespace the same as the global
+// namespace." It should be an easy refactor,
 exports.buildPlugin = function (options) {
   if (options.npmDependencies && ! options.npmDir)
     throw new Error("Must indicate .npm directory to use");
+  if (! options.name)
+    throw new Error("Must provide a name");
 
   var pkg = new packages.Package(options.library);
 
-  // It would be nice to have a way to say "make this package
-  // anonymous" without also saying "make its namespace the same as
-  // the global namespace." Though it would be an easy refactor, we
-  // don't have that yet, so just make up a random name.
-  var pkgName = "plugin" + Math.floor(Math.random() * 100000);
-
-  pkg.initFromOptions(pkgName, {
+  pkg.initFromOptions(options.name, {
     sliceName: "plugin",
     use: options.use || [],
+    sourceRoot: options.sourceRoot,
     sources: options.sources || [],
+    serveRoot: path.sep,
     npmDependencies: options.npmDependencies,
     npmDir: options.npmDir
   });
+  pkg.build();
 
   var target = new PluginTarget({
     library: options.library,

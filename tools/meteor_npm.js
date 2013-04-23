@@ -30,6 +30,8 @@ _.extend(exports, {
     return /^https:\/\/github.com\/.*\/tarball\/[0-9a-f]{40}/.test(x);
   },
 
+  // If there is a version that isn't exact, throws an Error with a
+  // human-readable message that is suitable for showing to the user.
   ensureOnlyExactVersions: function(npmDependencies) {
     var self = this;
     _.each(npmDependencies, function(version, name) {

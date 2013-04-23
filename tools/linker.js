@@ -1,6 +1,7 @@
 var fs = require('fs');
 var uglify = require('uglify-js');
 var _ = require('underscore');
+var buildmessage = require('./buildmessage');
 
 var packageDot = function (name) {
   if (/^[a-zA-Z0-9]*$/.exec(name))
@@ -53,9 +54,10 @@ var Module = function (options) {
 _.extend(Module.prototype, {
   // source: the source code
   // servePath: the path where it would prefer to be served if possible
-  addFile: function (source, servePath) {
+  addFile: function (source, servePath, sourcePath, includePositionInErrors) {
     var self = this;
-    self.files.push(new File(source, servePath));
+    self.files.push(new File(source, servePath, sourcePath,
+                             includePositionInErrors));
   },
 
 
@@ -124,9 +126,9 @@ _.extend(Module.prototype, {
 
     // Otherwise..
 
-    // Find the maximum line length. The extra two are for the
+    // Find the maximum line length. The extra three are for the
     // comments that will be emitted when we skip a unit.
-    var sourceWidth = _.max([68, self.maxLineLength(120 - 2)]) + 2;
+    var sourceWidth = _.max([68, self.maxLineLength(120 - 2)]) + 3;
 
     // Figure out which variables are module scope
     var moduleScopedVars = self.computeModuleScopedVars();
@@ -250,7 +252,7 @@ var writeSymbolTree = function (symbolTree, indent) {
 // File
 ///////////////////////////////////////////////////////////////////////////////
 
-var File = function (source, servePath) {
+var File = function (source, servePath, sourcePath, includePositionInErrors) {
   var self = this;
 
   // source code for this file (a string)
@@ -258,6 +260,12 @@ var File = function (source, servePath) {
 
   // the path where this file would prefer to be served if possible
   self.servePath = servePath;
+
+  // the path to use for error message
+  self.sourcePath = sourcePath;
+
+  // should line and column be included in errors?
+  self.includePositionInErrors = includePositionInErrors;
 
   // The individual @units in the file. Array of Unit. Concatenating
   // the source of each unit, in order, will give self.source.
@@ -319,14 +327,19 @@ _.extend(File.prototype, {
     // line, with /* .. */. Well, that requires parsing the source for
     // comments, because you have to do something different if you're
     // already inside a comment.
-    var lines = self.source.split('\n');
     var num = 1;
-    _.each(lines, function (line) {
-      if (line.length > width)
-        buf += line + "\n";
-      else
-        buf += (line + padding).slice(0, width) + " // " + num + "\n";
-      num++;
+    _.each(self.units, function (unit) {
+      var lines = unit.source.split('\n');
+
+      _.each(lines, function (line) {
+        if (! unit.include)
+          line = "// " + line;
+        if (line.length > width)
+          buf += line + "\n";
+        else
+          buf += (line + padding).slice(0, width) + " // " + num + "\n";
+        num++;
+      });
     });
 
     // Footer
@@ -345,18 +358,21 @@ _.extend(File.prototype, {
     var self = this;
     var lines = self.source.split("\n");
     var buf = "";
-    var unit = new Unit(null, true);
+    var unit = new Unit(null, true, self.sourcePath,
+                        self.includePositionInErrors ? 0 : null);
     self.units.push(unit);
 
-    var firstLine = true;
+    var lineCount = 0;
     _.each(lines, function (line) {
       // XXX overly permissive. should detect errors
       var match = /^\s*\/\/\s*@unit(\s+([^\s]+))?/.exec(line);
       if (match) {
         unit.source = buf;
         buf = line;
-        unit = new Unit(match[2] || null, false);
+        unit = new Unit(match[2] || null, false, self.sourcePath,
+                        self.includePositionInErrors ? lineCount : null);
         self.units.push(unit);
+        lineCount++;
         return;
       }
 
@@ -376,10 +392,9 @@ _.extend(File.prototype, {
         /* fall through */
       }
 
-      if (firstLine)
-        firstLine = false;
-      else
+      if (lineCount !== 0)
         buf += "\n";
+      lineCount++;
       buf += line;
     });
     unit.source = buf;
@@ -390,7 +405,7 @@ _.extend(File.prototype, {
 // Unit
 ///////////////////////////////////////////////////////////////////////////////
 
-var Unit = function (name, mandatory) {
+var Unit = function (name, mandatory, sourcePath, lineOffset) {
   var self = this;
 
   // name of the unit, or null if none provided
@@ -404,6 +419,17 @@ var Unit = function (name, mandatory) {
 
   // true if we should include this unit in the linked output
   self.include = self.mandatory;
+
+  // filename to use in error messages
+  self.sourcePath = sourcePath;
+
+  // offset of 'self.source' in the original input file, in whole
+  // lines (partial lines are not supported.) Used to generate correct
+  // line number information in error messages. Set to null to omit
+  // line/column information (you'll need to do this, for, eg,
+  // coffeescript output, given that we don't have sourcemaps here
+  // yet.)
+  self.lineOffset = lineOffset;
 
   // symbols mentioned in @export, @require, @provide, or @weak
   // directives. each is a map from the symbol (given as a string) to
@@ -422,9 +448,6 @@ _.extend(Unit.prototype, {
   computeGlobalReferences: function () {
     var self = this;
 
-    var toplevel = uglify.parse(self.source); // instanceof uglify.AST_Toplevel
-    toplevel.figure_out_scope();
-
     // XXX Use Uglify for now. Uglify is pretty good at returning us a
     // list of symbols that are referenced but not defined, but not
     // good at all at helping us figure out which of those are
@@ -434,9 +457,35 @@ _.extend(Unit.prototype, {
     // bogus! Use jsparse instead or maybe acorn, and rewrite uglify's
     // scope analysis code (it can't be that hard.)
 
-    // XXX XXX as configured, on parse error, uglify throws an
-    // exception and writes warnings to the console! that's clearly
-    // not going to fly.
+    // Uglify likes to print to stderr when it gets a parse
+    // error. Stop it from doing that.
+    var oldWarnFunction = uglify.AST_Node.warn_function;
+    uglify.AST_Node.warn_function = function () {};
+    try {
+      // instanceof uglify.AST_Toplevel
+      var toplevel = uglify.parse(self.source);
+    } catch (e) {
+      if (e instanceof uglify.JS_Parse_Error) {
+        // It appears that uglify's parse errors report 1-based line
+        // numbers but 0-based column numbers
+        buildmessage.error(e.message, {
+          file: self.sourcePath,
+          line: self.lineOffset === null ? null : e.line + self.lineOffset,
+          column: self.lineOffset === null ? null : e.col + 1,
+          downcase: true
+        });
+
+        // Recover by pretending that this unit is empty (which
+        // includes replacing its source code with '' in the output)
+        self.source = "";
+        return [];
+      };
+
+      throw e;
+    } finally {
+      uglify.AST_Node.warn_function = oldWarnFunction;
+    }
+    toplevel.figure_out_scope();
 
     var globalReferences = [];
     _.each(toplevel.enclosed, function (symbol) {
@@ -465,7 +514,16 @@ _.extend(Unit.prototype, {
 //
 // inputFiles: an array of objects representing input files.
 //  - source: the source code
-//  - servePath: the path where it would prefer to be served if possible
+//  - servePath: the path where it would prefer to be served if
+//    possible. still allowed on non-browser targets, where it
+//    represent as hint as to what the file should be named on disk in
+//    the bundle (this will only be seen by someone looking at the
+//    bundle, not in error messages, but it's still nice to make it
+//    look good)
+//  - sourcePath: path to use in error messages
+//  - includePositionInErrors: true to include line and column
+//    information in errors. set to false if, eg, this is the output
+//    of coffeescript. (XXX replace with real sourcemaps)
 //
 // forceExport: an array of symbols (as dotted strings) to force the
 // module to export, even if it wouldn't otherwise
@@ -496,7 +554,8 @@ var prelink = function (options) {
   });
 
   _.each(options.inputFiles, function (f) {
-    module.addFile(f.source, f.servePath);
+    module.addFile(f.source, f.servePath, f.sourcePath,
+                   f.includePositionInErrors);
   });
 
   var files = module.getLinkedFiles();

@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Extended and Extensable JSON library",
+  summary: "Extended and Extensible JSON library",
   internal: false
 });
 

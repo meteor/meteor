@@ -32,7 +32,9 @@ Plugin.registerSourceHandler("html", function (compileStep) {
 
     compileStep.addJavaScript({
       path: path.join(path_part, "template." + basename + ".js"),
-      data: results.js
+      sourcePath: compileStep.inputPath,
+      data: results.js,
+      lineForLine: false
     });
   }
 });

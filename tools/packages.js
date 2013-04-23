@@ -6,6 +6,7 @@ var watch = require('./watch.js');
 var bundler = require('./bundler.js');
 var Builder = require('./builder.js');
 var project = require('./project.js');
+var buildmessage = require('./buildmessage.js');
 var meteorNpm = require('./meteor_npm.js');
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require(path.join(__dirname, 'linker.js'));
@@ -67,7 +68,7 @@ var scanForSources = function (rootPath, extensions, ignoreFiles) {
 // - name [required]
 // - arch [required]
 // - uses
-// - sources
+// - getSourcesFunc
 // - forceExport
 // - dependencyInfo
 // - nodeModulesPath
@@ -102,9 +103,15 @@ var Slice = function (pkg, options) {
   //   to ensure that it loads if we load.
   self.uses = options.uses;
 
-  // This slice's source files. Array of paths. Empty if loaded from
-  // unipackage.
-  self.sources = options.sources || [];
+  // A function that returns the source files for this slice. Array of
+  // paths. Null if loaded from unipackage.
+  //
+  // This is a function rather than a literal array because for an
+  // app, we need to know the file extensions registered by the
+  // plugins in order to compute the sources list, so we have to wait
+  // until build time (after we have loaded any plugins, including
+  // local plugins in this package) to compute this.
+  self.getSourcesFunc = options.getSourcesFunc || null;
 
   // Symbols that this slice should export even if @export directives
   // don't appear in the source code. List of symbols (as strings.)
@@ -118,11 +125,11 @@ var Slice = function (pkg, options) {
     { files: {}, directories: {} };
 
   // Has this slice been compiled?
-  self.isCompiled = false;
+  self.isBuilt = false;
 
   // All symbols exported from the JavaScript code in this
   // package. Array of string symbol (eg "Foo", "Bar.baz".) Set only
-  // after _ensureCompiled().
+  // when isBuilt is true.
   self.exports = null;
 
   // Prelink output. 'boundary' is a magic cookie used for inserting
@@ -130,7 +137,7 @@ var Slice = function (pkg, options) {
   // (an array of objects with keys 'source' and 'servePath', both
   // strings -- see prelink() in linker.js) Both of these are inputs
   // into the final link phase, which inserts the final JavaScript
-  // resources into 'resources'. Set only after _ensureCompiled().
+  // resources into 'resources'. Set only when isBuilt is true.
   self.boundary = null;
   self.prelinkFiles = null;
 
@@ -151,7 +158,7 @@ var Slice = function (pkg, options) {
   // honored for "static", ignored for "head" and "body", sometimes
   // honored for CSS but ignored if we are concatenating.
   //
-  // Set only after _ensureCompiled().
+  // Set only when isBuilt is true.
   self.resources = null;
 
   // Absolute path to the node_modules directory to use at runtime to
@@ -161,31 +168,40 @@ var Slice = function (pkg, options) {
 };
 
 _.extend(Slice.prototype, {
-  // Add more source files. 'sources' is an array of paths. Cannot be
-  // called after _ensureCompiled().
-  addSources: function (sources) {
-    var self = this;
-    if (self.isCompiled)
-      throw new Error("Too late to add sources");
-    self.sources = self.sources.concat(sources);
-  },
-
-  // Process all source files through the appropriate handlers and run
-  // the prelink phase on any resulting JavaScript. Also add all
-  // provided source files to the package dependencies. Sets fields
-  // such as dependencies, exports, boundary, prelinkFiles, and
-  // resources. Idempotent.
-  _ensureCompiled: function () {
+  // Move the slice to the 'built' state. Process all source files
+  // through the appropriate handlers and run the prelink phase on any
+  // resulting JavaScript. Also add all provided source files to the
+  // package dependencies. Sets fields such as dependencies, exports,
+  // boundary, prelinkFiles, and resources.
+  build: function () {
     var self = this;
     var isApp = ! self.pkg.name;
 
-    if (self.isCompiled)
-      return;
+    if (self.isBuilt)
+      throw new Error("slice built twice?");
 
     var resources = [];
     var js = [];
 
-    _.each(self.sources, function (relPath) {
+    // Preemptively check to make sure that each of the packages we
+    // reference actually exist. If we find a package that doesn't
+    // exist, emit an error and remove it from the package list. That
+    // way we get one error about it instead of a new error at each
+    // stage in the build process in which we try to retrieve the
+    // package.
+    var scrubbedUses = [];
+    _.each(self.uses, function (u) {
+      var parts = u.spec.split('.');
+      var pkg = self.pkg.library.get(parts[0], /* throwOnError */ false);
+      if (! pkg) {
+        buildmessage.error("no such package: '" + parts[0] + "'");
+        // recover by omitting this package from 'uses'
+      } else
+        scrubbedUses.push(u);
+    });
+    self.uses = scrubbedUses;
+
+    _.each(self.getSourcesFunc(), function (relPath) {
       var absPath = path.resolve(self.pkg.sourceRoot, relPath);
       var ext = path.extname(relPath).substr(1);
       var handler = self._getSourceHandler(ext);
@@ -227,7 +243,7 @@ _.extend(Slice.prototype, {
       //   stylesheet and static assets, this is the root URL that
       //   will get prepended to the paths you pick for your output
       //   files so that you get your own namespace, for example
-      //   '/packages/foo'.
+      //   '/packages/foo'. null on non-browser targets
       // - read(n): read from the input file. If n is given it should
       //   be an integer, and you will receive the next n bytes of the
       //   file as a Buffer. If n is omitted you get the rest of the
@@ -242,17 +258,34 @@ _.extend(Slice.prototype, {
       //   appropriate tags to cause the stylesheet to be loaded. It
       //   will be subject to any stylesheet processing stages in
       //   effect, such as minification.)
-      // - addJavaScript({ path: "my/program.js", data: "my code" })
+      // - addJavaScript({ path: "my/program.js", data: "my code",
+      //                   sourcePath: "src/my/program.js",
+      //                   lineForLine: true })
       //   Add JavaScript code, which will be namespaced into this
       //   package's environment (eg, it will see only the exports of
       //   this package's imports), and which will be subject to
       //   minification and so forth. Again, 'path' is merely a hint
-      //   that may or may not be honored.
+      //   that may or may not be honored. 'sourcePath' is the path
+      //   that will be used in any error messages generated (eg,
+      //   "foo.js:4:1: syntax error"). It must be present and should
+      //   be relative to the project root. Typically 'inputPath' will
+      //   do handsomely. Set the misleadingly named lineForLine
+      //   option to true if line X, column Y in the input corresponds
+      //   to line X, column Y in the output. This will enable line
+      //   and column reporting in error messages. (XXX replace this
+      //   with source maps)
       // - addAsset({ path: "my/image.png", data: Buffer })
       //   Browser targets only. Add a file to serve as-is over HTTP.
       //   This time `data` is a Buffer rather than a string. It will
       //   be served at the exact path you request (concatenated with
       //   rootOutputPath.)
+      // - error({ message: "There's a problem in your source file",
+      //           sourcePath: "src/my/program.ext", line: 12,
+      //           column: 20, columnEnd: 25, func: "doStuff" })
+      //   Flag an error -- at a particular location in a source
+      //   file, if you like (you can even indicate a function name
+      //   to show in the error, like in stack traces.) sourcePath,
+      //   line, column, columnEnd, and func are all optional.
       //
       // XXX for now, these handlers must only generate portable code
       // (code that isn't dependent on the arch, other than 'browser'
@@ -321,15 +354,19 @@ _.extend(Slice.prototype, {
           resources.push({
             type: "css",
             data: new Buffer(options.data, 'utf8'),
-            servePath: options.path
+            servePath: path.join(self.pkg.serveRoot, options.path)
           });
         },
         addJavaScript: function (options) {
           if (typeof options.data !== "string")
             throw new Error("'data' option to addJavaScript must be a string");
+          if (typeof options.sourcePath !== "string")
+            throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
           js.push({
             source: options.data,
-            servePath: options.path
+            sourcePath: options.sourcePath,
+            servePath: path.join(self.pkg.serveRoot, options.path),
+            includePositionInErrors: options.lineForLine
           });
         },
         addAsset: function (options) {
@@ -341,12 +378,30 @@ _.extend(Slice.prototype, {
           resources.push({
             type: "static",
             data: options.data,
-            servePath: options.path
+            servePath: path.join(self.pkg.serveRoot, options.path)
+          });
+        },
+        error: function (options) {
+          buildmessage.error({
+            message: options.message,
+            sourcePath: options.sourcePath,
+            line: options.sourcePath ? options.line : undefined,
+            column: options.sourcePath ? options.column : undefined,
+            columnEnd: options.sourcePath ? options.columnEnd : undefined,
+            func: options.sourcePath ? options.func : undefined
           });
         }
       };
 
-      handler(compileStep);
+      try {
+        (buildmessage.markBoundary(handler))(compileStep);
+      } catch (e) {
+        e.message = e.message + " (compiling " + relPath + ")";
+        buildmessage.exception(e);
+
+        // Recover by ignoring this source file (as best we can -- the
+        // handler might already have emitted resources)
+      }
     });
 
     // Phase 1 link
@@ -382,7 +437,7 @@ _.extend(Slice.prototype, {
     self.boundary = results.boundary;
     self.exports = results.exports;
     self.resources = resources;
-    self.isCompiled = true;
+    self.isBuilt = true;
   },
 
   // Get the resources that this function contributes to a bundle, in
@@ -401,7 +456,9 @@ _.extend(Slice.prototype, {
   getResources: function (bundleArch) {
     var self = this;
     var library = self.pkg.library;
-    self._ensureCompiled();
+
+    if (! self.isBuilt)
+      throw new Error("getting resources of unbuilt slice?" + self.pkg.name + " " + self.sliceName + " " + self.arch);
 
     if (! archinfo.matches(bundleArch, self.arch))
       throw new Error("slice of arch '" + self.arch + "' does not support '" +
@@ -414,7 +471,8 @@ _.extend(Slice.prototype, {
     _.each(_.values(self.uses), function (u) {
       if (! u.unordered) {
         _.each(library.getSlices(u.spec, bundleArch), function (otherSlice) {
-          otherSlice._ensureCompiled(); // make sure otherSlice.exports is valid
+          if (! otherSlice.isBuilt)
+            throw new Error("dependency wasn't built?");
           _.each(otherSlice.exports, function (symbol) {
             imports[symbol] = otherSlice.pkg.name;
           });
@@ -480,7 +538,9 @@ _.extend(Slice.prototype, {
       js: function (compileStep) {
         compileStep.addJavaScript({
           data: compileStep.read().toString('utf8'),
-          path: compileStep.inputPath
+          path: compileStep.inputPath,
+          sourcePath: compileStep.inputPath,
+          lineForLine: true
         });
       }
     });
@@ -490,15 +550,17 @@ _.extend(Slice.prototype, {
       _.extend(all, otherPkg.legacyExtensionHandlers);
 
       _.each(all, function (handler, ext) {
-        if (ext in ret && ret[ext] !== handler)
-          // XXX do something more graceful than printing a stack
-          // trace and exiting!! we have higher standards than that!
-          throw new Error("Conflict: two packages included in " +
-                          (self.pkg.name || "your app") + ", " +
-                          (ret[ext].pkg.name || "your app") + " and " +
-                          (otherPkg.name || "your app") + ", " +
-                          "are both trying to handle ." + ext);
-        ret[ext] = handler;
+        if (ext in ret && ret[ext] !== handler) {
+          buildmessage.error(
+            "conflict: two packages included in " +
+              (self.pkg.name || "the app") + ", " +
+              (ret[ext].pkg.name || "the app") + " and " +
+              (otherPkg.name || "the app") + ", " +
+              "are both trying to handle ." + ext);
+          // Recover by just going with the first handler we saw
+        } else {
+          ret[ext] = handler;
+        }
       });
     });
 
@@ -528,6 +590,17 @@ _.extend(Slice.prototype, {
 // Packages
 ///////////////////////////////////////////////////////////////////////////////
 
+// XXX This object conflates two things that now seem to be almost
+// totally separate: source code for a package, and an actual built
+// package that is ready to be used. In fact it contains a list of
+// Slice objects about which the same thing can be said. To see the
+// distinction, ask yourself, what fields are set when the package is
+// initialized via initFromUnipackage?
+//
+// Package and Slice should each be split into two objects, eg
+// PackageSource and SliceSource versus BuiltPackage and BuiltSlice
+// (find better names, though.)
+
 var nextPackageId = 1;
 var Package = function (library) {
   var self = this;
@@ -543,12 +616,18 @@ var Package = function (library) {
   // a package.
   self.name = null;
 
-  // The path from which this package was loaded. null if loaded from
-  // unipackage.
+  // The path relative to which all source file paths are interpreted
+  // in this package. Also used to compute the location of the
+  // package's .npm directory (npm shrinkwrap state.) null if loaded
+  // from unipackage.
   self.sourceRoot = null;
 
-  // XXX needs docs
-  // null if loaded from unipackage
+  // Path that will be prepended to the URLs of all resources emitted
+  // by this package (assuming they don't end up getting
+  // concatenated.) For non-browser targets, the only effect this will
+  // have is to change the actual on-disk paths of the files in the
+  // bundle, for those that care to open up the bundle and look (but
+  // it's still nice to get it right.) null if loaded from unipackage.
   self.serveRoot = null;
 
   // Package library that should be used to resolve this package's
@@ -577,10 +656,17 @@ var Package = function (library) {
   // be used.
   self.testSlices = {};
 
-  // Plugins in this package. Map from plugin name to bundler.Plugin.
+  // The information necessary to build the plugins in this
+  // package. Map from plugin name to object with keys 'name', 'us',
+  // 'sources', and 'npmDependencies'.
+  self.pluginInfo = {};
+
+  // Plugins in this package. Map from plugin name to
+  // bundler.Plugin. Present only when isBuilt is true.
   self.plugins = {};
 
-  // Dependencies for any plugins in this package
+  // Dependencies for any plugins in this package. Present only when
+  // isBuilt is true.
   // XXX Refactor so that slice and plugin dependencies are handled by
   // the same mechanism.
   self.pluginDependencyInfo = { files: {}, directories: {} };
@@ -593,9 +679,25 @@ var Package = function (library) {
   // (without a dot) to a handler function that takes a
   // CompileStep. Valid only when _pluginsInitialized is true.
   self.sourceHandlers = null;
+
+  // Is this package in a built state? If not (if you created it by
+  // means that doesn't create it in a build state to start with) you
+  // will need to call build() before you can use it. We break down
+  // the two phases of the build process, plugin building and
+  // building, into two flags.
+  self.pluginsBuilt = false;
+  self.slicesBuilt = false;
 };
 
 _.extend(Package.prototype, {
+  // Make a dummy (empty) package that contains nothing of interest.
+  initEmpty: function (name) {
+    var self = this;
+    self.name = name;
+    self.defaultSlices = {'': []};
+    self.testSlices = {'': []};
+  },
+
   // Return the slice of the package to use for a given slice name
   // (eg, 'main' or 'test') and target architecture (eg,
   // 'native.linux.x86_64' or 'browser'), or throw an exception if
@@ -611,7 +713,7 @@ _.extend(Package.prototype, {
       // message, not an exception, and all of this talk of slices an
       // architectures is likely to be confusing/overkill in many
       // contexts.
-      throw new Error((self.name || "This app") +
+      throw new Error((self.name || "this app") +
                       " does not have a slice named '" + name +
                       "' that runs on architecture '" + arch + "'");
     }
@@ -622,14 +724,22 @@ _.extend(Package.prototype, {
   // Return the slices that should be used on a given arch if the
   // package is named without any qualifiers (eg, 'ddp' rather than
   // 'ddp.client').
+  //
+  // On error, throw an exception, or if inside
+  // buildmessage.capture(), log a build error and return [].
   getDefaultSlices: function (arch) {
     var self = this;
 
     var chosenArch = archinfo.mostSpecificMatch(arch,
                                                 _.keys(self.defaultSlices));
-    if (! chosenArch)
-      throw new Error((self.name || "This app") +
-                      " is not compatible with architecture '" + arch + "'");
+    if (! chosenArch) {
+      buildmessage.error(
+        (self.name || "this app") +
+          " is not compatible with architecture '" + arch + "'",
+        { secondary: true });
+      // recover by returning by no slices
+      return [];
+    }
 
     return _.map(self.defaultSlices[chosenArch], function (name) {
       return self.getSingleSlice(name, arch);
@@ -643,9 +753,14 @@ _.extend(Package.prototype, {
 
     var chosenArch = archinfo.mostSpecificMatch(arch,
                                                 _.keys(self.testSlices));
-    if (! chosenArch)
-      throw new Error((self.name || "This app") +
-                      " does not have tests for architecture " + arch + "'");
+    if (! chosenArch) {
+      buildmessage.error(
+        (self.name || "this app") +
+          " does not have tests for architecture " + arch + "'",
+        { secondary: true });
+      // recover by returning by no slices
+      return [];
+    }
 
     return _.map(self.testSlices[chosenArch], function (name) {
       return self.getSingleSlice(name, arch);
@@ -664,6 +779,10 @@ _.extend(Package.prototype, {
   // code in them so that they register their extensions.) Idempotent.
   _ensurePluginsInitialized: function () {
     var self = this;
+
+    if (! self.pluginsBuilt)
+      throw new Error("running plugins of unbuilt package?");
+
     if (self._pluginsInitialized)
       return;
 
@@ -673,31 +792,110 @@ _.extend(Package.prototype, {
       // 'handler' is a function that takes a single argument, a
       // CompileStep (#CompileStep)
       registerSourceHandler: function (extension, handler) {
-        if (extension in self.sourceHandlers)
-          throw new Error("Package " + self.name + " defines two " +
-                          "source handlers for the same extension ('." +
-                          extension + "')");
+        if (extension in self.sourceHandlers) {
+          buildmessage.error("duplicate handler for '*." +
+                             extension + "'; may only have one per Plugin",
+                             { useMyCaller: true });
+          // recover by ignoring all but the first
+          return;
+        }
+
         self.sourceHandlers[extension] = handler;
       }
     };
 
     self.sourceHandlers = [];
-    _.each(self.plugins, function (plugin) {
-      plugin.load({Plugin: Plugin});
+    _.each(self.plugins, function (plugin, name) {
+      buildmessage.enterJob({
+        title: "loading plugin `" + name +
+          "` from package `" + self.name + "`"
+        // don't necessarily have rootPath anymore
+        // (XXX we do, if the unipackage was locally built, which is
+        // the important case for debugging. it'd be nice to get this
+        // case right.)
+      }, function () {
+        plugin.load({Plugin: Plugin});
+      });
     });
 
     self._pluginsInitialized = true;
   },
 
-  // Programmatically create a package from scratch. For now, cannot
-  // create browser packages.
+  // Move a package to the built state (by running its source files
+  // through the appropriate compiler plugins.) Once build has
+  // completed, any errors detected in the package will have been
+  // emitted to buildmessage.
+  //
+  // build() may retrieve the package's dependencies from the library,
+  // so it is illegal to call build() from library.get() (until the
+  // package has actually been put in the loaded package list.)
+  build: function () {
+    var self = this;
+
+    if (self.pluginsBuilt || self.slicesBuilt)
+      throw new Error("package already built?");
+
+    // Build plugins
+    _.each(self.pluginInfo, function (info) {
+      buildmessage.enterJob({
+        title: "building plugin `" + info.name +
+          "` in package `" + self.name + "`",
+        rootPath: self.sourceRoot
+      }, function () {
+        var buildResult = bundler.buildPlugin({
+          name: info.name,
+          library: self.library,
+          use: info.use,
+          sourceRoot: self.sourceRoot,
+          sources: info.sources,
+          npmDependencies: info.npmDependencies,
+          // Plugins have their own npm dependencies separate from the
+          // rest of the package, so they need their own separate npm
+          // shrinkwrap and cache state.
+          npmDir: path.resolve(path.join(self.sourceRoot, '.npm', 'plugin',
+                                         info.name))
+        });
+
+        if (buildResult.dependencyInfo) {
+          // Merge plugin dependencies
+          // XXX is naive merge sufficient here? should be, because
+          // plugins can't (for now) contain directory dependencies?
+          _.extend(self.pluginDependencyInfo.files,
+                   buildResult.dependencyInfo.files);
+          _.extend(self.pluginDependencyInfo.directories,
+                   buildResult.dependencyInfo.directories);
+        }
+
+        self.plugins[info.name] = buildResult.plugin;
+      });
+    });
+    self.pluginsBuilt = true;
+
+    // Build slices. Might use our plugins, so needs to happen
+    // second.
+    _.each(self.slices, function (slice) {
+      slice.build();
+    });
+    self.slicesBuilt = true;
+  },
+
+  // Programmatically initialized a package from scratch. For now,
+  // cannot create browser packages. This function does not retrieve
+  // the package's dependencies from the library, and on return,
+  // the package will be in an unbuilt state.
   //
   // Unlike user-facing methods of creating a package
   // (initFromPackageDir, initFromAppDir) this does not implicitly add
   // a dependency on the 'meteor' package. If you want such a
   // dependency then you must add it yourself.
   //
+  // If called inside a buildmessage job, it will keep going if things
+  // go wrong. Be sure to call jobHasMessages to see if it actually
+  // succeeded.
+  //
   // Options:
+  // - sourceRoot (required if sources present)
+  // - serveRoot (required if sources present)
   // - sliceName
   // - use
   // - sources
@@ -706,6 +904,13 @@ _.extend(Package.prototype, {
   initFromOptions: function (name, options) {
     var self = this;
     self.name = name;
+
+    if (options.sources && options.sources.length > 1 &&
+        (! options.sourceRoot || ! options.serveRoot))
+      throw new Error("When source files are given, sourceRoot and " +
+                      "serveRoot must be specified");
+    self.sourceRoot = options.sourceRoot || path.sep;
+    self.serveRoot = options.serveRoot || path.sep;
 
     var isPortable = true;
     var nodeModulesPath = null;
@@ -725,7 +930,7 @@ _.extend(Package.prototype, {
       uses: _.map(options.use || [], function (spec) {
         return { spec: spec }
       }),
-      sources: options.sources || [],
+      getSourcesFunc: function () { return options.sources || []; },
       nodeModulesPath: nodeModulesPath
     });
     self.slices.push(slice);
@@ -733,9 +938,10 @@ _.extend(Package.prototype, {
     self.defaultSlices = {'native': [options.sliceName]};
   },
 
-  // loads a package's package.js file into memory, using
-  // runInThisContext. Wraps the contents of package.js in a closure,
-  // supplying pseudo-globals 'Package' and 'Npm'.
+  // Initialize a package from a legacy-style (package.js) package
+  // directory. This function does not retrieve the package's
+  // dependencies from the library, and on return, the package will be
+  // in an unbuilt state.
   //
   // options:
   // - skipNpmUpdate: if true, don't refresh .npm/node_modules (for
@@ -751,32 +957,18 @@ _.extend(Package.prototype, {
     self.sourceRoot = dir;
     self.serveRoot = path.join(path.sep, 'packages', name);
 
-    if (!fs.existsSync(self.sourceRoot))
-      throw new Error("The package named " + self.name + " does not exist.");
+    if (! fs.existsSync(self.sourceRoot))
+      throw new Error("putative package directory " + dir + " doesn't exist?");
 
     var roleHandlers = {use: null, test: null};
     var npmDependencies = null;
 
-    // Plugins defined by this package. Array of object each with the
-    // same keys as the options to _transitional_registerBuildPlugin.
-    var plugins = [];
-
     var packageJsPath = path.join(self.sourceRoot, 'package.js');
     var code = fs.readFileSync(packageJsPath);
     var packageJsHash = Builder.sha1(code);
-    // \n is necessary in case final line is a //-comment
-    var wrapped = "(function(Package,Npm){" + code.toString() + "\n})";
-    // See #runInThisContext
-    //
-    // XXX it'd be nice to runInNewContext so that the package
-    // setup code can't mess with our globals, but objects that
-    // come out of runInNewContext have bizarro antimatter
-    // prototype chains and break 'instanceof Array'. for now,
-    // steer clear
-    var func = require('vm').runInThisContext(wrapped, packageJsPath, true);
-    func({
-      // == 'Package' object visible in package.js ==
 
+    // == 'Package' object visible in package.js ==
+    var Package = {
       // Set package metadata. Options:
       // - summary: for 'meteor list'
       // - internal: if true, hide in list
@@ -788,22 +980,36 @@ _.extend(Package.prototype, {
       },
 
       on_use: function (f) {
-        if (roleHandlers.use)
-          throw new Error("A package may have only one on_use handler");
+        if (roleHandlers.use) {
+          buildmessage.error("duplicate on_use handler; a package may have " +
+                             "only one", { useMyCaller: true });
+          // Recover by ignoring the duplicate
+          return;
+        }
+
         roleHandlers.use = f;
       },
 
       on_test: function (f) {
-        if (roleHandlers.test)
-          throw new Error("A package may have only one on_test handler");
+        if (roleHandlers.test) {
+          buildmessage.error("duplicate on_test handler; a package may have " +
+                             "only one", { useMyCaller: true });
+          // Recover by ignoring the duplicate
+          return;
+        }
+
         roleHandlers.test = f;
       },
 
       // extension doesn't contain a dot
       register_extension: function (extension, callback) {
-        if (_.has(self.legacyExtensionHandlers, extension))
-          throw new Error("This package has already registered a handler for " +
-                          extension);
+        if (_.has(self.legacyExtensionHandlers, extension)) {
+          buildmessage.error("duplicate handler for '*." + extension +
+                             "'; only one per package allowed",
+                             { useMyCaller: true });
+          // Recover by ignoring the duplicate
+          return;
+        }
         self.legacyExtensionHandlers[extension] = function (compileStep) {
 
           // In the old extension API, there is a 'where' parameter
@@ -837,19 +1043,31 @@ _.extend(Package.prototype, {
               if (options.data) {
                 data = options.data;
                 if (!(data instanceof Buffer)) {
-                  if (!(typeof data === "string"))
-                    throw new Error("Bad type for data");
+                  if (!(typeof data === "string")) {
+                    buildmessage.error("bad type for 'data'",
+                                       { useMyCaller: true });
+                    // recover by ignoring resource
+                    return;
+                  }
                   data = new Buffer(data, 'utf8');
                 }
               } else {
-                if (!sourceFile)
-                  throw new Error("Need either source_file or data");
+                if (!sourceFile) {
+                  buildmessage.error("need either 'source_file' or 'data'",
+                                     { useMyCaller: true });
+                  // recover by ignoring resource
+                  return;
+                }
                 data = fs.readFileSync(sourceFile);
               }
 
-              if (options.where && options.where !== clientOrServer)
-                throw new Error("'where' is deprecated here and if provided " +
-                                "must be '" + clientOrServer + "'");
+              if (options.where && options.where !== clientOrServer) {
+                buildmessage.error("'where' is deprecated here and if " +
+                                   "provided must be '" + clientOrServer + "'",
+                                   { useMyCaller: true });
+                  // recover by ignoring resource
+                  return;
+              }
 
               var relPath = path.relative(compileStep.rootOutputPath,
                                           options.path);
@@ -867,10 +1085,8 @@ _.extend(Package.prototype, {
             },
 
             error: function (message) {
-              // XXX this isn't very good. improve it (but in the new
-              // API, not this legacy API)
-              throw new Error("Error while running '" + name + "' plugin: " +
-                              message);
+              buildmessage.error(message, { useMyCaller: true });
+              // recover by just continuing
             }
           };
 
@@ -933,31 +1149,66 @@ _.extend(Package.prototype, {
       // - npmDependencies: map from npm package name to required
       //   version (string)
       _transitional_registerBuildPlugin: function (options) {
-        if (! ('name' in options))
-          throw new Error("Build plugins require a name");
-        // XXX further type checking
-        plugins.push(options);
+        if (! ('name' in options)) {
+          buildmessage.error("build plugins require a name",
+                             { useMyCaller: true });
+          // recover by ignoring plugin
+          return;
+        }
+
+        if (options.name in self.pluginInfo) {
+          buildmessage.error("this package already has a plugin named '" +
+                             options.name + "'",
+                             { useMyCaller: true });
+          // recover by ignoring plugin
+          return;
+        }
+
+        if (options.name.match(/\.\./) || options.name.match(/[\\\/]/)) {
+          buildmessage.error("bad plugin name", { useMyCaller: true });
+          // recover by ignoring plugin
+          return;
+        }
+
+        // XXX probably want further type checking
+        self.pluginInfo[options.name] = options;
       }
-    }, {
-      // == 'Npm' object visible in package.js ==
+    };
+
+    // == 'Npm' object visible in package.js ==
+    var Npm = {
       depends: function (_npmDependencies) {
         // XXX make npmDependencies be per slice, so that production
         // doesn't have to ship all of the npm modules used by test
         // code
-        if (npmDependencies)
-          throw new Error("Can only call `Npm.depends` once in package " +
-                          self.name + ".");
-        if (typeof npmDependencies !== 'object')
-          throw new Error("The argument to Npm.depends should look like: " +
-                          "{gcd: '0.0.0'}");
-        npmDependencies = _npmDependencies;
+        if (npmDependencies) {
+          buildmessage.error("Npm.depends may only be called once per package",
+                             { useMyCaller: true });
+          // recover by ignoring the Npm.depends line
+          return;
+        }
+        if (typeof _npmDependencies !== 'object') {
+          buildmessage.error("the argument to Npm.depends should be an " +
+                             "object, like this: {gcd: '0.0.0'}",
+                             { useMyCaller: true });
+          // recover by ignoring the Npm.depends line
+          return;
+        }
 
         // don't allow npm fuzzy versions so that there is complete
         // consistency when deploying a meteor app
         //
         // XXX use something like seal or lockdown to have *complete*
         // confidence we're running the same code?
-        meteorNpm.ensureOnlyExactVersions(npmDependencies);
+        try {
+          meteorNpm.ensureOnlyExactVersions(_npmDependencies);
+        } catch (e) {
+          buildmessage.error(e.message, { useMyCaller: true, downcase: true });
+          // recover by ignoring the Npm.depends line
+          return;
+        }
+
+        npmDependencies = _npmDependencies;
       },
 
       require: function (name) {
@@ -969,12 +1220,34 @@ _.extend(Package.prototype, {
           try {
             return require(name); // from the dev bundle
           } catch (e) {
-            throw new Error("Can't find npm module '" + name +
-                            "'. Did you forget to call 'Npm.depends'?");
+            buildmessage.error("can't find npm module '" + name +
+                               "'. Did you forget to call 'Npm.depends'?",
+                               { useMyCaller: true });
+            // recover by, uh, returning undefined, which is likely to
+            // have some knock-on effects
+            return undefined;
           }
         }
       }
-    });
+    };
+
+    try {
+      files.runJavaScript(code.toString('utf8'), 'package.js',
+                          { Package: Package, Npm: Npm });
+    } catch (e) {
+      buildmessage.exception(e);
+
+      // Could be a syntax error or an exception. Recover by
+      // continuing as if package.js is empty. (Pressing on with
+      // whatever handlers were registered before the exception turns
+      // out to feel pretty disconcerting -- definitely violates the
+      // principle of least surprise.) Leave the metadata if we have
+      // it, though.
+      roleHandlers = {use: null, test: null};
+      self.legacyExtensionHandlers = {};
+      self.pluginInfo = {};
+      npmDependencies = null;
+    }
 
     // source files used
     var sources = {use: {client: [], server: []},
@@ -1088,11 +1361,19 @@ _.extend(Package.prototype, {
             });
           },
           error: function () {
-            throw new Error("api.error(), ironically, is no longer supported");
+            // I would try to support this but I don't even know what
+            // its signature was supposed to be anymore
+            buildmessage.error(
+              "api.error(), ironically, is no longer supported",
+              { useMyCaller: true });
+            // recover by ignoring
           },
           registered_extensions: function () {
-            throw new Error(
-              "api.registered_extensions() is no longer supported");
+            buildmessage.error(
+              "api.registered_extensions() is no longer supported",
+              { useMyCaller: true });
+            // recover by returning dummy value
+            return [];
           }
         });
       }
@@ -1152,7 +1433,7 @@ _.extend(Package.prototype, {
           name: ({ use: "main", test: "tests" })[role],
           arch: arch,
           uses: uses[role][where],
-          sources: sources[role][where],
+          getSourcesFunc: function () { return sources[role][where]; },
           forceExport: forceExport[role][where],
           dependencyInfo: dependencyInfo,
           nodeModulesPath: arch === nativeArch && nodeModulesPath || undefined
@@ -1163,44 +1444,12 @@ _.extend(Package.prototype, {
     // Default slices
     self.defaultSlices = { browser: ['main'], 'native': ['main'] };
     self.testSlices = { browser: ['tests'], 'native': ['tests'] };
-
-    // Build plugins
-    _.each(plugins, function (plugin) {
-      if (plugin.name in self.plugins)
-        throw new Error("Two plugins have the same name: '" +
-                        plugin.name + "'");
-      if (plugin.name.match(/\.\./) || plugin.name.match(/[\\\/]/))
-        throw new Error("Bad plugin name");
-
-      var buildResult = bundler.buildPlugin({
-        library: self.library,
-        use: plugin.use,
-        sources: _.map(plugin.sources, function (p) {
-          return path.join(dir, p);
-        }),
-        npmDependencies: plugin.npmDependencies,
-        // Plugins have their own npm dependencies separate from the
-        // rest of the package, so they need their own separate npm
-        // shrinkwrap and cache state.
-        npmDir: path.resolve(path.join(self.sourceRoot, '.npm', 'plugin',
-                                       plugin.name))
-      });
-
-      if (buildResult.dependencyInfo) {
-        // Merge plugin dependencies
-        // XXX is naive merge sufficient here? should be, because
-        // plugins can't (for now) contain directory dependencies?
-        _.extend(self.pluginDependencyInfo.files,
-                 buildResult.dependencyInfo.files);
-        _.extend(self.pluginDependencyInfo.directories,
-                 buildResult.dependencyInfo.directories);
-      }
-
-      self.plugins[plugin.name] = buildResult.plugin;
-
-    });
   },
 
+  // Initialize a package from a legacy-style application directory
+  // (has .meteor/packages.)  This function does not retrieve the
+  // package's dependencies from the library, and on return, the
+  // package will be in an unbuilt state.
   initFromAppDir: function (appDir, ignoreFiles) {
     var self = this;
     appDir = path.resolve(appDir);
@@ -1240,59 +1489,70 @@ _.extend(Package.prototype, {
               });
 
       // Determine source files
-      var allSources = scanForSources(
-        self.sourceRoot, slice.registeredExtensions(),
-        ignoreFiles || []);
+      slice.getSourcesFunc = function () {
+        var allSources = scanForSources(
+          self.sourceRoot, slice.registeredExtensions(),
+          ignoreFiles || []);
 
-      var withoutAppPackages = _.reject(allSources, function (sourcePath) {
-        // Skip files that are in app packages. (Directories named "packages"
-        // lower in the tree are OK.)
-        return sourcePath.match(/^packages\//);
-      });
-
-      var otherSliceName = (sliceName === "server") ? "client" : "server";
-      var withoutOtherSlice =
-        _.reject(withoutAppPackages, function (sourcePath) {
-          return (path.sep + sourcePath + path.sep).indexOf(
-            path.sep + otherSliceName + path.sep) !== -1;
+        var withoutAppPackages = _.reject(allSources, function (sourcePath) {
+          // Skip files that are in app packages. (Directories named "packages"
+          // lower in the tree are OK.)
+          return sourcePath.match(/^packages\//);
         });
 
-      var tests = false; /* for now */
-      var withoutOtherRole =
-        _.reject(withoutOtherSlice, function (sourcePath) {
-          var isTest =
-            ((path.sep + sourcePath + path.sep).indexOf(
-              path.sep + 'tests' + path.sep) !== -1);
-          return isTest !== (!!tests);
-        });
+        var otherSliceName = (sliceName === "server") ? "client" : "server";
+        var withoutOtherSlice =
+          _.reject(withoutAppPackages, function (sourcePath) {
+            return (path.sep + sourcePath + path.sep).indexOf(
+              path.sep + otherSliceName + path.sep) !== -1;
+          });
 
-      slice.addSources(withoutOtherRole);
+        var tests = false; /* for now */
+        var withoutOtherRole =
+          _.reject(withoutOtherSlice, function (sourcePath) {
+            var isTest =
+              ((path.sep + sourcePath + path.sep).indexOf(
+                path.sep + 'tests' + path.sep) !== -1);
+            return isTest !== (!!tests);
+          });
 
-      // Directories to monitor for new files
-      slice.dependencyInfo.directories[appDir] = {
-        include: _.map(slice.registeredExtensions(), function (ext) {
-          return new RegExp('\\.' + ext + "$");
-        }),
-        exclude: ignoreFiles
+        // XXX Add directory dependencies to slice at the time that
+        // getSourcesFunc is called. This is kind of a hack but it'll
+        // do for the moment.
+
+        // Directories to monitor for new files
+        slice.dependencyInfo.directories[appDir] = {
+          include: _.map(slice.registeredExtensions(), function (ext) {
+            return new RegExp('\\.' + ext + "$");
+          }),
+          exclude: ignoreFiles
+        };
+
+        // Inside the packages directory, only look for new packages
+        // (which we can detect by the appearance of a package.js file.)
+        // Other than that, packages explicitly call out the files they
+        // use.
+        slice.dependencyInfo.directories[path.resolve(appDir, 'packages')] = {
+          include: [ /^package\.js$/ ],
+          exclude: ignoreFiles
+        };
+
+        // Exclude .meteor/local and everything under it.
+        slice.dependencyInfo.directories[
+          path.resolve(appDir, '.meteor', 'local')] = { exclude: [/.?/] };
+
+        return withoutOtherRole;
       };
-
-      // Inside the packages directory, only look for new packages
-      // (which we can detect by the appearance of a package.js file.)
-      // Other than that, packages explicitly call out the files they
-      // use.
-      slice.dependencyInfo.directories[path.resolve(appDir, 'packages')] = {
-        include: [ /^package\.js$/ ],
-        exclude: ignoreFiles
-      };
-
-      // Exclude .meteor/local and everything under it.
-      slice.dependencyInfo.directories[
-        path.resolve(appDir, '.meteor', 'local')] = { exclude: [/.?/] };
     });
 
     self.defaultSlices = { browser: ['client'], 'native': ['server'] };
   },
 
+  // Initialize a package from a prebuilt Unipackage on disk. On
+  // return, the package will be a built state. This function does not
+  // retrieve the package's dependencies from the library (it is not
+  // necessary.)
+  //
   // options:
   // - onlyIfUpToDate: if true, then first check the unipackage's
   //   dependencies (if present) to see if it's up to date. If not,
@@ -1369,6 +1629,27 @@ _.extend(Package.prototype, {
     self.defaultSlices = mainJson.defaultSlices;
     self.testSlices = mainJson.testSlices;
 
+    _.each(mainJson.plugins, function (pluginMeta) {
+      if (pluginMeta.path.match(/\.\./))
+        throw new Error("bad path in unipackage");
+      var plugin = bundler.readPlugin(path.join(dir, pluginMeta.path));
+      // XXX would be nice to refactor so we don't have to manually
+      // bash the arch in here
+      plugin.arch = pluginMeta.arch;
+
+      // XXX should refactor so that we can have plugins of multiple
+      // different arches happily coexisting in memory, to match
+      // slices. If this becomes a problem before we have a chance to
+      // refactor, could just ignore plugins for arches that we don't
+      // support, if we are careful to not then try to write out the
+      // package and expect them to be intact..
+      if (pluginMeta.name in self.plugins)
+        throw new Error("Implementation limitation: this program " +
+                        "cannot yet handle fat plugins, sorry");
+      self.plugins[pluginMeta.name] = plugin;
+    });
+    self.pluginsBuilt = true;
+
     _.each(mainJson.slices, function (sliceMeta) {
       // aggressively sanitize path (don't let it escape to parent
       // directory)
@@ -1402,7 +1683,7 @@ _.extend(Package.prototype, {
         })
       });
 
-      slice.isCompiled = true;
+      slice.isBuilt = true;
       slice.exports = sliceJson.exports || [];
       slice.boundary = sliceJson.boundary;
       slice.prelinkFiles = [];
@@ -1437,26 +1718,7 @@ _.extend(Package.prototype, {
 
       self.slices.push(slice);
     });
-
-    _.each(mainJson.plugins, function (pluginMeta) {
-      if (pluginMeta.path.match(/\.\./))
-        throw new Error("bad path in unipackage");
-      var plugin = bundler.readPlugin(path.join(dir, pluginMeta.path));
-      // XXX would be nice to refactor so we don't have to manually
-      // bash the arch in here
-      plugin.arch = pluginMeta.arch;
-
-      // XXX should refactor so that we can have plugins of multiple
-      // different arches happily coexisting in memory, to match
-      // slices. If this becomes a problem before we have a chance to
-      // refactor, could just ignore plugins for arches that we don't
-      // support, if we are careful to not then try to write out the
-      // package and expect them to be intact..
-      if (pluginMeta.name in self.plugins)
-        throw new Error("Implementation limitation: this program " +
-                        "cannot yet handle fat plugins, sorry");
-      self.plugins[pluginMeta.name] = plugin;
-    });
+    self.slicesBuilt = true
 
     return true;
   },
@@ -1505,7 +1767,8 @@ _.extend(Package.prototype, {
 
       // Slices
       _.each(self.slices, function (slice) {
-        slice._ensureCompiled();
+        if (! slice.isBuilt)
+          throw new Error("saving unbuilt slice?");
 
         // Make up a filename for this slice
         var baseSliceName =

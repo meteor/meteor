@@ -4,6 +4,7 @@ var files = require('./files.js');
 var packages = require('./packages.js');
 var warehouse = require('./warehouse.js');
 var bundler = require('./bundler.js');
+var buildmessage = require('./buildmessage.js');
 var fs = require('fs');
 
 // Under the hood, packages in the library (/package/foo), and user
@@ -56,7 +57,9 @@ _.extend(Library.prototype, {
   // Given a package name as a string, retrieve a Package object. If
   // throwOnError is true, the default, throw an error if the package
   // can't be found. (If false is passed for throwOnError, then return
-  // null if the package can't be found.)
+  // null if the package can't be found.) When called inside
+  // buildmessage.enterJob, however, instead of throwing an error it
+  // will record a build error and return a dummy (empty) package.
   //
   // Searches overrides first, then any localPackageDirs you have
   // provided, then the manifest/warehouse if provided.
@@ -108,7 +111,11 @@ _.extend(Library.prototype, {
     if (! packageDir) {
       if (throwOnError === false)
         return null;
-      throw new Error("Package not available: " + name);
+      buildmessage.error("package not available: " + name);
+      // recover by returning a dummy (empty) package
+      var pkg = new packages.Package(self);
+      pkg.initEmpty(name);
+      return pkg;
     }
 
     // Load package from disk
@@ -140,22 +147,31 @@ _.extend(Library.prototype, {
         // period where we still have source trees in the warehouse
         // AND the unipackage format can't handle packages with
         // extensions, this will reduce startup time.
-        pkg.initFromPackageDir(name, packageDir,
-                               { skipNpmUpdate: fromWarehouse });
+        buildmessage.enterJob({
+          title: "building package `" + name + "`",
+          rootPath: packageDir
+        }, function () {
+          // This has to be done in the right sequence: initialize
+          // (which loads the dependency list but does not get() those
+          // packages), then put the package into the package list,
+          // then call build() to get() the dependencies and finish
+          // the build. If you called build() before putting the
+          // package in the package list then you'd recurse
+          // forever. (build() needs the dependencies because it needs
+          // to look at the handlers registered by any plugins in the
+          // packages that we use.)
+          pkg.initFromPackageDir(name, packageDir,
+                                 { skipNpmUpdate: fromWarehouse });
+          self.loadedPackages[name] = pkg;
+          pkg.build();
 
-        // We need to go ahead and put it in the package list without
-        // waiting until we've finished saving it. That's because
-        // saveAsUnipackage calls _ensureCompiled which might end up
-        // recursively get()ing itself to retrieve its handlers
-        // (because if it has a test slice, it probably uses the main
-        // slice.)
-        self.loadedPackages[name] = pkg;
-
-        if (pkg.canBeSavedAsUnipackage()) {
-          // Save it, for a fast load next time
-          files.add_to_gitignore(packageDir, '.build*');
-          pkg.saveAsUnipackage(buildDir, { buildOfPath: packageDir });
-        }
+          if (! buildmessage.jobHasMessages() && // ensure no errors!
+              pkg.canBeSavedAsUnipackage()) {
+            // Save it, for a fast load next time
+            files.add_to_gitignore(packageDir, '.build*');
+            pkg.saveAsUnipackage(buildDir, { buildOfPath: packageDir });
+          }
+        });
       }
     }
 
@@ -169,6 +185,7 @@ _.extend(Library.prototype, {
     var self = this;
     var pkg = new packages.Package(self);
     pkg.initFromAppDir(appDir, ignoreFiles || []);
+    pkg.build();
     return pkg;
   },
 
@@ -199,26 +216,40 @@ _.extend(Library.prototype, {
 
   // Get all packages available. Returns a map from the package name
   // to a Package object.
+  //
+  // XXX Hack: If errors occur while generating the list (which could
+  // easily happen, since it currently involves building packages)
+  // print them to the console and exit(1)! Certainly not ideal but is
+  // expedient since, eg, test-packages calls list() before it does
+  // anything else.
   list: function () {
     var self = this;
     var names = [];
-
-    names = _.keys(self.overrides);
-
-    _.each(self.localPackageDirs, function (dir) {
-      names = _.union(names, fs.readdirSync(dir));
-    });
-
-    if (self.releaseManifest) {
-      names = _.union(names, _.keys(self.releaseManifest.packages));
-    }
-
     var ret = {};
-    _.each(names, function (name) {
-      var pkg = self.get(name, false);
-      if (pkg)
-        ret[name] = pkg;
+
+    var messages = buildmessage.capture(function () {
+      names = _.keys(self.overrides);
+
+      _.each(self.localPackageDirs, function (dir) {
+        names = _.union(names, fs.readdirSync(dir));
+      });
+
+      if (self.releaseManifest) {
+        names = _.union(names, _.keys(self.releaseManifest.packages));
+      }
+
+      _.each(names, function (name) {
+        var pkg = self.get(name, false);
+        if (pkg)
+          ret[name] = pkg;
+      });
     });
+
+    if (messages.hasMessages()) {
+      process.stdout.write("=> Errors while scanning packages:\n\n");
+      process.stdout.write(messages.formatMessages());
+      process.exit(1);
+    }
 
     return ret;
   },
@@ -235,6 +266,8 @@ _.extend(Library.prototype, {
   // packages are rebuilt (eg, if you have two packages named 'foo' in
   // your search path, both of them will have their builds deleted but
   // only the visible one might get rebuilt immediately.)
+  //
+  // Returns a count of packages rebuilt.
   rebuildAll: function () {
     var self = this;
     // XXX refactor to combine logic with list()? important difference
@@ -292,7 +325,7 @@ _.extend(Library.prototype, {
         count ++;
     });
 
-    console.log("Rebuilt", count, "packages.");
+    return count;
   }
 });
 

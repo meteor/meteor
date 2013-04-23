@@ -18,6 +18,7 @@ var request = require('request');
 var fstream = require('fstream');
 
 var cleanup = require('./cleanup.js');
+var buildmessage = require('./buildmessage.js');
 
 var files = exports;
 _.extend(exports, {
@@ -563,6 +564,126 @@ _.extend(exports, {
       });
     return future.wait();
   },
+
+  // Return the result of evaluating `code` using
+  // `runInThisContext`. `code` will be wrapped in a closure. You can
+  // pass additional values to bind in the closure in `env`, the keys
+  // being the symbols to bind and the values being their
+  // values. `filename` is the filename to use in exceptions that come
+  // from inside this code.
+  //
+  // The really special thing about this function is that if a parse
+  // error occurs, we will raise an exception of type
+  // files.FancySyntaxError, from which you may read 'message', 'file',
+  // 'line', 'column', and 'columnEnd' attributes ... v8 is
+  // normally reluctant to reveal this information but will write it
+  // to stderr if you pass it an undocumented flag. Unforunately
+  // though node doesn't have dup2 so we can't intercept the write. So
+  // instead -- only if the parse does in fact fail, to determine the
+  // error we start a subprocess, redirect its stderr, grab the output
+  // and parse it.
+  runJavaScript: function (code, filename, env) {
+    var keys = [], values = [];
+    // don't assume that _.keys and _.values are guaranteed to
+    // enumerate in the same order
+    for (var k in env) {
+      keys.push(k);
+      values.push(env[k]);
+    }
+
+    var header = "(function(" + keys.join(',') + "){";
+    // \n is necessary in case final line is a //-comment
+    var footer = "\n})";
+    var wrapped = header + code + footer;
+
+    try {
+      // See #runInThisContext
+      //
+      // XXX it'd be nice to runInNewContext so that the code can't
+      // mess with our globals, but objects that come out of
+      // runInNewContext have bizarro antimatter prototype chains and
+      // break 'instanceof Array'. for now, steer clear
+      //
+      // Pass 'true' as third argument if we want the parse error on
+      // stderr (which we don't.)
+      var func = require('vm').runInThisContext(wrapped, filename);
+    } catch (e) {
+      // Got, presumably, a parse error. OK, we're going to start
+      // another copy of node and feed it the offending code on
+      // stdin. It should give us the error on stderr.
+
+      var Future = require('fibers/future');
+      var future = new Future;
+
+      var proc = child_process.execFile(
+        process.argv[0], [], {
+          stdio: ['pipe']
+        }, function (error, stdout, stderr) {
+          if (! error || error.code === 0)
+            future.return(null); // huh? didn't fail?
+          else
+            future.return(stderr);
+        });
+      proc.stdin.write(wrapped);
+      proc.stdin.end();
+      var stderr = future.wait();
+
+      if (stderr === null)
+        throw new Error("subprocess parsed bad code successfully?");
+
+/* stderr will look something like this (note leading blank line:)
+"
+[stdin]:1
+couaoeua aaaaaa nsolexloeuaoeuao
+         ^^^^^^
+SyntaxError: Unexpected identifier
+    at Object.<anonymous> ([stdin]-wrapper:6:22)
+    at Module._compile (module.js:449:26)
+    at evalScript (node.js:282:25)
+    at Socket.<anonymous> (node.js:152:11)
+    at Socket.EventEmitter.emit (events.js:93:17)
+    at Pipe.onread (net.js:418:51)"
+*/
+      var err = new files.FancySyntaxError;
+      err.file = filename;
+      var lines = stderr.split('\n');
+
+      // line number
+      var m = lines[1].match(/:(\d+)\s*$/);
+      if (! m)
+        throw new Error("can't parse line number from '" + lines[1] + "'");
+      err.line = +m[1];
+
+      // column range
+      m = lines[3].match(/^(\s*)(\^+)\s*$/)
+      if (! m)
+        throw new Error("can't parse column indicator from '" + lines[3] + "'");
+      err.column = m[1].length + 1;
+      err.columnEnd = err.column + m[2].length - 1;
+
+      // message
+      m = lines[4].match(/^SyntaxError:\s*(.*)$/);
+      if (! m)
+        throw new Error("can't parse error message from '" + lines[4] + "'");
+      err.message = m[1];
+
+      // adjust errors on line 1 to account for our header
+      if (err.line === 1) {
+        err.column -= header.length;
+        err.columnEnd -= header.length;
+      }
+
+      throw err;
+    }
+
+    return (buildmessage.markBoundary(func)).apply(null, values);
+  },
+
+  // - message: an error message from the parser
+  // - line: 1-based
+  // - column: 1-based
+  // - columnEnd: 1-based
+  FancySyntaxError: function () {},
 
   OfflineError: function (error) {
     this.error = error;
