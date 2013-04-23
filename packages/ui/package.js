@@ -5,7 +5,8 @@ Package.describe({
 Package.on_use(function (api) {
   api.use('underscore', 'client');
 
-  api.add_files(['chunk.js', 'component.js'], 'client');
+  api.add_files(['chunk.js', 'component.js', 'html_builder.js'],
+                'client');
 });
 
 Package.on_test(function (api) {
