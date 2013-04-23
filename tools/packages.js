@@ -238,7 +238,13 @@ _.extend(Package.prototype, {
       api.use(project.get_packages(app_dir));
 
       // -- Source files --
-      api.add_files(sources_except(api, "server"), "client");
+      var inCompatibilityMode = function (filename) {
+        return filename.indexOf(path.sep + 'client' + path.sep + 'compatibility' + path.sep) !== -1;
+      };
+      var clientFiles = sources_except(api, "server");
+      api.add_files(_.filter(clientFiles, inCompatibilityMode), "client", {compatibility: true});
+      api.add_files(_.reject(clientFiles, inCompatibilityMode), "client");
+
       api.add_files(sources_except(api, "client"), "server");
     });
 

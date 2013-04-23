@@ -115,7 +115,7 @@ var PackageBundlingInfo = function (pkg, bundle) {
       });
     },
 
-    add_files: function (paths, where) {
+    add_files: function (paths, where, opt) {
       if (!(paths instanceof Array))
         paths = paths ? [paths] : [];
       if (!(where instanceof Array))
@@ -123,7 +123,7 @@ var PackageBundlingInfo = function (pkg, bundle) {
 
       _.each(where, function (w) {
         _.each(paths, function (rel_path) {
-          self.add_file(rel_path, w);
+          self.add_file(rel_path, w, opt);
         });
       });
     },
@@ -188,8 +188,11 @@ _.extend(PackageBundlingInfo.prototype, {
     return candidates[0];
   },
 
-  add_file: function (rel_path, where) {
+  // opt {Object}
+  //   - compatibility {Boolean} In case this is a JS file, don't wrap in a closure.
+  add_file: function (rel_path, where, opt) {
     var self = this;
+    opt = opt || {};
 
     if (self.files[where][rel_path])
       return;
@@ -210,7 +213,8 @@ _.extend(PackageBundlingInfo.prototype, {
       handler(self.bundle.api,
               sourcePath,
               path.join(self.pkg.serve_root, rel_path),
-              where);
+              where,
+              opt);
     } else {
       // If we don't have an extension handler, serve this file
       // as a static resource.
@@ -302,6 +306,10 @@ var Bundle = function () {
      *
      * data: the data to send. overrides source_file if present. you
      * must still set path (except for "head" and "body".)
+     *
+     * compatibility: (only for js files) when set, don't wrap code in
+     * a closure.  used for client-side javascript libraries that use
+     * the `function foo()` or `var foo =` syntax to define globals.
      */
     add_resource: function (options) {
       var source_file = options.source_file || options.path;
@@ -337,11 +345,16 @@ var Bundle = function () {
             // scope (eg, file-level vars are file-scoped). On the server, this
             // is done in server/server.js to inject the Npm symbol.
             //
+            // Some client-side Javascript libraries define globals with `var foo =` or
+            // `function bar()` which only work if loaded directly from a script tag. If
+            // `options.compatibility` is set, don't wrap in a closure to enable using
+            // such libraries.
+            //
             // The ".call(this)" allows you to do a top-level "this.foo = "
             // to define global variables when using "use strict"
             // (http://es5.github.io/#x15.3.4.4); this is the only way to do
             // it in CoffeeScript.
-            if (w === "client") {
+            if (w === "client" && !options.compatibility) {
               wrapped = Buffer.concat([
                 new Buffer("(function(){ "),
                 data,
@@ -673,7 +686,7 @@ _.extend(Bundle.prototype, {
         contents = self.files.client[file];
         delete self.files.client[file];
         self.files.client_cacheable[file] = contents;
-        url = file + '?' + sha1(contents)
+        url = file + '?' + sha1(contents);
       }
       else
         throw new Error('unable to find file: ' + file);
