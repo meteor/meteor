@@ -201,9 +201,13 @@ _.extend(exports, {
     fs.writeFileSync(
       path.join(newPackageNpmDir, 'README'),
       // XXX copy?
-      "This directory and its contents are automatically generated when you change this\n"
-        + "package's npm dependencies. Commit this directory to source control so that\n"
-        + "others run the same versions of sub-dependencies.\n"
+      "This directory and the contained npm-shrinkwrap.json file are automatically\n"
+        + "generated when you change this package's npm dependencies. Commit this\n"
+        + "directory and the npm-shrinkwrap.json file to source control so that\n"
+        + "others run the same versions of sub-dependencies.\n\n"
+        + "Note the .gitignore in this directory is configured to ignore the\n"
+        + "node_modules sub-directory that meteor automatically creates.\n"
+
     );
   },
 
