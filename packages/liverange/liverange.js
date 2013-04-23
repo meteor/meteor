@@ -643,7 +643,7 @@ LiveRange.findRange = function(tag, node) {
   if (result)
     return result;
 
-  if (! node.parentNode)
+  if (! (node && node.parentNode))
     return null;
 
   return LiveRange.findRange(tag, node.parentNode);
@@ -658,6 +658,9 @@ var enclosingRangeSearch = function(tag, end, endIndex) {
 
   if (typeof endIndex === "undefined")
     endIndex = -1;
+
+  if (! end)
+    return null;
 
   if (end[tag] && endIndex + 1 < end[tag][1].length) {
     // immediately enclosing range ends at same node as this one

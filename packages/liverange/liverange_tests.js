@@ -567,6 +567,18 @@ Tinytest.add("liverange - findParent", function(test) {
 
 });
 
+Tinytest.add("liverange - findParent: node removed", function(test) {
+  var str = "I[A*a]i*";
+  var pat = makeTestPattern(str);
+  test.equal(pat.currentString(), str);
+
+  var ranges = pat.ranges;
+
+  ranges.A._end.parentNode.removeChild(ranges.A._end);
+
+  test.equal(ranges.A.findParent() && 'found parent',null);
+});
+
 Tinytest.add("liverange - destroy", function(test) {
   var str = "I*[[AB[H***FDE*ed*fG*gh]*baC*c*]]J*ji*";
   var pat = makeTestPattern(str);
