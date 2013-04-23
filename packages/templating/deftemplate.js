@@ -101,6 +101,12 @@ Meteor._template_decl_methods = {
   }
 };
 
+// XXX this is experimental; child nodes may
+// get template instances of their parents
+Meteor._getEnclosingTemplate = function (node) {
+  return templateObjFromLandmark(Spark._getEnclosingLandmark(node));
+};
+
 Meteor._def_template = function (name, raw_func) {
   Meteor._hook_handlebars();
 
