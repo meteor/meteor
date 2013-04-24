@@ -1,6 +1,9 @@
 
 ## vNEXT
 
+* When authenticating with GitHub, include a user agent string. This
+  unbreaks "Sign in with GitHub"
+
 * With `autopublish` on, publish many useful fields on `Meteor.users`.
 
 * When using the `http` package on the server synchronously, errors
