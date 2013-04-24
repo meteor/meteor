@@ -16,5 +16,8 @@
         "d3": ["The d3 package has been upgraded to 3.1.4. See ",
                "https://github.com/mbostock/d3/wiki/Upgrading-to-3.0"]
     }
+  },
+  {
+    "release": "0.6.2.1"
   }
 ]

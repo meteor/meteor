@@ -22,6 +22,11 @@ Accounts.oauth.registerService('github', 2, function(query) {
   };
 });
 
+// http://developer.github.com/v3/#user-agent-required
+var userAgent = "Meteor";
+if (Meteor.release)
+  userAgent += "/" + Meteor.release;
+
 var getAccessToken = function (query) {
   var config = Accounts.loginServiceConfiguration.findOne({service: 'github'});
   if (!config)
@@ -31,7 +36,10 @@ var getAccessToken = function (query) {
   try {
     response = Meteor.http.post(
       "https://github.com/login/oauth/access_token", {
-        headers: {Accept: 'application/json'},
+        headers: {
+          Accept: 'application/json',
+          "User-Agent": userAgent
+        },
         params: {
           code: query.code,
           client_id: config.clientId,
@@ -53,10 +61,6 @@ var getAccessToken = function (query) {
 
 var getIdentity = function (accessToken) {
   try {
-    var userAgent = "Meteor";
-    if (Meteor.release)
-      userAgent += "/" + Meteor.release;
-
     return Meteor.http.get(
       "https://api.github.com/user", {
         headers: {"User-Agent": userAgent}, // http://developer.github.com/v3/#user-agent-required
