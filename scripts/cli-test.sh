@@ -9,8 +9,6 @@ set -e -x
 
 cd `dirname $0`/..
 
-echo "FOO $METEOR_TOOLS_TREE_DIR"
-
 # METEOR_TOOLS_TREE_DIR is set in run-tools-tests.sh in order to test
 # running an installed version of Meteor (though notably without
 # testing springboarding, which is separately tested by
