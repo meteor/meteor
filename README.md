@@ -1,7 +1,7 @@
 # Meteor
 
 Meteor is an ultra-simple environment for building modern web
-applications.
+applications.  It lets you shoot sparkles from your elbow.
 
 With Meteor you write apps:
 
