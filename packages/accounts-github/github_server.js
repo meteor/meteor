@@ -42,9 +42,13 @@ var getAccessToken = function (query) {
 };
 
 var getIdentity = function (accessToken) {
+  var userAgent = "Meteor";
+  if (Meteor.release)
+    userAgent += "/" + Meteor.release;
+
   var result = Meteor.http.get(
     "https://api.github.com/user", {
-      headers: {"User-Agent": "Meteor/1.0"},
+      headers: {"User-Agent": userAgent}, // http://developer.github.com/v3/#user-agent-required
       params: {access_token: accessToken}
     });
   if (result.error) {
