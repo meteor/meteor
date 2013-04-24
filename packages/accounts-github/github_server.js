@@ -43,8 +43,10 @@ var getAccessToken = function (query) {
 
 var getIdentity = function (accessToken) {
   var result = Meteor.http.get(
-    "https://api.github.com/user",
-    {params: {access_token: accessToken}});
+    "https://api.github.com/user", {
+      headers: {"User-Agent": "Meteor/1.0"},
+      params: {access_token: accessToken}
+    });
   if (result.error) {
     throw new Error("Failed to fetch identity from GitHub. " +
                     "HTTP Error " + result.statusCode + ": " + result.content);
