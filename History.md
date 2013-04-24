@@ -9,6 +9,9 @@
 * When using the `http` package on the server synchronously, errors
   are thrown rather than passed in `result.error`
 
+Patches contributed by GitHub user pmark.
+
+
 ## v0.6.2
 
 * Better error reporting:
