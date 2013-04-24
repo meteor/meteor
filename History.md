@@ -1,6 +1,10 @@
 
 ## vNEXT
 
+* When authenticating with GitHub, include a user agent string. This
+  unbreaks "Sign in with GitHub"
+
+
 ## v0.6.2
 
 * Better error reporting:
