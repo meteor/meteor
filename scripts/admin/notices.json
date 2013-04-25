@@ -19,5 +19,12 @@
   },
   {
     "release": "0.6.2.1"
+  },
+  {
+    "release": "NEXT",
+    "packageNotices": {
+      "coffeescript": ["CoffeeScript has been updated to 1.6.2 from 1.5.0. See",
+                       "http://coffeescript.org/#changelog"]
+    }
   }
 ]
