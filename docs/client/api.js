@@ -1804,6 +1804,10 @@ Template.api.email_send = {
     {name: "html",
      type: "String",
      descr: rfc('mail body (HTML)')
+    },
+    {name: "headers",
+     type: "Object",
+     descr: rfc('custom headers (dictionary)')
     }
   ]
 };

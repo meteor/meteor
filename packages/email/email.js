@@ -85,12 +85,12 @@ var smtpSend = function (mc) {
  * @param options.subject {String} RFC5322 "Subject:" line
  * @param options.text {String} RFC5322 mail body (plain text)
  * @param options.html {String} RFC5322 mail body (HTML)
+ * @param options.headers {Object} custom RFC5322 headers (dictionary)
  */
 Email.send = function (options) {
   var mc = new MailComposer();
 
   // setup message data
-  // XXX support arbitrary headers
   // XXX support attachments (once we have a client/server-compatible binary
   //     Buffer class)
   mc.setMessageOption({
@@ -103,6 +103,10 @@ Email.send = function (options) {
     text: options.text,
     html: options.html
   });
+
+  if (options.headers !== undefined)
+    for (var header in options.headers)
+      mc.addHeader(header, options.headers[header]);
 
   maybeMakePool();
 
