@@ -11,6 +11,7 @@ var path = require('path');
 var fs = require('fs');
 var cleanup = require(path.join(__dirname, 'cleanup.js'));
 var files = require(path.join(__dirname, 'files.js'));
+var buildmessage = require('./buildmessage.js');
 var _ = require('underscore');
 
 // if a user exits meteor while we're trying to create a .npm
@@ -21,6 +22,10 @@ cleanup.onExit(function () {
       files.rm_recursive(dir);
   });
 });
+
+// Exception used internally to gracefully bail out of a npm run if
+// something goes wrong
+var NpmFailure = function () {};
 
 var meteorNpm = exports;
 _.extend(exports, {
@@ -87,11 +92,23 @@ _.extend(exports, {
         self._createFreshNpmDirectory(
           packageName, newPackageNpmDir, packageNpmDir, npmDependencies, quiet);
       }
+    } catch (e) {
+      if (e instanceof NpmFailure) {
+        // Something happened that was out of our control, but wasn't
+        // exactly unexpected (eg, no such npm package, no internet
+        // connection.) Handle it gracefully.
+        return false;
+      }
+
+      // Some other exception -- let it propagate.
+      throw e;
     } finally {
       if (fs.existsSync(newPackageNpmDir))
         files.rm_recursive(newPackageNpmDir);
       self._tmpDirs = _.without(self._tmpDirs, newPackageNpmDir);
     }
+
+    return true;
   },
 
   // Return true if all of a package's npm dependencies are portable
@@ -238,25 +255,27 @@ _.extend(exports, {
     );
   },
 
+  // Returns object with keys 'stdout', 'stderr', and 'success' (true
+  // for clean exit with exit code 0, else false)
   _execFileSync: function(file, args, opts) {
     var self = this;
     if (self._printNpmCalls) // only used by test_bundler.js
       process.stdout.write('cd ' + opts.cwd + ' && ' + file + ' ' + args.join(' ') + ' ... ');
 
-    return Future.wrap(function(cb) {
-      execFile(file, args, opts, function (err, stdout, stderr) {
-        if (self._printNpmCalls)
-          console.log('done');
+    var future = new Future;
 
-        var result = {stdout: stdout, stderr: stderr};
-        // so that we can inspect stdout/stderr in case there was an error
-        if (err) {
-          err.stdout = stdout;
-          err.stderr = stderr;
-        }
-        cb(err, result);
+    execFile(file, args, opts, function (err, stdout, stderr) {
+      if (self._printNpmCalls)
+        console.log(err ? 'failed' : 'done');
+
+      future.return({
+        success: ! err,
+        stdout: stdout,
+        stderr: stderr
       });
-    })().wait();
+    });
+
+    return future.wait();
   },
 
   _constructPackageJson: function(packageName, newPackageNpmDir, npmDependencies) {
@@ -313,10 +332,18 @@ _.extend(exports, {
   //   }
   // }
   _installedDependenciesTree: function(dir) {
-    return JSON.parse(
+    var result =
       this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
                          ["ls", "--json"],
-                         {cwd: dir}).stdout);
+                         {cwd: dir});
+
+    if (result.success)
+      return JSON.parse(result.stdout);
+
+    console.log(result.stderr);
+    buildmessage.error("couldn't read npm version lock information");
+    // Recover by returning false from updateDependencies
+    throw new NpmFailure;
   },
   _shrinkwrappedDependenciesTree: function(dir) {
     var shrinkwrapFile = fs.readFileSync(path.join(dir, 'npm-shrinkwrap.json'));
@@ -367,9 +394,27 @@ _.extend(exports, {
     // We don't use npm.commands.install since we couldn't
     // figure out how to silence all output (specifically the
     // installed tree which is printed out with `console.log`)
-    this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
-                       ["install", installArg],
-                       {cwd: dir});
+    var result =
+      this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
+                         ["install", installArg],
+                         {cwd: dir});
+
+    if (! result.success) {
+      var pkgNotFound = "404 '" + name + "' is not in the npm registry";
+      var versionNotFound = "version not found: " + version;
+      if (result.stderr.match(new RegExp(pkgNotFound))) {
+        buildmessage.error("there is no npm package named '" + name + "'");
+      } else if (result.stderr.match(new RegExp(versionNotFound))) {
+        buildmessage.error(name + " version " + version + " " +
+                           "is not available in the npm registry");
+      } else {
+        console.log(result.stderr);
+        buildmessage.error("couldn't install npm package");
+      }
+
+      // Recover by returning false from updateDependencies
+      throw new NpmFailure;
+    }
   },
 
   _installFromShrinkwrap: function(dir) {
@@ -379,9 +424,17 @@ _.extend(exports, {
     this._ensureConnected();
 
     // `npm install`, which reads npm-shrinkwrap.json
-    this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
-                       ["install"],
-                       {cwd: dir});
+    var result =
+      this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
+                         ["install"], {cwd: dir});
+
+
+    if (! result.success) {
+      console.log(result.stderr);
+      buildmessage.error("couldn't install npm packages from npm-shrinkwrap");
+      // Recover by returning false from updateDependencies
+      throw new NpmFailure;
+    }
   },
 
   // ensure we can reach http://npmjs.org before we try to install
@@ -390,8 +443,10 @@ _.extend(exports, {
     try {
       files.getUrl("http://registry.npmjs.org");
     } catch (e) {
-      throw new Error(
-        "Can't install npm dependencies. Check your internet connection and try again.");
+      buildmessage.error("Can't install npm dependencies. " +
+                         "Are you connected to the internet?");
+      // Recover by returning false from updateDependencies
+      throw new NpmFailure;
     }
   },
 
@@ -403,9 +458,17 @@ _.extend(exports, {
     //    (the `silent` flag isn't piped in to the call to npm.commands.ls)
     // 2. In various (non-deterministic?) cases we observed the
     //    npm-shrinkwrap.json file not being updated
-    self._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
-                       ["shrinkwrap"],
-                       {cwd: dir});
+    var result =
+      this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
+                         ["shrinkwrap"], {cwd: dir});
+
+    if (! result.sucess) {
+      console.log(result.stderr);
+      buildmessage.error("couldn't run `npm shrinkwrap`");
+      // Recover by returning false from updateDependencies
+      throw new NpmFailure;
+    }
+
     self._minimizeShrinkwrap(dir);
   },
 

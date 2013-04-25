@@ -916,9 +916,10 @@ _.extend(Package.prototype, {
     var nodeModulesPath = null;
     if (options.npmDependencies) {
       meteorNpm.ensureOnlyExactVersions(options.npmDependencies);
-      meteorNpm.updateDependencies(name, options.npmDir,
-                                   options.npmDependencies);
-      if (! meteorNpm.dependenciesArePortable(options.npmDir))
+      var npmOk =
+        meteorNpm.updateDependencies(name, options.npmDir,
+                                     options.npmDependencies);
+      if (npmOk && ! meteorNpm.dependenciesArePortable(options.npmDir))
         isPortable = false;
       nodeModulesPath = path.join(options.npmDir, 'node_modules');
     }
@@ -1386,6 +1387,7 @@ _.extend(Package.prototype, {
     if (npmDependencies) {
       var packageNpmDir =
         path.resolve(path.join(self.sourceRoot, '.npm'));
+      var npmOk = true;
 
       if (! options.skipNpmUpdate) {
         // go through a specialized npm dependencies update process,
@@ -1393,11 +1395,12 @@ _.extend(Package.prototype, {
         // (sub)dependencies. this process also runs mostly safely
         // multiple times in parallel (which could happen if you have
         // two apps running locally using the same package)
-        meteorNpm.updateDependencies(name, packageNpmDir, npmDependencies);
+        npmOk = meteorNpm.updateDependencies(name, packageNpmDir,
+                                             npmDependencies);
       }
 
       nodeModulesPath = path.join(packageNpmDir, 'node_modules');
-      if (! meteorNpm.dependenciesArePortable(packageNpmDir))
+      if (npmOk && ! meteorNpm.dependenciesArePortable(packageNpmDir))
         isPortable = false;
     }
 
