@@ -1,0 +1,22 @@
+<template name="configureLoginServiceDialogForFoursquare">
+  <p>
+    First, you'll need to get a Foursquare Client ID. Follow these steps:
+  </p>
+  <ol>
+    <li>
+    Visit <a href="https://foursquare.com/developers/register" target="blank">https://foursquare.com/developers/register</a>
+    </li>
+    <li>
+      Enter your application name.
+    </li>
+    <li>
+      Set URL to to: <span class="url">{{siteUrl}}</span>
+    </li>
+    <li>
+      Set callback URL to: <span class="url">{{siteUrl}}_oauth/foursquare?close</span>
+    </li>
+    <li>
+      Create the application.
+    </li>
+  </ol>
+</template>
