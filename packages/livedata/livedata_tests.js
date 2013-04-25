@@ -508,7 +508,7 @@ if (Meteor.isClient) {
     var conn = new Meteor._LivedataConnection('/',
                                               {reloadWithOutstanding: true});
     var collName = Random.id();
-    var coll = new Meteor.Collection(collName, {manager: conn});
+    var coll = new Meteor.Collection(collName, {connection: conn});
     var errorFromRerun;
     var gotErrorFromStopper = false;
     return [

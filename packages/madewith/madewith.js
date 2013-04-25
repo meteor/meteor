@@ -8,7 +8,7 @@ var server = Meteor.connect("madewith.meteor.com");
 var sub = server.subscribe("myApp", hostname);
 
 // minimongo collection to hold my singleton app record.
-var apps = new Meteor.Collection('madewith_apps', {manager: server});
+var apps = new Meteor.Collection('madewith_apps', {connection: server});
 
 server.methods({
   vote: function (hostname) {
