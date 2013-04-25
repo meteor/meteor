@@ -9,6 +9,8 @@
 * When using the `http` package on the server synchronously, errors
   are thrown rather than passed in `result.error`
 
+* Cursor transform functions on the server no longer are required to return
+  objects with correct `_id` fields.  #974
 
 ## v0.6.2.1
 
