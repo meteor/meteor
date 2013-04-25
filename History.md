@@ -18,7 +18,9 @@
   `localstorage` package, which defines a `Meteor._localStorage` API instead of
   trying to replace the DOM `window.localStorage` facility. (Now, apps can use
   the existence of `window.localStorage` to detect if the full localStorage API
-  is supported.)
+  is supported.)  #979
+
+* Support `appcache` on Chromium.  #958
 
 Patches contributed by GitHub user awwx.
 
