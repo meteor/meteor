@@ -275,7 +275,7 @@ Template.api.subscription_error = {
   id: "publish_error",
   name: "<i>this</i>.error(error)",
   locus: "Server",
-  descr: ["Call inside the publish function.  Stops this client's subscription, triggering a call on the client to the `onError` callback passed to [`Meteor.subscribe`](#meteor_subscribe), if any. If `error` is not a [`Meteor.Error`](#meteor_error), it will be mapped to `Meteor.Error(500, \"Internal server error\")`."]
+  descr: ["Call inside the publish function.  Stops this client's subscription, triggering a call on the client to the `onError` callback passed to [`Meteor.subscribe`](#meteor_subscribe), if any. If `error` is not a [`Meteor.Error`](#meteor_error), it will be [sanitized](#meteor_error)."]
 };
 
 Template.api.subscription_stop = {
@@ -1356,6 +1356,49 @@ Template.api.accounts_emailTemplates = {
 };
 
 
+
+Template.api.check = {
+  id: "check",
+  name: "check(value, pattern)",
+  locus: "Anywhere",
+  descr: ["Checks that a value matches a [pattern](#matchpatterns). If the value does not match the pattern, throws a `Match.Error`."],
+  args: [
+    {
+      name: "value",
+      type: "Any",
+      descr: "The value to check"
+    },
+    {
+      name: "pattern",
+      type: "Match pattern",
+      descr: "The [pattern](#matchpatterns) to match `value` against"
+    }
+  ]
+};
+
+Template.api.match_test = {
+  id: "match_test",
+  name: "Match.test(value, pattern)",
+  locus: "Anywhere",
+  descr: ["Returns true if the value matches the [pattern](#matchpatterns)."],
+  args: [
+    {
+      name: "value",
+      type: "Any",
+      descr: "The value to check"
+    },
+    {
+      name: "pattern",
+      type: "Match pattern",
+      descr: "The [pattern](#matchpatterns) to match `value` against"
+    }
+  ]
+};
+
+Template.api.matchpatterns = {
+  id: "matchpatterns",
+  name: "Match patterns"
+};
 
 Template.api.setTimeout = {
   id: "meteor_settimeout",

@@ -168,6 +168,7 @@ case is to publish a database query.
 
     // server: publish all messages for a given room
     Meteor.publish("messages", function (roomId) {
+      check(roomId, String);
       return Messages.find({room: roomId});
     });
 
@@ -260,6 +261,29 @@ database, and the examples in this section use the
         [MongoDB API](http://www.mongodb.org/display/DOCS/Manual).  Future
 releases will include support for other databases.
 {{/note}}
+
+
+<h3 id="dataandsecurity-validation">Input validation</h3>
+
+Meteor allows your methods and publish functions to take arguments of any
+[JSON](http://json.org/) type. (In fact, Meteor's wire protocol supports
+[EJSON](#ejson), an extension of JSON which also supports other common types
+like dates and binary buffers.) JavaScript's dynamic typing means you don't need
+to declare precise types of every variable in your app, but it's usually helpful
+to ensure that the arguments that clients are passing to your methods and
+publish functions are of the type that you expect.
+
+Meteor provides a [lightweight library](#match) for checking that arguments and
+other values are the type you expect them to be. Simply start your functions
+with statements like `check(username, String)` or
+`check(office, {building: String, room: Number})`. The `check` call will
+throw an error if its argument is of an unexpected type.
+
+Meteor also provides an easy way to make sure that all of your methods
+and publish functions validate all of their arguments. Just run
+<code>meteor add [audit-argument-checks](#auditargumentchecks)</code> and any
+method or publish function which skips `check`ing any of its arguments will fail
+with an exception.
 
 {{/better_markdown}}
 </template>

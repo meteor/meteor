@@ -48,24 +48,14 @@ Accounts._loginHandlers = [];
 // return `undefined`, meaning it handled this call to `login`. Return
 // that return value, which ought to be a {id/token} pair.
 var tryAllLoginHandlers = function (options) {
-  var result = undefined;
-
-  _.find(Accounts._loginHandlers, function(handler) {
-
-    var maybeResult = handler(options);
-    if (maybeResult !== undefined) {
-      result = maybeResult;
-      return true;
-    } else {
-      return false;
-    }
-  });
-
-  if (result === undefined) {
-    throw new Meteor.Error(400, "Unrecognized options for login request");
-  } else {
-    return result;
+  for (var i = 0; i < Accounts._loginHandlers.length; ++i) {
+    var handler = Accounts._loginHandlers[i];
+    var result = handler(options);
+    if (result !== undefined)
+      return result;
   }
+
+  throw new Meteor.Error(400, "Unrecognized options for login request");
 };
 
 
@@ -77,6 +67,9 @@ Meteor.methods({
   //   If unsuccessful (for example, if the user closed the oauth login popup),
   //     returns null
   login: function(options) {
+    // Login handlers should really also check whatever field they look at in
+    // options, but we don't enforce it.
+    check(options, Object);
     var result = tryAllLoginHandlers(options);
     if (result !== null)
       this.setUserId(result.id);
@@ -98,6 +91,7 @@ Accounts.registerLoginHandler(function(options) {
   if (!options.resume)
     return undefined;
 
+  check(options.resume, String);
   var user = Meteor.users.findOne({
     "services.resume.loginTokens.token": ""+options.resume
   });
@@ -286,22 +280,73 @@ Accounts.updateOrCreateUserFromExternalService = function(
 
 // Publish the current user's record to the client.
 Meteor.publish(null, function() {
-  if (this.userId)
+  if (this.userId) {
     return Meteor.users.find(
       {_id: this.userId},
       {fields: {profile: 1, username: 1, emails: 1}});
-  else {
+  } else {
     return null;
   }
-}, {is_auto: true});
+}, /*suppress autopublish warning*/{is_auto: true});
 
-// If autopublish is on, also publish everyone else's user record.
+// If autopublish is on, publish these user fields. Login service
+// packages (eg accounts-google) add to these by calling
+// Accounts.addAutopublishFields Notably, this isn't implemented with
+// multiple publishes since DDP only merges only across top-level
+// fields, not subfields (such as 'services.facebook.accessToken')
+Accounts._autopublishFields = {
+  loggedInUser: ['profile', 'username', 'emails'],
+  otherUsers: ['profile', 'username']
+};
+
+// Add to the list of fields or subfields to be automatically
+// published if autopublish is on
+//
+// @param opts {Object} with:
+//   - forLoggedInUser {Array} Array of fields published to the logged-in user
+//   - forOtherUsers {Array} Array of fields published to users that aren't logged in
+Accounts.addAutopublishFields = function(opts) {
+  Accounts._autopublishFields.loggedInUser.push.apply(
+    Accounts._autopublishFields.loggedInUser, opts.forLoggedInUser);
+  Accounts._autopublishFields.otherUsers.push.apply(
+    Accounts._autopublishFields.otherUsers, opts.forOtherUsers);
+};
+
 Meteor.default_server.onAutopublish(function () {
-  var handler = function () {
-    return Meteor.users.find(
-      {}, {fields: {profile: 1, username: 1}});
+  // ['profile', 'username'] -> {profile: 1, username: 1}
+  var toFieldSelector = function(fields) {
+    return _.object(_.map(fields, function(field) {
+      return [field, 1];
+    }));
   };
-  Meteor.default_server.publish(null, handler, {is_auto: true});
+
+  Meteor.default_server.publish(null, function () {
+    if (this.userId) {
+      return Meteor.users.find(
+        {_id: this.userId},
+        {fields: toFieldSelector(Accounts._autopublishFields.loggedInUser)});
+    } else {
+      return null;
+    }
+  }, /*suppress autopublish warning*/{is_auto: true});
+
+  // XXX this publish is neither dedup-able nor is it optimized by our
+  // special treatment of queries on a specific _id. Therefore this
+  // will have O(n^2) run-time performance every time a user document
+  // is changed (eg someone logging in). If this is a problem, we can
+  // instead write a manual publish function which filters out fields
+  // based on 'this.userId'.
+  Meteor.default_server.publish(null, function () {
+    var selector;
+    if (this.userId)
+      selector = {_id: {$ne: this.userId}};
+    else
+      selector = {};
+
+    return Meteor.users.find(
+      selector,
+      {fields: toFieldSelector(Accounts._autopublishFields.otherUsers)});
+  }, /*suppress autopublish warning*/{is_auto: true});
 });
 
 // Publish all login service configuration fields other than secret.
@@ -312,7 +357,8 @@ Meteor.publish("meteor.loginServiceConfiguration", function () {
 // Allow a one-time configuration for a login service. Modifications
 // to this collection are also allowed in insecure mode.
 Meteor.methods({
-  "configureLoginService": function(options) {
+  "configureLoginService": function (options) {
+    check(options, Match.ObjectIncluding({service: String}));
     // Don't let random users configure a service we haven't added yet (so
     // that when we do later add it, it's set up with their configuration
     // instead of ours).

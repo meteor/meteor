@@ -5,6 +5,12 @@ var TRANSFORMS = {};
 if (Meteor.isServer) {
   Meteor.methods({
     createInsecureCollection: function (name, options) {
+      check(name, String);
+      check(options, Match.Optional({
+        transformName: Match.Optional(String),
+        idGeneration: Match.Optional(String)
+      }));
+
       if (options && options.transformName) {
         options.transform = TRANSFORMS[options.transformName];
       }
@@ -820,52 +826,129 @@ testAsyncMulti('mongo-livedata - specified _id', [
 
 
 if (Meteor.isServer) {
-  (function () {
 
-    testAsyncMulti("mongo-livedata - minimongo on server to server connection", [
-      function (test, expect) {
-        var self = this;
-        self.id = Random.id();
-        var C = new Meteor.Collection("ServerMinimongo_" + self.id);
+  testAsyncMulti("mongo-livedata - minimongo on server to server connection", [
+    function (test, expect) {
+      var self = this;
+      Meteor._debug("connection setup");
+      self.id = Random.id();
+      var C = self.C = new Meteor.Collection("ServerMinimongo_" + self.id);
+      C.allow({
+        insert: function () {return true;},
+        update: function () {return true;},
+        remove: function () {return true;}
+      });
+      C.insert({a: 0, b: 1});
+      C.insert({a: 0, b: 2});
+      C.insert({a: 1, b: 3});
+      Meteor.publish(self.id, function () {
+        return C.find({a: 0});
+      });
 
-        C.insert({a: 0, b: 1});
-        C.insert({a: 0, b: 2});
-        C.insert({a: 1, b: 3});
-        Meteor.publish(self.id, function () {
-          return C.find({a: 0});
+      self.conn = Meteor.connect(Meteor.absoluteUrl());
+      pollUntil(expect, function () {
+        return self.conn.status().connected;
+      }, 10000);
+    },
+
+    function (test, expect) {
+      var self = this;
+      if (self.conn.status().connected) {
+        self.miniC = new Meteor.Collection("ServerMinimongo_" + self.id, {
+          manager: self.conn
         });
-
-        self.conn = Meteor.connect(Meteor.absoluteUrl());
-        pollUntil(expect, function () {
-          return self.conn.status().connected;
-        }, 10000);
-      },
-
-      function (test, expect) {
-        var self = this;
-        if (self.conn.status().connected) {
-          self.miniC = new Meteor.Collection("ServerMinimongo_" + self.id, {
-            manager: self.conn
-          });
-          var exp = expect(function (err) {
-            test.isFalse(err);
-          });
-          self.conn.subscribe(self.id, {
-            onError: exp,
-            onReady: exp
-          });
-        }
-      },
-
-      function (test, expect) {
-        var self = this;
-        if (self.miniC) {
-          var contents = self.miniC.find().fetch();
-          test.equal(contents.length, 2);
-          test.equal(contents[0].a, 0);
-        }
+        var exp = expect(function (err) {
+          test.isFalse(err);
+        });
+        self.conn.subscribe(self.id, {
+          onError: exp,
+          onReady: exp
+        });
       }
-    ]);
-  })();
+    },
 
+    function (test, expect) {
+      var self = this;
+      if (self.miniC) {
+        var contents = self.miniC.find().fetch();
+        test.equal(contents.length, 2);
+        test.equal(contents[0].a, 0);
+      }
+    },
+
+    function (test, expect) {
+      var self = this;
+      if (!self.miniC)
+        return;
+      self.miniC.insert({a:0, b:3});
+      var contents = self.miniC.find({b:3}).fetch();
+      test.equal(contents.length, 1);
+      test.equal(contents[0].a, 0);
+    }
+  ]);
+
+  testAsyncMulti("mongo-livedata - minimongo observe on server", [
+    function (test, expect) {
+      var self = this;
+      self.id = Random.id();
+      self.C = new Meteor.Collection("ServerMinimongoObserve_" + self.id);
+      self.events = [];
+
+      Meteor.publish(self.id, function () {
+        return self.C.find();
+      });
+
+      self.conn = Meteor.connect(Meteor.absoluteUrl());
+      pollUntil(expect, function () {
+        return self.conn.status().connected;
+      }, 10000);
+    },
+
+    function (test, expect) {
+      var self = this;
+      if (self.conn.status().connected) {
+        self.miniC = new Meteor.Collection("ServerMinimongoObserve_" + self.id, {
+          manager: self.conn
+        });
+        var exp = expect(function (err) {
+          test.isFalse(err);
+        });
+        self.conn.subscribe(self.id, {
+          onError: exp,
+          onReady: exp
+        });
+      }
+    },
+
+    function (test, expect) {
+      var self = this;
+      if (self.miniC) {
+        self.obs = self.miniC.find().observeChanges({
+          added: function (id, fields) {
+            self.events.push({evt: "a", id: id});
+            Meteor._sleepForMs(200);
+            self.events.push({evt: "b", id: id});
+          }
+        });
+        self.one = self.C.insert({});
+        self.two = self.C.insert({});
+        pollUntil(expect, function () {
+          return self.events.length === 4;
+        }, 10000);
+      }
+    },
+
+    function (test, expect) {
+      var self = this;
+      if (self.miniC) {
+        test.equal(self.events, [
+          {evt: "a", id: self.one},
+          {evt: "b", id: self.one},
+          {evt: "a", id: self.two},
+          {evt: "b", id: self.two}
+        ]);
+      }
+      self.obs && self.obs.stop();
+    }
+  ]);
 }

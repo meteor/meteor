@@ -301,11 +301,9 @@ EJSON.clone = function (v) {
     }
     return ret;
   }
-  if (_.isArray(v)) {
-    ret = v.slice(0);
-    for (var i = 0; i < v.length; i++)
-      ret[i] = EJSON.clone(ret[i]);
-    return ret;
+  // Clone arrays (and turn 'arguments' into an array).
+  if (_.isArray(v) || _.isArguments(v)) {
+    return _.map(v, EJSON.clone);
   }
   // handle general user-defined typed Objects if they have a clone method
   if (typeof v.clone === 'function') {

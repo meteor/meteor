@@ -500,8 +500,11 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
 
     _.each(['insert', 'update', 'remove'], function (method) {
       m[self._prefix + method] = function (/* ... */) {
+        // All the methods do their own validation, instead of using check().
+        check(arguments, [Match.Any]);
         try {
           if (this.isSimulation) {
+
             // In a client simulation, you can do any mutation (even with a
             // complex selector).
             self._collection[method].apply(
@@ -545,7 +548,11 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
         }
       };
     });
-    self._manager.methods(m);
+    // Minimongo on the server gets no stubs; instead, by default
+    // it wait()s until its result is ready, yielding.
+    // This matches the behavior of macromongo on the server better.
+    if (Meteor.isClient || self._manager === Meteor.default_server)
+      self._manager.methods(m);
   }
 };
 

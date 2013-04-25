@@ -287,106 +287,108 @@ Tinytest.add("livedata stub - this", function (test) {
 
 });
 
-Tinytest.add("livedata stub - methods", function (test) {
-  var stream = new Meteor._StubStream();
-  var conn = newConnection(stream);
+if (Meteor.isClient) {
+  Tinytest.add("livedata stub - methods", function (test) {
+    var stream = new Meteor._StubStream();
+    var conn = newConnection(stream);
 
-  startAndConnect(test, stream);
+    startAndConnect(test, stream);
 
-  var collName = Random.id();
-  var coll = new Meteor.Collection(collName, {manager: conn});
+    var collName = Random.id();
+    var coll = new Meteor.Collection(collName, {manager: conn});
 
-  // setup method
-  conn.methods({do_something: function (x) {
-    coll.insert({value: x});
-  }});
+    // setup method
+    conn.methods({do_something: function (x) {
+      coll.insert({value: x});
+    }});
 
-  // setup observers
-  var counts = {added: 0, removed: 0, changed: 0, moved: 0};
-  var handle = coll.find({}).observe(
-    { addedAt: function () { counts.added += 1; },
-      removedAt: function () { counts.removed += 1; },
-      changedAt: function () { counts.changed += 1; },
-      movedTo: function () { counts.moved += 1; }
+    // setup observers
+    var counts = {added: 0, removed: 0, changed: 0, moved: 0};
+    var handle = coll.find({}).observe(
+      { addedAt: function () { counts.added += 1; },
+        removedAt: function () { counts.removed += 1; },
+        changedAt: function () { counts.changed += 1; },
+        movedTo: function () { counts.moved += 1; }
+      });
+
+
+    // call method with results callback
+    var callback1Fired = false;
+    conn.call('do_something', 'friday!', function (err, res) {
+      test.isUndefined(err);
+      test.equal(res, '1234');
+      callback1Fired = true;
     });
+    test.isFalse(callback1Fired);
 
+    // observers saw the method run.
+    test.equal(counts, {added: 1, removed: 0, changed: 0, moved: 0});
 
-  // call method with results callback
-  var callback1Fired = false;
-  conn.call('do_something', 'friday!', function (err, res) {
-    test.isUndefined(err);
-    test.equal(res, '1234');
-    callback1Fired = true;
+    // get response from server
+    var message = JSON.parse(stream.sent.shift());
+    test.equal(message, {msg: 'method', method: 'do_something',
+                         params: ['friday!'], id:message.id});
+
+    test.equal(coll.find({}).count(), 1);
+    test.equal(coll.find({value: 'friday!'}).count(), 1);
+    var docId = coll.findOne({value: 'friday!'})._id;
+
+    // results does not yet result in callback, because data is not
+    // ready.
+    stream.receive({msg: 'result', id:message.id, result: "1234"});
+    test.isFalse(callback1Fired);
+
+    // result message doesn't affect data
+    test.equal(coll.find({}).count(), 1);
+    test.equal(coll.find({value: 'friday!'}).count(), 1);
+    test.equal(counts, {added: 1, removed: 0, changed: 0, moved: 0});
+
+    // data methods do not show up (not quiescent yet)
+    stream.receive({msg: 'added', collection: collName, id: Meteor.idStringify(docId),
+                    fields: {value: 'tuesday'}});
+    test.equal(coll.find({}).count(), 1);
+    test.equal(coll.find({value: 'friday!'}).count(), 1);
+    test.equal(counts, {added: 1, removed: 0, changed: 0, moved: 0});
+
+    // send another methods (unknown on client)
+    var callback2Fired = false;
+    conn.call('do_something_else', 'monday', function (err, res) {
+      callback2Fired = true;
+    });
+    test.isFalse(callback1Fired);
+    test.isFalse(callback2Fired);
+
+    // test we still send a method request to server
+    var message2 = JSON.parse(stream.sent.shift());
+    test.equal(message2, {msg: 'method', method: 'do_something_else',
+                          params: ['monday'], id: message2.id});
+
+    // get the first data satisfied message. changes are applied to database even
+    // though another method is outstanding, because the other method didn't have
+    // a stub. and its callback is called.
+    stream.receive({msg: 'updated', 'methods': [message.id]});
+    test.isTrue(callback1Fired);
+    test.isFalse(callback2Fired);
+
+    test.equal(coll.find({}).count(), 1);
+    test.equal(coll.find({value: 'tuesday'}).count(), 1);
+    test.equal(counts, {added: 1, removed: 0, changed: 1, moved: 0});
+
+    // second result
+    stream.receive({msg: 'result', id:message2.id, result:"bupkis"});
+    test.isFalse(callback2Fired);
+
+    // get second satisfied; no new changes are applied.
+    stream.receive({msg: 'updated', 'methods': [message2.id]});
+    test.isTrue(callback2Fired);
+
+    test.equal(coll.find({}).count(), 1);
+    test.equal(coll.find({value: 'tuesday', _id: docId}).count(), 1);
+    test.equal(counts, {added: 1, removed: 0, changed: 1, moved: 0});
+
+    handle.stop();
   });
-  test.isFalse(callback1Fired);
-
-  // observers saw the method run.
-  test.equal(counts, {added: 1, removed: 0, changed: 0, moved: 0});
-
-  // get response from server
-  var message = JSON.parse(stream.sent.shift());
-  test.equal(message, {msg: 'method', method: 'do_something',
-                       params: ['friday!'], id:message.id});
-
-  test.equal(coll.find({}).count(), 1);
-  test.equal(coll.find({value: 'friday!'}).count(), 1);
-  var docId = coll.findOne({value: 'friday!'})._id;
-
-  // results does not yet result in callback, because data is not
-  // ready.
-  stream.receive({msg: 'result', id:message.id, result: "1234"});
-  test.isFalse(callback1Fired);
-
-  // result message doesn't affect data
-  test.equal(coll.find({}).count(), 1);
-  test.equal(coll.find({value: 'friday!'}).count(), 1);
-  test.equal(counts, {added: 1, removed: 0, changed: 0, moved: 0});
-
-  // data methods do not show up (not quiescent yet)
-  stream.receive({msg: 'added', collection: collName, id: Meteor.idStringify(docId),
-                  fields: {value: 'tuesday'}});
-  test.equal(coll.find({}).count(), 1);
-  test.equal(coll.find({value: 'friday!'}).count(), 1);
-  test.equal(counts, {added: 1, removed: 0, changed: 0, moved: 0});
-
-  // send another methods (unknown on client)
-  var callback2Fired = false;
-  conn.call('do_something_else', 'monday', function (err, res) {
-    callback2Fired = true;
-  });
-  test.isFalse(callback1Fired);
-  test.isFalse(callback2Fired);
-
-  // test we still send a method request to server
-  var message2 = JSON.parse(stream.sent.shift());
-  test.equal(message2, {msg: 'method', method: 'do_something_else',
-                        params: ['monday'], id: message2.id});
-
-  // get the first data satisfied message. changes are applied to database even
-  // though another method is outstanding, because the other method didn't have
-  // a stub. and its callback is called.
-  stream.receive({msg: 'updated', 'methods': [message.id]});
-  test.isTrue(callback1Fired);
-  test.isFalse(callback2Fired);
-
-  test.equal(coll.find({}).count(), 1);
-  test.equal(coll.find({value: 'tuesday'}).count(), 1);
-  test.equal(counts, {added: 1, removed: 0, changed: 1, moved: 0});
-
-  // second result
-  stream.receive({msg: 'result', id:message2.id, result:"bupkis"});
-  test.isFalse(callback2Fired);
-
-  // get second satisfied; no new changes are applied.
-  stream.receive({msg: 'updated', 'methods': [message2.id]});
-  test.isTrue(callback2Fired);
-
-  test.equal(coll.find({}).count(), 1);
-  test.equal(coll.find({value: 'tuesday', _id: docId}).count(), 1);
-  test.equal(counts, {added: 1, removed: 0, changed: 1, moved: 0});
-
-  handle.stop();
-});
+}
 
 Tinytest.add("livedata stub - mutating method args", function (test) {
   var stream = new Meteor._StubStream();
@@ -428,69 +430,70 @@ var observeCursor = function (test, cursor) {
 };
 
 // method calls another method in simulation. see not sent.
-Tinytest.add("livedata stub - methods calling methods", function (test) {
-  var stream = new Meteor._StubStream();
-  var conn = newConnection(stream);
+if (Meteor.isClient) {
+  Tinytest.add("livedata stub - methods calling methods", function (test) {
+    var stream = new Meteor._StubStream();
+    var conn = newConnection(stream);
 
-  startAndConnect(test, stream);
+    startAndConnect(test, stream);
 
-  var coll_name = Random.id();
-  var coll = new Meteor.Collection(coll_name, {manager: conn});
+    var coll_name = Random.id();
+    var coll = new Meteor.Collection(coll_name, {manager: conn});
 
-  // setup methods
-  conn.methods({
-    do_something: function () {
-      conn.call('do_something_else');
-    },
-    do_something_else: function () {
-      coll.insert({a: 1});
-    }
+    // setup methods
+    conn.methods({
+      do_something: function () {
+        conn.call('do_something_else');
+      },
+      do_something_else: function () {
+        coll.insert({a: 1});
+      }
+    });
+
+    var o = observeCursor(test, coll.find());
+
+    // call method.
+    conn.call('do_something', _.identity);
+
+    // see we only send message for outer methods
+    var message = JSON.parse(stream.sent.shift());
+    test.equal(message, {msg: 'method', method: 'do_something',
+                         params: [], id:message.id});
+    test.length(stream.sent, 0);
+
+    // but inner method runs locally.
+    o.expectCallbacks({added: 1});
+    test.equal(coll.find().count(), 1);
+    var docId = coll.findOne()._id;
+    test.equal(coll.findOne(), {_id: docId, a: 1});
+
+    // we get the results
+    stream.receive({msg: 'result', id:message.id, result:"1234"});
+
+    // get data from the method. data from this doc does not show up yet, but data
+    // from another doc does.
+    stream.receive({msg: 'added', collection: coll_name, id: Meteor.idStringify(docId),
+                    fields: {value: 'tuesday'}});
+    o.expectCallbacks();
+    test.equal(coll.findOne(docId), {_id: docId, a: 1});
+    stream.receive({msg: 'added', collection: coll_name, id: 'monkey',
+                    fields: {value: 'bla'}});
+    o.expectCallbacks({added: 1});
+    test.equal(coll.findOne(docId), {_id: docId, a: 1});
+    var newDoc = coll.findOne({value: 'bla'});
+    test.isTrue(newDoc);
+    test.equal(newDoc, {_id: newDoc._id, value: 'bla'});
+
+    // get method satisfied. all data shows up. the 'a' field is reverted and
+    // 'value' field is set.
+    stream.receive({msg: 'updated', 'methods': [message.id]});
+    o.expectCallbacks({changed: 1});
+    test.equal(coll.findOne(docId), {_id: docId, value: 'tuesday'});
+    test.equal(coll.findOne(newDoc._id), {_id: newDoc._id, value: 'bla'});
+
+    o.stop();
   });
-
-  var o = observeCursor(test, coll.find());
-
-  // call method.
-  conn.call('do_something', _.identity);
-
-  // see we only send message for outer methods
-  var message = JSON.parse(stream.sent.shift());
-  test.equal(message, {msg: 'method', method: 'do_something',
-                       params: [], id:message.id});
-  test.length(stream.sent, 0);
-
-  // but inner method runs locally.
-  o.expectCallbacks({added: 1});
-  test.equal(coll.find().count(), 1);
-  var docId = coll.findOne()._id;
-  test.equal(coll.findOne(), {_id: docId, a: 1});
-
-  // we get the results
-  stream.receive({msg: 'result', id:message.id, result:"1234"});
-
-  // get data from the method. data from this doc does not show up yet, but data
-  // from another doc does.
-  stream.receive({msg: 'added', collection: coll_name, id: Meteor.idStringify(docId),
-                  fields: {value: 'tuesday'}});
-  o.expectCallbacks();
-  test.equal(coll.findOne(docId), {_id: docId, a: 1});
-  stream.receive({msg: 'added', collection: coll_name, id: 'monkey',
-                  fields: {value: 'bla'}});
-  o.expectCallbacks({added: 1});
-  test.equal(coll.findOne(docId), {_id: docId, a: 1});
-  var newDoc = coll.findOne({value: 'bla'});
-  test.isTrue(newDoc);
-  test.equal(newDoc, {_id: newDoc._id, value: 'bla'});
-
-  // get method satisfied. all data shows up. the 'a' field is reverted and
-  // 'value' field is set.
-  stream.receive({msg: 'updated', 'methods': [message.id]});
-  o.expectCallbacks({changed: 1});
-  test.equal(coll.findOne(docId), {_id: docId, value: 'tuesday'});
-  test.equal(coll.findOne(newDoc._id), {_id: newDoc._id, value: 'bla'});
-
-  o.stop();
-});
-
+}
 Tinytest.add("livedata stub - method call before connect", function (test) {
   var stream = new Meteor._StubStream;
   var conn = newConnection(stream);
@@ -640,179 +643,180 @@ Tinytest.add("livedata stub - reconnect", function (test) {
 });
 
 
-Tinytest.add("livedata stub - reconnect method which only got result", function (test) {
-  var stream = new Meteor._StubStream;
-  var conn = newConnection(stream);
-  startAndConnect(test, stream);
+if (Meteor.isClient) {
+  Tinytest.add("livedata stub - reconnect method which only got result", function (test) {
+    var stream = new Meteor._StubStream;
+    var conn = newConnection(stream);
+    startAndConnect(test, stream);
 
-  var collName = Random.id();
-  var coll = new Meteor.Collection(collName, {manager: conn});
-  var o = observeCursor(test, coll.find());
+    var collName = Random.id();
+    var coll = new Meteor.Collection(collName, {manager: conn});
+    var o = observeCursor(test, coll.find());
 
-  conn.methods({writeSomething: function () {
-    // stub write
-    coll.insert({foo: 'bar'});
-  }});
+    conn.methods({writeSomething: function () {
+      // stub write
+      coll.insert({foo: 'bar'});
+    }});
 
-  test.equal(coll.find({foo: 'bar'}).count(), 0);
+    test.equal(coll.find({foo: 'bar'}).count(), 0);
 
-  // Call a method. We'll get the result but not data-done before reconnect.
-  var callbackOutput = [];
-  var onResultReceivedOutput = [];
-  conn.apply('writeSomething', [],
-             {onResultReceived: function (err, result) {
-               onResultReceivedOutput.push(result);
-             }},
-             function (err, result) {
-               callbackOutput.push(result);
-             });
-  // Stub write is visible.
-  test.equal(coll.find({foo: 'bar'}).count(), 1);
-  var stubWrittenId = coll.findOne({foo: 'bar'})._id;
-  o.expectCallbacks({added: 1});
-  // Callback not called.
-  test.equal(callbackOutput, []);
-  test.equal(onResultReceivedOutput, []);
-  // Method sent.
-  var methodId = testGotMessage(
-    test, stream, {msg: 'method', method: 'writeSomething',
-                   params: [], id: '*'});
-  test.equal(stream.sent.length, 0);
+    // Call a method. We'll get the result but not data-done before reconnect.
+    var callbackOutput = [];
+    var onResultReceivedOutput = [];
+    conn.apply('writeSomething', [],
+               {onResultReceived: function (err, result) {
+                 onResultReceivedOutput.push(result);
+               }},
+               function (err, result) {
+                 callbackOutput.push(result);
+               });
+    // Stub write is visible.
+    test.equal(coll.find({foo: 'bar'}).count(), 1);
+    var stubWrittenId = coll.findOne({foo: 'bar'})._id;
+    o.expectCallbacks({added: 1});
+    // Callback not called.
+    test.equal(callbackOutput, []);
+    test.equal(onResultReceivedOutput, []);
+    // Method sent.
+    var methodId = testGotMessage(
+      test, stream, {msg: 'method', method: 'writeSomething',
+                     params: [], id: '*'});
+    test.equal(stream.sent.length, 0);
 
-  // Get some data.
-  stream.receive({msg: 'added', collection: collName,
-                  id: Meteor.idStringify(stubWrittenId), fields: {baz: 42}});
-  // It doesn't show up yet.
-  test.equal(coll.find().count(), 1);
-  test.equal(coll.findOne(stubWrittenId), {_id: stubWrittenId, foo: 'bar'});
-  o.expectCallbacks();
+    // Get some data.
+    stream.receive({msg: 'added', collection: collName,
+                    id: Meteor.idStringify(stubWrittenId), fields: {baz: 42}});
+    // It doesn't show up yet.
+    test.equal(coll.find().count(), 1);
+    test.equal(coll.findOne(stubWrittenId), {_id: stubWrittenId, foo: 'bar'});
+    o.expectCallbacks();
 
-  // Get the result.
-  stream.receive({msg: 'result', id: methodId, result: 'bla'});
-  // Data unaffected.
-  test.equal(coll.find().count(), 1);
-  test.equal(coll.findOne(stubWrittenId), {_id: stubWrittenId, foo: 'bar'});
-  o.expectCallbacks();
-  // Callback not called, but onResultReceived is.
-  test.equal(callbackOutput, []);
-  test.equal(onResultReceivedOutput, ['bla']);
+    // Get the result.
+    stream.receive({msg: 'result', id: methodId, result: 'bla'});
+    // Data unaffected.
+    test.equal(coll.find().count(), 1);
+    test.equal(coll.findOne(stubWrittenId), {_id: stubWrittenId, foo: 'bar'});
+    o.expectCallbacks();
+    // Callback not called, but onResultReceived is.
+    test.equal(callbackOutput, []);
+    test.equal(onResultReceivedOutput, ['bla']);
 
-  // Reset stream. Method does NOT get resent, because its result is already
-  // in. Reconnect quiescence happens as soon as 'connected' is received because
-  // there are no pending methods or subs in need of revival.
-  stream.reset();
-  testGotMessage(test, stream, makeConnectMessage(SESSION_ID));
-  // Still holding out hope for session resumption, so nothing updated yet.
-  test.equal(coll.find().count(), 1);
-  test.equal(coll.findOne(stubWrittenId), {_id: stubWrittenId, foo: 'bar'});
-  o.expectCallbacks();
-  test.equal(callbackOutput, []);
+    // Reset stream. Method does NOT get resent, because its result is already
+    // in. Reconnect quiescence happens as soon as 'connected' is received because
+    // there are no pending methods or subs in need of revival.
+    stream.reset();
+    testGotMessage(test, stream, makeConnectMessage(SESSION_ID));
+    // Still holding out hope for session resumption, so nothing updated yet.
+    test.equal(coll.find().count(), 1);
+    test.equal(coll.findOne(stubWrittenId), {_id: stubWrittenId, foo: 'bar'});
+    o.expectCallbacks();
+    test.equal(callbackOutput, []);
 
-  // Receive 'connected': time for reconnect quiescence! Data gets updated
-  // locally (ie, data is reset) and callback gets called.
-  stream.receive({msg: 'connected', session: SESSION_ID + 1});
-  test.equal(coll.find().count(), 0);
-  o.expectCallbacks({removed: 1});
-  test.equal(callbackOutput, ['bla']);
-  test.equal(onResultReceivedOutput, ['bla']);
-  stream.receive({msg: 'added', collection: collName,
-                  id: Meteor.idStringify(stubWrittenId), fields: {baz: 42}});
-  test.equal(coll.findOne(stubWrittenId), {_id: stubWrittenId, baz: 42});
-  o.expectCallbacks({added: 1});
-
-
+    // Receive 'connected': time for reconnect quiescence! Data gets updated
+    // locally (ie, data is reset) and callback gets called.
+    stream.receive({msg: 'connected', session: SESSION_ID + 1});
+    test.equal(coll.find().count(), 0);
+    o.expectCallbacks({removed: 1});
+    test.equal(callbackOutput, ['bla']);
+    test.equal(onResultReceivedOutput, ['bla']);
+    stream.receive({msg: 'added', collection: collName,
+                    id: Meteor.idStringify(stubWrittenId), fields: {baz: 42}});
+    test.equal(coll.findOne(stubWrittenId), {_id: stubWrittenId, baz: 42});
+    o.expectCallbacks({added: 1});
 
 
-  // Run method again. We're going to do the same thing this time, except we're
-  // also going to use an onReconnect to insert another method at reconnect
-  // time, which will delay reconnect quiescence.
-  conn.apply('writeSomething', [],
-             {onResultReceived: function (err, result) {
-               onResultReceivedOutput.push(result);
-             }},
-             function (err, result) {
-               callbackOutput.push(result);
-             });
-  // Stub write is visible.
-  test.equal(coll.find({foo: 'bar'}).count(), 1);
-  var stubWrittenId2 = coll.findOne({foo: 'bar'})._id;
-  o.expectCallbacks({added: 1});
-  // Callback not called.
-  test.equal(callbackOutput, ['bla']);
-  test.equal(onResultReceivedOutput, ['bla']);
-  // Method sent.
-  var methodId2 = testGotMessage(
-    test, stream, {msg: 'method', method: 'writeSomething',
-                   params: [], id: '*'});
-  test.equal(stream.sent.length, 0);
 
-  // Get some data.
-  stream.receive({msg: 'added', collection: collName,
-                  id: Meteor.idStringify(stubWrittenId2), fields: {baz: 42}});
-  // It doesn't show up yet.
-  test.equal(coll.find().count(), 2);
-  test.equal(coll.findOne(stubWrittenId2), {_id: stubWrittenId2, foo: 'bar'});
-  o.expectCallbacks();
 
-  // Get the result.
-  stream.receive({msg: 'result', id: methodId2, result: 'blab'});
-  // Data unaffected.
-  test.equal(coll.find().count(), 2);
-  test.equal(coll.findOne(stubWrittenId2), {_id: stubWrittenId2, foo: 'bar'});
-  o.expectCallbacks();
-  // Callback not called, but onResultReceived is.
-  test.equal(callbackOutput, ['bla']);
-  test.equal(onResultReceivedOutput, ['bla', 'blab']);
-  conn.onReconnect = function () {
-    conn.call('slowMethod', function (err, result) {
-      callbackOutput.push(result);
-    });
-  };
+    // Run method again. We're going to do the same thing this time, except we're
+    // also going to use an onReconnect to insert another method at reconnect
+    // time, which will delay reconnect quiescence.
+    conn.apply('writeSomething', [],
+               {onResultReceived: function (err, result) {
+                 onResultReceivedOutput.push(result);
+               }},
+               function (err, result) {
+                 callbackOutput.push(result);
+               });
+    // Stub write is visible.
+    test.equal(coll.find({foo: 'bar'}).count(), 1);
+    var stubWrittenId2 = coll.findOne({foo: 'bar'})._id;
+    o.expectCallbacks({added: 1});
+    // Callback not called.
+    test.equal(callbackOutput, ['bla']);
+    test.equal(onResultReceivedOutput, ['bla']);
+    // Method sent.
+    var methodId2 = testGotMessage(
+      test, stream, {msg: 'method', method: 'writeSomething',
+                     params: [], id: '*'});
+    test.equal(stream.sent.length, 0);
 
-  // Reset stream. Method does NOT get resent, because its result is already in,
-  // but slowMethod gets called via onReconnect. Reconnect quiescence is now
-  // blocking on slowMethod.
-  stream.reset();
-  testGotMessage(test, stream, makeConnectMessage(SESSION_ID + 1));
-  var slowMethodId = testGotMessage(
-    test, stream,
-    {msg: 'method', method: 'slowMethod', params: [], id: '*'});
-  // Still holding out hope for session resumption, so nothing updated yet.
-  test.equal(coll.find().count(), 2);
-  test.equal(coll.findOne(stubWrittenId2), {_id: stubWrittenId2, foo: 'bar'});
-  o.expectCallbacks();
-  test.equal(callbackOutput, ['bla']);
+    // Get some data.
+    stream.receive({msg: 'added', collection: collName,
+                    id: Meteor.idStringify(stubWrittenId2), fields: {baz: 42}});
+    // It doesn't show up yet.
+    test.equal(coll.find().count(), 2);
+    test.equal(coll.findOne(stubWrittenId2), {_id: stubWrittenId2, foo: 'bar'});
+    o.expectCallbacks();
 
-  // Receive 'connected'... but no reconnect quiescence yet due to slowMethod.
-  stream.receive({msg: 'connected', session: SESSION_ID + 2});
-  test.equal(coll.find().count(), 2);
-  test.equal(coll.findOne(stubWrittenId2), {_id: stubWrittenId2, foo: 'bar'});
-  o.expectCallbacks();
-  test.equal(callbackOutput, ['bla']);
+    // Get the result.
+    stream.receive({msg: 'result', id: methodId2, result: 'blab'});
+    // Data unaffected.
+    test.equal(coll.find().count(), 2);
+    test.equal(coll.findOne(stubWrittenId2), {_id: stubWrittenId2, foo: 'bar'});
+    o.expectCallbacks();
+    // Callback not called, but onResultReceived is.
+    test.equal(callbackOutput, ['bla']);
+    test.equal(onResultReceivedOutput, ['bla', 'blab']);
+    conn.onReconnect = function () {
+      conn.call('slowMethod', function (err, result) {
+        callbackOutput.push(result);
+      });
+    };
 
-  // Receive data matching our stub. It doesn't take effect yet.
-  stream.receive({msg: 'added', collection: collName,
-                  id: Meteor.idStringify(stubWrittenId2), fields: {foo: 'bar'}});
-  o.expectCallbacks();
+    // Reset stream. Method does NOT get resent, because its result is already in,
+    // but slowMethod gets called via onReconnect. Reconnect quiescence is now
+    // blocking on slowMethod.
+    stream.reset();
+    testGotMessage(test, stream, makeConnectMessage(SESSION_ID + 1));
+    var slowMethodId = testGotMessage(
+      test, stream,
+      {msg: 'method', method: 'slowMethod', params: [], id: '*'});
+    // Still holding out hope for session resumption, so nothing updated yet.
+    test.equal(coll.find().count(), 2);
+    test.equal(coll.findOne(stubWrittenId2), {_id: stubWrittenId2, foo: 'bar'});
+    o.expectCallbacks();
+    test.equal(callbackOutput, ['bla']);
 
-  // slowMethod is done writing, so we get full reconnect quiescence (but no
-  // slowMethod callback)... ie, a reset followed by applying the data we just
-  // got, as well as calling the callback from the method that half-finished
-  // before reset. The net effect is deleting doc 'stubWrittenId'.
-  stream.receive({msg: 'updated', methods: [slowMethodId]});
-  test.equal(coll.find().count(), 1);
-  test.equal(coll.findOne(stubWrittenId2), {_id: stubWrittenId2, foo: 'bar'});
-  o.expectCallbacks({removed: 1});
-  test.equal(callbackOutput, ['bla', 'blab']);
+    // Receive 'connected'... but no reconnect quiescence yet due to slowMethod.
+    stream.receive({msg: 'connected', session: SESSION_ID + 2});
+    test.equal(coll.find().count(), 2);
+    test.equal(coll.findOne(stubWrittenId2), {_id: stubWrittenId2, foo: 'bar'});
+    o.expectCallbacks();
+    test.equal(callbackOutput, ['bla']);
 
-  // slowMethod returns a value now.
-  stream.receive({msg: 'result', id: slowMethodId, result: 'slow'});
-  o.expectCallbacks();
-  test.equal(callbackOutput, ['bla', 'blab', 'slow']);
+    // Receive data matching our stub. It doesn't take effect yet.
+    stream.receive({msg: 'added', collection: collName,
+                    id: Meteor.idStringify(stubWrittenId2), fields: {foo: 'bar'}});
+    o.expectCallbacks();
 
-  o.stop();
-});
+    // slowMethod is done writing, so we get full reconnect quiescence (but no
+    // slowMethod callback)... ie, a reset followed by applying the data we just
+    // got, as well as calling the callback from the method that half-finished
+    // before reset. The net effect is deleting doc 'stubWrittenId'.
+    stream.receive({msg: 'updated', methods: [slowMethodId]});
+    test.equal(coll.find().count(), 1);
+    test.equal(coll.findOne(stubWrittenId2), {_id: stubWrittenId2, foo: 'bar'});
+    o.expectCallbacks({removed: 1});
+    test.equal(callbackOutput, ['bla', 'blab']);
 
+    // slowMethod returns a value now.
+    stream.receive({msg: 'result', id: slowMethodId, result: 'slow'});
+    o.expectCallbacks();
+    test.equal(callbackOutput, ['bla', 'blab', 'slow']);
+
+    o.stop();
+  });
+}
 Tinytest.add("livedata stub - reconnect method which only got data", function (test) {
   var stream = new Meteor._StubStream;
   var conn = newConnection(stream);
@@ -898,156 +902,158 @@ Tinytest.add("livedata stub - reconnect method which only got data", function (t
 
   o.stop();
 });
+if (Meteor.isClient) {
+  Tinytest.add("livedata stub - multiple stubs same doc", function (test) {
+    var stream = new Meteor._StubStream;
+    var conn = newConnection(stream);
+    startAndConnect(test, stream);
 
-Tinytest.add("livedata stub - multiple stubs same doc", function (test) {
-  var stream = new Meteor._StubStream;
-  var conn = newConnection(stream);
-  startAndConnect(test, stream);
+    var collName = Random.id();
+    var coll = new Meteor.Collection(collName, {manager: conn});
+    var o = observeCursor(test, coll.find());
 
-  var collName = Random.id();
-  var coll = new Meteor.Collection(collName, {manager: conn});
-  var o = observeCursor(test, coll.find());
+    conn.methods({
+      insertSomething: function () {
+        // stub write
+        coll.insert({foo: 'bar'});
+      },
+      updateIt: function (id) {
+        coll.update(id, {$set: {baz: 42}});
+      }
+    });
 
-  conn.methods({
-    insertSomething: function () {
-      // stub write
-      coll.insert({foo: 'bar'});
-    },
-    updateIt: function (id) {
-      coll.update(id, {$set: {baz: 42}});
-    }
+    test.equal(coll.find().count(), 0);
+
+    // Call the insert method.
+    conn.call('insertSomething', _.identity);
+    // Stub write is visible.
+    test.equal(coll.find({foo: 'bar'}).count(), 1);
+    var stubWrittenId = coll.findOne({foo: 'bar'})._id;
+    o.expectCallbacks({added: 1});
+    // Method sent.
+    var insertMethodId = testGotMessage(
+      test, stream, {msg: 'method', method: 'insertSomething',
+                     params: [], id: '*'});
+    test.equal(stream.sent.length, 0);
+
+    // Call update method.
+    conn.call('updateIt', stubWrittenId, _.identity);
+    // This stub write is visible too.
+    test.equal(coll.find().count(), 1);
+    test.equal(coll.findOne(stubWrittenId),
+               {_id: stubWrittenId, foo: 'bar', baz: 42});
+    o.expectCallbacks({changed: 1});
+    // Method sent.
+    var updateMethodId = testGotMessage(
+      test, stream, {msg: 'method', method: 'updateIt',
+                     params: [stubWrittenId], id: '*'});
+    test.equal(stream.sent.length, 0);
+
+    // Get some data... slightly different than what we wrote.
+    stream.receive({msg: 'added', collection: collName,
+                    id: Meteor.idStringify(stubWrittenId), fields: {foo: 'barb', other: 'field',
+                                                                    other2: 'bla'}});
+    // It doesn't show up yet.
+    test.equal(coll.find().count(), 1);
+    test.equal(coll.findOne(stubWrittenId),
+               {_id: stubWrittenId, foo: 'bar', baz: 42});
+    o.expectCallbacks();
+
+    // And get the first method-done. Still no updates to minimongo: we can't
+    // quiesce the doc until the second method is done.
+    stream.receive({msg: 'updated', methods: [insertMethodId]});
+    test.equal(coll.find().count(), 1);
+    test.equal(coll.findOne(stubWrittenId),
+               {_id: stubWrittenId, foo: 'bar', baz: 42});
+    o.expectCallbacks();
+
+    // More data. Not quite what we wrote. Also ignored for now.
+    stream.receive({msg: 'changed', collection: collName,
+                    id: Meteor.idStringify(stubWrittenId), fields: {baz: 43}, cleared: ['other']});
+    test.equal(coll.find().count(), 1);
+    test.equal(coll.findOne(stubWrittenId),
+               {_id: stubWrittenId, foo: 'bar', baz: 42});
+    o.expectCallbacks();
+
+    // Second data-ready. Now everything takes effect!
+    stream.receive({msg: 'updated', methods: [updateMethodId]});
+    test.equal(coll.find().count(), 1);
+    test.equal(coll.findOne(stubWrittenId),
+               {_id: stubWrittenId, foo: 'barb', other2: 'bla',
+                baz: 43});
+    o.expectCallbacks({changed: 1});
+
+    o.stop();
   });
+}
 
-  test.equal(coll.find().count(), 0);
+if (Meteor.isClient) {
+  Tinytest.add("livedata stub - unsent methods don't block quiescence", function (test) {
+    // This test is for https://github.com/meteor/meteor/issues/555
 
-  // Call the insert method.
-  conn.call('insertSomething', _.identity);
-  // Stub write is visible.
-  test.equal(coll.find({foo: 'bar'}).count(), 1);
-  var stubWrittenId = coll.findOne({foo: 'bar'})._id;
-  o.expectCallbacks({added: 1});
-  // Method sent.
-  var insertMethodId = testGotMessage(
-    test, stream, {msg: 'method', method: 'insertSomething',
-                   params: [], id: '*'});
-  test.equal(stream.sent.length, 0);
+    var stream = new Meteor._StubStream;
+    var conn = newConnection(stream);
+    startAndConnect(test, stream);
 
-  // Call update method.
-  conn.call('updateIt', stubWrittenId, _.identity);
-  // This stub write is visible too.
-  test.equal(coll.find().count(), 1);
-  test.equal(coll.findOne(stubWrittenId),
-             {_id: stubWrittenId, foo: 'bar', baz: 42});
-  o.expectCallbacks({changed: 1});
-  // Method sent.
-  var updateMethodId = testGotMessage(
-    test, stream, {msg: 'method', method: 'updateIt',
-                   params: [stubWrittenId], id: '*'});
-  test.equal(stream.sent.length, 0);
+    var collName = Random.id();
+    var coll = new Meteor.Collection(collName, {manager: conn});
 
-  // Get some data... slightly different than what we wrote.
-  stream.receive({msg: 'added', collection: collName,
-                  id: Meteor.idStringify(stubWrittenId), fields: {foo: 'barb', other: 'field',
-                                           other2: 'bla'}});
-  // It doesn't show up yet.
-  test.equal(coll.find().count(), 1);
-  test.equal(coll.findOne(stubWrittenId),
-             {_id: stubWrittenId, foo: 'bar', baz: 42});
-  o.expectCallbacks();
+    conn.methods({
+      insertSomething: function () {
+        // stub write
+        coll.insert({foo: 'bar'});
+      }
+    });
 
-  // And get the first method-done. Still no updates to minimongo: we can't
-  // quiesce the doc until the second method is done.
-  stream.receive({msg: 'updated', methods: [insertMethodId]});
-  test.equal(coll.find().count(), 1);
-  test.equal(coll.findOne(stubWrittenId),
-             {_id: stubWrittenId, foo: 'bar', baz: 42});
-  o.expectCallbacks();
+    test.equal(coll.find().count(), 0);
 
-  // More data. Not quite what we wrote. Also ignored for now.
-  stream.receive({msg: 'changed', collection: collName,
-                  id: Meteor.idStringify(stubWrittenId), fields: {baz: 43}, cleared: ['other']});
-  test.equal(coll.find().count(), 1);
-  test.equal(coll.findOne(stubWrittenId),
-             {_id: stubWrittenId, foo: 'bar', baz: 42});
-  o.expectCallbacks();
+    // Call a random method (no-op)
+    conn.call('no-op', _.identity);
+    // Call a wait method
+    conn.apply('no-op', [], {wait: true}, _.identity);
+    // Call a method with a stub that writes.
+    conn.call('insertSomething', _.identity);
 
-  // Second data-ready. Now everything takes effect!
-  stream.receive({msg: 'updated', methods: [updateMethodId]});
-  test.equal(coll.find().count(), 1);
-  test.equal(coll.findOne(stubWrittenId),
-             {_id: stubWrittenId, foo: 'barb', other2: 'bla',
-              baz: 43});
-  o.expectCallbacks({changed: 1});
 
-  o.stop();
-});
+    // Stub write is visible.
+    test.equal(coll.find({foo: 'bar'}).count(), 1);
+    var stubWrittenId = coll.findOne({foo: 'bar'})._id;
 
-Tinytest.add("livedata stub - unsent methods don't block quiescence", function (test) {
-  // This test is for https://github.com/meteor/meteor/issues/555
+    // first method sent
+    var firstMethodId = testGotMessage(
+      test, stream, {msg: 'method', method: 'no-op',
+                     params: [], id: '*'});
+    test.equal(stream.sent.length, 0);
 
-  var stream = new Meteor._StubStream;
-  var conn = newConnection(stream);
-  startAndConnect(test, stream);
+    // ack the first method
+    stream.receive({msg: 'updated', methods: [firstMethodId]});
+    stream.receive({msg: 'result', id: firstMethodId});
 
-  var collName = Random.id();
-  var coll = new Meteor.Collection(collName, {manager: conn});
+    // Wait method sent.
+    var waitMethodId = testGotMessage(
+      test, stream, {msg: 'method', method: 'no-op',
+                     params: [], id: '*'});
+    test.equal(stream.sent.length, 0);
 
-  conn.methods({
-    insertSomething: function () {
-      // stub write
-      coll.insert({foo: 'bar'});
-    }
+    // ack the wait method
+    stream.receive({msg: 'updated', methods: [waitMethodId]});
+    stream.receive({msg: 'result', id: waitMethodId});
+
+    // insert method sent.
+    var insertMethodId = testGotMessage(
+      test, stream, {msg: 'method', method: 'insertSomething',
+                     params: [], id: '*'});
+    test.equal(stream.sent.length, 0);
+
+    // ack the insert method
+    stream.receive({msg: 'updated', methods: [insertMethodId]});
+    stream.receive({msg: 'result', id: insertMethodId});
+
+    // simulation reverted.
+    test.equal(coll.find({foo: 'bar'}).count(), 0);
+
   });
-
-  test.equal(coll.find().count(), 0);
-
-  // Call a random method (no-op)
-  conn.call('no-op', _.identity);
-  // Call a wait method
-  conn.apply('no-op', [], {wait: true}, _.identity);
-  // Call a method with a stub that writes.
-  conn.call('insertSomething', _.identity);
-
-
-  // Stub write is visible.
-  test.equal(coll.find({foo: 'bar'}).count(), 1);
-  var stubWrittenId = coll.findOne({foo: 'bar'})._id;
-
-  // first method sent
-  var firstMethodId = testGotMessage(
-    test, stream, {msg: 'method', method: 'no-op',
-                   params: [], id: '*'});
-  test.equal(stream.sent.length, 0);
-
-  // ack the first method
-  stream.receive({msg: 'updated', methods: [firstMethodId]});
-  stream.receive({msg: 'result', id: firstMethodId});
-
-  // Wait method sent.
-  var waitMethodId = testGotMessage(
-    test, stream, {msg: 'method', method: 'no-op',
-                   params: [], id: '*'});
-  test.equal(stream.sent.length, 0);
-
-  // ack the wait method
-  stream.receive({msg: 'updated', methods: [waitMethodId]});
-  stream.receive({msg: 'result', id: waitMethodId});
-
-  // insert method sent.
-  var insertMethodId = testGotMessage(
-    test, stream, {msg: 'method', method: 'insertSomething',
-                   params: [], id: '*'});
-  test.equal(stream.sent.length, 0);
-
-  // ack the insert method
-  stream.receive({msg: 'updated', methods: [insertMethodId]});
-  stream.receive({msg: 'result', id: insertMethodId});
-
-  // simulation reverted.
-  test.equal(coll.find({foo: 'bar'}).count(), 0);
-
-});
-
+}
 Tinytest.add("livedata stub - reactive resub", function (test) {
   var stream = new Meteor._StubStream();
   var conn = newConnection(stream);
@@ -1282,10 +1288,17 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
   ]);
 });
 
+var getSelfConnectionUrl = function () {
+  if (Meteor.isClient) {
+    return "/";
+  } else {
+    return Meteor.absoluteUrl();
+  }
+};
 
 Tinytest.addAsync("livedata connection - version negotiation requires renegotiating",
                   function (test, onComplete) {
-  var connection = new Meteor._LivedataConnection(Meteor.absoluteUrl(), {
+  var connection = new Meteor._LivedataConnection(getSelfConnectionUrl(), {
     reloadWithOutstanding: true,
     supportedDDPVersions: ["garbled", Meteor._SUPPORTED_DDP_VERSIONS[0]],
     onConnectionFailure: function () { test.fail(); onComplete(); },
@@ -1299,7 +1312,7 @@ Tinytest.addAsync("livedata connection - version negotiation requires renegotiat
 
 Tinytest.addAsync("livedata connection - version negotiation error",
                   function (test, onComplete) {
-  var connection = new Meteor._LivedataConnection(Meteor.absoluteUrl(), {
+  var connection = new Meteor._LivedataConnection(getSelfConnectionUrl(), {
     reloadWithOutstanding: true,
     supportedDDPVersions: ["garbled", "more garbled"],
     onConnectionFailure: function () {
@@ -1507,43 +1520,44 @@ Tinytest.add("livedata stub - subscribe errors", function (test) {
   test.isFalse(onReadyFired);
 });
 
-Tinytest.add("livedata stub - stubs before connected", function (test) {
-  var stream = new Meteor._StubStream();
-  var conn = newConnection(stream);
+if (Meteor.isClient) {
+  Tinytest.add("livedata stub - stubs before connected", function (test) {
+    var stream = new Meteor._StubStream();
+    var conn = newConnection(stream);
 
-  var collName = Random.id();
-  var coll = new Meteor.Collection(collName, {manager: conn});
+    var collName = Random.id();
+    var coll = new Meteor.Collection(collName, {manager: conn});
 
-  // Start and send "connect", but DON'T get 'connected' quite yet.
-  stream.reset(); // initial connection start.
+    // Start and send "connect", but DON'T get 'connected' quite yet.
+    stream.reset(); // initial connection start.
 
-  testGotMessage(test, stream, makeConnectMessage());
-  test.length(stream.sent, 0);
+    testGotMessage(test, stream, makeConnectMessage());
+    test.length(stream.sent, 0);
 
-  // Insert a document. The stub updates "conn" directly.
-  coll.insert({_id: "foo", bar: 42}, _.identity);
-  test.equal(coll.find().count(), 1);
-  test.equal(coll.findOne(), {_id: "foo", bar: 42});
-  // It also sends the method message.
-  var methodMessage = JSON.parse(stream.sent.shift());
-  test.equal(methodMessage, {msg: 'method', method: '/' + collName + '/insert',
-                             params: [{_id: "foo", bar: 42}],
-                             id: methodMessage.id});
-  test.length(stream.sent, 0);
+    // Insert a document. The stub updates "conn" directly.
+    coll.insert({_id: "foo", bar: 42}, _.identity);
+    test.equal(coll.find().count(), 1);
+    test.equal(coll.findOne(), {_id: "foo", bar: 42});
+    // It also sends the method message.
+    var methodMessage = JSON.parse(stream.sent.shift());
+    test.equal(methodMessage, {msg: 'method', method: '/' + collName + '/insert',
+                               params: [{_id: "foo", bar: 42}],
+                               id: methodMessage.id});
+    test.length(stream.sent, 0);
 
-  // Now receive a connected message. This should not clear the
-  // _documentsWrittenByStub state!
-  stream.receive({msg: 'connected', session: SESSION_ID});
-  test.length(stream.sent, 0);
-  test.equal(coll.find().count(), 1);
+    // Now receive a connected message. This should not clear the
+    // _documentsWrittenByStub state!
+    stream.receive({msg: 'connected', session: SESSION_ID});
+    test.length(stream.sent, 0);
+    test.equal(coll.find().count(), 1);
 
-  // Now receive the "updated" message for the method. This should revert the
-  // insert.
-  stream.receive({msg: 'updated', methods: [methodMessage.id]});
-  test.length(stream.sent, 0);
-  test.equal(coll.find().count(), 0);
-});
-
+    // Now receive the "updated" message for the method. This should revert the
+    // insert.
+    stream.receive({msg: 'updated', methods: [methodMessage.id]});
+    test.length(stream.sent, 0);
+    test.equal(coll.find().count(), 0);
+  });
+}
 // XXX also test:
 // - reconnect, with session resume.
 // - restart on update flag

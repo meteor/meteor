@@ -1,3 +1,5 @@
-=> Meteor 0.6.1 released: Fixes "Corrupted .npm directory" error.
+=> Meteor 0.6.2.1 released: Unbreak 'Sign in with GitHub' by sending a
+   user agent string on API requests.
+
    This is being downloaded in the background. Update your project
-   to Meteor 0.6.1 by running 'meteor update'.
+   to Meteor 0.6.2.1 by running 'meteor update'.

@@ -12,6 +12,7 @@ var apps = new Meteor.Collection('madewith_apps', {manager: server});
 
 server.methods({
   vote: function (hostname) {
+    // This is a stub, so it doesn't need to call check.
     apps.update({name: hostname}, {$inc: {vote_count: 1}});
   }
 });

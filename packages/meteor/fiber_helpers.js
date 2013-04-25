@@ -78,14 +78,24 @@ _.extend(Meteor._SynchronousQueue.prototype, {
     self._scheduleRun();
     // No need to block.
   },
-  taskRunning: function () {
+
+  flush: function () {
     var self = this;
-    return self._taskRunning;
+    self.runTask(function () {});
   },
 
   safeToRunTask: function () {
     var self = this;
     return Fiber.current && self._currentTaskFiber !== Fiber.current;
+  },
+
+  drain: function () {
+    var self = this;
+    if (!self.safeToRunTask())
+      return;
+    while (!_.isEmpty(self._taskHandles)) {
+      self.flush();
+    }
   },
 
   _scheduleRun: function () {
