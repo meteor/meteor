@@ -7,7 +7,8 @@
       "dependencies": {
         "mimelib-noiconv": {
           "version": "0.1.9",
-          "from": "mimelib-noiconv@0.1.9"
+          "from": "mimelib-noiconv@*",
+          "resolved": "https://registry.npmjs.org/mimelib-noiconv/-/mimelib-noiconv-0.1.9.tgz"
         }
       }
     },
@@ -18,7 +19,8 @@
       "dependencies": {
         "rai": {
           "version": "0.1.7",
-          "from": "rai@0.1.7"
+          "from": "rai@*",
+          "resolved": "https://registry.npmjs.org/rai/-/rai-0.1.7.tgz"
         },
         "xoauth2": {
           "version": "0.1.6",
@@ -29,7 +31,8 @@
     },
     "stream-buffers": {
       "version": "0.2.3",
-      "from": "stream-buffers@0.2.3"
+      "from": "stream-buffers@0.2.3",
+      "resolved": "https://registry.npmjs.org/stream-buffers/-/stream-buffers-0.2.3.tgz"
     }
   }
 }
