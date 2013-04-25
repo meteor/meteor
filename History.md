@@ -1,6 +1,9 @@
 
 ## vNEXT
 
+* Files in the 'client/compatibility/' subdirectory of a Meteor app do
+  not get wrapped in a new variable scope.
+
 * With `autopublish` on, publish many useful fields on `Meteor.users`.
 
 * When using the `http` package on the server synchronously, errors
