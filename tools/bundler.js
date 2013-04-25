@@ -345,10 +345,11 @@ var Bundle = function () {
             // scope (eg, file-level vars are file-scoped). On the server, this
             // is done in server/server.js to inject the Npm symbol.
             //
-            // Some client-side Javascript libraries define globals with `var foo =` or
-            // `function bar()` which only work if loaded directly from a script tag. If
-            // `options.compatibility` is set, don't wrap in a closure to enable using
-            // such libraries.
+            // Some client-side Javascript libraries define globals
+            // with `var foo =` or `function bar()` which only work if
+            // loaded directly from a script tag. If
+            // `options.compatibility` is set, don't wrap in a closure
+            // to enable using such libraries.
             //
             // The ".call(this)" allows you to do a top-level "this.foo = "
             // to define global variables when using "use strict"
