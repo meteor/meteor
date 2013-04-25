@@ -12,6 +12,10 @@
 * Cursor transform functions on the server no longer are required to return
   objects with correct `_id` fields.  #974
 
+* Upgrade CoffeeScript from 1.5.0 to 1.6.2.  #972
+
+Patch contributed by GitHub user awwx.
+
 ## v0.6.2.1
 
 * When authenticating with GitHub, include a user agent string. This
