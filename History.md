@@ -14,7 +14,13 @@
 
 * Upgrade CoffeeScript from 1.5.0 to 1.6.2.  #972
 
-Patch contributed by GitHub user awwx.
+* The `localstorage-polyfill` smart package has been replaced by a
+  `localstorage` package, which defines a `Meteor._localStorage` API instead of
+  trying to replace the DOM `window.localStorage` facility. (Now, apps can use
+  the existence of `window.localStorage` to detect if the full localStorage API
+  is supported.)
+
+Patches contributed by GitHub user awwx.
 
 ## v0.6.2.1
 
