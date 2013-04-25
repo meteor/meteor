@@ -64,8 +64,8 @@ var getTokens = function (query) {
         grant_type: 'authorization_code'
       }});
   } catch (err) {
-    throw new Error("Failed to complete OAuth handshake with Google. " +
-                    err + (err.response ? ": " + err.response.content : ""));
+    console.error("Error completing OAuth handshake with Google:");
+    throw err;
   }
 
   if (response.data.error) { // if the http response was a json object with an error attribute
@@ -85,7 +85,7 @@ var getIdentity = function (accessToken) {
       "https://www.googleapis.com/oauth2/v1/userinfo",
       {params: {access_token: accessToken}}).data;
   } catch (err) {
-    throw new Error("Failed to fetch identity from Google. " +
-                    err + (err.response ? ": " + err.response.content : ""));
+    console.log("Error fetching identity from Google: ");
+    throw err;
   }
 };

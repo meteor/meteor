@@ -124,8 +124,8 @@ OAuth1Binding.prototype._call = function(method, url, headers, params) {
       }
     });
   } catch (err) {
-    throw new Error("Failed to send OAuth1 http request to " + url + ". " +
-                    err + (err.response ? ": " + err.response.content : ""));
+    console.error("Error sending OAuth1 request to " + url + ":");
+    throw err;
   }
 };
 

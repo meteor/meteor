@@ -49,8 +49,8 @@ var getAccessToken = function (query) {
         }
       });
   } catch (err) {
-    throw new Error("Failed to complete OAuth handshake with GitHub. " +
-                    err + (err.response ? ": " + err.response.content : ""));
+    console.error("Error completing OAuth handshake with Github:");
+    throw err;
   }
   if (response.data.error) { // if the http response was a json object with an error attribute
     throw new Error("Failed to complete OAuth handshake with GitHub. " + response.data.error);
@@ -67,7 +67,7 @@ var getIdentity = function (accessToken) {
         params: {access_token: accessToken}
       }).data;
   } catch (err) {
-    throw new Error("Failed to fetch identity from GitHub. " +
-                    err + (err.response ? ": " + err.response.content : ""));
+    console.error("Error fetching identity from GitHub:");
+    throw err;
   }
 };

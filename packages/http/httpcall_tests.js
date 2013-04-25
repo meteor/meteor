@@ -95,10 +95,20 @@ testAsyncMulti("httpcall - errors", [
     // Server serves 500
     error500Callback = function(error, result) {
       test.isTrue(error);
+      test.isTrue(error.message.indexOf("500") !== -1); // message has statusCode
+      test.isTrue(error.message.indexOf(
+        error.response.content.substring(0, 10)) !== -1); // message has part of content
+
       test.isTrue(result);
       test.isTrue(error.response);
       test.equal(result, error.response);
       test.equal(error.response.statusCode, 500);
+
+      // in test_responder.js we make a very long response body, to make sure
+      // that we truncate messages. first of all, make sure we didn't make that
+      // message too short, so that we can be sure we're verifying that we truncate.
+      test.isTrue(error.response.content.length > 160);
+      test.isTrue(error.message.length < 160); // make sure we truncate.
     };
     Meteor.http.call("GET", url_prefix()+"/fail", expect(error500Callback));
 

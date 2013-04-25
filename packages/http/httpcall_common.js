@@ -1,6 +1,18 @@
 
 Meteor.http = Meteor.http || {};
 
+Meteor.http._makeErrorByStatus = function(statusCode, content) {
+  var truncate = function(str, length) {
+    return str.length > length ? str.slice(0, length) + '...' : str;
+  };
+
+  var message = "failed [" + statusCode + "]";
+  if (content)
+    message += " " + truncate(content, 140);
+
+  return new Error(message);
+};
+
 Meteor.http._encodeParams = function(params) {
   var buf = [];
   _.each(params, function(value, key) {
