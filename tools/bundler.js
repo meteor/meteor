@@ -189,7 +189,7 @@ _.extend(PackageBundlingInfo.prototype, {
   },
 
   // opt {Object}
-  //   - compatibility {Boolean} In case this is a JS file, don't wrap in a closure.
+  //   - raw {Boolean} In case this is a JS file, don't wrap in a closure.
   add_file: function (rel_path, where, opt) {
     var self = this;
     opt = opt || {};
@@ -307,7 +307,7 @@ var Bundle = function () {
      * data: the data to send. overrides source_file if present. you
      * must still set path (except for "head" and "body".)
      *
-     * compatibility: (only for js files) when set, don't wrap code in
+     * raw: (only for js files) when set, don't wrap code in
      * a closure.  used for client-side javascript libraries that use
      * the `function foo()` or `var foo =` syntax to define globals.
      */
@@ -348,14 +348,14 @@ var Bundle = function () {
             // Some client-side Javascript libraries define globals
             // with `var foo =` or `function bar()` which only work if
             // loaded directly from a script tag. If
-            // `options.compatibility` is set, don't wrap in a closure
+            // `options.raw` is set, don't wrap in a closure
             // to enable using such libraries.
             //
             // The ".call(this)" allows you to do a top-level "this.foo = "
             // to define global variables when using "use strict"
             // (http://es5.github.io/#x15.3.4.4); this is the only way to do
             // it in CoffeeScript.
-            if (w === "client" && !options.compatibility) {
+            if (w === "client" && !options.raw) {
               wrapped = Buffer.concat([
                 new Buffer("(function(){ "),
                 data,

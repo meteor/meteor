@@ -12,7 +12,7 @@ Package.register_extension(
       path: serve_path,
       source_file: source_path,
       where: where,
-      compatibility: opt.compatibility
+      raw: opt.raw
     });
   }
 );
