@@ -1574,9 +1574,9 @@ _.extend(Package.prototype, {
     var mainJson =
       JSON.parse(fs.readFileSync(path.join(dir, 'unipackage.json')));
 
-    if (mainJson.version !== "1")
-      throw new Error("Unsupported unipackage version: " +
-                      JSON.stringify(mainJson.version));
+    if (mainJson.format !== "unipackage-1")
+      throw new Error("Unsupported unipackage format: " +
+                      JSON.stringify(mainJson.format));
 
     var buildInfoPath = path.join(dir, 'buildinfo.json');
     var buildInfoJson = fs.existsSync(buildInfoPath) ?
@@ -1662,9 +1662,9 @@ _.extend(Package.prototype, {
         fs.readFileSync(path.join(dir, sliceMeta.path)));
       var sliceBasePath = path.dirname(path.join(dir, sliceMeta.path));
 
-      if (sliceJson.version !== "1")
-        throw new Error("Unsupported unipackage slice version: " +
-                        JSON.stringify(sliceJson.version));
+      if (sliceJson.format!== "unipackage-slice-1")
+        throw new Error("Unsupported unipackage slice format: " +
+                        JSON.stringify(sliceJson.format));
 
       var nodeModulesPath = null;
       if (sliceJson.node_modules) {
@@ -1748,7 +1748,7 @@ _.extend(Package.prototype, {
     try {
 
       var mainJson = {
-        version: "1",
+        format: "unipackage-1",
         summary: self.metadata.summary,
         internal: self.metadata.internal,
         slices: [],
@@ -1797,7 +1797,7 @@ _.extend(Package.prototype, {
 
         // Construct slice metadata
         var sliceJson = {
-          version: "1",
+          format: "unipackage-slice-1",
           exports: slice.exports,
           uses: _.map(slice.uses, function (u) {
             var specParts = u.spec.split('.');

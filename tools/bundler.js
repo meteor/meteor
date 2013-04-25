@@ -2,7 +2,7 @@
 //
 // /star.json
 //
-//  - version: "1" for this format
+//  - format: "site-archive-1" for this version
 //
 //  - builtBy: human readable banner (eg, "Meteor 0.6.0")
 //
@@ -53,7 +53,7 @@
 //
 // /program.json
 //
-//  - version: "1" for this format
+//  - format: "browser-program-1" for this version
 //
 //  - page: path to the template for the HTML to serve when a browser
 //    loads a page that is part of the application. In the file
@@ -708,7 +708,7 @@ _.extend(ClientTarget.prototype, {
 
     // Control file
     builder.writeJson('program.json', {
-      version: "1",
+      format: "browser-program-1",
       manifest: manifest,
       page: 'app.html',
 
@@ -1046,7 +1046,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
 
   try {
     var json = {
-      version: "1",
+      format: "site-archive-1",
       builtBy: options.builtBy,
       programs: []
     };
