@@ -45,12 +45,12 @@ var load = function (options) {
   };
 
   // Load the code
-  var plugin = bundler.buildPlugin({
+  var image = bundler.buildJsImage({
     name: "load",
     library: options.library,
     use: options.packages || []
-  });
-  var ret = plugin.load(env);
+  }).image;
+  var ret = image.load(env);
 
   // Run any user startup hooks.
   _.each(env.__meteor_bootstrap__.startup_hooks, function (x) { x(); });

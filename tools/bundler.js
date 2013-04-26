@@ -139,11 +139,17 @@
 //
 // /program.json:
 //  - format: "javascript-image-1" for this version
+//  - arch: the architecture that this build requires
 //  - load: array with each item describing a JS file to load, in load order:
 //    - path: path of file, relative to program.json
 //    - node_modules: if Npm.require is called from this file, this is
 //      the path (relative to program.json) of the directory that should
 //      be search for npm modules
+//
+// It's a little odd that architecture is stored twice (in both the
+// top-level star control file and in the plugin control file) but
+// it's fine and it's probably actually cleaner, because it means that
+// the plugin can be treated as a self-contained unit.
 //
 // Note that while the spec for "native.*" is going to change to
 // represent an arbitrary POSIX (or Windows) process rather than
@@ -736,146 +742,17 @@ _.extend(ClientTarget.prototype, {
 });
 
 
-//////////////////// ServerTarget ////////////////////
+//////////////////// JsImageTarget and JsImage  ////////////////////
 
-// options:
-// - clientTarget: the ClientTarget to serve up over HTTP as our client
-// - releaseStamp: the Meteor release name (for retrieval at runtime)
-var ServerTarget = function (options) {
-  var self = this;
-  Target.apply(this, arguments);
-
-  self.clientTarget = options.clientTarget;
-  self.releaseStamp = options.releaseStamp;
-
-  if (! archinfo.matches(self.arch, "native"))
-    throw new Error("ServerTarget targeting something that isn't a server?");
-};
-
-inherits(ServerTarget, Target);
-
-// Code factored out of ServerTarget.write and Plugin.write
-// Options:
-// - load: array of objects with keys targetPath, data, nodeModulesDirectory
-// - nodeModulesDirectories: array of NodeModulesDirectory referenced
+// A JsImage (JavaScript Image) is a fully linked JavaScript program
+// that is totally ready to go. (Image is used in the sense of "the
+// output of a linker", as in "executable image", rather than in the
+// sense of "visual picture".)
 //
-// Returns the path (relative to 'builder') of the control file for
-// the target
-var writeServerTargetOrPlugin = function (builder, options) {
-  builder.reserve("program.js");
-
-  // Finalize choice of paths for node_modules directories -- These
-  // paths are no longer just "preferred"; they are the final paths
-  // that we will use
-  var nodeModulesDirectories = [];
-  _.each(options.nodeModulesDirectories || [], function (nmd) {
-    nodeModulesDirectories.push(new NodeModulesDirectory({
-      sourcePath: nmd.sourcePath,
-      preferredBundlePath: builder.generateFilename(nmd.preferredBundlePath,
-                                                    { directory: true })
-    }));
-  });
-
-  // JavaScript sources
-  var load = [];
-  _.each(options.load || [], function (item) {
-    if (! item.targetPath)
-      throw new Error("No targetPath?");
-
-    builder.write(item.targetPath, { data: item.data });
-    load.push({
-      path: item.targetPath,
-      node_modules: item.nodeModulesDirectory ?
-        item.nodeModulesDirectory.preferredBundlePath : undefined
-    });
-  });
-
-  // node_modules resources from the packages. Due to appropriate
-  // builder configuration, 'meteor bundle' and 'meteor deploy' copy
-  // them, and 'meteor run' symlinks them. If these contain
-  // arch-specific code then the target will end up having an
-  // appropriately specific arch.
-  _.each(nodeModulesDirectories, function (nmd) {
-    builder.copyDirectory({
-      from: nmd.sourcePath,
-      to: nmd.preferredBundlePath,
-      depend: false
-    });
-  });
-
-  // Control file
-  builder.writeJson('program.json', {
-    load: load,
-    format: "javascript-image-1"
-  });
-  return "program.json";
-};
-
-_.extend(ServerTarget.prototype, {
-  // Output the finished target to disk
-  // options:
-  // - omitDependencyKit: if true, don't copy node_modules from dev_bundle
-  // - getRelativeTargetPath: a function that takes {forTarget:
-  //   Target, relativeTo: Target} and return the path of one target
-  //   in the bundle relative to another. hack to get the path of the
-  //   client target.. we'll find a better solution here eventually
-  //
-  // Returns the path (relative to 'builder') of the control file for
-  // the plugin
-  write: function (builder, options) {
-    var self = this;
-
-    builder.writeJson("config.json", {
-      meteorRelease: self.releaseStamp && self.releaseStamp !== "none" ?
-        self.releaseStamp : undefined,
-      client: path.join(options.getRelativeTargetPath({
-        forTarget: self.clientTarget, relativeTo: self}),
-                        'program.json'),
-    });
-
-    if (! options.omitDependencyKit)
-      builder.reserve("node_modules", { directory: true });
-
-    var ret = writeServerTargetOrPlugin(builder, {
-      load: _.map(self.js, function (file) {
-        return {
-          targetPath: file.targetPath,
-          data: file.contents(),
-          nodeModulesDirectory: file.nodeModulesDirectory
-        };
-      }),
-      nodeModulesDirectories: self.nodeModulesDirectories
-    });
-
-    // Server driver
-    var serverPath = path.join(__dirname, 'server');
-    builder.copyDirectory({
-      from: serverPath,
-      to: '/',
-      ignore: ignoreFiles
-    });
-
-    // Main, architecture-dependent node_modules from the dependency
-    // kit. This one is copied in 'meteor bundle', symlinked in
-    // 'meteor run', and omitted by 'meteor deploy' (Galaxy provides a
-    // version that's appropriate for the server architecture.)
-    if (! options.omitDependencyKit) {
-      builder.copyDirectory({
-        from: path.join(files.get_dev_bundle(), 'lib', 'node_modules'),
-        to: 'node_modules',
-        ignore: ignoreFiles,
-        depend: false
-      });
-    }
-
-    return ret;
-  }
-});
-
-
-//////////////////// PluginTarget and Plugin ////////////////////
-
-var Plugin = function () {
+// A JsImage can be loaded into its own new JavaScript virtual
+// machine, or it can be loaded into an existing virtual machine as a
+// plugin.
+var JsImage = function () {
   var self = this;
 
   // Array of objects with keys:
@@ -892,12 +769,12 @@ var Plugin = function () {
   // NodeModulesDirectory object that we have created to represent it.
   self.nodeModulesDirectories = {};
 
-  // Architecture required by this plugin
+  // Architecture required by this image
   self.arch = null;
 };
 
-_.extend(Plugin.prototype, {
-  // Load the plugin into the current process. It gets its own unique
+_.extend(JsImage.prototype, {
+  // Load the image into the current process. It gets its own unique
   // Package object containing its own private copy of every
   // unipackage that it uses. This Package object is returned.
   //
@@ -907,7 +784,7 @@ _.extend(Plugin.prototype, {
   // values. In addition to the contents of `bindings`, Package and
   // Npm will be provided.
   //
-  // XXX throw an error if the plugin includes any "app-style" code
+  // XXX throw an error if the image includes any "app-style" code
   // that is built to put symbols in the global namespace rather than
   // in a compartment of Package
   load: function (bindings) {
@@ -916,7 +793,8 @@ _.extend(Plugin.prototype, {
 
     // Eval each JavaScript file, providing a 'Npm' symbol in the same
     // way that the server environment would, and a 'Package' symbol
-    // so the plugin has its own private universe of loaded packages
+    // so the loaded image has its own private universe of loaded
+    // packages
     var failed = false;
     _.each(self.jsToLoad, function (item) {
       if (failed)
@@ -965,75 +843,120 @@ _.extend(Plugin.prototype, {
     return ret;
   },
 
-  // Write this plugin out to disk
+  // Write this image out to disk
   //
   // Returns the path (relative to 'builder') of the control file for
-  // the plugin
+  // the image
   write: function (builder) {
     var self = this;
 
-    return writeServerTargetOrPlugin(builder, {
-      load: _.map(self.jsToLoad, function (item) {
-        return {
-          targetPath: item.targetPath,
-          data: new Buffer(item.source, 'utf8'),
-          nodeModulesDirectory: item.nodeModulesDirectory
-        };
-      }),
-      nodeModulesDirectories: self.nodeModulesDirectories
+    builder.reserve("program.js");
+
+    // Finalize choice of paths for node_modules directories -- These
+    // paths are no longer just "preferred"; they are the final paths
+    // that we will use
+    var nodeModulesDirectories = [];
+    _.each(self.nodeModulesDirectories || [], function (nmd) {
+      nodeModulesDirectories.push(new NodeModulesDirectory({
+        sourcePath: nmd.sourcePath,
+        preferredBundlePath: builder.generateFilename(nmd.preferredBundlePath,
+                                                      { directory: true })
+      }));
     });
-  },
 
-  // `dir` is a directory on disk that contains a program with arch
-  // matching js.* (eg, a plugin previously written out with write())
-  initFromDisk: function (dir) {
-    var self = this;
-    var json =
-      JSON.parse(fs.readFileSync(path.join(dir, 'program.json')));
+    // JavaScript sources
+    var load = [];
+    _.each(self.jsToLoad, function (item) {
+      if (! item.targetPath)
+        throw new Error("No targetPath?");
 
-    if (json.format !== "javascript-image-1")
-      throw new Error("Unsupported plugin format: " +
-                      JSON.stringify(json.format));
-
-    _.each(json.load, function (item) {
-      if (item.path.match(/\.\./))
-        throw new Error("bad path in plugin bundle");
-
-      var nmd = undefined;
-      if (item.node_modules) {
-        var node_modules = path.join(dir, item.node_modules);
-        if (! node_modules in self.nodeModulesDirectories)
-          self.nodeModulesDirectories[node_modules] =
-          new NodeModulesDirectory({
-            sourcePath: node_modules,
-            preferredBundlePath: item.node_modules
-          });
-        nmd = self.nodeModulesDirectories[node_modules];
-      }
-
-      self.jsToLoad.push({
-        targetPath: item.path,
-        source: fs.readFileSync(path.join(dir, item.path)),
-        nodeModulesDirectory: nmd
+      builder.write(item.targetPath, { data: new Buffer(item.source, 'utf8') });
+      load.push({
+        path: item.targetPath,
+        node_modules: item.nodeModulesDirectory ?
+          item.nodeModulesDirectory.preferredBundlePath : undefined
       });
     });
+
+    // node_modules resources from the packages. Due to appropriate
+    // builder configuration, 'meteor bundle' and 'meteor deploy' copy
+    // them, and 'meteor run' symlinks them. If these contain
+    // arch-specific code then the target will end up having an
+    // appropriately specific arch.
+    _.each(nodeModulesDirectories, function (nmd) {
+      builder.copyDirectory({
+        from: nmd.sourcePath,
+        to: nmd.preferredBundlePath,
+        depend: false
+      });
+    });
+
+    // Control file
+    builder.writeJson('program.json', {
+      load: load,
+      format: "javascript-image-1",
+      arch: self.arch
+    });
+    return "program.json";
   }
 });
 
-var PluginTarget = function (options) {
+// Create a JsImage by loading a bundle of format 'javascript-image-1'
+// from disk (eg, previously written out with write().) `dir` is the
+// path to the control file.
+JsImage.readFromDisk = function (controlFilePath) {
+  var ret = new JsImage;
+  var json = JSON.parse(fs.readFileSync(controlFilePath));
+  var dir = path.dirname(controlFilePath);
+
+  if (json.format !== "javascript-image-1")
+    throw new Error("Unsupported plugin format: " +
+                    JSON.stringify(json.format));
+
+  ret.arch = json.arch;
+
+  _.each(json.load, function (item) {
+    if (item.path.match(/\.\./))
+      throw new Error("bad path in plugin bundle");
+
+    var nmd = undefined;
+    if (item.node_modules) {
+      var node_modules = path.join(dir, item.node_modules);
+      if (! node_modules in ret.nodeModulesDirectories)
+        ret.nodeModulesDirectories[node_modules] =
+        new NodeModulesDirectory({
+          sourcePath: node_modules,
+          preferredBundlePath: item.node_modules
+        });
+      nmd = ret.nodeModulesDirectories[node_modules];
+    }
+
+    ret.jsToLoad.push({
+      targetPath: item.path,
+      source: fs.readFileSync(path.join(dir, item.path)),
+      nodeModulesDirectory: nmd
+    });
+  });
+
+  return ret;
+};
+
+var JsImageTarget = function (options) {
   var self = this;
   Target.apply(this, arguments);
 
   if (! archinfo.matches(self.arch, "native"))
-    throw new Error("PluginTarget targeting something incompatible?");
+    // Conceivably we could support targeting the browser as long as
+    // no native node modules were used.  No use case for that though.
+    throw new Error("JsImageTarget targeting something unusual?");
 };
 
-inherits(PluginTarget, Target);
+inherits(JsImageTarget, Target);
 
-_.extend(PluginTarget.prototype, {
-  toPlugin: function () {
+_.extend(JsImageTarget.prototype, {
+  toJsImage: function () {
     var self = this;
-    var ret = new Plugin;
+    var ret = new JsImage;
 
     _.each(self.js, function (file) {
       ret.jsToLoad.push({
@@ -1049,6 +972,80 @@ _.extend(PluginTarget.prototype, {
     return ret;
   }
 });
+
+
+//////////////////// ServerTarget ////////////////////
+
+// options:
+// - clientTarget: the ClientTarget to serve up over HTTP as our client
+// - releaseStamp: the Meteor release name (for retrieval at runtime)
+var ServerTarget = function (options) {
+  var self = this;
+  JsImageTarget.apply(this, arguments);
+
+  self.clientTarget = options.clientTarget;
+  self.releaseStamp = options.releaseStamp;
+
+  if (! archinfo.matches(self.arch, "native"))
+    throw new Error("ServerTarget targeting something that isn't a server?");
+};
+
+inherits(ServerTarget, JsImageTarget);
+
+_.extend(ServerTarget.prototype, {
+  // Output the finished target to disk
+  // options:
+  // - omitDependencyKit: if true, don't copy node_modules from dev_bundle
+  // - getRelativeTargetPath: a function that takes {forTarget:
+  //   Target, relativeTo: Target} and return the path of one target
+  //   in the bundle relative to another. hack to get the path of the
+  //   client target.. we'll find a better solution here eventually
+  //
+  // Returns the path (relative to 'builder') of the control file for
+  // the plugin
+  write: function (builder, options) {
+    var self = this;
+
+    // We will write out config.json, the dependency kit, and the
+    // server driver alongside the JsImage
+    builder.writeJson("config.json", {
+      meteorRelease: self.releaseStamp && self.releaseStamp !== "none" ?
+        self.releaseStamp : undefined,
+      client: path.join(options.getRelativeTargetPath({
+        forTarget: self.clientTarget, relativeTo: self}),
+                        'program.json'),
+    });
+
+    if (! options.omitDependencyKit)
+      builder.reserve("node_modules", { directory: true });
+
+    var ret = self.toJsImage().write(builder);
+
+    // Server driver
+    var serverPath = path.join(__dirname, 'server');
+    builder.copyDirectory({
+      from: serverPath,
+      to: '/',
+      ignore: ignoreFiles
+    });
+
+    // Main, architecture-dependent node_modules from the dependency
+    // kit. This one is copied in 'meteor bundle', symlinked in
+    // 'meteor run', and omitted by 'meteor deploy' (Galaxy provides a
+    // version that's appropriate for the server architecture.)
+    if (! options.omitDependencyKit) {
+      builder.copyDirectory({
+        from: path.join(files.get_dev_bundle(), 'lib', 'node_modules'),
+        to: 'node_modules',
+        ignore: ignoreFiles,
+        depend: false
+      });
+    }
+
+    return ret;
+  }
+});
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // writeSiteArchive
@@ -1320,12 +1317,13 @@ exports.bundle = function (appDir, outputPath, options) {
   } ;
 };
 
-// Make a Plugin object. It can either be loaded into memory with
-// load(), which returns the `Package` object inside the plugin's
-// namespace, or saved to disk with write(builder).
+// Make a JsImage object (a complete, linked, ready-to-go JavaScript
+// program.) It can either be loaded into memory with load(), which
+// returns the `Package` object inside the plugin's namespace, or
+// saved to disk with write(builder).
 //
 // Returns an object with keys:
-// - plugin: The created Plugin object.
+// - image: The created JsImage object.
 // - dependencyInfo: Source file dependency info (see bundle().)
 //
 // XXX return an 'errors' key for symmetry with bundle(), rather than
@@ -1333,8 +1331,10 @@ exports.bundle = function (appDir, outputPath, options) {
 //
 // options:
 // - library: required. the Library for resolving package dependencies
-// - name: required. a name for this plugin (cosmetic, but will appear
-//   in, eg, error messages.)
+// - name: required. a name for this image (cosmetic, but will appear
+//   in, eg, error messages) -- technically speaking, this is the name
+//   of the package created to contain the sources and package
+//   dependencies set up below
 // - use: list of packages to use in the plugin, as strings (foo or foo.bar)
 // - sources: source files to use (paths on local disk)
 // - sourceRoot: path relative to which sources should be
@@ -1351,7 +1351,7 @@ exports.bundle = function (appDir, outputPath, options) {
 // It would be nice to have a way to say "make this package anonymous"
 // without also saying "make its namespace the same as the global
 // namespace." It should be an easy refactor,
-exports.buildPlugin = function (options) {
+exports.buildJsImage = function (options) {
   if (options.npmDependencies && ! options.npmDir)
     throw new Error("Must indicate .npm directory to use");
   if (! options.name)
@@ -1370,7 +1370,7 @@ exports.buildPlugin = function (options) {
   });
   pkg.build();
 
-  var target = new PluginTarget({
+  var target = new JsImageTarget({
     library: options.library,
     arch: archinfo.host()
   });
@@ -1379,16 +1379,14 @@ exports.buildPlugin = function (options) {
   target.emitResources();
 
   return {
-    plugin: target.toPlugin(),
+    image: target.toJsImage(),
     dependencyInfo: target.getDependencyInfo()
   };
 };
 
-// Load a Plugin from disk (that was previously written by calling
-// write() on a Plugin.) `dir` is the directory that contains the
-// plugin.
-exports.readPlugin = function (dir) {
-  var ret = new Plugin;
-  ret.initFromDisk(dir);
-  return ret;
+// Load a JsImage from disk (that was previously written by calling
+// write() on a JsImage.) `controlFilePath` is the path to the control
+// file (eg, program.json).
+exports.readJsImage = function (controlFilePath) {
+  return JsImage.readFromDisk(controlFilePath);
 };

@@ -842,7 +842,7 @@ _.extend(Package.prototype, {
           "` in package `" + self.name + "`",
         rootPath: self.sourceRoot
       }, function () {
-        var buildResult = bundler.buildPlugin({
+        var buildResult = bundler.buildJsImage({
           name: info.name,
           library: self.library,
           use: info.use,
@@ -866,7 +866,7 @@ _.extend(Package.prototype, {
                    buildResult.dependencyInfo.directories);
         }
 
-        self.plugins[info.name] = buildResult.plugin;
+        self.plugins[info.name] = buildResult.image;
       });
     });
     self.pluginsBuilt = true;
@@ -1635,10 +1635,14 @@ _.extend(Package.prototype, {
     _.each(mainJson.plugins, function (pluginMeta) {
       if (pluginMeta.path.match(/\.\./))
         throw new Error("bad path in unipackage");
-      var plugin = bundler.readPlugin(path.join(dir, pluginMeta.path));
-      // XXX would be nice to refactor so we don't have to manually
-      // bash the arch in here
-      plugin.arch = pluginMeta.arch;
+      var plugin = bundler.readJsImage(path.join(dir, pluginMeta.path));
+
+      if (! archinfo.matches(archinfo.host(), plugin.arch)) {
+        buildmessage.error("package `" + name + "` is built for incompatible " +
+                           "architecture: " + plugin.arch);
+        // Recover by ignoring plugin
+        return;
+      }
 
       // XXX should refactor so that we can have plugins of multiple
       // different arches happily coexisting in memory, to match
@@ -1898,11 +1902,11 @@ _.extend(Package.prototype, {
         var pluginDir =
           builder.generateFilename('plugin.' + name + '.' + plugin.arch,
                                    { directory: true });
-        plugin.write(builder.enter(pluginDir));
+        var relPath = plugin.write(builder.enter(pluginDir));
         mainJson.plugins.push({
           name: name,
           arch: plugin.arch,
-          path: pluginDir
+          path: path.join(pluginDir, relPath)
         });
       });
 
