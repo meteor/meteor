@@ -462,7 +462,7 @@ _.extend(exports, {
       this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
                          ["shrinkwrap"], {cwd: dir});
 
-    if (! result.sucess) {
+    if (! result.success) {
       console.log(result.stderr);
       buildmessage.error("couldn't run `npm shrinkwrap`");
       // Recover by returning false from updateDependencies
