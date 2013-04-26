@@ -134,6 +134,7 @@
 // == Format of a program that is to be used as a plugin ==
 //
 // /program.json:
+//  - format: "javascript-plugin-1" for this version
 //  - load: array with each item describing a JS file to load, in load order:
 //    - path: path of file, relative to program.json
 //    - node_modules: if Npm.require is called from this file, this is
@@ -957,7 +958,10 @@ _.extend(Plugin.prototype, {
           nodeModulesDirectory: item.nodeModulesDirectory
         };
       }),
-      nodeModulesDirectories: self.nodeModulesDirectories
+      nodeModulesDirectories: self.nodeModulesDirectories,
+      extraControlInfo: {
+        format: "javascript-plugin-1"
+      }
     });
   },
 
@@ -967,6 +971,10 @@ _.extend(Plugin.prototype, {
     var self = this;
     var json =
       JSON.parse(fs.readFileSync(path.join(dir, 'program.json')));
+
+    if (json.format !== "javascript-plugin-1")
+      throw new Error("Unsupported plugin format: " +
+                      JSON.stringify(json.format));
 
     _.each(json.load, function (item) {
       if (item.path.match(/\.\./))
