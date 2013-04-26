@@ -3,7 +3,7 @@
 If you've found a bug in Meteor, file a bug report in [our issue
 tracker](https://github.com/meteor/meteor/issues). If the issue contains
 sensitive information or raises a security concern, email
-[security@meteor.com](mailto:security@meteor.com) instead, which will page the
+<code>security[]()@[]()meteor.com</code> instead, which will page the
 security team.
 
 A Meteor app has many moving parts, and it's often difficult to reproduce a bug
