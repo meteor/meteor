@@ -104,9 +104,9 @@ Email.send = function (options) {
     html: options.html
   });
 
-  if (options.headers !== undefined)
-    for (var header in options.headers)
-      mc.addHeader(header, options.headers[header]);
+  _.each(options.headers, function (value, name) {
+    mc.addHeader(name, value);
+  });
 
   maybeMakePool();
 
