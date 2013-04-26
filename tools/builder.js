@@ -198,6 +198,7 @@ _.extend(Builder.prototype, {
     if (relPath.slice(-1) === path.sep)
       relPath = relPath.slice(0, -1);
 
+    self._ensureDirectory(path.dirname(relPath));
     fs.writeFileSync(path.join(self.buildPath, relPath),
                      new Buffer(JSON.stringify(data, null, 2), 'utf8'));
 

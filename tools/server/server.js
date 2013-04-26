@@ -141,12 +141,15 @@ var appUrl = function (url) {
 var run = function () {
   var serverDir = __dirname;
 
-  // read our control file
+  // read our control files
   var serverJson =
     JSON.parse(fs.readFileSync(path.join(serverDir, 'program.json'), 'utf8'));
 
+  var configJson =
+    JSON.parse(fs.readFileSync(path.join(serverDir, 'config.json'), 'utf8'));
+
   // read the control for the client we'll be serving up
-  var clientJsonPath = path.join(serverDir, serverJson.client);
+  var clientJsonPath = path.join(serverDir, configJson.client);
   var clientDir = path.dirname(clientJsonPath);
   var clientJson = JSON.parse(fs.readFileSync(clientJsonPath, 'utf8'));
 
@@ -214,8 +217,8 @@ var run = function () {
   };
 
   __meteor_runtime_config__ = {};
-  if (serverJson.config && serverJson.config.release) {
-    __meteor_runtime_config__.meteorRelease = serverJson.config.release;
+  if (configJson.release) {
+    __meteor_runtime_config__.meteorRelease = configJson.release;
   }
 
   Fiber(function () {

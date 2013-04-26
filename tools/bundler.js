@@ -114,12 +114,15 @@
 //      the path (relative to program.json) of the directory that should
 //      be search for npm modules
 //
+// /config.json:
+//
 //  - client: the client program that should be served up by HTTP,
 //    expressed as a path (relative to program.json) to the *client's*
 //    program.json.
 //
 //  - config: additional framework-specific configuration. currently:
 //    - meteorRelease: the value to use for Meteor.release, if any
+//
 //
 // /app/*: source code of the (server part of the) app
 // /packages/foo.js: the (linked) source code for package foo
@@ -755,7 +758,6 @@ inherits(ServerTarget, Target);
 // Options:
 // - load: array of objects with keys targetPath, data, nodeModulesDirectory
 // - nodeModulesDirectories: array of NodeModulesDirectory referenced
-// - extraControlInfo: extra keys for program.json
 //
 // Returns the path (relative to 'builder') of the control file for
 // the target
@@ -802,10 +804,10 @@ var writeServerTargetOrPlugin = function (builder, options) {
   });
 
   // Control file
-  var json = _.extend({
-    load: load
-  }, options.extraControlInfo || {});
-  builder.writeJson('program.json', json);
+  builder.writeJson('program.json', {
+    load: load,
+    format: "javascript-image-1"
+  });
   return "program.json";
 };
 
@@ -823,6 +825,14 @@ _.extend(ServerTarget.prototype, {
   write: function (builder, options) {
     var self = this;
 
+    builder.writeJson("config.json", {
+      meteorRelease: self.releaseStamp && self.releaseStamp !== "none" ?
+        self.releaseStamp : undefined,
+      client: path.join(options.getRelativeTargetPath({
+        forTarget: self.clientTarget, relativeTo: self}),
+                        'program.json'),
+    });
+
     if (! options.omitDependencyKit)
       builder.reserve("node_modules", { directory: true });
 
@@ -834,16 +844,7 @@ _.extend(ServerTarget.prototype, {
           nodeModulesDirectory: file.nodeModulesDirectory
         };
       }),
-      nodeModulesDirectories: self.nodeModulesDirectories,
-      extraControlInfo: {
-        client: path.join(options.getRelativeTargetPath({
-          forTarget: self.clientTarget, relativeTo: self}),
-                          'program.json'),
-        config: {
-          meteorRelease: self.releaseStamp && self.releaseStamp !== "none" ?
-            self.releaseStamp : undefined
-        }
-      }
+      nodeModulesDirectories: self.nodeModulesDirectories
     });
 
     // Server driver
@@ -979,10 +980,7 @@ _.extend(Plugin.prototype, {
           nodeModulesDirectory: item.nodeModulesDirectory
         };
       }),
-      nodeModulesDirectories: self.nodeModulesDirectories,
-      extraControlInfo: {
-        format: "javascript-image-1"
-      }
+      nodeModulesDirectories: self.nodeModulesDirectories
     });
   },
 
