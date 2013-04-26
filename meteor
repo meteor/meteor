@@ -55,6 +55,7 @@ function install_dev_bundle {
         echo "Skipping download and installing kit from $SCRIPT_DIR/$TARBALL"
         tar -xzf "$SCRIPT_DIR/$TARBALL" -C "$BUNDLE_TMPDIR"
     else
+        # URL duplicated in tools/server/target.sh.in
         curl -# "https://d3sqy0vbqsdhku.cloudfront.net/$TARBALL" | tar -xzf - -C "$BUNDLE_TMPDIR"
         test -x "${BUNDLE_TMPDIR}/bin/node" # bomb out if it didn't work, eg no net
     fi

@@ -1,0 +1,23 @@
+set -e
+trap "echo Failed to fetch binary dependencies." EXIT
+
+cd `dirname $0`
+
+TARBALL="dev_bundle_##PLATFORM##_##BUNDLE_VERSION##.tar.gz"
+BUNDLE_TMPDIR="dependencies.fetch"
+
+rm -rf "$BUNDLE_TMPDIR"
+mkdir "$BUNDLE_TMPDIR"
+
+# Duplicated from 'meteor' script in root of repository
+curl -s "https://d3sqy0vbqsdhku.cloudfront.net/$TARBALL" | tar -xzf - -C "$BUNDLE_TMPDIR"
+
+# Delete old dev bundle and rename the new one on top of it.
+rm -rf "dependencies"
+mv "$BUNDLE_TMPDIR" "dependencies"
+
+trap - EXIT
+set +e
+
+export NODE_PATH="`pwd`/dependencies/lib/node_modules"
+dependencies/bin/node boot.js ##IMAGE##

@@ -1006,6 +1006,14 @@ _.extend(ServerTarget.prototype, {
   write: function (builder, options) {
     var self = this;
 
+    // Pick a start script name
+    // XXX base it on the name of the target
+    var scriptName = 'start.sh';
+    builder.reserve(scriptName);
+
+    // This is where the dev_bundle will be downloaded and unpacked
+    builder.reserve('dependencies');
+
     // We will write out config.json, the dependency kit, and the
     // server driver alongside the JsImage
     builder.writeJson("config.json", {
@@ -1019,15 +1027,40 @@ _.extend(ServerTarget.prototype, {
     if (! options.omitDependencyKit)
       builder.reserve("node_modules", { directory: true });
 
-    var ret = self.toJsImage().write(builder);
+    // Linked JavaScript image
+    var imageControlFile = self.toJsImage().write(builder);
 
-    // Server driver
-    var serverPath = path.join(__dirname, 'server');
-    builder.copyDirectory({
-      from: serverPath,
-      to: '/',
-      ignore: ignoreFiles
-    });
+    // Server bootstrap
+    builder.copyFile({ from: path.join(__dirname, 'server', 'boot.js'),
+                       to: 'boot.js' });
+
+    // Script that fetches the dev_bundle and runs the server bootstrap
+    var archToPlatform = {
+      'native.linux.x86_32': 'Linux_i686',
+      'native.linux.x86_64': 'Linux_x86_64',
+      'native.osx.x86_64': 'Darwin_x86_64'
+    };
+    var arch = archinfo.host();
+    var platform = archToPlatform[arch];
+    if (! platform) {
+      buildmessage.error("MDG does not publish dev_bundles for arch: " +
+                         arch);
+      // Recover by bailing out and leaving a partially built target
+      return;
+    }
+
+    var devBundleVersion =
+      fs.readFileSync(
+        path.join(files.get_dev_bundle(), '.bundle_version.txt'), 'utf8');
+    devBundleVersion = devBundleVersion.split('\n')[0];
+
+    var script = fs.readFileSync(path.join(__dirname, 'server',
+                                           'target.sh.in'), 'utf8');
+    script = script.replace(/##PLATFORM##/g, platform);
+    script = script.replace(/##BUNDLE_VERSION##/g, devBundleVersion);
+    script = script.replace(/##IMAGE##/g, imageControlFile);
+    builder.write(scriptName, { data: new Buffer(script, 'utf8'),
+                                executable: true });
 
     // Main, architecture-dependent node_modules from the dependency
     // kit. This one is copied in 'meteor bundle', symlinked in
@@ -1042,7 +1075,7 @@ _.extend(ServerTarget.prototype, {
       });
     }
 
-    return ret;
+    return scriptName;
   }
 });
 
@@ -1130,7 +1163,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
     });
 
     // Affordances for standalone use
-    var stub = new Buffer("require('./programs/server/server.js');\n", 'utf8');
+    var stub = new Buffer("require('./programs/server/boot.js');\n", 'utf8');
     builder.write('main.js', { data: stub });
 
     builder.write('README', { data: new Buffer(
