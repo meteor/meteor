@@ -14,6 +14,8 @@
 
 * Upgrade CoffeeScript from 1.5.0 to 1.6.2.  #972
 
+* `Email.send` has a new `headers` option to set arbitrary headers.  #963
+
 * The `localstorage-polyfill` smart package has been replaced by a
   `localstorage` package, which defines a `Meteor._localStorage` API instead of
   trying to replace the DOM `window.localStorage` facility. (Now, apps can use
@@ -22,7 +24,7 @@
 
 * Support `appcache` on Chromium.  #958
 
-Patches contributed by GitHub user awwx.
+Patches contributed by GitHub users awwx and spang.
 
 ## v0.6.2.1
 

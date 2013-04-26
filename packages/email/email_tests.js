@@ -14,7 +14,8 @@ Tinytest.add("email - dev mode smoke test", function (test) {
       to: "bar@example.com",
       cc: ["friends@example.com", "enemies@example.com"],
       subject: "This is the subject",
-      text: "This is the body\nof the message\nFrom us."
+      text: "This is the body\nof the message\nFrom us.",
+      headers: {'X-Meteor-Test': 'a custom header'}
     });
     // Note that we use the local "stream" here rather than Email._output_stream
     // in case a concurrent test run mutates Email._output_stream too.
@@ -22,6 +23,7 @@ Tinytest.add("email - dev mode smoke test", function (test) {
     test.equal(stream.getContentsAsString("utf8"),
                "====== BEGIN MAIL #0 ======\n" + 
                "MIME-Version: 1.0\r\n" +
+               "X-Meteor-Test: a custom header\r\n" +
                "From: foo@example.com\r\n" +
                "To: bar@example.com\r\n" +
                "Cc: friends@example.com, enemies@example.com\r\n" +
