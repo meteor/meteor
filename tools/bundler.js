@@ -24,7 +24,8 @@
 //      programmatically
 //    - arch: typically 'native' (for a portable plugin) or eg
 //      'native.linux.x86_64' for one that include native node_modules
-//    - path: directory (relative to star.json) containing this plugin
+//    - path: path (relative to star.json) to the control file (eg,
+//      program.json) for this plugin
 //
 // /README: human readable instructions
 //
@@ -134,7 +135,7 @@
 // == Format of a program that is to be used as a plugin ==
 //
 // /program.json:
-//  - format: "javascript-plugin-1" for this version
+//  - format: "javascript-image-1" for this version
 //  - load: array with each item describing a JS file to load, in load order:
 //    - path: path of file, relative to program.json
 //    - node_modules: if Npm.require is called from this file, this is
@@ -665,9 +666,14 @@ _.extend(ClientTarget.prototype, {
   },
 
   // Output the finished target to disk
+  //
+  // Returns the path (relative to 'builder') of the control file for
+  // the target
   write: function (builder) {
     var self = this;
     var manifest = [];
+
+    builder.reserve("program.json");
 
     // Resources served via HTTP
     _.each(["js", "css", "static"], function (type) {
@@ -722,6 +728,7 @@ _.extend(ClientTarget.prototype, {
       static: 'static',
       staticCacheable: 'static_cacheable'
     });
+    return "program.json";
   }
 });
 
@@ -749,7 +756,12 @@ inherits(ServerTarget, Target);
 // - load: array of objects with keys targetPath, data, nodeModulesDirectory
 // - nodeModulesDirectories: array of NodeModulesDirectory referenced
 // - extraControlInfo: extra keys for program.json
+//
+// Returns the path (relative to 'builder') of the control file for
+// the target
 var writeServerTargetOrPlugin = function (builder, options) {
+  builder.reserve("program.js");
+
   // Finalize choice of paths for node_modules directories -- These
   // paths are no longer just "preferred"; they are the final paths
   // that we will use
@@ -794,6 +806,7 @@ var writeServerTargetOrPlugin = function (builder, options) {
     load: load
   }, options.extraControlInfo || {});
   builder.writeJson('program.json', json);
+  return "program.json";
 };
 
 _.extend(ServerTarget.prototype, {
@@ -804,13 +817,16 @@ _.extend(ServerTarget.prototype, {
   //   Target, relativeTo: Target} and return the path of one target
   //   in the bundle relative to another. hack to get the path of the
   //   client target.. we'll find a better solution here eventually
+  //
+  // Returns the path (relative to 'builder') of the control file for
+  // the plugin
   write: function (builder, options) {
     var self = this;
 
     if (! options.omitDependencyKit)
       builder.reserve("node_modules", { directory: true });
 
-    writeServerTargetOrPlugin(builder, {
+    var ret = writeServerTargetOrPlugin(builder, {
       load: _.map(self.js, function (file) {
         return {
           targetPath: file.targetPath,
@@ -850,6 +866,8 @@ _.extend(ServerTarget.prototype, {
         depend: false
       });
     }
+
+    return ret;
   }
 });
 
@@ -947,10 +965,13 @@ _.extend(Plugin.prototype, {
   },
 
   // Write this plugin out to disk
+  //
+  // Returns the path (relative to 'builder') of the control file for
+  // the plugin
   write: function (builder) {
     var self = this;
 
-    writeServerTargetOrPlugin(builder, {
+    return writeServerTargetOrPlugin(builder, {
       load: _.map(self.jsToLoad, function (item) {
         return {
           targetPath: item.targetPath,
@@ -960,7 +981,7 @@ _.extend(Plugin.prototype, {
       }),
       nodeModulesDirectories: self.nodeModulesDirectories,
       extraControlInfo: {
-        format: "javascript-plugin-1"
+        format: "javascript-image-1"
       }
     });
   },
@@ -972,7 +993,7 @@ _.extend(Plugin.prototype, {
     var json =
       JSON.parse(fs.readFileSync(path.join(dir, 'program.json')));
 
-    if (json.format !== "javascript-plugin-1")
+    if (json.format !== "javascript-image-1")
       throw new Error("Unsupported plugin format: " +
                       JSON.stringify(json.format));
 
@@ -1092,14 +1113,14 @@ var writeSiteArchive = function (targets, outputPath, options) {
 
     // Write out each target
     _.each(targets, function (target, name) {
-      target.pathInBundle = path.join('programs', name);
-      target.write(builder.enter(paths[name]),
-                   { omitDependencyKit: options.nodeModulesMode === "skip",
-                     getRelativeTargetPath: getRelativeTargetPath });
+      var relControlFilePath =
+        target.write(builder.enter(paths[name]),
+                     { omitDependencyKit: options.nodeModulesMode === "skip",
+                       getRelativeTargetPath: getRelativeTargetPath });
       json.programs.push({
         name: name,
         arch: target.mostCompatibleArch(),
-        path: paths[name]
+        path: path.join(paths[name], relControlFilePath)
       });
     });
 
