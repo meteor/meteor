@@ -3,6 +3,8 @@
 
 Meteor.Collection = function (name, options) {
   var self = this;
+  if (! (self instanceof Meteor.Collection))
+    throw new Error('use "new" to construct a Meteor.Collection');
   if (options && options.methods) {
     // Backwards compatibility hack with original signature (which passed
     // "manager" directly instead of in options. (Managers must have a "methods"
