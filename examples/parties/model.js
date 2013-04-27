@@ -42,15 +42,15 @@ attending = function (party) {
   return (_.groupBy(party.rsvps, 'rsvp').yes || []).length;
 };
 
-var NonEmptyString = Match.Where(function (x) {
-  check(x, String);
+var NonEmptyString = function (x) {
+  check(x, string);
   return x.length !== 0;
-});
+};
 
-var Coordinate = Match.Where(function (x) {
-  check(x, Number);
+var Coordinate = function (x) {
+  check(x, number);
   return x >= 0 && x <= 1;
-});
+};
 
 Meteor.methods({
   // options should include: title, description, x, y, public
@@ -60,7 +60,7 @@ Meteor.methods({
       description: NonEmptyString,
       x: Coordinate,
       y: Coordinate,
-      public: Match.Optional(Boolean)
+      public: Match.Optional(boolean)
     });
 
     if (options.title.length > 100)
@@ -83,8 +83,8 @@ Meteor.methods({
   },
 
   invite: function (partyId, userId) {
-    check(partyId, String);
-    check(userId, String);
+    check(partyId, string);
+    check(userId, string);
     var party = Parties.findOne(partyId);
     if (! party || party.owner !== this.userId)
       throw new Meteor.Error(404, "No such party");
@@ -113,8 +113,8 @@ Meteor.methods({
   },
 
   rsvp: function (partyId, rsvp) {
-    check(partyId, String);
-    check(rsvp, String);
+    check(partyId, string);
+    check(rsvp, string);
     if (! this.userId)
       throw new Meteor.Error(403, "You must be logged in to RSVP");
     if (! _.contains(['yes', 'no', 'maybe'], rsvp))

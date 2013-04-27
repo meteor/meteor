@@ -60,7 +60,7 @@ Accounts.registerLoginHandler(function (options) {
   if (!options.oauth)
     return undefined; // don't handle
 
-  check(options.oauth, {state: String});
+  check(options.oauth, {state: string});
 
   if (!_.has(Accounts.oauth._loginResultForState, options.oauth.state)) {
     // OAuth state is not recognized, which could be either because the popup

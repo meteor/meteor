@@ -49,7 +49,7 @@ Meteor.methods({
 
 
   keepalive: function (player_id) {
-    check(player_id, String);
+    check(player_id, string);
     Players.update({_id: player_id},
                   {$set: {last_keepalive: (new Date()).getTime(),
                           idle: false}});

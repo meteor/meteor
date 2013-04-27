@@ -5,10 +5,10 @@ var TRANSFORMS = {};
 if (Meteor.isServer) {
   Meteor.methods({
     createInsecureCollection: function (name, options) {
-      check(name, String);
+      check(name, string);
       check(options, Match.Optional({
-        transformName: Match.Optional(String),
-        idGeneration: Match.Optional(String)
+        transformName: Match.Optional(string),
+        idGeneration: Match.Optional(string)
       }));
 
       if (options && options.transformName) {

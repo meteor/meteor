@@ -3,7 +3,7 @@ var handlesForRun = {};
 var reportsForRun = {};
 
 Meteor.publish(Meteor._ServerTestResultsSubscription, function (runId) {
-  check(runId, String);
+  check(runId, string);
   var self = this;
   if (!_.has(handlesForRun, runId))
     handlesForRun[runId] = [self];
@@ -23,8 +23,8 @@ Meteor.publish(Meteor._ServerTestResultsSubscription, function (runId) {
 
 Meteor.methods({
   'tinytest/run': function (runId, pathPrefix) {
-    check(runId, String);
-    check(pathPrefix, Match.Optional([String]));
+    check(runId, string);
+    check(pathPrefix, Match.Optional([string]));
     this.unblock();
 
     // XXX using private API === lame
@@ -59,7 +59,7 @@ Meteor.methods({
     future.wait();
   },
   'tinytest/clearResults': function (runId) {
-    check(runId, String);
+    check(runId, string);
     _.each(handlesForRun[runId], function (handle) {
       // XXX this doesn't actually notify the client that it has been
       // unsubscribed.
