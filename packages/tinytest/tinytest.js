@@ -156,9 +156,30 @@ _.extend(TestCaseResults.prototype, {
   },
 
   // XXX nodejs assert.throws can take an expected error, as a class,
-  // regular expression, or predicate function..
-  throws: function (f) {
-    var actual;
+  // regular expression, or predicate function.  However, with its 
+  // implementation if a constructor (class) is passed in and `actual`
+  // fails the instanceof test, the constructor is then treated as
+  // a predicate and called with `actual` (!)
+  //
+  // expected can be:
+  //  undefined: accept any exception.
+  //  regexp: accept an exception with message passing the regexp.
+  //  function: call the function as a predicate with the exception.
+  throws: function (f, expected) {
+    var actual, predicate;
+
+    if (expected === undefined)
+      predicate = function (actual) {
+        return true;
+      };
+    else if (expected instanceof RegExp)
+      predicate = function (actual) {
+        return expected.test(actual.message)
+      };
+    else if (typeof expected === 'function')
+      predicate = expected;
+    else
+      throw new Error('expected should be a predicate function or regexp');
 
     try {
       f();
@@ -166,7 +187,7 @@ _.extend(TestCaseResults.prototype, {
       actual = exception;
     }
 
-    if (actual)
+    if (actual && predicate(actual))
       this.ok({message: actual.message});
     else
       this.fail({type: "throws"});
