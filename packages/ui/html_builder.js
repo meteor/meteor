@@ -36,7 +36,6 @@ var evaluateStringOrHelper = function (stringOrHelper, component) {
 
 _.extend(HtmlBuilder.prototype, {
   encodeEntities: function (text, isQuoted) {
-    // XXX
     // All HTML entities in templates are decoded by the template
     // parser and given to HtmlBuilder as Unicode.  We then re-encode
     // some characters into entities here, but not most characters.
@@ -136,3 +135,11 @@ _.extend(HtmlBuilder.prototype, {
 // The HtmlBuilder probably has a tree of components
 // with children and elements, if only to track comment
 // references.
+
+// Component inclusions are also calculated, so their expressions
+// must be sent down.  Components must also be serialized on the
+// wire.  Argument change leads to update, of course.
+
+// Are Component class names in templates resolved?  Maybe.
+// Assuming so, the test for whether a class has changed is
+// comparing the resolved constructor names.
