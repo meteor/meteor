@@ -14,6 +14,29 @@ check = function (value, pattern) {
   checkSubtree(value, pattern);
 };
 
+string = function (value) {
+  if (typeof value === 'string')
+    return true;
+  throw new Match.Error("Expected a string, got " + EJSON.stringify(value));
+};
+
+boolean = function (value) {
+  if (typeof value === 'boolean')
+    return true;
+  throw new Match.Error("Expected a boolean, got " + EJSON.stringify(value));
+};
+
+number = function (value) {
+  if (typeof value === 'number')
+    return true;
+  throw new Match.Error("Expected a number, got " + EJSON.stringify(value));
+};
+
+object = function (value) {
+  check(value, Match.ObjectIncluding({}));
+  return true;
+};
+
 Match = {
   Optional: function (pattern) {
     return new Optional(pattern);
@@ -22,11 +45,11 @@ Match = {
     return new OneOf(_.toArray(arguments));
   },
   Any: ['__any__'],
-  Where: function (condition) {
-    return new Where(condition);
-  },
   ObjectIncluding: function (pattern) {
     return new ObjectIncluding(pattern);
+  },
+  Is: function (constructor) {
+    return new Is(constructor);
   },
 
   // XXX should we record the path down the tree in the error message?
@@ -80,48 +103,30 @@ var OneOf = function (choices) {
   this.choices = choices;
 };
 
-var Where = function (condition) {
-  this.condition = condition;
+var Is = function (constructor) {
+  this.constructor = constructor;
 };
 
 var ObjectIncluding = function (pattern) {
   this.pattern = pattern;
 };
 
-var typeofChecks = [
-  [String, "string"],
-  [Number, "number"],
-  [Boolean, "boolean"],
-  // While we don't allow undefined in EJSON, this is good for optional
-  // arguments with OneOf.
-  [undefined, "undefined"]
-];
-
 var checkSubtree = function (value, pattern) {
   // Match anything!
   if (pattern === Match.Any)
     return;
 
-  // Basic atomic types.
-  // XXX do we have to worry about if value is boxed (eg String)? will that
-  //     happen?
-  for (var i = 0; i < typeofChecks.length; ++i) {
-    if (pattern === typeofChecks[i][0]) {
-      if (typeof value === typeofChecks[i][1])
-        return;
-      throw new Match.Error("Expected " + typeofChecks[i][1] + ", got " +
-                            typeof value);
-    }
+  if (pattern === undefined) {
+    if (value === undefined)
+      return;
+    throw new Match.Error("Expected undefined, got " + EJSON.stringify(value));
   }
+
   if (pattern === null) {
     if (value === null)
       return;
     throw new Match.Error("Expected null, got " + EJSON.stringify(value));
   }
-
-  // "Object" is shorthand for Match.ObjectIncluding({});
-  if (pattern === Object)
-    pattern = Match.ObjectIncluding({});
 
   // Array (checked AFTER Any, which is implemented as an Array).
   if (pattern instanceof Array) {
@@ -137,16 +142,6 @@ var checkSubtree = function (value, pattern) {
     });
     return;
   }
-
-  // Arbitrary validation checks. The condition can return false or throw a
-  // Match.Error (ie, it can internally use check()) to fail.
-  if (pattern instanceof Where) {
-    if (pattern.condition(value))
-      return;
-    // XXX this error is terrible
-    throw new Match.Error("Failed Match.Where validation");
-  }
-
 
   if (pattern instanceof Optional)
     pattern = Match.OneOf(undefined, pattern.pattern);
@@ -168,13 +163,23 @@ var checkSubtree = function (value, pattern) {
     throw new Match.Error("Failed Match.OneOf validation");
   }
 
-  // A function that isn't something we special-case is assumed to be a
-  // constructor.
-  if (pattern instanceof Function) {
-    if (value instanceof pattern)
+  if (pattern instanceof Is) {
+    if (value instanceof pattern.constructor)
       return;
-    // XXX what if .name isn't defined
-    throw new Match.Error("Expected " + pattern.name);
+    throw new Match.Error(
+      "Expected " +
+      (pattern.constructor.name ? pattern.constructor.name : "instance of constructor")
+    );
+  }
+
+  // A predicate can throw its own Match.Error to provide a more specific error message.
+  if (typeof pattern === 'function') {
+    if (pattern(value))
+      return;
+    throw new Match.Error(
+      "Expected " +
+      (pattern.name ? pattern.name : 'to pass predicate test')
+    );
   }
 
   var unknownKeysAllowed = false;

@@ -69,7 +69,7 @@ Meteor.methods({
   login: function(options) {
     // Login handlers should really also check whatever field they look at in
     // options, but we don't enforce it.
-    check(options, Object);
+    check(options, object);
     var result = tryAllLoginHandlers(options);
     if (result !== null)
       this.setUserId(result.id);
@@ -91,7 +91,7 @@ Accounts.registerLoginHandler(function(options) {
   if (!options.resume)
     return undefined;
 
-  check(options.resume, String);
+  check(options.resume, string);
   var user = Meteor.users.findOne({
     "services.resume.loginTokens.token": ""+options.resume
   });
@@ -358,7 +358,7 @@ Meteor.publish("meteor.loginServiceConfiguration", function () {
 // to this collection are also allowed in insecure mode.
 Meteor.methods({
   "configureLoginService": function (options) {
-    check(options, Match.ObjectIncluding({service: String}));
+    check(options, Match.ObjectIncluding({service: string}));
     // Don't let random users configure a service we haven't added yet (so
     // that when we do later add it, it's set up with their configuration
     // instead of ours).

@@ -11,8 +11,8 @@ Meteor.methods({
     return arguments[0];
   },
   exception: function (where, intended) {
-    check(where, String);
-    check(intended, Match.Optional(Boolean));
+    check(where, string);
+    check(intended, Match.Optional(boolean));
     var shouldThrow =
       (Meteor.isServer && where === "server") ||
       (Meteor.isClient && where === "client") ||
@@ -29,7 +29,7 @@ Meteor.methods({
     }
   },
   setUserId: function(userId) {
-    check(userId, String);
+    check(userId, string);
     this.setUserId(userId);
   }
 });
@@ -58,7 +58,7 @@ if (Meteor.isServer) {
 
   Meteor.methods({
     delayedTrue: function(token) {
-      check(token, String);
+      check(token, string);
       var record = waiters[token] = {
         future: new Future(),
         timer: Meteor.setTimeout(function() {
@@ -70,7 +70,7 @@ if (Meteor.isServer) {
       return record.future.wait();
     },
     makeDelayedTrueImmediatelyReturnFalse: function(token) {
-      check(token, String);
+      check(token, string);
       var record = waiters[token];
       if (!record)
         return; // since delayedTrue's timeout had already run
@@ -97,17 +97,17 @@ Meteor.startup(function () {
 
 if (Meteor.isServer)
   Meteor.publish('ledger', function (world) {
-    check(world, String);
+    check(world, string);
     return Ledger.find({world: world});
   });
 
 Meteor.methods({
   'ledger/transfer': function (world, from_name, to_name, amount, cheat) {
-    check(world, String);
-    check(from_name, String);
-    check(to_name, String);
-    check(amount, Number);
-    check(cheat, Match.Optional(Boolean));
+    check(world, string);
+    check(from_name, string);
+    check(to_name, string);
+    check(amount, number);
+    check(cheat, Match.Optional(boolean));
     var from = Ledger.findOne({name: from_name, world: world});
     var to = Ledger.findOne({name: to_name, world: world});
 
@@ -153,7 +153,7 @@ if (Meteor.isServer) {
   (function () {
     var userIdWhenStopped = {};
     Meteor.publish("recordUserIdOnStop", function (key) {
-      check(key, String);
+      check(key, string);
       var self = this;
       self.onStop(function() {
         userIdWhenStopped[key] = self.userId;
@@ -162,7 +162,7 @@ if (Meteor.isServer) {
 
     Meteor.methods({
       userIdWhenStopped: function (key) {
-        check(key, String);
+        check(key, string);
         return userIdWhenStopped[key];
       }
     });
@@ -226,7 +226,7 @@ if (Meteor.isServer) {
 
     Meteor.methods({
       testOverlappingSubs: function (token) {
-        check(token, String);
+        check(token, string);
         _.each(universalSubscribers[0], function (sub) {
           sub.added(collName, token, {});
         });
@@ -246,7 +246,7 @@ if (Meteor.isServer) {
 if (Meteor.isServer) {
   Meteor.methods({
     runtimeUniversalSubCreation: function (token) {
-      check(token, String);
+      check(token, string);
       Meteor.publish(null, function () {
         this.added("runtimeSubCreation", token, {});
       });
@@ -258,9 +258,9 @@ if (Meteor.isServer) {
 
 if (Meteor.isServer) {
   Meteor.publish("publisherErrors", function (collName, options) {
-    check(collName, String);
+    check(collName, string);
     // See below to see what options are accepted.
-    check(options, Object);
+    check(options, object);
     var sub = this;
 
     // First add a random item, which should be cleaned up. We use ready/onReady
@@ -315,7 +315,7 @@ if (Meteor.isServer) {
 
   Meteor.publish("multiPublish", function (options) {
     // See below to see what options are accepted.
-    check(options, Object);
+    check(options, object);
     if (options.normal) {
       return [
         One.find(),

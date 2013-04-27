@@ -23,91 +23,91 @@ Tinytest.add("check - check", function (test) {
 
   // Atoms.
   var pairs = [
-    ["foo", String],
-    ["", String],
-    [0, Number],
-    [42.59, Number],
-    [NaN, Number],
-    [Infinity, Number],
-    [true, Boolean],
-    [false, Boolean],
+    ["foo", string],
+    ["", string],
+    [0, number],
+    [42.59, number],
+    [NaN, number],
+    [Infinity, number],
+    [true, boolean],
+    [false, boolean],
     [undefined, undefined],
     [null, null]
   ];
   _.each(pairs, function (pair) {
     matches(pair[0], Match.Any);
-    _.each([String, Number, Boolean, undefined, null], function (type) {
+    _.each([string, number, boolean, undefined, null], function (type) {
       if (type === pair[1]) {
         matches(pair[0], type);
         matches(pair[0], Match.Optional(type));
         matches(undefined, Match.Optional(type));
-        matches(pair[0], Match.Where(function () {
+        matches(pair[0], function () {
           check(pair[0], type);
           return true;
-        }));
-        matches(pair[0], Match.Where(function () {
+        });
+        matches(pair[0], function () {
           try {
             check(pair[0], type);
             return true;
           } catch (e) {
             return false;
           }
-        }));
+        });
       } else {
         fails(pair[0], type);
         matches(pair[0], Match.OneOf(type, pair[1]));
         matches(pair[0], Match.OneOf(pair[1], type));
-        fails(pair[0], Match.Where(function () {
+        fails(pair[0], function () {
           check(pair[0], type);
           return true;
-        }));
-        fails(pair[0], Match.Where(function () {
+        });
+        fails(pair[0], function () {
           try {
             check(pair[0], type);
             return true;
           } catch (e) {
             return false;
           }
-        }));
+        });
       }
       fails(pair[0], [type]);
-      fails(pair[0], Object);
+      fails(pair[0], object);
     });
   });
-  fails(true, Match.OneOf(String, Number, undefined, null, [Boolean]));
+  fails(true, Match.OneOf(string, number, undefined, null, [boolean]));
 
-  matches([1, 2, 3], [Number]);
-  matches([], [Number]);
-  fails([1, 2, 3, "4"], [Number]);
-  fails([1, 2, 3, [4]], [Number]);
-  matches([1, 2, 3, "4"], [Match.OneOf(Number, String)]);
+  matches([1, 2, 3], [number]);
+  matches([], [number]);
+  fails([1, 2, 3, "4"], [number]);
+  fails([1, 2, 3, [4]], [number]);
+  matches([1, 2, 3, "4"], [Match.OneOf(number, string)]);
 
-  matches({}, Object);
+  matches({}, object);
   matches({}, {});
-  matches({foo: 42}, Object);
+  matches({foo: 42}, object);
   fails({foo: 42}, {});
-  matches({a: 1, b:2}, {b: Number, a: Number});
-  fails({a: 1, b:2}, {b: Number});
-  matches({a: 1, b:2}, Match.ObjectIncluding({b: Number}));
-  fails({a: 1, b:2}, Match.ObjectIncluding({b: String}));
-  fails({a: 1, b:2}, Match.ObjectIncluding({c: String}));
-  fails({}, {a: Number});
-  matches({}, {a: Match.Optional(Number)});
-  matches({a: 1}, {a: Match.Optional(Number)});
-  fails({a: true}, {a: Match.Optional(Number)});
+  matches({a: 1, b:2}, {b: number, a: number});
+  fails({a: 1, b:2}, {b: number});
+  matches({a: 1, b:2}, Match.ObjectIncluding({b: number}));
+  fails({a: 1, b:2}, Match.ObjectIncluding({b: string}));
+  fails({a: 1, b:2}, Match.ObjectIncluding({c: string}));
+  fails({}, {a: number});
+  matches({}, {a: Match.Optional(number)});
+  matches({a: 1}, {a: Match.Optional(number)});
+  fails({a: true}, {a: Match.Optional(number)});
   // Match.Optional means "or undefined" at the top level but "or absent" in
   // objects.
-  fails({a: undefined}, {a: Match.Optional(Number)});
+  fails({a: undefined}, {a: Match.Optional(number)});
 
-  matches(/foo/, RegExp);
-  fails(/foo/, String);
-  matches(new Date, Date);
-  fails(new Date, Number);
-  matches(EJSON.newBinary(42), Match.Where(EJSON.isBinary));
-  fails([], Match.Where(EJSON.isBinary));
+  matches(/foo/, Match.Is(RegExp));
+  fails(/foo/, string);
+  matches(new Date, Match.Is(Date));
+  fails(new Date, number);
+  matches(EJSON.newBinary(42), EJSON.isBinary);
+  fails([], EJSON.isBinary);
 
-  matches(42, Match.Where(function (x) { return x % 2 === 0; }));
-  fails(43, Match.Where(function (x) { return x % 2 === 0; }));
+  matches(42, function (x) { return x % 2 === 0; });
+  fails(43, function (x) { return x % 2 === 0; });
 
   matches({
     a: "something",
@@ -116,22 +116,23 @@ Tinytest.add("check - check", function (test) {
       {x: 43, k: true, p: ["yay"]}
     ]
   }, {a: String, b: [Match.ObjectIncluding({
-    x: Number,
-    k: Match.OneOf(null, Boolean)})]});
+    x: number,
+    k: Match.OneOf(null, boolean)})]});
 
   // Test that "arguments" is treated like an array.
   var argumentsMatches = function () {
-    matches(arguments, [Number]);
+    matches(arguments, [number]);
   };
   argumentsMatches();
   argumentsMatches(1);
   argumentsMatches(1, 2);
   var argumentsFails = function () {
-    fails(arguments, [Number]);
+    fails(arguments, [number]);
   };
   argumentsFails("123");
   argumentsFails(1, "23");
 });
+
 
 Tinytest.add("check - argument checker", function (test) {
   var checksAllArguments = function (f /*arguments*/) {
@@ -145,16 +146,16 @@ Tinytest.add("check - argument checker", function (test) {
   checksAllArguments(function (x) {check(x, Match.Any);}, true);
   checksAllArguments(function (x) {check(x, Match.Any);}, 0);
   checksAllArguments(function (a, b, c) {
-    check(a, String);
-    check(b, Boolean);
-    check(c, Match.Optional(Number));
+    check(a, string);
+    check(b, boolean);
+    check(c, Match.Optional(number));
   }, "foo", true);
   checksAllArguments(function () {
-    check(arguments, [Number]);
+    check(arguments, [number]);
   }, 1, 2, 4);
   checksAllArguments(function(x) {
-    check(x, Number);
-    check(_.toArray(arguments).slice(1), [String]);
+    check(x, number);
+    check(_.toArray(arguments).slice(1), [string]);
   }, 1, "foo", "bar", "baz");
 
   var doesntCheckAllArguments = function (f /*arguments*/) {
@@ -171,19 +172,19 @@ Tinytest.add("check - argument checker", function (test) {
   doesntCheckAllArguments(function () {}, null);
   doesntCheckAllArguments(function () {}, 1);
   doesntCheckAllArguments(function () {
-    check(_.toArray(arguments).slice(1), [String]);
+    check(_.toArray(arguments).slice(1), [string]);
   }, 1, "asdf", "foo");
   doesntCheckAllArguments(function (x, y) {
-    check(x, Boolean);
+    check(x, boolean);
   }, true, false);
   // One "true" check doesn't count for all.
   doesntCheckAllArguments(function (x, y) {
-    check(x, Boolean);
+    check(x, boolean);
   }, true, true);
   // For non-primitives, we really do require that each arg gets checked.
   doesntCheckAllArguments(function (x, y) {
-    check(x, [Boolean]);
-    check(x, [Boolean]);
+    check(x, [boolean]);
+    check(x, [boolean]);
   }, [true], [true]);
 
 
@@ -192,7 +193,7 @@ Tinytest.add("check - argument checker", function (test) {
   // "check x and check y, both of which are true" (for any interned primitive
   // type).
   checksAllArguments(function (x, y) {
-    check(x, Boolean);
-    check(x, Boolean);
+    check(x, boolean);
+    check(x, boolean);
   }, true, true);
 });

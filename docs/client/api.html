@@ -76,7 +76,7 @@ different collections. We hope to lift this restriction in a future release.
 
     // publish dependent documents and simulate joins
     Meteor.publish("roomAndMessages", function (roomId) {
-      check(roomId, String);
+      check(roomId, string);
       return [
         Rooms.find({_id: roomId}, {fields: {secretInfo: 0}}),
         Messages.find({roomId: roomId})
@@ -99,7 +99,7 @@ Example:
     // server: publish the current size of a collection
     Meteor.publish("counts-by-room", function (roomId) {
       var self = this;
-      check(roomId, String);
+      check(roomId, string);
       var count = 0;
       var initializing = true;
       var handle = Messages.find({roomId: roomId}).observeChanges({
@@ -244,8 +244,8 @@ Example:
 
     Meteor.methods({
       foo: function (arg1, arg2) {
-        check(arg1, String);
-        check(arg2, [Number]);
+        check(arg1, string);
+        check(arg2, [number]);
         // .. do stuff ..
         if (you want to throw an error)
           throw new Meteor.Error(404, "Can't find my pants");
@@ -2283,17 +2283,17 @@ values are of the expected type. For example:
 
     Meteor.publish("chats-in-room", function (roomId) {
       // Make sure roomId is a string, not an arbitrary mongo selector object.
-      check(roomId, String);
+      check(roomId, string);
       return Chats.find({room: roomId});
     });
 
     Meteor.methods({addChat: function (roomId, message) {
-      check(roomId, String);
+      check(roomId, string);
       check(message, {
-        text: String,
-        timestamp: Date,
+        text: string,
+        timestamp: Match.Is(Date),
         // Optional, but if present must be an array of strings.
-        tags: Match.Optional([String])
+        tags: Match.Optional([string])
       });
 
       // ... do something with the message ...
@@ -2318,13 +2318,13 @@ The following patterns can be used as pattern arguments to `check` and `Match.te
 Matches any value.
 {{/dtdd}}
 
-{{#dtdd "<code>String</code>, <code>Number</code>, <code>Boolean</code>, <code>undefined</code>, <code>null</code>"}}
+{{#dtdd "<code>string</code>, <code>number</code>, <code>boolean</code>, <code>undefined</code>, <code>null</code>"}}
 Matches a primitive of the given type.
 {{/dtdd}}
 
 {{#dtdd "<code>[<em>pattern</em>]</code>"}}
 A one-element array matches an array of elements, each of which match
-*pattern*. For example, `[Number]` matches a (possibly empty) array of numbers;
+*pattern*. For example, `[number]` matches a (possibly empty) array of numbers;
 `[Match.Any]` matches any array.
 {{/dtdd}}
 
@@ -2340,7 +2340,7 @@ Matches an Object with the given keys; the value may also have other keys
 with arbitrary values.
 {{/dtdd}}
 
-{{#dtdd "<code>Object</code>"}}
+{{#dtdd "<code>object</code>"}}
 Matches any plain Object with any keys; equivalent to
 `Match.ObjectIncluding({})`.
 {{/dtdd}}
@@ -2353,20 +2353,22 @@ Matches either `undefined` or something that matches *pattern*.
 Matches any value that matches at least one of the provided patterns.
 {{/dtdd}}
 
-{{#dtdd "Any constructor function (eg, <code>Date</code>)"}}
-Matches any element that is an instance of that type.
+{{#dtdd "<code>Match.Is(<em>constructor</em>)</code>"}}
+Matches any element that is an instance of the constructor.
+
+    check(date, Match.Is(Date));
 {{/dtdd}}
 
-{{#dtdd "<code>Match.Where(<em>condition</em>)</code>"}}
-Calls the function *condition* with the value as the argument. If *condition*
-returns true, this matches. If *condition* throws a `Match.Error` or returns
-false, this fails. If *condition* throws any other error, that error is thrown
+{{#dtdd "Any function</code>"}}
+Calls the function with the value as the argument. If the function
+returns true, this matches. If the function throws a `Match.Error` or returns
+false, this fails. If the function throws any other error, that error is thrown
 from the call to `check` or `Match.test`. Examples:
 
-    check(buffer, Match.Where(EJSON.isBinary));
+    check(buffer, EJSON.isBinary);
 
-    NonEmptyString = Match.Where(function (x) {
-      check(x, String);
+    NonEmptyString = function (x) {
+      check(x, string);
       return x.length > 0;
     }
     check(arg, NonEmptyString);

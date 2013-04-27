@@ -16,16 +16,16 @@ var selectorFromUserQuery = function (user) {
   throw new Error("shouldn't happen (validation missed something)");
 };
 
-var userQueryValidator = Match.Where(function (user) {
+var userQueryValidator = function (user) {
   check(user, {
-    id: Match.Optional(String),
-    username: Match.Optional(String),
-    email: Match.Optional(String)
+    id: Match.Optional(string),
+    username: Match.Optional(string),
+    email: Match.Optional(string)
   });
   if (_.keys(user).length !== 1)
     throw new Match.Error("User property must have exactly one field");
   return true;
-});
+};
 
 // Step 1 of SRP password exchange. This puts an `M` value in the
 // session data for this connection. If a client later sends the same
@@ -43,7 +43,7 @@ var userQueryValidator = Match.Where(function (user) {
 Meteor.methods({beginPasswordExchange: function (request) {
   check(request, {
     user: userQueryValidator,
-    A: String
+    A: string
   });
   var selector = selectorFromUserQuery(request.user);
 
@@ -72,7 +72,7 @@ Meteor.methods({beginPasswordExchange: function (request) {
 Accounts.registerLoginHandler(function (options) {
   if (!options.srp)
     return undefined; // don't handle
-  check(options.srp, {M: String});
+  check(options.srp, {M: string});
 
   // we're always called from within a 'login' method, so this should
   // be safe.
@@ -107,7 +107,7 @@ Accounts.registerLoginHandler(function (options) {
   if (!options.password || !options.user)
     return undefined; // don't handle
 
-  check(options, {user: userQueryValidator, password: String});
+  check(options, {user: userQueryValidator, password: string});
 
   var selector = selectorFromUserQuery(options.user);
   var user = Meteor.users.findOne(selector);
@@ -148,9 +148,9 @@ Meteor.methods({changePassword: function (options) {
     // If options.M is set, it means we went through a challenge with the old
     // password. For now, we don't allow changePassword without knowing the old
     // password.
-    M: String,
+    M: string,
     srp: Match.Optional(Meteor._srp.matchVerifier),
-    password: Match.Optional(String)
+    password: Match.Optional(string)
   });
 
   var serialized = this._sessionData.srpChallenge;
@@ -200,7 +200,7 @@ Accounts.setPassword = function (userId, newPassword) {
 // Method called by a user to request a password reset email. This is
 // the start of the reset process.
 Meteor.methods({forgotPassword: function (options) {
-  check(options, {email: String});
+  check(options, {email: string});
 
   var user = Meteor.users.findOne({"emails.address": options.email});
   if (!user)
@@ -286,7 +286,7 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
 // Take token from sendResetPasswordEmail or sendEnrollmentEmail, change
 // the users password, and log them in.
 Meteor.methods({resetPassword: function (token, newVerifier) {
-  check(token, String);
+  check(token, string);
   check(newVerifier, Meteor._srp.matchVerifier);
 
   var user = Meteor.users.findOne({
@@ -363,7 +363,7 @@ Accounts.sendVerificationEmail = function (userId, address) {
 // Take token from sendVerificationEmail, mark the email as verified,
 // and log them in.
 Meteor.methods({verifyEmail: function (token) {
-  check(token, String);
+  check(token, string);
 
   var user = Meteor.users.findOne(
     {'services.email.verificationTokens.token': token});
@@ -418,10 +418,10 @@ var createUser = function (options) {
   // Unknown keys allowed, because a onCreateUserHook can take arbitrary
   // options.
   check(options, Match.ObjectIncluding({
-    generateLoginToken: Boolean,
-    username: Match.Optional(String),
-    email: Match.Optional(String),
-    password: Match.Optional(String),
+    generateLoginToken: boolean,
+    username: Match.Optional(string),
+    email: Match.Optional(string),
+    password: Match.Optional(string),
     srp: Match.Optional(Meteor._srp.matchVerifier)
   }));
 
@@ -453,7 +453,7 @@ var createUser = function (options) {
 // method for create user. Requests come from the client.
 Meteor.methods({createUser: function (options) {
   // createUser() above does more checking.
-  check(options, Object);
+  check(options, object);
   options.generateLoginToken = true;
   if (Accounts._options.forbidClientAccountCreation)
     throw new Meteor.Error(403, "Signups forbidden");
