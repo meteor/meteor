@@ -1,10 +1,31 @@
 
+
+ComponentInfo = function (constructorName) {
+  this.constructorName = constructorName;
+//  this.children = {};
+//  this.elements = {};
+};
+
+
 HtmlBuilder = function () {
-  this.builderId = Random.id();
-  this.nextElementNum = 1;
   this.htmlBuf = [];
-  this.elemKeyToNum = {};
-  this.currentComponent = null;
+
+  this.rootComponentInfo = null;
+  this.currentComponentInfo = null;
+  // parent chain of currentComponent
+  this.componentInfoStack = [];
+
+//  this.builderId = Random.id();
+//  this.nextElementNum = 1;
+
+  //this.chunkPool = [];
+  // openChunk and closeChunk are primitives that build
+  // the chunkPool.  They are possibly private.
+  // Can tell if openChunks or closeChunks are consecutive
+  // by looking at length of htmlBuf.  Interesting algo
+  // problem to build the chunk info correctly.
+  // ChunkInfo class?  Oh, it won't deserialize with
+  // class intact... without EJSON...
 };
 
 var TAG_NAME_REGEX = /^[a-zA-Z0-9]+$/;
