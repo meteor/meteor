@@ -406,7 +406,7 @@ if (Meteor.isServer) {
 };
 Meteor.methods({
   "livedata/setup" : function (id) {
-    check(id, String);
+    check(id, string);
     if (Meteor.isServer) {
       pubHandles[id] = {};
       Meteor.publish("pub1"+id, function () {
@@ -421,7 +421,7 @@ Meteor.methods({
     }
   },
   "livedata/pub1go" : function (id) {
-    check(id, String);
+    check(id, string);
     if (Meteor.isServer) {
 
       pubHandles[id].pub1.added("MultiPubCollection" + id, "foo", {a: "aa"});
@@ -430,7 +430,7 @@ Meteor.methods({
     return 0;
   },
   "livedata/pub2go" : function (id) {
-    check(id, String);
+    check(id, string);
     if (Meteor.isServer) {
       pubHandles[id].pub2.added("MultiPubCollection" + id , "foo", {b: "bb"});
       return 2;
@@ -605,7 +605,7 @@ if (Meteor.isClient) {
 if (Meteor.isServer) {
   Meteor.methods({
     "s2s": function (arg) {
-      check(arg, String);
+      check(arg, string);
       return "s2s " + arg;
     }
   });

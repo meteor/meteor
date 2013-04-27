@@ -112,6 +112,11 @@ var ObjectIncluding = function (pattern) {
 };
 
 var checkSubtree = function (value, pattern) {
+  if (pattern === String || pattern === Boolean || pattern === Number || pattern === Object)
+    throw new Match.Error("Use lowercase string, boolean, number, or object");
+  if (pattern === Date)
+    throw new Match.Error("Use Match.Is(Date)");
+
   // Match anything!
   if (pattern === Match.Any)
     return;

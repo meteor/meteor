@@ -115,7 +115,7 @@ Tinytest.add("check - check", function (test) {
       {x: 42, k: null},
       {x: 43, k: true, p: ["yay"]}
     ]
-  }, {a: String, b: [Match.ObjectIncluding({
+  }, {a: string, b: [Match.ObjectIncluding({
     x: number,
     k: Match.OneOf(null, boolean)})]});
 
