@@ -1,3 +1,5 @@
+// Choose the best available setImmediate implementation.
+//
 // Based on https://github.com/NobleJS/setImmediate#readme
 // version 1.0.1 (https://github.com/NobleJS/setImmediate/tree/1.0.1)
 //
@@ -8,12 +10,21 @@
 // * `nextTick` is not used for Node since `nextTick` runs its
 // callbacks before I/O, which is stricter than we're looking for.
 //
+// * If one invocation of a setImmediate callback pauses itself by a
+// call to alert/prompt/showModelDialog, the original polyfill
+// implementation ensured that no setImmedate callback would run until
+// the first invocation completed.  While correct per the spec
+// https://dvcs.w3.org/hg/webperf/raw-file/tip/specs/setImmediate/Overview.html,
+// what it would mean for us in practice is that any reactive updates
+// relying on Meteor.defer would be hung in the main window until the
+// modal dialog was dismissed.
+//
 // * Don't support using a string to be eval'ed for the callback.
 //
 // * The code isn't wrapped in a closure here because that's done by
 // the package system.
 //
-// * clearImmediate is not implemented.
+// * Don't implement clearImmediate.
 //
 // * Reformatted.
 
