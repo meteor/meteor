@@ -616,6 +616,7 @@ testAsyncMulti('mongo-livedata - document with a date, ' + idGeneration, [
 
 testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGeneration, [
   function (test, expect) {
+    var self = this;
     var seconds = function (doc) {
       doc.seconds = function () {return doc.d.getSeconds();};
       return doc;
@@ -632,30 +633,54 @@ testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGenera
       Meteor.subscribe('c-' + collectionName);
     }
 
-    var coll = new Meteor.Collection(collectionName, collectionOptions);
+    self.coll = new Meteor.Collection(collectionName, collectionOptions);
+    var obs;
     var expectAdd = expect(function (doc) {
       test.equal(doc.seconds(), 50);
     });
     var expectRemove = expect (function (doc) {
       test.equal(doc.seconds(), 50);
+      obs.stop();
     });
-    coll.insert({d: new Date(1356152390004)}, expect(function (err, id) {
+    self.coll.insert({d: new Date(1356152390004)}, expect(function (err, id) {
       test.isFalse(err);
       test.isTrue(id);
-      var cursor = coll.find();
-      cursor.observe({
+      var cursor = self.coll.find();
+      obs = cursor.observe({
         added: expectAdd,
         removed: expectRemove
       });
       test.equal(cursor.count(), 1);
       test.equal(cursor.fetch()[0].seconds(), 50);
-      test.equal(coll.findOne().seconds(), 50);
-      test.equal(coll.findOne({}, {transform: null}).seconds, undefined);
-      test.equal(coll.findOne({}, {
+      test.equal(self.coll.findOne().seconds(), 50);
+      test.equal(self.coll.findOne({}, {transform: null}).seconds, undefined);
+      test.equal(self.coll.findOne({}, {
         transform: function (doc) {return {seconds: doc.d.getSeconds()};}
       }).seconds, 50);
-      coll.remove(id);
+      self.coll.remove(id);
     }));
+  },
+  function (test, expect) {
+    var self = this;
+    self.coll.insert({d: new Date(1356152390004)}, expect(function (err, id) {
+      test.isFalse(err);
+      test.isTrue(id);
+      self.id1 = id;
+    }));
+    self.coll.insert({d: new Date(1356152391004)}, expect(function (err, id) {
+      test.isFalse(err);
+      test.isTrue(id);
+      self.id2 = id;
+    }));
+  },
+  function (test, expect) {
+    var self = this;
+    // Test that a transform that returns something other than a document with
+    // an _id (eg, a number) works. Regression test for #974.
+    test.equal(self.coll.find({}, {
+      transform: function (doc) { return doc.d.getSeconds(); },
+      sort: {d: 1}
+    }).fetch(), [50, 51]);
   }
 ]);
 

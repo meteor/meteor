@@ -4,7 +4,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('underscore', 'server');
-  api.use('localstorage-polyfill', 'client');
+  api.use('localstorage', 'client');
   api.use('accounts-urls', 'client');
 
   // need this because of the Meteor.users collection but in the future

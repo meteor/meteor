@@ -4,9 +4,24 @@ var crypto = Npm.require('crypto');
 var fs = Npm.require('fs');
 var path = Npm.require('path');
 
-var knownBrowsers = ['android', 'chrome', 'firefox', 'ie', 'mobileSafari', 'safari'];
+var knownBrowsers = [
+  'android',
+  'chrome',
+  'chromium',
+  'firefox',
+  'ie',
+  'mobileSafari',
+  'safari'
+];
 
-var browsersEnabledByDefault = ['android', 'chrome', 'ie', 'mobileSafari', 'safari'];
+var browsersEnabledByDefault = [
+  'android',
+  'chrome',
+  'chromium',
+  'ie',
+  'mobileSafari',
+  'safari'
+];
 
 var enabledBrowsers = {};
 _.each(browsersEnabledByDefault, function (browser) {

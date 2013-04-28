@@ -1,11 +1,30 @@
 
 ## vNEXT
 
+* Files in the 'client/compatibility/' subdirectory of a Meteor app do
+  not get wrapped in a new variable scope.
+
 * With `autopublish` on, publish many useful fields on `Meteor.users`.
 
 * When using the `http` package on the server synchronously, errors
   are thrown rather than passed in `result.error`
 
+* Cursor transform functions on the server no longer are required to return
+  objects with correct `_id` fields.  #974
+
+* Upgrade CoffeeScript from 1.5.0 to 1.6.2.  #972
+
+* `Email.send` has a new `headers` option to set arbitrary headers.  #963
+
+* The `localstorage-polyfill` smart package has been replaced by a
+  `localstorage` package, which defines a `Meteor._localStorage` API instead of
+  trying to replace the DOM `window.localStorage` facility. (Now, apps can use
+  the existence of `window.localStorage` to detect if the full localStorage API
+  is supported.)  #979
+
+* Support `appcache` on Chromium.  #958
+
+Patches contributed by GitHub users awwx and spang.
 
 ## v0.6.2.1
 
