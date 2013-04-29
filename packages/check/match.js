@@ -68,7 +68,6 @@ Match = {
   // `args` (either directly or in the first level of an array), throws an error
   // (using `description` in the message).
   //
-  // XXX private -- exported only for use by tests
   // @export Match._failIfArgumentsAreNotAllChecked
   _failIfArgumentsAreNotAllChecked: function (f, context, args, description) {
     var argChecker = new ArgumentChecker(args, description);
