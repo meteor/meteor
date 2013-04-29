@@ -9,6 +9,7 @@ Fiber(function () {
   var runner = require('./run.js');
   var library = require('./library.js');
   var buildmessage = require('./buildmessage.js');
+  var unipackage = require('./unipackage.js');
   var project = require('./project.js');
   var warehouse = require('./warehouse.js');
   var logging = require('./logging.js');
@@ -975,6 +976,65 @@ Fiber(function () {
         console.log("Built " + count + " packages.");
       if (messages.hasMessages())
         process.stdout.write("\n" + messages.formatMessages());
+    }
+  });
+
+  Commands.push({
+    name: "run-command",
+    help: "Build and run a command-line tool",
+    hidden: true,
+    func: function (argv) {
+      if (argv.help || argv._.length < 1) {
+        process.stdout.write(
+"Usage: meteor run-command <package directory> [arguments..]\n" +
+"\n" +
+"Builds the provided directory as a package, then loads the package and\n" +
+"calls the main() function inside the package. The function will receive\n" +
+"any remaining arguments. The exit status will be the return value of\n" +
+"main() (which is called inside a fiber).\n" +
+"\n" +
+"This command is for temporary, internal use, until we have a more mature\n" +
+"system for building standalone command-line programs with Meteor.\n");
+        process.exit(1);
+      }
+
+      // Make the directory visible as a package. Prefer to use the
+      // last component of the directory as the package name, so error
+      // messages look pretty, but if that would conflict with another
+      // package that we know about then use a random string.
+      var packageDir = path.resolve(argv._[0]);
+      var packageName = path.basename(packageDir);
+      if (context.library.get(packageName, false))
+        packageName = "tool" + Math.floor((Math.random() * 100000));
+      context.library.override(packageName, packageDir);
+
+      // Build and load the package
+      var world;
+      var messages = buildmessage.capture(function () {
+        world = unipackage.load({
+          library: context.library,
+          packages: [ packageName ],
+          release: context.releaseVersion
+        });
+      });
+      if (messages.hasMessages()) {
+        process.stderr.write(messages.formatMessages());
+        process.exit(1);
+      }
+
+      if (! ('main' in world[packageName])) {
+        process.stderr.write("Package does not define a main() function.\n");
+        process.exit(1);
+      }
+
+      var ret = world[packageName].main(argv._.slice(1));
+      // let exceptions propagate and get printed by node
+      if (ret === undefined)
+        ret = 0;
+      if (typeof ret !== "number")
+        ret = 1;
+      ret = +ret; // cast to integer
+      process.exit(ret);
     }
   });
 
