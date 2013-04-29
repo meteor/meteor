@@ -984,7 +984,11 @@ Fiber(function () {
     help: "Build and run a command-line tool",
     hidden: true,
     func: function (argv) {
-      if (argv.help || argv._.length < 1) {
+      // At this point options such as --help have already been parsed
+      // out.. that's no good. We'll have to go back tho the original
+      // process.argv and parse it ourselves.
+      argv = process.argv.slice(3);
+      if (! argv.length || argv[0] === "--help") {
         process.stdout.write(
 "Usage: meteor run-command <package directory> [arguments..]\n" +
 "\n" +
@@ -998,16 +1002,16 @@ Fiber(function () {
         process.exit(1);
       }
 
-      if (! fs.existsSync(argv._[0]) ||
-          ! fs.statSync(argv._[0]).isDirectory()) {
-        process.stderr.write(argv._[0] + ": not a directory\n");
+      if (! fs.existsSync(argv[0]) ||
+          ! fs.statSync(argv[0]).isDirectory()) {
+        process.stderr.write(argv[0] + ": not a directory\n");
         process.exit(1);
       }
 
       // Make the directory visible as a package. Derive the last
       // package name from the last component of the directory, and
       // bail out if that creates a conflict.
-      var packageDir = path.resolve(argv._[0]);
+      var packageDir = path.resolve(argv[0]);
       var packageName = path.basename(packageDir) + "-tool";
       if (context.library.get(packageName, false)) {
         process.stderr.write("'" + packageName + "' conflicts with the name " +
@@ -1035,7 +1039,7 @@ Fiber(function () {
         process.exit(1);
       }
 
-      var ret = world[packageName].main(argv._.slice(1));
+      var ret = world[packageName].main(argv.slice(1));
       // let exceptions propagate and get printed by node
       if (ret === undefined)
         ret = 0;
