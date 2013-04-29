@@ -998,11 +998,17 @@ Fiber(function () {
         process.exit(1);
       }
 
+      if (! fs.existsSync(argv._[0]) ||
+          ! fs.statSync(argv._[0]).isDirectory()) {
+        process.stderr.write(argv._[0] + ": not a directory\n");
+        process.exit(1);
+      }
+
       // Make the directory visible as a package. Derive the last
       // package name from the last component of the directory, and
       // bail out if that creates a conflict.
       var packageDir = path.resolve(argv._[0]);
-      var packageName = "tool-" + path.basename(packageDir);
+      var packageName = path.basename(packageDir) + "-tool";
       if (context.library.get(packageName, false)) {
         process.stderr.write("'" + packageName + "' conflicts with the name " +
                              "of a package in the library");
