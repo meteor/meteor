@@ -6,20 +6,20 @@
     },
     "stylus": {
       "version": "0.30.1",
-      "from": "stylus@0.30.1",
+      "from": "https://registry.npmjs.org/stylus/-/stylus-0.30.1.tgz",
       "resolved": "https://registry.npmjs.org/stylus/-/stylus-0.30.1.tgz",
       "dependencies": {
         "cssom": {
           "version": "0.2.5",
-          "from": "cssom@0.2.x"
+          "from": "cssom@0.2.5"
         },
         "mkdirp": {
           "version": "0.3.5",
-          "from": "mkdirp@0.3.x"
+          "from": "mkdirp@0.3.5"
         },
         "debug": {
           "version": "0.7.2",
-          "from": "debug@*"
+          "from": "debug@0.7.2"
         }
       }
     }

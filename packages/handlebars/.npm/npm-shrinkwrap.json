@@ -6,17 +6,17 @@
       "dependencies": {
         "optimist": {
           "version": "0.3.7",
-          "from": "optimist@~0.3",
+          "from": "optimist@0.3.7",
           "dependencies": {
             "wordwrap": {
               "version": "0.0.2",
-              "from": "wordwrap@~0.0.2"
+              "from": "wordwrap@0.0.2"
             }
           }
         },
         "uglify-js": {
           "version": "1.2.6",
-          "from": "uglify-js@~1.2"
+          "from": "uglify-js@1.2.6"
         }
       }
     }
