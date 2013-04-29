@@ -1279,7 +1279,7 @@ _.extend(Package.prototype, {
     // one. #OldStylePackageSupport
     _.each(["use", "test"], function (role) {
       if (roleHandlers[role]) {
-        roleHandlers[role]({
+        var api = {
           // Called when this package wants to make another package be
           // used. Can also take literal package objects, if you have
           // anonymous packages you want to use (eg, app packages)
@@ -1376,7 +1376,23 @@ _.extend(Package.prototype, {
             // recover by returning dummy value
             return [];
           }
-        });
+        };
+
+        try {
+          roleHandlers[role](api);
+        } catch (e) {
+          buildmessage.exception(e);
+          // Recover by ignoring all of the source files in the
+          // packages and any remaining role handlers. It violates the
+          // principle of least surprise to half-run a role handler
+          // and then continue.
+          sources = {use: {client: [], server: []},
+                     test: {client: [], server: []}};
+          roleHandlers = {use: null, test: null};
+          self.legacyExtensionHandlers = {};
+          self.pluginInfo = {};
+          npmDependencies = null;
+        }
       }
     });
 
