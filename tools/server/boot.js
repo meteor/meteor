@@ -153,7 +153,7 @@ var run = function () {
   var clientDir = path.dirname(clientJsonPath);
   var clientJson = JSON.parse(fs.readFileSync(clientJsonPath, 'utf8'));
 
-  if (clientJson.format !== "browser-program-1")
+  if (clientJson.format !== "browser-program-pre1")
     throw new Error("Unsupported format for client assets: " +
                     JSON.stringify(clientJson.format));
 

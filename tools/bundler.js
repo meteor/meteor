@@ -2,7 +2,7 @@
 //
 // /star.json
 //
-//  - format: "site-archive-1" for this version
+//  - format: "site-archive-pre1" for this version
 //
 //  - builtBy: human readable banner (eg, "Meteor 0.6.0")
 //
@@ -54,7 +54,7 @@
 //
 // /program.json
 //
-//  - format: "browser-program-1" for this version
+//  - format: "browser-program-pre1" for this version
 //
 //  - page: path to the template for the HTML to serve when a browser
 //    loads a page that is part of the application. In the file
@@ -138,7 +138,7 @@
 // == Format of a program that is to be used as a plugin ==
 //
 // /program.json:
-//  - format: "javascript-image-1" for this version
+//  - format: "javascript-image-pre1" for this version
 //  - arch: the architecture that this build requires
 //  - load: array with each item describing a JS file to load, in load order:
 //    - path: path of file, relative to program.json
@@ -724,7 +724,7 @@ _.extend(ClientTarget.prototype, {
 
     // Control file
     builder.writeJson('program.json', {
-      format: "browser-program-1",
+      format: "browser-program-pre1",
       manifest: manifest,
       page: 'app.html',
 
@@ -894,22 +894,22 @@ _.extend(JsImage.prototype, {
     // Control file
     builder.writeJson('program.json', {
       load: load,
-      format: "javascript-image-1",
+      format: "javascript-image-pre1",
       arch: self.arch
     });
     return "program.json";
   }
 });
 
-// Create a JsImage by loading a bundle of format 'javascript-image-1'
-// from disk (eg, previously written out with write().) `dir` is the
-// path to the control file.
+// Create a JsImage by loading a bundle of format
+// 'javascript-image-pre1' from disk (eg, previously written out with
+// write().) `dir` is the path to the control file.
 JsImage.readFromDisk = function (controlFilePath) {
   var ret = new JsImage;
   var json = JSON.parse(fs.readFileSync(controlFilePath));
   var dir = path.dirname(controlFilePath);
 
-  if (json.format !== "javascript-image-1")
+  if (json.format !== "javascript-image-pre1")
     throw new Error("Unsupported plugin format: " +
                     JSON.stringify(json.format));
 
@@ -1103,7 +1103,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
 
   try {
     var json = {
-      format: "site-archive-1",
+      format: "site-archive-pre1",
       builtBy: options.builtBy,
       programs: []
     };
