@@ -354,7 +354,7 @@ var error = function (message, options) {
 // thrown.
 var exception = function (error) {
   if (! currentJob)
-    throw new Error("Error: " + message);
+    throw new Error("Error: " + error.message);
 
   var message = error.message.slice(0,1).toLowerCase() + error.message.slice(1);
 
