@@ -998,14 +998,16 @@ Fiber(function () {
         process.exit(1);
       }
 
-      // Make the directory visible as a package. Prefer to use the
-      // last component of the directory as the package name, so error
-      // messages look pretty, but if that would conflict with another
-      // package that we know about then use a random string.
+      // Make the directory visible as a package. Derive the last
+      // package name from the last component of the directory, and
+      // bail out if that creates a conflict.
       var packageDir = path.resolve(argv._[0]);
-      var packageName = path.basename(packageDir);
-      if (context.library.get(packageName, false))
-        packageName = "tool" + Math.floor((Math.random() * 100000));
+      var packageName = "tool-" + path.basename(packageDir);
+      if (context.library.get(packageName, false)) {
+        process.stderr.write("'" + packageName + "' conflicts with the name " +
+                             "of a package in the library");
+        process.exit(1);
+      }
       context.library.override(packageName, packageDir);
 
       // Build and load the package
