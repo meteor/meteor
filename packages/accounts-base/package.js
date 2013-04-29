@@ -7,6 +7,7 @@ Package.on_use(function (api) {
   api.use('localstorage', 'client');
   api.use('accounts-urls', ['client', 'server']);
   api.use('deps', 'client');
+  api.use('check', 'server');
   api.use('random', ['client', 'server']);
 
   // need this because of the Meteor.users collection but in the future

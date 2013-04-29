@@ -51,4 +51,5 @@ Package.on_test(function (api) {
 
   api.use('http', 'client');
   api.add_files(['stream_tests.js'], 'client');
+  api.use('check', ['client', 'server']);
 });

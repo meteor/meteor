@@ -601,6 +601,7 @@ exports.run = function (context, options) {
   };
 
   startProxy(outerPort, innerPort, function () {
+    console.log(context.appDir);
     var banner = options.banner || files.pretty_path(context.appDir);
     process.stdout.write("[[[[[ " + banner + " ]]]]]\n\n");
 
