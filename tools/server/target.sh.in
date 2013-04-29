@@ -19,5 +19,15 @@ mv "$BUNDLE_TMPDIR" "dependencies"
 trap - EXIT
 set +e
 
+# If there are global node_modules in the bundle, remove them, since
+# they override NODE_PATH. Why are these present? Well, 'meteor
+# bundle' historically embeds them to give you a self-contained
+# bundle. But that never worked very well, because you'd get the
+# version for the arch you built on, and you'd have to manually
+# rebuild the binary modules (node-fibers) on the target system. It is
+# not ideal to have the bundle modify itself (much better for it to be
+# immutable) but ti'll do for now.
+rm -rf node_modules
+
 export NODE_PATH="`pwd`/dependencies/lib/node_modules"
 dependencies/bin/node boot.js ##IMAGE##
