@@ -1031,8 +1031,8 @@ _.extend(ServerTarget.prototype, {
     var imageControlFile = self.toJsImage().write(builder);
 
     // Server bootstrap
-    builder.copyFile({ from: path.join(__dirname, 'server', 'boot.js'),
-                       to: 'boot.js' });
+    builder.write('boot.js',
+                  { file: path.join(__dirname, 'server', 'boot.js') });
 
     // Script that fetches the dev_bundle and runs the server bootstrap
     var archToPlatform = {
