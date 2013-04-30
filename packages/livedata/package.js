@@ -3,7 +3,7 @@ Package.describe({
   internal: true
 });
 
-Npm.depends({sockjs: "0.3.4",
+Npm.depends({sockjs: "0.3.7",
              websocket: "1.0.7"});
 
 Package.on_use(function (api) {

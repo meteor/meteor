@@ -3,6 +3,7 @@
 var Fiber = require("fibers");
 
 var fs = require("fs");
+var os = require("os");
 var path = require("path");
 var url = require("url");
 
@@ -157,12 +158,26 @@ var run = function () {
     throw new Error("Unsupported format for client assets: " +
                     JSON.stringify(clientJson.format));
 
-  // check environment
-  var port = process.env.PORT ? parseInt(process.env.PORT) : 80;
+  var deployConfig =
+        process.env.METEOR_DEPLOY_CONFIG
+        ? JSON.parse(process.env.METEOR_DEPLOY_CONFIG) : {};
+  if (!deployConfig.packages)
+    deployConfig.packages = {};
+  if (!deployConfig.boot)
+    deployConfig.boot = {};
+  if (!deployConfig.boot.bind)
+    deployConfig.boot.bind = {};
 
-  // check for a valid MongoDB URL right away
-  if (!process.env.MONGO_URL)
-    throw new Error("MONGO_URL must be set in environment");
+  // check environment for legacy env variables.
+  if (process.env.PORT && !_.has(deployConfig.boot.bind, 'localPort')) {
+    deployConfig.boot.bind.localPort = parseInt(process.env.PORT);
+  }
+  // XXX make outer wrapper fail if MONGO_URL not set
+  if (process.env.MONGO_URL) {
+    if (!deployConfig.packages['mongo-livedata'])
+      deployConfig.packages['mongo-livedata'] = {};
+    deployConfig.packages['mongo-livedata'].url = process.env.MONGO_URL;
+  }
 
   // webserver
   var app = connect.createServer();
@@ -213,7 +228,8 @@ var run = function () {
     htmlAttributeHooks: [],
     // functions to be called after all packages are loaded and we are
     // ready to serve HTTP.
-    startup_hooks: []
+    startup_hooks: [],
+    deployConfig: deployConfig
   };
 
   __meteor_runtime_config__ = {};
@@ -318,15 +334,74 @@ var run = function () {
     _.each(__meteor_bootstrap__.startup_hooks, function (x) { x(); });
 
     // only start listening after all the startup code has run.
-    app.listen(port, function() {
+    var bind = deployConfig.boot.bind;
+    app.listen(bind.localPort || 0, function() {
       if (argv.keepalive)
         console.log("LISTENING"); // must match run.js
+      var port = app.address().port;
+      if (bind.viaProxy) {
+        Fiber(function () {
+          bindToProxy(port, bind.viaProxy);
+        }).run();
+      }
     });
 
   }).run();
 
   if (argv.keepalive)
     initKeepalive();
+};
+
+var bindToProxy = function (localPort, proxyConfig) {
+  // XXX also support galaxy-based lookup
+  if (!proxyConfig.proxyEndpoint)
+    throw new Error("missing proxyEndpoint");
+  if (!proxyConfig.bindHost)
+    throw new Error("missing bindHost");
+
+  var pid = 'pid-is-ignored';
+  var myHost = os.hostname();
+
+  var ddpBindTo = proxyConfig.unprivilegedPorts ? {
+    ddpUrl: 'ddp://' + proxyConfig.bindHost + ':8080/',
+    securePort: 4433
+  } : {
+    ddpUrl: 'ddp://' + proxyConfig.bindHost + '/'
+  };
+
+  var proxy = Package.meteor.Meteor.connect(proxyConfig.proxyEndpoint);
+  proxy.call('bindDdp', {
+    pid: pid,
+    bindTo: ddpBindTo,
+    proxyTo: {
+      host: myHost,
+      port: localPort,
+      pathPrefix: '/websocket'
+    }
+  });
+  proxy.call('bindHttp', {
+    pid: pid,
+    bindTo: {
+      host: proxyConfig.bindHost,
+      port: proxyConfig.unprivilegedPorts ? 8080 : 80
+    },
+    proxyTo: {
+      host: myHost,
+      port: localPort
+    }
+  });
+  proxy.call('bindHttp', {
+    pid: pid,
+    bindTo: {
+      host: proxyConfig.bindHost,
+      port: proxyConfig.unprivilegedPorts ? 4433: 443,
+      ssl: true
+    },
+    proxyTo: {
+      host: myHost,
+      port: localPort
+    }
+  });
 };
 
 run();
