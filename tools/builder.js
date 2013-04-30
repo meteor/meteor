@@ -2,9 +2,9 @@ var path = require('path');
 var files = require(path.join(__dirname, 'files.js'));
 var fs = require('fs');
 var _ = require('underscore');
-var crypto = require('crypto');
 
 var sha1 = function (contents) {
+  var crypto = require('crypto');
   var hash = crypto.createHash('sha1');
   hash.update(contents);
   return hash.digest('hex');
@@ -150,7 +150,8 @@ _.extend(Builder.prototype, {
   //
   // Returns the final canonicalize relPath that was written to.
   //
-  // If `file` is used then a dependency will be added on that file.
+  // If data was a filename then a dependency will be added on that
+  // file.
   write: function (relPath, options) {
     var self = this;
     options = options || {};
@@ -342,6 +343,21 @@ _.extend(Builder.prototype, {
     walk(options.from, normOptionsTo);
   },
 
+  // Copy a file into the bundle. 'options.from' is the source path on
+  // local disk. 'options.to' is the relative path in the bundle. Adds
+  // a dependency on the copied file.
+  copyFile: function (options) {
+    var self = this;
+
+    // XXX avoid reading whole file into memory
+    var data = fs.readFileSync(options.from);
+
+    self.dependencyInfo.files[path.resolve(options.from)] = sha1(data);
+
+    fs.writeFileSync(path.resolve(self.buildPath, options.to), data);
+    self.usedAsFile[options.to] = true;
+  },
+
   // Returns a new Builder-compatible object that works just like a
   // Builder, but interprets all paths relative to 'relPath', a path
   // relative to the bundle root which should not start with a '/'.
@@ -352,20 +368,20 @@ _.extend(Builder.prototype, {
   enter: function (relPath) {
     var self = this;
     var methods = ["write", "writeJson", "reserve", "generateFilename",
-                   "copyDirectory", "enter"];
+                   "copyDirectory", "copyFile", "enter"];
     var ret = {};
 
     _.each(methods, function (method) {
       ret[method] = function (/* arguments */) {
         args = _.toArray(arguments);
 
-        if (method !== "copyDirectory") {
+        if (! _.contains(["copyDirectory", "copyFile"], method)) {
           // Normal method (relPath as first argument)
           args = _.clone(args);
           args[0] = path.join(relPath, args[0]);
         } else {
-          // with copyDirectory the path we have to fix up is inside
-          // an options hash
+          // with copyDirectory/copyFile the path we have to fix up is
+          // inside an options hash
           args[0] = _.clone(args[0]);
           args[0].to = path.join(relPath, args[0].to);
         }

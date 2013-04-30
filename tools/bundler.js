@@ -169,8 +169,6 @@ var Builder = require(path.join(__dirname, 'builder.js'));
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var buildmessage = require('./buildmessage.js');
 var fs = require('fs');
-var uglify = require('uglify-js');
-var cleanCSS = require('clean-css');
 var _ = require('underscore');
 var project = require(path.join(__dirname, 'project.js'));
 var builder = require(path.join(__dirname, 'builder.js'));
@@ -524,6 +522,7 @@ _.extend(Target.prototype, {
       return file.contents('utf8');
     }).join('\n;\n');
 
+    var uglify = require('uglify-js');
     allJs = uglify.minify(allJs, {
       fromString: true,
       compress: {drop_debugger: false}
@@ -595,6 +594,7 @@ _.extend(ClientTarget.prototype, {
       return file.contents('utf8');
     }).join('\n');
 
+    var cleanCSS = require('clean-css');
     allCss = cleanCSS.process(allCss);
 
     self.css = [new File({ data: new Buffer(allCss, 'utf8') })];

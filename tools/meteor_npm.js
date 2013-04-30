@@ -4,7 +4,6 @@
 /// to ensure we get consistent versions of npm sub-dependencies.
 
 var semver = require('semver');
-var execFile = require('child_process').execFile;
 var Future = require('fibers/future');
 
 var path = require('path');
@@ -264,7 +263,8 @@ _.extend(exports, {
 
     var future = new Future;
 
-    execFile(file, args, opts, function (err, stdout, stderr) {
+    var child_process = require('child_process');
+    child_process.execFile(file, args, opts, function (err, stdout, stderr) {
       if (self._printNpmCalls)
         console.log(err ? 'failed' : 'done');
 

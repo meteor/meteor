@@ -1,5 +1,4 @@
 var fs = require('fs');
-var uglify = require('uglify-js');
 var _ = require('underscore');
 var buildmessage = require('./buildmessage');
 
@@ -459,6 +458,7 @@ _.extend(Unit.prototype, {
 
     // Uglify likes to print to stderr when it gets a parse
     // error. Stop it from doing that.
+    var uglify = require('uglify-js');
     var oldWarnFunction = uglify.AST_Node.warn_function;
     uglify.AST_Node.warn_function = function () {};
     try {

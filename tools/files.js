@@ -8,14 +8,8 @@ var fs = require("fs");
 var path = require('path');
 var os = require('os');
 var util = require('util');
-var child_process = require("child_process");
 var _ = require('underscore');
-var zlib = require("zlib");
-var tar = require("tar");
 var Future = require('fibers/future');
-var request = require('request');
-
-var fstream = require('fstream');
 
 var cleanup = require('./cleanup.js');
 var buildmessage = require('./buildmessage.js');
@@ -429,6 +423,7 @@ _.extend(exports, {
 
     var future = new Future;
 
+    var zlib = require("zlib");
     var gunzip = zlib.createGunzip()
           .on('error', function (e) {
             future.throw(e);
@@ -464,6 +459,9 @@ _.extend(exports, {
   // be piped as needed.  The tar archive will contain a top-level
   // directory named after dirPath.
   createTarGzStream: function (dirPath) {
+    var tar = require("tar");
+    var fstream = require('fstream');
+    var zlib = require("zlib");
     return fstream.Reader({ path: dirPath, type: 'Directory' }).pipe(
       tar.Pack()).pipe(zlib.createGzip());
   },
@@ -526,6 +524,7 @@ _.extend(exports, {
     else
       urlOrOptions = { url: urlOrOptions, headers: headers };
 
+    var request = require('request');
     request(urlOrOptions, function (error, response, body) {
       if (error)
         future.throw(new files.OfflineError(error));
@@ -556,6 +555,7 @@ _.extend(exports, {
     var future = new Future;
     var args = _.toArray(arguments).slice(1);
 
+    var child_process = require("child_process");
     child_process.execFile(
       command, args, {}, function (error, stdout, stderr) {
         if (! (error === null || error.code === 0))
@@ -615,6 +615,7 @@ _.extend(exports, {
       var Future = require('fibers/future');
       var future = new Future;
 
+      var child_process = require("child_process");
       var proc = child_process.execFile(
         process.argv[0], [], {
           stdio: ['pipe']

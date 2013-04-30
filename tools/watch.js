@@ -1,6 +1,5 @@
 var fs = require("fs");
 var path = require("path");
-var crypto = require('crypto');
 var _ = require('underscore');
 
 // Watch for changes to a set of files, and the first time that any of
@@ -135,6 +134,7 @@ _.extend(Watcher.prototype, {
     if (! fs.existsSync(absPath))
       return true;
 
+    var crypto = require('crypto');
     var hasher = crypto.createHash('sha1');
     hasher.update(fs.readFileSync(absPath));
     var hash = hasher.digest('hex');

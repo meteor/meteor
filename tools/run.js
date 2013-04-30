@@ -2,9 +2,7 @@
 
 var fs = require("fs");
 var path = require("path");
-var spawn = require('child_process').spawn;
 
-var httpProxy = require('http-proxy');
 
 var files = require('./files.js');
 var library = require('./library.js');
@@ -109,6 +107,7 @@ var requestQueue = [];
 var startProxy = function (outerPort, innerPort, callback) {
   callback = callback || function () {};
 
+  var httpProxy = require('http-proxy');
   var p = httpProxy.createServer(function (req, res, proxy) {
     if (Status.crashing) {
       // sad face. send error logs.
@@ -248,9 +247,9 @@ var startServer = function (options) {
   nodeOptions.push(path.join(options.bundlePath, 'main.js'));
   nodeOptions.push('--keepalive');
 
-  var proc = spawn(process.execPath,
-                   nodeOptions,
-                   {env: env});
+  var child_process = require('child_process');
+  var proc = child_process.spawn(process.execPath, nodeOptions,
+                                 {env: env});
 
   // XXX deal with test server logging differently?!
 

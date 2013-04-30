@@ -4,17 +4,12 @@
 // prompt for password
 // send RPC with or without password as required
 
-var crypto = require('crypto');
-var tty = require('tty');
-var request = require('request');
 var qs = require('querystring');
 var path = require('path');
 var files = require('./files.js');
 var warehouse = require('./warehouse.js');
 var buildmessage = require('./buildmessage.js');
 var _ = require('underscore');
-var keypress = require('keypress');
-var child_process = require('child_process');
 var inFiber = require('./fiber-helpers.js').inFiber;
 
 //
@@ -28,6 +23,7 @@ if (process.env.EMACS == "t") {
   // O_NONBLOCK on the evaluation of process.stdin (because Node unblocks stdio
   // when forking). This fixes execution of Mongo from within Emacs shell.
   process.stdin;
+  var child_process = require('child_process');
   child_process.spawn('true', [], {stdio: 'inherit'});
 }
 
@@ -46,6 +42,7 @@ var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
     url += '?' + qs.stringify(query_params);
   }
 
+  var request = require('request');
   var r = request({method: method, url: url}, function (error, response, body) {
     if (error || ((response.statusCode !== 200)
                   && (response.statusCode !== 201)))
@@ -265,6 +262,7 @@ var run_mongo_shell = function (url) {
   if (auth) args.push('-p', auth[1]);
   args.push(mongo_url.hostname + ':' + mongo_url.port + mongo_url.pathname);
 
+  var child_process = require('child_process');
   var proc = child_process.spawn(mongo_path,
                                  args,
                                  { stdio: 'inherit' });
@@ -274,6 +272,7 @@ var run_mongo_shell = function (url) {
 // actually make us more secure, but it means we won't leak a user's
 // password, which they might use on other sites too.
 var transform_password = function (password) {
+  var crypto = require('crypto');
   var hash = crypto.createHash('sha1');
   hash.update('S3krit Salt!');
   hash.update(password);
@@ -292,6 +291,7 @@ var read_password = function (callback) {
   }
 
   // keypress
+  var keypress = require('keypress');
   keypress(process.stdin);
   process.stdin.on('keypress', inFiber(function(c, key){
     if (key && 'enter' === key.name) {
@@ -348,6 +348,7 @@ var with_password = function (site, callback) {
   // Future.throw. Basically, what Future.wrap does.
   callback = inFiber(callback);
 
+  var request = require('request');
   request(check_url, function (error, response, body) {
     if (error || response.statusCode !== 200) {
       callback();

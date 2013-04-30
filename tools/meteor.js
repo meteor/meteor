@@ -1,3 +1,8 @@
+var PROFILE_REQUIRE = true;
+
+if (PROFILE_REQUIRE)
+  require('./profile-require.js').start();
+
 var Fiber = require('fibers');
 Fiber(function () {
 
@@ -1168,6 +1173,9 @@ Fiber(function () {
     var cmd = 'run';
     if (argv._.length)
       cmd = argv._.splice(0,1)[0];
+
+    if (PROFILE_REQUIRE)
+      require('./profile-require.js').printReport();
 
     findCommand(cmd).func(argv);
   };
