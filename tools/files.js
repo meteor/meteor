@@ -377,7 +377,9 @@ _.extend(exports, {
   },
 
   // Make a temporary directory. Returns the path to the newly created
-  // directory. We clean up on exit.
+  // directory. Only the current user is allowed to read or write the
+  // files in the directory (or add files to it.) The directory will
+  // be cleaned up an exit.
   mkdtemp: function (prefix) {
     var make = function () {
       prefix = prefix || 'meteor-temp-';
@@ -394,7 +396,7 @@ _.extend(exports, {
         var dir_path = path.join(
           tmp_dir, prefix + (Math.random() * 0x100000000 + 1).toString(36));
         try {
-          fs.mkdirSync(dir_path, 0755);
+          fs.mkdirSync(dir_path, 0700);
           return dir_path;
         } catch (err) {
           tries--;
