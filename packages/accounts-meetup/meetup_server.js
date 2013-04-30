@@ -38,12 +38,11 @@ var getAccessToken = function (query) {
         state: query.state
       }});
   } catch (err) {
-    console.error("Error completing OAuth handshake with Meetup:");
-    throw err;
+    throw new Error("Failed to complete OAuth handshake with Meetup. " + err.message);
   }
 
   if (response.data.error) { // if the http response was a json object with an error attribute
-    throw new Error("Error completeing OAuth handshake with Meetup. " + response.data.error);
+    throw new Error("Failed to complete OAuth handshake with Meetup. " + response.data.error);
   } else {
     return response.data.access_token;
   }
@@ -56,7 +55,6 @@ var getIdentity = function (accessToken) {
       {params: {member_id: 'self', access_token: accessToken}});
     return response.data.results && response.data.results[0];
   } catch (err) {
-    console.error("Error fetching identity from Meetup:");
-    throw err;
+    throw new Error("Failed to fetch identity from Meetup: " + err.message);
   }
 };

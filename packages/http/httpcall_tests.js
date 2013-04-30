@@ -107,8 +107,8 @@ testAsyncMulti("httpcall - errors", [
       // in test_responder.js we make a very long response body, to make sure
       // that we truncate messages. first of all, make sure we didn't make that
       // message too short, so that we can be sure we're verifying that we truncate.
-      test.isTrue(error.response.content.length > 160);
-      test.isTrue(error.message.length < 160); // make sure we truncate.
+      test.isTrue(error.response.content.length > 180);
+      test.isTrue(error.message.length < 180); // make sure we truncate.
     };
     Meteor.http.call("GET", url_prefix()+"/fail", expect(error500Callback));
 

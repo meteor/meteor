@@ -51,8 +51,7 @@ var getTokenResponse = function (query) {
         grant_type: 'authorization_code'
       }});
   } catch (err) {
-    console.error("Error completing OAuth handshake with Weibo:");
-    throw err;
+    throw new Error("Failed to complete OAuth handshake with Weibo. " + err.message);
   }
 
   // result.headers["content-type"] is 'text/plain;charset=UTF-8', so
@@ -72,7 +71,6 @@ var getIdentity = function (accessToken, userId) {
       "https://api.weibo.com/2/users/show.json",
       {params: {access_token: accessToken, uid: userId}}).data;
   } catch (err) {
-    console.error("Error fetching identity from Weibo:");
-    throw err;
+    throw new Error("Failed to fetch identity from Weibo. " + err.message);
   }
 };

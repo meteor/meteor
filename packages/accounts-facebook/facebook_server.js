@@ -68,8 +68,7 @@ var getTokenResponse = function (query) {
         }
       }).content;
   } catch (err) {
-    console.error("Error completing OAuth handshake with Facebook:");
-    throw err;
+    throw new Error("Failed to complete OAuth handshake with Facebook. " + err.message);
   }
 
   // If 'responseContent' parses as JSON, it is an error.
@@ -99,7 +98,6 @@ var getIdentity = function (accessToken) {
     return Meteor.http.get("https://graph.facebook.com/me", {
       params: {access_token: accessToken}}).data;
   } catch (err) {
-    console.error("Error fetching identity from Facebook:");
-    throw err;
+    throw new Error("Failed to fetch identity from Facebook. " + err.message);
   }
 };
