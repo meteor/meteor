@@ -104,7 +104,7 @@ _.extend(Module.prototype, {
   getLinkedFiles: function () {
     var self = this;
 
-    if (! self.files.length)
+    if (! self.files.length && ! self.useGlobalNamespace)
       return [];
 
     // If we don't want to create a separate scope for this module,
