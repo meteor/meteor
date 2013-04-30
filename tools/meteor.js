@@ -1,4 +1,4 @@
-var PROFILE_REQUIRE = true;
+var PROFILE_REQUIRE = false;
 
 if (PROFILE_REQUIRE)
   require('./profile-require.js').start();
