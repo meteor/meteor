@@ -221,6 +221,7 @@ var logToClients = function (msg) {
 // innerPort
 // mongoUrl
 // onExit
+// [program]
 // [onListen]
 // [nodeOptions]
 // [settings]
@@ -243,14 +244,40 @@ var startServer = function (options) {
   else
     delete env.METEOR_SETTINGS;
 
-  var nodeOptions = _.clone(options.nodeOptions);
-  nodeOptions.push(path.join(options.bundlePath, 'main.js'));
-  nodeOptions.push('--keepalive');
-  nodeOptions.push('program.json');
+  if (! options.program) {
+    var nodeOptions = _.clone(options.nodeOptions);
+    nodeOptions.push(path.join(options.bundlePath, 'main.js'));
+    nodeOptions.push('--keepalive');
+    nodeOptions.push('program.json');
 
-  var child_process = require('child_process');
-  var proc = child_process.spawn(process.execPath, nodeOptions,
-                                 {env: env});
+    var child_process = require('child_process');
+    var proc = child_process.spawn(process.execPath, nodeOptions,
+                                   {env: env});
+  } else {
+    var starJson = JSON.parse(
+      fs.readFileSync(path.join(options.bundlePath, 'star.json'), 'utf8'));
+    var programPath = null;
+
+    var archinfo = require('./archinfo.js');
+    _.each(starJson.programs, function (p) {
+      // XXX should actually use archinfo.mostSpecificMatch instead of
+      // taking the first match
+      if (p.name !== options.program)
+        return;
+      if (! archinfo.matches(archinfo.host(), p.arch))
+        return; // can't run here
+      programPath = path.join(options.bundlePath, p.path);
+    });
+
+    if (! programPath) {
+      // XXX probably not the correct error handling
+      process.stderr.write("Program '" + options.program + "' not found.\n");
+      process.exit(1);
+    }
+
+    var child_process = require('child_process');
+    var proc = child_process.spawn(programPath, [], {env: env});
+  }
 
   // XXX deal with test server logging differently?!
 
@@ -346,7 +373,9 @@ exports.getSettings = function (filename) {
 // watcher.stop() as appropriate.
 //
 // context is as created in meteor.js.
-// options include: port, minify, once, settingsFile, testPackages, banner
+// options include: port, minify, once, settingsFile, testPackages,
+// banner, program
+//
 //
 // banner can be used to replace the application path that is normally
 // printed on startup (context.appDir) with an arbitrary string, for
@@ -550,7 +579,8 @@ exports.run = function (context, options) {
         requestQueue = [];
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
-      settings: settings
+      settings: settings,
+      program: options.program
     });
   });
 

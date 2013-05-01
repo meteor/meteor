@@ -216,6 +216,7 @@ Fiber(function () {
             .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
             .describe('settings',  'Set optional data for Meteor.settings on the server')
             .describe('release', 'Specify the release of Meteor to use')
+            .describe('program', 'The program in the app to run (Advanced)')
             // #Once
             // With --once, meteor does not re-run the project if it crashes and
             // does not monitor for file changes. Intentionally undocumented:
@@ -249,7 +250,8 @@ Fiber(function () {
         port: new_argv.port,
         minify: new_argv.production,
         once: new_argv.once,
-        settingsFile: new_argv.settings
+        settingsFile: new_argv.settings,
+        program: new_argv.program || undefined
       });
     }
   });
