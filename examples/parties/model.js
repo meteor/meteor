@@ -42,15 +42,15 @@ attending = function (party) {
   return (_.groupBy(party.rsvps, 'rsvp').yes || []).length;
 };
 
-var NonEmptyString = Match.Where(function (x) {
+var NonEmptyString = function (x) {
   check(x, String);
   return x.length !== 0;
-});
+};
 
-var Coordinate = Match.Where(function (x) {
+var Coordinate = function (x) {
   check(x, Number);
   return x >= 0 && x <= 1;
-});
+};
 
 Meteor.methods({
   // options should include: title, description, x, y, public
