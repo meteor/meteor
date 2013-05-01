@@ -56,8 +56,8 @@ Meteor.Collection = function (name, options) {
 
   if (!options._driver) {
     if (name && self._connection === Meteor.default_server &&
-        Meteor._RemoteCollectionDriver)
-      options._driver = Meteor._RemoteCollectionDriver;
+        Meteor._getRemoteCollectionDriver)
+      options._driver = Meteor._getRemoteCollectionDriver();
     else
       options._driver = Meteor._LocalCollectionDriver;
   }
