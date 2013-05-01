@@ -382,13 +382,11 @@ _.extend(Slice.prototype, {
           });
         },
         error: function (options) {
-          buildmessage.error({
-            message: options.message,
-            sourcePath: options.sourcePath,
-            line: options.sourcePath ? options.line : undefined,
-            column: options.sourcePath ? options.column : undefined,
-            columnEnd: options.sourcePath ? options.columnEnd : undefined,
-            func: options.sourcePath ? options.func : undefined
+          buildmessage.error(options.message || ("error building " + relPath), {
+            file: options.sourcePath,
+            line: options.line ? options.line : undefined,
+            column: options.column ? options.column : undefined,
+            func: options.func ? options.func : undefined
           });
         }
       };
