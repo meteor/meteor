@@ -1390,6 +1390,20 @@ exports.bundle = function (appDir, outputPath, options) {
       return client;
     };
 
+    var makeBlankClientTarget = function (app) {
+      var client = new ClientTarget({
+        library: library,
+        arch: "browser"
+      });
+
+      client.make({
+        minify: options.minify,
+        addCacheBusters: true
+      });
+
+      return client;
+    };
+
     var makeTraditionalServerTarget = function (app, clientTarget) {
       var server = new ServerTarget({
         library: library,
@@ -1510,6 +1524,7 @@ exports.bundle = function (appDir, outputPath, options) {
     });
 
     // Step 3: build the programs
+    var blankClientTarget = null;
     _.each(programs, function (p) {
       // Read this directory as a package and create a target from
       // it
@@ -1520,23 +1535,27 @@ exports.bundle = function (appDir, outputPath, options) {
         target = makeBareServerTarget(p.name);
         break;
       case "traditional":
+        var clientTarget;
+
         if (! p.client) {
-          buildmessage.error("programs of type 'traditional' require a client",
-                             { file: p.attrsJsonRelPath });
-          // recover by ignoring target
-          return;
-        }
-        if (! (p.client in targets)) {
-          buildmessage.error("no such program '" + p.client + "'",
-                             { file: p.attrsJsonRelPath });
-          // recover by ignoring target
-          return;
+          if (! blankClientTarget) {
+            clientTarget = blankClientTarget = targets._blank =
+              makeBlankClientTarget();
+          }
+        } else {
+          clientTarget = targets[p.client];
+          if (! clientTarget) {
+            buildmessage.error("no such program '" + p.client + "'",
+                               { file: p.attrsJsonRelPath });
+            // recover by ignoring target
+            return;
+          }
         }
 
         // We don't check whether targets[p.client] is actually a
         // ClientTarget. If you want to be clever, go ahead.
 
-        target = makeTraditionalServerTarget(p.name, targets[p.client]);
+        target = makeTraditionalServerTarget(p.name, clientTarget);
         break;
       case "client":
         // We pass null for appDir because we are a
