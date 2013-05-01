@@ -1553,7 +1553,6 @@ exports.bundle = function (appDir, outputPath, options) {
       };
       library.removeOverride(p.name);
       targets[p.name] = target;
-      console.log("target", p.name);
     });
 
     // If we omitted a target due to an error, we might not have a
