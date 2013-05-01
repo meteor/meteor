@@ -1395,6 +1395,20 @@ Template.api.match_test = {
   ]
 };
 
+Template.api.match_constructors = {
+  id: "match_constructors",
+  name: "Match.constructors(constructor, constructor...)",
+  locus: "Anywhere",
+  descr: ["Registers constructors so that they can be used as a match pattern."],
+  args: [
+    {
+      name: "constructor",
+      type: "Constructor Function",
+      descr: "When the constructor is used as a match pattern, a value successfully matches if it is an instance of this type."
+    }
+  ]
+};
+
 Template.api.matchpatterns = {
   id: "matchpatterns",
   name: "Match patterns"
