@@ -768,26 +768,63 @@ Fiber(function () {
         process.stdout.write(opt.help());
         process.exit(1);
       }
+      var site = new_argv._[1];
+      var useGalaxy = 'GALAXY' in process.env;
+
+      if (useGalaxy)
+        var deployGalaxy = require('./deploy-galaxy.js');
 
       if (new_argv.delete) {
-        deploy.delete_app(new_argv._[1]);
+        if (useGalaxy)
+          deployGalaxy.deleteService(site);
+        else
+          deploy.delete_app(site);
       } else {
         requireDirInApp("deploy");
         var settings = undefined;
         if (new_argv.settings)
           settings = runner.getSettings(new_argv.settings);
-        deploy.deployCmd({
-          url: new_argv._[1],
-          appDir: context.appDir,
-          settings: settings,
-          setPassword: !!new_argv.password,
-          bundleOptions: {
-            nodeModulesMode: 'skip',
-            minify: !new_argv.debug,
-            releaseStamp: context.releaseVersion,
-            library: context.library
+
+        if (useGalaxy) {
+          if (new_argv.password) {
+            process.stderr.write("Galaxy does not support --password.\n");
+            process.exit(1);
           }
-        });
+
+          deployGalaxy.deploy({
+            service: site,
+            appDir: context.appDir,
+            settings: settings,
+            context: context,
+            bundleOptions: {
+              nodeModulesMode: 'skip',
+              minify: !new_argv.debug,
+              releaseStamp: context.releaseVersion,
+              library: context.library
+            }
+          });
+        } else {
+          deploy.deployCmd({
+            url: site,
+            appDir: context.appDir,
+            settings: settings,
+            setPassword: !!new_argv.password,
+            bundleOptions: {
+              nodeModulesMode: 'skip',
+              minify: !new_argv.debug,
+              releaseStamp: context.releaseVersion,
+              library: context.library
+            }
+          });
+        }
+      }
+
+      if (useGalaxy) {
+        // XXX Under certain circumstances (not yet clear), the websocket
+        // client in the 'websocket' package will block natural program
+        // exit even if all of its connections have been closed. So just
+        // go ahead and explicitly exit the process.
+        process.exit(0);
       }
     }
   });
