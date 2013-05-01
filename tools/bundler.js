@@ -538,7 +538,7 @@ _.extend(Target.prototype, {
             if (! nmd) {
               nmd = new NodeModulesDirectory({
                 sourcePath: slice.nodeModulesPath,
-                preferredBundlePath: path.join('/npm', slice.pkg.name,
+                preferredBundlePath: path.join('npm', slice.pkg.name,
                                                slice.sliceName)
               });
               self.nodeModulesDirectories[slice.nodeModulesPath] = nmd;
