@@ -212,6 +212,7 @@ var NodeModulesDirectory = function (options) {
 ///////////////////////////////////////////////////////////////////////////////
 
 // Allowed options:
+// - sourcePath: path to file on disk that will provide our contents
 // - data: contents of the file as a Buffer
 // - cacheable
 var File = function (options) {
@@ -224,7 +225,7 @@ var File = function (options) {
   // The absolute path in the filesystem from which we loaded (or will
   // load) this file (null if the file does not correspond to one on
   // disk.)
-  self.sourcePath = null;
+  self.sourcePath = options.sourcePath;
 
   // Where this file is intended to reside within the target's
   // filesystem.
@@ -667,7 +668,7 @@ _.extend(ClientTarget.prototype, {
     var self = this;
     exclude = exclude || [];
 
-    self.dependencyInfo.directories[dir] = {
+    self.dependencyInfo.directories[rootDir] = {
       include: [/.?/],
       exclude: exclude
     };
