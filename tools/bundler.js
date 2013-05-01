@@ -352,6 +352,62 @@ var Target = function (options) {
 };
 
 _.extend(Target.prototype, {
+  // Top-level entry point for building a target. Generally to build a
+  // target, you create with 'new', call make() to specify its sources
+  // and build options and actually do the work of buliding the
+  // target, and finally you retrieve the build product with a
+  // target-type-dependent function such as write() or toJsImage().
+  //
+  // options
+  // - packages: packages to include (Package or 'foo' or 'foo.slice'),
+  //   per _determineLoadOrder
+  // - test: packages to test (Package or 'foo'), per _determineLoadOrder
+  // - minify: true to minify
+  // - assetDirs: array of asset directories to add (browser only for
+  //   now) object with keys 'rootDir', 'exclude', 'assetPathPrefix'
+  //   all per addAssetDir.
+  // - addCacheBusters: if true, make all files cacheable by adding
+  //   unique query strings to their URLs. unlikely to be of much use
+  //   on server targets.
+  make: function (options) {
+    var self = this;
+
+    // Populate the list of slices to load
+    self._determineLoadOrder({
+      packages: options.packages || [],
+      test: options.test || []
+    });
+
+    // Link JavaScript, put resources in load order, and copy them to
+    // the bundle
+    self._emitResources();
+
+    // Minify, if requested
+    if (options.minify) {
+      self.minifyJs();
+      if (self.minifyCss) // XXX a bit of a hack
+        self.minifyCss();
+    }
+
+    // Process asset directories (eg, /public)
+    // XXX this should probably be part of the appDir reader
+    _.each(options.assetDirs || [], function (ad) {
+      self.addAssetDir(ad.rootDir, ad.exclude, ad.assetPathPrefix);
+    });
+
+    if (options.addCacheBusters) {
+      // Make client-side CSS and JS assets cacheable forever, by
+      // adding a query string with a cache-busting hash.
+      self._addCacheBusters("js");
+      self._addCacheBusters("css");
+    }
+
+    // XXX extra thing we have to do on the client. could this move
+    // into ClientTarget.write()?
+    if (self.assignTargetPaths)
+      self.assignTargetPaths();
+  },
+
   // Determine the packages to load, create Slices for
   // them, put them in load order, save in slices.
   //
@@ -363,7 +419,7 @@ _.extend(Target.prototype, {
   //   to include a particular named slice from a particular package.
   // - test: an array of packages (as Package objects or as name
   //   strings) whose test slices should be included
-  determineLoadOrder: function (options) {
+  _determineLoadOrder: function (options) {
     var self = this;
     var library = self.library;
 
@@ -439,7 +495,7 @@ _.extend(Target.prototype, {
   // Sort the slices in dependency order, then, slice by slice, write
   // their resources into the bundle (which includes running the
   // JavaScript linker.)
-  emitResources: function () {
+  _emitResources: function () {
     var self = this;
 
     var isBrowser = archinfo.matches(self.arch, "browser");
@@ -534,7 +590,7 @@ _.extend(Target.prototype, {
 
   // For each resource of the given type, make it cacheable by adding
   // a query string to the URL based on its hash.
-  addCacheBusters: function (type) {
+  _addCacheBusters: function (type) {
     var self = this;
     _.each(self[type], function (file) {
       file.addCacheBuster();
@@ -1163,10 +1219,11 @@ var writeSiteArchive = function (targets, outputPath, options) {
     });
 
     // Affordances for standalone use
-    var stub = new Buffer("require('./programs/server/boot.js');\n", 'utf8');
-    builder.write('main.js', { data: stub });
+    if (targets.server) {
+      var stub = new Buffer("require('./programs/server/boot.js');\n", 'utf8');
+      builder.write('main.js', { data: stub });
 
-    builder.write('README', { data: new Buffer(
+      builder.write('README', { data: new Buffer(
 "This is a Meteor application bundle. It has only one dependency,\n" +
 "node.js (with the 'fibers' package). To run the application:\n" +
 "\n" +
@@ -1182,6 +1239,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
 "\n" +
 "Find out more about Meteor at meteor.com.\n",
       'utf8')});
+    }
 
     // Control file
     builder.writeJson('star.json', json);
@@ -1278,61 +1336,65 @@ exports.bundle = function (appDir, outputPath, options) {
   var messages = buildmessage.capture({
     title: "building the application"
   }, function () {
-    // Create targets
-    var client = new ClientTarget({
-      library: library,
-      arch: "browser"
-    });
-    var server = new ServerTarget({
-      library: library,
-      arch: archinfo.host(),
-      clientTarget: client,
-      releaseStamp: options.releaseStamp
-    });
-    var targets = {
-      client: client,
-      server: server
-    };
+    var targets = {};
 
-    // Create a Package object that represents the app
-    var app = library.getForApp(appDir, ignoreFiles);
+    console.log(path.join(appDir, 'no-default-targets'));
+    var includeDefaultTargets = true;
+    if (fs.existsSync(path.join(appDir, 'no-default-targets')))
+      includeDefaultTargets = false;
+    console.log(includeDefaultTargets);
 
-    // Populate the list of slices to load
-    client.determineLoadOrder({
-      packages: [app],
-      test: options.testPackages || []
-    });
-    server.determineLoadOrder({
-      packages: [app],
-      test: options.testPackages || []
-    });
+    if (includeDefaultTargets) {
+      // Create a Package object that represents the app
+      var app = library.getForApp(appDir, ignoreFiles);
 
-    // Link JavaScript, put resources in load order, and copy them to
-    // the bundle
-    client.emitResources();
-    server.emitResources();
+      // Client
+      var client = new ClientTarget({
+        library: library,
+        arch: "browser"
+      });
 
-    // Minify, if requested (only the client)
-    if (options.minify) {
-      client.minifyJs();
-      client.minifyCss();
+      // Scan /public if the client has it
+      // XXX this should probably be part of the appDir reader
+      var clientAssetDirs = [];
+      if (files.is_app_dir(appDir)) { /* XXX what is this checking? */
+        var publicDir = path.join(appDir, 'public');
+        if (fs.existsSync(publicDir)) {
+          clientAssetDirs.push({
+            rootDir: publicDir,
+            exclude: ignoreFiles
+          });
+        }
+      }
+
+      client.make({
+        packages: [app],
+        test: options.testPackages || [],
+        minify: options.minify,
+        assetDirs: clientAssetDirs,
+        addCacheBusters: true
+      });
+
+      targets.client = client;
+
+      // Server
+      var server = new ServerTarget({
+        library: library,
+        arch: archinfo.host(),
+        clientTarget: client,
+        releaseStamp: options.releaseStamp
+      });
+
+      server.make({
+        packages: [app],
+        test: options.testPackages || [],
+        minify: false
+      });
+
+      targets.server = server;
     }
-
-    // Add assets from /public directory
-    // XXX this should probably be part of the appDir reader
-    if (files.is_app_dir(appDir)) { /* XXX what is this checking? */
-      var publicDir = path.join(appDir, 'public');
-      if (fs.existsSync(publicDir))
-        client.addAssetDir(publicDir, ignoreFiles);
-    }
-
-    // Make client-side CSS and JS assets cacheable forever, by adding
-    // a query string with a cache-busting hash.
-    client.addCacheBusters("js");
-    client.addCacheBusters("css");
 
     // Write to disk
-    client.assignTargetPaths();
     dependencyInfo = writeSiteArchive(targets, outputPath, {
       nodeModulesMode: options.nodeModulesMode,
       builtBy: builtBy
@@ -1407,9 +1469,7 @@ exports.buildJsImage = function (options) {
     library: options.library,
     arch: archinfo.host()
   });
-
-  target.determineLoadOrder({ packages: [pkg] });
-  target.emitResources();
+  target.make({ packages: [pkg] });
 
   return {
     image: target.toJsImage(),
