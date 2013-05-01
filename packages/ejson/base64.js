@@ -2,12 +2,6 @@
 
 var BASE_64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-var BASE_64_VALS = {};
-
-for (var i = 0; i < BASE_64_CHARS.length; i++) {
-  BASE_64_VALS[BASE_64_CHARS.charAt(i)] = i;
-};
-
 EJSON._base64Encode = function (array) {
   var answer = [];
   var a = null;
@@ -56,10 +50,7 @@ var getChar = function (val) {
 };
 
 var getVal = function (ch) {
-  if (ch === '=') {
-    return -1;
-  }
-  return BASE_64_VALS[ch];
+  return BASE_64_CHARS.indexOf(ch);
 };
 
 EJSON.newBinary = function (len) {
@@ -106,14 +97,14 @@ EJSON._base64Decode = function (str) {
       two = (v & 0x0F) << 4;
       break;
     case 2:
-      if (v > 0) {
+      if (v > -1) {
         two = two | (v >> 2);
         arr[j++] = two;
         three = (v & 0x03) << 6;
       }
       break;
     case 3:
-      if (v > 0) {
+      if (v > -1) {
         arr[j++] = three | v;
       }
       break;
