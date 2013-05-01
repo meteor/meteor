@@ -9,8 +9,16 @@ BUNDLE_TMPDIR="dependencies.fetch"
 rm -rf "$BUNDLE_TMPDIR"
 mkdir "$BUNDLE_TMPDIR"
 
-# Duplicated from 'meteor' script in root of repository
-curl -s "https://d3sqy0vbqsdhku.cloudfront.net/$TARBALL" | tar -xzf - -C "$BUNDLE_TMPDIR"
+# Cache dev bundles in /tmp.
+# XXX something more secure is needed in production
+CACHED_TARBALL="/tmp/$TARBALL"
+if [ ! -r "$CACHED_TARBALL" ]; then
+    # Duplicated from 'meteor' script in root of repository
+  TEMP_TARBALL="${CACHED_TARBALL}.tmp.${RANDOM}"
+  curl -s "https://d3sqy0vbqsdhku.cloudfront.net/$TARBALL" >"$TEMP_TARBALL"
+  mv "$TEMP_TARBALL" "$CACHED_TARBALL"
+fi
+tar -xzf "$CACHED_TARBALL" -C "$BUNDLE_TMPDIR"
 
 # Delete old dev bundle and rename the new one on top of it.
 rm -rf "dependencies"
