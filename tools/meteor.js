@@ -818,14 +818,6 @@ Fiber(function () {
           });
         }
       }
-
-      if (useGalaxy) {
-        // XXX Under certain circumstances (not yet clear), the websocket
-        // client in the 'websocket' package will block natural program
-        // exit even if all of its connections have been closed. So just
-        // go ahead and explicitly exit the process.
-        process.exit(0);
-      }
     }
   });
 

@@ -62,6 +62,13 @@ _.extend(Meteor._DdpClientStream.prototype, {
   _onConnect: function (connection) {
     var self = this;
 
+    if (self._forcedToDisconnect) {
+      // We were asked to disconnect between trying to open the connection and
+      // actually opening it. Let's just pretend this never happened.
+      connection.close();
+      return;
+    }
+
     if (self.currentStatus.connected) {
       // We already have a connection. It must have been the case that
       // we started two parallel connection attempts (because we

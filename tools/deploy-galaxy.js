@@ -11,7 +11,7 @@ var getMeteor = function (context) {
     _meteor = unipackage.load({
       library: context.library,
       packages: [ 'livedata' ],
-      release: context.releaseVersion,
+      release: context.releaseVersion
     }).meteor.Meteor;
   }
 
@@ -45,7 +45,7 @@ var exitWithError = function (error, messages) {
   if (msg)
     process.stderr.write(msg + "\n");
   else if (error instanceof Meteor.Error)
-    process.stderr.write("Denied: " + error.message + "\n")
+    process.stderr.write("Denied: " + error.message + "\n");
 
   process.exit(1);
 };
@@ -86,7 +86,7 @@ exports.deploy = function (options) {
                                     options.bundleOptions);
   if (bundleResult.errors) {
     process.stdout.write("\n\nErrors prevented deploying:\n");
-    process.stdout.write(bundleresult.errors.formatMessages());
+    process.stdout.write(bundleResult.errors.formatMessages());
     process.exit(1);
   }
 
@@ -158,4 +158,6 @@ exports.deploy = function (options) {
 
   process.stderr.write(options.service + ": " +
                        "pushed revision " + result.serial + "\n");
+  // Close the connection to Galaxy (otherwise Node will continue running).
+  galaxy.close();
 };
