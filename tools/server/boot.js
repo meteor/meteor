@@ -9,7 +9,7 @@ var url = require("url");
 
 var connect = require('connect');
 var gzippo = require('gzippo');
-var argv = require('optimist').argv;
+var argv = require('optimist').boolean('keepalive').argv;
 var useragent = require('useragent');
 
 var _ = require('underscore');
@@ -144,7 +144,7 @@ var run = function () {
 
   // read our control files
   var serverJson =
-    JSON.parse(fs.readFileSync(path.join(serverDir, process.argv[2]), 'utf8'));
+    JSON.parse(fs.readFileSync(path.join(serverDir, argv._[0]), 'utf8'));
 
   var configJson =
     JSON.parse(fs.readFileSync(path.join(serverDir, 'config.json'), 'utf8'));
