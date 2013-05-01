@@ -1358,15 +1358,7 @@ exports.bundle = function (appDir, outputPath, options) {
     var targets = {};
     var controlProgram = null;
 
-    var includeDefaultTargets = true;
-    if (fs.existsSync(path.join(appDir, 'no-default-targets')))
-      includeDefaultTargets = false;
-
-    if (includeDefaultTargets) {
-      // Create a Package object that represents the app
-      var app = library.getForApp(appDir, ignoreFiles);
-
-      // Client
+    var makeClientTarget = function (app, appDir) {
       var client = new ClientTarget({
         library: library,
         arch: "browser"
@@ -1374,14 +1366,16 @@ exports.bundle = function (appDir, outputPath, options) {
 
       // Scan /public if the client has it
       // XXX this should probably be part of the appDir reader
-      var clientAssetDirs = [];
-      if (files.is_app_dir(appDir)) { /* XXX what is this checking? */
-        var publicDir = path.join(appDir, 'public');
-        if (fs.existsSync(publicDir)) {
-          clientAssetDirs.push({
-            rootDir: publicDir,
-            exclude: ignoreFiles
-          });
+      if (appDir) {
+        var clientAssetDirs = [];
+        if (files.is_app_dir(appDir)) { /* XXX what is this checking? */
+          var publicDir = path.join(appDir, 'public');
+          if (fs.existsSync(publicDir)) {
+            clientAssetDirs.push({
+              rootDir: publicDir,
+              exclude: ignoreFiles
+            });
+          }
         }
       }
 
@@ -1393,13 +1387,14 @@ exports.bundle = function (appDir, outputPath, options) {
         addCacheBusters: true
       });
 
-      targets.client = client;
+      return client;
+    };
 
-      // Server
+    var makeTraditionalServerTarget = function (app, clientTarget) {
       var server = new ServerTarget({
         library: library,
         arch: archinfo.host(),
-        clientTarget: client,
+        clientTarget: clientTarget,
         releaseStamp: options.releaseStamp
       });
 
@@ -1409,11 +1404,47 @@ exports.bundle = function (appDir, outputPath, options) {
         minify: false
       });
 
+      return server;
+    };
+
+    var makeBareServerTarget = function (app) {
+      var server = new ServerTarget({
+        library: library,
+        arch: archinfo.host(),
+        releaseStamp: options.releaseStamp,
+        isBare: true
+      });
+
+      server.make({
+        packages: [app],
+        test: options.testPackages || [],
+        minify: false
+      });
+
+      return server;
+    };
+
+    var includeDefaultTargets = true;
+    if (fs.existsSync(path.join(appDir, 'no-default-targets')))
+      includeDefaultTargets = false;
+
+    if (includeDefaultTargets) {
+      // Create a Package object that represents the app
+      var app = library.getForApp(appDir, ignoreFiles);
+
+      // Client
+      var client = makeClientTarget(app, appDir);
+      targets.client = client;
+
+      // Server
+      var server = makeTraditionalServerTarget(app, client);
       targets.server = server;
     }
 
     // Pick up any additional targets in /programs
+    // Step 1: scan for targets and make a list
     var programsDir = path.join(appDir, 'programs');
+    var programs = [];
     if (fs.existsSync(programsDir)) {
       _.each(fs.readdirSync(programsDir), function (item) {
         if (item.match(/^\./))
@@ -1444,17 +1475,6 @@ exports.bundle = function (appDir, outputPath, options) {
           }
         }
 
-        var isBare = false;
-        if ('type' in attrsJson) {
-          if (! _.contains(["bare", "traditional"], attrsJson.type)) {
-            buildmessage.error("type must be 'bare' or 'traditional'",
-                               { file: attrsJsonRelPath });
-            // recover by ignoring type
-          } else {
-            isBare = attrsJson.type === "bare";
-          }
-        }
-
         var isControlProgram = !! attrsJson.isControlProgram;
         if (isControlProgram) {
           if (controlProgram !== null) {
@@ -1469,25 +1489,77 @@ exports.bundle = function (appDir, outputPath, options) {
           }
         }
 
-        // Read this directory as a package and create a target from
-        // it
-        var target = new ServerTarget({
-          library: library,
-          arch: archinfo.host(),
-          releaseStamp: options.releaseStamp,
-          isBare: isBare
+        // Add to list
+        programs.push({
+          type: attrsJson.type || "bare",
+          name: item,
+          path: itemPath,
+          client: attrsJson.client,
+          attrsJsonRelPath: attrsJsonRelPath
         });
-
-        library.override(item, itemPath);
-        target.make({
-          packages: [item],
-          minify: false
-        });
-        library.removeOverride(item);
-
-        targets[item] = target;
       });
     }
+
+    // Step 2: sort the list so that programs are built first (because
+    // when we build the servers we need to be able to reference the
+    // clients)
+    programs.sort(function (a, b) {
+      a = (a.type === "client") ? 0 : 1;
+      b = (b.type === "client") ? 0 : 1;
+      return a > b;
+    });
+
+    // Step 3: build the programs
+    _.each(programs, function (p) {
+      // Read this directory as a package and create a target from
+      // it
+      library.override(p.name, p.path);
+      var target;
+      switch (p.type) {
+      case "bare":
+        target = makeBareServerTarget(p.name);
+        break;
+      case "traditional":
+        if (! p.client) {
+          buildmessage.error("programs of type 'traditional' require a client",
+                             { file: p.attrsJsonRelPath });
+          // recover by ignoring target
+          return;
+        }
+        if (! (p.client in targets)) {
+          buildmessage.error("no such program '" + p.client + "'",
+                             { file: p.attrsJsonRelPath });
+          // recover by ignoring target
+          return;
+        }
+
+        // We don't check whether targets[p.client] is actually a
+        // ClientTarget. If you want to be clever, go ahead.
+
+        target = makeTraditionalServerTarget(p.name, targets[p.client]);
+        break;
+      case "client":
+        // We pass null for appDir because we are a
+        // package.js-driven directory and don't want to scan a
+        // /public directory for assets.
+        target = makeClientTarget(p.name, null);
+        break;
+      default:
+        buildmessage.error(
+          "type must be 'bare', 'traditional', or 'client'",
+          { file: p.attrsJsonRelPath });
+        // recover by ignoring target
+        return;
+      };
+      library.removeOverride(p.name);
+      targets[p.name] = target;
+      console.log("target", p.name);
+    });
+
+    // If we omitted a target due to an error, we might not have a
+    // controlProgram anymore.
+    if (! (controlProgram in targets))
+      controlProgram = undefined;
 
     // Write to disk
     dependencyInfo = writeSiteArchive(targets, outputPath, {
