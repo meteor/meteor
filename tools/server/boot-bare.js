@@ -7,7 +7,7 @@ var _ = require('underscore');
 
 // read our control files
 var serverJson =
-  JSON.parse(fs.readFileSync(path.join(__dirname, 'program.json'), 'utf8'));
+  JSON.parse(fs.readFileSync(path.join(__dirname, process.argv[2]), 'utf8'));
 var configJson =
   JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
 
@@ -74,5 +74,5 @@ Fiber(function () {
     process.stderr.write("Program has more than one main() function?\n");
     process.exit(1);
   }
-  process.exit(mains[0].call({}, process.argv.slice(2)));
+  process.exit(mains[0].call({}, process.argv.slice(3)));
 }).run();

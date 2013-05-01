@@ -143,7 +143,7 @@ var run = function () {
 
   // read our control files
   var serverJson =
-    JSON.parse(fs.readFileSync(path.join(serverDir, 'program.json'), 'utf8'));
+    JSON.parse(fs.readFileSync(path.join(serverDir, process.argv[2]), 'utf8'));
 
   var configJson =
     JSON.parse(fs.readFileSync(path.join(serverDir, 'config.json'), 'utf8'));

@@ -30,4 +30,4 @@ set +e
 rm -rf node_modules
 
 export NODE_PATH="`pwd`/dependencies/lib/node_modules"
-dependencies/bin/node boot.js ##IMAGE##
+dependencies/bin/node boot.js ##IMAGE## "$@"
