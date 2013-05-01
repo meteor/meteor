@@ -97,7 +97,7 @@ _.extend(Builder.prototype, {
       var shouldBeFile = (i === parts.length - 1) && ! isDirectory;
 
       // Basic sanitization
-      if (part.match(/^\.*$/))
+      if (part.match(/^\.+$/))
         throw new Error("Path contains forbidden segment '" + part + "'");
       part = part.replace(/[^a-zA-Z0-9._-]/g, '');
 
@@ -114,7 +114,8 @@ _.extend(Builder.prototype, {
       var suffix = '';
       while (true) {
         var candidate = path.join(partsOut.join(path.sep), part + suffix + ext);
-        if (! (candidate in self.usedAsFile) ||
+        if (candidate.length &&
+            ! (candidate in self.usedAsFile) ||
             (shouldBeFile === self.usedAsFile[candidate]))
           // No conflict -- either not used, or it's two paths that
           // share a common ancestor directory (as opposed to one path
