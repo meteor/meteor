@@ -20,4 +20,9 @@ _.extend(Meteor._RemoteCollectionDriver.prototype, {
 
 // singleton
 // XXX kind of hacky
-Meteor._RemoteCollectionDriver = new Meteor._RemoteCollectionDriver(process.env.MONGO_URL);
+var mongoUrl = Meteor._get(__meteor_bootstrap__.deployConfig,
+                           'packages', 'mongo-livedata', 'url');
+// XXX bad error since it could also be set directly in METEOR_DEPLOY_CONFIG
+if (!mongoUrl)
+  throw new Error("MONGO_URL must be set in environment");
+Meteor._RemoteCollectionDriver = new Meteor._RemoteCollectionDriver(mongoUrl);
