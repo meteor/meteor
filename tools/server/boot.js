@@ -363,8 +363,8 @@ var bindToProxy = function (localPort, proxyConfig) {
   var myHost = os.hostname();
 
   var ddpBindTo = proxyConfig.unprivilegedPorts ? {
-    ddpUrl: 'ddp://' + proxyConfig.bindHost + ':8080/',
-    securePort: 4433
+    ddpUrl: 'ddp://' + proxyConfig.bindHost + ':4433/',
+    insecurePort: 8080
   } : {
     ddpUrl: 'ddp://' + proxyConfig.bindHost + '/'
   };
