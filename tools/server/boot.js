@@ -358,8 +358,17 @@ var bindToProxy = function (localPort, proxyConfig) {
     throw new Error("missing proxyEndpoint");
   if (!proxyConfig.bindHost)
     throw new Error("missing bindHost");
+  // XXX move these into deployConfig?
+  if (!process.env.GALAXY_JOB)
+    throw new Error("missing $GALAXY_JOB");
+  if (!process.env.LAST_START)
+    throw new Error("missing $LAST_START");
 
-  var pid = 'pid-is-ignored';
+  // XXX rename pid argument to bindTo.
+  var pid = {
+    job: process.env.GALAXY_JOB,
+    lastStart: process.env.LAST_START
+  };
   var myHost = os.hostname();
 
   var ddpBindTo = proxyConfig.unprivilegedPorts ? {
