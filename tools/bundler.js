@@ -1035,12 +1035,16 @@ _.extend(JsImageTarget.prototype, {
 // options:
 // - clientTarget: the ClientTarget to serve up over HTTP as our client
 // - releaseStamp: the Meteor release name (for retrieval at runtime)
+// - isBare: at startup, just load the JavaScript and call main()
+//   (rather than running a traditional script that initializes a HTTP
+//   server and database connection in a hardcoded way)
 var ServerTarget = function (options) {
   var self = this;
   JsImageTarget.apply(this, arguments);
 
   self.clientTarget = options.clientTarget;
   self.releaseStamp = options.releaseStamp;
+  self.isBare = options.isBare;
 
   if (! archinfo.matches(self.arch, "native"))
     throw new Error("ServerTarget targeting something that isn't a server?");
@@ -1093,8 +1097,11 @@ _.extend(ServerTarget.prototype, {
     var imageControlFile = self.toJsImage().write(builder);
 
     // Server bootstrap
+    // XXX ideally, if isBare, should ensure that the app exports a
+    // main() function and complain if not
+    var bootScript = self.isBare ? 'boot-bare.js' : 'boot.js';
     builder.write('boot.js',
-                  { file: path.join(__dirname, 'server', 'boot.js') });
+                  { file: path.join(__dirname, 'server', bootScript) });
 
     // Script that fetches the dev_bundle and runs the server bootstrap
     var archToPlatform = {
@@ -1157,17 +1164,23 @@ _.extend(ServerTarget.prototype, {
 // options:
 // - nodeModulesMode: "skip", "symlink", "copy"
 // - builtBy: vanity identification string to write into metadata
+// - controlProgram: name of the control program (should be a target name)
 var writeSiteArchive = function (targets, outputPath, options) {
   var builder = new Builder({
     outputPath: outputPath,
     symlink: options.nodeModulesMode === "symlink"
   });
 
+  if (options.controlProgram && ! (options.controlProgram in targets))
+    throw new Error("controlProgram '" + options.controlProgram +
+                    "' is not the name of a target?");
+
   try {
     var json = {
       format: "site-archive-pre1",
       builtBy: options.builtBy,
-      programs: []
+      programs: [],
+      control: options.controlProgram || undefined
     };
 
     // Pick a path in the bundle for each target
@@ -1343,6 +1356,7 @@ exports.bundle = function (appDir, outputPath, options) {
     title: "building the application"
   }, function () {
     var targets = {};
+    var controlProgram = null;
 
     var includeDefaultTargets = true;
     if (fs.existsSync(path.join(appDir, 'no-default-targets')))
@@ -1415,12 +1429,53 @@ exports.bundle = function (appDir, outputPath, options) {
           return;
         }
 
+        // Read attributes.json, if it exists
+        var attrsJsonPath = path.join(itemPath, 'attributes.json');
+        var attrsJsonRelPath = path.join('programs', item, 'attributes.json');
+        var attrsJson = {};
+        if (fs.existsSync(attrsJsonPath)) {
+          try {
+            attrsJson = JSON.parse(fs.readFileSync(attrsJsonPath));
+          } catch (e) {
+            if (! (e instanceof SyntaxError))
+              throw e;
+            buildmessage.error(e.message, { file: attrsJsonRelPath });
+            // recover by ignoring attributes.json
+          }
+        }
+
+        var isBare = false;
+        if ('type' in attrsJson) {
+          if (! _.contains(["bare", "traditional"], attrsJson.type)) {
+            buildmessage.error("type must be 'bare' or 'traditional'",
+                               { file: attrsJsonRelPath });
+            // recover by ignoring type
+          } else {
+            isBare = attrsJson.type === "bare";
+          }
+        }
+
+        var isControlProgram = !! attrsJson.isControlProgram;
+        if (isControlProgram) {
+          if (controlProgram !== null) {
+            buildmessage.error(
+              "there can be only one control program ('" + controlProgram +
+                "' is also marked as the control program)",
+              { file: attrsJsonRelPath });
+            // recover by ignoring that it wants to be the control
+            // program
+          } else {
+            controlProgram = item;
+          }
+        }
+
         // Read this directory as a package and create a target from
         // it
         var target = new ServerTarget({
           library: library,
           arch: archinfo.host(),
-          releaseStamp: options.releaseStamp
+          releaseStamp: options.releaseStamp,
+          isBare: isBare
         });
 
         library.override(item, itemPath);
@@ -1437,7 +1492,8 @@ exports.bundle = function (appDir, outputPath, options) {
     // Write to disk
     dependencyInfo = writeSiteArchive(targets, outputPath, {
       nodeModulesMode: options.nodeModulesMode,
-      builtBy: builtBy
+      builtBy: builtBy,
+      controlProgram: controlProgram
     });
 
     success = true;
