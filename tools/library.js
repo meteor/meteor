@@ -42,10 +42,22 @@ _.extend(Library.prototype, {
   // Temporarily add a package to the library (or override a package
   // that actually exists in the library.) `packageName` is the name
   // to use for the package and `packageDir` is the directory that
-  // contains its source.
+  // contains its source. For now, it is an error to try to install
+  // two overrides for the same packageName.
   override: function (packageName, packageDir) {
     var self = this;
-    self.overrides[packageName] = packageDir
+    if (packageName in self.overrides)
+      throw new Error("Duplicate override for package '" + packageName + "'");
+    self.overrides[packageName] = path.resolve(packageDir);
+  },
+
+  // Undo an override previously set up with override().
+  removeOverride: function (packageName) {
+    var self = this;
+    if (!(packageName in self.overrides))
+      throw new Error("No override present for package '" + packageName + "'");
+    delete self.loadedPackages[packageName];
+    delete self.overrides[packageName];
   },
 
   // Force reload of all packages. See description at get().

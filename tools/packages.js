@@ -1533,16 +1533,22 @@ _.extend(Package.prototype, {
             return isTest !== (!!tests);
           });
 
+        var withoutOtherPrograms =
+          _.reject(withoutOtherRole, function (sourcePath) {
+            return !! sourcePath.match(/^programs\//);
+          });
+
         // XXX Add directory dependencies to slice at the time that
         // getSourcesFunc is called. This is kind of a hack but it'll
         // do for the moment.
 
         // Directories to monitor for new files
+        var appIgnores = _.clone(ignoreFiles);
         slice.dependencyInfo.directories[appDir] = {
           include: _.map(slice.registeredExtensions(), function (ext) {
             return new RegExp('\\.' + ext + "$");
           }),
-          exclude: ignoreFiles
+          exclude: ignoreFiles.concat(['tests'])
         };
 
         // Inside the packages directory, only look for new packages
@@ -1554,11 +1560,17 @@ _.extend(Package.prototype, {
           exclude: ignoreFiles
         };
 
+        // Ditto for the programs directory.
+        slice.dependencyInfo.directories[path.resolve(appDir, 'programs')] = {
+          include: [ /^package\.js$/ ],
+          exclude: ignoreFiles
+        };
+
         // Exclude .meteor/local and everything under it.
         slice.dependencyInfo.directories[
           path.resolve(appDir, '.meteor', 'local')] = { exclude: [/.?/] };
 
-        return withoutOtherRole;
+        return withoutOtherPrograms;
       };
     });
 

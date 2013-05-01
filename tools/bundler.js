@@ -1070,14 +1070,20 @@ _.extend(ServerTarget.prototype, {
     // This is where the dev_bundle will be downloaded and unpacked
     builder.reserve('dependencies');
 
+    // Relative path to our client, if we have one (hack)
+    var clientTargetPath;
+    if (self.clientTarget) {
+      clientTargetPath = path.join(options.getRelativeTargetPath({
+        forTarget: self.clientTarget, relativeTo: self}),
+                                   'program.json');
+    }
+
     // We will write out config.json, the dependency kit, and the
     // server driver alongside the JsImage
     builder.writeJson("config.json", {
       meteorRelease: self.releaseStamp && self.releaseStamp !== "none" ?
         self.releaseStamp : undefined,
-      client: path.join(options.getRelativeTargetPath({
-        forTarget: self.clientTarget, relativeTo: self}),
-                        'program.json'),
+      client: clientTargetPath || undefined
     });
 
     if (! options.omitDependencyKit)
@@ -1338,11 +1344,9 @@ exports.bundle = function (appDir, outputPath, options) {
   }, function () {
     var targets = {};
 
-    console.log(path.join(appDir, 'no-default-targets'));
     var includeDefaultTargets = true;
     if (fs.existsSync(path.join(appDir, 'no-default-targets')))
       includeDefaultTargets = false;
-    console.log(includeDefaultTargets);
 
     if (includeDefaultTargets) {
       // Create a Package object that represents the app
@@ -1392,6 +1396,42 @@ exports.bundle = function (appDir, outputPath, options) {
       });
 
       targets.server = server;
+    }
+
+    // Pick up any additional targets in /programs
+    var programsDir = path.join(appDir, 'programs');
+    if (fs.existsSync(programsDir)) {
+      _.each(fs.readdirSync(programsDir), function (item) {
+        if (item.match(/^\./))
+          return; // ignore dotfiles
+        var itemPath = path.join(programsDir, item);
+
+        if (! fs.statSync(itemPath).isDirectory())
+          return; // ignore non-directories
+
+        if (item in targets) {
+          buildmessage.error("duplicate programs named '" + item + "'");
+          // Recover by ignoring this program
+          return;
+        }
+
+        // Read this directory as a package and create a target from
+        // it
+        var target = new ServerTarget({
+          library: library,
+          arch: archinfo.host(),
+          releaseStamp: options.releaseStamp
+        });
+
+        library.override(item, itemPath);
+        target.make({
+          packages: [item],
+          minify: false
+        });
+        library.removeOverride(item);
+
+        targets[item] = target;
+      });
     }
 
     // Write to disk
