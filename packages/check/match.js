@@ -22,13 +22,12 @@ Match = {
     return new OneOf(_.toArray(arguments));
   },
   Any: ['__any__'],
-  Where: function (condition) {
-    return new Where(condition);
-  },
   ObjectIncluding: function (pattern) {
     return new ObjectIncluding(pattern);
   },
-
+  Is: function (constructor) {
+    return new Is(constructor);
+  },
   // XXX should we record the path down the tree in the error message?
   // XXX matchers should know how to describe themselves for errors
   Error: Meteor.makeErrorType("Match.Error", function (msg) {
@@ -80,8 +79,8 @@ var OneOf = function (choices) {
   this.choices = choices;
 };
 
-var Where = function (condition) {
-  this.condition = condition;
+var Is = function (constructor) {
+  this.constructor = constructor;
 };
 
 var ObjectIncluding = function (pattern) {
@@ -97,14 +96,21 @@ var typeofChecks = [
   [undefined, "undefined"]
 ];
 
+// While in general we can't detect whether a function is a
+// constructor instead of a predicate, we can at least warn for some
+// some common constructors if they are being used without `Match.Is`.
+var knownConstructors = [Array, Date, Error, Function, RegExp];
+
 var checkSubtree = function (value, pattern) {
+  if (_.contains(knownConstructors, pattern))
+    throw new Match.Error('use Match.Is to check for an instance of a constructor');
+
   // Match anything!
   if (pattern === Match.Any)
     return;
 
   // Basic atomic types.
-  // XXX do we have to worry about if value is boxed (eg String)? will that
-  //     happen?
+  // Do not match boxed objects (e.g. String)
   for (var i = 0; i < typeofChecks.length; ++i) {
     if (pattern === typeofChecks[i][0]) {
       if (typeof value === typeofChecks[i][1])
@@ -138,16 +144,6 @@ var checkSubtree = function (value, pattern) {
     return;
   }
 
-  // Arbitrary validation checks. The condition can return false or throw a
-  // Match.Error (ie, it can internally use check()) to fail.
-  if (pattern instanceof Where) {
-    if (pattern.condition(value))
-      return;
-    // XXX this error is terrible
-    throw new Match.Error("Failed Match.Where validation");
-  }
-
-
   if (pattern instanceof Optional)
     pattern = Match.OneOf(undefined, pattern.pattern);
 
@@ -168,13 +164,25 @@ var checkSubtree = function (value, pattern) {
     throw new Match.Error("Failed Match.OneOf validation");
   }
 
-  // A function that isn't something we special-case is assumed to be a
-  // constructor.
-  if (pattern instanceof Function) {
-    if (value instanceof pattern)
+  if (pattern instanceof Is) {
+    if (value instanceof pattern.constructor)
       return;
-    // XXX what if .name isn't defined
-    throw new Match.Error("Expected " + pattern.name);
+    throw new Match.Error(
+      "Expected " +
+      (pattern.constructor.name ? pattern.constructor.name
+                                : "instance of constructor")
+    );
+  }
+
+  // A predicate can throw its own Match.Error to provide a more
+  // specific error message.
+  if (typeof pattern === 'function') {
+    if (pattern(value))
+      return;
+    throw new Match.Error(
+      "Expected " +
+      (pattern.name ? pattern.name : 'to pass predicate test')
+    );
   }
 
   var unknownKeysAllowed = false;
