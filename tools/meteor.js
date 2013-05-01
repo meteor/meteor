@@ -1042,27 +1042,29 @@ Fiber(function () {
         process.exit(1);
       }
 
-      // Make the directory visible as a package. Derive the last
-      // package name from the last component of the directory, and
-      // bail out if that creates a conflict.
-      var packageDir = path.resolve(argv[0]);
-      var packageName = path.basename(packageDir) + "-tool";
-      if (context.library.get(packageName, false)) {
-        process.stderr.write("'" + packageName + "' conflicts with the name " +
-                             "of a package in the library");
-        process.exit(1);
-      }
-      context.library.override(packageName, packageDir);
-
       // Build and load the package
-      var world;
-      var messages = buildmessage.capture(function () {
-        world = unipackage.load({
-          library: context.library,
-          packages: [ packageName ],
-          release: context.releaseVersion
+      var world, packageName;
+      var messages = buildmessage.capture(
+        { title: "building the program" }, function () {
+          // Make the directory visible as a package. Derive the last
+          // package name from the last component of the directory, and
+          // bail out if that creates a conflict.
+          var packageDir = path.resolve(argv[0]);
+          packageName = path.basename(packageDir) + "-tool";
+          if (context.library.get(packageName, false)) {
+            process.stderr.write("'" + packageName +
+                                 "' conflicts with the name " +
+                                 "of a package in the library");
+            process.exit(1);
+          }
+          context.library.override(packageName, packageDir);
+
+          world = unipackage.load({
+            library: context.library,
+            packages: [ packageName ],
+            release: context.releaseVersion
+          });
         });
-      });
       if (messages.hasMessages()) {
         process.stderr.write(messages.formatMessages());
         process.exit(1);
