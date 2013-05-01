@@ -13,7 +13,19 @@ Plugin.registerSourceHandler("html", function (compileStep) {
   // XXX the way we deal with encodings here is sloppy .. should get
   // religion on that
   var contents = compileStep.read().toString('utf8');
-  var results = html_scanner.scan(contents, compileStep.inputPath);
+  try {
+    var results = html_scanner.scan(contents, compileStep.inputPath);
+  } catch (e) {
+    if (e instanceof html_scanner.ParseError) {
+      compileStep.error({
+        message: e.message,
+        sourcePath: compileStep.inputPath,
+        line: e.line
+      });
+      return;
+    } else
+      throw e;
+  }
 
   if (results.head)
     compileStep.appendDocument({ section: "head", data: results.head });
