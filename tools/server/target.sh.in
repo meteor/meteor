@@ -4,7 +4,7 @@ trap "echo Failed to fetch binary dependencies." EXIT
 cd `dirname $0`
 
 TARBALL="dev_bundle_##PLATFORM##_##BUNDLE_VERSION##.tar.gz"
-BUNDLE_TMPDIR="dependencies.fetch"
+BUNDLE_TMPDIR="$DATA_DIR/dependencies.fetch"
 
 rm -rf "$BUNDLE_TMPDIR"
 mkdir "$BUNDLE_TMPDIR"
@@ -21,8 +21,10 @@ fi
 tar -xzf "$CACHED_TARBALL" -C "$BUNDLE_TMPDIR"
 
 # Delete old dev bundle and rename the new one on top of it.
-rm -rf "dependencies"
-mv "$BUNDLE_TMPDIR" "dependencies"
+# XXX probably we can just trust that dependencies from last time are good
+DEPS_DIR="$DATA_DIR/dependencies"
+rm -rf "$DEPS_DIR"
+mv "$BUNDLE_TMPDIR" "$DEPS_DIR"
 
 trap - EXIT
 set +e
@@ -34,8 +36,10 @@ set +e
 # version for the arch you built on, and you'd have to manually
 # rebuild the binary modules (node-fibers) on the target system. It is
 # not ideal to have the bundle modify itself (much better for it to be
-# immutable) but ti'll do for now.
-rm -rf node_modules
+# immutable) but it'll do for now.
+# (And by "remove" we just mean "move out of the way", since that's
+# both faster and more atomic.)
+mv node_modules mode_nodules 2>/dev/null || true
 
-export NODE_PATH="`pwd`/dependencies/lib/node_modules"
-dependencies/bin/node boot.js ##IMAGE## "$@"
+export NODE_PATH="$DEPS_DIR/lib/node_modules"
+exec "$DEPS_DIR/bin/node" boot.js ##IMAGE## "$@"
