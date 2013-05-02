@@ -367,7 +367,7 @@ var bindToProxy = function (localPort, proxyConfig) {
   // XXX rename pid argument to bindTo.
   var pid = {
     job: process.env.GALAXY_JOB,
-    lastStart: process.env.LAST_START
+    lastStarted: process.env.LAST_START
   };
   var myHost = os.hostname();
 
