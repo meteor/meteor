@@ -3,20 +3,24 @@
     "handlebars": {
       "version": "1.0.7",
       "from": "handlebars@1.0.7",
+      "resolved": "https://registry.npmjs.org/handlebars/-/handlebars-1.0.7.tgz",
       "dependencies": {
         "optimist": {
           "version": "0.3.7",
           "from": "optimist@0.3.7",
+          "resolved": "https://registry.npmjs.org/optimist/-/optimist-0.3.7.tgz",
           "dependencies": {
             "wordwrap": {
               "version": "0.0.2",
-              "from": "wordwrap@0.0.2"
+              "from": "wordwrap@0.0.2",
+              "resolved": "https://registry.npmjs.org/wordwrap/-/wordwrap-0.0.2.tgz"
             }
           }
         },
         "uglify-js": {
           "version": "1.2.6",
-          "from": "uglify-js@1.2.6"
+          "from": "uglify-js@1.2.6",
+          "resolved": "https://registry.npmjs.org/uglify-js/-/uglify-js-1.2.6.tgz"
         }
       }
     }
