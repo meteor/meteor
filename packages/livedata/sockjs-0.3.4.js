@@ -1250,7 +1250,26 @@ var WebSocketTransport = SockJS.websocket = function(ri, trans_url) {
 };
 
 WebSocketTransport.prototype.doSend = function(data) {
-    this.ws.send('[' + data + ']');
+// <METEOR>
+// https://github.com/sockjs/sockjs-client/pull/117
+  var self = this;
+  var _send = function () {
+    self.ws.send('[' + data + ']');
+  };
+
+  if (/iPhone|iPad|iPod/.test(navigator.userAgent) &&
+      /OS 5_0|OS 5_1/.test(navigator.userAgent)) {
+    // On iOS 5.x, sending data to a websocket that has been closed
+    // while the app is sleeping can cause Safari to crash.  Work
+    // around this with `utils.delay`.
+    //
+    // https://bugs.webkit.org/show_bug.cgi?id=81517
+    // http://openradar.appspot.com/10811789
+    utils.delay(_send);
+  } else {
+    _send();
+  }
+// </METEOR>
 };
 
 WebSocketTransport.prototype.doCleanup = function() {
