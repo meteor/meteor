@@ -25,8 +25,9 @@ View the ```meteor-router``` example app online @  <a href="http://roles-example
 Run locally:
   1. install [Meteorite][1]
   2. ```git clone https://github.com/alanning/meteor-roles.git```
-  3a. ```cd meteor-roles/examples/router``` or
-  3b. ```cd meteor-roles/examples/mini-pages```
+  3. either
+    * ```cd meteor-roles/examples/router``` or
+    * ```cd meteor-roles/examples/mini-pages```
   4. ```mrt```
   5. point browser to ```http://localhost:3000```
 
