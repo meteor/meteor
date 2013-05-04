@@ -5,8 +5,8 @@
   },
   "packages": {
     "roles": {
-      "path": "../roles"
+      "path": "../../roles"
     },
-    "router": {}
+    "mini-pages": {}
   }
 }

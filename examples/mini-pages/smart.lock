@@ -1,0 +1,35 @@
+{
+  "meteor": {
+    "git": "https://github.com/meteor/meteor.git",
+    "branch": "master",
+    "commit": "bfe4b72ebec4367eaddcdf0887fcf5e649d9dcb8"
+  },
+  "dependencies": {
+    "basePackages": {
+      "roles": {
+        "path": "../../roles"
+      },
+      "mini-pages": {}
+    },
+    "packages": {
+      "roles": {
+        "path": "../../roles"
+      },
+      "mini-pages": {
+        "git": "https://github.com/cmather/meteor-mini-pages.git",
+        "tag": "v0.3.1",
+        "commit": "d218140d37b0dbec975880755c2035ae9e022936"
+      },
+      "HTML5-History-API": {
+        "git": "https://github.com/tmeasday/meteor-HTML5-History-API.git",
+        "tag": "v0.1.2",
+        "commit": "72333bfa71ae1ca75243085e83200eef40818088"
+      },
+      "page-js-ie-support": {
+        "git": "https://github.com/tmeasday/meteor-page-js-ie-support.git",
+        "tag": "v1.3.5",
+        "commit": "b99ed8380aefd10b2afc8f18d9eed4dd0d8ea9cb"
+      }
+    }
+  }
+}

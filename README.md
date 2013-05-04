@@ -10,20 +10,23 @@ Thanks to [@mcrider](https://github.com/mcrider)!
 
 <br />
 
-### Example App
+### Example Apps
 
-The ```example-app``` directory contains a Meteor app which shows off the following features:
+The ```examples``` directory contains Meteor apps which show off the following features:
 * Server-side publishing with authorization to secure sensitive data
 * Client-side navigation with link visibility based on user permissions
 * 'Sign-in required' app with up-front login page using ```accounts-ui```
-* Client-side routing via ```meteor-router``` smart package
+* Client-side routing
 
-View online @  <a href="http://roles-example.meteor.com/" target="_blank">http://roles-example.meteor.com/</a>
+The only difference between the two example apps is the routing packages used: one uses ```meteor-router``` and the other uses ```meteor-mini-pages```.
+
+View the ```meteor-router``` example app online @  <a href="http://roles-example.meteor.com/" target="_blank">http://roles-example.meteor.com/</a>
   
 Run locally:
   1. install [Meteorite][1]
   2. ```git clone https://github.com/alanning/meteor-roles.git```
-  3. ```cd meteor-roles/example-app```
+  3a. ```cd meteor-roles/examples/router``` or
+  3b. ```cd meteor-roles/examples/mini-pages```
   4. ```mrt```
   5. point browser to ```http://localhost:3000```
 

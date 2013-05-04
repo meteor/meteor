@@ -4,6 +4,31 @@
 
 
 ////////////////////////////////////////////////////////////////////
+// Routing stub
+//
+// Separate routing package details from general app code.
+Meteor.navigateTo = function (path) {
+  // ...over-ridden in routing.js
+};
+
+
+
+
+////////////////////////////////////////////////////////////////////
+// App.signout
+//
+App.signout = function () {
+  console.log('logging out...');
+  Meteor.logout(function () {
+    console.log('...done');
+    Meteor.navigateTo('/');
+  });
+};
+
+
+
+
+////////////////////////////////////////////////////////////////////
 // Patches
 //
 
@@ -17,14 +42,12 @@ if (!window.console.log) {
   };
 }
 
-
-
-
 // fix bootstrap dropdown unclickable issue on iOS
 // https://github.com/twitter/bootstrap/issues/4550
 $(document).on('touchstart.dropdown.data-api', '.dropdown-menu', function (e) {
     e.stopPropagation();
 });
+
 
 
 
@@ -43,77 +66,6 @@ Deps.autorun(function () {
   // users, for manage-users page
   Meteor.subscribe('users');
 });
-
-
-
-
-////////////////////////////////////////////////////////////////////
-// Routing
-//
-
-Meteor.Router.add({
-  '/': function () {
-    var user;
-
-    if (Meteor.loggingIn()) {
-      console.log('home: loading');
-      return 'loading';
-    }
-
-    user = Meteor.user();
-    if (!user) {
-      console.log('home: signin');
-      return 'signin';
-    }
-
-    console.log('home: user found');
-    console.log(user.roles);
-
-    // start on 'start' page
-    console.log('home: start');
-    return 'start';
-  },
-  '/signin': 'signin',
-  '/start': 'start',
-  '/secrets': 'secrets',
-  '/manage': 'manage',
-  '/signout': signout,
-  '*': 'not_found'
-});
-
-Meteor.Router.filters({
-  checkLoggedIn: function (page) {
-    var user;
-
-    if (Meteor.loggingIn()) {
-
-      console.log('filter: loading');
-      return 'loading';
-
-    } else {
-
-      user = Meteor.user();
-
-      if (user) {
-
-        console.log('filter: done');
-        return page;
-
-      } else {
-
-        console.log('filter: signin');
-        return 'signin';
-
-      }
-    }
-  }
-});
-
-// make sure user has logged in for all appropriate routes
-Meteor.Router.filter('checkLoggedIn', {
-  except:['signin','loading','not-found']
-});
-
 
 
 
@@ -196,15 +148,6 @@ function displayName (user) {
   return name || "<missing name>";
 }
 
-
-function signout () {
-  console.log('logging out...');
-  Meteor.logout(function () {
-    console.log('...done');
-    Meteor.Router.to('/');
-  });
-  
-}
 
 // insta-open/close nav rather than animate collapse.
 // this improves UX on mobile devices

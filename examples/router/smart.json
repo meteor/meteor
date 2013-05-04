@@ -1,0 +1,12 @@
+{
+  "meteor": {
+    "git": "https://github.com/meteor/meteor.git",
+    "branch": "master"
+  },
+  "packages": {
+    "roles": {
+      "path": "../../roles"
+    },
+    "router": {}
+  }
+}
