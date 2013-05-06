@@ -66,10 +66,10 @@ Tinytest.addAsync("observeChanges - callback isolation", function (test, onCompl
 
     var fooid = c.insert({apples: "ok"});
     logger.expectResult("added", [fooid, {apples: "ok"}]);
-    
+
     c.update(fooid, {apples: "not ok"})
     logger.expectResult("changed", [fooid, {apples: "not ok"}]);
-    
+
     test.equal(c.findOne(fooid).apples, "not ok");
 
     _.each(handles, function(handle) { handle.stop(); });
