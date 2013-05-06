@@ -4,7 +4,7 @@ trap "echo Failed to fetch binary dependencies." EXIT
 cd `dirname $0`
 
 # XXX don't hardcode linux :)
-TARBALL="dev_bundle_Linux_x86_64_##BUNDLE_VERSION##.tar.gz"
+TARBALL="dev_bundle_##PLATFORM##_##BUNDLE_VERSION##.tar.gz"
 BUNDLE_TMPDIR="$DATA_DIR/dependencies.fetch"
 
 rm -rf "$BUNDLE_TMPDIR"
