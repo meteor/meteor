@@ -153,9 +153,9 @@ var host = function () {
     else if (uname === "Linux") {
       var machine = run('uname', '-m');
       if (_.contains(["i386", "i686", "x86"], machine))
-        _host = "native.osx.x86_32";
+        _host = "native.linux.x86_32";
       else if (_.contains(["x86_64", "amd64", "ia64"], machine))
-        _host = "native.osx.x86_64";
+        _host = "native.linux.x86_64";
       else
         throw new Error("Unsupported architecture: " + machine);
     }
