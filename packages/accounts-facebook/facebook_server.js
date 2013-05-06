@@ -51,9 +51,9 @@ var isJSON = function (str) {
 // - accessToken
 // - expiresIn: lifetime of token in seconds
 var getTokenResponse = function (query) {
-  var config = Accounts.loginServiceConfiguration.findOne({service: 'facebook'});
+  var config = ServiceConfiguration.configurations.findOne({service: 'facebook'});
   if (!config)
-    throw new Accounts.ConfigError("Service not configured");
+    throw new ServiceConfiguration.ConfigError("Service not configured");
 
   var responseContent;
   try {

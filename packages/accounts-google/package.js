@@ -4,7 +4,7 @@ Package.describe({
 
 Package.on_use(function(api) {
   api.use('accounts-base', ['client', 'server']);
-  api.use('accounts-oauth2-helper', ['client', 'server']);
+  api.use('oauth2', ['client', 'server']);
   api.use('http', ['client', 'server']);
   api.use('templating', 'client');
 
