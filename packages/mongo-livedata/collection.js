@@ -1,4 +1,4 @@
-// manager, if given, is a LivedataClient or LivedataServer
+// connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
 
 Meteor.Collection = function (name, options) {
@@ -7,13 +7,17 @@ Meteor.Collection = function (name, options) {
     throw new Error('use "new" to construct a Meteor.Collection');
   if (options && options.methods) {
     // Backwards compatibility hack with original signature (which passed
-    // "manager" directly instead of in options. (Managers must have a "methods"
+    // "connection" directly instead of in options. (Connections must have a "methods"
     // method.)
     // XXX remove before 1.0
-    options = {manager: options};
+    options = {connection: options};
+  }
+  // Backwards compatibility: "connection" used to be called "manager".
+  if (options && options.manager && !options.connection) {
+    options.connection = options.manager;
   }
   options = _.extend({
-    manager: undefined,
+    connection: undefined,
     idGeneration: 'STRING',
     transform: null,
     _driver: undefined,
@@ -45,13 +49,13 @@ Meteor.Collection = function (name, options) {
                   "the collection name to turn off this warning.)");
   }
 
-  // note: nameless collections never have a manager
-  self._manager = name && (options.manager ||
+  // note: nameless collections never have a connection
+  self._connection = name && (options.connection ||
                            (Meteor.isClient ?
                             Meteor.default_connection : Meteor.default_server));
 
   if (!options._driver) {
-    if (name && self._manager === Meteor.default_server &&
+    if (name && self._connection === Meteor.default_server &&
         Meteor._RemoteCollectionDriver)
       options._driver = Meteor._RemoteCollectionDriver;
     else
@@ -61,11 +65,11 @@ Meteor.Collection = function (name, options) {
   self._collection = options._driver.open(name);
   self._name = name;
 
-  if (name && self._manager.registerStore) {
+  if (name && self._connection.registerStore) {
     // OK, we're going to be a slave, replicating some remote
     // database, except possibly with some temporary divergence while
     // we have unacknowledged RPC's.
-    var ok = self._manager.registerStore(name, {
+    var ok = self._connection.registerStore(name, {
       // Called at the beginning of a batch of updates. batchSize is the number
       // of update calls to expect.
       //
@@ -166,10 +170,10 @@ Meteor.Collection = function (name, options) {
 
   // autopublish
   if (!options._preventAutopublish &&
-      self._manager && self._manager.onAutopublish)
-    self._manager.onAutopublish(function () {
+      self._connection && self._connection.onAutopublish)
+    self._connection.onAutopublish(function () {
       var handler = function () { return self.find(); };
-      self._manager.publish(null, handler, {is_auto: true});
+      self._connection.publish(null, handler, {is_auto: true});
     });
 };
 
@@ -324,7 +328,7 @@ _.each(["insert", "update", "remove"], function (name) {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
     }
 
-    if (self._manager && self._manager !== Meteor.default_server) {
+    if (self._connection && self._connection !== Meteor.default_server) {
       // just remote to another endpoint, propagate return value or
       // exception.
 
@@ -341,12 +345,12 @@ _.each(["insert", "update", "remove"], function (name) {
         // asynchronous: on success, callback should return ret
         // (document ID for insert, undefined for update and
         // remove), not the method's result.
-        self._manager.apply(self._prefix + name, args, function (error, result) {
+        self._connection.apply(self._prefix + name, args, function (error, result) {
           callback(error, !error && ret);
         });
       } else {
         // synchronous: propagate exception
-        self._manager.apply(self._prefix + name, args);
+        self._connection.apply(self._prefix + name, args);
       }
 
     } else {
@@ -362,7 +366,7 @@ _.each(["insert", "update", "remove"], function (name) {
         throw e;
       }
 
-      // on success, return *ret*, not the manager's return value.
+      // on success, return *ret*, not the connection's return value.
       callback && callback(null, ret);
     }
 
@@ -497,7 +501,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
   self._prefix = '/' + self._name + '/';
 
   // mutation methods
-  if (self._manager) {
+  if (self._connection) {
     var m = {};
 
     _.each(['insert', 'update', 'remove'], function (method) {
@@ -553,8 +557,8 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
     // Minimongo on the server gets no stubs; instead, by default
     // it wait()s until its result is ready, yielding.
     // This matches the behavior of macromongo on the server better.
-    if (Meteor.isClient || self._manager === Meteor.default_server)
-      self._manager.methods(m);
+    if (Meteor.isClient || self._connection === Meteor.default_server)
+      self._connection.methods(m);
   }
 };
 

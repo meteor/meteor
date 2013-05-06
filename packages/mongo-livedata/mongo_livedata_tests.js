@@ -880,7 +880,7 @@ if (Meteor.isServer) {
       var self = this;
       if (self.conn.status().connected) {
         self.miniC = new Meteor.Collection("ServerMinimongo_" + self.id, {
-          manager: self.conn
+          connection: self.conn
         });
         var exp = expect(function (err) {
           test.isFalse(err);
@@ -933,7 +933,7 @@ if (Meteor.isServer) {
       var self = this;
       if (self.conn.status().connected) {
         self.miniC = new Meteor.Collection("ServerMinimongoObserve_" + self.id, {
-          manager: self.conn
+          connection: self.conn
         });
         var exp = expect(function (err) {
           test.isFalse(err);
