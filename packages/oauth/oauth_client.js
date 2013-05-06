@@ -5,9 +5,11 @@
 // @param callback {Function} Callback function to call on
 //   completion. Takes one argument, null on success, or Error on
 //   error.
+// @param loginPopupClosedCallback the callback to call when the
+//   login screen is dismissed.  Takes state and the callback
 // @param dimensions {optional Object(width, height)} The dimensions of
 //   the popup. If not passed defaults to something sane
-Accounts.oauth.initiateLogin = function(state, url, callback, dimensions) {
+Oauth.initiateLogin = function(state, url, callback, loginPopupClosedCallback, dimensions) {
   // default dimensions that worked well for facebook and google
   var popup = openCenteredPopup(
     url,
@@ -20,27 +22,9 @@ Accounts.oauth.initiateLogin = function(state, url, callback, dimensions) {
     // http://code.google.com/p/android/issues/detail?id=21061
     if (popup.closed || popup.closed === undefined) {
       clearInterval(checkPopupOpen);
-      tryLoginAfterPopupClosed(state, callback);
+      loginPopupClosedCallback(state, callback);
     }
   }, 100);
-};
-
-// Send an OAuth login method to the server. If the user authorized
-// access in the popup this should log the user in, otherwise
-// nothing should happen.
-var tryLoginAfterPopupClosed = function(state, callback) {
-  Accounts.callLoginMethod({
-    methodArguments: [{oauth: {state: state}}],
-    userCallback: callback && function (err) {
-      // Allow server to specify a specify subclass of errors. We should come
-      // up with a more generic way to do this!
-      if (err && err instanceof Meteor.Error &&
-          err.error === Accounts.LoginCancelledError.numericError) {
-        callback(new Accounts.LoginCancelledError(err.details));
-      } else {
-        callback(err);
-      }
-    }});
 };
 
 var openCenteredPopup = function(url, width, height) {

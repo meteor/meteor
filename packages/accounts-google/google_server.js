@@ -49,9 +49,9 @@ Accounts.oauth.registerService('google', 2, function(query) {
 // - expiresIn: lifetime of token in seconds
 // - refreshToken, if this is the first authorization request
 var getTokens = function (query) {
-  var config = Accounts.loginServiceConfiguration.findOne({service: 'google'});
+  var config = ServiceConfiguration.configurations.findOne({service: 'google'});
   if (!config)
-    throw new Accounts.ConfigError("Service not configured");
+    throw new ServiceConfiguration.ConfigError("Service not configured");
 
   var response;
   try {

@@ -22,9 +22,9 @@ Accounts.oauth.registerService('meetup', 2, function(query) {
 });
 
 var getAccessToken = function (query) {
-  var config = Accounts.loginServiceConfiguration.findOne({service: 'meetup'});
+  var config = ServiceConfiguration.configurations.findOne({service: 'meetup'});
   if (!config)
-    throw new Accounts.ConfigError("Service not configured");
+    throw new ServiceConfiguration.ConfigError("Service not configured");
 
   var response;
   try {
