@@ -22,6 +22,8 @@
   the existence of `window.localStorage` to detect if the full localStorage API
   is supported.)  #979
 
+* Fix EJSON base64 decoding bug. #1001
+
 * Support `appcache` on Chromium.  #958
 
 Patches contributed by GitHub users awwx and spang.
