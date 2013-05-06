@@ -474,7 +474,7 @@ Template.api.meteor_collection = {
   options: [
     {name: "manager",
      type: "Object",
-     descr: "The Meteor connection that will manage this collection, defaults to `Meteor` if null.  Unmanaged (`name` is null) collections cannot specify a manager."
+     descr: "The Meteor connection that will manage this collection, defaults to `Meteor` if null.  Unmanaged (`name` is null) collections cannot specify a manager. For collections intended to hold subscriptions to servers connected with `Meteor.connect` pass the result of  `Meteor.connect` call as a manager. See [Meteor.connect](#meteor_connect)."
     },
     {name: "idGeneration",
      type: "String",
