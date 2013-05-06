@@ -36,9 +36,9 @@ Accounts.oauth.registerService('weibo', 2, function(query) {
 // - access_token
 // - expires_in: lifetime of this token in seconds (5 years(!) right now)
 var getTokenResponse = function (query) {
-  var config = Accounts.loginServiceConfiguration.findOne({service: 'weibo'});
+  var config = ServiceConfiguration.configurations.findOne({service: 'weibo'});
   if (!config)
-    throw new Accounts.ConfigError("Service not configured");
+    throw new ServiceConfiguration.ConfigError("Service not configured");
 
   var response;
   try {
