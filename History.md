@@ -1,6 +1,9 @@
 
 ## vNEXT
 
+* The `manager` option to the `Meteor.Collection` constructor is now called
+  `connection`. The old name still works for now.  #987
+
 * Files in the 'client/compatibility/' subdirectory of a Meteor app do
   not get wrapped in a new variable scope.
 
