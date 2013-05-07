@@ -694,32 +694,32 @@ LocalCollection._findInOrderedResults = function (query, doc) {
   throw Error("object missing from query");
 };
 
-//This binary search puts a value between any equal values, and the first 
-//lesser value.  This is to match the previous insertion behaviour of comparing
-//each element and inserting it as soon as it compares less than the
-//encountered value.
+// This binary search puts a value between any equal values, and the first
+// lesser value.  This is to match the previous insertion behaviour of comparing
+// each element and inserting it as soon as it compares less than the
+// encountered value.
 LocalCollection._binarySearch = function (cmp, array, value) {
-  if (array.length == 0) return 0;
-  lower = 0;
-  upper = array.length - 1;
+  if (array.length === 0) return 0;
+  var lower = 0;
+  var upper = array.length - 1;
 
   while (lower <= upper) {
-    idx = Math.floor( (lower + upper) / 2 );
-    comparison = cmp(value, array[idx]);
-    //console.log("lower:"+lower + " upper:" + upper + " idx:"+idx +" c:"+comparison);
-    if (lower == upper) {
+    var idx = Math.floor( (lower + upper) / 2 );
+    var comparison = cmp(value, array[idx]);
+    if (lower === upper) {
       if (comparison >= 0) idx++;
       return idx;
     }
 
-    if ( comparison < 0 )
+    if (comparison < 0)
       upper = idx;
     else
       lower = idx + 1;
   }
 
-  return idx;
-}
+  // The loop should always end with the lower === upper case.
+  throw new Error("shouldn't happen");
+};
 
 LocalCollection._insertInSortedList = function (cmp, array, value) {
   if (array.length === 0) {
@@ -727,7 +727,7 @@ LocalCollection._insertInSortedList = function (cmp, array, value) {
     return 0;
   }
 
-  idx = LocalCollection._binarySearch (cmp, array, value)
+  var idx = LocalCollection._binarySearch(cmp, array, value);
   array.splice(idx, 0, value);
   return idx;
 };
