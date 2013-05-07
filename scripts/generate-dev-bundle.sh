@@ -145,7 +145,7 @@ cd ../..
 # click 'changelog' under the current version, then 'release notes' in
 # the upper right.
 cd "$DIR"
-MONGO_VERSION="2.2.1"
+MONGO_VERSION="2.4.3"
 MONGO_NAME="mongodb-${MONGO_OS}-${ARCH}-${MONGO_VERSION}"
 MONGO_URL="http://fastdl.mongodb.org/${MONGO_OS}/${MONGO_NAME}.tgz"
 curl "$MONGO_URL" | tar -xz

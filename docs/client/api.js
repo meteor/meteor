@@ -472,9 +472,9 @@ Template.api.meteor_collection = {
      descr: "The name of the collection.  If null, creates an unmanaged (unsynchronized) local collection."}
   ],
   options: [
-    {name: "manager",
+    {name: "connection",
      type: "Object",
-     descr: "The Meteor connection that will manage this collection, defaults to `Meteor` if null.  Unmanaged (`name` is null) collections cannot specify a manager."
+     descr: "The Meteor connection that will manage this collection, defaults to `Meteor` if null.  Unmanaged (`name` is null) collections cannot specify a connection."
     },
     {name: "idGeneration",
      type: "String",
