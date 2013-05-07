@@ -17,7 +17,7 @@ Template._loginButtonsLoggedOutSingleLoginButton.events({
       }
     };
 
-    var loginWithService = Meteor["loginWith" + capitalize(serviceName)];
+    var loginWithService = Accounts["loginWith" + capitalize(serviceName)];
 
     var options = {}; // use default scope unless specified
     if (Accounts.ui._options.requestPermissions[serviceName])

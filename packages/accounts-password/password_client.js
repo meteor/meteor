@@ -7,7 +7,7 @@
 //     it contains "@".
 // @param password {String}
 // @param callback {Function(error|undefined)}
-Meteor.loginWithPassword = function (selector, password, callback) {
+Accounts.loginWithPassword = function (selector, password, callback) {
   var srp = new Meteor._srp.Client(password);
   var request = srp.startExchange();
 

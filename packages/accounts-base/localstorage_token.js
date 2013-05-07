@@ -5,7 +5,7 @@
 
 // Login with a Meteor access token. This is the only public function
 // here.
-Meteor.loginWithToken = function (token, callback) {
+Accounts.loginWithToken = function (token, callback) {
   Accounts.callLoginMethod({
     methodArguments: [{resume: token}],
     userCallback: callback});
@@ -75,7 +75,7 @@ if (!Accounts._preventAutoLogin) {
     // request is in flight. This reduces page flicker on startup.
     var userId = Accounts._storedUserId();
     userId && Meteor.default_connection.setUserId(userId);
-    Meteor.loginWithToken(token, function (err) {
+    Accounts.loginWithToken(token, function (err) {
       if (err) {
         Meteor._debug("Error logging in with token: " + err);
         Accounts._makeClientLoggedOut();
@@ -96,7 +96,7 @@ Accounts._pollStoredLoginToken = function() {
   // != instead of !== just to make sure undefined and null are treated the same
   if (Accounts._lastLoginTokenWhenPolled != currentLoginToken) {
     if (currentLoginToken)
-      Meteor.loginWithToken(currentLoginToken); // XXX should we pass a callback here?
+      Accounts.loginWithToken(currentLoginToken); // XXX should we pass a callback here?
     else
       Meteor.logout();
   }
