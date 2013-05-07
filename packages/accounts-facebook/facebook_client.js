@@ -1,3 +1,4 @@
 Meteor.loginWithFacebook = function(options, callback) {
-  Facebook.requestCredential(options, callback, Accounts.oauth.tryLoginAfterPopupClosed);
+  var credentialRequestCompleteCallback = Accounts.oauth.credentialRequestCompleteHandler(callback);
+  Facebook.requestCredential(options, credentialRequestCompleteCallback);
 };

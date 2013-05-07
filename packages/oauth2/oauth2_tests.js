@@ -1,8 +1,8 @@
-Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
+Tinytest.add("oauth2 - loginResultForCredentialToken is stored", function (test) {
   var http = Npm.require('http');
   var foobookId = Random.id();
   var foobookOption1 = Random.id();
-  var state = Random.id();
+  var credentialToken = Random.id();
   var serviceName = Random.id();
 
   ServiceConfiguration.configurations.insert({service: serviceName});
@@ -19,16 +19,16 @@ Tinytest.add("oauth2 - loginResultForState is stored", function (test) {
     // simulate logging in using foobook
     var req = {method: "POST",
                url: "/_oauth/" + serviceName + "?close",
-               query: {state: state}};
+               query: {state: credentialToken}};
     Oauth._middleware(req, new http.ServerResponse(req));
 
     // Test that the login result for that user is prepared
     test.equal(
-      Oauth._loginResultForState[state].serviceName, serviceName);
+      Oauth._loginResultForCredentialToken[credentialToken].serviceName, serviceName);
     test.equal(
-      Oauth._loginResultForState[state].serviceData.id, foobookId);
+      Oauth._loginResultForCredentialToken[credentialToken].serviceData.id, foobookId);
     test.equal(
-      Oauth._loginResultForState[state].options.option1, foobookOption1);
+      Oauth._loginResultForCredentialToken[credentialToken].options.option1, foobookOption1);
 
   } finally {
     Oauth._unregisterService(serviceName);

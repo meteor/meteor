@@ -1,3 +1,4 @@
 Meteor.loginWithGithub = function(options, callback) {
-  Github.requestCredential(options, callback, Accounts.oauth.tryLoginAfterPopupClosed);
+  var credentialRequestCompleteCallback = Accounts.oauth.credentialRequestCompleteHandler(callback);
+  Github.requestCredential(options, credentialRequestCompleteCallback);
 };

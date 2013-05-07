@@ -4,6 +4,7 @@ Package.describe({
 
 Package.on_use(function(api) {
   api.use('accounts-base', ['client', 'server']);
+  api.use('accounts-oauth', ['client', 'server']);
   api.use('github', ['client', 'server']);
 
   api.add_files('github_login_button.css', 'client');
