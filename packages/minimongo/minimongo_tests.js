@@ -1069,10 +1069,10 @@ Tinytest.add("minimongo - binary search", function (test) {
 
   var checkSearchForward = function (array, value, expected, message) {
     checkSearch(forwardCmp, array, value, expected, message);
-  }
+  };
   var checkSearchBackward = function (array, value, expected, message) {
     checkSearch(backwardCmp, array, value, expected, message);
-  }
+  };
 
   checkSearchForward([1, 2, 5, 7], 4, 2, "Inner insert");
   checkSearchForward([1, 2, 3, 4], 3, 3, "Inner insert, equal value");

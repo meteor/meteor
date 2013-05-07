@@ -695,30 +695,20 @@ LocalCollection._findInOrderedResults = function (query, doc) {
 };
 
 // This binary search puts a value between any equal values, and the first
-// lesser value.  This is to match the previous insertion behaviour of comparing
-// each element and inserting it as soon as it compares less than the
-// encountered value.
+// lesser value.
 LocalCollection._binarySearch = function (cmp, array, value) {
-  if (array.length === 0) return 0;
-  var lower = 0;
-  var upper = array.length - 1;
+  var first = 0, rangeLength = array.length;
 
-  while (lower <= upper) {
-    var idx = Math.floor( (lower + upper) / 2 );
-    var comparison = cmp(value, array[idx]);
-    if (lower === upper) {
-      if (comparison >= 0) idx++;
-      return idx;
+  while (rangeLength > 0) {
+    var halfRange = Math.floor(rangeLength/2);
+    if (cmp(value, array[first + halfRange]) >= 0) {
+      first += halfRange + 1;
+      rangeLength -= halfRange + 1;
+    } else {
+      rangeLength = halfRange;
     }
-
-    if (comparison < 0)
-      upper = idx;
-    else
-      lower = idx + 1;
   }
-
-  // The loop should always end with the lower === upper case.
-  throw new Error("shouldn't happen");
+  return first;
 };
 
 LocalCollection._insertInSortedList = function (cmp, array, value) {
