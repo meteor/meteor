@@ -90,3 +90,7 @@ var getIdentity = function (accessToken) {
     throw new Error("Failed to fetch identity from Facebook. " + err.message);
   }
 };
+
+Facebook.retrieveCredential = function(credentialToken) {
+  return Oauth.retrieveCredential(credentialToken);
+};

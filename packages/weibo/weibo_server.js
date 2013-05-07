@@ -67,3 +67,7 @@ var getIdentity = function (accessToken, userId) {
     throw new Error("Failed to fetch identity from Weibo. " + err.message);
   }
 };
+
+Weibo.retrieveCredential = function(credentialToken) {
+  return Oauth.retrieveCredential(credentialToken);
+};
