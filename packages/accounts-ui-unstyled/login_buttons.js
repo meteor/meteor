@@ -125,7 +125,7 @@ Accounts._loginButtons.getLoginServices = function () {
   var self = this;
   var services = [];
 
-  // find all methods of the form: `Meteor.loginWithFoo`, where
+  // find all methods of the form: `Accounts.loginWithFoo`, where
   // `Foo` corresponds to a login service
   //
   // XXX we should consider having a client-side
@@ -135,13 +135,13 @@ Accounts._loginButtons.getLoginServices = function () {
   // benefit of allow us to unify facebook_{client,common,server}.js
   // into one file, which would encourage people to build more login
   // services packages.
-  _.each(_.keys(Meteor), function(methodName) {
+  _.each(_.keys(Accounts), function(methodName) {
     var match;
     if ((match = methodName.match(/^loginWith(.*)/))) {
       var serviceName = match[1].toLowerCase();
 
       // HACKETY HACK. needed to not match
-      // Meteor.loginWithToken. See XXX above.
+      // Accounts.loginWithToken. See XXX above.
       if (Accounts[serviceName])
         services.push(match[1].toLowerCase());
     }

@@ -9,7 +9,7 @@ Meteor.userId = function () {
 
 var loggingIn = false;
 var loggingInDeps = new Deps.Dependency;
-// This is mostly just called within this file, but Meteor.loginWithPassword
+// This is mostly just called within this file, but Accounts.loginWithPassword
 // also uses it to make loggingIn() be true during the beginPasswordExchange
 // method call too.
 Accounts._setLoggingIn = function (x) {

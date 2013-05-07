@@ -992,7 +992,7 @@ Template.api.loggingIn = {
   id: "meteor_loggingin",
   name: "Meteor.loggingIn()",
   locus: "Client",
-  descr: ["True if a login method (such as `Meteor.loginWithPassword`, `Meteor.loginWithFacebook`, or `Accounts.createUser`) is currently in progress. A reactive data source."]
+  descr: ["True if a login method (such as `Accounts.loginWithPassword`, `Accounts.loginWithFacebook`, or `Accounts.createUser`) is currently in progress. A reactive data source."]
 };
 
 Template.api.loggingInTemplate = {
@@ -1020,8 +1020,8 @@ Template.api.logout = {
 
 
 Template.api.loginWithPassword = {
-  id: "meteor_loginwithpassword",
-  name: "Meteor.loginWithPassword(user, password, [callback])",
+  id: "accounts_loginwithpassword",
+  name: "Accounts.loginWithPassword(user, password, [callback])",
   locus: "Client",
   descr: ["Log the user in with a password."],
   args: [
@@ -1045,8 +1045,8 @@ Template.api.loginWithPassword = {
 
 
 Template.api.loginWithExternalService = {
-  id: "meteor_loginwithexternalservice",
-  name: "Meteor.loginWith<i>ExternalService</i>([options], [callback])",
+  id: "accounts_loginwithexternalservice",
+  name: "Accounts.loginWith<i>ExternalService</i>([options], [callback])",
   locus: "Client",
   descr: ["Log the user in using an external service."],
   args: [
@@ -1105,7 +1105,7 @@ Template.api.accounts_ui_config = {
     {
       name: "requestOfflineToken",
       type: "Object",
-      descr: "To ask the user for permission to act on their behalf when offline, map the relevant external service to `true`. Currently only supported with Google. See [Meteor.loginWithExternalService](#meteor_loginwithexternalservice) for more details."
+      descr: "To ask the user for permission to act on their behalf when offline, map the relevant external service to `true`. Currently only supported with Google. See [Accounts.loginWithExternalService](#accounts_loginwithexternalservice) for more details."
     },
     {
       name: "passwordSignupFields",
