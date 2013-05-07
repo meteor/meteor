@@ -25,10 +25,10 @@ Accounts.registerLoginHandler(function (options) {
   if (!options.oauth)
     return undefined; // don't handle
 
-  check(options.oauth, {state: String});
+  check(options.oauth, {credentialToken: String});
 
-  if (!_.has(Oauth._loginResultForState, options.oauth.state)) {
-    // OAuth state is not recognized, which could be either because the popup
+  if (!_.has(Oauth._loginResultForCredentialToken, options.oauth.credentialToken)) {
+    // OAuth credentialToken is not recognized, which could be either because the popup
     // was closed by the user before completion, or some sort of error where
     // the oauth provider didn't talk to our server correctly and closed the
     // popup somehow.
@@ -40,7 +40,7 @@ Accounts.registerLoginHandler(function (options) {
     throw new Meteor.Error(Accounts.LoginCancelledError.numericError,
                            'No matching login attempt found');
   }
-  var result = Oauth._loginResultForState[options.oauth.state];
+  var result = Oauth._loginResultForCredentialToken[options.oauth.credentialToken];
   if (result instanceof Error)
     // We tried to login, but there was a fatal error. Report it back
     // to the user.

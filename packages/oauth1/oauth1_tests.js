@@ -1,11 +1,11 @@
-Tinytest.add("oauth1 - loginResultForState is stored", function (test) {
+Tinytest.add("oauth1 - loginResultForCredentialToken is stored", function (test) {
   var http = Npm.require('http');
   var twitterfooId = Random.id();
   var twitterfooName = 'nickname' + Random.id();
   var twitterfooAccessToken = Random.id();
   var twitterfooAccessTokenSecret = Random.id();
   var twitterOption1 = Random.id();
-  var state = Random.id();
+  var credentialToken = Random.id();
   var serviceName = Random.id();
 
   var urls = {
@@ -40,13 +40,13 @@ Tinytest.add("oauth1 - loginResultForState is stored", function (test) {
     });
 
     // simulate logging in using twitterfoo
-    Oauth1._requestTokens[state] = twitterfooAccessToken;
+    Oauth1._requestTokens[credentialToken] = twitterfooAccessToken;
 
     var req = {
       method: "POST",
       url: "/_oauth/" + serviceName + "?close",
       query: {
-        state: state,
+        state: credentialToken,
         oauth_token: twitterfooAccessToken
       }
     };
@@ -54,17 +54,17 @@ Tinytest.add("oauth1 - loginResultForState is stored", function (test) {
 
     // Test that right data is placed on the loginResult map
     test.equal(
-      Oauth._loginResultForState[state].serviceName, serviceName);
+      Oauth._loginResultForCredentialToken[credentialToken].serviceName, serviceName);
     test.equal(
-      Oauth._loginResultForState[state].serviceData.id, twitterfooId);
+      Oauth._loginResultForCredentialToken[credentialToken].serviceData.id, twitterfooId);
     test.equal(
-      Oauth._loginResultForState[state].serviceData.screenName, twitterfooName);
+      Oauth._loginResultForCredentialToken[credentialToken].serviceData.screenName, twitterfooName);
     test.equal(
-      Oauth._loginResultForState[state].serviceData.accessToken, twitterfooAccessToken);
+      Oauth._loginResultForCredentialToken[credentialToken].serviceData.accessToken, twitterfooAccessToken);
     test.equal(
-      Oauth._loginResultForState[state].serviceData.accessTokenSecret, twitterfooAccessTokenSecret);
+      Oauth._loginResultForCredentialToken[credentialToken].serviceData.accessTokenSecret, twitterfooAccessTokenSecret);
     test.equal(
-      Oauth._loginResultForState[state].options.option1, twitterOption1);
+      Oauth._loginResultForCredentialToken[credentialToken].options.option1, twitterOption1);
 
   } finally {
     Oauth._unregisterService(serviceName);

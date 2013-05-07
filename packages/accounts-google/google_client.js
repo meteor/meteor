@@ -1,3 +1,4 @@
 Meteor.loginWithGoogle = function(options, callback) {
-  Google.requestCredential(options, callback, Accounts.oauth.tryLoginAfterPopupClosed);
+  var credentialRequestCompleteCallback = Accounts.oauth.credentialRequestCompleteHandler(callback);
+  Google.requestCredential(options, credentialRequestCompleteCallback);
 };

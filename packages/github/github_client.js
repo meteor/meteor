@@ -1,16 +1,21 @@
-Github.requestCredential = function (options, callback, loginPopupClosedCallback) {
+// Request Github credentials for the user
+// @param options {optional}
+// @param credentialRequestCompleteCallback {Function} Callback function to call on
+//   completion. Takes one argument, credentialToken on success, or Error on
+//   error.
+Github.requestCredential = function (options, credentialRequestCompleteCallback) {
   // support both (options, callback) and (callback).
-  if (!callback && typeof options === 'function') {
-    callback = options;
+  if (!credentialRequestCompleteCallback && typeof options === 'function') {
+    credentialRequestCompleteCallback = options;
     options = {};
   }
 
   var config = ServiceConfiguration.configurations.findOne({service: 'github'});
   if (!config) {
-    callback && callback(new ServiceConfiguration.ConfigError("Service not configured"));
+    credentialRequestCompleteCallback && credentialRequestCompleteCallback(new ServiceConfiguration.ConfigError("Service not configured"));
     return;
   }
-  var state = Random.id();
+  var credentialToken = Random.id();
 
   var scope = (options && options.requestPermissions) || [];
   var flatScope = _.map(scope, encodeURIComponent).join('+');
@@ -20,8 +25,8 @@ Github.requestCredential = function (options, callback, loginPopupClosedCallback
         '?client_id=' + config.clientId +
         '&scope=' + flatScope +
         '&redirect_uri=' + Meteor.absoluteUrl('_oauth/github?close') +
-        '&state=' + state;
+        '&state=' + credentialToken;
 
-  Oauth.initiateLogin(state, loginUrl, callback, loginPopupClosedCallback,
+  Oauth.initiateLogin(credentialToken, loginUrl, credentialRequestCompleteCallback,
                                 {width: 900, height: 450});
 };

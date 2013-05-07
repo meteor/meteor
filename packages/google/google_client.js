@@ -1,7 +1,12 @@
-Google.requestCredential = function (options, callback, loginPopupClosedCallback) {
+// Request Google credentials for the user
+// @param options {optional}
+// @param credentialRequestCompleteCallback {Function} Callback function to call on
+//   completion. Takes one argument, credentialToken on success, or Error on
+//   error.
+Google.requestCredential = function (options, credentialRequestCompleteCallback) {
   // support both (options, callback) and (callback).
-  if (!callback && typeof options === 'function') {
-    callback = options;
+  if (!credentialRequestCompleteCallback && typeof options === 'function') {
+    credentialRequestCompleteCallback = options;
     options = {};
   } else if (!options) {
     options = {};
@@ -9,11 +14,11 @@ Google.requestCredential = function (options, callback, loginPopupClosedCallback
 
   var config = ServiceConfiguration.configurations.findOne({service: 'google'});
   if (!config) {
-    callback && callback(new ServiceConfiguration.ConfigError("Service not configured"));
+    credentialRequestCompleteCallback && credentialRequestCompleteCallback(new ServiceConfiguration.ConfigError("Service not configured"));
     return;
   }
 
-  var state = Random.id();
+  var credentialToken = Random.id();
 
   // always need this to get user id from google.
   var requiredScope = ['https://www.googleapis.com/auth/userinfo.profile'];
@@ -32,8 +37,8 @@ Google.requestCredential = function (options, callback, loginPopupClosedCallback
         '&client_id=' + config.clientId +
         '&scope=' + flatScope +
         '&redirect_uri=' + Meteor.absoluteUrl('_oauth/google?close') +
-        '&state=' + state +
+        '&state=' + credentialToken +
         '&access_type=' + accessType;
 
-  Oauth.initiateLogin(state, loginUrl, callback, loginPopupClosedCallback);
+  Oauth.initiateLogin(credentialToken, loginUrl, credentialRequestCompleteCallback);
 };

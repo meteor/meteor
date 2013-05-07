@@ -1,3 +1,4 @@
 Meteor.loginWithMeetup = function(options, callback) {
-  Meetup.requestCredential(options, callback, Accounts.oauth.tryLoginAfterPopupClosed);
+  var credentialRequestCompleteCallback = Accounts.oauth.credentialRequestCompleteHandler(callback);
+  Meetup.requestCredential(options, credentialRequestCompleteCallback);
 };
