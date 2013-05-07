@@ -72,3 +72,7 @@ var getIdentity = function (accessToken) {
     throw new Error("Failed to fetch identity from Google. " + err.message);
   }
 };
+
+Google.retrieveCredential = function(credentialToken) {
+  return Oauth.retrieveCredential(credentialToken);
+};
