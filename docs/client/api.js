@@ -1395,11 +1395,11 @@ Template.api.match_test = {
   ]
 };
 
-Template.api.match_constructors = {
-  id: "match_constructors",
-  name: "Match.constructors(constructor, constructor...)",
+Template.api.match_registerConstructor = {
+  id: "match_registerConstructor",
+  name: "Match.registerConstructor(constructor)",
   locus: "Anywhere",
-  descr: ["Registers constructors so that they can be used as a match pattern."],
+  descr: ["Registers the constructor so that it can be used as a match pattern."],
   args: [
     {
       name: "constructor",

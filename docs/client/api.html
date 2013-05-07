@@ -2308,7 +2308,7 @@ server logs but not revealed to the client.
 
 {{> api_box match_test}}
 
-{{> api_box match_constructors}}
+{{> api_box match_registerConstructor}}
 
 {{#api_box_inline matchpatterns}}
 
@@ -2322,6 +2322,13 @@ Matches any value.
 
 {{#dtdd "<code>String</code>, <code>Number</code>, <code>Boolean</code>, <code>undefined</code>, <code>null</code>"}}
 Matches a primitive of the given type.
+{{/dtdd}}
+
+{{#dtdd "<code>Date</code>, <code>Error</code>, <code>Function</code>, <code>Regexp</code>"}}
+Matches an instance of the given constructor.
+
+You can register other constructors to use as a match pattern
+with `Match.registerConstructor`.
 {{/dtdd}}
 
 {{#dtdd "<code>[<em>pattern</em>]</code>"}}
@@ -2353,13 +2360,6 @@ Matches either `undefined` or something that matches *pattern*.
 
 {{#dtdd "<code>Match.OneOf(<em>pattern1</em>, <em>pattern2</em>, ...)</code>"}}
 Matches any value that matches at least one of the provided patterns.
-{{/dtdd}}
-
-{{#dtdd "A constructor function (e.g. <code>Date</code>)"}}
-Matches any element that is an instance of that type.  (Constructors
-need to be registered with `Match.constructors` to be recognized as a
-constructor.  `Date`, `Error`, `Function`, and `RegExp` are registered
-for you).
 {{/dtdd}}
 
 {{#dtdd "<code><em>predicate</em></code> (any function)"}}

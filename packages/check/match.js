@@ -67,7 +67,7 @@ Match = {
     return result;
   },
 
-  constructors: function (/* arguments */) {
+  registerConstructor: function (/* arguments */) {
     _.each(arguments, function (constructor) {
       if (! _.contains(constructors, constructor))
         constructors.push(constructor);
@@ -77,7 +77,7 @@ Match = {
   // allow to be reset in unit tests
   __resetConstructors: function () {
     constructors = [];
-    Match.constructors(Array, Date, Error, Function, RegExp);
+    Match.registerConstructor(Array, Date, Error, Function, RegExp);
   }
 };
 

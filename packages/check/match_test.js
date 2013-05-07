@@ -143,7 +143,7 @@ Tinytest.add("check - register constructor", function (test) {
     this.bar = 123;
   };
   var foo = new Foo();
-  Match.constructors(Foo);
+  Match.registerConstructor(Foo);
   test.isFalse(Match.test(123, Foo));
   test.isTrue(Match.test(foo, Foo));
   test.isFalse(Match.test(Foo, Foo));
