@@ -1,3 +1,4 @@
 Meteor.loginWithWeibo = function(options, callback) {
-  Weibo.requestCredential(options, callback, Accounts.oauth.tryLoginAfterPopupClosed);
+  var credentialRequestCompleteCallback = Accounts.oauth.credentialRequestCompleteHandler(callback);
+  Weibo.requestCredential(options, credentialRequestCompleteCallback);
 };

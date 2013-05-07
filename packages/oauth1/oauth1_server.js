@@ -50,7 +50,7 @@ Oauth1._handleRequest = function (service, query, res) {
       var oauthResult = service.handleOauthRequest(oauthBinding);
 
       // Add the login result to the result map
-      Oauth._loginResultForState[query.state] = {
+      Oauth._loginResultForCredentialToken[query.state] = {
           serviceName: service.serviceName,
           serviceData: oauthResult.serviceData,
           options: oauthResult.options

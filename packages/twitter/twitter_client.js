@@ -1,31 +1,35 @@
-// XXX support options.requestPermissions as we do for Facebook, Google, Github
-Twitter.requestCredential = function (options, callback, loginPopupClosedCallback) {
+// Request Twitter credentials for the user
+// @param options {optional}  XXX support options.requestPermissions
+// @param credentialRequestCompleteCallback {Function} Callback function to call on
+//   completion. Takes one argument, credentialToken on success, or Error on
+//   error.
+Twitter.requestCredential = function (options, credentialRequestCompleteCallback) {
   // support both (options, callback) and (callback).
-  if (!callback && typeof options === 'function') {
-    callback = options;
+  if (!credentialRequestCompleteCallback && typeof options === 'function') {
+    credentialRequestCompleteCallback = options;
     options = {};
   }
 
   var config = ServiceConfiguration.configurations.findOne({service: 'twitter'});
   if (!config) {
-    callback && callback(new ServiceConfiguration.ConfigError("Service not configured"));
+    credentialRequestCompleteCallback && credentialRequestCompleteCallback(new ServiceConfiguration.ConfigError("Service not configured"));
     return;
   }
 
-  var state = Random.id();
-  // We need to keep state across the next two 'steps' so we're adding
-  // a state parameter to the url and the callback url that we'll be returned
+  var credentialToken = Random.id();
+  // We need to keep credentialToken across the next two 'steps' so we're adding
+  // a credentialToken parameter to the url and the callback url that we'll be returned
   // to by oauth provider
 
   // url back to app, enters "step 2" as described in
   // packages/accounts-oauth1-helper/oauth1_server.js
-  var callbackUrl = Meteor.absoluteUrl('_oauth/twitter?close&state=' + state);
+  var callbackUrl = Meteor.absoluteUrl('_oauth/twitter?close&state=' + credentialToken);
 
   // url to app, enters "step 1" as described in
   // packages/accounts-oauth1-helper/oauth1_server.js
   var url = '/_oauth/twitter/?requestTokenAndRedirect='
         + encodeURIComponent(callbackUrl)
-        + '&state=' + state;
+        + '&state=' + credentialToken;
 
-  Oauth.initiateLogin(state, url, callback, loginPopupClosedCallback);
+  Oauth.initiateLogin(credentialToken, url, credentialRequestCompleteCallback);
 };

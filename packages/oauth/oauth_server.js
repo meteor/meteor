@@ -42,10 +42,10 @@ Oauth._unregisterService = function (name) {
 // When we get an incoming OAuth http request we complete the oauth
 // handshake, account and token setup before responding.  The
 // results are stored in this map which is then read when the login
-// method is called. Maps state --> return value of `login`
+// method is called. Maps credentialToken --> return value of `login`
 //
 // XXX we should periodically clear old entries
-Oauth._loginResultForState = {};
+Oauth._loginResultForCredentialToken = {};
 
 // Listen to incoming OAuth http requests
 __meteor_bootstrap__.app
@@ -95,7 +95,7 @@ Oauth._middleware = function (req, res, next) {
     // we were passed. But then the developer wouldn't be able to
     // style the error or react to it in any way.
     if (req.query.state && err instanceof Error)
-      Oauth._loginResultForState[req.query.state] = err;
+      Oauth._loginResultForCredentialToken[req.query.state] = err;
 
     // XXX the following is actually wrong. if someone wants to
     // redirect rather than close once we are done with the OAuth
