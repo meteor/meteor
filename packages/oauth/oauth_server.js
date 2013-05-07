@@ -47,6 +47,16 @@ Oauth._unregisterService = function (name) {
 // XXX we should periodically clear old entries
 Oauth._loginResultForCredentialToken = {};
 
+Oauth.hasCredential = function(credentialToken) {
+  return _.has(Oauth._loginResultForCredentialToken, credentialToken);
+}
+
+Oauth.retrieveCredential = function(credentialToken) {
+  result = Oauth._loginResultForCredentialToken[credentialToken];
+  delete Oauth._loginResultForCredentialToken[credentialToken];
+  return result;
+}
+
 // Listen to incoming OAuth http requests
 __meteor_bootstrap__.app
   .use(connect.query())
@@ -158,3 +168,4 @@ var closePopup = function(res) {
         '<html><head><script>window.close()</script></head></html>';
   res.end(content, 'utf-8');
 };
+

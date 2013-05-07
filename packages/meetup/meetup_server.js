@@ -49,3 +49,8 @@ var getIdentity = function (accessToken) {
     throw new Error("Failed to fetch identity from Meetup: " + err.message);
   }
 };
+
+
+Meetup.retrieveCredential = function(credentialToken) {
+  return Oauth.retrieveCredential(credentialToken);
+};

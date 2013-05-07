@@ -61,3 +61,7 @@ var getIdentity = function (accessToken) {
     throw new Error("Failed to fetch identity from GitHub. " + err.message);
   }
 };
+
+Github.retrieveCredential = function(credentialToken) {
+  return Oauth.retrieveCredential(credentialToken);
+};

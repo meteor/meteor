@@ -24,3 +24,8 @@ Oauth.registerService('twitter', 1, Twitter._urls, function(oauthBinding) {
     }
   };
 });
+
+
+Twitter.retrieveCredential = function(credentialToken) {
+  return Oauth.retrieveCredential(credentialToken);
+};
