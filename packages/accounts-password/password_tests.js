@@ -49,7 +49,7 @@ if (Meteor.isClient) (function () {
     },
     logoutStep,
     function (test, expect) {
-      Meteor.loginWithPassword(username, password,
+      Accounts.loginWithPassword(username, password,
                                loggedInAs(username, test, expect));
     },
     logoutStep,
@@ -65,7 +65,7 @@ if (Meteor.isClient) (function () {
       });
       // At the beginning, we're not logged in.
       test.isFalse(loaded);
-      Meteor.loginWithPassword(username, password, expect(function (error) {
+      Accounts.loginWithPassword(username, password, expect(function (error) {
         test.equal(error, undefined);
         test.notEqual(Meteor.userId(), null);
         // By the time of the login callback, the user should be loaded.
@@ -78,17 +78,17 @@ if (Meteor.isClient) (function () {
     },
     logoutStep,
     function (test, expect) {
-      Meteor.loginWithPassword({username: username}, password,
+      Accounts.loginWithPassword({username: username}, password,
                                loggedInAs(username, test, expect));
     },
     logoutStep,
     function (test, expect) {
-      Meteor.loginWithPassword(email, password,
+      Accounts.loginWithPassword(email, password,
                                loggedInAs(username, test, expect));
     },
     logoutStep,
     function (test, expect) {
-      Meteor.loginWithPassword({email: email}, password,
+      Accounts.loginWithPassword({email: email}, password,
                                loggedInAs(username, test, expect));
     },
     logoutStep,
@@ -125,14 +125,14 @@ if (Meteor.isClient) (function () {
     logoutStep,
     // old password, failed login
     function (test, expect) {
-      Meteor.loginWithPassword(email, password, expect(function (error) {
+      Accounts.loginWithPassword(email, password, expect(function (error) {
         test.isTrue(error);
         test.isFalse(Meteor.user());
       }));
     },
     // new password, success
     function (test, expect) {
-      Meteor.loginWithPassword(email, password2,
+      Accounts.loginWithPassword(email, password2,
                                loggedInAs(username, test, expect));
     },
     logoutStep,
@@ -147,7 +147,7 @@ if (Meteor.isClient) (function () {
     },
     logoutStep,
     function(test, expect) {
-      Meteor.loginWithPassword({username: username2}, password2,
+      Accounts.loginWithPassword({username: username2}, password2,
                                loggedInAs(username2, test, expect));
     },
     logoutStep,

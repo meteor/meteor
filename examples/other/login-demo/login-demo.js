@@ -10,7 +10,7 @@ if (Meteor.isClient) {
 
   Template.main.events({
     'click #login': function (evt) {
-      Meteor.loginWithGoogle(function (err) {
+      Accounts.loginWithGoogle(function (err) {
         if (err)
           Meteor._debug(err);
       });
