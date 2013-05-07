@@ -25,11 +25,13 @@
   the existence of `window.localStorage` to detect if the full localStorage API
   is supported.)  #979
 
+* Use binary search in minimongo when updating ordered queries.  #969
+
 * Fix EJSON base64 decoding bug. #1001
 
 * Support `appcache` on Chromium.  #958
 
-Patches contributed by GitHub users awwx and spang.
+Patches contributed by GitHub users awwx, jagill, and spang.
 
 ## v0.6.2.1
 

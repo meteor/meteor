@@ -1048,6 +1048,62 @@ Tinytest.add("minimongo - array sort", function (test) {
     _.range(c.find().count()));
 });
 
+Tinytest.add("minimongo - binary search", function (test) {
+  var forwardCmp = function (a, b) {
+    return a - b;
+  };
+
+  var backwardCmp = function (a, b) {
+    return -1 * forwardCmp(a, b);
+  };
+
+  var checkSearch = function (cmp, array, value, expected, message) {
+    var actual = LocalCollection._binarySearch(cmp, array, value);
+    if (expected != actual) {
+      test.fail({type: "minimongo-binary-search",
+                 message: message + " : Expected index " + expected +
+                 " but had " + actual
+      });
+    }
+  };
+
+  var checkSearchForward = function (array, value, expected, message) {
+    checkSearch(forwardCmp, array, value, expected, message);
+  };
+  var checkSearchBackward = function (array, value, expected, message) {
+    checkSearch(backwardCmp, array, value, expected, message);
+  };
+
+  checkSearchForward([1, 2, 5, 7], 4, 2, "Inner insert");
+  checkSearchForward([1, 2, 3, 4], 3, 3, "Inner insert, equal value");
+  checkSearchForward([1, 2, 5], 4, 2, "Inner insert, odd length");
+  checkSearchForward([1, 3, 5, 6], 9, 4, "End insert");
+  checkSearchForward([1, 3, 5, 6], 0, 0, "Beginning insert");
+  checkSearchForward([1], 0, 0, "Single array, less than.");
+  checkSearchForward([1], 1, 1, "Single array, equal.");
+  checkSearchForward([1], 2, 1, "Single array, greater than.");
+  checkSearchForward([], 1, 0, "Empty array");
+  checkSearchForward([1, 1, 1, 2, 2, 2, 2], 1, 3, "Highly degenerate array, lower");
+  checkSearchForward([1, 1, 1, 2, 2, 2, 2], 2, 7, "Highly degenerate array, upper");
+  checkSearchForward([2, 2, 2, 2, 2, 2, 2], 1, 0, "Highly degenerate array, lower");
+  checkSearchForward([2, 2, 2, 2, 2, 2, 2], 2, 7, "Highly degenerate array, equal");
+  checkSearchForward([2, 2, 2, 2, 2, 2, 2], 3, 7, "Highly degenerate array, upper");
+
+  checkSearchBackward([7, 5, 2, 1], 4, 2, "Backward: Inner insert");
+  checkSearchBackward([4, 3, 2, 1], 3, 2, "Backward: Inner insert, equal value");
+  checkSearchBackward([5, 2, 1], 4, 1, "Backward: Inner insert, odd length");
+  checkSearchBackward([6, 5, 3, 1], 9, 0, "Backward: Beginning insert");
+  checkSearchBackward([6, 5, 3, 1], 0, 4, "Backward: End insert");
+  checkSearchBackward([1], 0, 1, "Backward: Single array, less than.");
+  checkSearchBackward([1], 1, 1, "Backward: Single array, equal.");
+  checkSearchBackward([1], 2, 0, "Backward: Single array, greater than.");
+  checkSearchBackward([], 1, 0, "Backward: Empty array");
+  checkSearchBackward([2, 2, 2, 2, 1, 1, 1], 1, 7, "Backward: Degenerate array, lower");
+  checkSearchBackward([2, 2, 2, 2, 1, 1, 1], 2, 4, "Backward: Degenerate array, upper");
+  checkSearchBackward([2, 2, 2, 2, 2, 2, 2], 1, 7, "Backward: Highly degenerate array, upper");
+  checkSearchBackward([2, 2, 2, 2, 2, 2, 2], 2, 7, "Backward: Highly degenerate array, upper");
+  checkSearchBackward([2, 2, 2, 2, 2, 2, 2], 3, 0, "Backward: Highly degenerate array, upper");
+});
 
 Tinytest.add("minimongo - modify", function (test) {
   var modify = function (doc, mod, result) {
