@@ -379,12 +379,15 @@ var bindToProxy = function (localPort, proxyConfig) {
   };
 
   var proxy = Package.meteor.Meteor.connect(proxyConfig.proxyEndpoint);
+  var route = process.env.ROUTE;
+  var host = route.split(":")[0];
+  var port = route.split(":")[1];
   proxy.call('bindDdp', {
     pid: pid,
     bindTo: ddpBindTo,
     proxyTo: {
-      host: myHost,
-      port: localPort,
+      host: host,
+      port: port,
       pathPrefix: '/websocket'
     }
   });
@@ -395,8 +398,8 @@ var bindToProxy = function (localPort, proxyConfig) {
       port: proxyConfig.unprivilegedPorts ? 8080 : 80
     },
     proxyTo: {
-      host: myHost,
-      port: localPort
+      host: host,
+      port: port
     }
   });
   proxy.call('bindHttp', {
@@ -407,8 +410,8 @@ var bindToProxy = function (localPort, proxyConfig) {
       ssl: true
     },
     proxyTo: {
-      host: myHost,
-      port: localPort
+      host: host,
+      port: port
     }
   });
 };
