@@ -77,8 +77,14 @@ Meteor.methods({
   //   If unsuccessful (for example, if the user closed the oauth login popup),
   //     returns null
   login: function(options) {
+    if (preLoginHook)
+      if(!preLoginHook(options))
+        throw new Meteor.Error(403, "Pre login validation failed.");
     var result = tryAllLoginHandlers(options);
     if (result !== null)
+      if (postLoginHook) 
+        if(!postLoginHook(result))
+          throw new Meteor.Error(403, "Post login validation failed.");
       this.setUserId(result.id);
     return result;
   },
@@ -87,6 +93,28 @@ Meteor.methods({
     this.setUserId(null);
   }
 });
+
+///
+/// CREATE PRELOGIN HOOK
+///
+var preLoginHook = null;
+Accounts.preLogin = function (func){
+  if (preLoginHook)
+    throw new Error("Can only call preLogin once");
+  else
+    preLoginHook = func;
+};
+
+///
+/// CREATE POSTLOGIN HOOK
+///
+var postLoginHook = null;
+Accounts.postLogin = function (func){
+  if (postLoginHook)
+    throw new Error("Can only postLogin once");
+  else
+    postLoginHook = func;
+};  
 
 ///
 /// RECONNECT TOKENS

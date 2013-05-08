@@ -2,7 +2,7 @@
   "dependencies": {
     "mongodb": {
       "version": "1.2.13",
-      "from": "mongodb@1.2.13",
+      "from": "https://registry.npmjs.org/mongodb/-/mongodb-1.2.13.tgz",
       "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-1.2.13.tgz",
       "dependencies": {
         "bson": {
