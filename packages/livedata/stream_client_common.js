@@ -86,8 +86,10 @@ _.extend(Meteor._DdpClientStream.prototype, {
     self.RETRY_BASE_TIMEOUT = 1000;
     // exponential factor to increase timeout each attempt.
     self.RETRY_EXPONENT = 2.2;
-    // maximum time between reconnects.
-    self.RETRY_MAX_TIMEOUT = 1800000; // 30min.
+    // maximum time between reconnects. keep this intentionally
+    // high-ish to ensure a server can recover from a failure caused
+    // by load
+    self.RETRY_MAX_TIMEOUT = 5 * 60000; // 5 minutes
     // time to wait for the first 2 retries.  this helps page reload
     // speed during dev mode restarts, but doesn't hurt prod too
     // much (due to CONNECT_TIMEOUT)
@@ -189,6 +191,12 @@ _.extend(Meteor._DdpClientStream.prototype, {
     timeout = timeout * ((Random.fraction() * self.RETRY_FUZZ) +
                          (1 - self.RETRY_FUZZ/2));
     return timeout;
+  },
+
+  // fired when we detect that we've gone online. try to reconnect
+  // immediately.
+  _online: function () {
+    this.reconnect();
   },
 
   _retryLater: function () {
