@@ -106,6 +106,8 @@ Tinytest.add("check - check", function (test) {
   matches(/foo/, RegExp);
   fails(/foo/, String);
   matches(new Date, Date);
+  matches(new Date, Match.InstanceOf(Date));
+  fails(123, Match.InstanceOf(Date));
   matches(function () {}, Function);
   fails(new Date, Number);
   matches(EJSON.newBinary(42), EJSON.isBinary);

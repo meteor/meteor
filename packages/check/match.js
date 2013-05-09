@@ -27,6 +27,9 @@ Match = {
   ObjectIncluding: function (pattern) {
     return new ObjectIncluding(pattern);
   },
+  InstanceOf: function (constructor) {
+    return new InstanceOf(constructor);
+  },
   // XXX should we record the path down the tree in the error message?
   // XXX matchers should know how to describe themselves for errors
   Error: Meteor.makeErrorType("Match.Error", function (msg) {
@@ -77,7 +80,7 @@ Match = {
   // allow to be reset in unit tests
   __resetConstructors: function () {
     constructors = [];
-    Match.registerConstructor(Array, Date, Error, Function, RegExp);
+    Match.registerConstructor(Date, Error, Function, RegExp);
   }
 };
 
@@ -95,6 +98,10 @@ var OneOf = function (choices) {
 
 var ObjectIncluding = function (pattern) {
   this.pattern = pattern;
+};
+
+var InstanceOf = function (constructor) {
+  this._constructor = constructor;
 };
 
 var typeofChecks = [
@@ -166,6 +173,15 @@ var checkSubtree = function (value, pattern) {
     throw new Match.Error("Failed Match.OneOf validation");
   }
 
+  if (pattern instanceof InstanceOf) {
+    if (value instanceof pattern._constructor)
+      return;
+    throw new Match.Error(
+      "Expected " +
+      (pattern.name ? pattern.name : "instance of constructor")
+    );
+  }
+
   if (typeof pattern === 'function') {
     if (_.contains(constructors, pattern)) {
       if (value instanceof pattern)
@@ -176,7 +192,12 @@ var checkSubtree = function (value, pattern) {
       );
     }    
     else {
-      if (pattern(value))
+      var result = pattern(value);
+      if (result !== false && result !== true)
+        throw new Error(
+          'predicate functions must return true or false; if using a constructor it should be registered'
+        );
+      if (result)
         return;
       throw new Match.Error(
         "Expected " +

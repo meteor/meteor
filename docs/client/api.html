@@ -2328,7 +2328,11 @@ Matches a primitive of the given type.
 Matches an instance of the given constructor.
 
 You can register other constructors to use as a match pattern
-with `Match.registerConstructor`.
+with `Match.registerConstructor`, or use `Match.InstanceOf`.
+{{/dtdd}}
+
+{{#dtdd "<code>Match.InstanceOf(<em>constructor</em>)</code>"}}
+Matches any value that is an instance of the given constructor.
 {{/dtdd}}
 
 {{#dtdd "<code>[<em>pattern</em>]</code>"}}
@@ -2363,12 +2367,12 @@ Matches any value that matches at least one of the provided patterns.
 {{/dtdd}}
 
 {{#dtdd "<code><em>predicate</em></code> (any function)"}}
-Calls the predicate function with the value as the argument, and
-matches if the function returns true and fails otherwise.  The
-function can also cause the match to fail with a more descriptive
-error message by throwing `Match.Error`. If the function throws any
-other error, that error is thrown from the call to `check` or
-`Match.test`. Examples:
+Calls the predicate function with the value as the argument, which
+must return a boolean `true` or `false`.  Matches if the function
+returns true.  The function can also cause the match to fail with a
+more descriptive error message by throwing `Match.Error`. If the
+function throws any other error, that error is thrown from the call to
+`check` or `Match.test`.  Examples:
 
     check(buffer, EJSON.isBinary);
 
