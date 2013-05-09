@@ -1036,16 +1036,12 @@ _.extend(JsImageTarget.prototype, {
 // options:
 // - clientTarget: the ClientTarget to serve up over HTTP as our client
 // - releaseStamp: the Meteor release name (for retrieval at runtime)
-// - isBare: at startup, just load the JavaScript and call main()
-//   (rather than running a traditional script that initializes a HTTP
-//   server and database connection in a hardcoded way)
 var ServerTarget = function (options) {
   var self = this;
   JsImageTarget.apply(this, arguments);
 
   self.clientTarget = options.clientTarget;
   self.releaseStamp = options.releaseStamp;
-  self.isBare = options.isBare;
 
   if (! archinfo.matches(self.arch, "native"))
     throw new Error("ServerTarget targeting something that isn't a server?");
@@ -1098,11 +1094,8 @@ _.extend(ServerTarget.prototype, {
     var imageControlFile = self.toJsImage().write(builder);
 
     // Server bootstrap
-    // XXX ideally, if isBare, should ensure that the app exports a
-    // main() function and complain if not
-    var bootScript = self.isBare ? 'boot-bare.js' : 'boot.js';
     builder.write('boot.js',
-                  { file: path.join(__dirname, 'server', bootScript) });
+                  { file: path.join(__dirname, 'server', 'boot.js') });
 
     // Script that fetches the dev_bundle and runs the server bootstrap
     var archToPlatform = {
@@ -1405,30 +1398,16 @@ exports.bundle = function (appDir, outputPath, options) {
       return client;
     };
 
-    var makeTraditionalServerTarget = function (app, clientTarget) {
-      var server = new ServerTarget({
+    var makeServerTarget = function (app, clientTarget) {
+      var targetOptions = {
         library: library,
         arch: archinfo.host(),
-        clientTarget: clientTarget,
         releaseStamp: options.releaseStamp
-      });
+      };
+      if (clientTarget)
+        targetOptions.clientTarget = clientTarget;
 
-      server.make({
-        packages: [app],
-        test: options.testPackages || [],
-        minify: false
-      });
-
-      return server;
-    };
-
-    var makeBareServerTarget = function (app) {
-      var server = new ServerTarget({
-        library: library,
-        arch: archinfo.host(),
-        releaseStamp: options.releaseStamp,
-        isBare: true
-      });
+      var server = new ServerTarget(targetOptions);
 
       server.make({
         packages: [app],
@@ -1452,7 +1431,7 @@ exports.bundle = function (appDir, outputPath, options) {
       targets.client = client;
 
       // Server
-      var server = makeTraditionalServerTarget(app, client);
+      var server = makeServerTarget(app, client);
       targets.server = server;
     }
 
@@ -1506,7 +1485,7 @@ exports.bundle = function (appDir, outputPath, options) {
 
         // Add to list
         programs.push({
-          type: attrsJson.type || "bare",
+          type: attrsJson.type || "server",
           name: item,
           path: itemPath,
           client: attrsJson.client,
@@ -1532,8 +1511,8 @@ exports.bundle = function (appDir, outputPath, options) {
       library.override(p.name, p.path);
       var target;
       switch (p.type) {
-      case "bare":
-        target = makeBareServerTarget(p.name);
+      case "server":
+        target = makeServerTarget(p.name);
         break;
       case "traditional":
         var clientTarget;
@@ -1556,7 +1535,7 @@ exports.bundle = function (appDir, outputPath, options) {
         // We don't check whether targets[p.client] is actually a
         // ClientTarget. If you want to be clever, go ahead.
 
-        target = makeTraditionalServerTarget(p.name, clientTarget);
+        target = makeServerTarget(p.name, clientTarget);
         break;
       case "client":
         // We pass null for appDir because we are a
@@ -1566,7 +1545,7 @@ exports.bundle = function (appDir, outputPath, options) {
         break;
       default:
         buildmessage.error(
-          "type must be 'bare', 'traditional', or 'client'",
+          "type must be 'server', 'traditional', or 'client'",
           { file: p.attrsJsonRelPath });
         // recover by ignoring target
         return;

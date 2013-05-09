@@ -3,6 +3,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
+  api.use('webapp', 'server');
   api.use('reload', 'client');
   api.use('routepolicy', 'server');
   api.use('startup', 'client');

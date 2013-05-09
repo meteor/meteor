@@ -10,6 +10,11 @@ Package.on_use(function (api) {
   api.use(['check', 'random', 'ejson', 'json', 'underscore', 'deps', 'logging'],
           ['client', 'server']);
 
+  // XXX we do NOT require webapp here, because it's OK to use this package on a
+  // server architecture without making a server (in order to do
+  // server-to-server DDP as a client). So if you want to provide a DDP server,
+  // you need to use webapp before you use livedata.
+
   // Transport
   api.use('reload', 'client');
   api.use('routepolicy', 'server');

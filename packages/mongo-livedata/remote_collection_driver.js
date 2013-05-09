@@ -22,18 +22,14 @@ _.extend(Meteor._RemoteCollectionDriver.prototype, {
 // Create the singleton _RemoteCollectionDriver only on demand, so we
 // only require Mongo configuration if it's actually used (eg, not if
 // you're only trying to receive data from a remote DDP server.)
-var theDriver = null;
-Meteor._getRemoteCollectionDriver = function () {
-  if (! theDriver) {
-    // XXX kind of hacky
-    var mongoUrl = Meteor._get(__meteor_bootstrap__.deployConfig,
-                               'packages', 'mongo-livedata', 'url');
-    // XXX bad error since it could also be set directly in METEOR_DEPLOY_CONFIG
-    if (! mongoUrl)
-      throw new Error("MONGO_URL must be set in environment");
+Meteor._getRemoteCollectionDriver = _.once(function () {
+  // XXX kind of hacky
+  var mongoUrl = (typeof __meteor_bootstrap__ !== 'undefined' &&
+                  Meteor._get(__meteor_bootstrap__.deployConfig,
+                              'packages', 'mongo-livedata', 'url'));
+  // XXX bad error since it could also be set directly in METEOR_DEPLOY_CONFIG
+  if (! mongoUrl)
+    throw new Error("MONGO_URL must be set in environment");
 
-    theDriver = new Meteor._RemoteCollectionDriver(mongoUrl);
-  }
-
-  return theDriver;
-};
+  return new Meteor._RemoteCollectionDriver(mongoUrl);
+});

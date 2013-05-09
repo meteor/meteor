@@ -13,6 +13,7 @@ Package.on_use(function (api) {
 });
 
 Package.on_test(function (api) {
+  api.use('webapp', 'server');
   api.use(['tinytest', 'underscore', 'liverange', 'deps', 'domutils',
            'minimongo', 'random']);
   api.use(['spark', 'test-helpers'], 'client');

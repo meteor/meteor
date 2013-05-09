@@ -1,0 +1,41 @@
+{
+  "dependencies": {
+    "connect": {
+      "version": "1.9.2",
+      "from": "connect@1.9.2",
+      "resolved": "https://registry.npmjs.org/connect/-/connect-1.9.2.tgz",
+      "dependencies": {
+        "qs": {
+          "version": "0.6.4",
+          "from": "qs@>= 0.4.0",
+          "resolved": "https://registry.npmjs.org/qs/-/qs-0.6.4.tgz"
+        },
+        "mime": {
+          "version": "1.2.9",
+          "from": "mime@>= 0.0.1"
+        },
+        "formidable": {
+          "version": "1.0.14",
+          "from": "formidable@1.0.x",
+          "resolved": "https://registry.npmjs.org/formidable/-/formidable-1.0.14.tgz"
+        }
+      }
+    },
+    "gzippo": {
+      "version": "0.1.7",
+      "from": "https://github.com/meteor/gzippo/tarball/1e4b955439abc643879ae264b28a761521818f3b",
+      "resolved": "https://github.com/meteor/gzippo/tarball/1e4b955439abc643879ae264b28a761521818f3b",
+      "dependencies": {
+        "mime": {
+          "version": "1.2.9",
+          "from": "mime@>= 1.2"
+        }
+      }
+    },
+    "useragent": {
+      "version": "2.0.1",
+      "from": "useragent@2.0.1",
+      "resolved": "https://registry.npmjs.org/useragent/-/useragent-2.0.1.tgz"
+    }
+  }
+}

@@ -4,6 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
+  api.use('webapp', 'server');
   api.use('accounts-base', ['client', 'server']);
   api.use('routepolicy', 'server');
 
