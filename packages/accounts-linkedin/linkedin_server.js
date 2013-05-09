@@ -1,3 +1,5 @@
+var urlUtil = Npm.require('url');
+
 Accounts.oauth.registerService('linkedin', 2, function(query) {
 
   var response = getTokens(query);
@@ -6,12 +8,12 @@ Accounts.oauth.registerService('linkedin', 2, function(query) {
 
   var identity = getIdentity(accessToken);
 
-  var profile_url = identity.siteStandardProfileRequest.url;
-  var url_parts = url_util.parse(profile_url, true);
+  var profileUrl = identity.siteStandardProfileRequest.url;
+  var urlParts = urlUtil.parse(profileUrl, true);
 
   return {
     serviceData: {
-      id: url_parts.query.id || Random.id(),
+      id: urlParts.query.id || Random.id(),
       accessToken: accessToken,
       expiresAt: (+new Date) + (1000 * response.expiresIn)
     },
@@ -24,7 +26,9 @@ Accounts.oauth.registerService('linkedin', 2, function(query) {
 });
 
 var getTokens = function (query) {
-  var config = Accounts.loginServiceConfiguration.findOne({service: 'linkedin'});
+  var config = Accounts.loginServiceConfiguration.findOne({
+    service: 'linkedin'
+  });
   if (!config)
     throw new Accounts.ConfigError("Service not configured");
 
@@ -41,10 +45,8 @@ var getTokens = function (query) {
 
   if (result.error) { // if the http response was an error
     throw new Error("Failed to complete OAuth handshake with LinkedIn. " +
-                    "HTTP Error " + result.statusCode + ": " + result.content);
-                    document.write('Hello world');
+      "HTTP Error " + result.statusCode + ": " + result.content);
   } else if (result.data.error) { // if the http response was a json object with an error attribute
-
     throw new Error("Failed to complete OAuth handshake with LinkedIn. " + result.data.error);
   } else {
     return {
@@ -64,7 +66,7 @@ var getIdentity = function (accessToken) {
     });
   if (result.error) {
     throw new Error("Failed to fetch identity from LinkedIn. " +
-                    "HTTP Error " + result.statusCode + ": " + result.content);
+      "HTTP Error " + result.statusCode + ": " + result.content);
   } else {
     return result.data;
   }
