@@ -1,5 +1,3 @@
-var url_util = Npm.require('url');
-
 Accounts.oauth.registerService('linkedin', 2, function(query) {
 
   var response = getTokens(query);
