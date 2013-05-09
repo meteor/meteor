@@ -195,7 +195,7 @@ var checkSubtree = function (value, pattern) {
       var result = pattern(value);
       if (result !== false && result !== true)
         throw new Error(
-          'predicate functions must return true or false; if using a constructor it should be registered'
+          'predicate functions must return true or false; for a constructor use Match.InstanceOf or Match.registerConstructor'
         );
       if (result)
         return;
