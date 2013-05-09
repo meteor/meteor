@@ -14,7 +14,7 @@ check = function (value, pattern) {
   checkSubtree(value, pattern);
 };
 
-var constuctors = [];
+var constructors = [];
 
 Match = {
   Optional: function (pattern) {
@@ -193,9 +193,9 @@ var checkSubtree = function (value, pattern) {
     }    
     else {
       var result = pattern(value);
-      if (result !== false && result !== true)
+      if (result && result !== true)
         throw new Error(
-          'predicate functions must return true or false; for a constructor use Match.InstanceOf or Match.registerConstructor'
+          'predicate functions must return true to match; for a constructor use Match.InstanceOf'
         );
       if (result)
         return;
