@@ -1,0 +1,8 @@
+{
+  "name": "accounts-linkedin",
+  "description": "Linkedin OAuth1 login service for use with Meteor Auth",
+  "homepage": "https://github.com/zealoushacker/meteor-accounts-linkedin",
+  "author": "Alex Notov  (http://twitter.com/zealoushacker)",
+  "version": "0.1.0",
+  "git": "https://github.com/zealoushacker/meteor-accounts-linkedin"
+}
