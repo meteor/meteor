@@ -211,8 +211,8 @@ EJSON.parse = function (item) {
 };
 
 EJSON.isBinary = function (obj) {
-  return (typeof Uint8Array !== 'undefined' && obj instanceof Uint8Array) ||
-    (obj && obj.$Uint8ArrayPolyfill);
+  return !!((typeof Uint8Array !== 'undefined' && obj instanceof Uint8Array) ||
+    (obj && obj.$Uint8ArrayPolyfill));
 };
 
 EJSON.equals = function (a, b, options) {

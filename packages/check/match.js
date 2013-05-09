@@ -22,13 +22,12 @@ Match = {
     return new OneOf(_.toArray(arguments));
   },
   Any: ['__any__'],
-  Where: function (condition) {
-    return new Where(condition);
-  },
   ObjectIncluding: function (pattern) {
     return new ObjectIncluding(pattern);
   },
-
+  InstanceOf: function (constructor) {
+    return new InstanceOf(constructor);
+  },
   // XXX should we record the path down the tree in the error message?
   // XXX matchers should know how to describe themselves for errors
   Error: Meteor.makeErrorType("Match.Error", function (msg) {
@@ -67,7 +66,7 @@ Match = {
     // If f didn't itself throw, make sure it checked all of its arguments.
     argChecker.throwUnlessAllArgumentsHaveBeenChecked();
     return result;
-  }
+  },
 };
 
 var Optional = function (pattern) {
@@ -80,12 +79,12 @@ var OneOf = function (choices) {
   this.choices = choices;
 };
 
-var Where = function (condition) {
-  this.condition = condition;
-};
-
 var ObjectIncluding = function (pattern) {
   this.pattern = pattern;
+};
+
+var InstanceOf = function (constructor) {
+  this._constructor = constructor;
 };
 
 var typeofChecks = [
@@ -103,8 +102,7 @@ var checkSubtree = function (value, pattern) {
     return;
 
   // Basic atomic types.
-  // XXX do we have to worry about if value is boxed (eg String)? will that
-  //     happen?
+  // Do not match boxed objects (e.g. String)
   for (var i = 0; i < typeofChecks.length; ++i) {
     if (pattern === typeofChecks[i][0]) {
       if (typeof value === typeofChecks[i][1])
@@ -138,16 +136,6 @@ var checkSubtree = function (value, pattern) {
     return;
   }
 
-  // Arbitrary validation checks. The condition can return false or throw a
-  // Match.Error (ie, it can internally use check()) to fail.
-  if (pattern instanceof Where) {
-    if (pattern.condition(value))
-      return;
-    // XXX this error is terrible
-    throw new Match.Error("Failed Match.Where validation");
-  }
-
-
   if (pattern instanceof Optional)
     pattern = Match.OneOf(undefined, pattern.pattern);
 
@@ -168,13 +156,37 @@ var checkSubtree = function (value, pattern) {
     throw new Match.Error("Failed Match.OneOf validation");
   }
 
-  // A function that isn't something we special-case is assumed to be a
-  // constructor.
-  if (pattern instanceof Function) {
-    if (value instanceof pattern)
+  if (pattern instanceof InstanceOf) {
+    if (value instanceof pattern._constructor)
       return;
-    // XXX what if .name isn't defined
-    throw new Match.Error("Expected " + pattern.name);
+    throw new Match.Error(
+      "Expected " +
+      (pattern.name ? pattern.name : "instance of constructor")
+    );
+  }
+
+  if (typeof pattern === 'function') {
+    if (Meteor.isConstructor(pattern)) {
+      if (value instanceof pattern)
+        return;
+      throw new Match.Error(
+        "Expected " +
+        (pattern.name ? pattern.name : "instance of constructor")
+      );
+    }    
+    else {
+      var result = pattern(value);
+      if (result && result !== true)
+        throw new Error(
+          'predicate functions must return true to match; for a constructor use Match.InstanceOf'
+        );
+      if (result)
+        return;
+      throw new Match.Error(
+        "Expected " +
+        (pattern.name ? pattern.name : 'to pass predicate test')
+      );
+    }
   }
 
   var unknownKeysAllowed = false;
