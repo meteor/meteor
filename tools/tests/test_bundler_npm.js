@@ -77,11 +77,13 @@ var _assertCorrectPackageNpmDir = function(deps) {
   _.each(deps, function(version, name) {
     assert(looksInstalled(nodeModulesDir, name));
 
-    assert.equal(JSON.parse(
-      fs.readFileSync(
-        path.join(nodeModulesDir, name, "package.json"),
-        'utf8')).version,
-                 expectedMeteorNpmShrinkwrapDependencies[name].version);
+    if (!/tarball/.test(version)) { // 'version' in package.json from a tarball won't be correct
+      assert.equal(JSON.parse(
+        fs.readFileSync(
+          path.join(nodeModulesDir, name, "package.json"),
+          'utf8')).version,
+                   version);
+    }
   });
 
   // all installed dependencies were expected to be found there,
@@ -105,7 +107,7 @@ var _assertCorrectBundleNpmContents = function(bundleDir, deps) {
   _.each(deps, function(version, name) {
     assert(looksInstalled(bundledPackageNodeModulesDir, name));
 
-    if (!/tarball/.test(version)) {
+    if (!/tarball/.test(version)) { // 'version' in package.json from a tarball won't be correct
       assert.equal(JSON.parse(
         fs.readFileSync(path.join(bundledPackageNodeModulesDir, name, 'package.json'), 'utf8'))
                    .version,
