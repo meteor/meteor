@@ -27,9 +27,14 @@
 
 * Use binary search in minimongo when updating ordered queries.  #969
 
-* Fix EJSON base64 decoding bug. #1001
+* Fix EJSON base64 decoding bug.  #1001
 
 * Support `appcache` on Chromium.  #958
+
+* Use websockets as a default transport on all browsers that aren't
+  known to crash.
+
+* Faster reconnects when regaining connectivity.  #696
 
 Patches contributed by GitHub users awwx, jagill, and spang.
 
