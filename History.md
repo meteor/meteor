@@ -31,8 +31,9 @@
 
 * Support `appcache` on Chromium.  #958
 
-* Use websockets as a default transport on all browsers that aren't
-  known to crash.
+* Use Websockets as a default transport on all browsers that aren't
+  known to crash. This eliminates the constant network spinner on iOS
+  devices.
 
 * Faster reconnects when regaining connectivity.  #696
 
