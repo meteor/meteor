@@ -1400,6 +1400,11 @@ Template.api.matchpatterns = {
   name: "Match patterns"
 };
 
+Template.api.constructors = {
+  id: "constructors",
+  name: "Constructors"
+};
+
 Template.api.setTimeout = {
   id: "meteor_settimeout",
   name: "Meteor.setTimeout(func, delay)",

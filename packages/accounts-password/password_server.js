@@ -16,7 +16,7 @@ var selectorFromUserQuery = function (user) {
   throw new Error("shouldn't happen (validation missed something)");
 };
 
-var userQueryValidator = Match.Where(function (user) {
+var userQueryValidator = function (user) {
   check(user, {
     id: Match.Optional(String),
     username: Match.Optional(String),
@@ -25,7 +25,7 @@ var userQueryValidator = Match.Where(function (user) {
   if (_.keys(user).length !== 1)
     throw new Match.Error("User property must have exactly one field");
   return true;
-});
+};
 
 // Step 1 of SRP password exchange. This puts an `M` value in the
 // session data for this connection. If a client later sends the same

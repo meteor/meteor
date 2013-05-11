@@ -49,6 +49,8 @@ Package.on_use(function (api, where) {
   // in this case server must load first.
   api.add_files('url_server.js', 'server');
   api.add_files('url_common.js', ['client', 'server']);
+
+  api.add_files('constructor.js', ['client', 'server']);
 });
 
 Package.on_test(function (api) {
@@ -63,4 +65,6 @@ Package.on_test(function (api) {
   api.add_files('fiber_helpers_test.js', ['server']);
 
   api.add_files('url_tests.js', ['client', 'server']);
+
+  api.add_files('constructor_tests.js', ['client', 'server']);
 });

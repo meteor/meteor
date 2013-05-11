@@ -41,40 +41,44 @@ Tinytest.add("check - check", function (test) {
         matches(pair[0], type);
         matches(pair[0], Match.Optional(type));
         matches(undefined, Match.Optional(type));
-        matches(pair[0], Match.Where(function () {
+        matches(pair[0], function () {
           check(pair[0], type);
           return true;
-        }));
-        matches(pair[0], Match.Where(function () {
+        });
+        matches(pair[0], function () {
           try {
             check(pair[0], type);
             return true;
           } catch (e) {
             return false;
           }
-        }));
+        });
       } else {
         fails(pair[0], type);
         matches(pair[0], Match.OneOf(type, pair[1]));
         matches(pair[0], Match.OneOf(pair[1], type));
-        fails(pair[0], Match.Where(function () {
+        fails(pair[0], function () {
           check(pair[0], type);
           return true;
-        }));
-        fails(pair[0], Match.Where(function () {
+        });
+        fails(pair[0], function () {
           try {
             check(pair[0], type);
             return true;
           } catch (e) {
             return false;
           }
-        }));
+        });
       }
       fails(pair[0], [type]);
       fails(pair[0], Object);
     });
   });
   fails(true, Match.OneOf(String, Number, undefined, null, [Boolean]));
+
+  fails(new String("foo"), String);
+  fails(new Boolean(true), Boolean);
+  fails(new Number(123), Number);
 
   matches([1, 2, 3], [Number]);
   matches([], [Number]);
@@ -102,12 +106,15 @@ Tinytest.add("check - check", function (test) {
   matches(/foo/, RegExp);
   fails(/foo/, String);
   matches(new Date, Date);
+  matches(new Date, Match.InstanceOf(Date));
+  fails(123, Match.InstanceOf(Date));
+  matches(function () {}, Function);
   fails(new Date, Number);
-  matches(EJSON.newBinary(42), Match.Where(EJSON.isBinary));
-  fails([], Match.Where(EJSON.isBinary));
+  matches(EJSON.newBinary(42), EJSON.isBinary);
+  fails([], EJSON.isBinary);
 
-  matches(42, Match.Where(function (x) { return x % 2 === 0; }));
-  fails(43, Match.Where(function (x) { return x % 2 === 0; }));
+  matches(42, function (x) { return x % 2 === 0; });
+  fails(43, function (x) { return x % 2 === 0; });
 
   matches({
     a: "something",

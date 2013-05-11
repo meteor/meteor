@@ -2322,6 +2322,19 @@ Matches any value.
 Matches a primitive of the given type.
 {{/dtdd}}
 
+{{#dtdd "<em>constructor</em> (<code>Date</code>, <code>Error</code>, <code>Function</code>, <code>Regexp</code>)"}}
+Matches any value that is an instance of the given
+<em>constructor</em>, where the constructor is known to Meteor.
+
+Use [`Meteor.declareConstructor`](#constructors) to make a constructor
+known to Meteor, or use `Match.InstanceOf` to match against any
+constructor.
+{{/dtdd}}
+
+{{#dtdd "<code>Match.InstanceOf(<em>constructor</em>)</code>"}}
+Matches any value that is an instance of the specified constructor.
+{{/dtdd}}
+
 {{#dtdd "<code>[<em>pattern</em>]</code>"}}
 A one-element array matches an array of elements, each of which match
 *pattern*. For example, `[Number]` matches a (possibly empty) array of numbers;
@@ -2353,25 +2366,60 @@ Matches either `undefined` or something that matches *pattern*.
 Matches any value that matches at least one of the provided patterns.
 {{/dtdd}}
 
-{{#dtdd "Any constructor function (eg, <code>Date</code>)"}}
-Matches any element that is an instance of that type.
-{{/dtdd}}
+{{#dtdd "<code><em>predicate</em></code> (any function)"}}
+Calls the predicate function with the value as the argument, and
+matches if the function returns a boolean `true`.  The function can
+also cause the match to fail with a more descriptive error message by
+throwing `Match.Error`. If the function throws any other error, that
+error is thrown from the call to `check` or `Match.test`.  Examples:
 
-{{#dtdd "<code>Match.Where(<em>condition</em>)</code>"}}
-Calls the function *condition* with the value as the argument. If *condition*
-returns true, this matches. If *condition* throws a `Match.Error` or returns
-false, this fails. If *condition* throws any other error, that error is thrown
-from the call to `check` or `Match.test`. Examples:
+    check(buffer, EJSON.isBinary);
 
-    check(buffer, Match.Where(EJSON.isBinary));
-
-    NonEmptyString = Match.Where(function (x) {
+    NonEmptyString = function (x) {
       check(x, String);
       return x.length > 0;
-    }
+    };
     check(arg, NonEmptyString);
 {{/dtdd}}
 </dl>
+
+{{/api_box_inline}}
+
+{{#api_box_inline constructors}}
+
+A constructor function can be declared to so that it is recognized as
+a constructor by Meteor.
+
+{{#note}}
+
+In JavaScript, a "constructor" is simply a function called with `new`,
+and so there is no general mechanism to detect whether a function is
+intended to be used as a constructor or not.  Future releases may
+improve the ability to easily annotate a constructor.
+
+{{/note}}
+
+<dl>
+{{#dtdd "<code>Meteor.declareConstructor(<em>constructor</em>)</code>"}}
+Makes *constructor* known as a constructor to Meteor.  For example:
+
+    function Point(x, y) {
+      this.x = x;
+      this.y = y;
+    };
+    Meteor.declareConstructor(Point);
+
+    p = new Point(13, 180);
+    check(p, Point);
+
+{{/dtdd}}
+
+{{#dtdd "<code>Meteor.isConstructor(<em>value</em>)</code>"}}
+Returns `true` if *value* is known to be a constructor.
+{{/dtdd}}
+
+</dl>
+
 
 {{/api_box_inline}}
 
