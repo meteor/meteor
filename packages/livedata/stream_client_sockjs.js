@@ -27,7 +27,8 @@ Meteor._DdpClientStream = function (url) {
   // Listen to global 'online' event if we are running in a browser.
   // (IE8 does not support addEventListener)
   if (typeof window !== 'undefined' && window.addEventListener)
-    window.addEventListener("online", _.bind(self._online, self));
+    window.addEventListener("online", _.bind(self._online, self),
+                            false /* useCapture. make FF3.6 happy. */);
 
   //// Kickoff!
   self._launchConnection();
