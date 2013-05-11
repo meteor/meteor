@@ -24,8 +24,9 @@ Meteor._DdpClientStream = function (url) {
 
   self.heartbeatTimer = null;
 
-  //// Listen to global 'online' event
-  if (typeof window !== 'undefined') // if we are running in a browser
+  // Listen to global 'online' event if we are running in a browser.
+  // (IE8 does not support addEventListener)
+  if (typeof window !== 'undefined' && window.addEventListener)
     window.addEventListener("online", _.bind(self._online, self));
 
   //// Kickoff!
