@@ -462,7 +462,7 @@ _.extend(exports, {
   // directory named after dirPath.
   createTarGzStream: function (dirPath) {
     return fstream.Reader({ path: dirPath, type: 'Directory' }).pipe(
-      tar.Pack()).pipe(zlib.createGzip());
+      tar.Pack({noProprietary: true})).pipe(zlib.createGzip());
   },
 
   // Tar-gzips a directory into a tarball on disk, synchronously.
