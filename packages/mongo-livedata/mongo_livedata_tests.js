@@ -27,22 +27,24 @@ Meteor._FailureTestCollection =
   new Meteor.Collection("___meteor_failure_test_collection");
 
 // For test "document with a custom type"
-var Dog = function (name, color) {
+var Dog = function (name, color, actions) {
   var self = this;
   self.color = color;
   self.name = name;
+  self.actions = actions || [{name: "wag"}, {name: "swim"}];
 };
 _.extend(Dog.prototype, {
   getName: function () { return this.name;},
   getColor: function () { return this.name;},
   equals: function (other) { return other.name === this.name &&
-                             other.color === this.color; },
-  toJSONValue: function () { return {color: this.color, name: this.name};},
+                             other.color === this.color &&
+                             EJSON.equals(other.actions, this.actions);},
+  toJSONValue: function () { return {color: this.color, name: this.name, actions: this.actions};},
   typeName: function () { return "dog"; },
   clone: function () { return new Dog(this.name, this.color); },
   speak: function () { return "woof"; }
 });
-EJSON.addType("dog", function (o) { return new Dog(o.name, o.color);});
+EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);});
 
 
 // Parameterize tests.
