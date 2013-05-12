@@ -15,7 +15,7 @@ var Future = Npm.require(path.join('fibers', 'future'));
 var replaceNames = function (filter, thing) {
   if (typeof thing === "object") {
     if (_.isArray(thing)) {
-      return _.map(thing, _.partial(replaceNames, filter));
+      return _.map(thing, _.bind(replaceNames, null, filter));
     }
     var ret = {};
     _.each(thing, function (value, key) {
