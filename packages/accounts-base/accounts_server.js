@@ -348,6 +348,21 @@ Meteor.users.allow({
   fetch: ['_id'] // we only look at _id.
 });
 
+  var tokenLifetime = (24*60*60*10)*1000
+    , cleanInterval = (60*5)*1000;
+  Meteor.setInterval(function() {
+    var now = +new Date
+      , cutoff = now - tokenLifetime;
+
+    Meteor.users.update({'services.resume.loginTokens.when' : {$lt: cutoff}}, {
+      $pull: {
+        'services.resume.loginTokens.when': {
+          $lt: cutoff
+        }
+      }
+    }, {multi: true});
+  }, cleanInterval);
+
 /// DEFAULT INDEXES ON USERS
 Meteor.users._ensureIndex('username', {unique: 1, sparse: 1});
 Meteor.users._ensureIndex('emails.address', {unique: 1, sparse: 1});
