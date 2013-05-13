@@ -71,12 +71,12 @@ Spacebars.parseStacheTag = function (inputString, pos) {
     return text;
   };
 
-  var scanDottedIdentifier = function () {
-    var name = scanIdentifier();
-    while (run(/^\./))
-      name += '.' + scanIdentifier();
-    return name;
-  };
+  //var scanDottedIdentifier = function () {
+  //  var name = scanIdentifier();
+  //  while (run(/^\./))
+  //    name += '.' + scanIdentifier();
+  //  return name;
+  //};
 
   var scanPath = function () {
     var segments = [];
@@ -197,17 +197,14 @@ Spacebars.parseStacheTag = function (inputString, pos) {
       error("Unclosed comment");
     tag.value = result.slice(0, -2);
   } else if (type === 'BLOCKCLOSE') {
-    tag.name = scanDottedIdentifier();
+    tag.path = scanPath();
     if (! run(ends.DOUBLE))
       expected('`}}`');
   } else if (type === 'ELSE') {
     if (! run(ends.DOUBLE))
       expected('`}}`');
   } else {
-    if (type === 'INCLUSION' || type === 'BLOCKOPEN')
-      tag.name = scanDottedIdentifier();
-    else
-      tag.path = scanPath();
+    tag.path = scanPath();
     tag.args = [];
     while (true) {
       run(/^\s*/);

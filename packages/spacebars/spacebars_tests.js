@@ -40,25 +40,25 @@ Tinytest.add("spacebars - stache tags", function (test) {
   run('{{ else }}', {type: 'ELSE'});
   run('{{else x}}', "Expected");
   run('{{else_x}}', {type: 'DOUBLE', path: ['else_x'], args: []});
-  run('{{/if}}', {type: 'BLOCKCLOSE', name: 'if'});
-  run('{{ / if }}', {type: 'BLOCKCLOSE', name: 'if'});
+  run('{{/if}}', {type: 'BLOCKCLOSE', path: ['if']});
+  run('{{ / if }}', {type: 'BLOCKCLOSE', path: ['if']});
   run('{{/if x}}', "Expected");
-  run('{{#if}}', {type: 'BLOCKOPEN', name: 'if', args: []});
-  run('{{ # if }}', {type: 'BLOCKOPEN', name: 'if', args: []});
-  run('{{#if_3}}', {type: 'BLOCKOPEN', name: 'if_3', args: []});
-  run('{{>x}}', {type: 'INCLUSION', name: 'x', args: []});
-  run('{{ > x }}', {type: 'INCLUSION', name: 'x', args: []});
-  run('{{>x_3}}', {type: 'INCLUSION', name: 'x_3', args: []});
+  run('{{#if}}', {type: 'BLOCKOPEN', path: ['if'], args: []});
+  run('{{ # if }}', {type: 'BLOCKOPEN', path: ['if'], args: []});
+  run('{{#if_3}}', {type: 'BLOCKOPEN', path: ['if_3'], args: []});
+  run('{{>x}}', {type: 'INCLUSION', path: ['x'], args: []});
+  run('{{ > x }}', {type: 'INCLUSION', path: ['x'], args: []});
+  run('{{>x_3}}', {type: 'INCLUSION', path: ['x_3'], args: []});
 
 
 
   run('{{foo 3}}', {type: 'DOUBLE', path: ['foo'], args: [['NUMBER', 3]]});
   run('{{ foo  3 }}', {type: 'DOUBLE', path: ['foo'], args: [['NUMBER', 3]]});
-  run('{{#foo 3}}', {type: 'BLOCKOPEN', name: 'foo', args: [['NUMBER', 3]]});
-  run('{{ # foo  3 }}', {type: 'BLOCKOPEN', name: 'foo',
+  run('{{#foo 3}}', {type: 'BLOCKOPEN', path: ['foo'], args: [['NUMBER', 3]]});
+  run('{{ # foo  3 }}', {type: 'BLOCKOPEN', path: ['foo'],
                          args: [['NUMBER', 3]]});
-  run('{{>foo 3}}', {type: 'INCLUSION', name: 'foo', args: [['NUMBER', 3]]});
-  run('{{ > foo  3 }}', {type: 'INCLUSION', name: 'foo',
+  run('{{>foo 3}}', {type: 'INCLUSION', path: ['foo'], args: [['NUMBER', 3]]});
+  run('{{ > foo  3 }}', {type: 'INCLUSION', path: ['foo'],
                          args: [['NUMBER', 3]]});
   run('{{{foo 3}}}', {type: 'TRIPLE', path: ['foo'], args: [['NUMBER', 3]]});
 
@@ -79,7 +79,7 @@ Tinytest.add("spacebars - stache tags", function (test) {
               ['PATH', ['', '4']]]});
 
   run('{{# foo this this.x null z=null}}',
-      {type: 'BLOCKOPEN', name: 'foo',
+      {type: 'BLOCKOPEN', path: ['foo'],
        args: [['PATH', ['']],
               ['PATH', ['', 'x']],
               ['NULL', null],
@@ -89,9 +89,20 @@ Tinytest.add("spacebars - stache tags", function (test) {
   run('{{foo x/..}}', "`..` is not supported");
   run('{{foo x/.}}', "`.`");
 
-  run('{{#a.b.c}}', {type: 'BLOCKOPEN', name: 'a.b.c', args: []});
-  run('{{> a.b.c}}', {type: 'INCLUSION', name: 'a.b.c', args: []});
+  run('{{#a.b.c}}', {type: 'BLOCKOPEN', path: ['a', 'b', 'c'],
+                     args: []});
+  run('{{> a.b.c}}', {type: 'INCLUSION', path: ['a', 'b', 'c'],
+                      args: []});
 
-  run('{{foo.[]/[]}}', {type: 'DOUBLE', path: ['foo', '', ''], args: []});
+  run('{{foo.[]/[]}}', {type: 'DOUBLE', path: ['foo', '', ''],
+                        args: []});
   run('{{[].foo}}', "Path can't start with empty string");
+
+  run('{{foo true}}', {type: 'DOUBLE', path: ['foo'],
+                       args: [['BOOLEAN', true]]});
+  run('{{foo "bar"}}', {type: 'DOUBLE', path: ['foo'],
+                        args: [['STRING', 'bar']]});
+  run("{{foo 'bar'}}", {type: 'DOUBLE', path: ['foo'],
+                        args: [['STRING', 'bar']]});
+
 });
