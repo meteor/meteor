@@ -109,11 +109,17 @@ _.extend(Component.prototype, {
   },
   addChild: function (name, childComponent) {
     if (name instanceof Component) {
-      // omitted name, generate unique child ID
+      // omitted name arg
       childComponent = name;
-      name = "__child#" + (this._uniqueIdCounter++) + "__";
+      name = null;
     }
+    // omitted name, generate unique child ID
+    if (name === null || typeof name === 'undefined')
+      name = "__child#" + (this._uniqueIdCounter++) + "__";
     name = String(name);
+
+    if (! (childComponent instanceof Component))
+      throw new Error("not a Component: " + childComponent);
 
     this._requireAlive();
     if (this.hasChild(name))

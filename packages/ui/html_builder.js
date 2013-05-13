@@ -4,10 +4,10 @@
 HtmlBuilder = function () {
   this.htmlBuf = [];
 
-  //this.rootComponent = null;
-  //this.currentComponent = null;
+  this.rootComponent = null;
+  this.currentComponent = null;
   // parent chain of currentComponent, exclusive
-  //this.componentStack = [];
+  this.componentStack = [];
 
 //  this.builderId = Random.id();
 //  this.nextElementNum = 1;
@@ -89,8 +89,8 @@ _.extend(HtmlBuilder.prototype, {
         throw new Error("Illegal HTML attribute name: " + attrName);
 
       buf.push(' ', attrName, '="');
-      var initialValue = (typeof attrValue === 'string' ?
-                          attrValue : attrValue());
+      var initialValue = (typeof attrValue === 'function' ?
+                          attrValue() : attrValue);
       buf.push(self._encodeEntities(initialValue, true));
       buf.push('"');
     });
@@ -105,22 +105,47 @@ _.extend(HtmlBuilder.prototype, {
     this.htmlBuf.push('</', tagName, '>');
   },
   text: function (stringOrFunction) {
-    var text = (typeof stringOrFunction === 'string' ?
-                stringOrFunction : stringOrFunction());
+    var text = (typeof stringOrFunction === 'function' ?
+                stringOrFunction() : stringOrFunction);
     this.htmlBuf.push(this.encodeEntities(text));
   },
   rawHtml: function (stringOrFunction) {
-    var html = (typeof stringOrFunction === 'string' ?
-                stringOrFunction : stringOrFunction());
+    var html = (typeof stringOrFunction === 'function' ?
+                stringOrFunction() : stringOrFunction);
     this.htmlBuf.push(html);
   },
-  component: function (componentOrFunction) {
-    // XXX
+  component: function (componentOrFunction, options) {
+    var self = this;
+    var comp = (typeof componentOrFunction === 'function' ?
+                componentOrFunction() : componentOrFunction);
+
+    var parentComponent = self.currentComponent; // may be null
+
+    if (self.currentComponent)
+      self.componentStack.push(self.currentComponent);
+    self.currentComponent = comp;
+
+    var childKey = (options && options.childKey || null);
+
+    try {
+      if (parentComponent)
+        parentComponent.addChild(childKey, comp);
+      comp.build(self);
+      // XXX
+    } finally {
+      self.currentComponent = self.componentStack.pop() || null;
+    }
   },
   finish: function () {
     return this.htmlBuf.join('');
   }
 });
+
+// CHANGES TO COMPONENT NEEDED:
+//
+// - childKey, elementKey -- call things "key"
+// - no attach/detach -- need to wire things up from HTML...
+
 
 // openChunk, closeChunk
 //
