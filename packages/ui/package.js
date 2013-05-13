@@ -11,7 +11,8 @@ Package.on_use(function (api) {
 
 Package.on_test(function (api) {
   api.use('tinytest');
-  api.use(['test-helpers', 'dom-utils'], 'client');
+  api.use('ui');
+  api.use(['test-helpers', 'domutils'], 'client');
 
 //  api.add_files([
 //    'component_tests.js'

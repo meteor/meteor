@@ -1,19 +1,13 @@
 
 
-ComponentInfo = function (constructorName) {
-  this.constructorName = constructorName;
-//  this.children = {};
-//  this.elements = {};
-};
-
 
 HtmlBuilder = function () {
   this.htmlBuf = [];
 
-  this.rootComponentInfo = null;
-  this.currentComponentInfo = null;
-  // parent chain of currentComponent
-  this.componentInfoStack = [];
+  //this.rootComponent = null;
+  //this.currentComponent = null;
+  // parent chain of currentComponent, exclusive
+  //this.componentStack = [];
 
 //  this.builderId = Random.id();
 //  this.nextElementNum = 1;
@@ -43,30 +37,20 @@ var escapeOne = function(c) {
   return escapeMap[c];
 };
 
-var evaluateStringOrHelper = function (stringOrHelper, component) {
-  if ((typeof stringOrHelper) === 'string')
-    return stringOrHelper;
-
-  if (! (component instanceof Component))
-    throw new Error("Can only use a helper from a Component");
-  if (! component.evaluateHelper)
-    throw new Error("Enclosing Component does not support helpers");
-
-  return component.evaluateHelper(stringOrHelper);
+var encodeEntities = function (text, isQuoted) {
+  // All HTML entities in templates are decoded by the template parser
+  // and given to HtmlBuilder as Unicode.  We then re-encode some
+  // characters into entities here, but not most characters.  If
+  // you're trying to use entities to send ASCII representations of
+  // non-ASCII characters to the client, you'll need a different
+  // policy here.
+  return text.replace(isQuoted ? ESCAPED_CHARS_QUOTED_REGEX :
+                      ESCAPED_CHARS_UNQUOTED_REGEX, escapeOne);
 };
 
 _.extend(HtmlBuilder.prototype, {
-  encodeEntities: function (text, isQuoted) {
-    // All HTML entities in templates are decoded by the template
-    // parser and given to HtmlBuilder as Unicode.  We then re-encode
-    // some characters into entities here, but not most characters.
-    // If you're trying to use entities to send ASCII representations
-    // of non-ASCII characters to the client, you'll need a different
-    // policy here.
-    return text.replace(isQuoted ? ESCAPED_CHARS_QUOTED_REGEX :
-                        ESCAPED_CHARS_UNQUOTED_REGEX, escapeOne);
-  },
-  computeAttributeValue: function (expression) {
+  _encodeEntities: encodeEntities,
+  /*computeAttributeValue: function (expression) {
     var self = this;
 
     if ((typeof expression) === 'string')
@@ -86,7 +70,7 @@ _.extend(HtmlBuilder.prototype, {
     });
 
     return initialValue;
-  },
+  },*/
   openTag: function (tagName, attrs, options) {
     var self = this;
 
@@ -105,8 +89,9 @@ _.extend(HtmlBuilder.prototype, {
         throw new Error("Illegal HTML attribute name: " + attrName);
 
       buf.push(' ', attrName, '="');
-      buf.push(self.encodeEntities(self.computeAttributeValue(attrValue),
-                                   true));
+      var initialValue = (typeof attrValue === 'string' ?
+                          attrValue : attrValue());
+      buf.push(self._encodeEntities(initialValue, true));
       buf.push('"');
     });
     if (options.selfClose)
@@ -119,13 +104,18 @@ _.extend(HtmlBuilder.prototype, {
       throw new Error("Illegal HTML tag name: " + tagName);
     this.htmlBuf.push('</', tagName, '>');
   },
-  text: function (stringOrHelper) {
-    var text = evaluateStringOrHelper(stringOrHelper);
+  text: function (stringOrFunction) {
+    var text = (typeof stringOrFunction === 'string' ?
+                stringOrFunction : stringOrFunction());
     this.htmlBuf.push(this.encodeEntities(text));
   },
-  rawHtml: function (stringOrHelper) {
-    var html = evaluateStringOrHelper(stringOrHelper);
+  rawHtml: function (stringOrFunction) {
+    var html = (typeof stringOrFunction === 'string' ?
+                stringOrFunction : stringOrFunction());
     this.htmlBuf.push(html);
+  },
+  component: function (componentOrFunction) {
+    // XXX
   },
   finish: function () {
     return this.htmlBuf.join('');
