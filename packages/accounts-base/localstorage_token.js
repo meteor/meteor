@@ -11,6 +11,9 @@ Accounts.loginWithToken = function (token, callback) {
     userCallback: callback});
 };
 
+// Preserve backwards compatibility.
+Meteor.loginWithToken = Accounts.loginWithToken;
+
 // Semi-internal API. Call this function to re-enable auto login after
 // if it was disabled at startup.
 Accounts._enableAutoLogin = function () {
