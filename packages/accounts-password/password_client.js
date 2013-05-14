@@ -43,6 +43,10 @@ Accounts.loginWithPassword = function (selector, password, callback) {
   });
 };
 
+// Preserve backwards compatibility.
+Meteor.loginWithPassword = Accounts.loginWithPassword;
+
+
 
 // Attempt to log in as a new user.
 Accounts.createUser = function (options, callback) {
