@@ -302,9 +302,11 @@ EJSON.clone = function (v) {
     return ret;
   }
   if (_.isArray(v) || _.isArguments(v)) {
-    ret = v.slice(0);
+    // For some reason, _.map doesn't work in this context on Opera (weird test
+    // failures).
+    ret = [];
     for (i = 0; i < v.length; i++)
-      ret[i] = EJSON.clone(ret[i]);
+      ret[i] = EJSON.clone(v[i]);
     return ret;
   }
   // handle general user-defined typed Objects if they have a clone method
