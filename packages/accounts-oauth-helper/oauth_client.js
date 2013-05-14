@@ -15,10 +15,20 @@ Accounts.oauth.initiateLogin = function(state, url, callback, dimensions) {
     (dimensions && dimensions.height) || 331);
 
   var checkPopupOpen = setInterval(function() {
-    // Fix for #328 - added a second test criteria (popup.closed === undefined)
-    // to humour this Android quirk:
-    // http://code.google.com/p/android/issues/detail?id=21061
-    if (popup.closed || popup.closed === undefined) {
+    try {
+      // Fix for #328 - added a second test criteria (popup.closed === undefined)
+      // to humour this Android quirk:
+      // http://code.google.com/p/android/issues/detail?id=21061
+      var popupClosed = popup.closed || popup.closed === undefined;
+    } catch (e) {
+      // For some unknown reason, IE9 (and others?) sometimes (when
+      // the popup closes too quickly?) throws "SCRIPT16386: No such
+      // interface supported" when trying to read 'popup.closed'. Try
+      // again in 100ms.
+      return;
+    }
+
+    if (popupClosed) {
       clearInterval(checkPopupOpen);
       tryLoginAfterPopupClosed(state, callback);
     }
