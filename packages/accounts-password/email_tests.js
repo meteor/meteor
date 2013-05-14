@@ -50,7 +50,7 @@ testAsyncMulti("accounts emails - reset password flow", [
     }));
   },
   function (test, expect) {
-    Meteor.loginWithPassword(
+    Accounts.loginWithPassword(
       {email: email1}, "newPassword",
       expect(function (error) {
         test.isFalse(error);
@@ -201,7 +201,7 @@ testAsyncMulti("accounts emails - enroll account flow", [
     }));
   },
   function (test, expect) {
-    Meteor.loginWithPassword({email: email4}, 'password',
+    Accounts.loginWithPassword({email: email4}, 'password',
                              loggedIn(test ,expect));
   },
   function (test, expect) {

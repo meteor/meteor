@@ -1353,7 +1353,7 @@ The Meteor Accounts system builds on top of the `userId` support in
 packages add the concept of user documents stored in the database, and
 additional packages add [secure password
 authentication](#accounts_passwords), [integration with third party
-login services](#meteor_loginwithexternalservice), and a [pre-built user
+login services](#accounts_loginwithexternalservice), and a [pre-built user
 interface](#accountsui).
 
 The basic Accounts system is in the `accounts-base` package, but
@@ -1518,9 +1518,9 @@ example:
 
 Each external service has its own login provider package and login function. For
 example, to support GitHub login, run `$ meteor add accounts-github` and use the
-`Meteor.loginWithGithub` function:
+`Accounts.loginWithGithub` function:
 
-    Meteor.loginWithGithub({
+    Accounts.loginWithGithub({
       requestPermissions: ['user', 'public_repo']
     }, function (err) {
       if (err)

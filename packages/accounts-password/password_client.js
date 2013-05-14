@@ -7,7 +7,7 @@
 //     it contains "@".
 // @param password {String}
 // @param callback {Function(error|undefined)}
-Meteor.loginWithPassword = function (selector, password, callback) {
+Accounts.loginWithPassword = function (selector, password, callback) {
   var srp = new Meteor._srp.Client(password);
   var request = srp.startExchange();
 
@@ -42,6 +42,10 @@ Meteor.loginWithPassword = function (selector, password, callback) {
       userCallback: callback});
   });
 };
+
+// Preserve backwards compatibility.
+Meteor.loginWithPassword = Accounts.loginWithPassword;
+
 
 
 // Attempt to log in as a new user.

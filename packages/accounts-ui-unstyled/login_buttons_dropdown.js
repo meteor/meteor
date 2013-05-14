@@ -377,7 +377,7 @@ var login = function () {
     throw new Error("Unexpected -- no element to use as a login user selector");
   }
 
-  Meteor.loginWithPassword(loginSelector, password, function (error, result) {
+  Accounts.loginWithPassword(loginSelector, password, function (error, result) {
     if (error) {
       loginButtonsSession.errorMessage(error.reason || "Unknown error");
     } else {
