@@ -154,7 +154,8 @@ testAsyncMulti = function (name, funcs) {
 };
 
 // @export pollUntil
-pollUntil = function (expect, f, timeout, step) {
+pollUntil = function (expect, f, timeout, step, noFail) {
+  noFail = noFail || false;
   step = step || 100;
   var expectation = expect(true);
   var start = (new Date()).valueOf();
@@ -164,7 +165,7 @@ pollUntil = function (expect, f, timeout, step) {
       return;
     }
     if (start + timeout < (new Date()).valueOf()) {
-      expectation(false);
+      expectation(noFail);
       return;
     }
     Meteor.setTimeout(helper, step);

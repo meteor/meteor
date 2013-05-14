@@ -59,6 +59,12 @@ _.extend(Meteor._DdpClientStream.prototype, {
     }
   },
 
+  // Changes where this connection points
+  _changeUrl: function (url) {
+    var self = this;
+    self.endpoint = url;
+  },
+
   _onConnect: function (connection) {
     var self = this;
 
