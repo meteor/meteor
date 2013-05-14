@@ -2213,6 +2213,12 @@ The user presses a keyboard key.  `keypress` is most useful for
 catching typing in text fields, while `keydown` and `keyup` can be
 used for arrow keys or modifier keys.
 {{/dtdd}}
+
+{{#dtdd "<code>tap</code>"}} Tap on an element.  On touch-enabled
+devices, this is a replacement to `click` that fires immediately.
+These events are synthesized from `touchmove` and `touchend`.
+{{/dtdd}}
+
 </dl>
 
 Other DOM events are available as well, but for the events above,
