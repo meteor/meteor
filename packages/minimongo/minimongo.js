@@ -498,6 +498,7 @@ LocalCollection.prototype.remove = function (selector) {
       LocalCollection._recomputeResults(query);
   });
   self._observeQueue.drain();
+  return remove.length;
 };
 
 // XXX atomicity: if multi is true, and one modification fails, do
@@ -523,12 +524,15 @@ LocalCollection.prototype.update = function (selector, mod, options) {
   });
   var recomputeQids = {};
 
+  var updateCount = 0;
+
   for (var id in self.docs) {
     var doc = self.docs[id];
     if (selector_f(doc)) {
       // XXX Should we save the original even if mod ends up being a no-op?
       self._saveOriginal(id, doc);
       self._modifyAndNotify(doc, mod, recomputeQids);
+      ++updateCount;
       if (!options.multi)
         break;
     }
@@ -541,6 +545,7 @@ LocalCollection.prototype.update = function (selector, mod, options) {
                                         qidToOriginalResults[qid]);
   });
   self._observeQueue.drain();
+  return updateCount;
 };
 
 LocalCollection.prototype._modifyAndNotify = function (

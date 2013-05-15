@@ -66,7 +66,8 @@ var log_callbacks = function (operations) {
 // XXX test shared structure in all MM entrypoints
 Tinytest.add("minimongo - basics", function (test) {
   var c = new LocalCollection(),
-      fluffyKitten_id;
+      fluffyKitten_id,
+      count;
 
   fluffyKitten_id = c.insert({type: "kitten", name: "fluffy"});
   c.insert({type: "kitten", name: "snookums"});
@@ -87,7 +88,8 @@ Tinytest.add("minimongo - basics", function (test) {
   test.length(c.find({type: "kitten"}).fetch(), 2);
   test.length(c.find({type: "cryptographer"}).fetch(), 2);
 
-  c.update({name: "snookums"}, {$set: {type: "cryptographer"}});
+  count = c.update({name: "snookums"}, {$set: {type: "cryptographer"}});
+  test.equal(count, 1);
   test.equal(c.find().count(), 4);
   test.equal(c.find({type: "kitten"}).count(), 1);
   test.equal(c.find({type: "cryptographer"}).count(), 3);
@@ -102,10 +104,12 @@ Tinytest.add("minimongo - basics", function (test) {
   c.remove({_id: null});
   c.remove({_id: false});
   c.remove({_id: undefined});
-  c.remove();
+  count = c.remove();
+  test.equal(count, 0);
   test.equal(c.find().count(), 4);
 
-  c.remove({});
+  count = c.remove({});
+  test.equal(count, 4);
   test.equal(c.find().count(), 0);
 
   c.insert({_id: 1, name: "strawberry", tags: ["fruit", "red", "squishy"]});
@@ -1647,7 +1651,8 @@ Tinytest.add("minimongo - diff", function (test) {
 
 Tinytest.add("minimongo - saveOriginals", function (test) {
   // set up some data
-  var c = new LocalCollection();
+  var c = new LocalCollection(),
+      count;
   c.insert({_id: 'foo', x: 'untouched'});
   c.insert({_id: 'bar', x: 'updateme'});
   c.insert({_id: 'baz', x: 'updateme'});
@@ -1658,8 +1663,11 @@ Tinytest.add("minimongo - saveOriginals", function (test) {
   c.saveOriginals();
   c.insert({_id: "hooray", z: 'insertme'});
   c.remove({y: 'removeme'});
-  c.update({x: 'updateme'}, {$set: {z: 5}}, {multi: true});
+  count = c.update({x: 'updateme'}, {$set: {z: 5}}, {multi: true});
   c.update('bar', {$set: {k: 7}});  // update same doc twice
+
+  // Verify returned count is correct
+  test.equal(count, 2);
 
   // Verify the originals.
   var originals = c.retrieveOriginals();
