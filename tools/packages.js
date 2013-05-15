@@ -239,7 +239,7 @@ _.extend(Package.prototype, {
 
       // -- Source files --
       var shouldLoadRaw = function (filename) {
-        return filename.indexOf(path.sep + 'client' + path.sep + 'compatibility' + path.sep) !== -1;
+        return filename.indexOf('client' + path.sep + 'compatibility' + path.sep) !== -1;
       };
       var clientFiles = sources_except(api, "server");
       api.add_files(_.filter(clientFiles, shouldLoadRaw), "client", {raw: true});
