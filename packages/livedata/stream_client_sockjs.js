@@ -148,6 +148,9 @@ _.extend(Meteor._DdpClientStream.prototype, {
           /iPhone|iPad|iPod/.test(navigator.userAgent) &&
           /OS 4_|OS 5_/.test(navigator.userAgent);
 
+    // XXX disable websockets
+    noWebsockets = true;
+
     if (!noWebsockets)
       protocolsWhitelist = ['websocket'].concat(protocolsWhitelist);
 
