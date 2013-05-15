@@ -1,6 +1,9 @@
 
 ## vNEXT
 
+
+## v0.6.3
+
 * Add new `check` package for ensuring that a value matches a required
   type and structure. This is used to validate untrusted input from the
   client. See http://docs.meteor.com/#match for details.
@@ -10,12 +13,15 @@
 
 * With `autopublish` on, publish many useful fields on `Meteor.users`.
 
-* Files in the 'client/compatibility/' subdirectory of a Meteor app do
+* Files in the `client/compatibility/` subdirectory of a Meteor app do
   not get wrapped in a new variable scope. This is useful for
   third-party libraries which expect `var` statements at the outermost
   level to be global.
 
-* When using the `http` package on the server synchronously, errors
+* Add synthetic `tap` event for use on touch enabled devices. This is a
+  replacement for `click` that fires immediately.
+
+* When using the `http` package synchronously on the server, errors
   are thrown rather than passed in `result.error`
 
 * The `manager` option to the `Meteor.Collection` constructor is now called
@@ -49,6 +55,7 @@
 * Support `appcache` on Chromium.  #958
 
 Patches contributed by GitHub users awwx, jagill, spang, and timhaines.
+
 
 ## v0.6.2.1
 

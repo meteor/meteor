@@ -21,14 +21,20 @@
     "release": "0.6.2.1"
   },
   {
-    "release": "NEXT",
+    "release": "0.6.3",
     "packageNotices": {
       "coffeescript": ["CoffeeScript has been updated to 1.6.2 from 1.5.0. See",
                        "http://coffeescript.org/#changelog"],
       "localstorage-polyfill": [
           "The localstorage-polyfill package has been replaced by the localstorage",
           "package, which creates an object at Meteor._localStorage instead of",
-          "pretending to be window.localStorage."]
+          "pretending to be window.localStorage."],
+      "http": [
+        "When using the `http` package synchronously on the server, errors",
+        "are now thrown rather than passed in `result.error`."]
     }
+  },
+  {
+    "release": "NEXT"
   }
 ]
