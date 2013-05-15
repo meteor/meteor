@@ -1,6 +1,7 @@
-=> Meteor 0.6.3 released: Websockets on by default, new `check` API to
-   validate untrusted input, `tap` events, and more.
-   See https://github.com/meteor/meteor/blob/devel/History.md for details.
+=> Meteor 0.6.3 released: Default to WebSockets in modern browsers, new
+   `check` API to validate untrusted input, synthetic `tap` events,
+   update to MongoDB 2.4, and more.  See
+   https://github.com/meteor/meteor/blob/devel/History.md for details.
 
    This is being downloaded in the background. Update your project
    to Meteor 0.6.3 by running 'meteor update'.
