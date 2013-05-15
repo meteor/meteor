@@ -40,12 +40,20 @@ _.each(['debug', 'info', 'warn', 'error'], function (level) {
     obj.level = level;
     // XXX file, line, package
 
-    if (Meteor.isServer) { /// XXX in the future, do the right thing on the client
-      var str = EJSON.stringify(obj);
-      if (intercepted)
-        interceptedLines.push(str);
-      else
-        console.log(EJSON.stringify(obj));
+    // XXX allow you to enable 'debug', probably per-package
+    if (level === 'debug')
+      return;
+
+    if (intercepted) {
+      interceptedLines.push(EJSON.stringify(obj));
+    } else if (Meteor.isServer) {
+      console.log(EJSON.stringify(obj));
+    } else {
+      // XXX Some levels should be probably be sent to the server
+      // XXX Uses of Meteor._debug should probably be replaced by Log.debug or
+      //     Log.info, and we should have another name for "do your best to
+      //     call call console.log".
+      Meteor._debug(Log.format(obj));
     }
   };
 });
@@ -70,8 +78,6 @@ var LEVEL_COLORS = {
 Log.format = function (obj, options) {
   options = options || {};
 
-  var util = Npm.require("util");
-
   var time = obj.time;
   if (!(time instanceof Date))
     throw new Error("'time' must be a Date object");
@@ -93,20 +99,26 @@ Log.format = function (obj, options) {
   var pad2 = function(n) { return n < 10 ? '0' + n : n; };
   var pad3 = function(n) { return n < 100 ? '0' + pad2(n) : n; };
 
-  var line = util.format(
-    "%s%s%s%s-%s:%s:%s.%s%s%s",
-    level.charAt(0).toUpperCase(),
-    time.getFullYear(),
-    pad2(time.getMonth() + 1 /*0-based*/),
-    pad2(time.getDate()),
-    pad2(time.getHours()),
-    pad2(time.getMinutes()),
-    pad2(time.getSeconds()),
-    pad3(time.getMilliseconds()),
-    timeInexact ? '?' : ' ',
-    message);
+  var dateStamp = time.getFullYear() +
+    pad2(time.getMonth() + 1 /*0-based*/) +
+    pad2(time.getDate());
+  var timeStamp = pad2(time.getHours()) +
+        ':' +
+        pad2(time.getMinutes()) +
+        ':' +
+        pad2(time.getSeconds()) +
+        '.' +
+        pad3(time.getMilliseconds());
 
-  if (options.color) {
+  var line = [
+    level.charAt(0).toUpperCase(),
+    dateStamp,
+    '-',
+    timeStamp,
+    timeInexact ? '?' : ' ',
+    message].join('');
+
+  if (options.color && Meteor.isServer) {
     var color = LEVEL_COLORS[level];
     if (color)
       line = Npm.require('cli-color')[color](line);

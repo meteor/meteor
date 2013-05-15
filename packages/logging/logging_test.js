@@ -34,10 +34,10 @@ Tinytest.add("logging - log", function (test) {
     test.equal(obj3.property2, "bar");
     test.equal(obj3.level, level);
     test.instanceOf(obj3.time, Date);
-};
+  };
 
   logBothMessageAndObject(Log, 'info');
-  _.each(['debug', 'info', 'warn', 'error'], function (level) {
+  _.each(['info', 'warn', 'error'], function (level) {
     logBothMessageAndObject(Log[level], level);
   });
 });

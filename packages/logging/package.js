@@ -18,5 +18,5 @@ Package.on_test(function (api) {
   api.use(['tinytest', 'underscore', 'ejson']);
   api.use('logging', ['client', 'server']);
   api.add_files('debug_test.js', 'client');
-  api.add_files('logging_test.js', 'server');
+  api.add_files('logging_test.js', ['server', 'client']);
 });
