@@ -24,7 +24,7 @@
     "release": "0.6.3",
     "notices": [
       "When using the `http` package synchronously on the server, errors",
-      "are now thrown rather than passed in `result.error`.",
+      "are now thrown rather than passed in `result.error`."
     ],
     "packageNotices": {
       "coffeescript": ["CoffeeScript has been updated to 1.6.2 from 1.5.0. See",
