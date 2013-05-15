@@ -18,8 +18,31 @@ Log._intercepted = function () {
   return lines;
 };
 
+var LEVEL_COLORS = {
+  debug: 'blue',
+  info: 'cyan',
+  warn: 'yellow',
+  error: 'red'
+};
+
 // XXX file, line, package
 var RESTRICTED_KEYS = ['time', 'timeInexact', 'level'];
+
+var logOnClient = function (obj) {
+  var str = Log.format(obj);
+
+  // XXX Some levels should be probably be sent to the server
+  var level = obj.level;
+
+  if ((typeof console !== 'undefined') && console[level]) {
+    console[level](str);
+  } else {
+    // XXX Uses of Meteor._debug should probably be replaced by Log.debug or
+    //     Log.info, and we should have another name for "do your best to
+    //     call call console.log".
+    Meteor._debug(str);
+  }
+};
 
 _.each(['debug', 'info', 'warn', 'error'], function (level) {
   Log[level] = function (arg) {
@@ -49,11 +72,7 @@ _.each(['debug', 'info', 'warn', 'error'], function (level) {
     } else if (Meteor.isServer) {
       console.log(EJSON.stringify(obj));
     } else {
-      // XXX Some levels should be probably be sent to the server
-      // XXX Uses of Meteor._debug should probably be replaced by Log.debug or
-      //     Log.info, and we should have another name for "do your best to
-      //     call call console.log".
-      Meteor._debug(Log.format(obj));
+      logOnClient(obj);
     }
   };
 });
@@ -67,15 +86,9 @@ Log.parse = function (line) {
   return obj;
 };
 
-var LEVEL_COLORS = {
-  debug: 'blue',
-  info: 'cyan',
-  warn: 'yellow',
-  error: 'red'
-};
-
 // formats a log object into colored human and machine-readable text
 Log.format = function (obj, options) {
+  obj = EJSON.clone(obj); // don't mutate the argument
   options = options || {};
 
   var time = obj.time;
