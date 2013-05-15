@@ -1,3 +1,11 @@
+Accounts.addAutopublishFields({
+  // not sure whether the github api can be used from the browser,
+  // thus not sure if we should be sending access tokens; but we do it
+  // for all other oauth2 providers, and it may come in handy.
+  forLoggedInUser: ['services.github'],
+  forOtherUsers: ['services.github.username']
+});
+
 Accounts.oauth.registerService('github', 2, function(query) {
 
   var accessToken = getAccessToken(query);
@@ -24,41 +32,40 @@ var getAccessToken = function (query) {
   if (!config)
     throw new Accounts.ConfigError("Service not configured");
 
-  var result = Meteor.http.post(
-    "https://github.com/login/oauth/access_token", {
-      headers: {
-        Accept: 'application/json',
-        "User-Agent": userAgent
-      },
-      params: {
-        code: query.code,
-        client_id: config.clientId,
-        client_secret: config.secret,
-        redirect_uri: Meteor.absoluteUrl("_oauth/github?close"),
-        state: query.state
-      }
-    });
-
-  if (result.error) { // if the http response was an error
-    throw new Error("Failed to complete OAuth handshake with GitHub. " +
-                    "HTTP Error " + result.statusCode + ": " + result.content);
-  } else if (result.data.error) { // if the http response was a json object with an error attribute
-    throw new Error("Failed to complete OAuth handshake with GitHub. " + result.data.error);
+  var response;
+  try {
+    response = Meteor.http.post(
+      "https://github.com/login/oauth/access_token", {
+        headers: {
+          Accept: 'application/json',
+          "User-Agent": userAgent
+        },
+        params: {
+          code: query.code,
+          client_id: config.clientId,
+          client_secret: config.secret,
+          redirect_uri: Meteor.absoluteUrl("_oauth/github?close"),
+          state: query.state
+        }
+      });
+  } catch (err) {
+    throw new Error("Failed to complete OAuth handshake with Github. " + err.message);
+  }
+  if (response.data.error) { // if the http response was a json object with an error attribute
+    throw new Error("Failed to complete OAuth handshake with GitHub. " + response.data.error);
   } else {
-    return result.data.access_token;
+    return response.data.access_token;
   }
 };
 
 var getIdentity = function (accessToken) {
-  var result = Meteor.http.get(
-    "https://api.github.com/user", {
-      headers: {"User-Agent": userAgent},
-      params: {access_token: accessToken}
-    });
-  if (result.error) {
-    throw new Error("Failed to fetch identity from GitHub. " +
-                    "HTTP Error " + result.statusCode + ": " + result.content);
-  } else {
-    return result.data;
+  try {
+    return Meteor.http.get(
+      "https://api.github.com/user", {
+        headers: {"User-Agent": userAgent}, // http://developer.github.com/v3/#user-agent-required
+        params: {access_token: accessToken}
+      }).data;
+  } catch (err) {
+    throw new Error("Failed to fetch identity from GitHub. " + err.message);
   }
 };

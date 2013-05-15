@@ -20,10 +20,12 @@ Email.send = function (options) {
 
 Meteor.methods({
   getInterceptedEmails: function (email) {
+    check(email, String);
     return interceptedEmails[email];
   },
 
   addEmailForTestAndVerify: function (email) {
+    check(email, String);
     Meteor.users.update(
       {_id: this.userId},
       {$push: {emails: {address: email, verified: false}}});
@@ -31,6 +33,7 @@ Meteor.methods({
   },
 
   createUserOnServer: function (email) {
+    check(email, String);
     var userId = Accounts.createUser({email: email});
     Accounts.sendEnrollmentEmail(userId);
     return Meteor.users.findOne(userId);

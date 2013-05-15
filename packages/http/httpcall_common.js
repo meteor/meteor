@@ -1,6 +1,20 @@
 
 Meteor.http = Meteor.http || {};
 
+Meteor.http._makeErrorByStatus = function(statusCode, content) {
+  var MAX_LENGTH = 160; // if you change this, also change the appropriate test
+
+  var truncate = function(str, length) {
+    return str.length > length ? str.slice(0, length) + '...' : str;
+  };
+
+  var message = "failed [" + statusCode + "]";
+  if (content)
+    message += " " + truncate(content.replace(/\n/g, " "), MAX_LENGTH);
+
+  return new Error(message);
+};
+
 Meteor.http._encodeParams = function(params) {
   var buf = [];
   _.each(params, function(value, key) {

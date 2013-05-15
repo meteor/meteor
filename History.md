@@ -2,6 +2,61 @@
 ## vNEXT
 
 
+## v0.6.3
+
+* Add new `check` package for ensuring that a value matches a required
+  type and structure. This is used to validate untrusted input from the
+  client. See http://docs.meteor.com/#match for details.
+
+* Use Websockets by default on supported browsers. This reduces latency
+  and eliminates the constant network spinner on iOS devices.
+
+* With `autopublish` on, publish many useful fields on `Meteor.users`.
+
+* Files in the `client/compatibility/` subdirectory of a Meteor app do
+  not get wrapped in a new variable scope. This is useful for
+  third-party libraries which expect `var` statements at the outermost
+  level to be global.
+
+* Add synthetic `tap` event for use on touch enabled devices. This is a
+  replacement for `click` that fires immediately.
+
+* When using the `http` package synchronously on the server, errors
+  are thrown rather than passed in `result.error`
+
+* The `manager` option to the `Meteor.Collection` constructor is now called
+  `connection`. The old name still works for now.  #987
+
+* The `localstorage-polyfill` smart package has been replaced by a
+  `localstorage` package, which defines a `Meteor._localStorage` API instead of
+  trying to replace the DOM `window.localStorage` facility. (Now, apps can use
+  the existence of `window.localStorage` to detect if the full localStorage API
+  is supported.)  #979
+
+* Upgrade MongoDB from 2.2.1 to 2.4.3.
+
+* Upgrade CoffeeScript from 1.5.0 to 1.6.2.  #972
+
+* Faster reconnects when regaining connectivity.  #696
+
+* `Email.send` has a new `headers` option to set arbitrary headers.  #963
+
+* Cursor transform functions on the server no longer are required to return
+  objects with correct `_id` fields.  #974
+
+* Rework `observe()` callback ordering in minimongo to improve fiber
+  safety on the server. This makes subscriptions on server to server DDP
+  more usable.
+
+* Use binary search in minimongo when updating ordered queries.  #969
+
+* Fix EJSON base64 decoding bug.  #1001
+
+* Support `appcache` on Chromium.  #958
+
+Patches contributed by GitHub users awwx, jagill, spang, and timhaines.
+
+
 ## v0.6.2.1
 
 * When authenticating with GitHub, include a user agent string. This

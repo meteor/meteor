@@ -51,3 +51,24 @@ Tinytest.add("ejson - equality and falsiness", function (test) {
   test.isFalse(EJSON.equals(undefined, {foo: "foo"}));
   test.isFalse(EJSON.equals({foo: "foo"}, undefined));
 });
+
+Tinytest.add("ejson - clone", function (test) {
+  var cloneTest = function (x, identical) {
+    var y = EJSON.clone(x);
+    test.isTrue(EJSON.equals(x, y));
+    test.equal(x === y, !!identical);
+  };
+  cloneTest(null, true);
+  cloneTest(undefined, true);
+  cloneTest(42, true);
+  cloneTest("asdf", true);
+  cloneTest([1, 2, 3]);
+  cloneTest([1, "fasdf", {foo: 42}]);
+  cloneTest({x: 42, y: "asdf"});
+
+  var testCloneArgs = function (/*arguments*/) {
+    var clonedArgs = EJSON.clone(arguments);
+    test.equal(clonedArgs, [1, 2, "foo", [4]]);
+  };
+  testCloneArgs(1, 2, "foo", [4]);
+});

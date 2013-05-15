@@ -15,15 +15,20 @@ var manifestUrl = testingUpdater
  * Downloads the current manifest file and returns it via a callback (or
  * null on error)
  */
-exports.getManifest = function () {
-  return files.getUrl({url: manifestUrl, json: true});
+exports.getManifest = function (context) {
+  var options = {url: manifestUrl, json: true};
+
+  if (context)
+    options.meteorReleaseContext = context;
+
+  return files.getUrl(options);
 };
 
 exports.startUpdateChecks = function (context) {
   var updateCheck = inFiber(function () {
     var manifest = null;
     try {
-      manifest = exports.getManifest();
+      manifest = exports.getManifest(context);
     } catch (e) {
       // Ignore error (eg, offline), but still do the "can we update this app
       // with a locally available release" check.
