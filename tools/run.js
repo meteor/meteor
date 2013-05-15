@@ -15,6 +15,7 @@ var buildmessage = require('./buildmessage.js');
 var mongo_runner = require('./mongo_runner.js');
 var mongoExitCodes = require('./mongo_exit_codes.js');
 var warehouse = require("./warehouse.js");
+var unipackage = require('./unipackage.js');
 
 var _ = require('underscore');
 var inFiber = require('./fiber-helpers.js').inFiber;
@@ -220,6 +221,7 @@ var logToClients = function (msg) {
 // outerPort
 // innerPort
 // mongoUrl
+// library
 // onExit
 // [program]
 // [onListen]
@@ -281,18 +283,26 @@ var startServer = function (options) {
 
   // XXX deal with test server logging differently?!
 
-  proc.stdout.setEncoding('utf8');
-  proc.stdout.on('data', function (data) {
-    if (!data) return;
+  var Log = unipackage.load({
+    library: options.library,
+    packages: ['logging']
+  }).logging.Log;
 
-    var originalLength = data.length;
+  proc.stdout.setEncoding('utf8');
+  // The byline module ensures that each 'data' call will receive one
+  // line.
+  require('byline')(proc.stdout).on('data', function (line) {
+    if (!line) return;
     // string must match server.js
-    data = data.replace(/^LISTENING\s*(?:\n|$)/m, '');
-    if (data.length != originalLength)
+    if (line.match(/^LISTENING\s*$/)) {
       options.onListen && options.onListen();
-    if (data) {
-      logToClients({stdout: data});
+      return;
     }
+
+    var obj = Log.parse(line);
+    if (!obj)
+      obj = {message: line, level: "info", time: new Date(), timeInexact: true};
+    logToClients({stdout: Log.format(obj, {color: true}) + '\n'});
   });
 
   proc.stderr.setEncoding('utf8');
@@ -563,6 +573,7 @@ exports.run = function (context, options) {
       outerPort: outerPort,
       innerPort: innerPort,
       mongoUrl: mongoUrl,
+      library: context.library,
       onExit: function (code) {
         // on server exit
         Status.running = false;
