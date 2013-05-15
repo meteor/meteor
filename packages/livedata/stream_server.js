@@ -1,5 +1,3 @@
-Meteor._routePolicy.declare('/sockjs/', 'network');
-
 // unique id for this instantiation of the server. If this changes
 // between client reconnects, the client will reload. You can set the
 // environment variable "SERVER_ID" to control this. For example, if
@@ -14,10 +12,16 @@ Meteor._DdpStreamServer = function () {
   self.registration_callbacks = [];
   self.open_sockets = [];
 
+  self.prefix = '/sockjs';
+  // We don't depend directly on routepolicy because we don't want to pull in
+  // webapp stuff if we're just doing server-to-server DDP as a client.
+  if (Meteor._routePolicy)
+    Meteor._routePolicy.declare(self.prefix + '/', 'network');
+
   // set up sockjs
   var sockjs = Npm.require('sockjs');
   self.server = sockjs.createServer({
-    prefix: '/sockjs', log: function(){},
+    prefix: self.prefix, log: function(){},
     // this is the default, but we code it explicitly because we depend
     // on it in stream_client:HEARTBEAT_TIMEOUT
     heartbeat_delay: 25000,
@@ -77,6 +81,7 @@ _.extend(Meteor._DdpStreamServer.prototype, {
   // Redirect /websocket to /sockjs/websocket in order to not expose
   // sockjs to clients that want to use raw websockets
   _redirectWebsocketEndpoint: function() {
+    var self = this;
     // Unfortunately we can't use a connect middleware here since
     // sockjs installs itself prior to all existing listeners
     // (meaning prior to any connect middlewares) so we need to take
@@ -95,7 +100,7 @@ _.extend(Meteor._DdpStreamServer.prototype, {
 
         if (request.url === '/websocket' ||
             request.url === '/websocket/')
-          request.url = '/sockjs/websocket';
+          request.url = self.prefix + '/websocket';
 
         _.each(oldAppListeners, function(oldListener) {
           oldListener.apply(app, args);

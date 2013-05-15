@@ -10,22 +10,20 @@ Package.on_use(function (api) {
   api.use(['check', 'random', 'ejson', 'json', 'underscore', 'deps', 'logging'],
           ['client', 'server']);
 
-  // XXX we do NOT require webapp here, because it's OK to use this package on a
-  // server architecture without making a server (in order to do
-  // server-to-server DDP as a client). So if you want to provide a DDP server,
-  // you need to use webapp before you use livedata.
+  // XXX we do NOT require webapp or routepolicy here, because it's OK to use
+  // this package on a server architecture without making a server (in order to
+  // do server-to-server DDP as a client). So if you want to provide a DDP
+  // server, you need to use webapp before you use livedata.
 
   // Transport
   api.use('reload', 'client');
-  api.use('routepolicy', 'server');
   api.add_files(['sockjs-0.3.4.js',
                  'stream_client_sockjs.js'], 'client');
   api.add_files('stream_client_nodejs.js', 'server');
   api.add_files('stream_client_common.js', ['client', 'server']);
   api.add_files('stream_server.js', 'server');
 
-  // livedata_connection.js uses a Minimongo collection internally to
-  // manage the current set of subscriptions.
+  // we depend on LocalCollection._diffObjects and ._applyChanges.
   api.use('minimongo', ['client', 'server']);
 
   api.add_files('writefence.js', 'server');
