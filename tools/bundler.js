@@ -539,8 +539,11 @@ _.extend(Target.prototype, {
             if (! nmd) {
               nmd = new NodeModulesDirectory({
                 sourcePath: slice.nodeModulesPath,
+                // It's important that this path end with
+                // node_modules. Otherwise, if two modules in this package
+                // depend on each other, they won't be able to find each other!
                 preferredBundlePath: path.join('npm', slice.pkg.name,
-                                               slice.sliceName)
+                                               slice.sliceName, 'node_modules')
               });
               self.nodeModulesDirectories[slice.nodeModulesPath] = nmd;
             }
