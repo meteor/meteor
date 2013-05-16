@@ -21,7 +21,6 @@ var respond = function(req, res) {
     res.end("REDIRECT TO FOO");
     return;
   } else if (req.url.slice(0,6) === "/login") {
-    var connect = Npm.require('connect');
     var username = 'meteor';
     // get password from query string
     var password = req.url.slice(7);
@@ -30,7 +29,7 @@ var respond = function(req, res) {
     var validate = function(user, pass) {
       return user === username && pass === password;
     };
-    var checker = connect.basicAuth(validate, realm);
+    var checker = __meteor_bootstrap__.app.__basicAuth__(validate, realm);
     var success = false;
     checker(req, res, function() {
       success = true;

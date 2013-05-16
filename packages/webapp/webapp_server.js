@@ -163,6 +163,14 @@ var runWebAppServer = function () {
 
   // webserver
   var app = connect.createServer();
+  // Parse the query string into res.query. Only oauth_server cares about this,
+  // but it's overkill to have that package depend on its own copy of connect
+  // just for this simple processing.
+  app.use(connect.query());
+  // Hack: allow http tests to call connect.basicAuth without making them
+  // Npm.depends on another copy of connect. (That would be fine if we could
+  // have test-only NPM dependencies but is overkill here.)
+  app.__basicAuth__ = connect.basicAuth;
 
   var staticCacheablePath = path.join(clientDir, clientJson.staticCacheable);
   if (staticCacheablePath)
