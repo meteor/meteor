@@ -1512,8 +1512,9 @@ _.extend(Package.prototype, {
           ignoreFiles || []);
 
         var withoutAppPackages = _.reject(allSources, function (sourcePath) {
-          // Skip files that are in app packages. (Directories named "packages"
-          // lower in the tree are OK.)
+          // Skip files that are in app packages; they'll get watched if they
+          // are actually listed in the .meteor/packages file. (Directories
+          // named "packages" lower in the tree are OK.)
           return sourcePath.match(/^packages\//);
         });
 
@@ -1551,16 +1552,9 @@ _.extend(Package.prototype, {
           exclude: ignoreFiles.concat(['tests'])
         };
 
-        // Inside the packages directory, only look for new packages
-        // (which we can detect by the appearance of a package.js file.)
-        // Other than that, packages explicitly call out the files they
-        // use.
-        slice.dependencyInfo.directories[path.resolve(appDir, 'packages')] = {
-          include: [ /^package\.js$/ ],
-          exclude: ignoreFiles
-        };
-
-        // Ditto for the programs directory.
+        // Inside the programs directory, only look for new program (which we
+        // can detect by the appearance of a package.js file.)  Other than that,
+        // programs explicitly call out the files they use.
         slice.dependencyInfo.directories[path.resolve(appDir, 'programs')] = {
           include: [ /^package\.js$/ ],
           exclude: ignoreFiles

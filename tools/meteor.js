@@ -480,6 +480,7 @@ Fiber(function () {
       // This is the right spot to do any other changes we need to the app in
       // order to update it for the new release (new metadata file formats,
       // etc, or maybe even updating renamed APIs).
+      // XXX add app packages to .meteor/packages here for linker upgrade!
       console.log("%s: updated to Meteor %s.",
                   path.basename(context.appDir), context.releaseVersion);
 
