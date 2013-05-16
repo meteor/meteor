@@ -38,9 +38,7 @@ set +e
 # rebuild the binary modules (node-fibers) on the target system. It is
 # not ideal to have the bundle modify itself (much better for it to be
 # immutable) but it'll do for now.
-# (And by "remove" we just mean "move out of the way", since that's
-# both faster and more atomic.)
-mv node_modules mode_nodules 2>/dev/null || true
+rm -rf node_modules 2>/dev/null || true
 
 export NODE_PATH="$DEPS_DIR/lib/node_modules"
 exec "$DEPS_DIR/bin/node" boot.js ##IMAGE## "$@"
