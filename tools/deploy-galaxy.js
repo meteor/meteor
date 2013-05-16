@@ -34,17 +34,12 @@ var getGalaxy = function (context) {
 };
 
 
-// XXX copied from galaxy/tool/galaxy.js
 var exitWithError = function (error, messages) {
   messages = messages || {};
-
-  if (! (error instanceof Meteor.Error))
-    throw error; // get a stack
-
   var msg = messages[error.error];
   if (msg)
     process.stderr.write(msg + "\n");
-  else if (error instanceof Meteor.Error)
+  else if (error.message)
     process.stderr.write("Denied: " + error.message + "\n");
 
   process.exit(1);
