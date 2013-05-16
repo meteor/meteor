@@ -1,6 +1,7 @@
 var Fiber = require("fibers");
 var fs = require("fs");
 var path = require("path");
+var Future = require(path.join("fibers", "future"));
 var _ = require('underscore');
 
 // This code is duplicated in tools/server/server.js.
@@ -67,11 +68,40 @@ Fiber(function () {
           }
       }
     };
+    var staticDirectory = path.join(__dirname, fileInfo.staticDirectory);
+    var getAsset = function (assetPath, encoding, callback) {
+      var fut;
+      if (! callback) {
+        fut = new Future();
+        callback = fut.resolver();
+      }
+      var _callback = Meteor.bindEnvironment(function (err, result) {
+        if (result && ! encoding)
+          // Sadly, this copies in Node 0.10.
+          result = new Uint8Array(result);
+        callback(err, result);
+      }, function (e) {
+        Meteor._debug("Exception in callback of getAsset", e.stack);
+      });
+      fs.readFile(path.join(staticDirectory, assetPath), encoding, _callback);
+      if (fut)
+        return fut.wait();
+    };
+
+    var Assets = {
+      getText: function (assetPath, callback) {
+        return getAsset(assetPath, "utf8", callback);
+      },
+      getBinary: function (assetPath, callback) {
+        return getAsset(assetPath, undefined, callback);
+      }
+    };
+
     // \n is necessary in case final line is a //-comment
-    var wrapped = "(function(Npm){" + code + "\n})";
+    var wrapped = "(function(Npm, Assets){" + code + "\n})";
 
     var func = require('vm').runInThisContext(wrapped, fileInfo.path, true);
-    func.call(global, Npm); // Coffeescript
+    func.call(global, Npm, Assets); // Coffeescript
   });
 
   // run the user startup hooks.

@@ -275,10 +275,13 @@ _.extend(Slice.prototype, {
       //   and column reporting in error messages. (XXX replace this
       //   with source maps)
       // - addAsset({ path: "my/image.png", data: Buffer })
-      //   Browser targets only. Add a file to serve as-is over HTTP.
-      //   This time `data` is a Buffer rather than a string. It will
-      //   be served at the exact path you request (concatenated with
-      //   rootOutputPath.)
+      //   Add a file to serve as-is over HTTP (browser targets) or
+      //   to include as-is in the bundle (native targets).
+      //   This time `data` is a Buffer rather than a string. For
+      //   browser targets, it will be served at the exact path you
+      //   request (concatenated with rootOutputPath). For server
+      //   targets, the file can be retrieved by passing path to
+      //   Assets.getText or Assets.getBinary.
       // - error({ message: "There's a problem in your source file",
       //           sourcePath: "src/my/program.ext", line: 12,
       //           column: 20, columnEnd: 25, func: "doStuff" })
@@ -370,9 +373,6 @@ _.extend(Slice.prototype, {
           });
         },
         addAsset: function (options) {
-          if (! archinfo.matches(self.arch, "browser"))
-            throw new Error("Sorry, currently, static assets can only be " +
-                            "emitted to browser targets");
           if (! (options.data instanceof Buffer))
             throw new Error("'data' option to addAsset must be a Buffer");
           resources.push({

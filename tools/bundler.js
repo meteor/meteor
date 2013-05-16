@@ -113,6 +113,8 @@
 //    - node_modules: if Npm.require is called from this file, this is
 //      the path (relative to program.json) of the directory that should
 //      be search for npm modules
+//    - staticDirectory: directory to search for static assets when
+//      Assets.getText and Assets.getBinary are called from this file.
 //
 // /config.json:
 //
@@ -247,6 +249,8 @@ var File = function (options) {
   // in the "server" architecture.
   self.nodeModulesDirectory = null;
 
+  self.staticDirectory = null;
+
   self._contents = options.data || null; // contents, if known, as a Buffer
   self._hash = null; // hash, if known, as a hex string
 };
@@ -306,13 +310,37 @@ _.extend(File.prototype, {
   // a forward slash and that uses a literal forward slash as the
   // component separator.
   setUrlFromRelPath: function (relPath) {
-    var self = this
+    var self = this;
     var url = relPath.split(path.sep).join('/');
 
     if (url.charAt(0) !== '/')
       url = '/' + url;
 
     self.url = url;
+  },
+
+  setTargetPathFromRelPath: function (relPath) {
+    var self = this;
+    // XXX hack
+    if (relPath.match(/^\/packages\//) || relPath.match(/^\/static\//))
+      self.targetPath = relPath;
+    else
+      self.targetPath = path.join('/app', relPath);
+  },
+
+  setStaticDirFromRelPath: function (relPath) {
+    var self = this;
+    // For package code, static assets go inside a directory inside
+    // static/packages specific to this package. Application assets (e.g. those
+    // inside private/) go in static/app/.
+    // XXX same hack as above
+    if (relPath.match(/^\/packages\//)) {
+      var dir = path.dirname(relPath);
+      var base = path.basename(relPath, ".js");
+      self.staticDirectory = path.join('/static', dir, base);
+    } else {
+      self.staticDirectory = path.join('/static', 'app');
+    }
   }
 });
 
@@ -351,6 +379,10 @@ var Target = function (options) {
   // on disk (NodeModulesDirectory.sourcePath) to a
   // NodeModulesDirectory object that we have created to represent it.
   self.nodeModulesDirectories = {};
+
+  // Static assets to include in the bundle. List of File.
+  // For browser targets, these are served over HTTP.
+  self.static = [];
 };
 
 _.extend(Target.prototype, {
@@ -365,9 +397,9 @@ _.extend(Target.prototype, {
   //   per _determineLoadOrder
   // - test: packages to test (Package or 'foo'), per _determineLoadOrder
   // - minify: true to minify
-  // - assetDirs: array of asset directories to add (browser only for
-  //   now) object with keys 'rootDir', 'exclude', 'assetPathPrefix'
-  //   all per addAssetDir.
+  // - assetDirs: array of asset directories to add
+  //   object with keys 'rootDir', 'exclude', 'assetPathPrefix',
+  //   'setUrl', 'setTargetPath', all per addAssetDir.
   // - addCacheBusters: if true, make all files cacheable by adding
   //   unique query strings to their URLs. unlikely to be of much use
   //   on server targets.
@@ -394,7 +426,7 @@ _.extend(Target.prototype, {
     // Process asset directories (eg, /public)
     // XXX this should probably be part of the appDir reader
     _.each(options.assetDirs || [], function (ad) {
-      self.addAssetDir(ad.rootDir, ad.exclude, ad.assetPathPrefix);
+      self.addAssetDir(ad);
     });
 
     if (options.addCacheBusters) {
@@ -524,14 +556,17 @@ _.extend(Target.prototype, {
             cacheable: false
           });
 
-          if (isBrowser)
+          if (isBrowser) {
             f.setUrlFromRelPath(resource.servePath);
-          else if (isNative) {
-            // XXX hack
-            if (resource.servePath.match(/^\/packages\//))
-              f.targetPath = resource.servePath;
+          } else if (isNative) {
+            var relPath;
+            if (resource.type === "static")
+              relPath = path.join(path.sep, "static", resource.servePath);
             else
-              f.targetPath = path.join('/app', resource.servePath);
+              relPath = resource.servePath;
+            f.setTargetPathFromRelPath(relPath);
+            if (resource.type === "js")
+              f.setStaticDirFromRelPath(relPath);
           }
 
           if (isNative && resource.type === "js" && ! isApp &&
@@ -618,8 +653,57 @@ _.extend(Target.prototype, {
   mostCompatibleArch: function () {
     var self = this;
     return archinfo.leastSpecificDescription(_.pluck(self.slices, 'arch'));
-  }
+  },
 
+  // assetDir has properties rootDir, exclude, assetPathPrefix, setUrl,
+  // and setTargetPath. (All but rootDir are optional.)
+  // Add all of the files in a directory `rootDir` (and its
+  // subdirectories) as static assets. `rootDir` should be an absolute
+  // path. If provided, exclude is an
+  // array of filename regexps to exclude. If provided, assetPathPrefix is a
+  // prefix to use when computing the path for each file.
+  addAssetDir: function (assetDir) {
+    var self = this;
+    var rootDir = assetDir.rootDir;
+    var exclude = assetDir.exclude;
+    var assetPathPrefix = assetDir.assetPathPrefix;
+    var setUrl = assetDir.setUrl;
+    var setTargetPath = assetDir.setTargetPath;
+    exclude = exclude || [];
+
+    self.dependencyInfo.directories[rootDir] = {
+      include: [/.?/],
+      exclude: exclude
+    };
+
+    var walk = function (dir, assetPathPrefix) {
+      _.each(fs.readdirSync(dir), function (item) {
+        // Skip excluded files
+        var matchesAnExclude = _.any(exclude, function (pattern) {
+          return item.match(pattern);
+        });
+        if (matchesAnExclude)
+          return;
+
+        var absPath = path.resolve(dir, item);
+        var assetPath = path.join(assetPathPrefix, item);
+        if (fs.statSync(absPath).isDirectory()) {
+          walk(absPath, assetPath);
+          return;
+        }
+
+        var f = new File({ sourcePath: absPath });
+        if (setUrl)
+          f.setUrlFromRelPath(assetPath);
+        if (setTargetPath)
+          f.setTargetPathFromRelPath(path.join('/static', 'app', assetPath));
+        self.dependencyInfo.files[absPath] = f.hash();
+        self.static.push(f);
+      });
+    };
+
+    walk(rootDir, assetPathPrefix || '');
+  }
 });
 
 
@@ -632,9 +716,6 @@ var ClientTarget = function (options) {
   // CSS files. List of File. They will be loaded at page load in the
   // order given.
   self.css = [];
-
-  // Static assets to serve with HTTP. List of File.
-  self.static = [];
 
   // List of segments of additional HTML for <head>/<body>.
   self.head = [];
@@ -660,47 +741,6 @@ _.extend(ClientTarget.prototype, {
 
     self.css = [new File({ data: new Buffer(allCss, 'utf8') })];
     self.css[0].setUrlToHash(".css");
-  },
-
-  // Add all of the files in a directory `rootDir` (and its
-  // subdirectories) as static assets. `rootDir` should be an absolute
-  // path. Only makes sense on clients. If provided, exclude is an
-  // array of filename regexps to exclude. If provided, assetPath is a
-  // prefix to use when computing the path for each file in the
-  // client's asset tree.
-  addAssetDir: function (rootDir, exclude, assetPathPrefix) {
-    var self = this;
-    exclude = exclude || [];
-
-    self.dependencyInfo.directories[rootDir] = {
-      include: [/.?/],
-      exclude: exclude
-    };
-
-    var walk = function (dir, assetPathPrefix) {
-      _.each(fs.readdirSync(dir), function (item) {
-        // Skip excluded files
-        var matchesAnExclude = _.any(exclude, function (pattern) {
-          return item.match(pattern);
-        });
-        if (matchesAnExclude)
-          return;
-
-        var absPath = path.resolve(dir, item);
-        var assetPath = path.join(assetPathPrefix, item);
-        if (fs.statSync(absPath).isDirectory()) {
-          walk(absPath, assetPath);
-          return;
-        }
-
-        var f = new File({ sourcePath: absPath });
-        f.setUrlFromRelPath(assetPath);
-        self.dependencyInfo.files[absPath] = f.hash();
-        self.static.push(f);
-      });
-    };
-
-    walk(rootDir, assetPathPrefix || '');
   },
 
   assignTargetPaths: function () {
@@ -749,17 +789,7 @@ _.extend(ClientTarget.prototype, {
     _.each(["js", "css", "static"], function (type) {
       _.each(self[type], function (file) {
 
-        if (! file.targetPath)
-          throw new Error("No targetPath?");
-
-        // XXX should probably use sanitize: true, but that will have
-        // to wait until the server is actually driven by the manifest
-        // (rather than just serving all of the files in a certain
-        // directories)
-        var contents = file.contents();
-        if (! (contents instanceof Buffer))
-          throw new Error("contents not a Buffer?");
-        builder.write(file.targetPath, { data: file.contents() });
+        writeFile(file, builder);
 
         manifest.push({
           path: file.targetPath,
@@ -935,7 +965,8 @@ _.extend(JsImage.prototype, {
       load.push({
         path: item.targetPath,
         node_modules: item.nodeModulesDirectory ?
-          item.nodeModulesDirectory.preferredBundlePath : undefined
+          item.nodeModulesDirectory.preferredBundlePath : undefined,
+        staticDirectory: item.staticDirectory
       });
     });
 
@@ -996,7 +1027,8 @@ JsImage.readFromDisk = function (controlFilePath) {
     ret.jsToLoad.push({
       targetPath: item.path,
       source: fs.readFileSync(path.join(dir, item.path)),
-      nodeModulesDirectory: nmd
+      nodeModulesDirectory: nmd,
+      staticDirectory: item.staticDirectory
     });
   });
 
@@ -1024,7 +1056,8 @@ _.extend(JsImageTarget.prototype, {
       ret.jsToLoad.push({
         targetPath: file.targetPath,
         source: file.contents().toString('utf8'),
-        nodeModulesDirectory: file.nodeModulesDirectory
+        nodeModulesDirectory: file.nodeModulesDirectory,
+        staticDirectory: file.staticDirectory
       });
     });
 
@@ -1148,10 +1181,27 @@ _.extend(ServerTarget.prototype, {
       });
     }
 
+    // Static assets
+    _.each(self.static, function (file) {
+      writeFile(file, builder);
+    });
+
     return scriptName;
   }
 });
 
+var writeFile = function (file, builder) {
+  if (! file.targetPath)
+    throw new Error("No targetPath?");
+  var contents = file.contents();
+  if (! (contents instanceof Buffer))
+    throw new Error("contents not a Buffer?");
+  // XXX should probably use sanitize: true, but that will have
+  // to wait until the server is actually driven by the manifest
+  // (rather than just serving all of the files in a certain
+  // directories)
+  builder.write(file.targetPath, { data: file.contents() });
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // writeSiteArchive
@@ -1363,7 +1413,23 @@ exports.bundle = function (appDir, outputPath, options) {
     var targets = {};
     var controlProgram = null;
 
-    var makeClientTarget = function (app, appDir) {
+    var getValidAssetDirs = function (dirNames, assetDirDefaults) {
+      var assetDirs = [];
+      assetDirDefaults = assetDirDefaults || {};
+      if (appDir) {
+        if (files.is_app_dir(appDir)) { /* XXX what is this checking? */
+          _.each(dirNames, function (dirName) {
+            var assetDir = path.join(appDir, dirName);
+            var assetDirObj = _.extend({ rootDir: assetDir }, assetDirDefaults);
+            if (fs.existsSync(assetDir))
+              assetDirs.push(assetDirObj);
+          });
+        }
+      }
+      return assetDirs;
+    };
+
+    var makeClientTarget = function (app, appDir, assetDirs) {
       var client = new ClientTarget({
         library: library,
         arch: "browser"
@@ -1371,18 +1437,13 @@ exports.bundle = function (appDir, outputPath, options) {
 
       // Scan /public if the client has it
       // XXX this should probably be part of the appDir reader
-      if (appDir) {
-        var clientAssetDirs = [];
-        if (files.is_app_dir(appDir)) { /* XXX what is this checking? */
-          var publicDir = path.join(appDir, 'public');
-          if (fs.existsSync(publicDir)) {
-            clientAssetDirs.push({
-              rootDir: publicDir,
-              exclude: ignoreFiles
-            });
-          }
-        }
-      }
+      assetDirs = assetDirs || [];
+      var clientAssetDirs = getValidAssetDirs(assetDirs, {
+        exclude: ignoreFiles,
+        setUrl: true
+        // No need to set targetPath when the asset dir is added;
+        // the target path will be set later in assignTargetPaths.
+      });
 
       client.make({
         packages: [app],
@@ -1409,7 +1470,14 @@ exports.bundle = function (appDir, outputPath, options) {
       return client;
     };
 
-    var makeServerTarget = function (app, clientTarget) {
+    var makeServerTarget = function (app, clientTarget, assetDirs) {
+      assetDirs = assetDirs || [];
+      var serverAssetDirs = getValidAssetDirs(assetDirs, {
+        exclude: ignoreFiles,
+        setTargetPath: true
+        // We need to set the target path when the asset dir is added,
+        // because the target path comes from the asset's path.
+      });
       var targetOptions = {
         library: library,
         arch: archinfo.host(),
@@ -1423,7 +1491,8 @@ exports.bundle = function (appDir, outputPath, options) {
       server.make({
         packages: [app],
         test: options.testPackages || [],
-        minify: false
+        minify: false,
+        assetDirs: serverAssetDirs
       });
 
       return server;
@@ -1438,11 +1507,11 @@ exports.bundle = function (appDir, outputPath, options) {
       var app = library.getForApp(appDir, ignoreFiles);
 
       // Client
-      var client = makeClientTarget(app, appDir);
+      var client = makeClientTarget(app, appDir, ['public']);
       targets.client = client;
 
       // Server
-      var server = makeServerTarget(app, client);
+      var server = makeServerTarget(app, client, ['private']);
       targets.server = server;
     }
 

@@ -851,7 +851,7 @@ var blacklistedSymbols = [
   "Package",
 
   // Meteor provides these at runtime
-  "Npm", "__meteor_runtime_config__", "__meteor_bootstrap__",
+  "Npm", "__meteor_runtime_config__", "__meteor_bootstrap__", "Assets",
 
   // A node-ism (and needed by the 'meteor' package to read the
   // environment to bootstrap __meteor_runtime_config__, though
