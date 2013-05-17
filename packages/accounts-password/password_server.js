@@ -6,26 +6,25 @@
 // @param user {Object} with one of `id`, `username`, or `email`.
 // @returns A selector to pass to mongo to get the user record.
 
-
 var selectorFromUserQuery = function (user) {
-  if (user.id)
-    return {_id: user.id};
-  else if (user.username)
-    return {username: user.username};
-  else if (user.email)
-    return {"emails.address": user.email};
-  throw new Error("dit mag niet gebeuren (validatie is mis gegaan)");
+    if (user.id)
+        return {_id: user.id};
+    else if (user.username)
+        return {username: user.username};
+    else if (user.email)
+        return {"emails.address": user.email};
+    throw new Error("mag niet gebeuren (validatie heeft iets gemist)");
 };
 
 var userQueryValidator = Match.Where(function (user) {
-  check(user, {
-    id: Match.Optional(String),
-    username: Match.Optional(String),
-    email: Match.Optional(String)
-  });
-  if (_.keys(user).length !== 1)
-    throw new Match.Error("User property must have exactly one field");
-  return true;
+    check(user, {
+        id: Match.Optional(String),
+        username: Match.Optional(String),
+        email: Match.Optional(String)
+    });
+    if (_.keys(user).length !== 1)
+        throw new Match.Error("Gebruiker eigenschap mag slechts een veld hebben.");
+    return true;
 });
 
 // Step 1 of SRP password exchange. This puts an `M` value in the
@@ -42,58 +41,58 @@ var userQueryValidator = Match.Where(function (user) {
 //   salt: random string ID
 //   B: hex encoded int. server's public key for this exchange
 Meteor.methods({beginPasswordExchange: function (request) {
-  check(request, {
-    user: userQueryValidator,
-    A: String
-  });
-  var selector = selectorFromUserQuery(request.user);
+    check(request, {
+        user: userQueryValidator,
+        A: String
+    });
+    var selector = selectorFromUserQuery(request.user);
 
-  var user = Meteor.users.findOne(selector);
-  if (!user)
-    throw new Meteor.Error(403, "Gebruiker niet gevonden.");
+    var user = Meteor.users.findOne(selector);
+    if (!user)
+        throw new Meteor.Error(403, "Gebruiker niet gevonden");
 
-  if (!user.services || !user.services.password ||
-      !user.services.password.srp)
-    throw new Meteor.Error(403, "Gebruiker heeft geen wachtwoord gezet.");
+    if (!user.services || !user.services.password ||
+        !user.services.password.srp)
+        throw new Meteor.Error(403, "Gebruiker heeft geen wachtwoord gezet");
 
-  var verifier = user.services.password.srp;
-  var srp = new Meteor._srp.Server(verifier);
-  var challenge = srp.issueChallenge({A: request.A});
+    var verifier = user.services.password.srp;
+    var srp = new Meteor._srp.Server(verifier);
+    var challenge = srp.issueChallenge({A: request.A});
 
-  // save off results in the current session so we can verify them
-  // later.
-  this._sessionData.srpChallenge =
+    // save off results in the current session so we can verify them
+    // later.
+    this._sessionData.srpChallenge =
     { userId: user._id, M: srp.M, HAMK: srp.HAMK };
 
-  return challenge;
+    return challenge;
 }});
 
 // Handler to login with password via SRP. Checks the `M` value set by
 // beginPasswordExchange.
 Accounts.registerLoginHandler(function (options) {
-  if (!options.srp)
-    return undefined; // don't handle
-  check(options.srp, {M: String});
+    if (!options.srp)
+        return undefined; // don't handle
+    check(options.srp, {M: String});
 
-  // we're always called from within a 'login' method, so this should
-  // be safe.
-  var currentInvocation = Meteor._CurrentInvocation.get();
-  var serialized = currentInvocation._sessionData.srpChallenge;
-  if (!serialized || serialized.M !== options.srp.M)
-    throw new Meteor.Error(403, "Onjuist wachtwoord.");
-  // Only can use challenges once.
-  delete currentInvocation._sessionData.srpChallenge;
+    // we're always called from within a 'login' method, so this should
+    // be safe.
+    var currentInvocation = Meteor._CurrentInvocation.get();
+    var serialized = currentInvocation._sessionData.srpChallenge;
+    if (!serialized || serialized.M !== options.srp.M)
+        throw new Meteor.Error(403, "Onjuist wachtwoord");
+    // Only can use challenges once.
+    delete currentInvocation._sessionData.srpChallenge;
 
-  var userId = serialized.userId;
-  var user = Meteor.users.findOne(userId);
-  // Was the user deleted since the start of this challenge?
-  if (!user)
-    throw new Meteor.Error(403, "Gebruiker niet gevonden.");
-  var stampedLoginToken = Accounts._generateStampedLoginToken();
-  Meteor.users.update(
-    userId, {$push: {'services.resume.loginTokens': stampedLoginToken}});
+    var userId = serialized.userId;
+    var user = Meteor.users.findOne(userId);
+    // Was the user deleted since the start of this challenge?
+    if (!user)
+        throw new Meteor.Error(403, "Gebruiker niet gevonden");
+    var stampedLoginToken = Accounts._generateStampedLoginToken();
+    Meteor.users.update(
+        userId, {$push: {'services.resume.loginTokens': stampedLoginToken}});
 
-  return {token: stampedLoginToken.token, id: userId, HAMK: serialized.HAMK};
+    return {token: stampedLoginToken.token, id: userId, HAMK: serialized.HAMK};
 });
 
 // Handler to login with plaintext password.
@@ -105,34 +104,34 @@ Accounts.registerLoginHandler(function (options) {
 // Also, it might be nice if servers could turn this off. Or maybe it
 // should be opt-in, not opt-out? Accounts.config option?
 Accounts.registerLoginHandler(function (options) {
-  if (!options.password || !options.user)
-    return undefined; // don't handle
+    if (!options.password || !options.user)
+        return undefined; // don't handle
 
-  check(options, {user: userQueryValidator, password: String});
+    check(options, {user: userQueryValidator, password: String});
 
-  var selector = selectorFromUserQuery(options.user);
-  var user = Meteor.users.findOne(selector);
-  if (!user)
-    throw new Meteor.Error(403, "Gebruiker niet gevonden.");
+    var selector = selectorFromUserQuery(options.user);
+    var user = Meteor.users.findOne(selector);
+    if (!user)
+        throw new Meteor.Error(403, "Gebruiker niet gevonden");
 
-  if (!user.services || !user.services.password ||
-      !user.services.password.srp)
-    throw new Meteor.Error(403, "Gebruiker heeft geen wachtwoord gezet.");
+    if (!user.services || !user.services.password ||
+        !user.services.password.srp)
+        throw new Meteor.Error(403, "Gebruiker heeft geen wachtwoord gezet");
 
-  // Just check the verifier output when the same identity and salt
-  // are passed. Don't bother with a full exchange.
-  var verifier = user.services.password.srp;
-  var newVerifier = Meteor._srp.generateVerifier(options.password, {
-    identity: verifier.identity, salt: verifier.salt});
+    // Just check the verifier output when the same identity and salt
+    // are passed. Don't bother with a full exchange.
+    var verifier = user.services.password.srp;
+    var newVerifier = Meteor._srp.generateVerifier(options.password, {
+        identity: verifier.identity, salt: verifier.salt});
 
-  if (verifier.verifier !== newVerifier.verifier)
-    throw new Meteor.Error(403, "Onjuist wachtwoord.");
+    if (verifier.verifier !== newVerifier.verifier)
+        throw new Meteor.Error(403, "Onjuist wachtwoord");
 
-  var stampedLoginToken = Accounts._generateStampedLoginToken();
-  Meteor.users.update(
-    user._id, {$push: {'services.resume.loginTokens': stampedLoginToken}});
+    var stampedLoginToken = Accounts._generateStampedLoginToken();
+    Meteor.users.update(
+        user._id, {$push: {'services.resume.loginTokens': stampedLoginToken}});
 
-  return {token: stampedLoginToken.token, id: user._id};
+    return {token: stampedLoginToken.token, id: user._id};
 });
 
 
@@ -143,54 +142,54 @@ Accounts.registerLoginHandler(function (options) {
 // Let the user change their own password if they know the old
 // password. Checks the `M` value set by beginPasswordExchange.
 Meteor.methods({changePassword: function (options) {
-  if (!this.userId)
-    throw new Meteor.Error(401, "Moet ingelogd zijn.");
-  check(options, {
-    // If options.M is set, it means we went through a challenge with the old
-    // password. For now, we don't allow changePassword without knowing the old
-    // password.
-    M: String,
-    srp: Match.Optional(Meteor._srp.matchVerifier),
-    password: Match.Optional(String)
-  });
+    if (!this.userId)
+        throw new Meteor.Error(401, "Moet ingelogd zijn");
+    check(options, {
+        // If options.M is set, it means we went through a challenge with the old
+        // password. For now, we don't allow changePassword without knowing the old
+        // password.
+        M: String,
+        srp: Match.Optional(Meteor._srp.matchVerifier),
+        password: Match.Optional(String)
+    });
 
-  var serialized = this._sessionData.srpChallenge;
-  if (!serialized || serialized.M !== options.M)
-    throw new Meteor.Error(403, "Onjuist wachtwoord");
-  if (serialized.userId !== this.userId)
+    var serialized = this._sessionData.srpChallenge;
+    if (!serialized || serialized.M !== options.M)
+        throw new Meteor.Error(403, "Onjuist wachtwoord");
+    if (serialized.userId !== this.userId)
     // No monkey business!
-    throw new Meteor.Error(403, "Incorrect wachtwoord");
-  // Only can use challenges once.
-  delete this._sessionData.srpChallenge;
+        throw new Meteor.Error(403, "Onjuist wachtwoord");
+    // Only can use challenges once.
+    delete this._sessionData.srpChallenge;
 
-  var verifier = options.srp;
-  if (!verifier && options.password) {
-    verifier = Meteor._srp.generateVerifier(options.password);
-  }
-  if (!verifier)
-    throw new Meteor.Error(400, "Onjuiste verificatie sleutel");
+    var verifier = options.srp;
+    if (!verifier && options.password) {
+        verifier = Meteor._srp.generateVerifier(options.password);
+    }
+    if (!verifier)
+        throw new Meteor.Error(400, "Onjuiste verifier");
 
-  // XXX this should invalidate all login tokens other than the current one
-  // (or it should assign a new login token, replacing existing ones)
-  Meteor.users.update({_id: this.userId},
-                      {$set: {'services.password.srp': verifier}});
+    // XXX this should invalidate all login tokens other than the current one
+    // (or it should assign a new login token, replacing existing ones)
+    Meteor.users.update({_id: this.userId},
+        {$set: {'services.password.srp': verifier}});
 
-  var ret = {passwordChanged: true};
-  if (serialized)
-    ret.HAMK = serialized.HAMK;
-  return ret;
+    var ret = {passwordChanged: true};
+    if (serialized)
+        ret.HAMK = serialized.HAMK;
+    return ret;
 }});
 
 
 // Force change the users password.
 Accounts.setPassword = function (userId, newPassword) {
-  var user = Meteor.users.findOne(userId);
-  if (!user)
-    throw new Meteor.Error(403, "Gebruiker niet gevonden.");
-  var newVerifier = Meteor._srp.generateVerifier(newPassword);
+    var user = Meteor.users.findOne(userId);
+    if (!user)
+        throw new Meteor.Error(403, "Gebruiker niet gevonden");
+    var newVerifier = Meteor._srp.generateVerifier(newPassword);
 
-  Meteor.users.update({_id: user._id}, {
-    $set: {'services.password.srp': newVerifier}});
+    Meteor.users.update({_id: user._id}, {
+        $set: {'services.password.srp': newVerifier}});
 };
 
 
@@ -201,46 +200,45 @@ Accounts.setPassword = function (userId, newPassword) {
 // Method called by a user to request a password reset email. This is
 // the start of the reset process.
 Meteor.methods({forgotPassword: function (options) {
+    check(options, {email: String});
 
-  check(options, {email: String});
+    var user = Meteor.users.findOne({"emails.address": options.email});
+    if (!user)
+        throw new Meteor.Error(403, "Gebruiker niet gevonden");
 
-  var user = Meteor.users.findOne({"emails.address": options.email});
-  if (!user)
-    throw new Meteor.Error(403, "Gebruiker niet gevonden.");
-
-  Accounts.sendResetPasswordEmail(user._id, options.email);
+    Accounts.sendResetPasswordEmail(user._id, options.email);
 }});
 
 // send the user an email with a link that when opened allows the user
 // to set a new password, without the old password.
 Accounts.sendResetPasswordEmail = function (userId, email) {
-  // Make sure the user exists, and email is one of their addresses.
-  var user = Meteor.users.findOne(userId);
-  if (!user)
-    throw new Error("Kan de gebruiker niet vinden.");
-  // pick the first email if we weren't passed an email.
-  if (!email && user.emails && user.emails[0])
-    email = user.emails[0].address;
-  // make sure we have a valid email
-  if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
-    throw new Error("Niet bestaand email adres voor gebruiker.");
+    // Make sure the user exists, and email is one of their addresses.
+    var user = Meteor.users.findOne(userId);
+    if (!user)
+        throw new Error("Kan de gebruiker niet vinden");
+    // pick the first email if we weren't passed an email.
+    if (!email && user.emails && user.emails[0])
+        email = user.emails[0].address;
+    // make sure we have a valid email
+    if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
+        throw new Error("Dit email adres bestaat niet voor deze gebruiker.");
 
-  var token = Random.id();
-  var when = +(new Date);
-  Meteor.users.update(userId, {$set: {
-    "services.password.reset": {
-      token: token,
-      email: email,
-      when: when
-    }
-  }});
+    var token = Random.id();
+    var when = +(new Date);
+    Meteor.users.update(userId, {$set: {
+        "services.password.reset": {
+            token: token,
+            email: email,
+            when: when
+        }
+    }});
 
-  var resetPasswordUrl = Accounts.urls.resetPassword(token);
-  Email.send({
-    to: email,
-    from: Accounts.emailTemplates.from,
-    subject: Accounts.emailTemplates.resetPassword.subject(user),
-    text: Accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl)});
+    var resetPasswordUrl = Accounts.urls.resetPassword(token);
+    Email.send({
+        to: email,
+        from: Accounts.emailTemplates.from,
+        subject: Accounts.emailTemplates.resetPassword.subject(user),
+        text: Accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl)});
 };
 
 // send the user an email informing them that their account was created, with
@@ -251,71 +249,71 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
 // This is not called automatically, it must be called manually if you
 // want to use enrollment emails.
 Accounts.sendEnrollmentEmail = function (userId, email) {
-  // XXX refactor! This is basically identical to sendResetPasswordEmail.
+    // XXX refactor! This is basically identical to sendResetPasswordEmail.
 
-  // Make sure the user exists, and email is in their addresses.
-  var user = Meteor.users.findOne(userId);
-  if (!user)
-    throw new Error("Kan de gebruiker niet vinden.");
-  // pick the first email if we weren't passed an email.
-  if (!email && user.emails && user.emails[0])
-    email = user.emails[0].address;
-  // make sure we have a valid email
-  if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
-    throw new Error("Niet bestaand email adres voor de gebruiker.");
+    // Make sure the user exists, and email is in their addresses.
+    var user = Meteor.users.findOne(userId);
+    if (!user)
+        throw new Error("Kan de gebruiker niet vinden");
+    // pick the first email if we weren't passed an email.
+    if (!email && user.emails && user.emails[0])
+        email = user.emails[0].address;
+    // make sure we have a valid email
+    if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
+        throw new Error("Dit email adres bestaat niet voor deze gebruiker.");
 
 
-  var token = Random.id();
-  var when = +(new Date);
-  Meteor.users.update(userId, {$set: {
-    "services.password.reset": {
-      token: token,
-      email: email,
-      when: when
-    }
-  }});
+    var token = Random.id();
+    var when = +(new Date);
+    Meteor.users.update(userId, {$set: {
+        "services.password.reset": {
+            token: token,
+            email: email,
+            when: when
+        }
+    }});
 
-  var enrollAccountUrl = Accounts.urls.enrollAccount(token);
-  Email.send({
-    to: email,
-    from: Accounts.emailTemplates.from,
-    subject: Accounts.emailTemplates.enrollAccount.subject(user),
-    text: Accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl)
-  });
+    var enrollAccountUrl = Accounts.urls.enrollAccount(token);
+    Email.send({
+        to: email,
+        from: Accounts.emailTemplates.from,
+        subject: Accounts.emailTemplates.enrollAccount.subject(user),
+        text: Accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl)
+    });
 };
 
 
 // Take token from sendResetPasswordEmail or sendEnrollmentEmail, change
 // the users password, and log them in.
 Meteor.methods({resetPassword: function (token, newVerifier) {
-  check(token, String);
-  check(newVerifier, Meteor._srp.matchVerifier);
+    check(token, String);
+    check(newVerifier, Meteor._srp.matchVerifier);
 
-  var user = Meteor.users.findOne({
-    "services.password.reset.token": ""+token});
-  if (!user)
-    throw new Meteor.Error(403, "Token is verlopen.");
-  var email = user.services.password.reset.email;
-  if (!_.include(_.pluck(user.emails || [], 'address'), email))
-    throw new Meteor.Error(403, "Token heeft onjuist email adres.");
+    var user = Meteor.users.findOne({
+        "services.password.reset.token": ""+token});
+    if (!user)
+        throw new Meteor.Error(403, "Token is verlopen");
+    var email = user.services.password.reset.email;
+    if (!_.include(_.pluck(user.emails || [], 'address'), email))
+        throw new Meteor.Error(403, "Token heeft een onjuist email adres");
 
-  var stampedLoginToken = Accounts._generateStampedLoginToken();
+    var stampedLoginToken = Accounts._generateStampedLoginToken();
 
-  // Update the user record by:
-  // - Changing the password verifier to the new one
-  // - Replacing all valid login tokens with new ones (changing
-  //   password should invalidate existing sessions).
-  // - Forgetting about the reset token that was just used
-  // - Verifying their email, since they got the password reset via email.
-  Meteor.users.update({_id: user._id, 'emails.address': email}, {
-    $set: {'services.password.srp': newVerifier,
-           'services.resume.loginTokens': [stampedLoginToken],
-           'emails.$.verified': true},
-    $unset: {'services.password.reset': 1}
-  });
+    // Update the user record by:
+    // - Changing the password verifier to the new one
+    // - Replacing all valid login tokens with new ones (changing
+    //   password should invalidate existing sessions).
+    // - Forgetting about the reset token that was just used
+    // - Verifying their email, since they got the password reset via email.
+    Meteor.users.update({_id: user._id, 'emails.address': email}, {
+        $set: {'services.password.srp': newVerifier,
+            'services.resume.loginTokens': [stampedLoginToken],
+            'emails.$.verified': true},
+        $unset: {'services.password.reset': 1}
+    });
 
-  this.setUserId(user._id);
-  return {token: stampedLoginToken.token, id: user._id};
+    this.setUserId(user._id);
+    return {token: stampedLoginToken.token, id: user._id};
 }});
 
 ///
@@ -326,82 +324,82 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
 // send the user an email with a link that when opened marks that
 // address as verified
 Accounts.sendVerificationEmail = function (userId, address) {
-  // XXX Also generate a link using which someone can delete this
-  // account if they own said address but weren't those who created
-  // this account.
+    // XXX Also generate a link using which someone can delete this
+    // account if they own said address but weren't those who created
+    // this account.
 
-  // Make sure the user exists, and address is one of their addresses.
-  var user = Meteor.users.findOne(userId);
-  if (!user)
-    throw new Error("Kan de gebruiker niet vinden.");
-  // pick the first unverified address if we weren't passed an address.
-  if (!address) {
-    var email = _.find(user.emails || [],
-                       function (e) { return !e.verified; });
-    address = (email || {}).address;
-  }
-  // make sure we have a valid address
-  if (!address || !_.contains(_.pluck(user.emails || [], 'address'), address))
-    throw new Error("Niet bestaand email adres voor de gebruiker.");
+    // Make sure the user exists, and address is one of their addresses.
+    var user = Meteor.users.findOne(userId);
+    if (!user)
+        throw new Error("Kan de gebruiker niet vinden");
+    // pick the first unverified address if we weren't passed an address.
+    if (!address) {
+        var email = _.find(user.emails || [],
+            function (e) { return !e.verified; });
+        address = (email || {}).address;
+    }
+    // make sure we have a valid address
+    if (!address || !_.contains(_.pluck(user.emails || [], 'address'), address))
+        throw new Error("Dit email adres bestaat niet voor deze gebruiker.");
 
 
-  var tokenRecord = {
-    token: Random.id(),
-    address: address,
-    when: +(new Date)};
-  Meteor.users.update(
-    {_id: userId},
-    {$push: {'services.email.verificationTokens': tokenRecord}});
+    var tokenRecord = {
+        token: Random.id(),
+        address: address,
+        when: +(new Date)};
+    Meteor.users.update(
+        {_id: userId},
+        {$push: {'services.email.verificationTokens': tokenRecord}});
 
-  var verifyEmailUrl = Accounts.urls.verifyEmail(tokenRecord.token);
-  Email.send({
-    to: address,
-    from: Accounts.emailTemplates.from,
-    subject: Accounts.emailTemplates.verifyEmail.subject(user),
-    text: Accounts.emailTemplates.verifyEmail.text(user, verifyEmailUrl)
-  });
+    var verifyEmailUrl = Accounts.urls.verifyEmail(tokenRecord.token);
+    Email.send({
+        to: address,
+        from: Accounts.emailTemplates.from,
+        subject: Accounts.emailTemplates.verifyEmail.subject(user),
+        text: Accounts.emailTemplates.verifyEmail.text(user, verifyEmailUrl)
+    });
 };
 
 // Take token from sendVerificationEmail, mark the email as verified,
 // and log them in.
 Meteor.methods({verifyEmail: function (token) {
-  check(token, String);
+    check(token, String);
 
-  var user = Meteor.users.findOne(
-    {'services.email.verificationTokens.token': token});
-  if (!user)
-    throw new Meteor.Error(403, "Controle email link is verlopen.");
+    var user = Meteor.users.findOne(
+        {'services.email.verificationTokens.token': token});
+    if (!user)
+        throw new Meteor.Error(403, "Verificatie email link is verlopen");
 
-  var tokenRecord = _.find(user.services.email.verificationTokens,
-                           function (t) {
-                             return t.token == token;
-                           });
-  if (!tokenRecord)
-    throw new Meteor.Error(403, "Controle email link is verlopen.");
+    var tokenRecord = _.find(user.services.email.verificationTokens,
+        function (t) {
+            return t.token == token;
+        });
+    if (!tokenRecord)
+        throw new Meteor.Error(403, "Verificatie email link is verlopen");
 
-  var emailsRecord = _.find(user.emails, function (e) {
-    return e.address == tokenRecord.address;
-  });
-  if (!emailsRecord)
-    throw new Meteor.Error(403, "Controle email link is voor niet bestaand adres.");
+    var emailsRecord = _.find(user.emails, function (e) {
+        return e.address == tokenRecord.address;
+    });
+    if (!emailsRecord)
+        throw new Meteor.Error(403, "Verificatie email link is voor een onbekend adres");
 
-  // Log the user in with a new login token.
-  var stampedLoginToken = Accounts._generateStampedLoginToken();
+    // Log the user in with a new login token.
+    var stampedLoginToken = Accounts._generateStampedLoginToken();
 
-  // By including the address in the query, we can use 'emails.$' in the
-  // modifier to get a reference to the specific object in the emails
-  // array. See
-  // http://www.mongodb.org/display/DOCS/Updating/#Updating-The%24positionaloperator)
-  // http://www.mongodb.org/display/DOCS/Updating#Updating-%24pull
-  Meteor.users.update(
-    {_id: user._id,
-     'emails.address': tokenRecord.address},
-    {$set: {'emails.$.verified': true},
-     $pull: {'services.email.verificationTokens': {token: token}},
-     $push: {'services.resume.loginTokens': stampedLoginToken}});
+    // By including the address in the query, we can use 'emails.$' in the
+    // modifier to get a reference to the specific object in the emails
+    // array. See
+    // http://www.mongodb.org/display/DOCS/Updating/#Updating-The%24positionaloperator)
+    // http://www.mongodb.org/display/DOCS/Updating#Updating-%24pull
+    Meteor.users.update(
+        {_id: user._id,
+            'emails.address': tokenRecord.address},
+        {$set: {'emails.$.verified': true},
+            $pull: {'services.email.verificationTokens': {token: token}},
+            $push: {'services.resume.loginTokens': stampedLoginToken}});
 
-  this.setUserId(user._id);
-  return {token: stampedLoginToken.token, id: user._id};
+    this.setUserId(user._id);
+    return {token: stampedLoginToken.token, id: user._id};
 }});
 
 
@@ -417,65 +415,65 @@ Meteor.methods({verifyEmail: function (token) {
 // returns an object with id: userId, and (if options.generateLoginToken is
 // set) token: loginToken.
 var createUser = function (options) {
-  // Unknown keys allowed, because a onCreateUserHook can take arbitrary
-  // options.
-  check(options, Match.ObjectIncluding({
-    generateLoginToken: Boolean,
-    username: Match.Optional(String),
-    email: Match.Optional(String),
-    password: Match.Optional(String),
-    srp: Match.Optional(Meteor._srp.matchVerifier)
-  }));
+    // Unknown keys allowed, because a onCreateUserHook can take arbitrary
+    // options.
+    check(options, Match.ObjectIncluding({
+        generateLoginToken: Boolean,
+        username: Match.Optional(String),
+        email: Match.Optional(String),
+        password: Match.Optional(String),
+        srp: Match.Optional(Meteor._srp.matchVerifier)
+    }));
 
-  var username = options.username;
-  var email = options.email;
-  if (!username && !email)
-    throw new Meteor.Error(400, "Gebruikersnaam of email adres moet gezet worden.");
+    var username = options.username;
+    var email = options.email;
+    if (!username && !email)
+        throw new Meteor.Error(400, "Gebruikersnaam of email moet gezet worden");
 
-  // Raw password. The meteor client doesn't send this, but a DDP
-  // client that didn't implement SRP could send this. This should
-  // only be done over SSL.
-  if (options.password) {
+    // Raw password. The meteor client doesn't send this, but a DDP
+    // client that didn't implement SRP could send this. This should
+    // only be done over SSL.
+    if (options.password) {
+        if (options.srp)
+            throw new Meteor.Error(400, "Geef niet en het wachtwoord en srp in opties");
+        options.srp = Meteor._srp.generateVerifier(options.password);
+    }
+
+    var user = {services: {}};
     if (options.srp)
-      throw new Meteor.Error(400, "Niet toegestaan om zowel wachtwoord als srp door te geven in options.");
-    options.srp = Meteor._srp.generateVerifier(options.password);
-  }
+        user.services.password = {srp: options.srp}; // XXX validate verifier
+    if (username)
+        user.username = username;
+    if (email)
+        user.emails = [{address: email, verified: false}];
 
-  var user = {services: {}};
-  if (options.srp)
-    user.services.password = {srp: options.srp}; // XXX validate verifier
-  if (username)
-    user.username = username;
-  if (email)
-    user.emails = [{address: email, verified: false}];
-
-  return Accounts.insertUserDoc(options, user);
+    return Accounts.insertUserDoc(options, user);
 };
 
 // method for create user. Requests come from the client.
 Meteor.methods({createUser: function (options) {
-  // createUser() above does more checking.
-  check(options, Object);
-  options.generateLoginToken = true;
-  if (Accounts._options.forbidClientAccountCreation)
-    throw new Meteor.Error(403, "Aanmeldingen niet toegestaan.");
+    // createUser() above does more checking.
+    check(options, Object);
+    options.generateLoginToken = true;
+    if (Accounts._options.forbidClientAccountCreation)
+        throw new Meteor.Error(403, "Aanmaken account verboden");
 
-  // Create user. result contains id and token.
-  var result = createUser(options);
-  // safety belt. createUser is supposed to throw on error. send 500 error
-  // instead of sending a verification email with empty userid.
-  if (!result.id)
-    throw new Error("createUser heeft gefaald bij het invoeren van een nieuwe gebruiker.");
+    // Create user. result contains id and token.
+    var result = createUser(options);
+    // safety belt. createUser is supposed to throw on error. send 500 error
+    // instead of sending a verification email with empty userid.
+    if (!result.id)
+        throw new Error("createUser heeft geen gebruiker kunnen inserten");
 
-  // If `Accounts._options.sendVerificationEmail` is set, register
-  // a token to verify the user's primary email, and send it to
-  // that address.
-  if (options.email && Accounts._options.sendVerificationEmail)
-    Accounts.sendVerificationEmail(result.id, options.email);
+    // If `Accounts._options.sendVerificationEmail` is set, register
+    // a token to verify the user's primary email, and send it to
+    // that address.
+    if (options.email && Accounts._options.sendVerificationEmail)
+        Accounts.sendVerificationEmail(result.id, options.email);
 
-  // client gets logged in as the new user afterwards.
-  this.setUserId(result.id);
-  return result;
+    // client gets logged in as the new user afterwards.
+    this.setUserId(result.id);
+    return result;
 }});
 
 // Create user directly on the server.
@@ -490,23 +488,23 @@ Meteor.methods({createUser: function (options) {
 // true", which we want to prevent the client from setting, but which a custom
 // method calling Accounts.createUser could set?
 Accounts.createUser = function (options, callback) {
-  options = _.clone(options);
-  options.generateLoginToken = false;
+    options = _.clone(options);
+    options.generateLoginToken = false;
 
-  // XXX allow an optional callback?
-  if (callback) {
-    throw new Error("Accounts.createUser met callback wordt nog niet door de server ondersteunt.");
-  }
+    // XXX allow an optional callback?
+    if (callback) {
+        throw new Error("Accounts.createUser met callback wordt nog niet ondersteunt door de server.");
+    }
 
-  var userId = createUser(options).id;
+    var userId = createUser(options).id;
 
-  return userId;
+    return userId;
 };
 
 ///
 /// PASSWORD-SPECIFIC INDEXES ON USERS
 ///
 Meteor.users._ensureIndex('emails.validationTokens.token',
-                          {unique: 1, sparse: 1});
+    {unique: 1, sparse: 1});
 Meteor.users._ensureIndex('emails.password.reset.token',
-                          {unique: 1, sparse: 1});
+    {unique: 1, sparse: 1});
