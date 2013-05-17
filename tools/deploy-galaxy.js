@@ -199,8 +199,8 @@ exports.logs = function (options) {
 
   var ok = logReader.registerStore('logs', {
     update: function (msg) {
-      // Ignore all messages but 'added'
-      if (msg.msg !== 'added')
+      // Ignore all messages but 'changed'
+      if (msg.msg !== 'changed')
         return;
       var obj = msg.fields.obj;
       obj = Log.parse(obj);
@@ -211,7 +211,8 @@ exports.logs = function (options) {
   if (!ok)
     throw new Error("Couldn't connect to logs mongodb.");
 
-  prettySub(logReader, "logsForApp", [options.app], {
+  prettySub(logReader, "logsForApp", [options.app,
+                                      {streaming: options.streaming}], {
     "no-such-app": "No such app: " + options.app
   });
 

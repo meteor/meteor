@@ -833,10 +833,9 @@ Fiber(function () {
     name: "logs",
     help: "Show logs for specified site",
     func: function (argv) {
-      if (_.isString(argv.f))
-        argv._.unshift(argv.f);
+      argv = require('optimist').boolean('f').argv;
 
-      if (argv.help || argv._.length < 1 || argv._.length > 2) {
+      if (argv.help || argv._.length !== 2) {
         process.stdout.write(
           "Usage: meteor logs [-f] <site>\n" +
             "\n" +
@@ -853,11 +852,11 @@ Fiber(function () {
         var deployGalaxy = require('./deploy-galaxy.js');
         deployGalaxy.logs({
           context: context,
-          app: argv._[0],
-          streaming: argv.f
+          app: argv._[1],
+          streaming: !!argv.f
         });
       } else {
-        deploy.logs(argv._[0]);
+        deploy.logs(argv._[1]);
       }
     }
   });
