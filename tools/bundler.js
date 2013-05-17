@@ -684,7 +684,6 @@ _.extend(ClientTarget.prototype, {
           return;
 
         var absPath = path.resolve(dir, item);
-        var assetPath = path.join(dir, item);
         if (fs.statSync(absPath).isDirectory()) {
           walk(absPath);
           return;
