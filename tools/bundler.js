@@ -1497,6 +1497,12 @@ exports.bundle = function (appDir, outputPath, options) {
       });
     }
 
+    if (! controlProgram) {
+      var target = makeServerTarget("ctl");
+      targets["ctl"] = target;
+      controlProgram = "ctl";
+    }
+
     // Step 2: sort the list so that programs are built first (because
     // when we build the servers we need to be able to reference the
     // clients)

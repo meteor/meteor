@@ -57,13 +57,13 @@ var prettyCall = function (galaxy, name, args, messages) {
 };
 
 
-exports.deleteService = function (service) {
+exports.deleteApp = function (app) {
   throw new Error("Not implemented");
 };
 
 // options:
 // - context
-// - service
+// - app
 // - appDir
 // - settings
 // - bundleOptions
@@ -71,7 +71,7 @@ exports.deploy = function (options) {
   var galaxy = getGalaxy(options.context);
   var Meteor = getMeteor(options.context);
 
-  process.stdout.write('Deploying ' + options.service + '. Bundling...\n');
+  process.stdout.write('Deploying ' + options.app + '. Bundling...\n');
   var tmpdir = files.mkdtemp('deploy');
   var buildDir = path.join(tmpdir, 'build');
   var topLevelDirName = path.basename(options.appDir);
@@ -102,7 +102,7 @@ exports.deploy = function (options) {
 
   var created = true;
   try {
-    galaxy.call('createService', options.service);
+    galaxy.call('createApp', options.app);
   } catch (e) {
     if (e instanceof Meteor.Error && e.error === 'already-exists') {
       // Cool, it already exists. No problem.
@@ -113,8 +113,8 @@ exports.deploy = function (options) {
   }
 
   // Get the upload information from Galaxy. It's a surprise if this
-  // fails (we already know the service exists.)
-  var info = prettyCall(galaxy, 'beginUploadStar', [options.service]);
+  // fails (we already know the app exists.)
+  var info = prettyCall(galaxy, 'beginUploadStar', [options.app]);
 
   // Upload
   // XXX copied from galaxy/tool/galaxy.js
@@ -149,9 +149,9 @@ exports.deploy = function (options) {
   });
 
   if (created)
-    process.stderr.write(options.service + ": created service\n");
+    process.stderr.write(options.app + ": created app\n");
 
-  process.stderr.write(options.service + ": " +
+  process.stderr.write(options.app + ": " +
                        "pushed revision " + result.serial + "\n");
   // Close the connection to Galaxy (otherwise Node will continue running).
   galaxy.close();

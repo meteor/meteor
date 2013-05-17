@@ -779,7 +779,7 @@ Fiber(function () {
 
       if (new_argv.delete) {
         if (useGalaxy)
-          deployGalaxy.deleteService(site);
+          deployGalaxy.deleteApp(site);
         else
           deploy.delete_app(site);
       } else {
@@ -795,7 +795,7 @@ Fiber(function () {
           }
 
           deployGalaxy.deploy({
-            service: site,
+            app: site,
             appDir: context.appDir,
             settings: settings,
             context: context,
