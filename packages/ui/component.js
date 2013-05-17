@@ -1,3 +1,197 @@
+Component = function (args) {
+  this.stage = Component.UNADDED;
+
+  this._uniqueIdCounter = 1;
+
+  // UNINITED Components get these:
+  this._args = args;
+  this._argDeps = {};
+
+  // INITED Components get these:
+  this.key = '';
+  this.parent = null;
+  this.children = {};
+
+  // BUILT Components get these:
+  this._start = null; // first Component or Node
+  this._end = null; // last Component or Node
+};
+
+// life stages of a Component
+_.extend(Component, {
+  UNADDED: ['UNADDED'],
+  ADDED: ['ADDED'],
+  BUILT: ['BUILT'],
+  DESTROYED: ['DESTROYED']
+});
+
+_.extend(Component.prototype, {
+  _requireStage: function (stage) {
+    if (this.stage !== stage)
+      throw new Error("Need a " + stage + " Component, found a " +
+                      this.stage + " Component.");
+  },
+  _added: function (key, parent) {
+    this._requireStage(Component.UNADDED);
+    this.key = key;
+    this.parent = parent;
+    this.stage = Component.ADDED;
+  },
+  destroy: function () {
+    // Leaves the DOM in place
+
+    if (this.stage === Component.DESTROYED)
+      return;
+
+    var oldStage = this.stage;
+    this.stage = Component.DESTROYED;
+
+    if (oldStage === Component.UNADDED)
+      return;
+
+    // maybe GC sooner
+    this._start = null;
+    this._end = null;
+
+    this.destroyed();
+
+    var children = this.children;
+    for (var k in children)
+      if (children.hasOwnProperty(k))
+        children[k].destroy();
+
+    if (this.parent)
+      delete this.parent.children[this.key];
+
+    this.children = {};
+  }
+});
+
+// Once the Component is built, if the Component implementation
+// modifies the DOM composition of the Component, it must specify
+// the new bounds using some combination of these.
+_.extend(Component.prototype, {
+  setStart: function (start) {
+    this._requireStage(Component.BUILT);
+
+    if (! ((start instanceof Component &&
+            start.stage === Component.BUILT) ||
+           (start && start.nodeType)))
+      throw new Error("start must be a built Component or a Node");
+
+    this._start = start;
+  },
+  setEnd: function (end) {
+    this._requireStage(Component.BUILT);
+
+    if (! ((end instanceof Component &&
+            end.stage === Component.BUILT) ||
+           (end && end.nodeType)))
+      throw new Error("end must be a built Component or a Node");
+
+    this._end = end;
+  },
+  setBounds: function (start, end) {
+    end = end || start;
+    this.setStart(start);
+    this.setEnd(end);
+  },
+  firstNode: function () {
+    this._requireStage(Component.BUILT);
+    return this._start instanceof Component ?
+      this._start.firstNode() : this._start;
+  },
+  lastNode: function () {
+    this._requireStage(Component.BUILT);
+    return this._end instanceof Component ?
+      this._end.lastNode() : this._end;
+  },
+  parentNode: function () {
+    return this.firstNode().parentNode;
+  },
+  findOne: function (selector) {
+    return DomUtils.findClipped(
+      this.parentNode(), selector,
+      this.firstNode(), this.lastNode());
+  },
+  findAll: function (selector) {
+    return DomUtils.findAllClipped(
+      this.parentNode(), selector,
+      this.firstNode(), this.lastNode());
+  }
+});
+
+_.extend(Component.prototype, {
+  getArg: function (argName) {
+    var dep = (this._argDeps.hasOwnProperty(argName) ?
+               this._argDeps[argName] :
+               (this._argDeps[argName] = new Deps.Dependency));
+    dep.depend();
+    return this._args[argName];
+  },
+  update: function (args) {
+    var oldArgs = this._args;
+    this._args = args;
+
+    var argDeps = this._argDeps;
+
+    for (var k in args) {
+      if (args.hasOwnProperty(k) &&
+          argDeps.hasOwnProperty(k) &&
+          ! EJSON.equal(args[k], oldArgs[k])) {
+        argDeps[k].invalidate();
+        delete oldArgs[k];
+      }
+    }
+    for (var k in oldArgs) {
+      if (oldArgs.hasOwnProperty(k) &&
+          argDeps.hasOwnProperty(k)) {
+        argDeps[k].invalidate();
+      }
+    }
+
+    this.updated(args, oldArgs);
+  }
+});
+
+_.extend(Component.prototype, {
+  hasChild: function (key) {
+    return this.children.hasOwnProperty(key);
+  },
+  addChild: function (key, childComponent) {
+    if (key instanceof Component) {
+      // omitted key arg
+      childComponent = key;
+      key = null;
+    }
+    // omitted key, generate unique child key
+    if (key === null || typeof key === 'undefined')
+      key = "__child#" + (this._uniqueIdCounter++) + "__";
+    key = String(key);
+
+    if (! (childComponent instanceof Component))
+      throw new Error("not a Component: " + childComponent);
+
+    this._requireStage(Component.ADDED);
+    childComponent._requireStage(Component.UNADDED);
+
+    if (this.hasChild(key))
+      throw new Error("Already have a child with key: " + key);
+
+    this.children[key] = childComponent;
+
+    childComponent._added(key, this);
+  }
+});
+
+_.extend(Component.prototype, {
+  render: function (builder) {},
+  updated: function (args, oldArgs) {},
+  destroyed: function () {}
+});
+
+//////////////////////////////////////////////////
+
 
 Component = function (args) {
   this.parent = null;
@@ -280,6 +474,8 @@ _.extend(Component.prototype, {
     return '';
   }
 });
+
+////////////////////
 
 Component.extend = function (options) {
   var superClass = this;
