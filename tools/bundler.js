@@ -664,10 +664,8 @@ _.extend(ClientTarget.prototype, {
   // Add all of the files in a directory `rootDir` (and its
   // subdirectories) as static assets. `rootDir` should be an absolute
   // path. Only makes sense on clients. If provided, exclude is an
-  // array of filename regexps to exclude. If provided, assetPath is a
-  // prefix to use when computing the path for each file in the
-  // client's asset tree.
-  addAssetDir: function (rootDir, exclude, assetPathPrefix) {
+  // array of filename regexps to exclude.
+  addAssetDir: function (rootDir, exclude) {
     var self = this;
     exclude = exclude || [];
 
@@ -676,7 +674,7 @@ _.extend(ClientTarget.prototype, {
       exclude: exclude
     };
 
-    var walk = function (dir, assetPath) {
+    var walk = function (dir) {
       _.each(fs.readdirSync(dir), function (item) {
         // Skip excluded files
         var matchesAnExclude = _.any(exclude, function (pattern) {
@@ -686,20 +684,20 @@ _.extend(ClientTarget.prototype, {
           return;
 
         var absPath = path.resolve(dir, item);
-        assetPath = path.join(dir, item);
+        var assetPath = path.join(dir, item);
         if (fs.statSync(absPath).isDirectory()) {
-          walk(absPath, assetPath);
+          walk(absPath);
           return;
         }
 
         var f = new File({ sourcePath: absPath });
-        f.setUrlFromRelPath(assetPath);
+        f.setUrlFromRelPath(path.relative(rootDir, absPath));
         self.dependencyInfo.files[absPath] = f.hash();
         self.static.push(f);
       });
     };
 
-    walk(rootDir, assetPathPrefix || '');
+    walk(rootDir);
   },
 
   assignTargetPaths: function () {
