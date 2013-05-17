@@ -8,9 +8,7 @@
 // @param dimensions {optional Object(width, height)} The dimensions of
 //   the popup. If not passed defaults to something sane
 Accounts.oauth.initiateLogin = function(state, url, callback, dimensions) {
-  // XXX these dimensions worked well for facebook and google, but
-  // it's sort of weird to have these here. Maybe an optional
-  // argument instead?
+  // default dimensions that worked well for facebook and google
   var popup = openCenteredPopup(
     url,
     (dimensions && dimensions.width) || 650,

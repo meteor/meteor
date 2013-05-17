@@ -1,3 +1,10 @@
+Accounts.addAutopublishFields({
+  // publish all fields including access token, which can legitimately
+  // be used from the client (if transmitted over ssl or on localhost)
+  forLoggedInUser: ['services.weibo'],
+  forOtherUsers: ['services.weibo.screenName']
+});
+
 Accounts.oauth.registerService('weibo', 2, function(query) {
 
   var response = getTokenResponse(query);
@@ -33,40 +40,37 @@ var getTokenResponse = function (query) {
   if (!config)
     throw new Accounts.ConfigError("Service not configured");
 
-  var result = Meteor.http.post(
-    "https://api.weibo.com/oauth2/access_token", {params: {
-      code: query.code,
-      client_id: config.clientId,
-      client_secret: config.secret,
-      redirect_uri: Meteor.absoluteUrl("_oauth/weibo?close", {replaceLocalhost: true}),
-      grant_type: 'authorization_code'
-    }});
-
-  if (result.error) { // if the http response was an error
-    throw new Error("Failed to complete OAuth handshake with Weibo. " +
-                    "HTTP Error " + result.statusCode + ": " + result.content);
+  var response;
+  try {
+    response = Meteor.http.post(
+      "https://api.weibo.com/oauth2/access_token", {params: {
+        code: query.code,
+        client_id: config.clientId,
+        client_secret: config.secret,
+        redirect_uri: Meteor.absoluteUrl("_oauth/weibo?close", {replaceLocalhost: true}),
+        grant_type: 'authorization_code'
+      }});
+  } catch (err) {
+    throw new Error("Failed to complete OAuth handshake with Weibo. " + err.message);
   }
 
   // result.headers["content-type"] is 'text/plain;charset=UTF-8', so
   // the http package doesn't automatically populate result.data
-  result.data = JSON.parse(result.content);
+  response.data = JSON.parse(response.content);
 
-  if (result.data.error) { // if the http response was a json object with an error attribute
-    throw new Error("Failed to complete OAuth handshake with Weibo. " + result.data.error);
+  if (response.data.error) { // if the http response was a json object with an error attribute
+    throw new Error("Failed to complete OAuth handshake with Weibo. " + response.data.error);
   } else {
-    return result.data;
+    return response.data;
   }
 };
 
 var getIdentity = function (accessToken, userId) {
-  var result = Meteor.http.get(
-    "https://api.weibo.com/2/users/show.json",
-    {params: {access_token: accessToken, uid: userId}});
-
-  if (result.error) {
-    throw new Error("Failed to fetch identity from Weibo. " +
-                    "HTTP Error " + result.statusCode + ": " + result.content);
-  } else {
-    return result.data;
+  try {
+    return Meteor.http.get(
+      "https://api.weibo.com/2/users/show.json",
+      {params: {access_token: accessToken, uid: userId}}).data;
+  } catch (err) {
+    throw new Error("Failed to fetch identity from Weibo. " + err.message);
   }
 };

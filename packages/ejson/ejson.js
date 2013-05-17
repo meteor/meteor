@@ -296,15 +296,17 @@ EJSON.clone = function (v) {
     return new Date(v.getTime());
   if (EJSON.isBinary(v)) {
     ret = EJSON.newBinary(v.length);
-    for (i = 0; i < v.length; i++) {
+    for (var i = 0; i < v.length; i++) {
       ret[i] = v[i];
     }
     return ret;
   }
-  if (_.isArray(v)) {
-    ret = v.slice(0);
-    for (var i = 0; i < v.length; i++)
-      ret[i] = EJSON.clone(ret[i]);
+  if (_.isArray(v) || _.isArguments(v)) {
+    // For some reason, _.map doesn't work in this context on Opera (weird test
+    // failures).
+    ret = [];
+    for (i = 0; i < v.length; i++)
+      ret[i] = EJSON.clone(v[i]);
     return ret;
   }
   // handle general user-defined typed Objects if they have a clone method

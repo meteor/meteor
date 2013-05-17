@@ -85,6 +85,11 @@ _.extend(UniversalEventListener._impl.w3c.prototype, {
         ret.push('mouseout');
     }
 
+    if (type === 'tap') {
+      ret.push('touchmove');
+      ret.push('touchend');
+    }
+
     return ret;
   },
 
@@ -194,12 +199,22 @@ _.extend(UniversalEventListener._impl.w3c.prototype, {
          (event.currentTarget !== event.relatedTarget &&
           ! DomUtils.elementContains(
             event.currentTarget, event.relatedTarget)))) {
-      if (event.type === 'mouseover'){
+      if (event.type === 'mouseover') {
         sendUIEvent('mouseenter', event.currentTarget, false);
       }
       else if (event.type === 'mouseout') {
         sendUIEvent('mouseleave', event.currentTarget, false);
       }
+    }
+
+    if (event.type === 'touchmove') {
+      event.currentTarget._notTapping = true;
+    }
+    if (event.type === 'touchend') {
+      if (!event.currentTarget._notTapping) {
+        sendUIEvent('tap', event.currentTarget, true);
+      }
+      delete event.currentTarget._notTapping;
     }
   }
 });

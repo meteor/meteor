@@ -36,8 +36,12 @@ testAsyncMulti("httpcall - basic", [
 
       if (Meteor.isServer) {
         // test sync version
-        var result = Meteor.http.call("GET", url_prefix()+url, options);
-        callback(result.error, result);
+        try {
+          var result = Meteor.http.call("GET", url_prefix()+url, options);
+          callback(undefined, result);
+        } catch (e) {
+          callback(e, e.response);
+        }
       }
     };
 
@@ -71,23 +75,52 @@ testAsyncMulti("httpcall - errors", [
   function(test, expect) {
 
     // Accessing unknown server (should fail to make any connection)
-    Meteor.http.call("GET", "http://asfd.asfd/", expect(
-      function(error, result) {
-        test.isTrue(error);
-        test.isTrue(result);
-        test.equal(error, result.error);
-      }));
+    var unknownServerCallback = function(error, result) {
+      test.isTrue(error);
+      test.isFalse(result);
+      test.isFalse(error.response);
+    };
+    Meteor.http.call("GET", "http://asfd.asfd/", expect(unknownServerCallback));
+
+    if (Meteor.isServer) {
+      // test sync version
+      try {
+        var unknownServerResult = Meteor.http.call("GET", "http://asfd.asfd/");
+        unknownServerCallback(undefined, unknownServerResult);
+      } catch (e) {
+        unknownServerCallback(e, e.response);
+      }
+    }
 
     // Server serves 500
-    Meteor.http.call("GET", url_prefix()+"/fail", expect(
-      function(error, result) {
-        test.isTrue(error);
-        test.isTrue(result);
-        test.equal(error, result.error);
+    error500Callback = function(error, result) {
+      test.isTrue(error);
+      test.isTrue(error.message.indexOf("500") !== -1); // message has statusCode
+      test.isTrue(error.message.indexOf(
+        error.response.content.substring(0, 10)) !== -1); // message has part of content
 
-        test.equal(result.statusCode, 500);
-      }));
+      test.isTrue(result);
+      test.isTrue(error.response);
+      test.equal(result, error.response);
+      test.equal(error.response.statusCode, 500);
 
+      // in test_responder.js we make a very long response body, to make sure
+      // that we truncate messages. first of all, make sure we didn't make that
+      // message too short, so that we can be sure we're verifying that we truncate.
+      test.isTrue(error.response.content.length > 180);
+      test.isTrue(error.message.length < 180); // make sure we truncate.
+    };
+    Meteor.http.call("GET", url_prefix()+"/fail", expect(error500Callback));
+
+    if (Meteor.isServer) {
+      // test sync version
+      try {
+        var error500Result = Meteor.http.call("GET", url_prefix()+"/fail");
+        error500Callback(undefined, error500Result);
+      } catch (e) {
+        error500Callback(e, e.response);
+      }
+    }
   }
 ]);
 
@@ -95,27 +128,51 @@ testAsyncMulti("httpcall - timeout", [
   function(test, expect) {
 
     // Should time out
+    var timeoutCallback = function(error, result) {
+      test.isTrue(error);
+      test.isFalse(result);
+      test.isFalse(error.response);
+    };
+    var timeoutUrl = url_prefix()+"/slow-"+Random.id();
     Meteor.http.call(
-      "GET", url_prefix()+"/slow-"+Random.id(),
+      "GET", timeoutUrl,
       { timeout: 500 },
-      expect(function(error, result) {
-        test.isTrue(error);
-        test.equal(error, result.error);
-      }));
+      expect(timeoutCallback));
+
+    if (Meteor.isServer) {
+      // test sync version
+      try {
+        var timeoutResult = Meteor.http.call("GET", timeoutUrl, { timeout: 500 });
+        timeoutCallback(undefined, timeoutResult);
+      } catch (e) {
+        timeoutCallback(e, e.response);
+      }
+    }
 
     // Should not time out
+    var noTimeoutCallback = function(error, result) {
+      test.isFalse(error);
+      test.isTrue(result);
+      test.equal(result.statusCode, 200);
+      var data = result.data;
+      test.equal(data.url.substring(0, 4), "/foo");
+      test.equal(data.method, "GET");
+    };
+    var noTimeoutUrl = url_prefix()+"/foo-"+Random.id();
     Meteor.http.call(
-      "GET", url_prefix()+"/foo-"+Random.id(),
+      "GET", noTimeoutUrl,
       { timeout: 2000 },
-      expect(function(error, result) {
-        test.isFalse(error);
-        test.isTrue(result);
-        test.equal(result.statusCode, 200);
-        var data = result.data;
-        test.equal(data.url.substring(0, 4), "/foo");
-        test.equal(data.method, "GET");
+      expect(noTimeoutCallback));
 
-      }));
+    if (Meteor.isServer) {
+      // test sync version
+      try {
+        var noTimeoutResult = Meteor.http.call("GET", noTimeoutUrl, { timeout: 2000 });
+        noTimeoutCallback(undefined, noTimeoutResult);
+      } catch (e) {
+        noTimeoutCallback(e, e.response);
+      }
+    }
   }
 ]);
 
