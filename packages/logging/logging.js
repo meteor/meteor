@@ -45,6 +45,7 @@ var logOnClient = function (obj) {
 };
 
 _.each(['debug', 'info', 'warn', 'error'], function (level) {
+  // @param arg {String|Object}
   Log[level] = function (arg) {
     var intercepted;
     if (intercept) {
