@@ -22,7 +22,7 @@ assert.doesNotThrow(function () {
 
   // sanity check -- main.js has expected contents.
   assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8").trim(),
-                     "require('./programs/server/server.js');");
+                     "require('./programs/server/boot.js');");
   // no top level node_modules directory
   assert(!fs.existsSync(path.join(tmpOutputDir,
                                   "programs", "server", "node_modules")));
@@ -46,7 +46,7 @@ assert.doesNotThrow(function () {
 
   // sanity check -- main.js has expected contents.
   assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8").trim(),
-                     "require('./programs/server/server.js');");
+                     "require('./programs/server/boot.js');");
   // verify that contents are not minified
   var appHtml = fs.readFileSync(path.join(tmpOutputDir, "programs",
                                           "client", "app.html"));
@@ -66,11 +66,11 @@ assert.doesNotThrow(function () {
 
   // sanity check -- main.js has expected contents.
   assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8").trim(),
-                     "require('./programs/server/server.js');");
+                     "require('./programs/server/boot.js');");
   // verify that tests for the meteor package are included
   var appHtml = fs.readFileSync(path.join(tmpOutputDir, "programs",
                                           "client", "app.html"));
-  assert(/src=\"\/package-tests\/meteor.js/.test(appHtml));
+  assert(/src=\"\/packages\/meteor\.tests\.js/.test(appHtml));
 });
 
 console.log("nodeModules: 'copy'");
@@ -81,7 +81,7 @@ assert.doesNotThrow(function () {
 
   // sanity check -- main.js has expected contents.
   assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8").trim(),
-                     "require('./programs/server/server.js');");
+                     "require('./programs/server/boot.js');");
   // node_modules directory exists and is not a symlink
   assert(!fs.lstatSync(path.join(tmpOutputDir, "programs", "server", "node_modules")).isSymbolicLink());
   // node_modules contains fibers
@@ -96,7 +96,7 @@ assert.doesNotThrow(function () {
 
   // sanity check -- main.js has expected contents.
   assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8").trim(),
-                     "require('./programs/server/server.js');");
+                     "require('./programs/server/boot.js');");
   // node_modules directory exists and is a symlink
   assert(fs.lstatSync(path.join(tmpOutputDir, "programs", "server", "node_modules")).isSymbolicLink());
   // node_modules contains fibers
@@ -104,6 +104,6 @@ assert.doesNotThrow(function () {
 
   // package node_modules directory also a symlink
   assert(fs.lstatSync(path.join(
-    tmpOutputDir, "programs", "server", "npm", "livedata"))
+    tmpOutputDir, "programs", "server", "npm", "livedata", "main", "node_modules"))
          .isSymbolicLink());
 });

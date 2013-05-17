@@ -244,6 +244,7 @@ if (Meteor.isServer) {
 EOF
 
 $METEOR -p $PORT --settings='settings.json' --once >> $OUTPUT
+rm settings.js
 
 
 # prepare die.js so that we have a server that loads packages and dies
@@ -257,8 +258,6 @@ echo "... local-package-sets -- new package"
 
 mkdir -p "$TEST_TMPDIR/local-packages/a-package-named-bar/"
 cat > "$TEST_TMPDIR/local-packages/a-package-named-bar/package.js" <<EOF
-console.log("loaded a-package-named-bar");
-
 Npm.depends({gcd: '0.0.0'});
 
 Package.on_use(function(api) {
@@ -267,6 +266,8 @@ Package.on_use(function(api) {
 EOF
 
 cat > "$TEST_TMPDIR/local-packages/a-package-named-bar/call_gcd.js" <<EOF
+console.log("loaded a-package-named-bar");
+
 var gcd = Npm.require('gcd');
 console.log("gcd(4,6)=" + gcd(4,6));
 EOF

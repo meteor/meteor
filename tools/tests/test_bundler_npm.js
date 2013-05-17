@@ -107,9 +107,10 @@ var _assertCorrectPackageNpmDir = function(deps) {
 var _assertCorrectBundleNpmContents = function(bundleDir, deps) {
   // sanity check -- main.js has expected contents.
   assert.strictEqual(fs.readFileSync(path.join(bundleDir, "main.js"), "utf8").trim(),
-                     "require('./programs/server/server.js');");
+                     "require('./programs/server/boot.js');");
 
-  var bundledPackageNodeModulesDir = path.join(bundleDir, 'programs', 'server', 'npm', 'test-package');
+  var bundledPackageNodeModulesDir = path.join(
+    bundleDir, 'programs', 'server', 'npm', 'test-package', 'main', 'node_modules');
 
   // bundle actually has the npm modules
   _.each(deps, function(version, name) {
@@ -162,6 +163,10 @@ assert.doesNotThrow(function () {
   var nodeModulesDir = path.join(testPackageDir, ".npm", "node_modules");
   assert(fs.existsSync(path.join(nodeModulesDir)));
   files.rm_recursive(nodeModulesDir);
+  // We also have to delete the .build directory or else we won't rebuild at
+  // all.
+  // XXX this seems wrong!
+  files.rm_recursive(path.join(testPackageDir, ".build"));
   assert(!fs.existsSync(path.join(nodeModulesDir)));
   lib.refresh();
 
@@ -203,6 +208,10 @@ assert.doesNotThrow(function () {
   var nodeModulesMimeDir = path.join(testPackageDir, ".npm", "node_modules", "mime");
   assert(fs.existsSync(path.join(nodeModulesMimeDir)));
   files.rm_recursive(nodeModulesMimeDir);
+  // We also have to delete the .build directory or else we won't rebuild at
+  // all.
+  // XXX this seems wrong!
+  files.rm_recursive(path.join(testPackageDir, ".build"));
   assert(!fs.existsSync(path.join(nodeModulesMimeDir)));
 
   lib.refresh();
@@ -227,8 +236,12 @@ assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0', mime: '0.1.2'});
   var tmpOutputDir = tmpDir();
   var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: lib});
-  assert.strictEqual(result.errors.length, 1);
-  assert(/version not found/.test(result.errors[0]));
+  assert(result.errors);
+  var job = _.find(result.errors.jobs, function (job) {
+    return job.title === "building package `test-package`";
+  });
+  assert(job);
+  assert(/mime version 0.1.2 is not available/.test(job.messages[0].message));
   _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.8'}); // shouldn't've changed
 });
 

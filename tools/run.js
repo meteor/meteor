@@ -312,7 +312,7 @@ var startServer = function (options) {
     }
   });
 
-  proc.on('exit', function (code, signal) {
+  proc.on('close', function (code, signal) {
     if (signal) {
       logToClients({'exit': '=> Exited from signal: ' + signal});
     } else {

@@ -1104,9 +1104,12 @@ _.extend(Package.prototype, {
                         "." + path.basename(compileStep.inputPath));
           } while (fs.existsSync(tempFilePath));
           var tempFile = fs.openSync(tempFilePath, "wx");
-          var data = compileStep.read();
-          fs.writeSync(tempFile, data, 0, data.length);
-          fs.closeSync(tempFile);
+          try {
+            var data = compileStep.read();
+            fs.writeSync(tempFile, data, 0, data.length);
+          } finally {
+            fs.closeSync(tempFile);
+          }
 
           try {
             callback(api, tempFilePath,
@@ -1721,8 +1724,13 @@ _.extend(Package.prototype, {
           throw new Error("bad resource file path in unipackage");
 
         var fd = fs.openSync(path.join(sliceBasePath, resource.file), "r");
-        var data = new Buffer(resource.length);
-        var count = fs.readSync(fd, data, 0, resource.length, resource.offset);
+        try {
+          var data = new Buffer(resource.length);
+          var count = fs.readSync(
+            fd, data, 0, resource.length, resource.offset);
+        } finally {
+          fs.closeSync(fd);
+        }
         if (count !== resource.length)
           throw new Error("couldn't read entire resource");
 

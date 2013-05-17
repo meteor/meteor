@@ -425,6 +425,7 @@ _.extend(exports, {
 
     var future = new Future;
 
+    var tar = require("tar");
     var zlib = require("zlib");
     var gunzip = zlib.createGunzip()
           .on('error', function (e) {
