@@ -365,7 +365,7 @@ _.extend(Target.prototype, {
   // - test: packages to test (Package or 'foo'), per _determineLoadOrder
   // - minify: true to minify
   // - assetDirs: array of asset directories to add (browser only for
-  //   now) object with keys 'rootDir', 'exclude', 'assetPathPrefix'
+  //   now) object with keys 'rootDir', 'exclude',
   //   all per addAssetDir.
   // - addCacheBusters: if true, make all files cacheable by adding
   //   unique query strings to their URLs. unlikely to be of much use
@@ -393,7 +393,7 @@ _.extend(Target.prototype, {
     // Process asset directories (eg, /public)
     // XXX this should probably be part of the appDir reader
     _.each(options.assetDirs || [], function (ad) {
-      self.addAssetDir(ad.rootDir, ad.exclude, ad.assetPathPrefix);
+      self.addAssetDir(ad.rootDir, ad.exclude);
     });
 
     if (options.addCacheBusters) {
