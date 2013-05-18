@@ -4,14 +4,15 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use('accounts-oauth-helper', 'client');
-  api.use('accounts-base', ['client', 'server']);
+  api.use('service-configuration', ['client', 'server']);
+  api.use('oauth', 'client');
 
   api.add_files('oauth2_common.js', ['client', 'server']);
   api.add_files('oauth2_server.js', 'server');
 });
 
 Package.on_test(function (api) {
-  api.use('accounts-oauth2-helper', 'server');
+  api.use('service-configuration', 'server');
+  api.use('oauth2', 'server');
   api.add_files("oauth2_tests.js", 'server');
 });

@@ -1,6 +1,13 @@
 
 ## vNEXT
 
+* Separate OAuth flow logic from Accounts into separate packages. The
+  `facebook`, `github`, `google`, `meetup`, `twitter`, and `weibo`
+  packages can be used to perform an OAuth exchange without creating an
+  account and logging in.  #1024
+
+Patch contributed by GitHub user timhaines.
+
 
 ## v0.6.3
 
