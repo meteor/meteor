@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Accounts service for Sina Weibo accounts"
+  summary: "Login service for Sina Weibo accounts"
 });
 
 Package.on_use(function(api) {

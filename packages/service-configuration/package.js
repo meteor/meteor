@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "Manage the configuration for third-party services"
+  summary: "Manage the configuration for third-party services",
+  internal: true
 });
 
 Package.on_use(function(api) {

@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Accounts service for Github accounts"
+  summary: "Login service for Github accounts"
 });
 
 Package.on_use(function(api) {
