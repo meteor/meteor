@@ -255,14 +255,17 @@ var runWebAppServer = function () {
 
     // only start listening after all the startup code has run.
     var bind = deployConfig.boot.bind;
-    app.listen(bind.localPort || 0, function() {
+    app.listen(bind.localPort || 0, Meteor.bindEnvironment(function() {
       if (argv.keepalive)
         console.log("LISTENING"); // must match run.js
       var port = app.address().port;
       if (bind.viaProxy) {
         bindToProxy(bind.viaProxy);
       }
-    });
+    }, function (e) {
+      console.error("Error listening:", e);
+      console.error(e.stack);
+    }));
 
     if (argv.keepalive)
       initKeepalive();
@@ -301,7 +304,7 @@ var bindToProxy = function (proxyConfig) {
   var proxy = Meteor.connect(proxyConfig.proxyEndpoint);
   var route = process.env.ROUTE;
   var host = route.split(":")[0];
-  var port = route.split(":")[1];
+  var port = +route.split(":")[1];
   proxy.call('bindDdp', {
     pid: pid,
     bindTo: ddpBindTo,
@@ -337,4 +340,3 @@ var bindToProxy = function (proxyConfig) {
 };
 
 runWebAppServer();
-
