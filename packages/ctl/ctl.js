@@ -34,7 +34,6 @@ Ctl.Commands.push({
       var deployConfig = {
         boot: {
           bind: {
-            localPort: 0,
             // XXX hardcode proxy location
             viaProxy: {
               proxyEndpoint: "localhost:3500",
