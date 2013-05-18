@@ -1,5 +1,8 @@
 Package.describe({
-  summary: "Login service for Github accounts"
+  summary: "Github OAuth flow",
+  // internal for now. Should be external when it has a richer API to do
+  // actual API things with the service, not just handle the OAuth flow.
+  internal: true
 });
 
 Package.on_use(function(api) {

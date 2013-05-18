@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Accounts service for Google accounts"
+  summary: "Login service for Google accounts"
 });
 
 Package.on_use(function(api) {

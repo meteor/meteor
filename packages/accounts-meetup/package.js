@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Accounts service for Meetup accounts"
+  summary: "Login service for Meetup accounts"
 });
 
 Package.on_use(function(api) {

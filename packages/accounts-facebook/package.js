@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Accounts service for Facebook accounts"
+  summary: "Login service for Facebook accounts"
 });
 
 Package.on_use(function(api) {
