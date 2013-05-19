@@ -166,8 +166,8 @@ Patches contributed by GitHub users andreas-karlsson and awwx.
 * `{{#with}}` helper now only includes its block if its argument is not falsey,
   and runs an `{{else}}` block if provided if the argument is falsey. #770, #866
 
-* Twitter login now stores profile_image_url and profile_image_url_https
-  attributes in the user.services.twitter namespace. #788
+* Twitter login now stores `profile_image_url` and `profile_image_url_https`
+  attributes in the `user.services.twitter` namespace. #788
 
 * Allow packages to register file extensions with dots in the filename.
 
@@ -235,7 +235,7 @@ mquandalle, Primigenus, raix, reustle, and timhaines.
 * Publish functions may now return an array of cursors to publish. Currently,
   the cursors must all be from different collections. #716
 
-* User documents have id's when onCreateUser and validateNewUser hooks run.
+* User documents have id's when `onCreateUser` and `validateNewUser` hooks run.
 
 * Encode and store custom EJSON types in MongoDB.
 
