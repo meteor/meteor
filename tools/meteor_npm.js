@@ -9,6 +9,7 @@ var Future = require('fibers/future');
 
 var path = require('path');
 var fs = require('fs');
+var os = require('os');
 var cleanup = require(path.join(__dirname, 'cleanup.js'));
 var files = require(path.join(__dirname, 'files.js'));
 var _ = require('underscore');
@@ -107,7 +108,7 @@ _.extend(exports, {
     // each time.
     fs.writeFileSync(
       path.join(newPackageNpmDir, '.gitignore'),
-      ['node_modules', ''/*git diff complains without trailing newline*/].join('\n'));
+      ['node_modules', ''/*git diff complains without trailing newline*/].join(os.EOL));
   },
 
   _updateExistingNpmDirectory: function(
@@ -199,14 +200,16 @@ _.extend(exports, {
 
   _createReadme: function(newPackageNpmDir) {
     fs.writeFileSync(
-      path.join(newPackageNpmDir, 'README'),
-      "This directory and the files immediately inside it are automatically generated\n"
-        + "when you change this package's NPM dependencies. Commit the files in this\n"
-        + "directory (npm-shrinkwrap.json, .gitignore, and this README) to source control\n"
-        + "so that others run the same versions of sub-dependencies.\n"
-        + "\n"
-        + "You should NOT check in the node_modules directory that Meteor automatically\n"
-        + "creates; if you are using git, the .gitignore file tells git to ignore it.\n"
+      path.join(newPackageNpmDir, 'README'), [
+        "This directory and the files immediately inside it are automatically generated",
+        "when you change this package's NPM dependencies. Commit the files in this",
+        "directory (npm-shrinkwrap.json, .gitignore, and this README) to source control",
+        "so that others run the same versions of sub-dependencies.",
+        "",
+        "You should NOT check in the node_modules directory that Meteor automatically",
+        "creates; if you are using git, the .gitignore file tells git to ignore it.",
+        ""
+        ].join(os.EOL)
     );
   },
 
@@ -421,7 +424,7 @@ _.extend(exports, {
       path.join(dir, 'npm-shrinkwrap.json'),
       // Matches the formatting done by 'npm shrinkwrap'.
       JSON.stringify({dependencies: newTopLevelDependencies}, null, 2)
-        + '\n');
+        .replace(/\n/g, os.EOL) + os.EOL);
   },
 
   _logUpdateDependencies: function(packageName, npmDependencies) {
