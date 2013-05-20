@@ -37,6 +37,9 @@ _.extend(Component, {
   DESTROYED: ['DESTROYED']
 });
 
+// Fills in for _start and _end on a temporary basis.
+var EMPTY = ['EMPTY'];
+
 _.extend(Component.prototype, {
   _requireStage: function (stage) {
     if (this.stage !== stage)
@@ -55,36 +58,45 @@ _.extend(Component.prototype, {
     self._requireStage(Component.ADDED);
     self._buildComputation =
       Deps.autorun(function (c) {
+        var isRebuild = (self.stage === Component.BUILT);
+        var oldFirstNode, oldLastNode;
+        if (isRebuild) {
+          oldFirstNode = self.firstNode();
+          oldLastNode = self.lastNode();
+          for (var k in self.children) {
+            if (self.children.hasOwnProperty(k)) {
+              var child = self.children[k];
+              child.destroy();
+              self.removeChild(child.key);
+            }
+          }
+          self.stage = Component.ADDED;
+        }
         var buf = new RenderBuffer(self);
         self.render(buf);
         var buildResult = buf.build();
-        var wasAttachedParent = null;
-        var wasAttachedBefore = null;
-        if (! c.firstRun) {
-          // already built; rebuilding
-          if (self.isAttached) {
-            wasAttachedParent = self.parentNode();
-            wasAttachedBefore = self.lastNode().nextSibling;
-            self.detach(true);
-          }
+        if (isRebuild) {
+          var parentNode = oldFirstNode.parentNode;
+          var beforeNode = oldLastNode.nextSibling;
+          DomUtils.extractRange(oldFirstNode, oldLastNode);
+          parentNode.insertBefore(buildResult.fragment,
+                                  beforeNode);
+        } else {
+          self._detachedContent = buildResult.fragment;
         }
-        self._detachedContent = buildResult.fragment;
         self._start = buildResult.start;
         self._end = buildResult.end;
-        if (wasAttachedParent) {
-          self.attach(wasAttachedParent, wasAttachedBefore,
-                      true);
-        }
+
+        self.stage = Component.BUILT;
         if (c.firstRun) {
           self.built();
         } else {
           self.rebuilt();
         }
       });
-    self.stage = Component.BUILT;
   },
   destroy: function () {
-    // Leaves the DOM in place
+    // Leaves the DOM and component hierarchy in place
 
     if (this.stage === Component.DESTROYED)
       return;
@@ -108,63 +120,105 @@ _.extend(Component.prototype, {
     for (var k in children)
       if (children.hasOwnProperty(k))
         children[k].destroy();
-
-    if (this.parent)
-      delete this.parent.children[this.key];
-
-    this.children = {};
   },
-  attach: function (parent, before, _silent) {
-    if (this.stage === Component.ADDED)
-      this.build();
+  attach: function (parentNode, beforeNode) {
+    var self = this;
+    if (self.stage === Component.ADDED) // not built
+      self.build();
 
-    this._requireStage(Component.BUILT);
-    if (this.isAttached)
+    var parent = self.parent;
+
+    self._requireStage(Component.BUILT);
+    if (self.isAttached)
       throw new Error("Component already attached");
 
-    if ((! parent) || ! parent.nodeType)
+    if ((! parentNode) || ! parentNode.nodeType)
       throw new Error("first argument of attach must be a Node");
-    if (before && ! before.nodeType)
+    if (beforeNode && ! beforeNode.nodeType)
       throw new Error("second argument of attach must be a Node" +
                       " if given");
 
-    var frag = this._detachedContent;
+    var frag = self._detachedContent;
 
-    if (DomUtils.wrapFragmentForContainer(frag, parent)) {
-      this._start = frag.firstChild;
-      this._end = frag.lastChild;
+    if (DomUtils.wrapFragmentForContainer(frag, parentNode))
+      self.setBounds(frag.firstChild, frag.lastChild);
+
+    parentNode.insertBefore(frag, beforeNode);
+    self._detachedContent = null;
+
+    self.isAttached = true;
+
+    if (parent && parent.stage === Component.BUILT) {
+      if (parent._start === EMPTY) {
+        parent.setBounds(self);
+      } else {
+        if (parent.firstNode() === self.lastNode().nextSibling)
+          parent.setStart(self);
+        if (parent.lastNode() === self.firstNode().previousSibling)
+          parent.setEnd(self);
+      }
     }
-    parent.insertBefore(frag, before);
-    this._detachedContent = null;
 
-    this.isAttached = true;
-
-    if (! _silent)
-      this.attached();
+    self.attached();
   },
-  detach: function (_silent) {
-    this._requireStage(Component.BUILT);
-    if (! this.isAttached)
+  detach: function (_duringSwap) {
+    var self = this;
+    var parent = self.parent;
+
+    if (parent)
+      parent._requireStage(Component.BUILT);
+    self._requireStage(Component.BUILT);
+    if (! self.isAttached)
       throw new Error("Component not attached");
 
-    this._detachedContent = document.createDocumentFragment();
+    if (parent) {
+      if (parent._start === comp) {
+        if (parent._end === comp) {
+          if (_duringSwap)
+            parent._start = parent._end = EMPTY;
+          else
+            throw new Error("Can't detach entire contents of " +
+                            "Component; use swapInChild instead");
+        } else {
+          var newFirstNode = comp.lastNode().nextSibling;
+          var foundComp = null;
+          for (var k in parent.children) {
+            if (parent.children.hasOwnProperty(k) &&
+                parent.children[k].firstNode() === newFirstNode) {
+              foundComp = parent.children[k];
+              break;
+            }
+          }
+          parent.setStart(foundComp || newFirstNode);
+        }
+      } else if (parent._end === comp) {
+        var newLastNode = comp.firstNode().previousSibling;
+        var foundComp = null;
+        for (var k in parent.children) {
+          if (parent.children.hasOwnProperty(k) &&
+              parent.children[k].lastNode() === newLastNode) {
+            foundComp = parent.children[k];
+            break;
+          }
+        }
+        parent.setEnd(foundComp || newLastNode);
+      }
+    }
 
-    var start = this.firstNode();
-    var end = this.lastNode();
-    var frag = this._detachedContent;
-    // extract start..end into frag
-    var parent = start.parentNode;
-    var before = start.previousSibling;
-    var after = end.nextSibling;
-    var n;
-    while ((n = (before ? before.nextSibling : parent.firstChild)) &&
-           (n !== after))
-      frag.appendChild(n);
+    self._detachedContent = document.createDocumentFragment();
 
-    this.isAttached = false;
+    DomUtils.extractRange(self.firstNode(), self.lastNode(),
+                          self._detachedContent);
 
-    if (! _silent)
-      this.detached();
+    self.isAttached = false;
+
+    self.detached();
+  },
+  swapInChild: function (toAttach, toDetach) {
+    var parentNode = toDetach.parentNode();
+    var beforeNode = toDetach.lastNode().nextSibling;
+    toDetach.detach(true);
+    toAttach.attach(parentNode, beforeNode);
   }
 });
 
@@ -259,7 +313,8 @@ _.extend(Component.prototype, {
   hasChild: function (key) {
     return this.children.hasOwnProperty(key);
   },
-  addChild: function (key, childComponent) {
+  addChild: function (key, childComponent, attachParentNode,
+                      attachBeforeNode) {
     if (key instanceof Component) {
       // omitted key arg
       childComponent = key;
@@ -273,10 +328,10 @@ _.extend(Component.prototype, {
     if (! (childComponent instanceof Component))
       throw new Error("not a Component: " + childComponent);
 
-    // XXX later: also work if we are BUILT, and build the
-    // child... maybe attach it too based on extra arguments
-    // to addChild like parentNode and beforeNode
-    this._requireStage(Component.ADDED);
+    if (this.stage === Component.DESTROYED)
+      throw new Error("parent Component already destroyed");
+    if (this.stage === Component.UNADDED)
+      throw new Error("parent Component is unadded");
     childComponent._requireStage(Component.UNADDED);
 
     if (this.hasChild(key))
@@ -285,32 +340,36 @@ _.extend(Component.prototype, {
     this.children[key] = childComponent;
 
     childComponent._added(key, this);
+
+    if (attachParentNode) {
+      if (this.stage !== Component.BUILT)
+        throw new Error("Attaching new child requires built " +
+                        "parent Component");
+      childComponent.attach(attachParentNode, attachBeforeNode);
+    }
   },
   removeChild: function (key) {
+    // note: must work if child is destroyed
+
     key = String(key);
 
-    // XXX later: also work if we are BUILT, and detach
-    // the child first if so.
-    this._requireStage(Component.ADDED);
+    if (this.stage === Component.DESTROYED)
+      throw new Error("parent Component already destroyed");
+    if (this.stage === Component.UNADDED)
+      throw new Error("parent Component is unadded");
 
     if (! this.hasChild(key))
       throw new Error("No such child component: " + key);
 
     var childComponent = this.children[key];
+    if (childComponent.stage === Component.BUILT &&
+        childComponent.isAttached)
+      childComponent.detach();
 
-    if (childComponent.isDestroyed) {
-      // shouldn't be possible, because destroying a component
-      // deletes it from the parent's children dictionary,
-      // but just in case...
-      delete this.children[key];
-    } else {
+    delete this.children[key];
+    childComponent.parent = null;
 
-      // XXX
-      //if (childComponent.isAttached)
-      //childComponent.detach();
-
-      childComponent.destroy();
-    }
+    childComponent.destroy();
   }
 });
 
@@ -661,7 +720,6 @@ Component.extend = function (options) {
     // each old function!
     var oldFunction = v;
     if ({init:1,
-         render:1,
          destroyed:1,
          updated:1,
          attached:1,

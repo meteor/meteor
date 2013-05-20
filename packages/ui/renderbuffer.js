@@ -1,5 +1,11 @@
 
-
+// TODO
+//
+// Make the function argument to component
+// run reactively.
+//
+// Then make openTag attributes
+// reactive too.
 
 RenderBuffer = function (component) {
   this._component = component;
@@ -97,20 +103,24 @@ _.extend(RenderBuffer.prototype, {
     if (typeof stringOrFunction === 'function') {
       var func = stringOrFunction;
       this.component(function () {
-        return new TextComponent({text: func()});
+        return TextComponent.create({text: func()});
       });
     } else {
+      if (typeof stringOrFunction !== 'string')
+        throw new Error("string required");
       var text = stringOrFunction;
-      this._htmlBuf.push(this.encodeEntities(text));
+      this._htmlBuf.push(this._encodeEntities(text));
     }
   },
   rawHtml: function (stringOrFunction) {
     if (typeof stringOrFunction === 'function') {
       var func = stringOrFunction;
       this.component(function () {
-        return new RawHtmlComponent({html: func()});
+        return RawHtmlComponent.create({html: func()});
       });
     } else {
+      if (typeof stringOrFunction !== 'string')
+        throw new Error("string required");
       var html = stringOrFunction;
       this._htmlBuf.push(html);
     }
@@ -123,8 +133,6 @@ _.extend(RenderBuffer.prototype, {
     var childKey = (options && options.childKey || null);
 
     this._component.addChild(childKey, comp);
-    // build it detached
-    comp._build();
 
     var commentString = this.builderId + '_' +
           (this._nextNum++);
@@ -132,13 +140,47 @@ _.extend(RenderBuffer.prototype, {
 
     this._childrenToAttach[commentString] = comp;
   },
-  toFragment: function () {
+  build: function () {
     var html = this._htmlBuf.join('');
     var frag = DomUtils.htmlToFragment(html);
+    if (! frag.firstChild)
+      frag.appendChild(document.createComment("empty"));
 
-    
+    var components = this._childrenToAttach;
+    var start = frag.firstChild;
+    var end = frag.lastChild;
 
-    return frag;
+    var replaceCommentsWithComponents = function (parent) {
+      var n = parent.firstChild;
+      while (n) {
+        var next = n.nextSibling;
+        if (n.nodeType === 8) { // COMMENT
+          var comp = components[n.nodeValue];
+          if (comp) {
+            if (parent === frag) {
+              if (n === frag.firstChild)
+                start = comp;
+              if (n === frag.lastChild)
+                end = comp;
+            }
+            comp.attach(parent, n);
+            parent.removeChild(n);
+          }
+        } else if (n.nodeType === 1) { // ELEMENT
+          // recurse
+          replaceCommentsWithComponents(n);
+        }
+        n = next;
+      }
+    };
+
+    replaceCommentsWithComponents(frag);
+
+    return {
+      fragment: frag,
+      start: start,
+      end: end
+    };
   }
 });
 

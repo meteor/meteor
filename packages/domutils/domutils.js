@@ -558,3 +558,17 @@ DomUtils.getElementValue = function (node) {
     return node.value;
   }
 };
+
+DomUtils.extractRange = function (start, end, optContainer) {
+  var parent = start.parentNode;
+  var before = start.previousSibling;
+  var after = end.nextSibling;
+  var n;
+  while ((n = (before ? before.nextSibling : parent.firstChild)) &&
+         (n !== after)) {
+    if (optContainer)
+      optContainer.appendChild(n);
+    else
+      parent.removeChild(n);
+  }
+};
