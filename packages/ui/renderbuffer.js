@@ -1,25 +1,14 @@
 
 
 
-HtmlBuilder = function () {
-  this.htmlBuf = [];
+RenderBuffer = function (component) {
+  this._component = component;
+  this._htmlBuf = [];
 
-  this.rootComponent = null;
-  this.currentComponent = null;
-  // parent chain of currentComponent, exclusive
-  this.componentStack = [];
+  this._builderId = Random.id();
+  this._nextNum = 1;
 
-//  this.builderId = Random.id();
-//  this.nextElementNum = 1;
-
-  //this.chunkPool = [];
-  // openChunk and closeChunk are primitives that build
-  // the chunkPool.  They are possibly private.
-  // Can tell if openChunks or closeChunks are consecutive
-  // by looking at length of htmlBuf.  Interesting algo
-  // problem to build the chunk info correctly.
-  // ChunkInfo class?  Oh, it won't deserialize with
-  // class intact... without EJSON...
+  this._childrenToAttach = []; // comment string -> component
 };
 
 var TAG_NAME_REGEX = /^[a-zA-Z0-9]+$/;
@@ -39,7 +28,7 @@ var escapeOne = function(c) {
 
 var encodeEntities = function (text, isQuoted) {
   // All HTML entities in templates are decoded by the template parser
-  // and given to HtmlBuilder as Unicode.  We then re-encode some
+  // and given to RenderBuffer as Unicode.  We then re-encode some
   // characters into entities here, but not most characters.  If
   // you're trying to use entities to send ASCII representations of
   // non-ASCII characters to the client, you'll need a different
@@ -48,7 +37,7 @@ var encodeEntities = function (text, isQuoted) {
                       ESCAPED_CHARS_UNQUOTED_REGEX, escapeOne);
 };
 
-_.extend(HtmlBuilder.prototype, {
+_.extend(RenderBuffer.prototype, {
   _encodeEntities: encodeEntities,
   /*computeAttributeValue: function (expression) {
     var self = this;
@@ -81,7 +70,7 @@ _.extend(HtmlBuilder.prototype, {
     attrs = attrs || {};
     options = options || {};
 
-    var buf = this.htmlBuf;
+    var buf = this._htmlBuf;
     buf.push('<', tagName);
     _.each(attrs, function (attrValue, attrName) {
       if ((typeof attrName) !== 'string' ||
@@ -102,42 +91,54 @@ _.extend(HtmlBuilder.prototype, {
     if ((typeof tagName) !== 'string' ||
         ! TAG_NAME_REGEX.test(tagName))
       throw new Error("Illegal HTML tag name: " + tagName);
-    this.htmlBuf.push('</', tagName, '>');
+    this._htmlBuf.push('</', tagName, '>');
   },
   text: function (stringOrFunction) {
-    var text = (typeof stringOrFunction === 'function' ?
-                stringOrFunction() : stringOrFunction);
-    this.htmlBuf.push(this.encodeEntities(text));
+    if (typeof stringOrFunction === 'function') {
+      var func = stringOrFunction;
+      this.component(function () {
+        return new TextComponent({text: func()});
+      });
+    } else {
+      var text = stringOrFunction;
+      this._htmlBuf.push(this.encodeEntities(text));
+    }
   },
   rawHtml: function (stringOrFunction) {
-    var html = (typeof stringOrFunction === 'function' ?
-                stringOrFunction() : stringOrFunction);
-    this.htmlBuf.push(html);
+    if (typeof stringOrFunction === 'function') {
+      var func = stringOrFunction;
+      this.component(function () {
+        return new RawHtmlComponent({html: func()});
+      });
+    } else {
+      var html = stringOrFunction;
+      this._htmlBuf.push(html);
+    }
   },
   component: function (componentOrFunction, options) {
     var self = this;
     var comp = (typeof componentOrFunction === 'function' ?
                 componentOrFunction() : componentOrFunction);
 
-    var parentComponent = self.currentComponent; // may be null
-
-    if (self.currentComponent)
-      self.componentStack.push(self.currentComponent);
-    self.currentComponent = comp;
-
     var childKey = (options && options.childKey || null);
 
-    try {
-      if (parentComponent)
-        parentComponent.addChild(childKey, comp);
-      comp.build(self);
-      // XXX
-    } finally {
-      self.currentComponent = self.componentStack.pop() || null;
-    }
+    this._component.addChild(childKey, comp);
+    // build it detached
+    comp._build();
+
+    var commentString = this.builderId + '_' +
+          (this._nextNum++);
+    this._htmlBuf.push('<!--' + commentString + '-->');
+
+    this._childrenToAttach[commentString] = comp;
   },
-  finish: function () {
-    return this.htmlBuf.join('');
+  toFragment: function () {
+    var html = this._htmlBuf.join('');
+    var frag = DomUtils.htmlToFragment(html);
+
+    
+
+    return frag;
   }
 });
 
@@ -168,7 +169,7 @@ _.extend(HtmlBuilder.prototype, {
 //
 // ... based on walking the DOM.
 //
-// The HtmlBuilder probably has a tree of components
+// The RenderBuffer probably has a tree of components
 // with children and elements, if only to track comment
 // references.
 

@@ -1,4 +1,44 @@
-var debug = function (method, component) {
+
+
+
+IfComponent = Component.extend({
+  arguments: {
+    positional: ['condition'],
+    required: ['bodyClass']
+  },
+  render: function (buf) {
+    if (this.getArg('condition'))
+      buf.component(this.getArg('bodyClass').create());
+    else if (this.getArg('elseClass'))
+      buf.component(this.getArg('elseClass'));
+  }
+});
+
+Meteor.startup(function () {
+  /*
+  RC = RootComponent.create({
+    bodyClass: Component.extend({
+      render: function (buf) {
+        buf.text(Session.get('foo') || '');
+      }
+    })
+  });
+ */
+  RC = RootComponent.create({
+    bodyClass: Component.extend({
+      render: function (buf) {
+        buf.text(function () {
+          return Session.get('foo') || '';
+        });
+      }
+    })
+  });
+  RC.attach(document.body);
+});
+
+
+
+/*var debug = function (method, component) {
   console.log(method, component.nameInParent);
 };
 
@@ -9,7 +49,7 @@ var escapeForHtml = (function() {
     ">": "&gt;",
     '"': "&quot;",
     "'": "&#x27;",
-    "`": "&#x60;", /* IE allows backtick-delimited attributes?? */
+    "`": "&#x60;", // IE allows backtick-delimited attributes??
     "&": "&amp;"
   };
   var escape_one = function(c) {
@@ -329,3 +369,4 @@ Meteor.startup(function () {
 
   LIST.attach(ul);
 });
+  */

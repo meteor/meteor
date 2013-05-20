@@ -1,10 +1,17 @@
+var constructorsLocked = true;
+
 Component = function (args) {
+  if (constructorsLocked)
+    throw new Error("To create a Component, " +
+                    "use ComponentClass.create(...)");
+  constructorsLocked = true;
+
   this.stage = Component.UNADDED;
 
   this._uniqueIdCounter = 1;
 
   // UNINITED Components get these:
-  this._args = args;
+  this._args = args || {};
   this._argDeps = {};
 
   // INITED Components get these:
@@ -15,6 +22,11 @@ Component = function (args) {
   // BUILT Components get these:
   this._start = null; // first Component or Node
   this._end = null; // last Component or Node
+  this.isAttached = false;
+  this._detachedContent = null; // DocumentFragment
+  this._buildComputation = null;
+
+  this.constructed();
 };
 
 // life stages of a Component
@@ -28,7 +40,7 @@ _.extend(Component, {
 _.extend(Component.prototype, {
   _requireStage: function (stage) {
     if (this.stage !== stage)
-      throw new Error("Need a " + stage + " Component, found a " +
+      throw new Error("Need " + stage + " Component, found " +
                       this.stage + " Component.");
   },
   _added: function (key, parent) {
@@ -36,6 +48,40 @@ _.extend(Component.prototype, {
     this.key = key;
     this.parent = parent;
     this.stage = Component.ADDED;
+    this.init();
+  },
+  build: function () {
+    var self = this;
+    self._requireStage(Component.ADDED);
+    self._buildComputation =
+      Deps.autorun(function (c) {
+        var buf = new RenderBuffer(self);
+        self.render(buf);
+        var buildResult = buf.build();
+        var wasAttachedParent = null;
+        var wasAttachedBefore = null;
+        if (! c.firstRun) {
+          // already built; rebuilding
+          if (self.isAttached) {
+            wasAttachedParent = self.parentNode();
+            wasAttachedBefore = self.lastNode().nextSibling;
+            self.detach(true);
+          }
+        }
+        self._detachedContent = buildResult.fragment;
+        self._start = buildResult.start;
+        self._end = buildResult.end;
+        if (wasAttachedParent) {
+          self.attach(wasAttachedParent, wasAttachedBefore,
+                      true);
+        }
+        if (c.firstRun) {
+          self.built();
+        } else {
+          self.rebuilt();
+        }
+      });
+    self.stage = Component.BUILT;
   },
   destroy: function () {
     // Leaves the DOM in place
@@ -48,6 +94,9 @@ _.extend(Component.prototype, {
 
     if (oldStage === Component.UNADDED)
       return;
+
+    if (this._buildComputation)
+      this._buildComputation.stop();
 
     // maybe GC sooner
     this._start = null;
@@ -64,6 +113,58 @@ _.extend(Component.prototype, {
       delete this.parent.children[this.key];
 
     this.children = {};
+  },
+  attach: function (parent, before, _silent) {
+    if (this.stage === Component.ADDED)
+      this.build();
+
+    this._requireStage(Component.BUILT);
+    if (this.isAttached)
+      throw new Error("Component already attached");
+
+    if ((! parent) || ! parent.nodeType)
+      throw new Error("first argument of attach must be a Node");
+    if (before && ! before.nodeType)
+      throw new Error("second argument of attach must be a Node" +
+                      " if given");
+
+    var frag = this._detachedContent;
+
+    if (DomUtils.wrapFragmentForContainer(frag, parent)) {
+      this._start = frag.firstChild;
+      this._end = frag.lastChild;
+    }
+    parent.insertBefore(frag, before);
+    this._detachedContent = null;
+
+    this.isAttached = true;
+
+    if (! _silent)
+      this.attached();
+  },
+  detach: function (_silent) {
+    this._requireStage(Component.BUILT);
+    if (! this.isAttached)
+      throw new Error("Component not attached");
+
+    this._detachedContent = document.createDocumentFragment();
+
+    var start = this.firstNode();
+    var end = this.lastNode();
+    var frag = this._detachedContent;
+    // extract start..end into frag
+    var parent = start.parentNode;
+    var before = start.previousSibling;
+    var after = end.nextSibling;
+    var n;
+    while ((n = (before ? before.nextSibling : parent.firstChild)) &&
+           (n !== after))
+      frag.appendChild(n);
+
+    this.isAttached = false;
+
+    if (! _silent)
+      this.detached();
   }
 });
 
@@ -172,6 +273,9 @@ _.extend(Component.prototype, {
     if (! (childComponent instanceof Component))
       throw new Error("not a Component: " + childComponent);
 
+    // XXX later: also work if we are BUILT, and build the
+    // child... maybe attach it too based on extra arguments
+    // to addChild like parentNode and beforeNode
     this._requireStage(Component.ADDED);
     childComponent._requireStage(Component.UNADDED);
 
@@ -181,17 +285,49 @@ _.extend(Component.prototype, {
     this.children[key] = childComponent;
 
     childComponent._added(key, this);
+  },
+  removeChild: function (key) {
+    key = String(key);
+
+    // XXX later: also work if we are BUILT, and detach
+    // the child first if so.
+    this._requireStage(Component.ADDED);
+
+    if (! this.hasChild(key))
+      throw new Error("No such child component: " + key);
+
+    var childComponent = this.children[key];
+
+    if (childComponent.isDestroyed) {
+      // shouldn't be possible, because destroying a component
+      // deletes it from the parent's children dictionary,
+      // but just in case...
+      delete this.children[key];
+    } else {
+
+      // XXX
+      //if (childComponent.isAttached)
+      //childComponent.detach();
+
+      childComponent.destroy();
+    }
   }
 });
 
 _.extend(Component.prototype, {
-  render: function (builder) {},
+  constructed: function () {},
+  init: function () {},
+  render: function (buf) {},
   updated: function (args, oldArgs) {},
-  destroyed: function () {}
+  destroyed: function () {},
+  attached: function () {},
+  detached: function () {},
+  built: function () {},
+  rebuilt: function () {}
 });
 
 //////////////////////////////////////////////////
-
+/*
 
 Component = function (args) {
   this.parent = null;
@@ -474,15 +610,30 @@ _.extend(Component.prototype, {
     return '';
   }
 });
-
+*/
 ////////////////////
+
+// Require ComponentClass.create(...) instead of
+// new CompomentClass(...) because a factory method gives
+// us more flexibility, and there should be one way to
+// make a component.  The `new` syntax is awkward if
+// the component class is calculated by a complex expression
+// (like a reactive getter).
+Component.create = function (/*args*/) {
+  constructorsLocked = false;
+  var comp = new this;
+  Component.apply(comp, arguments);
+  return comp;
+};
 
 Component.extend = function (options) {
   var superClass = this;
-  var baseClass = Component;
   // all constructors just call the base constructor
-  var newClass = function CustomComponent(/*args*/) {
-    baseClass.apply(this, arguments);
+  var newClass = function CustomComponent() {
+    if (constructorsLocked)
+      throw new Error("To create a Component, " +
+                      "use ComponentClass.create(...)");
+    // (Component.create kicks off construction)
   };
 
   // Establish a prototype link from newClass.prototype to
@@ -509,8 +660,16 @@ Component.extend = function (options) {
     // important that we have a closure here to capture
     // each old function!
     var oldFunction = v;
-    if ({init:1, build:1, built:1, attached:1, detached:1,
-         destroyed:1, updated:1}.hasOwnProperty(k)) {
+    if ({init:1,
+         render:1,
+         destroyed:1,
+         updated:1,
+         attached:1,
+         detached:1,
+         built:1,
+         rebuilt:1,
+         constructed:1
+        }.hasOwnProperty(k)) {
       options[k] = function () {
         superClass.prototype[k].apply(this, arguments);
         oldFunction.apply(this, arguments);
@@ -525,5 +684,36 @@ Component.extend = function (options) {
   // For browsers that don't support it, fill in `obj.constructor`.
   newClass.prototype.constructor = newClass;
 
+  newClass.create = Component.create;
+
   return newClass;
 };
+
+TextComponent = Component.extend({
+  render: function (buf) {
+    buf.text(this.getArg('text'));
+  }
+});
+
+RawHtmlComponent = Component.extend({
+  render: function (buf) {
+    buf.rawHtml(this.getArg('html'));
+  }
+});
+
+RootComponent = Component.extend({
+  constructed: function () {
+    this.stage = Component.ADDED;
+  },
+  render: function (buf) {
+    var bodyClass = this.getArg('bodyClass');
+    if (bodyClass)
+      buf.component(bodyClass.create());
+  }
+});
+
+
+// need **rebuild**; "render" runs in a reactive context
+
+// What does RenderBuffer do to build a subcomponent?
+// Assigning Chunks; build and rebuild
