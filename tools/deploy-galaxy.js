@@ -71,33 +71,37 @@ exports.deploy = function (options) {
   var galaxy = getGalaxy(options.context);
   var Meteor = getMeteor(options.context);
 
-  process.stdout.write('Deploying ' + options.app + '. Bundling...\n');
   var tmpdir = files.mkdtemp('deploy');
   var buildDir = path.join(tmpdir, 'build');
   var topLevelDirName = path.basename(options.appDir);
   var bundlePath = path.join(buildDir, topLevelDirName);
   var bundler = require('./bundler.js');
-  var bundleResult = bundler.bundle(options.appDir, bundlePath,
-                                    options.bundleOptions);
-  if (bundleResult.errors) {
-    process.stdout.write("\n\nErrors prevented deploying:\n");
-    process.stdout.write(bundleResult.errors.formatMessages());
-    process.exit(1);
+  var starball;
+  if (!options.starball) {
+    process.stdout.write('Deploying ' + options.app + '. Bundling...\n');
+    var bundleResult = bundler.bundle(options.appDir, bundlePath,
+                                      options.bundleOptions);
+    if (bundleResult.errors) {
+      process.stdout.write("\n\nErrors prevented deploying:\n");
+      process.stdout.write(bundleResult.errors.formatMessages());
+      process.exit(1);
+    }
+
+    // S3 (which is what's likely on the other end our upload) requires
+    // a content-length header for HTTP PUT uploads. That means that we
+    // have to actually tgz up the bundle before we can start the upload
+    // rather than streaming it. S3 has an alternate API for doing
+    // chunked uploads, but (a) it has a minimum chunk size of 5 MB, so
+    // it doesn't help us much (many/most stars will be smaller than
+    // that), and (b) it's nonstandard, so we'd have to bake in S3's
+    // specific scheme. Doesn't seem worthwhile for now, so just tar to
+    // a temporary directory. If stars get radically bigger then it
+    // might be worthwhile to tar to memory and spill to S3 every 5MB.
+    starball = path.join(tmpdir, topLevelDirName + ".tar.gz");
+    files.createTarball(bundlePath, starball);
+  } else {
+    starball = options.starball;
   }
-
-  // S3 (which is what's likely on the other end our upload) requires
-  // a content-length header for HTTP PUT uploads. That means that we
-  // have to actually tgz up the bundle before we can start the upload
-  // rather than streaming it. S3 has an alternate API for doing
-  // chunked uploads, but (a) it has a minimum chunk size of 5 MB, so
-  // it doesn't help us much (many/most stars will be smaller than
-  // that), and (b) it's nonstandard, so we'd have to bake in S3's
-  // specific scheme. Doesn't seem worthwhile for now, so just tar to
-  // a temporary directory. If stars get radically bigger then it
-  // might be worthwhile to tar to memory and spill to S3 every 5MB.
-  var tarball = path.join(tmpdir, topLevelDirName + ".tar.gz");
-  files.createTarball(bundlePath, tarball);
-
   process.stdout.write('Uploading...\n');
 
   var created = true;
@@ -118,8 +122,8 @@ exports.deploy = function (options) {
 
   // Upload
   // XXX copied from galaxy/tool/galaxy.js
-  var fileSize = fs.statSync(tarball).size;
-  var fileStream = fs.createReadStream(tarball);
+  var fileSize = fs.statSync(starball).size;
+  var fileStream = fs.createReadStream(starball);
   var request = require('request');
   var future = new Future;
   var req = request.put({
