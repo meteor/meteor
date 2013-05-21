@@ -1,11 +1,7 @@
 
 // TODO
 //
-// Make the function argument to component
-// run reactively.
-//
-// Then make openTag attributes
-// reactive too.
+// Make openTag attributes reactive.
 
 RenderBuffer = function (component) {
   this._component = component;
@@ -186,42 +182,3 @@ _.extend(RenderBuffer.prototype, {
     };
   }
 });
-
-// CHANGES TO COMPONENT NEEDED:
-//
-// - childKey, elementKey -- call things "key"
-// - no attach/detach -- need to wire things up from HTML...
-
-
-// openChunk, closeChunk
-//
-// Drop comemnts at start and finish.  Comments may have
-// to be fished out due to missing close tags (some fun
-// logic there).  Eventually, can produce cleaner HTML
-// using attributes in some cases instead of comments.
-// Chunks bound components, and also text/raw inclusions.
-// Consecutive openChunks or closeChunks create Chunks
-// defined in terms of each other.
-//
-// When building is finished, it produces HTML and some
-// other data.  We don't do materialization, because in
-// the server-side rendering case, the browser does that!
-//
-// After materialization, we want to somehow:
-// - recalculate all the helpers with deps tracking
-// - assign elements to components
-// - set bounds of components
-//
-// ... based on walking the DOM.
-//
-// The RenderBuffer probably has a tree of components
-// with children and elements, if only to track comment
-// references.
-
-// Component inclusions are also calculated, so their expressions
-// must be sent down.  Components must also be serialized on the
-// wire.  Argument change leads to update, of course.
-
-// Are Component class names in templates resolved?  Maybe.
-// Assuming so, the test for whether a class has changed is
-// comparing the resolved constructor names.
