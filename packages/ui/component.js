@@ -24,7 +24,9 @@ Component = function (args) {
   this._end = null; // last Component or Node
   this.isAttached = false;
   this._detachedContent = null; // DocumentFragment
-  this._buildComputation = null;
+
+  this._buildUpdater = null;
+  this._childUpdaters = {};
 
   this.constructed();
 };
@@ -56,20 +58,22 @@ _.extend(Component.prototype, {
   build: function () {
     var self = this;
     self._requireStage(Component.ADDED);
-    self._buildComputation =
+    self._buildUpdater =
       Deps.autorun(function (c) {
         var isRebuild = (self.stage === Component.BUILT);
         var oldFirstNode, oldLastNode;
         if (isRebuild) {
           oldFirstNode = self.firstNode();
           oldLastNode = self.lastNode();
-          for (var k in self.children) {
-            if (self.children.hasOwnProperty(k)) {
-              var child = self.children[k];
-              child.destroy();
-              self.removeChild(child.key);
+          Deps.nonreactive(function () {
+            for (var k in self.children) {
+              if (self.children.hasOwnProperty(k)) {
+                var child = self.children[k];
+                child.destroy();
+                self.removeChild(child.key);
+              }
             }
-          }
+          });
           self.stage = Component.ADDED;
         }
         var buf = new RenderBuffer(self);
@@ -88,11 +92,13 @@ _.extend(Component.prototype, {
         self._end = buildResult.end;
 
         self.stage = Component.BUILT;
-        if (c.firstRun) {
-          self.built();
-        } else {
-          self.rebuilt();
-        }
+        Deps.nonreactive(function () {
+          if (c.firstRun) {
+            self.built();
+          } else {
+            self.rebuilt();
+          }
+        });
       });
   },
   destroy: function () {
@@ -107,8 +113,15 @@ _.extend(Component.prototype, {
     if (oldStage === Component.UNADDED)
       return;
 
-    if (this._buildComputation)
-      this._buildComputation.stop();
+    if (this._buildUpdater)
+      this._buildUpdater.stop();
+
+    for (var k in this._childUpdaters) {
+      if (this._childUpdaters.hasOwnProperty(k)) {
+        this._childUpdaters[k].stop();
+        delete this._childUpdaters[k];
+      }
+    }
 
     // maybe GC sooner
     this._start = null;
@@ -161,7 +174,7 @@ _.extend(Component.prototype, {
 
     self.attached();
   },
-  detach: function (_duringSwap) {
+  detach: function (_allowTransientEmpty) {
     var self = this;
     var parent = self.parent;
 
@@ -174,7 +187,7 @@ _.extend(Component.prototype, {
     if (parent) {
       if (parent._start === comp) {
         if (parent._end === comp) {
-          if (_duringSwap)
+          if (_allowTransientEmpty)
             parent._start = parent._end = EMPTY;
           else
             throw new Error("Can't detach entire contents of " +
@@ -313,42 +326,79 @@ _.extend(Component.prototype, {
   hasChild: function (key) {
     return this.children.hasOwnProperty(key);
   },
-  addChild: function (key, childComponent, attachParentNode,
+  addChild: function (key, childComponentOrFunc,
+                      attachParentNode,
                       attachBeforeNode) {
-    if (key instanceof Component) {
+    if ((key instanceof Component) ||
+        ((typeof key) === 'function')) {
       // omitted key arg
-      childComponent = key;
+      childComponentOrFunc = key;
       key = null;
     }
+
     // omitted key, generate unique child key
     if (key === null || typeof key === 'undefined')
       key = "__child#" + (this._uniqueIdCounter++) + "__";
     key = String(key);
 
+    var self = this;
+    if (self.stage === Component.DESTROYED)
+      throw new Error("parent Component already destroyed");
+    if (self.stage === Component.UNADDED)
+      throw new Error("parent Component is unadded");
+
+    if (self.hasChild(key))
+      throw new Error("Already have a child with key: " + key);
+
+    var childComponent;
+    if (typeof childComponentOrFunc === 'function') {
+      var func = childComponentOrFunc;
+      this._childUpdaters[key] =
+        Deps.autorun(function (c) {
+          if (c.firstRun) {
+            childComponent = func();
+            return;
+          }
+          var oldChild = self.children[key];
+          if ((! (oldChild instanceof Component)) ||
+              oldChild.stage === Component.DESTROYED) {
+            // child shouldn't be missing, but may be
+            // destroyed
+            c.stop();
+            return;
+          }
+          var newChild = func();
+          if (! (newChild instanceof Component))
+            throw new Error("not a Component: " + newChild);
+          if (oldChild.constructor === newChild.constructor) {
+            oldChild.update(newChild._args);
+          } else {
+            self.replaceChild(key, newChild);
+          }
+        });
+    } else {
+      childComponent = childComponentOrFunc;
+    }
+
     if (! (childComponent instanceof Component))
       throw new Error("not a Component: " + childComponent);
 
-    if (this.stage === Component.DESTROYED)
-      throw new Error("parent Component already destroyed");
-    if (this.stage === Component.UNADDED)
-      throw new Error("parent Component is unadded");
     childComponent._requireStage(Component.UNADDED);
 
-    if (this.hasChild(key))
-      throw new Error("Already have a child with key: " + key);
+    self.children[key] = childComponent;
 
-    this.children[key] = childComponent;
-
-    childComponent._added(key, this);
+    childComponent._added(key, self);
 
     if (attachParentNode) {
-      if (this.stage !== Component.BUILT)
+      if (self.stage !== Component.BUILT)
         throw new Error("Attaching new child requires built " +
                         "parent Component");
       childComponent.attach(attachParentNode, attachBeforeNode);
     }
+
+    return childComponent;
   },
-  removeChild: function (key) {
+  removeChild: function (key, _allowTransientEmpty) {
     // note: must work if child is destroyed
 
     key = String(key);
@@ -364,12 +414,47 @@ _.extend(Component.prototype, {
     var childComponent = this.children[key];
     if (childComponent.stage === Component.BUILT &&
         childComponent.isAttached)
-      childComponent.detach();
+      childComponent.detach(_allowTransientEmpty);
 
     delete this.children[key];
+
+    if (this._childUpdaters[key]) {
+      this._childUpdaters[key].stop();
+      delete this._childUpdaters[key];
+    }
+
     childComponent.parent = null;
 
     childComponent.destroy();
+  },
+  replaceChild: function (key, newChild) {
+    if (this.stage === Component.DESTROYED)
+      throw new Error("parent Component already destroyed");
+    if (this.stage === Component.UNADDED)
+      throw new Error("parent Component is unadded");
+
+    if (! this.hasChild(key))
+      throw new Error("No such child component: " + key);
+
+    if (! (newChild instanceof Component))
+      throw new Error("Component required");
+
+    var oldChild = this.children[key];
+
+    if (oldChild.constructor === newChild.constructor) {
+      oldChild.update(newChild._args);
+    } else if (this.stage !== Component.BUILT ||
+               oldChild !== Component.BUILT ||
+               ! oldChild.isAttached) {
+      this.removeChild(key);
+      this.addChild(key, newChild);
+    } else {
+      // swap attached child
+      var parentNode = oldChild.parentNode();
+      var beforeNode = oldChild.lastNode().nextSibling;
+      this.removeChild(key, true);
+      this.addChild(key, newChild, parentNode, beforeNode);
+    }
   }
 });
 

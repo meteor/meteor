@@ -127,18 +127,21 @@ _.extend(RenderBuffer.prototype, {
   },
   component: function (componentOrFunction, options) {
     var self = this;
-    var comp = (typeof componentOrFunction === 'function' ?
-                componentOrFunction() : componentOrFunction);
+
+    if (! ((componentOrFunction instanceof Component) ||
+           (typeof componentOrFunction === 'function')))
+      throw new Error("Component or function required");
 
     var childKey = (options && options.childKey || null);
 
-    this._component.addChild(childKey, comp);
+    var childComp = self._component.addChild(
+      childKey, componentOrFunction);
 
-    var commentString = this.builderId + '_' +
-          (this._nextNum++);
-    this._htmlBuf.push('<!--' + commentString + '-->');
+    var commentString = self.builderId + '_' +
+          (self._nextNum++);
+    self._htmlBuf.push('<!--' + commentString + '-->');
 
-    this._childrenToAttach[commentString] = comp;
+    self._childrenToAttach[commentString] = childComp;
   },
   build: function () {
     var html = this._htmlBuf.join('');
