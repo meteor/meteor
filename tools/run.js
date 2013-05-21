@@ -251,7 +251,6 @@ var startServer = function (options) {
   if (! options.program) {
     var nodeOptions = _.clone(options.nodeOptions);
     nodeOptions.push(path.join(options.bundlePath, 'main.js'));
-    nodeOptions.push('program.json');
     nodeOptions.push('--keepalive');
 
     var child_process = require('child_process');
