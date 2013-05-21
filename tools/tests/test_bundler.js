@@ -26,6 +26,7 @@ Fiber(function () {
     require(path.join(__dirname, '..', 'meteor_npm.js'))._printNpmCalls = true;
 
     /// RUN TESTS
+    require(path.join(__dirname, 'test_bundler_assets.js'));
     require(path.join(__dirname, 'test_bundler_options.js'));
     require(path.join(__dirname, 'test_bundler_npm.js'));
   } catch (err) {
@@ -36,5 +37,3 @@ Fiber(function () {
     process.exit(1);
   };
 }).run();
-
-
