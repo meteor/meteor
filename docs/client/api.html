@@ -2314,6 +2314,8 @@ server logs but not revealed to the client.
 
 {{> api_box match_test}}
 
+{{> api_box match_registerConstructor}}
+
 {{#api_box_inline matchpatterns}}
 
 The following patterns can be used as pattern arguments to `check` and `Match.test`:
@@ -2326,6 +2328,17 @@ Matches any value.
 
 {{#dtdd "<code>String</code>, <code>Number</code>, <code>Boolean</code>, <code>undefined</code>, <code>null</code>"}}
 Matches a primitive of the given type.
+{{/dtdd}}
+
+{{#dtdd "<code>Date</code>, <code>Error</code>, <code>Function</code>, <code>Regexp</code>"}}
+Matches an instance of the given constructor.
+
+You can register other constructors to use as a match pattern
+with `Match.registerConstructor`, or use `Match.InstanceOf`.
+{{/dtdd}}
+
+{{#dtdd "<code>Match.InstanceOf(<em>constructor</em>)</code>"}}
+Matches any value that is an instance of the given constructor.
 {{/dtdd}}
 
 {{#dtdd "<code>[<em>pattern</em>]</code>"}}
@@ -2359,22 +2372,20 @@ Matches either `undefined` or something that matches *pattern*.
 Matches any value that matches at least one of the provided patterns.
 {{/dtdd}}
 
-{{#dtdd "Any constructor function (eg, <code>Date</code>)"}}
-Matches any element that is an instance of that type.
-{{/dtdd}}
+{{#dtdd "<code><em>predicate</em></code> (any function)"}}
+Calls the predicate function with the value as the argument, which
+must return a boolean `true` or `false`.  Matches if the function
+returns true.  The function can also cause the match to fail with a
+more descriptive error message by throwing `Match.Error`. If the
+function throws any other error, that error is thrown from the call to
+`check` or `Match.test`.  Examples:
 
-{{#dtdd "<code>Match.Where(<em>condition</em>)</code>"}}
-Calls the function *condition* with the value as the argument. If *condition*
-returns true, this matches. If *condition* throws a `Match.Error` or returns
-false, this fails. If *condition* throws any other error, that error is thrown
-from the call to `check` or `Match.test`. Examples:
+    check(buffer, EJSON.isBinary);
 
-    check(buffer, Match.Where(EJSON.isBinary));
-
-    NonEmptyString = Match.Where(function (x) {
+    NonEmptyString = function (x) {
       check(x, String);
       return x.length > 0;
-    }
+    };
     check(arg, NonEmptyString);
 {{/dtdd}}
 </dl>
