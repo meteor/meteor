@@ -537,7 +537,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
   _subscribeAndWait: function (/* arguments */) {
     var self = this;
     var f = new Future();
-    var args = _.toArray(arguments).slice(1);
+    var args = _.toArray(arguments);
     args.push({
       onReady: function () { f.return(); },
       onError: function (e) { f.throw(e); }
