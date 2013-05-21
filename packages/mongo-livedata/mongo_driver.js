@@ -123,6 +123,14 @@ _Mongo = function (url) {
   });
 };
 
+_Mongo.prototype.close = function() {
+  var self = this;
+  // Use Future.wrap so that errors get thrown. This happens to
+  // work even outside a fiber since the 'close' method is not
+  // actually asynchronous.
+  Future.wrap(_.bind(self.db.close, self.db))(true).wait();
+};
+
 // Returns the Mongo Collection object; may yield.
 _Mongo.prototype._getCollection = function(collectionName) {
   var self = this;
