@@ -534,6 +534,19 @@ _.extend(Meteor._LivedataConnection.prototype, {
     return handle;
   },
 
+  _subscribeAndWait: function (/* arguments */) {
+    var self = this;
+    var f = new Future();
+    var args = _.toArray(arguments).slice(1);
+    args.push({
+      onReady: function () { f.return(); },
+      onError: function (e) { f.throw(e); }
+    });
+
+    self.subscribe.apply(self, args);
+    return f.wait();
+},
+
   methods: function (methods) {
     var self = this;
     _.each(methods, function (func, name) {
