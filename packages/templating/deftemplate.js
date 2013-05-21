@@ -108,7 +108,7 @@ Meteor._def_template = function (name, raw_func) {
 
   // Define the function assigned to Template.<name>.
 
-  var partial = function (data) {
+  var partial = function (data, options) {
     var tmpl = name && Template[name] || {};
     var tmplData = tmpl._tmpl_data || {};
 
@@ -118,7 +118,7 @@ Meteor._def_template = function (name, raw_func) {
         created: function () {
           var template = templateObjFromLandmark(this);
           template.data = data;
-          tmpl.created && tmpl.created.call(template);
+          tmpl.created && tmpl.created.call(template, options);
         },
         rendered: function () {
           var template = templateObjFromLandmark(this);
