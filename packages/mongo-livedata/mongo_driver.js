@@ -894,3 +894,4 @@ _.extend(LiveResultsSet.prototype, {
 _.extend(Meteor, {
   _Mongo: _Mongo
 });
+Meteor._Mongo._Timestamp = MongoDB.Timestamp;
