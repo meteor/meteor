@@ -140,3 +140,8 @@ Log.format = function (obj, options) {
 
   return line;
 };
+
+Log.logFromText = function (line) {
+  // Turn a line of text into a loggable object.
+  return {message: line, level: "info", time: new Date(), timeInexact: true};
+};

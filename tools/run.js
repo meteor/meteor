@@ -304,15 +304,11 @@ var startServer = function (options) {
     var logIt = function (obj) {
       logToClients({stdout: Log.format(obj, {color: true}) + '\n'});
     };
-    var logFromText = function (line) {
-      // Turn a line of text into a loggable object.
-      return {message: line, level: "info", time: new Date(), timeInexact: true};
-    };
 
     try {
-      logIt(obj || logFromText(line));
+      logIt(obj || Log.logFromText(line));
     } catch (e) {
-      logIt(logFromText(line));
+      logIt(Log.logFromText(line));
     }
   });
 
