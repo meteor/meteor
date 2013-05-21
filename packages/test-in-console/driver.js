@@ -1,6 +1,8 @@
 // Global flag for phantomjs (or other browser) to eval to see if we're done.
+// @export DONE
 DONE = false;
 // Failure count for phantomjs exit code
+// @export FAILURES
 FAILURES = null;
 
 var getName = function (result) {
