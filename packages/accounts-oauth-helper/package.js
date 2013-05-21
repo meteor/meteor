@@ -4,6 +4,9 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
+  api.use('underscore', ['client', 'server']);
+  api.use('random', ['client', 'server']);
+  api.use('check', ['client', 'server']);
   api.use('webapp', 'server');
   api.use('accounts-base', ['client', 'server']);
   api.use('routepolicy', 'server');

@@ -5,7 +5,7 @@ Package.describe({
 
 Package.on_use(function (api) {
 
-  api.use(['tinytest', 'underscore', 'random', 'ejson']);
+  api.use(['tinytest', 'underscore', 'random', 'ejson', 'check']);
   api.use('http');
 
   api.add_files([

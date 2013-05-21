@@ -215,6 +215,7 @@ var logToClients = function (msg) {
   });
 };
 
+
 ////////// Launch server process //////////
 // Takes options:
 // bundlePath
@@ -227,6 +228,7 @@ var logToClients = function (msg) {
 // [onListen]
 // [nodeOptions]
 // [settings]
+
 
 var startServer = function (options) {
   // environment
@@ -300,9 +302,19 @@ var startServer = function (options) {
     }
 
     var obj = Log.parse(line);
-    if (!obj)
-      obj = {message: line, level: "info", time: new Date(), timeInexact: true};
-    logToClients({stdout: Log.format(obj, {color: true}) + '\n'});
+    var logIt = function (obj) {
+      logToClients({stdout: Log.format(obj, {color: true}) + '\n'});
+    };
+    var logFromText = function (line) {
+      // Turn a line of text into a loggable object.
+      return {message: line, level: "info", time: new Date(), timeInexact: true};
+    };
+
+    try {
+      logIt(obj || logFromText(line));
+    } catch (e) {
+      logIt(logFromText(line));
+    }
   });
 
   proc.stderr.setEncoding('utf8');
