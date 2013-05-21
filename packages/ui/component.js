@@ -306,15 +306,15 @@ _.extend(Component.prototype, {
     for (var k in args) {
       if (args.hasOwnProperty(k) &&
           argDeps.hasOwnProperty(k) &&
-          ! EJSON.equal(args[k], oldArgs[k])) {
-        argDeps[k].invalidate();
+          ! EJSON.equals(args[k], oldArgs[k])) {
+        argDeps[k].changed();
         delete oldArgs[k];
       }
     }
     for (var k in oldArgs) {
       if (oldArgs.hasOwnProperty(k) &&
           argDeps.hasOwnProperty(k)) {
-        argDeps[k].invalidate();
+        argDeps[k].changed();
       }
     }
 
