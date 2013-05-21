@@ -39,7 +39,7 @@ StarTranslator._translate = function (bundlePath) {
   // Format defined in meteor/tools/bundler.js
   var manifest = {
     "format": "site-archive-pre1",
-    "builtBy": "Satellite translator", // ???
+    "builtBy": "Star translator",
     "programs": [
       {
         "name": "client",
