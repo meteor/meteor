@@ -173,6 +173,7 @@ var printLogObject = function (obj) {
   console.log(Log.format(obj, { color: true }));
 };
 
+// @param line {String}
 // @returns {Object} structured JSON log object
 Log.printColorfullyFromTextOrJSON = function (line) {
   var obj = Log.parse(line) || objFromText(line);

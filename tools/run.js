@@ -289,6 +289,10 @@ var startServer = function (options) {
     packages: ['logging']
   }).logging.Log;
 
+  // Since no other process will be listening to stdout and parsing it,
+  // print directly in the same format as log messages from other apps
+  Log.outputFormat = 'colored-text';
+
   proc.stdout.setEncoding('utf8');
   // The byline module ensures that each 'data' call will receive one
   // line.
@@ -304,10 +308,9 @@ var startServer = function (options) {
   });
 
   proc.stderr.setEncoding('utf8');
-  proc.stderr.on('data', function (data) {
-    if (data) {
-      logToClients({stderr: data});
-    }
+  require('byline')(proc.stderr).on('data', function (line) {
+    if (!line) return;
+    Log.error('[stderr] ' + line);
   });
 
   proc.on('close', function (code, signal) {
