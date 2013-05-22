@@ -3,6 +3,7 @@ Log = function () {
   return Log.info.apply(this, arguments);
 };
 
+/// FOR TESTING
 var intercept = 0;
 var interceptedLines = [];
 
@@ -18,6 +19,17 @@ Log._intercepted = function () {
   return lines;
 };
 
+// Either 'json' or 'colored-text'.
+//
+// When this is set to 'json', print JSON documents that are parsed by another
+// process ('satellite' or 'meteor run'). This other process should call 
+// 'Log.format' for nice output.
+//
+// When this is set to 'colored-text', call 'Log.format' before printing.
+// This should be used for logging from within satellite, since there is no
+// other process that will be reading its standard output.
+Log.outputFormat = 'json';
+
 var LEVEL_COLORS = {
   debug: 'green',
   info: 'blue',
@@ -28,7 +40,7 @@ var LEVEL_COLORS = {
 // XXX file, line, package
 var RESTRICTED_KEYS = ['time', 'timeInexact', 'level'];
 
-var logOnClient = function (obj) {
+var logInBrowser = function (obj) {
   var str = Log.format(obj);
 
   // XXX Some levels should be probably be sent to the server
@@ -60,7 +72,7 @@ _.each(['debug', 'info', 'warn', 'error'], function (level) {
         throw new Error("Can't set '" + key + "' in log message");
     });
 
-    obj.time = new Date();
+		obj.time = new Date();
     obj.level = level;
     // XXX file, line, package
 
@@ -71,9 +83,15 @@ _.each(['debug', 'info', 'warn', 'error'], function (level) {
     if (intercepted) {
       interceptedLines.push(EJSON.stringify(obj));
     } else if (Meteor.isServer) {
-      console.log(EJSON.stringify(obj));
+    	if (Log.outputFormat === 'colored-text') {
+		    console.log(Log.format(obj, {color: true}));
+    	} else if (Log.outputFormat === 'json') {
+        console.log(EJSON.stringify(obj));
+    	} else {
+    	  throw new Error("Unknown logging output format: " + Log.outputFormat);
+    	}
     } else {
-      logOnClient(obj);
+      logInBrowser(obj);
     }
   };
 });
@@ -144,4 +162,18 @@ Log.format = function (obj, options) {
 Log.logFromText = function (line) {
   // Turn a line of text into a loggable object.
   return {message: line, level: "info", time: new Date(), timeInexact: true};
+};
+
+Log.printColorfullyFromTextOrJSON = function (line) {
+  var obj = Log.parse(line);
+
+  var logIt = function (obj) {
+    console.log(Log.format(obj, { color: true }));
+  };
+
+  try {
+    logIt(obj || Log.logFromText(line));
+  } catch (e) {
+    logIt(Log.logFromText(line));
+  }
 };

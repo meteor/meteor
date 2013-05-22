@@ -300,16 +300,7 @@ var startServer = function (options) {
       return;
     }
 
-    var obj = Log.parse(line);
-    var logIt = function (obj) {
-      logToClients({stdout: Log.format(obj, {color: true}) + '\n'});
-    };
-
-    try {
-      logIt(obj || Log.logFromText(line));
-    } catch (e) {
-      logIt(Log.logFromText(line));
-    }
+    Log.printColorfullyFromTextOrJSON(line);
   });
 
   proc.stderr.setEncoding('utf8');
