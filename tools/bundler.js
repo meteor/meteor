@@ -676,7 +676,7 @@ _.extend(ClientTarget.prototype, {
       exclude: exclude
     };
 
-    var walk = function (dir, assetPath) {
+    var walk = function (dir, assetPathPrefix) {
       _.each(fs.readdirSync(dir), function (item) {
         // Skip excluded files
         var matchesAnExclude = _.any(exclude, function (pattern) {
@@ -686,7 +686,7 @@ _.extend(ClientTarget.prototype, {
           return;
 
         var absPath = path.resolve(dir, item);
-        assetPath = path.join(dir, item);
+        var assetPath = path.join(assetPathPrefix, item);
         if (fs.statSync(absPath).isDirectory()) {
           walk(absPath, assetPath);
           return;
