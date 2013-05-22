@@ -44,7 +44,10 @@ Tinytest.add("logging - log", function (test) {
 
 Tinytest.add("logging - parse", function (test) {
   test.equal(Log.parse("message"), null);
-  test.equal(Log.parse('{"foo": "bar"}'), {foo: "bar"});
+  test.equal(Log.parse('{"foo": "bar"}'), null);
+  var time = new Date;
+  test.equal(Log.parse('{"foo": "bar", "time": ' + EJSON.stringify(time) + '}'),
+                        { foo: "bar", time: time });
   test.equal(Log.parse('{"foo": not json "bar"}'), null);
 });
 
@@ -68,4 +71,12 @@ Tinytest.add("logging - format", function (test) {
       level.charAt(0).toUpperCase() + '20120908-07:06:05.004 message {"foo":"bar"}');
 
   });
+});
+
+Tinytest.add("logging - printColorfullyFromTextOrJSON doesn't crash",
+  function (test) {
+  var line = '{"time": "not a date object"}';
+  var obj = Log.printColorfullyFromTextOrJSON(line); // XXX this is bad it prints to stdout
+  test.isTrue(_.isObject(obj));
+  test.equal(obj.message, line);
 });

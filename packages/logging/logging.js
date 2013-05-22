@@ -102,7 +102,12 @@ Log.parse = function (line) {
   if (line && line[0] === '{') { // might be json generated from calling 'Log'
     try { obj = EJSON.parse(line); } catch (e) {}
   }
-  return obj;
+
+  // XXX should probably check fields other than 'time'
+  if (obj && obj.time && (obj.time instanceof Date))
+    return obj;
+  else
+    return null;
 };
 
 // formats a log object into colored human and machine-readable text
@@ -159,24 +164,18 @@ Log.format = function (obj, options) {
   return line;
 };
 
-Log.logFromText = function (line) {
+var objFromText = function (line) {
   // Turn a line of text into a loggable object.
   return {message: line, level: "info", time: new Date(), timeInexact: true};
 };
 
+var printLogObject = function (obj) {
+  console.log(Log.format(obj, { color: true }));
+};
+
+// @returns {Object} structured JSON log object
 Log.printColorfullyFromTextOrJSON = function (line) {
-  var obj = Log.parse(line);
-
-  var logIt = function (obj) {
-    console.log(Log.format(obj, { color: true }));
-  };
-
-  try {
-    logIt(obj || Log.logFromText(line));
-  } catch (e) {
-    // If line is: '{"time": "foo"}', then obj will be: {time: "foo"}.
-    // `Log.format({time: "foo"}) throws an exception. Instead, just log
-    // line as if it were plain text.
-    logIt(Log.logFromText(line));
-  }
+  var obj = Log.parse(line) || objFromText(line);
+  printLogObject(obj);
+  return obj;
 };
