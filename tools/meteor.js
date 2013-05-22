@@ -785,7 +785,9 @@ Fiber(function () {
           deploy.delete_app(site);
       } else {
         var starball = new_argv.star;
-        requireDirInApp("deploy");
+        // We don't need to be in an app if we're not going to run the bundler.
+        if (!starball)
+          requireDirInApp("deploy");
         var settings = undefined;
         if (new_argv.settings)
           settings = runner.getSettings(new_argv.settings);

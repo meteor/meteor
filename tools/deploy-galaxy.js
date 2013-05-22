@@ -67,6 +67,10 @@ exports.deleteApp = function (app) {
 // - appDir
 // - settings
 // - bundleOptions
+// - starball
+// XXX refactor this to separate the "maybe bundle" part from "actually deploy"
+//     so we can be careful to not rely on any of the app dir context when
+//     in --star mode.
 exports.deploy = function (options) {
   var galaxy = getGalaxy(options.context);
   var Meteor = getMeteor(options.context);
