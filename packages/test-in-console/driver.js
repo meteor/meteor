@@ -1,9 +1,14 @@
 // Global flag for phantomjs (or other browser) to eval to see if we're done.
-// @export DONE
 DONE = false;
 // Failure count for phantomjs exit code
-// @export FAILURES
 FAILURES = null;
+
+// @export TEST_STATUS
+TEST_STATUS = {
+  DONE: false,
+  FAILURES: null
+};
+
 
 var getName = function (result) {
   return (result.server ? "S: " : "C: ") +
@@ -135,12 +140,12 @@ Meteor.startup(function () {
         if (doReport) {
           log("Waiting 3s for any last reports to get sent out");
           setTimeout(function () {
-            FAILURES = failed;
-            DONE = true;
+            TEST_STATUS.FAILURES = FAILURES = failed;
+            TEST_STATUS.DONE = DONE = true;
           }, 3000);
         } else {
-          FAILURES = failed;
-          DONE = true;
+          TEST_STATUS.FAILURES = FAILURES = failed;
+          TEST_STATUS.DONE = DONE = true;
         }
       });
     },
