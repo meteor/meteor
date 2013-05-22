@@ -19,8 +19,8 @@ Log._intercepted = function () {
 };
 
 var LEVEL_COLORS = {
-  debug: 'blue',
-  info: 'cyan',
+  debug: 'green',
+  info: 'blue',
   warn: 'yellow',
   error: 'red'
 };
