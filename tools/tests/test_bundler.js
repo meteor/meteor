@@ -11,6 +11,8 @@
 /*global*/ Fiber = require('fibers');
 /*global*/ Future = require('fibers/future');
 
+/*global*/ mainJSContents = "process.argv.splice(2, 0, 'program.json');\nrequire('./programs/server/boot.js');\n";
+
 var tmpBaseDir = files.mkdtemp('test_bundler');
 var tmpCounter = 1;
 var lastTmpDir;
