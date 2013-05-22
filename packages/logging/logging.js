@@ -164,19 +164,11 @@ Log.format = function (obj, options) {
   return line;
 };
 
-var objFromText = function (line) {
-  // Turn a line of text into a loggable object.
-  return {message: line, level: "info", time: new Date(), timeInexact: true};
-};
-
-var printLogObject = function (obj) {
-  console.log(Log.format(obj, { color: true }));
-};
-
+// Turn a line of text into a loggable object.
 // @param line {String}
-// @returns {Object} structured JSON log object
-Log.printColorfullyFromTextOrJSON = function (line) {
-  var obj = Log.parse(line) || objFromText(line);
-  printLogObject(obj);
-  return obj;
+// @param override {Object}
+Log.objFromText = function (line, override) {
+  var obj = {message: line, level: "info", time: new Date(), timeInexact: true};
+  return _.extend(obj, override);
 };
+

@@ -304,13 +304,15 @@ var startServer = function (options) {
       return;
     }
 
-    Log.printColorfullyFromTextOrJSON(line);
+    var obj = Log.parse(line) || objFromText(line);
+    console.log(Log.format(obj, { color:true }));
   });
 
   proc.stderr.setEncoding('utf8');
   require('byline')(proc.stderr).on('data', function (line) {
     if (!line) return;
-    Log.error('[stderr] ' + line);
+    var obj = Log.objFromText(line, { level: 'error', stderr: true });
+    console.log(Log.format(obj, { color: true }));
   });
 
   proc.on('close', function (code, signal) {
