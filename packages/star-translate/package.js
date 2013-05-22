@@ -3,7 +3,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['dev-bundle']);
+  api.use(['dev-bundle-fetcher']);
   api.add_files(['translator.js'], 'server');
 });
 

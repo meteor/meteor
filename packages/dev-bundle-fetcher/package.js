@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "A shell script for downloading the Meteor dev bundle"
+  summary: "A shell script for downloading the Meteor dev bundle",
+  internal: true
 });
 
 Package._transitional_registerBuildPlugin({

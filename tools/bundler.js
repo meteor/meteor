@@ -1124,8 +1124,8 @@ _.extend(ServerTarget.prototype, {
 
     var shellScripts = unipackage.load({
       library: self.library,
-      packages: ['dev-bundle']
-    })['dev-bundle'].shellScripts;
+      packages: ['dev-bundle-fetcher']
+    })['dev-bundle-fetcher'].shellScripts;
     var script = shellScripts['dev-bundle.sh.in'].source;
     script = script.replace(/##PLATFORM##/g, platform);
     script = script.replace(/##BUNDLE_VERSION##/g, devBundleVersion);
