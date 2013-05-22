@@ -1,6 +1,11 @@
 set -e
 trap "echo Failed to fetch binary dependencies." EXIT
 
+if [ -z "$DATA_DIR" ]; then
+    echo "Please set DATA_DIR to a writeable directory."
+    exit 1
+fi
+
 cd `dirname $0`
 
 # XXX don't hardcode linux :)
