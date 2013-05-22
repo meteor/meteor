@@ -41,4 +41,4 @@ set +e
 rm -rf node_modules 2>/dev/null || true
 
 export NODE_PATH="$DEPS_DIR/lib/node_modules"
-exec "$DEPS_DIR/bin/node" boot.js ##IMAGE## "$@"
+exec "$DEPS_DIR/bin/node" ##RUN_FILE## ##IMAGE## "$@"

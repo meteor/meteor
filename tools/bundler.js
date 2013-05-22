@@ -172,6 +172,7 @@ var fs = require('fs');
 var _ = require('underscore');
 var project = require(path.join(__dirname, 'project.js'));
 var builder = require(path.join(__dirname, 'builder.js'));
+var unipackage = require(path.join(__dirname, 'unipackage.js'));
 
 // files to ignore when bundling. node has no globs, so use regexps
 var ignoreFiles = [
@@ -1045,6 +1046,7 @@ var ServerTarget = function (options) {
 
   self.clientTarget = options.clientTarget;
   self.releaseStamp = options.releaseStamp;
+  self.library = options.library;
 
   if (! archinfo.matches(self.arch, "native"))
     throw new Error("ServerTarget targeting something that isn't a server?");
@@ -1120,11 +1122,15 @@ _.extend(ServerTarget.prototype, {
         path.join(files.get_dev_bundle(), '.bundle_version.txt'), 'utf8');
     devBundleVersion = devBundleVersion.split('\n')[0];
 
-    var script = fs.readFileSync(path.join(__dirname, 'server',
-                                           'target.sh.in'), 'utf8');
+    var shellScripts = unipackage.load({
+      library: self.library,
+      packages: ['dev-bundle-fetcher']
+    })['dev-bundle-fetcher'].shellScripts;
+    var script = shellScripts['dev-bundle.sh.in'].source;
     script = script.replace(/##PLATFORM##/g, platform);
     script = script.replace(/##BUNDLE_VERSION##/g, devBundleVersion);
     script = script.replace(/##IMAGE##/g, imageControlFile);
+    script = script.replace(/##RUN_FILE##/g, 'boot.js');
     builder.write(scriptName, { data: new Buffer(script, 'utf8'),
                                 executable: true });
 
