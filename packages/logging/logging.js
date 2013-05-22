@@ -22,7 +22,7 @@ Log._intercepted = function () {
 // Either 'json' or 'colored-text'.
 //
 // When this is set to 'json', print JSON documents that are parsed by another
-// process ('satellite' or 'meteor run'). This other process should call 
+// process ('satellite' or 'meteor run'). This other process should call
 // 'Log.format' for nice output.
 //
 // When this is set to 'colored-text', call 'Log.format' before printing.
@@ -72,7 +72,7 @@ _.each(['debug', 'info', 'warn', 'error'], function (level) {
         throw new Error("Can't set '" + key + "' in log message");
     });
 
-		obj.time = new Date();
+    obj.time = new Date();
     obj.level = level;
     // XXX file, line, package
 
@@ -83,13 +83,13 @@ _.each(['debug', 'info', 'warn', 'error'], function (level) {
     if (intercepted) {
       interceptedLines.push(EJSON.stringify(obj));
     } else if (Meteor.isServer) {
-    	if (Log.outputFormat === 'colored-text') {
-		    console.log(Log.format(obj, {color: true}));
-    	} else if (Log.outputFormat === 'json') {
+      if (Log.outputFormat === 'colored-text') {
+        console.log(Log.format(obj, {color: true}));
+      } else if (Log.outputFormat === 'json') {
         console.log(EJSON.stringify(obj));
-    	} else {
-    	  throw new Error("Unknown logging output format: " + Log.outputFormat);
-    	}
+      } else {
+        throw new Error("Unknown logging output format: " + Log.outputFormat);
+      }
     } else {
       logInBrowser(obj);
     }
@@ -174,6 +174,9 @@ Log.printColorfullyFromTextOrJSON = function (line) {
   try {
     logIt(obj || Log.logFromText(line));
   } catch (e) {
+    // If line is: '{"time": "foo"}', then obj will be: {time: "foo"}.
+    // `Log.format({time: "foo"}) throws an exception. Instead, just log
+    // line as if it were plain text.
     logIt(Log.logFromText(line));
   }
 };
