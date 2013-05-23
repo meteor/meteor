@@ -6,6 +6,8 @@
   packages can be used to perform an OAuth exchange without creating an
   account and logging in.  #1024
 
+* Make `Meteor.defer` work in an inactive tab in iOS.  #1023
+
 * Allow new `Random` instances to be constructed with specified seed. This
   can be used to create repeatable test cases for code that picks random
   values.  #1033
