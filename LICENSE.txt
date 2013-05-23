@@ -379,7 +379,7 @@ Copyright (c) 2009-2010 Alexis Sellier
 useragent: https://github.com/fintanf/node-useragent
 ----------
 
-This parser is based on the user agent parser; code.google.com/p/ua-parser/ 
+This parser is based on the user agent parser; code.google.com/p/ua-parser/
 which is released under Apache license:
 
 Copyright 2009 Google Inc.
@@ -425,6 +425,13 @@ amdefine: https://github.com/jrburke/amdefine
 ----------
 
 Copyright (c) 2011, The Dojo Foundation
+
+
+----------
+nlogger: https://github.com/igo/nlogger
+----------
+
+Copyright (c) 2010 by Igor Urmincek
 
 
 
@@ -528,12 +535,12 @@ openssl: http://www.openssl.org/
 showdown: http://www.attacklab.net/
 ---------
 
-Copyright (c) 2007, John Fraser  
-<http://www.attacklab.net/>  
+Copyright (c) 2007, John Fraser
+<http://www.attacklab.net/>
 All rights reserved.
 
-Original Markdown copyright (c) 2004, John Gruber  
-<http://daringfireball.net/>  
+Original Markdown copyright (c) 2004, John Gruber
+<http://daringfireball.net/>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -713,9 +720,9 @@ the following conditions:
 The above copyright notice and this permission notice shall be
 included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
-EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
-WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND,
+EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY
+WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
 
 IN NO EVENT SHALL TOM WU BE LIABLE FOR ANY SPECIAL, INCIDENTAL,
 INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND, OR ANY DAMAGES WHATSOEVER
@@ -987,7 +994,7 @@ MongoDB uses third-party libraries or other resources that may
 be distributed under licenses different than the MongoDB software.
 
 In the event that we accidentally failed to list a required notice,
-please bring it to our attention through any of the ways detailed here : 
+please bring it to our attention through any of the ways detailed here :
 
            mongodb-dev@googlegroups.com
 
@@ -1500,7 +1507,7 @@ maintained libraries. The externally maintained libraries used by Node are:
      * are met:
      *
      * 1. Redistributions of source code must retain the above copyright
-     *    notice, this list of conditions and the following disclaimer. 
+     *    notice, this list of conditions and the following disclaimer.
      *
      * 2. Redistributions in binary form must reproduce the above copyright
      *    notice, this list of conditions and the following disclaimer in
@@ -1571,7 +1578,7 @@ maintained libraries. The externally maintained libraries used by Node are:
     AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-    IN THE SOFTWARE. 
+    IN THE SOFTWARE.
   """
 
 - Closure Linter is located at tools/closure_linter. Closure's license
@@ -1738,8 +1745,8 @@ maintained libraries. The externally maintained libraries used by Node are:
     */
   """
 
-- npm is a package manager program located at deps/npm. 
-  npm's license follows: 
+- npm is a package manager program located at deps/npm.
+  npm's license follows:
   """
     Copyright 2009-2012, Isaac Z. Schlueter (the "Original Author")
     All rights reserved.
