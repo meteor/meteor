@@ -304,7 +304,7 @@ var startServer = function (options) {
       return;
     }
 
-    var obj = Log.parse(line) || objFromText(line);
+    var obj = Log.parse(line) || Log.objFromText(line);
     console.log(Log.format(obj, { color:true }));
   });
 
