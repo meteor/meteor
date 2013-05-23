@@ -56,6 +56,7 @@ var logInBrowser = function (obj) {
   }
 };
 
+// @returns {Object: { line: Number, fileName: String }}
 var getCallerDetails = function () {
   var e = new Error();
   // now magic will happen: get line number from callstack
@@ -68,7 +69,7 @@ var getCallerDetails = function () {
     line = lines[++index];
 
   var details = {};
-  details.line = line.split(':')[1];
+  details.line = +line.split(':')[1];
 
   // line can be in two formats depending on function description availability:
   // 0) at functionName (/filePath/file.js:line:position)
