@@ -19,6 +19,8 @@ Package.on_use(function (api) {
     'login_buttons_single.js',
     'login_buttons_dropdown.js',
     'login_buttons_dialogs.js'], 'client');
+
+    api.add_files('server_methods.js', 'server');
 });
 
 Package.on_test(function (api) {
