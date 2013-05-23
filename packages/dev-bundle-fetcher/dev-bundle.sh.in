@@ -8,8 +8,37 @@ fi
 
 cd `dirname $0`
 
+# Duplicated from scripts/admin/launch-meteor, except that we hardcode the path
+# to sysctl. (When satellite spawns ultraworld, ultraworld doesn't have a PATH
+# and so can't find sysctl itself.)
+UNAME=$(uname)
+if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
+    echo "Sorry, this OS is not supported yet." 1>&2
+    exit 1
+fi
+
+# If you change this, also change host() in tools/archinfo.js
+if [ "$UNAME" = "Darwin" ] ; then
+    if [ "i386" != "$(uname -p)" -o "1" != "$(/usr/sbin/sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0)" ] ; then
+        # Can't just test uname -m = x86_64, because Snow Leopard can
+        # return other values.
+        echo "Only 64-bit Intel processors are supported at this time." 1>&2
+        exit 1
+    fi
+    ARCH="x86_64"
+elif [ "$UNAME" = "Linux" ] ; then
+    ARCH="$(uname -m)"
+    if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
+        echo "Unsupported architecture: $ARCH" 1>&2
+        echo "Meteor only supports i686 and x86_64 for now." 1>&2
+        exit 1
+    fi
+fi
+PLATFORM="${UNAME}_${ARCH}"
+
+
 # XXX don't hardcode linux :)
-TARBALL="dev_bundle_##PLATFORM##_##BUNDLE_VERSION##.tar.gz"
+TARBALL="dev_bundle_${PLATFORM}_##BUNDLE_VERSION##.tar.gz"
 BUNDLE_TMPDIR="$DATA_DIR/dependencies.fetch"
 
 rm -rf "$BUNDLE_TMPDIR"
