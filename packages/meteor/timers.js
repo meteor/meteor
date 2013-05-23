@@ -1,4 +1,4 @@
-var withCurrentInvocation = function (f) {
+var withoutInvocation = function (f) {
   if (Meteor._CurrentInvocation) {
     if (Meteor._CurrentInvocation.get() && Meteor._CurrentInvocation.get().isSimulation)
       throw new Error("Can't set timers inside simulations");
@@ -9,7 +9,7 @@ var withCurrentInvocation = function (f) {
 };
 
 var bindAndCatch = function (context, f) {
-  return Meteor.bindEnvironment(withCurrentInvocation(f), function (e) {
+  return Meteor.bindEnvironment(withoutInvocation(f), function (e) {
     // XXX report nicely (or, should we catch it at all?)
     Meteor._debug("Exception from " + context + ":", e);
   });
