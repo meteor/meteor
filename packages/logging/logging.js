@@ -71,7 +71,7 @@ var getCallerDetails = function () {
   details.line = line.split(':')[1];
 
   // line can be in two formats depending on function description availability:
-  // 0) at functionNumber (/filePath/file.js:line:position)
+  // 0) at functionName (/filePath/file.js:line:position)
   // 1) at /filePath/file.js:line:position
   details.fileName = line.indexOf('(') === -1 ?
                         line.split('at ')[1] :
