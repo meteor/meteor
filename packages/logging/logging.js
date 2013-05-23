@@ -56,6 +56,32 @@ var logInBrowser = function (obj) {
   }
 };
 
+var getCallerDetails = function () {
+  var e = new Error();
+  // now magic will happen: get line number from callstack
+  var lines = e.stack.split('\n');
+  var line = lines[2];
+  var index = 0;
+
+  // Pick the first line outside logging package
+  while (line.indexOf('/packages/logging.js') !== -1)
+    line = lines[++index];
+
+  var details = {};
+  details.line = line.split(':')[1];
+
+  // line can be in two formats depending on function description availability:
+  // 0) at functionNumber (/filePath/file.js:line:position)
+  // 1) at /filePath/file.js:line:position
+  details.fileName = line.indexOf('(') === -1 ?
+                        line.split('at ')[1] :
+                        line.split('(')[1];
+  details.fileName = details.fileName.split(':')[0]; // get rid of line number
+  details.fileName = details.fileName.split('/').slice(-1)[0];
+
+  return details;
+};
+
 _.each(['debug', 'info', 'warn', 'error'], function (level) {
   // @param arg {String|Object}
   Log[level] = function (arg) {
@@ -65,7 +91,8 @@ _.each(['debug', 'info', 'warn', 'error'], function (level) {
       intercepted = true;
     }
 
-    var obj = (typeof arg === 'string') ? {message: arg} : arg;
+    var obj = (typeof arg === 'string') ?
+                _.extend(getCallerDetails(), {message: arg}): arg;
 
     _.each(RESTRICTED_KEYS, function (key) {
       if (obj[key])
