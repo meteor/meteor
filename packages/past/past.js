@@ -1,7 +1,8 @@
-// This file is used to set up aliases and methods to preserve backwards on some 
-// deprecated methods.  Care should be taken when adding aliases and methods
-// that the target will not be undefined, as the past package is loaded early.
-// In some cases, it may be best to define the alias in the package it refers to.
+// This file is used to set up aliases and methods to preserve backwards
+// compatibility on some deprecated methods.  Care should be taken when
+// adding aliases and methods that the target will not be undefined, as
+// the past package is loaded early.  In some cases, it may be best to
+// define the alias in the package it refers to.
 
 // Old under_score version of camelCase public API names.
 Meteor.is_client = Meteor.isClient;
