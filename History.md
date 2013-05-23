@@ -6,7 +6,11 @@
   packages can be used to perform an OAuth exchange without creating an
   account and logging in.  #1024
 
-Patch contributed by GitHub user timhaines.
+* Allow new `Random` instances to be constructed with specified seed. This
+  can be used to create repeatable test cases for code that picks random
+  values.  #1033
+
+Patches contributed by GitHub users awwx and timhaines.
 
 
 ## v0.6.3
