@@ -34,10 +34,12 @@ var LEVEL_COLORS = {
   debug: 'green',
   info: 'blue',
   warn: 'yellow',
-  error: 'red'
+  error: 'red',
+  metaInfo: 'magenta'
 };
 
-// XXX file, line, package
+// XXX package
+var RESERVED_KEYS = ['time', 'timeInexact', 'level', 'fileName', 'line', 'app'];
 var RESTRICTED_KEYS = ['time', 'timeInexact', 'level'];
 
 var logInBrowser = function (obj) {
@@ -149,8 +151,12 @@ Log.format = function (obj, options) {
   var timeInexact = obj.timeInexact;
 
   var level = obj.level || 'info';
+  var fileName = obj.fileName;
+  var lineNumber = obj.line;
+  var appName = obj.app|| '';
+  if (appName) appName = '[' + appName + ']';
 
-  _.each(RESTRICTED_KEYS, function(key) {
+  _.each(RESERVED_KEYS, function(key) {
     delete obj[key];
   });
 
@@ -174,22 +180,28 @@ Log.format = function (obj, options) {
         pad2(time.getSeconds()) +
         '.' +
         pad3(time.getMilliseconds());
+  var sourceInfo = (fileName && lineNumber) ?
+                   '(' + fileName + ':' + lineNumber + ')' : '';
 
-  var line = [
+  var infoPrefix = [
     level.charAt(0).toUpperCase(),
     dateStamp,
     '-',
     timeStamp,
     timeInexact ? '?' : ' ',
-    message].join('');
+    appName,
+    sourceInfo].join('');
 
-  if (options.color && Meteor.isServer) {
-    var color = LEVEL_COLORS[level];
-    if (color)
-      line = Npm.require('cli-color')[color](line);
-  }
+  var prettify = function (line, color) {
+    if (options.color && Meteor.isServer) {
+      if (color)
+        return line = Npm.require('cli-color')[color](line);
+      return line
+    }
+  };
 
-  return line;
+  return prettify(infoPrefix, LEVEL_COLORS.metaInfo)
+       + prettify(message, LEVEL_COLORS[level]);
 };
 
 // Turn a line of text into a loggable object.
