@@ -12,6 +12,9 @@
   can be used to create repeatable test cases for code that picks random
   values.  #1033
 
+* Fix CoffeeScript error reporting to include source file and line
+  number again.  #1052
+
 Patches contributed by GitHub users awwx and timhaines.
 
 
