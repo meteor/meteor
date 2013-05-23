@@ -171,4 +171,3 @@ Log.objFromText = function (line, override) {
   var obj = {message: line, level: "info", time: new Date(), timeInexact: true};
   return _.extend(obj, override);
 };
-
