@@ -17,6 +17,8 @@ Handlebars.registerHelper(
 Template._loginButtons.events({
   'click #login-buttons-logout': function() {
     Meteor.logout(function () {
+      Meteor.call('accountsOnLoggedOut'); // Send the loggedOut event to the server
+      if (Accounts.onLoggedOut !== undefined) Accounts.onLoggedOut(); // Fire the loggedOut event
       loginButtonsSession.closeDropdown();
     });
   }

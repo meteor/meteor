@@ -7,6 +7,8 @@ Template._loginButtonsLoggedOutSingleLoginButton.events({
     loginButtonsSession.resetMessages();
     var callback = function (err) {
       if (!err) {
+        Meteor.call('accountsOnLoggedIn'); // Send the loggedIn event to the server
+        if (Accounts.onLoggedIn !== undefined) Accounts.onLoggedIn(); // Fire the loggedIn event
         loginButtonsSession.closeDropdown();
       } else if (err instanceof Accounts.LoginCancelledError) {
         // do nothing
