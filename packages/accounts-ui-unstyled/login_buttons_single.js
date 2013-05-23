@@ -7,6 +7,7 @@ Template._loginButtonsLoggedOutSingleLoginButton.events({
     loginButtonsSession.resetMessages();
     var callback = function (err) {
       if (!err) {
+        if (Accounts.loggedIn !== undefined) Accounts.loggedIn(); // Fire the loggedIn event
         loginButtonsSession.closeDropdown();
       } else if (err instanceof Accounts.LoginCancelledError) {
         // do nothing

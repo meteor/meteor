@@ -381,6 +381,7 @@ var login = function () {
     if (error) {
       loginButtonsSession.errorMessage(error.reason || "Unknown error");
     } else {
+      if (Accounts.loggedIn !== undefined) Accounts.loggedIn(); // Fire the loggedIn event
       loginButtonsSession.closeDropdown();
     }
   });
