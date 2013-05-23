@@ -381,8 +381,8 @@ var login = function () {
     if (error) {
       loginButtonsSession.errorMessage(error.reason || "Unknown error");
     } else {
-      Meteor.call('accountsLoggedIn'); // Send the loggedIn event to the server
-      if (Accounts.loggedIn !== undefined) Accounts.loggedIn(); // Fire the loggedIn event
+      Meteor.call('accountsOnLoggedIn'); // Send the loggedIn event to the server
+      if (Accounts.onLoggedIn !== undefined) Accounts.onLoggedIn(); // Fire the loggedIn event
       loginButtonsSession.closeDropdown();
     }
   });
