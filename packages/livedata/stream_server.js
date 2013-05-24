@@ -33,7 +33,7 @@ Meteor._DdpStreamServer = function () {
     // converts to Unix sockets) but for now, raise the delay.
     disconnect_delay: 60 * 1000,
     jsessionid: false});
-  self.server.installHandlers(__meteor_bootstrap__.app);
+  self.server.installHandlers(__meteor_bootstrap__.httpServer);
 
   // Support the /websocket endpoint
   self._redirectWebsocketEndpoint();
@@ -88,9 +88,9 @@ _.extend(Meteor._DdpStreamServer.prototype, {
     // an approach similar to overshadowListeners in
     // https://github.com/sockjs/sockjs-node/blob/cf820c55af6a9953e16558555a31decea554f70e/src/utils.coffee
     _.each(['request', 'upgrade'], function(event) {
-      var app = __meteor_bootstrap__.app;
-      var oldAppListeners = app.listeners(event).slice(0);
-      app.removeAllListeners(event);
+      var httpServer = __meteor_bootstrap__.httpServer;
+      var oldHttpServerListeners = httpServer.listeners(event).slice(0);
+      httpServer.removeAllListeners(event);
 
       // request and upgrade have different arguments passed but
       // we only care about the first one which is always request
@@ -102,11 +102,11 @@ _.extend(Meteor._DdpStreamServer.prototype, {
             request.url === '/websocket/')
           request.url = self.prefix + '/websocket';
 
-        _.each(oldAppListeners, function(oldListener) {
-          oldListener.apply(app, args);
+        _.each(oldHttpServerListeners, function(oldListener) {
+          oldListener.apply(httpServer, args);
         });
       };
-      app.addListener(event, newListener);
+      httpServer.addListener(event, newListener);
     });
   }
 });

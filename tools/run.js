@@ -247,6 +247,8 @@ var startServer = function (options) {
     env.METEOR_SETTINGS = options.settings;
   else
     delete env.METEOR_SETTINGS;
+  // Display errors from (eg) the NPM connect module over the network.
+  env.NODE_ENV = 'development';
 
   if (! options.program) {
     var nodeOptions = _.clone(options.nodeOptions);

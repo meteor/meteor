@@ -1,24 +1,45 @@
 {
   "dependencies": {
     "connect": {
-      "version": "1.9.2",
+      "version": "2.7.10",
       "dependencies": {
         "qs": {
           "version": "0.6.5"
         },
-        "mime": {
-          "version": "1.2.9"
-        },
         "formidable": {
           "version": "1.0.14"
-        }
-      }
-    },
-    "gzippo": {
-      "from": "https://github.com/meteor/gzippo/tarball/1e4b955439abc643879ae264b28a761521818f3b",
-      "dependencies": {
-        "mime": {
-          "version": "1.2.9"
+        },
+        "cookie-signature": {
+          "version": "1.0.1"
+        },
+        "buffer-crc32": {
+          "version": "0.2.1"
+        },
+        "cookie": {
+          "version": "0.0.5"
+        },
+        "send": {
+          "version": "0.1.0",
+          "dependencies": {
+            "mime": {
+              "version": "1.2.6"
+            },
+            "range-parser": {
+              "version": "0.0.4"
+            }
+          }
+        },
+        "bytes": {
+          "version": "0.2.0"
+        },
+        "fresh": {
+          "version": "0.1.0"
+        },
+        "pause": {
+          "version": "0.0.1"
+        },
+        "debug": {
+          "version": "0.7.2"
         }
       }
     },
