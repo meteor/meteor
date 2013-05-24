@@ -40,7 +40,8 @@ var LEVEL_COLORS = {
 var META_COLOR = 'magenta';
 
 // XXX package
-var RESTRICTED_KEYS = ['time', 'timeInexact', 'level', 'file', 'line', 'app'];
+var RESTRICTED_KEYS = ['time', 'timeInexact', 'level', 'file', 'line', 'app',
+                        'originApp'];
 
 var logInBrowser = function (obj) {
   var str = Log.format(obj);
@@ -156,7 +157,7 @@ Log.format = function (obj, options) {
   var file = obj.file;
   var lineNumber = obj.line;
   var appName = obj.app|| '';
-  if (appName) appName = '[' + appName + ']';
+  var originApp = obj.originApp;
 
   _.each(RESTRICTED_KEYS, function(key) {
     delete obj[key];
@@ -184,6 +185,10 @@ Log.format = function (obj, options) {
         pad3(time.getMilliseconds());
   var sourceInfo = (file && lineNumber) ?
                    '(' + file + ':' + lineNumber + ')' : '';
+  var appInfo = '';
+  if (appName) appInfo += appName;
+  if (originApp && originApp !== appName) appInfo += ':' + originApp;
+  if (appInfo) appInfo = '[' + appInfo + ']';
 
   var metaPrefix = [
     level.charAt(0).toUpperCase(),
@@ -191,7 +196,7 @@ Log.format = function (obj, options) {
     '-',
     timeStamp,
     timeInexact ? '?' : ' ',
-    appName,
+    appInfo,
     sourceInfo].join('');
 
   var prettify = function (line, color) {
