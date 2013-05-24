@@ -10,7 +10,7 @@ var getMeteor = function (context) {
   if (! _meteor) {
     _meteor = unipackage.load({
       library: context.library,
-      packages: [ 'livedata' ],
+      packages: [ 'livedata', 'mongo-livedata' ],
       release: context.releaseVersion
     }).meteor.Meteor;
   }
@@ -50,6 +50,16 @@ var exitWithError = function (error, messages) {
 var prettyCall = function (galaxy, name, args, messages) {
   try {
     var ret = galaxy.apply(name, args);
+  } catch (e) {
+    exitWithError(e, messages);
+  }
+  return ret;
+};
+
+
+var prettySub = function (galaxy, name, args, messages) {
+  try {
+    var ret = galaxy._subscribeAndWait.apply(galaxy, [name].concat(args));
   } catch (e) {
     exitWithError(e, messages);
   }
@@ -161,6 +171,39 @@ exports.deploy = function (options) {
 
   process.stderr.write(options.app + ": " +
                        "pushed revision " + result.serial + "\n");
+  // Close the connection to Galaxy (otherwise Node will continue running).
+  galaxy.close();
+};
+
+// options:
+// - context
+// - app
+exports.logs = function (options) {
+  var galaxy = getGalaxy(options.context);
+
+  var Log = unipackage.load({
+    library: options.context.library,
+    packages: [ 'logging' ],
+    release: options.context.releaseVersion
+  }).logging.Log;
+
+  var Collection = getMeteor().Collection;
+  var Logs = new Collection("logs", galaxy);
+
+  Logs.find().observe({
+    added: function(log) {
+      var parsed = Log.parse(log.obj);
+      if (parsed)
+        console.log(Log.format(parsed, {color: true}));
+    }
+  });
+
+  // XXX make this talk to a separate logReader service instead of
+  // ultraworld direcly
+  prettySub(galaxy, "logsForApp", [options.app], {
+    "no-such-app": "No such app: " + options.app
+  });
+
   // Close the connection to Galaxy (otherwise Node will continue running).
   galaxy.close();
 };

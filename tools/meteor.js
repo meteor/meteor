@@ -841,7 +841,17 @@ Fiber(function () {
         process.exit(1);
       }
 
-      deploy.logs(argv._[0]);
+      var useGalaxy = 'GALAXY' in process.env;
+
+      if (useGalaxy) {
+        var deployGalaxy = require('./deploy-galaxy.js');
+        deployGalaxy.logs({
+          context: context,
+          app: argv._[0]
+        });
+      } else {
+        deploy.logs(argv._[0]);
+      }
     }
   });
 
