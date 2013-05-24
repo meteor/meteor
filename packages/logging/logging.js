@@ -185,7 +185,7 @@ Log.format = function (obj, options) {
   var sourceInfo = (fileName && lineNumber) ?
                    '(' + fileName + ':' + lineNumber + ')' : '';
 
-  var infoPrefix = [
+  var metaPrefix = [
     level.charAt(0).toUpperCase(),
     dateStamp,
     '-',
@@ -202,7 +202,7 @@ Log.format = function (obj, options) {
     }
   };
 
-  return prettify(infoPrefix, META_COLOR)
+  return prettify(metaPrefix, META_COLOR)
        + ' '
        + prettify(message, LEVEL_COLORS[level]);
 };
