@@ -95,7 +95,7 @@ which npm
 # you update version numbers.
 
 cd "$DIR/lib/node_modules"
-npm install connect@1.9.2 # not 2.x yet. sockjs doesn't work w/ new connect
+npm install connect@2.7.10
 npm install optimist@0.3.5
 npm install semver@1.1.0
 npm install handlebars@1.0.7
@@ -109,10 +109,6 @@ npm install fstream@0.1.21
 npm install tar@0.1.14
 npm install kexec@0.1.1
 npm install shell-quote@0.0.1
-
-# allow clientMaxAge to be set to 0:
-# https://github.com/tomgco/gzippo/pull/49
-npm install https://github.com/meteor/gzippo/tarball/1e4b955439
 
 # uglify-js has a bug which drops 'undefined' in arrays:
 # https://github.com/mishoo/UglifyJS2/pull/97

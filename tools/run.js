@@ -240,6 +240,9 @@ var start_server = function (options) {
       env.METEOR_SETTINGS = settings;
   }
 
+  // Display errors from (eg) the NPM connect module over the network.
+  env.NODE_ENV = 'development';
+
   var nodeOptions = _.clone(options.nodeOptions);
   nodeOptions.push(path.join(options.bundlePath, 'main.js'));
   nodeOptions.push('--keepalive');
