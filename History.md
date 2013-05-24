@@ -15,7 +15,9 @@
 * Fix CoffeeScript error reporting to include source file and line
   number again.  #1052
 
-Patches contributed by GitHub users awwx and timhaines.
+* Fix Mongo queries which nested JavaScript RegExp objects inside `$or`.  #1089
+
+Patches contributed by GitHub users awwx, johnston, and timhaines.
 
 
 ## v0.6.3
