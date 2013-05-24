@@ -831,13 +831,13 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
         {y: /^p/}, 
         {z: 'q'}
       ]}
-    ), 
+    ),
     {'$or': [
       {x: {$regex: '^o'}},
       {y: {$regex: '^p'}},
       {z: 'q'}
     ]}
-  )
+  );
 
   test.equal(
     Meteor.Collection._rewriteSelector(
@@ -851,7 +851,7 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
           {t: /^d/i}
         ]}
       ]}
-    ), 
+    ),
     {'$or': [
       {'$and': [
         {x: {$regex: '^a', $options: 'i'}},
@@ -862,7 +862,7 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
         {t: {$regex: '^d', $options: 'i'}}
       ]}
     ]}
-  )
+  );
 
   var oid = new Meteor.Collection.ObjectID();
   test.equal(Meteor.Collection._rewriteSelector(oid),

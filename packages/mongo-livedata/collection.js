@@ -251,10 +251,9 @@ Meteor.Collection._rewriteSelector = function (selector) {
     }
     else if (_.contains(['$or','$and','$nor'], key)) {
       // Translate lower levels of $and/$or/$nor
-      ret[key] = []
-      _.each(value, function (v, k) {
-        ret[key].push(Meteor.Collection._rewriteSelector(v))
-      })
+      ret[key] = _.map(value, function (v) {
+        return Meteor.Collection._rewriteSelector(v);
+      });
     }
     else
       ret[key] = value;
