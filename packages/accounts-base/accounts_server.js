@@ -348,20 +348,24 @@ Meteor.users.allow({
   fetch: ['_id'] // we only look at _id.
 });
 
-  var tokenLifetime = (24*60*60*10)*1000
-    , cleanInterval = (60*5)*1000;
-  Meteor.setInterval(function() {
-    var now = +new Date
-      , cutoff = now - tokenLifetime;
+Accounts._tokenLifetimeInMilliseconds = (24*60*60*10)*1000;
+Accounts._cleanExpiredTokens = function() {
+  var now = +new Date
+    , cutoff = now - Accounts._tokenLifetimeInMilliseconds;
 
-    Meteor.users.update({'services.resume.loginTokens.when' : {$lt: cutoff}}, {
-      $pull: {
-        'services.resume.loginTokens': {
-          when: {$lt: cutoff}
-        }
+  Meteor.users.update({'services.resume.loginTokens.when' : {$lt: cutoff}}, {
+    $pull: {
+      'services.resume.loginTokens': {
+        when: {$lt: cutoff}
       }
-    }, {multi: true});
-  }, cleanInterval);
+    }
+  }, {multi: true});
+};
+
+Accounts.cleanExpiredIntervalInMilliseconds = (60*5)*1000;
+Meteor.setInterval(function() {
+  Accounts._cleanExpiredTokens();
+}, Accounts._cleanExpiredIntervalInMilliseconds);
 
 /// DEFAULT INDEXES ON USERS
 Meteor.users._ensureIndex('username', {unique: 1, sparse: 1});
