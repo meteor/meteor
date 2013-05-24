@@ -195,11 +195,8 @@ Log.format = function (obj, options) {
     sourceInfo].join('');
 
   var prettify = function (line, color) {
-    if (options.color && Meteor.isServer) {
-      if (color)
-        return line = Npm.require('cli-color')[color](line);
-      return line
-    }
+    return (options.color && Meteor.isServer && color) ?
+      Npm.require('cli-color')[color](line) : line;
   };
 
   return prettify(metaPrefix, META_COLOR)
