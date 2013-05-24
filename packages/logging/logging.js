@@ -40,7 +40,7 @@ var LEVEL_COLORS = {
 var META_COLOR = 'magenta';
 
 // XXX package
-var RESTRICTED_KEYS = ['time', 'timeInexact', 'level', 'fileName', 'line', 'app'];
+var RESTRICTED_KEYS = ['time', 'timeInexact', 'level', 'file', 'line', 'app'];
 
 var logInBrowser = function (obj) {
   var str = Log.format(obj);
@@ -58,7 +58,7 @@ var logInBrowser = function (obj) {
   }
 };
 
-// @returns {Object: { line: Number, fileName: String }}
+// @returns {Object: { line: Number, file: String }}
 var getCallerDetails = function () {
   var e = new Error();
   // now magic will happen: get line number from callstack
@@ -76,11 +76,11 @@ var getCallerDetails = function () {
   // line can be in two formats depending on function description availability:
   // 0) at functionName (/filePath/file.js:line:position)
   // 1) at /filePath/file.js:line:position
-  details.fileName = line.indexOf('(') === -1 ?
+  details.file = line.indexOf('(') === -1 ?
                         line.split('at ')[1] :
                         line.split('(')[1];
-  details.fileName = details.fileName.split(':')[0]; // get rid of line number
-  details.fileName = details.fileName.split('/').slice(-1)[0];
+  details.file = details.file.split(':')[0]; // get rid of line number
+  details.file = details.file.split('/').slice(-1)[0];
 
   return details;
 };
@@ -94,7 +94,7 @@ _.each(['debug', 'info', 'warn', 'error'], function (level) {
       intercepted = true;
     }
 
-    var obj = (typeof arg === 'string') ? {message: arg}): arg;
+    var obj = (typeof arg === 'string') ? {message: arg}: arg;
 
     _.each(RESTRICTED_KEYS, function (key) {
       if (obj[key])
@@ -153,7 +153,7 @@ Log.format = function (obj, options) {
   var timeInexact = obj.timeInexact;
 
   var level = obj.level || 'info';
-  var fileName = obj.fileName;
+  var file = obj.file;
   var lineNumber = obj.line;
   var appName = obj.app|| '';
   if (appName) appName = '[' + appName + ']';
@@ -182,8 +182,8 @@ Log.format = function (obj, options) {
         pad2(time.getSeconds()) +
         '.' +
         pad3(time.getMilliseconds());
-  var sourceInfo = (fileName && lineNumber) ?
-                   '(' + fileName + ':' + lineNumber + ')' : '';
+  var sourceInfo = (file && lineNumber) ?
+                   '(' + file + ':' + lineNumber + ')' : '';
 
   var metaPrefix = [
     level.charAt(0).toUpperCase(),
