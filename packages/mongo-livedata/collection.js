@@ -238,8 +238,6 @@ Meteor.Collection._rewriteSelector = function (selector) {
   var ret = {};
   _.each(selector, function (value, key) {
     if (value instanceof RegExp) {
-      // XXX should also do this translation at lower levels (eg if the outer
-      // level is $and/$or/$nor, or if there's an $elemMatch)
       ret[key] = {$regex: value.source};
       var regexOptions = '';
       // JS RegExp objects support 'i', 'm', and 'g'. Mongo regex $options
@@ -250,6 +248,13 @@ Meteor.Collection._rewriteSelector = function (selector) {
         regexOptions += 'm';
       if (regexOptions)
         ret[key].$options = regexOptions;
+    }
+    else if (_.contains(['$or','$and','$nor'], key)) {
+      // Translate lower levels of $and/$or/$nor
+      ret[key] = []
+      _.each(value, function (v, k) {
+        ret[key].push(Meteor.Collection._rewriteSelector(v))
+      })
     }
     else
       ret[key] = value;
