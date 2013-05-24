@@ -34,13 +34,13 @@ var LEVEL_COLORS = {
   debug: 'green',
   info: 'blue',
   warn: 'yellow',
-  error: 'red',
-  metaInfo: 'magenta'
+  error: 'red'
 };
 
+var META_COLOR = 'magenta';
+
 // XXX package
-var RESERVED_KEYS = ['time', 'timeInexact', 'level', 'fileName', 'line', 'app'];
-var RESTRICTED_KEYS = ['time', 'timeInexact', 'level'];
+var RESTRICTED_KEYS = ['time', 'timeInexact', 'level', 'fileName', 'line', 'app'];
 
 var logInBrowser = function (obj) {
   var str = Log.format(obj);
@@ -94,13 +94,15 @@ _.each(['debug', 'info', 'warn', 'error'], function (level) {
       intercepted = true;
     }
 
-    var obj = (typeof arg === 'string') ?
-                _.extend(getCallerDetails(), {message: arg}): arg;
+    var obj = (typeof arg === 'string') ? {message: arg}): arg;
 
     _.each(RESTRICTED_KEYS, function (key) {
       if (obj[key])
         throw new Error("Can't set '" + key + "' in log message");
     });
+
+    obj = _.extend(getCallerDetails(), obj);
+
 
     obj.time = new Date();
     obj.level = level;
@@ -156,7 +158,7 @@ Log.format = function (obj, options) {
   var appName = obj.app|| '';
   if (appName) appName = '[' + appName + ']';
 
-  _.each(RESERVED_KEYS, function(key) {
+  _.each(RESTRICTED_KEYS, function(key) {
     delete obj[key];
   });
 
@@ -200,7 +202,8 @@ Log.format = function (obj, options) {
     }
   };
 
-  return prettify(infoPrefix, LEVEL_COLORS.metaInfo)
+  return prettify(infoPrefix, META_COLOR)
+       + ' '
        + prettify(message, LEVEL_COLORS[level]);
 };
 
