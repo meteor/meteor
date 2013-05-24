@@ -5,7 +5,7 @@ Package.describe({
 Npm.depends( {"node-sass" : "0.5.0"} );
 
 Package.register_extension(
-  "sass", function (bundle, source_path, serve_path, where) {
+  "scss", function (bundle, source_path, serve_path, where) {
     var sass = Npm.require('node-sass');
     var fs = Npm.require('fs');
 
