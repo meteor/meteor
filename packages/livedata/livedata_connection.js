@@ -1355,6 +1355,7 @@ Meteor._LivedataConnection._allConnections = [];
 Meteor._LivedataConnection._allSubscriptionsReady = function () {
   return _.all(Meteor._LivedataConnection._allConnections, function (conn) {
     return _.all(conn._subscriptions, function (sub) {
+      sub.readyDeps.depend();
       return sub.ready;
     });
   });

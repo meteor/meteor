@@ -71,7 +71,6 @@ body {
   border-left: 2px solid #def;
   padding: 4px;
   position: relative;
-  width: 600px;
 }
 
 .test_table .test .testrow { position: relative; overflow: hidden; /*hasLayout*/ }
