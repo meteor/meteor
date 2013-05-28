@@ -349,7 +349,7 @@ var startServer = function (options) {
 
 var killServer = function (handle) {
   if (handle.proc.pid) {
-    handle.proc.removeAllListeners('exit');
+    handle.proc.removeAllListeners('close');
     handle.proc.kill();
   }
   clearInterval(handle.timer);
