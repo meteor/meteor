@@ -17,7 +17,9 @@
 
 * Fix Mongo queries which nested JavaScript RegExp objects inside `$or`.  #1089
 
-* Upgrade Underscore from 1.4.2 to 1.4.4.
+* Upgrade Underscore from 1.4.2 to 1.4.4.  #776
+
+* Upgrade http-proxy from 0.8.5 to 0.10.1.  #513
 
 * Upgrade Connect from 1.9.2 to 2.7.10.
 
