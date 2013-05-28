@@ -185,8 +185,12 @@ Fiber(function () {
       // reparse args
       // This help logic should probably move to run.js eventually
       var opt = require('optimist')
-            .alias('port', 'p').default('port', 3000)
-            .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
+            .alias('port', 'p').default('port', process.env.METEOR_PORT || 3000)
+            .describe('port', 'Port to listen on')
+            .describe('inner_port', 'Port for the internal server').default('inner_port', process.env.METEOR_INNER_PORT || 3001)
+            .describe('mongo_port', "MongoDB port").default('mongo_port', process.env.METEOR_MONGO_PORT || 3002)
+            .alias('bind', 'b').default('bind', process.env.METEOR_IP || "0.0.0.0")
+            .describe('inner_bind', 'IP of the internal server').default('inner_bind', process.env.METEOR_INNER_IP || "127.0.0.1")
             .boolean('production')
             .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
             .describe('settings',  'Set optional data for Meteor.settings on the server')
@@ -222,6 +226,10 @@ Fiber(function () {
       maybePrintUserOverrideMessage();
       runner.run(context, {
         port: new_argv.port,
+        inner_port: new_argv.inner_port,
+        mongo_port: new_argv.mongo_port,
+        bind: new_argv.bind,
+        inner_bind: new_argv.inner_bind,
         minify: new_argv.production,
         once: new_argv.once,
         settingsFile: new_argv.settings
@@ -677,7 +685,7 @@ Fiber(function () {
             process.exit(1);
           }
 
-          var mongo_url = "mongodb://127.0.0.1:" + mongod_port + "/meteor";
+          var mongo_url = "mongodb://" + new_argv.inner_bind +  ":" + mongod_port + "/meteor";
 
           if (new_argv.url)
             console.log(mongo_url);
@@ -829,8 +837,12 @@ Fiber(function () {
       // reparse args
       // This help logic should probably move to run.js eventually
       var opt = require('optimist')
-            .alias('port', 'p').default('port', 3000)
-            .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
+            .alias('port', 'p').default('port', process.env.METEOR_PORT || 3000)
+            .describe('port', 'Port to listen on')
+            .describe('inner_port', 'Port for the internal server').default('inner_port', process.env.METEOR_INNER_PORT || 3001)
+            .describe('mongo_port', "MongoDB port").default('mongo_port', process.env.METEOR_MONGO_PORT || 3002)
+            .alias('bind', 'b').default('bind', process.env.METEOR_IP || "0.0.0.0")
+            .describe('inner_bind', 'IP of the internal server').default('inner_bind', process.env.METEOR_INNER_IP || "127.0.0.1")
             .describe('deploy', 'Optionally, specify a domain to deploy to, rather than running locally.')
             .boolean('production')
             .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
@@ -919,6 +931,10 @@ Fiber(function () {
       } else {
         runner.run(context, {
           port: new_argv.port,
+          inner_port: new_argv.inner_port,
+          mongo_port: new_argv.mongo_port,
+          bind: new_argv.bind,
+          inner_bind: new_argv.inner_bind,
           minify: new_argv.production,
           once: new_argv.once,
           testPackages: testPackages,

@@ -169,6 +169,7 @@ var run = function () {
 
   // check environment
   var port = process.env.PORT ? parseInt(process.env.PORT) : 80;
+  var ip = process.env.IP || "127.0.0.1";
 
   // check for a valid MongoDB URL right away
   if (!process.env.MONGO_URL)
@@ -329,7 +330,7 @@ var run = function () {
     _.each(__meteor_bootstrap__.startup_hooks, function (x) { x(); });
 
     // only start listening after all the startup code has run.
-    httpServer.listen(port, function() {
+    httpServer.listen(port, ip, function() {
       if (argv.keepalive)
         console.log("LISTENING"); // must match run.js
     });
