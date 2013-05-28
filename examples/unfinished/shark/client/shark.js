@@ -1,6 +1,5 @@
 
 
-
 IfComponent = Component.extend({
   arguments: {
     positional: ['condition'],
@@ -133,7 +132,7 @@ UL = DebugComponent.extend({
       "</ul>";
   }
 });
-
+*/
 
 // Function equal to LocalCollection._idStringify, or the identity
 // function if we don't have LiveData.  Converts item keys (i.e. DDP
@@ -161,7 +160,7 @@ var applyChanges = function (doc, changeFields) {
   });
 };
 
-EmptyComponent = Component.extend({
+/*EmptyComponent = Component.extend({
   build: function (frag) {
     var comment = document.createComment('empty');
     frag.appendChild(comment);
@@ -170,14 +169,19 @@ EmptyComponent = Component.extend({
   toHtml: function () {
     return '<!--empty-->';
   }
-});
+});*/
 
 Each = DebugComponent.extend({
 
-  items: new OrderedDict(idStringify),
-  init: function () {
+  // XXX what is init() good for if render lets you reactively
+  // depend on args, but init doesn't?  (you can access them
+  // but your code only ever runs once)
+
+  render: function () {
     var self = this;
     var cursor = self.getArg('list'); // XXX support arrays too
+
+    self.items = new OrderedDict(idStringify);
     var items = self.items;
 
     // Templates should have access to data and methods added by the
@@ -194,6 +198,8 @@ Each = DebugComponent.extend({
       return doc;
     };
 
+    // because we're in render(), rebuild or destroy will
+    // stop this handle.
     self.cursorHandle = cursor.observeChanges({
       addedBefore: function (id, item, beforeId) {
         var doc = EJSON.clone(item);
@@ -234,10 +240,6 @@ Each = DebugComponent.extend({
       self.cursorHandle.stop();
       self.cursorHandle = null;
     }
-  },
-
-  updated: function (args, oldArgs) {
-    // XXXX whhaaaaaaa
   },
 
   _itemChildId: function (id) {
@@ -337,7 +339,7 @@ Each = DebugComponent.extend({
 
 });
 
-MyLI = DebugComponent.extend({
+/*MyLI = DebugComponent.extend({
   init: function () {
     this.setChild('1', LI, {text: this.getArg('data').text || ''});
   },
@@ -374,4 +376,4 @@ Meteor.startup(function () {
 
   LIST.attach(ul);
 });
-  */
+*/
