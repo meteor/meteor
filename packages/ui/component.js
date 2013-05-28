@@ -485,7 +485,8 @@ _.extend(Component.prototype, {
 Component.create = function (/*args*/) {
   constructorsLocked = false;
   var comp = new this;
-  Component.apply(comp, arguments);
+  if (this !== Component)
+    Component.apply(comp, arguments);
   return comp;
 };
 
