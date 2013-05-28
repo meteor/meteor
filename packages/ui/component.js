@@ -27,6 +27,7 @@ Component = function (args) {
 
   this._buildUpdater = null;
   this._childUpdaters = {};
+  this.elements = {};
 
   this.constructed();
 };
@@ -74,6 +75,7 @@ _.extend(Component.prototype, {
               }
             }
           });
+          self.elements = {};
           self.stage = Component.ADDED;
         }
         var buf = new RenderBuffer(self);
@@ -455,6 +457,9 @@ _.extend(Component.prototype, {
       this.removeChild(key, true);
       this.addChild(key, newChild, parentNode, beforeNode);
     }
+  },
+  registerElement: function (elementKey, element) {
+    this.elements[elementKey] = element;
   }
 });
 
