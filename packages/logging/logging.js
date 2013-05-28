@@ -43,7 +43,7 @@ var META_COLOR = 'magenta';
 var RESTRICTED_KEYS = ['time', 'timeInexact', 'level', 'file', 'line',
                         'program', 'originApp'];
 
-var FORMATTED_KEYS = RESTRICTED_KEYS.concat(['app']);
+var FORMATTED_KEYS = RESTRICTED_KEYS.concat(['app', 'message']);
 
 var logInBrowser = function (obj) {
   var str = Log.format(obj);
@@ -160,13 +160,13 @@ Log.format = function (obj, options) {
   var lineNumber = obj.line;
   var appName = obj.app|| '';
   var originApp = obj.originApp;
+  var message = obj.message || '';
+  var program = obj.program || '';
 
   _.each(FORMATTED_KEYS, function(key) {
     delete obj[key];
   });
 
-  var message = obj.message || '';
-  delete obj.message;
   if (!_.isEmpty(obj)) {
     if (message) message += " ";
     message += EJSON.stringify(obj);
@@ -186,7 +186,8 @@ Log.format = function (obj, options) {
         '.' +
         pad3(time.getMilliseconds());
   var sourceInfo = (file && lineNumber) ?
-                   '(' + file + ':' + lineNumber + ')' : '';
+      ['(', (program ? program + ':' : ''), file, ':', lineNumber, ')'].join('')
+      : '';
   var appInfo = '';
   if (appName) appInfo += appName;
   if (originApp && originApp !== appName) appInfo += ':' + originApp;
