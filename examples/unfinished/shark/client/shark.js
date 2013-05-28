@@ -177,10 +177,15 @@ Each = DebugComponent.extend({
   // depend on args, but init doesn't?  (you can access them
   // but your code only ever runs once)
 
-  render: function () {
+  render: function (buf) {
     var self = this;
-    var cursor = self.getArg('list'); // XXX support arrays too
+    // XXX support arrays too.
+    // For now, we assume `list` is a database cursor.
+    var cursor = self.getArg('list');
 
+    // OrderedDict from id string or object (which is
+    // stringified internally by the dict) to untransformed
+    // document.
     self.items = new OrderedDict(idStringify);
     var items = self.items;
 
@@ -189,9 +194,9 @@ Each = DebugComponent.extend({
     // it here.
     //
     // NOTE: this is a little bit of an abstraction violation. Ideally,
-    // the only thing Spark should know about Minimongo is the contract of
-    // observeChanges. In theory, anything that implements observeChanges
-    // could be passed to Spark.list. But meh.
+    // the only thing we should know about Minimongo is the contract of
+    // observeChanges. In theory, we could allow anything that implements
+    // observeChanges to be passed to us.
     var transformedDoc = function (doc) {
       if (cursor.getTransform && cursor.getTransform())
         return cursor.getTransform()(EJSON.clone(doc));
@@ -205,46 +210,51 @@ Each = DebugComponent.extend({
         var doc = EJSON.clone(item);
         doc._id = id;
         items.putBefore(id, doc, beforeId);
-        var tdoc = transformedDoc(doc);
+        //var tdoc = transformedDoc(doc);
 
-        self.itemAddedBefore(id, tdoc, beforeId);
+        //self.itemAddedBefore(id, tdoc, beforeId);
       },
       removed: function (id) {
-        items.remove(id);
+        //items.remove(id);
 
-        self.itemRemoved(id);
+        //self.itemRemoved(id);
       },
       movedBefore: function (id, beforeId) {
-        items.moveBefore(id, beforeId);
+        //items.moveBefore(id, beforeId);
 
-        self.itemMovedBefore(id, beforeId);
+        //self.itemMovedBefore(id, beforeId);
       },
       changed: function (id, fields) {
-        var doc = items.get(id);
-        if (! doc)
-          throw new Error("Unknown id for changed: " + idStringify(id));
-        applyChanges(doc, fields);
-        var tdoc = transformedDoc(doc);
+        //var doc = items.get(id);
+        //if (! doc)
+        //throw new Error("Unknown id for changed: " + idStringify(id));
+        //applyChanges(doc, fields);
+        //var tdoc = transformedDoc(doc);
 
-        self.itemChanged(id, tdoc);
+        //self.itemChanged(id, tdoc);
       }
     });
 
-    if (self.items.empty())
-      self.initiallyEmpty();
-  },
+    if (items.empty) {
+      buf.component(function () {
+        return (self.getArg('elseClass') || Component).create(
+          { data: this.getArg('data') });
+      }, { key: 'else' });
+    } else {
+      items.forEach(function (doc, id) {
+        var tdoc = transformedDoc(doc);
 
-  destroyed: function () {
-    var self = this;
-    if (self.cursorHandle) {
-      self.cursorHandle.stop();
-      self.cursorHandle = null;
+        buf.component(function () {
+          return self.getArg('bodyClass').create({ data: tdoc });
+        }, { key: this._itemChildId(id) });
+      });
     }
   },
 
   _itemChildId: function (id) {
     return 'item:' + idStringify(id);
-  },
+  }
+  /*
   addItemChild: function (id, comp) {
     this.addChild(this._itemChildId(id), comp);
   },
@@ -336,7 +346,7 @@ Each = DebugComponent.extend({
     }
   }
   // XXX toHtml
-
+*/
 });
 
 /*MyLI = DebugComponent.extend({
