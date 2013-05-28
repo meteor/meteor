@@ -5,6 +5,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('routepolicy', 'server');
+  api.use('service-configuration', 'server');
 
   api.add_files('oauth_common.js', ['client', 'server']);
   api.add_files('oauth_client.js', 'client');

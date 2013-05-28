@@ -4,6 +4,9 @@ Meteor._routePolicy.declare('/_oauth/', 'network');
 
 Oauth._services = {};
 
+// Maps from service version to handler function.
+Oauth._requestHandlers = {};
+
 
 // Register a handler for an OAuth service. The handler will be called
 // when we get an incoming http request on /_oauth/{serviceName}. This
@@ -88,12 +91,10 @@ Oauth._middleware = function (req, res, next) {
     // Make sure we're configured
     ensureConfigured(serviceName);
 
-    if (service.version === 1)
-      Oauth1._handleRequest(service, req.query, res);
-    else if (service.version === 2)
-      Oauth2._handleRequest(service, req.query, res);
-    else
+    var handler = Oauth._requestHandlers[service.version];
+    if (!handler)
       throw new Error("Unexpected OAuth version " + service.version);
+    handler(service, req.query, res);
   } catch (err) {
     // if we got thrown an error, save it off, it will get passed to
     // the approporiate login call (if any) and reported there.
