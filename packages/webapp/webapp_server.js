@@ -282,6 +282,8 @@ var bindToProxy = function (proxyConfig) {
   // XXX move these into deployConfig?
   if (!process.env.GALAXY_JOB)
     throw new Error("missing $GALAXY_JOB");
+  if (!process.env.GALAXY_APP)
+    throw new Error("missing $GALAXY_APP");
   if (!process.env.LAST_START)
     throw new Error("missing $LAST_START");
 
@@ -306,6 +308,7 @@ var bindToProxy = function (proxyConfig) {
   var host = route.split(":")[0];
   var port = +route.split(":")[1];
   proxy.call('bindDdp', {
+    app: process.env.GALAXY_APP,
     pid: pid,
     bindTo: ddpBindTo,
     proxyTo: {
@@ -315,6 +318,7 @@ var bindToProxy = function (proxyConfig) {
     }
   });
   proxy.call('bindHttp', {
+    app: process.env.GALAXY_APP,
     pid: pid,
     bindTo: {
       host: proxyConfig.bindHost,
@@ -326,6 +330,7 @@ var bindToProxy = function (proxyConfig) {
     }
   });
   proxy.call('bindHttp', {
+    app: process.env.GALAXY_APP,
     pid: pid,
     bindTo: {
       host: proxyConfig.bindHost,
