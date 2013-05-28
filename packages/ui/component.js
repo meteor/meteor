@@ -570,6 +570,6 @@ RootComponent = Component.extend({
   render: function (buf) {
     var bodyClass = this.getArg('bodyClass');
     if (bodyClass)
-      buf.component(bodyClass.create());
+      buf.component(bodyClass.create(), {key: 'body'});
   }
 });

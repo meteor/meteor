@@ -1,14 +1,11 @@
 
-// TODO
-//
-// Make openTag attributes reactive.
-
 RenderBuffer = function (component) {
   this._component = component;
   this._htmlBuf = [];
 
   this._builderId = Random.id();
   this._nextNum = 1;
+  this._elementNextNums = {};
 
   this._childrenToAttach = []; // comment string -> component
 };
@@ -39,29 +36,23 @@ var encodeEntities = function (text, isQuoted) {
                       ESCAPED_CHARS_UNQUOTED_REGEX, escapeOne);
 };
 
+var updateDOMAttribute = function (component, elemKey, attrName,
+                                   newValue, oldValue) {
+  // XXX Do smart stuff here, like treat "class" attribute
+  // specially, and set JS properties instead of HTML attributes
+  // when appropriate.  Don't get too crazy, though.  Fancy
+  // manipulation of DOM elements can be done programmatically
+  // instead.
+  //
+  // Allow Components to hook into (i.e. replace) this update
+  // logic for attributes of their choice?
+  var elem = component.elements[elemKey];
+  elem.setAttribute(attrName, newValue);
+};
+
+
 _.extend(RenderBuffer.prototype, {
   _encodeEntities: encodeEntities,
-  /*computeAttributeValue: function (expression) {
-    var self = this;
-
-    if ((typeof expression) === 'string')
-      return expression;
-
-    var initialValue;
-    Deps.autorun(function (c) {
-      if (c.firstRun) {
-        c.expression = expression;
-        c.component = self.currentComponent;
-      } else {
-        return; // XXX
-      }
-
-      initialValue =
-        _.map(c.expression, evaluateStringOrHelper).join('');
-    });
-
-    return initialValue;
-  },*/
   openTag: function (tagName, attrs, options) {
     var self = this;
 
@@ -72,6 +63,11 @@ _.extend(RenderBuffer.prototype, {
     attrs = attrs || {};
     options = options || {};
 
+    var isElementReactive = false;
+    // any reactive updaters here will close over this variable,
+    // which we will set to something non-null afterwards.
+    var elementKey = (options.key || null);
+
     var buf = this._htmlBuf;
     buf.push('<', tagName);
     _.each(attrs, function (attrValue, attrName) {
@@ -80,11 +76,50 @@ _.extend(RenderBuffer.prototype, {
         throw new Error("Illegal HTML attribute name: " + attrName);
 
       buf.push(' ', attrName, '="');
-      var initialValue = (typeof attrValue === 'function' ?
-                          attrValue() : attrValue);
+      var initialValue;
+      if (typeof attrValue === 'function') {
+        var func = attrValue;
+        // we assume we've been called from some Component build,
+        // so this autorun will be stopped when the Component
+        // is rebuilt or destroyed.
+        isElementReactive = true;
+        Deps.autorun(function (c) {
+          if (c.firstRun) {
+            var newValue = attrValue();
+            initialValue = newValue;
+            c.oldValue = newValue;
+          } else {
+            var newValue = attrValue();
+            var comp = self._component;
+            if (comp && comp.stage === Component.BUILT) {
+              var elem = elementKey && comp.elements[elementKey];
+              if (elem) {
+                updateDOMAttribute(comp, elementKey, attrName,
+                                   newValue, c.oldValue);
+              }
+            }
+            c.oldValue = newValue;
+          }
+        });
+      } else {
+        initialValue = attrValue;
+      }
       buf.push(self._encodeEntities(initialValue, true));
       buf.push('"');
     });
+
+    if (isElementReactive) {
+      if (! elementKey) {
+        if (! this._elementNextNums[tagName])
+          this._elementNextNums[tagName] = 1;
+        elementKey = tagName +
+          (this._elementNextNums[tagName]++);
+      }
+
+      buf.push(' data-meteorui-id="' +
+               self._encodeEntities(elementKey, true) + '"');
+    }
+
     if (options.selfClose)
       buf.push('/');
     buf.push('>');
@@ -128,7 +163,7 @@ _.extend(RenderBuffer.prototype, {
            (typeof componentOrFunction === 'function')))
       throw new Error("Component or function required");
 
-    var childKey = (options && options.childKey || null);
+    var childKey = (options && options.key || null);
 
     var childComp = self._component.addChild(
       childKey, componentOrFunction);
@@ -140,16 +175,20 @@ _.extend(RenderBuffer.prototype, {
     self._childrenToAttach[commentString] = childComp;
   },
   build: function () {
-    var html = this._htmlBuf.join('');
+    var self = this;
+
+    var html = self._htmlBuf.join('');
     var frag = DomUtils.htmlToFragment(html);
     if (! frag.firstChild)
       frag.appendChild(document.createComment("empty"));
 
-    var components = this._childrenToAttach;
+    var components = self._childrenToAttach;
     var start = frag.firstChild;
     var end = frag.lastChild;
 
-    var replaceCommentsWithComponents = function (parent) {
+    // wireUpDOM = replace comments with Components and register
+    // keyed elements
+    var wireUpDOM = function (parent) {
       var n = parent.firstChild;
       while (n) {
         var next = n.nextSibling;
@@ -166,14 +205,18 @@ _.extend(RenderBuffer.prototype, {
             parent.removeChild(n);
           }
         } else if (n.nodeType === 1) { // ELEMENT
+          var elemKey = n.getAttribute('data-meteorui-id');
+          if (elemKey)
+            self._component.registerElement(elemKey, n);
+
           // recurse
-          replaceCommentsWithComponents(n);
+          wireUpDOM(n);
         }
         n = next;
       }
     };
 
-    replaceCommentsWithComponents(frag);
+    wireUpDOM(frag);
 
     return {
       fragment: frag,

@@ -27,9 +27,14 @@ Meteor.startup(function () {
   RC = RootComponent.create({
     bodyClass: Component.extend({
       render: function (buf) {
+        buf.openTag('span', {style: function () {
+          return 'background-color:' +
+            Session.get('bgcolor');
+        }});
         buf.text(function () {
           return Session.get('foo') || '';
         });
+        buf.closeTag('span');
       }
     })
   });
