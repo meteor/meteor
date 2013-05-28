@@ -40,8 +40,10 @@ var LEVEL_COLORS = {
 var META_COLOR = 'magenta';
 
 // XXX package
-var RESTRICTED_KEYS = ['time', 'timeInexact', 'level', 'file', 'line', 'app',
-                        'originApp'];
+var RESTRICTED_KEYS = ['time', 'timeInexact', 'level', 'file', 'line',
+                        'program', 'originApp'];
+
+var FORMATTED_KEYS = RESTRICTED_KEYS.concat(['app']);
 
 var logInBrowser = function (obj) {
   var str = Log.format(obj);
@@ -159,7 +161,7 @@ Log.format = function (obj, options) {
   var appName = obj.app|| '';
   var originApp = obj.originApp;
 
-  _.each(RESTRICTED_KEYS, function(key) {
+  _.each(FORMATTED_KEYS, function(key) {
     delete obj[key];
   });
 
