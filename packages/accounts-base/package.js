@@ -9,6 +9,7 @@ Package.on_use(function (api) {
   api.use('deps', 'client');
   api.use('check', 'server');
   api.use('random', ['client', 'server']);
+  api.use('service-configuration', ['client', 'server']);
 
   // need this because of the Meteor.users collection but in the future
   // we'd probably want to abstract this away

@@ -75,6 +75,9 @@ Tinytest.add("check - check", function (test) {
     });
   });
   fails(true, Match.OneOf(String, Number, undefined, null, [Boolean]));
+  fails(new String("foo"), String);
+  fails(new Boolean(true), Boolean);
+  fails(new Number(123), Number);
 
   matches([1, 2, 3], [Number]);
   matches([], [Number]);

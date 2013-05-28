@@ -16,6 +16,7 @@ Package.on_use(function (api, where) {
   api.add_files('client_environment.js', 'client');
   api.add_files('server_environment.js', 'server');
   api.add_files('helpers.js', ['client', 'server']);
+  api.add_files('setimmediate.js', ['client', 'server']);
   api.add_files('timers.js', ['client', 'server']);
   api.add_files('errors.js', ['client', 'server']);
   api.add_files('fiber_helpers.js', 'server');
@@ -45,4 +46,6 @@ Package.on_test(function (api) {
   api.add_files('fiber_helpers_test.js', ['server']);
 
   api.add_files('url_tests.js', ['client', 'server']);
+
+  api.add_files('timers_tests.js', ['client', 'server']);
 });

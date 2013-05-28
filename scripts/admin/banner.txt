@@ -1,5 +1,1 @@
-=> Meteor 0.6.2.1 released: Unbreak 'Sign in with GitHub' by sending a
-   user agent string on API requests.
-
-   This is being downloaded in the background. Update your project
-   to Meteor 0.6.2.1 by running 'meteor update'.
+=> Meteor 0.6.3.1: Small fix to 'client/compatibility' from 0.6.3

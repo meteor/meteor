@@ -1,9 +1,6 @@
-// @export Random
-Random = {};
-
 // see http://baagoe.org/en/wiki/Better_random_numbers_for_javascript
 // for a full discussion and Alea implementation.
-Random._Alea = function () {
+var Alea = function () {
   function Mash() {
     var n = 0xefc8249d;
 
@@ -76,6 +73,53 @@ Random._Alea = function () {
   } (Array.prototype.slice.call(arguments)));
 };
 
+var UNMISTAKABLE_CHARS = "23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz";
+
+var create = function (/* arguments */) {
+
+  var random = Alea.apply(null, arguments);
+
+  var self = {};
+
+  var bind = function (fn) {
+    return _.bind(fn, self);
+  };
+
+  return _.extend(self, {
+    _Alea: Alea,
+
+    create: create,
+
+    fraction: random,
+
+    choice: bind(function (arrayOrString) {
+      var index = Math.floor(this.fraction() * arrayOrString.length);
+      if (typeof arrayOrString === "string")
+        return arrayOrString.substr(index, 1);
+      else
+        return arrayOrString[index];
+    }),
+
+    id: bind(function() {
+      var digits = [];
+      // Length of 17 preserves around 96 bits of entropy, which is the
+      // amount of state in our PRNG
+      for (var i = 0; i < 17; i++) {
+        digits[i] = this.choice(UNMISTAKABLE_CHARS);
+      }
+      return digits.join("");
+    }),
+
+    hexString: bind(function (digits) {
+      var hexDigits = [];
+      for (var i = 0; i < digits; ++i) {
+        hexDigits.push(this.choice("0123456789abcdef"));
+      }
+      return hexDigits.join('');
+    })
+  });
+};
+
 // instantiate RNG.  Heuristically collect entropy from various sources
 
 // client sources
@@ -105,33 +149,7 @@ var pid = (typeof process !== 'undefined' && process.pid) || 1;
 // XXX On the server, use the crypto module (OpenSSL) instead of this PRNG.
 //     (Make Random.fraction be generated from Random.hexString instead of the
 //     other way around, and generate Random.hexString from crypto.randomBytes.)
-Random.fraction = new Random._Alea([
-  new Date(), height, width, agent, pid, Math.random()]);
-
-Random.choice = function (arrayOrString) {
-  var index = Math.floor(Random.fraction() * arrayOrString.length);
-  if (typeof arrayOrString === "string")
-    return arrayOrString.substr(index, 1);
-  else
-    return arrayOrString[index];
-};
-
-var UNMISTAKABLE_CHARS = "23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz";
-Random.id = function() {
-  var digits = [];
-  // Length of 17 preserves around 96 bits of entropy, which is the
-  // amount of state in our PRNG
-  for (var i = 0; i < 17; i++) {
-    digits[i] = Random.choice(UNMISTAKABLE_CHARS);
-  }
-  return digits.join("");
-};
-
-var HEX_DIGITS = "0123456789abcdef";
-Random.hexString = function (digits) {
-  var hexDigits = [];
-  for (var i = 0; i < digits; ++i) {
-    hexDigits.push(Random.choice("0123456789abcdef"));
-  }
-  return hexDigits.join('');
-};
+// @export Random
+Random = create([
+  new Date(), height, width, agent, pid, Math.random()
+]);

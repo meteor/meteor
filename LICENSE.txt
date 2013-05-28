@@ -346,6 +346,12 @@ node-kexec: https://github.com/jprichardson/node-kexec
 Copyright (c) 2011-2012 JP Richardson
 
 
+----------
+setImmediate: https://github.com/NobleJS/setImmediate
+----------
+
+Copyright (c) 2012 Barnesandnoble.com, llc, Donavon West, and Domenic Denicola
+
 
 ==============
 Apache License

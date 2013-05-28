@@ -14,7 +14,11 @@ var handler = function (compileStep) {
     var output = coffee.compile(source, options);
   } catch (e) {
     // XXX better error handling, once the Plugin interface support it
-    throw new Error(e.message);
+    throw new Error(
+      compileStep.inputPath + ':' +
+      (e.location ? (e.location.first_line + ': ') : ' ') +
+      e.message
+    );
   }
 
   compileStep.addJavaScript({

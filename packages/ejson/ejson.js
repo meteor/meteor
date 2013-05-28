@@ -213,8 +213,8 @@ EJSON.parse = function (item) {
 };
 
 EJSON.isBinary = function (obj) {
-  return (typeof Uint8Array !== 'undefined' && obj instanceof Uint8Array) ||
-    (obj && obj.$Uint8ArrayPolyfill);
+  return !!((typeof Uint8Array !== 'undefined' && obj instanceof Uint8Array) ||
+    (obj && obj.$Uint8ArrayPolyfill));
 };
 
 EJSON.equals = function (a, b, options) {
@@ -298,14 +298,18 @@ EJSON.clone = function (v) {
     return new Date(v.getTime());
   if (EJSON.isBinary(v)) {
     ret = EJSON.newBinary(v.length);
-    for (i = 0; i < v.length; i++) {
+    for (var i = 0; i < v.length; i++) {
       ret[i] = v[i];
     }
     return ret;
   }
-  // Clone arrays (and turn 'arguments' into an array).
   if (_.isArray(v) || _.isArguments(v)) {
-    return _.map(v, EJSON.clone);
+    // For some reason, _.map doesn't work in this context on Opera (weird test
+    // failures).
+    ret = [];
+    for (i = 0; i < v.length; i++)
+      ret[i] = EJSON.clone(v[i]);
+    return ret;
   }
   // handle general user-defined typed Objects if they have a clone method
   if (typeof v.clone === 'function') {

@@ -113,8 +113,7 @@ var checkSubtree = function (value, pattern) {
     return;
 
   // Basic atomic types.
-  // XXX do we have to worry about if value is boxed (eg String)? will that
-  //     happen?
+  // Do not match boxed objects (e.g. String, Boolean)
   for (var i = 0; i < typeofChecks.length; ++i) {
     if (pattern === typeofChecks[i][0]) {
       if (typeof value === typeofChecks[i][1])
