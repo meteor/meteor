@@ -41,7 +41,7 @@ var META_COLOR = 'magenta';
 
 // XXX package
 var RESTRICTED_KEYS = ['time', 'timeInexact', 'level', 'file', 'line',
-                        'program', 'originApp'];
+                        'program', 'originApp', 'stderr'];
 
 var FORMATTED_KEYS = RESTRICTED_KEYS.concat(['app', 'message']);
 
