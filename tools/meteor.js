@@ -582,7 +582,7 @@ Fiber(function () {
     func: function (argv) {
       if (argv.help) {
         process.stdout.write(
-          "Usage: meteor bundle <output_file.tar.gz> [--using]\n" +
+          "Usage: meteor bundle <output_file.tar.gz> [--debug]\n" +
             "\n" +
             "Package this project up for deployment. The output is a tarball that\n" +
             "includes everything necessary to run the application. See README in\n" +
