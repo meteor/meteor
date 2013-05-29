@@ -63,26 +63,32 @@ var logInBrowser = function (obj) {
 
 // @returns {Object: { line: Number, file: String }}
 Log._getCallerDetails = function () {
-  var e = new Error();
-  // now magic will happen: get line number from callstack
-  var lines = e.stack.split('\n');
-  var line = lines[2];
-  var index = 0;
+  var getStack = function(){
+    var orig = Error.prepareStackTrace;
+    Error.prepareStackTrace = function(_, stack){ return stack; };
+    var err = new Error;
+    Error.captureStackTrace(err, arguments.callee);
+    var stack = err.stack;
+    Error.prepareStackTrace = orig;
+    return stack;
+  };
 
-  // Pick the first line outside logging package
-  while (line.indexOf('/packages/logging.js') !== -1)
-    line = lines[++index];
+  // now magic will happen: get line number from callstack
+  var frames = getStack();
+  var index = 1;
+  var frame = frames[index];
+
+  // Pick the first frame outside logging package
+  while (frame.getFileName().indexOf('/packages/logging.js') !== -1)
+    frame = frames[++index];
 
   var details = {};
-  details.line = +line.split(':')[1];
+  details.line = frame.getLineNumber();
 
   // line can be in two formats depending on function description availability:
   // 0) at functionName (/filePath/file.js:line:position)
   // 1) at /filePath/file.js:line:position
-  details.file = line.indexOf('(') === -1 ?
-                        line.split('at ')[1] :
-                        line.split('(')[1];
-  details.file = details.file.split(':').slice(-3)[0]; // get rid of line number
+  details.file = frame.getFileName();
   details.file = details.file.split('/').slice(-1)[0] // get rid of whole path
                              .split('?')[0];  // get rid of url trailing
 
