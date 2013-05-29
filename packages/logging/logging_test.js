@@ -1,3 +1,8 @@
+Tinytest.add("logging - _getCallerDetails", function (test) {
+  var details = Log._getCallerDetails();
+  test.equal(details, { file: 'logging_test.js', line: 2 });
+});
+
 Tinytest.add("logging - log", function (test) {
   var logBothMessageAndObject = function (log, level) {
     Log._intercept(3);

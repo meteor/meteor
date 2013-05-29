@@ -62,7 +62,7 @@ var logInBrowser = function (obj) {
 };
 
 // @returns {Object: { line: Number, file: String }}
-var getCallerDetails = function () {
+Log._getCallerDetails = function () {
   var e = new Error();
   // now magic will happen: get line number from callstack
   var lines = e.stack.split('\n');
@@ -104,7 +104,7 @@ _.each(['debug', 'info', 'warn', 'error'], function (level) {
         throw new Error("Can't set '" + key + "' in log message");
     });
 
-    obj = _.extend(getCallerDetails(), obj);
+    obj = _.extend(Log._getCallerDetails(), obj);
     obj.time = new Date();
     obj.level = level;
 
