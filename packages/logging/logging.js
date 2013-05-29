@@ -188,23 +188,21 @@ Log.format = function (obj, options) {
 
   var appInfo = '';
   if (appName) appInfo += appName;
-  if (originApp && originApp !== appName) appInfo += ':' + originApp;
-  if (appInfo) appInfo = ' [' + appInfo + ']';
+  if (originApp && originApp !== appName) appInfo += ' via ' + originApp;
+  if (appInfo) appInfo = '[' + appInfo + '] ';
 
   var sourceInfo = (file && lineNumber) ?
-      ['(', (program ? program + ':' : ''), file, ':', lineNumber, ')'].join('')
+      ['(', (program ? program + ':' : ''), file, ':', lineNumber, ') '].join('')
       : '';
-  if (sourceInfo && !appInfo)
-    sourceInfo = ' ' + sourceInfo;
 
-  var stderrIndicator = stderr ? ' (STDERR)' : '';
+  var stderrIndicator = stderr ? '(STDERR) ' : '';
 
   var metaPrefix = [
     level.charAt(0).toUpperCase(),
     dateStamp,
     '-',
     timeStamp,
-    timeInexact ? '?' : '',
+    timeInexact ? '?' : ' ',
     appInfo,
     sourceInfo,
     stderrIndicator].join('');
@@ -215,7 +213,6 @@ Log.format = function (obj, options) {
   };
 
   return prettify(metaPrefix, META_COLOR)
-    + ' '
     + prettify(message, LEVEL_COLORS[level]);
 };
 

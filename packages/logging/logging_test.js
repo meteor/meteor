@@ -76,7 +76,7 @@ Tinytest.add("logging - format", function (test) {
 
     test.equal(
       Log.format({message: "message", time: time, timeInexact: true, level: level}),
-      level.charAt(0).toUpperCase() + "20120908-07:06:05.004? message");
+      level.charAt(0).toUpperCase() + "20120908-07:06:05.004?message");
 
     test.equal(
       Log.format({foo1: "bar1", foo2: "bar2", time: time, level: level}),
@@ -89,7 +89,7 @@ Tinytest.add("logging - format", function (test) {
     // Has everything except stderr field
     test.equal(
       Log.format({message: "message", foo: "bar", time: time, level: level, file: "app.js", line:42, app: "myApp", originApp: "proxy", program: "server"}),
-      level.charAt(0).toUpperCase() + '20120908-07:06:05.004 [myApp:proxy](server:app.js:42) message {\"foo\":\"bar\"}');
+      level.charAt(0).toUpperCase() + '20120908-07:06:05.004 [myApp via proxy] (server:app.js:42) message {\"foo\":\"bar\"}');
 
     // stderr
     test.equal(
@@ -102,7 +102,7 @@ Tinytest.add("logging - format", function (test) {
       level.charAt(0).toUpperCase() + '20120908-07:06:05.004 [app] message');
     test.equal(
       Log.format({message: "message", time: time, level: level, app: "app", originApp: "proxy"}),
-      level.charAt(0).toUpperCase() + '20120908-07:06:05.004 [app:proxy] message');
+      level.charAt(0).toUpperCase() + '20120908-07:06:05.004 [app via proxy] message');
 
     // source info
     test.equal(
