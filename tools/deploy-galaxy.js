@@ -180,6 +180,11 @@ exports.deploy = function (options) {
 // - app
 exports.logs = function (options) {
   var galaxy = getGalaxy(options.context);
+  var logReaderURL = prettyCall(galaxy, "getLogReaderURL", [], {
+    'no-log-reader': "Can't find log reader service"
+  });
+
+  var logReader = getMeteor().connect(logReaderURL);
 
   var Log = unipackage.load({
     library: options.context.library,
@@ -188,8 +193,7 @@ exports.logs = function (options) {
   }).logging.Log;
 
   var Collection = getMeteor().Collection;
-  var Logs = new Collection("logs", galaxy);
-
+  var Logs = new Collection("logs", logReader);
   Logs.find().observe({
     added: function(log) {
       var parsed = Log.parse(log.obj);
@@ -200,10 +204,11 @@ exports.logs = function (options) {
 
   // XXX make this talk to a separate logReader service instead of
   // ultraworld direcly
-  prettySub(galaxy, "logsForApp", [options.app], {
+  prettySub(logReader, "logsForApp", [options.app], {
     "no-such-app": "No such app: " + options.app
   });
 
-  // Close the connection to Galaxy (otherwise Node will continue running).
+  // Close connections to Galaxy and log-reader (otherwise Node will continue running).
   galaxy.close();
+  logReader.close();
 };
