@@ -152,6 +152,7 @@ Log.format = function (obj, options) {
     throw new Error("'time' must be a Date object");
   var timeInexact = obj.timeInexact;
 
+  // store fields that are in FORMATTED_KEYS since we strip them
   var level = obj.level || 'info';
   var file = obj.file;
   var lineNumber = obj.line;
@@ -159,6 +160,7 @@ Log.format = function (obj, options) {
   var originApp = obj.originApp;
   var message = obj.message || '';
   var program = obj.program || '';
+  var stderr = obj.stderr || '';
 
   _.each(FORMATTED_KEYS, function(key) {
     delete obj[key];
@@ -182,13 +184,17 @@ Log.format = function (obj, options) {
         pad2(time.getSeconds()) +
         '.' +
         pad3(time.getMilliseconds());
+
   var sourceInfo = (file && lineNumber) ?
       ['(', (program ? program + ':' : ''), file, ':', lineNumber, ')'].join('')
       : '';
+
   var appInfo = '';
   if (appName) appInfo += appName;
   if (originApp && originApp !== appName) appInfo += ':' + originApp;
   if (appInfo) appInfo = '[' + appInfo + ']';
+
+  var stderrIndicator = stderr ? ' (STDERR)' : '';
 
   var metaPrefix = [
     level.charAt(0).toUpperCase(),
@@ -197,7 +203,8 @@ Log.format = function (obj, options) {
     timeStamp,
     timeInexact ? '?' : ' ',
     appInfo,
-    sourceInfo].join('');
+    sourceInfo,
+    stderrIndicator].join('');
 
   var prettify = function (line, color) {
     return (options.color && Meteor.isServer && color) ?
@@ -205,8 +212,8 @@ Log.format = function (obj, options) {
   };
 
   return prettify(metaPrefix, META_COLOR)
-       + ' '
-       + prettify(message, LEVEL_COLORS[level]);
+    + ' '
+    + prettify(message, LEVEL_COLORS[level]);
 };
 
 // Turn a line of text into a loggable object.
