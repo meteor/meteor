@@ -185,14 +185,16 @@ Log.format = function (obj, options) {
         '.' +
         pad3(time.getMilliseconds());
 
-  var sourceInfo = (file && lineNumber) ?
-      ['(', (program ? program + ':' : ''), file, ':', lineNumber, ')'].join('')
-      : '';
-
   var appInfo = '';
   if (appName) appInfo += appName;
   if (originApp && originApp !== appName) appInfo += ':' + originApp;
   if (appInfo) appInfo = ' [' + appInfo + ']';
+
+  var sourceInfo = (file && lineNumber) ?
+      ['(', (program ? program + ':' : ''), file, ':', lineNumber, ')'].join('')
+      : '';
+  if (sourceInfo && !appInfo)
+    sourceInfo = ' ' + sourceInfo;
 
   var stderrIndicator = stderr ? ' (STDERR)' : '';
 
