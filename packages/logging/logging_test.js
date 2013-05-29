@@ -12,6 +12,13 @@ Tinytest.add("logging - log", function (test) {
     test.throws(function () {
       log({level: 'not the right level'});
     });
+    _.each(['file', 'line', 'program', 'originApp'], function (restrictedKey) {
+      test.throws(function () {
+        var obj = {};
+        obj[restrictedKey] = 'usage of restricted key';
+        log(obj);
+      });
+    });
 
     var intercepted = Log._intercepted();
     test.equal(intercepted.length, 3);
