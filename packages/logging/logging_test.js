@@ -61,7 +61,7 @@ Tinytest.add("logging - format", function (test) {
 
     test.equal(
       Log.format({message: "message", time: time, timeInexact: true, level: level}),
-      level.charAt(0).toUpperCase() + "20120908-07:06:05.004?message");
+      level.charAt(0).toUpperCase() + "20120908-07:06:05.004? message");
 
     test.equal(
       Log.format({foo1: "bar1", foo2: "bar2", time: time, level: level}),

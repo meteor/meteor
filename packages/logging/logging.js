@@ -192,7 +192,7 @@ Log.format = function (obj, options) {
   var appInfo = '';
   if (appName) appInfo += appName;
   if (originApp && originApp !== appName) appInfo += ':' + originApp;
-  if (appInfo) appInfo = '[' + appInfo + ']';
+  if (appInfo) appInfo = ' [' + appInfo + ']';
 
   var stderrIndicator = stderr ? ' (STDERR)' : '';
 
@@ -201,7 +201,7 @@ Log.format = function (obj, options) {
     dateStamp,
     '-',
     timeStamp,
-    timeInexact ? '?' : ' ',
+    timeInexact ? '?' : '',
     appInfo,
     sourceInfo,
     stderrIndicator].join('');
