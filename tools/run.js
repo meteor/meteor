@@ -313,7 +313,7 @@ var startServer = function (options) {
   proc.stderr.setEncoding('utf8');
   require('byline')(proc.stderr).on('data', function (line) {
     if (!line) return;
-    var obj = Log.objFromText(line, { level: 'error', stderr: true });
+    var obj = Log.objFromText(line, { level: 'warn', stderr: true });
     console.log(Log.format(obj, { color: true }));
   });
 
