@@ -171,7 +171,7 @@ var applyChanges = function (doc, changeFields) {
   }
 });*/
 
-Each = DebugComponent.extend({
+Each = Component.extend({
 
   // XXX what is init() good for if render lets you reactively
   // depend on args, but init doesn't?  (you can access them
