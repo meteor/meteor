@@ -580,7 +580,7 @@ Fiber(function () {
     name: "bundle",
     help: "Pack this project up into a tarball",
     func: function (argv) {
-      if (argv.help || argv._.length != 1) {
+      if (argv.help) {
         process.stdout.write(
           "Usage: meteor bundle <output_file.tar.gz>\n" +
             "\n" +
@@ -608,7 +608,7 @@ Fiber(function () {
       var bundler = require(path.join(__dirname, 'bundler.js'));
       var errors = bundler.bundle(context.appDir, bundle_path, {
         nodeModulesMode: 'copy',
-        minify: true,  // XXX allow --debug
+        minify: argv.debug,  // XXX allow --debug
         releaseStamp: context.releaseVersion,
         packageSearchOptions: context.packageSearchOptions
       });
