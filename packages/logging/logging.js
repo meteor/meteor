@@ -105,11 +105,8 @@ _.each(['debug', 'info', 'warn', 'error'], function (level) {
     });
 
     obj = _.extend(getCallerDetails(), obj);
-
-
     obj.time = new Date();
     obj.level = level;
-    // XXX file, line, package
 
     // XXX allow you to enable 'debug', probably per-package
     if (level === 'debug')
@@ -158,7 +155,7 @@ Log.format = function (obj, options) {
   var level = obj.level || 'info';
   var file = obj.file;
   var lineNumber = obj.line;
-  var appName = obj.app|| '';
+  var appName = obj.app || '';
   var originApp = obj.originApp;
   var message = obj.message || '';
   var program = obj.program || '';
