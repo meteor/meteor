@@ -82,8 +82,9 @@ Log._getCallerDetails = function () {
   details.file = line.indexOf('(') === -1 ?
                         line.split('at ')[1] :
                         line.split('(')[1];
-  details.file = details.file.split(':')[0]; // get rid of line number
-  details.file = details.file.split('/').slice(-1)[0];
+  details.file = details.file.split(':').slice(-3)[0]; // get rid of line number
+  details.file = details.file.split('/').slice(-1)[0] // get rid of whole path
+                             .split('?')[0];  // get rid of url trailing
 
   return details;
 };
