@@ -610,7 +610,7 @@ Fiber(function () {
       var bundler = require(path.join(__dirname, 'bundler.js'));
       var errors = bundler.bundle(context.appDir, bundle_path, {
         nodeModulesMode: 'copy',
-        minify: argv.debug,
+        minify: !argv.debug,
         releaseStamp: context.releaseVersion,
         packageSearchOptions: context.packageSearchOptions
       });
