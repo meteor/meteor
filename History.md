@@ -6,6 +6,11 @@
   packages can be used to perform an OAuth exchange without creating an
   account and logging in.  #1024
 
+* If you set the `DISABLE_WEBSOCKETS` environment variable, browsers will not
+  attempt to connect to your app using Websockets. Use this if you know your
+  server environment does not properly proxy Websockets to reduce connection
+  startup time.
+
 * Make `Meteor.defer` work in an inactive tab in iOS.  #1023
 
 * Allow new `Random` instances to be constructed with specified seed. This
