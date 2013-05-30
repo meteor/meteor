@@ -1,5 +1,8 @@
 Tinytest.add("logging - _getCallerDetails", function (test) {
   var details = Log._getCallerDetails();
+  // Ignore this test for Opera, IE, Safari since this test would work only
+  // in Chrome and Firefox, other browsers don't give us an ability to get
+  // stacktrace.
   if ((new Error).stack) {
     //test.equal(details, { file: 'logging_test.js', line: 2 });
     // XXX: When we have source maps, we should uncomment the test above and
