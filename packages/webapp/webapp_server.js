@@ -129,6 +129,11 @@ var appUrl = function (url) {
   return true;
 };
 
+
+Meteor._postStartup = function (callback) {
+  __meteor_bootstrap__.postStartupHooks.push(callback);
+};
+
 var runWebAppServer = function () {
   // read the control for the client we'll be serving up
   var clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
@@ -264,6 +269,9 @@ var runWebAppServer = function () {
       if (bind.viaProxy) {
         bindToProxy(bind.viaProxy);
       }
+
+      _.each(__meteor_bootstrap__.postStartupHooks, function (x) { x(); });
+
     }, function (e) {
       console.error("Error listening:", e);
       console.error(e.stack);

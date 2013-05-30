@@ -20,6 +20,7 @@ var configJson =
 // Set up environment
 __meteor_bootstrap__ = {
   startup_hooks: [],
+  postStartupHooks: [],
   serverDir: __dirname,
   configJson: configJson };
 __meteor_runtime_config__ = { meteorRelease: configJson.release };
