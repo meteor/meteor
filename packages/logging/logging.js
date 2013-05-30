@@ -63,34 +63,47 @@ var logInBrowser = function (obj) {
 
 // @returns {Object: { line: Number, file: String }}
 Log._getCallerDetails = function () {
-  var getStack = function(){
+  var getStack = function () {
     var orig = Error.prepareStackTrace;
     Error.prepareStackTrace = function(_, stack){ return stack; };
     var err = new Error;
-    Error.captureStackTrace(err, arguments.callee);
+    if (_.isFunction(Error.captureStackTrace))
+      Error.captureStackTrace(err, arguments.callee);
     var stack = err.stack;
     Error.prepareStackTrace = orig;
     return stack;
   };
 
-  // now magic will happen: get line number from callstack
-  var frames = getStack();
-  var index = 1;
-  var frame = frames[index];
+  var stack = getStack();
 
-  // Pick the first frame outside logging package
-  while (frame.getFileName().indexOf('/packages/logging.js') !== -1)
-    frame = frames[++index];
+  if (!stack) return {};
+
+  var isV8 = false;
+  var lines = stack;
+  // check for V8 specifics
+  if (_.isArray(stack))
+    isV8 = true;
+  else
+    lines = stack.split('\n');
+  var index = 1;
+  var line = lines[index];
+
+  // looking for the first line outside the logging package
+  while ((isV8?line.getFileName():line).indexOf('/packages/logging.js') !== -1)
+    line = lines[++index];
 
   var details = {};
-  details.line = frame.getLineNumber();
 
-  // line can be in two formats depending on function description availability:
-  // 0) at functionName (/filePath/file.js:line:position)
-  // 1) at /filePath/file.js:line:position
-  details.file = frame.getFileName();
-  details.file = details.file.split('/').slice(-1)[0] // get rid of whole path
-                             .split('?')[0];  // get rid of url trailing
+  // The format for FF is functionName@filePath:lineNumber
+  // For V8 call built-in function
+  details.line = isV8 ? line.getLineNumber() : line.split(':').slice(-1)[0];
+
+  // Possible format: https://foo.bar.com/scripts/file.js?random=foobar
+  // For FF we parse the line, for V8 we call built-in function
+  // XXX: if you can write the following in better way, please do it
+  details.file = isV8 ? line.getFileName()
+                      : line.split('@')[1].split(':').slice(0, -1).join(':');
+  details.file = details.file.split('/').slice(-1)[0].split('?')[0];
 
   return details;
 };
