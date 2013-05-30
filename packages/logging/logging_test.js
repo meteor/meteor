@@ -1,9 +1,11 @@
 Tinytest.add("logging - _getCallerDetails", function (test) {
   var details = Log._getCallerDetails();
-  //test.equal(details, { file: 'logging_test.js', line: 2 });
-  // XXX: When we have source maps, we should uncomment the test above and
-  // remove this one
-  test.isTrue(details.file === 'logging.tests.js');
+  if ((new Error).stack) {
+    //test.equal(details, { file: 'logging_test.js', line: 2 });
+    // XXX: When we have source maps, we should uncomment the test above and
+    // remove this one
+    test.isTrue(details.file === 'logging.tests.js');
+  }
 });
 
 Tinytest.add("logging - log", function (test) {
