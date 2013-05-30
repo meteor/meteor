@@ -204,6 +204,9 @@ exports.logs = function (options) {
     }
   });
 
+  if (!ok)
+    throw new Error("Couldn't connect to logs mongodb.");
+
   // XXX make this talk to a separate logReader service instead of
   // ultraworld direcly
   prettySub(logReader, "logsForApp", [options.app], {
