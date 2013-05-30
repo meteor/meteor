@@ -86,13 +86,17 @@ var smtpSend = function (mc) {
  * @param options.text {String} RFC5322 mail body (plain text)
  * @param options.html {String} RFC5322 mail body (HTML)
  * @param options.headers {Object} custom RFC5322 headers (dictionary)
+ * @param options.attachments {Object[]} Array of attachment objects, with
+ *        required key "contents" (String of attachment contents,
+ *        base64-encoded) and optional keys "fileName" (the filename the
+ *        client should save the attachment as), "contentType" (MIME type for
+ *        the file; if unspecified and fileName is specified, will derive from
+ *        fileName), and "cid" (the Content-Id which can be referenced from
+ *        HTML IMG tags).
  */
 Email.send = function (options) {
   var mc = new MailComposer();
 
-  // setup message data
-  // XXX support attachments (once we have a client/server-compatible binary
-  //     Buffer class)
   mc.setMessageOption({
     from: options.from,
     to: options.to,
@@ -107,6 +111,16 @@ Email.send = function (options) {
   _.each(options.headers, function (value, name) {
     mc.addHeader(name, value);
   });
+
+  _.each(options.attachments, function (attachment) {
+    var mcAttachment = _.pick(attachment, 'fileName', 'contentType', 'cid');
+    // There is no Meteor abstraction for binary buffers, reading from files
+    // on the server, or node-style streams, so we only support base64-encoded
+    // strings. Once we have APIs for these things, we should support them
+    // here too. (We don't want to just expose Node's Buffer class directly,
+    // because it does not exist on the client.)
+    mcAttachment.contents = new Buffer(attachment.contents, 'base64');
+    mc.addAttachment(mcAttachment);
 
   maybeMakePool();
 

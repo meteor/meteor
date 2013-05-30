@@ -1808,6 +1808,10 @@ Template.api.email_send = {
     {name: "headers",
      type: "Object",
      descr: rfc('custom headers (dictionary)')
+    },
+    {name: "attachments",
+     type: "Array",
+     descr: "Array of objects describing attachments."
     }
   ]
 };

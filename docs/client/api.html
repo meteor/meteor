@@ -2944,13 +2944,31 @@ by spammers.)
                 'Hello from Meteor!',
                 'This is a test of Email.send.');
 
+`attachments` is an array of objects with the following keys:
+
+<dl class="objdesc">
+{{#dtdd name="contents" type="String (base64 encoded)"}}
+The contents of the attached file; required.
+{{/dtdd}}
+
+{{#dtdd name="fileName" type="String"}}
+The filename the client should save the attachment as.
+{{/dtdd}}
+
+{{#dtdd name="contentType" type="String"}}
+The <a href="http://en.wikipedia.org/wiki/MIME#Content-Type"
+target="_blank">MIME Content-Type</a> of the file; if not provided
+and `fileName` is, Meteor guesses it based on `fileName`.
+{{/dtdd}}
+
+{{#dtdd name="cid" type="String"}}
+A globally-unique content ID for the file; if provided, the email's HTML body
+can refer to it using syntax like `<img src="cid:THE_CID">`.
+{{/dtdd}}
+</dl>
+
 {{/better_markdown}}
 </template>
-
-
-
-
-
 
 <template name="api_box">
 <div class="api {{bare}}">
