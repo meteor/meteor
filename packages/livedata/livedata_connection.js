@@ -687,21 +687,16 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
     // If the caller didn't give a callback, decide what to do.
     if (!callback) {
-      if (Meteor.isClient)
+      if (Meteor.isClient) {
         // On the client, we don't have fibers, so we can't block. The
         // only thing we can do is to return undefined and discard the
         // result of the RPC.
         callback = function () {};
-      else {
-        // On the server, make the function synchronous.
+      } else {
+        // On the server, make the function synchronous. Throw on
+        // errors, return on success.
         var future = new Future;
-        callback = function (err, result) {
-          if (err)
-            future['throw'](err);
-          else {
-            future['return'](result);
-          }
-        };
+        callback = future.resolver();
       }
     }
     // Send the RPC. Note that on the client, it is important that the
