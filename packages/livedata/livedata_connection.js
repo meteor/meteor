@@ -534,18 +534,30 @@ _.extend(Meteor._LivedataConnection.prototype, {
     return handle;
   },
 
-  _subscribeAndWait: function (/* arguments */) {
+  // options:
+  // - onLateError {Function(error)} called if an error was received after the ready event.
+  //     (errors received before ready cause an error to be thrown)
+  _subscribeAndWait: function (name, args, options) {
     var self = this;
     var f = new Future();
-    var args = _.toArray(arguments);
+    var ready = false;
+    args = args || [];
     args.push({
-      onReady: function () { f.return(); },
-      onError: function (e) { f.throw(e); }
+      onReady: function () {
+        ready = true;
+        f.return();
+      },
+      onError: function (e) {
+        if (!ready)
+          f.throw(e);
+        else
+          options && options.onLateError && options.onLateError(e);
+      }
     });
 
-    self.subscribe.apply(self, args);
+    self.subscribe.apply(self, [name].concat(args));
     return f.wait();
-},
+  },
 
   methods: function (methods) {
     var self = this;

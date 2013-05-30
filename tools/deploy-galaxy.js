@@ -58,10 +58,14 @@ var prettyCall = function (galaxy, name, args, messages) {
 
 
 var prettySub = function (galaxy, name, args, messages) {
-  try {
-    var ret = galaxy._subscribeAndWait.apply(galaxy, [name].concat(args));
-  } catch (e) {
+  var onError = function (e) {
     exitWithError(e, messages);
+  };
+
+  try {
+    var ret = galaxy._subscribeAndWait(name, args, {onLateError: onError});
+  } catch (e) {
+    onError(e);
   }
   return ret;
 };
@@ -207,8 +211,6 @@ exports.logs = function (options) {
   if (!ok)
     throw new Error("Couldn't connect to logs mongodb.");
 
-  // XXX make this talk to a separate logReader service instead of
-  // ultraworld direcly
   prettySub(logReader, "logsForApp", [options.app], {
     "no-such-app": "No such app: " + options.app
   });
