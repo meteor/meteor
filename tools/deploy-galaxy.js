@@ -178,6 +178,7 @@ exports.deploy = function (options) {
 // options:
 // - context
 // - app
+// - streaming (BOOL)
 exports.logs = function (options) {
   var galaxy = getGalaxy(options.context);
   var logReaderURL = prettyCall(galaxy, "getLogReaderURL", [], {
@@ -192,13 +193,14 @@ exports.logs = function (options) {
     release: options.context.releaseVersion
   }).logging.Log;
 
-  var Collection = getMeteor().Collection;
-  var Logs = new Collection("logs", logReader);
-  Logs.find().observe({
-    added: function(log) {
-      var parsed = Log.parse(log.obj);
-      if (parsed)
-        console.log(Log.format(parsed, {color: true}));
+  var ok = logReader.registerStore('logs', {
+    update: function (msg) {
+      // Ignore all messages but 'added'
+      if (msg.msg !== 'added')
+        return;
+      var obj = msg.fields.obj;
+      obj = Log.parse(obj);
+      obj && console.log(Log.format(obj, {color: true}));
     }
   });
 
@@ -208,7 +210,10 @@ exports.logs = function (options) {
     "no-such-app": "No such app: " + options.app
   });
 
-  // Close connections to Galaxy and log-reader (otherwise Node will continue running).
-  galaxy.close();
-  logReader.close();
+  // if streaming is needed there is no point in closing connection
+  if (!options.streaming) {
+    // Close connections to Galaxy and log-reader (otherwise Node will continue running).
+    galaxy.close();
+    logReader.close();
+  }
 };

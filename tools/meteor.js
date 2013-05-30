@@ -833,11 +833,17 @@ Fiber(function () {
     name: "logs",
     help: "Show logs for specified site",
     func: function (argv) {
+      if (_.isString(argv.f))
+        argv._.unshift(argv.f);
+
       if (argv.help || argv._.length < 1 || argv._.length > 2) {
         process.stdout.write(
-          "Usage: meteor logs <site>\n" +
+          "Usage: meteor logs [-f] <site>\n" +
             "\n" +
-            "Retrieves the server logs for the requested site.\n");
+            "Retrieves the server logs for the requested site.\n" +
+            "\n" +
+            "-f\t\tThe -f option causes to not stop when end of logs is " +
+            "reached but rather to wait for additional logs to be appended.\n");
         process.exit(1);
       }
 
@@ -847,7 +853,8 @@ Fiber(function () {
         var deployGalaxy = require('./deploy-galaxy.js');
         deployGalaxy.logs({
           context: context,
-          app: argv._[0]
+          app: argv._[0],
+          streaming: argv.f
         });
       } else {
         deploy.logs(argv._[0]);
