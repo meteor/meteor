@@ -608,7 +608,7 @@ Fiber(function () {
     name: "bundle",
     help: "Pack this project up into a tarball",
     func: function (argv) {
-      if (argv.help || argv._.length != 1) {
+      var usage = function () {
         process.stdout.write(
           "Usage: meteor bundle <output_file.tar.gz>\n" +
             "\n" +
@@ -616,7 +616,18 @@ Fiber(function () {
             "includes everything necessary to run the application. See README in\n" +
             "the tarball for details.\n");
         process.exit(1);
-      }
+      };
+      if (argv.help)
+        usage();
+
+      // re-parse the args to this command
+      // XXX clean up this whole file :)
+      argv = require("optimist")
+        .boolean('for-deploy').argv;
+      argv._.shift();  // pull off the word "bundle"
+
+      if (argv._.length != 1)
+        usage();
 
       // XXX if they pass a file that doesn't end in .tar.gz or .tgz,
       // add the former for them
@@ -635,7 +646,7 @@ Fiber(function () {
 
       var bundler = require(path.join(__dirname, 'bundler.js'));
       var bundleResult = bundler.bundle(context.appDir, bundle_path, {
-        nodeModulesMode: 'copy',
+        nodeModulesMode: argv['for-deploy'] ? 'skip' : 'copy',
         minify: true,  // XXX allow --debug
         releaseStamp: context.releaseVersion,
         library: context.library
