@@ -151,7 +151,7 @@ _.each(['debug', 'info', 'warn', 'error'], function (level) {
 // tries to parse line as EJSON. returns object if parse is successful, or null if not
 Log.parse = function (line) {
   var obj = null;
-  if (line && line[0] === '{') { // might be json generated from calling 'Log'
+  if (line && line.charAt(0) === '{') { // might be json generated from calling 'Log'
     try { obj = EJSON.parse(line); } catch (e) {}
   }
 
