@@ -12,6 +12,11 @@ Meteor.navigateTo = function (path) {
   Meteor.Router.to(path);
 };
 
+function emailVerified (user) {
+  return _.some(user.emails, function (email) {
+    return email.verified;
+  });
+}
 
 Meteor.Router.add({
   '/': function () {
