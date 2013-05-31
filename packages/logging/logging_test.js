@@ -8,6 +8,10 @@ Tinytest.add("logging - _getCallerDetails", function (test) {
     // XXX: When we have source maps, we should uncomment the test above and
     // remove this one
     test.isTrue(details.file === 'logging.tests.js');
+
+    // evaled statements shouldn't crash
+    var code = "Log._getCallerDetails().file";
+    test.matches(eval(code), /^eval|logging.tests.js$/);
   }
 });
 
@@ -118,3 +122,4 @@ Tinytest.add("logging - format", function (test) {
       level.charAt(0).toUpperCase() + '20120908-07:06:05.004 (app.js:42) message');
   });
 });
+

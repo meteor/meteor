@@ -67,8 +67,6 @@ Log._getCallerDetails = function () {
     var orig = Error.prepareStackTrace;
     Error.prepareStackTrace = function(_, stack){ return stack; };
     var err = new Error;
-    if (_.isFunction(Error.captureStackTrace))
-      Error.captureStackTrace(err, arguments.callee);
     var stack = err.stack;
     Error.prepareStackTrace = orig;
     return stack;
@@ -89,7 +87,8 @@ Log._getCallerDetails = function () {
   var line = lines[index];
 
   // looking for the first line outside the logging package
-  while ((isV8?line.getFileName():line).indexOf('/packages/logging.js') !== -1)
+  while ((isV8 ? line.getFileName() || '' : line)
+          .indexOf('/packages/logging.js') !== -1)
     line = lines[++index];
 
   var details = {};
@@ -101,7 +100,7 @@ Log._getCallerDetails = function () {
   // Possible format: https://foo.bar.com/scripts/file.js?random=foobar
   // For FF we parse the line, for V8 we call built-in function
   // XXX: if you can write the following in better way, please do it
-  details.file = isV8 ? line.getFileName()
+  details.file = isV8 ? line.getFileName() || (line.isEval() ? 'eval' : '')
                       : line.split('@')[1].split(':').slice(0, -1).join(':');
   details.file = details.file.split('/').slice(-1)[0].split('?')[0];
 
