@@ -2,18 +2,18 @@
   "meteor": {
     "git": "https://github.com/meteor/meteor.git",
     "branch": "master",
-    "commit": "bfe4b72ebec4367eaddcdf0887fcf5e649d9dcb8"
+    "commit": "5d736d4bf0448c7db1f9b47124dfafc34a9631bb"
   },
   "dependencies": {
     "basePackages": {
-      "roles": {
-        "path": "../../roles"
-      },
+      "roles": {},
       "router": {}
     },
     "packages": {
       "roles": {
-        "path": "../../roles"
+        "git": "https://github.com/alanning/meteor-roles.git",
+        "tag": "v1.0.5",
+        "commit": "a6e0ce33f8dc69a816165c458b138c2acb30ad0e"
       },
       "router": {
         "git": "https://github.com/tmeasday/meteor-router.git",

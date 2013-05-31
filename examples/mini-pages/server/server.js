@@ -48,18 +48,22 @@ Meteor.startup(function () {
         {name:"Admin User",email:"admin@example.com",roles:['admin']}
       ];
 
-    _.each(users, function (user) {
-      var id;
+    _.each(users, function (userData) {
+      var id,
+          user;
       
-      console.log(user);
+      console.log(userData);
 
       id = Accounts.createUser({
-        email: user.email,
+        email: userData.email,
         password: "apple1",
-        profile: { name: user.name }
+        profile: { name: userData.name }
       });
 
-      Roles.addUsersToRoles(id, user.roles);
+      // email verification
+      Meteor.users.update({_id: id}, {$set:{'emails.0.verified': true}});
+
+      Roles.addUsersToRoles(id, userData.roles);
     
     });
   }

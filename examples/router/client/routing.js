@@ -28,6 +28,11 @@ Meteor.Router.add({
       return 'signin';
     }
 
+    if (!emailVerified(user)) {
+      console.log('home: awaiting-verification');
+      return 'awaiting-verification';
+    }
+
     console.log('home: user found');
     console.log(user.roles);
 
@@ -56,17 +61,23 @@ Meteor.Router.filters({
 
       user = Meteor.user();
 
-      if (user) {
-
-        console.log('filter: done');
-        return page;
-
-      } else {
+      if (!user) {
 
         console.log('filter: signin');
         return 'signin';
 
       }
+
+      if (!emailVerified(user)) {
+
+        console.log('filter: awaiting-verification');
+        return 'awaiting-verification';
+
+      } 
+
+      console.log('filter: done');
+      return page;
+
     }
   }
 });

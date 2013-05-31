@@ -4,9 +4,7 @@
     "branch": "master"
   },
   "packages": {
-    "roles": {
-      "path": "../../roles"
-    },
+    "roles": {},
     "router": {}
   }
 }

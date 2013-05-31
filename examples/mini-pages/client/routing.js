@@ -12,6 +12,12 @@ Meteor.navigateTo = function (path) {
   Meteor.go(path);
 };
 
+function emailVerified (user) {
+  return _.some(user.emails, function (email) {
+    return email.verified;
+  });
+}
+
 var authenticate = function () {
   var user;
 
@@ -26,17 +32,27 @@ var authenticate = function () {
 
     user = Meteor.user();
 
-    if (user) {
-
-      console.log('filter: done');
-      this.layout('layout');
-
-    } else {
+    if (!user) {
 
       console.log('filter: signin');
       this.template('signin');
       this.layout('layout_no_header');
       this.done();
+      return;
+
+    }
+
+    if (!emailVerified(user)) {
+
+      console.log('filter: awaiting-verification');
+      this.template('awaiting-verification');
+      this.layout('layout');
+      this.done();
+
+    } else {
+
+      console.log('filter: done');
+      this.layout('layout');
 
     }
   }
