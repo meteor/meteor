@@ -2,7 +2,7 @@ Package.describe({
   summary: 'Expressive, dynamic, robust CSS.'
 });
 
-Npm.depends({stylus: "0.30.1", nib: "0.8.2"});
+Npm.depends({stylus: "0.32.1", nib: "0.9.1"});
 
 Package.register_extension(
   'styl', function(bundle, source_path, serve_path, where) {
