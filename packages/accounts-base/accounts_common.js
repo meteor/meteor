@@ -65,3 +65,15 @@ Accounts.LoginCancelledError.numericError = 0x8acdc2f;
 Accounts.LoginCancelledError.prototype = new Error();
 Accounts.LoginCancelledError.prototype.name = 'Accounts.LoginCancelledError';
 
+// BOO Thrown when the user cancels the login process (eg, closes an oauth
+// popup, declines retina scan, etc)
+Accounts.LinkCancelledError = function(description) {
+  this.message = description;
+};
+
+// This is used to transmit specific subclass errors over the wire. We should
+// come up with a more generic way to do this (eg, with some sort of symbolic
+// error code rather than a number).
+Accounts.LinkCancelledError.numericError = 0x8acdc2fff;
+Accounts.LinkCancelledError.prototype = new Error();
+Accounts.LinkCancelledError.prototype.name = 'Accounts.LinkCancelledError';

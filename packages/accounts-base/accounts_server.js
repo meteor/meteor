@@ -58,6 +58,27 @@ var tryAllLoginHandlers = function (options) {
   throw new Meteor.Error(400, "Unrecognized options for login request");
 };
 
+///
+/// BOO LINK HANDLERS
+/// - mimic login handlers
+
+Accounts.registerLinkHandler = function(handler) {
+  Accounts._linkHandlers.push(handler);
+};
+
+// list of all registered link handlers.
+Accounts._linkHandlers = [];
+
+var tryAllLinkHandlers = function (userId, options) {
+  for (var i = 0; i < Accounts._linkHandlers.length; ++i) {
+    var handler = Accounts._linkHandlers[i];
+    var result = handler(userId, options);
+    if (result !== undefined)
+      return result;
+  }
+
+  throw new Meteor.Error(400, "Unrecognized options for link request");
+};
 
 // Actual methods for login and logout. This is the entry point for
 // clients to actually log in.
@@ -78,6 +99,33 @@ Meteor.methods({
 
   logout: function() {
     this.setUserId(null);
+  },
+
+  //BOO 
+  link: function(options) {
+    check(options, Object);
+    var userId = Meteor.userId();
+    if(userId == null){
+      throw new Meteor.Error(90000, "You must be logged into an existing account to link a 3rd party service.");
+    }
+    var result = tryAllLinkHandlers(userId, options);
+    if (result !== null)
+      console.log("yay!");
+    return result;
+  },
+
+  //BOO 
+  unlink: function(options){
+    check(options, Object);
+    var userId = Meteor.userId()
+      , serviceKey = "services." + options.serviceName
+      , updates = { $unset: {} };
+      updates.$unset[serviceKey] = '';
+
+      console.log('updates', updates);
+
+    Meteor.users.update(userId, updates); // throws an exception on failure
+    return true;
   }
 });
 
@@ -273,6 +321,80 @@ Accounts.updateOrCreateUserFromExternalService = function(
   }
 };
 
+///
+/// BOO LINK USERS
+///
+
+Accounts.linkUserFromExternalService = function(
+  userId, serviceName, serviceData, options) {
+  options = _.clone(options || {});
+
+  if (serviceName === "password" || serviceName === "resume")
+    throw new Error(
+      "Can't use linkUserFromExternalService with internal service "
+        + serviceName);
+  if (!_.has(serviceData, 'id'))
+    throw new Error(
+      "Service data for service " + serviceName + " must include id");
+
+  // Look for a user with the appropriate service user id.
+  var selector = {};
+  var serviceIdKey = "services." + serviceName + ".id";
+
+  // XXX Temporary special case for Twitter. (Issue #629)
+  //   The serviceData.id will be a string representation of an integer.
+  //   We want it to match either a stored string or int representation.
+  //   This is to cater to earlier versions of Meteor storing twitter
+  //   user IDs in number form, and recent versions storing them as strings.
+  //   This can be removed once migration technology is in place, and twitter
+  //   users stored with integer IDs have been migrated to string IDs.
+  if (serviceName === "twitter" && !isNaN(serviceData.id)) {
+    selector["$or"] = [{},{}];
+    selector["$or"][0][serviceIdKey] = serviceData.id;
+    selector["$or"][1][serviceIdKey] = parseInt(serviceData.id, 10);
+  } else {
+    selector[serviceIdKey] = serviceData.id;
+  }
+
+  var user = Meteor.users.findOne({_id: userId});
+  var possibleUser = Meteor.users.findOne(selector);
+
+  if (user) {
+    // We *don't* process options (eg, profile) for update, but we do replace
+    // the serviceData (eg, so that we keep an unexpired access token and
+    // don't cache old email addresses in serviceData.email).
+    // XXX provide an onUpdateUser hook which would let apps update
+    //     the profile too
+
+    if (possibleUser && possibleUser._id !== userId) {
+      throw new Meteor.Error(90003, "This external service account is already linked with some other user!");
+    };
+
+    _.each(user.services, function (value, key){
+      if (serviceName == key) {
+        if (user.services[key].id !== serviceData.id) {
+          throw new Meteor.Meteor.Error(90004, "Trying to add same services but different account!");
+        };      
+      };
+    });
+
+    var stampedToken = Accounts._generateStampedLoginToken();
+    var setAttrs = {};
+    _.each(serviceData, function(value, key) {
+      setAttrs["services." + serviceName + "." + key] = value;
+    });
+
+    // XXX Maybe we should re-use the selector above and notice if the update
+    //     touches nothing?
+    Meteor.users.update(
+      user._id,
+      {$set: setAttrs,
+       $push: {'services.resume.loginTokens': stampedToken}});
+    return {token: stampedToken.token, id: user._id};
+  } else {
+    throw new Meteor.Error(90000, "You must be logged in as an existing user to link a 3rd party account.");
+  }
+};
 
 ///
 /// PUBLISHING DATA
