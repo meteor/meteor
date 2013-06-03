@@ -844,20 +844,26 @@ Fiber(function () {
     name: "logs",
     help: "Show logs for specified site",
     func: function (argv) {
+      var useGalaxy = 'GALAXY' in process.env;
       argv = require('optimist').boolean('f').argv;
 
       if (argv.help || argv._.length !== 2) {
-        process.stdout.write(
-          "Usage: meteor logs [-f] <site>\n" +
+        if (useGalaxy) {
+          process.stdout.write(
+            "Usage: meteor logs [-f] <site>\n" +
+              "\n" +
+              "Retrieves the server logs for the requested site.\n" +
+              "\n" +
+              "-f      enables logs streaming.\n");
+        } else {
+          process.stdout.write(
+            "Usage: meteor logs <site>\n" +
             "\n" +
-            "Retrieves the server logs for the requested site.\n" +
-            "\n" +
-            "-f\t\tThe -f option causes to not stop when end of logs is " +
-            "reached but rather to wait for additional logs to be appended.\n");
+            "Retrieves the server logs for the requested site.\n");
+        }
+
         process.exit(1);
       }
-
-      var useGalaxy = 'GALAXY' in process.env;
 
       if (useGalaxy) {
         var deployGalaxy = require('./deploy-galaxy.js');
