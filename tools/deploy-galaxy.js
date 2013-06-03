@@ -209,7 +209,7 @@ exports.logs = function (options) {
   });
 
   if (!ok)
-    throw new Error("Couldn't connect to logs mongodb.");
+    throw new Error("Can't listen to messages on the logs collection");
 
   prettySub(logReader, "logsForApp", [options.app,
                                       {streaming: options.streaming}], {
