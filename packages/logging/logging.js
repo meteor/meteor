@@ -203,7 +203,10 @@ Log.format = function (obj, options) {
         pad2(time.getSeconds()) +
         '.' +
         pad3(time.getMilliseconds());
-
+   
+  // eg in San Francisco in June this will be '(-7)'
+  var utcOffsetStr = '(' + (-(new Date().getTimezoneOffset() / 60)) + ')';
+  
   var appInfo = '';
   if (appName) appInfo += appName;
   if (originApp && originApp !== appName) appInfo += ' via ' + originApp;
@@ -220,6 +223,7 @@ Log.format = function (obj, options) {
     dateStamp,
     '-',
     timeStamp,
+    utcOffsetStr,
     timeInexact ? '?' : ' ',
     appInfo,
     sourceInfo,

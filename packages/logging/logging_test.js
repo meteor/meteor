@@ -78,48 +78,50 @@ Tinytest.add("logging - parse", function (test) {
 
 Tinytest.add("logging - format", function (test) {
   var time = new Date(2012, 9 - 1/*0-based*/, 8, 7, 6, 5, 4);
+  var utcOffsetStr = '(' + (-(new Date().getTimezoneOffset() / 60)) + ')';
+  
   _.each(['debug', 'info', 'warn', 'error'], function (level) {
     test.equal(
       Log.format({message: "message", time: time, level: level}),
-      level.charAt(0).toUpperCase() + "20120908-07:06:05.004 message");
+      level.charAt(0).toUpperCase() + "20120908-07:06:05.004" + utcOffsetStr + " message");
 
     test.equal(
       Log.format({message: "message", time: time, timeInexact: true, level: level}),
-      level.charAt(0).toUpperCase() + "20120908-07:06:05.004?message");
+      level.charAt(0).toUpperCase() + "20120908-07:06:05.004" + utcOffsetStr + "?message");
 
     test.equal(
       Log.format({foo1: "bar1", foo2: "bar2", time: time, level: level}),
-      level.charAt(0).toUpperCase() + '20120908-07:06:05.004 {"foo1":"bar1","foo2":"bar2"}');
+      level.charAt(0).toUpperCase() + '20120908-07:06:05.004' + utcOffsetStr + ' {"foo1":"bar1","foo2":"bar2"}');
 
     test.equal(
       Log.format({message: "message", foo: "bar", time: time, level: level}),
-      level.charAt(0).toUpperCase() + '20120908-07:06:05.004 message {"foo":"bar"}');
+      level.charAt(0).toUpperCase() + '20120908-07:06:05.004' + utcOffsetStr + ' message {"foo":"bar"}');
 
     // Has everything except stderr field
     test.equal(
       Log.format({message: "message", foo: "bar", time: time, level: level, file: "app.js", line:42, app: "myApp", originApp: "proxy", program: "server"}),
-      level.charAt(0).toUpperCase() + '20120908-07:06:05.004 [myApp via proxy] (server:app.js:42) message {\"foo\":\"bar\"}');
+      level.charAt(0).toUpperCase() + '20120908-07:06:05.004' + utcOffsetStr + ' [myApp via proxy] (server:app.js:42) message {\"foo\":\"bar\"}');
 
     // stderr
     test.equal(
       Log.format({message: "message from stderr", time: time, level: level, stderr: true}),
-      level.charAt(0).toUpperCase() + '20120908-07:06:05.004 (STDERR) message from stderr');
+      level.charAt(0).toUpperCase() + '20120908-07:06:05.004' + utcOffsetStr + ' (STDERR) message from stderr');
 
     // app/originApp
     test.equal(
       Log.format({message: "message", time: time, level: level, app: "app", originApp: "app"}),
-      level.charAt(0).toUpperCase() + '20120908-07:06:05.004 [app] message');
+      level.charAt(0).toUpperCase() + '20120908-07:06:05.004' + utcOffsetStr + ' [app] message');
     test.equal(
       Log.format({message: "message", time: time, level: level, app: "app", originApp: "proxy"}),
-      level.charAt(0).toUpperCase() + '20120908-07:06:05.004 [app via proxy] message');
+      level.charAt(0).toUpperCase() + '20120908-07:06:05.004' + utcOffsetStr + ' [app via proxy] message');
 
     // source info
     test.equal(
       Log.format({message: "message", time: time, level: level, file: "app.js", line: 42, program: "server"}),
-      level.charAt(0).toUpperCase() + '20120908-07:06:05.004 (server:app.js:42) message');
+      level.charAt(0).toUpperCase() + '20120908-07:06:05.004' + utcOffsetStr + ' (server:app.js:42) message');
     test.equal(
       Log.format({message: "message", time: time, level: level, file: "app.js", line: 42}),
-      level.charAt(0).toUpperCase() + '20120908-07:06:05.004 (app.js:42) message');
+      level.charAt(0).toUpperCase() + '20120908-07:06:05.004' + utcOffsetStr + ' (app.js:42) message');
   });
 });
 
