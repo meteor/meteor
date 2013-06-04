@@ -531,7 +531,7 @@ _.extend(SynchronousCursor.prototype, {
   },
 
   // Mostly usable for tailable cursors.
-  count: function () {
+  close: function () {
     var self = this;
 
     self._dbCursor.close();
