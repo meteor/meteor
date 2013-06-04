@@ -22,12 +22,12 @@ var _galaxy;
 var getGalaxy = function (context) {
   if (! _galaxy) {
     var Meteor = getMeteor(context);
-    if (! ('GALAXY' in process.env)) {
+    if (!context.galaxy) {
       process.stderr.write("GALAXY environment variable must be set.\n");
       process.exit(1);
     }
 
-    _galaxy = Meteor.connect(process.env['GALAXY']);
+    _galaxy = Meteor.connect(context.galaxy);
   }
 
   return _galaxy;
@@ -218,7 +218,8 @@ exports.logs = function (options) {
 
   // if streaming is needed there is no point in closing connection
   if (!options.streaming) {
-    // Close connections to Galaxy and log-reader (otherwise Node will continue running).
+    // Close connections to Galaxy and log-reader
+    // (otherwise Node will continue running).
     galaxy.close();
     logReader.close();
   }

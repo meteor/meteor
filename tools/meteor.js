@@ -58,6 +58,8 @@ Fiber(function () {
   // Figures out if we're in an app dir, what release we're using, etc. May
   // download the release if necessary.
   var calculateContext = function (argv) {
+    context.galaxy = process.env['GALAXY'];
+
     var appDir = files.findAppDir();
     context.appDir = appDir && path.resolve(appDir);
     context.globalReleaseVersion = calculateReleaseVersion(argv);
@@ -784,7 +786,7 @@ Fiber(function () {
         process.exit(1);
       }
       var site = new_argv._[1];
-      var useGalaxy = 'GALAXY' in process.env;
+      var useGalaxy = !!context.galaxy;
 
       if (useGalaxy)
         var deployGalaxy = require('./deploy-galaxy.js');
@@ -844,7 +846,7 @@ Fiber(function () {
     name: "logs",
     help: "Show logs for specified site",
     func: function (argv) {
-      var useGalaxy = 'GALAXY' in process.env;
+      var useGalaxy = !!context.galaxy;
       argv = require('optimist').boolean('f').argv;
 
       if (argv.help || argv._.length !== 2) {
