@@ -1,5 +1,0 @@
-# Make sure git uses line endings that match how files get regenerated
-# (by 'npm shrinkwrap' and meteor_npm.js)
-*/.npm/npm-shrinkwrap.json  eol=lf
-*/.npm/.gitignore           eol=lf
-*/.npm/README               eol=lf

@@ -108,6 +108,12 @@ _.extend(exports, {
     fs.writeFileSync(
       path.join(newPackageNpmDir, '.gitignore'),
       ['node_modules', ''/*git diff complains without trailing newline*/].join('\n'));
+
+    // create a .gitattributes to ensure git diff expects what was generated.
+    fs.writeFileSync(
+      path.join(newPackageNpmDir, '.gitattributes'),
+      ['/npm-shrinkwrap.json eol=lf', '/README eol=lf', '/.git* eol=lf',
+       ''/*git diff complains without trailing newline*/].join('\n'));
   },
 
   _updateExistingNpmDirectory: function(
