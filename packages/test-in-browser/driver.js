@@ -417,4 +417,4 @@ var forgetEvents = function (results) {
 
 var _throttled_update = _.throttle(function() {
   resultsDeps.changed();
-}, 1000);
+}, 25000);
