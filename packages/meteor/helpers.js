@@ -1,5 +1,8 @@
 // XXX namespacing -- find a better home for these?
 
+if (Meteor.isServer)
+  var Future = Npm.require('fibers/future');
+
 if (typeof __meteor_runtime_config__ === 'object' &&
     __meteor_runtime_config__.meteorRelease)
   Meteor.release = __meteor_runtime_config__.meteorRelease;
@@ -57,5 +60,28 @@ _.extend(Meteor, {
 
       delete stack[i][key];
     }
+  },
+
+  _wrapAsync: function (fn) {
+    var self = this;
+    return function (/* arguments */) {
+      var callback;
+      var fut;
+      var newArgs = Array.prototype.slice.call(arguments);
+      if (newArgs.length &&
+          typeof(newArgs[newArgs.length - 1]) === "function") {
+        var origCb = newArgs[newArgs.length - 1];
+        callback = Meteor.bindEnvironment(origCb, function (e) {
+          Meteor._debug("Exception in callback of async function", e.stack);
+        });
+        newArgs[newArgs.length - 1] = callback;
+      } else {
+        fut = new Future();
+        newArgs[newArgs.length] = fut.resolver();
+      }
+      fn.apply(self, newArgs);
+      if (fut)
+        return fut.wait();
+    };
   }
 });
