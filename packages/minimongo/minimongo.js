@@ -197,6 +197,8 @@ LocalCollection.Cursor.prototype.count = function () {
 
 LocalCollection.Cursor.prototype._publishCursor = function (sub) {
   var self = this;
+  if (! self.collection.name)
+    throw new Error("Can't publish a cursor from a collection without a name.");
   var collection = self.collection.name;
   return Meteor.Collection._publishCursor(self, sub, collection);
 };
