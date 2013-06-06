@@ -453,7 +453,14 @@ var SynchronousCursor = function (dbCursor, cursorDescription, useTransform) {
   var self = this;
   self._dbCursor = dbCursor;
   self._cursorDescription = cursorDescription;
-  self._transform = useTransform && cursorDescription.options.transform;
+  if (useTransform && cursorDescription.options &&
+      cursorDescription.options.transform) {
+    self._transform = Deps._makeNonreactive(
+      cursorDescription.options.transform
+    );
+  } else {
+    self._transform = null;
+  }
 
   // Need to specify that the callback is the first argument to nextObject,
   // since otherwise when we try to call it with no args the driver will
