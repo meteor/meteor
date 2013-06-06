@@ -8,7 +8,8 @@
 // LiveResultsSet: the return value of a live query.
 
 // @export LocalCollection
-LocalCollection = function () {
+LocalCollection = function (name) {
+  this.name = name;
   this.docs = {}; // _id -> document (also containing id)
 
   this._observeQueue = new Meteor._SynchronousQueue();
@@ -192,6 +193,12 @@ LocalCollection.Cursor.prototype.count = function () {
     self.db_objects = self._getRawObjects(true);
 
   return self.db_objects.length;
+};
+
+LocalCollection.Cursor.prototype._publishCursor = function (sub) {
+  var self = this;
+  var collection = self.collection.name;
+  return Meteor.Collection._publishCursor(self, sub, collection);
 };
 
 LocalCollection._isOrderedChanges = function (callbacks) {

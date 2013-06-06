@@ -49,10 +49,15 @@ Meteor.Collection = function (name, options) {
                   "the collection name to turn off this warning.)");
   }
 
-  // note: nameless collections never have a connection
-  self._connection = name && (options.connection ||
-                           (Meteor.isClient ?
-                            Meteor.default_connection : Meteor.default_server));
+  if (! name || options.connection === null)
+    // note: nameless collections never have a connection
+    self._connection = null;
+  else if (options.connection)
+    self._connection = options.connection;
+  else if (Meteor.isClient)
+    self._connection = Meteor.default_connection;
+  else
+    self._connection = Meteor.default_server;
 
   if (!options._driver) {
     if (name && self._connection === Meteor.default_server &&
@@ -62,10 +67,10 @@ Meteor.Collection = function (name, options) {
       options._driver = Meteor._LocalCollectionDriver;
   }
 
-  self._collection = options._driver.open(name);
+  self._collection = options._driver.open(name, self._connection);
   self._name = name;
 
-  if (name && self._connection.registerStore) {
+  if (self._connection && self._connection.registerStore) {
     // OK, we're going to be a slave, replicating some remote
     // database, except possibly with some temporary divergence while
     // we have unacknowledged RPC's.
