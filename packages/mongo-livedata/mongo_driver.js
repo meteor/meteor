@@ -446,19 +446,14 @@ _Mongo.prototype._createSynchronousCursor = function (cursorDescription,
     replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
     options.fields, mongoOptions);
 
-  return new SynchronousCursor(dbCursor, cursorDescription);
+  return new SynchronousCursor(dbCursor, cursorDescription, useTransform);
 };
 
-var SynchronousCursor = function (dbCursor, cursorDescription) {
+var SynchronousCursor = function (dbCursor, cursorDescription, useTransform) {
   var self = this;
   self._dbCursor = dbCursor;
   self._cursorDescription = cursorDescription;
-
-  if (cursorDescription.options.transform)
-    self._transform = Deps._makeNonreactive(
-      cursorDescription.options.transform);
-  else
-    self._transform = null;
+  self._transform = useTransform && cursorDescription.options.transform;
 
   // Need to specify that the callback is the first argument to nextObject,
   // since otherwise when we try to call it with no args the driver will
@@ -928,7 +923,8 @@ _Mongo.prototype._observeChangesTailable = function (
                     + " tailable cursor without a "
                     + (ordered ? "addedBefore" : "added") + " callback");
   }
-  var cursor = self._createSynchronousCursor(cursorDescription);
+  var cursor = self._createSynchronousCursor(cursorDescription,
+                                            true /* useTransform */);
 
   var stopped = false;
   var lastTS = undefined;
@@ -970,7 +966,7 @@ _Mongo.prototype._observeChangesTailable = function (
         cursor = self._createSynchronousCursor(new CursorDescription(
           cursorDescription.collectionName,
           newSelector,
-          cursorDescription.options));
+          cursorDescription.options), true /* useTransform */);
       }
     }
   });
