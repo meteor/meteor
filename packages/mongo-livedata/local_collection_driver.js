@@ -18,11 +18,11 @@ _.extend(Meteor._LocalCollectionDriver.prototype, {
     if (! conn) {
       return ensureCollection(name, self.noConnCollections);
     }
-    if (! conn.collections)
-      conn.collections = {};
+    if (! conn._mongo_livedata_collections)
+      conn._mongo_livedata_collections = {};
     // XXX is there a way to keep track of a connection's collections without
     // dangling it off the connection object?
-    return ensureCollection(name, conn.collections);
+    return ensureCollection(name, conn._mongo_livedata_collections);
   }
 });
 
