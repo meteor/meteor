@@ -54,7 +54,8 @@ Ctl.Commands.push({
       Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), 'server', {
         exitPolicy: 'restart',
         env: {
-          METEOR_DEPLOY_CONFIG: JSON.stringify(deployConfig)
+          METEOR_DEPLOY_CONFIG: JSON.stringify(deployConfig),
+          ROOT_URL: appConfig.sitename
         },
         ports: {
           "main": {

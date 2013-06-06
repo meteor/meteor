@@ -239,6 +239,14 @@ var runWebAppServer = function () {
             "// ##RUNTIME_CONFIG##",
             "__meteor_runtime_config__ = " +
               JSON.stringify(__meteor_runtime_config__) + ";");
+    var rootUrl = "";
+    if (process.env.ABSOLUTE_URL) {
+      rootUrl = __meteor_runtime_config__.ROOT_URL || process.env.ROOT_URL;
+    }
+    boilerplateHtml = boilerplateHtml.replace(
+        /##ROOT_URL##/g,
+      rootUrl
+    );
 
     app.use(function (req, res, next) {
       if (! appUrl(req.url))
@@ -283,7 +291,11 @@ var runWebAppServer = function () {
   };
 };
 
-var bindToProxy = function (proxyConfig) {
+var bindToProxy = Meteor._bindToProxy = function (proxyConfig) {
+
+  var securePort = proxyConfig.securePort || (proxyConfig.unprivilegedPorts ? 4433 : 443);
+  var insecurePort = proxyConfig.insecurePort || (proxyConfig.unprivilegedPorts ? 8080 : 80);
+  var bindPathPrefix = proxyConfig.bindPathPrefix || "";
   // XXX also support galaxy-based lookup
   if (!proxyConfig.proxyEndpoint)
     throw new Error("missing proxyEndpoint");
@@ -306,10 +318,10 @@ var bindToProxy = function (proxyConfig) {
   var myHost = os.hostname();
 
   var ddpBindTo = proxyConfig.unprivilegedPorts ? {
-    ddpUrl: 'ddp://' + proxyConfig.bindHost + ':4433/',
-    insecurePort: 8080
+    ddpUrl: 'ddp://' + proxyConfig.bindHost + ':' + securePort + bindPathPrefix + '/',
+    insecurePort: insecurePort
   } : {
-    ddpUrl: 'ddp://' + proxyConfig.bindHost + '/'
+    ddpUrl: 'ddp://' + proxyConfig.bindHost + bindPathPrefix + '/'
   };
 
   // This is run after packages are loaded (in main) so we can use
@@ -331,25 +343,29 @@ var bindToProxy = function (proxyConfig) {
     pid: pid,
     bindTo: {
       host: proxyConfig.bindHost,
-      port: proxyConfig.unprivilegedPorts ? 8080 : 80
+      port: insecurePort,
+      pathPrefix: bindPathPrefix
     },
     proxyTo: {
       host: host,
       port: port
     }
   });
-  proxy.call('bindHttp', {
-    pid: pid,
-    bindTo: {
-      host: proxyConfig.bindHost,
-      port: proxyConfig.unprivilegedPorts ? 4433: 443,
-      ssl: true
-    },
-    proxyTo: {
-      host: host,
-      port: port
-    }
+  if (!proxyConfig.omitSsl) {
+    proxy.call('bindHttp', {
+      pid: pid,
+      bindTo: {
+        host: proxyConfig.bindHost,
+        port: securePort,
+        pathPrefix: bindPathPrefix,
+        ssl: true
+      },
+      proxyTo: {
+        host: host,
+        port: port
+      }
   });
+  }
 };
 
 runWebAppServer();

@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html##HTML_ATTRIBUTES##>
 <head>
-{{#each stylesheets}}  <link rel="stylesheet" href="{{this}}">
+{{#each stylesheets}}  <link rel="stylesheet" href="##ROOT_URL##{{this}}">
 {{/each}}
 
 <script type="text/javascript">
 // ##RUNTIME_CONFIG##
 </script>
 
-{{#each scripts}}  <script type="text/javascript" src="{{this}}"></script>
+{{#each scripts}}  <script type="text/javascript" src="##ROOT_URL##{{this}}"></script>
 {{/each}}
 
 {{{head_extra}}}
