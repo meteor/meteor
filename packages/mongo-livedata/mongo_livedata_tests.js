@@ -1020,3 +1020,17 @@ if (Meteor.isServer) {
     }
   ]);
 }
+
+if (Meteor.isClient) {
+  Tinytest.addAsync("mongo-livedata - local collections with different connections", function (test, onComplete) {
+    var cname = Random.id();
+    var coll1 = new Meteor.Collection(cname);
+    var doc = { foo: "bar" };
+    var coll2 = new Meteor.Collection("foo", { connection: null });
+    coll2.insert(doc, function (err, id) {
+      test.equal(coll1.find(doc).count(), 0);
+      test.equal(coll2.find(doc).count(), 1);
+      onComplete();
+    });
+  });
+}
