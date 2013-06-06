@@ -184,13 +184,18 @@ exports.deploy = function (options) {
 // - app
 // - streaming (BOOL)
 exports.logs = function (options) {
-  var galaxy = getGalaxy(options.context);
-  var logReaderURL = prettyCall(galaxy, "getLogReaderURL", [], {
-    'no-log-reader': "Can't find log reader service"
-  });
+  var logReaderURL;
+  if (options.context.adminBaseUrl) {
+    logReaderURL = options.context.adminBaseUrl + "log-reader";
+  } else {
+    var galaxy = getGalaxy(options.context);
+    logReaderURL = prettyCall(galaxy, "getLogReaderURL", [], {
+      'no-log-reader': "Can't find log reader service"
+    });
+    galaxy.close();
+  }
 
-  var logReader = getMeteor().connect(logReaderURL);
-
+  var logReader = getMeteor(options.context).connect(logReaderURL);
   var Log = unipackage.load({
     library: options.context.library,
     packages: [ 'logging' ],
@@ -220,7 +225,6 @@ exports.logs = function (options) {
   if (!options.streaming) {
     // Close connections to Galaxy and log-reader
     // (otherwise Node will continue running).
-    galaxy.close();
     logReader.close();
   }
 };

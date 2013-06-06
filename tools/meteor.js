@@ -9,6 +9,7 @@ Fiber(function () {
   var path = require('path');
   var _ = require('underscore');
   var fs = require("fs");
+  var cp = require('child_process');
   var files = require('./files.js');
   var deploy = require('./deploy.js');
   var runner = require('./run.js');
@@ -18,6 +19,46 @@ Fiber(function () {
   var project = require('./project.js');
   var warehouse = require('./warehouse.js');
   var logging = require('./logging.js');
+
+
+  var Future = require('fibers/future');
+
+  var sshTunnel = function (to, localPort, remoteEnd, keyfile) {
+    var args = [to, '-L', localPort+':'+remoteEnd, 'echo __CONNECTED__ && cat -'];
+    if (keyfile)
+      args = ["-i", keyfile].concat(args);
+    var tunnel = cp.spawn('ssh', args, {
+      stdio: [process.stdin, 'pipe', 'pipe']
+    });
+
+    var exitFuture = new Future();
+    var connectedFuture = new Future();
+
+    tunnel.on('exit', function (code, signal) {
+      if (!connectedFuture.isResolved()) {
+        connectedFuture.throw(new Error("ssh exited without making a connection"));
+      }
+      exitFuture.return(signal || code);
+    });
+
+    tunnel.stdout.setEncoding('utf8');
+    tunnel.stdout.on('data', function (str) {
+      if (!connectedFuture.isResolved() && str.match(/__CONNECTED__/)) {
+        connectedFuture.return(true);
+      }
+    });
+
+    tunnel.stderr.setEncoding('utf8');
+    tunnel.stderr.on('data', function (str) {
+      if (str.match(/Killed by/))
+        return;
+      process.stderr.write(str);
+    });
+
+    tunnel.waitExit = _.bind(exitFuture.wait, exitFuture);
+    tunnel.waitConnected = _.bind(connectedFuture.wait, connectedFuture);
+    return tunnel;
+  };
 
   // This code is duplicated in app/server/server.js.
   var MIN_NODE_VERSION = 'v0.8.24';
@@ -58,7 +99,15 @@ Fiber(function () {
   // Figures out if we're in an app dir, what release we're using, etc. May
   // download the release if necessary.
   var calculateContext = function (argv) {
-    context.galaxy = process.env['GALAXY'];
+    context.port = process.env.PORT || 9414;
+    if (!!process.env.GALAXY && process.env.GALAXY.indexOf("ssh://") === 0) {
+      context.galaxy = "localhost:" + context.port + "/ultraworld";
+      context.adminBaseUrl = "localhost:" + context.port + "/";
+      context.galaxyHost = process.env.GALAXY.substr("ssh://".length);
+      context.identity = argv.identity;
+    } else {
+      context.galaxy = process.env.GALAXY;
+    }
 
     var appDir = files.findAppDir();
     context.appDir = appDir && path.resolve(appDir);
@@ -255,6 +304,23 @@ Fiber(function () {
         settingsFile: new_argv.settings,
         program: new_argv.program || undefined
       });
+    }
+  });
+
+  Commands.push({
+    name: "galaxy",
+    help: "Interact with your galaxy server",
+    func: function (argv) {
+      var cmd = argv._.splice(0, 1)[0];
+      switch (cmd) {
+      case "configure":
+        console.log("Visit http://localhost:" + context.port + "/proxy to configure your galaxy");
+        var fut = new Future();
+        fut.wait();
+        break;
+      default:
+        break;
+      }
     }
   });
 
@@ -751,6 +817,8 @@ Fiber(function () {
             .boolean('debug')
             .describe('debug', 'deploy in debug mode (don\'t minify, etc)')
             .describe('settings', 'set optional data for Meteor.settings')
+            .alias('identity', 'i')
+            .describe('identity', 'Selects a file from which the identity (private key) is read.  See ssh(1) for details.')
             .describe('star', 'a star (tarball) to deploy instead of the current meteor app')
             .usage(
               "Usage: meteor deploy <site> [--password] [--settings settings.json] [--debug] [--delete]\n" +
@@ -1251,7 +1319,19 @@ Fiber(function () {
     if (PROFILE_REQUIRE)
       require('./profile-require.js').printReport();
 
-    findCommand(cmd).func(argv);
+    var tunnel;
+    try {
+      if (context.galaxyHost) {
+        tunnel = sshTunnel(context.galaxyHost, context.port, "localhost:9414", context.identity);
+        tunnel.waitConnected();
+      }
+      findCommand(cmd).func(argv);
+    } finally {
+      if (tunnel) {
+        tunnel.kill('SIGHUP');
+        tunnel.waitExit();
+      }
+    }
   };
 
   main();

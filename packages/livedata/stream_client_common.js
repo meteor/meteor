@@ -52,8 +52,8 @@ var translateUrl =  function(url, newSchemeBase, subPath) {
     url = newSchemeBase + "://" + url;
   }
 
-  if (__meteor_runtime_config__.ABSOLUTE_URL && startsWith(url, "/"))
-      url = Meteor.absoluteUrl() + url;
+  if (__meteor_runtime_config__.PATH_PREFIX && startsWith(url, "/"))
+      url = __meteor_runtime_config__.PATH_PREFIX + url;
 
   if (endsWith(url, "/"))
     return url + subPath;

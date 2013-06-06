@@ -15,6 +15,19 @@ var useragent = Npm.require('useragent');
 // pidfiles.
 // XXX This should really be part of the boot script, not the webapp package.
 //     Or we should just get rid of it, and rely on containerization.
+
+
+var findGalaxy = _.once(function () {
+  if (!('GALAXY' in process.env)) {
+    console.log(
+      "GALAXY environment variable must be set. See 'galaxy --help'.");
+    process.exit(1);
+  }
+
+  return Meteor.connect(process.env['GALAXY']);
+});
+
+
 var initKeepalive = function () {
   var keepaliveCount = 0;
 
@@ -239,13 +252,11 @@ var runWebAppServer = function () {
             "// ##RUNTIME_CONFIG##",
             "__meteor_runtime_config__ = " +
               JSON.stringify(__meteor_runtime_config__) + ";");
-    var rootUrl = "";
-    if (process.env.ABSOLUTE_URL) {
-      rootUrl = __meteor_runtime_config__.ROOT_URL || process.env.ROOT_URL;
-    }
+
+    var pathPrefix = __meteor_runtime_config__.PATH_PREFIX || process.env.PATH_PREFIX || "";
     boilerplateHtml = boilerplateHtml.replace(
-        /##ROOT_URL##/g,
-      rootUrl
+        /##PATH_PREFIX##/g,
+      pathPrefix
     );
 
     app.use(function (req, res, next) {
@@ -274,8 +285,28 @@ var runWebAppServer = function () {
       if (argv.keepalive)
         console.log("LISTENING"); // must match run.js
       var port = httpServer.address().port;
-      if (bind.viaProxy) {
+      if (bind.viaProxy && bind.viaProxy.proxyEndpoint) {
         bindToProxy(bind.viaProxy);
+      } else if (bind.viaProxy) {
+        // bind via the proxy, but we'll have to find it ourselves via
+        // ultraworld.
+        var galaxy = findGalaxy();
+        galaxy.subscribe('servicesByName', 'proxy');
+        var Proxies = new Meteor.Collection('services', {
+          manager: galaxy
+        });
+        var doBinding = function (proxyService) {
+          if (proxyService.providers.proxy) {
+            Log("Attempting to bind to proxy");
+            bindToProxy(_.extend({
+              proxyEndpoint: proxyService.providers.proxy
+            }, bind.viaProxy));
+          }
+        };
+        Proxies.find().observe({
+          added: doBinding,
+          changed: doBinding
+        });
       }
 
       _.each(__meteor_bootstrap__.postStartupHooks, function (x) { x(); });
@@ -364,8 +395,9 @@ var bindToProxy = Meteor._bindToProxy = function (proxyConfig) {
         host: host,
         port: port
       }
-  });
+    });
   }
+  Log("Bound to proxy");
 };
 
 runWebAppServer();
