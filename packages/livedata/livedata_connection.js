@@ -556,7 +556,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
     });
 
     self.subscribe.apply(self, [name].concat(args));
-    return f.wait();
+    f.wait();
   },
 
   methods: function (methods) {
