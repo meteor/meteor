@@ -68,8 +68,13 @@ _.extend(Meteor, {
       var callback;
       var fut;
       var newArgs = Array.prototype.slice.call(arguments);
-      if (newArgs.length &&
-          typeof(newArgs[newArgs.length - 1]) === "function") {
+      var haveCb = newArgs.length &&
+            (newArgs[newArgs.length - 1] instanceof Function);
+      if (Meteor.isClient && ! haveCb) {
+        newArgs.push(function () { });
+        haveCb = true;
+      }
+      if (haveCb) {
         var origCb = newArgs[newArgs.length - 1];
         callback = Meteor.bindEnvironment(origCb, function (e) {
           Meteor._debug("Exception in callback of async function", e.stack);
@@ -80,7 +85,7 @@ _.extend(Meteor, {
         newArgs[newArgs.length] = fut.resolver();
       }
       fn.apply(self, newArgs);
-      if (fut)
+      if (! haveCb)
         return fut.wait();
     };
   }
