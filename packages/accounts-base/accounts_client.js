@@ -18,6 +18,7 @@ Accounts._setLoggingIn = function (x) {
     loggingInDeps.changed();
   }
 };
+
 Meteor.loggingIn = function () {
   loggingInDeps.depend();
   return loggingIn;
@@ -144,6 +145,7 @@ Accounts.callLoginMethod = function (options) {
 
   if (!options._suppressLoggingIn)
     Accounts._setLoggingIn(true);
+  
   Meteor.apply(
     options.methodName,
     options.methodArguments,
@@ -151,55 +153,6 @@ Accounts.callLoginMethod = function (options) {
     loggedInAndDataReadyCallback);
 };
 
-Accounts._makeClientLoggedOut = function() {
-  Accounts._unstoreLoginToken();
-  Meteor.default_connection.setUserId(null);
-  Meteor.default_connection.onReconnect = null;
-};
-
-Accounts._makeClientLoggedIn = function(userId, token) {
-  Accounts._storeLoginToken(userId, token);
-  Meteor.default_connection.setUserId(userId);
-};
-
-Meteor.logout = function (callback) {
-  Meteor.apply('logout', [], {wait: true}, function(error, result) {
-    if (error) {
-      callback && callback(error);
-    } else {
-      Accounts._makeClientLoggedOut();
-      callback && callback();
-    }
-  });
-};
-
-///
-/// LOGIN SERVICES
-///
-
-var loginServicesHandle = Meteor.subscribe("meteor.loginServiceConfiguration");
-
-// A reactive function returning whether the loginServiceConfiguration
-// subscription is ready. Used by accounts-ui to hide the login button
-// until we have all the configuration loaded
-Accounts.loginServicesConfigured = function () {
-  return loginServicesHandle.ready();
-};
-
-///
-/// HANDLEBARS HELPERS
-///
-
-// If we're using Handlebars, register the {{currentUser}} and
-// {{loggingIn}} global helpers.
-if (typeof Handlebars !== 'undefined') {
-  Handlebars.registerHelper('currentUser', function () {
-    return Meteor.user();
-  });
-  Handlebars.registerHelper('loggingIn', function () {
-    return Meteor.loggingIn();
-  });
-}
 
 // BOO LINK METHODS
 // 
@@ -324,3 +277,31 @@ Meteor.logout = function (callback) {
     }
   });
 };
+
+///
+/// LOGIN SERVICES
+///
+
+var loginServicesHandle = Meteor.subscribe("meteor.loginServiceConfiguration");
+
+// A reactive function returning whether the loginServiceConfiguration
+// subscription is ready. Used by accounts-ui to hide the login button
+// until we have all the configuration loaded
+Accounts.loginServicesConfigured = function () {
+  return loginServicesHandle.ready();
+};
+
+///
+/// HANDLEBARS HELPERS
+///
+
+// If we're using Handlebars, register the {{currentUser}} and
+// {{loggingIn}} global helpers.
+if (typeof Handlebars !== 'undefined') {
+  Handlebars.registerHelper('currentUser', function () {
+    return Meteor.user();
+  });
+  Handlebars.registerHelper('loggingIn', function () {
+    return Meteor.loggingIn();
+  });
+}

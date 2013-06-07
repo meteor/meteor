@@ -24,9 +24,10 @@ Accounts.oauth.credentialRequestCompleteHandler = function(callback) {
       Accounts.oauth.tryLoginAfterPopupClosed(credentialTokenOrError, callback);
     }
   };
-};
+}
 
-//BOO 
+// Mimic Existing Oauth login method for link external service's account 
+// to Meteor user account.  
 Accounts.oauth.tryLinkAfterPopupClosed = function (credentialToken, callback) {
   Accounts.callLinkMethod({
     methodArguments: [{oauth: {credentialToken: credentialToken}}],
@@ -42,7 +43,6 @@ Accounts.oauth.tryLinkAfterPopupClosed = function (credentialToken, callback) {
     }});
 };
 
-//BOO
 Accounts.oauth.linkRequestCompleteHandler = function (callback) {
   return function (credentialTokenOrError) {
     if(credentialTokenOrError && credentialTokenOrError instanceof Error) {
@@ -51,4 +51,4 @@ Accounts.oauth.linkRequestCompleteHandler = function (callback) {
       Accounts.oauth.tryLinkAfterPopupClosed(credentialTokenOrError, callback);
     }
   };
-};
+}

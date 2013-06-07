@@ -6,4 +6,3 @@ Accounts.addAutopublishFields({
   forLoggedInUser: ['services.weibo'],
   forOtherUsers: ['services.weibo.screenName']
 });
-

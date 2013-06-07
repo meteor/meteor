@@ -65,7 +65,7 @@ Accounts.LoginCancelledError.numericError = 0x8acdc2f;
 Accounts.LoginCancelledError.prototype = new Error();
 Accounts.LoginCancelledError.prototype.name = 'Accounts.LoginCancelledError';
 
-// BOO Thrown when the user cancels the login process (eg, closes an oauth
+// Thrown when the user cancels the login process (eg, closes an oauth
 // popup, declines retina scan, etc)
 Accounts.LinkCancelledError = function(description) {
   this.message = description;
@@ -77,3 +77,6 @@ Accounts.LinkCancelledError = function(description) {
 Accounts.LinkCancelledError.numericError = 0x8acdc2fff;
 Accounts.LinkCancelledError.prototype = new Error();
 Accounts.LinkCancelledError.prototype.name = 'Accounts.LinkCancelledError';
+
+
+

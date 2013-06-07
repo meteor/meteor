@@ -59,8 +59,8 @@ var tryAllLoginHandlers = function (options) {
 };
 
 ///
-/// BOO LINK HANDLERS
-/// - mimic login handlers
+/// LINK HANDLERS
+/// BOO - mimic login handlers
 
 Accounts.registerLinkHandler = function(handler) {
   Accounts._linkHandlers.push(handler);
@@ -79,6 +79,7 @@ var tryAllLinkHandlers = function (userId, options) {
 
   throw new Meteor.Error(400, "Unrecognized options for link request");
 };
+
 
 // Actual methods for login and logout. This is the entry point for
 // clients to actually log in.
@@ -109,22 +110,36 @@ Meteor.methods({
       throw new Meteor.Error(90000, "You must be logged into an existing account to link a 3rd party service.");
     }
     var result = tryAllLinkHandlers(userId, options);
-    if (result !== null)
-      console.log("yay!");
+
     return result;
   },
 
   //BOO 
   unlink: function(options){
     check(options, Object);
-    var userId = Meteor.userId()
-      , serviceKey = "services." + options.serviceName
+    var serviceKey = "services." + options.serviceName
       , updates = { $unset: {} };
       updates.$unset[serviceKey] = '';
 
-      console.log('updates', updates);
+    var user = Meteor.user();
+    if (!user) {
+      throw new Meteor.Error(90003, "You must login to unlink a service.");
+    };
+    if (options.serviceName == "password") {
+      throw new Meteor.Error(90004, "You can't unlink password service");
+    };
+    if (!user.services[options.serviceName]) {
+      throw new Meteor.Error(90005, "You can't unlink a non-existing service.");
+    };
 
-    Meteor.users.update(userId, updates); // throws an exception on failure
+    //BOO STUPID WAY TO WRIT THIS THING! NEED TO FIX IT
+    var count = _.keys(user.services);
+
+    if(count.length <= 2) {
+      throw new Meteor.Error(90006, "You can't unlink the only service.");
+    }
+
+    Meteor.users.update(user._id, updates); 
     return true;
   }
 });
@@ -322,9 +337,11 @@ Accounts.updateOrCreateUserFromExternalService = function(
 };
 
 ///
-/// BOO LINK USERS
+/// LINK USERS
 ///
+/// link external service's account to current Meteor user.
 
+//BOO 
 Accounts.linkUserFromExternalService = function(
   userId, serviceName, serviceData, options) {
   options = _.clone(options || {});
@@ -367,18 +384,17 @@ Accounts.linkUserFromExternalService = function(
     //     the profile too
 
     if (possibleUser && possibleUser._id !== userId) {
-      throw new Meteor.Error(90003, "This external service account is already linked with some other user!");
+      throw new Meteor.Error(90001, "Another user already exist with this service!");
     };
 
     _.each(user.services, function (value, key){
       if (serviceName == key) {
         if (user.services[key].id !== serviceData.id) {
-          throw new Meteor.Meteor.Error(90004, "Trying to add same services but different account!");
+          throw new Meteor.Meteor.Error(90002, "attempt link service already exist");
         };      
       };
     });
 
-    var stampedToken = Accounts._generateStampedLoginToken();
     var setAttrs = {};
     _.each(serviceData, function(value, key) {
       setAttrs["services." + serviceName + "." + key] = value;
@@ -388,13 +404,13 @@ Accounts.linkUserFromExternalService = function(
     //     touches nothing?
     Meteor.users.update(
       user._id,
-      {$set: setAttrs,
-       $push: {'services.resume.loginTokens': stampedToken}});
-    return {token: stampedToken.token, id: user._id};
+      {$set: setAttrs});
+    return {id: user._id};
   } else {
-    throw new Meteor.Error(90000, "You must be logged in as an existing user to link a 3rd party account.");
+    throw new Meteor.Error(90000, "You must be logged into an existing account to link a 3rd party service.");
   }
 };
+
 
 ///
 /// PUBLISHING DATA
