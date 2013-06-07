@@ -947,7 +947,8 @@ _.extend(LiveResultsSet.prototype, {
 //     optimization which allows it to find the right place to start without
 //     an index on ts. It's how the oplog works.)
 //   - No callbacks are triggered synchronously with the call (there's no
-//     "initial data").
+//     differentiation between "initial data" and "later changes"; everything
+//     that matches the query gets sent asynchronously).
 //   - De-duplication is not implemented.
 //   - Does not yet interact with the write fence. Probably, this should work by
 //     ignoring removes (which don't work on capped collections) and updates
