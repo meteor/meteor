@@ -418,6 +418,12 @@ Meteor.Collection.prototype._dropIndex = function (index) {
     throw new Error("Can only call _dropIndex on server collections");
   self._collection._dropIndex(index);
 };
+Meteor.Collection.prototype._createCappedCollection = function (byteSize) {
+  var self = this;
+  if (!self._collection._createCappedCollection)
+    throw new Error("Can only call _createCappedCollection on server collections");
+  self._collection._createCappedCollection(byteSize);
+};
 
 Meteor.Collection.ObjectID = LocalCollection._ObjectID;
 

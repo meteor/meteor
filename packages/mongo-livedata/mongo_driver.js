@@ -84,7 +84,7 @@ var replaceTypes = function (document, atomTransformer) {
 
 _Mongo = function (url) {
   var self = this;
-  self.collection_queue = [];
+  self._connectCallbacks = [];
   self._liveResultsSets = {};
 
   var options = {db: {safe: true}};
@@ -113,13 +113,12 @@ _Mongo = function (url) {
       throw err;
     self.db = db;
 
-    // drain queue of pending callbacks
-    var c;
-    while ((c = self.collection_queue.pop())) {
-      Fiber(function () {
-        db.collection(c.name, c.callback);
-      }).run();
-    }
+    Fiber(function () {
+      // drain queue of pending callbacks
+      _.each(self._connectCallbacks, function (c) {
+        c(db);
+      });
+    }).run();
   });
 };
 
@@ -131,18 +130,34 @@ _Mongo.prototype.close = function() {
   Future.wrap(_.bind(self.db.close, self.db))(true).wait();
 };
 
+_Mongo.prototype._withDb = function (callback) {
+  var self = this;
+  if (self.db) {
+    callback(self.db);
+  } else {
+    self._connectCallbacks.push(callback);
+  }
+};
+
 // Returns the Mongo Collection object; may yield.
-_Mongo.prototype._getCollection = function(collectionName) {
+_Mongo.prototype._getCollection = function (collectionName) {
   var self = this;
 
   var future = new Future;
-  if (self.db) {
-    self.db.collection(collectionName, future.resolver());
-  } else {
-    self.collection_queue.push({name: collectionName,
-                                callback: future.resolver()});
-  }
+  self._withDb(function (db) {
+    db.collection(collectionName, future.resolver());
+  });
   return future.wait();
+};
+
+_Mongo.prototype._createCappedCollection = function (collectionName, byteSize) {
+  var self = this;
+  var future = new Future();
+  self._withDb(function (db) {
+    db.createCollection(collectionName, {capped: true, size: byteSize},
+                        future.resolver());
+  });
+  future.wait();
 };
 
 // This should be called synchronously with a write, to create a
@@ -917,6 +932,33 @@ _.extend(LiveResultsSet.prototype, {
   }
 });
 
+// observeChanges for tailable cursors on capped collections.
+//
+// Some differences from normal cursors:
+//   - Will never produce anything other than 'added' or 'addedBefore'. If you
+//     do update a document that has already been produced, this will not notice
+//     it.
+//   - If you disconnect and reconnect from Mongo, it will essentially restart
+//     the query, which will lead to duplicate results. This is pretty bad,
+//     but if you include a field called 'ts' which is inserted as
+//     new Meteor._Mongo._Timestamp(0, 0) (which is initialized to the current
+//     Mongo-style timestamp), we'll be able to find the place to restart
+//     properly. (This field is specifically understood by Mongo with an
+//     optimization which allows it to find the right place to start without
+//     an index on ts. It's how the oplog works.)
+//   - No callbacks are triggered synchronously with the call (there's no
+//     "initial data").
+//   - De-duplication is not implemented.
+//   - Does not yet interact with the write fence. Probably, this should work by
+//     ignoring removes (which don't work on capped collections) and updates
+//     (which don't affect tailable cursors), and just keeping track of the ID
+//     of the inserted object, and closing the write fence once you get to that
+//     ID (or timestamp?).  This doesn't work well if the document doesn't match
+//     the query, though.  On the other hand, the write fence can close
+//     immediately if it does not match the query. So if we trust minimongo
+//     enough to accurately evaluate the query against the write fence, we
+//     should be able to do this...  Of course, minimongo doesn't even support
+//     Mongo Timestamps yet.
 _Mongo.prototype._observeChangesTailable = function (
     cursorDescription, ordered, callbacks) {
   var self = this;

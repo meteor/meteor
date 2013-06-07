@@ -10,7 +10,7 @@ _.extend(Meteor._RemoteCollectionDriver.prototype, {
     var ret = {};
     _.each(
       ['find', 'findOne', 'insert', 'update', 'remove', '_ensureIndex',
-       '_dropIndex'],
+       '_dropIndex', '_createCappedCollection'],
       function (m) {
         ret[m] = _.bind(self.mongo[m], self.mongo, name);
       });
