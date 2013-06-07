@@ -856,7 +856,7 @@ Fiber(function () {
               "\n" +
               "Retrieves the server logs for the requested site.\n" +
               "\n" +
-              "Pass -f to show new logs as they come in.\n");
+              "Pass -f to see new logs as they come in.\n");
         } else {
           process.stdout.write(
             "Usage: meteor logs <site>\n" +
