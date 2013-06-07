@@ -453,8 +453,7 @@ var SynchronousCursor = function (dbCursor, cursorDescription, useTransform) {
   var self = this;
   self._dbCursor = dbCursor;
   self._cursorDescription = cursorDescription;
-  if (useTransform && cursorDescription.options &&
-      cursorDescription.options.transform) {
+  if (useTransform && cursorDescription.options.transform) {
     self._transform = Deps._makeNonreactive(
       cursorDescription.options.transform
     );
@@ -931,7 +930,7 @@ _Mongo.prototype._observeChangesTailable = function (
                     + (ordered ? "addedBefore" : "added") + " callback");
   }
   var cursor = self._createSynchronousCursor(cursorDescription,
-                                            true /* useTransform */);
+                                            false /* useTransform */);
 
   var stopped = false;
   var lastTS = undefined;
@@ -973,7 +972,7 @@ _Mongo.prototype._observeChangesTailable = function (
         cursor = self._createSynchronousCursor(new CursorDescription(
           cursorDescription.collectionName,
           newSelector,
-          cursorDescription.options), true /* useTransform */);
+          cursorDescription.options), false /* useTransform */);
       }
     }
   });
