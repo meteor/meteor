@@ -856,12 +856,12 @@ Fiber(function () {
               "\n" +
               "Retrieves the server logs for the requested site.\n" +
               "\n" +
-              "-f      enables logs streaming.\n");
+              "Pass -f to show new logs as they come in.\n");
         } else {
           process.stdout.write(
             "Usage: meteor logs <site>\n" +
-            "\n" +
-            "Retrieves the server logs for the requested site.\n");
+              "\n" +
+              "Retrieves the server logs for the requested site.\n");
         }
 
         process.exit(1);
