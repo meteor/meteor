@@ -51,7 +51,7 @@ OAuth1Binding.prototype.prepareAccessToken = function(query) {
   self.accessTokenSecret = tokens.oauth_token_secret;
 };
 
-OAuth1Binding.prototype.call = function(method, url, params) {
+OAuth1Binding.prototype.call = function(method, url, params, callback) {
   var self = this;
 
   var headers = self._buildHeader({
@@ -62,16 +62,15 @@ OAuth1Binding.prototype.call = function(method, url, params) {
     params = {};
   }
 
-  var response = self._call(method, url, headers, params);
-  return response;
+  return self._call(method, url, headers, params, callback);
 };
 
-OAuth1Binding.prototype.get = function(url, params) {
-  return this.call('GET', url, params);
+OAuth1Binding.prototype.get = function(url, params, callback) {
+  return this.call('GET', url, params, callback);
 };
 
-OAuth1Binding.prototype.post = function(url, params) {
-  return this.call('POST', url, params);
+OAuth1Binding.prototype.post = function(url, params, callback) {
+  return this.call('POST', url, params, callback);
 };
 
 OAuth1Binding.prototype._buildHeader = function(headers) {
@@ -106,7 +105,7 @@ OAuth1Binding.prototype._getSignature = function(method, url, rawHeaders, access
   return crypto.createHmac('SHA1', signingKey).update(signatureBase).digest('base64');
 };
 
-OAuth1Binding.prototype._call = function(method, url, headers, params) {
+OAuth1Binding.prototype._call = function(method, url, headers, params, callback) {
   var self = this;
 
   // Get the signature
@@ -122,7 +121,7 @@ OAuth1Binding.prototype._call = function(method, url, headers, params) {
       headers: {
         Authorization: authString
       }
-    });
+    }, callback);
   } catch (err) {
     throw new Error("Failed to send OAuth1 request to " + url + ". " + err.message);
   }
