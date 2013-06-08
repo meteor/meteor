@@ -89,9 +89,17 @@ Template.api.ejsonParse = {
 
 Template.api.ejsonStringify = {
   id: "ejson_stringify",
-  name: "EJSON.stringify(val)",
+  name: "EJSON.stringify(val, [options])",
   locus: "Anywhere",
   args: [ {name: "val", type: "EJSON-compatible value", descr: "A value to stringify."} ],
+  options: [
+    {name: "indent",
+     type: "Boolean, Integer, or String",
+     descr: "Indents objects and arrays for easy readability.  When `true`, indents by 2 spaces; when an integer, indents by that number of spaces; and when a string, uses the string as the indentation pattern."},
+    {name: "keyOrderSensitive",
+     type: "Boolean",
+     descr: "Stringifies in key sensitive order, when supported by the JavaScript implementation.  Without this option, object keys are emitted in sorted order."}
+  ],
   descr: ["Serialize a value to a string.\n\nFor EJSON values, the serialization " +
           "fully represents the value. For non-EJSON values, serializes the " +
           "same way as `JSON.stringify`."]
@@ -116,10 +124,15 @@ Template.api.ejsonToJSONValue = {
 
 Template.api.ejsonEquals = {
   id: "ejson_equals",
-  name: "EJSON.equals(a, b)", //doc options?
+  name: "EJSON.equals(a, b, [options])",
   locus: "Anywhere",
   args: [ {name: "a", type: "EJSON-compatible object"},
           {name: "b", type: "EJSON-compatible object"} ],
+  options: [
+    {name: "keyOrderSensitive",
+     type: "Boolean",
+     descr: "Compare in key sensitive order, if supported by the JavaScript implementation.  For example, `{a: 1, b: 2}` is not equal to `{b: 2, a: 1}` with this option, but they are equal when this option is not specified."}
+  ],
   descr: ["Return true if `a` and `b` are equal to each other.  Return false otherwise." +
           "  Uses the `equals` method on `a` if present, otherwise performs a deep comparison."]
 },

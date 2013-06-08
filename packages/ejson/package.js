@@ -9,6 +9,7 @@ Package.on_use(function (api) {
   api.export('EJSONTest', {testOnly: true});
   api.add_files('ejson.js', ['client', 'server']);
   api.add_files('base64.js', ['client', 'server']);
+  api.add_files('stringify.js', ['client', 'server']);
 });
 
 Package.on_test(function (api) {
