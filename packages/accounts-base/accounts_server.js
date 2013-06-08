@@ -60,7 +60,7 @@ var tryAllLoginHandlers = function (options) {
 
 ///
 /// LINK HANDLERS
-/// BOO - mimic login handlers
+/
 
 Accounts.registerLinkHandler = function(handler) {
   Accounts._linkHandlers.push(handler);
@@ -102,7 +102,7 @@ Meteor.methods({
     this.setUserId(null);
   },
 
-  //BOO 
+  
   link: function(options) {
     check(options, Object);
     var userId = Meteor.userId();
@@ -114,7 +114,7 @@ Meteor.methods({
     return result;
   },
 
-  //BOO 
+  
   unlink: function(options){
     check(options, Object);
     var serviceKey = "services." + options.serviceName
@@ -132,7 +132,7 @@ Meteor.methods({
       throw new Meteor.Error(90005, "You can't unlink a non-existing service.");
     };
 
-    //BOO STUPID WAY TO WRIT THIS THING! NEED TO FIX IT
+    
     var count = _.keys(user.services);
 
     if(count.length <= 2) {
@@ -341,7 +341,7 @@ Accounts.updateOrCreateUserFromExternalService = function(
 ///
 /// link external service's account to current Meteor user.
 
-//BOO 
+
 Accounts.linkUserFromExternalService = function(
   userId, serviceName, serviceData, options) {
   options = _.clone(options || {});
@@ -354,7 +354,6 @@ Accounts.linkUserFromExternalService = function(
     throw new Error(
       "Service data for service " + serviceName + " must include id");
 
-  // Look for a user with the appropriate service user id.
   var selector = {};
   var serviceIdKey = "services." + serviceName + ".id";
 
@@ -377,11 +376,6 @@ Accounts.linkUserFromExternalService = function(
   var possibleUser = Meteor.users.findOne(selector);
 
   if (user) {
-    // We *don't* process options (eg, profile) for update, but we do replace
-    // the serviceData (eg, so that we keep an unexpired access token and
-    // don't cache old email addresses in serviceData.email).
-    // XXX provide an onUpdateUser hook which would let apps update
-    //     the profile too
 
     if (possibleUser && possibleUser._id !== userId) {
       throw new Meteor.Error(90001, "Another user already exist with this service!");
@@ -400,8 +394,6 @@ Accounts.linkUserFromExternalService = function(
       setAttrs["services." + serviceName + "." + key] = value;
     });
 
-    // XXX Maybe we should re-use the selector above and notice if the update
-    //     touches nothing?
     Meteor.users.update(
       user._id,
       {$set: setAttrs});

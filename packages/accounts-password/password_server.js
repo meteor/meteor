@@ -137,7 +137,7 @@ Accounts.registerLoginHandler(function (options) {
 /// LINK EMAIL/PASSWORD TO EXISTING USER
 ///
 
-// BOO
+
 Accounts.registerLinkHandler(function (userId, options) {
   if (!options.srp)
     return undefined; // don't handle
@@ -145,7 +145,7 @@ Accounts.registerLinkHandler(function (userId, options) {
   check(options, {username: Match.Optional(String), email: Match.Optional(String), srp: Match.Optional(Meteor._srp.matchVerifier)});
 
   var user = Meteor.users.findOne(userId);
-  //BOO better way to handle this for checking duplicated user
+  
   var possibleUser = Meteor.users.findOne({"emails.address":options.email});
 
   if (!user)

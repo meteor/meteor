@@ -43,7 +43,7 @@ Meteor.loginWithPassword = function (selector, password, callback) {
   });
 };
 
-//BOO Link Password,   Mimic createUser/loginWithPassword function.  
+
 Meteor.linkWithPassword = function (options, callback) {
   options = _.clone(options); // we'll be modifying options
   

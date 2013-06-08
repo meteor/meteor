@@ -154,7 +154,7 @@ Accounts.callLoginMethod = function (options) {
 };
 
 
-// BOO LINK METHODS
+
 // 
 // Call a link method on the server.
 // A link method is a method which on success calls `this.setUserId(id)` on
