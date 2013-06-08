@@ -4,9 +4,12 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use('json');
-  api.add_files('ejson.js', ['client', 'server']);
-  api.add_files('base64.js', ['client', 'server']);
+  api.use(['json', 'underscore']);
+  api.add_files([
+    'stringify.js',
+    'ejson.js',
+    'base64.js',
+  ], ['client', 'server']);
 });
 
 Package.on_test(function (api) {
