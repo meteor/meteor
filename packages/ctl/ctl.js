@@ -71,7 +71,7 @@ Ctl.Commands.push({
         env: {
           METEOR_DEPLOY_CONFIG: JSON.stringify(deployConfig),
           PATH_PREFIX: bindPathPrefix,
-          ROOT_URL: appConfig.sitename
+          ROOT_URL: appConfig.sitename + bindPathPrefix
         },
         ports: {
           "main": {

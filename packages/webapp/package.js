@@ -9,5 +9,6 @@ Npm.depends({connect: "2.7.10",
 Package.on_use(function (api) {
   // XXX: Refactor so as not to have to use ctl-helper
   api.use(['logging', 'underscore'], 'server');
+  api.add_files('webapp_shared.js', ['client', 'server']);
   api.add_files('webapp_server.js', 'server');
 });

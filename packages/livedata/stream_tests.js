@@ -50,7 +50,7 @@ Tinytest.add("stream - sockjs urls are computed correctly", function(test) {
                    "http://subdomain.meteor.com/sockjs");
   testHasSockjsUrl("subdomain.meteor.com",
                    "http://subdomain.meteor.com/sockjs");
-  testHasSockjsUrl("/", "/sockjs");
+  testHasSockjsUrl("/", Meteor._fixLink("/sockjs"));
 
   testHasSockjsUrl("http://localhost:3000/", "http://localhost:3000/sockjs");
   testHasSockjsUrl("http://localhost:3000", "http://localhost:3000/sockjs");
@@ -73,7 +73,7 @@ testAsyncMulti("stream - /websocket is a websocket endpoint", [
     // Verify that /websocket and /websocket/ don't return the main page
     //
     _.each(['/websocket', '/websocket/'], function(path) {
-      Meteor.http.get(path, expect(function(error, result) {
+      Meteor.http.get(Meteor._fixLink(path), expect(function(error, result) {
         test.isNotNull(error);
         test.equal(result.content, 'Can "Upgrade" only to "WebSocket".');
       }));

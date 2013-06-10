@@ -7,12 +7,14 @@
 __meteor_runtime_config__.serverId =
   process.env.SERVER_ID ? process.env.SERVER_ID : Random.id();
 
+var pathPrefix = process.env.PATH_PREFIX || "";
+
 Meteor._DdpStreamServer = function () {
   var self = this;
   self.registration_callbacks = [];
   self.open_sockets = [];
 
-  self.prefix = '/sockjs';
+  self.prefix = pathPrefix + '/sockjs';
   // We don't depend directly on routepolicy because we don't want to pull in
   // webapp stuff if we're just doing server-to-server DDP as a client.
   if (Meteor._routePolicy)
@@ -109,8 +111,8 @@ _.extend(Meteor._DdpStreamServer.prototype, {
         // Store arguments for use within the closure below
         var args = arguments;
 
-        if (request.url === '/websocket' ||
-            request.url === '/websocket/')
+        if (request.url === pathPrefix + '/websocket' ||
+            request.url === pathPrefix + '/websocket/')
           request.url = self.prefix + '/websocket';
 
         _.each(oldHttpServerListeners, function(oldListener) {

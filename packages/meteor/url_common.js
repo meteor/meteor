@@ -38,4 +38,5 @@ Meteor.absoluteUrl = function (path, options) {
 Meteor.absoluteUrl.defaultOptions = { };
 if (typeof __meteor_runtime_config__ === "object" &&
     __meteor_runtime_config__.ROOT_URL)
-  Meteor.absoluteUrl.defaultOptions.rootUrl = __meteor_runtime_config__.ROOT_URL;
+  Meteor.absoluteUrl.defaultOptions.rootUrl = __meteor_runtime_config__.ROOT_URL +
+  (__meteor_runtime_config__.PATH_PREFIX || "");

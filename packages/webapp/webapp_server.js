@@ -180,7 +180,12 @@ var runWebAppServer = function () {
   }
 
   // webserver
-  var app = connect();
+  var app = connect().use(function (request, response, next) {
+    var pathPrefix = process.env.PATH_PREFIX;
+    if (pathPrefix && request.url.indexOf(pathPrefix) === 0)
+      request.url = request.url.substring(pathPrefix.length);
+    next();
+  });
   // Parse the query string into res.query. Only oauth_server cares about this,
   // but it's overkill to have that package depend on its own copy of connect
   // just for this simple processing.
@@ -297,7 +302,7 @@ var runWebAppServer = function () {
         });
         var doBinding = function (proxyService) {
           if (proxyService.providers.proxy) {
-            Log("Attempting to bind to proxy");
+            Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
             bindToProxy(_.extend({
               proxyEndpoint: proxyService.providers.proxy
             }, bind.viaProxy));
@@ -367,7 +372,7 @@ var bindToProxy = Meteor._bindToProxy = function (proxyConfig) {
     proxyTo: {
       host: host,
       port: port,
-      pathPrefix: '/websocket'
+      pathPrefix: bindPathPrefix + '/websocket'
     }
   });
   proxy.call('bindHttp', {
@@ -379,7 +384,8 @@ var bindToProxy = Meteor._bindToProxy = function (proxyConfig) {
     },
     proxyTo: {
       host: host,
-      port: port
+      port: port,
+      pathPrefix: bindPathPrefix
     }
   });
   if (!proxyConfig.omitSsl) {
@@ -393,7 +399,8 @@ var bindToProxy = Meteor._bindToProxy = function (proxyConfig) {
       },
       proxyTo: {
         host: host,
-        port: port
+        port: port,
+        pathPrefix: bindPathPrefix
       }
     });
   }
