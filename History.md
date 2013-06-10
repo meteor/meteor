@@ -1,6 +1,37 @@
 
 ## vNEXT
 
+## v0.6.4
+
+* Separate OAuth flow logic from Accounts into separate packages. The
+  `facebook`, `github`, `google`, `meetup`, `twitter`, and `weibo`
+  packages can be used to perform an OAuth exchange without creating an
+  account and logging in.  #1024
+
+* If you set the `DISABLE_WEBSOCKETS` environment variable, browsers will not
+  attempt to connect to your app using Websockets. Use this if you know your
+  server environment does not properly proxy Websockets to reduce connection
+  startup time.
+
+* Make `Meteor.defer` work in an inactive tab in iOS.  #1023
+
+* Allow new `Random` instances to be constructed with specified seed. This
+  can be used to create repeatable test cases for code that picks random
+  values.  #1033
+
+* Fix CoffeeScript error reporting to include source file and line
+  number again.  #1052
+
+* Fix Mongo queries which nested JavaScript RegExp objects inside `$or`.  #1089
+
+* Upgraded dependencies:
+  * Underscore from 1.4.2 to 1.4.4  #776
+  * http-proxy from 0.8.5 to 0.10.1  #513
+  * connect from 1.9.2 to 2.7.10
+  * mongodb from 1.2.13 to 1.3.7  #1060
+
+Patches contributed by GitHub users awwx, johnston, and timhaines.
+
 
 ## v0.6.3
 
@@ -150,8 +181,8 @@ Patches contributed by GitHub users andreas-karlsson and awwx.
 * `{{#with}}` helper now only includes its block if its argument is not falsey,
   and runs an `{{else}}` block if provided if the argument is falsey. #770, #866
 
-* Twitter login now stores profile_image_url and profile_image_url_https
-  attributes in the user.services.twitter namespace. #788
+* Twitter login now stores `profile_image_url` and `profile_image_url_https`
+  attributes in the `user.services.twitter` namespace. #788
 
 * Allow packages to register file extensions with dots in the filename.
 
@@ -219,7 +250,7 @@ mquandalle, Primigenus, raix, reustle, and timhaines.
 * Publish functions may now return an array of cursors to publish. Currently,
   the cursors must all be from different collections. #716
 
-* User documents have id's when onCreateUser and validateNewUser hooks run.
+* User documents have id's when `onCreateUser` and `validateNewUser` hooks run.
 
 * Encode and store custom EJSON types in MongoDB.
 

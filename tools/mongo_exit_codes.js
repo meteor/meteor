@@ -58,7 +58,9 @@ exports.Codes = {
   100 : { code: 100,
           symbol: "EXIT_UNCAUGHT",
           longText: "MongoDB had an unspecified uncaught exception.\n" +
-          "Check to make sure that MongoDB is able to write to its database directory."
+          "This can be caused by MongoDB being unable to write to a local database.\n" +
+          "Check that you have permissions to write to .meteor/local. MongoDB does\n" +
+          "not support filesystems like NFS that do not allow file locking."
         }
 };
 

@@ -2,7 +2,7 @@
 var _XHR_URL_PREFIX = "/http_test_responder";
 var url_prefix = function () {
   if (Meteor.isServer && _XHR_URL_PREFIX.indexOf("http") !== 0) {
-    var address = __meteor_bootstrap__.app.address();
+    var address = __meteor_bootstrap__.httpServer.address();
     _XHR_URL_PREFIX = "http://127.0.0.1:" + address.port + _XHR_URL_PREFIX;
   }
   return _XHR_URL_PREFIX;
