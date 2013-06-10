@@ -13,6 +13,11 @@ IfComponent = Component.extend({
   }
 });
 
+Items = new Meteor.Collection(null);
+Items.insert({ text: 'Foo' });
+Items.insert({ text: 'Bar' });
+Items.insert({ text: 'Baz' });
+
 Meteor.startup(function () {
   /*
   RC = RootComponent.create({
@@ -23,7 +28,7 @@ Meteor.startup(function () {
     })
   });
  */
-  RC = RootComponent.create({
+  /*RC = RootComponent.create({
     bodyClass: Component.extend({
       render: function (buf) {
         buf.openTag('span', {style: function () {
@@ -36,7 +41,25 @@ Meteor.startup(function () {
         buf.closeTag('span');
       }
     })
+  });*/
+
+  RC = RootComponent.create({
+    bodyClass: Component.extend({
+      render: function (buf) {
+        buf.component(Each.create({
+          bodyClass: Component.extend({
+            render: function (buf) {
+              buf.openTag('div');
+              buf.text(this.getArg('data').text || '');
+              buf.closeTag('div');
+            }
+          }),
+          list: Items.find()
+        }), { key: 'body' });
+      }
+    })
   });
+
   RC.attach(document.body);
 });
 
@@ -210,9 +233,12 @@ Each = Component.extend({
         var doc = EJSON.clone(item);
         doc._id = id;
         items.putBefore(id, doc, beforeId);
-        //var tdoc = transformedDoc(doc);
 
-        //self.itemAddedBefore(id, tdoc, beforeId);
+        if (self.stage === Component.BUILT) {
+          var tdoc = transformedDoc(doc);
+
+          self.itemAddedBefore(id, tdoc, beforeId);
+        }
       },
       removed: function (id) {
         //items.remove(id);
@@ -235,10 +261,10 @@ Each = Component.extend({
       }
     });
 
-    if (items.empty) {
+    if (items.empty()) {
       buf.component(function () {
         return (self.getArg('elseClass') || Component).create(
-          { data: this.getArg('data') });
+          { data: self.getArg('data') });
       }, { key: 'else' });
     } else {
       items.forEach(function (doc, id) {
@@ -246,14 +272,14 @@ Each = Component.extend({
 
         buf.component(function () {
           return self.getArg('bodyClass').create({ data: tdoc });
-        }, { key: this._itemChildId(id) });
+        }, { key: self._itemChildId(id) });
       });
     }
   },
 
   _itemChildId: function (id) {
     return 'item:' + idStringify(id);
-  }
+  },
   /*
   addItemChild: function (id, comp) {
     this.addChild(this._itemChildId(id), comp);
@@ -284,11 +310,22 @@ Each = Component.extend({
       this.setStart(comp);
     if (isLast)
       this.setEnd(comp);
-  },
+  },*/
 
   itemAddedBefore: function (id, doc, beforeId) {
-    var bodyClass = this.getArg('bodyClass');
-    var comp = new bodyClass({data: doc});
+    var self = this;
+
+    var childId = self._itemChildId(id);
+    var comp = self.getArg('bodyClass').create({data: doc});
+
+    if (self.items.size() === 1) {
+      // was empty
+      self.replaceChild('else', comp, childId);
+    } else {
+      self.addChild(childId, comp // XXXXXX
+    }
+
+
     this.addItemChild(id, comp);
 
     if (this.isBuilt) {
@@ -298,7 +335,8 @@ Each = Component.extend({
         // was empty
         this.removeChild('else');
     }
-  },
+  }
+  /*
   itemRemoved: function (id) {
     if (this.items.size() === 1) {
       // making empty

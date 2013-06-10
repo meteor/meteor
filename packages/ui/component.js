@@ -429,7 +429,7 @@ _.extend(Component.prototype, {
 
     childComponent.destroy();
   },
-  replaceChild: function (key, newChild) {
+  replaceChild: function (key, newChild, newKey) {
     if (this.stage === Component.DESTROYED)
       throw new Error("parent Component already destroyed");
     if (this.stage === Component.UNADDED)
@@ -441,21 +441,25 @@ _.extend(Component.prototype, {
     if (! (newChild instanceof Component))
       throw new Error("Component required");
 
+    if ((typeof newKey) !== 'string')
+      newKey = key;
+
     var oldChild = this.children[key];
 
-    if (oldChild.constructor === newChild.constructor) {
+    if (newKey === key &&
+        oldChild.constructor === newChild.constructor) {
       oldChild.update(newChild._args);
     } else if (this.stage !== Component.BUILT ||
                oldChild !== Component.BUILT ||
                ! oldChild.isAttached) {
       this.removeChild(key);
-      this.addChild(key, newChild);
+      this.addChild(newKey, newChild);
     } else {
       // swap attached child
       var parentNode = oldChild.parentNode();
       var beforeNode = oldChild.lastNode().nextSibling;
       this.removeChild(key, true);
-      this.addChild(key, newChild, parentNode, beforeNode);
+      this.addChild(newKey, newChild, parentNode, beforeNode);
     }
   },
   registerElement: function (elementKey, element) {
