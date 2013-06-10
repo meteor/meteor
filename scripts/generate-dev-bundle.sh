@@ -73,7 +73,7 @@ cd build
 git clone git://github.com/joyent/node.git
 cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
-# the top of app/meteor/meteor.js and app/server/server.js.
+# the top of tools/meteor.js and tools/server/server.js.
 git checkout v0.8.24
 
 ./configure --prefix="$DIR"
