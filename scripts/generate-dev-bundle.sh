@@ -73,8 +73,8 @@ cd build
 git clone git://github.com/joyent/node.git
 cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
-# the top of app/meteor/meteor.js and app/server/server.js.
-git checkout v0.8.18
+# the top of tools/meteor.js and tools/server/server.js.
+git checkout v0.8.24
 
 ./configure --prefix="$DIR"
 make -j4
@@ -140,7 +140,7 @@ cd ../..
 # click 'changelog' under the current version, then 'release notes' in
 # the upper right.
 cd "$DIR"
-MONGO_VERSION="2.4.3"
+MONGO_VERSION="2.4.4"
 MONGO_NAME="mongodb-${MONGO_OS}-${ARCH}-${MONGO_VERSION}"
 MONGO_URL="http://fastdl.mongodb.org/${MONGO_OS}/${MONGO_NAME}.tgz"
 curl "$MONGO_URL" | tar -xz
