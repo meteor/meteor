@@ -174,9 +174,8 @@ _.extend(exports, {
       }
     });
 
-    self._shrinkwrap(newPackageNpmDir);
-    self._createReadme(newPackageNpmDir);
-    self._renameAlmostAtomically(newPackageNpmDir, packageNpmDir);
+    self._completeNpmDirectory(
+      packageName, newPackageNpmDir, packageNpmDir, npmDependencies);
   },
 
   _createFreshNpmDirectory: function(
@@ -192,7 +191,25 @@ _.extend(exports, {
       self._installNpmModule(name, version, newPackageNpmDir);
     });
 
+    self._completeNpmDirectory(
+      packageName, newPackageNpmDir, packageNpmDir, npmDependencies);
+  },
+
+  // Shared code for _updateExistingNpmDirectory and _createFreshNpmDirectory.
+  _completeNpmDirectory: function (
+    packageName, newPackageNpmDir, packageNpmDir, npmDependencies) {
+    var self = this;
+
+    // temporarily construct a matching package.json to make `npm shrinkwrap`
+    // happy
+    self._constructPackageJson(packageName, newPackageNpmDir, npmDependencies);
+
+    // Create a shrinkwrap file.
     self._shrinkwrap(newPackageNpmDir);
+
+    // now delete package.json
+    fs.unlinkSync(path.join(newPackageNpmDir, 'package.json'));
+
     self._createReadme(newPackageNpmDir);
     self._renameAlmostAtomically(newPackageNpmDir, packageNpmDir);
   },
