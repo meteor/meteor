@@ -142,9 +142,14 @@ client cache, the server *publishes* sets of JSON documents, and the
 client *subscribes* to those sets.  As documents in a set change, the
 server patches each client's cache.
 
-Today most Meteor apps use MongoDB as their database because it is the
-best supported, though support for other databases is coming in the
-future. The
+{{#note}}
+Today most Meteor apps use MongoDB as their database because support for 
+it is built-in and it is the best supported, though support for other 
+databases is coming in the future. The examples in this section use the
+[MongoDB API](http://www.mongodb.org/display/DOCS/Manual).
+{{/note}}
+
+The
 [`Meteor.Collection`](http://docs.meteor.com/#meteor_collection) class
 is used to declare Mongo collections and to manipulate them. Thanks to
 `minimongo`, Meteor's client-side Mongo emulator, `Meteor.Collection`
