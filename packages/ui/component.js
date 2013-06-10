@@ -187,15 +187,15 @@ _.extend(Component.prototype, {
       throw new Error("Component not attached");
 
     if (parent) {
-      if (parent._start === comp) {
-        if (parent._end === comp) {
+      if (parent._start === self) {
+        if (parent._end === self) {
           if (_allowTransientEmpty)
             parent._start = parent._end = EMPTY;
           else
             throw new Error("Can't detach entire contents of " +
                             "Component; use swapInChild instead");
         } else {
-          var newFirstNode = comp.lastNode().nextSibling;
+          var newFirstNode = self.lastNode().nextSibling;
           var foundComp = null;
           for (var k in parent.children) {
             if (parent.children.hasOwnProperty(k) &&
@@ -206,8 +206,8 @@ _.extend(Component.prototype, {
           }
           parent.setStart(foundComp || newFirstNode);
         }
-      } else if (parent._end === comp) {
-        var newLastNode = comp.firstNode().previousSibling;
+      } else if (parent._end === self) {
+        var newLastNode = self.firstNode().previousSibling;
         var foundComp = null;
         for (var k in parent.children) {
           if (parent.children.hasOwnProperty(k) &&

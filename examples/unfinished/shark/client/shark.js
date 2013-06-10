@@ -54,13 +54,17 @@ Meteor.startup(function () {
               buf.closeTag('div');
             }
           }),
-          list: Items.find()
+          list: Items.find({}, { sort: { text: 1 }})
         }), { key: 'body' });
       }
     })
   });
 
   RC.attach(document.body);
+
+  Items.insert({ text: 'Qux' });
+  Items.remove({ text: 'Foo' });
+  Items.update({ text: 'Bar' }, { text: 'Car' });
 });
 
 
@@ -236,28 +240,31 @@ Each = Component.extend({
 
         if (self.stage === Component.BUILT) {
           var tdoc = transformedDoc(doc);
-
           self.itemAddedBefore(id, tdoc, beforeId);
         }
       },
       removed: function (id) {
-        //items.remove(id);
+        items.remove(id);
 
-        //self.itemRemoved(id);
+        if (self.stage === Component.BUILT)
+          self.itemRemoved(id);
       },
       movedBefore: function (id, beforeId) {
-        //items.moveBefore(id, beforeId);
+        items.moveBefore(id, beforeId);
 
-        //self.itemMovedBefore(id, beforeId);
+        if (self.stage === Component.BUILT)
+          self.itemMovedBefore(id, beforeId);
       },
       changed: function (id, fields) {
-        //var doc = items.get(id);
-        //if (! doc)
-        //throw new Error("Unknown id for changed: " + idStringify(id));
-        //applyChanges(doc, fields);
-        //var tdoc = transformedDoc(doc);
+        var doc = items.get(id);
+        if (! doc)
+          throw new Error("Unknown id for changed: " + idStringify(id));
+        applyChanges(doc, fields);
 
-        //self.itemChanged(id, tdoc);
+        if (self.stage === Component.BUILT) {
+          var tdoc = transformedDoc(doc);
+          self.itemChanged(id, tdoc);
+        }
       }
     });
 
@@ -280,40 +287,10 @@ Each = Component.extend({
   _itemChildId: function (id) {
     return 'item:' + idStringify(id);
   },
-  /*
-  addItemChild: function (id, comp) {
-    this.addChild(this._itemChildId(id), comp);
-  },
-  removeItemChild: function (id) {
-    this.removeChild(this._itemChildId(id));
-  },
-  getItemChild: function (id) {
-    return this.children[this._itemChildId(id)];
-  },
-  // Utility to attach a child component for an item in its
-  // appropriate position in the DOM, after it is already
-  // in the correct position in the items dict.
-  // Also adjusts the component's bounds.
-  attachItemChild: function (id, comp, beforeId) {
-    if (! this.isBuilt)
-      throw new Error("Component must be built");
-
-    var isFirst = !this.items.prev(id);
-    var isLast = !beforeId;
-    var beforeNode =
-          (beforeId ? this.getItemChild(beforeId).firstNode() :
-           this.lastNode().nextSibling);
-
-    comp.attach(this.parentNode(), beforeNode);
-
-    if (isFirst)
-      this.setStart(comp);
-    if (isLast)
-      this.setEnd(comp);
-  },*/
-
   itemAddedBefore: function (id, doc, beforeId) {
     var self = this;
+    if (self.stage !== Component.BUILT)
+      throw new Error("Component must be built");
 
     var childId = self._itemChildId(id);
     var comp = self.getArg('bodyClass').create({data: doc});
@@ -322,69 +299,56 @@ Each = Component.extend({
       // was empty
       self.replaceChild('else', comp, childId);
     } else {
-      self.addChild(childId, comp // XXXXXX
+      var beforeNode =
+            (beforeId ?
+             self.children[self._itemChildId(beforeId)].firstNode() :
+             (self.lastNode().nextSibling || null));
+      var parentNode = self.parentNode();
+
+      self.addChild(childId, comp, parentNode, beforeNode);
     }
-
-
-    this.addItemChild(id, comp);
-
-    if (this.isBuilt) {
-      this.attachItemChild(id, comp, beforeId);
-
-      if (this.items.size() === 1)
-        // was empty
-        this.removeChild('else');
-    }
-  }
-  /*
+  },
   itemRemoved: function (id) {
-    if (this.items.size() === 1) {
-      // making empty
-      var elseClass = this.getArg('elseClass') || EmptyComponent;
-      var comp = new elseClass({data: this.getArg('data')});
-      this.addChild('else', comp);
+    var self = this;
+    if (self.stage !== Component.BUILT)
+      throw new Error("Component must be built");
 
-      if (this.isBuilt) {
-        comp.attach(this.parentNode(), this.firstNode());
-        this.setBounds(comp);
-      }
+    var childId = self._itemChildId(id);
+    if (self.items.size() === 0) {
+      // made empty
+      var elseClass = self.getArg('elseClass') || Component;
+      var comp = elseClass.create({data: self.getArg('data')});
+      self.replaceChild(childId, comp, 'else');
+    } else {
+      self.removeChild(childId);
     }
-    this.removeItemChild(id);
   },
   itemMovedBefore: function (id, beforeId) {
-    if (this.items.size() === 1)
+    var self = this;
+    if (self.stage !== Component.BUILT)
+      throw new Error("Component must be built");
+
+    if (self.items.size() === 1)
       return; // move is meaningless anyway
 
-    if (this.isBuilt) {
-      var comp = this.getItemChild(id);
-      comp.detach();
-      this.attachItemChild(id, comp, beforeId);
-    }
+    var comp = self.children[self._itemChildId(id)];
+
+    var beforeNode =
+          (beforeId ?
+           self.children[self._itemChildId(beforeId)].firstNode() :
+           (self.lastNode().nextSibling || null));
+    var parentNode = self.parentNode();
+
+    comp.detach();
+    comp.attach(parentNode, beforeNode);
   },
   itemChanged: function (id, doc) {
-    this.getItemChild(id).update({data: doc});
-  },
-  initiallyEmpty: function () {
-    var elseClass = this.getArg('elseClass') || EmptyComponent;
-    this.addChild('else', new elseClass({data: this.getArg('data')}));
-  },
-
-  build: function (frag) {
     var self = this;
-    if (self.items.empty()) {
-      var elseChild = self.children['else'];
-      elseChild.attach(frag);
-      self.setBounds(elseChild);
-    } else {
-      self.items.forEach(function (doc, id) {
-        self.getItemChild(id).attach(frag);
-      });
-      self.setBounds(self.getItemChild(self.items.first()),
-                     self.getItemChild(self.items.last()));
-    }
+    if (self.stage !== Component.BUILT)
+      throw new Error("Component must be built");
+
+    self.children[self._itemChildId(id)].update({data: doc});
   }
-  // XXX toHtml
-*/
 });
 
 /*MyLI = DebugComponent.extend({
