@@ -1,6 +1,8 @@
 
 ## vNEXT
 
+## v0.6.4
+
 * Separate OAuth flow logic from Accounts into separate packages. The
   `facebook`, `github`, `google`, `meetup`, `twitter`, and `weibo`
   packages can be used to perform an OAuth exchange without creating an
@@ -22,11 +24,11 @@
 
 * Fix Mongo queries which nested JavaScript RegExp objects inside `$or`.  #1089
 
-* Upgrade Underscore from 1.4.2 to 1.4.4.  #776
-
-* Upgrade http-proxy from 0.8.5 to 0.10.1.  #513
-
-* Upgrade Connect from 1.9.2 to 2.7.10.
+* Upgraded dependencies:
+  * Underscore from 1.4.2 to 1.4.4  #776
+  * http-proxy from 0.8.5 to 0.10.1  #513
+  * connect from 1.9.2 to 2.7.10
+  * mongodb from 1.2.13 to 1.3.7  #1060
 
 Patches contributed by GitHub users awwx, johnston, and timhaines.
 
