@@ -12,7 +12,7 @@ Package.describe({
   internal: true
 });
 
-Npm.depends({mongodb: "1.3.6"});
+Npm.depends({mongodb: "1.3.7"});
 
 Package.on_use(function (api) {
   api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging',

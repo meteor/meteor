@@ -20,8 +20,9 @@ Meteor._DdpStreamServer = function () {
 
   // set up sockjs
   var sockjs = Npm.require('sockjs');
-  self.server = sockjs.createServer({
-    prefix: self.prefix, log: function(){},
+  var serverOptions = {
+    prefix: self.prefix,
+    log: function() {},
     // this is the default, but we code it explicitly because we depend
     // on it in stream_client:HEARTBEAT_TIMEOUT
     heartbeat_delay: 25000,
@@ -32,7 +33,17 @@ Meteor._DdpStreamServer = function () {
     // combining CPU-heavy processing with SockJS termination (eg a proxy which
     // converts to Unix sockets) but for now, raise the delay.
     disconnect_delay: 60 * 1000,
-    jsessionid: false});
+    jsessionid: false
+  };
+
+  // If you know your server environment (eg, proxies) will prevent websockets
+  // from ever working, set $DISABLE_WEBSOCKETS and SockJS clients (ie,
+  // browsers) will not waste time attempting to use them.
+  // (Your server will still have a /websocket endpoint.)
+  if (process.env.DISABLE_WEBSOCKETS)
+    serverOptions.websocket = false;
+
+  self.server = sockjs.createServer(serverOptions);
   self.server.installHandlers(__meteor_bootstrap__.httpServer);
 
   // Support the /websocket endpoint
