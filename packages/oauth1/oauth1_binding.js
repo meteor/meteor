@@ -115,16 +115,12 @@ OAuth1Binding.prototype._call = function(method, url, headers, params, callback)
   var authString = self._getAuthHeaderString(headers);
 
   // Make signed request
-  try {
-    return Meteor.http.call(method, url, {
-      params: params,
-      headers: {
-        Authorization: authString
-      }
-    }, callback);
-  } catch (err) {
-    throw new Error("Failed to send OAuth1 request to " + url + ". " + err.message);
-  }
+  return Meteor.http.call(method, url, {
+    params: params,
+    headers: {
+      Authorization: authString
+    }
+  }, callback);
 };
 
 OAuth1Binding.prototype._encodeHeader = function(header) {
