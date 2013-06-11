@@ -571,6 +571,52 @@ if (Meteor.isServer) {
 
     onComplete();
   });
+
+  Tinytest.addAsync("mongo-livedata - async server-side insert, " + idGeneration, function (test, onComplete) {
+    // Tests that insert returns before the callback runs. Relies on the fact
+    // that mongo does not run the callback before spinning off the event loop.
+    var cname = Random.id();
+    var coll = new Meteor.Collection(cname);
+    var doc = { foo: "bar" };
+    var x = 0;
+    coll.insert(doc, function (err, result) {
+      test.equal(err, null);
+      test.equal(x, 1);
+      onComplete();
+    });
+    x++;
+  });
+
+  Tinytest.addAsync("mongo-livedata - async server-side update, " + idGeneration, function (test, onComplete) {
+    // Tests that update returns before the callback runs.
+    var cname = Random.id();
+    var coll = new Meteor.Collection(cname);
+    var doc = { foo: "bar" };
+    var x = 0;
+    var id = coll.insert(doc);
+    coll.update(id, { $set: { foo: "baz" } }, function (err, result) {
+      test.equal(err, null);
+      test.equal(x, 1);
+      onComplete();
+    });
+    x++;
+  });
+
+  Tinytest.addAsync("mongo-livedata - async server-side remove, " + idGeneration, function (test, onComplete) {
+    // Tests that remove returns before the callback runs.
+    var cname = Random.id();
+    var coll = new Meteor.Collection(cname);
+    var doc = { foo: "bar" };
+    var x = 0;
+    var id = coll.insert(doc);
+    coll.remove(id, function (err, result) {
+      test.equal(err, null);
+      test.isFalse(coll.findOne(id));
+      test.equal(x, 1);
+      onComplete();
+    });
+    x++;
+  });
 }
 
 
