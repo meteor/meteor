@@ -300,7 +300,7 @@ _.extend(Builder.prototype, {
       normOptionsTo = normOptionsTo.slice(0, -1);
 
     var absPathTo = path.join(self.buildPath, normOptionsTo);
-    if (self.shouldSymlink) {  // && ! (normOptionsTo in self.usedAsFile)) {
+    if (self.shouldSymlink) {
       var canSymlink = true;
       if (self.usedAsFile[normOptionsTo]) {
         throw new Error("tried to copy a directory onto " + normOptionsTo +
