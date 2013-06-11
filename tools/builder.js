@@ -300,10 +300,33 @@ _.extend(Builder.prototype, {
       normOptionsTo = normOptionsTo.slice(0, -1);
 
     var absPathTo = path.join(self.buildPath, normOptionsTo);
-    if (self.shouldSymlink && ! (normOptionsTo in self.usedAsFile)) {
-      self._ensureDirectory(path.dirname(normOptionsTo));
-      fs.symlinkSync(path.resolve(options.from), absPathTo);
-      return;
+    if (self.shouldSymlink) {  // && ! (normOptionsTo in self.usedAsFile)) {
+      var canSymlink = true;
+      if (self.usedAsFile[normOptionsTo]) {
+        throw new Error("tried to copy a directory onto " + normOptionsTo +
+                        " but it is is already a file");
+      } else if (normOptionsTo in self.usedAsFile) {
+        // It's already here and is a directory, maybe because of a call to
+        // reserve with {directory: true}. If it's an empty directory, this is
+        // salvageable. The directory should exist, because all code paths which
+        // set usedAsFile to false create the directory.
+        //
+        // XXX This is somewhat broken: what if the reason we're in
+        // self.usedAsFile is because an immediate child of ours was reserved as
+        // a file but not actually written yet?
+        var children = fs.readdirSync(absPathTo);
+        if (_.isEmpty(children)) {
+          fs.rmdirSync(absPathTo);
+        } else {
+          canSymlink = false;
+        }
+      }
+
+      if (canSymlink) {
+        self._ensureDirectory(path.dirname(normOptionsTo));
+        fs.symlinkSync(path.resolve(options.from), absPathTo);
+        return;
+      }
     }
 
     var ignore = options.ignore || [];
