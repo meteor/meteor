@@ -17,7 +17,8 @@ if (Meteor.isClient) {
 
   // Proxy the public methods of Meteor.default_connection so they can
   // be called directly on Meteor.
-  _.each(['subscribe', 'methods', 'call', 'apply', 'status', 'reconnect'],
+  _.each(['subscribe', 'methods', 'call', 'apply', 'status', 'reconnect', 
+          'disconnect'],
          function (name) {
            Meteor[name] = _.bind(Meteor.default_connection[name],
                                  Meteor.default_connection);

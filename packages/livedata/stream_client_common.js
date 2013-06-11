@@ -176,6 +176,20 @@ _.extend(Meteor._DdpClientStream.prototype, {
     self.statusChanged();
   },
 
+  disconnect: function () {
+    var self = this;
+    self._cleanup();
+    if (self.retryTimer) {
+      clearTimeout(self.retryTimer);
+      self.retryTimer = null;
+    }
+    self.currentStatus = {
+      status: "offline",
+      connected: false,
+      retryCount: 0
+    };
+    self.statusChanged();
+  },
 
   _lostConnection: function () {
     var self = this;
