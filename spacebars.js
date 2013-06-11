@@ -238,29 +238,32 @@ var randomLetters = function () {
   return str;
 };
 
-var tokenizeHtml = function (html, preString, postString, tagInfoGetter) {
+var MODE_ALL_STACHE = 0;
+var MODE_NO_STACHE = 1;
+var MODE_NO_COMPONENTS = 2;
+
+var tokenizeHtml = function (html, preString, postString, tagLookup) {
   var tokens = HTML5Tokenizer.tokenize(html);
 
   var out = [];
 
-  var noStache = function (chrs, customMessage) {
-    if (! chrs)
-      return chrs;
-
-    var extracted = extractTags(chrs);
-    if (typeof extracted === "string")
-      return chrs;
-
-    for (var i = 0; i < extracted.length; i++)
-      if (extracted[i].id)
-        throw new Error((customMessage ||
-                         "Can't use a stache tag at this position " +
-                         "in an HTML tag") + ", at " +
-                        tagInfoGetter(extracted[i].id).prettyOffset());
-    return chrs;
-  };
-
-  var extractTags = function (str) {
+  var extractTags = function (str, mode, customErrorMessage) {
+    // Scan `str` for substrings that are actually our
+    // alphabetic markers that represent stache tags
+    // (or entire blocks, which have `.type` of `'block'`
+    // and `.isBlock` of `true`).
+    //
+    // Return either a single string (if there are no stache
+    // tags) or an array, each element of which is either a
+    // string or a tag or block.
+    //
+    // The `mode` flag can be used to restrict the allowed
+    // tag types, for example by setting it to MODE_NO_STACHE
+    // to disallow stache tags completely (and verify that
+    // there are none).  If this flag is used,
+    // `customErrorMessage` may optionally be given to replace
+    // the default error message of "Can't use this stache tag
+    // at this position in an HTML tag".
     if (! str)
       return '';
 
@@ -274,9 +277,19 @@ var tokenizeHtml = function (html, preString, postString, tagInfoGetter) {
       var idEnd = str.indexOf(postString, idStart);
       if (idEnd < 0)
         throw new Error("error extracting tags"); // shouldn't happen
-      var x;
-      buf.push(x = {id: str.slice(idStart, idEnd)});
-      x.ref = tagInfoGetter(x.id).ref();
+      var tagId = str.slice(idStart, idEnd);
+      var tag = tagLookup.getTag(tagId);
+      if (mode) {
+        if (mode === MODE_NO_STACHE ||
+            (mode === MODE_NO_COMPONENTS &&
+             (tag.isBlock || tag.type === 'INCLUSION')))
+          throw new Error(
+            (customErrorMessage ||
+             "Can't use this stache tag at this position " +
+             "in an HTML tag") + ", at " +
+              tagLookup.prettyOffset(tagId));
+      }
+      buf.push(tag);
       lastPos = idEnd + postString.length;
     }
     if (lastPos < str.length)
@@ -288,12 +301,26 @@ var tokenizeHtml = function (html, preString, postString, tagInfoGetter) {
     return buf;
   };
 
+  // Run extractTags(chrs) and make sure there are no stache tags,
+  // because they are illegal in this position (e.g. HTML tag
+  // name).
+  var noStache = function (str, customMessage) {
+    return extractTags(str, MODE_NO_STACHE, customMessage);
+  };
+
+  // Like `extractTags(str)`, but doesn't allow block helpers
+  // or inclusions.
+  var extractStringTags = function (str, customMessage) {
+    return extractTags(str, MODE_NO_COMPONENTS, customMessage);
+  };
+
   for (var i = 0; i < tokens.length; i++) {
     var tok = tokens[i];
     if (tok.type === 'Characters' ||
         tok.type === 'SpaceCharacters') {
       var s = tok.data;
-      // combine multiple adjacent "Characters"
+      // combine multiple adjacent "Characters"; this is
+      // necessary to make sure we extract the tags properly.
       while (tokens[i+1] &&
              (tokens[i+1].type === 'Characters' ||
               tokens[i+1].type === 'SpaceCharacters')) {
@@ -309,18 +336,22 @@ var tokenizeHtml = function (html, preString, postString, tagInfoGetter) {
       out.push({type: 'DocType',
                 name: noStache(tok.name),
                 correct: tok.correct,
-                publicId: noStache(tok.publicId),
-                systemId: noStache(tok.systemId)});
+                publicId: tok.publicId && noStache(tok.publicId),
+                systemId: tok.systemId && noStache(tok.systemId)
+               });
     } else if (tok.type === 'Comment') {
       out.push({type: 'Comment',
-                data: extractTags(tok.data)});
+                data: extractStringTags(tok.data)});
     } else if (tok.type === 'StartTag') {
       out.push({ type: 'StartTag',
                  name: noStache(tok.name),
                  data: _.map(tok.data, function (kv) {
-                   return { nodeName: extractTags(kv.nodeName),
-                            nodeValue: extractTags(kv.nodeValue) };
-                 }) });
+                   return {
+                     nodeName: extractStringTags(kv.nodeName),
+                     nodeValue: extractStringTags(kv.nodeValue) };
+                 }),
+                 self_closing: tok.self_closing
+               });
     } else {
       // ignore (ParseError, EOF)
     }
@@ -346,19 +377,24 @@ Spacebars.parse = function (inputString) {
     }
   }
 
-  // now build a tree where block contents put into an object
-  // with `type:'block'`.  Also check that tags match.
+  // now build a tree where block contents are put into an object
+  // with `type:'block'`.  Also check that block stache tags match.
 
   var parseBlock = function (openTagIndex) {
     var isTopLevel = (openTagIndex < 0);
     var block = {
       type: 'block',
-      isBlock: true,
+      isBlock: true, // always true for a block; just a type marker
+      // openTag, closeTag must be present except at top level
       openTag: null,
-      elseTag: null,
       closeTag: null,
       bodyChildren: [], // tags and blocks
-      elseChildren: []
+      bodyTokens: null, // filled in by a subsequent recursive pass
+      // if elseTag is present, then elseChildren and elseTokens
+      // must be too.
+      elseTag: null,
+      elseChildren: null,
+      elseTokens: null
     };
     var children = block.bodyChildren; // repointed to elseChildren later
     if (! isTopLevel)
@@ -394,7 +430,8 @@ Spacebars.parse = function (inputString) {
           throw new Error("Duplicate `{{else}}` at " +
                           prettyOffset(inputString, t.charPos));
         block.elseTag = t;
-        children = block.elseChildren;
+        children = [];
+        block.elseChildren = children;
       } else {
         children.push(t);
       }
@@ -420,23 +457,23 @@ Spacebars.parse = function (inputString) {
 
   var idLookup = {};
 
-  var tagInfoGetter = function (id) {
-    var t = idLookup[id];
-    return {
-      prettyOffset: function () {
-        return t ? prettyOffset(
-          inputString, (t.isBlock ? t.openTag : t).charPos) :
-        "(unknown)";
-      },
-      ref: function () {
-        return t;
-      }
-    };
+  var tagLookup = {
+    prettyOffset: function (tagId) {
+      var t = idLookup[tagId];
+      return t ? prettyOffset(
+        inputString, (t.isBlock ? t.openTag : t).charPos) :
+      "(unknown)";
+    },
+    getTag: function (tagId) {
+      return idLookup[tagId];
+    }
   };
 
   var tokenizeBlock = function (block) {
-    // replace all child tags and blocks in the HTML with random
-    // identifiers!
+    // Strategy: replace all child tags and blocks in the HTML
+    // with random identifiers before passing to the tokenizer!
+    // Because the random identifiers consist of ASCII letters,
+    // they will be parsed as tokens or substrings of tokens.
 
     var isTopLevel = ! block.openTag;
     var hasElse = !! block.elseTag;
@@ -456,8 +493,7 @@ Spacebars.parse = function (inputString) {
       });
       html += inputString.slice(pos, endPos);
 
-      return tokenizeHtml(html, preString, postString,
-                          tagInfoGetter);
+      return tokenizeHtml(html, preString, postString, tagLookup);
     };
 
     var bodyStart = (isTopLevel ? 0 : tagEnd(block.openTag));
