@@ -10,7 +10,7 @@
           "version": "0.2.4",
           "dependencies": {
             "event-emitter": {
-              "version": "0.2.1"
+              "version": "0.2.2"
             },
             "next-tick": {
               "version": "0.1.0"

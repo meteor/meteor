@@ -1,8 +1,5 @@
 {
   "dependencies": {
-    "nib": {
-      "version": "0.8.2"
-    },
     "stylus": {
       "version": "0.30.1",
       "dependencies": {
@@ -16,6 +13,9 @@
           "version": "0.7.2"
         }
       }
+    },
+    "nib": {
+      "version": "0.8.2"
     }
   }
 }

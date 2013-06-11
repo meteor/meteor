@@ -943,9 +943,9 @@ _.extend(Package.prototype, {
   // in an unbuilt state.
   //
   // options:
-  // - skipNpmUpdate: if true, don't refresh .npm/node_modules (for
+  // - skipNpmUpdate: if true, don't refresh .npm/package/node_modules (for
   //   packages that use Npm.depend). Only use this when you are
-  //   certain that .npm/node_modules was previously created by some
+  //   certain that .npm/package/node_modules was previously created by some
   //   other means, and you're certain that the package's Npm.depend
   //   instructions haven't changed since then.
   initFromPackageDir: function (name, dir, options) {
@@ -1215,7 +1215,7 @@ _.extend(Package.prototype, {
 
       require: function (name) {
         var nodeModuleDir = path.join(self.sourceRoot,
-                                      '.npm', 'node_modules', name);
+                                      '.npm', 'package', 'node_modules', name);
         if (fs.existsSync(nodeModuleDir)) {
           return require(nodeModuleDir);
         } else {
@@ -1402,11 +1402,26 @@ _.extend(Package.prototype, {
     // every build.
     var nodeModulesPath = null;
     if (npmDependencies) {
+
+      // We used to put this directly in .npm, but in linker-land, the package's
+      // own NPM dependencies go in .npm/package and build plugin X's goes in
+      // .npm/plugin/X. Notably, the former is NOT an ancestor of the latter, so
+      // that a build plugin does NOT see the package's node_modules.
+      // XXX maybe there should be separate NPM dirs for use vs test?
       var packageNpmDir =
-        path.resolve(path.join(self.sourceRoot, '.npm'));
+        path.resolve(path.join(self.sourceRoot, '.npm', 'package'));
       var npmOk = true;
 
       if (! options.skipNpmUpdate) {
+        // If this package was previously built with pre-linker versions, it may
+        // have files directly inside `.npm` instead of nested inside
+        // `.npm/package`. Clean them up if they are there.
+        var preLinkerFiles = [
+          'npm-shrinkwrap.json', 'README', '.gitignore', 'node_modules'];
+        _.each(preLinkerFiles, function (f) {
+          files.rm_recursive(path.join(self.sourceRoot, '.npm', f));
+        });
+
         // go through a specialized npm dependencies update process,
         // ensuring we don't get new versions of any
         // (sub)dependencies. this process also runs mostly safely

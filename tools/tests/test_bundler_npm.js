@@ -46,7 +46,7 @@ var _assertCorrectPackageNpmDir = function(deps) {
 
   // sort of a weird way to do it, but i don't want to have to look up all subdependencies
   // to write these tests, so just transplant that information
-  var actualMeteorNpmShrinkwrapDependencies = JSON.parse(fs.readFileSync(path.join(testPackageDir, ".npm", "npm-shrinkwrap.json"), 'utf8')).dependencies;
+  var actualMeteorNpmShrinkwrapDependencies = JSON.parse(fs.readFileSync(path.join(testPackageDir, ".npm", "package", "npm-shrinkwrap.json"), 'utf8')).dependencies;
   var expectedMeteorNpmShrinkwrapDependencies = _.object(_.map(deps, function(version, name) {
     var expected = {};
     if (/tarball/.test(version)) {
@@ -69,17 +69,17 @@ var _assertCorrectPackageNpmDir = function(deps) {
   }));
 
   assert.equal(
-    fs.readFileSync(path.join(testPackageDir, ".npm", "npm-shrinkwrap.json"), 'utf8'),
+    fs.readFileSync(path.join(testPackageDir, ".npm", "package", "npm-shrinkwrap.json"), 'utf8'),
     JSON.stringify({
       dependencies: expectedMeteorNpmShrinkwrapDependencies}, null, /*indentation, the way npm does it*/2) + '\n');
 
   assert.equal(
-    fs.readFileSync(path.join(testPackageDir, ".npm", ".gitignore"), 'utf8'),
+    fs.readFileSync(path.join(testPackageDir, ".npm", "package", ".gitignore"), 'utf8'),
     "node_modules\n");
-  assert(fs.existsSync(path.join(testPackageDir, ".npm", "README")));
+  assert(fs.existsSync(path.join(testPackageDir, ".npm", "package", "README")));
 
   // verify the contents of the `node_modules` dir
-  var nodeModulesDir = path.join(testPackageDir, ".npm", "node_modules");
+  var nodeModulesDir = path.join(testPackageDir, ".npm", "package", "node_modules");
 
   // all expected dependencies are installed correctly, with the correct version
   _.each(deps, function(version, name) {
@@ -155,12 +155,12 @@ assert.doesNotThrow(function () {
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0'});
 });
 
-console.log("app that uses gcd - as would be in a 3rd party repository (no .npm/node_modules)");
+console.log("app that uses gcd - as would be in a 3rd party repository (no .npm/package/node_modules)");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
 
-  // rm -rf .npm/node_modules
-  var nodeModulesDir = path.join(testPackageDir, ".npm", "node_modules");
+  // rm -rf .npm/package/node_modules
+  var nodeModulesDir = path.join(testPackageDir, ".npm", "package", "node_modules");
   assert(fs.existsSync(path.join(nodeModulesDir)));
   files.rm_recursive(nodeModulesDir);
   // We also have to delete the .build directory or else we won't rebuild at
@@ -204,8 +204,8 @@ console.log("app that uses gcd - add mime, as it would happen if you pulled in t
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
 
-  // rm -rf .npm/node_modules/mime
-  var nodeModulesMimeDir = path.join(testPackageDir, ".npm", "node_modules", "mime");
+  // rm -rf .npm/package/node_modules/mime
+  var nodeModulesMimeDir = path.join(testPackageDir, ".npm", "package", "node_modules", "mime");
   assert(fs.existsSync(path.join(nodeModulesMimeDir)));
   files.rm_recursive(nodeModulesMimeDir);
   // We also have to delete the .build directory or else we won't rebuild at
@@ -269,7 +269,7 @@ assert.doesNotThrow(function () {
   // Check that a string introduced by our fork is in the source.
   assert(/clientMaxAge = 604800000/.test(
     fs.readFileSync(
-      path.join(testPackageDir, ".npm", "node_modules", "gzippo", "lib", "staticGzip.js"), "utf8")));
+      path.join(testPackageDir, ".npm", "package", "node_modules", "gzippo", "lib", "staticGzip.js"), "utf8")));
 });
 
 console.log("bundle multiple apps in parallel using a meteor package dependent on an npm package");
@@ -281,8 +281,8 @@ console.log("bundle multiple apps in parallel using a meteor package dependent o
 //  lack of atomicity, but this is relatively rare.)
 assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0', mime: '1.2.7'});
-  // rm -rf .npm/node_modules, to make sure installing modules takes some time
-  var nodeModulesDir = path.join(testPackageDir, ".npm", "node_modules");
+  // rm -rf .npm/package/node_modules, to make sure installing modules takes some time
+  var nodeModulesDir = path.join(testPackageDir, ".npm", "package", "node_modules");
   assert(fs.existsSync(path.join(nodeModulesDir)));
   files.rm_recursive(nodeModulesDir);
   assert(!fs.existsSync(path.join(nodeModulesDir)));
