@@ -487,6 +487,21 @@ var toJSLiteral = function (obj) {
           .replace(/\u2029/g, '\\u2029'));
 };
 
+// takes an object whose keys and values are strings of
+// JavaScript source code and returns the source code
+// of an object literal.
+var makeObjectLiteral = function (obj) {
+  var buf = [];
+  buf.push('{');
+  for (var k in obj) {
+    if (buf.length > 1)
+      buf.push(', ');
+    buf.push(k, ':', obj[k]);
+  }
+  buf.push('}');
+  return buf.join('');
+};
+
 Spacebars.compile = function (inputString) {
   var tree;
   if (typeof inputString === 'object') {
@@ -495,7 +510,25 @@ Spacebars.compile = function (inputString) {
     tree = Spacebars.parse(inputString);
   }
 
-  // XXX rewrite interpolate
+  // XXX rewrite interpolate.
+  //
+  // Should now return the source code of either a
+  // string or a (reactive) function.  Ideally it is
+  // a simple string if possible.
+  //
+  // Oh snap, can't do components this way.
+  // Only double and triple stache.
+  // Should first write the logic that parses out
+  // block helpers and inclusions in a run of Characters,
+  // in tokensToFunc.  These tags aren't allowed in an
+  // interpolation, only double-stache and triple-stache are.
+  //
+  // Will need to write the lookup rules for component names,
+  // helper functions, and values.  Maybe it's the same?
+  // Delegates to `component.lookup(path)`?
+  //
+  // We will probably lose the `{{#if equal a b}}` convenience
+  // syntax (but maybe introduce new syntax for this later).
   var interpolate = function (strOrArray, indent) {
     if (typeof strOrArray === "string")
       return toJSLiteral(strOrArray);
@@ -552,27 +585,45 @@ Spacebars.compile = function (inputString) {
     _.each(tokens, function (t) {
       switch (t.type) {
       case 'Characters':
-        // XXX what does interpolate do here?
-        js += indent + 'html.text(' + interpolate(t.data, indent) +');\n';
+        js += indent + 'buf.text(' + interpolate(t.data, indent) +');\n';
         break;
       case 'StartTag':
-        // XXX take `t.data` and generate an appropriate
+        // XXX Take `t.data` and generate an appropriate
         // attrs argument.
-        // Also, emit the `selfClose` option.
-        js += indent + 'html.openTag(' + toJSLiteral(t.name) +
-          (t.data.length ? ', [' + _.map(t.data, function (kv) {
-            return '[' + interpolate(kv.nodeName, indent) + ', ' +
-              interpolate(kv.nodeValue, indent) + ']';
-          }).join(', ') + ']' : '') + ');\n';
+        var attrs = null;
+        var dynamicAttrs = null;
+        _.each(t.data, function (kv) {
+          var name = kv.nodeName;
+          var value = kv.nodeValue;
+          if ((typeof name) !== 'string') {
+            dynamicAttrs = (dynamicAttrs || []);
+            dynamicAttrs.push([interpolate(name, indent),
+                               interpolate(value, indent)]);
+          } else {
+            attrs = (attrs || {});
+            attrs[toJSLiteral(name)] =
+              interpolate(value, indent);
+          }
+        });
+        var options = null;
+        if (dynamicAttrs) {
+          options = (options || {});
+          options['dynamicAttrs'] = makeObjectLiteral(dynamicAttrs);
+        }
+        // XXX Pass the `selfClose` option.
+        js += indent + 'buf.openTag(' + toJSLiteral(t.name) +
+          ((attrs || options) ? ', ' + makeObjectLiteral(attrs) : '') +
+          (options ? ', ' + makeObjectLiteral(options) : '') +
+          ');\n';
         break;
       case 'EndTag':
-        js += indent + 'html.close(' + interpolate(t.name, indent) + ');\n';
+        js += indent + 'buf.close(' + toJSLiteral(t.name) + ');\n';
         break;
       case 'Comment':
-        js += indent + 'html.comment(' + interpolate(t.name, indent) + ');\n';
+        js += indent + 'buf.comment(' + interpolate(t.name, indent) + ');\n';
         break;
       case 'DocType':
-        js += indent + 'html.doctype(' + toJSLiteral(t.name) + ', ' +
+        js += indent + 'buf.doctype(' + toJSLiteral(t.name) + ', ' +
           toJSLiteral({correct: t.correct, publicId: t.publicId,
                        systemId: t.systemId}) + ');\n';
         break;

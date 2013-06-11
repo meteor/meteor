@@ -53,6 +53,8 @@ var updateDOMAttribute = function (component, elemKey, attrName,
 
 _.extend(RenderBuffer.prototype, {
   _encodeEntities: encodeEntities,
+  // XXX implement dynamicAttrs option,
+  // takes [[k, v], ...]
   openTag: function (tagName, attrs, options) {
     var self = this;
 
@@ -173,6 +175,33 @@ _.extend(RenderBuffer.prototype, {
     self._htmlBuf.push('<!--' + commentString + '-->');
 
     self._childrenToAttach[commentString] = childComp;
+  },
+  comment: function (stringOrFunction) {
+    // XXX making comments reactively update seems
+    // right; consider doing that.
+
+    var self = this;
+
+    var content;
+    if (typeof stringOrFunction === 'function') {
+      var func = stringOrFunction;
+      content = func();
+    } else {
+      if (typeof stringOrFunction !== 'string')
+        throw new Error("string required");
+      content = stringOrFunction;
+    }
+
+    // comments can't have "--" in them in HTML.
+    // just strip those so that we don't run into trouble.
+    content = content.replace(/--/g, '');
+    self._htmlBuf.push('<!--' + content + '-->');
+  },
+  doctype: function (name, options) {
+    var buf = this._htmlBuf;
+    buf.push('<!DOCTYPE ', name);
+    // XXX handle options (publicId, systemId, ...)
+    buf.push('>');
   },
   build: function () {
     var self = this;
