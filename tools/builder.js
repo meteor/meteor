@@ -381,7 +381,7 @@ _.extend(Builder.prototype, {
 
     _.each(methods, function (method) {
       ret[method] = function (/* arguments */) {
-        args = _.toArray(arguments);
+        var args = _.toArray(arguments);
 
         if (method !== "copyDirectory") {
           // Normal method (relPath as first argument)
