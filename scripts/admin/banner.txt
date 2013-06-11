@@ -1,1 +1,5 @@
-=> Meteor 0.6.3.1: Small fix to 'client/compatibility' from 0.6.3
+=> Meteor 0.6.4 released: New OAuth packages and recommended updates. See
+   https://github.com/meteor/meteor/blob/devel/History.md for details.
+
+   This is being downloaded in the background. Update your project
+   to Meteor 0.6.4 by running 'meteor update'.
