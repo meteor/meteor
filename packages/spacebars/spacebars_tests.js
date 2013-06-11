@@ -106,3 +106,217 @@ Tinytest.add("spacebars - stache tags", function (test) {
                         args: [['STRING', 'bar']]});
 
 });
+
+Tinytest.add("spacebars - parser", function (test) {
+  // check a block and reduce it to a slightly simpler form
+  // for writing tests.
+  var checkAndStripBlock = function (block, isTopLevel) {
+    test.equal(block.type, 'block');
+    test.equal(block.isBlock, true);
+    delete block.isBlock;
+    if (isTopLevel) {
+      // top-level block has no bounding stache tags
+      // and no {{else}}
+      test.equal(block.openTag, null);
+      test.equal(block.closeTag, null);
+      test.equal(block.elseTag, null);
+      test.equal(block.elseChildren, null);
+      test.equal(block.elseTokens, null);
+      delete block.openTag;
+      delete block.closeTag;
+      delete block.elseTag;
+      delete block.elseChildren;
+      delete block.elseTokens;
+    } else {
+      test.isTrue(block.openTag);
+      test.isTrue(block.closeTag);
+      checkAndStripTag(block.openTag);
+      checkAndStripTag(block.closeTag);
+      if (block.elseTag) {
+        checkAndStripTag(block.elseTag);
+      } else {
+        // if no {{else}}, then no elseTag, elseChildren,
+        // elseTokens
+        test.equal(block.elseTag, null);
+        test.equal(block.elseChildren, null);
+        test.equal(block.elseTokens, null);
+        delete block.elseTag;
+        delete block.elseChildren;
+        delete block.elseTokens;
+      }
+    }
+
+    var checkAndStripTokens = function (tokens, children) {
+      var nextChild = 0;
+
+      _.each(tokens, function (tok) {
+        switch (tok.type) {
+        case 'StartTag':
+          test.equal(typeof tok.name, 'string');
+          _.each(tok.data, function (nv) {
+            if (typeof nv.nodeName !== 'string') {
+              test.isTrue(_.isArray(nv.nodeName));
+              _.each(nv.nodeName, function (tagOrStr) {
+                if (typeof tagOrStr !== 'string') {
+                  checkAndStripTag(tagOrStr, true);
+                  test.isTrue(children[nextChild++] === tagOrStr);
+                }
+              });
+            }
+            if (typeof nv.nodeValue !== 'string') {
+              test.isTrue(_.isArray(nv.nodeValue));
+              _.each(nv.nodeValue, function (tagOrStr) {
+                if (typeof tagOrStr !== 'string') {
+                  checkAndStripTag(tagOrStr, true);
+                  test.isTrue(children[nextChild++] === tagOrStr);
+                }
+              });
+            }
+          });
+          if (! tok.self_closing)
+            delete tok.self_closing;
+          break;
+        case 'Characters':
+        case 'Comment':
+          if (typeof tok.data !== 'string') {
+            test.isTrue(_.isArray(tok.data));
+            _.each(tok.data, function (tagOrStr) {
+              if (typeof tagOrStr !== 'string') {
+                checkAndStripTag(tagOrStr);
+                test.isTrue(children[nextChild++] === tagOrStr);
+              }
+            });
+          }
+          break;
+        case 'EndTag':
+        case 'DocType':
+          test.equal(typeof tok.name, 'string');
+          break;
+        default:
+          test.fail("Unknown token type: " + tok.type);
+        }
+      });
+
+      test.equal(nextChild, children.length);
+    };
+
+    checkAndStripTokens(block.bodyTokens, block.bodyChildren);
+    if (block.elseTag)
+      checkAndStripTokens(block.elseTokens, block.elseChildren);
+
+    // children already checked
+    delete block.bodyChildren;
+    delete block.elseChildren;
+
+    return block;
+  };
+
+  var checkAndStripTag = function (tag, onlyStringStaches) {
+    if (tag.isBlock) {
+      if (onlyStringStaches)
+        test.fail("Can't have block here");
+      checkAndStripBlock(tag);
+    } else {
+      if (onlyStringStaches) {
+        test.isFalse(tag.type === 'INCLUSION' ||
+                     tag.type === 'BLOCKOPEN' ||
+                     tag.type === 'BLOCKCLOSE' ||
+                     tag.type === 'ELSE');
+      }
+      delete tag.charPos;
+      delete tag.charLength;
+    }
+
+    return tag;
+  };
+
+  var run = function (input, expectedParse) {
+    test.equal(checkAndStripBlock(Spacebars.parse(input),
+                                  true),
+               expectedParse);
+  };
+
+  run('<a>{{foo}}b',
+    {"type":"block",
+     "bodyTokens":[
+       {"type":"StartTag",
+        "name":"a",
+        "data":[]},
+       {"type":"Characters",
+        "data":[
+          {"type":"DOUBLE","path":["foo"],"args":[]},
+          "b"]}]});
+
+  run('<a {{foo}}={{bar}}>',
+      {"type":"block",
+       "bodyTokens":[
+         {"type":"StartTag",
+          "name":"a",
+          "data":[
+            {"nodeName":[
+              {"type":"DOUBLE",
+               "path":["foo"],
+               "args":[]}],
+             "nodeValue":[
+               {"type":"DOUBLE",
+                "path":["bar"],
+                "args":[]}]}]}]});
+
+  run('<br/>',
+      {"type":"block",
+       "bodyTokens":[
+         {"type":"StartTag",
+          "name":"br",
+          "data":[],
+          "self_closing":true}]});
+
+  run('111{{#foo}}222{{#bar}}333{{/bar}}444{{/foo}}555',
+      {"type":"block",
+       "bodyTokens":[
+         {"type":"Characters",
+          "data":["111",
+                  {"type":"block",
+                   "openTag":{
+                     "type":"BLOCKOPEN",
+                     "path":["foo"],
+                     "args":[]},
+                   "closeTag":{
+                     "type":"BLOCKCLOSE",
+                     "path":["foo"]},
+                   "bodyTokens":[
+                     {"type":"Characters",
+                      "data":["222",
+                              {"type":"block",
+                               "openTag":{
+                                 "type":"BLOCKOPEN",
+                                 "path":["bar"],
+                                 "args":[]},
+                               "closeTag":{
+                                 "type":"BLOCKCLOSE",
+                                 "path":["bar"]},
+                               "bodyTokens":[
+                                 {"type":"Characters",
+                                  "data":"333"}]},
+                              "444"]}]},
+                  "555"]}]});
+
+  run('<div>{{#foo x=y}}{{else}}<hr>{{/foo}}</div>',
+      {"type":"block",
+       "bodyTokens":[
+         {"type":"StartTag",
+          "name":"div",
+          "data":[]},
+         {"type":"Characters",
+          "data":[
+            {"type":"block",
+             "openTag":{
+               "type":"BLOCKOPEN",
+               "path":["foo"],
+               "args":[["PATH",["y"],"x"]]},
+             "closeTag": {"type":"BLOCKCLOSE", "path":["foo"]},
+             "bodyTokens":[],
+             "elseTag": {"type":"ELSE"},
+             "elseTokens":[
+               {"type":"StartTag","name":"hr","data":[]}]}]},
+         {"type":"EndTag","name":"div"}]});
+});
