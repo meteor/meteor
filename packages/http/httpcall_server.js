@@ -92,7 +92,7 @@ Meteor.http.call = function(method, url, options, callback) {
   var req_options = {
     url: new_url,
     method: method,
-    encoding: "utf8",
+    encoding: (options.encoding || "utf8"),
     jar: false,
     timeout: options.timeout,
     body: content,
