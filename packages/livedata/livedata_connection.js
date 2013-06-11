@@ -802,6 +802,11 @@ _.extend(Meteor._LivedataConnection.prototype, {
     return self._stream.reconnect.apply(self._stream, arguments);
   },
 
+  disconnect: function (/*passthrough args*/) {
+    var self = this;
+    return self._stream.disconnect.apply(self._stream, arguments);
+  },
+
   ///
   /// Reactive user system
   ///
