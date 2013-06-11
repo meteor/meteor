@@ -238,7 +238,7 @@ _.extend(Builder.prototype, {
 
       var shouldBeDirectory = (i < parts.length - 1) || options.directory;
       if (shouldBeDirectory) {
-        if (! soFar in self.usedAsFile) {
+        if (! (soFar in self.usedAsFile)) {
           fs.mkdirSync(path.join(self.buildPath, soFar), 0755);
           self.usedAsFile[soFar] = false;
         }

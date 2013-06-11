@@ -983,12 +983,13 @@ JsImage.readFromDisk = function (controlFilePath) {
     var nmd = undefined;
     if (item.node_modules) {
       var node_modules = path.join(dir, item.node_modules);
-      if (! node_modules in ret.nodeModulesDirectories)
+      if (! (node_modules in ret.nodeModulesDirectories)) {
         ret.nodeModulesDirectories[node_modules] =
-        new NodeModulesDirectory({
-          sourcePath: node_modules,
-          preferredBundlePath: item.node_modules
-        });
+          new NodeModulesDirectory({
+            sourcePath: node_modules,
+            preferredBundlePath: item.node_modules
+          });
+      }
       nmd = ret.nodeModulesDirectories[node_modules];
     }
 
