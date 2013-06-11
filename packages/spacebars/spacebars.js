@@ -487,13 +487,6 @@ var toJSLiteral = function (obj) {
           .replace(/\u2029/g, '\\u2029'));
 };
 
-var tagLiteral = function (tag) {
-  var lit = _.extend({}, tag);
-  delete lit.charPos;
-  delete lit.charLength;
-  return toJSLiteral(lit);
-};
-
 Spacebars.compile = function (inputString) {
   var tree;
   if (typeof inputString === 'object') {
@@ -502,6 +495,7 @@ Spacebars.compile = function (inputString) {
     tree = Spacebars.parse(inputString);
   }
 
+  // XXX rewrite interpolate
   var interpolate = function (strOrArray, indent) {
     if (typeof strOrArray === "string")
       return toJSLiteral(strOrArray);
@@ -554,14 +548,18 @@ Spacebars.compile = function (inputString) {
   var tokensToFunc = function (tokens, indent) {
     var oldIndent = indent || '';
     indent = oldIndent + '  ';
-    var js = 'function (html, env) {\n';
+    var js = 'function (buf) {\n';
     _.each(tokens, function (t) {
       switch (t.type) {
       case 'Characters':
+        // XXX what does interpolate do here?
         js += indent + 'html.text(' + interpolate(t.data, indent) +');\n';
         break;
       case 'StartTag':
-        js += indent + 'html.open(' + interpolate(t.name, indent) +
+        // XXX take `t.data` and generate an appropriate
+        // attrs argument.
+        // Also, emit the `selfClose` option.
+        js += indent + 'html.openTag(' + toJSLiteral(t.name) +
           (t.data.length ? ', [' + _.map(t.data, function (kv) {
             return '[' + interpolate(kv.nodeName, indent) + ', ' +
               interpolate(kv.nodeValue, indent) + ']';
