@@ -314,7 +314,7 @@ Fiber(function () {
       var cmd = argv._.splice(0, 1)[0];
       switch (cmd) {
       case "configure":
-        console.log("Visit http://localhost:" + context.port + "/proxy to configure your galaxy");
+        console.log("Visit http://localhost:" + context.port + "/panel to configure your galaxy");
         var fut = new Future();
         fut.wait();
         break;
