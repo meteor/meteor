@@ -3,6 +3,9 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
+  api.use('deps');
+  api.use('random');
+  api.use('domutils');
   api.use('underscore', 'client');
   api.use('ejson', 'client');
 

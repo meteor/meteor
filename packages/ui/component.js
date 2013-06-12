@@ -1,5 +1,6 @@
 var constructorsLocked = true;
 
+// @export Component
 Component = function (args) {
   if (constructorsLocked)
     throw new Error("To create a Component, " +
@@ -556,18 +557,21 @@ Component.extend = function (options) {
   return newClass;
 };
 
+// @export TextComponent
 TextComponent = Component.extend({
   render: function (buf) {
     buf.text(this.getArg('text'));
   }
 });
 
+// @export RawHtmlComponent
 RawHtmlComponent = Component.extend({
   render: function (buf) {
     buf.rawHtml(this.getArg('html'));
   }
 });
 
+// @export RootComponent
 RootComponent = Component.extend({
   constructed: function () {
     this.stage = Component.ADDED;

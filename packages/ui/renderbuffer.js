@@ -1,4 +1,4 @@
-
+// @export RenderBuffer
 RenderBuffer = function (component) {
   this._component = component;
   this._htmlBuf = [];

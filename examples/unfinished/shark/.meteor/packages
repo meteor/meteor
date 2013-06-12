@@ -9,3 +9,5 @@ preserve-inputs
 ui
 html5-tokenizer
 spacebars
+ordered-dict
+ejson
