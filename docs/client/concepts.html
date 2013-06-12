@@ -244,6 +244,13 @@ modify data, those modifications can run locally without waiting for the
 confirmation from the server, while still giving the server final say
 over the requested change.
 
+{{#note}}
+The current release of Meteor supports MongoDB, the popular document
+database, and the examples in this section use the
+        [MongoDB API](http://www.mongodb.org/display/DOCS/Manual).  Future
+releases will include support for other databases.
+{{/note}}
+
 <h3 id="dataandsecurity-authentication">Authentication and user accounts</h3>
 
 Meteor includes [Meteor Accounts](#accounts_api), a state-of-the-art
@@ -260,14 +267,6 @@ password change, and password reset emails. You can add [Accounts
 UI](#accountsui) to your app with just one line of code. The `accounts-ui` smart
 package even provides a configuration wizard that walks you through the steps to
 set up the external login services you're using in your app.
-
-{{#note}}
-The current release of Meteor supports MongoDB, the popular document
-database, and the examples in this section use the
-        [MongoDB API](http://www.mongodb.org/display/DOCS/Manual).  Future
-releases will include support for other databases.
-{{/note}}
-
 
 <h3 id="dataandsecurity-validation">Input validation</h3>
 

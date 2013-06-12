@@ -1,6 +1,10 @@
 
 ## vNEXT
 
+* Upgraded dependencies:
+  * Node from 0.8.18 to 0.8.24
+  * MongoDB from 2.4.3 to 2.4.4
+
 ## v0.6.4
 
 * Separate OAuth flow logic from Accounts into separate packages. The
@@ -28,7 +32,7 @@
   * Underscore from 1.4.2 to 1.4.4  #776
   * http-proxy from 0.8.5 to 0.10.1  #513
   * connect from 1.9.2 to 2.7.10
-  * mongodb from 1.2.13 to 1.3.7  #1060
+  * Node mongodb client from 1.2.13 to 1.3.7  #1060
 
 Patches contributed by GitHub users awwx, johnston, and timhaines.
 

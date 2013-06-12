@@ -16,11 +16,17 @@ var selectorFromUserQuery = function (user) {
   throw new Error("shouldn't happen (validation missed something)");
 };
 
+// XXX maybe this belongs in the check package
+var NonEmptyString = Match.Where(function (x) {
+  check(x, String);
+  return x.length > 0;
+});
+
 var userQueryValidator = Match.Where(function (user) {
   check(user, {
-    id: Match.Optional(String),
-    username: Match.Optional(String),
-    email: Match.Optional(String)
+    id: Match.Optional(NonEmptyString),
+    username: Match.Optional(NonEmptyString),
+    email: Match.Optional(NonEmptyString)
   });
   if (_.keys(user).length !== 1)
     throw new Match.Error("User property must have exactly one field");

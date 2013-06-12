@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ORIGDIR=$(pwd)
 cd $(dirname $0)

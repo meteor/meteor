@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # NOTE: by default this tests the working copy, not the installed
 # meteor.  To test the installed meteor, pass in --global. To test a

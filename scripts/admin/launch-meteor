@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This is the script that we install somewhere in your $PATH (as "meteor")
 # when you run
