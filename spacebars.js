@@ -652,7 +652,7 @@ Spacebars.compile = function (inputString) {
       return 'function () { return ' + parts.join('+') +
         '; }';
     } else {
-      return parts.join('+');
+      return parts.length ? parts.join('+') : '""';
     }
   };
 
