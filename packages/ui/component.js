@@ -48,6 +48,28 @@ Component = function (args) {
   this.elements = {};
 
   if (! templatesAssigned) {
+    // This code is run once ever, when the first Component
+    // instance is created.
+    //
+    // Assign the value of
+    // `UI._templates["FooComponent"]` to
+    // `FooComponent.prototype.render`, and so on for other
+    // entries in the `UI._templates` dictionary.
+    //
+    // This code lives here because we can't tie together
+    // templates and Component definitions any sooner.
+    // For example, nothing useful can happen when
+    // `FooComponent = Component.extend(...)` runs, because
+    // the implementation of `extend` doesn't even know the
+    // name of the Component class being defined.
+    // All we can do is collect the templates as they are
+    // declared, and then at some point sufficiently late
+    // (here) assign them to the appropriate Component
+    // classes.
+    //
+    // XXX does this use of the global scope work with linking?
+    // Can we actually find and access all Component classes
+    // this way?
     _.each(UI._templates, function (v, k) {
       if (UI.isComponentClass(global[k])) {
         if (k.prototype.hasOwnProperty('render'))
