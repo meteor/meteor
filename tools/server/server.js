@@ -248,7 +248,7 @@ var run = function () {
         // dev bundle if you are in an app or your package isn't using
         // said npm module
         require: function(name) {
-          var filePathParts = filename.split(path.sep);
+          var filePathParts = filename.split('/'); // Npm.require() paths always use forward slashes
           if (filePathParts[0] !== 'app' || filePathParts[1] !== 'packages') { // XXX it's weird that we're dependent on the dir structure
             return require(name); // current no support for npm outside packages. load from dev bundle only
           } else {
