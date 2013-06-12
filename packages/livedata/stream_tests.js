@@ -32,6 +32,26 @@ testAsyncMulti("stream - reconnect", [
   }
 ]);
 
+testAsyncMulti("stream - disconnect basic", [
+  function (test, expect) {
+    var stream = new Meteor._DdpClientStream("/");
+
+    var callback = _.once(expect(function() {
+      test.equal(stream.status().status, "connected");
+
+      stream.disconnect();
+      test.equal(stream.status().status, "offline");
+
+      stream.reconnect();
+      test.equal(stream.status().status, "connecting");
+    }));
+
+    if (stream.status().status !== "connected")
+      stream.on('reset', callback);
+    else
+      callback();
+  }
+]);
 
 Tinytest.add("stream - sockjs urls are computed correctly", function(test) {
   var testHasSockjsUrl = function(raw, expectedSockjsUrl) {
