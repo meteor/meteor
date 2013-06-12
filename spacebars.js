@@ -1,4 +1,5 @@
 
+// @export Spacebars
 Spacebars = {};
 
 var makeStacheTagStartRegex = function (r) {
