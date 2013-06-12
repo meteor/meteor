@@ -565,7 +565,7 @@ Spacebars.compile = function (inputString) {
   //
   // We will probably lose the `{{#if equal a b}}` convenience
   // syntax (but maybe introduce new syntax for this later).
-  var interpolate = function (strOrArray, indent) {
+  /*var interpolate = function (strOrArray, indent) {
     if (typeof strOrArray === "string")
       return toJSLiteral(strOrArray);
 
@@ -612,20 +612,90 @@ Spacebars.compile = function (inputString) {
     });
 
     return parts.join('+');
+  };*/
+
+  // Return the source code of a string or (reactive) function
+  // (if necessary).
+  var interpolate = function (strOrArray, indent) {
+    if (typeof strOrArray === "string")
+      return toJSLiteral(strOrArray);
+
+    var parts = [];
+    var isReactive = false;
+    _.each(strOrArray, function (strOrTag) {
+      if (typeof strOrTag === "string") {
+        parts.push(toJSLiteral(strOrTag));
+      } else {
+        var tag = strOrTag;
+        switch (tag.type) {
+        case 'COMMENT':
+          // nothing to do
+          break;
+        case 'DOUBLE': // fall through
+        case 'TRIPLE':
+          isReactive = true;
+          parts.push('stuff()'); // XXXXXXXX
+          /*          parts.push('env.' +
+                       (tag.type === 'DOUBLE' ? 'dstache' : 'tstache') +
+                       '(' + toJSLiteral(tag.path) +
+                       (tag.args.length ? ', ' + toJSLiteral(tag.args) : '') +
+                     ')');*/
+            break;
+          default:
+            throw new Error("Unknown stache tag type: " + tag.type);
+            //parts.push('env.tag(' + tagLiteral(tag) + ')');
+          }
+        }
+    });
+
+    if (isReactive) {
+      return 'function () { return ' + parts.join('+') +
+        '; }';
+    } else {
+      return parts.join('+');
+    }
   };
 
-  var tokensToFunc = function (tokens, indent) {
+  var tokensToRenderFunc = function (tokens, indent) {
     var oldIndent = indent || '';
     indent = oldIndent + '  ';
     var js = 'function (buf) {\n';
     _.each(tokens, function (t) {
       switch (t.type) {
       case 'Characters':
-        js += indent + 'buf.text(' + interpolate(t.data, indent) +');\n';
+        if (typeof t.data === 'string') {
+          js += indent + 'buf.text(' + toJSLiteral(t.data) +
+            ');\n';
+        } else {
+          _.each(t.data, function (tagOrStr) {
+            if (typeof tagOrStr === 'string') {
+              js += indent + 'buf.text(' + toJSLiteral(tagOrStr) +
+                ');\n';
+            } else {
+              // tag or block
+              var tag = tagOrStr;
+              if (tag.isBlock) {
+                // XXX implement
+              } else {
+                switch (tag.type) {
+                case 'INCLUSION':
+                  // XXX implement
+                  break;
+                case 'DOUBLE':
+                case 'TRIPLE':
+                  // XXX implement
+                  break;
+                case 'COMMENT':
+                  break;
+                default:
+                  throw new Error("Unexpected tag type: " + tag.type);
+                }
+              }
+            }
+          });
+        }
         break;
       case 'StartTag':
-        // XXX Take `t.data` and generate an appropriate
-        // attrs argument.
         var attrs = null;
         var dynamicAttrs = null;
         _.each(t.data, function (kv) {
@@ -646,14 +716,17 @@ Spacebars.compile = function (inputString) {
           options = (options || {});
           options['dynamicAttrs'] = makeObjectLiteral(dynamicAttrs);
         }
-        // XXX Pass the `selfClose` option.
+        if (t.self_closing) {
+          options = (options || {});
+          options['selfClose'] = 'true';
+        }
         js += indent + 'buf.openTag(' + toJSLiteral(t.name) +
           ((attrs || options) ? ', ' + makeObjectLiteral(attrs) : '') +
           (options ? ', ' + makeObjectLiteral(options) : '') +
           ');\n';
         break;
       case 'EndTag':
-        js += indent + 'buf.close(' + toJSLiteral(t.name) + ');\n';
+        js += indent + 'buf.closeTag(' + toJSLiteral(t.name) + ');\n';
         break;
       case 'Comment':
         js += indent + 'buf.comment(' + interpolate(t.name, indent) + ');\n';
@@ -672,5 +745,5 @@ Spacebars.compile = function (inputString) {
     return js;
   };
 
-  return tokensToFunc(tree.bodyTokens);
+  return tokensToRenderFunc(tree.bodyTokens);
 };
