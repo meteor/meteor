@@ -67,7 +67,7 @@ var getTokenResponse = function (query) {
     throw new Error("Failed to complete OAuth handshake with LinkedIn. " + responseContent);
   }
 
-  // Success! Extract access token and expiration
+  // Success! Extract access token and expiration time from the response
   var parsedResponse = JSON.parse(responseContent);
   var accessToken = parsedResponse.access_token;
   var expiresIn = parsedResponse.expires_in;
