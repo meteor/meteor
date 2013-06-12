@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script fills TARGET_DIR with what should go into
 #     ~/.meteor/tools/VERSION

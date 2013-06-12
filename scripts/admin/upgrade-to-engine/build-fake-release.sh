@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Builds a tarball that can be downloaded by pre-engine "meteor update" to
 # bootstrap us into engine-land.

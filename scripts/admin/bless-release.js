@@ -180,7 +180,7 @@ var writeBigRedButton = function (blessedReleaseName, gitTagSourceSha, gitTag) {
                 'com.meteor.warehouse/releases']);
   s3Files.push(['manifest.json', 'com.meteor.static/update']);
   var scriptText =
-        "#!/bin/bash\n" +
+        "#!/usr/bin/env bash\n" +
         "# Wow! It's time to release Meteor " + blessedReleaseName + "!\n" +
         "# Look at the contents of this directory, cross your fingers, and\n" +
         "# run this script!\n\n" +

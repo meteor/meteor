@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ### Build a tarball for each smart package, which will later be put on
 ### warehouse.meteor.com. Compute a version for each package by
