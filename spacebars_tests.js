@@ -339,8 +339,28 @@ Tinytest.add("spacebars - compiler", function (test) {
   run('<a foo=bar>abc</a>',
 
       'function (buf) {',
-      '  buf.openTag("a", {"foo":"bar"});',
+      '  buf.openTag("a", {"foo": "bar"});',
       '  buf.text("abc");',
       '  buf.closeTag("a");',
       '}');
+
+  run('<a foo={{bar}}>',
+
+      'function (buf) {',
+      '  var self = this;',
+      '  buf.openTag("a", {"foo": function () { return String(Spacebars.call(self.lookup("bar"))); }});',
+      '}');
+
+  run('<a foo={{bar.baz}}>',
+
+      'function (buf) {',
+      '  var self = this;',
+      '  buf.openTag("a", {"foo": function () { return String(Spacebars.call(Spacebars.index(self.lookup("bar"), "baz"))); }});',
+      '}');
 });
+
+// XXXX double and triple stache in various contexts:
+// * comment
+// * attribute value
+// * dynamic attribute
+// * regular level

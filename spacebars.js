@@ -532,7 +532,7 @@ var makeObjectLiteral = function (obj) {
   for (var k in obj) {
     if (buf.length > 1)
       buf.push(', ');
-    buf.push(k, ':', obj[k]);
+    buf.push(k, ': ', obj[k]);
   }
   buf.push('}');
   return buf.join('');
@@ -616,7 +616,7 @@ Spacebars.compile = function (inputString) {
 
   // Return the source code of a string or (reactive) function
   // (if necessary).
-  var interpolate = function (strOrArray, indent) {
+  var interpolate = function (strOrArray, funcInfo) {
     if (typeof strOrArray === "string")
       return toJSLiteral(strOrArray);
 
@@ -659,18 +659,24 @@ Spacebars.compile = function (inputString) {
   var tokensToRenderFunc = function (tokens, indent) {
     var oldIndent = indent || '';
     indent = oldIndent + '  ';
-    var js = 'function (buf) {\n';
+
+    var funcInfo = {
+      indent: indent, // read-only
+      usedSelf: false // read/write
+    };
+
+    var bodyLines = [];
     _.each(tokens, function (t) {
       switch (t.type) {
       case 'Characters':
         if (typeof t.data === 'string') {
-          js += indent + 'buf.text(' + toJSLiteral(t.data) +
-            ');\n';
+          bodyLines.push('buf.text(' + toJSLiteral(t.data) +
+                         ');');
         } else {
           _.each(t.data, function (tagOrStr) {
             if (typeof tagOrStr === 'string') {
-              js += indent + 'buf.text(' + toJSLiteral(tagOrStr) +
-                ');\n';
+              bodyLines.push('buf.text(' + toJSLiteral(tagOrStr) +
+                             ');');
             } else {
               // tag or block
               var tag = tagOrStr;
@@ -703,46 +709,61 @@ Spacebars.compile = function (inputString) {
           var value = kv.nodeValue;
           if ((typeof name) !== 'string') {
             dynamicAttrs = (dynamicAttrs || []);
-            dynamicAttrs.push([interpolate(name, indent),
-                               interpolate(value, indent)]);
+            dynamicAttrs.push([interpolate(name, funcInfo),
+                               interpolate(value, funcInfo)]);
           } else {
             attrs = (attrs || {});
             attrs[toJSLiteral(name)] =
-              interpolate(value, indent);
+              interpolate(value, funcInfo);
           }
         });
         var options = null;
         if (dynamicAttrs) {
           options = (options || {});
-          options['dynamicAttrs'] = makeObjectLiteral(dynamicAttrs);
+          options['dynamicAttrs'] = '[' +
+            _.map(dynamicAttrs, function (pair) {
+              return '[' + pair[0] + ', ' + pair[1] + ']';
+            }).join(', ') + ']';
         }
         if (t.self_closing) {
           options = (options || {});
           options['selfClose'] = 'true';
         }
-        js += indent + 'buf.openTag(' + toJSLiteral(t.name) +
-          ((attrs || options) ? ', ' + makeObjectLiteral(attrs) : '') +
-          (options ? ', ' + makeObjectLiteral(options) : '') +
-          ');\n';
+        bodyLines.push(
+          'buf.openTag(' + toJSLiteral(t.name) +
+            ((attrs || options) ?
+             ', ' + makeObjectLiteral(attrs)
+             : '') +
+            (options ? ', ' + makeObjectLiteral(options) : '') +
+            ');');
         break;
       case 'EndTag':
-        js += indent + 'buf.closeTag(' + toJSLiteral(t.name) + ');\n';
+        bodyLines.push('buf.closeTag(' + toJSLiteral(t.name) +
+                       ');');
         break;
       case 'Comment':
-        js += indent + 'buf.comment(' + interpolate(t.name, indent) + ');\n';
+        bodyLines.push('buf.comment(' +
+                       interpolate(t.name, funcInfo) + ');');
         break;
       case 'DocType':
-        js += indent + 'buf.doctype(' + toJSLiteral(t.name) + ', ' +
-          toJSLiteral({correct: t.correct, publicId: t.publicId,
-                       systemId: t.systemId}) + ');\n';
+        bodyLines.push(
+          'buf.doctype(' + toJSLiteral(t.name) + ', ' +
+            toJSLiteral({correct: t.correct,
+                         publicId: t.publicId,
+                         systemId: t.systemId}) + ');');
         break;
       default:
         throw new Error("Unexpected token type: " + t.type);
         break;
       }
     });
-    js += oldIndent + '}';
-    return js;
+
+    return 'function (buf) {' +
+      (bodyLines ?
+       (funcInfo.usedSelf ?
+        '\n' + indent + 'var self = this;' : '') +
+       '\n' + indent + bodyLines.join('\n' + indent) + '\n' :
+       '') + '}';
   };
 
   return tokensToRenderFunc(tree.bodyTokens);
