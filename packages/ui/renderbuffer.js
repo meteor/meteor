@@ -178,7 +178,7 @@ _.extend(RenderBuffer.prototype, {
   },
   comment: function (stringOrFunction) {
     // XXX making comments reactively update seems
-    // right; consider doing that.
+    // right, for completeness; consider doing that.
 
     var self = this;
 
