@@ -1,4 +1,21 @@
+// @export UI
+UI = {
+  isComponentClass: function (value) {
+    return (typeof value === 'function') &&
+      (value === Component ||
+       (value.protoype instanceof Component));
+  },
+  // Generated templates are put here.  This object must
+  // be populated before any Components are actually
+  // created, i.e. as the compiled template scripts are
+  // evaluated.
+  _templates: {}
+};
+
 var constructorsLocked = true;
+
+var templatesAssigned = false;
+var global = (function () { return this; })();
 
 // @export Component
 Component = function (args) {
@@ -29,6 +46,19 @@ Component = function (args) {
   this._buildUpdater = null;
   this._childUpdaters = {};
   this.elements = {};
+
+  if (! templatesAssigned) {
+    _.each(UI._templates, function (v, k) {
+      if (UI.isComponentClass(global[k])) {
+        if (k.prototype.hasOwnProperty('render'))
+          throw new Error(
+            'Component "' + k + '" has both a render method ' +
+              'implementation and a template of that name');
+        k.prototype.render = v;
+      }
+    });
+    templatesAssigned = true;
+  }
 
   this.constructed();
 };
