@@ -3,18 +3,27 @@
 var Fiber = require("fibers");
 
 var fs = require("fs");
+var http = require("http");
 var path = require("path");
 var url = require("url");
 
+// connect (and some other NPM modules) use $NODE_ENV to make some decisions;
+// eg, if $NODE_ENV is not production, they send stack traces on error. connect
+// considers 'development' to be the default mode, but that's less safe than
+// assuming 'production' to be the default. If you really want development mode,
+// set it in your wrapper script (eg, run.js).  We need to run this very early,
+// since connect makes this decision when it is require'd.
+if (!process.env.NODE_ENV)
+  process.env.NODE_ENV = 'production';
+
 var connect = require('connect');
-var gzippo = require('gzippo');
 var argv = require('optimist').argv;
 var useragent = require('useragent');
 
 var _ = require('underscore');
 
 // This code is duplicated in tools/server/server.js.
-var MIN_NODE_VERSION = 'v0.8.18';
+var MIN_NODE_VERSION = 'v0.8.24';
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
     'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
@@ -166,18 +175,19 @@ var run = function () {
     throw new Error("MONGO_URL must be set in environment");
 
   // webserver
-  var app = connect.createServer();
+  var app = connect();
+
+  // Auto-compress any json, javascript, or text.
+  app.use(connect.compress());
+
   var static_cacheable_path = path.join(bundle_dir, 'static_cacheable');
   if (fs.existsSync(static_cacheable_path))
     // cacheable files are files that should never change. Typically
     // named by their hash (eg meteor bundled js and css files).
     // cache them ~forever (1yr)
-    //
-    // 'root' option is to work around an issue in connect/gzippo.
-    // See https://github.com/meteor/meteor/pull/852
-    app.use(gzippo.staticGzip(static_cacheable_path,
-                              {clientMaxAge: 1000 * 60 * 60 * 24 * 365,
-                               root: '/'}));
+    app.use(connect.static(static_cacheable_path,
+                           {maxAge: 1000 * 60 * 60 * 24 * 365}));
+
   // cache non-cacheable file anyway. This isn't really correct, as
   // users can change the files and changes won't propogate
   // immediately. However, if we don't cache them, browsers will
@@ -186,9 +196,10 @@ var run = function () {
   // bust caches. That way we can both get good caching behavior and
   // allow users to change assets without delay.
   // https://github.com/meteor/meteor/issues/773
-  app.use(gzippo.staticGzip(path.join(bundle_dir, 'static'),
-                            {clientMaxAge: 1000 * 60 * 60 * 24,
-                             root: '/'}));
+  app.use(connect.static(path.join(bundle_dir, 'static'),
+                         {maxAge: 1000 * 60 * 60 * 24}));
+
+  var httpServer = http.createServer(app);
 
   // read bundle config file
   var info_raw =
@@ -200,6 +211,7 @@ var run = function () {
   __meteor_bootstrap__ = {
     startup_hooks: [],
     app: app,
+    httpServer: httpServer,
     // metadata about this bundle
     bundle: bundle,
     // function that takes a connect `req` object and returns a summary
@@ -317,7 +329,7 @@ var run = function () {
     _.each(__meteor_bootstrap__.startup_hooks, function (x) { x(); });
 
     // only start listening after all the startup code has run.
-    app.listen(port, function() {
+    httpServer.listen(port, function() {
       if (argv.keepalive)
         console.log("LISTENING"); // must match run.js
     });

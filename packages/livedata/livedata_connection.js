@@ -622,6 +622,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
         self._saveOriginals();
 
       try {
+        // Note that unlike in the corresponding server code, we never audit
+        // that stubs check() their arguments.
         var ret = Meteor._CurrentInvocation.withValue(invocation,function () {
           if (Meteor.isServer) {
             // Because saveOriginals and retrieveOriginals aren't reentrant,
@@ -683,8 +685,9 @@ _.extend(Meteor._LivedataConnection.prototype, {
         callback = function (err, result) {
           if (err)
             future['throw'](err);
-          else
+          else {
             future['return'](result);
+          }
         };
       }
     }
@@ -945,6 +948,10 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
     if (self._waitingForQuiescence()) {
       self._messagesBufferedUntilQuiescence.push(msg);
+
+      if (msg.msg === "nosub")
+        delete self._subsBeingRevived[msg.id];
+
       _.each(msg.subs || [], function (subId) {
         delete self._subsBeingRevived[subId];
       });
@@ -1179,6 +1186,14 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
   _livedata_nosub: function (msg) {
     var self = this;
+
+    // First pass it through _livedata_data, which only uses it to help get
+    // towards quiescence.
+    self._livedata_data(msg);
+
+    // Do the rest of our processing immediately, with no
+    // buffering-until-quiescence.
+
     // we weren't subbed anyway, or we initiated the unsub.
     if (!_.has(self._subscriptions, msg.id))
       return;
@@ -1188,6 +1203,14 @@ _.extend(Meteor._LivedataConnection.prototype, {
       errorCallback(new Meteor.Error(
         msg.error.error, msg.error.reason, msg.error.details));
     }
+  },
+
+  _process_nosub: function () {
+    // This is called as part of the "buffer until quiescence" process, but
+    // nosub's effect is always immediate. It only goes in the buffer at all
+    // because it's possible for a nosub to be the thing that triggers
+    // quiescence, if we were waiting for a sub to be revived and it dies
+    // instead.
   },
 
   _livedata_result: function (msg) {

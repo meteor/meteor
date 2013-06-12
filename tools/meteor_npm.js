@@ -174,9 +174,8 @@ _.extend(exports, {
       }
     });
 
-    self._shrinkwrap(newPackageNpmDir);
-    self._createReadme(newPackageNpmDir);
-    self._renameAlmostAtomically(newPackageNpmDir, packageNpmDir);
+    self._completeNpmDirectory(
+      packageName, newPackageNpmDir, packageNpmDir, npmDependencies);
   },
 
   _createFreshNpmDirectory: function(
@@ -192,7 +191,25 @@ _.extend(exports, {
       self._installNpmModule(name, version, newPackageNpmDir);
     });
 
+    self._completeNpmDirectory(
+      packageName, newPackageNpmDir, packageNpmDir, npmDependencies);
+  },
+
+  // Shared code for _updateExistingNpmDirectory and _createFreshNpmDirectory.
+  _completeNpmDirectory: function (
+    packageName, newPackageNpmDir, packageNpmDir, npmDependencies) {
+    var self = this;
+
+    // temporarily construct a matching package.json to make `npm shrinkwrap`
+    // happy
+    self._constructPackageJson(packageName, newPackageNpmDir, npmDependencies);
+
+    // Create a shrinkwrap file.
     self._shrinkwrap(newPackageNpmDir);
+
+    // now delete package.json
+    fs.unlinkSync(path.join(newPackageNpmDir, 'package.json'));
+
     self._createReadme(newPackageNpmDir);
     self._renameAlmostAtomically(newPackageNpmDir, packageNpmDir);
   },
@@ -200,10 +217,13 @@ _.extend(exports, {
   _createReadme: function(newPackageNpmDir) {
     fs.writeFileSync(
       path.join(newPackageNpmDir, 'README'),
-      // XXX copy?
-      "This directory and its contents are automatically generated when you change this\n"
-        + "package's npm dependencies. Commit this directory to source control so that\n"
-        + "others run the same versions of sub-dependencies.\n"
+      "This directory and the files immediately inside it are automatically generated\n"
+        + "when you change this package's NPM dependencies. Commit the files in this\n"
+        + "directory (npm-shrinkwrap.json, .gitignore, and this README) to source control\n"
+        + "so that others run the same versions of sub-dependencies.\n"
+        + "\n"
+        + "You should NOT check in the node_modules directory that Meteor automatically\n"
+        + "creates; if you are using git, the .gitignore file tells git to ignore it.\n"
     );
   },
 
@@ -296,6 +316,7 @@ _.extend(exports, {
   // npm-shrinkwrap.json with keys like "version" and "from") to the canonical
   // version that matches what users put in the `Npm.depends` clause.  ie,
   // either the version or the tarball URL.
+  // If more logic is added here, it should probably go in minimizeModule too.
   _canonicalVersion: function (depObj) {
     var self = this;
     if (self._isGitHubTarball(depObj.from))
@@ -365,14 +386,59 @@ _.extend(exports, {
 
   // `npm shrinkwrap`
   _shrinkwrap: function(dir) {
+    var self = this;
     // We don't use npm.commands.shrinkwrap for two reasons:
     // 1. As far as we could tell there's no way to completely silence the output
     //    (the `silent` flag isn't piped in to the call to npm.commands.ls)
     // 2. In various (non-deterministic?) cases we observed the
     //    npm-shrinkwrap.json file not being updated
-    this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
+    self._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
                        ["shrinkwrap"],
                        {cwd: dir});
+    self._minimizeShrinkwrap(dir);
+  },
+
+  // The shrinkwrap file format contains a lot of extra data that can change as
+  // you re-run the NPM-update process without actually affecting what is
+  // installed. This step trims everything but the most important bits from the
+  // file, so that the file doesn't change unnecessary.
+  //
+  // This is based on an analysis of install.js in the npm module:
+  //   https://github.com/isaacs/npm/blob/master/lib/install.js
+  // It appears that the only things actually read from a given dependency are
+  // its sub-dependencies and a single version, which is read by the readWrap
+  // function; and furthermore, we can just put all versions in the "version"
+  // field.
+  _minimizeShrinkwrap: function (dir) {
+    var self = this;
+    var topLevel = self._shrinkwrappedDependenciesTree(dir);
+
+    var minimizeModule = function (module) {
+      var minimized = {};
+      if (self._isGitHubTarball(module.from))
+        minimized.from = module.from;
+      else
+        minimized.version = module.version;
+
+      if (module.dependencies) {
+        minimized.dependencies = {};
+        _.each(module.dependencies, function (subModule, name) {
+          minimized.dependencies[name] = minimizeModule(subModule);
+        });
+      }
+      return minimized;
+    };
+
+    var newTopLevelDependencies = {};
+    _.each(topLevel.dependencies, function (module, name) {
+      newTopLevelDependencies[name] = minimizeModule(module);
+    });
+
+    fs.writeFileSync(
+      path.join(dir, 'npm-shrinkwrap.json'),
+      // Matches the formatting done by 'npm shrinkwrap'.
+      JSON.stringify({dependencies: newTopLevelDependencies}, null, 2)
+        + '\n');
   },
 
   _logUpdateDependencies: function(packageName, npmDependencies) {

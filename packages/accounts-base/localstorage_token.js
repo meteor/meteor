@@ -36,8 +36,8 @@ Accounts._isolateLoginTokenForTest = function () {
 };
 
 Accounts._storeLoginToken = function(userId, token) {
-  localStorage.setItem(userIdKey, userId);
-  localStorage.setItem(loginTokenKey, token);
+  Meteor._localStorage.setItem(userIdKey, userId);
+  Meteor._localStorage.setItem(loginTokenKey, token);
 
   // to ensure that the localstorage poller doesn't end up trying to
   // connect a second time
@@ -45,8 +45,8 @@ Accounts._storeLoginToken = function(userId, token) {
 };
 
 Accounts._unstoreLoginToken = function() {
-  localStorage.removeItem(userIdKey);
-  localStorage.removeItem(loginTokenKey);
+  Meteor._localStorage.removeItem(userIdKey);
+  Meteor._localStorage.removeItem(loginTokenKey);
 
   // to ensure that the localstorage poller doesn't end up trying to
   // connect a second time
@@ -54,11 +54,11 @@ Accounts._unstoreLoginToken = function() {
 };
 
 Accounts._storedLoginToken = function() {
-  return localStorage.getItem(loginTokenKey);
+  return Meteor._localStorage.getItem(loginTokenKey);
 };
 
 Accounts._storedUserId = function() {
-  return localStorage.getItem(userIdKey);
+  return Meteor._localStorage.getItem(userIdKey);
 };
 
 

@@ -5,24 +5,33 @@
 // Users can specify various keys to identify themselves with.
 // @param user {Object} with one of `id`, `username`, or `email`.
 // @returns A selector to pass to mongo to get the user record.
+
 var selectorFromUserQuery = function (user) {
-  if (!user)
-    throw new Meteor.Error(400, "Must pass a user property in request");
-  if (_.keys(user).length !== 1)
-    throw new Meteor.Error(400, "User property must have exactly one field");
-
-  var selector;
   if (user.id)
-    selector = {_id: user.id};
+    return {_id: user.id};
   else if (user.username)
-    selector = {username: user.username};
+    return {username: user.username};
   else if (user.email)
-    selector = {"emails.address": user.email};
-  else
-    throw new Meteor.Error(400, "Must pass username, email, or id in request.user");
-
-  return selector;
+    return {"emails.address": user.email};
+  throw new Error("shouldn't happen (validation missed something)");
 };
+
+// XXX maybe this belongs in the check package
+var NonEmptyString = Match.Where(function (x) {
+  check(x, String);
+  return x.length > 0;
+});
+
+var userQueryValidator = Match.Where(function (user) {
+  check(user, {
+    id: Match.Optional(NonEmptyString),
+    username: Match.Optional(NonEmptyString),
+    email: Match.Optional(NonEmptyString)
+  });
+  if (_.keys(user).length !== 1)
+    throw new Match.Error("User property must have exactly one field");
+  return true;
+});
 
 // Step 1 of SRP password exchange. This puts an `M` value in the
 // session data for this connection. If a client later sends the same
@@ -38,6 +47,10 @@ var selectorFromUserQuery = function (user) {
 //   salt: random string ID
 //   B: hex encoded int. server's public key for this exchange
 Meteor.methods({beginPasswordExchange: function (request) {
+  check(request, {
+    user: userQueryValidator,
+    A: String
+  });
   var selector = selectorFromUserQuery(request.user);
 
   var user = Meteor.users.findOne(selector);
@@ -65,8 +78,7 @@ Meteor.methods({beginPasswordExchange: function (request) {
 Accounts.registerLoginHandler(function (options) {
   if (!options.srp)
     return undefined; // don't handle
-  if (!options.srp.M)
-    throw new Meteor.Error(400, "Must pass M in options.srp");
+  check(options.srp, {M: String});
 
   // we're always called from within a 'login' method, so this should
   // be safe.
@@ -100,6 +112,8 @@ Accounts.registerLoginHandler(function (options) {
 Accounts.registerLoginHandler(function (options) {
   if (!options.password || !options.user)
     return undefined; // don't handle
+
+  check(options, {user: userQueryValidator, password: String});
 
   var selector = selectorFromUserQuery(options.user);
   var user = Meteor.users.findOne(selector);
@@ -136,31 +150,29 @@ Accounts.registerLoginHandler(function (options) {
 Meteor.methods({changePassword: function (options) {
   if (!this.userId)
     throw new Meteor.Error(401, "Must be logged in");
+  check(options, {
+    // If options.M is set, it means we went through a challenge with the old
+    // password. For now, we don't allow changePassword without knowing the old
+    // password.
+    M: String,
+    srp: Match.Optional(Meteor._srp.matchVerifier),
+    password: Match.Optional(String)
+  });
 
-  // If options.M is set, it means we went through a challenge with
-  // the old password.
-
-  if (!options.M /* could allow unsafe password changes here */) {
-    throw new Meteor.Error(403, "Old password required.");
-  }
-
-  if (options.M) {
-    var serialized = this._sessionData.srpChallenge;
-    if (!serialized || serialized.M !== options.M)
-      throw new Meteor.Error(403, "Incorrect password");
-    if (serialized.userId !== this.userId)
-      // No monkey business!
-      throw new Meteor.Error(403, "Incorrect password");
-    // Only can use challenges once.
-    delete this._sessionData.srpChallenge;
-  }
+  var serialized = this._sessionData.srpChallenge;
+  if (!serialized || serialized.M !== options.M)
+    throw new Meteor.Error(403, "Incorrect password");
+  if (serialized.userId !== this.userId)
+    // No monkey business!
+    throw new Meteor.Error(403, "Incorrect password");
+  // Only can use challenges once.
+  delete this._sessionData.srpChallenge;
 
   var verifier = options.srp;
   if (!verifier && options.password) {
     verifier = Meteor._srp.generateVerifier(options.password);
   }
-  if (!verifier || !verifier.identity || !verifier.salt ||
-      !verifier.verifier)
+  if (!verifier)
     throw new Meteor.Error(400, "Invalid verifier");
 
   // XXX this should invalidate all login tokens other than the current one
@@ -194,15 +206,13 @@ Accounts.setPassword = function (userId, newPassword) {
 // Method called by a user to request a password reset email. This is
 // the start of the reset process.
 Meteor.methods({forgotPassword: function (options) {
-  var email = options.email;
-  if (!email)
-    throw new Meteor.Error(400, "Need to set options.email");
+  check(options, {email: String});
 
-  var user = Meteor.users.findOne({"emails.address": email});
+  var user = Meteor.users.findOne({"emails.address": options.email});
   if (!user)
     throw new Meteor.Error(403, "User not found");
 
-  Accounts.sendResetPasswordEmail(user._id, email);
+  Accounts.sendResetPasswordEmail(user._id, options.email);
 }});
 
 // send the user an email with a link that when opened allows the user
@@ -282,10 +292,8 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
 // Take token from sendResetPasswordEmail or sendEnrollmentEmail, change
 // the users password, and log them in.
 Meteor.methods({resetPassword: function (token, newVerifier) {
-  if (!token)
-    throw new Meteor.Error(400, "Need to pass token");
-  if (!newVerifier)
-    throw new Meteor.Error(400, "Need to pass newVerifier");
+  check(token, String);
+  check(newVerifier, Meteor._srp.matchVerifier);
 
   var user = Meteor.users.findOne({
     "services.password.reset.token": ""+token});
@@ -361,8 +369,7 @@ Accounts.sendVerificationEmail = function (userId, address) {
 // Take token from sendVerificationEmail, mark the email as verified,
 // and log them in.
 Meteor.methods({verifyEmail: function (token) {
-  if (!token)
-    throw new Meteor.Error(400, "Need to pass token");
+  check(token, String);
 
   var user = Meteor.users.findOne(
     {'services.email.verificationTokens.token': token});
@@ -414,6 +421,16 @@ Meteor.methods({verifyEmail: function (token) {
 // returns an object with id: userId, and (if options.generateLoginToken is
 // set) token: loginToken.
 var createUser = function (options) {
+  // Unknown keys allowed, because a onCreateUserHook can take arbitrary
+  // options.
+  check(options, Match.ObjectIncluding({
+    generateLoginToken: Boolean,
+    username: Match.Optional(String),
+    email: Match.Optional(String),
+    password: Match.Optional(String),
+    srp: Match.Optional(Meteor._srp.matchVerifier)
+  }));
+
   var username = options.username;
   var email = options.email;
   if (!username && !email)
@@ -441,7 +458,8 @@ var createUser = function (options) {
 
 // method for create user. Requests come from the client.
 Meteor.methods({createUser: function (options) {
-  options = _.clone(options);
+  // createUser() above does more checking.
+  check(options, Object);
   options.generateLoginToken = true;
   if (Accounts._options.forbidClientAccountCreation)
     throw new Meteor.Error(403, "Signups forbidden");

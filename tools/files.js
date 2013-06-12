@@ -6,6 +6,8 @@
 
 var fs = require("fs");
 var path = require('path');
+var os = require('os');
+var util = require('util');
 var _ = require('underscore');
 var zlib = require("zlib");
 var tar = require("tar");
@@ -485,6 +487,42 @@ _.extend(exports, {
     var future = new Future;
     // can't just use Future.wrap, because we want to return "body", not
     // "response".
+
+    urlOrOptions = _.clone(urlOrOptions); // we are going to change it
+    var appVersion;
+    try {
+      appVersion = getToolsVersion();
+    } catch(e) {
+      appVersion = 'checkout';
+    }
+
+    // meteorReleaseContext - an option with information about app directory
+    // release versions, etc, is used to get exact Meteor version used.
+    if (urlOrOptions.hasOwnProperty('meteorReleaseContext')) {
+      // Get meteor app release version: if specified in command line args, take
+      // releaseVersion, if not specified, try global meteor version
+      var meteorReleaseContext = urlOrOptions.meteorReleaseContext;
+      appVersion = meteorReleaseContext.releaseVersion;
+
+      if (appVersion === 'none')
+        appVersion = meteorReleaseContext.appReleaseVersion;
+      if (appVersion === 'none')
+        appVersion = 'checkout';
+
+      delete urlOrOptions.meteorReleaseContext;
+    }
+
+    // Get some kind of User Agent: environment information.
+    var ua = util.format('Meteor/%s OS/%s (%s; %s; %s;)',
+              appVersion, os.platform(), os.type(), os.release(), os.arch());
+
+    var headers = {'User-Agent': ua };
+
+    if (_.isObject(urlOrOptions))
+      urlOrOptions.headers = _.extend(headers, urlOrOptions.headers);
+    else
+      urlOrOptions = { url: urlOrOptions, headers: headers };
+
     request(urlOrOptions, function (error, response, body) {
       if (error)
         future.throw(new files.OfflineError(error));

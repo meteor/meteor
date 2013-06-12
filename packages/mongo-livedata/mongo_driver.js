@@ -15,7 +15,7 @@ var Future = Npm.require(path.join('fibers', 'future'));
 var replaceNames = function (filter, thing) {
   if (typeof thing === "object") {
     if (_.isArray(thing)) {
-      return _.map(thing, _.partial(replaceNames, filter));
+      return _.map(thing, _.bind(replaceNames, null, filter));
     }
     var ret = {};
     _.each(thing, function (value, key) {
@@ -466,11 +466,17 @@ _.extend(SynchronousCursor.prototype, {
       var doc = self._synchronousNextObject().wait();
       if (!doc || !doc._id) return null;
       doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
-      if (self._transform)
-        doc = self._transform(doc);
+
+      // Did Mongo give us duplicate documents in the same cursor? If so, ignore
+      // this one. (Do this before the transform, since transform might return
+      // some unrelated value.)
       var strId = Meteor.idStringify(doc._id);
       if (self._visitedIds[strId]) continue;
       self._visitedIds[strId] = true;
+
+      if (self._transform)
+        doc = self._transform(doc);
+
       return doc;
     }
   },
@@ -797,7 +803,7 @@ _.extend(LiveResultsSet.prototype, {
       self._synchronousCursor.rewind();
     } else {
       self._synchronousCursor = self._mongoHandle._createSynchronousCursor(
-        self._cursorDescription, false);
+        self._cursorDescription, false /* !useTransform */);
     }
     var newResults = self._synchronousCursor.getRawObjects(self._ordered);
     var oldResults = self._results;

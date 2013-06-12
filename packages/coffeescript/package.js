@@ -2,7 +2,7 @@ Package.describe({
   summary: "Javascript dialect with fewer braces and semicolons"
 });
 
-Npm.depends({"coffee-script": "1.5.0"});
+Npm.depends({"coffee-script": "1.6.2"});
 
 var coffeescript_handler = function(bundle, source_path, serve_path, where) {
   var fs = Npm.require('fs');
@@ -15,7 +15,11 @@ var coffeescript_handler = function(bundle, source_path, serve_path, where) {
   try {
     contents = coffee.compile(contents.toString('utf8'), options);
   } catch (e) {
-    return bundle.error(e.message);
+    return bundle.error(
+      source_path + ':' +
+      (e.location ? (e.location.first_line + ': ') : ' ') +
+      e.message
+    );
   }
 
   contents = new Buffer(contents);

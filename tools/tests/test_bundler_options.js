@@ -23,7 +23,7 @@ assert.doesNotThrow(function () {
   assert(!fs.existsSync(path.join(tmpOutputDir, "server", "node_modules")));
   // yes package node_modules directory
   assert(fs.lstatSync(path.join(
-    tmpOutputDir, "app", "packages", "stream", "node_modules"))
+    tmpOutputDir, "app", "packages", "livedata", "node_modules"))
          .isDirectory());
 
   // verify that contents are minified
@@ -96,6 +96,6 @@ assert.doesNotThrow(function () {
 
   // package node_modules directory also a symlink
   assert(fs.lstatSync(path.join(
-    tmpOutputDir, "app", "packages", "stream", "node_modules"))
+    tmpOutputDir, "app", "packages", "livedata", "node_modules"))
          .isSymbolicLink());
 });

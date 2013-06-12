@@ -23,7 +23,7 @@ var resultSet = {};
 var toReport = [];
 
 var hrefPath = document.location.href.split("/");
-var platform = hrefPath.length && hrefPath[hrefPath.length - 1];
+var platform = decodeURIComponent(hrefPath.length && hrefPath[hrefPath.length - 1]);
 if (!platform)
   platform = "local";
 var doReport = Meteor &&

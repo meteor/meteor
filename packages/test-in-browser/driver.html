@@ -100,15 +100,15 @@
 <template name="test">
   <div class="test {{test_class}}">
     <div class="testrow">
-      <div class="testname">
-        {{#if server}}S:{{else}}C:{{/if}}
-        {{name}}
-      </div>
       <div class="teststatus">
         {{test_status_display}}
       </div>
       <div class="testtime">
         {{test_time_display}}
+      </div>
+      <div class="testname">
+        {{#if server}}S:{{else}}C:{{/if}}
+        {{name}}
       </div>
     </div>
     {{#if expanded}}

@@ -42,3 +42,18 @@ Tinytest.add("base64 - wikipedia examples", function (test) {
     test.equal(arrayToAscii(EJSON._base64Decode(t.res)), t.txt);
   });
 });
+
+Tinytest.add("base64 - non-text examples", function (test) {
+  var tests = [
+    {array: [0, 0, 0], b64: "AAAA"},
+    {array: [0, 0, 1], b64: "AAAB"}
+  ];
+  _.each(tests, function(t) {
+    test.equal(EJSON._base64Encode(t.array), t.b64);
+    var expectedAsBinary = EJSON.newBinary(t.array.length);
+    _.each(t.array, function (val, i) {
+      expectedAsBinary[i] = val;
+    });
+    test.equal(EJSON._base64Decode(t.b64), expectedAsBinary);
+  });
+});

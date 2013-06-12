@@ -73,8 +73,8 @@ cd build
 git clone git://github.com/joyent/node.git
 cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
-# the top of app/meteor/meteor.js and app/server/server.js.
-git checkout v0.8.18
+# the top of tools/meteor.js and tools/server/server.js.
+git checkout v0.8.24
 
 ./configure --prefix="$DIR"
 make -j4
@@ -95,7 +95,7 @@ which npm
 # you update version numbers.
 
 cd "$DIR/lib/node_modules"
-npm install connect@1.9.2 # not 2.x yet. sockjs doesn't work w/ new connect
+npm install connect@2.7.10
 npm install optimist@0.3.5
 npm install semver@1.1.0
 npm install handlebars@1.0.7
@@ -103,16 +103,12 @@ npm install clean-css@0.8.3
 npm install useragent@2.0.1
 npm install request@2.12.0
 npm install keypress@0.1.0
-npm install http-proxy@0.8.5
-npm install underscore@1.4.2 # 1.4.4 is a performance regression
+npm install http-proxy@0.10.1  # not 0.10.2, which contains a sketchy websocket change
+npm install underscore@1.4.4
 npm install fstream@0.1.21
 npm install tar@0.1.14
 npm install kexec@0.1.1
 npm install shell-quote@0.0.1
-
-# allow clientMaxAge to be set to 0:
-# https://github.com/tomgco/gzippo/pull/49
-npm install https://github.com/meteor/gzippo/tarball/1e4b955439
 
 # uglify-js has a bug which drops 'undefined' in arrays:
 # https://github.com/mishoo/UglifyJS2/pull/97
@@ -145,7 +141,7 @@ cd ../..
 # click 'changelog' under the current version, then 'release notes' in
 # the upper right.
 cd "$DIR"
-MONGO_VERSION="2.2.1"
+MONGO_VERSION="2.4.4"
 MONGO_NAME="mongodb-${MONGO_OS}-${ARCH}-${MONGO_VERSION}"
 MONGO_URL="http://fastdl.mongodb.org/${MONGO_OS}/${MONGO_NAME}.tgz"
 curl "$MONGO_URL" | tar -xz

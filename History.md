@@ -1,6 +1,96 @@
 
 ## vNEXT
 
+* Upgraded dependencies:
+  * Node from 0.8.18 to 0.8.24
+  * MongoDB from 2.4.3 to 2.4.4
+
+## v0.6.4
+
+* Separate OAuth flow logic from Accounts into separate packages. The
+  `facebook`, `github`, `google`, `meetup`, `twitter`, and `weibo`
+  packages can be used to perform an OAuth exchange without creating an
+  account and logging in.  #1024
+
+* If you set the `DISABLE_WEBSOCKETS` environment variable, browsers will not
+  attempt to connect to your app using Websockets. Use this if you know your
+  server environment does not properly proxy Websockets to reduce connection
+  startup time.
+
+* Make `Meteor.defer` work in an inactive tab in iOS.  #1023
+
+* Allow new `Random` instances to be constructed with specified seed. This
+  can be used to create repeatable test cases for code that picks random
+  values.  #1033
+
+* Fix CoffeeScript error reporting to include source file and line
+  number again.  #1052
+
+* Fix Mongo queries which nested JavaScript RegExp objects inside `$or`.  #1089
+
+* Upgraded dependencies:
+  * Underscore from 1.4.2 to 1.4.4  #776
+  * http-proxy from 0.8.5 to 0.10.1  #513
+  * connect from 1.9.2 to 2.7.10
+  * Node mongodb client from 1.2.13 to 1.3.7  #1060
+
+Patches contributed by GitHub users awwx, johnston, and timhaines.
+
+
+## v0.6.3
+
+* Add new `check` package for ensuring that a value matches a required
+  type and structure. This is used to validate untrusted input from the
+  client. See http://docs.meteor.com/#match for details.
+
+* Use Websockets by default on supported browsers. This reduces latency
+  and eliminates the constant network spinner on iOS devices.
+
+* With `autopublish` on, publish many useful fields on `Meteor.users`.
+
+* Files in the `client/compatibility/` subdirectory of a Meteor app do
+  not get wrapped in a new variable scope. This is useful for
+  third-party libraries which expect `var` statements at the outermost
+  level to be global.
+
+* Add synthetic `tap` event for use on touch enabled devices. This is a
+  replacement for `click` that fires immediately.
+
+* When using the `http` package synchronously on the server, errors
+  are thrown rather than passed in `result.error`
+
+* The `manager` option to the `Meteor.Collection` constructor is now called
+  `connection`. The old name still works for now.  #987
+
+* The `localstorage-polyfill` smart package has been replaced by a
+  `localstorage` package, which defines a `Meteor._localStorage` API instead of
+  trying to replace the DOM `window.localStorage` facility. (Now, apps can use
+  the existence of `window.localStorage` to detect if the full localStorage API
+  is supported.)  #979
+
+* Upgrade MongoDB from 2.2.1 to 2.4.3.
+
+* Upgrade CoffeeScript from 1.5.0 to 1.6.2.  #972
+
+* Faster reconnects when regaining connectivity.  #696
+
+* `Email.send` has a new `headers` option to set arbitrary headers.  #963
+
+* Cursor transform functions on the server no longer are required to return
+  objects with correct `_id` fields.  #974
+
+* Rework `observe()` callback ordering in minimongo to improve fiber
+  safety on the server. This makes subscriptions on server to server DDP
+  more usable.
+
+* Use binary search in minimongo when updating ordered queries.  #969
+
+* Fix EJSON base64 decoding bug.  #1001
+
+* Support `appcache` on Chromium.  #958
+
+Patches contributed by GitHub users awwx, jagill, spang, and timhaines.
+
 
 ## v0.6.2.1
 
@@ -95,8 +185,8 @@ Patches contributed by GitHub users andreas-karlsson and awwx.
 * `{{#with}}` helper now only includes its block if its argument is not falsey,
   and runs an `{{else}}` block if provided if the argument is falsey. #770, #866
 
-* Twitter login now stores profile_image_url and profile_image_url_https
-  attributes in the user.services.twitter namespace. #788
+* Twitter login now stores `profile_image_url` and `profile_image_url_https`
+  attributes in the `user.services.twitter` namespace. #788
 
 * Allow packages to register file extensions with dots in the filename.
 
@@ -164,7 +254,7 @@ mquandalle, Primigenus, raix, reustle, and timhaines.
 * Publish functions may now return an array of cursors to publish. Currently,
   the cursors must all be from different collections. #716
 
-* User documents have id's when onCreateUser and validateNewUser hooks run.
+* User documents have id's when `onCreateUser` and `validateNewUser` hooks run.
 
 * Encode and store custom EJSON types in MongoDB.
 
