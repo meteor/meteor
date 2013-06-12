@@ -320,3 +320,27 @@ Tinytest.add("spacebars - parser", function (test) {
                {"type":"StartTag","name":"hr","data":[]}]}]},
          {"type":"EndTag","name":"div"}]});
 });
+
+Tinytest.add("spacebars - compiler", function (test) {
+
+  var run = function (input/*, expectedLines*/) {
+    var expectedLines = Array.prototype.slice.call(arguments, 1);
+    var expected = expectedLines.join('\n');
+    var output = Spacebars.compile(input);
+    test.equal(output, expected);
+  };
+
+  run('abc',
+
+      'function (buf) {',
+      '  buf.text("abc");',
+      '}');
+
+  run('<a foo=bar>abc</a>',
+
+      'function (buf) {',
+      '  buf.openTag("a", {"foo":"bar"});',
+      '  buf.text("abc");',
+      '  buf.closeTag("a");',
+      '}');
+});
