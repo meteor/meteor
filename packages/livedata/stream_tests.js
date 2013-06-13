@@ -32,24 +32,58 @@ testAsyncMulti("stream - reconnect", [
   }
 ]);
 
-testAsyncMulti("stream - disconnect basic", [
+// Disconnecting and reconnecting transitions through the correct statuses.
+testAsyncMulti("stream - basic disconnect", [
   function (test, expect) {
+    var history = [];
     var stream = new Meteor._DdpClientStream("/");
+    var onTestPass = expect(_.identity);
 
-    var callback = _.once(expect(function() {
-      test.equal(stream.status().status, "connected");
+    Deps.autorun(function() {
+      var status = stream.status();
 
-      stream.disconnect();
-      test.equal(stream.status().status, "offline");
+      if (_.last(history) != status.status) {
+        history.push(status.status);
 
-      stream.reconnect();
-      test.equal(stream.status().status, "connecting");
-    }));
+        if (_.isEqual(history, ["connecting", "connected"]))
+          stream.disconnect();
 
-    if (stream.status().status !== "connected")
-      stream.on('reset', callback);
-    else
-      callback();
+        if (_.isEqual(history, ["connecting", "connected", "offline"]))
+          stream.reconnect();
+
+        if (_.isEqual(history, ["connecting", "connected", "offline",
+                                "connecting", "connected"])) {
+          stream.disconnect();
+          onTestPass();
+        }
+      }
+    });
+  }
+]);
+
+// Remain offline if the online event is received while offline.
+testAsyncMulti("stream - disconnect remains offline", [
+  function (test, expect) {
+    var history = [];
+    var stream = new Meteor._DdpClientStream("/");
+    var onTestComplete = expect(_.identity);
+
+    Deps.autorun(function() {
+      var status = stream.status();
+
+      if (_.last(history) != status.status) {
+        history.push(status.status);
+
+        if (_.isEqual(history, ["connecting", "connected"]))
+          stream.disconnect();
+
+        if (_.isEqual(history, ["connecting", "connected", "offline"])) {
+          stream._online();
+          test.isTrue(status.status == "offline");
+          onTestComplete();
+        }
+      }
+    });
   }
 ]);
 
