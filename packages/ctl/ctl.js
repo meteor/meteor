@@ -36,25 +36,20 @@ Ctl.Commands.push({
       if (appConfig.admin) {
         bindPathPrefix = "/" + Ctl.myAppName();
         proxyConfig = {
-          securePort: 44433,
+          securePort: null,
           insecurePort: 9414,
-          unprivilegedPorts: true,
           bindHost: "localhost",
-          bindPathPrefix: bindPathPrefix,
-          omitSsl: true
+          bindPathPrefix: bindPathPrefix
         };
       } else {
         proxyConfig = {
-          bindHost: appConfig.sitename,
-          // XXX eventually proxy should be privileged
-          unprivilegedPorts: true
+          bindHost: appConfig.sitename
         };
       }
 
       var deployConfig = {
         boot: {
           bind: {
-            // XXX hardcode proxy location
             viaProxy: proxyConfig
           }
         },
@@ -70,8 +65,7 @@ Ctl.Commands.push({
         exitPolicy: 'restart',
         env: {
           METEOR_DEPLOY_CONFIG: JSON.stringify(deployConfig),
-          PATH_PREFIX: bindPathPrefix,
-          ROOT_URL: appConfig.sitename + bindPathPrefix
+          ROOT_URL: "https://" + appConfig.sitename + bindPathPrefix
         },
         ports: {
           "main": {

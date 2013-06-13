@@ -23,6 +23,15 @@ Fiber(function () {
 
   var Future = require('fibers/future');
 
+
+  // This code is duplicated in app/server/server.js.
+  var MIN_NODE_VERSION = 'v0.8.18';
+  if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
+    process.stderr.write(
+      'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
+    process.exit(1);
+  }
+
   var sshTunnel = function (to, localPort, remoteEnd, keyfile) {
     var args = [to, '-L', localPort+':'+remoteEnd, 'echo __CONNECTED__ && cat -'];
     if (keyfile)
@@ -99,14 +108,15 @@ Fiber(function () {
   // Figures out if we're in an app dir, what release we're using, etc. May
   // download the release if necessary.
   var calculateContext = function (argv) {
-    context.port = process.env.PORT || 9414;
-    if (!!process.env.GALAXY && process.env.GALAXY.indexOf("ssh://") === 0) {
-      context.galaxy = "localhost:" + context.port + "/ultraworld";
-      context.adminBaseUrl = "localhost:" + context.port + "/";
+    // 9414 because 9414xy (gAlAxy) in 1337
+    context.galaxyPort = process.env.PORT || 9414;
+    if (process.env.GALAXY && process.env.GALAXY.indexOf("ssh://") === 0) {
+      context.galaxyUrl = "localhost:" + context.galaxyPort + "/ultraworld";
+      context.adminBaseUrl = "localhost:" + context.galaxyPort + "/";
       context.galaxyHost = process.env.GALAXY.substr("ssh://".length);
-      context.identity = argv.identity;
+      context.sshIdentity = argv["ssh-identity"];
     } else {
-      context.galaxy = process.env.GALAXY;
+      context.galaxyUrl = process.env.GALAXY;
     }
 
     var appDir = files.findAppDir();
@@ -314,9 +324,8 @@ Fiber(function () {
       var cmd = argv._.splice(0, 1)[0];
       switch (cmd) {
       case "configure":
-        console.log("Visit http://localhost:" + context.port + "/panel to configure your galaxy");
-        var fut = new Future();
-        fut.wait();
+        console.log("Visit http://localhost:" + context.galaxyPort + "/panel to configure your galaxy");
+        Fiber.yield();
         break;
       default:
         break;
@@ -817,8 +826,8 @@ Fiber(function () {
             .boolean('debug')
             .describe('debug', 'deploy in debug mode (don\'t minify, etc)')
             .describe('settings', 'set optional data for Meteor.settings')
-            .alias('identity', 'i')
-            .describe('identity', 'Selects a file from which the identity (private key) is read.  See ssh(1) for details.')
+            .alias('ssh-identity', 'i')
+            .describe('ssh-identity', 'Selects a file from which the identity (private key) is read.  See ssh(1) for details.')
             .describe('star', 'a star (tarball) to deploy instead of the current meteor app')
             .usage(
               "Usage: meteor deploy <site> [--password] [--settings settings.json] [--debug] [--delete]\n" +
@@ -854,7 +863,7 @@ Fiber(function () {
         process.exit(1);
       }
       var site = new_argv._[1];
-      var useGalaxy = !!context.galaxy;
+      var useGalaxy = !!context.galaxyUrl;
 
       if (useGalaxy)
         var deployGalaxy = require('./deploy-galaxy.js');
@@ -914,7 +923,7 @@ Fiber(function () {
     name: "logs",
     help: "Show logs for specified site",
     func: function (argv) {
-      var useGalaxy = !!context.galaxy;
+      var useGalaxy = !!context.galaxyUrl;
       argv = require('optimist').boolean('f').argv;
 
       if (argv.help || argv._.length !== 2) {
@@ -1278,7 +1287,8 @@ Fiber(function () {
           .boolean("help")
           .boolean("version")
           .boolean("arch")
-          .boolean("debug");
+          .boolean("debug")
+          .alias("i", "ssh-identity");
 
     var argv = optimist.argv;
 
@@ -1322,7 +1332,7 @@ Fiber(function () {
     var tunnel;
     try {
       if (context.galaxyHost) {
-        tunnel = sshTunnel(context.galaxyHost, context.port, "localhost:9414", context.identity);
+        tunnel = sshTunnel(context.galaxyHost, context.galaxyPort, "localhost:9414", context.sshIdentity);
         tunnel.waitConnected();
       }
       findCommand(cmd).func(argv);

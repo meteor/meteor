@@ -7,7 +7,7 @@
 __meteor_runtime_config__.serverId =
   process.env.SERVER_ID ? process.env.SERVER_ID : Random.id();
 
-var pathPrefix = process.env.PATH_PREFIX || "";
+var pathPrefix = __meteor_runtime_config__.PATH_PREFIX ||  "";
 
 Meteor._DdpStreamServer = function () {
   var self = this;
@@ -112,9 +112,9 @@ _.extend(Meteor._DdpStreamServer.prototype, {
         var args = arguments;
 
         if (request.url === pathPrefix + '/websocket' ||
-            request.url === pathPrefix + '/websocket/')
+            request.url === pathPrefix + '/websocket/') {
           request.url = self.prefix + '/websocket';
-
+        }
         _.each(oldHttpServerListeners, function(oldListener) {
           oldListener.apply(httpServer, args);
         });

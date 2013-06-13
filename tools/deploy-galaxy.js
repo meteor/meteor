@@ -22,12 +22,12 @@ var _galaxy;
 var getGalaxy = function (context) {
   if (! _galaxy) {
     var Meteor = getMeteor(context);
-    if (!context.galaxy) {
+    if (!context.galaxyUrl) {
       process.stderr.write("GALAXY environment variable must be set.\n");
       process.exit(1);
     }
 
-    _galaxy = Meteor.connect(context.galaxy);
+    _galaxy = Meteor.connect(context.galaxyUrl);
   }
 
   return _galaxy;

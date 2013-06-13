@@ -10,23 +10,23 @@ var connect = Npm.require('connect');
 var optimist = Npm.require('optimist');
 var useragent = Npm.require('useragent');
 
-// Keepalives so that when the outer server dies unceremoniously and
-// doesn't kill us, we quit ourselves. A little gross, but better than
-// pidfiles.
-// XXX This should really be part of the boot script, not the webapp package.
-//     Or we should just get rid of it, and rely on containerization.
-
 
 var findGalaxy = _.once(function () {
   if (!('GALAXY' in process.env)) {
     console.log(
-      "GALAXY environment variable must be set. See 'galaxy --help'.");
+      "To do Meteor Galaxy operations like binding to a Galaxy " +
+        "proxy, the GALAXY environment variable must be set.");
     process.exit(1);
   }
 
   return Meteor.connect(process.env['GALAXY']);
 });
 
+// Keepalives so that when the outer server dies unceremoniously and
+// doesn't kill us, we quit ourselves. A little gross, but better than
+// pidfiles.
+// XXX This should really be part of the boot script, not the webapp package.
+//     Or we should just get rid of it, and rely on containerization.
 
 var initKeepalive = function () {
   var keepaliveCount = 0;
@@ -180,11 +180,29 @@ var runWebAppServer = function () {
   }
 
   // webserver
-  var app = connect().use(function (request, response, next) {
-    var pathPrefix = process.env.PATH_PREFIX;
-    if (pathPrefix && request.url.indexOf(pathPrefix) === 0)
+  var app = connect();
+
+  // Strip off the path prefix, if it exists.
+  app.use(function (request, response, next) {
+    var pathPrefix = __meteor_runtime_config__.PATH_PREFIX;
+    var url = Npm.require('url').parse(request.url);
+    var pathname = url.pathname;
+    // check if the path in the url starts with the path prefix (and the part
+    // after the path prefix must start with a / if it exists.)
+    if (pathPrefix && pathname.substring(0, pathPrefix.length) === pathPrefix &&
+       (pathname.length == pathPrefix.length
+        || pathname.substring(pathPrefix.length, pathPrefix.length + 1) === "/")) {
       request.url = request.url.substring(pathPrefix.length);
-    next();
+      next();
+    } else if (pathname === "/facicon.ico") {
+      next();
+    } else if (pathPrefix) {
+      response.writeHead(404);
+      response.write("Unknown path");
+      response.end();
+    } else {
+      next();
+    }
   });
   // Parse the query string into res.query. Only oauth_server cares about this,
   // but it's overkill to have that package depend on its own copy of connect
@@ -258,10 +276,10 @@ var runWebAppServer = function () {
             "__meteor_runtime_config__ = " +
               JSON.stringify(__meteor_runtime_config__) + ";");
 
-    var pathPrefix = __meteor_runtime_config__.PATH_PREFIX || process.env.PATH_PREFIX || "";
+
     boilerplateHtml = boilerplateHtml.replace(
         /##PATH_PREFIX##/g,
-      pathPrefix
+      __meteor_runtime_config__.PATH_PREFIX || ""
     );
 
     app.use(function (req, res, next) {
@@ -287,11 +305,11 @@ var runWebAppServer = function () {
     // only start listening after all the startup code has run.
     var bind = deployConfig.boot.bind;
     httpServer.listen(bind.localPort || 0, Meteor.bindEnvironment(function() {
-      if (argv.keepalive)
+      if (argv.keepalive || true)
         console.log("LISTENING"); // must match run.js
       var port = httpServer.address().port;
       if (bind.viaProxy && bind.viaProxy.proxyEndpoint) {
-        bindToProxy(bind.viaProxy);
+        Meteor._bindToProxy(bind.viaProxy);
       } else if (bind.viaProxy) {
         // bind via the proxy, but we'll have to find it ourselves via
         // ultraworld.
@@ -303,7 +321,7 @@ var runWebAppServer = function () {
         var doBinding = function (proxyService) {
           if (proxyService.providers.proxy) {
             Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
-            bindToProxy(_.extend({
+            Meteor._bindToProxy(_.extend({
               proxyEndpoint: proxyService.providers.proxy
             }, bind.viaProxy));
           }
@@ -327,10 +345,10 @@ var runWebAppServer = function () {
   };
 };
 
-var bindToProxy = Meteor._bindToProxy = function (proxyConfig) {
+Meteor._bindToProxy = function (proxyConfig) {
 
-  var securePort = proxyConfig.securePort || (proxyConfig.unprivilegedPorts ? 4433 : 443);
-  var insecurePort = proxyConfig.insecurePort || (proxyConfig.unprivilegedPorts ? 8080 : 80);
+  var securePort = proxyConfig.securePort || 4433;
+  var insecurePort = proxyConfig.insecurePort || 8080;
   var bindPathPrefix = proxyConfig.bindPathPrefix || "";
   // XXX also support galaxy-based lookup
   if (!proxyConfig.proxyEndpoint)
@@ -353,11 +371,9 @@ var bindToProxy = Meteor._bindToProxy = function (proxyConfig) {
   };
   var myHost = os.hostname();
 
-  var ddpBindTo = proxyConfig.unprivilegedPorts ? {
+  var ddpBindTo = {
     ddpUrl: 'ddp://' + proxyConfig.bindHost + ':' + securePort + bindPathPrefix + '/',
     insecurePort: insecurePort
-  } : {
-    ddpUrl: 'ddp://' + proxyConfig.bindHost + bindPathPrefix + '/'
   };
 
   // This is run after packages are loaded (in main) so we can use
@@ -388,7 +404,7 @@ var bindToProxy = Meteor._bindToProxy = function (proxyConfig) {
       pathPrefix: bindPathPrefix
     }
   });
-  if (!proxyConfig.omitSsl) {
+  if (proxyConfig.securePort !== null) {
     proxy.call('bindHttp', {
       pid: pid,
       bindTo: {

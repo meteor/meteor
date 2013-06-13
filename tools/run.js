@@ -242,7 +242,7 @@ var startServer = function (options) {
 
   env.PORT = options.innerPort;
   env.MONGO_URL = options.mongoUrl;
-  env.ROOT_URL = env.ROOT_URL || ('http://localhost:' + options.outerPort + (env.PATH_PREFIX || ""));
+  env.ROOT_URL = options.rootUrl;
   if (options.settings)
     env.METEOR_SETTINGS = options.settings;
   else
@@ -553,9 +553,10 @@ exports.run = function (context, options) {
     // Start the server
     Status.running = true;
 
+
+    var rootUrl = process.env.ROOT_URL || ('http://localhost:' + outerPort);
     if (firstRun) {
-      process.stdout.write("=> Meteor server running on: http://localhost:" +
-                           outerPort + (process.env.PATH_PREFIX || "") + "/\n");
+      process.stdout.write("=> Meteor server running on: " + rootUrl + "/\n");
       firstRun = false;
       lastThingThatPrintedWasRestartMessage = false;
     } else {
@@ -578,6 +579,7 @@ exports.run = function (context, options) {
       outerPort: outerPort,
       innerPort: innerPort,
       mongoUrl: mongoUrl,
+      rootUrl: rootUrl,
       library: context.library,
       onExit: function (code) {
         // on server exit

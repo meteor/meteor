@@ -75,7 +75,7 @@ testAsyncMulti("stream - /websocket is a websocket endpoint", [
     _.each(['/websocket', '/websocket/'], function(path) {
       Meteor.http.get(Meteor._fixLink(path), expect(function(error, result) {
         test.isNotNull(error);
-        test.equal(result.content, 'Can "Upgrade" only to "WebSocket".');
+        test.equal('Can "Upgrade" only to "WebSocket".', result.content);
       }));
     });
 
@@ -88,15 +88,15 @@ testAsyncMulti("stream - /websocket is a websocket endpoint", [
     var pageContent;
     var wrappedCallback = expect(function(error, result) {
       test.isNull(error);
-      test.equal(result.content, pageContent);
+      test.equal(pageContent, result.content);
     });
 
-    Meteor.http.get('/', expect(function(error, result) {
+    Meteor.http.get(Meteor._fixLink('/'), expect(function(error, result) {
       test.isNull(error);
       pageContent = result.content;
 
       _.each(['/websockets', '/websockets/'], function(path) {
-        Meteor.http.get(path, wrappedCallback);
+        Meteor.http.get(Meteor._fixLink(path), wrappedCallback);
       });
     }));
   }
