@@ -1553,7 +1553,7 @@ _.extend(Package.prototype, {
           include: _.map(slice.registeredExtensions(), function (ext) {
             return new RegExp('\\.' + ext + "$");
           }),
-          exclude: ignoreFiles.concat(['tests'])
+          exclude: ignoreFiles.concat([/^tests$/])
         };
 
         // Inside the programs directory, only look for new program (which we
