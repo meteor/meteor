@@ -138,23 +138,22 @@ html_scanner = {
 
 
     // <body> or <template>
-    var code = 'Package.handlebars.Handlebars.json_ast_to_func(' +
-          JSON.stringify(Handlebars.to_json_ast(contents)) + ')';
+    var renderFuncCode = Spacebars.compile(contents);
 
     if (tag === "template") {
       var name = attribs.name;
       if (! name)
         throwParseError("Template has no 'name' attribute");
 
-      results.js += "Meteor._def_template(" + JSON.stringify(name) + ","
-        + code + ");\n";
+      results.js += "UI._templates[" + JSON.stringify(name) +
+        "] = " + renderFuncCode + ";\n";
     } else {
       // <body>
       if (hasAttribs)
         throwParseError("Attributes on <body> not supported");
-      results.js += "Meteor.startup(function(){" +
-        "document.body.appendChild(Spark.render(" +
-        "Meteor._def_template(null," + code + ")));});";
+      results.js += "UI._templates.Body = " + renderFuncCode + ";\n";
+      results.js += "Body = RootComponent.extend({ render: UI._templates.Body });\n";
+      results.js += 'Meteor.startup(function () { Body.create().attach(document.body); });\n';
     }
   }
 };

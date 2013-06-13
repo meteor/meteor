@@ -1,3 +1,4 @@
+/*
 // @export Template
 Template = {};
 
@@ -205,3 +206,4 @@ Meteor._def_template = function (name, raw_func) {
   // useful for unnamed templates, like body
   return partial;
 };
+*/
