@@ -218,7 +218,7 @@ _.extend(Meteor._DdpClientStream.prototype, {
   // immediately.
   _online: function () {
     // if we've requested to be offline by disconnecting, don't reconnect.
-    if (self.currentStatus.status != "offline")
+    if (this.currentStatus.status != "offline")
       this.reconnect();
   },
 
