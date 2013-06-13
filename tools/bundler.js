@@ -115,6 +115,17 @@
 //      be search for npm modules
 //    - staticDirectory: directory to search for static assets when
 //      Assets.getText and Assets.getBinary are called from this file.
+//    - sourceMap: if present, path of a file that contains a source
+//      map for this file, relative to program.json
+//    - sources: if sourceMap present, a map from a a relative path in
+//      the source map (no leading slash) to information about the
+//      source file:
+//      - source: path of this source file if available, relative to
+//        program.json
+//      - package: name of the package from which this file came, if
+//        any (omit if file came from an app)
+//      - sourcePath: original relative path within the source tree of
+//        'package' (or the app) of this source file
 //
 // /config.json:
 //

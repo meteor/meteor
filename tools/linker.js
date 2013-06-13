@@ -110,7 +110,9 @@ _.extend(Module.prototype, {
     return globalReferences;
   },
 
-  // Output is a list of objects with keys 'source' and 'servePath'.
+  // Output is a list of objects with keys 'source', 'servePath',
+  // 'sourceMap', 'sources' (map from relative path in source map to
+  // 'package', 'sourcePath', 'path')
   getLinkedFiles: function () {
     var self = this;
 
@@ -132,7 +134,9 @@ _.extend(Module.prototype, {
         return {
           source: file.getLinkedOutput({ preserveLineNumbers: true,
                                          exports: moduleExports }),
-          servePath: file.servePath
+          servePath: file.servePath,
+          sourceMap: null, // XXX XXX
+          sources: {} // XXX XXX
         };
       }));
     }
@@ -168,7 +172,9 @@ _.extend(Module.prototype, {
 
     return [{
       source: combined,
-      servePath: self.combinedServePath
+      servePath: self.combinedServePath,
+      sourceMap: null, // XXX XXX
+      sources: {} // XXX XXX
     }];
   },
 
@@ -628,6 +634,9 @@ _.extend(Unit.prototype, {
 //
 // Output is an object with keys:
 // - files: is an array of output files in the same format as inputFiles
+//   - EXCEPT THAT, for now, sourcePath is omitted and is replaced with
+//     sourceMap (a SourceMapGenerator) and sources (map to keys 'package',
+//     'sourcePath', 'path') similar to self.resources in a Slice (XXX)
 // - exports: the exports, as a list of string ('Foo', 'Thing.Stuff', etc)
 // - boundary: an opaque value that must be passed along with 'files' to link()
 var prelink = function (options) {
