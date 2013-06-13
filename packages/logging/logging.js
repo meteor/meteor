@@ -110,18 +110,20 @@ Log._getCallerDetails = function () {
 _.each(['debug', 'info', 'warn', 'error'], function (level) {
   // @param arg {String|Object}
   Log[level] = function (arg) {
-    var intercepted;
     if (intercept) {
       intercept--;
       intercepted = true;
     }
 
-    var obj = (typeof arg === 'string') ? {message: arg}: arg;
+    var obj = (_.isObject(arg)) ? arg : {message: new String(arg).toString() };
 
     _.each(RESTRICTED_KEYS, function (key) {
       if (obj[key])
         throw new Error("Can't set '" + key + "' in log message");
     });
+
+    if (_.has(obj, 'message') && !_.isString(obj.message))
+      throw new Error("Message should be set to string in the log message");
 
     obj = _.extend(Log._getCallerDetails(), obj);
     obj.time = new Date();
@@ -203,10 +205,10 @@ Log.format = function (obj, options) {
         pad2(time.getSeconds()) +
         '.' +
         pad3(time.getMilliseconds());
-   
+
   // eg in San Francisco in June this will be '(-7)'
   var utcOffsetStr = '(' + (-(new Date().getTimezoneOffset() / 60)) + ')';
-  
+
   var appInfo = '';
   if (appName) appInfo += appName;
   if (originApp && originApp !== appName) appInfo += ' via ' + originApp;

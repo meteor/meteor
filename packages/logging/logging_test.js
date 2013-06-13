@@ -19,23 +19,10 @@ Tinytest.add("logging - log", function (test) {
   var logBothMessageAndObject = function (log, level) {
     Log._intercept(3);
 
+    // Tests for correctness
     log("message");
     log({property1: "foo", property2: "bar"});
     log({message: "mixed", property1: "foo", property2: "bar"});
-
-    test.throws(function () {
-      log({time: 'not the right time'});
-    });
-    test.throws(function () {
-      log({level: 'not the right level'});
-    });
-    _.each(['file', 'line', 'program', 'originApp'], function (restrictedKey) {
-      test.throws(function () {
-        var obj = {};
-        obj[restrictedKey] = 'usage of restricted key';
-        log(obj);
-      });
-    });
 
     var intercepted = Log._intercepted();
     test.equal(intercepted.length, 3);
@@ -58,6 +45,57 @@ Tinytest.add("logging - log", function (test) {
     test.equal(obj3.property2, "bar");
     test.equal(obj3.level, level);
     test.instanceOf(obj3.time, Date);
+
+    // Test logging falsy values, as well as single digits
+    Log._intercept(4);
+    log(1);
+    log(0);
+    log(null);
+    log(undefined);
+
+    intercepted = Log._intercepted();
+
+    var obj4 = EJSON.parse(intercepted[0]);
+    test.equal(obj4.message, "1", "Logging single digit");
+
+    var obj5 = EJSON.parse(intercepted[1]);
+    test.equal(obj5.message, "0", "Logging falsy value: 0");
+
+    var obj6 = EJSON.parse(intercepted[2]);
+    test.equal(obj6.message, "null", "Logging falsy value: null");
+
+    var obj7 = EJSON.parse(intercepted[3]);
+    test.equal(obj7.message, "undefined", "Logging falsy value: undefined");
+
+    // Tests for correct exceptions
+    Log._intercept(6);
+
+    test.throws(function () {
+      log({time: 'not the right time'});
+    });
+    test.throws(function () {
+      log({level: 'not the right level'});
+    });
+    _.each(['file', 'line', 'program', 'originApp'], function (restrictedKey) {
+      test.throws(function () {
+        var obj = {};
+        obj[restrictedKey] = 'usage of restricted key';
+        log(obj);
+      });
+    });
+
+    // Can't pass numbers, objects, arrays or functions as message
+    Log._intercept(8);
+    test.throws(function () { log({ message: 1 }); });
+    test.throws(function () { log({ message: NaN }); });
+    test.throws(function () { log({ message: {foo:"bar"} }); });
+    test.throws(function () { log({ message: ["a", "r", "r"] }); });
+    test.throws(function () { log({ message: null }); });
+    test.throws(function () { log({ message: undefined }); });
+    test.throws(function () { log({ message: new Date }); });
+    test.throws(function () { log({ message: function () { return 42; } }); });
+
+    Log._intercepted();
   };
 
   logBothMessageAndObject(Log, 'info');
@@ -79,7 +117,7 @@ Tinytest.add("logging - parse", function (test) {
 Tinytest.add("logging - format", function (test) {
   var time = new Date(2012, 9 - 1/*0-based*/, 8, 7, 6, 5, 4);
   var utcOffsetStr = '(' + (-(new Date().getTimezoneOffset() / 60)) + ')';
-  
+
   _.each(['debug', 'info', 'warn', 'error'], function (level) {
     test.equal(
       Log.format({message: "message", time: time, level: level}),
