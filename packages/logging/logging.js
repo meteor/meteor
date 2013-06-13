@@ -115,7 +115,8 @@ _.each(['debug', 'info', 'warn', 'error'], function (level) {
       intercepted = true;
     }
 
-    var obj = (_.isObject(arg)) ? arg : {message: new String(arg).toString() };
+    var obj = (_.isObject(arg) && !_.isRegExp(arg) && !_.isDate(arg) ) ?
+              arg : {message: new String(arg).toString() };
 
     _.each(RESTRICTED_KEYS, function (key) {
       if (obj[key])

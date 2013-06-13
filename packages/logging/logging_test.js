@@ -47,25 +47,30 @@ Tinytest.add("logging - log", function (test) {
     test.instanceOf(obj3.time, Date);
 
     // Test logging falsy values, as well as single digits
-    Log._intercept(4);
+    // and some other non-stringy things
+    Log._intercept(9);
     log(1);
     log(0);
     log(null);
     log(undefined);
+    log(new Date('Wed Jun 12 2013 18:15:16 GMT-0700 (PDT)'));
+    log(/[^regexp]{0,1}/g);
+    log(true);
+    log(false);
+    log(-Infinity);
 
     intercepted = Log._intercepted();
+    var expected = ['1', '0', 'null', 'undefined', 'Wed Jun 12 2013 18:15:16 GMT-0700 (PDT)', "/[^regexp]{0,1}/g", 'true', 'false', '-Infinity'];
+    var testNames = ['single digit', 'falsy - 0', 'falsy - null', 'falsy - undefined', 'date', 'regexp', 'boolean - true', 'boolean - false', 'number - -Infinity'];
 
-    var obj4 = EJSON.parse(intercepted[0]);
-    test.equal(obj4.message, "1", "Logging single digit");
+    test.equal(intercepted.length, 9);
 
-    var obj5 = EJSON.parse(intercepted[1]);
-    test.equal(obj5.message, "0", "Logging falsy value: 0");
-
-    var obj6 = EJSON.parse(intercepted[2]);
-    test.equal(obj6.message, "null", "Logging falsy value: null");
-
-    var obj7 = EJSON.parse(intercepted[3]);
-    test.equal(obj7.message, "undefined", "Logging falsy value: undefined");
+    _.each(_.zip(expected, intercepted, testNames), function (expectedRecievedTest) {
+      (function (expected, recieved, testName) {
+        var obj = EJSON.parse(recieved);
+        test.equal(obj.message, expected, 'Logging ' + testName);
+      }).apply(this, expectedRecievedTest);
+    });
 
     // Tests for correct exceptions
     Log._intercept(6);
