@@ -22,10 +22,8 @@ Fiber(function () {
 
 
   var Future = require('fibers/future');
-
-
   // This code is duplicated in app/server/server.js.
-  var MIN_NODE_VERSION = 'v0.8.18';
+  var MIN_NODE_VERSION = 'v0.8.24';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
     process.stderr.write(
       'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
@@ -68,14 +66,6 @@ Fiber(function () {
     tunnel.waitConnected = _.bind(connectedFuture.wait, connectedFuture);
     return tunnel;
   };
-
-  // This code is duplicated in app/server/server.js.
-  var MIN_NODE_VERSION = 'v0.8.24';
-  if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
-    process.stderr.write(
-      'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
-    process.exit(1);
-  }
 
   var Commands = [];
 
