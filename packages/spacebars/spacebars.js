@@ -239,9 +239,22 @@ var randomLetters = function () {
   return str;
 };
 
-var MODE_ALL_STACHE = 0;
-var MODE_NO_STACHE = 1;
-var MODE_NO_COMPONENTS = 2;
+var ALLOW_ALL_STACHE = 0;
+var ALLOW_NO_STACHE = 1;
+var ALLOW_NO_COMPONENTS = 2;
+
+// Double- vs triple-stache is really only a sensible distinction
+// at text level.  In other contexts, we mandate one or the other
+// or treat them the same.  The reason is that Meteor UI's
+// HTML-generation API is high-level and does the encoding for us.
+//
+// In a comment, allow either and perform no escaping.  You can have
+// any text in a comment except `--`.
+var INTERPOLATE_COMMENT = 1;
+// Only allow double in `<a href="{{foo}}">` or `<a href={{foo}}>`.
+var INTERPOLATE_ATTR_VALUE = 2;
+// Only allow triple in `<span {{{additionalAttrs}}}>`.
+var INTERPOLATE_DYNAMIC_ATTR = 3;
 
 var tokenizeHtml = function (html, preString, postString, tagLookup) {
   var tokens = HTML5Tokenizer.tokenize(html);
@@ -259,7 +272,7 @@ var tokenizeHtml = function (html, preString, postString, tagLookup) {
     // string or a tag or block.
     //
     // The `mode` flag can be used to restrict the allowed
-    // tag types, for example by setting it to MODE_NO_STACHE
+    // tag types, for example by setting it to ALLOW_NO_STACHE
     // to disallow stache tags completely (and verify that
     // there are none).  If this flag is used,
     // `customErrorMessage` may optionally be given to replace
@@ -281,8 +294,8 @@ var tokenizeHtml = function (html, preString, postString, tagLookup) {
       var tagId = str.slice(idStart, idEnd);
       var tag = tagLookup.getTag(tagId);
       if (mode) {
-        if (mode === MODE_NO_STACHE ||
-            (mode === MODE_NO_COMPONENTS &&
+        if (mode === ALLOW_NO_STACHE ||
+            (mode === ALLOW_NO_COMPONENTS &&
              (tag.isBlock || tag.type === 'INCLUSION')))
           throw new Error(
             (customErrorMessage ||
@@ -306,13 +319,13 @@ var tokenizeHtml = function (html, preString, postString, tagLookup) {
   // because they are illegal in this position (e.g. HTML tag
   // name).
   var noStache = function (str, customMessage) {
-    return extractTags(str, MODE_NO_STACHE, customMessage);
+    return extractTags(str, ALLOW_NO_STACHE, customMessage);
   };
 
   // Like `extractTags(str)`, but doesn't allow block helpers
   // or inclusions.
   var extractStringTags = function (str, customMessage) {
-    return extractTags(str, MODE_NO_COMPONENTS, customMessage);
+    return extractTags(str, ALLOW_NO_COMPONENTS, customMessage);
   };
 
   for (var i = 0; i < tokens.length; i++) {
@@ -617,7 +630,7 @@ Spacebars.compile = function (inputString) {
 
   // Return the source code of a string or (reactive) function
   // (if necessary).
-  var interpolate = function (strOrArray, funcInfo) {
+  var interpolate = function (strOrArray, funcInfo, interpolateMode) {
     if (typeof strOrArray === "string")
       return toJSLiteral(strOrArray);
 
@@ -635,18 +648,27 @@ Spacebars.compile = function (inputString) {
         case 'DOUBLE': // fall through
         case 'TRIPLE':
           isReactive = true;
-          parts.push('stuff()'); // XXXXXXXX
-          /*          parts.push('env.' +
-                       (tag.type === 'DOUBLE' ? 'dstache' : 'tstache') +
-                       '(' + toJSLiteral(tag.path) +
-                       (tag.args.length ? ', ' + toJSLiteral(tag.args) : '') +
-                     ')');*/
-            break;
-          default:
-            throw new Error("Unknown stache tag type: " + tag.type);
-            //parts.push('env.tag(' + tagLiteral(tag) + ')');
+          if (interpolateMode === INTERPOLATE_ATTR_VALUE &&
+              tag.type === 'TRIPLE')
+            throw new Error("Can't have a triple-stache in an attribute value");
+          if (interpolateMode === INTERPOLATE_DYNAMIC_ATTR &&
+              tag.type === 'DOUBLE')
+            throw new Error("Can only have triple-stache for dynamic attributes");
+
+          funcInfo.usedSelf = true;
+          var code = 'self.lookup(' + toJSLiteral(tag.path[0]) + ')';
+          if (tag.path.length > 1) {
+            code = 'Spacebars.index(' + code + ', ' +
+              _.map(tag.path.slice(1), toJSLiteral).join(', ') + ')';
           }
+          // XXX pass args to `call`
+          code = 'String(Spacebars.call(' + code + '))';
+          parts.push(code);
+          break;
+        default:
+          throw new Error("Unknown stache tag type: " + tag.type);
         }
+      }
     });
 
     if (isReactive) {
@@ -710,12 +732,14 @@ Spacebars.compile = function (inputString) {
           var value = kv.nodeValue;
           if ((typeof name) !== 'string') {
             dynamicAttrs = (dynamicAttrs || []);
-            dynamicAttrs.push([interpolate(name, funcInfo),
-                               interpolate(value, funcInfo)]);
+            dynamicAttrs.push([interpolate(name, funcInfo,
+                                           INTERPOLATE_DYNAMIC_ATTR),
+                               interpolate(value, funcInfo,
+                                           INTERPOLATE_DYNAMIC_ATTR)]);
           } else {
             attrs = (attrs || {});
             attrs[toJSLiteral(name)] =
-              interpolate(value, funcInfo);
+              interpolate(value, funcInfo, INTERPOLATE_ATTR_VALUE);
           }
         });
         var options = null;
@@ -744,7 +768,8 @@ Spacebars.compile = function (inputString) {
         break;
       case 'Comment':
         bodyLines.push('buf.comment(' +
-                       interpolate(t.name, funcInfo) + ');');
+                       interpolate(t.name, funcInfo,
+                                  INTERPOLATE_COMMENT) + ');');
         break;
       case 'DocType':
         bodyLines.push(

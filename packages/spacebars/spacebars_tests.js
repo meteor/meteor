@@ -358,9 +358,3 @@ Tinytest.add("spacebars - compiler", function (test) {
       '  buf.openTag("a", {"foo": function () { return String(Spacebars.call(Spacebars.index(self.lookup("bar"), "baz"))); }});',
       '}');
 });
-
-// XXXX double and triple stache in various contexts:
-// * comment
-// * attribute value
-// * dynamic attribute
-// * regular level

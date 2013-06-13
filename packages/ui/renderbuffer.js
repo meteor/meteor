@@ -54,7 +54,11 @@ var updateDOMAttribute = function (component, elemKey, attrName,
 _.extend(RenderBuffer.prototype, {
   _encodeEntities: encodeEntities,
   // XXX implement dynamicAttrs option,
-  // takes [[k, v], ...]
+  // takes [[k, v], ...], does something fancy to parse out
+  // name=value dynamically.  For example, `<span {{{attrs}}}>`
+  // leads to `{ dynamicAttrs: [[attrs(), ''] }`, and each time
+  // `attrs()` is evaluated, it is tokenized for attribute
+  // assignments.
   openTag: function (tagName, attrs, options) {
     var self = this;
 
