@@ -53,14 +53,14 @@ Tinytest.add("logging - log", function (test) {
     log(0);
     log(null);
     log(undefined);
-    log(new Date('Wed Jun 12 2013 18:15:16 GMT-0700 (PDT)'));
+    log(new Date(1371086116000));
     log(/[^regexp]{0,1}/g);
     log(true);
     log(false);
     log(-Infinity);
 
     intercepted = Log._intercepted();
-    var expected = ['1', '0', 'null', 'undefined', 'Wed Jun 12 2013 18:15:16 GMT-0700 (PDT)', "/[^regexp]{0,1}/g", 'true', 'false', '-Infinity'];
+    var expected = ['1', '0', 'null', 'undefined', new Date(1371086116000), "/[^regexp]{0,1}/g", 'true', 'false', '-Infinity'];
     var testNames = ['single digit', 'falsy - 0', 'falsy - null', 'falsy - undefined', 'date', 'regexp', 'boolean - true', 'boolean - false', 'number - -Infinity'];
 
     test.equal(intercepted.length, 9);
@@ -68,6 +68,8 @@ Tinytest.add("logging - log", function (test) {
     _.each(_.zip(expected, intercepted, testNames), function (expectedRecievedTest) {
       (function (expected, recieved, testName) {
         var obj = EJSON.parse(recieved);
+        if (_.isDate(expected))
+          obj.message = new Date(obj.message);
         test.equal(obj.message, expected, 'Logging ' + testName);
       }).apply(this, expectedRecievedTest);
     });
