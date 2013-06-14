@@ -194,7 +194,7 @@ var runWebAppServer = function () {
         || pathname.substring(pathPrefix.length, pathPrefix.length + 1) === "/")) {
       request.url = request.url.substring(pathPrefix.length);
       next();
-    } else if (pathname === "/facicon.ico") {
+    } else if (pathname === "/favicon.ico" || pathname === "/robots.txt") {
       next();
     } else if (pathPrefix) {
       response.writeHead(404);
