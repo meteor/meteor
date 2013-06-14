@@ -54,7 +54,6 @@ assert.doesNotThrow(function () {
   var staticDir;
   var packageTxtPath;
   _.each(serverManifest.load, function (item) {
-    console.log(item.path);
     if (item.path === "/packages/test-package.js") {
       packageTxtPath = path.join(tmpOutputDir,
                                  "programs", "server",
