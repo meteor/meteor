@@ -232,8 +232,7 @@ exports.logs = function (options) {
 // options:
 // - context
 // - app
-exports.mongo = function (options) {
+exports.tempMongoUrl = function (options) {
   var galaxy = getGalaxy(options.context);
-  console.log(options.app);
   return galaxy.call('getTempMongoUrl', options.app);
 };

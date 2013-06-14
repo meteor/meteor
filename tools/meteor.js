@@ -792,7 +792,7 @@ Fiber(function () {
         // remote mode
         if (!!context.galaxyUrl) {
           var deployGalaxy = require('./deploy-galaxy.js');
-          var url = deployGalaxy.mongo({
+          var url = deployGalaxy.tempMongoUrl({
             app: new_argv._[1],
             context: context
           });
