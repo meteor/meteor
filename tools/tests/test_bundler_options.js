@@ -49,7 +49,7 @@ assert.doesNotThrow(function () {
                      mainJSContents);
   // verify that contents are not minified
   var appHtml = fs.readFileSync(path.join(tmpOutputDir, "programs",
-                                          "client", "app.html"), '
+                                          "client", "app.html"), 'utf8');
   assert(!(/src=\"##PATH_PREFIX##\/[0-9a-f]{40,40}.js\"/.test(appHtml)));
   assert(/src=\"##PATH_PREFIX##\/packages\/meteor/.test(appHtml));
   assert(/src=\"##PATH_PREFIX##\/packages\/deps/.test(appHtml));
