@@ -1562,13 +1562,19 @@ _.extend(Package.prototype, {
         // getSourcesFunc is called. This is kind of a hack but it'll
         // do for the moment.
 
+        // XXX nothing here monitors for the no-default-targets file
+
         // Directories to monitor for new files
         var appIgnores = _.clone(ignoreFiles);
         slice.dependencyInfo.directories[appDir] = {
           include: _.map(slice.registeredExtensions(), function (ext) {
             return new RegExp('\\.' + ext + "$");
           }),
-          exclude: ignoreFiles.concat([/^tests$/])
+          // XXX This excludes watching under *ANY* packages or programs
+          // directory, but we should really only care about top-level ones.
+          // But watcher doesn't let you do that.
+          exclude: ignoreFiles.concat([/^packages$/, /^programs$/,
+                                       /^tests$/])
         };
 
         // Inside the programs directory, only look for new program (which we
