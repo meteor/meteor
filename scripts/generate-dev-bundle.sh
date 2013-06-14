@@ -122,7 +122,7 @@ npm install progress@0.0.5
 # If you update the version of fibers in the dev bundle, also update the "npm
 # install" command in docs/client/concepts.html and in the README in
 # app/lib/bundler.js.
-npm install fibers@1.0.0
+npm install fibers@1.0.1
 # Fibers ships with compiled versions of its C code for a dozen platforms. This
 # bloats our dev bundle, and confuses dpkg-buildpackage and rpmbuild into
 # thinking that the packages need to depend on both 32- and 64-bit versions of

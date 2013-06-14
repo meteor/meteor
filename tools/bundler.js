@@ -765,7 +765,7 @@ _.extend(Bundle.prototype, {
 "This is a Meteor application bundle. It has only one dependency,\n" +
 "node.js (with the 'fibers' package). To run the application:\n" +
 "\n" +
-"  $ npm install fibers@1.0.0\n" +
+"  $ npm install fibers@1.0.1\n" +
 "  $ export MONGO_URL='mongodb://user:password@host:port/databasename'\n" +
 "  $ export ROOT_URL='http://example.com'\n" +
 "  $ export MAIL_URL='smtp://user:password@mailhost:port/'\n" +
