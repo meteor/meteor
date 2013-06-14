@@ -48,22 +48,18 @@ Tinytest.add("logging - log", function (test) {
 
     // Test logging falsy values, as well as single digits
     // and some other non-stringy things
-    Log._intercept(9);
-    log(1);
-    log(0);
-    log(null);
-    log(undefined);
-    log(new Date(1371086116000));
-    log(/[^regexp]{0,1}/g);
-    log(true);
-    log(false);
-    log(-Infinity);
+    var testcases = [1, 0, null, undefined, new Date(1371086116000),
+                     /[^regexp]{0,1}/g, true, false, -Infinity];
+    Log._intercept(testcases.length);
+    _.each(testcases, function (testcase) {
+      log(testcase);
+    });
 
     intercepted = Log._intercepted();
     var expected = ['1', '0', 'null', 'undefined', new Date(1371086116000), "/[^regexp]{0,1}/g", 'true', 'false', '-Infinity'];
     var testNames = ['single digit', 'falsy - 0', 'falsy - null', 'falsy - undefined', 'date', 'regexp', 'boolean - true', 'boolean - false', 'number - -Infinity'];
 
-    test.equal(intercepted.length, 9);
+    test.equal(intercepted.length, testcases.length);
 
     _.each(_.zip(expected, intercepted, testNames), function (expectedRecievedTest) {
       (function (expected, recieved, testName) {
@@ -92,22 +88,21 @@ Tinytest.add("logging - log", function (test) {
     });
 
     // Can't pass numbers, objects, arrays or functions as message
-    Log._intercept(8);
-    test.throws(function () { log({ message: 1 }); });
-    test.throws(function () { log({ message: NaN }); });
-    test.throws(function () { log({ message: {foo:"bar"} }); });
-    test.throws(function () { log({ message: ["a", "r", "r"] }); });
-    test.throws(function () { log({ message: null }); });
-    test.throws(function () { log({ message: undefined }); });
-    test.throws(function () { log({ message: new Date }); });
-    test.throws(function () { log({ message: function () { return 42; } }); });
+    var throwingTestcases = [1, NaN, {foo:"bar"}, ["a", "r", "r"], null,
+                             undefined, new Date, function () { return 42; } ];
+    Log._intercept(throwingTestcases.length);
+    _.each(throwingTestcases, function (testcase) {
+      test.throws(function () {
+        log({ message: testcase });
+      });
+    });
 
     // Since everything above throws, it shouldn't print anything,
     // It clears the intercepted array as well.
     test.equal(Log._intercepted().length, 0);
     // Put counter back to 0.
     // It didn't move and empty intercepted list proves it.
-    Log._intercept(-8);
+    Log._intercept(-throwingTestcases.length);
   };
 
   logBothMessageAndObject(Log, 'info');
