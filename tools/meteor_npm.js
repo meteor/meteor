@@ -255,7 +255,7 @@ _.extend(exports, {
     fs.unlinkSync(path.join(newPackageNpmDir, 'package.json'));
 
     self._createReadme(newPackageNpmDir);
-    self._renameAlmostAtomically(newPackageNpmDir, packageNpmDir);
+    files.renameDirAlmostAtomically(newPackageNpmDir, packageNpmDir);
   },
 
   _createReadme: function(newPackageNpmDir) {
@@ -304,31 +304,6 @@ _.extend(exports, {
     });
     var packageJsonPath = path.join(newPackageNpmDir, 'package.json');
     fs.writeFileSync(packageJsonPath, packageJsonContents);
-  },
-
-  // - rename original .npm dir to another name (require for atomicity in next step)
-  // - atomically rename temporary package npm dir to the original package's .npm dir
-  // - delete the renamed original .npm directory
-  _renameAlmostAtomically: function(newPackageNpmDir, packageNpmDir) {
-    var self = this;
-    var oldPackageNpmDir = packageNpmDir + '-old-' + self._randomToken();;
-
-    // Get rid of old dir, if it exists.
-    var movedOldDir = true;
-    try {
-      fs.renameSync(packageNpmDir, oldPackageNpmDir);
-    } catch (e) {
-      if (e.code !== 'ENOENT')
-        throw e;
-      movedOldDir = false;
-    }
-
-    // Now rename the directory.
-    fs.renameSync(newPackageNpmDir, packageNpmDir);
-
-    // ... and delete the old one.
-    if (movedOldDir)
-      files.rm_recursive(oldPackageNpmDir);
   },
 
   // Gets a JSON object from `npm ls --json` (_installedDependenciesTree) or

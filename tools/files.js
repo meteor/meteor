@@ -539,6 +539,33 @@ _.extend(exports, {
     return future.wait();
   },
 
+  // Use this if you'd like to replace a directory with another directory as
+  // close to atomically as possible. It's better than recursively deleting the
+  // target directory first and then renaming. (Failure modes here include
+  // "there's a brief moment where toDir does not exist" and "you can end up
+  // with garbage directories sitting around", but not "there's any time where
+  // toDir exists but is in a state other than initial or final".)
+  renameDirAlmostAtomically: function(fromDir, toDir) {
+    var garbageDir = toDir + '-garbage-' + files._randomToken();
+
+    // Get old dir out of the way, if it exists.
+    var movedOldDir = true;
+    try {
+      fs.renameSync(toDir, garbageDir);
+    } catch (e) {
+      if (e.code !== 'ENOENT')
+        throw e;
+      movedOldDir = false;
+    }
+
+    // Now rename the directory.
+    fs.renameSync(fromDir, toDir);
+
+    // ... and delete the old one.
+    if (movedOldDir)
+      files.rm_recursive(garbageDir);
+  },
+
   // Run a program synchronously and, assuming it returns success (0),
   // return whatever it wrote to stdout, as a string. Otherwise (if it
   // did not exit gracefully and return 0) return null. As node has

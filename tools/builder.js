@@ -417,8 +417,11 @@ _.extend(Builder.prototype, {
   // Move the completed bundle into its final location (outputPath)
   complete: function () {
     var self = this;
-    files.rm_recursive(self.outputPath);
-    fs.renameSync(self.buildPath, self.outputPath);
+    // XXX Alternatively, we could just keep buildPath around, and make
+    // outputPath be a symlink pointing to it. This doesn't work for the NPM use
+    // case of renameDirAlmostAtomically since that one is constructing files to
+    // be checked in to version control, but here we could get away with it.
+    files.renameDirAlmostAtomically(self.buildPath, self.outputPath);
   },
 
   // Delete the partially-completed bundle. Do not disturb outputPath.
