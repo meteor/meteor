@@ -102,7 +102,12 @@ Tinytest.add("logging - log", function (test) {
     test.throws(function () { log({ message: new Date }); });
     test.throws(function () { log({ message: function () { return 42; } }); });
 
-    Log._intercepted();
+    // Since everything above throws, it shouldn't print anything,
+    // It clears the intercepted array as well.
+    test.equal(Log._intercepted().length, 0);
+    // Put counter back to 0.
+    // It didn't move and empty intercepted list proves it.
+    Log._intercept(-8);
   };
 
   logBothMessageAndObject(Log, 'info');
