@@ -169,7 +169,7 @@ var run = function () {
 
   // check environment
   var port = process.env.PORT ? parseInt(process.env.PORT) : 80;
-  var hostname = process.env.HOSTNAME ? parseInt(process.env.HOSTNAME) : 'INADDR_ANY';
+  var hostname = process.env.HOSTNAME ? process.env.HOSTNAME : 'INADDR_ANY';
 
   // check for a valid MongoDB URL right away
   if (!process.env.MONGO_URL)
