@@ -87,9 +87,10 @@ Tinytest.add("logging - log", function (test) {
       });
     });
 
-    // Can't pass numbers, objects, arrays or functions as message
+    // Can't pass numbers, objects, arrays, regexps or functions as message
     var throwingTestcases = [1, NaN, {foo:"bar"}, ["a", "r", "r"], null,
-                             undefined, new Date, function () { return 42; } ];
+                             undefined, new Date, function () { return 42; },
+                             /[regexp]/ ];
     Log._intercept(throwingTestcases.length);
     _.each(throwingTestcases, function (testcase) {
       test.throws(function () {
