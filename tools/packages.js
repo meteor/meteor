@@ -1818,7 +1818,10 @@ _.extend(Package.prototype, {
 
       builder.reserve("unipackage.json");
       builder.reserve("buildinfo.json");
-      builder.reserve("node_modules", { directory: true });
+      // These is where we put the NPM dependencies of the slices (but not of
+      // plugins). The node_modules directory is nested inside "npm" so that it
+      // is not visible from within plugins.
+      builder.reserve("npm/node_modules", { directory: true });
       builder.reserve("head");
       builder.reserve("body");
 
@@ -1863,7 +1866,7 @@ _.extend(Package.prototype, {
               unordered: u.unordered || undefined
             };
           }),
-          node_modules: slice.nodeModulesPath ? 'node_modules' : undefined,
+          node_modules: slice.nodeModulesPath ? 'npm/node_modules' : undefined,
           resources: [],
           boundary: slice.boundary
         };
@@ -1938,7 +1941,7 @@ _.extend(Package.prototype, {
         if (slice.nodeModulesPath) {
           builder.copyDirectory({
             from: slice.nodeModulesPath,
-            to: 'node_modules',
+            to: 'npm/node_modules',
             depend: false
           });
         }
