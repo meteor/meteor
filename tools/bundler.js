@@ -242,18 +242,33 @@ var StaticDirectory = function (options) {
 // Allowed options:
 // - sourcePath: path to file on disk that will provide our contents
 // - data: contents of the file as a Buffer
+// - sourceMap: if 'data' is given, can be given instead of sourcePath. a string
+// - sources: if sourceMap is provided, map from relative path to object
+//   with keys 'package', 'sourcePath', 'source'
 // - cacheable
 var File = function (options) {
   var self = this;
 
-  if (options.data && ! (options.data instanceof Buffer)) {
+  if (options.data && ! (options.data instanceof Buffer))
     throw new Error('File contents must be provided as a Buffer');
-  }
+  if (! options.sourcePath && ! options.data)
+    throw new Error("Must provide either sourcePath or data");
 
   // The absolute path in the filesystem from which we loaded (or will
   // load) this file (null if the file does not correspond to one on
   // disk.)
   self.sourcePath = options.sourcePath;
+
+  // If this file was generated, a sourceMap (provided as a string)
+  // with debugging information. Set with setSourceMap.
+  self.sourceMap = null;
+
+  // If sourceMap is set, this is a map from a relative source file
+  // path in the source map (no leading '/') to an object with keys:
+  // - package: name of the source package, or null for the app
+  // - sourcePath: the source path, relative to the root of 'package'
+  // - source: full contents of the source file, as a Buffer
+  self.sources = null;
 
   // Where this file is intended to reside within the target's
   // filesystem.
@@ -293,8 +308,9 @@ _.extend(File.prototype, {
   contents: function (encoding) {
     var self = this;
     if (! self._contents) {
-      if (! self.sourcePath)
+      if (! self.sourcePath) {
         throw new Error("Have neither contents nor sourcePath for file");
+      }
       else
         self._contents = fs.readFileSync(self.sourcePath);
     }
@@ -371,6 +387,17 @@ _.extend(File.prototype, {
       sourcePath: staticSourceDirectory,
       bundlePath: bundlePath
     });
+  },
+
+  // Set a source map for this File. sourceMap is given as a
+  // string. See self.sources for the format of sources.
+  setSourceMap: function (sourceMap, sources) {
+    var self = this;
+
+    if (typeof sourceMap !== "string")
+      throw new Error("sourceMap must be given as a string");
+    self.sourceMap = sourceMap;
+    self.sources = sources || {};
   }
 });
 
@@ -453,7 +480,7 @@ _.extend(Target.prototype, {
         self.minifyCss();
     }
 
-    // Process asset directories (eg, /public)
+    // Process asset directories (eg, '/public')
     // XXX this should probably be part of the appDir reader
     _.each(options.assetDirs || [], function (ad) {
       self.addAssetDir(ad);
@@ -599,7 +626,7 @@ _.extend(Target.prototype, {
       var isApp = ! slice.pkg.name;
 
       // Emit the resources
-      _.each(slice.getResources(self.arch), function (resource) {
+       _.each(slice.getResources(self.arch), function (resource) {
         if (_.contains(["js", "css", "static"], resource.type)) {
           if (resource.type === "css" && ! isBrowser)
             // XXX might be nice to throw an error here, but then we'd
@@ -643,6 +670,11 @@ _.extend(Target.prototype, {
               self.nodeModulesDirectories[slice.nodeModulesPath] = nmd;
             }
             f.nodeModulesDirectory = nmd;
+          }
+
+          if (resource.type === "js" && resource.sourceMap) {
+            f.setSourceMap(resource.sourceMap.toString(),
+                           resource.sources);
           }
 
           self[resource.type].push(f);
@@ -910,6 +942,9 @@ var JsImage = function () {
   // - source: JS source code to load, as a string
   // - nodeModulesDirectory: a NodeModulesDirectory indicating which
   //   directory should be searched by Npm.require()
+  // - sourceMap: if set, source map for this code, AS A STRING
+  // - sources: map from relative path in source map to object with
+  //   keys 'source' (a string), 'package', 'sourcePath'
   // note: this can't be called `load` at it would shadow `load()`
   self.jsToLoad = [];
 
@@ -1013,8 +1048,8 @@ _.extend(JsImage.prototype, {
       }, bindings || {});
 
       try {
-        // XXX Get the actual source file path -- item.targetPath is
-        // not actually correct (it's the path in the bundle rather
+        // XXX XXX Get the actual source file path -- item.targetPath
+        // is not actually correct (it's the path in the bundle rather
         // than in the source tree.) Moreover, we need to do source
         // mapping.
         files.runJavaScript(item.source, item.targetPath, env);
@@ -1063,6 +1098,14 @@ _.extend(JsImage.prototype, {
           item.nodeModulesDirectory.preferredBundlePath : undefined,
         staticDirectory: item.staticDirectory ?
           item.staticDirectory.bundlePath : undefined
+        sourceMap: item.sourceMap || undefined, // XXX XXX WRONG -- should be a file, not an inline string
+        sources: item.sourceMap ? _.map(item.sources || [], function (x) {
+          return {
+            source: x.source.toString('utf8'), // XXX XXX WRONG -- should be a file, not an inline string
+            package: x.package,
+            sourcePath: x.sourcePath
+          };
+        }) : undefined
       });
     });
 
@@ -1127,6 +1170,8 @@ JsImage.readFromDisk = function (controlFilePath) {
       staticDirectory: new StaticDirectory({
         sourcePath: item.staticDirectory
       })
+      // XXX XXX set 'sourceMap' (to a string) and 'sources' (keys
+      // 'package', 'sourcePath', 'source' as a string)
     });
   });
 
@@ -1156,6 +1201,8 @@ _.extend(JsImageTarget.prototype, {
         source: file.contents().toString('utf8'),
         nodeModulesDirectory: file.nodeModulesDirectory,
         staticDirectory: file.staticDirectory
+        sourceMap: file.sourceMap,
+        sources: file.sources
       });
     });
 

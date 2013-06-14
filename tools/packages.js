@@ -12,6 +12,7 @@ var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require(path.join(__dirname, 'linker.js'));
 var unipackage = require('./unipackage.js');
 var fs = require('fs');
+var sourcemap = require('source-map');
 
 // Find all files under `rootPath` that have an extension in
 // `extensions` (an array of extensions without leading dot), and
@@ -180,7 +181,7 @@ var Slice = function (pkg, options) {
   // source path given in sourceMap (no leading '/') to:
   // - package: package name, or null for app
   // - sourcePath: original relative path within 'package' or app
-  // - path: absolute path on disk to the source file
+  // - source: full contents of the original source file, as a Buffer
   //
   // Set only when isBuilt is true.
   self.resources = null;
@@ -547,7 +548,7 @@ _.extend(Slice.prototype, {
     var jsResources = _.map(files, function (file) {
       return {
         type: "js",
-        data: new Buffer(file.source, 'utf8'),
+        data: new Buffer(file.source, 'utf8'), // XXX encoding
         servePath: file.servePath,
         staticDirectory: self.staticDirectory
         sourceMap: file.sourceMap,
@@ -1891,7 +1892,18 @@ _.extend(Package.prototype, {
         if (resource.type === "prelink") {
           slice.prelinkFiles.push({
             source: data.toString('utf8'),
-            servePath: resource.servePath
+            servePath: resource.servePath,
+            // XXX XXX sourceMap and sources should come from separate
+            // files (and probably be lazily loaded..)
+            sourceMap: resource.sourceMap ?
+              sourcemap.SourceMapGenerator.fromSourceMap(new sourcemap.SourceMapConsumer(resource.sourceMap)) : undefined,
+            sources: resource.sourceMap ? _.map(resource.sources, function (x) {
+              return {
+                package: x.package,
+                sourcePath: x.sourcePath,
+                source: new Buffer(x.source, 'utf8')
+              };
+            }) : undefined
           });
         } else if (_.contains(["head", "body", "css", "js", "static"],
                               resource.type)) {
@@ -2067,7 +2079,17 @@ _.extend(Package.prototype, {
             file: resourcePath,
             length: data.length,
             offset: 0,
-            servePath: file.servePath || undefined
+            servePath: file.servePath || undefined,
+            // XXX XXX these should actually be written to separate files!
+            // (sourceMap and the actual source files in 'sources'
+            sourceMap: file.sourceMap ? file.sourceMap.toString() : undefined,
+            sources: file.sourceMap ? _.map(file.sources, function (x) {
+              return {
+                package: x.package,
+                sourcePath: x.sourcePath,
+                source: x.source.toString('utf8')
+              }
+            }) : undefined
           });
         });
 

@@ -1,5 +1,6 @@
 var fs = require('fs');
 var _ = require('underscore');
+var sourcemap = require('source-map');
 var buildmessage = require('./buildmessage');
 
 var packageDot = function (name) {
@@ -112,7 +113,7 @@ _.extend(Module.prototype, {
 
   // Output is a list of objects with keys 'source', 'servePath',
   // 'sourceMap', 'sources' (map from relative path in source map to
-  // 'package', 'sourcePath', 'path')
+  // 'package', 'sourcePath', 'source')
   getLinkedFiles: function () {
     var self = this;
 
@@ -131,12 +132,20 @@ _.extend(Module.prototype, {
       }];
 
       return ret.concat(_.map(self.files, function (file) {
+        var node = file.getLinkedOutput({ preserveLineNumbers: true,
+                                          exports: moduleExports }),
+        var results = node.toStringWithSourceMap({
+          file: file.servePath
+        }); // results has 'code' and 'map' attributes
+
+        sources = {};
+        file.addToSourcesSet(sources);
+
         return {
-          source: file.getLinkedOutput({ preserveLineNumbers: true,
-                                         exports: moduleExports }),
+          source: results.code,
           servePath: file.servePath,
-          sourceMap: null, // XXX XXX
-          sources: {} // XXX XXX
+          sourceMap: results.map,
+          sources: sources
         };
       }));
     }
@@ -151,30 +160,37 @@ _.extend(Module.prototype, {
     var moduleScopedVars = self.computeModuleScopedVars();
 
     // Prologue
-    var combined = "(function () {\n\n";
-    combined += self.boundary;
+    var chunks = [];
+    chunks.push("(function () {\n\n" + self.boundary);
 
     if (moduleScopedVars.length) {
-      combined += "/* Package-scope variables */\n";
-      combined += "var " + moduleScopedVars.join(', ') + ";\n\n";
+      chunks.push("/* Package-scope variables */\n");
+      chunks.push("var " + moduleScopedVars.join(', ') + ";\n\n");
     }
 
     // Emit each file
+    var sources = {};
     _.each(self.files, function (file) {
-      combined += file.getLinkedOutput({ sourceWidth: sourceWidth,
-                                         exports: moduleExports });
-      combined += "\n";
+      chunks.push(file.getLinkedOutput({ sourceWidth: sourceWidth,
+                                         exports: moduleExports }));
+      chunks.push("\n");
+      file.addToSourcesSet(sources);
     });
 
     // Epilogue
-    combined += self.getExportCode();
-    combined += "\n})();";
+    chunks.push(self.getExportCode());
+    chunks.push("\n})();");
+
+    var node = new sourcemap.SourceNode(null, null, null, chunks);
+    var results = node.toStringWithSourceMap({
+      file: self.combinedServePath
+    }); // results has 'code' and 'map' attributes
 
     return [{
-      source: combined,
+      source: results.code,
       servePath: self.combinedServePath,
-      sourceMap: null, // XXX XXX
-      sources: {} // XXX XXX
+      sourceMap: results.map,
+      sources: sources
     }];
   },
 
@@ -291,8 +307,13 @@ var File = function (inputFile, module) {
   // the path where this file would prefer to be served if possible
   self.servePath = inputFile.servePath;
 
-  // the path to use for error message
+  // The relative path of this input file in its source tree (eg,
+  // package or app.) Used for source maps, error messages..
   self.sourcePath = inputFile.sourcePath;
+
+  // The source tree to which sourcePath is relative. Either a name of
+  // a package, or null to mean "the app".
+  self.package = null; // XXX XXX actually set this
 
   // should line and column be included in errors?
   self.includePositionInErrors = inputFile.includePositionInErrors;
@@ -331,32 +352,60 @@ _.extend(File.prototype, {
     return globalReferences;
   },
 
+  // Relative path to use in source maps to indicate this file. No
+  // leading slash.
+  _pathForSourceMap: function () {
+    var self = this;
+
+    if (self.package)
+      return "package/" + self.package + "/" + self.sourcePath;
+    else
+      return "app/" + self.sourcePath;
+  },
+
+  // Add to a 'sources' set (a map from source map relative paths to
+  // info about each source file)
+  addToSourcesSet: function (sources) {
+    var self = this;
+    sources[self._pathForSourceMap()] = {
+      package: self.package,
+      sourcePath: self.sourcePath,
+      source: new Buffer(self.source, 'utf8') // XXX encoding
+    };
+  },
+
   // Options:
   // - preserveLineNumbers: if true, decorate minimally so that line
   //   numbers don't change between input and output. In this case,
   //   sourceWidth is ignored.
   // - sourceWidth: width in columns to use for the source code
   // - exports: the module's exports
+  //
+  // Returns a SourceNode.
   getLinkedOutput: function (options) {
     var self = this;
-
-    // XXX XXX if a unit is not going to be used, prepend each line with '//'
 
     // The newline after the source closes a '//' comment.
     if (options.preserveLineNumbers) {
       // Ugly version
+      // XXX XXX need to propagate source maps through linkerUnitTransform!
       var body = self.linkerUnitTransform(self.source, options.exports);
-      if (body.length && body[body.length - 1] !== '\n')
-        body += '\n';
-      return self.bare ? body : ("(function(){" + body + "})();\n");
+      return new sourcemap.SourceNode(null, null, null, [
+        self.bare ? "" : "(function(){",
+        new sourcemap.SourceNode(1, 0, self._pathForSourceMap(),
+                                 body),
+        body.length && body[body.length - 1] !== '\n' ? "\n" : "",
+        self.bare ? "" : "\n})();\n"
+      ]);
     }
 
     // Pretty version
-    var buf = "";
+    var chunks = [];
+    var header = "";
 
     // Prologue
-    if (!self.bare)
-      buf += "(function () {\n\n";
+    if (! self.bare)
+      header += "(function () {\n\n";
 
     // Banner
     var width = options.sourceWidth || 70;
@@ -365,14 +414,16 @@ _.extend(File.prototype, {
     var spacer = "// " + new Array(bannerWidth - 6 + 1).join(' ') + " //\n";
     var padding = new Array(bannerWidth + 1).join(' ');
     var blankLine = new Array(width + 1).join(' ') + " //\n";
-    buf += divider + spacer;
-    buf += "// " + (self.servePath.slice(1) + padding).slice(0, bannerWidth - 6) +
-      " //\n";
+    header += divider + spacer;
+    header += "// " +
+      (self.servePath.slice(1) + padding).slice(0, bannerWidth - 6) + " //\n";
     if (self.bare) {
       var bareText = "This file is in bare mode and is not in its own closure.";
-      buf += "// " + (bareText + padding).slice(0, bannerWidth - 6) + " //\n";
+      header += "// " +
+        (bareText + padding).slice(0, bannerWidth - 6) + " //\n";
     }
-    buf += spacer + divider + blankLine;
+    header += spacer + divider + blankLine;
+    chunks.push(header);
 
     // Code, with line numbers
     // You might prefer your line numbers at the beginning of the
@@ -384,26 +435,41 @@ _.extend(File.prototype, {
       var unitSource = self.linkerUnitTransform(unit.source, options.exports);
       var lines = unitSource.split('\n');
 
+      // There are probably ways to make a more compact source
+      // map. For example, for an included unit, the only change we
+      // make is to append a comment, so we can probably emit one
+      // mapping for the whole unit. And for a non-included unit, we
+      // can probably tolerate mapping it inexactly or not at all
+      // (since it's in a comment.) For the moment, we'll do it by the
+      // book just to see how it goes.
+
       _.each(lines, function (line) {
-        if (! unit.include)
-          line = "// " + line;
-        if (line.length > width)
-          buf += line + "\n";
-        else
-          buf += (line + padding).slice(0, width) + " // " + num + "\n";
+        var prefix = "", suffix = "\n";
+
+        if (! unit.include) {
+          prefix = "// ";
+        }
+
+        var lengthWithPrefix = line.length + prefix.length;
+        if (lengthWithPrefix <= width) {
+          suffix = padding.slice(lengthWithPrefix, width) + " // " + num + "\n";
+        }
+
+        chunks.push(prefix);
+        chunks.push(new sourcemap.SourceNode(num, 0, self._pathForSourceMap(),
+                                             line));
+        chunks.push(suffix);
+
         num++;
       });
     });
 
     // Footer
-    buf += divider;
+    if (! self.bare)
+      chunks.push(divider + "\n}).call(this);\n");
+    chunks.push("\n\n\n\n\n");
 
-    // Epilogue
-    if (!self.bare)
-      buf += "\n}).call(this);\n";
-    buf += "\n\n\n\n\n";
-
-    return buf;
+    return new sourcemap.SourceNode(null, null, null, chunks);
   },
 
   // If "line" contains nothing but a comment (of either syntax), return the
@@ -693,6 +759,8 @@ var link = function (options) {
 
   var ret = [];
   _.each(options.prelinkFiles, function (file) {
+    // XXX XXX obviously, mucking with boundary ruins the source
+    // map.. need a new approach here
     var source = file.source;
     var parts = source.split(options.boundary);
     if (parts.length > 2)
@@ -702,9 +770,12 @@ var link = function (options) {
       if (source.length === 0)
         return; // empty global-imports file -- elide
     }
+
     ret.push({
       source: source,
-      servePath: file.servePath
+      servePath: file.servePath,
+      sourceMap: file.sourceMap,
+      sources: file.sources
     });
   });
 
