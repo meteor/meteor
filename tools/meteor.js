@@ -790,7 +790,19 @@ Fiber(function () {
 
       } else if (new_argv._.length === 2) {
         // remote mode
-        deploy.mongo(new_argv._[1], new_argv.url);
+        if (!!context.galaxyUrl) {
+          var deployGalaxy = require('./deploy-galaxy.js');
+          var url = deployGalaxy.tempMongoUrl({
+            app: new_argv._[1],
+            context: context
+          });
+          if (new_argv.url)
+            process.stdout.write(url + "\n");
+          else
+            deploy.run_mongo_shell(url);
+        } else {
+          deploy.mongo(new_argv._[1], new_argv.url);
+        }
 
       } else {
         // usage
