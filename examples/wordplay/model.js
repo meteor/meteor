@@ -113,11 +113,11 @@ Meteor.methods({
 
     // now only on the server, check against dictionary and score it.
     if (Meteor.isServer) {
-      if (DICTIONARY.indexOf(word.word.toLowerCase()) === -1) {
-        Words.update(word._id, {$set: {score: 0, state: 'bad'}});
-      } else {
+      if (_.has(DICTIONARY, word.word.toLowerCase())) {
         var score = Math.pow(2, word.word.length - 3);
         Words.update(word._id, {$set: {score: score, state: 'good'}});
+      } else {
+        Words.update(word._id, {$set: {score: 0, state: 'bad'}});
       }
     }
   }
@@ -125,14 +125,12 @@ Meteor.methods({
 
 
 if (Meteor.isServer) {
-  DICTIONARY = Assets.getText("enable2k.txt").split("\n");
-  // Remove comment lines
-  DICTIONARY = _.filter(DICTIONARY, function (line) {
-    return line.indexOf("//") !== 0;
-  });
-  // Remove quotes and commas from words
-  DICTIONARY = _.map(DICTIONARY, function (line) {
-    return line.replace(/'/g, "").replace(",", "");
+  DICTIONARY = {};
+  _.each(Assets.getText("enable2k.txt").split("\n"), function (line) {
+    // Skip comment lines
+    if (line.indexOf("//") !== 0) {
+      DICTIONARY[line] = true;
+    }
   });
 
   // publish all the non-idle players.
