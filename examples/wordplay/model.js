@@ -16,6 +16,8 @@ var DICE = ['PCHOAS', 'OATTOW', 'LRYTTE', 'VTHRWE',
             'MTOICU', 'AFPKFS', 'XLDERI', 'ENSIEU',
             'YLDEVR', 'ZNRNHL', 'NMIQHU', 'OBBAOJ'];
 
+var DICTIONARY = null;
+
 // board is an array of length 16, in row-major order.  ADJACENCIES
 // lists the board positions adjacent to each board position.
 var ADJACENCIES = [
@@ -123,6 +125,16 @@ Meteor.methods({
 
 
 if (Meteor.isServer) {
+  DICTIONARY = Assets.getText("enable2k.txt").split("\n");
+  // Remove comment lines
+  DICTIONARY = _.filter(DICTIONARY, function (line) {
+    return line.indexOf("//") !== 0;
+  });
+  // Remove quotes and commas from words
+  DICTIONARY = _.map(DICTIONARY, function (line) {
+    return line.replace(/'/g, "").replace(",", "");
+  });
+
   // publish all the non-idle players.
   Meteor.publish('players', function () {
     return Players.find({idle: false});
@@ -143,4 +155,3 @@ if (Meteor.isServer) {
                              {player_id: player_id}]});
   });
 }
-

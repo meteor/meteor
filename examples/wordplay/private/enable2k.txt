@@ -1,8 +1,6 @@
 // enable2k dictionary courtesy of http://www.morewords.com/, public
 // domain.  includes standard inflections, which are missing in
 // /usr/share/dict/words.
-
-DICTIONARY = [
 'aa',
 'aah',
 'aahed',
@@ -173531,4 +173529,3 @@ DICTIONARY = [
 'zymurgy',
 'zyzzyva',
 'zyzzyvas'
-];
