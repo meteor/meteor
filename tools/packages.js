@@ -1944,7 +1944,7 @@ _.extend(Package.prototype, {
       _.each(buildInfoJson.dependencies.directories, function (d) {
         _.each(["include", "exclude"], function (k) {
           d[k] = _.map(d[k], function (r) {
-            return r.sources;
+            return r.source;
           });
         });
       });
