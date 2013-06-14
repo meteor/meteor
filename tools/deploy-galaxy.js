@@ -228,3 +228,12 @@ exports.logs = function (options) {
     logReader.close();
   }
 };
+
+// options:
+// - context
+// - app
+exports.mongo = function (options) {
+  var galaxy = getGalaxy(options.context);
+  console.log(options.app);
+  return galaxy.call('getTempMongoUrl', options.app);
+};
