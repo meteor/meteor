@@ -20,7 +20,6 @@ Fiber(function () {
   var warehouse = require('./warehouse.js');
   var logging = require('./logging.js');
 
-
   var Future = require('fibers/future');
   // This code is duplicated in app/server/server.js.
   var MIN_NODE_VERSION = 'v0.8.24';
@@ -767,9 +766,11 @@ Fiber(function () {
       }
 
       var new_argv = opt.argv;
+      var mongoUrl;
 
       if (new_argv._.length === 1) {
         // localhost mode
+        var fut = new Future();
         find_mongo_port("mongo", function (mongod_port) {
           if (!mongod_port) {
             process.stdout.write(
@@ -780,34 +781,32 @@ Fiber(function () {
             process.exit(1);
           }
 
-          var mongo_url = "mongodb://127.0.0.1:" + mongod_port + "/meteor";
-
-          if (new_argv.url)
-            console.log(mongo_url);
-          else
-            deploy.run_mongo_shell(mongo_url);
+          fut.return("mongodb://127.0.0.1:" + mongod_port + "/meteor");
         });
+        mongoUrl = fut.wait();
 
       } else if (new_argv._.length === 2) {
         // remote mode
-        if (!!context.galaxyUrl) {
+        if (context.galaxyUrl) {
           var deployGalaxy = require('./deploy-galaxy.js');
-          var url = deployGalaxy.temporaryMongoUrl({
+          mongoUrl = deployGalaxy.temporaryMongoUrl({
             app: new_argv._[1],
             context: context
           });
-          if (new_argv.url)
-            process.stdout.write(url + "\n");
-          else
-            deploy.run_mongo_shell(url);
         } else {
-          deploy.mongo(new_argv._[1], new_argv.url);
+          mongoUrl = deploy.temporaryMongoUrl(new_argv._[1]);
         }
-
       } else {
         // usage
         process.stdout.write(opt.help());
         process.exit(1);
+      }
+
+      if (new_argv.url) {
+        console.log(mongoUrl);
+      } else {
+        process.stdin.pause();
+        deploy.run_mongo_shell(mongoUrl);
       }
     }
   });

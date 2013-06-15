@@ -11,6 +11,7 @@ var warehouse = require('./warehouse.js');
 var buildmessage = require('./buildmessage.js');
 var _ = require('underscore');
 var inFiber = require('./fiber-helpers.js').inFiber;
+var Future = require('fibers/future');
 
 //
 // configuration
@@ -176,33 +177,21 @@ var delete_app = function (url) {
   });
 };
 
-// either print the mongo credential (just_credential is true) or open
-// a mongo shell.
-var mongo = function (url, just_credential) {
+var temporaryMongoUrl = function (url) {
   var parsed_url = parse_url(url);
-
+  var passwordFut = new Future();
   with_password(parsed_url.hostname, function (password) {
-    var opts = {};
-    if (password) opts.password = password;
-
-    meteor_rpc('mongo', 'GET', parsed_url.hostname, opts, function (err, body) {
-      if (err) {
-        process.stderr.write(body + "\n");
-        process.exit(1);
-      }
-
-      if (just_credential) {
-        // just print the URL
-        process.stdout.write(body + "\n");
-
-      } else {
-        // pause stdin so we don't try to read it while mongo is
-        // running.
-        process.stdin.pause();
-        run_mongo_shell(body);
-      }
-    });
+    passwordFut.return(password);
   });
+  var password = passwordFut.wait();
+  var urlFut = new Future();
+  var opts = {};
+  if (password)
+    opts.password = password;
+  meteor_rpc('mongo', 'GET',
+             parsed_url.hostname, opts, urlFut.resolver());
+  var mongoUrl = urlFut.wait();
+  return mongoUrl;
 };
 
 var logs = function (url) {
@@ -386,7 +375,7 @@ var get_new_password = function (callback) {
 exports.deployCmd = deployCmd;
 exports.deployToServer = deployToServer;
 exports.delete_app = delete_app;
-exports.mongo = mongo;
+exports.temporaryMongoUrl = temporaryMongoUrl;
 exports.logs = logs;
 
 exports.run_mongo_shell = run_mongo_shell;
