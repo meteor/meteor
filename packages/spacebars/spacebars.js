@@ -656,7 +656,7 @@ Spacebars.compile = function (inputString) {
     var argCode = codeGenArgs(tag.args, funcInfo);
 
     return 'String(Spacebars.call(' + nameCode +
-      (argCode ? ', ' + argCode.join(', ') : '') + '))';
+      (argCode ? ', ' + argCode.join(', ') : '') + ') || "")';
   };
 
   // Return the source code of a string or (reactive) function

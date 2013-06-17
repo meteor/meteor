@@ -364,14 +364,14 @@ Tinytest.add("spacebars - compiler", function (test) {
 
       'function (buf) {',
       '  var self = this;',
-      '  buf.openTag("a", {"foo": function () { return String(Spacebars.call(self.lookup("bar"))); }});',
+      '  buf.openTag("a", {"foo": function () { return String(Spacebars.call(self.lookup("bar")) || ""); }});',
       '}');
 
   run('<a foo={{bar.baz}}>',
 
       'function (buf) {',
       '  var self = this;',
-      '  buf.openTag("a", {"foo": function () { return String(Spacebars.call(Spacebars.index(self.lookup("bar"), "baz"))); }});',
+      '  buf.openTag("a", {"foo": function () { return String(Spacebars.call(Spacebars.index(self.lookup("bar"), "baz")) || ""); }});',
       '}');
 
   run('foo {{bar}} baz',
@@ -379,7 +379,7 @@ Tinytest.add("spacebars - compiler", function (test) {
       'function (buf) {',
       '  var self = this;',
       '  buf.text("foo ");',
-      '  buf.text(function () { return String(Spacebars.call(self.lookup("bar"))); });',
+      '  buf.text(function () { return String(Spacebars.call(self.lookup("bar")) || ""); });',
       '  buf.text(" baz");',
       '}');
 
@@ -388,7 +388,7 @@ Tinytest.add("spacebars - compiler", function (test) {
       'function (buf) {',
       '  var self = this;',
       '  buf.text("foo ");',
-      '  buf.rawHtml(function () { return String(Spacebars.call(self.lookup("bar"))); });',
+      '  buf.rawHtml(function () { return String(Spacebars.call(self.lookup("bar")) || ""); });',
       '  buf.text(" baz");',
       '}');
 
@@ -397,7 +397,7 @@ Tinytest.add("spacebars - compiler", function (test) {
       'function (buf) {',
       '  var self = this;',
       '  buf.text("foo ");',
-      '  buf.text(function () { return String(Spacebars.call(self.lookup("bar"), "hello")); });',
+      '  buf.text(function () { return String(Spacebars.call(self.lookup("bar"), "hello") || ""); });',
       '  buf.text(" baz");',
       '}');
 
@@ -406,7 +406,7 @@ Tinytest.add("spacebars - compiler", function (test) {
       'function (buf) {',
       '  var self = this;',
       '  buf.text("foo ");',
-      '  buf.text(function () { return String(Spacebars.call(self.lookup("bar"), Spacebars.call(self.lookup("hello")))); });',
+      '  buf.text(function () { return String(Spacebars.call(self.lookup("bar"), Spacebars.call(self.lookup("hello"))) || ""); });',
       '  buf.text(" baz");',
       '}');
 
@@ -414,7 +414,7 @@ Tinytest.add("spacebars - compiler", function (test) {
 
       'function (buf) {',
       '  var self = this;',
-      '  buf.text(function () { return String(Spacebars.call(Spacebars.index(self.lookup("foo"), "bar"), Spacebars.call(Spacebars.index(self.lookup("x"), "y")), 0, null, "hi", {"abc": Spacebars.call(Spacebars.index(self.lookup("z"), "w")), "z": 123.4})); });',
+      '  buf.text(function () { return String(Spacebars.call(Spacebars.index(self.lookup("foo"), "bar"), Spacebars.call(Spacebars.index(self.lookup("x"), "y")), 0, null, "hi", {"abc": Spacebars.call(Spacebars.index(self.lookup("z"), "w")), "z": 123.4}) || ""); });',
       '}');
 
   run('{{> foo bar baz=x.y}}',
