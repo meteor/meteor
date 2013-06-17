@@ -628,6 +628,18 @@ Spacebars.compile = function (inputString) {
     return parts.join('+');
   };*/
 
+  var codeGenBasicStache = function (tag, funcInfo) {
+    funcInfo.usedSelf = true;
+    var code = 'self.lookup(' + toJSLiteral(tag.path[0]) + ')';
+    if (tag.path.length > 1) {
+      code = 'Spacebars.index(' + code + ', ' +
+        _.map(tag.path.slice(1), toJSLiteral).join(', ') + ')';
+    }
+    // XXX pass args to `call`
+    code = 'String(Spacebars.call(' + code + '))';
+    return code;
+  };
+
   // Return the source code of a string or (reactive) function
   // (if necessary).
   var interpolate = function (strOrArray, funcInfo, interpolateMode) {
@@ -655,15 +667,7 @@ Spacebars.compile = function (inputString) {
               tag.type === 'DOUBLE')
             throw new Error("Can only have triple-stache for dynamic attributes");
 
-          funcInfo.usedSelf = true;
-          var code = 'self.lookup(' + toJSLiteral(tag.path[0]) + ')';
-          if (tag.path.length > 1) {
-            code = 'Spacebars.index(' + code + ', ' +
-              _.map(tag.path.slice(1), toJSLiteral).join(', ') + ')';
-          }
-          // XXX pass args to `call`
-          code = 'String(Spacebars.call(' + code + '))';
-          parts.push(code);
+          parts.push(codeGenBasicStache(tag, funcInfo));
           break;
         default:
           throw new Error("Unknown stache tag type: " + tag.type);
@@ -712,6 +716,11 @@ Spacebars.compile = function (inputString) {
                   break;
                 case 'DOUBLE':
                 case 'TRIPLE':
+                  bodyLines.push(
+                    'buf.' +
+                      (tag.type === 'TRIPLE' ? 'rawHtml' : 'text') +
+                      '(' + codeGenBasicStache(tag, funcInfo) +
+                      ');');
                   // XXX implement
                   break;
                 case 'COMMENT':

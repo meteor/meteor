@@ -357,4 +357,22 @@ Tinytest.add("spacebars - compiler", function (test) {
       '  var self = this;',
       '  buf.openTag("a", {"foo": function () { return String(Spacebars.call(Spacebars.index(self.lookup("bar"), "baz"))); }});',
       '}');
+
+  run('foo {{bar}} baz',
+
+      'function (buf) {',
+      '  var self = this;',
+      '  buf.text("foo ");',
+      '  buf.text(String(Spacebars.call(self.lookup("bar"))));',
+      '  buf.text(" baz");',
+      '}');
+
+  run('foo {{{bar}}} baz',
+
+      'function (buf) {',
+      '  var self = this;',
+      '  buf.text("foo ");',
+      '  buf.rawHtml(String(Spacebars.call(self.lookup("bar"))));',
+      '  buf.text(" baz");',
+      '}');
 });
