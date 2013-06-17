@@ -400,4 +400,12 @@ Tinytest.add("spacebars - compiler", function (test) {
       '  var self = this;',
       '  buf.text(function () { return String(Spacebars.call(Spacebars.index(self.lookup("foo"), "bar"), Spacebars.call(Spacebars.index(self.lookup("x"), "y")), 0, null, "hi", {"abc": Spacebars.call(Spacebars.index(self.lookup("z"), "w")), "z": 123.4})); });',
       '}');
+
+  run('{{> foo bar baz=x.y}}',
+
+      'function (buf) {',
+      '  var self = this;',
+      '  buf.component(function () { return ((self.lookup("foo")) || EmptyComponent).create({"data": Spacebars.call(self.lookup("bar")), "baz": Spacebars.call(Spacebars.index(self.lookup("x"), "y"))}); });',
+      '}');
+
 });
