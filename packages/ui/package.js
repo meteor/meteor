@@ -8,8 +8,13 @@ Package.on_use(function (api) {
   api.use('domutils');
   api.use('underscore', 'client');
   api.use('ejson', 'client');
+  api.use('ordered-dict', 'client');
 
-  api.add_files(['chunk.js', 'component.js', 'renderbuffer.js'],
+  // LocalCollection; weak dependency:
+  api.use('minimongo', 'client');
+
+  api.add_files(['chunk.js', 'component.js', 'renderbuffer.js',
+                 'library.js'],
                 'client');
 });
 

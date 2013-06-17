@@ -9,6 +9,7 @@ Package.on_use(function (api, where) {
   api.use('underscore', where);
   api.use('jsparse', where);
   api.use('html5-tokenizer', where);
+  api.use('ui');
   api.add_files(['spacebars.js'], where);
 });
 

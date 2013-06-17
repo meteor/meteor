@@ -2,8 +2,8 @@
 UI = {
   isComponentClass: function (value) {
     return (typeof value === 'function') &&
-      (value === Component ||
-       (value.protoype instanceof Component));
+      ((value === Component) ||
+       (value.prototype instanceof Component));
   },
   // Generated templates are put here.  This object must
   // be populated before any Components are actually
@@ -72,11 +72,13 @@ Component = function (args) {
     // this way?
     _.each(UI._templates, function (v, k) {
       if (UI.isComponentClass(global[k])) {
-        if (k.prototype.hasOwnProperty('render'))
+        var cls = global[k];
+        if (cls.prototype.hasOwnProperty('render') &&
+            cls.prototype.render !== v)
           throw new Error(
             'Component "' + k + '" has both a render method ' +
               'implementation and a template of that name');
-        k.prototype.render = v;
+        cls.prototype.render = v;
       }
     });
     templatesAssigned = true;
@@ -534,9 +536,33 @@ _.extend(Component.prototype, {
 
 _.extend(Component.prototype, {
   lookup: function (id) {
-    if (id === "foo")
-      return "David";
-    return null;
+    var self = this;
+
+    var result = null;
+    var thisToBind = null;
+    var data;
+
+    if (id in self) {
+      result = self[id];
+      thisToBind = self;
+    } else if (id === 'if') {
+      result = If;
+    } else if (id === 'each') {
+      result = Each;
+    } else if (id in global) {
+      result = global[id];
+      thisToBind = self.getArg('data') || null;
+    } else if ((data = self.getArg('data'))) {
+      thisToBind = data;
+      result = data[id];
+    }
+
+    if (thisToBind &&
+        typeof result === 'function' &&
+        ! UI.isComponentClass(result))
+      return _.bind(result, thisToBind);
+
+    return result;
   }
 });
 
