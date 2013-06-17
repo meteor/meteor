@@ -153,7 +153,7 @@ html_scanner = {
         throwParseError("Attributes on <body> not supported");
       results.js += "UI._templates.Body = " + renderFuncCode + ";\n";
       results.js += "Body = RootComponent.extend({ render: UI._templates.Body });\n";
-      results.js += 'Meteor.startup(function () { Body.create().attach(document.body); });\n';
+      results.js += 'Meteor.startup(function () { if (!(Body.prototype instanceof RootComponent)) throw new Error("Body must extend RootComponent"); Body.create().attach(document.body); });\n';
     }
   }
 };
