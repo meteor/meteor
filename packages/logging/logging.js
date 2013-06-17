@@ -13,6 +13,8 @@ var interceptedLines = [];
 Log._intercept = function (count) {
   intercept += count;
 };
+
+// Returns intercepted lines and resets the intercept counter.
 Log._intercepted = function () {
   var lines = interceptedLines;
   interceptedLines = [];
