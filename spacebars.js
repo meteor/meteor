@@ -794,3 +794,51 @@ Spacebars.compile = function (inputString) {
 
   return tokensToRenderFunc(tree.bodyTokens);
 };
+
+Spacebars.index = function (value/*, identifiers*/) {
+  var identifiers = Array.prototype.slice.call(arguments, 1);
+
+  // The object we got `curValue` from by indexing.
+  // For the value itself, we don't know the appropriate value
+  // of `this`, so we assume it is already bound.
+  var nextThis = null;
+
+  _.each(identifiers, function (id) {
+    if (typeof value === 'function' &&
+        ! UI.isComponentClass(value)) {
+      // Call a getter -- in `{{foo.bar}}`, call `foo()` if it
+      // is a function before indexing it with `bar`.
+      //
+      // In `{{foo blah=FooComponent.Bar}}`, treat
+      // `FooComponent` as a non-function.
+      value = value.call(nextThis);
+    }
+    nextThis = value;
+    if (value)
+      value = value[id];
+  });
+
+  if (typeof value === 'function' &&
+      ! UI.isComponentClass(value)) {
+    // bind `this` for resulting function, so it can be
+    // called with `Spacebars.call`.
+    value = _.bind(value, nextThis);
+  }
+
+  return value;
+};
+
+Spacebars.call = function (value/*, args*/) {
+  if (typeof value !== 'function' ||
+      UI.isComponentClass(value))
+    return value; // ignore args
+
+  var args = Array.prototype.slice.call(arguments, 1);
+
+  // There is a correct value of `this` for any given
+  // call, but we don't know it here.  It must be
+  // bound to the function in advance (so that `value`
+  // is actually a wrapper which ignores its `this`
+  // and supplies one).
+  return value.apply(null, args);
+};
