@@ -532,6 +532,13 @@ _.extend(Component.prototype, {
   rebuilt: function () {}
 });
 
+_.extend(Component.prototype, {
+  lookup: function (id) {
+    if (id === "foo")
+      return "David";
+    return null;
+  }
+});
 
 // Require ComponentClass.create(...) instead of
 // new CompomentClass(...) because a factory method gives
