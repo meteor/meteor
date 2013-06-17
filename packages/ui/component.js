@@ -505,7 +505,7 @@ _.extend(Component.prototype, {
         oldChild.constructor === newChild.constructor) {
       oldChild.update(newChild._args);
     } else if (this.stage !== Component.BUILT ||
-               oldChild !== Component.BUILT ||
+               oldChild.stage !== Component.BUILT ||
                ! oldChild.isAttached) {
       this.removeChild(key);
       this.addChild(newKey, newChild);
