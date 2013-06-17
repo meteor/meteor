@@ -270,7 +270,7 @@ Each = Component.extend({
 
     if (items.empty()) {
       buf.component(function () {
-        return (self.getArg('elseClass') || Component).create(
+        return (self.getArg('elseClass') || EmptyComponent).create(
           { data: self.getArg('data') });
       }, { key: 'else' });
     } else {
@@ -316,7 +316,7 @@ Each = Component.extend({
     var childId = self._itemChildId(id);
     if (self.items.size() === 0) {
       // made empty
-      var elseClass = self.getArg('elseClass') || Component;
+      var elseClass = self.getArg('elseClass') || EmptyComponent;
       var comp = elseClass.create({data: self.getArg('data')});
       self.replaceChild(childId, comp, 'else');
     } else {
