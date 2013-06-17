@@ -113,6 +113,7 @@ Log._getCallerDetails = function () {
 _.each(['debug', 'info', 'warn', 'error'], function (level) {
   // @param arg {String|Object}
   Log[level] = function (arg) {
+    var intercepted = false;
     if (intercept) {
       intercept--;
       intercepted = true;
