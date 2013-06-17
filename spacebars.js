@@ -573,13 +573,13 @@ Spacebars.compile = function (inputString) {
     return code;
   };
 
-  var codeGenBasicStache = function (tag, funcInfo) {
-    var code = codeGenPath(tag.path, funcInfo);
-
+  // returns: array of source strings, or null if no
+  // args at all
+  var codeGenArgs = function (tagArgs, funcInfo, forComponent) {
     var options = null; // source -> source
     var args = null; // [source]
 
-    _.each(tag.args, function (arg) {
+    _.each(tagArgs, function (arg, i) {
       var argType = arg[0];
       var argValue = arg[1];
 
@@ -605,19 +605,40 @@ Spacebars.compile = function (inputString) {
         options[toJSLiteral(arg[2])] = argCode;
       } else {
         // positional argument
-        args = (args || []);
-        args.push(argCode);
+        if (forComponent) {
+          // for Components, only take one positional
+          // argument, and call it `data`
+          if (i === 0) {
+            options = (options || {});
+            options[toJSLiteral('data')] = argCode;
+          }
+        } else {
+          args = (args || []);
+          args.push(argCode);
+        }
       }
     });
 
-    if (options) {
-      args = (args || []);
-      args.push(makeObjectLiteral(options));
+    if (forComponent) {
+      // components get one argument, the options dictionary
+      args = [options ? makeObjectLiteral(options) : '{}'];
+    } else {
+      // put options as dictionary at end of args
+      if (options) {
+        args = (args || []);
+        args.push(makeObjectLiteral(options));
+      }
     }
 
-    code = 'String(Spacebars.call(' + code +
-      (args ? ', ' + args.join(', ') : '') + '))';
-    return code;
+    return args;
+  };
+
+  var codeGenBasicStache = function (tag, funcInfo) {
+    var nameCode = codeGenPath(tag.path, funcInfo);
+    var argCode = codeGenArgs(tag.args, funcInfo);
+
+    return 'String(Spacebars.call(' + nameCode +
+      (argCode ? ', ' + argCode.join(', ') : '') + '))';
   };
 
   // Return the source code of a string or (reactive) function
@@ -692,7 +713,11 @@ Spacebars.compile = function (inputString) {
               } else {
                 switch (tag.type) {
                 case 'INCLUSION':
-                  // XXX implement
+                  var nameCode = codeGenPath(tag.path, funcInfo);
+                  var argCode =
+                        codeGenArgs(tag.args, funcInfo, true);
+                  bodyLines.push('buf.component(function () { return ((' + nameCode + ') || EmptyComponent).create(' +
+                                 (argCode ? argCode.join(', ') : '') + '); });');
                   break;
                 case 'DOUBLE':
                 case 'TRIPLE':
