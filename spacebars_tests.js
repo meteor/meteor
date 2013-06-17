@@ -363,7 +363,7 @@ Tinytest.add("spacebars - compiler", function (test) {
       'function (buf) {',
       '  var self = this;',
       '  buf.text("foo ");',
-      '  buf.text(String(Spacebars.call(self.lookup("bar"))));',
+      '  buf.text(function () { return String(Spacebars.call(self.lookup("bar"))); });',
       '  buf.text(" baz");',
       '}');
 
@@ -372,7 +372,32 @@ Tinytest.add("spacebars - compiler", function (test) {
       'function (buf) {',
       '  var self = this;',
       '  buf.text("foo ");',
-      '  buf.rawHtml(String(Spacebars.call(self.lookup("bar"))));',
+      '  buf.rawHtml(function () { return String(Spacebars.call(self.lookup("bar"))); });',
       '  buf.text(" baz");',
+      '}');
+
+  run('foo {{bar "hello"}} baz',
+
+      'function (buf) {',
+      '  var self = this;',
+      '  buf.text("foo ");',
+      '  buf.text(function () { return String(Spacebars.call(self.lookup("bar"), "hello")); });',
+      '  buf.text(" baz");',
+      '}');
+
+  run('foo {{bar hello}} baz',
+
+      'function (buf) {',
+      '  var self = this;',
+      '  buf.text("foo ");',
+      '  buf.text(function () { return String(Spacebars.call(self.lookup("bar"), Spacebars.call(self.lookup("hello")))); });',
+      '  buf.text(" baz");',
+      '}');
+
+  run('{{foo.bar x.y abc=z.w 0 null "hi" z=123.4}}',
+
+      'function (buf) {',
+      '  var self = this;',
+      '  buf.text(function () { return String(Spacebars.call(Spacebars.index(self.lookup("foo"), "bar"), Spacebars.call(Spacebars.index(self.lookup("x"), "y")), 0, null, "hi", {"abc": Spacebars.call(Spacebars.index(self.lookup("z"), "w")), "z": 123.4})); });',
       '}');
 });

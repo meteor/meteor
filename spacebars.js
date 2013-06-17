@@ -628,15 +628,63 @@ Spacebars.compile = function (inputString) {
     return parts.join('+');
   };*/
 
-  var codeGenBasicStache = function (tag, funcInfo) {
+  // `path` is an array of at least one string
+  var codeGenPath = function (path, funcInfo) {
     funcInfo.usedSelf = true;
-    var code = 'self.lookup(' + toJSLiteral(tag.path[0]) + ')';
-    if (tag.path.length > 1) {
+
+    var code = 'self.lookup(' + toJSLiteral(path[0]) + ')';
+    if (path.length > 1) {
       code = 'Spacebars.index(' + code + ', ' +
-        _.map(tag.path.slice(1), toJSLiteral).join(', ') + ')';
+        _.map(path.slice(1), toJSLiteral).join(', ') + ')';
     }
-    // XXX pass args to `call`
-    code = 'String(Spacebars.call(' + code + '))';
+
+    return code;
+  };
+
+  var codeGenBasicStache = function (tag, funcInfo) {
+    var code = codeGenPath(tag.path, funcInfo);
+
+    var options = null; // source -> source
+    var args = null; // [source]
+
+    _.each(tag.args, function (arg) {
+      var argType = arg[0];
+      var argValue = arg[1];
+
+      var argCode;
+      switch (argType) {
+      case 'STRING':
+      case 'NUMBER':
+      case 'BOOLEAN':
+      case 'NULL':
+        argCode = toJSLiteral(argValue);
+        break;
+      case 'PATH':
+        argCode = 'Spacebars.call(' +
+          codeGenPath(argValue, funcInfo) + ')';
+        break;
+      default:
+        throw new Error("Unexpected arg type: " + argType);
+      }
+
+      if (arg.length > 2) {
+        // keyword argument
+        options = (options || {});
+        options[toJSLiteral(arg[2])] = argCode;
+      } else {
+        // positional argument
+        args = (args || []);
+        args.push(argCode);
+      }
+    });
+
+    if (options) {
+      args = (args || []);
+      args.push(makeObjectLiteral(options));
+    }
+
+    code = 'String(Spacebars.call(' + code +
+      (args ? ', ' + args.join(', ') : '') + '))';
     return code;
   };
 
@@ -719,9 +767,9 @@ Spacebars.compile = function (inputString) {
                   bodyLines.push(
                     'buf.' +
                       (tag.type === 'TRIPLE' ? 'rawHtml' : 'text') +
-                      '(' + codeGenBasicStache(tag, funcInfo) +
-                      ');');
-                  // XXX implement
+                      '(function () { return ' +
+                      codeGenBasicStache(tag, funcInfo) +
+                      '; });');
                   break;
                 case 'COMMENT':
                   break;
