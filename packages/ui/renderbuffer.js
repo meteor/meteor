@@ -1,7 +1,19 @@
+// RenderBuffer is a friend class of Component that provides the
+// API for implementations of comp.render(buf) and knows how to
+// buffer HTML and then optionally wire it up as reactive DOM.
+//
+// Each Component creates its own instance of RenderBuffer during
+// render (i.e. build or server-side HTML generation).
+
 // @export RenderBuffer
-RenderBuffer = function (component) {
+RenderBuffer = function (component, options) {
   this._component = component;
+  if (! (component instanceof Component))
+    throw new Error("Component required as first argument");
+
   this._htmlBuf = [];
+
+  this._isPreview = !! (options && options.preview);
 
   this._builderId = Random.id();
   this._nextNum = 1;
@@ -94,6 +106,8 @@ _.extend(RenderBuffer.prototype, {
             var newValue = attrValue();
             initialValue = newValue;
             c.oldValue = newValue;
+            if (self._isPreview)
+              c.stop();
           } else {
             var newValue = attrValue();
             var comp = self._component;
@@ -114,7 +128,7 @@ _.extend(RenderBuffer.prototype, {
       buf.push('"');
     });
 
-    if (isElementReactive) {
+    if (isElementReactive && ! self._isPreview) {
       if (! elementKey) {
         if (! this._elementNextNums[tagName])
           this._elementNextNums[tagName] = 1;
@@ -174,11 +188,16 @@ _.extend(RenderBuffer.prototype, {
     var childComp = self._component.addChild(
       childKey, componentOrFunction);
 
-    var commentString = self.builderId + '_' +
-          (self._nextNum++);
-    self._htmlBuf.push('<!--' + commentString + '-->');
+    if (self._isPreview) {
+      self._htmlBuf.push(
+        childComp.getPreviewHtml());
+    } else {
+      var commentString = self.builderId + '_' +
+            (self._nextNum++);
+      self._htmlBuf.push('<!--' + commentString + '-->');
 
-    self._childrenToAttach[commentString] = childComp;
+      self._childrenToAttach[commentString] = childComp;
+    }
   },
   comment: function (stringOrFunction) {
     // XXX making comments reactively update seems
@@ -209,6 +228,9 @@ _.extend(RenderBuffer.prototype, {
   },
   build: function () {
     var self = this;
+
+    if (self._isPreview)
+      throw new Error("Can't build preview HTML as DOM");
 
     var html = self._htmlBuf.join('');
     var frag = DomUtils.htmlToFragment(html);
@@ -242,7 +264,7 @@ _.extend(RenderBuffer.prototype, {
           if (elemKey)
             self._component.registerElement(elemKey, n);
 
-          // recurse
+          // recurse through DOM
           wireUpDOM(n);
         }
         n = next;
@@ -256,5 +278,11 @@ _.extend(RenderBuffer.prototype, {
       start: start,
       end: end
     };
+  },
+  getFullHtml: function () {
+    if (! this._isPreview)
+      throw new Error("Can only get full HTML when previewing");
+
+    return this._htmlBuf.join('');
   }
 });

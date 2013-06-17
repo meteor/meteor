@@ -171,6 +171,8 @@ Each = Component.extend({
 // keys) to strings for storage in an OrderedDict.
 var idStringify;
 
+// XXX not clear if this is the right way to do a weak dependency
+// now, on the linker branch
 if (typeof LocalCollection !== 'undefined') {
   idStringify = function (id) {
     if (id === null)
@@ -182,7 +184,7 @@ if (typeof LocalCollection !== 'undefined') {
   idStringify = function (id) { return id; };
 }
 
-// XXX duplicated code from minimongo.js.  It's small though.
+// XXX duplicated code from minimongo.js.
 var applyChanges = function (doc, changeFields) {
   _.each(changeFields, function (value, key) {
     if (value === undefined)

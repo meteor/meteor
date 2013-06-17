@@ -289,6 +289,12 @@ _.extend(Component.prototype, {
     var beforeNode = toDetach.lastNode().nextSibling;
     toDetach.detach(true);
     toAttach.attach(parentNode, beforeNode);
+  },
+  getPreviewHtml: function () {
+    this._requireStage(Component.ADDED);
+    var buf = new RenderBuffer(this, { preview: true });
+    this.render(buf);
+    return buf.getFullHtml();
   }
 });
 
@@ -541,6 +547,10 @@ _.extend(Component.prototype, {
     var result = null;
     var thisToBind = null;
     var data;
+
+    // XXX figure out what this should really do,
+    // and how custom component classes should
+    // hook into this behavior.
 
     if (id in self) {
       result = self[id];
