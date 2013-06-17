@@ -30,7 +30,13 @@ Fiber(function () {
   }
 
   var sshTunnel = function (to, localPort, remoteEnd, keyfile) {
-    var args = [to, '-L', localPort+':'+remoteEnd, 'echo __CONNECTED__ && cat -'];
+    var args = [];
+    if (to.split(':')[1]){
+      var hostPort = to.split(':');
+      to = hostPort[0];
+      args = ['-p', hostPort[1]].concat(args);
+    }
+    args = args.concat([to, '-L', localPort+':'+remoteEnd, 'echo __CONNECTED__ && cat -']);
     if (keyfile)
       args = ["-i", keyfile].concat(args);
     var tunnel = cp.spawn('ssh', args, {
