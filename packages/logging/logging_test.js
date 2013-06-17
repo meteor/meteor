@@ -48,26 +48,36 @@ Tinytest.add("logging - log", function (test) {
 
     // Test logging falsy values, as well as single digits
     // and some other non-stringy things
-    var testcases = [1, 0, null, undefined, new Date(1371086116000),
-                     /[^regexp]{0,1}/g, true, false, -Infinity];
+    // In a format of testcase, expected result, name of the test.
+    var testcases = [
+          [1, "1", "single digit"],
+          [0, "0", "falsy - 0"],
+          [null, "null", "falsy - null"],
+          [undefined, "undefined", "falsy - undefined"],
+          ["2013-06-13T01:15:16.000Z", new Date("2013-06-13T01:15:16.000Z"), "date"],
+          [/[^regexp]{0,1}/g, "/[^regexp]{0,1}/g", "regexp"],
+          [true, "true", "boolean - true"],
+          [false, "false", "boolean - false"],
+          [-Infinity, "-Infinity", "number - -Infinity"]];
+
     Log._intercept(testcases.length);
     _.each(testcases, function (testcase) {
-      log(testcase);
+      log(testcase[0]);
     });
 
     intercepted = Log._intercepted();
-    var expected = ['1', '0', 'null', 'undefined', new Date(1371086116000), "/[^regexp]{0,1}/g", 'true', 'false', '-Infinity'];
-    var testNames = ['single digit', 'falsy - 0', 'falsy - null', 'falsy - undefined', 'date', 'regexp', 'boolean - true', 'boolean - false', 'number - -Infinity'];
 
     test.equal(intercepted.length, testcases.length);
 
-    _.each(_.zip(expected, intercepted, testNames), function (expectedRecievedTest) {
-      (function (expected, recieved, testName) {
-        var obj = EJSON.parse(recieved);
-        if (_.isDate(expected))
-          obj.message = new Date(obj.message);
-        test.equal(obj.message, expected, 'Logging ' + testName);
-      }).apply(this, expectedRecievedTest);
+    _.each(testcases, function (testcase, index) {
+      var expected = testcase[1];
+      var testName = testcase[2];
+      var recieved = intercepted[index];
+      var obj = EJSON.parse(recieved);
+
+      if (_.isDate(expected))
+        obj.message = new Date(obj.message);
+      test.equal(obj.message, expected, 'Logging ' + testName);
     });
 
     // Tests for correct exceptions
