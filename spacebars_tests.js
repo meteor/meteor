@@ -326,8 +326,24 @@ Tinytest.add("spacebars - compiler", function (test) {
   var run = function (input/*, expectedLines*/) {
     var expectedLines = Array.prototype.slice.call(arguments, 1);
     var expected = expectedLines.join('\n');
-    var output = Spacebars.compile(input);
-    test.equal(output, expected);
+    if (arguments[1].fail) {
+      var expectedMessage = arguments[1].fail;
+      // test for error starting with expectedMessage
+      var msg = '';
+      test.throws(function () {
+        try {
+          Spacebars.compile(input);
+        } catch (e) {
+          msg = e.message;
+          throw e;
+        }
+      });
+      test.equal(msg.slice(0, expectedMessage.length),
+                 expectedMessage);
+    } else {
+      var output = Spacebars.compile(input);
+      test.equal(output, expected);
+    }
   };
 
   run('abc',
@@ -408,4 +424,26 @@ Tinytest.add("spacebars - compiler", function (test) {
       '  buf.component(function () { return ((self.lookup("foo")) || EmptyComponent).create({"data": Spacebars.call(self.lookup("bar")), "baz": Spacebars.call(Spacebars.index(self.lookup("x"), "y"))}); });',
       '}');
 
+  run('{{#foo.bar}}{{/foo.baz}}', {fail: 'Close tag'});
+  run('{{/foo.bar}}{{#foo.bar}}', {fail: 'Unexpected close tag'});
+
+  run('{{#if foo}}bar{{/if}}',
+
+      'function (buf) {',
+      '  var self = this;',
+      '  buf.component(function () { return ((self.lookup("if")) || EmptyComponent).create({"data": Spacebars.call(self.lookup("foo")), "bodyClass": Component.extend({render: function (buf) {',
+      '    buf.text("bar");',
+      '  }})}); });',
+      '}');
+
+  run('{{#if foo}}bar{{else}}baz{{/if}}',
+
+      'function (buf) {',
+      '  var self = this;',
+      '  buf.component(function () { return ((self.lookup("if")) || EmptyComponent).create({"data": Spacebars.call(self.lookup("foo")), "bodyClass": Component.extend({render: function (buf) {',
+      '    buf.text("bar");',
+      '  }}), "elseClass": Component.extend({render: function (buf) {',
+      '    buf.text("baz");',
+      '  }})}); });',
+      '}');
 });

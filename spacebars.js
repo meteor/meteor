@@ -427,14 +427,16 @@ Spacebars.parse = function (inputString) {
         while (stacheTags[i] !== b.closeTag)
           i++;
       } else if (t.type === 'BLOCKCLOSE') {
+        var name = t.path.join('.');
         if (isTopLevel)
-          throw new Error("Unexpected close tag `" +t.name + "` at " +
+          throw new Error("Unexpected close tag `" + name + "` at " +
                           prettyOffset(inputString, t.charPos));
-        if (t.name !== block.openTag.name)
+        if (name !== block.openTag.path.join('.'))
           throw new Error("Close tag at " +
                           prettyOffset(inputString, t.charPos) +
-                          " doesn't match `" + block.openTag.name +
-                          "`, found `" + t.name + "`");
+                          " doesn't match `" +
+                          block.openTag.path.join('.') +
+                          "`, found `" + name + "`");
         block.closeTag = t;
       } else if (t.type === 'ELSE') {
         if (isTopLevel)
@@ -574,10 +576,18 @@ Spacebars.compile = function (inputString) {
   };
 
   // returns: array of source strings, or null if no
-  // args at all
-  var codeGenArgs = function (tagArgs, funcInfo, forComponent) {
+  // args at all.
+  // if forComponentWithOpts is truthy, perform
+  // component invocation argument handling.
+  // forComponentWithOpts is a map from name of keyword
+  // argument to source code.  For example,
+  // `{ bodyClass: "Component.extend(..." }`.
+  var codeGenArgs = function (tagArgs, funcInfo,
+                              forComponentWithOpts) {
     var options = null; // source -> source
     var args = null; // [source]
+
+    var forComponent = !! forComponentWithOpts;
 
     _.each(tagArgs, function (arg, i) {
       var argType = arg[0];
@@ -602,7 +612,10 @@ Spacebars.compile = function (inputString) {
       if (arg.length > 2) {
         // keyword argument
         options = (options || {});
-        options[toJSLiteral(arg[2])] = argCode;
+        if (! (forComponentWithOpts &&
+               (arg[2] in forComponentWithOpts))) {
+          options[toJSLiteral(arg[2])] = argCode;
+        }
       } else {
         // positional argument
         if (forComponent) {
@@ -620,6 +633,11 @@ Spacebars.compile = function (inputString) {
     });
 
     if (forComponent) {
+      _.each(forComponentWithOpts, function (v, k) {
+        options = (options || {});
+        options[toJSLiteral(k)] = v;
+      });
+
       // components get one argument, the options dictionary
       args = [options ? makeObjectLiteral(options) : '{}'];
     } else {
@@ -709,15 +727,33 @@ Spacebars.compile = function (inputString) {
               // tag or block
               var tag = tagOrStr;
               if (tag.isBlock) {
-                // XXX implement
+                var block = tag;
+                var nameCode = codeGenPath(
+                  block.openTag.path, funcInfo);
+                var extraArgs = {
+                  bodyClass: 'Component.extend({render: ' +
+                    tokensToRenderFunc(block.bodyTokens, indent) +
+                    '})'
+                };
+                if (block.elseTokens) {
+                  extraArgs.elseClass =
+                    'Component.extend({render: ' +
+                    tokensToRenderFunc(block.elseTokens, indent) +
+                    '})';
+                }
+                var argCode =
+                      codeGenArgs(block.openTag.args, funcInfo,
+                                  extraArgs)[0];
+                bodyLines.push('buf.component(function () { return ((' + nameCode + ') || EmptyComponent).create(' + argCode +
+                               '); });');
               } else {
                 switch (tag.type) {
                 case 'INCLUSION':
                   var nameCode = codeGenPath(tag.path, funcInfo);
                   var argCode =
-                        codeGenArgs(tag.args, funcInfo, true);
-                  bodyLines.push('buf.component(function () { return ((' + nameCode + ') || EmptyComponent).create(' +
-                                 (argCode ? argCode.join(', ') : '') + '); });');
+                        codeGenArgs(tag.args, funcInfo, {})[0];
+                  bodyLines.push('buf.component(function () { return ((' + nameCode + ') || EmptyComponent).create(' + argCode +
+                                 '); });');
                   break;
                 case 'DOUBLE':
                 case 'TRIPLE':
@@ -802,8 +838,8 @@ Spacebars.compile = function (inputString) {
       (bodyLines ?
        (funcInfo.usedSelf ?
         '\n' + indent + 'var self = this;' : '') +
-       '\n' + indent + bodyLines.join('\n' + indent) + '\n' :
-       '') + '}';
+       '\n' + indent + bodyLines.join('\n' + indent) + '\n' +
+       oldIndent : '') + '}';
   };
 
   return tokensToRenderFunc(tree.bodyTokens);
