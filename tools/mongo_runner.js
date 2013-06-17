@@ -125,7 +125,7 @@ var find_mongo_and_kill_it_dead = function (port, callback) {
   });
 };
 
-exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callback) {
+exports.launch_mongo = function (app_dir, ip, port, launch_callback, on_exit_callback) {
   var handle = {stop: function (callback) { callback(); } };
   launch_callback = launch_callback || function () {};
   on_exit_callback = on_exit_callback || function () {};
@@ -158,7 +158,7 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
     }
 
     var proc = child_process.spawn(mongod_path, [
-      '--bind_ip', '127.0.0.1',
+      '--bind_ip', ip,
       '--smallfiles',
       '--port', port,
       '--dbpath', data_path

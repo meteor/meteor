@@ -100,7 +100,7 @@ var request_queue = [];
 // calls callback once proxy is actively listening on outer and
 // proxying to inner.
 
-var start_proxy = function (outer_port, inner_port, callback) {
+var start_proxy = function (bind, inner_bind, outer_port, inner_port, callback) {
   callback = callback || function () {};
 
   var p = httpProxy.createServer(function (req, res, proxy) {
@@ -125,14 +125,14 @@ var start_proxy = function (outer_port, inner_port, callback) {
     } else if (Status.listening) {
       // server is listening. things are hunky dory!
       proxy.proxyRequest(req, res, {
-        host: '127.0.0.1', port: inner_port
+        host: inner_bind, port: inner_port
       });
     } else {
       // Not listening yet. Queue up request.
       var buffer = httpProxy.buffer(req);
       request_queue.push(function () {
         proxy.proxyRequest(req, res, {
-          host: '127.0.0.1', port: inner_port,
+          host: inner_bind, port: inner_port,
           buffer: buffer
         });
       });
@@ -144,14 +144,14 @@ var start_proxy = function (outer_port, inner_port, callback) {
     if (Status.listening) {
       // server is listening. things are hunky dory!
       p.proxy.proxyWebSocketRequest(req, socket, head, {
-        host: '127.0.0.1', port: inner_port
+        host: inner_bind, port: inner_port
       });
     } else {
       // Not listening yet. Queue up request.
       var buffer = httpProxy.buffer(req);
       request_queue.push(function () {
         p.proxy.proxyWebSocketRequest(req, socket, head, {
-          host: '127.0.0.1', port: inner_port,
+          host: inner_bind, port: inner_port,
           buffer: buffer
         });
       });
@@ -160,7 +160,7 @@ var start_proxy = function (outer_port, inner_port, callback) {
 
   p.on('error', function (err) {
     if (err.code == 'EADDRINUSE') {
-      process.stderr.write("Can't listen on port " + outer_port
+      process.stderr.write("Can't listen on " + bind + ":" + outer_port
                            + ". Perhaps another Meteor is running?\n");
       process.stderr.write("\n");
       process.stderr.write("Running two copies of Meteor in the same application directory\n");
@@ -183,7 +183,7 @@ var start_proxy = function (outer_port, inner_port, callback) {
     res.end('Unexpected error.');
   });
 
-  p.listen(outer_port, callback);
+  p.listen(outer_port, bind, callback);
 };
 
 ////////// MongoDB //////////
@@ -230,6 +230,7 @@ var start_server = function (options) {
   for (var k in process.env)
     env[k] = process.env[k];
 
+  env.IP = options.innerBind;
   env.PORT = options.innerPort;
   env.MONGO_URL = options.mongoURL;
   env.ROOT_URL = env.ROOT_URL || ('http://localhost:' + options.outerPort);
@@ -586,12 +587,14 @@ exports.getSettings = function (filename) {
 // options include: port, minify, once, settingsFile, testPackages
 exports.run = function (context, options) {
   var outer_port = options.port || 3000;
-  var inner_port = outer_port + 1;
-  var mongo_port = outer_port + 2;
+  var inner_port = options.inner_port || outer_port + 1;
+  var mongo_port = options.mongo_port || inner_port + 1;
+  var bind = options.bind || '0.0.0.0';
+  var inner_bind = options.inner_bind || '127.0.0.1';
   var bundle_path = path.join(context.appDir, '.meteor', 'local', 'build');
   // Allow override and use of external mongo. Matches code in launch_mongo.
   var mongo_url = process.env.MONGO_URL ||
-        ("mongodb://127.0.0.1:" + mongo_port + "/meteor");
+        ("mongodb://" + inner_bind + ":" + mongo_port + "/meteor");
   var firstRun = true;
 
   var deps_info = null;
@@ -758,6 +761,7 @@ exports.run = function (context, options) {
       bundlePath: bundle_path,
       outerPort: outer_port,
       innerPort: inner_port,
+      innerBind: inner_bind,
       mongoURL: mongo_url,
       onExit: function (code) {
         // on server exit
@@ -785,6 +789,7 @@ exports.run = function (context, options) {
   var launch = function () {
     Status.mongoHandle = mongo_runner.launch_mongo(
       context.appDir,
+      inner_bind,
       mongo_port,
       function () { // On Mongo startup complete
         // don't print mongo startup is slow warning.
@@ -825,7 +830,7 @@ exports.run = function (context, options) {
       });
   };
 
-  start_proxy(outer_port, inner_port, function () {
+  start_proxy(bind, inner_bind, outer_port, inner_port, function () {
     process.stdout.write("[[[[[ " + files.pretty_path(context.appDir) + " ]]]]]\n\n");
 
     mongo_startup_print_timer = setTimeout(function () {
