@@ -108,12 +108,9 @@ Tinytest.add("logging - log", function (test) {
       });
     });
 
-    // Since everything above throws, it shouldn't print anything,
-    // It clears the intercepted array as well.
+    // Since all tests above should throw, nothing should be printed.
+    // This call will set the logging interception to the clean state as well.
     test.equal(Log._intercepted().length, 0);
-    // Put counter back to 0.
-    // It didn't move and empty intercepted list proves it.
-    Log._intercept(-throwingTestcases.length);
   };
 
   logBothMessageAndObject(Log, 'info');

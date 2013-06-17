@@ -16,6 +16,7 @@ Log._intercept = function (count) {
 Log._intercepted = function () {
   var lines = interceptedLines;
   interceptedLines = [];
+  intercept = 0;
   return lines;
 };
 
