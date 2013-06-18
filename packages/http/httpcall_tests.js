@@ -457,14 +457,19 @@ if (Meteor.isServer) {
       do_test("/%2d%2d/nosuchfile", 200, /DOCTYPE/);
 
       // existing static file
-      do_test("/packages/http/httpcall_client.js", 200, /Meteor.http.call/);
-      do_test("/packages/http/../http/httpcall_client.js", 200, /Meteor.http.call/);
-      do_test("/packages/http/%2e%2e/http/httpcall_client.js", 200, /Meteor.http.call/);
-      do_test("/packages/http/%2E%2E/http/httpcall_client.js", 200, /Meteor.http.call/);
-      do_test("/packages/http/../../packages/http/httpcall_client.js", 200, /Meteor.http.call/);
-      do_test("/packages/http/%2e%2e/%2e%2e/packages/http/httpcall_client.js", 200, /Meteor.http.call/);
-      do_test("/packages/http/%2E%2E/%2E%2E/packages/http/httpcall_client.js", 200, /Meteor.http.call/);
-      do_test("/packages/http/../../../../../../packages/http/httpcall_client.js", 403);
+      var succeeds = [
+        "/packages/http/test_static.serveme",
+        "/packages/http/../http/test_static.serveme",
+        "/packages/http/%2e%2e/http/test_static.serveme",
+        "/packages/http/%2E%2E/http/test_static.serveme",
+        "/packages/http/../../packages/http/test_static.serveme",
+        "/packages/http/%2e%2e/%2e%2e/packages/http/test_static.serveme",
+        "/packages/http/%2E%2E/%2E%2E/packages/http/test_static.serveme",
+      ];
+      _.each(succeeds, function (path) {
+        do_test(path, 200, /static file serving/);
+      });
+      do_test("/packages/http/../../../../../../packages/http/test_static.serveme", 403);
 
       // file outside of our app
       do_test("/../../../../../../../../../../../bin/ls", 403);
