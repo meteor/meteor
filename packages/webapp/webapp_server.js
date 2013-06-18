@@ -216,12 +216,11 @@ var runWebAppServer = function () {
   // Auto-compress any json, javascript, or text.
   app.use(connect.compress());
 
-  var staticCacheablePath = path.join(clientDir, clientJson.staticCacheable);
-  if (staticCacheablePath) {
+  if (clientJson.staticCacheable) {
     // cacheable files are files that should never change. Typically
     // named by their hash (eg meteor bundled js and css files).
     // cache them ~forever (1yr)
-    app.use(connect.static(staticCacheablePath,
+    app.use(connect.static(path.join(clientDir, clientJson.staticCacheable),
                            {maxAge: 1000 * 60 * 60 * 24 * 365}));
   }
 
@@ -233,9 +232,9 @@ var runWebAppServer = function () {
   // bust caches. That way we can both get good caching behavior and
   // allow users to change assets without delay.
   // https://github.com/meteor/meteor/issues/773
-  var staticPath = path.join(clientDir, clientJson.static);
-  if (staticPath) {
-    app.use(connect.static(staticPath, {maxAge: 1000 * 60 * 60 * 24}));
+  if (clientJson.static) {
+    app.use(connect.static(path.join(clientDir, clientJson.static),
+                           {maxAge: 1000 * 60 * 60 * 24}));
   }
 
   var httpServer = http.createServer(app);
