@@ -581,7 +581,7 @@ Spacebars.compile = function (inputString) {
   // component invocation argument handling.
   // forComponentWithOpts is a map from name of keyword
   // argument to source code.  For example,
-  // `{ bodyClass: "Component.extend(..." }`.
+  // `{ body: "Component.extend(..." }`.
   var codeGenArgs = function (tagArgs, funcInfo,
                               forComponentWithOpts) {
     var options = null; // source -> source
@@ -731,12 +731,12 @@ Spacebars.compile = function (inputString) {
                 var nameCode = codeGenPath(
                   block.openTag.path, funcInfo);
                 var extraArgs = {
-                  bodyClass: 'Component.extend({render: ' +
+                  body: 'Component.extend({render: ' +
                     tokensToRenderFunc(block.bodyTokens, indent) +
                     '})'
                 };
                 if (block.elseTokens) {
-                  extraArgs.elseClass =
+                  extraArgs['else'] =
                     'Component.extend({render: ' +
                     tokensToRenderFunc(block.elseTokens, indent) +
                     '})';
