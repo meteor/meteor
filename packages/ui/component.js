@@ -682,6 +682,9 @@ RootComponent = Component.extend({
     this.stage = Component.ADDED;
 
     this._uid = Random.id();
+
+    // this would normally be called upon "add"
+    this.init();
   },
   render: function (buf) {
     var bodyClass = this.getArg('bodyClass');
