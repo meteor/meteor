@@ -670,14 +670,33 @@ RawHtmlComponent = Component.extend({
   }
 });
 
+// A RootComponent is the root of its Component tree in terms
+// of parent/child relationships.  It's the only kind of
+// component that can function without actually being added
+// to another component first.
+
 // @export RootComponent
 RootComponent = Component.extend({
   constructed: function () {
+    // skip the UNADDED phase completely
     this.stage = Component.ADDED;
+
+    this._uid = Random.id();
   },
   render: function (buf) {
     var bodyClass = this.getArg('bodyClass');
     if (bodyClass)
       buf.component(bodyClass.create(), {key: 'body'});
+  },
+  attached: function () {
+    RootComponent._attachedInstances[this._uid] = this;
+  },
+  detached: function () {
+    delete RootComponent._attachedInstances[this._uid];
+  },
+  destroyed: function () {
+    delete RootComponent._attachedInstances[this._uid];
   }
 });
+
+RootComponent._attachedInstances = {};
