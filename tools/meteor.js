@@ -1037,12 +1037,16 @@ Fiber(function () {
                 "to try the tests against many different browser versions.");
 
 
-      var new_argv = opt.argv;
-
       if (argv.help) {
         process.stdout.write(opt.help());
         process.exit(1);
       }
+
+      argv = opt.argv;
+      // remove 'test-packages'.
+      // XXX we need to fix up this argv stuff once and for all to provide a
+      // real interface to commands that isn't terrible.
+      argv._.shift();
 
       var testPackages;
       if (_.isEmpty(argv._)) {
@@ -1080,29 +1084,29 @@ Fiber(function () {
       files.cp_r(path.join(__dirname, 'test-runner-app'), context.appDir);
       // Undocumented flag to use a different test driver.
       project.add_package(context.appDir,
-                          new_argv['driver-package'] || 'test-in-browser');
+                          argv['driver-package'] || 'test-in-browser');
 
-      if (new_argv.deploy) {
+      if (argv.deploy) {
         var deployOptions = {
-          site: new_argv.deploy
+          site: argv.deploy
         };
         deploy.deployToServer(context.appDir, {
           nodeModulesMode: 'skip',
           testPackages: testPackages,
-          minify: new_argv.production,
+          minify: argv.production,
           releaseStamp: context.releaseVersion,
           library: context.library
         }, {
-          site: new_argv.deploy,
-          settings: new_argv.settings && runner.getSettings(new_argv.settings)
+          site: argv.deploy,
+          settings: argv.settings && runner.getSettings(argv.settings)
         });
       } else {
         runner.run(context, {
-          port: new_argv.port,
-          minify: new_argv.production,
-          once: new_argv.once,
+          port: argv.port,
+          minify: argv.production,
+          once: argv.once,
           testPackages: testPackages,
-          settingsFile: new_argv.settings,
+          settingsFile: argv.settings,
           banner: "Tests"
         });
       }
