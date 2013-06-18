@@ -912,14 +912,17 @@ _.extend(Package.prototype, {
 
     var isPortable = true;
     var nodeModulesPath = null;
-    if (options.npmDependencies) {
-      meteorNpm.ensureOnlyExactVersions(options.npmDependencies);
-      var npmOk =
-        meteorNpm.updateDependencies(name, options.npmDir,
-                                     options.npmDependencies);
-      if (npmOk && ! meteorNpm.dependenciesArePortable(options.npmDir))
-        isPortable = false;
-      nodeModulesPath = path.join(options.npmDir, 'node_modules');
+    meteorNpm.ensureOnlyExactVersions(options.npmDependencies);
+    if (options.npmDir) {
+      // Always run updateDependencies, even if there are no dependencies: there
+      // may be a .npm directoryon disk to delete.
+      if (meteorNpm.updateDependencies(name, options.npmDir,
+                                       options.npmDependencies)) {
+        // At least one dependency was installed, and there were no errors.
+        if (!meteorNpm.dependenciesArePortable(options.npmDir))
+          isPortable = false;
+        nodeModulesPath = path.join(options.npmDir, 'node_modules');
+      }
     }
 
     var arch = isPortable ? "native" : archinfo.host();
@@ -1400,39 +1403,41 @@ _.extend(Package.prototype, {
     // Grab any npm dependencies. Keep them in a cache in the package
     // source directory so we don't have to do this from scratch on
     // every build.
+
+    // We used to put this directly in .npm, but in linker-land, the package's
+    // own NPM dependencies go in .npm/package and build plugin X's goes in
+    // .npm/plugin/X. Notably, the former is NOT an ancestor of the latter, so
+    // that a build plugin does NOT see the package's node_modules.
+    // XXX maybe there should be separate NPM dirs for use vs test?
+    var packageNpmDir =
+          path.resolve(path.join(self.sourceRoot, '.npm', 'package'));
+    var npmOk = true;
+
+    if (! options.skipNpmUpdate) {
+      // If this package was previously built with pre-linker versions, it may
+      // have files directly inside `.npm` instead of nested inside
+      // `.npm/package`. Clean them up if they are there.
+      var preLinkerFiles = [
+        'npm-shrinkwrap.json', 'README', '.gitignore', 'node_modules'];
+      _.each(preLinkerFiles, function (f) {
+        files.rm_recursive(path.join(self.sourceRoot, '.npm', f));
+      });
+
+      // go through a specialized npm dependencies update process,
+      // ensuring we don't get new versions of any
+      // (sub)dependencies. this process also runs mostly safely
+      // multiple times in parallel (which could happen if you have
+      // two apps running locally using the same package)
+      // We run this even if we have no dependencies, because we might
+      // need to delete dependencies we used to have.
+      npmOk = meteorNpm.updateDependencies(name, packageNpmDir,
+                                           npmDependencies);
+    }
+
     var nodeModulesPath = null;
-    if (npmDependencies) {
-
-      // We used to put this directly in .npm, but in linker-land, the package's
-      // own NPM dependencies go in .npm/package and build plugin X's goes in
-      // .npm/plugin/X. Notably, the former is NOT an ancestor of the latter, so
-      // that a build plugin does NOT see the package's node_modules.
-      // XXX maybe there should be separate NPM dirs for use vs test?
-      var packageNpmDir =
-        path.resolve(path.join(self.sourceRoot, '.npm', 'package'));
-      var npmOk = true;
-
-      if (! options.skipNpmUpdate) {
-        // If this package was previously built with pre-linker versions, it may
-        // have files directly inside `.npm` instead of nested inside
-        // `.npm/package`. Clean them up if they are there.
-        var preLinkerFiles = [
-          'npm-shrinkwrap.json', 'README', '.gitignore', 'node_modules'];
-        _.each(preLinkerFiles, function (f) {
-          files.rm_recursive(path.join(self.sourceRoot, '.npm', f));
-        });
-
-        // go through a specialized npm dependencies update process,
-        // ensuring we don't get new versions of any
-        // (sub)dependencies. this process also runs mostly safely
-        // multiple times in parallel (which could happen if you have
-        // two apps running locally using the same package)
-        npmOk = meteorNpm.updateDependencies(name, packageNpmDir,
-                                             npmDependencies);
-      }
-
+    if (npmOk) {
       nodeModulesPath = path.join(packageNpmDir, 'node_modules');
-      if (npmOk && ! meteorNpm.dependenciesArePortable(packageNpmDir))
+      if (! meteorNpm.dependenciesArePortable(packageNpmDir))
         isPortable = false;
     }
 
