@@ -431,7 +431,7 @@ Tinytest.add("spacebars - compiler", function (test) {
 
       'function (buf) {',
       '  var self = this;',
-      '  buf.component(function () { return ((self.lookup("if")) || EmptyComponent).create({"data": Spacebars.call(self.lookup("foo")), "bodyClass": Component.extend({render: function (buf) {',
+      '  buf.component(function () { return ((self.lookup("if")) || EmptyComponent).create({"data": Spacebars.call(self.lookup("foo")), "body": Component.extend({render: function (buf) {',
       '    buf.text("bar");',
       '  }})}); });',
       '}');
@@ -440,9 +440,9 @@ Tinytest.add("spacebars - compiler", function (test) {
 
       'function (buf) {',
       '  var self = this;',
-      '  buf.component(function () { return ((self.lookup("if")) || EmptyComponent).create({"data": Spacebars.call(self.lookup("foo")), "bodyClass": Component.extend({render: function (buf) {',
+      '  buf.component(function () { return ((self.lookup("if")) || EmptyComponent).create({"data": Spacebars.call(self.lookup("foo")), "body": Component.extend({render: function (buf) {',
       '    buf.text("bar");',
-      '  }}), "elseClass": Component.extend({render: function (buf) {',
+      '  }}), "else": Component.extend({render: function (buf) {',
       '    buf.text("baz");',
       '  }})}); });',
       '}');

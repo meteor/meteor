@@ -1,14 +1,14 @@
 // @export If
 If = Component.extend({
   init: function () {
-    if (! this.getArg('bodyClass'))
+    if (! this.getArg('body'))
       throw new Error("If requires a body");
   },
   render: function (buf) {
     if (this.getArg('data'))
-      buf.component(this.getArg('bodyClass').create());
-    else if (this.getArg('elseClass'))
-      buf.component(this.getArg('elseClass'));
+      buf.component(this.getArg('body').create());
+    else if (this.getArg('else'))
+      buf.component(this.getArg('else'));
   }
 });
 
@@ -85,7 +85,7 @@ Each = Component.extend({
 
     if (items.empty()) {
       buf.component(function () {
-        return (self.getArg('elseClass') || EmptyComponent).create(
+        return (self.getArg('else') || EmptyComponent).create(
           { data: self.getArg('data') });
       }, { key: 'else' });
     } else {
@@ -93,7 +93,7 @@ Each = Component.extend({
         var tdoc = transformedDoc(doc);
 
         buf.component(function () {
-          return self.getArg('bodyClass').create({ data: tdoc });
+          return self.getArg('body').create({ data: tdoc });
         }, { key: self._itemChildId(id) });
       });
     }
@@ -108,7 +108,7 @@ Each = Component.extend({
       throw new Error("Component must be built");
 
     var childId = self._itemChildId(id);
-    var comp = self.getArg('bodyClass').create({data: doc});
+    var comp = self.getArg('body').create({data: doc});
 
     if (self.items.size() === 1) {
       // was empty
@@ -131,7 +131,7 @@ Each = Component.extend({
     var childId = self._itemChildId(id);
     if (self.items.size() === 0) {
       // made empty
-      var elseClass = self.getArg('elseClass') || EmptyComponent;
+      var elseClass = self.getArg('else') || EmptyComponent;
       var comp = elseClass.create({data: self.getArg('data')});
       self.replaceChild(childId, comp, 'else');
     } else {

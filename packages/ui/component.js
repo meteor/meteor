@@ -552,7 +552,9 @@ _.extend(Component.prototype, {
     // and how custom component classes should
     // hook into this behavior.
 
-    if (id in self) {
+    if (! id) {
+      result = self.getArg('data') || null;
+    } else if (id in self) {
       result = self[id];
       thisToBind = self;
     } else if (id === 'if') {
@@ -562,6 +564,8 @@ _.extend(Component.prototype, {
     } else if (id in global) {
       result = global[id];
       thisToBind = self.getArg('data') || null;
+    } else if ((result = self.getArg(id))) {
+      thisToBind = self;
     } else if ((data = self.getArg('data'))) {
       thisToBind = data;
       result = data[id];
@@ -687,9 +691,9 @@ RootComponent = Component.extend({
     this.init();
   },
   render: function (buf) {
-    var bodyClass = this.getArg('bodyClass');
-    if (bodyClass)
-      buf.component(bodyClass.create(), {key: 'body'});
+    var body = this.getArg('body');
+    if (body)
+      buf.component(body.create(), {key: 'body'});
   },
   attached: function () {
     RootComponent._attachedInstances[this._uid] = this;
