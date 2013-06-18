@@ -44,16 +44,18 @@
       <li>{{this}}</li>
     {{/each}}
   </ul>
+  </div></div>
 {{/isolate}}
 
 {{#isolate}}
+  <div class="row-fluid"><div class="span12">
   <div class="test_table">
     {{#each data}}
       {{> test_group this}}
     {{/each}}
   </div>
-{{/isolate}}
   </div></div>
+{{/isolate}}
 </template>
 
 <template name="progressBar">
