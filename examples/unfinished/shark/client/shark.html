@@ -3,9 +3,19 @@
 </head>
 
 <body>
+
+<h1>Hello {{name}}</h1>
+
 {{#each items}}
   <div>{{text}}</div>
 {{else}}
   <strong>Empty</strong>
 {{/each}}
+
+<p>{{#twice}}testing{{/twice}}</p>
+
 </body>
+
+<template name="twice">
+{{> body}} {{> body}}
+</template>
