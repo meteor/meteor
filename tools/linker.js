@@ -349,6 +349,24 @@ _.extend(File.prototype, {
     return buf;
   },
 
+  // If "line" contains nothing but a comment (of either syntax), return the
+  // body of the comment with leading and trailing spaces trimmed (possibly the
+  // empty string). Otherwise return null. (We need to support both comment
+  // syntaxes because the CoffeeScript compiler only emits /**/ comments.)
+  _getSingleLineCommentBody: function (line) {
+    var self = this;
+    var match = /^\s*\/\/(.+)$/.exec(line);
+    if (match) {
+      return match[1].trim();
+    }
+    match = /^\s*\/\*(.+)\*\/\s*$/.exec(line);
+    // Make sure we don't get tricked by lines like
+    //     /* Comment */  var myRegexp = /x*/
+    if (match && match[1].indexOf('*/') === -1)
+      return match[1].trim();
+    return null;
+  },
+
   // Split file and populate self.units
   // XXX it is an error to declare a @unit not at toplevel (eg, inside a
   // function or object..) We don't detect this but we might have to to
@@ -363,32 +381,36 @@ _.extend(File.prototype, {
 
     var lineCount = 0;
     _.each(lines, function (line) {
-      // XXX overly permissive. should detect errors
-      var match = /^\s*\/\/\s*@unit(\s+([^\s]+))?/.exec(line);
-      if (match) {
-        unit.source = buf;
-        buf = line;
-        unit = new Unit(match[2] || null, false, self.sourcePath,
-                        self.includePositionInErrors ? lineCount : null);
-        self.units.push(unit);
-        lineCount++;
-        return;
-      }
+      var commentBody = self._getSingleLineCommentBody(line);
 
-      // XXX overly permissive. should detect errors
-      match = /^\s*\/\/\s*@(export|require|provide|weak)(\s+.*)$/.exec(line);
-      if (match) {
-        var what = match[1];
-        var symbols = _.map(match[2].split(/,/), function (s) {
-          return s.replace(/^\s+|\s+$/g, ''); // trim leading/trailing whitespace
-        });
+      if (commentBody) {
+        // XXX overly permissive. should detect errors
+        var match = /^@unit(?:\s+(\S+))?$/.exec(commentBody);
+        if (match) {
+          unit.source = buf;
+          buf = line;
+          unit = new Unit(match[1] || null, false, self.sourcePath,
+                          self.includePositionInErrors ? lineCount : null);
+          self.units.push(unit);
+          lineCount++;
+          return;
+        }
 
-        _.each(symbols, function (s) {
-          if (s.length)
-            unit[what + "s"][s] = true;
-        });
+        // XXX overly permissive. should detect errors
+        match = /^@(export|require|provide|weak)(\s+.*)$/.exec(commentBody);
+        if (match) {
+          var what = match[1];
+          var symbols = _.map(match[2].split(/,/), function (s) {
+            return s.trim();
+          });
 
-        /* fall through */
+          _.each(symbols, function (s) {
+            if (s.length)
+              unit[what + "s"][s] = true;
+          });
+
+          /* fall through */
+        }
       }
 
       if (lineCount !== 0)
