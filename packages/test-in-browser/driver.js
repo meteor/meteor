@@ -1,12 +1,12 @@
+var countDep = new Deps.Dependency;
 var running = true;
-
-var resultTree = [];
-var failedTests = [];
-var resultsDeps = new Deps.Dependency;
-var countDeps = new Deps.Dependency;
 var totalCount = 0;
 var passedCount = 0;
 var failedCount = 0;
+
+var topLevelGroupsDep = new Deps.Dependency;
+var resultTree = [];
+var failedTests = [];
 
 
 Session.setDefault("groupPath", ["tinytest"]);
@@ -17,7 +17,7 @@ Meteor.startup(function () {
   Meteor._runTestsEverywhere(reportResults, function () {
     running = false;
     Meteor.onTestsComplete && Meteor.onTestsComplete();
-    resultsDeps.changed();
+    countDep.changed();
     Deps.flush();
 
     Meteor.default_connection._unsubscribeAll();
@@ -26,36 +26,39 @@ Meteor.startup(function () {
 });
 
 Template.progressBar.running = function () {
-  countDeps.depend();
-  return passedCount + failedCount < totalCount;
+  countDep.depend();
+  return running;
 };
 
 Template.progressBar.percentPass = function () {
-  countDeps.depend();
+  countDep.depend();
   if (totalCount === 0)
     return 0;
   return 100*passedCount/totalCount;
 };
 
 Template.progressBar.totalCount = function () {
+  countDep.depend();
   return totalCount;
 };
 
 Template.progressBar.passedCount = function () {
+  countDep.depend();
   return passedCount;
 };
 
 Template.progressBar.percentFail = function () {
-  countDeps.depend();
+  countDep.depend();
   if (totalCount === 0)
     return 0;
   return 100*failedCount/totalCount;
 };
 
 Template.progressBar.anyFail = function () {
-  countDeps.depend();
+  countDep.depend();
   return failedCount > 0;
 };
+
 
 Template.groupNav.groupPaths = function () {
   var groupPath = Session.get("groupPath");
@@ -88,6 +91,13 @@ Template.groupNav.events({
   }
 });
 
+
+Template.test_group.groupDep = function () {
+  this.dep.depend();
+  return "";
+};
+
+
 Template.test_group.events({
   "click .groupname": function () {
     changeToPath(this.path);
@@ -95,41 +105,18 @@ Template.test_group.events({
 });
 
 Template.test_table.running = function() {
-  resultsDeps.depend();
+  countDep.depend();
   return running;
 };
 
 Template.test_table.passed = function() {
-  resultsDeps.depend();
-
-  // walk whole tree to look for failed tests
-  var walk = function (groups) {
-    var ret = true;
-
-    _.each(groups || [], function (group) {
-      if (!ret)
-        return;
-
-      _.each(group.tests || [], function (t) {
-        if (!ret)
-          return;
-        if (_testStatus(t) === "failed")
-          ret = false;
-      });
-
-      if (!walk(group.groups))
-        ret = false;
-    });
-
-    return ret;
-  };
-
-  return walk(resultTree);
+  countDep.depend();
+  return failedCount === 0;
 };
 
 
 Template.test_table.total_test_time = function() {
-  resultsDeps.depend();
+  countDep.depend();
 
   // walk whole tree to get all tests
   var walk = function (groups) {
@@ -152,12 +139,18 @@ Template.test_table.total_test_time = function() {
 
 
 Template.test_table.data = function() {
-  resultsDeps.depend();
+  topLevelGroupsDep.depend();
   return resultTree;
 };
 Template.test_table.failedTests = function() {
-  resultsDeps.depend();
+  countDep.depend();
   return failedTests;
+};
+
+
+Template.test.testDep = function () {
+  this.dep.depend();
+  return "";
 };
 
 Template.test.test_status_display = function() {
@@ -192,7 +185,7 @@ Template.test.test_class = function() {
 Template.test.events({
   'click .testname': function() {
     this.expanded = ! this.expanded;
-    resultsDeps.changed();
+    this.dep.changed();
   }
 });
 
@@ -335,9 +328,15 @@ var _findTestForResults = function (results) {
       newGroup = {
         name: gname,
         parent: (group || null),
-        path: groupPath.slice(0, i+1)
+        path: groupPath.slice(0, i+1),
+        dep: new Deps.Dependency
       }; // create group
       array.push(newGroup);
+
+      if (group)
+        group.dep.changed();
+      else
+        topLevelGroupsDep.changed();
     }
     group = newGroup;
     i++;
@@ -353,10 +352,17 @@ var _findTestForResults = function (results) {
     var nameParts = _.clone(groupPath);
     nameParts.push(testName);
     var fullName = nameParts.join(' - ');
-    test = {name: testName, parent: group, server: server, fullName: fullName};
+    test = {
+      name: testName,
+      parent: group,
+      server: server,
+      fullName: fullName,
+      dep: new Deps.Dependency
+    };
     group.tests.push(test);
+    group.dep.changed();
     totalCount++;
-    countDeps.changed();
+    countDep.changed();
   }
 
   return test;
@@ -385,19 +391,20 @@ var reportResults = function(results) {
   var status = _testStatus(test);
   if (status === "failed") {
     failedCount++;
-    countDeps.changed();
     // Expand a failed test (but only set this if the user hasn't clicked on the
     // test name yet).
     if (test.expanded === undefined)
       test.expanded = true;
     if (!_.contains(failedTests, test.fullName))
       failedTests.push(test.fullName);
+
+    countDep.changed();
+    test.dep.changed();
   } else if (status === "succeeded") {
     passedCount++;
-    countDeps.changed();
+    countDep.changed();
+    test.dep.changed();
   }
-
-  _throttled_update();
 };
 
 // forget all of the events for a particular test
@@ -406,15 +413,11 @@ var forgetEvents = function (results) {
   var status = _testStatus(test);
   if (status === "failed") {
     failedCount--;
-    countDeps.changed();
+    countDep.changed();
   } else if (status === "succeeded") {
     passedCount--;
-    countDeps.changed();
+    countDep.changed();
   }
   delete test.events;
-  resultsDeps.changed();
+  test.dep.changed();
 };
-
-var _throttled_update = _.throttle(function() {
-  resultsDeps.changed();
-}, 1000);

@@ -9,6 +9,7 @@
 </body>
 
 <template name="test_table">
+{{#isolate}}
   <div class="navbar navbar-fixed-top navbar-inverse">
     <div class="navbar-inner">
       <div class="row-fluid">
@@ -43,12 +44,15 @@
       <li>{{this}}</li>
     {{/each}}
   </ul>
+{{/isolate}}
 
+{{#isolate}}
   <div class="test_table">
     {{#each data}}
       {{> test_group this}}
     {{/each}}
   </div>
+{{/isolate}}
   </div></div>
 </template>
 
@@ -86,6 +90,7 @@
 </template>
 
 <template name="test_group">
+  {{groupDep}}
   <div class="group">
     <div class="groupname"><a>{{name}}</a></div>
     {{#each tests}}
@@ -98,6 +103,7 @@
 </template>
 
 <template name="test">
+  {{testDep}}
   <div class="test {{test_class}}">
     <div class="testrow">
       <div class="teststatus">
