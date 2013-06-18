@@ -88,3 +88,16 @@ assert.doesNotThrow(function () {
   });
   assert.strictEqual(fut.wait(), 0);
 });
+
+console.log("Use Assets API from unipackage");
+assert.doesNotThrow(function () {
+  var lib = new library.Library({
+    localPackageDirs: [ path.join(files.getCurrentToolsDir(), "packages"),
+                       path.join(appWithPrivate, "packages") ]
+  });
+  var testPackage = unipackage.load({
+    library: lib,
+    packages: ['test-package']
+  })['test-package'].TestAsset;
+  testPackage.go(false /* don't exit when done */);
+});

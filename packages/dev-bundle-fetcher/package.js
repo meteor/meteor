@@ -12,5 +12,5 @@ Package._transitional_registerBuildPlugin({
 });
 
 Package.on_use(function (api) {
-  api.add_files(['dev-bundle.sh.in'], ['server']);
+  api.add_files(['dev-bundle.sh.in', 'dev-bundle.js'], ['server']);
 });

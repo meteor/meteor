@@ -65,7 +65,7 @@ StarTranslator._writeServerProg = function (bundlePath, serverProgPath) {
   var platform = this._getPlatform();
   var bundleVersion = this._getBundleVersion(bundlePath);
   var runFile = 'main.js';
-  var serverScript = shellScripts['dev-bundle.sh.in'].source;
+  var serverScript = DevBundleFetcher.script;
   // Duplicated from meteor/tools/bundler.js
   serverScript = serverScript.replace(/##PLATFORM##/g, platform);
   serverScript = serverScript.replace(/##BUNDLE_VERSION##/g, bundleVersion);

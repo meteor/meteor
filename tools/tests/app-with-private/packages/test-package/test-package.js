@@ -6,7 +6,7 @@ if (Meteor.isServer) {
     return (new Buffer(b)).toString();
   };
 
-  TestAsset.go = function (passed) {
+  TestAsset.go = function (exit) {
     var expectText = "Package\n";
     if (Assets.getText("test-package.txt") !== expectText)
       throw new Error("getText test-package.txt does not match");
@@ -20,7 +20,8 @@ if (Meteor.isServer) {
       Assets.getBinary("test-package.txt", function (err, result) {
         if (err || TestAsset.convert(result) !== expectText)
           throw new Error("async getBinary test-package.txt does not match");
-        process.exit(0);
+        if (exit)
+          process.exit(0);
       });
     });
   };
