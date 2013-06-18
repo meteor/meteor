@@ -35,12 +35,12 @@ Log.outputFormat = 'json';
 
 var LEVEL_COLORS = {
   debug: 'green',
-  info: 'blue',
-  warn: 'yellow',
+  // leave info as the default color
+  warn: 'magenta',
   error: 'red'
 };
 
-var META_COLOR = 'magenta';
+var META_COLOR = 'blue';
 
 // XXX package
 var RESTRICTED_KEYS = ['time', 'timeInexact', 'level', 'file', 'line',
