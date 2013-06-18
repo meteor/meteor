@@ -21,6 +21,15 @@ var handler = function (compileStep) {
     );
   }
 
+  // We want the symbol "share" to be visible to all CoffeeScript files in the
+  // package (and shared between them), but not visible to JavaScript
+  // files. (That's because we don't want to introduce two competing ways to
+  // make package-local variables into JS ("share" vs assigning to non-var
+  // variables).) The following hack accomplishes that: "__coffeescriptShare"
+  // will be visible at the package level and "share" at the file level.
+  output = ("__coffeescriptShare = __coffeescriptShare || {}; " +
+            "var share = __coffeescriptShare;" + output);
+
   compileStep.addJavaScript({
     path: compileStep.inputPath + ".js",
     sourcePath: compileStep.inputPath,
