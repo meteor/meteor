@@ -1,12 +1,39 @@
+////
+//// Setup
+////
+
+
+// dependency for the count of tests running/passed/failed, etc. drives
+// the navbar and the like.
 var countDep = new Deps.Dependency;
+// things that change on countDep
 var running = true;
 var totalCount = 0;
 var passedCount = 0;
 var failedCount = 0;
-
-var topLevelGroupsDep = new Deps.Dependency;
-var resultTree = [];
 var failedTests = [];
+
+// Dependency for when a new top level group is added. Each group and
+// each test have their own dependency objects.
+var topLevelGroupsDep = new Deps.Dependency;
+
+// An array of top-level groups.
+//
+// Each group is an object with:
+// - name: string
+// - path: array of strings (names of parent groups)
+// - parent: parent group object (back reference)
+// - dep: Deps.Dependency object for this group. fires when new tests added.
+// - groups: list of sub-groups
+// - tests: list of tests in this group
+//
+// Each test is an object with:
+// - name: string
+// - parent: parent group object (back reference)
+// - server: boolean
+// - fullName: string
+// - dep: Deps.Dependency object for this test. fires when the test completes.
+var resultTree = [];
 
 
 Session.setDefault("groupPath", ["tinytest"]);
@@ -24,6 +51,214 @@ Meteor.startup(function () {
   }, Session.get("groupPath"));
 
 });
+
+
+////
+//// Take incoming results and drive resultsTree
+////
+
+// report a series of events in a single test, or just the existence of
+// that test if no events. this is the entry point for test results to
+// this module.
+var reportResults = function(results) {
+  var test = _findTestForResults(results);
+
+  if (_.isArray(results.events)) {
+    // append events, if present
+    Array.prototype.push.apply((test.events || (test.events = [])),
+                               results.events);
+    // sort and de-duplicate, based on sequence number
+    test.events.sort(function (a, b) {
+      return a.sequence - b.sequence;
+    });
+    var out = [];
+    _.each(test.events, function (e) {
+      if (out.length === 0 || out[out.length - 1].sequence !== e.sequence)
+        out.push(e);
+    });
+    test.events = out;
+  }
+  var status = _testStatus(test);
+  if (status === "failed") {
+    failedCount++;
+    // Expand a failed test (but only set this if the user hasn't clicked on the
+    // test name yet).
+    if (test.expanded === undefined)
+      test.expanded = true;
+    if (!_.contains(failedTests, test.fullName))
+      failedTests.push(test.fullName);
+
+    countDep.changed();
+    test.dep.changed();
+  } else if (status === "succeeded") {
+    passedCount++;
+    countDep.changed();
+    test.dep.changed();
+  }
+};
+
+// forget all of the events for a particular test
+var forgetEvents = function (results) {
+  var test = _findTestForResults(results);
+  var status = _testStatus(test);
+  if (status === "failed") {
+    failedCount--;
+    countDep.changed();
+  } else if (status === "succeeded") {
+    passedCount--;
+    countDep.changed();
+  }
+  delete test.events;
+  test.dep.changed();
+};
+
+// given a 'results' as delivered via reportResults, find the
+// corresponding leaf object in resultTree, creating one if it doesn't
+// exist. it will be an object with attributes 'name', 'parent', and
+// possibly 'events'.
+var _findTestForResults = function (results) {
+  var groupPath = results.groupPath; // array
+  if ((! _.isArray(groupPath)) || (groupPath.length < 1)) {
+    throw new Error("Test must be part of a group");
+  }
+
+  var group;
+  var i = 0;
+  _.each(groupPath, function(gname) {
+    var array = (group ? (group.groups || (group.groups = []))
+                 : resultTree);
+    var newGroup = _.find(array, function(g) { return g.name === gname; });
+    if (! newGroup) {
+      newGroup = {
+        name: gname,
+        parent: (group || null),
+        path: groupPath.slice(0, i+1),
+        dep: new Deps.Dependency
+      }; // create group
+      array.push(newGroup);
+
+      if (group)
+        group.dep.changed();
+      else
+        topLevelGroupsDep.changed();
+    }
+    group = newGroup;
+    i++;
+  });
+
+  var testName = results.test;
+  var server = !!results.server;
+  var test = _.find(group.tests || (group.tests = []),
+                    function(t) { return t.name === testName &&
+                                  t.server === server; });
+  if (! test) {
+    // create test
+    var nameParts = _.clone(groupPath);
+    nameParts.push(testName);
+    var fullName = nameParts.join(' - ');
+    test = {
+      name: testName,
+      parent: group,
+      server: server,
+      fullName: fullName,
+      dep: new Deps.Dependency
+    };
+    group.tests.push(test);
+    group.dep.changed();
+    totalCount++;
+    countDep.changed();
+  }
+
+  return test;
+};
+
+
+
+////
+//// Helpers on test objects
+////
+
+var _testTime = function(t) {
+  if (t.events && t.events.length > 0) {
+    var lastEvent = _.last(t.events);
+    if (lastEvent.type === "finish") {
+      if ((typeof lastEvent.timeMs) === "number") {
+        return lastEvent.timeMs;
+      }
+    }
+  }
+  return null;
+};
+
+var _testStatus = function(t) {
+  var events = t.events || [];
+  if (_.find(events, function(x) { return x.type === "exception"; })) {
+    // "exception" should be last event, except race conditions on the
+    // server can make this not the case.  Technically we can't tell
+    // if the test is still running at this point, but it can only
+    // result in FAIL.
+    return "failed";
+  } else if (events.length == 0 || (_.last(events).type != "finish")) {
+    return "running";
+  } else if (_.any(events, function(e) {
+    return e.type == "fail" || e.type == "exception"; })) {
+    return "failed";
+  } else {
+    return "succeeded";
+  }
+};
+
+
+
+////
+//// Templates
+////
+
+//// Template - test_table
+
+Template.test_table.running = function() {
+  countDep.depend();
+  return running;
+};
+
+Template.test_table.passed = function() {
+  countDep.depend();
+  return failedCount === 0;
+};
+
+Template.test_table.total_test_time = function() {
+  countDep.depend();
+
+  // walk whole tree to get all tests
+  var walk = function (groups) {
+    var total = 0;
+
+    _.each(groups || [], function (group) {
+      _.each(group.tests || [], function (t) {
+        total += _testTime(t);
+      });
+
+      total += walk(group.groups);
+    });
+
+    return total;
+  };
+
+  return walk(resultTree);
+};
+
+Template.test_table.data = function() {
+  topLevelGroupsDep.depend();
+  return resultTree;
+};
+
+Template.test_table.failedTests = function() {
+  countDep.depend();
+  return failedTests;
+};
+
+
+//// Template - progressBar
 
 Template.progressBar.running = function () {
   countDep.depend();
@@ -60,6 +295,8 @@ Template.progressBar.anyFail = function () {
 };
 
 
+//// Template - groupNav
+
 Template.groupNav.groupPaths = function () {
   var groupPath = Session.get("groupPath");
   var ret = [];
@@ -92,11 +329,14 @@ Template.groupNav.events({
 });
 
 
+//// Template - test_group
+
 Template.test_group.groupDep = function () {
+  // this template just establishes a dependency. It doesn't actually
+  // render anything.
   this.dep.depend();
   return "";
 };
-
 
 Template.test_group.events({
   "click .groupname": function () {
@@ -104,51 +344,12 @@ Template.test_group.events({
   }
 });
 
-Template.test_table.running = function() {
-  countDep.depend();
-  return running;
-};
 
-Template.test_table.passed = function() {
-  countDep.depend();
-  return failedCount === 0;
-};
-
-
-Template.test_table.total_test_time = function() {
-  countDep.depend();
-
-  // walk whole tree to get all tests
-  var walk = function (groups) {
-    var total = 0;
-
-    _.each(groups || [], function (group) {
-      _.each(group.tests || [], function (t) {
-        total += _testTime(t);
-      });
-
-      total += walk(group.groups);
-    });
-
-    return total;
-  };
-
-  return walk(resultTree);
-};
-
-
-
-Template.test_table.data = function() {
-  topLevelGroupsDep.depend();
-  return resultTree;
-};
-Template.test_table.failedTests = function() {
-  countDep.depend();
-  return failedTests;
-};
-
+//// Template - test
 
 Template.test.testDep = function () {
+  // this template just establishes a dependency. It doesn't actually
+  // render anything.
   this.dep.depend();
   return "";
 };
@@ -224,6 +425,9 @@ Template.test.eventsArray = function() {
   });
 };
 
+
+//// Template - event
+
 Template.event.events({
   'click .debug': function () {
     // the way we manage groupPath, shortName, cookies, etc, is really
@@ -278,146 +482,3 @@ Template.event.is_debuggable = function() {
   return !!this.cookie;
 };
 
-var _testTime = function(t) {
-  if (t.events && t.events.length > 0) {
-    var lastEvent = _.last(t.events);
-    if (lastEvent.type === "finish") {
-      if ((typeof lastEvent.timeMs) === "number") {
-        return lastEvent.timeMs;
-      }
-    }
-  }
-  return null;
-};
-
-var _testStatus = function(t) {
-  var events = t.events || [];
-  if (_.find(events, function(x) { return x.type === "exception"; })) {
-    // "exception" should be last event, except race conditions on the
-    // server can make this not the case.  Technically we can't tell
-    // if the test is still running at this point, but it can only
-    // result in FAIL.
-    return "failed";
-  } else if (events.length == 0 || (_.last(events).type != "finish")) {
-    return "running";
-  } else if (_.any(events, function(e) {
-    return e.type == "fail" || e.type == "exception"; })) {
-    return "failed";
-  } else {
-    return "succeeded";
-  }
-};
-
-// given a 'results' as delivered via setReporter, find the
-// corresponding leaf object in resultTree, creating one if it doesn't
-// exist. it will be an object with attributes 'name', 'parent', and
-// possibly 'events'.
-var _findTestForResults = function (results) {
-  var groupPath = results.groupPath; // array
-  if ((! _.isArray(groupPath)) || (groupPath.length < 1)) {
-    throw new Error("Test must be part of a group");
-  }
-
-  var group;
-  var i = 0;
-  _.each(groupPath, function(gname) {
-    var array = (group ? (group.groups || (group.groups = []))
-                 : resultTree);
-    var newGroup = _.find(array, function(g) { return g.name === gname; });
-    if (! newGroup) {
-      newGroup = {
-        name: gname,
-        parent: (group || null),
-        path: groupPath.slice(0, i+1),
-        dep: new Deps.Dependency
-      }; // create group
-      array.push(newGroup);
-
-      if (group)
-        group.dep.changed();
-      else
-        topLevelGroupsDep.changed();
-    }
-    group = newGroup;
-    i++;
-  });
-
-  var testName = results.test;
-  var server = !!results.server;
-  var test = _.find(group.tests || (group.tests = []),
-                    function(t) { return t.name === testName &&
-                                  t.server === server; });
-  if (! test) {
-    // create test
-    var nameParts = _.clone(groupPath);
-    nameParts.push(testName);
-    var fullName = nameParts.join(' - ');
-    test = {
-      name: testName,
-      parent: group,
-      server: server,
-      fullName: fullName,
-      dep: new Deps.Dependency
-    };
-    group.tests.push(test);
-    group.dep.changed();
-    totalCount++;
-    countDep.changed();
-  }
-
-  return test;
-};
-
-// report a series of events in a single test, or just
-// the existence of that test if no events
-var reportResults = function(results) {
-  var test = _findTestForResults(results);
-
-  if (_.isArray(results.events)) {
-    // append events, if present
-    Array.prototype.push.apply((test.events || (test.events = [])),
-                               results.events);
-    // sort and de-duplicate, based on sequence number
-    test.events.sort(function (a, b) {
-      return a.sequence - b.sequence;
-    });
-    var out = [];
-    _.each(test.events, function (e) {
-      if (out.length === 0 || out[out.length - 1].sequence !== e.sequence)
-        out.push(e);
-    });
-    test.events = out;
-  }
-  var status = _testStatus(test);
-  if (status === "failed") {
-    failedCount++;
-    // Expand a failed test (but only set this if the user hasn't clicked on the
-    // test name yet).
-    if (test.expanded === undefined)
-      test.expanded = true;
-    if (!_.contains(failedTests, test.fullName))
-      failedTests.push(test.fullName);
-
-    countDep.changed();
-    test.dep.changed();
-  } else if (status === "succeeded") {
-    passedCount++;
-    countDep.changed();
-    test.dep.changed();
-  }
-};
-
-// forget all of the events for a particular test
-var forgetEvents = function (results) {
-  var test = _findTestForResults(results);
-  var status = _testStatus(test);
-  if (status === "failed") {
-    failedCount--;
-    countDep.changed();
-  } else if (status === "succeeded") {
-    passedCount--;
-    countDep.changed();
-  }
-  delete test.events;
-  test.dep.changed();
-};
