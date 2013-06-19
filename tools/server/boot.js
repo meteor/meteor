@@ -83,7 +83,10 @@ Fiber(function () {
       }, function (e) {
         Meteor._debug("Exception in callback of getAsset", e.stack);
       });
-      fs.readFile(path.join(staticDirectory, assetPath), encoding, _callback);
+      var filePath = path.join(staticDirectory, assetPath);
+      if (filePath.indexOf("..") !== -1)
+        throw new Error(".. is not allowed in asset paths.");
+      fs.readFile(filePath, encoding, _callback);
       if (fut)
         return fut.wait();
     };
