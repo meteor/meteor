@@ -314,6 +314,10 @@ var toc = [
     ],
     "Email", [
       "Email.send"
+    ],
+    {name: "Assets", id: "assets"}, [
+      {name: "Assets.getText", id: "assets_getText"},
+      {name: "Assets.getBinary", id: "assets_getBinary"}
     ]
   ],
 
