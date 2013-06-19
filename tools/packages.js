@@ -165,6 +165,10 @@ var Slice = function (pkg, options) {
   // resolve Npm.require() calls in this slice. null if this slice
   // does not have a node_modules.
   self.nodeModulesPath = options.nodeModulesPath;
+
+  // Absolute path to the location on disk where Assets API calls will search in
+  // this slice.
+  self.staticDirectory = options.staticDirectory;
 };
 
 _.extend(Slice.prototype, {
@@ -214,13 +218,11 @@ _.extend(Slice.prototype, {
         //
         // XXX This is pretty confusing, especially if you've
         // accidentally forgotten a plugin -- revisit?
-        if (archinfo.matches(self.arch, "browser")) {
-          resources.push({
-            type: "static",
-            data: contents,
-            servePath: path.join(self.pkg.serveRoot, relPath)
-          });
-        }
+        resources.push({
+          type: "static",
+          data: contents,
+          servePath: path.join(self.pkg.serveRoot, relPath)
+        });
         return;
       }
 
@@ -492,7 +494,8 @@ _.extend(Slice.prototype, {
       return {
         type: "js",
         data: new Buffer(file.source, 'utf8'),
-        servePath: file.servePath
+        servePath: file.servePath,
+        staticDirectory: self.staticDirectory
       };
     });
 
@@ -933,7 +936,8 @@ _.extend(Package.prototype, {
         return { spec: spec }
       }),
       getSourcesFunc: function () { return options.sources || []; },
-      nodeModulesPath: nodeModulesPath
+      nodeModulesPath: nodeModulesPath,
+      staticDirectory: options.sourceRoot
     });
     self.slices.push(slice);
 
@@ -1476,7 +1480,8 @@ _.extend(Package.prototype, {
           getSourcesFunc: function () { return sources[role][where]; },
           forceExport: forceExport[role][where],
           dependencyInfo: dependencyInfo,
-          nodeModulesPath: arch === nativeArch && nodeModulesPath || undefined
+          nodeModulesPath: arch === nativeArch && nodeModulesPath || undefined,
+          staticDirectory: self.sourceRoot
         }));
       });
     });
@@ -1727,6 +1732,10 @@ _.extend(Package.prototype, {
         nodeModulesPath = path.join(sliceBasePath, sliceJson.node_modules);
       }
 
+      var staticDirectory = null;
+      if (sliceJson.staticDirectory)
+        staticDirectory = path.join(sliceBasePath, sliceJson.staticDirectory);
+
       var slice = new Slice(self, {
         name: sliceMeta.name,
         arch: sliceMeta.arch,
@@ -1737,7 +1746,8 @@ _.extend(Package.prototype, {
             spec: u['package'] + (u.slice ? "." + u.slice : ""),
             unordered: u.unordered
           };
-        })
+        }),
+        staticDirectory: staticDirectory
       });
 
       slice.isBuilt = true;
@@ -1873,7 +1883,8 @@ _.extend(Package.prototype, {
           }),
           node_modules: slice.nodeModulesPath ? 'npm/node_modules' : undefined,
           resources: [],
-          boundary: slice.boundary
+          boundary: slice.boundary,
+          staticDirectory: path.join(sliceDir, self.serveRoot)
         };
 
         // Output 'head', 'body' resources nicely

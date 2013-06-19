@@ -175,6 +175,8 @@ var _ = require('underscore');
 var project = require(path.join(__dirname, 'project.js'));
 var builder = require(path.join(__dirname, 'builder.js'));
 var unipackage = require(path.join(__dirname, 'unipackage.js'));
+var Fiber = require('fibers');
+var Future = require(path.join('fibers', 'future'));
 
 // files to ignore when bundling. node has no globs, so use regexps
 var ignoreFiles = [
@@ -208,6 +210,18 @@ var NodeModulesDirectory = function (options) {
   // The path (relative to the bundle root) where we would preferably
   // like the node_modules to be output (essentially cosmetic.)
   self.preferredBundlePath = options.preferredBundlePath;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// StaticDirectory
+///////////////////////////////////////////////////////////////////////////////
+
+// Like a NodeModulesDirectory but for static assets that are accessible via the
+// Assets API.
+var StaticDirectory = function (options) {
+  var self = this;
+  self.sourcePath = options.sourcePath;
+  self.bundlePath = options.bundlePath;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -328,19 +342,24 @@ _.extend(File.prototype, {
       self.targetPath = path.join('/app', relPath);
   },
 
-  setStaticDirFromRelPath: function (relPath) {
+  setStaticDirectory: function (relPath, staticSourceDirectory) {
     var self = this;
     // For package code, static assets go inside a directory inside
     // static/packages specific to this package. Application assets (e.g. those
     // inside private/) go in static/app/.
     // XXX same hack as above
+    var bundlePath;
     if (relPath.match(/^\/packages\//)) {
       var dir = path.dirname(relPath);
       var base = path.basename(relPath, ".js");
-      self.staticDirectory = path.join('/static', dir, base);
+      bundlePath = path.join('/static', dir, base);
     } else {
-      self.staticDirectory = path.join('/static', 'app');
+      bundlePath = path.join('/static', 'app');
     }
+    self.staticDirectory = new StaticDirectory({
+      sourcePath: staticSourceDirectory,
+      bundlePath: bundlePath
+    });
   }
 });
 
@@ -566,7 +585,7 @@ _.extend(Target.prototype, {
               relPath = resource.servePath;
             f.setTargetPathFromRelPath(relPath);
             if (resource.type === "js")
-              f.setStaticDirFromRelPath(relPath);
+              f.setStaticDirectory(relPath, resource.staticDirectory);
           }
 
           if (isNative && resource.type === "js" && ! isApp &&
@@ -882,10 +901,36 @@ _.extend(JsImage.prototype, {
     var self = this;
     var ret = {};
 
+    // XXX This is mostly duplicated from server/boot.js, as is Npm.require
+    // below. Some way to avoid this?
+    var getAsset = function (staticDirectory, assetPath, encoding, callback) {
+      var fut;
+      if (! callback) {
+        if (! Fiber.current)
+          throw new Error("The synchronous Assets API can " +
+                          "only be called from within a Fiber.");
+        fut = new Future();
+        callback = fut.resolver();
+      }
+      var _callback = function (err, result) {
+        if (result && ! encoding)
+          // Sadly, this copies in Node 0.10.
+          result = new Uint8Array(result);
+        callback(err, result);
+      };
+      var filePath = path.join(staticDirectory, assetPath);
+      if (filePath.indexOf("..") !== -1)
+        throw new Error(".. is not allowed in asset paths.");
+      fs.readFile(filePath, encoding, _callback);
+      if (fut)
+        return fut.wait();
+    };
+
     // Eval each JavaScript file, providing a 'Npm' symbol in the same
-    // way that the server environment would, and a 'Package' symbol
+    // way that the server environment would, a 'Package' symbol
     // so the loaded image has its own private universe of loaded
-    // packages
+    // packages, and an 'Assets' symbol to help the package find its
+    // static assets.
     var failed = false;
     _.each(self.jsToLoad, function (item) {
       if (failed)
@@ -913,6 +958,16 @@ _.extend(JsImage.prototype, {
                               "' while loading " + item.targetPath +
                               ". Check your Npm.depends().'");
             }
+          }
+        },
+        Assets: {
+          getText: function (assetPath, callback) {
+            return getAsset(item.staticDirectory.sourcePath,
+                            assetPath, "utf8", callback);
+          },
+          getBinary: function (assetPath, callback) {
+            return getAsset(item.staticDirectory.sourcePath,
+                            assetPath, undefined, callback);
           }
         }
       }, bindings || {});
@@ -966,7 +1021,8 @@ _.extend(JsImage.prototype, {
         path: item.targetPath,
         node_modules: item.nodeModulesDirectory ?
           item.nodeModulesDirectory.preferredBundlePath : undefined,
-        staticDirectory: item.staticDirectory
+        staticDirectory: item.staticDirectory ?
+          item.staticDirectory.bundlePath : undefined
       });
     });
 
@@ -1028,7 +1084,9 @@ JsImage.readFromDisk = function (controlFilePath) {
       targetPath: item.path,
       source: fs.readFileSync(path.join(dir, item.path)),
       nodeModulesDirectory: nmd,
-      staticDirectory: item.staticDirectory
+      staticDirectory: new StaticDirectory({
+        sourcePath: item.staticDirectory
+      })
     });
   });
 
@@ -1156,11 +1214,10 @@ _.extend(ServerTarget.prototype, {
         path.join(files.get_dev_bundle(), '.bundle_version.txt'), 'utf8');
     devBundleVersion = devBundleVersion.split('\n')[0];
 
-    var shellScripts = unipackage.load({
+    var script = unipackage.load({
       library: self.library,
       packages: ['dev-bundle-fetcher']
-    })['dev-bundle-fetcher'].shellScripts;
-    var script = shellScripts['dev-bundle.sh.in'].source;
+    })["dev-bundle-fetcher"].DevBundleFetcher.script;
     script = script.replace(/##PLATFORM##/g, platform);
     script = script.replace(/##BUNDLE_VERSION##/g, devBundleVersion);
     script = script.replace(/##IMAGE##/g, imageControlFile);
