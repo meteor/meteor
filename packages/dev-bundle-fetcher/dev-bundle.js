@@ -1,4 +1,6 @@
 // @export DevBundleFetcher
 DevBundleFetcher = {
-  script: Assets.getText("dev-bundle")
+  script: function () {
+    return Assets.getText("dev-bundle");
+  }
 };

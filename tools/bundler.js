@@ -1217,7 +1217,7 @@ _.extend(ServerTarget.prototype, {
     var script = unipackage.load({
       library: self.library,
       packages: ['dev-bundle-fetcher']
-    })["dev-bundle-fetcher"].DevBundleFetcher.script;
+    })["dev-bundle-fetcher"].DevBundleFetcher.script();
     script = script.replace(/##PLATFORM##/g, platform);
     script = script.replace(/##BUNDLE_VERSION##/g, devBundleVersion);
     script = script.replace(/##IMAGE##/g, imageControlFile);
