@@ -3,14 +3,6 @@ Package.describe({
   internal: true
 });
 
-Package._transitional_registerBuildPlugin({
-  name: 'includeShScript',
-  use: [],
-  sources: [
-    'plugins/shell.js'
-  ]
-});
-
 Package.on_use(function (api) {
-  api.add_files(['dev-bundle.sh.in', 'dev-bundle.js'], ['server']);
+  api.add_files(['dev-bundle', 'dev-bundle.js'], ['server']);
 });

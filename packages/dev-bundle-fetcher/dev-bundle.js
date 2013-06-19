@@ -1,4 +1,4 @@
 // @export DevBundleFetcher
 DevBundleFetcher = {
-  script: Assets.getText("dev-bundle.sh.in")
+  script: Assets.getText("dev-bundle")
 };
