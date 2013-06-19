@@ -94,6 +94,10 @@ var reportResults = function(results) {
     passedCount++;
     countDep.changed();
     test.dep.changed();
+  } else if (test.expanded) {
+    // re-render the test if new results come in and the test is
+    // currently expanded.
+    test.dep.changed();
   }
 };
 
