@@ -4,12 +4,13 @@
 
 <body>
   <div class="container-fluid">
-  {{> test_table}}
+  {{> navBars}}
+  {{> failedTests}}
+  {{> testTable}}
   </div>
 </body>
 
-<template name="test_table">
-{{#isolate}}
+<template name="navBars">
   <div class="navbar navbar-fixed-top navbar-inverse">
     <div class="navbar-inner">
       <div class="row-fluid">
@@ -38,24 +39,6 @@
     </div>
   </div>
   {{> groupNav}}
-  <div class="row-fluid"><div class="span12">
-  <ul class="failedTests">
-    {{#each failedTests}}
-      <li>{{this}}</li>
-    {{/each}}
-  </ul>
-  </div></div>
-{{/isolate}}
-
-{{#isolate}}
-  <div class="row-fluid"><div class="span12">
-  <div class="test_table">
-    {{#each data}}
-      {{> test_group this}}
-    {{/each}}
-  </div>
-  </div></div>
-{{/isolate}}
 </template>
 
 <template name="progressBar">
@@ -89,6 +72,26 @@
       &nbsp;
     </div>
   </div>
+</template>
+
+<template name="failedTests">
+  <div class="row-fluid"><div class="span12">
+  <ul class="failedTests">
+    {{#each failedTests}}
+      <li>{{this}}</li>
+    {{/each}}
+  </ul>
+  </div></div>
+</template>
+
+<template name="testTable">
+  <div class="row-fluid"><div class="span12">
+  <div class="test_table">
+    {{#each data}}
+      {{> test_group this}}
+    {{/each}}
+  </div>
+  </div></div>
 </template>
 
 <template name="test_group">

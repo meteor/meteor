@@ -218,19 +218,19 @@ var _testStatus = function(t) {
 //// Templates
 ////
 
-//// Template - test_table
+//// Template - navBars
 
-Template.test_table.running = function() {
+Template.navBars.running = function() {
   countDep.depend();
   return running;
 };
 
-Template.test_table.passed = function() {
+Template.navBars.passed = function() {
   countDep.depend();
   return failedCount === 0;
 };
 
-Template.test_table.total_test_time = function() {
+Template.navBars.total_test_time = function() {
   countDep.depend();
 
   // walk whole tree to get all tests
@@ -249,16 +249,6 @@ Template.test_table.total_test_time = function() {
   };
 
   return walk(resultTree);
-};
-
-Template.test_table.data = function() {
-  topLevelGroupsDep.depend();
-  return resultTree;
-};
-
-Template.test_table.failedTests = function() {
-  countDep.depend();
-  return failedTests;
 };
 
 
@@ -331,6 +321,23 @@ Template.groupNav.events({
     Meteor._reload.reload();
   }
 });
+
+
+//// Template - failedTests
+
+Template.failedTests.failedTests = function() {
+  countDep.depend();
+  return failedTests;
+};
+
+
+
+//// Template - testTable
+
+Template.testTable.data = function() {
+  topLevelGroupsDep.depend();
+  return resultTree;
+};
 
 
 //// Template - test_group
