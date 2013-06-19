@@ -175,6 +175,7 @@ var _ = require('underscore');
 var project = require(path.join(__dirname, 'project.js'));
 var builder = require(path.join(__dirname, 'builder.js'));
 var unipackage = require(path.join(__dirname, 'unipackage.js'));
+var Fiber = require('fibers');
 var Future = require(path.join('fibers', 'future'));
 
 // files to ignore when bundling. node has no globs, so use regexps
@@ -905,6 +906,9 @@ _.extend(JsImage.prototype, {
     var getAsset = function (staticDirectory, assetPath, encoding, callback) {
       var fut;
       if (! callback) {
+        if (! Fiber.current)
+          throw new Error("The synchronous Assets API can " +
+                          "only be called from within a Fiber.");
         fut = new Future();
         callback = fut.resolver();
       }

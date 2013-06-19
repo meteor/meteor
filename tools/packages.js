@@ -218,13 +218,11 @@ _.extend(Slice.prototype, {
         //
         // XXX This is pretty confusing, especially if you've
         // accidentally forgotten a plugin -- revisit?
-        if (archinfo.matches(self.arch, "browser")) {
-          resources.push({
-            type: "static",
-            data: contents,
-            servePath: path.join(self.pkg.serveRoot, relPath)
-          });
-        }
+        resources.push({
+          type: "static",
+          data: contents,
+          servePath: path.join(self.pkg.serveRoot, relPath)
+        });
         return;
       }
 

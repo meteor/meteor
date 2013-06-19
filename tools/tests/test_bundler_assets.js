@@ -27,10 +27,10 @@ assert.doesNotThrow(function () {
   assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
   assert(fs.existsSync(testTxtPath));
   assert(fs.existsSync(nestedTxtPath));
-  assert.strictEqual(fs.readFileSync(testTxtPath, "utf8").trim(),
-                     "Test");
-  assert.strictEqual(fs.readFileSync(nestedTxtPath, "utf8").trim(),
-                     "Nested");
+  assert.strictEqual(fs.readFileSync(testTxtPath, "utf8"),
+                     "Test\n");
+  assert.strictEqual(fs.readFileSync(nestedTxtPath, "utf8"),
+                     "Nested\n");
 });
 
 console.log("Bundle app with private/ directory and package asset");
@@ -53,11 +53,16 @@ assert.doesNotThrow(function () {
   );
   var staticDir;
   var packageTxtPath;
+  var unregisteredExtensionPath;
   _.each(serverManifest.load, function (item) {
     if (item.path === "/packages/test-package.js") {
       packageTxtPath = path.join(tmpOutputDir,
                                  "programs", "server",
                                  item.staticDirectory, "test-package.txt");
+      unregisteredExtensionPath = path.join(tmpOutputDir,
+                                            "programs", "server",
+                                            item.staticDirectory,
+                                            "test.notregistered");
     }
     if (item.path === "/app/test.js") {
       staticDir = path.join(tmpOutputDir,
@@ -72,9 +77,12 @@ assert.doesNotThrow(function () {
   assert(fs.existsSync(testTxtPath));
   assert(fs.existsSync(nestedTxtPath));
   assert(fs.existsSync(packageTxtPath));
-  assert.strictEqual(fs.readFileSync(testTxtPath, "utf8").trim(), "Test");
-  assert.strictEqual(fs.readFileSync(nestedTxtPath, "utf8").trim(), "Nested");
-  assert.strictEqual(fs.readFileSync(packageTxtPath, "utf8").trim(), "Package");
+  assert(fs.existsSync(unregisteredExtensionPath));
+  assert.strictEqual(fs.readFileSync(testTxtPath, "utf8"), "Test\n");
+  assert.strictEqual(fs.readFileSync(nestedTxtPath, "utf8"), "Nested\n");
+  assert.strictEqual(fs.readFileSync(packageTxtPath, "utf8"), "Package\n");
+  assert.strictEqual(fs.readFileSync(unregisteredExtensionPath, "utf8"),
+                     "No extension handler\n");
 
   // Run the app to check that Assets.getText/Binary do the right things.
   var cp = require('child_process');

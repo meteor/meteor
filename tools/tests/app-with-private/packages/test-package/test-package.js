@@ -13,6 +13,8 @@ if (Meteor.isServer) {
     if (TestAsset.convert(Assets.getBinary("test-package.txt"))
         !== expectText)
       throw new Error("getBinary test-package.txt does not match");
+    if (Assets.getText("test.notregistered") !== "No extension handler\n")
+      throw new Error("File with unregistered extension does not match");
 
     Assets.getText("test-package.txt", function (err, result) {
       if (err || result !== expectText)
