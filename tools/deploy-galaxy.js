@@ -3,6 +3,7 @@ var files = require('./files.js');
 var path = require('path');
 var fs = require('fs');
 var unipackage = require('./unipackage.js');
+var Fiber = require('fibers');
 
 // a bit of a hack
 var _meteor;
@@ -226,6 +227,8 @@ exports.logs = function (options) {
     // Close connections to Galaxy and log-reader
     // (otherwise Node will continue running).
     logReader.close();
+  } else {
+    Fiber.yield();
   }
 };
 
