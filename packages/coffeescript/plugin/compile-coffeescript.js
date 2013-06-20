@@ -64,10 +64,18 @@ var addSharedHeader = function (source) {
   // should work both in "package" mode where __coffeescriptShare will be added
   // as a var in the package closure, and in "app" mode where it will end up as
   // a global.
-  return ("__coffeescriptShare = typeof __coffeescriptShare === 'object' ? " +
-          "__coffeescriptShare : {}; " +
-          "var share = __coffeescriptShare;" +
-          source);
+  //
+  // This ends in a newline in case the first line is a linker @comment, which
+  // should be at the beginning of a line.
+  var header = ("__coffeescriptShare = typeof __coffeescriptShare === 'object' " +
+                "? __coffeescriptShare : {}; " +
+                "var share = __coffeescriptShare;\n");
+
+  // If the file begins with "use strict", we need to keep that as the first
+  // statement.
+  return source.replace(/^(?:(['"])use strict\1;\n)?/, function (match) {
+    return match + header;
+  });
 };
 
 var handler = function (compileStep) {
