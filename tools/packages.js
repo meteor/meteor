@@ -372,7 +372,7 @@ _.extend(Slice.prototype, {
             sourcePath: options.sourcePath,
             servePath: path.join(self.pkg.serveRoot, options.path),
             includePositionInErrors: options.lineForLine,
-            stripVarFromExports: !!options.stripVarFromExports
+            linkerUnitTransform: options.linkerUnitTransform
           });
         },
         addAsset: function (options) {
