@@ -128,6 +128,7 @@ Handlebars.evaluate = function (ast, data, options) {
     if (id[1] === '') {
       // an empty path segment is our AST's way of encoding
       // the presence of 'this.' at the beginning of the path.
+      id = id.slice();
       id.splice(1, 1); // remove the ''
       scopedToContext = true;
     }
