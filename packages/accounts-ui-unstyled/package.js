@@ -3,7 +3,8 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['accounts-urls', 'accounts-base', 'underscore', 'templating',
+  api.use(['service-configuration', 'accounts-urls', 'accounts-base',
+           'underscore', 'templating',
            'handlebars', 'spark', 'session'], 'client');
 
   api.add_files([
