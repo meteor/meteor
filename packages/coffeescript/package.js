@@ -8,7 +8,7 @@ Package._transitional_registerBuildPlugin({
   sources: [
     'plugin/compile-coffeescript.js'
   ],
-  npmDependencies: {"coffee-script": "1.6.2"}
+  npmDependencies: {"coffee-script": "1.6.3"}
 });
 
 Package.on_test(function (api) {
