@@ -29,6 +29,7 @@ html_scanner = {
     };
 
     var results = html_scanner._initResults();
+    results.js += 'Template = (typeof Template === "undefined") ? {} : Template;\n';
 
     var rOpenTag = /^((<(template|head|body)\b)|(<!--)|(<!DOCTYPE|{{!)|$)/i;
 
@@ -145,14 +146,14 @@ html_scanner = {
       if (! name)
         throwParseError("Template has no 'name' attribute");
 
-      results.js += "UI._templates[" + JSON.stringify(name) +
-        "] = " + renderFuncCode + ";\n";
+      results.js += "Template[" + JSON.stringify(name) +
+        "] = Component.extend({render: " + renderFuncCode + "});\n";
     } else {
       // <body>
       if (hasAttribs)
         throwParseError("Attributes on <body> not supported");
-      results.js += "UI._templates.Body = " + renderFuncCode + ";\n";
-      results.js += "Body = RootComponent.extend({ render: UI._templates.Body });\n";
+
+      results.js += "Body = RootComponent.extend({render: " + renderFuncCode + "});\n";
       results.js += 'Meteor.startup(function () { if (!(Body.prototype instanceof RootComponent)) throw new Error("Body must extend RootComponent"); Body.create().attach(document.body); });\n';
     }
   }
