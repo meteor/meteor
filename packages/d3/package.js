@@ -3,5 +3,6 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
+  api.exportSymbol('d3', 'client');
   api.add_files('d3.v3.js', 'client');
 });
