@@ -53,10 +53,11 @@ var Module = function (options) {
 _.extend(Module.prototype, {
   // source: the source code
   // servePath: the path where it would prefer to be served if possible
-  addFile: function (source, servePath, sourcePath, includePositionInErrors) {
+  addFile: function (source, servePath, sourcePath, includePositionInErrors,
+                     stripVarFromExports) {
     var self = this;
     self.files.push(new File(source, servePath, sourcePath,
-                             includePositionInErrors));
+                             includePositionInErrors, stripVarFromExports));
   },
 
 
@@ -106,6 +107,8 @@ _.extend(Module.prototype, {
     if (! self.files.length && ! self.useGlobalNamespace)
       return [];
 
+    var moduleExports = self.getExports();
+
     // If we don't want to create a separate scope for this module,
     // then our job is much simpler. And we can get away with
     // preserving the line numbers.
@@ -117,9 +120,10 @@ _.extend(Module.prototype, {
 
       return ret.concat(_.map(self.files, function (file) {
         return {
-          source: file.getLinkedOutput({ preserveLineNumbers: true }),
+          source: file.getLinkedOutput({ preserveLineNumbers: true,
+                                         exports: moduleExports }),
           servePath: file.servePath
-        }
+        };
       }));
     }
 
@@ -143,7 +147,8 @@ _.extend(Module.prototype, {
 
     // Emit each file
     _.each(self.files, function (file) {
-      combined += file.getLinkedOutput({ sourceWidth: sourceWidth });
+      combined += file.getLinkedOutput({ sourceWidth: sourceWidth,
+                                         exports: moduleExports });
       combined += "\n";
     });
 
@@ -199,7 +204,7 @@ _.extend(Module.prototype, {
     buf += writeSymbolTree(exports, 0);
     buf += ";\n";
     return buf;
-  },
+  }
 
 });
 
@@ -251,7 +256,8 @@ var writeSymbolTree = function (symbolTree, indent) {
 // File
 ///////////////////////////////////////////////////////////////////////////////
 
-var File = function (source, servePath, sourcePath, includePositionInErrors) {
+var File = function (source, servePath, sourcePath, includePositionInErrors,
+                     stripVarFromExports) {
   var self = this;
 
   // source code for this file (a string)
@@ -269,6 +275,10 @@ var File = function (source, servePath, sourcePath, includePositionInErrors) {
   // The individual @units in the file. Array of Unit. Concatenating
   // the source of each unit, in order, will give self.source.
   self.units = [];
+
+  // Should we try to ensure that exports are not also declared as top-level
+  // vars? (eg, for CoffeeScript.)
+  self.stripVarFromExports = stripVarFromExports;
 
   self._unitize();
 };
@@ -292,6 +302,7 @@ _.extend(File.prototype, {
   //   numbers don't change between input and output. In this case,
   //   sourceWidth is ignored.
   // - sourceWidth: width in columns to use for the source code
+  // - exports: the exports to remove, if stripVarFromExports was set
   getLinkedOutput: function (options) {
     var self = this;
 
@@ -300,7 +311,8 @@ _.extend(File.prototype, {
     // The newline after the source closes a '//' comment.
     if (options.preserveLineNumbers) {
       // Ugly version
-      return "(function(){" + self.source + "\n})();\n";
+      return "(function(){" +
+        self._maybeStripVars(self.source, options.exports) + "\n})();\n";
     }
 
     // Pretty version
@@ -328,7 +340,8 @@ _.extend(File.prototype, {
     // already inside a comment.
     var num = 1;
     _.each(self.units, function (unit) {
-      var lines = unit.source.split('\n');
+      var unitSource = self._maybeStripVars(unit.source, options.exports);
+      var lines = unitSource.split('\n');
 
       _.each(lines, function (line) {
         if (! unit.include)
@@ -345,7 +358,7 @@ _.extend(File.prototype, {
     buf += divider;
 
     // Epilogue
-    buf += "\n}).call(this);\n\n\n\n\n\n"
+    buf += "\n}).call(this);\n\n\n\n\n\n";
     return buf;
   },
 
@@ -419,6 +432,52 @@ _.extend(File.prototype, {
       buf += line;
     });
     unit.source = buf;
+  },
+
+  _maybeStripVars: function (source, exports) {
+    var self = this;
+
+    if (!self.stripVarFromExports || !exports || _.isEmpty(exports))
+      return source;
+    var lines = source.split("\n");
+
+    // We make the following assumptions, based on the output of CoffeeScript
+    // 1.6.3.
+    //   - The var declaration in question is not indented and is the first such
+    //     var declaration.  (CoffeeScript only produces one var line at each
+    //     scope and there's only one top-level scope.)  All relevant variables
+    //     are actually on this line.
+    //   - The user hasn't used a ###-comment containing a line that looks like
+    //     a var line, to produce something like
+    //        /* bla
+    //        var foo;
+    //        */
+    //     before an actual var line.  (ie, we do NOT attempt to figure out if
+    //     we're inside a /**/ comment, which is produced by ### comments.)
+    //   - The var in question is not assigned to in the declaraction, nor are
+    //     any other vars on this line. (CoffeeScript does produce some
+    //     assignments but only for internal helpers generated by CoffeeScript,
+    //     and they end up on subsequent lines.)
+    // XXX relax these assumptions by doing actual JS parsing (eg with jsparse).
+    //     I'd do this now, but there's no easy way to "unparse" a jsparse AST.
+
+    var foundVarLine = false;
+    lines = _.map(lines, function (line) {
+      if (foundVarLine)
+        return line;
+      var match = /^var (.+)([,;])$/.exec(line);
+      if (!match)
+        return line;
+      foundVarLine = true;
+      var vars = match[1].split(', ');
+      vars = _.difference(vars, exports);
+      if (!_.isEmpty(vars))
+        return "var " + vars.join(', ') + match[2];
+      // We got rid of all the vars on this line. Drop the whole line if this
+      // didn't continue to the next line, otherwise keep just the 'var '.
+      return match[2] === ';' ? '' : 'var';
+    });
+    return lines.join('\n');
   }
 });
 
@@ -546,6 +605,10 @@ _.extend(Unit.prototype, {
 //  - includePositionInErrors: true to include line and column
 //    information in errors. set to false if, eg, this is the output
 //    of coffeescript. (XXX replace with real sourcemaps)
+//  - stripVarFromExports: true if we should look at the top of the file
+//    for a "var" declaration which may declare some exports as unassigned
+//    vars, and if so, remove the var declaration. (This is designed
+//    to work with the output of the CoffeeScript compiler.)
 //
 // forceExport: an array of symbols (as dotted strings) to force the
 // module to export, even if it wouldn't otherwise
@@ -577,7 +640,8 @@ var prelink = function (options) {
 
   _.each(options.inputFiles, function (f) {
     module.addFile(f.source, f.servePath, f.sourcePath,
-                   f.includePositionInErrors);
+                   f.includePositionInErrors,
+                   f.stripVarFromExports);
   });
 
   var files = module.getLinkedFiles();

@@ -371,7 +371,8 @@ _.extend(Slice.prototype, {
             source: options.data,
             sourcePath: options.sourcePath,
             servePath: path.join(self.pkg.serveRoot, options.path),
-            includePositionInErrors: options.lineForLine
+            includePositionInErrors: options.lineForLine,
+            stripVarFromExports: !!options.stripVarFromExports
           });
         },
         addAsset: function (options) {
