@@ -28,6 +28,8 @@ _.each(browsersEnabledByDefault, function (browser) {
   enabledBrowsers[browser] = true;
 });
 
+var extraResources = {};
+
 Meteor.AppCache = {
   config: function(options) {
     _.each(options, function (value, option) {
@@ -43,6 +45,11 @@ Meteor.AppCache = {
       else if (option === 'onlineOnly') {
         _.each(value, function (urlPrefix) {
           Meteor._routePolicy.declare(urlPrefix, 'static-online');
+        });
+      }
+      else if (option === 'extraResources') {
+        _.each(value, function (resource) {
+          extraResources[resource] = 1;
         });
       }
       else {
@@ -126,6 +133,10 @@ app.use(function(req, res, next) {
 
       manifest += "\n";
     }
+  });
+  _.each(_.keys(extraResources), function (url) {
+    manifest += url;
+    manifest += "\n";
   });
   manifest += "\n";
 
