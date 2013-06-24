@@ -4,6 +4,7 @@ var path = require('path');
 var fs = require('fs');
 var unipackage = require('./unipackage.js');
 var Fiber = require('fibers');
+var request = require('request');
 
 // a bit of a hack
 var _meteor;
@@ -24,7 +25,7 @@ var getGalaxy = function (context) {
   if (! _galaxy) {
     var Meteor = getMeteor(context);
     if (!context.galaxyUrl) {
-      process.stderr.write("GALAXY environment variable must be set.\n");
+      process.stderr.write("Must have a deploy endpoint.\n");
       process.exit(1);
     }
 
@@ -71,8 +72,31 @@ var prettySub = function (galaxy, name, args, messages) {
   return ret;
 };
 
+exports.discoverGalaxy = function (app) {
+  app = app + ":" + (process.env.DISCOVERY_PORT || 443);
+  var url = "https://" + app + "/discovery/_GALAXY_";
+  var fut = new Future();
 
-exports.deleteApp = function (app) {
+  var noDiscoveryResult = {};
+  if (process.env.GALAXY)
+    noDiscoveryResult.deployEndpoint = process.env.GALAXY;
+
+  request(url, function (err, resp, body) {
+    if (err || resp.statusCode !== 200) {
+      fut.return(noDiscoveryResult);
+    } else {
+      try {
+        var result = JSON.parse(body);
+        fut.return(result);
+      } catch (e) {
+        fut.return(noDiscoveryResult);
+      }
+    }
+  });
+  return fut.wait();
+};
+
+exports.deleteApp = function (context) {
   throw new Error("Not implemented");
 };
 
@@ -143,7 +167,6 @@ exports.deploy = function (options) {
   // XXX copied from galaxy/tool/galaxy.js
   var fileSize = fs.statSync(starball).size;
   var fileStream = fs.createReadStream(starball);
-  var request = require('request');
   var future = new Future;
   var req = request.put({
     url: info.put,
