@@ -14,6 +14,13 @@ var global = (function () { return this; })();
 
 // @export Component
 Component = function (args) {
+  if (this === global) {
+    // without `new`, `Component(...)` is an alias for
+    // `Component.augment(...)`.  This code controls just
+    // the base class, but derived classes have the same logic.
+    return Component.augment.apply(Component, arguments);
+  }
+
   if (constructorsLocked)
     throw new Error("To create a Component, " +
                     "use ComponentClass.create(...)");
@@ -638,12 +645,20 @@ Component.augment = function (options) {
       cls.prototype[propKey] = propValue;
     }
   });
+
+  return cls;
 };
 
 Component.extend = function (options) {
   var superClass = this;
   // all constructors just call the base constructor
   var newClass = function CustomComponent() {
+    if (this === global) {
+      // without `new`, `MyComp(...)` is an alias for
+      // `MyComp.augment(...)`.
+      return newClass.augment.apply(newClass, arguments);
+    }
+
     if (constructorsLocked)
       throw new Error("To create a Component, " +
                       "use ComponentClass.create(...)");

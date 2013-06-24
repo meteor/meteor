@@ -6,7 +6,7 @@ Items.insert({ text: 'Foo' });
 Items.insert({ text: 'Bar' });
 Items.insert({ text: 'Baz' });
 
-Body.augment({
+Body({
   items: function () {
     return Items.find({}, { sort: { text: 1 }});
   },
