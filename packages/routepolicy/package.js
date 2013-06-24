@@ -4,7 +4,6 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use('webapp', 'server');
   api.use('underscore', 'server');
   api.add_files('routepolicy.js', 'server');
 });
