@@ -4,12 +4,7 @@ UI = {
     return (typeof value === 'function') &&
       ((value === Component) ||
        (value.prototype instanceof Component));
-  },
-  // Generated templates are put here.  This object must
-  // be populated before any Components are actually
-  // created, i.e. as the compiled template scripts are
-  // evaluated.
-  _templates: {}
+  }
 };
 
 var constructorsLocked = true;
@@ -46,43 +41,6 @@ Component = function (args) {
   this._buildUpdater = null;
   this._childUpdaters = {};
   this.elements = {};
-
-  if (! templatesAssigned) {
-    // This code is run once ever, when the first Component
-    // instance is created.
-    //
-    // Assign the value of
-    // `UI._templates["FooComponent"]` to
-    // `FooComponent.prototype.render`, and so on for other
-    // entries in the `UI._templates` dictionary.
-    //
-    // This code lives here because we can't tie together
-    // templates and Component definitions any sooner.
-    // For example, nothing useful can happen when
-    // `FooComponent = Component.extend(...)` runs, because
-    // the implementation of `extend` doesn't even know the
-    // name of the Component class being defined.
-    // All we can do is collect the templates as they are
-    // declared, and then at some point sufficiently late
-    // (here) assign them to the appropriate Component
-    // classes.
-    //
-    // XXX does this use of the global scope work with linking?
-    // Can we actually find and access all Component classes
-    // this way?
-    _.each(UI._templates, function (v, k) {
-      if (UI.isComponentClass(global[k])) {
-        var cls = global[k];
-        if (cls.prototype.hasOwnProperty('render') &&
-            cls.prototype.render !== v)
-          throw new Error(
-            'Component "' + k + '" has both a render method ' +
-              'implementation and a template of that name');
-        cls.prototype.render = v;
-      }
-    });
-    templatesAssigned = true;
-  }
 
   this.constructed();
 };
@@ -529,16 +487,21 @@ _.extend(Component.prototype, {
 });
 
 _.extend(Component.prototype, {
+  render: function (buf) {}
+});
+
+var allCallbacks = {
   constructed: function () {},
   init: function () {},
-  render: function (buf) {},
   updated: function (args, oldArgs) {},
   destroyed: function () {},
   attached: function () {},
   detached: function () {},
   built: function () {},
   rebuilt: function () {}
-});
+};
+
+_.extend(Component.prototype, allCallbacks);
 
 _.extend(Component.prototype, {
   lookup: function (id) {
@@ -594,6 +557,89 @@ Component.create = function (/*args*/) {
   return comp;
 };
 
+
+var setSuperClass = function (subClass, superClass) {
+  // Establish a prototype link from newClass.prototype to
+  // superClass.prototype.  This is similar to making
+  // newClass.prototype a `new superClass` but bypasses
+  // the constructor.
+  //
+  // Replaces subClass.prototype, losing any properties.
+  var fakeSuperClass = function () {};
+  fakeSuperClass.prototype = superClass.prototype;
+  subClass.prototype = new fakeSuperClass;
+
+  // Record the superClass for our future use.
+  subClass.superClass = superClass;
+
+  // Inherit class (static) properties from parent.
+  _.extend(subClass, superClass);
+
+  // For browsers that don't support it, fill in `obj.constructor`.
+  subClass.prototype.constructor = subClass;
+
+  subClass.create = Component.create;
+};
+
+Component.augment = function (options) {
+  var cls = this;
+
+  if (! options)
+    throw new Error("Options object required to augment object");
+
+  if ('extend' in options) {
+    var newSuper = options.extend;
+    if (! UI.isComponentClass(newSuper))
+      throw new Error("'extend' option must be a Component class");
+
+    if (cls.superClass !== Component)
+      throw new Error("Can only set superclass once, on generic Component");
+
+    if (newSuper !== cls.superClass) {
+      var oldProto = cls.prototype;
+      setSuperClass(cls, newSuper);
+      // restore old properties on proto from previous augments
+      // or extends.
+      for (var k in oldProto)
+        if (oldProto.hasOwnProperty(k))
+          cls.prototype[k] = oldProto[k];
+    }
+    delete options.extend;
+  }
+
+  _.each(options, function (propValue, propKey) {
+    // (it's important that this loop body is a closure,
+    // because local variables are closed over by nested
+    // closures and those variables have different values
+    // each time through the loop)
+    if (allCallbacks.hasOwnProperty(propKey)) {
+      // Property is on our list of callbacks.
+      // Callbacks chain with previous callbacks
+      // and super's callback.
+      if (cls.prototype.hasOwnProperty(propKey)) {
+        // not the first time this callback has been defined
+        // on this class!  Chain with previous, not super.
+        var prevFunction = cls.prototype[propKey];
+        cls.prototype[propKey] = function (/*arguments*/) {
+          prevFunction.apply(this, arguments);
+          propValue.apply(this, arguments);
+        };
+      } else {
+        // First time this callback has been defined on this
+        // class.  Chain with super.
+        cls.prototype[propKey] = function (/*arguments*/) {
+          if (cls.superClass)
+            cls.superClass.prototype[propKey].apply(this, arguments);
+          propValue.apply(this, arguments);
+        };
+      }
+    } else {
+      // normal, non-callback method or other property
+      cls.prototype[propKey] = propValue;
+    }
+  });
+};
+
 Component.extend = function (options) {
   var superClass = this;
   // all constructors just call the base constructor
@@ -604,54 +650,10 @@ Component.extend = function (options) {
     // (Component.create kicks off construction)
   };
 
-  // Establish a prototype link from newClass.prototype to
-  // superClass.prototype.  This is similar to making
-  // newClass.prototype a `new superClass` but bypasses
-  // the constructor.
-  var fakeSuperClass = function () {};
-  fakeSuperClass.prototype = superClass.prototype;
-  newClass.prototype = new fakeSuperClass;
+  setSuperClass(newClass, superClass);
 
-  // Record the superClass for our future use.
-  newClass.superClass = superClass;
-
-  // Inherit class (static) properties from parent.
-  _.extend(newClass, superClass);
-
-  // For callbacks, call one in turn from super to sub.
-  // Or rather, redefine each callback we are given to call
-  // super method first.
-  // XXX TODO: clean this up.
-  // - General combining mechanism?  Filtering mechanism?
-  // - Get the lookup hash out of here!
-  _.each(options, function (v, k) {
-    // important that we have a closure here to capture
-    // each old function!
-    var oldFunction = v;
-    if ({init:1,
-         destroyed:1,
-         updated:1,
-         attached:1,
-         detached:1,
-         built:1,
-         rebuilt:1,
-         constructed:1
-        }.hasOwnProperty(k)) {
-      options[k] = function () {
-        superClass.prototype[k].apply(this, arguments);
-        oldFunction.apply(this, arguments);
-      };
-    }
-  });
-
-  // Add instance properties and methods.
   if (options)
-    _.extend(newClass.prototype, options);
-
-  // For browsers that don't support it, fill in `obj.constructor`.
-  newClass.prototype.constructor = newClass;
-
-  newClass.create = Component.create;
+    newClass.augment(options);
 
   return newClass;
 };

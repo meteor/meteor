@@ -6,14 +6,14 @@ Items.insert({ text: 'Foo' });
 Items.insert({ text: 'Bar' });
 Items.insert({ text: 'Baz' });
 
-Body = RootComponent.extend({
+Body.augment({
   items: function () {
     return Items.find({}, { sort: { text: 1 }});
   },
   name: 'David'
 });
 
-twice = Component.extend();
+twice = Template.twice;
 
 Meteor.startup(function () {
   Items.insert({ text: 'Qux' });
