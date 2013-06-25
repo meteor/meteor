@@ -13,8 +13,6 @@ Body({
   name: 'David'
 });
 
-twice = Template.twice;
-
 Meteor.startup(function () {
   Items.insert({ text: 'Qux' });
   Items.remove({ text: 'Foo' });

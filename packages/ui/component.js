@@ -14,7 +14,7 @@ var global = (function () { return this; })();
 
 // @export Component
 Component = function (args) {
-  if (this === global) {
+  if (! (this instanceof Component)) {
     // without `new`, `Component(...)` is an alias for
     // `Component.augment(...)`.  This code controls just
     // the base class, but derived classes have the same logic.
@@ -570,17 +570,24 @@ var setSuperClass = function (subClass, superClass) {
   // superClass.prototype.  This is similar to making
   // newClass.prototype a `new superClass` but bypasses
   // the constructor.
-  //
-  // Replaces subClass.prototype, losing any properties.
+
+  var oldProto = subClass.prototype;
+
   var fakeSuperClass = function () {};
   fakeSuperClass.prototype = superClass.prototype;
   subClass.prototype = new fakeSuperClass;
 
-  // Record the superClass for our future use.
-  subClass.superClass = superClass;
-
   // Inherit class (static) properties from parent.
   _.extend(subClass, superClass);
+
+  // Record the (new) superClass for our future use.
+  subClass.superClass = superClass;
+
+  // restore old properties on proto (from previous augments
+  // or extends)
+  for (var k in oldProto)
+    if (oldProto.hasOwnProperty(k))
+      subClass.prototype[k] = oldProto[k];
 
   // For browsers that don't support it, fill in `obj.constructor`.
   subClass.prototype.constructor = subClass;
@@ -603,13 +610,7 @@ Component.augment = function (options) {
       throw new Error("Can only set superclass once, on generic Component");
 
     if (newSuper !== cls.superClass) {
-      var oldProto = cls.prototype;
       setSuperClass(cls, newSuper);
-      // restore old properties on proto from previous augments
-      // or extends.
-      for (var k in oldProto)
-        if (oldProto.hasOwnProperty(k))
-          cls.prototype[k] = oldProto[k];
     }
     delete options.extend;
   }
@@ -652,8 +653,8 @@ Component.augment = function (options) {
 Component.extend = function (options) {
   var superClass = this;
   // all constructors just call the base constructor
-  var newClass = function CustomComponent() {
-    if (this === global) {
+  var newClass = function CustomComponent(/*arguments*/) {
+    if (! (this instanceof newClass)) {
       // without `new`, `MyComp(...)` is an alias for
       // `MyComp.augment(...)`.
       return newClass.augment.apply(newClass, arguments);
