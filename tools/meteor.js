@@ -957,8 +957,14 @@ Fiber(function () {
     name: "logs",
     help: "Show logs for specified site",
     func: function (argv) {
-      var useGalaxy = !!context.galaxyUrl;
       argv = require('optimist').boolean('f').argv;
+
+      var discoverResults = deployGalaxy.discoverGalaxy(argv._[1]);
+      var deployEndpoint = discoverResults.deployEndpoint;
+      var site = removeRootFromSiteName(argv._[1],
+                                        discoverResults.rootSiteName);
+      calculateGalaxyContextAndTunnel(deployEndpoint, context, argv);
+      var useGalaxy = !!context.galaxyUrl;
 
       if (argv.help || argv._.length !== 2) {
         if (useGalaxy) {
@@ -979,14 +985,13 @@ Fiber(function () {
       }
 
       if (useGalaxy) {
-        var deployGalaxy = require('./deploy-galaxy.js');
         deployGalaxy.logs({
           context: context,
-          app: argv._[1],
+          app: site,
           streaming: !!argv.f
         });
       } else {
-        deploy.logs(argv._[1]);
+        deploy.logs(site);
       }
     }
   });
