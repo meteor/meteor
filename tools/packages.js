@@ -794,7 +794,7 @@ _.extend(Package.prototype, {
       // 'handler' is a function that takes a single argument, a
       // CompileStep (#CompileStep)
       registerSourceHandler: function (extension, handler) {
-        if (extension in self.sourceHandlers) {
+        if (_.has(self.sourceHandlers, extension)) {
           buildmessage.error("duplicate handler for '*." +
                              extension + "'; may only have one per Plugin",
                              { useMyCaller: true });
@@ -806,7 +806,7 @@ _.extend(Package.prototype, {
       }
     };
 
-    self.sourceHandlers = [];
+    self.sourceHandlers = {};
     _.each(self.plugins, function (plugin, name) {
       buildmessage.enterJob({
         title: "loading plugin `" + name +
