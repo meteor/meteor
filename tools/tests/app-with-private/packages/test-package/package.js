@@ -5,5 +5,5 @@ Package._transitional_registerBuildPlugin({
 });
 
 Package.on_use(function (api) {
-  api.add_files(['test-package.js', 'test-package.txt'], 'server');
+  api.add_files(['test-package.js', 'test-package.txt', 'test.notregistered'], 'server');
 });

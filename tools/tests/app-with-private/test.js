@@ -14,7 +14,7 @@ if (Meteor.isServer) {
     Assets.getBinary("test.txt", function (err, result) {
       if (err || TestAsset.convert(result) !== expectText)
         throw new Error("async getBinary test.txt does not match");
-      TestAsset.go();
+      TestAsset.go(true /* exit when done */);
     });
   });
 }

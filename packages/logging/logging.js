@@ -13,9 +13,12 @@ var interceptedLines = [];
 Log._intercept = function (count) {
   intercept += count;
 };
+
+// Returns intercepted lines and resets the intercept counter.
 Log._intercepted = function () {
   var lines = interceptedLines;
   interceptedLines = [];
+  intercept = 0;
   return lines;
 };
 
@@ -32,12 +35,12 @@ Log.outputFormat = 'json';
 
 var LEVEL_COLORS = {
   debug: 'green',
-  info: 'blue',
-  warn: 'yellow',
+  // leave info as the default color
+  warn: 'magenta',
   error: 'red'
 };
 
-var META_COLOR = 'magenta';
+var META_COLOR = 'blue';
 
 // XXX package
 var RESTRICTED_KEYS = ['time', 'timeInexact', 'level', 'file', 'line',
@@ -110,6 +113,7 @@ Log._getCallerDetails = function () {
 _.each(['debug', 'info', 'warn', 'error'], function (level) {
   // @param arg {String|Object}
   Log[level] = function (arg) {
+    var intercepted = false;
     if (intercept) {
       intercept--;
       intercepted = true;
@@ -124,7 +128,7 @@ _.each(['debug', 'info', 'warn', 'error'], function (level) {
     });
 
     if (_.has(obj, 'message') && !_.isString(obj.message))
-      throw new Error("Message should be set to string in the log message");
+      throw new Error("The 'message' field in log objects must be a string");
 
     obj = _.extend(Log._getCallerDetails(), obj);
     obj.time = new Date();

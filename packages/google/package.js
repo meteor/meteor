@@ -9,7 +9,8 @@ Package.on_use(function(api) {
   api.use('oauth2', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
   api.use('http', ['client', 'server']);
-  api.use('templating', 'client');
+  api.use(['underscore', 'service-configuration'], ['client', 'server']);
+  api.use(['random', 'templating'], 'client');
 
   api.add_files(
     ['google_configure.html', 'google_configure.js'],

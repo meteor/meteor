@@ -53,10 +53,11 @@ var Module = function (options) {
 _.extend(Module.prototype, {
   // source: the source code
   // servePath: the path where it would prefer to be served if possible
-  addFile: function (source, servePath, sourcePath, includePositionInErrors) {
+  addFile: function (source, servePath, sourcePath, includePositionInErrors,
+                     linkerUnitTransform) {
     var self = this;
     self.files.push(new File(source, servePath, sourcePath,
-                             includePositionInErrors));
+                             includePositionInErrors, linkerUnitTransform));
   },
 
 
@@ -106,6 +107,8 @@ _.extend(Module.prototype, {
     if (! self.files.length && ! self.useGlobalNamespace)
       return [];
 
+    var moduleExports = self.getExports();
+
     // If we don't want to create a separate scope for this module,
     // then our job is much simpler. And we can get away with
     // preserving the line numbers.
@@ -117,9 +120,10 @@ _.extend(Module.prototype, {
 
       return ret.concat(_.map(self.files, function (file) {
         return {
-          source: file.getLinkedOutput({ preserveLineNumbers: true }),
+          source: file.getLinkedOutput({ preserveLineNumbers: true,
+                                         exports: moduleExports }),
           servePath: file.servePath
-        }
+        };
       }));
     }
 
@@ -143,7 +147,8 @@ _.extend(Module.prototype, {
 
     // Emit each file
     _.each(self.files, function (file) {
-      combined += file.getLinkedOutput({ sourceWidth: sourceWidth });
+      combined += file.getLinkedOutput({ sourceWidth: sourceWidth,
+                                         exports: moduleExports });
       combined += "\n";
     });
 
@@ -199,7 +204,7 @@ _.extend(Module.prototype, {
     buf += writeSymbolTree(exports, 0);
     buf += ";\n";
     return buf;
-  },
+  }
 
 });
 
@@ -251,7 +256,8 @@ var writeSymbolTree = function (symbolTree, indent) {
 // File
 ///////////////////////////////////////////////////////////////////////////////
 
-var File = function (source, servePath, sourcePath, includePositionInErrors) {
+var File = function (source, servePath, sourcePath, includePositionInErrors,
+                     linkerUnitTransform) {
   var self = this;
 
   // source code for this file (a string)
@@ -269,6 +275,12 @@ var File = function (source, servePath, sourcePath, includePositionInErrors) {
   // The individual @units in the file. Array of Unit. Concatenating
   // the source of each unit, in order, will give self.source.
   self.units = [];
+
+  // A function which transforms the source code once all exports are
+  // known. (eg, for CoffeeScript.)
+  self.linkerUnitTransform = linkerUnitTransform || function (source, exports) {
+    return source;
+  };
 
   self._unitize();
 };
@@ -292,6 +304,7 @@ _.extend(File.prototype, {
   //   numbers don't change between input and output. In this case,
   //   sourceWidth is ignored.
   // - sourceWidth: width in columns to use for the source code
+  // - exports: the module's exports
   getLinkedOutput: function (options) {
     var self = this;
 
@@ -300,7 +313,8 @@ _.extend(File.prototype, {
     // The newline after the source closes a '//' comment.
     if (options.preserveLineNumbers) {
       // Ugly version
-      return "(function(){" + self.source + "\n})();\n";
+      return "(function(){" +
+        self.linkerUnitTransform(self.source, options.exports) + "\n})();\n";
     }
 
     // Pretty version
@@ -328,7 +342,8 @@ _.extend(File.prototype, {
     // already inside a comment.
     var num = 1;
     _.each(self.units, function (unit) {
-      var lines = unit.source.split('\n');
+      var unitSource = self.linkerUnitTransform(unit.source, options.exports);
+      var lines = unitSource.split('\n');
 
       _.each(lines, function (line) {
         if (! unit.include)
@@ -345,8 +360,26 @@ _.extend(File.prototype, {
     buf += divider;
 
     // Epilogue
-    buf += "\n}).call(this);\n\n\n\n\n\n"
+    buf += "\n}).call(this);\n\n\n\n\n\n";
     return buf;
+  },
+
+  // If "line" contains nothing but a comment (of either syntax), return the
+  // body of the comment with leading and trailing spaces trimmed (possibly the
+  // empty string). Otherwise return null. (We need to support both comment
+  // syntaxes because the CoffeeScript compiler only emits /**/ comments.)
+  _getSingleLineCommentBody: function (line) {
+    var self = this;
+    var match = /^\s*\/\/(.+)$/.exec(line);
+    if (match) {
+      return match[1].trim();
+    }
+    match = /^\s*\/\*(.+)\*\/\s*$/.exec(line);
+    // Make sure we don't get tricked by lines like
+    //     /* Comment */  var myRegexp = /x*/
+    if (match && match[1].indexOf('*/') === -1)
+      return match[1].trim();
+    return null;
   },
 
   // Split file and populate self.units
@@ -363,32 +396,36 @@ _.extend(File.prototype, {
 
     var lineCount = 0;
     _.each(lines, function (line) {
-      // XXX overly permissive. should detect errors
-      var match = /^\s*\/\/\s*@unit(\s+([^\s]+))?/.exec(line);
-      if (match) {
-        unit.source = buf;
-        buf = line;
-        unit = new Unit(match[2] || null, false, self.sourcePath,
-                        self.includePositionInErrors ? lineCount : null);
-        self.units.push(unit);
-        lineCount++;
-        return;
-      }
+      var commentBody = self._getSingleLineCommentBody(line);
 
-      // XXX overly permissive. should detect errors
-      match = /^\s*\/\/\s*@(export|require|provide|weak)(\s+.*)$/.exec(line);
-      if (match) {
-        var what = match[1];
-        var symbols = _.map(match[2].split(/,/), function (s) {
-          return s.replace(/^\s+|\s+$/g, ''); // trim leading/trailing whitespace
-        });
+      if (commentBody) {
+        // XXX overly permissive. should detect errors
+        var match = /^@unit(?:\s+(\S+))?$/.exec(commentBody);
+        if (match) {
+          unit.source = buf;
+          buf = line;
+          unit = new Unit(match[1] || null, false, self.sourcePath,
+                          self.includePositionInErrors ? lineCount : null);
+          self.units.push(unit);
+          lineCount++;
+          return;
+        }
 
-        _.each(symbols, function (s) {
-          if (s.length)
-            unit[what + "s"][s] = true;
-        });
+        // XXX overly permissive. should detect errors
+        match = /^@(export|require|provide|weak)(\s+.*)$/.exec(commentBody);
+        if (match) {
+          var what = match[1];
+          var symbols = _.map(match[2].split(/,/), function (s) {
+            return s.trim();
+          });
 
-        /* fall through */
+          _.each(symbols, function (s) {
+            if (s.length)
+              unit[what + "s"][s] = true;
+          });
+
+          /* fall through */
+        }
       }
 
       if (lineCount !== 0)
@@ -524,6 +561,10 @@ _.extend(Unit.prototype, {
 //  - includePositionInErrors: true to include line and column
 //    information in errors. set to false if, eg, this is the output
 //    of coffeescript. (XXX replace with real sourcemaps)
+//  - linkerUnitTransform: if given, this function will be called
+//    when the module is being linked with the source of the unit
+//    and an array of the exports of the module; the unit's source will
+//    be replaced by what the function returns.
 //
 // forceExport: an array of symbols (as dotted strings) to force the
 // module to export, even if it wouldn't otherwise
@@ -555,7 +596,8 @@ var prelink = function (options) {
 
   _.each(options.inputFiles, function (f) {
     module.addFile(f.source, f.servePath, f.sourcePath,
-                   f.includePositionInErrors);
+                   f.includePositionInErrors,
+                   f.linkerUnitTransform);
   });
 
   var files = module.getLinkedFiles();

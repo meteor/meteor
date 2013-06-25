@@ -6,6 +6,7 @@ Package.describe({
 Package.on_use(function (api) {
   api.use('service-configuration', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
+  api.use('underscore', 'server');
 
   api.add_files('oauth1_binding.js', 'server');
   api.add_files('oauth1_common.js', ['client', 'server']);

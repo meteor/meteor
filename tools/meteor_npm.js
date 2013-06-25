@@ -36,6 +36,7 @@ _.extend(exports, {
 
   // If there is a version that isn't exact, throws an Error with a
   // human-readable message that is suitable for showing to the user.
+  // npmDependencies may be falsey or empty.
   ensureOnlyExactVersions: function(npmDependencies) {
     var self = this;
     _.each(npmDependencies, function(version, name) {
@@ -50,11 +51,13 @@ _.extend(exports, {
   },
 
   // Creates a temporary directory in which the new contents of the package's
-  // .npm directory will be assembled. If all is successful, renames that directory
-  // back to .npm.
+  // .npm directory will be assembled. If all is successful, renames that
+  // directory back to .npm. Returns true if there are NPM dependencies and
+  // they are installed without error.
   //
   // @param npmDependencies {Object} dependencies that should be installed,
-  //     eg {tar: '0.1.6', gcd: '0.0.0'}
+  //     eg {tar: '0.1.6', gcd: '0.0.0'}. If falsey or empty, will remove
+  //     the .npm directory instead.
   updateDependencies: function(packageName,
                                packageNpmDir,
                                npmDependencies,
@@ -66,6 +69,24 @@ _.extend(exports, {
     // randomize the name, in case we're bundling this package
     // multiple times in parallel.
     var newPackageNpmDir = packageNpmDir + '-new-' + self._randomToken();
+
+    if (!npmDependencies || _.isEmpty(npmDependencies)) {
+      // No NPM dependencies? Delete the .npm directory if it exists (because,
+      // eg, we used to have NPM dependencies but don't any more).  We'd like to
+      // do this in as atomic a way as possible in case multiple meteor
+      // instances are trying to make this update in parallel, so we rename the
+      // directory to something before doing the rm -rf.
+      try {
+        fs.renameSync(packageNpmDir, newPackageNpmDir);
+      } catch (e) {
+        if (e.code !== 'ENOENT')
+          throw e;
+        // It didn't exist, which is exactly what we wanted.
+        return false;
+      }
+      files.rm_recursive(newPackageNpmDir);
+      return false;
+    }
 
     try {
       // v0.6.0 had a bug that could cause .npm directories to be

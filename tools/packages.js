@@ -165,6 +165,10 @@ var Slice = function (pkg, options) {
   // resolve Npm.require() calls in this slice. null if this slice
   // does not have a node_modules.
   self.nodeModulesPath = options.nodeModulesPath;
+
+  // Absolute path to the location on disk where Assets API calls will search in
+  // this slice.
+  self.staticDirectory = options.staticDirectory;
 };
 
 _.extend(Slice.prototype, {
@@ -214,13 +218,11 @@ _.extend(Slice.prototype, {
         //
         // XXX This is pretty confusing, especially if you've
         // accidentally forgotten a plugin -- revisit?
-        if (archinfo.matches(self.arch, "browser")) {
-          resources.push({
-            type: "static",
-            data: contents,
-            servePath: path.join(self.pkg.serveRoot, relPath)
-          });
-        }
+        resources.push({
+          type: "static",
+          data: contents,
+          servePath: path.join(self.pkg.serveRoot, relPath)
+        });
         return;
       }
 
@@ -369,7 +371,8 @@ _.extend(Slice.prototype, {
             source: options.data,
             sourcePath: options.sourcePath,
             servePath: path.join(self.pkg.serveRoot, options.path),
-            includePositionInErrors: options.lineForLine
+            includePositionInErrors: options.lineForLine,
+            linkerUnitTransform: options.linkerUnitTransform
           });
         },
         addAsset: function (options) {
@@ -492,7 +495,8 @@ _.extend(Slice.prototype, {
       return {
         type: "js",
         data: new Buffer(file.source, 'utf8'),
-        servePath: file.servePath
+        servePath: file.servePath,
+        staticDirectory: self.staticDirectory
       };
     });
 
@@ -790,7 +794,7 @@ _.extend(Package.prototype, {
       // 'handler' is a function that takes a single argument, a
       // CompileStep (#CompileStep)
       registerSourceHandler: function (extension, handler) {
-        if (extension in self.sourceHandlers) {
+        if (_.has(self.sourceHandlers, extension)) {
           buildmessage.error("duplicate handler for '*." +
                              extension + "'; may only have one per Plugin",
                              { useMyCaller: true });
@@ -802,7 +806,7 @@ _.extend(Package.prototype, {
       }
     };
 
-    self.sourceHandlers = [];
+    self.sourceHandlers = {};
     _.each(self.plugins, function (plugin, name) {
       buildmessage.enterJob({
         title: "loading plugin `" + name +
@@ -912,14 +916,17 @@ _.extend(Package.prototype, {
 
     var isPortable = true;
     var nodeModulesPath = null;
-    if (options.npmDependencies) {
-      meteorNpm.ensureOnlyExactVersions(options.npmDependencies);
-      var npmOk =
-        meteorNpm.updateDependencies(name, options.npmDir,
-                                     options.npmDependencies);
-      if (npmOk && ! meteorNpm.dependenciesArePortable(options.npmDir))
-        isPortable = false;
-      nodeModulesPath = path.join(options.npmDir, 'node_modules');
+    meteorNpm.ensureOnlyExactVersions(options.npmDependencies);
+    if (options.npmDir) {
+      // Always run updateDependencies, even if there are no dependencies: there
+      // may be a .npm directoryon disk to delete.
+      if (meteorNpm.updateDependencies(name, options.npmDir,
+                                       options.npmDependencies)) {
+        // At least one dependency was installed, and there were no errors.
+        if (!meteorNpm.dependenciesArePortable(options.npmDir))
+          isPortable = false;
+        nodeModulesPath = path.join(options.npmDir, 'node_modules');
+      }
     }
 
     var arch = isPortable ? "native" : archinfo.host();
@@ -930,7 +937,8 @@ _.extend(Package.prototype, {
         return { spec: spec }
       }),
       getSourcesFunc: function () { return options.sources || []; },
-      nodeModulesPath: nodeModulesPath
+      nodeModulesPath: nodeModulesPath,
+      staticDirectory: options.sourceRoot
     });
     self.slices.push(slice);
 
@@ -1400,39 +1408,41 @@ _.extend(Package.prototype, {
     // Grab any npm dependencies. Keep them in a cache in the package
     // source directory so we don't have to do this from scratch on
     // every build.
+
+    // We used to put this directly in .npm, but in linker-land, the package's
+    // own NPM dependencies go in .npm/package and build plugin X's goes in
+    // .npm/plugin/X. Notably, the former is NOT an ancestor of the latter, so
+    // that a build plugin does NOT see the package's node_modules.
+    // XXX maybe there should be separate NPM dirs for use vs test?
+    var packageNpmDir =
+          path.resolve(path.join(self.sourceRoot, '.npm', 'package'));
+    var npmOk = true;
+
+    if (! options.skipNpmUpdate) {
+      // If this package was previously built with pre-linker versions, it may
+      // have files directly inside `.npm` instead of nested inside
+      // `.npm/package`. Clean them up if they are there.
+      var preLinkerFiles = [
+        'npm-shrinkwrap.json', 'README', '.gitignore', 'node_modules'];
+      _.each(preLinkerFiles, function (f) {
+        files.rm_recursive(path.join(self.sourceRoot, '.npm', f));
+      });
+
+      // go through a specialized npm dependencies update process,
+      // ensuring we don't get new versions of any
+      // (sub)dependencies. this process also runs mostly safely
+      // multiple times in parallel (which could happen if you have
+      // two apps running locally using the same package)
+      // We run this even if we have no dependencies, because we might
+      // need to delete dependencies we used to have.
+      npmOk = meteorNpm.updateDependencies(name, packageNpmDir,
+                                           npmDependencies);
+    }
+
     var nodeModulesPath = null;
-    if (npmDependencies) {
-
-      // We used to put this directly in .npm, but in linker-land, the package's
-      // own NPM dependencies go in .npm/package and build plugin X's goes in
-      // .npm/plugin/X. Notably, the former is NOT an ancestor of the latter, so
-      // that a build plugin does NOT see the package's node_modules.
-      // XXX maybe there should be separate NPM dirs for use vs test?
-      var packageNpmDir =
-        path.resolve(path.join(self.sourceRoot, '.npm', 'package'));
-      var npmOk = true;
-
-      if (! options.skipNpmUpdate) {
-        // If this package was previously built with pre-linker versions, it may
-        // have files directly inside `.npm` instead of nested inside
-        // `.npm/package`. Clean them up if they are there.
-        var preLinkerFiles = [
-          'npm-shrinkwrap.json', 'README', '.gitignore', 'node_modules'];
-        _.each(preLinkerFiles, function (f) {
-          files.rm_recursive(path.join(self.sourceRoot, '.npm', f));
-        });
-
-        // go through a specialized npm dependencies update process,
-        // ensuring we don't get new versions of any
-        // (sub)dependencies. this process also runs mostly safely
-        // multiple times in parallel (which could happen if you have
-        // two apps running locally using the same package)
-        npmOk = meteorNpm.updateDependencies(name, packageNpmDir,
-                                             npmDependencies);
-      }
-
+    if (npmOk) {
       nodeModulesPath = path.join(packageNpmDir, 'node_modules');
-      if (npmOk && ! meteorNpm.dependenciesArePortable(packageNpmDir))
+      if (! meteorNpm.dependenciesArePortable(packageNpmDir))
         isPortable = false;
     }
 
@@ -1471,7 +1481,8 @@ _.extend(Package.prototype, {
           getSourcesFunc: function () { return sources[role][where]; },
           forceExport: forceExport[role][where],
           dependencyInfo: dependencyInfo,
-          nodeModulesPath: arch === nativeArch && nodeModulesPath || undefined
+          nodeModulesPath: arch === nativeArch && nodeModulesPath || undefined,
+          staticDirectory: self.sourceRoot
         }));
       });
     });
@@ -1723,6 +1734,10 @@ _.extend(Package.prototype, {
         nodeModulesPath = path.join(sliceBasePath, sliceJson.node_modules);
       }
 
+      var staticDirectory = null;
+      if (sliceJson.staticDirectory)
+        staticDirectory = path.join(sliceBasePath, sliceJson.staticDirectory);
+
       var slice = new Slice(self, {
         name: sliceMeta.name,
         arch: sliceMeta.arch,
@@ -1733,7 +1748,8 @@ _.extend(Package.prototype, {
             spec: u['package'] + (u.slice ? "." + u.slice : ""),
             unordered: u.unordered
           };
-        })
+        }),
+        staticDirectory: staticDirectory
       });
 
       slice.isBuilt = true;
@@ -1869,7 +1885,8 @@ _.extend(Package.prototype, {
           }),
           node_modules: slice.nodeModulesPath ? 'npm/node_modules' : undefined,
           resources: [],
-          boundary: slice.boundary
+          boundary: slice.boundary,
+          staticDirectory: path.join(sliceDir, self.serveRoot)
         };
 
         // Output 'head', 'body' resources nicely

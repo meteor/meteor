@@ -1,9 +1,18 @@
 // URL prefix for tests to talk to
 var _XHR_URL_PREFIX = "/http_test_responder";
+
+var url_base = function () {
+  if (Meteor.isServer) {
+    var address = __meteor_bootstrap__.httpServer.address();
+    return "http://127.0.0.1:" + address.port;
+  } else {
+    return "";
+  }
+};
+
 var url_prefix = function () {
   if (Meteor.isServer && _XHR_URL_PREFIX.indexOf("http") !== 0) {
-    var address = __meteor_bootstrap__.httpServer.address();
-    _XHR_URL_PREFIX = "http://127.0.0.1:" + address.port + _XHR_URL_PREFIX;
+    _XHR_URL_PREFIX = url_base() + _XHR_URL_PREFIX;
   }
   return _XHR_URL_PREFIX;
 };
@@ -406,6 +415,70 @@ testAsyncMulti("httpcall - params", [
     do_test("PUT", "/put", {foo:"bar"}, "/put", "foo=bar");
   }
 ]);
+
+
+if (Meteor.isServer) {
+  // This is testing the server's static file sending code, not the http
+  // package. It's here because it is very similar to the other tests
+  // here, even though it is testing something else.
+  //
+  // client http library mangles paths before they are requested. only
+  // run this test on the server.
+  testAsyncMulti("httpcall - static file serving", [
+    function(test, expect) {
+      // register an error handling middleware with connect to suppress
+      // error printing for this test. connect knows it is an error
+      // handler because it has 4 arguments instead of 3. go figure.
+      __meteor_bootstrap__.app.use(function (err, req, res, next) {
+        if (!err || !req.headers['x-suppress-error']) {
+          next();
+          return;
+        }
+        res.writeHead(err.status, { 'Content-Type': 'text/plain' });
+        res.end("An error message");
+      });
+
+      var do_test = function (path, code, match) {
+        Meteor.http.get(
+          url_base() + path,
+          {headers: {'x-suppress-error': 'true'}},
+          expect(function(error, result) {
+            test.equal(result.statusCode, code);
+            if (match)
+              test.matches(result.content, match);
+          }));
+      };
+
+      // no such file
+      do_test("/nosuchfile", 200, /DOCTYPE/);
+      do_test("/../nosuchfile", 403);
+      do_test("/%2e%2e/nosuchfile", 403);
+      do_test("/%2E%2E/nosuchfile", 403);
+      do_test("/%2d%2d/nosuchfile", 200, /DOCTYPE/);
+
+      // existing static file
+      var succeeds = [
+        "/packages/http/test_static.serveme",
+        "/packages/http/../http/test_static.serveme",
+        "/packages/http/%2e%2e/http/test_static.serveme",
+        "/packages/http/%2E%2E/http/test_static.serveme",
+        "/packages/http/../../packages/http/test_static.serveme",
+        "/packages/http/%2e%2e/%2e%2e/packages/http/test_static.serveme",
+        "/packages/http/%2E%2E/%2E%2E/packages/http/test_static.serveme",
+      ];
+      _.each(succeeds, function (path) {
+        do_test(path, 200, /static file serving/);
+      });
+      do_test("/packages/http/../../../../../../packages/http/test_static.serveme", 403);
+
+      // file outside of our app
+      do_test("/../../../../../../../../../../../bin/ls", 403);
+      do_test("/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/bin/ls", 403);
+      do_test("/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/bin/ls", 403);
+
+    }
+  ]);
+}
 
 
 // TO TEST/ADD:
