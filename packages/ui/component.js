@@ -530,8 +530,6 @@ _.extend(Component.prototype, {
       result = If;
     } else if (id === 'each') {
       result = Each;
-    } else if (id === 'content') {
-      return self.lookup('body'); // XXX hack for trying `content`
     } else if (id in global) {
       result = global[id];
       thisToBind = self.getArg('data') || null;
@@ -722,9 +720,9 @@ RootComponent = Component.extend({
     this.init();
   },
   render: function (buf) {
-    var body = this.getArg('body');
-    if (body)
-      buf.component(body.create(), {key: 'body'});
+    var content = this.getArg('content');
+    if (content)
+      buf.component(content.create(), {key: 'content'});
   },
   attached: function () {
     RootComponent._attachedInstances[this._uid] = this;

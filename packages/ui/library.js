@@ -1,14 +1,14 @@
 // @export If
 If = Component.extend({
   init: function () {
-    if (! this.getArg('body'))
-      throw new Error("If requires a body");
+    if (! this.getArg('content'))
+      throw new Error("If requires content");
   },
   render: function (buf) {
     if (this.getArg('data'))
-      buf.component(this.getArg('body').create());
-    else if (this.getArg('else'))
-      buf.component(this.getArg('else'));
+      buf.component(this.getArg('content').create());
+    else if (this.getArg('elseContent'))
+      buf.component(this.getArg('elseContent'));
   }
 });
 
@@ -85,15 +85,16 @@ Each = Component.extend({
 
     if (items.empty()) {
       buf.component(function () {
-        return (self.getArg('else') || EmptyComponent).create(
-          { data: self.getArg('data') });
-      }, { key: 'else' });
+        return (self.getArg('elseContent') ||
+                EmptyComponent).create(
+                  { data: self.getArg('data') });
+      }, { key: 'elseContent' });
     } else {
       items.forEach(function (doc, id) {
         var tdoc = transformedDoc(doc);
 
         buf.component(function () {
-          return self.getArg('body').create({ data: tdoc });
+          return self.getArg('content').create({ data: tdoc });
         }, { key: self._itemChildId(id) });
       });
     }
@@ -108,11 +109,11 @@ Each = Component.extend({
       throw new Error("Component must be built");
 
     var childId = self._itemChildId(id);
-    var comp = self.getArg('body').create({data: doc});
+    var comp = self.getArg('content').create({data: doc});
 
     if (self.items.size() === 1) {
       // was empty
-      self.replaceChild('else', comp, childId);
+      self.replaceChild('elseContent', comp, childId);
     } else {
       var beforeNode =
             (beforeId ?
@@ -131,9 +132,10 @@ Each = Component.extend({
     var childId = self._itemChildId(id);
     if (self.items.size() === 0) {
       // made empty
-      var elseClass = self.getArg('else') || EmptyComponent;
+      var elseClass = self.getArg('elseContent') ||
+            EmptyComponent;
       var comp = elseClass.create({data: self.getArg('data')});
-      self.replaceChild(childId, comp, 'else');
+      self.replaceChild(childId, comp, 'elseContent');
     } else {
       self.removeChild(childId);
     }
