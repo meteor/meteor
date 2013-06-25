@@ -44,6 +44,7 @@ Package.on_test(function (api) {
   api.add_files('dynamics_test.js', ['client', 'server']);
 
   api.add_files('fiber_helpers_test.js', ['server']);
+  api.add_files('wrapasync_test.js', ['server']);
 
   api.add_files('url_tests.js', ['client', 'server']);
 

@@ -62,31 +62,52 @@ _.extend(Meteor, {
     }
   },
 
-  _wrapAsync: function (fn) {
-    var self = this;
+  // The callback, if given, is assumed to be the last non-required argument of
+  // type Function passed to fn.
+  // Examples:
+  // fs.readFileSync(pathname, [callback]) should be wrapped as:
+  // _wrapAsync(fs.readFileSync, 1)
+  // fs.open(path, flags, [mode], [callback]) should be wrapped as:
+  // _wrapAsync(fs.open, 2)
+  _wrapAsync: function (fn, numRequiredArgs) {
+    if (typeof(numRequiredArgs) !== "number")
+      throw new Error("Meteor._wrapAsync must be passed numRequiredArgs.");
+
     return function (/* arguments */) {
+      var self = this;
       var callback;
       var fut;
       var newArgs = Array.prototype.slice.call(arguments);
-      var haveCb = newArgs.length &&
-            (newArgs[newArgs.length - 1] instanceof Function);
-      if (Meteor.isClient && ! haveCb) {
-        newArgs.push(function () { });
-        haveCb = true;
+
+      var logErr = function (err) {
+        if (err)
+          return Meteor._debug("Exception in callback of async function",
+                               err.stack);
+      };
+
+      // Pop off optional args that are undefined
+      while (newArgs.length > numRequiredArgs &&
+             typeof(newArgs[newArgs.length - 1]) === "undefined") {
+        newArgs.pop();
       }
-      if (haveCb) {
-        var origCb = newArgs[newArgs.length - 1];
-        callback = Meteor.bindEnvironment(origCb, function (e) {
-          Meteor._debug("Exception in callback of async function", e.stack);
-        });
-        newArgs[newArgs.length - 1] = callback;
+      // If we have any optional arguments left and the last optional arg is a
+      // function, then that's our callback; otherwise, we don't have one.
+      if (newArgs.length > numRequiredArgs &&
+          newArgs[newArgs.length - 1] instanceof Function) {
+        callback = newArgs.pop();
       } else {
-        fut = new Future();
-        newArgs[newArgs.length] = fut.resolver();
+        if (Meteor.isClient) {
+          callback = logErr;
+        } else {
+          fut = new Future();
+          callback = fut.resolver();
+        }
       }
-      fn.apply(self, newArgs);
-      if (! haveCb)
+      newArgs.push(Meteor.bindEnvironment(callback, logErr));
+      var result = fn.apply(self, newArgs);
+      if (fut)
         return fut.wait();
+      return result;
     };
   }
 });

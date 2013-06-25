@@ -75,20 +75,3 @@ Tinytest.add("environment - helpers", function (test) {
   Meteor._delete(x, "a");
   test.equal(x, {});
 });
-
-if (Meteor.isServer) {
-  var asyncFunction = function (x, cb) {
-    setTimeout(function () { cb(null, x); }, 5);
-  };
-  var wrapped = Meteor._wrapAsync(asyncFunction);
-
-  Tinytest.add("environment - wrapAsync sync", function (test) {
-    test.equal(wrapped(3), 3);
-  });
-
-  testAsyncMulti("environment - wrapAsync async", [
-    function (test, expect) {
-      test.equal(wrapped(4, expect(null, 4)), undefined);
-    }
-  ]);
-}
