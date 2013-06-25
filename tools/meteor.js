@@ -818,7 +818,7 @@ Fiber(function () {
         var deployEndpoint = discoverResults.deployEndpoint;
         var site = removeRootFromSiteName(new_argv._[1],
                                           discoverResults.rootSiteName);
-        calculateGalaxyContextAndTunnel(discoverResults, context, new_argv);
+        calculateGalaxyContextAndTunnel(deployEndpoint, context, new_argv);
         // remote mode
         if (context.galaxyUrl) {
           mongoUrl = deployGalaxy.temporaryMongoUrl({
