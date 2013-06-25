@@ -1205,6 +1205,21 @@ Spark.createLandmark = function (options, htmlFunc) {
 
       landmark._range = range;
       renderer.landmarkRanges.push(range);
+      // Help GC avoid an actual memory leak (#1157) by nulling the
+      // `renderer` local variable, which holds data structures about
+      // the preservation and patching performed during this rendering
+      // pass, including references to the old LiveRanges.  If
+      // `renderer` is retained by the LiveRange we initialize here,
+      // it creates a chain linking the new LiveRanges to the
+      // renderer, to the old LiveRanges, to the old renderer, etc.
+      //
+      // The reason the new LiveRange might retains `renderer` has to
+      // do with how V8 implements closures.  V8 considers
+      // `range.finalize` to close over `renderer`, even though it
+      // doesn't use it.  Because `renderer` is used by *some* nested
+      // closure, it apparently is retained by all nested closures as
+      // part of `Spark.createLandmark`'s function context.
+      renderer = null;
     });
 };
 
