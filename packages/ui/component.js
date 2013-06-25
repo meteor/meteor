@@ -516,7 +516,6 @@ _.extend(Component.prototype, {
 
     var result = null;
     var thisToBind = null;
-    var data;
 
     // XXX figure out what this should really do,
     // and how custom component classes should
@@ -531,14 +530,28 @@ _.extend(Component.prototype, {
       result = If;
     } else if (id === 'each') {
       result = Each;
+    } else if (id === 'content') {
+      return self.lookup('body'); // XXX hack for trying `content`
     } else if (id in global) {
       result = global[id];
       thisToBind = self.getArg('data') || null;
     } else if ((result = self.getArg(id))) {
       thisToBind = self;
-    } else if ((data = self.getArg('data'))) {
-      thisToBind = data;
-      result = data[id];
+    } else {
+      // look for data arg, maybe in parent.  stop as
+      // soon as we find a non-null value.
+      var comp = self;
+      var data = self.getArg('data');
+      // `== null` means null or undefined
+      while (data == null && comp.parent) {
+        comp = comp.parent;
+        data = comp.getArg('data');
+      }
+
+      if (data != null) {
+        thisToBind = data;
+        result = data[id];
+      }
     }
 
     if (thisToBind &&

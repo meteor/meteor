@@ -7,7 +7,9 @@
 <h1>Hello {{name}}</h1>
 
 {{#each items}}
-  <div>{{text}}</div>
+  {{#divwrap}}
+    <div>{{text}}</div>
+  {{/divwrap}}
 {{else}}
   <strong>Empty</strong>
 {{/each}}
@@ -17,5 +19,9 @@
 </body>
 
 <template name="twice">
-{{> body foo=123}} {{{middle}}} {{> body foo=456}}
+{{> content foo=123}} {{{middle}}} {{> content foo=456}}
+</template>
+
+<template name="divwrap">
+<div>{{> content}}</div>
 </template>
