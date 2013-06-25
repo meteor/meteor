@@ -19,9 +19,9 @@ Accounts.oauth.tryLoginAfterPopupClosed = function(credentialToken, callback) {
 Accounts.oauth.credentialRequestCompleteHandler = function(callback) {
   return function (credentialTokenOrError) {
     if(credentialTokenOrError && credentialTokenOrError instanceof Error) {
-      callback(credentialTokenOrError);
+      callback && callback(credentialTokenOrError);
     } else {
       Accounts.oauth.tryLoginAfterPopupClosed(credentialTokenOrError, callback);
     }
   };
-}
+};
