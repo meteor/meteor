@@ -494,7 +494,11 @@ _.extend(Component.prototype, {
 });
 
 _.extend(Component.prototype, {
-  render: function (buf) {}
+  render: function (buf) {
+    var content = this.getArg('content');
+    if (content)
+      buf.component(content.create(), {key: 'content'});
+  }
 });
 
 var allCallbacks = {
@@ -562,16 +566,20 @@ _.extend(Component.prototype, {
 });
 
 // Require ComponentClass.create(...) instead of
-// new CompomentClass(...) because a factory method gives
+// new ComponentClass(...) because a factory method gives
 // us more flexibility, and there should be one way to
 // make a component.  The `new` syntax is awkward if
 // the component class is calculated by a complex expression
 // (like a reactive getter).
-Component.create = function (/*args*/) {
+Component.create = function (args) {
   constructorsLocked = false;
-  var comp = new this;
-  if (this !== Component)
-    Component.apply(comp, arguments);
+  var comp;
+  if (this === Component) {
+    comp = new Component(args);
+  } else {
+    comp = new this;
+    Component.call(comp, args);
+  }
   return comp;
 };
 
@@ -718,11 +726,6 @@ RootComponent = Component.extend({
 
     // this would normally be called upon "add"
     this.init();
-  },
-  render: function (buf) {
-    var content = this.getArg('content');
-    if (content)
-      buf.component(content.create(), {key: 'content'});
   },
   attached: function () {
     RootComponent._attachedInstances[this._uid] = this;
