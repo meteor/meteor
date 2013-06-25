@@ -10,6 +10,9 @@ Package.on_use(function(api) {
   api.use('oauth', ['client', 'server']);
   api.use('http', ['client', 'server']);
   api.use('templating', 'client');
+  api.use('underscore', 'server');
+  api.use('random', 'client');
+  api.use('service-configuration', ['client', 'server']);
 
   api.add_files(
     ['facebook_configure.html', 'facebook_configure.js'],
