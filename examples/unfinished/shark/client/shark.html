@@ -12,10 +12,10 @@
   <strong>Empty</strong>
 {{/each}}
 
-<p>{{#twice middle="<hr>"}}testing{{/twice}}</p>
+<p>{{#twice middle="<hr>"}}testing{{foo}}{{/twice}}</p>
 
 </body>
 
 <template name="twice">
-{{> body}} {{{middle}}} {{> body}}
+{{> body foo=123}} {{{middle}}} {{> body foo=456}}
 </template>
