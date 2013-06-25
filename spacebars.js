@@ -563,10 +563,14 @@ Spacebars.compile = function (inputString) {
   }
 
   // `path` is an array of at least one string
-  var codeGenPath = function (path, funcInfo) {
+  var codeGenPath = function (path, funcInfo, searchTemplates) {
     funcInfo.usedSelf = true;
 
     var code = 'self.lookup(' + toJSLiteral(path[0]) + ')';
+    if (searchTemplates) {
+      code = '(Template[' + toJSLiteral(path[0]) + '] || ' +
+        code + ')';
+    }
     if (path.length > 1) {
       code = 'Spacebars.index(' + code + ', ' +
         _.map(path.slice(1), toJSLiteral).join(', ') + ')';
@@ -729,7 +733,7 @@ Spacebars.compile = function (inputString) {
               if (tag.isBlock) {
                 var block = tag;
                 var nameCode = codeGenPath(
-                  block.openTag.path, funcInfo);
+                  block.openTag.path, funcInfo, true);
                 var extraArgs = {
                   body: 'Component.extend({render: ' +
                     tokensToRenderFunc(block.bodyTokens, indent) +
@@ -749,7 +753,7 @@ Spacebars.compile = function (inputString) {
               } else {
                 switch (tag.type) {
                 case 'INCLUSION':
-                  var nameCode = codeGenPath(tag.path, funcInfo);
+                  var nameCode = codeGenPath(tag.path, funcInfo, true);
                   var argCode =
                         codeGenArgs(tag.args, funcInfo, {})[0];
                   bodyLines.push('buf.component(function () { return ((' + nameCode + ') || EmptyComponent).create(' + argCode +
