@@ -36,8 +36,8 @@ Ctl.Commands.push({
       if (appConfig.admin) {
         bindPathPrefix = "/" + Ctl.myAppName();
         proxyConfig = {
-          securePort: appConfig.securePort || null,
-          insecurePort: appConfig.insecurePort || 9414,
+          securePort: null,
+          insecurePort: 9414,
           bindHost: "localhost",
           bindPathPrefix: bindPathPrefix
         };
@@ -57,8 +57,7 @@ Ctl.Commands.push({
           "mongo-livedata": {
             url: appConfig.MONGO_URL
           }
-        },
-        deployInfo: appConfig.deployInfo
+        }
       };
 
       // XXX args? env?

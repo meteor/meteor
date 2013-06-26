@@ -77,7 +77,7 @@ var prettySub = function (galaxy, name, args, messages) {
 
 exports.discoverGalaxy = function (app) {
   app = app + ":" + (process.env.DISCOVERY_PORT || 443);
-  var url = "https://" + app + "/discovery/_GALAXY_";
+  var url = "https://" + app + "/_GALAXY_";
   var fut = new Future();
 
   var discoveryFailed = {};
