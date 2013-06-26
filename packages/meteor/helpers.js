@@ -62,17 +62,14 @@ _.extend(Meteor, {
     }
   },
 
-  // The callback, if given, is assumed to be the last non-required argument of
-  // type Function passed to fn.
-  // Examples:
-  // fs.readFileSync(pathname, [callback]) should be wrapped as:
-  // _wrapAsync(fs.readFileSync, 1)
-  // fs.open(path, flags, [mode], [callback]) should be wrapped as:
-  // _wrapAsync(fs.open, 2)
-  _wrapAsync: function (fn, numRequiredArgs) {
-    if (typeof(numRequiredArgs) !== "number")
-      throw new Error("Meteor._wrapAsync must be passed numRequiredArgs.");
-
+  // _wrapAsync can wrap any function that takes some number of arguments that
+  // can't be undefined, followed by some optional arguments, where the callback
+  // is the last optional argument.
+  // e.g. fs.readFile(pathname, [callback]),
+  // fs.open(pathname, flags, [mode], [callback])
+  // For maximum effectiveness and least confusion, wrapAsync should be used on
+  // functions where the callback is the only argument of type Function.
+  _wrapAsync: function (fn) {
     return function (/* arguments */) {
       var self = this;
       var callback;
@@ -86,13 +83,13 @@ _.extend(Meteor, {
       };
 
       // Pop off optional args that are undefined
-      while (newArgs.length > numRequiredArgs &&
+      while (newArgs.length > 0 &&
              typeof(newArgs[newArgs.length - 1]) === "undefined") {
         newArgs.pop();
       }
       // If we have any optional arguments left and the last optional arg is a
       // function, then that's our callback; otherwise, we don't have one.
-      if (newArgs.length > numRequiredArgs &&
+      if (newArgs.length > 0 &&
           newArgs[newArgs.length - 1] instanceof Function) {
         callback = newArgs.pop();
       } else {

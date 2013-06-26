@@ -317,11 +317,6 @@ var throwIfSelectorIsNotId = function (selector, methodName) {
 // generating their result until the database has acknowledged
 // them. In the future maybe we should provide a flag to turn this
 // off.
-var numRequiredArgs = {
-  insert: 1,
-  update: 2,
-  remove: 1
-};
 _.each(["insert", "update", "remove"], function (name) {
   Meteor.Collection.prototype[name] = function (/* arguments */) {
     var self = this;
@@ -396,7 +391,7 @@ _.each(["insert", "update", "remove"], function (name) {
       // and propagate any exception.
       args.push(wrappedCallback);
       try {
-        Meteor._wrapAsync(self._collection[name], numRequiredArgs[name]).apply(self._collection, args);
+        Meteor._wrapAsync(self._collection[name]).apply(self._collection, args);
       } catch (e) {
         if (callback) {
           callback(e);
@@ -580,8 +575,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
             self[validatedMethodName].apply(self, argsWithUserId);
           } else if (self._isInsecure()) {
             // In insecure mode, allow any mutation (with a simple selector).
-            Meteor._wrapAsync(self._collection[method],
-                              numRequiredArgs[method]).
+            Meteor._wrapAsync(self._collection[method]).
               apply(self._collection, _.toArray(arguments));
           } else {
             // In secure mode, if we haven't called allow or deny, then nothing

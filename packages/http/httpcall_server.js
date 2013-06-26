@@ -107,4 +107,4 @@ Meteor.http._call = function(method, url, options, callback) {
   });
 };
 
-Meteor.http.call = Meteor._wrapAsync(Meteor.http._call, 2);
+Meteor.http.call = Meteor._wrapAsync(Meteor.http._call);

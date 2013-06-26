@@ -18,10 +18,10 @@ var asyncFunction3 = function (opt, cb) {
 var asyncFunction4 = function (cb) {
   asyncFunction1(3, cb);
 };
-var wrapped1 = Meteor._wrapAsync(asyncFunction1, 1);
-var wrapped2 = Meteor._wrapAsync(asyncFunction2, 1);
-var wrapped3 = Meteor._wrapAsync(asyncFunction3, 0);
-var wrapped4 = Meteor._wrapAsync(asyncFunction4, 0);
+var wrapped1 = Meteor._wrapAsync(asyncFunction1);
+var wrapped2 = Meteor._wrapAsync(asyncFunction2);
+var wrapped3 = Meteor._wrapAsync(asyncFunction3);
+var wrapped4 = Meteor._wrapAsync(asyncFunction4);
 
 Tinytest.add("environment - wrapAsync sync", function (test) {
   // one required arg and callback
