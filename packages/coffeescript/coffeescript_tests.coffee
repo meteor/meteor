@@ -1,9 +1,5 @@
 Meteor.__COFFEESCRIPT_PRESENT = true
 
-### @export COFFEESCRIPT_EXPORTED ###
-
-COFFEESCRIPT_EXPORTED = 123
-
 # This is read in coffeescript_strict_tests.coffee.
 share.coffeeShared = 789
 

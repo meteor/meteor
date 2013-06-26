@@ -476,11 +476,6 @@ _.extend(Target.prototype, {
     var self = this;
     var library = self.library;
 
-    // Each of these are map from slice.id to Slice
-    var needed = {}; // Slices that we still need to add
-    var done = {}; // Slices that are already in self.slices
-    var onStack = {}; // Slices that we're in the process of adding
-
     // Find the roots
     var rootSlices =
       _.flatten([
@@ -495,53 +490,87 @@ _.extend(Target.prototype, {
           return pkg.getTestSlices(self.arch);
         })
       ]);
-    _.each(rootSlices, function (slice) {
-      needed[slice.id] = slice;
-    });
 
-    // Set self.slices to be all of the roots, plus all of their
-    // dependencies, in the correct load order. "Load order" means
-    // that if X depends on (uses) Y, and that relationship is not
-    // marked as unordered, Y appears before X in the ordering. Raises
-    // an exception iff there is no such ordering (due to circular
-    // dependency.)
+    // PHASE 1: Which slices will be used?
+    //
+    // Figure out which slices are going to be used in the target, regardless of
+    // order. We ignore weak dependencies here, because they don't actually
+    // create a "must-use" constraint, just an ordering constraint.
+
+    // What slices will be used in the target? Built in Phase 1, read in
+    // Phase 2.
+    var getsUsed = {};  // Map from slice.id to Slice.
+    var addToGetsUsed = function (slice) {
+      if (_.has(getsUsed, slice.id))
+        return;
+      getsUsed[slice.id] = slice;
+      _.each(slice.uses, function (u) {
+        if (u.weak)
+          return;
+        _.each(library.getSlices(u.spec, self.arch), addToGetsUsed);
+      });
+    };
+    _.each(rootSlices, addToGetsUsed);
+
+    // PHASE 2: In what order should we load the slices?
+    //
+    // Set self.slices to be all of the roots, plus all of their non-weak
+    // dependencies, in the correct load order. "Load order" means that if X
+    // depends on (uses) Y, and that relationship is not marked as unordered, Y
+    // appears before X in the ordering. Raises an exception iff there is no
+    // such ordering (due to circular dependency.)
+
+    // What slices have not yet been added to self.slices?
+    var needed = _.clone(getsUsed);  // Map from slice.id to Slice.
+    // Slices that we are in the process of adding; used to detect circular
+    // ordered dependencies.
+    var onStack = {};  // Map from slice.id to true.
+
+    // This helper recursively adds slice's ordered dependencies to self.slices,
+    // then adds slice itself.
+    var add = function (slice) {
+      // If this has already been added, there's nothing to do.
+      if (!_.has(needed, slice.id))
+        return;
+
+      _.each(slice.uses, function (u) {
+        // If this is an unordered dependency, then there's no reason to add it
+        // *now*, and for all we know, `u` will depend on `slice` and need to be
+        // added after it. So we ignore this edge. Because we did follow this
+        // edge in Phase 1, usedSlice was at some point in `needed` and will not
+        // be left out.
+        if (u.unordered)
+          return;
+
+        _.each(library.getSlices(u.spec, self.arch), function (usedSlice) {
+          // If this is a weak dependency, and nothing else in the target had a
+          // strong dependency on it, then ignore this edge.
+          if (u.weak && ! _.has(getsUsed, usedSlice.id))
+            return;
+
+          if (onStack[usedSlice.id]) {
+            buildmessage.error("circular dependency between packages " +
+                               slice.pkg.name + " and " + usedSlice.pkg.name);
+            // recover by not enforcing one of the depedencies
+            return;
+          }
+          onStack[usedSlice.id] = true;
+          add(usedSlice);
+          delete onStack[usedSlice.id];
+        });
+      });
+      self.slices.push(slice);
+      delete needed[slice.id];
+    };
+
     while (true) {
-      // Get an arbitrary slice from those that remain, or break if
-      // none remain
+      // Get an arbitrary slice from those that remain, or break if none remain.
       var first = null;
       for (first in needed) break;
       if (! first)
         break;
-      first = needed[first];
-
-      // Add its strong dependencies to the order, then add it. Add
-      // its weak dependencies to the list of things to add later.
-      var add = function (slice) {
-        if (done[slice.id])
-          return;
-
-        _.each(slice.uses, function (u) {
-          _.each(library.getSlices(u.spec, self.arch), function (usedSlice) {
-            if (u.unordered) {
-              needed[usedSlice.id] = usedSlice;
-              return;
-            }
-            if (onStack[usedSlice.id]) {
-              buildmessage.error("circular dependency between packages " +
-                                 slice.pkg.name + " and " + usedSlice.pkg.name);
-              // recover by not enforcing one of the depedencies
-              return;
-            }
-            onStack[usedSlice.id] = true;
-            add(usedSlice);
-            delete onStack[usedSlice.id];
-          });
-        });
-        self.slices.push(slice);
-        done[slice.id] = true;
-        delete needed[slice.id];
-      };
-      add(first);
+      // Now add it, after its ordered dependencies.
+      add(needed[first]);
     }
   },
 

@@ -13,6 +13,7 @@ Package._transitional_registerBuildPlugin({
 
 Package.on_test(function (api) {
   api.use(['coffeescript', 'tinytest']);
+  api.use(['coffeescript-test-helper'], ['client', 'server']);
   api.add_files([
     'coffeescript_test_setup.js',
     'coffeescript_tests.coffee',
