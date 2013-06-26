@@ -15,7 +15,7 @@ Package.on_use(function (api, where) {
   // XXX Now the *.js handler is intrinsic rather than coming from the
   // 'meteor' package and we could remove this (if we provided a way
   // to let the package opt to not depend on 'meteor'.) We could even
-  // remove weak dependency support, though I think it's worth keeping
+  // remove unordered dependency support, though I think it's worth keeping
   // around for now to keep the possibility of dependency
   // configuration alive in the codebase.
   api.use('meteor', where, {unordered: true});

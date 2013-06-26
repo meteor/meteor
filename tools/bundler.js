@@ -514,8 +514,8 @@ _.extend(Target.prototype, {
         break;
       first = needed[first];
 
-      // Add its strong dependencies to the order, then add it. Add
-      // its weak dependencies to the list of things to add later.
+      // Add its ordered dependencies to the order, then add it. Add
+      // its unordered dependencies to the list of things to add later.
       var add = function (slice) {
         if (done[slice.id])
           return;

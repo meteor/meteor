@@ -1455,12 +1455,12 @@ _.extend(Package.prototype, {
         // Everything depends on the package 'meteor', which sets up
         // the basic environment) (except 'meteor' itself).
         if (! (name === "meteor" && role === "use")) {
-          // Don't add the dependency if one already exists. This
-          // allows the package to create an unordered dependency and
-          // override the one that we'd add here. This is necessary to
-          // resolve the circular dependency between meteor and
-          // underscore (underscore depends weakly on meteor; it just
-          // needs the .js extension handler.)
+          // Don't add the dependency if one already exists. This allows the
+          // package to create an unordered dependency and override the one that
+          // we'd add here. This is necessary to resolve the circular dependency
+          // between meteor and underscore (underscore has an unordered
+          // dependency on meteor dating from when the .js extension handler was
+          // in the "meteor" package.)
           var alreadyDependsOnMeteor =
             !! _.find(uses[role][where], function (u) {
               return u.spec === "meteor";
