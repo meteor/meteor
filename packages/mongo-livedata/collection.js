@@ -317,6 +317,11 @@ var throwIfSelectorIsNotId = function (selector, methodName) {
 // generating their result until the database has acknowledged
 // them. In the future maybe we should provide a flag to turn this
 // off.
+var numRequiredArgs = {
+  insert: 1,
+  update: 2,
+  remove: 1
+};
 _.each(["insert", "update", "remove"], function (name) {
   Meteor.Collection.prototype[name] = function (/* arguments */) {
     var self = this;
@@ -356,6 +361,13 @@ _.each(["insert", "update", "remove"], function (name) {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
     }
 
+    var wrappedCallback;
+    if (callback) {
+      wrappedCallback = function (error, result) {
+        callback(error, !error && ret);
+      };
+    }
+
     if (self._connection && self._connection !== Meteor.default_server) {
       // just remote to another endpoint, propagate return value or
       // exception.
@@ -369,13 +381,11 @@ _.each(["insert", "update", "remove"], function (name) {
         throwIfSelectorIsNotId(args[0], name);
       }
 
-      if (callback) {
+      if (wrappedCallback) {
         // asynchronous: on success, callback should return ret
         // (document ID for insert, undefined for update and
         // remove), not the method's result.
-        self._connection.apply(self._prefix + name, args, function (error, result) {
-          callback(error, !error && ret);
-        });
+        self._connection.apply(self._prefix + name, args, wrappedCallback);
       } else {
         // synchronous: propagate exception
         self._connection.apply(self._prefix + name, args);
@@ -384,8 +394,9 @@ _.each(["insert", "update", "remove"], function (name) {
     } else {
       // it's my collection.  descend into the collection object
       // and propagate any exception.
+      args.push(wrappedCallback);
       try {
-        self._collection[name].apply(self._collection, args);
+        Meteor._wrapAsync(self._collection[name], numRequiredArgs[name]).apply(self._collection, args);
       } catch (e) {
         if (callback) {
           callback(e);
@@ -393,9 +404,6 @@ _.each(["insert", "update", "remove"], function (name) {
         }
         throw e;
       }
-
-      // on success, return *ret*, not the connection's return value.
-      callback && callback(null, ret);
     }
 
     // both sync and async, unless we threw an exception, return ret
@@ -572,8 +580,9 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
             self[validatedMethodName].apply(self, argsWithUserId);
           } else if (self._isInsecure()) {
             // In insecure mode, allow any mutation (with a simple selector).
-            self._collection[method].apply(
-              self._collection, _.toArray(arguments));
+            Meteor._wrapAsync(self._collection[method],
+                              numRequiredArgs[method]).
+              apply(self._collection, _.toArray(arguments));
           } else {
             // In secure mode, if we haven't called allow or deny, then nothing
             // is permitted.

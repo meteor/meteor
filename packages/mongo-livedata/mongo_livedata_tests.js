@@ -873,8 +873,8 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
   test.equal(
     Meteor.Collection._rewriteSelector(
       {'$or': [
-        {x: /^o/}, 
-        {y: /^p/}, 
+        {x: /^o/},
+        {y: /^p/},
         {z: 'q'}
       ]}
     ),
@@ -922,7 +922,7 @@ testAsyncMulti('mongo-livedata - specified _id', [
       Meteor.call('createInsecureCollection', collectionName);
       Meteor.subscribe('c-' + collectionName);
     }
-    var expectError = expect(function (err) {
+    var expectError = expect(function (err, result) {
       test.isTrue(err);
       var doc = coll.findOne();
       test.equal(doc.name, "foo");
