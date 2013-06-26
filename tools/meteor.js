@@ -1139,8 +1139,10 @@ Fiber(function () {
       });
       if (count)
         console.log("Built " + count + " packages.");
-      if (messages.hasMessages())
+      if (messages.hasMessages()) {
         process.stdout.write("\n" + messages.formatMessages());
+        process.exit(1);
+      }
     }
   });
 
