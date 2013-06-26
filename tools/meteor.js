@@ -123,14 +123,14 @@ Fiber(function () {
   };
 
   var calculateGalaxyContextAndTunnel = function (deployEndpoint,
-                                                  context, argv) {
+                                                  context, sshIdentity) {
     // 9414 because 9414xy (gAlAxy) in 1337
     context.galaxyPort = process.env.PORT || 9414;
     if (deployEndpoint && deployEndpoint.indexOf("ssh://") === 0) {
       context.galaxyUrl = "localhost:" + context.galaxyPort + "/ultraworld";
       context.adminBaseUrl = "localhost:" + context.galaxyPort + "/";
       context.galaxyHost = deployEndpoint.substr("ssh://".length);
-      context.sshIdentity = argv["ssh-identity"];
+      context.sshIdentity = sshIdentity;
       tunnel = sshTunnel(context.galaxyHost, context.galaxyPort,
                          "localhost:9414", context.sshIdentity);
       tunnel.waitConnected();
@@ -138,6 +138,16 @@ Fiber(function () {
       context.galaxyUrl = deployEndpoint;
       context.adminBaseUrl = process.env.GALAXY + "/";
     }
+  };
+
+  var prepareForGalaxy = function (site, context, argv) {
+    var discoverResults = deployGalaxy.discoverGalaxy(site);
+    var deployEndpoint = discoverResults.deployEndpoint;
+    var rootSiteName = discoverResults.rootSiteName;
+    site = removeRootFromSiteName(site, rootSiteName);
+    calculateGalaxyContextAndTunnel(deployEndpoint, context,
+                                    argv["ssh-identity"]);
+    return site;
   };
 
   var removeRootFromSiteName = function (site, rootSiteName) {
@@ -814,11 +824,7 @@ Fiber(function () {
         mongoUrl = fut.wait();
 
       } else if (new_argv._.length === 2) {
-        var discoverResults = deployGalaxy.discoverGalaxy(new_argv._[1]);
-        var deployEndpoint = discoverResults.deployEndpoint;
-        var site = removeRootFromSiteName(new_argv._[1],
-                                          discoverResults.rootSiteName);
-        calculateGalaxyContextAndTunnel(deployEndpoint, context, new_argv);
+        var site = prepareForGalaxy(new_argv._[1], context, new_argv);
         // remote mode
         if (context.galaxyUrl) {
           mongoUrl = deployGalaxy.temporaryMongoUrl({
@@ -895,15 +901,10 @@ Fiber(function () {
         process.stdout.write(opt.help());
         process.exit(1);
       }
-      var site = new_argv._[1];
-      var discoverResults = deployGalaxy.discoverGalaxy(site);
-      var deployEndpoint = discoverResults.deployEndpoint;
-      var rootSiteName = discoverResults.rootSiteName;
-      site = removeRootFromSiteName(site, rootSiteName);
-      calculateGalaxyContextAndTunnel(deployEndpoint, context, new_argv);
+      var site = prepareForGalaxy(new_argv._[1], context, new_argv);
 
       if (new_argv.delete) {
-        if (deployEndpoint)
+        if (context.galaxyUrl)
           deployGalaxy.deleteApp(context);
         else
           deploy.delete_app(site);
@@ -916,7 +917,7 @@ Fiber(function () {
         if (new_argv.settings)
           settings = runner.getSettings(new_argv.settings);
 
-        if (deployEndpoint) {
+        if (context.galaxyUrl) {
           if (new_argv.password) {
             process.stderr.write("Galaxy does not support --password.\n");
             process.exit(1);
@@ -959,11 +960,7 @@ Fiber(function () {
     func: function (argv) {
       argv = require('optimist').boolean('f').argv;
 
-      var discoverResults = deployGalaxy.discoverGalaxy(argv._[1]);
-      var deployEndpoint = discoverResults.deployEndpoint;
-      var site = removeRootFromSiteName(argv._[1],
-                                        discoverResults.rootSiteName);
-      calculateGalaxyContextAndTunnel(deployEndpoint, context, argv);
+      var site = prepareForGalaxy(argv._[1], context, argv);
       var useGalaxy = !!context.galaxyUrl;
 
       if (argv.help || argv._.length !== 2) {

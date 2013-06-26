@@ -25,7 +25,10 @@ var getGalaxy = function (context) {
   if (! _galaxy) {
     var Meteor = getMeteor(context);
     if (!context.galaxyUrl) {
-      process.stderr.write("Must have a deploy endpoint.\n");
+      process.stderr.write("Could not find a deploy endpoint. " +
+                           "You can set the GALAXY environment variable, " +
+                           "or configure your site name to resolve to " +
+                           "your Galaxy's proxy.\n");
       process.exit(1);
     }
 
@@ -77,19 +80,19 @@ exports.discoverGalaxy = function (app) {
   var url = "https://" + app + "/discovery/_GALAXY_";
   var fut = new Future();
 
-  var noDiscoveryResult = {};
+  var discoveryFailed = {};
   if (process.env.GALAXY)
-    noDiscoveryResult.deployEndpoint = process.env.GALAXY;
+    discoveryFailed.deployEndpoint = process.env.GALAXY;
 
   request(url, function (err, resp, body) {
     if (err || resp.statusCode !== 200) {
-      fut.return(noDiscoveryResult);
+      fut.return(discoveryFailed);
     } else {
       try {
         var result = JSON.parse(body);
         fut.return(result);
       } catch (e) {
-        fut.return(noDiscoveryResult);
+        fut.return(discoveryFailed);
       }
     }
   });
