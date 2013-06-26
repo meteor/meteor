@@ -72,6 +72,7 @@ var scanForSources = function (rootPath, extensions, ignoreFiles) {
 // - forceExport
 // - dependencyInfo
 // - nodeModulesPath
+// - noExports
 //
 // Do not include the source files in dependencyInfo. They will be
 // added at compile time when the sources are actually read.
@@ -131,6 +132,9 @@ var Slice = function (pkg, options) {
   // package. Array of string symbol (eg "Foo", "Bar.baz".) Set only
   // when isBuilt is true.
   self.exports = null;
+
+  // Are we allowed to have exports?  (eg, test slices don't export.)
+  self.noExports = !!options.noExports;
 
   // Prelink output. 'boundary' is a magic cookie used for inserting
   // imports. 'prelinkFiles' is the partially linked JavaScript code
@@ -415,7 +419,8 @@ _.extend(Slice.prototype, {
       // XXX report an error if there is a package called global-imports
       importStubServePath: '/packages/global-imports.js',
       name: self.pkg.name || null,
-      forceExport: self.forceExport
+      forceExport: self.forceExport,
+      noExports: self.noExports
     });
 
     // Add dependencies on the source code to any plugins that we
@@ -1358,6 +1363,12 @@ _.extend(Package.prototype, {
           // @param symbols String (eg "Foo", "Foo.bar") or array of String
           // @param where 'client', 'server', or an array of those
           exportSymbol: function (symbols, where) {
+            if (role === "test") {
+              buildmessage.error("You cannot export symbols from a test.",
+                                 { useMyCaller: true });
+              // recover by ignoring
+              return;
+            }
             if (!(symbols instanceof Array))
               symbols = symbols ? [symbols] : [];
 
@@ -1482,7 +1493,11 @@ _.extend(Package.prototype, {
           forceExport: forceExport[role][where],
           dependencyInfo: dependencyInfo,
           nodeModulesPath: arch === nativeArch && nodeModulesPath || undefined,
-          staticDirectory: self.sourceRoot
+          staticDirectory: self.sourceRoot,
+          // test slices don't get used by other packages, so they have nothing
+          // to export.  (And notably, they should NOT stomp on the Package.foo
+          // object defined by their corresponding use slice.)
+          noExports: role === "test"
         }));
       });
     });
@@ -1791,7 +1806,7 @@ _.extend(Package.prototype, {
 
       self.slices.push(slice);
     });
-    self.slicesBuilt = true
+    self.slicesBuilt = true;
 
     return true;
   },

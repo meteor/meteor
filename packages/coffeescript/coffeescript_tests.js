@@ -7,9 +7,5 @@ Tinytest.add("literate coffeescript - presence", function(test) {
 
 Tinytest.add("coffeescript - exported variable", function(test) {
   test.equal(COFFEESCRIPT_EXPORTED, 123);
-  test.equal(Package.coffeescript.COFFEESCRIPT_EXPORTED, 123);
-});
-Tinytest.add("coffeescript - exported variable with 'use strict'", function(test) {
-  test.equal(COFFEESCRIPT_EXPORTED2, 456);
-  test.equal(Package.coffeescript.COFFEESCRIPT_EXPORTED2, 456);
+  test.equal(Package['coffeescript-test-helper'].COFFEESCRIPT_EXPORTED, 123);
 });

@@ -29,7 +29,7 @@ var generateBoundary = function () {
 ///////////////////////////////////////////////////////////////////////////////
 
 // options include name, imports, forceExport, useGlobalNamespace,
-// combinedServePath, and importStubServePath, all of which have the
+// combinedServePath, importStubServePath, and noExports, all of which have the
 // same meaning as they do when passed to import().
 var Module = function (options) {
   var self = this;
@@ -48,6 +48,7 @@ var Module = function (options) {
   self.useGlobalNamespace = options.useGlobalNamespace;
   self.combinedServePath = options.combinedServePath;
   self.importStubServePath = options.importStubServePath;
+  self.noExports = !!options.noExports;
 };
 
 _.extend(Module.prototype, {
@@ -57,7 +58,8 @@ _.extend(Module.prototype, {
                      linkerUnitTransform) {
     var self = this;
     self.files.push(new File(source, servePath, sourcePath,
-                             includePositionInErrors, linkerUnitTransform));
+                             includePositionInErrors, linkerUnitTransform,
+                             self.noExports));
   },
 
 
@@ -165,8 +167,11 @@ _.extend(Module.prototype, {
   // Return our exports as a list of string
   getExports: function () {
     var self = this;
-    var exports = {};
 
+    if (self.noExports)
+      return [];
+
+    var exports = {};
     _.each(self.files, function (file) {
       _.each(file.units, function (unit) {
         _.extend(exports, unit.exports);
@@ -180,6 +185,10 @@ _.extend(Module.prototype, {
   getExportCode: function () {
     var self = this;
     if (! self.name)
+      return "";
+    // If we're a no-exports module, then we have no export code (not even
+    // creating Package.foo).
+    if (self.noExports)
       return "";
     if (self.useGlobalNamespace)
       // Haven't thought about this case. When would this happen?
@@ -257,7 +266,7 @@ var writeSymbolTree = function (symbolTree, indent) {
 ///////////////////////////////////////////////////////////////////////////////
 
 var File = function (source, servePath, sourcePath, includePositionInErrors,
-                     linkerUnitTransform) {
+                     linkerUnitTransform, noExports) {
   var self = this;
 
   // source code for this file (a string)
@@ -281,6 +290,9 @@ var File = function (source, servePath, sourcePath, includePositionInErrors,
   self.linkerUnitTransform = linkerUnitTransform || function (source, exports) {
     return source;
   };
+
+  // If true, @export is an error.
+  self.noExports = noExports;
 
   self._unitize();
 };
@@ -419,10 +431,16 @@ _.extend(File.prototype, {
             return s.trim();
           });
 
-          _.each(symbols, function (s) {
-            if (s.length)
-              unit[what + "s"][s] = true;
-          });
+          if (self.noExports && what === "export") {
+            buildmessage.error("@export not allowed in this slice",
+                               { file: self.sourcePath });
+            // recover by ignoring
+          } else {
+            _.each(symbols, function (s) {
+              if (s.length)
+                unit[what + "s"][s] = true;
+            });
+          }
 
           /* fall through */
         }
@@ -581,17 +599,26 @@ _.extend(Unit.prototype, {
 // containing import setup code for the global environment. this is
 // the servePath to use for it.
 //
+// noExports: if true, the module does not export anything (even an empty
+// Package.foo object). eg, for test slices.
+//
 // Output is an object with keys:
 // - files: is an array of output files in the same format as inputFiles
 // - exports: the exports, as a list of string ('Foo', 'Thing.Stuff', etc)
 // - boundary: an opaque value that must be passed along with 'files' to link()
 var prelink = function (options) {
+  if (options.noExports && options.forceExport &&
+      ! _.isEmpty(options.forceExport)) {
+    throw new Error("Can't force exports if there are no exports!");
+  };
+
   var module = new Module({
     name: options.name,
     forceExport: options.forceExport,
     useGlobalNamespace: options.useGlobalNamespace,
     importStubServePath: options.importStubServePath,
-    combinedServePath: options.combinedServePath
+    combinedServePath: options.combinedServePath,
+    noExports: !!options.noExports
   });
 
   _.each(options.inputFiles, function (f) {
