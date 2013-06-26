@@ -199,8 +199,11 @@ _.extend(Module.prototype, {
     buf += packageDot(self.name) + " = ";
 
     var exports = self.getExports();
+    // Even if there are no exports, we need to define Package.foo, because the
+    // existence of Package.foo is how another package (eg, one that weakly
+    // depends on foo) can tell if foo is loaded.
     if (exports.length === 0)
-      return "";
+      return buf + "{};\n";
 
     // Given exports like Foo, Bar.Baz, Bar.Quux.A, and Bar.Quux.B,
     // construct an expression like
@@ -209,8 +212,8 @@ _.extend(Module.prototype, {
     _.each(self.getExports(), function (symbol) {
       scratch[symbol] = symbol;
     });
-    var exports = buildSymbolTree(scratch);
-    buf += writeSymbolTree(exports, 0);
+    var exportTree = buildSymbolTree(scratch);
+    buf += writeSymbolTree(exportTree, 0);
     buf += ";\n";
     return buf;
   }
@@ -223,7 +226,7 @@ _.extend(Module.prototype, {
 var buildSymbolTree = function (symbolMap, f) {
   // XXX XXX detect and report conflicts, like one file exporting
   // Foo and another file exporting Foo.Bar
-  var ret = {}
+  var ret = {};
 
   _.each(symbolMap, function (value, symbol) {
     var parts = symbol.split('.');

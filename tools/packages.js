@@ -102,6 +102,12 @@ var Slice = function (pkg, options) {
   // - unordered: If true, we don't want the package's imports and we
   //   don't want to force the package to load before us. We just want
   //   to ensure that it loads if we load.
+  // - weak: If true, we don't *need* to load the other package, but
+  //   if the other package ends up loaded in the target, it must
+  //   be forced to load before us. We will not get its imports
+  //   or plugins.
+  // It is an error for both unordered and weak to be true, because
+  // such a dependency would have no effect.
   self.uses = options.uses;
 
   // A function that returns the source files for this slice. Array of
@@ -475,7 +481,11 @@ _.extend(Slice.prototype, {
     // packages get precedence.
     var imports = {}; // map from symbol to supplying package name
     _.each(_.values(self.uses), function (u) {
-      if (! u.unordered) {
+      // We don't get imports from unordered dependencies (since they may not be
+      // defined yet) or from weak dependencies (because the meaning of a name
+      // shouldn't be affected by the non-local decision of whether or not
+      // an unrelated package in the target depends on something).
+      if (! u.unordered && ! u.weak) {
         _.each(library.getSlices(u.spec, bundleArch), function (otherSlice) {
           if (! otherSlice.isBuilt)
             throw new Error("dependency wasn't built?");
@@ -522,7 +532,11 @@ _.extend(Slice.prototype, {
     var ret = [self.pkg];
 
     _.each(self.uses, function (u) {
-      ret.push(self.pkg.library.get(u.spec.split('.')[0]));
+      // We don't use plugins from weak dependencies, because the ability to
+      // compile a certain type of file shouldn't depend on whether or not some
+      // unrelated package in the target has a dependency.
+      if (! u.weak)
+        ret.push(self.pkg.library.get(u.spec.split('.')[0]));
     });
 
     _.each(ret, function (pkg) {
@@ -939,7 +953,7 @@ _.extend(Package.prototype, {
       name: options.sliceName,
       arch: arch,
       uses: _.map(options.use || [], function (spec) {
-        return { spec: spec }
+        return { spec: spec };
       }),
       getSourcesFunc: function () { return options.sources || []; },
       nodeModulesPath: nodeModulesPath,
@@ -1272,7 +1286,7 @@ _.extend(Package.prototype, {
     var forceExport = {use: {client: [], server: []},
                        test: {client: [], server: []}};
 
-    // packages used (keys are 'name' and 'unordered')
+    // packages used (keys are 'spec', 'unordered', and 'weak')
     var uses = {use: {client: [], server: []},
                 test: {client: [], server: []}};
 
@@ -1317,6 +1331,13 @@ _.extend(Package.prototype, {
           //   'handlebars') have an implicit dependency on
           //   'meteor'. Internal use only -- future support of this
           //   is not guaranteed. #UnorderedPackageReferences
+          //
+          // - weak: if true, don't require this package to load at all, but if
+          //   it's going to load, load it before us.  Don't bring this
+          //   package's imports into our namespace and don't allow us to use
+          //   its plugins. (Has the same limitation as "unordered" that this
+          //   flag is not tracked per-environment or per-role; this may
+          //   change.)
           use: function (names, where, options) {
             options = options || {};
 
@@ -1326,13 +1347,26 @@ _.extend(Package.prototype, {
             if (!(where instanceof Array))
               where = where ? [where] : ["client", "server"];
 
+            // A normal dependency creates an ordering constraint and a "if I'm
+            // used, use that" constraint. Unordered dependencies lack the
+            // former; weak dependencies lack the latter. There's no point to a
+            // dependency that lacks both!
+            if (options.unordered && options.weak) {
+              buildmessage.error(
+                "A dependency may not be both unordered and weak.",
+                { useMyCaller: true });
+              // recover by ignoring
+              return;
+            }
+
             _.each(names, function (name) {
               _.each(where, function (w) {
                 if (options.role && options.role !== "use")
                   throw new Error("Role override is no longer supported");
                 uses[role][w].push({
                   spec: name,
-                  unordered: options.unordered || false
+                  unordered: options.unordered || false,
+                  weak: options.weak || false
                 });
               });
             });
@@ -1535,7 +1569,7 @@ _.extend(Package.prototype, {
         name: sliceName,
         arch: arch,
         uses: _.map(names, function (name) {
-          return { spec: name }
+          return { spec: name };
         })
       });
       self.slices.push(slice);
@@ -1760,7 +1794,8 @@ _.extend(Package.prototype, {
         uses: _.map(sliceJson.uses, function (u) {
           return {
             spec: u['package'] + (u.slice ? "." + u.slice : ""),
-            unordered: u.unordered
+            unordered: u.unordered,
+            weak: u.weak
           };
         }),
         staticDirectory: staticDirectory
@@ -1894,7 +1929,8 @@ _.extend(Package.prototype, {
             return {
               'package': specParts[0],
               slice: specParts[1] || undefined,
-              unordered: u.unordered || undefined
+              unordered: u.unordered || undefined,
+              weak: u.weak || undefined
             };
           }),
           node_modules: slice.nodeModulesPath ? 'npm/node_modules' : undefined,
