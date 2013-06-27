@@ -20,7 +20,7 @@ The ```examples``` directory contains Meteor apps which show off the following f
 
 The only difference between the two example apps is the routing packages used: one uses ```meteor-router``` and the other uses ```meteor-mini-pages```.
 
-View the ```meteor-router``` example app online @  <a href="http://roles-example.meteor.com/" target="_blank">http://roles-example.meteor.com/</a>
+View the ```meteor-router``` example app online @  <a href="http://roles.meteor.com/" target="_blank">http://roles.meteor.com/</a>
   
 Run locally:
   1. install [Meteorite][1]
