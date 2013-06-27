@@ -87,8 +87,8 @@ _.extend(Meteor, {
              typeof(newArgs[newArgs.length - 1]) === "undefined") {
         newArgs.pop();
       }
-      // If we have any optional arguments left and the last optional arg is a
-      // function, then that's our callback; otherwise, we don't have one.
+      // If we have any left and the last one is a function, then that's our
+      // callback; otherwise, we don't have one.
       if (newArgs.length > 0 &&
           newArgs[newArgs.length - 1] instanceof Function) {
         callback = newArgs.pop();
