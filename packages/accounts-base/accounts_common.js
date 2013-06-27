@@ -20,9 +20,11 @@ if (!Accounts._options) {
 //     client signups.
 // - forbidClientAccountCreation {Boolean}
 //     Do not allow clients to create accounts directly.
+// - requireEmailVerification {Boolean}
+//     Do not allow users to login until they have verified their email address
 Accounts.config = function(options) {
   // validate option keys
-  var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation"];
+  var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation", "requireEmailVerification"];
   _.each(_.keys(options), function (key) {
     if (!_.contains(VALID_KEYS, key)) {
       throw new Error("Accounts.config: Invalid key: " + key);
