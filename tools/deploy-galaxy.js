@@ -187,7 +187,7 @@ exports.deploy = function (options) {
 exports.logs = function (options) {
   var logReaderURL;
   if (options.context.adminBaseUrl) {
-    logReaderURL = options.context.adminBaseUrl + "log-reader";
+    logReaderURL = options.context.adminBaseUrl + "/log-reader";
   } else {
     var galaxy = getGalaxy(options.context);
     logReaderURL = prettyCall(galaxy, "getLogReaderURL", [], {
