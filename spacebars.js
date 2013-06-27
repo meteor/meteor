@@ -474,8 +474,8 @@ Spacebars.parse = function (inputString, options) {
     }
 
     if (! isTopLevel && ! block.closeTag)
-      throw new Error("Unclosed `" + block.openTag.name +
-                      "` tag at top level");
+      error("Unclosed `" + block.openTag.name +
+            "` tag at top level");
 
     return block;
   };
@@ -586,6 +586,16 @@ Spacebars.compile = function (inputString, options) {
       options && { sourceName: options.sourceName });
   }
 
+  // XXX refactor to unify instances of this helper.
+  // Spacebars should probably be a class representing
+  // a Spacebars processor, with static methods aliased,
+  // e.g. `Spacebars.compile` calls `(new Spacebars).compile`.
+  var error = function (msg) {
+    if (options && options.sourceName)
+      msg = msg + " in " + options.sourceName;
+    throw new Error(msg);
+  };
+
   // `path` is an array of at least one string
   var codeGenPath = function (path, funcInfo, searchTemplates) {
     funcInfo.usedSelf = true;
@@ -634,7 +644,7 @@ Spacebars.compile = function (inputString, options) {
           codeGenPath(argValue, funcInfo) + ')';
         break;
       default:
-        throw new Error("Unexpected arg type: " + argType);
+        error("Unexpected arg type: " + argType);
       }
 
       if (arg.length > 2) {
@@ -709,15 +719,15 @@ Spacebars.compile = function (inputString, options) {
           isReactive = true;
           if (interpolateMode === INTERPOLATE_ATTR_VALUE &&
               tag.type === 'TRIPLE')
-            throw new Error("Can't have a triple-stache in an attribute value");
+            error("Can't have a triple-stache in an attribute value");
           if (interpolateMode === INTERPOLATE_DYNAMIC_ATTR &&
               tag.type === 'DOUBLE')
-            throw new Error("Can only have triple-stache for dynamic attributes");
+            error("Can only have triple-stache for dynamic attributes");
 
           parts.push(codeGenBasicStache(tag, funcInfo));
           break;
         default:
-          throw new Error("Unknown stache tag type: " + tag.type);
+          error("Unknown stache tag type: " + tag.type);
         }
       }
     });
@@ -795,7 +805,7 @@ Spacebars.compile = function (inputString, options) {
                 case 'COMMENT':
                   break;
                 default:
-                  throw new Error("Unexpected tag type: " + tag.type);
+                  error("Unexpected tag type: " + tag.type);
                 }
               }
             }
@@ -857,7 +867,7 @@ Spacebars.compile = function (inputString, options) {
                          systemId: t.systemId}) + ');');
         break;
       default:
-        throw new Error("Unexpected token type: " + t.type);
+        error("Unexpected token type: " + t.type);
         break;
       }
     });
