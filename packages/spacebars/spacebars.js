@@ -726,6 +726,8 @@ Spacebars.compile = function (inputString, options) {
 
           parts.push(codeGenBasicStache(tag, funcInfo));
           break;
+        case 'ANNOTATION':
+          error("Can't use an annotation stache tag in an attribute name or value");
         default:
           error("Unknown stache tag type: " + tag.type);
         }
@@ -804,6 +806,8 @@ Spacebars.compile = function (inputString, options) {
                   break;
                 case 'COMMENT':
                   break;
+                case 'ANNOTATION':
+                  error("Annotation stache tag must occur inside an HTML start tag");
                 default:
                   error("Unexpected tag type: " + tag.type);
                 }
@@ -819,11 +823,17 @@ Spacebars.compile = function (inputString, options) {
           var name = kv.nodeName;
           var value = kv.nodeValue;
           if ((typeof name) !== 'string') {
-            dynamicAttrs = (dynamicAttrs || []);
-            dynamicAttrs.push([interpolate(name, funcInfo,
-                                           INTERPOLATE_DYNAMIC_ATTR),
-                               interpolate(value, funcInfo,
-                                           INTERPOLATE_DYNAMIC_ATTR)]);
+            if (name.length === 1 &&
+                name[0].type === 'ANNOTATION' &&
+                value === '') {
+              // do something with annotation
+            } else {
+              dynamicAttrs = (dynamicAttrs || []);
+              dynamicAttrs.push([interpolate(name, funcInfo,
+                                             INTERPOLATE_DYNAMIC_ATTR),
+                                 interpolate(value, funcInfo,
+                                             INTERPOLATE_DYNAMIC_ATTR)]);
+            }
           } else {
             attrs = (attrs || {});
             attrs[toJSLiteral(name)] =
