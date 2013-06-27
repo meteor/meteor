@@ -112,7 +112,7 @@ Fiber(function () {
       context.sshIdentity = argv["ssh-identity"];
     } else {
       context.galaxyUrl = process.env.GALAXY + "/ultraworld";
-      context.adminBaseUrl = process.env.GALAXY;
+      context.adminBaseUrl = process.env.GALAXY + "/";
     }
 
     var appDir = files.findAppDir();
