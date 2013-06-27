@@ -111,7 +111,8 @@ Fiber(function () {
       context.galaxyHost = process.env.GALAXY.substr("ssh://".length);
       context.sshIdentity = argv["ssh-identity"];
     } else {
-      context.galaxyUrl = process.env.GALAXY;
+      context.galaxyUrl = process.env.GALAXY + "/ultraworld";
+      context.adminBaseUrl = process.env.GALAXY;
     }
 
     var appDir = files.findAppDir();
