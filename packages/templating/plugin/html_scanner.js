@@ -139,12 +139,14 @@ html_scanner = {
 
 
     // <body> or <template>
-    var renderFuncCode = Spacebars.compile(contents);
 
     if (tag === "template") {
       var name = attribs.name;
       if (! name)
         throwParseError("Template has no 'name' attribute");
+
+      var renderFuncCode = Spacebars.compile(
+        contents, { sourceName: 'Template "' + name + '"' });
 
       results.js += "\nTemplate[" + JSON.stringify(name) +
         "] = Component.extend({render: " + renderFuncCode + "});\n";
@@ -152,6 +154,9 @@ html_scanner = {
       // <body>
       if (hasAttribs)
         throwParseError("Attributes on <body> not supported");
+
+      var renderFuncCode = Spacebars.compile(
+        contents, { sourceName: "<body>" });
 
       results.js += "\nBody = RootComponent.extend({render: " + renderFuncCode + "});\n";
       results.js += '\nMeteor.startup(function () { Body.create().attach(document.body); });\n';

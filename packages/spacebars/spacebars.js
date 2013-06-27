@@ -3,7 +3,7 @@
 Spacebars = {};
 
 var makeStacheTagStartRegex = function (r) {
-  return new RegExp(r.source + /(?![{>!#/])/.source,
+  return new RegExp(r.source + /(?![{>!#/@])/.source,
                     r.ignoreCase ? 'i' : '');
 };
 
@@ -22,7 +22,8 @@ var starts = {
   COMMENT: makeStacheTagStartRegex(/^\{\{\s*!/),
   INCLUSION: makeStacheTagStartRegex(/^\{\{\s*>\s*(?!\s)/),
   BLOCKOPEN: makeStacheTagStartRegex(/^\{\{\s*#\s*(?!\s)/),
-  BLOCKCLOSE: makeStacheTagStartRegex(/^\{\{\s*\/\s*(?!\s)/)
+  BLOCKCLOSE: makeStacheTagStartRegex(/^\{\{\s*\/\s*(?!\s)/),
+  ANNOTATION: makeStacheTagStartRegex(/^\{\{\s*@\s*(?!\s)/)
 };
 
 var ends = {
@@ -33,7 +34,7 @@ var ends = {
 Spacebars.starts = starts;
 
 // Parse a tag at `pos` in `inputString`.  Succeeds or errors.
-Spacebars.parseStacheTag = function (inputString, pos) {
+Spacebars.parseStacheTag = function (inputString, pos, options) {
   pos = pos || 0;
   var startPos = pos;
   var str = inputString.slice(pos);
@@ -173,13 +174,17 @@ Spacebars.parseStacheTag = function (inputString, pos) {
   var type;
 
   var error = function (msg) {
-    throw new Error(msg + " at " + prettyOffset(inputString, pos));
+    msg = msg + " at " + prettyOffset(inputString, pos);
+    if (options && options.sourceName)
+      msg += " in " + options.sourceName;
+    throw new Error(msg);
   };
   var expected = function (what) {
     error('Expected ' + what + ', found "' + str.slice(0,5) + '"');
   };
 
   // must do ELSE first; order of others doesn't matter
+
   if (run(starts.ELSE)) type = 'ELSE';
   else if (run(starts.DOUBLE)) type = 'DOUBLE';
   else if (run(starts.TRIPLE)) type = 'TRIPLE';
@@ -187,6 +192,7 @@ Spacebars.parseStacheTag = function (inputString, pos) {
   else if (run(starts.INCLUSION)) type = 'INCLUSION';
   else if (run(starts.BLOCKOPEN)) type = 'BLOCKOPEN';
   else if (run(starts.BLOCKCLOSE)) type = 'BLOCKCLOSE';
+  else if (run(starts.ANNOTATION)) type = 'ANNOTATION';
   else
     error('Unknown stache tag starting with "' + str.slice(0,5) + '"');
 
@@ -256,10 +262,16 @@ var INTERPOLATE_ATTR_VALUE = 2;
 // Only allow triple in `<span {{{additionalAttrs}}}>`.
 var INTERPOLATE_DYNAMIC_ATTR = 3;
 
-var tokenizeHtml = function (html, preString, postString, tagLookup) {
+var tokenizeHtml = function (html, preString, postString, tagLookup, options) {
   var tokens = HTML5Tokenizer.tokenize(html);
 
   var out = [];
+
+  var error = function (msg) {
+    if (options && options.sourceName)
+      msg = msg + " in " + options.sourceName;
+    throw new Error(msg);
+  };
 
   var extractTags = function (str, mode, customErrorMessage) {
     // Scan `str` for substrings that are actually our
@@ -290,14 +302,14 @@ var tokenizeHtml = function (html, preString, postString, tagLookup) {
       var idStart = pos + preString.length;
       var idEnd = str.indexOf(postString, idStart);
       if (idEnd < 0)
-        throw new Error("error extracting tags"); // shouldn't happen
+        error("error extracting tags"); // shouldn't happen
       var tagId = str.slice(idStart, idEnd);
       var tag = tagLookup.getTag(tagId);
       if (mode) {
         if (mode === ALLOW_NO_STACHE ||
             (mode === ALLOW_NO_COMPONENTS &&
              (tag.isBlock || tag.type === 'INCLUSION')))
-          throw new Error(
+          error(
             (customErrorMessage ||
              "Can't use this stache tag at this position " +
              "in an HTML tag") + ", at " +
@@ -374,7 +386,7 @@ var tokenizeHtml = function (html, preString, postString, tagLookup) {
   return out;
 };
 
-Spacebars.parse = function (inputString) {
+Spacebars.parse = function (inputString, options) {
   // first, scan for all the stache tags
 
   var stacheTags = [];
@@ -385,11 +397,19 @@ Spacebars.parse = function (inputString) {
     if (pos < 0) {
       pos = inputString.length;
     } else {
-      var tag = Spacebars.parseStacheTag(inputString, pos);
+      var tag = Spacebars.parseStacheTag(
+        inputString, pos,
+        options && { sourceName: options.sourceName });
       stacheTags.push(tag);
       pos += tag.charLength;
     }
   }
+
+  var error = function (msg) {
+    if (options && options.sourceName)
+      msg = msg + " in " + options.sourceName;
+    throw new Error(msg);
+  };
 
   // now build a tree where block contents are put into an object
   // with `type:'block'`.  Also check that block stache tags match.
@@ -429,22 +449,22 @@ Spacebars.parse = function (inputString) {
       } else if (t.type === 'BLOCKCLOSE') {
         var name = t.path.join('.');
         if (isTopLevel)
-          throw new Error("Unexpected close tag `" + name + "` at " +
-                          prettyOffset(inputString, t.charPos));
+          error("Unexpected close tag `" + name + "` at " +
+                prettyOffset(inputString, t.charPos));
         if (name !== block.openTag.path.join('.'))
-          throw new Error("Close tag at " +
-                          prettyOffset(inputString, t.charPos) +
-                          " doesn't match `" +
-                          block.openTag.path.join('.') +
-                          "`, found `" + name + "`");
+          error("Close tag at " +
+                prettyOffset(inputString, t.charPos) +
+                " doesn't match `" +
+                block.openTag.path.join('.') +
+                "`, found `" + name + "`");
         block.closeTag = t;
       } else if (t.type === 'ELSE') {
         if (isTopLevel)
-          throw new Error("Unexpected `{{else}}` at " +
-                          prettyOffset(inputString, t.charPos));
+          error("Unexpected `{{else}}` at " +
+                prettyOffset(inputString, t.charPos));
         if (block.elseTag)
-          throw new Error("Duplicate `{{else}}` at " +
-                          prettyOffset(inputString, t.charPos));
+          error("Duplicate `{{else}}` at " +
+                prettyOffset(inputString, t.charPos));
         block.elseTag = t;
         children = [];
         block.elseChildren = children;
@@ -509,7 +529,9 @@ Spacebars.parse = function (inputString) {
       });
       html += inputString.slice(pos, endPos);
 
-      return tokenizeHtml(html, preString, postString, tagLookup);
+      return tokenizeHtml(
+        html, preString, postString, tagLookup,
+        options && { sourceName: options.sourceName });
     };
 
     var bodyStart = (isTopLevel ? 0 : tagEnd(block.openTag));
@@ -554,12 +576,14 @@ var makeObjectLiteral = function (obj) {
   return buf.join('');
 };
 
-Spacebars.compile = function (inputString) {
+Spacebars.compile = function (inputString, options) {
   var tree;
   if (typeof inputString === 'object') {
     tree = inputString; // allow passing parse tree
   } else {
-    tree = Spacebars.parse(inputString);
+    tree = Spacebars.parse(
+      inputString,
+      options && { sourceName: options.sourceName });
   }
 
   // `path` is an array of at least one string
