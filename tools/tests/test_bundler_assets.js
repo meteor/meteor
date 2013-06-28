@@ -89,7 +89,8 @@ assert.doesNotThrow(function () {
   var meteor = path.join(__dirname, "..", "..", "meteor"); // XXX is this allowed?
   var fut = new Future();
   var proc = cp.spawn(meteor, ["--once"], {
-    cwd: path.join(__dirname, "app-with-private")
+    cwd: path.join(__dirname, "app-with-private"),
+    stdio: 'inherit'
   });
   proc.on("exit", function (code) {
     fut.return(code);
