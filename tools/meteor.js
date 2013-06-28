@@ -19,7 +19,7 @@ Fiber(function () {
   var project = require('./project.js');
   var warehouse = require('./warehouse.js');
   var logging = require('./logging.js');
-  var deployGalaxy = require('./deploy-galaxy.js');
+  var deployGalaxy;
 
   var Future = require('fibers/future');
   // This code is duplicated in app/server/server.js.
@@ -124,23 +124,30 @@ Fiber(function () {
 
   var calculateGalaxyContextAndTunnel = function (deployEndpoint,
                                                   context, sshIdentity) {
+    var galaxyContext = {};
     // 9414 because 9414xy (gAlAxy) in 1337
-    context.galaxyPort = process.env.PORT || 9414;
+    galaxyContext.port = process.env.PORT || 9414;
     if (deployEndpoint && deployEndpoint.indexOf("ssh://") === 0) {
-      context.galaxyUrl = "localhost:" + context.galaxyPort + "/ultraworld";
-      context.adminBaseUrl = "localhost:" + context.galaxyPort + "/";
-      context.galaxyHost = deployEndpoint.substr("ssh://".length);
-      context.sshIdentity = sshIdentity;
-      tunnel = sshTunnel(context.galaxyHost, context.galaxyPort,
-                         "localhost:9414", context.sshIdentity);
+      galaxyContext.url = "localhost:" + galaxyContext.port +
+        "/ultraworld";
+      galaxyContext.adminBaseUrl = "localhost:" +
+        galaxyContext.port + "/";
+      galaxyContext.host = deployEndpoint.substr("ssh://".length);
+      galaxyContext.sshIdentity = sshIdentity;
+      tunnel = sshTunnel(galaxyContext.host, galaxyContext.port,
+                         "localhost:9414", galaxyContext.sshIdentity);
       tunnel.waitConnected();
-    } else {
-      context.galaxyUrl = deployEndpoint;
-      context.adminBaseUrl = process.env.GALAXY + "/";
+      context.galaxy = galaxyContext;
+    } else if (deployEndpoint) {
+      galaxyContext.galaxyUrl = deployEndpoint;
+      galaxyContext.adminBaseUrl = process.env.GALAXY + "/";
+      context.galaxy = galaxyContext;
     }
   };
 
   var prepareForGalaxy = function (site, context, argv) {
+    if (! deployGalaxy)
+      deployGalaxy = require('./deploy-galaxy.js');
     var deployEndpoint = deployGalaxy.discoverGalaxy(site);
     calculateGalaxyContextAndTunnel(deployEndpoint, context,
                                     argv["ssh-identity"]);
@@ -335,7 +342,7 @@ Fiber(function () {
       var cmd = argv._.splice(0, 1)[0];
       switch (cmd) {
       case "configure":
-        console.log("Visit http://localhost:" + context.galaxyPort + "/panel to configure your galaxy");
+        console.log("Visit http://localhost:" + context.galaxy.galaxyPort + "/panel to configure your galaxy");
         Fiber.yield();
         break;
       default:
@@ -811,7 +818,7 @@ Fiber(function () {
         var site = new_argv._[1];
         prepareForGalaxy(site, context, new_argv);
         // remote mode
-        if (context.galaxyUrl) {
+        if (context.galaxy) {
           mongoUrl = deployGalaxy.temporaryMongoUrl({
             app: site,
             context: context
@@ -890,7 +897,7 @@ Fiber(function () {
       prepareForGalaxy(site, context, new_argv);
 
       if (new_argv.delete) {
-        if (context.galaxyUrl)
+        if (context.galaxy)
           deployGalaxy.deleteApp(context);
         else
           deploy.delete_app(site);
@@ -903,7 +910,7 @@ Fiber(function () {
         if (new_argv.settings)
           settings = runner.getSettings(new_argv.settings);
 
-        if (context.galaxyUrl) {
+        if (context.galaxy) {
           if (new_argv.password) {
             process.stderr.write("Galaxy does not support --password.\n");
             process.exit(1);
@@ -948,7 +955,7 @@ Fiber(function () {
 
       var site = argv._[1];
       prepareForGalaxy(site, context, argv);
-      var useGalaxy = !!context.galaxyUrl;
+      var useGalaxy = !!context.galaxy;
 
       if (argv.help || argv._.length !== 2) {
         if (useGalaxy) {

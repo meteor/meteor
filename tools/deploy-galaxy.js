@@ -24,15 +24,15 @@ var _galaxy;
 var getGalaxy = function (context) {
   if (! _galaxy) {
     var Meteor = getMeteor(context);
-    if (!context.galaxyUrl) {
+    if (!context.galaxy) {
       process.stderr.write("Could not find a deploy endpoint. " +
                            "You can set the GALAXY environment variable, " +
-                           "or configure your site name to resolve to " +
+                           "or configure your site's DNS to resolve to " +
                            "your Galaxy's proxy.\n");
       process.exit(1);
     }
 
-    _galaxy = Meteor.connect(context.galaxyUrl);
+    _galaxy = Meteor.connect(context.galaxy.url);
   }
 
   return _galaxy;
@@ -80,18 +80,17 @@ exports.discoverGalaxy = function (app) {
   var url = "https://" + app + "/_GALAXY_";
   var fut = new Future();
 
-  var discoveryFailed = null;
   if (process.env.GALAXY)
-    discoveryFailed = process.env.GALAXY;
+    return process.env.GALAXY;
 
   request(url, function (err, resp, body) {
     if (err || resp.statusCode !== 200) {
-      fut.return(discoveryFailed);
+      fut.return(null);
     } else {
       try {
         fut.return(body);
       } catch (e) {
-        fut.return(discoveryFailed);
+        fut.return(null);
       }
     }
   });
@@ -211,8 +210,8 @@ exports.deploy = function (options) {
 // - streaming (BOOL)
 exports.logs = function (options) {
   var logReaderURL;
-  if (options.context.adminBaseUrl) {
-    logReaderURL = options.context.adminBaseUrl + "log-reader";
+  if (options.context.galaxy.adminBaseUrl) {
+    logReaderURL = options.context.galaxy.adminBaseUrl + "log-reader";
   } else {
     var galaxy = getGalaxy(options.context);
     logReaderURL = prettyCall(galaxy, "getLogReaderURL", [], {
