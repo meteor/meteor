@@ -80,17 +80,16 @@ exports.discoverGalaxy = function (app) {
   var url = "https://" + app + "/_GALAXY_";
   var fut = new Future();
 
-  var discoveryFailed = {};
+  var discoveryFailed = null;
   if (process.env.GALAXY)
-    discoveryFailed.deployEndpoint = process.env.GALAXY;
+    discoveryFailed = process.env.GALAXY;
 
   request(url, function (err, resp, body) {
     if (err || resp.statusCode !== 200) {
       fut.return(discoveryFailed);
     } else {
       try {
-        var result = JSON.parse(body);
-        fut.return(result);
+        fut.return(body);
       } catch (e) {
         fut.return(discoveryFailed);
       }

@@ -141,25 +141,9 @@ Fiber(function () {
   };
 
   var prepareForGalaxy = function (site, context, argv) {
-    var discoverResults = deployGalaxy.discoverGalaxy(site);
-    var deployEndpoint = discoverResults.deployEndpoint;
-    var rootSiteName = discoverResults.rootSiteName;
-    site = removeRootFromSiteName(site, rootSiteName);
+    var deployEndpoint = deployGalaxy.discoverGalaxy(site);
     calculateGalaxyContextAndTunnel(deployEndpoint, context,
                                     argv["ssh-identity"]);
-    return site;
-  };
-
-  var removeRootFromSiteName = function (site, rootSiteName) {
-    // If appName ends in .foo.com (where foo.com is the rootSiteName), then
-    // remove it.
-    if (! rootSiteName)
-      return site;
-    var suffixStart = site.length - rootSiteName.length;
-    if (suffixStart > 0 &&
-        site.substring(suffixStart) === rootSiteName)
-      return site.substring(0, suffixStart - 1); // -1 to remove the dot
-    return site;
   };
 
   var setReleaseVersion = function (version) {
@@ -824,7 +808,8 @@ Fiber(function () {
         mongoUrl = fut.wait();
 
       } else if (new_argv._.length === 2) {
-        var site = prepareForGalaxy(new_argv._[1], context, new_argv);
+        var site = new_argv._[1];
+        prepareForGalaxy(site, context, new_argv);
         // remote mode
         if (context.galaxyUrl) {
           mongoUrl = deployGalaxy.temporaryMongoUrl({
@@ -901,7 +886,8 @@ Fiber(function () {
         process.stdout.write(opt.help());
         process.exit(1);
       }
-      var site = prepareForGalaxy(new_argv._[1], context, new_argv);
+      var site = new_argv._[1];
+      prepareForGalaxy(site, context, new_argv);
 
       if (new_argv.delete) {
         if (context.galaxyUrl)
@@ -960,7 +946,8 @@ Fiber(function () {
     func: function (argv) {
       argv = require('optimist').boolean('f').argv;
 
-      var site = prepareForGalaxy(argv._[1], context, argv);
+      var site = argv._[1];
+      prepareForGalaxy(site, context, argv);
       var useGalaxy = !!context.galaxyUrl;
 
       if (argv.help || argv._.length !== 2) {
