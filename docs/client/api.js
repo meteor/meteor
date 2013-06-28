@@ -1816,7 +1816,7 @@ Template.api.assets_getText = {
   id: "assets_getText",
   name: "Assets.getText(assetPath, [asyncCallback])",
   locus: "Server",
-  descr: ["Retrieve the contents of the static server asset as a string."],
+  descr: ["Retrieve the contents of the static server asset as a UTF8-encoded string."],
   args: [
     {name: "assetPath",
      type: "String",
