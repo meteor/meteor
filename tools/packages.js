@@ -1227,6 +1227,25 @@ _.extend(Package.prototype, {
       }
     };
 
+    var require_or_resolve = function (f, name) {
+      var nodeModuleDir = path.join(self.sourceRoot,
+                                    '.npm', 'package', 'node_modules', name);
+      if (fs.existsSync(nodeModuleDir)) {
+        return f(nodeModuleDir);
+      } else {
+        try {
+          return f(name); // from the dev bundle
+        } catch (e) {
+          buildmessage.error("can't find npm module '" + name +
+                             "'. Did you forget to call 'Npm.depends'?",
+                             { useMyCaller: true });
+          // recover by, uh, returning undefined, which is likely to
+          // have some knock-on effects
+          return undefined;
+        }
+      }
+    };
+
     // == 'Npm' object visible in package.js ==
     var Npm = {
       depends: function (_npmDependencies) {
@@ -1264,22 +1283,11 @@ _.extend(Package.prototype, {
       },
 
       require: function (name) {
-        var nodeModuleDir = path.join(self.sourceRoot,
-                                      '.npm', 'package', 'node_modules', name);
-        if (fs.existsSync(nodeModuleDir)) {
-          return require(nodeModuleDir);
-        } else {
-          try {
-            return require(name); // from the dev bundle
-          } catch (e) {
-            buildmessage.error("can't find npm module '" + name +
-                               "'. Did you forget to call 'Npm.depends'?",
-                               { useMyCaller: true });
-            // recover by, uh, returning undefined, which is likely to
-            // have some knock-on effects
-            return undefined;
-          }
-        }
+        return require_or_resolve(require, name);
+      },
+
+      resolve: function (name) {
+        return require_or_resolve(require.resolve, name);
       }
     };
 
