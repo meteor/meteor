@@ -263,7 +263,7 @@ _.extend(Slice.prototype, {
       //   files so that you get your own namespace, for example
       //   '/packages/foo'. null on non-browser targets
       // - fileOptions: any options passed to "api.add_files"; for
-      //   use by the plugin. The built-in "js" plugin uses the "raw"
+      //   use by the plugin. The built-in "js" plugin uses the "bare"
       //   option for files that shouldn't be wrapped in a closure.
       // - read(n): read from the input file. If n is given it should
       //   be an integer, and you will receive the next n bytes of the
@@ -1678,7 +1678,7 @@ _.extend(Package.prototype, {
             var clientCompatSubstr =
                   path.sep + 'client' + path.sep + 'compatibility' + path.sep;
             if ((path.sep + relPath).indexOf(clientCompatSubstr) !== -1)
-              sourceObj.fileOptions = {raw: true};
+              sourceObj.fileOptions = {bare: true};
           }
           return sourceObj;
         });
