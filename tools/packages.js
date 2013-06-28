@@ -281,7 +281,7 @@ _.extend(Slice.prototype, {
       //   effect, such as minification.)
       // - addJavaScript({ path: "my/program.js", data: "my code",
       //                   sourcePath: "src/my/program.js",
-      //                   lineForLine: true })
+      //                   lineForLine: true, bare: true})
       //   Add JavaScript code, which will be namespaced into this
       //   package's environment (eg, it will see only the exports of
       //   this package's imports), and which will be subject to
@@ -294,7 +294,9 @@ _.extend(Slice.prototype, {
       //   option to true if line X, column Y in the input corresponds
       //   to line X, column Y in the output. This will enable line
       //   and column reporting in error messages. (XXX replace this
-      //   with source maps)
+      //   with source maps)  "bare" means to not wrap the file in
+      //   a closure, so that its vars are shared with other files
+      //   in the module.
       // - addAsset({ path: "my/image.png", data: Buffer })
       //   Add a file to serve as-is over HTTP (browser targets) or
       //   to include as-is in the bundle (native targets).
@@ -392,7 +394,8 @@ _.extend(Slice.prototype, {
             sourcePath: options.sourcePath,
             servePath: path.join(self.pkg.serveRoot, options.path),
             includePositionInErrors: options.lineForLine,
-            linkerUnitTransform: options.linkerUnitTransform
+            linkerUnitTransform: options.linkerUnitTransform,
+            bare: !!options.bare
           });
         },
         addAsset: function (options) {
@@ -571,7 +574,9 @@ _.extend(Slice.prototype, {
           data: compileStep.read().toString('utf8'),
           path: compileStep.inputPath,
           sourcePath: compileStep.inputPath,
-          lineForLine: true
+          lineForLine: true,
+          // XXX eventually get rid of backward-compatibility "raw" name
+          bare: compileStep.fileOptions.bare || compileStep.fileOptions.raw
         });
       }
     });
