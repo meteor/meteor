@@ -451,7 +451,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
       LocalCollection._recomputeResults(self.queries[qid]);
   });
   self._observeQueue.drain();
-  if (callback) Meteor.defer(function () { callback(doc._id); });
+  if (callback) Meteor.defer(function () { callback(null, doc._id); });
   return doc._id;
 };
 
