@@ -14,7 +14,7 @@ var fs = require('fs');
 
 // Find all files under `rootPath` that have an extension in
 // `extensions` (an array of extensions without leading dot), and
-// return them as a list of paths relative to sourceRoot. Ignore files
+// return them as a list of paths relative to rootPath. Ignore files
 // that match a regexp in the ignoreFiles array, if given. As a
 // special case (ugh), push all html files to the head of the list.
 var scanForSources = function (rootPath, extensions, ignoreFiles) {
@@ -110,8 +110,12 @@ var Slice = function (pkg, options) {
   // such a dependency would have no effect.
   self.uses = options.uses;
 
-  // A function that returns the source files for this slice. Array of
-  // paths. Null if loaded from unipackage.
+  // A function that returns the source files for this slice. Array of objects
+  // with keys "relPath" and "fileOptions". Null if loaded from unipackage.
+  //
+  // fileOptions is optional and represents arbitrary options passed to
+  // "api.add_files"; they are made available on to the plugin as
+  // compileStep.fileOptions.
   //
   // This is a function rather than a literal array because for an
   // app, we need to know the file extensions registered by the
@@ -215,7 +219,9 @@ _.extend(Slice.prototype, {
     });
     self.uses = scrubbedUses;
 
-    _.each(self.getSourcesFunc(), function (relPath) {
+    _.each(self.getSourcesFunc(), function (source) {
+      var relPath = source.relPath;
+      var fileOptions = _.clone(source.fileOptions) || {};
       var absPath = path.resolve(self.pkg.sourceRoot, relPath);
       var ext = path.extname(relPath).substr(1);
       var handler = self._getSourceHandler(ext);
@@ -256,6 +262,9 @@ _.extend(Slice.prototype, {
       //   will get prepended to the paths you pick for your output
       //   files so that you get your own namespace, for example
       //   '/packages/foo'. null on non-browser targets
+      // - fileOptions: any options passed to "api.add_files"; for
+      //   use by the plugin. The built-in "js" plugin uses the "raw"
+      //   option for files that shouldn't be wrapped in a closure.
       // - read(n): read from the input file. If n is given it should
       //   be an integer, and you will receive the next n bytes of the
       //   file as a Buffer. If n is omitted you get the rest of the
@@ -340,6 +349,7 @@ _.extend(Slice.prototype, {
         _fullInputPath: absPath, // avoid, see above..
         rootOutputPath: self.pkg.serveRoot,
         arch: self.arch,
+        fileOptions: fileOptions,
         read: function (n) {
           if (n === undefined || readOffset + n > contents.length)
             n = contents.length - readOffset;
@@ -919,14 +929,14 @@ _.extend(Package.prototype, {
   // - serveRoot (required if sources present)
   // - sliceName
   // - use
-  // - sources
+  // - sources (array of paths or relPath/fileOptions objects)
   // - npmDependencies
   // - npmDir
   initFromOptions: function (name, options) {
     var self = this;
     self.name = name;
 
-    if (options.sources && options.sources.length > 1 &&
+    if (options.sources && ! _.isEmpty(options.sources.length) &&
         (! options.sourceRoot || ! options.serveRoot))
       throw new Error("When source files are given, sourceRoot and " +
                       "serveRoot must be specified");
@@ -948,6 +958,12 @@ _.extend(Package.prototype, {
       }
     }
 
+    var sources = _.map(options.sources, function (source) {
+      if (typeof source === "string")
+        return {relPath: source};
+      return source;
+    });
+
     var arch = isPortable ? "native" : archinfo.host();
     var slice = new Slice(self, {
       name: options.sliceName,
@@ -955,7 +971,7 @@ _.extend(Package.prototype, {
       uses: _.map(options.use || [], function (spec) {
         return { spec: spec };
       }),
-      getSourcesFunc: function () { return options.sources || []; },
+      getSourcesFunc: function () { return sources; },
       nodeModulesPath: nodeModulesPath,
       staticDirectory: options.sourceRoot
     });
@@ -1375,7 +1391,7 @@ _.extend(Package.prototype, {
           // Top-level call to add a source file to a package. It will
           // be processed according to its extension (eg, *.coffee
           // files will be compiled to JavaScript.)
-          add_files: function (paths, where) {
+          add_files: function (paths, where, fileOptions) {
             if (!(paths instanceof Array))
               paths = paths ? [paths] : [];
 
@@ -1384,7 +1400,10 @@ _.extend(Package.prototype, {
 
             _.each(paths, function (path) {
               _.each(where, function (w) {
-                sources[role][w].push(path);
+                var source = {relPath: path};
+                if (fileOptions)
+                  source.fileOptions = fileOptions;
+                sources[role][w].push(source);
               });
             });
           },
@@ -1649,7 +1668,20 @@ _.extend(Package.prototype, {
         slice.dependencyInfo.directories[
           path.resolve(appDir, '.meteor', 'local')] = { exclude: [/.?/] };
 
-        return withoutOtherPrograms;
+        // Convert into relPath/fileOptions objects.
+        return _.map(withoutOtherPrograms, function (relPath) {
+          var sourceObj = {relPath: relPath};
+
+          // Special case: on the client, JavaScript files in a
+          // `client/compatibility` directory don't get wrapped in a closure.
+          if (sliceName === "client" && relPath.match(/\.js$/)) {
+            var clientCompatSubstr =
+                  path.sep + 'client' + path.sep + 'compatibility' + path.sep;
+            if ((path.sep + relPath).indexOf(clientCompatSubstr) !== -1)
+              sourceObj.fileOptions = {raw: true};
+          }
+          return sourceObj;
+        });
       };
     });
 
