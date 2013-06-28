@@ -291,6 +291,9 @@ var File = function (inputFile, noExports) {
       return source;
     };
 
+  // If true, don't wrap this individual file in a closure.
+  self.bare = !!inputFile.bare;
+
   // If true, @export is an error.
   self.noExports = noExports;
 
@@ -325,15 +328,18 @@ _.extend(File.prototype, {
     // The newline after the source closes a '//' comment.
     if (options.preserveLineNumbers) {
       // Ugly version
-      return "(function(){" +
-        self.linkerUnitTransform(self.source, options.exports) + "\n})();\n";
+      var body = self.linkerUnitTransform(self.source, options.exports);
+      if (body.length && body[body.length - 1] !== '\n')
+        body += '\n';
+      return self.bare ? body : ("(function(){" + body + "})();\n");
     }
 
     // Pretty version
     var buf = "";
 
     // Prologue
-    buf += "(function () {\n\n";
+    if (!self.bare)
+      buf += "(function () {\n\n";
 
     // Banner
     var width = options.sourceWidth || 70;
@@ -345,6 +351,10 @@ _.extend(File.prototype, {
     buf += divider + spacer;
     buf += "// " + (self.servePath.slice(1) + padding).slice(0, bannerWidth - 6) +
       " //\n";
+    if (self.bare) {
+      var bareText = "This file is in bare mode and is not in its own closure.";
+      buf += "// " + (bareText + padding).slice(0, bannerWidth - 6) + " //\n";
+    }
     buf += spacer + divider + blankLine;
 
     // Code, with line numbers
@@ -372,7 +382,10 @@ _.extend(File.prototype, {
     buf += divider;
 
     // Epilogue
-    buf += "\n}).call(this);\n\n\n\n\n\n";
+    if (!self.bare)
+      buf += "\n}).call(this);\n";
+    buf += "\n\n\n\n\n";
+
     return buf;
   },
 
@@ -935,7 +948,7 @@ var blacklistedSymbols = [
   "ActiveXObject", "CollectGarbage", "XDomainRequest"
 ];
 
-var blacklist = {}
+var blacklist = {};
 _.each(blacklistedSymbols, function (name) {
   blacklist[name] = true;
 });
