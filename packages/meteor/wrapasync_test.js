@@ -61,3 +61,15 @@ testAsyncMulti("environment - wrapAsync async", [
     test.equal(wrapped4(cb(3)), undefined);
   }
 ]);
+
+Tinytest.addAsync("environment - wrapAsync callback is " +
+                  "in fiber", function (test, onComplete) {
+                    var cb = function (err, result) {
+                      if (Meteor.isServer) {
+                        var Fiber = Npm.require('fibers');
+                        test.isTrue(Fiber.current);
+                      }
+                      onComplete();
+                    };
+                    wrapped1(3, cb);
+                  });

@@ -451,6 +451,8 @@ LocalCollection.prototype.insert = function (doc, callback) {
       LocalCollection._recomputeResults(self.queries[qid]);
   });
   self._observeQueue.drain();
+  // Defer in case the callback returns on a future; gives the caller time to
+  // wait on the future.
   if (callback) Meteor.defer(function () { callback(null, doc._id); });
   return doc._id;
 };
@@ -509,6 +511,8 @@ LocalCollection.prototype.remove = function (selector, callback) {
       LocalCollection._recomputeResults(query);
   });
   self._observeQueue.drain();
+  // Defer in case the callback returns on a future; gives the caller time to
+  // wait on the future.
   if (callback) Meteor.defer(callback);
 };
 
@@ -557,6 +561,8 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
                                         qidToOriginalResults[qid]);
   });
   self._observeQueue.drain();
+  // Defer in case the callback returns on a future; gives the caller time to
+  // wait on the future.
   if (callback) Meteor.defer(callback);
 };
 

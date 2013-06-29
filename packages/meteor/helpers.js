@@ -74,7 +74,7 @@ _.extend(Meteor, {
       var self = this;
       var callback;
       var fut;
-      var newArgs = Array.prototype.slice.call(arguments);
+      var newArgs = _.toArray(arguments);
 
       var logErr = function (err) {
         if (err)

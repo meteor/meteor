@@ -63,20 +63,30 @@ testAsyncMulti("mongo-livedata - database error reporting. " + idGeneration, [
 
     _.each(["insert", "remove", "update"], function (op) {
       var arg = (op === "insert" ? {} : 'bla');
+      var arg2 = {};
+
+      var callOp = function (callback) {
+        if (op === "update") {
+          ftc[op](arg, arg2, callback);
+        } else {
+          ftc[op](arg, callback);
+        }
+      };
+
       if (Meteor.isServer) {
         test.throws(function () {
-          ftc[op](arg);
+          callOp();
         });
 
-        ftc[op](arg, expect(exception));
+        callOp(expect(exception));
       }
 
       if (Meteor.isClient) {
-        ftc[op](arg, expect(exception));
+        callOp(expect(exception));
 
         // This would log to console in normal operation.
         Meteor._suppress_log(1);
-        ftc[op](arg);
+        callOp();
       }
     });
   }
