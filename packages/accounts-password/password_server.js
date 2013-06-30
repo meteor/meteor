@@ -474,8 +474,10 @@ Meteor.methods({createUser: function (options) {
   if (options.email && Accounts._options.sendVerificationEmail)
     Accounts.sendVerificationEmail(result.id, options.email);
 
-  // client gets logged in as the new user afterwards.
-  this.setUserId(result.id);
+  // client gets logged in as the new user afterwards, if email verification isn't required to login.
+  if (Accounts._options.requireEmailVerification)
+    this.setUserId(result.id);
+
   return result;
 }});
 
