@@ -1084,6 +1084,11 @@ Template.api.accounts_config = {
       descr: "New users with an email address will receive an address verification email."
     },
     {
+      name: "requireEmailVerification",
+      type: "Boolean",
+      descr: "Users with an email address will not be allowed to login until they have verified their email address."
+    },
+    {
       name: "forbidClientAccountCreation",
       type: "Boolean",
       descr: "Calls to [`createUser`](#accounts_createuser) from the client will be rejected. In addition, if you are using [accounts-ui](#accountsui), the \"Create account\" link will not be available."

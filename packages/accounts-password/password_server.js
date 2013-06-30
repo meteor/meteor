@@ -54,6 +54,9 @@ Meteor.methods({beginPasswordExchange: function (request) {
   if (!user.services || !user.services.password ||
       !user.services.password.srp)
     throw new Meteor.Error(403, "User has no password set");
+    
+  if (Accounts._options.requireEmailVerification && !user.emails[0].verified)
+    throw new Meteor.Error(403, "You must verify your email address before you can log in");
 
   var verifier = user.services.password.srp;
   var srp = new Meteor._srp.Server(verifier);
@@ -471,8 +474,10 @@ Meteor.methods({createUser: function (options) {
   if (options.email && Accounts._options.sendVerificationEmail)
     Accounts.sendVerificationEmail(result.id, options.email);
 
-  // client gets logged in as the new user afterwards.
-  this.setUserId(result.id);
+  // client gets logged in as the new user afterwards, if email verification isn't required to login.
+  if (!Accounts._options.requireEmailVerification)
+    this.setUserId(result.id);
+
   return result;
 }});
 
