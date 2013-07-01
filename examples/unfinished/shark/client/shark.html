@@ -1,31 +1,24 @@
 <head>
-  <title>shark</title>
+  <title>Shark Test</title>
 </head>
 
 <body>
-
+<div class="{{containerClass}}">
 <h1>Hello {{name}}</h1>
 
 {{#each items}}
-  {{#divwrap}}
-    <div>{{text}}</div>
-  {{/divwrap}}
+  {{#item}}
+    {{text}}
+  {{/item}}
 {{else}}
   <strong>Empty</strong>
 {{/each}}
-
-<p>{{#twice middle="<hr>"}}testing{{foo}}{{/twice}}</p>
-
+</div>
 </body>
 
-<template name="blah">
-HI
+<template name="item">
+  <div>{{> content}}</div>
+  <div>{{> content text=foo}}</div>
+  {{rand}}
 </template>
 
-<template name="twice">
-{{> content foo=123}} {{{middle}}} {{> content foo=456}}
-</template>
-
-<template name="divwrap">
-<div>{{> content}}</div>
-</template>
