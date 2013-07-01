@@ -54,12 +54,9 @@ var Module = function (options) {
 _.extend(Module.prototype, {
   // source: the source code
   // servePath: the path where it would prefer to be served if possible
-  addFile: function (source, servePath, sourcePath, includePositionInErrors,
-                     linkerUnitTransform) {
+  addFile: function (inputFile) {
     var self = this;
-    self.files.push(new File(source, servePath, sourcePath,
-                             includePositionInErrors, linkerUnitTransform,
-                             self.noExports));
+    self.files.push(new File(inputFile, self.noExports));
   },
 
 
@@ -268,21 +265,20 @@ var writeSymbolTree = function (symbolTree, indent) {
 // File
 ///////////////////////////////////////////////////////////////////////////////
 
-var File = function (source, servePath, sourcePath, includePositionInErrors,
-                     linkerUnitTransform, noExports) {
+var File = function (inputFile, noExports) {
   var self = this;
 
   // source code for this file (a string)
-  self.source = source;
+  self.source = inputFile.source;
 
   // the path where this file would prefer to be served if possible
-  self.servePath = servePath;
+  self.servePath = inputFile.servePath;
 
   // the path to use for error message
-  self.sourcePath = sourcePath;
+  self.sourcePath = inputFile.sourcePath;
 
   // should line and column be included in errors?
-  self.includePositionInErrors = includePositionInErrors;
+  self.includePositionInErrors = inputFile.includePositionInErrors;
 
   // The individual @units in the file. Array of Unit. Concatenating
   // the source of each unit, in order, will give self.source.
@@ -290,9 +286,13 @@ var File = function (source, servePath, sourcePath, includePositionInErrors,
 
   // A function which transforms the source code once all exports are
   // known. (eg, for CoffeeScript.)
-  self.linkerUnitTransform = linkerUnitTransform || function (source, exports) {
-    return source;
-  };
+  self.linkerUnitTransform =
+    inputFile.linkerUnitTransform || function (source, exports) {
+      return source;
+    };
+
+  // If true, don't wrap this individual file in a closure.
+  self.bare = !!inputFile.bare;
 
   // If true, @export is an error.
   self.noExports = noExports;
@@ -328,15 +328,18 @@ _.extend(File.prototype, {
     // The newline after the source closes a '//' comment.
     if (options.preserveLineNumbers) {
       // Ugly version
-      return "(function(){" +
-        self.linkerUnitTransform(self.source, options.exports) + "\n})();\n";
+      var body = self.linkerUnitTransform(self.source, options.exports);
+      if (body.length && body[body.length - 1] !== '\n')
+        body += '\n';
+      return self.bare ? body : ("(function(){" + body + "})();\n");
     }
 
     // Pretty version
     var buf = "";
 
     // Prologue
-    buf += "(function () {\n\n";
+    if (!self.bare)
+      buf += "(function () {\n\n";
 
     // Banner
     var width = options.sourceWidth || 70;
@@ -348,6 +351,10 @@ _.extend(File.prototype, {
     buf += divider + spacer;
     buf += "// " + (self.servePath.slice(1) + padding).slice(0, bannerWidth - 6) +
       " //\n";
+    if (self.bare) {
+      var bareText = "This file is in bare mode and is not in its own closure.";
+      buf += "// " + (bareText + padding).slice(0, bannerWidth - 6) + " //\n";
+    }
     buf += spacer + divider + blankLine;
 
     // Code, with line numbers
@@ -375,7 +382,10 @@ _.extend(File.prototype, {
     buf += divider;
 
     // Epilogue
-    buf += "\n}).call(this);\n\n\n\n\n\n";
+    if (!self.bare)
+      buf += "\n}).call(this);\n";
+    buf += "\n\n\n\n\n";
+
     return buf;
   },
 
@@ -624,10 +634,8 @@ var prelink = function (options) {
     noExports: !!options.noExports
   });
 
-  _.each(options.inputFiles, function (f) {
-    module.addFile(f.source, f.servePath, f.sourcePath,
-                   f.includePositionInErrors,
-                   f.linkerUnitTransform);
+  _.each(options.inputFiles, function (inputFile) {
+    module.addFile(inputFile);
   });
 
   var files = module.getLinkedFiles();
@@ -940,7 +948,7 @@ var blacklistedSymbols = [
   "ActiveXObject", "CollectGarbage", "XDomainRequest"
 ];
 
-var blacklist = {}
+var blacklist = {};
 _.each(blacklistedSymbols, function (name) {
   blacklist[name] = true;
 });

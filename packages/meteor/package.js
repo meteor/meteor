@@ -48,4 +48,7 @@ Package.on_test(function (api) {
   api.add_files('url_tests.js', ['client', 'server']);
 
   api.add_files('timers_tests.js', ['client', 'server']);
+
+  api.add_files('bare_test_setup.js', 'client', {bare: true});
+  api.add_files('bare_tests.js', 'client');
 });
