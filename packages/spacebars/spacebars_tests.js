@@ -421,7 +421,7 @@ Tinytest.add("spacebars - compiler", function (test) {
 
       'function (buf) {',
       '  var self = this;',
-      '  buf.component(function () { return ((self.lookup("foo")) || EmptyComponent).create({"data": Spacebars.call(self.lookup("bar")), "baz": Spacebars.call(Spacebars.index(self.lookup("x"), "y"))}); });',
+      '  buf.component(function () { return ((self.lookup("foo")) || Component).create({"data": Spacebars.call(self.lookup("bar")), "baz": Spacebars.call(Spacebars.index(self.lookup("x"), "y"))}); });',
       '}');
 
   run('{{#foo.bar}}{{/foo.baz}}', {fail: 'Close tag'});
@@ -431,7 +431,7 @@ Tinytest.add("spacebars - compiler", function (test) {
 
       'function (buf) {',
       '  var self = this;',
-      '  buf.component(function () { return ((self.lookup("if")) || EmptyComponent).create({"data": Spacebars.call(self.lookup("foo")), "content": Component.extend({render: function (buf) {',
+      '  buf.component(function () { return ((self.lookup("if")) || Component).create({"data": Spacebars.call(self.lookup("foo")), "content": Component.extend({render: function (buf) {',
       '    buf.text("bar");',
       '  }})}); });',
       '}');
@@ -440,7 +440,7 @@ Tinytest.add("spacebars - compiler", function (test) {
 
       'function (buf) {',
       '  var self = this;',
-      '  buf.component(function () { return ((self.lookup("if")) || EmptyComponent).create({"data": Spacebars.call(self.lookup("foo")), "content": Component.extend({render: function (buf) {',
+      '  buf.component(function () { return ((self.lookup("if")) || Component).create({"data": Spacebars.call(self.lookup("foo")), "content": Component.extend({render: function (buf) {',
       '    buf.text("bar");',
       '  }}), "elseContent": Component.extend({render: function (buf) {',
       '    buf.text("baz");',

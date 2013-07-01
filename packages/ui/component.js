@@ -693,10 +693,6 @@ Component.extend = function (options) {
   return newClass;
 };
 
-// @export EmptyComponent
-EmptyComponent = Component.extend({});
-// (might be some optimizations possible in the future)
-
 // @export TextComponent
 TextComponent = Component.extend({
   render: function (buf) {

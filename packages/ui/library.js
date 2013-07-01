@@ -85,9 +85,8 @@ Each = Component.extend({
 
     if (items.empty()) {
       buf.component(function () {
-        return (self.getArg('elseContent') ||
-                EmptyComponent).create(
-                  { data: self.getArg('data') });
+        return (self.getArg('elseContent') || Component).create(
+          { data: self.getArg('data') });
       }, { key: 'elseContent' });
     } else {
       items.forEach(function (doc, id) {
@@ -132,8 +131,7 @@ Each = Component.extend({
     var childId = self._itemChildId(id);
     if (self.items.size() === 0) {
       // made empty
-      var elseClass = self.getArg('elseContent') ||
-            EmptyComponent;
+      var elseClass = self.getArg('elseContent') || Component;
       var comp = elseClass.create({data: self.getArg('data')});
       self.replaceChild(childId, comp, 'elseContent');
     } else {

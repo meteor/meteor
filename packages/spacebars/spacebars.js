@@ -784,7 +784,7 @@ Spacebars.compile = function (inputString, options) {
                 var argCode =
                       codeGenArgs(block.openTag.args, funcInfo,
                                   extraArgs)[0];
-                bodyLines.push('buf.component(function () { return ((' + nameCode + ') || EmptyComponent).create(' + argCode +
+                bodyLines.push('buf.component(function () { return ((' + nameCode + ') || Component).create(' + argCode +
                                '); });');
               } else {
                 switch (tag.type) {
@@ -792,7 +792,7 @@ Spacebars.compile = function (inputString, options) {
                   var nameCode = codeGenPath(tag.path, funcInfo, true);
                   var argCode =
                         codeGenArgs(tag.args, funcInfo, {})[0];
-                  bodyLines.push('buf.component(function () { return ((' + nameCode + ') || EmptyComponent).create(' + argCode +
+                  bodyLines.push('buf.component(function () { return ((' + nameCode + ') || Component).create(' + argCode +
                                  '); });');
                   break;
                 case 'DOUBLE':
