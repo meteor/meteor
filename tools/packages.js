@@ -389,6 +389,8 @@ _.extend(Slice.prototype, {
             throw new Error("'data' option to addJavaScript must be a string");
           if (typeof options.sourcePath !== "string")
             throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
+          if (options.bare && ! archinfo.matches(self.arch, "browser"))
+            throw new Error("'bare' option may only be used for browser targets");
           js.push({
             source: options.data,
             sourcePath: options.sourcePath,
