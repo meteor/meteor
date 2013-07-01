@@ -19,6 +19,5 @@ Body({
 
 Template.item({
   foo: function () { return Session.get('foo'); },
-  rand: function () { return Math.random(); },
-  built: function () { console.log('built'); }
+  rand: function () { return Math.random(); }
 });

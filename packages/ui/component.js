@@ -537,7 +537,7 @@ _.extend(Component.prototype, {
     } else if (id in global) {
       result = global[id];
       thisToBind = self.getArg('data') || null;
-    } else if ((result = self.getArg(id))) {
+    } else if ((result = self.getArg(id)) != null) {
       thisToBind = self;
     } else {
       // look for data arg, maybe in parent.  stop as
