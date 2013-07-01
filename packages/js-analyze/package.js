@@ -14,10 +14,12 @@ Npm.depends({
 });
 
 Package.on_use(function (api, where) {
+  api.add_files('js_analyze.js', 'server');
 });
 
 Package.on_test(function (api) {
   api.use('tinytest');
   api.use('js-analyze');
   api.add_files('esprima_tests.js', 'server');
+  api.add_files('js_analyze_tests.js', 'server');
 });
