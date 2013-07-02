@@ -33,6 +33,8 @@ Tinytest.add("js-analyze - findGlobalDottedRefs", function (test) {
   test.equal(run('a[b=c] = d'), {a: W, b: W, c: R, d: R});
   test.equal(run('a.a.a[b.b.b=c.c.c] = d.d.d'),
              {'a.a.a': W, 'b.b.b': W, 'c.c.c': R, 'd.d.d': R});
+  // Without ignoreEval, this thinks J is global.
+  test.equal(run('function x(){var J;J=3;eval("foo");}'), {eval: R});
 });
 
 Tinytest.add("js-analyze - findAssignedGlobals", function (test) {

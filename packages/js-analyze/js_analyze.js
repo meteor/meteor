@@ -44,7 +44,7 @@ JSAnalyze.findGlobalDottedRefs = function (source) {
   source = '(function () {' + source + '\n})';
 
   var parseTree = esprimaParse(source);
-  var scoper = escope.analyze(parseTree);
+  var scoper = escope.analyze(parseTree, {ignoreEval: true});
 
   var currentScope = null;
   var dottedExpressionStack = [];
@@ -146,6 +146,18 @@ JSAnalyze.findAssignedGlobals = function (source) {
   var parseTree = esprimaParse(source);
   // We have to pass ignoreEval; otherwise, the existence of a direct eval call
   // causes escope to not bother to resolve references in the eval's scope.
+  // This is because an eval can pull references inward:
+  //
+  /   function outer() {
+  //     var i = 42;
+  //     function inner() {
+  //       eval('var i = 0');
+  //       i;  // 0, not 42
+  //     }
+  //   }
+  //
+  // But it can't pull references outward, so for our purposes it is safe to
+  // ignore.
   var scoper = escope.analyze(parseTree, {ignoreEval: true});
 
   var currentScope = null;
