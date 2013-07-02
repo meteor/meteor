@@ -550,7 +550,7 @@ _.extend(Slice.prototype, {
         type: "js",
         data: new Buffer(file.source, 'utf8'), // XXX encoding
         servePath: file.servePath,
-        staticDirectory: self.staticDirectory
+        staticDirectory: self.staticDirectory,
         sourceMap: file.sourceMap,
         sources: file.sources
       };

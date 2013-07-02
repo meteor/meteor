@@ -1097,7 +1097,7 @@ _.extend(JsImage.prototype, {
         node_modules: item.nodeModulesDirectory ?
           item.nodeModulesDirectory.preferredBundlePath : undefined,
         staticDirectory: item.staticDirectory ?
-          item.staticDirectory.bundlePath : undefined
+          item.staticDirectory.bundlePath : undefined,
         sourceMap: item.sourceMap || undefined, // XXX XXX WRONG -- should be a file, not an inline string
         sources: item.sourceMap ? _.map(item.sources || [], function (x) {
           return {
@@ -1200,7 +1200,7 @@ _.extend(JsImageTarget.prototype, {
         targetPath: file.targetPath,
         source: file.contents().toString('utf8'),
         nodeModulesDirectory: file.nodeModulesDirectory,
-        staticDirectory: file.staticDirectory
+        staticDirectory: file.staticDirectory,
         sourceMap: file.sourceMap,
         sources: file.sources
       });

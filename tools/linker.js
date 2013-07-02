@@ -133,7 +133,7 @@ _.extend(Module.prototype, {
 
       return ret.concat(_.map(self.files, function (file) {
         var node = file.getLinkedOutput({ preserveLineNumbers: true,
-                                          exports: moduleExports }),
+                                          exports: moduleExports });
         var results = node.toStringWithSourceMap({
           file: file.servePath
         }); // results has 'code' and 'map' attributes
