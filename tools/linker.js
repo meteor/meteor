@@ -90,6 +90,16 @@ _.extend(Module.prototype, {
   computeModuleScopedVars: function () {
     var self = this;
 
+    if (!self.jsAnalyze) {
+      // We don't have access to static analysis, probably because we *are* the
+      // js-analyze package.  Let's do a stupid heuristic: any exports that have
+      // no dots are module scoped vars. (This works for
+      // js-analyze.JSAnalyze...)
+      return _.filter(self.getExports(), function (e) {
+        return e.indexOf('.') === -1;
+      });
+    }
+
     // Find all global references in any files
     var globalReferences = [];
     _.each(self.files, function (file) {
@@ -527,12 +537,11 @@ _.extend(Unit.prototype, {
     var self = this;
 
     var jsAnalyze = self.file.module.jsAnalyze;
-    // If we don't have a JSAnalyze object, we probably are the JSAnalyze module
-    // and we should make sure to consider JSAnalyze as a module-scoped
-    // variable.
-    // XXX this is silly, we should return [] and make exports count too
+    // If we don't have a JSAnalyze object, we probably are the js-analyze
+    // package itself. Assume we have no global references. At the module level,
+    // we'll assume that exports are global references.
     if (!jsAnalyze)
-      return ['JSAnalyze'];
+      return [];
 
     // XXX think about parse errors
     return _.keys(jsAnalyze.findAssignedGlobals(self.source));
