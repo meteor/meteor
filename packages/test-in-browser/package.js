@@ -13,7 +13,8 @@ Package.on_use(function (api) {
 
   api.use('session');
 
-  api.use(['ui', 'livedata', 'deps'], 'client');
+  api.use(['ui', 'templating', 'spacebars',
+           'livedata', 'deps'], 'client');
 
   api.add_files([
     'driver.css',
