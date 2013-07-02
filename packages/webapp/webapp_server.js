@@ -284,6 +284,12 @@ var runWebAppServer = function () {
   _.extend(WebApp, {
     connectHandlers: packageAndAppHandlers,
     httpServer: httpServer,
+    // metadata about the client program that we serve
+    clientProgram: {
+      manifest: clientJson.manifest
+      // XXX do we need a "root: clientDir" field here? it used to be here but
+      // was unused.
+    },
     // For testing.
     suppressConnectErrors: function () {
       suppressConnectErrors = true;
@@ -294,13 +300,6 @@ var runWebAppServer = function () {
     __basicAuth__: connect.basicAuth
   });
   _.extend(__meteor_bootstrap__, {
-    // metadata about this bundle
-    // XXX this could use some refactoring to better distinguish
-    // server and client
-    bundle: {
-      manifest: clientJson.manifest,
-      root: clientDir
-    },
     // function that takes a connect `req` object and returns a summary
     // object with information about the request. See
     // #BrowserIdentifcation

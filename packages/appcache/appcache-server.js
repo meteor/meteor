@@ -1,4 +1,3 @@
-var bundle = __meteor_bootstrap__.bundle;
 var crypto = Npm.require('crypto');
 var fs = Npm.require('fs');
 var path = Npm.require('path');
@@ -97,7 +96,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
 
   var hash = crypto.createHash('sha1');
   hash.update(JSON.stringify(__meteor_runtime_config__), 'utf8');
-  _.each(bundle.manifest, function (resource) {
+  _.each(WebApp.clientProgram.manifest, function (resource) {
     if (resource.where === 'client' || resource.where === 'internal') {
       hash.update(resource.hash);
     }
@@ -109,7 +108,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
 
   manifest += "CACHE:" + "\n";
   manifest += "/" + "\n";
-  _.each(bundle.manifest, function (resource) {
+  _.each(WebApp.clientProgram.manifest, function (resource) {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url)) {
       manifest += resource.url;
@@ -138,7 +137,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
   // request to the server and have the asset served from cache by
   // specifying the full URL with hash in their code (manually, with
   // some sort of URL rewriting helper)
-  _.each(bundle.manifest, function (resource) {
+  _.each(WebApp.clientProgram.manifest, function (resource) {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url) &&
         !resource.cacheable) {
@@ -174,7 +173,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
 
 var sizeCheck = function() {
   var totalSize = 0;
-  _.each(bundle.manifest, function (resource) {
+  _.each(WebApp.clientProgram.manifest, function (resource) {
     if (resource.where === 'client') {
       totalSize += resource.size;
     }

@@ -63,14 +63,17 @@ _.extend(_RoutePolicyConstructor.prototype, {
     var self = this;
     if (type === 'static-online')
       return null;
-    if (typeof __meteor_bootstrap__ === "undefined" ||
-        !__meteor_bootstrap__.bundle || !__meteor_bootstrap__.bundle.manifest)
+    if (!Package.webapp || !Package.webapp.WebApp
+        || !Package.webapp.WebApp.clientProgram
+        || !Package.webapp.WebApp.clientProgram.manifest) {
       // Hack: If we don't have a manifest, deal with it
       // gracefully. This lets us load livedata into a nodejs
       // environment that doesn't have a HTTP server (eg, a
       // command-line tool).
       return null;
-    var manifest = _testManifest || __meteor_bootstrap__.bundle.manifest;
+    }
+    var manifest =
+          _testManifest || Package.webapp.WebApp.clientProgram.manifest;
     var conflict = _.find(manifest, function (resource) {
       return (resource.type === 'static' &&
               resource.where === 'client' &&
