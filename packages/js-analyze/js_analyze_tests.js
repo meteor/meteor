@@ -60,11 +60,16 @@ Tinytest.add("js-analyze - findAssignedGlobals", function (test) {
   run(
     '(function (a, d) { var b = a, c; return f(a.z, b.z, c.z, d.z, e.z); })()',
     {});
-  run('try { Foo } catch (e) { e }', {});
+  // catch clause declares a name
+  run('try { Foo } catch (e) { e = 5 }', {});
   run('try { Foo } catch (e) { Foo }', {});
   run('try { Foo } catch (Foo) { Foo }', {});
   run('try { e } catch (Foo) { Foo }', {});
   run('var x = function y () { return String(y); }', {});
   run('a[b=c] = d', {b: true});
   run('a.a.a[b.b.b=c.c.c] = d.d.d', {});
+  // esprima ignores parentheses
+  run('((((x)))) = 5', {x: true});
+  // esprima ignores comments
+  run('x /* foo */ = 5', {x: true});
 });
