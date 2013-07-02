@@ -35,7 +35,7 @@ Handlebars.to_json_ast = function (code) {
 
   // Recreate Handlebars.Exception to properly report error messages
   // and stack traces. (https://github.com/wycats/handlebars.js/issues/226)
-  makeHandlebarsExceptionsVisible(req);
+  makeHandlebarsExceptionsVisible();
 
   var identifier = function (node) {
     if (node.type !== "ID")
@@ -148,7 +148,7 @@ Handlebars.to_json_ast = function (code) {
   return template(ast.statements);
 };
 
-var makeHandlebarsExceptionsVisible = function (req) {
+var makeHandlebarsExceptionsVisible = function () {
   hbars.Exception = function(message) {
     this.message = message;
     // In Node, if we don't do this we don't see the message displayed

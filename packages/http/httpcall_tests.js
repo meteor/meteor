@@ -102,7 +102,7 @@ testAsyncMulti("httpcall - errors", [
     }
 
     // Server serves 500
-    error500Callback = function(error, result) {
+    var error500Callback = function(error, result) {
       test.isTrue(error);
       test.isTrue(error.message.indexOf("500") !== -1); // message has statusCode
       test.isTrue(error.message.indexOf(

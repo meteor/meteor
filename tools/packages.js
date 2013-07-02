@@ -10,6 +10,7 @@ var buildmessage = require('./buildmessage.js');
 var meteorNpm = require('./meteor_npm.js');
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require(path.join(__dirname, 'linker.js'));
+var unipackage = require('./unipackage.js');
 var fs = require('fs');
 
 // Find all files under `rootPath` that have an extension in
@@ -431,6 +432,18 @@ _.extend(Slice.prototype, {
     });
 
     // Phase 1 link
+
+    // Load jsAnalyze from the js-analyze package... unless we are the
+    // js-analyze package, in which case never mind. (The js-analyze package's
+    // default slice is not allowed to depend on anything!)
+    var jsAnalyze = null;
+    if (! _.isEmpty(js) && self.pkg.name !== "js-analyze") {
+      jsAnalyze = unipackage.load({
+        library: self.pkg.library,
+        packages: ["js-analyze"]
+      })["js-analyze"].JSAnalyze;
+    }
+
     var results = linker.prelink({
       inputFiles: js,
       useGlobalNamespace: isApp,
@@ -441,7 +454,8 @@ _.extend(Slice.prototype, {
       importStubServePath: '/packages/global-imports.js',
       name: self.pkg.name || null,
       forceExport: self.forceExport,
-      noExports: self.noExports
+      noExports: self.noExports,
+      jsAnalyze: jsAnalyze
     });
 
     // Add dependencies on the source code to any plugins that we
@@ -1524,8 +1538,10 @@ _.extend(Package.prototype, {
         var where = (arch === "browser") ? "client" : "server";
 
         // Everything depends on the package 'meteor', which sets up
-        // the basic environment) (except 'meteor' itself).
-        if (! (name === "meteor" && role === "use")) {
+        // the basic environment) (except 'meteor' itself, and js-analyze
+        // which needs to be loaded by the linker).
+        // XXX add a better API for js-analyze to declare itself here
+        if (! (name === "meteor" && role === "use") && name !== "js-analyze") {
           // Don't add the dependency if one already exists. This allows the
           // package to create an unordered dependency and override the one that
           // we'd add here. This is necessary to resolve the circular dependency
