@@ -54,7 +54,7 @@ Oauth.hasCredential = function(credentialToken) {
 }
 
 Oauth.retrieveCredential = function(credentialToken) {
-  result = Oauth._loginResultForCredentialToken[credentialToken];
+  var result = Oauth._loginResultForCredentialToken[credentialToken];
   delete Oauth._loginResultForCredentialToken[credentialToken];
   return result;
 }
