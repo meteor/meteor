@@ -10,6 +10,19 @@ JSAnalyze = {};
 JSAnalyze.READ = 1;
 JSAnalyze.WRITE = 2;
 
+// Like esprima.parse, but annotates any thrown error with $ParseError = true.
+var esprimaParse = function (source) {
+  try {
+    return esprima.parse(source);
+  } catch (e) {
+    if ('index' in e && 'lineNumber' in e &&
+        'column' in e && 'description' in e) {
+      e.$ParseError = true;
+    }
+    throw e;
+  }
+};
+
 // Analyze the JavaScript source code `source` and return a dictionary
 // of all the global dotted references.
 //
@@ -30,7 +43,7 @@ JSAnalyze.findGlobalDottedRefs = function (source) {
   // The newline is necessary in case source ends with a comment.
   source = '(function () {' + source + '\n})';
 
-  var parseTree = esprima.parse(source);
+  var parseTree = esprimaParse(source);
   var scoper = escope.analyze(parseTree);
 
   var currentScope = null;
@@ -130,7 +143,7 @@ JSAnalyze.findAssignedGlobals = function (source) {
   // The newline is necessary in case source ends with a comment.
   source = '(function () {' + source + '\n})';
 
-  var parseTree = esprima.parse(source);
+  var parseTree = esprimaParse(source);
   // We have to pass ignoreEval; otherwise, the existence of a direct eval call
   // causes escope to not bother to resolve references in the eval's scope.
   var scoper = escope.analyze(parseTree, {ignoreEval: true});

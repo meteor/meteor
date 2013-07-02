@@ -523,7 +523,7 @@ _.extend(Unit.prototype, {
   // example: if the code references 'Foo.bar.baz' and 'Quux', and
   // neither are declared in a scope enclosing the point where they're
   // referenced, then globalReferences would include ["Foo", "Quux"].
-  // 
+  //
   // XXX Doing this at the unit level means that we need to also look
   //     for var declarations in various units, and use them to create
   //     a graph of unit dependencies such that in:
@@ -543,30 +543,23 @@ _.extend(Unit.prototype, {
     if (!jsAnalyze)
       return [];
 
-    // XXX think about parse errors
-    return _.keys(jsAnalyze.findAssignedGlobals(self.source));
-    // try {
-    //   // instanceof uglify.AST_Toplevel
-    //   var toplevel = uglify.parse(self.source);
-    // } catch (e) {
-    //   if (e instanceof uglify.JS_Parse_Error) {
-    //     // It appears that uglify's parse errors report 1-based line
-    //     // numbers but 0-based column numbers
-    //     buildmessage.error(e.message, {
-    //       file: self.file.sourcePath,
-    //       line: self.lineOffset === null ? null : e.line + self.lineOffset,
-    //       column: self.lineOffset === null ? null : e.col + 1,
-    //       downcase: true
-    //     });
+    try {
+      return _.keys(jsAnalyze.findAssignedGlobals(self.source));
+    } catch (e) {
+      if (!e.$ParseError)
+        throw e;
+      buildmessage.error(e.description, {
+        file: self.file.sourcePath,
+        line: self.lineOffset === null ? null : e.lineNumber + self.lineOffset,
+        column: self.lineOffset === null ? null : e.column,
+        downcase: true
+      });
 
-    //     // Recover by pretending that this unit is empty (which
-    //     // includes replacing its source code with '' in the output)
-    //     self.source = "";
-    //     return [];
-    //   };
-
-    //   throw e;
-    // } finally {
+      // Recover by pretending that this unit is empty (which
+      // includes replacing its source code with '' in the output)
+      self.source = "";
+      return [];
+    }
   }
 });
 
