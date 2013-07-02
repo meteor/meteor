@@ -72,4 +72,8 @@ Tinytest.add("js-analyze - findAssignedGlobals", function (test) {
   run('((((x)))) = 5', {x: true});
   // esprima ignores comments
   run('x /* foo */ = 5', {x: true});
+
+  // Without ignoreEval, this thinks J is global.
+  run('function x(){var J;J=3;eval("foo");}', {});
 });
+

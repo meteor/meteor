@@ -131,11 +131,39 @@ JSAnalyze.findAssignedGlobals = function (source) {
   source = '(function () {' + source + '\n})';
 
   var parseTree = esprima.parse(source);
-  var scoper = escope.analyze(parseTree);
+  // We have to pass ignoreEval; otherwise, the existence of a direct eval call
+  // causes escope to not bother to resolve references in the eval's scope.
+  var scoper = escope.analyze(parseTree, {ignoreEval: true});
 
   var currentScope = null;
   var assignedGlobals = {};
 
+  // XXX This whole traversal is somewhat overkill. escope actually already
+  // calculates the implicit global variables. The following code ALMOST works,
+  // and doesn't even require ignoreEval:
+  //
+  //  var globalScope = scoper.acquire(parseTree);
+  //  if (globalScope.type !== 'global')
+  //    throw new Error("Unexpected scope type " + globalScope.type);
+  //
+  //  // can't use underscore because we want to have no dependencies
+  //  for (var i = 0; i < globalScope.variables.length; ++i) {
+  //    var variable = globalScope.variables[i];
+  //    // Because this is the global scope, and we wrap source in a function,
+  //    // the only variables in it should have a single implicit definition.
+  //    if (variable.defs.length !== 1)
+  //      throw new Error("Unexpected def length", variable.defs.length);
+  //    if (variable.defs[0].type !== escope.Variable.ImplicitGlobalVariable)
+  //      throw new Error("Unexpected def type", variable.defs[0].type);
+  //    assignedGlobals[variable.name] = true;
+  //  }
+  //
+  // However, it misses out on variables defined by `for (x in y)`, increments
+  // and decrements, and += expressions.  Maybe this is acceptable (they
+  // aren't a great way of defining variables) and we should just use the
+  // simpler code instead.
+
+  // Traverse the tree looking for assignments to unreferenced variables.
   estraverse.traverse(parseTree, {
     enter: function (node, parent) {
       currentScope = scoper.acquire(node) || currentScope;

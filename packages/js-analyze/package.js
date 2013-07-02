@@ -10,7 +10,9 @@ Npm.depends({
   // probably switch to a built NPM version when it gets released.
   esprima: "https://github.com/ariya/esprima/tarball/5044b87f94fb802d9609f1426c838874ec2007b3",
   estraverse: "1.1.2-1",
-  escope: "0.0.14"
+  // Fork to add ignoreEval option.
+  // https://github.com/Constellation/escope/pull/18
+  escope: "https://github.com/meteor/escope/tarball/fef31f03797be5718080f811f9ca6e5297c90d2a"
 });
 
 // This package may not depend on ANY other Meteor packages, even in the test
