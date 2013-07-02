@@ -308,6 +308,8 @@ var runWebAppServer = function () {
     // have test-only NPM dependencies but is overkill here.)
     __basicAuth__: connect.basicAuth
   });
+  // XXX move deployConfig out of __meteor_bootstrap__, after deciding where in
+  // the world it goes. maybe a new deploy-config package?
   _.extend(__meteor_bootstrap__, {
     deployConfig: deployConfig
   });
