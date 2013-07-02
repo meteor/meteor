@@ -13,20 +13,13 @@ Npm.depends({
   escope: "0.0.14"
 });
 
-// This package may not depend on ANY other Meteor packages. This is because it
-// is used by the linker; the linker is smart enough not to try to apply it to
-// itself, but it cannot depend on any other packages or else it would be
-// impossible to load at link time (or all transitive dependencies packages
-// would need to function without the analysis provided by this package).
+// This package may not depend on ANY other Meteor packages, even in the test
+// slice. (Tests for this package are in the js-analyze-tests package.) This is
+// because it is used by the linker; the linker is smart enough not to try to
+// apply it to itself, but it cannot depend on any other packages or else it
+// would be impossible to load at link time (or all transitive dependencies
+// packages would need to function without the analysis provided by this
+// package).
 Package.on_use(function (api, where) {
   api.add_files('js_analyze.js', 'server');
-});
-
-// It's OK to have dependencies here, though, because unipackage.load doesn't
-// need to load dependencies of test slices.
-Package.on_test(function (api) {
-  api.use('tinytest');
-  api.use('js-analyze');
-  api.add_files('esprima_tests.js', 'server');
-  api.add_files('js_analyze_tests.js', 'server');
 });
