@@ -134,8 +134,7 @@ var appUrl = function (url) {
     return false;
 
   // Avoid serving app HTML for declared routes such as /sockjs/.
-  if (__meteor_bootstrap__._routePolicy &&
-      __meteor_bootstrap__._routePolicy.classify(url))
+  if (Meteor._routePolicy.classify(url))
     return false;
 
   // we currently return app HTML on all URLs by default

@@ -117,5 +117,4 @@ _.extend(Meteor.__RoutePolicyConstructor.prototype, {
   }
 });
 
-__meteor_bootstrap__._routePolicy = Meteor._routePolicy =
-  new Meteor.__RoutePolicyConstructor();
+Meteor._routePolicy = new Meteor.__RoutePolicyConstructor();
