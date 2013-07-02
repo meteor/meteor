@@ -15,10 +15,11 @@ Meteor._DdpStreamServer = function () {
   self.open_sockets = [];
 
   self.prefix = pathPrefix + '/sockjs';
-  // We don't depend directly on routepolicy because we don't want to pull in
-  // webapp stuff if we're just doing server-to-server DDP as a client.
-  if (Meteor._routePolicy)
-    Meteor._routePolicy.declare(self.prefix + '/', 'network');
+  // routepolicy is only a weak dependency, because we don't need it if we're
+  // just doing server-to-server DDP as a client.
+  if (Package.routepolicy) {
+    Package.routepolicy.RoutePolicy.declare(self.prefix + '/', 'network');
+  }
 
   // set up sockjs
   var sockjs = Npm.require('sockjs');

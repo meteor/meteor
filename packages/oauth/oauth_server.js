@@ -1,6 +1,6 @@
 var Fiber = Npm.require('fibers');
 
-Meteor._routePolicy.declare('/_oauth/', 'network');
+RoutePolicy.declare('/_oauth/', 'network');
 
 Oauth._services = {};
 

@@ -7,8 +7,7 @@
 // are by prefix only: if "/foo" is declared NETWORK then "/foobar"
 // will also be treated as a network route.
 //
-// Meteor._routePolicy is a low-level API for declaring the route type
-// of URL prefixes:
+// RoutePolicy is a low-level API for declaring the route type of URL prefixes:
 //
 // "network": for network routes that should not conflict with static
 // resources.  (For example, if "/sockjs/" is a network route, we
@@ -25,12 +24,14 @@
 // routes would break tinytest... so allow policy instances to be
 // constructed for testing.
 
-Meteor.__RoutePolicyConstructor = function () {
+// XXX export is the only way to share with our tests. annoying!
+// @export _RoutePolicyConstructor
+_RoutePolicyConstructor = function () {
   var self = this;
   self.urlPrefixTypes = {};
 };
 
-_.extend(Meteor.__RoutePolicyConstructor.prototype, {
+_.extend(_RoutePolicyConstructor.prototype, {
 
   urlPrefixMatches: function (urlPrefix, url) {
     return url.substr(0, urlPrefix.length) === urlPrefix;
@@ -117,5 +118,5 @@ _.extend(Meteor.__RoutePolicyConstructor.prototype, {
   }
 });
 
-__meteor_bootstrap__._routePolicy = Meteor._routePolicy =
-  new Meteor.__RoutePolicyConstructor();
+// @export RoutePolicy
+RoutePolicy = new _RoutePolicyConstructor();

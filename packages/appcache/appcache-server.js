@@ -42,7 +42,7 @@ Meteor.AppCache = {
       }
       else if (option === 'onlineOnly') {
         _.each(value, function (urlPrefix) {
-          Meteor._routePolicy.declare(urlPrefix, 'static-online');
+          RoutePolicy.declare(urlPrefix, 'static-online');
         });
       }
       else {
@@ -112,7 +112,7 @@ app.use(function(req, res, next) {
   manifest += "/" + "\n";
   _.each(bundle.manifest, function (resource) {
     if (resource.where === 'client' &&
-        ! Meteor._routePolicy.classify(resource.url)) {
+        ! RoutePolicy.classify(resource.url)) {
       manifest += resource.url;
       // If the resource is not already cacheable (has a query
       // parameter, presumably with a hash or version of some sort),
@@ -141,7 +141,7 @@ app.use(function(req, res, next) {
   // some sort of URL rewriting helper)
   _.each(bundle.manifest, function (resource) {
     if (resource.where === 'client' &&
-        ! Meteor._routePolicy.classify(resource.url) &&
+        ! RoutePolicy.classify(resource.url) &&
         !resource.cacheable) {
       manifest += resource.url + " " + resource.url +
         "?" + resource.hash + "\n";
@@ -156,8 +156,8 @@ app.use(function(req, res, next) {
   manifest += "/app.manifest" + "\n";
   _.each(
     [].concat(
-      Meteor._routePolicy.urlPrefixesFor('network'),
-      Meteor._routePolicy.urlPrefixesFor('static-online')
+      RoutePolicy.urlPrefixesFor('network'),
+      RoutePolicy.urlPrefixesFor('static-online')
     ),
     function (urlPrefix) {
       manifest += urlPrefix + "\n";
