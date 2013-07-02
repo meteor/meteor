@@ -49,7 +49,7 @@ var Module = function (options) {
   self.combinedServePath = options.combinedServePath;
   self.importStubServePath = options.importStubServePath;
   self.noExports = !!options.noExports;
-  self.library = options.library;
+  self.jsAnalyze = options.jsAnalyze;
 };
 
 _.extend(Module.prototype, {
@@ -516,53 +516,38 @@ _.extend(Unit.prototype, {
   computeGlobalReferences: function () {
     var self = this;
 
-    // XXX Use Uglify for now. Uglify is pretty good at returning us a
-    // list of symbols that are referenced but not defined, but not
-    // good at all at helping us figure out which of those are
-    // assigned to rather than just referenced. Without the
-    // assignments, we have to maintain an explicit list of symbols
-    // that we expect to be declared in the browser, which is super
-    // bogus! Use jsparse instead or maybe acorn, and rewrite uglify's
-    // scope analysis code (it can't be that hard.)
+    var jsAnalyze = self.file.module.jsAnalyze;
+    // If we don't have a JSAnalyze object, we probably are the JSAnalyze module
+    // and we should make sure to consider JSAnalyze as a module-scoped
+    // variable.
+    // XXX this is silly, we should return [] and make exports count too
+    if (!jsAnalyze)
+      return ['JSAnalyze'];
 
-    // Uglify likes to print to stderr when it gets a parse
-    // error. Stop it from doing that.
-    var uglify = require('uglify-js');
-    var oldWarnFunction = uglify.AST_Node.warn_function;
-    uglify.AST_Node.warn_function = function () {};
-    try {
-      // instanceof uglify.AST_Toplevel
-      var toplevel = uglify.parse(self.source);
-    } catch (e) {
-      if (e instanceof uglify.JS_Parse_Error) {
-        // It appears that uglify's parse errors report 1-based line
-        // numbers but 0-based column numbers
-        buildmessage.error(e.message, {
-          file: self.file.sourcePath,
-          line: self.lineOffset === null ? null : e.line + self.lineOffset,
-          column: self.lineOffset === null ? null : e.col + 1,
-          downcase: true
-        });
+    // XXX think about parse errors
+    return _.keys(jsAnalyze.findAssignedGlobals(self.source));
+    // try {
+    //   // instanceof uglify.AST_Toplevel
+    //   var toplevel = uglify.parse(self.source);
+    // } catch (e) {
+    //   if (e instanceof uglify.JS_Parse_Error) {
+    //     // It appears that uglify's parse errors report 1-based line
+    //     // numbers but 0-based column numbers
+    //     buildmessage.error(e.message, {
+    //       file: self.file.sourcePath,
+    //       line: self.lineOffset === null ? null : e.line + self.lineOffset,
+    //       column: self.lineOffset === null ? null : e.col + 1,
+    //       downcase: true
+    //     });
 
-        // Recover by pretending that this unit is empty (which
-        // includes replacing its source code with '' in the output)
-        self.source = "";
-        return [];
-      };
+    //     // Recover by pretending that this unit is empty (which
+    //     // includes replacing its source code with '' in the output)
+    //     self.source = "";
+    //     return [];
+    //   };
 
-      throw e;
-    } finally {
-      uglify.AST_Node.warn_function = oldWarnFunction;
-    }
-    toplevel.figure_out_scope();
-
-    var globalReferences = [];
-    _.each(toplevel.enclosed, function (symbol) {
-      if (symbol.undeclared && ! (symbol.name in blacklist))
-        globalReferences.push(symbol.name);
-    });
-
-    return globalReferences;
+    //   throw e;
+    // } finally {
   }
 });
 
@@ -616,7 +601,9 @@ _.extend(Unit.prototype, {
 // noExports: if true, the module does not export anything (even an empty
 // Package.foo object). eg, for test slices.
 //
-// library: a Library object (used to load packages used by the linker itself)
+// jsAnalyze: if possible, the JSAnalyze object from the js-analyze
+// package. (This is not possible if we are currently linking the main slice of
+// the js-analyze package!)
 //
 // Output is an object with keys:
 // - files: is an array of output files in the same format as inputFiles
@@ -635,7 +622,7 @@ var prelink = function (options) {
     importStubServePath: options.importStubServePath,
     combinedServePath: options.combinedServePath,
     noExports: !!options.noExports,
-    library: options.library
+    jsAnalyze: options.jsAnalyze
   });
 
   _.each(options.inputFiles, function (inputFile) {
