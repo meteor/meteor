@@ -441,7 +441,8 @@ _.extend(Slice.prototype, {
       importStubServePath: '/packages/global-imports.js',
       name: self.pkg.name || null,
       forceExport: self.forceExport,
-      noExports: self.noExports
+      noExports: self.noExports,
+      library: self.pkg.library
     });
 
     // Add dependencies on the source code to any plugins that we

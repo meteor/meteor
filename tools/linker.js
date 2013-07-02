@@ -49,6 +49,7 @@ var Module = function (options) {
   self.combinedServePath = options.combinedServePath;
   self.importStubServePath = options.importStubServePath;
   self.noExports = !!options.noExports;
+  self.library = options.library;
 };
 
 _.extend(Module.prototype, {
@@ -56,7 +57,7 @@ _.extend(Module.prototype, {
   // servePath: the path where it would prefer to be served if possible
   addFile: function (inputFile) {
     var self = this;
-    self.files.push(new File(inputFile, self.noExports));
+    self.files.push(new File(inputFile, self));
   },
 
 
@@ -265,7 +266,7 @@ var writeSymbolTree = function (symbolTree, indent) {
 // File
 ///////////////////////////////////////////////////////////////////////////////
 
-var File = function (inputFile, noExports) {
+var File = function (inputFile, module) {
   var self = this;
 
   // source code for this file (a string)
@@ -294,8 +295,8 @@ var File = function (inputFile, noExports) {
   // If true, don't wrap this individual file in a closure.
   self.bare = !!inputFile.bare;
 
-  // If true, @export is an error.
-  self.noExports = noExports;
+  // The Module containing this file.
+  self.module = module;
 
   self._unitize();
 };
@@ -415,8 +416,8 @@ _.extend(File.prototype, {
     var self = this;
     var lines = self.source.split("\n");
     var buf = "";
-    var unit = new Unit(null, true, self.sourcePath,
-                        self.includePositionInErrors ? 0 : null);
+    var unit = new Unit(
+      null, true, self, self.includePositionInErrors ? 0 : null);
     self.units.push(unit);
 
     var lineCount = 0;
@@ -429,7 +430,7 @@ _.extend(File.prototype, {
         if (match) {
           unit.source = buf;
           buf = line;
-          unit = new Unit(match[1] || null, false, self.sourcePath,
+          unit = new Unit(match[1] || null, false, self,
                           self.includePositionInErrors ? lineCount : null);
           self.units.push(unit);
           lineCount++;
@@ -444,7 +445,7 @@ _.extend(File.prototype, {
             return s.trim();
           });
 
-          if (self.noExports && what === "export") {
+          if (self.module.noExports && what === "export") {
             buildmessage.error("@export not allowed in this slice",
                                { file: self.sourcePath });
             // recover by ignoring
@@ -472,7 +473,7 @@ _.extend(File.prototype, {
 // Unit
 ///////////////////////////////////////////////////////////////////////////////
 
-var Unit = function (name, mandatory, sourcePath, lineOffset) {
+var Unit = function (name, mandatory, file, lineOffset) {
   var self = this;
 
   // name of the unit, or null if none provided
@@ -487,8 +488,8 @@ var Unit = function (name, mandatory, sourcePath, lineOffset) {
   // true if we should include this unit in the linked output
   self.include = self.mandatory;
 
-  // filename to use in error messages
-  self.sourcePath = sourcePath;
+  // The File containing the unit.
+  self.file = file;
 
   // offset of 'self.source' in the original input file, in whole
   // lines (partial lines are not supported.) Used to generate correct
@@ -537,7 +538,7 @@ _.extend(Unit.prototype, {
         // It appears that uglify's parse errors report 1-based line
         // numbers but 0-based column numbers
         buildmessage.error(e.message, {
-          file: self.sourcePath,
+          file: self.file.sourcePath,
           line: self.lineOffset === null ? null : e.line + self.lineOffset,
           column: self.lineOffset === null ? null : e.col + 1,
           downcase: true
@@ -615,6 +616,8 @@ _.extend(Unit.prototype, {
 // noExports: if true, the module does not export anything (even an empty
 // Package.foo object). eg, for test slices.
 //
+// library: a Library object (used to load packages used by the linker itself)
+//
 // Output is an object with keys:
 // - files: is an array of output files in the same format as inputFiles
 // - exports: the exports, as a list of string ('Foo', 'Thing.Stuff', etc)
@@ -631,7 +634,8 @@ var prelink = function (options) {
     useGlobalNamespace: options.useGlobalNamespace,
     importStubServePath: options.importStubServePath,
     combinedServePath: options.combinedServePath,
-    noExports: !!options.noExports
+    noExports: !!options.noExports,
+    library: options.library
   });
 
   _.each(options.inputFiles, function (inputFile) {
