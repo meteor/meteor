@@ -29,7 +29,7 @@ var generateBoundary = function () {
 ///////////////////////////////////////////////////////////////////////////////
 
 // options include name, imports, forceExport, useGlobalNamespace,
-// combinedServePath, and importStubServePath, all of which have the
+// combinedServePath, importStubServePath, and noExports, all of which have the
 // same meaning as they do when passed to import().
 var Module = function (options) {
   var self = this;
@@ -48,16 +48,16 @@ var Module = function (options) {
   self.useGlobalNamespace = options.useGlobalNamespace;
   self.combinedServePath = options.combinedServePath;
   self.importStubServePath = options.importStubServePath;
+  self.noExports = !!options.noExports;
+  self.jsAnalyze = options.jsAnalyze;
 };
 
 _.extend(Module.prototype, {
   // source: the source code
   // servePath: the path where it would prefer to be served if possible
-  addFile: function (source, servePath, sourcePath, includePositionInErrors,
-                     linkerUnitTransform) {
+  addFile: function (inputFile) {
     var self = this;
-    self.files.push(new File(source, servePath, sourcePath,
-                             includePositionInErrors, linkerUnitTransform));
+    self.files.push(new File(inputFile, self));
   },
 
 
@@ -89,6 +89,16 @@ _.extend(Module.prototype, {
   // the actual static analysis) to the final phase.
   computeModuleScopedVars: function () {
     var self = this;
+
+    if (!self.jsAnalyze) {
+      // We don't have access to static analysis, probably because we *are* the
+      // js-analyze package.  Let's do a stupid heuristic: any exports that have
+      // no dots are module scoped vars. (This works for
+      // js-analyze.JSAnalyze...)
+      return _.filter(self.getExports(), function (e) {
+        return e.indexOf('.') === -1;
+      });
+    }
 
     // Find all global references in any files
     var globalReferences = [];
@@ -165,8 +175,11 @@ _.extend(Module.prototype, {
   // Return our exports as a list of string
   getExports: function () {
     var self = this;
-    var exports = {};
 
+    if (self.noExports)
+      return [];
+
+    var exports = {};
     _.each(self.files, function (file) {
       _.each(file.units, function (unit) {
         _.extend(exports, unit.exports);
@@ -181,6 +194,10 @@ _.extend(Module.prototype, {
     var self = this;
     if (! self.name)
       return "";
+    // If we're a no-exports module, then we have no export code (not even
+    // creating Package.foo).
+    if (self.noExports)
+      return "";
     if (self.useGlobalNamespace)
       // Haven't thought about this case. When would this happen?
       throw new Error("Not implemented: exports from global namespace");
@@ -190,8 +207,11 @@ _.extend(Module.prototype, {
     buf += packageDot(self.name) + " = ";
 
     var exports = self.getExports();
+    // Even if there are no exports, we need to define Package.foo, because the
+    // existence of Package.foo is how another package (eg, one that weakly
+    // depends on foo) can tell if foo is loaded.
     if (exports.length === 0)
-      return "";
+      return buf + "{};\n";
 
     // Given exports like Foo, Bar.Baz, Bar.Quux.A, and Bar.Quux.B,
     // construct an expression like
@@ -200,8 +220,8 @@ _.extend(Module.prototype, {
     _.each(self.getExports(), function (symbol) {
       scratch[symbol] = symbol;
     });
-    var exports = buildSymbolTree(scratch);
-    buf += writeSymbolTree(exports, 0);
+    var exportTree = buildSymbolTree(scratch);
+    buf += writeSymbolTree(exportTree, 0);
     buf += ";\n";
     return buf;
   }
@@ -214,7 +234,7 @@ _.extend(Module.prototype, {
 var buildSymbolTree = function (symbolMap, f) {
   // XXX XXX detect and report conflicts, like one file exporting
   // Foo and another file exporting Foo.Bar
-  var ret = {}
+  var ret = {};
 
   _.each(symbolMap, function (value, symbol) {
     var parts = symbol.split('.');
@@ -256,21 +276,20 @@ var writeSymbolTree = function (symbolTree, indent) {
 // File
 ///////////////////////////////////////////////////////////////////////////////
 
-var File = function (source, servePath, sourcePath, includePositionInErrors,
-                     linkerUnitTransform) {
+var File = function (inputFile, module) {
   var self = this;
 
   // source code for this file (a string)
-  self.source = source;
+  self.source = inputFile.source;
 
   // the path where this file would prefer to be served if possible
-  self.servePath = servePath;
+  self.servePath = inputFile.servePath;
 
   // the path to use for error message
-  self.sourcePath = sourcePath;
+  self.sourcePath = inputFile.sourcePath;
 
   // should line and column be included in errors?
-  self.includePositionInErrors = includePositionInErrors;
+  self.includePositionInErrors = inputFile.includePositionInErrors;
 
   // The individual @units in the file. Array of Unit. Concatenating
   // the source of each unit, in order, will give self.source.
@@ -278,9 +297,16 @@ var File = function (source, servePath, sourcePath, includePositionInErrors,
 
   // A function which transforms the source code once all exports are
   // known. (eg, for CoffeeScript.)
-  self.linkerUnitTransform = linkerUnitTransform || function (source, exports) {
-    return source;
-  };
+  self.linkerUnitTransform =
+    inputFile.linkerUnitTransform || function (source, exports) {
+      return source;
+    };
+
+  // If true, don't wrap this individual file in a closure.
+  self.bare = !!inputFile.bare;
+
+  // The Module containing this file.
+  self.module = module;
 
   self._unitize();
 };
@@ -313,15 +339,18 @@ _.extend(File.prototype, {
     // The newline after the source closes a '//' comment.
     if (options.preserveLineNumbers) {
       // Ugly version
-      return "(function(){" +
-        self.linkerUnitTransform(self.source, options.exports) + "\n})();\n";
+      var body = self.linkerUnitTransform(self.source, options.exports);
+      if (body.length && body[body.length - 1] !== '\n')
+        body += '\n';
+      return self.bare ? body : ("(function(){" + body + "})();\n");
     }
 
     // Pretty version
     var buf = "";
 
     // Prologue
-    buf += "(function () {\n\n";
+    if (!self.bare)
+      buf += "(function () {\n\n";
 
     // Banner
     var width = options.sourceWidth || 70;
@@ -333,6 +362,10 @@ _.extend(File.prototype, {
     buf += divider + spacer;
     buf += "// " + (self.servePath.slice(1) + padding).slice(0, bannerWidth - 6) +
       " //\n";
+    if (self.bare) {
+      var bareText = "This file is in bare mode and is not in its own closure.";
+      buf += "// " + (bareText + padding).slice(0, bannerWidth - 6) + " //\n";
+    }
     buf += spacer + divider + blankLine;
 
     // Code, with line numbers
@@ -360,7 +393,10 @@ _.extend(File.prototype, {
     buf += divider;
 
     // Epilogue
-    buf += "\n}).call(this);\n\n\n\n\n\n";
+    if (!self.bare)
+      buf += "\n}).call(this);\n";
+    buf += "\n\n\n\n\n";
+
     return buf;
   },
 
@@ -390,8 +426,8 @@ _.extend(File.prototype, {
     var self = this;
     var lines = self.source.split("\n");
     var buf = "";
-    var unit = new Unit(null, true, self.sourcePath,
-                        self.includePositionInErrors ? 0 : null);
+    var unit = new Unit(
+      null, true, self, self.includePositionInErrors ? 0 : null);
     self.units.push(unit);
 
     var lineCount = 0;
@@ -404,7 +440,7 @@ _.extend(File.prototype, {
         if (match) {
           unit.source = buf;
           buf = line;
-          unit = new Unit(match[1] || null, false, self.sourcePath,
+          unit = new Unit(match[1] || null, false, self,
                           self.includePositionInErrors ? lineCount : null);
           self.units.push(unit);
           lineCount++;
@@ -419,10 +455,16 @@ _.extend(File.prototype, {
             return s.trim();
           });
 
-          _.each(symbols, function (s) {
-            if (s.length)
-              unit[what + "s"][s] = true;
-          });
+          if (self.module.noExports && what === "export") {
+            buildmessage.error("@export not allowed in this slice",
+                               { file: self.sourcePath });
+            // recover by ignoring
+          } else {
+            _.each(symbols, function (s) {
+              if (s.length)
+                unit[what + "s"][s] = true;
+            });
+          }
 
           /* fall through */
         }
@@ -441,7 +483,7 @@ _.extend(File.prototype, {
 // Unit
 ///////////////////////////////////////////////////////////////////////////////
 
-var Unit = function (name, mandatory, sourcePath, lineOffset) {
+var Unit = function (name, mandatory, file, lineOffset) {
   var self = this;
 
   // name of the unit, or null if none provided
@@ -456,8 +498,8 @@ var Unit = function (name, mandatory, sourcePath, lineOffset) {
   // true if we should include this unit in the linked output
   self.include = self.mandatory;
 
-  // filename to use in error messages
-  self.sourcePath = sourcePath;
+  // The File containing the unit.
+  self.file = file;
 
   // offset of 'self.source' in the original input file, in whole
   // lines (partial lines are not supported.) Used to generate correct
@@ -481,56 +523,43 @@ _.extend(Unit.prototype, {
   // example: if the code references 'Foo.bar.baz' and 'Quux', and
   // neither are declared in a scope enclosing the point where they're
   // referenced, then globalReferences would include ["Foo", "Quux"].
+  //
+  // XXX Doing this at the unit level means that we need to also look
+  //     for var declarations in various units, and use them to create
+  //     a graph of unit dependencies such that in:
+  //        // @unit X
+  //        var A;
+  //        // @unit Y
+  //        A = 5;
+  //     including Y requires including X. Since we don't do that, @unit
+  //     is currently broken. It's also unused and undocumented :)
   computeGlobalReferences: function () {
     var self = this;
 
-    // XXX Use Uglify for now. Uglify is pretty good at returning us a
-    // list of symbols that are referenced but not defined, but not
-    // good at all at helping us figure out which of those are
-    // assigned to rather than just referenced. Without the
-    // assignments, we have to maintain an explicit list of symbols
-    // that we expect to be declared in the browser, which is super
-    // bogus! Use jsparse instead or maybe acorn, and rewrite uglify's
-    // scope analysis code (it can't be that hard.)
+    var jsAnalyze = self.file.module.jsAnalyze;
+    // If we don't have a JSAnalyze object, we probably are the js-analyze
+    // package itself. Assume we have no global references. At the module level,
+    // we'll assume that exports are global references.
+    if (!jsAnalyze)
+      return [];
 
-    // Uglify likes to print to stderr when it gets a parse
-    // error. Stop it from doing that.
-    var uglify = require('uglify-js');
-    var oldWarnFunction = uglify.AST_Node.warn_function;
-    uglify.AST_Node.warn_function = function () {};
     try {
-      // instanceof uglify.AST_Toplevel
-      var toplevel = uglify.parse(self.source);
+      return _.keys(jsAnalyze.findAssignedGlobals(self.source));
     } catch (e) {
-      if (e instanceof uglify.JS_Parse_Error) {
-        // It appears that uglify's parse errors report 1-based line
-        // numbers but 0-based column numbers
-        buildmessage.error(e.message, {
-          file: self.sourcePath,
-          line: self.lineOffset === null ? null : e.line + self.lineOffset,
-          column: self.lineOffset === null ? null : e.col + 1,
-          downcase: true
-        });
+      if (!e.$ParseError)
+        throw e;
+      buildmessage.error(e.description, {
+        file: self.file.sourcePath,
+        line: self.lineOffset === null ? null : e.lineNumber + self.lineOffset,
+        column: self.lineOffset === null ? null : e.column,
+        downcase: true
+      });
 
-        // Recover by pretending that this unit is empty (which
-        // includes replacing its source code with '' in the output)
-        self.source = "";
-        return [];
-      };
-
-      throw e;
-    } finally {
-      uglify.AST_Node.warn_function = oldWarnFunction;
+      // Recover by pretending that this unit is empty (which
+      // includes replacing its source code with '' in the output)
+      self.source = "";
+      return [];
     }
-    toplevel.figure_out_scope();
-
-    var globalReferences = [];
-    _.each(toplevel.enclosed, function (symbol) {
-      if (symbol.undeclared && ! (symbol.name in blacklist))
-        globalReferences.push(symbol.name);
-    });
-
-    return globalReferences;
   }
 });
 
@@ -581,23 +610,35 @@ _.extend(Unit.prototype, {
 // containing import setup code for the global environment. this is
 // the servePath to use for it.
 //
+// noExports: if true, the module does not export anything (even an empty
+// Package.foo object). eg, for test slices.
+//
+// jsAnalyze: if possible, the JSAnalyze object from the js-analyze
+// package. (This is not possible if we are currently linking the main slice of
+// the js-analyze package!)
+//
 // Output is an object with keys:
 // - files: is an array of output files in the same format as inputFiles
 // - exports: the exports, as a list of string ('Foo', 'Thing.Stuff', etc)
 // - boundary: an opaque value that must be passed along with 'files' to link()
 var prelink = function (options) {
+  if (options.noExports && options.forceExport &&
+      ! _.isEmpty(options.forceExport)) {
+    throw new Error("Can't force exports if there are no exports!");
+  };
+
   var module = new Module({
     name: options.name,
     forceExport: options.forceExport,
     useGlobalNamespace: options.useGlobalNamespace,
     importStubServePath: options.importStubServePath,
-    combinedServePath: options.combinedServePath
+    combinedServePath: options.combinedServePath,
+    noExports: !!options.noExports,
+    jsAnalyze: options.jsAnalyze
   });
 
-  _.each(options.inputFiles, function (f) {
-    module.addFile(f.source, f.servePath, f.sourcePath,
-                   f.includePositionInErrors,
-                   f.linkerUnitTransform);
+  _.each(options.inputFiles, function (inputFile) {
+    module.addFile(inputFile);
   });
 
   var files = module.getLinkedFiles();
@@ -674,246 +715,6 @@ var getImportCode = function (imports, header, omitvar) {
   buf += "\n";
   return buf;
 };
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-
-// From Chome. Open a console on an empty tab and call:
-//   Object.getOwnPropertyNames(this).join('", "')
-//   Object.getOwnPropertyNames(Object.getPrototypeOf(this)).join('", "')
-// I'm not sure why window has a prototype, but it does, and that
-// prototype contains important stuff like setTimeout.
-// Additionally I manually added a few symbols at the bottom.
-var blacklistedSymbols = [
-  // Object.getOwnPropertyNames(this).join('", "')
-  "eval", "$", "ntp", "findAncestorByClass", "escape", "undefined",
-  "decodeURI", "eventLog", "url", "isRTL", "encodeURIComponent",
-  "getRequiredElement", "chromeSend", "getFaviconURL", "logEvent",
-  "parseHtmlSubset", "isNaN", "preventDefaultOnPoundLinkClicks",
-  "Date", "window", "Math", "RangeError", "i18nTemplate", "NaN",
-  "cr", "appendParam", "String", "decodeURIComponent",
-  "findAncestor", "external", "unescape", "SyntaxError", "isFinite",
-  "v8Intl", "RegExp", "location", "TypeError", "Function", "toCssPx",
-  "document", "assert", "Object", "ReferenceError", "loadTimeData",
-  "parseInt", "chrome", "EventTracker", "disableTextSelectAndDrag",
-  "EvalError", "parseQueryParams", "Infinity", "swapDomNodes",
-  "encodeURI", "top", "Intl", "global", "Error", "Array", "URIError",
-  "parseFloat", "JSON", "Number", "Boolean", "WebSocket",
-  "webkitRTCPeerConnection", "webkitMediaStream",
-  "webkitOfflineAudioContext", "webkitAudioContext",
-  "webkitSpeechGrammarList", "webkitSpeechGrammar",
-  "webkitSpeechRecognitionEvent", "webkitSpeechRecognitionError",
-  "webkitSpeechRecognition", "webkitNotifications",
-  "WebKitSourceBufferList", "WebKitSourceBuffer",
-  "WebKitMediaSource", "SharedWorker", "DeviceOrientationEvent",
-  "MediaController", "HTMLSourceElement", "TimeRanges", "MediaError",
-  "HTMLVideoElement", "HTMLMediaElement", "HTMLAudioElement",
-  "Audio", "TrackEvent", "TextTrackList", "TextTrackCueList",
-  "TextTrackCue", "TextTrack", "HTMLTrackElement",
-  "HTMLShadowElement", "HTMLContentElement", "WebKitShadowRoot",
-  "localStorage", "sessionStorage", "applicationCache", "CloseEvent",
-  "MediaStreamEvent", "RTCIceCandidate", "RTCSessionDescription",
-  "OfflineAudioCompletionEvent", "AudioProcessingEvent",
-  "webkitAudioPannerNode", "SQLException", "IDBVersionChangeEvent",
-  "IDBTransaction", "IDBRequest", "IDBOpenDBRequest",
-  "IDBObjectStore", "IDBKeyRange", "IDBIndex", "IDBFactory",
-  "IDBDatabase", "IDBCursorWithValue", "IDBCursor", "indexedDB",
-  "webkitIDBTransaction", "webkitIDBRequest", "webkitIDBObjectStore",
-  "webkitIDBKeyRange", "webkitIDBIndex", "webkitIDBFactory",
-  "webkitIDBDatabase", "webkitIDBCursor", "webkitIndexedDB",
-  "webkitStorageInfo", "Notification", "WebKitMutationObserver",
-  "webkitURL", "URL", "FileReader", "FileError", "FormData",
-  "SVGFilterElement", "SVGFETurbulenceElement", "SVGFETileElement",
-  "SVGFESpotLightElement", "SVGFESpecularLightingElement",
-  "SVGFEPointLightElement", "SVGFEOffsetElement",
-  "SVGFEMorphologyElement", "SVGFEMergeNodeElement",
-  "SVGFEMergeElement", "SVGFEImageElement",
-  "SVGFEGaussianBlurElement", "SVGFEFuncRElement",
-  "SVGFEFuncGElement", "SVGFEFuncBElement", "SVGFEFuncAElement",
-  "SVGFEFloodElement", "SVGFEDropShadowElement",
-  "SVGFEDistantLightElement", "SVGFEDisplacementMapElement",
-  "SVGFEDiffuseLightingElement", "SVGFEConvolveMatrixElement",
-  "SVGFECompositeElement", "SVGFEComponentTransferElement",
-  "SVGFEColorMatrixElement", "SVGFEBlendElement",
-  "SVGComponentTransferFunctionElement", "SVGVKernElement",
-  "SVGMissingGlyphElement", "SVGHKernElement", "SVGGlyphRefElement",
-  "SVGGlyphElement", "SVGFontFaceUriElement",
-  "SVGFontFaceSrcElement", "SVGFontFaceNameElement",
-  "SVGFontFaceFormatElement", "SVGFontFaceElement", "SVGFontElement",
-  "SVGAltGlyphItemElement", "SVGAltGlyphElement",
-  "SVGAltGlyphDefElement", "SVGSetElement", "SVGMPathElement",
-  "SVGAnimateTransformElement", "SVGAnimateMotionElement",
-  "SVGAnimateElement", "SVGAnimateColorElement", "SVGZoomAndPan",
-  "SVGViewSpec", "SVGViewElement", "SVGUseElement", "SVGUnitTypes",
-  "SVGTSpanElement", "SVGTRefElement", "SVGTransformList",
-  "SVGTransform", "SVGTitleElement", "SVGTextPositioningElement",
-  "SVGTextPathElement", "SVGTextElement", "SVGTextContentElement",
-  "SVGSymbolElement", "SVGSwitchElement", "SVGSVGElement",
-  "SVGStyleElement", "SVGStringList", "SVGStopElement",
-  "SVGScriptElement", "SVGRenderingIntent", "SVGRectElement",
-  "SVGRect", "SVGRadialGradientElement", "SVGPreserveAspectRatio",
-  "SVGPolylineElement", "SVGPolygonElement", "SVGPointList",
-  "SVGPoint", "SVGPatternElement", "SVGPathSegMovetoRel",
-  "SVGPathSegMovetoAbs", "SVGPathSegList",
-  "SVGPathSegLinetoVerticalRel", "SVGPathSegLinetoVerticalAbs",
-  "SVGPathSegLinetoRel", "SVGPathSegLinetoHorizontalRel",
-  "SVGPathSegLinetoHorizontalAbs", "SVGPathSegLinetoAbs",
-  "SVGPathSegCurvetoQuadraticSmoothRel",
-  "SVGPathSegCurvetoQuadraticSmoothAbs",
-  "SVGPathSegCurvetoQuadraticRel", "SVGPathSegCurvetoQuadraticAbs",
-  "SVGPathSegCurvetoCubicSmoothRel",
-  "SVGPathSegCurvetoCubicSmoothAbs", "SVGPathSegCurvetoCubicRel",
-  "SVGPathSegCurvetoCubicAbs", "SVGPathSegClosePath",
-  "SVGPathSegArcRel", "SVGPathSegArcAbs", "SVGPathSeg",
-  "SVGPathElement", "SVGPaint", "SVGNumberList", "SVGNumber",
-  "SVGMetadataElement", "SVGMatrix", "SVGMaskElement",
-  "SVGMarkerElement", "SVGLineElement", "SVGLinearGradientElement",
-  "SVGLengthList", "SVGLength", "SVGImageElement",
-  "SVGGradientElement", "SVGGElement", "SVGException",
-  "SVGForeignObjectElement", "SVGEllipseElement",
-  "SVGElementInstanceList", "SVGElementInstance", "SVGElement",
-  "SVGDocument", "SVGDescElement", "SVGDefsElement",
-  "SVGCursorElement", "SVGColor", "SVGClipPathElement",
-  "SVGCircleElement", "SVGAnimatedTransformList",
-  "SVGAnimatedString", "SVGAnimatedRect",
-  "SVGAnimatedPreserveAspectRatio", "SVGAnimatedNumberList",
-  "SVGAnimatedNumber", "SVGAnimatedLengthList", "SVGAnimatedLength",
-  "SVGAnimatedInteger", "SVGAnimatedEnumeration",
-  "SVGAnimatedBoolean", "SVGAnimatedAngle", "SVGAngle",
-  "SVGAElement", "SVGZoomEvent", "XPathException", "XPathResult",
-  "XPathEvaluator", "Storage", "ClientRectList", "ClientRect",
-  "MimeTypeArray", "MimeType", "PluginArray", "Plugin",
-  "MessageChannel", "MessagePort", "XSLTProcessor",
-  "XMLHttpRequestException", "XMLHttpRequestUpload",
-  "XMLHttpRequest", "XMLSerializer", "DOMParser", "XMLDocument",
-  "EventSource", "RangeException", "Range", "NodeFilter", "Blob",
-  "FileList", "File", "Worker", "Clipboard", "WebKitPoint",
-  "WebKitCSSMatrix", "WebKitCSSKeyframesRule",
-  "WebKitCSSKeyframeRule", "EventException", "WebGLContextEvent",
-  "SpeechInputEvent", "StorageEvent", "TouchEvent",
-  "XMLHttpRequestProgressEvent", "WheelEvent",
-  "WebKitTransitionEvent", "WebKitAnimationEvent", "UIEvent",
-  "TextEvent", "ProgressEvent", "PageTransitionEvent",
-  "PopStateEvent", "OverflowEvent", "MutationEvent", "MouseEvent",
-  "MessageEvent", "KeyboardEvent", "HashChangeEvent", "ErrorEvent",
-  "CustomEvent", "CompositionEvent", "BeforeLoadEvent", "Event",
-  "DataView", "Float64Array", "Float32Array", "Uint32Array",
-  "Int32Array", "Uint16Array", "Int16Array", "Uint8ClampedArray",
-  "Uint8Array", "Int8Array", "ArrayBufferView", "ArrayBuffer",
-  "DOMStringMap", "WebGLUniformLocation", "WebGLTexture",
-  "WebGLShaderPrecisionFormat", "WebGLShader",
-  "WebGLRenderingContext", "WebGLRenderbuffer", "WebGLProgram",
-  "WebGLFramebuffer", "WebGLBuffer", "WebGLActiveInfo",
-  "TextMetrics", "ImageData", "CanvasRenderingContext2D",
-  "CanvasGradient", "CanvasPattern", "Option", "Image",
-  "HTMLUnknownElement", "HTMLOptionsCollection",
-  "HTMLFormControlsCollection", "HTMLAllCollection",
-  "HTMLCollection", "HTMLUListElement", "HTMLTitleElement",
-  "HTMLTextAreaElement", "HTMLTableSectionElement",
-  "HTMLTableRowElement", "HTMLTableElement", "HTMLTableColElement",
-  "HTMLTableCellElement", "HTMLTableCaptionElement",
-  "HTMLStyleElement", "HTMLSpanElement", "HTMLSelectElement",
-  "HTMLScriptElement", "HTMLQuoteElement", "HTMLProgressElement",
-  "HTMLPreElement", "HTMLParamElement", "HTMLParagraphElement",
-  "HTMLOutputElement", "HTMLOptionElement", "HTMLOptGroupElement",
-  "HTMLObjectElement", "HTMLOListElement", "HTMLModElement",
-  "HTMLMeterElement", "HTMLMetaElement", "HTMLMenuElement",
-  "HTMLMarqueeElement", "HTMLMapElement", "HTMLLinkElement",
-  "HTMLLegendElement", "HTMLLabelElement", "HTMLLIElement",
-  "HTMLKeygenElement", "HTMLInputElement", "HTMLImageElement",
-  "HTMLIFrameElement", "HTMLHtmlElement", "HTMLHeadingElement",
-  "HTMLHeadElement", "HTMLHRElement", "HTMLFrameSetElement",
-  "HTMLFrameElement", "HTMLFormElement", "HTMLFontElement",
-  "HTMLFieldSetElement", "HTMLEmbedElement", "HTMLDivElement",
-  "HTMLDirectoryElement", "HTMLDataListElement", "HTMLDListElement",
-  "HTMLCanvasElement", "HTMLButtonElement", "HTMLBodyElement",
-  "HTMLBaseFontElement", "HTMLBaseElement", "HTMLBRElement",
-  "HTMLAreaElement", "HTMLAppletElement", "HTMLAnchorElement",
-  "HTMLElement", "HTMLDocument", "Window", "Selection",
-  "ProcessingInstruction", "EntityReference", "Entity", "Notation",
-  "DocumentType", "CDATASection", "Comment", "Text", "Element",
-  "Attr", "CharacterData", "NamedNodeMap", "NodeList", "Node",
-  "Document", "DocumentFragment", "DOMTokenList",
-  "DOMSettableTokenList", "DOMImplementation", "DOMStringList",
-  "DOMException", "StyleSheetList", "RGBColor", "Rect",
-  "CSSRuleList", "Counter", "MediaList", "CSSStyleDeclaration",
-  "CSSStyleRule", "CSSPageRule", "CSSMediaRule", "CSSImportRule",
-  "CSSFontFaceRule", "CSSCharsetRule", "CSSRule",
-  "WebKitCSSFilterValue", "WebKitCSSMixFunctionValue",
-  "WebKitCSSTransformValue", "CSSValueList", "CSSPrimitiveValue",
-  "CSSValue", "CSSStyleSheet", "StyleSheet", "performance",
-  "console", "devicePixelRatio", "styleMedia", "parent", "opener",
-  "frames", "self", "defaultstatus", "defaultStatus", "status",
-  "name", "length", "closed", "pageYOffset", "pageXOffset",
-  "scrollY", "scrollX", "screenTop", "screenLeft", "screenY",
-  "screenX", "innerWidth", "innerHeight", "outerWidth",
-  "outerHeight", "offscreenBuffering", "frameElement", "event",
-  "crypto", "clientInformation", "navigator", "toolbar", "statusbar",
-  "scrollbars", "personalbar", "menubar", "locationbar", "history",
-  "screen",
-
-  // Object.getOwnPropertyNames(Object.getPrototypeOf(this)).join('", "')
-  "toString", "postMessage", "close", "blur", "focus",
-  "ondeviceorientation", "onwebkittransitionend",
-  "onwebkitanimationstart", "onwebkitanimationiteration",
-  "onwebkitanimationend", "onsearch", "onreset", "onwaiting",
-  "onvolumechange", "onunload", "ontimeupdate", "onsuspend",
-  "onsubmit", "onstorage", "onstalled", "onselect", "onseeking",
-  "onseeked", "onscroll", "onresize", "onratechange", "onprogress",
-  "onpopstate", "onplaying", "onplay", "onpause", "onpageshow",
-  "onpagehide", "ononline", "onoffline", "onmousewheel", "onmouseup",
-  "onmouseover", "onmouseout", "onmousemove", "onmousedown",
-  "onmessage", "onloadstart", "onloadedmetadata", "onloadeddata",
-  "onload", "onkeyup", "onkeypress", "onkeydown", "oninvalid",
-  "oninput", "onhashchange", "onfocus", "onerror", "onended",
-  "onemptied", "ondurationchange", "ondrop", "ondragstart",
-  "ondragover", "ondragleave", "ondragenter", "ondragend", "ondrag",
-  "ondblclick", "oncontextmenu", "onclick", "onchange",
-  "oncanplaythrough", "oncanplay", "onblur", "onbeforeunload",
-  "onabort", "getSelection", "print", "stop", "open",
-  "showModalDialog", "alert", "confirm", "prompt", "find",
-  "scrollBy", "scrollTo", "scroll", "moveBy", "moveTo", "resizeBy",
-  "resizeTo", "matchMedia", "setTimeout", "clearTimeout",
-  "setInterval", "clearInterval", "requestAnimationFrame",
-  "cancelAnimationFrame", "webkitRequestAnimationFrame",
-  "webkitCancelAnimationFrame", "webkitCancelRequestAnimationFrame",
-  "atob", "btoa", "addEventListener", "removeEventListener",
-  "captureEvents", "releaseEvents", "getComputedStyle",
-  "getMatchedCSSRules", "webkitConvertPointFromPageToNode",
-  "webkitConvertPointFromNodeToPage", "dispatchEvent",
-  "webkitRequestFileSystem", "webkitResolveLocalFileSystemURL",
-  "openDatabase", "TEMPORARY", "PERSISTENT", "constructor",
-
-  // Additional, manually added symbols.
-
-  // We're going to need 'arguments'
-  "arguments",
-
-  // This is how we do imports and exports
-  "Package",
-
-  // Meteor provides these at runtime
-  "Npm", "__meteor_runtime_config__", "__meteor_bootstrap__", "Assets",
-
-  // A node-ism (and needed by the 'meteor' package to read the
-  // environment to bootstrap __meteor_runtime_config__, though
-  // probably we should find a better way to do that)
-  "process",
-
-  // Another node global
-  "Buffer",
-
-  // These are used by sockjs. (XXX before this
-  // goes out the door, it needs to switch to detecting assignment
-  // rather than using a blacklist, or at the very very least it needs
-  // to have a blacklist that includes all the major browsers.)
-  "ActiveXObject", "CollectGarbage", "XDomainRequest"
-];
-
-var blacklist = {}
-_.each(blacklistedSymbols, function (name) {
-  blacklist[name] = true;
-});
 
 var linker = module.exports = {
   prelink: prelink,

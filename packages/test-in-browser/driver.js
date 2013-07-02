@@ -288,6 +288,15 @@ Template.progressBar.anyFail = function () {
   return failedCount > 0;
 };
 
+Template.progressBar.barOuterClass = function () {
+  return Template.progressBar.running() ? 'progress-striped' : '';
+};
+
+Template.progressBar.barInnerClass = function () {
+  return (Template.progressBar.anyFail() ?
+          'bar-warning' : 'bar-success');
+};
+
 
 //// Template - groupNav
 
@@ -492,4 +501,3 @@ Template.event.get_details = function() {
 Template.event.is_debuggable = function() {
   return !!this.cookie;
 };
-
