@@ -166,7 +166,7 @@ Template._configureLoginServiceDialog.events({
       _.each(configurationFields(), function(field) {
         configuration[field.property] = document.getElementById(
           'configure-login-service-dialog-' + field.property).value
-          .replace(/^\s*|\s*$/g, ""); // trim;
+          .replace(/^\s*|\s*$/g, ""); // trim() doesnt work on IE8;
       });
 
       // Configure this login service
