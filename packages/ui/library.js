@@ -1,14 +1,24 @@
 // @export If
 If = Component.extend({
-  init: function () {
-    if (! this.getArg('content'))
-      throw new Error("If requires content");
-  },
   render: function (buf) {
-    if (this.getArg('data'))
-      buf.component(this.getArg('content').create());
-    else if (this.getArg('elseContent'))
-      buf.component(this.getArg('elseContent'));
+    if (this.getArg('data')) {
+      if (this.getArg('content'))
+        buf.component(this.getArg('content').create());
+    } else if (this.getArg('elseContent')) {
+      buf.component(this.getArg('elseContent').create());
+    }
+  }
+});
+
+// @export Unless
+Unless = Component.extend({
+  render: function (buf) {
+    if (! this.getArg('data')) {
+      if (this.getArg('content'))
+        buf.component(this.getArg('content').create());
+    } else if (this.getArg('elseContent')) {
+      buf.component(this.getArg('elseContent').create());
+    }
   }
 });
 

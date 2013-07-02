@@ -565,6 +565,10 @@ _.extend(Component.prototype, {
       result = If;
     } else if (id === 'each') {
       result = Each;
+    } else if (id === 'unless') {
+      result = Unless;
+    } else if (id === 'with') {
+      result = Component;
     } else if (id in global) {
       result = global[id];
       thisToBind = self.getData();
