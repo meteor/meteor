@@ -192,7 +192,7 @@ Accounts.loginServicesConfigured = function () {
 
 // If we're using Handlebars, register the {{currentUser}} and
 // {{loggingIn}} global helpers.
-if (Package.handlebars.Handlebars) {
+if (Package.handlebars) {
   Package.handlebars.Handlebars.registerHelper('currentUser', function () {
     return Meteor.user();
   });
