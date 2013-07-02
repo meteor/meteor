@@ -82,11 +82,20 @@ _.extend(RenderBuffer.prototype, {
     options = options || {};
 
     var isElementReactive = false;
-    // any reactive updaters here will close over this variable,
-    // which we will set to something non-null afterwards.
+    // Any reactive updaters here will close over this variable,
+    // which we set to something non-null as soon as we are
+    // sure we need to generate a key.
     var elementKey = (options.key || null);
+    var requireElementKey = function () {
+      if (! elementKey) {
+        if (! self._elementNextNums[tagName])
+          self._elementNextNums[tagName] = 1;
+        elementKey = tagName +
+          (self._elementNextNums[tagName]++);
+      }
+    };
 
-    var buf = this._htmlBuf;
+    var buf = self._htmlBuf;
     buf.push('<', tagName);
     _.each(attrs, function (attrValue, attrName) {
       if ((typeof attrName) !== 'string' ||
@@ -112,6 +121,7 @@ _.extend(RenderBuffer.prototype, {
             var newValue = attrValue();
             var comp = self._component;
             if (comp && comp.stage === Component.BUILT) {
+              // (elementKey has been set by now)
               var elem = elementKey && comp.elements[elementKey];
               if (elem) {
                 updateDOMAttribute(comp, elementKey, attrName,
@@ -128,13 +138,41 @@ _.extend(RenderBuffer.prototype, {
       buf.push('"');
     });
 
+    if (options.annotations) {
+      _.each(options.annotations, function (ann) {
+        if (ann.type !== 'emit')
+          return;
+
+        isElementReactive = true;
+
+        if (! self.isPreview) {
+          requireElementKey();
+
+          self._component.addAnnotation(
+            elementKey, {
+              name: 'emit',
+              component: self._component,
+              element: null,
+              // XXX should probably have setup/teardown here,
+              // and maybe include reactive attributes under
+              // the same mechanism.  Maybe it's an autorun.
+              wired: function () {
+                var self = this;
+                _.each(ann.data, function (v, k) {
+                  self.element.addEventListener(k, function (event) {
+                    event.name = v;
+                    self.component.dispatch(event);
+                  });
+                });
+              }
+            });
+        }
+
+      });
+    }
+
     if (isElementReactive && ! self._isPreview) {
-      if (! elementKey) {
-        if (! this._elementNextNums[tagName])
-          this._elementNextNums[tagName] = 1;
-        elementKey = tagName +
-          (this._elementNextNums[tagName]++);
-      }
+      requireElementKey();
 
       buf.push(' data-meteorui-id="' +
                self._encodeEntities(elementKey, true) + '"');

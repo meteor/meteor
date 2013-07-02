@@ -17,7 +17,7 @@
 </body>
 
 <template name="item">
-  <div>{{> content}}</div>
+  <div {{@emit click="itemClick"}}>{{> content}}</div>
   <div>{{> content text=foo}}</div>
   {{rand}}
 </template>

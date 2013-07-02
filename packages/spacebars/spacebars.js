@@ -819,6 +819,7 @@ Spacebars.compile = function (inputString, options) {
       case 'StartTag':
         var attrs = null;
         var dynamicAttrs = null;
+        var annotations = null;
         _.each(t.data, function (kv) {
           var name = kv.nodeName;
           var value = kv.nodeValue;
@@ -826,7 +827,33 @@ Spacebars.compile = function (inputString, options) {
             if (name.length === 1 &&
                 name[0].type === 'ANNOTATION' &&
                 value === '') {
-              // do something with annotation
+              var tag = name[0];
+              // XXX support arbitrary, user-defined
+              // annotations in the future
+              var annotationName = tag.path.join('');
+              if (annotationName !== 'emit')
+                error("Unknown annotation: " + annotationName);
+
+              // for now, we only allow strings and keyword
+              // arguments whose values are strings,
+              // as in `{{@emit "keydown" click="myclick"}}`
+              var emitData = null;
+              _.each(tag.args, function (arg) {
+                if (arg[0] !== 'STRING')
+                  error("Argument values to @emit must be STRING");
+                var highEvent = arg[1];
+                var lowEvent = arg[2] || highEvent;
+                emitData = (emitData || {});
+                emitData[toJSLiteral(lowEvent)] =
+                  toJSLiteral(highEvent);
+              });
+              if (emitData) {
+                annotations = (annotations || []);
+                annotations.push(makeObjectLiteral({
+                  type: toJSLiteral('emit'),
+                  data: makeObjectLiteral(emitData)
+                }));
+              }
             } else {
               dynamicAttrs = (dynamicAttrs || []);
               dynamicAttrs.push([interpolate(name, funcInfo,
@@ -847,6 +874,11 @@ Spacebars.compile = function (inputString, options) {
             _.map(dynamicAttrs, function (pair) {
               return '[' + pair[0] + ', ' + pair[1] + ']';
             }).join(', ') + ']';
+        }
+        if (annotations) {
+          options = (options || {});
+          options['annotations'] = '[' +
+            annotations.join(', ') + ']';
         }
         if (t.self_closing) {
           options = (options || {});

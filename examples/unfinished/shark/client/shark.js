@@ -14,10 +14,15 @@ Body({
     return Items.find({}, { sort: { text: 1 }});
   },
   name: 'David',
-  containerClass: function () { return Session.get('containerClass'); }
+  containerClass: function () {
+    return Session.get('containerClass');
+  }
 });
 
 Template.item({
   foo: function () { return Session.get('foo'); },
-  rand: function () { return Math.random(); }
+  rand: function () { return Math.random(); },
+  itemClick: function (evt) {
+    console.log(this.getData());
+  }
 });

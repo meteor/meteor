@@ -49,6 +49,9 @@ Component = function (args) {
   this._childUpdaters = {};
   this.elements = {};
 
+  // element annotations, defined during build
+  this.annotations = {};
+
   this.constructed();
 };
 
@@ -325,6 +328,21 @@ _.extend(Component.prototype, {
     dep.depend();
     return this._args[argName];
   },
+  getData: function () {
+    var self = this;
+    // look for data arg, maybe in parent.  stop as
+    // soon as we find a non-null value.
+    var comp = self;
+    var data = self.getArg('data');
+    // `== null` means null or undefined
+    while (data == null && comp.parent) {
+      comp = comp.parent;
+      data = comp.getArg('data');
+    }
+    if (data == null)
+      data = null;
+    return data;
+  },
   update: function (args) {
     var oldArgs = this._args;
     this._args = args;
@@ -488,8 +506,21 @@ _.extend(Component.prototype, {
       this.addChild(newKey, newChild, parentNode, beforeNode);
     }
   },
+  addAnnotation: function (elementKey, annotation) {
+    annotation.component = this;
+
+    if (! this.annotations[elementKey])
+      this.annotations[elementKey] = [];
+    this.annotations[elementKey].push(annotation);
+  },
   registerElement: function (elementKey, element) {
     this.elements[elementKey] = element;
+    if (this.annotations[elementKey]) {
+      _.each(this.annotations[elementKey], function (ann) {
+        ann.element = element;
+        ann.wired && ann.wired();
+      });
+    }
   }
 });
 
@@ -526,7 +557,7 @@ _.extend(Component.prototype, {
     // hook into this behavior.
 
     if (! id) {
-      result = self.getArg('data') || null;
+      result = self.getData();
     } else if (id in self) {
       result = self[id];
       thisToBind = self;
@@ -536,21 +567,13 @@ _.extend(Component.prototype, {
       result = Each;
     } else if (id in global) {
       result = global[id];
-      thisToBind = self.getArg('data') || null;
+      thisToBind = self.getData();
     } else if ((result = self.getArg(id)) != null) {
+      // (`!= null` means not `null` or `undefined`)
       thisToBind = self;
     } else {
-      // look for data arg, maybe in parent.  stop as
-      // soon as we find a non-null value.
-      var comp = self;
-      var data = self.getArg('data');
-      // `== null` means null or undefined
-      while (data == null && comp.parent) {
-        comp = comp.parent;
-        data = comp.getArg('data');
-      }
-
-      if (data != null) {
+      var data = self.getData();
+      if (data !== null) {
         thisToBind = data;
         result = data[id];
       }
@@ -562,6 +585,15 @@ _.extend(Component.prototype, {
       return _.bind(result, thisToBind);
 
     return result;
+  },
+  dispatch: function (event) {
+    var self = this;
+
+    if (event.name in self) {
+      self[event.name].call(self, event);
+    } else if (self.parent) {
+      self.parent.dispatch(event);
+    }
   }
 });
 
