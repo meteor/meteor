@@ -455,7 +455,16 @@ _.extend(File.prototype, {
             return s.trim();
           });
 
-          if (self.module.noExports && what === "export") {
+          var badSymbols = _.reject(symbols, function (s) {
+            // XXX should be unicode-friendlier
+            return s.match(/^([_$a-zA-Z][_$a-zA-Z0-9]*)(\.[_$a-zA-Z][_$a-zA-Z0-9]*)*$/);
+          });
+          if (!_.isEmpty(badSymbols)) {
+            buildmessage.error("bad symbols for @" + what + ": " +
+                               JSON.stringify(badSymbols),
+                               { file: self.sourcePath });
+            // recover by ignoring
+          } else if (self.module.noExports && what === "export") {
             buildmessage.error("@export not allowed in this slice",
                                { file: self.sourcePath });
             // recover by ignoring
