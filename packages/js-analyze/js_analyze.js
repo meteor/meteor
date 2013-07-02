@@ -144,7 +144,9 @@ JSAnalyze.findAssignedGlobals = function (source) {
       if (node.type !== Syntax.Identifier)
         return;
       // We already know this one is an assigned global.
-      if (_.has(assignedGlobals, node.name))
+      // (Avoid using _.has here so that we have no Meteor package
+      // dependencies.)
+      if (assignedGlobals.hasOwnProperty(node.name))
         return;
 
       var ref = null;
