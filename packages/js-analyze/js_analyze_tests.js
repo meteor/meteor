@@ -1,4 +1,4 @@
-Tinytest.add("js-analyze - basic", function (test) {
+Tinytest.add("js-analyze - findGlobalDottedRefs", function (test) {
 
   var R = JSAnalyze.READ;
   var W = JSAnalyze.WRITE;
@@ -33,4 +33,38 @@ Tinytest.add("js-analyze - basic", function (test) {
   test.equal(run('a[b=c] = d'), {a: W, b: W, c: R, d: R});
   test.equal(run('a.a.a[b.b.b=c.c.c] = d.d.d'),
              {'a.a.a': W, 'b.b.b': W, 'c.c.c': R, 'd.d.d': R});
+});
+
+Tinytest.add("js-analyze - findAssignedGlobals", function (test) {
+
+  var run = function (source, expected) {
+    test.equal(JSAnalyze.findAssignedGlobals(source), expected);
+  };
+
+  run('x', {});
+  run('x + y', {});
+  run('x = y', {x: true});
+  run('var x; x = y', {});
+  run('var y; x = y', {x: true});
+  run('var x,y; x = y', {});
+  run('for (x in y);', {x: true});
+  run('for (var x in y);', {});
+  run('x++', {x: true});
+  run('var x = y', {});
+  run('a.b[c.d]', {});
+  run('foo.bar[baz][c.d].z = 3', {});
+  run('foo.bar(baz)[c.d].z = 3', {});
+  run('var x = y.z; x.a = y; z.b;', {});
+  run('Foo.Bar', {});
+  run('Foo.Bar = 3', {});
+  run(
+    '(function (a, d) { var b = a, c; return f(a.z, b.z, c.z, d.z, e.z); })()',
+    {});
+  run('try { Foo } catch (e) { e }', {});
+  run('try { Foo } catch (e) { Foo }', {});
+  run('try { Foo } catch (Foo) { Foo }', {});
+  run('try { e } catch (Foo) { Foo }', {});
+  run('var x = function y () { return String(y); }', {});
+  run('a[b=c] = d', {b: true});
+  run('a.a.a[b.b.b=c.c.c] = d.d.d', {});
 });

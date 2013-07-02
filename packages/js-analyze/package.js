@@ -14,6 +14,7 @@ Npm.depends({
 });
 
 Package.on_use(function (api, where) {
+  api.use('underscore', 'server');
   api.add_files('js_analyze.js', 'server');
 });
 
