@@ -150,11 +150,6 @@ var appUrl = function (url) {
   return true;
 };
 
-
-Meteor._postStartup = function (callback) {
-  __meteor_bootstrap__.postStartupHooks.push(callback);
-};
-
 var runWebAppServer = function () {
   // read the control for the client we'll be serving up
   var clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
@@ -286,6 +281,7 @@ var runWebAppServer = function () {
 
 
   var httpServer = http.createServer(app);
+  var onListeningCallbacks = [];
 
   // start up app
   _.extend(WebApp, {
@@ -300,6 +296,12 @@ var runWebAppServer = function () {
     // For testing.
     suppressConnectErrors: function () {
       suppressConnectErrors = true;
+    },
+    onListening: function (f) {
+      if (onListeningCallbacks)
+        onListeningCallbacks.push(f);
+      else
+        f();
     },
     // Hack: allow http tests to call connect.basicAuth without making them
     // Npm.depends on another copy of connect. (That would be fine if we could
@@ -358,8 +360,9 @@ var runWebAppServer = function () {
         });
       }
 
-      _.each(__meteor_bootstrap__.postStartupHooks, function (x) { x(); });
-
+      var callbacks = onListeningCallbacks;
+      onListeningCallbacks = null;
+      _.each(callbacks, function (x) { x(); });
     }, function (e) {
       console.error("Error listening:", e);
       console.error(e.stack);
