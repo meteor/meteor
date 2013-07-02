@@ -513,6 +513,16 @@ _.extend(Unit.prototype, {
   // example: if the code references 'Foo.bar.baz' and 'Quux', and
   // neither are declared in a scope enclosing the point where they're
   // referenced, then globalReferences would include ["Foo", "Quux"].
+  // 
+  // XXX Doing this at the unit level means that we need to also look
+  //     for var declarations in various units, and use them to create
+  //     a graph of unit dependencies such that in:
+  //        // @unit X
+  //        var A;
+  //        // @unit Y
+  //        A = 5;
+  //     including Y requires including X. Since we don't do that, @unit
+  //     is currently broken. It's also unused and undocumented :)
   computeGlobalReferences: function () {
     var self = this;
 
