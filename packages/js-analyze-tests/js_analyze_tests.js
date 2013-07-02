@@ -49,7 +49,9 @@ Tinytest.add("js-analyze - findAssignedGlobals", function (test) {
   run('var x,y; x = y', {});
   run('for (x in y);', {x: true});
   run('for (var x in y);', {});
-  run('x++', {x: true});
+  // Update operators cause ReferenceError if the left-hand is not defined.
+  run('x++', {});
+  run('x += 5', {});
   run('var x = y', {});
   run('a.b[c.d]', {});
   run('foo.bar[baz][c.d].z = 3', {});

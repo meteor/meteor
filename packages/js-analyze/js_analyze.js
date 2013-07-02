@@ -171,10 +171,9 @@ JSAnalyze.findAssignedGlobals = function (source) {
   //    assignedGlobals[variable.name] = true;
   //  }
   //
-  // However, it misses out on variables defined by `for (x in y)`, increments
-  // and decrements, and += expressions.  Maybe this is acceptable (they
-  // aren't a great way of defining variables) and we should just use the
-  // simpler code instead.
+  // Unfortunately, escope's ImplicitGlobalVariable search has several bugs.
+  //   https://github.com/Constellation/escope/issues/17
+
 
   // Traverse the tree looking for assignments to unreferenced variables.
   estraverse.traverse(parseTree, {
@@ -208,15 +207,14 @@ JSAnalyze.findAssignedGlobals = function (source) {
 
       // OK, it's a global. But is it being assigned to? The situations where a
       // global is assigned to are:
-      //    - left-hand side of an assignment (including +=, etc)
+      //    - left-hand side of an '=' assignment
       //    - the `x` in `for (x in y)` (without a `var`)
-      //    - prefix and postfix `++` and `--`
-      // (Admittedly, if the only write to a global is via ++, --, or an
-      // operator like +=, it's unlikely to contain anything interesting. But
-      // let's count those anyway.)
-      if ((parent.type === Syntax.AssignmentExpression && parent.left === node)
-          || (parent.type === Syntax.ForInStatement && parent.left === node)
-          || (parent.type === Syntax.UpdateExpression)) {
+      // (You might think that ++, --, and the += family of operators also
+      // write to globals, but they can't in and of themselves conjure up
+      // a reference where none existed before.)
+      if ((parent.type === Syntax.AssignmentExpression && parent.left === node
+           && parent.operator === '=')
+          || (parent.type === Syntax.ForInStatement && parent.left === node)) {
         assignedGlobals[node.name] = true;
       }
     },
