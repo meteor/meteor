@@ -10,6 +10,8 @@ var connect = Npm.require('connect');
 var optimist = Npm.require('optimist');
 var useragent = Npm.require('useragent');
 
+// @export WebApp
+WebApp = {};
 
 var findGalaxy = _.once(function () {
   if (!('GALAXY' in process.env)) {
@@ -207,10 +209,6 @@ var runWebAppServer = function () {
   // but it's overkill to have that package depend on its own copy of connect
   // just for this simple processing.
   app.use(connect.query());
-  // Hack: allow http tests to call connect.basicAuth without making them
-  // Npm.depends on another copy of connect. (That would be fine if we could
-  // have test-only NPM dependencies but is overkill here.)
-  app.__basicAuth__ = connect.basicAuth;
 
   // Auto-compress any json, javascript, or text.
   app.use(connect.compress());
@@ -236,12 +234,66 @@ var runWebAppServer = function () {
                            {maxAge: 1000 * 60 * 60 * 24}));
   }
 
+  // Packages and apps can add handlers to this via WebApp.connectHandlers.
+  // They are inserted before our default handler.
+  var packageAndAppHandlers = connect();
+  app.use(packageAndAppHandlers);
+
+  var suppressConnectErrors = false;
+  // connect knows it is an error handler because it has 4 arguments instead of
+  // 3. go figure.  (It is not smart enough to find such a thing if it's hidden
+  // inside packageAndAppHandlers.)
+  app.use(function (err, req, res, next) {
+    if (!err || !suppressConnectErrors || !req.headers['x-suppress-error']) {
+      next(err);
+      return;
+    }
+    res.writeHead(err.status, { 'Content-Type': 'text/plain' });
+    res.end("An error message");
+  });
+
+  // Will be updated by main before we listen.
+  var boilerplateHtml = null;
+  app.use(function (req, res, next) {
+    if (! appUrl(req.url))
+      return next();
+
+    if (!boilerplateHtml)
+      throw new Error("boilerplateHtml should be set before listening!");
+
+    var request = categorizeRequest(req);
+
+    res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+
+    var requestSpecificHtml = htmlAttributes(boilerplateHtml, request);
+    res.write(requestSpecificHtml);
+    res.end();
+    return undefined;
+  });
+
+  // Return 404 by default, if no other handlers serve this URL.
+  app.use(function (req, res) {
+    res.writeHead(404);
+    res.end();
+  });
+
+
   var httpServer = http.createServer(app);
 
   // start up app
-  _.extend(__meteor_bootstrap__, {
-    app: app,
+  _.extend(WebApp, {
+    connectHandlers: packageAndAppHandlers,
     httpServer: httpServer,
+    // For testing.
+    suppressConnectErrors: function () {
+      suppressConnectErrors = true;
+    },
+    // Hack: allow http tests to call connect.basicAuth without making them
+    // Npm.depends on another copy of connect. (That would be fine if we could
+    // have test-only NPM dependencies but is overkill here.)
+    __basicAuth__: connect.basicAuth
+  });
+  _.extend(__meteor_bootstrap__, {
     // metadata about this bundle
     // XXX this could use some refactoring to better distinguish
     // server and client
@@ -268,37 +320,15 @@ var runWebAppServer = function () {
     argv = optimist(argv).boolean('keepalive').argv;
 
     var boilerplateHtmlPath = path.join(clientDir, clientJson.page);
-    var boilerplateHtml =
-          fs.readFileSync(boilerplateHtmlPath, 'utf8').replace(
-            "// ##RUNTIME_CONFIG##",
-            "__meteor_runtime_config__ = " +
-              JSON.stringify(__meteor_runtime_config__) + ";");
-
-
-    boilerplateHtml = boilerplateHtml.replace(
-        /##PATH_PREFIX##/g,
-      __meteor_runtime_config__.PATH_PREFIX || ""
-    );
-
-    app.use(function (req, res, next) {
-      if (! appUrl(req.url))
-        return next();
-
-      var request = categorizeRequest(req);
-
-      res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
-
-      var requestSpecificHtml = htmlAttributes(boilerplateHtml, request);
-      res.write(requestSpecificHtml);
-      res.end();
-      return undefined;
-    });
-
-    // Return 404 by default, if no other handlers serve this URL.
-    app.use(function (req, res) {
-      res.writeHead(404);
-      res.end();
-    });
+    boilerplateHtml =
+      fs.readFileSync(boilerplateHtmlPath, 'utf8')
+      .replace(
+        "// ##RUNTIME_CONFIG##",
+        "__meteor_runtime_config__ = " +
+          JSON.stringify(__meteor_runtime_config__) + ";")
+      .replace(
+          /##PATH_PREFIX##/g,
+        __meteor_runtime_config__.PATH_PREFIX || "");
 
     // only start listening after all the startup code has run.
     var bind = deployConfig.boot.bind;

@@ -60,15 +60,13 @@ Oauth.retrieveCredential = function(credentialToken) {
 }
 
 // Listen to incoming OAuth http requests
-__meteor_bootstrap__.app
-  .use(function(req, res, next) {
-    // Need to create a Fiber since we're using synchronous http
-    // calls and nothing else is wrapping this in a fiber
-    // automatically
-    Fiber(function () {
-      Oauth._middleware(req, res, next);
-    }).run();
-  });
+WebApp.connectHandlers.use(function(req, res, next) {
+  // Need to create a Fiber since we're using synchronous http calls and nothing
+  // else is wrapping this in a fiber automatically
+  Fiber(function () {
+    Oauth._middleware(req, res, next);
+  }).run();
+});
 
 
 Oauth._middleware = function (req, res, next) {

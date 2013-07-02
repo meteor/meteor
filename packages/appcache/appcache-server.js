@@ -1,4 +1,3 @@
-var app = __meteor_bootstrap__.app;
 var bundle = __meteor_bootstrap__.bundle;
 var crypto = Npm.require('crypto');
 var fs = Npm.require('fs');
@@ -63,7 +62,7 @@ __meteor_bootstrap__.htmlAttributeHooks.push(function (request) {
     return null;
 });
 
-app.use(function(req, res, next) {
+WebApp.connectHandlers.use(function(req, res, next) {
   if (req.url !== '/app.manifest') {
     return next();
   }

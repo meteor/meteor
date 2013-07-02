@@ -3,7 +3,7 @@ var _XHR_URL_PREFIX = "/http_test_responder";
 
 var url_base = function () {
   if (Meteor.isServer) {
-    var address = __meteor_bootstrap__.httpServer.address();
+    var address = WebApp.httpServer.address();
     return "http://127.0.0.1:" + address.port;
   } else {
     return "";
@@ -426,17 +426,9 @@ if (Meteor.isServer) {
   // run this test on the server.
   testAsyncMulti("httpcall - static file serving", [
     function(test, expect) {
-      // register an error handling middleware with connect to suppress
-      // error printing for this test. connect knows it is an error
-      // handler because it has 4 arguments instead of 3. go figure.
-      __meteor_bootstrap__.app.use(function (err, req, res, next) {
-        if (!err || !req.headers['x-suppress-error']) {
-          next();
-          return;
-        }
-        res.writeHead(err.status, { 'Content-Type': 'text/plain' });
-        res.end("An error message");
-      });
+      // Suppress error printing for this test (and for any other code that sets
+      // the x-suppress-error header).
+      WebApp.suppressConnectErrors();
 
       var do_test = function (path, code, match) {
         Meteor.http.get(

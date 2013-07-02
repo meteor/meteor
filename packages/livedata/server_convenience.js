@@ -4,13 +4,10 @@ _.extend(Meteor, {
   }
 });
 
-if (typeof __meteor_bootstrap__ == 'undefined' ||
-    !__meteor_bootstrap__.app) {
-  // We haven't been loaded in an environment with a HTTP server (for
-  // example, we might be being loaded from a command-line tool.)
-  // Don't create a server.. don't even map publish, methods, call,
-  // etc onto Meteor.
-} else {
+// Only create a server (and map publish, methods, call, etc onto Meteor) if we
+// are in an environment with a HTTP server (as opposed to, eg, a command-line
+// tool).
+if (Package.webapp) {
   if (process.env.DDP_DEFAULT_CONNECTION_URL) {
     __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL =
       process.env.DDP_DEFAULT_CONNECTION_URL;
