@@ -71,10 +71,10 @@ var initKeepalive = function () {
 // * `browser`: browser identification object described above
 // * `url`: parsed url, including parsed query params
 //
-// As a temporary hack there is a `categorizeRequest` function on
-// __meteor_bootstrap__ which converts a connect `req` to a Meteor
-// `request`. This can go away once smart packages such as appcache are
-// being passed a `request` object directly when they serve content.
+// As a temporary hack there is a `categorizeRequest` function on WebApp which
+// converts a connect `req` to a Meteor `request`. This can go away once smart
+// packages such as appcache are being passed a `request` object directly when
+// they serve content.
 //
 // This allows `request` to be used uniformly: it is passed to the html
 // attributes hook, and the appcache package can use it when deciding
@@ -104,21 +104,28 @@ var identifyBrowser = function (req) {
   };
 };
 
-var categorizeRequest = function (req) {
+WebApp.categorizeRequest = function (req) {
   return {
     browser: identifyBrowser(req),
     url: url.parse(req.url, true)
   };
 };
 
+// HTML attribute hooks: functions to be called to determine any attributes to
+// be added to the '<html>' tag. Each function is passed a 'request' object (see
+// #BrowserIdentification) and should return a string,
+var htmlAttributeHooks = [];
 var htmlAttributes = function (template, request) {
   var attributes = '';
-  _.each(__meteor_bootstrap__.htmlAttributeHooks || [], function (hook) {
+  _.each(htmlAttributeHooks || [], function (hook) {
     var attribute = hook(request);
     if (attribute !== null && attribute !== undefined && attribute !== '')
       attributes += ' ' + attribute;
   });
   return template.replace('##HTML_ATTRIBUTES##', attributes);
+};
+WebApp.addHtmlAttributeHook = function (hook) {
+  htmlAttributeHooks.push(hook);
 };
 
 // Serve app HTML for this URL?
@@ -261,7 +268,7 @@ var runWebAppServer = function () {
     if (!boilerplateHtml)
       throw new Error("boilerplateHtml should be set before listening!");
 
-    var request = categorizeRequest(req);
+    var request = WebApp.categorizeRequest(req);
 
     res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
 
@@ -300,14 +307,6 @@ var runWebAppServer = function () {
     __basicAuth__: connect.basicAuth
   });
   _.extend(__meteor_bootstrap__, {
-    // function that takes a connect `req` object and returns a summary
-    // object with information about the request. See
-    // #BrowserIdentifcation
-    categorizeRequest: categorizeRequest,
-    // list of functions to be called to determine any attributes to be
-    // added to the '<html>' tag. Each function is passed a 'request'
-    // object (see #BrowserIdentifcation) and should return a string,
-    htmlAttributeHooks: [],
     deployConfig: deployConfig
   });
 

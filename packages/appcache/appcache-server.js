@@ -54,7 +54,7 @@ var browserEnabled = function(request) {
   return enabledBrowsers[request.browser.name];
 };
 
-__meteor_bootstrap__.htmlAttributeHooks.push(function (request) {
+WebApp.addHtmlAttributeHook(function (request) {
   if (browserEnabled(request))
     return 'manifest="/app.manifest"';
   else
@@ -76,7 +76,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
   // use").  Returning a 404 gets the browser to really turn off the
   // app cache.
 
-  if (!browserEnabled(__meteor_bootstrap__.categorizeRequest(req))) {
+  if (!browserEnabled(WebApp.categorizeRequest(req))) {
     res.writeHead(404);
     res.end();
     return;
