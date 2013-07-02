@@ -15,6 +15,10 @@ Package.on_use(function (api) {
   // we'd probably want to abstract this away
   api.use('mongo-livedata', ['client', 'server']);
 
+  // If handlebars happens to be loaded, we'll define some helpers like
+  // {{currentUser}}.  If not, no biggie.
+  api.use('handlebars', 'client', {weak: true});
+
   api.add_files('accounts_common.js', ['client', 'server']);
   api.add_files('accounts_server.js', 'server');
 

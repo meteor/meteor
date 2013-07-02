@@ -111,7 +111,8 @@ Fiber(function () {
       context.galaxyHost = process.env.GALAXY.substr("ssh://".length);
       context.sshIdentity = argv["ssh-identity"];
     } else {
-      context.galaxyUrl = process.env.GALAXY;
+      context.galaxyUrl = process.env.GALAXY + "/ultraworld";
+      context.adminBaseUrl = process.env.GALAXY + "/";
     }
 
     var appDir = files.findAppDir();
@@ -1139,8 +1140,10 @@ Fiber(function () {
       });
       if (count)
         console.log("Built " + count + " packages.");
-      if (messages.hasMessages())
+      if (messages.hasMessages()) {
         process.stdout.write("\n" + messages.formatMessages());
+        process.exit(1);
+      }
     }
   });
 

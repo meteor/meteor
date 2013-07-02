@@ -1,8 +1,5 @@
 'use strict'
 
-### @export COFFEESCRIPT_EXPORTED2 ###
-COFFEESCRIPT_EXPORTED2 = 456
-
 # Another variable, which will stay in the var line.
 x = 5
 

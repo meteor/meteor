@@ -1,6 +1,8 @@
 
 ## vNEXT
 
+* Fix Spark memory leak.  #1157
+
 * Upgraded dependencies:
   * Node from 0.8.18 to 0.8.24
   * MongoDB from 2.4.3 to 2.4.4

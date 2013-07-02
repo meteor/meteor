@@ -14,7 +14,7 @@ var fs = require('fs');
 
 // Find all files under `rootPath` that have an extension in
 // `extensions` (an array of extensions without leading dot), and
-// return them as a list of paths relative to sourceRoot. Ignore files
+// return them as a list of paths relative to rootPath. Ignore files
 // that match a regexp in the ignoreFiles array, if given. As a
 // special case (ugh), push all html files to the head of the list.
 var scanForSources = function (rootPath, extensions, ignoreFiles) {
@@ -72,6 +72,7 @@ var scanForSources = function (rootPath, extensions, ignoreFiles) {
 // - forceExport
 // - dependencyInfo
 // - nodeModulesPath
+// - noExports
 //
 // Do not include the source files in dependencyInfo. They will be
 // added at compile time when the sources are actually read.
@@ -101,10 +102,20 @@ var Slice = function (pkg, options) {
   // - unordered: If true, we don't want the package's imports and we
   //   don't want to force the package to load before us. We just want
   //   to ensure that it loads if we load.
+  // - weak: If true, we don't *need* to load the other package, but
+  //   if the other package ends up loaded in the target, it must
+  //   be forced to load before us. We will not get its imports
+  //   or plugins.
+  // It is an error for both unordered and weak to be true, because
+  // such a dependency would have no effect.
   self.uses = options.uses;
 
-  // A function that returns the source files for this slice. Array of
-  // paths. Null if loaded from unipackage.
+  // A function that returns the source files for this slice. Array of objects
+  // with keys "relPath" and "fileOptions". Null if loaded from unipackage.
+  //
+  // fileOptions is optional and represents arbitrary options passed to
+  // "api.add_files"; they are made available on to the plugin as
+  // compileStep.fileOptions.
   //
   // This is a function rather than a literal array because for an
   // app, we need to know the file extensions registered by the
@@ -131,6 +142,9 @@ var Slice = function (pkg, options) {
   // package. Array of string symbol (eg "Foo", "Bar.baz".) Set only
   // when isBuilt is true.
   self.exports = null;
+
+  // Are we allowed to have exports?  (eg, test slices don't export.)
+  self.noExports = !!options.noExports;
 
   // Prelink output. 'boundary' is a magic cookie used for inserting
   // imports. 'prelinkFiles' is the partially linked JavaScript code
@@ -205,7 +219,9 @@ _.extend(Slice.prototype, {
     });
     self.uses = scrubbedUses;
 
-    _.each(self.getSourcesFunc(), function (relPath) {
+    _.each(self.getSourcesFunc(), function (source) {
+      var relPath = source.relPath;
+      var fileOptions = _.clone(source.fileOptions) || {};
       var absPath = path.resolve(self.pkg.sourceRoot, relPath);
       var ext = path.extname(relPath).substr(1);
       var handler = self._getSourceHandler(ext);
@@ -246,6 +262,9 @@ _.extend(Slice.prototype, {
       //   will get prepended to the paths you pick for your output
       //   files so that you get your own namespace, for example
       //   '/packages/foo'. null on non-browser targets
+      // - fileOptions: any options passed to "api.add_files"; for
+      //   use by the plugin. The built-in "js" plugin uses the "bare"
+      //   option for files that shouldn't be wrapped in a closure.
       // - read(n): read from the input file. If n is given it should
       //   be an integer, and you will receive the next n bytes of the
       //   file as a Buffer. If n is omitted you get the rest of the
@@ -262,7 +281,7 @@ _.extend(Slice.prototype, {
       //   effect, such as minification.)
       // - addJavaScript({ path: "my/program.js", data: "my code",
       //                   sourcePath: "src/my/program.js",
-      //                   lineForLine: true })
+      //                   lineForLine: true, bare: true})
       //   Add JavaScript code, which will be namespaced into this
       //   package's environment (eg, it will see only the exports of
       //   this package's imports), and which will be subject to
@@ -275,7 +294,9 @@ _.extend(Slice.prototype, {
       //   option to true if line X, column Y in the input corresponds
       //   to line X, column Y in the output. This will enable line
       //   and column reporting in error messages. (XXX replace this
-      //   with source maps)
+      //   with source maps)  "bare" means to not wrap the file in
+      //   a closure, so that its vars are shared with other files
+      //   in the module.
       // - addAsset({ path: "my/image.png", data: Buffer })
       //   Add a file to serve as-is over HTTP (browser targets) or
       //   to include as-is in the bundle (native targets).
@@ -330,6 +351,7 @@ _.extend(Slice.prototype, {
         _fullInputPath: absPath, // avoid, see above..
         rootOutputPath: self.pkg.serveRoot,
         arch: self.arch,
+        fileOptions: fileOptions,
         read: function (n) {
           if (n === undefined || readOffset + n > contents.length)
             n = contents.length - readOffset;
@@ -367,12 +389,15 @@ _.extend(Slice.prototype, {
             throw new Error("'data' option to addJavaScript must be a string");
           if (typeof options.sourcePath !== "string")
             throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
+          if (options.bare && ! archinfo.matches(self.arch, "browser"))
+            throw new Error("'bare' option may only be used for browser targets");
           js.push({
             source: options.data,
             sourcePath: options.sourcePath,
             servePath: path.join(self.pkg.serveRoot, options.path),
             includePositionInErrors: options.lineForLine,
-            linkerUnitTransform: options.linkerUnitTransform
+            linkerUnitTransform: options.linkerUnitTransform,
+            bare: !!options.bare
           });
         },
         addAsset: function (options) {
@@ -415,7 +440,8 @@ _.extend(Slice.prototype, {
       // XXX report an error if there is a package called global-imports
       importStubServePath: '/packages/global-imports.js',
       name: self.pkg.name || null,
-      forceExport: self.forceExport
+      forceExport: self.forceExport,
+      noExports: self.noExports
     });
 
     // Add dependencies on the source code to any plugins that we
@@ -470,7 +496,11 @@ _.extend(Slice.prototype, {
     // packages get precedence.
     var imports = {}; // map from symbol to supplying package name
     _.each(_.values(self.uses), function (u) {
-      if (! u.unordered) {
+      // We don't get imports from unordered dependencies (since they may not be
+      // defined yet) or from weak dependencies (because the meaning of a name
+      // shouldn't be affected by the non-local decision of whether or not
+      // an unrelated package in the target depends on something).
+      if (! u.unordered && ! u.weak) {
         _.each(library.getSlices(u.spec, bundleArch), function (otherSlice) {
           if (! otherSlice.isBuilt)
             throw new Error("dependency wasn't built?");
@@ -517,7 +547,11 @@ _.extend(Slice.prototype, {
     var ret = [self.pkg];
 
     _.each(self.uses, function (u) {
-      ret.push(self.pkg.library.get(u.spec.split('.')[0]));
+      // We don't use plugins from weak dependencies, because the ability to
+      // compile a certain type of file shouldn't depend on whether or not some
+      // unrelated package in the target has a dependency.
+      if (! u.weak)
+        ret.push(self.pkg.library.get(u.spec.split('.')[0]));
     });
 
     _.each(ret, function (pkg) {
@@ -542,7 +576,9 @@ _.extend(Slice.prototype, {
           data: compileStep.read().toString('utf8'),
           path: compileStep.inputPath,
           sourcePath: compileStep.inputPath,
-          lineForLine: true
+          lineForLine: true,
+          // XXX eventually get rid of backward-compatibility "raw" name
+          bare: compileStep.fileOptions.bare || compileStep.fileOptions.raw
         });
       }
     });
@@ -900,14 +936,14 @@ _.extend(Package.prototype, {
   // - serveRoot (required if sources present)
   // - sliceName
   // - use
-  // - sources
+  // - sources (array of paths or relPath/fileOptions objects)
   // - npmDependencies
   // - npmDir
   initFromOptions: function (name, options) {
     var self = this;
     self.name = name;
 
-    if (options.sources && options.sources.length > 1 &&
+    if (options.sources && ! _.isEmpty(options.sources.length) &&
         (! options.sourceRoot || ! options.serveRoot))
       throw new Error("When source files are given, sourceRoot and " +
                       "serveRoot must be specified");
@@ -929,14 +965,20 @@ _.extend(Package.prototype, {
       }
     }
 
+    var sources = _.map(options.sources, function (source) {
+      if (typeof source === "string")
+        return {relPath: source};
+      return source;
+    });
+
     var arch = isPortable ? "native" : archinfo.host();
     var slice = new Slice(self, {
       name: options.sliceName,
       arch: arch,
       uses: _.map(options.use || [], function (spec) {
-        return { spec: spec }
+        return { spec: spec };
       }),
-      getSourcesFunc: function () { return options.sources || []; },
+      getSourcesFunc: function () { return sources; },
       nodeModulesPath: nodeModulesPath,
       staticDirectory: options.sourceRoot
     });
@@ -1267,7 +1309,7 @@ _.extend(Package.prototype, {
     var forceExport = {use: {client: [], server: []},
                        test: {client: [], server: []}};
 
-    // packages used (keys are 'name' and 'unordered')
+    // packages used (keys are 'spec', 'unordered', and 'weak')
     var uses = {use: {client: [], server: []},
                 test: {client: [], server: []}};
 
@@ -1312,6 +1354,13 @@ _.extend(Package.prototype, {
           //   'handlebars') have an implicit dependency on
           //   'meteor'. Internal use only -- future support of this
           //   is not guaranteed. #UnorderedPackageReferences
+          //
+          // - weak: if true, don't require this package to load at all, but if
+          //   it's going to load, load it before us.  Don't bring this
+          //   package's imports into our namespace and don't allow us to use
+          //   its plugins. (Has the same limitation as "unordered" that this
+          //   flag is not tracked per-environment or per-role; this may
+          //   change.)
           use: function (names, where, options) {
             options = options || {};
 
@@ -1321,13 +1370,26 @@ _.extend(Package.prototype, {
             if (!(where instanceof Array))
               where = where ? [where] : ["client", "server"];
 
+            // A normal dependency creates an ordering constraint and a "if I'm
+            // used, use that" constraint. Unordered dependencies lack the
+            // former; weak dependencies lack the latter. There's no point to a
+            // dependency that lacks both!
+            if (options.unordered && options.weak) {
+              buildmessage.error(
+                "A dependency may not be both unordered and weak.",
+                { useMyCaller: true });
+              // recover by ignoring
+              return;
+            }
+
             _.each(names, function (name) {
               _.each(where, function (w) {
                 if (options.role && options.role !== "use")
                   throw new Error("Role override is no longer supported");
                 uses[role][w].push({
                   spec: name,
-                  unordered: options.unordered || false
+                  unordered: options.unordered || false,
+                  weak: options.weak || false
                 });
               });
             });
@@ -1336,7 +1398,7 @@ _.extend(Package.prototype, {
           // Top-level call to add a source file to a package. It will
           // be processed according to its extension (eg, *.coffee
           // files will be compiled to JavaScript.)
-          add_files: function (paths, where) {
+          add_files: function (paths, where, fileOptions) {
             if (!(paths instanceof Array))
               paths = paths ? [paths] : [];
 
@@ -1345,7 +1407,10 @@ _.extend(Package.prototype, {
 
             _.each(paths, function (path) {
               _.each(where, function (w) {
-                sources[role][w].push(path);
+                var source = {relPath: path};
+                if (fileOptions)
+                  source.fileOptions = fileOptions;
+                sources[role][w].push(source);
               });
             });
           },
@@ -1358,6 +1423,12 @@ _.extend(Package.prototype, {
           // @param symbols String (eg "Foo", "Foo.bar") or array of String
           // @param where 'client', 'server', or an array of those
           exportSymbol: function (symbols, where) {
+            if (role === "test") {
+              buildmessage.error("You cannot export symbols from a test.",
+                                 { useMyCaller: true });
+              // recover by ignoring
+              return;
+            }
             if (!(symbols instanceof Array))
               symbols = symbols ? [symbols] : [];
 
@@ -1455,12 +1526,12 @@ _.extend(Package.prototype, {
         // Everything depends on the package 'meteor', which sets up
         // the basic environment) (except 'meteor' itself).
         if (! (name === "meteor" && role === "use")) {
-          // Don't add the dependency if one already exists. This
-          // allows the package to create an unordered dependency and
-          // override the one that we'd add here. This is necessary to
-          // resolve the circular dependency between meteor and
-          // underscore (underscore depends weakly on meteor; it just
-          // needs the .js extension handler.)
+          // Don't add the dependency if one already exists. This allows the
+          // package to create an unordered dependency and override the one that
+          // we'd add here. This is necessary to resolve the circular dependency
+          // between meteor and underscore (underscore has an unordered
+          // dependency on meteor dating from when the .js extension handler was
+          // in the "meteor" package.)
           var alreadyDependsOnMeteor =
             !! _.find(uses[role][where], function (u) {
               return u.spec === "meteor";
@@ -1482,7 +1553,11 @@ _.extend(Package.prototype, {
           forceExport: forceExport[role][where],
           dependencyInfo: dependencyInfo,
           nodeModulesPath: arch === nativeArch && nodeModulesPath || undefined,
-          staticDirectory: self.sourceRoot
+          staticDirectory: self.sourceRoot,
+          // test slices don't get used by other packages, so they have nothing
+          // to export.  (And notably, they should NOT stomp on the Package.foo
+          // object defined by their corresponding use slice.)
+          noExports: role === "test"
         }));
       });
     });
@@ -1521,7 +1596,7 @@ _.extend(Package.prototype, {
         name: sliceName,
         arch: arch,
         uses: _.map(names, function (name) {
-          return { spec: name }
+          return { spec: name };
         })
       });
       self.slices.push(slice);
@@ -1601,7 +1676,20 @@ _.extend(Package.prototype, {
         slice.dependencyInfo.directories[
           path.resolve(appDir, '.meteor', 'local')] = { exclude: [/.?/] };
 
-        return withoutOtherPrograms;
+        // Convert into relPath/fileOptions objects.
+        return _.map(withoutOtherPrograms, function (relPath) {
+          var sourceObj = {relPath: relPath};
+
+          // Special case: on the client, JavaScript files in a
+          // `client/compatibility` directory don't get wrapped in a closure.
+          if (sliceName === "client" && relPath.match(/\.js$/)) {
+            var clientCompatSubstr =
+                  path.sep + 'client' + path.sep + 'compatibility' + path.sep;
+            if ((path.sep + relPath).indexOf(clientCompatSubstr) !== -1)
+              sourceObj.fileOptions = {bare: true};
+          }
+          return sourceObj;
+        });
       };
     });
 
@@ -1746,7 +1834,8 @@ _.extend(Package.prototype, {
         uses: _.map(sliceJson.uses, function (u) {
           return {
             spec: u['package'] + (u.slice ? "." + u.slice : ""),
-            unordered: u.unordered
+            unordered: u.unordered,
+            weak: u.weak
           };
         }),
         staticDirectory: staticDirectory
@@ -1792,7 +1881,7 @@ _.extend(Package.prototype, {
 
       self.slices.push(slice);
     });
-    self.slicesBuilt = true
+    self.slicesBuilt = true;
 
     return true;
   },
@@ -1880,7 +1969,8 @@ _.extend(Package.prototype, {
             return {
               'package': specParts[0],
               slice: specParts[1] || undefined,
-              unordered: u.unordered || undefined
+              unordered: u.unordered || undefined,
+              weak: u.weak || undefined
             };
           }),
           node_modules: slice.nodeModulesPath ? 'npm/node_modules' : undefined,
