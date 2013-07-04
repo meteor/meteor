@@ -13,7 +13,10 @@ Package.on_use(function (api) {
   // LocalCollection; weak dependency:
   api.use('minimongo', 'client');
 
-  api.add_files(['chunk.js', 'component.js', 'renderbuffer.js',
+  api.add_files(['base.js',
+                 'lifecycle.js',
+
+                 'component.js', 'renderbuffer.js',
                  'library.js'],
                 'client');
 });

@@ -9,7 +9,6 @@ UI = {
 
 var constructorsLocked = true;
 
-var templatesAssigned = false;
 var global = (function () { return this; })();
 
 // @export Component
