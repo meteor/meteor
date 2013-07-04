@@ -1,3 +1,6 @@
+_UI = {
+  nextGuid: 1
+};
 
 var isComponentType = function (x) {
   return (typeof x === 'function') &&
@@ -5,7 +8,12 @@ var isComponentType = function (x) {
      (x.prototype instanceof Component));
 };
 
+var MAKING_PROTO = {}; // unique sentinel object
+
 var constrImpl = function (ths, args, type) {
+  if (args[0] === MAKING_PROTO)
+    return ths;
+
   if (ths instanceof type) {
     // invoked with `new`
 
@@ -30,6 +38,7 @@ var constrImpl = function (ths, args, type) {
       }
     }
 
+    ths.guid = _UI.nextGuid++;
     ths.constructed();
 
     return ths;
@@ -53,7 +62,7 @@ var _extend = function (tgt, src) {
 var setSuperType = function (subType, superType) {
   var oldProto = subType.prototype;
 
-  subType.prototype = new superType;
+  subType.prototype = new superType(MAKING_PROTO);
 
   // Make the 'constructor' property of components behave
   // the way you'd think it should in OO, i.e.
