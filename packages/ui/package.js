@@ -15,6 +15,7 @@ Package.on_use(function (api) {
 
   api.add_files(['base.js',
                  'lifecycle.js',
+                 'tree.js',
 
                  'component.js', 'renderbuffer.js',
                  'library.js'],

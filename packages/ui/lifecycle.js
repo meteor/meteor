@@ -10,10 +10,18 @@ Component.define({
 Component({
   stage: Component.INITIAL,
 
+  // use this internally, not to produce error messages for
+  // developers
   _assertStage: function (stage) {
     if (this.stage !== stage)
       throw new Error("Need " + stage + " Component, found " +
                       this.stage + " Component.");
+  },
+
+  // use this to produce error messages
+  _requireNotDestroyed: function () {
+    if (this.stage === Component.DESTROYED)
+      throw new Error("Component has been destroyed; can't perform this operation");
   },
 
   _added: function () {
@@ -36,6 +44,10 @@ Component({
 
     this.destroyed();
   },
+
+  init: function () {},
+  built: function () {},
+  destroyed: function () {},
 
   extendHooks: {
     init: 'chain',

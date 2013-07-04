@@ -157,6 +157,8 @@ _extend(Component, {
       if (hook) {
         if (hook === 'chain')
           hook = chainCallback;
+        // Note that it's ok for the hook to recursively
+        // invoke `this.augment`.
         hook.call(type, optValue, optKey);
         if (! type._superSealed)
           type._superSealed = optKey;
