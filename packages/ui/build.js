@@ -5,10 +5,23 @@ Component({
   start: null,
   end: null,
 
+  // XXX implement firstNode, lastNode
+
   isAttached: false,
-  _offscreenFragment: null,
+  // array of nodes (if component is BUILT and not attached)
+  _offscreenNodes: null,
 
   render: function (buf) {},
+
+  _buildNodes: function () {
+    var html = "<hr>"; // this could be anything
+    // Returns an array of top-level nodes.
+    // If there are two or more, they share a DocumentFragment
+    // parent.
+    var nodes = $.parseHTML(html);
+
+    return nodes;
+  },
 
   build: function () {
     var self = this;
@@ -18,6 +31,9 @@ Component({
       throw new Error("Component already built");
     if (self.stage !== Component.ADDED)
       throw new Error("Component must be added to a parent (or made a root) before building");
+
+    self._offscreenNodes = self._buildNodes();
+    self._built();
 
     // Do something like old `build`.
     //
@@ -79,5 +95,94 @@ Component({
     // that they didn't put there, e.g. if they call remove() on
     // the last component and then start inserting DOM nodes
     // manually.
+
+
+
+    // Don't ever create DocumentFragments because of jQuery's
+    // "safe fragment" workaround that we want to be sure to
+    // use.  It has to do with custom elements in IE 8 (and
+    // not 9?).  Document this with a link to the DOM quirk.
+
+    // # component.add(child)
+    //
+    // Adds `child` to this component in the parent/child
+    // hierarchy.
+    //
+    // Components must be assembled from "top to bottom."  Each
+    // component must either be added as a child of another,
+    // or made a root using `component.makeRoot()`, before
+    // it can receive its own children.  This ensures that
+    // every component already knows its parent when it is
+    // initialized.  A component's parent is permanent; the
+    // component cannot be removed or reparented without
+    // destroying it.
+    //
+    // The child is not attached to the DOM unless a further call
+    // to `child.attach` is made specifying where to put the child
+    // in the DOM.  The convenience methods
+    // `component.append(child)`, `prepend`, and `insert` will
+    // will both add the child if necessary and insert it into
+    // the DOM.
+    //
+    // Requires `component` is not destroyed.
+    //
+    // # component.remove([child])
+    //
+    // Removes `child` from this component's list of children,
+    // removes its nodes from the DOM (if it is built and attached),
+    // and destroys it.  If no child is given, removes `component`
+    // itself from its parent.
+    //
+    // If `child` is already destroyed, its DOM is left untouched.
+    // Components with destroyed children still attached are
+    // presumed to be in the process of being destroyed or rebuilt.
+    //
+    // If you want to just remove a component from the DOM but not
+    // remove it as a child or destroy it, use `child.detach()`.
+    //
+    // Requires `component` is not destroyed.
+    //
+    // Updates `start` and `end` and populates the component with
+    // a comment if it becomes empty.
+    //
+    // # component.attach(parentNode, [beforeNode])
+    //
+    // Requires `component` be parented and not attached.  Builds it
+    // if necessary, then plunks it in the DOM.
+    //
+    // If you want to move a Component in the DOM, detach it first
+    // and then attach it somewhere else.
+    //
+    // # component.append(childOrDom)
+    //
+    // childOrDom is a Component, or node, or HTML string,
+    // or array of elements (various things a la jQuery).
+    //
+    // Given `child`: It must be a child of this component or addable
+    // as one.  Builds it if necessary.  Attaches it at the end of
+    // this component.  Updates `start` and `end` of this component.
+    //
+    // # component.prepend(childOrDom)
+    //
+    // See append.
+    //
+    // # component.insert(childOrDom, before, parentNode)
+    //
+    // `before` is a Component or node.  parentNode is only used
+    // if `before` is null.  See append.
+    //
+    // # component.detach()
+    //
+    // Component must be built and attached.  Removes this component's
+    // DOM and puts it into an offscreen storage.  Updates the parent's
+    // `start` and `end` and populates it with a comment if it becomes
+    // empty.
+
+    // You are free to manipulate the DOM of your component, excluding
+    // the regions that belong to child components, though if you do it
+    // in ways other than calling the above methods, you are responsible
+    // for ensuring that `start` and `end` poing to the first and last
+    // *node or Component* at the top level of the component's DOM,
+    // and that the component does not become empty.
   }
 });

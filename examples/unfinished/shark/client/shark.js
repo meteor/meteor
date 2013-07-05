@@ -26,3 +26,24 @@ Template.item({
     console.log(this.getData());
   }
 });
+
+
+//Meteor.startup(function () {
+//  var body = document.body;
+//  var table = document.createElement("TABLE");
+//  TABLE = table;
+
+  /*var tr = document.createElement("TR");
+  var td = document.createElement("TD");
+  var hello = document.createTextNode("hello");
+  tr.appendChild(td);
+  td.appendChild(hello);
+  body.appendChild(table);
+  table.appendChild(tr);*/
+
+//  var frag = $.parseHTML("<tr><td>hello")[0].parentNode;
+//  console.log(frag.firstChild.nodeName);
+//  $(table).append(frag);
+//
+//  console.log(TABLE.rows.length);
+//});
