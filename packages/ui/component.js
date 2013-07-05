@@ -108,7 +108,7 @@ _.extend(Component.prototype, {
           var beforeNode = oldLastNode.nextSibling;
           DomUtils.extractRange(oldFirstNode, oldLastNode);
           parentNode.insertBefore(buildResult.fragment,
-                                  beforeNode);
+                                  beforeNode || null);
         } else {
           self._detachedContent = buildResult.fragment;
         }
@@ -180,7 +180,7 @@ _.extend(Component.prototype, {
     if (DomUtils.wrapFragmentForContainer(frag, parentNode))
       self.setBounds(frag.firstChild, frag.lastChild);
 
-    parentNode.insertBefore(frag, beforeNode);
+    parentNode.insertBefore(frag, beforeNode || null);
     self._detachedContent = null;
 
     self.isAttached = true;

@@ -159,10 +159,14 @@ _.extend(RenderBuffer.prototype, {
               wired: function () {
                 var self = this;
                 _.each(ann.data, function (v, k) {
-                  self.element.addEventListener(k, function (event) {
-                    event.name = v;
-                    self.component.dispatch(event);
-                  });
+                  if (self.element.addEventListener) {
+                    self.element.addEventListener(k, function (event) {
+                      event.name = v;
+                      self.component.dispatch(event);
+                    });
+                  } else {
+                    // XXX IE
+                  }
                 });
               }
             });
