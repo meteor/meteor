@@ -154,11 +154,14 @@ var PackageBundlingInfo = function (pkg, bundle) {
 };
 
 _.extend(PackageBundlingInfo.prototype, {
+  // Added to supress multiple warnings pr. extenstions
+  sourceHandlerWarnings: {},
+
   // Find the function that should be used to handle a source file
   // found in this package. We'll use handlers that are defined in
   // this package and in its immediate dependencies. ('extension'
   // should be the extension of the file without a leading dot.)
-  get_source_handler: function (extension) {
+  get_source_handlers: function (extension) {
     var self = this;
     var candidates = [];
 
@@ -178,14 +181,18 @@ _.extend(PackageBundlingInfo.prototype, {
     if (!candidates.length)
       return null;
 
-    if (candidates.length > 1)
+    if (candidates.length > 1 && typeof self.sourceHandlerWarnings[extension] === 'undefined') {
       // XXX improve error message (eg, name the packages involved)
       // and make it clear that it's not a global conflict, but just
       // among this package's dependencies
-      throw new Error("Conflict: two packages are both trying " +
+      console.log("Warning possible Conflict: two packages are both trying " +
                       "to handle ." + extension);
 
-    return candidates[0];
+      // Dont blow the whistle twice
+      self.sourceHandlerWarnings[extension] = true;
+    }
+
+    return candidates;
   },
 
   // opt {Object}
@@ -208,13 +215,15 @@ _.extend(PackageBundlingInfo.prototype, {
     // substr to remove the dot to translate between the with-dot world
     // of registered_extensions and the without dot world of
     // get_source_handler. This could use some API beautification.
-    var handler = ext && self.get_source_handler(ext.substr(1));
+    var handler = ext && self.get_source_handlers(ext.substr(1));
     if (handler) {
-      handler(self.bundle.api,
-              sourcePath,
-              path.join(self.pkg.serve_root, rel_path),
-              where,
-              opt);
+      for (var i = 0; i < handler.length; i++) {
+        handler[i](self.bundle.api,
+                sourcePath,
+                path.join(self.pkg.serve_root, rel_path),
+                where,
+                opt);
+      }
     } else {
       // If we don't have an extension handler, serve this file
       // as a static resource.
