@@ -545,11 +545,11 @@ _.extend(Meteor._LivedataConnection.prototype, {
     args.push({
       onReady: function () {
         ready = true;
-        f.return();
+        f['return']();
       },
       onError: function (e) {
         if (!ready)
-          f.throw(e);
+          f['throw'](e);
         else
           options && options.onLateError && options.onLateError(e);
       }
