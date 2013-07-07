@@ -63,7 +63,7 @@ var htmlToFragment = function (html) {
   // jQuery to actually do it because it has tricks to create a "safe"
   // fragment for HTML5 tags in IE <9.
 
-  var nodes = $.parseHTML(html);
+  var nodes = $.parseHTML(html) || [];
 
   var a, b;
 
@@ -106,9 +106,69 @@ Component({
   render: function (buf) {},
 
   _buildFragment: function () {
-    var html = "<hr>"; // this could be anything
+    var self = this;
 
-    return htmlToFragment(html);
+    var strs = [];
+    var randomString = Random.id();
+    var commentUid = 1;
+    var componentsToAttach = {};
+
+    self.render(function (/*args*/) {
+      for (var i = 0; i < arguments.length; i++) {
+        var arg = arguments[i];
+        if (typeof arg === 'string') {
+          strs.push(arg);
+        } else if (arg instanceof Component) {
+          var commentString = randomString + '_' + (commentUid++);
+          strs.push('<!--', commentString, '-->');
+          self.add(arg);
+          componentsToAttach[commentString] = arg;
+        } else {
+          throw new Error("Expected string or Component");
+        }
+      }
+    });
+
+    var html = strs.join('');
+
+    var frag = htmlToFragment(html);
+    var start = frag.firstChild;
+    var end = frag.lastChild;
+
+    // walk frag and replace comments with Components
+
+    var wireUpDOM = function (parent) {
+      var n = parent.firstChild;
+      while (n) {
+        var next = n.nextSibling;
+        if (n.nodeType === 8) { // COMMENT
+          var comp = componentsToAttach[n.nodeValue];
+          if (comp) {
+            if (parent === frag) {
+              if (n === frag.firstChild)
+                start = comp;
+              if (n === frag.lastChild)
+                end = comp;
+            }
+            comp.attach(parent, n);
+            parent.removeChild(n);
+          }
+        } else if (n.nodeType === 1) { // ELEMENT
+          // recurse through DOM
+          wireUpDOM(n);
+        }
+        n = next;
+      }
+    };
+
+    wireUpDOM(frag);
+
+    return {
+      fragment: frag,
+      // start and end will both be null if frag is empty
+      start: start,
+      end: end
+    };
   },
 
   build: function () {
@@ -120,13 +180,14 @@ Component({
     if (self.stage !== Component.ADDED)
       throw new Error("Component must be added to a parent (or made a root) before building");
 
-    var frag = self._buildFragment();
+    var info = self._buildFragment();
+    var frag = info.fragment;
     if (! frag.firstChild)
       frag.appendChild(createEmptyComment());
 
     self._offscreenFragment = frag;
-    self.start = frag.firstChild;
-    self.end = frag.lastChild;
+    self.start = info.start || frag.firstChild;
+    self.end = info.end || frag.lastChild;
 
     self._built();
   },
@@ -331,7 +392,7 @@ Component({
     } else {
       var nodes;
       if (typeof childOrDom === 'string') {
-        nodes = $.parseHTML(childOrDom);
+        nodes = $.parseHTML(childOrDom) || [];
       } else if (childOrDom.nodeType) {
         nodes = [childOrDom];
       } else if (typeof childOrDom.length === 'number' &&
