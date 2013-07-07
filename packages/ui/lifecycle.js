@@ -24,6 +24,12 @@ Component({
       throw new Error("Component has been destroyed; can't perform this operation");
   },
 
+  _requireBuilt: function () {
+    this._requireNotDestroyed();
+    if (this.stage !== Component.BUILT)
+      throw new Error("Component must be built into DOM to use this function");
+  },
+
   _added: function () {
     this._assertStage(Component.INITIAL);
     this.stage = Component.ADDED;
