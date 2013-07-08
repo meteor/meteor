@@ -71,7 +71,9 @@ _.extend(Meteor._SynchronousQueue.prototype, {
     }
 
     var fut = new Future;
-    self._taskHandles.push({task: task, future: fut});
+    self._taskHandles.push({task: Meteor.bindEnvironment(task, function (e) {
+      Meteor._debug("Exception from task:", e ? e.stack : e);
+    }), future: fut});
     self._scheduleRun();
     // Yield. We'll get back here after the task is run (and will throw if the
     // task throws).
