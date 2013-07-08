@@ -48,17 +48,11 @@ _UI.HTML = Component.extend({
 
 _UI.Counter = Component.extend({
   typeName: "Counter",
-  init: function () {
-    this._count = 0;
-    this.countDep = new Deps.Dependency;
-  },
-  count: function () {
-    this.countDep.depend();
-    return this._count;
+  fields: {
+    count: 0
   },
   increment: function () {
-    this._count++;
-    this.countDep.changed();
+    this.set('count', this.count() + 1);
   },
   render: function (buf) {
     var self = this;
@@ -74,6 +68,5 @@ _UI.Counter = Component.extend({
     self.$("div").on('click', function (evt) {
       self.increment();
     });
-    self.append("<div>foo</div>");
   }
 });

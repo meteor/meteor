@@ -601,5 +601,4 @@ Component({
 // - content()
 // - Spacebars compiler
 // - event maps
-// - fields
 // - preview HTML

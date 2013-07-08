@@ -17,6 +17,7 @@ Package.on_use(function (api) {
                  'lifecycle.js',
                  'tree.js',
                  'dom.js',
+                 'forms.js',
                  'components.js',
 
                  'component.js', 'renderbuffer.js',
