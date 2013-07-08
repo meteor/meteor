@@ -621,3 +621,4 @@ Component({
 // - Spacebars compiler
 // - event maps
 // - preview HTML
+// - Each for cursors, and for arrays
