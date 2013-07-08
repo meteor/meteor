@@ -221,7 +221,11 @@ Component({
   // build autorun, so it assumes it's already inside the appropriate
   // reactive computation.  Use `rebuild` which simply invalidates the
   // computation.
-  _rebuild: function (oldChildren) {
+  //
+  // `builtChildren` is a map of children that were added during
+  // the previous build (as opposed to at some other time, such as
+  // earlier from an `init` callback).
+  _rebuild: function (builtChildren) {
     var self = this;
 
     self._assertStage(Component.BUILT);
@@ -234,14 +238,21 @@ Component({
     var parentNode = B.parentNode;
     var nextNode = B.nextSibling || null;
 
-    if (oldChildren) {
+    // for efficiency, do a quick check to see if we've *ever*
+    // had children or if we are still using the prototype's
+    // empty object.
+    if (self.children !== UIComponent.prototype.children) {
       Deps.nonreactive(function () {
-        // kill children from last render
-        for (var k in oldChildren) {
-          var child = oldChildren[k];
-          // destroy first, then remove (which doesn't affect DOM)
-          child.destroy();
-          self.remove(child);
+        // kill children from last render, and also any
+        // attached children
+        var children = self.children;
+        for (var k in children) {
+          var child = children[k];
+          if (child.isAttached || builtChildren[k]) {
+            // destroy first, then remove (which doesn't affect DOM)
+            child.destroy();
+            self.remove(child);
+          }
         }
       });
     }
@@ -254,6 +265,9 @@ Component({
     $(oldNodes).remove();
 
     var div = makeSafeDiv();
+    // set `self.start` to null so that calls to `attach` from
+    // `_populate` don't try to do start/end pointer logic.
+    self.start = self.end = null;
     var info = self._populate(div);
     if (! div.firstChild)
       div.appendChild(createEmptyComment());
@@ -302,8 +316,13 @@ Component({
 
     var parent = self.parent;
     // We could be a root (and have no parent).  Parent could
-    // theoretically be destroyed, or not yet built.
-    if (parent && parent.stage === Component.BUILT) {
+    // theoretically be destroyed, or not yet built (if we
+    // are currently building).
+    // We use a falsy `parent.start` as a cue that this is a
+    // rebuild and we should also skip the start/end adjustment
+    // logic.
+    if (parent && parent.stage === Component.BUILT &&
+        parent.start) {
       if (parent.isEmpty()) {
         var comment = parent.start;
         parent.start = parent.end = self;
