@@ -13,9 +13,8 @@ StarTranslator = {};
 StarTranslator.maybeTranslate = function (bundlePath, translatedPath) {
   var self = this;
   if (path.resolve(bundlePath) !== path.resolve(translatedPath)) {
-    var fut = new Future();
-    ncp(bundlePath, translatedPath, fut.resolver());
-    fut.wait();
+    var _ncp = Meteor._wrapAsync(ncp);
+    _ncp(bundlePath, translatedPath);
   }
 
   try {

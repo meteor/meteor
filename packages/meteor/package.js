@@ -35,7 +35,7 @@ Package.on_use(function (api, where) {
 });
 
 Package.on_test(function (api) {
-  api.use(['underscore', 'tinytest']);
+  api.use(['underscore', 'tinytest', 'test-helpers']);
 
   api.add_files('client_environment_test.js', 'client');
   api.add_files('server_environment_test.js', 'server');
@@ -44,6 +44,7 @@ Package.on_test(function (api) {
   api.add_files('dynamics_test.js', ['client', 'server']);
 
   api.add_files('fiber_helpers_test.js', ['server']);
+  api.add_files('wrapasync_test.js', ['server']);
 
   api.add_files('url_tests.js', ['client', 'server']);
 
