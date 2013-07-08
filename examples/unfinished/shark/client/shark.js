@@ -47,3 +47,42 @@ Template.item({
 //
 //  console.log(TABLE.rows.length);
 //});
+
+Span = UIComponent.extend({
+  render: function (buf) {
+    buf("<span style='background:red;margin:5px'>Hello</span>");
+  }
+});
+
+Div = UIComponent.extend({
+  render: function (buf) {
+    buf("<div style='background:blue;margin:5px'>World</div>");
+  }
+});
+
+Either = UIComponent.extend({
+  render: function (buf) {
+    buf(Div.create(),
+        {
+          type: function () { return window[Session.get('which')]; },
+          args: {
+            built: function () {
+              var self = this;
+              self.$("*").on('click', function (evt) {
+                Session.set(
+                  'which',
+                  Session.get('which') === 'Div' ? 'Span' : 'Div');
+              });
+            }
+          }
+        },
+        { type: Span });
+  }
+});
+
+Meteor.startup(function () {
+  Session.set('which', 'Span');
+
+  var x = Either.create({isRoot: true});
+  x.attach(document.body);
+});

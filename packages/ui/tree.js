@@ -132,6 +132,12 @@ Component({
     self._added();
   },
 
+  hasChild: function (comp) {
+    this._requireNotDestroyed();
+
+    return this.children[comp.guid] === comp;
+  },
+
   extendHooks: {
     isRoot: function (value) {
       if (value)

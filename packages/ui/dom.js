@@ -94,33 +94,16 @@ Component({
   _populate: function (div) {
     var self = this;
 
-    var strs = [];
-    var randomString = Random.id();
-    var commentUid = 1;
-    var componentsToAttach = {};
+    var buf = makeRenderBuffer(self);
+    self.render(buf);
 
-    self.render(function (/*args*/) {
-      for (var i = 0; i < arguments.length; i++) {
-        var arg = arguments[i];
-        if (typeof arg === 'string') {
-          strs.push(arg);
-        } else if (arg instanceof Component) {
-          var commentString = randomString + '_' + (commentUid++);
-          strs.push('<!--', commentString, '-->');
-          self.add(arg);
-          componentsToAttach[commentString] = arg;
-        } else {
-          throw new Error("Expected string or Component");
-        }
-      }
-    });
-
-    var html = strs.join('');
+    var html = buf.getHtml();
 
     $(div).append(html);
     var start = div.firstChild;
     var end = div.lastChild;
 
+    var componentsToAttach = buf.componentsToAttach;
     // walk div and replace comments with Components
 
     var wireUpDOM = function (parent) {
@@ -182,6 +165,7 @@ Component({
 
       if (c.firstRun) {
         var div = makeSafeDiv();
+        // capture reactivity:
         var info = self._populate(div);
 
         if (! div.firstChild)
@@ -191,6 +175,7 @@ Component({
         self.start = info.start || div.firstChild;
         self.end = info.end || div.lastChild;
       } else {
+        // capture reactivity:
         self._rebuild(c.builtChildren);
       }
 
@@ -593,6 +578,38 @@ Component({
     self._computations.push(c);
 
     return c;
+  },
+
+  replaceChild: function (oldChild, newChild) {
+    var self = this;
+
+    self._requireBuilt();
+    oldChild._requireBuilt();
+    if (! oldChild.isAttached)
+      throw new Error("Child to replace must be attached");
+
+    var lastNode = oldChild.lastNode();
+    var parentNode = lastNode.parentNode;
+    var nextNode = lastNode.nextSibling;
+
+    oldChild.remove();
+    self.insertBefore(newChild, nextNode, parentNode);
+  },
+
+  swapChild: function (oldChild, newChild) {
+    var self = this;
+
+    self._requireBuilt();
+    oldChild._requireBuilt();
+    if (! oldChild.isAttached)
+      throw new Error("Child to swap out must be attached");
+
+    var lastNode = oldChild.lastNode();
+    var parentNode = lastNode.parentNode;
+    var nextNode = lastNode.nextSibling;
+
+    oldChild.detach();
+    self.insertBefore(newChild, nextNode, parentNode);
   }
 
   // If Component is ever emptied, it gets an empty comment node.
