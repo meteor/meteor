@@ -74,5 +74,6 @@ _UI.Counter = Component.extend({
     self.$("div").on('click', function (evt) {
       self.increment();
     });
+    self.append("<div>foo</div>");
   }
 });

@@ -483,7 +483,7 @@ Component({
       }
 
       if (nodes.length) {
-        insertNodesBefore(nodes, before, parentNode);
+        insertNodesBefore(nodes, parentNode, before);
 
         if (self.isEmpty()) {
           var comment = self.start;
