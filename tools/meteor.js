@@ -139,8 +139,9 @@ Fiber(function () {
       tunnel.waitConnected();
       context.galaxy = galaxyContext;
     } else if (deployEndpoint) {
-      galaxyContext.galaxyUrl = deployEndpoint;
-      galaxyContext.adminBaseUrl = process.env.GALAXY + "/";
+      tunnel = null;
+      galaxyContext.url = deployEndpoint + "/ultraworld";
+      galaxyContext.adminBaseUrl = deployEndpoint + "/";
       context.galaxy = galaxyContext;
     }
   };
