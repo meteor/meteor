@@ -201,7 +201,7 @@ var writeCallback = function (write, refresh, callback) {
     write.committed();
     if (callback)
       callback(err, result);
-    else
+    else if (err)
       throw err;
   }, function (err) {
     Meteor._debug("Error in Mongo write:", err.stack);
