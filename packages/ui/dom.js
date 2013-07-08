@@ -54,28 +54,13 @@ var insertNodesBefore = function (nodes, parentNode, beforeNode) {
   }
 };
 
-var htmlToFragment = function (html) {
-  // When jQuery parses HTML into an array of nodes, the nodes all
-  // tend to reside in a DocumentFragment if there are two or more
-  // of them, but no fragment is created if there are 0 or 1.
-  //
-  // If we need to create a DocumentFragment ourselves, we still want
-  // jQuery to actually do it because it has tricks to create a "safe"
+var makeSafeDiv = function () {
+  // create a DIV in a DocumentFragment, where the DocumentFragment
+  // is created by jQuery, which uses tricks to create a "safe"
   // fragment for HTML5 tags in IE <9.
-
-  var nodes = $.parseHTML(html) || [];
-
-  var a, b;
-
-  if (nodes.length === 0) {
-    return $.buildFragment([], document);
-  } else if ((a = nodes[0].parentNode) && a.nodeType === 11 &&
-             (b = nodes[nodes.length - 1]) && b.nodeType === 11 &&
-             a === b) {
-    return a;
-  } else {
-    return $.buildFragment(nodes, nodes[0].ownerDocument);
-  }
+  var div = document.createElement("DIV");
+  var frag = $.buildFragment([div], document);
+  return div;
 };
 
 Component({
@@ -100,12 +85,13 @@ Component({
 
   isAttached: false,
 
-  // DocumentFragment (if component is BUILT and not attached).
-  _offscreenFragment: null,
+  // DIV holding offscreen content (if component is BUILT and not attached).
+  // It's a DIV rather than a fragment so that jQuery can run against it.
+  _offscreen: null,
 
   render: function (buf) {},
 
-  _buildFragment: function () {
+  _populate: function (div) {
     var self = this;
 
     var strs = [];
@@ -131,11 +117,11 @@ Component({
 
     var html = strs.join('');
 
-    var frag = htmlToFragment(html);
-    var start = frag.firstChild;
-    var end = frag.lastChild;
+    $(div).append(html);
+    var start = div.firstChild;
+    var end = div.lastChild;
 
-    // walk frag and replace comments with Components
+    // walk div and replace comments with Components
 
     var wireUpDOM = function (parent) {
       var n = parent.firstChild;
@@ -144,10 +130,10 @@ Component({
         if (n.nodeType === 8) { // COMMENT
           var comp = componentsToAttach[n.nodeValue];
           if (comp) {
-            if (parent === frag) {
-              if (n === frag.firstChild)
+            if (parent === div) {
+              if (n === div.firstChild)
                 start = comp;
-              if (n === frag.lastChild)
+              if (n === div.lastChild)
                 end = comp;
             }
             comp.attach(parent, n);
@@ -162,7 +148,7 @@ Component({
       }
     };
 
-    wireUpDOM(frag);
+    wireUpDOM(div);
 
     // We should have attached all specified components, but
     // if the comments we generated somehow didn't turn into
@@ -172,8 +158,7 @@ Component({
       componentsToAttach[k].destroy();
 
     return {
-      fragment: frag,
-      // start and end will both be null if frag is empty
+      // start and end will both be null if div is empty
       start: start,
       end: end
     };
@@ -196,22 +181,22 @@ Component({
         (oldChildren || (oldChildren = {}))[k] = true;
 
       if (c.firstRun) {
-        var info = self._buildFragment();
+        var div = makeSafeDiv();
+        var info = self._populate(div);
 
-        var frag = info.fragment;
-        if (! frag.firstChild)
-          frag.appendChild(createEmptyComment());
+        if (! div.firstChild)
+          div.appendChild(createEmptyComment());
 
-        self._offscreenFragment = frag;
-        self.start = info.start || frag.firstChild;
-        self.end = info.end || frag.lastChild;
+        self._offscreen = div;
+        self.start = info.start || div.firstChild;
+        self.end = info.end || div.lastChild;
       } else {
         self._rebuild(c.builtChildren);
       }
 
       var newChildren = null;
       for (var k in self.children)
-        if (! oldChildren[k])
+        if (! (oldChildren && oldChildren[k]))
           (newChildren || (newChildren = {}))[k] = self.children[k];
 
       c.builtChildren = newChildren;
@@ -242,7 +227,7 @@ Component({
     self._assertStage(Component.BUILT);
 
     // Should work whether this component is detached or attached!
-    // In other words, it may reside in a DocumentFragment.
+    // In other words, it may reside in an offscreen element.
 
     var A = self.firstNode();
     var B = self.lastNode();
@@ -268,14 +253,14 @@ Component({
 
     $(oldNodes).remove();
 
-    var info = self._buildFragment();
-    var frag = info.fragment;
-    if (! frag.firstChild)
-      frag.appendChild(createEmptyComment());
+    var div = makeSafeDiv();
+    var info = self._populate(div);
+    if (! div.firstChild)
+      div.appendChild(createEmptyComment());
 
-    self.start = info.start || frag.firstChild;
-    self.end = info.end || frag.lastChild;
-    insertNodesBefore(frag.childNodes, parentNode, nextNode);
+    self.start = info.start || div.firstChild;
+    self.end = info.end || div.lastChild;
+    insertNodesBefore(div.childNodes, parentNode, nextNode);
   },
 
   // # component.attach(parentNode, [beforeNode])
@@ -309,10 +294,10 @@ Component({
       throw new Error("second argument to attach must be a Node" +
                       " if given");
 
-    insertNodesBefore(self._offscreenFragment.childNodes,
+    insertNodesBefore(self._offscreen.childNodes,
                       parentNode, beforeNode);
 
-    self._offscreenFragment = null;
+    self._offscreen = null;
     self.isAttached = true;
 
     var parent = self.parent;
@@ -387,11 +372,12 @@ Component({
       nodes.push(n);
     nodes.push(B);
 
-    // Put nodes into a DocumentFragment created by jQuery, preserving
+    // Move nodes into an offscreen div, preserving
     // any event handlers and data associated with the nodes.
-    var frag = $.buildFragment(nodes, nodes[0].ownerDocument);
+    var div = makeSafeDiv();
+    $(div).append(nodes);
 
-    self._offscreenFragment = frag;
+    self._offscreen = dov;
     self.isAttached = false;
 
     self.detached();
@@ -415,8 +401,8 @@ Component({
 
   destroyed: function () {
     // clean up any data associated with offscreen nodes
-    if (this._offscreenFragment)
-      $.cleanData(this._offscreenFragment.childNodes);
+    if (this._offscreen)
+      $.cleanData(this._offscreen.childNodes);
 
     // stop all computations (rebuilding and comp.autorun)
     var comps = this._computations;

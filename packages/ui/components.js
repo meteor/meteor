@@ -28,7 +28,7 @@ var encodeEntities = function (text, isQuoted) {
 _UI.Text = Component.extend({
   _encodeEntities: encodeEntities,
   _stringify: function (x) {
-    return String(x || '');
+    return String(x == null ? '' : x);
   },
   render: function (buf) {
     var data = this.data();
@@ -38,10 +38,41 @@ _UI.Text = Component.extend({
 
 _UI.HTML = Component.extend({
   _stringify: function (x) {
-    return String(x || '');
+    return String(x == null ? '' : x);
   },
   render: function (buf) {
     var data = this.data();
     buf(this._stringify(data));
+  }
+});
+
+_UI.Counter = Component.extend({
+  typeName: "Counter",
+  init: function () {
+    this._count = 0;
+    this.countDep = new Deps.Dependency;
+  },
+  count: function () {
+    this.countDep.depend();
+    return this._count;
+  },
+  increment: function () {
+    this._count++;
+    this.countDep.changed();
+  },
+  render: function (buf) {
+    var self = this;
+
+    buf("<div style='background:yellow'>",
+        new _UI.Text(function () {
+          return self.count();
+        }),
+        "</div>");
+  },
+  built: function () {
+    var self = this;
+    self.$("div").on('click', function (evt) {
+      self.increment();
+    });
   }
 });
