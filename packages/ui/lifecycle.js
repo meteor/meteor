@@ -37,7 +37,6 @@ Component({
   },
 
   _built: function () {
-    this._assertStage(Component.ADDED);
     this.stage = Component.BUILT;
     this.built();
   },

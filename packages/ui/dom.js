@@ -152,6 +152,7 @@ Component({
             }
             comp.attach(parent, n);
             parent.removeChild(n);
+            delete componentsToAttach[n.nodeValue];
           }
         } else if (n.nodeType === 1) { // ELEMENT
           // recurse through DOM
@@ -162,6 +163,13 @@ Component({
     };
 
     wireUpDOM(frag);
+
+    // We should have attached all specified components, but
+    // if the comments we generated somehow didn't turn into
+    // comments (due to bad HTML) we won't have found them,
+    // in which case we clean them up here just to be safe.
+    for (var k in componentsToAttach)
+      componentsToAttach[k].destroy();
 
     return {
       fragment: frag,
@@ -180,16 +188,94 @@ Component({
     if (self.stage !== Component.ADDED)
       throw new Error("Component must be added to a parent (or made a root) before building");
 
+    self._rebuilder = self.autorun(function (c) {
+      // record set of children that existed before,
+      // or null (for efficiency)
+      var oldChildren = null;
+      for (var k in self.children)
+        (oldChildren || (oldChildren = {}))[k] = true;
+
+      if (c.firstRun) {
+        var info = self._buildFragment();
+
+        var frag = info.fragment;
+        if (! frag.firstChild)
+          frag.appendChild(createEmptyComment());
+
+        self._offscreenFragment = frag;
+        self.start = info.start || frag.firstChild;
+        self.end = info.end || frag.lastChild;
+      } else {
+        self._rebuild(c.builtChildren);
+      }
+
+      var newChildren = null;
+      for (var k in self.children)
+        if (! oldChildren[k])
+          (newChildren || (newChildren = {}))[k] = self.children[k];
+
+      c.builtChildren = newChildren;
+
+      Deps.nonreactive(function () {
+        self._built();
+      });
+    });
+  },
+
+  // Components normally reactively rebuild.  This method is only to
+  // be used if you need to manually trigger a rebuild for some
+  // reason.
+  rebuild: function () {
+    this._requireBuilt();
+
+    if (this._rebuilder)
+      this._rebuilder.invalidate();
+  },
+
+  // Don't call this directly.  It implements the re-run of the
+  // build autorun, so it assumes it's already inside the appropriate
+  // reactive computation.  Use `rebuild` which simply invalidates the
+  // computation.
+  _rebuild: function (oldChildren) {
+    var self = this;
+
+    self._assertStage(Component.BUILT);
+
+    // Should work whether this component is detached or attached!
+    // In other words, it may reside in a DocumentFragment.
+
+    var A = self.firstNode();
+    var B = self.lastNode();
+    var parentNode = B.parentNode;
+    var nextNode = B.nextSibling || null;
+
+    if (oldChildren) {
+      Deps.nonreactive(function () {
+        // kill children from last render
+        for (var k in oldChildren) {
+          var child = oldChildren[k];
+          // destroy first, then remove (which doesn't affect DOM)
+          child.destroy();
+          self.remove(child);
+        }
+      });
+    }
+
+    var oldNodes = [];
+    for (var n = A; n !== B; n = n.nextSibling)
+      oldNodes.push(n);
+    oldNodes.push(B);
+
+    $(oldNodes).remove();
+
     var info = self._buildFragment();
     var frag = info.fragment;
     if (! frag.firstChild)
       frag.appendChild(createEmptyComment());
 
-    self._offscreenFragment = frag;
     self.start = info.start || frag.firstChild;
     self.end = info.end || frag.lastChild;
-
-    self._built();
+    insertNodesBefore(frag.childNodes, parentNode, nextNode);
   },
 
   // # component.attach(parentNode, [beforeNode])
@@ -331,6 +417,12 @@ Component({
     // clean up any data associated with offscreen nodes
     if (this._offscreenFragment)
       $.cleanData(this._offscreenFragment.childNodes);
+
+    // stop all computations (rebuilding and comp.autorun)
+    var comps = this._computations;
+    if (comps)
+      for (var i = 0; i < comps.length; i++)
+        comps[i].stop();
   },
 
 
@@ -483,19 +575,20 @@ Component({
     }
 
     return results;
-  }
+  },
 
-  // Reactive building:
-  //
-  // * Perhaps factor out into a `_rebuild` method.
-  //   - Destroys, then removes, each child
-  // * There should be some natural way for the autorun
-  //   to die with the Component.  One solution is to
-  //   have `self.autorun`, which performs an autorun
-  //   that stops when the component is destroyed.  Note
-  //   that autoruns nested inside the `build` autorun
-  //   will (additionally) stop on rebuild, as they
-  //   should.
+  autorun: function (compFunc) {
+    var self = this;
+
+    self._requireNotDestroyed();
+
+    var c = Deps.autorun(compFunc);
+
+    self._computations = self._computations || [];
+    self._computations.push(c);
+
+    return c;
+  }
 
   // If Component is ever emptied, it gets an empty comment node.
   // This case is treated specially and the comment is removed
