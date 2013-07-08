@@ -593,3 +593,13 @@ Component({
   // *node or Component* at the top level of the component's DOM,
   // and that the component does not become empty.
 });
+
+
+// Next up:
+//
+// - reactive attributes
+// - content()
+// - Spacebars compiler
+// - event maps
+// - fields
+// - preview HTML
