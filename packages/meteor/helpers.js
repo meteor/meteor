@@ -79,7 +79,7 @@ _.extend(Meteor, {
       var logErr = function (err) {
         if (err)
           return Meteor._debug("Exception in callback of async function",
-                               err.stack);
+                               err ? err.stack : err);
       };
 
       // Pop off optional args that are undefined
