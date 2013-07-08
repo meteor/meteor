@@ -1,3 +1,4 @@
+// @export _UI
 _UI = {
   nextGuid: 1
 };
@@ -21,21 +22,34 @@ var constrImpl = function (ths, args, type) {
       type._superSealed = "instantiated";
 
     var options = args[0];
+
+    // support `(dataFunc[, options])` args
+    var dataFunc = null;
+    if (typeof options === 'function') {
+      dataFunc = options;
+      options = args[1];
+    }
+
+    var specialOptions = false;
+
     if (options) {
-      var specialOptions = false;
       for (var k in options) {
         if (type._extendHooks[k]) {
           specialOptions = true;
           break;
         }
       }
-      if (specialOptions) {
-        // create a subtype
-        return type.extend(options).create();
-      } else {
-        // don't create a subtype (faster)
+    }
+
+    if (specialOptions) {
+      // create a subtype
+      return type.extend(options).create(dataFunc);
+    } else {
+      // don't create a subtype (faster)
+      if (options)
         _extend(ths, options);
-      }
+      if (dataFunc)
+        ths.data = dataFunc;
     }
 
     ths.guid = _UI.nextGuid++;
@@ -135,22 +149,32 @@ _extend(Component, {
   },
   // must be exported for absolute access from `extend`
   _constrImpl: constrImpl,
-  create: function (options) {
-    return new this(options);
+  create: function (dataFunc, options) {
+    return new this(dataFunc, options);
   },
   augment: function (options) {
     var type = this;
+
+    // Note: We avoid calling `delete options.foo` even if it's
+    // convenient so that we don't mutate the `options` object,
+    // which might be used more than once.
 
     if ((!options) || typeof options !== 'object')
       throw new Error("Options object required to augment type");
 
     // handle 'extend' first
-    if ('extend' in options) {
+    if ('extend' in options)
       type._extendHooks.extend(options.extend, 'extend');
-      delete options.extend;
-    }
 
     for (var optKey in options) {
+      if (optKey === 'extend')
+        continue;
+      // Don't put typeName on the proto; it goes on the type constructor.
+      // When we're called from `extend`, typeName has already been
+      // taken care of.  When we're called directly, we silently drop it.
+      if (optKey === 'typeName')
+        continue;
+
       var optValue = options[optKey];
 
       var hook = type._extendHooks[optKey];
@@ -172,6 +196,10 @@ _extend(Component, {
   extend: function (options) {
     var superType = this;
 
+    // Note: We avoid calling `delete options.foo` even if it's
+    // convenient so that we don't mutate the `options` object,
+    // which might be used more than once.
+
     if (! superType._superSealed)
       superType._superSealed = "extended";
 
@@ -179,7 +207,6 @@ _extend(Component, {
     if (options && options.typeName) {
       typeName = String(options.typeName).replace(
           /^[^a-zA-Z_]|[^a-zA-Z_0-9]/g, '') || typeName;
-      delete options.typeName;
     }
 
     var newType = Function(
@@ -208,7 +235,10 @@ _extend(Component, {
   isType: isComponentType
 });
 
-Component({ constructed: function () {} });
+Component({
+  constructed: function () {},
+  data: function () { return null; }
+});
 
 // @export UIComponent
 UIComponent = Component;

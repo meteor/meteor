@@ -17,6 +17,7 @@ Package.on_use(function (api) {
                  'lifecycle.js',
                  'tree.js',
                  'build.js',
+                 'components.js',
 
                  'component.js', 'renderbuffer.js',
                  'library.js'],
