@@ -250,10 +250,9 @@ exports.logs = function (options) {
     logsSubscription = logReader.subscribe("logsForApp", options.app,
                       {streaming: options.streaming, resumeAfterId: lastLogId});
   };
-  logsSubscription = prettySub(logReader, "logsForApp", [options.app,
-                                      {streaming: options.streaming}], {
-    "no-such-app": "No such app: " + options.app
-  });
+  logsSubscription = prettySub(logReader, "logsForApp",
+                               [options.app, {streaming: options.streaming}],
+                               {"no-such-app": "No such app: " + options.app});
 
   // if streaming is needed there is no point in closing connection
   if (!options.streaming) {
