@@ -343,7 +343,8 @@ Fiber(function () {
       var cmd = argv._.splice(0, 1)[0];
       switch (cmd) {
       case "configure":
-        console.log("Visit http://localhost:" + context.galaxy.galaxyPort + "/panel to configure your galaxy");
+        prepareForGalaxy(null, context, argv);
+        console.log("Visit http://localhost:" + context.galaxy.port + "/panel to configure your galaxy");
         Fiber.yield();
         break;
       default:
