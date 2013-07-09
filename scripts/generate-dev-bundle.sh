@@ -109,7 +109,7 @@ npm install tar@0.1.14
 npm install kexec@0.1.1
 npm install shell-quote@0.0.1
 npm install byline@2.0.3
-npm install source-map@0.1.22
+npm install source-map@0.1.24
 
 # Fork of node-source-map-support which allows us to specify our own
 # retrieveSourceMap function.
