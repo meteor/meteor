@@ -154,14 +154,15 @@ var Slice = function (pkg, options) {
   // Are we allowed to have exports?  (eg, test slices don't export.)
   self.noExports = !!options.noExports;
 
-  // Prelink output. 'boundary' is a magic cookie used for inserting
-  // imports. 'prelinkFiles' is the partially linked JavaScript code
-  // (an array of objects with keys 'source' and 'servePath', both
-  // strings -- see prelink() in linker.js) Both of these are inputs
-  // into the final link phase, which inserts the final JavaScript
-  // resources into 'resources'. Set only when isBuilt is true.
-  self.boundary = null;
+  // Prelink output. 'prelinkFiles' is the partially linked JavaScript code (an
+  // array of objects with keys 'source' and 'servePath', both strings -- see
+  // prelink() in linker.js) 'packageScopeVariables' are are variables that are
+  // syntactically globals in our input files and which we capture with a
+  // package-scope closure. Both of these are inputs into the final link phase,
+  // which inserts the final JavaScript resources into 'resources'. Set only
+  // when isBuilt is true.
   self.prelinkFiles = null;
+  self.packageScopeVariables = null;
 
   // All of the data provided for eventual inclusion in the bundle,
   // other than JavaScript that still needs to be fed through the
@@ -207,7 +208,7 @@ _.extend(Slice.prototype, {
   // through the appropriate handlers and run the prelink phase on any
   // resulting JavaScript. Also add all provided source files to the
   // package dependencies. Sets fields such as dependencies, exports,
-  // boundary, prelinkFiles, and resources.
+  // prelinkFiles, packageScopeVariables, and resources.
   build: function () {
     var self = this;
     var isApp = ! self.pkg.name;
@@ -466,8 +467,6 @@ _.extend(Slice.prototype, {
       combinedServePath: isApp ? null :
         "/packages/" + self.pkg.name +
         (self.sliceName === "main" ? "" : ("." + self.sliceName)) + ".js",
-      // XXX report an error if there is a package called global-imports
-      importStubServePath: '/packages/global-imports.js',
       name: self.pkg.name || null,
       forceExport: self.forceExport,
       noExports: self.noExports,
@@ -491,8 +490,8 @@ _.extend(Slice.prototype, {
     });
 
     self.prelinkFiles = results.files;
-    self.boundary = results.boundary;
     self.exports = results.exports;
+    self.packageScopeVariables = results.packageScopeVariables;
     self.resources = resources;
     self.isBuilt = true;
   },
@@ -546,8 +545,12 @@ _.extend(Slice.prototype, {
     var files = linker.link({
       imports: imports,
       useGlobalNamespace: isApp,
+      // XXX report an error if there is a package called global-imports
+      importStubServePath: isApp && '/packages/global-imports.js',
       prelinkFiles: self.prelinkFiles,
-      boundary: self.boundary
+      exports: self.exports,
+      packageScopeVariables: self.packageScopeVariables,
+      name: self.pkg.name || null
     });
 
     // Add each output as a resource
@@ -1874,7 +1877,7 @@ _.extend(Package.prototype, {
 
       slice.isBuilt = true;
       slice.exports = sliceJson.exports || [];
-      slice.boundary = sliceJson.boundary;
+      slice.packageScopeVariables = sliceJson.packageScopeVariables || [];
       slice.prelinkFiles = [];
       slice.resources = [];
 
@@ -1968,7 +1971,7 @@ _.extend(Package.prototype, {
 
       var buildInfoJson = {
         dependencies: { files: {}, directories: {} },
-        source: options.buildOfPath || undefined,
+        source: options.buildOfPath || undefined
       };
 
       builder.reserve("unipackage.json");
@@ -2011,6 +2014,7 @@ _.extend(Package.prototype, {
         var sliceJson = {
           format: "unipackage-slice-pre1",
           exports: slice.exports,
+          packageScopeVariables: slice.packageScopeVariables,
           uses: _.map(slice.uses, function (u) {
             var specParts = u.spec.split('.');
             if (specParts.length > 2)
@@ -2024,7 +2028,6 @@ _.extend(Package.prototype, {
           }),
           node_modules: slice.nodeModulesPath ? 'npm/node_modules' : undefined,
           resources: [],
-          boundary: slice.boundary,
           staticDirectory: path.join(sliceDir, self.serveRoot)
         };
 

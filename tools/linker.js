@@ -10,21 +10,6 @@ var packageDot = function (name) {
     return "Package['" + name + "']";
 };
 
-var generateBoundary = function () {
-  // In a perfect world we would call Packages.random.Random.id().
-  // But we can't do that this is part of the code that is used to
-  // compile and load packages. So let it slide for now and provide a
-  // version based on (the completely non-cryptographic) Math.random,
-  // which is good enough for this particular application.
-  var alphabet = "23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz";
-  var digits = [];
-  for (var i = 0; i < 17; i++) {
-    var index = Math.floor(Math.random() * alphabet.length);
-    digits[i] = alphabet.substr(index, 1);
-  }
-  return "__imports_" + digits.join("") + "__";
-};
-
 ///////////////////////////////////////////////////////////////////////////////
 // Module
 ///////////////////////////////////////////////////////////////////////////////
@@ -40,9 +25,6 @@ var Module = function (options) {
 
   // files in the module. array of File
   self.files = [];
-
-  // boundary to use to mark where import should go in final phase
-  self.boundary = generateBoundary();
 
   // options
   self.forceExport = options.forceExport || [];
@@ -88,13 +70,13 @@ _.extend(Module.prototype, {
   // and see what your globals are. Probably this means we need to
   // move the emission of the Package-scope Variables section (but not
   // the actual static analysis) to the final phase.
-  computeModuleScopedVars: function () {
+  computeModuleScopeVars: function () {
     var self = this;
 
     if (!self.jsAnalyze) {
       // We don't have access to static analysis, probably because we *are* the
       // js-analyze package.  Let's do a stupid heuristic: any exports that have
-      // no dots are module scoped vars. (This works for
+      // no dots are module scope vars. (This works for
       // js-analyze.JSAnalyze...)
       return _.filter(self.getExports(), function (e) {
         return e.indexOf('.') === -1;
@@ -108,7 +90,7 @@ _.extend(Module.prototype, {
     });
     globalReferences = _.uniq(globalReferences);
 
-    return globalReferences;
+    return _.isEmpty(globalReferences) ? undefined : globalReferences;
   },
 
   // Output is a list of objects with keys 'source', 'servePath',
@@ -117,7 +99,7 @@ _.extend(Module.prototype, {
   getPrelinkedFiles: function () {
     var self = this;
 
-    if (! self.files.length && ! self.useGlobalNamespace)
+    if (! self.files.length)
       return [];
 
     var moduleExports = self.getExports();
@@ -126,12 +108,7 @@ _.extend(Module.prototype, {
     // then our job is much simpler. And we can get away with
     // preserving the line numbers.
     if (self.useGlobalNamespace) {
-      var ret = [{
-        source: self.boundary,
-        servePath: self.importStubServePath
-      }];
-
-      return ret.concat(_.map(self.files, function (file) {
+      return _.map(self.files, function (file) {
         var node = file.getPrelinkedOutput({ preserveLineNumbers: true,
                                              exports: moduleExports });
         var results = node.toStringWithSourceMap({
@@ -147,7 +124,7 @@ _.extend(Module.prototype, {
           sourceMap: results.map,
           sources: sources
         };
-      }));
+      });
     }
 
     // Otherwise..
@@ -156,30 +133,18 @@ _.extend(Module.prototype, {
     // comments that will be emitted when we skip a unit.
     var sourceWidth = _.max([68, self.maxLineLength(120 - 2)]) + 3;
 
-    // Figure out which variables are module scope
-    var moduleScopedVars = self.computeModuleScopedVars();
-
     // Prologue
     var chunks = [];
-    chunks.push("(function () {\n\n" + self.boundary);
-
-    if (moduleScopedVars.length) {
-      chunks.push("/* Package-scope variables */\n");
-      chunks.push("var " + moduleScopedVars.join(', ') + ";\n\n");
-    }
 
     // Emit each file
     var sources = {};
     _.each(self.files, function (file) {
+      if (!_.isEmpty(chunks))
+        chunks.push("\n\n\n\n\n\n");
       chunks.push(file.getPrelinkedOutput({ sourceWidth: sourceWidth,
                                             exports: moduleExports }));
-      chunks.push("\n");
       file.addToSourcesSet(sources);
     });
-
-    // Epilogue
-    chunks.push(self.getExportCode());
-    chunks.push("\n})();");
 
     var node = new sourcemap.SourceNode(null, null, null, chunks);
     var results = node.toStringWithSourceMap({
@@ -209,45 +174,7 @@ _.extend(Module.prototype, {
     });
 
     return _.union(_.keys(exports), self.forceExport);
-  },
-
-  // Return code that saves our exports to Package.packagename.foo.bar
-  getExportCode: function () {
-    var self = this;
-    if (! self.name)
-      return "";
-    // If we're a no-exports module, then we have no export code (not even
-    // creating Package.foo).
-    if (self.noExports)
-      return "";
-    if (self.useGlobalNamespace)
-      // Haven't thought about this case. When would this happen?
-      throw new Error("Not implemented: exports from global namespace");
-
-    var buf = "/* Exports */\n";
-    buf += "if (typeof Package === 'undefined') Package = {};\n";
-    buf += packageDot(self.name) + " = ";
-
-    var exports = self.getExports();
-    // Even if there are no exports, we need to define Package.foo, because the
-    // existence of Package.foo is how another package (eg, one that weakly
-    // depends on foo) can tell if foo is loaded.
-    if (exports.length === 0)
-      return buf + "{};\n";
-
-    // Given exports like Foo, Bar.Baz, Bar.Quux.A, and Bar.Quux.B,
-    // construct an expression like
-    // {Foo: Foo, Bar: {Baz: Bar.Baz, Quux: {A: Bar.Quux.A, B: Bar.Quux.B}}}
-    var scratch = {};
-    _.each(self.getExports(), function (symbol) {
-      scratch[symbol] = symbol;
-    });
-    var exportTree = buildSymbolTree(scratch);
-    buf += writeSymbolTree(exportTree, 0);
-    buf += ";\n";
-    return buf;
   }
-
 });
 
 // Given 'symbolMap' like {Foo: 's1', 'Bar.Baz': 's2', 'Bar.Quux.A': 's3', 'Bar.Quux.B': 's4'}
@@ -463,7 +390,6 @@ _.extend(File.prototype, {
     // Footer
     if (! self.bare)
       chunks.push(divider + "\n}).call(this);\n");
-    chunks.push("\n\n\n\n\n");
 
     return new sourcemap.SourceNode(null, null, null, chunks);
   },
@@ -700,7 +626,6 @@ _.extend(Unit.prototype, {
 //     sourceMap (a SourceMapGenerator) and sources (map to keys 'package',
 //     'sourcePath', 'path') similar to self.resources in a Slice (XXX)
 // - exports: the exports, as a list of string ('Foo', 'Thing.Stuff', etc)
-// - boundary: an opaque value that must be passed along with 'files' to link()
 var prelink = function (options) {
   if (options.noExports && options.forceExport &&
       ! _.isEmpty(options.forceExport)) {
@@ -723,11 +648,12 @@ var prelink = function (options) {
 
   var files = module.getPrelinkedFiles();
   var exports = module.getExports();
+  var packageScopeVariables = module.computeModuleScopeVars();
 
   return {
     files: files,
     exports: exports,
-    boundary: module.boundary
+    packageScopeVariables: packageScopeVariables
   };
 };
 
@@ -744,38 +670,68 @@ var prelink = function (options) {
 //
 // prelinkFiles: the 'files' output from prelink()
 //
-// boundary: the 'boundary' output from prelink()
-//
 // Output is an array of final output files in the same format as the
 // 'inputFiles' argument to prelink().
 var link = function (options) {
-  var importCode = options.useGlobalNamespace ?
-    getImportCode(options.imports, "/* Imports for global scope */\n\n", true) :
-    getImportCode(options.imports, "/* Imports */\n");
+  if (options.useGlobalNamespace) {
+    return [{
+      source: getImportCode(options.imports,
+                            "/* Imports for global scope */\n\n", true),
+      servePath: options.importStubServePath
+    }].concat(options.prelinkFiles);
+  }
+
+  var header = getHeader({
+    imports: options.imports,
+    packageScopeVariables: options.packageScopeVariables});
+  var footer = getFooter({
+    exports: options.exports,
+    name: options.name
+  });
 
   var ret = [];
   _.each(options.prelinkFiles, function (file) {
-    // XXX XXX obviously, mucking with boundary ruins the source
-    // map.. need a new approach here
-    var source = file.source;
-    var parts = source.split(options.boundary);
-    if (parts.length > 2)
-      throw new Error("Boundary appears more than once?");
-    if (parts.length === 2) {
-      source = parts[0] + importCode + parts[1];
-      if (source.length === 0)
-        return; // empty global-imports file -- elide
+    if (file.sourceMap) {
+      // XXX we read this as a string (in initFromUnipackage), then converted to
+      // Consumer and then to Generator. It's wasteful to then convert back to
+      // string and to consumer.
+      var node = new sourcemap.SourceNode(null, null, null, [
+        header,
+        sourcemap.SourceNode.fromStringWithSourceMap(
+          file.source,
+          new sourcemap.SourceMapConsumer(file.sourceMap.toString())),
+        footer
+      ]);
+      var results = node.toStringWithSourceMap({
+        file: file.servePath
+      });
+      ret.push({
+        source: results.code,
+        servePath: file.servePath,
+        sourceMap: results.map,
+        sources: file.sources
+      });
+    } else {
+      ret.push({
+        source: header + file.source + footer,
+        servePath: file.servePath
+      });
     }
-
-    ret.push({
-      source: source,
-      servePath: file.servePath,
-      sourceMap: file.sourceMap,
-      sources: file.sources
-    });
   });
 
   return ret;
+};
+
+var getHeader = function (options) {
+  var chunks = [];
+  chunks.push("(function () {\n\n" );
+  chunks.push(getImportCode(options.imports, "/* Imports */\n"));
+  if (options.packageScopeVariables
+      && !_.isEmpty(options.packageScopeVariables)) {
+    chunks.push("/* Package-scope variables */\n");
+    chunks.push("var " + options.packageScopeVariables.join(', ') + ";\n\n");
+  }
+  return chunks.join('');
 };
 
 var getImportCode = function (imports, header, omitvar) {
@@ -788,10 +744,10 @@ var getImportCode = function (imports, header, omitvar) {
   _.each(imports, function (name, symbol) {
     scratch[symbol] = packageDot(name) + "." + symbol;
   });
-  var imports = buildSymbolTree(scratch);
+  var tree = buildSymbolTree(scratch);
 
   var buf = header;
-  _.each(imports, function (node, key) {
+  _.each(tree, function (node, key) {
     buf += (omitvar ? "" : "var " ) +
       key + " = " + writeSymbolTree(node) + ";\n";
   });
@@ -799,6 +755,37 @@ var getImportCode = function (imports, header, omitvar) {
   // XXX need to remove newlines, whitespace, in line number preserving mode
   buf += "\n";
   return buf;
+};
+
+var getFooter = function (options) {
+  var chunks = [];
+
+  if (options.name && options.exports && !_.isEmpty(options.exports)) {
+    chunks.push("/* Exports */\n");
+    chunks.push("if (typeof Package === 'undefined') Package = {};\n");
+    chunks.push(packageDot(options.name), " = ");
+
+    // Even if there are no exports, we need to define Package.foo, because the
+    // existence of Package.foo is how another package (eg, one that weakly
+    // depends on foo) can tell if foo is loaded.
+    if (_.isEmpty(options.exports)) {
+      chunks.push("{};\n");
+    } else {
+      // Given exports like Foo, Bar.Baz, Bar.Quux.A, and Bar.Quux.B,
+      // construct an expression like
+      // {Foo: Foo, Bar: {Baz: Bar.Baz, Quux: {A: Bar.Quux.A, B: Bar.Quux.B}}}
+      var scratch = {};
+      _.each(options.exports, function (symbol) {
+        scratch[symbol] = symbol;
+      });
+      var exportTree = buildSymbolTree(scratch);
+      chunks.push(writeSymbolTree(exportTree, 0));
+      chunks.push(";\n");
+    }
+  }
+
+  chunks.push("\n})();\n");
+  return chunks.join('');
 };
 
 var linker = module.exports = {
