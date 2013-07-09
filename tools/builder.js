@@ -378,6 +378,7 @@ _.extend(Builder.prototype, {
     var methods = ["write", "writeJson", "reserve", "generateFilename",
                    "copyDirectory", "enter"];
     var ret = {};
+    var relPathWithSep = relPath + path.sep;
 
     _.each(methods, function (method) {
       ret[method] = function (/* arguments */) {
@@ -401,10 +402,10 @@ _.extend(Builder.prototype, {
           // sub-bundle, not the parent bundle
           if (ret.substr(0, 1) === '/')
             ret = ret.substr(1);
-          if (ret.substr(0, relPath.length) !== relPath)
+          if (ret.substr(0, relPathWithSep.length) !== relPathWithSep)
             throw new Error("generateFilename returned path outside of " +
                             "sub-bundle?");
-          ret = ret.substr(relPath.length);
+          ret = ret.substr(relPathWithSep.length);
         }
 
         return ret;

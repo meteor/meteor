@@ -370,10 +370,10 @@ _.extend(File.prototype, {
   setTargetPathFromRelPath: function (relPath) {
     var self = this;
     // XXX hack
-    if (relPath.match(/^\/packages\//) || relPath.match(/^\/static\//))
+    if (relPath.match(/^packages\//) || relPath.match(/^static\//))
       self.targetPath = relPath;
     else
-      self.targetPath = path.join('/app', relPath);
+      self.targetPath = path.join('app', relPath);
   },
 
   setStaticDirectory: function (relPath, staticSourceDirectory) {
@@ -383,12 +383,12 @@ _.extend(File.prototype, {
     // inside private/) go in static/app/.
     // XXX same hack as above
     var bundlePath;
-    if (relPath.match(/^\/packages\//)) {
+    if (relPath.match(/^packages\//)) {
       var dir = path.dirname(relPath);
       var base = path.basename(relPath, ".js");
-      bundlePath = path.join('/static', dir, base);
+      bundlePath = path.join('static', dir, base);
     } else {
-      bundlePath = path.join('/static', 'app');
+      bundlePath = path.join('static', 'app');
     }
     self.staticDirectory = new StaticDirectory({
       sourcePath: staticSourceDirectory,
@@ -652,9 +652,12 @@ _.extend(Target.prototype, {
           } else if (isNative) {
             var relPath;
             if (resource.type === "static")
-              relPath = path.join(path.sep, "static", resource.servePath);
-            else
-              relPath = resource.servePath;
+              relPath = path.join("static", resource.servePath);
+            else {
+              if (resource.servePath.charAt(0) !== '/')
+                throw new Error("bad servePath: " + resource.servePath);
+              relPath = resource.servePath.slice(1);
+            }
             f.setTargetPathFromRelPath(relPath);
             if (resource.type === "js")
               f.setStaticDirectory(relPath, resource.staticDirectory);
