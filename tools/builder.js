@@ -272,6 +272,19 @@ _.extend(Builder.prototype, {
     return relPath;
   },
 
+  // Convenience wrapper around generateFilename and write.
+  //
+  // (Note that in the object returned by builder.enter, this method
+  // is patched through directly rather than rewriting its inputs and
+  // outputs. This is only valid because it does nothing with its inputs
+  // and outputs other than send pass them to other methods.)
+  writeToGeneratedFilename: function (relPath, writeOptions) {
+    var self = this;
+    var generated = self.generateFilename(relPath);
+    self.write(generated, writeOptions);
+    return generated;
+  },
+
   // Recursively copy a directory and all of its contents into the
   // bundle. But if the symlink option was passed to the Builder
   // constructor, then make a symlink instead, if possible.
@@ -377,11 +390,11 @@ _.extend(Builder.prototype, {
     var self = this;
     var methods = ["write", "writeJson", "reserve", "generateFilename",
                    "copyDirectory", "enter"];
-    var ret = {};
+    var subBuilder = {};
     var relPathWithSep = relPath + path.sep;
 
     _.each(methods, function (method) {
-      ret[method] = function (/* arguments */) {
+      subBuilder[method] = function (/* arguments */) {
         var args = _.toArray(arguments);
 
         if (method !== "copyDirectory") {
@@ -412,7 +425,14 @@ _.extend(Builder.prototype, {
       };
     });
 
-    return ret;
+    // Methods that don't have to fix up arguments or return values, because
+    // they are implemented purely in terms of other methods which do.
+    var passThroughMethods = ["writeToGeneratedFilename"];
+    _.each(passThroughMethods, function (method) {
+      subBuilder[method] = self[method];
+    });
+
+    return subBuilder;
   },
 
   // Move the completed bundle into its final location (outputPath)

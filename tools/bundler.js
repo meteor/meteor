@@ -70,6 +70,8 @@
 //        parameter when used
 //    - size: size of file in bytes
 //    - hash: sha1 hash of the file contents
+//    - sourceMap: optional path to source map file (relative to program.json)
+//    - sources: same as in native format (see below)
 //    Additionally there will be an entry with where equal to
 //    "internal", path equal to page (above), and hash equal to the
 //    sha1 of page (before replacements.) Currently this is used to
@@ -199,6 +201,13 @@ var rejectBadPath = function (p) {
   if (p.match(/\.\./))
     throw new Error("bad path: " + p);
 };
+
+var stripLeadingSlash = function (p) {
+  if (p.charAt(0) !== '/')
+    throw new Error("bad path: " + p);
+  return p.slice(1);
+};
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // NodeModulesDirectory
@@ -643,9 +652,7 @@ _.extend(Target.prototype, {
             if (resource.type === "static")
               relPath = path.join("static", resource.servePath);
             else {
-              if (resource.servePath.charAt(0) !== '/')
-                throw new Error("bad servePath: " + resource.servePath);
-              relPath = resource.servePath.slice(1);
+              relPath = stripLeadingSlash(resource.servePath);
             }
             f.setTargetPathFromRelPath(relPath);
             if (resource.type === "js")
@@ -868,26 +875,50 @@ _.extend(ClientTarget.prototype, {
   // the target
   write: function (builder) {
     var self = this;
-    var manifest = [];
 
     builder.reserve("program.json");
+    builder.reserve("app.html");
 
-    // Resources served via HTTP
-    _.each(["js", "css", "static"], function (type) {
-      _.each(self[type], function (file) {
-
-        writeFile(file, builder);
-
-        manifest.push({
-          path: file.targetPath,
-          where: "client",
-          type: type,
-          cacheable: file.cacheable,
-          url: file.url,
-          size: file.size(),
-          hash: file.hash()
+    // Helper to iterate over all resources that we serve over HTTP.
+    var eachResource = function (f) {
+      _.each(["js", "css", "static"], function (type) {
+        _.each(self[type], function (file) {
+          f(file, type);
         });
       });
+    };
+
+    // Reserve all file names from the manifest, so that interleaved
+    // generateFilename calls don't overlap with them.
+    eachResource(function (file, type) {
+      builder.reserve(file.targetPath);
+    });
+
+    // Build up a manifest of all resources served via HTTP.
+    var manifest = [];
+    eachResource(function (file, type) {
+      writeFile(file, builder);
+
+      var manifestItem = {
+        path: file.targetPath,
+        where: "client",
+        type: type,
+        cacheable: file.cacheable,
+        url: file.url,
+        size: file.size(),
+        hash: file.hash()
+      };
+
+      if (file.sourceMap) {
+        manifestItem.sourceMap = builder.writeToGeneratedFilename(
+          stripLeadingSlash(file.targetPath + '.map'), {
+            data: new Buffer(file.sourceMap.toString(), 'utf8')
+          });
+
+        // XXX write sources too
+      }
+
+      manifest.push(manifestItem);
     });
 
     // HTML boilerplate (the HTML served to make the client load the
@@ -1078,8 +1109,9 @@ _.extend(JsImage.prototype, {
       if (! item.targetPath)
         throw new Error("No targetPath?");
 
-      var loadPath = builder.generateFilename(item.targetPath);
-      builder.write(loadPath, { data: new Buffer(item.source, 'utf8') });
+      var loadPath = builder.writeToGeneratedFilename(
+        item.targetPath,
+        { data: new Buffer(item.source, 'utf8') });
       var loadItem = {
         path: loadPath,
         node_modules: item.nodeModulesDirectory ?
@@ -1089,26 +1121,22 @@ _.extend(JsImage.prototype, {
       };
 
       if (item.sourceMap) {
-        // XXX this code is very similar to saveAsUnipackage.
         // Write the source map.
-        var mapFilename = builder.generateFilename(item.targetPath + '.map');
-        loadItem.sourceMap = mapFilename;
-        builder.write(mapFilename, {
-          data: new Buffer(item.sourceMap.toString(), 'utf8')
-        });
+        // XXX this code is very similar to saveAsUnipackage.
+        loadItem.sourceMap = builder.writeToGeneratedFilename(
+          item.targetPath + '.map',
+          { data: new Buffer(item.sourceMap.toString(), 'utf8') }
+        );
 
         // Now write the sources themselves.
         loadItem.sources = {};
         _.each(item.sources, function (x, pathForSourceMap) {
-          var savedFilename = builder.generateFilename(
-            path.join('sources', pathForSourceMap));
-          builder.write(savedFilename, {
-            data: x.source
-          });
           loadItem.sources[pathForSourceMap] = {
             package: x.package,
             sourcePath: x.sourcePath,
-            source: savedFilename
+            source: builder.writeToGeneratedFilename(
+              path.join('sources', pathForSourceMap),
+              { data: x.source })
           };
         });
       }

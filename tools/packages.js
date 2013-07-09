@@ -2065,13 +2065,11 @@ _.extend(Package.prototype, {
           if (_.contains(["head", "body"], resource.type))
             return; // already did this one
 
-          var resourcePath = builder.generateFilename(
-            path.join(sliceDir, resource.servePath));
-
-          builder.write(resourcePath, { data: resource.data });
           sliceJson.resources.push({
             type: resource.type,
-            file: resourcePath,
+            file: builder.writeToGeneratedFilename(
+              path.join(sliceDir, resource.servePath),
+              { data: resource.data }),
             length: resource.data.length,
             offset: 0,
             servePath: resource.servePath || undefined
@@ -2080,17 +2078,11 @@ _.extend(Package.prototype, {
 
         // Output prelink resources
         _.each(slice.prelinkFiles, function (file) {
-          var resourcePath = builder.generateFilename(
-            path.join(sliceDir, file.servePath));
-          var data = new Buffer(file.source, 'utf8');
-
-          builder.write(resourcePath, {
-            data: data
-          });
-
           var resource = {
             type: 'prelink',
-            file: resourcePath,
+            file: builder.writeToGeneratedFilename(
+              path.join(sliceDir, file.servePath),
+              { data: new Buffer(file.source, 'utf8') }),
             length: data.length,
             offset: 0,
             servePath: file.servePath || undefined
@@ -2098,25 +2090,20 @@ _.extend(Package.prototype, {
 
           if (file.sourceMap) {
             // Write the source map.
-            var mapFilename = builder.generateFilename(
-              path.join(sliceDir, file.servePath + '.map'));
-            resource.sourceMap = mapFilename;
-            builder.write(mapFilename, {
-              data: new Buffer(file.sourceMap.toString(), 'utf8')
-            });
+            resource.sourceMap = builder.writeToGeneratedFilename(
+              path.join(sliceDir, file.servePath + '.map'),
+              { data: new Buffer(file.sourceMap.toString(), 'utf8') }
+            );
 
             // Now write the sources themselves.
             resource.sources = {};
             _.each(file.sources, function (x, pathForSourceMap) {
-              var savedFilename = builder.generateFilename(
-                path.join(sliceDir, 'sources', x.sourcePath));
-              builder.write(savedFilename, {
-                data: x.source
-              });
               resource.sources[pathForSourceMap] = {
                 package: x.package,
                 sourcePath: x.sourcePath,
-                source: savedFilename
+                source: builder.writeToGeneratedFilename(
+                  path.join(sliceDir, 'sources', x.sourcePath),
+                  { data: x.source })
               };
             });
           }
