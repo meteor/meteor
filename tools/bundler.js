@@ -380,6 +380,8 @@ _.extend(File.prototype, {
     // static/packages specific to this package. Application assets (e.g. those
     // inside private/) go in static/app/.
     // XXX same hack as above
+    // XXX XXX is this all still true?
+    // XXX rename static -> assets on server
     var bundlePath;
     if (relPath.match(/^packages\//)) {
       var dir = path.dirname(relPath);
@@ -496,11 +498,6 @@ _.extend(Target.prototype, {
       self._addCacheBusters("js");
       self._addCacheBusters("css");
     }
-
-    // XXX extra thing we have to do on the client. could this move
-    // into ClientTarget.write()?
-    if (self.assignTargetPaths)
-      self.assignTargetPaths();
   },
 
   // Determine the packages to load, create Slices for
@@ -645,16 +642,17 @@ _.extend(Target.prototype, {
             cacheable: false
           });
 
+          var relPath;
+          if (resource.type === "static" && isNative)
+            relPath = path.join("static", resource.servePath);
+          else {
+            relPath = stripLeadingSlash(resource.servePath);
+          }
+          f.setTargetPathFromRelPath(relPath);
+
           if (isBrowser) {
             f.setUrlFromRelPath(resource.servePath);
           } else if (isNative) {
-            var relPath;
-            if (resource.type === "static")
-              relPath = path.join("static", resource.servePath);
-            else {
-              relPath = stripLeadingSlash(resource.servePath);
-            }
-            f.setTargetPathFromRelPath(relPath);
             if (resource.type === "js")
               f.setStaticDirectory(relPath, resource.staticDirectory);
           }
@@ -789,8 +787,13 @@ _.extend(Target.prototype, {
         var f = new File({ sourcePath: absPath });
         if (setUrl)
           f.setUrlFromRelPath(assetPath);
+        // XXX why is this separate from _emitResources ?
+        // XXX fix up server static resources
+        var relPath = assetDir.useSubDirectory
+              ? path.join('static', 'app', assetPath)
+              : assetPath;
         if (setTargetPath)
-          f.setTargetPathFromRelPath(path.join('/static', 'app', assetPath));
+          f.setTargetPathFromRelPath(relPath);
         self.dependencyInfo.files[absPath] = f.hash();
         self.static.push(f);
       });
@@ -835,22 +838,6 @@ _.extend(ClientTarget.prototype, {
 
     self.css = [new File({ data: new Buffer(allCss, 'utf8') })];
     self.css[0].setUrlToHash(".css");
-  },
-
-  assignTargetPaths: function () {
-    var self = this;
-    _.each(["js", "css", "static"], function (type) {
-      _.each(self[type], function (file) {
-        if (! file.targetPath) {
-          if (! file.url)
-            throw new Error("Client file with no URL?");
-
-          var parts = file.url.replace(/\?.*$/, '').split('/').slice(1);
-          parts.unshift(file.cacheable ? "static_cacheable" : "static");
-          file.targetPath = path.sep + path.join.apply(path, parts);
-        }
-      });
-    });
   },
 
   generateHtmlBoilerplate: function () {
@@ -911,7 +898,7 @@ _.extend(ClientTarget.prototype, {
 
       if (file.sourceMap) {
         manifestItem.sourceMap = builder.writeToGeneratedFilename(
-          stripLeadingSlash(file.targetPath + '.map'), {
+          file.targetPath + '.map', {
             data: new Buffer(file.sourceMap.toString(), 'utf8')
           });
 
@@ -1637,9 +1624,8 @@ exports.bundle = function (appDir, outputPath, options) {
       assetDirs = assetDirs || [];
       var clientAssetDirs = getValidAssetDirs(assetDirs, {
         exclude: ignoreFiles,
-        setUrl: true
-        // No need to set targetPath when the asset dir is added;
-        // the target path will be set later in assignTargetPaths.
+        setUrl: true,
+        setTargetPath: true
       });
 
       client.make({
@@ -1671,9 +1657,11 @@ exports.bundle = function (appDir, outputPath, options) {
       assetDirs = assetDirs || [];
       var serverAssetDirs = getValidAssetDirs(assetDirs, {
         exclude: ignoreFiles,
-        setTargetPath: true
         // We need to set the target path when the asset dir is added,
         // because the target path comes from the asset's path.
+        setTargetPath: true,
+        // XXX this is a hack, re-assess how the subdirs are named
+        useSubDirectory: true
       });
       var targetOptions = {
         library: library,

@@ -229,15 +229,15 @@ var runWebAppServer = function () {
       next();
       return;
     }
-    var path = connect.utils.parseUrl(req).pathname;
+    var pathname = connect.utils.parseUrl(req).pathname;
 
     try {
-      path = decodeURIComponent(path);
+      pathname = decodeURIComponent(pathname);
     } catch (e) {
       next();
       return;
     }
-    if (!_.has(staticFiles, path)) {
+    if (!_.has(staticFiles, pathname)) {
       next();
       return;
     }
@@ -246,7 +246,7 @@ var runWebAppServer = function () {
     // 'send' and yield to the event loop, we never call another handler with
     // 'next'.
 
-    var info = staticFiles[path];
+    var info = staticFiles[pathname];
 
     // Cacheable files are files that should never change. Typically
     // named by their hash (eg meteor bundled js and css files).

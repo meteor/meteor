@@ -2078,11 +2078,12 @@ _.extend(Package.prototype, {
 
         // Output prelink resources
         _.each(slice.prelinkFiles, function (file) {
+          var data = new Buffer(file.source, 'utf8');
           var resource = {
             type: 'prelink',
             file: builder.writeToGeneratedFilename(
               path.join(sliceDir, file.servePath),
-              { data: new Buffer(file.source, 'utf8') }),
+              { data: data }),
             length: data.length,
             offset: 0,
             servePath: file.servePath || undefined
