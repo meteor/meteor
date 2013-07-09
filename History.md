@@ -1,6 +1,9 @@
 
 ## vNEXT
 
+* Calling `findOne()` on the server no longer loads the full query result
+  into memory.
+
 * Fix Spark memory leak.  #1157
 
 * Upgraded dependencies:

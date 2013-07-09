@@ -288,7 +288,8 @@ _Mongo.prototype.findOne = function (collection_name, selector, options) {
   if (arguments.length === 1)
     selector = {};
 
-  // XXX use limit=1 instead?
+  options = options || {};
+  options.limit = 1;
   return self.find(collection_name, selector, options).fetch()[0];
 };
 
