@@ -336,6 +336,7 @@ _.extend(File.prototype, {
     var self = this;
     self.url = "/" + self.hash() + suffix;
     self.cacheable = true;
+    self.targetPath = self.hash() + suffix;
   },
 
   // Append "?<hash>" to the URL and mark the file as cacheable.
