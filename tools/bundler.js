@@ -206,6 +206,11 @@ var inherits = function (child, parent) {
   child.prototype.constructor = child;
 };
 
+var rejectBadPath = function (p) {
+  if (p.match(/\.\./))
+    throw new Error("bad path: " + p);
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // NodeModulesDirectory
 ///////////////////////////////////////////////////////////////////////////////
@@ -941,9 +946,9 @@ var JsImage = function () {
   // - source: JS source code to load, as a string
   // - nodeModulesDirectory: a NodeModulesDirectory indicating which
   //   directory should be searched by Npm.require()
-  // - sourceMap: if set, source map for this code, AS A STRING
+  // - sourceMap: if set, source map for this code, as a SourceMapGenerator
   // - sources: map from relative path in source map to object with
-  //   keys 'source' (a string), 'package', 'sourcePath'
+  //   keys 'source' (a Buffer), 'package', 'sourcePath'
   // note: this can't be called `load` at it would shadow `load()`
   self.jsToLoad = [];
 
@@ -1166,11 +1171,11 @@ JsImage.readFromDisk = function (controlFilePath) {
   ret.arch = json.arch;
 
   _.each(json.load, function (item) {
-    if (item.path.match(/\.\./))
-      throw new Error("bad path in plugin bundle");
+    rejectBadPath(item.path);
 
     var nmd = undefined;
     if (item.node_modules) {
+      rejectBadPath(item.node_modules);
       var node_modules = path.join(dir, item.node_modules);
       if (! (node_modules in ret.nodeModulesDirectories)) {
         ret.nodeModulesDirectories[node_modules] =
@@ -1182,16 +1187,34 @@ JsImage.readFromDisk = function (controlFilePath) {
       nmd = ret.nodeModulesDirectories[node_modules];
     }
 
-    ret.jsToLoad.push({
+    var loadItem = {
       targetPath: item.path,
       source: fs.readFileSync(path.join(dir, item.path)),
       nodeModulesDirectory: nmd,
       staticDirectory: new StaticDirectory({
         sourcePath: item.staticDirectory
       })
-      // XXX XXX set 'sourceMap' (to a string) and 'sources' (keys
-      // 'package', 'sourcePath', 'source' as a string)
-    });
+    };
+    if (item.sourceMap) {
+      // XXX this is the same code as initFromUnipackage
+      rejectBadPath(item.sourceMap);
+      var rawSourceMap = fs.readFileSync(
+        path.join(dir, item.sourceMap), 'utf8');
+      loadItem.sourceMap = sourcemap.SourceMapGenerator.fromSourceMap(
+        new sourcemap.SourceMapConsumer(rawSourceMap));
+      if (item.sources) {
+        loadItem.sources = {};
+        _.each(item.sources, function (x, pathForSourceMap) {
+          rejectBadPath(x.source);
+          loadItem.sources[pathForSourceMap] = {
+            package: x.package,
+            sourcePath: x.sourcePath,
+            source: fs.readFileSync(path.join(dir, x.source))
+          };
+        });
+      }
+    }
+    ret.jsToLoad.push(loadItem);
   });
 
   return ret;
