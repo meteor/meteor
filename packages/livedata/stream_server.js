@@ -7,7 +7,7 @@
 __meteor_runtime_config__.serverId =
   process.env.SERVER_ID ? process.env.SERVER_ID : Random.id();
 
-var pathPrefix = __meteor_runtime_config__.PATH_PREFIX ||  "";
+var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX ||  "";
 
 Meteor._DdpStreamServer = function () {
   var self = this;

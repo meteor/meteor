@@ -52,7 +52,7 @@ var translateUrl =  function(url, newSchemeBase, subPath) {
     url = newSchemeBase + "://" + url;
   }
 
-  url = Meteor._fixLink(url);
+  url = Meteor._relativeToSiteRootUrl(url);
 
   if (endsWith(url, "/"))
     return url + subPath;

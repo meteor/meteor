@@ -187,7 +187,7 @@ var runWebAppServer = function () {
 
   // Strip off the path prefix, if it exists.
   app.use(function (request, response, next) {
-    var pathPrefix = __meteor_runtime_config__.PATH_PREFIX;
+    var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
     var url = Npm.require('url').parse(request.url);
     var pathname = url.pathname;
     // check if the path in the url starts with the path prefix (and the part
@@ -329,8 +329,8 @@ var runWebAppServer = function () {
         "__meteor_runtime_config__ = " +
           JSON.stringify(__meteor_runtime_config__) + ";")
       .replace(
-          /##PATH_PREFIX##/g,
-        __meteor_runtime_config__.PATH_PREFIX || "");
+          /##ROOT_URL_PATH_PREFIX##/g,
+        __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || "");
 
     // only start listening after all the startup code has run.
     var bind = deployConfig.boot.bind;

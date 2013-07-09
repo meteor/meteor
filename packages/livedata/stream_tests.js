@@ -50,7 +50,7 @@ Tinytest.add("stream - sockjs urls are computed correctly", function(test) {
                    "http://subdomain.meteor.com/sockjs");
   testHasSockjsUrl("subdomain.meteor.com",
                    "http://subdomain.meteor.com/sockjs");
-  testHasSockjsUrl("/", Meteor._fixLink("/sockjs"));
+  testHasSockjsUrl("/", Meteor._relativeToSiteRootUrl("/sockjs"));
 
   testHasSockjsUrl("http://localhost:3000/", "http://localhost:3000/sockjs");
   testHasSockjsUrl("http://localhost:3000", "http://localhost:3000/sockjs");
@@ -73,7 +73,7 @@ testAsyncMulti("stream - /websocket is a websocket endpoint", [
     // Verify that /websocket and /websocket/ don't return the main page
     //
     _.each(['/websocket', '/websocket/'], function(path) {
-      Meteor.http.get(Meteor._fixLink(path), expect(function(error, result) {
+      Meteor.http.get(Meteor._relativeToSiteRootUrl(path), expect(function(error, result) {
         test.isNotNull(error);
         test.equal('Can "Upgrade" only to "WebSocket".', result.content);
       }));
@@ -91,12 +91,12 @@ testAsyncMulti("stream - /websocket is a websocket endpoint", [
       test.equal(pageContent, result.content);
     });
 
-    Meteor.http.get(Meteor._fixLink('/'), expect(function(error, result) {
+    Meteor.http.get(Meteor._relativeToSiteRootUrl('/'), expect(function(error, result) {
       test.isNull(error);
       pageContent = result.content;
 
       _.each(['/websockets', '/websockets/'], function(path) {
-        Meteor.http.get(Meteor._fixLink(path), wrappedCallback);
+        Meteor.http.get(Meteor._relativeToSiteRootUrl(path), wrappedCallback);
       });
     }));
   }
