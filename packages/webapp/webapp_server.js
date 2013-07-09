@@ -5,6 +5,7 @@ var http = Npm.require("http");
 var os = Npm.require("os");
 var path = Npm.require("path");
 var url = Npm.require("url");
+var crypto = Npm.require("crypto");
 
 var connect = Npm.require('connect');
 var optimist = Npm.require('optimist');
@@ -49,6 +50,12 @@ var initKeepalive = function () {
   }, 3000);
 };
 
+
+var sha1 = function (contents) {
+  var hash = crypto.createHash('sha1');
+  hash.update(contents);
+  return hash.digest('hex');
+};
 
 // #BrowserIdentification
 //
@@ -218,8 +225,29 @@ var runWebAppServer = function () {
 
   var staticFiles = {};
   _.each(clientJson.manifest, function (item) {
-    if (item.url && item.where === "client")
-      staticFiles[url.parse(item.url).pathname] = item;
+    if (item.url && item.where === "client") {
+      var staticFile = {
+        path: item.path,
+        cacheable: item.cacheable
+      };
+
+      // Serve the source map too, under a hashed URL. Note that the hash is
+      // based on item.url which contains the file's hash, so this should change
+      // when the file changes and thus be cacheable. The URL ends with a slash,
+      // so that source files referenced from the source map with relative URLs
+      // are resolved under it.
+      if (item.sourceMap) {
+        var sourceMapRootUrl = "/_sources/" + sha1(item.url) + "/";
+        // Register the source map itself to be served.
+        staticFiles[sourceMapRootUrl] = {
+          path: item.sourceMap,
+          cacheable: true
+        };
+        // Send the SourceMap header when the source file is served.
+        staticFile.sourceMap = sourceMapRootUrl;
+      }
+      staticFiles[url.parse(item.url).pathname] = staticFile;
+    }
   });
 
   // Serve static files from the manifest.
@@ -262,6 +290,11 @@ var runWebAppServer = function () {
     var maxAge = info.cacheable
           ? 1000 * 60 * 60 * 24 * 365
           : 1000 * 60 * 60 * 24;
+
+    // Tell the client where to find the source map for this file.
+    if (info.sourceMap) {
+      res.setHeader('SourceMap', info.sourceMap);
+    }
 
     send(req, path.join(clientDir, info.path))
       .maxage(maxAge)
