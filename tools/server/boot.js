@@ -3,6 +3,7 @@ var fs = require("fs");
 var path = require("path");
 var Future = require(path.join("fibers", "future"));
 var _ = require('underscore');
+var sourcemap_support = require('source-map-support');
 
 // This code is duplicated in tools/server/server.js.
 var MIN_NODE_VERSION = 'v0.8.24';
@@ -13,15 +14,16 @@ if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
 }
 
 // read our control files
-var serverJson =
-  JSON.parse(fs.readFileSync(path.join(__dirname, process.argv[2]), 'utf8'));
+var serverJsonPath = path.resolve(process.argv[2]);
+var serverDir = path.dirname(serverJsonPath);
+var serverJson = JSON.parse(fs.readFileSync(serverJsonPath, 'utf8'));
 var configJson =
-  JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
+  JSON.parse(fs.readFileSync(path.resolve(serverDir, 'config.json'), 'utf8'));
 
 // Set up environment
 __meteor_bootstrap__ = {
   startup_hooks: [],
-  serverDir: __dirname,
+  serverDir: serverDir,
   configJson: configJson };
 __meteor_runtime_config__ = { meteorRelease: configJson.release };
 
@@ -34,10 +36,36 @@ __meteor_runtime_config__ = { meteorRelease: configJson.release };
 if (!process.env.NODE_ENV)
   process.env.NODE_ENV = 'production';
 
+// Map from load path to its source map.
+var sourceMapsAsStrings = {};
+
+// Read all the source maps into memory once.
+_.each(serverJson.load, function (fileInfo) {
+  if (fileInfo.sourceMap) {
+    sourceMapsAsStrings[fileInfo.path] = fs.readFileSync(
+      path.resolve(serverDir, fileInfo.sourceMap), 'utf8');
+  }
+});
+
+var retrieveSourceMap = function (pathForSourceMap) {
+  if (_.has(sourceMapsAsStrings, pathForSourceMap))
+    return {data: sourceMapsAsStrings[pathForSourceMap]};
+  return null;
+};
+
+sourcemap_support.install({
+  // Use the source maps specified in program.json instead of parsing source
+  // code for them.
+  retrieveSourceMap: retrieveSourceMap,
+  // For now, don't fix the source line in uncaught exceptions, because we
+  // haven't fixed handleUncaughtExceptions in source-map-support to properly
+  // locate the source files.
+  handleUncaughtExceptions: false
+});
 
 Fiber(function () {
   _.each(serverJson.load, function (fileInfo) {
-    var code = fs.readFileSync(path.join(__dirname, fileInfo.path));
+    var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
 
     var Npm = {
       require: function (name) {
@@ -46,7 +74,7 @@ Fiber(function () {
         }
 
         var nodeModuleDir =
-          path.join(__dirname, fileInfo.node_modules, name);
+          path.resolve(serverDir, fileInfo.node_modules, name);
 
         if (fs.existsSync(nodeModuleDir)) {
           return require(nodeModuleDir);
@@ -67,7 +95,7 @@ Fiber(function () {
           }
       }
     };
-    var staticDirectory = path.join(__dirname, fileInfo.staticDirectory);
+    var staticDirectory = path.resolve(serverDir, fileInfo.staticDirectory);
     var getAsset = function (assetPath, encoding, callback) {
       var fut;
       if (! callback) {

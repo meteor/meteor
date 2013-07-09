@@ -1483,7 +1483,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
     // Affordances for standalone use
     if (targets.server) {
       // add program.json as the first argument after "node main.js" to the boot script.
-      var stub = new Buffer("process.argv.splice(2, 0, 'program.json');\nrequire('./programs/server/boot.js');\n", 'utf8');
+      var stub = new Buffer("process.argv.splice(2, 0, 'program.json');\nprocess.chdir(require('path').join(__dirname, 'programs', 'server'));\nrequire('./programs/server/boot.js');\n", 'utf8');
       builder.write('main.js', { data: stub });
 
       builder.write('README', { data: new Buffer(
