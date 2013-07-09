@@ -302,8 +302,34 @@ var runWebAppServer = function () {
 
     // Tell the client where to find the source map for this file.
     if (info.sourceMap) {
-      // This should just be SourceMap, but slightly more browsers support the
-      // older X-SourceMap.
+      // This should just be SourceMap, but slightly more versions of Chrome
+      // support the older X-SourceMap.
+      //
+      // To figure out if your version of Chrome should support SourceMap,
+      //   - go to chrome://version. Let's say the Chrome version is
+      //      28.0.1500.71 and the Blink version is 537.36 (@153022)
+      //   - go to http://src.chromium.org/viewvc/blink/branches/chromium/1500/Source/core/inspector/InspectorPageAgent.cpp?view=log
+      //     where the "1500" is the third part of your Chrome version
+      //   - find the first revision that is no greater than the "153022"
+      //     number.  That's probably the first one and it probably has
+      //     a message of the form "Branch 1500 - blink@r149738"
+      //   - If *that* revision number (149738) is at least 151755,
+      //     then Chrome should support SourceMap (not just X-SourceMap)
+      // (The change is https://codereview.chromium.org/15832007)
+      //
+      // You also need to enable source maps in Chrome: open dev tools, click
+      // the gear in the bottom right corner, and select "enable source maps".
+      //
+      // Firefox 23+ supports source maps (and they are on by default in 24+),
+      // but doesn't support either header yet:
+      //   https://bugzilla.mozilla.org/show_bug.cgi?id=765993
+      // We could make FF work by adding a comment to the end of the source map
+      // file. But that would require doing one of the following:
+      //   - determining the source map URL at bundle time instead of here
+      //   - writing to the source directory
+      //   - not using the send module (or hacking it to allow a footer)
+      // None of these alternatives are great, so for now we just hope that
+      // FF will implement one of the headers soon.
       res.setHeader('X-SourceMap', info.sourceMap);
     }
 
