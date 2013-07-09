@@ -275,6 +275,8 @@ _.extend(Slice.prototype, {
       //   can ensure that the version of the file that you use is
       //   exactly the one that is recorded in the dependency
       //   information.
+      // - pathForSourceMap: If this file is to be included in a source map,
+      //   this is the name you should use for it in the map.
       // - rootOutputPath: on browser targets, for resources such as
       //   stylesheet and static assets, this is the root URL that
       //   will get prepended to the paths you pick for your output
@@ -367,6 +369,14 @@ _.extend(Slice.prototype, {
         inputSize: contents.length,
         inputPath: relPath,
         _fullInputPath: absPath, // avoid, see above..
+        // XXX duplicates _pathForSourceMap() in linker
+        pathForSourceMap: (
+          self.pkg.name
+            ? "packages/" + self.pkg.name + "/" + relPath
+            : "app/" + relPath),
+        // null if this is an app. intended to be used for the sources
+        // dictionary for source maps.
+        packageName: self.pkg.name,
         rootOutputPath: self.pkg.serveRoot,
         arch: self.arch,
         fileOptions: fileOptions,
@@ -415,7 +425,12 @@ _.extend(Slice.prototype, {
             servePath: path.join(self.pkg.serveRoot, options.path),
             includePositionInErrors: options.lineForLine,
             linkerFileTransform: options.linkerFileTransform,
-            bare: !!options.bare
+            bare: !!options.bare,
+            sourceMap: (options.sourceMapAsString
+                        && sourcemap.SourceMapGenerator.fromSourceMap(
+                          new sourcemap.SourceMapConsumer(
+                            options.sourceMapAsString))),
+            sources: options.sources
           });
         },
         addAsset: function (options) {
