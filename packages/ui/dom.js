@@ -207,10 +207,11 @@ Component({
     // Should work whether this component is detached or attached!
     // In other words, it may reside in an offscreen element.
 
-    var A = self.firstNode();
-    var B = self.lastNode();
-    var parentNode = B.parentNode;
-    var nextNode = B.nextSibling || null;
+    var firstNode = self.firstNode();
+    var lastNode = self.lastNode();
+    var parentNode = lastNode.parentNode;
+    var nextNode = lastNode.nextSibling || null;
+    var prevNode = firstNode.previousSibling || null;
 
     // for efficiency, do a quick check to see if we've *ever*
     // had children or if we are still using the prototype's
@@ -222,19 +223,29 @@ Component({
         var children = self.children;
         for (var k in children) {
           var child = children[k];
-          if (child.isAttached || builtChildren[k]) {
-            // destroy first, then remove (which doesn't affect DOM)
+          if (builtChildren[k]) {
+            // destroy first, then remove
+            // (which doesn't affect DOM, which we will
+            // remove all at once)
             child.destroy();
             self.remove(child);
+          } else if (child.isAttached) {
+            // detach the child; we don't have a good way
+            // of keeping this from affecting the DOM
+            child.detach();
           }
         }
       });
     }
 
     var oldNodes = [];
-    for (var n = A; n !== B; n = n.nextSibling)
+    // must be careful as call to `detach` above may have
+    // must with firstNode or lastNode
+    for (var n = prevNode ? prevNode.nextSibling :
+               parentNode.firstChild;
+         n && n !== nextNode;
+         n = n.nextSibling)
       oldNodes.push(n);
-    oldNodes.push(B);
 
     $(oldNodes).remove();
 

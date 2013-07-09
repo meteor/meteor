@@ -95,6 +95,10 @@ Either = UIComponent.extend({
 Meteor.startup(function () {
   Session.set('which', 'Span');
 
-  var x = Either.create({isRoot: true});
+  // leak `x` for fooling around in the console
+  x = Either.create({isRoot: true});
   x.attach(document.body);
+
+  // leak `c`
+  (c = _UI.Counter.create({isRoot:true})).attach(document.body);
 });
