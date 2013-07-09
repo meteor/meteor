@@ -76,20 +76,9 @@
 //    trigger HTML5 appcache reloads at the right time (if the
 //    'appcache' package is being used.)
 //
-//  - static: a path, relative to program.json, to a directory. If the
-//    server is too dumb to read 'manifest', it can just serve all of
-//    the files in this directory (with a relatively short cache
-//    expiry time.)
-//    XXX do not use this. It will go away soon.
-//
-//  - static_cacheable: just like 'static' but resources that can be
-//    cached aggressively (cacheable: true in the manifest)
-//    XXX do not use this. It will go away soon.
-//
 // Convention:
 //
-// page is 'app.html', static is 'static', and staticCacheable is
-// 'static_cacheable'.
+// page is 'app.html'.
 //
 //
 // == Format of a program when arch is "native.*" ==
@@ -914,17 +903,8 @@ _.extend(ClientTarget.prototype, {
     // Control file
     builder.writeJson('program.json', {
       format: "browser-program-pre1",
-      manifest: manifest,
       page: 'app.html',
-
-      // XXX the following are for use by 'legacy' (read: current)
-      // server.js implementations which aren't smart enough to read
-      // the manifest and instead want all of the resources in a
-      // directory together so they can just point gzippo at it. we
-      // should remove this and make the server work from the
-      // manifest.
-      static: 'static',
-      staticCacheable: 'static_cacheable'
+      manifest: manifest
     });
     return "program.json";
   }

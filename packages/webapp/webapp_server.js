@@ -9,6 +9,7 @@ var url = Npm.require("url");
 var connect = Npm.require('connect');
 var optimist = Npm.require('optimist');
 var useragent = Npm.require('useragent');
+var send = Npm.require('send');
 
 // @export WebApp
 WebApp = {};
@@ -215,26 +216,68 @@ var runWebAppServer = function () {
   // Auto-compress any json, javascript, or text.
   app.use(connect.compress());
 
-  if (clientJson.staticCacheable) {
-    // cacheable files are files that should never change. Typically
-    // named by their hash (eg meteor bundled js and css files).
-    // cache them ~forever (1yr)
-    app.use(connect.static(path.join(clientDir, clientJson.staticCacheable),
-                           {maxAge: 1000 * 60 * 60 * 24 * 365}));
-  }
+  var staticFiles = {};
+  _.each(clientJson.manifest, function (item) {
+    if (item.url && item.where === "client")
+      staticFiles[url.parse(item.url).pathname] = item;
+  });
 
-  // cache non-cacheable file anyway. This isn't really correct, as
-  // users can change the files and changes won't propogate
-  // immediately. However, if we don't cache them, browsers will
-  // 'flicker' when rerendering images. Eventually we will probably want
-  // to rewrite URLs of static assets to include a query parameter to
-  // bust caches. That way we can both get good caching behavior and
-  // allow users to change assets without delay.
-  // https://github.com/meteor/meteor/issues/773
-  if (clientJson.static) {
-    app.use(connect.static(path.join(clientDir, clientJson.static),
-                           {maxAge: 1000 * 60 * 60 * 24}));
-  }
+  // Serve static files from the manifest.
+  // This is inspired by the 'static' middleware.
+  app.use(function (req, res, next) {
+    if ('GET' != req.method && 'HEAD' != req.method) {
+      next();
+      return;
+    }
+    var path = connect.utils.parseUrl(req).pathname;
+
+    try {
+      path = decodeURIComponent(path);
+    } catch (e) {
+      next();
+      return;
+    }
+    if (!_.has(staticFiles, path)) {
+      next();
+      return;
+    }
+
+    // We don't need to call pause because, unlike 'static', once we call into
+    // 'send' and yield to the event loop, we never call another handler with
+    // 'next'.
+
+    var info = staticFiles[path];
+
+    // Cacheable files are files that should never change. Typically
+    // named by their hash (eg meteor bundled js and css files).
+    // We cache them ~forever (1yr).
+    //
+    // We cache non-cacheable files anyway. This isn't really correct, as users
+    // can change the files and changes won't propagate immediately. However, if
+    // we don't cache them, browsers will 'flicker' when rerendering
+    // images. Eventually we will probably want to rewrite URLs of static assets
+    // to include a query parameter to bust caches. That way we can both get
+    // good caching behavior and allow users to change assets without delay.
+    // https://github.com/meteor/meteor/issues/773
+    var maxAge = info.cacheable
+          ? 1000 * 60 * 60 * 24 * 365
+          : 1000 * 60 * 60 * 24;
+
+    send(req, path.join(clientDir, info.path))
+      .maxage(maxAge)
+      .hidden(true)  // if we specified a dotfile in the manifest, serve it
+      .on('error', function (err) {
+        Log.error("Error serving static file " + err);
+        res.writeHead(500);
+        res.end();
+      })
+      .on('directory', function () {
+        Log.error("Unexpected directory " + info.path);
+        res.writeHead(500);
+        res.end();
+      })
+      .pipe(res);
+  });
 
   // Packages and apps can add handlers to this via WebApp.connectHandlers.
   // They are inserted before our default handler.

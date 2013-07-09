@@ -43,6 +43,23 @@
         }
       }
     },
+    "send": {
+      "version": "0.1.0",
+      "dependencies": {
+        "debug": {
+          "version": "0.7.2"
+        },
+        "mime": {
+          "version": "1.2.6"
+        },
+        "fresh": {
+          "version": "0.1.0"
+        },
+        "range-parser": {
+          "version": "0.0.4"
+        }
+      }
+    },
     "useragent": {
       "version": "2.0.1"
     }
