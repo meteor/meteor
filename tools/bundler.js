@@ -1151,9 +1151,9 @@ _.extend(JsImage.prototype, {
 
     // Control file
     builder.writeJson('program.json', {
-      load: load,
       format: "javascript-image-pre1",
-      arch: self.arch
+      arch: self.arch,
+      load: load
     });
     return "program.json";
   }
