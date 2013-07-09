@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html##HTML_ATTRIBUTES##>
 <head>
-{{#each stylesheets}}  <link rel="stylesheet" href="##PATH_PREFIX##{{this}}">
+{{#each stylesheets}}  <link rel="stylesheet" href="##ROOT_URL_PATH_PREFIX##{{this}}">
 {{/each}}
 
 <script type="text/javascript">
 // ##RUNTIME_CONFIG##
 </script>
 
-{{#each scripts}}  <script type="text/javascript" src="##PATH_PREFIX##{{this}}"></script>
+{{#each scripts}}  <script type="text/javascript" src="##ROOT_URL_PATH_PREFIX##{{this}}"></script>
 {{/each}}
 
 {{{head_extra}}}
