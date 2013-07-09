@@ -188,6 +188,7 @@ var builder = require(path.join(__dirname, 'builder.js'));
 var unipackage = require(path.join(__dirname, 'unipackage.js'));
 var Fiber = require('fibers');
 var Future = require(path.join('fibers', 'future'));
+var sourcemap = require('source-map');
 
 // files to ignore when bundling. node has no globs, so use regexps
 var ignoreFiles = [
@@ -259,8 +260,9 @@ var File = function (options) {
   // disk.)
   self.sourcePath = options.sourcePath;
 
-  // If this file was generated, a sourceMap (provided as a string)
-  // with debugging information. Set with setSourceMap.
+  // If this file was generated, a sourceMap (provided as a
+  // sourcemap.SourceMapGenerator) with debugging information. Set with
+  // setSourceMap.
   self.sourceMap = null;
 
   // If sourceMap is set, this is a map from a relative source file
@@ -390,12 +392,12 @@ _.extend(File.prototype, {
   },
 
   // Set a source map for this File. sourceMap is given as a
-  // string. See self.sources for the format of sources.
+  // sourcemap.SourceMapGenerator. See self.sources for the format of sources.
   setSourceMap: function (sourceMap, sources) {
     var self = this;
 
-    if (typeof sourceMap !== "string")
-      throw new Error("sourceMap must be given as a string");
+    if (!(sourceMap instanceof sourcemap.SourceMapGenerator))
+      throw new Error("sourceMap must be given as a SourceMapGenerator");
     self.sourceMap = sourceMap;
     self.sources = sources || {};
   }
@@ -469,8 +471,7 @@ _.extend(Target.prototype, {
       test: options.test || []
     });
 
-    // Link JavaScript, put resources in load order, and copy them to
-    // the bundle
+    // Link JavaScript and set up self.js, etc.
     self._emitResources();
 
     // Minify, if requested
@@ -612,9 +613,8 @@ _.extend(Target.prototype, {
     }
   },
 
-  // Sort the slices in dependency order, then, slice by slice, write
-  // their resources into the bundle (which includes running the
-  // JavaScript linker.)
+  // Process all of the sorted slices (which includes running the JavaScript
+  // linker).
   _emitResources: function () {
     var self = this;
 
@@ -673,8 +673,7 @@ _.extend(Target.prototype, {
           }
 
           if (resource.type === "js" && resource.sourceMap) {
-            f.setSourceMap(resource.sourceMap.toString(),
-                           resource.sources);
+            f.setSourceMap(resource.sourceMap, resource.sources);
           }
 
           self[resource.type].push(f);
@@ -1071,7 +1070,7 @@ _.extend(JsImage.prototype, {
   write: function (builder) {
     var self = this;
 
-    builder.reserve("program.js");
+    builder.reserve("program.json");
 
     // Finalize choice of paths for node_modules directories -- These
     // paths are no longer just "preferred"; they are the final paths
@@ -1091,22 +1090,42 @@ _.extend(JsImage.prototype, {
       if (! item.targetPath)
         throw new Error("No targetPath?");
 
-      builder.write(item.targetPath, { data: new Buffer(item.source, 'utf8') });
-      load.push({
-        path: item.targetPath,
+      var loadPath = builder.generateFilename(item.targetPath);
+      builder.write(loadPath, { data: new Buffer(item.source, 'utf8') });
+      var loadItem = {
+        path: loadPath,
         node_modules: item.nodeModulesDirectory ?
           item.nodeModulesDirectory.preferredBundlePath : undefined,
         staticDirectory: item.staticDirectory ?
-          item.staticDirectory.bundlePath : undefined,
-        sourceMap: item.sourceMap || undefined, // XXX XXX WRONG -- should be a file, not an inline string
-        sources: item.sourceMap ? _.map(item.sources || [], function (x) {
-          return {
-            source: x.source.toString('utf8'), // XXX XXX WRONG -- should be a file, not an inline string
+          item.staticDirectory.bundlePath : undefined
+      };
+
+      if (item.sourceMap) {
+        // XXX this code is very similar to saveAsUnipackage.
+        // Write the source map.
+        var mapFilename = builder.generateFilename(item.targetPath + '.map');
+        loadItem.sourceMap = mapFilename;
+        builder.write(mapFilename, {
+          data: new Buffer(item.sourceMap.toString(), 'utf8')
+        });
+
+        // Now write the sources themselves.
+        loadItem.sources = {};
+        _.each(item.sources, function (x, pathForSourceMap) {
+          var savedFilename = builder.generateFilename(
+            path.join('sources', pathForSourceMap));
+          builder.write(savedFilename, {
+            data: x.source
+          });
+          loadItem.sources[pathForSourceMap] = {
             package: x.package,
-            sourcePath: x.sourcePath
+            sourcePath: x.sourcePath,
+            source: savedFilename
           };
-        }) : undefined
-      });
+        });
+      }
+
+      load.push(loadItem);
     });
 
     // node_modules resources from the packages. Due to appropriate

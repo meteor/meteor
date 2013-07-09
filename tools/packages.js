@@ -1904,10 +1904,10 @@ _.extend(Package.prototype, {
             prelinkFile.sourceMap = sourcemap.SourceMapGenerator.fromSourceMap(
               new sourcemap.SourceMapConsumer(rawSourceMap));
             if (resource.sources) {
-              resource.sources = {};
+              prelinkFile.sources = {};
               _.each(resource.sources, function (x, pathForSourceMap) {
                 rejectBadPath(x.source);
-                resource.sources[pathForSourceMap] = {
+                prelinkFile.sources[pathForSourceMap] = {
                   package: x.package,
                   sourcePath: x.sourcePath,
                   source: fs.readFileSync(path.join(sliceBasePath, x.source))
