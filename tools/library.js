@@ -7,7 +7,7 @@ var bundler = require('./bundler.js');
 var buildmessage = require('./buildmessage.js');
 var fs = require('fs');
 
-// Under the hood, packages in the library (/package/foo), and user
+// Under the hood, packages in the library (/packages/foo), and user
 // applications, are both Packages -- they are just represented
 // differently on disk.
 
