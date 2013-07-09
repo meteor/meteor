@@ -220,7 +220,7 @@ exports.logs = function (options) {
     galaxy.close();
   }
 
-  var lastLog = null;
+  var lastLogId = "unknown";
   var logReader = getMeteor(options.context).connect(logReaderURL);
   var Log = unipackage.load({
     library: options.context.library,
@@ -234,7 +234,7 @@ exports.logs = function (options) {
       if (msg.msg !== 'changed')
         return;
       var obj = msg.fields.obj;
-      lastLog = obj;
+      lastLogId = msg.fields.id;
       obj = Log.parse(obj);
       obj && console.log(Log.format(obj, {color: true}));
     }
@@ -246,11 +246,9 @@ exports.logs = function (options) {
   var logsSubscription = null;
   // In case of reconnect recover the state so user sees only new logs
   logReader.onReconnect = function () {
-    if (!lastLog)
-      lastLog = "";
     logsSubscription && logsSubscription.stop();
     logsSubscription = logReader.subscribe("logsForApp", options.app,
-                        {streaming: options.streaming, startingLog: lastLog});
+                      {streaming: options.streaming, resumeAfterId: lastLogId});
   };
   logsSubscription = prettySub(logReader, "logsForApp", [options.app,
                                       {streaming: options.streaming}], {
