@@ -76,7 +76,10 @@ Meteor.methods({
     return result;
   },
 
-  logout: function() {
+  logout: function(loginToken) {
+    check(loginToken, Match.Optional(Match.OneOf(String, null)));
+    if (loginToken)
+      Accounts._removeLoginToken(this.userId, loginToken);
     this.setUserId(null);
   }
 });
@@ -107,6 +110,14 @@ Accounts.registerLoginHandler(function(options) {
 // Semi-public. Used by other login methods to generate tokens.
 Accounts._generateStampedLoginToken = function () {
   return {token: Random.id(), when: +(new Date)};
+};
+
+Accounts._removeLoginToken = function (userId, loginToken) {
+  Meteor.users.update(userId, {
+    $pull: {
+      "services.resume.loginTokens": { "token": loginToken }
+    }
+  });
 };
 
 
