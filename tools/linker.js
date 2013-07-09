@@ -114,7 +114,7 @@ _.extend(Module.prototype, {
   // Output is a list of objects with keys 'source', 'servePath',
   // 'sourceMap', 'sources' (map from relative path in source map to
   // 'package', 'sourcePath', 'source')
-  getLinkedFiles: function () {
+  getPrelinkedFiles: function () {
     var self = this;
 
     if (! self.files.length && ! self.useGlobalNamespace)
@@ -132,8 +132,8 @@ _.extend(Module.prototype, {
       }];
 
       return ret.concat(_.map(self.files, function (file) {
-        var node = file.getLinkedOutput({ preserveLineNumbers: true,
-                                          exports: moduleExports });
+        var node = file.getPrelinkedOutput({ preserveLineNumbers: true,
+                                             exports: moduleExports });
         var results = node.toStringWithSourceMap({
           file: file.servePath
         }); // results has 'code' and 'map' attributes
@@ -171,8 +171,8 @@ _.extend(Module.prototype, {
     // Emit each file
     var sources = {};
     _.each(self.files, function (file) {
-      chunks.push(file.getLinkedOutput({ sourceWidth: sourceWidth,
-                                         exports: moduleExports }));
+      chunks.push(file.getPrelinkedOutput({ sourceWidth: sourceWidth,
+                                            exports: moduleExports }));
       chunks.push("\n");
       file.addToSourcesSet(sources);
     });
@@ -382,7 +382,7 @@ _.extend(File.prototype, {
   // - exports: the module's exports
   //
   // Returns a SourceNode.
-  getLinkedOutput: function (options) {
+  getPrelinkedOutput: function (options) {
     var self = this;
 
     // The newline after the source closes a '//' comment.
@@ -725,7 +725,7 @@ var prelink = function (options) {
     module.addFile(inputFile);
   });
 
-  var files = module.getLinkedFiles();
+  var files = module.getPrelinkedFiles();
   var exports = module.getExports();
 
   return {
