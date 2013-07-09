@@ -67,10 +67,11 @@ var Component = function Component() {
   return constrImpl(this, arguments, Component);
 };
 
-var _extend = function (tgt, src) {
+_extend = function (tgt, src) {
   for (var k in src)
     if (src.hasOwnProperty(k))
       tgt[k] = src[k];
+  return tgt;
 };
 
 var setSuperType = function (subType, superType) {
@@ -136,7 +137,8 @@ _extend(Component, {
       }
     },
     extendHooks: function (hooks) {
-      _extend(this._extendHooks, hooks);
+      this._extendHooks =
+        _extend(_extend({}, this._extendHooks), hooks);
     },
     // make typeName count as a special option for when `create`
     // checks for special options, even though it's not

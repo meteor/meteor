@@ -50,13 +50,25 @@ Template.item({
 
 Span = UIComponent.extend({
   render: function (buf) {
-    buf("<span style='background:red;margin:5px'>Hello</span>");
+    buf("<span ",
+        { attrs: { style: function () {
+          return ['background: ' + (Session.get('bg') || 'red') + ';',
+                  'margin: 5px;']; },
+                   foo: function () { return 'bar'; } }},
+        "><br ", { attrs: { 'class': function () { return 'brrr'; } }},
+        ">Hello</span>");
   }
 });
 
 Div = UIComponent.extend({
   render: function (buf) {
-    buf("<div style='background:blue;margin:5px'>World</div>");
+    buf("<div style='background:cyan;margin:5px'>World",
+        "<input type=checkbox ",
+        {attrs: {checked: function () {
+          return Session.get('checked') ? 'checked' : null;
+        }}},
+        ">",
+        "</div>");
   }
 });
 

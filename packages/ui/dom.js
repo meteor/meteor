@@ -46,6 +46,30 @@ var compareElementIndex = function (a, b) {
   }
 };
 
+// Returns true if element a contains node b and is not node b.
+var elementContains = function (a, b) {
+  if (a.nodeType !== 1) /* ELEMENT */
+    return false;
+  if (a === b)
+    return false;
+
+  if (a.compareDocumentPosition) {
+    return a.compareDocumentPosition(b) & 0x10;
+  } else {
+    // Should be only old IE and maybe other old browsers here.
+    // Modern Safari has both functions but seems to get contains() wrong.
+    // IE can't handle b being a text node.  We work around this
+    // by doing a direct parent test now.
+    b = b.parentNode;
+    if (! (b && b.nodeType === 1)) /* ELEMENT */
+      return false;
+    if (a === b)
+      return true;
+
+    return a.contains(b);
+  }
+};
+
 var insertNodesBefore = function (nodes, parentNode, beforeNode) {
   if (beforeNode) {
     $(nodes).insertBefore(beforeNode);
@@ -100,51 +124,9 @@ Component({
     var html = buf.getHtml();
 
     $(div).append(html);
-    var start = div.firstChild;
-    var end = div.lastChild;
 
-    var componentsToAttach = buf.componentsToAttach;
-    // walk div and replace comments with Components
-
-    var wireUpDOM = function (parent) {
-      var n = parent.firstChild;
-      while (n) {
-        var next = n.nextSibling;
-        if (n.nodeType === 8) { // COMMENT
-          var comp = componentsToAttach[n.nodeValue];
-          if (comp) {
-            if (parent === div) {
-              if (n === div.firstChild)
-                start = comp;
-              if (n === div.lastChild)
-                end = comp;
-            }
-            comp.attach(parent, n);
-            parent.removeChild(n);
-            delete componentsToAttach[n.nodeValue];
-          }
-        } else if (n.nodeType === 1) { // ELEMENT
-          // recurse through DOM
-          wireUpDOM(n);
-        }
-        n = next;
-      }
-    };
-
-    wireUpDOM(div);
-
-    // We should have attached all specified components, but
-    // if the comments we generated somehow didn't turn into
-    // comments (due to bad HTML) we won't have found them,
-    // in which case we clean them up here just to be safe.
-    for (var k in componentsToAttach)
-      componentsToAttach[k].destroy();
-
-    return {
-      // start and end will both be null if div is empty
-      start: start,
-      end: end
-    };
+    // returns info object with {start, end}
+    return buf.wireUpDOM(div);
   },
 
   build: function () {
@@ -186,8 +168,15 @@ Component({
 
       c.builtChildren = newChildren;
 
-      Deps.nonreactive(function () {
-        self._built();
+      // don't capture dependencies, but provide a
+      // parent autorun (so that any autoruns created
+      // from a built callback are stopped on rebuild)
+      var x = Deps.autorun(function (c) {
+        if (c.firstRun)
+          self._built();
+      });
+      Deps.onInvalidate(function () {
+        x.stop();
       });
     });
   },
@@ -516,6 +505,26 @@ Component({
     this.insertBefore(childOrDom, after.nextSibling, parentNode);
   },
 
+  containsElement: function (elem) {
+    var self = this;
+    self._requireBuilt();
+
+    var firstNode = self.firstNode();
+    var prevNode = firstNode.previousSibling;
+    var nextNode = self.lastNode().nextSibling;
+
+    // element must not be "above" this component
+    if (elementContains(elem, firstNode))
+      return false;
+    // element must not be "at or before" prevNode
+    if (prevNode && compareElementIndex(prevNode, elem) >= 0)
+      return false;
+    // element must not be "at or after" nextNode
+    if (nextNode && compareElementIndex(elem, nextNode) >= 0)
+      return false;
+    return true;
+  },
+
   $: function (selector) {
     var self = this;
 
@@ -610,6 +619,24 @@ Component({
 
     oldChild.detach();
     self.insertBefore(newChild, nextNode, parentNode);
+  },
+
+  built: function () {
+    var self = this;
+    var cbs = self._builtCallbacks;
+    if (cbs) {
+      for (var i = 0, N = cbs.length; i < N; i++)
+        cbs[i](self);
+      self._builtCallbacks.length = 0;
+    }
+  },
+
+  _onNextBuilt: function (cb) {
+    var self = this;
+    var cbs = self._builtCallbacks;
+    if (! cbs)
+      cbs = self._builtCallbacks = [];
+    cbs.push(cb);
   }
 
   // If Component is ever emptied, it gets an empty comment node.
@@ -633,7 +660,7 @@ Component({
 
 // Next up:
 //
-// - reactive attributes
+// - reactive *dynamic* attributes
 // - content()
 // - Spacebars compiler
 // - event maps
