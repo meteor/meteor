@@ -311,10 +311,6 @@ var File = function (inputFile, module) {
   // package or app.) Used for source maps, error messages..
   self.sourcePath = inputFile.sourcePath;
 
-  // The source tree to which sourcePath is relative. Either a name of
-  // a package, or null to mean "the app".
-  self.package = null; // XXX XXX actually set this
-
   // should line and column be included in errors?
   self.includePositionInErrors = inputFile.includePositionInErrors;
 
@@ -357,8 +353,8 @@ _.extend(File.prototype, {
   _pathForSourceMap: function () {
     var self = this;
 
-    if (self.package)
-      return "package/" + self.package + "/" + self.sourcePath;
+    if (self.module.name)
+      return "package/" + self.module.name + "/" + self.sourcePath;
     else
       return "app/" + self.sourcePath;
   },
@@ -368,7 +364,7 @@ _.extend(File.prototype, {
   addToSourcesSet: function (sources) {
     var self = this;
     sources[self._pathForSourceMap()] = {
-      package: self.package,
+      package: self.module.name,
       sourcePath: self.sourcePath,
       source: new Buffer(self.source, 'utf8') // XXX encoding
     };
