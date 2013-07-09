@@ -674,11 +674,15 @@ var prelink = function (options) {
 // 'inputFiles' argument to prelink().
 var link = function (options) {
   if (options.useGlobalNamespace) {
-    return [{
-      source: getImportCode(options.imports,
-                            "/* Imports for global scope */\n\n", true),
-      servePath: options.importStubServePath
-    }].concat(options.prelinkFiles);
+    var ret = [];
+    if (!_.isEmpty(options.imports)) {
+      ret.push({
+        source: getImportCode(options.imports,
+                              "/* Imports for global scope */\n\n", true),
+        servePath: options.importStubServePath
+      });
+    }
+    return ret.concat(options.prelinkFiles);
   }
 
   var header = getHeader({
