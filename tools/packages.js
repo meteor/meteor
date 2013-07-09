@@ -2074,23 +2074,40 @@ _.extend(Package.prototype, {
             data: data
           });
 
-          sliceJson.resources.push({
+          var resource = {
             type: 'prelink',
             file: resourcePath,
             length: data.length,
             offset: 0,
-            servePath: file.servePath || undefined,
-            // XXX XXX these should actually be written to separate files!
-            // (sourceMap and the actual source files in 'sources'
-            sourceMap: file.sourceMap ? file.sourceMap.toString() : undefined,
-            sources: file.sourceMap ? _.map(file.sources, function (x) {
-              return {
+            servePath: file.servePath || undefined
+          };
+
+          if (file.sourceMap) {
+            // Write the source map.
+            var mapFilename = builder.generateFilename(
+              path.join(sliceDir, file.servePath + '.map'));
+            resource.sourceMap = mapFilename;
+            builder.write(mapFilename, {
+              data: new Buffer(file.sourceMap.toString(), 'utf8')
+            });
+
+            // Now write the sources themselves.
+            resource.sources = {};
+            _.each(file.sources, function (x, pathForSourceMap) {
+              var savedFilename = builder.generateFilename(
+                path.join(sliceDir, 'sources', x.sourcePath));
+              builder.write(savedFilename, {
+                data: x.source
+              });
+              resource.sources[pathForSourceMap] = {
                 package: x.package,
                 sourcePath: x.sourcePath,
-                source: x.source.toString('utf8')
-              }
-            }) : undefined
-          });
+                source: savedFilename
+              };
+            });
+          }
+
+          sliceJson.resources.push(resource);
         });
 
         // If slice has included node_modules, copy them in

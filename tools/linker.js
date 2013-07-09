@@ -353,6 +353,8 @@ _.extend(File.prototype, {
   _pathForSourceMap: function () {
     var self = this;
 
+    // XXX why is this "package" and not "packages"? Every other directory is
+    // called "packages".
     if (self.module.name)
       return "package/" + self.module.name + "/" + self.sourcePath;
     else
