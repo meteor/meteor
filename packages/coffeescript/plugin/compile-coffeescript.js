@@ -102,7 +102,7 @@ var handler = function (compileStep) {
     sourcePath: compileStep.inputPath,
     data: output,
     lineForLine: false,
-    linkerUnitTransform: function (source, exports) {
+    linkerFileTransform: function (source, exports) {
       return addSharedHeader(stripExportedVars(source, exports));
     }
   });

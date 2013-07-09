@@ -129,9 +129,8 @@ _.extend(Module.prototype, {
 
     // Otherwise..
 
-    // Find the maximum line length. The extra three are for the
-    // comments that will be emitted when we skip a unit.
-    var sourceWidth = _.max([68, self.maxLineLength(120 - 2)]) + 3;
+    // Find the maximum line length.
+    var sourceWidth = _.max([68, self.maxLineLength(120 - 2)]);
 
     // Prologue
     var chunks = [];
@@ -168,9 +167,7 @@ _.extend(Module.prototype, {
 
     var exports = {};
     _.each(self.files, function (file) {
-      _.each(file.units, function (unit) {
-        _.extend(exports, unit.exports);
-      });
+      _.extend(exports, file.exports);
     });
 
     return _.union(_.keys(exports), self.forceExport);
@@ -241,14 +238,10 @@ var File = function (inputFile, module) {
   // should line and column be included in errors?
   self.includePositionInErrors = inputFile.includePositionInErrors;
 
-  // The individual @units in the file. Array of Unit. Concatenating
-  // the source of each unit, in order, will give self.source.
-  self.units = [];
-
   // A function which transforms the source code once all exports are
   // known. (eg, for CoffeeScript.)
-  self.linkerUnitTransform =
-    inputFile.linkerUnitTransform || function (source, exports) {
+  self.linkerFileTransform =
+    inputFile.linkerFileTransform || function (source, exports) {
       return source;
     };
 
@@ -258,22 +251,51 @@ var File = function (inputFile, module) {
   // The Module containing this file.
   self.module = module;
 
-  self._unitize();
+  // symbols mentioned in @export, @require, @provide, or @weak
+  // directives. each is a map from the symbol (given as a string) to
+  // true. (only @export is actually implemented)
+  self.exports = {};
+  self.requires = {};
+  self.provides = {};
+  self.weaks = {};
+
+  self._scanForComments();
 };
 
 _.extend(File.prototype, {
-  // Return the union of the global references in all of the units in
-  // this file that we are actually planning to use. Array of string.
+  // Return the globals in this file as an array of symbol names.  For
+  // example: if the code references 'Foo.bar.baz' and 'Quux', and
+  // neither are declared in a scope enclosing the point where they're
+  // referenced, then globalReferences would include ["Foo", "Quux"].
   computeGlobalReferences: function () {
     var self = this;
 
-    var globalReferences = [];
-    _.each(self.units, function (unit) {
-      if (unit.include)
-        globalReferences = globalReferences.concat(unit.computeGlobalReferences());
-    });
-    return globalReferences;
+    var jsAnalyze = self.module.jsAnalyze;
+    // If we don't have a JSAnalyze object, we probably are the js-analyze
+    // package itself. Assume we have no global references. At the module level,
+    // we'll assume that exports are global references.
+    if (!jsAnalyze)
+      return [];
+
+    try {
+      return _.keys(jsAnalyze.findAssignedGlobals(self.source));
+    } catch (e) {
+      if (!e.$ParseError)
+        throw e;
+      buildmessage.error(e.description, {
+        file: self.sourcePath,
+        line: self.includePositionInErrors ? e.lineNumber : null,
+        column: self.includePositionInErrors ? e.column : null,
+        downcase: true
+      });
+
+      // Recover by pretending that this file is empty (which
+      // includes replacing its source code with '' in the output)
+      self.source = "";
+      return [];
+    }
   },
+
 
   // Relative path to use in source maps to indicate this file. No
   // leading slash.
@@ -311,8 +333,8 @@ _.extend(File.prototype, {
     // The newline after the source closes a '//' comment.
     if (options.preserveLineNumbers) {
       // Ugly version
-      // XXX XXX need to propagate source maps through linkerUnitTransform!
-      var body = self.linkerUnitTransform(self.source, options.exports);
+      // XXX XXX need to propagate source maps through linkerFileTransform!
+      var body = self.linkerFileTransform(self.source, options.exports);
       return new sourcemap.SourceNode(null, null, null, [
         self.bare ? "" : "(function(){",
         new sourcemap.SourceNode(1, 0, self._pathForSourceMap(),
@@ -354,37 +376,26 @@ _.extend(File.prototype, {
     // comments, because you have to do something different if you're
     // already inside a comment.
     var num = 1;
-    _.each(self.units, function (unit) {
-      var unitSource = self.linkerUnitTransform(unit.source, options.exports);
-      var lines = unitSource.split('\n');
+    var transformedSource = self.linkerFileTransform(
+      self.source, options.exports);
+    var lines = transformedSource.split('\n');
 
-      // There are probably ways to make a more compact source
-      // map. For example, for an included unit, the only change we
-      // make is to append a comment, so we can probably emit one
-      // mapping for the whole unit. And for a non-included unit, we
-      // can probably tolerate mapping it inexactly or not at all
-      // (since it's in a comment.) For the moment, we'll do it by the
-      // book just to see how it goes.
+      // There are probably ways to make a more compact source map. For example,
+      // the only change we make is to append a comment, so we can probably emit
+      // one mapping for the whole file. For the moment, we'll do it by the book
+      // just to see how it goes.
+    _.each(lines, function (line) {
+      var suffix = "\n";
 
-      _.each(lines, function (line) {
-        var prefix = "", suffix = "\n";
+      if (line.length <= width) {
+        suffix = padding.slice(line.length, width) + " // " + num + "\n";
+      }
 
-        if (! unit.include) {
-          prefix = "// ";
-        }
+      chunks.push(new sourcemap.SourceNode(num, 0, self._pathForSourceMap(),
+                                           line));
+      chunks.push(suffix);
 
-        var lengthWithPrefix = line.length + prefix.length;
-        if (lengthWithPrefix <= width) {
-          suffix = padding.slice(lengthWithPrefix, width) + " // " + num + "\n";
-        }
-
-        chunks.push(prefix);
-        chunks.push(new sourcemap.SourceNode(num, 0, self._pathForSourceMap(),
-                                             line));
-        chunks.push(suffix);
-
-        num++;
-      });
+      num++;
     });
 
     // Footer
@@ -412,157 +423,45 @@ _.extend(File.prototype, {
     return null;
   },
 
-  // Split file and populate self.units
-  // XXX it is an error to declare a @unit not at toplevel (eg, inside a
-  // function or object..) We don't detect this but we might have to to
-  // give an acceptable user experience..
-  _unitize: function () {
+  // Scan for @export, etc.
+  _scanForComments: function () {
     var self = this;
     var lines = self.source.split("\n");
-    var buf = "";
-    var unit = new Unit(
-      null, true, self, self.includePositionInErrors ? 0 : null);
-    self.units.push(unit);
 
-    var lineCount = 0;
     _.each(lines, function (line) {
       var commentBody = self._getSingleLineCommentBody(line);
+      if (!commentBody)
+        return;
 
-      if (commentBody) {
-        // XXX overly permissive. should detect errors
-        var match = /^@unit(?:\s+(\S+))?$/.exec(commentBody);
-        if (match) {
-          unit.source = buf;
-          buf = line;
-          unit = new Unit(match[1] || null, false, self,
-                          self.includePositionInErrors ? lineCount : null);
-          self.units.push(unit);
-          lineCount++;
-          return;
-        }
+      // XXX overly permissive. should detect errors
+      var match = /^@(export|require|provide|weak)(\s+.*)$/.exec(commentBody);
+      if (match) {
+        var what = match[1];
+        var symbols = _.map(match[2].split(/,/), function (s) {
+          return s.trim();
+        });
 
-        // XXX overly permissive. should detect errors
-        match = /^@(export|require|provide|weak)(\s+.*)$/.exec(commentBody);
-        if (match) {
-          var what = match[1];
-          var symbols = _.map(match[2].split(/,/), function (s) {
-            return s.trim();
+        var badSymbols = _.reject(symbols, function (s) {
+          // XXX should be unicode-friendlier
+          return s.match(/^([_$a-zA-Z][_$a-zA-Z0-9]*)(\.[_$a-zA-Z][_$a-zA-Z0-9]*)*$/);
+        });
+        if (!_.isEmpty(badSymbols)) {
+          buildmessage.error("bad symbols for @" + what + ": " +
+                             JSON.stringify(badSymbols),
+                             { file: self.sourcePath });
+          // recover by ignoring
+        } else if (self.module.noExports && what === "export") {
+          buildmessage.error("@export not allowed in this slice",
+                             { file: self.sourcePath });
+          // recover by ignoring
+        } else {
+          _.each(symbols, function (s) {
+            if (s.length)
+              self[what + "s"][s] = true;
           });
-
-          var badSymbols = _.reject(symbols, function (s) {
-            // XXX should be unicode-friendlier
-            return s.match(/^([_$a-zA-Z][_$a-zA-Z0-9]*)(\.[_$a-zA-Z][_$a-zA-Z0-9]*)*$/);
-          });
-          if (!_.isEmpty(badSymbols)) {
-            buildmessage.error("bad symbols for @" + what + ": " +
-                               JSON.stringify(badSymbols),
-                               { file: self.sourcePath });
-            // recover by ignoring
-          } else if (self.module.noExports && what === "export") {
-            buildmessage.error("@export not allowed in this slice",
-                               { file: self.sourcePath });
-            // recover by ignoring
-          } else {
-            _.each(symbols, function (s) {
-              if (s.length)
-                unit[what + "s"][s] = true;
-            });
-          }
-
-          /* fall through */
         }
       }
-
-      if (lineCount !== 0)
-        buf += "\n";
-      lineCount++;
-      buf += line;
     });
-    unit.source = buf;
-  }
-});
-
-///////////////////////////////////////////////////////////////////////////////
-// Unit
-///////////////////////////////////////////////////////////////////////////////
-
-var Unit = function (name, mandatory, file, lineOffset) {
-  var self = this;
-
-  // name of the unit, or null if none provided
-  self.name = name;
-
-  // source code for this unit (a string)
-  self.source = null;
-
-  // true if this unit is to always be included
-  self.mandatory = !! mandatory;
-
-  // true if we should include this unit in the linked output
-  self.include = self.mandatory;
-
-  // The File containing the unit.
-  self.file = file;
-
-  // offset of 'self.source' in the original input file, in whole
-  // lines (partial lines are not supported.) Used to generate correct
-  // line number information in error messages. Set to null to omit
-  // line/column information (you'll need to do this, for, eg,
-  // coffeescript output, given that we don't have sourcemaps here
-  // yet.)
-  self.lineOffset = lineOffset;
-
-  // symbols mentioned in @export, @require, @provide, or @weak
-  // directives. each is a map from the symbol (given as a string) to
-  // true.
-  self.exports = {};
-  self.requires = {};
-  self.provides = {};
-  self.weaks = {};
-};
-
-_.extend(Unit.prototype, {
-  // Return the globals in unit file as an array of symbol names.  For
-  // example: if the code references 'Foo.bar.baz' and 'Quux', and
-  // neither are declared in a scope enclosing the point where they're
-  // referenced, then globalReferences would include ["Foo", "Quux"].
-  //
-  // XXX Doing this at the unit level means that we need to also look
-  //     for var declarations in various units, and use them to create
-  //     a graph of unit dependencies such that in:
-  //        // @unit X
-  //        var A;
-  //        // @unit Y
-  //        A = 5;
-  //     including Y requires including X. Since we don't do that, @unit
-  //     is currently broken. It's also unused and undocumented :)
-  computeGlobalReferences: function () {
-    var self = this;
-
-    var jsAnalyze = self.file.module.jsAnalyze;
-    // If we don't have a JSAnalyze object, we probably are the js-analyze
-    // package itself. Assume we have no global references. At the module level,
-    // we'll assume that exports are global references.
-    if (!jsAnalyze)
-      return [];
-
-    try {
-      return _.keys(jsAnalyze.findAssignedGlobals(self.source));
-    } catch (e) {
-      if (!e.$ParseError)
-        throw e;
-      buildmessage.error(e.description, {
-        file: self.file.sourcePath,
-        line: self.lineOffset === null ? null : e.lineNumber + self.lineOffset,
-        column: self.lineOffset === null ? null : e.column,
-        downcase: true
-      });
-
-      // Recover by pretending that this unit is empty (which
-      // includes replacing its source code with '' in the output)
-      self.source = "";
-      return [];
-    }
   }
 });
 
@@ -593,9 +492,9 @@ _.extend(Unit.prototype, {
 //  - includePositionInErrors: true to include line and column
 //    information in errors. set to false if, eg, this is the output
 //    of coffeescript. (XXX replace with real sourcemaps)
-//  - linkerUnitTransform: if given, this function will be called
-//    when the module is being linked with the source of the unit
-//    and an array of the exports of the module; the unit's source will
+//  - linkerFileTransform: if given, this function will be called
+//    when the module is being linked with the source of the file
+//    and an array of the exports of the module; the file's source will
 //    be replaced by what the function returns.
 //
 // forceExport: an array of symbols (as dotted strings) to force the

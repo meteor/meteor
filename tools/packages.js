@@ -414,7 +414,7 @@ _.extend(Slice.prototype, {
             sourcePath: options.sourcePath,
             servePath: path.join(self.pkg.serveRoot, options.path),
             includePositionInErrors: options.lineForLine,
-            linkerUnitTransform: options.linkerUnitTransform,
+            linkerFileTransform: options.linkerFileTransform,
             bare: !!options.bare
           });
         },
