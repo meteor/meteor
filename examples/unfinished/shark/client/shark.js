@@ -51,11 +51,19 @@ Template.item({
 Span = UIComponent.extend({
   render: function (buf) {
     buf("<span ",
-        { attrs: { style: function () {
-          return ['background: ' + (Session.get('bg') || 'red') + ';',
-                  'margin: 5px;']; },
-                   foo: function () { return 'bar'; } }},
-        "><br ", { attrs: { 'class': function () { return 'brrr'; } }},
+        { attrs: function () {
+          return { style:
+                   'background: ' + (Session.get('bg') || 'red') + ';' +
+                   'margin: 5px;',
+                   foo: 'bar'
+                 };}},
+        "><br ", {
+          attrs: function () {
+            var x = { 'class': ['brrr', 'cold'] };
+            x[Session.get('attrName') || 'boring'] = "";
+            return x;
+          }
+        },
         ">Hello</span>");
   }
 });
@@ -64,9 +72,9 @@ Div = UIComponent.extend({
   render: function (buf) {
     buf("<div style='background:cyan;margin:5px'>World",
         "<input type=checkbox ",
-        {attrs: {checked: function () {
-          return Session.get('checked') ? 'checked' : null;
-        }}},
+        {attrs: function () {
+          return {checked: Session.get('checked') ? 'checked' : null};
+        }},
         ">",
         "</div>");
   }

@@ -400,7 +400,11 @@ Component({
 
   extendHooks: {
     attached: 'chain',
-    detached: 'chain'
+    detached: 'chain',
+    attributeHandlers: function (handlers) {
+      this._attributeHandlers =
+        _extend(_extend({}, this._attributeHandlers), handlers);
+    }
   },
 
   destroyed: function () {
@@ -668,10 +672,24 @@ Component({
   // and that the component does not become empty.
 });
 
+Component({
+  attributeHandlers: {
+    'class': AttributeHandler.extend({
+      stringifyValue: function (value) {
+        if (typeof value === 'string')
+          return value;
+        else if (typeof value.length === 'number') {
+          return Array.prototype.join.call(value, ' ');
+        } else {
+          return String(value);
+        }
+      }
+    })
+  }
+});
 
 // Next up:
 //
-// - reactive *dynamic* attributes
 // - content()
 // - Spacebars compiler
 // - event maps

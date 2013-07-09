@@ -24,18 +24,6 @@ _UI.encodeSpecialEntities = function (text, isQuoted) {
                       ESCAPED_CHARS_UNQUOTED_REGEX, escapeOne);
 };
 
-var ATTRIBUTE_NAME_REGEX = /^[^\s"'>/=/]+$/;
-
-// takes a known-to-be non-function, asserts it is
-// a string or an array, and produces a string
-var stringifyAttrValue = function (v) {
-  if (typeof v === 'string')
-    return v;
-  else if (typeof v.length === 'number')
-    return Array.prototype.join.call(v, ' ');
-  else
-    throw new Error("Expected string or array for attr value");
-};
 
 var GT_OR_QUOTE = /[>'"]/;
 
@@ -70,10 +58,10 @@ makeRenderBuffer = function (component, options) {
   // between 1 and `maxDataAttrNumber` inclusive.
   var curDataAttrNumber = 1;
   var maxDataAttrNumber = 0;
-  var dataAttrs = [];
+  var dataAttrs = []; // names of all HTML attributes used
   var greaterThanEndsTag = false;
 
-  var elementsToWire = {};
+  var attrManagersToWire = {};
 
   var push = function (/*stringsToPush*/) {
     for (var i = 0, N = arguments.length;
@@ -132,69 +120,36 @@ makeRenderBuffer = function (component, options) {
         throw new Error("Expected 'type' to be Component or function");
       }
     } else if (arg.attrs) {
-      // `{attrs: { name1: string, array, or function, ... }}`
+      // `{attrs: functionOrDictionary }`
       // attrs object inserts zero or more `name="value"` items
       // into the HTML, and can reactively update them later.
       // You can have multiple attrs objects in a tag, but they
-      // can't specify any of the same attributes (i.e. the right
-      // thing won't happen).
+      // can't specify any of the same attributes (i.e. if `{{foo}}`
+      // and `{{bar}}` in the same tag declare a same-named attribute,
+      // they won't cooperate).
       var elemId = null;
-      for (var attrName in arg.attrs) {
-        if (! ATTRIBUTE_NAME_REGEX.test(attrName))
-          throw new Error("Illegal HTML attribute name: " + attrName);
-        // the declared property of `attrs`, which may
-        // be a string or array, or a function that returns
-        // one.
-        var attrValue = arg.attrs[attrName];
-        // the current value, which may be an array or a string.
-        var initialValue;
 
-        if (typeof attrValue === 'function') {
-          // calculate the initial value without reactivity.
-          // once the element exists, recalculate it with
-          // an autorun.
-          Deps.nonreactive(function () {
-            initialValue = attrValue();
-          });
+      var manager = new AttributeManager(component, arg.attrs);
 
-          if (! elemId) {
-            elemId = elementUid++;
-            // don't call the `push` helper, go around it
-            strs.push('data-meteorui-id', curDataAttrNumber,
-                      '="', elemId, '" ');
-            if (curDataAttrNumber > maxDataAttrNumber) {
-              dataAttrs[curDataAttrNumber-1] =
-                'data-meteorui-id' + curDataAttrNumber;
-              maxDataAttrNumber = curDataAttrNumber;
-            }
-            curDataAttrNumber++;
-            greaterThanEndsTag = true;
-          }
-
-          var info = (elementsToWire[elemId] ||
-                      (elementsToWire[elemId] = {}));
-
-          info[attrName] = {
-            attrName: attrName,
-            attrValueFunc: attrValue,
-            initialValue: initialValue
-          };
-
-        } else {
-          initialValue = attrValue;
+      if (manager.isReactive()) {
+        var elemId = elementUid++;
+        // don't call the `push` helper, go around it
+        strs.push('data-meteorui-id', curDataAttrNumber,
+                  '="', elemId, '" ');
+        if (curDataAttrNumber > maxDataAttrNumber) {
+          dataAttrs[curDataAttrNumber-1] =
+            'data-meteorui-id' + curDataAttrNumber;
+          maxDataAttrNumber = curDataAttrNumber;
         }
+        curDataAttrNumber++;
+        greaterThanEndsTag = true;
 
-        if (initialValue != null) {
-          var stringValue = stringifyAttrValue(initialValue);
-
-          // don't call the `push` helper, go around it
-          strs.push(' ', attrName, '="',
-                    _UI.encodeSpecialEntities(stringValue, true),
-                    '" ');
-        }
-
-        // XXX make attr update hookable
+        attrManagersToWire[elemId] = manager;
       }
+
+      // don't call the `push` helper, go around it
+      strs.push(' ', manager.getInitialHTML(), ' ');
+
     } else {
       throw new Error("Expected HTML string, Component, component spec or attrs spec");
     }
@@ -233,15 +188,21 @@ makeRenderBuffer = function (component, options) {
             delete componentsToAttach[n.nodeValue];
           }
         } else if (n.nodeType === 1) { // ELEMENT
-          var elemId, callback;
           // detect elements with reactive attributes
           for (var i = 0; i < maxDataAttrNumber; i++) {
             var attrName = dataAttrs[i];
             var elemId = n.getAttribute(attrName);
             if (elemId) {
-              var info = elementsToWire[elemId];
-              if (info)
-                info._element = n;
+              var mgr = attrManagersToWire[elemId];
+              if (mgr) {
+                mgr.wire(n, component);
+                // note: this callback will be called inside
+                // the build autorun, so its internal
+                // autorun will be stopped on rebuild
+                component._onNextBuilt((function (mgr) {
+                  return function () { mgr.start(); };
+                })(mgr));
+              }
               n.removeAttribute(attrName);
             }
           }
@@ -264,63 +225,7 @@ makeRenderBuffer = function (component, options) {
 
     // aid GC
     componentsToAttach = null;
-
-    // onNextBuilt callbacks run within the build
-    // computation and are stopped on rebuild.
-    component._onNextBuilt(function () {
-      for (var k in elementsToWire) {
-        var infoObj = elementsToWire[k];
-        if (infoObj._element) {
-          // element found during DOM traversal
-          for (var attrName in infoObj) {
-            // XXXX putting _element on the dictionary is not right
-            if (attrName === '_element')
-              continue;
-            component.autorun(function (c) {
-              // note: it's not safe to access `attrName`
-              // and `infoObj` from this closure, except
-              // during firstRun when they have their original
-              // values.
-              if (c.firstRun) {
-                c.element = infoObj._element;
-                c.info = infoObj[attrName];
-                c.curValue = c.info.initialValue;
-              }
-              var info = c.info;
-              if (component.stage !== Component.BUILT ||
-                  ! component.containsElement(c.element)) {
-                c.stop();
-                return;
-              }
-              // capture dependencies of this line:
-              var newValue = info.attrValueFunc();
-
-              var oldValue = c.curValue;
-              if (newValue == null) {
-                if (oldValue != null)
-                  c.element.removeAttribute(info.attrName);
-              } else {
-                var newStringValue = stringifyAttrValue(newValue);
-                if (oldValue == null) {
-                  c.element.setAttribute(
-                    info.attrName, newStringValue);
-                } else {
-                  var oldStringValue =
-                        stringifyAttrValue(oldValue);
-                  if (newStringValue !== oldStringValue) {
-                    c.element.setAttribute(
-                      info.attrName, newStringValue);
-                  }
-                }
-              }
-
-              c.curValue = newValue;
-            });
-          }
-        }
-      }
-      elementsToWire = null;
-    });
+    attrManagersToWire = null;
 
     return {
       // start and end will both be null if div is empty
