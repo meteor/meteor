@@ -902,7 +902,16 @@ _.extend(ClientTarget.prototype, {
             data: new Buffer(file.sourceMap.toString(), 'utf8')
           });
 
-        // XXX write sources too
+        manifestItem.sources = {};
+        _.each(file.sources, function (x, pathForSourceMap) {
+          manifestItem.sources[pathForSourceMap] = {
+            package: x.package,
+            sourcePath: x.sourcePath,
+            source: builder.writeToGeneratedFilename(
+              path.join('sources', pathForSourceMap),
+              { data: x.source })
+          };
+        });
       }
 
       manifest.push(manifestItem);
