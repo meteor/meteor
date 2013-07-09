@@ -62,6 +62,12 @@ var scanForSources = function (rootPath, extensions, ignoreFiles) {
   });
 };
 
+var rejectBadPath = function (p) {
+  if (p.match(/\.\./))
+    throw new Error("bad path: " + p);
+};
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // Slice
 ///////////////////////////////////////////////////////////////////////////////
@@ -1805,8 +1811,8 @@ _.extend(Package.prototype, {
     self.testSlices = mainJson.testSlices;
 
     _.each(mainJson.plugins, function (pluginMeta) {
-      if (pluginMeta.path.match(/\.\./))
-        throw new Error("bad path in unipackage");
+      rejectBadPath(pluginMeta.path);
+
       var plugin = bundler.readJsImage(path.join(dir, pluginMeta.path));
 
       if (! archinfo.matches(archinfo.host(), plugin.arch)) {
@@ -1832,8 +1838,7 @@ _.extend(Package.prototype, {
     _.each(mainJson.slices, function (sliceMeta) {
       // aggressively sanitize path (don't let it escape to parent
       // directory)
-      if (sliceMeta.path.match(/\.\./))
-        throw new Error("bad path in unipackage");
+      rejectBadPath(sliceMeta.path);
       var sliceJson = JSON.parse(
         fs.readFileSync(path.join(dir, sliceMeta.path)));
       var sliceBasePath = path.dirname(path.join(dir, sliceMeta.path));
@@ -1844,8 +1849,7 @@ _.extend(Package.prototype, {
 
       var nodeModulesPath = null;
       if (sliceJson.node_modules) {
-        if (sliceJson.node_modules.match(/\.\./))
-          throw new Error("bad node_modules path in unipackage");
+        rejectBadPath(sliceJson.node_modules);
         nodeModulesPath = path.join(sliceBasePath, sliceJson.node_modules);
       }
 
@@ -1875,8 +1879,7 @@ _.extend(Package.prototype, {
       slice.resources = [];
 
       _.each(sliceJson.resources, function (resource) {
-        if (resource.file.match(/\.\./))
-          throw new Error("bad resource file path in unipackage");
+        rejectBadPath(resource.file);
 
         var fd = fs.openSync(path.join(sliceBasePath, resource.file), "r");
         try {
@@ -1890,21 +1893,29 @@ _.extend(Package.prototype, {
           throw new Error("couldn't read entire resource");
 
         if (resource.type === "prelink") {
-          slice.prelinkFiles.push({
+          var prelinkFile = {
             source: data.toString('utf8'),
-            servePath: resource.servePath,
-            // XXX XXX sourceMap and sources should come from separate
-            // files (and probably be lazily loaded..)
-            sourceMap: resource.sourceMap ?
-              sourcemap.SourceMapGenerator.fromSourceMap(new sourcemap.SourceMapConsumer(resource.sourceMap)) : undefined,
-            sources: resource.sourceMap ? _.map(resource.sources, function (x) {
-              return {
-                package: x.package,
-                sourcePath: x.sourcePath,
-                source: new Buffer(x.source, 'utf8')
-              };
-            }) : undefined
-          });
+            servePath: resource.servePath
+          };
+          if (resource.sourceMap) {
+            rejectBadPath(resource.sourceMap);
+            var rawSourceMap = fs.readFileSync(
+              path.join(sliceBasePath, resource.sourceMap), 'utf8');
+            prelinkFile.sourceMap = sourcemap.SourceMapGenerator.fromSourceMap(
+              new sourcemap.SourceMapConsumer(rawSourceMap));
+            if (resource.sources) {
+              resource.sources = {};
+              _.each(resource.sources, function (x, pathForSourceMap) {
+                rejectBadPath(x.source);
+                resource.sources[pathForSourceMap] = {
+                  package: x.package,
+                  sourcePath: x.sourcePath,
+                  source: fs.readFileSync(path.join(sliceBasePath, x.source))
+                };
+              });
+            }
+          }
+          slice.prelinkFiles.push(prelinkFile);
         } else if (_.contains(["head", "body", "css", "js", "static"],
                               resource.type)) {
           slice.resources.push({
