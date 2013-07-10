@@ -153,7 +153,7 @@ makeRenderBuffer = function (component, options) {
       strs.push(' ', manager.getInitialHTML(), ' ');
 
     } else {
-      throw new Error("Expected HTML string, Component, component spec or attrs spec");
+      throw new Error("Expected HTML string, Component, component spec or attrs spec, found: " + arg);
     }
   };
 
