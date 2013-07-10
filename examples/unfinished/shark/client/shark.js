@@ -129,3 +129,25 @@ Meteor.startup(function () {
   // leak `c`
   (c = _UI.Counter.create({isRoot:true})).attach(document.body);
 });
+
+Meteor.startup(function () {
+  var c = function (n) { return UIComponent.create({render:function(buf) { buf(String(n)); }}); };
+
+  var L = _UI.List();
+
+  L.addItemBefore('a', c(1));
+  L.addItemBefore('b', c(2));
+  L.addItemBefore('c', c(3));
+  L.makeRoot();
+  L.attach(document.body);
+  L.addItemBefore('d', c(4));
+  L.addItemBefore('e', c(5), 'b');
+  L.moveItemBefore('d', 'c');
+  L.moveItemBefore('a');
+  L.removeItem('b');
+  L.removeItem('a');
+  L.removeItem('c');
+  L.removeItem('d');
+  L.removeItem('e');
+  L.addItemBefore('a', c(1));
+});
