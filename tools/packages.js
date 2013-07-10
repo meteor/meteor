@@ -181,8 +181,7 @@ var Slice = function (pkg, options) {
   // honored for "static", ignored for "head" and "body", sometimes
   // honored for CSS but ignored if we are concatenating.
   //
-  // sourceMap: Allowed only for "js". If present, a
-  // SourceMapGenerator.
+  // sourceMap: Allowed only for "js". If present, a string.
   //
   // sources: Only if 'sourceMap' present. A mapping from a relative
   // source path given in sourceMap (no leading '/') to:
@@ -426,10 +425,7 @@ _.extend(Slice.prototype, {
             includePositionInErrors: options.lineForLine,
             linkerFileTransform: options.linkerFileTransform,
             bare: !!options.bare,
-            sourceMap: (options.sourceMapAsString
-                        && sourcemap.SourceMapGenerator.fromSourceMap(
-                          new sourcemap.SourceMapConsumer(
-                            options.sourceMapAsString))),
+            sourceMap: options.sourceMap,
             sources: options.sources
           });
         },
@@ -1917,10 +1913,8 @@ _.extend(Package.prototype, {
           };
           if (resource.sourceMap) {
             rejectBadPath(resource.sourceMap);
-            var rawSourceMap = fs.readFileSync(
+            prelinkFile.sourceMap = fs.readFileSync(
               path.join(sliceBasePath, resource.sourceMap), 'utf8');
-            prelinkFile.sourceMap = sourcemap.SourceMapGenerator.fromSourceMap(
-              new sourcemap.SourceMapConsumer(rawSourceMap));
             if (resource.sources) {
               prelinkFile.sources = {};
               _.each(resource.sources, function (x, pathForSourceMap) {
@@ -2108,7 +2102,7 @@ _.extend(Package.prototype, {
             // Write the source map.
             resource.sourceMap = builder.writeToGeneratedFilename(
               path.join(sliceDir, file.servePath + '.map'),
-              { data: new Buffer(file.sourceMap.toString(), 'utf8') }
+              { data: new Buffer(file.sourceMap, 'utf8') }
             );
 
             // Now write the sources themselves.

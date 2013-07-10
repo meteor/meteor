@@ -70,8 +70,8 @@ var stripExportedVars = function (source, exports) {
   return lines.join('\n');
 };
 
-var addSharedHeader = function (source, sourceMapAsString) {
-  var sourceMapJSON = JSON.parse(sourceMapAsString);
+var addSharedHeader = function (source, sourceMap) {
+  var sourceMapJSON = JSON.parse(sourceMap);
 
   // We want the symbol "share" to be visible to all CoffeeScript files in the
   // package (and shared between them), but not visible to JavaScript
@@ -108,8 +108,7 @@ var addSharedHeader = function (source, sourceMapAsString) {
   });
   return {
     source: source,
-    sourceMap: sourcemap.SourceMapGenerator.fromSourceMap(
-      new sourcemap.SourceMapConsumer(sourceMapJSON))
+    sourceMap: JSON.stringify(sourceMapJSON)
   };
 };
 
@@ -150,11 +149,10 @@ var handler = function (compileStep) {
     data: output.js,
     lineForLine: false,
     linkerFileTransform: function (source, exports, sourceMap) {
-      var sourceMapAsString = sourceMap.toString();
       var stripped = stripExportedVars(source, exports);
-      return addSharedHeader(stripped, sourceMapAsString);
+      return addSharedHeader(stripped, sourceMap);
     },
-    sourceMapAsString: output.v3SourceMap,
+    sourceMap: output.v3SourceMap,
     sources: sources
   });
 };

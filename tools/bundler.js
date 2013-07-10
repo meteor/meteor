@@ -263,9 +263,8 @@ var File = function (options) {
   // disk.)
   self.sourcePath = options.sourcePath;
 
-  // If this file was generated, a sourceMap (provided as a
-  // sourcemap.SourceMapGenerator) with debugging information. Set with
-  // setSourceMap.
+  // If this file was generated, a sourceMap (as a string) with debugging
+  // information. Set with setSourceMap.
   self.sourceMap = null;
 
   // If sourceMap is set, this is a map from a relative source file
@@ -397,13 +396,13 @@ _.extend(File.prototype, {
     });
   },
 
-  // Set a source map for this File. sourceMap is given as a
-  // sourcemap.SourceMapGenerator. See self.sources for the format of sources.
+  // Set a source map for this File. sourceMap is given as a string. See
+  // self.sources for the format of sources.
   setSourceMap: function (sourceMap, sources) {
     var self = this;
 
-    if (!(sourceMap instanceof sourcemap.SourceMapGenerator))
-      throw new Error("sourceMap must be given as a SourceMapGenerator");
+    if (typeof sourceMap !== "string")
+      throw new Error("sourceMap must be given as a string");
     self.sourceMap = sourceMap;
     self.sources = sources || {};
   }
@@ -900,7 +899,7 @@ _.extend(ClientTarget.prototype, {
       if (file.sourceMap) {
         manifestItem.sourceMap = builder.writeToGeneratedFilename(
           file.targetPath + '.map', {
-            data: new Buffer(file.sourceMap.toString(), 'utf8')
+            data: new Buffer(file.sourceMap, 'utf8')
           });
 
         manifestItem.sources = {};
@@ -957,7 +956,7 @@ var JsImage = function () {
   // - source: JS source code to load, as a string
   // - nodeModulesDirectory: a NodeModulesDirectory indicating which
   //   directory should be searched by Npm.require()
-  // - sourceMap: if set, source map for this code, as a SourceMapGenerator
+  // - sourceMap: if set, source map for this code, as a string
   // - sources: map from relative path in source map to object with
   //   keys 'source' (a Buffer), 'package', 'sourcePath'
   // note: this can't be called `load` at it would shadow `load()`
@@ -1122,7 +1121,7 @@ _.extend(JsImage.prototype, {
         // XXX this code is very similar to saveAsUnipackage.
         loadItem.sourceMap = builder.writeToGeneratedFilename(
           item.targetPath + '.map',
-          { data: new Buffer(item.sourceMap.toString(), 'utf8') }
+          { data: new Buffer(item.sourceMap, 'utf8') }
         );
 
         // Now write the sources themselves.
@@ -1206,10 +1205,8 @@ JsImage.readFromDisk = function (controlFilePath) {
     if (item.sourceMap) {
       // XXX this is the same code as initFromUnipackage
       rejectBadPath(item.sourceMap);
-      var rawSourceMap = fs.readFileSync(
+      loadItem.sourceMap = fs.readFileSync(
         path.join(dir, item.sourceMap), 'utf8');
-      loadItem.sourceMap = sourcemap.SourceMapGenerator.fromSourceMap(
-        new sourcemap.SourceMapConsumer(rawSourceMap));
       if (item.sources) {
         loadItem.sources = {};
         _.each(item.sources, function (x, pathForSourceMap) {
