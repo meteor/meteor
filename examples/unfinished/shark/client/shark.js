@@ -4,9 +4,11 @@ Items.insert({ text: 'Bar' });
 Items.insert({ text: 'Baz' });
 
 Meteor.startup(function () {
-  Items.insert({ text: 'Qux' });
-  Items.remove({ text: 'Foo' });
-  Items.update({ text: 'Bar' }, { text: 'Car' });
+  Meteor.setTimeout(function () {
+    Items.insert({ text: 'Qux' });
+    Items.remove({ text: 'Foo' });
+    Items.update({ text: 'Bar' }, { text: 'Car' });
+  }, 1000);
 });
 
 Body({
@@ -106,13 +108,14 @@ Either = UIComponent.extend({
           elseContent: Span
         }),
         { type: Span });
-    /*    buf(new _UI.Each({
+    buf(new _UI.Each({
+      data: function () { return Items.find({}, { sort: { text: 1 }}); },
       content: UIComponent.extend({
         render: function (buf) {
-          buf("<div>Each ", String(this.data()), "</div>");
+          buf("<div>Each ", this.data().text, "</div>");
         }
       })
-    }));*/
+    }));
   }
 });
 

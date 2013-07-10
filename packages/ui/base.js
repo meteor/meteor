@@ -17,7 +17,7 @@ var constrImpl = function (ths, args, type) {
 
   if (! (ths instanceof type))
     // invoked without `new`
-    return new type;
+    return new type(args[0], args[1]);
 
   // invoked as `new Foo(...)`
   if (! type._superSealed)
@@ -236,7 +236,9 @@ _extend(Component, {
 
 Component.include({
   constructed: function () {},
-  data: function () { return null; }
+  data: function () {
+    return this.parent ? this.parent.data() : null;
+  }
 });
 
 // @export UIComponent
