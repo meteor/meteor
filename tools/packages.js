@@ -554,6 +554,7 @@ _.extend(Slice.prototype, {
       prelinkFiles: self.prelinkFiles,
       exports: self.exports,
       packageScopeVariables: self.packageScopeVariables,
+      includeSourceMapInstructions: archinfo.matches(self.arch, "browser"),
       name: self.pkg.name || null
     });
 

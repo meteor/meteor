@@ -344,29 +344,23 @@ _.extend(File.prototype, {
 
     // Pretty version
     var chunks = [];
-    var header = "";
 
     // Prologue
     if (! self.bare)
-      header += "(function () {\n\n";
+      chunks.push("(function () {\n\n");
 
     // Banner
+    var bannerLines = [self.servePath.slice(1)];
+    if (self.bare) {
+      bannerLines.push(
+        "This file is in bare mode and is not in its own closure.");
+    }
     var width = options.sourceWidth || 70;
     var bannerWidth = width + 3;
-    var divider = new Array(bannerWidth + 1).join('/') + "\n";
-    var spacer = "// " + new Array(bannerWidth - 6 + 1).join(' ') + " //\n";
-    var padding = new Array(bannerWidth + 1).join(' ');
+    var padding = bannerPadding(bannerWidth);
+    chunks.push(banner(bannerLines, bannerWidth));
     var blankLine = new Array(width + 1).join(' ') + " //\n";
-    header += divider + spacer;
-    header += "// " +
-      (self.servePath.slice(1) + padding).slice(0, bannerWidth - 6) + " //\n";
-    if (self.bare) {
-      var bareText = "This file is in bare mode and is not in its own closure.";
-      header += "// " +
-        (bareText + padding).slice(0, bannerWidth - 6) + " //\n";
-    }
-    header += spacer + divider + blankLine;
-    chunks.push(header);
+    chunks.push(blankLine);
 
     var transformedSourceWithMap = self.linkerFileTransform(
       self.source, options.exports, self.sourceMap);
@@ -426,7 +420,7 @@ _.extend(File.prototype, {
 
     // Footer
     if (! self.bare)
-      chunks.push(divider + "\n}).call(this);\n");
+      chunks.push(dividerLine(bannerWidth) + "\n}).call(this);\n");
 
     var node = new sourcemap.SourceNode(null, null, null, chunks);
 
@@ -500,6 +494,32 @@ _.extend(File.prototype, {
     });
   }
 });
+
+// Given a list of lines (not newline-terminated), returns a string placing them
+// in a pretty banner of width bannerWidth. All lines must have length at most
+// (bannerWidth - 6); if bannerWidth is not provided, the smallest width that
+// fits is used.
+var banner = function (lines, bannerWidth) {
+  if (!bannerWidth)
+    bannerWidth = 6 + _.max(lines, function (x) { return x.length; }).length;
+
+  var divider = dividerLine(bannerWidth);
+  var spacer = "// " + new Array(bannerWidth - 6 + 1).join(' ') + " //\n";
+  var padding = bannerPadding(bannerWidth);
+
+  var buf = divider + spacer;
+  _.each(lines, function (line) {
+    buf += "// " + (line + padding).slice(0, bannerWidth - 6) + " //\n";
+  });
+  buf += spacer + divider;
+  return buf;
+};
+var dividerLine = function (bannerWidth) {
+  return new Array(bannerWidth + 1).join('/') + "\n";
+};
+var bannerPadding = function (bannerWidth) {
+  return new Array(bannerWidth + 1).join(' ');
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Top-level entry point
@@ -591,6 +611,14 @@ var prelink = function (options) {
   };
 };
 
+var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
+  "This file was compiled by the Meteor linker. You can view the original",
+  "source in your browser if your browser supports source maps.",
+  "",
+  "If you are using Chrome, open the Developer Tools and click the gear",
+  "icon in its lower right corner. In the General Settings panel, turn",
+  "on 'Enable source maps'."
+]);
 
 // Finish the linking.
 //
@@ -621,7 +649,8 @@ var link = function (options) {
 
   var header = getHeader({
     imports: options.imports,
-    packageScopeVariables: options.packageScopeVariables});
+    packageScopeVariables: options.packageScopeVariables
+  });
   var footer = getFooter({
     exports: options.exports,
     name: options.name
@@ -630,12 +659,13 @@ var link = function (options) {
   var ret = [];
   _.each(options.prelinkFiles, function (file) {
     if (file.sourceMap) {
-      var node = new sourcemap.SourceNode(null, null, null, [
-        header,
-        sourcemap.SourceNode.fromStringWithSourceMap(
-          file.source, new sourcemap.SourceMapConsumer(file.sourceMap)),
-        footer
-      ]);
+      var chunks = [header];
+      if (options.includeSourceMapInstructions)
+        chunks.push("\n" + SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n");
+      chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
+        file.source, new sourcemap.SourceMapConsumer(file.sourceMap)));
+      chunks.push(footer);
+      var node = new sourcemap.SourceNode(null, null, null, chunks);
       var results = node.toStringWithSourceMap({
         file: file.servePath
       });
