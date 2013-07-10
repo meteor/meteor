@@ -425,7 +425,11 @@ _.extend(File.prototype, {
         buf += suffix;
       });
       // The existing source map is valid because all we're doing is adding
-      // things to the end of lines, which doesn't affect the source map.
+      // things to the end of lines, which doesn't affect the source map.  (If
+      // we wanted to be picky, we could add some explicitly non-mapped regions
+      // to the source map to cover the suffixes, which would make this
+      // equivalent to the "no source map coming in" case, but this doesn't seem
+      // that important.)
       chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
         self.source,
         new sourcemap.SourceMapConsumer(transformedSourceWithMap.sourceMap)));
