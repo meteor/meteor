@@ -1,13 +1,13 @@
 Items = new Meteor.Collection(null);
 Items.insert({ text: 'Foo' });
 Items.insert({ text: 'Bar' });
-Items.insert({ text: 'Baz' });
+Items.insert({ text: 'Beef' });
 
 Meteor.startup(function () {
   Meteor.setTimeout(function () {
     Items.insert({ text: 'Qux' });
     Items.remove({ text: 'Foo' });
-    Items.update({ text: 'Bar' }, { text: 'Car' });
+    Items.update({ text: 'Bar' }, { text: 'Coke' });
   }, 1000);
 });
 

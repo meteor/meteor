@@ -45,6 +45,9 @@ _UI.List = Component.extend({
                         this.lastNode().nextSibling, this.parentNode());
     }
   },
+  getItem: function (id) {
+    return this._items.get(id) || null;
+  },
   render: function (buf) {
     var self = this;
     if (self._items.empty()) {
@@ -65,15 +68,7 @@ _UI.List = Component.extend({
 
 _UI.Each = Component.extend({
   typeName: 'Each',
-  init: function () {
-    this.list = new _UI.List({_idStringify: Meteor.idStringify});
-    this.elseView = this.elseContent();
-
-    // must be a cursor and isn't allowed to change
-    var cursor = this.data();
-
-
-  },
+  List: _UI.List,
   render: function (buf) {
     var self = this;
 
@@ -83,7 +78,12 @@ _UI.Each = Component.extend({
     var cursor = self.data();
     // XXX support null
 
-    /*  cursor.observe({
+    var list = new self.List({
+      _idStringify: Meteor.idStringify,
+      elseContent: self.elseContent
+    });
+
+    cursor.observe({
       _no_indices: true,
       addedAt: function (doc, i, beforeId) {
         var comp = self.content(function () {
@@ -96,17 +96,21 @@ _UI.Each = Component.extend({
         // XXX could `before` be a falsy ID?  Technically
         // idStringify seems to allow for them -- though
         // OrderedDict won't call stringify on a falsy arg.
-        items.putBefore(doc._id, comp, beforeId);
-
+        list.addItemBefore(doc._id, comp, beforeId);
+      },
+      removed: function (doc) {
+        list.removeItem(doc._id);
+      },
+      movedTo: function (doc, i, j, beforeId) {
+        list.moveItemBefore(doc._id, beforeId);
+      },
+      changed: function (newDoc) {
+        var comp = list.getItem(newDoc._id);
+        comp._data = newDoc;
+        comp.dataDep.changed();
       }
-    });*/
+    });
 
-    //if (items.empty()) {
-//      buf(self.elseContent());
-//    } else {
-//      items.forEach(function (comp) {
-//        buf(comp);
-//      });
-//    }
+    buf(list);
   }
 });
