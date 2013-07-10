@@ -175,16 +175,6 @@ Component.include({
     });
   },
 
-  // Components normally reactively rebuild.  This method is only to
-  // be used if you need to manually trigger a rebuild for some
-  // reason.
-  rebuild: function () {
-    this._requireBuilt();
-
-    if (this._rebuilder)
-      this._rebuilder.invalidate();
-  },
-
   // Don't call this directly.  It implements the re-run of the
   // build autorun, so it assumes it's already inside the appropriate
   // reactive computation.  Use `rebuild` which simply invalidates the
