@@ -38,9 +38,9 @@ _UI.Each = Component.extend({
   typeName: 'Each',
   render: function (buf) {
     var self = this;
-    buf(self.content.create(function () { return 0; })),
-    buf(self.content.create(function () { return 1; }));
-    buf(self.content.create(function () { return 2; }));
+    buf(self.content(function () { return 0; })),
+    buf(self.content(function () { return 1; }));
+    buf(self.content(function () { return 2; }));
   }
 });
 

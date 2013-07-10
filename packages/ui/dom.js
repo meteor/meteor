@@ -113,8 +113,15 @@ Component.include({
   // It's a DIV rather than a fragment so that jQuery can run against it.
   _offscreen: null,
 
-  content: function () { return null; },
-  elseContent: function () { return null; },
+  // Unlike Component constructor, caller is not allowed to skip `dataFunc`
+  // and pass `options` as the first argument.  However, `dataFunc`
+  // may be falsy and `options` is optional.
+  //
+  // The idea is that a Component type makes a perfect value
+  // for `content`, but you can also write your own function
+  // that constructs a Component. This function can return null.
+  content: function (dataFunc, options) { return null; },
+  elseContent: function (dataFunc, options) { return null; },
 
   render: function (buf) {
     buf(this.content());
