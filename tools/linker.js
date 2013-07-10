@@ -227,9 +227,6 @@ var File = function (inputFile, module) {
   // package or app.) Used for source maps, error messages..
   self.sourcePath = inputFile.sourcePath;
 
-  // should line and column be included in errors?
-  self.includePositionInErrors = inputFile.includePositionInErrors;
-
   // A function which transforms the source code once all exports are
   // known. (eg, for CoffeeScript.)
   self.linkerFileTransform =
@@ -277,12 +274,25 @@ _.extend(File.prototype, {
     } catch (e) {
       if (!e.$ParseError)
         throw e;
-      buildmessage.error(e.description, {
+
+      var errorOptions = {
         file: self.sourcePath,
-        line: self.includePositionInErrors ? e.lineNumber : null,
-        column: self.includePositionInErrors ? e.column : null,
+        line: e.lineNumber,
+        column: e.column,
         downcase: true
-      });
+      };
+      if (self.sourceMap) {
+        var parsed = new sourcemap.SourceMapConsumer(self.sourceMap);
+        var original = parsed.originalPositionFor(
+          {line: e.lineNumber, column: e.column - 1});
+        if (original.source) {
+          errorOptions.file = original.source;
+          errorOptions.line = original.line;
+          errorOptions.column = original.column + 1;
+        }
+      }
+
+      buildmessage.error(e.description, errorOptions);
 
       // Recover by pretending that this file is empty (which
       // includes replacing its source code with '' in the output)
@@ -545,9 +555,7 @@ var bannerPadding = function (bannerWidth) {
 //    bundle, not in error messages, but it's still nice to make it
 //    look good)
 //  - sourcePath: path to use in error messages
-//  - includePositionInErrors: true to include line and column
-//    information in errors. set to false if, eg, this is the output
-//    of coffeescript. (XXX replace with real sourcemaps)
+//  - sourceMap: an optional source map (as string) for the input file
 //  - linkerFileTransform: if given, this function will be called
 //    when the module is being linked with the source of the file
 //    and an array of the exports of the module; the file's source will

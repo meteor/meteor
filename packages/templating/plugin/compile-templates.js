@@ -42,11 +42,12 @@ Plugin.registerSourceHandler("html", function (compileStep) {
     var ext = path.extname(compileStep.inputPath);
     var basename = path.basename(compileStep.inputPath, ext);
 
+    // XXX generate a source map
+
     compileStep.addJavaScript({
       path: path.join(path_part, "template." + basename + ".js"),
       sourcePath: compileStep.inputPath,
-      data: results.js,
-      lineForLine: false
+      data: results.js
     });
   }
 });

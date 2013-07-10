@@ -144,7 +144,6 @@ var handler = function (compileStep) {
     path: outputFile,
     sourcePath: compileStep.inputPath,
     data: output.js,
-    lineForLine: false,
     linkerFileTransform: function (source, exports, sourceMap) {
       var stripped = stripExportedVars(source, exports);
       return addSharedHeader(stripped, sourceMap);
