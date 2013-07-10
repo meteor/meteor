@@ -882,6 +882,7 @@ _.extend(ClientTarget.prototype, {
         // but doesn't care about the newline; WebKit only looks for the first
         // three characters (not the single quote) and then strips everything up
         // to a newline.
+        // https://groups.google.com/forum/#!topic/mozilla.dev.js-sourcemap/3QBr4FBng5g
         var mapData = new Buffer(")]}'\n" + file.sourceMap, 'utf8');
         manifestItem.sourceMap = builder.writeToGeneratedFilename(
           file.targetPath + '.map', {data: mapData});
