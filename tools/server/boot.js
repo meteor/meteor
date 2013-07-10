@@ -37,19 +37,23 @@ if (!process.env.NODE_ENV)
   process.env.NODE_ENV = 'production';
 
 // Map from load path to its source map.
-var sourceMapsAsStrings = {};
+var parsedSourceMaps = {};
 
 // Read all the source maps into memory once.
 _.each(serverJson.load, function (fileInfo) {
   if (fileInfo.sourceMap) {
-    sourceMapsAsStrings[fileInfo.path] = fs.readFileSync(
+    var rawSourceMap = fs.readFileSync(
       path.resolve(serverDir, fileInfo.sourceMap), 'utf8');
+    // Parse the source map only once, not each time it's needed. Also remove
+    // the anti-XSSI header if it's there.
+    parsedSourceMaps[fileInfo.path] = JSON.parse(
+      rawSourceMap.replace(/^\)\]\}'/, ''));
   }
 });
 
 var retrieveSourceMap = function (pathForSourceMap) {
-  if (_.has(sourceMapsAsStrings, pathForSourceMap))
-    return {data: sourceMapsAsStrings[pathForSourceMap]};
+  if (_.has(parsedSourceMaps, pathForSourceMap))
+    return {map: parsedSourceMaps[pathForSourceMap]};
   return null;
 };
 

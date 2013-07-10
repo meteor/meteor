@@ -114,7 +114,7 @@ npm install source-map@0.1.24
 # Fork of node-source-map-support which allows us to specify our own
 # retrieveSourceMap function.
 # XXX send a pull request
-npm install https://github.com/meteor/node-source-map-support/tarball/3b90243e6b51a2ff8705acd74b62c09df05a6199
+npm install https://github.com/meteor/node-source-map-support/tarball/b23f7c5a509343b3951f5db2b5f790ad791bddc5
 
 # uglify-js has a bug which drops 'undefined' in arrays:
 # https://github.com/mishoo/UglifyJS2/pull/97
