@@ -940,6 +940,13 @@ LocalCollection._observeOrderedFromObserveChanges =
     function (cursor, callbacks, transform) {
   var docs = new OrderedDict(LocalCollection._idStringify);
   var suppressed = !!callbacks._suppress_initial;
+  // The "_no_indices" option sets all index arguments to -1
+  // and skips the linear scans required to generate them.
+  // This lets observers that don't need absolute indices
+  // benefit from the other features of this API --
+  // relative order, transforms, and applyChanges -- without
+  // the speed hit.
+  var indices = !callbacks._no_indices;
   var handle = cursor.observeChanges({
     addedBefore: function (id, fields, before) {
       var doc = EJSON.clone(fields);
@@ -947,7 +954,7 @@ LocalCollection._observeOrderedFromObserveChanges =
       docs.putBefore(id, doc, before ? before : null);
       if (!suppressed) {
         if (callbacks.addedAt) {
-          var index = docs.indexOf(id);
+          var index = indices ? docs.indexOf(id) : -1;
           callbacks.addedAt(transform(EJSON.clone(doc)),
                             index, before);
         } else if (callbacks.added) {
@@ -963,7 +970,7 @@ LocalCollection._observeOrderedFromObserveChanges =
       // writes through to the doc set
       LocalCollection._applyChanges(doc, fields);
       if (callbacks.changedAt) {
-        var index = docs.indexOf(id);
+        var index = indices ? docs.indexOf(id) : -1;
         callbacks.changedAt(transform(EJSON.clone(doc)),
                             transform(oldDoc), index);
       } else if (callbacks.changed) {
@@ -976,11 +983,12 @@ LocalCollection._observeOrderedFromObserveChanges =
       var from;
       // only capture indexes if we're going to call the callback that needs them.
       if (callbacks.movedTo)
-        from = docs.indexOf(id);
-      docs.moveBefore(id, before ? before : null);
+        from = indices ? docs.indexOf(id) : -1;
+      docs.moveBefore(id, before || null);
       if (callbacks.movedTo) {
-        var to = docs.indexOf(id);
-        callbacks.movedTo(transform(EJSON.clone(doc)), from, to);
+        var to = indices ? docs.indexOf(id) : -1;
+        callbacks.movedTo(transform(EJSON.clone(doc)), from, to,
+                          before || null);
       } else if (callbacks.moved) {
         callbacks.moved(transform(EJSON.clone(doc)));
       }
@@ -990,7 +998,7 @@ LocalCollection._observeOrderedFromObserveChanges =
       var doc = docs.get(id);
       var index;
       if (callbacks.removedAt)
-        index = docs.indexOf(id);
+        index = indices ? docs.indexOf(id) : -1;
       docs.remove(id);
       callbacks.removedAt && callbacks.removedAt(transform(doc), index);
       callbacks.removed && callbacks.removed(transform(doc));
