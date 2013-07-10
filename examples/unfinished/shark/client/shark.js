@@ -83,6 +83,8 @@ Div = UIComponent.extend({
 });
 
 Either = UIComponent.extend({
+  isHeavyweight: true,
+  typeName: 'Either',
   render: function (buf) {
     buf(Div.create(),
         {

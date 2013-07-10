@@ -91,6 +91,11 @@ Component.include({
   start: null,
   end: null,
 
+  // "Heavyweight" components have HTML comments as their
+  // firstNode and lastNode.  This is more efficient when a component
+  // has O(N) top-level children.  See `detach`.
+  isHeavyweight: false,
+
   firstNode: function () {
     this._requireBuilt();
     return this.start instanceof Component ?
@@ -135,7 +140,15 @@ Component.include({
 
     var html = buf.getHtml();
 
+    if (self.isHeavyweight)
+      div.appendChild(document.createComment(
+        ' ' + self.constructor.typeName + ' '));
+
     $(div).append(html);
+
+    if (self.isHeavyweight)
+      div.appendChild(document.createComment(
+        ' /' + self.constructor.typeName + ' '));
 
     // returns info object with {start, end}
     return buf.wireUpDOM(div);
@@ -316,10 +329,10 @@ Component.include({
     // theoretically be destroyed, or not yet built (if we
     // are currently building).
     // We use a falsy `parent.start` as a cue that this is a
-    // rebuild and we should also skip the start/end adjustment
+    // rebuild, another case where we skip the start/end adjustment
     // logic.
     if (parent && parent.stage === Component.BUILT &&
-        parent.start) {
+        parent.start && ! parent.isHeavyweight) {
       if (parent.isEmpty()) {
         var comment = parent.start;
         parent.start = parent.end = self;
@@ -354,7 +367,30 @@ Component.include({
 
     // We could be a root (and have no parent).  Parent could
     // theoretically be destroyed, or not yet built.
-    if (parent && parent.stage === Component.BUILT) {
+    if (parent && parent.stage === Component.BUILT &&
+        ! parent.isHeavyweight) {
+      // For lightweight components, do some magic to update the
+      // firstNode and lastNode.  The main issue is we need to
+      // know if the new firstNode or lastNode is part of a
+      // child component or not, because if it is, we need to
+      // set `start` or `end` to the component rather than the
+      // node.  Since we don't have any pointers from the DOM
+      // and can't make any assumptions about the structure of
+      // the component, we have to do a search over our children.
+      // Repeatedly detaching the first or last of O(N) top-level
+      // components is asymptotically bad -- O(n^2) -- so use a
+      // "heavyweight" component for that case, which avoids this
+      // whole issue by dropping marker comments.
+      //
+      // Even if we kept a list (or tree) of our children in
+      // DOM order, making it easy to check the first or last at
+      // any time, if someone calls `attach` for some DOM node
+      // argument we'd need to be able to compare sibling node
+      // positions in O(1), and it's not clear that this is possible.
+      // `node.compareDocumentPosition` is probably pretty
+      // fast, but the IE equivalent (`sourceIndex`) only works on
+      // elements, not text nodes.  The state of the art in determining
+      // the ordering of two siblings is a linear scan.
       if (parent.start === self) {
         if (parent.end === self) {
           // we're emptying the parent; populate it with a
@@ -393,7 +429,7 @@ Component.include({
     var div = makeSafeDiv();
     $(div).append(nodes);
 
-    self._offscreen = dov;
+    self._offscreen = div;
     self.isAttached = false;
 
     self.detached();
