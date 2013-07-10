@@ -215,9 +215,8 @@ var runWebAppServer = function () {
       next();
     }
   });
-  // Parse the query string into res.query. Only oauth_server cares about this,
-  // but it's overkill to have that package depend on its own copy of connect
-  // just for this simple processing.
+  // Parse the query string into res.query. Used to detect sourcemap=1 and by
+  // oauth_server.
   app.use(connect.query());
 
   // Auto-compress any json, javascript, or text.
@@ -237,14 +236,18 @@ var runWebAppServer = function () {
       // so that source files referenced from the source map with relative URLs
       // are resolved under it.
       if (item.sourceMap) {
-        var sourceMapRootUrl = "/_sources/" + sha1(item.url) + "/";
-        // Register the source map itself to be served.
-        staticFiles[sourceMapRootUrl] = {
-          path: item.sourceMap,
-          cacheable: true
-        };
+        var sourceMapUrl = item.url;
+        var argument = "sourcemap=y";
+        if (sourceMapUrl.indexOf('?') === -1)
+          sourceMapUrl += '?' + argument;
+        else
+          sourceMapUrl += '&' + argument;
+
         // Send the SourceMap header when the source file is served.
-        staticFile.sourceMap = sourceMapRootUrl;
+        staticFile.urlToSourceMap = sourceMapUrl;
+
+        // Register the source map itself to be served.
+        staticFile.sourceMapFile = item.sourceMap;
       }
       staticFiles[url.parse(item.url).pathname] = staticFile;
     }
@@ -276,6 +279,18 @@ var runWebAppServer = function () {
 
     var info = staticFiles[pathname];
 
+    var fileToServe, urlToSourceMap;
+    if (req.query.sourcemap === 'y') {
+      // This is a request for a sourcemap.
+      fileToServe = info.sourceMapFile;
+      // Source maps don't have source maps.
+      urlToSourceMap = null;
+    } else {
+      // This is not a request for a sourcemap.
+      fileToServe = info.path;
+      urlToSourceMap = info.urlToSourceMap;
+    }
+
     // Cacheable files are files that should never change. Typically
     // named by their hash (eg meteor bundled js and css files).
     // We cache them ~forever (1yr).
@@ -287,12 +302,16 @@ var runWebAppServer = function () {
     // to include a query parameter to bust caches. That way we can both get
     // good caching behavior and allow users to change assets without delay.
     // https://github.com/meteor/meteor/issues/773
+    //
+    // Because a source map's URL is constructed from the URL of the file it is
+    // the source map of, we assume that a source map is cacheable iff the file
+    // is cacheable.
     var maxAge = info.cacheable
           ? 1000 * 60 * 60 * 24 * 365
           : 1000 * 60 * 60 * 24;
 
     // Tell the client where to find the source map for this file.
-    if (info.sourceMap) {
+    if (urlToSourceMap) {
       // This should just be SourceMap, but slightly more versions of Chrome
       // support the older X-SourceMap.
       //
@@ -321,10 +340,10 @@ var runWebAppServer = function () {
       //   - not using the send module (or hacking it to allow a footer)
       // None of these alternatives are great, so for now we just hope that
       // FF will implement one of the headers soon.
-      res.setHeader('X-SourceMap', info.sourceMap);
+      res.setHeader('X-SourceMap', urlToSourceMap);
     }
 
-    send(req, path.join(clientDir, info.path))
+    send(req, path.join(clientDir, fileToServe))
       .maxage(maxAge)
       .hidden(true)  // if we specified a dotfile in the manifest, serve it
       .on('error', function (err) {
@@ -333,7 +352,7 @@ var runWebAppServer = function () {
         res.end();
       })
       .on('directory', function () {
-        Log.error("Unexpected directory " + info.path);
+        Log.error("Unexpected directory " + fileToServe);
         res.writeHead(500);
         res.end();
       })
