@@ -13,6 +13,8 @@
 * Add new `Assets` API and `private` subdirectory for including and accessing
   server assets in an application.
 
+* Delete login tokens from server when user logs out.
+
 ## v0.6.4
 
 * Separate OAuth flow logic from Accounts into separate packages. The
