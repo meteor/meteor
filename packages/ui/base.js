@@ -15,54 +15,49 @@ var constrImpl = function (ths, args, type) {
   if (args[0] === MAKING_PROTO)
     return ths;
 
-  if (ths instanceof type) {
-    // invoked as `new Foo(...)`
+  if (! (ths instanceof type))
+    // invoked without `new`
+    return new type;
 
-    if (! type._superSealed)
-      type._superSealed = "instantiated";
+  // invoked as `new Foo(...)`
+  if (! type._superSealed)
+    type._superSealed = "instantiated";
 
-    var options = args[0];
+  var options = args[0];
 
-    // support `(dataFunc[, options])` args
-    var dataFunc = null;
-    if (typeof options === 'function') {
-      dataFunc = options;
-      options = args[1];
-    }
+  // support `(dataFunc[, options])` args
+  var dataFunc = null;
+  if (typeof options === 'function') {
+    dataFunc = options;
+    options = args[1];
+  }
 
-    var specialOptions = false;
+  var specialOptions = false;
 
-    if (options) {
-      for (var k in options) {
-        if (type._extendHooks[k]) {
-          specialOptions = true;
-          break;
-        }
+  if (options) {
+    for (var k in options) {
+      if (type._extendHooks[k]) {
+        specialOptions = true;
+        break;
       }
     }
-
-    if (specialOptions) {
-      // create a subtype
-      return type.extend(options).create(dataFunc);
-    } else {
-      // don't create a subtype (faster)
-      if (options)
-        _extend(ths, options);
-      if (dataFunc)
-        ths.data = dataFunc;
-    }
-
-    ths.guid = _UI.nextGuid++;
-    ths.constructed();
-
-    return ths;
-  } else if (! args.length) {
-    // invoked as `Foo()`
-    return new type;
-  } else {
-    // invoked without `new` as `Foo(...)`
-    return type.augment.apply(type, args);
   }
+
+  if (specialOptions) {
+    // create a subtype
+    return type.extend(options).create(dataFunc);
+  } else {
+    // don't create a subtype (faster)
+    if (options)
+      _extend(ths, options);
+    if (dataFunc)
+      ths.data = dataFunc;
+  }
+
+  ths.guid = _UI.nextGuid++;
+  ths.constructed();
+
+  return ths;
 };
 
 var Component = function Component() {
@@ -101,7 +96,7 @@ var setSuperType = function (subType, superType) {
   // Record the (new) superType for our future use.
   subType.superType = superType;
 
-  // restore old properties on proto (from previous augments
+  // restore old properties on proto (from previous includes
   // or extends)
   _extend(subType.prototype, oldProto);
 
@@ -156,7 +151,7 @@ _extend(Component, {
   create: function (dataFunc, options) {
     return new this(dataFunc, options);
   },
-  augment: function (options) {
+  include: function (options) {
     var type = this;
 
     // Note: We avoid calling `delete options.foo` even if it's
@@ -164,7 +159,7 @@ _extend(Component, {
     // which might be used more than once.
 
     if ((!options) || typeof options !== 'object')
-      throw new Error("Options object required to augment type");
+      throw new Error("Options object required in 'include'");
 
     // handle 'extend' first
     if ('extend' in options)
@@ -186,7 +181,7 @@ _extend(Component, {
         if (hook === 'chain')
           hook = chainCallback;
         // Note that it's ok for the hook to recursively
-        // invoke `this.augment`.
+        // invoke `this.include`.
         hook.call(type, optValue, optKey);
         if (! type._superSealed)
           type._superSealed = optKey;
@@ -223,7 +218,7 @@ _extend(Component, {
     newType._superSealed = null;
 
     if (options)
-      newType.augment(options);
+      newType.include(options);
 
     return newType;
   },
@@ -239,7 +234,7 @@ _extend(Component, {
   isType: isComponentType
 });
 
-Component({
+Component.include({
   constructed: function () {},
   data: function () { return null; }
 });

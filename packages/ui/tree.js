@@ -4,7 +4,7 @@ var Component = UIComponent;
 // don't ever mutate it!
 var EMPTY_OBJECT = {};
 
-Component({
+Component.include({
   parent: null,
 
   // We declare data structures on the prototype for
@@ -144,7 +144,7 @@ Component({
   extendHooks: {
     isRoot: function (value) {
       if (value)
-        this.augment({
+        this.include({
           constructed: function () {
             this.makeRoot(); } });
     }

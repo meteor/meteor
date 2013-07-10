@@ -87,7 +87,7 @@ var makeSafeDiv = function () {
   return div;
 };
 
-Component({
+Component.include({
   start: null,
   end: null,
 
@@ -677,7 +677,7 @@ Component({
   // and that the component does not become empty.
 });
 
-Component({
+Component.include({
   attributeHandlers: {
     'class': AttributeHandler.extend({
       stringifyValue: function (value) {

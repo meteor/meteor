@@ -7,7 +7,7 @@ Component.define({
   DESTROYED: '<DESTROYED>'
 });
 
-Component({
+Component.include({
   stage: Component.INITIAL,
 
   // use this internally, not to produce error messages for

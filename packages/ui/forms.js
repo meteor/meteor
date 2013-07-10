@@ -10,7 +10,7 @@ var getterImpl =
         };
       };
 
-Component({
+Component.include({
   extendHooks: {
     fields: function (dict) {
       var proto = this.prototype;
@@ -19,7 +19,7 @@ Component({
       for (var fieldName in dict)
         proto[fieldName] = getterImpl(fieldName);
 
-      type.augment({
+      type.include({
         constructed: function () {
           for (var fieldName in dict) {
             this["_" + fieldName] = dict[fieldName];
