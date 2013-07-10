@@ -416,7 +416,7 @@ LocalCollection.Cursor.prototype._depend = function (changers) {
 // (real mongodb does in fact enforce this)
 // XXX possibly enforce that 'undefined' does not appear (we assume
 // this in our handling of null and $exists)
-LocalCollection.prototype.insert = function (doc) {
+LocalCollection.prototype.insert = function (doc, callback) {
   var self = this;
   doc = EJSON.clone(doc);
 
@@ -451,10 +451,13 @@ LocalCollection.prototype.insert = function (doc) {
       LocalCollection._recomputeResults(self.queries[qid]);
   });
   self._observeQueue.drain();
+  // Defer in case the callback returns on a future; gives the caller time to
+  // wait on the future.
+  if (callback) Meteor.defer(function () { callback(null, doc._id); });
   return doc._id;
 };
 
-LocalCollection.prototype.remove = function (selector) {
+LocalCollection.prototype.remove = function (selector, callback) {
   var self = this;
   var remove = [];
 
@@ -508,12 +511,19 @@ LocalCollection.prototype.remove = function (selector) {
       LocalCollection._recomputeResults(query);
   });
   self._observeQueue.drain();
+  // Defer in case the callback returns on a future; gives the caller time to
+  // wait on the future.
+  if (callback) Meteor.defer(callback);
 };
 
 // XXX atomicity: if multi is true, and one modification fails, do
 // we rollback the whole operation, or what?
-LocalCollection.prototype.update = function (selector, mod, options) {
+LocalCollection.prototype.update = function (selector, mod, options, callback) {
   var self = this;
+  if (! callback && options instanceof Function) {
+    callback = options;
+    options = null;
+  }
   if (!options) options = {};
 
   if (options.upsert)
@@ -551,6 +561,9 @@ LocalCollection.prototype.update = function (selector, mod, options) {
                                         qidToOriginalResults[qid]);
   });
   self._observeQueue.drain();
+  // Defer in case the callback returns on a future; gives the caller time to
+  // wait on the future.
+  if (callback) Meteor.defer(callback);
 };
 
 LocalCollection.prototype._modifyAndNotify = function (

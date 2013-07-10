@@ -10,10 +10,11 @@ Package.on_use(function (api) {
   api.use(['check', 'random', 'ejson', 'json', 'underscore', 'deps', 'logging'],
           ['client', 'server']);
 
-  // XXX we do NOT require webapp or routepolicy here, because it's OK to use
-  // this package on a server architecture without making a server (in order to
-  // do server-to-server DDP as a client). So if you want to provide a DDP
-  // server, you need to use webapp before you use livedata.
+  // It is OK to use this package on a server architecture without making a
+  // server (in order to do server-to-server DDP as a client). So these are only
+  // included as weak dependencies.
+  // XXX split this package into multiple packages or multiple slices instead
+  api.use(['webapp', 'routepolicy'], 'server', {weak: true});
 
   // Transport
   api.use('reload', 'client');

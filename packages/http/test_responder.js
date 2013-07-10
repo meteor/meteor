@@ -29,7 +29,7 @@ var respond = function(req, res) {
     var validate = function(user, pass) {
       return user === username && pass === password;
     };
-    var checker = __meteor_bootstrap__.app.__basicAuth__(validate, realm);
+    var checker = WebApp.__basicAuth__(validate, realm);
     var success = false;
     checker(req, res, function() {
       success = true;
@@ -73,9 +73,8 @@ var respond = function(req, res) {
 };
 
 var run_responder = function() {
-
-  var app = __meteor_bootstrap__.app;
-  app.stack.unshift({ route: TEST_RESPONDER_ROUTE, handle: respond });
+  WebApp.connectHandlers.stack.unshift(
+    { route: TEST_RESPONDER_ROUTE, handle: respond });
 };
 
 run_responder();

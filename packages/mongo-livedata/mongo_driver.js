@@ -176,11 +176,10 @@ _Mongo.prototype._maybeBeginWrite = function () {
 
 //////////// Public API //////////
 
-// The write methods block until the database has confirmed the write
-// (it may not be replicated or stable on disk, but one server has
-// confirmed it.) (In the future we might have an option to turn this
-// off, ie, to enqueue the request on the wire and return
-// immediately.)  They return nothing on success, and raise an
+// The write methods block until the database has confirmed the write (it may
+// not be replicated or stable on disk, but one server has confirmed it) if no
+// callback is provided. If a callback is provided, then they call the callback
+// when the write is confirmed. They return nothing on success, and raise an
 // exception on failure.
 //
 // After making a write (with insert, update, remove), observers are
@@ -193,26 +192,45 @@ _Mongo.prototype._maybeBeginWrite = function () {
 // well-defined -- a write "has been made" if it's returned, and an
 // observer "has been notified" if its callback has returned.
 
-_Mongo.prototype.insert = function (collection_name, document) {
+var writeCallback = function (write, refresh, callback) {
+  return Meteor.bindEnvironment(function (err, result) {
+    if (! err) {
+      // XXX We don't have to run this on error, right?
+      refresh();
+    }
+    write.committed();
+    if (callback)
+      callback(err, result);
+    else if (err)
+      throw err;
+  }, function (err) {
+    Meteor._debug("Error in Mongo write:", err.stack);
+  });
+};
+
+_Mongo.prototype._insert = function (collection_name, document, callback) {
   var self = this;
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e.expected = true;
-    throw e;
+    if (callback)
+      return callback(e);
+    else
+      throw e;
   }
 
   var write = self._maybeBeginWrite();
-
+  var refresh = function () {
+    Meteor.refresh({ collection: collection_name, id: document._id });
+  };
+  callback = writeCallback(write, refresh, callback);
   try {
     var collection = self._getCollection(collection_name);
-    var future = new Future;
     collection.insert(replaceTypes(document, replaceMeteorAtomWithMongo),
-                      {safe: true}, future.resolver());
-    future.wait();
-    // XXX We don't have to run this on error, right?
-    Meteor.refresh({collection: collection_name, id: document._id});
-  } finally {
+                      {safe: true}, callback);
+  } catch (e) {
     write.committed();
+    throw e;
   }
 };
 
@@ -235,37 +253,50 @@ _Mongo.prototype._refresh = function (collectionName, selector) {
   }
 };
 
-_Mongo.prototype.remove = function (collection_name, selector) {
+_Mongo.prototype._remove = function (collection_name, selector, callback) {
   var self = this;
 
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e.expected = true;
-    throw e;
+    if (callback)
+      return callback(e);
+    else
+      throw e;
   }
 
   var write = self._maybeBeginWrite();
+  var refresh = function () {
+    self._refresh(collection_name, selector);
+  };
+  callback = writeCallback(write, refresh, callback);
 
   try {
     var collection = self._getCollection(collection_name);
-    var future = new Future;
     collection.remove(replaceTypes(selector, replaceMeteorAtomWithMongo),
-                      {safe: true}, future.resolver());
-    future.wait();
-    // XXX We don't have to run this on error, right?
-    self._refresh(collection_name, selector);
-  } finally {
+                      {safe: true}, callback);
+  } catch (e) {
     write.committed();
+    throw e;
   }
 };
 
-_Mongo.prototype.update = function (collection_name, selector, mod, options) {
+_Mongo.prototype._update = function (collection_name, selector, mod,
+                                    options, callback) {
   var self = this;
+
+  if (! callback && options instanceof Function) {
+    callback = options;
+    options = null;
+  }
 
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e.expected = true;
-    throw e;
+    if (callback)
+      return callback(e);
+    else
+      throw e;
   }
 
   // explicit safety check. null and undefined can crash the mongo
@@ -279,22 +310,31 @@ _Mongo.prototype.update = function (collection_name, selector, mod, options) {
   if (!options) options = {};
 
   var write = self._maybeBeginWrite();
+  var refresh = function () {
+    self._refresh(collection_name, selector);
+  };
+  callback = writeCallback(write, refresh, callback);
   try {
     var collection = self._getCollection(collection_name);
     var mongoOpts = {safe: true};
     // explictly enumerate options that minimongo supports
     if (options.upsert) mongoOpts.upsert = true;
     if (options.multi) mongoOpts.multi = true;
-    var future = new Future;
     collection.update(replaceTypes(selector, replaceMeteorAtomWithMongo),
                       replaceTypes(mod, replaceMeteorAtomWithMongo),
-                      mongoOpts, future.resolver());
-    future.wait();
-    self._refresh(collection_name, selector);
-  } finally {
+                      mongoOpts, callback);
+  } catch (e) {
     write.committed();
+    throw e;
   }
 };
+
+_.each(["insert", "update", "remove"], function (method) {
+  _Mongo.prototype[method] = function (/* arguments */) {
+    var self = this;
+    return Meteor._wrapAsync(self["_" + method]).apply(self, arguments);
+  };
+});
 
 _Mongo.prototype.find = function (collectionName, selector, options) {
   var self = this;

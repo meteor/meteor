@@ -10,6 +10,8 @@ var connect = Npm.require('connect');
 var optimist = Npm.require('optimist');
 var useragent = Npm.require('useragent');
 
+// @export WebApp
+WebApp = {};
 
 var findGalaxy = _.once(function () {
   if (!('GALAXY' in process.env)) {
@@ -69,10 +71,10 @@ var initKeepalive = function () {
 // * `browser`: browser identification object described above
 // * `url`: parsed url, including parsed query params
 //
-// As a temporary hack there is a `categorizeRequest` function on
-// __meteor_bootstrap__ which converts a connect `req` to a Meteor
-// `request`. This can go away once smart packages such as appcache are
-// being passed a `request` object directly when they serve content.
+// As a temporary hack there is a `categorizeRequest` function on WebApp which
+// converts a connect `req` to a Meteor `request`. This can go away once smart
+// packages such as appcache are being passed a `request` object directly when
+// they serve content.
 //
 // This allows `request` to be used uniformly: it is passed to the html
 // attributes hook, and the appcache package can use it when deciding
@@ -102,21 +104,28 @@ var identifyBrowser = function (req) {
   };
 };
 
-var categorizeRequest = function (req) {
+WebApp.categorizeRequest = function (req) {
   return {
     browser: identifyBrowser(req),
     url: url.parse(req.url, true)
   };
 };
 
+// HTML attribute hooks: functions to be called to determine any attributes to
+// be added to the '<html>' tag. Each function is passed a 'request' object (see
+// #BrowserIdentification) and should return a string,
+var htmlAttributeHooks = [];
 var htmlAttributes = function (template, request) {
   var attributes = '';
-  _.each(__meteor_bootstrap__.htmlAttributeHooks || [], function (hook) {
+  _.each(htmlAttributeHooks || [], function (hook) {
     var attribute = hook(request);
     if (attribute !== null && attribute !== undefined && attribute !== '')
       attributes += ' ' + attribute;
   });
   return template.replace('##HTML_ATTRIBUTES##', attributes);
+};
+WebApp.addHtmlAttributeHook = function (hook) {
+  htmlAttributeHooks.push(hook);
 };
 
 // Serve app HTML for this URL?
@@ -134,17 +143,11 @@ var appUrl = function (url) {
     return false;
 
   // Avoid serving app HTML for declared routes such as /sockjs/.
-  if (__meteor_bootstrap__._routePolicy &&
-      __meteor_bootstrap__._routePolicy.classify(url))
+  if (RoutePolicy.classify(url))
     return false;
 
   // we currently return app HTML on all URLs by default
   return true;
-};
-
-
-Meteor._postStartup = function (callback) {
-  __meteor_bootstrap__.postStartupHooks.push(callback);
 };
 
 var runWebAppServer = function () {
@@ -184,7 +187,7 @@ var runWebAppServer = function () {
 
   // Strip off the path prefix, if it exists.
   app.use(function (request, response, next) {
-    var pathPrefix = __meteor_runtime_config__.PATH_PREFIX;
+    var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
     var url = Npm.require('url').parse(request.url);
     var pathname = url.pathname;
     // check if the path in the url starts with the path prefix (and the part
@@ -208,10 +211,6 @@ var runWebAppServer = function () {
   // but it's overkill to have that package depend on its own copy of connect
   // just for this simple processing.
   app.use(connect.query());
-  // Hack: allow http tests to call connect.basicAuth without making them
-  // Npm.depends on another copy of connect. (That would be fine if we could
-  // have test-only NPM dependencies but is overkill here.)
-  app.__basicAuth__ = connect.basicAuth;
 
   // Auto-compress any json, javascript, or text.
   app.use(connect.compress());
@@ -237,27 +236,81 @@ var runWebAppServer = function () {
                            {maxAge: 1000 * 60 * 60 * 24}));
   }
 
+  // Packages and apps can add handlers to this via WebApp.connectHandlers.
+  // They are inserted before our default handler.
+  var packageAndAppHandlers = connect();
+  app.use(packageAndAppHandlers);
+
+  var suppressConnectErrors = false;
+  // connect knows it is an error handler because it has 4 arguments instead of
+  // 3. go figure.  (It is not smart enough to find such a thing if it's hidden
+  // inside packageAndAppHandlers.)
+  app.use(function (err, req, res, next) {
+    if (!err || !suppressConnectErrors || !req.headers['x-suppress-error']) {
+      next(err);
+      return;
+    }
+    res.writeHead(err.status, { 'Content-Type': 'text/plain' });
+    res.end("An error message");
+  });
+
+  // Will be updated by main before we listen.
+  var boilerplateHtml = null;
+  app.use(function (req, res, next) {
+    if (! appUrl(req.url))
+      return next();
+
+    if (!boilerplateHtml)
+      throw new Error("boilerplateHtml should be set before listening!");
+
+    var request = WebApp.categorizeRequest(req);
+
+    res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+
+    var requestSpecificHtml = htmlAttributes(boilerplateHtml, request);
+    res.write(requestSpecificHtml);
+    res.end();
+    return undefined;
+  });
+
+  // Return 404 by default, if no other handlers serve this URL.
+  app.use(function (req, res) {
+    res.writeHead(404);
+    res.end();
+  });
+
+
   var httpServer = http.createServer(app);
+  var onListeningCallbacks = [];
 
   // start up app
-  _.extend(__meteor_bootstrap__, {
-    app: app,
+  _.extend(WebApp, {
+    connectHandlers: packageAndAppHandlers,
     httpServer: httpServer,
-    // metadata about this bundle
-    // XXX this could use some refactoring to better distinguish
-    // server and client
-    bundle: {
-      manifest: clientJson.manifest,
-      root: clientDir
+    // metadata about the client program that we serve
+    clientProgram: {
+      manifest: clientJson.manifest
+      // XXX do we need a "root: clientDir" field here? it used to be here but
+      // was unused.
     },
-    // function that takes a connect `req` object and returns a summary
-    // object with information about the request. See
-    // #BrowserIdentifcation
-    categorizeRequest: categorizeRequest,
-    // list of functions to be called to determine any attributes to be
-    // added to the '<html>' tag. Each function is passed a 'request'
-    // object (see #BrowserIdentifcation) and should return a string,
-    htmlAttributeHooks: [],
+    // For testing.
+    suppressConnectErrors: function () {
+      suppressConnectErrors = true;
+    },
+    onListening: function (f) {
+      if (onListeningCallbacks)
+        onListeningCallbacks.push(f);
+      else
+        f();
+    },
+    // Hack: allow http tests to call connect.basicAuth without making them
+    // Npm.depends on another copy of connect. (That would be fine if we could
+    // have test-only NPM dependencies but is overkill here.)
+    __basicAuth__: connect.basicAuth
+  });
+  // XXX move deployConfig out of __meteor_bootstrap__, after deciding where in
+  // the world it goes. maybe a new deploy-config package?
+  _.extend(__meteor_bootstrap__, {
     deployConfig: deployConfig
   });
 
@@ -269,37 +322,15 @@ var runWebAppServer = function () {
     argv = optimist(argv).boolean('keepalive').argv;
 
     var boilerplateHtmlPath = path.join(clientDir, clientJson.page);
-    var boilerplateHtml =
-          fs.readFileSync(boilerplateHtmlPath, 'utf8').replace(
-            "// ##RUNTIME_CONFIG##",
-            "__meteor_runtime_config__ = " +
-              JSON.stringify(__meteor_runtime_config__) + ";");
-
-
-    boilerplateHtml = boilerplateHtml.replace(
-        /##PATH_PREFIX##/g,
-      __meteor_runtime_config__.PATH_PREFIX || ""
-    );
-
-    app.use(function (req, res, next) {
-      if (! appUrl(req.url))
-        return next();
-
-      var request = categorizeRequest(req);
-
-      res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
-
-      var requestSpecificHtml = htmlAttributes(boilerplateHtml, request);
-      res.write(requestSpecificHtml);
-      res.end();
-      return undefined;
-    });
-
-    // Return 404 by default, if no other handlers serve this URL.
-    app.use(function (req, res) {
-      res.writeHead(404);
-      res.end();
-    });
+    boilerplateHtml =
+      fs.readFileSync(boilerplateHtmlPath, 'utf8')
+      .replace(
+        "// ##RUNTIME_CONFIG##",
+        "__meteor_runtime_config__ = " +
+          JSON.stringify(__meteor_runtime_config__) + ";")
+      .replace(
+          /##ROOT_URL_PATH_PREFIX##/g,
+        __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || "");
 
     // only start listening after all the startup code has run.
     var bind = deployConfig.boot.bind;
@@ -331,8 +362,9 @@ var runWebAppServer = function () {
         });
       }
 
-      _.each(__meteor_bootstrap__.postStartupHooks, function (x) { x(); });
-
+      var callbacks = onListeningCallbacks;
+      onListeningCallbacks = null;
+      _.each(callbacks, function (x) { x(); });
     }, function (e) {
       console.error("Error listening:", e);
       console.error(e.stack);

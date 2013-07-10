@@ -7,18 +7,21 @@
 __meteor_runtime_config__.serverId =
   process.env.SERVER_ID ? process.env.SERVER_ID : Random.id();
 
-var pathPrefix = __meteor_runtime_config__.PATH_PREFIX ||  "";
+var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX ||  "";
 
 Meteor._DdpStreamServer = function () {
   var self = this;
   self.registration_callbacks = [];
   self.open_sockets = [];
 
+  // Because we are installing directly onto WebApp.httpServer instead of using
+  // WebApp.app, we have to process the path prefix ourselves.
   self.prefix = pathPrefix + '/sockjs';
-  // We don't depend directly on routepolicy because we don't want to pull in
-  // webapp stuff if we're just doing server-to-server DDP as a client.
-  if (Meteor._routePolicy)
-    Meteor._routePolicy.declare(self.prefix + '/', 'network');
+  // routepolicy is only a weak dependency, because we don't need it if we're
+  // just doing server-to-server DDP as a client.
+  if (Package.routepolicy) {
+    Package.routepolicy.RoutePolicy.declare(self.prefix + '/', 'network');
+  }
 
   // set up sockjs
   var sockjs = Npm.require('sockjs');
@@ -46,7 +49,10 @@ Meteor._DdpStreamServer = function () {
     serverOptions.websocket = false;
 
   self.server = sockjs.createServer(serverOptions);
-  self.server.installHandlers(__meteor_bootstrap__.httpServer);
+  if (!Package.webapp) {
+    throw new Error("Cannot create a DDP server without the webapp package");
+  }
+  self.server.installHandlers(Package.webapp.WebApp.httpServer);
 
   // Support the /websocket endpoint
   self._redirectWebsocketEndpoint();
@@ -101,7 +107,7 @@ _.extend(Meteor._DdpStreamServer.prototype, {
     // an approach similar to overshadowListeners in
     // https://github.com/sockjs/sockjs-node/blob/cf820c55af6a9953e16558555a31decea554f70e/src/utils.coffee
     _.each(['request', 'upgrade'], function(event) {
-      var httpServer = __meteor_bootstrap__.httpServer;
+      var httpServer = Package.webapp.WebApp.httpServer;
       var oldHttpServerListeners = httpServer.listeners(event).slice(0);
       httpServer.removeAllListeners(event);
 

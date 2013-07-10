@@ -1,4 +1,4 @@
-CurrentFoo = new Meteor.EnvironmentVariable;
+var CurrentFoo = new Meteor.EnvironmentVariable;
 
 Tinytest.add("environment - dynamic variables", function (test) {
   test.equal(CurrentFoo.get(), undefined);

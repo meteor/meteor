@@ -4,6 +4,7 @@ var path = require('path');
 var fs = require('fs');
 var unipackage = require('./unipackage.js');
 var Fiber = require('fibers');
+var request = require('request');
 
 // a bit of a hack
 var _meteor;
@@ -23,12 +24,15 @@ var _galaxy;
 var getGalaxy = function (context) {
   if (! _galaxy) {
     var Meteor = getMeteor(context);
-    if (!context.galaxyUrl) {
-      process.stderr.write("GALAXY environment variable must be set.\n");
+    if (!context.galaxy) {
+      process.stderr.write("Could not find a deploy endpoint. " +
+                           "You can set the GALAXY environment variable, " +
+                           "or configure your site's DNS to resolve to " +
+                           "your Galaxy's proxy.\n");
       process.exit(1);
     }
 
-    _galaxy = Meteor.connect(context.galaxyUrl);
+    _galaxy = Meteor.connect(context.galaxy.url);
   }
 
   return _galaxy;
@@ -71,8 +75,29 @@ var prettySub = function (galaxy, name, args, messages) {
   return ret;
 };
 
+exports.discoverGalaxy = function (app) {
+  app = app + ":" + (process.env.DISCOVERY_PORT || 443);
+  var url = "https://" + app + "/_GALAXY_";
+  var fut = new Future();
 
-exports.deleteApp = function (app) {
+  if (process.env.GALAXY)
+    return process.env.GALAXY;
+
+  request(url, function (err, resp, body) {
+    if (err || resp.statusCode !== 200) {
+      fut.return(null);
+    } else {
+      try {
+        fut.return(body);
+      } catch (e) {
+        fut.return(null);
+      }
+    }
+  });
+  return fut.wait();
+};
+
+exports.deleteApp = function (context) {
   throw new Error("Not implemented");
 };
 
@@ -143,7 +168,6 @@ exports.deploy = function (options) {
   // XXX copied from galaxy/tool/galaxy.js
   var fileSize = fs.statSync(starball).size;
   var fileStream = fs.createReadStream(starball);
-  var request = require('request');
   var future = new Future;
   var req = request.put({
     url: info.put,
@@ -186,8 +210,8 @@ exports.deploy = function (options) {
 // - streaming (BOOL)
 exports.logs = function (options) {
   var logReaderURL;
-  if (options.context.adminBaseUrl) {
-    logReaderURL = options.context.adminBaseUrl + "log-reader";
+  if (options.context.galaxy.adminBaseUrl) {
+    logReaderURL = options.context.galaxy.adminBaseUrl + "log-reader";
   } else {
     var galaxy = getGalaxy(options.context);
     logReaderURL = prettyCall(galaxy, "getLogReaderURL", [], {
@@ -196,6 +220,7 @@ exports.logs = function (options) {
     galaxy.close();
   }
 
+  var lastLogId = null;
   var logReader = getMeteor(options.context).connect(logReaderURL);
   var Log = unipackage.load({
     library: options.context.library,
@@ -209,6 +234,7 @@ exports.logs = function (options) {
       if (msg.msg !== 'changed')
         return;
       var obj = msg.fields.obj;
+      lastLogId = msg.fields.id;
       obj = Log.parse(obj);
       obj && console.log(Log.format(obj, {color: true}));
     }
@@ -217,10 +243,18 @@ exports.logs = function (options) {
   if (!ok)
     throw new Error("Can't listen to messages on the logs collection");
 
-  prettySub(logReader, "logsForApp", [options.app,
-                                      {streaming: options.streaming}], {
-    "no-such-app": "No such app: " + options.app
-  });
+  var logsSubscription = null;
+  // In case of reconnect recover the state so user sees only new logs
+  logReader.onReconnect = function () {
+    logsSubscription && logsSubscription.stop();
+    var opts = { streaming: options.streaming };
+    if (lastLogId)
+      opts.resumeAfterId = lastLogId;
+    logsSubscription = logReader.subscribe("logsForApp", options.app, opts);
+  };
+  logsSubscription = prettySub(logReader, "logsForApp",
+                               [options.app, {streaming: options.streaming}],
+                               {"no-such-app": "No such app: " + options.app});
 
   // if streaming is needed there is no point in closing connection
   if (!options.streaming) {

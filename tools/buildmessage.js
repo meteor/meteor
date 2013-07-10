@@ -239,13 +239,10 @@ var jobHasMessages = function () {
 // If a function on the stack has been marked with markBoundary, don't
 // return anything past that function. We call this the "user portion"
 // of the stack.
-//
-// XXX This will blow up on errors whose message contains
-// newlines. Might want to be more robust to that.
 var parseStack = function (err) {
   var frames = err.stack.split('\n');
 
-  frames.shift(); // first line is the exception
+  frames.shift(); // at least the first line is the exception
   var stop = false;
   var ret = [];
 
@@ -274,8 +271,12 @@ var parseStack = function (err) {
         line: m[3] ? +m[3] : undefined,
         column: m[5] ? +m[5] : undefined
       });
-    } else
+    } else if (_.isEmpty(ret)) {
+      // We haven't found any stack frames, so probably we have newlines in the
+      // error message. Just skip this line.
+    } else {
       throw new Error("Couldn't parse stack frame: '" + frame + "'");
+    }
   });
 
   return ret;

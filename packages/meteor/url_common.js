@@ -41,9 +41,9 @@ if (typeof __meteor_runtime_config__ === "object" &&
   Meteor.absoluteUrl.defaultOptions.rootUrl = __meteor_runtime_config__.ROOT_URL;
 
 
-Meteor._fixLink = function (link) {
+Meteor._relativeToSiteRootUrl = function (link) {
   if (typeof __meteor_runtime_config__ === "object" &&
       link.substr(0, 1) === "/")
-    link = (__meteor_runtime_config__.PATH_PREFIX || "") + link;
+    link = (__meteor_runtime_config__.ROOT_URL_PATH_PREFIX || "") + link;
   return link;
 };

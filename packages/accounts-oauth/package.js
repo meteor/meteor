@@ -9,7 +9,6 @@ Package.on_use(function (api) {
   api.use('check', ['client', 'server']);
   api.use('webapp', 'server');
   api.use('accounts-base', ['client', 'server']);
-  api.use('routepolicy', 'server');
   api.use('oauth', 'server');
 
   api.add_files('oauth_common.js', ['client', 'server']);

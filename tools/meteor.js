@@ -19,6 +19,7 @@ Fiber(function () {
   var project = require('./project.js');
   var warehouse = require('./warehouse.js');
   var logging = require('./logging.js');
+  var deployGalaxy;
 
   var Future = require('fibers/future');
   // This code is duplicated in app/server/server.js.
@@ -28,6 +29,8 @@ Fiber(function () {
       'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
     process.exit(1);
   }
+
+  var tunnel;
 
   var sshTunnel = function (to, localPort, remoteEnd, keyfile) {
     var args = [];
@@ -103,18 +106,6 @@ Fiber(function () {
   // Figures out if we're in an app dir, what release we're using, etc. May
   // download the release if necessary.
   var calculateContext = function (argv) {
-    // 9414 because 9414xy (gAlAxy) in 1337
-    context.galaxyPort = process.env.PORT || 9414;
-    if (process.env.GALAXY && process.env.GALAXY.indexOf("ssh://") === 0) {
-      context.galaxyUrl = "localhost:" + context.galaxyPort + "/ultraworld";
-      context.adminBaseUrl = "localhost:" + context.galaxyPort + "/";
-      context.galaxyHost = process.env.GALAXY.substr("ssh://".length);
-      context.sshIdentity = argv["ssh-identity"];
-    } else {
-      context.galaxyUrl = process.env.GALAXY + "/ultraworld";
-      context.adminBaseUrl = process.env.GALAXY + "/";
-    }
-
     var appDir = files.findAppDir();
     context.appDir = appDir && path.resolve(appDir);
     context.globalReleaseVersion = calculateReleaseVersion(argv);
@@ -129,6 +120,38 @@ Fiber(function () {
     // Recalculate release version, taking the current app into account.
     setReleaseVersion(calculateReleaseVersion(argv));
     toolsDebugMessage("Running Meteor Release " + context.releaseVersion);
+  };
+
+  var calculateGalaxyContextAndTunnel = function (deployEndpoint,
+                                                  context, sshIdentity) {
+    var galaxyContext = {};
+    // 9414 because 9414xy (gAlAxy) in 1337
+    galaxyContext.port = process.env.PORT || 9414;
+    if (deployEndpoint && deployEndpoint.indexOf("ssh://") === 0) {
+      galaxyContext.url = "localhost:" + galaxyContext.port +
+        "/ultraworld";
+      galaxyContext.adminBaseUrl = "localhost:" +
+        galaxyContext.port + "/";
+      galaxyContext.host = deployEndpoint.substr("ssh://".length);
+      galaxyContext.sshIdentity = sshIdentity;
+      tunnel = sshTunnel(galaxyContext.host, galaxyContext.port,
+                         "localhost:9414", galaxyContext.sshIdentity);
+      tunnel.waitConnected();
+      context.galaxy = galaxyContext;
+    } else if (deployEndpoint) {
+      tunnel = null;
+      galaxyContext.url = deployEndpoint + "/ultraworld";
+      galaxyContext.adminBaseUrl = deployEndpoint + "/";
+      context.galaxy = galaxyContext;
+    }
+  };
+
+  var prepareForGalaxy = function (site, context, argv) {
+    if (! deployGalaxy)
+      deployGalaxy = require('./deploy-galaxy.js');
+    var deployEndpoint = deployGalaxy.discoverGalaxy(site);
+    calculateGalaxyContextAndTunnel(deployEndpoint, context,
+                                    argv["ssh-identity"]);
   };
 
   var setReleaseVersion = function (version) {
@@ -320,7 +343,8 @@ Fiber(function () {
       var cmd = argv._.splice(0, 1)[0];
       switch (cmd) {
       case "configure":
-        console.log("Visit http://localhost:" + context.galaxyPort + "/panel to configure your galaxy");
+        prepareForGalaxy(null, context, argv);
+        console.log("Visit http://localhost:" + context.galaxy.port + "/panel to configure your galaxy");
         Fiber.yield();
         break;
       default:
@@ -793,15 +817,16 @@ Fiber(function () {
         mongoUrl = fut.wait();
 
       } else if (new_argv._.length === 2) {
+        var site = new_argv._[1];
+        prepareForGalaxy(site, context, new_argv);
         // remote mode
-        if (context.galaxyUrl) {
-          var deployGalaxy = require('./deploy-galaxy.js');
+        if (context.galaxy) {
           mongoUrl = deployGalaxy.temporaryMongoUrl({
-            app: new_argv._[1],
+            app: site,
             context: context
           });
         } else {
-          mongoUrl = deploy.temporaryMongoUrl(new_argv._[1]);
+          mongoUrl = deploy.temporaryMongoUrl(site);
         }
       } else {
         // usage
@@ -871,14 +896,11 @@ Fiber(function () {
         process.exit(1);
       }
       var site = new_argv._[1];
-      var useGalaxy = !!context.galaxyUrl;
-
-      if (useGalaxy)
-        var deployGalaxy = require('./deploy-galaxy.js');
+      prepareForGalaxy(site, context, new_argv);
 
       if (new_argv.delete) {
-        if (useGalaxy)
-          deployGalaxy.deleteApp(site);
+        if (context.galaxy)
+          deployGalaxy.deleteApp(context);
         else
           deploy.delete_app(site);
       } else {
@@ -890,7 +912,7 @@ Fiber(function () {
         if (new_argv.settings)
           settings = runner.getSettings(new_argv.settings);
 
-        if (useGalaxy) {
+        if (context.galaxy) {
           if (new_argv.password) {
             process.stderr.write("Galaxy does not support --password.\n");
             process.exit(1);
@@ -931,8 +953,11 @@ Fiber(function () {
     name: "logs",
     help: "Show logs for specified site",
     func: function (argv) {
-      var useGalaxy = !!context.galaxyUrl;
       argv = require('optimist').boolean('f').argv;
+
+      var site = argv._[1];
+      prepareForGalaxy(site, context, argv);
+      var useGalaxy = !!context.galaxy;
 
       if (argv.help || argv._.length !== 2) {
         if (useGalaxy) {
@@ -953,14 +978,13 @@ Fiber(function () {
       }
 
       if (useGalaxy) {
-        var deployGalaxy = require('./deploy-galaxy.js');
         deployGalaxy.logs({
           context: context,
-          app: argv._[1],
+          app: site,
           streaming: !!argv.f
         });
       } else {
-        deploy.logs(argv._[1]);
+        deploy.logs(site);
       }
     }
   });
@@ -1343,12 +1367,7 @@ Fiber(function () {
     if (PROFILE_REQUIRE)
       require('./profile-require.js').printReport();
 
-    var tunnel;
     try {
-      if (context.galaxyHost) {
-        tunnel = sshTunnel(context.galaxyHost, context.galaxyPort, "localhost:9414", context.sshIdentity);
-        tunnel.waitConnected();
-      }
       findCommand(cmd).func(argv);
     } finally {
       if (tunnel) {
