@@ -85,7 +85,6 @@ Div = UIComponent.extend({
 });
 
 Either = UIComponent.extend({
-  isHeavyweight: true,
   typeName: 'Either',
   render: function (buf) {
     buf(Div.create(),
@@ -133,7 +132,7 @@ Meteor.startup(function () {
 Meteor.startup(function () {
   var c = function (n) { return UIComponent.create({render:function(buf) { buf(String(n)); }}); };
 
-  var L = _UI.List();
+  L = _UI.List();
 
   L.addItemBefore('a', c(1));
   L.addItemBefore('b', c(2));
@@ -150,4 +149,7 @@ Meteor.startup(function () {
   L.removeItem('d');
   L.removeItem('e');
   L.addItemBefore('a', c(1));
+  L.addItemBefore('b', c(2), 'a');
+  L.addItemBefore('c', c(3));
+  L.moveItemBefore('c', 'a');
 });

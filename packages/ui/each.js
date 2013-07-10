@@ -2,7 +2,6 @@ var Component = UIComponent;
 
 _UI.List = Component.extend({
   typeName: 'List',
-  isHeavyweight: true,
   _idStringify: null,
   constructed: function () {
     this._items = new OrderedDict(
@@ -37,6 +36,12 @@ _UI.List = Component.extend({
     self._items.forEach(function (comp) {
       buf(comp);
     });
+  },
+  _findStartComponent: function () {
+    return this._items.firstValue();
+  },
+  _findEndComponent: function () {
+    return this._items.lastValue();
   }
 });
 

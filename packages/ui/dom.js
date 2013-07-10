@@ -7,24 +7,6 @@ var createEmptyComment = function (beforeNode) {
   return x;
 };
 
-var findChildWithFirstNode = function (parent, firstNode) {
-  var children = parent.children;
-  // linear-time scan until found
-  for (var k in children)
-    if (children[k].firstNode() === firstNode)
-      return children[k];
-  return null;
-};
-
-var findChildWithLastNode = function (parent, lastNode) {
-  var children = parent.children;
-  // linear-time scan until found
-  for (var k in children)
-    if (children[k].lastNode() === lastNode)
-      return children[k];
-  return null;
-};
-
 // Returns 0 if the nodes are the same or either one contains the other;
 // otherwise, -1 if a comes before b, or else 1 if b comes before a in
 // document order.
@@ -91,11 +73,6 @@ Component.include({
   start: null,
   end: null,
 
-  // "Heavyweight" components have HTML comments as their
-  // firstNode and lastNode.  This is more efficient when a component
-  // has O(N) top-level children.  See `detach`.
-  isHeavyweight: false,
-
   firstNode: function () {
     this._requireBuilt();
     return this.start instanceof Component ?
@@ -140,15 +117,7 @@ Component.include({
 
     var html = buf.getHtml();
 
-    if (self.isHeavyweight)
-      div.appendChild(document.createComment(
-        ' ' + self.constructor.typeName + ' '));
-
     $(div).append(html);
-
-    if (self.isHeavyweight)
-      div.appendChild(document.createComment(
-        ' /' + self.constructor.typeName + ' '));
 
     // returns info object with {start, end}
     return buf.wireUpDOM(div);
@@ -332,7 +301,7 @@ Component.include({
     // rebuild, another case where we skip the start/end adjustment
     // logic.
     if (parent && parent.stage === Component.BUILT &&
-        parent.start && ! parent.isHeavyweight) {
+        parent.start) {
       if (parent.isEmpty()) {
         var comment = parent.start;
         parent.start = parent.end = self;
@@ -367,9 +336,8 @@ Component.include({
 
     // We could be a root (and have no parent).  Parent could
     // theoretically be destroyed, or not yet built.
-    if (parent && parent.stage === Component.BUILT &&
-        ! parent.isHeavyweight) {
-      // For lightweight components, do some magic to update the
+    if (parent && parent.stage === Component.BUILT) {
+      // Do some magic to update the
       // firstNode and lastNode.  The main issue is we need to
       // know if the new firstNode or lastNode is part of a
       // child component or not, because if it is, we need to
@@ -378,19 +346,10 @@ Component.include({
       // and can't make any assumptions about the structure of
       // the component, we have to do a search over our children.
       // Repeatedly detaching the first or last of O(N) top-level
-      // components is asymptotically bad -- O(n^2) -- so use a
-      // "heavyweight" component for that case, which avoids this
-      // whole issue by dropping marker comments.
+      // components is asymptotically bad -- O(n^2).
       //
-      // Even if we kept a list (or tree) of our children in
-      // DOM order, making it easy to check the first or last at
-      // any time, if someone calls `attach` for some DOM node
-      // argument we'd need to be able to compare sibling node
-      // positions in O(1), and it's not clear that this is possible.
-      // `node.compareDocumentPosition` is probably pretty
-      // fast, but the IE equivalent (`sourceIndex`) only works on
-      // elements, not text nodes.  The state of the art in determining
-      // the ordering of two siblings is a linear-time scan.
+      // Components that manage large numbers of top-level components
+      // should override _findStartComponent and _findEndComponent.
       if (parent.start === self) {
         if (parent.end === self) {
           // we're emptying the parent; populate it with a
@@ -405,8 +364,9 @@ Component.include({
           // Figure out if the following top-level node is the
           // first node of a Component.
           var newFirstNode = B.nextSibling;
-          parent.start = (
-            findChildWithFirstNode(parent, newFirstNode) || newFirstNode);
+          parent.start = parent._findStartComponent(newFirstNode);
+          if (! (parent.start && parent.start.firstNode() === newFirstNode))
+            parent.start = newFirstNode;
         }
       } else if (parent.end === self) {
         // Removing component at the end of parent.
@@ -414,8 +374,9 @@ Component.include({
         // Figure out if the previous top-level node is the
         // last node of a Component.
         var newLastNode = A.previousSibling;
-        parent.end = (
-          findChildWithLastNode(parent, newLastNode) || newLastNode);
+        parent.end = parent._findEndComponent(newLastNode);
+        if (! (parent.end && parent.end.lastNode() === newLastNode))
+          parent.end = newLastNode;
       }
     }
 
@@ -732,7 +693,33 @@ Component.include({
     if (! cbs)
       cbs = self._builtCallbacks = [];
     cbs.push(cb);
+  },
+
+  // Return a child whose firstNode() may be `firstNode`.
+  // If such a child exists, it must be found by this function.
+  // If no such child exists, this function may return null
+  // or a wrong guess at a child.  Subclasses that know,
+  // for example, the earliest child component in the DOM
+  // at all times can supply that as a guess.
+  _findStartComponent: function (firstNode) {
+    var children = this.children;
+    // linear-time scan until found
+    for (var k in children)
+      if (children[k].firstNode() === firstNode)
+        return children[k];
+    return null;
+  },
+
+  _findEndComponent: function (lastNode) {
+    var children = parent.children;
+    // linear-time scan until found
+    for (var k in children)
+      if (children[k].lastNode() === lastNode)
+        return children[k];
+    return null;
   }
+
+
 
   // If Component is ever emptied, it gets an empty comment node.
   // This case is treated specially and the comment is removed
