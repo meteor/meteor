@@ -104,13 +104,13 @@ Either = UIComponent.extend({
           elseContent: Span
         }),
         { type: Span });
-    buf(new _UI.Each({
+    /*    buf(new _UI.Each({
       content: UIComponent.extend({
         render: function (buf) {
           buf("<div>Each ", String(this.data()), "</div>");
         }
       })
-    }));
+    }));*/
   }
 });
 

@@ -182,7 +182,7 @@ Each = Component.extend({
 var idStringify;
 
 // XXX not clear if this is the right way to do a weak dependency
-// now, on the linker branch
+// now, post-linker
 if (typeof LocalCollection !== 'undefined') {
   idStringify = function (id) {
     if (id === null)

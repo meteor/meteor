@@ -20,6 +20,7 @@ Package.on_use(function (api) {
                  'render.js',
                  'dom.js',
                  'forms.js',
+                 'each.js',
                  'components.js',
 
                  'component.js', 'renderbuffer.js',
