@@ -49,6 +49,7 @@ Template.item({
 //});
 
 Span = UIComponent.extend({
+  typeName: 'Span',
   render: function (buf) {
     buf("<span ",
         { attrs: function () {
@@ -69,6 +70,7 @@ Span = UIComponent.extend({
 });
 
 Div = UIComponent.extend({
+  typeName: 'Div',
   render: function (buf) {
     buf("<div style='background:cyan;margin:5px'>World",
         "<input type=checkbox ",

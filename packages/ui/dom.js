@@ -113,7 +113,12 @@ Component({
   // It's a DIV rather than a fragment so that jQuery can run against it.
   _offscreen: null,
 
-  render: function (buf) {},
+  content: function () { return null; },
+  elseContent: function () { return null; },
+
+  render: function (buf) {
+    buf(this.content());
+  },
 
   _populate: function (div) {
     var self = this;
@@ -690,7 +695,6 @@ Component({
 
 // Next up:
 //
-// - content()
 // - Spacebars compiler
 // - event maps
 // - preview HTML

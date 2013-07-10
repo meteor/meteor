@@ -1,6 +1,7 @@
 var Component = UIComponent;
 
 _UI.Text = Component.extend({
+  typeName: 'Text',
   _encodeEntities: _UI.encodeSpecialEntities,
   _stringify: function (x) {
     return String(x == null ? '' : x);
@@ -12,6 +13,7 @@ _UI.Text = Component.extend({
 });
 
 _UI.HTML = Component.extend({
+  typeName: 'HTML',
   _stringify: function (x) {
     return String(x == null ? '' : x);
   },
@@ -22,8 +24,7 @@ _UI.HTML = Component.extend({
 });
 
 _UI.If = Component.extend({
-  content: function () { return null; },
-  elseContent: function () { return null; },
+  typeName: 'If',
   render: function (buf) {
     var self = this;
     var condition = Deps.isolate(function () {
