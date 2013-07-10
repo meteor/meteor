@@ -112,7 +112,8 @@ Component.include({
     // removed from the DOM wholesale in one operation.
     if (child.stage === Component.BUILT &&
         child.isAttached) {
-      child.detach();
+
+      child.detach(true); // _forDestruction = true
     }
 
     var guid = child.guid;

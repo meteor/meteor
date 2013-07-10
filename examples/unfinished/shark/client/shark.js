@@ -4,16 +4,16 @@ Items.insert({ text: 'Bar' });
 Items.insert({ text: 'Beef' });
 
 Meteor.startup(function () {
-  Meteor.setInterval(function () {
+  Meteor.setTimeout(function () {
     Items.insert({ text: 'Qux' });
     Items.remove({ text: 'Foo' });
     Items.update({ text: 'Bar' }, { text: 'Coke' });
 
-    Items.remove({});
-    Items.insert({ text: 'Foo' });
-    Items.insert({ text: 'Bar' });
-    Items.insert({ text: 'Beef' });
-  }, 500);
+    //Items.remove({});
+    //Items.insert({ text: 'Foo' });
+    //Items.insert({ text: 'Bar' });
+    //Items.insert({ text: 'Beef' });
+  }, 1000);
 });
 
 Body({

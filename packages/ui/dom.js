@@ -313,7 +313,7 @@ Component.include({
   // DOM and puts it into an offscreen storage.  Updates the parent's
   // `start` and `end` and populates it with a comment if it becomes
   // empty.
-  detach: function () {
+  detach: function (_forDestruction) {
     var self = this;
 
     self._requireBuilt();
@@ -375,15 +375,19 @@ Component.include({
       nodes.push(n);
     nodes.push(B);
 
-    // Move nodes into an offscreen div, preserving
-    // any event handlers and data associated with the nodes.
-    var div = makeSafeDiv();
-    $(div).append(nodes);
+    if (_forDestruction) {
+      $(nodes).remove();
+    } else {
+      // Move nodes into an offscreen div, preserving
+      // any event handlers and data associated with the nodes.
+      var div = makeSafeDiv();
+      $(div).append(nodes);
 
-    self._offscreen = div;
-    self.isAttached = false;
+      self._offscreen = div;
+      self.isAttached = false;
 
-    self.detached();
+      self.detached();
+    }
   },
 
   isEmpty: function () {
