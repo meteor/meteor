@@ -149,11 +149,23 @@ exports.deploy = function (options) {
   process.stdout.write('Uploading...\n');
 
   var created = true;
+  var appConfig = {
+      METEOR_SETTINGS: options.settings
+  };
   try {
-    galaxy.call('createApp', options.app);
+    galaxy.call('createApp', options.app, appConfig);
   } catch (e) {
     if (e instanceof Meteor.Error && e.error === 'already-exists') {
-      // Cool, it already exists. No problem.
+      // Cool, it already exists. No problem. Just set the settings if they were
+      // passed. We explicitly check for undefined because we want to allow you
+      // to unset settings by passing an empty file.
+      if (options.settings !== undefined) {
+        try {
+          galaxy.call('updateAppConfiguration', options.app, appConfig);
+        } catch (e) {
+          exitWithError(e);
+        }
+      }
       created = false;
     } else {
       exitWithError(e);
