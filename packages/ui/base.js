@@ -16,7 +16,7 @@ var constrImpl = function (ths, args, type) {
     return ths;
 
   if (ths instanceof type) {
-    // invoked with `new`
+    // invoked as `new Foo(...)`
 
     if (! type._superSealed)
       type._superSealed = "instantiated";
@@ -56,9 +56,11 @@ var constrImpl = function (ths, args, type) {
     ths.constructed();
 
     return ths;
+  } else if (! args.length) {
+    // invoked as `Foo()`
+    return new type;
   } else {
-
-    // invoked without `new`
+    // invoked without `new` as `Foo(...)`
     return type.augment.apply(type, args);
   }
 };

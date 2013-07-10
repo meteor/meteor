@@ -96,6 +96,11 @@ Either = UIComponent.extend({
             }
           }
         },
+        new _UI.If({
+          data: function () { return Session.get('which') === 'Div'; },
+          content: Div,
+          elseContent: Span
+        }),
         { type: Span });
   }
 });

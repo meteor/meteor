@@ -6,6 +6,11 @@ var isValidAttributeName = function (str) {
   return ATTRIBUTE_NAME_REGEX.test(str);
 };
 
+var makeAttributeHandler = function (component, name, value) {
+  return new (component.constructor._attributeHandlers[name] ||
+               AttributeHandler)(name, value);
+};
+
 AttributeManager = function (component, dictOrFunc) {
   var self = this;
   self.component = component;
@@ -39,7 +44,8 @@ AttributeManager = function (component, dictOrFunc) {
     if (! isValidAttributeName(attrName))
       throw new Error("Illegal HTML attribute name: " + attrName);
 
-    handlers[attrName] = new AttributeHandler(attrName, dict[attrName]);
+    handlers[attrName] = makeAttributeHandler(
+      component, attrName, dict[attrName]);
   }
 };
 
@@ -99,8 +105,10 @@ _extend(AttributeManager.prototype, {
           if (! isValidAttributeName(attrName))
             throw new Error("Illegal HTML attribute name: " + attrName);
 
-          var h = handlers[attrName] =
-            new AttributeHandler(attrName, newDict[attrName]);
+          var h = makeAttributeHandler(
+            component, attrName, newDict[attrName]);
+
+          handlers[attrName] = h;
           h.add(element);
         }
       }
@@ -129,13 +137,11 @@ _extend(AttributeHandler.prototype, {
     this.update(element, null, this.value);
   },
   update: function (element, oldValue, value) {
-    if (oldValue == null) {
-      if (value != null)
-        element.setAttribute(this.name, this.stringifyValue(value));
-    } else if (value == null) {
-      element.removeAttribute(this.name);
+    if (value == null) {
+      if (oldValue != null)
+        element.removeAttribute(this.name);
     } else {
-      element.setAttribute(this.name, value);
+      element.setAttribute(this.name, this.stringifyValue(value));
     }
   }
 });
@@ -143,7 +149,7 @@ _extend(AttributeHandler.prototype, {
 // @export AttributeHandler
 AttributeHandler.extend = function (options) {
   var curType = this;
-  var subType = function (/*arguments*/) {
+  var subType = function AttributeHandlerSubtype(/*arguments*/) {
     AttributeHandler.apply(this, arguments);
   };
   subType.prototype = new curType;

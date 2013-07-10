@@ -304,5 +304,25 @@ _.extend(Deps, {
   afterFlush: function (f) {
     afterFlushCallbacks.push(f);
     requireFlush();
+  },
+
+  // two values are equal if `equals(x, y)`, which defaults to `===`
+  isolate: function (f, equals) {
+    if (! Deps.active)
+      return f();
+
+    var resultDep = new Deps.Dependency;
+    var origResult;
+    Deps.autorun(function (c) {
+      var result = f();
+      if (c.firstRun)
+        origResult = result;
+      else if (! (equals ? equals(result, origResult) :
+                  result === origResult))
+        resultDep.changed();
+    });
+    resultDep.depend();
+
+    return origResult;
   }
 });

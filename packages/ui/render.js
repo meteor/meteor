@@ -81,7 +81,9 @@ makeRenderBuffer = function (component, options) {
   };
 
   var handle = function (arg) {
-    if (typeof arg === 'string') {
+    if (arg == null) {
+      return;
+    } else if (typeof arg === 'string') {
       // "HTML"
       push(arg);
     } else if (arg instanceof Component) {

@@ -53,8 +53,11 @@ Component({
       throw new Error("Child already added to this component!");
     if (child.stage === Component.DESTROYED)
       throw new Error("Can't add DESTROYED child component");
-    else if (child.stage !== Component.INITIAL)
+    else if (child.stage !== Component.INITIAL) {
+      if (! child.parent)
+        throw new Error("Can't add a root component");
       throw new Error("Child already added to another component");
+    }
 
     // instantiate a new dictionary to hold children rather
     // than mutating the proto's empty object

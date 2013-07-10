@@ -21,6 +21,18 @@ _UI.HTML = Component.extend({
   }
 });
 
+_UI.If = Component.extend({
+  content: function () { return null; },
+  elseContent: function () { return null; },
+  render: function (buf) {
+    var self = this;
+    var condition = Deps.isolate(function () {
+      return !! self.data();
+    });
+    buf(condition ? self.content() : self.elseContent());
+  }
+});
+
 _UI.Counter = Component.extend({
   typeName: "Counter",
   fields: {
