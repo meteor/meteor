@@ -6,12 +6,20 @@ Log = function () {
 /// FOR TESTING
 var intercept = 0;
 var interceptedLines = [];
+var suppress = 0;
 
 // Intercept the next 'count' calls to a Log function. The actual
 // lines printed to the console can be cleared and read by calling
 // Log._intercepted().
 Log._intercept = function (count) {
   intercept += count;
+};
+
+// Suppress the next 'count' calls to a Log function. Use this to stop
+// tests from spamming the console, especially with red errors that
+// might look like a failing test.
+Log._suppress = function (count) {
+  suppress += count;
 };
 
 // Returns intercepted lines and resets the intercept counter.
@@ -113,6 +121,11 @@ Log._getCallerDetails = function () {
 _.each(['debug', 'info', 'warn', 'error'], function (level) {
   // @param arg {String|Object}
   Log[level] = function (arg) {
+    if (suppress) {
+      suppress--;
+      return;
+    }
+
     var intercepted = false;
     if (intercept) {
       intercept--;
