@@ -163,15 +163,14 @@ Accounts._makeClientLoggedIn = function(userId, token) {
 };
 
 Meteor.logout = function (callback) {
-  Meteor.apply('logout', [Accounts._storedLoginToken()], {wait: true},
-               function(error, result) {
-                 if (error) {
-                   callback && callback(error);
-                 } else {
-                   Accounts._makeClientLoggedOut();
-                   callback && callback();
-                 }
-               });
+  Meteor.apply('logout', [], {wait: true}, function(error, result) {
+    if (error) {
+      callback && callback(error);
+    } else {
+      Accounts._makeClientLoggedOut();
+      callback && callback();
+    }
+  });
 };
 
 ///

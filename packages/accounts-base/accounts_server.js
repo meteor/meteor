@@ -71,15 +71,16 @@ Meteor.methods({
     // options, but we don't enforce it.
     check(options, Object);
     var result = tryAllLoginHandlers(options);
-    if (result !== null)
+    if (result !== null) {
       this.setUserId(result.id);
+      this._sessionData.loginToken = result.token;
+    }
     return result;
   },
 
-  logout: function(loginToken) {
-    check(loginToken, Match.Optional(Match.OneOf(String, null)));
-    if (loginToken)
-      Accounts._removeLoginToken(this.userId, loginToken);
+  logout: function() {
+    if (this._sessionData.loginToken && this.userId)
+      Accounts._removeLoginToken(this.userId, this._sessionData.loginToken);
     this.setUserId(null);
   }
 });
