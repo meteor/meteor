@@ -51,9 +51,9 @@ var log_callbacks = function (operations) {
       delete old_obj._id;
       operations.push(EJSON.clone(['changed', obj, at, old_obj]));
     },
-    movedTo: function (obj, old_at, new_at) {
+    movedTo: function (obj, old_at, new_at, before) {
       delete obj._id;
-      operations.push(EJSON.clone(['moved', obj, old_at, new_at]));
+      operations.push(EJSON.clone(['moved', obj, old_at, new_at, before]));
     },
     removedAt: function (old_obj, at) {
       var id = old_obj._id;
@@ -1361,7 +1361,7 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   handle = c.find({}, {sort: {a: 1}}).observe(cbs);
   test.isTrue(handle.collection === c);
 
-  c.insert({a:1});
+  c.insert({_id: 'foo', a:1});
   test.equal(operations.shift(), ['added', {a:1}, 0, null]);
   c.update({a:1}, {$set: {a: 2}});
   test.equal(operations.shift(), ['changed', {a:2}, 0, {a:1}]);
@@ -1372,7 +1372,7 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   test.equal(operations.shift(), ['changed', {a:11}, 1, {a:10}]);
   c.update({a:11}, {a:1});
   test.equal(operations.shift(), ['changed', {a:1}, 1, {a:11}]);
-  test.equal(operations.shift(), ['moved', {a:1}, 1, 0]);
+  test.equal(operations.shift(), ['moved', {a:1}, 1, 0, 'foo']);
   c.remove({a:2});
   test.equal(operations.shift(), undefined);
   var id = c.findOne({a:3})._id;

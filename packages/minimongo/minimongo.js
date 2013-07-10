@@ -954,10 +954,11 @@ LocalCollection._observeOrderedFromObserveChanges =
       // only capture indexes if we're going to call the callback that needs them.
       if (callbacks.movedTo)
         from = docs.indexOf(id);
-      docs.moveBefore(id, before ? before : null);
+      docs.moveBefore(id, before || null);
       if (callbacks.movedTo) {
         var to = docs.indexOf(id);
-        callbacks.movedTo(transform(EJSON.clone(doc)), from, to);
+        callbacks.movedTo(transform(EJSON.clone(doc)), from, to,
+                          before || null);
       } else if (callbacks.moved) {
         callbacks.moved(transform(EJSON.clone(doc)));
       }
