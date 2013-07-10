@@ -336,7 +336,7 @@ var trimmedElementValueById = function(id) {
   if (!element)
     return null;
   else
-    return element.value.replace(/^\s*|\s*$/g, ""); // trim;
+    return element.value.replace(/^\s*|\s*$/g, ""); // trim() doesn't work on IE8;
 };
 
 var loginOrSignup = function () {
