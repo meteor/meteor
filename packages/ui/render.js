@@ -31,8 +31,8 @@ makeRenderBuffer = function (component, options) {
   var isPreview = !! options && options.preview;
 
   var strs = [];
-  var componentsToAttach = {};
-  var randomString = Random.id();
+  var componentsToAttach = null; // {}
+  var randomString = null; // Random.id()
   var commentUid = 1;
   var elementUid = 1;
   // Problem: In the template `<span {{foo}} {{bar}}>`, how do
@@ -58,10 +58,10 @@ makeRenderBuffer = function (component, options) {
   // between 1 and `maxDataAttrNumber` inclusive.
   var curDataAttrNumber = 1;
   var maxDataAttrNumber = 0;
-  var dataAttrs = []; // names of all HTML attributes used
+  var dataAttrs = null; // []; names of all HTML attributes used
   var greaterThanEndsTag = false;
 
-  var attrManagersToWire = {};
+  var attrManagersToWire = null; // {}
 
   var push = function (/*stringsToPush*/) {
     for (var i = 0, N = arguments.length;
@@ -88,9 +88,11 @@ makeRenderBuffer = function (component, options) {
       push(arg);
     } else if (arg instanceof Component) {
       // Component
+      randomString = randomString || Random.id();
       var commentString = randomString + '_' + (commentUid++);
       push('<!--', commentString, '-->');
       component.add(arg);
+      componentsToAttach = componentsToAttach || {};
       componentsToAttach[commentString] = arg;
     } else if (arg.type) {
       // `{type: componentTypeOrFunction, args: object}`
@@ -139,6 +141,10 @@ makeRenderBuffer = function (component, options) {
         strs.push('data-meteorui-id', curDataAttrNumber,
                   '="', elemId, '" ');
         if (curDataAttrNumber > maxDataAttrNumber) {
+          if (! dataAttrs) {
+            dataAttrs = [];
+            attrManagersToWire = {};
+          }
           dataAttrs[curDataAttrNumber-1] =
             'data-meteorui-id' + curDataAttrNumber;
           maxDataAttrNumber = curDataAttrNumber;
@@ -177,35 +183,39 @@ makeRenderBuffer = function (component, options) {
       while (n) {
         var next = n.nextSibling;
         if (n.nodeType === 8) { // COMMENT
-          var comp = componentsToAttach[n.nodeValue];
-          if (comp) {
-            if (parent === root) {
-              if (n === root.firstChild)
-                start = comp;
-              if (n === root.lastChild)
-                end = comp;
+          if (componentsToAttach) {
+            var comp = componentsToAttach[n.nodeValue];
+            if (comp) {
+              if (parent === root) {
+                if (n === root.firstChild)
+                  start = comp;
+                if (n === root.lastChild)
+                  end = comp;
+              }
+              comp.attach(parent, n);
+              parent.removeChild(n);
+              delete componentsToAttach[n.nodeValue];
             }
-            comp.attach(parent, n);
-            parent.removeChild(n);
-            delete componentsToAttach[n.nodeValue];
           }
         } else if (n.nodeType === 1) { // ELEMENT
-          // detect elements with reactive attributes
-          for (var i = 0; i < maxDataAttrNumber; i++) {
-            var attrName = dataAttrs[i];
-            var elemId = n.getAttribute(attrName);
-            if (elemId) {
-              var mgr = attrManagersToWire[elemId];
-              if (mgr) {
-                mgr.wire(n, component);
-                // note: this callback will be called inside
-                // the build autorun, so its internal
-                // autorun will be stopped on rebuild
-                component._onNextBuilt((function (mgr) {
-                  return function () { mgr.start(); };
-                })(mgr));
+          if (attrManagersToWire) {
+            // detect elements with reactive attributes
+            for (var i = 0; i < maxDataAttrNumber; i++) {
+              var attrName = dataAttrs[i];
+              var elemId = n.getAttribute(attrName);
+              if (elemId) {
+                var mgr = attrManagersToWire[elemId];
+                if (mgr) {
+                  mgr.wire(n, component);
+                  // note: this callback will be called inside
+                  // the build autorun, so its internal
+                  // autorun will be stopped on rebuild
+                  component._onNextBuilt((function (mgr) {
+                    return function () { mgr.start(); };
+                  })(mgr));
+                }
+                n.removeAttribute(attrName);
               }
-              n.removeAttribute(attrName);
             }
           }
 
@@ -216,14 +226,16 @@ makeRenderBuffer = function (component, options) {
       }
     };
 
-    recurse(root);
+    if (componentsToAttach || attrManagersToWire)
+      recurse(root);
 
     // We should have attached all specified components, but
     // if the comments we generated somehow didn't turn into
     // comments (due to bad HTML) we won't have found them,
     // in which case we clean them up here just to be safe.
-    for (var k in componentsToAttach)
-      componentsToAttach[k].destroy();
+    if (componentsToAttach)
+      for (var k in componentsToAttach)
+        componentsToAttach[k].destroy();
 
     // aid GC
     componentsToAttach = null;

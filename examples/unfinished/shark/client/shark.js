@@ -4,16 +4,21 @@ Items.insert({ text: 'Bar' });
 Items.insert({ text: 'Beef' });
 
 Meteor.startup(function () {
-  Meteor.setTimeout(function () {
+  Meteor.setInterval(function () {
     Items.insert({ text: 'Qux' });
     Items.remove({ text: 'Foo' });
     Items.update({ text: 'Bar' }, { text: 'Coke' });
-  }, 1000);
+
+    Items.remove({});
+    Items.insert({ text: 'Foo' });
+    Items.insert({ text: 'Bar' });
+    Items.insert({ text: 'Beef' });
+  }, 500);
 });
 
 Body({
   items: function () {
-    return Items.find({}, { sort: { text: 1 }});
+    return Items.find({xxx:3}, { sort: { text: 1 }});
   },
   name: 'David',
   containerClass: function () {
@@ -111,7 +116,8 @@ Either = UIComponent.extend({
       data: function () { return Items.find({}, { sort: { text: 1 }}); },
       content: UIComponent.extend({
         render: function (buf) {
-          buf("<div>Each ", this.data().text, "</div>");
+          buf("<div>Each ", this.data().text, " ", String(Math.random()),
+              "</div>");
         }
       })
     }));
