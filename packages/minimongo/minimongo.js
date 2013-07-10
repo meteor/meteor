@@ -951,6 +951,9 @@ LocalCollection._observeOrderedFromObserveChanges =
     addedBefore: function (id, fields, before) {
       var doc = EJSON.clone(fields);
       doc._id = id;
+      // XXX could `before` be a falsy ID?  Technically
+      // idStringify seems to allow for them -- though
+      // OrderedDict won't call stringify on a falsy arg.
       docs.putBefore(id, doc, before || null);
       if (!suppressed) {
         if (callbacks.addedAt) {
