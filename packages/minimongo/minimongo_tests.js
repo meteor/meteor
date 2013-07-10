@@ -1375,9 +1375,8 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   test.equal(operations.shift(), ['moved', {a:1}, 1, 0, 'foo']);
   c.remove({a:2});
   test.equal(operations.shift(), undefined);
-  var id = c.findOne({a:3})._id;
   c.remove({a:3});
-  test.equal(operations.shift(), ['removed', id, 1, {a:3}]);
+  test.equal(operations.shift(), ['removed', 'foo', 1, {a:3}]);
 
   // test stop
   handle.stop();
@@ -1404,21 +1403,41 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   test.equal(operations.shift(), undefined);
   c.insert({a:1});
   test.equal(operations.shift(), undefined);
-  c.insert({a:2});
+  c.insert({_id: 'foo', a:2});
   test.equal(operations.shift(), ['added', {a:2}, 0, null]);
   c.insert({a:3});
   test.equal(operations.shift(), ['added', {a:3}, 1, null]);
   c.insert({a:4});
   test.equal(operations.shift(), undefined);
-  id = c.findOne({a:2})._id;
   c.update({a:1}, {a:0});
   test.equal(operations.shift(), undefined);
   c.update({a:0}, {a:5});
-  test.equal(operations.shift(), ['removed', id, 0, {a:2}]);
+  test.equal(operations.shift(), ['removed', 'foo', 0, {a:2}]);
   test.equal(operations.shift(), ['added', {a:4}, 1, null]);
   c.update({a:3}, {a:3.5});
   test.equal(operations.shift(), ['changed', {a:3.5}, 0, {a:3}]);
+  handle.stop();
 
+  // test _no_indices
+
+  c.remove({});
+  handle = c.find({}, {sort: {a: 1}}).observe(_.extend(cbs, {_no_indices: true}));
+  c.insert({_id: 'foo', a:1});
+  test.equal(operations.shift(), ['added', {a:1}, -1, null]);
+  c.update({a:1}, {$set: {a: 2}});
+  test.equal(operations.shift(), ['changed', {a:2}, -1, {a:1}]);
+  c.insert({a:10});
+  test.equal(operations.shift(), ['added', {a:10}, -1, null]);
+  c.update({}, {$inc: {a: 1}}, {multi: true});
+  test.equal(operations.shift(), ['changed', {a:3}, -1, {a:2}]);
+  test.equal(operations.shift(), ['changed', {a:11}, -1, {a:10}]);
+  c.update({a:11}, {a:1});
+  test.equal(operations.shift(), ['changed', {a:1}, -1, {a:11}]);
+  test.equal(operations.shift(), ['moved', {a:1}, -1, -1, 'foo']);
+  c.remove({a:2});
+  test.equal(operations.shift(), undefined);
+  c.remove({a:3});
+  test.equal(operations.shift(), ['removed', 'foo', -1, {a:3}]);
   handle.stop();
 });
 
