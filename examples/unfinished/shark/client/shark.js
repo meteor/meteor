@@ -132,7 +132,7 @@ Meteor.startup(function () {
 Meteor.startup(function () {
   var c = function (n) { return UIComponent.create({render:function(buf) { buf(String(n)); }}); };
 
-  L = _UI.List();
+  L = _UI.List({elseContent: function () { return c('else'); }});
 
   L.addItemBefore('a', c(1));
   L.addItemBefore('b', c(2));
