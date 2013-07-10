@@ -71,12 +71,16 @@ Meteor.methods({
     // options, but we don't enforce it.
     check(options, Object);
     var result = tryAllLoginHandlers(options);
-    if (result !== null)
+    if (result !== null) {
       this.setUserId(result.id);
+      this._sessionData.loginToken = result.token;
+    }
     return result;
   },
 
   logout: function() {
+    if (this._sessionData.loginToken && this.userId)
+      Accounts._removeLoginToken(this.userId, this._sessionData.loginToken);
     this.setUserId(null);
   }
 });
@@ -107,6 +111,14 @@ Accounts.registerLoginHandler(function(options) {
 // Semi-public. Used by other login methods to generate tokens.
 Accounts._generateStampedLoginToken = function () {
   return {token: Random.id(), when: +(new Date)};
+};
+
+Accounts._removeLoginToken = function (userId, loginToken) {
+  Meteor.users.update(userId, {
+    $pull: {
+      "services.resume.loginTokens": { "token": loginToken }
+    }
+  });
 };
 
 
