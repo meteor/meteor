@@ -876,10 +876,15 @@ _.extend(ClientTarget.prototype, {
       };
 
       if (file.sourceMap) {
+        // Add anti-XSSI header to this file which will be served over
+        // HTTP. Note that the Mozilla and WebKit implementations differ as to
+        // what they strip: Mozilla looks for the four punctuation characters
+        // but doesn't care about the newline; WebKit only looks for the first
+        // three characters (not the single quote) and then strips everything up
+        // to a newline.
+        var mapData = new Buffer(")]}'\n" + file.sourceMap, 'utf8');
         manifestItem.sourceMap = builder.writeToGeneratedFilename(
-          file.targetPath + '.map', {
-            data: new Buffer(file.sourceMap, 'utf8')
-          });
+          file.targetPath + '.map', {data: mapData});
       }
 
       manifest.push(manifestItem);
