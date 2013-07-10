@@ -245,15 +245,6 @@ var runWebAppServer = function () {
         };
         // Send the SourceMap header when the source file is served.
         staticFile.sourceMap = sourceMapRootUrl;
-
-        // Now register all the sources from this source map to be served, under
-        // the source map's URL.
-        _.each(item.sources, function (x, pathForSourceMap) {
-          staticFiles[sourceMapRootUrl + pathForSourceMap] = {
-            path: x.source,
-            cacheable: true
-          };
-        });
       }
       staticFiles[url.parse(item.url).pathname] = staticFile;
     }

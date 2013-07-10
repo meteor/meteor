@@ -46,8 +46,11 @@ _.each(serverJson.load, function (fileInfo) {
       path.resolve(serverDir, fileInfo.sourceMap), 'utf8');
     // Parse the source map only once, not each time it's needed. Also remove
     // the anti-XSSI header if it's there.
-    parsedSourceMaps[fileInfo.path] = JSON.parse(
-      rawSourceMap.replace(/^\)\]\}'/, ''));
+    var parsedSourceMap = JSON.parse(rawSourceMap.replace(/^\)\]\}'/, ''));
+    // source-map-support doesn't ever look at the sourcesContent field, so
+    // there's no point in keeping it in memory.
+    delete parsedSourceMap.sourcesContent;
+    parsedSourceMaps[fileInfo.path] = parsedSourceMap;
   }
 });
 

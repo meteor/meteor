@@ -119,9 +119,14 @@ var handler = function (compileStep) {
     bare: true,
     filename: compileStep.inputPath,
     literate: path.extname(compileStep.inputPath) === '.litcoffee',
+    // Return a source map.
     sourceMap: true,
-    generatedFile: "/" + outputFile,  // Used in source map.
-    sourceFiles: [compileStep.pathForSourceMap]  // Used in source map.
+    // Include the original source in the source map (sourcesContent field).
+    inline: true,
+    // This becomes the "file" field of the source map.
+    generatedFile: "/" + outputFile,
+    // This becomes the "sources" field of the source map.
+    sourceFiles: [compileStep.pathForSourceMap]
   };
 
   try {
@@ -135,14 +140,6 @@ var handler = function (compileStep) {
     );
   }
 
-  // These are the sources that correspond to the input files in the source map.
-  var sources = {};
-  sources[compileStep.pathForSourceMap] = {
-    source: new Buffer(source, 'utf8'),
-    package: compileStep.packageName,
-    sourcePath: compileStep.inputPath
-  };
-
   compileStep.addJavaScript({
     path: outputFile,
     sourcePath: compileStep.inputPath,
@@ -152,8 +149,7 @@ var handler = function (compileStep) {
       var stripped = stripExportedVars(source, exports);
       return addSharedHeader(stripped, sourceMap);
     },
-    sourceMap: output.v3SourceMap,
-    sources: sources
+    sourceMap: output.v3SourceMap
   });
 };
 

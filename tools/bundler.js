@@ -71,7 +71,6 @@
 //    - size: size of file in bytes
 //    - hash: sha1 hash of the file contents
 //    - sourceMap: optional path to source map file (relative to program.json)
-//    - sources: same as in native format (see below)
 //    Additionally there will be an entry with where equal to
 //    "internal", path equal to page (above), and hash equal to the
 //    sha1 of page (before replacements.) Currently this is used to
@@ -108,15 +107,6 @@
 //      Assets.getText and Assets.getBinary are called from this file.
 //    - sourceMap: if present, path of a file that contains a source
 //      map for this file, relative to program.json
-//    - sources: if sourceMap present, a map from a a relative path in
-//      the source map (no leading slash) to information about the
-//      source file:
-//      - source: path of this source file if available, relative to
-//        program.json
-//      - package: name of the package from which this file came, if
-//        any (omit if file came from an app)
-//      - sourcePath: original relative path within the source tree of
-//        'package' (or the app) of this source file
 //
 // /config.json:
 //
@@ -247,8 +237,6 @@ var StaticDirectory = function (options) {
 // - sourcePath: path to file on disk that will provide our contents
 // - data: contents of the file as a Buffer
 // - sourceMap: if 'data' is given, can be given instead of sourcePath. a string
-// - sources: if sourceMap is provided, map from relative path to object
-//   with keys 'package', 'sourcePath', 'source'
 // - cacheable
 var File = function (options) {
   var self = this;
@@ -267,13 +255,6 @@ var File = function (options) {
   // information. Set with setSourceMap.
   self.sourceMap = null;
 
-  // If sourceMap is set, this is a map from a relative source file
-  // path in the source map (no leading '/') to an object with keys:
-  // - package: name of the source package, or null for the app
-  // - sourcePath: the source path, relative to the root of 'package'
-  // - source: full contents of the source file, as a Buffer
-  self.sources = null;
-
   // Where this file is intended to reside within the target's
   // filesystem.
   self.targetPath = null;
@@ -281,7 +262,7 @@ var File = function (options) {
   // The URL at which this file is intended to be served, relative to
   // the base URL at which the target is being served (ignored if this
   // file is not intended to be served over HTTP.)
-  self.url = null
+  self.url = null;
 
   // Is this file guaranteed to never change, so that we can let it be
   // cached forever? Only makes sense of self.url is set.
@@ -396,15 +377,13 @@ _.extend(File.prototype, {
     });
   },
 
-  // Set a source map for this File. sourceMap is given as a string. See
-  // self.sources for the format of sources.
-  setSourceMap: function (sourceMap, sources) {
+  // Set a source map for this File. sourceMap is given as a string.
+  setSourceMap: function (sourceMap) {
     var self = this;
 
     if (typeof sourceMap !== "string")
       throw new Error("sourceMap must be given as a string");
     self.sourceMap = sourceMap;
-    self.sources = sources || {};
   }
 });
 
@@ -675,7 +654,7 @@ _.extend(Target.prototype, {
           }
 
           if (resource.type === "js" && resource.sourceMap) {
-            f.setSourceMap(resource.sourceMap, resource.sources);
+            f.setSourceMap(resource.sourceMap);
           }
 
           self[resource.type].push(f);
@@ -901,17 +880,6 @@ _.extend(ClientTarget.prototype, {
           file.targetPath + '.map', {
             data: new Buffer(file.sourceMap, 'utf8')
           });
-
-        manifestItem.sources = {};
-        _.each(file.sources, function (x, pathForSourceMap) {
-          manifestItem.sources[pathForSourceMap] = {
-            package: x.package,
-            sourcePath: x.sourcePath,
-            source: builder.writeToGeneratedFilename(
-              path.join('sources', pathForSourceMap),
-              { data: x.source })
-          };
-        });
       }
 
       manifest.push(manifestItem);
@@ -957,8 +925,6 @@ var JsImage = function () {
   // - nodeModulesDirectory: a NodeModulesDirectory indicating which
   //   directory should be searched by Npm.require()
   // - sourceMap: if set, source map for this code, as a string
-  // - sources: map from relative path in source map to object with
-  //   keys 'source' (a Buffer), 'package', 'sourcePath'
   // note: this can't be called `load` at it would shadow `load()`
   self.jsToLoad = [];
 
@@ -1123,18 +1089,6 @@ _.extend(JsImage.prototype, {
           item.targetPath + '.map',
           { data: new Buffer(item.sourceMap, 'utf8') }
         );
-
-        // Now write the sources themselves.
-        loadItem.sources = {};
-        _.each(item.sources, function (x, pathForSourceMap) {
-          loadItem.sources[pathForSourceMap] = {
-            package: x.package,
-            sourcePath: x.sourcePath,
-            source: builder.writeToGeneratedFilename(
-              path.join('sources', pathForSourceMap),
-              { data: x.source })
-          };
-        });
       }
 
       load.push(loadItem);
@@ -1207,17 +1161,6 @@ JsImage.readFromDisk = function (controlFilePath) {
       rejectBadPath(item.sourceMap);
       loadItem.sourceMap = fs.readFileSync(
         path.join(dir, item.sourceMap), 'utf8');
-      if (item.sources) {
-        loadItem.sources = {};
-        _.each(item.sources, function (x, pathForSourceMap) {
-          rejectBadPath(x.source);
-          loadItem.sources[pathForSourceMap] = {
-            package: x.package,
-            sourcePath: x.sourcePath,
-            source: fs.readFileSync(path.join(dir, x.source))
-          };
-        });
-      }
     }
     ret.jsToLoad.push(loadItem);
   });
@@ -1248,8 +1191,7 @@ _.extend(JsImageTarget.prototype, {
         source: file.contents().toString('utf8'),
         nodeModulesDirectory: file.nodeModulesDirectory,
         staticDirectory: file.staticDirectory,
-        sourceMap: file.sourceMap,
-        sources: file.sources
+        sourceMap: file.sourceMap
       });
     });
 

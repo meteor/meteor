@@ -183,12 +183,6 @@ var Slice = function (pkg, options) {
   //
   // sourceMap: Allowed only for "js". If present, a string.
   //
-  // sources: Only if 'sourceMap' present. A mapping from a relative
-  // source path given in sourceMap (no leading '/') to:
-  // - package: package name, or null for app
-  // - sourcePath: original relative path within 'package' or app
-  // - source: full contents of the original source file, as a Buffer
-  //
   // Set only when isBuilt is true.
   self.resources = null;
 
@@ -425,8 +419,7 @@ _.extend(Slice.prototype, {
             includePositionInErrors: options.lineForLine,
             linkerFileTransform: options.linkerFileTransform,
             bare: !!options.bare,
-            sourceMap: options.sourceMap,
-            sources: options.sources
+            sourceMap: options.sourceMap
           });
         },
         addAsset: function (options) {
@@ -571,8 +564,7 @@ _.extend(Slice.prototype, {
         data: new Buffer(file.source, 'utf8'), // XXX encoding
         servePath: file.servePath,
         staticDirectory: self.staticDirectory,
-        sourceMap: file.sourceMap,
-        sources: file.sources
+        sourceMap: file.sourceMap
       };
     });
 
@@ -1915,17 +1907,6 @@ _.extend(Package.prototype, {
             rejectBadPath(resource.sourceMap);
             prelinkFile.sourceMap = fs.readFileSync(
               path.join(sliceBasePath, resource.sourceMap), 'utf8');
-            if (resource.sources) {
-              prelinkFile.sources = {};
-              _.each(resource.sources, function (x, pathForSourceMap) {
-                rejectBadPath(x.source);
-                prelinkFile.sources[pathForSourceMap] = {
-                  package: x.package,
-                  sourcePath: x.sourcePath,
-                  source: fs.readFileSync(path.join(sliceBasePath, x.source))
-                };
-              });
-            }
           }
           slice.prelinkFiles.push(prelinkFile);
         } else if (_.contains(["head", "body", "css", "js", "static"],
@@ -2104,18 +2085,6 @@ _.extend(Package.prototype, {
               path.join(sliceDir, file.servePath + '.map'),
               { data: new Buffer(file.sourceMap, 'utf8') }
             );
-
-            // Now write the sources themselves.
-            resource.sources = {};
-            _.each(file.sources, function (x, pathForSourceMap) {
-              resource.sources[pathForSourceMap] = {
-                package: x.package,
-                sourcePath: x.sourcePath,
-                source: builder.writeToGeneratedFilename(
-                  path.join(sliceDir, 'sources', x.sourcePath),
-                  { data: x.source })
-              };
-            });
           }
 
           sliceJson.resources.push(resource);
