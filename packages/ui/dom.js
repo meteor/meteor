@@ -9,7 +9,7 @@ var createEmptyComment = function (beforeNode) {
 
 var findChildWithFirstNode = function (parent, firstNode) {
   var children = parent.children;
-  // linear scan until found
+  // linear-time scan until found
   for (var k in children)
     if (children[k].firstNode() === firstNode)
       return children[k];
@@ -18,7 +18,7 @@ var findChildWithFirstNode = function (parent, firstNode) {
 
 var findChildWithLastNode = function (parent, lastNode) {
   var children = parent.children;
-  // linear scan until found
+  // linear-time scan until found
   for (var k in children)
     if (children[k].lastNode() === lastNode)
       return children[k];
@@ -390,7 +390,7 @@ Component.include({
       // `node.compareDocumentPosition` is probably pretty
       // fast, but the IE equivalent (`sourceIndex`) only works on
       // elements, not text nodes.  The state of the art in determining
-      // the ordering of two siblings is a linear scan.
+      // the ordering of two siblings is a linear-time scan.
       if (parent.start === self) {
         if (parent.end === self) {
           // we're emptying the parent; populate it with a
@@ -569,6 +569,9 @@ Component.include({
   },
 
   containsElement: function (elem) {
+    if (elem.nodeType !== 1)
+      throw new Error("containsElement requires an Element node");
+
     var self = this;
     self._requireBuilt();
 
@@ -586,6 +589,35 @@ Component.include({
     if (nextNode && compareElementIndex(elem, nextNode) >= 0)
       return false;
     return true;
+  },
+
+  // Take element `elem` and find the innermost component containing
+  // it which is either this component or a descendent of this component.
+  findByElement: function (elem) {
+    if (elem.nodeType !== 1)
+      throw new Error("findByElement requires an Element node");
+
+    var self = this;
+    self._requireBuilt();
+
+    if (! self.containsElement(elem))
+      return null;
+
+    var children = self.children;
+    // XXX linear-time scan through all children,
+    // running DOM comparison methods that may themselves
+    // be O(N).  Not sure what the constants are.
+    for (var k in children) {
+      var child = children[k];
+      if (child.stage === Component.BUILT &&
+          child.isAttached) {
+        var found = child.findByElement(elem);
+        if (found)
+          return found;
+      }
+    }
+
+    return self;
   },
 
   $: function (selector) {
