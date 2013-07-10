@@ -951,7 +951,7 @@ LocalCollection._observeOrderedFromObserveChanges =
     addedBefore: function (id, fields, before) {
       var doc = EJSON.clone(fields);
       doc._id = id;
-      docs.putBefore(id, doc, before ? before : null);
+      docs.putBefore(id, doc, before || null);
       if (!suppressed) {
         if (callbacks.addedAt) {
           var index = indices ? docs.indexOf(id) : -1;
