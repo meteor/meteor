@@ -26,8 +26,9 @@ var meteorNpm = exports;
 _.extend(exports, {
   _tmpDirs: [],
 
-  _isGitHubTarball: function (x) {
-    return /^https:\/\/github.com\/.*\/tarball\/[0-9a-f]{40}/.test(x);
+  // Checks if package URL is passed instead of a version number
+  _isUrl: function(version) {
+    return !!version && version.substr(0, 4) === 'http';
   },
 
   ensureOnlyExactVersions: function(npmDependencies) {
@@ -37,7 +38,7 @@ _.extend(exports, {
       // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
       // don't want anything too vague. For now, we support semvers and github
       // tarballs pointing at an exact commit.
-      if (!semver.valid(version) && !self._isGitHubTarball(version))
+      if (!semver.valid(version) && !self._isUrl(version))
         throw new Error(
           "Must declare exact version of npm package dependency: " + name + '@' + version);
     });
@@ -302,7 +303,7 @@ _.extend(exports, {
   // If more logic is added here, it should probably go in minimizeModule too.
   _canonicalVersion: function (depObj) {
     var self = this;
-    if (self._isGitHubTarball(depObj.from))
+    if (self._isUrl(depObj.from))
       return depObj.from;
     else
       return depObj.version;
@@ -333,7 +334,7 @@ _.extend(exports, {
   _installNpmModule: function(name, version, dir) {
     this._ensureConnected();
 
-    var installArg = this._isGitHubTarball(version)
+    var installArg = this._isUrl(version)
           ? version : (name + "@" + version);
 
     // We don't use npm.commands.install since we couldn't
@@ -398,7 +399,7 @@ _.extend(exports, {
 
     var minimizeModule = function (module) {
       var minimized = {};
-      if (self._isGitHubTarball(module.from))
+      if (self._isUrl(module.from))
         minimized.from = module.from;
       else
         minimized.version = module.version;
