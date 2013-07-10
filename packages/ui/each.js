@@ -6,44 +6,37 @@ _UI.Each = Component.extend({
     var self = this;
 
     // XXX support arrays too.
+    // XXX and objects.
     // For now, we assume the data is a database cursor.
     var cursor = self.data();
-    // XXX also support `null`
+    // XXX support null
 
-    
+    // id -> component
+    var items = self.items = new OrderedDict(Meteor.idStringify);
 
-    var self = this;
-    buf(self.content(function () { return 0; })),
-    buf(self.content(function () { return 1; }));
-    buf(self.content(function () { return 2; }));
+    cursor.observe({
+      _no_indices: true,
+      addedAt: function (doc, i, beforeId) {
+        var comp = self.content(function () {
+          this.dataDep.depend();
+          return this._data;
+        }, {
+          _data: doc,
+          dataDep: new Deps.Dependency
+        });
+        // XXX could `before` be a falsy ID?  Technically
+        // idStringify seems to allow for them -- though
+        // OrderedDict won't call stringify on a falsy arg.
+        items.putBefore(doc._id, comp, beforeId);
+      }
+    });
+
+    if (items.empty()) {
+      buf(self.elseContent());
+    } else {
+      items.forEach(function (comp) {
+        buf(comp);
+      });
+    }
   }
 });
-
-
-// Function equal to LocalCollection._idStringify, or the identity
-// function if we don't have LiveData.  Converts item keys (i.e. DDP
-// keys) to strings for storage in an OrderedDict.
-var idStringify;
-
-// XXX not clear if this is the right way to do a weak dependency
-// now, post-linker
-if (typeof LocalCollection !== 'undefined') {
-  idStringify = function (id) {
-    if (id === null)
-      return id;
-    else
-      return LocalCollection._idStringify(id);
-  };
-} else {
-  idStringify = function (id) { return id; };
-}
-
-// XXX duplicated code from minimongo.js.
-var applyChanges = function (doc, changeFields) {
-  _.each(changeFields, function (value, key) {
-    if (value === undefined)
-      delete doc[key];
-    else
-      doc[key] = value;
-  });
-};
