@@ -414,12 +414,11 @@ _.extend(File.prototype, {
         if (line.length <= width) {
           suffix = padding.slice(line.length, width) + " // " + num + "\n";
         }
-        f(line, suffix);
+        f(line, suffix, num);
         num++;
       });
     };
 
-    var num = 1;
     var lines = self.source.split('\n');
 
     if (transformedSourceWithMap.sourceMap) {
@@ -437,7 +436,7 @@ _.extend(File.prototype, {
       // the only change we make is to append a comment, so we can probably emit
       // one mapping for the whole file. For the moment, we'll do it by the book
       // just to see how it goes.
-      numberifyLines(function (line, suffix) {
+      numberifyLines(function (line, suffix, num) {
         chunks.push(new sourcemap.SourceNode(num, 0, self._pathForSourceMap(),
                                              line));
         chunks.push(suffix);
