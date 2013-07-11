@@ -642,6 +642,15 @@ _.extend(exports, {
       // another copy of node and feed it the offending code on
       // stdin. It should give us the error on stderr.
 
+      // Why do we think it has to be a parse error? After all, this is
+      // *run*InThisContext so it could be a thrown exception. But the only code
+      // we are running is the function definition, which should not be able to
+      // throw... unless "code" is imbalanced (ie, has a '})' in it), in which
+      // case "code" should basically be considered as a parse error
+      // anyway. (The error message in the latter case may be poor, though.)
+
+      // XXX XXX don't run the code until after this block
+
       var Future = require('fibers/future');
       var future = new Future;
 
