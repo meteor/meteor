@@ -139,17 +139,23 @@ Meteor.startup(function () {
 });
 
 Meteor.startup(function () {
-  var c = function (n) { return UIComponent.create({render:function(buf) { buf(String(n)); }}); };
+  var c = UIComponent.extend({
+    render: function(buf) {
+      buf(String(this.data()));
+    }
+  });
 
-  L = _UI.List({elseContent: function () { return c('else'); }});
+  L = _UI.List({elseContent: function () {
+    return c(function () { return 'else'; });
+  }});
 
-  L.addItemBefore('a', c(1));
-  L.addItemBefore('b', c(2));
-  L.addItemBefore('c', c(3));
+  L.addItemBefore('a', c, 1);
+  L.addItemBefore('b', c, 2);
+  L.addItemBefore('c', c, 3);
   L.makeRoot();
   L.attach(document.body);
-  L.addItemBefore('d', c(4));
-  L.addItemBefore('e', c(5), 'b');
+  L.addItemBefore('d', c, 4);
+  L.addItemBefore('e', c, 5, 'b');
   L.moveItemBefore('d', 'c');
   L.moveItemBefore('a');
   L.removeItem('b');
@@ -157,8 +163,8 @@ Meteor.startup(function () {
   L.removeItem('c');
   L.removeItem('d');
   L.removeItem('e');
-  L.addItemBefore('a', c(1));
-  L.addItemBefore('b', c(2), 'a');
-  L.addItemBefore('c', c(3));
+  L.addItemBefore('a', c, 1);
+  L.addItemBefore('b', c, 2, 'a');
+  L.addItemBefore('c', c, 3);
   L.moveItemBefore('c', 'a');
 });

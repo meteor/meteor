@@ -287,9 +287,14 @@ Component.include({
     // We could be a root (and have no parent).  Parent could
     // theoretically be destroyed, or not yet built (if we
     // are currently building).
+    //
     // We use a falsy `parent.start` as a cue that this is a
     // rebuild, another case where we skip the start/end adjustment
     // logic.
+    //
+    // `attach` is special in that it is used during building
+    // and rebuilding; it is not required that the parent is
+    // completely built.
     if (parent && parent.stage === Component.BUILT &&
         parent.start) {
       if (parent.isEmpty()) {

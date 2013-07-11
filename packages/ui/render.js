@@ -91,7 +91,6 @@ makeRenderBuffer = function (component, options) {
       randomString = randomString || Random.id();
       var commentString = randomString + '_' + (commentUid++);
       push('<!--', commentString, '-->');
-      component.add(arg);
       componentsToAttach = componentsToAttach || {};
       componentsToAttach[commentString] = arg;
     } else if (arg.type) {
@@ -191,6 +190,12 @@ makeRenderBuffer = function (component, options) {
                   start = comp;
                 if (n === root.lastChild)
                   end = comp;
+              }
+              if (comp.stage === Component.INITIAL) {
+                component.add(comp);
+              } else if (comp.parent !== component) {
+                throw new Error("Component used in render must be a child " +
+                                "(or addable as one)");
               }
               comp.attach(parent, n);
               parent.removeChild(n);
