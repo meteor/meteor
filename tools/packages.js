@@ -316,11 +316,11 @@ _.extend(Slice.prototype, {
       //   Assets.getText or Assets.getBinary.
       // - error({ message: "There's a problem in your source file",
       //           sourcePath: "src/my/program.ext", line: 12,
-      //           column: 20, columnEnd: 25, func: "doStuff" })
+      //           column: 20, func: "doStuff" })
       //   Flag an error -- at a particular location in a source
       //   file, if you like (you can even indicate a function name
       //   to show in the error, like in stack traces.) sourcePath,
-      //   line, column, columnEnd, and func are all optional.
+      //   line, column, and func are all optional.
       //
       // XXX for now, these handlers must only generate portable code
       // (code that isn't dependent on the arch, other than 'browser'

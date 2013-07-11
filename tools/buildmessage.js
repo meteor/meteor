@@ -356,8 +356,15 @@ var error = function (message, options) {
 // actually occurred, rather than the place where the exception was
 // thrown.
 var exception = function (error) {
-  if (! currentJob)
+  if (! currentJob) {
+    // XXX this may be the wrong place to do this, but it makes syntax errors in
+    // files loaded via unipackage.load have context.
+    if (error instanceof files.FancySyntaxError) {
+      error.message = "Syntax error: " + error.message + " at " +
+        error.file + ":" + error.line + ":" + error.column;
+    }
     throw error;
+  }
 
   var message = error.message;
 

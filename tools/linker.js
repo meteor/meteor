@@ -283,8 +283,7 @@ _.extend(File.prototype, {
       var errorOptions = {
         file: self.sourcePath,
         line: e.lineNumber,
-        column: e.column,
-        downcase: true
+        column: e.column
       };
       if (self.sourceMap) {
         var parsed = new sourcemap.SourceMapConsumer(self.sourceMap);

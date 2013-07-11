@@ -623,16 +623,13 @@ _.extend(exports, {
   // exceptions that come from inside this code. `options.sourceMap` is an
   // optional source map that represents the file.
   //
-  // The really special thing about this function is that if a parse
-  // error occurs, we will raise an exception of type
-  // files.FancySyntaxError, from which you may read 'message', 'file',
-  // 'line', 'column', and 'columnEnd' attributes ... v8 is
-  // normally reluctant to reveal this information but will write it
-  // to stderr if you pass it an undocumented flag. Unforunately
-  // though node doesn't have dup2 so we can't intercept the write. So
-  // instead -- only if the parse does in fact fail, to determine the
-  // error we start a subprocess, redirect its stderr, grab the output
-  // and parse it.
+  // The really special thing about this function is that if a parse error
+  // occurs, we will raise an exception of type files.FancySyntaxError, from
+  // which you may read 'message', 'file', 'line', and 'column' attributes
+  // ... v8 is normally reluctant to reveal this information but will write it
+  // to stderr if you pass it an undocumented flag. Unforunately though node
+  // doesn't have dup2 so we can't intercept the write. So instead we use a
+  // completely different parser with a better error handling API. Ah well.
   runJavaScript: function (code, options) {
     if (typeof code !== 'string')
       throw new Error("code must be a string");
@@ -655,7 +652,8 @@ _.extend(exports, {
     }
 
     var chunks = [];
-    chunks.push("(function(" + keys.join(',') + "){");
+    var header = "(function(" + keys.join(',') + "){";
+    chunks.push(header);
     if (options.sourceMap) {
       var consumer = new sourcemap.SourceMapConsumer(options.sourceMap);
       chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
@@ -667,15 +665,17 @@ _.extend(exports, {
     chunks.push("\n})");
 
     var wrapped;
+    var parsedSourceMap = null;
     if (options.sourceMap) {
       var node = new sourcemap.SourceNode(null, null, null, chunks);
       var results = node.toStringWithSourceMap({
         file: stackFilename
       });
       wrapped = results.code;
-      var parsedSourceMap = results.map.toJSON();
+      parsedSourceMap = results.map.toJSON();
       parsedSourceMaps[stackFilename] = parsedSourceMap;
     } else {
+
       wrapped = chunks.join('');
     };
 
@@ -689,94 +689,75 @@ _.extend(exports, {
       //
       // Pass 'true' as third argument if we want the parse error on
       // stderr (which we don't.)
-      var func = require('vm').runInThisContext(wrapped, stackFilename);
-    } catch (e) {
-      // Got, presumably, a parse error. OK, we're going to start
-      // another copy of node and feed it the offending code on
-      // stdin. It should give us the error on stderr.
+      var script = require('vm').createScript(wrapped, stackFilename);
+    } catch (nodeParseError) {
+      if (!(nodeParseError instanceof SyntaxError))
+        throw nodeParseError;
+      // Got a parse error. Unfortunately, we can't actually get the location of
+      // the parse error from the SyntaxError; Node has some hacky support for
+      // displaying it over stderr if you pass an undocumented third argument to
+      // stackFilename, but that's not what we want. See
+      //    https://github.com/joyent/node/issues/3452
+      // for more information. One thing to try (and in fact, what an early
+      // version of this function did) is to actually fork a new node
+      // to run the code and parse its output. We instead run an entirely
+      // different JS parser, from the esprima project, but which at least
+      // has a nice API for reporting errors.
+      var esprima = require('esprima');
+      try {
+        esprima.parse(wrapped);
+      } catch (esprimaParseError) {
+        // Is this actually an Esprima syntax error?
+        if (!('index' in esprimaParseError &&
+              'lineNumber' in esprimaParseError &&
+              'column' in esprimaParseError &&
+              'description' in esprimaParseError)) {
+          throw esprimaParseError;
+        }
+        var err = new files.FancySyntaxError;
 
-      // Why do we think it has to be a parse error? After all, this is
-      // *run*InThisContext so it could be a thrown exception. But the only code
-      // we are running is the function definition, which should not be able to
-      // throw... unless "code" is imbalanced (ie, has a '})' in it), in which
-      // case "code" should basically be considered as a parse error
-      // anyway. (The error message in the latter case may be poor, though.)
+        err.message = esprimaParseError.description;
 
-      // XXX XXX don't run the code until after this block
+        if (parsedSourceMap) {
+          // XXX this duplicates code in computeGlobalReferences
+          var consumer2 = new sourcemap.SourceMapConsumer(parsedSourceMap);
+          var original = consumer2.originalPositionFor({
+            line: esprimaParseError.lineNumber,
+            column: esprimaParseError.column - 1
+          });
+          if (original.source) {
+            err.file = original.source;
+            err.line = original.line;
+            err.column = original.column + 1;
+            throw err;
+          }
+        }
 
-      var Future = require('fibers/future');
-      var future = new Future;
-
-      var child_process = require("child_process");
-      var proc = child_process.execFile(
-        process.argv[0], [], {
-          stdio: ['pipe']
-        }, function (error, stdout, stderr) {
-          if (! error || error.code === 0)
-            future.return(null); // huh? didn't fail?
-          else
-            future.return(stderr);
-        });
-      proc.stdin.write(wrapped);
-      proc.stdin.end();
-      var stderr = future.wait();
-
-      if (stderr === null)
-        throw new Error("subprocess parsed bad code successfully?");
-
-/* stderr will look something like this (note leading blank line:)
-"
-[stdin]:1
-couaoeua aaaaaa nsolexloeuaoeuao
-         ^^^^^^
-SyntaxError: Unexpected identifier
-    at Object.<anonymous> ([stdin]-wrapper:6:22)
-    at Module._compile (module.js:449:26)
-    at evalScript (node.js:282:25)
-    at Socket.<anonymous> (node.js:152:11)
-    at Socket.EventEmitter.emit (events.js:93:17)
-    at Pipe.onread (net.js:418:51)"
-*/
-      var err = new files.FancySyntaxError;
-      err.file = filename;  // *not* stackFilename
-      var lines = stderr.split('\n');
-
-      // line number
-      var m = lines[1].match(/:(\d+)\s*$/);
-      if (! m)
-        throw new Error("can't parse line number from '" + lines[1] + "'");
-      err.line = +m[1];
-
-      // column range
-      m = lines[3].match(/^(\s*)(\^+)\s*$/)
-      if (! m)
-        throw new Error("can't parse column indicator from '" + lines[3] + "'");
-      err.column = m[1].length + 1;
-      err.columnEnd = err.column + m[2].length - 1;
-
-      // message
-      m = lines[4].match(/^SyntaxError:\s*(.*)$/);
-      if (! m)
-        throw new Error("can't parse error message from '" + lines[4] + "'");
-      err.message = m[1];
-
-      // adjust errors on line 1 to account for our header
-      if (err.line === 1) {
-        // XXX XXX i killed header
-        err.column -= header.length;
-        err.columnEnd -= header.length;
+        err.file = filename;  // *not* stackFilename
+        err.line = esprimaParseError.lineNumber;
+        err.column = esprimaParseError.column;
+        // adjust errors on line 1 to account for our header
+        if (err.line === 1) {
+          err.column -= header.length;
+        }
+        throw err;
       }
 
-      throw err;
+      // What? Node thought that this was a parse error and esprima didn't? Eh,
+      // just throw Node's error and don't care too much about the line numbers
+      // being right.
+      throw nodeParseError;
     }
+
+    var func = script.runInThisContext();
 
     return (buildmessage.markBoundary(func)).apply(null, values);
   },
 
   // - message: an error message from the parser
+  // - file: filename
   // - line: 1-based
   // - column: 1-based
-  // - columnEnd: 1-based
   FancySyntaxError: function () {},
 
   OfflineError: function (error) {
