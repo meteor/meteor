@@ -211,7 +211,7 @@ _.extend(Package.prototype, {
       var withoutAppPackages = _.reject(allSources, function (sourcePath) {
         // Skip files that are in app packages. (Directories named "packages"
         // lower in the tree are OK.)
-        return sourcePath.match(/^packages\//);
+        return sourcePath.lastIndexOf('packages' + path.sep, 0) === 0);
       });
       var withoutExceptDir = _.reject(withoutAppPackages, function (source_path) {
         return (path.sep + source_path + path.sep).indexOf(path.sep + except + path.sep) !== -1;
@@ -472,7 +472,7 @@ _.extend(exports, {
 
     // Next, search $PACKAGE_DIRS.
     if (process.env.PACKAGE_DIRS)
-      packageDirs.push.apply(packageDirs, process.env.PACKAGE_DIRS.split(':'));
+      packageDirs.push.apply(packageDirs, process.env.PACKAGE_DIRS.split(path.delimiter));
 
     // If we're running out of a git checkout of meteor, use the packages from
     // the git tree.
