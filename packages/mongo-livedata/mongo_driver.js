@@ -228,9 +228,10 @@ _Mongo.prototype.remove = function (collection_name, selector) {
     var future = new Future;
     collection.remove(replaceTypes(selector, replaceMeteorAtomWithMongo),
                       {safe: true}, future.resolver());
-    future.wait();
+    var result = future.wait();
     // XXX We don't have to run this on error, right?
     self._refresh(collection_name, selector);
+    return result;
   } finally {
     write.committed();
   }
@@ -266,8 +267,9 @@ _Mongo.prototype.update = function (collection_name, selector, mod, options) {
     collection.update(replaceTypes(selector, replaceMeteorAtomWithMongo),
                       replaceTypes(mod, replaceMeteorAtomWithMongo),
                       mongoOpts, future.resolver());
-    future.wait();
+    var result = future.wait();
     self._refresh(collection_name, selector);
+    return result;
   } finally {
     write.committed();
   }

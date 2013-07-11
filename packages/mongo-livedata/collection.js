@@ -361,7 +361,9 @@ _.each(["insert", "update", "remove"], function (name) {
       // it's my collection.  descend into the collection object
       // and propagate any exception.
       try {
-        self._collection[name].apply(self._collection, args);
+        var result = self._collection[name].apply(self._collection, args);
+        if (ret === undefined)
+          ret = result;
       } catch (e) {
         if (callback) {
           callback(e);
