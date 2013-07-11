@@ -44,6 +44,22 @@ Meteor.loginWithPassword = function (selector, password, callback) {
 };
 
 
+Meteor.linkWithPassword = function (options, callback) {
+  options = _.clone(options); // we'll be modifying options
+  
+  if (!options.password)
+    throw new Error("Must set options.password");
+  var verifier = Meteor._srp.generateVerifier(options.password);
+  // strip old password, replacing with the verifier object
+  delete options.password;
+  options.srp = verifier;
+
+  Accounts.callLinkMethod({
+    methodArguments: [options],
+    userCallback: callback
+  });
+};
+
 // Attempt to log in as a new user.
 Accounts.createUser = function (options, callback) {
   options = _.clone(options); // we'll be modifying options
@@ -54,7 +70,7 @@ Accounts.createUser = function (options, callback) {
   // strip old password, replacing with the verifier object
   delete options.password;
   options.srp = verifier;
-
+  
   Accounts.callLoginMethod({
     methodName: 'createUser',
     methodArguments: [options],

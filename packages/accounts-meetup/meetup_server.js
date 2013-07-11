@@ -7,5 +7,3 @@ Accounts.addAutopublishFields({
   forLoggedInUser: ['services.meetup'],
   forOtherUsers: ['services.meetup.id']
 });
-
-

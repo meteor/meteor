@@ -25,3 +25,30 @@ Accounts.oauth.credentialRequestCompleteHandler = function(callback) {
     }
   };
 }
+
+// Mimic Existing Oauth login method for link external service's account 
+// to Meteor user account.  
+Accounts.oauth.tryLinkAfterPopupClosed = function (credentialToken, callback) {
+  Accounts.callLinkMethod({
+    methodArguments: [{oauth: {credentialToken: credentialToken}}],
+    userCallback: callback && function (err) {
+      // Allow server to specify a specify subclass of errors. We should come
+      // up with a more generic way to do this!
+      if (err && err instanceof Meteor.Error &&
+          err.error === Accounts.LinkCancelledError.numericError) {
+        callback(new Accounts.LinkCancelledError(err.details));
+      } else {
+        callback(err);
+      }
+    }});
+};
+
+Accounts.oauth.linkRequestCompleteHandler = function (callback) {
+  return function (credentialTokenOrError) {
+    if(credentialTokenOrError && credentialTokenOrError instanceof Error) {
+      callback(credentialTokenOrError);
+    } else {
+      Accounts.oauth.tryLinkAfterPopupClosed(credentialTokenOrError, callback);
+    }
+  };
+}

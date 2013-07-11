@@ -58,6 +58,28 @@ var tryAllLoginHandlers = function (options) {
   throw new Meteor.Error(400, "Unrecognized options for login request");
 };
 
+///
+/// LINK HANDLERS
+/
+
+Accounts.registerLinkHandler = function(handler) {
+  Accounts._linkHandlers.push(handler);
+};
+
+// list of all registered link handlers.
+Accounts._linkHandlers = [];
+
+var tryAllLinkHandlers = function (userId, options) {
+  for (var i = 0; i < Accounts._linkHandlers.length; ++i) {
+    var handler = Accounts._linkHandlers[i];
+    var result = handler(userId, options);
+    if (result !== undefined)
+      return result;
+  }
+
+  throw new Meteor.Error(400, "Unrecognized options for link request");
+};
+
 
 // Actual methods for login and logout. This is the entry point for
 // clients to actually log in.
@@ -78,6 +100,47 @@ Meteor.methods({
 
   logout: function() {
     this.setUserId(null);
+  },
+
+  
+  link: function(options) {
+    check(options, Object);
+    var userId = Meteor.userId();
+    if(userId == null){
+      throw new Meteor.Error(90000, "You must be logged into an existing account to link a 3rd party service.");
+    }
+    var result = tryAllLinkHandlers(userId, options);
+
+    return result;
+  },
+
+  
+  unlink: function(options){
+    check(options, Object);
+    var serviceKey = "services." + options.serviceName
+      , updates = { $unset: {} };
+      updates.$unset[serviceKey] = '';
+
+    var user = Meteor.user();
+    if (!user) {
+      throw new Meteor.Error(90003, "You must login to unlink a service.");
+    };
+    if (options.serviceName == "password") {
+      throw new Meteor.Error(90004, "You can't unlink password service");
+    };
+    if (!user.services[options.serviceName]) {
+      throw new Meteor.Error(90005, "You can't unlink a non-existing service.");
+    };
+
+    
+    var count = _.keys(user.services);
+
+    if(count.length <= 2) {
+      throw new Meteor.Error(90006, "You can't unlink the only service.");
+    }
+
+    Meteor.users.update(user._id, updates); 
+    return true;
   }
 });
 
@@ -270,6 +333,73 @@ Accounts.updateOrCreateUserFromExternalService = function(
     user.services[serviceName] = serviceData;
     options.generateLoginToken = true;
     return Accounts.insertUserDoc(options, user);
+  }
+};
+
+///
+/// LINK USERS
+///
+/// link external service's account to current Meteor user.
+
+
+Accounts.linkUserFromExternalService = function(
+  userId, serviceName, serviceData, options) {
+  options = _.clone(options || {});
+
+  if (serviceName === "password" || serviceName === "resume")
+    throw new Error(
+      "Can't use linkUserFromExternalService with internal service "
+        + serviceName);
+  if (!_.has(serviceData, 'id'))
+    throw new Error(
+      "Service data for service " + serviceName + " must include id");
+
+  var selector = {};
+  var serviceIdKey = "services." + serviceName + ".id";
+
+  // XXX Temporary special case for Twitter. (Issue #629)
+  //   The serviceData.id will be a string representation of an integer.
+  //   We want it to match either a stored string or int representation.
+  //   This is to cater to earlier versions of Meteor storing twitter
+  //   user IDs in number form, and recent versions storing them as strings.
+  //   This can be removed once migration technology is in place, and twitter
+  //   users stored with integer IDs have been migrated to string IDs.
+  if (serviceName === "twitter" && !isNaN(serviceData.id)) {
+    selector["$or"] = [{},{}];
+    selector["$or"][0][serviceIdKey] = serviceData.id;
+    selector["$or"][1][serviceIdKey] = parseInt(serviceData.id, 10);
+  } else {
+    selector[serviceIdKey] = serviceData.id;
+  }
+
+  var user = Meteor.users.findOne({_id: userId});
+  var possibleUser = Meteor.users.findOne(selector);
+
+  if (user) {
+
+    if (possibleUser && possibleUser._id !== userId) {
+      throw new Meteor.Error(90001, "Another user already exist with this service!");
+    };
+
+    _.each(user.services, function (value, key){
+      if (serviceName == key) {
+        if (user.services[key].id !== serviceData.id) {
+          throw new Meteor.Meteor.Error(90002, "attempt link service already exist");
+        };      
+      };
+    });
+
+    var setAttrs = {};
+    _.each(serviceData, function(value, key) {
+      setAttrs["services." + serviceName + "." + key] = value;
+    });
+
+    Meteor.users.update(
+      user._id,
+      {$set: setAttrs});
+    return {id: user._id};
+  } else {
+    throw new Meteor.Error(90000, "You must be logged into an existing account to link a 3rd party service.");
   }
 };
 
