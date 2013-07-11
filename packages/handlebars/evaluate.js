@@ -34,9 +34,13 @@ Handlebars._default_helpers = {
       return options.fn(data);
   },
   'each': function (data, options) {
-    var parentData = this;
-    if (data && data.length > 0)
-      return _.map(data, function(x, i) {
+    var parentData = this,
+      hasValues = false,
+      key = _.isArray(data) ? '_index' : '_key',
+      branches = _.map(data, function(x, i) {
+        hasValues = true;
+        // enable eachWithIndex functional parity with handlebars
+        if(x){ x[key] = i; }
         // infer a branch key from the data
         var branch = ((x && x._id) || (typeof x === 'string' ? x : null) ||
                       Spark.UNIQUE_LABEL);
@@ -44,12 +48,10 @@ Handlebars._default_helpers = {
           return options.fn(x);
         });
       }).join('');
-    else
-      return Spark.labelBranch(
-        'else',
-        function () {
-          return options.inverse(parentData);
-        });
+    
+    return hasValues && branches || Spark.labelBranch('else', function () {
+      return options.inverse(parentData);
+    });
   },
   'if': function (data, options) {
     if (!data || (data instanceof Array && !data.length))
