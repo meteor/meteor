@@ -163,8 +163,8 @@ var checkSubtree = function (value, pattern) {
           throw err;
       }
     }
-    // XXX this error is terrible, esp if it was converted from Optional
-    throw new Match.Error("Failed Match.OneOf validation");
+    // XXX this error is terrible
+    throw new Match.Error("Failed Match.OneOf or Match.Optional validation");
   }
 
   // A function that isn't something we special-case is assumed to be a
