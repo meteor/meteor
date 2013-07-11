@@ -113,7 +113,10 @@ Either = UIComponent.extend({
         }),
         { type: Span });
     buf(new _UI.Each({
-      data: function () { return Items.find({}, { sort: { text: 1 }}); },
+      data: function () {
+        return Session.get('nodata') ? null :
+          Items.find({}, { sort: { text: 1 }});
+      },
       content: UIComponent.extend({
         render: function (buf) {
           buf("<div>Each ", this.data().text, " ", String(Math.random()),

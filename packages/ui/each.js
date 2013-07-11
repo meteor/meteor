@@ -18,9 +18,8 @@ _UI.List = Component.extend({
         this._else = null;
       }
 
-      // XXX clean this up by making insertBefore work with two nulls
-      this.insertBefore(comp, beforeId ? this._items.get(beforeId) :
-                        this.lastNode().nextSibling, this.parentNode());
+      this.insertBefore(
+        comp, beforeId ? this._items.get(beforeId) : null);
     }
   },
   removeItem: function (id) {
@@ -41,8 +40,8 @@ _UI.List = Component.extend({
 
     if (this.stage === Component.BUILT) {
       comp.detach();
-      this.insertBefore(comp, beforeId ? this._items.get(beforeId) :
-                        this.lastNode().nextSibling, this.parentNode());
+      this.insertBefore(
+        comp, beforeId ? this._items.get(beforeId) : null);
     }
   },
   getItem: function (id) {
@@ -76,7 +75,8 @@ _UI.Each = Component.extend({
     // XXX and objects.
     // For now, we assume the data is a database cursor.
     var cursor = self.data();
-    // XXX support null
+    if (! cursor)
+      return;
 
     var list = new self.List({
       _idStringify: Meteor.idStringify,

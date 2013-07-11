@@ -453,16 +453,14 @@ Component.include({
 
     self._requireBuilt();
 
-    if (! (before || parentNode))
-      throw new Error("Need a Component or DOM node as arg 2 or 3");
-
     if (before instanceof Component) {
       before = before.firstNode();
-      parentNode = before.parentNode;
     } else if (! before) {
-      parentNode = (parentNode || self.parentNode());
+      if ((! parentNode) || (parentNode === self.parentNode())) {
+        before = self.lastNode().nextSibling;
+        parentNode = parentNode || self.parentNode();
+      }
     }
-
     parentNode = parentNode || before.parentNode;
 
     if (childOrDom instanceof Component) {
@@ -511,12 +509,15 @@ Component.include({
   },
 
   insertAfter: function (childOrDom, after, parentNode) {
-    if (! (after || parentNode))
-      throw new Error("Need a Component or DOM node as arg 2 or 3");
+    var self = this;
 
     if (after instanceof Component) {
       after = after.lastNode();
-      parentNode = after.parentNode;
+    } else if (! after) {
+      if ((! parentNode) || (parentNode === self.parentNode())) {
+        after = self.firstNode().previousSibling;
+        parentNode = parentNode || self.parentNode();
+      }
     }
     parentNode = parentNode || after.parentNode;
 
