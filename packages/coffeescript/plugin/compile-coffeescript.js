@@ -144,9 +144,9 @@ var handler = function (compileStep) {
     path: outputFile,
     sourcePath: compileStep.inputPath,
     data: output.js,
-    linkerFileTransform: function (source, exports, sourceMap) {
-      var stripped = stripExportedVars(source, exports);
-      return addSharedHeader(stripped, sourceMap);
+    linkerFileTransform: function (sourceWithMap, exports) {
+      var stripped = stripExportedVars(sourceWithMap.source, exports);
+      return addSharedHeader(stripped, sourceWithMap.sourceMap);
     },
     sourceMap: output.v3SourceMap
   });

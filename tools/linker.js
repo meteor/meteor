@@ -60,6 +60,13 @@ _.extend(Module.prototype, {
     return _.max(maxInFile);
   },
 
+  runLinkerFileTransforms: function (exports) {
+    var self = this;
+    _.each(self.files, function (f) {
+      f.runLinkerFileTransform(exports);
+    });
+  },
+
   // Figure out which vars need to be specifically put in the module
   // scope.
   //
@@ -70,7 +77,7 @@ _.extend(Module.prototype, {
   // and see what your globals are. Probably this means we need to
   // move the emission of the Package-scope Variables section (but not
   // the actual static analysis) to the final phase.
-  computeModuleScopeVars: function () {
+  computeModuleScopeVars: function (exports) {
     var self = this;
 
     if (!self.jsAnalyze) {
@@ -78,7 +85,7 @@ _.extend(Module.prototype, {
       // js-analyze package.  Let's do a stupid heuristic: any exports that have
       // no dots are module scope vars. (This works for
       // js-analyze.JSAnalyze...)
-      return _.filter(self.getExports(), function (e) {
+      return _.filter(exports, function (e) {
         return e.indexOf('.') === -1;
       });
     }
@@ -94,14 +101,12 @@ _.extend(Module.prototype, {
   },
 
   // Output is a list of objects with keys 'source', 'servePath', 'sourceMap',
-  // 'sourcePath', 'source')
-  getPrelinkedFiles: function () {
+  // 'sourcePath'
+  getPrelinkedFiles: function (moduleExports) {
     var self = this;
 
     if (! self.files.length)
       return [];
-
-    var moduleExports = self.getExports();
 
     // If we don't want to create a separate scope for this module,
     // then our job is much simpler. And we can get away with
@@ -230,8 +235,8 @@ var File = function (inputFile, module) {
   // A function which transforms the source code once all exports are
   // known. (eg, for CoffeeScript.)
   self.linkerFileTransform =
-    inputFile.linkerFileTransform || function (source, exports, sourceMap) {
-      return {source: source, sourceMap: sourceMap};
+    inputFile.linkerFileTransform || function (sourceWithMap, exports) {
+      return sourceWithMap;
     };
 
   // If true, don't wrap this individual file in a closure.
@@ -297,6 +302,7 @@ _.extend(File.prototype, {
       // Recover by pretending that this file is empty (which
       // includes replacing its source code with '' in the output)
       self.source = "";
+      self.sourceMap = null;
       return [];
     }
   },
@@ -313,6 +319,15 @@ _.extend(File.prototype, {
       return "app/" + self.sourcePath;
   },
 
+  runLinkerFileTransform: function (exports) {
+    var self = this;
+    var sourceAndMap = self.linkerFileTransform(
+      {source: self.source, sourceMap: self.sourceMap},
+      exports);
+    self.source = sourceAndMap.source;
+    self.sourceMap = sourceAndMap.sourceMap;
+  },
+
   // Options:
   // - preserveLineNumbers: if true, decorate minimally so that line
   //   numbers don't change between input and output. In this case,
@@ -327,14 +342,10 @@ _.extend(File.prototype, {
     // The newline after the source closes a '//' comment.
     if (options.preserveLineNumbers) {
       // Ugly version
-      // XXX XXX need to propagate source maps through linkerFileTransform!
-      var bodyWithMap = self.linkerFileTransform(self.source, options.exports,
-                                                 self.sourceMap);
-      self.source = bodyWithMap.source;
       var mapNode;
-      if (bodyWithMap.sourceMap) {
+      if (self.sourceMap) {
         mapNode = sourcemap.SourceNode.fromStringWithSourceMap(
-          self.source, new sourcemap.SourceMapConsumer(bodyWithMap.sourceMap));
+          self.source, new sourcemap.SourceMapConsumer(self.sourceMap));
       } else {
         mapNode = new sourcemap.SourceNode(1, 0, self._pathForSourceMap(),
                                            self.source);
@@ -345,8 +356,7 @@ _.extend(File.prototype, {
       return new sourcemap.SourceNode(null, null, null, [
         self.bare ? "" : "(function(){",
         mapNode,
-        (self.source.length
-          && bodyWithMap.source[self.source.length - 1] !== '\n'
+        (self.source.length && self.source[self.source.length - 1] !== '\n'
          ? "\n" : ""),
         self.bare ? "" : "\n})();\n"
       ]);
@@ -372,13 +382,6 @@ _.extend(File.prototype, {
     var blankLine = new Array(width + 1).join(' ') + " //\n";
     chunks.push(blankLine);
 
-    var transformedSourceWithMap = self.linkerFileTransform(
-      self.source, options.exports, self.sourceMap);
-    // Update self.source, because that's what computeGlobalReferences will look
-    // at.
-    var originalSource = self.source;
-    self.source = transformedSourceWithMap.source;
-
     // Code, with line numbers
     // You might prefer your line numbers at the beginning of the
     // line, with /* .. */. Well, that requires parsing the source for
@@ -401,7 +404,7 @@ _.extend(File.prototype, {
 
     var lines = self.source.split('\n');
 
-    if (transformedSourceWithMap.sourceMap) {
+    if (self.sourceMap) {
       var buf = "";
       numberifyLines(function (line, suffix) {
         buf += line;
@@ -415,7 +418,7 @@ _.extend(File.prototype, {
       // that important.)
       chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
         self.source,
-        new sourcemap.SourceMapConsumer(transformedSourceWithMap.sourceMap)));
+        new sourcemap.SourceMapConsumer(self.sourceMap)));
     } else {
       // There are probably ways to make a more compact source map. For example,
       // the only change we make is to append a comment, so we can probably emit
@@ -439,8 +442,8 @@ _.extend(File.prototype, {
     // source in the source map. (If we are working on generated code, the
     // source map we received should have already contained the original
     // source.)
-    if (!transformedSourceWithMap.sourceMap)
-      node.setSourceContent(self._pathForSourceMap(), originalSource);
+    if (!self.sourceMap)
+      node.setSourceContent(self._pathForSourceMap(), self.source);
 
     return node;
   },
@@ -608,9 +611,18 @@ var prelink = function (options) {
     module.addFile(inputFile);
   });
 
-  var files = module.getPrelinkedFiles();
+  // 1) Figure out what this entire module exports.
+  // 2) Run the linkerFileTransforms, which depend on the exports. (This is, eg,
+  //    CoffeeScript arranging to not close over the exports.)
+  // 3) Do static analysis to compute module-scoped variables; this has to be
+  //    done based on the *output* of the transforms. Error recovery from the
+  //    static analysis mutates the sources, so this has to be done before
+  //    concatenation.
+  // 4) Finally, concatenate.
   var exports = module.getExports();
-  var packageScopeVariables = module.computeModuleScopeVars();
+  module.runLinkerFileTransforms(exports);
+  var packageScopeVariables = module.computeModuleScopeVars(exports);
+  var files = module.getPrelinkedFiles(exports);
 
   return {
     files: files,

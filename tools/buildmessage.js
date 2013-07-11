@@ -349,8 +349,7 @@ var error = function (message, options) {
 
 // Record an exception. The message as well as any file and line
 // information be read directly out of the exception. If not in a job,
-// throws the exception instead. The first character of the error's
-// message is downcased. Also capture the user portion of the stack.
+// throws the exception instead. Also capture the user portion of the stack.
 //
 // There is special handling for files.FancySyntaxError exceptions. We
 // will grab the file and location information where the syntax error
@@ -358,23 +357,25 @@ var error = function (message, options) {
 // thrown.
 var exception = function (error) {
   if (! currentJob)
-    throw new Error("Error: " + error.message);
+    throw error;
 
-  var message = error.message.slice(0,1).toLowerCase() + error.message.slice(1);
+  var message = error.message;
 
   if (error instanceof files.FancySyntaxError) {
+    // No stack, because FancySyntaxError isn't a real Error and has no stack
+    // property!
     currentJob.addMessage({
       message: message,
-      stack: parseStack(error),
       file: error.file,
       line: error.line,
       column: error.column
     });
   } else {
-    var locus = parseStack(error)[0];
+    var stack = parseStack(error);
+    var locus = stack[0];
     currentJob.addMessage({
       message: message,
-      stack: parseStack(error),
+      stack: stack,
       func: locus.func,
       file: locus.file,
       line: locus.line,

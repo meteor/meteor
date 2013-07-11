@@ -10,9 +10,30 @@ var os = require('os');
 var util = require('util');
 var _ = require('underscore');
 var Future = require('fibers/future');
+var sourcemap = require('source-map');
+var sourcemap_support = require('source-map-support');
 
 var cleanup = require('./cleanup.js');
 var buildmessage = require('./buildmessage.js');
+
+var parsedSourceMaps = {};
+var nextStackFilenameCounter = 1;
+var retrieveSourceMap = function (pathForSourceMap) {
+  if (_.has(parsedSourceMaps, pathForSourceMap))
+    return {map: parsedSourceMaps[pathForSourceMap]};
+  return null;
+};
+
+sourcemap_support.install({
+  // Use the source maps specified to runJavaScript instead of parsing source
+  // code for them.
+  retrieveSourceMap: retrieveSourceMap,
+  // For now, don't fix the source line in uncaught exceptions, because we
+  // haven't fixed handleUncaughtExceptions in source-map-support to properly
+  // locate the source files.
+  handleUncaughtExceptions: false
+});
+
 
 var files = exports;
 _.extend(exports, {
@@ -595,12 +616,12 @@ _.extend(exports, {
     return future.wait();
   },
 
-  // Return the result of evaluating `code` using
-  // `runInThisContext`. `code` will be wrapped in a closure. You can
-  // pass additional values to bind in the closure in `env`, the keys
-  // being the symbols to bind and the values being their
-  // values. `filename` is the filename to use in exceptions that come
-  // from inside this code.
+  // Return the result of evaluating `code` using `runInThisContext`. `code`
+  // will be wrapped in a closure. You can pass additional values to bind in the
+  // closure in `options.symbols`, the keys being the symbols to bind and the
+  // values being their values. `options.filename` is the filename to use in
+  // exceptions that come from inside this code. `options.sourceMap` is an
+  // optional source map that represents the file.
   //
   // The really special thing about this function is that if a parse
   // error occurs, we will raise an exception of type
@@ -612,19 +633,51 @@ _.extend(exports, {
   // instead -- only if the parse does in fact fail, to determine the
   // error we start a subprocess, redirect its stderr, grab the output
   // and parse it.
-  runJavaScript: function (code, filename, env) {
+  runJavaScript: function (code, options) {
+    if (typeof code !== 'string')
+      throw new Error("code must be a string");
+
+    options = options || {};
+    var filename = options.filename || "<anonymous>";
     var keys = [], values = [];
     // don't assume that _.keys and _.values are guaranteed to
     // enumerate in the same order
-    for (var k in env) {
-      keys.push(k);
-      values.push(env[k]);
+    _.each(options.symbols, function (value, name) {
+      keys.push(name);
+      values.push(value);
+    });
+
+    var stackFilename = filename;
+    if (options.sourceMap) {
+      // We want to generate an arbitrary filename that we use to associate the
+      // file with its source map.
+      stackFilename = "<runJavaScript-" + nextStackFilenameCounter++ + ">";
     }
 
-    var header = "(function(" + keys.join(',') + "){";
+    var chunks = [];
+    chunks.push("(function(" + keys.join(',') + "){");
+    if (options.sourceMap) {
+      var consumer = new sourcemap.SourceMapConsumer(options.sourceMap);
+      chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
+        code, consumer));
+    } else {
+      chunks.push(code);
+    }
     // \n is necessary in case final line is a //-comment
-    var footer = "\n})";
-    var wrapped = header + code + footer;
+    chunks.push("\n})");
+
+    var wrapped;
+    if (options.sourceMap) {
+      var node = new sourcemap.SourceNode(null, null, null, chunks);
+      var results = node.toStringWithSourceMap({
+        file: stackFilename
+      });
+      wrapped = results.code;
+      var parsedSourceMap = results.map.toJSON();
+      parsedSourceMaps[stackFilename] = parsedSourceMap;
+    } else {
+      wrapped = chunks.join('');
+    };
 
     try {
       // See #runInThisContext
@@ -636,7 +689,7 @@ _.extend(exports, {
       //
       // Pass 'true' as third argument if we want the parse error on
       // stderr (which we don't.)
-      var func = require('vm').runInThisContext(wrapped, filename);
+      var func = require('vm').runInThisContext(wrapped, stackFilename);
     } catch (e) {
       // Got, presumably, a parse error. OK, we're going to start
       // another copy of node and feed it the offending code on
@@ -685,7 +738,7 @@ SyntaxError: Unexpected identifier
     at Pipe.onread (net.js:418:51)"
 */
       var err = new files.FancySyntaxError;
-      err.file = filename;
+      err.file = filename;  // *not* stackFilename
       var lines = stderr.split('\n');
 
       // line number
@@ -709,6 +762,7 @@ SyntaxError: Unexpected identifier
 
       // adjust errors on line 1 to account for our header
       if (err.line === 1) {
+        // XXX XXX i killed header
         err.column -= header.length;
         err.columnEnd -= header.length;
       }

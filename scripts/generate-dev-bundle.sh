@@ -109,12 +109,16 @@ npm install tar@0.1.14
 npm install kexec@0.1.1
 npm install shell-quote@0.0.1
 npm install byline@2.0.3
-npm install source-map@0.1.24
+
+# Fork of source-map which fixes one function with empty maps.
+#   https://github.com/mozilla/source-map/pull/70
+# See also below, where we get it into source-map-support.
+npm install https://github.com/meteor/source-map/tarball/4a52398901fdb4b55b06ef4dd8b69f8256072b09
 
 # Fork of node-source-map-support which allows us to specify our own
-# retrieveSourceMap function.
+# retrieveSourceMap function, and uses the above version of source-map.
 # XXX send a pull request
-npm install https://github.com/meteor/node-source-map-support/tarball/b23f7c5a509343b3951f5db2b5f790ad791bddc5
+npm install https://github.com/meteor/node-source-map-support/tarball/d048eaa765bf743ddaad64716647f8760e2b8507
 
 # uglify-js has a bug which drops 'undefined' in arrays:
 # https://github.com/mishoo/UglifyJS2/pull/97

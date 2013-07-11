@@ -1317,8 +1317,10 @@ _.extend(Package.prototype, {
     };
 
     try {
-      files.runJavaScript(code.toString('utf8'), 'package.js',
-                          { Package: Package, Npm: Npm });
+      files.runJavaScript(code.toString('utf8'), {
+        filename: 'package.js',
+        symbols: { Package: Package, Npm: Npm }
+      });
     } catch (e) {
       buildmessage.exception(e);
 

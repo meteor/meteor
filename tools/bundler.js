@@ -1036,9 +1036,12 @@ _.extend(JsImage.prototype, {
       try {
         // XXX XXX Get the actual source file path -- item.targetPath
         // is not actually correct (it's the path in the bundle rather
-        // than in the source tree.) Moreover, we need to do source
-        // mapping.
-        files.runJavaScript(item.source, item.targetPath, env);
+        // than in the source tree.)
+        files.runJavaScript(item.source.toString('utf8'), {
+          filename: item.targetPath,
+          symbols: env,
+          sourceMap: item.sourceMap
+        });
       } catch (e) {
         buildmessage.exception(e);
         // Recover by skipping the rest of the load
