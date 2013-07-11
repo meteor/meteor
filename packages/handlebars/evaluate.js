@@ -244,11 +244,12 @@ Handlebars.evaluate = function (ast, data, options) {
       // at least one positional argument; not no args
       // or only hash args.
       var oneArg = values[1];
-      if (typeof oneArg === "function")
+      if (typeof oneArg === "function") {
         // invoke the positional arguments
         // (and hash arguments) as a nested helper invocation.
         oneArg = apply(values.slice(1), {hash:hash});
-      values = [values[0], oneArg];
+        values = [values[0], oneArg];
+      }
       // keyword args don't go to the block helper, then.
       extra.hash = {};
     } else {
