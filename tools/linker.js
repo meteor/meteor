@@ -119,10 +119,17 @@ _.extend(Module.prototype, {
           file: file.servePath
         }); // results has 'code' and 'map' attributes
 
+        var sourceMap = results.map.toJSON();
+        // No use generating empty source maps.
+        if (_.isEmpty(sourceMap.sources))
+          sourceMap = null;
+        else
+          sourceMap = JSON.stringify(sourceMap);
+
         return {
           source: results.code,
           servePath: file.servePath,
-          sourceMap: results.map.toString()
+          sourceMap: sourceMap
         };
       });
     }
@@ -313,9 +320,9 @@ _.extend(File.prototype, {
     var self = this;
 
     if (self.module.name)
-      return "packages/" + self.module.name + "/" + self.sourcePath;
+      return self.module.name + "/" + self.sourcePath;
     else
-      return "app/" + self.sourcePath;
+      return require('path').basename(self.sourcePath);
   },
 
   runLinkerFileTransform: function (exports) {
@@ -346,10 +353,13 @@ _.extend(File.prototype, {
         mapNode = sourcemap.SourceNode.fromStringWithSourceMap(
           self.source, new sourcemap.SourceMapConsumer(self.sourceMap));
       } else {
-        mapNode = new sourcemap.SourceNode(1, 0, self._pathForSourceMap(),
-                                           self.source);
-        // Provide the original content as well.
-        mapNode.setSourceContent(self._pathForSourceMap(), self.source);
+        // This is an app file that was always JS. The output file here is going
+        // to be the same name as the input file (because _pathForSourceMap in
+        // apps is the basename of the source file), and having a JS file
+        // pointing to a source map pointing to a JS file of the same name will
+        // (a) be confusing (b) be unnecessary since we aren't renumbering
+        // anything and (c) confuse at least Chrome.
+        mapNode = self.source;
       }
 
       return new sourcemap.SourceNode(null, null, null, [

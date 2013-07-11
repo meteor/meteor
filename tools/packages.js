@@ -361,8 +361,8 @@ _.extend(Slice.prototype, {
         // XXX duplicates _pathForSourceMap() in linker
         pathForSourceMap: (
           self.pkg.name
-            ? "packages/" + self.pkg.name + "/" + relPath
-            : "app/" + relPath),
+            ? self.pkg.name + "/" + relPath
+            : path.basename(relPath)),
         // null if this is an app. intended to be used for the sources
         // dictionary for source maps.
         packageName: self.pkg.name,

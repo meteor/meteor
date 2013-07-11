@@ -303,6 +303,15 @@ _.extend(File.prototype, {
     return encoding ? self._contents.toString(encoding) : self._contents;
   },
 
+  setContents: function (b) {
+    var self = this;
+    if (!(b instanceof Buffer))
+      throw new Error("Must set contents to a Buffer");
+    self._contents = b;
+    // Un-cache hash.
+    self._hash = null;
+  },
+
   size: function () {
     var self = this;
     return self.contents().length;
@@ -863,16 +872,14 @@ _.extend(ClientTarget.prototype, {
     // Build up a manifest of all resources served via HTTP.
     var manifest = [];
     eachResource(function (file, type) {
-      writeFile(file, builder);
+      var fileContents = file.contents();
 
       var manifestItem = {
         path: file.targetPath,
         where: "client",
         type: type,
         cacheable: file.cacheable,
-        url: file.url,
-        size: file.size(),
-        hash: file.hash()
+        url: file.url
       };
 
       if (file.sourceMap) {
@@ -886,7 +893,25 @@ _.extend(ClientTarget.prototype, {
         var mapData = new Buffer(")]}'\n" + file.sourceMap, 'utf8');
         manifestItem.sourceMap = builder.writeToGeneratedFilename(
           file.targetPath + '.map', {data: mapData});
+
+        // Use a SHA to make this cacheable.
+        var sourceMapBaseName = file.hash() + ".map";
+        // XXX When we can, drop all of this and just use the SourceMap
+        // header. FF doesn't support that yet, though.
+        //   https://bugzilla.mozilla.org/show_bug.cgi?id=765993
+        file.setContents(Buffer.concat([
+          file.contents(),
+          new Buffer("\n//@ sourceMappingURL=" + sourceMapBaseName + "\n")
+        ]));
+        manifestItem.sourceMapUrl = require('url').resolve(
+          file.url, sourceMapBaseName);
       }
+
+      // Set this now, in case we mutated the file's contents.
+      manifestItem.size = file.size();
+      manifestItem.hash = file.hash();
+
+      writeFile(file, builder);
 
       manifest.push(manifestItem);
     });

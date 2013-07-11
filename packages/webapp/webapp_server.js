@@ -215,8 +215,8 @@ var runWebAppServer = function () {
       next();
     }
   });
-  // Parse the query string into res.query. Used to detect sourcemap=1 and by
-  // oauth_server.
+  // Parse the query string into res.query. Used by oauth_server, but it's
+  // generally pretty handy..
   app.use(connect.query());
 
   // Auto-compress any json, javascript, or text.
@@ -225,31 +225,19 @@ var runWebAppServer = function () {
   var staticFiles = {};
   _.each(clientJson.manifest, function (item) {
     if (item.url && item.where === "client") {
-      var staticFile = {
+      staticFiles[url.parse(item.url).pathname] = {
         path: item.path,
         cacheable: item.cacheable
       };
 
-      // Serve the source map too, under a hashed URL. Note that the hash is
-      // based on item.url which contains the file's hash, so this should change
-      // when the file changes and thus be cacheable. The URL ends with a slash,
-      // so that source files referenced from the source map with relative URLs
-      // are resolved under it.
+      // Serve the source map too, under the specified URL. We assume all source
+      // maps are cacheable.
       if (item.sourceMap) {
-        var sourceMapUrl = item.url;
-        var argument = "sourcemap=y";
-        if (sourceMapUrl.indexOf('?') === -1)
-          sourceMapUrl += '?' + argument;
-        else
-          sourceMapUrl += '&' + argument;
-
-        // Send the SourceMap header when the source file is served.
-        staticFile.urlToSourceMap = sourceMapUrl;
-
-        // Register the source map itself to be served.
-        staticFile.sourceMapFile = item.sourceMap;
+        staticFiles[url.parse(item.sourceMapUrl).pathname] = {
+          path: item.sourceMap,
+          cacheable: true
+        };
       }
-      staticFiles[url.parse(item.url).pathname] = staticFile;
     }
   });
 
@@ -279,18 +267,6 @@ var runWebAppServer = function () {
 
     var info = staticFiles[pathname];
 
-    var fileToServe, urlToSourceMap;
-    if (req.query.sourcemap === 'y') {
-      // This is a request for a sourcemap.
-      fileToServe = info.sourceMapFile;
-      // Source maps don't have source maps.
-      urlToSourceMap = null;
-    } else {
-      // This is not a request for a sourcemap.
-      fileToServe = info.path;
-      urlToSourceMap = info.urlToSourceMap;
-    }
-
     // Cacheable files are files that should never change. Typically
     // named by their hash (eg meteor bundled js and css files).
     // We cache them ~forever (1yr).
@@ -302,48 +278,38 @@ var runWebAppServer = function () {
     // to include a query parameter to bust caches. That way we can both get
     // good caching behavior and allow users to change assets without delay.
     // https://github.com/meteor/meteor/issues/773
-    //
-    // Because a source map's URL is constructed from the URL of the file it is
-    // the source map of, we assume that a source map is cacheable iff the file
-    // is cacheable.
     var maxAge = info.cacheable
           ? 1000 * 60 * 60 * 24 * 365
           : 1000 * 60 * 60 * 24;
 
-    // Tell the client where to find the source map for this file.
-    if (urlToSourceMap) {
-      // This should just be SourceMap, but slightly more versions of Chrome
-      // support the older X-SourceMap.
-      //
-      // To figure out if your version of Chrome should support SourceMap,
-      //   - go to chrome://version. Let's say the Chrome version is
-      //      28.0.1500.71 and the Blink version is 537.36 (@153022)
-      //   - go to http://src.chromium.org/viewvc/blink/branches/chromium/1500/Source/core/inspector/InspectorPageAgent.cpp?view=log
-      //     where the "1500" is the third part of your Chrome version
-      //   - find the first revision that is no greater than the "153022"
-      //     number.  That's probably the first one and it probably has
-      //     a message of the form "Branch 1500 - blink@r149738"
-      //   - If *that* revision number (149738) is at least 151755,
-      //     then Chrome should support SourceMap (not just X-SourceMap)
-      // (The change is https://codereview.chromium.org/15832007)
-      //
-      // You also need to enable source maps in Chrome: open dev tools, click
-      // the gear in the bottom right corner, and select "enable source maps".
-      //
-      // Firefox 23+ supports source maps (and they are on by default in 24+),
-      // but doesn't support either header yet:
-      //   https://bugzilla.mozilla.org/show_bug.cgi?id=765993
-      // We could make FF work by adding a comment to the end of the source map
-      // file. But that would require doing one of the following:
-      //   - determining the source map URL at bundle time instead of here
-      //   - writing to the source directory
-      //   - not using the send module (or hacking it to allow a footer)
-      // None of these alternatives are great, so for now we just hope that
-      // FF will implement one of the headers soon.
-      res.setHeader('X-SourceMap', urlToSourceMap);
-    }
+    // It sure would be nice to write this here:
+    //  res.setHeader('X-SourceMap', urlToSourceMap);
+    // Or even just SourceMap, but slightly more versions of Chrome support the
+    // older X-SourceMap.
+    //
+    // But we'd like to support FF, so for now we just use the "//@" comment at
+    // the end of the source map file.
+    //
+    // To figure out if your version of Chrome should support SourceMap,
+    //   - go to chrome://version. Let's say the Chrome version is
+    //      28.0.1500.71 and the Blink version is 537.36 (@153022)
+    //   - go to http://src.chromium.org/viewvc/blink/branches/chromium/1500/Source/core/inspector/InspectorPageAgent.cpp?view=log
+    //     where the "1500" is the third part of your Chrome version
+    //   - find the first revision that is no greater than the "153022"
+    //     number.  That's probably the first one and it probably has
+    //     a message of the form "Branch 1500 - blink@r149738"
+    //   - If *that* revision number (149738) is at least 151755,
+    //     then Chrome should support SourceMap (not just X-SourceMap)
+    // (The change is https://codereview.chromium.org/15832007)
+    //
+    // You also need to enable source maps in Chrome: open dev tools, click
+    // the gear in the bottom right corner, and select "enable source maps".
+    //
+    // Firefox 23+ supports source maps (and they are on by default in 24+),
+    // but doesn't support either header yet:
+    //   https://bugzilla.mozilla.org/show_bug.cgi?id=765993
 
-    send(req, path.join(clientDir, fileToServe))
+    send(req, path.join(clientDir, info.path))
       .maxage(maxAge)
       .hidden(true)  // if we specified a dotfile in the manifest, serve it
       .on('error', function (err) {
@@ -352,7 +318,7 @@ var runWebAppServer = function () {
         res.end();
       })
       .on('directory', function () {
-        Log.error("Unexpected directory " + fileToServe);
+        Log.error("Unexpected directory " + info.path);
         res.writeHead(500);
         res.end();
       })
