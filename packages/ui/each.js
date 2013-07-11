@@ -64,6 +64,9 @@ _UI.List = Component.extend({
       comp.dataDep.changed();
     }
   },
+  numItems: function () {
+    return this._items.size();
+  },
   render: function (buf) {
     // This component reactively rebuilds when any dependencies
     // here are invalidated.
@@ -86,6 +89,39 @@ _UI.List = Component.extend({
   },
   _findEndComponent: function () {
     return this._items.lastValue();
+  },
+  // Replace the data in this list with a different dataset,
+  // reusing components with matching ids, moving them if
+  // necessary.
+  // The caller supplies a sequence of (id, data) : (String, any)
+  // pairs using the `add` method of the returned object, and then
+  // calls `end`.
+  beginReplace: function () {
+    var self = this;
+    // XXX let's start with a stupid implementation
+    var items = self._items;
+    var ptr = items.first();
+    while (ptr) {
+      self.removeItem(ptr);
+      ptr = items.first();
+    }
+    var seenIds = {};
+    var counter = 1;
+    // uniquify IDs by adding a few random characters and
+    // a counter.
+    var rand = Random.id().slice(0,4);
+    return {
+      add: function (id, compType, data) {
+        var origId = id;
+        while (seenIds.hasOwnProperty(id))
+          id = origId + rand + (counter++);
+        seenIds[id] = true;
+        self.addItemBefore(id, compType, data, ptr);
+      },
+      end: function () {
+        // nothing to do
+      }
+    };
   }
 });
 
@@ -103,27 +139,62 @@ _UI.Each = Component.extend({
     // add outside of the rebuild cycle
     self.add(self._list);
   },
+  _getId: function (value) { // override this
+    if (value == null) {
+      return ' ';
+    } else if (value._id == null) {
+      if (typeof value === 'object')
+        // value is some object without `_id`.  oh well.
+        return ' ';
+      else
+        // value is a string or number, say
+        return String(value);
+    } else {
+      if (typeof value._id === 'object')
+        return ' ';
+      else
+        return String(value._id);
+    }
+  },
   render: function (buf) {
     var self = this;
     var list = self._list;
 
-    // XXX support arrays too.
-    // XXX and objects.
-    // For now, we assume the data is a database cursor.
     var newData = self.data();
     // Do a `===` check even though it's weak
     if (newData !== self._oldData) {
       self._oldData = newData;
 
-      if (newData && newData.observe) {
+      var replacer = list.beginReplace();
+
+      if (! newData) {
+        // nothing to do
+      } else if (typeof newData.length === 'number' &&
+                 typeof newData.splice === 'function') {
+        // looks like an array
+        var array = newData;
+
+        for (var i=0, N=array.length; i<N; i++) {
+          var x = array[i];
+          replacer.add(self._getId(x), self.content, x);
+        }
+
+      } else if (newData.observe) {
         var cursor = newData;
 
+        // we assume that `observe` will only call `addedAt` (and
+        // not other callbacks) before returning (which is specced),
+        // and further that these calls will be in document order
+        // (which isn't).
         cursor.observe({
           _no_indices: true,
           addedAt: function (doc, i, beforeId) {
-            list.addItemBefore(Meteor.idStringify(doc._id),
-                               self.content, doc,
-                               beforeId && Meteor.idStringify(beforeId));
+            var id = Meteor.idStringify(doc._id);
+            if (replacer)
+              replacer.add(id, self.content, doc);
+            else
+              list.addItemBefore(id, self.content, doc,
+                                 beforeId && Meteor.idStringify(beforeId));
           },
           removed: function (doc) {
             list.removeItem(Meteor.idStringify(doc._id));
@@ -136,10 +207,14 @@ _UI.Each = Component.extend({
             list.setItemData(Meteor.idStringify(newDoc._id), newDoc);
           }
         });
+      } else {
+        for (var k in newData)
+          replacer.add(k, self.content, newData[k]);
       }
+
+      replacer.end();
+      replacer = null; // so cursor.observe callbacks stop using it
     }
-    // XXX we fail on switching to empty; should use
-    // patching replace for that.
 
     buf(list);
   }

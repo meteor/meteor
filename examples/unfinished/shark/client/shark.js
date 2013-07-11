@@ -114,7 +114,8 @@ Either = UIComponent.extend({
         { type: Span });
     buf(new _UI.Each({
       data: function () {
-        return Session.get('nodata') ? null :
+        var sess = Session.get('items');
+        return sess != null ? sess :
           Items.find({}, { sort: { text: 1 }});
       },
       content: UIComponent.extend({

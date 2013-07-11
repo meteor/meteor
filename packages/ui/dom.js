@@ -207,7 +207,7 @@ Component.include({
         var children = self.children;
         for (var k in children) {
           var child = children[k];
-          if (builtChildren[k]) {
+          if (builtChildren && builtChildren[k]) {
             // destroy first, then remove
             // (which doesn't affect DOM, which we will
             // remove all at once)
