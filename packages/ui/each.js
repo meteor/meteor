@@ -2,12 +2,10 @@ var Component = UIComponent;
 
 _UI.List = Component.extend({
   typeName: 'List',
-  _idStringify: null,
   _items: null, // OrderedDict of id -> Component
   _else: null, // Component
   constructed: function () {
-    this._items = new OrderedDict(
-      this._idStringify || function (x) { return x; });
+    this._items = new OrderedDict;
   },
   addItemBefore: function (id, comp, beforeId) {
     this._items.putBefore(id, comp, beforeId);
@@ -79,7 +77,6 @@ _UI.Each = Component.extend({
       return;
 
     var list = new self.List({
-      _idStringify: Meteor.idStringify,
       elseContent: self.elseContent
     });
 
@@ -96,16 +93,18 @@ _UI.Each = Component.extend({
         // XXX could `before` be a falsy ID?  Technically
         // idStringify seems to allow for them -- though
         // OrderedDict won't call stringify on a falsy arg.
-        list.addItemBefore(doc._id, comp, beforeId);
+        list.addItemBefore(Meteor.idStringify(doc._id), comp,
+                           beforeId && Meteor.idStringify(beforeId));
       },
       removed: function (doc) {
-        list.removeItem(doc._id);
+        list.removeItem(Meteor.idStringify(doc._id));
       },
       movedTo: function (doc, i, j, beforeId) {
-        list.moveItemBefore(doc._id, beforeId);
+        list.moveItemBefore(Meteor.idStringify(doc._id),
+                            beforeId && Meteor.idStringify(beforeId));
       },
       changed: function (newDoc) {
-        var comp = list.getItem(newDoc._id);
+        var comp = list.getItem(Meteor.idStringify(newDoc._id));
         comp._data = newDoc;
         comp.dataDep.changed();
       }
