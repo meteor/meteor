@@ -169,6 +169,20 @@ _.extend(Meteor._DdpClientStream.prototype, {
     self.statusChanged();
   },
 
+  disconnect: function () {
+    var self = this;
+    self._cleanup();
+    if (self.retryTimer) {
+      clearTimeout(self.retryTimer);
+      self.retryTimer = null;
+    }
+    self.currentStatus = {
+      status: "offline",
+      connected: false,
+      retryCount: 0
+    };
+    self.statusChanged();
+  },
 
   _lostConnection: function () {
     var self = this;
@@ -196,7 +210,9 @@ _.extend(Meteor._DdpClientStream.prototype, {
   // fired when we detect that we've gone online. try to reconnect
   // immediately.
   _online: function () {
-    this.reconnect();
+    // if we've requested to be offline by disconnecting, don't reconnect.
+    if (this.currentStatus.status != "offline")
+      this.reconnect();
   },
 
   _retryLater: function () {
