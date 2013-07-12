@@ -117,7 +117,19 @@ _UI.List = Component.extend({
 
         // Now we know `id` is unique among new items,
         // but it may match an old item at or after
-        // the location of `ptr`
+        // the location of `ptr`.
+        //
+        // We use the strategy of moving an existing component
+        // into the appropriate place if one exists, otherwise
+        // inserting one.  This is efficient if, say, a new document
+        // is inserted at the top or bottom, removed from the bottom,
+        // or moved to the top.  It's inefficient if a document is
+        // removed from the top or moved to the bottom, because we
+        // will perform `N-1` "moves".
+        //
+        // In summary, we don't generate efficient moves the way
+        // least-common-subsequence would, be we do reuse existing
+        // components and move them to the right place.
         if (ptr === id) {
           // XXX we don't deal the case where compType is different
           // from the original compType.
