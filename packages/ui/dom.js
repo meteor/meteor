@@ -160,6 +160,7 @@ Component.include({
         if (! (oldChildren && oldChildren[k]))
           (newChildren || (newChildren = {}))[k] = self.children[k];
 
+      // `builtChildren` is actually children *added* during build
       c.builtChildren = newChildren;
 
       // don't capture dependencies, but provide a
