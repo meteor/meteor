@@ -303,5 +303,28 @@ _.extend(Deps, {
   afterFlush: function (f) {
     afterFlushCallbacks.push(f);
     requireFlush();
+  },
+
+  injective: function (v) {
+    return {
+      _value: v != null ? v : 0,
+      _dep: new Deps.Dependency,
+
+      set: function(value) {
+        if (this.value !== value) {
+          this._value = value;
+          return this._dep.changed();
+        }
+      },
+
+      get: function() {
+        this._dep.depend();
+        return this._value;
+      },
+
+      depend: function() {
+        return this._dep.depend();
+      }
+    };
   }
 });
