@@ -98,7 +98,7 @@ Fiber(function () {
           // Try to guess the package name so we can print a nice
           // error message
           var filePathParts = fileInfo.path.split(path.sep);
-          var packageName = filePathParts[2].replace(/\.js$/, '');
+          var packageName = filePathParts[1].replace(/\.js$/, '');
 
           // XXX better message
           throw new Error(
