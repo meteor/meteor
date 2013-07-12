@@ -120,7 +120,10 @@ Either = UIComponent.extend({
       },
       content: UIComponent.extend({
         render: function (buf) {
-          buf("<div>Each ", this.data().text, " ", String(Math.random()),
+          var self = this;
+          buf("<div>Each ",
+              _UI.Text(function () { return self.data().text; }),
+              " ", String(Math.random()),
               "</div>");
         }
       })
