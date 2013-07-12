@@ -252,8 +252,10 @@ var File = function (options) {
   self.sourcePath = options.sourcePath;
 
   // If this file was generated, a sourceMap (as a string) with debugging
-  // information. Set with setSourceMap.
+  // information, as well as the "root" that paths in it should be resolved
+  // against. Set with setSourceMap.
   self.sourceMap = null;
+  self.sourceMapRoot = null;
 
   // Where this file is intended to reside within the target's
   // filesystem.
@@ -387,12 +389,13 @@ _.extend(File.prototype, {
   },
 
   // Set a source map for this File. sourceMap is given as a string.
-  setSourceMap: function (sourceMap) {
+  setSourceMap: function (sourceMap, root) {
     var self = this;
 
     if (typeof sourceMap !== "string")
       throw new Error("sourceMap must be given as a string");
     self.sourceMap = sourceMap;
+    self.sourceMapRoot = root;
   }
 });
 
@@ -663,7 +666,7 @@ _.extend(Target.prototype, {
           }
 
           if (resource.type === "js" && resource.sourceMap) {
-            f.setSourceMap(resource.sourceMap);
+            f.setSourceMap(resource.sourceMap, path.dirname(relPath));
           }
 
           self[resource.type].push(f);
@@ -1123,6 +1126,7 @@ _.extend(JsImage.prototype, {
           item.targetPath + '.map',
           { data: new Buffer(item.sourceMap, 'utf8') }
         );
+        loadItem.sourceMapRoot = item.sourceMapRoot;
       }
 
       load.push(loadItem);
@@ -1195,6 +1199,7 @@ JsImage.readFromDisk = function (controlFilePath) {
       rejectBadPath(item.sourceMap);
       loadItem.sourceMap = fs.readFileSync(
         path.join(dir, item.sourceMap), 'utf8');
+      loadItem.sourceMapRoot = item.sourceMapRoot;
     }
     ret.jsToLoad.push(loadItem);
   });
@@ -1225,7 +1230,8 @@ _.extend(JsImageTarget.prototype, {
         source: file.contents().toString('utf8'),
         nodeModulesDirectory: file.nodeModulesDirectory,
         staticDirectory: file.staticDirectory,
-        sourceMap: file.sourceMap
+        sourceMap: file.sourceMap,
+        sourceMapRoot: file.sourceMapRoot
       });
     });
 

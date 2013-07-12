@@ -50,13 +50,19 @@ _.each(serverJson.load, function (fileInfo) {
     // source-map-support doesn't ever look at the sourcesContent field, so
     // there's no point in keeping it in memory.
     delete parsedSourceMap.sourcesContent;
+    var url;
+    if (fileInfo.sourceMapRoot) {
+      // Add the specified root to any root that may be in the file.
+      parsedSourceMap.sourceRoot = path.join(
+        fileInfo.sourceMapRoot, parsedSourceMap.sourceRoot || '');
+    }
     parsedSourceMaps[fileInfo.path] = parsedSourceMap;
   }
 });
 
 var retrieveSourceMap = function (pathForSourceMap) {
   if (_.has(parsedSourceMaps, pathForSourceMap))
-    return {map: parsedSourceMaps[pathForSourceMap]};
+    return { map: parsedSourceMaps[pathForSourceMap] };
   return null;
 };
 

@@ -641,7 +641,7 @@ var prelink = function (options) {
 };
 
 var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
-  "This file was compiled by the Meteor linker. You can view the original",
+  "This is a generated file. You can view the original",
   "source in your browser if your browser supports source maps.",
   "",
   "If you are using Chrome, open the Developer Tools and click the gear",
