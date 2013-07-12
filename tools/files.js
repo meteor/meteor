@@ -673,6 +673,14 @@ _.extend(exports, {
       });
       wrapped = results.code;
       parsedSourceMap = results.map.toJSON();
+      if (options.sourceMapRoot) {
+        // Add the specified root to any root that may be in the file.
+        parsedSourceMap.sourceRoot = path.join(
+          options.sourceMapRoot, parsedSourceMap.sourceRoot || '');
+      }
+      // source-map-support doesn't ever look at the sourcesContent field, so
+      // there's no point in keeping it in memory.
+      delete parsedSourceMap.sourcesContent;
       parsedSourceMaps[stackFilename] = parsedSourceMap;
     } else {
 

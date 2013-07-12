@@ -1068,7 +1068,8 @@ _.extend(JsImage.prototype, {
         files.runJavaScript(item.source.toString('utf8'), {
           filename: item.targetPath,
           symbols: env,
-          sourceMap: item.sourceMap
+          sourceMap: item.sourceMap,
+          sourceMapRoot: item.sourceMapRoot
         });
       } catch (e) {
         buildmessage.exception(e);
