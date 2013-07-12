@@ -1158,6 +1158,24 @@ Fiber(function () {
         process.exit(1);
       }
 
+      if (context.appDir) {
+        // The library doesn't know about other programs in your app. Let's blow
+        // away their .build directories if they have them, and not rebuild
+        // them. Sort of hacky, but eh.
+        var programsDir = path.join(context.appDir, 'programs');
+        try {
+          var programs = fs.readdirSync(programsDir);
+        } catch (e) {
+          // OK if the programs directory doesn't exist; that'll just leave
+          // 'programs' empty.
+          if (e.code !== "ENOENT")
+            throw e;
+        }
+        _.each(programs, function (program) {
+          files.rm_recursive(path.join(programsDir, program, '.build'));
+        });
+      }
+
       var count = null;
       var messages = buildmessage.capture(function () {
         count = context.library.rebuildAll();
