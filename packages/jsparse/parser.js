@@ -26,6 +26,7 @@ var makeSet = function (array) {
 };
 
 
+// @export JSParser
 JSParser = function (code, options) {
   this.lexer = new JSLexer(code);
   this.oldToken = null;

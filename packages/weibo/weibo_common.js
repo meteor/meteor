@@ -1,3 +1,2 @@
-if (typeof Weibo === 'undefined') {
-  Weibo = {};
-}
+// @export Weibo
+Weibo = {};

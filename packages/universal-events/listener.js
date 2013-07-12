@@ -160,6 +160,8 @@ var typeCounts = {};
 // in browsers that don't require it. In other words, when the flag
 // is set, modern browsers will require the same API calls as IE <=
 // 8. This is only used for tests and is private for now.
+//
+// @export UniversalEventListener
 UniversalEventListener = function (handler, _checkIECompliance) {
   this.handler = handler;
   this.types = {}; // map from event type name to 'true'

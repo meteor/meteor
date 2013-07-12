@@ -3,7 +3,7 @@ var _XHR_URL_PREFIX = "/http_test_responder";
 
 var url_base = function () {
   if (Meteor.isServer) {
-    var address = __meteor_bootstrap__.httpServer.address();
+    var address = WebApp.httpServer.address();
     return "http://127.0.0.1:" + address.port;
   } else {
     return "";
@@ -102,7 +102,7 @@ testAsyncMulti("httpcall - errors", [
     }
 
     // Server serves 500
-    error500Callback = function(error, result) {
+    var error500Callback = function(error, result) {
       test.isTrue(error);
       test.isTrue(error.message.indexOf("500") !== -1); // message has statusCode
       test.isTrue(error.message.indexOf(
@@ -426,17 +426,9 @@ if (Meteor.isServer) {
   // run this test on the server.
   testAsyncMulti("httpcall - static file serving", [
     function(test, expect) {
-      // register an error handling middleware with connect to suppress
-      // error printing for this test. connect knows it is an error
-      // handler because it has 4 arguments instead of 3. go figure.
-      __meteor_bootstrap__.app.use(function (err, req, res, next) {
-        if (!err || !req.headers['x-suppress-error']) {
-          next();
-          return;
-        }
-        res.writeHead(err.status, { 'Content-Type': 'text/plain' });
-        res.end("An error message");
-      });
+      // Suppress error printing for this test (and for any other code that sets
+      // the x-suppress-error header).
+      WebApp.suppressConnectErrors();
 
       var do_test = function (path, code, match) {
         Meteor.http.get(
@@ -449,33 +441,37 @@ if (Meteor.isServer) {
           }));
       };
 
-      // no such file
-      do_test("/nosuchfile", 200, /DOCTYPE/);
-      do_test("/../nosuchfile", 403);
-      do_test("/%2e%2e/nosuchfile", 403);
-      do_test("/%2E%2E/nosuchfile", 403);
-      do_test("/%2d%2d/nosuchfile", 200, /DOCTYPE/);
-
       // existing static file
-      var succeeds = [
-        "/packages/http/test_static.serveme",
+      do_test("/packages/http/test_static.serveme", 200, /static file serving/);
+
+      // no such file, so return the default app HTML.
+      var getsAppHtml = [
+        // This file doesn't exist.
+        "/nosuchfile",
+
+        // Our static file serving doesn't process .. or its encoded version, so
+        // any of these return the app HTML.
+        "/../nosuchfile",
+        "/%2e%2e/nosuchfile",
+        "/%2E%2E/nosuchfile",
+        "/%2d%2d/nosuchfile",
         "/packages/http/../http/test_static.serveme",
         "/packages/http/%2e%2e/http/test_static.serveme",
         "/packages/http/%2E%2E/http/test_static.serveme",
         "/packages/http/../../packages/http/test_static.serveme",
         "/packages/http/%2e%2e/%2e%2e/packages/http/test_static.serveme",
         "/packages/http/%2E%2E/%2E%2E/packages/http/test_static.serveme",
+
+        // ... and they *definitely* shouldn't be able to escape the app bundle.
+        "/packages/http/../../../../../../packages/http/test_static.serveme",
+        "/../../../../../../../../../../../bin/ls",
+        "/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/bin/ls",
+        "/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/bin/ls"
       ];
-      _.each(succeeds, function (path) {
-        do_test(path, 200, /static file serving/);
+
+      _.each(getsAppHtml, function (x) {
+        do_test(x, 200, /<title>Tests<\/title/);
       });
-      do_test("/packages/http/../../../../../../packages/http/test_static.serveme", 403);
-
-      // file outside of our app
-      do_test("/../../../../../../../../../../../bin/ls", 403);
-      do_test("/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/bin/ls", 403);
-      do_test("/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/bin/ls", 403);
-
     }
   ]);
 }

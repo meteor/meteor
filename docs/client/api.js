@@ -1811,3 +1811,43 @@ Template.api.email_send = {
     }
   ]
 };
+
+Template.api.assets_getText = {
+  id: "assets_getText",
+  name: "Assets.getText(assetPath, [asyncCallback])",
+  locus: "Server",
+  descr: ["Retrieve the contents of the static server asset as a UTF8-encoded string."],
+  args: [
+    {name: "assetPath",
+     type: "String",
+     descr: "The path of the asset, relative to the application's " +
+     "`private` subdirectory."
+    },
+    {name: "asyncCallback",
+     type: "Function",
+     descr: "Optional callback, which is called asynchronously with the error " +
+     "or result after the function is complete. If not provided, the function " +
+     "runs synchronously."
+    }
+  ]
+};
+
+Template.api.assets_getBinary = {
+  id: "assets_getBinary",
+  name: "Assets.getBinary(assetPath, [asyncCallback])",
+  locus: "Server",
+  descr: ["Retrieve the contents of the static server asset as an EJSON Binary."],
+  args: [
+    {name: "assetPath",
+     type: "String",
+     descr: "The path of the asset, relative to the application's " +
+     "`private` subdirectory."
+    },
+    {name: "asyncCallback",
+     type: "Function",
+     descr: "Optional callback, which is called asynchronously with the error " +
+     "or result after the function is complete. If not provided, the function " +
+     "runs synchronously."
+    }
+  ]
+};

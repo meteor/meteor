@@ -1,3 +1,2 @@
-if (typeof Github === 'undefined') {
-  Github = {};
-}
+// @export Github
+Github = {};

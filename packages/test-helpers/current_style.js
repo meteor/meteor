@@ -1,6 +1,5 @@
-
+// @export getStyleProperty
 // Cross-browser implementation of getting the computed style of an element.
-
 getStyleProperty = function(n, prop) {
   if (n.currentStyle) {
     // camelCase it for IE

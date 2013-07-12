@@ -49,15 +49,6 @@ _.extend(exports, {
         ret.push(line);
     });
 
-    // add packages in the app's packages/ directory
-    var appPackagesDir = path.join(app_dir, 'packages');
-    if (fs.existsSync(appPackagesDir)) {
-      _.each(fs.readdirSync(appPackagesDir), function(appPackage) {
-        if (files.is_package_dir(path.join(appPackagesDir, appPackage)))
-          ret.push(appPackage);
-      });
-    }
-
     return ret;
   },
 

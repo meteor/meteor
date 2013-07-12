@@ -25,6 +25,7 @@
 // timer' button again. the problem is almost certainly in afterFlush
 // (not hard to see what it is.)
 
+// @export Spark
 Spark = {};
 
 Spark._currentRenderer = (function () {

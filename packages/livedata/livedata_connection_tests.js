@@ -1296,6 +1296,56 @@ var getSelfConnectionUrl = function () {
   }
 };
 
+if (Meteor.isServer) {
+  var reversed = {};
+  Meteor.methods({
+    reverse: function (arg) {
+      reversed[arg] = true;
+      return arg.split("").reverse().join("");
+    }
+  });
+}
+
+testAsyncMulti("livedata connection - reconnect to a different server", [
+  function (test, expect) {
+    var self = this;
+    self.conn = Meteor.connect("reverse.meteor.com");
+    pollUntil(expect, function () {
+      return self.conn.status().connected;
+    }, 5000, 100, true); // poll until connected, but don't fail if we don't connect
+  },
+  function (test, expect) {
+    var self = this;
+    self.doTest = self.conn.status().connected;
+    if (self.doTest) {
+      self.conn.call("reverse", "foo", expect(function (err, res) {
+        test.equal(res, "oof");
+      }));
+    }
+  },
+  function (test, expect) {
+    var self = this;
+    if (self.doTest) {
+      self.conn.reconnect({url: getSelfConnectionUrl()});
+      self.conn.call("reverse", "bar", expect(function (err, res) {
+        test.equal(res, "rab");
+      }));
+    }
+  },
+  function (test, expect) {
+    var self = this;
+    var id = Random.id();
+    if (self.doTest) {
+      self.conn.call("reverse", id, expect(function (err, res) {
+        if (Meteor.isServer) {
+          test.isTrue(reversed[id]);
+        }
+      }));
+    }
+  }
+
+]);
+
 Tinytest.addAsync("livedata connection - version negotiation requires renegotiating",
                   function (test, onComplete) {
   var connection = new Meteor._LivedataConnection(getSelfConnectionUrl(), {

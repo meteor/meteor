@@ -6,6 +6,7 @@ var isArray = function (obj) {
   return obj && (typeof obj === 'object') && (typeof obj.length === 'number');
 };
 
+// @export ParseNode
 ParseNode = function (name, children) {
   this.name = name;
   this.children = children;

@@ -5,10 +5,14 @@
 /*global*/ fs = require('fs');
 /*global*/ files = require(path.join(__dirname, '..', 'files.js'));
 /*global*/ bundler = require(path.join(__dirname, '..', 'bundler.js'));
+/*global*/ library = require(path.join(__dirname, '..', 'library.js'));
+/*global*/ unipackage = require(path.join(__dirname, '..', 'unipackage.js'));
 /*global*/ _ = require('underscore');
 /*global*/ assert = require('assert');
 /*global*/ Fiber = require('fibers');
 /*global*/ Future = require('fibers/future');
+
+/*global*/ mainJSContents = "process.argv.splice(2, 0, 'program.json');\nprocess.chdir(require('path').join(__dirname, 'programs', 'server'));\nrequire('./programs/server/boot.js');\n";
 
 var tmpBaseDir = files.mkdtemp('test_bundler');
 var tmpCounter = 1;
@@ -25,6 +29,7 @@ Fiber(function () {
     require(path.join(__dirname, '..', 'meteor_npm.js'))._printNpmCalls = true;
 
     /// RUN TESTS
+    require(path.join(__dirname, 'test_bundler_assets.js'));
     require(path.join(__dirname, 'test_bundler_options.js'));
     require(path.join(__dirname, 'test_bundler_npm.js'));
   } catch (err) {
@@ -35,5 +40,3 @@ Fiber(function () {
     process.exit(1);
   };
 }).run();
-
-

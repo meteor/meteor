@@ -1,3 +1,2 @@
-if (typeof Meetup === 'undefined') {
-  Meetup = {};
-}
+// @export Meetup
+Meetup = {};

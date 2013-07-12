@@ -7,8 +7,11 @@ Package.describe({
 
 Package.on_use(function(api) {
   api.use('oauth2', ['client', 'server']);
+  api.use('oauth', ['client', 'server']);
   api.use('http', ['client', 'server']);
   api.use('templating', 'client');
+  api.use('random', 'client');
+  api.use('service-configuration', ['client', 'server']);
 
   api.add_files(
     ['weibo_configure.html', 'weibo_configure.js'],

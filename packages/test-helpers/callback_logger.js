@@ -10,6 +10,7 @@ var Fiber = Meteor.isServer ? Npm.require('fibers') : null;
 
 var TIMEOUT = 1000;
 
+// @export withCallbackLogger
 // Run the given function, passing it a correctly-set-up callback logger as an
 // argument.  If we're meant to be running asynchronously, the function gets its
 // own Fiber.
@@ -26,7 +27,7 @@ withCallbackLogger = function (test, callbackNames, async, fun) {
   }
 };
 
-CallbackLogger = function (test, callbackNames) {
+var CallbackLogger = function (test, callbackNames) {
   var self = this;
   self._log = [];
   self._test = test;

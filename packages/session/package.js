@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['underscore', 'reactive-dict'], 'client');
+  api.use(['underscore', 'reactive-dict', 'ejson'], 'client');
 
   // XXX what I really want to do is ensure that if 'reload' is going to
   // be loaded, it should be loaded before 'session'. Session can work
@@ -17,5 +17,6 @@ Package.on_use(function (api) {
 Package.on_test(function (api) {
   api.use('tinytest');
   api.use('session', 'client');
+  api.use('deps');
   api.add_files('session_tests.js', 'client');
 });

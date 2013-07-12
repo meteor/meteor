@@ -5,14 +5,14 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('service-configuration', ['client', 'server']);
-  api.use('oauth', 'client');
+  api.use('oauth', ['client', 'server']);
 
   api.add_files('oauth2_common.js', ['client', 'server']);
   api.add_files('oauth2_server.js', 'server');
 });
 
 Package.on_test(function (api) {
-  api.use('service-configuration', 'server');
-  api.use('oauth2', 'server');
+  api.use(['tinytest', 'random', 'oauth2', 'oauth', 'service-configuration'],
+          'server');
   api.add_files("oauth2_tests.js", 'server');
 });

@@ -4,17 +4,14 @@
 // prompt for password
 // send RPC with or without password as required
 
-var crypto = require('crypto');
-var tty = require('tty');
-var request = require('request');
 var qs = require('querystring');
 var path = require('path');
 var files = require('./files.js');
 var warehouse = require('./warehouse.js');
+var buildmessage = require('./buildmessage.js');
 var _ = require('underscore');
-var keypress = require('keypress');
-var child_process = require('child_process');
 var inFiber = require('./fiber-helpers.js').inFiber;
+var Future = require('fibers/future');
 
 //
 // configuration
@@ -27,6 +24,7 @@ if (process.env.EMACS == "t") {
   // O_NONBLOCK on the evaluation of process.stdin (because Node unblocks stdio
   // when forking). This fixes execution of Mongo from within Emacs shell.
   process.stdin;
+  var child_process = require('child_process');
   child_process.spawn('true', [], {stdio: 'inherit'});
 }
 
@@ -45,6 +43,7 @@ var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
     url += '?' + qs.stringify(query_params);
   }
 
+  var request = require('request');
   var r = request({method: method, url: url}, function (error, response, body) {
     if (error || ((response.statusCode !== 200)
                   && (response.statusCode !== 201)))
@@ -92,13 +91,10 @@ var deployToServer = function (app_dir, bundleOptions, deployOptions) {
 
   process.stdout.write('Deploying to ' + site + '.  Bundling...\n');
   var bundler = require('./bundler.js');
-  var errors = bundler.bundle(app_dir, bundle_path, bundleOptions);
-  if (errors) {
+  var bundleResult = bundler.bundle(app_dir, bundle_path, bundleOptions);
+  if (bundleResult.errors) {
     process.stdout.write("\n\nErrors prevented deploying:\n");
-    _.each(errors, function (e) {
-      process.stdout.write(e + "\n");
-    });
-    files.rm_recursive(build_dir);
+    process.stdout.write(bundleResult.errors.formatMessages());
     process.exit(1);
   }
 
@@ -181,33 +177,21 @@ var delete_app = function (url) {
   });
 };
 
-// either print the mongo credential (just_credential is true) or open
-// a mongo shell.
-var mongo = function (url, just_credential) {
+var temporaryMongoUrl = function (url) {
   var parsed_url = parse_url(url);
-
+  var passwordFut = new Future();
   with_password(parsed_url.hostname, function (password) {
-    var opts = {};
-    if (password) opts.password = password;
-
-    meteor_rpc('mongo', 'GET', parsed_url.hostname, opts, function (err, body) {
-      if (err) {
-        process.stderr.write(body + "\n");
-        process.exit(1);
-      }
-
-      if (just_credential) {
-        // just print the URL
-        process.stdout.write(body + "\n");
-
-      } else {
-        // pause stdin so we don't try to read it while mongo is
-        // running.
-        process.stdin.pause();
-        run_mongo_shell(body);
-      }
-    });
+    passwordFut.return(password);
   });
+  var password = passwordFut.wait();
+  var urlFut = new Future();
+  var opts = {};
+  if (password)
+    opts.password = password;
+  meteor_rpc('mongo', 'GET',
+             parsed_url.hostname, opts, urlFut.resolver());
+  var mongoUrl = urlFut.wait();
+  return mongoUrl;
 };
 
 var logs = function (url) {
@@ -261,12 +245,15 @@ var run_mongo_shell = function (url) {
   var mongo_path = path.join(files.get_dev_bundle(), 'mongodb', 'bin', 'mongo');
   var mongo_url = require('url').parse(url);
   var auth = mongo_url.auth && mongo_url.auth.split(':');
+  var ssl = require('querystring').parse(mongo_url.query).ssl === "true";
 
   var args = [];
+  if (ssl) args.push('--ssl');
   if (auth) args.push('-u', auth[0]);
   if (auth) args.push('-p', auth[1]);
   args.push(mongo_url.hostname + ':' + mongo_url.port + mongo_url.pathname);
 
+  var child_process = require('child_process');
   var proc = child_process.spawn(mongo_path,
                                  args,
                                  { stdio: 'inherit' });
@@ -276,6 +263,7 @@ var run_mongo_shell = function (url) {
 // actually make us more secure, but it means we won't leak a user's
 // password, which they might use on other sites too.
 var transform_password = function (password) {
+  var crypto = require('crypto');
   var hash = crypto.createHash('sha1');
   hash.update('S3krit Salt!');
   hash.update(password);
@@ -294,6 +282,7 @@ var read_password = function (callback) {
   }
 
   // keypress
+  var keypress = require('keypress');
   keypress(process.stdin);
   process.stdin.on('keypress', inFiber(function(c, key){
     if (key && 'enter' === key.name) {
@@ -350,6 +339,7 @@ var with_password = function (site, callback) {
   // Future.throw. Basically, what Future.wrap does.
   callback = inFiber(callback);
 
+  var request = require('request');
   request(check_url, function (error, response, body) {
     if (error || response.statusCode !== 200) {
       callback();
@@ -387,7 +377,7 @@ var get_new_password = function (callback) {
 exports.deployCmd = deployCmd;
 exports.deployToServer = deployToServer;
 exports.delete_app = delete_app;
-exports.mongo = mongo;
+exports.temporaryMongoUrl = temporaryMongoUrl;
 exports.logs = logs;
 
 exports.run_mongo_shell = run_mongo_shell;

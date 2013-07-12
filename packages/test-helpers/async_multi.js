@@ -109,7 +109,8 @@ _.extend(ExpectationManager.prototype, {
   }
 });
 
-/*global*/ testAsyncMulti = function (name, funcs) {
+// @export testAsyncMulti
+testAsyncMulti = function (name, funcs) {
   // XXX Tests on remote browsers are _slow_. We need a better solution.
   var timeout = 180000;
 
@@ -152,9 +153,9 @@ _.extend(ExpectationManager.prototype, {
   });
 };
 
-/*global*/
-
-pollUntil = function (expect, f, timeout, step) {
+// @export pollUntil
+pollUntil = function (expect, f, timeout, step, noFail) {
+  noFail = noFail || false;
   step = step || 100;
   var expectation = expect(true);
   var start = (new Date()).valueOf();
@@ -164,7 +165,7 @@ pollUntil = function (expect, f, timeout, step) {
       return;
     }
     if (start + timeout < (new Date()).valueOf()) {
-      expectation(false);
+      expectation(noFail);
       return;
     }
     Meteor.setTimeout(helper, step);

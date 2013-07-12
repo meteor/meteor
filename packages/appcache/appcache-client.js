@@ -1,5 +1,4 @@
-if (! window.applicationCache)
-  return;
+if (window.applicationCache) {
 
 var appCacheStatuses = [
   'uncached',
@@ -65,3 +64,5 @@ window.applicationCache.addEventListener('obsolete', (function() {
     Meteor._reload.reload();
   }
 }), false);
+
+} // if window.applicationCache

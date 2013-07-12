@@ -1,6 +1,5 @@
-if (typeof Twitter === 'undefined') {
-  Twitter = {};
-}
+// @export Twitter
+Twitter = {};
 
 Twitter._urls = {
   requestToken: "https://api.twitter.com/oauth/request_token",

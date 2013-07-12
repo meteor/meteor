@@ -1,3 +1,4 @@
+// @export Accounts
 if (typeof Accounts === 'undefined')
   Accounts = {};
 

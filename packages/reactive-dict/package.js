@@ -6,7 +6,7 @@ Package.describe({
 Package.on_use(function (api, where) {
   where = where || ['client', 'server'];
 
-  api.use(['underscore', 'deps'], where);
+  api.use(['underscore', 'deps', 'ejson'], where);
   api.add_files('reactive-dict.js', where);
 });
 
