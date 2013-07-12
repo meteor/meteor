@@ -1,5 +1,6 @@
 var Component = UIComponent;
 
+// `id` arguments to this class MUST be non-empty strings
 _UI.List = Component.extend({
   typeName: 'List',
   _items: null, // OrderedDict of id -> Component
@@ -98,28 +99,44 @@ _UI.List = Component.extend({
   // calls `end`.
   beginReplace: function () {
     var self = this;
-    // XXX let's start with a stupid implementation
+
     var items = self._items;
     var ptr = items.first();
-    while (ptr) {
-      self.removeItem(ptr);
-      ptr = items.first();
-    }
     var seenIds = {};
     var counter = 1;
     // uniquify IDs by adding a few random characters and
     // a counter.
     var rand = Random.id().slice(0,4);
     return {
+      // here only, id may be null
       add: function (id, compType, data) {
         var origId = id;
-        while (seenIds.hasOwnProperty(id))
-          id = origId + rand + (counter++);
+        while ((! id) || seenIds.hasOwnProperty(id))
+          id = (origId || '') + rand + (counter++);
         seenIds[id] = true;
-        self.addItemBefore(id, compType, data, ptr);
+
+        // Now we know `id` is unique among new items,
+        // but it may match an old item at or after
+        // the location of `ptr`
+        if (ptr === id) {
+          // XXX we don't deal the case where compType is different
+          // from the original compType.
+          self.setItemData(id, data);
+          ptr = items.next(ptr);
+        } else if (items.has(id)) {
+          self.moveItemBefore(id, ptr);
+          self.setItemData(id, data);
+        } else {
+          self.addItemBefore(id, compType, data, ptr);
+        }
       },
       end: function () {
-        // nothing to do
+        // delete everything at or after ptr
+        while (ptr) {
+          var next = items.next(ptr);
+          self.removeItem(ptr);
+          ptr = next;
+        }
       }
     };
   }
@@ -141,17 +158,17 @@ _UI.Each = Component.extend({
   },
   _getId: function (value) { // override this
     if (value == null) {
-      return ' ';
+      return null;
     } else if (value._id == null) {
       if (typeof value === 'object')
         // value is some object without `_id`.  oh well.
-        return ' ';
+        return null;
       else
         // value is a string or number, say
         return String(value);
     } else {
       if (typeof value._id === 'object')
-        return ' ';
+        return null;
       else
         return String(value._id);
     }
