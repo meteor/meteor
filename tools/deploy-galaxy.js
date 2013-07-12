@@ -232,7 +232,11 @@ exports.logs = function (options) {
     galaxy.close();
   }
 
-  var lastLogId = null;
+  // XXX: should not be global, quick hack to force logs continuation work after
+  // reconnect. Since ssh-tunnel reconnect forces this method to rerun we need
+  // to preserve some global state.
+  if (typeof lastLogId === "undefined")
+    lastLogId = null;
   var logReader = getMeteor(options.context).connect(logReaderURL);
   var Log = unipackage.load({
     library: options.context.library,
