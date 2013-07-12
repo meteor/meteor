@@ -638,7 +638,13 @@ Component.include({
 
     self._requireNotDestroyed();
 
-    var c = Deps.autorun(compFunc);
+    // XXX so many nested functions... Deps.nonreactive here
+    // feels heavyweight, but we don't want building a child
+    // while building a parent to mean that when the parent
+    // rebuilds, the child automatically does.
+    var c = Deps.nonreactive(function () {
+      return Deps.autorun(compFunc);
+    });
 
     self._computations = self._computations || [];
     self._computations.push(c);
