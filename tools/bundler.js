@@ -70,26 +70,16 @@
 //        parameter when used
 //    - size: size of file in bytes
 //    - hash: sha1 hash of the file contents
+//    - sourceMap: optional path to source map file (relative to program.json)
 //    Additionally there will be an entry with where equal to
 //    "internal", path equal to page (above), and hash equal to the
 //    sha1 of page (before replacements.) Currently this is used to
 //    trigger HTML5 appcache reloads at the right time (if the
 //    'appcache' package is being used.)
 //
-//  - static: a path, relative to program.json, to a directory. If the
-//    server is too dumb to read 'manifest', it can just serve all of
-//    the files in this directory (with a relatively short cache
-//    expiry time.)
-//    XXX do not use this. It will go away soon.
-//
-//  - static_cacheable: just like 'static' but resources that can be
-//    cached aggressively (cacheable: true in the manifest)
-//    XXX do not use this. It will go away soon.
-//
 // Convention:
 //
-// page is 'app.html', static is 'static', and staticCacheable is
-// 'static_cacheable'.
+// page is 'app.html'.
 //
 //
 // == Format of a program when arch is "native.*" ==
@@ -115,6 +105,8 @@
 //      be search for npm modules
 //    - staticDirectory: directory to search for static assets when
 //      Assets.getText and Assets.getBinary are called from this file.
+//    - sourceMap: if present, path of a file that contains a source
+//      map for this file, relative to program.json
 //
 // /config.json:
 //
@@ -177,6 +169,7 @@ var builder = require(path.join(__dirname, 'builder.js'));
 var unipackage = require(path.join(__dirname, 'unipackage.js'));
 var Fiber = require('fibers');
 var Future = require(path.join('fibers', 'future'));
+var sourcemap = require('source-map');
 
 // files to ignore when bundling. node has no globs, so use regexps
 var ignoreFiles = [
@@ -193,6 +186,18 @@ var inherits = function (child, parent) {
   child.prototype = new tmp;
   child.prototype.constructor = child;
 };
+
+var rejectBadPath = function (p) {
+  if (p.match(/\.\./))
+    throw new Error("bad path: " + p);
+};
+
+var stripLeadingSlash = function (p) {
+  if (p.charAt(0) !== '/')
+    throw new Error("bad path: " + p);
+  return p.slice(1);
+};
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // NodeModulesDirectory
@@ -231,18 +236,26 @@ var StaticDirectory = function (options) {
 // Allowed options:
 // - sourcePath: path to file on disk that will provide our contents
 // - data: contents of the file as a Buffer
+// - sourceMap: if 'data' is given, can be given instead of sourcePath. a string
 // - cacheable
 var File = function (options) {
   var self = this;
 
-  if (options.data && ! (options.data instanceof Buffer)) {
+  if (options.data && ! (options.data instanceof Buffer))
     throw new Error('File contents must be provided as a Buffer');
-  }
+  if (! options.sourcePath && ! options.data)
+    throw new Error("Must provide either sourcePath or data");
 
   // The absolute path in the filesystem from which we loaded (or will
   // load) this file (null if the file does not correspond to one on
   // disk.)
   self.sourcePath = options.sourcePath;
+
+  // If this file was generated, a sourceMap (as a string) with debugging
+  // information, as well as the "root" that paths in it should be resolved
+  // against. Set with setSourceMap.
+  self.sourceMap = null;
+  self.sourceMapRoot = null;
 
   // Where this file is intended to reside within the target's
   // filesystem.
@@ -251,7 +264,7 @@ var File = function (options) {
   // The URL at which this file is intended to be served, relative to
   // the base URL at which the target is being served (ignored if this
   // file is not intended to be served over HTTP.)
-  self.url = null
+  self.url = null;
 
   // Is this file guaranteed to never change, so that we can let it be
   // cached forever? Only makes sense of self.url is set.
@@ -282,13 +295,23 @@ _.extend(File.prototype, {
   contents: function (encoding) {
     var self = this;
     if (! self._contents) {
-      if (! self.sourcePath)
+      if (! self.sourcePath) {
         throw new Error("Have neither contents nor sourcePath for file");
+      }
       else
         self._contents = fs.readFileSync(self.sourcePath);
     }
 
     return encoding ? self._contents.toString(encoding) : self._contents;
+  },
+
+  setContents: function (b) {
+    var self = this;
+    if (!(b instanceof Buffer))
+      throw new Error("Must set contents to a Buffer");
+    self._contents = b;
+    // Un-cache hash.
+    self._hash = null;
   },
 
   size: function () {
@@ -304,6 +327,7 @@ _.extend(File.prototype, {
     var self = this;
     self.url = "/" + self.hash() + suffix;
     self.cacheable = true;
+    self.targetPath = self.hash() + suffix;
   },
 
   // Append "?<hash>" to the URL and mark the file as cacheable.
@@ -336,10 +360,10 @@ _.extend(File.prototype, {
   setTargetPathFromRelPath: function (relPath) {
     var self = this;
     // XXX hack
-    if (relPath.match(/^\/packages\//) || relPath.match(/^\/static\//))
+    if (relPath.match(/^packages\//) || relPath.match(/^static\//))
       self.targetPath = relPath;
     else
-      self.targetPath = path.join('/app', relPath);
+      self.targetPath = path.join('app', relPath);
   },
 
   setStaticDirectory: function (relPath, staticSourceDirectory) {
@@ -348,18 +372,30 @@ _.extend(File.prototype, {
     // static/packages specific to this package. Application assets (e.g. those
     // inside private/) go in static/app/.
     // XXX same hack as above
+    // XXX XXX is this all still true?
+    // XXX rename static -> assets on server
     var bundlePath;
-    if (relPath.match(/^\/packages\//)) {
+    if (relPath.match(/^packages\//)) {
       var dir = path.dirname(relPath);
       var base = path.basename(relPath, ".js");
-      bundlePath = path.join('/static', dir, base);
+      bundlePath = path.join('static', dir, base);
     } else {
-      bundlePath = path.join('/static', 'app');
+      bundlePath = path.join('static', 'app');
     }
     self.staticDirectory = new StaticDirectory({
       sourcePath: staticSourceDirectory,
       bundlePath: bundlePath
     });
+  },
+
+  // Set a source map for this File. sourceMap is given as a string.
+  setSourceMap: function (sourceMap, root) {
+    var self = this;
+
+    if (typeof sourceMap !== "string")
+      throw new Error("sourceMap must be given as a string");
+    self.sourceMap = sourceMap;
+    self.sourceMapRoot = root;
   }
 });
 
@@ -431,8 +467,7 @@ _.extend(Target.prototype, {
       test: options.test || []
     });
 
-    // Link JavaScript, put resources in load order, and copy them to
-    // the bundle
+    // Link JavaScript and set up self.js, etc.
     self._emitResources();
 
     // Minify, if requested
@@ -442,7 +477,7 @@ _.extend(Target.prototype, {
         self.minifyCss();
     }
 
-    // Process asset directories (eg, /public)
+    // Process asset directories (eg, '/public')
     // XXX this should probably be part of the appDir reader
     _.each(options.assetDirs || [], function (ad) {
       self.addAssetDir(ad);
@@ -454,11 +489,6 @@ _.extend(Target.prototype, {
       self._addCacheBusters("js");
       self._addCacheBusters("css");
     }
-
-    // XXX extra thing we have to do on the client. could this move
-    // into ClientTarget.write()?
-    if (self.assignTargetPaths)
-      self.assignTargetPaths();
   },
 
   // Determine the packages to load, create Slices for
@@ -574,9 +604,8 @@ _.extend(Target.prototype, {
     }
   },
 
-  // Sort the slices in dependency order, then, slice by slice, write
-  // their resources into the bundle (which includes running the
-  // JavaScript linker.)
+  // Process all of the sorted slices (which includes running the JavaScript
+  // linker).
   _emitResources: function () {
     var self = this;
 
@@ -588,7 +617,7 @@ _.extend(Target.prototype, {
       var isApp = ! slice.pkg.name;
 
       // Emit the resources
-      _.each(slice.getResources(self.arch), function (resource) {
+       _.each(slice.getResources(self.arch), function (resource) {
         if (_.contains(["js", "css", "static"], resource.type)) {
           if (resource.type === "css" && ! isBrowser)
             // XXX might be nice to throw an error here, but then we'd
@@ -604,15 +633,17 @@ _.extend(Target.prototype, {
             cacheable: false
           });
 
+          var relPath;
+          if (resource.type === "static" && isNative)
+            relPath = path.join("static", resource.servePath);
+          else {
+            relPath = stripLeadingSlash(resource.servePath);
+          }
+          f.setTargetPathFromRelPath(relPath);
+
           if (isBrowser) {
             f.setUrlFromRelPath(resource.servePath);
           } else if (isNative) {
-            var relPath;
-            if (resource.type === "static")
-              relPath = path.join(path.sep, "static", resource.servePath);
-            else
-              relPath = resource.servePath;
-            f.setTargetPathFromRelPath(relPath);
             if (resource.type === "js")
               f.setStaticDirectory(relPath, resource.staticDirectory);
           }
@@ -632,6 +663,10 @@ _.extend(Target.prototype, {
               self.nodeModulesDirectories[slice.nodeModulesPath] = nmd;
             }
             f.nodeModulesDirectory = nmd;
+          }
+
+          if (resource.type === "js" && resource.sourceMap) {
+            f.setSourceMap(resource.sourceMap, path.dirname(relPath));
           }
 
           self[resource.type].push(f);
@@ -743,8 +778,13 @@ _.extend(Target.prototype, {
         var f = new File({ sourcePath: absPath });
         if (setUrl)
           f.setUrlFromRelPath(assetPath);
+        // XXX why is this separate from _emitResources ?
+        // XXX fix up server static resources
+        var relPath = assetDir.useSubDirectory
+              ? path.join('static', 'app', assetPath)
+              : assetPath;
         if (setTargetPath)
-          f.setTargetPathFromRelPath(path.join('/static', 'app', assetPath));
+          f.setTargetPathFromRelPath(relPath);
         self.dependencyInfo.files[absPath] = f.hash();
         self.static.push(f);
       });
@@ -791,22 +831,6 @@ _.extend(ClientTarget.prototype, {
     self.css[0].setUrlToHash(".css");
   },
 
-  assignTargetPaths: function () {
-    var self = this;
-    _.each(["js", "css", "static"], function (type) {
-      _.each(self[type], function (file) {
-        if (! file.targetPath) {
-          if (! file.url)
-            throw new Error("Client file with no URL?");
-
-          var parts = file.url.replace(/\?.*$/, '').split('/').slice(1);
-          parts.unshift(file.cacheable ? "static_cacheable" : "static");
-          file.targetPath = path.sep + path.join.apply(path, parts);
-        }
-      });
-    });
-  },
-
   generateHtmlBoilerplate: function () {
     var self = this;
 
@@ -829,26 +853,74 @@ _.extend(ClientTarget.prototype, {
   // the target
   write: function (builder) {
     var self = this;
-    var manifest = [];
 
     builder.reserve("program.json");
+    builder.reserve("app.html");
 
-    // Resources served via HTTP
-    _.each(["js", "css", "static"], function (type) {
-      _.each(self[type], function (file) {
-
-        writeFile(file, builder);
-
-        manifest.push({
-          path: file.targetPath,
-          where: "client",
-          type: type,
-          cacheable: file.cacheable,
-          url: file.url,
-          size: file.size(),
-          hash: file.hash()
+    // Helper to iterate over all resources that we serve over HTTP.
+    var eachResource = function (f) {
+      _.each(["js", "css", "static"], function (type) {
+        _.each(self[type], function (file) {
+          f(file, type);
         });
       });
+    };
+
+    // Reserve all file names from the manifest, so that interleaved
+    // generateFilename calls don't overlap with them.
+    eachResource(function (file, type) {
+      builder.reserve(file.targetPath);
+    });
+
+    // Build up a manifest of all resources served via HTTP.
+    var manifest = [];
+    eachResource(function (file, type) {
+      var fileContents = file.contents();
+
+      var manifestItem = {
+        path: file.targetPath,
+        where: "client",
+        type: type,
+        cacheable: file.cacheable,
+        url: file.url
+      };
+
+      if (file.sourceMap) {
+        // Add anti-XSSI header to this file which will be served over
+        // HTTP. Note that the Mozilla and WebKit implementations differ as to
+        // what they strip: Mozilla looks for the four punctuation characters
+        // but doesn't care about the newline; WebKit only looks for the first
+        // three characters (not the single quote) and then strips everything up
+        // to a newline.
+        // https://groups.google.com/forum/#!topic/mozilla.dev.js-sourcemap/3QBr4FBng5g
+        var mapData = new Buffer(")]}'\n" + file.sourceMap, 'utf8');
+        manifestItem.sourceMap = builder.writeToGeneratedFilename(
+          file.targetPath + '.map', {data: mapData});
+
+        // Use a SHA to make this cacheable.
+        var sourceMapBaseName = file.hash() + ".map";
+        // XXX When we can, drop all of this and just use the SourceMap
+        //     header. FF doesn't support that yet, though:
+        //         https://bugzilla.mozilla.org/show_bug.cgi?id=765993
+        // Note: if we use the older '//@' comment, FF 24 will print a lot
+        // of warnings to the console. So we use the newer '//#' comment...
+        // which Chrome (28) doesn't support. So we also set X-SourceMap
+        // in webapp_server.
+        file.setContents(Buffer.concat([
+          file.contents(),
+          new Buffer("\n//# sourceMappingURL=" + sourceMapBaseName + "\n")
+        ]));
+        manifestItem.sourceMapUrl = require('url').resolve(
+          file.url, sourceMapBaseName);
+      }
+
+      // Set this now, in case we mutated the file's contents.
+      manifestItem.size = file.size();
+      manifestItem.hash = file.hash();
+
+      writeFile(file, builder);
+
+      manifest.push(manifestItem);
     });
 
     // HTML boilerplate (the HTML served to make the client load the
@@ -864,17 +936,8 @@ _.extend(ClientTarget.prototype, {
     // Control file
     builder.writeJson('program.json', {
       format: "browser-program-pre1",
-      manifest: manifest,
       page: 'app.html',
-
-      // XXX the following are for use by 'legacy' (read: current)
-      // server.js implementations which aren't smart enough to read
-      // the manifest and instead want all of the resources in a
-      // directory together so they can just point gzippo at it. we
-      // should remove this and make the server work from the
-      // manifest.
-      static: 'static',
-      staticCacheable: 'static_cacheable'
+      manifest: manifest
     });
     return "program.json";
   }
@@ -899,6 +962,7 @@ var JsImage = function () {
   // - source: JS source code to load, as a string
   // - nodeModulesDirectory: a NodeModulesDirectory indicating which
   //   directory should be searched by Npm.require()
+  // - sourceMap: if set, source map for this code, as a string
   // note: this can't be called `load` at it would shadow `load()`
   self.jsToLoad = [];
 
@@ -1002,11 +1066,15 @@ _.extend(JsImage.prototype, {
       }, bindings || {});
 
       try {
-        // XXX Get the actual source file path -- item.targetPath is
-        // not actually correct (it's the path in the bundle rather
-        // than in the source tree.) Moreover, we need to do source
-        // mapping.
-        files.runJavaScript(item.source, item.targetPath, env);
+        // XXX XXX Get the actual source file path -- item.targetPath
+        // is not actually correct (it's the path in the bundle rather
+        // than in the source tree.)
+        files.runJavaScript(item.source.toString('utf8'), {
+          filename: item.targetPath,
+          symbols: env,
+          sourceMap: item.sourceMap,
+          sourceMapRoot: item.sourceMapRoot
+        });
       } catch (e) {
         buildmessage.exception(e);
         // Recover by skipping the rest of the load
@@ -1025,7 +1093,7 @@ _.extend(JsImage.prototype, {
   write: function (builder) {
     var self = this;
 
-    builder.reserve("program.js");
+    builder.reserve("program.json");
 
     // Finalize choice of paths for node_modules directories -- These
     // paths are no longer just "preferred"; they are the final paths
@@ -1045,14 +1113,28 @@ _.extend(JsImage.prototype, {
       if (! item.targetPath)
         throw new Error("No targetPath?");
 
-      builder.write(item.targetPath, { data: new Buffer(item.source, 'utf8') });
-      load.push({
-        path: item.targetPath,
+      var loadPath = builder.writeToGeneratedFilename(
+        item.targetPath,
+        { data: new Buffer(item.source, 'utf8') });
+      var loadItem = {
+        path: loadPath,
         node_modules: item.nodeModulesDirectory ?
           item.nodeModulesDirectory.preferredBundlePath : undefined,
         staticDirectory: item.staticDirectory ?
           item.staticDirectory.bundlePath : undefined
-      });
+      };
+
+      if (item.sourceMap) {
+        // Write the source map.
+        // XXX this code is very similar to saveAsUnipackage.
+        loadItem.sourceMap = builder.writeToGeneratedFilename(
+          item.targetPath + '.map',
+          { data: new Buffer(item.sourceMap, 'utf8') }
+        );
+        loadItem.sourceMapRoot = item.sourceMapRoot;
+      }
+
+      load.push(loadItem);
     });
 
     // node_modules resources from the packages. Due to appropriate
@@ -1070,9 +1152,9 @@ _.extend(JsImage.prototype, {
 
     // Control file
     builder.writeJson('program.json', {
-      load: load,
       format: "javascript-image-pre1",
-      arch: self.arch
+      arch: self.arch,
+      load: load
     });
     return "program.json";
   }
@@ -1093,11 +1175,11 @@ JsImage.readFromDisk = function (controlFilePath) {
   ret.arch = json.arch;
 
   _.each(json.load, function (item) {
-    if (item.path.match(/\.\./))
-      throw new Error("bad path in plugin bundle");
+    rejectBadPath(item.path);
 
     var nmd = undefined;
     if (item.node_modules) {
+      rejectBadPath(item.node_modules);
       var node_modules = path.join(dir, item.node_modules);
       if (! (node_modules in ret.nodeModulesDirectories)) {
         ret.nodeModulesDirectories[node_modules] =
@@ -1109,14 +1191,22 @@ JsImage.readFromDisk = function (controlFilePath) {
       nmd = ret.nodeModulesDirectories[node_modules];
     }
 
-    ret.jsToLoad.push({
+    var loadItem = {
       targetPath: item.path,
       source: fs.readFileSync(path.join(dir, item.path)),
       nodeModulesDirectory: nmd,
       staticDirectory: new StaticDirectory({
         sourcePath: item.staticDirectory
       })
-    });
+    };
+    if (item.sourceMap) {
+      // XXX this is the same code as initFromUnipackage
+      rejectBadPath(item.sourceMap);
+      loadItem.sourceMap = fs.readFileSync(
+        path.join(dir, item.sourceMap), 'utf8');
+      loadItem.sourceMapRoot = item.sourceMapRoot;
+    }
+    ret.jsToLoad.push(loadItem);
   });
 
   return ret;
@@ -1144,7 +1234,9 @@ _.extend(JsImageTarget.prototype, {
         targetPath: file.targetPath,
         source: file.contents().toString('utf8'),
         nodeModulesDirectory: file.nodeModulesDirectory,
-        staticDirectory: file.staticDirectory
+        staticDirectory: file.staticDirectory,
+        sourceMap: file.sourceMap,
+        sourceMapRoot: file.sourceMapRoot
       });
     });
 
@@ -1380,7 +1472,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
     // Affordances for standalone use
     if (targets.server) {
       // add program.json as the first argument after "node main.js" to the boot script.
-      var stub = new Buffer("process.argv.splice(2, 0, 'program.json');\nrequire('./programs/server/boot.js');\n", 'utf8');
+      var stub = new Buffer("process.argv.splice(2, 0, 'program.json');\nprocess.chdir(require('path').join(__dirname, 'programs', 'server'));\nrequire('./programs/server/boot.js');\n", 'utf8');
       builder.write('main.js', { data: stub });
 
       builder.write('README', { data: new Buffer(
@@ -1526,9 +1618,8 @@ exports.bundle = function (appDir, outputPath, options) {
       assetDirs = assetDirs || [];
       var clientAssetDirs = getValidAssetDirs(assetDirs, {
         exclude: ignoreFiles,
-        setUrl: true
-        // No need to set targetPath when the asset dir is added;
-        // the target path will be set later in assignTargetPaths.
+        setUrl: true,
+        setTargetPath: true
       });
 
       client.make({
@@ -1560,9 +1651,11 @@ exports.bundle = function (appDir, outputPath, options) {
       assetDirs = assetDirs || [];
       var serverAssetDirs = getValidAssetDirs(assetDirs, {
         exclude: ignoreFiles,
-        setTargetPath: true
         // We need to set the target path when the asset dir is added,
         // because the target path comes from the asset's path.
+        setTargetPath: true,
+        // XXX this is a hack, re-assess how the subdirs are named
+        useSubDirectory: true
       });
       var targetOptions = {
         library: library,

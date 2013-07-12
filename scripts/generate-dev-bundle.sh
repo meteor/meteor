@@ -110,6 +110,20 @@ npm install kexec@0.1.1
 npm install shell-quote@0.0.1
 npm install byline@2.0.3
 
+# Using the unreleased 1.1 branch. We can probably switch to a built NPM version
+# when it gets released.
+npm install https://github.com/ariya/esprima/tarball/5044b87f94fb802d9609f1426c838874ec2007b3
+
+# Fork of source-map which fixes one function with empty maps.
+#   https://github.com/mozilla/source-map/pull/70
+# See also below, where we get it into source-map-support.
+npm install https://github.com/meteor/source-map/tarball/4a52398901fdb4b55b06ef4dd8b69f8256072b09
+
+# Fork of node-source-map-support which allows us to specify our own
+# retrieveSourceMap function, and uses the above version of source-map.
+# XXX send a pull request
+npm install https://github.com/meteor/node-source-map-support/tarball/d048eaa765bf743ddaad64716647f8760e2b8507
+
 # uglify-js has a bug which drops 'undefined' in arrays:
 # https://github.com/mishoo/UglifyJS2/pull/97
 npm install https://github.com/meteor/UglifyJS2/tarball/aa5abd14d3

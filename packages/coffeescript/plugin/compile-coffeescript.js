@@ -2,6 +2,7 @@ var fs = Npm.require('fs');
 var path = Npm.require('path');
 var coffee = Npm.require('coffee-script');
 var _ = Npm.require('underscore');
+var sourcemap = Npm.require('source-map');
 
 var stripExportedVars = function (source, exports) {
   if (!exports || _.isEmpty(exports))
@@ -28,33 +29,50 @@ var stripExportedVars = function (source, exports) {
   // XXX relax these assumptions by doing actual JS parsing (eg with jsparse).
   //     I'd do this now, but there's no easy way to "unparse" a jsparse AST.
 
-  var foundVarLine = false;
-  lines = _.map(lines, function (line) {
-    if (foundVarLine)
-      return line;
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
     var match = /^var (.+)([,;])$/.exec(line);
     if (!match)
-      return line;
-    foundVarLine = true;
+      continue;
 
     // If there's an assignment on this line, we assume that there are ONLY
     // assignments and that the var we are looking for is not declared. (Part
     // of our strong assumption about the layout of this code.)
     if (match[1].indexOf('=') !== -1)
-      return line;
+      continue;
+
+    // We want to replace the line with something no shorter, so that all
+    // records in the source map continue to point at valid
+    // characters.
+    var replaceLine = function (x) {
+      if (x.length >= lines[i].length) {
+        lines[i] = x;
+      } else {
+        lines[i] = x + new Array(1 + (lines[i].length - x.length)).join(' ');
+      }
+    };
 
     var vars = match[1].split(', ');
     vars = _.difference(vars, exports);
-    if (!_.isEmpty(vars))
-      return "var " + vars.join(', ') + match[2];
-    // We got rid of all the vars on this line. Drop the whole line if this
-    // didn't continue to the next line, otherwise keep just the 'var '.
-    return match[2] === ';' ? '' : 'var';
-  });
+    if (!_.isEmpty(vars)) {
+      replaceLine("var " + vars.join(', ') + match[2]);
+    } else {
+      // We got rid of all the vars on this line. Drop the whole line if this
+      // didn't continue to the next line, otherwise keep just the 'var '.
+      if (match[2] === ';')
+        replaceLine('');
+      else
+        replaceLine('var');
+    }
+    break;
+  }
+
   return lines.join('\n');
 };
 
-var addSharedHeader = function (source) {
+var addSharedHeader = function (source, sourceMap) {
+  var sourceMapJSON = JSON.parse(sourceMap);
+
   // We want the symbol "share" to be visible to all CoffeeScript files in the
   // package (and shared between them), but not visible to JavaScript
   // files. (That's because we don't want to introduce two competing ways to
@@ -73,17 +91,42 @@ var addSharedHeader = function (source) {
 
   // If the file begins with "use strict", we need to keep that as the first
   // statement.
-  return source.replace(/^(?:(['"])use strict\1;\n)?/, function (match) {
-    return match + header;
+  source = source.replace(/^(?:((['"])use strict\2;)\n)?/, function (match, useStrict) {
+    if (match) {
+      // There's a "use strict"; we keep this as the first statement and insert
+      // our header at the end of the line that it's on. This doesn't change
+      // line numbers or the part of the line that previous may have been
+      // annotated, so we don't need to update the source map.
+      return useStrict + "  " + header;
+    } else {
+      // There's no use strict, so we can just add the header at the very
+      // beginning. This adds a line to the file, so we update the source map to
+      // add a single un-annotated line to the beginning.
+      sourceMapJSON.mappings = ";" + sourceMapJSON.mappings;
+      return header;
+    }
   });
+  return {
+    source: source,
+    sourceMap: JSON.stringify(sourceMapJSON)
+  };
 };
 
 var handler = function (compileStep) {
   var source = compileStep.read().toString('utf8');
+  var outputFile = compileStep.inputPath + ".js";
   var options = {
     bare: true,
     filename: compileStep.inputPath,
-    literate: path.extname(compileStep.inputPath) === '.litcoffee'
+    literate: path.extname(compileStep.inputPath) === '.litcoffee',
+    // Return a source map.
+    sourceMap: true,
+    // Include the original source in the source map (sourcesContent field).
+    inline: true,
+    // This becomes the "file" field of the source map.
+    generatedFile: "/" + outputFile,
+    // This becomes the "sources" field of the source map.
+    sourceFiles: [compileStep.pathForSourceMap]
   };
 
   try {
@@ -98,13 +141,14 @@ var handler = function (compileStep) {
   }
 
   compileStep.addJavaScript({
-    path: compileStep.inputPath + ".js",
+    path: outputFile,
     sourcePath: compileStep.inputPath,
-    data: output,
-    lineForLine: false,
-    linkerUnitTransform: function (source, exports) {
-      return addSharedHeader(stripExportedVars(source, exports));
-    }
+    data: output.js,
+    linkerFileTransform: function (sourceWithMap, exports) {
+      var stripped = stripExportedVars(sourceWithMap.source, exports);
+      return addSharedHeader(stripped, sourceWithMap.sourceMap);
+    },
+    sourceMap: output.v3SourceMap
   });
 };
 

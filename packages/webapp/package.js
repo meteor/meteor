@@ -4,6 +4,7 @@ Package.describe({
 });
 
 Npm.depends({connect: "2.7.10",
+             send: "0.1.0",
              useragent: "2.0.1"});
 
 Package.on_use(function (api) {

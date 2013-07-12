@@ -4,14 +4,11 @@ Tinytest.add("logging - _getCallerDetails", function (test) {
   // in Chrome and Firefox, other browsers don't give us an ability to get
   // stacktrace.
   if ((new Error).stack) {
-    //test.equal(details, { file: 'logging_test.js', line: 2 });
-    // XXX: When we have source maps, we should uncomment the test above and
-    // remove this one
-    test.isTrue(details.file === 'logging.tests.js');
+    test.equal(details.file, 'tinytest.js');
 
     // evaled statements shouldn't crash
     var code = "Log._getCallerDetails().file";
-    test.matches(eval(code), /^eval|logging.tests.js$/);
+    test.matches(eval(code), /^eval|tinytest.js$/);
   }
 });
 
