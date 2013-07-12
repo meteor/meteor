@@ -646,7 +646,12 @@ var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
   "",
   "If you are using Chrome, open the Developer Tools and click the gear",
   "icon in its lower right corner. In the General Settings panel, turn",
-  "on 'Enable source maps'."
+  "on 'Enable source maps'.",
+  "",
+  "If you are using Firefox 23, go to `about:config` and set the",
+  "`devtools.debugger.source-maps-enabled` preference to true.",
+  "(The preference should be on by default in Firefox 24; versions",
+  "older than 23 do not support source maps.)"
 ]);
 
 // Finish the linking.

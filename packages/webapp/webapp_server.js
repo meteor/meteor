@@ -227,12 +227,14 @@ var runWebAppServer = function () {
     if (item.url && item.where === "client") {
       staticFiles[url.parse(item.url).pathname] = {
         path: item.path,
-        cacheable: item.cacheable
+        cacheable: item.cacheable,
+        // Link from source to its map
+        sourceMapUrl: item.sourceMapUrl
       };
 
-      // Serve the source map too, under the specified URL. We assume all source
-      // maps are cacheable.
       if (item.sourceMap) {
+        // Serve the source map too, under the specified URL. We assume all
+        // source maps are cacheable.
         staticFiles[url.parse(item.sourceMapUrl).pathname] = {
           path: item.sourceMap,
           cacheable: true
@@ -282,15 +284,15 @@ var runWebAppServer = function () {
           ? 1000 * 60 * 60 * 24 * 365
           : 1000 * 60 * 60 * 24;
 
-    // It sure would be nice to write this here:
-    //  res.setHeader('X-SourceMap', urlToSourceMap);
-    // Or even just SourceMap, but slightly more versions of Chrome support the
-    // older X-SourceMap.
+    // Set the X-SourceMap header, which current Chrome understands.
+    // (The files also contain '//#' comments which FF 24 understands and
+    // Chrome doesn't understand yet.)
     //
-    // But we'd like to support FF, so for now we just use the "//@" comment at
-    // the end of the source map file.
+    // Eventually we should set the SourceMap header but the current version of
+    // Chrome and no version of FF supports it.
     //
-    // To figure out if your version of Chrome should support SourceMap,
+    // To figure out if your version of Chrome should support the SourceMap
+    // header,
     //   - go to chrome://version. Let's say the Chrome version is
     //      28.0.1500.71 and the Blink version is 537.36 (@153022)
     //   - go to http://src.chromium.org/viewvc/blink/branches/chromium/1500/Source/core/inspector/InspectorPageAgent.cpp?view=log
@@ -305,9 +307,13 @@ var runWebAppServer = function () {
     // You also need to enable source maps in Chrome: open dev tools, click
     // the gear in the bottom right corner, and select "enable source maps".
     //
-    // Firefox 23+ supports source maps (and they are on by default in 24+),
-    // but doesn't support either header yet:
+    // Firefox 23+ supports source maps but doesn't support either header yet,
+    // so we include the '//#' comment for it:
     //   https://bugzilla.mozilla.org/show_bug.cgi?id=765993
+    // In FF 23 you need to turn on `devtools.debugger.source-maps-enabled`
+    // in `about:config` (it is on by default in FF 24).
+    if (info.sourceMapUrl)
+      res.setHeader('X-SourceMap', info.sourceMapUrl);
 
     send(req, path.join(clientDir, info.path))
       .maxage(maxAge)
