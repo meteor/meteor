@@ -5,7 +5,7 @@ BUNDLE_VERSION=0.3.6
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
 UNAME=$(uname)
-if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
+if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" -a "$UNAME" != "FreeBSD" ] ; then
     echo "Sorry, this OS is not supported."
     exit 1
 fi
@@ -22,6 +22,13 @@ if [ "$UNAME" = "Darwin" ] ; then
 elif [ "$UNAME" = "Linux" ] ; then
     ARCH="$(uname -m)"
     if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
+        echo "Unsupported architecture: $ARCH"
+        echo "Meteor only supports i686 and x86_64 for now."
+        exit 1
+    fi
+elif [ "$UNAME" = "FreeBSD" ] ; then
+    ARCH="$(uname -m)"
+    if [ "$ARCH" != "i386" -a "$ARCH" != "amd64" ] ; then
         echo "Unsupported architecture: $ARCH"
         echo "Meteor only supports i686 and x86_64 for now."
         exit 1

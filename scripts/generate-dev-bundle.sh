@@ -13,6 +13,19 @@ if [ "$UNAME" == "Linux" ] ; then
         exit 1
     fi
     MONGO_OS="linux"
+    MAKE="make"
+
+    stripBinary() {
+        strip --remove-section=.comment --remove-section=.note $1
+    }
+elif [ "$UNAME" == "FreeBSD" ] ; then
+    if [ "$ARCH" != "i386" -a "$ARCH" != "amd64" ] ; then
+        echo "Unsupported architecture: $ARCH"
+        echo "Meteor only supports i686 and x86_64 for now."
+        exit 1
+    fi
+    MONGO_OS="freebsd"
+    MAKE="gmake"
 
     stripBinary() {
         strip --remove-section=.comment --remove-section=.note $1
@@ -33,6 +46,7 @@ elif [ "$UNAME" == "Darwin" ] ; then
     fi
 
     MONGO_OS="osx"
+    MAKE="make"
 
     # We don't strip on Mac because we don't know a safe command. (Can't strip
     # too much because we do need node to be able to load objects like
@@ -77,8 +91,8 @@ cd node
 git checkout v0.8.18
 
 ./configure --prefix="$DIR"
-make -j4
-make install PORTABLE=1
+$MAKE -j4
+$MAKE install PORTABLE=1
 # PORTABLE=1 is a node hack to make npm look relative to itself instead
 # of hard coding the PREFIX.
 
@@ -141,11 +155,34 @@ cd ../..
 # click 'changelog' under the current version, then 'release notes' in
 # the upper right.
 cd "$DIR"
-MONGO_VERSION="2.4.3"
-MONGO_NAME="mongodb-${MONGO_OS}-${ARCH}-${MONGO_VERSION}"
-MONGO_URL="http://fastdl.mongodb.org/${MONGO_OS}/${MONGO_NAME}.tgz"
-curl "$MONGO_URL" | tar -xz
-mv "$MONGO_NAME" mongodb
+if [ "$MONGO_OS" != "freebsd" ] ; then
+    MONGO_VERSION="2.4.3"
+    MONGO_NAME="mongodb-${MONGO_OS}-${ARCH}-${MONGO_VERSION}"
+    MONGO_URL="http://fastdl.mongodb.org/${MONGO_OS}/${MONGO_NAME}.tgz"
+    curl "$MONGO_URL" | tar -xz
+    mv "$MONGO_NAME" mongodb
+else
+    cp -R /usr/ports/databases/mongodb mongodb-build
+    cd mongodb-build
+    make
+    cd ..
+    mkdir -p mongodb/bin
+    cp mongodb-build/work/mongodb-src-r2.4.4/bsondump mongodb/bin
+    cp mongodb-build/work/mongodb-src-r2.4.4/mongo mongodb/bin
+    cp mongodb-build/work/mongodb-src-r2.4.4/mongod mongodb/bin
+    cp mongodb-build/work/mongodb-src-r2.4.4/mongodump mongodb/bin
+    cp mongodb-build/work/mongodb-src-r2.4.4/mongoexport mongodb/bin
+    cp mongodb-build/work/mongodb-src-r2.4.4/mongofiles mongodb/bin
+    cp mongodb-build/work/mongodb-src-r2.4.4/mongoimport mongodb/bin
+    cp mongodb-build/work/mongodb-src-r2.4.4/mongooplog mongodb/bin
+    cp mongodb-build/work/mongodb-src-r2.4.4/mongoperf mongodb/bin
+    cp mongodb-build/work/mongodb-src-r2.4.4/mongorestore mongodb/bin
+    cp mongodb-build/work/mongodb-src-r2.4.4/mongos mongodb/bin
+    cp mongodb-build/work/mongodb-src-r2.4.4/mongosniff mongodb/bin
+    cp mongodb-build/work/mongodb-src-r2.4.4/mongostat mongodb/bin
+    cp mongodb-build/work/mongodb-src-r2.4.4/mongotop mongodb/bin
+    rm -R mongodb-build
+fi
 
 # don't ship a number of mongo binaries. they are big and unused. these
 # could be deleted from git dev_bundle but not sure which we'll end up
