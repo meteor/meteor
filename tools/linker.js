@@ -1,5 +1,6 @@
 var fs = require('fs');
 var _ = require('underscore');
+var sourcemap = require('source-map');
 var buildmessage = require('./buildmessage');
 
 var packageDot = function (name) {
@@ -7,21 +8,6 @@ var packageDot = function (name) {
     return "Package." + name;
   else
     return "Package['" + name + "']";
-};
-
-var generateBoundary = function () {
-  // In a perfect world we would call Packages.random.Random.id().
-  // But we can't do that this is part of the code that is used to
-  // compile and load packages. So let it slide for now and provide a
-  // version based on (the completely non-cryptographic) Math.random,
-  // which is good enough for this particular application.
-  var alphabet = "23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz";
-  var digits = [];
-  for (var i = 0; i < 17; i++) {
-    var index = Math.floor(Math.random() * alphabet.length);
-    digits[i] = alphabet.substr(index, 1);
-  }
-  return "__imports_" + digits.join("") + "__";
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -39,9 +25,6 @@ var Module = function (options) {
 
   // files in the module. array of File
   self.files = [];
-
-  // boundary to use to mark where import should go in final phase
-  self.boundary = generateBoundary();
 
   // options
   self.forceExport = options.forceExport || [];
@@ -77,6 +60,13 @@ _.extend(Module.prototype, {
     return _.max(maxInFile);
   },
 
+  runLinkerFileTransforms: function (exports) {
+    var self = this;
+    _.each(self.files, function (f) {
+      f.runLinkerFileTransform(exports);
+    });
+  },
+
   // Figure out which vars need to be specifically put in the module
   // scope.
   //
@@ -87,15 +77,15 @@ _.extend(Module.prototype, {
   // and see what your globals are. Probably this means we need to
   // move the emission of the Package-scope Variables section (but not
   // the actual static analysis) to the final phase.
-  computeModuleScopedVars: function () {
+  computeModuleScopeVars: function (exports) {
     var self = this;
 
     if (!self.jsAnalyze) {
       // We don't have access to static analysis, probably because we *are* the
       // js-analyze package.  Let's do a stupid heuristic: any exports that have
-      // no dots are module scoped vars. (This works for
+      // no dots are module scope vars. (This works for
       // js-analyze.JSAnalyze...)
-      return _.filter(self.getExports(), function (e) {
+      return _.filter(exports, function (e) {
         return e.indexOf('.') === -1;
       });
     }
@@ -107,68 +97,68 @@ _.extend(Module.prototype, {
     });
     globalReferences = _.uniq(globalReferences);
 
-    return globalReferences;
+    return _.isEmpty(globalReferences) ? undefined : globalReferences;
   },
 
-  // Output is a list of objects with keys 'source' and 'servePath'.
-  getLinkedFiles: function () {
+  // Output is a list of objects with keys 'source', 'servePath', 'sourceMap',
+  // 'sourcePath'
+  getPrelinkedFiles: function (moduleExports) {
     var self = this;
 
-    if (! self.files.length && ! self.useGlobalNamespace)
+    if (! self.files.length)
       return [];
-
-    var moduleExports = self.getExports();
 
     // If we don't want to create a separate scope for this module,
     // then our job is much simpler. And we can get away with
     // preserving the line numbers.
     if (self.useGlobalNamespace) {
-      var ret = [{
-        source: self.boundary,
-        servePath: self.importStubServePath
-      }];
+      return _.map(self.files, function (file) {
+        var node = file.getPrelinkedOutput({ preserveLineNumbers: true,
+                                             exports: moduleExports });
+        var results = node.toStringWithSourceMap({
+          file: file.servePath
+        }); // results has 'code' and 'map' attributes
 
-      return ret.concat(_.map(self.files, function (file) {
+        var sourceMap = results.map.toJSON();
+        // No use generating empty source maps.
+        if (_.isEmpty(sourceMap.sources))
+          sourceMap = null;
+        else
+          sourceMap = JSON.stringify(sourceMap);
+
         return {
-          source: file.getLinkedOutput({ preserveLineNumbers: true,
-                                         exports: moduleExports }),
-          servePath: file.servePath
+          source: results.code,
+          servePath: file.servePath,
+          sourceMap: sourceMap
         };
-      }));
+      });
     }
 
     // Otherwise..
 
-    // Find the maximum line length. The extra three are for the
-    // comments that will be emitted when we skip a unit.
-    var sourceWidth = _.max([68, self.maxLineLength(120 - 2)]) + 3;
-
-    // Figure out which variables are module scope
-    var moduleScopedVars = self.computeModuleScopedVars();
+    // Find the maximum line length.
+    var sourceWidth = _.max([68, self.maxLineLength(120 - 2)]);
 
     // Prologue
-    var combined = "(function () {\n\n";
-    combined += self.boundary;
-
-    if (moduleScopedVars.length) {
-      combined += "/* Package-scope variables */\n";
-      combined += "var " + moduleScopedVars.join(', ') + ";\n\n";
-    }
+    var chunks = [];
 
     // Emit each file
     _.each(self.files, function (file) {
-      combined += file.getLinkedOutput({ sourceWidth: sourceWidth,
-                                         exports: moduleExports });
-      combined += "\n";
+      if (!_.isEmpty(chunks))
+        chunks.push("\n\n\n\n\n\n");
+      chunks.push(file.getPrelinkedOutput({ sourceWidth: sourceWidth,
+                                            exports: moduleExports }));
     });
 
-    // Epilogue
-    combined += self.getExportCode();
-    combined += "\n})();";
+    var node = new sourcemap.SourceNode(null, null, null, chunks);
 
+    var results = node.toStringWithSourceMap({
+      file: self.combinedServePath
+    }); // results has 'code' and 'map' attributes
     return [{
-      source: combined,
-      servePath: self.combinedServePath
+      source: results.code,
+      servePath: self.combinedServePath,
+      sourceMap: results.map.toString()
     }];
   },
 
@@ -181,51 +171,11 @@ _.extend(Module.prototype, {
 
     var exports = {};
     _.each(self.files, function (file) {
-      _.each(file.units, function (unit) {
-        _.extend(exports, unit.exports);
-      });
+      _.extend(exports, file.exports);
     });
 
     return _.union(_.keys(exports), self.forceExport);
-  },
-
-  // Return code that saves our exports to Package.packagename.foo.bar
-  getExportCode: function () {
-    var self = this;
-    if (! self.name)
-      return "";
-    // If we're a no-exports module, then we have no export code (not even
-    // creating Package.foo).
-    if (self.noExports)
-      return "";
-    if (self.useGlobalNamespace)
-      // Haven't thought about this case. When would this happen?
-      throw new Error("Not implemented: exports from global namespace");
-
-    var buf = "/* Exports */\n";
-    buf += "if (typeof Package === 'undefined') Package = {};\n";
-    buf += packageDot(self.name) + " = ";
-
-    var exports = self.getExports();
-    // Even if there are no exports, we need to define Package.foo, because the
-    // existence of Package.foo is how another package (eg, one that weakly
-    // depends on foo) can tell if foo is loaded.
-    if (exports.length === 0)
-      return buf + "{};\n";
-
-    // Given exports like Foo, Bar.Baz, Bar.Quux.A, and Bar.Quux.B,
-    // construct an expression like
-    // {Foo: Foo, Bar: {Baz: Bar.Baz, Quux: {A: Bar.Quux.A, B: Bar.Quux.B}}}
-    var scratch = {};
-    _.each(self.getExports(), function (symbol) {
-      scratch[symbol] = symbol;
-    });
-    var exportTree = buildSymbolTree(scratch);
-    buf += writeSymbolTree(exportTree, 0);
-    buf += ";\n";
-    return buf;
   }
-
 });
 
 // Given 'symbolMap' like {Foo: 's1', 'Bar.Baz': 's2', 'Bar.Quux.A': 's3', 'Bar.Quux.B': 's4'}
@@ -285,44 +235,103 @@ var File = function (inputFile, module) {
   // the path where this file would prefer to be served if possible
   self.servePath = inputFile.servePath;
 
-  // the path to use for error message
+  // The relative path of this input file in its source tree (eg,
+  // package or app.) Used for source maps, error messages..
   self.sourcePath = inputFile.sourcePath;
-
-  // should line and column be included in errors?
-  self.includePositionInErrors = inputFile.includePositionInErrors;
-
-  // The individual @units in the file. Array of Unit. Concatenating
-  // the source of each unit, in order, will give self.source.
-  self.units = [];
 
   // A function which transforms the source code once all exports are
   // known. (eg, for CoffeeScript.)
-  self.linkerUnitTransform =
-    inputFile.linkerUnitTransform || function (source, exports) {
-      return source;
+  self.linkerFileTransform =
+    inputFile.linkerFileTransform || function (sourceWithMap, exports) {
+      return sourceWithMap;
     };
 
   // If true, don't wrap this individual file in a closure.
   self.bare = !!inputFile.bare;
 
+  // A source map (generated by something like CoffeeScript) for the input file.
+  self.sourceMap = inputFile.sourceMap;
+
   // The Module containing this file.
   self.module = module;
 
-  self._unitize();
+  // symbols mentioned in @export, @require, @provide, or @weak
+  // directives. each is a map from the symbol (given as a string) to
+  // true. (only @export is actually implemented)
+  self.exports = {};
+  self.requires = {};
+  self.provides = {};
+  self.weaks = {};
+
+  self._scanForComments();
 };
 
 _.extend(File.prototype, {
-  // Return the union of the global references in all of the units in
-  // this file that we are actually planning to use. Array of string.
+  // Return the globals in this file as an array of symbol names.  For
+  // example: if the code references 'Foo.bar.baz' and 'Quux', and
+  // neither are declared in a scope enclosing the point where they're
+  // referenced, then globalReferences would include ["Foo", "Quux"].
   computeGlobalReferences: function () {
     var self = this;
 
-    var globalReferences = [];
-    _.each(self.units, function (unit) {
-      if (unit.include)
-        globalReferences = globalReferences.concat(unit.computeGlobalReferences());
-    });
-    return globalReferences;
+    var jsAnalyze = self.module.jsAnalyze;
+    // If we don't have a JSAnalyze object, we probably are the js-analyze
+    // package itself. Assume we have no global references. At the module level,
+    // we'll assume that exports are global references.
+    if (!jsAnalyze)
+      return [];
+
+    try {
+      return _.keys(jsAnalyze.findAssignedGlobals(self.source));
+    } catch (e) {
+      if (!e.$ParseError)
+        throw e;
+
+      var errorOptions = {
+        file: self.sourcePath,
+        line: e.lineNumber,
+        column: e.column
+      };
+      if (self.sourceMap) {
+        var parsed = new sourcemap.SourceMapConsumer(self.sourceMap);
+        var original = parsed.originalPositionFor(
+          {line: e.lineNumber, column: e.column - 1});
+        if (original.source) {
+          errorOptions.file = original.source;
+          errorOptions.line = original.line;
+          errorOptions.column = original.column + 1;
+        }
+      }
+
+      buildmessage.error(e.description, errorOptions);
+
+      // Recover by pretending that this file is empty (which
+      // includes replacing its source code with '' in the output)
+      self.source = "";
+      self.sourceMap = null;
+      return [];
+    }
+  },
+
+
+  // Relative path to use in source maps to indicate this file. No
+  // leading slash.
+  _pathForSourceMap: function () {
+    var self = this;
+
+    if (self.module.name)
+      return self.module.name + "/" + self.sourcePath;
+    else
+      return require('path').basename(self.sourcePath);
+  },
+
+  runLinkerFileTransform: function (exports) {
+    var self = this;
+    var sourceAndMap = self.linkerFileTransform(
+      {source: self.source, sourceMap: self.sourceMap},
+      exports);
+    self.source = sourceAndMap.source;
+    self.sourceMap = sourceAndMap.sourceMap;
   },
 
   // Options:
@@ -331,73 +340,121 @@ _.extend(File.prototype, {
   //   sourceWidth is ignored.
   // - sourceWidth: width in columns to use for the source code
   // - exports: the module's exports
-  getLinkedOutput: function (options) {
+  //
+  // Returns a SourceNode.
+  getPrelinkedOutput: function (options) {
     var self = this;
-
-    // XXX XXX if a unit is not going to be used, prepend each line with '//'
 
     // The newline after the source closes a '//' comment.
     if (options.preserveLineNumbers) {
       // Ugly version
-      var body = self.linkerUnitTransform(self.source, options.exports);
-      if (body.length && body[body.length - 1] !== '\n')
-        body += '\n';
-      return self.bare ? body : ("(function(){" + body + "})();\n");
+      var mapNode;
+      if (self.sourceMap) {
+        mapNode = sourcemap.SourceNode.fromStringWithSourceMap(
+          self.source, new sourcemap.SourceMapConsumer(self.sourceMap));
+      } else {
+        // This is an app file that was always JS. The output file here is going
+        // to be the same name as the input file (because _pathForSourceMap in
+        // apps is the basename of the source file), and having a JS file
+        // pointing to a source map pointing to a JS file of the same name will
+        // (a) be confusing (b) be unnecessary since we aren't renumbering
+        // anything and (c) confuse at least Chrome.
+        mapNode = self.source;
+      }
+
+      return new sourcemap.SourceNode(null, null, null, [
+        self.bare ? "" : "(function(){",
+        mapNode,
+        (self.source.length && self.source[self.source.length - 1] !== '\n'
+         ? "\n" : ""),
+        self.bare ? "" : "\n})();\n"
+      ]);
     }
 
     // Pretty version
-    var buf = "";
+    var chunks = [];
 
     // Prologue
-    if (!self.bare)
-      buf += "(function () {\n\n";
+    if (! self.bare)
+      chunks.push("(function () {\n\n");
 
     // Banner
+    var bannerLines = [self.servePath.slice(1)];
+    if (self.bare) {
+      bannerLines.push(
+        "This file is in bare mode and is not in its own closure.");
+    }
     var width = options.sourceWidth || 70;
     var bannerWidth = width + 3;
-    var divider = new Array(bannerWidth + 1).join('/') + "\n";
-    var spacer = "// " + new Array(bannerWidth - 6 + 1).join(' ') + " //\n";
-    var padding = new Array(bannerWidth + 1).join(' ');
+    var padding = bannerPadding(bannerWidth);
+    chunks.push(banner(bannerLines, bannerWidth));
     var blankLine = new Array(width + 1).join(' ') + " //\n";
-    buf += divider + spacer;
-    buf += "// " + (self.servePath.slice(1) + padding).slice(0, bannerWidth - 6) +
-      " //\n";
-    if (self.bare) {
-      var bareText = "This file is in bare mode and is not in its own closure.";
-      buf += "// " + (bareText + padding).slice(0, bannerWidth - 6) + " //\n";
-    }
-    buf += spacer + divider + blankLine;
+    chunks.push(blankLine);
 
     // Code, with line numbers
     // You might prefer your line numbers at the beginning of the
     // line, with /* .. */. Well, that requires parsing the source for
     // comments, because you have to do something different if you're
     // already inside a comment.
-    var num = 1;
-    _.each(self.units, function (unit) {
-      var unitSource = self.linkerUnitTransform(unit.source, options.exports);
-      var lines = unitSource.split('\n');
 
+    var numberifyLines = function (f) {
+      var num = 1;
+      var lines = self.source.split('\n');
       _.each(lines, function (line) {
-        if (! unit.include)
-          line = "// " + line;
-        if (line.length > width)
-          buf += line + "\n";
-        else
-          buf += (line + padding).slice(0, width) + " // " + num + "\n";
+        var suffix = "\n";
+
+        if (line.length <= width) {
+          suffix = padding.slice(line.length, width) + " // " + num + "\n";
+        }
+        f(line, suffix, num);
         num++;
       });
-    });
+    };
+
+    var lines = self.source.split('\n');
+
+    if (self.sourceMap) {
+      var buf = "";
+      numberifyLines(function (line, suffix) {
+        buf += line;
+        buf += suffix;
+      });
+      // The existing source map is valid because all we're doing is adding
+      // things to the end of lines, which doesn't affect the source map.  (If
+      // we wanted to be picky, we could add some explicitly non-mapped regions
+      // to the source map to cover the suffixes, which would make this
+      // equivalent to the "no source map coming in" case, but this doesn't seem
+      // that important.)
+      chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
+        self.source,
+        new sourcemap.SourceMapConsumer(self.sourceMap)));
+    } else {
+      // There are probably ways to make a more compact source map. For example,
+      // the only change we make is to append a comment, so we can probably emit
+      // one mapping for the whole file. For the moment, we'll do it by the book
+      // just to see how it goes.
+      numberifyLines(function (line, suffix, num) {
+        chunks.push(new sourcemap.SourceNode(num, 0, self._pathForSourceMap(),
+                                             line));
+        chunks.push(suffix);
+      });
+    }
 
     // Footer
-    buf += divider;
+    if (! self.bare)
+      chunks.push(dividerLine(bannerWidth) + "\n}).call(this);\n");
 
-    // Epilogue
-    if (!self.bare)
-      buf += "\n}).call(this);\n";
-    buf += "\n\n\n\n\n";
+    var node = new sourcemap.SourceNode(null, null, null, chunks);
 
-    return buf;
+    // If we're working directly from the original source here (and not from the
+    // output of a transformation that had a source map), include the original
+    // source in the source map. (If we are working on generated code, the
+    // source map we received should have already contained the original
+    // source.)
+    if (!self.sourceMap)
+      node.setSourceContent(self._pathForSourceMap(), self.source);
+
+    return node;
   },
 
   // If "line" contains nothing but a comment (of either syntax), return the
@@ -418,159 +475,73 @@ _.extend(File.prototype, {
     return null;
   },
 
-  // Split file and populate self.units
-  // XXX it is an error to declare a @unit not at toplevel (eg, inside a
-  // function or object..) We don't detect this but we might have to to
-  // give an acceptable user experience..
-  _unitize: function () {
+  // Scan for @export, etc.
+  _scanForComments: function () {
     var self = this;
     var lines = self.source.split("\n");
-    var buf = "";
-    var unit = new Unit(
-      null, true, self, self.includePositionInErrors ? 0 : null);
-    self.units.push(unit);
 
-    var lineCount = 0;
     _.each(lines, function (line) {
       var commentBody = self._getSingleLineCommentBody(line);
+      if (!commentBody)
+        return;
 
-      if (commentBody) {
-        // XXX overly permissive. should detect errors
-        var match = /^@unit(?:\s+(\S+))?$/.exec(commentBody);
-        if (match) {
-          unit.source = buf;
-          buf = line;
-          unit = new Unit(match[1] || null, false, self,
-                          self.includePositionInErrors ? lineCount : null);
-          self.units.push(unit);
-          lineCount++;
-          return;
-        }
+      // XXX overly permissive. should detect errors
+      var match = /^@(export|require|provide|weak)(\s+.*)$/.exec(commentBody);
+      if (match) {
+        var what = match[1];
+        var symbols = _.map(match[2].split(/,/), function (s) {
+          return s.trim();
+        });
 
-        // XXX overly permissive. should detect errors
-        match = /^@(export|require|provide|weak)(\s+.*)$/.exec(commentBody);
-        if (match) {
-          var what = match[1];
-          var symbols = _.map(match[2].split(/,/), function (s) {
-            return s.trim();
+        var badSymbols = _.reject(symbols, function (s) {
+          // XXX should be unicode-friendlier
+          return s.match(/^([_$a-zA-Z][_$a-zA-Z0-9]*)(\.[_$a-zA-Z][_$a-zA-Z0-9]*)*$/);
+        });
+        if (!_.isEmpty(badSymbols)) {
+          buildmessage.error("bad symbols for @" + what + ": " +
+                             JSON.stringify(badSymbols),
+                             { file: self.sourcePath });
+          // recover by ignoring
+        } else if (self.module.noExports && what === "export") {
+          buildmessage.error("@export not allowed in this slice",
+                             { file: self.sourcePath });
+          // recover by ignoring
+        } else {
+          _.each(symbols, function (s) {
+            if (s.length)
+              self[what + "s"][s] = true;
           });
-
-          var badSymbols = _.reject(symbols, function (s) {
-            // XXX should be unicode-friendlier
-            return s.match(/^([_$a-zA-Z][_$a-zA-Z0-9]*)(\.[_$a-zA-Z][_$a-zA-Z0-9]*)*$/);
-          });
-          if (!_.isEmpty(badSymbols)) {
-            buildmessage.error("bad symbols for @" + what + ": " +
-                               JSON.stringify(badSymbols),
-                               { file: self.sourcePath });
-            // recover by ignoring
-          } else if (self.module.noExports && what === "export") {
-            buildmessage.error("@export not allowed in this slice",
-                               { file: self.sourcePath });
-            // recover by ignoring
-          } else {
-            _.each(symbols, function (s) {
-              if (s.length)
-                unit[what + "s"][s] = true;
-            });
-          }
-
-          /* fall through */
         }
       }
-
-      if (lineCount !== 0)
-        buf += "\n";
-      lineCount++;
-      buf += line;
     });
-    unit.source = buf;
   }
 });
 
-///////////////////////////////////////////////////////////////////////////////
-// Unit
-///////////////////////////////////////////////////////////////////////////////
+// Given a list of lines (not newline-terminated), returns a string placing them
+// in a pretty banner of width bannerWidth. All lines must have length at most
+// (bannerWidth - 6); if bannerWidth is not provided, the smallest width that
+// fits is used.
+var banner = function (lines, bannerWidth) {
+  if (!bannerWidth)
+    bannerWidth = 6 + _.max(lines, function (x) { return x.length; }).length;
 
-var Unit = function (name, mandatory, file, lineOffset) {
-  var self = this;
+  var divider = dividerLine(bannerWidth);
+  var spacer = "// " + new Array(bannerWidth - 6 + 1).join(' ') + " //\n";
+  var padding = bannerPadding(bannerWidth);
 
-  // name of the unit, or null if none provided
-  self.name = name;
-
-  // source code for this unit (a string)
-  self.source = null;
-
-  // true if this unit is to always be included
-  self.mandatory = !! mandatory;
-
-  // true if we should include this unit in the linked output
-  self.include = self.mandatory;
-
-  // The File containing the unit.
-  self.file = file;
-
-  // offset of 'self.source' in the original input file, in whole
-  // lines (partial lines are not supported.) Used to generate correct
-  // line number information in error messages. Set to null to omit
-  // line/column information (you'll need to do this, for, eg,
-  // coffeescript output, given that we don't have sourcemaps here
-  // yet.)
-  self.lineOffset = lineOffset;
-
-  // symbols mentioned in @export, @require, @provide, or @weak
-  // directives. each is a map from the symbol (given as a string) to
-  // true.
-  self.exports = {};
-  self.requires = {};
-  self.provides = {};
-  self.weaks = {};
+  var buf = divider + spacer;
+  _.each(lines, function (line) {
+    buf += "// " + (line + padding).slice(0, bannerWidth - 6) + " //\n";
+  });
+  buf += spacer + divider;
+  return buf;
 };
-
-_.extend(Unit.prototype, {
-  // Return the globals in unit file as an array of symbol names.  For
-  // example: if the code references 'Foo.bar.baz' and 'Quux', and
-  // neither are declared in a scope enclosing the point where they're
-  // referenced, then globalReferences would include ["Foo", "Quux"].
-  //
-  // XXX Doing this at the unit level means that we need to also look
-  //     for var declarations in various units, and use them to create
-  //     a graph of unit dependencies such that in:
-  //        // @unit X
-  //        var A;
-  //        // @unit Y
-  //        A = 5;
-  //     including Y requires including X. Since we don't do that, @unit
-  //     is currently broken. It's also unused and undocumented :)
-  computeGlobalReferences: function () {
-    var self = this;
-
-    var jsAnalyze = self.file.module.jsAnalyze;
-    // If we don't have a JSAnalyze object, we probably are the js-analyze
-    // package itself. Assume we have no global references. At the module level,
-    // we'll assume that exports are global references.
-    if (!jsAnalyze)
-      return [];
-
-    try {
-      return _.keys(jsAnalyze.findAssignedGlobals(self.source));
-    } catch (e) {
-      if (!e.$ParseError)
-        throw e;
-      buildmessage.error(e.description, {
-        file: self.file.sourcePath,
-        line: self.lineOffset === null ? null : e.lineNumber + self.lineOffset,
-        column: self.lineOffset === null ? null : e.column,
-        downcase: true
-      });
-
-      // Recover by pretending that this unit is empty (which
-      // includes replacing its source code with '' in the output)
-      self.source = "";
-      return [];
-    }
-  }
-});
+var dividerLine = function (bannerWidth) {
+  return new Array(bannerWidth + 1).join('/') + "\n";
+};
+var bannerPadding = function (bannerWidth) {
+  return new Array(bannerWidth + 1).join(' ');
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Top-level entry point
@@ -596,12 +567,10 @@ _.extend(Unit.prototype, {
 //    bundle, not in error messages, but it's still nice to make it
 //    look good)
 //  - sourcePath: path to use in error messages
-//  - includePositionInErrors: true to include line and column
-//    information in errors. set to false if, eg, this is the output
-//    of coffeescript. (XXX replace with real sourcemaps)
-//  - linkerUnitTransform: if given, this function will be called
-//    when the module is being linked with the source of the unit
-//    and an array of the exports of the module; the unit's source will
+//  - sourceMap: an optional source map (as string) for the input file
+//  - linkerFileTransform: if given, this function will be called
+//    when the module is being linked with the source of the file
+//    and an array of the exports of the module; the file's source will
 //    be replaced by what the function returns.
 //
 // forceExport: an array of symbols (as dotted strings) to force the
@@ -628,8 +597,9 @@ _.extend(Unit.prototype, {
 //
 // Output is an object with keys:
 // - files: is an array of output files in the same format as inputFiles
+//   - EXCEPT THAT, for now, sourcePath is omitted and is replaced with
+//     sourceMap (a string) (XXX)
 // - exports: the exports, as a list of string ('Foo', 'Thing.Stuff', etc)
-// - boundary: an opaque value that must be passed along with 'files' to link()
 var prelink = function (options) {
   if (options.noExports && options.forceExport &&
       ! _.isEmpty(options.forceExport)) {
@@ -650,16 +620,39 @@ var prelink = function (options) {
     module.addFile(inputFile);
   });
 
-  var files = module.getLinkedFiles();
+  // 1) Figure out what this entire module exports.
+  // 2) Run the linkerFileTransforms, which depend on the exports. (This is, eg,
+  //    CoffeeScript arranging to not close over the exports.)
+  // 3) Do static analysis to compute module-scoped variables; this has to be
+  //    done based on the *output* of the transforms. Error recovery from the
+  //    static analysis mutates the sources, so this has to be done before
+  //    concatenation.
+  // 4) Finally, concatenate.
   var exports = module.getExports();
+  module.runLinkerFileTransforms(exports);
+  var packageScopeVariables = module.computeModuleScopeVars(exports);
+  var files = module.getPrelinkedFiles(exports);
 
   return {
     files: files,
     exports: exports,
-    boundary: module.boundary
+    packageScopeVariables: packageScopeVariables
   };
 };
 
+var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
+  "This is a generated file. You can view the original",
+  "source in your browser if your browser supports source maps.",
+  "",
+  "If you are using Chrome, open the Developer Tools and click the gear",
+  "icon in its lower right corner. In the General Settings panel, turn",
+  "on 'Enable source maps'.",
+  "",
+  "If you are using Firefox 23, go to `about:config` and set the",
+  "`devtools.debugger.source-maps-enabled` preference to true.",
+  "(The preference should be on by default in Firefox 24; versions",
+  "older than 23 do not support source maps.)"
+]);
 
 // Finish the linking.
 //
@@ -673,33 +666,69 @@ var prelink = function (options) {
 //
 // prelinkFiles: the 'files' output from prelink()
 //
-// boundary: the 'boundary' output from prelink()
-//
 // Output is an array of final output files in the same format as the
 // 'inputFiles' argument to prelink().
 var link = function (options) {
-  var importCode = options.useGlobalNamespace ?
-    getImportCode(options.imports, "/* Imports for global scope */\n\n", true) :
-    getImportCode(options.imports, "/* Imports */\n");
+  if (options.useGlobalNamespace) {
+    var ret = [];
+    if (!_.isEmpty(options.imports)) {
+      ret.push({
+        source: getImportCode(options.imports,
+                              "/* Imports for global scope */\n\n", true),
+        servePath: options.importStubServePath
+      });
+    }
+    return ret.concat(options.prelinkFiles);
+  }
+
+  var header = getHeader({
+    imports: options.imports,
+    packageScopeVariables: options.packageScopeVariables
+  });
+  var footer = getFooter({
+    exports: options.exports,
+    name: options.name
+  });
 
   var ret = [];
   _.each(options.prelinkFiles, function (file) {
-    var source = file.source;
-    var parts = source.split(options.boundary);
-    if (parts.length > 2)
-      throw new Error("Boundary appears more than once?");
-    if (parts.length === 2) {
-      source = parts[0] + importCode + parts[1];
-      if (source.length === 0)
-        return; // empty global-imports file -- elide
+    if (file.sourceMap) {
+      var chunks = [header];
+      if (options.includeSourceMapInstructions)
+        chunks.push("\n" + SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n");
+      chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
+        file.source, new sourcemap.SourceMapConsumer(file.sourceMap)));
+      chunks.push(footer);
+      var node = new sourcemap.SourceNode(null, null, null, chunks);
+      var results = node.toStringWithSourceMap({
+        file: file.servePath
+      });
+      ret.push({
+        source: results.code,
+        servePath: file.servePath,
+        sourceMap: results.map.toString()
+      });
+    } else {
+      ret.push({
+        source: header + file.source + footer,
+        servePath: file.servePath
+      });
     }
-    ret.push({
-      source: source,
-      servePath: file.servePath
-    });
   });
 
   return ret;
+};
+
+var getHeader = function (options) {
+  var chunks = [];
+  chunks.push("(function () {\n\n" );
+  chunks.push(getImportCode(options.imports, "/* Imports */\n"));
+  if (options.packageScopeVariables
+      && !_.isEmpty(options.packageScopeVariables)) {
+    chunks.push("/* Package-scope variables */\n");
+    chunks.push("var " + options.packageScopeVariables.join(', ') + ";\n\n");
+  }
+  return chunks.join('');
 };
 
 var getImportCode = function (imports, header, omitvar) {
@@ -712,10 +741,10 @@ var getImportCode = function (imports, header, omitvar) {
   _.each(imports, function (name, symbol) {
     scratch[symbol] = packageDot(name) + "." + symbol;
   });
-  var imports = buildSymbolTree(scratch);
+  var tree = buildSymbolTree(scratch);
 
   var buf = header;
-  _.each(imports, function (node, key) {
+  _.each(tree, function (node, key) {
     buf += (omitvar ? "" : "var " ) +
       key + " = " + writeSymbolTree(node) + ";\n";
   });
@@ -723,6 +752,37 @@ var getImportCode = function (imports, header, omitvar) {
   // XXX need to remove newlines, whitespace, in line number preserving mode
   buf += "\n";
   return buf;
+};
+
+var getFooter = function (options) {
+  var chunks = [];
+
+  if (options.name && options.exports && !_.isEmpty(options.exports)) {
+    chunks.push("/* Exports */\n");
+    chunks.push("if (typeof Package === 'undefined') Package = {};\n");
+    chunks.push(packageDot(options.name), " = ");
+
+    // Even if there are no exports, we need to define Package.foo, because the
+    // existence of Package.foo is how another package (eg, one that weakly
+    // depends on foo) can tell if foo is loaded.
+    if (_.isEmpty(options.exports)) {
+      chunks.push("{};\n");
+    } else {
+      // Given exports like Foo, Bar.Baz, Bar.Quux.A, and Bar.Quux.B,
+      // construct an expression like
+      // {Foo: Foo, Bar: {Baz: Bar.Baz, Quux: {A: Bar.Quux.A, B: Bar.Quux.B}}}
+      var scratch = {};
+      _.each(options.exports, function (symbol) {
+        scratch[symbol] = symbol;
+      });
+      var exportTree = buildSymbolTree(scratch);
+      chunks.push(writeSymbolTree(exportTree, 0));
+      chunks.push(";\n");
+    }
+  }
+
+  chunks.push("\n})();\n");
+  return chunks.join('');
 };
 
 var linker = module.exports = {

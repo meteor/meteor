@@ -12,6 +12,7 @@ var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require(path.join(__dirname, 'linker.js'));
 var unipackage = require('./unipackage.js');
 var fs = require('fs');
+var sourcemap = require('source-map');
 
 // Find all files under `rootPath` that have an extension in
 // `extensions` (an array of extensions without leading dot), and
@@ -60,6 +61,12 @@ var scanForSources = function (rootPath, extensions, ignoreFiles) {
     return abs.substr(prefix.length);
   });
 };
+
+var rejectBadPath = function (p) {
+  if (p.match(/\.\./))
+    throw new Error("bad path: " + p);
+};
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Slice
@@ -147,14 +154,15 @@ var Slice = function (pkg, options) {
   // Are we allowed to have exports?  (eg, test slices don't export.)
   self.noExports = !!options.noExports;
 
-  // Prelink output. 'boundary' is a magic cookie used for inserting
-  // imports. 'prelinkFiles' is the partially linked JavaScript code
-  // (an array of objects with keys 'source' and 'servePath', both
-  // strings -- see prelink() in linker.js) Both of these are inputs
-  // into the final link phase, which inserts the final JavaScript
-  // resources into 'resources'. Set only when isBuilt is true.
-  self.boundary = null;
+  // Prelink output. 'prelinkFiles' is the partially linked JavaScript code (an
+  // array of objects with keys 'source' and 'servePath', both strings -- see
+  // prelink() in linker.js) 'packageScopeVariables' are are variables that are
+  // syntactically globals in our input files and which we capture with a
+  // package-scope closure. Both of these are inputs into the final link phase,
+  // which inserts the final JavaScript resources into 'resources'. Set only
+  // when isBuilt is true.
   self.prelinkFiles = null;
+  self.packageScopeVariables = null;
 
   // All of the data provided for eventual inclusion in the bundle,
   // other than JavaScript that still needs to be fed through the
@@ -172,6 +180,8 @@ var Slice = function (pkg, options) {
   // to be served. Interpretation varies by type. For example, always
   // honored for "static", ignored for "head" and "body", sometimes
   // honored for CSS but ignored if we are concatenating.
+  //
+  // sourceMap: Allowed only for "js". If present, a string.
   //
   // Set only when isBuilt is true.
   self.resources = null;
@@ -191,7 +201,7 @@ _.extend(Slice.prototype, {
   // through the appropriate handlers and run the prelink phase on any
   // resulting JavaScript. Also add all provided source files to the
   // package dependencies. Sets fields such as dependencies, exports,
-  // boundary, prelinkFiles, and resources.
+  // prelinkFiles, packageScopeVariables, and resources.
   build: function () {
     var self = this;
     var isApp = ! self.pkg.name;
@@ -258,6 +268,8 @@ _.extend(Slice.prototype, {
       //   can ensure that the version of the file that you use is
       //   exactly the one that is recorded in the dependency
       //   information.
+      // - pathForSourceMap: If this file is to be included in a source map,
+      //   this is the name you should use for it in the map.
       // - rootOutputPath: on browser targets, for resources such as
       //   stylesheet and static assets, this is the root URL that
       //   will get prepended to the paths you pick for your output
@@ -282,7 +294,7 @@ _.extend(Slice.prototype, {
       //   effect, such as minification.)
       // - addJavaScript({ path: "my/program.js", data: "my code",
       //                   sourcePath: "src/my/program.js",
-      //                   lineForLine: true, bare: true})
+      //                   bare: true })
       //   Add JavaScript code, which will be namespaced into this
       //   package's environment (eg, it will see only the exports of
       //   this package's imports), and which will be subject to
@@ -291,11 +303,7 @@ _.extend(Slice.prototype, {
       //   that will be used in any error messages generated (eg,
       //   "foo.js:4:1: syntax error"). It must be present and should
       //   be relative to the project root. Typically 'inputPath' will
-      //   do handsomely. Set the misleadingly named lineForLine
-      //   option to true if line X, column Y in the input corresponds
-      //   to line X, column Y in the output. This will enable line
-      //   and column reporting in error messages. (XXX replace this
-      //   with source maps)  "bare" means to not wrap the file in
+      //   do handsomely. "bare" means to not wrap the file in
       //   a closure, so that its vars are shared with other files
       //   in the module.
       // - addAsset({ path: "my/image.png", data: Buffer })
@@ -308,11 +316,11 @@ _.extend(Slice.prototype, {
       //   Assets.getText or Assets.getBinary.
       // - error({ message: "There's a problem in your source file",
       //           sourcePath: "src/my/program.ext", line: 12,
-      //           column: 20, columnEnd: 25, func: "doStuff" })
+      //           column: 20, func: "doStuff" })
       //   Flag an error -- at a particular location in a source
       //   file, if you like (you can even indicate a function name
       //   to show in the error, like in stack traces.) sourcePath,
-      //   line, column, columnEnd, and func are all optional.
+      //   line, column, and func are all optional.
       //
       // XXX for now, these handlers must only generate portable code
       // (code that isn't dependent on the arch, other than 'browser'
@@ -350,6 +358,14 @@ _.extend(Slice.prototype, {
         inputSize: contents.length,
         inputPath: relPath,
         _fullInputPath: absPath, // avoid, see above..
+        // XXX duplicates _pathForSourceMap() in linker
+        pathForSourceMap: (
+          self.pkg.name
+            ? self.pkg.name + "/" + relPath
+            : path.basename(relPath)),
+        // null if this is an app. intended to be used for the sources
+        // dictionary for source maps.
+        packageName: self.pkg.name,
         rootOutputPath: self.pkg.serveRoot,
         arch: self.arch,
         fileOptions: fileOptions,
@@ -396,9 +412,9 @@ _.extend(Slice.prototype, {
             source: options.data,
             sourcePath: options.sourcePath,
             servePath: path.join(self.pkg.serveRoot, options.path),
-            includePositionInErrors: options.lineForLine,
-            linkerUnitTransform: options.linkerUnitTransform,
-            bare: !!options.bare
+            linkerFileTransform: options.linkerFileTransform,
+            bare: !!options.bare,
+            sourceMap: options.sourceMap
           });
         },
         addAsset: function (options) {
@@ -450,8 +466,6 @@ _.extend(Slice.prototype, {
       combinedServePath: isApp ? null :
         "/packages/" + self.pkg.name +
         (self.sliceName === "main" ? "" : ("." + self.sliceName)) + ".js",
-      // XXX report an error if there is a package called global-imports
-      importStubServePath: '/packages/global-imports.js',
       name: self.pkg.name || null,
       forceExport: self.forceExport,
       noExports: self.noExports,
@@ -475,8 +489,8 @@ _.extend(Slice.prototype, {
     });
 
     self.prelinkFiles = results.files;
-    self.boundary = results.boundary;
     self.exports = results.exports;
+    self.packageScopeVariables = results.packageScopeVariables;
     self.resources = resources;
     self.isBuilt = true;
   },
@@ -530,17 +544,23 @@ _.extend(Slice.prototype, {
     var files = linker.link({
       imports: imports,
       useGlobalNamespace: isApp,
+      // XXX report an error if there is a package called global-imports
+      importStubServePath: isApp && '/packages/global-imports.js',
       prelinkFiles: self.prelinkFiles,
-      boundary: self.boundary
+      exports: self.exports,
+      packageScopeVariables: self.packageScopeVariables,
+      includeSourceMapInstructions: archinfo.matches(self.arch, "browser"),
+      name: self.pkg.name || null
     });
 
     // Add each output as a resource
     var jsResources = _.map(files, function (file) {
       return {
         type: "js",
-        data: new Buffer(file.source, 'utf8'),
+        data: new Buffer(file.source, 'utf8'), // XXX encoding
         servePath: file.servePath,
-        staticDirectory: self.staticDirectory
+        staticDirectory: self.staticDirectory,
+        sourceMap: file.sourceMap
       };
     });
 
@@ -590,7 +610,6 @@ _.extend(Slice.prototype, {
           data: compileStep.read().toString('utf8'),
           path: compileStep.inputPath,
           sourcePath: compileStep.inputPath,
-          lineForLine: true,
           // XXX eventually get rid of backward-compatibility "raw" name
           bare: compileStep.fileOptions.bare || compileStep.fileOptions.raw
         });
@@ -1298,8 +1317,10 @@ _.extend(Package.prototype, {
     };
 
     try {
-      files.runJavaScript(code.toString('utf8'), 'package.js',
-                          { Package: Package, Npm: Npm });
+      files.runJavaScript(code.toString('utf8'), {
+        filename: 'package.js',
+        symbols: { Package: Package, Npm: Npm }
+      });
     } catch (e) {
       buildmessage.exception(e);
 
@@ -1794,8 +1815,8 @@ _.extend(Package.prototype, {
     self.testSlices = mainJson.testSlices;
 
     _.each(mainJson.plugins, function (pluginMeta) {
-      if (pluginMeta.path.match(/\.\./))
-        throw new Error("bad path in unipackage");
+      rejectBadPath(pluginMeta.path);
+
       var plugin = bundler.readJsImage(path.join(dir, pluginMeta.path));
 
       if (! archinfo.matches(archinfo.host(), plugin.arch)) {
@@ -1821,8 +1842,7 @@ _.extend(Package.prototype, {
     _.each(mainJson.slices, function (sliceMeta) {
       // aggressively sanitize path (don't let it escape to parent
       // directory)
-      if (sliceMeta.path.match(/\.\./))
-        throw new Error("bad path in unipackage");
+      rejectBadPath(sliceMeta.path);
       var sliceJson = JSON.parse(
         fs.readFileSync(path.join(dir, sliceMeta.path)));
       var sliceBasePath = path.dirname(path.join(dir, sliceMeta.path));
@@ -1833,8 +1853,7 @@ _.extend(Package.prototype, {
 
       var nodeModulesPath = null;
       if (sliceJson.node_modules) {
-        if (sliceJson.node_modules.match(/\.\./))
-          throw new Error("bad node_modules path in unipackage");
+        rejectBadPath(sliceJson.node_modules);
         nodeModulesPath = path.join(sliceBasePath, sliceJson.node_modules);
       }
 
@@ -1859,13 +1878,12 @@ _.extend(Package.prototype, {
 
       slice.isBuilt = true;
       slice.exports = sliceJson.exports || [];
-      slice.boundary = sliceJson.boundary;
+      slice.packageScopeVariables = sliceJson.packageScopeVariables || [];
       slice.prelinkFiles = [];
       slice.resources = [];
 
       _.each(sliceJson.resources, function (resource) {
-        if (resource.file.match(/\.\./))
-          throw new Error("bad resource file path in unipackage");
+        rejectBadPath(resource.file);
 
         var fd = fs.openSync(path.join(sliceBasePath, resource.file), "r");
         try {
@@ -1879,10 +1897,16 @@ _.extend(Package.prototype, {
           throw new Error("couldn't read entire resource");
 
         if (resource.type === "prelink") {
-          slice.prelinkFiles.push({
+          var prelinkFile = {
             source: data.toString('utf8'),
             servePath: resource.servePath
-          });
+          };
+          if (resource.sourceMap) {
+            rejectBadPath(resource.sourceMap);
+            prelinkFile.sourceMap = fs.readFileSync(
+              path.join(sliceBasePath, resource.sourceMap), 'utf8');
+          }
+          slice.prelinkFiles.push(prelinkFile);
         } else if (_.contains(["head", "body", "css", "js", "static"],
                               resource.type)) {
           slice.resources.push({
@@ -1935,7 +1959,7 @@ _.extend(Package.prototype, {
 
       var buildInfoJson = {
         dependencies: { files: {}, directories: {} },
-        source: options.buildOfPath || undefined,
+        source: options.buildOfPath || undefined
       };
 
       builder.reserve("unipackage.json");
@@ -1978,6 +2002,7 @@ _.extend(Package.prototype, {
         var sliceJson = {
           format: "unipackage-slice-pre1",
           exports: slice.exports,
+          packageScopeVariables: slice.packageScopeVariables,
           uses: _.map(slice.uses, function (u) {
             var specParts = u.spec.split('.');
             if (specParts.length > 2)
@@ -1991,7 +2016,6 @@ _.extend(Package.prototype, {
           }),
           node_modules: slice.nodeModulesPath ? 'npm/node_modules' : undefined,
           resources: [],
-          boundary: slice.boundary,
           staticDirectory: path.join(sliceDir, self.serveRoot)
         };
 
@@ -2029,13 +2053,11 @@ _.extend(Package.prototype, {
           if (_.contains(["head", "body"], resource.type))
             return; // already did this one
 
-          var resourcePath = builder.generateFilename(
-            path.join(sliceDir, resource.servePath));
-
-          builder.write(resourcePath, { data: resource.data });
           sliceJson.resources.push({
             type: resource.type,
-            file: resourcePath,
+            file: builder.writeToGeneratedFilename(
+              path.join(sliceDir, resource.servePath),
+              { data: resource.data }),
             length: resource.data.length,
             offset: 0,
             servePath: resource.servePath || undefined
@@ -2044,21 +2066,26 @@ _.extend(Package.prototype, {
 
         // Output prelink resources
         _.each(slice.prelinkFiles, function (file) {
-          var resourcePath = builder.generateFilename(
-            path.join(sliceDir, file.servePath));
           var data = new Buffer(file.source, 'utf8');
-
-          builder.write(resourcePath, {
-            data: data
-          });
-
-          sliceJson.resources.push({
+          var resource = {
             type: 'prelink',
-            file: resourcePath,
+            file: builder.writeToGeneratedFilename(
+              path.join(sliceDir, file.servePath),
+              { data: data }),
             length: data.length,
             offset: 0,
             servePath: file.servePath || undefined
-          });
+          };
+
+          if (file.sourceMap) {
+            // Write the source map.
+            resource.sourceMap = builder.writeToGeneratedFilename(
+              path.join(sliceDir, file.servePath + '.map'),
+              { data: new Buffer(file.sourceMap, 'utf8') }
+            );
+          }
+
+          sliceJson.resources.push(resource);
         });
 
         // If slice has included node_modules, copy them in

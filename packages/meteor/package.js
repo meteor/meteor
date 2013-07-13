@@ -24,7 +24,6 @@ Package.on_use(function (api, where) {
 
   // dynamic variables, bindEnvironment
   // XXX move into a separate package?
-  api.use('underscore', ['client', 'server']);
   api.add_files('dynamics_browser.js', 'client');
   api.add_files('dynamics_nodejs.js', 'server');
 

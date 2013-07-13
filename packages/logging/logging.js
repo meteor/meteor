@@ -6,12 +6,20 @@ Log = function () {
 /// FOR TESTING
 var intercept = 0;
 var interceptedLines = [];
+var suppress = 0;
 
 // Intercept the next 'count' calls to a Log function. The actual
 // lines printed to the console can be cleared and read by calling
 // Log._intercepted().
 Log._intercept = function (count) {
   intercept += count;
+};
+
+// Suppress the next 'count' calls to a Log function. Use this to stop
+// tests from spamming the console, especially with red errors that
+// might look like a failing test.
+Log._suppress = function (count) {
+  suppress += count;
 };
 
 // Returns intercepted lines and resets the intercept counter.
@@ -67,11 +75,11 @@ var logInBrowser = function (obj) {
 // @returns {Object: { line: Number, file: String }}
 Log._getCallerDetails = function () {
   var getStack = function () {
-    var orig = Error.prepareStackTrace;
-    Error.prepareStackTrace = function(_, stack){ return stack; };
+    // We do NOT use Error.prepareStackTrace here (a V8 extension that gets us a
+    // pre-parsed stack) since it's impossible to compose it with the use of
+    // Error.prepareStackTrace used on the server for source maps.
     var err = new Error;
     var stack = err.stack;
-    Error.prepareStackTrace = orig;
     return stack;
   };
 
@@ -79,33 +87,37 @@ Log._getCallerDetails = function () {
 
   if (!stack) return {};
 
-  var isV8 = false;
-  var lines = stack;
-  // check for V8 specifics
-  if (_.isArray(stack))
-    isV8 = true;
-  else
-    lines = stack.split('\n');
-  var index = 1;
-  var line = lines[index];
+  var lines = stack.split('\n');
 
-  // looking for the first line outside the logging package
-  while ((isV8 ? line.getFileName() || '' : line)
-          .indexOf('/packages/logging.js') !== -1)
-    line = lines[++index];
+  // looking for the first line outside the logging package (or an
+  // eval if we find that first)
+  var line;
+  for (var i = 1; i < lines.length; ++i) {
+    line = lines[i];
+    if (line.match(/^\s*at eval \(eval/)) {
+      return {file: "eval"};
+    }
+
+    // XXX probably wants to be / or .js in case no source maps
+    if (!line.match(/packages\/logging(?:\/|(?:\.tests)?\.js)/))
+      break;
+  }
 
   var details = {};
 
-  // The format for FF is functionName@filePath:lineNumber
-  // For V8 call built-in function
-  details.line = isV8 ? line.getLineNumber() : line.split(':').slice(-1)[0];
+  // The format for FF is 'functionName@filePath:lineNumber'
+  // The format for V8 is 'functionName (packages/logging/logging.js:81)' or
+  //                      'packages/logging/logging.js:81'
+  var match = /(?:[@(]| at )([^(]+?):([0-9:]+)(?:\)|$)/.exec(line);
+  if (!match)
+    return details;
+  // in case the matched block here is line:column
+  details.line = match[2].split(':')[0];
 
   // Possible format: https://foo.bar.com/scripts/file.js?random=foobar
-  // For FF we parse the line, for V8 we call built-in function
   // XXX: if you can write the following in better way, please do it
-  details.file = isV8 ? line.getFileName() || (line.isEval() ? 'eval' : '')
-                      : line.split('@')[1].split(':').slice(0, -1).join(':');
-  details.file = details.file.split('/').slice(-1)[0].split('?')[0];
+  // XXX: what about evals?
+  details.file = match[1].split('/').slice(-1)[0].split('?')[0];
 
   return details;
 };
@@ -113,6 +125,11 @@ Log._getCallerDetails = function () {
 _.each(['debug', 'info', 'warn', 'error'], function (level) {
   // @param arg {String|Object}
   Log[level] = function (arg) {
+    if (suppress) {
+      suppress--;
+      return;
+    }
+
     var intercepted = false;
     if (intercept) {
       intercept--;

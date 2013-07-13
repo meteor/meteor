@@ -200,4 +200,3 @@ if (Package.handlebars) {
     return Meteor.loggingIn();
   });
 }
-

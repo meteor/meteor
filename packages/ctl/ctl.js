@@ -65,7 +65,8 @@ Ctl.Commands.push({
         exitPolicy: 'restart',
         env: {
           METEOR_DEPLOY_CONFIG: JSON.stringify(deployConfig),
-          ROOT_URL: "https://" + appConfig.sitename + bindPathPrefix
+          ROOT_URL: "https://" + appConfig.sitename + bindPathPrefix,
+          METEOR_SETTINGS: appConfig.METEOR_SETTINGS
         },
         ports: {
           "main": {

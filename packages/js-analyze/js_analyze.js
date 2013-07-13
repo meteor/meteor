@@ -148,7 +148,7 @@ JSAnalyze.findAssignedGlobals = function (source) {
   // causes escope to not bother to resolve references in the eval's scope.
   // This is because an eval can pull references inward:
   //
-  /   function outer() {
+  //   function outer() {
   //     var i = 42;
   //     function inner() {
   //       eval('var i = 0');

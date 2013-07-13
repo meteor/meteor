@@ -13,6 +13,7 @@ Package.on_use(function (api, where) {
   where = where instanceof Array ? where : [where];
 
   api.add_files("showdown.js", where);
+  api.exportSymbol('Showdown', where);
 
   // XXX what we really want to do is, load template-integration after
   // handlebars, iff handlebars was included in the project.

@@ -20,24 +20,30 @@ assert.doesNotThrow(function () {
       path.join(tmpOutputDir, "programs", "client", "program.json")
     )
   );
-  var staticDir = path.join(tmpOutputDir, "programs",
-                            "client", clientManifest.static);
-  var testTxtPath = path.join(staticDir, "test.txt");
-  var nestedTxtPath = path.join(staticDir, "nested", "nested.txt");
-  assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
-  assert(fs.existsSync(testTxtPath));
-  assert(fs.existsSync(nestedTxtPath));
-  assert.strictEqual(fs.readFileSync(testTxtPath, "utf8"),
-                     "Test\n");
-  assert.strictEqual(fs.readFileSync(nestedTxtPath, "utf8"),
-                     "Nested\n");
+
+  var testCases = [["/test.txt", "Test\n"],
+               ["/nested/nested.txt", "Nested\n"]];
+  _.each(testCases, function (file) {
+    var manifestItem = _.find(clientManifest.manifest, function (m) {
+      return m.url === file[0];
+    });
+    assert(manifestItem);
+    var diskPath = path.join(tmpOutputDir, "programs", "client",
+                             manifestItem.path);
+    assert(fs.existsSync(diskPath));
+    assert.strictEqual(fs.readFileSync(diskPath, "utf8"), file[1]);
+  });
 });
 
 console.log("Bundle app with private/ directory and package asset");
 assert.doesNotThrow(function () {
+  // Make sure we rebuild this app package.
+  files.rm_recursive(
+    path.join(appWithPrivate, "packages", "test-package", ".build"));
+
   var lib = new library.Library({
     localPackageDirs: [ path.join(files.getCurrentToolsDir(), 'packages'),
-                      path.join(appWithPrivate, "packages") ]
+                        path.join(appWithPrivate, "packages") ]
   });
   var tmpOutputDir = tmpDir();
   var result = bundler.bundle(appWithPrivate, tmpOutputDir, {
@@ -55,7 +61,7 @@ assert.doesNotThrow(function () {
   var packageTxtPath;
   var unregisteredExtensionPath;
   _.each(serverManifest.load, function (item) {
-    if (item.path === "/packages/test-package.js") {
+    if (item.path === "packages/test-package.js") {
       packageTxtPath = path.join(tmpOutputDir,
                                  "programs", "server",
                                  item.staticDirectory, "test-package.txt");
@@ -64,13 +70,13 @@ assert.doesNotThrow(function () {
                                             item.staticDirectory,
                                             "test.notregistered");
     }
-    if (item.path === "/app/test.js") {
+    if (item.path === "app/test.js") {
       staticDir = path.join(tmpOutputDir,
                             "programs", "server",
                             item.staticDirectory);
     }
   });
-  // Check that the files are where the manifest says they are
+  // check that the files are where the manifest says they are
   var testTxtPath = path.join(staticDir, "test.txt");
   var nestedTxtPath = path.join(staticDir, "nested", "test.txt");
   assert.strictEqual(result.errors, false, result.errors && result.errors[0]);

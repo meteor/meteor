@@ -12,6 +12,7 @@ if [ "$UNAME" == "Linux" ] ; then
         echo "Meteor only supports i686 and x86_64 for now."
         exit 1
     fi
+
     MONGO_OS="linux"
 
     stripBinary() {
@@ -109,6 +110,20 @@ npm install kexec@0.1.1
 npm install shell-quote@0.0.1
 npm install byline@2.0.3
 
+# Using the unreleased 1.1 branch. We can probably switch to a built NPM version
+# when it gets released.
+npm install https://github.com/ariya/esprima/tarball/5044b87f94fb802d9609f1426c838874ec2007b3
+
+# Fork of source-map which fixes one function with empty maps.
+#   https://github.com/mozilla/source-map/pull/70
+# See also below, where we get it into source-map-support.
+npm install https://github.com/meteor/source-map/tarball/4a52398901fdb4b55b06ef4dd8b69f8256072b09
+
+# Fork of node-source-map-support which allows us to specify our own
+# retrieveSourceMap function, and uses the above version of source-map.
+# XXX send a pull request
+npm install https://github.com/meteor/node-source-map-support/tarball/d048eaa765bf743ddaad64716647f8760e2b8507
+
 # uglify-js has a bug which drops 'undefined' in arrays:
 # https://github.com/mishoo/UglifyJS2/pull/97
 npm install https://github.com/meteor/UglifyJS2/tarball/aa5abd14d3
@@ -134,25 +149,68 @@ rm -rf *
 mv ../$FIBERS_ARCH .
 cd ../..
 
+# Checkout and build mongodb.
+# We want to build a binary that includes SSL support but does not depend on a
+# particular version of openssl on the host system.
 
-# Download and install mongodb.
+cd "$DIR/build"
+OPENSSL="openssl-1.0.1e"
+OPENSSL_URL="http://www.openssl.org/source/$OPENSSL.tar.gz"
+wget $OPENSSL_URL || curl -O $OPENSSL_URL
+tar xzf $OPENSSL.tar.gz
+
+cd $OPENSSL
+if [ "$UNAME" == "Linux" ]; then
+    ./config --prefix="$DIR/build/openssl-out" no-shared
+else
+    # This configuration line is taken from Homebrew formula:
+    # https://github.com/mxcl/homebrew/blob/master/Library/Formula/openssl.rb
+    ./Configure no-shared zlib-dynamic --prefix="$DIR/build/openssl-out" darwin64-x86_64-cc enable-ec_nistp_64_gcc_128
+fi
+make install
+
 # To see the mongo changelog, go to http://www.mongodb.org/downloads,
 # click 'changelog' under the current version, then 'release notes' in
 # the upper right.
-cd "$DIR"
+cd "$DIR/build"
 MONGO_VERSION="2.4.4"
-MONGO_NAME="mongodb-${MONGO_OS}-${ARCH}-${MONGO_VERSION}"
-MONGO_URL="http://fastdl.mongodb.org/${MONGO_OS}/${MONGO_NAME}.tgz"
-curl "$MONGO_URL" | tar -xz
-mv "$MONGO_NAME" mongodb
 
-# don't ship a number of mongo binaries. they are big and unused. these
-# could be deleted from git dev_bundle but not sure which we'll end up
-# needing.
-cd mongodb/bin
-rm bsondump mongodump mongoexport mongofiles mongoimport mongorestore mongos mongosniff mongostat mongotop mongooplog mongoperf
-cd ../..
+# We use Meteor fork since we added some changes to the building script.
+# Our patches allow us to link most of the libraries statically.
+git clone git://github.com/meteor/mongo.git
+cd mongo
+git checkout ssl-r$MONGO_VERSION
 
+# Compile
+
+MONGO_FLAGS="--ssl --release "
+MONGO_FLAGS+="--cpppath $DIR/build/openssl-out/include --libpath $DIR/build/openssl-out/lib "
+
+if [ "$MONGO_OS" == "osx" ]; then
+    # NOTE: '--64' option breaks the compilation, even it is on by default on x64 mac: https://jira.mongodb.org/browse/SERVER-5575
+    MONGO_FLAGS+="-j4 "
+    MONGO_FLAGS+="--openssl $DIR/build/openssl-out/lib "
+    /usr/local/bin/scons $MONGO_FLAGS mongo mongod
+elif [ "$MONGO_OS" == "linux" ]; then
+    MONGO_FLAGS+="-j2 --no-glibc-check --prefix=./ "
+    if [ "$ARCH" == "x86_64" ]; then
+      MONGO_FLAGS+="--64"
+    fi
+    scons $MONGO_FLAGS mongo mongod
+else
+    echo "We don't know how to compile mongo for this platform"
+    exit 1
+fi
+
+# Copy binaries
+mkdir -p "$DIR/mongodb/bin"
+cp mongo "$DIR/mongodb/bin/"
+cp mongod "$DIR/mongodb/bin/"
+
+# Copy mongodb distribution information
+find ./distsrc -maxdepth 1 -type f -exec cp '{}' ../mongodb \;
+
+cd "$DIR"
 stripBinary bin/node
 stripBinary mongodb/bin/mongo
 stripBinary mongodb/bin/mongod

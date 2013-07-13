@@ -655,7 +655,8 @@ disable this behavior, pass `{reactive: false}` as an option to
 
 {{> api_box findone}}
 
-Equivalent to `find(selector, options).fetch()[0]`.
+Equivalent to `find(selector, options).fetch()[0]` with
+`options.limit = 1`.
 
 {{> api_box insert}}
 

@@ -1,6 +1,9 @@
 
 ## vNEXT
 
+* Calling `findOne()` on the server no longer loads the full query result
+  into memory.
+
 * Fix Spark memory leak.  #1157
 
 * Upgraded dependencies:
@@ -12,6 +15,8 @@
 
 * Add new `Assets` API and `private` subdirectory for including and accessing
   server assets in an application.
+
+* Delete login tokens from server when user logs out.
 
 ## v0.6.4
 
