@@ -26,6 +26,13 @@ elif [ "$UNAME" = "Linux" ] ; then
         echo "Meteor only supports i686 and x86_64 for now."
         exit 1
     fi
+elif [ "$UNAME" = "FreeBSD" ] ; then
+    ARCH="$(uname -m)"
+    if [ "$ARCH" != "i386" -a "$ARCH" != "amd64" ] ; then
+        echo "Unsupported architecture: $ARCH"
+        echo "Meteor only supports i686 and x86_64 for now."
+        exit 1
+    fi
 fi
 PLATFORM="${UNAME}_${ARCH}"
 

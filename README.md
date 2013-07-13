@@ -43,6 +43,8 @@ you can build all the Meteor dependencies (node.js, npm, mongodb, etc)
 with the provided script. If you do not run this script, Meteor will
 automatically download pre-compiled binaries when you first run it.
 
+    # FreeBSD only
+    ln -s /usr/local/bin/bash /bin/bash
     # OPTIONAL
     ./scripts/generate-dev-bundle.sh
 
