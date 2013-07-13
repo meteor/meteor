@@ -73,7 +73,8 @@ Ctl.Commands.push({
           "email": {
             url: appConfig.MAIL_URL
           }
-        }
+        },
+        proxyServiceName: appConfig.proxyServiceName || "proxy"
       };
 
       // Merge in any values that might have been added to the app's config in

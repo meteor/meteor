@@ -452,7 +452,8 @@ var runWebAppServer = function () {
         // bind via the proxy, but we'll have to find it ourselves via
         // ultraworld.
         var galaxy = findGalaxy();
-        galaxy.subscribe('servicesByName', 'proxy');
+        var proxyServiceName = deployConfig.proxyServiceName || "proxy";
+        galaxy.subscribe('servicesByName', proxyServiceName);
         var Proxies = new Meteor.Collection('services', {
           manager: galaxy
         });
@@ -462,7 +463,7 @@ var runWebAppServer = function () {
             WebAppInternals.bindToProxy(_.extend({
               proxyEndpoint: proxyService.providers.proxy
             }, bind.viaProxy));
-          }
+         }
         };
         Proxies.find().observe({
           added: doBinding,
