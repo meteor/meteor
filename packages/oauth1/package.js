@@ -4,6 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
+  api.use('random');
   api.use('service-configuration', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
   api.use('underscore', 'server');
