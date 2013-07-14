@@ -62,12 +62,17 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
     return lexer.next();
   };
 
-  var scanIdentifier = function () {
+  var scanIdentifier = function (isFirstInPath) {
     var tok = scanToken();
-    // We don't care about overlap with JS keywords.  This code
-    // won't accept "true", "false", or "null" as identifiers however.
-    if (tok.type() !== 'IDENTIFIER' && tok.type() !== 'KEYWORD')
+    // We don't care about overlap with JS keywords,
+    // but accept "true", "false", and "null" as identifiers
+    // only if not isFirstInPath.
+    if (! (tok.type() === 'IDENTIFIER' ||
+           tok.type() === 'KEYWORD' ||
+           ((! isFirstInPath) && (tok.type() === 'BOOLEAN' ||
+                                  tok.type() === 'NULL')))) {
       expected('IDENTIFIER');
+    }
     var text = tok.text();
     advance(text.length);
     return text;
@@ -106,7 +111,7 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
           error("Path can't start with empty string");
         segments.push(seg);
       } else {
-        var id = scanIdentifier();
+        var id = scanIdentifier(! segments.length);
         if (id === 'this' && ! segments.length) {
           // initial `this`
           segments.push('');
