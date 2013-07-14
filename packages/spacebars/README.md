@@ -21,7 +21,7 @@ A basic double-stache tag consists of an identifier or a dotted path (see Paths 
 </p>
 ```
 
-Double-stache tags may be used at the level of HTML elements (that is, outside HTML tag angle brackets) or in an attribute of an HTML tag.  The inserted text is automatically HTML-escaped as appropriate (for example, turning `<` into `&lt;`).  Double-stache tags may not be used to generate the name of a tag (as in `<{{foo}}>`) or any other piece of a tag except for attribute names and values as described here.
+Double-stache tags may only be used at the level of HTML elements (that is, outside HTML tag angle brackets) or in an attribute of an HTML tag.  The inserted text is automatically HTML-escaped as appropriate (for example, turning `<` into `&lt;`).  Double-stache tags may not be used to generate the name of a tag (as in `<{{foo}}>`) or any other piece of a tag except for attribute names and values as described here.
 
 Any part of an attribute name or value is fair game:
 
