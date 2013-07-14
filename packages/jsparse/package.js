@@ -9,7 +9,7 @@ Package.on_use(function (api) {
 });
 
 Package.on_test(function (api) {
-  api.use('tinytest');
+  api.use(['tinytest', 'underscore']);
   api.use('jsparse', 'client');
 
   api.add_files('parser_tests.js',

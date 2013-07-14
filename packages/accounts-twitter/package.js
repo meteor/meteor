@@ -3,6 +3,7 @@ Package.describe({
 });
 
 Package.on_use(function(api) {
+  api.use('underscore', ['server']);
   api.use('accounts-base', ['client', 'server']);
   api.use('accounts-oauth', ['client', 'server']);
   api.use('twitter', ['client', 'server']);

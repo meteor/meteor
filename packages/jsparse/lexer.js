@@ -255,6 +255,7 @@ Lexeme.prototype.toString = function () {
 //           Thie flag can be read and set manually to affect the
 //           parsing of the next token.
 
+// @export JSLexer
 JSLexer = function (code) {
   this.code = code;
   this.pos = 0;

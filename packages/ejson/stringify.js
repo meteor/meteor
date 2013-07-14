@@ -7,8 +7,6 @@
 //
 //    NO WARRANTY EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
 
-EJSON = {}; // Global!
-
 function quote(string) {
   return JSON.stringify(string);
 }
@@ -185,4 +183,4 @@ function stringify(value, replacer, space) {
             return str('', {'': value});
         }
 
-EJSON._canonicalStringify = stringify;
+canonicalStringify = stringify;

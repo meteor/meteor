@@ -1,3 +1,6 @@
+// @export EJSON
+EJSON = {};
+
 var customTypes = {};
 // Add a custom type, using a method of your choice to get to and
 // from a basic JSON-able representation.  The factory argument
@@ -210,7 +213,7 @@ EJSON.stringify = function (item, options) {
   if (keyOrderSensitive)
     return JSON.stringify(json, null, indent);
   else
-    return EJSON._canonicalStringify(json, null, indent);
+    return canonicalStringify(json, null, indent);
 };
 
 EJSON.parse = function (item) {

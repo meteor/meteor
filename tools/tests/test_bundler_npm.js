@@ -6,6 +6,13 @@ var meteorNpm = require(path.join(__dirname, '..', 'meteor_npm.js'));
 var tmpPackageDirContainer = tmpDir();
 var testPackageDir = path.join(tmpPackageDirContainer, 'test-package');
 
+lib = new library.Library({
+  localPackageDirs: [
+    tmpPackageDirContainer,
+    path.join(files.getCurrentToolsDir(), 'packages')
+  ]
+});
+
 var updateTestPackage = function(npmDependencies) {
   if (!fs.existsSync(testPackageDir))
     fs.mkdirSync(testPackageDir);
@@ -19,6 +26,7 @@ var updateTestPackage = function(npmDependencies) {
   // we need at least one server file, otherwise we don't bother copying
   // the gcd module into the bundle.
   fs.writeFileSync(path.join(testPackageDir, 'dummy.js'), "");
+  lib.refresh();
 };
 
 process.env.PACKAGE_DIRS = tmpPackageDirContainer;
@@ -38,7 +46,7 @@ var _assertCorrectPackageNpmDir = function(deps) {
 
   // sort of a weird way to do it, but i don't want to have to look up all subdependencies
   // to write these tests, so just transplant that information
-  var actualMeteorNpmShrinkwrapDependencies = JSON.parse(fs.readFileSync(path.join(testPackageDir, ".npm", "npm-shrinkwrap.json"), 'utf8')).dependencies;
+  var actualMeteorNpmShrinkwrapDependencies = JSON.parse(fs.readFileSync(path.join(testPackageDir, ".npm", "package", "npm-shrinkwrap.json"), 'utf8')).dependencies;
   var expectedMeteorNpmShrinkwrapDependencies = _.object(_.map(deps, function(version, name) {
     var expected = {};
     if (/tarball/.test(version)) {
@@ -61,17 +69,17 @@ var _assertCorrectPackageNpmDir = function(deps) {
   }));
 
   assert.equal(
-    fs.readFileSync(path.join(testPackageDir, ".npm", "npm-shrinkwrap.json"), 'utf8'),
+    fs.readFileSync(path.join(testPackageDir, ".npm", "package", "npm-shrinkwrap.json"), 'utf8'),
     JSON.stringify({
       dependencies: expectedMeteorNpmShrinkwrapDependencies}, null, /*indentation, the way npm does it*/2) + '\n');
 
   assert.equal(
-    fs.readFileSync(path.join(testPackageDir, ".npm", ".gitignore"), 'utf8'),
+    fs.readFileSync(path.join(testPackageDir, ".npm", "package", ".gitignore"), 'utf8'),
     "node_modules\n");
-  assert(fs.existsSync(path.join(testPackageDir, ".npm", "README")));
+  assert(fs.existsSync(path.join(testPackageDir, ".npm", "package", "README")));
 
   // verify the contents of the `node_modules` dir
-  var nodeModulesDir = path.join(testPackageDir, ".npm", "node_modules");
+  var nodeModulesDir = path.join(testPackageDir, ".npm", "package", "node_modules");
 
   // all expected dependencies are installed correctly, with the correct version
   _.each(deps, function(version, name) {
@@ -98,10 +106,11 @@ var _assertCorrectPackageNpmDir = function(deps) {
 
 var _assertCorrectBundleNpmContents = function(bundleDir, deps) {
   // sanity check -- main.js has expected contents.
-  assert.strictEqual(fs.readFileSync(path.join(bundleDir, "main.js"), "utf8").trim(),
-                     "require('./server/server.js');");
+  assert.strictEqual(fs.readFileSync(path.join(bundleDir, "main.js"), "utf8"),
+                     mainJSContents);
 
-  var bundledPackageNodeModulesDir = path.join(bundleDir, 'app', 'packages', 'test-package', 'node_modules');
+  var bundledPackageNodeModulesDir = path.join(
+    bundleDir, 'programs', 'server', 'npm', 'test-package', 'main', 'node_modules');
 
   // bundle actually has the npm modules
   _.each(deps, function(version, name) {
@@ -131,8 +140,8 @@ console.log("app that uses gcd - clean run");
 assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0'});
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none'});
-  assert.strictEqual(errors, undefined, errors && errors[0]);
+  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: lib});
+  assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
   _assertCorrectPackageNpmDir({gcd: '0.0.0'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0'});
 });
@@ -140,21 +149,26 @@ assert.doesNotThrow(function () {
 console.log("app that uses gcd - no changes, running again");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none'});
-  assert.strictEqual(errors, undefined, errors && errors[0]);
+  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: lib});
+  assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
   _assertCorrectPackageNpmDir({gcd: '0.0.0'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0'});
 });
 
-console.log("app that uses gcd - as would be in a 3rd party repository (no .npm/node_modules)");
+console.log("app that uses gcd - as would be in a 3rd party repository (no .npm/package/node_modules)");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
 
-  // rm -rf .npm/node_modules
-  var nodeModulesDir = path.join(testPackageDir, ".npm", "node_modules");
+  // rm -rf .npm/package/node_modules
+  var nodeModulesDir = path.join(testPackageDir, ".npm", "package", "node_modules");
   assert(fs.existsSync(path.join(nodeModulesDir)));
   files.rm_recursive(nodeModulesDir);
+  // We also have to delete the .build directory or else we won't rebuild at
+  // all.
+  // XXX this seems wrong!
+  files.rm_recursive(path.join(testPackageDir, ".build"));
   assert(!fs.existsSync(path.join(nodeModulesDir)));
+  lib.refresh();
 
   // while bundling, verify that we don't call `npm install
   // name@version unnecessarily` -- calling `npm install` is enough,
@@ -167,10 +181,10 @@ assert.doesNotThrow(function () {
       assert.fail("shouldn't be installing specific npm packages: " + args[1]);
     return bareExecFileSync(file, args, opts);
   };
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none'});
+  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: lib});
   meteorNpm._execFileSync = bareExecFileSync;
 
-  assert.strictEqual(errors, undefined, errors && errors[0]);
+  assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
   _assertCorrectPackageNpmDir({gcd: '0.0.0'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0'});
 });
@@ -180,8 +194,8 @@ console.log("app that uses gcd - add mime and semver");
 assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none'});
-  assert.strictEqual(errors, undefined, errors && errors[0]);
+  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: lib});
+  assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
   _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
 });
@@ -190,14 +204,19 @@ console.log("app that uses gcd - add mime, as it would happen if you pulled in t
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
 
-  // rm -rf .npm/node_modules/mime
-  var nodeModulesMimeDir = path.join(testPackageDir, ".npm", "node_modules", "mime");
+  // rm -rf .npm/package/node_modules/mime
+  var nodeModulesMimeDir = path.join(testPackageDir, ".npm", "package", "node_modules", "mime");
   assert(fs.existsSync(path.join(nodeModulesMimeDir)));
   files.rm_recursive(nodeModulesMimeDir);
+  // We also have to delete the .build directory or else we won't rebuild at
+  // all.
+  // XXX this seems wrong!
+  files.rm_recursive(path.join(testPackageDir, ".build"));
   assert(!fs.existsSync(path.join(nodeModulesMimeDir)));
 
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none'});
-  assert.strictEqual(errors, undefined, errors && errors[0]);
+  lib.refresh();
+  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: lib});
+  assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
   _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
 });
@@ -206,8 +225,8 @@ console.log("app that uses gcd - upgrade mime, remove semver");
 assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0', mime: '1.2.8'});
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none'});
-  assert.strictEqual(errors, undefined, errors && errors[0]);
+  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: lib});
+  assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
   _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.8'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0', mime: '1.2.8'});
 });
@@ -216,9 +235,13 @@ console.log("app that uses gcd - try downgrading mime to non-existant version");
 assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0', mime: '0.1.2'});
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none'});
-  assert.strictEqual(errors.length, 1);
-  assert(/version not found/.test(errors[0]));
+  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: lib});
+  assert(result.errors);
+  var job = _.find(result.errors.jobs, function (job) {
+    return job.title === "building package `test-package`";
+  });
+  assert(job);
+  assert(/mime version 0.1.2 is not available/.test(job.messages[0].message));
   _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.8'}); // shouldn't've changed
 });
 
@@ -226,8 +249,8 @@ console.log("app that uses gcd - downgrade mime to an existant version");
 assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0', mime: '1.2.7'});
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none'});
-  assert.strictEqual(errors, undefined, errors && errors[0]);
+  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: lib});
+  assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
 
   _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0', mime: '1.2.7'});
@@ -239,14 +262,14 @@ assert.doesNotThrow(function () {
   var deps = {gzippo: 'https://github.com/meteor/gzippo/tarball/1e4b955439abc643879ae264b28a761521818f3b'};
   updateTestPackage(deps);
   var tmpOutputDir = tmpDir();
-  var errors = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none'});
-  assert.strictEqual(errors, undefined, errors && errors[0]);
+  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', releaseStamp: 'none', library: lib});
+  assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
   _assertCorrectPackageNpmDir(deps);
   _assertCorrectBundleNpmContents(tmpOutputDir, deps);
   // Check that a string introduced by our fork is in the source.
   assert(/clientMaxAge = 604800000/.test(
     fs.readFileSync(
-      path.join(testPackageDir, ".npm", "node_modules", "gzippo", "lib", "staticGzip.js"), "utf8")));
+      path.join(testPackageDir, ".npm", "package", "node_modules", "gzippo", "lib", "staticGzip.js"), "utf8")));
 });
 
 console.log("bundle multiple apps in parallel using a meteor package dependent on an npm package");
@@ -258,8 +281,8 @@ console.log("bundle multiple apps in parallel using a meteor package dependent o
 //  lack of atomicity, but this is relatively rare.)
 assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0', mime: '1.2.7'});
-  // rm -rf .npm/node_modules, to make sure installing modules takes some time
-  var nodeModulesDir = path.join(testPackageDir, ".npm", "node_modules");
+  // rm -rf .npm/package/node_modules, to make sure installing modules takes some time
+  var nodeModulesDir = path.join(testPackageDir, ".npm", "package", "node_modules");
   assert(fs.existsSync(path.join(nodeModulesDir)));
   files.rm_recursive(nodeModulesDir);
   assert(!fs.existsSync(path.join(nodeModulesDir)));

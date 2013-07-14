@@ -1,3 +1,7 @@
+// XXX XXX should really '@export Meteor._StubStream' but we're not
+// there yet (other packages need to cooperate and also export
+// Meteor.foo rather than Meteor)
+
 Meteor._StubStream = function () {
   var self = this;
 

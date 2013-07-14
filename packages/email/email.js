@@ -1,3 +1,4 @@
+// @export Email
 Email = {};
 
 var Future = Npm.require('fibers/future');

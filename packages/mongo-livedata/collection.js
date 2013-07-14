@@ -49,23 +49,28 @@ Meteor.Collection = function (name, options) {
                   "the collection name to turn off this warning.)");
   }
 
-  // note: nameless collections never have a connection
-  self._connection = name && (options.connection ||
-                           (Meteor.isClient ?
-                            Meteor.default_connection : Meteor.default_server));
+  if (! name || options.connection === null)
+    // note: nameless collections never have a connection
+    self._connection = null;
+  else if (options.connection)
+    self._connection = options.connection;
+  else if (Meteor.isClient)
+    self._connection = Meteor.default_connection;
+  else
+    self._connection = Meteor.default_server;
 
   if (!options._driver) {
     if (name && self._connection === Meteor.default_server &&
-        Meteor._RemoteCollectionDriver)
-      options._driver = Meteor._RemoteCollectionDriver;
+        Meteor._getRemoteCollectionDriver)
+      options._driver = Meteor._getRemoteCollectionDriver();
     else
       options._driver = Meteor._LocalCollectionDriver;
   }
 
-  self._collection = options._driver.open(name);
+  self._collection = options._driver.open(name, self._connection);
   self._name = name;
 
-  if (name && self._connection.registerStore) {
+  if (self._connection && self._connection.registerStore) {
     // OK, we're going to be a slave, replicating some remote
     // database, except possibly with some temporary divergence while
     // we have unacknowledged RPC's.
@@ -221,6 +226,25 @@ _.extend(Meteor.Collection.prototype, {
 
 });
 
+Meteor.Collection._publishCursor = function (cursor, sub, collection) {
+  var observeHandle = cursor.observeChanges({
+    added: function (id, fields) {
+      sub.added(collection, id, fields);
+    },
+    changed: function (id, fields) {
+      sub.changed(collection, id, fields);
+    },
+    removed: function (id) {
+      sub.removed(collection, id);
+    }
+  });
+
+  // We don't call sub.ready() here: it gets called in livedata_server, after
+  // possibly calling _publishCursor on multiple returned cursors.
+
+  // register stop callback (expects lambda w/ no args).
+  sub.onStop(function () {observeHandle.stop();});
+};
 
 // protect against dangerous selectors.  falsey and {_id: falsey} are both
 // likely programmer error, and not what you want, particularly for destructive
@@ -332,6 +356,13 @@ _.each(["insert", "update", "remove"], function (name) {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
     }
 
+    var wrappedCallback;
+    if (callback) {
+      wrappedCallback = function (error, result) {
+        callback(error, !error && ret);
+      };
+    }
+
     if (self._connection && self._connection !== Meteor.default_server) {
       // just remote to another endpoint, propagate return value or
       // exception.
@@ -345,21 +376,12 @@ _.each(["insert", "update", "remove"], function (name) {
         throwIfSelectorIsNotId(args[0], name);
       }
 
-      if (callback) {
-        // asynchronous: on success, callback should return ret
-        // (document ID for insert, undefined for update and
-        // remove), not the method's result.
-        self._connection.apply(self._prefix + name, args, function (error, result) {
-          callback(error, !error && ret);
-        });
-      } else {
-        // synchronous: propagate exception
-        self._connection.apply(self._prefix + name, args);
-      }
+      self._connection.apply(self._prefix + name, args, wrappedCallback);
 
     } else {
       // it's my collection.  descend into the collection object
       // and propagate any exception.
+      args.push(wrappedCallback);
       try {
         self._collection[name].apply(self._collection, args);
       } catch (e) {
@@ -369,9 +391,6 @@ _.each(["insert", "update", "remove"], function (name) {
         }
         throw e;
       }
-
-      // on success, return *ret*, not the connection's return value.
-      callback && callback(null, ret);
     }
 
     // both sync and async, unless we threw an exception, return ret
@@ -393,6 +412,12 @@ Meteor.Collection.prototype._dropIndex = function (index) {
   if (!self._collection._dropIndex)
     throw new Error("Can only call _dropIndex on server collections");
   self._collection._dropIndex(index);
+};
+Meteor.Collection.prototype._createCappedCollection = function (byteSize) {
+  var self = this;
+  if (!self._collection._createCappedCollection)
+    throw new Error("Can only call _createCappedCollection on server collections");
+  self._collection._createCappedCollection(byteSize);
 };
 
 Meteor.Collection.ObjectID = LocalCollection._ObjectID;
@@ -542,8 +567,8 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
             self[validatedMethodName].apply(self, argsWithUserId);
           } else if (self._isInsecure()) {
             // In insecure mode, allow any mutation (with a simple selector).
-            self._collection[method].apply(
-              self._collection, _.toArray(arguments));
+            self._collection[method].apply(self._collection,
+                                           _.toArray(arguments));
           } else {
             // In secure mode, if we haven't called allow or deny, then nothing
             // is permitted.

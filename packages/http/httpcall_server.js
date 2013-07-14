@@ -5,8 +5,9 @@ var request = Npm.require('request');
 var url_util = Npm.require('url');
 var Future = Npm.require(path.join('fibers', 'future'));
 
-
-Meteor.http.call = function(method, url, options, callback) {
+// Meteor.http._call always runs asynchronously; Meteor.http.call, defined
+// below, wraps _call and runs synchronously when no callback is provided.
+Meteor.http._call = function(method, url, options, callback) {
 
   ////////// Process arguments //////////
 
@@ -58,21 +59,6 @@ Meteor.http.call = function(method, url, options, callback) {
 
   _.extend(headers, options.headers || {});
 
-  ////////// Callback wrapping //////////
-
-  var fut;
-  if (! callback) {
-    // Sync mode
-    fut = new Future;
-    callback = fut.resolver(); // throw errors, return results
-  } else {
-    // Async mode
-    // re-enter user code in a Fiber
-    callback = Meteor.bindEnvironment(callback, function(e) {
-      Meteor._debug("Exception in callback of Meteor.http.call", e.stack);
-    });
-  }
-
   // wrap callback to add a 'response' property on an error, in case
   // we have both (http 4xx/5xx error, which has a response payload)
   callback = (function(callback) {
@@ -119,8 +105,6 @@ Meteor.http.call = function(method, url, options, callback) {
     callback(error, response);
 
   });
-
-  // If we're in sync mode, block and return the result.
-  if (fut)
-    return fut.wait();
 };
+
+Meteor.http.call = Meteor._wrapAsync(Meteor.http._call);

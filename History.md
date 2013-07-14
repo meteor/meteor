@@ -1,6 +1,25 @@
 
 ## vNEXT
 
+* Calling `findOne()` on the server no longer loads the full query result
+  into memory.
+
+* Fix Spark memory leak.  #1157
+
+* Upgraded dependencies:
+  * Node from 0.8.18 to 0.8.24
+  * MongoDB from 2.4.3 to 2.4.4
+
+* Make server-side Mongo inserts, updates, and removes run asynchronously when a
+  callback is passed.
+
+* Add new `Assets` API and `private` subdirectory for including and accessing
+  server assets in an application.
+
+* Delete login tokens from server when user logs out.
+
+## v0.6.4
+
 * Separate OAuth flow logic from Accounts into separate packages. The
   `facebook`, `github`, `google`, `meetup`, `twitter`, and `weibo`
   packages can be used to perform an OAuth exchange without creating an
@@ -22,11 +41,11 @@
 
 * Fix Mongo queries which nested JavaScript RegExp objects inside `$or`.  #1089
 
-* Upgrade Underscore from 1.4.2 to 1.4.4.  #776
-
-* Upgrade http-proxy from 0.8.5 to 0.10.1.  #513
-
-* Upgrade Connect from 1.9.2 to 2.7.10.
+* Upgraded dependencies:
+  * Underscore from 1.4.2 to 1.4.4  #776
+  * http-proxy from 0.8.5 to 0.10.1  #513
+  * connect from 1.9.2 to 2.7.10
+  * Node mongodb client from 1.2.13 to 1.3.7  #1060
 
 Patches contributed by GitHub users awwx, johnston, and timhaines.
 

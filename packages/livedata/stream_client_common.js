@@ -52,6 +52,8 @@ var translateUrl =  function(url, newSchemeBase, subPath) {
     url = newSchemeBase + "://" + url;
   }
 
+  url = Meteor._relativeToSiteRootUrl(url);
+
   if (endsWith(url, "/"))
     return url + subPath;
   else
@@ -129,9 +131,14 @@ _.extend(Meteor._DdpClientStream.prototype, {
   // Trigger a reconnect.
   reconnect: function (options) {
     var self = this;
+    options = options || {};
+
+    if (options.url) {
+      self._changeUrl(options.url);
+    }
 
     if (self.currentStatus.connected) {
-      if (options && options._force) {
+      if (options._force || options.url) {
         // force reconnect.
         self._lostConnection();
       } // else, noop.

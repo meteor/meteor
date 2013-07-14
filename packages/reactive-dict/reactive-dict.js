@@ -12,6 +12,7 @@ var parse = function (serialized) {
 };
 
 // migrationData, if present, should be data previously returned from getMigrationData()
+// @export ReactiveDict
 ReactiveDict = function (migrationData) {
   this.keys = migrationData || {}; // key -> value
   this.keyDeps = {}; // key -> Dependency

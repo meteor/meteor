@@ -324,12 +324,22 @@ utils.amendUrl = function(url) {
     if (url.indexOf('//') === 0) {
         url = dl.protocol + url;
     }
-    // '/abc' --> 'http://localhost:80/abc'
+    // '/abc' --> 'http://localhost:1234/abc'
     if (url.indexOf('/') === 0) {
         url = dl.protocol + '//' + dl.host + url;
     }
     // strip trailing slashes
     url = url.replace(/[/]+$/,'');
+
+    // We have a full url here, with proto and host. For some browsers
+    // http://localhost:80/ is not in the same origin as http://localhost/
+	// Remove explicit :80 or :443 in such cases. See #74
+    var parts = url.split("/");
+    if ((parts[0] === "http:" && /:80$/.test(parts[2])) ||
+	    (parts[0] === "https:" && /:443$/.test(parts[2]))) {
+		parts[2] = parts[2].replace(/:(80|443)$/, "");
+	}
+    url = parts.join("/");
     return url;
 };
 
@@ -948,7 +958,7 @@ utils.isXHRCorsCapable = function() {
  */
 
 var SockJS = function(url, dep_protocols_whitelist, options) {
-    if (this === _window) {
+    if (!(this instanceof SockJS)) {
         // makes `new` optional
         return new SockJS(url, dep_protocols_whitelist, options);
     }
@@ -1197,6 +1207,10 @@ SockJS.prototype._applyInfo = function(info, rtt, protocols_whitelist) {
     that._options.rtt = rtt;
     that._options.rto = utils.countRTO(rtt);
     that._options.info.null_origin = !_document.domain;
+    // Servers can override base_url, eg to provide a randomized domain name and
+    // avoid browser per-domain connection limits.
+    if (info.base_url)
+      that._base_url = info.base_url;
     var probed = utils.probeProtocols();
     that._protocols = utils.detectProtocols(probed, protocols_whitelist, info);
 // <METEOR>

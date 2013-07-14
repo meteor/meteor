@@ -196,7 +196,7 @@ _.extend(warehouse, {
 
   _packageUpdatesMessage: function (packageNames) {
     var lines = [];
-    var width = 80;  // see packages.format_list for why we hardcode this
+    var width = 80;  // see library.formatList for why we hardcode this
     var currentLine = ' * Package updates:';
     _.each(packageNames, function (name) {
       if (currentLine.length + 1 + name.length <= width) {

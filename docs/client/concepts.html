@@ -28,17 +28,23 @@ CSS rules, and static assets.  Meteor automates the packaging and transmission
 of these different components.  And, it is quite flexible about how you choose
 to structure those components in your file tree.
 
-The only server asset is JavaScript.  Meteor gathers all your JavaScript
-files, excluding anything under the `client`
-and `public` subdirectories, and loads them into a Node.js
+The only server assets are JavaScript and files in the `private` subdirectory.
+Meteor gathers all your JavaScript
+files, excluding anything under the `client`, `public`, and `private`
+subdirectories, and loads them into a Node.js
 server instance inside a fiber.  In Meteor, your server code runs in
 a single thread per request, not in the asynchronous callback style
 typical of Node.  We find the linear execution model a better fit for
 the typical server code in a Meteor application.
 
+Meteor gathers any files under the `private` subdirectory and makes the contents
+of these files available to server code via the [`Assets`](#assets) API. The
+`private` subdirectory is the place for any files that should be accessible to
+server code but not served to the client, like private data files.
+
 There are more assets to consider on the client side.  Meteor
-gathers all JavaScript files in your tree with the exception of
-the `server` and `public` subdirectories for the
+gathers all JavaScript files in your tree, with the exception of
+the `server`, `public`, and `private` subdirectories, for the
 client.  It minifies this bundle and serves it to each new client.
 You're free to use a single JavaScript file for your entire application, or
 create a nested tree of separate files, or anything in between.
@@ -61,8 +67,8 @@ containing passwords or authentication mechanisms, should be
 kept in the `server` directory.
 
 CSS files are gathered together as well: the client will get a bundle with all
-the CSS in your tree (excluding the `server`
-and `public` subdirectories).
+the CSS in your tree (excluding the `server`,
+`public`, and `private` subdirectories).
 
 In development mode, JavaScript and CSS files are sent individually to make
 debugging easier.
@@ -244,6 +250,13 @@ modify data, those modifications can run locally without waiting for the
 confirmation from the server, while still giving the server final say
 over the requested change.
 
+{{#note}}
+The current release of Meteor supports MongoDB, the popular document
+database, and the examples in this section use the
+        [MongoDB API](http://www.mongodb.org/display/DOCS/Manual).  Future
+releases will include support for other databases.
+{{/note}}
+
 <h3 id="dataandsecurity-authentication">Authentication and user accounts</h3>
 
 Meteor includes [Meteor Accounts](#accounts_api), a state-of-the-art
@@ -260,14 +273,6 @@ password change, and password reset emails. You can add [Accounts
 UI](#accountsui) to your app with just one line of code. The `accounts-ui` smart
 package even provides a configuration wizard that walks you through the steps to
 set up the external login services you're using in your app.
-
-{{#note}}
-The current release of Meteor supports MongoDB, the popular document
-database, and the examples in this section use the
-        [MongoDB API](http://www.mongodb.org/display/DOCS/Manual).  Future
-releases will include support for other databases.
-{{/note}}
-
 
 <h3 id="dataandsecurity-validation">Input validation</h3>
 

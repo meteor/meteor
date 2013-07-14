@@ -1,3 +1,2 @@
-if (typeof Facebook === 'undefined') {
-  Facebook = {};
-}
+// @export Facebook
+Facebook = {};

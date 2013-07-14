@@ -69,6 +69,13 @@ var tag_names =
    'P PARAM PRE Q S SAMP SCRIPT SELECT SMALL SPAN STRIKE STRONG SUB SUP ' +
    'TABLE TBODY TD TEXTAREA TFOOT TH THEAD TR TT U UL VAR').split(' ');
 
+// @export A, ABBR, ACRONYM, B, BDO, BIG, BLOCKQUOTE, BR, BUTTON, CAPTION
+// @export CITE, CODE, COL, COLGROUP, DD, DEL, DFN, DIV, DL, DT, EM, FIELDSET
+// @export FORM, H1, H2, H3, H4, H5, H6, HR, I, IFRAME, IMG, INPUT, INS, KBD
+// @export LABEL, LEGEND, LI, OBJECT, OL, OPTGROUP, OPTION, P, PARAM, PRE, Q
+// @export S, SAMP, SCRIPT, SELECT, SMALL, SPAN, STRIKE, STRONG, SUB, SUP
+// @export TABLE, TBODY, TD, TEXTAREA, TFOOT, TH, THEAD, TR, TT, U, UL, VAR
+
 for (var i = 0; i < tag_names.length; i++) {
   var tag = tag_names[i];
 

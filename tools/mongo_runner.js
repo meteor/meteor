@@ -1,6 +1,5 @@
 var fs = require("fs");
 var path = require("path");
-var child_process = require('child_process');
 
 var files = require('./files.js');
 
@@ -15,6 +14,7 @@ var _ = require('underscore');
  */
 var find_mongo_pids = function (app_dir, port, callback) {
   // 'ps ax' should be standard across all MacOS and Linux.
+  var child_process = require('child_process');
   child_process.exec('ps ax',
     function (error, stdout, stderr) {
       if (error) {
@@ -157,6 +157,7 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
       return;
     }
 
+    var child_process = require('child_process');
     var proc = child_process.spawn(mongod_path, [
       '--bind_ip', '127.0.0.1',
       '--smallfiles',

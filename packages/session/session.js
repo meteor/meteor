@@ -5,6 +5,8 @@ if (Meteor._reload) {
     migratedKeys = migrationData.keys;
   }
 }
+
+// @export Session
 Session = new ReactiveDict(migratedKeys);
 
 if (Meteor._reload) {

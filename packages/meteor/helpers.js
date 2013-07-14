@@ -1,6 +1,10 @@
 // XXX namespacing -- find a better home for these?
 
-if (__meteor_runtime_config__.meteorRelease)
+if (Meteor.isServer)
+  var Future = Npm.require('fibers/future');
+
+if (typeof __meteor_runtime_config__ === 'object' &&
+    __meteor_runtime_config__.meteorRelease)
   Meteor.release = __meteor_runtime_config__.meteorRelease;
 
 _.extend(Meteor, {
@@ -56,5 +60,51 @@ _.extend(Meteor, {
 
       delete stack[i][key];
     }
+  },
+
+  // _wrapAsync can wrap any function that takes some number of arguments that
+  // can't be undefined, followed by some optional arguments, where the callback
+  // is the last optional argument.
+  // e.g. fs.readFile(pathname, [callback]),
+  // fs.open(pathname, flags, [mode], [callback])
+  // For maximum effectiveness and least confusion, wrapAsync should be used on
+  // functions where the callback is the only argument of type Function.
+  _wrapAsync: function (fn) {
+    return function (/* arguments */) {
+      var self = this;
+      var callback;
+      var fut;
+      var newArgs = _.toArray(arguments);
+
+      var logErr = function (err) {
+        if (err)
+          return Meteor._debug("Exception in callback of async function",
+                               err ? err.stack : err);
+      };
+
+      // Pop off optional args that are undefined
+      while (newArgs.length > 0 &&
+             typeof(newArgs[newArgs.length - 1]) === "undefined") {
+        newArgs.pop();
+      }
+      // If we have any left and the last one is a function, then that's our
+      // callback; otherwise, we don't have one.
+      if (newArgs.length > 0 &&
+          newArgs[newArgs.length - 1] instanceof Function) {
+        callback = newArgs.pop();
+      } else {
+        if (Meteor.isClient) {
+          callback = logErr;
+        } else {
+          fut = new Future();
+          callback = fut.resolver();
+        }
+      }
+      newArgs.push(Meteor.bindEnvironment(callback, logErr));
+      var result = fn.apply(self, newArgs);
+      if (fut)
+        return fut.wait();
+      return result;
+    };
   }
 });

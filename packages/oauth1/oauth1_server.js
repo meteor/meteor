@@ -2,7 +2,7 @@
 Oauth1._requestTokens = {};
 
 // connect middleware
-Oauth1._handleRequest = function (service, query, res) {
+Oauth._requestHandlers['1'] = function (service, query, res) {
 
   var config = ServiceConfiguration.configurations.findOne({service: service.serviceName});
   if (!config) {
@@ -26,7 +26,6 @@ Oauth1._handleRequest = function (service, query, res) {
     var redirectUrl = urls.authenticate + '?oauth_token=' + oauthBinding.requestToken;
     res.writeHead(302, {'Location': redirectUrl});
     res.end();
-
   } else {
     // step 2, redirected from provider login - complete the login
     // process: if the user authorized permissions, get an access
@@ -56,9 +55,9 @@ Oauth1._handleRequest = function (service, query, res) {
           options: oauthResult.options
         };
     }
-  }
 
-  // Either close the window, redirect, or render nothing
-  // if all else fails
-  Oauth._renderOauthResults(res, query);
+    // Either close the window, redirect, or render nothing
+    // if all else fails
+    Oauth._renderOauthResults(res, query);
+  }
 };

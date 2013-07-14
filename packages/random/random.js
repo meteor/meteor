@@ -149,6 +149,7 @@ var pid = (typeof process !== 'undefined' && process.pid) || 1;
 // XXX On the server, use the crypto module (OpenSSL) instead of this PRNG.
 //     (Make Random.fraction be generated from Random.hexString instead of the
 //     other way around, and generate Random.hexString from crypto.randomBytes.)
+// @export Random
 Random = create([
   new Date(), height, width, agent, pid, Math.random()
 ]);
