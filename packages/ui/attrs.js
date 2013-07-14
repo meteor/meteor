@@ -1,4 +1,3 @@
-var Component = UIComponent;
 
 var ATTRIBUTE_NAME_REGEX = /^[^\s"'>/=/]+$/;
 
@@ -128,7 +127,7 @@ _extend(AttributeHandler.prototype, {
       return '';
 
     return this.name + '="' +
-      _UI.encodeSpecialEntities(this.stringifyValue(value), true) + '"';
+      UI.encodeSpecialEntities(this.stringifyValue(value), true) + '"';
   },
   stringifyValue: function (value) {
     return String(value);

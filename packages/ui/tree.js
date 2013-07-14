@@ -1,4 +1,3 @@
-var Component = UIComponent;
 
 // this is a shared object that lives on prototypes;
 // don't ever mutate it!

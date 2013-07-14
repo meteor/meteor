@@ -1,5 +1,5 @@
-// @export _UI
-_UI = {
+// @export UI
+UI = {
   nextGuid: 1
 };
 
@@ -54,7 +54,7 @@ var constrImpl = function (ths, args, type) {
       ths.data = dataFunc;
   }
 
-  ths.guid = _UI.nextGuid++;
+  ths.guid = UI.nextGuid++;
   ths.constructed();
 
   return ths;
@@ -241,5 +241,4 @@ Component.include({
   }
 });
 
-// @export UIComponent
-UIComponent = Component;
+UI.Component = Component;

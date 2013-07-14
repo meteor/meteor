@@ -1,4 +1,3 @@
-var Component = UIComponent;
 
 Component.define({
   INITIAL: '<INITIAL>',

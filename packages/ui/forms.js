@@ -1,4 +1,3 @@
-var Component = UIComponent;
 
 var getterImpl =
       function (foo) {

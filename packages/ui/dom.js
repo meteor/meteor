@@ -1,4 +1,3 @@
-var Component = UIComponent;
 
 var emptyCommentProp = 'meteor-ui-empty';
 var createEmptyComment = function (beforeNode) {

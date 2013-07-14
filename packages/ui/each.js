@@ -1,7 +1,6 @@
-var Component = UIComponent;
 
 // `id` arguments to this class MUST be non-empty strings
-_UI.List = Component.extend({
+UI.List = Component.extend({
   typeName: 'List',
   _items: null, // OrderedDict of id -> Component
   _else: null, // Component
@@ -154,9 +153,9 @@ _UI.List = Component.extend({
   }
 });
 
-_UI.Each = Component.extend({
+UI.Each = Component.extend({
   typeName: 'Each',
-  List: _UI.List,
+  List: UI.List,
   _oldData: null,
   init: function () {
     var self = this;

@@ -1,4 +1,3 @@
-var Component = UIComponent;
 
 var ESCAPED_CHARS_UNQUOTED_REGEX = /[&<>]/g;
 var ESCAPED_CHARS_QUOTED_REGEX = /[&<>"]/g;
@@ -13,7 +12,7 @@ var escapeOne = function(c) {
   return escapeMap[c];
 };
 
-_UI.encodeSpecialEntities = function (text, isQuoted) {
+UI.encodeSpecialEntities = function (text, isQuoted) {
   // Encode Unicode characters to HTML entities.
   //
   // This implementation just encodes the characters that otherwise

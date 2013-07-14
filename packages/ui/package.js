@@ -20,9 +20,7 @@ Package.on_use(function (api) {
                  'forms.js',
                  'each.js',
                  'components.js',
-
-                 'component.js', 'renderbuffer.js',
-                 'library.js'],
+                 'lookup.js'],
                 'client');
 });
 

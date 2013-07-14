@@ -1,8 +1,7 @@
-var Component = UIComponent;
 
-_UI.Text = Component.extend({
+UI.Text = Component.extend({
   typeName: 'Text',
-  _encodeEntities: _UI.encodeSpecialEntities,
+  _encodeEntities: UI.encodeSpecialEntities,
   _stringify: function (x) {
     return String(x == null ? '' : x);
   },
@@ -12,7 +11,7 @@ _UI.Text = Component.extend({
   }
 });
 
-_UI.HTML = Component.extend({
+UI.HTML = Component.extend({
   typeName: 'HTML',
   _stringify: function (x) {
     return String(x == null ? '' : x);
@@ -23,7 +22,7 @@ _UI.HTML = Component.extend({
   }
 });
 
-_UI.If = Component.extend({
+UI.If = Component.extend({
   typeName: 'If',
   render: function (buf) {
     var self = this;
@@ -34,7 +33,18 @@ _UI.If = Component.extend({
   }
 });
 
-_UI.Counter = Component.extend({
+UI.Unless = Component.extend({
+  typeName: 'Unless',
+  render: function (buf) {
+    var self = this;
+    var condition = Deps.isolate(function () {
+      return ! self.data();
+    });
+    buf(condition ? self.content() : self.elseContent());
+  }
+});
+
+UI.Counter = Component.extend({
   typeName: "Counter",
   fields: {
     count: 0
@@ -46,7 +56,7 @@ _UI.Counter = Component.extend({
     var self = this;
 
     buf("<div style='background:yellow'>",
-        new _UI.Text(function () {
+        new UI.Text(function () {
           return self.count();
         }),
         "</div>");
