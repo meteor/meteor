@@ -20,7 +20,7 @@ var sourcemap = require('source-map');
 // unipackage/slice changes, but this version (which is build-tool-specific) can
 // change when the the contents (not structure) of the built output changes. So
 // eg, if we improve the linker's static analysis, this should be bumped.
-exports.BUILD_VERSION = 'meteor/1';
+exports.BUILD_VERSION = 'meteor/2';
 
 // Find all files under `rootPath` that have an extension in
 // `extensions` (an array of extensions without leading dot), and
@@ -1983,6 +1983,22 @@ _.extend(Package.prototype, {
       builder.reserve("npm/node_modules", { directory: true });
       builder.reserve("head");
       builder.reserve("body");
+
+      // Pre-linker versions of Meteor expect all packages in the warehouse to
+      // contain a file called "package.js"; they use this as part of deciding
+      // whether or not they need to download a new package. Because packages
+      // are downloaded by the *existing* version of the tools, we need to
+      // include this file until we're comfortable breaking "meteor update" from
+      // 0.6.4.  (Specifically, warehouse.packageExistsInWarehouse used to check
+      // to see if package.js exists instead of just looking for the package
+      // directory.)
+      // XXX Remove this once we can.
+      builder.write("package.js", {
+        data: new Buffer(
+          ("// This file is included for compatibility with the Meteor " +
+           "0.6.4 package downloader.\n"),
+          "utf8")
+      };
 
       // Slices
       _.each(self.slices, function (slice) {
