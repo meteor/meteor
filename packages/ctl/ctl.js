@@ -49,7 +49,10 @@ Ctl.Commands.push({
       if (appConfig.admin) {
         bindPathPrefix = "/" + Ctl.myAppName();
         proxyConfig = {
-          securePort: null,
+          // For testing/development, we want to run two satellites with two
+          // proxies on the same machine. So we choose the admin ports to not
+          // conflict with ports used by jobs on the border proxy.
+          securePort: 4414,
           insecurePort: 9414,
           bindHost: "localhost",
           bindPathPrefix: bindPathPrefix
