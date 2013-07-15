@@ -287,5 +287,7 @@ exports.logs = function (options) {
 // - app
 exports.temporaryMongoUrl = function (options) {
   var galaxy = getGalaxy(options.context);
-  return galaxy.call('getTemporaryMongoUrl', options.app);
+  var url = galaxy.call('getTemporaryMongoUrl', options.app);
+  galaxy.close();
+  return url;
 };
