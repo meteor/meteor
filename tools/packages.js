@@ -14,6 +14,14 @@ var unipackage = require('./unipackage.js');
 var fs = require('fs');
 var sourcemap = require('source-map');
 
+// Whenever you change anything about the code that generates unipackages, bump
+// this version number. The idea is that the "format" field of the unipackage
+// JSON file only changes when the actual specified structure of the
+// unipackage/slice changes, but this version (which is build-tool-specific) can
+// change when the the contents (not structure) of the built output changes. So
+// eg, if we improve the linker's static analysis, this should be bumped.
+exports.BUILD_VERSION = 'meteor/1';
+
 // Find all files under `rootPath` that have an extension in
 // `extensions` (an array of extensions without leading dot), and
 // return them as a list of paths relative to rootPath. Ignore files
@@ -1780,6 +1788,11 @@ _.extend(Package.prototype, {
 
     // If we're supposed to check the dependencies, go ahead and do so
     if (options.onlyIfUpToDate) {
+      // Do we think we'll generate different contents than the tool that built
+      // this package?
+      if (mainJson.buildVersion !== exports.BUILD_VERSION)
+        return false;
+
       if (options.buildOfPath &&
           (buildInfoJson.source !== options.buildOfPath)) {
         // This catches the case where you copy a source tree that had
@@ -1948,6 +1961,7 @@ _.extend(Package.prototype, {
 
       var mainJson = {
         format: "unipackage-pre1",
+        buildVersion: exports.BUILD_VERSION,
         summary: self.metadata.summary,
         internal: self.metadata.internal,
         slices: [],
