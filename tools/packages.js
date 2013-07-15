@@ -1998,7 +1998,7 @@ _.extend(Package.prototype, {
           ("// This file is included for compatibility with the Meteor " +
            "0.6.4 package downloader.\n"),
           "utf8")
-      };
+      });
 
       // Slices
       _.each(self.slices, function (slice) {
