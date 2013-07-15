@@ -21,7 +21,16 @@ TOPDIR=$(pwd)
 OUTDIR="$TOPDIR/dist/packages"
 mkdir -p $OUTDIR
 
-# Make sure all NPM modules are updated.
+# Find a GNU tar, so we can use the --transform flag.
+if [ -x "/usr/bin/gnutar" ] ; then
+    # Mac.
+    GNUTAR=/usr/bin/gnutar
+else
+    # Linux.
+    GNUTAR=tar
+fi
+
+# Build all unipackages.
 ./meteor --get-ready
 
 # A hacky (?) way to pass the release manifest chunk with package
@@ -41,7 +50,13 @@ do
 
     PACKAGE_VERSION=$(git ls-tree HEAD $PACKAGE | shasum | cut -f 1 -d " ") # shasum's output looks like: 'SHA -'
     echo "$PACKAGE version $PACKAGE_VERSION"
-    $TAR -c -z -f $OUTDIR/$PACKAGE-${PACKAGE_VERSION}-${PLATFORM}.tar.gz $PACKAGE
+    ROOTDIR="$PACKAGE-${PACKAGE_VERSION}-${PLATFORM}"
+    TARBALL="$OUTDIR/$PACKAGE-${PACKAGE_VERSION}-${PLATFORM}.tar.gz"
+
+    # Create the tarball from the built package. In the tarball, the root
+    # directory should be $ROOTDIR, so we replace the "." with that, using
+    # --transform (a  GNU tar extension).
+    "$GNUTAR" czf "$TARBALL" -C "$PACKAGE/.build" --transform 's/^\./'"$ROOTDIR"'/' .
 
     # this is used in build-release.sh, which constructs the release json.
     echo -n "    \"$PACKAGE\": \"$PACKAGE_VERSION\"" >> "$TOPDIR/.package_manifest_chunk"
