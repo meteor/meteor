@@ -3,6 +3,7 @@ var files = require('./files.js');
 var path = require('path');
 var fs = require('fs');
 var unipackage = require('./unipackage.js');
+var fiberHelpers = require('./fiber-helpers.js');
 var Fiber = require('fibers');
 var request = require('request');
 
@@ -232,11 +233,7 @@ exports.logs = function (options) {
     galaxy.close();
   }
 
-  // XXX: should not be global, quick hack to force logs continuation work after
-  // reconnect. Since ssh-tunnel reconnect forces this method to rerun we need
-  // to preserve some global state.
-  if (typeof lastLogId === "undefined")
-    lastLogId = null;
+  var lastLogId = null;
   var logReader = getMeteor(options.context).connect(logReaderURL);
   var Log = unipackage.load({
     library: options.context.library,
@@ -278,7 +275,7 @@ exports.logs = function (options) {
     // (otherwise Node will continue running).
     logReader.close();
   } else {
-    Fiber.yield();
+    fiberHelpers.yieldForever();
   }
 };
 
