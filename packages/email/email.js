@@ -60,7 +60,7 @@ var devModeSend = function (mc) {
   var future = new Future;
   mc.on('end', function () {
     stream.write("====== END MAIL #" + devmode_mail_id + " ======\n");
-    future.ret();
+    future['return']();
   });
   future.wait();
 };

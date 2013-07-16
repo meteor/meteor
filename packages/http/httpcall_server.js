@@ -3,7 +3,6 @@ Meteor.http = Meteor.http || {};
 var path = Npm.require('path');
 var request = Npm.require('request');
 var url_util = Npm.require('url');
-var Future = Npm.require(path.join('fibers', 'future'));
 
 // Meteor.http._call always runs asynchronously; Meteor.http.call, defined
 // below, wraps _call and runs synchronously when no callback is provided.
