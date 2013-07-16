@@ -1,7 +1,6 @@
-Template.headline.release = function () {
+Template.topbar.release = function () {
   return Meteor.release || "(checkout)";
 };
-
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -85,7 +84,7 @@ Meteor.startup(function () {
 });
 
 var toc = [
-  {name: "Meteor " + Template.headline.release(), id: "top"}, [
+  {name: "Overview", id: "top"}, [
     "Quick start",
     "Seven principles",
     "Resources"

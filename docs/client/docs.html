@@ -6,12 +6,16 @@
 </head>
 
 <body>
-  <div id="nav">
+  <div id="topbar">
+    {{> topbar}}
+  </div>
+  <div id="nav1">
+  </div>
+  <div id="nav2">
     {{> nav }}
   </div>
   <div id="main">
     <div id="top"></div>
-    {{> headline }}
     {{> introduction }}
     {{> concepts }}
     {{> api }}
@@ -20,8 +24,12 @@
   </div>
 </body>
 
+<template name="topbar">
+  <h1>Documentation {{release}}</h1>
+</template>
+
 <template name="nav">
-<div id="nav-inner">
+<div id="nav1-inner">
   {{#each sections}}
   {{#if type "spacer"}}
     <div class="spacer"> </div>
@@ -34,12 +42,6 @@
   {{/each}}
 </div>
 </template>
-
-<!-- This only is displayed on narrow displays (eg phone) -->
-<template name="headline">
-  <h1 class="main-headline">Meteor {{release}}</h1>
-</template>
-
 
 <template name="dtdd_helper">
 <dt><span class="name">{{{name}}}</span>

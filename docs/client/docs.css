@@ -103,44 +103,57 @@ a:hover {
     background-color: yellow;
 }
 
+/** Topbar **/
+
+#topbar {
+    border: 1px solid black;
+    border-style: none none solid none;
+    line-height: 50px;
+}
+
+#topbar h1 {
+    font-size: 2em;
+    margin: 0 0 0 .25em;
+}
+
 /** Section nav **/
 
-#nav {
+#nav2 {
     line-height: 1.2;
     border-width: 1px;
     border-color: black;
     border-style: none dotted none none;
 }
 
-#nav-inner {
+#nav2-inner {
     padding-left: 30px;
     padding-right: 30px;
     padding-top: -10px;
     padding-bottom: 30px;
 }
 
-#nav a {
+#nav2 a {
     text-decoration: none;
     color: black;
 }
 
-#nav a:hover {
+#nav2 a:hover {
     margin: 0px -5px 0px -5px;
     padding: 2px 5px 2px 5px;
 }
 
-#nav h1 {
+#nav2 h1 {
     font-size: 1.8em;
     margin: 1.2em 0 .2em 0;
 }
 
-#nav h2 {
+#nav2 h2 {
     font-size: 1.33em;
     font-weight: normal;
     margin: .6em 0 .3em 0;
 }
 
-#nav h3 {
+#nav2 h3 {
     font-size: .8em;
     font-weight: normal;
     margin: 4px 0px 4px 0px;
@@ -149,7 +162,7 @@ a:hover {
     letter-spacing: 0px;
 }
 
-#nav h4 {
+#nav2 h4 {
     font-size: .8em;
     font-weight: normal;
     margin: 4px 0px 4px 0px;
@@ -158,16 +171,30 @@ a:hover {
     letter-spacing: 0px;
 }
 
-#nav .spacer {
+#nav2 .spacer {
     height: .33em;
 }
 
-#nav .noncode {
+#nav2 .noncode {
     font-style: italic;
 }
 
-#nav .current {
+#nav2 .current {
     color: red;
+}
+
+/** Level 2 nav **/
+
+#nav1 {
+    line-height: 1.2;
+    border-width: 1px;
+    border-color: black;
+    border-style: none dotted none none;
+}
+
+#nav1-inner {
+    padding-left: 30px;
+    padding-right: 30px;
 }
 
 /** Main pane **/
@@ -407,8 +434,18 @@ dl.callbacks {
 
 /** layout control **/
 
+/* XXX obviously this needs to be rethought for two-level nav on
+mobile/tablet */
+
+#topbar {
+    display: none;
+}
+
 /* default to no sidebar */
-#nav {
+#nav1 {
+    display: none;
+}
+#nav2 {
     display: none;
 }
 .github-ribbon {
@@ -420,20 +457,39 @@ pre {
 
 @media (min-width: 768px) {
 /* ipad portrait or better */
+
+#topbar {
+    display: block;
+    position: fixed;
+    height: 50px;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+}
 #main {
-    width: 440px;
+    width: 440px; /* XXX */
     height: 100%;
-    margin-left: 260px; /* nav width + padding */
+    margin-top: 50px; /* topbar */
+    margin-left: 520px; /* nav width + padding */
     padding: 30px;
 }
-#nav {
+#nav1 {
     display: block;
     width: 200px;
     position: fixed;
     overflow: auto;
     height: 100%;
-    top: 0;
+    top: 50px;
     left: 0;
+}
+#nav2 {
+    display: block;
+    width: 200px;
+    position: fixed;
+    overflow: auto;
+    height: 100%;
+    top: 50px;
+    left: 260px;
 }
 .main-headline {
     display: none;
@@ -444,12 +500,20 @@ pre {
 /* ipad landscape and desktop */
 #main {
     width: 610px;
-    margin-left: 330px; /* nav width + padding */
+    margin-left: 660px; /* nav width + padding */
 }
-#nav {
+#nav1 {
     width: 270px;
+}
+#nav2 {
+    width: 270px;
+    left: 330px;
 }
 .github-ribbon {
     display: block;
+    position: absolute;
+    top: 50px; /* topbar */
+    right: 0px;
+    border: 0
 }
 }
