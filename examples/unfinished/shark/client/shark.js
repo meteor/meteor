@@ -55,7 +55,7 @@ Template.item({
 //  console.log(TABLE.rows.length);
 //});
 
-Span = UIComponent.extend({
+Span = UI.Component.extend({
   typeName: 'Span',
   render: function (buf) {
     buf("<span ",
@@ -76,7 +76,7 @@ Span = UIComponent.extend({
   }
 });
 
-Div = UIComponent.extend({
+Div = UI.Component.extend({
   typeName: 'Div',
   render: function (buf) {
     buf("<div style='background:cyan;margin:5px'>World",
@@ -89,7 +89,7 @@ Div = UIComponent.extend({
   }
 });
 
-Either = UIComponent.extend({
+Either = UI.Component.extend({
   typeName: 'Either',
   render: function (buf) {
     buf(Div.create(),
@@ -106,23 +106,23 @@ Either = UIComponent.extend({
             }
           }
         },
-        new _UI.If({
+        new UI.If({
           data: function () { return Session.get('which') === 'Div'; },
           content: Div,
           elseContent: Span
         }),
         { type: Span });
-    buf(new _UI.Each({
+    buf(new UI.Each({
       data: function () {
         var sess = Session.get('items');
         return sess != null ? sess :
           Items.find({}, { sort: { text: 1 }});
       },
-      content: UIComponent.extend({
+      content: UI.Component.extend({
         render: function (buf) {
           var self = this;
           buf("<div>Each ",
-              _UI.Text(function () { return self.data().text; }),
+              UI.Text(function () { return self.data().text; }),
               " ", String(Math.random()),
               "</div>");
         }
@@ -139,17 +139,17 @@ Meteor.startup(function () {
   x.attach(document.body);
 
   // leak `c`
-  (c = _UI.Counter.create({isRoot:true})).attach(document.body);
+  (c = UI.Counter.create({isRoot:true})).attach(document.body);
 });
 
 Meteor.startup(function () {
-  var c = UIComponent.extend({
+  var c = UI.Component.extend({
     render: function(buf) {
       buf(String(this.data()));
     }
   });
 
-  L = _UI.List({elseContent: function () {
+  L = UI.List({elseContent: function () {
     return c(function () { return 'else'; });
   }});
 
