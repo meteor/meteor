@@ -32,16 +32,16 @@ a img {
 
 /** Variables **/
 
-@nav1-width: 200px;
-@nav2-width: 270px;
+@nav1-width: 150px;
+@nav2-width: 225px;
 
 @nav1-width-tablet: 100px;
 @nav2-width-tablet: 200px;
 
-@nav1-padding: 30px;
-@nav2-padding: 30px;
+@nav1-padding: 10px;
+@nav2-padding: 25px;
 
-@topbar-height: 50px;
+@topbar-height: 55px;
 
 /** Basics **/
 
@@ -140,10 +140,9 @@ a:hover {
 }
 
 #nav2-inner {
-    padding-left: 30px;
-    padding-right: 30px;
     padding-top: -10px;
-    padding-bottom: 30px;
+    padding-left: @nav2-padding;
+    padding-right: @nav2-padding;
 }
 
 #nav2 a {
@@ -204,12 +203,13 @@ a:hover {
     line-height: 1.2;
     border-width: 1px;
     border-color: black;
-    border-style: none dotted none none;
+    border-style: none solid none none;
 }
 
 #nav1-inner {
-    padding-left: 30px;
-    padding-right: 30px;
+    padding-top: 10px;
+    padding-left: @nav1-padding;
+    padding-right: @nav1-padding;
 }
 
 #nav1 ul {
@@ -218,7 +218,21 @@ a:hover {
     margin: 0;
 }
 
+#nav1 li {
+    width: 100%;
+    color: #333;
+}
 
+#nav1 li:hover {
+    color: black;
+    font-weight: bold;
+}
+
+#nav1 li.selected {
+    color: black;
+    font-weight: bold;
+    background-color: yellow;
+}
 
 
 /** Main pane **/
@@ -494,8 +508,7 @@ pre {
     width: 440px; /* XXX */
     height: 100%;
     margin-top: @topbar-height;
-    margin-left: (@nav1-width-tablet + @nav1-padding * 2 +
-                  @nav2-width-tablet + @nav2-padding * 2);
+    margin-left: @nav1-width-tablet + @nav2-width-tablet;
     padding: 30px;
 }
 #nav1 {
@@ -511,10 +524,11 @@ pre {
     display: block;
     width: @nav1-width-tablet;
     position: fixed;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
     height: 100%;
     top: @topbar-height;
-    left: (@nav1-width-tablet + @nav1-padding * 2);
+    left: @nav1-width-tablet;
 }
 .main-headline {
     display: none;
@@ -525,22 +539,21 @@ pre {
 /* ipad landscape and desktop */
 #main {
     width: 610px; /* XXX */
-    margin-left: (@nav1-width + @nav1-padding * 2 +
-                  @nav2-width + @nav2-padding * 2);
+    margin-left: (@nav1-width + @nav2-width);
 }
 #nav1 {
     width: @nav1-width;
 }
 #nav2 {
     width: @nav2-width;
-    left: (@nav1-width + @nav1-padding * 2);
+    left: @nav1-width;
 }
 .github-ribbon {
     display: block;
-    position: absolute;
-    top: @topbar-height;
+    position: fixed;
+    top: 0px;
     right: 0px;
     border: 0;
-    z-index: -1;
+    z-index: 1;
 }
 }

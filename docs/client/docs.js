@@ -2,6 +2,11 @@ Template.topbar.release = function () {
   return Meteor.release || "(checkout)";
 };
 
+if (! Session.get('manual')) {
+  // XXX sync with URLs/use routes
+  Session.set('manual', 'essentials');
+}
+
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
   // broken before the multi-page layout because it had illegible
@@ -71,7 +76,7 @@ Meteor.startup(function () {
     });
   };
 
-  $('#main, #nav').delegate("a[href^='#']", 'click', function (evt) {
+  $('#main, #nav2').delegate("a[href^='#']", 'click', function (evt) {
     evt.preventDefault();
     var sel = $(this).attr('href');
     scrollToSection(sel);
@@ -83,12 +88,9 @@ Meteor.startup(function () {
   $('a:not([href^="#"])').attr('target', '_blank');
 });
 
-var toc = [
-  {name: "Overview", id: "top"}, [
-    "Quick start",
-    "Seven principles",
-    "Resources"
-  ],
+
+
+var tocMeteor = [
   "Concepts", [
     "What is Meteor?",
     "Structuring your app",
@@ -100,6 +102,28 @@ var toc = [
     "Namespacing",
     "Deploying",
     "Writing packages"
+  ],
+  "Command line", [ [
+    "meteor help",
+    "meteor run",
+    "meteor create",
+    "meteor deploy",
+    "meteor logs",
+    "meteor update",
+    "meteor add",
+    "meteor remove",
+    "meteor list",
+    "meteor mongo",
+    "meteor reset",
+    "meteor bundle"
+  ] ]
+];
+
+var tocEssentials = [
+  {name: "Overview", id: "top"}, [
+    "Quick start",
+    "Seven principles",
+    "Resources"
   ],
 
   "API", [
@@ -341,25 +365,15 @@ var toc = [
     "stylus",
     "showdown",
     "underscore"
-  ] ],
-
-  "Command line", [ [
-    "meteor help",
-    "meteor run",
-    "meteor create",
-    "meteor deploy",
-    "meteor logs",
-    "meteor update",
-    "meteor add",
-    "meteor remove",
-    "meteor list",
-    "meteor mongo",
-    "meteor reset",
-    "meteor bundle"
   ] ]
 ];
 
-var outerNavSections = [
+var manualContents = {
+  essentials: tocEssentials,
+  meteor: tocMeteor
+};
+
+var manualNames = [
   "Essentials",
   null,
   "Meteor",
@@ -383,13 +397,28 @@ var outerNavSections = [
   "lispyscript"
 ];
 
-Template.outerNav.sections = function () {
-  return _.map(outerNavSections, function (name) {
-    if (name)
-      return {name: name};
-    else
-      return {spacer: true};
-  });
+var manuals = _.map(manualNames, function (name) {
+  if (! name)
+    return { spacer: true };
+
+  var id = name.toLowerCase();
+  return {
+    name: name,
+    id: id
+  };
+});
+
+Template.outerNav.sections = manuals;
+
+Template.outerNav.maybe_selected = function () {
+  return Session.get("manual") === this.id ? "selected" : "";
+};
+
+Template.outerNav.events = {
+  'click li': function (evt) {
+    if (! this.spacer)
+      Session.set("manual", this.id);
+  }
 };
 
 var name_to_id = function (name) {
@@ -416,7 +445,7 @@ Template.nav.sections = function () {
     });
   };
 
-  walk(toc, 1);
+  walk(manualContents[Session.get('manual')] || [], 1);
   return ret;
 };
 

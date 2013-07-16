@@ -33,7 +33,9 @@
   <div id="nav1-inner">
     <ul>
       {{#each sections}}
-      <li>{{#unless spacer}}{{name}}{{#else}} {{/unless}}</li>
+      <li class="{{maybe_selected}}">
+        {{#if spacer}}&nbsp;{{else}}{{name}}{{/if}}
+      </li>
       {{/each}}
     </ul>
   </div>
