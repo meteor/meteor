@@ -251,18 +251,19 @@ var parseStack = function (err) {
       return;
     var m;
     if (m =
-        frame.match(/^\s*at\s*([^\s]+)\s*\(([^:]*)(:(\d+))?(:(\d+))?\)\s*$/)) {
+        frame.match(/^\s*at\s*((new )?[^\s]+)\s*\(([^:]*)(:(\d+))?(:(\d+))?\)\s*$/)) {
       // "    at My.Function (/path/to/myfile.js:532:39)"
       // "    at Array.forEach (native)"
+      // "    at new My.Class (file.js:1:2)"
       if (m[1] === "__mark__") {
         stop = true;
         return;
       }
       ret.push({
         func: m[1],
-        file: m[2],
-        line: m[4] ? +m[4] : undefined,
-        column: m[6] ? +m[6] : undefined
+        file: m[3],
+        line: m[5] ? +m[5] : undefined,
+        column: m[7] ? +m[7] : undefined
       });
     } else if (m = frame.match(/^\s*at\s+([^:]+)(:(\d+))?(:(\d+))?\s*$/)) {
       // "    at /path/to/myfile.js:532:39"
