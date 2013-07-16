@@ -158,6 +158,8 @@ var appUrl = function (url) {
   return true;
 };
 
+// This is used to move legacy environment variables into deployConfig, where
+// other packages look for them. We probably don't want it here forever.
 var copyEnvVarToDeployConfig = function (deployConfig, envVar,
                                          packageName, configKey) {
   if (process.env[envVar]) {
@@ -194,7 +196,6 @@ var runWebAppServer = function () {
     deployConfig.boot.bind.localPort = parseInt(process.env.PORT);
   }
   copyEnvVarToDeployConfig(deployConfig, "MONGO_URL", "mongo-livedata", "url");
-  copyEnvVarToDeployConfig(deployConfig, "MAIL_URL", "email", "url");
 
   // webserver
   var app = connect();
