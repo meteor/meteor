@@ -84,6 +84,8 @@ UI.List = Component.extend({
       });
     }
   },
+  // Optimize the calculation of the new `.start` and `.end`
+  // after removing child components at the start or end.
   _findStartComponent: function () {
     return this._items.firstValue();
   },
