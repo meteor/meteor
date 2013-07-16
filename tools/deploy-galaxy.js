@@ -6,6 +6,7 @@ var unipackage = require('./unipackage.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var Fiber = require('fibers');
 var request = require('request');
+var _ = require('underscore');
 
 // a bit of a hack
 var _meteor;
@@ -84,15 +85,18 @@ exports.discoverGalaxy = function (app) {
   if (process.env.GALAXY)
     return process.env.GALAXY;
 
-  request(url, function (err, resp, body) {
-    if (err || resp.statusCode !== 200) {
-      fut.return(null);
+  // At some point we may want to send a version in the request so that galaxy
+  // can respond differently to different versions of meteor.
+  request({ url: url, json: true }, function (err, resp, body) {
+    if (! err &&
+        resp.statusCode === 200 &&
+        body &&
+        _.has(body, "galaxyDiscoveryVersion") &&
+        _.has(body, "galaxyUrl") &&
+        (body.galaxyDiscoveryVersion === "galaxy-discovery-pre0")) {
+      fut.return(body.galaxyUrl);
     } else {
-      try {
-        fut.return(body);
-      } catch (e) {
-        fut.return(null);
-      }
+      fut.return(null);
     }
   });
   return fut.wait();
