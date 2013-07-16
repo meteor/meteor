@@ -1066,6 +1066,11 @@ Template.api.loginWithExternalService = {
       name: "requestOfflineToken",
       type: "Boolean",
       descr: "If true, asks the user for permission to act on their behalf when offline. This stores an additional offline token in the `services` field of the user document. Currently only supported with Google."
+    },
+    {
+      name: "forceApprovalPrompt",
+      type: "Boolean",
+      descr: "If true, forces the user to approve the app's permissions, even if previously approved. Currently only supported with Google."
     }
   ]
 };
