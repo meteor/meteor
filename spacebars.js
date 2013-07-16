@@ -618,11 +618,14 @@ Spacebars.compile = function (inputString, options) {
 
   // returns: array of source strings, or null if no
   // args at all.
+  //
   // if forComponentWithOpts is truthy, perform
   // component invocation argument handling.
   // forComponentWithOpts is a map from name of keyword
   // argument to source code.  For example,
   // `{ content: "Component.extend(..." }`.
+  // In this case, we return an array of exactly one string
+  // containing the source code of an object literal.
   var codeGenArgs = function (tagArgs, funcInfo,
                               forComponentWithOpts) {
     var options = null; // source -> source
@@ -643,8 +646,8 @@ Spacebars.compile = function (inputString, options) {
         argCode = toJSLiteral(argValue);
         break;
       case 'PATH':
-        argCode = 'Spacebars.call(' +
-          codeGenPath(argValue, funcInfo) + ')';
+        argCode = 'function () { return Spacebars.call(' +
+          codeGenPath(argValue, funcInfo) + '); }';
         break;
       default:
         error("Unexpected arg type: " + argType);
@@ -690,6 +693,23 @@ Spacebars.compile = function (inputString, options) {
     }
 
     return args;
+  };
+
+  var codeGenComponent = function (path, args, funcInfo,
+                                   compOptions) {
+
+    var nameCode = codeGenPath(path, funcInfo, true);
+    var argCode = codeGenArgs(args, funcInfo,
+                              compOptions || {})[0];
+
+    // XXX provide a better error message if
+    // `foo` in `{{> foo}}` is not found?
+    // Instead of `null`, we could evaluate to the path
+    // as a string, and then the renderer could choke on
+    // that in a way where it ends up in the error message.
+
+    return '{type: function () { return ((' + nameCode +
+      ') || null); }, args: ' + argCode + '}';
   };
 
   var codeGenBasicStache = function (tag, funcInfo) {
@@ -752,58 +772,53 @@ Spacebars.compile = function (inputString, options) {
       usedSelf: false // read/write
     };
 
-    var bodyLines = [];
+    var renderables = [];
     _.each(tokens, function (t) {
       switch (t.type) {
       case 'Characters':
         if (typeof t.data === 'string') {
-          bodyLines.push('buf.text(' + toJSLiteral(t.data) +
-                         ');');
+          renderables.push(toJSLiteral(t.data));
         } else {
           _.each(t.data, function (tagOrStr) {
             if (typeof tagOrStr === 'string') {
-              bodyLines.push('buf.text(' + toJSLiteral(tagOrStr) +
-                             ');');
+              renderables.push(toJSLiteral(tagOrStr));
             } else {
               // tag or block
               var tag = tagOrStr;
               if (tag.isBlock) {
+                // XXX as an optimization, move these inner
+                // Component classes out so they become
+                // members of the enclosing class, so they
+                // aren't created per call to render.
                 var block = tag;
-                var nameCode = codeGenPath(
-                  block.openTag.path, funcInfo, true);
                 var extraArgs = {
-                  content: 'Component.extend({render: ' +
+                  content: 'UI.Component.extend({render: ' +
                     tokensToRenderFunc(block.bodyTokens, indent) +
                     '})'
                 };
                 if (block.elseTokens) {
                   extraArgs.elseContent =
-                    'Component.extend({render: ' +
+                    'UI.Component.extend({render: ' +
                     tokensToRenderFunc(block.elseTokens, indent) +
                     '})';
                 }
-                var argCode =
-                      codeGenArgs(block.openTag.args, funcInfo,
-                                  extraArgs)[0];
-                bodyLines.push('buf.component(function () { return ((' + nameCode + ') || Component).create(' + argCode +
-                               '); });');
+                renderables.push(codeGenComponent(
+                  block.openTag.path,
+                  block.openTag.args,
+                  funcInfo, extraArgs));
               } else {
                 switch (tag.type) {
                 case 'INCLUSION':
-                  var nameCode = codeGenPath(tag.path, funcInfo, true);
-                  var argCode =
-                        codeGenArgs(tag.args, funcInfo, {})[0];
-                  bodyLines.push('buf.component(function () { return ((' + nameCode + ') || Component).create(' + argCode +
-                                 '); });');
+                  renderables.push(codeGenComponent(
+                    tag.path, tag.args, funcInfo));
                   break;
                 case 'DOUBLE':
                 case 'TRIPLE':
-                  bodyLines.push(
-                    'buf.' +
-                      (tag.type === 'TRIPLE' ? 'rawHtml' : 'text') +
+                  renderables.push(
+                    'UI.' + (tag.type === 'TRIPLE' ? 'HTML' : 'Text') +
                       '(function () { return ' +
                       codeGenBasicStache(tag, funcInfo) +
-                      '; });');
+                      '; })');
                   break;
                 case 'COMMENT':
                   break;
