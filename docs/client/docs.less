@@ -30,6 +30,19 @@ a img {
   border: none;
 }
 
+/** Variables **/
+
+@nav1-width: 200px;
+@nav2-width: 270px;
+
+@nav1-width-tablet: 100px;
+@nav2-width-tablet: 200px;
+
+@nav1-padding: 30px;
+@nav2-padding: 30px;
+
+@topbar-height: 50px;
+
 /** Basics **/
 
 body {
@@ -108,7 +121,7 @@ a:hover {
 #topbar {
     border: 1px solid black;
     border-style: none none solid none;
-    line-height: 50px;
+    line-height: @topbar-height;
 }
 
 #topbar h1 {
@@ -461,7 +474,7 @@ pre {
 #topbar {
     display: block;
     position: fixed;
-    height: 50px;
+    height: @topbar-height;
     top: 0px;
     left: 0px;
     width: 100%;
@@ -469,27 +482,28 @@ pre {
 #main {
     width: 440px; /* XXX */
     height: 100%;
-    margin-top: 50px; /* topbar */
-    margin-left: 520px; /* nav width + padding */
+    margin-top: @topbar-height;
+    margin-left: (@nav1-width-tablet + @nav1-padding * 2 +
+                  @nav2-width-tablet + @nav2-padding * 2);
     padding: 30px;
 }
 #nav1 {
     display: block;
-    width: 200px;
+    width: @nav1-width-tablet;
     position: fixed;
     overflow: auto;
     height: 100%;
-    top: 50px;
+    top: @topbar-height;
     left: 0;
 }
 #nav2 {
     display: block;
-    width: 200px;
+    width: @nav1-width-tablet;
     position: fixed;
     overflow: auto;
     height: 100%;
-    top: 50px;
-    left: 260px;
+    top: @topbar-height;
+    left: (@nav1-width-tablet + @nav1-padding * 2);
 }
 .main-headline {
     display: none;
@@ -499,20 +513,21 @@ pre {
 @media (min-width: 1024px) {
 /* ipad landscape and desktop */
 #main {
-    width: 610px;
-    margin-left: 660px; /* nav width + padding */
+    width: 610px; /* XXX */
+    margin-left: (@nav1-width + @nav1-padding * 2 +
+                  @nav2-width + @nav2-padding * 2);
 }
 #nav1 {
-    width: 270px;
+    width: @nav1-width;
 }
 #nav2 {
-    width: 270px;
-    left: 330px;
+    width: @nav2-width;
+    left: (@nav1-width + @nav1-padding * 2);
 }
 .github-ribbon {
     display: block;
     position: absolute;
-    top: 50px; /* topbar */
+    top: @topbar-height;
     right: 0px;
     border: 0
 }
