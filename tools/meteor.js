@@ -32,9 +32,10 @@ Fiber(function () {
   }
 
   var killTunnel = function (tunnel) {
-    // XXX check if tunnel is already dead?
-    tunnel.kill("SIGHUP");
-    tunnel.waitExit();
+    if (! tunnel.exitFuture.isResolved()) {
+      tunnel.proc.kill("SIGHUP");
+      tunnel.exitFuture.wait();
+    }
   };
 
   var sshTunnel = function (to, localPort, remoteEnd, keyfile) {
@@ -75,15 +76,18 @@ Fiber(function () {
       process.stderr.write(str);
     });
 
-    tunnel.waitExit = _.bind(exitFuture.wait, exitFuture);
-    tunnel.waitConnected = _.bind(connectedFuture.wait, connectedFuture);
+    var tunnelResult = {
+      waitConnected: _.bind(connectedFuture.wait, connectedFuture),
+      exitFuture: exitFuture,
+      proc: tunnel
+    };
 
     cleanup.onExit(function () {
       Fiber(function () {
-        killTunnel(tunnel);
+        killTunnel(tunnelResult);
       }).run();
     });
-    return tunnel;
+    return tunnelResult;
   };
 
   var Commands = [];
@@ -177,9 +181,13 @@ Fiber(function () {
     return function (argv) {
       if (argv._[1]) {
         var tunnel = prepareForGalaxy(argv._[1], context, argv["ssh-identity"]);
-        var result = cmd(argv);
-        if (tunnel)
-          killTunnel(tunnel);
+        var result;
+        try {
+          result = cmd(argv);
+        } finally {
+          if (tunnel)
+            killTunnel(tunnel);
+        }
         return result;
       } else {
         return cmd(argv);
@@ -384,6 +392,9 @@ Fiber(function () {
       var cmd = argv._.splice(0, 1)[0];
       switch (cmd) {
       case "configure":
+        // We don't use galaxyCommand here because we want the tunnel to stay
+        // open (galaxyCommand closes the tunnel as soon as the command finishes
+        // running). The tunnel will be cleaned up when the process exits.
         prepareForGalaxy(null, context, argv["ssh-identity"]);
         console.log("Visit http://localhost:" + context.galaxy.port + "/panel to configure your galaxy");
         break;
@@ -1008,6 +1019,9 @@ Fiber(function () {
     },
     func: function (argv) {
       var site = argv._[1];
+      // We don't use galaxyCommand here because we want the tunnel to stay
+      // open (galaxyCommand closes the tunnel as soon as the command finishes
+      // running). The tunnel will be cleaned up when the process exits.
       var tunnel = prepareForGalaxy(site, context, argv["ssh-identity"]);
       var useGalaxy = !!context.galaxy;
 
