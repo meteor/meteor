@@ -1213,16 +1213,6 @@ _.extend(Package.prototype, {
         };
       },
 
-      // Same as node's default `require` but is relative to the
-      // package's directory. Regular `require` doesn't work well
-      // because we read the package.js file and `runInThisContext` it
-      // separately as a string.  This means that paths are relative
-      // to the top-level meteor.js script rather than the location of
-      // package.js
-      _require: function(filename) {
-        return require(path.join(self.sourceRoot, filename));
-      },
-
       // Define a plugin. A plugin extends the build process for
       // targets that use this package. For example, a Coffeescript
       // compiler would be a plugin. A plugin is its own little
