@@ -158,6 +158,17 @@ var appUrl = function (url) {
   return true;
 };
 
+// This is used to move legacy environment variables into deployConfig, where
+// other packages look for them. We probably don't want it here forever.
+var copyEnvVarToDeployConfig = function (deployConfig, envVar,
+                                         packageName, configKey) {
+  if (process.env[envVar]) {
+    if (! deployConfig.packages[packageName])
+      deployConfig.packages[packageName] = {};
+    deployConfig.packages[packageName][configKey] = process.env[envVar];
+  }
+};
+
 var runWebAppServer = function () {
   // read the control for the client we'll be serving up
   var clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
@@ -184,11 +195,7 @@ var runWebAppServer = function () {
   if (process.env.PORT && !_.has(deployConfig.boot.bind, 'localPort')) {
     deployConfig.boot.bind.localPort = parseInt(process.env.PORT);
   }
-  if (process.env.MONGO_URL) {
-    if (!deployConfig.packages['mongo-livedata'])
-      deployConfig.packages['mongo-livedata'] = {};
-    deployConfig.packages['mongo-livedata'].url = process.env.MONGO_URL;
-  }
+  copyEnvVarToDeployConfig(deployConfig, "MONGO_URL", "mongo-livedata", "url");
 
   // webserver
   var app = connect();
