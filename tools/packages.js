@@ -1970,7 +1970,7 @@ _.extend(Package.prototype, {
       };
 
       var buildInfoJson = {
-        buildVersion: exports.BUILD_VERSION,
+        builtBy: exports.BUILD_VERSION,
         dependencies: { files: {}, directories: {} },
         source: options.buildOfPath || undefined
       };
