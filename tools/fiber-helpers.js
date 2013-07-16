@@ -37,11 +37,3 @@ exports.parallelEach = function (collection, callback, context) {
   // Throw if any threw.
   _.each(futures, function (f) { f.get(); });
 };
-
-// https://github.com/laverdet/node-fibers/issues/131
-var fibersYieldForever = [];
-exports.yieldForever = function () {
-  fibersYieldForever.push(Fiber.current);
-  Fiber.yield();
-};
-

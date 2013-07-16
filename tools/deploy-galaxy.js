@@ -274,8 +274,6 @@ exports.logs = function (options) {
     // Close connections to Galaxy and log-reader
     // (otherwise Node will continue running).
     logReader.close();
-  } else {
-    fiberHelpers.yieldForever();
   }
 };
 
