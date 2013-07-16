@@ -35,8 +35,7 @@ var makePool = function (mailUrlString) {
 // Meteor.startup code can set $MAIL_URL.
 var smtpPool = null;
 var maybeMakePool = function () {
-  // webapp_server.js sets the deployConfig field from MAIL_URL. But we still
-  // check MAIL_URL in case someone else set it in Meteor.startup code.
+  // We check MAIL_URL in case someone else set it in Meteor.startup code.
   var mailUrl = process.env.MAIL_URL ||
         (typeof __meteor_bootstrap__ !== 'undefined' &&
          Meteor._get(__meteor_bootstrap__.deployConfig,
