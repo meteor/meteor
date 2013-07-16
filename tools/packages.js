@@ -1790,7 +1790,7 @@ _.extend(Package.prototype, {
     if (options.onlyIfUpToDate) {
       // Do we think we'll generate different contents than the tool that built
       // this package?
-      if (mainJson.buildVersion !== exports.BUILD_VERSION)
+      if (buildInfoJson.builtBy !== exports.BUILD_VERSION)
         return false;
 
       if (options.buildOfPath &&
@@ -1961,7 +1961,6 @@ _.extend(Package.prototype, {
 
       var mainJson = {
         format: "unipackage-pre1",
-        buildVersion: exports.BUILD_VERSION,
         summary: self.metadata.summary,
         internal: self.metadata.internal,
         slices: [],
@@ -1971,6 +1970,7 @@ _.extend(Package.prototype, {
       };
 
       var buildInfoJson = {
+        buildVersion: exports.BUILD_VERSION,
         dependencies: { files: {}, directories: {} },
         source: options.buildOfPath || undefined
       };

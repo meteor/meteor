@@ -60,8 +60,10 @@ do
 
     # Create the tarball from the built package. In the tarball, the root
     # directory should be $ROOTDIR, so we replace the "." with that, using
-    # --transform (a  GNU tar extension).
-    "$GNUTAR" czf "$TARBALL" -C "$PACKAGE/.build" --transform 's/^\./'"$ROOTDIR"'/' .
+    # --transform (a GNU tar extension). Leave out the buildinfo.json file,
+    # which contains local paths and is only used to decide if we should rebuild
+    # a package from its corresponding source tree.
+    "$GNUTAR" czf "$TARBALL" -C "$PACKAGE/.build" --exclude buildinfo.json --transform 's/^\./'"$ROOTDIR"'/' .
 
     # this is used in build-release.sh, which constructs the release json.
     echo -n "    \"$PACKAGE\": \"$PACKAGE_VERSION\"" >> "$TOPDIR/.package_manifest_chunk"
