@@ -39,8 +39,8 @@ Roles.createRole = function (role) {
   var id,
       match
 
-  if (!role 
-      || 'string' !== typeof role 
+  if (!role
+      || 'string' !== typeof role
       || role.trim().length === 0) {
     return
   }
@@ -61,15 +61,15 @@ Roles.createRole = function (role) {
   }
 }
 
-/** 
- * Delete an existing role.  Will throw "Role in use" error if any users 
+/**
+ * Delete an existing role.  Will throw "Role in use" error if any users
  * are currently assigned to the target role.
- * 
+ *
  * @method deleteRole
  * @param {String} role Name of role
  */
 Roles.deleteRole = function (role) {
-  if (!role) {
+  if (! role) {
     return
   }
 
@@ -79,8 +79,11 @@ Roles.deleteRole = function (role) {
     throw new Meteor.Error(403, 'Role in use')
   }
 
-  Meteor.roles.remove({ name: role })
-}
+  var thisRole = Meteor.roles.findOne({ name: role })
+  if (thisRole) {
+    Meteor.roles.remove({ _id: thisRole._id })
+  }
+};
 
 /**
  * Add users to roles. Will create roles as needed.
@@ -194,12 +197,12 @@ Roles.removeUsersFromRoles = function (users, roles) {
 Roles.userIsInRole = function (user, roles) {
   var id,
       userRoles
-    
+
   // ensure array to simplify code
   if (!_.isArray(roles)) {
     roles = [roles]
   }
-  
+
   if (!user) {
     return false
   } else if ('object' === typeof user) {
@@ -213,7 +216,7 @@ Roles.userIsInRole = function (user, roles) {
     id = user._id
   } else if ('string' === typeof user) {
     id = user
-  } 
+  }
 
   if (!id) return false
 
@@ -235,7 +238,7 @@ Roles.getRolesForUser = function (user) {
     { _id: user},
     { _id: 0, roles: 1}
   )
-  
+
   return user ? user.roles : undefined
 }
 
