@@ -84,12 +84,15 @@ exports.discoverGalaxy = function (app) {
   if (process.env.GALAXY)
     return process.env.GALAXY;
 
-  request(url, function (err, resp, body) {
+  request({ url: url, json: true }, function (err, resp, body) {
     if (err || resp.statusCode !== 200) {
       fut.return(null);
     } else {
       try {
-        fut.return(body);
+        if (body.galaxyDiscoveryVersion === "galaxy-discovery-pre0")
+          fut.return(body.galaxyUrl);
+        else
+          fut.return(null);
       } catch (e) {
         fut.return(null);
       }
