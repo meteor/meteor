@@ -359,6 +359,39 @@ var toc = [
   ] ]
 ];
 
+var outerNavSections = [
+  "Essentials",
+  null,
+  "Meteor",
+  "Galaxy",
+  "Cookbook",
+  null,
+  "ddp",
+  "spacebars",
+  "deps",
+  "spark",
+  "accounts",
+  "minimongo",
+  "match",
+  "ejson",
+  "http",
+  "email",
+  null,
+  "twilio",
+  "router",
+  "forms",
+  "lispyscript"
+];
+
+Template.outerNav.sections = function () {
+  return _.map(outerNavSections, function (name) {
+    if (name)
+      return {name: name};
+    else
+      return {spacer: true};
+  });
+};
+
 var name_to_id = function (name) {
   var x = name.toLowerCase().replace(/[^a-z0-9_,.]/g, '').replace(/[,.]/g, '_');
   return x;

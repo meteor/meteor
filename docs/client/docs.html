@@ -10,6 +10,7 @@
     {{> topbar}}
   </div>
   <div id="nav1">
+    {{> outerNav }}
   </div>
   <div id="nav2">
     {{> nav }}
@@ -26,6 +27,16 @@
 
 <template name="topbar">
   <h1>Documentation {{release}}</h1>
+</template>
+
+<template name="outerNav">
+  <div id="nav1-inner">
+    <ul>
+      {{#each sections}}
+      <li>{{#unless spacer}}{{name}}{{#else}} {{/unless}}</li>
+      {{/each}}
+    </ul>
+  </div>
 </template>
 
 <template name="nav">
