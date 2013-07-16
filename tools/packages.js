@@ -84,6 +84,7 @@ var rejectBadPath = function (p) {
 // - name [required]
 // - arch [required]
 // - uses
+// - implies
 // - getSourcesFunc
 // - forceExport
 // - dependencyInfo
@@ -124,7 +125,17 @@ var Slice = function (pkg, options) {
   //   or plugins.
   // It is an error for both unordered and weak to be true, because
   // such a dependency would have no effect.
+  //
+  // In most places, you want to use slice.eachUsedSlice() instead of
+  // slice.uses, which also takes into account implied packages.
   self.uses = options.uses;
+
+  // Packages which are "implied" by using this package. If a slice X uses this
+  // slice Y, and Y implies Z, then X will effectively use Z as well (and get
+  // its imports and plugins).  An array of objects of the same type as the
+  // elements of self.uses (although for now unordered and weak are not
+  // allowed).
+  self.implies = options.implies || [];
 
   // A function that returns the source files for this slice. Array of objects
   // with keys "relPath" and "fileOptions". Null if loaded from unipackage.
@@ -226,17 +237,19 @@ _.extend(Slice.prototype, {
     // way we get one error about it instead of a new error at each
     // stage in the build process in which we try to retrieve the
     // package.
-    var scrubbedUses = [];
-    _.each(self.uses, function (u) {
-      var parts = u.spec.split('.');
-      var pkg = self.pkg.library.get(parts[0], /* throwOnError */ false);
-      if (! pkg) {
-        buildmessage.error("no such package: '" + parts[0] + "'");
-        // recover by omitting this package from 'uses'
-      } else
-        scrubbedUses.push(u);
+    _.each(['uses', 'implies'], function (field) {
+      var scrubbed = [];
+      _.each(self[field], function (u) {
+        var parts = u.spec.split('.');
+        var pkg = self.pkg.library.get(parts[0], /* throwOnError */ false);
+        if (! pkg) {
+          buildmessage.error("no such package: '" + parts[0] + "'");
+          // recover by omitting this package from the field
+        } else
+          scrubbed.push(u);
+      });
+      self[field] = scrubbed;
     });
-    self.uses = scrubbedUses;
 
     _.each(self.getSourcesFunc(), function (source) {
       var relPath = source.relPath;
@@ -530,22 +543,20 @@ _.extend(Slice.prototype, {
     // Compute imports by merging the exports of all of the packages
     // we use. Note that in the case of conflicting symbols, later
     // packages get precedence.
+    //
+    // We don't get imports from unordered dependencies (since they may not be
+    // defined yet) or from weak dependencies (because the meaning of a name
+    // shouldn't be affected by the non-local decision of whether or not an
+    // unrelated package in the target depends on something).
     var imports = {}; // map from symbol to supplying package name
-    _.each(_.values(self.uses), function (u) {
-      // We don't get imports from unordered dependencies (since they may not be
-      // defined yet) or from weak dependencies (because the meaning of a name
-      // shouldn't be affected by the non-local decision of whether or not
-      // an unrelated package in the target depends on something).
-      if (! u.unordered && ! u.weak) {
-        _.each(library.getSlices(u.spec, bundleArch), function (otherSlice) {
-          if (! otherSlice.isBuilt)
-            throw new Error("dependency wasn't built?");
-          _.each(otherSlice.exports, function (symbol) {
-            imports[symbol] = otherSlice.pkg.name;
-          });
+    self.eachUsedSlice(
+      bundleArch, {skipWeak: true, skipUnordered: true}, function (otherSlice) {
+        if (! otherSlice.isBuilt)
+          throw new Error("dependency wasn't built?");
+        _.each(otherSlice.exports, function (symbol) {
+          imports[symbol] = otherSlice.pkg.name;
         });
-      }
-    });
+      });
 
     // Phase 2 link
     var isApp = ! self.pkg.name;
@@ -575,6 +586,48 @@ _.extend(Slice.prototype, {
     return _.union(self.resources, jsResources); // union preserves order
   },
 
+  // Calls `callback` with each slice (of architecture matching `arch`) that is
+  // "used" by this slice. This includes directly used slices, and slices that
+  // are transitively "implied" by used slices. (But not slices that are used by
+  // slices that we use!)  Options are skipWeak and skipUnordered, meaning to
+  // ignore direct "uses" that are weak or unordered.
+  eachUsedSlice: function (arch, options, callback) {
+    var self = this;
+    if (typeof options === "function") {
+      callback = options;
+      options = {};
+    }
+
+    var processedSliceId = {};
+    var usesToProcess = [];
+    _.each(self.uses, function (use) {
+      if (options.skipUnordered && use.unordered)
+        return;
+      if (options.skipWeak && use.weak)
+        return;
+      usesToProcess.push(use);
+    });
+
+    while (!_.isEmpty(usesToProcess)) {
+      var use = usesToProcess.shift();
+
+      var slices = self.pkg.library.getSlices(use.spec, arch);
+      _.each(slices, function (slice) {
+        if (_.has(processedSliceId, slice.id))
+          return;
+        processedSliceId[slice.id] = true;
+        callback(slice, {
+          unordered: !!use.unordered,
+          weak: !!use.weak
+        });
+
+        _.each(slice.implies, function (implied) {
+          usesToProcess.push(implied);
+        });
+      });
+    }
+  },
+
   // Return an array of all plugins that are active in this slice, as
   // a list of Packages.
   _activePluginPackages: function () {
@@ -586,15 +639,24 @@ _.extend(Slice.prototype, {
     // what the correct behavior should be -- we need to resolve
     // whether we think about extensions as being global to a package
     // or particular to a slice.
+    // (there's also some weirdness here with handling implies, because
+    // the implies field is on the target slice, but we really only care
+    // about packages.)
     var ret = [self.pkg];
 
-    _.each(self.uses, function (u) {
-      // We don't use plugins from weak dependencies, because the ability to
-      // compile a certain type of file shouldn't depend on whether or not some
-      // unrelated package in the target has a dependency.
-      if (! u.weak)
-        ret.push(self.pkg.library.get(u.spec.split('.')[0]));
+    // We don't use plugins from weak dependencies, because the ability to
+    // compile a certain type of file shouldn't depend on whether or not some
+    // unrelated package in the target has a dependency.
+    //
+    // We pass archinfo.host here, not self.arch, because it may be more
+    // specific, and because plugins always have to run on the host
+    // architecture.
+    self.eachUsedSlice(archinfo.host(), {skipWeak: true}, function (usedSlice) {
+      ret.push(usedSlice.pkg);
     });
+
+    // Only need one copy of each package.
+    ret = _.uniq(ret);
 
     _.each(ret, function (pkg) {
       pkg._ensurePluginsInitialized();
@@ -1342,9 +1404,13 @@ _.extend(Package.prototype, {
     var forceExport = {use: {client: [], server: []},
                        test: {client: [], server: []}};
 
-    // packages used (keys are 'spec', 'unordered', and 'weak')
+    // packages used and implied (keys are 'spec', 'unordered', and 'weak').  an
+    // "implied" package is a package that will be used by a slice which uses
+    // us. (since you can't use a test slice, only the use slice can have
+    // "implies".)
     var uses = {use: {client: [], server: []},
                 test: {client: [], server: []}};
+    var implies = {client: [], server: []};
 
     // For this old-style, on_use/on_test/where-based package, figure
     // out its dependencies by calling its on_xxx functions and seeing
@@ -1423,6 +1489,35 @@ _.extend(Package.prototype, {
                   spec: name,
                   unordered: options.unordered || false,
                   weak: options.weak || false
+                });
+              });
+            });
+          },
+
+          // Called when this package wants packages using it to also use
+          // another package.  eg, for umbrella packages which want packages
+          // using them to also get symbols or plugins from their components.
+          imply: function (names, where) {
+            if (role === "test") {
+              buildmessage.error(
+                "api.imply() is only allowed in on_use, not on_test.",
+                { useMyCaller: true });
+              // recover by ignoring
+              return;
+            }
+
+            if (!(names instanceof Array))
+              names = names ? [names] : [];
+
+            if (!(where instanceof Array))
+              where = where ? [where] : ["client", "server"];
+
+            _.each(names, function (name) {
+              _.each(where, function (w) {
+                implies[w].push({
+                  spec: name
+                  // We don't allow weak or unordered implies, since the main
+                  // purpose of imply is to provide imports and plugins.
                 });
               });
             });
@@ -1584,6 +1679,7 @@ _.extend(Package.prototype, {
           name: ({ use: "main", test: "tests" })[role],
           arch: arch,
           uses: uses[role][where],
+          implies: role === "use" && implies[where] || undefined,
           getSourcesFunc: function () { return sources[role][where]; },
           forceExport: forceExport[role][where],
           dependencyInfo: dependencyInfo,
@@ -1875,6 +1971,11 @@ _.extend(Package.prototype, {
             weak: u.weak
           };
         }),
+        implies: _.map(sliceJson.implies, function (u) {
+          return {
+            spec: u['package'] + (u.slice ? "." + u.slice : "")
+          };
+        }),
         staticDirectory: staticDirectory
       });
 
@@ -2033,6 +2134,16 @@ _.extend(Package.prototype, {
               weak: u.weak || undefined
             };
           }),
+          implies: (_.isEmpty(slice.implies) ? undefined :
+                    _.map(slice.implies, function (u) {
+                      var specParts = u.spec.split('.');
+                      if (specParts.length > 2)
+                        throw new Error("Bad package spec: " + u.spec);
+                      return {
+                        'package': specParts[0],
+                        slice: specParts[1] || undefined
+                      };
+                    })),
           node_modules: slice.nodeModulesPath ? 'npm/node_modules' : undefined,
           resources: [],
           staticDirectory: path.join(sliceDir, self.serveRoot)

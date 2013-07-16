@@ -534,11 +534,7 @@ _.extend(Target.prototype, {
       if (_.has(getsUsed, slice.id))
         return;
       getsUsed[slice.id] = slice;
-      _.each(slice.uses, function (u) {
-        if (u.weak)
-          return;
-        _.each(library.getSlices(u.spec, self.arch), addToGetsUsed);
-      });
+      slice.eachUsedSlice(self.arch, {skipWeak: true}, addToGetsUsed);
     };
     _.each(rootSlices, addToGetsUsed);
 
@@ -563,19 +559,16 @@ _.extend(Target.prototype, {
       if (!_.has(needed, slice.id))
         return;
 
-      _.each(slice.uses, function (u) {
-        // If this is an unordered dependency, then there's no reason to add it
-        // *now*, and for all we know, `u` will depend on `slice` and need to be
-        // added after it. So we ignore this edge. Because we did follow this
-        // edge in Phase 1, usedSlice was at some point in `needed` and will not
-        // be left out.
-        if (u.unordered)
-          return;
-
-        _.each(library.getSlices(u.spec, self.arch), function (usedSlice) {
+      // Process each ordered dependency. (If we have an unordered dependency
+      // `u`, then there's no reason to add it *now*, and for all we know, `u`
+      // will depend on `slice` and need to be added after it. So we ignore
+      // those edge. Because we did follow those edges in Phase 1, any unordered
+      // slices were at some point in `needed` and will not be left out.)
+      slice.eachUsedSlice(
+        self.arch, {skipUnordered: true}, function (usedSlice, useOptions) {
           // If this is a weak dependency, and nothing else in the target had a
           // strong dependency on it, then ignore this edge.
-          if (u.weak && ! _.has(getsUsed, usedSlice.id))
+          if (useOptions.weak && ! _.has(getsUsed, usedSlice.id))
             return;
 
           if (onStack[usedSlice.id]) {
@@ -588,7 +581,6 @@ _.extend(Target.prototype, {
           add(usedSlice);
           delete onStack[usedSlice.id];
         });
-      });
       self.slices.push(slice);
       delete needed[slice.id];
     };
