@@ -6,7 +6,7 @@ html_scanner = {
   // top-level tags, which are allowed to have attributes,
   // and ignores top-level HTML comments.
 
-  // Has fields 'message', 'line'
+  // Has fields 'message', 'line', 'file'
   ParseError: function () {
   },
 
@@ -19,11 +19,17 @@ html_scanner = {
       index += amount;
     };
 
-    var throwParseError = function(msg) {
+    var throwParseError = function (msg/*, atIndex, lineOffset*/) {
+      // XXX figure out how this code from Geoff works with
+      // Spacebars (-dgr)
+
+//      atIndex = atIndex || index;
+//      lineOffset = lineOffset || 0;
+
       var ret = new html_scanner.ParseError;
       ret.message = msg || "bad formatting in HTML template";
       ret.file = source_name;
-      ret.line = contents.substring(0, index).split('\n').length;
+//      ret.line = contents.substring(0, atIndex).split('\n').length + lineOffset;
       throw ret;
     };
 
@@ -45,6 +51,7 @@ html_scanner = {
       var matchTokenComment = match[4];
       var matchTokenUnsupported = match[5];
 
+      var tagStartIndex = index;
       advance(match.index + match[0].length);
 
       if (! matchToken)
@@ -96,11 +103,13 @@ html_scanner = {
       if (! end)
         throwParseError("unclosed <"+tagName+">");
       var tagContents = rest.slice(0, end.index);
+      var contentsStartIndex = index;
       advance(end.index + end[0].length);
 
       // act on the tag
       html_scanner._handleTag(results, tagName, tagAttribs, tagContents,
-                              throwParseError);
+                              throwParseError, contentsStartIndex,
+                              tagStartIndex);
     }
 
     return results;
@@ -114,11 +123,14 @@ html_scanner = {
     return results;
   },
 
-  _handleTag: function (results, tag, attribs, contents, throwParseError) {
+  _handleTag: function (results, tag, attribs, contents, throwParseError,
+                        contentsStartIndex, tagStartIndex) {
 
     // trim the tag contents.
     // this is a courtesy and is also relied on by some unit tests.
-    contents = contents.match(/^[ \t\r\n]*([\s\S]*?)[ \t\r\n]*$/)[1];
+    var m = contents.match(/^([ \t\r\n]*)([\s\S]*?)[ \t\r\n]*$/);
+    contentsStartIndex += m[1].length;
+    contents = m[2];
 
     // do we have 1 or more attribs?
     var hasAttribs = false;
