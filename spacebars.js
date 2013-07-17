@@ -770,17 +770,32 @@ Spacebars.compile = function (inputString, options) {
     };
 
     var renderables = [];
+
+    var lastString = -1;
+    var renderableString = function (str) {
+      var escaped = toJSLiteral(str);
+
+      var N = renderables.length;
+      if (N && lastString === N - 1) {
+        renderables[N - 1] = renderables[N - 1].slice(0, -1) +
+          escaped.slice(1);
+      } else {
+        lastString = N;
+        renderables.push(escaped);
+      }
+    };
+
     _.each(tokens, function (t) {
       switch (t.type) {
       case 'Characters':
         if (typeof t.data === 'string') {
-          renderables.push(toJSLiteral(
-            UI.encodeSpecialEntities(t.data)));
+          renderableString(
+            UI.encodeSpecialEntities(t.data));
         } else {
           _.each(t.data, function (tagOrStr) {
             if (typeof tagOrStr === 'string') {
-              renderables.push(toJSLiteral(
-                UI.encodeSpecialEntities(tagOrStr)));
+              renderableString(
+                UI.encodeSpecialEntities(tagOrStr));
             } else {
               // tag or block
               var tag = tagOrStr;
@@ -831,7 +846,7 @@ Spacebars.compile = function (inputString, options) {
         break;
       case 'StartTag':
         // no space between tag name and attrs obj required
-        renderables.push(toJSLiteral("<" + t.name));
+        renderableString("<" + t.name);
 
         if (t.data && t.data.length) {
           var isReactive = false;
@@ -873,21 +888,21 @@ Spacebars.compile = function (inputString, options) {
           renderables.push('{attrs: ' + attrCode + '}');
         }
 
-        renderables.push(toJSLiteral(
-          t.self_closing ? '/>' : '>'));
+        renderableString(
+          t.self_closing ? '/>' : '>');
         break;
       case 'EndTag':
-        renderables.push(toJSLiteral('</' + t.name + '>'));
+        renderableString('</' + t.name + '>');
         break;
       case 'Comment':
         // XXX make comments reactive?  no clear use case.
         // here we allow double and triple stache and
         // only run it once.
-        renderables.push(toJSLiteral('<!--'));
+        renderableString('<!--');
         renderables.push('Spacebars.escapeHtmlComment(' +
                          interpolate(t.name, funcInfo,
                                      INTERPOLATE_COMMENT));
-        renderables.push(toJSLiteral('-->'));
+        renderableString('-->');
         break;
       case 'DocType':
         // XXX output a proper doctype based on
@@ -921,7 +936,7 @@ Spacebars.index = function (value/*, identifiers*/) {
 
   _.each(identifiers, function (id) {
     if (typeof value === 'function' &&
-        ! UI.isComponentClass(value)) {
+        ! UI.Component.isType(value)) {
       // Call a getter -- in `{{foo.bar}}`, call `foo()` if it
       // is a function before indexing it with `bar`.
       //
@@ -935,7 +950,7 @@ Spacebars.index = function (value/*, identifiers*/) {
   });
 
   if (typeof value === 'function' &&
-      ! UI.isComponentClass(value)) {
+      ! UI.Component.isType(value)) {
     // bind `this` for resulting function, so it can be
     // called with `Spacebars.call`.
     value = _.bind(value, nextThis);
@@ -946,7 +961,7 @@ Spacebars.index = function (value/*, identifiers*/) {
 
 Spacebars.call = function (value/*, args*/) {
   if (typeof value !== 'function' ||
-      UI.isComponentClass(value))
+      UI.Component.isType(value))
     return value; // ignore args
 
   var args = Array.prototype.slice.call(arguments, 1);
