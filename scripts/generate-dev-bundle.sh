@@ -109,6 +109,7 @@ npm install tar@0.1.14
 npm install kexec@0.1.1
 npm install shell-quote@0.0.1
 npm install byline@2.0.3
+npm install source-map@0.1.26
 
 # Using the unreleased 1.1 branch. We can probably switch to a built NPM version
 # when it gets released.
@@ -120,9 +121,10 @@ npm install https://github.com/ariya/esprima/tarball/5044b87f94fb802d9609f1426c8
 npm install https://github.com/meteor/source-map/tarball/4a52398901fdb4b55b06ef4dd8b69f8256072b09
 
 # Fork of node-source-map-support which allows us to specify our own
-# retrieveSourceMap function, and uses the above version of source-map.
-# XXX send a pull request
-npm install https://github.com/meteor/node-source-map-support/tarball/d048eaa765bf743ddaad64716647f8760e2b8507
+# retrieveSourceMap function, and uses source-map 0.1.26.
+#   https://github.com/evanw/node-source-map-support/pull/18
+#   https://github.com/evanw/node-source-map-support/pull/17
+npm install https://github.com/meteor/node-source-map-support/tarball/980e444c8346bbe29992fd3086bab0456b8d8667
 
 # uglify-js has a bug which drops 'undefined' in arrays:
 # https://github.com/mishoo/UglifyJS2/pull/97
