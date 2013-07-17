@@ -1,0 +1,63 @@
+
+
+
+- create/extend: ok to put primitives on proto in create?
+- eliminate makeRoot?
+
+
+
+
+TextSearchComponent = Component.extend({
+  SubView: FooView,
+  myStuff: {},
+  init: function () {
+    this.x = new this.subView({});
+  },
+  helpers: {
+    function () {
+
+    }
+  }
+});
+
+Template.foo.helpers({
+  prettyName: 
+});
+Template.foo.events({
+  prettyName: 
+});
+
+
+
+
+Template.foo.include({
+  extend: FooComponent
+});
+
+
+.count()
+
+new Foo(function () {})
+
+{{#each foo}}
+
+
+<template name="if">
+{{#if this}}
+  {{> content}}
+{{else}}
+  {{> elseContent}}
+{{/if}}
+</template>
+
+built: function () {
+  this.append(new TextBox);
+  this.append(
+}
+
+
+
+
+- #IF DATA CONFUSION!!!
+- data arg as non-function...
+
