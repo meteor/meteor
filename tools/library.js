@@ -34,12 +34,15 @@ var Library = function (options) {
       return stats.isDirectory();
     });
 
-  // these three are maps from package name to Package
-  self.loadedPackages = {}; // current cache
-  self.previouslyLoadedPackages = {}; // need validation after soft reset
-  self.warehouseCache = {}; // unconditionally survive soft reset
-
+  self.loadedPackages = {}; // map from package name to Package
   self.overrides = {}; // package name to package directory
+
+  // map from package name to:
+  // - pkg: cached Package object
+  // - packageDir: directory from which it was loaded
+  // - revalidate: true if the package needs to have its dependencies
+  //   checked before it can be reused
+  self.softReloadCache = {};
 };
 
 _.extend(Library.prototype, {
@@ -62,6 +65,7 @@ _.extend(Library.prototype, {
       throw new Error("No override present for package '" + packageName + "'");
     delete self.loadedPackages[packageName];
     delete self.overrides[packageName];
+    delete self.softReloadCache[packageName];
   },
 
   // Force reload of changed packages. See description at get().
@@ -80,14 +84,9 @@ _.extend(Library.prototype, {
     var self = this;
     soft = soft || false;
 
-    if (soft) {
-      self.previouslyLoadedPackages = self.loadedPackages;
-    } else {
-      self.previouslyLoadedPackages = {};
-      self.warehouseCache = {};
-    }
-
     self.loadedPackages = {};
+    if (! soft)
+      self.softReloadCache = {};
   },
 
   // Given a package name as a string, retrieve a Package object. If
@@ -115,13 +114,6 @@ _.extend(Library.prototype, {
       return name;
 
     // Packages cached from previous calls
-    if (_.has(self.warehouseCache, name))
-      self.loadedPackages[name] = self.warehouseCache[name];
-    else if (_.has(self.previouslyLoadedPackages, name) &&
-             self.previouslyLoadedPackages[name].checkUpToDate())
-      self.loadedPackages[name] = self.previouslyLoadedPackages[name];
-    delete self.previouslyLoadedPackages[name];
-
     if (_.has(self.loadedPackages, name)) {
       return self.loadedPackages[name];
     }
@@ -160,6 +152,23 @@ _.extend(Library.prototype, {
       var pkg = new packages.Package(self);
       pkg.initEmpty(name);
       return pkg;
+    }
+
+    // See if we can reuse a package that we have cached from before
+    // the last soft refresh.
+    if (_.has(self.softReloadCache, name)) {
+      var entry = self.softReloadCache[name];
+
+      if (entry.packageDir === packageDir &&
+          (! entry.revalidate || entry.pkg.checkUpToDate())) {
+        // Cache hit
+        self.loadedPackages[name] = entry.pkg;
+        return entry.pkg;
+      }
+
+      // Package has either changed, or it has been shadowed by a
+      // package in a different location.
+      delete self.softReloadCache[name];
     }
 
     // Load package from disk
@@ -219,8 +228,11 @@ _.extend(Library.prototype, {
       }
     }
 
-    if (fromWarehouse)
-      self.warehouseCache[name] = pkg;
+    self.softReloadCache[name] = {
+      packageDir: packageDir,
+      revalidate: ! fromWarehouse,
+      pkg: pkg
+    };
 
     return pkg;
   },
