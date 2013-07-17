@@ -262,8 +262,6 @@ var ALLOW_NO_COMPONENTS = 2;
 var INTERPOLATE_COMMENT = 1;
 // Only allow double in `<a href="{{foo}}">` or `<a href={{foo}}>`.
 var INTERPOLATE_ATTR_VALUE = 2;
-// Only allow triple in `<span {{{additionalAttrs}}}>`.
-var INTERPOLATE_DYNAMIC_ATTR = 3;
 
 var tokenizeHtml = function (html, preString, postString, tagLookup, options) {
   var tokens = HTML5Tokenizer.tokenize(html);
@@ -716,8 +714,8 @@ Spacebars.compile = function (inputString, options) {
     var nameCode = codeGenPath(tag.path, funcInfo);
     var argCode = codeGenArgs(tag.args, funcInfo);
 
-    return 'String(Spacebars.call(' + nameCode +
-      (argCode ? ', ' + argCode.join(', ') : '') + ') || "")';
+    return 'Spacebars.call(' + nameCode +
+      (argCode ? ', ' + argCode.join(', ') : '') + ')';
   };
 
   // Return the source code of a string or (reactive) function
@@ -743,24 +741,23 @@ Spacebars.compile = function (inputString, options) {
           if (interpolateMode === INTERPOLATE_ATTR_VALUE &&
               tag.type === 'TRIPLE')
             error("Can't have a triple-stache in an attribute value");
-          if (interpolateMode === INTERPOLATE_DYNAMIC_ATTR &&
-              tag.type === 'DOUBLE')
-            error("Can only have triple-stache for dynamic attributes");
-
           parts.push(codeGenBasicStache(tag, funcInfo));
           break;
         default:
+          // the parser would have errored on any components
+          // inside an HTML tag, so no other stache tag
+          // types possible.
           error("Unknown stache tag type: " + tag.type);
         }
       }
     });
 
-    if (isReactive) {
-      return 'function () { return ' + parts.join('+') +
-        '; }';
-    } else {
+//    if (isReactive) {
+//      return 'function () { return ' + parts.join('+') +
+//        '; }';
+//    } else {
       return parts.length ? parts.join('+') : '""';
-    }
+//    }
   };
 
   var tokensToRenderFunc = function (tokens, indent) {
@@ -777,11 +774,13 @@ Spacebars.compile = function (inputString, options) {
       switch (t.type) {
       case 'Characters':
         if (typeof t.data === 'string') {
-          renderables.push(toJSLiteral(t.data));
+          renderables.push(toJSLiteral(
+            UI.encodeSpecialEntities(t.data)));
         } else {
           _.each(t.data, function (tagOrStr) {
             if (typeof tagOrStr === 'string') {
-              renderables.push(toJSLiteral(tagOrStr));
+              renderables.push(toJSLiteral(
+                UI.encodeSpecialEntities(tagOrStr)));
             } else {
               // tag or block
               var tag = tagOrStr;
@@ -831,58 +830,67 @@ Spacebars.compile = function (inputString, options) {
         }
         break;
       case 'StartTag':
-        var attrs = null;
-        var dynamicAttrs = null;
-        _.each(t.data, function (kv) {
-          var name = kv.nodeName;
-          var value = kv.nodeValue;
-          if ((typeof name) !== 'string') {
-            dynamicAttrs = (dynamicAttrs || []);
-            dynamicAttrs.push([interpolate(name, funcInfo,
-                                           INTERPOLATE_DYNAMIC_ATTR),
-                               interpolate(value, funcInfo,
-                                           INTERPOLATE_DYNAMIC_ATTR)]);
-          } else {
-            attrs = (attrs || {});
-            attrs[toJSLiteral(name)] =
-              interpolate(value, funcInfo, INTERPOLATE_ATTR_VALUE);
+        // no space between tag name and attrs obj required
+        renderables.push(toJSLiteral("<" + t.name));
+
+        if (t.data && t.data.length) {
+          var isReactive = false;
+          var attrs = {};
+          var pairsWithReactiveNames = [];
+          _.each(t.data, function (kv) {
+            var name = kv.nodeName;
+            var value = kv.nodeValue;
+            if ((typeof name) === 'string') {
+              attrs = (attrs || {});
+              attrs[toJSLiteral(name)] =
+                interpolate(value, funcInfo,
+                            INTERPOLATE_ATTR_VALUE);
+              if ((typeof value) !== 'string')
+                isReactive = true;
+            } else if (value === '' &&
+                       name.length === 1 &&
+                       name[0].type === 'TRIPLE') {
+              renderables.push(
+                'Spacebars.parseAttrs(' +
+                  codeGenBasicStache(name[0], funcInfo) + ')');
+            } else {
+              pairsWithReactiveNames.push(
+                interpolate(name, funcInfo,
+                            INTERPOLATE_ATTR_VALUE),
+                interpolate(name, funcInfo,
+                            INTERPOLATE_ATTR_VALUE));
+              isReactive = true;
+            }
+          });
+          var attrCode = makeObjectLiteral(attrs);
+          if (pairsWithReactiveNames.length) {
+            attrCode = 'Spacebars.extend(' + attrCode +
+              ', ' + pairsWithReactiveNames.join(', ') + ')';
           }
-        });
-        var options = null;
-        if (dynamicAttrs) {
-          options = (options || {});
-          options['dynamicAttrs'] = '[' +
-            _.map(dynamicAttrs, function (pair) {
-              return '[' + pair[0] + ', ' + pair[1] + ']';
-            }).join(', ') + ']';
+          if (isReactive)
+            attrCode = ('function () { return ' + attrCode +
+                        '; }');
+          renderables.push('{attrs: ' + attrCode + '}');
         }
-        if (t.self_closing) {
-          options = (options || {});
-          options['selfClose'] = 'true';
-        }
-        bodyLines.push(
-          'buf.openTag(' + toJSLiteral(t.name) +
-            ((attrs || options) ?
-             ', ' + makeObjectLiteral(attrs)
-             : '') +
-            (options ? ', ' + makeObjectLiteral(options) : '') +
-            ');');
+
+        renderables.push(t.self_closing ? '/>' : '>');
         break;
       case 'EndTag':
-        bodyLines.push('buf.closeTag(' + toJSLiteral(t.name) +
-                       ');');
+        renderables.push(toJSLiteral('</' + t.name + '>'));
         break;
       case 'Comment':
-        bodyLines.push('buf.comment(' +
-                       interpolate(t.name, funcInfo,
-                                  INTERPOLATE_COMMENT) + ');');
+        // XXX make comments reactive?  no clear use case.
+        // here we allow double and triple stache and
+        // only run it once.
+        renderables.push(toJSLiteral('<!--'));
+        renderables.push('Spacebars.escapeHtmlComment(' +
+                         interpolate(t.name, funcInfo,
+                                     INTERPOLATE_COMMENT));
+        renderables.push(toJSLiteral('-->'));
         break;
       case 'DocType':
-        bodyLines.push(
-          'buf.doctype(' + toJSLiteral(t.name) + ', ' +
-            toJSLiteral({correct: t.correct,
-                         publicId: t.publicId,
-                         systemId: t.systemId}) + ');');
+        // XXX output a proper doctype based on
+        // t.name, t.correct, t.publicId, t.systemId
         break;
       default:
         error("Unexpected token type: " + t.type);
@@ -891,10 +899,11 @@ Spacebars.compile = function (inputString, options) {
     });
 
     return 'function (buf) {' +
-      (bodyLines ?
+      (renderables.length ?
        (funcInfo.usedSelf ?
         '\n' + indent + 'var self = this;' : '') +
-       '\n' + indent + bodyLines.join('\n' + indent) + '\n' +
+       '\n' + indent + 'buf(' +
+       renderables.join(',\n' + indent) + ');\n' +
        oldIndent : '') + '}';
   };
 
@@ -947,4 +956,25 @@ Spacebars.call = function (value/*, args*/) {
   // is actually a wrapper which ignores its `this`
   // and supplies one).
   return value.apply(null, args);
+};
+
+Spacebars.extend = function (obj/*, k1, v1, k2, v2, ...*/) {
+  for (var i = 1; i < arguments.length; i += 2)
+    obj[arguments[i]] = arguments[i+1];
+  return obj;
+};
+
+Spacebars.parseAttrs = function (attrs) {
+  if (attrs && (typeof attrs) === 'object')
+    return attrs;
+  else
+    throw new Error("XXX Should allow strings here");
+};
+
+Spacebars.escapeHtmlComment = function (str) {
+  // comments can't have "--" in them in HTML.
+  // just strip those so that we don't run into trouble.
+  if ((typeof str) === 'string')
+    return str.replace(/--/g, '');
+  return str;
 };
