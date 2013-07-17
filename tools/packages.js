@@ -1436,7 +1436,7 @@ _.extend(Package.prototype, {
               paths = paths ? [paths] : [];
 
             if (!(where instanceof Array))
-              where = where ? [where] : [];
+              where = where ? [where] : ["client", "server"];
 
             _.each(paths, function (path) {
               _.each(where, function (w) {
