@@ -4,16 +4,15 @@ var querystring = Npm.require("querystring");
 // An OAuth1 wrapper around http calls which helps get tokens and
 // takes care of HTTP headers
 //
-// @param consumerKey {String} As supplied by the OAuth1 provider
+// @param config {Object} Keys, Secrets and options
 // @param consumerSecret {String} As supplied by the OAuth1 provider
 // @param urls {Object}
 //   - requestToken (String): url
 //   - authorize (String): url
 //   - accessToken (String): url
 //   - authenticate (String): url
-OAuth1Binding = function(consumerKey, consumerSecret, urls) {
-  this._consumerKey = consumerKey;
-  this._secret = consumerSecret;
+OAuth1Binding = function(config, urls) {
+  this._config = config;
   this._urls = urls;
 };
 
@@ -31,10 +30,14 @@ OAuth1Binding.prototype.prepareRequestToken = function(callbackUrl) {
   if (!tokens.oauth_callback_confirmed)
     throw new Error("oauth_callback_confirmed false when requesting oauth1 token", tokens);
   self.requestToken = tokens.oauth_token;
+  self.requestTokenSecret = tokens.oauth_token_secret;
 };
 
-OAuth1Binding.prototype.prepareAccessToken = function(query) {
+OAuth1Binding.prototype.prepareAccessToken = function(query, requestTokenSecret) {
   var self = this;
+
+  if (requestTokenSecret)
+    self.accessTokenSecret = requestTokenSecret
 
   var headers = self._buildHeader({
     oauth_token: query.oauth_token
@@ -77,7 +80,7 @@ OAuth1Binding.prototype.post = function(url, params) {
 OAuth1Binding.prototype._buildHeader = function(headers) {
   var self = this;
   return _.extend({
-    oauth_consumer_key: self._consumerKey,
+    oauth_consumer_key: self._config.consumerKey,
     oauth_nonce: Random.id().replace(/\W/g, ''),
     oauth_signature_method: 'HMAC-SHA1',
     oauth_timestamp: (new Date().valueOf()/1000).toFixed().toString(),
@@ -99,7 +102,7 @@ OAuth1Binding.prototype._getSignature = function(method, url, rawHeaders, access
     self._encodeString(parameters)
   ].join('&');
 
-  var signingKey = self._encodeString(self._secret) + '&';
+  var signingKey = self._encodeString(self._config.secret) + '&';
   if (accessTokenSecret)
     signingKey += self._encodeString(accessTokenSecret);
 

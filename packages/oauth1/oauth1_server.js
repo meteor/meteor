@@ -1,3 +1,5 @@
+var querystring = Npm.require("querystring");
+
 // A place to store request tokens pending verification
 Oauth1._requestTokens = {};
 
@@ -10,8 +12,7 @@ Oauth1._handleRequest = function (service, query, res) {
   }
 
   var urls = service.urls;
-  var oauthBinding = new OAuth1Binding(
-    config.consumerKey, config.secret, urls);
+  var oauthBinding = new OAuth1Binding(config, urls);
 
   if (query.requestTokenAndRedirect) {
     // step 1 - get and store a request token
@@ -20,10 +21,19 @@ Oauth1._handleRequest = function (service, query, res) {
     oauthBinding.prepareRequestToken(query.requestTokenAndRedirect);
 
     // Keep track of request token so we can verify it on the next step
-    Oauth1._requestTokens[query.state] = oauthBinding.requestToken;
+    Oauth1._requestTokens[query.state] = {
+      requestToken: oauthBinding.requestToken, 
+      requestTokenSecret: oauthBinding.requestTokenSecret
+    };
+
 
     // redirect to provider login, which will redirect back to "step 2" below
-    var redirectUrl = urls.authenticate + '?oauth_token=' + oauthBinding.requestToken;
+    var redirectUrl = urls.authenticate + '?oauth_token=' + oauthBinding.requestToken 
+
+    // this should be handled more magically - needed for trello
+    if(config.name)
+      redirectUrl = redirectUrl + "&name=" + config.name;
+
     res.writeHead(302, {'Location': redirectUrl});
     res.end();
   } else {
@@ -32,7 +42,8 @@ Oauth1._handleRequest = function (service, query, res) {
     // token and access token secret and log in as user
 
     // Get the user's request token so we can verify it and clear it
-    var requestToken = Oauth1._requestTokens[query.state];
+    var requestToken       = Oauth1._requestTokens[query.state].requestToken;
+    var requestTokenSecret = Oauth1._requestTokens[query.state].requestTokenSecret;
     delete Oauth1._requestTokens[query.state];
 
     // Verify user authorized access and the oauth_token matches
@@ -43,7 +54,7 @@ Oauth1._handleRequest = function (service, query, res) {
       // subsequent call to the `login` method will be immediate.
 
       // Get the access token for signing requests
-      oauthBinding.prepareAccessToken(query);
+      oauthBinding.prepareAccessToken(query, requestTokenSecret);
 
       // Run service-specific handler.
       var oauthResult = service.handleOauthRequest(oauthBinding);
