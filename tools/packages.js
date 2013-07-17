@@ -20,7 +20,7 @@ var sourcemap = require('source-map');
 // unipackage/slice changes, but this version (which is build-tool-specific) can
 // change when the the contents (not structure) of the built output changes. So
 // eg, if we improve the linker's static analysis, this should be bumped.
-exports.BUILD_VERSION = 'meteor/2';
+exports.BUILT_BY = 'meteor/3';
 
 // Find all files under `rootPath` that have an extension in
 // `extensions` (an array of extensions without leading dot), and
@@ -187,17 +187,17 @@ var Slice = function (pkg, options) {
   // other than JavaScript that still needs to be fed through the
   // final link stage. A list of objects with these keys:
   //
-  // type: "js", "css", "head", "body", "static"
+  // type: "js", "css", "head", "body", "asset"
   //
   // data: The contents of this resource, as a Buffer. For example,
   // for "head", the data to insert in <head>; for "js", the
   // JavaScript source code (which may be subject to further
-  // processing such as minification); for "static", the contents of a
+  // processing such as minification); for "asset", the contents of a
   // static resource such as an image.
   //
   // servePath: The (absolute) path at which the resource would prefer
   // to be served. Interpretation varies by type. For example, always
-  // honored for "static", ignored for "head" and "body", sometimes
+  // honored for "asset", ignored for "head" and "body", sometimes
   // honored for CSS but ignored if we are concatenating.
   //
   // sourceMap: Allowed only for "js". If present, a string.
@@ -212,7 +212,7 @@ var Slice = function (pkg, options) {
 
   // Absolute path to the location on disk where Assets API calls will search in
   // this slice.
-  self.staticDirectory = options.staticDirectory;
+  self.assetsDirectory = options.assetsDirectory;
 };
 
 _.extend(Slice.prototype, {
@@ -267,7 +267,7 @@ _.extend(Slice.prototype, {
         // XXX This is pretty confusing, especially if you've
         // accidentally forgotten a plugin -- revisit?
         resources.push({
-          type: "static",
+          type: "asset",
           data: contents,
           servePath: path.join(self.pkg.serveRoot, relPath)
         });
@@ -442,7 +442,7 @@ _.extend(Slice.prototype, {
           if (! (options.data instanceof Buffer))
             throw new Error("'data' option to addAsset must be a Buffer");
           resources.push({
-            type: "static",
+            type: "asset",
             data: options.data,
             servePath: path.join(self.pkg.serveRoot, options.path)
           });
@@ -578,7 +578,7 @@ _.extend(Slice.prototype, {
         type: "js",
         data: new Buffer(file.source, 'utf8'), // XXX encoding
         servePath: file.servePath,
-        staticDirectory: self.staticDirectory,
+        assetsDirectory: self.assetsDirectory,
         sourceMap: file.sourceMap
       };
     });
@@ -1090,7 +1090,7 @@ _.extend(Package.prototype, {
       }),
       getSourcesFunc: function () { return sources; },
       nodeModulesPath: nodeModulesPath,
-      staticDirectory: options.sourceRoot
+      assetsDirectory: options.sourceRoot
     });
     self.slices.push(slice);
 
@@ -1691,7 +1691,7 @@ _.extend(Package.prototype, {
           forceExport: forceExport[role][where],
           dependencyInfo: dependencyInfo,
           nodeModulesPath: arch === nativeArch && nodeModulesPath || undefined,
-          staticDirectory: self.sourceRoot,
+          assetsDirectory: self.sourceRoot,
           // test slices don't get used by other packages, so they have nothing
           // to export.  (And notably, they should NOT stomp on the Package.foo
           // object defined by their corresponding use slice.)
@@ -1889,7 +1889,7 @@ _.extend(Package.prototype, {
     if (options.onlyIfUpToDate) {
       // Do we think we'll generate different contents than the tool that built
       // this package?
-      if (buildInfoJson.builtBy !== exports.BUILD_VERSION)
+      if (buildInfoJson.builtBy !== exports.BUILT_BY)
         return false;
 
       if (options.buildOfPath &&
@@ -1959,9 +1959,9 @@ _.extend(Package.prototype, {
         nodeModulesPath = path.join(sliceBasePath, sliceJson.node_modules);
       }
 
-      var staticDirectory = null;
-      if (sliceJson.staticDirectory)
-        staticDirectory = path.join(sliceBasePath, sliceJson.staticDirectory);
+      var assetsDirectory = null;
+      if (sliceJson.assetsDirectory)
+        assetsDirectory = path.join(sliceBasePath, sliceJson.assetsDirectory);
 
       var slice = new Slice(self, {
         name: sliceMeta.name,
@@ -1980,7 +1980,7 @@ _.extend(Package.prototype, {
             spec: u['package'] + (u.slice ? "." + u.slice : "")
           };
         }),
-        staticDirectory: staticDirectory
+        assetsDirectory: assetsDirectory
       });
 
       slice.isBuilt = true;
@@ -2014,7 +2014,7 @@ _.extend(Package.prototype, {
               path.join(sliceBasePath, resource.sourceMap), 'utf8');
           }
           slice.prelinkFiles.push(prelinkFile);
-        } else if (_.contains(["head", "body", "css", "js", "static"],
+        } else if (_.contains(["head", "body", "css", "js", "asset"],
                               resource.type)) {
           slice.resources.push({
             type: resource.type,
@@ -2105,7 +2105,7 @@ _.extend(Package.prototype, {
       };
 
       var buildInfoJson = {
-        builtBy: exports.BUILD_VERSION,
+        builtBy: exports.BUILT_BY,
         dependencies: { files: {}, directories: {} },
         source: options.buildOfPath || undefined
       };
@@ -2190,7 +2190,7 @@ _.extend(Package.prototype, {
                     })),
           node_modules: slice.nodeModulesPath ? 'npm/node_modules' : undefined,
           resources: [],
-          staticDirectory: path.join(sliceDir, self.serveRoot)
+          assetsDirectory: path.join(sliceDir, self.serveRoot)
         };
 
         // Output 'head', 'body' resources nicely

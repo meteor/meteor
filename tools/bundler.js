@@ -64,7 +64,7 @@
 //  - manifest: array of resources to serve with HTTP, each an object:
 //    - path: path of file relative to program.json
 //    - where: "client"
-//    - type: "js", "css", or "static"
+//    - type: "js", "css", or "asset"
 //    - cacheable: is it safe to ask the browser to cache this file (boolean)
 //    - url: relative url to download the resource, includes cache busting
 //        parameter when used
@@ -103,7 +103,7 @@
 //    - node_modules: if Npm.require is called from this file, this is
 //      the path (relative to program.json) of the directory that should
 //      be search for npm modules
-//    - staticDirectory: directory to search for static assets when
+//    - assetsDirectory: directory to search for static assets when
 //      Assets.getText and Assets.getBinary are called from this file.
 //    - sourceMap: if present, path of a file that contains a source
 //      map for this file, relative to program.json
@@ -218,12 +218,12 @@ var NodeModulesDirectory = function (options) {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// StaticDirectory
+// AssetsDirectory
 ///////////////////////////////////////////////////////////////////////////////
 
 // Like a NodeModulesDirectory but for static assets that are accessible via the
 // Assets API.
-var StaticDirectory = function (options) {
+var AssetsDirectory = function (options) {
   var self = this;
   self.sourcePath = options.sourcePath;
   self.bundlePath = options.bundlePath;
@@ -276,7 +276,7 @@ var File = function (options) {
   // in the "server" architecture.
   self.nodeModulesDirectory = null;
 
-  self.staticDirectory = null;
+  self.assetsDirectory = null;
 
   self._contents = options.data || null; // contents, if known, as a Buffer
   self._hash = null; // hash, if known, as a hex string
@@ -360,30 +360,28 @@ _.extend(File.prototype, {
   setTargetPathFromRelPath: function (relPath) {
     var self = this;
     // XXX hack
-    if (relPath.match(/^packages\//) || relPath.match(/^static\//))
+    if (relPath.match(/^packages\//) || relPath.match(/^assets\//))
       self.targetPath = relPath;
     else
       self.targetPath = path.join('app', relPath);
   },
 
-  setStaticDirectory: function (relPath, staticSourceDirectory) {
+  setAssetsDirectory: function (relPath, assetsSourceDirectory) {
     var self = this;
     // For package code, static assets go inside a directory inside
-    // static/packages specific to this package. Application assets (e.g. those
-    // inside private/) go in static/app/.
+    // assets/packages specific to this package. Application assets (e.g. those
+    // inside private/) go in assets/app/.
     // XXX same hack as above
-    // XXX XXX is this all still true?
-    // XXX rename static -> assets on server
     var bundlePath;
     if (relPath.match(/^packages\//)) {
       var dir = path.dirname(relPath);
       var base = path.basename(relPath, ".js");
-      bundlePath = path.join('static', dir, base);
+      bundlePath = path.join('assets', dir, base);
     } else {
-      bundlePath = path.join('static', 'app');
+      bundlePath = path.join('assets', 'app');
     }
-    self.staticDirectory = new StaticDirectory({
-      sourcePath: staticSourceDirectory,
+    self.assetsDirectory = new AssetsDirectory({
+      sourcePath: assetsSourceDirectory,
       bundlePath: bundlePath
     });
   },
@@ -437,7 +435,7 @@ var Target = function (options) {
 
   // Static assets to include in the bundle. List of File.
   // For browser targets, these are served over HTTP.
-  self.static = [];
+  self.asset = [];
 };
 
 _.extend(Target.prototype, {
@@ -610,7 +608,7 @@ _.extend(Target.prototype, {
 
       // Emit the resources
        _.each(slice.getResources(self.arch), function (resource) {
-        if (_.contains(["js", "css", "static"], resource.type)) {
+        if (_.contains(["js", "css", "asset"], resource.type)) {
           if (resource.type === "css" && ! isBrowser)
             // XXX might be nice to throw an error here, but then we'd
             // have to make it so that packages.js ignores css files
@@ -626,8 +624,8 @@ _.extend(Target.prototype, {
           });
 
           var relPath;
-          if (resource.type === "static" && isNative)
-            relPath = path.join("static", resource.servePath);
+          if (resource.type === "asset" && isNative)
+            relPath = path.join("assets", resource.servePath);
           else {
             relPath = stripLeadingSlash(resource.servePath);
           }
@@ -637,7 +635,7 @@ _.extend(Target.prototype, {
             f.setUrlFromRelPath(resource.servePath);
           } else if (isNative) {
             if (resource.type === "js")
-              f.setStaticDirectory(relPath, resource.staticDirectory);
+              f.setAssetsDirectory(relPath, resource.assetsDirectory);
           }
 
           if (isNative && resource.type === "js" && ! isApp &&
@@ -771,14 +769,13 @@ _.extend(Target.prototype, {
         if (setUrl)
           f.setUrlFromRelPath(assetPath);
         // XXX why is this separate from _emitResources ?
-        // XXX fix up server static resources
         var relPath = assetDir.useSubDirectory
-              ? path.join('static', 'app', assetPath)
+              ? path.join('assets', 'app', assetPath)
               : assetPath;
         if (setTargetPath)
           f.setTargetPathFromRelPath(relPath);
         self.dependencyInfo.files[absPath] = f.hash();
-        self.static.push(f);
+        self.asset.push(f);
       });
     };
 
@@ -851,7 +848,7 @@ _.extend(ClientTarget.prototype, {
 
     // Helper to iterate over all resources that we serve over HTTP.
     var eachResource = function (f) {
-      _.each(["js", "css", "static"], function (type) {
+      _.each(["js", "css", "asset"], function (type) {
         _.each(self[type], function (file) {
           f(file, type);
         });
@@ -988,7 +985,7 @@ _.extend(JsImage.prototype, {
 
     // XXX This is mostly duplicated from server/boot.js, as is Npm.require
     // below. Some way to avoid this?
-    var getAsset = function (staticDirectory, assetPath, encoding, callback) {
+    var getAsset = function (assetsDirectory, assetPath, encoding, callback) {
       var fut;
       if (! callback) {
         if (! Fiber.current)
@@ -1003,7 +1000,7 @@ _.extend(JsImage.prototype, {
           result = new Uint8Array(result);
         callback(err, result);
       };
-      var filePath = path.join(staticDirectory, assetPath);
+      var filePath = path.join(assetsDirectory, assetPath);
       if (filePath.indexOf("..") !== -1)
         throw new Error(".. is not allowed in asset paths.");
       fs.readFile(filePath, encoding, _callback);
@@ -1047,11 +1044,11 @@ _.extend(JsImage.prototype, {
         },
         Assets: {
           getText: function (assetPath, callback) {
-            return getAsset(item.staticDirectory.sourcePath,
+            return getAsset(item.assetsDirectory.sourcePath,
                             assetPath, "utf8", callback);
           },
           getBinary: function (assetPath, callback) {
-            return getAsset(item.staticDirectory.sourcePath,
+            return getAsset(item.assetsDirectory.sourcePath,
                             assetPath, undefined, callback);
           }
         }
@@ -1112,8 +1109,8 @@ _.extend(JsImage.prototype, {
         path: loadPath,
         node_modules: item.nodeModulesDirectory ?
           item.nodeModulesDirectory.preferredBundlePath : undefined,
-        staticDirectory: item.staticDirectory ?
-          item.staticDirectory.bundlePath : undefined
+        assetsDirectory: item.assetsDirectory ?
+          item.assetsDirectory.bundlePath : undefined
       };
 
       if (item.sourceMap) {
@@ -1187,8 +1184,8 @@ JsImage.readFromDisk = function (controlFilePath) {
       targetPath: item.path,
       source: fs.readFileSync(path.join(dir, item.path)),
       nodeModulesDirectory: nmd,
-      staticDirectory: new StaticDirectory({
-        sourcePath: item.staticDirectory
+      assetsDirectory: new AssetsDirectory({
+        sourcePath: item.assetsDirectory
       })
     };
     if (item.sourceMap) {
@@ -1226,7 +1223,7 @@ _.extend(JsImageTarget.prototype, {
         targetPath: file.targetPath,
         source: file.contents().toString('utf8'),
         nodeModulesDirectory: file.nodeModulesDirectory,
-        staticDirectory: file.staticDirectory,
+        assetsDirectory: file.assetsDirectory,
         sourceMap: file.sourceMap,
         sourceMapRoot: file.sourceMapRoot
       });
@@ -1352,7 +1349,7 @@ _.extend(ServerTarget.prototype, {
     }
 
     // Static assets
-    _.each(self.static, function (file) {
+    _.each(self.asset, function (file) {
       writeFile(file, builder);
     });
 

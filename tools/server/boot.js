@@ -108,7 +108,7 @@ Fiber(function () {
           }
       }
     };
-    var staticDirectory = path.resolve(serverDir, fileInfo.staticDirectory);
+    var assetsDirectory = path.resolve(serverDir, fileInfo.assetsDirectory);
     var getAsset = function (assetPath, encoding, callback) {
       var fut;
       if (! callback) {
@@ -123,7 +123,7 @@ Fiber(function () {
       }, function (e) {
         Meteor._debug("Exception in callback of getAsset", e.stack);
       });
-      var filePath = path.join(staticDirectory, assetPath);
+      var filePath = path.join(assetsDirectory, assetPath);
       if (filePath.indexOf("..") !== -1)
         throw new Error(".. is not allowed in asset paths.");
       fs.readFile(filePath, encoding, _callback);
