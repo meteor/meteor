@@ -828,6 +828,12 @@ var Package = function (library) {
   // building, into two flags.
   self.pluginsBuilt = false;
   self.slicesBuilt = false;
+
+  // True if the dependencyInfo in the slices can be taken as as
+  // accurate. (False if we loaded the package from disk and it didn't
+  // come with dependency info, eg, it was a release build built by
+  // someone else.)
+  self.haveDependencyInfo = false;
 };
 
 _.extend(Package.prototype, {
@@ -1018,6 +1024,7 @@ _.extend(Package.prototype, {
       slice.build();
     });
     self.slicesBuilt = true;
+    self.haveDependencyInfo = true;
   },
 
   // Programmatically initialized a package from scratch. For now,
@@ -1862,15 +1869,21 @@ _.extend(Package.prototype, {
 
     // Read the dependency info (if present), and make the strings
     // back into regexps
-    var dependencies = buildInfoJson.dependencies ||
-      { files: {}, directories: {} };
-    _.each(dependencies.directories, function (d) {
-      _.each(["include", "exclude"], function (k) {
-        d[k] = _.map(d[k], function (s) {
-          return new RegExp(s);
+    var haveDependencyInfo, dependencies;
+    if (buildInfoJson.dependencies) {
+      haveDependencyInfo = true;
+      dependencies = buildInfoJson.dependencies;
+      _.each(dependencies.directories, function (d) {
+        _.each(["include", "exclude"], function (k) {
+          d[k] = _.map(d[k], function (s) {
+            return new RegExp(s);
+          });
         });
       });
-    });
+    } else {
+      haveDependencyInfo = false;
+      dependencies = { files: {}, directories: {} };
+    }
 
     // If we're supposed to check the dependencies, go ahead and do so
     if (options.onlyIfUpToDate) {
@@ -1890,17 +1903,7 @@ _.extend(Package.prototype, {
         return false;
       }
 
-      var isUpToDate = true;
-      var watcher = new watch.Watcher({
-        files: dependencies.files,
-        directories: dependencies.directories,
-        onChange: function () {
-          isUpToDate = false;
-        }
-      });
-      watcher.stop();
-
-      if (! isUpToDate)
+      if (! self.checkUpToDate(dependencies))
         return false;
     }
 
@@ -1909,6 +1912,7 @@ _.extend(Package.prototype, {
       summary: mainJson.summary,
       internal: mainJson.internal
     };
+    self.haveDependencyInfo = haveDependencyInfo;
     self.defaultSlices = mainJson.defaultSlices;
     self.testSlices = mainJson.testSlices;
 
@@ -2027,6 +2031,46 @@ _.extend(Package.prototype, {
     self.slicesBuilt = true;
 
     return true;
+  },
+
+  // Try to check if this package is up-to-date (that is, whether its
+  // source files have been modified.) True if we have dependency info
+  // and it says that the package is up-to-date. False if a source
+  // file has changed OR if we loaded the package from disk and it
+  // didn't have dependency info.
+  //
+  // The argument _dependencyInfo is for internal use and should not
+  // be set by the caller.
+  checkUpToDate: function (_dependencyInfo) {
+    var self = this;
+
+    // Compute the dependency info to use
+    var dependencyInfo = _dependencyInfo;
+    if (! dependencyInfo && self.haveDependencyInfo) {
+      dependencyInfo = { files: {}, directories: {} };
+      _.each(self.slices, function (slice) {
+        // XXX is naive merge sufficient here?
+        _.extend(dependencyInfo.files,
+                 slice.dependencyInfo.files);
+        _.extend(dependencyInfo.directories,
+                 slice.dependencyInfo.directories);
+      });
+    }
+
+    if (! dependencyInfo)
+      return false;
+
+    var isUpToDate = true;
+    var watcher = new watch.Watcher({
+      files: dependencyInfo.files,
+      directories: dependencyInfo.directories,
+      onChange: function () {
+        isUpToDate = false;
+      }
+    });
+    watcher.stop();
+
+    return isUpToDate;
   },
 
   // True if this package can be saved as a unipackage

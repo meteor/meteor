@@ -462,7 +462,7 @@ exports.run = function (context, options) {
         if (Status.crashing)
           logToClients({'system': "=> Modified -- restarting."});
         Status.reset();
-        context.library.refresh(); // pick up changes to packages
+        context.library.refresh(true); // pick up changes to packages
         restartServer();
       }
     });

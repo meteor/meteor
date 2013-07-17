@@ -34,7 +34,11 @@ var Library = function (options) {
       return stats.isDirectory();
     });
 
-  self.loadedPackages = {};
+  // these three are maps from package name to Package
+  self.loadedPackages = {}; // current cache
+  self.previouslyLoadedPackages = {}; // need validation after soft reset
+  self.warehouseCache = {}; // unconditionally survive soft reset
+
   self.overrides = {}; // package name to package directory
 };
 
@@ -60,9 +64,29 @@ _.extend(Library.prototype, {
     delete self.overrides[packageName];
   },
 
-  // Force reload of all packages. See description at get().
-  refresh: function () {
+  // Force reload of changed packages. See description at get().
+  //
+  // If soft is false, the default, the cache is totally flushed and
+  // all packages are reloaded unconditionally.
+  //
+  // If soft is true, then packages from the warehouse aren't reloaded
+  // (they are supposed to be immutable, after all), and if we loaded
+  // a built package with dependency info, we won't reload it if the
+  // dependency info says that its source files are still up to
+  // date. The ideas is that assuming the user is "following the
+  // rules", this will correctly reload any changed packages while in
+  // most cases avoiding nearly all reloading.
+  refresh: function (soft) {
     var self = this;
+    soft = soft || false;
+
+    if (soft) {
+      self.previouslyLoadedPackages = self.loadedPackages;
+    } else {
+      self.previouslyLoadedPackages = {};
+      self.warehouseCache = {};
+    }
+
     self.loadedPackages = {};
   },
 
@@ -91,8 +115,16 @@ _.extend(Library.prototype, {
       return name;
 
     // Packages cached from previous calls
-    if (name in self.loadedPackages)
+    if (_.has(self.warehouseCache, name))
+      self.loadedPackages[name] = self.warehouseCache[name];
+    else if (_.has(self.previouslyLoadedPackages, name) &&
+             self.previouslyLoadedPackages[name].checkUpToDate())
+      self.loadedPackages[name] = self.previouslyLoadedPackages[name];
+    delete self.previouslyLoadedPackages[name];
+
+    if (_.has(self.loadedPackages, name)) {
       return self.loadedPackages[name];
+    }
 
     // If there's an override for this package, use that without
     // looking at any other options.
@@ -186,6 +218,9 @@ _.extend(Library.prototype, {
         });
       }
     }
+
+    if (fromWarehouse)
+      self.warehouseCache[name] = pkg;
 
     return pkg;
   },
