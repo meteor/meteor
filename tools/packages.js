@@ -209,10 +209,6 @@ var Slice = function (pkg, options) {
   // resolve Npm.require() calls in this slice. null if this slice
   // does not have a node_modules.
   self.nodeModulesPath = options.nodeModulesPath;
-
-  // Absolute path to the location on disk where Assets API calls will search in
-  // this slice.
-  self.assetsDirectory = options.assetsDirectory;
 };
 
 _.extend(Slice.prototype, {
@@ -251,12 +247,25 @@ _.extend(Slice.prototype, {
       self[field] = scrubbed;
     });
 
+    var addAsset = function (contents, relPath) {
+      // XXX hack
+      if (!self.pkg.name)
+        relPath = relPath.replace(/^(private|public)\//, '');
+
+      resources.push({
+        type: "asset",
+        data: contents,
+        path: relPath,
+        servePath: path.join(self.pkg.serveRoot, relPath)
+      });
+    };
+
     _.each(self.getSourcesFunc(), function (source) {
       var relPath = source.relPath;
       var fileOptions = _.clone(source.fileOptions) || {};
       var absPath = path.resolve(self.pkg.sourceRoot, relPath);
       var ext = path.extname(relPath).substr(1);
-      var handler = self._getSourceHandler(ext);
+      var handler = !source.isAsset && self._getSourceHandler(ext);
       var contents = fs.readFileSync(absPath);
       self.dependencyInfo.files[absPath] = Builder.sha1(contents);
 
@@ -266,11 +275,7 @@ _.extend(Slice.prototype, {
         //
         // XXX This is pretty confusing, especially if you've
         // accidentally forgotten a plugin -- revisit?
-        resources.push({
-          type: "asset",
-          data: contents,
-          servePath: path.join(self.pkg.serveRoot, relPath)
-        });
+        addAsset(contents, relPath);
         return;
       }
 
@@ -441,11 +446,7 @@ _.extend(Slice.prototype, {
         addAsset: function (options) {
           if (! (options.data instanceof Buffer))
             throw new Error("'data' option to addAsset must be a Buffer");
-          resources.push({
-            type: "asset",
-            data: options.data,
-            servePath: path.join(self.pkg.serveRoot, options.path)
-          });
+          addAsset(options.data, options.path);
         },
         error: function (options) {
           buildmessage.error(options.message || ("error building " + relPath), {
@@ -578,7 +579,6 @@ _.extend(Slice.prototype, {
         type: "js",
         data: new Buffer(file.source, 'utf8'), // XXX encoding
         servePath: file.servePath,
-        assetsDirectory: self.assetsDirectory,
         sourceMap: file.sourceMap
       };
     });
@@ -1089,8 +1089,7 @@ _.extend(Package.prototype, {
         return { spec: spec };
       }),
       getSourcesFunc: function () { return sources; },
-      nodeModulesPath: nodeModulesPath,
-      assetsDirectory: options.sourceRoot
+      nodeModulesPath: nodeModulesPath
     });
     self.slices.push(slice);
 
@@ -1691,7 +1690,6 @@ _.extend(Package.prototype, {
           forceExport: forceExport[role][where],
           dependencyInfo: dependencyInfo,
           nodeModulesPath: arch === nativeArch && nodeModulesPath || undefined,
-          assetsDirectory: self.sourceRoot,
           // test slices don't get used by other packages, so they have nothing
           // to export.  (And notably, they should NOT stomp on the Package.foo
           // object defined by their corresponding use slice.)
@@ -1814,7 +1812,7 @@ _.extend(Package.prototype, {
           path.resolve(appDir, '.meteor', 'local')] = { exclude: [/.?/] };
 
         // Convert into relPath/fileOptions objects.
-        return _.map(withoutOtherPrograms, function (relPath) {
+        var sources = _.map(withoutOtherPrograms, function (relPath) {
           var sourceObj = {relPath: relPath};
 
           // Special case: on the client, JavaScript files in a
@@ -1827,6 +1825,44 @@ _.extend(Package.prototype, {
           }
           return sourceObj;
         });
+
+        var assetDir = sliceName === "client" ? "public" : "private";
+        var absAssetDir = path.resolve(appDir, assetDir);
+        slice.dependencyInfo.directories[absAssetDir]
+          = { include: [/.?/], exclude: ignoreFiles};
+        var walkAssetDir = function (subdir) {
+          var dir = path.join(appDir, subdir);
+          try {
+            var items = fs.readdirSync(dir);
+          } catch (e) {
+            // OK if the directory (esp the top level asset dir) doesn't exist.
+            if (e.code === "ENOENT")
+              return;
+            throw e;
+          }
+          _.each(items, function (item) {
+            // Skip excluded files
+            var matchesAnExclude = _.any(ignoreFiles, function (pattern) {
+              return item.match(pattern);
+            });
+            if (matchesAnExclude)
+              return;
+
+            var assetAbsPath = path.join(dir, item);
+            var assetRelPath = path.join(subdir, item);
+            if (fs.statSync(assetAbsPath).isDirectory()) {
+              walkAssetDir(assetRelPath);
+              return;
+            }
+
+            sources.push({
+              relPath: assetRelPath,
+              isAsset: true
+            });
+          });
+        };
+        walkAssetDir(assetDir);
+        return sources;
       };
     });
 
@@ -1959,10 +1995,6 @@ _.extend(Package.prototype, {
         nodeModulesPath = path.join(sliceBasePath, sliceJson.node_modules);
       }
 
-      var assetsDirectory = null;
-      if (sliceJson.assetsDirectory)
-        assetsDirectory = path.join(sliceBasePath, sliceJson.assetsDirectory);
-
       var slice = new Slice(self, {
         name: sliceMeta.name,
         arch: sliceMeta.arch,
@@ -1979,8 +2011,7 @@ _.extend(Package.prototype, {
           return {
             spec: u['package'] + (u.slice ? "." + u.slice : "")
           };
-        }),
-        assetsDirectory: assetsDirectory
+        })
       });
 
       slice.isBuilt = true;
@@ -2019,7 +2050,8 @@ _.extend(Package.prototype, {
           slice.resources.push({
             type: resource.type,
             data: data,
-            servePath: resource.servePath || undefined
+            servePath: resource.servePath || undefined,
+            path: resource.path || undefined
           });
         } else
           throw new Error("bad resource type in unipackage: " +
@@ -2189,8 +2221,7 @@ _.extend(Package.prototype, {
                       };
                     })),
           node_modules: slice.nodeModulesPath ? 'npm/node_modules' : undefined,
-          resources: [],
-          assetsDirectory: path.join(sliceDir, self.serveRoot)
+          resources: []
         };
 
         // Output 'head', 'body' resources nicely
@@ -2234,7 +2265,8 @@ _.extend(Package.prototype, {
               { data: resource.data }),
             length: resource.data.length,
             offset: 0,
-            servePath: resource.servePath || undefined
+            servePath: resource.servePath || undefined,
+            path: resource.path || undefined
           });
         });
 

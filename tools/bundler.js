@@ -103,8 +103,9 @@
 //    - node_modules: if Npm.require is called from this file, this is
 //      the path (relative to program.json) of the directory that should
 //      be search for npm modules
-//    - assetsDirectory: directory to search for static assets when
-//      Assets.getText and Assets.getBinary are called from this file.
+//    - assets: map from path (the argument to Assets.getText and
+//      Assets.getBinary) to path on disk (relative to program.json)
+//      of the asset
 //    - sourceMap: if present, path of a file that contains a source
 //      map for this file, relative to program.json
 //
@@ -218,18 +219,6 @@ var NodeModulesDirectory = function (options) {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// AssetsDirectory
-///////////////////////////////////////////////////////////////////////////////
-
-// Like a NodeModulesDirectory but for static assets that are accessible via the
-// Assets API.
-var AssetsDirectory = function (options) {
-  var self = this;
-  self.sourcePath = options.sourcePath;
-  self.bundlePath = options.bundlePath;
-};
-
-///////////////////////////////////////////////////////////////////////////////
 // File
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -276,7 +265,9 @@ var File = function (options) {
   // in the "server" architecture.
   self.nodeModulesDirectory = null;
 
-  self.assetsDirectory = null;
+  // For server JS only. Assets associated with this slice; map from the path
+  // that is the argument to Assets.getBinary, to a Buffer that is its contents.
+  self.assets = null;
 
   self._contents = options.data || null; // contents, if known, as a Buffer
   self._hash = null; // hash, if known, as a hex string
@@ -366,26 +357,6 @@ _.extend(File.prototype, {
       self.targetPath = path.join('app', relPath);
   },
 
-  setAssetsDirectory: function (relPath, assetsSourceDirectory) {
-    var self = this;
-    // For package code, static assets go inside a directory inside
-    // assets/packages specific to this package. Application assets (e.g. those
-    // inside private/) go in assets/app/.
-    // XXX same hack as above
-    var bundlePath;
-    if (relPath.match(/^packages\//)) {
-      var dir = path.dirname(relPath);
-      var base = path.basename(relPath, ".js");
-      bundlePath = path.join('assets', dir, base);
-    } else {
-      bundlePath = path.join('assets', 'app');
-    }
-    self.assetsDirectory = new AssetsDirectory({
-      sourcePath: assetsSourceDirectory,
-      bundlePath: bundlePath
-    });
-  },
-
   // Set a source map for this File. sourceMap is given as a string.
   setSourceMap: function (sourceMap, root) {
     var self = this;
@@ -394,6 +365,13 @@ _.extend(File.prototype, {
       throw new Error("sourceMap must be given as a string");
     self.sourceMap = sourceMap;
     self.sourceMapRoot = root;
+  },
+
+  // note: this assets object may be shared among multiple files!
+  setAssets: function (assets) {
+    var self = this;
+    if (!_.isEmpty(assets))
+      self.assets = assets;
   }
 });
 
@@ -450,9 +428,6 @@ _.extend(Target.prototype, {
   //   per _determineLoadOrder
   // - test: packages to test (Package or 'foo'), per _determineLoadOrder
   // - minify: true to minify
-  // - assetDirs: array of asset directories to add
-  //   object with keys 'rootDir', 'exclude', 'assetPathPrefix',
-  //   'setUrl', 'setTargetPath', all per addAssetDir.
   // - addCacheBusters: if true, make all files cacheable by adding
   //   unique query strings to their URLs. unlikely to be of much use
   //   on server targets.
@@ -474,12 +449,6 @@ _.extend(Target.prototype, {
       if (self.minifyCss) // XXX a bit of a hack
         self.minifyCss();
     }
-
-    // Process asset directories (eg, '/public')
-    // XXX this should probably be part of the appDir reader
-    _.each(options.assetDirs || [], function (ad) {
-      self.addAssetDir(ad);
-    });
 
     if (options.addCacheBusters) {
       // Make client-side CSS and JS assets cacheable forever, by
@@ -607,8 +576,37 @@ _.extend(Target.prototype, {
       var isApp = ! slice.pkg.name;
 
       // Emit the resources
-       _.each(slice.getResources(self.arch), function (resource) {
-        if (_.contains(["js", "css", "asset"], resource.type)) {
+      var resources = slice.getResources(self.arch);
+
+      // First, find all the assets, so that we can associate them with each js
+      // resource (for native slices).
+      var sliceAssets = {};
+      _.each(resources, function (resource) {
+        if (resource.type !== "asset")
+          return;
+
+        var f = new File({data: resource.data, cacheable: false});
+
+        var relPath = isNative
+              ? path.join("assets", resource.servePath)
+              : stripLeadingSlash(resource.servePath);
+        f.setTargetPathFromRelPath(relPath);
+
+        if (isBrowser)
+          f.setUrlFromRelPath(resource.servePath);
+        else {
+          sliceAssets[resource.path] = resource.data;
+        }
+
+        self.asset.push(f);
+      });
+
+      // Now look for the other kinds of resources.
+      _.each(resources, function (resource) {
+        if (resource.type === "asset")
+          return;  // already handled
+
+        if (_.contains(["js", "css"], resource.type)) {
           if (resource.type === "css" && ! isBrowser)
             // XXX might be nice to throw an error here, but then we'd
             // have to make it so that packages.js ignores css files
@@ -618,41 +616,36 @@ _.extend(Target.prototype, {
             // meteor.js?
             return;
 
-          var f = new File({
-            data: resource.data,
-            cacheable: false
-          });
+          var f = new File({data: resource.data, cacheable: false});
 
-          var relPath;
-          if (resource.type === "asset" && isNative)
-            relPath = path.join("assets", resource.servePath);
-          else {
-            relPath = stripLeadingSlash(resource.servePath);
-          }
+          var relPath = stripLeadingSlash(resource.servePath);
           f.setTargetPathFromRelPath(relPath);
 
           if (isBrowser) {
             f.setUrlFromRelPath(resource.servePath);
-          } else if (isNative) {
-            if (resource.type === "js")
-              f.setAssetsDirectory(relPath, resource.assetsDirectory);
           }
 
-          if (isNative && resource.type === "js" && ! isApp &&
-              slice.nodeModulesPath) {
-            var nmd = self.nodeModulesDirectories[slice.nodeModulesPath];
-            if (! nmd) {
-              nmd = new NodeModulesDirectory({
-                sourcePath: slice.nodeModulesPath,
-                // It's important that this path end with
-                // node_modules. Otherwise, if two modules in this package
-                // depend on each other, they won't be able to find each other!
-                preferredBundlePath: path.join('npm', slice.pkg.name,
-                                               slice.sliceName, 'node_modules')
-              });
-              self.nodeModulesDirectories[slice.nodeModulesPath] = nmd;
+          if (resource.type === "js" && isNative) {
+            // Hack, but otherwise we'll end up putting app assets on this file.
+            if (resource.servePath !== "/packages/global-imports.js")
+              f.setAssets(sliceAssets);
+
+            if (! isApp && slice.nodeModulesPath) {
+              var nmd = self.nodeModulesDirectories[slice.nodeModulesPath];
+              if (! nmd) {
+                nmd = new NodeModulesDirectory({
+                  sourcePath: slice.nodeModulesPath,
+                  // It's important that this path end with
+                  // node_modules. Otherwise, if two modules in this package
+                  // depend on each other, they won't be able to find each
+                  // other!
+                  preferredBundlePath: path.join(
+                    'npm', slice.pkg.name, slice.sliceName, 'node_modules')
+                });
+                self.nodeModulesDirectories[slice.nodeModulesPath] = nmd;
+              }
+              f.nodeModulesDirectory = nmd;
             }
-            f.nodeModulesDirectory = nmd;
           }
 
           if (resource.type === "js" && resource.sourceMap) {
@@ -726,60 +719,6 @@ _.extend(Target.prototype, {
   mostCompatibleArch: function () {
     var self = this;
     return archinfo.leastSpecificDescription(_.pluck(self.slices, 'arch'));
-  },
-
-  // assetDir has properties rootDir, exclude, assetPathPrefix, setUrl,
-  // and setTargetPath. (All but rootDir are optional.)
-  // Add all of the files in a directory `rootDir` (and its
-  // subdirectories) as static assets. `rootDir` should be an absolute
-  // path. If provided, exclude is an
-  // array of filename regexps to exclude. If provided, assetPathPrefix is a
-  // prefix to use when computing the path for each file.
-  addAssetDir: function (assetDir) {
-    var self = this;
-    var rootDir = assetDir.rootDir;
-    var exclude = assetDir.exclude;
-    var assetPathPrefix = assetDir.assetPathPrefix;
-    var setUrl = assetDir.setUrl;
-    var setTargetPath = assetDir.setTargetPath;
-    exclude = exclude || [];
-
-    self.dependencyInfo.directories[rootDir] = {
-      include: [/.?/],
-      exclude: exclude
-    };
-
-    var walk = function (dir, assetPathPrefix) {
-      _.each(fs.readdirSync(dir), function (item) {
-        // Skip excluded files
-        var matchesAnExclude = _.any(exclude, function (pattern) {
-          return item.match(pattern);
-        });
-        if (matchesAnExclude)
-          return;
-
-        var absPath = path.resolve(dir, item);
-        var assetPath = path.join(assetPathPrefix, item);
-        if (fs.statSync(absPath).isDirectory()) {
-          walk(absPath, assetPath);
-          return;
-        }
-
-        var f = new File({ sourcePath: absPath });
-        if (setUrl)
-          f.setUrlFromRelPath(assetPath);
-        // XXX why is this separate from _emitResources ?
-        var relPath = assetDir.useSubDirectory
-              ? path.join('assets', 'app', assetPath)
-              : assetPath;
-        if (setTargetPath)
-          f.setTargetPathFromRelPath(relPath);
-        self.dependencyInfo.files[absPath] = f.hash();
-        self.asset.push(f);
-      });
-    };
-
-    walk(rootDir, assetPathPrefix || '');
   }
 });
 
@@ -985,7 +924,7 @@ _.extend(JsImage.prototype, {
 
     // XXX This is mostly duplicated from server/boot.js, as is Npm.require
     // below. Some way to avoid this?
-    var getAsset = function (assetsDirectory, assetPath, encoding, callback) {
+    var getAsset = function (assets, assetPath, encoding, callback) {
       var fut;
       if (! callback) {
         if (! Fiber.current)
@@ -1000,10 +939,14 @@ _.extend(JsImage.prototype, {
           result = new Uint8Array(result);
         callback(err, result);
       };
-      var filePath = path.join(assetsDirectory, assetPath);
-      if (filePath.indexOf("..") !== -1)
-        throw new Error(".. is not allowed in asset paths.");
-      fs.readFile(filePath, encoding, _callback);
+
+      if (!assets || !_.has(assets, assetPath)) {
+        _.callback(new Error("Unknown asset: " + assetPath));
+      } else {
+        var buffer = assets[assetPath];
+        var result = encoding ? buffer.toString(encoding) : buffer;
+        _callback(null, result);
+      }
       if (fut)
         return fut.wait();
     };
@@ -1044,12 +987,10 @@ _.extend(JsImage.prototype, {
         },
         Assets: {
           getText: function (assetPath, callback) {
-            return getAsset(item.assetsDirectory.sourcePath,
-                            assetPath, "utf8", callback);
+            return getAsset(item.assets, assetPath, "utf8", callback);
           },
           getBinary: function (assetPath, callback) {
-            return getAsset(item.assetsDirectory.sourcePath,
-                            assetPath, undefined, callback);
+            return getAsset(item.assets, assetPath, undefined, callback);
           }
         }
       }, bindings || {});
@@ -1096,6 +1037,10 @@ _.extend(JsImage.prototype, {
       }));
     });
 
+    // If multiple load files share the same asset, only write one copy of
+    // each. (eg, for app assets.)
+    var assetFilesBySha = {};
+
     // JavaScript sources
     var load = [];
     _.each(self.jsToLoad, function (item) {
@@ -1108,9 +1053,7 @@ _.extend(JsImage.prototype, {
       var loadItem = {
         path: loadPath,
         node_modules: item.nodeModulesDirectory ?
-          item.nodeModulesDirectory.preferredBundlePath : undefined,
-        assetsDirectory: item.assetsDirectory ?
-          item.assetsDirectory.bundlePath : undefined
+          item.nodeModulesDirectory.preferredBundlePath : undefined
       };
 
       if (item.sourceMap) {
@@ -1121,6 +1064,33 @@ _.extend(JsImage.prototype, {
           { data: new Buffer(item.sourceMap, 'utf8') }
         );
         loadItem.sourceMapRoot = item.sourceMapRoot;
+      }
+
+      if (!_.isEmpty(item.assets)) {
+        // For package code, static assets go inside a directory inside
+        // assets/packages specific to this package. Application assets (e.g. those
+        // inside private/) go in assets/app/.
+        // XXX same hack as setTargetPathFromRelPath
+          var assetBundlePath;
+        if (item.targetPath.match(/^packages\//)) {
+          var dir = path.dirname(item.targetPath);
+          var base = path.basename(item.targetPath, ".js");
+          assetBundlePath = path.join('assets', dir, base);
+        } else {
+          assetBundlePath = path.join('assets', 'app');
+        }
+
+        loadItem.assets = {};
+        _.each(item.assets, function (data, relPath) {
+          var sha = Builder.sha1(data);
+          if (_.has(assetFilesBySha, sha)) {
+            loadItem.assets[relPath] = assetFilesBySha[sha];
+          } else {
+            loadItem.assets[relPath] = assetFilesBySha[sha] =
+              builder.writeToGeneratedFilename(
+                path.join(assetBundlePath, relPath), { data: data });
+          }
+        });
       }
 
       load.push(loadItem);
@@ -1183,11 +1153,9 @@ JsImage.readFromDisk = function (controlFilePath) {
     var loadItem = {
       targetPath: item.path,
       source: fs.readFileSync(path.join(dir, item.path)),
-      nodeModulesDirectory: nmd,
-      assetsDirectory: new AssetsDirectory({
-        sourcePath: item.assetsDirectory
-      })
+      nodeModulesDirectory: nmd
     };
+
     if (item.sourceMap) {
       // XXX this is the same code as initFromUnipackage
       rejectBadPath(item.sourceMap);
@@ -1195,6 +1163,14 @@ JsImage.readFromDisk = function (controlFilePath) {
         path.join(dir, item.sourceMap), 'utf8');
       loadItem.sourceMapRoot = item.sourceMapRoot;
     }
+
+    if (!_.isEmpty(item.assets)) {
+      loadItem.assets = {};
+      _.each(item.assets, function (filename, relPath) {
+        loadItem.assets[relPath] = fs.readFileSync(path.join(dir, filename));
+      });
+    }
+
     ret.jsToLoad.push(loadItem);
   });
 
@@ -1223,7 +1199,7 @@ _.extend(JsImageTarget.prototype, {
         targetPath: file.targetPath,
         source: file.contents().toString('utf8'),
         nodeModulesDirectory: file.nodeModulesDirectory,
-        assetsDirectory: file.assetsDirectory,
+        assets: file.assets,
         sourceMap: file.sourceMap,
         sourceMapRoot: file.sourceMapRoot
       });
@@ -1297,7 +1273,8 @@ _.extend(ServerTarget.prototype, {
     if (! options.omitDependencyKit)
       builder.reserve("node_modules", { directory: true });
 
-    // Linked JavaScript image
+    // Linked JavaScript image (including static assets, assuming that there are
+    // any JS files at all)
     var imageControlFile = self.toJsImage().write(builder);
 
     // Server bootstrap
@@ -1347,11 +1324,6 @@ _.extend(ServerTarget.prototype, {
         depend: false
       });
     }
-
-    // Static assets
-    _.each(self.asset, function (file) {
-      writeFile(file, builder);
-    });
 
     return scriptName;
   }
@@ -1580,49 +1552,23 @@ exports.bundle = function (appDir, outputPath, options) {
     var targets = {};
     var controlProgram = null;
 
-    var getValidAssetDirs = function (dirNames, assetDirDefaults) {
-      var assetDirs = [];
-      assetDirDefaults = assetDirDefaults || {};
-      if (appDir) {
-        if (files.is_app_dir(appDir)) { /* XXX what is this checking? */
-          _.each(dirNames, function (dirName) {
-            var assetDir = path.join(appDir, dirName);
-            var assetDirObj = _.extend({ rootDir: assetDir }, assetDirDefaults);
-            if (fs.existsSync(assetDir))
-              assetDirs.push(assetDirObj);
-          });
-        }
-      }
-      return assetDirs;
-    };
-
-    var makeClientTarget = function (app, appDir, assetDirs) {
+    var makeClientTarget = function (app) {
       var client = new ClientTarget({
         library: library,
         arch: "browser"
-      });
-
-      // Scan /public if the client has it
-      // XXX this should probably be part of the appDir reader
-      assetDirs = assetDirs || [];
-      var clientAssetDirs = getValidAssetDirs(assetDirs, {
-        exclude: ignoreFiles,
-        setUrl: true,
-        setTargetPath: true
       });
 
       client.make({
         packages: [app],
         test: options.testPackages || [],
         minify: options.minify,
-        assetDirs: clientAssetDirs,
         addCacheBusters: true
       });
 
       return client;
     };
 
-    var makeBlankClientTarget = function (app) {
+    var makeBlankClientTarget = function () {
       var client = new ClientTarget({
         library: library,
         arch: "browser"
@@ -1636,16 +1582,7 @@ exports.bundle = function (appDir, outputPath, options) {
       return client;
     };
 
-    var makeServerTarget = function (app, clientTarget, assetDirs) {
-      assetDirs = assetDirs || [];
-      var serverAssetDirs = getValidAssetDirs(assetDirs, {
-        exclude: ignoreFiles,
-        // We need to set the target path when the asset dir is added,
-        // because the target path comes from the asset's path.
-        setTargetPath: true,
-        // XXX this is a hack, re-assess how the subdirs are named
-        useSubDirectory: true
-      });
+    var makeServerTarget = function (app, clientTarget) {
       var targetOptions = {
         library: library,
         arch: archinfo.host(),
@@ -1659,8 +1596,7 @@ exports.bundle = function (appDir, outputPath, options) {
       server.make({
         packages: [app],
         test: options.testPackages || [],
-        minify: false,
-        assetDirs: serverAssetDirs
+        minify: false
       });
 
       return server;
@@ -1675,11 +1611,11 @@ exports.bundle = function (appDir, outputPath, options) {
       var app = library.getForApp(appDir, ignoreFiles);
 
       // Client
-      var client = makeClientTarget(app, appDir, ['public']);
+      var client = makeClientTarget(app);
       targets.client = client;
 
       // Server
-      var server = makeServerTarget(app, client, ['private']);
+      var server = makeServerTarget(app, client);
       targets.server = server;
     }
 
@@ -1792,10 +1728,7 @@ exports.bundle = function (appDir, outputPath, options) {
         target = makeServerTarget(p.name, clientTarget);
         break;
       case "client":
-        // We pass null for appDir because we are a
-        // package.js-driven directory and don't want to scan a
-        // /public directory for assets.
-        target = makeClientTarget(p.name, null);
+        target = makeClientTarget(p.name);
         break;
       default:
         buildmessage.error(

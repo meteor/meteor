@@ -108,7 +108,6 @@ Fiber(function () {
           }
       }
     };
-    var assetsDirectory = path.resolve(serverDir, fileInfo.assetsDirectory);
     var getAsset = function (assetPath, encoding, callback) {
       var fut;
       if (! callback) {
@@ -123,10 +122,13 @@ Fiber(function () {
       }, function (e) {
         Meteor._debug("Exception in callback of getAsset", e.stack);
       });
-      var filePath = path.join(assetsDirectory, assetPath);
-      if (filePath.indexOf("..") !== -1)
-        throw new Error(".. is not allowed in asset paths.");
-      fs.readFile(filePath, encoding, _callback);
+
+      if (!fileInfo.assets || !_.has(fileInfo.assets, assetPath)) {
+        _callback(new Error("Unknown asset: " + assetPath));
+      } else {
+        var filePath = path.join(serverDir, fileInfo.assets[assetPath]);
+        fs.readFile(filePath, encoding, _callback);
+      }
       if (fut)
         return fut.wait();
     };
