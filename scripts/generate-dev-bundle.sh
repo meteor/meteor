@@ -100,7 +100,7 @@ cd "$DIR/lib/node_modules"
 npm install optimist@0.3.5
 npm install semver@1.1.0
 npm install handlebars@1.0.7
-npm install clean-css@0.8.3
+npm install clean-css@1.0.11
 npm install request@2.12.0
 npm install keypress@0.1.0
 npm install http-proxy@0.10.1  # not 0.10.2, which contains a sketchy websocket change
@@ -108,18 +108,14 @@ npm install underscore@1.4.4
 npm install fstream@0.1.21
 npm install tar@0.1.14
 npm install kexec@0.1.1
-npm install shell-quote@0.0.1
-npm install byline@2.0.3
+npm install shell-quote@0.0.1   # now at 1.3.3, which adds plenty of options to parse but doesn't change quote
+npm install byline@2.0.3  # v3 requires node 0.10
 npm install source-map@0.1.26
+npm install progress@1.0.0
 
 # Using the unreleased 1.1 branch. We can probably switch to a built NPM version
 # when it gets released.
 npm install https://github.com/ariya/esprima/tarball/5044b87f94fb802d9609f1426c838874ec2007b3
-
-# Fork of source-map which fixes one function with empty maps.
-#   https://github.com/mozilla/source-map/pull/70
-# See also below, where we get it into source-map-support.
-npm install https://github.com/meteor/source-map/tarball/4a52398901fdb4b55b06ef4dd8b69f8256072b09
 
 # Fork of node-source-map-support which allows us to specify our own
 # retrieveSourceMap function, and uses source-map 0.1.26.
@@ -130,11 +126,6 @@ npm install https://github.com/meteor/node-source-map-support/tarball/980e444c83
 # uglify-js has a bug which drops 'undefined' in arrays:
 # https://github.com/mishoo/UglifyJS2/pull/97
 npm install https://github.com/meteor/UglifyJS2/tarball/aa5abd14d3
-
-# progress 0.1.0 has a regression where it opens stdin and thus does not
-# allow the node process to exit cleanly. See
-# https://github.com/visionmedia/node-progress/issues/19
-npm install progress@0.0.5
 
 # If you update the version of fibers in the dev bundle, also update the "npm
 # install" command in docs/client/concepts.html and in the README in
