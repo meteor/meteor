@@ -1,4 +1,9 @@
 
+// All `<body>` tags in HTML files are compiled to extend
+// Body.  If you put helpers and events on Body, they all
+// inherit them.
+UI.Body = Component.extend({isRoot: true});
+
 UI.Text = Component.extend({
   typeName: 'Text',
   _encodeEntities: UI.encodeSpecialEntities,

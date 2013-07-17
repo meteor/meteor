@@ -171,7 +171,7 @@ html_scanner = {
 
       // We may be one of many `<body>` tags.  Eventually
       // we may need to combine explicitly.
-      results.js += "\nMeteor.startup(function () { UI.Component.create({render: " + renderFuncCode + ", isRoot: true}).attach(document.body); });\n";
+      results.js += "\nMeteor.startup(function () { UI.Body.create({render: " + renderFuncCode + "}).attach(document.body); });\n";
     }
   }
 };

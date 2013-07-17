@@ -16,7 +16,7 @@ Meteor.startup(function () {
   }, 1000);
 });
 
-Body.include({
+UI.Body.include({
   items: function () {
     return Items.find({}, { sort: { text: 1 }});
   },
