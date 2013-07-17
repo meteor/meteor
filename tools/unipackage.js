@@ -7,9 +7,18 @@ var bundler = require('./bundler.js');
 // tools (such as 'meteor'.) The requested packages will be loaded
 // together will all of their dependencies, and each time you call
 // this function you load another, distinct copy of all of the
-// packages. The return value is an object that maps package name to
-// package exports (that is, it is the Package object from inside the
-// sandbox created for the newly loaded packages.)
+// packages (except see note about caching below.) The return value is
+// an object that maps package name to package exports (that is, it is
+// the Package object from inside the sandbox created for the newly
+// loaded packages.)
+//
+// Caching: There is a simple cache. If you call this function with
+// exactly the same library, release, and packages, we will attempt to
+// return the memoized return value from the previous load (rather
+// than creating a whole new copy of the packages in memory.) The
+// caching logic is not particularly sophisticated. For example,
+// whenever you call load() with a different library the cache is
+// flushed.
 //
 // Options:
 // - library: The Library to use to retrieve packages and their
@@ -30,10 +39,26 @@ var bundler = require('./bundler.js');
 //   var reverse = Meteor.connect('reverse.meteor.com');
 //   console.log(reverse.call('reverse', 'hello world'));
 
+var cacheLibrary = null;
+var cacheRelease = null;
+var cache = null; // map from package names (joined with ',') to return value
+
 var load = function (options) {
   options = options || {};
   if (! (options.library instanceof library.Library))
     throw new Error("unipackage.load requires a library");
+
+  // Check the cache first
+  if (cacheLibrary !== options.library ||
+      cacheRelease !== options.release) {
+    cacheLibrary = options.library;
+    cacheRelease = options.release;
+    cache = {};
+  }
+  var cacheKey = (options.packages || []).join(',');
+  if (_.has(cache, cacheKey)) {
+    return cache[cacheKey];
+  }
 
   // Set up a minimal server-like environment (omitting the parts that
   // are specific to the HTTP server.) Kind of a hack. I suspect this
@@ -54,6 +79,9 @@ var load = function (options) {
 
   // Run any user startup hooks.
   _.each(env.__meteor_bootstrap__.startup_hooks, function (x) { x(); });
+
+  // Save to cache
+  cache[cacheKey] = ret;
 
   return ret;
 };
