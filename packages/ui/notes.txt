@@ -1,8 +1,32 @@
 
 
+TO FIX:
+- get rid of `include`?
+  - no `new` means include
+  - maybe eliminate `create`
+  - just need good error messages if you forget `new`
+  - Problem: Pretty hard to detect if you forget `new`.
+    `Template.foo` used to be a pure function; now it
+    modifies classes?
+- how to let helpers access data in `this`?
+- support primitive data arg?
+- `#if` shouldn't set data, got confused there...
+- eliminate makeRoot?
+
+- MAYBE TEMPLATES ARE NOT COMPONENTS AFTER ALL
+  - Templates have helpers with data in `this`
+  - Template.foo(...) works but FooComponent(...) doesn't
+
+
+TODO:
+- event maps
+
 
 - create/extend: ok to put primitives on proto in create?
-- eliminate makeRoot?
+
+====================
+
+
 
 
 
@@ -54,10 +78,4 @@ built: function () {
   this.append(new TextBox);
   this.append(
 }
-
-
-
-
-- #IF DATA CONFUSION!!!
-- data arg as non-function...
 
