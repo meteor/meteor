@@ -51,7 +51,7 @@ Meteor.methods({
     };
 
     var onComplete = function() {
-      future.ret();
+      future['return']();
     };
 
     Meteor._runTests(onReport, onComplete, pathPrefix);

@@ -52,12 +52,7 @@ _.extend(Ctl, {
 
   // use _.memoize so that this is called only once per app.
   subscribeToAppJobs: _.memoize(function (appName) {
-    var f = new Future();
-    Ctl.findGalaxy().subscribe("jobsByApp", appName, {
-      onReady: function () {f.return();},
-      onError: function (e) {f.throw(e);}
-    });
-    f.wait();
+    Ctl.findGalaxy()._subscribeAndWait("jobsByApp", [appName]);
   }),
 
   // XXX this never unsubs...

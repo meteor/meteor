@@ -14,6 +14,14 @@ var unipackage = require('./unipackage.js');
 var fs = require('fs');
 var sourcemap = require('source-map');
 
+// Whenever you change anything about the code that generates unipackages, bump
+// this version number. The idea is that the "format" field of the unipackage
+// JSON file only changes when the actual specified structure of the
+// unipackage/slice changes, but this version (which is build-tool-specific) can
+// change when the the contents (not structure) of the built output changes. So
+// eg, if we improve the linker's static analysis, this should be bumped.
+exports.BUILD_VERSION = 'meteor/2';
+
 // Find all files under `rootPath` that have an extension in
 // `extensions` (an array of extensions without leading dot), and
 // return them as a list of paths relative to rootPath. Ignore files
@@ -1205,16 +1213,6 @@ _.extend(Package.prototype, {
         };
       },
 
-      // Same as node's default `require` but is relative to the
-      // package's directory. Regular `require` doesn't work well
-      // because we read the package.js file and `runInThisContext` it
-      // separately as a string.  This means that paths are relative
-      // to the top-level meteor.js script rather than the location of
-      // package.js
-      _require: function(filename) {
-        return require(path.join(self.sourceRoot, filename));
-      },
-
       // Define a plugin. A plugin extends the build process for
       // targets that use this package. For example, a Coffeescript
       // compiler would be a plugin. A plugin is its own little
@@ -1781,6 +1779,11 @@ _.extend(Package.prototype, {
 
     // If we're supposed to check the dependencies, go ahead and do so
     if (options.onlyIfUpToDate) {
+      // Do we think we'll generate different contents than the tool that built
+      // this package?
+      if (buildInfoJson.builtBy !== exports.BUILD_VERSION)
+        return false;
+
       if (options.buildOfPath &&
           (buildInfoJson.source !== options.buildOfPath)) {
         // This catches the case where you copy a source tree that had
@@ -1958,6 +1961,7 @@ _.extend(Package.prototype, {
       };
 
       var buildInfoJson = {
+        builtBy: exports.BUILD_VERSION,
         dependencies: { files: {}, directories: {} },
         source: options.buildOfPath || undefined
       };
@@ -1970,6 +1974,22 @@ _.extend(Package.prototype, {
       builder.reserve("npm/node_modules", { directory: true });
       builder.reserve("head");
       builder.reserve("body");
+
+      // Pre-linker versions of Meteor expect all packages in the warehouse to
+      // contain a file called "package.js"; they use this as part of deciding
+      // whether or not they need to download a new package. Because packages
+      // are downloaded by the *existing* version of the tools, we need to
+      // include this file until we're comfortable breaking "meteor update" from
+      // 0.6.4.  (Specifically, warehouse.packageExistsInWarehouse used to check
+      // to see if package.js exists instead of just looking for the package
+      // directory.)
+      // XXX Remove this once we can.
+      builder.write("package.js", {
+        data: new Buffer(
+          ("// This file is included for compatibility with the Meteor " +
+           "0.6.4 package downloader.\n"),
+          "utf8")
+      });
 
       // Slices
       _.each(self.slices, function (slice) {

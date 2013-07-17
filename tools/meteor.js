@@ -20,6 +20,7 @@ Fiber(function () {
   var warehouse = require('./warehouse.js');
   var logging = require('./logging.js');
   var deployGalaxy;
+  var cleanup = require('./cleanup.js');
 
   var Future = require('fibers/future');
   // This code is duplicated in app/server/server.js.
@@ -30,7 +31,12 @@ Fiber(function () {
     process.exit(1);
   }
 
-  var tunnel;
+  var killTunnel = function (tunnel) {
+    if (! tunnel.exitFuture.isResolved()) {
+      tunnel.proc.kill("SIGHUP");
+      tunnel.exitFuture.wait();
+    }
+  };
 
   var sshTunnel = function (to, localPort, remoteEnd, keyfile) {
     var args = [];
@@ -70,9 +76,18 @@ Fiber(function () {
       process.stderr.write(str);
     });
 
-    tunnel.waitExit = _.bind(exitFuture.wait, exitFuture);
-    tunnel.waitConnected = _.bind(connectedFuture.wait, connectedFuture);
-    return tunnel;
+    var tunnelResult = {
+      waitConnected: _.bind(connectedFuture.wait, connectedFuture),
+      exitFuture: exitFuture,
+      proc: tunnel
+    };
+
+    cleanup.onExit(function () {
+      Fiber(function () {
+        killTunnel(tunnelResult);
+      }).run();
+    });
+    return tunnelResult;
   };
 
   var Commands = [];
@@ -125,6 +140,7 @@ Fiber(function () {
   var calculateGalaxyContextAndTunnel = function (deployEndpoint,
                                                   context, sshIdentity) {
     var galaxyContext = {};
+    var tunnel;
     // 9414 because 9414xy (gAlAxy) in 1337
     galaxyContext.port = process.env.PORT || 9414;
     if (deployEndpoint && deployEndpoint.indexOf("ssh://") === 0) {
@@ -139,19 +155,44 @@ Fiber(function () {
       tunnel.waitConnected();
       context.galaxy = galaxyContext;
     } else if (deployEndpoint) {
-      tunnel = null;
       galaxyContext.url = deployEndpoint + "/ultraworld";
       galaxyContext.adminBaseUrl = deployEndpoint + "/";
       context.galaxy = galaxyContext;
     }
+    return tunnel;
   };
 
-  var prepareForGalaxy = function (site, context, argv) {
+  var prepareForGalaxy = function (site, context, sshIdentity) {
     if (! deployGalaxy)
       deployGalaxy = require('./deploy-galaxy.js');
     var deployEndpoint = deployGalaxy.discoverGalaxy(site);
-    calculateGalaxyContextAndTunnel(deployEndpoint, context,
-                                    argv["ssh-identity"]);
+    return calculateGalaxyContextAndTunnel(deployEndpoint, context,
+                                           sshIdentity);
+  };
+
+  // A command wrapped with galaxyCommand does the following:
+  // 1. Looks for the first non-hyphenated argument, and assumes that that is the
+  // site.
+  // 2. Tries to discover and set up a connection to a galaxy. If the galaxy
+  // discovery process indicates that a ssh tunnel needs to be set up, the optional
+  // ssh-identity argument is used to set it up.
+  // 3. Runs the command, and kills the tunnel, if any, when it finishes.
+  var galaxyCommand = function (cmd) {
+    return function (argv) {
+      if (argv._[1]) {
+        var tunnel = prepareForGalaxy(argv._[1], context, argv["ssh-identity"]);
+        var result;
+        try {
+          result = cmd(argv);
+        } finally {
+          if (tunnel)
+            killTunnel(tunnel);
+        }
+        return result;
+      } else {
+        return cmd(argv);
+      }
+    };
   };
 
   var setReleaseVersion = function (version) {
@@ -280,13 +321,21 @@ Fiber(function () {
     process.exit(1);
   };
 
+  var runCommand = function (cmd, argv) {
+    var cmdRunner = findCommand(cmd);
+    if (cmdRunner.argumentParser)
+      cmdRunner.func(cmdRunner.argumentParser(argv));
+    else
+      cmdRunner.func(argv);
+  };
+
   // XXX when the pass unexpected argument or unrecognized flags, print
   // an error and fail out
 
   Commands.push({
     name: "run",
     help: "[default] Run this project in local development mode",
-    func: function (argv) {
+    argumentParser: function (argv) {
       // reparse args
       // This help logic should probably move to run.js eventually
       var opt = require('optimist')
@@ -317,21 +366,21 @@ Fiber(function () {
                 "The application's database persists between runs. It's stored under\n" +
                 "the .meteor directory in the root of the project.\n");
 
-      var new_argv = opt.argv;
-
       if (argv.help) {
         process.stdout.write(opt.help());
         process.exit(1);
       }
-
+      return opt.argv;
+    },
+    func: function (argv) {
       requireDirInApp("run");
       maybePrintUserOverrideMessage();
       runner.run(context, {
-        port: new_argv.port,
-        minify: new_argv.production,
-        once: new_argv.once,
-        settingsFile: new_argv.settings,
-        program: new_argv.program || undefined
+        port: argv.port,
+        minify: argv.production,
+        once: argv.once,
+        settingsFile: argv.settings,
+        program: argv.program || undefined
       });
     }
   });
@@ -343,9 +392,11 @@ Fiber(function () {
       var cmd = argv._.splice(0, 1)[0];
       switch (cmd) {
       case "configure":
-        prepareForGalaxy(null, context, argv);
+        // We don't use galaxyCommand here because we want the tunnel to stay
+        // open (galaxyCommand closes the tunnel as soon as the command finishes
+        // running). The tunnel will be cleaned up when the process exits.
+        prepareForGalaxy(null, context, argv["ssh-identity"]);
         console.log("Visit http://localhost:" + context.galaxy.port + "/panel to configure your galaxy");
-        Fiber.yield();
         break;
       default:
         break;
@@ -360,14 +411,14 @@ Fiber(function () {
         usage();
       var cmd = argv._.splice(0,1)[0];
       argv.help = true;
-      findCommand(cmd).func(argv);
+      runCommand(cmd, argv);
     }
   });
 
   Commands.push({
     name: "create",
     help: "Create a new project",
-    func: function (argv) {
+    argumentParser: function (argv) {
       // reparse args
       var opt = require('optimist')
             .describe('example', 'Example template to use.')
@@ -388,20 +439,30 @@ Fiber(function () {
                 "sample applications. Use --list to see the available examples.");
 
       var new_argv = opt.argv;
+
       var appPath;
+      if (argv._.length === 1)
+        appPath = argv._[0];
+      else if (argv._.length === 0 && argv.example)
+        appPath = argv.example;
+      if (appPath) {
+        new_argv.appPath = appPath;
+      } else if (argv.help) {
+        process.stdout.write(opt.help());
+        process.exit(1);
+      }
+
+      return new_argv;
+    },
+    func: function (argv) {
+      var appPath = argv.appPath;
 
       var example_dir = path.join(__dirname, '..', 'examples');
       var examples = _.reject(fs.readdirSync(example_dir), function (e) {
         return (e === 'unfinished' || e === 'other'  || e[0] === '.');
       });
 
-      if (argv._.length === 1) {
-        appPath = argv._[0];
-      } else if (argv._.length === 0 && new_argv.example) {
-        appPath = new_argv.example;
-      }
-
-      if (new_argv['list']) {
+      if (argv['list']) {
         process.stdout.write("Available examples:\n");
         _.each(examples, function (e) {
           process.stdout.write("  " + e + "\n");
@@ -410,11 +471,6 @@ Fiber(function () {
                              "Create a project from an example with 'meteor create --example <name>'.\n");
         process.exit(1);
       };
-
-      if (argv.help || !appPath) {
-        process.stdout.write(opt.help());
-        process.exit(1);
-      }
 
       if (fs.existsSync(appPath)) {
         process.stderr.write(appPath + ": Already exists\n");
@@ -431,13 +487,13 @@ Fiber(function () {
         return x.replace(/~name~/g, path.basename(appPath));
       };
 
-      if (new_argv.example) {
-        if (examples.indexOf(new_argv.example) === -1) {
-          process.stderr.write(new_argv.example + ": no such example\n\n");
+      if (argv.example) {
+        if (examples.indexOf(argv.example) === -1) {
+          process.stderr.write(argv.example + ": no such example\n\n");
           process.stderr.write("List available applications with 'meteor create --list'.\n");
           process.exit(1);
         } else {
-          files.cp_r(path.join(example_dir, new_argv.example), appPath, {
+          files.cp_r(path.join(example_dir, argv.example), appPath, {
             ignore: [/^local$/]
           });
         }
@@ -461,9 +517,9 @@ Fiber(function () {
       project.writeMeteorReleaseVersion(appPath, context.globalReleaseVersion);
 
       process.stderr.write(appPath + ": created");
-      if (new_argv.example &&
-          new_argv.example !== appPath)
-        process.stderr.write(" (from '" + new_argv.example + "' template)");
+      if (argv.example &&
+          argv.example !== appPath)
+        process.stderr.write(" (from '" + argv.example + "' template)");
       process.stderr.write(".\n\n");
 
       process.stderr.write(
@@ -476,7 +532,7 @@ Fiber(function () {
   Commands.push({
     name: "update",
     help: "Upgrade this project to the latest version of Meteor",
-    func: function (argv) {
+    argumentParser: function (argv) {
       // reparse args
       var opt = require('optimist').usage(
         "Usage: meteor update [--release <release>]\n" +
@@ -489,7 +545,9 @@ Fiber(function () {
         process.stdout.write(opt.help());
         process.exit(1);
       }
-
+      return opt.argv;
+    },
+    func: function (argv) {
       // refuse to update if we're in a git checkout.
       if (!files.usesWarehouse()) {
         logging.die(
@@ -501,9 +559,9 @@ Fiber(function () {
 
       // Unless the user specified a specific release (or we're doing a
       // mid-update springboard), go get the latest release.
-      if (!opt.argv.release) {
+      if (!argv.release) {
         // Undocumented flag (used, eg, by upgrade-to-engine.js).
-        if (!opt.argv["dont-fetch-latest"]) {
+        if (!argv["dont-fetch-latest"]) {
           try {
             didGlobalUpdateWithoutSpringboarding =
               warehouse.fetchLatestRelease();
@@ -531,9 +589,9 @@ Fiber(function () {
       // If we're not in an app, then we're done (other than maybe printing some
       // stuff).
       if (!context.appDir) {
-        if (opt.argv["dont-fetch-latest"])
+        if (argv["dont-fetch-latest"])
           return;
-        if (opt.argv.release || didGlobalUpdateWithoutSpringboarding) {
+        if (argv.release || didGlobalUpdateWithoutSpringboarding) {
           // If the user specified a specific release, or we just did a global
           // update (with springboarding, in which case --release is set, or
           // without springboarding, in which case didGlobalUpdate is set),
@@ -767,7 +825,7 @@ Fiber(function () {
   Commands.push({
     name: "mongo",
     help: "Connect to the Mongo database for the specified site",
-    func: function (argv) {
+    argumentParser: function (argv) {
       var opt = require('optimist')
             .boolean('url')
             .boolean('U')
@@ -796,10 +854,18 @@ Fiber(function () {
         process.exit(1);
       }
 
-      var new_argv = opt.argv;
+      if (opt.argv._.length !== 1 && opt.argv._.length !== 2) {
+        // usage
+        process.stdout.write(opt.help());
+        process.exit(1);
+      }
+
+      return opt.argv;
+    },
+    func: galaxyCommand(function (argv) {
       var mongoUrl;
 
-      if (new_argv._.length === 1) {
+      if (argv._.length === 1) {
         // localhost mode
         var fut = new Future();
         find_mongo_port("mongo", function (mongod_port) {
@@ -816,9 +882,8 @@ Fiber(function () {
         });
         mongoUrl = fut.wait();
 
-      } else if (new_argv._.length === 2) {
-        var site = new_argv._[1];
-        prepareForGalaxy(site, context, new_argv);
+      } else if (argv._.length === 2) {
+        var site = argv._[1];
         // remote mode
         if (context.galaxy) {
           mongoUrl = deployGalaxy.temporaryMongoUrl({
@@ -828,25 +893,20 @@ Fiber(function () {
         } else {
           mongoUrl = deploy.temporaryMongoUrl(site);
         }
-      } else {
-        // usage
-        process.stdout.write(opt.help());
-        process.exit(1);
       }
-
-      if (new_argv.url) {
+      if (argv.url) {
         console.log(mongoUrl);
       } else {
         process.stdin.pause();
         deploy.run_mongo_shell(mongoUrl);
       }
-    }
+    })
   });
 
   Commands.push({
     name: "deploy",
     help: "Deploy this project to Meteor",
-    func: function (argv) {
+    argumentParser: function (argv) {
       var opt = require('optimist')
             .alias('password', 'P')
             .boolean('password')
@@ -895,25 +955,27 @@ Fiber(function () {
         process.stdout.write(opt.help());
         process.exit(1);
       }
-      var site = new_argv._[1];
-      prepareForGalaxy(site, context, new_argv);
+      return new_argv;
+    },
+    func: galaxyCommand(function (argv) {
+      var site = argv._[1];
 
-      if (new_argv.delete) {
+      if (argv.delete) {
         if (context.galaxy)
           deployGalaxy.deleteApp(context);
         else
           deploy.delete_app(site);
       } else {
-        var starball = new_argv.star;
+        var starball = argv.star;
         // We don't need to be in an app if we're not going to run the bundler.
         if (!starball)
           requireDirInApp("deploy");
         var settings = undefined;
-        if (new_argv.settings)
-          settings = runner.getSettings(new_argv.settings);
+        if (argv.settings)
+          settings = runner.getSettings(argv.settings);
 
         if (context.galaxy) {
-          if (new_argv.password) {
+          if (argv.password) {
             process.stderr.write("Galaxy does not support --password.\n");
             process.exit(1);
           }
@@ -926,7 +988,7 @@ Fiber(function () {
             starball: starball,
             bundleOptions: {
               nodeModulesMode: 'skip',
-              minify: !new_argv.debug,
+              minify: !argv.debug,
               releaseStamp: context.releaseVersion,
               library: context.library
             }
@@ -936,27 +998,31 @@ Fiber(function () {
             url: site,
             appDir: context.appDir,
             settings: settings,
-            setPassword: !!new_argv.password,
+            setPassword: !!argv.password,
             bundleOptions: {
               nodeModulesMode: 'skip',
-              minify: !new_argv.debug,
+              minify: !argv.debug,
               releaseStamp: context.releaseVersion,
               library: context.library
             }
           });
         }
       }
-    }
+    })
   });
 
   Commands.push({
     name: "logs",
     help: "Show logs for specified site",
+    argumentParser: function (argv) {
+      return require('optimist').boolean('f').argv;
+    },
     func: function (argv) {
-      argv = require('optimist').boolean('f').argv;
-
       var site = argv._[1];
-      prepareForGalaxy(site, context, argv);
+      // We don't use galaxyCommand here because we want the tunnel to stay
+      // open (galaxyCommand closes the tunnel as soon as the command finishes
+      // running). The tunnel will be cleaned up when the process exits.
+      var tunnel = prepareForGalaxy(site, context, argv["ssh-identity"]);
       var useGalaxy = !!context.galaxy;
 
       if (argv.help || argv._.length !== 2) {
@@ -978,11 +1044,14 @@ Fiber(function () {
       }
 
       if (useGalaxy) {
+        var streaming = !!argv.f;
         deployGalaxy.logs({
           context: context,
           app: site,
-          streaming: !!argv.f
+          streaming: streaming
         });
+        if (! streaming && tunnel)
+          killTunnel(tunnel);
       } else {
         deploy.logs(site);
       }
@@ -1028,7 +1097,7 @@ Fiber(function () {
   Commands.push({
     name: "test-packages",
     help: "Test one or more packages",
-    func: function (argv) {
+    argumentParser: function (argv) {
       // reparse args
       // This help logic should probably move to run.js eventually
       var opt = require('optimist')
@@ -1061,13 +1130,13 @@ Fiber(function () {
                 "can use in conjunction with a service like Browserling or BrowserStack\n" +
                 "to try the tests against many different browser versions.");
 
-
       if (argv.help) {
         process.stdout.write(opt.help());
         process.exit(1);
       }
-
-      argv = opt.argv;
+      return opt.argv;
+    },
+    func: function (argv) {
       // remove 'test-packages'.
       // XXX we need to fix up this argv stuff once and for all to provide a
       // real interface to commands that isn't terrible.
@@ -1314,6 +1383,13 @@ Fiber(function () {
     process.exit(0);
   };
 
+  // Implements --build-version.
+  var printBuildVersion = function () {
+    var packages = require('./packages.js');
+    console.log(packages.BUILD_VERSION);
+    process.exit(0);
+  };
+
   // Implements --arch.
   var printArch = function () {
     var archinfo = require('./archinfo.js');
@@ -1342,6 +1418,7 @@ Fiber(function () {
           .boolean("h")
           .boolean("help")
           .boolean("version")
+          .boolean("build-version")
           .boolean("arch")
           .boolean("debug")
           .alias("i", "ssh-identity");
@@ -1368,6 +1445,11 @@ Fiber(function () {
       delete argv.help;
     }
 
+    if (argv['build-version']) {
+      printBuildVersion();
+      return;
+    }
+
     if (argv.version) {
       printVersion();
       return;
@@ -1385,14 +1467,7 @@ Fiber(function () {
     if (PROFILE_REQUIRE)
       require('./profile-require.js').printReport();
 
-    try {
-      findCommand(cmd).func(argv);
-    } finally {
-      if (tunnel) {
-        tunnel.kill('SIGHUP');
-        tunnel.waitExit();
-      }
-    }
+    runCommand(cmd, argv);
   };
 
   main();

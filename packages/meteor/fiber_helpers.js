@@ -19,9 +19,6 @@ Meteor._noYieldsAllowed = function (f) {
   }
 };
 
-// js2-mode AST blows up when parsing 'future.return()', so alias.
-Future.prototype.ret = Future.prototype['return'];
-
 // Meteor._SynchronousQueue is a queue which runs task functions serially.
 // Tasks are assumed to be synchronous: ie, it's assumed that they are
 // done when they return.
@@ -162,9 +159,9 @@ _.extend(Meteor._SynchronousQueue.prototype, {
     // the task threw).
     if (taskHandle.future) {
       if (exception)
-        taskHandle.future.throw(exception);
+        taskHandle.future['throw'](exception);
       else
-        taskHandle.future.ret();
+        taskHandle.future['return']();
     }
   }
 });
