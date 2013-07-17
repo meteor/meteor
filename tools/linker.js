@@ -693,20 +693,26 @@ var link = function (options) {
   var ret = [];
   _.each(options.prelinkFiles, function (file) {
     if (file.sourceMap) {
-      var chunks = [header];
       if (options.includeSourceMapInstructions)
-        chunks.push("\n" + SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n");
-      chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
-        file.source, new sourcemap.SourceMapConsumer(file.sourceMap)));
-      chunks.push(footer);
-      var node = new sourcemap.SourceNode(null, null, null, chunks);
-      var results = node.toStringWithSourceMap({
-        file: file.servePath
-      });
+        header += "\n" + SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n";
+
+      // Bias the source map by the length of the header without
+      // (fully) parsing and re-serializing it. (We used to do this
+      // with the source-map library, but it was incredibly slow,
+      // accounting for over half of bundling time.) It would be nice
+      // if we could use "index maps" for this (the 'sections' key),
+      // as that would let us avoid even JSON-parsing the source map,
+      // but that doesn't seem to be supported by Firefox yet.
+      if (header.charAt(header.length - 1) !== "\n")
+        header += "\n"; // make sure it's a whole number of lines
+      var headerLines = header.split('\n').length - 1;
+      var sourceMapJson = JSON.parse(file.sourceMap);
+      sourceMapJson.mappings = (new Array(headerLines + 1).join(';')) +
+        sourceMapJson.mappings;
       ret.push({
-        source: results.code,
+        source: header + file.source + footer,
         servePath: file.servePath,
-        sourceMap: results.map.toString()
+        sourceMap: JSON.stringify(sourceMapJson)
       });
     } else {
       ret.push({
