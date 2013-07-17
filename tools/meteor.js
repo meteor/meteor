@@ -1383,10 +1383,10 @@ Fiber(function () {
     process.exit(0);
   };
 
-  // Implements --build-version.
-  var printBuildVersion = function () {
+  // Implements --built-by
+  var printBuiltBy = function () {
     var packages = require('./packages.js');
-    console.log(packages.BUILD_VERSION);
+    console.log(packages.BUILT_BY);
     process.exit(0);
   };
 
@@ -1418,7 +1418,7 @@ Fiber(function () {
           .boolean("h")
           .boolean("help")
           .boolean("version")
-          .boolean("build-version")
+          .boolean("built-by")
           .boolean("arch")
           .boolean("debug")
           .alias("i", "ssh-identity");
@@ -1445,8 +1445,8 @@ Fiber(function () {
       delete argv.help;
     }
 
-    if (argv['build-version']) {
-      printBuildVersion();
+    if (argv['built-by']) {
+      printBuiltBy();
       return;
     }
 
