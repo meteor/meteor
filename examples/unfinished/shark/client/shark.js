@@ -16,9 +16,9 @@ Meteor.startup(function () {
   }, 1000);
 });
 
-Body({
+Body.include({
   items: function () {
-    return Items.find({xxx:3}, { sort: { text: 1 }});
+    return Items.find({}, { sort: { text: 1 }});
   },
   name: 'David',
   containerClass: function () {
@@ -26,7 +26,7 @@ Body({
   }
 });
 
-Template.item({
+Template.item.include({
   foo: function () { return Session.get('foo'); },
   rand: function () { return Math.random(); }
 //  itemClick: function (evt) {

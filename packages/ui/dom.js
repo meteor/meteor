@@ -200,7 +200,7 @@ Component.include({
     // for efficiency, do a quick check to see if we've *ever*
     // had children or if we are still using the prototype's
     // empty object.
-    if (self.children !== UIComponent.prototype.children) {
+    if (self.children !== UI.Component.prototype.children) {
       Deps.nonreactive(function () {
         // kill children from last render, and also any
         // attached children

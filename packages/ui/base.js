@@ -210,7 +210,7 @@ _extend(Component, {
 
     var newType = Function(
       "return function " + typeName + "() { " +
-        "return Package.ui.UIComponent._constrImpl(this, " +
+        "return Package.ui.UI.Component._constrImpl(this, " +
         "arguments, " + typeName + "); };")();
 
     setSuperType(newType, superType);
