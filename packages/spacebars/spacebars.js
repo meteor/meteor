@@ -873,7 +873,8 @@ Spacebars.compile = function (inputString, options) {
           renderables.push('{attrs: ' + attrCode + '}');
         }
 
-        renderables.push(t.self_closing ? '/>' : '>');
+        renderables.push(toJSLiteral(
+          t.self_closing ? '/>' : '>'));
         break;
       case 'EndTag':
         renderables.push(toJSLiteral('</' + t.name + '>'));

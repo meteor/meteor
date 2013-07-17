@@ -28,10 +28,10 @@ Body({
 
 Template.item({
   foo: function () { return Session.get('foo'); },
-  rand: function () { return Math.random(); },
-  itemClick: function (evt) {
-    console.log(this.getData());
-  }
+  rand: function () { return Math.random(); }
+//  itemClick: function (evt) {
+//    console.log(this.getData());
+//  }
 });
 
 

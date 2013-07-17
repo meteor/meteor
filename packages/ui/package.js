@@ -6,12 +6,9 @@ Package.on_use(function (api) {
   api.use('deps');
   api.use('random');
   api.use('domutils');
-  api.use('underscore', 'client');
-  api.use('ejson', 'client');
-  api.use('ordered-dict', 'client');
-
-  // LocalCollection; weak dependency:
-  api.use('minimongo', 'client');
+  api.use('underscore');
+  api.use('ejson');
+  api.use('ordered-dict');
 
   api.add_files(['base.js',
                  'lifecycle.js',
@@ -20,8 +17,7 @@ Package.on_use(function (api) {
                  'forms.js',
                  'each.js',
                  'components.js',
-                 'lookup.js'],
-                'client');
+                 'lookup.js'], ['client', 'server']);
 });
 
 Package.on_test(function (api) {

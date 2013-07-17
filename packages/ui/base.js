@@ -60,7 +60,7 @@ var constrImpl = function (ths, args, type) {
   return ths;
 };
 
-var Component = function Component() {
+Component = function Component() {
   return constrImpl(this, arguments, Component);
 };
 
