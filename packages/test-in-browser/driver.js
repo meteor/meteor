@@ -220,7 +220,7 @@ var _testStatus = function(t) {
 
 //// Template - navBars
 
-Template.navBars({
+Template.navBars.include({
   running: function() {
     countDep.depend();
     return running;
@@ -254,7 +254,7 @@ Template.navBars({
 
 //// Template - progressBar
 
-Template.progressBar({
+Template.progressBar.include({
   running: function () {
     countDep.depend();
     return running;
@@ -294,7 +294,7 @@ Template.progressBar({
 
 //// Template - groupNav
 
-Template.groupNav({
+Template.groupNav.include({
   groupPaths: function () {
     var groupPath = Session.get("groupPath");
     var ret = [];
@@ -329,7 +329,7 @@ Template.groupNav({
 
 //// Template - failedTests
 
-Template.failedTests({
+Template.failedTests.include({
   failedTests: function() {
     countDep.depend();
     return failedTests;
@@ -338,7 +338,7 @@ Template.failedTests({
 
 //// Template - testTable
 
-Template.testTable({
+Template.testTable.include({
   data: function() {
     topLevelGroupsDep.depend();
     return resultTree;
@@ -347,7 +347,7 @@ Template.testTable({
 
 //// Template - test_group
 
-Template.test_group({
+Template.test_group.include({
   groupDep: function () {
     // this template just establishes a dependency. It doesn't actually
     // render anything.
@@ -368,7 +368,7 @@ Template.test_group.events({
 
 //// Template - test
 
-Template.test({
+Template.test.include({
   testDep: function () {
     // this template just establishes a dependency. It doesn't actually
     // render anything.
@@ -464,7 +464,7 @@ Template.event.events({
   }
 });*/
 
-Template.event({
+Template.event.include({
   get_details: function() {
 
     var prepare = function(details) {
