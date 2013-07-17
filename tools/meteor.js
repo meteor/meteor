@@ -388,6 +388,8 @@ Fiber(function () {
   Commands.push({
     name: "galaxy",
     help: "Interact with your galaxy server",
+    // Remove this once Galaxy support is official.
+    hidden: true,
     func: function (argv) {
       var cmd = argv._.splice(0, 1)[0];
       switch (cmd) {
