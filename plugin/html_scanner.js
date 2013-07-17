@@ -148,7 +148,7 @@ html_scanner = {
         contents, { sourceName: 'Template "' + name + '"' });
 
       results.js += "\nTemplate[" + JSON.stringify(name) +
-        "] = Component.extend({render: " + renderFuncCode + "});\n";
+        "] = UI.Component.extend({render: " + renderFuncCode + "});\n";
     } else {
       // <body>
       if (hasAttribs)
@@ -157,8 +157,8 @@ html_scanner = {
       var renderFuncCode = Spacebars.compile(
         contents, { sourceName: "<body>" });
 
-      results.js += "\nBody = RootComponent.extend({render: " + renderFuncCode + "});\n";
-      results.js += '\nMeteor.startup(function () { Body.create().attach(document.body); });\n';
+      results.js += "\nBody = UI.Component.extend({render: " + renderFuncCode + ", isRoot: true});\n";
+      results.js += '\nMeteor.startup(function () { (new Body).attach(document.body); });\n';
     }
   }
 };
