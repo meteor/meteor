@@ -395,7 +395,14 @@ Fiber(function () {
         // We don't use galaxyCommand here because we want the tunnel to stay
         // open (galaxyCommand closes the tunnel as soon as the command finishes
         // running). The tunnel will be cleaned up when the process exits.
-        prepareForGalaxy(null, context, argv["ssh-identity"]);
+        prepareForGalaxy(argv._[0], context, argv["ssh-identity"]);
+        if (! context.galaxy) {
+          process.stdout.write("You must provide a galaxy to configure " +
+                               "(by setting the GALAXY environment variable " +
+                               "or providing a sitename " +
+                               "(meteor galaxy configure <sitename>).");
+          process.exit(1);
+        }
         console.log("Visit http://localhost:" + context.galaxy.port + "/panel to configure your galaxy");
         break;
       default:
