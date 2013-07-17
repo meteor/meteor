@@ -17,7 +17,7 @@ Package.on_use(function (api) {
                  'forms.js',
                  'each.js',
                  'components.js',
-                 'lookup.js'], ['client', 'server']);
+                 'lookup.js']);
 });
 
 Package.on_test(function (api) {
