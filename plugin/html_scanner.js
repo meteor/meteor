@@ -169,8 +169,9 @@ html_scanner = {
       var renderFuncCode = Spacebars.compile(
         contents, { sourceName: "<body>" });
 
-      results.js += "\nBody = UI.Component.extend({render: " + renderFuncCode + ", isRoot: true});\n";
-      results.js += '\nMeteor.startup(function () { (new Body).attach(document.body); });\n';
+      // We may be one of many `<body>` tags.  Eventually
+      // we may need to combine explicitly.
+      results.js += "\nMeteor.startup(function () { UI.Component.create({render: " + renderFuncCode + ", isRoot: true}).attach(document.body); });\n";
     }
   }
 };
