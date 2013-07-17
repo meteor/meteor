@@ -1437,10 +1437,11 @@ var writeSiteArchive = function (targets, outputPath, options) {
       builder.write('main.js', { data: stub });
 
       builder.write('README', { data: new Buffer(
-"This is a Meteor application bundle. It has only one dependency,\n" +
-"node.js (with the 'fibers' package). To run the application:\n" +
+"This is a Meteor application bundle. It has only one dependency:\n" +
+"Node.js 0.8 (with the 'fibers' package). The current release of Meteor\n" +
+"has been tested with Node 0.8.24. To run the application:\n" +
 "\n" +
-"  $ npm install fibers@1.0.0\n" +
+"  $ npm install fibers@1.0.1\n" +
 "  $ export MONGO_URL='mongodb://user:password@host:port/databasename'\n" +
 "  $ export ROOT_URL='http://example.com'\n" +
 "  $ export MAIL_URL='smtp://user:password@mailhost:port/'\n" +
