@@ -346,11 +346,8 @@ _.extend(Library.prototype, {
       });
     });
 
-    _.each(self.releaseManifest || {}, function (name, version) {
-      var packageDir = path.join(warehouse.getWarehouseDir(),
-                                 'packages', name, version);
-      all[packageDir] = name;
-    });
+    // We *DON'T* look in the warehouse here, because warehouse packages are
+    // prebuilt.
 
     // Delete any that are source packages with builds.
     var count = 0;
