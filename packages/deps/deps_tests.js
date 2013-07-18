@@ -385,3 +385,23 @@ Tinytest.add("deps - injective", function (test) {
   test.equal(centigrade,100);
   Deps.flush();
 });
+
+Tinytest.add("deps - indirect injective", function (test) {
+  var obj = { value: 5 };
+  var length = Deps.injective(obj);
+  var square;
+  Deps.autorun(function() { square = length.get().value * length.get().value });
+  test.equal(length.get().value,5);
+  test.equal(square,25);
+  obj.value = 6;
+  length.set(obj);
+  test.equal(length.get().value,6);
+  Deps.flush();
+  test.equal(square,25);
+  obj.value = 7;
+  length.set(obj);
+  test.equal(length.get().value,7);
+  length.changed();
+  Deps.flush();
+  test.equal(square,49);
+});

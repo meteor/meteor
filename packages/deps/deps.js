@@ -310,21 +310,29 @@ _.extend(Deps, {
       _value: v != null ? v : 0,
       _dep: new Deps.Dependency,
 
-      set: function(value) {
-        if (this.value !== value) {
-          this._value = value;
-          return this._dep.changed();
+      set: function (v) {
+        if (this._value !== v) {
+          this._value = v;
+          this.changed();
         }
+        return this;
       },
 
-      get: function() {
-        this._dep.depend();
+      get: function () {
+        this.depend();
         return this._value;
       },
 
-      depend: function() {
-        return this._dep.depend();
+      depend: function () {
+        this._dep.depend();
+        return this;
+      },
+
+      changed: function () {
+        this._dep.changed();
+        return this;
       }
     };
   }
+
 });
