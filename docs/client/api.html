@@ -12,6 +12,15 @@ on the client, just on the server, or *Anywhere*.
 
 {{> api_box isClient}}
 {{> api_box isServer}}
+
+{{#note}}
+`Meteor.isServer` can be used to limit where code runs, but it does not
+prevent code from being sent to the client. Any sensitive code that you
+don't want served to the client, such as code containing passwords or
+authentication mechanisms, should be kept in the `server` directory.
+{{/note}}
+
+
 {{> api_box startup}}
 
 On a server, the function will run as soon as the server process is
