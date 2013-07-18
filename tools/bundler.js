@@ -115,8 +115,7 @@
 //    expressed as a path (relative to program.json) to the *client's*
 //    program.json.
 //
-//  - config: additional framework-specific configuration. currently:
-//    - meteorRelease: the value to use for Meteor.release, if any
+//  - meteorRelease: the value to use for Meteor.release, if any
 //
 //
 // /app/*: source code of the (server part of the) app

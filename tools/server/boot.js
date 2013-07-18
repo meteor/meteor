@@ -25,7 +25,7 @@ __meteor_bootstrap__ = {
   startup_hooks: [],
   serverDir: serverDir,
   configJson: configJson };
-__meteor_runtime_config__ = { meteorRelease: configJson.release };
+__meteor_runtime_config__ = { meteorRelease: configJson.meteorRelease };
 
 
 // connect (and some other NPM modules) use $NODE_ENV to make some decisions;
