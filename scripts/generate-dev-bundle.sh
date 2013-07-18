@@ -100,7 +100,6 @@ cd "$DIR/lib/node_modules"
 npm install optimist@0.3.5
 npm install semver@1.1.0
 npm install handlebars@1.0.7
-npm install clean-css@1.0.11
 npm install request@2.12.0
 npm install keypress@0.1.0
 npm install http-proxy@0.10.1  # not 0.10.2, which contains a sketchy websocket change
@@ -122,16 +121,6 @@ npm install https://github.com/ariya/esprima/tarball/5044b87f94fb802d9609f1426c8
 #   https://github.com/evanw/node-source-map-support/pull/18
 #   https://github.com/evanw/node-source-map-support/pull/17
 npm install https://github.com/meteor/node-source-map-support/tarball/980e444c8346bbe29992fd3086bab0456b8d8667
-
-# uglify-js has a bug which drops 'undefined' in arrays:
-# This has finally been merged:
-#   https://github.com/mishoo/UglifyJS2/commit/b1febde3
-# so we should consider upgrading to a newer version of Uglify soon.
-# This version was forked from 3a591c4 which was v2.2.5. A casual glance
-# at the commits between there and b1febde3 suggests that we should
-# be able to upgrade without any negative consequences (no obvious
-# API changes, etc).
-npm install https://github.com/meteor/UglifyJS2/tarball/aa5abd14d3
 
 # If you update the version of fibers in the dev bundle, also update the "npm
 # install" command in docs/client/concepts.html and in the README in

@@ -445,9 +445,13 @@ _.extend(Target.prototype, {
 
     // Minify, if requested
     if (options.minify) {
-      self.minifyJs();
+      var minifiers = unipackage.load({
+        library: self.library,
+        packages: ['minifiers']
+      }).minifiers;
+      self.minifyJs(minifiers);
       if (self.minifyCss) // XXX a bit of a hack
-        self.minifyCss();
+        self.minifyCss(minifiers);
     }
 
     if (options.addCacheBusters) {
@@ -677,15 +681,14 @@ _.extend(Target.prototype, {
   },
 
   // Minify the JS in this target
-  minifyJs: function () {
+  minifyJs: function (minifiers) {
     var self = this;
 
     var allJs = _.map(self.js, function (file) {
       return file.contents('utf8');
     }).join('\n;\n');
 
-    var uglify = require('uglify-js');
-    allJs = uglify.minify(allJs, {
+    allJs = minifiers.UglifyJSMinify(allJs, {
       fromString: true,
       compress: {drop_debugger: false}
     }).code;
@@ -744,16 +747,15 @@ var ClientTarget = function (options) {
 inherits(ClientTarget, Target);
 
 _.extend(ClientTarget.prototype, {
-  // Minify the JS in this target
-  minifyCss: function () {
+  // Minify the CSS in this target
+  minifyCss: function (minifiers) {
     var self = this;
 
     var allCss = _.map(self.css, function (file) {
       return file.contents('utf8');
     }).join('\n');
 
-    var cleanCSS = require('clean-css');
-    allCss = cleanCSS.process(allCss);
+    allCss = minifiers.CleanCSSProcess(allCss);
 
     self.css = [new File({ data: new Buffer(allCss, 'utf8') })];
     self.css[0].setUrlToHash(".css");

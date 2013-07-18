@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "JavaScript code analysis for Meteor"
+  summary: "JavaScript code analysis for Meteor",
+  internal: true
 });
 
 // Use some packages from the Esprima project.  If it turns out we need these on
