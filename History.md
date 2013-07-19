@@ -1,6 +1,10 @@
 
 ## vNEXT
 
+## v0.6.4.1
+
+* Update mongodb driver to use version 0.2.1 of the bson module.
+
 ## v0.6.4
 
 * Separate OAuth flow logic from Accounts into separate packages. The
