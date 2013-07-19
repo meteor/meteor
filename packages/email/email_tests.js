@@ -21,6 +21,7 @@ Tinytest.add("email - dev mode smoke test", function (test) {
     // in case a concurrent test run mutates Email._output_stream too.
     // XXX brittle if mailcomposer changes header order, etc
     test.equal(stream.getContentsAsString("utf8"),
+               "Email disabled since SMTP server not set (via system $MAIL_URL).\n" +
                "====== BEGIN MAIL #0 ======\n" + 
                "MIME-Version: 1.0\r\n" +
                "X-Meteor-Test: a custom header\r\n" +

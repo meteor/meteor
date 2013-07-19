@@ -53,6 +53,7 @@ var devModeSend = function (mc) {
   var stream = Email._output_stream;
   
   // This approach does not prevent other writers to stdout from interleaving.
+  stream.write("Email disabled since SMTP server not set (via system $MAIL_URL).");
   stream.write("====== BEGIN MAIL #" + devmode_mail_id + " ======\n");
   mc.streamMessage();
   mc.pipe(stream, {end: false});
