@@ -791,7 +791,7 @@ var getFooter = function (options) {
   var chunks = [];
 
   if (options.name && options.exports && !_.isEmpty(options.exports)) {
-    chunks.push("/* Exports */\n");
+    chunks.push("\n\n/* Exports */\n");
     chunks.push("if (typeof Package === 'undefined') Package = {};\n");
     chunks.push(packageDot(options.name), " = ");
 
