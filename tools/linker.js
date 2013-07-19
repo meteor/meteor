@@ -181,10 +181,17 @@ _.extend(Module.prototype, {
 // Given 'symbolMap' like {Foo: 's1', 'Bar.Baz': 's2', 'Bar.Quux.A': 's3', 'Bar.Quux.B': 's4'}
 // return something like
 // {Foo: 's1', Bar: {Baz: 's2', Quux: {A: 's3', B: 's4'}}}
-var buildSymbolTree = function (symbolMap, f) {
+//
+// If 'inputTree' is given, it is modified (augumented) instead of
+// constructing a new tree.
+//
+// If the value of a symbol in symbolMap is set null, then we just
+// ensure that its parents exist. For example, {'A.B.C': null} means
+// to make sure that symbol tree contains at least {A: {B: {}}}.
+var buildSymbolTree = function (symbolMap, inputTree) {
   // XXX XXX detect and report conflicts, like one file exporting
   // Foo and another file exporting Foo.Bar
-  var ret = {};
+  var ret = inputTree || {};
 
   _.each(symbolMap, function (value, symbol) {
     var parts = symbol.split('.');
@@ -196,7 +203,9 @@ var buildSymbolTree = function (symbolMap, f) {
         walk[part] = {};
       walk = walk[part];
     });
-    walk[lastPart] = value;
+
+    if (value)
+      walk[lastPart] = value;
   });
 
   return ret;
@@ -209,6 +218,9 @@ var writeSymbolTree = function (symbolTree, indent) {
   var put = function (node, indent) {
     if (typeof node === "string") {
       return node;
+    }
+    if (_.keys(node).length === 0) {
+      return '{}';
     }
     var spacing = new Array(indent + 1).join(' ');
     // XXX prettyprint!
@@ -662,6 +674,8 @@ var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
 // 'Foo', "Foo.bar", etc) to the module from which it should be
 // imported (which must load before us at runtime)
 //
+// exports: symbols to export, as an array of symbol names as strings
+//
 // useGlobalNamespace: must be the same value that was passed to link()
 //
 // prelinkFiles: the 'files' output from prelink()
@@ -674,7 +688,8 @@ var link = function (options) {
     if (!_.isEmpty(options.imports)) {
       ret.push({
         source: getImportCode(options.imports,
-                              "/* Imports for global scope */\n\n", true),
+                              "/* Imports for global scope */\n\n", true,
+                              options.exports),
         servePath: options.importStubServePath
       });
     }
@@ -683,6 +698,7 @@ var link = function (options) {
 
   var header = getHeader({
     imports: options.imports,
+    exports: options.exports,
     packageScopeVariables: options.packageScopeVariables
   });
   var footer = getFooter({
@@ -728,7 +744,8 @@ var link = function (options) {
 var getHeader = function (options) {
   var chunks = [];
   chunks.push("(function () {\n\n" );
-  chunks.push(getImportCode(options.imports, "/* Imports */\n"));
+  chunks.push(getImportCode(options.imports, "/* Imports */\n", false,
+                            options.exports));
   if (options.packageScopeVariables
       && !_.isEmpty(options.packageScopeVariables)) {
     chunks.push("/* Package-scope variables */\n");
@@ -737,26 +754,36 @@ var getHeader = function (options) {
   return chunks.join('');
 };
 
-var getImportCode = function (imports, header, omitvar) {
+var getImportCode = function (imports, header, omitvar, exports) {
   var self = this;
+  exports = exports || {};
 
-  if (_.isEmpty(imports))
+  if (_.isEmpty(imports) && _.isEmpty(exports))
     return "";
 
+  // Imports
   var scratch = {};
   _.each(imports, function (name, symbol) {
     scratch[symbol] = packageDot(name) + "." + symbol;
   });
   var tree = buildSymbolTree(scratch);
 
+  // Now, if we export a symbol A.B.C, and A.B.* isn't imported, set
+  // up A.B = {}
+  scratch = {};
+  _.each(exports, function (symbol) {
+    scratch[symbol] = null;
+  });
+  buildSymbolTree(scratch, tree);
+
+  // Generate output
   var buf = header;
   _.each(tree, function (node, key) {
     buf += (omitvar ? "" : "var " ) +
       key + " = " + writeSymbolTree(node) + ";\n";
   });
-
-  // XXX need to remove newlines, whitespace, in line number preserving mode
   buf += "\n";
+
   return buf;
 };
 
