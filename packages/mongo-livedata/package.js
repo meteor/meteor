@@ -37,4 +37,3 @@ Package.on_test(function (api) {
   api.add_files('collection_tests.js', ['client', 'server']);
   api.add_files('observe_changes_tests.js', ['client', 'server']);
 });
-
