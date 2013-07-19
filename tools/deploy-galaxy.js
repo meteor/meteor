@@ -87,7 +87,11 @@ exports.discoverGalaxy = function (app) {
 
   // At some point we may want to send a version in the request so that galaxy
   // can respond differently to different versions of meteor.
-  request({ url: url, json: true }, function (err, resp, body) {
+  request({
+    url: url,
+    json: true,
+    followRedirect: false
+  }, function (err, resp, body) {
     if (! err &&
         resp.statusCode === 200 &&
         body &&
