@@ -110,7 +110,6 @@ npm install kexec@0.1.1
 npm install shell-quote@0.0.1   # now at 1.3.3, which adds plenty of options to parse but doesn't change quote
 npm install byline@2.0.3  # v3 requires node 0.10
 npm install source-map@0.1.26
-npm install progress@1.0.0
 
 # Using the unreleased 1.1 branch. We can probably switch to a built NPM version
 # when it gets released.
