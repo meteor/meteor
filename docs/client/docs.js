@@ -1,5 +1,5 @@
 Template.headline.release = function () {
-  return Meteor.release || "(checkout)";
+  return "0.6.4";
 };
 
 
