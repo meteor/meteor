@@ -2867,11 +2867,15 @@ Example server method:
     Meteor.methods({checkTwitter: function (userId) {
       check(userId, String);
       this.unblock();
-      var result = Meteor.http.call("GET", "http://api.twitter.com/xyz",
-                                    {params: {user: userId}});
-      if (result.statusCode === 200)
-         return true
-      return false;
+      try {
+        var result = Meteor.http.call("GET", "http://api.twitter.com/xyz",
+                                      {params: {user: userId}});
+        console.log(result);
+        return true;
+      } catch (ex) {
+        console.log(ex.response);
+        return false;
+      }
     }});
 
 Example asynchronous HTTP call:
