@@ -580,13 +580,15 @@ Fiber(function () {
     name: "bundle",
     help: "Pack this project up into a tarball",
     func: function (argv) {
-      if (argv.help || argv._.length != 1) {
+      if (argv.help) {
         process.stdout.write(
-          "Usage: meteor bundle <output_file.tar.gz>\n" +
+          "Usage: meteor bundle <output_file.tar.gz> [--debug]\n" +
             "\n" +
             "Package this project up for deployment. The output is a tarball that\n" +
             "includes everything necessary to run the application. See README in\n" +
-            "the tarball for details.\n");
+            "the tarball for details.\n" +
+            "\n" +
+            "With --debug, the files will not be minimized.\n");
         process.exit(1);
       }
 
@@ -608,7 +610,7 @@ Fiber(function () {
       var bundler = require(path.join(__dirname, 'bundler.js'));
       var errors = bundler.bundle(context.appDir, bundle_path, {
         nodeModulesMode: 'copy',
-        minify: true,  // XXX allow --debug
+        minify: !argv.debug,
         releaseStamp: context.releaseVersion,
         packageSearchOptions: context.packageSearchOptions
       });
