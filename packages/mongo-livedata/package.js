@@ -12,7 +12,8 @@ Package.describe({
   internal: true
 });
 
-Npm.depends({mongodb: "1.3.7"});
+Npm.depends({
+  mongodb: "https://github.com/meteor/node-mongodb-native/tarball/20e17040c5eccf3c431788dd281b8099cd2099f8"});
 
 Package.on_use(function (api) {
   api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging', 'livedata'],

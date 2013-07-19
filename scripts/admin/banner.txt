@@ -1,5 +1,4 @@
-=> Meteor 0.6.4 released: New OAuth packages and recommended updates. See
-   https://github.com/meteor/meteor/blob/devel/History.md for details.
+=> Meteor 0.6.4.1: security fix for upstream MongoDB BSON library.
 
    This is being downloaded in the background. Update your project
-   to Meteor 0.6.4 by running 'meteor update'.
+   to Meteor 0.6.4.1 by running 'meteor update'.
