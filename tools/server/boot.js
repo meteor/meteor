@@ -114,13 +114,17 @@ Fiber(function () {
         fut = new Future();
         callback = fut.resolver();
       }
-      var _callback = Meteor.bindEnvironment(function (err, result) {
+      // This assumes that we've already loaded the meteor package, so meteor
+      // itself (and weird special cases like js-analyze) can't call
+      // Assets.get*. (We could change this function so that it doesn't call
+      // bindEnvironment if you don't pass a callback if we need to.)
+      var _callback = Package.meteor.Meteor.bindEnvironment(function (err, result) {
         if (result && ! encoding)
           // Sadly, this copies in Node 0.10.
           result = new Uint8Array(result);
         callback(err, result);
       }, function (e) {
-        Meteor._debug("Exception in callback of getAsset", e.stack);
+        console.log("Exception in callback of getAsset", e.stack);
       });
 
       if (!fileInfo.assets || !_.has(fileInfo.assets, assetPath)) {

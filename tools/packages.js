@@ -265,7 +265,7 @@ _.extend(Slice.prototype, {
       var fileOptions = _.clone(source.fileOptions) || {};
       var absPath = path.resolve(self.pkg.sourceRoot, relPath);
       var ext = path.extname(relPath).substr(1);
-      var handler = !source.isAsset && self._getSourceHandler(ext);
+      var handler = !fileOptions.isAsset && self._getSourceHandler(ext);
       var contents = fs.readFileSync(absPath);
       self.dependencyInfo.files[absPath] = Builder.sha1(contents);
 
@@ -1857,7 +1857,9 @@ _.extend(Package.prototype, {
 
             sources.push({
               relPath: assetRelPath,
-              isAsset: true
+              fileOptions: {
+                isAsset: true
+              }
             });
           });
         };
