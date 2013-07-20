@@ -5,6 +5,7 @@
 
 // Login with a Meteor access token. This is the only public function
 // here.
+// @export Meteor.loginWithToken
 Meteor.loginWithToken = function (token, callback) {
   Accounts.callLoginMethod({
     methodArguments: [{resume: token}],
@@ -74,7 +75,7 @@ if (!Accounts._preventAutoLogin) {
     // On startup, optimistically present us as logged in while the
     // request is in flight. This reduces page flicker on startup.
     var userId = Accounts._storedUserId();
-    userId && Meteor.default_connection.setUserId(userId);
+    userId && Meteor.connection.setUserId(userId);
     Meteor.loginWithToken(token, function (err) {
       if (err) {
         Meteor._debug("Error logging in with token: " + err);

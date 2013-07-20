@@ -13,7 +13,7 @@ var updatingAppcache = false;
 var reloadRetry = null;
 var appcacheUpdated = false;
 
-Meteor._reload.onMigrate('appcache', function(retry) {
+Reload._onMigrate('appcache', function(retry) {
   if (appcacheUpdated)
     return [true];
 
@@ -61,7 +61,7 @@ window.applicationCache.addEventListener('obsolete', (function() {
   }
   else {
     appcacheUpdated = true;
-    Meteor._reload.reload();
+    Reload._reload();
   }
 }), false);
 

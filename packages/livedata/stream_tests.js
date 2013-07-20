@@ -26,7 +26,7 @@ testAsyncMulti("stream - reconnect", [
     }));
 
     if (Meteor.status().status !== "connected")
-      Meteor.default_connection._stream.on('reset', callback);
+      Meteor.connection._stream.on('reset', callback);
     else
       callback();
   }
@@ -89,7 +89,7 @@ testAsyncMulti("stream - disconnect remains offline", [
 
 Tinytest.add("stream - sockjs urls are computed correctly", function(test) {
   var testHasSockjsUrl = function(raw, expectedSockjsUrl) {
-    var actual = Meteor._DdpClientStream._toSockjsUrl(raw);
+    var actual = _LivedataTest.toSockjsUrl(raw);
     if (expectedSockjsUrl instanceof RegExp)
       test.isTrue(actual.match(expectedSockjsUrl), actual);
     else

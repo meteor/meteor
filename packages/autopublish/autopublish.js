@@ -1,1 +1,1 @@
-Meteor.default_server.autopublish();
+Meteor.server.autopublish();

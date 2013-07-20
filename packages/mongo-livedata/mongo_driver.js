@@ -82,7 +82,7 @@ var replaceTypes = function (document, atomTransformer) {
 };
 
 
-_Mongo = function (url) {
+MongoConnection = function (url) {
   var self = this;
   self._connectCallbacks = [];
   self._liveResultsSets = {};
@@ -122,7 +122,7 @@ _Mongo = function (url) {
   });
 };
 
-_Mongo.prototype.close = function() {
+MongoConnection.prototype.close = function() {
   var self = this;
   // Use Future.wrap so that errors get thrown. This happens to
   // work even outside a fiber since the 'close' method is not
@@ -130,7 +130,7 @@ _Mongo.prototype.close = function() {
   Future.wrap(_.bind(self.db.close, self.db))(true).wait();
 };
 
-_Mongo.prototype._withDb = function (callback) {
+MongoConnection.prototype._withDb = function (callback) {
   var self = this;
   if (self.db) {
     callback(self.db);
@@ -140,7 +140,7 @@ _Mongo.prototype._withDb = function (callback) {
 };
 
 // Returns the Mongo Collection object; may yield.
-_Mongo.prototype._getCollection = function (collectionName) {
+MongoConnection.prototype._getCollection = function (collectionName) {
   var self = this;
 
   var future = new Future;
@@ -150,7 +150,8 @@ _Mongo.prototype._getCollection = function (collectionName) {
   return future.wait();
 };
 
-_Mongo.prototype._createCappedCollection = function (collectionName, byteSize) {
+MongoConnection.prototype._createCappedCollection = function (collectionName,
+                                                              byteSize) {
   var self = this;
   var future = new Future();
   self._withDb(function (db) {
@@ -165,9 +166,9 @@ _Mongo.prototype._createCappedCollection = function (collectionName, byteSize) {
 // the write, and after observers have been notified (or at least,
 // after the observer notifiers have added themselves to the write
 // fence), you should call 'committed()' on the object returned.
-_Mongo.prototype._maybeBeginWrite = function () {
+MongoConnection.prototype._maybeBeginWrite = function () {
   var self = this;
-  var fence = Meteor._CurrentWriteFence.get();
+  var fence = DDP._CurrentWriteFence.get();
   if (fence)
     return fence.beginWrite();
   else
@@ -185,7 +186,7 @@ _Mongo.prototype._maybeBeginWrite = function () {
 // After making a write (with insert, update, remove), observers are
 // notified asynchronously. If you want to receive a callback once all
 // of the observer notifications have landed for your write, do the
-// writes inside a write fence (set Meteor._CurrentWriteFence to a new
+// writes inside a write fence (set DDP._CurrentWriteFence to a new
 // _WriteFence, and then set a callback on the write fence.)
 //
 // Since our execution environment is single-threaded, this is
@@ -208,7 +209,8 @@ var writeCallback = function (write, refresh, callback) {
   });
 };
 
-_Mongo.prototype._insert = function (collection_name, document, callback) {
+MongoConnection.prototype._insert = function (collection_name, document,
+                                              callback) {
   var self = this;
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
@@ -236,7 +238,7 @@ _Mongo.prototype._insert = function (collection_name, document, callback) {
 
 // Cause queries that may be affected by the selector to poll in this write
 // fence.
-_Mongo.prototype._refresh = function (collectionName, selector) {
+MongoConnection.prototype._refresh = function (collectionName, selector) {
   var self = this;
   var refreshKey = {collection: collectionName};
   // If we know which documents we're removing, don't poll queries that are
@@ -253,7 +255,8 @@ _Mongo.prototype._refresh = function (collectionName, selector) {
   }
 };
 
-_Mongo.prototype._remove = function (collection_name, selector, callback) {
+MongoConnection.prototype._remove = function (collection_name, selector,
+                                              callback) {
   var self = this;
 
   if (collection_name === "___meteor_failure_test_collection") {
@@ -281,8 +284,8 @@ _Mongo.prototype._remove = function (collection_name, selector, callback) {
   }
 };
 
-_Mongo.prototype._update = function (collection_name, selector, mod,
-                                    options, callback) {
+MongoConnection.prototype._update = function (collection_name, selector, mod,
+                                              options, callback) {
   var self = this;
 
   if (! callback && options instanceof Function) {
@@ -330,13 +333,13 @@ _Mongo.prototype._update = function (collection_name, selector, mod,
 };
 
 _.each(["insert", "update", "remove"], function (method) {
-  _Mongo.prototype[method] = function (/* arguments */) {
+  MongoConnection.prototype[method] = function (/* arguments */) {
     var self = this;
     return Meteor._wrapAsync(self["_" + method]).apply(self, arguments);
   };
 });
 
-_Mongo.prototype.find = function (collectionName, selector, options) {
+MongoConnection.prototype.find = function (collectionName, selector, options) {
   var self = this;
 
   if (arguments.length === 1)
@@ -346,7 +349,8 @@ _Mongo.prototype.find = function (collectionName, selector, options) {
     self, new CursorDescription(collectionName, selector, options));
 };
 
-_Mongo.prototype.findOne = function (collection_name, selector, options) {
+MongoConnection.prototype.findOne = function (collection_name, selector,
+                                              options) {
   var self = this;
   if (arguments.length === 1)
     selector = {};
@@ -358,7 +362,8 @@ _Mongo.prototype.findOne = function (collection_name, selector, options) {
 
 // We'll actually design an index API later. For now, we just pass through to
 // Mongo's, but make it synchronous.
-_Mongo.prototype._ensureIndex = function (collectionName, index, options) {
+MongoConnection.prototype._ensureIndex = function (collectionName, index,
+                                                   options) {
   var self = this;
   options = _.extend({safe: true}, options);
 
@@ -369,7 +374,7 @@ _Mongo.prototype._ensureIndex = function (collectionName, index, options) {
   var indexName = collection.ensureIndex(index, options, future.resolver());
   future.wait();
 };
-_Mongo.prototype._dropIndex = function (collectionName, index) {
+MongoConnection.prototype._dropIndex = function (collectionName, index) {
   var self = this;
 
   // This function is only used by test code, not within a method, so we don't
@@ -474,8 +479,8 @@ Cursor.prototype.observeChanges = function (callbacks) {
     self._cursorDescription, ordered, callbacks);
 };
 
-_Mongo.prototype._createSynchronousCursor = function (cursorDescription,
-                                                      useTransform) {
+MongoConnection.prototype._createSynchronousCursor = function(cursorDescription,
+                                                              useTransform) {
   var self = this;
 
   var collection = self._getCollection(cursorDescription.collectionName);
@@ -539,7 +544,7 @@ _.extend(SynchronousCursor.prototype, {
         // ignore this one. (Do this before the transform, since transform might
         // return some unrelated value.) We don't do this for tailable cursors,
         // because we want to maintain O(1) memory usage.
-        var strId = Meteor.idStringify(doc._id);
+        var strId = LocalCollection._idStringify(doc._id);
         if (self._visitedIds[strId]) continue;
         self._visitedIds[strId] = true;
       }
@@ -637,7 +642,7 @@ ObserveHandle.prototype.stop = function () {
   self._liveResultsSet = null;
 };
 
-_Mongo.prototype._observeChanges = function (
+MongoConnection.prototype._observeChanges = function (
     cursorDescription, ordered, callbacks) {
   var self = this;
 
@@ -732,12 +737,12 @@ var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
   // database for changes. If this selector specifies specific IDs, specify them
   // here, so that updates to different specific IDs don't cause us to poll.
   var listenOnTrigger = function (trigger) {
-    var listener = Meteor._InvalidationCrossbar.listen(
+    var listener = DDP._InvalidationCrossbar.listen(
       trigger, function (notification, complete) {
         // When someone does a transaction that might affect us, schedule a poll
         // of the database. If that transaction happens inside of a write fence,
         // block the fence until we've polled and notified observers.
-        var fence = Meteor._CurrentWriteFence.get();
+        var fence = DDP._CurrentWriteFence.get();
         if (fence)
           self._pendingWrites.push(fence.beginWrite());
         // Ensure a poll is scheduled... but if we already know that one is,
@@ -962,7 +967,7 @@ _.extend(LiveResultsSet.prototype, {
     if (_.isEmpty(self._observeHandles) &&
         self._addHandleTasksScheduledButNotPerformed === 0) {
       // The last observe handle was stopped; call our stop callbacks, which:
-      //  - removes us from the _Mongo's _liveResultsSets map
+      //  - removes us from the MongoConnection's _liveResultsSets map
       //  - stops the poll timer
       //  - removes us from the invalidation crossbar
       _.each(self._stopCallbacks, function (c) { c(); });
@@ -982,9 +987,9 @@ _.extend(LiveResultsSet.prototype, {
 //   - If you disconnect and reconnect from Mongo, it will essentially restart
 //     the query, which will lead to duplicate results. This is pretty bad,
 //     but if you include a field called 'ts' which is inserted as
-//     new Meteor._Mongo._Timestamp(0, 0) (which is initialized to the current
-//     Mongo-style timestamp), we'll be able to find the place to restart
-//     properly. (This field is specifically understood by Mongo with an
+//     new _MongoLivedataTest.MongoTimestamp(0, 0) (which is initialized to the
+//     current Mongo-style timestamp), we'll be able to find the place to
+//     restart properly. (This field is specifically understood by Mongo with an
 //     optimization which allows it to find the right place to start without
 //     an index on ts. It's how the oplog works.)
 //   - No callbacks are triggered synchronously with the call (there's no
@@ -1001,7 +1006,7 @@ _.extend(LiveResultsSet.prototype, {
 //     enough to accurately evaluate the query against the write fence, we
 //     should be able to do this...  Of course, minimongo doesn't even support
 //     Mongo Timestamps yet.
-_Mongo.prototype._observeChangesTailable = function (
+MongoConnection.prototype._observeChangesTailable = function (
     cursorDescription, ordered, callbacks) {
   var self = this;
 
@@ -1069,7 +1074,8 @@ _Mongo.prototype._observeChangesTailable = function (
   };
 };
 
-_.extend(Meteor, {
-  _Mongo: _Mongo
-});
-Meteor._Mongo._Timestamp = MongoDB.Timestamp;
+// XXX We probably need to find a better way to expose this. Right now
+// it's only used by tests, but in fact you need it in normal
+// operation to interact with capped collections.
+// @export _MongoLivedataTest.MongoTimestamp
+_MongoLivedataTest.MongoTimestamp = MongoDB.Timestamp;

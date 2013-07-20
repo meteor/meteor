@@ -200,7 +200,10 @@ LocalCollection.Cursor.prototype._publishCursor = function (sub) {
   if (! self.collection.name)
     throw new Error("Can't publish a cursor from a collection without a name.");
   var collection = self.collection.name;
-  return Meteor.Collection._publishCursor(self, sub, collection);
+
+  // XXX minimongo should not depend on mongo-livedata!
+  return Packages['mongo-livedata'].
+    Meteor.Collection._publishCursor(self, sub, collection);
 };
 
 LocalCollection._isOrderedChanges = function (callbacks) {
@@ -825,6 +828,7 @@ LocalCollection.prototype.resumeObservers = function () {
 };
 
 
+// NB: used by livedata
 LocalCollection._idStringify = function (id) {
   if (id instanceof LocalCollection._ObjectID) {
     return id.valueOf();
@@ -849,7 +853,7 @@ LocalCollection._idStringify = function (id) {
 };
 
 
-
+// NB: used by livedata
 LocalCollection._idParse = function (id) {
   if (id === "") {
     return id;
@@ -865,11 +869,6 @@ LocalCollection._idParse = function (id) {
     return id;
   }
 };
-
-if (typeof Meteor !== 'undefined') {
-  Meteor.idParse = LocalCollection._idParse;
-  Meteor.idStringify = LocalCollection._idStringify;
-}
 
 LocalCollection._makeChangedFields = function (newDoc, oldDoc) {
   var fields = {};

@@ -45,6 +45,8 @@ Accounts.config = function(options) {
 // Users table. Don't use the normal autopublish, since we want to hide
 // some fields. Code to autopublish this is in accounts_server.js.
 // XXX Allow users to configure this collection name.
+//
+// @export Meteor.users
 Meteor.users = new Meteor.Collection("users", {_preventAutopublish: true});
 // There is an allow call in accounts_server that restricts this
 // collection.

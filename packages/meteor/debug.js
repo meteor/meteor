@@ -10,6 +10,8 @@ var suppress = 0;
 // _debug. the intent is for this message to go to the terminal and
 // be very visible. if you change _debug to go someplace else, etc,
 // please fix the autopublish code to do something reasonable.
+//
+// @export Meteor._debug
 Meteor._debug = function (/* arguments */) {
   if (suppress) {
     suppress--;
@@ -55,6 +57,8 @@ Meteor._debug = function (/* arguments */) {
 
 // Suppress the next 'count' Meteor._debug messsages. Use this to
 // stop tests from spamming the console.
+//
+// @export Meteor._suppress_log
 Meteor._suppress_log = function (count) {
   suppress += count;
 };

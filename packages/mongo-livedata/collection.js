@@ -1,6 +1,7 @@
-// connection, if given, is a LivedataClient or LivedataServer
+// options.connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
 
+// @export Meteor.Collection
 Meteor.Collection = function (name, options) {
   var self = this;
   if (! (self instanceof Meteor.Collection))
@@ -55,16 +56,16 @@ Meteor.Collection = function (name, options) {
   else if (options.connection)
     self._connection = options.connection;
   else if (Meteor.isClient)
-    self._connection = Meteor.default_connection;
+    self._connection = Meteor.connection;
   else
-    self._connection = Meteor.default_server;
+    self._connection = Meteor.server;
 
   if (!options._driver) {
-    if (name && self._connection === Meteor.default_server &&
-        Meteor._getRemoteCollectionDriver)
-      options._driver = Meteor._getRemoteCollectionDriver();
+    if (name && self._connection === Meteor.server &&
+        typeof getRemoteCollectionDriver !== "undefined")
+      options._driver = getRemoteCollectionDriver();
     else
-      options._driver = Meteor._LocalCollectionDriver;
+      options._driver = LocalCollectionDriver;
   }
 
   self._collection = options._driver.open(name, self._connection);
@@ -101,7 +102,7 @@ Meteor.Collection = function (name, options) {
       // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
       update: function (msg) {
-        var mongoId = Meteor.idParse(msg.id);
+        var mongoId = LocalCollection._idParse(msg.id);
         var doc = self._collection.findOne(mongoId);
 
         // Is this a "replace the whole doc" message coming from the quiescence
@@ -363,11 +364,11 @@ _.each(["insert", "update", "remove"], function (name) {
       };
     }
 
-    if (self._connection && self._connection !== Meteor.default_server) {
+    if (self._connection && self._connection !== Meteor.server) {
       // just remote to another endpoint, propagate return value or
       // exception.
 
-      var enclosing = Meteor._CurrentInvocation.get();
+      var enclosing = DDP._CurrentInvocation.get();
       var alreadyInSimulation = enclosing && enclosing.isSimulation;
       if (!alreadyInSimulation && name !== "insert") {
         // If we're about to actually send an RPC, we should throw an error if
@@ -586,7 +587,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
     // Minimongo on the server gets no stubs; instead, by default
     // it wait()s until its result is ready, yielding.
     // This matches the behavior of macromongo on the server better.
-    if (Meteor.isClient || self._connection === Meteor.default_server)
+    if (Meteor.isClient || self._connection === Meteor.server)
       self._connection.methods(m);
   }
 };

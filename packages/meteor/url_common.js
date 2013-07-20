@@ -1,3 +1,4 @@
+// @export Meteor.absoluteUrl
 Meteor.absoluteUrl = function (path, options) {
   // path is optional
   if (!options && typeof path === 'object') {
@@ -41,6 +42,7 @@ if (typeof __meteor_runtime_config__ === "object" &&
   Meteor.absoluteUrl.defaultOptions.rootUrl = __meteor_runtime_config__.ROOT_URL;
 
 
+// @export Meteor._relativeToSiteRootUrl
 Meteor._relativeToSiteRootUrl = function (link) {
   if (typeof __meteor_runtime_config__ === "object" &&
       link.substr(0, 1) === "/")

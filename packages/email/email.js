@@ -1,6 +1,3 @@
-// @export Email
-Email = {};
-
 var Future = Npm.require('fibers/future');
 var urlModule = Npm.require('url');
 var MailComposer = Npm.require('mailcomposer').MailComposer;
@@ -45,18 +42,28 @@ var maybeMakePool = function () {
   }
 };
 
-Email._next_devmode_mail_id = 0;
+var next_devmode_mail_id = 0;
+var output_stream = process.stdout;
 
-// Overridden by tests.
-Email._output_stream = process.stdout;
+// Testing hooks
+// @export _EmailTest.overrideOutputStream
+_EmailTest.overrideOutputStream = function (stream) {
+  next_devmode_mail_id = 0;
+  output_stream = stream;
+};
+
+// @export _EmailTest.restoreOutputStream
+_EmailTest.restoreOutputStream = function () {
+  output_stream = process.stdout;
+};
 
 var devModeSend = function (mc) {
-  var devmode_mail_id = Email._next_devmode_mail_id++;
+  var devmode_mail_id = next_devmode_mail_id++;
 
   // Make sure we use whatever stream was set at the time of the Email.send
   // call even in the 'end' callback, in case there are multiple concurrent
   // test runs.
-  var stream = Email._output_stream;
+  var stream = output_stream;
 
   // This approach does not prevent other writers to stdout from interleaving.
   stream.write("====== BEGIN MAIL #" + devmode_mail_id + " ======\n");
@@ -72,6 +79,19 @@ var devModeSend = function (mc) {
 
 var smtpSend = function (mc) {
   smtpPool._future_wrapped_sendMail(mc).wait();
+};
+
+/**
+ * Mock out email sending (eg, during a test.) This is private for now.
+ *
+ * f receives the arguments to Email.send and should return true to go
+ * ahead and send the email (or at least, try subsequent hooks), or
+ * false to skip sending.
+ */
+// @export Email._hookSend
+var sendHooks = [];
+Email._hookSend = function (f) {
+  sendHooks.push(f);
 };
 
 /**
@@ -93,7 +113,12 @@ var smtpSend = function (mc) {
  * @param options.html {String} RFC5322 mail body (HTML)
  * @param options.headers {Object} custom RFC5322 headers (dictionary)
  */
+// @export Email.send
 Email.send = function (options) {
+  for (var i = 0; i < sendHooks.length; i++)
+    if (! sendHooks[i](options))
+      return;
+
   var mc = new MailComposer();
 
   // setup message data
@@ -122,3 +147,4 @@ Email.send = function (options) {
     devModeSend(mc);
   }
 };
+

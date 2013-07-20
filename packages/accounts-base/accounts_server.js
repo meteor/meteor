@@ -2,6 +2,7 @@
 /// CURRENT USER
 ///
 
+// @export Meteor.userId
 Meteor.userId = function () {
   // This function only works if called inside a method. In theory, it
   // could also be called from publish statements, since they also
@@ -12,12 +13,13 @@ Meteor.userId = function () {
   // user expects. The way to make this work in a publish is to do
   // Meteor.find(this.userId()).observe and recompute when the user
   // record changes.
-  var currentInvocation = Meteor._CurrentInvocation.get();
+  var currentInvocation = DDP._CurrentInvocation.get();
   if (!currentInvocation)
     throw new Error("Meteor.userId can only be invoked in method calls. Use this.userId in publish functions.");
   return currentInvocation.userId;
 };
 
+// @export Meteor.user
 Meteor.user = function () {
   var userId = Meteor.userId();
   if (!userId)
@@ -324,7 +326,7 @@ Accounts.addAutopublishFields = function(opts) {
     Accounts._autopublishFields.otherUsers, opts.forOtherUsers);
 };
 
-Meteor.default_server.onAutopublish(function () {
+Meteor.server.onAutopublish(function () {
   // ['profile', 'username'] -> {profile: 1, username: 1}
   var toFieldSelector = function(fields) {
     return _.object(_.map(fields, function(field) {
@@ -332,7 +334,7 @@ Meteor.default_server.onAutopublish(function () {
     }));
   };
 
-  Meteor.default_server.publish(null, function () {
+  Meteor.server.publish(null, function () {
     if (this.userId) {
       return Meteor.users.find(
         {_id: this.userId},
@@ -348,7 +350,7 @@ Meteor.default_server.onAutopublish(function () {
   // is changed (eg someone logging in). If this is a problem, we can
   // instead write a manual publish function which filters out fields
   // based on 'this.userId'.
-  Meteor.default_server.publish(null, function () {
+  Meteor.server.publish(null, function () {
     var selector;
     if (this.userId)
       selector = {_id: {$ne: this.userId}};

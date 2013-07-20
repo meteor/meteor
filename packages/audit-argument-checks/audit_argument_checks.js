@@ -1,1 +1,1 @@
-Meteor._LivedataServer._auditArgumentChecks = true;
+DDP._setAuditArgumentChecks(true);

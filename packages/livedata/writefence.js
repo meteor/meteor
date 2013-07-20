@@ -4,7 +4,9 @@ var Future = Npm.require(path.join('fibers', 'future'));
 // A write fence collects a group of writes, and provides a callback
 // when all of the writes are fully committed and propagated (all
 // observers have been notified of the write and acknowledged it.)
-Meteor._WriteFence = function () {
+//
+// @export DDP._WriteFence
+DDP._WriteFence = function () {
   var self = this;
 
   self.armed = false;
@@ -17,9 +19,11 @@ Meteor._WriteFence = function () {
 // The current write fence. When there is a current write fence, code
 // that writes to databases should register their writes with it using
 // beginWrite().
-Meteor._CurrentWriteFence = new Meteor.EnvironmentVariable;
+//
+// @export DDP._CurrentWriteFence
+DDP._CurrentWriteFence = new Meteor.EnvironmentVariable;
 
-_.extend(Meteor._WriteFence.prototype, {
+_.extend(DDP._WriteFence.prototype, {
   // Start tracking a write, and return an object to represent it. The
   // object has a single method, committed(). This method should be
   // called when the write is fully committed and propagated. You can

@@ -23,7 +23,7 @@ var findGalaxy = _.once(function () {
     process.exit(1);
   }
 
-  return Meteor.connect(process.env['GALAXY']);
+  return DDP.connect(process.env['GALAXY']);
 });
 
 // Keepalives so that when the outer server dies unceremoniously and
@@ -510,8 +510,8 @@ Meteor._bindToProxy = function (proxyConfig) {
   };
 
   // This is run after packages are loaded (in main) so we can use
-  // Meteor.connect.
-  var proxy = Meteor.connect(proxyConfig.proxyEndpoint);
+  // DDP.connect.
+  var proxy = DDP.connect(proxyConfig.proxyEndpoint);
   var route = process.env.ROUTE;
   var host = route.split(":")[0];
   var port = +route.split(":")[1];

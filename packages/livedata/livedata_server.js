@@ -1,18 +1,22 @@
 var Fiber = Npm.require('fibers');
 
 // This file contains classes:
-// * LivedataSession - The server's connection to a single DDP client
-// * LivedataSubscription - A single subscription for a single client
-// * LivedataServer - An entire server that may talk to > 1 client.  A DDP endpoint.
+// * Session - The server's connection to a single DDP client
+// * Subscription - A single subscription for a single client
+// * Server - An entire server that may talk to > 1 client. A DDP endpoint.
+//
+// Session and Subscription are file scope. For now, until we freeze
+// the interface, Server is package scope (in the future it should be
+// exported.)
 
 // Represents a single document in a SessionCollectionView
-Meteor._SessionDocumentView = function () {
+var SessionDocumentView = function () {
   var self = this;
   self.existsIn = {}; // set of subscriptionHandle
   self.dataByKey = {}; // key-> [ {subscriptionHandle, value} by precedence]
 };
 
-_.extend(Meteor._SessionDocumentView.prototype, {
+_.extend(SessionDocumentView.prototype, {
 
   getFields: function () {
     var self = this;
@@ -91,14 +95,18 @@ _.extend(Meteor._SessionDocumentView.prototype, {
 });
 
 // Represents a client's view of a single collection
-Meteor._SessionCollectionView = function (collectionName, sessionCallbacks) {
+var SessionCollectionView = function (collectionName, sessionCallbacks) {
   var self = this;
   self.collectionName = collectionName;
   self.documents = {};
   self.callbacks = sessionCallbacks;
 };
 
-_.extend(Meteor._SessionCollectionView.prototype, {
+// @export _LivedataTest.SessionCollectionView
+_LivedataTest.SessionCollectionView = SessionCollectionView;
+
+
+_.extend(SessionCollectionView.prototype, {
 
   isEmpty: function () {
     var self = this;
@@ -144,7 +152,7 @@ _.extend(Meteor._SessionCollectionView.prototype, {
     var added = false;
     if (!docView) {
       added = true;
-      docView = new Meteor._SessionDocumentView();
+      docView = new SessionDocumentView();
       self.documents[id] = docView;
     }
     docView.existsIn[subscriptionHandle] = true;
@@ -198,11 +206,12 @@ _.extend(Meteor._SessionCollectionView.prototype, {
     }
   }
 });
+
 /******************************************************************************/
-/* LivedataSession                                                            */
+/* Session                                                                    */
 /******************************************************************************/
 
-Meteor._LivedataSession = function (server, version) {
+var Session = function (server, version) {
   var self = this;
   self.id = Random.id();
 
@@ -249,7 +258,7 @@ Meteor._LivedataSession = function (server, version) {
   self._pendingReady = [];
 };
 
-_.extend(Meteor._LivedataSession.prototype, {
+_.extend(Session.prototype, {
 
 
   sendReady: function (subscriptionIds) {
@@ -304,8 +313,8 @@ _.extend(Meteor._LivedataSession.prototype, {
     if (_.has(self.collectionViews, collectionName)) {
       return self.collectionViews[collectionName];
     }
-    var ret = new Meteor._SessionCollectionView(collectionName,
-                                                self.getSendCallbacks());
+    var ret = new SessionCollectionView(collectionName,
+                                        self.getSendCallbacks());
     self.collectionViews[collectionName] = ret;
     return ret;
   },
@@ -343,8 +352,8 @@ _.extend(Meteor._LivedataSession.prototype, {
     self.last_connect_time = +(new Date);
     _.each(self.out_queue, function (msg) {
       if (Meteor._printSentDDP)
-        Meteor._debug("Sent DDP", Meteor._stringifyDDP(msg));
-      self.socket.send(Meteor._stringifyDDP(msg));
+        Meteor._debug("Sent DDP", stringifyDDP(msg));
+      self.socket.send(stringifyDDP(msg));
     });
     self.out_queue = [];
 
@@ -361,7 +370,7 @@ _.extend(Meteor._LivedataSession.prototype, {
     var self = this;
     // Make a shallow copy of the set of universal handlers and start them. If
     // additional universal publishers start while we're running them (due to
-    // yielding), they will run separately as part of _LivedataServer.publish.
+    // yielding), they will run separately as part of Server.publish.
     var handlers = _.clone(self.server.universal_publish_handlers);
     _.each(handlers, function (handler) {
       self._startSubscription(handler);
@@ -426,9 +435,9 @@ _.extend(Meteor._LivedataSession.prototype, {
   send: function (msg) {
     var self = this;
     if (Meteor._printSentDDP)
-      Meteor._debug("Sent DDP", Meteor._stringifyDDP(msg));
+      Meteor._debug("Sent DDP", stringifyDDP(msg));
     if (self.socket)
-      self.socket.send(Meteor._stringifyDDP(msg));
+      self.socket.send(stringifyDDP(msg));
     else
       self.out_queue.push(msg);
   },
@@ -546,7 +555,7 @@ _.extend(Meteor._LivedataSession.prototype, {
       // set up to mark the method as satisfied once all observers
       // (and subscriptions) have reacted to any writes that were
       // done.
-      var fence = new Meteor._WriteFence;
+      var fence = new DDP._WriteFence;
       fence.onAllCommitted(function () {
         // Retire the fence so that future writes are allowed.
         // This means that callbacks like timers are free to use
@@ -584,15 +593,15 @@ _.extend(Meteor._LivedataSession.prototype, {
         self._setUserId(userId);
       };
 
-      var invocation = new Meteor._MethodInvocation({
+      var invocation = new MethodInvocation({
         isSimulation: false,
         userId: self.userId, setUserId: setUserId,
         unblock: unblock,
         sessionData: self.sessionData
       });
       try {
-        var result = Meteor._CurrentWriteFence.withValue(fence, function () {
-          return Meteor._CurrentInvocation.withValue(invocation, function () {
+        var result = DDP._CurrentWriteFence.withValue(fence, function () {
+          return DDP._CurrentInvocation.withValue(invocation, function () {
             return maybeAuditArgumentChecks(
               handler, invocation, msg.params, "call to '" + msg.method + "'");
           });
@@ -714,7 +723,7 @@ _.extend(Meteor._LivedataSession.prototype, {
   _startSubscription: function (handler, subId, params, name) {
     var self = this;
 
-    var sub = new Meteor._LivedataSubscription(
+    var sub = new Subscription(
       self, handler, subId, params, name);
     if (subId)
       self._namedSubs[subId] = sub;
@@ -761,15 +770,14 @@ _.extend(Meteor._LivedataSession.prototype, {
 });
 
 /******************************************************************************/
-/* LivedataSubscription                                                       */
+/* Subscription                                                               */
 /******************************************************************************/
 
 // ctor for a sub handle: the input to each publish function
-Meteor._LivedataSubscription = function (
+var Subscription = function (
     session, handler, subscriptionId, params, name) {
   var self = this;
-  // LivedataSession
-  self._session = session;
+  self._session = session; // type is Session
 
   self._handler = handler;
 
@@ -815,12 +823,12 @@ Meteor._LivedataSubscription = function (
   // a ddp consumer that isn't minimongo
 
   self._idFilter = {
-    idStringify: Meteor.idStringify,
-    idParse: Meteor.idParse
+    idStringify: LocalCollection._idStringify,
+    idParse: LocalCollection._idParse
   };
 };
 
-_.extend(Meteor._LivedataSubscription.prototype, {
+_.extend(Subscription.prototype, {
   _runHandler: function () {
     var self = this;
     try {
@@ -925,14 +933,14 @@ _.extend(Meteor._LivedataSubscription.prototype, {
     });
   },
 
-  // Returns a new _LivedataSubscription for the same session with the same
-  // initial creation parameters. This isn't a clone: it doesn't have the same
-  // _documents cache, stopped state or callbacks; may have a different
-  // _subscriptionHandle, and gets its userId from the session, not from this
-  // object.
+  // Returns a new Subscription for the same session with the same
+  // initial creation parameters. This isn't a clone: it doesn't have
+  // the same _documents cache, stopped state or callbacks; may have a
+  // different _subscriptionHandle, and gets its userId from the
+  // session, not from this object.
   _recreate: function () {
     var self = this;
-    return new Meteor._LivedataSubscription(
+    return new Subscription(
       self._session, self._handler, self._subscriptionId, self._params);
   },
 
@@ -1004,11 +1012,10 @@ _.extend(Meteor._LivedataSubscription.prototype, {
 });
 
 /******************************************************************************/
-/* LivedataServer                                                             */
+/* Server                                                                     */
 /******************************************************************************/
 
-
-Meteor._LivedataServer = function () {
+Server = function () {
   var self = this;
 
   self.publish_handlers = {};
@@ -1021,7 +1028,7 @@ Meteor._LivedataServer = function () {
 
   self.sessions = {}; // map from id to session
 
-  self.stream_server = new Meteor._DdpStreamServer;
+  self.stream_server = new StreamServer;
 
   self.stream_server.register(function (socket) {
     // socket implements the SockJSConnection interface
@@ -1031,7 +1038,7 @@ Meteor._LivedataServer = function () {
       var msg = {msg: 'error', reason: reason};
       if (offendingMessage)
         msg.offendingMessage = offendingMessage;
-      socket.send(Meteor._stringifyDDP(msg));
+      socket.send(stringifyDDP(msg));
     };
 
     socket.on('data', function (raw_msg) {
@@ -1040,7 +1047,7 @@ Meteor._LivedataServer = function () {
       }
       try {
         try {
-          var msg = Meteor._parseDDP(raw_msg);
+          var msg = parseDDP(raw_msg);
         } catch (err) {
           sendError('Parse error');
           return;
@@ -1099,22 +1106,21 @@ Meteor._LivedataServer = function () {
   }, 1 * 60 * 1000);
 };
 
-_.extend(Meteor._LivedataServer.prototype, {
+_.extend(Server.prototype, {
 
   _handleConnect: function (socket, msg) {
     var self = this;
     // In the future, handle session resumption: something like:
     //  socket.meteor_session = self.sessions[msg.session]
-    var version = Meteor._LivedataServer._calculateVersion(
-      msg.support, Meteor._SUPPORTED_DDP_VERSIONS);
+    var version = calculateVersion(msg.support, SUPPORTED_DDP_VERSIONS);
 
     if (msg.version === version) {
       // Creating a new session
-      socket.meteor_session = new Meteor._LivedataSession(self, version);
+      socket.meteor_session = new Session(self, version);
       self.sessions[socket.meteor_session.id] = socket.meteor_session;
 
 
-      socket.send(Meteor._stringifyDDP({msg: 'connected',
+      socket.send(stringifyDDP({msg: 'connected',
                                   session: socket.meteor_session.id}));
       // will kick off previous connection, if any
       socket.meteor_session.connect(socket);
@@ -1129,11 +1135,11 @@ _.extend(Meteor._LivedataServer.prototype, {
       // floor. We don't want to confuse things.
       socket.removeAllListeners('data');
       setTimeout(function () {
-        socket.send(Meteor._stringifyDDP({msg: 'failed', version: version}));
+        socket.send(stringifyDDP({msg: 'failed', version: version}));
         socket.close();
       }, timeout);
     } else {
-      socket.send(Meteor._stringifyDDP({msg: 'failed', version: version}));
+      socket.send(stringifyDDP({msg: 'failed', version: version}));
       socket.close();
     }
   },
@@ -1265,7 +1271,7 @@ _.extend(Meteor._LivedataServer.prototype, {
       var setUserId = function() {
         throw new Error("Can't call setUserId on a server initiated method call");
       };
-      var currentInvocation = Meteor._CurrentInvocation.get();
+      var currentInvocation = DDP._CurrentInvocation.get();
       if (currentInvocation) {
         userId = currentInvocation.userId;
         setUserId = function(userId) {
@@ -1273,13 +1279,13 @@ _.extend(Meteor._LivedataServer.prototype, {
         };
       }
 
-      var invocation = new Meteor._MethodInvocation({
+      var invocation = new MethodInvocation({
         isSimulation: false,
         userId: userId, setUserId: setUserId,
         sessionData: self.sessionData
       });
       try {
-        var result = Meteor._CurrentInvocation.withValue(invocation, function () {
+        var result = DDP._CurrentInvocation.withValue(invocation, function () {
           return maybeAuditArgumentChecks(
             handler, invocation, args, "internal call to '" + name + "'");
         });
@@ -1322,8 +1328,8 @@ _.extend(Meteor._LivedataServer.prototype, {
   }
 });
 
-Meteor._LivedataServer._calculateVersion = function (clientSupportedVersions,
-                                                     serverSupportedVersions) {
+var calculateVersion = function (clientSupportedVersions,
+                                 serverSupportedVersions) {
   var correctVersion = _.find(clientSupportedVersions, function (version) {
     return _.contains(serverSupportedVersions, version);
   });
@@ -1332,6 +1338,10 @@ Meteor._LivedataServer._calculateVersion = function (clientSupportedVersions,
   }
   return correctVersion;
 };
+
+// @export _LivedataTest.calculateVersion
+_LivedataTest.calculateVersion = calculateVersion;
+
 
 // "blind" exceptions other than those that were deliberately thrown to signal
 // errors to the client
@@ -1358,9 +1368,17 @@ var wrapInternalException = function (exception, context) {
   return new Meteor.Error(500, "Internal server error");
 };
 
+// Private interface for 'audit-argument-checks' package.
+//
+// @export DDP._setAuditArgumentChecks
+var shouldAuditArgumentChecks = false;
+DDP._setAuditArgumentChecks = function (value) {
+  shouldAuditArgumentChecks = value;
+};
+
 var maybeAuditArgumentChecks = function (f, context, args, description) {
   args = args || [];
-  if (Meteor._LivedataServer._auditArgumentChecks) {
+  if (shouldAuditArgumentChecks) {
     return Match._failIfArgumentsAreNotAllChecked(
       f, context, args, description);
   }

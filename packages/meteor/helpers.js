@@ -1,15 +1,19 @@
-// XXX namespacing -- find a better home for these?
-
 if (Meteor.isServer)
   var Future = Npm.require('fibers/future');
 
+// @export Meteor.release
 if (typeof __meteor_runtime_config__ === 'object' &&
     __meteor_runtime_config__.meteorRelease)
   Meteor.release = __meteor_runtime_config__.meteorRelease;
 
+// XXX find a better home for these? Ideally they would be _.get,
+// _.ensure, _.delete..
+
 _.extend(Meteor, {
   // _get(a,b,c,d) returns a[b][c][d], or else undefined if a[b] or
   // a[b][c] doesn't exist.
+  //
+  // @export Meteor._get
   _get: function (obj /*, arguments */) {
     for (var i = 1; i < arguments.length; i++) {
       if (!(arguments[i] in obj))
@@ -21,6 +25,8 @@ _.extend(Meteor, {
 
   // _ensure(a,b,c,d) ensures that a[b][c][d] exists. If it does not,
   // it is created and set to {}. Either way, it is returned.
+  //
+  // @export Meteor._ensure
   _ensure: function (obj /*, arguments */) {
     for (var i = 1; i < arguments.length; i++) {
       var key = arguments[i];
@@ -34,6 +40,8 @@ _.extend(Meteor, {
 
   // _delete(a, b, c, d) deletes a[b][c][d], then a[b][c] unless it
   // isn't empty, then a[b] unless it isn't empty.
+  //
+  // @export Meteor._delete
   _delete: function (obj /*, arguments */) {
     var stack = [obj];
     var leaf = true;
@@ -69,6 +77,8 @@ _.extend(Meteor, {
   // fs.open(pathname, flags, [mode], [callback])
   // For maximum effectiveness and least confusion, wrapAsync should be used on
   // functions where the callback is the only argument of type Function.
+  //
+  // @export Meteor._wrapAsync
   _wrapAsync: function (fn) {
     return function (/* arguments */) {
       var self = this;

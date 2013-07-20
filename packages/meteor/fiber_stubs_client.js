@@ -2,12 +2,16 @@
 // to use a queue too, and also to call noYieldsAllowed.
 
 // The client has no ability to yield, so noYieldsAllowed is a noop.
+//
+// @export Meteor._noYieldsAllowed
 Meteor._noYieldsAllowed = function (f) {
   return f();
 };
 
 // An even simpler queue of tasks than the fiber-enabled one.  This one just
 // runs all the tasks when you call runTask or flush, synchronously.
+//
+// @export Meteor._SynchronousQueue
 Meteor._SynchronousQueue = function () {
   var self = this;
   self._tasks = [];

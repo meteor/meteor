@@ -6,15 +6,15 @@
 // deep meaning to the matching function, and it could be changed later
 // as long as it preserves that property.
 Tinytest.add('livedata - crossbar', function (test) {
-  test.isTrue(Meteor._InvalidationCrossbar._matches(
+  test.isTrue(DDP._InvalidationCrossbar._matches(
     {collection: "C"}, {collection: "C"}));
-  test.isTrue(Meteor._InvalidationCrossbar._matches(
+  test.isTrue(DDP._InvalidationCrossbar._matches(
     {collection: "C", id: "X"}, {collection: "C"}));
-  test.isTrue(Meteor._InvalidationCrossbar._matches(
+  test.isTrue(DDP._InvalidationCrossbar._matches(
     {collection: "C"}, {collection: "C", id: "X"}));
-  test.isTrue(Meteor._InvalidationCrossbar._matches(
+  test.isTrue(DDP._InvalidationCrossbar._matches(
     {collection: "C", id: "X"}, {collection: "C"}));
 
-  test.isFalse(Meteor._InvalidationCrossbar._matches(
+  test.isFalse(DDP._InvalidationCrossbar._matches(
     {collection: "C", id: "X"}, {collection: "C", id: "Y"}));
 });

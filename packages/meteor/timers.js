@@ -1,8 +1,9 @@
 var withoutInvocation = function (f) {
-  if (Meteor._CurrentInvocation) {
-    if (Meteor._CurrentInvocation.get() && Meteor._CurrentInvocation.get().isSimulation)
+  if (Package.livedata) {
+    var _CurrentInvocation = Package.livedata.DDP._CurrentInvocation;
+    if (_CurrentInvocation.get() && _CurrentInvocation.get().isSimulation)
       throw new Error("Can't set timers inside simulations");
-    return function () { Meteor._CurrentInvocation.withValue(null, f); };
+    return function () { _CurrentInvocation.withValue(null, f); };
   }
   else
     return f;
@@ -20,18 +21,22 @@ _.extend(Meteor, {
   // inside a server method are not part of the method invocation and
   // should clear out the CurrentInvocation environment variable.
 
+  // @export Meteor.setTimeout
   setTimeout: function (f, duration) {
     return setTimeout(bindAndCatch("setTimeout callback", f), duration);
   },
 
+  // @export Meteor.setInterval
   setInterval: function (f, duration) {
     return setInterval(bindAndCatch("setInterval callback", f), duration);
   },
 
+  // @export Meteor.clearInterval
   clearInterval: function(x) {
     return clearInterval(x);
   },
 
+  // @export Meteor.clearTimeout
   clearTimeout: function(x) {
     return clearTimeout(x);
   },
@@ -40,6 +45,7 @@ _.extend(Meteor, {
   // Deps.afterFlush or Node's nextTick (in practice). Then tests can do:
   //    callSomethingThatDefersSomeWork();
   //    Meteor.defer(expect(somethingThatValidatesThatTheWorkHappened));
+  // @export Meteor.defer
   defer: function (f) {
     Meteor._setImmediate(bindAndCatch("defer callback", f));
   }

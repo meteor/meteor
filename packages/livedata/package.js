@@ -24,7 +24,8 @@ Package.on_use(function (api) {
   api.add_files('stream_client_common.js', ['client', 'server']);
   api.add_files('stream_server.js', 'server');
 
-  // we depend on LocalCollection._diffObjects and ._applyChanges.
+  // we depend on LocalCollection._diffObjects, _applyChanges,
+  // _idParse, _idStringify.
   api.use('minimongo', ['client', 'server']);
 
   api.add_files('writefence.js', 'server');
@@ -45,7 +46,7 @@ Package.on_test(function (api) {
   api.use('livedata', ['client', 'server']);
   api.use('mongo-livedata', ['client', 'server']);
   api.use('test-helpers', ['client', 'server']);
-  api.use(['underscore', 'tinytest', 'random', 'deps']);
+  api.use(['underscore', 'tinytest', 'random', 'deps', 'minimongo']);
 
   api.add_files('livedata_connection_tests.js', ['client', 'server']);
   api.add_files('livedata_tests.js', ['client', 'server']);

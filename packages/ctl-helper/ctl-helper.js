@@ -43,7 +43,7 @@ _.extend(Ctl, {
       process.exit(1);
     }
 
-    return Meteor.connect(process.env['GALAXY']);
+    return DDP.connect(process.env['GALAXY']);
   }),
 
   jobsCollection: _.once(function () {

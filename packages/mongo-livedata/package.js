@@ -8,7 +8,7 @@
 // minutiae.
 
 Package.describe({
-  summary: "Adaptor for using MongoDB and Minimongo over Livedata",
+  summary: "Adaptor for using MongoDB and Minimongo over DDP",
   internal: true
 });
 
@@ -29,7 +29,8 @@ Package.on_use(function (api) {
 Package.on_test(function (api) {
   api.use('mongo-livedata');
   api.use('check');
-  api.use(['tinytest', 'underscore', 'test-helpers', 'ejson', 'random']);
+  api.use(['tinytest', 'underscore', 'test-helpers', 'ejson', 'random',
+           'livedata']);
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
   api.add_files('mongo_livedata_tests.js', ['client', 'server']);

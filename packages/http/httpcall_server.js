@@ -4,9 +4,9 @@ var path = Npm.require('path');
 var request = Npm.require('request');
 var url_util = Npm.require('url');
 
-// Meteor.http._call always runs asynchronously; Meteor.http.call, defined
-// below, wraps _call and runs synchronously when no callback is provided.
-Meteor.http._call = function(method, url, options, callback) {
+// _call always runs asynchronously; Meteor.http.call, defined below,
+// wraps _call and runs synchronously when no callback is provided.
+_call = function(method, url, options, callback) {
 
   ////////// Process arguments //////////
 
@@ -40,8 +40,8 @@ Meteor.http._call = function(method, url, options, callback) {
   else
     params_for_body = options.params;
 
-  var new_url = Meteor.http._buildUrl(
-    url_parts.protocol+"//"+url_parts.host+url_parts.pathname,
+  var new_url = buildUrl(
+    url_parts.protocol + "//" + url_parts.host + url_parts.pathname,
     url_parts.search, options.query, params_for_url);
 
   if (options.auth) {
@@ -52,7 +52,7 @@ Meteor.http._call = function(method, url, options, callback) {
   }
 
   if (params_for_body) {
-    content = Meteor.http._encodeParams(params_for_body);
+    content = encodeParams(params_for_body);
     headers['Content-Type'] = "application/x-www-form-urlencoded";
   }
 
@@ -95,10 +95,10 @@ Meteor.http._call = function(method, url, options, callback) {
       response.content = body;
       response.headers = res.headers;
 
-      Meteor.http._populateData(response);
+      populateData(response);
 
       if (response.statusCode >= 400)
-        error = Meteor.http._makeErrorByStatus(response.statusCode, response.content);
+        error = makeErrorByStatus(response.statusCode, response.content);
     }
 
     callback(error, response);
@@ -106,4 +106,5 @@ Meteor.http._call = function(method, url, options, callback) {
   });
 };
 
-Meteor.http.call = Meteor._wrapAsync(Meteor.http._call);
+// @export Meteor.http.call
+Meteor.http.call = Meteor._wrapAsync(_call);

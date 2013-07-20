@@ -1,9 +1,10 @@
-// @export Meteor
-Meteor = {
-  isClient: false,
-  isServer: true
-};
+// @export Meteor.isClient
+Meteor.isClient = false;
 
+// @export Meteor.isServer
+Meteor.isServer = true;
+
+// @export Meteor.settings
 Meteor.settings = {};
 if (process.env.METEOR_SETTINGS) {
   try {

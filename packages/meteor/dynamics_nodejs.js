@@ -4,6 +4,7 @@ var Fiber = Npm.require('fibers');
 
 var nextSlot = 0;
 
+// @export Meteor.EnvironmentVariable
 Meteor.EnvironmentVariable = function () {
   this.slot = nextSlot++;
 };
@@ -50,6 +51,8 @@ _.extend(Meteor.EnvironmentVariable.prototype, {
 // If it's called inside a fiber, it works normally (the
 // return value of the function will be passed through, and no new
 // fiber will be created.)
+//
+// @export Meteor.bindEnvironment
 Meteor.bindEnvironment = function (func, onException, _this) {
   var boundValues = _.clone(Fiber.current._meteor_dynamics || []);
 

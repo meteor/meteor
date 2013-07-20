@@ -1,6 +1,3 @@
-// @export EJSON
-EJSON = {};
-
 var customTypes = {};
 // Add a custom type, using a method of your choice to get to and
 // from a basic JSON-able representation.  The factory argument
@@ -11,6 +8,8 @@ var customTypes = {};
 // - A toJSONValue() method, so that Meteor can serialize it
 // - a typeName() method, to show how to look it up in our type table.
 // It is okay if these methods are monkey-patched on.
+//
+// @export EJSON.addType
 EJSON.addType = function (name, factory) {
   if (_.has(customTypes, name))
     throw new Error("Type " + name + " already present");
@@ -41,10 +40,10 @@ var builtinConverters = [
         || (obj && _.has(obj, '$Uint8ArrayPolyfill'));
     },
     toJSONValue: function (obj) {
-      return {$binary: EJSON._base64Encode(obj)};
+      return {$binary: base64Encode(obj)};
     },
     fromJSONValue: function (obj) {
-      return EJSON._base64Decode(obj.$binary);
+      return base64Decode(obj.$binary);
     }
   },
   { // Escaping one level
@@ -92,6 +91,7 @@ var builtinConverters = [
   }
 ];
 
+// @export EJSON._isCustomType
 EJSON._isCustomType = function (obj) {
   return obj &&
     typeof obj.toJSONValue === 'function' &&
@@ -100,7 +100,8 @@ EJSON._isCustomType = function (obj) {
 };
 
 
-//for both arrays and objects, in-place modification.
+// for both arrays and objects, in-place modification.
+// @export EJSON._adjustTypesToJSONValue
 var adjustTypesToJSONValue =
 EJSON._adjustTypesToJSONValue = function (obj) {
   if (obj === null)
@@ -135,6 +136,7 @@ var toJSONValueHelper = function (item) {
   return undefined;
 };
 
+// @export EJSON.toJSONValue
 EJSON.toJSONValue = function (item) {
   var changed = toJSONValueHelper(item);
   if (changed !== undefined)
@@ -146,9 +148,11 @@ EJSON.toJSONValue = function (item) {
   return item;
 };
 
-//for both arrays and objects. Tries its best to just
+// for both arrays and objects. Tries its best to just
 // use the object you hand it, but may return something
 // different if the object you hand it itself needs changing.
+//
+// @export EJSON._adjustTypesFromJSONValue
 var adjustTypesFromJSONValue =
 EJSON._adjustTypesFromJSONValue = function (obj) {
   if (obj === null)
@@ -193,6 +197,7 @@ var fromJSONValueHelper = function (value) {
   return value;
 };
 
+// @export EJSON.fromJSONValue
 EJSON.fromJSONValue = function (item) {
   var changed = fromJSONValueHelper(item);
   if (changed === item && typeof item === 'object') {
@@ -204,19 +209,23 @@ EJSON.fromJSONValue = function (item) {
   }
 };
 
+// @export EJSON.stringify
 EJSON.stringify = function (item) {
   return JSON.stringify(EJSON.toJSONValue(item));
 };
 
+// @export EJSON.parse
 EJSON.parse = function (item) {
   return EJSON.fromJSONValue(JSON.parse(item));
 };
 
+// @export EJSON.isBinary
 EJSON.isBinary = function (obj) {
   return !!((typeof Uint8Array !== 'undefined' && obj instanceof Uint8Array) ||
     (obj && obj.$Uint8ArrayPolyfill));
 };
 
+// @export EJSON.equals
 EJSON.equals = function (a, b, options) {
   var i;
   var keyOrderSensitive = !!(options && options.keyOrderSensitive);
@@ -288,6 +297,7 @@ EJSON.equals = function (a, b, options) {
   }
 };
 
+// @export EJSON.clone
 EJSON.clone = function (v) {
   var ret;
   if (typeof v !== "object")

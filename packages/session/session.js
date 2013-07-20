@@ -1,6 +1,6 @@
 var migratedKeys = {};
-if (Meteor._reload) {
-  var migrationData = Meteor._reload.migrationData('session');
+if (Package.reload) {
+  var migrationData = Package.reload.Reload._migrationData('session');
   if (migrationData && migrationData.keys) {
     migratedKeys = migrationData.keys;
   }
@@ -9,8 +9,8 @@ if (Meteor._reload) {
 // @export Session
 Session = new ReactiveDict(migratedKeys);
 
-if (Meteor._reload) {
-  Meteor._reload.onMigrate('session', function () {
+if (Package.reload) {
+  Package.reload.Reload._onMigrate('session', function () {
     return [true, {keys: Session.keys}];
   });
 }

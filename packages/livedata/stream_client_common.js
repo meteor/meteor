@@ -60,7 +60,20 @@ var translateUrl =  function(url, newSchemeBase, subPath) {
     return url + "/" + subPath;
 };
 
-_.extend(Meteor._DdpClientStream.prototype, {
+toSockjsUrl = function (url) {
+  return translateUrl(url, "http", "sockjs");
+};
+
+toWebsocketUrl = function (url) {
+  var ret = translateUrl(url, "ws", "websocket");
+  return ret;
+};
+
+// @export _LivedataTest.toSockjsUrl
+_LivedataTest.toSockjsUrl = toSockjsUrl;
+
+
+_.extend(ClientStream.prototype, {
 
   // Register for callbacks.
   on: function (name, callback) {
@@ -259,17 +272,5 @@ _.extend(Meteor._DdpClientStream.prototype, {
     if (self.statusListeners)
       self.statusListeners.depend();
     return self.currentStatus;
-  }
-});
-
-_.extend(Meteor._DdpClientStream, {
-
-  _toSockjsUrl: function (url) {
-    return translateUrl(url, "http", "sockjs");
-  },
-
-  _toWebsocketUrl: function (url) {
-    var ret = translateUrl(url, "ws", "websocket");
-    return ret;
   }
 });

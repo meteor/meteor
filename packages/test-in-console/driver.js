@@ -73,7 +73,7 @@ Meteor.startup(function () {
   setTimeout(sendReports, 500);
   setInterval(sendReports, 2000);
 
-  Meteor._runTestsEverywhere(
+  Tinytest._runTestsEverywhere(
     function (results) {
       var name = getName(results);
       if (!_.has(resultSet, name)) {

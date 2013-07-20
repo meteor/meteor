@@ -3,8 +3,9 @@
 ///
 
 // This is reactive.
+// @export Meteor.userId
 Meteor.userId = function () {
-  return Meteor.default_connection.userId();
+  return Meteor.connection.userId();
 };
 
 var loggingIn = false;
@@ -18,12 +19,14 @@ Accounts._setLoggingIn = function (x) {
     loggingInDeps.changed();
   }
 };
+// @export Meteor.loggingIn
 Meteor.loggingIn = function () {
   loggingInDeps.depend();
   return loggingIn;
 };
 
 // This calls userId, which is reactive.
+// @export Meteor.user
 Meteor.user = function () {
   var userId = Meteor.userId();
   if (!userId)
@@ -45,7 +48,7 @@ Meteor.user = function () {
 //   - Updating the Meteor.loggingIn() reactive data source
 //   - Calling the method in 'wait' mode
 //   - On success, saving the resume token to localStorage
-//   - On success, calling Meteor.default_connection.setUserId()
+//   - On success, calling Meteor.connection.setUserId()
 //   - Setting up an onReconnect handler which logs in with
 //     the resume token
 //
@@ -88,9 +91,9 @@ Accounts.callLoginMethod = function (options) {
   // will occur before the callback from the resume login call.)
   var onResultReceived = function (err, result) {
     if (err || !result || !result.token) {
-      Meteor.default_connection.onReconnect = null;
+      Meteor.connection.onReconnect = null;
     } else {
-      Meteor.default_connection.onReconnect = function() {
+      Meteor.connection.onReconnect = function() {
         reconnected = true;
         Accounts.callLoginMethod({
           methodArguments: [{resume: result.token}],
@@ -153,15 +156,16 @@ Accounts.callLoginMethod = function (options) {
 
 Accounts._makeClientLoggedOut = function() {
   Accounts._unstoreLoginToken();
-  Meteor.default_connection.setUserId(null);
-  Meteor.default_connection.onReconnect = null;
+  Meteor.connection.setUserId(null);
+  Meteor.connection.onReconnect = null;
 };
 
 Accounts._makeClientLoggedIn = function(userId, token) {
   Accounts._storeLoginToken(userId, token);
-  Meteor.default_connection.setUserId(userId);
+  Meteor.connection.setUserId(userId);
 };
 
+// @export Meteor.logout
 Meteor.logout = function (callback) {
   Meteor.apply('logout', [], {wait: true}, function(error, result) {
     if (error) {

@@ -1,6 +1,9 @@
-Meteor._SUPPORTED_DDP_VERSIONS = [ 'pre1' ];
+SUPPORTED_DDP_VERSIONS = [ 'pre1' ];
 
-Meteor._MethodInvocation = function (options) {
+// @export _LivedataTest.SUPPORTED_DDP_VERSIONS
+_LivedataTest.SUPPORTED_DDP_VERSIONS = SUPPORTED_DDP_VERSIONS;
+
+MethodInvocation = function (options) {
   var self = this;
 
   // true if we're running not the actual method, but a stub (that is,
@@ -35,7 +38,7 @@ Meteor._MethodInvocation = function (options) {
   this._sessionData = options.sessionData;
 };
 
-_.extend(Meteor._MethodInvocation.prototype, {
+_.extend(MethodInvocation.prototype, {
   unblock: function () {
     var self = this;
     self._calledUnblock = true;
@@ -50,7 +53,7 @@ _.extend(Meteor._MethodInvocation.prototype, {
   }
 });
 
-Meteor._parseDDP = function (stringMessage) {
+parseDDP = function (stringMessage) {
   try {
     var msg = JSON.parse(stringMessage);
   } catch (e) {
@@ -84,7 +87,7 @@ Meteor._parseDDP = function (stringMessage) {
   return msg;
 };
 
-Meteor._stringifyDDP = function (msg) {
+stringifyDDP = function (msg) {
   var copy = EJSON.clone(msg);
   // swizzle 'changed' messages from 'fields undefined' rep to 'fields
   // and cleared' rep
@@ -112,39 +115,10 @@ Meteor._stringifyDDP = function (msg) {
   return JSON.stringify(copy);
 };
 
-Meteor._CurrentInvocation = new Meteor.EnvironmentVariable;
-
-// Note: The DDP server assumes that Meteor.Error EJSON-serializes as an object
-// containing 'error' and optionally 'reason' and 'details'.
-// The DDP client manually puts these into Meteor.Error objects. (We don't use
-// EJSON.addType here because the type is determined by location in the
-// protocol, not text on the wire.)
-Meteor.Error = Meteor.makeErrorType(
-  "Meteor.Error",
-  function (error, reason, details) {
-    var self = this;
-
-    // Currently, a numeric code, likely similar to a HTTP code (eg,
-    // 404, 500). That is likely to change though.
-    self.error = error;
-
-    // Optional: A short human-readable summary of the error. Not
-    // intended to be shown to end users, just developers. ("Not Found",
-    // "Internal Server Error")
-    self.reason = reason;
-
-    // Optional: Additional information about the error, say for
-    // debugging. It might be a (textual) stack trace if the server is
-    // willing to provide one. The corresponding thing in HTTP would be
-    // the body of a 404 or 500 response. (The difference is that we
-    // never expect this to be shown to end users, only developers, so
-    // it doesn't need to be pretty.)
-    self.details = details;
-
-    // This is what gets displayed at the top of a stack trace. Current
-    // format is "[404]" (if no reason is set) or "File not found [404]"
-    if (self.reason)
-      self.message = self.reason + ' [' + self.error + ']';
-    else
-      self.message = '[' + self.error + ']';
-  });
+// This is private but it's used in a few places. accounts-base uses
+// it to get the current user. accounts-password uses it to stash SRP
+// state in the DDP session. Meteor.setTimeout and friends clear
+// it. We can probably find a better way to factor this.
+//
+// @export DDP._CurrentInvocation
+DDP._CurrentInvocation = new Meteor.EnvironmentVariable;
