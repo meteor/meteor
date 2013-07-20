@@ -51,6 +51,7 @@ var getIdentity = function (accessToken) {
 };
 
 
+// @export Meetup.retrieveCredential
 Meetup.retrieveCredential = function(credentialToken) {
   return Oauth.retrieveCredential(credentialToken);
 };

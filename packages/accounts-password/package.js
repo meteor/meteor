@@ -16,7 +16,6 @@ Package.on_use(function(api) {
   api.add_files('email_templates.js', 'server');
   api.add_files('password_server.js', 'server');
   api.add_files('password_client.js', 'client');
-  api.add_files('password_common.js', ['server', 'client']);
 });
 
 Package.on_test(function(api) {

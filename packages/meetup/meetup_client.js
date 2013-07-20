@@ -1,4 +1,5 @@
 // Request Meetup credentials for the user
+// @export Meetup.requestCredential
 // @param options {optional}
 // @param credentialRequestCompleteCallback {Function} Callback function to call on
 //   completion. Takes one argument, credentialToken on success, or Error on

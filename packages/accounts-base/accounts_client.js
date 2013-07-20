@@ -13,6 +13,7 @@ var loggingInDeps = new Deps.Dependency;
 // This is mostly just called within this file, but Meteor.loginWithPassword
 // also uses it to make loggingIn() be true during the beginPasswordExchange
 // method call too.
+// @export Accounts._setLoggingIn
 Accounts._setLoggingIn = function (x) {
   if (loggingIn !== x) {
     loggingIn = x;
@@ -60,6 +61,8 @@ Meteor.user = function () {
 //                 its error will be passed to the callback).
 // - userCallback: Will be called with no arguments once the user is fully
 //                 logged in, or with the error on error.
+//
+// @export Accounts.callLoginMethod
 Accounts.callLoginMethod = function (options) {
   options = _.extend({
     methodName: 'login',
@@ -81,11 +84,11 @@ Accounts.callLoginMethod = function (options) {
   // getting the results of subscription rerun, we WILL NOT re-send this
   // method (because we never re-send methods whose results we've received)
   // but we WILL call loggedInAndDataReadyCallback at "reconnect quiesce"
-  // time. This will lead to _makeClientLoggedIn(result.id) even though we
+  // time. This will lead to makeClientLoggedIn(result.id) even though we
   // haven't actually sent a login method!
   //
   // But by making sure that we send this "resume" login in that case (and
-  // calling _makeClientLoggedOut if it fails), we'll end up with an accurate
+  // calling makeClientLoggedOut if it fails), we'll end up with an accurate
   // client-side userId. (It's important that livedata_connection guarantees
   // that the "reconnect quiesce"-time call to loggedInAndDataReadyCallback
   // will occur before the callback from the resume login call.)
@@ -103,7 +106,7 @@ Accounts.callLoginMethod = function (options) {
           _suppressLoggingIn: true,
           userCallback: function (error) {
             if (error) {
-              Accounts._makeClientLoggedOut();
+              makeClientLoggedOut();
             }
             options.userCallback(error);
           }});
@@ -141,7 +144,7 @@ Accounts.callLoginMethod = function (options) {
     }
 
     // Make the client logged in. (The user data should already be loaded!)
-    Accounts._makeClientLoggedIn(result.id, result.token);
+    makeClientLoggedIn(result.id, result.token);
     options.userCallback();
   };
 
@@ -154,14 +157,14 @@ Accounts.callLoginMethod = function (options) {
     loggedInAndDataReadyCallback);
 };
 
-Accounts._makeClientLoggedOut = function() {
-  Accounts._unstoreLoginToken();
+makeClientLoggedOut = function() {
+  unstoreLoginToken();
   Meteor.connection.setUserId(null);
   Meteor.connection.onReconnect = null;
 };
 
-Accounts._makeClientLoggedIn = function(userId, token) {
-  Accounts._storeLoginToken(userId, token);
+makeClientLoggedIn = function(userId, token) {
+  storeLoginToken(userId, token);
   Meteor.connection.setUserId(userId);
 };
 
@@ -171,7 +174,7 @@ Meteor.logout = function (callback) {
     if (error) {
       callback && callback(error);
     } else {
-      Accounts._makeClientLoggedOut();
+      makeClientLoggedOut();
       callback && callback();
     }
   });
@@ -186,6 +189,8 @@ var loginServicesHandle = Meteor.subscribe("meteor.loginServiceConfiguration");
 // A reactive function returning whether the loginServiceConfiguration
 // subscription is ready. Used by accounts-ui to hide the login button
 // until we have all the configuration loaded
+//
+// @export Accounts.loginServicesConfigured
 Accounts.loginServicesConfigured = function () {
   return loginServicesHandle.ready();
 };

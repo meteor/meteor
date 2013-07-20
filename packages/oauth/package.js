@@ -8,7 +8,6 @@ Package.on_use(function (api) {
   api.use('webapp', 'server');
   api.use(['underscore', 'service-configuration'], 'server');
 
-  api.add_files('oauth_common.js', ['client', 'server']);
   api.add_files('oauth_client.js', 'client');
   api.add_files('oauth_server.js', 'server');
 });

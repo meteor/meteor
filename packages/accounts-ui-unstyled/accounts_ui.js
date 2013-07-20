@@ -1,14 +1,11 @@
-if (!Accounts.ui)
-  Accounts.ui = {};
+// XXX this shouldn't need to be exported
+// @export Accoutns.ui._options
+Accounts.ui._options = {
+  requestPermissions: {},
+  requestOfflineToken: {}
+};
 
-if (!Accounts.ui._options) {
-  Accounts.ui._options = {
-    requestPermissions: {},
-    requestOfflineToken: {}
-  };
-}
-
-
+// @export Accounts.ui.config
 Accounts.ui.config = function(options) {
   // validate options keys
   var VALID_KEYS = ['passwordSignupFields', 'requestPermissions', 'requestOfflineToken'];
@@ -62,7 +59,7 @@ Accounts.ui.config = function(options) {
   }
 };
 
-Accounts.ui._passwordSignupFields = function () {
+passwordSignupFields = function () {
   return Accounts.ui._options.passwordSignupFields || "EMAIL_ONLY";
 };
 

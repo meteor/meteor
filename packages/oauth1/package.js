@@ -10,7 +10,6 @@ Package.on_use(function (api) {
   api.use('underscore', 'server');
 
   api.add_files('oauth1_binding.js', 'server');
-  api.add_files('oauth1_common.js', ['client', 'server']);
   api.add_files('oauth1_server.js', 'server');
 });
 

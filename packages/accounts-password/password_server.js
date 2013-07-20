@@ -188,6 +188,7 @@ Meteor.methods({changePassword: function (options) {
 
 
 // Force change the users password.
+// @export Accounts.setPassword
 Accounts.setPassword = function (userId, newPassword) {
   var user = Meteor.users.findOne(userId);
   if (!user)
@@ -217,6 +218,8 @@ Meteor.methods({forgotPassword: function (options) {
 
 // send the user an email with a link that when opened allows the user
 // to set a new password, without the old password.
+//
+// @export Accounts.sendResetPasswordEmail
 Accounts.sendResetPasswordEmail = function (userId, email) {
   // Make sure the user exists, and email is one of their addresses.
   var user = Meteor.users.findOne(userId);
@@ -252,8 +255,10 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
 // to choose their password. The email must be one of the addresses in the
 // user's emails field, or undefined to pick the first email automatically.
 //
-// This is not called automatically, it must be called manually if you
+// This is not called automatically. It must be called manually if you
 // want to use enrollment emails.
+//
+// @export Accounts.sendResetPasswordEmail
 Accounts.sendEnrollmentEmail = function (userId, email) {
   // XXX refactor! This is basically identical to sendResetPasswordEmail.
 
@@ -329,6 +334,8 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
 
 // send the user an email with a link that when opened marks that
 // address as verified
+//
+// @export Accounts.sendVerificationEmail
 Accounts.sendVerificationEmail = function (userId, address) {
   // XXX Also generate a link using which someone can delete this
   // account if they own said address but weren't those who created
@@ -493,6 +500,8 @@ Meteor.methods({createUser: function (options) {
 // which is always empty when called from the createUser method? eg, "admin:
 // true", which we want to prevent the client from setting, but which a custom
 // method calling Accounts.createUser could set?
+//
+// @export Accounts.createUser
 Accounts.createUser = function (options, callback) {
   options = _.clone(options);
   options.generateLoginToken = false;

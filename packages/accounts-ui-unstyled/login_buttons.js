@@ -1,6 +1,3 @@
-if (!Accounts._loginButtons)
-  Accounts._loginButtons = {};
-
 // for convenience
 var loginButtonsSession = Accounts._loginButtonsSession;
 
@@ -30,16 +27,12 @@ Template._loginButtons.preserve({
 // loginButtonLoggedOut template
 //
 
-Template._loginButtonsLoggedOut.dropdown = function () {
-  return Accounts._loginButtons.dropdown();
-};
+Template._loginButtonsLoggedOut.dropdown = dropdown;
 
-Template._loginButtonsLoggedOut.services = function () {
-  return Accounts._loginButtons.getLoginServices();
-};
+Template._loginButtonsLoggedOut.services = getLoginServices;
 
 Template._loginButtonsLoggedOut.singleService = function () {
-  var services = Accounts._loginButtons.getLoginServices();
+  var services = getLoginServices();
   if (services.length !== 1)
     throw new Error(
       "Shouldn't be rendering this template with more than one configured service");
@@ -57,9 +50,7 @@ Template._loginButtonsLoggedOut.configurationLoaded = function () {
 
 // decide whether we should show a dropdown rather than a row of
 // buttons
-Template._loginButtonsLoggedIn.dropdown = function () {
-  return Accounts._loginButtons.dropdown();
-};
+Template._loginButtonsLoggedIn.dropdown = dropdown;
 
 
 
@@ -67,9 +58,7 @@ Template._loginButtonsLoggedIn.dropdown = function () {
 // loginButtonsLoggedInSingleLogoutButton template
 //
 
-Template._loginButtonsLoggedInSingleLogoutButton.displayName = function () {
-  return Accounts._loginButtons.displayName();
-};
+Template._loginButtonsLoggedInSingleLogoutButton.displayName = displayName;
 
 
 
@@ -90,16 +79,14 @@ Template._loginButtonsMessages.infoMessage = function () {
 // loginButtonsLoggingInPadding template
 //
 
-Template._loginButtonsLoggingInPadding.dropdown = function () {
-  return Accounts._loginButtons.dropdown();
-};
+Template._loginButtonsLoggingInPadding.dropdown = dropdown;
 
 
 //
 // helpers
 //
 
-Accounts._loginButtons.displayName = function () {
+displayName = function () {
   var user = Meteor.user();
   if (!user)
     return '';
@@ -121,7 +108,7 @@ Accounts._loginButtons.displayName = function () {
 // NOTE: It is very important to have this return password last
 // because of the way we render the different providers in
 // login_buttons_dropdown.html
-Accounts._loginButtons.getLoginServices = function () {
+getLoginServices = function () {
   var self = this;
   var services = [];
 
@@ -161,19 +148,19 @@ Accounts._loginButtons.getLoginServices = function () {
   });
 };
 
-Accounts._loginButtons.hasPasswordService = function () {
+hasPasswordService = function () {
   return Accounts.password;
 };
 
-Accounts._loginButtons.dropdown = function () {
-  return Accounts._loginButtons.hasPasswordService() || Accounts._loginButtons.getLoginServices().length > 1;
+dropdown = function () {
+  return hasPasswordService() || getLoginServices().length > 1;
 };
 
 // XXX improve these. should this be in accounts-password instead?
 //
 // XXX these will become configurable, and will be validated on
 // the server as well.
-Accounts._loginButtons.validateUsername = function (username) {
+validateUsername = function (username) {
   if (username.length >= 3) {
     return true;
   } else {
@@ -181,8 +168,8 @@ Accounts._loginButtons.validateUsername = function (username) {
     return false;
   }
 };
-Accounts._loginButtons.validateEmail = function (email) {
-  if (Accounts.ui._passwordSignupFields() === "USERNAME_AND_OPTIONAL_EMAIL" && email === '')
+validateEmail = function (email) {
+  if (passwordSignupFields() === "USERNAME_AND_OPTIONAL_EMAIL" && email === '')
     return true;
 
   if (email.indexOf('@') !== -1) {
@@ -192,7 +179,7 @@ Accounts._loginButtons.validateEmail = function (email) {
     return false;
   }
 };
-Accounts._loginButtons.validatePassword = function (password) {
+validatePassword = function (password) {
   if (password.length >= 6) {
     return true;
   } else {

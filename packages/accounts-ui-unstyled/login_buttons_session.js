@@ -27,7 +27,11 @@ var validateKey = function (key) {
 
 var KEY_PREFIX = "Meteor.loginButtons.";
 
-// XXX we should have a better pattern for code private to a package like this one
+// XXX This should probably be package scope rather than exported
+// (there was even a comment to that effect here from before we had
+// namespacing) but accounts-ui-viewer uses it, so leave it as is for
+// now
+// @export Accounts._loginButtonsSession
 Accounts._loginButtonsSession = {
   set: function(key, value) {
     validateKey(key);

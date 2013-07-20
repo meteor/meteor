@@ -18,7 +18,6 @@ Package.on_use(function(api) {
     ['github_configure.html', 'github_configure.js'],
     'client');
 
-  api.add_files('github_common.js', ['client', 'server']);
   api.add_files('github_server.js', 'server');
   api.add_files('github_client.js', 'client');
 });

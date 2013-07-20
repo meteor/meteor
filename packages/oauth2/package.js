@@ -7,7 +7,6 @@ Package.on_use(function (api) {
   api.use('service-configuration', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
 
-  api.add_files('oauth2_common.js', ['client', 'server']);
   api.add_files('oauth2_server.js', 'server');
 });
 

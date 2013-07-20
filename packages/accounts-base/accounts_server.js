@@ -38,20 +38,22 @@ Meteor.user = function () {
 // - `undefined`, meaning don't handle;
 // - {id: userId, token: *}, if the user logged in successfully.
 // - throw an error, if the user failed to log in.
+//
+// @export Accounts.registerLoginHandler
 Accounts.registerLoginHandler = function(handler) {
-  Accounts._loginHandlers.push(handler);
+  loginHandlers.push(handler);
 };
 
 // list of all registered handlers.
-Accounts._loginHandlers = [];
+loginHandlers = [];
 
 
 // Try all of the registered login handlers until one of them doesn'
 // return `undefined`, meaning it handled this call to `login`. Return
 // that return value, which ought to be a {id/token} pair.
 var tryAllLoginHandlers = function (options) {
-  for (var i = 0; i < Accounts._loginHandlers.length; ++i) {
-    var handler = Accounts._loginHandlers[i];
+  for (var i = 0; i < loginHandlers.length; ++i) {
+    var handler = loginHandlers[i];
     var result = handler(options);
     if (result !== undefined)
       return result;
@@ -82,7 +84,7 @@ Meteor.methods({
 
   logout: function() {
     if (this._sessionData.loginToken && this.userId)
-      Accounts._removeLoginToken(this.userId, this._sessionData.loginToken);
+      removeLoginToken(this.userId, this._sessionData.loginToken);
     this.setUserId(null);
   }
 });
@@ -111,11 +113,13 @@ Accounts.registerLoginHandler(function(options) {
 });
 
 // Semi-public. Used by other login methods to generate tokens.
+//
+// @export Accounts._generateStampedLoginToken
 Accounts._generateStampedLoginToken = function () {
   return {token: Random.id(), when: +(new Date)};
 };
 
-Accounts._removeLoginToken = function (userId, loginToken) {
+removeLoginToken = function (userId, loginToken) {
   Meteor.users.update(userId, {
     $pull: {
       "services.resume.loginTokens": { "token": loginToken }
@@ -127,6 +131,8 @@ Accounts._removeLoginToken = function (userId, loginToken) {
 ///
 /// CREATE USER HOOKS
 ///
+
+// @export Accounts.onCreateUser
 var onCreateUserHook = null;
 Accounts.onCreateUser = function (func) {
   if (onCreateUserHook)
@@ -142,6 +148,9 @@ var defaultCreateUserHook = function (options, user) {
     user.profile = options.profile;
   return user;
 };
+
+// Called by accounts-password
+// @export Accounts.insertUserDoc
 Accounts.insertUserDoc = function (options, user) {
   // - clone user document, to protect from modification
   // - add createdAt timestamp
@@ -205,6 +214,7 @@ Accounts.insertUserDoc = function (options, user) {
   return result;
 };
 
+// @export Accounts.validateNewUser
 var validateNewUserHooks = [];
 Accounts.validateNewUser = function (func) {
   validateNewUserHooks.push(func);
@@ -225,6 +235,8 @@ Accounts.validateNewUser = function (func) {
 //        (eg, profile)
 // @returns {Object} Object with token and id keys, like the result
 //        of the "login" method.
+//
+// @export Accounts.updateOrCreateUserFromExternalService
 Accounts.updateOrCreateUserFromExternalService = function(
   serviceName, serviceData, options) {
   options = _.clone(options || {});
@@ -308,7 +320,7 @@ Meteor.publish(null, function() {
 // Accounts.addAutopublishFields Notably, this isn't implemented with
 // multiple publishes since DDP only merges only across top-level
 // fields, not subfields (such as 'services.facebook.accessToken')
-Accounts._autopublishFields = {
+autopublishFields = {
   loggedInUser: ['profile', 'username', 'emails'],
   otherUsers: ['profile', 'username']
 };
@@ -320,10 +332,10 @@ Accounts._autopublishFields = {
 //   - forLoggedInUser {Array} Array of fields published to the logged-in user
 //   - forOtherUsers {Array} Array of fields published to users that aren't logged in
 Accounts.addAutopublishFields = function(opts) {
-  Accounts._autopublishFields.loggedInUser.push.apply(
-    Accounts._autopublishFields.loggedInUser, opts.forLoggedInUser);
-  Accounts._autopublishFields.otherUsers.push.apply(
-    Accounts._autopublishFields.otherUsers, opts.forOtherUsers);
+  autopublishFields.loggedInUser.push.apply(
+    autopublishFields.loggedInUser, opts.forLoggedInUser);
+  autopublishFields.otherUsers.push.apply(
+    autopublishFields.otherUsers, opts.forOtherUsers);
 };
 
 Meteor.server.onAutopublish(function () {
@@ -338,7 +350,7 @@ Meteor.server.onAutopublish(function () {
     if (this.userId) {
       return Meteor.users.find(
         {_id: this.userId},
-        {fields: toFieldSelector(Accounts._autopublishFields.loggedInUser)});
+        {fields: toFieldSelector(autopublishFields.loggedInUser)});
     } else {
       return null;
     }
@@ -359,7 +371,7 @@ Meteor.server.onAutopublish(function () {
 
     return Meteor.users.find(
       selector,
-      {fields: toFieldSelector(Accounts._autopublishFields.otherUsers)});
+      {fields: toFieldSelector(autopublishFields.otherUsers)});
   }, /*suppress autopublish warning*/{is_auto: true});
 });
 

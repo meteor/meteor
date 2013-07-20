@@ -12,6 +12,11 @@ var optimist = Npm.require('optimist');
 var useragent = Npm.require('useragent');
 var send = Npm.require('send');
 
+// XXX we have to export WebApp as a single symbol because we modify
+// it (for example, it has an attribute httpServer which isn't known
+// until runWebAppServer-time.) It would be nice to refactor so that
+// this isn't the case and we can export the symbols individually.
+//
 // @export WebApp
 WebApp = {};
 
@@ -441,7 +446,7 @@ var runWebAppServer = function () {
         console.log("LISTENING"); // must match run.js
       var port = httpServer.address().port;
       if (bind.viaProxy && bind.viaProxy.proxyEndpoint) {
-        Meteor._bindToProxy(bind.viaProxy);
+        bindToProxy(bind.viaProxy);
       } else if (bind.viaProxy) {
         // bind via the proxy, but we'll have to find it ourselves via
         // ultraworld.
@@ -453,7 +458,7 @@ var runWebAppServer = function () {
         var doBinding = function (proxyService) {
           if (proxyService.providers.proxy) {
             Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
-            Meteor._bindToProxy(_.extend({
+            bindToProxy(_.extend({
               proxyEndpoint: proxyService.providers.proxy
             }, bind.viaProxy));
           }
@@ -478,7 +483,7 @@ var runWebAppServer = function () {
   };
 };
 
-Meteor._bindToProxy = function (proxyConfig) {
+bindToProxy = function (proxyConfig) {
 
   var securePort = proxyConfig.securePort || 4433;
   var insecurePort = proxyConfig.insecurePort || 8080;

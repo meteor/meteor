@@ -20,7 +20,7 @@ Tinytest.add("oauth2 - loginResultForCredentialToken is stored", function (test)
     var req = {method: "POST",
                url: "/_oauth/" + serviceName + "?close",
                query: {state: credentialToken}};
-    Oauth._middleware(req, new http.ServerResponse(req));
+    _OauthTest.middleware(req, new http.ServerResponse(req));
 
     // Test that the login result for that user is prepared
     test.equal(
@@ -31,6 +31,6 @@ Tinytest.add("oauth2 - loginResultForCredentialToken is stored", function (test)
       Oauth._loginResultForCredentialToken[credentialToken].options.option1, foobookOption1);
 
   } finally {
-    Oauth._unregisterService(serviceName);
+    _OauthTest.unregisterService(serviceName);
   }
 });

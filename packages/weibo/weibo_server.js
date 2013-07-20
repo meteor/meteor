@@ -68,6 +68,7 @@ var getIdentity = function (accessToken, userId) {
   }
 };
 
+// @export Weibo.retrieveCredential
 Weibo.retrieveCredential = function(credentialToken) {
   return Oauth.retrieveCredential(credentialToken);
 };

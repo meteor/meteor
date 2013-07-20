@@ -1,5 +1,6 @@
 // Helper for registering OAuth based accounts packages.
 // Adds an index to the user collection.
+// @export Accounts.oauth.registerService
 Accounts.oauth.registerService = function (name) {
   // Accounts.updateOrCreateUserFromExternalService does a lookup by this id,
   // so this should be a unique index. You might want to add indexes for other
@@ -12,6 +13,7 @@ Accounts.oauth.registerService = function (name) {
 
 // For test cleanup only. (Mongo has a limit as to how many indexes it can have
 // per collection.)
+// @export Accounts.oauth._unregisterService
 Accounts.oauth._unregisterService = function (name) {
   var index = {};
   index['services.' + name + '.id'] = 1;

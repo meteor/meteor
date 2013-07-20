@@ -1,6 +1,7 @@
 // Send an OAuth login method to the server. If the user authorized
 // access in the popup this should log the user in, otherwise
 // nothing should happen.
+// @export Accounts.oauth.tryLoginAfterPopupClosed
 Accounts.oauth.tryLoginAfterPopupClosed = function(credentialToken, callback) {
   Accounts.callLoginMethod({
     methodArguments: [{oauth: {credentialToken: credentialToken}}],
@@ -16,6 +17,7 @@ Accounts.oauth.tryLoginAfterPopupClosed = function(credentialToken, callback) {
     }});
 };
 
+// @export Accounts.oauth.credentialRequestCompleteHandler
 Accounts.oauth.credentialRequestCompleteHandler = function(callback) {
   return function (credentialTokenOrError) {
     if(credentialTokenOrError && credentialTokenOrError instanceof Error) {

@@ -12,11 +12,20 @@ Meteor.loginWithToken = function (token, callback) {
     userCallback: callback});
 };
 
+var autoLoginEnabled = true;
+
+// Semi-internal API. Call at startup to prevent automatic login.
+// @export Accounts._disableAutoLogin
+Acocunts._disableAutoLogin = function () {
+  autoLoginEnabled = false;
+};
+
 // Semi-internal API. Call this function to re-enable auto login after
 // if it was disabled at startup.
+// @export Accounts._enableAutoLogin
 Accounts._enableAutoLogin = function () {
-  Accounts._preventAutoLogin = false;
-  Accounts._pollStoredLoginToken();
+  autoLoginEnabled = true;
+  pollStoredLoginToken();
 };
 
 
@@ -31,34 +40,39 @@ var userIdKey = "Meteor.userId";
 // Call this from the top level of the test file for any test that does
 // logging in and out, to protect multiple tabs running the same tests
 // simultaneously from interfering with each others' localStorage.
+// @export Accounts._isolateLoginTokenForTest
 Accounts._isolateLoginTokenForTest = function () {
   loginTokenKey = loginTokenKey + Random.id();
   userIdKey = userIdKey + Random.id();
 };
 
-Accounts._storeLoginToken = function(userId, token) {
+storeLoginToken = function(userId, token) {
   Meteor._localStorage.setItem(userIdKey, userId);
   Meteor._localStorage.setItem(loginTokenKey, token);
 
   // to ensure that the localstorage poller doesn't end up trying to
   // connect a second time
-  Accounts._lastLoginTokenWhenPolled = token;
+  lastLoginTokenWhenPolled = token;
 };
 
-Accounts._unstoreLoginToken = function() {
+unstoreLoginToken = function() {
   Meteor._localStorage.removeItem(userIdKey);
   Meteor._localStorage.removeItem(loginTokenKey);
 
   // to ensure that the localstorage poller doesn't end up trying to
   // connect a second time
-  Accounts._lastLoginTokenWhenPolled = null;
+  lastLoginTokenWhenPolled = null;
 };
 
-Accounts._storedLoginToken = function() {
+// This is private, but it is exported for now because it is used by a
+// test in accounts-password.
+//
+// @export Accounts._storedLoginToken
+storedLoginToken = Accounts._storedLoginToken = function() {
   return Meteor._localStorage.getItem(loginTokenKey);
 };
 
-Accounts._storedUserId = function() {
+storedUserId = function() {
   return Meteor._localStorage.getItem(userIdKey);
 };
 
@@ -67,19 +81,19 @@ Accounts._storedUserId = function() {
 /// AUTO-LOGIN
 ///
 
-if (!Accounts._preventAutoLogin) {
+if (autoLoginEnabled) {
   // Immediately try to log in via local storage, so that any DDP
   // messages are sent after we have established our user account
-  var token = Accounts._storedLoginToken();
+  var token = storedLoginToken();
   if (token) {
     // On startup, optimistically present us as logged in while the
     // request is in flight. This reduces page flicker on startup.
-    var userId = Accounts._storedUserId();
+    var userId = storedUserId();
     userId && Meteor.connection.setUserId(userId);
     Meteor.loginWithToken(token, function (err) {
       if (err) {
         Meteor._debug("Error logging in with token: " + err);
-        Accounts._makeClientLoggedOut();
+        makeClientLoggedOut();
       }
     });
   }
@@ -87,21 +101,21 @@ if (!Accounts._preventAutoLogin) {
 
 // Poll local storage every 3 seconds to login if someone logged in in
 // another tab
-Accounts._lastLoginTokenWhenPolled = token;
-Accounts._pollStoredLoginToken = function() {
-  if (Accounts._preventAutoLogin)
+lastLoginTokenWhenPolled = token;
+pollStoredLoginToken = function() {
+  if (! autoLoginEnabled)
     return;
 
-  var currentLoginToken = Accounts._storedLoginToken();
+  var currentLoginToken = storedLoginToken();
 
   // != instead of !== just to make sure undefined and null are treated the same
-  if (Accounts._lastLoginTokenWhenPolled != currentLoginToken) {
+  if (lastLoginTokenWhenPolled != currentLoginToken) {
     if (currentLoginToken)
       Meteor.loginWithToken(currentLoginToken); // XXX should we pass a callback here?
     else
       Meteor.logout();
   }
-  Accounts._lastLoginTokenWhenPolled = currentLoginToken;
+  lastLoginTokenWhenPolled = currentLoginToken;
 };
 
-setInterval(Accounts._pollStoredLoginToken, 3000);
+setInterval(pollStoredLoginToken, 3000);

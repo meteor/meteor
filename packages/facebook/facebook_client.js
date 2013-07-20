@@ -1,4 +1,6 @@
 // Request Facebook credentials for the user
+//
+// @export Facebook.requestCredential
 // @param options {optional}
 // @param credentialRequestCompleteCallback {Function} Callback function to call on
 //   completion. Takes one argument, credentialToken on success, or Error on

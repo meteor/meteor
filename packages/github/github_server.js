@@ -62,6 +62,8 @@ var getIdentity = function (accessToken) {
   }
 };
 
+
+// @export Github.retrieveCredential
 Github.retrieveCredential = function(credentialToken) {
   return Oauth.retrieveCredential(credentialToken);
 };

@@ -17,7 +17,6 @@ Package.on_use(function(api) {
     ['weibo_configure.html', 'weibo_configure.js'],
     'client');
 
-  api.add_files('weibo_common.js', ['client', 'server']);
   api.add_files('weibo_server.js', 'server');
   api.add_files('weibo_client.js', 'client');
 });

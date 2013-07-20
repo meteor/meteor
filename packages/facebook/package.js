@@ -18,7 +18,6 @@ Package.on_use(function(api) {
     ['facebook_configure.html', 'facebook_configure.js'],
     'client');
 
-  api.add_files('facebook_common.js', ['client', 'server']);
   api.add_files('facebook_server.js', 'server');
   api.add_files('facebook_client.js', 'client');
 });
