@@ -10,6 +10,19 @@ Ctl.Commands.push({
   }
 });
 
+var mergeObjects = function (obj1, obj2) {
+  var result = _.clone(obj1);
+  _.each(obj2, function (v, k) {
+    // If both objects have an object at this key, then merge those objects.
+    // Otherwise, choose obj2's value.
+    if ((v instanceof Object) && (obj1[k] instanceof Object))
+      result[k] = mergeObjects(v, obj1[k]);
+    else
+      result[k] = v;
+  });
+  return result;
+};
+
 
 Ctl.Commands.push({
   name: "start",
@@ -62,6 +75,11 @@ Ctl.Commands.push({
           }
         }
       };
+
+      // Merge in any values that might have been added to the app's config in
+      // the database.
+      if (appConfig.deployConfig)
+        deployConfig = mergeObjects(deployConfig, appConfig.deployConfig);
 
       // XXX args? env?
       Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), 'server', {
