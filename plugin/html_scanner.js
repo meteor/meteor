@@ -170,7 +170,7 @@ html_scanner = {
       if (! name)
         throwParseError("Template has no 'name' attribute");
 
-      results.js += "Meteor._def_template(" + JSON.stringify(name) + ","
+      results.js += "Template.__define__(" + JSON.stringify(name) + ","
         + code + ");\n";
     } else {
       // <body>
@@ -178,7 +178,7 @@ html_scanner = {
         throwParseError("Attributes on <body> not supported");
       results.js += "Meteor.startup(function(){" +
         "document.body.appendChild(Spark.render(" +
-        "Meteor._def_template(null," + code + ")));});";
+        "Template.__define__(null," + code + ")));});";
     }
   }
 };

@@ -768,7 +768,7 @@ Tinytest.add("templating - events", function (test) {
   test.isTrue(_.contains(buf, 'a'));
   test.isTrue(_.contains(buf, 'b'));
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 Tinytest.add("templating - #each rendered callback", function (test) {
