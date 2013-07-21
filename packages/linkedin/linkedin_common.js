@@ -1,3 +1,2 @@
-if (typeof LinkedIn === 'undefined') {
-  LinkedIn = {};
-}
+// @export LinkedIn
+LinkedIn = {};
