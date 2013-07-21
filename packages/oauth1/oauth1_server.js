@@ -2,7 +2,7 @@
 Oauth1._requestTokens = {};
 
 // connect middleware
-Oauth1._handleRequest = function (service, query, res) {
+Oauth._requestHandlers['1'] = function (service, query, res) {
 
   var config = ServiceConfiguration.configurations.findOne({service: service.serviceName});
   if (!config) {

@@ -5,7 +5,7 @@ Package.describe({
 
 Package.on_use(function (api) {
 
-  api.use('tinytest');
+  api.use(['tinytest', 'underscore', 'random', 'ejson', 'check']);
   api.use('http');
 
   api.add_files([
@@ -14,4 +14,7 @@ Package.on_use(function (api) {
   api.add_files([
     'reporter.js'
   ], "server");
+
+  // This is to be run by phantomjs, not as part of normal package code.
+  api.add_files('runner.js', 'server', {isAsset: true});
 });

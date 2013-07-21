@@ -1,3 +1,4 @@
+// @export Email
 Email = {};
 
 var Future = Npm.require('fibers/future');
@@ -34,8 +35,13 @@ var makePool = function (mailUrlString) {
 // Meteor.startup code can set $MAIL_URL.
 var smtpPool = null;
 var maybeMakePool = function () {
-  if (!smtpPool && process.env.MAIL_URL) {
-    smtpPool = makePool(process.env.MAIL_URL);
+  // We check MAIL_URL in case someone else set it in Meteor.startup code.
+  var mailUrl = process.env.MAIL_URL ||
+        (typeof __meteor_bootstrap__ !== 'undefined' &&
+         Meteor._get(__meteor_bootstrap__.deployConfig,
+                     'packages', 'email', 'url'));
+  if (!smtpPool && mailUrl) {
+    smtpPool = makePool(mailUrl);
   }
 };
 
@@ -51,7 +57,7 @@ var devModeSend = function (mc) {
   // call even in the 'end' callback, in case there are multiple concurrent
   // test runs.
   var stream = Email._output_stream;
-  
+
   // This approach does not prevent other writers to stdout from interleaving.
   stream.write("====== BEGIN MAIL #" + devmode_mail_id + " ======\n");
   mc.streamMessage();
@@ -59,7 +65,7 @@ var devModeSend = function (mc) {
   var future = new Future;
   mc.on('end', function () {
     stream.write("====== END MAIL #" + devmode_mail_id + " ======\n");
-    future.ret();
+    future['return']();
   });
   future.wait();
 };

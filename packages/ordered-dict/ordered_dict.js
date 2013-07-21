@@ -1,3 +1,4 @@
+// @export OrderedDict
 // This file defines an ordered dictionary abstraction that is useful for
 // maintaining a dataset backed by observeChanges.  It supports ordering items
 // by specifying the item they now come before.
@@ -150,7 +151,7 @@ _.extend(OrderedDict.prototype, {
   prev: function (key) {
     var self = this;
     if (self.has(key)) {
-      var elt = self.get(key);
+      var elt = self._dict[self._k(key)];
       if (elt.prev)
         return elt.prev.key;
     }
@@ -159,7 +160,7 @@ _.extend(OrderedDict.prototype, {
   next: function (key) {
     var self = this;
     if (self.has(key)) {
-      var elt = self.get(key);
+      var elt = self._dict[self._k(key)];
       if (elt.next)
         return elt.next.key;
     }

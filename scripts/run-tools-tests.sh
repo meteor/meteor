@@ -29,7 +29,9 @@ admin/launch-meteor --version  # downloads the bootstrap tarball
 # Test springboarding specifically
 ./tools-springboard-test.sh
 # CLI tests (without springboarding, but with a warehouse)
-./cli-test.sh
+# XXX For now, we turn this off, because it requires us to have a built release
+# which is compatible with the current tools.
+#  ./cli-test.sh
 
 unset METEOR_TOOLS_TREE_DIR
 unset METEOR_WAREHOUSE_DIR
@@ -39,6 +41,11 @@ unset METEOR_WAREHOUSE_DIR
 ### Bundler unit tests
 ###
 ./bundler-test.sh
+
+###
+### Watcher unit tests
+###
+./watch-test.sh
 
 ###
 ### Test the Meteor CLI from a checkout. We do this last because it is least likely to fail.

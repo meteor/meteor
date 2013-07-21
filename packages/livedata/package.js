@@ -3,24 +3,28 @@ Package.describe({
   internal: true
 });
 
-Npm.depends({sockjs: "0.3.4",
+Npm.depends({sockjs: "0.3.7",
              websocket: "1.0.7"});
 
 Package.on_use(function (api) {
-  api.use(['random', 'ejson', 'json', 'underscore', 'deps', 'logging', 'check'],
+  api.use(['check', 'random', 'ejson', 'json', 'underscore', 'deps', 'logging'],
           ['client', 'server']);
+
+  // It is OK to use this package on a server architecture without making a
+  // server (in order to do server-to-server DDP as a client). So these are only
+  // included as weak dependencies.
+  // XXX split this package into multiple packages or multiple slices instead
+  api.use(['webapp', 'routepolicy'], 'server', {weak: true});
 
   // Transport
   api.use('reload', 'client');
-  api.use('routepolicy', 'server');
   api.add_files(['sockjs-0.3.4.js',
                  'stream_client_sockjs.js'], 'client');
   api.add_files('stream_client_nodejs.js', 'server');
   api.add_files('stream_client_common.js', ['client', 'server']);
   api.add_files('stream_server.js', 'server');
 
-  // livedata_connection.js uses a Minimongo collection internally to
-  // manage the current set of subscriptions.
+  // we depend on LocalCollection._diffObjects and ._applyChanges.
   api.use('minimongo', ['client', 'server']);
 
   api.add_files('writefence.js', 'server');
@@ -41,7 +45,7 @@ Package.on_test(function (api) {
   api.use('livedata', ['client', 'server']);
   api.use('mongo-livedata', ['client', 'server']);
   api.use('test-helpers', ['client', 'server']);
-  api.use('tinytest');
+  api.use(['underscore', 'tinytest', 'random', 'deps']);
 
   api.add_files('livedata_connection_tests.js', ['client', 'server']);
   api.add_files('livedata_tests.js', ['client', 'server']);
@@ -51,4 +55,5 @@ Package.on_test(function (api) {
 
   api.use('http', 'client');
   api.add_files(['stream_tests.js'], 'client');
+  api.use('check', ['client', 'server']);
 });

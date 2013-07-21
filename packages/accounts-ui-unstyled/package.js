@@ -3,7 +3,11 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['accounts-urls', 'accounts-base', 'underscore', 'templating'], 'client');
+  api.use(['deps', 'service-configuration', 'accounts-urls', 'accounts-base',
+           'underscore', 'templating',
+           'handlebars', 'spark', 'session'], 'client');
+  // Export Accounts (etc) to packages using this one.
+  api.imply('accounts-base', ['client', 'server']);
 
   api.add_files([
     'accounts_ui.js',

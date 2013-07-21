@@ -12,6 +12,15 @@ on the client, just on the server, or *Anywhere*.
 
 {{> api_box isClient}}
 {{> api_box isServer}}
+
+{{#note}}
+`Meteor.isServer` can be used to limit where code runs, but it does not
+prevent code from being sent to the client. Any sensitive code that you
+don't want served to the client, such as code containing passwords or
+authentication mechanisms, should be kept in the `server` directory.
+{{/note}}
+
+
 {{> api_box startup}}
 
 On a server, the function will run as soon as the server process is
@@ -655,7 +664,8 @@ disable this behavior, pass `{reactive: false}` as an option to
 
 {{> api_box findone}}
 
-Equivalent to `find(selector, options).fetch()[0]`.
+Equivalent to `find(selector, options).fetch()[0]` with
+`options.limit = 1`.
 
 {{> api_box insert}}
 
@@ -2945,6 +2955,25 @@ by spammers.)
                 'This is a test of Email.send.');
 
 {{/better_markdown}}
+
+<h2 id="assets"><span>Assets</span></h2>
+
+{{#better_markdown}}
+`Assets` allows server code in a Meteor application to access static server
+assets, which are located in the `private` subdirectory of an application's
+tree.
+
+{{> api_box assets_getText }}
+{{> api_box assets_getBinary }}
+
+Static server assets are included by placing them in the application's `private`
+subdirectory. For example, if an application's `private` subdirectory includes a
+directory called `nested` with a file called `data.txt` inside it, then server
+code can read `data.txt` by running:
+
+    var data = Assets.getText('nested/data.txt');
+{{/better_markdown}}
+
 </template>
 
 

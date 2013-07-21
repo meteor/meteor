@@ -1,5 +1,5 @@
 // connect middleware
-Oauth2._handleRequest = function (service, query, res) {
+Oauth._requestHandlers['2'] = function (service, query, res) {
   // check if user authorized access
   if (!query.error) {
     // Prepare the login results before returning.  This way the

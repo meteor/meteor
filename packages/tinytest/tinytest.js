@@ -35,6 +35,12 @@ _.extend(TestCaseResults.prototype, {
   fail: function (doc) {
     var self = this;
 
+    if (typeof doc === "string") {
+      // Some very old code still tries to call fail() with a
+      // string. Don't do this!
+      doc = { type: "fail", message: doc };
+    }
+
     if (self.stop_at_offset === 0) {
       if (Meteor.isClient) {
         // Only supported on the browser for now..
@@ -485,8 +491,8 @@ _.extend(TestRun.prototype, {
 /* Public API                                                                 */
 /******************************************************************************/
 
-var globals = this;
-globals.Tinytest = {
+// @export Tinytest
+Tinytest = {
   add: function (name, func) {
     TestManager.addCase(new TestCase(name, func));
   },

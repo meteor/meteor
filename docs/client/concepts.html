@@ -28,17 +28,23 @@ CSS rules, and static assets.  Meteor automates the packaging and transmission
 of these different components.  And, it is quite flexible about how you choose
 to structure those components in your file tree.
 
-The only server asset is JavaScript.  Meteor gathers all your JavaScript
-files, excluding anything under the `client`
-and `public` subdirectories, and loads them into a Node.js
+The only server assets are JavaScript and files in the `private` subdirectory.
+Meteor gathers all your JavaScript
+files, excluding anything under the `client`, `public`, and `private`
+subdirectories, and loads them into a Node.js
 server instance inside a fiber.  In Meteor, your server code runs in
 a single thread per request, not in the asynchronous callback style
 typical of Node.  We find the linear execution model a better fit for
 the typical server code in a Meteor application.
 
+Meteor gathers any files under the `private` subdirectory and makes the contents
+of these files available to server code via the [`Assets`](#assets) API. The
+`private` subdirectory is the place for any files that should be accessible to
+server code but not served to the client, like private data files.
+
 There are more assets to consider on the client side.  Meteor
-gathers all JavaScript files in your tree with the exception of
-the `server` and `public` subdirectories for the
+gathers all JavaScript files in your tree, with the exception of
+the `server`, `public`, and `private` subdirectories, for the
 client.  It minifies this bundle and serves it to each new client.
 You're free to use a single JavaScript file for your entire application, or
 create a nested tree of separate files, or anything in between.
@@ -61,8 +67,8 @@ containing passwords or authentication mechanisms, should be
 kept in the `server` directory.
 
 CSS files are gathered together as well: the client will get a bundle with all
-the CSS in your tree (excluding the `server`
-and `public` subdirectories).
+the CSS in your tree (excluding the `server`,
+`public`, and `private` subdirectories).
 
 In development mode, JavaScript and CSS files are sent individually to make
 debugging easier.
@@ -678,12 +684,13 @@ To get started, run
 
     $ meteor bundle myapp.tgz
 
-This command will generate a fully-contained Node.js application in
-the form of a tarball.  To run this application, you need to provide
-Node.js 0.8 and a MongoDB server.  You can then run the application by
-invoking node, specifying the HTTP port for the application to listen
-on, and the MongoDB endpoint.  If you don't already have a MongoDB
-server, we can recommend our friends at [MongoHQ](http://mongohq.com).
+This command will generate a fully-contained Node.js application in the form of
+a tarball.  To run this application, you need to provide Node.js 0.8 and a
+MongoDB server.  (The current release of Meteor has been tested with Node
+0.8.24.) You can then run the application by invoking node, specifying the HTTP
+port for the application to listen on, and the MongoDB endpoint.  If you don't
+already have a MongoDB server, we can recommend our friends at
+[MongoHQ](http://mongohq.com).
 
     $ PORT=3000 MONGO_URL=mongodb://localhost:27017/myapp node bundle/main.js
 
@@ -698,7 +705,7 @@ have `npm` available, and run the following:
 
     $ cd bundle/server/node_modules
     $ rm -r fibers
-    $ npm install fibers@1.0.0
+    $ npm install fibers@1.0.1
 {{/warning}}
 
 {{/better_markdown}}

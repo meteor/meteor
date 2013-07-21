@@ -4,7 +4,7 @@ Package.describe({
 
 Package.on_use(function (api, where) {
   // XXX Backbone requires either jquery or zepto
-  api.use(["jquery", "json"]);
+  api.use(["jquery", "json", "underscore"]);
 
   where = where || ['client', 'server'];
   api.add_files("backbone.js", where);

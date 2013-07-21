@@ -1,3 +1,6 @@
+// @export Template
+Template = {};
+
 Meteor._partials = {};
 
 // XXX Handlebars hooking is janky and gross

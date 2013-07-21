@@ -13,7 +13,7 @@ Package.on_use(function (api) {
 
 Package.on_test(function (api) {
   api.use('tinytest');
-  api.use(['universal-events', 'test-helpers'], 'client');
+  api.use(['universal-events', 'test-helpers', 'underscore'], 'client');
   api.use('domutils');
   api.use('spark');
 

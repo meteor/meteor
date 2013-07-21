@@ -5,7 +5,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use(['underscore', 'random', 'domutils', 'liverange', 'universal-events',
-           'ordered-dict'],
+           'ordered-dict', 'deps', 'ejson'],
           'client');
 
   api.add_files(['spark.js', 'patch.js', 'convenience.js',
@@ -13,7 +13,9 @@ Package.on_use(function (api) {
 });
 
 Package.on_test(function (api) {
-  api.use('tinytest');
+  api.use('webapp', 'server');
+  api.use(['tinytest', 'underscore', 'liverange', 'deps', 'domutils',
+           'minimongo', 'random']);
   api.use(['spark', 'test-helpers'], 'client');
 
   api.add_files('test_form_responder.js', 'server');

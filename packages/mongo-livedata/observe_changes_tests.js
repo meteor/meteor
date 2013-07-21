@@ -66,10 +66,10 @@ Tinytest.addAsync("observeChanges - callback isolation", function (test, onCompl
 
     var fooid = c.insert({apples: "ok"});
     logger.expectResult("added", [fooid, {apples: "ok"}]);
-    
+
     c.update(fooid, {apples: "not ok"})
     logger.expectResult("changed", [fooid, {apples: "not ok"}]);
-    
+
     test.equal(c.findOne(fooid).apples, "not ok");
 
     _.each(handles, function(handle) { handle.stop(); });
@@ -194,3 +194,71 @@ Tinytest.addAsync("observeChanges - unordered - enters and exits result set thro
   onComplete();
   });
 });
+
+
+if (Meteor.isServer) {
+  testAsyncMulti("observeChanges - tailable", [
+    function (test, expect) {
+      var self = this;
+      var collName = "cap_" + Random.id();
+      var coll = new Meteor.Collection(collName);
+      coll._createCappedCollection(1000000);
+      self.xs = [];
+      self.expects = [];
+      self.insert = function (fields) {
+        coll.insert(_.extend({ts: new Meteor._Mongo._Timestamp(0, 0)}, fields));
+      };
+
+      // Tailable observe shouldn't show things that are in the initial
+      // contents.
+      self.insert({x: 1});
+      // Wait for one added call before going to the next test function.
+      self.expects.push(expect());
+
+      var cursor = coll.find({y: {$ne: 7}}, {tailable: true});
+      self.handle = cursor.observeChanges({
+        added: function (id, fields) {
+          self.xs.push(fields.x);
+          test.notEqual(self.expects.length, 0);
+          self.expects.pop()();
+        },
+        changed: function () {
+          test.fail({unexpected: "changed"});
+        },
+        removed: function () {
+          test.fail({unexpected: "removed"});
+        }
+      });
+
+      // Nothing happens synchronously.
+      test.equal(self.xs, []);
+    },
+    function (test, expect) {
+      var self = this;
+      // The cursors sees the first element.
+      test.equal(self.xs, [1]);
+      self.xs = [];
+
+      self.insert({x: 2, y: 3});
+      self.insert({x: 3, y: 7});  // filtered out by the query
+      self.insert({x: 4});
+      // Expect two added calls to happen.
+      self.expects = [expect(), expect()];
+    },
+    function (test, expect) {
+      var self = this;
+      test.equal(self.xs, [2, 4]);
+      self.xs = [];
+      self.handle.stop();
+
+      self.insert({x: 5});
+      // XXX This timeout isn't perfect but it's pretty hard to prove that an
+      // event WON'T happen without something like a write fence.
+      Meteor.setTimeout(expect(), 1000);
+    },
+    function (test, expect) {
+      var self = this;
+      test.equal(self.xs, []);
+    }
+  ]);
+}

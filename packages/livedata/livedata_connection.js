@@ -534,6 +534,31 @@ _.extend(Meteor._LivedataConnection.prototype, {
     return handle;
   },
 
+  // options:
+  // - onLateError {Function(error)} called if an error was received after the ready event.
+  //     (errors received before ready cause an error to be thrown)
+  _subscribeAndWait: function (name, args, options) {
+    var self = this;
+    var f = new Future();
+    var ready = false;
+    args = args || [];
+    args.push({
+      onReady: function () {
+        ready = true;
+        f['return']();
+      },
+      onError: function (e) {
+        if (!ready)
+          f['throw'](e);
+        else
+          options && options.onLateError && options.onLateError(e);
+      }
+    });
+
+    self.subscribe.apply(self, [name].concat(args));
+    f.wait();
+  },
+
   methods: function (methods) {
     var self = this;
     _.each(methods, function (func, name) {
@@ -674,21 +699,16 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
     // If the caller didn't give a callback, decide what to do.
     if (!callback) {
-      if (Meteor.isClient)
+      if (Meteor.isClient) {
         // On the client, we don't have fibers, so we can't block. The
         // only thing we can do is to return undefined and discard the
         // result of the RPC.
         callback = function () {};
-      else {
-        // On the server, make the function synchronous.
+      } else {
+        // On the server, make the function synchronous. Throw on
+        // errors, return on success.
         var future = new Future;
-        callback = function (err, result) {
-          if (err)
-            future['throw'](err);
-          else {
-            future['return'](result);
-          }
-        };
+        callback = future.resolver();
       }
     }
     // Send the RPC. Note that on the client, it is important that the
@@ -800,6 +820,11 @@ _.extend(Meteor._LivedataConnection.prototype, {
   reconnect: function (/*passthrough args*/) {
     var self = this;
     return self._stream.reconnect.apply(self._stream, arguments);
+  },
+
+  close: function () {
+    var self = this;
+    return self._stream.forceDisconnect();
   },
 
   ///

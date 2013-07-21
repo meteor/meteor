@@ -12,11 +12,13 @@ Package.describe({
   internal: true
 });
 
-Npm.depends({mongodb: "1.3.7"});
+Npm.depends({mongodb: "1.3.12"});
 
 Package.on_use(function (api) {
-  api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging', 'livedata'],
+  api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging',
+           'livedata', 'deps'],
           ['client', 'server']);
+  api.use('check', ['client', 'server']);
 
   api.add_files('mongo_driver.js', 'server');
   api.add_files('local_collection_driver.js', ['client', 'server']);
@@ -26,8 +28,8 @@ Package.on_use(function (api) {
 
 Package.on_test(function (api) {
   api.use('mongo-livedata');
-  api.use('tinytest');
-  api.use('test-helpers');
+  api.use('check');
+  api.use(['tinytest', 'underscore', 'test-helpers', 'ejson', 'random']);
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
   api.add_files('mongo_livedata_tests.js', ['client', 'server']);
@@ -35,4 +37,3 @@ Package.on_test(function (api) {
   api.add_files('collection_tests.js', ['client', 'server']);
   api.add_files('observe_changes_tests.js', ['client', 'server']);
 });
-

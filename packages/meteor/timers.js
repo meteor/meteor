@@ -11,7 +11,7 @@ var withoutInvocation = function (f) {
 var bindAndCatch = function (context, f) {
   return Meteor.bindEnvironment(withoutInvocation(f), function (e) {
     // XXX report nicely (or, should we catch it at all?)
-    Meteor._debug("Exception from " + context + ":", e);
+    Meteor._debug("Exception from " + context + ":", e, e.stack);
   });
 };
 

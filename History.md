@@ -1,9 +1,28 @@
 
 ## vNEXT
 
+* Calling `findOne()` on the server no longer loads the full query result
+  into memory.
+
+* Fix Spark memory leak.  #1157
+
 * Upgraded dependencies:
   * Node from 0.8.18 to 0.8.24
   * MongoDB from 2.4.3 to 2.4.4
+
+* Make server-side Mongo inserts, updates, and removes run asynchronously when a
+  callback is passed.
+
+* Add new `Assets` API and `private` subdirectory for including and accessing
+  server assets in an application.
+
+* Delete login tokens from server when user logs out.
+
+
+## v0.6.4.1
+
+* Update mongodb driver to use version 0.2.1 of the bson module.
+
 
 ## v0.6.4
 

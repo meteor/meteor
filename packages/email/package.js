@@ -7,6 +7,7 @@ Package.describe({
 Npm.depends({mailcomposer: "0.1.15", simplesmtp: "0.1.25", "stream-buffers": "0.2.3"});
 
 Package.on_use(function (api) {
+  api.use('underscore', 'server');
   api.add_files('email.js', 'server');
 });
 

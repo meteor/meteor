@@ -7,7 +7,9 @@
 
 // LiveResultsSet: the return value of a live query.
 
-LocalCollection = function () {
+// @export LocalCollection
+LocalCollection = function (name) {
+  this.name = name;
   this.docs = {}; // _id -> document (also containing id)
 
   this._observeQueue = new Meteor._SynchronousQueue();
@@ -191,6 +193,14 @@ LocalCollection.Cursor.prototype.count = function () {
     self.db_objects = self._getRawObjects(true);
 
   return self.db_objects.length;
+};
+
+LocalCollection.Cursor.prototype._publishCursor = function (sub) {
+  var self = this;
+  if (! self.collection.name)
+    throw new Error("Can't publish a cursor from a collection without a name.");
+  var collection = self.collection.name;
+  return Meteor.Collection._publishCursor(self, sub, collection);
 };
 
 LocalCollection._isOrderedChanges = function (callbacks) {
@@ -406,7 +416,7 @@ LocalCollection.Cursor.prototype._depend = function (changers) {
 // (real mongodb does in fact enforce this)
 // XXX possibly enforce that 'undefined' does not appear (we assume
 // this in our handling of null and $exists)
-LocalCollection.prototype.insert = function (doc) {
+LocalCollection.prototype.insert = function (doc, callback) {
   var self = this;
   doc = EJSON.clone(doc);
 
@@ -441,10 +451,13 @@ LocalCollection.prototype.insert = function (doc) {
       LocalCollection._recomputeResults(self.queries[qid]);
   });
   self._observeQueue.drain();
+  // Defer in case the callback returns on a future; gives the caller time to
+  // wait on the future.
+  if (callback) Meteor.defer(function () { callback(null, doc._id); });
   return doc._id;
 };
 
-LocalCollection.prototype.remove = function (selector) {
+LocalCollection.prototype.remove = function (selector, callback) {
   var self = this;
   var remove = [];
 
@@ -498,12 +511,19 @@ LocalCollection.prototype.remove = function (selector) {
       LocalCollection._recomputeResults(query);
   });
   self._observeQueue.drain();
+  // Defer in case the callback returns on a future; gives the caller time to
+  // wait on the future.
+  if (callback) Meteor.defer(callback);
 };
 
 // XXX atomicity: if multi is true, and one modification fails, do
 // we rollback the whole operation, or what?
-LocalCollection.prototype.update = function (selector, mod, options) {
+LocalCollection.prototype.update = function (selector, mod, options, callback) {
   var self = this;
+  if (! callback && options instanceof Function) {
+    callback = options;
+    options = null;
+  }
   if (!options) options = {};
 
   if (options.upsert)
@@ -541,6 +561,9 @@ LocalCollection.prototype.update = function (selector, mod, options) {
                                         qidToOriginalResults[qid]);
   });
   self._observeQueue.drain();
+  // Defer in case the callback returns on a future; gives the caller time to
+  // wait on the future.
+  if (callback) Meteor.defer(callback);
 };
 
 LocalCollection.prototype._modifyAndNotify = function (
@@ -818,7 +841,7 @@ LocalCollection._idStringify = function (id) {
     }
   } else if (id === undefined) {
     return '-';
-  } else if (typeof id === 'object') {
+  } else if (typeof id === 'object' && id !== null) {
     throw new Error("Meteor does not currently support objects other than ObjectID as ids");
   } else { // Numbers, true, false, null
     return "~" + JSON.stringify(id);
@@ -917,14 +940,24 @@ LocalCollection._observeOrderedFromObserveChanges =
     function (cursor, callbacks, transform) {
   var docs = new OrderedDict(LocalCollection._idStringify);
   var suppressed = !!callbacks._suppress_initial;
+  // The "_no_indices" option sets all index arguments to -1
+  // and skips the linear scans required to generate them.
+  // This lets observers that don't need absolute indices
+  // benefit from the other features of this API --
+  // relative order, transforms, and applyChanges -- without
+  // the speed hit.
+  var indices = !callbacks._no_indices;
   var handle = cursor.observeChanges({
     addedBefore: function (id, fields, before) {
       var doc = EJSON.clone(fields);
       doc._id = id;
-      docs.putBefore(id, doc, before ? before : null);
+      // XXX could `before` be a falsy ID?  Technically
+      // idStringify seems to allow for them -- though
+      // OrderedDict won't call stringify on a falsy arg.
+      docs.putBefore(id, doc, before || null);
       if (!suppressed) {
         if (callbacks.addedAt) {
-          var index = docs.indexOf(id);
+          var index = indices ? docs.indexOf(id) : -1;
           callbacks.addedAt(transform(EJSON.clone(doc)),
                             index, before);
         } else if (callbacks.added) {
@@ -940,7 +973,7 @@ LocalCollection._observeOrderedFromObserveChanges =
       // writes through to the doc set
       LocalCollection._applyChanges(doc, fields);
       if (callbacks.changedAt) {
-        var index = docs.indexOf(id);
+        var index = indices ? docs.indexOf(id) : -1;
         callbacks.changedAt(transform(EJSON.clone(doc)),
                             transform(oldDoc), index);
       } else if (callbacks.changed) {
@@ -953,11 +986,12 @@ LocalCollection._observeOrderedFromObserveChanges =
       var from;
       // only capture indexes if we're going to call the callback that needs them.
       if (callbacks.movedTo)
-        from = docs.indexOf(id);
-      docs.moveBefore(id, before ? before : null);
+        from = indices ? docs.indexOf(id) : -1;
+      docs.moveBefore(id, before || null);
       if (callbacks.movedTo) {
-        var to = docs.indexOf(id);
-        callbacks.movedTo(transform(EJSON.clone(doc)), from, to);
+        var to = indices ? docs.indexOf(id) : -1;
+        callbacks.movedTo(transform(EJSON.clone(doc)), from, to,
+                          before || null);
       } else if (callbacks.moved) {
         callbacks.moved(transform(EJSON.clone(doc)));
       }
@@ -967,7 +1001,7 @@ LocalCollection._observeOrderedFromObserveChanges =
       var doc = docs.get(id);
       var index;
       if (callbacks.removedAt)
-        index = docs.indexOf(id);
+        index = indices ? docs.indexOf(id) : -1;
       docs.remove(id);
       callbacks.removedAt && callbacks.removedAt(transform(doc), index);
       callbacks.removed && callbacks.removed(transform(doc));

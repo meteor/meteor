@@ -6,12 +6,9 @@ Package.describe({
 Package.on_use(function (api, where) {
   where = where || ["client", "server"];
 
-  api.use('ejson');
-
-  // XXX These files have various dependencies on other packages
-  // that aren't specified here. :(
-  // This package should probably get split into several packages,
-  // each with correct dependencies.
+  api.use(['underscore', 'deps', 'ejson', 'tinytest', 'random',
+          'domutils']);
+  api.use(['spark'], 'client');
 
   api.add_files('try_all_permutations.js', where);
   api.add_files('async_multi.js', where);
@@ -28,6 +25,6 @@ Package.on_use(function (api, where) {
 
 Package.on_test(function (api) {
   api.use('tinytest');
-  api.use('test-helpers');
+  api.use(['test-helpers', 'underscore']);
   api.add_files('try_all_permutations_test.js', 'client');
 });

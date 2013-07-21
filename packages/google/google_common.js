@@ -1,3 +1,2 @@
-if (typeof Google === 'undefined') {
-  Google = {};
-}
+// @export Google
+Google = {};
