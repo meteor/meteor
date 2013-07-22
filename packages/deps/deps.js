@@ -335,7 +335,7 @@ _.extend(Deps, {
       },
 
       force: function(b) {
-        this._force = b;
+        this._force = !!b;
         return this;
       }
     };
