@@ -2025,16 +2025,22 @@ _.extend(Package.prototype, {
       _.each(sliceJson.resources, function (resource) {
         rejectBadPath(resource.file);
 
-        var fd = fs.openSync(path.join(sliceBasePath, resource.file), "r");
-        try {
-          var data = new Buffer(resource.length);
-          var count = fs.readSync(
-            fd, data, 0, resource.length, resource.offset);
-        } finally {
-          fs.closeSync(fd);
+        var data = new Buffer(resource.length);
+        // Read the data from disk, if it is non-empty. Avoid doing IO for empty
+        // files, because (a) unnecessary and (b) fs.readSync with length 0
+        // throws instead of acting like POSIX read:
+        // https://github.com/joyent/node/issues/5685
+        if (resource.length > 0) {
+          var fd = fs.openSync(path.join(sliceBasePath, resource.file), "r");
+          try {
+            var count = fs.readSync(
+              fd, data, 0, resource.length, resource.offset);
+          } finally {
+            fs.closeSync(fd);
+          }
+          if (count !== resource.length)
+            throw new Error("couldn't read entire resource");
         }
-        if (count !== resource.length)
-          throw new Error("couldn't read entire resource");
 
         if (resource.type === "prelink") {
           var prelinkFile = {
