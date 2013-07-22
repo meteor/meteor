@@ -90,6 +90,8 @@ exports.discoverGalaxy = function (app) {
   request({
     url: url,
     json: true,
+    // We don't want to be confused by, eg, a non-Galaxy-hosted site which
+    // redirects to a Galaxy-hosted site.
     followRedirect: false
   }, function (err, resp, body) {
     if (! err &&
