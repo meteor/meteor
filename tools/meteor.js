@@ -162,6 +162,15 @@ Fiber(function () {
     return tunnel;
   };
 
+  var qualifySitename = function (site) {
+    // Append .meteor.com if we don't have a domain name. In the future, we
+    // probably want this to be configurable via a client-side preference of
+    // some kind.
+    if (site.indexOf(".") === -1)
+      site = site + ".meteor.com";
+    return site;
+  };
+
   var prepareForGalaxy = function (site, context, sshIdentity) {
     if (! deployGalaxy)
       deployGalaxy = require('./deploy-galaxy.js');
@@ -180,6 +189,7 @@ Fiber(function () {
   var galaxyCommand = function (cmd) {
     return function (argv) {
       if (argv._[1]) {
+        argv._[1] = qualifySitename(argv._[1]);
         var tunnel = prepareForGalaxy(argv._[1], context, argv["ssh-identity"]);
         var result;
         try {
@@ -397,6 +407,7 @@ Fiber(function () {
         // We don't use galaxyCommand here because we want the tunnel to stay
         // open (galaxyCommand closes the tunnel as soon as the command finishes
         // running). The tunnel will be cleaned up when the process exits.
+        argv._[0] = qualifySitename(argv._[0]);
         prepareForGalaxy(argv._[0], context, argv["ssh-identity"]);
         if (! context.galaxy) {
           process.stdout.write("You must provide a galaxy to configure " +
@@ -1031,6 +1042,7 @@ Fiber(function () {
       // We don't use galaxyCommand here because we want the tunnel to stay
       // open (galaxyCommand closes the tunnel as soon as the command finishes
       // running). The tunnel will be cleaned up when the process exits.
+      site = qualifySitename(site);
       var tunnel = prepareForGalaxy(site, context, argv["ssh-identity"]);
       var useGalaxy = !!context.galaxy;
 
