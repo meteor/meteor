@@ -407,7 +407,8 @@ Fiber(function () {
         // We don't use galaxyCommand here because we want the tunnel to stay
         // open (galaxyCommand closes the tunnel as soon as the command finishes
         // running). The tunnel will be cleaned up when the process exits.
-        argv._[0] = qualifySitename(argv._[0]);
+        if (argv._[0])
+          argv._[0] = qualifySitename(argv._[0]);
         prepareForGalaxy(argv._[0], context, argv["ssh-identity"]);
         if (! context.galaxy) {
           process.stdout.write("You must provide a galaxy to configure " +
