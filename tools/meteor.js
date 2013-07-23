@@ -946,7 +946,8 @@ Fiber(function () {
             .alias('admin', 'A')
             .boolean('admin')
             .boolean('A')
-            .describe('admin', 'Marks the application as an admin app, it will be available in Galaxy admin interface.')
+            // Shouldn't be public until the Galaxy release
+            //.describe('admin', 'Marks the application as an admin app, it will be available in Galaxy admin interface.')
             .usage(
               "Usage: meteor deploy <site> [--password] [--settings settings.json] [--debug] [--delete]\n" +
                 "\n" +
@@ -971,10 +972,11 @@ Fiber(function () {
                 "\n" +
                 "The --password flag sets an administrative password for the domain. Once\n" +
                 "set, any subsequent 'deploy', 'logs', or 'mongo' command will prompt for\n" +
-                "the password. You can change the password with a second 'deploy' command.\n" +
-                "\n" +
-                "The --admin flag marks application as administrative to Galaxy interface.\n" +
-                "Application's web-interface will be accessible from admin's panel only.\n"
+                "the password. You can change the password with a second 'deploy' command.\n"
+                // Shouldn't be public until the Galaxy release
+                //"\n" +
+                //"The --admin flag marks application as administrative to Galaxy interface.\n" +
+                //"Application's web-interface will be accessible from admin's panel only.\n"
             );
 
       var new_argv = opt.argv;
