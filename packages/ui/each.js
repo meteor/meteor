@@ -192,7 +192,12 @@ UI.Each = Component.extend({
 
     var newData = self.data();
     // Do a `===` check even though it's weak
-    if (newData !== self._oldData) {
+    // XXX no, don't, because of the case where we
+    // are given the same array but it has been
+    // mutated, like test-in-browser does.
+    // But if we did some "is it the same" check
+    // it would go here.
+    if (true || newData !== self._oldData) {
       self._oldData = newData;
 
       var replacer = list.beginReplace();

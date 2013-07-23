@@ -177,8 +177,7 @@ Component.include({
 
   // Don't call this directly.  It implements the re-run of the
   // build autorun, so it assumes it's already inside the appropriate
-  // reactive computation.  Use `rebuild` which simply invalidates the
-  // computation.
+  // reactive computation.
   //
   // `builtChildren` is a map of children that were added during
   // the previous build (as opposed to at some other time, such as

@@ -1,6 +1,15 @@
 
 var global = (function () { return this; })();
 
+var findComponentWithProp = function (id, comp) {
+  while (comp) {
+    if (id in comp)
+      return comp;
+    comp = comp.parent;
+  }
+  return null;
+};
+
 Component.include({
   lookup: function (id) {
     var self = this;
@@ -12,11 +21,12 @@ Component.include({
     // and how custom component classes should
     // hook into this behavior.
 
+    var cmp;
     if (! id) {
       result = self.data();
-    } else if (id in self) {
-      result = self[id];
-      thisToBind = self;
+    } else if ((cmp = findComponentWithProp(id, self))) {
+      result = cmp[id];
+      thisToBind = cmp;
     } else if (id === 'if') {
       result = UI.If;
     } else if (id === 'each') {
@@ -25,10 +35,15 @@ Component.include({
       result = UI.Unless;
     } else if (id === 'with') {
       result = Component;
-    } else if (id in global) {
+    } else if (/^[A-Z]/.test(id) && (id in global)) {
+      // Only look for a global identifier if `id` is
+      // capitalized.  This avoids have `{{name}}` mean
+      // `window.name`.
       result = global[id];
       thisToBind = self.data();
     } else {
+      // check `data()` last, because it establishes
+      // a dependency.
       var data = self.data();
       if (data != null) {
         thisToBind = data;

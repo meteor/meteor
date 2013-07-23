@@ -294,6 +294,14 @@ Template.progressBar.include({
 
 //// Template - groupNav
 
+var changeToPath = function (path) {
+  Session.set("groupPath", path);
+  Session.set("rerunScheduled", true);
+  // pretend there's just been a hot code push
+  // so we run the tests completely fresh.
+  Meteor._reload.reload();
+};
+
 Template.groupNav.include({
   groupPaths: function () {
     var groupPath = Session.get("groupPath");
@@ -305,26 +313,26 @@ Template.groupNav.include({
   },
   rerunScheduled: function () {
     return Session.get("rerunScheduled");
-  },
-  changeToPath: function (path) {
-    Session.set("groupPath", path);
-    Session.set("rerunScheduled", true);
-    // pretend there's just been a hot code push
-    // so we run the tests completely fresh.
-    Meteor._reload.reload();
   }
 });
 
-// XXXX EVENTS
-/*Template.groupNav.events({
-  "click .group": function () {
-    changeToPath(this.path);
-  },
-  "click .rerun": function () {
-    Session.set("rerunScheduled", true);
-    Meteor._reload.reload();
+Template.groupNav.include({
+  built: function () {
+    var self = this;
+    // we don't yet have API support for event maps which do
+    // full delegation
+    // on our component (listening to all events on current
+    // and future elements), so just use delegation on some
+    // DOM node.
+    self.$(".navbar").on('click', '.group', function (evt) {
+      var data = self.findByElement(evt.currentTarget).data();
+      changeToPath(data.path);
+    }).on('click', '.rerun', function (evt) {
+      Session.set("rerunScheduled", true);
+      Meteor._reload.reload();
+    });
   }
-});*/
+});
 
 
 //// Template - failedTests
@@ -339,7 +347,7 @@ Template.failedTests.include({
 //// Template - testTable
 
 Template.testTable.include({
-  data: function() {
+  data: function () {
     topLevelGroupsDep.depend();
     return resultTree;
   }
@@ -348,36 +356,26 @@ Template.testTable.include({
 //// Template - test_group
 
 Template.test_group.include({
-  groupDep: function () {
-    // this template just establishes a dependency. It doesn't actually
-    // render anything.
-    this.dep.depend();
-    return "";
+  built: function () {
+    var self = this;
+    self.$(".group").on('click', '.groupname', function (evt) {
+      var data = self.findByElement(evt.currentTarget).data();
+      changeToPath(data.path);
+      // prevent enclosing groups from also triggering on
+      // same groupname.  It would be cleaner to think of
+      // this as each group only listening to its *own*
+      // groupname, but currently it listens to all of them.
+      evt.stopImmediatePropagation();
+    });
   }
 });
-
-// XXXX EVENTS
-/*
-Template.test_group.events({
-  "click .groupname": function () {
-    changeToPath(this.path);
-  }
-});
-*/
 
 
 //// Template - test
 
 Template.test.include({
-  testDep: function () {
-    // this template just establishes a dependency. It doesn't actually
-    // render anything.
-    this.dep.depend();
-    return "";
-  },
-
   test_status_display: function() {
-    var status = _testStatus(this);
+    var status = _testStatus(this.data());
     if (status == "failed") {
       return "FAIL";
     } else if (status == "succeeded") {
@@ -388,15 +386,15 @@ Template.test.include({
   },
 
   test_time_display: function() {
-    var time = _testTime(this);
+    var time = _testTime(this.data());
     return (typeof time === "number") ? time + " ms" : "";
   },
 
   test_class: function() {
-    var events = this.events || [];
-    var classes = [_testStatus(this)];
+    var events = this.data().events || [];
+    var classes = [_testStatus(this.data())];
 
-    if (this.expanded) {
+    if (this.data().expanded) {
       classes.push("expanded");
     } else {
       classes.push("collapsed");
@@ -406,7 +404,7 @@ Template.test.include({
   },
 
   eventsArray: function() {
-    var events = _.filter(this.events, function(e) {
+    var events = _.filter(this.data().events, function(e) {
       return e.type != "finish";
     });
 
@@ -441,28 +439,34 @@ Template.test.include({
   }
 });
 
-// XXXX EVENTS
-/*Template.test.events({
-  'click .testname': function() {
-    this.expanded = ! this.expanded;
-    this.dep.changed();
+Template.test.include({
+  built: function () {
+    var self = this;
+    self.$(".test").on('click', '.testname', function (evt) {
+      var data = self.findByElement(evt.currentTarget).data();
+      data.expanded = ! data.expanded;
+      data.dep.changed();
+    });
   }
-});*/
+});
 
 
 //// Template - event
 
-// XXXX EVENTS
-/*
-Template.event.events({
-  'click .debug': function () {
-    // the way we manage groupPath, shortName, cookies, etc, is really
-    // messy. needs to be aggressively refactored.
-    forgetEvents({groupPath: this.cookie.groupPath,
-                  test: this.cookie.shortName});
-    Meteor._debugTest(this.cookie, reportResults);
+Template.event.include({
+  built: function () {
+    var self = this;
+    self.$(".event").on('click', '.debug', function (evt) {
+      var data = self.findByElement(evt.currentTarget).data();
+
+      // the way we manage groupPath, shortName, cookies, etc, is really
+      // messy. needs to be aggressively refactored.
+      forgetEvents({groupPath: data.cookie.groupPath,
+                    test: data.cookie.shortName});
+      Meteor._debugTest(data.cookie, reportResults);
+    });
   }
-});*/
+});
 
 Template.event.include({
   get_details: function() {
@@ -484,7 +488,7 @@ Template.event.include({
       }));
     };
 
-    var details = this.details;
+    var details = this.data().details;
 
     if (! details) {
       return null;
@@ -506,6 +510,16 @@ Template.event.include({
   },
 
   is_debuggable: function() {
-    return !!this.cookie;
+    return !!this.data().cookie;
   }
 });
+
+
+// XXX BAD
+// This is the only way we can currently write a helper
+// that gets the current data context inside an #each --
+// make it global.  D'oh.
+window.ThisWithDep = function () {
+  this.dep.depend();
+  return this;
+};

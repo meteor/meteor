@@ -29,10 +29,22 @@ UI.HTML = Component.extend({
 
 UI.If = Component.extend({
   typeName: 'If',
+  init: function () {
+    // here we implement the idea that the one positional arg to
+    // a component becomes its data by default, but components
+    // like `#if` don't want it to be the data context
+    // seen by the content so they can change it.
+    // the implementation will change (but not the idea)
+    // if Geoff's proposal for extend and args is implemented.
+    // It's also possible the right thing to do is
+    // to have `arg` and `data` be separate.
+    this.condition = this.data;
+    this.data = this.parent.data;
+  },
   render: function (buf) {
     var self = this;
     var condition = Deps.isolate(function () {
-      return !! self.data();
+      return !! self.condition();
     });
     buf(condition ? self.content() : self.elseContent());
   }
@@ -40,10 +52,15 @@ UI.If = Component.extend({
 
 UI.Unless = Component.extend({
   typeName: 'Unless',
+  init: function () {
+    // see comment in `If`
+    this.condition = this.data;
+    this.data = this.parent.data;
+  },
   render: function (buf) {
     var self = this;
     var condition = Deps.isolate(function () {
-      return ! self.data();
+      return ! self.condition();
     });
     buf(condition ? self.content() : self.elseContent());
   }

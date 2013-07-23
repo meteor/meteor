@@ -136,7 +136,7 @@ makeRenderBuffer = function (component, options) {
       if (manager.isReactive()) {
         var elemId = elementUid++;
         // don't call the `push` helper, go around it
-        strs.push('data-meteorui-id', curDataAttrNumber,
+        strs.push(' data-meteorui-id', curDataAttrNumber,
                   '="', elemId, '" ');
         if (curDataAttrNumber > maxDataAttrNumber) {
           if (! dataAttrs) {
