@@ -175,6 +175,10 @@ exports.deploy = function (options) {
   var appConfig = {
       METEOR_SETTINGS: options.settings
   };
+
+  if (options.admin)
+    appConfig.admin = true;
+
   try {
     galaxy.call('createApp', options.app, appConfig);
   } catch (e) {

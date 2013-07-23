@@ -941,8 +941,12 @@ Fiber(function () {
             .describe('debug', 'deploy in debug mode (don\'t minify, etc)')
             .describe('settings', 'set optional data for Meteor.settings')
             .alias('ssh-identity', 'i')
-            .describe('ssh-identity', 'Selects a file from which the identity (private key) is read.  See ssh(1) for details.')
+            .describe('ssh-identity', 'Selects a file from which the identity (private key) is read. See ssh(1) for details.')
             .describe('star', 'a star (tarball) to deploy instead of the current meteor app')
+            .alias('admin', 'A')
+            .boolean('admin')
+            .boolean('A')
+            .describe('admin', 'Marks the application as an admin app, it will be available in Galaxy admin interface.')
             .usage(
               "Usage: meteor deploy <site> [--password] [--settings settings.json] [--debug] [--delete]\n" +
                 "\n" +
@@ -967,7 +971,10 @@ Fiber(function () {
                 "\n" +
                 "The --password flag sets an administrative password for the domain. Once\n" +
                 "set, any subsequent 'deploy', 'logs', or 'mongo' command will prompt for\n" +
-                "the password. You can change the password with a second 'deploy' command."
+                "the password. You can change the password with a second 'deploy' command.\n" +
+                "\n" +
+                "The --admin flag marks application as administrative to Galaxy interface.\n" +
+                "Application's web-interface will be accessible from admin's panel only.\n"
             );
 
       var new_argv = opt.argv;
@@ -1012,7 +1019,8 @@ Fiber(function () {
               minify: !argv.debug,
               releaseStamp: context.releaseVersion,
               library: context.library
-            }
+            },
+            admin: argv.admin
           });
         } else {
           deploy.deployCmd({
