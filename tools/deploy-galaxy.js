@@ -35,11 +35,17 @@ var getGalaxy = function (context) {
     }
 
     _galaxy = Meteor.connect(context.galaxy.url);
-    Meteor.setTimeout(function () {
+    var timeout = Meteor.setTimeout(function () {
       if (_galaxy.status().status !== "connected") {
+        console.log(_galaxy.status());
         exitWithError("Could not connect to galaxy " + context.galaxy + ": " + _galaxy.status().status);
       }
     }, 10*1000);
+    var close = _galaxy.close;
+    _galaxy.close = function (/*arguments*/) {
+      Meteor.clearTimeout(timeout);
+      close.apply(_galaxy, arguments);
+    };
   }
 
   return _galaxy;
