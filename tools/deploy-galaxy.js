@@ -37,8 +37,8 @@ var getGalaxy = function (context) {
     _galaxy = Meteor.connect(context.galaxy.url);
     var timeout = Meteor.setTimeout(function () {
       if (_galaxy.status().status !== "connected") {
-        console.log(_galaxy.status());
-        exitWithError("Could not connect to galaxy " + context.galaxy + ": " + _galaxy.status().status);
+        process.stderr.write("Could not connect to galaxy " + context.galaxy.url + ": " + _galaxy.status().status + '\n');
+        process.exit(1);
       }
     }, 10*1000);
     var close = _galaxy.close;
