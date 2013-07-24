@@ -86,10 +86,9 @@ var rejectBadPath = function (p) {
 // - uses
 // - implies
 // - getSourcesFunc
-// - forceExport
+// - exports
 // - dependencyInfo
 // - nodeModulesPath
-// - noExports
 //
 // Do not include the source files in dependencyInfo. They will be
 // added at compile time when the sources are actually read.
@@ -151,10 +150,10 @@ var Slice = function (pkg, options) {
   // local plugins in this package) to compute this.
   self.getSourcesFunc = options.getSourcesFunc || null;
 
-  // Symbols that this slice should export even if @export directives
-  // don't appear in the source code. List of symbols (as strings.)
-  // Empty if loaded from unipackage.
-  self.forceExport = options.forceExport || [];
+  // Symbols that this slice should export. List of symbols (as strings.)  Null
+  // if this slice should not have any exports and in fact should not even
+  // define `Package.name` (ie, test slices).
+  self.exports = options.exports;
 
   // Files and directories that we want to monitor for changes in
   // development mode, such as source files and package.js, in the
@@ -164,14 +163,6 @@ var Slice = function (pkg, options) {
 
   // Has this slice been compiled?
   self.isBuilt = false;
-
-  // All symbols exported from the JavaScript code in this
-  // package. Array of string symbol (eg "Foo", "Bar.baz".) Set only
-  // when isBuilt is true.
-  self.exports = null;
-
-  // Are we allowed to have exports?  (eg, test slices don't export.)
-  self.noExports = !!options.noExports;
 
   // Prelink output. 'prelinkFiles' is the partially linked JavaScript code (an
   // array of objects with keys 'source' and 'servePath', both strings -- see
@@ -489,8 +480,7 @@ _.extend(Slice.prototype, {
         "/packages/" + self.pkg.name +
         (self.sliceName === "main" ? "" : ("." + self.sliceName)) + ".js",
       name: self.pkg.name || null,
-      forceExport: self.forceExport,
-      noExports: self.noExports,
+      exports: self.exports,
       jsAnalyze: jsAnalyze
     });
 
@@ -511,7 +501,6 @@ _.extend(Slice.prototype, {
     });
 
     self.prelinkFiles = results.files;
-    self.exports = results.exports;
     self.packageScopeVariables = results.packageScopeVariables;
     self.resources = resources;
     self.isBuilt = true;
@@ -1406,9 +1395,8 @@ _.extend(Package.prototype, {
     var sources = {use: {client: [], server: []},
                    test: {client: [], server: []}};
 
-    // symbols force-exported
-    var forceExport = {use: {client: [], server: []},
-                       test: {client: [], server: []}};
+    // symbols exported
+    var exports = {client: [], server: []};
 
     // packages used and implied (keys are 'spec', 'unordered', and 'weak').  an
     // "implied" package is a package that will be used by a slice which uses
@@ -1556,12 +1544,9 @@ _.extend(Package.prototype, {
             });
           },
 
-          // Force the export of a symbol from this package. An
-          // alternative to using @export directives. Possibly helpful
-          // when you don't want to modify the source code of a third
-          // party library.
+          // Export symbols from this package.
           //
-          // @param symbols String (eg "Foo", "Foo.bar") or array of String
+          // @param symbols String (eg "Foo") or array of String
           // @param where 'client', 'server', or an array of those
           exportSymbol: function (symbols, where) {
             if (role === "test") {
@@ -1574,8 +1559,15 @@ _.extend(Package.prototype, {
             where = toWhereArray(where);
 
             _.each(symbols, function (symbol) {
+              // XXX be unicode-friendlier
+              if (!symbol.match(/^([_$a-zA-Z][_$a-zA-Z0-9]*)$/)) {
+                buildmessage.error("Bad exported symbol: " + symbol,
+                                   { useMyCaller: true });
+                // recover by ignoring
+                return;
+              }
               _.each(where, function (w) {
-                forceExport[role][w].push(symbol);
+                exports[w].push(symbol);
               });
             });
           },
@@ -1691,13 +1683,9 @@ _.extend(Package.prototype, {
           uses: uses[role][where],
           implies: role === "use" && implies[where] || undefined,
           getSourcesFunc: function () { return sources[role][where]; },
-          forceExport: forceExport[role][where],
+          exports: role === "use" ? exports[where] : null,
           dependencyInfo: dependencyInfo,
-          nodeModulesPath: arch === nativeArch && nodeModulesPath || undefined,
-          // test slices don't get used by other packages, so they have nothing
-          // to export.  (And notably, they should NOT stomp on the Package.foo
-          // object defined by their corresponding use slice.)
-          noExports: role === "test"
+          nodeModulesPath: arch === nativeArch && nodeModulesPath || undefined
         }));
       });
     });
@@ -2021,7 +2009,7 @@ _.extend(Package.prototype, {
       });
 
       slice.isBuilt = true;
-      slice.exports = sliceJson.exports || [];
+      slice.exports = sliceJson.exports || null;
       slice.packageScopeVariables = sliceJson.packageScopeVariables || [];
       slice.prelinkFiles = [];
       slice.resources = [];
@@ -2209,7 +2197,7 @@ _.extend(Package.prototype, {
         // Construct slice metadata
         var sliceJson = {
           format: "unipackage-slice-pre1",
-          exports: slice.exports,
+          exports: slice.exports || undefined,
           packageScopeVariables: slice.packageScopeVariables,
           uses: _.map(slice.uses, function (u) {
             var specParts = u.spec.split('.');

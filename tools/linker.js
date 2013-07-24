@@ -14,8 +14,8 @@ var packageDot = function (name) {
 // Module
 ///////////////////////////////////////////////////////////////////////////////
 
-// options include name, imports, forceExport, useGlobalNamespace,
-// combinedServePath, importStubServePath, and noExports, all of which have the
+// options include name, imports, exports, useGlobalNamespace,
+// combinedServePath, and importStubServePath, all of which have the
 // same meaning as they do when passed to import().
 var Module = function (options) {
   var self = this;
@@ -27,11 +27,10 @@ var Module = function (options) {
   self.files = [];
 
   // options
-  self.forceExport = options.forceExport || [];
+  self.exports = options.exports || [];
   self.useGlobalNamespace = options.useGlobalNamespace;
   self.combinedServePath = options.combinedServePath;
   self.importStubServePath = options.importStubServePath;
-  self.noExports = !!options.noExports;
   self.jsAnalyze = options.jsAnalyze;
 };
 
@@ -60,10 +59,10 @@ _.extend(Module.prototype, {
     return _.max(maxInFile);
   },
 
-  runLinkerFileTransforms: function (exports) {
+  runLinkerFileTransforms: function () {
     var self = this;
     _.each(self.files, function (f) {
-      f.runLinkerFileTransform(exports);
+      f.runLinkerFileTransform(self.exports);
     });
   },
 
@@ -77,17 +76,14 @@ _.extend(Module.prototype, {
   // and see what your globals are. Probably this means we need to
   // move the emission of the Package-scope Variables section (but not
   // the actual static analysis) to the final phase.
-  computeModuleScopeVars: function (exports) {
+  computeModuleScopeVars: function () {
     var self = this;
 
     if (!self.jsAnalyze) {
       // We don't have access to static analysis, probably because we *are* the
-      // js-analyze package.  Let's do a stupid heuristic: any exports that have
-      // no dots are module scope vars. (This works for
-      // js-analyze.JSAnalyze...)
-      return _.filter(exports, function (e) {
-        return e.indexOf('.') === -1;
-      });
+      // js-analyze package.  Let's do a stupid heuristic: the exports are
+      // the only module scope vars. (This works for js-analyze.JSAnalyze...)
+      return self.exports;
     }
 
     // Find all global references in any files
@@ -102,7 +98,7 @@ _.extend(Module.prototype, {
 
   // Output is a list of objects with keys 'source', 'servePath', 'sourceMap',
   // 'sourcePath'
-  getPrelinkedFiles: function (moduleExports) {
+  getPrelinkedFiles: function () {
     var self = this;
 
     if (! self.files.length)
@@ -113,8 +109,7 @@ _.extend(Module.prototype, {
     // preserving the line numbers.
     if (self.useGlobalNamespace) {
       return _.map(self.files, function (file) {
-        var node = file.getPrelinkedOutput({ preserveLineNumbers: true,
-                                             exports: moduleExports });
+        var node = file.getPrelinkedOutput({ preserveLineNumbers: true });
         var results = node.toStringWithSourceMap({
           file: file.servePath
         }); // results has 'code' and 'map' attributes
@@ -146,8 +141,7 @@ _.extend(Module.prototype, {
     _.each(self.files, function (file) {
       if (!_.isEmpty(chunks))
         chunks.push("\n\n\n\n\n\n");
-      chunks.push(file.getPrelinkedOutput({ sourceWidth: sourceWidth,
-                                            exports: moduleExports }));
+      chunks.push(file.getPrelinkedOutput({ sourceWidth: sourceWidth });
     });
 
     var node = new sourcemap.SourceNode(null, null, null, chunks);
@@ -160,21 +154,6 @@ _.extend(Module.prototype, {
       servePath: self.combinedServePath,
       sourceMap: results.map.toString()
     }];
-  },
-
-  // Return our exports as a list of string
-  getExports: function () {
-    var self = this;
-
-    if (self.noExports)
-      return [];
-
-    var exports = {};
-    _.each(self.files, function (file) {
-      _.extend(exports, file.exports);
-    });
-
-    return _.union(_.keys(exports), self.forceExport);
   }
 });
 
@@ -266,15 +245,6 @@ var File = function (inputFile, module) {
 
   // The Module containing this file.
   self.module = module;
-
-  // directives. each is a map from the symbol (given as a string) to
-  // true. (only @export is actually implemented)
-  self.exports = {};
-  self.requires = {};
-  self.provides = {};
-  self.weaks = {};
-
-  self._scanForComments();
 };
 
 _.extend(File.prototype, {
@@ -350,7 +320,6 @@ _.extend(File.prototype, {
   //   numbers don't change between input and output. In this case,
   //   sourceWidth is ignored.
   // - sourceWidth: width in columns to use for the source code
-  // - exports: the module's exports
   //
   // Returns a SourceNode.
   getPrelinkedOutput: function (options) {
@@ -466,65 +435,6 @@ _.extend(File.prototype, {
       node.setSourceContent(self._pathForSourceMap(), self.source);
 
     return node;
-  },
-
-  // If "line" contains nothing but a comment (of either syntax), return the
-  // body of the comment with leading and trailing spaces trimmed (possibly the
-  // empty string). Otherwise return null. (We need to support both comment
-  // syntaxes because the CoffeeScript compiler only emits /**/ comments.)
-  _getSingleLineCommentBody: function (line) {
-    var self = this;
-    var match = /^\s*\/\/(.+)$/.exec(line);
-    if (match) {
-      return match[1].trim();
-    }
-    match = /^\s*\/\*(.+)\*\/\s*$/.exec(line);
-    // Make sure we don't get tricked by lines like
-    //     /* Comment */  var myRegexp = /x*/
-    if (match && match[1].indexOf('*/') === -1)
-      return match[1].trim();
-    return null;
-  },
-
-  // Scan for @export, etc.
-  _scanForComments: function () {
-    var self = this;
-    var lines = self.source.split("\n");
-
-    _.each(lines, function (line) {
-      var commentBody = self._getSingleLineCommentBody(line);
-      if (!commentBody)
-        return;
-
-      // XXX overly permissive. should detect errors
-      var match = /^@(export|require|provide|weak)(\s+.*)$/.exec(commentBody);
-      if (match) {
-        var what = match[1];
-        var symbols = _.map(match[2].split(/,/), function (s) {
-          return s.trim();
-        });
-
-        var badSymbols = _.reject(symbols, function (s) {
-          // XXX should be unicode-friendlier
-          return s.match(/^([_$a-zA-Z][_$a-zA-Z0-9]*)(\.[_$a-zA-Z][_$a-zA-Z0-9]*)*$/);
-        });
-        if (!_.isEmpty(badSymbols)) {
-          buildmessage.error("bad symbols for @" + what + ": " +
-                             JSON.stringify(badSymbols),
-                             { file: self.sourcePath });
-          // recover by ignoring
-        } else if (self.module.noExports && what === "export") {
-          buildmessage.error("@export not allowed in this slice",
-                             { file: self.sourcePath });
-          // recover by ignoring
-        } else {
-          _.each(symbols, function (s) {
-            if (s.length)
-              self[what + "s"][s] = true;
-          });
-        }
-      }
-    });
   }
 });
 
@@ -584,8 +494,7 @@ var bannerPadding = function (bannerWidth) {
 //    and an array of the exports of the module; the file's source will
 //    be replaced by what the function returns.
 //
-// forceExport: an array of symbols (as dotted strings) to force the
-// module to export, even if it wouldn't otherwise
+// exports: an array of symbols that the module exports
 //
 // useGlobalNamespace: make the top level namespace be the same as the
 // global namespace, so that symbols are accessible from the
@@ -599,9 +508,6 @@ var bannerPadding = function (bannerWidth) {
 // containing import setup code for the global environment. this is
 // the servePath to use for it.
 //
-// noExports: if true, the module does not export anything (even an empty
-// Package.foo object). eg, for test slices.
-//
 // jsAnalyze: if possible, the JSAnalyze object from the js-analyze
 // package. (This is not possible if we are currently linking the main slice of
 // the js-analyze package!)
@@ -610,20 +516,14 @@ var bannerPadding = function (bannerWidth) {
 // - files: is an array of output files in the same format as inputFiles
 //   - EXCEPT THAT, for now, sourcePath is omitted and is replaced with
 //     sourceMap (a string) (XXX)
-// - exports: the exports, as a list of string ('Foo', 'Thing.Stuff', etc)
+// - packageScopeVariables: an array of package-scope variables
 var prelink = function (options) {
-  if (options.noExports && options.forceExport &&
-      ! _.isEmpty(options.forceExport)) {
-    throw new Error("Can't force exports if there are no exports!");
-  };
-
   var module = new Module({
     name: options.name,
-    forceExport: options.forceExport,
+    exports: options.exports,
     useGlobalNamespace: options.useGlobalNamespace,
     importStubServePath: options.importStubServePath,
     combinedServePath: options.combinedServePath,
-    noExports: !!options.noExports,
     jsAnalyze: options.jsAnalyze
   });
 
@@ -631,22 +531,19 @@ var prelink = function (options) {
     module.addFile(inputFile);
   });
 
-  // 1) Figure out what this entire module exports.
-  // 2) Run the linkerFileTransforms, which depend on the exports. (This is, eg,
-  //    CoffeeScript arranging to not close over the exports.)
-  // 3) Do static analysis to compute module-scoped variables; this has to be
+  // 1) Run the linkerFileTransforms. (This is, eg, CoffeeScript arranging to
+  //    not close over the exports.)
+  // 2) Do static analysis to compute module-scoped variables; this has to be
   //    done based on the *output* of the transforms. Error recovery from the
   //    static analysis mutates the sources, so this has to be done before
   //    concatenation.
-  // 4) Finally, concatenate.
-  var exports = module.getExports();
-  module.runLinkerFileTransforms(exports);
-  var packageScopeVariables = module.computeModuleScopeVars(exports);
-  var files = module.getPrelinkedFiles(exports);
+  // 3) Finally, concatenate.
+  module.runLinkerFileTransforms();
+  var packageScopeVariables = module.computeModuleScopeVars();
+  var files = module.getPrelinkedFiles();
 
   return {
     files: files,
-    exports: exports,
     packageScopeVariables: packageScopeVariables
   };
 };
@@ -673,7 +570,8 @@ var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
 // 'Foo', "Foo.bar", etc) to the module from which it should be
 // imported (which must load before us at runtime)
 //
-// exports: symbols to export, as an array of symbol names as strings
+// exports: symbols to export, as an array of symbol names as strings.
+//   if null, not even Package.name will be defined.
 //
 // useGlobalNamespace: must be the same value that was passed to link()
 //
@@ -789,7 +687,7 @@ var getImportCode = function (imports, header, omitvar, exports) {
 var getFooter = function (options) {
   var chunks = [];
 
-  if (options.name && options.exports && !_.isEmpty(options.exports)) {
+  if (options.name && options.exports) {
     chunks.push("\n\n/* Exports */\n");
     chunks.push("if (typeof Package === 'undefined') Package = {};\n");
     chunks.push(packageDot(options.name), " = ");
