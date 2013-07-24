@@ -88,6 +88,17 @@ var UI = UI2 = {
   },
   isComponent: function (obj) {
     return obj && obj.isa === UI.Component.isa;
+  },
+  attachRoot: function (comp, parentNode, beforeNode) {
+    comp._requireNotDestroyed();
+
+    if (! comp.isInited)
+      comp.makeRoot();
+
+    if (comp.parent)
+      throw new Error("Component is inited with a parent (not a root)");
+
+    comp._attach(parentNode, beforeNode);
   }
 };
 
@@ -360,11 +371,16 @@ _extend(UI.Component, {
   // It's a DIV rather than a fragment so that jQuery can run against it.
   _offscreen: null,
 
-  // XXX COMMENTS
-
+  // `content` and `elseContent` must be Components or functions
+  // that return components.
   content: UI.Component,
   elseContent: UI.Component,
 
+  // The `render` method is overridden by compiled templates
+  // and other components to declare the component's
+  // constituent HTML/DOM and children.  It's called during
+  // building on the client, and it can also be used on the
+  // client or server to generate initial HTML.
   render: function (buf) {
     buf.write(this.content.extend());
   },
