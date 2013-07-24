@@ -20,6 +20,8 @@ Package.on_use(function (api) {
           ['client', 'server']);
   api.use('check', ['client', 'server']);
 
+  api.use('insecure', {weak: true});
+
   api.exportSymbol('_MongoLivedataTest', 'server');
 
   api.add_files('mongo_driver.js', 'server');

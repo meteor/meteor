@@ -508,10 +508,10 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
   // allow/deny semantics. If false, use insecure mode semantics.
   self._restricted = false;
 
-  // Insecure mode (default to allowing writes). Defaults to 'undefined'
-  // which means use the global Meteor.Collection.insecure.  This
-  // property can be overriden by tests or packages wishing to change
-  // insecure mode behavior of their collections.
+  // Insecure mode (default to allowing writes). Defaults to 'undefined' which
+  // means insecure iff the insecure package is loaded. This property can be
+  // overriden by tests or packages wishing to change insecure mode behavior of
+  // their collections.
   self._insecure = undefined;
 
   self._validators = {
@@ -609,7 +609,7 @@ Meteor.Collection.prototype._updateFetch = function (fields) {
 Meteor.Collection.prototype._isInsecure = function () {
   var self = this;
   if (self._insecure === undefined)
-    return Meteor.Collection.insecure;
+    return !!Package.insecure;
   return self._insecure;
 };
 
