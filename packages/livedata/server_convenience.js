@@ -1,9 +1,3 @@
-Meteor.server = null;
-
-// Note that this is redefined below if we in fact start a server.
-Meteor.refresh = function (notification) {
-};
-
 // Only create a server if we are in an environment with a HTTP server
 // (as opposed to, eg, a command-line tool).
 //
@@ -34,9 +28,14 @@ if (Package.webapp) {
          function (name) {
            Meteor[name] = _.bind(Meteor.server[name], Meteor.server);
          });
+} else {
+  // No server? Make these empty/no-ops.
+  Meteor.server = null;
+  Meteor.refresh = function (notificatio) {
+  };
 }
 
 // Meteor.server used to be called Meteor.default_server. Provide
 // backcompat as a courtesy even though it was never documented.
-// XXX remove this after a while
+// XXX COMPAT WITH 0.6.4
 Meteor.default_server = Meteor.server;

@@ -1,5 +1,5 @@
-Meteor.connection = null;
-
+// Meteor.refresh can be called on the client (if you're in common code) but it
+// only has an effect on the server.
 Meteor.refresh = function (notification) {
 };
 
@@ -22,15 +22,17 @@ if (Meteor.isClient) {
            Meteor[name] = _.bind(Meteor.connection[name], Meteor.connection);
          });
 } else {
-  /* Never set up a default connection on the server. Don't even map
-     subscribe/call/etc onto Meteor. */
+  // Never set up a default connection on the server. Don't even map
+  // subscribe/call/etc onto Meteor.
+  Meteor.connection = null;
 }
 
 // Meteor.connection used to be called
 // Meteor.default_connection. Provide backcompat as a courtesy even
 // though it was never documented.
-// XXX remove this after a while
+// XXX COMPAT WITH 0.6.4
 Meteor.default_connection = Meteor.connection;
 
 // We should transition from Meteor.connect to DDP.connect.
+// XXX COMPAT WITH 0.6.4
 Meteor.connect = DDP.connect;
