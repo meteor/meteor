@@ -906,8 +906,8 @@ _.extend(Connection.prototype, {
 
     // Mark all named subscriptions which are ready (ie, we already called the
     // ready callback) as needing to be revived.
-    // XXX We should also block reconnect quiescence until autopublish is done
-    //     re-publishing to avoid flicker!
+    // XXX We should also block reconnect quiescence until unnamed subscriptions
+    //     (eg, autopublish) are done re-publishing to avoid flicker!
     self._subsBeingRevived = {};
     _.each(self._subscriptions, function (sub, id) {
       if (sub.ready)

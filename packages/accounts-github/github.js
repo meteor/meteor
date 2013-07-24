@@ -12,7 +12,6 @@ if (Meteor.isClient) {
     Github.requestCredential(options, credentialRequestCompleteCallback);
   };
 } else {
-
   Accounts.addAutopublishFields({
     // not sure whether the github api can be used from the browser,
     // thus not sure if we should be sending access tokens; but we do it

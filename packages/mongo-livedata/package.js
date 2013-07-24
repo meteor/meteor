@@ -20,7 +20,11 @@ Package.on_use(function (api) {
           ['client', 'server']);
   api.use('check', ['client', 'server']);
 
+  // Allow us to detect 'insecure'.
   api.use('insecure', {weak: true});
+
+  // Allow us to detect 'autopublish', and publish collections if it's loaded.
+  api.use('autopublish', 'server', {weak: true});
 
   api.exportSymbol('_MongoLivedataTest', 'server');
 

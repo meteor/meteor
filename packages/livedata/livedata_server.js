@@ -1024,9 +1024,6 @@ Server = function () {
 
   self.method_handlers = {};
 
-  self.on_autopublish = []; // array of func if AP disabled, null if enabled
-  self.warned_about_autopublish = false;
-
   self.sessions = {}; // map from id to session
 
   self.stream_server = new StreamServer;
@@ -1176,7 +1173,7 @@ _.extend(Server.prototype, {
       return;
     }
 
-    if (!self.on_autopublish && !options.is_auto) {
+    if (Package.autopublish && !options.is_auto) {
       // They have autopublish on, yet they're trying to manually
       // picking stuff to publish. They probably should turn off
       // autopublish. (This check isn't perfect -- if you create a
@@ -1307,25 +1304,6 @@ _.extend(Server.prototype, {
     if (exception)
       throw exception;
     return result;
-  },
-
-  // A much more elegant way to do this would be: let any autopublish
-  // provider (eg, mongo-livedata) declare a weak package dependency
-  // on the autopublish package, then have that package simply set a
-  // flag that eg the Collection constructor checks, and autopublishes
-  // if necessary.
-  autopublish: function () {
-    var self = this;
-    _.each(self.on_autopublish || [], function (f) { f(); });
-    self.on_autopublish = null;
-  },
-
-  onAutopublish: function (f) {
-    var self = this;
-    if (self.on_autopublish)
-      self.on_autopublish.push(f);
-    else
-      f();
   }
 });
 

@@ -174,12 +174,12 @@ Meteor.Collection = function (name, options) {
   self._defineMutationMethods();
 
   // autopublish
-  if (!options._preventAutopublish &&
-      self._connection && self._connection.onAutopublish)
-    self._connection.onAutopublish(function () {
-      var handler = function () { return self.find(); };
-      self._connection.publish(null, handler, {is_auto: true});
-    });
+  if (Package.autopublish && !options._preventAutopublish && self._connection
+      && self._connection.publish) {
+    self._connection.publish(null, function () {
+      return self.find();
+    }, {is_auto: true});
+  }
 };
 
 ///

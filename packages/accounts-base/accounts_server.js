@@ -312,13 +312,14 @@ Meteor.publish(null, function() {
 // Accounts.addAutopublishFields Notably, this isn't implemented with
 // multiple publishes since DDP only merges only across top-level
 // fields, not subfields (such as 'services.facebook.accessToken')
-autopublishFields = {
+var autopublishFields = {
   loggedInUser: ['profile', 'username', 'emails'],
   otherUsers: ['profile', 'username']
 };
 
 // Add to the list of fields or subfields to be automatically
-// published if autopublish is on
+// published if autopublish is on. Must be called from top-level
+// code (ie, before Meteor.startup hooks run).
 //
 // @param opts {Object} with:
 //   - forLoggedInUser {Array} Array of fields published to the logged-in user
@@ -330,42 +331,45 @@ Accounts.addAutopublishFields = function(opts) {
     autopublishFields.otherUsers, opts.forOtherUsers);
 };
 
-Meteor.server.onAutopublish(function () {
-  // ['profile', 'username'] -> {profile: 1, username: 1}
-  var toFieldSelector = function(fields) {
-    return _.object(_.map(fields, function(field) {
-      return [field, 1];
-    }));
-  };
+if (Package.autopublish) {
+  // Use Meteor.startup to give other packages a chance to call
+  // addAutopublishFields.
+  Meteor.startup(function () {
+    // ['profile', 'username'] -> {profile: 1, username: 1}
+    var toFieldSelector = function(fields) {
+      return _.object(_.map(fields, function(field) {
+        return [field, 1];
+      }));
+    };
 
-  Meteor.server.publish(null, function () {
-    if (this.userId) {
+    Meteor.server.publish(null, function () {
+      if (this.userId) {
+        return Meteor.users.find(
+          {_id: this.userId},
+          {fields: toFieldSelector(autopublishFields.loggedInUser)});
+      } else {
+        return null;
+      }
+    }, /*suppress autopublish warning*/{is_auto: true});
+
+    // XXX this publish is neither dedup-able nor is it optimized by our special
+    // treatment of queries on a specific _id. Therefore this will have O(n^2)
+    // run-time performance every time a user document is changed (eg someone
+    // logging in). If this is a problem, we can instead write a manual publish
+    // function which filters out fields based on 'this.userId'.
+    Meteor.server.publish(null, function () {
+      var selector;
+      if (this.userId)
+        selector = {_id: {$ne: this.userId}};
+      else
+        selector = {};
+
       return Meteor.users.find(
-        {_id: this.userId},
-        {fields: toFieldSelector(autopublishFields.loggedInUser)});
-    } else {
-      return null;
-    }
-  }, /*suppress autopublish warning*/{is_auto: true});
-
-  // XXX this publish is neither dedup-able nor is it optimized by our
-  // special treatment of queries on a specific _id. Therefore this
-  // will have O(n^2) run-time performance every time a user document
-  // is changed (eg someone logging in). If this is a problem, we can
-  // instead write a manual publish function which filters out fields
-  // based on 'this.userId'.
-  Meteor.server.publish(null, function () {
-    var selector;
-    if (this.userId)
-      selector = {_id: {$ne: this.userId}};
-    else
-      selector = {};
-
-    return Meteor.users.find(
-      selector,
-      {fields: toFieldSelector(autopublishFields.otherUsers)});
-  }, /*suppress autopublish warning*/{is_auto: true});
-});
+        selector,
+        {fields: toFieldSelector(autopublishFields.otherUsers)});
+    }, /*suppress autopublish warning*/{is_auto: true});
+  });
+}
 
 // Publish all login service configuration fields other than secret.
 Meteor.publish("meteor.loginServiceConfiguration", function () {

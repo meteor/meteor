@@ -12,7 +12,6 @@ if (Meteor.isClient) {
     Twitter.requestCredential(options, credentialRequestCompleteCallback);
   };
 } else {
-
   var autopublishedFields = _.map(
     // don't send access token. https://dev.twitter.com/discussions/5025
     Twitter.whitelistedFields.concat(['id', 'screenName']),

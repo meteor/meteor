@@ -19,6 +19,10 @@ Package.on_use(function (api) {
   // Detect whether or not the user wants us to audit argument checks.
   api.use(['audit-argument-checks'], 'server', {weak: true});
 
+  // Allow us to detect 'autopublish', so we can print a warning if the user
+  // runs Meteor.publish while it's loaded.
+  api.use('autopublish', 'server', {weak: true});
+
   api.exportSymbol('DDP');
   api.exportSymbol('DDPServer', 'server');
 

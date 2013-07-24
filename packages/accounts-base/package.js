@@ -21,6 +21,10 @@ Package.on_use(function (api) {
   // {{currentUser}}.  If not, no biggie.
   api.use('handlebars', 'client', {weak: true});
 
+  // Allow us to detect 'autopublish', and publish some Meteor.users fields if
+  // it's loaded.
+  api.use('autopublish', 'server', {weak: true});
+
   api.exportSymbol('Accounts');
 
   api.add_files('accounts_common.js', ['client', 'server']);

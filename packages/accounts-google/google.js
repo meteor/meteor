@@ -12,7 +12,6 @@ if (Meteor.isClient) {
     Google.requestCredential(options, credentialRequestCompleteCallback);
   };
 } else {
-
   Accounts.addAutopublishFields({
     forLoggedInUser: _.map(
       // publish access token since it can be used from the client (if

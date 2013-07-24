@@ -12,7 +12,6 @@ if (Meteor.isClient) {
     Meetup.requestCredential(options, credentialRequestCompleteCallback);
   };
 } else {
-
   Accounts.addAutopublishFields({
     // publish all fields including access token, which can legitimately
     // be used from the client (if transmitted over ssl or on
@@ -20,6 +19,4 @@ if (Meteor.isClient) {
     forLoggedInUser: ['services.meetup'],
     forOtherUsers: ['services.meetup.id']
   });
-
-
 }
