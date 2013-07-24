@@ -5,11 +5,9 @@ Package.describe({
   internal: true
 });
 
-Package.on_use(function (api, where) {
-  where = where || ['client', 'server'];
-
-  api.use('underscore', where);
-  api.add_files(['deps.js'], where);
+Package.on_use(function (api) {
+  api.use('underscore');
+  api.add_files('deps.js');
 });
 
 Package.on_test(function (api) {

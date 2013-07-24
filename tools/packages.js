@@ -1467,6 +1467,11 @@ _.extend(Package.prototype, {
           //   flag is not tracked per-environment or per-role; this may
           //   change.)
           use: function (names, where, options) {
+            // Support `api.use(package, {weak: true})` without where.
+            if (where.constructor === Object && !options) {
+              options = where;
+              where = null;
+            }
             options = options || {};
 
             if (!(names instanceof Array))

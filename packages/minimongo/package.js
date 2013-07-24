@@ -3,20 +3,16 @@ Package.describe({
   internal: true
 });
 
-Package.on_use(function (api, where) {
-  where = where || ['client', 'server'];
-
-  // It would be sort of nice if minimongo didn't depend on
-  // underscore, so we could ship it separately.
+Package.on_use(function (api) {
   api.use(['underscore', 'json', 'ejson', 'ordered-dict', 'deps',
-           'random', 'ordered-dict'], where);
+           'random', 'ordered-dict']);
   api.add_files([
     'minimongo.js',
     'selector.js',
     'modify.js',
     'diff.js',
     'objectid.js'
-  ], where);
+  ]);
 });
 
 Package.on_test(function (api) {

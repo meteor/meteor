@@ -9,6 +9,6 @@ Npm.depends({
   "uglify-js": "https://github.com/mishoo/UglifyJS2/tarball/b1febde3e9be32b9d88918ed733efc3796e3f143"
 });
 
-Package.on_use(function (api, where) {
+Package.on_use(function (api) {
   api.add_files('minifiers.js', 'server');
 });

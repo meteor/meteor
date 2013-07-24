@@ -10,7 +10,7 @@ Package._transitional_registerBuildPlugin({
   sources: ['plugin/basic-file-types.js']
 });
 
-Package.on_use(function (api, where) {
+Package.on_use(function (api) {
   api.use('underscore', ['client', 'server']);
 
   api.add_files('client_environment.js', 'client');

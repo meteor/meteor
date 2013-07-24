@@ -3,10 +3,9 @@ Package.describe({
   internal: true
 });
 
-Package.on_use(function (api, where) {
-  where = where || ['client', 'server'];
+Package.on_use(function (api) {
   api.use('underscore');
-  api.add_files('random.js', where);
+  api.add_files('random.js');
 });
 
 Package.on_test(function(api) {
