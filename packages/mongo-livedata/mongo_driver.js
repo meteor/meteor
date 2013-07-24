@@ -124,6 +124,10 @@ MongoConnection = function (url) {
   });
 };
 
+// Some apps want to use this directly. Maybe they shouldn't, but let's not
+// break them yet.
+Meteor._Mongo = MongoConnection;
+
 MongoConnection.prototype.close = function() {
   var self = this;
   // Use Future.wrap so that errors get thrown. This happens to
