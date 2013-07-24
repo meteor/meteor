@@ -168,6 +168,8 @@ Fiber(function () {
     // some kind.
     if (site.indexOf(".") === -1)
       site = site + ".meteor.com";
+    while (site[site.length - 1] === ".")
+      site = site.substring(0, site.length - 1);
     return site;
   };
 
