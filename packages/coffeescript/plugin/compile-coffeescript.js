@@ -28,6 +28,8 @@ var stripExportedVars = function (source, exports) {
   //     up on subsequent lines.)
   // XXX relax these assumptions by doing actual JS parsing (eg with jsparse).
   //     I'd do this now, but there's no easy way to "unparse" a jsparse AST.
+  //     Or alternatively, hack the compiler to allow us to specify unbound
+  //     symbols directly.
 
   for (var i = 0; i < lines.length; i++) {
     var line = lines[i];
@@ -83,8 +85,7 @@ var addSharedHeader = function (source, sourceMap) {
   // as a var in the package closure, and in "app" mode where it will end up as
   // a global.
   //
-  // This ends in a newline in case the first line is a linker @comment, which
-  // should be at the beginning of a line.
+  // This ends in a newline to make the source map easier to adjust.
   var header = ("__coffeescriptShare = typeof __coffeescriptShare === 'object' " +
                 "? __coffeescriptShare : {}; " +
                 "var share = __coffeescriptShare;\n");
