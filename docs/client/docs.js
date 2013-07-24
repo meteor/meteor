@@ -139,6 +139,7 @@ var toc = [
     {name: "Server connections", id: "connections"}, [
       "Meteor.status",
       "Meteor.reconnect",
+      "Meteor.disconnect",
       "Meteor.connect"
     ],
 

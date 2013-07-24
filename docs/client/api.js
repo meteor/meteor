@@ -447,6 +447,14 @@ Template.api.reconnect = {
     "This method does nothing if the client is already connected."]
 };
 
+Template.api.disconnect = {
+  id: "meteor_disconnect",
+  name: "Meteor.disconnect()",
+  locus: "Client",
+  descr: [
+    "Disconnect the connection to the server."]
+};
+
 Template.api.connect = {
   id: "meteor_connect",
   name: "Meteor.connect(url)",
