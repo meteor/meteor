@@ -1,4 +1,3 @@
-// @export Meteor.render
 Meteor.render = function (htmlFunc) {
   return Spark.render(function () {
     return Spark.isolate(
@@ -9,7 +8,6 @@ Meteor.render = function (htmlFunc) {
   });
 };
 
-// @export Meteor.renderList
 Meteor.renderList = function (cursor, itemFunc, elseFunc) {
   return Spark.render(function () {
     return Spark.list(cursor, function (item) {

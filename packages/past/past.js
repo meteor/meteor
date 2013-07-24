@@ -6,8 +6,6 @@
 
 // Old under_score version of camelCase public API names.
 //
-// @export Meteor.is_client
-// @export Meteor.is_server
 Meteor.is_client = Meteor.isClient;
 Meteor.is_server = Meteor.isServer;
 
@@ -19,19 +17,15 @@ Meteor.is_server = Meteor.isServer;
 // We used to require a special "autosubscribe" call to reactively subscribe to
 // things. Now, it works with autorun.
 //
-// @export Meteor.autosubscribe
 Meteor.autosubscribe = Deps.autorun;
 
 // "new deps" back-compat
 //
-// @export Meteor.flush
-// @export Meteor.autorun
 Meteor.flush = Deps.flush;
 Meteor.autorun = Deps.autorun;
 
 // Deps API that briefly existed in 0.5.9
 //
-// @export Deps.depend
 Deps.depend = function (d) {
   return d.depend();
 };
@@ -39,7 +33,6 @@ Deps.depend = function (d) {
 // Instead of the "random" package with Random.id(), we used to have this
 // Meteor.uuid() implementing the RFC 4122 v4 UUID.
 //
-// @export Meteor.uuid
 Meteor.uuid = function () {
   var HEX_DIGITS = "0123456789abcdef";
   var s = [];

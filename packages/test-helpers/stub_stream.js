@@ -1,4 +1,3 @@
-// @export StubStream
 StubStream = function () {
   var self = this;
 

@@ -21,22 +21,18 @@ _.extend(Meteor, {
   // inside a server method are not part of the method invocation and
   // should clear out the CurrentInvocation environment variable.
 
-  // @export Meteor.setTimeout
   setTimeout: function (f, duration) {
     return setTimeout(bindAndCatch("setTimeout callback", f), duration);
   },
 
-  // @export Meteor.setInterval
   setInterval: function (f, duration) {
     return setInterval(bindAndCatch("setInterval callback", f), duration);
   },
 
-  // @export Meteor.clearInterval
   clearInterval: function(x) {
     return clearInterval(x);
   },
 
-  // @export Meteor.clearTimeout
   clearTimeout: function(x) {
     return clearTimeout(x);
   },
@@ -45,7 +41,6 @@ _.extend(Meteor, {
   // Deps.afterFlush or Node's nextTick (in practice). Then tests can do:
   //    callSomethingThatDefersSomeWork();
   //    Meteor.defer(expect(somethingThatValidatesThatTheWorkHappened));
-  // @export Meteor.defer
   defer: function (f) {
     Meteor._setImmediate(bindAndCatch("defer callback", f));
   }

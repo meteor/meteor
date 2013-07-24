@@ -25,6 +25,8 @@
 // timer' button again. the problem is almost certainly in afterFlush
 // (not hard to see what it is.)
 
+Spark = {};
+_SparkTest = {};
 
 var currentRenderer = (function () {
   var current = null;
@@ -42,7 +44,6 @@ var currentRenderer = (function () {
 })();
 
 TAG = "_spark_" + Random.id();
-// @export _SparkTest.TAG
 _SparkTest.TAG = TAG;
 
 // We also export this as Spark._TAG due to a historical accident. I
@@ -50,7 +51,6 @@ _SparkTest.TAG = TAG;
 // stuff?)  but let's keep exporting it since without it it would be
 // very difficult for code outside the spark package to, eg, walk
 // spark's liverange hierarchy.
-// @export Spark._TAG
 Spark._TAG = TAG;
 
 // XXX document contract for each type of annotation?
@@ -66,14 +66,12 @@ var ANNOTATION_LIST_ITEM = "item";
 // XXX why do we need, eg, _ANNOTATION_ISOLATE? it has no semantics?
 
 // Use from tests to turn on extra UniversalEventListener sanity checks
-// @export _SparkTest.setCheckIECompliance
 var checkIECompliance = false;
 _SparkTest.setCheckIECompliance = function (value) {
   checkIECompliance = value;
 };
 
 // Private interface to 'preserve-inputs' package
-// @export Spark._addGlobalPreserve
 var globalPreserves = {};
 Spark._addGlobalPreserve = function (selector, value) {
   globalPreserves[selector] = value;
@@ -426,7 +424,6 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
   });
 };
 
-// @export Spark.render
 Spark.render = function (htmlFunc) {
   var renderer = new Renderer;
   var frag = renderer.materialize(htmlFunc);
@@ -552,7 +549,6 @@ var pathForRange = function (r) {
 // `range` is a region of `document`. Modify it in-place so that it
 // matches the result of Spark.render(htmlFunc), preserving landmarks.
 //
-// @export Spark.renderToRange
 Spark.renderToRange = function (range, htmlFunc) {
   // `range` may be out-of-document and we don't check here.
   // XXX should we?
@@ -677,7 +673,6 @@ Spark.renderToRange = function (range, htmlFunc) {
 // and `end`, and call their 'finalize' function if any. Or instead of
 // `start` and `end` you may pass a fragment in `start`.
 //
-// @export Spark.finalize
 Spark.finalize = function (start, end) {
   if (! start.parentNode && start.nodeType !== 11 /* DocumentFragment */) {
     // Workaround for LiveRanges' current inability to contain
@@ -698,13 +693,11 @@ Spark.finalize = function (start, end) {
 /* Data contexts                                                              */
 /******************************************************************************/
 
-// @export Spark.setDataContext
 Spark.setDataContext = withRenderer(function (dataContext, html, _renderer) {
   return _renderer.annotate(
     html, ANNOTATION_DATA, { data: dataContext });
 });
 
-// @export Spark.getDataContext
 Spark.getDataContext = function (node) {
   var range = findRangeOfType(ANNOTATION_DATA, node);
   return range && range.data;
@@ -745,7 +738,6 @@ var getListener = function () {
   return universalListener;
 };
 
-// @export Spark.attachEvents
 Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
   var listener = getListener();
 
@@ -861,7 +853,6 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
 /* Isolate                                                                    */
 /******************************************************************************/
 
-// @export Spark.isolate
 Spark.isolate = function (htmlFunc) {
   var renderer = currentRenderer.get();
   if (!renderer)
@@ -925,7 +916,6 @@ if (typeof LocalCollection !== 'undefined') {
   idStringify = function (id) { return id; };
 }
 
-// @export Spark.list
 Spark.list = function (cursor, itemFunc, elseFunc) {
   elseFunc = elseFunc || function () { return ''; };
 
@@ -1100,7 +1090,6 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
 
 var nextLandmarkId = 1;
 
-// @export Spark.Landmark
 Spark.Landmark = function () {
   this.id = nextLandmarkId++;
   this._range = null; // will be set when put onscreen
@@ -1128,14 +1117,12 @@ _.extend(Spark.Landmark.prototype, {
   }
 });
 
-// @export Spark.UNIQUE_LABEL
 Spark.UNIQUE_LABEL = ['UNIQUE_LABEL'];
 
 // label must be a string.
 // or pass label === null to not drop a label after all (meaning that
 // this function is a noop)
 //
-// @export Spark.labelBranch
 Spark.labelBranch = function (label, htmlFunc) {
   var renderer = currentRenderer.get();
   if (! renderer || label === null)
@@ -1172,7 +1159,6 @@ Spark.labelBranch = function (label, htmlFunc) {
   // nodes?)
 };
 
-// @export Spark.createLandmark
 Spark.createLandmark = function (options, htmlFunc) {
   var renderer = currentRenderer.get();
   if (! renderer) {
@@ -1258,7 +1244,6 @@ Spark.createLandmark = function (options, htmlFunc) {
     });
 };
 
-// @export _SparkTest.getEnclosingLandmark
 _SparkTest.getEnclosingLandmark = function (node) {
   var range = findRangeOfType(ANNOTATION_LANDMARK, node);
   return range ? range.landmark : null;

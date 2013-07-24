@@ -1,7 +1,6 @@
 var crypto = Npm.require("crypto");
 var querystring = Npm.require("querystring");
 
-// @export OAuth1Binding
 // An OAuth1 wrapper around http calls which helps get tokens and
 // takes care of HTTP headers
 //

@@ -24,14 +24,14 @@
 // routes would break tinytest... so allow policy instances to be
 // constructed for testing.
 
-// XXX export is the only way to share with our tests. annoying!
-// @export _RoutePolicyConstructor
-_RoutePolicyConstructor = function () {
+_RoutePolicyTest = {};
+
+var RoutePolicyConstructor = _RoutePolicyTest.Constructor = function () {
   var self = this;
   self.urlPrefixTypes = {};
 };
 
-_.extend(_RoutePolicyConstructor.prototype, {
+_.extend(RoutePolicyConstructor.prototype, {
 
   urlPrefixMatches: function (urlPrefix, url) {
     return url.substr(0, urlPrefix.length) === urlPrefix;
@@ -121,5 +121,4 @@ _.extend(_RoutePolicyConstructor.prototype, {
   }
 });
 
-// @export RoutePolicy
-RoutePolicy = new _RoutePolicyConstructor();
+RoutePolicy = new RoutePolicyConstructor();

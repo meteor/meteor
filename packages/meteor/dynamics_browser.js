@@ -3,7 +3,6 @@
 var nextSlot = 0;
 var currentValues = [];
 
-// @export Meteor.EnvironmentVariable
 Meteor.EnvironmentVariable = function () {
   this.slot = nextSlot++;
 };
@@ -25,7 +24,6 @@ _.extend(Meteor.EnvironmentVariable.prototype, {
   }
 });
 
-// @export Meteor.bindEnvironment
 Meteor.bindEnvironment = function (func, onException, _this) {
   // needed in order to be able to create closures inside func and
   // have the closed variables not change back to their original

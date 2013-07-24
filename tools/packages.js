@@ -1435,6 +1435,17 @@ _.extend(Package.prototype, {
     // one. #OldStylePackageSupport
     _.each(["use", "test"], function (role) {
       if (roleHandlers[role]) {
+        var toArray = function (x) {
+          if (x instanceof Array)
+            return x;
+          return x ? [x] : [];
+        };
+        var toWhereArray = function (where) {
+          if (where instanceof Array)
+            return where;
+          return where ? [where] : ['client', 'server'];
+        };
+
         var api = {
           // Called when this package wants to make another package be
           // used. Can also take literal package objects, if you have
@@ -1474,11 +1485,8 @@ _.extend(Package.prototype, {
             }
             options = options || {};
 
-            if (!(names instanceof Array))
-              names = names ? [names] : [];
-
-            if (!(where instanceof Array))
-              where = where ? [where] : ["client", "server"];
+            names = toArray(names);
+            where = toWhereArray(where);
 
             // A normal dependency creates an ordering constraint and a "if I'm
             // used, use that" constraint. Unordered dependencies lack the
@@ -1517,11 +1525,8 @@ _.extend(Package.prototype, {
               return;
             }
 
-            if (!(names instanceof Array))
-              names = names ? [names] : [];
-
-            if (!(where instanceof Array))
-              where = where ? [where] : ["client", "server"];
+            names = toArray(names);
+            where = toWhereArray(where);
 
             _.each(names, function (name) {
               _.each(where, function (w) {
@@ -1538,11 +1543,8 @@ _.extend(Package.prototype, {
           // be processed according to its extension (eg, *.coffee
           // files will be compiled to JavaScript.)
           add_files: function (paths, where, fileOptions) {
-            if (!(paths instanceof Array))
-              paths = paths ? [paths] : [];
-
-            if (!(where instanceof Array))
-              where = where ? [where] : ["client", "server"];
+            paths = toArray(paths);
+            where = toWhereArray(where);
 
             _.each(paths, function (path) {
               _.each(where, function (w) {
@@ -1568,11 +1570,8 @@ _.extend(Package.prototype, {
               // recover by ignoring
               return;
             }
-            if (!(symbols instanceof Array))
-              symbols = symbols ? [symbols] : [];
-
-            if (!(where instanceof Array))
-              where = where ? [where] : [];
+            symbols = toArray(symbols);
+            where = toWhereArray(where);
 
             _.each(symbols, function (symbol) {
               _.each(where, function (w) {

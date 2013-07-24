@@ -69,7 +69,6 @@ toWebsocketUrl = function (url) {
   return ret;
 };
 
-// @export _LivedataTest.toSockjsUrl
 _LivedataTest.toSockjsUrl = toSockjsUrl;
 
 

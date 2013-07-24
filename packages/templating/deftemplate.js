@@ -1,4 +1,3 @@
-// @export Template
 Template = {};
 
 var registeredPartials = {};

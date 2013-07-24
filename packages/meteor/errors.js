@@ -10,7 +10,6 @@ var inherits = function (child, parent) {
 // environments. constructor can set fields on `this` (and should probably set
 // `message`, which is what gets displayed at the top of a stack trace).
 //
-// @export Meteor.makeErrorType
 Meteor.makeErrorType = function (name, constructor) {
   var errorClass = function (/*arguments*/) {
     var self = this;
@@ -51,7 +50,6 @@ Meteor.makeErrorType = function (name, constructor) {
 // EJSON.addType here because the type is determined by location in the
 // protocol, not text on the wire.)
 //
-// @export Meteor.Error
 Meteor.Error = Meteor.makeErrorType(
   "Meteor.Error",
   function (error, reason, details) {

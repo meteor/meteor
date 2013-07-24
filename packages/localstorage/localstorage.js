@@ -1,5 +1,4 @@
 // This is not an ideal name, but we can change it later.
-// @export Meteor._localStorage
 
 if (window.localStorage) {
   Meteor._localStorage = {

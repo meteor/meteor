@@ -1,3 +1,5 @@
+DDPServer = {};
+
 var Fiber = Npm.require('fibers');
 
 // This file contains classes:
@@ -102,7 +104,6 @@ var SessionCollectionView = function (collectionName, sessionCallbacks) {
   self.callbacks = sessionCallbacks;
 };
 
-// @export _LivedataTest.SessionCollectionView
 _LivedataTest.SessionCollectionView = SessionCollectionView;
 
 
@@ -1339,7 +1340,6 @@ var calculateVersion = function (clientSupportedVersions,
   return correctVersion;
 };
 
-// @export _LivedataTest.calculateVersion
 _LivedataTest.calculateVersion = calculateVersion;
 
 
@@ -1370,7 +1370,6 @@ var wrapInternalException = function (exception, context) {
 
 // Private interface for 'audit-argument-checks' package.
 //
-// @export DDP._setAuditArgumentChecks
 var shouldAuditArgumentChecks = false;
 DDP._setAuditArgumentChecks = function (value) {
   shouldAuditArgumentChecks = value;

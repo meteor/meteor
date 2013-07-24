@@ -7,6 +7,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('underscore');
+  api.exportSymbol('Deps');
   api.add_files('deps.js');
 });
 

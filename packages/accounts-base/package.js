@@ -22,6 +22,8 @@ Package.on_use(function (api) {
   // {{currentUser}}.  If not, no biggie.
   api.use('handlebars', 'client', {weak: true});
 
+  api.exportSymbol('Accounts');
+
   api.add_files('accounts_common.js', ['client', 'server']);
   api.add_files('accounts_server.js', 'server');
 

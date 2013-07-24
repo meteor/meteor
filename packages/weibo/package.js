@@ -13,6 +13,8 @@ Package.on_use(function(api) {
   api.use('random', 'client');
   api.use('service-configuration', ['client', 'server']);
 
+  api.exportSymbol('Weibo');
+
   api.add_files(
     ['weibo_configure.html', 'weibo_configure.js'],
     'client');

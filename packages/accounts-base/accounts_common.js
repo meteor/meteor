@@ -1,6 +1,7 @@
+Accounts = {};
+
 // Currently this is read directly by packages like accounts-password
 // and accounts-ui-unstyled.
-// @export Accounts._options
 Accounts._options = {};
 
 // Set up config for the accounts system. Call this on both the client
@@ -19,7 +20,6 @@ Accounts._options = {};
 // - forbidClientAccountCreation {Boolean}
 //     Do not allow clients to create accounts directly.
 //
-// @export Accounts.config
 Accounts.config = function(options) {
   // validate option keys
   var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation"];
@@ -45,20 +45,16 @@ Accounts.config = function(options) {
 // some fields. Code to autopublish this is in accounts_server.js.
 // XXX Allow users to configure this collection name.
 //
-// @export Meteor.users
 Meteor.users = new Meteor.Collection("users", {_preventAutopublish: true});
 // There is an allow call in accounts_server that restricts this
 // collection.
 
 // loginServiceConfiguration and ConfigError are maintained for backwards compatibility
-// @export Accounts.loginServiceConfiguration
-// @export Accounts.ConfigError
 Accounts.loginServiceConfiguration = ServiceConfiguration.configurations;
 Accounts.ConfigError = ServiceConfiguration.ConfigError;
 
 // Thrown when the user cancels the login process (eg, closes an oauth
 // popup, declines retina scan, etc)
-// @export Accounts.LoginCancelledError
 Accounts.LoginCancelledError = function(description) {
   this.message = description;
 };

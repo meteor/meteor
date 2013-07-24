@@ -5,7 +5,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use(['underscore'], 'client');
-
+  api.exportSymbol('UniversalEventListener', 'client');
   api.add_files(['listener.js',
                  'events-w3c.js',
                  'events-ie.js'], 'client');

@@ -14,6 +14,8 @@ Package.on_use(function(api) {
   api.use('random', 'client');
   api.use('service-configuration', ['client', 'server']);
 
+  api.exportSymbol('Meetup');
+
   api.add_files(
     ['meetup_configure.html', 'meetup_configure.js'],
     'client');

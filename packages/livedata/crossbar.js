@@ -1,4 +1,3 @@
-// @export DDP._InvalidationCrossbar
 DDP._InvalidationCrossbar = function () {
   var self = this;
 

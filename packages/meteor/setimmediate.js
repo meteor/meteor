@@ -135,7 +135,6 @@ function useTimeout() {
 }
 
 
-// @export Meteor._setImmediate
 Meteor._setImmediate =
   useSetImmediate() ||
   usePostMessage() ||

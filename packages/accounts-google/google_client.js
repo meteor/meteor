@@ -1,4 +1,3 @@
-// @export Meteor.loginWithGoogle
 Meteor.loginWithGoogle = function(options, callback) {
   // support a callback without options
   if (! callback && typeof options === "function") {

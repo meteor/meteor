@@ -6,7 +6,6 @@ if (Package.reload) {
   }
 }
 
-// @export Session
 Session = new ReactiveDict(migratedKeys);
 
 if (Package.reload) {

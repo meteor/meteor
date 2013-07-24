@@ -1,5 +1,8 @@
 var Fiber = Npm.require('fibers');
 
+Oauth = {};
+_OauthTest = {};
+
 RoutePolicy.declare('/_oauth/', 'network');
 
 var registeredServices = {};
@@ -8,7 +11,6 @@ var registeredServices = {};
 // 'oauth1' and 'oauth2' packages manipulate this directly to register
 // for callbacks.
 //
-// @export Oauth._requestHandlers
 Oauth._requestHandlers = {};
 
 
@@ -28,7 +30,6 @@ Oauth._requestHandlers = {};
 //       up in the user's services[name] field
 //     - `null` if the user declined to give permissions
 //
-// @export Oauth.registerService
 Oauth.registerService = function (name, version, urls, handleOauthRequest) {
   if (registeredServices[name])
     throw new Error("Already registered the " + name + " OAuth service");
@@ -42,7 +43,6 @@ Oauth.registerService = function (name, version, urls, handleOauthRequest) {
 };
 
 // For test cleanup.
-// @export _OauthTest.unregisterService
 _OauthTest.unregisterService = function (name) {
   delete registeredServices[name];
 };
@@ -58,15 +58,12 @@ _OauthTest.unregisterService = function (name) {
 //
 // XXX we should periodically clear old entries
 //
-// @export Oauth._loginResultForCredentialToken
 Oauth._loginResultForCredentialToken = {};
 
-// @export Oauth.hasCredential
 Oauth.hasCredential = function(credentialToken) {
   return _.has(Oauth._loginResultForCredentialToken, credentialToken);
 }
 
-// @export Oauth.retrieveCredential
 Oauth.retrieveCredential = function(credentialToken) {
   var result = Oauth._loginResultForCredentialToken[credentialToken];
   delete Oauth._loginResultForCredentialToken[credentialToken];
@@ -132,7 +129,6 @@ middleware = function (req, res, next) {
   }
 };
 
-// @export _OauthTest.middleware
 _OauthTest.middleware = middleware;
 
 // Handle /_oauth/* paths and extract the service name
@@ -162,7 +158,6 @@ var ensureConfigured = function(serviceName) {
 };
 
 // Internal: used by the oauth1 and oauth2 packages
-// @export Oauth._renderOauthResults
 Oauth._renderOauthResults = function(res, query) {
   // We support ?close and ?redirect=URL. Any other query should
   // just serve a blank page

@@ -5,6 +5,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('underscore');
+  api.exportSymbol('Random');
   api.add_files('random.js');
 });
 

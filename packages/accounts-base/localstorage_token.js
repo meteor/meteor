@@ -5,7 +5,6 @@
 
 // Login with a Meteor access token. This is the only public function
 // here.
-// @export Meteor.loginWithToken
 Meteor.loginWithToken = function (token, callback) {
   Accounts.callLoginMethod({
     methodArguments: [{resume: token}],
@@ -15,14 +14,12 @@ Meteor.loginWithToken = function (token, callback) {
 var autoLoginEnabled = true;
 
 // Semi-internal API. Call at startup to prevent automatic login.
-// @export Accounts._disableAutoLogin
 Acocunts._disableAutoLogin = function () {
   autoLoginEnabled = false;
 };
 
 // Semi-internal API. Call this function to re-enable auto login after
 // if it was disabled at startup.
-// @export Accounts._enableAutoLogin
 Accounts._enableAutoLogin = function () {
   autoLoginEnabled = true;
   pollStoredLoginToken();
@@ -40,7 +37,6 @@ var userIdKey = "Meteor.userId";
 // Call this from the top level of the test file for any test that does
 // logging in and out, to protect multiple tabs running the same tests
 // simultaneously from interfering with each others' localStorage.
-// @export Accounts._isolateLoginTokenForTest
 Accounts._isolateLoginTokenForTest = function () {
   loginTokenKey = loginTokenKey + Random.id();
   userIdKey = userIdKey + Random.id();
@@ -67,7 +63,6 @@ unstoreLoginToken = function() {
 // This is private, but it is exported for now because it is used by a
 // test in accounts-password.
 //
-// @export Accounts._storedLoginToken
 storedLoginToken = Accounts._storedLoginToken = function() {
   return Meteor._localStorage.getItem(loginTokenKey);
 };

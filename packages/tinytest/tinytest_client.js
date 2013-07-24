@@ -2,7 +2,6 @@
 // the server. Sets a 'server' flag on test results that came from the
 // server.
 //
-// @export Tinytest._runTestsEverywhere
 Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix) {
   var runId = Random.id();
   var localComplete = false;

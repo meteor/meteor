@@ -2,6 +2,9 @@ var Future = Npm.require('fibers/future');
 var urlModule = Npm.require('url');
 var MailComposer = Npm.require('mailcomposer').MailComposer;
 
+Email = {};
+_EmailTest = {};
+
 var makePool = function (mailUrlString) {
   var mailUrl = urlModule.parse(mailUrlString);
   if (mailUrl.protocol !== 'smtp:')
@@ -46,13 +49,11 @@ var next_devmode_mail_id = 0;
 var output_stream = process.stdout;
 
 // Testing hooks
-// @export _EmailTest.overrideOutputStream
 _EmailTest.overrideOutputStream = function (stream) {
   next_devmode_mail_id = 0;
   output_stream = stream;
 };
 
-// @export _EmailTest.restoreOutputStream
 _EmailTest.restoreOutputStream = function () {
   output_stream = process.stdout;
 };
@@ -88,7 +89,6 @@ var smtpSend = function (mc) {
  * ahead and send the email (or at least, try subsequent hooks), or
  * false to skip sending.
  */
-// @export Email._hookSend
 var sendHooks = [];
 Email._hookSend = function (f) {
   sendHooks.push(f);
@@ -113,7 +113,6 @@ Email._hookSend = function (f) {
  * @param options.html {String} RFC5322 mail body (HTML)
  * @param options.headers {Object} custom RFC5322 headers (dictionary)
  */
-// @export Email.send
 Email.send = function (options) {
   for (var i = 0; i < sendHooks.length; i++)
     if (! sendHooks[i](options))

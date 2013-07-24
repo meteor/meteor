@@ -8,6 +8,8 @@ Package.on_use(function (api) {
   // Resolve circular dependency with webapp. We can only use WebApp via
   // Package.webapp and only after initial load.
   api.use('webapp', 'server', {unordered: true});
+  api.exportSymbol('RoutePolicy', 'server');
+  api.exportSymbol('_RoutePolicyTest', 'server');
   api.add_files('routepolicy.js', 'server');
 });
 

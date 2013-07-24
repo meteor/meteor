@@ -571,5 +571,4 @@ Patcher._copyAttributes = function(tgt, src) {
   }
 };
 
-// @export _SparkTest.Patcher
 _SparkTest.Patcher = Patcher;

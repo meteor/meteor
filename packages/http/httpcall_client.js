@@ -1,4 +1,3 @@
-// @export Meteor.http.call
 Meteor.http.call = function(method, url, options, callback) {
 
   ////////// Process arguments //////////

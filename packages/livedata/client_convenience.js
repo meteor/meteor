@@ -1,7 +1,5 @@
-// @export Meteor.connection
 Meteor.connection = null;
 
-// @export Meteor.refresh
 Meteor.refresh = function (notification) {
 };
 
@@ -18,13 +16,6 @@ if (Meteor.isClient) {
 
   // Proxy the public methods of Meteor.connection so they can
   // be called directly on Meteor.
-  // @export Meteor.subscribe
-  // @export Meteor.methods
-  // @export Meteor.call
-  // @export Meteor.apply
-  // @export Meteor.status
-  // @export Meteor.reconnect
-  // @export Meteor.disconnect
   _.each(['subscribe', 'methods', 'call', 'apply', 'status', 'reconnect',
           'disconnect'],
          function (name) {
@@ -42,5 +33,4 @@ if (Meteor.isClient) {
 Meteor.default_connection = Meteor.connection;
 
 // We should transition from Meteor.connect to DDP.connect.
-// @export Meteor.connect
 Meteor.connect = DDP.connect;

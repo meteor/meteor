@@ -1,3 +1,5 @@
+SRP = {};
+
 /////// PUBLIC CLIENT
 
 /**
@@ -10,7 +12,6 @@
  *   testing.  Random UUID if not provided.
  * - SRP parameters (see _defaults and paramsFromOptions below)
  */
-// @export SRP.generateVerifier
 SRP.generateVerifier = function (password, options) {
   var params = paramsFromOptions(options);
 
@@ -30,7 +31,6 @@ SRP.generateVerifier = function (password, options) {
 };
 
 // For use with check().
-// @export SRP.matchVerifier
 SRP.matchVerifier = {
   identity: String,
   salt: String,
@@ -47,7 +47,6 @@ SRP.matchVerifier = {
  *      passed in for testing.
  * - SRP parameters (see _defaults and paramsFromOptions below)
  */
-// @export SRP.Client
 SRP.Client = function (password, options) {
   var self = this;
   self.params = paramsFromOptions(options);
@@ -174,7 +173,6 @@ SRP.Client.prototype.verifyConfirmation = function (confirmation) {
  *      passed in for testing.
  * - SRP parameters (see _defaults and paramsFromOptions below)
  */
-// @export SRP.Server
 SRP.Server = function (verifier, options) {
   var self = this;
   self.params = paramsFromOptions(options);

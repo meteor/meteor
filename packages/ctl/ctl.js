@@ -165,7 +165,6 @@ Ctl.Commands.push({
   }
 });
 
-// @export main
 main = function (argv) {
   return Ctl.main(argv);
 };

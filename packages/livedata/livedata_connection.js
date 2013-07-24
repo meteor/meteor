@@ -1383,7 +1383,6 @@ _.extend(Connection.prototype, {
   }
 });
 
-// @export _LivedataTest.Connection
 _LivedataTest.Connection = Connection;
 
 // @param url {String} URL to Meteor app,
@@ -1393,7 +1392,6 @@ _LivedataTest.Connection = Connection;
 //     "/",
 //     "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"
 //
-// @export DDP.connect
 DDP.connect = function (url, _reloadOnUpdate) {
   var ret = new Connection(
     url, {reloadOnUpdate: _reloadOnUpdate});
@@ -1404,7 +1402,6 @@ DDP.connect = function (url, _reloadOnUpdate) {
 // Hack for `spiderable` package: a way to see if the page is done
 // loading all the data it needs.
 //
-// @export DDP._allSubscriptionsReady
 allConnections = [];
 DDP._allSubscriptionsReady = function () {
   return _.all(allConnections, function (conn) {

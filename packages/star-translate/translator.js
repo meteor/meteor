@@ -2,7 +2,6 @@ var fs = Npm.require('fs');
 var path = Npm.require('path');
 var ncp = Npm.require('ncp').ncp;
 
-//@export StarTranslator
 StarTranslator = {};
 
 // Produces a star version of bundlePath in translatedPath, where bundlePath can

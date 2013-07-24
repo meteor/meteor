@@ -8,6 +8,7 @@ Npm.depends({
 });
 
 Package.on_use(function (api) {
+  api.exportSymbol('Log');
   api.use(['underscore', 'ejson']);
   api.add_files('logging.js');
 });

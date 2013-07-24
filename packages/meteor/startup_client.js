@@ -19,7 +19,6 @@ if (document.addEventListener) {
   window.attachEvent('load', ready);
 }
 
-// @export Meteor.startup
 Meteor.startup = function (cb) {
   var doScroll = !document.addEventListener &&
     document.documentElement.doScroll;

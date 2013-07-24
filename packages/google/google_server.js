@@ -1,5 +1,6 @@
+Google = {};
+
 // https://developers.google.com/accounts/docs/OAuth2Login#userinfocall
-// @export Google.whitelistedFields
 Google.whitelistedFields = ['id', 'email', 'verified_email', 'name', 'given_name',
                    'family_name', 'picture', 'locale', 'timezone', 'gender'];
 
@@ -75,7 +76,6 @@ var getIdentity = function (accessToken) {
 };
 
 
-// @export Google.retrieveCredential
 Google.retrieveCredential = function(credentialToken) {
   return Oauth.retrieveCredential(credentialToken);
 };

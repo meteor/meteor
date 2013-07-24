@@ -67,22 +67,18 @@ populateData = function(response) {
   }
 };
 
-// @export Meteor.http.get
 Meteor.http.get = function (/* varargs */) {
   return Meteor.http.call.apply(this, ["GET"].concat(_.toArray(arguments)));
 };
 
-// @export Meteor.http.post
 Meteor.http.post = function (/* varargs */) {
   return Meteor.http.call.apply(this, ["POST"].concat(_.toArray(arguments)));
 };
 
-// @export Meteor.http.put
 Meteor.http.put = function (/* varargs */) {
   return Meteor.http.call.apply(this, ["PUT"].concat(_.toArray(arguments)));
 };
 
-// @export Meteor.http.del
 Meteor.http.del = function (/* varargs */) {
   return Meteor.http.call.apply(this, ["DELETE"].concat(_.toArray(arguments)));
 };

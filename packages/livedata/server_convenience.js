@@ -1,18 +1,12 @@
-// @export Meteor.server
 Meteor.server = null;
 
 // Note that this is redefined below if we in fact start a server.
-// @export Meteor.refresh
 Meteor.refresh = function (notification) {
 };
 
 // Only create a server if we are in an environment with a HTTP server
 // (as opposed to, eg, a command-line tool).
 //
-// @export Meteor.publish
-// @export Meteor.methods
-// @export Meteor.call
-// @export Meteor.apply
 if (Package.webapp) {
   if (process.env.DDP_DEFAULT_CONNECTION_URL) {
     __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL =

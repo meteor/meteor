@@ -1,4 +1,3 @@
-// @export WrappedFrag
 // A WrappedFrag provides utility methods pertaining to a given
 // DocumentFragment that are helpful in tests.  For example,
 // WrappedFrag(frag).html() constructs a sort of cross-browser

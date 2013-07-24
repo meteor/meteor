@@ -1,6 +1,5 @@
 // Attempt to log in with a password.
 //
-// @export Meteor.loginWithPassword
 // @param selector {String|Object} One of the following:
 //   - {username: (username)}
 //   - {email: (email)}
@@ -46,7 +45,6 @@ Meteor.loginWithPassword = function (selector, password, callback) {
 
 
 // Attempt to log in as a new user.
-// @export Accounts.createUser
 Accounts.createUser = function (options, callback) {
   options = _.clone(options); // we'll be modifying options
 
@@ -68,7 +66,6 @@ Accounts.createUser = function (options, callback) {
 
 // Change password. Must be logged in.
 //
-// @export Accounts.changePassword
 // @param oldPassword {String|null} By default servers no longer allow
 //   changing password without the old password, but they could so we
 //   support passing no password to the server and letting it decide.
@@ -124,7 +121,6 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
 // Sends an email to a user with a link that can be used to reset
 // their password
 //
-// @export Accounts.forgotPassword
 // @param options {Object}
 //   - email: (email)
 // @param callback (optional) {Function(error|undefined)}
@@ -137,7 +133,6 @@ Accounts.forgotPassword = function(options, callback) {
 // Resets a password based on a token originally created by
 // Accounts.forgotPassword, and then logs in the matching user.
 //
-// @export Accounts.resetPassword
 // @param token {String}
 // @param newPassword {String}
 // @param callback (optional) {Function(error|undefined)}
@@ -157,7 +152,6 @@ Accounts.resetPassword = function(token, newPassword, callback) {
 // Verifies a user's email address based on a token originally
 // created by Accounts.sendVerificationEmail
 //
-// @export Accounts.verifyEmail
 // @param token {String}
 // @param callback (optional) {Function(error|undefined)}
 Accounts.verifyEmail = function(token, callback) {

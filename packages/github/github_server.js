@@ -1,3 +1,5 @@
+Github = {};
+
 Oauth.registerService('github', 2, null, function(query) {
 
   var accessToken = getAccessToken(query);
@@ -63,7 +65,6 @@ var getIdentity = function (accessToken) {
 };
 
 
-// @export Github.retrieveCredential
 Github.retrieveCredential = function(credentialToken) {
   return Oauth.retrieveCredential(credentialToken);
 };

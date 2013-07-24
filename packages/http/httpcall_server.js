@@ -106,5 +106,4 @@ _call = function(method, url, options, callback) {
   });
 };
 
-// @export Meteor.http.call
 Meteor.http.call = Meteor._wrapAsync(_call);

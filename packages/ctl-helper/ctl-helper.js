@@ -1,7 +1,6 @@
 var optimist = Npm.require('optimist');
 var Future = Npm.require('fibers/future');
 
-// @export Ctl
 Ctl = {};
 
 _.extend(Ctl, {

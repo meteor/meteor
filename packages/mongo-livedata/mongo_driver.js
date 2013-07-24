@@ -7,6 +7,8 @@
  * these outside of a fiber they will explode!
  */
 
+_MongoLivedataTest = {};
+
 var path = Npm.require('path');
 var MongoDB = Npm.require('mongodb');
 var Fiber = Npm.require('fibers');
@@ -1077,5 +1079,4 @@ MongoConnection.prototype._observeChangesTailable = function (
 // XXX We probably need to find a better way to expose this. Right now
 // it's only used by tests, but in fact you need it in normal
 // operation to interact with capped collections.
-// @export _MongoLivedataTest.MongoTimestamp
 _MongoLivedataTest.MongoTimestamp = MongoDB.Timestamp;

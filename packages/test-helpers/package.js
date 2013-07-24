@@ -8,6 +8,12 @@ Package.on_use(function (api) {
           'domutils']);
   api.use(['spark'], 'client');
 
+  api.exportSymbol([
+    'pollUntil', 'WrappedFrag', 'permutations', 'StubStream', 'SeededRandom',
+    'ReactiveVar', 'OnscreenDiv', 'clickElement', 'blurElement', 'focusElement',
+    'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',
+    'withCallbackLogger', 'testAsyncMulti']);
+
   api.add_files('try_all_permutations.js');
   api.add_files('async_multi.js');
   api.add_files('event_simulation.js');

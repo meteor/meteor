@@ -10,5 +10,6 @@ Npm.depends({
 });
 
 Package.on_use(function (api) {
+  api.exportSymbol(['CleanCSSProcess', 'UglifyJSMinify']);
   api.add_files('minifiers.js', 'server');
 });

@@ -491,12 +491,12 @@ _.extend(TestRun.prototype, {
 /* Public API                                                                 */
 /******************************************************************************/
 
-// @export Tinytest.add
+Tinytest = {};
+
 Tinytest.add = function (name, func) {
   TestManager.addCase(new TestCase(name, func));
 };
 
-// @export Tinytest.addAsync
 Tinytest.addAsync = function (name, func) {
   TestManager.addCase(new TestCase(name, func, true));
 };
@@ -506,7 +506,6 @@ Tinytest.addAsync = function (name, func) {
 // server, and likewise for the client.) Report results via
 // onReport. Call onComplete when it's done.
 //
-// @export Tinytest._runTests
 Tinytest._runTests = function (onReport, onComplete, pathPrefix) {
   var testRun = TestManager.createRun(onReport, pathPrefix);
   testRun.run(onComplete);
@@ -516,7 +515,6 @@ Tinytest._runTests = function (onReport, onComplete, pathPrefix) {
 // error, all as indicated by 'cookie', which will have come from a
 // failure event output by _runTests.
 //
-// @export Tinytest._debugTest
 Tinytest._debugTest = function (cookie, onReport, onComplete) {
   var testRun = TestManager.createRun(onReport);
   testRun.debug(cookie, onComplete);

@@ -1,6 +1,8 @@
+DDP = {};
+_LivedataTest = {};
+
 SUPPORTED_DDP_VERSIONS = [ 'pre1' ];
 
-// @export _LivedataTest.SUPPORTED_DDP_VERSIONS
 _LivedataTest.SUPPORTED_DDP_VERSIONS = SUPPORTED_DDP_VERSIONS;
 
 MethodInvocation = function (options) {
@@ -119,6 +121,4 @@ stringifyDDP = function (msg) {
 // it to get the current user. accounts-password uses it to stash SRP
 // state in the DDP session. Meteor.setTimeout and friends clear
 // it. We can probably find a better way to factor this.
-//
-// @export DDP._CurrentInvocation
 DDP._CurrentInvocation = new Meteor.EnvironmentVariable;

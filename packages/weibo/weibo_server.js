@@ -1,3 +1,5 @@
+Weibo = {};
+
 Oauth.registerService('weibo', 2, null, function(query) {
 
   var response = getTokenResponse(query);
@@ -68,7 +70,6 @@ var getIdentity = function (accessToken, userId) {
   }
 };
 
-// @export Weibo.retrieveCredential
 Weibo.retrieveCredential = function(credentialToken) {
   return Oauth.retrieveCredential(credentialToken);
 };

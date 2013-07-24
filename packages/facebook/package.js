@@ -14,6 +14,8 @@ Package.on_use(function(api) {
   api.use('random', 'client');
   api.use('service-configuration', ['client', 'server']);
 
+  api.exportSymbol('Facebook');
+
   api.add_files(
     ['facebook_configure.html', 'facebook_configure.js'],
     'client');

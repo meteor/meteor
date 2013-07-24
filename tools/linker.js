@@ -267,7 +267,6 @@ var File = function (inputFile, module) {
   // The Module containing this file.
   self.module = module;
 
-  // symbols mentioned in @export, @require, @provide, or @weak
   // directives. each is a map from the symbol (given as a string) to
   // true. (only @export is actually implemented)
   self.exports = {};

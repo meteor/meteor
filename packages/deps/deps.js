@@ -1,7 +1,3 @@
-// We have to export Deps as a single symbol since we want to be able
-// to change Deps.active later.
-//
-// @export Deps
 Deps = {};
 Deps.active = false;
 Deps.currentComputation = null;

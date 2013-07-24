@@ -31,7 +31,6 @@ var KEY_PREFIX = "Meteor.loginButtons.";
 // (there was even a comment to that effect here from before we had
 // namespacing) but accounts-ui-viewer uses it, so leave it as is for
 // now
-// @export Accounts._loginButtonsSession
 Accounts._loginButtonsSession = {
   set: function(key, value) {
     validateKey(key);

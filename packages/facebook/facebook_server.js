@@ -1,3 +1,5 @@
+Facebook = {};
+
 var querystring = Npm.require('querystring');
 
 
@@ -91,7 +93,6 @@ var getIdentity = function (accessToken) {
   }
 };
 
-// @export Facebook.retrieveCredential
 Facebook.retrieveCredential = function(credentialToken) {
   return Oauth.retrieveCredential(credentialToken);
 };

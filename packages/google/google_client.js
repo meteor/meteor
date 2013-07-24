@@ -1,5 +1,6 @@
+Google = {};
+
 // Request Google credentials for the user
-// @export Google.requestCredential
 // @param options {optional}
 // @param credentialRequestCompleteCallback {Function} Callback function to call on
 //   completion. Takes one argument, credentialToken on success, or Error on

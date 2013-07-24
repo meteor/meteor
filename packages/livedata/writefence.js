@@ -5,7 +5,6 @@ var Future = Npm.require(path.join('fibers', 'future'));
 // when all of the writes are fully committed and propagated (all
 // observers have been notified of the write and acknowledged it.)
 //
-// @export DDP._WriteFence
 DDP._WriteFence = function () {
   var self = this;
 
@@ -20,7 +19,6 @@ DDP._WriteFence = function () {
 // that writes to databases should register their writes with it using
 // beginWrite().
 //
-// @export DDP._CurrentWriteFence
 DDP._CurrentWriteFence = new Meteor.EnvironmentVariable;
 
 _.extend(DDP._WriteFence.prototype, {

@@ -4,6 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
+  api.exportSymbol('LocalCollection');
   api.use(['underscore', 'json', 'ejson', 'ordered-dict', 'deps',
            'random', 'ordered-dict']);
   api.add_files([

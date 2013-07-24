@@ -71,6 +71,8 @@ var providers = [];
 
 ////////// External API //////////
 
+Reload = {};
+
 // Packages that support migration should register themselves by
 // calling this function. When it's time to migrate, callback will
 // be called with one argument, the "retry function." If the package
@@ -85,7 +87,6 @@ var providers = [];
 // ready this time, then the migration will happen. name must be set if there
 // is migration data.
 //
-// @export Reload._onMigrate
 Reload._onMigrate = function (name, callback) {
   if (!callback) {
     // name not provided, so first arg is callback.
@@ -98,7 +99,6 @@ Reload._onMigrate = function (name, callback) {
 // Called by packages when they start up.
 // Returns the object that was saved, or undefined if none saved.
 //
-// @export Reload._migrationData
 Reload._migrationData = function (name) {
   return old_data[name];
 };
@@ -109,7 +109,6 @@ Reload._migrationData = function (name) {
 // will happen at some point in the future once all of the packages
 // are ready to migrate.
 //
-// @export Reload._reload
 var reloading = false;
 Reload._reload = function () {
   if (reloading)

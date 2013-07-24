@@ -11,6 +11,7 @@ Package.on_use(function (api) {
   // the session.
   api.use('reload', 'client', {weak: true});
 
+  api.exportSymbol('Session', 'client');
   api.add_files('session.js', 'client');
 });
 

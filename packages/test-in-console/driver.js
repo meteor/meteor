@@ -3,7 +3,6 @@ DONE = false;
 // Failure count for phantomjs exit code
 FAILURES = null;
 
-// @export TEST_STATUS
 TEST_STATUS = {
   DONE: false,
   FAILURES: null

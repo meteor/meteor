@@ -2,7 +2,6 @@
 /// CURRENT USER
 ///
 
-// @export Meteor.userId
 Meteor.userId = function () {
   // This function only works if called inside a method. In theory, it
   // could also be called from publish statements, since they also
@@ -19,7 +18,6 @@ Meteor.userId = function () {
   return currentInvocation.userId;
 };
 
-// @export Meteor.user
 Meteor.user = function () {
   var userId = Meteor.userId();
   if (!userId)
@@ -39,7 +37,6 @@ Meteor.user = function () {
 // - {id: userId, token: *}, if the user logged in successfully.
 // - throw an error, if the user failed to log in.
 //
-// @export Accounts.registerLoginHandler
 Accounts.registerLoginHandler = function(handler) {
   loginHandlers.push(handler);
 };
@@ -114,7 +111,6 @@ Accounts.registerLoginHandler(function(options) {
 
 // Semi-public. Used by other login methods to generate tokens.
 //
-// @export Accounts._generateStampedLoginToken
 Accounts._generateStampedLoginToken = function () {
   return {token: Random.id(), when: +(new Date)};
 };
@@ -132,7 +128,6 @@ removeLoginToken = function (userId, loginToken) {
 /// CREATE USER HOOKS
 ///
 
-// @export Accounts.onCreateUser
 var onCreateUserHook = null;
 Accounts.onCreateUser = function (func) {
   if (onCreateUserHook)
@@ -150,7 +145,6 @@ var defaultCreateUserHook = function (options, user) {
 };
 
 // Called by accounts-password
-// @export Accounts.insertUserDoc
 Accounts.insertUserDoc = function (options, user) {
   // - clone user document, to protect from modification
   // - add createdAt timestamp
@@ -214,7 +208,6 @@ Accounts.insertUserDoc = function (options, user) {
   return result;
 };
 
-// @export Accounts.validateNewUser
 var validateNewUserHooks = [];
 Accounts.validateNewUser = function (func) {
   validateNewUserHooks.push(func);
@@ -236,7 +229,6 @@ Accounts.validateNewUser = function (func) {
 // @returns {Object} Object with token and id keys, like the result
 //        of the "login" method.
 //
-// @export Accounts.updateOrCreateUserFromExternalService
 Accounts.updateOrCreateUserFromExternalService = function(
   serviceName, serviceData, options) {
   options = _.clone(options || {});

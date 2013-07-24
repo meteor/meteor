@@ -3,7 +3,6 @@
 ///
 
 // This is reactive.
-// @export Meteor.userId
 Meteor.userId = function () {
   return Meteor.connection.userId();
 };
@@ -13,21 +12,18 @@ var loggingInDeps = new Deps.Dependency;
 // This is mostly just called within this file, but Meteor.loginWithPassword
 // also uses it to make loggingIn() be true during the beginPasswordExchange
 // method call too.
-// @export Accounts._setLoggingIn
 Accounts._setLoggingIn = function (x) {
   if (loggingIn !== x) {
     loggingIn = x;
     loggingInDeps.changed();
   }
 };
-// @export Meteor.loggingIn
 Meteor.loggingIn = function () {
   loggingInDeps.depend();
   return loggingIn;
 };
 
 // This calls userId, which is reactive.
-// @export Meteor.user
 Meteor.user = function () {
   var userId = Meteor.userId();
   if (!userId)
@@ -62,7 +58,6 @@ Meteor.user = function () {
 // - userCallback: Will be called with no arguments once the user is fully
 //                 logged in, or with the error on error.
 //
-// @export Accounts.callLoginMethod
 Accounts.callLoginMethod = function (options) {
   options = _.extend({
     methodName: 'login',
@@ -168,7 +163,6 @@ makeClientLoggedIn = function(userId, token) {
   Meteor.connection.setUserId(userId);
 };
 
-// @export Meteor.logout
 Meteor.logout = function (callback) {
   Meteor.apply('logout', [], {wait: true}, function(error, result) {
     if (error) {
@@ -190,7 +184,6 @@ var loginServicesHandle = Meteor.subscribe("meteor.loginServiceConfiguration");
 // subscription is ready. Used by accounts-ui to hide the login button
 // until we have all the configuration loaded
 //
-// @export Accounts.loginServicesConfigured
 Accounts.loginServicesConfigured = function () {
   return loginServicesHandle.ready();
 };

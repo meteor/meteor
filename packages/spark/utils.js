@@ -1,4 +1,3 @@
-// @export Spark._labelFromIdOrName
 Spark._labelFromIdOrName = function(n) {
   var label = null;
 

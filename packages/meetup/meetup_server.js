@@ -1,3 +1,5 @@
+Meetup = {};
+
 Oauth.registerService('meetup', 2, null, function(query) {
 
   var accessToken = getAccessToken(query);
@@ -51,7 +53,6 @@ var getIdentity = function (accessToken) {
 };
 
 
-// @export Meetup.retrieveCredential
 Meetup.retrieveCredential = function(credentialToken) {
   return Oauth.retrieveCredential(credentialToken);
 };

@@ -62,7 +62,6 @@ var getVal = function (ch) {
   return BASE_64_VALS[ch];
 };
 
-// @export EJSON.newBinary
 EJSON.newBinary = function (len) {
   if (typeof Uint8Array === 'undefined' || typeof ArrayBuffer === 'undefined') {
     var ret = [];
@@ -123,8 +122,6 @@ base64Decode = function (str) {
   return arr;
 };
 
-// @export _EJSONTest.base64Encode
 _EJSONTest.base64Encode = base64Encode;
 
-// @export _EJSONTest.base64Decode
 _EJSONTest.base64Decode = base64Decode;

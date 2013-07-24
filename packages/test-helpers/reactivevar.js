@@ -12,7 +12,6 @@
 // Constructor, with optional 'new':
 // var R = [new] ReactiveVar([initialValue])
 
-// @export ReactiveVar
 ReactiveVar = function(initialValue) {
   if (! (this instanceof ReactiveVar))
     return new ReactiveVar(initialValue);

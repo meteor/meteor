@@ -16,6 +16,11 @@ Package.on_use(function (api) {
   // XXX split this package into multiple packages or multiple slices instead
   api.use(['webapp', 'routepolicy'], 'server', {weak: true});
 
+  api.exportSymbol('DDP');
+  api.exportSymbol('DDPServer', 'server');
+
+  api.exportSymbol('_LivedataTest');
+
   // Transport
   api.use('reload', 'client');
   api.add_files(['sockjs-0.3.4.js',
@@ -27,6 +32,7 @@ Package.on_use(function (api) {
   // we depend on LocalCollection._diffObjects, _applyChanges,
   // _idParse, _idStringify.
   api.use('minimongo', ['client', 'server']);
+
 
   api.add_files('writefence.js', 'server');
   api.add_files('crossbar.js', 'server');

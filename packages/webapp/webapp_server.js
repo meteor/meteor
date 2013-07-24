@@ -16,8 +16,6 @@ var send = Npm.require('send');
 // it (for example, it has an attribute httpServer which isn't known
 // until runWebAppServer-time.) It would be nice to refactor so that
 // this isn't the case and we can export the symbols individually.
-//
-// @export WebApp
 WebApp = {};
 
 var findGalaxy = _.once(function () {
@@ -424,7 +422,6 @@ var runWebAppServer = function () {
   // Let the rest of the packages (and Meteor.startup hooks) insert connect
   // middlewares and update __meteor_runtime_config__, then keep going to set up
   // actually serving HTML.
-  // @export main
   main = function (argv) {
     argv = optimist(argv).boolean('keepalive').argv;
 
