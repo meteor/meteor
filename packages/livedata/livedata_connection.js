@@ -161,7 +161,7 @@ var Connection = function (url, options) {
   self._userIdDeps = (typeof Deps !== "undefined") && new Deps.Dependency;
 
   // Block auto-reload while we're waiting for method responses.
-  if (Package.reload && !options.reloadWithOutstanding) {
+  if (Meteor.isClient && Package.reload && !options.reloadWithOutstanding) {
     Reload._onMigrate(function (retry) {
       if (!self._readyToMigrate()) {
         if (self._retryMigrate)
@@ -279,7 +279,7 @@ var Connection = function (url, options) {
   }
 
 
-  if (Package.reload && options.reloadOnUpdate) {
+  if (Meteor.isClient && Package.reload && options.reloadOnUpdate) {
     self._stream.on('update_available', function () {
       // Start trying to migrate to a new version. Until all packages
       // signal that they're ready for a migration, the app will
