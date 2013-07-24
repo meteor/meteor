@@ -1,3 +1,5 @@
+Accounts.ui = {};
+
 Accounts.ui._options = {
   requestPermissions: {},
   requestOfflineToken: {}

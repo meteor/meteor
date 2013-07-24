@@ -20,7 +20,7 @@ Package.on_use(function (api) {
           ['client', 'server']);
   api.use('check', ['client', 'server']);
 
-  api.exportSymbol('_MongoLivedataTest');
+  api.exportSymbol('_MongoLivedataTest', 'server');
 
   api.add_files('mongo_driver.js', 'server');
   api.add_files('local_collection_driver.js', ['client', 'server']);
