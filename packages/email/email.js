@@ -90,7 +90,7 @@ var smtpSend = function (mc) {
  * false to skip sending.
  */
 var sendHooks = [];
-Email._hookSend = function (f) {
+_EmailTest.hookSend = function (f) {
   sendHooks.push(f);
 };
 

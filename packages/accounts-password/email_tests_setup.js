@@ -5,7 +5,7 @@
 //
 var interceptedEmails = {}; // (email address) -> (array of contents)
 
-Email._hookSend(function (options) {
+_EmailTest.hookSend(function (options) {
   var to = options.to;
   if (to.indexOf('intercept') === -1) {
     return true; // go ahead and send
