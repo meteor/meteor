@@ -30,6 +30,7 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
 
   // https://developers.google.com/accounts/docs/OAuth2WebServer#formingtheurl
   var accessType = options.requestOfflineToken ? 'offline' : 'online';
+  var approvalPrompt = options.forceApprovalPrompt ? 'force' : 'auto';
 
   var loginUrl =
         'https://accounts.google.com/o/oauth2/auth' +
@@ -38,7 +39,8 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
         '&scope=' + flatScope +
         '&redirect_uri=' + Meteor.absoluteUrl('_oauth/google?close') +
         '&state=' + credentialToken +
-        '&access_type=' + accessType;
+        '&access_type=' + accessType +
+        '&approval_prompt=' + approvalPrompt;
 
   Oauth.initiateLogin(credentialToken, loginUrl, credentialRequestCompleteCallback);
 };
