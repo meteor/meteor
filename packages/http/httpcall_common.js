@@ -67,6 +67,9 @@ populateData = function(response) {
   }
 };
 
+// XXX rename to HTTP
+Meteor.http = {};
+
 Meteor.http.get = function (/* varargs */) {
   return Meteor.http.call.apply(this, ["GET"].concat(_.toArray(arguments)));
 };

@@ -1467,7 +1467,7 @@ _.extend(Package.prototype, {
           //   change.)
           use: function (names, where, options) {
             // Support `api.use(package, {weak: true})` without where.
-            if (where.constructor === Object && !options) {
+            if (_.isObject(where) && !_.isArray(where) && !options) {
               options = where;
               where = null;
             }

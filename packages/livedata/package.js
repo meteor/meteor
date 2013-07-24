@@ -34,14 +34,14 @@ Package.on_use(function (api) {
   api.use('minimongo', ['client', 'server']);
 
 
+  api.add_files('livedata_server.js', 'server');
+
   api.add_files('writefence.js', 'server');
   api.add_files('crossbar.js', 'server');
 
   api.add_files('livedata_common.js', ['client', 'server']);
 
   api.add_files('livedata_connection.js', ['client', 'server']);
-
-  api.add_files('livedata_server.js', 'server');
 
 
   api.add_files('client_convenience.js', 'client');

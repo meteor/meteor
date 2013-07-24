@@ -1,5 +1,4 @@
 DDP = {};
-_LivedataTest = {};
 
 SUPPORTED_DDP_VERSIONS = [ 'pre1' ];
 

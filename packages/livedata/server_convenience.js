@@ -16,13 +16,13 @@ if (Package.webapp) {
   Meteor.server = new Server;
 
   Meteor.refresh = function (notification) {
-    var fence = DDP._CurrentWriteFence.get();
+    var fence = DDPServer._CurrentWriteFence.get();
     if (fence) {
       // Block the write fence until all of the invalidations have
       // landed.
       var proxy_write = fence.beginWrite();
     }
-    DDP._InvalidationCrossbar.fire(notification, function () {
+    DDPServer._InvalidationCrossbar.fire(notification, function () {
       if (proxy_write)
         proxy_write.committed();
     });

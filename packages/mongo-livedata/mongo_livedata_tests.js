@@ -124,8 +124,8 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
     if (Meteor.isClient) {
       f();
     } else {
-      var fence = new DDP._WriteFence;
-      DDP._CurrentWriteFence.withValue(fence, f);
+      var fence = new DDPServer._WriteFence;
+      DDPServer._CurrentWriteFence.withValue(fence, f);
       fence.armAndWait();
     }
 
@@ -281,8 +281,8 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
     if (Meteor.isClient) {
       f();
     } else {
-      var fence = new DDP._WriteFence;
-      DDP._CurrentWriteFence.withValue(fence, f);
+      var fence = new DDPServer._WriteFence;
+      DDPServer._CurrentWriteFence.withValue(fence, f);
       fence.armAndWait();
     }
   };
@@ -360,8 +360,8 @@ var runInFence = function (f) {
   if (Meteor.isClient) {
     f();
   } else {
-    var fence = new DDP._WriteFence;
-    DDP._CurrentWriteFence.withValue(fence, f);
+    var fence = new DDPServer._WriteFence;
+    DDPServer._CurrentWriteFence.withValue(fence, f);
     fence.armAndWait();
   }
 };

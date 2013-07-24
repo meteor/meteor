@@ -141,7 +141,7 @@ _.extend(Module.prototype, {
     _.each(self.files, function (file) {
       if (!_.isEmpty(chunks))
         chunks.push("\n\n\n\n\n\n");
-      chunks.push(file.getPrelinkedOutput({ sourceWidth: sourceWidth });
+      chunks.push(file.getPrelinkedOutput({ sourceWidth: sourceWidth }));
     });
 
     var node = new sourcemap.SourceNode(null, null, null, chunks);

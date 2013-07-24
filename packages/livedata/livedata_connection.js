@@ -648,7 +648,7 @@ _.extend(Connection.prototype, {
       try {
         // Note that unlike in the corresponding server code, we never audit
         // that stubs check() their arguments.
-        var ret = DDP._CurrentInvocation.withValue(invocation,function () {
+        var ret = DDP._CurrentInvocation.withValue(invocation, function () {
           if (Meteor.isServer) {
             // Because saveOriginals and retrieveOriginals aren't reentrant,
             // don't allow stubs to yield.

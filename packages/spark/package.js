@@ -8,8 +8,8 @@ Package.on_use(function (api) {
            'ordered-dict', 'deps', 'ejson'],
           'client');
 
-  api.exportSymbol('Spark');
-  api.exportSymbol('_SparkTest');
+  api.exportSymbol('Spark', 'client');
+  api.exportSymbol('_SparkTest', 'client');
 
   api.add_files(['spark.js', 'patch.js', 'convenience.js',
                  'utils.js'], 'client');

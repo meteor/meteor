@@ -1,3 +1,5 @@
+autoLoginEnabled = true;
+
 // reads a reset password token from the url's hash fragment, if it's
 // there. if so prevent automatically logging in since it could be
 // confusing to be logged in as user A while resetting password for
@@ -9,7 +11,7 @@
 var match;
 match = window.location.hash.match(/^\#\/reset-password\/(.*)$/);
 if (match) {
-  Accounts._disableAutoLogin();
+  autoLoginEnabled = false;
   Accounts._resetPasswordToken = match[1];
   window.location.hash = '';
 }
@@ -26,7 +28,7 @@ if (match) {
 // in line with the hash fragment approach)
 match = window.location.hash.match(/^\#\/verify-email\/(.*)$/);
 if (match) {
-  Accounts._disableAutoLogin();
+  autoLoginEnabled = false;
   Accounts._verifyEmailToken = match[1];
   window.location.hash = '';
 }
@@ -36,7 +38,7 @@ if (match) {
 // reset password links.
 match = window.location.hash.match(/^\#\/enroll-account\/(.*)$/);
 if (match) {
-  Accounts._disableAutoLogin();
+  autoLoginEnabled = false;
   Accounts._enrollAccountToken = match[1];
   window.location.hash = '';
 }

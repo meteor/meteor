@@ -1,5 +1,7 @@
 // XXX These should probably not actually be public?
 
+Accounts.urls = {};
+
 Accounts.urls.resetPassword = function (token) {
   return Meteor.absoluteUrl('#/reset-password/' + token);
 };

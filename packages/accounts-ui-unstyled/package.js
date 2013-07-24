@@ -3,7 +3,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['deps', 'service-configuration', 'accounts-urls', 'accounts-base',
+  api.use(['deps', 'service-configuration', 'accounts-base',
            'underscore', 'templating',
            'handlebars', 'spark', 'session'], 'client');
   // Export Accounts (etc) to packages using this one.

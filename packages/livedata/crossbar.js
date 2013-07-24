@@ -1,4 +1,4 @@
-DDP._InvalidationCrossbar = function () {
+DDPServer._InvalidationCrossbar = function () {
   var self = this;
 
   self.next_id = 1;
@@ -7,7 +7,7 @@ DDP._InvalidationCrossbar = function () {
   self.listeners = {};
 };
 
-_.extend(DDP._InvalidationCrossbar.prototype, {
+_.extend(DDPServer._InvalidationCrossbar.prototype, {
   // Listen for notification that match 'trigger'. A notification
   // matches if it has the key-value pairs in trigger as a
   // subset. When a notification matches, call 'callback', passing two
@@ -96,4 +96,4 @@ _.extend(DDP._InvalidationCrossbar.prototype, {
 });
 
 // singleton
-DDP._InvalidationCrossbar = new DDP._InvalidationCrossbar;
+DDPServer._InvalidationCrossbar = new DDPServer._InvalidationCrossbar;

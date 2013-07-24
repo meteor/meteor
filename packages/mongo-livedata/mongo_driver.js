@@ -170,7 +170,7 @@ MongoConnection.prototype._createCappedCollection = function (collectionName,
 // fence), you should call 'committed()' on the object returned.
 MongoConnection.prototype._maybeBeginWrite = function () {
   var self = this;
-  var fence = DDP._CurrentWriteFence.get();
+  var fence = DDPServer._CurrentWriteFence.get();
   if (fence)
     return fence.beginWrite();
   else
@@ -188,7 +188,7 @@ MongoConnection.prototype._maybeBeginWrite = function () {
 // After making a write (with insert, update, remove), observers are
 // notified asynchronously. If you want to receive a callback once all
 // of the observer notifications have landed for your write, do the
-// writes inside a write fence (set DDP._CurrentWriteFence to a new
+// writes inside a write fence (set DDPServer._CurrentWriteFence to a new
 // _WriteFence, and then set a callback on the write fence.)
 //
 // Since our execution environment is single-threaded, this is
@@ -739,12 +739,12 @@ var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
   // database for changes. If this selector specifies specific IDs, specify them
   // here, so that updates to different specific IDs don't cause us to poll.
   var listenOnTrigger = function (trigger) {
-    var listener = DDP._InvalidationCrossbar.listen(
+    var listener = DDPServer._InvalidationCrossbar.listen(
       trigger, function (notification, complete) {
         // When someone does a transaction that might affect us, schedule a poll
         // of the database. If that transaction happens inside of a write fence,
         // block the fence until we've polled and notified observers.
-        var fence = DDP._CurrentWriteFence.get();
+        var fence = DDPServer._CurrentWriteFence.get();
         if (fence)
           self._pendingWrites.push(fence.beginWrite());
         // Ensure a poll is scheduled... but if we already know that one is,

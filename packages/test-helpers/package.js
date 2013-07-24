@@ -9,9 +9,9 @@ Package.on_use(function (api) {
   api.use(['spark'], 'client');
 
   api.exportSymbol([
-    'pollUntil', 'WrappedFrag', 'permutations', 'StubStream', 'SeededRandom',
-    'ReactiveVar', 'OnscreenDiv', 'clickElement', 'blurElement', 'focusElement',
-    'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',
+    'pollUntil', 'WrappedFrag', 'try_all_permutations', 'StubStream',
+    'SeededRandom', 'ReactiveVar', 'OnscreenDiv', 'clickElement', 'blurElement',
+    'focusElement', 'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',
     'withCallbackLogger', 'testAsyncMulti']);
 
   api.add_files('try_all_permutations.js');

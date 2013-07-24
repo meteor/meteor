@@ -3,19 +3,14 @@
 // seconds to synchronize login state between multiple tabs in the same
 // browser.
 
+var lastLoginTokenWhenPolled;
+
 // Login with a Meteor access token. This is the only public function
 // here.
 Meteor.loginWithToken = function (token, callback) {
   Accounts.callLoginMethod({
     methodArguments: [{resume: token}],
     userCallback: callback});
-};
-
-var autoLoginEnabled = true;
-
-// Semi-internal API. Call at startup to prevent automatic login.
-Acocunts._disableAutoLogin = function () {
-  autoLoginEnabled = false;
 };
 
 // Semi-internal API. Call this function to re-enable auto login after
@@ -63,11 +58,11 @@ unstoreLoginToken = function() {
 // This is private, but it is exported for now because it is used by a
 // test in accounts-password.
 //
-storedLoginToken = Accounts._storedLoginToken = function() {
+var storedLoginToken = Accounts._storedLoginToken = function() {
   return Meteor._localStorage.getItem(loginTokenKey);
 };
 
-storedUserId = function() {
+var storedUserId = function() {
   return Meteor._localStorage.getItem(userIdKey);
 };
 
@@ -97,7 +92,7 @@ if (autoLoginEnabled) {
 // Poll local storage every 3 seconds to login if someone logged in in
 // another tab
 lastLoginTokenWhenPolled = token;
-pollStoredLoginToken = function() {
+var pollStoredLoginToken = function() {
   if (! autoLoginEnabled)
     return;
 

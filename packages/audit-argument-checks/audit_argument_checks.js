@@ -1,1 +1,1 @@
-DDP._setAuditArgumentChecks(true);
+DDPServer._setAuditArgumentChecks(true);

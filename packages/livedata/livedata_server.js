@@ -556,7 +556,7 @@ _.extend(Session.prototype, {
       // set up to mark the method as satisfied once all observers
       // (and subscriptions) have reacted to any writes that were
       // done.
-      var fence = new DDP._WriteFence;
+      var fence = new DDPServer._WriteFence;
       fence.onAllCommitted(function () {
         // Retire the fence so that future writes are allowed.
         // This means that callbacks like timers are free to use
@@ -601,7 +601,7 @@ _.extend(Session.prototype, {
         sessionData: self.sessionData
       });
       try {
-        var result = DDP._CurrentWriteFence.withValue(fence, function () {
+        var result = DDPServer._CurrentWriteFence.withValue(fence, function () {
           return DDP._CurrentInvocation.withValue(invocation, function () {
             return maybeAuditArgumentChecks(
               handler, invocation, msg.params, "call to '" + msg.method + "'");
@@ -1371,7 +1371,7 @@ var wrapInternalException = function (exception, context) {
 // Private interface for 'audit-argument-checks' package.
 //
 var shouldAuditArgumentChecks = false;
-DDP._setAuditArgumentChecks = function (value) {
+DDPServer._setAuditArgumentChecks = function (value) {
   shouldAuditArgumentChecks = value;
 };
 

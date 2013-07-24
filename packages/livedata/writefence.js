@@ -5,7 +5,7 @@ var Future = Npm.require(path.join('fibers', 'future'));
 // when all of the writes are fully committed and propagated (all
 // observers have been notified of the write and acknowledged it.)
 //
-DDP._WriteFence = function () {
+DDPServer._WriteFence = function () {
   var self = this;
 
   self.armed = false;
@@ -19,9 +19,9 @@ DDP._WriteFence = function () {
 // that writes to databases should register their writes with it using
 // beginWrite().
 //
-DDP._CurrentWriteFence = new Meteor.EnvironmentVariable;
+DDPServer._CurrentWriteFence = new Meteor.EnvironmentVariable;
 
-_.extend(DDP._WriteFence.prototype, {
+_.extend(DDPServer._WriteFence.prototype, {
   // Start tracking a write, and return an object to represent it. The
   // object has a single method, committed(). This method should be
   // called when the write is fully committed and propagated. You can
