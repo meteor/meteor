@@ -1,4 +1,4 @@
-Tinytest.add("logging - debug", function (test) {
+Tinytest.add("core - debug", function (test) {
 
   // Just run a log statement and make sure it doesn't explode.
   Meteor._suppress_log(3);
