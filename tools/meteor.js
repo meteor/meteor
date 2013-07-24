@@ -943,9 +943,7 @@ Fiber(function () {
             .alias('ssh-identity', 'i')
             .describe('ssh-identity', 'Selects a file from which the identity (private key) is read. See ssh(1) for details.')
             .describe('star', 'a star (tarball) to deploy instead of the current meteor app')
-            .alias('admin', 'A')
             .boolean('admin')
-            .boolean('A')
             // Shouldn't be public until the Galaxy release
             //.describe('admin', 'Marks the application as an admin app, it will be available in Galaxy admin interface.')
             .usage(
