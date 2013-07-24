@@ -40,7 +40,7 @@ Tinytest.add("oauth1 - loginResultForCredentialToken is stored", function (test)
     });
 
     // simulate logging in using twitterfoo
-    _Oauth1Test.requestTokens[credentialToken] = twitterfooAccessToken;
+    _OAuth1Test.requestTokens[credentialToken] = twitterfooAccessToken;
 
     var req = {
       method: "POST",

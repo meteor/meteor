@@ -12,6 +12,5 @@ Package.on_use(function(api) {
 
   api.add_files('google_login_button.css', 'client');
 
-  api.add_files('google_server.js', 'server');
-  api.add_files('google_client.js', 'client');
+  api.add_files("google.js");
 });

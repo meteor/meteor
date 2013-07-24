@@ -7,17 +7,7 @@ Accounts.oauth.registerService = function (name) {
   // that in your app.
   Meteor.users._ensureIndex('services.' + name + '.id',
                             {unique: 1, sparse: 1});
-
 };
-
-// For test cleanup only. (Mongo has a limit as to how many indexes it can have
-// per collection.)
-Accounts.oauth._unregisterService = function (name) {
-  var index = {};
-  index['services.' + name + '.id'] = 1;
-  Meteor.users._dropIndex(index);
-};
-
 
 // Listen to calls to `login` with an oauth option set. This is where
 // users actually get logged in to meteor via oauth.

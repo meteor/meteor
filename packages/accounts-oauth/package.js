@@ -13,6 +13,7 @@ Package.on_use(function (api) {
   api.imply('accounts-base', ['client', 'server']);
   api.use('oauth', 'server');
 
+  api.add_files('oauth_common.js');
   api.add_files('oauth_client.js', 'client');
   api.add_files('oauth_server.js', 'server');
 });
