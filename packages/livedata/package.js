@@ -16,6 +16,9 @@ Package.on_use(function (api) {
   // XXX split this package into multiple packages or multiple slices instead
   api.use(['webapp', 'routepolicy'], 'server', {weak: true});
 
+  // Detect whether or not the user wants us to audit argument checks.
+  api.use(['audit-argument-checks'], 'server', {weak: true});
+
   api.exportSymbol('DDP');
   api.exportSymbol('DDPServer', 'server');
 

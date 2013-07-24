@@ -1368,16 +1368,12 @@ var wrapInternalException = function (exception, context) {
   return new Meteor.Error(500, "Internal server error");
 };
 
-// Private interface for 'audit-argument-checks' package.
-//
-var shouldAuditArgumentChecks = false;
-DDPServer._setAuditArgumentChecks = function (value) {
-  shouldAuditArgumentChecks = value;
-};
 
+// Audit argument checks, if the audit-argument-checks package exists (it is a
+// weak dependency of this package).
 var maybeAuditArgumentChecks = function (f, context, args, description) {
   args = args || [];
-  if (shouldAuditArgumentChecks) {
+  if (Package['audit-argument-checks']) {
     return Match._failIfArgumentsAreNotAllChecked(
       f, context, args, description);
   }
