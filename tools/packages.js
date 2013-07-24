@@ -295,6 +295,10 @@ _.extend(Slice.prototype, {
       // - fileOptions: any options passed to "api.add_files"; for
       //   use by the plugin. The built-in "js" plugin uses the "bare"
       //   option for files that shouldn't be wrapped in a closure.
+      // - exports: An array of symbols exported by this slice, or null
+      //   if it may not export any symbols (eg, test slices). This
+      //   is used by CoffeeScript to ensure that it doesn't close over
+      //   those symbols, eg.
       // - read(n): read from the input file. If n is given it should
       //   be an integer, and you will receive the next n bytes of the
       //   file as a Buffer. If n is omitted you get the rest of the
@@ -386,6 +390,7 @@ _.extend(Slice.prototype, {
         rootOutputPath: self.pkg.serveRoot,
         arch: self.arch,
         fileOptions: fileOptions,
+        exports: self.exports,
         read: function (n) {
           if (n === undefined || readOffset + n > contents.length)
             n = contents.length - readOffset;
@@ -429,7 +434,6 @@ _.extend(Slice.prototype, {
             source: options.data,
             sourcePath: options.sourcePath,
             servePath: path.join(self.pkg.serveRoot, options.path),
-            linkerFileTransform: options.linkerFileTransform,
             bare: !!options.bare,
             sourceMap: options.sourceMap
           });

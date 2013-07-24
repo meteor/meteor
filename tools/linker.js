@@ -59,13 +59,6 @@ _.extend(Module.prototype, {
     return _.max(maxInFile);
   },
 
-  runLinkerFileTransforms: function () {
-    var self = this;
-    _.each(self.files, function (f) {
-      f.runLinkerFileTransform(self.exports);
-    });
-  },
-
   // Figure out which vars need to be specifically put in the module
   // scope.
   //
@@ -230,13 +223,6 @@ var File = function (inputFile, module) {
   // package or app.) Used for source maps, error messages..
   self.sourcePath = inputFile.sourcePath;
 
-  // A function which transforms the source code once all exports are
-  // known. (eg, for CoffeeScript.)
-  self.linkerFileTransform =
-    inputFile.linkerFileTransform || function (sourceWithMap, exports) {
-      return sourceWithMap;
-    };
-
   // If true, don't wrap this individual file in a closure.
   self.bare = !!inputFile.bare;
 
@@ -304,15 +290,6 @@ _.extend(File.prototype, {
       return self.module.name + "/" + self.sourcePath;
     else
       return require('path').basename(self.sourcePath);
-  },
-
-  runLinkerFileTransform: function (exports) {
-    var self = this;
-    var sourceAndMap = self.linkerFileTransform(
-      {source: self.source, sourceMap: self.sourceMap},
-      exports);
-    self.source = sourceAndMap.source;
-    self.sourceMap = sourceAndMap.sourceMap;
   },
 
   // Options:
@@ -489,10 +466,6 @@ var bannerPadding = function (bannerWidth) {
 //    look good)
 //  - sourcePath: path to use in error messages
 //  - sourceMap: an optional source map (as string) for the input file
-//  - linkerFileTransform: if given, this function will be called
-//    when the module is being linked with the source of the file
-//    and an array of the exports of the module; the file's source will
-//    be replaced by what the function returns.
 //
 // exports: an array of symbols that the module exports
 //
@@ -531,14 +504,9 @@ var prelink = function (options) {
     module.addFile(inputFile);
   });
 
-  // 1) Run the linkerFileTransforms. (This is, eg, CoffeeScript arranging to
-  //    not close over the exports.)
-  // 2) Do static analysis to compute module-scoped variables; this has to be
-  //    done based on the *output* of the transforms. Error recovery from the
-  //    static analysis mutates the sources, so this has to be done before
-  //    concatenation.
-  // 3) Finally, concatenate.
-  module.runLinkerFileTransforms();
+  // Do static analysis to compute module-scoped variables. Error recovery from
+  // the static analysis mutates the sources, so this has to be done before
+  // concatenation.
   var packageScopeVariables = module.computeModuleScopeVars();
   var files = module.getPrelinkedFiles();
 

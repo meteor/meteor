@@ -141,15 +141,14 @@ var handler = function (compileStep) {
     );
   }
 
+  var stripped = stripExportedVars(output.js, compileStep.exports);
+  var sourceWithMap = addSharedHeader(stripped, output.v3SourceMap);
+
   compileStep.addJavaScript({
     path: outputFile,
     sourcePath: compileStep.inputPath,
-    data: output.js,
-    linkerFileTransform: function (sourceWithMap, exports) {
-      var stripped = stripExportedVars(sourceWithMap.source, exports);
-      return addSharedHeader(stripped, sourceWithMap.sourceMap);
-    },
-    sourceMap: output.v3SourceMap
+    data: sourceWithMap.source,
+    sourceMap: sourceWithMap.sourceMap
   });
 };
 
