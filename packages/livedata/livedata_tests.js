@@ -572,7 +572,7 @@ if (Meteor.isClient) {
         // sub.stop does NOT call onError.
         test.isFalse(gotErrorFromStopper);
         test.equal(_.size(conn._subscriptions), 0);  // white-box test
-        conn._stream.forceDisconnect();
+        conn._stream.disconnect({_permanent: true});
       }
     ];})());
 

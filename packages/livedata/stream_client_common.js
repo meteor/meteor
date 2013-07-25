@@ -157,51 +157,38 @@ _.extend(Meteor._DdpClientStream.prototype, {
     self._retryNow();
   },
 
-  // Permanently disconnect a stream. Once a stream is forced to
-  // disconnect, it can never reconnect. This is for error cases such as
-  // ddp version mismatch, where trying again won't fix the problem.
-  //
-  // XXX this should probably be renamed and possibly unified with
-  // 'disconnect'.
-  forceDisconnect: function (optionalErrorMessage) {
+  disconnect: function (options) {
     var self = this;
-    self._forcedToDisconnect = true;
-    self._cleanup();
-    if (self.retryTimer) {
-      clearTimeout(self.retryTimer);
-      self.retryTimer = null;
-    }
-    self.currentStatus = {
-      status: "failed",
-      connected: false,
-      retryCount: 0
-    };
-    if (optionalErrorMessage)
-      self.currentStatus.reason = optionalErrorMessage;
-    self.statusChanged();
-  },
-
-  // Temporarily take the stream offline. reconnect() later to go back
-  // online. This can be used to pause live updates, save battery on
-  // mobile devices, etc.
-  disconnect: function () {
-    var self = this;
+    options = options || {};
 
     // Failed is permanent. If we're failed, don't let people go back
     // online by calling 'disconnect' then 'reconnect'.
     if (self._forcedToDisconnect)
       return;
 
+    // If _permanent is set, permanently disconnect a stream. Once a stream
+    // is forced to disconnect, it can never reconnect. This is for
+    // error cases such as ddp version mismatch, where trying again
+    // won't fix the problem.
+    if (options._permanent) {
+      self._forcedToDisconnect = true;
+    }
+
     self._cleanup();
     if (self.retryTimer) {
       clearTimeout(self.retryTimer);
       self.retryTimer = null;
     }
+
     self.currentStatus = {
-      status: "offline",
+      status: (options._permanent ? "failed" : "offline"),
       connected: false,
       retryCount: 0
     };
+
+    if (options._permanent && options._error)
+      self.currentStatus.reason = options._error;
+
     self.statusChanged();
   },
 
