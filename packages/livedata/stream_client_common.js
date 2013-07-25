@@ -157,25 +157,40 @@ _.extend(Meteor._DdpClientStream.prototype, {
     self._retryNow();
   },
 
-  // Permanently disconnect a stream.
-  forceDisconnect: function (optionalErrorMessage) {
+  disconnect: function (options) {
     var self = this;
-    self._forcedToDisconnect = true;
+    options = options || {};
+
+    // Failed is permanent. If we're failed, don't let people go back
+    // online by calling 'disconnect' then 'reconnect'.
+    if (self._forcedToDisconnect)
+      return;
+
+    // If _permanent is set, permanently disconnect a stream. Once a stream
+    // is forced to disconnect, it can never reconnect. This is for
+    // error cases such as ddp version mismatch, where trying again
+    // won't fix the problem.
+    if (options._permanent) {
+      self._forcedToDisconnect = true;
+    }
+
     self._cleanup();
     if (self.retryTimer) {
       clearTimeout(self.retryTimer);
       self.retryTimer = null;
     }
+
     self.currentStatus = {
-      status: "failed",
+      status: (options._permanent ? "failed" : "offline"),
       connected: false,
       retryCount: 0
     };
-    if (optionalErrorMessage)
-      self.currentStatus.reason = optionalErrorMessage;
+
+    if (options._permanent && options._error)
+      self.currentStatus.reason = options._error;
+
     self.statusChanged();
   },
-
 
   _lostConnection: function () {
     var self = this;
@@ -203,7 +218,9 @@ _.extend(Meteor._DdpClientStream.prototype, {
   // fired when we detect that we've gone online. try to reconnect
   // immediately.
   _online: function () {
-    this.reconnect();
+    // if we've requested to be offline by disconnecting, don't reconnect.
+    if (this.currentStatus.status != "offline")
+      this.reconnect();
   },
 
   _retryLater: function () {

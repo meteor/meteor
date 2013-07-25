@@ -32,6 +32,60 @@ testAsyncMulti("stream - reconnect", [
   }
 ]);
 
+// Disconnecting and reconnecting transitions through the correct statuses.
+testAsyncMulti("stream - basic disconnect", [
+  function (test, expect) {
+    var history = [];
+    var stream = new Meteor._DdpClientStream("/");
+    var onTestPass = expect();
+
+    Deps.autorun(function() {
+      var status = stream.status();
+
+      if (_.last(history) != status.status) {
+        history.push(status.status);
+
+        if (_.isEqual(history, ["connecting", "connected"]))
+          stream.disconnect();
+
+        if (_.isEqual(history, ["connecting", "connected", "offline"]))
+          stream.reconnect();
+
+        if (_.isEqual(history, ["connecting", "connected", "offline",
+                                "connecting", "connected"])) {
+          stream.disconnect();
+          onTestPass();
+        }
+      }
+    });
+  }
+]);
+
+// Remain offline if the online event is received while offline.
+testAsyncMulti("stream - disconnect remains offline", [
+  function (test, expect) {
+    var history = [];
+    var stream = new Meteor._DdpClientStream("/");
+    var onTestComplete = expect();
+
+    Deps.autorun(function() {
+      var status = stream.status();
+
+      if (_.last(history) != status.status) {
+        history.push(status.status);
+
+        if (_.isEqual(history, ["connecting", "connected"]))
+          stream.disconnect();
+
+        if (_.isEqual(history, ["connecting", "connected", "offline"])) {
+          stream._online();
+          test.isTrue(status.status == "offline");
+          onTestComplete();
+        }
+      }
+    });
+  }
+]);
 
 Tinytest.add("stream - sockjs urls are computed correctly", function(test) {
   var testHasSockjsUrl = function(raw, expectedSockjsUrl) {

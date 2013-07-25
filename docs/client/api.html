@@ -422,8 +422,8 @@ the server. The return value is an object with the following fields:
   values are `connected` (the connection is up and
   running), `connecting` (disconnected and trying to open a
   new connection), `failed` (permanently failed to connect; e.g., the client
-  and server support different versions of DDP) and `waiting` (failed
-  to connect and waiting to try to reconnect).
+  and server support different versions of DDP), `waiting` (failed
+  to connect and waiting to try to reconnect) and `offline` (user has disconnected the connection).
 {{/dtdd}}
 
 {{#dtdd name="retryCount" type="Number"}}
@@ -450,6 +450,19 @@ to get realtime updates.
 
 {{> api_box reconnect}}
 
+{{> api_box disconnect}}
+
+Call this method to temporarily disconnect from the server and stop all
+live data updates. While the client is disconnected it will not receive
+updates to collections, method calls will be queued until the
+connection is reestablished, and hot code push will be disabled.
+
+Call [Meteor.reconnect](#meteor_reconnect) to reestablish the connection
+and resume data transfer.
+
+This can be used to save battery on mobile devices when real time
+updates are not required.
+
 {{> api_box connect}}
 
 To call methods on another Meteor application or subscribe to its data
@@ -472,6 +485,8 @@ sets, call `Meteor.connect` with the URL of the application.
   [Meteor.status](#meteor_status).
 * `reconnect` -
   See [Meteor.reconnect](#meteor_reconnect).
+* `disconnect` -
+  See [Meteor.disconnect](#meteor_disconnect).
 * `onReconnect` - Set this to a function to be called as the first step of
   reconnecting. This function can call methods which will be executed before
   any other outstanding methods. For example, this can be used to re-establish
