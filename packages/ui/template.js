@@ -32,8 +32,8 @@ UI.makeTemplate = function (underlying) {
           if (typeof oldProp === 'function') {
             underlying[k] = (function (oldCb) {
               return function () {
-                oldCb.call(underlying);
-                givenProp.call(underlying);
+                oldCb.call(this);
+                givenProp.call(this);
               };
             })(oldProp);
           } else {
@@ -41,10 +41,14 @@ UI.makeTemplate = function (underlying) {
           }
         } else if (typeof givenProp === 'function') {
           // helper
-          underlying[k] = function (/**/) {
-            var data = this.get();
-            return givenProp.apply(data, arguments);
-          };
+          if (k === 'data')
+            throw new Error("'data' is reserved and can't be used as a helper name");
+          underlying[k] = (function (helper) {
+            return function (/**/) {
+              var data = this.get();
+              return helper.apply(data, arguments);
+            };
+          })(givenProp);
         } else {
           underlying[k] = givenProp;
         }

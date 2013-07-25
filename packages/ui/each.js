@@ -51,7 +51,7 @@ UI.List = Component.extend({
         // component methods don't.  Maybe they should.
         //
         // XXX this doesn't reactively update elseContent
-        this._else = constructify(this.elseContent);
+        this._else = constructify(this.elseContent || UI.Component);
         this.append(this._else);
       }
     }
@@ -93,7 +93,8 @@ UI.List = Component.extend({
     } else {
       self._else = null;
       self._items.forEach(function (comp) {
-        buf.write(comp);
+        // XXX have to add here, which is weird....
+        buf.write(self.add(comp));
       });
     }
   },
@@ -208,7 +209,7 @@ UI.Each = Component.extend({
     // if `content` reactively changes type, we simply rebuild
     // completely.
     var content = (typeof self.content === 'function' ?
-                   self.content() : self.content);
+                   self.content() : self.content) || UI.Component;
 
     var replacer = list.beginReplace();
 

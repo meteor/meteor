@@ -349,7 +349,7 @@ Template.failedTests({
 //// Template - testTable
 
 Template.testTable({
-  data: function () {
+  testdata: function () {
     topLevelGroupsDep.depend();
     return resultTree;
   }

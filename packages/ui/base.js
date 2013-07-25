@@ -412,9 +412,9 @@ _extend(UI.Component, {
   _offscreen: null,
 
   // `content` and `elseContent` must be Components or functions
-  // that return components.
-  content: UI.Component,
-  elseContent: UI.Component,
+  // that return components, or null.
+  content: null,
+  elseContent: null,
 
   // The `render` method is overridden by compiled templates
   // and other components to declare the component's

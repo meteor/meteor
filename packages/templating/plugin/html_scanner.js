@@ -172,7 +172,7 @@ html_scanner = {
         contents, { sourceName: "<body>" });
 
       // We may be one of many `<body>` tags.
-      results.js += "\nUI.body.contentParts.push(UI.Component.extend({render: " + renderFuncCode + "}));\nMeteor.startup(function () { if (! UI.body.isInited) UI.append(UI.body); });";
+      results.js += "\nUI.body.contentParts.push(UI.Component.extend({render: " + renderFuncCode + "}));\nMeteor.startup(function () { if (! UI.body.isInited) UI.append(UI.body); });\n";
     }
   }
 };
