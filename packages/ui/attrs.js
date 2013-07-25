@@ -163,12 +163,38 @@ var ClassHandler = AttributeHandler.extend({
     } else {
       return String(value);
     }
+  },
+  update: function (element, oldValue, value) {
+    var oldClasses = oldValue;
+    if (typeof oldClasses === 'string')
+      oldClasses = _.compact(oldClasses.split(' '));
+    var newClasses = value;
+    if (typeof newClasses === 'string')
+      newClasses = _.compact(newClasses.split(' '));
+
+    var classes = _.compact(element.className.split(' '));
+
+    // XXX optimize this later
+    _.each(oldClasses, function (c) {
+      if (_.indexOf(newClasses, c) < 0)
+        classes = _.without(classes, c);
+    });
+    _.each(newClasses, function (c) {
+      if (_.indexOf(oldClasses, c) < 0 &&
+          _.indexOf(classes, c) < 0)
+        classes.push(c);
+    });
+
+    element.className = classes.join(' ');
   }
 });
 
 var makeAttributeHandler = function (component, name, value) {
   //  return new (component.constructor._attributeHandlers[name] ||
   //               AttributeHandler)(name, value);
+
+  // will need one for 'style' on IE, though modern browsers
+  // seem to handle setAttribute ok.
   if (name === 'class') {
     return new ClassHandler(name, value);
   } else {
