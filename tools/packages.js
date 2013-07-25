@@ -1762,7 +1762,7 @@ _.extend(Package.prototype, {
           // XXX remove and make everyone explicitly declare all dependencies
           ['meteor', 'webapp', 'logging', 'deps', 'session',
            'livedata', 'mongo-livedata', 'spark', 'templating', 'check',
-           'underscore', 'jquery'],
+           'underscore', 'jquery', 'handlebars', 'random'],
         project.get_packages(appDir));
 
       var arch = sliceName === "server" ? "native" : "browser";
