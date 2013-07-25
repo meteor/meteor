@@ -981,7 +981,9 @@ Spacebars.extend = function (obj/*, k1, v1, k2, v2, ...*/) {
 };
 
 Spacebars.parseAttrs = function (attrs) {
-  if (attrs && (typeof attrs) === 'object')
+  if (! attrs)
+    return {};
+  else if (typeof attrs === 'object')
     return attrs;
   else
     throw new Error("XXX Should allow strings here");

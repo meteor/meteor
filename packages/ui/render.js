@@ -31,6 +31,8 @@ var GT_OR_QUOTE = /[>'"]/;
 // component, just return it.  In this latter case, the
 // `props` argument must be falsy.
 constructify = function (comp, props) {
+  if (! comp)
+    throw new Error("No such component");
   if (props)
     // comp had better be uninited! (or will throw)
     return comp.extend(props);

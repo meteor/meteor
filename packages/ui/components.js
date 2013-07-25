@@ -63,7 +63,7 @@ UI.Unless = Component.extend({
 // for the demo.....
 // @export FadeyIf
 FadeyIf = Component.extend({
-  typeName: 'If',
+  typeName: 'FadeyIf',
   _animationOptions: { duration: 1000, queue: false },
   init: function () {
     this.condition = this.data;
@@ -100,7 +100,7 @@ FadeyIf = Component.extend({
             curCondition ? self.content : self.elseContent);
           if (self.hasChild(oldChild)) {
             $(oldChild.parentNode()).animate(
-              {height: 0, opacity: 0},
+              {height: 0, width: 0, opacity: 0},
               self._animationOptions,
               (function (oldChild) {
                 return function () {
@@ -115,7 +115,9 @@ FadeyIf = Component.extend({
           var newDiv = $('<div style="display:none"></div>');
           self.append(newDiv);
           self.insertBefore(newChild, null, newDiv.get(0));
-          newDiv.animate({height: 'show', opacity: 1},
+          newDiv.animate({height: 'show',
+                          width: 'show',
+                          opacity: 1},
                          self._animationOptions);
         }
       }
@@ -127,6 +129,39 @@ FadeyIf = Component.extend({
   }
 });
 
+// @export Checkbox
+Checkbox = UI.makeTemplate(Component.extend({
+  typeName: 'Checkbox',
+  init: function () {
+    var self = this;
+    if (typeof self.data === 'string') {
+      var field = self.data;
+      self.set('checked', self.get(field));
+
+      self.autorun(function (c) {
+        var checked = self.get('checked');
+        if (! c.firstRun)
+          self.set(field, checked);
+      });
+    }
+  },
+  render: function (buf) {
+    var self = this;
+    buf.write('<input type="checkbox"',
+              {attrs: function () {
+                return self.get('checked') ?
+                  {'checked':''} : {};
+              }},'>');
+  }
+}))({
+  fields: {checked: false},
+  'change input': function (evt) {
+    var comp = UI.Component.current;
+    var newChecked = !! evt.target.checked;
+    if (newChecked !== comp.get('checked'))
+      comp.set('checked', newChecked);
+  }
+});
 
 /*
 UI.Counter = Component.extend({

@@ -13,9 +13,9 @@ Package.on_use(function (api) {
                  'attrs.js',
                  'render.js',
                  'fields.js',
+                 'template.js',
                  'components.js',
-                 'each.js',
-                 'template.js']);
+                 'each.js']);
 });
 
 Package.on_test(function (api) {

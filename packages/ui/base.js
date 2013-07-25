@@ -297,7 +297,9 @@ _extend(UI.Component, {
     // instantiated", and `init` is the callback you get
     // when that happens.
     child.isInited = true;
-    callChainedCallback(child, 'init');
+    Deps.nonreactive(function () {
+      callChainedCallback(child, 'init');
+    });
 
     // useful in: `this.foo = this.add(Foo.extend())`
     return child;
