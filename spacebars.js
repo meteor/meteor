@@ -694,7 +694,7 @@ Spacebars.compile = function (inputString, options) {
                                    compOptions) {
 
     var nameCode = codeGenPath(path, funcInfo);
-    var argCode = args.length ?
+    var argCode = (args.length || compOptions) ?
           codeGenArgs(args, funcInfo, compOptions || {})[0] : null;
 
     // XXX provide a better error message if
