@@ -869,8 +869,8 @@ Spacebars.compile = function (inputString, options) {
                        name.length === 1 &&
                        name[0].type === 'TRIPLE') {
               renderables.push(
-                'Spacebars.parseAttrs(' +
-                  codeGenBasicStache(name[0], funcInfo) + ')');
+                '{attrs: function () { return Spacebars.parseAttrs(' +
+                  codeGenBasicStache(name[0], funcInfo) + '); }}');
             } else {
               pairsWithReactiveNames.push(
                 interpolate(name, funcInfo,
