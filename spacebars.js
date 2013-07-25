@@ -598,14 +598,11 @@ Spacebars.compile = function (inputString, options) {
   };
 
   // `path` is an array of at least one string
-  var codeGenPath = function (path, funcInfo, searchTemplates) {
+  var codeGenPath = function (path, funcInfo) {
     funcInfo.usedSelf = true;
 
-    var code = 'self.get(' + toJSLiteral(path[0]) + ')';
-    if (searchTemplates) {
-      code = '(Template[' + toJSLiteral(path[0]) + '] || ' +
-        code + ')';
-    }
+    var code = 'self.lookup(' + toJSLiteral(path[0]) + ')';
+
     if (path.length > 1) {
       code = 'Spacebars.index(' + code + ', ' +
         _.map(path.slice(1), toJSLiteral).join(', ') + ')';
@@ -696,9 +693,9 @@ Spacebars.compile = function (inputString, options) {
   var codeGenComponent = function (path, args, funcInfo,
                                    compOptions) {
 
-    var nameCode = codeGenPath(path, funcInfo, true);
-    var argCode = codeGenArgs(args, funcInfo,
-                              compOptions || {})[0];
+    var nameCode = codeGenPath(path, funcInfo);
+    var argCode = args.length ?
+          codeGenArgs(args, funcInfo, compOptions || {})[0] : null;
 
     // XXX provide a better error message if
     // `foo` in `{{> foo}}` is not found?
@@ -706,8 +703,14 @@ Spacebars.compile = function (inputString, options) {
     // as a string, and then the renderer could choke on
     // that in a way where it ends up in the error message.
 
-    return '{child: function () { return ((' + nameCode +
-      ') || null); }, props: ' + argCode + '}';
+    var compFunc = 'function () { return ((' + nameCode +
+          ') || null); }';
+
+    if (path.length === 1)
+      compFunc = 'Template[' + toJSLiteral(path[0]) + '] || ' + compFunc;
+
+    return '{child: ' + compFunc + (argCode ? ', props: ' + argCode : '') +
+      '}';
   };
 
   var codeGenBasicStache = function (tag, funcInfo) {
@@ -830,7 +833,7 @@ Spacebars.compile = function (inputString, options) {
                 case 'TRIPLE':
                   renderables.push(
                     'UI.' + (tag.type === 'TRIPLE' ? 'HTML' : 'Text') +
-                      '(function () { return ' +
+                      '.withData(function () { return ' +
                       codeGenBasicStache(tag, funcInfo) +
                       '; })');
                   break;
