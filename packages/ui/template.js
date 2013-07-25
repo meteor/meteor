@@ -75,6 +75,7 @@ UI.makeTemplate = function (underlying) {
                 // XXX
                 var comp = UI.body.findByElement(evt.target);
                 evt.component = comp;
+                UI.Component.current = comp;
                 var data = comp.get();
                 handler.call(data, evt);
               };
