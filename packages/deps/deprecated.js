@@ -9,7 +9,7 @@ Meteor.autorun = Deps.autorun;
 // We used to require a special "autosubscribe" call to reactively subscribe to
 // things. Now, it works with autorun.
 // XXX COMPAT WITH 0.5.4
-Meteor.autosubscribe = Deps.autosubscribe;
+Meteor.autosubscribe = Deps.autorun;
 
 // This Deps API briefly existed in 0.5.8 and 0.5.9
 // XXX COMPAT WITH 0.5.9
