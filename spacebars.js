@@ -601,7 +601,7 @@ Spacebars.compile = function (inputString, options) {
   var codeGenPath = function (path, funcInfo, searchTemplates) {
     funcInfo.usedSelf = true;
 
-    var code = 'self.lookup(' + toJSLiteral(path[0]) + ')';
+    var code = 'self.get(' + toJSLiteral(path[0]) + ')';
     if (searchTemplates) {
       code = '(Template[' + toJSLiteral(path[0]) + '] || ' +
         code + ')';
@@ -706,8 +706,8 @@ Spacebars.compile = function (inputString, options) {
     // as a string, and then the renderer could choke on
     // that in a way where it ends up in the error message.
 
-    return '{type: function () { return ((' + nameCode +
-      ') || null); }, args: ' + argCode + '}';
+    return '{child: function () { return ((' + nameCode +
+      ') || null); }, props: ' + argCode + '}';
   };
 
   var codeGenBasicStache = function (tag, funcInfo) {
@@ -918,7 +918,7 @@ Spacebars.compile = function (inputString, options) {
       (renderables.length ?
        (funcInfo.usedSelf ?
         '\n' + indent + 'var self = this;' : '') +
-       '\n' + indent + 'buf(' +
+       '\n' + indent + 'buf.write(' +
        renderables.join(',\n' + indent) + ');\n' +
        oldIndent : '') + '}';
   };
@@ -935,8 +935,7 @@ Spacebars.index = function (value/*, identifiers*/) {
   var nextThis = null;
 
   _.each(identifiers, function (id) {
-    if (typeof value === 'function' &&
-        ! UI.Component.isType(value)) {
+    if (typeof value === 'function') {
       // Call a getter -- in `{{foo.bar}}`, call `foo()` if it
       // is a function before indexing it with `bar`.
       //
@@ -949,8 +948,7 @@ Spacebars.index = function (value/*, identifiers*/) {
       value = value[id];
   });
 
-  if (typeof value === 'function' &&
-      ! UI.Component.isType(value)) {
+  if (typeof value === 'function') {
     // bind `this` for resulting function, so it can be
     // called with `Spacebars.call`.
     value = _.bind(value, nextThis);
@@ -960,8 +958,7 @@ Spacebars.index = function (value/*, identifiers*/) {
 };
 
 Spacebars.call = function (value/*, args*/) {
-  if (typeof value !== 'function' ||
-      UI.Component.isType(value))
+  if (typeof value !== 'function')
     return value; // ignore args
 
   var args = Array.prototype.slice.call(arguments, 1);
