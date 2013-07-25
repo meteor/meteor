@@ -18,6 +18,11 @@
 
 * Delete login tokens from server when user logs out.
 
+* Renames (may require doc updates):
+   - `Meteor.default_connection` - `Meteor.connection`
+   - `Meteor.default_server` - `Meteor.server`
+   - `Meteor.connect` - `DDP.connect`
+
 
 ## v0.6.4.1
 

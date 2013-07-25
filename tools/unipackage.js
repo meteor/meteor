@@ -31,12 +31,12 @@ var bundler = require('./bundler.js');
 //   environment)
 //
 // Example usage:
-//   var Meteor = require('./unipackage.js').load({
+//   var DDP = require('./unipackage.js').load({
 //     library: context.library,
 //     packages: ['livedata'],
 //     release: context.releaseVersion
-//   }).meteor.Meteor;
-//   var reverse = Meteor.connect('reverse.meteor.com');
+//   }).livedata.DDP;
+//   var reverse = DDP.connect('reverse.meteor.com');
 //   console.log(reverse.call('reverse', 'hello world'));
 
 var cacheLibrary = null;
