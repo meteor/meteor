@@ -200,7 +200,7 @@ Meteor._LivedataConnection = function (url, options) {
       } else {
         var error =
               "Version negotiation failed; server requested version " + msg.version;
-        self._stream.forceDisconnect(error);
+        self._stream.disconnect({_permanent: true, _error: error});
         options.onConnectionFailure(error);
       }
     }
@@ -829,7 +829,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
   close: function () {
     var self = this;
-    return self._stream.forceDisconnect();
+    return self._stream.disconnect({_permanent: true});
   },
 
   ///

@@ -1354,7 +1354,7 @@ Tinytest.addAsync("livedata connection - version negotiation requires renegotiat
     onConnectionFailure: function () { test.fail(); onComplete(); },
     onConnected: function () {
       test.equal(connection._version, Meteor._SUPPORTED_DDP_VERSIONS[0]);
-      connection._stream.forceDisconnect();
+      connection._stream.disconnect({_permanent: true});
       onComplete();
     }
   });
