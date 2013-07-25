@@ -12,7 +12,8 @@ Package.on_use(function (api) {
                  'attrs.js',
                  'render.js',
                  'fields.js',
-                 'components.js']);
+                 'components.js',
+                 'each.js']);
 });
 
 Package.on_test(function (api) {

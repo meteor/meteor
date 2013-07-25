@@ -31,7 +31,7 @@ var GT_OR_QUOTE = /[>'"]/;
 // in the special case where `comp` is an already-inited
 // component, just return it.  In this latter case, the
 // `props` argument must be falsy.
-var constructify = function (comp, props) {
+constructify = function (comp, props) {
   if (props)
     // comp had better be uninited! (or will throw)
     return comp.extend(props);
@@ -100,11 +100,12 @@ makeRenderBuffer = function (component, options) {
     push('<!--', commentString, '-->');
     componentsToAttach = componentsToAttach || {};
     componentsToAttach[commentString] = comp;
+    return comp;
   };
 
   var handle = function (arg) {
     if (arg == null) {
-      return;
+      // nothing to do
     } else if (typeof arg === 'string') {
       // "HTML"
       push(arg);
@@ -113,7 +114,7 @@ makeRenderBuffer = function (component, options) {
       if (! arg.isInited)
         arg = arg.extend();
 
-      handleComponent(arg);
+      return handleComponent(arg);
     } else if ((typeof arg === 'function') || arg.child) {
       // `componentFunction`, or
       // `{child: componentOrFunction, props: object}`
@@ -180,7 +181,12 @@ makeRenderBuffer = function (component, options) {
       }
       // the autorun above closes down over this var:
       var curChild = constructify(curComp, props);
-      handleComponent(curChild);
+      // return something the caller of `buf.write` can't get
+      // any other way if `arg` involved a componentFunction:
+      // the actual component created.  If the arg we are
+      // handling is the last arg to `buf.write`, it will return
+      // this value.
+      return handleComponent(curChild);
     } else if (arg.attrs) {
       // `{attrs: functionOrDictionary }`
       // attrs object inserts zero or more `name="value"` items
@@ -223,8 +229,10 @@ makeRenderBuffer = function (component, options) {
 
   var buf = {};
   buf.write = function (/*args*/) {
+    var ret;
     for (var i = 0; i < arguments.length; i++)
-      handle(arguments[i]);
+      ret = handle(arguments[i]);
+    return ret;
   };
 
   buf.getHtml = function () {
