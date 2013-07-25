@@ -452,7 +452,7 @@ Template.api.disconnect = {
   name: "Meteor.disconnect()",
   locus: "Client",
   descr: [
-    "Disconnect the connection to the server."]
+    "Disconnect the client from the server."]
 };
 
 Template.api.connect = {
