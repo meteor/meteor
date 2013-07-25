@@ -27,7 +27,24 @@ UI.makeTemplate = function (underlying) {
         var oldProp = underlying[k];
         var givenProp = options[k];
 
-        if (k.indexOf(' ') >= 0) {
+        if (k === 'fields') {
+          // XXX basic fields impl
+          // XXX could support functions as initial field values
+          _.each(givenProp, function (fieldValue, fieldName) {
+            var getter = function () {
+              getter.$dep.depend();
+              return getter.$value;
+            };
+            getter.$value = fieldValue; // initial value
+            getter.$dep = new Deps.Dependency;
+            getter.$set = function (v) {
+              getter.$value = v;
+              getter.$dep.changed();
+            };
+            underlying[fieldName] = getter;
+          });
+
+        } else if (k.indexOf(' ') >= 0) {
           // event handler
           // XXX clean up
           var eventType = k.slice(0, k.indexOf(' '));
@@ -40,8 +57,9 @@ UI.makeTemplate = function (underlying) {
             handler: (function (handler) {
               return function (evt) {
                 // XXX
-                var data = UI.body.findByElement(
-                  evt.currentTarget).get();
+                var comp = UI.body.findByElement(evt.target);
+                evt.component = comp;
+                var data = comp.get();
                 handler.call(data, evt);
               };
             })(givenProp)

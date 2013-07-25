@@ -72,6 +72,14 @@ _extend(UI.Component, {
   lookup: function (id) {
     return this.get(id, true);
   },
+  set: function (id, value) {
+    var comp = findComponentWithProp(id, this);
+    if (! comp || ! comp[id])
+      throw new Error("Can't find field: " + id);
+    if (! comp[id].$set)
+      throw new Error("Not a settable field: " + id);
+    comp[id].$set(value);
+  },
   // convenient syntax
   withData: function (data) {
     return this.extend({data: data});
