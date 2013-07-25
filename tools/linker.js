@@ -462,8 +462,8 @@ var bannerPadding = function (bannerWidth) {
 //  - sourcePath: path to use in error messages
 //  - sourceMap: an optional source map (as string) for the input file
 //
-// declaredExports: an array of symbols that the module exports.  null
-// if our slice isn't allowed to have exports.
+// declaredExports: an array of symbols that the module exports.  null if our
+// slice isn't allowed to have exports. Symbols are {name,testOnly} pairs.
 //
 // useGlobalNamespace: make the top level namespace be the same as the
 // global namespace, so that symbols are accessible from the

@@ -399,7 +399,7 @@ _.extend(Slice.prototype, {
         rootOutputPath: self.pkg.serveRoot,
         arch: self.arch,
         fileOptions: fileOptions,
-        declaredExports: self.declaredExports,
+        declaredExports: _.pluck(self.declaredExports, 'name'),
         read: function (n) {
           if (n === undefined || readOffset + n > contents.length)
             n = contents.length - readOffset;
@@ -493,7 +493,7 @@ _.extend(Slice.prototype, {
         "/packages/" + self.pkg.name +
         (self.sliceName === "main" ? "" : ("." + self.sliceName)) + ".js",
       name: self.pkg.name || null,
-      declaredExports: self.declaredExports,
+      declaredExports: _.pluck(self.declaredExports, 'name'),
       jsAnalyze: jsAnalyze
     });
 
@@ -517,14 +517,14 @@ _.extend(Slice.prototype, {
 
     self.packageVariables = [];
     var packageVariableNames = {};
-    _.each(self.declaredExports, function (name) {
-      if (_.has(packageVariableNames, name))
+    _.each(self.declaredExports, function (symbol) {
+      if (_.has(packageVariableNames, symbol.name))
         return;
       self.packageVariables.push({
-        name: name,
-        export: true
+        name: symbol.name,
+        export: symbol.testOnly? "tests" : true
       });
-      packageVariableNames[name] = true;
+      packageVariableNames[symbol.name] = true;
     });
     _.each(results.assignedVariables, function (name) {
       if (_.has(packageVariableNames, name))
@@ -580,8 +580,9 @@ _.extend(Slice.prototype, {
         if (! otherSlice.isBuilt)
           throw new Error("dependency wasn't built?");
         _.each(otherSlice.packageVariables, function (symbol) {
-          // XXX implement test-only exports
-          if (symbol.export)
+          // Slightly hacky implementation of test-only exports.
+          if (symbol.export === true ||
+              (symbol.export === "tests" && self.sliceName === "tests"))
             imports[symbol.name] = otherSlice.pkg.name;
         });
       });
@@ -1586,13 +1587,22 @@ _.extend(Package.prototype, {
           //
           // @param symbols String (eg "Foo") or array of String
           // @param where 'client', 'server', or an array of those
-          exportSymbol: function (symbols, where) {
+          // @param options 'testOnly', boolean.
+          exportSymbol: function (symbols, where, options) {
             if (role === "test") {
               buildmessage.error("You cannot export symbols from a test.",
                                  { useMyCaller: true });
               // recover by ignoring
               return;
             }
+            // Support `api.exportSymbol("FooTest", {testOnly: true})` without
+            // where.
+            if (_.isObject(where) && !_.isArray(where) && !options) {
+              options = where;
+              where = null;
+            }
+            options = options || {};
+
             symbols = toArray(symbols);
             where = toWhereArray(where);
 
@@ -1605,7 +1615,7 @@ _.extend(Package.prototype, {
                 return;
               }
               _.each(where, function (w) {
-                exports[w].push(symbol);
+                exports[w].push({name: symbol, testOnly: !!options.testOnly});
               });
             });
           },

@@ -26,7 +26,7 @@ Package.on_use(function (api) {
   api.exportSymbol('DDP');
   api.exportSymbol('DDPServer', 'server');
 
-  api.exportSymbol('_LivedataTest');
+  api.exportSymbol('_LivedataTest', {testOnly: true});
 
   // Transport
   api.use('reload', 'client');

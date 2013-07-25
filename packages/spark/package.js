@@ -9,7 +9,7 @@ Package.on_use(function (api) {
           'client');
 
   api.exportSymbol('Spark', 'client');
-  api.exportSymbol('_SparkTest', 'client');
+  api.exportSymbol('_SparkTest', 'client', {testOnly: true});
 
   api.add_files(['spark.js', 'patch.js', 'convenience.js',
                  'utils.js'], 'client');

@@ -9,7 +9,7 @@ Package.on_use(function (api) {
   api.use(['underscore', 'service-configuration'], 'server');
 
   api.exportSymbol('Oauth');
-  api.exportSymbol('_OauthTest', 'server');
+  api.exportSymbol('_OauthTest', 'server', {testOnly: true});
 
   api.add_files('oauth_client.js', 'client');
   api.add_files('oauth_server.js', 'server');
