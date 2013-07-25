@@ -319,20 +319,12 @@ Template.groupNav({
 });
 
 Template.groupNav({
-  rendered: function () {
-    var self = this;
-    // we don't yet have API support for event maps which do
-    // full delegation
-    // on our component (listening to all events on current
-    // and future elements), so just use delegation on some
-    // DOM node.
-    self.$(".navbar").on('click', '.group', function (evt) {
-      var data = self.findByElement(evt.currentTarget).get();
-      changeToPath(data.path);
-    }).on('click', '.rerun', function (evt) {
+  'click .group': function () {
+    changeToPath(this.path);
+  },
+  'click .rerun': function () {
       Session.set("rerunScheduled", true);
       Meteor._reload.reload();
-    });
   }
 });
 
@@ -358,17 +350,13 @@ Template.testTable({
 //// Template - test_group
 
 Template.test_group({
-  rendered: function () {
-    var self = this;
-    self.$(".group").on('click', '.groupname', function (evt) {
-      var data = self.findByElement(evt.currentTarget).get();
-      changeToPath(data.path);
-      // prevent enclosing groups from also triggering on
-      // same groupname.  It would be cleaner to think of
-      // this as each group only listening to its *own*
-      // groupname, but currently it listens to all of them.
-      evt.stopImmediatePropagation();
-    });
+  'click .groupname': function (evt) {
+    changeToPath(this.path);
+    // prevent enclosing groups from also triggering on
+    // same groupname.  It would be cleaner to think of
+    // this as each group only listening to its *own*
+    // groupname, but currently it listens to all of them.
+    evt.stopImmediatePropagation();
   }
 });
 
@@ -442,13 +430,9 @@ Template.test({
 });
 
 Template.test({
-  rendered: function () {
-    var self = this;
-    self.$(".test").on('click', '.testname', function (evt) {
-      var data = self.findByElement(evt.currentTarget).get();
-      data.expanded = ! data.expanded;
-      data.dep.changed();
-    });
+  'click .testname': function () {
+    this.expanded = ! this.expanded;
+    this.dep.changed();
   }
 });
 
@@ -456,17 +440,12 @@ Template.test({
 //// Template - event
 
 Template.event({
-  rendered: function () {
-    var self = this;
-    self.$(".event").on('click', '.debug', function (evt) {
-      var data = self.findByElement(evt.currentTarget).get();
-
-      // the way we manage groupPath, shortName, cookies, etc, is really
-      // messy. needs to be aggressively refactored.
-      forgetEvents({groupPath: data.cookie.groupPath,
-                    test: data.cookie.shortName});
-      Meteor._debugTest(data.cookie, reportResults);
-    });
+  'click .debug': function () {
+    // the way we manage groupPath, shortName, cookies, etc, is really
+    // messy. needs to be aggressively refactored.
+    forgetEvents({groupPath: this.cookie.groupPath,
+                  test: this.cookie.shortName});
+    Meteor._debugTest(this.cookie, reportResults);
   }
 });
 

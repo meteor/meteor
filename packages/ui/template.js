@@ -27,7 +27,27 @@ UI.makeTemplate = function (underlying) {
         var oldProp = underlying[k];
         var givenProp = options[k];
 
-        if (chainers.hasOwnProperty(k)) {
+        if (k.indexOf(' ') >= 0) {
+          // event handler
+          // XXX clean up
+          var eventType = k.slice(0, k.indexOf(' '));
+          var selector = k.slice(k.indexOf(' ') + 1);
+
+          underlying._events = (underlying._events || []);
+          underlying._events.push({
+            type: eventType,
+            selector: selector,
+            handler: (function (handler) {
+              return function (evt) {
+                // XXX
+                var data = UI.body.findByElement(
+                  evt.currentTarget).get();
+                handler.call(data, evt);
+              };
+            })(givenProp)
+          });
+
+        } else if (chainers.hasOwnProperty(k)) {
           // init, rendered, destroyed
           if (typeof oldProp === 'function') {
             underlying[k] = (function (oldCb) {

@@ -487,6 +487,18 @@ _extend(UI.Component, {
         if (c.firstRun) {
           self.isBuilt = true;
           self._callOnNextBuiltCallbacks();
+
+          // FAKE-ISH (NON-DELEGATED) EVENT MAP STUFF
+          if (self._events && self._events.length) {
+            _.each(self._events, function (info) {
+              $(self.firstNode().parentNode).find(info.selector).on(
+                info.type, function (evt) {
+                  if (self.containsElement(evt.currentTarget))
+                    info.handler(evt);
+                });
+            });
+          }
+
           callChainedCallback(self, 'rendered');
         }
       });
@@ -572,7 +584,7 @@ _extend(UI.Component, {
   _attach: function (parentNode, beforeNode) {
     var self = this;
 
-    this._requireNotDestroyed();
+    self._requireNotDestroyed();
 
     if (! self.isInited)
       throw new Error("Component to attach must be inited");
