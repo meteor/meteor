@@ -27,6 +27,20 @@ UI.encodeSpecialEntities = function (text, isQuoted) {
 
 var GT_OR_QUOTE = /[>'"]/;
 
+// Instantiate `comp` with `props` by calling extend, or,
+// in the special case where `comp` is an already-inited
+// component, just return it.  In this latter case, the
+// `props` argument must be falsy.
+var constructify = function (comp, props) {
+  if (props)
+    // comp had better be uninited! (or will throw)
+    return comp.extend(props);
+  else if (comp.isInited)
+    return comp;
+  else
+    return comp.extend();
+};
+
 makeRenderBuffer = function (component, options) {
   var isPreview = !! options && options.preview;
 
@@ -80,6 +94,14 @@ makeRenderBuffer = function (component, options) {
     strs.push.apply(strs, arguments);
   };
 
+  var handleComponent = function (comp) {
+    randomString = randomString || Random.id();
+    var commentString = randomString + '_' + (commentUid++);
+    push('<!--', commentString, '-->');
+    componentsToAttach = componentsToAttach || {};
+    componentsToAttach[commentString] = comp;
+  };
+
   var handle = function (arg) {
     if (arg == null) {
       return;
@@ -90,51 +112,67 @@ makeRenderBuffer = function (component, options) {
       // Component
       if (! arg.isInited)
         arg = arg.extend();
-      randomString = randomString || Random.id();
-      var commentString = randomString + '_' + (commentUid++);
-      push('<!--', commentString, '-->');
-      componentsToAttach = componentsToAttach || {};
-      componentsToAttach[commentString] = arg;
-    } else if (arg.extend) {
-      // `{extend: componentOrFunction, props: object}`
-      /*      if (UI.isComponent(arg.extend)) {
-        // In `{extend: comp}` with no `props`, it's ok
-        // for `comp` to be already inited.  This lets
-        // you write `{{> foo}}` to insert already-inited
-        // `foo`, with cooperation from the template
-        // compiler (i.e. not emitting an empty props object).
-        if (arg.props)
-          handle(arg.extend.extend(arg.props));
-        else if (arg.extend.isInited)
-          handle(arg.extend);
-        else
-          handle(arg.extend.extend());
-      } else if (typeof arg.extend === 'function') {
-        var curType;
-        // XXXXXXX WIP
-        component.autorun(function (c) {
+
+      handleComponent(arg);
+    } else if (arg.child) {
+      // `{child: componentOrFunction, props: object}`
+
+      // In `{child: comp}` with no `props`, it's ok
+      // for `comp` to be already inited.  This lets
+      // you write `{{> foo}}` to insert already-inited
+      // `foo`, with cooperation from the template
+      // compiler (i.e. not emitting an empty props object).
+
+      // `curComp` holds the latest value of the `child`
+      // function if `componentOrFunction` is a function,
+      // or else the value itself if it is not.
+      // In the case where `curComp`
+      // is uninited and we instantiate a copy, `curComp`
+      // is not that copy, it's the original component used
+      // as a prototype.
+      var curComp = arg.child;
+      var props = arg.props;
+      if (typeof curComp === 'function') {
+        var compFunc = curComp;
+        // use `Deps.autorun`, not `component.autorun`,
+        // because we *do* want to be stopped when the
+        // enclosing computation is invalidated (i.e.
+        // the rebuilder computation).
+        Deps.autorun(function (c) {
           // capture dependencies of this line:
-          var type = arg.type();
+          var comp = compFunc();
           if (c.firstRun) {
-            curType = type;
-          } else if (component.stage !== Component.BUILT ||
-                     ! component.hasChild(curChild)) {
-            c.stop();
-          } else if (type !== curType) {
-            var oldChild = curChild;
-            curType = type;
-            // don't capture any dependencies here
-            Deps.nonreactive(function () {
-              curChild = curType.create(arg.args);
-              component.replaceChild(oldChild, curChild);
-            });
+            // right away
+            curComp = comp;
+          } else {
+            // later (on subsequent runs)...
+            if (! component.isBuilt ||
+                component.isDestroyed ||
+                ! component.hasChild(curChild)) {
+              c.stop();
+            } if (comp !== curComp) {
+              var oldChild = curChild;
+              var oldComp = curComp;
+              curComp = comp;
+              // don't capture any dependencies here
+              Deps.nonreactive(function () {
+                curChild = constructify(curComp, props);
+                if (oldChild === oldComp)
+                  // didn't create the oldChild, just
+                  // used it!  So detach it, don't destroy it.
+                  component.swapChild(oldChild, curChild);
+                else
+                  component.replaceChild(oldChild, curChild);
+              });
+            }
           }
         });
-        var curChild = curType.create(arg.args);
-        handle(curChild);
-      } else {
-        throw new Error("Expected 'extend' to be Component or function");
-      }*/
+      } else if (! UI.isComponent(curComp)) {
+        throw new Error("Expected function or Component");
+      }
+      // the autorun above closes down over this var:
+      var curChild = constructify(curComp, props);
+      handleComponent(curChild);
     } else if (arg.attrs) {
       // `{attrs: functionOrDictionary }`
       // attrs object inserts zero or more `name="value"` items

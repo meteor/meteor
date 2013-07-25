@@ -71,7 +71,7 @@ _extend(UI.Component, {
   _constr: function Component() {},
 
   _super: null,
-  guid: 1,
+  guid: "1",
 
   extend: function (props) {
     // this function should never cause `props` to be
@@ -114,7 +114,7 @@ _extend(UI.Component, {
     // for efficient Component instantiations, we assign
     // as few things as possible here.
     c._super = this;
-    c.guid = UI.nextGuid++;
+    c.guid = String(UI.nextGuid++);
 
     return c;
   },
@@ -175,6 +175,10 @@ _extend(UI.Component, {
       return;
 
     this.isDestroyed = true;
+
+    // recursively destroy children as well
+    for (var k in this.children)
+      this.children[k].destroy();
 
     // clean up any data associated with offscreen nodes
     if (this._offscreen)
@@ -278,6 +282,9 @@ _extend(UI.Component, {
     // when that happens.
     child.isInited = true;
     callChainedCallback(child, 'init');
+
+    // useful in: `this.foo = this.add(Foo.extend())`
+    return child;
   },
 
   hasChild: function (comp) {
@@ -987,18 +994,24 @@ _extend(UI.Component, {
   _findStartComponent: function (firstNode) {
     var children = this.children;
     // linear-time scan until found
-    for (var k in children)
-      if (children[k].firstNode() === firstNode)
-        return children[k];
+    for (var k in children) {
+      var c = children[k];
+      if (c.isBuilt && c.isAttached &&
+          c.firstNode() === firstNode)
+        return c;
+    }
     return null;
   },
 
   _findEndComponent: function (lastNode) {
     var children = this.children;
     // linear-time scan until found
-    for (var k in children)
-      if (children[k].lastNode() === lastNode)
-        return children[k];
+    for (var k in children) {
+      var c = children[k];
+      if (c.isBuilt && c.isAttached &&
+          c.lastNode() === lastNode)
+        return c;
+    }
     return null;
   }
 
