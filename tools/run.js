@@ -405,6 +405,29 @@ exports.run = function (context, options) {
         ("mongodb://127.0.0.1:" + mongoPort + "/meteor");
   var firstRun = true;
 
+  // node-http-proxy doesn't properly handle errors if it has a problem writing
+  // to the proxy target. While we try to not proxy requests when we don't think
+  // the target is listening, there are race conditions here, and in any case
+  // those attempts don't take effect for pre-existing websocket connections.
+  // Error handling in node-http-proxy is really convoluted and will change with
+  // their ongoing Node 0.10.x compatible rewrite, so rather than trying to
+  // debug and send pull request now, we'll wait for them to finish their
+  // rewrite. In the meantime, ignore two common exceptions that we sometimes
+  // see instead of crashing.
+  //
+  // See https://github.com/meteor/meteor/issues/513
+  //
+  // That bug is about "meteor deploy"s use of http-proxy, but it also affects
+  // our use here; see
+  // https://groups.google.com/d/msg/meteor-core/JgbnfKEa5lA/FJHZtJftfSsJ
+  //
+  // XXX remove this once we've upgraded and fixed http-proxy
+  process.on('uncaughtException', function (e) {
+    if (e && (e.errno === 'EPIPE' || e.message === "This socket is closed."))
+      return;
+    throw e;
+  });
+
   var serverHandle;
   var watcher;
 
