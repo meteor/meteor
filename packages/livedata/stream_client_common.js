@@ -178,6 +178,10 @@ _.extend(Meteor._DdpClientStream.prototype, {
 
   disconnect: function () {
     var self = this;
+
+    if (self._forcedToDisconnect)
+      return;
+
     self._cleanup();
     if (self.retryTimer) {
       clearTimeout(self.retryTimer);
