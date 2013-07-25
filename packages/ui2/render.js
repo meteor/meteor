@@ -97,7 +97,7 @@ makeRenderBuffer = function (component, options) {
       componentsToAttach[commentString] = arg;
     } else if (arg.extend) {
       // `{extend: componentOrFunction, props: object}`
-      if (UI.isComponent(arg.extend)) {
+      /*      if (UI.isComponent(arg.extend)) {
         // In `{extend: comp}` with no `props`, it's ok
         // for `comp` to be already inited.  This lets
         // you write `{{> foo}}` to insert already-inited
@@ -133,8 +133,8 @@ makeRenderBuffer = function (component, options) {
         var curChild = curType.create(arg.args);
         handle(curChild);
       } else {
-        throw new Error("Expected 'type' to be Component or function");
-      }
+        throw new Error("Expected 'extend' to be Component or function");
+      }*/
     } else if (arg.attrs) {
       // `{attrs: functionOrDictionary }`
       // attrs object inserts zero or more `name="value"` items
@@ -175,7 +175,8 @@ makeRenderBuffer = function (component, options) {
     }
   };
 
-  var buf = function (/*args*/) {
+  var buf = {};
+  buf.write = function (/*args*/) {
     for (var i = 0; i < arguments.length; i++)
       handle(arguments[i]);
   };
@@ -204,13 +205,13 @@ makeRenderBuffer = function (component, options) {
                 if (n === root.lastChild)
                   end = comp;
               }
-              if (comp.stage === Component.INITIAL) {
+              if (! comp.isInited) {
                 component.add(comp);
               } else if (comp.parent !== component) {
                 throw new Error("Component used in render must be a child " +
                                 "(or addable as one)");
               }
-              comp.attach(parent, n);
+              comp._attach(parent, n);
               parent.removeChild(n);
               delete componentsToAttach[n.nodeValue];
             }

@@ -1,3 +1,13 @@
+// A very basic operation like Underscore's `_.extend` that
+// copies `src`'s own, enumerable properties onto `tgt` and
+// returns `tgt`.
+_extend = function (tgt, src) {
+  for (var k in src)
+    if (src.hasOwnProperty(k))
+      tgt[k] = src[k];
+  return tgt;
+};
+
 // @export UI2
 var UI = UI2 = {
   nextGuid: 2, // Component is 1!
@@ -14,78 +24,18 @@ var UI = UI2 = {
   // create instances (and the hope is we can gloss over the
   // difference in the docs).
 
-  Component: {
-    // If a Component has a `typeName` property set via `extend`,
-    // we make it use that name when printed in Chrome Dev Tools.
-    // If you then extend this Component and don't supply any
-    // new typeName, it should use the same typeName (or the
-    // most specific one in the case of an `extend` chain with
-    // `typeName` set at multiple points).
-    //
-    // To accomplish this, keeping performance in mind,
-    // any Component where `typeName` is explicitly set
-    // also has a function property `_constr` whose source-code
-    // name is `typeName`.  `extend` creates this `_constr`
-    // function, which can then be used internally as a
-    // constructor to quickly create new instances that
-    // pretty-print correctly.
-    typeName: "Component",
-    _constr: function Component() {},
+  Component: (function (constr) {
+    // Make sure the "class name" that Chrome infers for
+    // UI.Component is "Component", and that
+    // `new UI.Component._constr` (which is what `extend`
+    // does) also produces objects whose inferred class
+    // name is "Component".  Chrome's name inference rules
+    // are a little mysterious, but a function name in
+    // the source code (as in `function Component() {}`)
+    // seems to be reliable and high precedence.
+    return _extend(new constr, {_constr: constr});
+  })(function Component() {}),
 
-    _super: null,
-    guid: 1,
-
-    extend: function (props) {
-      // this function should never cause `props` to be
-      // mutated in case people want to reuse `props` objects
-      // in a mixin-like way.
-
-      if (this.isInited)
-        // Disallow extending inited Components so that
-        // inited Components don't inherit instance-specific
-        // properties from other inited Components, just
-        // default values.
-        throw new Error("Can't extend an inited Component");
-
-      // Any Component with a typeName of "Foo" (say) is given
-      // a `._constr` of the form `function Foo() {}`.
-      if (props && props.typeName)
-        this._constr =
-          Function("return function " +
-                   sanitizeTypeName(props.typeName) +
-                   "() {};")();
-
-      // We don't know where we're getting `_constr` from --
-      // it might be from some supertype -- just that it has
-      // the right function name.  So set the `prototype`
-      // property each time we use it as a constructor.
-      this._constr.prototype = this;
-
-      var c = new this._constr;
-      if (props)
-        _extend(c, props);
-
-      // for efficient Component instantiations, we assign
-      // as few things as possible here.
-      c._super = this;
-      c.guid = UI.nextGuid++;
-
-      return c;
-    },
-
-    // `x.isa(Foo)` where `x` is a Component returns `true`
-    // if `x` is `Foo` or a Component that descends from
-    // (transitively extends) `Foo`.
-    isa: function (obj) {
-      var x = this;
-      while (x) {
-        if (x === obj)
-          return true;
-        x = x._super;
-      }
-      return false;
-    }
-  },
   isComponent: function (obj) {
     return obj && obj.isa === UI.Component.isa;
   },
@@ -102,15 +52,86 @@ var UI = UI2 = {
   }
 };
 
-// A very basic operation like Underscore's `_.extend` that
-// copies `src`'s own, enumerable properties onto `tgt` and
-// returns `tgt`.
-_extend = function (tgt, src) {
-  for (var k in src)
-    if (src.hasOwnProperty(k))
-      tgt[k] = src[k];
-  return tgt;
-};
+_extend(UI.Component, {
+  // If a Component has a `typeName` property set via `extend`,
+  // we make it use that name when printed in Chrome Dev Tools.
+  // If you then extend this Component and don't supply any
+  // new typeName, it should use the same typeName (or the
+  // most specific one in the case of an `extend` chain with
+  // `typeName` set at multiple points).
+  //
+  // To accomplish this, keeping performance in mind,
+  // any Component where `typeName` is explicitly set
+  // also has a function property `_constr` whose source-code
+  // name is `typeName`.  `extend` creates this `_constr`
+  // function, which can then be used internally as a
+  // constructor to quickly create new instances that
+  // pretty-print correctly.
+  typeName: "Component",
+  _constr: function Component() {},
+
+  _super: null,
+  guid: 1,
+
+  extend: function (props) {
+    // this function should never cause `props` to be
+    // mutated in case people want to reuse `props` objects
+    // in a mixin-like way.
+
+    if (this.isInited)
+      // Disallow extending inited Components so that
+      // inited Components don't inherit instance-specific
+      // properties from other inited Components, just
+      // default values.
+      throw new Error("Can't extend an inited Component");
+
+    var constr;
+    var constrMade = false;
+    // Any Component with a typeName of "Foo" (say) is given
+    // a `._constr` of the form `function Foo() {}`.
+    if (props && props.typeName) {
+      constr = Function("return function " +
+                        sanitizeTypeName(props.typeName) +
+                        "() {};")();
+      constrMade = true;
+    } else {
+      constr = this._constr;
+    }
+
+    // We don't know where we're getting `constr` from --
+    // it might be from some supertype -- just that it has
+    // the right function name.  So set the `prototype`
+    // property each time we use it as a constructor.
+    constr.prototype = this;
+
+    var c = new constr;
+    if (constrMade)
+      c._constr = constr;
+
+    if (props)
+      _extend(c, props);
+
+    // for efficient Component instantiations, we assign
+    // as few things as possible here.
+    c._super = this;
+    c.guid = UI.nextGuid++;
+
+    return c;
+  },
+
+  // `x.isa(Foo)` where `x` is a Component returns `true`
+  // if `x` is `Foo` or a Component that descends from
+  // (transitively extends) `Foo`.
+  isa: function (obj) {
+    var x = this;
+    while (x) {
+      if (x === obj)
+        return true;
+      x = x._super;
+    }
+    return false;
+  }
+});
 
 callChainedCallback = function (comp, propName) {
   if (comp._super)
@@ -532,7 +553,6 @@ _extend(UI.Component, {
   _attach: function (parentNode, beforeNode) {
     var self = this;
 
-    this._requireBuilt();
     this._requireNotDestroyed();
 
     if (! self.isInited)

@@ -1,8 +1,5 @@
-
-// All `<body>` tags in HTML files are compiled to extend
-// Body.  If you put helpers and events on Body, they all
-// inherit them.
-UI.Body = Component.extend({isRoot: true});
+var UI = UI2;
+var Component = UI.Component;
 
 UI.Text = Component.extend({
   typeName: 'Text',
@@ -11,8 +8,8 @@ UI.Text = Component.extend({
     return String(x == null ? '' : x);
   },
   render: function (buf) {
-    var data = this.data();
-    buf(this._encodeEntities(this._stringify(data)));
+    var data = this.get();
+    buf.write(this._encodeEntities(this._stringify(data)));
   }
 });
 
@@ -22,11 +19,11 @@ UI.HTML = Component.extend({
     return String(x == null ? '' : x);
   },
   render: function (buf) {
-    var data = this.data();
-    buf(this._stringify(data));
+    var data = this.get();
+    buf.write(this._stringify(data));
   }
 });
-
+/*
 UI.If = Component.extend({
   typeName: 'If',
   init: function () {
@@ -90,3 +87,4 @@ UI.Counter = Component.extend({
     });
   }
 });
+ */

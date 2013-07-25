@@ -8,7 +8,11 @@ Package.on_use(function (api) {
   api.use('ejson');
   api.use('ordered-dict');
 
-  api.add_files(['base.js']);
+  api.add_files(['base.js',
+                 'attrs.js',
+                 'render.js',
+                 'fields.js',
+                 'components.js']);
 });
 
 Package.on_test(function (api) {
@@ -17,6 +21,7 @@ Package.on_test(function (api) {
   api.use(['test-helpers', 'underscore'], 'client');
 
   api.add_files([
-    'base_tests.js'
+    'base_tests.js',
+    'render_tests.js'
   ], 'client');
 });
