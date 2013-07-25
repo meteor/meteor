@@ -22,6 +22,7 @@
    - `Meteor.default_connection` - `Meteor.connection`
    - `Meteor.default_server` - `Meteor.server`
    - `Meteor.connect` - `DDP.connect`
+   - `Meteor.http` - `HTTP`
 
 
 ## v0.6.4.1

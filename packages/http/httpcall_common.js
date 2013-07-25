@@ -67,21 +67,20 @@ populateData = function(response) {
   }
 };
 
-// XXX rename to HTTP
-Meteor.http = {};
+HTTP = {};
 
-Meteor.http.get = function (/* varargs */) {
-  return Meteor.http.call.apply(this, ["GET"].concat(_.toArray(arguments)));
+HTTP.get = function (/* varargs */) {
+  return HTTP.call.apply(this, ["GET"].concat(_.toArray(arguments)));
 };
 
-Meteor.http.post = function (/* varargs */) {
-  return Meteor.http.call.apply(this, ["POST"].concat(_.toArray(arguments)));
+HTTP.post = function (/* varargs */) {
+  return HTTP.call.apply(this, ["POST"].concat(_.toArray(arguments)));
 };
 
-Meteor.http.put = function (/* varargs */) {
-  return Meteor.http.call.apply(this, ["PUT"].concat(_.toArray(arguments)));
+HTTP.put = function (/* varargs */) {
+  return HTTP.call.apply(this, ["PUT"].concat(_.toArray(arguments)));
 };
 
-Meteor.http.del = function (/* varargs */) {
-  return Meteor.http.call.apply(this, ["DELETE"].concat(_.toArray(arguments)));
+HTTP.del = function (/* varargs */) {
+  return HTTP.call.apply(this, ["DELETE"].concat(_.toArray(arguments)));
 };

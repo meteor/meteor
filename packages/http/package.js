@@ -4,9 +4,11 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('underscore');
+  api.exportSymbol('HTTP');
   api.add_files('httpcall_common.js', ['client', 'server']);
   api.add_files('httpcall_client.js', 'client');
   api.add_files('httpcall_server.js', 'server');
+  api.add_files('deprecated.js', ['client', 'server']);
 });
 
 Package.on_test(function (api) {

@@ -2814,9 +2814,9 @@ For example, the `toJSONValue` method for
       return this.toHexString();
     };
 
-<h2 id="meteor_http"><span>Meteor.http</span></h2>
+<h2 id="HTTP"><span>HTTP</span></h2>
 
-`Meteor.http` provides an HTTP API on the client and server.  To use
+`HTTP` provides an HTTP request API on the client and server.  To use
 these functions, add the HTTP package to your project with `$ meteor add
 http`.
 
@@ -2887,8 +2887,8 @@ Example server method:
     Meteor.methods({checkTwitter: function (userId) {
       check(userId, String);
       this.unblock();
-      var result = Meteor.http.call("GET", "http://api.twitter.com/xyz",
-                                    {params: {user: userId}});
+      var result = HTTP.call("GET", "http://api.twitter.com/xyz",
+                             {params: {user: userId}});
       if (result.statusCode === 200)
          return true
       return false;
@@ -2896,13 +2896,13 @@ Example server method:
 
 Example asynchronous HTTP call:
 
-    Meteor.http.call("POST", "http://api.twitter.com/xyz",
-                     {data: {some: "json", stuff: 1}},
-                     function (error, result) {
-                       if (result.statusCode === 200) {
-                         Session.set("twizzled", true);
-                       }
-                     });
+    HTTP.call("POST", "http://api.twitter.com/xyz",
+              {data: {some: "json", stuff: 1}},
+              function (error, result) {
+                if (result.statusCode === 200) {
+                  Session.set("twizzled", true);
+                }
+              });
 
 
 {{> api_box http_get}}

@@ -8,6 +8,7 @@ Package.on_use(function (api) {
   api.use('service-configuration', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
   api.use('underscore', 'server');
+  api.use('http', 'server');
 
   api.exportSymbol('OAuth1Binding', 'server');
   api.exportSymbol('_OAuth1Test', 'server');

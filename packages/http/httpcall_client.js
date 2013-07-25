@@ -1,4 +1,4 @@
-Meteor.http.call = function(method, url, options, callback) {
+HTTP.call = function(method, url, options, callback) {
 
   ////////// Process arguments //////////
 

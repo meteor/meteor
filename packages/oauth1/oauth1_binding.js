@@ -117,7 +117,7 @@ OAuth1Binding.prototype._call = function(method, url, headers, params) {
 
   // Make signed request
   try {
-    return Meteor.http.call(method, url, {
+    return HTTP.call(method, url, {
       params: params,
       headers: {
         Authorization: authString

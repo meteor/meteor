@@ -28,7 +28,7 @@ var getAccessToken = function (query) {
 
   var response;
   try {
-    response = Meteor.http.post(
+    response = HTTP.post(
       "https://github.com/login/oauth/access_token", {
         headers: {
           Accept: 'application/json',
@@ -54,7 +54,7 @@ var getAccessToken = function (query) {
 
 var getIdentity = function (accessToken) {
   try {
-    return Meteor.http.get(
+    return HTTP.get(
       "https://api.github.com/user", {
         headers: {"User-Agent": userAgent}, // http://developer.github.com/v3/#user-agent-required
         params: {access_token: accessToken}

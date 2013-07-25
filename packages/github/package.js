@@ -8,7 +8,7 @@ Package.describe({
 Package.on_use(function(api) {
   api.use('oauth2', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
-  api.use('http', ['client', 'server']);
+  api.use('http', ['server']);
   api.use('underscore', 'client');
   api.use('templating', 'client');
   api.use('random', 'client');

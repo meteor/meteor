@@ -127,7 +127,7 @@ testAsyncMulti("stream - /websocket is a websocket endpoint", [
     // Verify that /websocket and /websocket/ don't return the main page
     //
     _.each(['/websocket', '/websocket/'], function(path) {
-      Meteor.http.get(Meteor._relativeToSiteRootUrl(path), expect(function(error, result) {
+      HTTP.get(Meteor._relativeToSiteRootUrl(path), expect(function(error, result) {
         test.isNotNull(error);
         test.equal('Can "Upgrade" only to "WebSocket".', result.content);
       }));
@@ -145,12 +145,12 @@ testAsyncMulti("stream - /websocket is a websocket endpoint", [
       test.equal(pageContent, result.content);
     });
 
-    Meteor.http.get(Meteor._relativeToSiteRootUrl('/'), expect(function(error, result) {
+    HTTP.get(Meteor._relativeToSiteRootUrl('/'), expect(function(error, result) {
       test.isNull(error);
       pageContent = result.content;
 
       _.each(['/websockets', '/websockets/'], function(path) {
-        Meteor.http.get(Meteor._relativeToSiteRootUrl(path), wrappedCallback);
+        HTTP.get(Meteor._relativeToSiteRootUrl(path), wrappedCallback);
       });
     }));
   }

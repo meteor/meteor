@@ -19,7 +19,7 @@ Meteor.methods({
     // XXX Could do a more precise validation here; reports are complex!
     check(reports, [Object]);
     if (url) {
-      Meteor.http.post(url, {
+      HTTP.post(url, {
         data: reports
       });
     }

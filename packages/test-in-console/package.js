@@ -6,7 +6,7 @@ Package.describe({
 Package.on_use(function (api) {
 
   api.use(['tinytest', 'underscore', 'random', 'ejson', 'check']);
-  api.use('http');
+  api.use('http', 'server');
 
   api.exportSymbol('TEST_STATUS', 'client');
 

@@ -42,7 +42,7 @@ var getTokens = function (query) {
 
   var response;
   try {
-    response = Meteor.http.post(
+    response = HTTP.post(
       "https://accounts.google.com/o/oauth2/token", {params: {
         code: query.code,
         client_id: config.clientId,
@@ -67,7 +67,7 @@ var getTokens = function (query) {
 
 var getIdentity = function (accessToken) {
   try {
-    return Meteor.http.get(
+    return HTTP.get(
       "https://www.googleapis.com/oauth2/v1/userinfo",
       {params: {access_token: accessToken}}).data;
   } catch (err) {

@@ -1,12 +1,10 @@
-Meteor.http = Meteor.http || {};
-
 var path = Npm.require('path');
 var request = Npm.require('request');
 var url_util = Npm.require('url');
 
-// _call always runs asynchronously; Meteor.http.call, defined below,
+// _call always runs asynchronously; HTTP.call, defined below,
 // wraps _call and runs synchronously when no callback is provided.
-_call = function(method, url, options, callback) {
+var _call = function(method, url, options, callback) {
 
   ////////// Process arguments //////////
 
@@ -106,4 +104,4 @@ _call = function(method, url, options, callback) {
   });
 };
 
-Meteor.http.call = Meteor._wrapAsync(_call);
+HTTP.call = Meteor._wrapAsync(_call);
