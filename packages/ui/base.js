@@ -1127,10 +1127,3 @@ UI.body = UI.Component.extend({
       buf.write(this.contentParts[i]);
   }
 });
-
-if (Meteor.startup) {
-  // don't run this at build plugin time
-  Meteor.startup(function () {
-    UI.append(UI.body);
-  });
-}

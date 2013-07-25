@@ -173,7 +173,7 @@ UI.Each = Component.extend({
   List: UI.List,
   init: function () {
     var self = this;
-    self._list = self.List({
+    self._list = self.List.extend({
       // doesn't bind `this` if `elseContent` is a function,
       // but then `elseContent` is not a real method, right?
       // just a function you call for reactivity purposes?

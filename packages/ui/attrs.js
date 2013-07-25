@@ -6,8 +6,9 @@ var isValidAttributeName = function (str) {
 };
 
 var makeAttributeHandler = function (component, name, value) {
-  return new (component.constructor._attributeHandlers[name] ||
-               AttributeHandler)(name, value);
+//  return new (component.constructor._attributeHandlers[name] ||
+//               AttributeHandler)(name, value);
+  return new AttributeHandler(name, value);
 };
 
 AttributeManager = function (component, dictOrFunc) {

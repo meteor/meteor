@@ -6,6 +6,7 @@ Package.on_use(function (api) {
   api.use('deps');
   api.use('random');
   api.use('ejson');
+  api.use('underscore'); // very slight
   api.use('ordered-dict');
 
   api.add_files(['base.js',
@@ -13,7 +14,8 @@ Package.on_use(function (api) {
                  'render.js',
                  'fields.js',
                  'components.js',
-                 'each.js']);
+                 'each.js',
+                 'template.js']);
 });
 
 Package.on_test(function (api) {

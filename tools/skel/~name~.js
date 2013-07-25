@@ -1,17 +1,10 @@
 if (Meteor.isClient) {
-  // Plan is for this to change to simply
-  // `Template.hello({ ...`
-  Template.hello.include({
+  Template.hello({
     greeting: function () {
       return "Welcome to ~name~.";
     },
 
-    // we'll probably change `built` to `rendered`
-    // (the intention was to emphasize that `built`
-    // is when you have DOM nodes and it never
-    // gets called on the server, but I don't like
-    // it enough)
-    built: function () {
+    rendered: function () {
       var self = this;
       // There will be event maps that do delegation
       // on the DOM range of the component for you.

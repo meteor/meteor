@@ -220,7 +220,7 @@ var _testStatus = function(t) {
 
 //// Template - navBars
 
-Template.navBars.include({
+Template.navBars({
   running: function() {
     countDep.depend();
     return running;
@@ -254,7 +254,7 @@ Template.navBars.include({
 
 //// Template - progressBar
 
-Template.progressBar.include({
+Template.progressBar({
   running: function () {
     countDep.depend();
     return running;
@@ -284,10 +284,12 @@ Template.progressBar.include({
     return failedCount > 0;
   },
   barOuterClass: function () {
-    return this.running() ? 'progress-striped' : '';
+    countDep.depend();
+    return running ? 'progress-striped' : '';
   },
   barInnerClass: function () {
-    return (this.anyFail() ?
+    countDep.depend();
+    return (failedCount > 0 ?
             'bar-warning' : 'bar-success');
   }
 });
@@ -302,7 +304,7 @@ var changeToPath = function (path) {
   Meteor._reload.reload();
 };
 
-Template.groupNav.include({
+Template.groupNav({
   groupPaths: function () {
     var groupPath = Session.get("groupPath");
     var ret = [];
@@ -316,8 +318,8 @@ Template.groupNav.include({
   }
 });
 
-Template.groupNav.include({
-  built: function () {
+Template.groupNav({
+  rendered: function () {
     var self = this;
     // we don't yet have API support for event maps which do
     // full delegation
@@ -337,7 +339,7 @@ Template.groupNav.include({
 
 //// Template - failedTests
 
-Template.failedTests.include({
+Template.failedTests({
   failedTests: function() {
     countDep.depend();
     return failedTests;
@@ -346,7 +348,7 @@ Template.failedTests.include({
 
 //// Template - testTable
 
-Template.testTable.include({
+Template.testTable({
   data: function () {
     topLevelGroupsDep.depend();
     return resultTree;
@@ -355,8 +357,8 @@ Template.testTable.include({
 
 //// Template - test_group
 
-Template.test_group.include({
-  built: function () {
+Template.test_group({
+  rendered: function () {
     var self = this;
     self.$(".group").on('click', '.groupname', function (evt) {
       var data = self.findByElement(evt.currentTarget).data();
@@ -373,9 +375,9 @@ Template.test_group.include({
 
 //// Template - test
 
-Template.test.include({
+Template.test({
   test_status_display: function() {
-    var status = _testStatus(this.data());
+    var status = _testStatus(this);
     if (status == "failed") {
       return "FAIL";
     } else if (status == "succeeded") {
@@ -386,15 +388,15 @@ Template.test.include({
   },
 
   test_time_display: function() {
-    var time = _testTime(this.data());
+    var time = _testTime(this);
     return (typeof time === "number") ? time + " ms" : "";
   },
 
   test_class: function() {
-    var events = this.data().events || [];
-    var classes = [_testStatus(this.data())];
+    var events = this.events || [];
+    var classes = [_testStatus(this)];
 
-    if (this.data().expanded) {
+    if (this.expanded) {
       classes.push("expanded");
     } else {
       classes.push("collapsed");
@@ -404,7 +406,7 @@ Template.test.include({
   },
 
   eventsArray: function() {
-    var events = _.filter(this.data().events, function(e) {
+    var events = _.filter(this.events, function(e) {
       return e.type != "finish";
     });
 
@@ -439,8 +441,8 @@ Template.test.include({
   }
 });
 
-Template.test.include({
-  built: function () {
+Template.test({
+  rendered: function () {
     var self = this;
     self.$(".test").on('click', '.testname', function (evt) {
       var data = self.findByElement(evt.currentTarget).data();
@@ -453,8 +455,8 @@ Template.test.include({
 
 //// Template - event
 
-Template.event.include({
-  built: function () {
+Template.event({
+  rendered: function () {
     var self = this;
     self.$(".event").on('click', '.debug', function (evt) {
       var data = self.findByElement(evt.currentTarget).data();
@@ -468,7 +470,7 @@ Template.event.include({
   }
 });
 
-Template.event.include({
+Template.event({
   get_details: function() {
 
     var prepare = function(details) {
@@ -488,7 +490,7 @@ Template.event.include({
       }));
     };
 
-    var details = this.data().details;
+    var details = this.details;
 
     if (! details) {
       return null;
@@ -510,7 +512,7 @@ Template.event.include({
   },
 
   is_debuggable: function() {
-    return !!this.data().cookie;
+    return !!this.cookie;
   }
 });
 
