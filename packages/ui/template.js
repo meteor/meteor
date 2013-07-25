@@ -99,6 +99,9 @@ UI.makeTemplate = function (underlying) {
             throw new Error("'data' is reserved and can't be used as a helper name");
           underlying[k] = (function (helper) {
             return function (/**/) {
+              // XXX total hack!!  this line:
+              UI.Component.current = this;
+
               var data = this.get();
               return helper.apply(data, arguments);
             };
