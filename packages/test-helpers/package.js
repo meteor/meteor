@@ -12,7 +12,7 @@ Package.on_use(function (api) {
     'pollUntil', 'WrappedFrag', 'try_all_permutations', 'StubStream',
     'SeededRandom', 'ReactiveVar', 'OnscreenDiv', 'clickElement', 'blurElement',
     'focusElement', 'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',
-    'withCallbackLogger', 'testAsyncMulti']);
+    'withCallbackLogger', 'testAsyncMulti'], {testOnly: true});
 
   api.add_files('try_all_permutations.js');
   api.add_files('async_multi.js');
