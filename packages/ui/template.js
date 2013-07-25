@@ -62,7 +62,7 @@ UI.makeTemplate = function (underlying) {
 
         } else if (k.indexOf(' ') >= 0) {
           // event handler
-          // XXX clean up
+          // XXX clean this up
           var eventType = k.slice(0, k.indexOf(' '));
           var selector = k.slice(k.indexOf(' ') + 1);
 

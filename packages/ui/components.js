@@ -64,7 +64,7 @@ UI.Unless = Component.extend({
 // @export FadeyIf
 FadeyIf = Component.extend({
   typeName: 'FadeyIf',
-  _animationOptions: { duration: 1000, queue: false },
+  animationDuration: 1000,
   init: function () {
     this.condition = this.data;
     // content doesn't see the condition as `data`
@@ -98,27 +98,39 @@ FadeyIf = Component.extend({
           var oldChild = self.curComp;
           var newChild = self.curComp = constructify(
             curCondition ? self.content : self.elseContent);
-          if (self.hasChild(oldChild)) {
-            $(oldChild.parentNode()).animate(
-              {height: 0, width: 0, opacity: 0},
-              self._animationOptions,
-              (function (oldChild) {
-                return function () {
-                  if (self.hasChild(oldChild)) {
-                    var div = oldChild.parentNode();
-                    oldChild.remove();
-                    $(div).remove();
-                  }
-                };
-              })(oldChild));
-          }
+
           var newDiv = $('<div style="display:none"></div>');
           self.append(newDiv);
           self.insertBefore(newChild, null, newDiv.get(0));
           newDiv.animate({height: 'show',
                           width: 'show',
                           opacity: 1},
-                         self._animationOptions);
+                         {queue: false,
+                          duration: self.animationDuration});
+
+          if (self.hasChild(oldChild)) {
+            $(oldChild.parentNode()).animate(
+              {height: 0, width: 0, opacity: 0},
+              {queue: false, duration: self.animationDuration,
+               complete:
+               (function (oldChild) {
+                 return function () {
+                   if (self.hasChild(oldChild)) {
+                     var div = oldChild.parentNode();
+                     oldChild.remove();
+                     // XXX need a good way to remove DOM nodes from a
+                     // Component.
+                     // Assume here there is more than one div because
+                     // we just added one.
+                     if (div === self.start)
+                       self.start = div.nextSibling;
+                     else if (div === self.end)
+                       self.end = div.previousSibling;
+                     $(div).remove();
+                   }
+                 };
+               })(oldChild)});
+          }
         }
       }
     });
