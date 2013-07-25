@@ -831,8 +831,14 @@ _extend(UI.Component, {
     var prevNode = firstNode.previousSibling;
     var nextNode = self.lastNode().nextSibling;
 
-    // element must not be "above" this component
-    if (elementContains(elem, firstNode))
+    // because we can only do comparisons on elements, find
+    // some elements.
+    while (prevNode && prevNode.nodeType !== 1)
+      prevNode = prevNode.previousSibling;
+    while (nextNode && nextNode.nodeType !== 1)
+      nextNode = nextNode.nextSibling;
+
+    if (! elementContains(firstNode.parentNode, elem))
       return false;
     // element must not be "at or before" prevNode
     if (prevNode && compareElementIndex(prevNode, elem) >= 0)

@@ -327,7 +327,7 @@ Template.groupNav({
     // and future elements), so just use delegation on some
     // DOM node.
     self.$(".navbar").on('click', '.group', function (evt) {
-      var data = self.findByElement(evt.currentTarget).data();
+      var data = self.findByElement(evt.currentTarget).get();
       changeToPath(data.path);
     }).on('click', '.rerun', function (evt) {
       Session.set("rerunScheduled", true);
@@ -361,7 +361,7 @@ Template.test_group({
   rendered: function () {
     var self = this;
     self.$(".group").on('click', '.groupname', function (evt) {
-      var data = self.findByElement(evt.currentTarget).data();
+      var data = self.findByElement(evt.currentTarget).get();
       changeToPath(data.path);
       // prevent enclosing groups from also triggering on
       // same groupname.  It would be cleaner to think of
@@ -445,7 +445,7 @@ Template.test({
   rendered: function () {
     var self = this;
     self.$(".test").on('click', '.testname', function (evt) {
-      var data = self.findByElement(evt.currentTarget).data();
+      var data = self.findByElement(evt.currentTarget).get();
       data.expanded = ! data.expanded;
       data.dep.changed();
     });
@@ -459,7 +459,7 @@ Template.event({
   rendered: function () {
     var self = this;
     self.$(".event").on('click', '.debug', function (evt) {
-      var data = self.findByElement(evt.currentTarget).data();
+      var data = self.findByElement(evt.currentTarget).get();
 
       // the way we manage groupPath, shortName, cookies, etc, is really
       // messy. needs to be aggressively refactored.

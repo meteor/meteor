@@ -5,12 +5,6 @@ var isValidAttributeName = function (str) {
   return ATTRIBUTE_NAME_REGEX.test(str);
 };
 
-var makeAttributeHandler = function (component, name, value) {
-//  return new (component.constructor._attributeHandlers[name] ||
-//               AttributeHandler)(name, value);
-  return new AttributeHandler(name, value);
-};
-
 AttributeManager = function (component, dictOrFunc) {
   var self = this;
   self.component = component;
@@ -158,4 +152,26 @@ AttributeHandler.extend = function (options) {
   if (options)
     _extend(subType.prototype, options);
   return subType;
+};
+
+var ClassHandler = AttributeHandler.extend({
+  stringifyValue: function (value) {
+    if (typeof value === 'string')
+      return value;
+    else if (typeof value.length === 'number') {
+      return Array.prototype.join.call(value, ' ');
+    } else {
+      return String(value);
+    }
+  }
+});
+
+var makeAttributeHandler = function (component, name, value) {
+  //  return new (component.constructor._attributeHandlers[name] ||
+  //               AttributeHandler)(name, value);
+  if (name === 'class') {
+    return new ClassHandler(name, value);
+  } else {
+    return new AttributeHandler(name, value);
+  }
 };
