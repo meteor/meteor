@@ -307,7 +307,7 @@ _.extend(Deps, {
   },
 
   // two values are equal if `equals(x, y)`, which defaults to `===`
-  isolate: function (f, equals) {
+  isolateValue: function (f, equals) {
     if (! Deps.active)
       return f();
 

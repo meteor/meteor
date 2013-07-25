@@ -114,7 +114,8 @@ makeRenderBuffer = function (component, options) {
         arg = arg.extend();
 
       handleComponent(arg);
-    } else if (arg.child) {
+    } else if ((typeof arg === 'function') || arg.child) {
+      // `componentFunction`, or
       // `{child: componentOrFunction, props: object}`
 
       // In `{child: comp}` with no `props`, it's ok
@@ -130,8 +131,15 @@ makeRenderBuffer = function (component, options) {
       // is uninited and we instantiate a copy, `curComp`
       // is not that copy, it's the original component used
       // as a prototype.
-      var curComp = arg.child;
-      var props = arg.props;
+      var curComp, props;
+      if (typeof arg === 'function') {
+        curComp = arg;
+        props = null;
+      } else {
+        curComp = arg.child;
+        props = arg.props;
+      }
+
       if (typeof curComp === 'function') {
         var compFunc = curComp;
         // use `Deps.autorun`, not `component.autorun`,

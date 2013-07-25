@@ -43,7 +43,7 @@ UI.If = Component.extend({
   },
   render: function (buf) {
     var self = this;
-    var condition = Deps.isolate(function () {
+    var condition = Deps.isolateValue(function () {
       return !! self.condition();
     });
     buf(condition ? self.content() : self.elseContent());
@@ -59,7 +59,7 @@ UI.Unless = Component.extend({
   },
   render: function (buf) {
     var self = this;
-    var condition = Deps.isolate(function () {
+    var condition = Deps.isolateValue(function () {
       return ! self.condition();
     });
     buf(condition ? self.content() : self.elseContent());

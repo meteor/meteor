@@ -150,6 +150,7 @@ Tinytest.add("ui - render", function (test) {
     test.equal(which.numListeners(), 0);
   })();
 
+
   (function () {
     var R = ReactiveVar(1);
     var which = ReactiveVar("H");
@@ -170,7 +171,7 @@ Tinytest.add("ui - render", function (test) {
     var c = UI.Component.extend({
       render: function (buf) {
         var self = this;
-        // also, choose which one to use reactively
+        // choose which one to use reactively
         buf.write({child: function () {
           return which.get() === "H" ? Hello : World;
         }, props: {
@@ -203,4 +204,95 @@ Tinytest.add("ui - render", function (test) {
     test.equal(name.numListeners(), 0);
   })();
 
+  (function () {
+    var which = ReactiveVar("H");
+
+    // two factory (uninited) Components
+    var Hello = UI.Text.withData("hello");
+    var World = UI.Text.withData("world");
+
+    var c = UI.Component.extend({
+      render: function (buf) {
+        var self = this;
+        // choose which one to use reactively
+        buf.write(function () {
+          return which.get() === "H" ? Hello : World;
+        });
+      }
+    });
+
+    c.build();
+    test.equal($(c._offscreen).html(), "hello");
+    which.set("W");
+    Deps.flush();
+    test.equal($(c._offscreen).html(), "world");
+    test.equal(_.keys(c.children).length, 1);
+    which.set("H");
+    Deps.flush();
+    test.equal($(c._offscreen).html(), "hello");
+    test.equal(_.keys(c.children).length, 1);
+    c.destroy();
+    test.equal(which.numListeners(), 0);
+  })();
+
+});
+
+Tinytest.add("ui - if/unless", function (test) {
+  var hello = UI.Text.withData("hello");
+  var world = UI.Text.withData("world");
+  var R = ReactiveVar('true');
+  var renderedCounts = [0, 0, 0];
+  var c = UI.Component.extend({
+    rendered: function () { renderedCounts[0]++; },
+    render: function (buf) {
+      buf.write(
+        UI.If.extend({
+          data: function () {
+            return R.get().charAt(0) === 't';
+          },
+          content: hello,
+          elseContent: world,
+          rendered: function () {
+            renderedCounts[1]++;
+          }
+        }),
+        UI.Unless.extend({
+          data: function () {
+            return R.get().charAt(0) === 't';
+          },
+          content: hello,
+          elseContent: world,
+          rendered: function () {
+            renderedCounts[2]++;
+          }
+        }));
+    }
+  });
+
+  c.build();
+  test.equal($(c._offscreen).html(), "helloworld");
+  test.equal(renderedCounts, [1,1,1]);
+  R.set('false');
+  Deps.flush();
+  test.equal($(c._offscreen).html(), "worldhello");
+  test.equal(renderedCounts, [1,2,2]);
+  R.set('true');
+  Deps.flush();
+  test.equal($(c._offscreen).html(), "helloworld");
+  test.equal(renderedCounts, [1,3,3]);
+  R.set('torrid');
+  Deps.flush();
+  test.equal($(c._offscreen).html(), "helloworld");
+  test.equal(renderedCounts, [1,3,3]);
+  R.set('flagrant');
+  Deps.flush();
+  test.equal($(c._offscreen).html(), "worldhello");
+  test.equal(renderedCounts, [1,4,4]);
+  R.set('fromage');
+  Deps.flush();
+  test.equal($(c._offscreen).html(), "worldhello");
+  test.equal(renderedCounts, [1,4,4]);
+
+  c.destroy();
+  test.equal(R.numListeners(), 0);
 });

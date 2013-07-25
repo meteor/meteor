@@ -133,12 +133,18 @@ _extend(UI.Component, {
   }
 });
 
-callChainedCallback = function (comp, propName) {
+callChainedCallback = function (comp, propName, orig) {
+  // Call `comp.foo`, `comp._super.foo`,
+  // `comp._super._super.foo`, and so on, but in reverse
+  // order, and only if `foo` is an "own property" in each
+  // case.  Furthermore, the passed value of `this` should
+  // remain `comp` for all calls (which is achieved by
+  // filling in `orig` when recursing).
   if (comp._super)
-    callChainedCallback(comp._super, propName);
+    callChainedCallback(comp._super, propName, orig || comp);
 
   if (comp.hasOwnProperty(propName))
-    comp[propName].call(comp);
+    comp[propName].call(orig || comp);
 };
 
 // Make `typeName` a non-empty string starting with an ASCII
@@ -410,7 +416,7 @@ _extend(UI.Component, {
   // building on the client, and it can also be used on the
   // client or server to generate initial HTML.
   render: function (buf) {
-    buf.write(this.content.extend());
+    buf.write(this.content);
   },
 
   _populate: function (div) {
