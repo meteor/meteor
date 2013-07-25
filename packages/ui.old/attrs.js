@@ -1,4 +1,3 @@
-var UI = UI2;
 
 var ATTRIBUTE_NAME_REGEX = /^[^\s"'>/=/]+$/;
 
@@ -77,8 +76,7 @@ _extend(AttributeManager.prototype, {
     var handlers = self.handlers;
 
     component.autorun(function (c) {
-      if ((! component.isBuilt) ||
-          component.isDestroyed ||
+      if (component.stage !== Component.BUILT ||
           ! component.containsElement(element)) {
         c.stop();
         return;

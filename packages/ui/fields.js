@@ -1,4 +1,3 @@
-var UI = UI2;
 
 var findComponentWithProp = function (id, comp) {
   while (comp) {

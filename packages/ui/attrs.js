@@ -76,7 +76,8 @@ _extend(AttributeManager.prototype, {
     var handlers = self.handlers;
 
     component.autorun(function (c) {
-      if (component.stage !== Component.BUILT ||
+      if ((! component.isBuilt) ||
+          component.isDestroyed ||
           ! component.containsElement(element)) {
         c.stop();
         return;

@@ -1,4 +1,3 @@
-var UI = UI2;
 
 var ESCAPED_CHARS_UNQUOTED_REGEX = /[&<>]/g;
 var ESCAPED_CHARS_QUOTED_REGEX = /[&<>"]/g;
@@ -26,20 +25,6 @@ UI.encodeSpecialEntities = function (text, isQuoted) {
 
 
 var GT_OR_QUOTE = /[>'"]/;
-
-// Instantiate `comp` with `props` by calling extend, or,
-// in the special case where `comp` is an already-inited
-// component, just return it.  In this latter case, the
-// `props` argument must be falsy.
-constructify = function (comp, props) {
-  if (props)
-    // comp had better be uninited! (or will throw)
-    return comp.extend(props);
-  else if (comp.isInited)
-    return comp;
-  else
-    return comp.extend();
-};
 
 makeRenderBuffer = function (component, options) {
   var isPreview = !! options && options.preview;
@@ -94,99 +79,48 @@ makeRenderBuffer = function (component, options) {
     strs.push.apply(strs, arguments);
   };
 
-  var handleComponent = function (comp) {
-    randomString = randomString || Random.id();
-    var commentString = randomString + '_' + (commentUid++);
-    push('<!--', commentString, '-->');
-    componentsToAttach = componentsToAttach || {};
-    componentsToAttach[commentString] = comp;
-    return comp;
-  };
-
   var handle = function (arg) {
     if (arg == null) {
-      // nothing to do
+      return;
     } else if (typeof arg === 'string') {
       // "HTML"
       push(arg);
-    } else if (UI.isComponent(arg)) {
+    } else if (arg instanceof Component) {
       // Component
-      if (! arg.isInited)
-        arg = arg.extend();
-
-      return handleComponent(arg);
-    } else if ((typeof arg === 'function') || arg.child) {
-      // `componentFunction`, or
-      // `{child: componentOrFunction, props: object}`
-
-      // In `{child: comp}` with no `props`, it's ok
-      // for `comp` to be already inited.  This lets
-      // you write `{{> foo}}` to insert already-inited
-      // `foo`, with cooperation from the template
-      // compiler (i.e. not emitting an empty props object).
-
-      // `curComp` holds the latest value of the `child`
-      // function if `componentOrFunction` is a function,
-      // or else the value itself if it is not.
-      // In the case where `curComp`
-      // is uninited and we instantiate a copy, `curComp`
-      // is not that copy, it's the original component used
-      // as a prototype.
-      var curComp, props;
-      if (typeof arg === 'function') {
-        curComp = arg;
-        props = null;
-      } else {
-        curComp = arg.child;
-        props = arg.props;
-      }
-
-      if (typeof curComp === 'function') {
-        var compFunc = curComp;
-        // use `Deps.autorun`, not `component.autorun`,
-        // because we *do* want to be stopped when the
-        // enclosing computation is invalidated (i.e.
-        // the rebuilder computation).
-        Deps.autorun(function (c) {
+      randomString = randomString || Random.id();
+      var commentString = randomString + '_' + (commentUid++);
+      push('<!--', commentString, '-->');
+      componentsToAttach = componentsToAttach || {};
+      componentsToAttach[commentString] = arg;
+    } else if (arg.type) {
+      // `{type: componentTypeOrFunction, args: object}`
+      if (Component.isType(arg.type)) {
+        handle(arg.type.create(arg.args));
+      } else if (typeof arg.type === 'function') {
+        var curType;
+        component.autorun(function (c) {
           // capture dependencies of this line:
-          var comp = compFunc();
+          var type = arg.type();
           if (c.firstRun) {
-            // right away
-            curComp = comp;
-          } else {
-            // later (on subsequent runs)...
-            if (! component.isBuilt ||
-                component.isDestroyed ||
-                ! component.hasChild(curChild)) {
-              c.stop();
-            } if (comp !== curComp) {
-              var oldChild = curChild;
-              var oldComp = curComp;
-              curComp = comp;
-              // don't capture any dependencies here
-              Deps.nonreactive(function () {
-                curChild = constructify(curComp, props);
-                if (oldChild === oldComp)
-                  // didn't create the oldChild, just
-                  // used it!  So detach it, don't destroy it.
-                  component.swapChild(oldChild, curChild);
-                else
-                  component.replaceChild(oldChild, curChild);
-              });
-            }
+            curType = type;
+          } else if (component.stage !== Component.BUILT ||
+                     ! component.hasChild(curChild)) {
+            c.stop();
+          } else if (type !== curType) {
+            var oldChild = curChild;
+            curType = type;
+            // don't capture any dependencies here
+            Deps.nonreactive(function () {
+              curChild = curType.create(arg.args);
+              component.replaceChild(oldChild, curChild);
+            });
           }
         });
-      } else if (! UI.isComponent(curComp)) {
-        throw new Error("Expected function or Component");
+        var curChild = curType.create(arg.args);
+        handle(curChild);
+      } else {
+        throw new Error("Expected 'type' to be Component or function");
       }
-      // the autorun above closes down over this var:
-      var curChild = constructify(curComp, props);
-      // return something the caller of `buf.write` can't get
-      // any other way if `arg` involved a componentFunction:
-      // the actual component created.  If the arg we are
-      // handling is the last arg to `buf.write`, it will return
-      // this value.
-      return handleComponent(curChild);
     } else if (arg.attrs) {
       // `{attrs: functionOrDictionary }`
       // attrs object inserts zero or more `name="value"` items
@@ -227,12 +161,9 @@ makeRenderBuffer = function (component, options) {
     }
   };
 
-  var buf = {};
-  buf.write = function (/*args*/) {
-    var ret;
+  var buf = function (/*args*/) {
     for (var i = 0; i < arguments.length; i++)
-      ret = handle(arguments[i]);
-    return ret;
+      handle(arguments[i]);
   };
 
   buf.getHtml = function () {
@@ -259,13 +190,13 @@ makeRenderBuffer = function (component, options) {
                 if (n === root.lastChild)
                   end = comp;
               }
-              if (! comp.isInited) {
+              if (comp.stage === Component.INITIAL) {
                 component.add(comp);
               } else if (comp.parent !== component) {
                 throw new Error("Component used in render must be a child " +
                                 "(or addable as one)");
               }
-              comp._attach(parent, n);
+              comp.attach(parent, n);
               parent.removeChild(n);
               delete componentsToAttach[n.nodeValue];
             }

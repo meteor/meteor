@@ -1,4 +1,3 @@
-var UI = UI2;
 
 Tinytest.add("ui - render", function (test) {
   (function () {

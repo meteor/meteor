@@ -1,4 +1,3 @@
-var UI = UI2;
 
 Tinytest.add("ui - Component basics", function (test) {
   var Foo = UI.Component.extend();
