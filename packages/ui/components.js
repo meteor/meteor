@@ -1,4 +1,6 @@
 
+UI.Empty = Empty;
+
 UI.Text = Component.extend({
   typeName: 'Text',
   _encodeEntities: UI.encodeSpecialEntities,

@@ -208,8 +208,10 @@ UI.Each = Component.extend({
 
     // if `content` reactively changes type, we simply rebuild
     // completely.
+    // XXX the occurrences of `|| Empty` in this file may or may not
+    // be necessary
     var content = (typeof self.content === 'function' ?
-                   self.content() : self.content) || UI.Component;
+                   self.content() : self.content) || UI.Empty;
 
     var replacer = list.beginReplace();
 

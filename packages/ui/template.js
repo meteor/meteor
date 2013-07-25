@@ -17,6 +17,31 @@
 
 var chainers = { init: 1, rendered: 1, destroyed: 1 };
 
+var makeGetter = function (obj, propName, initialValue) {
+  var getter = function (newValue) {
+    if (this !== obj) {
+      // if we're being called on a subclass, copy ourselves!
+      // XXX lazy copying is probably not the right way to do this.
+      this[propName] = makeGetter(this, propName, initialValue);
+      return arguments.length ? this[propName](newValue) :
+        this[propName]();
+    }
+    if (arguments.length) {
+      // setter doubles as a getter.  that way we have access to `this`
+      // both ways.
+      getter.$value = newValue;
+      getter.$dep.changed();
+    } else {
+      getter.$dep.depend();
+      return getter.$value;
+    }
+  };
+  getter.$value = initialValue;
+  getter.$dep = new Deps.Dependency;
+
+  return getter;
+};
+
 UI.makeTemplate = function (underlying) {
   return function (options) {
     if (! arguments.length)
@@ -31,17 +56,8 @@ UI.makeTemplate = function (underlying) {
           // XXX basic fields impl
           // XXX could support functions as initial field values
           _.each(givenProp, function (fieldValue, fieldName) {
-            var getter = function () {
-              getter.$dep.depend();
-              return getter.$value;
-            };
-            getter.$value = fieldValue; // initial value
-            getter.$dep = new Deps.Dependency;
-            getter.$set = function (v) {
-              getter.$value = v;
-              getter.$dep.changed();
-            };
-            underlying[fieldName] = getter;
+            underlying[fieldName] = makeGetter(underlying, fieldName,
+                                               fieldValue);
           });
 
         } else if (k.indexOf(' ') >= 0) {

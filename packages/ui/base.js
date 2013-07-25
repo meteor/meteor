@@ -139,6 +139,10 @@ _extend(UI.Component, {
   }
 });
 
+Empty = Component.extend({
+  render: function (buf) {}
+});
+
 callChainedCallback = function (comp, propName, orig) {
   // Call `comp.foo`, `comp._super.foo`,
   // `comp._super._super.foo`, and so on, but in reverse
@@ -412,9 +416,9 @@ _extend(UI.Component, {
   _offscreen: null,
 
   // `content` and `elseContent` must be Components or functions
-  // that return components, or null.
-  content: null,
-  elseContent: null,
+  // that return components.
+  content: Empty,
+  elseContent: Empty,
 
   // The `render` method is overridden by compiled templates
   // and other components to declare the component's

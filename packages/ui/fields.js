@@ -76,9 +76,9 @@ _extend(UI.Component, {
     var comp = findComponentWithProp(id, this);
     if (! comp || ! comp[id])
       throw new Error("Can't find field: " + id);
-    if (! comp[id].$set)
+    if (typeof comp[id] !== 'function')
       throw new Error("Not a settable field: " + id);
-    comp[id].$set(value);
+    comp[id](value);
   },
   // convenient syntax
   withData: function (data) {
