@@ -37,8 +37,10 @@
   Backbone.VERSION = '0.9.2';
 
   // Require Underscore, if we're on the server, and it's not already present.
-  var _ = root._;
-  if (!_ && (typeof require !== 'undefined')) _ = require('underscore');
+  // <METEOR> Commented these lines out; we have _ via api.use.
+  // var _ = root._;
+  // if (!_ && (typeof require !== 'undefined')) _ = require('underscore');
+  // </METEOR>
 
   // For Backbone's purposes, jQuery, Zepto, or Ender owns the `$` variable.
   var $ = root.jQuery || root.Zepto || root.ender;
