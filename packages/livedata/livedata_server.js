@@ -104,7 +104,7 @@ var SessionCollectionView = function (collectionName, sessionCallbacks) {
   self.callbacks = sessionCallbacks;
 };
 
-_LivedataTest.SessionCollectionView = SessionCollectionView;
+LivedataTest.SessionCollectionView = SessionCollectionView;
 
 
 _.extend(SessionCollectionView.prototype, {
@@ -1318,7 +1318,7 @@ var calculateVersion = function (clientSupportedVersions,
   return correctVersion;
 };
 
-_LivedataTest.calculateVersion = calculateVersion;
+LivedataTest.calculateVersion = calculateVersion;
 
 
 // "blind" exceptions other than those that were deliberately thrown to signal

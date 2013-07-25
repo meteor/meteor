@@ -9,7 +9,7 @@ Package.on_use(function (api) {
   // Package.webapp and only after initial load.
   api.use('webapp', 'server', {unordered: true});
   api.exportSymbol('RoutePolicy', 'server');
-  api.exportSymbol('_RoutePolicyTest', 'server', {testOnly: true});
+  api.exportSymbol('RoutePolicyTest', 'server', {testOnly: true});
   api.add_files('routepolicy.js', 'server');
 });
 

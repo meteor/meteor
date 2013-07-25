@@ -6,7 +6,7 @@ Tinytest.add("email - dev mode smoke test", function (test) {
 
   try {
     var stream = new streamBuffers.WritableStreamBuffer;
-    _EmailTest.overrideOutputStream(stream);
+    EmailTest.overrideOutputStream(stream);
     Email.send({
       from: "foo@example.com",
       to: "bar@example.com",
@@ -34,6 +34,6 @@ Tinytest.add("email - dev mode smoke test", function (test) {
                "From us.\r\n" +
                "====== END MAIL #0 ======\n");
   } finally {
-    _EmailTest.restoreOutputStream();
+    EmailTest.restoreOutputStream();
   }
 });

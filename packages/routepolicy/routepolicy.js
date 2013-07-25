@@ -24,9 +24,9 @@
 // routes would break tinytest... so allow policy instances to be
 // constructed for testing.
 
-_RoutePolicyTest = {};
+RoutePolicyTest = {};
 
-var RoutePolicyConstructor = _RoutePolicyTest.Constructor = function () {
+var RoutePolicyConstructor = RoutePolicyTest.Constructor = function () {
   var self = this;
   self.urlPrefixTypes = {};
 };

@@ -122,6 +122,6 @@ base64Decode = function (str) {
   return arr;
 };
 
-_EJSONTest.base64Encode = base64Encode;
+EJSONTest.base64Encode = base64Encode;
 
-_EJSONTest.base64Decode = base64Decode;
+EJSONTest.base64Decode = base64Decode;

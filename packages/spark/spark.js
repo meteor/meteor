@@ -26,7 +26,7 @@
 // (not hard to see what it is.)
 
 Spark = {};
-_SparkTest = {};
+SparkTest = {};
 
 var currentRenderer = (function () {
   var current = null;
@@ -44,7 +44,7 @@ var currentRenderer = (function () {
 })();
 
 TAG = "_spark_" + Random.id();
-_SparkTest.TAG = TAG;
+SparkTest.TAG = TAG;
 
 // We also export this as Spark._TAG due to a historical accident. I
 // don't know if anything uses it (possibly some of Chris Mather's
@@ -67,7 +67,7 @@ var ANNOTATION_LIST_ITEM = "item";
 
 // Use from tests to turn on extra UniversalEventListener sanity checks
 var checkIECompliance = false;
-_SparkTest.setCheckIECompliance = function (value) {
+SparkTest.setCheckIECompliance = function (value) {
   checkIECompliance = value;
 };
 
@@ -1244,7 +1244,7 @@ Spark.createLandmark = function (options, htmlFunc) {
     });
 };
 
-_SparkTest.getEnclosingLandmark = function (node) {
+SparkTest.getEnclosingLandmark = function (node) {
   var range = findRangeOfType(ANNOTATION_LANDMARK, node);
   return range ? range.landmark : null;
 };

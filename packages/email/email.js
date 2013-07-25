@@ -3,7 +3,7 @@ var urlModule = Npm.require('url');
 var MailComposer = Npm.require('mailcomposer').MailComposer;
 
 Email = {};
-_EmailTest = {};
+EmailTest = {};
 
 var makePool = function (mailUrlString) {
   var mailUrl = urlModule.parse(mailUrlString);
@@ -49,12 +49,12 @@ var next_devmode_mail_id = 0;
 var output_stream = process.stdout;
 
 // Testing hooks
-_EmailTest.overrideOutputStream = function (stream) {
+EmailTest.overrideOutputStream = function (stream) {
   next_devmode_mail_id = 0;
   output_stream = stream;
 };
 
-_EmailTest.restoreOutputStream = function () {
+EmailTest.restoreOutputStream = function () {
   output_stream = process.stdout;
 };
 
@@ -90,7 +90,7 @@ var smtpSend = function (mc) {
  * false to skip sending.
  */
 var sendHooks = [];
-_EmailTest.hookSend = function (f) {
+EmailTest.hookSend = function (f) {
   sendHooks.push(f);
 };
 

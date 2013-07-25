@@ -4,7 +4,7 @@
 // XXX test variable wrapping (eg TR vs THEAD) inside each branch of Spark.list?
 
 
-_SparkTest.setCheckIECompliance(true);
+SparkTest.setCheckIECompliance(true);
 
 // Tests can use {preserve: idNameLabels} or renderWithPreservation
 // to cause any element with an id or name to be preserved.  This effect
@@ -74,7 +74,7 @@ Tinytest.add("spark - assembly", function (test) {
     test.equal(furtherCanon(f.html()), html);
 
     var actualGroups = [];
-    var tempRange = new LiveRange(_SparkTest.TAG, frag);
+    var tempRange = new LiveRange(SparkTest.TAG, frag);
     tempRange.visit(function (isStart, rng) {
       if (! isStart && rng.type === "data" /* Spark._ANNOTATION_DATA */)
         actualGroups.push(furtherCanon(canonicalizeHtml(
@@ -3341,8 +3341,8 @@ Tinytest.add("spark - current landmark", function (test) {
   test.equal(callbacks, 1);
   Deps.flush();
   test.equal(callbacks, 2);
-  test.equal(null, _SparkTest.getEnclosingLandmark(d.node()));
-  var enc = _SparkTest.getEnclosingLandmark(d.node().firstChild);
+  test.equal(null, SparkTest.getEnclosingLandmark(d.node()));
+  var enc = SparkTest.getEnclosingLandmark(d.node().firstChild);
   test.equal(enc.a, 9);
   test.equal(enc.b, 2);
   test.isFalse('c' in enc);
@@ -3358,32 +3358,32 @@ Tinytest.add("spark - current landmark", function (test) {
   Deps.flush();
   test.equal(callbacks, 4);
 
-  test.isTrue(_SparkTest.getEnclosingLandmark(findOuter()).outer);
-  test.isTrue(_SparkTest.getEnclosingLandmark(findInnerA()).innerA);
-  test.isTrue(_SparkTest.getEnclosingLandmark(findInnerB()).innerB);
-  test.equal(1, _SparkTest.getEnclosingLandmark(findOuter()).renderCount);
-  test.equal(1, _SparkTest.getEnclosingLandmark(findInnerA()).renderCount);
-  test.equal(1, _SparkTest.getEnclosingLandmark(findInnerB()).renderCount);
+  test.isTrue(SparkTest.getEnclosingLandmark(findOuter()).outer);
+  test.isTrue(SparkTest.getEnclosingLandmark(findInnerA()).innerA);
+  test.isTrue(SparkTest.getEnclosingLandmark(findInnerB()).innerB);
+  test.equal(1, SparkTest.getEnclosingLandmark(findOuter()).renderCount);
+  test.equal(1, SparkTest.getEnclosingLandmark(findInnerA()).renderCount);
+  test.equal(1, SparkTest.getEnclosingLandmark(findInnerB()).renderCount);
 
   R.set(4)
   Deps.flush();
   test.equal(callbacks, 5);
-  test.equal(2, _SparkTest.getEnclosingLandmark(findOuter()).renderCount);
-  test.equal(2, _SparkTest.getEnclosingLandmark(findInnerA()).renderCount);
+  test.equal(2, SparkTest.getEnclosingLandmark(findOuter()).renderCount);
+  test.equal(2, SparkTest.getEnclosingLandmark(findInnerA()).renderCount);
 
   R.set(5)
   Deps.flush();
   test.equal(callbacks, 6);
-  test.equal(3, _SparkTest.getEnclosingLandmark(findOuter()).renderCount);
-  test.equal(3, _SparkTest.getEnclosingLandmark(findInnerA()).renderCount);
-  test.equal(1, _SparkTest.getEnclosingLandmark(findInnerB()).renderCount);
+  test.equal(3, SparkTest.getEnclosingLandmark(findOuter()).renderCount);
+  test.equal(3, SparkTest.getEnclosingLandmark(findInnerA()).renderCount);
+  test.equal(1, SparkTest.getEnclosingLandmark(findInnerB()).renderCount);
 
   R.set(6)
   Deps.flush();
   test.equal(callbacks, 7);
-  test.equal(4, _SparkTest.getEnclosingLandmark(findOuter()).renderCount);
-  test.equal(4, _SparkTest.getEnclosingLandmark(findInnerA()).renderCount);
-  test.equal(2, _SparkTest.getEnclosingLandmark(findInnerB()).renderCount);
+  test.equal(4, SparkTest.getEnclosingLandmark(findOuter()).renderCount);
+  test.equal(4, SparkTest.getEnclosingLandmark(findInnerA()).renderCount);
+  test.equal(2, SparkTest.getEnclosingLandmark(findInnerB()).renderCount);
 
   d.kill();
   Deps.flush();

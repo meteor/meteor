@@ -89,7 +89,7 @@ testAsyncMulti("stream - disconnect remains offline", [
 
 Tinytest.add("stream - sockjs urls are computed correctly", function(test) {
   var testHasSockjsUrl = function(raw, expectedSockjsUrl) {
-    var actual = _LivedataTest.toSockjsUrl(raw);
+    var actual = LivedataTest.toSockjsUrl(raw);
     if (expectedSockjsUrl instanceof RegExp)
       test.isTrue(actual.match(expectedSockjsUrl), actual);
     else

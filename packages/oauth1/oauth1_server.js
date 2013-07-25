@@ -1,7 +1,7 @@
 // A place to store request tokens pending verification
 var requestTokens = {};
 
-_OAuth1Test = {requestTokens: requestTokens};
+OAuth1Test = {requestTokens: requestTokens};
 
 // connect middleware
 Oauth._requestHandlers['1'] = function (service, query, res) {

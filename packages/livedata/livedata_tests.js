@@ -32,7 +32,7 @@ if (Meteor.isServer) {
   Tinytest.add("livedata - version negotiation", function (test) {
     var versionCheck = function (clientVersions, serverVersions, expected) {
       test.equal(
-        _LivedataTest.calculateVersion(clientVersions, serverVersions),
+        LivedataTest.calculateVersion(clientVersions, serverVersions),
         expected);
     };
 
@@ -504,7 +504,7 @@ if (Meteor.isClient) {
   testAsyncMulti("livedata - publisher errors", (function () {
     // Use a separate connection so that we can safely check to see if
     // conn._subscriptions is empty.
-    var conn = new _LivedataTest.Connection('/',
+    var conn = new LivedataTest.Connection('/',
                                             {reloadWithOutstanding: true});
     var collName = Random.id();
     var coll = new Meteor.Collection(collName, {connection: conn});

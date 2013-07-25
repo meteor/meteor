@@ -745,7 +745,7 @@ testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGenera
 testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
   function (test, expect) {
     // XXX probably shouldn't use EJSON's private test symbols
-    var bin = _EJSONTest.base64Decode(
+    var bin = EJSONTest.base64Decode(
       "TWFuIGlzIGRpc3Rpbmd1aXNoZWQsIG5vdCBvbmx5IGJ5IGhpcyBy" +
         "ZWFzb24sIGJ1dCBieSB0aGlzIHNpbmd1bGFyIHBhc3Npb24gZnJv" +
         "bSBvdGhlciBhbmltYWxzLCB3aGljaCBpcyBhIGx1c3Qgb2YgdGhl" +

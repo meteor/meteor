@@ -2,14 +2,14 @@ var newConnection = function (stream) {
   // Some of these tests leave outstanding methods with no result yet
   // returned. This should not block us from re-running tests when sources
   // change.
-  return new _LivedataTest.Connection(stream, {reloadWithOutstanding: true});
+  return new LivedataTest.Connection(stream, {reloadWithOutstanding: true});
 };
 
 var makeConnectMessage = function (session) {
   var msg = {
     msg: 'connect',
-    version: _LivedataTest.SUPPORTED_DDP_VERSIONS[0],
-    support: _LivedataTest.SUPPORTED_DDP_VERSIONS
+    version: LivedataTest.SUPPORTED_DDP_VERSIONS[0],
+    support: LivedataTest.SUPPORTED_DDP_VERSIONS
   };
 
   if (session)
@@ -1345,12 +1345,12 @@ testAsyncMulti("livedata connection - reconnect to a different server", [
 
 Tinytest.addAsync("livedata connection - version negotiation requires renegotiating",
                   function (test, onComplete) {
-  var connection = new _LivedataTest.Connection(getSelfConnectionUrl(), {
+  var connection = new LivedataTest.Connection(getSelfConnectionUrl(), {
     reloadWithOutstanding: true,
-    supportedDDPVersions: ["garbled", _LivedataTest.SUPPORTED_DDP_VERSIONS[0]],
+    supportedDDPVersions: ["garbled", LivedataTest.SUPPORTED_DDP_VERSIONS[0]],
     onConnectionFailure: function () { test.fail(); onComplete(); },
     onConnected: function () {
-      test.equal(connection._version, _LivedataTest.SUPPORTED_DDP_VERSIONS[0]);
+      test.equal(connection._version, LivedataTest.SUPPORTED_DDP_VERSIONS[0]);
       connection._stream.disconnect({_permanent: true});
       onComplete();
     }
@@ -1359,7 +1359,7 @@ Tinytest.addAsync("livedata connection - version negotiation requires renegotiat
 
 Tinytest.addAsync("livedata connection - version negotiation error",
                   function (test, onComplete) {
-  var connection = new _LivedataTest.Connection(getSelfConnectionUrl(), {
+  var connection = new LivedataTest.Connection(getSelfConnectionUrl(), {
     reloadWithOutstanding: true,
     supportedDDPVersions: ["garbled", "more garbled"],
     onConnectionFailure: function () {

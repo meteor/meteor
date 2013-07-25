@@ -2,7 +2,7 @@ DDP = {};
 
 SUPPORTED_DDP_VERSIONS = [ 'pre1' ];
 
-_LivedataTest.SUPPORTED_DDP_VERSIONS = SUPPORTED_DDP_VERSIONS;
+LivedataTest.SUPPORTED_DDP_VERSIONS = SUPPORTED_DDP_VERSIONS;
 
 MethodInvocation = function (options) {
   var self = this;

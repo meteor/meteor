@@ -1,4 +1,4 @@
-_LivedataTest = {};
+LivedataTest = {};
 
 // XXX from Underscore.String (http://epeli.github.com/underscore.string/)
 var startsWith = function(str, starts) {
@@ -70,7 +70,7 @@ toWebsocketUrl = function (url) {
   return ret;
 };
 
-_LivedataTest.toSockjsUrl = toSockjsUrl;
+LivedataTest.toSockjsUrl = toSockjsUrl;
 
 
 _.extend(ClientStream.prototype, {

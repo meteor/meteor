@@ -1,7 +1,7 @@
 var Fiber = Npm.require('fibers');
 
 Oauth = {};
-_OauthTest = {};
+OauthTest = {};
 
 RoutePolicy.declare('/_oauth/', 'network');
 
@@ -43,7 +43,7 @@ Oauth.registerService = function (name, version, urls, handleOauthRequest) {
 };
 
 // For test cleanup.
-_OauthTest.unregisterService = function (name) {
+OauthTest.unregisterService = function (name) {
   delete registeredServices[name];
 };
 
@@ -129,7 +129,7 @@ middleware = function (req, res, next) {
   }
 };
 
-_OauthTest.middleware = middleware;
+OauthTest.middleware = middleware;
 
 // Handle /_oauth/* paths and extract the service name
 //

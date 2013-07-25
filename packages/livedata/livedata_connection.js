@@ -1383,7 +1383,7 @@ _.extend(Connection.prototype, {
   }
 });
 
-_LivedataTest.Connection = Connection;
+LivedataTest.Connection = Connection;
 
 // @param url {String} URL to Meteor app,
 //     e.g.:
