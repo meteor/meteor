@@ -157,7 +157,12 @@ _.extend(Meteor._DdpClientStream.prototype, {
     self._retryNow();
   },
 
-  // Permanently disconnect a stream.
+  // Permanently disconnect a stream. Once a stream is forced to
+  // disconnect, it can never reconnect. This is for error cases such as
+  // ddp version mismatch, where trying again won't fix the problem.
+  //
+  // XXX this should probably be renamed and possibly unified with
+  // 'disconnect'.
   forceDisconnect: function (optionalErrorMessage) {
     var self = this;
     self._forcedToDisconnect = true;
@@ -176,9 +181,14 @@ _.extend(Meteor._DdpClientStream.prototype, {
     self.statusChanged();
   },
 
+  // Temporarily take the stream offline. reconnect() later to go back
+  // online. This can be used to pause live updates, save battery on
+  // mobile devices, etc.
   disconnect: function () {
     var self = this;
 
+    // Failed is permanent. If we're failed, don't let people go back
+    // online by calling 'disconnect' then 'reconnect'.
     if (self._forcedToDisconnect)
       return;
 
