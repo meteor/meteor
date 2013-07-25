@@ -140,7 +140,7 @@ var toc = [
       "Meteor.status",
       "Meteor.reconnect",
       "Meteor.disconnect",
-      "Meteor.connect"
+      "DDP.connect"
     ],
 
     {name: "Collections", id: "collections"}, [

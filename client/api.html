@@ -466,8 +466,8 @@ updates are not required.
 {{> api_box connect}}
 
 To call methods on another Meteor application or subscribe to its data
-sets, call `Meteor.connect` with the URL of the application.
-`Meteor.connect` returns an object which provides:
+sets, call `DDP.connect` with the URL of the application.
+`DDP.connect` returns an object which provides:
 
 * `subscribe` -
   Subscribe to a record set. See
@@ -496,11 +496,6 @@ By default, clients open a connection to the server from which they're loaded.
 When you call `Meteor.subscribe`, `Meteor.status`, `Meteor.call`, and
 `Meteor.apply`, you are using a connection back to that default
 server.
-
-{{#warning}}
-In this release, `Meteor.connect` can only be called on the client.
-Servers can not yet connect to other servers.
-{{/warning}}
 
 <h2 id="collections"><span>Collections</span></h2>
 
