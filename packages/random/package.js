@@ -7,6 +7,7 @@ Package.on_use(function (api) {
   api.use('underscore');
   api.exportSymbol('Random');
   api.add_files('random.js');
+  api.add_files('deprecated.js');
 });
 
 Package.on_test(function(api) {

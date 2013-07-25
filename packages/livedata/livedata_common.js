@@ -16,9 +16,6 @@ MethodInvocation = function (options) {
   // zero-latency connection to the user.
   this.isSimulation = options.isSimulation;
 
-  // XXX Backwards compatibility only. Remove this before 1.0.
-  this.is_simulation = this.isSimulation;
-
   // call this function to allow other method invocations (from the
   // same client) to continue running without waiting for this one to
   // complete.

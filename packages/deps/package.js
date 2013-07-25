@@ -9,6 +9,7 @@ Package.on_use(function (api) {
   api.use('underscore');
   api.exportSymbol('Deps');
   api.add_files('deps.js');
+  api.add_files('deprecated.js');
 });
 
 Package.on_test(function (api) {
