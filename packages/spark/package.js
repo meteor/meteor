@@ -19,7 +19,7 @@ Package.on_test(function (api) {
   api.use('webapp', 'server');
   api.use(['tinytest', 'underscore', 'liverange', 'deps', 'domutils',
            'minimongo', 'random']);
-  api.use(['spark', 'test-helpers'], 'client');
+  api.use(['spark', 'test-helpers', 'jquery'], 'client');
 
   api.add_files('test_form_responder.js', 'server');
 

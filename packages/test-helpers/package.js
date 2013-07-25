@@ -6,7 +6,7 @@ Package.describe({
 Package.on_use(function (api) {
   api.use(['underscore', 'deps', 'ejson', 'tinytest', 'random',
           'domutils']);
-  api.use(['spark'], 'client');
+  api.use(['spark', 'jquery'], 'client');
 
   api.exportSymbol([
     'pollUntil', 'WrappedFrag', 'try_all_permutations', 'StubStream',

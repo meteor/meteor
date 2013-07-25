@@ -3,6 +3,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
+  api.use('underscore', 'client');
   // Note: html.js will optionally use jquery if it's available
   api.add_files('html.js', 'client');
   api.exportSymbol([

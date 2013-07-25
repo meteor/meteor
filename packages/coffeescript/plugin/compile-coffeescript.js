@@ -141,7 +141,7 @@ var handler = function (compileStep) {
     );
   }
 
-  var stripped = stripExportedVars(output.js, compileStep.exports);
+  var stripped = stripExportedVars(output.js, compileStep.declaredExports);
   var sourceWithMap = addSharedHeader(stripped, output.v3SourceMap);
 
   compileStep.addJavaScript({

@@ -27,7 +27,7 @@ var Module = function (options) {
   self.files = [];
 
   // options
-  self.exports = options.exports || [];
+  self.declaredExports = options.declaredExports;
   self.useGlobalNamespace = options.useGlobalNamespace;
   self.combinedServePath = options.combinedServePath;
   self.importStubServePath = options.importStubServePath;
@@ -61,32 +61,25 @@ _.extend(Module.prototype, {
 
   // Figure out which vars need to be specifically put in the module
   // scope.
-  //
-  // XXX We used to subtract 'import roots' out of this (defined as
-  // the first part of each imported symbol) but two-phase link
-  // complicates this. We should really go back to doing it, though,
-  // because otherwise the output looks ugly and it's harder to skim
-  // and see what your globals are. Probably this means we need to
-  // move the emission of the Package-scope Variables section (but not
-  // the actual static analysis) to the final phase.
-  computeModuleScopeVars: function () {
+  computeAssignedVariables: function () {
     var self = this;
 
     if (!self.jsAnalyze) {
       // We don't have access to static analysis, probably because we *are* the
       // js-analyze package.  Let's do a stupid heuristic: the exports are
       // the only module scope vars. (This works for js-analyze.JSAnalyze...)
-      return self.exports;
+      return self.declaredExports;
     }
 
     // Find all global references in any files
-    var globalReferences = [];
+    var assignedVariables = [];
     _.each(self.files, function (file) {
-      globalReferences = globalReferences.concat(file.computeGlobalReferences());
+      assignedVariables = assignedVariables.concat(
+        file.computeAssignedVariables());
     });
-    globalReferences = _.uniq(globalReferences);
+    assignedVariables = _.uniq(assignedVariables);
 
-    return _.isEmpty(globalReferences) ? undefined : globalReferences;
+    return _.isEmpty(assignedVariables) ? undefined : assignedVariables;
   },
 
   // Output is a list of objects with keys 'source', 'servePath', 'sourceMap',
@@ -97,11 +90,11 @@ _.extend(Module.prototype, {
     // If there are no files *and* we are a no-exports-at-all slice (eg a test
     // slice), then generate no prelink output.
     //
-    // If there are no files, but we are a use slice (and thus self.exports is
-    // an actual, albeit potentially empty, list), we DON'T want to take this
-    // path: we want to return an empty prelink file, so that at link time we
-    // end up at least setting `Package.foo = {}`.
-    if (_.isEmpty(self.files) && !self.exports)
+    // If there are no files, but we are a use slice (and thus
+    // self.declaredExports is an actual, albeit potentially empty, list), we
+    // DON'T want to take this path: we want to return an empty prelink file, so
+    // that at link time we end up at least setting `Package.foo = {}`.
+    if (_.isEmpty(self.files) && !self.declaredExports)
       return [];
 
     // If we don't want to create a separate scope for this module,
@@ -161,16 +154,11 @@ _.extend(Module.prototype, {
 // return something like
 // {Foo: 's1', Bar: {Baz: 's2', Quux: {A: 's3', B: 's4'}}}
 //
-// If 'inputTree' is given, it is modified (augumented) instead of
-// constructing a new tree.
-//
 // If the value of a symbol in symbolMap is set null, then we just
 // ensure that its parents exist. For example, {'A.B.C': null} means
 // to make sure that symbol tree contains at least {A: {B: {}}}.
-var buildSymbolTree = function (symbolMap, inputTree) {
-  // XXX XXX detect and report conflicts, like one file exporting
-  // Foo and another file exporting Foo.Bar
-  var ret = inputTree || {};
+var buildSymbolTree = function (symbolMap) {
+  var ret = {};
 
   _.each(symbolMap, function (value, symbol) {
     var parts = symbol.split('.');
@@ -245,7 +233,7 @@ _.extend(File.prototype, {
   // example: if the code references 'Foo.bar.baz' and 'Quux', and
   // neither are declared in a scope enclosing the point where they're
   // referenced, then globalReferences would include ["Foo", "Quux"].
-  computeGlobalReferences: function () {
+  computeAssignedVariables: function () {
     var self = this;
 
     var jsAnalyze = self.module.jsAnalyze;
@@ -474,7 +462,8 @@ var bannerPadding = function (bannerWidth) {
 //  - sourcePath: path to use in error messages
 //  - sourceMap: an optional source map (as string) for the input file
 //
-// exports: an array of symbols that the module exports
+// declaredExports: an array of symbols that the module exports.  null
+// if our slice isn't allowed to have exports.
 //
 // useGlobalNamespace: make the top level namespace be the same as the
 // global namespace, so that symbols are accessible from the
@@ -496,11 +485,12 @@ var bannerPadding = function (bannerWidth) {
 // - files: is an array of output files in the same format as inputFiles
 //   - EXCEPT THAT, for now, sourcePath is omitted and is replaced with
 //     sourceMap (a string) (XXX)
-// - packageScopeVariables: an array of package-scope variables
+// - assignedPackageVariables: an array of variables assigned to without
+//   being declared
 var prelink = function (options) {
   var module = new Module({
     name: options.name,
-    exports: options.exports,
+    declaredExports: options.declaredExports,
     useGlobalNamespace: options.useGlobalNamespace,
     importStubServePath: options.importStubServePath,
     combinedServePath: options.combinedServePath,
@@ -514,12 +504,12 @@ var prelink = function (options) {
   // Do static analysis to compute module-scoped variables. Error recovery from
   // the static analysis mutates the sources, so this has to be done before
   // concatenation.
-  var packageScopeVariables = module.computeModuleScopeVars();
+  var assignedVariables = module.computeAssignedVariables();
   var files = module.getPrelinkedFiles();
 
   return {
     files: files,
-    packageScopeVariables: packageScopeVariables
+    assignedVariables: assignedVariables
   };
 };
 
@@ -545,8 +535,12 @@ var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
 // 'Foo', "Foo.bar", etc) to the module from which it should be
 // imported (which must load before us at runtime)
 //
-// exports: symbols to export, as an array of symbol names as strings.
-//   if null, not even Package.name will be defined.
+// noExports: if true, don't generate an exports section (don't even create
+// `Package.name`).
+//
+// packageVariables: package-scope variables, some of which may be exports.
+//   a list of {name, export} objects; any non-falsy value for "export" means
+//   to export it.
 //
 // useGlobalNamespace: must be the same value that was passed to link()
 //
@@ -560,8 +554,7 @@ var link = function (options) {
     if (!_.isEmpty(options.imports)) {
       ret.push({
         source: getImportCode(options.imports,
-                              "/* Imports for global scope */\n\n", true,
-                              options.exports),
+                              "/* Imports for global scope */\n\n", true),
         servePath: options.importStubServePath
       });
     }
@@ -570,11 +563,18 @@ var link = function (options) {
 
   var header = getHeader({
     imports: options.imports,
-    exports: options.exports,
-    packageScopeVariables: options.packageScopeVariables
+    packageVariables: options.packageVariables
   });
+
+  var exported;
+  if (!options.noExports) {
+    exported = _.pluck(_.filter(options.packageVariables, function (v) {
+      return v.export;
+    }), 'name');
+  }
+
   var footer = getFooter({
-    exports: options.exports,
+    exported: exported,
     name: options.name
   });
 
@@ -616,21 +616,19 @@ var link = function (options) {
 var getHeader = function (options) {
   var chunks = [];
   chunks.push("(function () {\n\n" );
-  chunks.push(getImportCode(options.imports, "/* Imports */\n", false,
-                            options.exports));
-  if (options.packageScopeVariables
-      && !_.isEmpty(options.packageScopeVariables)) {
+  chunks.push(getImportCode(options.imports, "/* Imports */\n", false));
+  if (!_.isEmpty(options.packageVariables)) {
     chunks.push("/* Package-scope variables */\n");
-    chunks.push("var " + options.packageScopeVariables.join(', ') + ";\n\n");
+    chunks.push("var " + _.pluck(options.packageVariables, 'name').join(', ') +
+                ";\n\n");
   }
   return chunks.join('');
 };
 
-var getImportCode = function (imports, header, omitvar, exports) {
+var getImportCode = function (imports, header, omitvar) {
   var self = this;
-  exports = exports || {};
 
-  if (_.isEmpty(imports) && _.isEmpty(exports))
+  if (_.isEmpty(imports))
     return "";
 
   // Imports
@@ -639,14 +637,6 @@ var getImportCode = function (imports, header, omitvar, exports) {
     scratch[symbol] = packageDot(name) + "." + symbol;
   });
   var tree = buildSymbolTree(scratch);
-
-  // Now, if we export a symbol A.B.C, and A.B.* isn't imported, set
-  // up A.B = {}
-  scratch = {};
-  _.each(exports, function (symbol) {
-    scratch[symbol] = null;
-  });
-  buildSymbolTree(scratch, tree);
 
   // Generate output
   var buf = header;
@@ -662,7 +652,7 @@ var getImportCode = function (imports, header, omitvar, exports) {
 var getFooter = function (options) {
   var chunks = [];
 
-  if (options.name && options.exports) {
+  if (options.name && options.exported) {
     chunks.push("\n\n/* Exports */\n");
     chunks.push("if (typeof Package === 'undefined') Package = {};\n");
     chunks.push(packageDot(options.name), " = ");
@@ -670,18 +660,18 @@ var getFooter = function (options) {
     // Even if there are no exports, we need to define Package.foo, because the
     // existence of Package.foo is how another package (eg, one that weakly
     // depends on foo) can tell if foo is loaded.
-    if (_.isEmpty(options.exports)) {
+    if (_.isEmpty(options.exported)) {
       chunks.push("{};\n");
     } else {
-      // Given exports like Foo, Bar.Baz, Bar.Quux.A, and Bar.Quux.B,
-      // construct an expression like
-      // {Foo: Foo, Bar: {Baz: Bar.Baz, Quux: {A: Bar.Quux.A, B: Bar.Quux.B}}}
+      // A slightly overkill way to print out a properly indented version of
+      // {Foo: Foo, Bar: Bar, Quux: Quux}. (This was less overkill back when
+      // you could export dotted symbols.)
       var scratch = {};
-      _.each(options.exports, function (symbol) {
+      _.each(options.exported, function (symbol) {
         scratch[symbol] = symbol;
       });
       var exportTree = buildSymbolTree(scratch);
-      chunks.push(writeSymbolTree(exportTree, 0));
+      chunks.push(writeSymbolTree(exportTree));
       chunks.push(";\n");
     }
   }

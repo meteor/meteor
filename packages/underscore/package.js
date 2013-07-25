@@ -20,5 +20,5 @@ Package.on_use(function (api) {
 
   api.exportSymbol('_');
 
-  api.add_files('underscore.js');
+  api.add_files(['pre.js', 'underscore.js', 'post.js']);
 });
