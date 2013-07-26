@@ -360,6 +360,15 @@ _.each(["insert", "update", "remove"], function (name) {
     }
 
     if (name === "insert") {
+      // Perform a bulk insertion if an array of documents is passed,
+      // returning the caller an array of the document IDs
+      if (_.isArray(args[0])){
+        var docIds = _.map(args[0], function(doc){
+          return self.insert(doc);
+        }, self);
+        return docIds;
+      }
+
       if (!args.length)
         throw new Error("insert requires an argument");
       // shallow-copy the document and generate an ID
