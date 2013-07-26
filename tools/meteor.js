@@ -1231,9 +1231,7 @@ Fiber(function () {
       // At this point options such as --help have already been parsed
       // out.. that's no good. We'll have to go back tho the original
       // process.argv and parse it ourselves.
-      // XXX this is wrong, what if you did something like
-      //   "meteor --release foo run-command ..."
-      argv = process.argv.slice(3);
+      argv = argv._;
       if (! argv.length || argv[0] === "--help") {
         process.stdout.write(
 "Usage: meteor run-command <package directory> [arguments..]\n" +
