@@ -1,7 +1,7 @@
 // @param url {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or
 //   "ddp+sockjs://foo-**.meteor.com/sockjs"
-ClientStream = function (url) {
+LivedataTest.ClientStream = function (url) {
   var self = this;
   self._initCommon();
 
@@ -34,7 +34,7 @@ ClientStream = function (url) {
   self._launchConnection();
 };
 
-_.extend(ClientStream.prototype, {
+_.extend(LivedataTest.ClientStream.prototype, {
 
   // data is a utf8 string. Data sent while not connected is dropped on
   // the floor, and it is up the user of this API to retransmit lost

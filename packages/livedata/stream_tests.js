@@ -36,7 +36,7 @@ testAsyncMulti("stream - reconnect", [
 testAsyncMulti("stream - basic disconnect", [
   function (test, expect) {
     var history = [];
-    var stream = new Meteor._DdpClientStream("/");
+    var stream = new LivedataTest.ClientStream("/");
     var onTestPass = expect();
 
     Deps.autorun(function() {
@@ -65,7 +65,7 @@ testAsyncMulti("stream - basic disconnect", [
 testAsyncMulti("stream - disconnect remains offline", [
   function (test, expect) {
     var history = [];
-    var stream = new Meteor._DdpClientStream("/");
+    var stream = new LivedataTest.ClientStream("/");
     var onTestComplete = expect();
 
     Deps.autorun(function() {

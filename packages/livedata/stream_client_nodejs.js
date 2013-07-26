@@ -9,7 +9,7 @@
 // We don't do any heartbeating. (The logic that did this in sockjs was removed,
 // because it used a built-in sockjs mechanism. We could do it with WebSocket
 // ping frames or with DDP-level messages.)
-ClientStream = function (endpoint) {
+LivedataTest.ClientStream = function (endpoint) {
   var self = this;
 
   // WebSocket-Node https://github.com/Worlize/WebSocket-Node
@@ -47,7 +47,7 @@ ClientStream = function (endpoint) {
   self._launchConnection();
 };
 
-_.extend(ClientStream.prototype, {
+_.extend(LivedataTest.ClientStream.prototype, {
 
   // data is a utf8 string. Data sent while not connected is dropped on
   // the floor, and it is up the user of this API to retransmit lost

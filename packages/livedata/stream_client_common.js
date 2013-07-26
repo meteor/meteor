@@ -1,5 +1,3 @@
-LivedataTest = {};
-
 // XXX from Underscore.String (http://epeli.github.com/underscore.string/)
 var startsWith = function(str, starts) {
   return str.length >= starts.length &&
@@ -73,7 +71,7 @@ toWebsocketUrl = function (url) {
 LivedataTest.toSockjsUrl = toSockjsUrl;
 
 
-_.extend(ClientStream.prototype, {
+_.extend(LivedataTest.ClientStream.prototype, {
 
   // Register for callbacks.
   on: function (name, callback) {

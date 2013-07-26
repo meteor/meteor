@@ -32,7 +32,7 @@ var Connection = function (url, options) {
   if (typeof url === "object") {
     self._stream = url;
   } else {
-    self._stream = new ClientStream(url);
+    self._stream = new LivedataTest.ClientStream(url);
   }
 
   self._lastSessionId = null;
