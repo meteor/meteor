@@ -23,6 +23,7 @@ Npm.depends({
 // would be impossible to load at link time (or all transitive dependencies
 // packages would need to function without the analysis provided by this
 // package).
-Package.on_use(function (api, where) {
+Package.on_use(function (api) {
+  api.export('JSAnalyze', 'server');
   api.add_files('js_analyze.js', 'server');
 });

@@ -9,47 +9,39 @@ var request = require('request');
 var _ = require('underscore');
 
 // a bit of a hack
-var _meteor;
-var getMeteor = function (context) {
-  if (! _meteor) {
-    _meteor = unipackage.load({
-      library: context.library,
-      packages: [ 'livedata', 'mongo-livedata' ],
-      release: context.releaseVersion
-    }).meteor.Meteor;
+var getPackage = _.once(function (context) {
+  return unipackage.load({
+    library: context.library,
+    packages: [ 'meteor', 'livedata', 'mongo-livedata' ],
+    release: context.releaseVersion
+  });
+});
+
+var getGalaxy = _.once(function (context) {
+  var Package = getPackage(context);
+  if (!context.galaxy) {
+    process.stderr.write("Could not find a deploy endpoint. " +
+                         "You can set the GALAXY environment variable, " +
+                         "or configure your site's DNS to resolve to " +
+                         "your Galaxy's proxy.\n");
+    process.exit(1);
   }
 
-  return _meteor;
-};
-
-var _galaxy;
-var getGalaxy = function (context) {
-  if (! _galaxy) {
-    var Meteor = getMeteor(context);
-    if (!context.galaxy) {
-      process.stderr.write("Could not find a deploy endpoint. " +
-                           "You can set the GALAXY environment variable, " +
-                           "or configure your site's DNS to resolve to " +
-                           "your Galaxy's proxy.\n");
+  var galaxy = Package.livedata.DDP.connect(context.galaxy.url);
+  var timeout = Package.meteor.Meteor.setTimeout(function () {
+    if (galaxy.status().status !== "connected") {
+      process.stderr.write("Could not connect to galaxy " + context.galaxy.url
+                           + ": " + galaxy.status().status + '\n');
       process.exit(1);
     }
-
-    _galaxy = Meteor.connect(context.galaxy.url);
-    var timeout = Meteor.setTimeout(function () {
-      if (_galaxy.status().status !== "connected") {
-        process.stderr.write("Could not connect to galaxy " + context.galaxy.url + ": " + _galaxy.status().status + '\n');
-        process.exit(1);
-      }
-    }, 10*1000);
-    var close = _galaxy.close;
-    _galaxy.close = function (/*arguments*/) {
-      Meteor.clearTimeout(timeout);
-      close.apply(_galaxy, arguments);
-    };
-  }
-
-  return _galaxy;
-};
+  }, 10*1000);
+  var close = galaxy.close;
+  galaxy.close = function (/*arguments*/) {
+    Package.meteor.Meteor.clearTimeout(timeout);
+    close.apply(galaxy, arguments);
+  };
+  return galaxy;
+});
 
 
 var exitWithError = function (error, messages) {
@@ -136,7 +128,7 @@ exports.deleteApp = function (context) {
 //     in --star mode.
 exports.deploy = function (options) {
   var galaxy = getGalaxy(options.context);
-  var Meteor = getMeteor(options.context);
+  var Package = getPackage(options.context);
 
   var tmpdir = files.mkdtemp('deploy');
   var buildDir = path.join(tmpdir, 'build');
@@ -182,7 +174,7 @@ exports.deploy = function (options) {
   try {
     galaxy.call('createApp', options.app, appConfig);
   } catch (e) {
-    if (e instanceof Meteor.Error && e.error === 'already-exists') {
+    if (e instanceof Package.meteor.Meteor.Error && e.error === 'already-exists') {
       // Cool, it already exists. No problem. Just set the settings if they were
       // passed. We explicitly check for undefined because we want to allow you
       // to unset settings by passing an empty file.
@@ -260,7 +252,8 @@ exports.logs = function (options) {
   }
 
   var lastLogId = null;
-  var logReader = getMeteor(options.context).connect(logReaderURL);
+  var logReader =
+        getPackage(options.context).livedata.DDP.connect(logReaderURL);
   var Log = unipackage.load({
     library: options.context.library,
     packages: [ 'logging' ],

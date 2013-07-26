@@ -1,3 +1,5 @@
+Meetup = {};
+
 Oauth.registerService('meetup', 2, null, function(query) {
 
   var accessToken = getAccessToken(query);
@@ -19,7 +21,7 @@ var getAccessToken = function (query) {
 
   var response;
   try {
-    response = Meteor.http.post(
+    response = HTTP.post(
       "https://secure.meetup.com/oauth2/access", {headers: {Accept: 'application/json'}, params: {
         code: query.code,
         client_id: config.clientId,
@@ -41,7 +43,7 @@ var getAccessToken = function (query) {
 
 var getIdentity = function (accessToken) {
   try {
-    var response = Meteor.http.get(
+    var response = HTTP.get(
       "https://secure.meetup.com/2/members",
       {params: {member_id: 'self', access_token: accessToken}});
     return response.data.results && response.data.results[0];

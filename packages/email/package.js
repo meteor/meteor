@@ -8,6 +8,8 @@ Npm.depends({mailcomposer: "0.1.15", simplesmtp: "0.1.25", "stream-buffers": "0.
 
 Package.on_use(function (api) {
   api.use('underscore', 'server');
+  api.export('Email', 'server');
+  api.export('EmailTest', 'server', {testOnly: true});
   api.add_files('email.js', 'server');
 });
 

@@ -1,4 +1,3 @@
-
 // XXX from Underscore.String (http://epeli.github.com/underscore.string/)
 var startsWith = function(str, starts) {
   return str.length >= starts.length &&
@@ -60,7 +59,19 @@ var translateUrl =  function(url, newSchemeBase, subPath) {
     return url + "/" + subPath;
 };
 
-_.extend(Meteor._DdpClientStream.prototype, {
+toSockjsUrl = function (url) {
+  return translateUrl(url, "http", "sockjs");
+};
+
+toWebsocketUrl = function (url) {
+  var ret = translateUrl(url, "ws", "websocket");
+  return ret;
+};
+
+LivedataTest.toSockjsUrl = toSockjsUrl;
+
+
+_.extend(LivedataTest.ClientStream.prototype, {
 
   // Register for callbacks.
   on: function (name, callback) {
@@ -259,17 +270,5 @@ _.extend(Meteor._DdpClientStream.prototype, {
     if (self.statusListeners)
       self.statusListeners.depend();
     return self.currentStatus;
-  }
-});
-
-_.extend(Meteor._DdpClientStream, {
-
-  _toSockjsUrl: function (url) {
-    return translateUrl(url, "http", "sockjs");
-  },
-
-  _toWebsocketUrl: function (url) {
-    var ret = translateUrl(url, "ws", "websocket");
-    return ret;
   }
 });

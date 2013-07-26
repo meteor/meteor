@@ -1,4 +1,3 @@
-// @export SeededRandom
 SeededRandom = function(seed) { // seed may be a string or any type
   if (! (this instanceof SeededRandom))
     return new SeededRandom(seed);

@@ -11,7 +11,5 @@ Package.on_use(function(api) {
 
   api.add_files('meetup_login_button.css', 'client');
 
-  api.add_files('meetup_common.js', ['client', 'server']);
-  api.add_files('meetup_server.js', 'server');
-  api.add_files('meetup_client.js', 'client');
+  api.add_files("meetup.js");
 });

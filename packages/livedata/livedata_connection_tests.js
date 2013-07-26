@@ -1,16 +1,15 @@
-
 var newConnection = function (stream) {
   // Some of these tests leave outstanding methods with no result yet
   // returned. This should not block us from re-running tests when sources
   // change.
-  return new Meteor._LivedataConnection(stream, {reloadWithOutstanding: true});
+  return new LivedataTest.Connection(stream, {reloadWithOutstanding: true});
 };
 
 var makeConnectMessage = function (session) {
   var msg = {
     msg: 'connect',
-    version: Meteor._SUPPORTED_DDP_VERSIONS[0],
-    support: Meteor._SUPPORTED_DDP_VERSIONS
+    version: LivedataTest.SUPPORTED_DDP_VERSIONS[0],
+    support: LivedataTest.SUPPORTED_DDP_VERSIONS
   };
 
   if (session)
@@ -69,7 +68,7 @@ var startAndConnect = function(test, stream) {
 var SESSION_ID = '17';
 
 Tinytest.add("livedata stub - receive data", function (test) {
-  var stream = new Meteor._StubStream();
+  var stream = new StubStream();
   var conn = newConnection(stream);
 
   startAndConnect(test, stream);
@@ -97,7 +96,7 @@ Tinytest.add("livedata stub - receive data", function (test) {
 });
 
 Tinytest.add("livedata stub - subscribe", function (test) {
-  var stream = new Meteor._StubStream();
+  var stream = new StubStream();
   var conn = newConnection(stream);
 
   startAndConnect(test, stream);
@@ -146,7 +145,7 @@ Tinytest.add("livedata stub - subscribe", function (test) {
 
 
 Tinytest.add("livedata stub - reactive subscribe", function (test) {
-  var stream = new Meteor._StubStream();
+  var stream = new StubStream();
   var conn = newConnection(stream);
 
   startAndConnect(test, stream);
@@ -263,14 +262,12 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
 
 
 Tinytest.add("livedata stub - this", function (test) {
-  var stream = new Meteor._StubStream();
+  var stream = new StubStream();
   var conn = newConnection(stream);
 
   startAndConnect(test, stream);
   conn.methods({test_this: function() {
     test.isTrue(this.isSimulation);
-    // XXX Backwards compatibility only. Remove this before 1.0.
-    test.isTrue(this.is_simulation);
     this.unblock(); // should be a no-op
   }});
 
@@ -289,7 +286,7 @@ Tinytest.add("livedata stub - this", function (test) {
 
 if (Meteor.isClient) {
   Tinytest.add("livedata stub - methods", function (test) {
-    var stream = new Meteor._StubStream();
+    var stream = new StubStream();
     var conn = newConnection(stream);
 
     startAndConnect(test, stream);
@@ -344,7 +341,7 @@ if (Meteor.isClient) {
     test.equal(counts, {added: 1, removed: 0, changed: 0, moved: 0});
 
     // data methods do not show up (not quiescent yet)
-    stream.receive({msg: 'added', collection: collName, id: Meteor.idStringify(docId),
+    stream.receive({msg: 'added', collection: collName, id: LocalCollection._idStringify(docId),
                     fields: {value: 'tuesday'}});
     test.equal(coll.find({}).count(), 1);
     test.equal(coll.find({value: 'friday!'}).count(), 1);
@@ -391,7 +388,7 @@ if (Meteor.isClient) {
 }
 
 Tinytest.add("livedata stub - mutating method args", function (test) {
-  var stream = new Meteor._StubStream();
+  var stream = new StubStream();
   var conn = newConnection(stream);
 
   startAndConnect(test, stream);
@@ -432,7 +429,7 @@ var observeCursor = function (test, cursor) {
 // method calls another method in simulation. see not sent.
 if (Meteor.isClient) {
   Tinytest.add("livedata stub - methods calling methods", function (test) {
-    var stream = new Meteor._StubStream();
+    var stream = new StubStream();
     var conn = newConnection(stream);
 
     startAndConnect(test, stream);
@@ -472,7 +469,7 @@ if (Meteor.isClient) {
 
     // get data from the method. data from this doc does not show up yet, but data
     // from another doc does.
-    stream.receive({msg: 'added', collection: coll_name, id: Meteor.idStringify(docId),
+    stream.receive({msg: 'added', collection: coll_name, id: LocalCollection._idStringify(docId),
                     fields: {value: 'tuesday'}});
     o.expectCallbacks();
     test.equal(coll.findOne(docId), {_id: docId, a: 1});
@@ -495,7 +492,7 @@ if (Meteor.isClient) {
   });
 }
 Tinytest.add("livedata stub - method call before connect", function (test) {
-  var stream = new Meteor._StubStream;
+  var stream = new StubStream;
   var conn = newConnection(stream);
 
   var callbackOutput = [];
@@ -516,7 +513,7 @@ Tinytest.add("livedata stub - method call before connect", function (test) {
 });
 
 Tinytest.add("livedata stub - reconnect", function (test) {
-  var stream = new Meteor._StubStream();
+  var stream = new StubStream();
   var conn = newConnection(stream);
 
   startAndConnect(test, stream);
@@ -645,7 +642,7 @@ Tinytest.add("livedata stub - reconnect", function (test) {
 
 if (Meteor.isClient) {
   Tinytest.add("livedata stub - reconnect method which only got result", function (test) {
-    var stream = new Meteor._StubStream;
+    var stream = new StubStream;
     var conn = newConnection(stream);
     startAndConnect(test, stream);
 
@@ -685,7 +682,7 @@ if (Meteor.isClient) {
 
     // Get some data.
     stream.receive({msg: 'added', collection: collName,
-                    id: Meteor.idStringify(stubWrittenId), fields: {baz: 42}});
+                    id: LocalCollection._idStringify(stubWrittenId), fields: {baz: 42}});
     // It doesn't show up yet.
     test.equal(coll.find().count(), 1);
     test.equal(coll.findOne(stubWrittenId), {_id: stubWrittenId, foo: 'bar'});
@@ -720,7 +717,7 @@ if (Meteor.isClient) {
     test.equal(callbackOutput, ['bla']);
     test.equal(onResultReceivedOutput, ['bla']);
     stream.receive({msg: 'added', collection: collName,
-                    id: Meteor.idStringify(stubWrittenId), fields: {baz: 42}});
+                    id: LocalCollection._idStringify(stubWrittenId), fields: {baz: 42}});
     test.equal(coll.findOne(stubWrittenId), {_id: stubWrittenId, baz: 42});
     o.expectCallbacks({added: 1});
 
@@ -752,7 +749,7 @@ if (Meteor.isClient) {
 
     // Get some data.
     stream.receive({msg: 'added', collection: collName,
-                    id: Meteor.idStringify(stubWrittenId2), fields: {baz: 42}});
+                    id: LocalCollection._idStringify(stubWrittenId2), fields: {baz: 42}});
     // It doesn't show up yet.
     test.equal(coll.find().count(), 2);
     test.equal(coll.findOne(stubWrittenId2), {_id: stubWrittenId2, foo: 'bar'});
@@ -796,7 +793,7 @@ if (Meteor.isClient) {
 
     // Receive data matching our stub. It doesn't take effect yet.
     stream.receive({msg: 'added', collection: collName,
-                    id: Meteor.idStringify(stubWrittenId2), fields: {foo: 'bar'}});
+                    id: LocalCollection._idStringify(stubWrittenId2), fields: {foo: 'bar'}});
     o.expectCallbacks();
 
     // slowMethod is done writing, so we get full reconnect quiescence (but no
@@ -818,7 +815,7 @@ if (Meteor.isClient) {
   });
 }
 Tinytest.add("livedata stub - reconnect method which only got data", function (test) {
-  var stream = new Meteor._StubStream;
+  var stream = new StubStream;
   var conn = newConnection(stream);
   startAndConnect(test, stream);
 
@@ -904,7 +901,7 @@ Tinytest.add("livedata stub - reconnect method which only got data", function (t
 });
 if (Meteor.isClient) {
   Tinytest.add("livedata stub - multiple stubs same doc", function (test) {
-    var stream = new Meteor._StubStream;
+    var stream = new StubStream;
     var conn = newConnection(stream);
     startAndConnect(test, stream);
 
@@ -951,7 +948,7 @@ if (Meteor.isClient) {
 
     // Get some data... slightly different than what we wrote.
     stream.receive({msg: 'added', collection: collName,
-                    id: Meteor.idStringify(stubWrittenId), fields: {foo: 'barb', other: 'field',
+                    id: LocalCollection._idStringify(stubWrittenId), fields: {foo: 'barb', other: 'field',
                                                                     other2: 'bla'}});
     // It doesn't show up yet.
     test.equal(coll.find().count(), 1);
@@ -969,7 +966,7 @@ if (Meteor.isClient) {
 
     // More data. Not quite what we wrote. Also ignored for now.
     stream.receive({msg: 'changed', collection: collName,
-                    id: Meteor.idStringify(stubWrittenId), fields: {baz: 43}, cleared: ['other']});
+                    id: LocalCollection._idStringify(stubWrittenId), fields: {baz: 43}, cleared: ['other']});
     test.equal(coll.find().count(), 1);
     test.equal(coll.findOne(stubWrittenId),
                {_id: stubWrittenId, foo: 'bar', baz: 42});
@@ -991,7 +988,7 @@ if (Meteor.isClient) {
   Tinytest.add("livedata stub - unsent methods don't block quiescence", function (test) {
     // This test is for https://github.com/meteor/meteor/issues/555
 
-    var stream = new Meteor._StubStream;
+    var stream = new StubStream;
     var conn = newConnection(stream);
     startAndConnect(test, stream);
 
@@ -1055,7 +1052,7 @@ if (Meteor.isClient) {
   });
 }
 Tinytest.add("livedata stub - reactive resub", function (test) {
-  var stream = new Meteor._StubStream();
+  var stream = new StubStream();
   var conn = newConnection(stream);
 
   startAndConnect(test, stream);
@@ -1124,7 +1121,7 @@ Tinytest.add("livedata stub - reactive resub", function (test) {
 
 
 Tinytest.add("livedata connection - reactive userId", function (test) {
-  var stream = new Meteor._StubStream();
+  var stream = new StubStream();
   var conn = newConnection(stream);
 
   test.equal(conn.userId(), null);
@@ -1133,7 +1130,7 @@ Tinytest.add("livedata connection - reactive userId", function (test) {
 });
 
 Tinytest.add("livedata connection - two wait methods", function (test) {
-  var stream = new Meteor._StubStream();
+  var stream = new StubStream();
   var conn = newConnection(stream);
   startAndConnect(test, stream);
 
@@ -1244,7 +1241,7 @@ Tinytest.add("livedata connection - two wait methods", function (test) {
 });
 
 Tinytest.add("livedata connection - onReconnect prepends messages correctly with a wait method", function(test) {
-  var stream = new Meteor._StubStream();
+  var stream = new StubStream();
   var conn = newConnection(stream);
   startAndConnect(test, stream);
 
@@ -1309,7 +1306,7 @@ if (Meteor.isServer) {
 testAsyncMulti("livedata connection - reconnect to a different server", [
   function (test, expect) {
     var self = this;
-    self.conn = Meteor.connect("reverse.meteor.com");
+    self.conn = DDP.connect("reverse.meteor.com");
     pollUntil(expect, function () {
       return self.conn.status().connected;
     }, 5000, 100, true); // poll until connected, but don't fail if we don't connect
@@ -1348,12 +1345,12 @@ testAsyncMulti("livedata connection - reconnect to a different server", [
 
 Tinytest.addAsync("livedata connection - version negotiation requires renegotiating",
                   function (test, onComplete) {
-  var connection = new Meteor._LivedataConnection(getSelfConnectionUrl(), {
+  var connection = new LivedataTest.Connection(getSelfConnectionUrl(), {
     reloadWithOutstanding: true,
-    supportedDDPVersions: ["garbled", Meteor._SUPPORTED_DDP_VERSIONS[0]],
+    supportedDDPVersions: ["garbled", LivedataTest.SUPPORTED_DDP_VERSIONS[0]],
     onConnectionFailure: function () { test.fail(); onComplete(); },
     onConnected: function () {
-      test.equal(connection._version, Meteor._SUPPORTED_DDP_VERSIONS[0]);
+      test.equal(connection._version, LivedataTest.SUPPORTED_DDP_VERSIONS[0]);
       connection._stream.disconnect({_permanent: true});
       onComplete();
     }
@@ -1362,7 +1359,7 @@ Tinytest.addAsync("livedata connection - version negotiation requires renegotiat
 
 Tinytest.addAsync("livedata connection - version negotiation error",
                   function (test, onComplete) {
-  var connection = new Meteor._LivedataConnection(getSelfConnectionUrl(), {
+  var connection = new LivedataTest.Connection(getSelfConnectionUrl(), {
     reloadWithOutstanding: true,
     supportedDDPVersions: ["garbled", "more garbled"],
     onConnectionFailure: function () {
@@ -1379,7 +1376,7 @@ Tinytest.addAsync("livedata connection - version negotiation error",
 });
 
 Tinytest.add("livedata connection - onReconnect prepends messages correctly without a wait method", function(test) {
-  var stream = new Meteor._StubStream();
+  var stream = new StubStream();
   var conn = newConnection(stream);
   startAndConnect(test, stream);
 
@@ -1423,7 +1420,7 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
 });
 
 Tinytest.add("livedata connection - onReconnect with sent messages", function(test) {
-  var stream = new Meteor._StubStream();
+  var stream = new StubStream();
   var conn = newConnection(stream);
   startAndConnect(test, stream);
 
@@ -1466,7 +1463,7 @@ Tinytest.add("livedata connection - onReconnect with sent messages", function(te
 
 
 Tinytest.add("livedata stub - reconnect double wait method", function (test) {
-  var stream = new Meteor._StubStream;
+  var stream = new StubStream;
   var conn = newConnection(stream);
   startAndConnect(test, stream);
 
@@ -1530,7 +1527,7 @@ Tinytest.add("livedata stub - reconnect double wait method", function (test) {
 });
 
 Tinytest.add("livedata stub - subscribe errors", function (test) {
-  var stream = new Meteor._StubStream();
+  var stream = new StubStream();
   var conn = newConnection(stream);
 
   startAndConnect(test, stream);
@@ -1572,7 +1569,7 @@ Tinytest.add("livedata stub - subscribe errors", function (test) {
 
 if (Meteor.isClient) {
   Tinytest.add("livedata stub - stubs before connected", function (test) {
-    var stream = new Meteor._StubStream();
+    var stream = new StubStream();
     var conn = newConnection(stream);
 
     var collName = Random.id();

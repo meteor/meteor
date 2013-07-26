@@ -6,7 +6,6 @@
 
 var currentArgumentChecker = new Meteor.EnvironmentVariable;
 
-// @export check
 check = function (value, pattern) {
   // Record that check got called, if somebody cared.
   var argChecker = currentArgumentChecker.get();
@@ -16,26 +15,20 @@ check = function (value, pattern) {
 };
 
 Match = {
-  // @export Match.Optional
   Optional: function (pattern) {
     return new Optional(pattern);
   },
-  // @export Match.OneOf
   OneOf: function (/*arguments*/) {
     return new OneOf(_.toArray(arguments));
   },
-  // @export Match.Any
   Any: ['__any__'],
-  // @export Match.Where
   Where: function (condition) {
     return new Where(condition);
   },
-  // @export Match.ObjectIncluding
   ObjectIncluding: function (pattern) {
     return new ObjectIncluding(pattern);
   },
 
-  // @export Match.Error
   // XXX should we record the path down the tree in the error message?
   // XXX matchers should know how to describe themselves for errors
   Error: Meteor.makeErrorType("Match.Error", function (msg) {
@@ -45,7 +38,6 @@ Match = {
     this.sanitizedError = new Meteor.Error(400, "Match failed");
   }),
 
-  // @export Match.test
   // Tests to see if value matches pattern. Unlike check, it merely returns true
   // or false (unless an error other than Match.Error was thrown). It does not
   // interact with _failIfArgumentsAreNotAllChecked.
@@ -68,7 +60,6 @@ Match = {
   // `args` (either directly or in the first level of an array), throws an error
   // (using `description` in the message).
   //
-  // @export Match._failIfArgumentsAreNotAllChecked
   _failIfArgumentsAreNotAllChecked: function (f, context, args, description) {
     var argChecker = new ArgumentChecker(args, description);
     var result = currentArgumentChecker.withValue(argChecker, function () {

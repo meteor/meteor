@@ -1,3 +1,5 @@
+// This is not an ideal name, but we can change it later.
+
 if (window.localStorage) {
   Meteor._localStorage = {
     getItem: function (key) {

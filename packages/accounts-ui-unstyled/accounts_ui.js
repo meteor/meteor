@@ -1,13 +1,9 @@
-if (!Accounts.ui)
-  Accounts.ui = {};
+Accounts.ui = {};
 
-if (!Accounts.ui._options) {
-  Accounts.ui._options = {
-    requestPermissions: {},
-    requestOfflineToken: {}
-  };
-}
-
+Accounts.ui._options = {
+  requestPermissions: {},
+  requestOfflineToken: {}
+};
 
 Accounts.ui.config = function(options) {
   // validate options keys
@@ -62,7 +58,7 @@ Accounts.ui.config = function(options) {
   }
 };
 
-Accounts.ui._passwordSignupFields = function () {
+passwordSignupFields = function () {
   return Accounts.ui._options.passwordSignupFields || "EMAIL_ONLY";
 };
 

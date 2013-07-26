@@ -20,7 +20,7 @@ var sourcemap = require('source-map');
 // unipackage/slice changes, but this version (which is build-tool-specific) can
 // change when the the contents (not structure) of the built output changes. So
 // eg, if we improve the linker's static analysis, this should be bumped.
-exports.BUILT_BY = 'meteor/3';
+exports.BUILT_BY = 'meteor/4';
 
 // Find all files under `rootPath` that have an extension in
 // `extensions` (an array of extensions without leading dot), and
@@ -86,10 +86,9 @@ var rejectBadPath = function (p) {
 // - uses
 // - implies
 // - getSourcesFunc
-// - forceExport
+// - exports
 // - dependencyInfo
 // - nodeModulesPath
-// - noExports
 //
 // Do not include the source files in dependencyInfo. They will be
 // added at compile time when the sources are actually read.
@@ -151,10 +150,14 @@ var Slice = function (pkg, options) {
   // local plugins in this package) to compute this.
   self.getSourcesFunc = options.getSourcesFunc || null;
 
-  // Symbols that this slice should export even if @export directives
-  // don't appear in the source code. List of symbols (as strings.)
-  // Empty if loaded from unipackage.
-  self.forceExport = options.forceExport || [];
+  // True if this slice is not permitted to have any exports, and in fact should
+  // not even define `Package.name` (ie, test slices).
+  self.noExports = options.noExports || false;
+
+  // Symbols that this slice should export. List of symbols (as strings). Null
+  // on built packages (see packageVariables instead), or in packages where
+  // noExports is set.
+  self.declaredExports = options.declaredExports || null;
 
   // Files and directories that we want to monitor for changes in
   // development mode, such as source files and package.js, in the
@@ -165,23 +168,21 @@ var Slice = function (pkg, options) {
   // Has this slice been compiled?
   self.isBuilt = false;
 
-  // All symbols exported from the JavaScript code in this
-  // package. Array of string symbol (eg "Foo", "Bar.baz".) Set only
-  // when isBuilt is true.
-  self.exports = null;
-
-  // Are we allowed to have exports?  (eg, test slices don't export.)
-  self.noExports = !!options.noExports;
-
-  // Prelink output. 'prelinkFiles' is the partially linked JavaScript code (an
+  // Prelink output.
+  //
+  // 'prelinkFiles' is the partially linked JavaScript code (an
   // array of objects with keys 'source' and 'servePath', both strings -- see
-  // prelink() in linker.js) 'packageScopeVariables' are are variables that are
-  // syntactically globals in our input files and which we capture with a
-  // package-scope closure. Both of these are inputs into the final link phase,
-  // which inserts the final JavaScript resources into 'resources'. Set only
-  // when isBuilt is true.
+  // prelink() in linker.js)
+  //
+  // 'packageVariables' are are variables that are syntactically globals in our
+  // input files and which we capture with a package-scope closure. A list of
+  // objects with keys 'name' (required) and 'export' (true, 'tests', or falsy).
+  //
+  // Both of these are saved into slices on disk, and are inputs into the final
+  // link phase, which inserts the final JavaScript resources into
+  // 'resources'. Set only when isBuilt is true.
   self.prelinkFiles = null;
-  self.packageScopeVariables = null;
+  self.packageVariables = null;
 
   // All of the data provided for eventual inclusion in the bundle,
   // other than JavaScript that still needs to be fed through the
@@ -216,7 +217,7 @@ _.extend(Slice.prototype, {
   // through the appropriate handlers and run the prelink phase on any
   // resulting JavaScript. Also add all provided source files to the
   // package dependencies. Sets fields such as dependencies, exports,
-  // prelinkFiles, packageScopeVariables, and resources.
+  // prelinkFiles, packageVariables, and resources.
   build: function () {
     var self = this;
     var isApp = ! self.pkg.name;
@@ -304,6 +305,9 @@ _.extend(Slice.prototype, {
       // - fileOptions: any options passed to "api.add_files"; for
       //   use by the plugin. The built-in "js" plugin uses the "bare"
       //   option for files that shouldn't be wrapped in a closure.
+      // - declaredExports: An array of symbols exported by this slice, or null
+      //   if it may not export any symbols (eg, test slices). This is used by
+      //   CoffeeScript to ensure that it doesn't close over those symbols, eg.
       // - read(n): read from the input file. If n is given it should
       //   be an integer, and you will receive the next n bytes of the
       //   file as a Buffer. If n is omitted you get the rest of the
@@ -395,6 +399,7 @@ _.extend(Slice.prototype, {
         rootOutputPath: self.pkg.serveRoot,
         arch: self.arch,
         fileOptions: fileOptions,
+        declaredExports: _.pluck(self.declaredExports, 'name'),
         read: function (n) {
           if (n === undefined || readOffset + n > contents.length)
             n = contents.length - readOffset;
@@ -438,7 +443,6 @@ _.extend(Slice.prototype, {
             source: options.data,
             sourcePath: options.sourcePath,
             servePath: path.join(self.pkg.serveRoot, options.path),
-            linkerFileTransform: options.linkerFileTransform,
             bare: !!options.bare,
             sourceMap: options.sourceMap
           });
@@ -489,8 +493,7 @@ _.extend(Slice.prototype, {
         "/packages/" + self.pkg.name +
         (self.sliceName === "main" ? "" : ("." + self.sliceName)) + ".js",
       name: self.pkg.name || null,
-      forceExport: self.forceExport,
-      noExports: self.noExports,
+      declaredExports: _.pluck(self.declaredExports, 'name'),
       jsAnalyze: jsAnalyze
     });
 
@@ -511,8 +514,30 @@ _.extend(Slice.prototype, {
     });
 
     self.prelinkFiles = results.files;
-    self.exports = results.exports;
-    self.packageScopeVariables = results.packageScopeVariables;
+
+    self.packageVariables = [];
+    var packageVariableNames = {};
+    _.each(self.declaredExports, function (symbol) {
+      if (_.has(packageVariableNames, symbol.name))
+        return;
+      self.packageVariables.push({
+        name: symbol.name,
+        export: symbol.testOnly? "tests" : true
+      });
+      packageVariableNames[symbol.name] = true;
+    });
+    _.each(results.assignedVariables, function (name) {
+      if (_.has(packageVariableNames, name))
+        return;
+      self.packageVariables.push({
+        name: name
+      });
+      packageVariableNames[name] = true;
+    });
+    // Forget about the *declared* exports; what matters is packageVariables
+    // now.
+    self.declaredExports = null;
+
     self.resources = resources;
     self.isBuilt = true;
   },
@@ -554,8 +579,11 @@ _.extend(Slice.prototype, {
       bundleArch, {skipWeak: true, skipUnordered: true}, function (otherSlice) {
         if (! otherSlice.isBuilt)
           throw new Error("dependency wasn't built?");
-        _.each(otherSlice.exports, function (symbol) {
-          imports[symbol] = otherSlice.pkg.name;
+        _.each(otherSlice.packageVariables, function (symbol) {
+          // Slightly hacky implementation of test-only exports.
+          if (symbol.export === true ||
+              (symbol.export === "tests" && self.sliceName === "tests"))
+            imports[symbol.name] = otherSlice.pkg.name;
         });
       });
 
@@ -567,8 +595,8 @@ _.extend(Slice.prototype, {
       // XXX report an error if there is a package called global-imports
       importStubServePath: isApp && '/packages/global-imports.js',
       prelinkFiles: self.prelinkFiles,
-      exports: self.exports,
-      packageScopeVariables: self.packageScopeVariables,
+      noExports: self.noExports,
+      packageVariables: self.packageVariables,
       includeSourceMapInstructions: archinfo.matches(self.arch, "browser"),
       name: self.pkg.name || null
     });
@@ -1406,9 +1434,8 @@ _.extend(Package.prototype, {
     var sources = {use: {client: [], server: []},
                    test: {client: [], server: []}};
 
-    // symbols force-exported
-    var forceExport = {use: {client: [], server: []},
-                       test: {client: [], server: []}};
+    // symbols exported
+    var exports = {client: [], server: []};
 
     // packages used and implied (keys are 'spec', 'unordered', and 'weak').  an
     // "implied" package is a package that will be used by a slice which uses
@@ -1435,6 +1462,17 @@ _.extend(Package.prototype, {
     // one. #OldStylePackageSupport
     _.each(["use", "test"], function (role) {
       if (roleHandlers[role]) {
+        var toArray = function (x) {
+          if (x instanceof Array)
+            return x;
+          return x ? [x] : [];
+        };
+        var toWhereArray = function (where) {
+          if (where instanceof Array)
+            return where;
+          return where ? [where] : ['client', 'server'];
+        };
+
         var api = {
           // Called when this package wants to make another package be
           // used. Can also take literal package objects, if you have
@@ -1467,13 +1505,15 @@ _.extend(Package.prototype, {
           //   flag is not tracked per-environment or per-role; this may
           //   change.)
           use: function (names, where, options) {
+            // Support `api.use(package, {weak: true})` without where.
+            if (_.isObject(where) && !_.isArray(where) && !options) {
+              options = where;
+              where = null;
+            }
             options = options || {};
 
-            if (!(names instanceof Array))
-              names = names ? [names] : [];
-
-            if (!(where instanceof Array))
-              where = where ? [where] : ["client", "server"];
+            names = toArray(names);
+            where = toWhereArray(where);
 
             // A normal dependency creates an ordering constraint and a "if I'm
             // used, use that" constraint. Unordered dependencies lack the
@@ -1512,11 +1552,8 @@ _.extend(Package.prototype, {
               return;
             }
 
-            if (!(names instanceof Array))
-              names = names ? [names] : [];
-
-            if (!(where instanceof Array))
-              where = where ? [where] : ["client", "server"];
+            names = toArray(names);
+            where = toWhereArray(where);
 
             _.each(names, function (name) {
               _.each(where, function (w) {
@@ -1533,11 +1570,8 @@ _.extend(Package.prototype, {
           // be processed according to its extension (eg, *.coffee
           // files will be compiled to JavaScript.)
           add_files: function (paths, where, fileOptions) {
-            if (!(paths instanceof Array))
-              paths = paths ? [paths] : [];
-
-            if (!(where instanceof Array))
-              where = where ? [where] : ["client", "server"];
+            paths = toArray(paths);
+            where = toWhereArray(where);
 
             _.each(paths, function (path) {
               _.each(where, function (w) {
@@ -1549,29 +1583,39 @@ _.extend(Package.prototype, {
             });
           },
 
-          // Force the export of a symbol from this package. An
-          // alternative to using @export directives. Possibly helpful
-          // when you don't want to modify the source code of a third
-          // party library.
+          // Export symbols from this package.
           //
-          // @param symbols String (eg "Foo", "Foo.bar") or array of String
+          // @param symbols String (eg "Foo") or array of String
           // @param where 'client', 'server', or an array of those
-          exportSymbol: function (symbols, where) {
+          // @param options 'testOnly', boolean.
+          export: function (symbols, where, options) {
             if (role === "test") {
               buildmessage.error("You cannot export symbols from a test.",
                                  { useMyCaller: true });
               // recover by ignoring
               return;
             }
-            if (!(symbols instanceof Array))
-              symbols = symbols ? [symbols] : [];
+            // Support `api.export("FooTest", {testOnly: true})` without
+            // where.
+            if (_.isObject(where) && !_.isArray(where) && !options) {
+              options = where;
+              where = null;
+            }
+            options = options || {};
 
-            if (!(where instanceof Array))
-              where = where ? [where] : [];
+            symbols = toArray(symbols);
+            where = toWhereArray(where);
 
             _.each(symbols, function (symbol) {
+              // XXX be unicode-friendlier
+              if (!symbol.match(/^([_$a-zA-Z][_$a-zA-Z0-9]*)$/)) {
+                buildmessage.error("Bad exported symbol: " + symbol,
+                                   { useMyCaller: true });
+                // recover by ignoring
+                return;
+              }
               _.each(where, function (w) {
-                forceExport[role][w].push(symbol);
+                exports[w].push({name: symbol, testOnly: !!options.testOnly});
               });
             });
           },
@@ -1687,13 +1731,10 @@ _.extend(Package.prototype, {
           uses: uses[role][where],
           implies: role === "use" && implies[where] || undefined,
           getSourcesFunc: function () { return sources[role][where]; },
-          forceExport: forceExport[role][where],
+          noExports: role === "test",
+          declaredExports: role === "use" ? exports[where] : null,
           dependencyInfo: dependencyInfo,
-          nodeModulesPath: arch === nativeArch && nodeModulesPath || undefined,
-          // test slices don't get used by other packages, so they have nothing
-          // to export.  (And notably, they should NOT stomp on the Package.foo
-          // object defined by their corresponding use slice.)
-          noExports: role === "test"
+          nodeModulesPath: arch === nativeArch && nodeModulesPath || undefined
         }));
       });
     });
@@ -1720,8 +1761,8 @@ _.extend(Package.prototype, {
           // standard client packages for the classic meteor stack.
           // XXX remove and make everyone explicitly declare all dependencies
           ['meteor', 'webapp', 'logging', 'deps', 'session',
-           'livedata', 'mongo-livedata', 'spark', 'templating', 'startup',
-           'past', 'check'],
+           'livedata', 'mongo-livedata', 'spark', 'templating', 'check',
+           'underscore', 'jquery', 'handlebars', 'random'],
         project.get_packages(appDir));
 
       var arch = sliceName === "server" ? "native" : "browser";
@@ -2017,8 +2058,8 @@ _.extend(Package.prototype, {
       });
 
       slice.isBuilt = true;
-      slice.exports = sliceJson.exports || [];
-      slice.packageScopeVariables = sliceJson.packageScopeVariables || [];
+      slice.noExports = !!sliceJson.noExports;
+      slice.packageVariables = sliceJson.packageVariables || [];
       slice.prelinkFiles = [];
       slice.resources = [];
 
@@ -2205,8 +2246,8 @@ _.extend(Package.prototype, {
         // Construct slice metadata
         var sliceJson = {
           format: "unipackage-slice-pre1",
-          exports: slice.exports,
-          packageScopeVariables: slice.packageScopeVariables,
+          noExports: slice.noExports || undefined,
+          packageVariables: slice.packageVariables,
           uses: _.map(slice.uses, function (u) {
             var specParts = u.spec.split('.');
             if (specParts.length > 2)

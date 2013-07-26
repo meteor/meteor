@@ -1,7 +1,6 @@
 var crypto = Npm.require("crypto");
 var querystring = Npm.require("querystring");
 
-// @export OAuth1Binding
 // An OAuth1 wrapper around http calls which helps get tokens and
 // takes care of HTTP headers
 //
@@ -118,7 +117,7 @@ OAuth1Binding.prototype._call = function(method, url, headers, params) {
 
   // Make signed request
   try {
-    return Meteor.http.call(method, url, {
+    return HTTP.call(method, url, {
       params: params,
       headers: {
         Authorization: authString

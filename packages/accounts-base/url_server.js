@@ -1,9 +1,6 @@
-// @export Accounts
-if (typeof Accounts === 'undefined')
-  Accounts = {};
+// XXX These should probably not actually be public?
 
-if (!Accounts.urls)
-  Accounts.urls = {};
+Accounts.urls = {};
 
 Accounts.urls.resetPassword = function (token) {
   return Meteor.absoluteUrl('#/reset-password/' + token);

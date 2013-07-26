@@ -754,22 +754,28 @@ if (Meteor.isServer) {
   });
 
   Tinytest.add("collection - global insecure", function (test) {
-    // note: This test alters the global insecure status! This may
-    // collide with itself if run multiple times (but is better than
-    // the old test which had the same problem)
-    var oldGlobalInsecure = Meteor.Collection.insecure;
+    // note: This test alters the global insecure status, by sneakily hacking
+    // the global Package object! This may collide with itself if run multiple
+    // times (but is better than the old test which had the same problem)
+    var insecurePackage = Package.insecure;
 
-    Meteor.Collection.insecure = true;
+    Package.insecure = {};
     var collection = new Meteor.Collection(null);
     test.equal(collection._isInsecure(), true);
 
-    Meteor.Collection.insecure = false;
+    Package.insecure = undefined;
+    test.equal(collection._isInsecure(), false);
+
+    delete Package.insecure;
     test.equal(collection._isInsecure(), false);
 
     collection._insecure = true;
     test.equal(collection._isInsecure(), true);
 
-    Meteor.Collection.insecure = oldGlobalInsecure;
+    if (insecurePackage)
+      Package.insecure = insecurePackage;
+    else
+      delete Package.insecure;
   });
 }
 

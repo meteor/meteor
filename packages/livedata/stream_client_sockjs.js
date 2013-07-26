@@ -1,7 +1,7 @@
 // @param url {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or
 //   "ddp+sockjs://foo-**.meteor.com/sockjs"
-Meteor._DdpClientStream = function (url) {
+LivedataTest.ClientStream = function (url) {
   var self = this;
   self._initCommon();
 
@@ -34,7 +34,7 @@ Meteor._DdpClientStream = function (url) {
   self._launchConnection();
 };
 
-_.extend(Meteor._DdpClientStream.prototype, {
+_.extend(LivedataTest.ClientStream.prototype, {
 
   // data is a utf8 string. Data sent while not connected is dropped on
   // the floor, and it is up the user of this API to retransmit lost
@@ -168,8 +168,7 @@ _.extend(Meteor._DdpClientStream.prototype, {
     // can connect to random hostnames and get around browser per-host
     // connection limits.
     self.socket = new SockJS(
-      Meteor._DdpClientStream._toSockjsUrl(self.rawUrl),
-      undefined, {
+      toSockjsUrl(self.rawUrl), undefined, {
         debug: false, protocols_whitelist: self._sockjsProtocolsWhitelist()
       });
     self.socket.onmessage = function (data) {

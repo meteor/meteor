@@ -26,8 +26,6 @@
  * the client's session to render properly.
  */
 
-Meteor._reload = {};
-
 var KEY_NAME = 'Meteor_Reload';
 // after how long should we consider this no longer an automatic
 // reload, but a fresh restart. This only happens if a reload is
@@ -73,6 +71,8 @@ var providers = [];
 
 ////////// External API //////////
 
+Reload = {};
+
 // Packages that support migration should register themselves by
 // calling this function. When it's time to migrate, callback will
 // be called with one argument, the "retry function." If the package
@@ -86,7 +86,8 @@ var providers = [];
 // will be polled once again for its migration data. If they are all
 // ready this time, then the migration will happen. name must be set if there
 // is migration data.
-Meteor._reload.onMigrate = function (name, callback) {
+//
+Reload._onMigrate = function (name, callback) {
   if (!callback) {
     // name not provided, so first arg is callback.
     callback = name;
@@ -97,7 +98,8 @@ Meteor._reload.onMigrate = function (name, callback) {
 
 // Called by packages when they start up.
 // Returns the object that was saved, or undefined if none saved.
-Meteor._reload.migrationData = function (name) {
+//
+Reload._migrationData = function (name) {
   return old_data[name];
 };
 
@@ -106,8 +108,9 @@ Meteor._reload.migrationData = function (name) {
 // migrate it over. This function returns immediately. The reload
 // will happen at some point in the future once all of the packages
 // are ready to migrate.
+//
 var reloading = false;
-Meteor._reload.reload = function () {
+Reload._reload = function () {
   if (reloading)
     return;
   reloading = true;

@@ -12,7 +12,7 @@ Meteor.userId = function () {
   // user expects. The way to make this work in a publish is to do
   // Meteor.find(this.userId()).observe and recompute when the user
   // record changes.
-  var currentInvocation = Meteor._CurrentInvocation.get();
+  var currentInvocation = DDP._CurrentInvocation.get();
   if (!currentInvocation)
     throw new Error("Meteor.userId can only be invoked in method calls. Use this.userId in publish functions.");
   return currentInvocation.userId;
@@ -36,20 +36,21 @@ Meteor.user = function () {
 // - `undefined`, meaning don't handle;
 // - {id: userId, token: *}, if the user logged in successfully.
 // - throw an error, if the user failed to log in.
+//
 Accounts.registerLoginHandler = function(handler) {
-  Accounts._loginHandlers.push(handler);
+  loginHandlers.push(handler);
 };
 
 // list of all registered handlers.
-Accounts._loginHandlers = [];
+loginHandlers = [];
 
 
 // Try all of the registered login handlers until one of them doesn'
 // return `undefined`, meaning it handled this call to `login`. Return
 // that return value, which ought to be a {id/token} pair.
 var tryAllLoginHandlers = function (options) {
-  for (var i = 0; i < Accounts._loginHandlers.length; ++i) {
-    var handler = Accounts._loginHandlers[i];
+  for (var i = 0; i < loginHandlers.length; ++i) {
+    var handler = loginHandlers[i];
     var result = handler(options);
     if (result !== undefined)
       return result;
@@ -80,7 +81,7 @@ Meteor.methods({
 
   logout: function() {
     if (this._sessionData.loginToken && this.userId)
-      Accounts._removeLoginToken(this.userId, this._sessionData.loginToken);
+      removeLoginToken(this.userId, this._sessionData.loginToken);
     this.setUserId(null);
   }
 });
@@ -109,11 +110,12 @@ Accounts.registerLoginHandler(function(options) {
 });
 
 // Semi-public. Used by other login methods to generate tokens.
+//
 Accounts._generateStampedLoginToken = function () {
   return {token: Random.id(), when: +(new Date)};
 };
 
-Accounts._removeLoginToken = function (userId, loginToken) {
+removeLoginToken = function (userId, loginToken) {
   Meteor.users.update(userId, {
     $pull: {
       "services.resume.loginTokens": { "token": loginToken }
@@ -125,6 +127,7 @@ Accounts._removeLoginToken = function (userId, loginToken) {
 ///
 /// CREATE USER HOOKS
 ///
+
 var onCreateUserHook = null;
 Accounts.onCreateUser = function (func) {
   if (onCreateUserHook)
@@ -140,6 +143,8 @@ var defaultCreateUserHook = function (options, user) {
     user.profile = options.profile;
   return user;
 };
+
+// Called by accounts-password
 Accounts.insertUserDoc = function (options, user) {
   // - clone user document, to protect from modification
   // - add createdAt timestamp
@@ -223,6 +228,7 @@ Accounts.validateNewUser = function (func) {
 //        (eg, profile)
 // @returns {Object} Object with token and id keys, like the result
 //        of the "login" method.
+//
 Accounts.updateOrCreateUserFromExternalService = function(
   serviceName, serviceData, options) {
   options = _.clone(options || {});
@@ -306,60 +312,64 @@ Meteor.publish(null, function() {
 // Accounts.addAutopublishFields Notably, this isn't implemented with
 // multiple publishes since DDP only merges only across top-level
 // fields, not subfields (such as 'services.facebook.accessToken')
-Accounts._autopublishFields = {
+var autopublishFields = {
   loggedInUser: ['profile', 'username', 'emails'],
   otherUsers: ['profile', 'username']
 };
 
 // Add to the list of fields or subfields to be automatically
-// published if autopublish is on
+// published if autopublish is on. Must be called from top-level
+// code (ie, before Meteor.startup hooks run).
 //
 // @param opts {Object} with:
 //   - forLoggedInUser {Array} Array of fields published to the logged-in user
 //   - forOtherUsers {Array} Array of fields published to users that aren't logged in
 Accounts.addAutopublishFields = function(opts) {
-  Accounts._autopublishFields.loggedInUser.push.apply(
-    Accounts._autopublishFields.loggedInUser, opts.forLoggedInUser);
-  Accounts._autopublishFields.otherUsers.push.apply(
-    Accounts._autopublishFields.otherUsers, opts.forOtherUsers);
+  autopublishFields.loggedInUser.push.apply(
+    autopublishFields.loggedInUser, opts.forLoggedInUser);
+  autopublishFields.otherUsers.push.apply(
+    autopublishFields.otherUsers, opts.forOtherUsers);
 };
 
-Meteor.default_server.onAutopublish(function () {
-  // ['profile', 'username'] -> {profile: 1, username: 1}
-  var toFieldSelector = function(fields) {
-    return _.object(_.map(fields, function(field) {
-      return [field, 1];
-    }));
-  };
+if (Package.autopublish) {
+  // Use Meteor.startup to give other packages a chance to call
+  // addAutopublishFields.
+  Meteor.startup(function () {
+    // ['profile', 'username'] -> {profile: 1, username: 1}
+    var toFieldSelector = function(fields) {
+      return _.object(_.map(fields, function(field) {
+        return [field, 1];
+      }));
+    };
 
-  Meteor.default_server.publish(null, function () {
-    if (this.userId) {
+    Meteor.server.publish(null, function () {
+      if (this.userId) {
+        return Meteor.users.find(
+          {_id: this.userId},
+          {fields: toFieldSelector(autopublishFields.loggedInUser)});
+      } else {
+        return null;
+      }
+    }, /*suppress autopublish warning*/{is_auto: true});
+
+    // XXX this publish is neither dedup-able nor is it optimized by our special
+    // treatment of queries on a specific _id. Therefore this will have O(n^2)
+    // run-time performance every time a user document is changed (eg someone
+    // logging in). If this is a problem, we can instead write a manual publish
+    // function which filters out fields based on 'this.userId'.
+    Meteor.server.publish(null, function () {
+      var selector;
+      if (this.userId)
+        selector = {_id: {$ne: this.userId}};
+      else
+        selector = {};
+
       return Meteor.users.find(
-        {_id: this.userId},
-        {fields: toFieldSelector(Accounts._autopublishFields.loggedInUser)});
-    } else {
-      return null;
-    }
-  }, /*suppress autopublish warning*/{is_auto: true});
-
-  // XXX this publish is neither dedup-able nor is it optimized by our
-  // special treatment of queries on a specific _id. Therefore this
-  // will have O(n^2) run-time performance every time a user document
-  // is changed (eg someone logging in). If this is a problem, we can
-  // instead write a manual publish function which filters out fields
-  // based on 'this.userId'.
-  Meteor.default_server.publish(null, function () {
-    var selector;
-    if (this.userId)
-      selector = {_id: {$ne: this.userId}};
-    else
-      selector = {};
-
-    return Meteor.users.find(
-      selector,
-      {fields: toFieldSelector(Accounts._autopublishFields.otherUsers)});
-  }, /*suppress autopublish warning*/{is_auto: true});
-});
+        selector,
+        {fields: toFieldSelector(autopublishFields.otherUsers)});
+    }, /*suppress autopublish warning*/{is_auto: true});
+  });
+}
 
 // Publish all login service configuration fields other than secret.
 Meteor.publish("meteor.loginServiceConfiguration", function () {

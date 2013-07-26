@@ -329,7 +329,7 @@ LocalCollection._f = {
       return 9;
     if (EJSON.isBinary(v))
       return 5;
-    if (v instanceof Meteor.Collection.ObjectID)
+    if (v instanceof LocalCollection._ObjectID)
       return 7;
     return 3; // object
 

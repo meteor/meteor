@@ -8,7 +8,7 @@
 // minutiae.
 
 Package.describe({
-  summary: "Adaptor for using MongoDB and Minimongo over Livedata",
+  summary: "Adaptor for using MongoDB and Minimongo over DDP",
   internal: true
 });
 
@@ -20,6 +20,14 @@ Package.on_use(function (api) {
           ['client', 'server']);
   api.use('check', ['client', 'server']);
 
+  // Allow us to detect 'insecure'.
+  api.use('insecure', {weak: true});
+
+  // Allow us to detect 'autopublish', and publish collections if it's loaded.
+  api.use('autopublish', 'server', {weak: true});
+
+  api.export('MongoLivedataTest', 'server', {testOnly: true});
+
   api.add_files('mongo_driver.js', 'server');
   api.add_files('local_collection_driver.js', ['client', 'server']);
   api.add_files('remote_collection_driver.js', 'server');
@@ -29,7 +37,8 @@ Package.on_use(function (api) {
 Package.on_test(function (api) {
   api.use('mongo-livedata');
   api.use('check');
-  api.use(['tinytest', 'underscore', 'test-helpers', 'ejson', 'random']);
+  api.use(['tinytest', 'underscore', 'test-helpers', 'ejson', 'random',
+           'livedata']);
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
   api.add_files('mongo_livedata_tests.js', ['client', 'server']);

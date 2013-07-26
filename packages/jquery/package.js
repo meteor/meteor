@@ -2,9 +2,9 @@ Package.describe({
   summary: "Manipulate the DOM using CSS selectors"
 });
 
-Package.on_use(function (api, where) {
-  api.add_files('jquery.js', 'client');
+Package.on_use(function (api) {
+  api.add_files(['jquery.js', 'post.js'], 'client');
 
-  api.exportSymbol('$', where);
-  api.exportSymbol('jQuery', where);
+  api.export('$', 'client');
+  api.export('jQuery', 'client');
 });

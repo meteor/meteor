@@ -35,6 +35,7 @@ Meteor._noYieldsAllowed = function (f) {
 // XXX break this out into an NPM module?
 // XXX could maybe use the npm 'schlock' module instead, which would
 //     also support multiple concurrent "read" tasks
+//
 Meteor._SynchronousQueue = function () {
   var self = this;
   // List of tasks to run (not including a currently-running task if any). Each
@@ -168,6 +169,7 @@ _.extend(Meteor._SynchronousQueue.prototype, {
 
 // Sleep. Mostly used for debugging (eg, inserting latency into server
 // methods).
+//
 Meteor._sleepForMs = function (ms) {
   var fiber = Fiber.current;
   setTimeout(function() {

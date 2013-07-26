@@ -5,6 +5,8 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use(['json', 'underscore']);
+  api.export('EJSON');
+  api.export('EJSONTest', {testOnly: true});
   api.add_files('ejson.js', ['client', 'server']);
   api.add_files('base64.js', ['client', 'server']);
 });

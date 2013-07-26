@@ -4,7 +4,6 @@ var estraverse = Npm.require('estraverse');
 
 var Syntax = estraverse.Syntax;
 
-// @export JSAnalyze
 JSAnalyze = {};
 
 JSAnalyze.READ = 1;

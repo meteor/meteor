@@ -1,5 +1,4 @@
 if (Meteor.isServer) {
-  // XXX namespacing
   var path = Npm.require('path');
   var Fiber = Npm.require('fibers');
   var Future = Npm.require(path.join('fibers', 'future'));
@@ -11,13 +10,13 @@ if (Meteor.isServer) {
 //   reloadOnUpdate: should we try to reload when the server says
 //                      there's new code available?
 //   reloadWithOutstanding: is it OK to reload if there are outstanding methods?
-Meteor._LivedataConnection = function (url, options) {
+var Connection = function (url, options) {
   var self = this;
   options = _.extend({
     reloadOnUpdate: false,
     // The rest of these options are only for testing.
     reloadWithOutstanding: false,
-    supportedDDPVersions: Meteor._SUPPORTED_DDP_VERSIONS,
+    supportedDDPVersions: SUPPORTED_DDP_VERSIONS,
     onConnectionFailure: function (reason) {
       Meteor._debug("Failed DDP connection: " + reason);
     },
@@ -33,7 +32,7 @@ Meteor._LivedataConnection = function (url, options) {
   if (typeof url === "object") {
     self._stream = url;
   } else {
-    self._stream = new Meteor._DdpClientStream(url);
+    self._stream = new LivedataTest.ClientStream(url);
   }
 
   self._lastSessionId = null;
@@ -162,8 +161,8 @@ Meteor._LivedataConnection = function (url, options) {
   self._userIdDeps = (typeof Deps !== "undefined") && new Deps.Dependency;
 
   // Block auto-reload while we're waiting for method responses.
-  if (Meteor._reload && !options.reloadWithOutstanding) {
-    Meteor._reload.onMigrate(function (retry) {
+  if (Meteor.isClient && Package.reload && !options.reloadWithOutstanding) {
+    Reload._onMigrate(function (retry) {
       if (!self._readyToMigrate()) {
         if (self._retryMigrate)
           throw new Error("Two migrations in progress?");
@@ -177,7 +176,7 @@ Meteor._LivedataConnection = function (url, options) {
 
   var onMessage = function (raw_msg) {
     try {
-      var msg = Meteor._parseDDP(raw_msg);
+      var msg = parseDDP(raw_msg);
     } catch (e) {
       Meteor._debug("Exception while parsing DDP", e);
       return;
@@ -280,12 +279,12 @@ Meteor._LivedataConnection = function (url, options) {
   }
 
 
-  if (Meteor._reload && options.reloadOnUpdate) {
+  if (Meteor.isClient && Package.reload && options.reloadOnUpdate) {
     self._stream.on('update_available', function () {
       // Start trying to migrate to a new version. Until all packages
       // signal that they're ready for a migration, the app will
       // continue running normally.
-      Meteor._reload.reload();
+      Reload._reload();
     });
   }
 
@@ -384,7 +383,7 @@ _.extend(MethodInvoker.prototype, {
   }
 });
 
-_.extend(Meteor._LivedataConnection.prototype, {
+_.extend(Connection.prototype, {
   // 'name' is the name of the data on the wire that should go in the
   // store. 'wrappedStore' should be an object with methods beginUpdate, update,
   // endUpdate, saveOriginals, retrieveOriginals. see Collection for an example.
@@ -629,7 +628,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
     // to do a RPC, so we use the return value of the stub as our return
     // value.
 
-    var enclosing = Meteor._CurrentInvocation.get();
+    var enclosing = DDP._CurrentInvocation.get();
     var alreadyInSimulation = enclosing && enclosing.isSimulation;
 
     var stub = self._methodHandlers[name];
@@ -637,7 +636,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
       var setUserId = function(userId) {
         self.setUserId(userId);
       };
-      var invocation = new Meteor._MethodInvocation({
+      var invocation = new MethodInvocation({
         isSimulation: true,
         userId: self.userId(), setUserId: setUserId,
         sessionData: self._sessionData
@@ -649,7 +648,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
       try {
         // Note that unlike in the corresponding server code, we never audit
         // that stubs check() their arguments.
-        var ret = Meteor._CurrentInvocation.withValue(invocation,function () {
+        var ret = DDP._CurrentInvocation.withValue(invocation, function () {
           if (Meteor.isServer) {
             // Because saveOriginals and retrieveOriginals aren't reentrant,
             // don't allow stubs to yield.
@@ -809,7 +808,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
   // Sends the DDP stringification of the given message object
   _send: function (obj) {
     var self = this;
-    self._stream.send(Meteor._stringifyDDP(obj));
+    self._stream.send(stringifyDDP(obj));
   },
 
   status: function (/*passthrough args*/) {
@@ -907,8 +906,8 @@ _.extend(Meteor._LivedataConnection.prototype, {
 
     // Mark all named subscriptions which are ready (ie, we already called the
     // ready callback) as needing to be revived.
-    // XXX We should also block reconnect quiescence until autopublish is done
-    //     re-publishing to avoid flicker!
+    // XXX We should also block reconnect quiescence until unnamed subscriptions
+    //     (eg, autopublish) are done re-publishing to avoid flicker!
     self._subsBeingRevived = {};
     _.each(self._subscriptions, function (sub, id) {
       if (sub.ready)
@@ -1067,7 +1066,7 @@ _.extend(Meteor._LivedataConnection.prototype, {
                         + msg.id);
       }
       serverDoc.document = msg.fields || {};
-      serverDoc.document._id = Meteor.idParse(msg.id);
+      serverDoc.document._id = LocalCollection._idParse(msg.id);
     } else {
       self._pushUpdate(updates, msg.collection, msg);
     }
@@ -1384,26 +1383,28 @@ _.extend(Meteor._LivedataConnection.prototype, {
   }
 });
 
-_.extend(Meteor, {
-  // @param url {String} URL to Meteor app,
-  //     e.g.:
-  //     "subdomain.meteor.com",
-  //     "http://subdomain.meteor.com",
-  //     "/",
-  //     "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"
-  connect: function (url, _reloadOnUpdate) {
-    var ret = new Meteor._LivedataConnection(
-      url, {reloadOnUpdate: _reloadOnUpdate});
-    Meteor._LivedataConnection._allConnections.push(ret); // hack. see below.
-    return ret;
-  }
-});
+LivedataTest.Connection = Connection;
+
+// @param url {String} URL to Meteor app,
+//     e.g.:
+//     "subdomain.meteor.com",
+//     "http://subdomain.meteor.com",
+//     "/",
+//     "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"
+//
+DDP.connect = function (url, _reloadOnUpdate) {
+  var ret = new Connection(
+    url, {reloadOnUpdate: _reloadOnUpdate});
+  allConnections.push(ret); // hack. see below.
+  return ret;
+};
 
 // Hack for `spiderable` package: a way to see if the page is done
 // loading all the data it needs.
-Meteor._LivedataConnection._allConnections = [];
-Meteor._LivedataConnection._allSubscriptionsReady = function () {
-  return _.all(Meteor._LivedataConnection._allConnections, function (conn) {
+//
+allConnections = [];
+DDP._allSubscriptionsReady = function () {
+  return _.all(allConnections, function (conn) {
     return _.all(conn._subscriptions, function (sub) {
       return sub.ready;
     });

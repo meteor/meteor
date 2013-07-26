@@ -206,7 +206,8 @@ if (Meteor.isServer) {
       self.xs = [];
       self.expects = [];
       self.insert = function (fields) {
-        coll.insert(_.extend({ts: new Meteor._Mongo._Timestamp(0, 0)}, fields));
+        coll.insert(_.extend({ts: new MongoLivedataTest.MongoTimestamp(0, 0)},
+                             fields));
       };
 
       // Tailable observe shouldn't show things that are in the initial

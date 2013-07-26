@@ -1,3 +1,5 @@
+Weibo = {};
+
 Oauth.registerService('weibo', 2, null, function(query) {
 
   var response = getTokenResponse(query);
@@ -35,7 +37,7 @@ var getTokenResponse = function (query) {
 
   var response;
   try {
-    response = Meteor.http.post(
+    response = HTTP.post(
       "https://api.weibo.com/oauth2/access_token", {params: {
         code: query.code,
         client_id: config.clientId,
@@ -60,7 +62,7 @@ var getTokenResponse = function (query) {
 
 var getIdentity = function (accessToken, userId) {
   try {
-    return Meteor.http.get(
+    return HTTP.get(
       "https://api.weibo.com/2/users/show.json",
       {params: {access_token: accessToken, uid: userId}}).data;
   } catch (err) {

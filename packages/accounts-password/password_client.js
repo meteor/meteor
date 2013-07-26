@@ -8,7 +8,7 @@
 // @param password {String}
 // @param callback {Function(error|undefined)}
 Meteor.loginWithPassword = function (selector, password, callback) {
-  var srp = new Meteor._srp.Client(password);
+  var srp = new SRP.Client(password);
   var request = srp.startExchange();
 
   if (typeof selector === 'string')
@@ -50,7 +50,7 @@ Accounts.createUser = function (options, callback) {
 
   if (!options.password)
     throw new Error("Must set options.password");
-  var verifier = Meteor._srp.generateVerifier(options.password);
+  var verifier = SRP.generateVerifier(options.password);
   // strip old password, replacing with the verifier object
   delete options.password;
   options.srp = verifier;
@@ -77,7 +77,7 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
     return;
   }
 
-  var verifier = Meteor._srp.generateVerifier(newPassword);
+  var verifier = SRP.generateVerifier(newPassword);
 
   if (!oldPassword) {
     Meteor.apply('changePassword', [{srp: verifier}], function (error, result) {
@@ -89,7 +89,7 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
       }
     });
   } else { // oldPassword
-    var srp = new Meteor._srp.Client(oldPassword);
+    var srp = new SRP.Client(oldPassword);
     var request = srp.startExchange();
     request.user = {id: Meteor.user()._id};
     Meteor.apply('beginPasswordExchange', [request], function (error, result) {
@@ -142,7 +142,7 @@ Accounts.resetPassword = function(token, newPassword, callback) {
   if (!newPassword)
     throw new Error("Need to pass newPassword");
 
-  var verifier = Meteor._srp.generateVerifier(newPassword);
+  var verifier = SRP.generateVerifier(newPassword);
   Accounts.callLoginMethod({
     methodName: 'resetPassword',
     methodArguments: [token, verifier],
