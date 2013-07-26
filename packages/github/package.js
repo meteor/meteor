@@ -14,7 +14,7 @@ Package.on_use(function(api) {
   api.use('random', 'client');
   api.use('service-configuration', ['client', 'server']);
 
-  api.exportSymbol('Github');
+  api.export('Github');
 
   api.add_files(
     ['github_configure.html', 'github_configure.js'],

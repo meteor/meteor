@@ -13,7 +13,7 @@ Package._transitional_registerBuildPlugin({
 Package.on_use(function (api) {
   api.use('underscore', ['client', 'server']);
 
-  api.exportSymbol('Meteor');
+  api.export('Meteor');
 
   api.add_files('client_environment.js', 'client');
   api.add_files('server_environment.js', 'server');

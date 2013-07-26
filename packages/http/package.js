@@ -4,7 +4,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('underscore');
-  api.exportSymbol('HTTP');
+  api.export('HTTP');
   api.add_files('httpcall_common.js', ['client', 'server']);
   api.add_files('httpcall_client.js', 'client');
   api.add_files('httpcall_server.js', 'server');

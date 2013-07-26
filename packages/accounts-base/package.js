@@ -25,7 +25,7 @@ Package.on_use(function (api) {
   // it's loaded.
   api.use('autopublish', 'server', {weak: true});
 
-  api.exportSymbol('Accounts');
+  api.export('Accounts');
 
   api.add_files('accounts_common.js', ['client', 'server']);
   api.add_files('accounts_server.js', 'server');

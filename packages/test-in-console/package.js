@@ -8,7 +8,7 @@ Package.on_use(function (api) {
   api.use(['tinytest', 'underscore', 'random', 'ejson', 'check']);
   api.use('http', 'server');
 
-  api.exportSymbol('TEST_STATUS', 'client');
+  api.export('TEST_STATUS', 'client');
 
   api.add_files(['driver.js'], "client");
   api.add_files(['reporter.js'], "server");

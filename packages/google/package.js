@@ -12,7 +12,7 @@ Package.on_use(function(api) {
   api.use(['underscore', 'service-configuration'], ['client', 'server']);
   api.use(['random', 'templating'], 'client');
 
-  api.exportSymbol('Google');
+  api.export('Google');
 
   api.add_files(
     ['google_configure.html', 'google_configure.js'],

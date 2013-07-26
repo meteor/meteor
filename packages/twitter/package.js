@@ -14,7 +14,7 @@ Package.on_use(function(api) {
   api.use('underscore', 'server');
   api.use('service-configuration', ['client', 'server']);
 
-  api.exportSymbol('Twitter');
+  api.export('Twitter');
 
   api.add_files(
     ['twitter_configure.html', 'twitter_configure.js'],

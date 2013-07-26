@@ -6,7 +6,7 @@ Package.on_use(function (api) {
   api.use('underscore', 'client');
   // Note: html.js will optionally use jquery if it's available
   api.add_files('html.js', 'client');
-  api.exportSymbol([
+  api.export([
     'A', 'ABBR', 'ACRONYM', 'B', 'BDO', 'BIG', 'BLOCKQUOTE', 'BR', 'BUTTON',
     'CAPTION', 'CITE', 'CODE', 'COL', 'COLGROUP', 'DD', 'DEL', 'DFN', 'DIV',
     'DL', 'DT', 'EM', 'FIELDSET', 'FORM', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',

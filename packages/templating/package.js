@@ -23,7 +23,7 @@ Package.on_use(function (api) {
 
   api.use(['underscore', 'spark', 'handlebars'], 'client');
 
-  api.exportSymbol('Template', 'client');
+  api.export('Template', 'client');
 
   // provides the runtime logic to instantiate our templates
   api.add_files('deftemplate.js', 'client');

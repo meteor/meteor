@@ -26,7 +26,7 @@ Package.on_use(function (api) {
   // Allow us to detect 'autopublish', and publish collections if it's loaded.
   api.use('autopublish', 'server', {weak: true});
 
-  api.exportSymbol('MongoLivedataTest', 'server', {testOnly: true});
+  api.export('MongoLivedataTest', 'server', {testOnly: true});
 
   api.add_files('mongo_driver.js', 'server');
   api.add_files('local_collection_driver.js', ['client', 'server']);

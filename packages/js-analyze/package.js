@@ -24,6 +24,6 @@ Npm.depends({
 // packages would need to function without the analysis provided by this
 // package).
 Package.on_use(function (api) {
-  api.exportSymbol('JSAnalyze', 'server');
+  api.export('JSAnalyze', 'server');
   api.add_files('js_analyze.js', 'server');
 });

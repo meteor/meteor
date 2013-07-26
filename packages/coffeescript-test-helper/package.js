@@ -5,6 +5,6 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('coffeescript', ['client', 'server']);
-  api.exportSymbol('COFFEESCRIPT_EXPORTED');
+  api.export('COFFEESCRIPT_EXPORTED');
   api.add_files("exporting.coffee", ['client', 'server']);
 });

@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.exportSymbol(['JSLexer', 'JSParser', 'ParseNode']);
+  api.export(['JSLexer', 'JSParser', 'ParseNode']);
   api.add_files(['lexer.js', 'parserlib.js', 'stringify.js', 'parser.js'],
                 ['client', 'server']);
 });

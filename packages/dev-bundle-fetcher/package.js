@@ -4,6 +4,6 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.exportSymbol('DevBundleFetcher', 'server');
+  api.export('DevBundleFetcher', 'server');
   api.add_files(['dev-bundle', 'dev-bundle.js'], ['server']);
 });

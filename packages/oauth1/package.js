@@ -10,8 +10,8 @@ Package.on_use(function (api) {
   api.use('underscore', 'server');
   api.use('http', 'server');
 
-  api.exportSymbol('OAuth1Binding', 'server');
-  api.exportSymbol('OAuth1Test', 'server', {testOnly: true});
+  api.export('OAuth1Binding', 'server');
+  api.export('OAuth1Test', 'server', {testOnly: true});
 
   api.add_files('oauth1_binding.js', 'server');
   api.add_files('oauth1_server.js', 'server');

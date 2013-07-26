@@ -7,7 +7,7 @@ Package.on_use(function (api) {
   api.use('underscore', ['client', 'server']);
   api.use('random', ['client', 'server']);
 
-  api.exportSymbol('Tinytest');
+  api.export('Tinytest');
 
   api.add_files('tinytest.js', ['client', 'server']);
 

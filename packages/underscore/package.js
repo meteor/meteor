@@ -18,7 +18,7 @@ Package.on_use(function (api) {
   // configuration alive in the codebase.
   api.use('meteor', {unordered: true});
 
-  api.exportSymbol('_');
+  api.export('_');
 
   api.add_files(['pre.js', 'underscore.js', 'post.js']);
 });

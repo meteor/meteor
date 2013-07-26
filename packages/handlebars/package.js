@@ -9,7 +9,7 @@ Package.on_use(function (api) {
   api.use('underscore');
   api.use('spark', 'client');
 
-  api.exportSymbol('Handlebars');
+  api.export('Handlebars');
 
   // XXX these should be split up into two different slices, not
   // different code with totally different APIs that is sent depending

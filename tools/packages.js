@@ -1588,14 +1588,14 @@ _.extend(Package.prototype, {
           // @param symbols String (eg "Foo") or array of String
           // @param where 'client', 'server', or an array of those
           // @param options 'testOnly', boolean.
-          exportSymbol: function (symbols, where, options) {
+          export: function (symbols, where, options) {
             if (role === "test") {
               buildmessage.error("You cannot export symbols from a test.",
                                  { useMyCaller: true });
               // recover by ignoring
               return;
             }
-            // Support `api.exportSymbol("FooTest", {testOnly: true})` without
+            // Support `api.export("FooTest", {testOnly: true})` without
             // where.
             if (_.isObject(where) && !_.isArray(where) && !options) {
               options = where;

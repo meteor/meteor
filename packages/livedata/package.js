@@ -23,10 +23,10 @@ Package.on_use(function (api) {
   // runs Meteor.publish while it's loaded.
   api.use('autopublish', 'server', {weak: true});
 
-  api.exportSymbol('DDP');
-  api.exportSymbol('DDPServer', 'server');
+  api.export('DDP');
+  api.export('DDPServer', 'server');
 
-  api.exportSymbol('LivedataTest', {testOnly: true});
+  api.export('LivedataTest', {testOnly: true});
 
   // Transport
   api.use('reload', 'client');

@@ -8,7 +8,7 @@ Package.on_use(function (api) {
           'domutils']);
   api.use(['spark', 'jquery'], 'client');
 
-  api.exportSymbol([
+  api.export([
     'pollUntil', 'WrappedFrag', 'try_all_permutations', 'StubStream',
     'SeededRandom', 'ReactiveVar', 'OnscreenDiv', 'clickElement', 'blurElement',
     'focusElement', 'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',

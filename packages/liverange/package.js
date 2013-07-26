@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.exportSymbol('LiveRange', 'client');
+  api.export('LiveRange', 'client');
   api.add_files('liverange.js', 'client');
 });
 

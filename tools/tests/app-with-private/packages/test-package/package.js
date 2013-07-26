@@ -5,6 +5,6 @@ Package._transitional_registerBuildPlugin({
 });
 
 Package.on_use(function (api) {
-  api.exportSymbol('TestAsset', 'server');
+  api.export('TestAsset', 'server');
   api.add_files(['test-package.js', 'test-package.txt', 'test.notregistered'], 'server');
 });
