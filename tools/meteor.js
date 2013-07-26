@@ -948,7 +948,7 @@ Fiber(function () {
 
       if (argv.delete) {
         if (context.galaxy)
-          deployGalaxy.deleteApp(context);
+          deployGalaxy.deleteApp(site, context);
         else
           deploy.delete_app(site);
       } else {
