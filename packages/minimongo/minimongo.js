@@ -42,13 +42,11 @@ LocalCollection._applyChanges = function (doc, changeFields) {
   });
 };
 
-LocalCollection.MinimongoError = function (message) {
-  var self = this;
-  self.name = "MinimongoError";
-  self.details = message;
+var MinimongoError = function (message) {
+  var e = new Error(message);
+  e.name = "MinimongoError";
+  return e;
 };
-
-LocalCollection.MinimongoError.prototype = new Error;
 
 
 // options may include sort, skip, limit, reactive
@@ -431,7 +429,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
   var id = LocalCollection._idStringify(doc._id);
 
   if (_.has(self.docs, doc._id))
-    throw new LocalCollection.MinimongoError("Duplicate _id '" + doc._id + "'");
+    throw MinimongoError("Duplicate _id '" + doc._id + "'");
 
   self._saveOriginal(id, undefined);
   self.docs[id] = doc;
