@@ -384,7 +384,7 @@ Meteor.methods({
     // Don't let random users configure a service we haven't added yet (so
     // that when we do later add it, it's set up with their configuration
     // instead of ours).
-    if (!Accounts[options.service])
+    if (!Package[options.service])
       throw new Meteor.Error(403, "Service unknown");
     if (ServiceConfiguration.configurations.findOne({service: options.service}))
       throw new Meteor.Error(403, "Service " + options.service + " already configured");
