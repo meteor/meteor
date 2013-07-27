@@ -397,9 +397,10 @@ _.extend(exports, {
   formatList: function (pkgs) {
     var longest = '';
     _.each(pkgs, function (pkg) {
-      if (pkg.name.length > longest.length)
+      if (!pkg.metadata.internal && pkg.name.length > longest.length)
         longest = pkg.name;
     });
+
     var pad = longest.replace(/./g, ' ');
     // it'd be nice to read the actual terminal width, but I tried
     // several methods and none of them work (COLUMNS isn't set in
