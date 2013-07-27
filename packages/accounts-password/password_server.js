@@ -224,7 +224,7 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
     throw new Error("No such email for user.");
 
   var token = Random.id();
-  var when = +(new Date);
+  var when = new Date();
   Meteor.users.update(userId, {$set: {
     "services.password.reset": {
       token: token,
@@ -264,7 +264,7 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
 
 
   var token = Random.id();
-  var when = +(new Date);
+  var when = new Date();
   Meteor.users.update(userId, {$set: {
     "services.password.reset": {
       token: token,
@@ -346,7 +346,7 @@ Accounts.sendVerificationEmail = function (userId, address) {
   var tokenRecord = {
     token: Random.id(),
     address: address,
-    when: +(new Date)};
+    when: new Date()};
   Meteor.users.update(
     {_id: userId},
     {$push: {'services.email.verificationTokens': tokenRecord}});

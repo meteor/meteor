@@ -141,7 +141,7 @@ Accounts.insertUserDoc = function (options, user) {
   // the user document (in which you can modify its contents), and
   // one that gets called after (in which you should change other
   // collections)
-  user = _.extend({createdAt: +(new Date), _id: Random.id()}, user);
+  user = _.extend({createdAt: new Date(), _id: Random.id()}, user);
 
   var result = {};
   if (options.generateLoginToken) {
