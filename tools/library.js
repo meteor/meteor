@@ -127,6 +127,7 @@ _.extend(Library.prototype, {
     if (! packageDir) {
       for (var i = 0; i < self.localPackageDirs.length; ++i) {
         var packageDir = path.join(self.localPackageDirs[i], name);
+        // XXX or unipackage.json?
         if (fs.existsSync(path.join(packageDir, 'package.js')))
           break;
         packageDir = null;

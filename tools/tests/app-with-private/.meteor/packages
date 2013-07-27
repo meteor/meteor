@@ -7,3 +7,4 @@ autopublish
 insecure
 preserve-inputs
 test-package
+standard-app-packages

@@ -1757,14 +1757,7 @@ _.extend(Package.prototype, {
 
     _.each(["client", "server"], function (sliceName) {
       // Determine used packages
-      var names = _.union(
-          // standard client packages for the classic meteor stack.
-          // XXX remove and make everyone explicitly declare all dependencies
-          ['meteor', 'webapp', 'logging', 'deps', 'session',
-           'livedata', 'mongo-livedata', 'spark', 'templating', 'check',
-           'underscore', 'jquery', 'handlebars', 'random'],
-        project.get_packages(appDir));
-
+      var names = project.get_packages(appDir);
       var arch = sliceName === "server" ? "native" : "browser";
 
       // Create slice
