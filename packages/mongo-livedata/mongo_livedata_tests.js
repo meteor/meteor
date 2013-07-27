@@ -124,8 +124,8 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
     if (Meteor.isClient) {
       f();
     } else {
-      var fence = new Meteor._WriteFence;
-      Meteor._CurrentWriteFence.withValue(fence, f);
+      var fence = new DDPServer._WriteFence;
+      DDPServer._CurrentWriteFence.withValue(fence, f);
       fence.armAndWait();
     }
 
@@ -281,8 +281,8 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
     if (Meteor.isClient) {
       f();
     } else {
-      var fence = new Meteor._WriteFence;
-      Meteor._CurrentWriteFence.withValue(fence, f);
+      var fence = new DDPServer._WriteFence;
+      DDPServer._CurrentWriteFence.withValue(fence, f);
       fence.armAndWait();
     }
   };
@@ -360,8 +360,8 @@ var runInFence = function (f) {
   if (Meteor.isClient) {
     f();
   } else {
-    var fence = new Meteor._WriteFence;
-    Meteor._CurrentWriteFence.withValue(fence, f);
+    var fence = new DDPServer._WriteFence;
+    DDPServer._CurrentWriteFence.withValue(fence, f);
     fence.armAndWait();
   }
 };
@@ -744,7 +744,8 @@ testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGenera
 
 testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
   function (test, expect) {
-    var bin = EJSON._base64Decode(
+    // XXX probably shouldn't use EJSON's private test symbols
+    var bin = EJSONTest.base64Decode(
       "TWFuIGlzIGRpc3Rpbmd1aXNoZWQsIG5vdCBvbmx5IGJ5IGhpcyBy" +
         "ZWFzb24sIGJ1dCBieSB0aGlzIHNpbmd1bGFyIHBhc3Npb24gZnJv" +
         "bSBvdGhlciBhbmltYWxzLCB3aGljaCBpcyBhIGx1c3Qgb2YgdGhl" +
@@ -969,7 +970,7 @@ if (Meteor.isServer) {
         return C.find({a: 0});
       });
 
-      self.conn = Meteor.connect(Meteor.absoluteUrl());
+      self.conn = DDP.connect(Meteor.absoluteUrl());
       pollUntil(expect, function () {
         return self.conn.status().connected;
       }, 10000);
@@ -1022,7 +1023,7 @@ if (Meteor.isServer) {
         return self.C.find();
       });
 
-      self.conn = Meteor.connect(Meteor.absoluteUrl());
+      self.conn = DDP.connect(Meteor.absoluteUrl());
       pollUntil(expect, function () {
         return self.conn.status().connected;
       }, 10000);

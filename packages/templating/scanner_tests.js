@@ -24,9 +24,9 @@ Tinytest.add("templating - html scanner", function (test) {
 
   var BODY_PREAMBLE = "Meteor.startup(function(){" +
         "document.body.appendChild(Spark.render(" +
-        "Meteor._def_template(null,";
+        "Template.__define__(null,";
   var BODY_POSTAMBLE = ")));});";
-  var TEMPLATE_PREAMBLE = "Meteor._def_template(";
+  var TEMPLATE_PREAMBLE = "Template.__define__(";
   var TEMPLATE_POSTAMBLE = ");\n";
 
   var checkResults = function(results, expectJs, expectHead) {

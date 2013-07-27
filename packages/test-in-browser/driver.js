@@ -41,13 +41,13 @@ Session.set("rerunScheduled", false);
 
 Meteor.startup(function () {
   Deps.flush();
-  Meteor._runTestsEverywhere(reportResults, function () {
+  Tinytest._runTestsEverywhere(reportResults, function () {
     running = false;
     Meteor.onTestsComplete && Meteor.onTestsComplete();
     countDep.changed();
     Deps.flush();
 
-    Meteor.default_connection._unsubscribeAll();
+    Meteor.connection._unsubscribeAll();
   }, Session.get("groupPath"));
 
 });
@@ -318,7 +318,7 @@ var changeToPath = function (path) {
   Session.set("rerunScheduled", true);
   // pretend there's just been a hot code push
   // so we run the tests completely fresh.
-  Meteor._reload.reload();
+  Reload._reload();
 };
 
 Template.groupNav.events({
@@ -327,7 +327,7 @@ Template.groupNav.events({
   },
   "click .rerun": function () {
     Session.set("rerunScheduled", true);
-    Meteor._reload.reload();
+    Reload._reload();
   }
 });
 
@@ -454,7 +454,7 @@ Template.event.events({
     // messy. needs to be aggressively refactored.
     forgetEvents({groupPath: this.cookie.groupPath,
                   test: this.cookie.shortName});
-    Meteor._debugTest(this.cookie, reportResults);
+    Tinytest._debugTest(this.cookie, reportResults);
   }
 });
 

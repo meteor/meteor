@@ -630,6 +630,8 @@ _.extend(exports, {
   // to stderr if you pass it an undocumented flag. Unforunately though node
   // doesn't have dup2 so we can't intercept the write. So instead we use a
   // completely different parser with a better error handling API. Ah well.
+  // The underlying V8 issue is:
+  //    https://code.google.com/p/v8/issues/detail?id=1281
   runJavaScript: function (code, options) {
     if (typeof code !== 'string')
       throw new Error("code must be a string");

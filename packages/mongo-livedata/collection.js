@@ -1,4 +1,4 @@
-// connection, if given, is a LivedataClient or LivedataServer
+// options.connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
 
 Meteor.Collection = function (name, options) {
@@ -55,16 +55,16 @@ Meteor.Collection = function (name, options) {
   else if (options.connection)
     self._connection = options.connection;
   else if (Meteor.isClient)
-    self._connection = Meteor.default_connection;
+    self._connection = Meteor.connection;
   else
-    self._connection = Meteor.default_server;
+    self._connection = Meteor.server;
 
   if (!options._driver) {
-    if (name && self._connection === Meteor.default_server &&
-        Meteor._getRemoteCollectionDriver)
-      options._driver = Meteor._getRemoteCollectionDriver();
+    if (name && self._connection === Meteor.server &&
+        typeof getRemoteCollectionDriver !== "undefined")
+      options._driver = getRemoteCollectionDriver();
     else
-      options._driver = Meteor._LocalCollectionDriver;
+      options._driver = LocalCollectionDriver;
   }
 
   self._collection = options._driver.open(name, self._connection);
@@ -101,7 +101,7 @@ Meteor.Collection = function (name, options) {
       // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
       update: function (msg) {
-        var mongoId = Meteor.idParse(msg.id);
+        var mongoId = LocalCollection._idParse(msg.id);
         var doc = self._collection.findOne(mongoId);
 
         // Is this a "replace the whole doc" message coming from the quiescence
@@ -174,12 +174,12 @@ Meteor.Collection = function (name, options) {
   self._defineMutationMethods();
 
   // autopublish
-  if (!options._preventAutopublish &&
-      self._connection && self._connection.onAutopublish)
-    self._connection.onAutopublish(function () {
-      var handler = function () { return self.find(); };
-      self._connection.publish(null, handler, {is_auto: true});
-    });
+  if (Package.autopublish && !options._preventAutopublish && self._connection
+      && self._connection.publish) {
+    self._connection.publish(null, function () {
+      return self.find();
+    }, {is_auto: true});
+  }
 };
 
 ///
@@ -363,11 +363,11 @@ _.each(["insert", "update", "remove"], function (name) {
       };
     }
 
-    if (self._connection && self._connection !== Meteor.default_server) {
+    if (self._connection && self._connection !== Meteor.server) {
       // just remote to another endpoint, propagate return value or
       // exception.
 
-      var enclosing = Meteor._CurrentInvocation.get();
+      var enclosing = DDP._CurrentInvocation.get();
       var alreadyInSimulation = enclosing && enclosing.isSimulation;
       if (!alreadyInSimulation && name !== "insert") {
         // If we're about to actually send an RPC, we should throw an error if
@@ -508,10 +508,10 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
   // allow/deny semantics. If false, use insecure mode semantics.
   self._restricted = false;
 
-  // Insecure mode (default to allowing writes). Defaults to 'undefined'
-  // which means use the global Meteor.Collection.insecure.  This
-  // property can be overriden by tests or packages wishing to change
-  // insecure mode behavior of their collections.
+  // Insecure mode (default to allowing writes). Defaults to 'undefined' which
+  // means insecure iff the insecure package is loaded. This property can be
+  // overriden by tests or packages wishing to change insecure mode behavior of
+  // their collections.
   self._insecure = undefined;
 
   self._validators = {
@@ -586,7 +586,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
     // Minimongo on the server gets no stubs; instead, by default
     // it wait()s until its result is ready, yielding.
     // This matches the behavior of macromongo on the server better.
-    if (Meteor.isClient || self._connection === Meteor.default_server)
+    if (Meteor.isClient || self._connection === Meteor.server)
       self._connection.methods(m);
   }
 };
@@ -609,7 +609,7 @@ Meteor.Collection.prototype._updateFetch = function (fields) {
 Meteor.Collection.prototype._isInsecure = function () {
   var self = this;
   if (self._insecure === undefined)
-    return Meteor.Collection.insecure;
+    return !!Package.insecure;
   return self._insecure;
 };
 

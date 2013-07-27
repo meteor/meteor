@@ -6,7 +6,7 @@ html_scanner = {
   // top-level tags, which are allowed to have attributes,
   // and ignores top-level HTML comments.
 
-  // Has fields 'message', 'line'
+  // Has fields 'message', 'line', 'file'
   ParseError: function () {
   },
 
@@ -19,11 +19,14 @@ html_scanner = {
       index += amount;
     };
 
-    var throwParseError = function(msg) {
+    var throwParseError = function (msg, atIndex, lineOffset) {
+      atIndex = atIndex || index;
+      lineOffset = lineOffset || 0;
+
       var ret = new html_scanner.ParseError;
       ret.message = msg || "bad formatting in HTML template";
       ret.file = source_name;
-      ret.line = contents.substring(0, index).split('\n').length;
+      ret.line = contents.substring(0, atIndex).split('\n').length + lineOffset;
       throw ret;
     };
 
@@ -44,6 +47,7 @@ html_scanner = {
       var matchTokenComment = match[4];
       var matchTokenUnsupported = match[5];
 
+      var tagStartIndex = index;
       advance(match.index + match[0].length);
 
       if (! matchToken)
@@ -95,11 +99,13 @@ html_scanner = {
       if (! end)
         throwParseError("unclosed <"+tagName+">");
       var tagContents = rest.slice(0, end.index);
+      var contentsStartIndex = index;
       advance(end.index + end[0].length);
 
       // act on the tag
       html_scanner._handleTag(results, tagName, tagAttribs, tagContents,
-                              throwParseError);
+                              throwParseError, contentsStartIndex,
+                              tagStartIndex);
     }
 
     return results;
@@ -113,11 +119,14 @@ html_scanner = {
     return results;
   },
 
-  _handleTag: function (results, tag, attribs, contents, throwParseError) {
+  _handleTag: function (results, tag, attribs, contents, throwParseError,
+                        contentsStartIndex, tagStartIndex) {
 
     // trim the tag contents.
     // this is a courtesy and is also relied on by some unit tests.
-    contents = contents.match(/^[ \t\r\n]*([\s\S]*?)[ \t\r\n]*$/)[1];
+    var m = contents.match(/^([ \t\r\n]*)([\s\S]*?)[ \t\r\n]*$/);
+    contentsStartIndex += m[1].length;
+    contents = m[2];
 
     // do we have 1 or more attribs?
     var hasAttribs = false;
@@ -137,15 +146,31 @@ html_scanner = {
 
 
     // <body> or <template>
+    try {
+      var ast = Handlebars.to_json_ast(contents);
+    } catch (e) {
+      if (e instanceof Handlebars.ParseError) {
+        if (typeof(e.line) === "number")
+          // subtract one from e.line because it is one-based but we
+          // need it to be an offset from contentsStartIndex
+          throwParseError(e.message, contentsStartIndex, e.line - 1);
+        else
+          // No line number available from Handlebars parser, so
+          // generate the parse error at the <template> tag itself
+          throwParseError("error in template: " + e.message, tagStartIndex);
+      }
+      else
+        throw e;
+    }
     var code = 'Package.handlebars.Handlebars.json_ast_to_func(' +
-          JSON.stringify(Handlebars.to_json_ast(contents)) + ')';
+          JSON.stringify(ast) + ')';
 
     if (tag === "template") {
       var name = attribs.name;
       if (! name)
         throwParseError("Template has no 'name' attribute");
 
-      results.js += "Meteor._def_template(" + JSON.stringify(name) + ","
+      results.js += "Template.__define__(" + JSON.stringify(name) + ","
         + code + ");\n";
     } else {
       // <body>
@@ -153,12 +178,7 @@ html_scanner = {
         throwParseError("Attributes on <body> not supported");
       results.js += "Meteor.startup(function(){" +
         "document.body.appendChild(Spark.render(" +
-        "Meteor._def_template(null," + code + ")));});";
+        "Template.__define__(null," + code + ")));});";
     }
   }
 };
-
-// If we are running at bundle time, set module.exports.
-// For unit testing in server environment, don't.
-if (typeof module !== 'undefined')
-  module.exports = html_scanner;

@@ -20,6 +20,7 @@ Fiber(function () {
   var warehouse = require('./warehouse.js');
   var logging = require('./logging.js');
   var deployGalaxy;
+  var cleanup = require('./cleanup.js');
 
   var Future = require('fibers/future');
   // This code is duplicated in app/server/server.js.
@@ -30,7 +31,12 @@ Fiber(function () {
     process.exit(1);
   }
 
-  var tunnel;
+  var killTunnel = function (tunnel) {
+    if (! tunnel.exitFuture.isResolved()) {
+      tunnel.proc.kill("SIGHUP");
+      tunnel.exitFuture.wait();
+    }
+  };
 
   var sshTunnel = function (to, localPort, remoteEnd, keyfile) {
     var args = [];
@@ -70,9 +76,18 @@ Fiber(function () {
       process.stderr.write(str);
     });
 
-    tunnel.waitExit = _.bind(exitFuture.wait, exitFuture);
-    tunnel.waitConnected = _.bind(connectedFuture.wait, connectedFuture);
-    return tunnel;
+    var tunnelResult = {
+      waitConnected: _.bind(connectedFuture.wait, connectedFuture),
+      exitFuture: exitFuture,
+      proc: tunnel
+    };
+
+    cleanup.onExit(function () {
+      Fiber(function () {
+        killTunnel(tunnelResult);
+      }).run();
+    });
+    return tunnelResult;
   };
 
   var Commands = [];
@@ -125,6 +140,7 @@ Fiber(function () {
   var calculateGalaxyContextAndTunnel = function (deployEndpoint,
                                                   context, sshIdentity) {
     var galaxyContext = {};
+    var tunnel;
     // 9414 because 9414xy (gAlAxy) in 1337
     galaxyContext.port = process.env.PORT || 9414;
     if (deployEndpoint && deployEndpoint.indexOf("ssh://") === 0) {
@@ -139,19 +155,56 @@ Fiber(function () {
       tunnel.waitConnected();
       context.galaxy = galaxyContext;
     } else if (deployEndpoint) {
-      tunnel = null;
       galaxyContext.url = deployEndpoint + "/ultraworld";
       galaxyContext.adminBaseUrl = deployEndpoint + "/";
       context.galaxy = galaxyContext;
     }
+    return tunnel;
   };
 
-  var prepareForGalaxy = function (site, context, argv) {
+  var qualifySitename = function (site) {
+    // Append .meteor.com if we don't have a domain name. In the future, we
+    // probably want this to be configurable via a client-side preference of
+    // some kind.
+    if (site.indexOf(".") === -1)
+      site = site + ".meteor.com";
+    while (site[site.length - 1] === ".")
+      site = site.substring(0, site.length - 1);
+    return site;
+  };
+
+  var prepareForGalaxy = function (site, context, sshIdentity) {
     if (! deployGalaxy)
       deployGalaxy = require('./deploy-galaxy.js');
     var deployEndpoint = deployGalaxy.discoverGalaxy(site);
-    calculateGalaxyContextAndTunnel(deployEndpoint, context,
-                                    argv["ssh-identity"]);
+    return calculateGalaxyContextAndTunnel(deployEndpoint, context,
+                                           sshIdentity);
+  };
+
+  // A command wrapped with galaxyCommand does the following:
+  // 1. Looks for the first non-hyphenated argument, and assumes that that is the
+  // site.
+  // 2. Tries to discover and set up a connection to a galaxy. If the galaxy
+  // discovery process indicates that a ssh tunnel needs to be set up, the optional
+  // ssh-identity argument is used to set it up.
+  // 3. Runs the command, and kills the tunnel, if any, when it finishes.
+  var galaxyCommand = function (cmd) {
+    return function (argv, showUsage) {
+      if (argv._[0]) {
+        argv._[0] = qualifySitename(argv._[0]);
+        var tunnel = prepareForGalaxy(argv._[0], context, argv["ssh-identity"]);
+        var result;
+        try {
+          result = cmd(argv, showUsage);
+        } finally {
+          if (tunnel)
+            killTunnel(tunnel);
+        }
+        return result;
+      } else {
+        return cmd(argv, showUsage);
+      }
+    };
   };
 
   var setReleaseVersion = function (version) {
@@ -280,58 +333,71 @@ Fiber(function () {
     process.exit(1);
   };
 
+  var runCommand = function (cmd, showHelp) {
+    var cmdRunner = findCommand(cmd || 'run');
+    // Reparse args.
+    var opt = require('optimist')(process.argv.slice(2));
+    cmdRunner.argumentParser(opt);
+    var showUsage = function () {
+      process.stdout.write(opt.help());
+      process.exit(1);
+    };
+    if (showHelp) {
+      showUsage();
+    } else {
+      // Remove the command name from argv._. Note that argv is a getter, so we
+      // actually have to save it into a new variable if we want to mutate its
+      // internals.
+      var argv = opt.argv;
+      if (cmd && cmd === argv._[0])
+        argv._.shift();
+      cmdRunner.func(argv, showUsage);
+    }
+  };
+
   // XXX when the pass unexpected argument or unrecognized flags, print
   // an error and fail out
 
   Commands.push({
     name: "run",
     help: "[default] Run this project in local development mode",
-    func: function (argv) {
+    argumentParser: function (opt) {
       // reparse args
-      // This help logic should probably move to run.js eventually
-      var opt = require('optimist')
-            .alias('port', 'p').default('port', 3000)
-            .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
-            .boolean('production')
-            .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
-            .describe('settings',  'Set optional data for Meteor.settings on the server')
-            .describe('release', 'Specify the release of Meteor to use')
-            .describe('program', 'The program in the app to run (Advanced)')
-            // #Once
-            // With --once, meteor does not re-run the project if it crashes and
-            // does not monitor for file changes. Intentionally undocumented:
-            // intended for automated testing (eg, cli-test.sh), not end-user
-            // use.
-            .boolean('once')
-            .usage(
-              "Usage: meteor run [options]\n" +
-                "\n" +
-                "Searches upward from the current directory for the root directory of a\n" +
-                "Meteor project, then runs that project in local development\n" +
-                "mode. You can use the application by pointing your web browser at\n" +
-                "localhost:3000. No internet connection is required.\n" +
-                "\n" +
-                "Whenever you change any of the application's source files, the changes\n" +
-                "are automatically detected and applied to the running application.\n" +
-                "\n" +
-                "The application's database persists between runs. It's stored under\n" +
-                "the .meteor directory in the root of the project.\n");
-
-      var new_argv = opt.argv;
-
-      if (argv.help) {
-        process.stdout.write(opt.help());
-        process.exit(1);
-      }
-
+      opt.alias('port', 'p').default('port', 3000)
+        .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
+        .boolean('production')
+        .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
+        .describe('settings',  'Set optional data for Meteor.settings on the server')
+        .describe('release', 'Specify the release of Meteor to use')
+        .describe('program', 'The program in the app to run (Advanced)')
+      // #Once
+      // With --once, meteor does not re-run the project if it crashes and does
+      // not monitor for file changes. Intentionally undocumented: intended for
+      // automated testing (eg, cli-test.sh), not end-user use.
+        .boolean('once')
+        .usage(
+          "Usage: meteor run [options]\n" +
+            "\n" +
+            "Searches upward from the current directory for the root directory of a\n" +
+            "Meteor project, then runs that project in local development\n" +
+            "mode. You can use the application by pointing your web browser at\n" +
+            "localhost:3000. No internet connection is required.\n" +
+            "\n" +
+            "Whenever you change any of the application's source files, the changes\n" +
+            "are automatically detected and applied to the running application.\n" +
+            "\n" +
+            "The application's database persists between runs. It's stored under\n" +
+            "the .meteor directory in the root of the project.\n");
+    },
+    func: function (argv) {
       requireDirInApp("run");
       maybePrintUserOverrideMessage();
       runner.run(context, {
-        port: new_argv.port,
-        minify: new_argv.production,
-        once: new_argv.once,
-        settingsFile: new_argv.settings,
-        program: new_argv.program || undefined
+        port: argv.port,
+        minify: argv.production,
+        once: argv.once,
+        settingsFile: argv.settings,
+        program: argv.program || undefined
       });
     }
   });
@@ -339,13 +405,32 @@ Fiber(function () {
   Commands.push({
     name: "galaxy",
     help: "Interact with your galaxy server",
+    // Remove this once Galaxy support is official.
+    hidden: true,
+    argumentParser: function (opt) {
+      opt.usage(
+        "Usage: meteor galaxy configure <sitename>\n" +
+          "\n" +
+          "Allows you to interact with a Galaxy server.\n");
+    },
     func: function (argv) {
-      var cmd = argv._.splice(0, 1)[0];
+      var cmd = argv._.shift();
       switch (cmd) {
       case "configure":
-        prepareForGalaxy(null, context, argv);
+        // We don't use galaxyCommand here because we want the tunnel to stay
+        // open (galaxyCommand closes the tunnel as soon as the command finishes
+        // running). The tunnel will be cleaned up when the process exits.
+        if (argv._[0])
+          argv._[0] = qualifySitename(argv._[0]);
+        prepareForGalaxy(argv._[0], context, argv["ssh-identity"]);
+        if (! context.galaxy) {
+          process.stdout.write("You must provide a galaxy to configure " +
+                               "(by setting the GALAXY environment variable " +
+                               "or providing a sitename " +
+                               "(meteor galaxy configure <sitename>).");
+          process.exit(1);
+        }
         console.log("Visit http://localhost:" + context.galaxy.port + "/panel to configure your galaxy");
-        Fiber.yield();
         break;
       default:
         break;
@@ -354,54 +439,39 @@ Fiber(function () {
   });
 
   Commands.push({
-    name: "help",
-    func: function (argv) {
-      if (!argv._.length || argv.help)
-        usage();
-      var cmd = argv._.splice(0,1)[0];
-      argv.help = true;
-      findCommand(cmd).func(argv);
-    }
-  });
-
-  Commands.push({
     name: "create",
     help: "Create a new project",
-    func: function (argv) {
-      // reparse args
-      var opt = require('optimist')
-            .describe('example', 'Example template to use.')
-            .boolean('list')
-            .describe('list', 'Show list of available examples.')
-            .usage(
-              "Usage: meteor create [--release <release>] <name>\n" +
-                "       meteor create [--release <release>] --example <example_name> [<name>]\n" +
-                "       meteor create --list\n" +
-                "\n" +
-                "Make a subdirectory named <name> and create a new Meteor project\n" +
-                "there. You can also pass an absolute or relative path.\n" +
-                "\n" +
-                "The project will use the release of Meteor specified with the --release\n" +
-                "option, or the latest available version if the option is not specified.\n" +
-                "\n" +
-                "You can pass --example to start off with a copy of one of the Meteor\n" +
-                "sample applications. Use --list to see the available examples.");
-
-      var new_argv = opt.argv;
+    argumentParser: function (opt) {
+      opt.describe('example', 'Example template to use.')
+        .boolean('list')
+        .describe('list', 'Show list of available examples.')
+        .usage(
+          "Usage: meteor create [--release <release>] <name>\n" +
+            "       meteor create [--release <release>] --example <example_name> [<name>]\n" +
+            "       meteor create --list\n" +
+            "\n" +
+            "Make a subdirectory named <name> and create a new Meteor project\n" +
+            "there. You can also pass an absolute or relative path.\n" +
+            "\n" +
+            "The project will use the release of Meteor specified with the --release\n" +
+            "option, or the latest available version if the option is not specified.\n" +
+            "\n" +
+            "You can pass --example to start off with a copy of one of the Meteor\n" +
+            "sample applications. Use --list to see the available examples.");
+    },
+    func: function (argv, showUsage) {
       var appPath;
+      if (argv._.length === 1)
+        appPath = argv._[0];
+      else if (argv._.length === 0 && argv.example)
+        appPath = argv.example;
 
       var example_dir = path.join(__dirname, '..', 'examples');
       var examples = _.reject(fs.readdirSync(example_dir), function (e) {
         return (e === 'unfinished' || e === 'other'  || e[0] === '.');
       });
 
-      if (argv._.length === 1) {
-        appPath = argv._[0];
-      } else if (argv._.length === 0 && new_argv.example) {
-        appPath = new_argv.example;
-      }
-
-      if (new_argv['list']) {
+      if (argv['list']) {
         process.stdout.write("Available examples:\n");
         _.each(examples, function (e) {
           process.stdout.write("  " + e + "\n");
@@ -411,9 +481,8 @@ Fiber(function () {
         process.exit(1);
       };
 
-      if (argv.help || !appPath) {
-        process.stdout.write(opt.help());
-        process.exit(1);
+      if (!appPath) {
+        showUsage();
       }
 
       if (fs.existsSync(appPath)) {
@@ -431,13 +500,13 @@ Fiber(function () {
         return x.replace(/~name~/g, path.basename(appPath));
       };
 
-      if (new_argv.example) {
-        if (examples.indexOf(new_argv.example) === -1) {
-          process.stderr.write(new_argv.example + ": no such example\n\n");
+      if (argv.example) {
+        if (examples.indexOf(argv.example) === -1) {
+          process.stderr.write(argv.example + ": no such example\n\n");
           process.stderr.write("List available applications with 'meteor create --list'.\n");
           process.exit(1);
         } else {
-          files.cp_r(path.join(example_dir, new_argv.example), appPath, {
+          files.cp_r(path.join(example_dir, argv.example), appPath, {
             ignore: [/^local$/]
           });
         }
@@ -461,9 +530,9 @@ Fiber(function () {
       project.writeMeteorReleaseVersion(appPath, context.globalReleaseVersion);
 
       process.stderr.write(appPath + ": created");
-      if (new_argv.example &&
-          new_argv.example !== appPath)
-        process.stderr.write(" (from '" + new_argv.example + "' template)");
+      if (argv.example &&
+          argv.example !== appPath)
+        process.stderr.write(" (from '" + argv.example + "' template)");
       process.stderr.write(".\n\n");
 
       process.stderr.write(
@@ -476,20 +545,16 @@ Fiber(function () {
   Commands.push({
     name: "update",
     help: "Upgrade this project to the latest version of Meteor",
+    argumentParser: function (opt) {
+      opt.boolean('dont-fetch-latest')
+        .usage(
+          "Usage: meteor update [--release <release>]\n" +
+            "\n" +
+            "Sets the version of Meteor to use with the current project. If a\n" +
+            "release is specified with --release, set the project to use that\n" +
+            "version. Otherwise download and use the latest release of Meteor.");
+    },
     func: function (argv) {
-      // reparse args
-      var opt = require('optimist').usage(
-        "Usage: meteor update [--release <release>]\n" +
-          "\n" +
-          "Sets the version of Meteor to use with the current project. If a\n" +
-          "release is specified with --release, set the project to use that\n" +
-          "version. Otherwise download and use the latest release of Meteor.");
-
-      if (argv.help) {
-        process.stdout.write(opt.help());
-        process.exit(1);
-      }
-
       // refuse to update if we're in a git checkout.
       if (!files.usesWarehouse()) {
         logging.die(
@@ -501,9 +566,9 @@ Fiber(function () {
 
       // Unless the user specified a specific release (or we're doing a
       // mid-update springboard), go get the latest release.
-      if (!opt.argv.release) {
+      if (!argv.release) {
         // Undocumented flag (used, eg, by upgrade-to-engine.js).
-        if (!opt.argv["dont-fetch-latest"]) {
+        if (!argv["dont-fetch-latest"]) {
           try {
             didGlobalUpdateWithoutSpringboarding =
               warehouse.fetchLatestRelease();
@@ -531,9 +596,9 @@ Fiber(function () {
       // If we're not in an app, then we're done (other than maybe printing some
       // stuff).
       if (!context.appDir) {
-        if (opt.argv["dont-fetch-latest"])
+        if (argv["dont-fetch-latest"])
           return;
-        if (opt.argv.release || didGlobalUpdateWithoutSpringboarding) {
+        if (argv.release || didGlobalUpdateWithoutSpringboarding) {
           // If the user specified a specific release, or we just did a global
           // update (with springboarding, in which case --release is set, or
           // without springboarding, in which case didGlobalUpdate is set),
@@ -590,18 +655,42 @@ Fiber(function () {
   });
 
   Commands.push({
+    name: "run-upgrader",
+    help: "Execute a specific upgrader by name. Intended for testing.",
+    hidden: true,
+    argumentParser: function (opt) {
+      opt .usage(
+        "Usage: meteor run-upgrader <upgrader>\n" +
+          "\n" +
+          "Runs a specific upgrader on the current app. This is for testing\n" +
+          "internal functionality of Meteor.");
+    },
+    func: function (argv, showUsage) {
+      if (argv._.length !== 1)
+        showUsage();
+
+      requireDirInApp("run-upgrader");
+
+      var upgraders = require("./upgraders.js");
+      console.log("%s: running upgrader %s.",
+                  path.basename(context.appDir), argv._[0]);
+      upgraders.runUpgrader(argv._[0], context.appDir);
+    }
+  });
+
+  Commands.push({
     name: "add",
     help: "Add a package to this project",
-    func: function (argv) {
-      if (argv.help || !argv._.length) {
-        process.stdout.write(
-          "Usage: meteor add <package> [package] [package..]\n" +
+    argumentParser: function (opt) {
+      opt.usage("Usage: meteor add <package> [package] [package..]\n" +
             "\n" +
             "Adds packages to your Meteor project. You can add multiple\n" +
             "packages with one command. For a list of the available packages, see\n" +
             "'meteor list'.\n");
-        process.exit(1);
-      }
+    },
+    func: function (argv, showUsage) {
+      if (_.isEmpty(argv._))
+        showUsage();
 
       requireDirInApp('add');
       var all = context.library.list();
@@ -627,16 +716,16 @@ Fiber(function () {
   Commands.push({
     name: "remove",
     help: "Remove a package from this project",
-    func: function (argv) {
-      if (argv.help || !argv._.length) {
-        process.stdout.write(
-          "Usage: meteor remove <package> [package] [package..]\n" +
-            "\n" +
-            "Removes a package previously added to your Meteor project. For a\n" +
-            "list of the packages that your application is currently using, see\n" +
-            "'meteor list --using'.\n");
-        process.exit(1);
-      }
+    argumentParser: function (opt) {
+      opt.usage("Usage: meteor remove <package> [package] [package..]\n" +
+                "\n" +
+                "Removes a package previously added to your Meteor project. For a\n" +
+                "list of the packages that your application is currently using, see\n" +
+                "'meteor list --using'.\n");
+    },
+    func: function (argv, showUsage) {
+      if (_.isEmpty(argv._))
+        showUsage();
 
       requireDirInApp('remove');
       var using = {};
@@ -658,18 +747,16 @@ Fiber(function () {
   Commands.push({
     name: "list",
     help: "List available packages",
+    argumentParser: function (opt) {
+      opt.boolean("using")
+        .usage("Usage: meteor list [--using]\n" +
+               "\n" +
+               "Without arguments, lists all available Meteor packages. To add one\n" +
+               "of these packages to your project, see 'meteor add'.\n" +
+               "\n" +
+               "With --using, list the packages that you have added to your project.\n");
+    },
     func: function (argv) {
-      if (argv.help) {
-        process.stdout.write(
-          "Usage: meteor list [--using]\n" +
-            "\n" +
-            "Without arguments, lists all available Meteor packages. To add one\n" +
-            "of these packages to your project, see 'meteor add'.\n" +
-            "\n" +
-            "With --using, list the packages that you have added to your project.\n");
-        process.exit(1);
-      }
-
       if (argv.using) {
         requireDirInApp('list --using');
         var using = project.get_packages(context.appDir);
@@ -704,27 +791,17 @@ Fiber(function () {
   Commands.push({
     name: "bundle",
     help: "Pack this project up into a tarball",
-    func: function (argv) {
-      var usage = function () {
-        process.stdout.write(
-          "Usage: meteor bundle <output_file.tar.gz>\n" +
-            "\n" +
-            "Package this project up for deployment. The output is a tarball that\n" +
-            "includes everything necessary to run the application. See README in\n" +
-            "the tarball for details.\n");
-        process.exit(1);
-      };
-      if (argv.help)
-        usage();
-
-      // re-parse the args to this command
-      // XXX clean up this whole file :)
-      argv = require("optimist")
-        .boolean('for-deploy').argv;
-      argv._.shift();  // pull off the word "bundle"
-
-      if (argv._.length != 1)
-        usage();
+    argumentParser: function (opt) {
+      opt.boolean('for-deploy')
+        .usage("Usage: meteor bundle <output_file.tar.gz>\n" +
+               "\n" +
+               "Package this project up for deployment. The output is a tarball that\n" +
+               "includes everything necessary to run the application. See README in\n" +
+               "the tarball for details.\n");
+    },
+    func: function (argv, showUsage) {
+      if (argv._.length !== 1)
+        showUsage();
 
       // XXX if they pass a file that doesn't end in .tar.gz or .tgz,
       // add the former for them
@@ -767,39 +844,37 @@ Fiber(function () {
   Commands.push({
     name: "mongo",
     help: "Connect to the Mongo database for the specified site",
-    func: function (argv) {
-      var opt = require('optimist')
-            .boolean('url')
-            .boolean('U')
-            .alias('url', 'U')
-            .describe('url', 'return a Mongo database URL')
-            .usage(
-              "Usage: meteor mongo [--url] [site]\n" +
-                "\n" +
-                "Opens a Mongo shell to view or manipulate collections.\n" +
-                "\n" +
-                "If site is specified, this is the hosted Mongo database for the deployed\n" +
-                "Meteor site.\n" +
-                "\n" +
-                "If no site is specified, this is the current project's local development\n" +
-                "database.  In this case, the current working directory must be a\n" +
-                "Meteor project directory, and the Meteor application must already be\n" +
-                "running.\n" +
-                "\n" +
-                "Instead of opening a shell, specifying --url (-U) will return a URL\n" +
-                "suitable for an external program to connect to the database.  For remote\n" +
-                "databases on deployed applications, the URL is valid for one minute.\n"
-            );
+    argumentParser: function (opt) {
+        opt.boolean('url')
+        .boolean('U')
+        .alias('url', 'U')
+        .describe('url', 'return a Mongo database URL')
+        .usage(
+          "Usage: meteor mongo [--url] [site]\n" +
+            "\n" +
+            "Opens a Mongo shell to view or manipulate collections.\n" +
+            "\n" +
+            "If site is specified, this is the hosted Mongo database for the deployed\n" +
+            "Meteor site.\n" +
+            "\n" +
+            "If no site is specified, this is the current project's local development\n" +
+            "database.  In this case, the current working directory must be a\n" +
+            "Meteor project directory, and the Meteor application must already be\n" +
+            "running.\n" +
+            "\n" +
+            "Instead of opening a shell, specifying --url (-U) will return a URL\n" +
+            "suitable for an external program to connect to the database.  For remote\n" +
+            "databases on deployed applications, the URL is valid for one minute.\n"
+        );
+    },
 
-      if (argv.help) {
-        process.stdout.write(opt.help());
-        process.exit(1);
-      }
+    func: galaxyCommand(function (argv, showUsage) {
+      if (argv._.length > 1)
+        showUsage();
 
-      var new_argv = opt.argv;
       var mongoUrl;
 
-      if (new_argv._.length === 1) {
+      if (argv._.length === 0) {
         // localhost mode
         var fut = new Future();
         find_mongo_port("mongo", function (mongod_port) {
@@ -816,9 +891,8 @@ Fiber(function () {
         });
         mongoUrl = fut.wait();
 
-      } else if (new_argv._.length === 2) {
-        var site = new_argv._[1];
-        prepareForGalaxy(site, context, new_argv);
+      } else {
+        var site = argv._[0];
         // remote mode
         if (context.galaxy) {
           mongoUrl = deployGalaxy.temporaryMongoUrl({
@@ -828,92 +902,90 @@ Fiber(function () {
         } else {
           mongoUrl = deploy.temporaryMongoUrl(site);
         }
-      } else {
-        // usage
-        process.stdout.write(opt.help());
-        process.exit(1);
       }
-
-      if (new_argv.url) {
+      if (argv.url) {
         console.log(mongoUrl);
       } else {
         process.stdin.pause();
         deploy.run_mongo_shell(mongoUrl);
       }
-    }
+    })
   });
 
   Commands.push({
     name: "deploy",
     help: "Deploy this project to Meteor",
-    func: function (argv) {
-      var opt = require('optimist')
-            .alias('password', 'P')
-            .boolean('password')
-            .boolean('P')
-            .describe('password', 'set a password for this deployment')
-            .alias('delete', 'D')
-            .boolean('delete')
-            .boolean('D')
-            .describe('delete', "permanently delete this deployment")
-            .boolean('debug')
-            .describe('debug', 'deploy in debug mode (don\'t minify, etc)')
-            .describe('settings', 'set optional data for Meteor.settings')
-            .alias('ssh-identity', 'i')
-            .describe('ssh-identity', 'Selects a file from which the identity (private key) is read.  See ssh(1) for details.')
-            .describe('star', 'a star (tarball) to deploy instead of the current meteor app')
-            .usage(
-              "Usage: meteor deploy <site> [--password] [--settings settings.json] [--debug] [--delete]\n" +
-                "\n" +
-                "Deploys the project in your current directory to Meteor's servers.\n" +
-                "\n" +
-                "You can deploy to any available name under 'meteor.com'\n" +
-                "without any additional configuration, for example,\n" +
-                "'myapp.meteor.com'. If you deploy to a custom domain, such as\n" +
-                "'myapp.mydomain.com', then you'll also need to configure your domain's\n" +
-                "DNS records. See the Meteor docs for details.\n" +
-                "\n" +
-                "The --settings flag can be used to pass deploy-specific information to\n" +
-                "the application. It will be available at runtime in Meteor.settings, but only\n" +
-                "on the server. If the object contains a key named 'public', then\n" +
-                "Meteor.settings.public will also be available on the client. The argument\n" +
-                "is the name of a file containing the JSON data to use. The settings will\n" +
-                "persist across deployments until you again specify a settings file. To\n" +
-                "unset Meteor.settings, pass an empty settings file.\n" +
-                "\n" +
-                "The --delete flag permanently removes a deployed application, including\n" +
-                "all of its stored data.\n" +
-                "\n" +
-                "The --password flag sets an administrative password for the domain. Once\n" +
-                "set, any subsequent 'deploy', 'logs', or 'mongo' command will prompt for\n" +
-                "the password. You can change the password with a second 'deploy' command."
-            );
+    argumentParser: function (opt) {
+      opt.alias('password', 'P')
+        .boolean('password')
+        .boolean('P')
+        .describe('password', 'set a password for this deployment')
+        .alias('delete', 'D')
+        .boolean('delete')
+        .boolean('D')
+        .describe('delete', "permanently delete this deployment")
+        .boolean('debug')
+        .describe('debug', 'deploy in debug mode (don\'t minify, etc)')
+        .describe('settings', 'set optional data for Meteor.settings')
+        .alias('ssh-identity', 'i')
+        .describe('ssh-identity', 'Selects a file from which the identity (private key) is read. See ssh(1) for details.')
+        .describe('star', 'a star (tarball) to deploy instead of the current meteor app')
+        .boolean('admin')
+      // Shouldn't be documented until the Galaxy release
+      //.describe('admin', 'Marks the application as an admin app, it will be available in Galaxy admin interface.')
+        .usage(
+          "Usage: meteor deploy <site> [--password] [--settings settings.json] [--debug] [--delete]\n" +
+            "\n" +
+            "Deploys the project in your current directory to Meteor's servers.\n" +
+            "\n" +
+            "You can deploy to any available name under 'meteor.com'\n" +
+            "without any additional configuration, for example,\n" +
+            "'myapp.meteor.com'. If you deploy to a custom domain, such as\n" +
+            "'myapp.mydomain.com', then you'll also need to configure your domain's\n" +
+            "DNS records. See the Meteor docs for details.\n" +
+            "\n" +
+            "The --settings flag can be used to pass deploy-specific information to\n" +
+            "the application. It will be available at runtime in Meteor.settings, but only\n" +
+            "on the server. If the object contains a key named 'public', then\n" +
+            "Meteor.settings.public will also be available on the client. The argument\n" +
+            "is the name of a file containing the JSON data to use. The settings will\n" +
+            "persist across deployments until you again specify a settings file. To\n" +
+            "unset Meteor.settings, pass an empty settings file.\n" +
+            "\n" +
+            "The --delete flag permanently removes a deployed application, including\n" +
+            "all of its stored data.\n" +
+            "\n" +
+            "The --password flag sets an administrative password for the domain. Once\n" +
+            "set, any subsequent 'deploy', 'logs', or 'mongo' command will prompt for\n" +
+            "the password. You can change the password with a second 'deploy' command.\n"
+          // Shouldn't be documented until the Galaxy release
+          //"\n" +
+          //"The --admin flag marks application as administrative to Galaxy interface.\n" +
+          //"Application's web-interface will be accessible from admin's panel only.\n"
+        );
+    },
+    func: galaxyCommand(function (argv, showUsage) {
+      if (argv._.length !== 1)
+        showUsage();
 
-      var new_argv = opt.argv;
+      var site = argv._[0];
 
-      if (argv.help || new_argv._.length != 2) {
-        process.stdout.write(opt.help());
-        process.exit(1);
-      }
-      var site = new_argv._[1];
-      prepareForGalaxy(site, context, new_argv);
-
-      if (new_argv.delete) {
+      if (argv.delete) {
         if (context.galaxy)
-          deployGalaxy.deleteApp(context);
+          deployGalaxy.deleteApp(site, context);
         else
           deploy.delete_app(site);
       } else {
-        var starball = new_argv.star;
+        var starball = argv.star;
         // We don't need to be in an app if we're not going to run the bundler.
         if (!starball)
           requireDirInApp("deploy");
         var settings = undefined;
-        if (new_argv.settings)
-          settings = runner.getSettings(new_argv.settings);
+        if (argv.settings)
+          settings = runner.getSettings(argv.settings);
 
         if (context.galaxy) {
-          if (new_argv.password) {
+          if (argv.password) {
             process.stderr.write("Galaxy does not support --password.\n");
             process.exit(1);
           }
@@ -926,63 +998,60 @@ Fiber(function () {
             starball: starball,
             bundleOptions: {
               nodeModulesMode: 'skip',
-              minify: !new_argv.debug,
+              minify: !argv.debug,
               releaseStamp: context.releaseVersion,
               library: context.library
-            }
+            },
+            admin: argv.admin
           });
         } else {
           deploy.deployCmd({
             url: site,
             appDir: context.appDir,
             settings: settings,
-            setPassword: !!new_argv.password,
+            setPassword: !!argv.password,
             bundleOptions: {
               nodeModulesMode: 'skip',
-              minify: !new_argv.debug,
+              minify: !argv.debug,
               releaseStamp: context.releaseVersion,
               library: context.library
             }
           });
         }
       }
-    }
+    })
   });
 
   Commands.push({
     name: "logs",
     help: "Show logs for specified site",
-    func: function (argv) {
-      argv = require('optimist').boolean('f').argv;
+    argumentParser: function (opt) {
+      opt.boolean('f')
+      // XXX once Galaxy is released, document -f
+        .usage("Usage: meteor logs <site>\n" +
+               "\n" +
+               "Retrieves the server logs for the requested site.\n");
+    },
+    func: function (argv, showUsage) {
+      if (argv._.length !== 1)
+        showUsage();
 
-      var site = argv._[1];
-      prepareForGalaxy(site, context, argv);
+      // We don't use galaxyCommand here because we want the tunnel to stay
+      // open (galaxyCommand closes the tunnel as soon as the command finishes
+      // running). The tunnel will be cleaned up when the process exits.
+      var site = qualifySitename(argv._[0]);
+      var tunnel = prepareForGalaxy(site, context, argv["ssh-identity"]);
       var useGalaxy = !!context.galaxy;
 
-      if (argv.help || argv._.length !== 2) {
-        if (useGalaxy) {
-          process.stdout.write(
-            "Usage: meteor logs [-f] <site>\n" +
-              "\n" +
-              "Retrieves the server logs for the requested site.\n" +
-              "\n" +
-              "Pass -f to see new logs as they come in.\n");
-        } else {
-          process.stdout.write(
-            "Usage: meteor logs <site>\n" +
-              "\n" +
-              "Retrieves the server logs for the requested site.\n");
-        }
-
-        process.exit(1);
-      }
-
       if (useGalaxy) {
+        var streaming = !!argv.f;
         deployGalaxy.logs({
           context: context,
           app: site,
-          streaming: !!argv.f
+          streaming: streaming
         });
+        if (! streaming && tunnel)
+          killTunnel(tunnel);
       } else {
         deploy.logs(site);
       }
@@ -992,15 +1061,14 @@ Fiber(function () {
   Commands.push({
     name: "reset",
     help: "Reset the project state. Erases the local database.",
+    argumentParser: function (opt) {
+      opt.usage("Usage: meteor reset\n" +
+                "\n" +
+                "Reset the current project to a fresh state. Removes all local\n" +
+                "data and kills any running meteor development servers.\n");
+    },
     func: function (argv) {
-      if (argv.help) {
-        process.stdout.write(
-          "Usage: meteor reset\n" +
-            "\n" +
-            "Reset the current project to a fresh state. Removes all local\n" +
-            "data and kills any running meteor development servers.\n");
-        process.exit(1);
-      } else if (!_.isEmpty(argv._)) {
+      if (!_.isEmpty(argv._)) {
         process.stdout.write("meteor reset only affects the locally stored database.\n\n" +
                              "To reset a deployed application use\nmeteor deploy --delete appname\n" +
                              "followed by\nmeteor deploy appname\n");
@@ -1028,51 +1096,38 @@ Fiber(function () {
   Commands.push({
     name: "test-packages",
     help: "Test one or more packages",
-    func: function (argv) {
-      // reparse args
+    argumentParser: function (opt) {
       // This help logic should probably move to run.js eventually
-      var opt = require('optimist')
-            .alias('port', 'p').default('port', 3000)
-            .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
-            .describe('deploy', 'Optionally, specify a domain to deploy to, rather than running locally.')
-            .boolean('production')
-            .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
-            .boolean('once') // See #Once
-            .describe('settings',  'Set optional data for Meteor.settings on the server')
-            .usage(
-              "Usage: meteor test-packages [--release <release>] [options] [package...]\n" +
-                "\n" +
-                "Runs unit tests for one or more packages. The results are shown in\n" +
-                "a browser dashboard that updates whenever a relevant source file is\n" +
-                "modified.\n" +
-                "\n" +
-                "Packages may be specified by name or by path. If a package argument\n" +
-                "contains a '/', it is loaded from a directory of that name; otherwise,\n" +
-                "the package name is resolved according to the usual package search\n" +
-                "algorithm ('packages' subdirectory of the current app, $PACKAGE_DIRS\n" +
-                "directories, and core packages in that order). You can test any number\n" +
-                "of packages simultaneously. If you don't specify any package names\n" +
-                "then all available packages will be tested.\n" +
-                "\n" +
-                "Open the test dashboard in your browser to run the tests and see the\n" +
-                "results. By default the URL is localhost:3000 but that can be changed\n" +
-                "with --port. Alternatively, you can deploy the tests onto the 'meteor\n" +
-                "deploy' server by using --deploy. This gives you a public URL that you\n" +
-                "can use in conjunction with a service like Browserling or BrowserStack\n" +
-                "to try the tests against many different browser versions.");
-
-
-      if (argv.help) {
-        process.stdout.write(opt.help());
-        process.exit(1);
-      }
-
-      argv = opt.argv;
-      // remove 'test-packages'.
-      // XXX we need to fix up this argv stuff once and for all to provide a
-      // real interface to commands that isn't terrible.
-      argv._.shift();
-
+      opt .alias('port', 'p').default('port', 3000)
+        .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
+        .describe('deploy', 'Optionally, specify a domain to deploy to, rather than running locally.')
+        .boolean('production')
+        .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
+        .boolean('once') // See #Once
+        .describe('settings',  'Set optional data for Meteor.settings on the server')
+        .usage(
+          "Usage: meteor test-packages [--release <release>] [options] [package...]\n" +
+            "\n" +
+            "Runs unit tests for one or more packages. The results are shown in\n" +
+            "a browser dashboard that updates whenever a relevant source file is\n" +
+            "modified.\n" +
+            "\n" +
+            "Packages may be specified by name or by path. If a package argument\n" +
+            "contains a '/', it is loaded from a directory of that name; otherwise,\n" +
+            "the package name is resolved according to the usual package search\n" +
+            "algorithm ('packages' subdirectory of the current app, $PACKAGE_DIRS\n" +
+            "directories, and core packages in that order). You can test any number\n" +
+            "of packages simultaneously. If you don't specify any package names\n" +
+            "then all available packages will be tested.\n" +
+            "\n" +
+            "Open the test dashboard in your browser to run the tests and see the\n" +
+            "results. By default the URL is localhost:3000 but that can be changed\n" +
+            "with --port. Alternatively, you can deploy the tests onto the 'meteor\n" +
+            "deploy' server by using --deploy. This gives you a public URL that you\n" +
+            "can use in conjunction with a service like Browserling or BrowserStack\n" +
+            "to try the tests against many different browser versions.");
+    },
+    func: function (argv) {
       var testPackages;
       if (_.isEmpty(argv._)) {
         // XXX The call to list() here is unfortunate, because list()
@@ -1142,21 +1197,21 @@ Fiber(function () {
     name: "rebuild-all",
     help: "Rebuild all packages",
     hidden: true,
-    func: function (argv) {
-      if (argv.help || argv._.length !== 0) {
-        process.stdout.write(
-"Usage: meteor rebuild-all\n" +
-"\n" +
-"Rebuild all source packages in the library. This includes packages found\n" +
-"through the PACKAGE_DIRS environment variable, local packages in the \n" +
-"current application, and packages in the warehouse (but only those in the\n" +
-"currently effective Meteor release.) It doesn't include any packages for\n" +
-"which we don't have the source.\n" +
-"\n" +
-"You should never need to use this command. It is intended for use while\n" +
-"debugging the Meteor packaging tools themselves.\n");
-        process.exit(1);
-      }
+    argumentParser: function (opt) {
+      opt.usage("Usage: meteor rebuild-all\n" +
+                "\n" +
+                "Rebuild all source packages in the library. This includes packages found\n" +
+                "through the PACKAGE_DIRS environment variable, local packages in the \n" +
+                "current application, and packages in the warehouse (but only those in the\n" +
+                "currently effective Meteor release.) It doesn't include any packages for\n" +
+                "which we don't have the source.\n" +
+                "\n" +
+                "You should never need to use this command. It is intended for use while\n" +
+                "debugging the Meteor packaging tools themselves.\n");
+    },
+    func: function (argv, showUsage) {
+      if (argv._.length !== 0)
+        showUsage();
 
       if (context.appDir) {
         // The library doesn't know about other programs in your app. Let's blow
@@ -1193,11 +1248,15 @@ Fiber(function () {
     name: "run-command",
     help: "Build and run a command-line tool",
     hidden: true,
+    argumentParser: function (opt) {
+      // This command does things manually. See below.
+    },
     func: function (argv) {
       // At this point options such as --help have already been parsed
       // out.. that's no good. We'll have to go back tho the original
       // process.argv and parse it ourselves.
-      argv = process.argv.slice(3);
+      argv = process.argv;
+      argv = argv.slice(argv.indexOf("run-command") + 1);
       if (! argv.length || argv[0] === "--help") {
         process.stdout.write(
 "Usage: meteor run-command <package directory> [arguments..]\n" +
@@ -1314,6 +1373,13 @@ Fiber(function () {
     process.exit(0);
   };
 
+  // Implements --built-by
+  var printBuiltBy = function () {
+    var packages = require('./packages.js');
+    console.log(packages.BUILT_BY);
+    process.exit(0);
+  };
+
   // Implements --arch.
   var printArch = function () {
     var archinfo = require('./archinfo.js');
@@ -1342,6 +1408,7 @@ Fiber(function () {
           .boolean("h")
           .boolean("help")
           .boolean("version")
+          .boolean("built-by")
           .boolean("arch")
           .boolean("debug")
           .alias("i", "ssh-identity");
@@ -1363,9 +1430,14 @@ Fiber(function () {
       return;
     }
 
-    if (argv.help) {
-      argv._.splice(0, 0, "help");
-      delete argv.help;
+    if (argv._[0] === "help") {
+      argv._.shift();
+      argv.help = true;
+    }
+
+    if (argv['built-by']) {
+      printBuiltBy();
+      return;
     }
 
     if (argv.version) {
@@ -1378,21 +1450,17 @@ Fiber(function () {
       return;
     }
 
-    var cmd = 'run';
+    var cmd = null;
     if (argv._.length)
-      cmd = argv._.splice(0,1)[0];
+      cmd = argv._[0];
 
     if (PROFILE_REQUIRE)
       require('./profile-require.js').printReport();
 
-    try {
-      findCommand(cmd).func(argv);
-    } finally {
-      if (tunnel) {
-        tunnel.kill('SIGHUP');
-        tunnel.waitExit();
-      }
-    }
+    if (argv.help && (!cmd || cmd === "help"))
+      usage();
+
+    runCommand(cmd, argv.help);
   };
 
   main();

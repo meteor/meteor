@@ -1,5 +1,4 @@
 if (typeof ServiceConfiguration === 'undefined') {
-  // @export ServiceConfiguration
   ServiceConfiguration = {};
 }
 

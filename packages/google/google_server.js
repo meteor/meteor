@@ -1,3 +1,5 @@
+Google = {};
+
 // https://developers.google.com/accounts/docs/OAuth2Login#userinfocall
 Google.whitelistedFields = ['id', 'email', 'verified_email', 'name', 'given_name',
                    'family_name', 'picture', 'locale', 'timezone', 'gender'];
@@ -40,7 +42,7 @@ var getTokens = function (query) {
 
   var response;
   try {
-    response = Meteor.http.post(
+    response = HTTP.post(
       "https://accounts.google.com/o/oauth2/token", {params: {
         code: query.code,
         client_id: config.clientId,
@@ -65,13 +67,14 @@ var getTokens = function (query) {
 
 var getIdentity = function (accessToken) {
   try {
-    return Meteor.http.get(
+    return HTTP.get(
       "https://www.googleapis.com/oauth2/v1/userinfo",
       {params: {access_token: accessToken}}).data;
   } catch (err) {
     throw new Error("Failed to fetch identity from Google. " + err.message);
   }
 };
+
 
 Google.retrieveCredential = function(credentialToken) {
   return Oauth.retrieveCredential(credentialToken);

@@ -4,7 +4,7 @@ var match = hostname.match(/(.*)\.meteor.com$/);
 var shortname = match ? match[1] : hostname;
 
 // connect to madewith and subscribe to my app's record
-var server = Meteor.connect("madewith.meteor.com");
+var server = DDP.connect("madewith.meteor.com");
 var sub = server.subscribe("myApp", hostname);
 
 // minimongo collection to hold my singleton app record.

@@ -109,7 +109,6 @@ _.extend(ExpectationManager.prototype, {
   }
 });
 
-// @export testAsyncMulti
 testAsyncMulti = function (name, funcs) {
   // XXX Tests on remote browsers are _slow_. We need a better solution.
   var timeout = 180000;
@@ -153,7 +152,6 @@ testAsyncMulti = function (name, funcs) {
   });
 };
 
-// @export pollUntil
 pollUntil = function (expect, f, timeout, step, noFail) {
   noFail = noFail || false;
   step = step || 100;

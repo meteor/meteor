@@ -2,10 +2,8 @@ Package.describe({
   summary: "Collection of small helper functions: _.map, _.each, ..."
 });
 
-Package.on_use(function (api, where) {
-  where = where || ['client', 'server'];
-
-  // Like all package, we have an implicit depedency on the 'meteor'
+Package.on_use(function (api) {
+  // Like all packages, we have an implicit depedency on the 'meteor'
   // package, which provides such things as the *.js file handler. Use
   // an undocumented API to allow 'meteor' to after us even though we
   // depend on it. This is necessary since 'meteor' depends on us. One
@@ -18,9 +16,9 @@ Package.on_use(function (api, where) {
   // remove unordered dependency support, though I think it's worth keeping
   // around for now to keep the possibility of dependency
   // configuration alive in the codebase.
-  api.use('meteor', where, {unordered: true});
+  api.use('meteor', {unordered: true});
 
-  api.exportSymbol('_', where);
+  api.export('_');
 
-  api.add_files('underscore.js', where);
+  api.add_files(['pre.js', 'underscore.js', 'post.js']);
 });

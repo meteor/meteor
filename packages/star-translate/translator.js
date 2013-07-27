@@ -1,9 +1,7 @@
 var fs = Npm.require('fs');
 var path = Npm.require('path');
 var ncp = Npm.require('ncp').ncp;
-var Future = Npm.require('fibers/future');
 
-//@export StarTranslator
 StarTranslator = {};
 
 // Produces a star version of bundlePath in translatedPath, where bundlePath can

@@ -1,4 +1,3 @@
-// @export OnscreenDiv
 // OnscreenDiv is an object that appends a DIV to the document
 // body and keeps track of it, providing methods that query it,
 // mutate, and destroy it.

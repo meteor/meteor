@@ -4,6 +4,7 @@
 set -e
 trap 'echo FAILED' EXIT
 
+cd `dirname $0`
 METEOR_DIR=$(pwd)/..
 
 # run tests

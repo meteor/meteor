@@ -26,16 +26,70 @@ testAsyncMulti("stream - reconnect", [
     }));
 
     if (Meteor.status().status !== "connected")
-      Meteor.default_connection._stream.on('reset', callback);
+      Meteor.connection._stream.on('reset', callback);
     else
       callback();
   }
 ]);
 
+// Disconnecting and reconnecting transitions through the correct statuses.
+testAsyncMulti("stream - basic disconnect", [
+  function (test, expect) {
+    var history = [];
+    var stream = new LivedataTest.ClientStream("/");
+    var onTestPass = expect();
+
+    Deps.autorun(function() {
+      var status = stream.status();
+
+      if (_.last(history) != status.status) {
+        history.push(status.status);
+
+        if (_.isEqual(history, ["connecting", "connected"]))
+          stream.disconnect();
+
+        if (_.isEqual(history, ["connecting", "connected", "offline"]))
+          stream.reconnect();
+
+        if (_.isEqual(history, ["connecting", "connected", "offline",
+                                "connecting", "connected"])) {
+          stream.disconnect();
+          onTestPass();
+        }
+      }
+    });
+  }
+]);
+
+// Remain offline if the online event is received while offline.
+testAsyncMulti("stream - disconnect remains offline", [
+  function (test, expect) {
+    var history = [];
+    var stream = new LivedataTest.ClientStream("/");
+    var onTestComplete = expect();
+
+    Deps.autorun(function() {
+      var status = stream.status();
+
+      if (_.last(history) != status.status) {
+        history.push(status.status);
+
+        if (_.isEqual(history, ["connecting", "connected"]))
+          stream.disconnect();
+
+        if (_.isEqual(history, ["connecting", "connected", "offline"])) {
+          stream._online();
+          test.isTrue(status.status == "offline");
+          onTestComplete();
+        }
+      }
+    });
+  }
+]);
 
 Tinytest.add("stream - sockjs urls are computed correctly", function(test) {
   var testHasSockjsUrl = function(raw, expectedSockjsUrl) {
-    var actual = Meteor._DdpClientStream._toSockjsUrl(raw);
+    var actual = LivedataTest.toSockjsUrl(raw);
     if (expectedSockjsUrl instanceof RegExp)
       test.isTrue(actual.match(expectedSockjsUrl), actual);
     else
@@ -73,7 +127,7 @@ testAsyncMulti("stream - /websocket is a websocket endpoint", [
     // Verify that /websocket and /websocket/ don't return the main page
     //
     _.each(['/websocket', '/websocket/'], function(path) {
-      Meteor.http.get(Meteor._relativeToSiteRootUrl(path), expect(function(error, result) {
+      HTTP.get(Meteor._relativeToSiteRootUrl(path), expect(function(error, result) {
         test.isNotNull(error);
         test.equal('Can "Upgrade" only to "WebSocket".', result.content);
       }));
@@ -91,12 +145,12 @@ testAsyncMulti("stream - /websocket is a websocket endpoint", [
       test.equal(pageContent, result.content);
     });
 
-    Meteor.http.get(Meteor._relativeToSiteRootUrl('/'), expect(function(error, result) {
+    HTTP.get(Meteor._relativeToSiteRootUrl('/'), expect(function(error, result) {
       test.isNull(error);
       pageContent = result.content;
 
       _.each(['/websockets', '/websockets/'], function(path) {
-        Meteor.http.get(Meteor._relativeToSiteRootUrl(path), wrappedCallback);
+        HTTP.get(Meteor._relativeToSiteRootUrl(path), wrappedCallback);
       });
     }));
   }

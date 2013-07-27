@@ -1,7 +1,6 @@
 var optimist = Npm.require('optimist');
 var Future = Npm.require('fibers/future');
 
-// @export Ctl
 Ctl = {};
 
 _.extend(Ctl, {
@@ -43,7 +42,7 @@ _.extend(Ctl, {
       process.exit(1);
     }
 
-    return Meteor.connect(process.env['GALAXY']);
+    return DDP.connect(process.env['GALAXY']);
   }),
 
   jobsCollection: _.once(function () {
@@ -52,12 +51,7 @@ _.extend(Ctl, {
 
   // use _.memoize so that this is called only once per app.
   subscribeToAppJobs: _.memoize(function (appName) {
-    var f = new Future();
-    Ctl.findGalaxy().subscribe("jobsByApp", appName, {
-      onReady: function () {f.return();},
-      onError: function (e) {f.throw(e);}
-    });
-    f.wait();
+    Ctl.findGalaxy()._subscribeAndWait("jobsByApp", [appName]);
   }),
 
   // XXX this never unsubs...
@@ -92,7 +86,7 @@ _.extend(Ctl, {
         "\n" +
         "For now, the GALAXY environment variable must be set to the location of\n" +
         "your Galaxy management server (Ultraworld.) This string is in the same\n" +
-        "format as the argument to Meteor.connect().\n" +
+        "format as the argument to DDP.connect().\n" +
         "\n" +
         "Commands:\n");
     _.each(Ctl.Commands, function (cmd) {

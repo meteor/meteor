@@ -4,7 +4,7 @@
 
 // This is reactive.
 Meteor.userId = function () {
-  return Meteor.default_connection.userId();
+  return Meteor.connection.userId();
 };
 
 var loggingIn = false;
@@ -45,7 +45,7 @@ Meteor.user = function () {
 //   - Updating the Meteor.loggingIn() reactive data source
 //   - Calling the method in 'wait' mode
 //   - On success, saving the resume token to localStorage
-//   - On success, calling Meteor.default_connection.setUserId()
+//   - On success, calling Meteor.connection.setUserId()
 //   - Setting up an onReconnect handler which logs in with
 //     the resume token
 //
@@ -57,6 +57,7 @@ Meteor.user = function () {
 //                 its error will be passed to the callback).
 // - userCallback: Will be called with no arguments once the user is fully
 //                 logged in, or with the error on error.
+//
 Accounts.callLoginMethod = function (options) {
   options = _.extend({
     methodName: 'login',
@@ -78,19 +79,19 @@ Accounts.callLoginMethod = function (options) {
   // getting the results of subscription rerun, we WILL NOT re-send this
   // method (because we never re-send methods whose results we've received)
   // but we WILL call loggedInAndDataReadyCallback at "reconnect quiesce"
-  // time. This will lead to _makeClientLoggedIn(result.id) even though we
+  // time. This will lead to makeClientLoggedIn(result.id) even though we
   // haven't actually sent a login method!
   //
   // But by making sure that we send this "resume" login in that case (and
-  // calling _makeClientLoggedOut if it fails), we'll end up with an accurate
+  // calling makeClientLoggedOut if it fails), we'll end up with an accurate
   // client-side userId. (It's important that livedata_connection guarantees
   // that the "reconnect quiesce"-time call to loggedInAndDataReadyCallback
   // will occur before the callback from the resume login call.)
   var onResultReceived = function (err, result) {
     if (err || !result || !result.token) {
-      Meteor.default_connection.onReconnect = null;
+      Meteor.connection.onReconnect = null;
     } else {
-      Meteor.default_connection.onReconnect = function() {
+      Meteor.connection.onReconnect = function() {
         reconnected = true;
         Accounts.callLoginMethod({
           methodArguments: [{resume: result.token}],
@@ -100,7 +101,7 @@ Accounts.callLoginMethod = function (options) {
           _suppressLoggingIn: true,
           userCallback: function (error) {
             if (error) {
-              Accounts._makeClientLoggedOut();
+              makeClientLoggedOut();
             }
             options.userCallback(error);
           }});
@@ -138,7 +139,7 @@ Accounts.callLoginMethod = function (options) {
     }
 
     // Make the client logged in. (The user data should already be loaded!)
-    Accounts._makeClientLoggedIn(result.id, result.token);
+    makeClientLoggedIn(result.id, result.token);
     options.userCallback();
   };
 
@@ -151,15 +152,15 @@ Accounts.callLoginMethod = function (options) {
     loggedInAndDataReadyCallback);
 };
 
-Accounts._makeClientLoggedOut = function() {
-  Accounts._unstoreLoginToken();
-  Meteor.default_connection.setUserId(null);
-  Meteor.default_connection.onReconnect = null;
+makeClientLoggedOut = function() {
+  unstoreLoginToken();
+  Meteor.connection.setUserId(null);
+  Meteor.connection.onReconnect = null;
 };
 
-Accounts._makeClientLoggedIn = function(userId, token) {
-  Accounts._storeLoginToken(userId, token);
-  Meteor.default_connection.setUserId(userId);
+makeClientLoggedIn = function(userId, token) {
+  storeLoginToken(userId, token);
+  Meteor.connection.setUserId(userId);
 };
 
 Meteor.logout = function (callback) {
@@ -167,7 +168,7 @@ Meteor.logout = function (callback) {
     if (error) {
       callback && callback(error);
     } else {
-      Accounts._makeClientLoggedOut();
+      makeClientLoggedOut();
       callback && callback();
     }
   });
@@ -182,6 +183,7 @@ var loginServicesHandle = Meteor.subscribe("meteor.loginServiceConfiguration");
 // A reactive function returning whether the loginServiceConfiguration
 // subscription is ready. Used by accounts-ui to hide the login button
 // until we have all the configuration loaded
+//
 Accounts.loginServicesConfigured = function () {
   return loginServicesHandle.ready();
 };

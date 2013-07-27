@@ -12,6 +12,7 @@ Package.on_use(function (api) {
   api.use('underscore');
 
   api.use('session');
+  api.use('reload');
 
   api.use(['spark', 'livedata', 'templating', 'deps'], 'client');
 

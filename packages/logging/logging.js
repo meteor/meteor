@@ -1,4 +1,3 @@
-// @export Log
 Log = function () {
   return Log.info.apply(this, arguments);
 };

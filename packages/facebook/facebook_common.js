@@ -1,2 +1,0 @@
-// @export Facebook
-Facebook = {};

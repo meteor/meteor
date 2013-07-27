@@ -115,8 +115,8 @@ _.extend(Builder.prototype, {
       while (true) {
         var candidate = path.join(partsOut.join(path.sep), part + suffix + ext);
         if (candidate.length &&
-            ! (candidate in self.usedAsFile) ||
-            (shouldBeFile === self.usedAsFile[candidate]))
+            (! (candidate in self.usedAsFile) ||
+             (!shouldBeFile && !self.usedAsFile[candidate])))
           // No conflict -- either not used, or it's two paths that
           // share a common ancestor directory (as opposed to one path
           // thinking that a/b should be a file, and another thinking

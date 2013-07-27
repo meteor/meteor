@@ -850,8 +850,8 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({$where: "this.a === 1", a: 2}, {a: 1});
   match({$where: "this.a === 1", b: 2}, {a: 1, b: 2});
   match({$where: "this.a === 1 && this.b === 2"}, {a: 1, b: 2});
-  match({$where: "_.isArray(this.a)"}, {a: []});
-  nomatch({$where: "_.isArray(this.a)"}, {a: 1});
+  match({$where: "this.a instanceof Array"}, {a: []});
+  nomatch({$where: "this.a instanceof Array"}, {a: 1});
 
   // reaching into array
   match({"dogs.0.name": "Fido"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});

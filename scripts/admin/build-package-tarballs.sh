@@ -21,7 +21,16 @@ TOPDIR=$(pwd)
 OUTDIR="$TOPDIR/dist/packages"
 mkdir -p $OUTDIR
 
-# Make sure all NPM modules are updated.
+# Find a GNU tar, so we can use the --transform flag.
+if [ -x "/usr/bin/gnutar" ] ; then
+    # Mac.
+    GNUTAR=/usr/bin/gnutar
+else
+    # Linux.
+    GNUTAR=tar
+fi
+
+# Build all unipackages.
 ./meteor --get-ready
 
 # A hacky (?) way to pass the release manifest chunk with package
@@ -29,6 +38,11 @@ mkdir -p $OUTDIR
 if [ -e "$TOPDIR/.package_manifest_chunk" ]; then
   rm "$TOPDIR/.package_manifest_chunk"
 fi
+
+# The "build version" of the current tools. A change to this should result in a
+# change to all package versions; this will only be incremented when it's
+# important for all packages to be rebuilt, not on every tools release.
+BUILT_BY=$(./meteor --built-by)
 
 FIRST_RUN=true # keep track to place commas correctly
 cd packages
@@ -39,9 +53,17 @@ do
       echo "," >> "$TOPDIR/.package_manifest_chunk"
     fi
 
-    PACKAGE_VERSION=$(git ls-tree HEAD $PACKAGE | shasum | cut -f 1 -d " ") # shasum's output looks like: 'SHA -'
+    PACKAGE_VERSION=$(cat <(echo "$BUILT_BY") <(git ls-tree HEAD $PACKAGE) | shasum | cut -f 1 -d " ") # shasum's output looks like: 'SHA -'
     echo "$PACKAGE version $PACKAGE_VERSION"
-    $TAR -c -z -f $OUTDIR/$PACKAGE-${PACKAGE_VERSION}-${PLATFORM}.tar.gz $PACKAGE
+    ROOTDIR="$PACKAGE-${PACKAGE_VERSION}-${PLATFORM}"
+    TARBALL="$OUTDIR/$PACKAGE-${PACKAGE_VERSION}-${PLATFORM}.tar.gz"
+
+    # Create the tarball from the built package. In the tarball, the root
+    # directory should be $ROOTDIR, so we replace the "." with that, using
+    # --transform (a GNU tar extension). Leave out the buildinfo.json file,
+    # which contains local paths and is only used to decide if we should rebuild
+    # a package from its corresponding source tree.
+    "$GNUTAR" czf "$TARBALL" -C "$PACKAGE/.build" --exclude buildinfo.json --transform 's/^\./'"$ROOTDIR"'/' .
 
     # this is used in build-release.sh, which constructs the release json.
     echo -n "    \"$PACKAGE\": \"$PACKAGE_VERSION\"" >> "$TOPDIR/.package_manifest_chunk"

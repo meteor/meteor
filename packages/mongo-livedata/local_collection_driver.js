@@ -1,5 +1,4 @@
-// XXX namespacing
-Meteor._LocalCollectionDriver = function () {
+LocalCollectionDriver = function () {
   var self = this;
   self.noConnCollections = {};
 };
@@ -10,7 +9,7 @@ var ensureCollection = function (name, collections) {
   return collections[name];
 };
 
-_.extend(Meteor._LocalCollectionDriver.prototype, {
+_.extend(LocalCollectionDriver.prototype, {
   open: function (name, conn) {
     var self = this;
     if (!name)
@@ -27,4 +26,4 @@ _.extend(Meteor._LocalCollectionDriver.prototype, {
 });
 
 // singleton
-Meteor._LocalCollectionDriver = new Meteor._LocalCollectionDriver;
+LocalCollectionDriver = new LocalCollectionDriver;

@@ -1,4 +1,3 @@
-// @export TestAsset
 TestAsset = {};
 
 if (Meteor.isServer) {

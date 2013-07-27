@@ -12,7 +12,10 @@ var optimist = Npm.require('optimist');
 var useragent = Npm.require('useragent');
 var send = Npm.require('send');
 
-// @export WebApp
+// XXX we have to export WebApp as a single symbol because we modify
+// it (for example, it has an attribute httpServer which isn't known
+// until runWebAppServer-time.) It would be nice to refactor so that
+// this isn't the case and we can export the symbols individually.
 WebApp = {};
 
 var findGalaxy = _.once(function () {
@@ -23,7 +26,7 @@ var findGalaxy = _.once(function () {
     process.exit(1);
   }
 
-  return Meteor.connect(process.env['GALAXY']);
+  return DDP.connect(process.env['GALAXY']);
 });
 
 // Keepalives so that when the outer server dies unceremoniously and
@@ -158,6 +161,17 @@ var appUrl = function (url) {
   return true;
 };
 
+// This is used to move legacy environment variables into deployConfig, where
+// other packages look for them. We probably don't want it here forever.
+var copyEnvVarToDeployConfig = function (deployConfig, envVar,
+                                         packageName, configKey) {
+  if (process.env[envVar]) {
+    if (! deployConfig.packages[packageName])
+      deployConfig.packages[packageName] = {};
+    deployConfig.packages[packageName][configKey] = process.env[envVar];
+  }
+};
+
 var runWebAppServer = function () {
   // read the control for the client we'll be serving up
   var clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
@@ -184,11 +198,7 @@ var runWebAppServer = function () {
   if (process.env.PORT && !_.has(deployConfig.boot.bind, 'localPort')) {
     deployConfig.boot.bind.localPort = parseInt(process.env.PORT);
   }
-  if (process.env.MONGO_URL) {
-    if (!deployConfig.packages['mongo-livedata'])
-      deployConfig.packages['mongo-livedata'] = {};
-    deployConfig.packages['mongo-livedata'].url = process.env.MONGO_URL;
-  }
+  copyEnvVarToDeployConfig(deployConfig, "MONGO_URL", "mongo-livedata", "url");
 
   // webserver
   var app = connect();
@@ -412,7 +422,6 @@ var runWebAppServer = function () {
   // Let the rest of the packages (and Meteor.startup hooks) insert connect
   // middlewares and update __meteor_runtime_config__, then keep going to set up
   // actually serving HTML.
-  // @export main
   main = function (argv) {
     argv = optimist(argv).boolean('keepalive').argv;
 
@@ -434,7 +443,7 @@ var runWebAppServer = function () {
         console.log("LISTENING"); // must match run.js
       var port = httpServer.address().port;
       if (bind.viaProxy && bind.viaProxy.proxyEndpoint) {
-        Meteor._bindToProxy(bind.viaProxy);
+        bindToProxy(bind.viaProxy);
       } else if (bind.viaProxy) {
         // bind via the proxy, but we'll have to find it ourselves via
         // ultraworld.
@@ -446,7 +455,7 @@ var runWebAppServer = function () {
         var doBinding = function (proxyService) {
           if (proxyService.providers.proxy) {
             Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
-            Meteor._bindToProxy(_.extend({
+            bindToProxy(_.extend({
               proxyEndpoint: proxyService.providers.proxy
             }, bind.viaProxy));
           }
@@ -471,7 +480,7 @@ var runWebAppServer = function () {
   };
 };
 
-Meteor._bindToProxy = function (proxyConfig) {
+bindToProxy = function (proxyConfig) {
 
   var securePort = proxyConfig.securePort || 4433;
   var insecurePort = proxyConfig.insecurePort || 8080;
@@ -503,8 +512,8 @@ Meteor._bindToProxy = function (proxyConfig) {
   };
 
   // This is run after packages are loaded (in main) so we can use
-  // Meteor.connect.
-  var proxy = Meteor.connect(proxyConfig.proxyEndpoint);
+  // DDP.connect.
+  var proxy = DDP.connect(proxyConfig.proxyEndpoint);
   var route = process.env.ROUTE;
   var host = route.split(":")[0];
   var port = +route.split(":")[1];

@@ -34,8 +34,15 @@ var Library = function (options) {
       return stats.isDirectory();
     });
 
-  self.loadedPackages = {};
+  self.loadedPackages = {}; // map from package name to Package
   self.overrides = {}; // package name to package directory
+
+  // map from package name to:
+  // - pkg: cached Package object
+  // - packageDir: directory from which it was loaded
+  // - revalidate: true if the package needs to have its dependencies
+  //   checked before it can be reused
+  self.softReloadCache = {};
 };
 
 _.extend(Library.prototype, {
@@ -58,12 +65,28 @@ _.extend(Library.prototype, {
       throw new Error("No override present for package '" + packageName + "'");
     delete self.loadedPackages[packageName];
     delete self.overrides[packageName];
+    delete self.softReloadCache[packageName];
   },
 
-  // Force reload of all packages. See description at get().
-  refresh: function () {
+  // Force reload of changed packages. See description at get().
+  //
+  // If soft is false, the default, the cache is totally flushed and
+  // all packages are reloaded unconditionally.
+  //
+  // If soft is true, then packages from the warehouse aren't reloaded
+  // (they are supposed to be immutable, after all), and if we loaded
+  // a built package with dependency info, we won't reload it if the
+  // dependency info says that its source files are still up to
+  // date. The ideas is that assuming the user is "following the
+  // rules", this will correctly reload any changed packages while in
+  // most cases avoiding nearly all reloading.
+  refresh: function (soft) {
     var self = this;
+    soft = soft || false;
+
     self.loadedPackages = {};
+    if (! soft)
+      self.softReloadCache = {};
   },
 
   // Given a package name as a string, retrieve a Package object. If
@@ -91,8 +114,9 @@ _.extend(Library.prototype, {
       return name;
 
     // Packages cached from previous calls
-    if (name in self.loadedPackages)
+    if (_.has(self.loadedPackages, name)) {
       return self.loadedPackages[name];
+    }
 
     // If there's an override for this package, use that without
     // looking at any other options.
@@ -103,6 +127,7 @@ _.extend(Library.prototype, {
     if (! packageDir) {
       for (var i = 0; i < self.localPackageDirs.length; ++i) {
         var packageDir = path.join(self.localPackageDirs[i], name);
+        // XXX or unipackage.json?
         if (fs.existsSync(path.join(packageDir, 'package.js')))
           break;
         packageDir = null;
@@ -128,6 +153,23 @@ _.extend(Library.prototype, {
       var pkg = new packages.Package(self);
       pkg.initEmpty(name);
       return pkg;
+    }
+
+    // See if we can reuse a package that we have cached from before
+    // the last soft refresh.
+    if (_.has(self.softReloadCache, name)) {
+      var entry = self.softReloadCache[name];
+
+      if (entry.packageDir === packageDir &&
+          (! entry.revalidate || entry.pkg.checkUpToDate())) {
+        // Cache hit
+        self.loadedPackages[name] = entry.pkg;
+        return entry.pkg;
+      }
+
+      // Package has either changed, or it has been shadowed by a
+      // package in a different location.
+      delete self.softReloadCache[name];
     }
 
     // Load package from disk
@@ -186,6 +228,12 @@ _.extend(Library.prototype, {
         });
       }
     }
+
+    self.softReloadCache[name] = {
+      packageDir: packageDir,
+      revalidate: ! fromWarehouse,
+      pkg: pkg
+    };
 
     return pkg;
   },
@@ -299,11 +347,8 @@ _.extend(Library.prototype, {
       });
     });
 
-    _.each(self.releaseManifest || {}, function (name, version) {
-      var packageDir = path.join(warehouse.getWarehouseDir(),
-                                 'packages', name, version);
-      all[packageDir] = name;
-    });
+    // We *DON'T* look in the warehouse here, because warehouse packages are
+    // prebuilt.
 
     // Delete any that are source packages with builds.
     var count = 0;
@@ -352,9 +397,10 @@ _.extend(exports, {
   formatList: function (pkgs) {
     var longest = '';
     _.each(pkgs, function (pkg) {
-      if (pkg.name.length > longest.length)
+      if (!pkg.metadata.internal && pkg.name.length > longest.length)
         longest = pkg.name;
     });
+
     var pad = longest.replace(/./g, ' ');
     // it'd be nice to read the actual terminal width, but I tried
     // several methods and none of them work (COLUMNS isn't set in

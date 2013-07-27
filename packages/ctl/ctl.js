@@ -56,6 +56,9 @@ Ctl.Commands.push({
         packages: {
           "mongo-livedata": {
             url: appConfig.MONGO_URL
+          },
+          "email": {
+            url: appConfig.MAIL_URL
           }
         }
       };
@@ -162,7 +165,6 @@ Ctl.Commands.push({
   }
 });
 
-// @export main
 main = function (argv) {
   return Ctl.main(argv);
 };

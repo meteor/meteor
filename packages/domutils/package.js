@@ -14,6 +14,7 @@ Package.on_use(function (api) {
 
   api.use('underscore', 'client');
 
+  api.export('DomUtils', 'client');
   api.add_files('domutils.js', 'client');
 });
 

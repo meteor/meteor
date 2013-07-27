@@ -9,7 +9,7 @@
 // We don't do any heartbeating. (The logic that did this in sockjs was removed,
 // because it used a built-in sockjs mechanism. We could do it with WebSocket
 // ping frames or with DDP-level messages.)
-Meteor._DdpClientStream = function (endpoint) {
+LivedataTest.ClientStream = function (endpoint) {
   var self = this;
 
   // WebSocket-Node https://github.com/Worlize/WebSocket-Node
@@ -47,7 +47,7 @@ Meteor._DdpClientStream = function (endpoint) {
   self._launchConnection();
 };
 
-_.extend(Meteor._DdpClientStream.prototype, {
+_.extend(LivedataTest.ClientStream.prototype, {
 
   // data is a utf8 string. Data sent while not connected is dropped on
   // the floor, and it is up the user of this API to retransmit lost
@@ -170,7 +170,7 @@ _.extend(Meteor._DdpClientStream.prototype, {
     // a protocol and the server doesn't send one back (and sockjs
     // doesn't). also, related: I guess we have to accept that
     // 'stream' is ddp-specific
-    self.client.connect(Meteor._DdpClientStream._toWebsocketUrl(self.endpoint));
+    self.client.connect(toWebsocketUrl(self.endpoint));
 
     if (self.connectionTimer)
       clearTimeout(self.connectionTimer);

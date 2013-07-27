@@ -25,7 +25,7 @@ __meteor_bootstrap__ = {
   startup_hooks: [],
   serverDir: serverDir,
   configJson: configJson };
-__meteor_runtime_config__ = { meteorRelease: configJson.release };
+__meteor_runtime_config__ = { meteorRelease: configJson.meteorRelease };
 
 
 // connect (and some other NPM modules) use $NODE_ENV to make some decisions;
@@ -108,25 +108,31 @@ Fiber(function () {
           }
       }
     };
-    var staticDirectory = path.resolve(serverDir, fileInfo.staticDirectory);
     var getAsset = function (assetPath, encoding, callback) {
       var fut;
       if (! callback) {
         fut = new Future();
         callback = fut.resolver();
       }
-      var _callback = Meteor.bindEnvironment(function (err, result) {
+      // This assumes that we've already loaded the meteor package, so meteor
+      // itself (and weird special cases like js-analyze) can't call
+      // Assets.get*. (We could change this function so that it doesn't call
+      // bindEnvironment if you don't pass a callback if we need to.)
+      var _callback = Package.meteor.Meteor.bindEnvironment(function (err, result) {
         if (result && ! encoding)
           // Sadly, this copies in Node 0.10.
           result = new Uint8Array(result);
         callback(err, result);
       }, function (e) {
-        Meteor._debug("Exception in callback of getAsset", e.stack);
+        console.log("Exception in callback of getAsset", e.stack);
       });
-      var filePath = path.join(staticDirectory, assetPath);
-      if (filePath.indexOf("..") !== -1)
-        throw new Error(".. is not allowed in asset paths.");
-      fs.readFile(filePath, encoding, _callback);
+
+      if (!fileInfo.assets || !_.has(fileInfo.assets, assetPath)) {
+        _callback(new Error("Unknown asset: " + assetPath));
+      } else {
+        var filePath = path.join(serverDir, fileInfo.assets[assetPath]);
+        fs.readFile(filePath, encoding, _callback);
+      }
       if (fut)
         return fut.wait();
     };

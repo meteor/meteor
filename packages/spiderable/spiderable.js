@@ -42,7 +42,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
           "        && typeof(Meteor.status) !== 'undefined' " +
           "        && Meteor.status().connected) {" +
           "      Deps.flush();" +
-          "      return Meteor._LivedataConnection._allSubscriptionsReady();" +
+          "      return DDP._allSubscriptionsReady();" +
           "    }" +
           "    return false;" +
           "  });" +

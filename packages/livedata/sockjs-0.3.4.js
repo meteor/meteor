@@ -1970,7 +1970,17 @@ InfoReceiver.prototype = new EventEmitter(['finish']);
 InfoReceiver.prototype.doXhr = function(base_url, AjaxObject) {
     var that = this;
     var t0 = (new Date()).getTime();
-    var xo = new AjaxObject('GET', base_url + '/info');
+
+// <METEOR>
+  // https://github.com/sockjs/sockjs-client/pull/129
+  // var xo = new AjaxObject('GET', base_url + '/info');
+
+    var xo = new AjaxObject(
+      // add cachebusting parameter to url to work around a chrome bug:
+      // https://code.google.com/p/chromium/issues/detail?id=263981
+      // or misbehaving proxies.
+      'GET', base_url + '/info?cb=' + utils.random_string(10))
+// </METEOR>
 
     var tref = utils.delay(8000,
                            function(){xo.ontimeout();});

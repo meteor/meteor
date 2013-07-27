@@ -1,10 +1,16 @@
 var Fiber = Npm.require('fibers');
 
+Oauth = {};
+OauthTest = {};
+
 RoutePolicy.declare('/_oauth/', 'network');
 
-Oauth._services = {};
+var registeredServices = {};
 
-// Maps from service version to handler function.
+// Internal: Maps from service version to handler function. The
+// 'oauth1' and 'oauth2' packages manipulate this directly to register
+// for callbacks.
+//
 Oauth._requestHandlers = {};
 
 
@@ -23,11 +29,12 @@ Oauth._requestHandlers = {};
 //     - {serviceData:, (optional options:)} where serviceData should end
 //       up in the user's services[name] field
 //     - `null` if the user declined to give permissions
+//
 Oauth.registerService = function (name, version, urls, handleOauthRequest) {
-  if (Oauth._services[name])
+  if (registeredServices[name])
     throw new Error("Already registered the " + name + " OAuth service");
 
-  Oauth._services[name] = {
+  registeredServices[name] = {
     serviceName: name,
     version: version,
     urls: urls,
@@ -35,9 +42,9 @@ Oauth.registerService = function (name, version, urls, handleOauthRequest) {
   };
 };
 
-// For test cleanup only.
-Oauth._unregisterService = function (name) {
-  delete Oauth._services[name];
+// For test cleanup.
+OauthTest.unregisterService = function (name) {
+  delete registeredServices[name];
 };
 
 
@@ -46,7 +53,11 @@ Oauth._unregisterService = function (name) {
 // results are stored in this map which is then read when the login
 // method is called. Maps credentialToken --> return value of `login`
 //
+// NB: the oauth1 and oauth2 packages manipulate this directly. might
+// be nice for them to have a setter instead
+//
 // XXX we should periodically clear old entries
+//
 Oauth._loginResultForCredentialToken = {};
 
 Oauth.hasCredential = function(credentialToken) {
@@ -64,12 +75,11 @@ WebApp.connectHandlers.use(function(req, res, next) {
   // Need to create a Fiber since we're using synchronous http calls and nothing
   // else is wrapping this in a fiber automatically
   Fiber(function () {
-    Oauth._middleware(req, res, next);
+    middleware(req, res, next);
   }).run();
 });
 
-
-Oauth._middleware = function (req, res, next) {
+middleware = function (req, res, next) {
   // Make sure to catch any exceptions because otherwise we'd crash
   // the runner
   try {
@@ -80,7 +90,7 @@ Oauth._middleware = function (req, res, next) {
       return;
     }
 
-    var service = Oauth._services[serviceName];
+    var service = registeredServices[serviceName];
 
     // Skip everything if there's no service set by the oauth middleware
     if (!service)
@@ -119,6 +129,8 @@ Oauth._middleware = function (req, res, next) {
   }
 };
 
+OauthTest.middleware = middleware;
+
 // Handle /_oauth/* paths and extract the service name
 //
 // @returns {String|null} e.g. "facebook", or null if this isn't an
@@ -145,6 +157,7 @@ var ensureConfigured = function(serviceName) {
   };
 };
 
+// Internal: used by the oauth1 and oauth2 packages
 Oauth._renderOauthResults = function(res, query) {
   // We support ?close and ?redirect=URL. Any other query should
   // just serve a blank page

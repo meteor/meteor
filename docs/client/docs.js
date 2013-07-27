@@ -139,7 +139,8 @@ var toc = [
     {name: "Server connections", id: "connections"}, [
       "Meteor.status",
       "Meteor.reconnect",
-      "Meteor.connect"
+      "Meteor.disconnect",
+      "DDP.connect"
     ],
 
     {name: "Collections", id: "collections"}, [
@@ -305,12 +306,12 @@ var toc = [
     ],
 
 
-    "Meteor.http", [
-      "Meteor.http.call",
-      {name: "Meteor.http.get", id: "meteor_http_get"},
-      {name: "Meteor.http.post", id: "meteor_http_post"},
-      {name: "Meteor.http.put", id: "meteor_http_put"},
-      {name: "Meteor.http.del", id: "meteor_http_del"}
+    "HTTP", [
+      "HTTP.call",
+      {name: "HTTP.get", id: "meteor_http_get"},
+      {name: "HTTP.post", id: "meteor_http_post"},
+      {name: "HTTP.put", id: "meteor_http_put"},
+      {name: "HTTP.del", id: "meteor_http_del"}
     ],
     "Email", [
       "Email.send"

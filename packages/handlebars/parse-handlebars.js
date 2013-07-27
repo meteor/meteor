@@ -1,4 +1,3 @@
-// @export Handlebars
 Handlebars = {};
 
 /* Our format:
@@ -30,8 +29,41 @@ Handlebars = {};
 var path = Npm.require('path');
 var hbars = Npm.require('handlebars');
 
+// Has keys 'message', 'line'
+Handlebars.ParseError = function (message, line) {
+  this.message = message;
+  if (line)
+    this.line = line;
+};
+
+// Raises Handlebars.ParseError if the Handlebars parser fails. We
+// will do our best to decode the output of Handlebars into a message
+// and a line number.
+
+// If Handlebars parsing fails, the Handlebars parser error will
+// escape to the caller.
+//
 Handlebars.to_json_ast = function (code) {
-  var ast = hbars.parse(code);
+  try {
+    var ast = hbars.parse(code);
+  } catch (e) {
+    // The Handlebars parser throws Error objects with a message
+    // attribute (and nothing else) and we must do our best. Parse
+    // errors include a line number (relative to the start of 'code'
+    // of course) which we'll attempt to parse out. (Handlebars
+    // almost, but not quite copies the line number information onto
+    // the Error object.) Other than parse errors, you also see very
+    // short strings like "else doesn't match unless" (with no
+    // location information.)
+    var m = e.message.match(/^Parse error on line (\d+):([\s\S]*)$/)
+    if (m)
+      throw new Handlebars.ParseError("Parse error:" + m[2], +m[1]);
+
+    if (e.message)
+      throw new Handlebars.ParseError(e.message);
+
+    throw e;
+  }
 
   // Recreate Handlebars.Exception to properly report error messages
   // and stack traces. (https://github.com/wycats/handlebars.js/issues/226)

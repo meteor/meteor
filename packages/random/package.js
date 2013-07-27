@@ -3,10 +3,11 @@ Package.describe({
   internal: true
 });
 
-Package.on_use(function (api, where) {
-  where = where || ['client', 'server'];
+Package.on_use(function (api) {
   api.use('underscore');
-  api.add_files('random.js', where);
+  api.export('Random');
+  api.add_files('random.js');
+  api.add_files('deprecated.js');
 });
 
 Package.on_test(function(api) {

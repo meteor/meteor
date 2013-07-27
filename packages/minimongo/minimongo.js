@@ -7,7 +7,6 @@
 
 // LiveResultsSet: the return value of a live query.
 
-// @export LocalCollection
 LocalCollection = function (name) {
   this.name = name;
   this.docs = {}; // _id -> document (also containing id)
@@ -43,13 +42,11 @@ LocalCollection._applyChanges = function (doc, changeFields) {
   });
 };
 
-LocalCollection.MinimongoError = function (message) {
-  var self = this;
-  self.name = "MinimongoError";
-  self.details = message;
+var MinimongoError = function (message) {
+  var e = new Error(message);
+  e.name = "MinimongoError";
+  return e;
 };
-
-LocalCollection.MinimongoError.prototype = new Error;
 
 
 // options may include sort, skip, limit, reactive
@@ -200,7 +197,10 @@ LocalCollection.Cursor.prototype._publishCursor = function (sub) {
   if (! self.collection.name)
     throw new Error("Can't publish a cursor from a collection without a name.");
   var collection = self.collection.name;
-  return Meteor.Collection._publishCursor(self, sub, collection);
+
+  // XXX minimongo should not depend on mongo-livedata!
+  return Packages['mongo-livedata'].
+    Meteor.Collection._publishCursor(self, sub, collection);
 };
 
 LocalCollection._isOrderedChanges = function (callbacks) {
@@ -429,7 +429,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
   var id = LocalCollection._idStringify(doc._id);
 
   if (_.has(self.docs, doc._id))
-    throw new LocalCollection.MinimongoError("Duplicate _id '" + doc._id + "'");
+    throw MinimongoError("Duplicate _id '" + doc._id + "'");
 
   self._saveOriginal(id, undefined);
   self.docs[id] = doc;
@@ -825,6 +825,7 @@ LocalCollection.prototype.resumeObservers = function () {
 };
 
 
+// NB: used by livedata
 LocalCollection._idStringify = function (id) {
   if (id instanceof LocalCollection._ObjectID) {
     return id.valueOf();
@@ -849,7 +850,7 @@ LocalCollection._idStringify = function (id) {
 };
 
 
-
+// NB: used by livedata
 LocalCollection._idParse = function (id) {
   if (id === "") {
     return id;
@@ -865,11 +866,6 @@ LocalCollection._idParse = function (id) {
     return id;
   }
 };
-
-if (typeof Meteor !== 'undefined') {
-  Meteor.idParse = LocalCollection._idParse;
-  Meteor.idStringify = LocalCollection._idStringify;
-}
 
 LocalCollection._makeChangedFields = function (newDoc, oldDoc) {
   var fields = {};
