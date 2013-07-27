@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Include a standard set of Meteor packages in your app."
+  summary: "Include a standard set of Meteor packages in your app"
 });
 
 Package.on_use(function(api) {
