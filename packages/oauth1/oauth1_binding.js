@@ -123,7 +123,8 @@ OAuth1Binding.prototype._call = function(method, url, headers, params, callback)
       }
     }, callback);
   } catch (err) {
-    throw new Error("Failed to send OAuth1 request to " + url + ". " + err.message);
+    throw _.extend(new Error("Failed to send OAuth1 request to " + url + ". " + err.message),
+                   {response: err.response});
   }
 };
 
