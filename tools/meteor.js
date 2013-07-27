@@ -655,6 +655,30 @@ Fiber(function () {
   });
 
   Commands.push({
+    name: "run-upgrader",
+    help: "Execute a specific upgrader by name. Intended for testing.",
+    hidden: true,
+    argumentParser: function (opt) {
+      opt .usage(
+        "Usage: meteor run-upgrader <upgrader>\n" +
+          "\n" +
+          "Runs a specific upgrader on the current app. This is for testing\n" +
+          "internal functionality of Meteor.");
+    },
+    func: function (argv, showUsage) {
+      if (argv._.length !== 1)
+        showUsage();
+
+      requireDirInApp("run-upgrader");
+
+      var upgraders = require("./upgraders.js");
+      console.log("%s: running upgrader %s.",
+                  path.basename(context.appDir), argv._[0]);
+      upgraders.runUpgrader(argv._[0], context.appDir);
+    }
+  });
+
+  Commands.push({
     name: "add",
     help: "Add a package to this project",
     argumentParser: function (opt) {

@@ -7,3 +7,4 @@ insecure
 preserve-inputs
 bootstrap
 random
+standard-app-packages

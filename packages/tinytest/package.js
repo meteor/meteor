@@ -16,7 +16,6 @@ Package.on_use(function (api) {
   api.add_files('model.js', ['client', 'server']);
 
   api.add_files('tinytest_client.js', 'client');
-  api.use('startup', 'server');
   api.add_files('tinytest_server.js', 'server');
 
   api.use('check');
