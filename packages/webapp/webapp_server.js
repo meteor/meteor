@@ -183,7 +183,9 @@ var runWebAppServer = function () {
     throw new Error("Unsupported format for client assets: " +
                     JSON.stringify(clientJson.format));
 
-  // XXX change all this config to something more reasonable
+  // XXX change all this config to something more reasonable.
+  //     and move it out of webapp into a different package so you don't
+  //     have weird things like mongo-livedata weak-dep'ing on webapp
   var deployConfig =
         process.env.METEOR_DEPLOY_CONFIG
         ? JSON.parse(process.env.METEOR_DEPLOY_CONFIG) : {};
