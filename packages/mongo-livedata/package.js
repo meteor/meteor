@@ -30,8 +30,6 @@ Package.on_use(function (api) {
   // questionable reasons) initialized by the webapp package.
   api.use('webapp', 'server', {weak: true});
 
-  api.export('MongoLivedataTest', 'server', {testOnly: true});
-
   api.add_files('mongo_driver.js', 'server');
   api.add_files('local_collection_driver.js', ['client', 'server']);
   api.add_files('remote_collection_driver.js', 'server');

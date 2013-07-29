@@ -7,8 +7,6 @@
  * these outside of a fiber they will explode!
  */
 
-MongoLivedataTest = {};
-
 var path = Npm.require('path');
 var MongoDB = Npm.require('mongodb');
 var Fiber = Npm.require('fibers');
@@ -993,7 +991,7 @@ _.extend(LiveResultsSet.prototype, {
 //   - If you disconnect and reconnect from Mongo, it will essentially restart
 //     the query, which will lead to duplicate results. This is pretty bad,
 //     but if you include a field called 'ts' which is inserted as
-//     new MongoLivedataTest.MongoTimestamp(0, 0) (which is initialized to the
+//     new MongoConnection.MongoTimestamp(0, 0) (which is initialized to the
 //     current Mongo-style timestamp), we'll be able to find the place to
 //     restart properly. (This field is specifically understood by Mongo with an
 //     optimization which allows it to find the right place to start without
@@ -1082,5 +1080,5 @@ MongoConnection.prototype._observeChangesTailable = function (
 
 // XXX We probably need to find a better way to expose this. Right now
 // it's only used by tests, but in fact you need it in normal
-// operation to interact with capped collections.
-MongoLivedataTest.MongoTimestamp = MongoDB.Timestamp;
+// operation to interact with capped collections (eg, Galaxy uses it).
+MongoConnection.MongoTimestamp = MongoDB.Timestamp;
