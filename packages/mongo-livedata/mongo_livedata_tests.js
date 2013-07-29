@@ -876,7 +876,11 @@ if (Meteor.isServer) {
 Tinytest.add('mongo-livedata - rewrite selector', function (test) {
   test.equal(Meteor.Collection._rewriteSelector({x: /^o+B/im}),
              {x: {$regex: '^o+B', $options: 'im'}});
+  test.equal(Meteor.Collection._rewriteSelector({x: {$regex: /^o+B/im}}),
+             {x: {$regex: '^o+B', $options: 'im'}});
   test.equal(Meteor.Collection._rewriteSelector({x: /^o+B/}),
+             {x: {$regex: '^o+B'}});
+  test.equal(Meteor.Collection._rewriteSelector({x: {$regex: /^o+B/}}),
              {x: {$regex: '^o+B'}});
   test.equal(Meteor.Collection._rewriteSelector('foo'),
              {_id: 'foo'});
@@ -886,13 +890,15 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
       {'$or': [
         {x: /^o/},
         {y: /^p/},
-        {z: 'q'}
+        {z: 'q'},
+        {w: {$regex: /^r/}}
       ]}
     ),
     {'$or': [
       {x: {$regex: '^o'}},
       {y: {$regex: '^p'}},
-      {z: 'q'}
+      {z: 'q'},
+      {w: {$regex: '^r'}}
     ]}
   );
 
@@ -901,22 +907,28 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
       {'$or': [
         {'$and': [
           {x: /^a/i},
-          {y: /^b/}
+          {y: /^b/},
+          {z: {$regex: /^c/i}},
+          {w: {$regex: '^[abc]', $options: 'i'}} // make sure we don't break vanilla selectors
         ]},
         {'$nor': [
-          {s: /^c/},
-          {t: /^d/i}
+          {s: /^d/},
+          {t: /^e/i},
+          {u: {$regex: /^f/i}}
         ]}
       ]}
     ),
     {'$or': [
       {'$and': [
         {x: {$regex: '^a', $options: 'i'}},
-        {y: {$regex: '^b'}}
+        {y: {$regex: '^b'}},
+        {z: {$regex: '^c', $options: 'i'}},
+        {w: {$regex: '^[abc]', $options: 'i'}}
       ]},
       {'$nor': [
-        {s: {$regex: '^c'}},
-        {t: {$regex: '^d', $options: 'i'}}
+        {s: {$regex: '^d'}},
+        {t: {$regex: '^e', $options: 'i'}},
+        {u: {$regex: '^f', $options: 'i'}}
       ]}
     ]}
   );
