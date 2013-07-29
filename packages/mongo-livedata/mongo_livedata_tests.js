@@ -909,7 +909,9 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
           {x: /^a/i},
           {y: /^b/},
           {z: {$regex: /^c/i}},
-          {w: {$regex: '^[abc]', $options: 'i'}} // make sure we don't break vanilla selectors
+          {w: {$regex: '^[abc]', $options: 'i'}}, // make sure we don't break vanilla selectors
+          {v: {$regex: /O/, $options: 'i'}}, // $options should override the ones on the RegExp object
+          {u: {$regex: /O/m, $options: 'i'}} // $options should override the ones on the RegExp object
         ]},
         {'$nor': [
           {s: /^d/},
@@ -923,7 +925,9 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
         {x: {$regex: '^a', $options: 'i'}},
         {y: {$regex: '^b'}},
         {z: {$regex: '^c', $options: 'i'}},
-        {w: {$regex: '^[abc]', $options: 'i'}}
+        {w: {$regex: '^[abc]', $options: 'i'}},
+        {v: {$regex: 'O', $options: 'i'}},
+        {u: {$regex: 'O', $options: 'i'}}
       ]},
       {'$nor': [
         {s: {$regex: '^d'}},

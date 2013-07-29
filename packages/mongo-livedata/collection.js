@@ -266,6 +266,10 @@ Meteor.Collection._rewriteSelector = function (selector) {
       ret[key] = convertRegexpToMongoSelector(value);
     } else if (value && value.$regex instanceof RegExp) {
       ret[key] = convertRegexpToMongoSelector(value.$regex);
+      // if value is {$regex: /foo/, $options: ...} then $options
+      // override the ones set on $regex.
+      if (value.$options)
+        ret[key].$options = value.$options;
     }
     else if (_.contains(['$or','$and','$nor'], key)) {
       // Translate lower levels of $and/$or/$nor
