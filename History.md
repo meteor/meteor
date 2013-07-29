@@ -1,6 +1,8 @@
 
 ## vNEXT
 
+* Fix Mongo selectors of the form: {$regex: /foo/}.
+
 * Calling `findOne()` on the server no longer loads the full query result
   into memory.
 
