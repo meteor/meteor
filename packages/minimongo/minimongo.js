@@ -199,7 +199,7 @@ LocalCollection.Cursor.prototype._publishCursor = function (sub) {
   var collection = self.collection.name;
 
   // XXX minimongo should not depend on mongo-livedata!
-  return Packages['mongo-livedata'].
+  return Package['mongo-livedata'].
     Meteor.Collection._publishCursor(self, sub, collection);
 };
 
