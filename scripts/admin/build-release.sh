@@ -45,7 +45,8 @@ cat > "$OUTDIR/release.json" <<ENDOFMANIFEST
   "tools": "$TOOLS_VERSION",
   "packages": {
 $MANIFEST_PACKAGE_CHUNK
-  }
+  },
+  "upgraders": ["app-packages"]
 }
 ENDOFMANIFEST
 
