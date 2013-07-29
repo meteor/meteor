@@ -916,7 +916,9 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
         {'$nor': [
           {s: /^d/},
           {t: /^e/i},
-          {u: {$regex: /^f/i}}
+          {u: {$regex: /^f/i}},
+          // even empty string overrides built-in flags
+          {v: {$regex: /^g/i, $options: ''}}
         ]}
       ]}
     ),
@@ -932,7 +934,8 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
       {'$nor': [
         {s: {$regex: '^d'}},
         {t: {$regex: '^e', $options: 'i'}},
-        {u: {$regex: '^f', $options: 'i'}}
+        {u: {$regex: '^f', $options: 'i'}},
+        {v: {$regex: '^g', $options: ''}}
       ]}
     ]}
   );
