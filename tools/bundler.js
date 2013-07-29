@@ -10,7 +10,7 @@
 //    - name: short, unique name for program, for referring to it
 //      programmatically
 //    - arch: architecture that this program targets. Something like
-//            "native", "native.linux.x86_64", or "browser.w3c".
+//            "os", "os.linux.x86_64", or "browser.w3c".
 //    - path: directory (relative to star.json) containing this program
 //
 //    XXX in the future this will also contain instructions for
@@ -22,8 +22,8 @@
 //  - plugins: array of plugins in the star, each an object:
 //    - name: short, unique name for plugin, for referring to it
 //      programmatically
-//    - arch: typically 'native' (for a portable plugin) or eg
-//      'native.linux.x86_64' for one that include native node_modules
+//    - arch: typically 'os' (for a portable plugin) or eg
+//      'os.linux.x86_64' for one that include native node_modules
 //    - path: path (relative to star.json) to the control file (eg,
 //      program.json) for this plugin
 //
@@ -82,7 +82,7 @@
 // page is 'app.html'.
 //
 //
-// == Format of a program when arch is "native.*" ==
+// == Format of a program when arch is "os.*" ==
 //
 // Standard:
 //
@@ -145,13 +145,13 @@
 // it's fine and it's probably actually cleaner, because it means that
 // the plugin can be treated as a self-contained unit.
 //
-// Note that while the spec for "native.*" is going to change to
+// Note that while the spec for "os.*" is going to change to
 // represent an arbitrary POSIX (or Windows) process rather than
 // assuming a nodejs host, these plugins will always refer to
 // JavaScript code (that potentially might be a plugin to be loaded
 // into an existing JS VM). But this seems to be a concern that is
 // somewhat orthogonal to arch (these plugins can still use packages
-// of arch "native.*".) There is probably a missing abstraction here
+// of arch "os.*".) There is probably a missing abstraction here
 // somewhere (decoupling target type from architecture) but it can
 // wait until later.
 
@@ -389,7 +389,7 @@ var Target = function (options) {
   // Package library to use for resolving package dependenices.
   self.library = options.library;
 
-  // Something like "browser.w3c" or "native" or "native.osx.x86_64"
+  // Something like "browser.w3c" or "os" or "os.osx.x86_64"
   self.arch = options.arch;
 
   // All of the Slices that are to go into this target, in the order
@@ -572,7 +572,7 @@ _.extend(Target.prototype, {
     var self = this;
 
     var isBrowser = archinfo.matches(self.arch, "browser");
-    var isNative = archinfo.matches(self.arch, "native");
+    var isOs = archinfo.matches(self.arch, "os");
 
     // Copy their resources into the bundle in order
     _.each(self.slices, function (slice) {
@@ -582,7 +582,7 @@ _.extend(Target.prototype, {
       var resources = slice.getResources(self.arch);
 
       // First, find all the assets, so that we can associate them with each js
-      // resource (for native slices).
+      // resource (for os slices).
       var sliceAssets = {};
       _.each(resources, function (resource) {
         if (resource.type !== "asset")
@@ -590,7 +590,7 @@ _.extend(Target.prototype, {
 
         var f = new File({data: resource.data, cacheable: false});
 
-        var relPath = isNative
+        var relPath = isOs
               ? path.join("assets", resource.servePath)
               : stripLeadingSlash(resource.servePath);
         f.setTargetPathFromRelPath(relPath);
@@ -628,7 +628,7 @@ _.extend(Target.prototype, {
             f.setUrlFromRelPath(resource.servePath);
           }
 
-          if (resource.type === "js" && isNative) {
+          if (resource.type === "js" && isOs) {
             // Hack, but otherwise we'll end up putting app assets on this file.
             if (resource.servePath !== "/packages/global-imports.js")
               f.setAssets(sliceAssets);
@@ -714,10 +714,10 @@ _.extend(Target.prototype, {
 
   // Return the most inclusive architecture with which this target is
   // compatible. For example, if we set out to build a
-  // 'native.linux.x86_64' version of this target (by passing that as
+  // 'os.linux.x86_64' version of this target (by passing that as
   // the 'arch' argument to the constructor), but ended up not
   // including anything that was specific to Linux, the return value
-  // would be 'native'.
+  // would be 'os'.
   mostCompatibleArch: function () {
     var self = this;
     return archinfo.leastSpecificDescription(_.pluck(self.slices, 'arch'));
@@ -1182,7 +1182,7 @@ var JsImageTarget = function (options) {
   var self = this;
   Target.apply(this, arguments);
 
-  if (! archinfo.matches(self.arch, "native"))
+  if (! archinfo.matches(self.arch, "os"))
     // Conceivably we could support targeting the browser as long as
     // no native node modules were used.  No use case for that though.
     throw new Error("JsImageTarget targeting something unusual?");
@@ -1227,7 +1227,7 @@ var ServerTarget = function (options) {
   self.releaseStamp = options.releaseStamp;
   self.library = options.library;
 
-  if (! archinfo.matches(self.arch, "native"))
+  if (! archinfo.matches(self.arch, "os"))
     throw new Error("ServerTarget targeting something that isn't a server?");
 };
 
@@ -1284,9 +1284,9 @@ _.extend(ServerTarget.prototype, {
 
     // Script that fetches the dev_bundle and runs the server bootstrap
     var archToPlatform = {
-      'native.linux.x86_32': 'Linux_i686',
-      'native.linux.x86_64': 'Linux_x86_64',
-      'native.osx.x86_64': 'Darwin_x86_64'
+      'os.linux.x86_32': 'Linux_i686',
+      'os.linux.x86_64': 'Linux_x86_64',
+      'os.osx.x86_64': 'Darwin_x86_64'
     };
     var arch = archinfo.host();
     var platform = archToPlatform[arch];

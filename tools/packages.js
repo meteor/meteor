@@ -20,7 +20,7 @@ var sourcemap = require('source-map');
 // unipackage/slice changes, but this version (which is build-tool-specific) can
 // change when the the contents (not structure) of the built output changes. So
 // eg, if we improve the linker's static analysis, this should be bumped.
-exports.BUILT_BY = 'meteor/4';
+exports.BUILT_BY = 'meteor/5';
 
 // Find all files under `rootPath` that have an extension in
 // `extensions` (an array of extensions without leading dot), and
@@ -338,7 +338,7 @@ _.extend(Slice.prototype, {
       //   in the module.
       // - addAsset({ path: "my/image.png", data: Buffer })
       //   Add a file to serve as-is over HTTP (browser targets) or
-      //   to include as-is in the bundle (native targets).
+      //   to include as-is in the bundle (os targets).
       //   This time `data` is a Buffer rather than a string. For
       //   browser targets, it will be served at the exact path you
       //   request (concatenated with rootOutputPath). For server
@@ -354,7 +354,7 @@ _.extend(Slice.prototype, {
       //
       // XXX for now, these handlers must only generate portable code
       // (code that isn't dependent on the arch, other than 'browser'
-      // vs 'native') -- they can look at the arch that is provided
+      // vs 'os') -- they can look at the arch that is provided
       // but they can't rely on the running on that particular arch
       // (in the end, an arch-specific slice will be emitted only if
       // there are native node modules.) Obviously this should
@@ -875,7 +875,7 @@ _.extend(Package.prototype, {
 
   // Return the slice of the package to use for a given slice name
   // (eg, 'main' or 'test') and target architecture (eg,
-  // 'native.linux.x86_64' or 'browser'), or throw an exception if
+  // 'os.linux.x86_64' or 'browser'), or throw an exception if
   // that packages can't be loaded under these circumstances.
   getSingleSlice: function (name, arch) {
     var self = this;
@@ -1109,7 +1109,7 @@ _.extend(Package.prototype, {
       return source;
     });
 
-    var arch = isPortable ? "native" : archinfo.host();
+    var arch = isPortable ? "os" : archinfo.host();
     var slice = new Slice(self, {
       name: options.sliceName,
       arch: arch,
@@ -1121,7 +1121,7 @@ _.extend(Package.prototype, {
     });
     self.slices.push(slice);
 
-    self.defaultSlices = {'native': [options.sliceName]};
+    self.defaultSlices = {'os': [options.sliceName]};
   },
 
   // Initialize a package from a legacy-style (package.js) package
@@ -1696,9 +1696,9 @@ _.extend(Package.prototype, {
     }
 
     // Create slices
-    var nativeArch = isPortable ? "native" : archinfo.host();
+    var osArch = isPortable ? "os" : archinfo.host();
     _.each(["use", "test"], function (role) {
-      _.each(["browser", nativeArch], function (arch) {
+      _.each(["browser", osArch], function (arch) {
         var where = (arch === "browser") ? "client" : "server";
 
         // Everything depends on the package 'meteor', which sets up
@@ -1734,14 +1734,14 @@ _.extend(Package.prototype, {
           noExports: role === "test",
           declaredExports: role === "use" ? exports[where] : null,
           dependencyInfo: dependencyInfo,
-          nodeModulesPath: arch === nativeArch && nodeModulesPath || undefined
+          nodeModulesPath: arch === osArch && nodeModulesPath || undefined
         }));
       });
     });
 
     // Default slices
-    self.defaultSlices = { browser: ['main'], 'native': ['main'] };
-    self.testSlices = { browser: ['tests'], 'native': ['tests'] };
+    self.defaultSlices = { browser: ['main'], 'os': ['main'] };
+    self.testSlices = { browser: ['tests'], 'os': ['tests'] };
   },
 
   // Initialize a package from a legacy-style application directory
@@ -1758,7 +1758,7 @@ _.extend(Package.prototype, {
     _.each(["client", "server"], function (sliceName) {
       // Determine used packages
       var names = project.get_packages(appDir);
-      var arch = sliceName === "server" ? "native" : "browser";
+      var arch = sliceName === "server" ? "os" : "browser";
 
       // Create slice
       var slice = new Slice(self, {
@@ -1902,7 +1902,7 @@ _.extend(Package.prototype, {
       };
     });
 
-    self.defaultSlices = { browser: ['client'], 'native': ['server'] };
+    self.defaultSlices = { browser: ['client'], 'os': ['server'] };
   },
 
   // Initialize a package from a prebuilt Unipackage on disk. On
