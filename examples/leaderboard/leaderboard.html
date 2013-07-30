@@ -15,12 +15,11 @@
     {{/each}}
   </div>
 
-  {{#if selected_name}}
-  <div class="details">
+  {{! XXX revert back to if selected_name once we have event delegation }}
+  <div class="details" style="display: {{upvote_display}}"}>
     <div class="name">{{selected_name}}</div>
     <input type="button" class="inc" value="Give 5 points" />
   </div>
-  {{/if}}
 
   {{#unless selected_name}}
   <div class="none">Click a player to select</div>
