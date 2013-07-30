@@ -20,7 +20,7 @@ var sourcemap = require('source-map');
 // unipackage/slice changes, but this version (which is build-tool-specific) can
 // change when the the contents (not structure) of the built output changes. So
 // eg, if we improve the linker's static analysis, this should be bumped.
-exports.BUILT_BY = 'meteor/5';
+exports.BUILT_BY = 'meteor/6';
 
 // Find all files under `rootPath` that have an extension in
 // `extensions` (an array of extensions without leading dot), and
@@ -857,12 +857,6 @@ var Package = function (library) {
   // building, into two flags.
   self.pluginsBuilt = false;
   self.slicesBuilt = false;
-
-  // True if the dependencyInfo in the slices can be taken as as
-  // accurate. (False if we loaded the package from disk and it didn't
-  // come with dependency info, eg, it was a release build built by
-  // someone else.)
-  self.haveDependencyInfo = false;
 };
 
 _.extend(Package.prototype, {
@@ -1053,7 +1047,6 @@ _.extend(Package.prototype, {
       slice.build();
     });
     self.slicesBuilt = true;
-    self.haveDependencyInfo = true;
   },
 
   // Programmatically initialized a package from scratch. For now,
@@ -1951,21 +1944,16 @@ _.extend(Package.prototype, {
 
     // Read the dependency info (if present), and make the strings
     // back into regexps
-    var haveDependencyInfo, dependencies;
-    if (buildInfoJson.dependencies) {
-      haveDependencyInfo = true;
-      dependencies = buildInfoJson.dependencies;
-      _.each(dependencies.directories, function (d) {
+    var sliceDependencies = buildInfoJson.sliceDependencies || {};
+    _.each(sliceDependencies, function (dependencyInfo, sliceTag) {
+      _.each(dependencyInfo.directories, function (d) {
         _.each(["include", "exclude"], function (k) {
           d[k] = _.map(d[k], function (s) {
             return new RegExp(s);
           });
         });
       });
-    } else {
-      haveDependencyInfo = false;
-      dependencies = { files: {}, directories: {} };
-    }
+    });
 
     // If we're supposed to check the dependencies, go ahead and do so
     if (options.onlyIfUpToDate) {
@@ -1985,7 +1973,7 @@ _.extend(Package.prototype, {
         return false;
       }
 
-      if (! self.checkUpToDate(dependencies))
+      if (! self.checkUpToDate(sliceDependencies))
         return false;
     }
 
@@ -1994,7 +1982,6 @@ _.extend(Package.prototype, {
       summary: mainJson.summary,
       internal: mainJson.internal
     };
-    self.haveDependencyInfo = haveDependencyInfo;
     self.defaultSlices = mainJson.defaultSlices;
     self.testSlices = mainJson.testSlices;
 
@@ -2044,7 +2031,7 @@ _.extend(Package.prototype, {
       var slice = new Slice(self, {
         name: sliceMeta.name,
         arch: sliceMeta.arch,
-        dependencyInfo: dependencies,
+        dependencyInfo: sliceDependencies[sliceMeta.path],
         nodeModulesPath: nodeModulesPath,
         uses: _.map(sliceJson.uses, function (u) {
           return {
@@ -2120,29 +2107,35 @@ _.extend(Package.prototype, {
   // Try to check if this package is up-to-date (that is, whether its
   // source files have been modified.) True if we have dependency info
   // and it says that the package is up-to-date. False if a source
-  // file has changed OR if we loaded the package from disk and it
-  // didn't have dependency info.
+  // file has changed.
   //
-  // The argument _dependencyInfo is for internal use and should not
-  // be set by the caller.
-  checkUpToDate: function (_dependencyInfo) {
+  // The argument _sliceDependencies is used when reading from disk when there
+  // are no slices yet; don't pass it from outside this file.
+  checkUpToDate: function (_sliceDependencies) {
     var self = this;
 
     // Compute the dependency info to use
-    var dependencyInfo = _dependencyInfo;
-    if (! dependencyInfo && self.haveDependencyInfo) {
-      dependencyInfo = { files: {}, directories: {} };
+    var dependencyInfo = { files: {}, directories: {} };
+
+    var merge = function (di) {
+      // XXX is naive merge sufficient here?
+      _.extend(dependencyInfo.files, di.files);
+      _.extend(dependencyInfo.directories, di.directories);
+    };
+
+    if (_sliceDependencies) {
+      _.each(_sliceDependencies, function (dependencyInfo, sliceTag) {
+        merge(dependencyInfo);
+      });
+    } else {
       _.each(self.slices, function (slice) {
-        // XXX is naive merge sufficient here?
-        _.extend(dependencyInfo.files,
-                 slice.dependencyInfo.files);
-        _.extend(dependencyInfo.directories,
-                 slice.dependencyInfo.directories);
+        merge(slice.dependencyInfo);
       });
     }
 
-    if (! dependencyInfo)
-      return false;
+    // XXX There used to be a concept in this file of "packages loaded from disk
+    // without having dependencyInfo, but it was unclear when that would happen,
+    // so this was removed.
 
     var isUpToDate = true;
     var watcher = new watch.Watcher({
@@ -2190,7 +2183,7 @@ _.extend(Package.prototype, {
 
       var buildInfoJson = {
         builtBy: exports.BUILT_BY,
-        dependencies: { files: {}, directories: {} },
+        sliceDependencies: { },
         source: options.buildOfPath || undefined
       };
 
@@ -2239,12 +2232,9 @@ _.extend(Package.prototype, {
           path: sliceJsonFile
         });
 
-        // Merge slice dependencies
-        // XXX is naive merge sufficient here?
-        _.extend(buildInfoJson.dependencies.files,
-                 slice.dependencyInfo.files);
-        _.extend(buildInfoJson.dependencies.directories,
-                 slice.dependencyInfo.directories);
+        // Save slice dependencies. Keyed by the json path rather than thinking
+        // too hard about how to encode pair (name, arch).
+        buildInfoJson.sliceDependencies[sliceJsonFile] = slice.dependencyInfo;
 
         // Construct slice metadata
         var sliceJson = {
@@ -2374,10 +2364,12 @@ _.extend(Package.prototype, {
 
       // Prep dependencies for serialization by turning regexps into
       // strings
-      _.each(buildInfoJson.dependencies.directories, function (d) {
-        _.each(["include", "exclude"], function (k) {
-          d[k] = _.map(d[k], function (r) {
-            return r.source;
+      _.each(buildInfoJson.sliceDependencies, function (dependencyInfo) {
+        _.each(dependencyInfo.directories, function (d) {
+          _.each(["include", "exclude"], function (k) {
+            d[k] = _.map(d[k], function (r) {
+              return r.source;
+            });
           });
         });
       });
