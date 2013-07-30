@@ -1946,13 +1946,8 @@ _.extend(Package.prototype, {
     // back into regexps
     var sliceDependencies = buildInfoJson.sliceDependencies || {};
     _.each(sliceDependencies, function (dependencyInfo, sliceTag) {
-      _.each(dependencyInfo.directories, function (d) {
-        _.each(["include", "exclude"], function (k) {
-          d[k] = _.map(d[k], function (s) {
-            return new RegExp(s);
-          });
-        });
-      });
+      sliceDependencies[sliceTag] =
+        makeDependencyInfoIntoRegexps(dependencyInfo);
     });
 
     // If we're supposed to check the dependencies, go ahead and do so
@@ -2234,7 +2229,8 @@ _.extend(Package.prototype, {
 
         // Save slice dependencies. Keyed by the json path rather than thinking
         // too hard about how to encode pair (name, arch).
-        buildInfoJson.sliceDependencies[sliceJsonFile] = slice.dependencyInfo;
+        buildInfoJson.sliceDependencies[sliceJsonFile] =
+          makeDependencyInfoSerializable(slice.dependencyInfo);
 
         // Construct slice metadata
         var sliceJson = {
@@ -2362,18 +2358,6 @@ _.extend(Package.prototype, {
         });
       });
 
-      // Prep dependencies for serialization by turning regexps into
-      // strings
-      _.each(buildInfoJson.sliceDependencies, function (dependencyInfo) {
-        _.each(dependencyInfo.directories, function (d) {
-          _.each(["include", "exclude"], function (k) {
-            d[k] = _.map(d[k], function (r) {
-              return r.source;
-            });
-          });
-        });
-      });
-
       builder.writeJson("unipackage.json", mainJson);
       builder.writeJson("buildinfo.json", buildInfoJson);
       builder.complete();
@@ -2383,6 +2367,34 @@ _.extend(Package.prototype, {
     }
   }
 });
+
+// Convert regex to string.
+var makeDependencyInfoSerializable = function (dependencyInfo) {
+  var out = {files: dependencyInfo.files, directories: {}};
+  _.each(dependencyInfo.directories, function (d, path) {
+    var dirInfo = out.directories[path] = {};
+    _.each(["include", "exclude"], function (k) {
+      dirInfo[k] = _.map(d[k], function (r) {
+        return r.source;
+      });
+    });
+  });
+  return out;
+};
+
+// Convert string to regex.
+var makeDependencyInfoIntoRegexps = function (dependencyInfo) {
+  var out = {files: dependencyInfo.files, directories: {}};
+  _.each(dependencyInfo.directories, function (d, path) {
+    var dirInfo = out.directories[path] = {};
+    _.each(["include", "exclude"], function (k) {
+      dirInfo[k] = _.map(d[k], function (s) {
+        return new RegExp(s);
+      });
+    });
+  });
+  return out;
+};
 
 var packages = exports;
 _.extend(exports, {
