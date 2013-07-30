@@ -709,6 +709,7 @@ _.extend(Slice.prototype, {
           path: compileStep.inputPath,
           sourcePath: compileStep.inputPath,
           // XXX eventually get rid of backward-compatibility "raw" name
+          // XXX COMPAT WITH 0.6.4
           bare: compileStep.fileOptions.bare || compileStep.fileOptions.raw
         });
       }
@@ -826,12 +827,12 @@ var Package = function (library) {
   self.testSlices = {};
 
   // The information necessary to build the plugins in this
-  // package. Map from plugin name to object with keys 'name', 'us',
+  // package. Map from plugin name to object with keys 'name', 'use',
   // 'sources', and 'npmDependencies'.
   self.pluginInfo = {};
 
-  // Plugins in this package. Map from plugin name to
-  // bundler.Plugin. Present only when isBuilt is true.
+  // Plugins in this package. Map from plugin name to JsImage. Present only when
+  // isBuilt is true.
   self.plugins = {};
 
   // Dependencies for any plugins in this package. Present only when
@@ -1187,6 +1188,7 @@ _.extend(Package.prototype, {
         roleHandlers.test = f;
       },
 
+      // XXX COMPAT WITH 0.6.4
       // extension doesn't contain a dot
       register_extension: function (extension, callback) {
         if (_.has(self.legacyExtensionHandlers, extension)) {
@@ -1619,6 +1621,7 @@ _.extend(Package.prototype, {
               });
             });
           },
+          // XXX COMPAT WITH 0.6.4
           error: function () {
             // I would try to support this but I don't even know what
             // its signature was supposed to be anymore
@@ -1627,6 +1630,7 @@ _.extend(Package.prototype, {
               { useMyCaller: true });
             // recover by ignoring
           },
+          // XXX COMPAT WITH 0.6.4
           registered_extensions: function () {
             buildmessage.error(
               "api.registered_extensions() is no longer supported",
