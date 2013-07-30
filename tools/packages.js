@@ -1473,10 +1473,19 @@ _.extend(Package.prototype, {
             return x;
           return x ? [x] : [];
         };
+
+        var places = ['client', 'server'];
         var toWhereArray = function (where) {
-          if (where instanceof Array)
+          if (where instanceof Array) {
+            if (_.difference(where, places).length > 0)
+                buildmessage.error(where + " is not a valid argument.",
+                    { useMyCaller: true });
             return where;
-          return where ? [where] : ['client', 'server'];
+          }
+          if (_.indexOf(places, where) === -1 )
+              buildmessage.error(where + " is not a valid argument.",
+                  { useMyCaller: true });
+          return where ? [where] : places;
         };
 
         var api = {
