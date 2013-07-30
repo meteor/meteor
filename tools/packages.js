@@ -2192,6 +2192,11 @@ _.extend(Package.prototype, {
         plugins: []
       };
 
+      // Note: The contents of buildInfoJson (with the root directory of the
+      // Meteor checkout naively deleted) gets its SHA taken to determine the
+      // built package's warehouse version. So it should not contain
+      // platform-dependent data and should contain all sources of change to the
+      // unipackage's output.  See scripts/admin/build-package-tarballs.sh.
       var buildInfoJson = {
         builtBy: exports.BUILT_BY,
         sliceDependencies: { },
