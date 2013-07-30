@@ -1429,6 +1429,9 @@ treats the following fields specially:
 Like all [Meteor.Collection](#collections)s, you can access all
 documents on the server, but only those specifically published by the server are
 available on the client.
+Notably, if you removed the autopublish package, the `services` Object are unavailable. To get it back, you can call
+
+    Meteor.default_server.autopublish()
 
 By default, the current user's `username`, `emails` and `profile` are
 published to the client. You can publish additional fields for the
