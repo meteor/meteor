@@ -801,6 +801,8 @@ Fiber(function () {
     help: "Pack this project up into a tarball",
     argumentParser: function (opt) {
       opt.boolean('for-deploy')
+        .boolean('debug')
+        .describe('debug', "bundle in debug mode (don't minify, etc)")
         .usage("Usage: meteor bundle <output_file.tar.gz>\n" +
                "\n" +
                "Package this project up for deployment. The output is a tarball that\n" +
@@ -829,7 +831,7 @@ Fiber(function () {
       var bundler = require(path.join(__dirname, 'bundler.js'));
       var bundleResult = bundler.bundle(context.appDir, bundle_path, {
         nodeModulesMode: argv['for-deploy'] ? 'skip' : 'copy',
-        minify: true,  // XXX allow --debug
+        minify: !argv.debug,
         releaseStamp: context.releaseVersion,
         library: context.library
       });
