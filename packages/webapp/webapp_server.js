@@ -12,11 +12,8 @@ var optimist = Npm.require('optimist');
 var useragent = Npm.require('useragent');
 var send = Npm.require('send');
 
-// XXX we have to export WebApp as a single symbol because we modify
-// it (for example, it has an attribute httpServer which isn't known
-// until runWebAppServer-time.) It would be nice to refactor so that
-// this isn't the case and we can export the symbols individually.
 WebApp = {};
+WebAppInternals = {};
 
 var findGalaxy = _.once(function () {
   if (!('GALAXY' in process.env)) {
@@ -445,7 +442,7 @@ var runWebAppServer = function () {
         console.log("LISTENING"); // must match run.js
       var port = httpServer.address().port;
       if (bind.viaProxy && bind.viaProxy.proxyEndpoint) {
-        bindToProxy(bind.viaProxy);
+        WebAppInternals.bindToProxy(bind.viaProxy);
       } else if (bind.viaProxy) {
         // bind via the proxy, but we'll have to find it ourselves via
         // ultraworld.
@@ -457,7 +454,7 @@ var runWebAppServer = function () {
         var doBinding = function (proxyService) {
           if (proxyService.providers.proxy) {
             Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
-            bindToProxy(_.extend({
+            WebAppInternals.bindToProxy(_.extend({
               proxyEndpoint: proxyService.providers.proxy
             }, bind.viaProxy));
           }
@@ -482,8 +479,7 @@ var runWebAppServer = function () {
   };
 };
 
-bindToProxy = function (proxyConfig) {
-
+WebAppInternals.bindToProxy = function (proxyConfig) {
   var securePort = proxyConfig.securePort || 4433;
   var insecurePort = proxyConfig.insecurePort || 8080;
   var bindPathPrefix = proxyConfig.bindPathPrefix || "";
