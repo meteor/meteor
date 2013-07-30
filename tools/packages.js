@@ -832,11 +832,16 @@ var Package = function (library) {
   self.pluginInfo = {};
 
   // Plugins in this package. Map from plugin name to JsImage. Present only when
-  // isBuilt is true.
+  // pluginsBuilt is true.
   self.plugins = {};
 
-  // Dependencies for any plugins in this package. Complete only when
-  // isBuilt is true.
+  // Full transitive dependencies for all plugins in this package, as well as
+  // this package's package.js. If any of these dependencies change, not only
+  // may our plugins need to be rebuilt, but any package that directly uses this
+  // package needs to be rebuilt in case the change to plugins affected
+  // compilation.
+  //
+  // Complete only when pluginsBuilt is true.
   // XXX Refactor so that slice and plugin dependencies are handled by
   // the same mechanism.
   self.pluginDependencyInfo = { files: {}, directories: {} };
@@ -1950,6 +1955,13 @@ _.extend(Package.prototype, {
         makeDependencyInfoIntoRegexps(dependencyInfo);
     });
 
+    self.pluginDependencyInfo = makeDependencyInfoIntoRegexps(
+      buildInfoJson.pluginDependencies || {});
+    // minor hack: sneak the plugin dependency info into the dictionary passed
+    // to checkUpToDate so that changes to anything compiled into our plugins
+    // causes us to recompile.
+    sliceDependencies[''] = self.pluginDependencyInfo;
+
     // If we're supposed to check the dependencies, go ahead and do so
     if (options.onlyIfUpToDate) {
       // Do we think we'll generate different contents than the tool that built
@@ -2183,6 +2195,8 @@ _.extend(Package.prototype, {
       var buildInfoJson = {
         builtBy: exports.BUILT_BY,
         sliceDependencies: { },
+        pluginDependencies: makeDependencyInfoSerializable(
+          self.pluginDependencyInfo),
         source: options.buildOfPath || undefined
       };
 
@@ -2374,6 +2388,8 @@ _.extend(Package.prototype, {
 
 // Convert regex to string.
 var makeDependencyInfoSerializable = function (dependencyInfo) {
+  if (!dependencyInfo)
+    dependencyInfo = { files: {}, directories: {} };
   var out = {files: dependencyInfo.files, directories: {}};
   _.each(dependencyInfo.directories, function (d, path) {
     var dirInfo = out.directories[path] = {};
@@ -2388,6 +2404,8 @@ var makeDependencyInfoSerializable = function (dependencyInfo) {
 
 // Convert string to regex.
 var makeDependencyInfoIntoRegexps = function (dependencyInfo) {
+  if (!dependencyInfo)
+    dependencyInfo = { files: {}, directories: {} };
   var out = {files: dependencyInfo.files, directories: {}};
   _.each(dependencyInfo.directories, function (d, path) {
     var dirInfo = out.directories[path] = {};
