@@ -2159,10 +2159,14 @@ _.extend(Package.prototype, {
   //   then modified.
   saveAsUnipackage: function (outputPath, options) {
     var self = this;
-    var builder = new Builder({ outputPath: outputPath });
+
+    if (!self.pluginsBuilt || !self.slicesBuilt)
+      throw new Error("Unbuilt packages cannot be saved");
 
     if (! self.canBeSavedAsUnipackage())
       throw new Error("This package can not yet be saved as a unipackage");
+
+    var builder = new Builder({ outputPath: outputPath });
 
     try {
 
