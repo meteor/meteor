@@ -424,10 +424,9 @@ Fiber(function () {
           argv._[0] = qualifySitename(argv._[0]);
         prepareForGalaxy(argv._[0], context, argv["ssh-identity"]);
         if (! context.galaxy) {
-          process.stdout.write("You must provide a galaxy to configure " +
-                               "(by setting the GALAXY environment variable " +
-                               "or providing a sitename " +
-                               "(meteor galaxy configure <sitename>).");
+          process.stdout.write(
+            "You must provide a galaxy to configure (by setting the GALAXY environment variable " +
+              "or providing a sitename (meteor galaxy configure <sitename>).\n");
           process.exit(1);
         }
         console.log("Visit http://localhost:" + context.galaxy.port + "/panel to configure your galaxy");
