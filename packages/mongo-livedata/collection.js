@@ -61,10 +61,12 @@ Meteor.Collection = function (name, options) {
 
   if (!options._driver) {
     if (name && self._connection === Meteor.server &&
-        typeof getRemoteCollectionDriver !== "undefined")
-      options._driver = getRemoteCollectionDriver();
-    else
+        typeof MongoInternals !== "undefined" &&
+        MongoInternals.defaultRemoteCollectionDriver) {
+      options._driver = MongoInternals.defaultRemoteCollectionDriver();
+    } else {
       options._driver = LocalCollectionDriver;
+    }
   }
 
   self._collection = options._driver.open(name, self._connection);

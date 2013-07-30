@@ -206,7 +206,7 @@ if (Meteor.isServer) {
       self.xs = [];
       self.expects = [];
       self.insert = function (fields) {
-        coll.insert(_.extend({ts: new Meteor._Mongo.MongoTimestamp(0, 0)},
+        coll.insert(_.extend({ts: new MongoInternals.MongoTimestamp(0, 0)},
                              fields));
       };
 

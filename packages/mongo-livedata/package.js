@@ -26,9 +26,12 @@ Package.on_use(function (api) {
   // Allow us to detect 'autopublish', and publish collections if it's loaded.
   api.use('autopublish', 'server', {weak: true});
 
-  // RemoteCollectionDriver gets its deployConfig from something that is (for
-  // questionable reasons) initialized by the webapp package.
+  // defaultRemoteCollectionDriver gets its deployConfig from something that is
+  // (for questionable reasons) initialized by the webapp package.
   api.use('webapp', 'server', {weak: true});
+
+  // Stuff that should be exposed via a real API, but we haven't yet.
+  api.export('MongoInternals', 'server');
 
   api.add_files('mongo_driver.js', 'server');
   api.add_files('local_collection_driver.js', ['client', 'server']);
