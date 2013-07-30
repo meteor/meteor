@@ -582,7 +582,7 @@ var link = function (options) {
   _.each(options.prelinkFiles, function (file) {
     if (file.sourceMap) {
       if (options.includeSourceMapInstructions)
-        header += "\n" + SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n";
+        header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
 
       // Bias the source map by the length of the header without
       // (fully) parsing and re-serializing it. (We used to do this
