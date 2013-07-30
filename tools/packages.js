@@ -835,7 +835,7 @@ var Package = function (library) {
   // isBuilt is true.
   self.plugins = {};
 
-  // Dependencies for any plugins in this package. Present only when
+  // Dependencies for any plugins in this package. Complete only when
   // isBuilt is true.
   // XXX Refactor so that slice and plugin dependencies are handled by
   // the same mechanism.
@@ -1153,6 +1153,12 @@ _.extend(Package.prototype, {
     var packageJsPath = path.join(self.sourceRoot, 'package.js');
     var code = fs.readFileSync(packageJsPath);
     var packageJsHash = Builder.sha1(code);
+
+    // Any package that depends on us needs to be rebuilt if our package.js file
+    // changes, because a change to package.js might add or remove a plugin,
+    // which could change a file from being handled by extension vs treated as
+    // an asset.
+    self.pluginDependencyInfo.files[packageJsPath] = packageJsHash;
 
     // == 'Package' object visible in package.js ==
     var Package = {
