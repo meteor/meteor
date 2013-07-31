@@ -87,10 +87,10 @@ var rejectBadPath = function (p) {
 // - implies
 // - getSourcesFunc
 // - exports
-// - dependencyInfo
+// - watchSet
 // - nodeModulesPath
 //
-// Do not include the source files in dependencyInfo. They will be
+// Do not include the source files in watchSet. They will be
 // added at compile time when the sources are actually read.
 var Slice = function (pkg, options) {
   var self = this;
@@ -160,10 +160,8 @@ var Slice = function (pkg, options) {
   self.declaredExports = options.declaredExports || null;
 
   // Files and directories that we want to monitor for changes in
-  // development mode, such as source files and package.js, in the
-  // format accepted by watch.Watcher.
-  self.dependencyInfo = options.dependencyInfo ||
-    { files: {}, directories: {} };
+  // development mode, such as source files and package.js, as a watch.WatchSet.
+  self.watchSet = options.watchSet || new watch.WatchSet();
 
   // Has this slice been compiled?
   self.isBuilt = false;
@@ -268,7 +266,7 @@ _.extend(Slice.prototype, {
       var ext = path.extname(relPath).substr(1);
       var handler = !fileOptions.isAsset && self._getSourceHandler(ext);
       var contents = fs.readFileSync(absPath);
-      self.dependencyInfo.files[absPath] = Builder.sha1(contents);
+      self.watchSet.addFile(absPath, Builder.sha1(contents));
 
       if (! handler) {
         // If we don't have an extension handler, serve this file as a
@@ -497,20 +495,16 @@ _.extend(Slice.prototype, {
       jsAnalyze: jsAnalyze
     });
 
-    // Add dependencies on the source code to any plugins that we
-    // could have used (we need to depend even on plugins that we
-    // didn't use, because if they were changed they might become
-    // relevant to us)
-    //
-    // XXX I guess they're probably properly disjoint since plugins
-    // probably include only file dependencies? Anyway it would be a
-    // strange situation if plugin source directories overlapped with
-    // other parts of your app
+    // Add dependencies on the source code to any plugins that we could have
+    // used. We need to depend even on plugins that we didn't use, because if
+    // they were changed they might become relevant to us. This means that we
+    // end up depending on every source file contributing to all plugins in the
+    // packages we use (including source files from other packages that the
+    // plugin program itself uses), as well as the package.js file from every
+    // package we directly use (since changing the package.js may add or remove
+    // a plugin).
     _.each(self._activePluginPackages(), function (otherPkg) {
-      _.extend(self.dependencyInfo.files,
-               otherPkg.pluginDependencyInfo.files);
-      _.extend(self.dependencyInfo.directories,
-               otherPkg.pluginDependencyInfo.directories);
+      self.watchSet.merge(otherPkg.pluginWatchSet);
     });
 
     self.prelinkFiles = results.files;
@@ -835,19 +829,17 @@ var Package = function (library) {
   // pluginsBuilt is true.
   self.plugins = {};
 
-  // Full transitive dependencies for all plugins in this package, as well as
-  // this package's package.js. If any of these dependencies change, not only
-  // may our plugins need to be rebuilt, but any package that directly uses this
-  // package needs to be rebuilt in case the change to plugins affected
-  // compilation.
+  // A WatchSet for the full transitive dependencies for all plugins in this
+  // package, as well as this package's package.js. If any of these dependencies
+  // change, our plugins need to be rebuilt... but also, any package that
+  // directly uses this package needs to be rebuilt in case the change to
+  // plugins affected compilation.
   //
   // Complete only when pluginsBuilt is true.
-  // XXX Refactor so that slice and plugin dependencies are handled by
-  // the same mechanism.
-  self.pluginDependencyInfo = { files: {}, directories: {} };
+  self.pluginWatchSet = new watch.WatchSet();
 
-  // True if plugins have been initialized (if
-  // _ensurePluginsInitialized has been called)
+  // True if plugins have been initialized (if _ensurePluginsInitialized has
+  // been called)
   self._pluginsInitialized = false;
 
   // Source file handlers registered by plugins. Map from extension
@@ -1031,16 +1023,10 @@ _.extend(Package.prototype, {
                                          info.name))
         });
 
-        if (buildResult.dependencyInfo) {
-          // Merge plugin dependencies
-          // XXX is naive merge sufficient here? should be, because
-          // plugins can't (for now) contain directory dependencies?
-          _.extend(self.pluginDependencyInfo.files,
-                   buildResult.dependencyInfo.files);
-          _.extend(self.pluginDependencyInfo.directories,
-                   buildResult.dependencyInfo.directories);
-        }
+        // Add this plugin's dependencies to our "plugin dependency" WatchSet.
+        self.pluginWatchSet.merge(buildResult.watchSet);
 
+        // Register the built plugin's code.
         self.plugins[info.name] = buildResult.image;
       });
     });
@@ -1156,7 +1142,7 @@ _.extend(Package.prototype, {
     // changes, because a change to package.js might add or remove a plugin,
     // which could change a file from being handled by extension vs treated as
     // an asset.
-    self.pluginDependencyInfo.files[packageJsPath] = packageJsHash;
+    self.pluginWatchSet.addFile(packageJsPath, packageJsHash);
 
     // == 'Package' object visible in package.js ==
     var Package = {
@@ -1728,10 +1714,12 @@ _.extend(Package.prototype, {
             uses[role][where].unshift({ spec: "meteor" });
         }
 
-        // We need to create a separate (non ===) copy of
-        // dependencyInfo for each slice.
-        var dependencyInfo = { files: {}, directories: {} };
-        dependencyInfo.files[packageJsPath] = packageJsHash;
+        // Each slice has its own separate WatchSet. This is so that, eg, a test
+        // slice's dependencies doesn't end up getting merged into the
+        // pluginWatchSet of a package that uses it: only the use slice's
+        // dependencies need to go there!
+        var watchSet = new watch.WatchSet();
+        watchSet.addFile(packageJsPath, packageJsHash);
 
         self.slices.push(new Slice(self, {
           name: ({ use: "main", test: "tests" })[role],
@@ -1741,7 +1729,7 @@ _.extend(Package.prototype, {
           getSourcesFunc: function () { return sources[role][where]; },
           noExports: role === "test",
           declaredExports: role === "use" ? exports[where] : null,
-          dependencyInfo: dependencyInfo,
+          watchSet: watchSet,
           nodeModulesPath: arch === osArch && nodeModulesPath || undefined
         }));
       });
@@ -1947,16 +1935,22 @@ _.extend(Package.prototype, {
     // XXX should comprehensively sanitize (eg, typecheck) everything
     // read from json files
 
-    // Read the dependency info (if present), and make the strings
-    // back into regexps
-    var sliceDependencies = buildInfoJson.sliceDependencies || {};
-    _.each(sliceDependencies, function (dependencyInfo, sliceTag) {
-      sliceDependencies[sliceTag] =
-        makeDependencyInfoIntoRegexps(dependencyInfo);
+    // Read the watch sets for each slice; keep them separate (for passing to
+    // the Slice constructor below) as well as merging them into one big
+    // WatchSet.
+    var mergedWatchSet = new watch.WatchSet();
+    var sliceWatchSets = {};
+    _.each(buildInfoJson.sliceDependencies, function (watchSetJSON, sliceTag) {
+      var watchSet = watch.WatchSet.fromJSON(watchSetJSON);
+      mergedWatchSet.merge(watchSet);
+      sliceWatchSets[sliceTag] = watchSet;
     });
 
-    self.pluginDependencyInfo = makeDependencyInfoIntoRegexps(
+    self.pluginWatchSet = watch.WatchSet.fromJSON(
       buildInfoJson.pluginDependencies);
+    // This might be redundant (since pluginWatchSet was probably merged into
+    // each slice watchSet when it was built) but shouldn't hurt.
+    mergedWatchSet.merge(self.pluginWatchSet);
 
     // If we're supposed to check the dependencies, go ahead and do so
     if (options.onlyIfUpToDate) {
@@ -1976,7 +1970,7 @@ _.extend(Package.prototype, {
         return false;
       }
 
-      if (! self.checkUpToDate(sliceDependencies))
+      if (! self.checkUpToDate(mergedWatchSet))
         return false;
     }
 
@@ -2034,7 +2028,7 @@ _.extend(Package.prototype, {
       var slice = new Slice(self, {
         name: sliceMeta.name,
         arch: sliceMeta.arch,
-        dependencyInfo: sliceDependencies[sliceMeta.path],
+        watchSet: sliceWatchSets[sliceMeta.path],
         nodeModulesPath: nodeModulesPath,
         uses: _.map(sliceJson.uses, function (u) {
           return {
@@ -2107,50 +2101,26 @@ _.extend(Package.prototype, {
     return true;
   },
 
-  // Try to check if this package is up-to-date (that is, whether its
-  // source files have been modified.) True if we have dependency info
-  // and it says that the package is up-to-date. False if a source
-  // file has changed.
+  // Try to check if this package is up-to-date (that is, whether its source
+  // files have been modified.) True if we have dependency info and it says that
+  // the package is up-to-date. False if a source file has changed.
   //
-  // The argument _sliceDependencies is used when reading from disk when there
-  // are no slices yet; don't pass it from outside this file.
-  checkUpToDate: function (_sliceDependencies) {
+  // The argument _watchSet is used when reading from disk when there are no
+  // slices yet; don't pass it from outside this file.
+  checkUpToDate: function (_watchSet) {
     var self = this;
 
-    // Compute the dependency info to use
-    var dependencyInfo = { files: {}, directories: {} };
-
-    var merge = function (di) {
-      // XXX is naive merge sufficient here?
-      _.extend(dependencyInfo.files, di.files);
-      _.extend(dependencyInfo.directories, di.directories);
-    };
-
-    if (_sliceDependencies) {
-      _.each(_sliceDependencies, function (dependencyInfo, sliceTag) {
-        merge(dependencyInfo);
-      });
-    } else {
+    if (!_watchSet) {
+      // This call was on an already-fully-loaded Package and we just want to
+      // see if it's changed. So we have some watchSets inside ourselves.
+      _watchSet = new watch.WatchSet();
+      _watchSet.merge(self.pluginWatchSet);
       _.each(self.slices, function (slice) {
-        merge(slice.dependencyInfo);
+        _watchSet.merge(slice.watchSet);
       });
     }
 
-    // XXX There used to be a concept in this file of "packages loaded from disk
-    // without having dependencyInfo, but it was unclear when that would happen,
-    // so this was removed.
-
-    var isUpToDate = true;
-    var watcher = new watch.Watcher({
-      files: dependencyInfo.files,
-      directories: dependencyInfo.directories,
-      onChange: function () {
-        isUpToDate = false;
-      }
-    });
-    watcher.stop();
-
-    return isUpToDate;
+    return watch.isUpToDate(_watchSet);
   },
 
   // True if this package can be saved as a unipackage
@@ -2196,8 +2166,7 @@ _.extend(Package.prototype, {
       var buildInfoJson = {
         builtBy: exports.BUILT_BY,
         sliceDependencies: { },
-        pluginDependencies: makeDependencyInfoSerializable(
-          self.pluginDependencyInfo),
+        pluginDependencies: self.pluginWatchSet.toJSON(),
         source: options.buildOfPath || undefined
       };
 
@@ -2249,7 +2218,7 @@ _.extend(Package.prototype, {
         // Save slice dependencies. Keyed by the json path rather than thinking
         // too hard about how to encode pair (name, arch).
         buildInfoJson.sliceDependencies[sliceJsonFile] =
-          makeDependencyInfoSerializable(slice.dependencyInfo);
+          slice.watchSet.toJSON();
 
         // Construct slice metadata
         var sliceJson = {
@@ -2385,38 +2354,6 @@ _.extend(Package.prototype, {
     }
   }
 });
-
-// Convert regex to string.
-var makeDependencyInfoSerializable = function (dependencyInfo) {
-  if (!dependencyInfo)
-    dependencyInfo = { files: {}, directories: {} };
-  var out = {files: dependencyInfo.files, directories: {}};
-  _.each(dependencyInfo.directories, function (d, path) {
-    var dirInfo = out.directories[path] = {};
-    _.each(["include", "exclude"], function (k) {
-      dirInfo[k] = _.map(d[k], function (r) {
-        return r.source;
-      });
-    });
-  });
-  return out;
-};
-
-// Convert string to regex.
-var makeDependencyInfoIntoRegexps = function (dependencyInfo) {
-  if (!dependencyInfo)
-    dependencyInfo = { files: {}, directories: {} };
-  var out = {files: dependencyInfo.files, directories: {}};
-  _.each(dependencyInfo.directories, function (d, path) {
-    var dirInfo = out.directories[path] = {};
-    _.each(["include", "exclude"], function (k) {
-      dirInfo[k] = _.map(d[k], function (s) {
-        return new RegExp(s);
-      });
-    });
-  });
-  return out;
-};
 
 var packages = exports;
 _.extend(exports, {

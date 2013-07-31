@@ -167,6 +167,7 @@ var _ = require('underscore');
 var project = require(path.join(__dirname, 'project.js'));
 var builder = require(path.join(__dirname, 'builder.js'));
 var unipackage = require(path.join(__dirname, 'unipackage.js'));
+var watch = require('./watch.js');
 var Fiber = require('fibers');
 var Future = require(path.join('fibers', 'future'));
 var sourcemap = require('source-map');
@@ -400,9 +401,8 @@ var Target = function (options) {
   // the order given.
   self.js = [];
 
-  // Files and paths used by this target, in the format used by
-  // watch.Watcher.
-  self.dependencyInfo = {files: {}, directories: {}};
+  // On-disk dependencies of this target.
+  self.watchSet = new watch.WatchSet();
 
   // node_modules directories that we need to copy into the target (or
   // otherwise make available at runtime.) A map from an absolute path
@@ -669,13 +669,8 @@ _.extend(Target.prototype, {
         throw new Error("Unknown type " + resource.type);
       });
 
-      // Depend on the source files that produced these
-      // resources. (Since the dependencyInfo.directories should be
-      // disjoint, it should be OK to merge them this way.)
-      _.extend(self.dependencyInfo.files,
-               slice.dependencyInfo.files);
-      _.extend(self.dependencyInfo.directories,
-               slice.dependencyInfo.directories);
+      // Depend on the source files that produced these resources.
+      self.watchSet.merge(slice.watchSet);
     });
   },
 
@@ -705,11 +700,10 @@ _.extend(Target.prototype, {
     });
   },
 
-  // Return all dependency info for this target, in the format
-  // expected by watch.Watcher.
-  getDependencyInfo: function () {
+  // Return the WatchSet for this target's dependency info.
+  getWatchSet: function () {
     var self = this;
-    return self.dependencyInfo;
+    return self.watchSet;
   },
 
   // Return the most inclusive architecture with which this target is
@@ -765,7 +759,7 @@ _.extend(ClientTarget.prototype, {
 
     var templatePath = path.join(__dirname, "app.html.in");
     var template = fs.readFileSync(templatePath);
-    self.dependencyInfo.files[templatePath] = Builder.sha1(template);
+    self.watchSet.addFile(templatePath, Builder.sha1(template));
 
     var f = require('handlebars').compile(template.toString());
     return new Buffer(f({
@@ -1350,8 +1344,8 @@ var writeFile = function (file, builder) {
 // path of a directory that should be created to contain the generated
 // site archive.
 //
-// Returns dependencyInfo (in the format expected by watch.Watcher)
-// for all files and directories that ultimately went into the bundle.
+// Returns a watch.WatchSet for all files and directories that ultimately went
+// into the bundle.
 //
 // options:
 // - nodeModulesMode: "skip", "symlink", "copy"
@@ -1457,25 +1451,17 @@ var writeSiteArchive = function (targets, outputPath, options) {
     // Control file
     builder.writeJson('star.json', json);
 
-    // Merge the dependencyInfo of everything that went into the
-    // bundle. A naive merge like this doesn't work in general but
-    // should work in this case.
-    var fileDeps = {}, directoryDeps = {};
+    // Merge the WatchSet of everything that went into the bundle.
+    var watchSet = new watch.WatchSet();
     var dependencySources = [builder].concat(_.values(targets));
     _.each(dependencySources, function (s) {
-      var info = s.getDependencyInfo();
-      _.extend(fileDeps, info.files);
-      _.extend(directoryDeps, info.directories);
+      watchSet.merge(s.getWatchSet());
     });
 
     // We did it!
     builder.complete();
 
-    return {
-      files: fileDeps,
-      directories: directoryDeps
-    };
-
+    return watchSet;
   } catch (e) {
     builder.abort();
     throw e;
@@ -1495,10 +1481,9 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
- * - dependencyInfo: Information about files and paths that were
+ * - watchSet: Information about files and paths that were
  *   inputs into the bundle and that we may wish to monitor for
- *   changes when developing interactively. It has two keys, 'files'
- *   and 'directories', in the format expected by watch.Watcher.
+ *   changes when developing interactively, as a watch.WatchSet.
  *
  * On failure ('errors' is truthy), no bundle will be output (in fact,
  * outputPath will have been removed if it existed.)
@@ -1545,7 +1530,7 @@ exports.bundle = function (appDir, outputPath, options) {
                             " " + options.releaseStamp : "");
 
   var success = false;
-  var dependencyInfo = { files: {}, directories: {} };
+  var watchSet = new watch.WatchSet();
   var messages = buildmessage.capture({
     title: "building the application"
   }, function () {
@@ -1749,7 +1734,7 @@ exports.bundle = function (appDir, outputPath, options) {
       controlProgram = undefined;
 
     // Write to disk
-    dependencyInfo = writeSiteArchive(targets, outputPath, {
+    watchSet = writeSiteArchive(targets, outputPath, {
       nodeModulesMode: options.nodeModulesMode,
       builtBy: builtBy,
       controlProgram: controlProgram
@@ -1763,8 +1748,8 @@ exports.bundle = function (appDir, outputPath, options) {
 
   return {
     errors: success ? false : messages,
-    dependencyInfo: dependencyInfo
-  } ;
+    watchSet: watchSet
+  };
 };
 
 // Make a JsImage object (a complete, linked, ready-to-go JavaScript
@@ -1774,7 +1759,7 @@ exports.bundle = function (appDir, outputPath, options) {
 //
 // Returns an object with keys:
 // - image: The created JsImage object.
-// - dependencyInfo: Source file dependency info (see bundle().)
+// - watchSet: Source file WatchSet (see bundle().)
 //
 // XXX return an 'errors' key for symmetry with bundle(), rather than
 // letting exceptions escape?
@@ -1828,7 +1813,7 @@ exports.buildJsImage = function (options) {
 
   return {
     image: target.toJsImage(),
-    dependencyInfo: target.getDependencyInfo()
+    watchSet: target.getWatchSet()
   };
 };
 

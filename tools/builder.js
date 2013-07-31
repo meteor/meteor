@@ -1,5 +1,6 @@
 var path = require('path');
 var files = require(path.join(__dirname, 'files.js'));
+var watch = require('./watch.js');
 var fs = require('fs');
 var _ = require('underscore');
 
@@ -51,7 +52,7 @@ var Builder = function (options) {
   files.rm_recursive(self.buildPath);
   files.mkdir_p(self.buildPath, 0755);
 
-  self.dependencyInfo = { directories: {}, files: {} };
+  self.watchSet = new watch.WatchSet();
 
   // XXX cleaner error handling. don't make the humans read an
   // exception (and, make suitable for use in automated systems)
@@ -151,7 +152,7 @@ _.extend(Builder.prototype, {
   //
   // Returns the final canonicalize relPath that was written to.
   //
-  // If `file` is used then a dependency will be added on that file.
+  // If `file` is used then it will be added to the builder's WatchSet.
   write: function (relPath, options) {
     var self = this;
     options = options || {};
@@ -175,7 +176,7 @@ _.extend(Builder.prototype, {
     } else if (options.file) {
       var sourcePath = path.resolve(options.file);
       data = fs.readFileSync(sourcePath);
-      self.dependencyInfo.files[sourcePath] = sha1(data);
+      self.watchSet.addFile(sourcePath, sha1(data));
     }
 
     self._ensureDirectory(path.dirname(relPath));
@@ -289,7 +290,7 @@ _.extend(Builder.prototype, {
   // bundle. But if the symlink option was passed to the Builder
   // constructor, then make a symlink instead, if possible.
   //
-  // This does NOT add any dependencies.
+  // This does NOT add anything to the WatchSet.
   //
   // Options:
   // - from: source path on local disk to copy from
@@ -436,11 +437,11 @@ _.extend(Builder.prototype, {
     files.rm_recursive(self.buildPath);
   },
 
-  // Return all dependency info that has accumulated, in the format
-  // expected by watch.Watcher.
-  getDependencyInfo: function () {
+  // Returns a WatchSet representing all files that were read from disk by the
+  // builder.
+  getWatchSet: function () {
     var self = this;
-    return self.dependencyInfo;
+    return self.watchSet;
   }
 });
 

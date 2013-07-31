@@ -471,7 +471,7 @@ exports.run = function (context, options) {
     library: context.library
   };
 
-  var startWatching = function (dependencyInfo) {
+  var startWatching = function (watchSet) {
     if (!Status.shouldRestart)
       return;
 
@@ -479,8 +479,7 @@ exports.run = function (context, options) {
       watcher.stop();
 
     watcher = new watch.Watcher({
-      files: dependencyInfo.files,
-      directories: dependencyInfo.directories,
+      watchSet: watchSet,
       onChange: function () {
         if (Status.crashing)
           logToClients({'system': "=> Modified -- restarting."});
@@ -524,12 +523,12 @@ exports.run = function (context, options) {
 
     // Bundle up the app
     var bundleResult = bundler.bundle(context.appDir, bundlePath, bundleOpts);
-    var dependencyInfo = bundleResult.dependencyInfo;
+    var watchSet = bundleResult.watchSet;
     if (bundleResult.errors) {
       logToClients({stdout: "=> Errors prevented startup:\n\n" +
                     bundleResult.errors.formatMessages() + "\n"});
       Status.hardCrashed("has errors");
-      startWatching(dependencyInfo);
+      startWatching(watchSet);
       return;
     }
 
@@ -546,32 +545,14 @@ exports.run = function (context, options) {
         Builder.sha1(fs.readFileSync(options.settingsFile, "utf8"));
 
       // Reload if the setting file changes
-      dependencyInfo.files[path.resolve(options.settingsFile)] =
-        settingsHash;
-    }
-
-    // If using a warehouse, don't do dependency monitoring on any of
-    // the files that are in the warehouse. You should not be editing
-    // those files directly.
-    if (files.usesWarehouse()) {
-      var warehouseDir = path.resolve(warehouse.getWarehouseDir());
-      var filterKeys = function (obj) {
-        _.each(_.keys(obj), function (k) {
-          k = path.resolve(k);
-          if (warehouseDir.length <= k.length &&
-              k.substr(0, warehouseDir.length) === warehouseDir)
-            delete obj[k];
-        });
-      };
-      filterKeys(dependencyInfo.files);
-      filterKeys(dependencyInfo.directories);
+      watchSet.addFile(path.resolve(options.settingsFile), settingsHash);
     }
 
     // Start watching for changes for files. There's no hurry to call
-    // this, since dependencyInfo contains a snapshot of the state of
+    // this, since watchSet contains a snapshot of the state of
     // the world at the time of bundling, in the form of hashes and
     // lists of matching files in each directory.
-    startWatching(dependencyInfo);
+    startWatching(watchSet);
 
     // Start the server
     Status.running = true;

@@ -197,6 +197,10 @@ _.extend(WatchSet.prototype, {
 
 WatchSet.fromJSON = function (json) {
   var set = new WatchSet;
+
+  if (!json)
+    return set;
+
   if (json.alwaysFire) {
     set.alwaysFire = true;
     return set;
@@ -265,6 +269,7 @@ var readDirectory = function (options) {
   return filtered;
 };
 
+// All fields are private.
 var Watcher = function (options) {
   var self = this;
 
@@ -280,6 +285,7 @@ var Watcher = function (options) {
     throw new Error("onChange option is required");
 
   self.stopped = false;
+  self.justCheckOnce = !!options._justCheckOnce;
 
   self.fileWatches = []; // array of paths
   self.directoryWatches = []; // array of watch object
@@ -366,7 +372,7 @@ _.extend(Watcher.prototype, {
       return true;
     }
 
-    if (!isDoubleCheck) {
+    if (!isDoubleCheck && !self.justCheckOnce) {
       // Whenever a directory changes, scan it soon as we notice,
       // but then scan it again one secord later just to make sure
       // that we haven't missed any changes. See commentary at
@@ -396,6 +402,9 @@ _.extend(Watcher.prototype, {
       if (self._fireIfFileChanged(absPath))
         return;
 
+      if (self.justCheckOnce)
+        return;
+
       // Intentionally not using fs.watch since it doesn't play well with
       // vim (https://github.com/joyent/node/issues/3172)
       // Note that we poll very frequently (500 ms)
@@ -407,7 +416,7 @@ _.extend(Watcher.prototype, {
       self.fileWatches.push(absPath);
     });
 
-    if (self.stopped)
+    if (self.stopped || self.justCheckOnce)
       return;
 
     // One second later, check the files again, because fs.watchFile
@@ -437,6 +446,9 @@ _.extend(Watcher.prototype, {
       // Check for the case where by the time we created the watch, the
       // directory has already changed.
       if (self._fireIfDirectoryChanged(info))
+        return;
+
+      if (self.stopped || self.justCheckOnce)
         return;
 
       // fs.watchFile doesn't work for directories (as tested on ubuntu)
@@ -493,8 +505,26 @@ _.extend(Watcher.prototype, {
   }
 });
 
+// Given a WatchSet, returns true if it currently describes the state of the
+// disk.
+var isUpToDate = function (watchSet) {
+  var upToDate = true;
+  var watcher = new Watcher({
+    watchSet: watchSet,
+    onChange: function () {
+      upToDate = false;
+    },
+    // internal flag which prevents us from starting watches and timers that
+    // we're about to cancel anyway
+    _justCheckOnce: true
+  });
+  watcher.stop();
+  return upToDate;
+};
+
 _.extend(exports, {
   WatchSet: WatchSet,
   Watcher: Watcher,
-  readDirectory: readDirectory
+  readDirectory: readDirectory,
+  isUpToDate: isUpToDate
 });
