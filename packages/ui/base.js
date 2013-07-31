@@ -377,24 +377,24 @@ _extend(UI.Component, {
   start: null,
   end: null,
 
-  firstNode: function () {
-    this._requireBuilt();
-    this._requireNotDestroyed();
+//  firstNode: function () {
+//    this._requireBuilt();
+//    this._requireNotDestroyed();
+//
+//    return UI.isComponent(this.start) ?
+//      this.start.firstNode() : this.start;
+//  },
 
-    return UI.isComponent(this.start) ?
-      this.start.firstNode() : this.start;
-  },
-
-  lastNode: function () {
-    this._requireBuilt();
-    this._requireNotDestroyed();
-
-    return UI.isComponent(this.end) ?
-      this.end.lastNode() : this.end;
-  },
+//  lastNode: function () {
+//    this._requireBuilt();
+//    this._requireNotDestroyed();
+//
+//    return UI.isComponent(this.end) ?
+//      this.end.lastNode() : this.end;
+//  },
 
   parentNode: function () {
-    return this.firstNode().parentNode;
+    return this.start.parentNode;
   },
 
   // Built Components are either attached or detached.
@@ -441,8 +441,7 @@ _extend(UI.Component, {
 
     $(div).append(html);
 
-    // returns info object with {start, end}
-    return buf.wireUpDOM(div);
+    buf.wireUpDOM(div);
   },
 
   build: function () {
@@ -465,15 +464,23 @@ _extend(UI.Component, {
       if (c.firstRun) {
         var div = makeSafeDiv();
         // capture reactivity:
-        var info = self._populate(div);
+        self._populate(div);
 
         if (! div.firstChild)
           div.appendChild(createEmptyComment());
 
         self._offscreen = div;
-        self.start = info.start || div.firstChild;
-        self.end = info.end || div.lastChild;
+
+        self.start = document.createTextNode("");
+        self.end = document.createTextNode("");
+        div.insertBefore(self.start, div.firstChild);
+        div.appendChild(self.end);
       } else {
+        // XXXXXXXXX not implemented yet
+        c.stop();
+        return;
+        // XXXXXXXXX
+
         // capture reactivity:
         self._rebuild(c.builtChildren);
       }

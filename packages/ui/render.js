@@ -241,9 +241,6 @@ makeRenderBuffer = function (component, options) {
   };
 
   buf.wireUpDOM = function (root) {
-    var start = root.firstChild;
-    var end = root.lastChild;
-
     // walk div and replace comments with Components
 
     var recurse = function (parent) {
@@ -254,12 +251,6 @@ makeRenderBuffer = function (component, options) {
           if (componentsToAttach) {
             var comp = componentsToAttach[n.nodeValue];
             if (comp) {
-              if (parent === root) {
-                if (n === root.firstChild)
-                  start = comp;
-                if (n === root.lastChild)
-                  end = comp;
-              }
               if (! comp.isInited) {
                 component.add(comp);
               } else if (comp.parent !== component) {
@@ -314,13 +305,6 @@ makeRenderBuffer = function (component, options) {
     // aid GC
     componentsToAttach = null;
     attrManagersToWire = null;
-
-    return {
-      // start and end will both be null if div is empty
-      start: start,
-      end: end
-    };
-
   };
 
   return buf;
