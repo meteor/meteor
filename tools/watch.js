@@ -2,6 +2,9 @@ var fs = require("fs");
 var path = require("path");
 var _ = require('underscore');
 
+// XXX XXX redo this doc
+
+
 // Watch for changes to a set of files, and the first time that any of
 // the files change, call a user-provided callback. (If you want a
 // second callback, you'll need to create a second Watcher.)
@@ -70,277 +73,6 @@ var _ = require('underscore');
 //   received one argument, the absolute path to a changed or removed
 //   file (potentially not the only one that changed or was removed)
 //
-var Watcher = function (options) {
-  var self = this;
-
-  // Map from the absolute path to a file, to a sha1 hash. Fire when
-  // the file changes from that sha.
-  self.files = options.files || {};
-
-  // Map from an absolute path to a directory, to an object with keys
-  // 'include' and 'exclude', both lists of regular expressions. Fire
-  // when a file is added to that directory whose name matches at
-  // least one regular expression in 'include' and no regular
-  // expressions in 'exclude'. Subdirectories are included
-  // recursively, but not subdirectories that match 'exclude'. The
-  // most specific rule wins, so you can change the parameters in
-  // effect in subdirectories simply by specifying additional rules.
-  self.directories = options.directories || {};
-
-  // Function to call when a change is detected according to one of
-  // the above.
-  self.onChange = options.onChange;
-  if (! self.onChange)
-    throw new Error("onChange option is required");
-
-  // self.directories in a different form. It's an array of objects,
-  // each with keys 'dir', 'include', 'options', where path is
-  // guaranteed to not contain a trailing slash (unless it is the root
-  // directory) and the objects are sorted from longest path to
-  // shortest (that is, most specific rule to least specific.)
-  self.rules = _.map(self.directories, function (options, dir) {
-    return {
-      dir: path.resolve(dir),
-      include: options.include || [],
-      exclude: options.exclude || []
-    };
-  });
-  self.rules = self.rules.sort(function (a, b) {
-    return a.dir.length < b.dir.length ? 1 : -1;
-  });
-
-  self.stopped = false;
-  self.fileWatches = []; // array of paths
-  self.directoryWatches = {}; // map from path to watch object
-
-  // We track all of the currently active timers so that we can cancel
-  // them at stop() time. This stops the process from hanging at
-  // shutdown until all of the timers have fired.. An alternate
-  // approach would be to use the unref() timer handle method present
-  // in modern node.
-  var nextTimerId = 1;
-  self.timers = {}; // map from arbitrary number (nextTimerId) to timer handle
-
-  self._startFileWatches();
-  _.each(self.rules, function (rule) {
-    self._watchDirectory(rule.dir);
-  });
-};
-
-_.extend(Watcher.prototype, {
-  _checkFileChanged: function (absPath) {
-    var self = this;
-
-    if (! fs.existsSync(absPath))
-      return true;
-
-    var crypto = require('crypto');
-    var hasher = crypto.createHash('sha1');
-    hasher.update(fs.readFileSync(absPath));
-    var hash = hasher.digest('hex');
-
-    return (self.files[absPath] !== hash);
-  },
-
-  _startFileWatches: function () {
-    var self = this;
-
-    // Set up a watch for each file
-    _.each(self.files, function (hash, absPath) {
-      // Intentionally not using fs.watch since it doesn't play well with
-      // vim (https://github.com/joyent/node/issues/3172)
-      // Note that we poll very frequently (500 ms)
-      fs.watchFile(absPath, {interval: 500}, function () {
-        // Fire only if the contents of the file actually changed (eg,
-        // maybe just its atime changed)
-        if (self._checkFileChanged(absPath))
-          self._fire(absPath);
-      });
-      self.fileWatches.push(absPath);
-
-      // Check for the case where by the time we created the watch,
-      // the file had already changed from the sha we were provided.
-      if (self._checkFileChanged(absPath))
-        self._fire(absPath);
-    });
-
-    // One second later, check the files again, because fs.watchFile
-    // is actually implemented by polling the file's mtime, and some
-    // filesystems (OSX HFS+) only keep mtimes to a resolution of one
-    // second. This handles the case where we check the hash and set
-    // up the watch, but then the file change before the clock rolls
-    // over to the next second, and fs.watchFile doesn't notice and
-    // doesn't call us back. #WorkAroundLowPrecisionMtimes
-    var timerId = self.nextTimerId++;
-    self.timers[timerId] = setTimeout(function () {
-      delete self.timers[timerId];
-      if (self.stopped)
-        return;
-
-      _.each(self.files, function (hash, absPath) {
-        if (self._checkFileChanged(absPath))
-          self._fire(absPath);
-      });
-    }, 1000);
-  },
-
-  // Pass true for `include` to include everything (and process only
-  // excludes)
-  _matches: function (filename, include, exclude) {
-    var self = this;
-
-    if (include === true)
-      include = [/.?/];
-    for (var i = 0; i < include.length; i++)
-      if (include[i].test(filename))
-        break;
-    if (i === include.length) {
-      return false; // didn't match any includes
-    }
-
-    for (var i = 0; i < exclude.length; i++) {
-      if (exclude[i].test(filename)) {
-        return false; // matched an exclude
-      }
-    }
-
-    // Matched an include and didn't match any excludes
-    return true;
-  },
-
-  _watchDirectory: function (absPath) {
-    var self = this;
-
-    if (absPath in self.directoryWatches)
-      // Already being taken care of
-      return;
-
-    // Determine the options that apply to this directory by finding
-    // the most specific rule.
-    absPath = path.resolve(absPath); // ensure no trailing slash
-    for (var i = 0; i < self.rules.length; i++) {
-      var rule = self.rules[i];
-      if (absPath.length >= rule.dir.length &&
-          absPath.substr(0, rule.dir.length) === rule.dir)
-        break; // found a match
-      rule = null;
-    }
-    if (! rule)
-      // Huh, doesn't appear that we're supposed to be watching this
-      // directory.
-      return;
-
-    var contents = [];
-    var scanDirectory = function (isDoubleCheck) {
-      if (self.stopped)
-        return;
-
-      if (! fs.existsSync(absPath)) {
-        // Directory was removed. Stop watching.
-        var watch = self.directoryWatches[absPath];
-        watch && watch.close();
-        delete self.directoryWatches[absPath];
-        return;
-      }
-
-      // Find previously unknown files and subdirectories. (We don't
-      // care about removed subdirectories because the logic
-      // immediately above handles them, and we don't care about
-      // removed files because the ones we care about will already
-      // have file watches on them.)
-      var newContents = fs.readdirSync(absPath);
-      var added = _.difference(newContents, contents);
-      contents = newContents;
-
-      // Look at each newly added item
-      _.each(added, function (addedItem) {
-        var addedPath = path.join(absPath, addedItem);
-
-        // Is it a directory?
-        try {
-          var stats = fs.lstatSync(addedPath);
-        } catch (e) {
-          // Can't be found? That's weird. Ignore.
-          return;
-        }
-        var isDirectory = stats.isDirectory();
-
-        // Does it match the rule?
-        if (! self._matches(addedItem,
-                            isDirectory ? true : rule.include,
-                            rule.exclude))
-          return; // No
-
-        if (! isDirectory) {
-          if (! (addedPath in self.files))
-            // Found a newly added file that we care about.
-            self._fire(absPath);
-        } else {
-          // Found a subdirectory that we care to monitor.
-          self._watchDirectory(addedPath);
-        }
-      });
-
-      if (! isDoubleCheck) {
-        // Whenever a directory changes, scan it soon as we notice,
-        // but then scan it again one secord later just to make sure
-        // that we haven't missed any changes. See commentary at
-        // #WorkAroundLowPrecisionMtimes
-        var timerId = self.nextTimerId++;
-        self.timers[timerId] = setTimeout(function () {
-          delete self.timers[timerId];
-          if (! self.stopped)
-            scanDirectory(true);
-        }, 1000);
-      }
-    };
-
-    // fs.watchFile doesn't work for directories (as tested on ubuntu)
-    // Notice that we poll very frequently (500 ms)
-    try {
-      self.directoryWatches[absPath] =
-        fs.watch(absPath, {interval: 500}, scanDirectory);
-      scanDirectory();
-    } catch (e) {
-      // Can happen if the directory doesn't exist, say because a
-      // nonexistent path was included in self.directories
-    }
-  },
-
-  _fire: function (changedFile) {
-    var self = this;
-
-    if (self.stopped)
-      return;
-
-    self.stop();
-    self.onChange(changedFile);
-  },
-
-  stop: function () {
-    var self = this;
-    self.stopped = true;
-
-    // Clean up timers
-    _.each(self.timers, function (timer, id) {
-      clearTimeout(timer);
-    });
-
-    // Clean up file watches
-    _.each(self.fileWatches, function (absPath) {
-      fs.unwatchFile(absPath);
-    });
-    self.fileWatches = [];
-
-    // Clean up directory watches
-    _.each(self.directoryWatches, function (watch) {
-      watch.close();
-    });
-    self.directoryWatches = {};
-  }
-});
-
-exports.Watcher = Watcher;
 
 var WatchSet = function () {
   var self = this;
@@ -534,3 +266,231 @@ exports.readDirectory = function (options) {
   filtered.sort();
   return filtered;
 };
+
+var Watcher = function (options) {
+  var self = this;
+
+  // The set to watch.
+  self.watchSet = options.watchSet;
+  if (! self.watchSet)
+    throw new Error("watchSet option is required");
+
+  // Function to call when a change is detected according to one of
+  // the above.
+  self.onChange = options.onChange;
+  if (! self.onChange)
+    throw new Error("onChange option is required");
+
+  self.stopped = false;
+
+  self.fileWatches = []; // array of paths
+  self.directoryWatches = {}; // map from path to watch object
+
+  // We track all of the currently active timers so that we can cancel
+  // them at stop() time. This stops the process from hanging at
+  // shutdown until all of the timers have fired. An alternate
+  // approach would be to use the unref() timer handle method present
+  // in modern node.
+  var nextTimerId = 1;
+  self.timers = {}; // map from arbitrary number (nextTimerId) to timer handle
+
+  // Were we given an inconsistent WatchSet? Fire now and be done with it.
+  if (self.watchSet.alwaysFire) {
+    self._fire();
+    return;
+  }
+
+  self._startFileWatches();
+  self._startDirectoryWatches();
+};
+
+_.extend(Watcher.prototype, {
+  _fireIfFileChanged: function (absPath) {
+    var self = this;
+
+    if (self.stopped)
+      return true;
+
+    var oldHash = self.watchSet.files[absPath];
+
+    if (oldHash === undefined)
+      throw new Error("Checking unknown file " + absPath);
+
+    try {
+      var contents = fs.readFileSync(absPath);
+    } catch (e) {
+      // Rethrow most errors.
+      if (!e || (e.code !== 'ENOENT' && e.code !== 'EISDIR'))
+        throw e;
+      // File does not exist (or is a directory).
+      // Is this what we expected?
+      if (oldHash === null)
+        return false;
+      // Nope, not what we expected.
+      self._fire();
+      return true;
+    }
+
+    // File exists! Is that what we expected?
+    if (oldHash === null) {
+      self._fire();
+      return true;
+    }
+
+    var crypto = require('crypto');
+    var hasher = crypto.createHash('sha1');
+    hasher.update(contents);
+    var newHash = hasher.digest('hex');
+
+    // Unchanged?
+    if (newHash === oldHash)
+      return false;
+
+    self._fire();
+    return true;
+  },
+
+  _fireIfDirectoryChanged: function (info, isDoubleCheck) {
+    var self = this;
+
+    if (self.stopped)
+      return true;
+
+    var newContents = exports.readDirectory({
+      absPath: info.absPath,
+      include: info.include,
+      exclude: info.exclude
+    });
+
+    // If newContents is null (no directory) or the directory has changed, fire.
+    if (!_.isEqual(info.contents, newContents)) {
+      self._fire();
+      return true;
+    }
+
+    if (!isDoubleCheck) {
+      // Whenever a directory changes, scan it soon as we notice,
+      // but then scan it again one secord later just to make sure
+      // that we haven't missed any changes. See commentary at
+      // #WorkAroundLowPrecisionMtimes
+      // XXX not sure why this uses a different strategy than files
+      var timerId = self.nextTimerId++;
+      self.timers[timerId] = setTimeout(function () {
+        delete self.timers[timerId];
+        if (! self.stopped)
+          self._fireIfDirectoryChanged(info, true);
+      }, 1000);
+    }
+
+    return false;
+  },
+
+  _startFileWatches: function () {
+    var self = this;
+
+    // Set up a watch for each file
+    _.each(self.watchSet.files, function (hash, absPath) {
+      if (self.stopped)
+        return;
+
+      // Check for the case where by the time we created the watch,
+      // the file had already changed from the sha we were provided.
+      if (self._fireIfFileChanged(absPath))
+        return;
+
+      // Intentionally not using fs.watch since it doesn't play well with
+      // vim (https://github.com/joyent/node/issues/3172)
+      // Note that we poll very frequently (500 ms)
+      fs.watchFile(absPath, {interval: 500}, function () {
+        // Fire only if the contents of the file actually changed (eg,
+        // maybe just its atime changed)
+        self._fireIfFileChanged(absPath);
+      });
+      self.fileWatches.push(absPath);
+    });
+
+    if (self.stopped)
+      return;
+
+    // One second later, check the files again, because fs.watchFile
+    // is actually implemented by polling the file's mtime, and some
+    // filesystems (OSX HFS+) only keep mtimes to a resolution of one
+    // second. This handles the case where we check the hash and set
+    // up the watch, but then the file change before the clock rolls
+    // over to the next second, and fs.watchFile doesn't notice and
+    // doesn't call us back. #WorkAroundLowPrecisionMtimes
+    var timerId = self.nextTimerId++;
+    self.timers[timerId] = setTimeout(function () {
+      delete self.timers[timerId];
+      _.each(self.watchSet.files, function (hash, absPath) {
+        self._fireIfFileChanged(absPath);
+      });
+    }, 1000);
+  },
+
+  _startDirectoryWatches: function () {
+    var self = this;
+
+    // Set up a watch for each directory
+    _.each(self.watchSet.directories, function (info) {
+      if (self.stopped)
+        return;
+
+      // Check for the case where by the time we created the watch, the
+      // directory has already changed.
+      if (self._fireIfDirectoryChanged(info))
+        return;
+
+      // fs.watchFile doesn't work for directories (as tested on ubuntu)
+      // Notice that we poll very frequently (500 ms)
+      try {
+        self.directoryWatches.push(
+          fs.watch(info.absPath, {interval: 500}, function () {
+            self._fireIfDirectoryChanged(info);
+          })
+        );
+      } catch (e) {
+        // Can happen if the directory doesn't exist, in which case we should
+        // fire.
+        if (e && e.code === "ENOENT") {
+          self._fire();
+          return;
+        }
+        throw e;
+      }
+    });
+  },
+
+  _fire: function () {
+    var self = this;
+
+    if (self.stopped)
+      return;
+
+    self.stop();
+    self.onChange();
+  },
+
+  stop: function () {
+    var self = this;
+    self.stopped = true;
+
+    // Clean up timers
+    _.each(self.timers, function (timer, id) {
+      clearTimeout(timer);
+    });
+    self.timers = {};
+
+    // Clean up file watches
+    _.each(self.fileWatches, function (absPath) {
+      fs.unwatchFile(absPath);
+    });
+    self.fileWatches = [];
+
+    // Clean up directory watches
+    _.each(self.directoryWatches, function (watch) {
+      watch.close();
+    });
+    self.directoryWatches = [];
+  }
+});
