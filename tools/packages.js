@@ -1956,7 +1956,7 @@ _.extend(Package.prototype, {
     });
 
     self.pluginDependencyInfo = makeDependencyInfoIntoRegexps(
-      buildInfoJson.pluginDependencies || {});
+      buildInfoJson.pluginDependencies);
     // minor hack: sneak the plugin dependency info into the dictionary passed
     // to checkUpToDate so that changes to anything compiled into our plugins
     // causes us to recompile.
