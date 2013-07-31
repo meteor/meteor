@@ -22,6 +22,10 @@ var sourcemap = require('source-map');
 // eg, if we improve the linker's static analysis, this should be bumped.
 exports.BUILT_BY = 'meteor/6';
 
+// Match out path pattern:  ../file.js (*nix) or ..\\file.js (Windows)
+var escapedSep = path.sep === '/' ? '\/' : '\\\\';
+var matchOutPath = new RegExp('\.\.' + escapedSep);
+
 // Find all files under `rootPath` that have an extension in
 // `extensions` (an array of extensions without leading dot), and
 // return them as a list of paths relative to rootPath. Ignore files
@@ -62,7 +66,7 @@ var scanForSources = function (rootPath, extensions, ignoreFiles) {
     prefix += path.sep;
 
   return fileList.map(function (abs) {
-    if (path.relative(prefix, abs).match(/\.\./))
+    if (path.relative(prefix, abs).match(matchOutPath))
       // XXX audit to make sure it works in all possible symlink
       // scenarios
       throw new Error("internal error: source file outside of parent?");
@@ -71,7 +75,7 @@ var scanForSources = function (rootPath, extensions, ignoreFiles) {
 };
 
 var rejectBadPath = function (p) {
-  if (p.match(/\.\./))
+  if (p.match(matchOutPath))
     throw new Error("bad path: " + p);
 };
 
@@ -1349,7 +1353,7 @@ _.extend(Package.prototype, {
           return;
         }
 
-        if (options.name.match(/\.\./) || options.name.match(/[\\\/]/)) {
+        if (options.name.match(matchOutPath) || options.name.match(/[\\\/]/)) {
           buildmessage.error("bad plugin name", { useMyCaller: true });
           // recover by ignoring plugin
           return;

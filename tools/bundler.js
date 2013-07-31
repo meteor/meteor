@@ -187,8 +187,12 @@ var inherits = function (child, parent) {
   child.prototype.constructor = child;
 };
 
+// Match out path pattern:  ../file.js (*nix) or ..\\file.js (Windows)
+var escapedSep = path.sep === '/' ? '\/' : '\\\\';
+var matchOutPath = new RegExp('\.\.' + escapedSep);
+
 var rejectBadPath = function (p) {
-  if (p.match(/\.\./))
+  if (p.match(matchOutPath))
     throw new Error("bad path: " + p);
 };
 
