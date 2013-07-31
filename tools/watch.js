@@ -222,9 +222,7 @@ WatchSet.fromJSON = function (json) {
   return set;
 };
 
-exports.WatchSet = WatchSet;
-
-exports.readDirectory = function (options) {
+var readDirectory = function (options) {
   // Read the directory.
   try {
     var contents = fs.readdirSync(options.absPath);
@@ -493,4 +491,10 @@ _.extend(Watcher.prototype, {
     });
     self.directoryWatches = [];
   }
+});
+
+_.extend(exports, {
+  WatchSet: WatchSet,
+  Watcher: Watcher,
+  readDirectory: readDirectory
 });
