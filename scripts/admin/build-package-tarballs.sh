@@ -48,7 +48,7 @@ do
       echo "," >> "$TOPDIR/.package_manifest_chunk"
     fi
 
-    PACKAGE_VERSION=$(perl -pe 's/\Q$ENV{TOPDIR}\E//g' $PACKAGE/.build/buildinfo.json | shasum | cut -c 1-10)
+    PACKAGE_VERSION=$(perl -pe 's/\Q$ENV{TOPDIR}\E//g; s/os\..*\.json/os.json/g' $PACKAGE/.build/buildinfo.json | shasum | cut -c 1-10)
     echo "$PACKAGE version $PACKAGE_VERSION"
     ROOTDIR="$PACKAGE-${PACKAGE_VERSION}-${PLATFORM}"
     TARBALL="$OUTDIR/$PACKAGE-${PACKAGE_VERSION}-${PLATFORM}.tar.gz"

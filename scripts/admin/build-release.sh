@@ -40,7 +40,7 @@ MANIFEST_PACKAGE_CHUNK=$(cat "$TOPDIR/.package_manifest_chunk")
 rm "$TOPDIR/.tools_version"
 rm "$TOPDIR/.package_manifest_chunk"
 
-cat > "$OUTDIR/release.json" <<ENDOFMANIFEST
+cat > "$OUTDIR/release.json-$PLATFORM" <<ENDOFMANIFEST
 {
   "tools": "$TOOLS_VERSION",
   "packages": {
@@ -50,4 +50,4 @@ $MANIFEST_PACKAGE_CHUNK
 }
 ENDOFMANIFEST
 
-cat "$OUTDIR/release.json"
+cat "$OUTDIR/release.json-$PLATFORM"

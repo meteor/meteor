@@ -67,16 +67,23 @@ var configureS3 = function () {
   return s3;
 };
 
-// fetch and parse release manifest
+// fetch release manifest
 var getManifest = function(s3, gitSha) {
-  var content = doOrDie("Release " + gitSha + " not built.", function () {
+  var manifestMetas = list3FilesWithPrefix(
+    s3, ["unpublished", gitSha, "release.json-"].join("/"));
+  var manifests = _.map(manifestMetas, function (meta) {
     return s3.GetObject({
       BucketName: "com.meteor.warehouse",
-      ObjectName: ["unpublished", gitSha, "release.json"].join("/")
+      ObjectName: meta.Key
     }).Body;
   });
 
-  return JSON.parse(content);
+  manifests = _.uniq(manifests);
+  if (manifests.length !== 1) {
+    die("Manifests are not identical!" + manifests);
+  }
+
+  return manifests[0];
 };
 
 // are there any files with this prefix?
@@ -88,7 +95,7 @@ var anyWithPrefix = function(s3, prefix) {
   return !_.isEmpty(files.Body.ListBucketResult.Contents);
 };
 
-var copy3FilesWithPrefix = function (s3, prefix, destDir) {
+var list3FilesWithPrefix = function (s3, prefix) {
   var artifacts = s3.ListObjects({
     BucketName: "com.meteor.warehouse",
     Prefix: prefix
@@ -98,7 +105,11 @@ var copy3FilesWithPrefix = function (s3, prefix, destDir) {
   if (artifacts.length !== 3)
     throw new Error("Expected three artifacts with prefix " + prefix +
                     ", found " + artifacts.length);
+  return artifacts;
+};
 
+var copy3FilesWithPrefix = function (s3, prefix, destDir) {
+  var artifacts = list3FilesWithPrefix(s3, prefix);
 
   parallelEach(artifacts, function (artifact) {
     var sourceKey = artifact.Key;
@@ -154,14 +165,12 @@ var publishPackage = function(s3, gitSha, name, version) {
   copy3FilesWithPrefix(s3, sourcePrefix, destDir);
 };
 
-// publish the release manifest, copying from
-// s3://com.meteor.warehouse/unpublished/GITSHA/release.json to
+// publish the release manifest at
 // s3://com.meteor.warehouse/releases/RELEASE.release.json
-var publishManifest = function(s3, gitSha, release) {
+var publishManifest = function(s3, manifestText, release) {
   var destKey = ["releases", release + ".release.json"].join("/");
-  var sourceKey = ["unpublished", gitSha, "release.json"].join("/");
 
-  process.stdout.write("release manifest read from " + gitSha + ": ");
+  process.stdout.write("release manifest: ");
   if (anyWithPrefix(s3, destKey)) {
     console.log("already published at " + release);
     return;
@@ -173,11 +182,11 @@ var publishManifest = function(s3, gitSha, release) {
   var opts = {
     BucketName: "com.meteor.warehouse",
     ObjectName: destKey,
-    SourceBucket: "com.meteor.warehouse",
-    SourceObject: sourceKey,
+    ContentLength: Buffer.byteLength(manifestText),
+    Body: manifestText,
     Acl: "public-read"
   };
-  s3.CopyObject(opts);
+  s3.PutObject(opts);
 };
 
 var parallelEach = function (collection, callback, context) {
@@ -216,12 +225,13 @@ var main = function() {
   }
 
   var s3 = configureS3();
-  var manifest = getManifest(s3, gitSha);
+  var manifestText = getManifest(s3, gitSha);
+  var manifest = JSON.parse(manifestText);
   publishTools(s3, gitSha, manifest.tools);
   parallelEach(manifest.packages, function(version, name) {
     publishPackage(s3, gitSha, name, version);
   });
-  publishManifest(s3, gitSha, release);
+  publishManifest(s3, manifestText, release);
 
   if (gitTag !== undefined) {
     console.log("Pushing git tag " + gitTag);
