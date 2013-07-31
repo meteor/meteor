@@ -175,9 +175,9 @@ var sourcemap = require('source-map');
 // files to ignore when bundling. node has no globs, so use regexps
 var ignoreFiles = [
     /~$/, /^\.#/, /^#.*#$/,
-    /^\.DS_Store$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/,
-    /^\.meteor$/, /* avoids scanning N^2 files when bundling all packages */
-    /^\.git$/ /* often has too many files to watch */
+    /^\.DS_Store\/?$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/,
+    /^\.meteor\/$/, /* avoids scanning N^2 files when bundling all packages */
+    /^\.git\/$/ /* often has too many files to watch */
 ];
 
 // http://davidshariff.com/blog/javascript-inheritance-patterns/

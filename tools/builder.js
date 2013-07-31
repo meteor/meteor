@@ -298,7 +298,8 @@ _.extend(Builder.prototype, {
   //   receive the files
   // - ignore: array of regexps of filenames (that is, basenames) to
   //   ignore (they may still be visible in the output bundle if
-  //   symlinks are being used)
+  //   symlinks are being used).  Like with WatchSets, they match against
+  //   entries that end with a slash if it's a directory.
   copyDirectory: function (options) {
     var self = this;
     options = options || {};
@@ -343,13 +344,19 @@ _.extend(Builder.prototype, {
       self._ensureDirectory(relTo);
 
       _.each(fs.readdirSync(absFrom), function (item) {
-        if (_.any(ignore, function (pattern) {
-          return item.match(pattern);
-        })) return; // skip excluded files
-
         var thisAbsFrom = path.resolve(absFrom, item);
         var thisRelTo = path.join(relTo, item);
-        if (fs.statSync(thisAbsFrom).isDirectory()) {
+
+        var isDir = fs.statSync(thisAbsFrom).isDirectory();
+        var itemForMatch = item;
+        if (isDir)
+          itemForMatch += '/';
+
+        if (_.any(ignore, function (pattern) {
+          return itemForMatch.match(pattern);
+        })) return; // skip excluded files
+
+        if (isDir) {
           walk(thisAbsFrom, thisRelTo);
           return;
         }

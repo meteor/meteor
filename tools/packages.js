@@ -22,52 +22,10 @@ var sourcemap = require('source-map');
 // eg, if we improve the linker's static analysis, this should be bumped.
 exports.BUILT_BY = 'meteor/6';
 
-// Find all files under `rootPath` that have an extension in
-// `extensions` (an array of extensions without leading dot), and
-// return them as a list of paths relative to rootPath. Ignore files
-// that match a regexp in the ignoreFiles array, if given. As a
-// special case (ugh), push all html files to the head of the list.
-var scanForSources = function (rootPath, extensions, ignoreFiles) {
-  var self = this;
-
-  // find everything in tree, sorted depth-first alphabetically.
-  var fileList = files.file_list_sync(rootPath, extensions);
-  fileList = _.reject(fileList, function (file) {
-    return _.any(ignoreFiles || [], function (pattern) {
-      return file.match(pattern);
-    });
-  });
-  fileList.sort(files.sort);
-
-  // XXX HUGE HACK --
-  // push html (template) files ahead of everything else. this is
-  // important because the user wants to be able to say
-  // Template.foo.events = { ... }
-  //
-  // maybe all of the templates should go in one file? packages
-  // should probably have a way to request this treatment (load
-  // order dependency tags?) .. who knows.
-  var htmls = [];
-  _.each(fileList, function (filename) {
-    if (path.extname(filename) === '.html') {
-      htmls.push(filename);
-      fileList = _.reject(fileList, function (f) { return f === filename;});
-    }
-  });
-  fileList = htmls.concat(fileList);
-
-  // now make everything relative to rootPath
-  var prefix = rootPath;
-  if (prefix[prefix.length - 1] !== path.sep)
-    prefix += path.sep;
-
-  return fileList.map(function (abs) {
-    if (path.relative(prefix, abs).match(/\.\./))
-      // XXX audit to make sure it works in all possible symlink
-      // scenarios
-      throw new Error("internal error: source file outside of parent?");
-    return abs.substr(prefix.length);
-  });
+// Like Perl's quotemeta: quotes all regexp metacharacters. See
+//   https://github.com/substack/quotemeta/blob/master/index.js
+var quotemeta = function (str) {
+    return String(str).replace(/(\W)/g, '\\$1');
 };
 
 var rejectBadPath = function (p) {
@@ -1767,82 +1725,88 @@ _.extend(Package.prototype, {
       self.slices.push(slice);
 
       // Watch control files for changes
-      // XXX this read has a race with the actual read that is used
+      // XXX this read has a race with the actual reads that are is used
       _.each([path.join(appDir, '.meteor', 'packages'),
-              path.join(appDir, '.meteor', 'releases')], function (p) {
-                if (fs.existsSync(p)) {
-                  slice.dependencyInfo.files[p] =
-                    Builder.sha1(fs.readFileSync(p));
+              path.join(appDir, '.meteor', 'release')], function (p) {
+                try {
+                  var hash = Builder.sha1(fs.readFileSync(p));
+                } catch (e) {
+                  // If it doesn't exist, just depend on that fact.
+                  if (!e || e.code !== "ENOENT")
+                    throw e;
+                  hash = null;
                 }
+                slice.watchSet.addFile(p, hash);
               });
 
       // Determine source files
       slice.getSourcesFunc = function () {
-        var allSources = scanForSources(
-          self.sourceRoot, slice.registeredExtensions(),
-          ignoreFiles || []);
+        var sourceInclude = _.map(slice.registeredExtensions(), function (ext) {
+          return new RegExp('\\.' + quotemeta(ext) + '$');
+        });
+        var sourceExclude = [/^\./].concat(ignoreFiles);
 
-        var withoutAppPackages = _.reject(allSources, function (sourcePath) {
-          // Skip files that are in app packages; they'll get watched if they
-          // are actually listed in the .meteor/packages file. (Directories
-          // named "packages" lower in the tree are OK.)
-          return sourcePath.match(/^packages\//);
+        var readAndWatchDirectory = function (relDir, filters) {
+          filters = filters || {};
+          var absPath = path.join(self.sourceRoot, relDir);
+          var contents = watch.readDirectory({
+            absPath: absPath,
+            include: filters.include,
+            exclude: filters.exclude
+          });
+          slice.watchSet.addDirectory({
+            absPath: absPath,
+            include: filters.include,
+            exclude: filters.exclude,
+            contents: contents
+          });
+          return _.map(contents, function (x) {
+            return path.join(relDir, x);
+          });
+        };
+
+        // Read top-level source files.
+        var sources = readAndWatchDirectory('', {
+          include: sourceInclude,
+          exclude: sourceExclude
         });
 
-        var otherSliceName = (sliceName === "server") ? "client" : "server";
-        var withoutOtherSlice =
-          _.reject(withoutAppPackages, function (sourcePath) {
-            return (path.sep + sourcePath + path.sep).indexOf(
-              path.sep + otherSliceName + path.sep) !== -1;
-          });
+        var otherSliceRegExp =
+              (sliceName === "server" ? /^client\/$/ : /^server\/$/);
 
-        var tests = false; /* for now */
-        var withoutOtherRole =
-          _.reject(withoutOtherSlice, function (sourcePath) {
-            var isTest =
-              ((path.sep + sourcePath + path.sep).indexOf(
-                path.sep + 'tests' + path.sep) !== -1);
-            return isTest !== (!!tests);
-          });
+        // Read top-level subdirectories. Ignore subdirectories that have
+        // special handling.
+        var sourceDirectories = readAndWatchDirectory('', {
+          include: [/\/$/],
+          exclude: [/^packages\/$/, /^programs\/$/, /^tests\/$/,
+                    /^public\/$/, /^private\/$/,
+                    otherSliceRegExp].concat(sourceExclude)
+        });
 
-        var withoutOtherPrograms =
-          _.reject(withoutOtherRole, function (sourcePath) {
-            return !! sourcePath.match(/^programs\//);
-          });
+        while (!_.isEmpty(sourceDirectories)) {
+          var dir = sourceDirectories.shift();
+          // remove trailing slash
+          dir = dir.substr(0, dir.length - 1);
 
-        // XXX Add directory dependencies to slice at the time that
-        // getSourcesFunc is called. This is kind of a hack but it'll
-        // do for the moment.
+          // Find source files in this directory.
+          Array.prototype.push.apply(sources, readAndWatchDirectory(dir, {
+            include: sourceInclude,
+            exclude: sourceExclude
+          }));
 
-        // XXX nothing here monitors for the no-default-targets file
+          // Find sub-sourceDirectories. Note that we DON'T need to ignore the
+          // directory names that are only special at the top level.
+          Array.prototype.push.apply(sourceDirectories, readAndWatchDirectory(dir, {
+            include: [/\/$/],
+            exclude: [/^tests\/$/, otherSliceRegExp].concat(sourceExclude)
+          }));
+        }
 
-        // Directories to monitor for new files
-        var appIgnores = _.clone(ignoreFiles);
-        slice.dependencyInfo.directories[appDir] = {
-          include: _.map(slice.registeredExtensions(), function (ext) {
-            return new RegExp('\\.' + ext + "$");
-          }),
-          // XXX This excludes watching under *ANY* packages or programs
-          // directory, but we should really only care about top-level ones.
-          // But watcher doesn't let you do that.
-          exclude: ignoreFiles.concat([/^packages$/, /^programs$/,
-                                       /^tests$/])
-        };
-
-        // Inside the programs directory, only look for new program (which we
-        // can detect by the appearance of a package.js file.)  Other than that,
-        // programs explicitly call out the files they use.
-        slice.dependencyInfo.directories[path.resolve(appDir, 'programs')] = {
-          include: [ /^package\.js$/ ],
-          exclude: ignoreFiles
-        };
-
-        // Exclude .meteor/local and everything under it.
-        slice.dependencyInfo.directories[
-          path.resolve(appDir, '.meteor', 'local')] = { exclude: [/.?/] };
+        // We've found all the source files. Sort them!
+        sources.sort(files.sort);
 
         // Convert into relPath/fileOptions objects.
-        var sources = _.map(withoutOtherPrograms, function (relPath) {
+        sources = _.map(sources, function (relPath) {
           var sourceObj = {relPath: relPath};
 
           // Special case: on the client, JavaScript files in a
@@ -1856,44 +1820,42 @@ _.extend(Package.prototype, {
           return sourceObj;
         });
 
+        // Now look for assets for this slice.
         var assetDir = sliceName === "client" ? "public" : "private";
-        var absAssetDir = path.resolve(appDir, assetDir);
-        slice.dependencyInfo.directories[absAssetDir]
-          = { include: [/.?/], exclude: ignoreFiles};
-        var walkAssetDir = function (subdir) {
-          var dir = path.join(appDir, subdir);
-          try {
-            var items = fs.readdirSync(dir);
-          } catch (e) {
-            // OK if the directory (esp the top level asset dir) doesn't exist.
-            if (e.code === "ENOENT")
-              return;
-            throw e;
-          }
-          _.each(items, function (item) {
-            // Skip excluded files
-            var matchesAnExclude = _.any(ignoreFiles, function (pattern) {
-              return item.match(pattern);
+        var assetDirs = readAndWatchDirectory('', {
+          include: [new RegExp('^' + assetDir + '/$')]
+        });
+        if (_.isEmpty(assetDirs)) {
+          if (_.isEqual(assetDirs, [assetDir + '/']))
+            throw new Error("Surprising assetDirs: " + assetDirs);
+
+          while (!_.isEmpty(assetDirs)) {
+            dir = assetDirs.shift();
+            // remove trailing slash
+            dir = dir.substr(0, dir.length - 1);
+
+            // Find asset files in this directory.
+            var assetsAndSubdirs = readAndWatchDirectory(dir, {
+              // we DO look under dot directories here
+              exclude: ignoreFiles
             });
-            if (matchesAnExclude)
-              return;
-
-            var assetAbsPath = path.join(dir, item);
-            var assetRelPath = path.join(subdir, item);
-            if (fs.statSync(assetAbsPath).isDirectory()) {
-              walkAssetDir(assetRelPath);
-              return;
-            }
-
-            sources.push({
-              relPath: assetRelPath,
-              fileOptions: {
-                isAsset: true
+            _.each(assetsAndSubdirs, function (item) {
+              if (item[item.length - 1] === '/') {
+                // Recurse on this directory.
+                assetDirs.push(item);
+              } else {
+                // This file is an asset.
+                sources.push({
+                  relPath: item,
+                  fileOptions: {
+                    isAsset: true
+                  }
+                });
               }
             });
-          });
-        };
-        walkAssetDir(assetDir);
+          }
+        }
+
         return sources;
       };
     });
