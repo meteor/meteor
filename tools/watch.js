@@ -341,3 +341,196 @@ _.extend(Watcher.prototype, {
 });
 
 exports.Watcher = Watcher;
+
+var WatchSet = function () {
+  var self = this;
+
+  // Set this to true if any Watcher built on this WatchSet must immediately
+  // fire (eg, if this WatchSet was given two different sha1 for the same file).
+  self.alwaysFire = false;
+
+  // Map from the absolute path to a file, to a sha1 hash, or null if the file
+  // should not exist. A Watcher created from this set fires when the file
+  // changes from that sha, or is deleted (if non-null) or created (if null).
+  self.files = {};
+
+  // Array of object with keys:
+  // - 'absPath': absolute path to a directory
+  // - 'include': array of RegExps
+  // - 'exclude': array of RegExps
+  // - 'contents': array of strings
+  //
+  // This represents the assertion that 'absPath' is a directory and that
+  // 'contents' is its immediate contents, as filtered by the regular
+  // expressions.  Entries in 'contents' are file and subdirectory names;
+  // directory names end with '/'. 'contents' is sorted. An entry is in
+  // 'contents' if its value (including the slash, for directories) matches at
+  // least one regular expression in 'include' and no regular expressions in
+  // 'exclude'.
+  //
+  // There is no recursion here: files contained in subdirectories never appear.
+  //
+  // A directory may have multiple entries (presumably with different
+  // include/exclude filters).
+  self.directories = [];
+};
+
+_.extend(WatchSet.prototype, {
+  addFile: function (filePath, hash) {
+    var self = this;
+    // No need to update if this is in always-fire mode already.
+    if (self.alwaysFire)
+      return;
+    if (_.has(self.files, filePath)) {
+      // Redundant?
+      if (self.files[filePath] === hash)
+        return;
+      // Nope, inconsistent.
+      self.alwaysFire = true;
+      return;
+    }
+    self.files[filePath] = hash;
+  },
+
+  // Takes options absPath, include, exclude, and contents, as described
+  // above. contents does not need to be pre-sorted.
+  addDirectory: function (options) {
+    var self = this;
+    if (self.alwaysFire)
+      return;
+    if (_.isEmpty(options.include))
+      return;
+    var contents = _.clone(options.contents || []);
+    contents.sort();
+
+    self.directories.push({
+      absPath: options.absPath,
+      include: options.include,
+      exclude: options.exclude,
+      contents: contents
+    });
+  },
+
+  // Merges another WatchSet into this one. This one will now fire if either
+  // WatchSet would have fired.
+  merge: function (other) {
+    var self = this;
+    if (self.alwaysFire)
+      return;
+    if (other.alwaysFire) {
+      self.alwaysFire = true;
+      return;
+    }
+    _.each(other.files, function (hash, name) {
+      self.addFile(name, hash);
+    });
+    _.each(other.directories, function (dir) {
+      // XXX this doesn't deep-clone the directory, but I think these objects
+      // are never mutated
+      self.directories.push(dir);
+    });
+  },
+
+  toJSON: function () {
+    var self = this;
+    if (self.alwaysFire)
+      return {alwaysFire: true};
+    var ret = {files: self.files};
+
+    var reToJSON = function (r) {
+      var options = '';
+      if (r.ignoreCase)
+        options += 'i';
+      if (r.multiline)
+        options += 'm';
+      if (r.global)
+        options += 'g';
+      if (options)
+        return {$regex: r.source, $options: options};
+      return r.source;
+    };
+
+    ret.directories = _.map(self.directories, function (d) {
+      return {
+        absPath: d.absPath,
+        include: _.map(d.include, reToJSON),
+        exclude: _.map(d.exclude, reToJSON),
+        contents: d.contents
+      };
+    });
+
+    return ret;
+  }
+});
+
+WatchSet.fromJSON = function (json) {
+  var set = new WatchSet;
+  if (json.alwaysFire) {
+    set.alwaysFire = true;
+    return set;
+  }
+
+  set.files = _.clone(json.files);
+
+  var reFromJSON = function (j) {
+    if (j.$regex)
+      return new RegExp(j.$regex, j.$options);
+    return new RegExp(j);
+  };
+
+  set.directories = _.map(json.directories, function (d) {
+    return {
+      absPath: d.absPath,
+      include: _.map(d.include, reFromJSON),
+      exclude: _.map(d.exclude, reFromJSON),
+      contents: d.contents
+    };
+  });
+
+  return set;
+};
+
+exports.WatchSet = WatchSet;
+
+exports.readDirectory = function (options) {
+  // Read the directory.
+  try {
+    var contents = fs.readdirSync(options.absPath);
+  } catch (e) {
+    // If the path is not a directory, return null; let other errors through.
+    if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR'))
+      return null;
+    throw e;
+  }
+
+  // Add slashes to the end of directories.
+  var contentsWithSlashes = [];
+  _.each(contents, function (entry) {
+    try {
+      // We do stat instead of lstat here, so that we treat symlinks to
+      // directories just like directories themselves.
+      // XXX Does the treatment of symlinks make sense?
+      var stats = fs.statSync(path.join(options.absPath, entry));
+    } catch (e) {
+      // Disappeared after the readdirSync (or a dangling symlink)? Eh, pretend
+      // it was never there in the first place.
+      return;
+    }
+    if (stats.isDirectory())
+      entry += '/';
+    contentsWithSlashes.push(entry);
+  });
+
+  // Filter based on regexps.
+  var filtered = _.filter(contentsWithSlashes, function (entry) {
+    return _.any(options.include, function (re) {
+      return re.test(entry);
+    }) && !_.any(options.exclude, function (re) {
+      return re.test(entry);
+    });
+  });
+
+  // Sort it!
+  filtered.sort();
+  return filtered;
+};
