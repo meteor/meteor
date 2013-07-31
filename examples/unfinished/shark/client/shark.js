@@ -18,6 +18,12 @@ UI.body.items = Items.find({}, { sort: { text: 1 }});
 
 //////////////////////////////
 
+// We probably want to instrument insertNode/
+// removeNode to record who added a node,
+// for the purpose of event handling, and also
+// to notify any jQuery widgets on an element
+// that care about elements coming and going.
+
 var removeNode = function (n) {
   n.parentNode.removeChild(n);
 };
@@ -47,6 +53,51 @@ var isArray = function (x) {
   return !!((typeof x.length === 'number') &&
             (x.sort || x.splice));
 };
+
+// A DomRange points to a `start` empty text node,
+// an `end` empty text node, and zero or more
+// keyed children, where a child is a node
+// or a DomRange.  These children all occur
+// as siblings at the DOM top level of the range.
+//
+// A DomRange never throws errors due to children
+// being moved or removed without its knowledge,
+// even if a child is
+// reparented or moved outside the start and
+// end pointers.  A node child is considered
+// removed if it's no longer a sibling (that is,
+// it doesn't have the same parentNode
+// as `start`).  A DomRange child is considered
+// removed if its `start` node is no longer
+// a sibling.  A DomRange *may* error if its
+// `end` pointer is removed or reparented away
+// from its `start` pointer.
+//
+// Children can be added with or without a key.
+// Children added without a key can't be moved
+// or removed.  Children added with a key can be
+// removed, moved to the end, or moved before
+// another keyed child.
+//
+// DomRange inserts and moves children using
+// algorithms that are correct if no nodes have
+// been moved without the DomRange's knowledge,
+// but still well-defined (if not necessarily
+// "what you want") if nodes have been moved.
+// For example, when a DomRange moves a child
+// DomRange, it moves all nodes between the
+// child's `start` and `end` inclusive, even
+// if those aren't the right nodes.  (In contrast,
+// removing a DomRange removes the children
+// no matter where they are.)  Inserting a
+// new DomRange or node before an existing child
+// will see if the child is still present and
+// use the child's `start` and `end` pointers
+// (if it is a DomRange) to find an insertion
+// position.  If someone has shuffled around
+// all the sibling nodes in question, this
+// position won't be very meaningful but it will
+// still exist.
 
 DomRange = function () {
   var start = document.createTextNode("");
