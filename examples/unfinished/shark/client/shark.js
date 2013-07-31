@@ -15,6 +15,9 @@ UI.body.name = 'David';
 
 UI.body.items = Items.find({}, { sort: { text: 1 }});
 
+
+//////////////////////////////
+
 var removeNode = function (n) {
   n.parentNode.removeChild(n);
 };
@@ -22,88 +25,6 @@ var removeNode = function (n) {
 var insertNode = function (n, parent, next) {
   parent.insertBefore(n, next || null);
 };
-
-DomTemplate = function (start, end, subs) {
-  this.start = start;
-  this.end = end;
-  this.subs = {};
-  this.nextUid = 1;
-  this.addSubs(subs);
-
-  this.start.$ui = this;
-};
-
-_.extend(DomTemplate.prototype, {
-  addSubs: function (newSubs) {
-    var uid = this.nextUid;
-    var subs = this.subs;
-    _.each(newSubs, function (v) {
-      subs[uid++] = v;
-    });
-    this.nextUid = uid;
-  },
-  parentNode: function () {
-    return this.start.parentNode;
-  },
-  empty: function () {
-    var parentNode = this.parentNode();
-    if (! parentNode)
-      return;
-
-    var subs = this.subs;
-    for (var k in subs) {
-      var n = subs[k];
-      if (n.parentNode === parentNode) {
-        // sub is still there
-        if (n.$ui && n.$ui.start === n)
-          // sub-DomTemplate
-          n.$ui.remove();
-        else
-          // sub-node or DomElement
-          removeNode(n);
-      }
-    }
-    this.subs = {};
-  },
-  remove: function () {
-    this.empty();
-    removeNode(this.start);
-    removeNode(this.end);
-  },
-  prependDom: function (newNodes) {
-    var parentNode = this.parentNode();
-    if (! parentNode)
-      return;
-    var nextNode = this.start.nextSibling;
-
-    for (var i = 0; i < newNodes.length; i++)
-      insertNode(newNodes[i],
-                 parentNode, nextNode);
-  },
-  appendDom: function (newNodes) {
-    var parentNode = this.parentNode();
-    if (! parentNode)
-      return;
-    var nextNode = this.end;
-
-    for (var i = 0; i < newNodes.length; i++)
-      insertNode(newNodes[i],
-                 parentNode, nextNode);
-  },
-  moveBefore: function (nextNode) {
-    var afterNode = this.end.nextSibling;
-    var nodes = [];
-    for (var n = this.start;
-         n && n !== afterNode;
-         n = n.nextSibling)
-      nodes.push(n);
-
-    var parentNode = this.parentNode();
-
-    for (var i = 0; i < nodes.length; i++)
-      insertNode(nodes[i], parentNode, nextNode);
-  }
-});
 
 var newFragment = function (nodeArray) {
   // jQuery fragments are built specially in
