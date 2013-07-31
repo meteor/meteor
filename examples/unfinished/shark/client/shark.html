@@ -3,22 +3,13 @@
 </head>
 
 <body>
-<div class="{{containerClass}}">
+
 <h1>Hello {{name}}</h1>
 
 {{#each items}}
-  {{#item}}
-    {{text}}
-  {{/item}}
+  <div>{{text}}</div>
 {{else}}
   <strong>Empty</strong>
 {{/each}}
-</div>
+
 </body>
-
-<template name="item">
-  <div>{{> content}}</div>
-  <div>{{> content text=foo}}</div>
-  {{rand}}
-</template>
-
