@@ -1,5 +1,5 @@
 
-var ATTRIBUTE_NAME_REGEX = /^[^\s"'>/=/]+$/;
+var ATTRIBUTE_NAME_REGEX = /^[^\s"'>/=]+$/;
 
 var isValidAttributeName = function (str) {
   return ATTRIBUTE_NAME_REGEX.test(str);
