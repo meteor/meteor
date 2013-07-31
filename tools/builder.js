@@ -289,9 +289,7 @@ _.extend(Builder.prototype, {
   // bundle. But if the symlink option was passed to the Builder
   // constructor, then make a symlink instead, if possible.
   //
-  // Adds dependencies both on the files that were copied, and on the
-  // contents of the directory tree (respecting 'ignore'.) Disable
-  // this with depend: false.
+  // This does NOT add any dependencies.
   //
   // Options:
   // - from: source path on local disk to copy from
@@ -300,13 +298,9 @@ _.extend(Builder.prototype, {
   // - ignore: array of regexps of filenames (that is, basenames) to
   //   ignore (they may still be visible in the output bundle if
   //   symlinks are being used)
-  // - depend: Should dependencies be added? Defaults to true.
   copyDirectory: function (options) {
     var self = this;
     options = options || {};
-
-    var createDependencies =
-      ('depend' in options) ? options.depend : true;
 
     var normOptionsTo = options.to;
     if (normOptionsTo.slice(-1) === path.sep)
@@ -343,12 +337,6 @@ _.extend(Builder.prototype, {
     }
 
     var ignore = options.ignore || [];
-    if (createDependencies) {
-      self.dependencyInfo.directories[absPathTo] = {
-        include: [/.?/],
-        exclude: ignore
-      };
-    }
 
     var walk = function (absFrom, relTo) {
       self._ensureDirectory(relTo);
@@ -367,9 +355,6 @@ _.extend(Builder.prototype, {
 
         // XXX avoid reading whole file into memory
         var data = fs.readFileSync(thisAbsFrom);
-
-        if (createDependencies)
-          self.dependencyInfo.files[thisAbsFrom] = sha1(data);
 
         fs.writeFileSync(path.resolve(self.buildPath, thisRelTo), data);
         self.usedAsFile[thisRelTo] = true;

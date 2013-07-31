@@ -2355,8 +2355,7 @@ _.extend(Package.prototype, {
         if (slice.nodeModulesPath) {
           builder.copyDirectory({
             from: slice.nodeModulesPath,
-            to: 'npm/node_modules',
-            depend: false
+            to: 'npm/node_modules'
           });
         }
 

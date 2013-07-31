@@ -1105,8 +1105,7 @@ _.extend(JsImage.prototype, {
     _.each(nodeModulesDirectories, function (nmd) {
       builder.copyDirectory({
         from: nmd.sourcePath,
-        to: nmd.preferredBundlePath,
-        depend: false
+        to: nmd.preferredBundlePath
       });
     });
 
@@ -1321,8 +1320,7 @@ _.extend(ServerTarget.prototype, {
       builder.copyDirectory({
         from: path.join(files.get_dev_bundle(), 'lib', 'node_modules'),
         to: 'node_modules',
-        ignore: ignoreFiles,
-        depend: false
+        ignore: ignoreFiles
       });
     }
 
