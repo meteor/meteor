@@ -182,7 +182,7 @@ var publishManifest = function(s3, manifestText, release) {
   var opts = {
     BucketName: "com.meteor.warehouse",
     ObjectName: destKey,
-    ContentLength: Buffer.byteLength(manifestText),
+    ContentLength: manifestText.length,
     Body: manifestText,
     Acl: "public-read"
   };
