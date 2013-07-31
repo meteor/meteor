@@ -282,7 +282,7 @@ var Watcher = function (options) {
   self.stopped = false;
 
   self.fileWatches = []; // array of paths
-  self.directoryWatches = {}; // map from path to watch object
+  self.directoryWatches = []; // array of watch object
 
   // We track all of the currently active timers so that we can cancel
   // them at stop() time. This stops the process from hanging at
