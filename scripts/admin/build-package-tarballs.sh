@@ -16,7 +16,7 @@ set -u
 # cd to top level dir
 cd `dirname $0`
 cd ../..
-TOPDIR=$(pwd)
+export TOPDIR=$(pwd)
 
 OUTDIR="$TOPDIR/dist/packages"
 mkdir -p $OUTDIR
