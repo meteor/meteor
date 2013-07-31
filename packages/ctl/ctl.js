@@ -183,6 +183,30 @@ Ctl.Commands.push({
   }
 });
 
+Ctl.Commands.push({
+  name: "migrate",
+  help: "Run this app's migrate program",
+  func: function (argv) {
+    var numMigrations = Ctl.getJobsByApp(
+      Ctl.myAppName(), { program: "migrate", done: false }
+    ).count();
+
+    if (numMigrations === 0) {
+      var appConfig = Ctl.prettyCall(
+        Ctl.findGalaxy(), 'getAppConfiguration', [Ctl.myAppName()]
+      );
+
+      Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), 'migrate', {
+        exitPolicy: 'restart',
+        env: {
+          METEOR_SETTINGS: appConfig.METEOR_SETTINGS
+        }
+      }]);
+      console.log("Started migrations.");
+    }
+  }
+});
+
 main = function (argv) {
   return Ctl.main(argv);
 };
