@@ -859,7 +859,7 @@ var Package = function (library) {
   // means that doesn't create it in a build state to start with) you
   // will need to call build() before you can use it. We break down
   // the two phases of the build process, plugin building and
-  // building, into two flags.
+  // slice building, into two flags.
   self.pluginsBuilt = false;
   self.slicesBuilt = false;
 };
@@ -1957,10 +1957,6 @@ _.extend(Package.prototype, {
 
     self.pluginDependencyInfo = makeDependencyInfoIntoRegexps(
       buildInfoJson.pluginDependencies);
-    // minor hack: sneak the plugin dependency info into the dictionary passed
-    // to checkUpToDate so that changes to anything compiled into our plugins
-    // causes us to recompile.
-    sliceDependencies[''] = self.pluginDependencyInfo;
 
     // If we're supposed to check the dependencies, go ahead and do so
     if (options.onlyIfUpToDate) {
