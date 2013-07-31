@@ -1875,3 +1875,29 @@ Tinytest.add("minimongo - immediate invalidate", function (test) {
 
   c.stop();
 });
+
+
+Tinytest.add("minimongo - count on cursor with limit", function(test){
+  var coll = new LocalCollection(), called = 0;
+
+  coll.insert({_id: 'A'});
+  coll.insert({_id: 'B'});
+  coll.insert({_id: 'C'});
+  coll.insert({_id: 'D'});
+
+  var c = Deps.autorun(function (c) {
+    var cursor = coll.find({_id: {$exists: true}}, {sort: {_id: 1}, limit: 3});
+    test.equal(cursor.count(), 3)
+    if (!c.firstRun){
+      called = called + 1;
+    }
+  });
+
+  coll.remove('A');
+
+  coll.insert('A');
+
+  test.equal(called, 2)
+  c.stop();
+
+});
