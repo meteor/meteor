@@ -1,14 +1,16 @@
 Items = new Meteor.Collection(null);
-Items.insert({ text: 'Foo' });
-Items.insert({ text: 'Bar' });
-Items.insert({ text: 'Beef' });
+Items.insert({ text: 'Foo Greenspan' });
+Items.insert({ text: 'Bar Oliver' });
+Items.insert({ text: 'Beef Tofu' });
 
 Meteor.startup(function () {
+  /*
   Meteor.setTimeout(function () {
     Items.insert({ text: 'Qux' });
     Items.remove({ text: 'Foo' });
     Items.update({ text: 'Bar' }, { text: 'Coke' });
   }, 1000);
+   */
 });
 
 UI.body.name = 'David';
@@ -263,17 +265,20 @@ _extend(DomRange.prototype, {
   }
 });
 
-Meteor.startup(function () {
-  var R = window.R = new DomRange;
-  $(document.body).append(R.getNodes());
-  R.add('aaa', document.createTextNode('aaa'));
-  R.add('bbb', document.createTextNode('bbb'));
-  R.add('ccc', document.createTextNode('ccc'));
-  R.add('zzz', document.createTextNode('zzz'),
-        'bbb');
-  R.remove('aaa');
-  R.moveBefore('bbb', 'zzz');
-  R.moveBefore('zzz', null);
-  R.removeAll();
-  R.add('aaa', document.createTextNode('aaa'));
-});
+// xcxc rendered didn't work and was surprising.
+UI.body.attached = function () {
+  $('#list').sortable();
+};
+
+// TO REPRO FAILURE:
+// 1. Move "Bar Oliver" to the bottom of the list
+// 2. Call `funkyReorder()`.
+var funkyIteration = 0;
+funkyReorder = function () {
+  var chars = "THEMAGICALMACHINETHATDOESNTBREAKNOMATTERWHATYOUDOWITHIT";
+  Items.find({}, {sort: {text: 1}}).forEach(function (item) {
+    Items.update(item._id, {
+      text: chars[funkyIteration++] + item.text.slice(1)
+    });
+  });
+};
