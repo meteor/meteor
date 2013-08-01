@@ -20,6 +20,12 @@ var sourcemap = require('source-map');
 // unipackage/slice changes, but this version (which is build-tool-specific) can
 // change when the the contents (not structure) of the built output changes. So
 // eg, if we improve the linker's static analysis, this should be bumped.
+//
+// You should also update this whenever you update any of the packages used
+// directly by the unipackage creation process (eg js-analyze) since they do not
+// end up as watched dependencies. (At least for now, packages only used in
+// target creation (eg minifiers and dev-bundle-fetcher) don't require you to
+// update BUILT_BY, though you will need to quit and rerun "meteor run".)
 exports.BUILT_BY = 'meteor/7';
 
 // Like Perl's quotemeta: quotes all regexp metacharacters. See

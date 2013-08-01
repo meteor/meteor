@@ -1,3 +1,7 @@
+// IF YOU MAKE ANY CHANGES TO THIS PACKAGE THAT COULD AFFECT ITS OUTPUT, YOU
+// MUST UPDATE BUILT_BY IN tools/packages.js. Otherwise packages may not be
+// rebuilt with the new changes.
+
 Package.describe({
   summary: "JavaScript code analysis for Meteor",
   internal: true
