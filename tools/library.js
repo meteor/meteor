@@ -174,7 +174,7 @@ _.extend(Library.prototype, {
     }
 
     // Load package from disk
-    var pkg = new packages.Package(self);
+    var pkg = new packages.Package(self, packageDir);
     if (fs.existsSync(path.join(packageDir, 'unipackage.json'))) {
       // It's an already-built package
       pkg.initFromUnipackage(name, packageDir);
