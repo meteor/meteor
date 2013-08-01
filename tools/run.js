@@ -498,8 +498,14 @@ exports.run = function (context, options) {
   var restartServer = inFiber(function () {
     Status.running = false;
     Status.listening = false;
-    if (serverHandle)
+    if (watcher) {
+      watcher.stop();
+      watcher = null;
+    }
+    if (serverHandle) {
       killServer(serverHandle);
+      serverHandle = null;
+    }
 
     // If the user did not specify a --release on the command line, and
     // simultaneously runs `meteor update` during this run, just exit and let
@@ -551,12 +557,6 @@ exports.run = function (context, options) {
       watchSet.addFile(path.resolve(options.settingsFile), settingsHash);
     }
 
-    // Start watching for changes for files. There's no hurry to call
-    // this, since watchSet contains a snapshot of the state of
-    // the world at the time of bundling, in the form of hashes and
-    // lists of matching files in each directory.
-    startWatching(watchSet);
-
     // Start the server
     Status.running = true;
 
@@ -607,6 +607,12 @@ exports.run = function (context, options) {
       settings: settings,
       program: options.program
     });
+
+    // Start watching for changes for files. There's no hurry to call
+    // this, since watchSet contains a snapshot of the state of
+    // the world at the time of bundling, in the form of hashes and
+    // lists of matching files in each directory.
+    startWatching(watchSet);
   });
 
   var mongoErrorCount = 0;
