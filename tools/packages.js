@@ -1898,11 +1898,13 @@ _.extend(Package.prototype, {
       sliceWatchSets[sliceTag] = watchSet;
     });
 
-    self.pluginWatchSet = watch.WatchSet.fromJSON(
+    // We do NOT put this (or anything!) onto self until we've passed the
+    // onlyIfUpToDate check.
+    var pluginWatchSet = watch.WatchSet.fromJSON(
       buildInfoJson.pluginDependencies);
     // This might be redundant (since pluginWatchSet was probably merged into
     // each slice watchSet when it was built) but shouldn't hurt.
-    mergedWatchSet.merge(self.pluginWatchSet);
+    mergedWatchSet.merge(pluginWatchSet);
 
     // If we're supposed to check the dependencies, go ahead and do so
     if (options.onlyIfUpToDate) {
@@ -1933,6 +1935,7 @@ _.extend(Package.prototype, {
     };
     self.defaultSlices = mainJson.defaultSlices;
     self.testSlices = mainJson.testSlices;
+    self.pluginWatchSet = pluginWatchSet;
 
     _.each(mainJson.plugins, function (pluginMeta) {
       rejectBadPath(pluginMeta.path);
