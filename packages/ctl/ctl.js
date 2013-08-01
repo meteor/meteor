@@ -195,11 +195,19 @@ Ctl.Commands.push({
       var appConfig = Ctl.prettyCall(
         Ctl.findGalaxy(), 'getAppConfiguration', [Ctl.myAppName()]
       );
+      var deployConfig = {
+        packages: {
+          "mongo-livedata": {
+            url: appConfig.MONGO_URL
+          }
+        }
+      };
 
       Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), 'migrate', {
         exitPolicy: 'restart',
         env: {
-          METEOR_SETTINGS: appConfig.METEOR_SETTINGS
+          METEOR_SETTINGS: appConfig.METEOR_SETTINGS,
+          METEOR_DEPLOY_CONFIG: JSON.stringify(deployConfig)
         }
       }]);
       console.log("Started migrations.");
