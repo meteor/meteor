@@ -294,6 +294,16 @@ UI.Each = Component.extend({
         comp.build();
         var r = new DomRange;
         r.component = comp;
+        // XXX emulate hypothetical
+        // node.$ui.data() API
+        _.each(comp._offscreen.childNodes,
+               function (n) {
+                 n.$ui = {
+                   data: function () {
+                     return data;
+                   }
+                 };
+               });
         r.add(_.toArray(
           comp._offscreen.childNodes));
         comp._offscreen = null;
