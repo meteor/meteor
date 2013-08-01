@@ -48,7 +48,7 @@ _.extend(exports, {
     // probably have a way to request this treatment (load order dependency
     // tags?) .. who knows.
     var ishtml_a = path.extname(a) === '.html';
-    var ishtml_b = path.extname(a) === '.html';
+    var ishtml_b = path.extname(b) === '.html';
     if (ishtml_a !== ishtml_b) {
       return (ishtml_a ? -1 : 1);
     }
