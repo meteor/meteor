@@ -26,7 +26,7 @@ var sourcemap = require('source-map');
 // end up as watched dependencies. (At least for now, packages only used in
 // target creation (eg minifiers and dev-bundle-fetcher) don't require you to
 // update BUILT_BY, though you will need to quit and rerun "meteor run".)
-exports.BUILT_BY = 'meteor/7';
+exports.BUILT_BY = 'meteor/8';
 
 // Like Perl's quotemeta: quotes all regexp metacharacters. See
 //   https://github.com/substack/quotemeta/blob/master/index.js
@@ -468,6 +468,9 @@ _.extend(Slice.prototype, {
     // a plugin).
     _.each(self._activePluginPackages(), function (otherPkg) {
       self.watchSet.merge(otherPkg.pluginWatchSet);
+      // XXX this assumes this is not overwriting something different
+      self.pkg.pluginProviderPackageDirs[otherPkg.name] =
+        otherPkg.packageDirectoryForBuildInfo;
     });
 
     self.prelinkFiles = results.files;
@@ -729,7 +732,7 @@ _.extend(Slice.prototype, {
 // (find better names, though.)
 
 var nextPackageId = 1;
-var Package = function (library) {
+var Package = function (library, packageDirectoryForBuildInfo) {
   var self = this;
 
   // A unique ID (guaranteed to not be reused in this process -- if
@@ -756,6 +759,14 @@ var Package = function (library) {
   // bundle, for those that care to open up the bundle and look (but
   // it's still nice to get it right.) null if loaded from unipackage.
   self.serveRoot = null;
+
+  // The package's directory. This is used only by other packages that use this
+  // package in their buildinfo.json (to detect that they need to be rebuilt if
+  // the library's resolution of the package name changes); it is not used to
+  // read files or anything else. Notably, it should be the same if a package is
+  // read from a source tree or read from the .build unipackage inside that
+  // source tree.
+  self.packageDirectoryForBuildInfo = packageDirectoryForBuildInfo;
 
   // Package library that should be used to resolve this package's
   // dependencies
@@ -800,6 +811,12 @@ var Package = function (library) {
   //
   // Complete only when pluginsBuilt is true.
   self.pluginWatchSet = new watch.WatchSet();
+
+  // Map from package name to packageDirectoryForBuildInfo of packages that are
+  // directly used by this package. We use this to figure out that we need to
+  // rebuild if the resolution of the package changes (eg, an app package is
+  // added that overshadows a warehouse package, or the release changes).
+  self.pluginProviderPackageDirs = {};
 
   // True if plugins have been initialized (if _ensurePluginsInitialized has
   // been called)
@@ -989,6 +1006,11 @@ _.extend(Package.prototype, {
         // Add this plugin's dependencies to our "plugin dependency" WatchSet.
         self.pluginWatchSet.merge(buildResult.watchSet);
 
+        // Remember the library resolution of all packages used by the plugin.
+        // XXX assumes that this merges cleanly
+        _.extend(self.pluginProviderPackageDirs,
+                 buildResult.pluginProviderPackageDirs);
+
         // Register the built plugin's code.
         self.plugins[info.name] = buildResult.image;
       });
@@ -1076,13 +1098,6 @@ _.extend(Package.prototype, {
   // directory. This function does not retrieve the package's
   // dependencies from the library, and on return, the package will be
   // in an unbuilt state.
-  //
-  // options:
-  // - skipNpmUpdate: if true, don't refresh .npm/package/node_modules (for
-  //   packages that use Npm.depend). Only use this when you are
-  //   certain that .npm/package/node_modules was previously created by some
-  //   other means, and you're certain that the package's Npm.depend
-  //   instructions haven't changed since then.
   initFromPackageDir: function (name, dir, options) {
     var self = this;
     var isPortable = true;
@@ -1638,31 +1653,25 @@ _.extend(Package.prototype, {
     // XXX maybe there should be separate NPM dirs for use vs test?
     var packageNpmDir =
           path.resolve(path.join(self.sourceRoot, '.npm', 'package'));
-    var npmOk = true;
 
-    if (! options.skipNpmUpdate) {
-      // If this package was previously built with pre-linker versions, it may
-      // have files directly inside `.npm` instead of nested inside
-      // `.npm/package`. Clean them up if they are there.
-      var preLinkerFiles = [
-        'npm-shrinkwrap.json', 'README', '.gitignore', 'node_modules'];
-      _.each(preLinkerFiles, function (f) {
-        files.rm_recursive(path.join(self.sourceRoot, '.npm', f));
-      });
+    // If this package was previously built with pre-linker versions, it may
+    // have files directly inside `.npm` instead of nested inside
+    // `.npm/package`. Clean them up if they are there.
+    var preLinkerFiles = [
+      'npm-shrinkwrap.json', 'README', '.gitignore', 'node_modules'];
+    _.each(preLinkerFiles, function (f) {
+      files.rm_recursive(path.join(self.sourceRoot, '.npm', f));
+    });
 
-      // go through a specialized npm dependencies update process,
-      // ensuring we don't get new versions of any
-      // (sub)dependencies. this process also runs mostly safely
-      // multiple times in parallel (which could happen if you have
-      // two apps running locally using the same package)
-      // We run this even if we have no dependencies, because we might
-      // need to delete dependencies we used to have.
-      npmOk = meteorNpm.updateDependencies(name, packageNpmDir,
-                                           npmDependencies);
-    }
-
+    // go through a specialized npm dependencies update process,
+    // ensuring we don't get new versions of any
+    // (sub)dependencies. this process also runs mostly safely
+    // multiple times in parallel (which could happen if you have
+    // two apps running locally using the same package)
+    // We run this even if we have no dependencies, because we might
+    // need to delete dependencies we used to have.
     var nodeModulesPath = null;
-    if (npmOk) {
+    if (meteorNpm.updateDependencies(name, packageNpmDir, npmDependencies)) {
       nodeModulesPath = path.join(packageNpmDir, 'node_modules');
       if (! meteorNpm.dependenciesArePortable(packageNpmDir))
         isPortable = false;
@@ -1929,6 +1938,7 @@ _.extend(Package.prototype, {
     // This might be redundant (since pluginWatchSet was probably merged into
     // each slice watchSet when it was built) but shouldn't hurt.
     mergedWatchSet.merge(pluginWatchSet);
+    var pluginProviderPackageDirs = buildInfoJson.pluginProviderPackages || {};
 
     // If we're supposed to check the dependencies, go ahead and do so
     if (options.onlyIfUpToDate) {
@@ -1948,7 +1958,7 @@ _.extend(Package.prototype, {
         return false;
       }
 
-      if (! self.checkUpToDate(mergedWatchSet))
+      if (! self.checkUpToDate(mergedWatchSet, pluginProviderPackageDirs))
         return false;
     }
 
@@ -1960,6 +1970,7 @@ _.extend(Package.prototype, {
     self.defaultSlices = mainJson.defaultSlices;
     self.testSlices = mainJson.testSlices;
     self.pluginWatchSet = pluginWatchSet;
+    self.pluginProviderPackageDirs = pluginProviderPackageDirs;
 
     _.each(mainJson.plugins, function (pluginMeta) {
       rejectBadPath(pluginMeta.path);
@@ -2084,9 +2095,10 @@ _.extend(Package.prototype, {
   // files have been modified.) True if we have dependency info and it says that
   // the package is up-to-date. False if a source file has changed.
   //
-  // The argument _watchSet is used when reading from disk when there are no
-  // slices yet; don't pass it from outside this file.
-  checkUpToDate: function (_watchSet) {
+  // The arguments _watchSet and _pluginProviderPackageDirs are used when
+  // reading from disk when there are no slices yet; don't pass them from
+  // outside this file.
+  checkUpToDate: function (_watchSet, _pluginProviderPackageDirs) {
     var self = this;
 
     if (!_watchSet) {
@@ -2098,6 +2110,19 @@ _.extend(Package.prototype, {
         _watchSet.merge(slice.watchSet);
       });
     }
+    if (!_pluginProviderPackageDirs) {
+      _pluginProviderPackageDirs = self.pluginProviderPackageDirs;
+    }
+
+    // Are all of the packages we directly use (which can provide plugins which
+    // affect compilation) resolving to the same directory? (eg, have we updated
+    // our release version to something with a new version of a package?)
+    var packageResolutionsSame = _.all(
+      _pluginProviderPackageDirs, function (packageDir, name) {
+        return self.library.findPackageDirectory(name) === packageDir;
+      });
+    if (!packageResolutionsSame)
+      return false;
 
     return watch.isUpToDate(_watchSet);
   },
@@ -2146,6 +2171,7 @@ _.extend(Package.prototype, {
         builtBy: exports.BUILT_BY,
         sliceDependencies: { },
         pluginDependencies: self.pluginWatchSet.toJSON(),
+        pluginProviderPackages: self.pluginProviderPackageDirs,
         source: options.buildOfPath || undefined
       };
 
