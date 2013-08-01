@@ -1,268 +1,319 @@
 
-// XXXX COMBINE LIST AND EACH???
+//////////////////////////////
 
-// `id` arguments to this class MUST be non-empty strings
-UI.List = Component.extend({
-  typeName: 'List',
-  _items: null, // OrderedDict of id -> Component
-  _else: null, // Component
-  init: function () {
-    this._items = new OrderedDict;
+// We probably want to instrument insertNode/
+// removeNode to record who added a node,
+// for the purpose of event handling, and also
+// to notify any jQuery widgets on an element
+// that care about elements coming and going.
+
+var removeNode = function (n) {
+  n.parentNode.removeChild(n);
+};
+
+var insertNode = function (n, parent, next) {
+  parent.insertBefore(n, next || null);
+};
+
+var newFragment = function (nodeArray) {
+  // jQuery fragments are built specially in
+  // IE<9 so that they can safely hold HTML5
+  // elements.
+  return $.buildFragment(nodeArray, document);
+};
+
+// A very basic operation like Underscore's `_.extend` that
+// copies `src`'s own, enumerable properties onto `tgt` and
+// returns `tgt`.
+var _extend = function (tgt, src) {
+  for (var k in src)
+    if (src.hasOwnProperty(k))
+      tgt[k] = src[k];
+  return tgt;
+};
+
+var isArray = function (x) {
+  return !!((typeof x.length === 'number') &&
+            (x.sort || x.splice));
+};
+
+// A DomRange points to a `start` empty text node,
+// an `end` empty text node, and zero or more
+// keyed children, where a child is a node
+// or a DomRange.  These children all occur
+// as siblings at the DOM top level of the range.
+//
+// A DomRange never throws errors due to children
+// being moved or removed without its knowledge,
+// even if a child is
+// reparented or moved outside the start and
+// end pointers.  A node child is considered
+// removed if it's no longer a sibling (that is,
+// it doesn't have the same parentNode
+// as `start`).  A DomRange child is considered
+// removed if its `start` node is no longer
+// a sibling.  A DomRange *may* error if its
+// `end` pointer is removed or reparented away
+// from its `start` pointer.
+//
+// Children can be added with or without a key.
+// Children added without a key can't be moved
+// or removed.  Children added with a key can be
+// removed, moved to the end, or moved before
+// another keyed child.
+//
+// DomRange inserts and moves children using
+// algorithms that are correct if no nodes have
+// been moved without the DomRange's knowledge,
+// but still well-defined (if not necessarily
+// "what you want") if nodes have been moved.
+// For example, when a DomRange moves a child
+// DomRange, it moves all nodes between the
+// child's `start` and `end` inclusive, even
+// if those aren't the right nodes.  (In contrast,
+// removing a DomRange removes the children
+// no matter where they are.)  Inserting a
+// new DomRange or node before an existing child
+// will see if the child is still present and
+// use the child's `start` and `end` pointers
+// (if it is a DomRange) to find an insertion
+// position.  If someone has shuffled around
+// all the sibling nodes in question, this
+// position won't be very meaningful but it will
+// still exist.
+
+DomRange = function () {
+  var start = document.createTextNode("");
+  var end = document.createTextNode("");
+  var fragment = newFragment([start, end]);
+
+  this.start = start;
+  start.$ui = this;
+  this.end = end;
+
+  this.children = {};
+  this.nextChildId = 1;
+};
+
+_extend(DomRange.prototype, {
+  parentNode: function () {
+    return this.start.parentNode;
   },
-  addItemBefore: function (id, comp, data, beforeId) {
-    var self = this;
+  getNodes: function () {
+    var afterNode = this.end.nextSibling;
+    var nodes = [];
+    for (var n = this.start;
+         n && n !== afterNode;
+         n = n.nextSibling)
+      nodes.push(n);
+    return nodes;
+  },
+  removeAll: function () {
+    var parentNode = this.parentNode();
+    if (! parentNode)
+      return;
 
-    var dep = new Deps.Dependency;
-    comp = comp.withData(_extend(function () {
-      dep.depend();
-      return data;
-    }, {
-      $set: function (v) {
-        data = v;
-        dep.changed();
-      }}));
-
-    self._items.putBefore(id, comp, beforeId);
-
-    if (self.isBuilt) {
-      if (self._else) {
-        self._else.remove();
-        self._else = null;
+    var children = this.children;
+    for (var k in children) {
+      var rangeOrNode = children[k];
+      if (rangeOrNode.parentNode === parentNode) {
+        // node, still there
+        removeNode(rangeOrNode);
+      } else if (rangeOrNode.start &&
+                 rangeOrNode.start.parentNode === parentNode) {
+        // DomRange, still there
+        rangeOrNode.remove();
       }
-
-      self.insertBefore(
-        comp, beforeId ? self._items.get(beforeId) : null);
+      delete children[k];
     }
   },
-  removeItem: function (id) {
-    var comp = this._items.remove(id);
+  getInsertionPoint: function (beforeId) {
+    var children = this.children;
+    var parentNode = this.parentNode();
 
-    if (this.isBuilt) {
-      comp.remove();
-      if (this._items.empty()) {
-        // XXX figure out what to do about the need for
-        // `constructify` in places like this.  We want
-        // `content` and `elseContent` to be able to be
-        // functions so that templates can include
-        // children with reactive types.  However,
-        // while render buffers are programmed to accept
-        // the union type of {uninited component |
-        // inited component | function}, the built-time
-        // component methods don't.  Maybe they should.
-        //
-        // XXX this doesn't reactively update elseContent
-        this._else = constructify(this.elseContent || UI.Component);
-        this.append(this._else);
-      }
+    beforeId = '_' + beforeId;
+    var nextNode;
+
+    if (
+      beforeId != null &&
+        children.hasOwnProperty(beforeId) &&
+        (nextNode = children[beforeId]) &&
+        (nextNode.parentNode === parentNode ||
+         (nextNode = nextNode.start) &&
+         nextNode.parentNode === parentNode))
+      return nextNode;
+
+    return this.end;
+  },
+  add: function (id, rangeNodeOrContent, beforeId) {
+    if (id && typeof id !== 'string') {
+      beforeId = rangeNodeOrContent;
+      rangeNodeOrContent = id;
+      id = null;
     }
-  },
-  moveItemBefore: function (id, beforeId) {
-    var comp = this._items.get(id);
-    this._items.moveBefore(id, beforeId);
 
-    if (this.isBuilt) {
-      comp.detach();
-      this.insertBefore(
-        comp, beforeId ? this._items.get(beforeId) : null);
+    if (isArray(rangeNodeOrContent)) {
+      if (id != null)
+        throw new Error("Can only add one node or one range if id is given");
+      var content = rangeNodeOrContent;
+      for (var i = 0; i < content.length; i++)
+        this.add(content[i], beforeId);
+      return;
     }
-  },
-  getItem: function (id) {
-    return this._items.get(id) || null;
-  },
-  setItemData: function (id, newData) {
-    var comp = this.getItem(id);
-    if (! comp)
-      throw new Error("No such item: " + id);
 
-    comp.data.$set(newData);
-  },
-  numItems: function () {
-    return this._items.size();
-  },
-  render: function (buf) {
-    // This component reactively rebuilds when any dependencies
-    // here are invalidated.
-    //
-    // The "item" methods cannot be called from here; they assume
-    // they are not operating during the build, but either
-    // before or after it.
+    var rangeOrNode = rangeNodeOrContent;
+    if (id == null)
+      id = this.nextChildId++;
+    else
+      id = '_' + id;
 
-    var self = this;
-    if (self._items.empty()) {
-      self._else = buf.write(self.elseContent);
+    var children = this.children;
+    if (children.hasOwnProperty(id))
+      throw new Error("Item already exists: " + id.slice(1));
+    children[id] = rangeOrNode;
+
+    var parentNode = this.parentNode();
+    if (! parentNode)
+      return;
+    var nextNode = this.getInsertionPoint(beforeId);
+
+    if (typeof rangeOrNode.getNodes === 'function') {
+      // DomRange
+      var nodes = rangeOrNode.getNodes();
+      for (var i = 0; i < nodes.length; i++)
+        insertNode(nodes[i], parentNode, nextNode);
     } else {
-      self._else = null;
-      self._items.forEach(function (comp) {
-        // XXX have to add here, which is weird....
-        buf.write(self.add(comp));
-      });
+      // node
+      insertNode(rangeOrNode, parentNode, nextNode);
     }
   },
-  // Optimize the calculation of the new `.start` and `.end`
-  // after removing child components at the start or end.
-  _findStartComponent: function () {
-    return this._items.firstValue();
-  },
-  _findEndComponent: function () {
-    return this._items.lastValue();
-  },
-  // Replace the data in this list with a different dataset,
-  // reusing components with matching ids, moving them if
-  // necessary.
-  // The caller supplies a sequence of (id, data) : (String, any)
-  // pairs using the `add` method of the returned object, and then
-  // calls `end`.
-  beginReplace: function () {
-    var self = this;
+  remove: function (id) {
+    if (id == null) {
+      // remove self
+      this.removeAll();
+      removeNode(this.start);
+      removeNode(this.end);
+      return;
+    }
 
-    var items = self._items;
-    var ptr = items.first();
-    var seenIds = {};
-    var counter = 1;
-    // uniquify IDs by adding a few random characters and
-    // a counter.
-    var rand = Random.id().slice(0,4);
-    return {
-      // here only, id may be null
-      add: function (id, comp, data) {
-        var origId = id;
-        while ((! id) || seenIds.hasOwnProperty(id))
-          id = (origId || '') + rand + (counter++);
-        seenIds[id] = true;
+    id = '_' + id;
+    var children = this.children;
+    var rangeOrNode =
+          (children.hasOwnProperty(id) &&
+           children[id]);
+    delete children[id];
+    if (! rangeOrNode)
+      return;
 
-        // Now we know `id` is unique among new items,
-        // but it may match an old item at or after
-        // the location of `ptr`.
-        //
-        // We use the strategy of moving an existing component
-        // into the appropriate place if one exists, otherwise
-        // inserting one.  This is efficient if, say, a new document
-        // is inserted at the top or bottom, removed from the bottom,
-        // or moved to the top.  It's inefficient if a document is
-        // removed from the top or moved to the bottom, because we
-        // will perform `N-1` "moves".
-        //
-        // In summary, we don't generate efficient moves the way
-        // least-common-subsequence would, be we do reuse existing
-        // components and move them to the right place.
-        if (ptr === id) {
-          // XXX we don't deal the case where comp is different
-          // from the original comp.  Oops.
-          self.setItemData(id, data);
-          ptr = items.next(ptr);
-        } else if (items.has(id)) {
-          self.moveItemBefore(id, ptr);
-          self.setItemData(id, data);
-        } else {
-          self.addItemBefore(id, comp, data, ptr);
-        }
-      },
-      end: function () {
-        // delete everything at or after ptr
-        while (ptr) {
-          var next = items.next(ptr);
-          self.removeItem(ptr);
-          ptr = next;
-        }
-      }
-    };
+    var parentNode = this.parentNode();
+    if (! parentNode)
+      return;
+
+    if (rangeOrNode.parentNode === parentNode) {
+      // node
+      removeNode(rangeOrNode);
+    } else if (rangeOrNode.start &&
+               rangeOrNode.start.parentNode === parentNode) {
+      // DomRange
+      rangeOrNode.remove();
+    }
+  },
+  moveBefore: function (id, beforeId) {
+    var nextNode = this.getInsertionPoint(beforeId);
+    id = '_' + id;
+    var children = this.children;
+    var rangeOrNode =
+          (children.hasOwnProperty(id) &&
+           children[id]);
+    if (! rangeOrNode)
+      return;
+
+    var parentNode = this.parentNode();
+    if (! parentNode)
+      return;
+
+
+    if (rangeOrNode.parentNode === parentNode) {
+      // node
+      insertNode(rangeOrNode, parentNode, nextNode);
+    } else if (rangeOrNode.start &&
+               rangeOrNode.start.parentNode === parentNode) {
+      // DomRange
+      var nodes = rangeOrNode.getNodes();
+      for (var i = 0; i < nodes.length; i++)
+        insertNode(nodes[i], parentNode, nextNode);
+    }
+  },
+  get: function (id) {
+    id = '_' + id;
+    var children = this.children;
+    if (children.hasOwnProperty(id))
+      return children[id];
+    return null;
   }
 });
 
+////////////////////
+
 UI.Each = Component.extend({
   typeName: 'Each',
-  List: UI.List,
-  init: function () {
-    var self = this;
-    self._list = self.List.extend({
-      // doesn't bind `this` if `elseContent` is a function,
-      // but then `elseContent` is not a real method, right?
-      // just a function you call for reactivity purposes?
-      elseContent: self.elseContent
-    });
-    // add outside of the rebuild cycle
-    self.add(self._list);
-  },
-  _getId: function (value) { // override this
-    if (value == null) {
-      return null;
-    } else if (value._id == null) {
-      if (typeof value === 'object')
-        // value is some object without `_id`.  oh well.
-        return null;
-      else
-        // value is a string or number, say
-        return String(value);
-    } else {
-      if (typeof value._id === 'object')
-        return null;
-      else
-        return String(value._id);
-    }
-  },
   render: function (buf) {
+    // do nothing
+  },
+  rendered: function () {
     var self = this;
-    var list = self._list;
 
-    var data = self.get();
+    var cursor = self.get();
 
-    // if `content` reactively changes type, we simply rebuild
-    // completely.
-    // XXX the occurrences of `|| Empty` in this file may or may not
-    // be necessary
-    var content = (typeof self.content === 'function' ?
-                   self.content() : self.content) || UI.Empty;
+    var content =
+          (typeof self.content === 'function' ?
+           self.content() : self.content)
+          || UI.Empty;
 
-    var replacer = list.beginReplace();
+    var range = new DomRange;
+    self.append(range.getNodes());
 
-    if (! data) {
-      // no items to enumerate in the replacement
-    } else if (typeof data.length === 'number' &&
-               typeof data.splice === 'function') {
-      // looks like an array
-      var array = data;
-
-      for (var i=0, N=array.length; i<N; i++) {
-        var x = array[i];
-        replacer.add(self._getId(x), self.content, x);
-      }
-
-    } else if (data.observe) {
-      var cursor = data;
-
-      // we assume that `observe` will only call `addedAt` (and
-      // not other callbacks) before returning (which is specced),
-      // and further that these calls will be in document order
-      // (which isn't).
-      cursor.observe({
+    cursor.observe({
         _no_indices: true,
-        addedAt: function (doc, i, beforeId) {
-          var id = Meteor.idStringify(doc._id);
-          if (replacer)
-            replacer.add(id, content, doc);
-          else
-            list.addItemBefore(id, content, doc,
-                               beforeId && Meteor.idStringify(beforeId));
-        },
-        removed: function (doc) {
-          list.removeItem(Meteor.idStringify(doc._id));
-        },
-        movedTo: function (doc, i, j, beforeId) {
-          list.moveItemBefore(Meteor.idStringify(doc._id),
-                              beforeId && Meteor.idStringify(beforeId));
-        },
-        changed: function (newDoc) {
-          list.setItemData(Meteor.idStringify(newDoc._id), newDoc);
-        }
-      });
-    } else {
-      for (var k in data)
-        replacer.add(k, content, data[k]);
-    }
+      addedAt: function (doc, i, beforeId) {
+        var id = Meteor.idStringify(doc._id);
 
-    replacer.end();
-    replacer = null; // so cursor.observe callbacks stop using it
+        var data = doc;
+        var dep = new Deps.Dependency;
+        var comp = content.withData(_extend(
+          function () {
+            dep.depend();
+            return data;
+          }, {
+            $set: function (v) {
+              data = v;
+              dep.changed();
+            }}));
 
-    buf.write(list);
+        self.add(comp);
+        comp.build();
+        var r = new DomRange;
+        r.component = comp;
+        r.add(_.toArray(
+          comp._offscreen.childNodes));
+        comp._offscreen = null;
+        comp.isAttached = true;
+
+        if (beforeId)
+          beforeId = Meteor.idStringify(beforeId);
+        range.add(id, r, beforeId);
+      },
+      removed: function (doc) {
+        range.remove(Meteor.idStringify(doc._id));
+      },
+      movedTo: function (doc, i, j, beforeId) {
+        range.moveBefore(
+          Meteor.idStringify(doc._id),
+          beforeId && Meteor.idStringify(beforeId));
+      },
+      changed: function (newDoc) {
+        range.get(Meteor.idStringify(newDoc._id)).component.data.$set(newDoc);
+      }
+    });
   }
 });
