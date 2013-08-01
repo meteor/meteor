@@ -74,6 +74,8 @@ var _ = require('underscore');
 //   file (potentially not the only one that changed or was removed)
 //
 
+
+
 var WatchSet = function () {
   var self = this;
 
@@ -90,7 +92,7 @@ var WatchSet = function () {
   // - 'absPath': absolute path to a directory
   // - 'include': array of RegExps
   // - 'exclude': array of RegExps
-  // - 'contents': array of strings
+  // - 'contents': array of strings, or null if the directory should not exist
   //
   // This represents the assertion that 'absPath' is a directory and that
   // 'contents' is its immediate contents, as filtered by the regular
@@ -132,8 +134,9 @@ _.extend(WatchSet.prototype, {
       return;
     if (_.isEmpty(options.include))
       return;
-    var contents = _.clone(options.contents || []);
-    contents.sort();
+    var contents = _.clone(options.contents);
+    if (contents)
+      contents.sort();
 
     self.directories.push({
       absPath: options.absPath,
@@ -320,12 +323,9 @@ _.extend(Watcher.prototype, {
     if (oldHash === undefined)
       throw new Error("Checking unknown file " + absPath);
 
-    try {
-      var contents = fs.readFileSync(absPath);
-    } catch (e) {
-      // Rethrow most errors.
-      if (!e || (e.code !== 'ENOENT' && e.code !== 'EISDIR'))
-        throw e;
+    var contents = readFile(absPath);
+
+    if (contents === null) {
       // File does not exist (or is a directory).
       // Is this what we expected?
       if (oldHash === null)
@@ -341,10 +341,7 @@ _.extend(Watcher.prototype, {
       return true;
     }
 
-    var crypto = require('crypto');
-    var hasher = crypto.createHash('sha1');
-    hasher.update(contents);
-    var newHash = hasher.digest('hex');
+    var newHash = sha1(contents);
 
     // Unchanged?
     if (newHash === oldHash)
@@ -366,7 +363,7 @@ _.extend(Watcher.prototype, {
       exclude: info.exclude
     });
 
-    // If newContents is null (no directory) or the directory has changed, fire.
+    // If the directory has changed (including being deleted or created).
     if (!_.isEqual(info.contents, newContents)) {
       self._fire();
       return true;
@@ -522,9 +519,44 @@ var isUpToDate = function (watchSet) {
   return upToDate;
 };
 
+// Options should have absPath/include/exclude.
+var readAndWatchDirectory = function (watchSet, options) {
+  var contents = readDirectory(options);
+  watchSet.addDirectory(_.extend({contents: contents}, options));
+  return contents;
+};
+
+var readAndWatchFile = function (watchSet, absPath) {
+  var contents = readFile(absPath);
+  var hash = contents === null ? null : sha1(contents);
+  watchSet.addFile(absPath, hash);
+  return contents;
+};
+
+var readFile = function (absPath) {
+  try {
+    return fs.readFileSync(absPath);
+  } catch (e) {
+    // Rethrow most errors.
+    if (!e || (e.code !== 'ENOENT' && e.code !== 'EISDIR'))
+      throw e;
+    // File does not exist (or is a directory).
+    return null;
+  }
+};
+
+var sha1 = function (contents) {
+  var crypto = require('crypto');
+  var hash = crypto.createHash('sha1');
+  hash.update(contents);
+  return hash.digest('hex');
+};
+
 _.extend(exports, {
   WatchSet: WatchSet,
   Watcher: Watcher,
   readDirectory: readDirectory,
-  isUpToDate: isUpToDate
+  isUpToDate: isUpToDate,
+  readAndWatchDirectory: readAndWatchDirectory,
+  readAndWatchFile: readAndWatchFile
 });

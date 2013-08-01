@@ -758,8 +758,7 @@ _.extend(ClientTarget.prototype, {
     var self = this;
 
     var templatePath = path.join(__dirname, "app.html.in");
-    var template = fs.readFileSync(templatePath);
-    self.watchSet.addFile(templatePath, Builder.sha1(template));
+    var template = watch.readAndWatchFile(self.watchSet, templatePath);
 
     var f = require('handlebars').compile(template.toString());
     return new Buffer(f({
@@ -1587,9 +1586,13 @@ exports.bundle = function (appDir, outputPath, options) {
       return server;
     };
 
-    var includeDefaultTargets = true;
-    if (fs.existsSync(path.join(appDir, 'no-default-targets')))
-      includeDefaultTargets = false;
+    // Include default targets, unless there's a no-default-targets file in the
+    // top level of the app. (This is a very hacky interface which will
+    // change. Note, eg, that .meteor/packages is confusingly ignored in this
+    // case.)
+
+    var includeDefaultTargets = watch.readAndWatchFile(
+      watchSet, path.join(appDir, 'no-default-targets')) === null;
 
     if (includeDefaultTargets) {
       // Create a Package object that represents the app
@@ -1605,73 +1608,83 @@ exports.bundle = function (appDir, outputPath, options) {
     }
 
     // Pick up any additional targets in /programs
-    // Step 1: scan for targets and make a list
+    // Step 1: scan for targets and make a list. We will reload if you create a
+    // new subdir in 'programs', or create 'programs' itself.
     var programsDir = path.join(appDir, 'programs');
     var programs = [];
-    if (fs.existsSync(programsDir)) {
-      _.each(fs.readdirSync(programsDir), function (item) {
-        if (item.match(/^\./))
-          return; // ignore dotfiles
-        var itemPath = path.join(programsDir, item);
+    var programsSubdirs = watch.readAndWatchDirectory(watchSet, {
+      absPath: programsDir,
+      include: [/\/$/],
+      exclude: [/^\./]
+    });
 
-        if (! fs.statSync(itemPath).isDirectory())
-          return; // ignore non-directories
+    _.each(programsSubdirs, function (item) {
+      // Remove trailing slash.
+      item = item.substr(0, item.length - 1);
 
-        if (item in targets) {
-          buildmessage.error("duplicate programs named '" + item + "'");
-          // Recover by ignoring this program
-          return;
+      if (_.has(targets, item)) {
+        buildmessage.error("duplicate programs named '" + item + "'");
+        // Recover by ignoring this program
+        return;
+      }
+      targets[item] = true;  // will be overwritten with actual target later
+
+      // Read attributes.json, if it exists
+      var attrsJsonAbsPath = path.join(programsDir, item, 'attributes.json');
+      var attrsJsonRelPath = path.join('programs', item, 'attributes.json');
+      var attrsJsonContents = watch.readAndWatchFile(
+        watchSet, attrsJsonAbsPath);
+
+      var attrsJson = {};
+      if (attrsJsonContents !== null) {
+        try {
+          attrsJson = JSON.parse(attrsJsonContents);
+        } catch (e) {
+          if (! (e instanceof SyntaxError))
+            throw e;
+          buildmessage.error(e.message, { file: attrsJsonRelPath });
+          // recover by ignoring attributes.json
         }
+      }
 
-        // Read attributes.json, if it exists
-        var attrsJsonPath = path.join(itemPath, 'attributes.json');
-        var attrsJsonRelPath = path.join('programs', item, 'attributes.json');
-        var attrsJson = {};
-        if (fs.existsSync(attrsJsonPath)) {
-          try {
-            attrsJson = JSON.parse(fs.readFileSync(attrsJsonPath));
-          } catch (e) {
-            if (! (e instanceof SyntaxError))
-              throw e;
-            buildmessage.error(e.message, { file: attrsJsonRelPath });
-            // recover by ignoring attributes.json
-          }
-        }
-
-        var isControlProgram = !! attrsJson.isControlProgram;
-        if (isControlProgram) {
-          if (controlProgram !== null) {
-            buildmessage.error(
+      var isControlProgram = !! attrsJson.isControlProgram;
+      if (isControlProgram) {
+        if (controlProgram !== null) {
+          buildmessage.error(
               "there can be only one control program ('" + controlProgram +
-                "' is also marked as the control program)",
-              { file: attrsJsonRelPath });
-            // recover by ignoring that it wants to be the control
-            // program
-          } else {
-            controlProgram = item;
-          }
+              "' is also marked as the control program)",
+            { file: attrsJsonRelPath });
+          // recover by ignoring that it wants to be the control
+          // program
+        } else {
+          controlProgram = item;
         }
+      }
 
-        // Add to list
-        programs.push({
-          type: attrsJson.type || "server",
-          name: item,
-          path: itemPath,
-          client: attrsJson.client,
-          attrsJsonRelPath: attrsJsonRelPath
-        });
+      // Add to list
+      programs.push({
+        type: attrsJson.type || "server",
+        name: item,
+        path: path.join(programsDir, item),
+        client: attrsJson.client,
+        attrsJsonRelPath: attrsJsonRelPath
       });
-    }
+    });
 
     if (! controlProgram) {
-      var target = makeServerTarget("ctl");
-      targets["ctl"] = target;
-      controlProgram = "ctl";
+      if (_.has(targets, 'ctl')) {
+        buildmessage.error(
+          "A program named ctl exists but no program has isControlProgram set");
+        // recover by not making a control program
+      }  else {
+        var target = makeServerTarget("ctl");
+        targets["ctl"] = target;
+        controlProgram = "ctl";
+      }
     }
 
-    // Step 2: sort the list so that programs are built first (because
-    // when we build the servers we need to be able to reference the
-    // clients)
+    // Step 2: sort the list so that client programs are built first (because
+    // when we build the servers we need to be able to reference the clients)
     programs.sort(function (a, b) {
       a = (a.type === "client") ? 0 : 1;
       b = (b.type === "client") ? 0 : 1;
@@ -1733,12 +1746,16 @@ exports.bundle = function (appDir, outputPath, options) {
     if (! (controlProgram in targets))
       controlProgram = undefined;
 
+    // Make sure notice when somebody adds a package to the app packages dir
+    // that may override a warehouse package.
+    library.watchLocalPackageDirs(watchSet);
+
     // Write to disk
-    watchSet = writeSiteArchive(targets, outputPath, {
+    watchSet.merge(writeSiteArchive(targets, outputPath, {
       nodeModulesMode: options.nodeModulesMode,
       builtBy: builtBy,
       controlProgram: controlProgram
-    });
+    }));
 
     success = true;
   });

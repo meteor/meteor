@@ -174,9 +174,7 @@ _.extend(Builder.prototype, {
         throw new Error("May only pass one of data and file, not both");
       data = options.data;
     } else if (options.file) {
-      var sourcePath = path.resolve(options.file);
-      data = fs.readFileSync(sourcePath);
-      self.watchSet.addFile(sourcePath, sha1(data));
+      data = watch.readAndWatchFile(self.watchSet, path.resolve(options.file));
     }
 
     self._ensureDirectory(path.dirname(relPath));

@@ -223,8 +223,7 @@ _.extend(Slice.prototype, {
       var absPath = path.resolve(self.pkg.sourceRoot, relPath);
       var ext = path.extname(relPath).substr(1);
       var handler = !fileOptions.isAsset && self._getSourceHandler(ext);
-      var contents = fs.readFileSync(absPath);
-      self.watchSet.addFile(absPath, Builder.sha1(contents));
+      var contents = watch.readAndWatchFile(self.watchSet, absPath);
 
       if (! handler) {
         // If we don't have an extension handler, serve this file as a
@@ -1728,15 +1727,7 @@ _.extend(Package.prototype, {
       // XXX this read has a race with the actual reads that are is used
       _.each([path.join(appDir, '.meteor', 'packages'),
               path.join(appDir, '.meteor', 'release')], function (p) {
-                try {
-                  var hash = Builder.sha1(fs.readFileSync(p));
-                } catch (e) {
-                  // If it doesn't exist, just depend on that fact.
-                  if (!e || e.code !== "ENOENT")
-                    throw e;
-                  hash = null;
-                }
-                slice.watchSet.addFile(p, hash);
+                watch.readAndWatchFile(slice.watchSet, p);
               });
 
       // Determine source files
@@ -1746,19 +1737,15 @@ _.extend(Package.prototype, {
         });
         var sourceExclude = [/^\./].concat(ignoreFiles);
 
+        // Wrapper around watch.readAndWatchDirectory which takes in and returns
+        // sourceRoot-relative directories.
         var readAndWatchDirectory = function (relDir, filters) {
           filters = filters || {};
           var absPath = path.join(self.sourceRoot, relDir);
-          var contents = watch.readDirectory({
+          var contents = watch.readAndWatchDirectory(slice.watchSet, {
             absPath: absPath,
             include: filters.include,
             exclude: filters.exclude
-          });
-          slice.watchSet.addDirectory({
-            absPath: absPath,
-            include: filters.include,
-            exclude: filters.exclude,
-            contents: contents
           });
           return _.map(contents, function (x) {
             return path.join(relDir, x);

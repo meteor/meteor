@@ -1,6 +1,7 @@
 var path = require('path');
 var _ = require('underscore');
 var files = require('./files.js');
+var watch = require('./watch.js');
 var packages = require('./packages.js');
 var warehouse = require('./warehouse.js');
 var bundler = require('./bundler.js');
@@ -127,7 +128,7 @@ _.extend(Library.prototype, {
     if (! packageDir) {
       for (var i = 0; i < self.localPackageDirs.length; ++i) {
         var packageDir = path.join(self.localPackageDirs[i], name);
-        // XXX or unipackage.json?
+        // XXX or unipackage.json? see also watchLocalPackageDirs
         if (fs.existsSync(path.join(packageDir, 'package.js')))
           break;
         packageDir = null;
@@ -272,6 +273,23 @@ _.extend(Library.prototype, {
       // message
       throw new Error("Bad slice spec");
     }
+  },
+
+  // Register local package directories with a watchSet. We want to know if a
+  // package is created or deleted, which includes both its top-level source
+  // directory or its package.js file.
+  watchLocalPackageDirs: function (watchSet) {
+    var self = this;
+    _.each(self.localPackageDirs, function (packageDir) {
+      var packages = watch.readAndWatchDirectory(watchSet, {
+        absPath: packageDir,
+        include: [/\/$/]
+      });
+      _.each(packages, function (p) {
+        watch.readAndWatchFile(path.join(packageDir, p, 'package.js'));
+        // XXX unipackage.json too?
+      });
+    });
   },
 
   // Get all packages available. Returns a map from the package name
