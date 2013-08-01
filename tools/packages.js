@@ -469,7 +469,7 @@ _.extend(Slice.prototype, {
     _.each(self._activePluginPackages(), function (otherPkg) {
       self.watchSet.merge(otherPkg.pluginWatchSet);
       // XXX this assumes this is not overwriting something different
-      self.pkg.pluginProviderPackages[otherPkg.name] =
+      self.pkg.pluginProviderPackageDirs[otherPkg.name] =
         otherPkg.packageDirectoryForBuildInfo;
     });
 
@@ -812,8 +812,11 @@ var Package = function (library, packageDirectoryForBuildInfo) {
   // Complete only when pluginsBuilt is true.
   self.pluginWatchSet = new watch.WatchSet();
 
-  // XXX DOC
-  self.pluginProviderPackages = {};
+  // Map from package name to packageDirectoryForBuildInfo of packages that are
+  // directly used by this package. We use this to figure out that we need to
+  // rebuild if the resolution of the package changes (eg, an app package is
+  // added that overshadows a warehouse package, or the release changes).
+  self.pluginProviderPackageDirs = {};
 
   // True if plugins have been initialized (if _ensurePluginsInitialized has
   // been called)
@@ -1930,7 +1933,7 @@ _.extend(Package.prototype, {
     // This might be redundant (since pluginWatchSet was probably merged into
     // each slice watchSet when it was built) but shouldn't hurt.
     mergedWatchSet.merge(pluginWatchSet);
-    var pluginProviderPackages = buildInfoJson.pluginProviderPackages || {};
+    var pluginProviderPackageDirs = buildInfoJson.pluginProviderPackages || {};
 
     // If we're supposed to check the dependencies, go ahead and do so
     if (options.onlyIfUpToDate) {
@@ -1950,7 +1953,7 @@ _.extend(Package.prototype, {
         return false;
       }
 
-      if (! self.checkUpToDate(mergedWatchSet, pluginProviderPackages))
+      if (! self.checkUpToDate(mergedWatchSet, pluginProviderPackageDirs))
         return false;
     }
 
@@ -1962,7 +1965,7 @@ _.extend(Package.prototype, {
     self.defaultSlices = mainJson.defaultSlices;
     self.testSlices = mainJson.testSlices;
     self.pluginWatchSet = pluginWatchSet;
-    self.pluginProviderPackages = pluginProviderPackages;
+    self.pluginProviderPackageDirs = pluginProviderPackageDirs;
 
     _.each(mainJson.plugins, function (pluginMeta) {
       rejectBadPath(pluginMeta.path);
@@ -2087,10 +2090,10 @@ _.extend(Package.prototype, {
   // files have been modified.) True if we have dependency info and it says that
   // the package is up-to-date. False if a source file has changed.
   //
-  // The arguments _watchSet and _pluginProviderPackages are used when reading
-  // from disk when there are no slices yet; don't pass them from outside this
-  // file.
-  checkUpToDate: function (_watchSet, _pluginProviderPackages) {
+  // The arguments _watchSet and _pluginProviderPackageDirs are used when
+  // reading from disk when there are no slices yet; don't pass them from
+  // outside this file.
+  checkUpToDate: function (_watchSet, _pluginProviderPackageDirs) {
     var self = this;
 
     if (!_watchSet) {
@@ -2102,15 +2105,15 @@ _.extend(Package.prototype, {
         _watchSet.merge(slice.watchSet);
       });
     }
-    if (!_pluginProviderPackages) {
-      _pluginProviderPackages = self.pluginProviderPackages;
+    if (!_pluginProviderPackageDirs) {
+      _pluginProviderPackageDirs = self.pluginProviderPackageDirs;
     }
 
     // Are all of the packages we directly use (which can provide plugins which
     // affect compilation) resolving to the same directory? (eg, have we updated
     // our release version to something with a new version of a package?)
     var packageResolutionsSame = _.all(
-      _pluginProviderPackages, function (packageDir, name) {
+      _pluginProviderPackageDirs, function (packageDir, name) {
         return self.library.findPackageDirectory(name) === packageDir;
       });
     if (!packageResolutionsSame)
@@ -2163,7 +2166,7 @@ _.extend(Package.prototype, {
         builtBy: exports.BUILT_BY,
         sliceDependencies: { },
         pluginDependencies: self.pluginWatchSet.toJSON(),
-        pluginProviderPackages: self.pluginProviderPackages,
+        pluginProviderPackages: self.pluginProviderPackageDirs,
         source: options.buildOfPath || undefined
       };
 
