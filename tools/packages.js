@@ -1422,10 +1422,26 @@ _.extend(Package.prototype, {
             return x;
           return x ? [x] : [];
         };
+
+        var allWheres = ['client', 'server'];
         var toWhereArray = function (where) {
-          if (where instanceof Array)
-            return where;
-          return where ? [where] : ['client', 'server'];
+          if (!(where instanceof Array)) {
+            where = where ? [where] : allWheres;
+          }
+          where = _.uniq(where);
+          var realWhere = _.intersection(where, allWheres);
+          if (realWhere.length !== where.length) {
+            var badWheres = _.difference(where, allWheres);
+            // avoid using _.each so as to not add more frames to skip
+            for (var i = 0; i < badWheres.length; ++i) {
+              buildmessage.error(
+                "Invalid 'where' argument: '" + badWheres[i] + "'",
+                // skip toWhereArray in addition to the actual API function
+                {useMyCaller: 1});
+            };
+            // recover by using the real ones only
+          }
+          return realWhere;
         };
 
         var api = {
