@@ -325,6 +325,7 @@ var markBoundary = function (f) {
 //   'file', 'line', and 'column' (overwriting any values passed in
 //   for those.) It also captures the user portion of the stack,
 //   starting at and including the caller's caller.
+//   If this is a number instead of 'true', skips that many stack frames.
 // - downcase: if true, the first character of `message` will be
 //   converted to lower case.
 // - secondary: ignore this error if there are are already other
@@ -350,7 +351,9 @@ var error = function (message, options) {
   if ('useMyCaller' in info) {
     if (info.useMyCaller) {
       info.stack = parseStack(new Error()).slice(2);
-      var caller = info.stack[0];
+      var howManyToSkip = (
+        typeof info.useMyCaller === "number" ? info.useMyCaller : 0);
+      var caller = info.stack[howManyToSkip];
       info.func = caller.func;
       info.file = caller.file;
       info.line = caller.line;

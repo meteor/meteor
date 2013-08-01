@@ -1423,18 +1423,25 @@ _.extend(Package.prototype, {
           return x ? [x] : [];
         };
 
-        var places = ['client', 'server'];
+        var allWheres = ['client', 'server'];
         var toWhereArray = function (where) {
-          if (where instanceof Array) {
-            if (_.difference(where, places).length > 0)
-                buildmessage.error(where + " is not a valid argument.",
-                    { useMyCaller: true });
-            return where;
+          if (!(where instanceof Array)) {
+            where = where ? [where] : allWheres;
           }
-          if (_.indexOf(places, where) === -1 )
-              buildmessage.error(where + " is not a valid argument.",
-                  { useMyCaller: true });
-          return where ? [where] : places;
+          where = _.uniq(where);
+          var realWhere = _.intersection(where, allWheres);
+          if (realWhere.length !== where.length) {
+            var badWheres = _.difference(where, allWheres);
+            // avoid using _.each so as to not add more frames to skip
+            for (var i = 0; i < badWheres.length; ++i) {
+              buildmessage.error(
+                "Invalid 'where' argument: '" + badWheres[i] + "'",
+                // skip toWhereArray in addition to the actual API function
+                {useMyCaller: 1});
+            };
+            // recover by using the real ones only
+          }
+          return realWhere;
         };
 
         var api = {
