@@ -404,6 +404,9 @@ var Target = function (options) {
   // On-disk dependencies of this target.
   self.watchSet = new watch.WatchSet();
 
+  // Map from package name to package directory of all packages used.
+  self.pluginProviderPackageDirs = {};
+
   // node_modules directories that we need to copy into the target (or
   // otherwise make available at runtime.) A map from an absolute path
   // on disk (NodeModulesDirectory.sourcePath) to a
@@ -671,6 +674,11 @@ _.extend(Target.prototype, {
 
       // Depend on the source files that produced these resources.
       self.watchSet.merge(slice.watchSet);
+      // Remember the library resolution of all packages used in these
+      // resources.
+      // XXX assumes that this merges cleanly
+      _.extend(self.pluginProviderPackageDirs,
+               slice.pkg.pluginProviderPackageDirs)
     });
   },
 
@@ -704,6 +712,11 @@ _.extend(Target.prototype, {
   getWatchSet: function () {
     var self = this;
     return self.watchSet;
+  },
+
+  getPluginProviderPackageDirs: function () {
+    var self = this;
+    return self.pluginProviderPackageDirs;
   },
 
   // Return the most inclusive architecture with which this target is
@@ -1830,7 +1843,8 @@ exports.buildJsImage = function (options) {
 
   return {
     image: target.toJsImage(),
-    watchSet: target.getWatchSet()
+    watchSet: target.getWatchSet(),
+    pluginProviderPackageDirs: target.getPluginProviderPackageDirs()
   };
 };
 

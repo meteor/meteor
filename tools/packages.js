@@ -1006,6 +1006,11 @@ _.extend(Package.prototype, {
         // Add this plugin's dependencies to our "plugin dependency" WatchSet.
         self.pluginWatchSet.merge(buildResult.watchSet);
 
+        // Remember the library resolution of all packages used by the plugin.
+        // XXX assumes that this merges cleanly
+        _.extend(self.pluginProviderPackageDirs,
+                 buildResult.pluginProviderPackageDirs);
+
         // Register the built plugin's code.
         self.plugins[info.name] = buildResult.image;
       });
