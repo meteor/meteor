@@ -1724,7 +1724,7 @@ _.extend(Package.prototype, {
       self.slices.push(slice);
 
       // Watch control files for changes
-      // XXX this read has a race with the actual reads that are is used
+      // XXX this read has a race with the actual reads that are used
       _.each([path.join(appDir, '.meteor', 'packages'),
               path.join(appDir, '.meteor', 'release')], function (p) {
                 watch.readAndWatchFile(slice.watchSet, p);
