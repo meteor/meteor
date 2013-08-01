@@ -468,6 +468,9 @@ _.extend(Slice.prototype, {
     // a plugin).
     _.each(self._activePluginPackages(), function (otherPkg) {
       self.watchSet.merge(otherPkg.pluginWatchSet);
+      // XXX this assumes this is not overwriting something different
+      self.pkg.pluginProviderPackages[otherPkg.name] =
+        otherPkg.packageDirectoryForBuildInfo;
     });
 
     self.prelinkFiles = results.files;
@@ -729,7 +732,7 @@ _.extend(Slice.prototype, {
 // (find better names, though.)
 
 var nextPackageId = 1;
-var Package = function (library) {
+var Package = function (library, packageDirectoryForBuildInfo) {
   var self = this;
 
   // A unique ID (guaranteed to not be reused in this process -- if
@@ -756,6 +759,14 @@ var Package = function (library) {
   // bundle, for those that care to open up the bundle and look (but
   // it's still nice to get it right.) null if loaded from unipackage.
   self.serveRoot = null;
+
+  // The package's directory. This is used only by other packages that use this
+  // package in their buildinfo.json (to detect that they need to be rebuilt if
+  // the library's resolution of the package name changes); it is not used to
+  // read files or anything else. Notably, it should be the same if a package is
+  // read from a source tree or read from the .build unipackage inside that
+  // source tree.
+  self.packageDirectoryForBuildInfo = packageDirectoryForBuildInfo;
 
   // Package library that should be used to resolve this package's
   // dependencies
@@ -800,6 +811,9 @@ var Package = function (library) {
   //
   // Complete only when pluginsBuilt is true.
   self.pluginWatchSet = new watch.WatchSet();
+
+  // XXX DOC
+  self.pluginProviderPackages = {};
 
   // True if plugins have been initialized (if _ensurePluginsInitialized has
   // been called)
@@ -1960,6 +1974,7 @@ _.extend(Package.prototype, {
     self.defaultSlices = mainJson.defaultSlices;
     self.testSlices = mainJson.testSlices;
     self.pluginWatchSet = pluginWatchSet;
+    self.pluginProviderPackages = buildInfoJson.pluginProviderPackages || {};
 
     _.each(mainJson.plugins, function (pluginMeta) {
       rejectBadPath(pluginMeta.path);
@@ -2146,6 +2161,7 @@ _.extend(Package.prototype, {
         builtBy: exports.BUILT_BY,
         sliceDependencies: { },
         pluginDependencies: self.pluginWatchSet.toJSON(),
+        pluginProviderPackages: self.pluginProviderPackages,
         source: options.buildOfPath || undefined
       };
 
