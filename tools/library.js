@@ -286,7 +286,8 @@ _.extend(Library.prototype, {
         include: [/\/$/]
       });
       _.each(packages, function (p) {
-        watch.readAndWatchFile(path.join(packageDir, p, 'package.js'));
+        watch.readAndWatchFile(watchSet,
+                               path.join(packageDir, p, 'package.js'));
         // XXX unipackage.json too?
       });
     });

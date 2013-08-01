@@ -472,6 +472,9 @@ exports.run = function (context, options) {
   };
 
   var startWatching = function (watchSet) {
+    if (process.env.METEOR_DEBUG_WATCHSET)
+      console.log(JSON.stringify(watchSet, null, 2));
+
     if (!Status.shouldRestart)
       return;
 

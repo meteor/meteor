@@ -1812,9 +1812,10 @@ _.extend(Package.prototype, {
         var assetDirs = readAndWatchDirectory('', {
           include: [new RegExp('^' + assetDir + '/$')]
         });
-        if (_.isEmpty(assetDirs)) {
-          if (_.isEqual(assetDirs, [assetDir + '/']))
-            throw new Error("Surprising assetDirs: " + assetDirs);
+
+        if (!_.isEmpty(assetDirs)) {
+          if (!_.isEqual(assetDirs, [assetDir + '/']))
+            throw new Error("Surprising assetDirs: " + JSON.stringify(assetDirs));
 
           while (!_.isEmpty(assetDirs)) {
             dir = assetDirs.shift();
@@ -1823,9 +1824,11 @@ _.extend(Package.prototype, {
 
             // Find asset files in this directory.
             var assetsAndSubdirs = readAndWatchDirectory(dir, {
+              include: [/.?/],
               // we DO look under dot directories here
               exclude: ignoreFiles
             });
+
             _.each(assetsAndSubdirs, function (item) {
               if (item[item.length - 1] === '/') {
                 // Recurse on this directory.
