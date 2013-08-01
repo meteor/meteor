@@ -458,9 +458,10 @@ _.extend(Watcher.prototype, {
         );
       } catch (e) {
         // Can happen if the directory doesn't exist, in which case we should
-        // fire.
+        // fire if it should be there.
         if (e && e.code === "ENOENT") {
-          self._fire();
+          if (info.contents !== null)
+            self._fire();
           return;
         }
         throw e;
