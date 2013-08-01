@@ -8,7 +8,7 @@ Meteor.startup(function () {
    */
 });
 
-UI.body.name = 'David';
+UI.body.name = 'World';
 
 UI.body.items = Items.find({}, { sort: { rank: 1 }});
 

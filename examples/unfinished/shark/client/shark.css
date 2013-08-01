@@ -1,4 +1,8 @@
-.foo { background: red; }
-
-aside { color: red; }
-asdf { color: red; }
+#list div {
+  padding: 10px;
+  background: #eee;
+  border: 1px solid #bbb;
+  margin: 8px;
+  font-weight: bold;
+  cursor: move;
+}
