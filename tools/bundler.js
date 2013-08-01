@@ -1713,6 +1713,8 @@ exports.bundle = function (appDir, outputPath, options) {
           if (! blankClientTarget) {
             clientTarget = blankClientTarget = targets._blank =
               makeBlankClientTarget();
+          } else {
+            clientTarget = blankClientTarget;
           }
         } else {
           clientTarget = targets[p.client];
