@@ -641,11 +641,14 @@ Fiber(function () {
       // APIs).
       var oldManifest = warehouse.ensureReleaseExistsAndReturnManifest(
         appRelease);
-      var upgraders = _.difference(context.releaseManifest.upgraders || [],
-                                   oldManifest.upgraders || []);
-      _.each(upgraders, function (upgrader) {
-        require("./upgraders.js").runUpgrader(upgrader, context.appDir);
-      });
+      // We can only run upgrades from pinned apps.
+      if (oldManifest) {
+        var upgraders = _.difference(context.releaseManifest.upgraders || [],
+                                     oldManifest.upgraders || []);
+        _.each(upgraders, function (upgrader) {
+          require("./upgraders.js").runUpgrader(upgrader, context.appDir);
+        });
+      }
 
       // This is the right spot to do any other changes we need to the app in
       // order to update it for the new release .
