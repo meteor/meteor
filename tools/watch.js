@@ -2,77 +2,56 @@ var fs = require("fs");
 var path = require("path");
 var _ = require('underscore');
 
-// XXX XXX redo this doc
-
-
 // Watch for changes to a set of files, and the first time that any of
 // the files change, call a user-provided callback. (If you want a
 // second callback, you'll need to create a second Watcher.)
 //
+// You describe the structure you want to watch in a WatchSet; you then create a
+// Watcher to watch it. Watcher does not mutate WatchSet, so you can create
+// several Watchers from the same WatchSet. WatchSet can be easily converted to
+// and from JSON for serialization.
+//
 // You can set up two kinds of watches, file and directory watches.
 //
-// In a file watch, you provide an absolute path to a file and a SHA1
-// (encoded as hex) of the contents of that file. If the file ever
-// changes so that its contents no longer match that SHA1, the
-// callback triggers.
+// In a file watch, you provide an absolute path to a file and a SHA1 (encoded
+// as hex) of the contents of that file. If the file ever changes so that its
+// contents no longer match that SHA1, the callback triggers. You can also
+// provide `null` for the SHA1, which means the file should not exist.
 //
-// In a directory watch, you provide an absolute path to a directory
-// and two lists of regular expressions specifying the files to
-// include or exclude. If there is ever a file in the directory or its
-// children that matches the criteria set up by the regular
-// expressions, but that IS NOT present as a file watch, then the
-// callback triggers.
+// In a directory watch, you provide an absolute path to a directory,
+// two lists of regular expressions specifying the entries to
+// include and exclude, and an array of which entries to expect
 //
-// For directory watches, the regular expressions work as follows. You
-// provide two arrays of regular expressions, an include list and an
-// exclude list. A file in the directory matches if it matches at
-// least one regular expression in the include list, and doesn't match
-// any regular expressions in the exclude list. Subdirectories are
-// included recursively, as long as their names do not match any
-// regular expression in the exclude list.
+// For directory watches, the regular expressions work as follows. You provide
+// two arrays of regular expressions, an include list and an exclude list. An
+// entry in the directory matches if it matches at least one regular expression
+// in the include list, and doesn't match any regular expressions in the exclude
+// list. The string that is matched against the regular expression ends with a
+// '/' if the entry is directory. There is NO IMPLICIT RECURSION here: a
+// directory watch ONLY watches the immediate children of the directory! If you
+// want a recursive watch, you need to do the recursive walk while building the
+// WatchSet and add a bunch of separate directory watches.
 //
-// When multiple directory watches are set up, say on a directory A
-// and its subdirectory B, the most specific watch takes precedence in
-// each directory. So only B's include/exclude lists will be checked
-// in B.
+// There can be multiple directory watches on the same directory. There is no
+// relationship between the files found in directory watches and the files
+// watched by file watches; they are parallel mechanisms.
 //
-// Regular expressions are checked only against individual path
-// components (the actual name of the file or the subdirectory), not
-// against the entire path.
+// Regular expressions are checked only against individual path components (the
+// actual name of the file or the subdirectory) plus the trailing '/' for
+// directories, not against the entire path.
 //
 // You can call stop() to stop watching and tear down the
 // watcher. Calling stop() guarantees that you will not receive a
 // callback (if you have not already.) Calling stop() is unnecessary
 // if you've received a callback.
 //
-// A limitation of the current implementation is that if you set up a
-// directory watch on a directory A, and A does not exist at the time
-// the Watcher is created but is then created later, then A will not
-// be monitored. (Of course, this limitation only applies to the roots
-// of the directory watches. If A exists at the time the watch is
-// created, and a subdirectory B is later created, it will be properly
-// detected. Likewise if A exists and is then deleted it will be
-// detected.)
+// To do a "one-shot" (to see if any files have been modified, compared to the
+// dependencies, at a particular point in time), use the isUpToDate function.
 //
-// To do a "one-shot" (to see if any files have been modified,
-// compared to the dependencies, at a particular point in time, just
-// create a Watcher and see if your onChange function was called
-// before the Watcher constructor changed. (Then call stop() as
-// usual.)
-//
-// XXX This should be reengineered so that dependency information from
-// multiple sources can be easily merged in a generic way. Possibly in
-// this new model subdirectories would be allowed in include/exclude
-// patterns, and multiple directory rules would be OR'd rather than
-// taking the most specific rule.
-//
-// Options may include
-// - files: see self.files comment below
-// - directories: see self.directories comment below
-// - onChange: the function to call when the first change is detected.
-//   received one argument, the absolute path to a changed or removed
-//   file (potentially not the only one that changed or was removed)
-//
+// XXX Symlinks are currently treated transparently: we treat them as the thing
+// they point to (ie, as a directory if they point to a directory, as
+// nonexistent if they point to something nonexist, etc). Not sure if this is
+// correct.
 
 
 
@@ -253,6 +232,7 @@ var readDirectory = function (options) {
       // it was never there in the first place.
       return;
     }
+    // XXX if we're on windows, I guess it's possible for files to end with '/'.
     if (stats.isDirectory())
       entry += '/';
     contentsWithSlashes.push(entry);

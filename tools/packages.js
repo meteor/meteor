@@ -1770,6 +1770,7 @@ _.extend(Package.prototype, {
                     otherSliceRegExp].concat(sourceExclude)
         });
 
+        // XXX avoid infinite recursion with bad symlinks
         while (!_.isEmpty(sourceDirectories)) {
           var dir = sourceDirectories.shift();
           // remove trailing slash
@@ -1813,6 +1814,7 @@ _.extend(Package.prototype, {
           include: [new RegExp('^' + assetDir + '/$')]
         });
 
+        // XXX avoid infinite recursion with bad symlinks
         if (!_.isEmpty(assetDirs)) {
           if (!_.isEqual(assetDirs, [assetDir + '/']))
             throw new Error("Surprising assetDirs: " + JSON.stringify(assetDirs));
