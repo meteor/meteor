@@ -211,6 +211,8 @@ Ctl.Commands.push({
         }
       }]);
       console.log("Started migrations for app", Ctl.myAppName());
+    } else {
+      console.log("Migrations already running for app", Ctl.myAppName());
     }
   }
 });
