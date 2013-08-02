@@ -356,7 +356,7 @@ UI.Each = Component.extend({
     self.append(document.createTextNode(""));
 
     cursor.observe({
-        _no_indices: true,
+      _no_indices: true,
       addedAt: function (doc, i, beforeId) {
         var id = LocalCollection._idStringify(doc._id);
 
