@@ -122,6 +122,24 @@ Tinytest.add("check - check", function (test) {
     x: Number,
     k: Match.OneOf(null, Boolean)})]});
 
+
+  // Match.Integer
+  matches(-1, Match.Integer);
+  matches(0, Match.Integer);
+  matches(1, Match.Integer);
+  matches(-2147483648, Match.Integer); // INT_MIN
+  matches(2147483647, Match.Integer); // INT_MAX
+  fails(123.33, Match.Integer);
+  fails(.33, Match.Integer);
+  fails(1.348192308491824e+23, Match.Integer);
+  fails(NaN, Match.Integer);
+  fails(Infinity, Match.Integer);
+  fails(-Infinity, Match.Integer);
+  fails({}, Match.Integer);
+  fails([], Match.Integer);
+  fails(function () {}, Match.Integer);
+  fails(new Date, Match.Integer);
+
   // Test that "arguments" is treated like an array.
   var argumentsMatches = function () {
     matches(arguments, [Number]);
