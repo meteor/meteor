@@ -1,6 +1,13 @@
 
 ## vNEXT
 
+* linker!  namespacing, exports, unipackages, weak and unordered dependencies,
+  etc.  sourcemaps (including for coffee). standard-app-packages.  don't
+  implicitly use all app packages. lots of stuff moved from server.js (now
+  boot.js) to webapp package. plugins!
+
+* Log
+
 * Fix Mongo selectors of the form: {$regex: /foo/}.
 
 * Calling `findOne()` on the server no longer loads the full query result
@@ -10,7 +17,16 @@
 
 * Upgraded dependencies:
   * Node from 0.8.18 to 0.8.24
-  * MongoDB from 2.4.3 to 2.4.4
+  * MongoDB from 2.4.3 to 2.4.4, now with SSL support
+  * CleanCSS from 0.8.3 to 1.0.11
+  * Underscore from 1.4.4 to 1.5.1
+  * Fibers from 1.0.0 to 1.0.1
+
+* When removing the last NPM dependency, clean up the `.npm` dir
+
+* `$ROOT_URL` may now have a path part
+
+* `new Meteor.Collection("name", {connection: null})` works
 
 * Make server-side Mongo inserts, updates, and removes run asynchronously when a
   callback is passed.
@@ -25,6 +41,29 @@
    - `Meteor.default_server` - `Meteor.server`
    - `Meteor.connect` - `DDP.connect`
    - `Meteor.http` - `HTTP`
+
+* The `observe` callback `movedTo` now has the fourth argument `before`.
+
+* The `client/compatibility` thing added in 0.6.3 could be used from package.js
+  by passing the `raw` option to `add_files`; this is renamed to `bare`
+
+* Fix EPIPEs during dev mode hot code reload
+
+* Fix bug where we would never quiesce if we tried to revive subs that errored
+  out (5e7138d)
+
+* Implement "meteor bundle --debug" #748
+
+bugs to describe:
+  #1151 (Meteor.disconnect etc)
+  #1106
+  #1143
+  #1191
+  #1226
+  #1181
+  /sockjs/info cache buster (for Chrome bug)
+
+Patches contributed by GitHub users btipling, mizzao, timhaines and zol.
 
 
 ## v0.6.4.1
