@@ -96,9 +96,9 @@ Ctl.Commands.push({
           }
         }
       }]);
-      console.log("Started a server.");
+      Log("Started a server.");
     } else {
-      console.log("Server already running.");
+      Log.warn("Server already running.");
     }
   }
 });
@@ -130,7 +130,7 @@ Ctl.Commands.push({
         return;
       Ctl.kill(job.program, job._id);
     });
-    console.log("Server stopped.");
+    Log("Server stopped.");
   }
 });
 
@@ -152,7 +152,7 @@ Ctl.Commands.push({
     var scales = _.map(argv._, function (arg) {
       var m = arg.match(/^(.+)=(\d+)$/);
       if (!m) {
-        console.log("Bad scaling argument; should be program=number.");
+        Log("Bad scaling argument; should be program=number.");
         process.exit(1);
       }
       return {program: m[1], scale: parseInt(m[2])};
@@ -172,7 +172,7 @@ Ctl.Commands.push({
       // Now start any jobs that are necessary.
       if (s.scale <= 0)
         return;
-      console.log("Starting %d jobs for %s", s.scale, s.program);
+      Log("Starting %d jobs for %s", s.scale, s.program);
       _.times(s.scale, function () {
         // XXX args? env?
         Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), s.program, {
@@ -210,9 +210,9 @@ Ctl.Commands.push({
           METEOR_DEPLOY_CONFIG: JSON.stringify(deployConfig)
         }
       }]);
-      console.log("Started migrations for app", Ctl.myAppName());
+      Log("Started migrations for app", Ctl.myAppName());
     } else {
-      console.log("Migrations already running for app", Ctl.myAppName());
+      Log.warn("Migrations already running for app", Ctl.myAppName());
     }
   }
 });
