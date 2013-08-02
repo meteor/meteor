@@ -8,9 +8,12 @@ Package.on_use(function (api) {
   api.use('service-configuration', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
   api.use('underscore', 'server');
+  api.use('http', 'server');
+
+  api.export('OAuth1Binding', 'server');
+  api.export('OAuth1Test', 'server', {testOnly: true});
 
   api.add_files('oauth1_binding.js', 'server');
-  api.add_files('oauth1_common.js', ['client', 'server']);
   api.add_files('oauth1_server.js', 'server');
 });
 

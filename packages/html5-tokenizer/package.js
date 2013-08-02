@@ -2,12 +2,11 @@ Package.describe({
   summary: "HTML5 tokenizer"
 });
 
-Package.on_use(function (api, where) {
-  where = where || ['client', 'server'];
-
+Package.on_use(function (api) {
+  api.export('HTML5Tokenizer');
   api.add_files(['entities.js', 'constants.js', 'buffer.js',
                  'events.js', 'tokenizer.js',
-                 'html5_tokenizer.js'], where);
+                 'html5_tokenizer.js']);
 });
 
 Package.on_test(function (api) {

@@ -276,7 +276,7 @@ UI.Each = Component.extend({
     cursor.observe({
         _no_indices: true,
       addedAt: function (doc, i, beforeId) {
-        var id = Meteor.idStringify(doc._id);
+        var id = LocalCollection._idStringify(doc._id);
 
         var data = doc;
         var dep = new Deps.Dependency;
@@ -300,19 +300,19 @@ UI.Each = Component.extend({
         comp.isAttached = true;
 
         if (beforeId)
-          beforeId = Meteor.idStringify(beforeId);
+          beforeId = LocalCollection._idStringify(beforeId);
         range.add(id, r, beforeId);
       },
       removed: function (doc) {
-        range.remove(Meteor.idStringify(doc._id));
+        range.remove(LocalCollection._idStringify(doc._id));
       },
       movedTo: function (doc, i, j, beforeId) {
         range.moveBefore(
-          Meteor.idStringify(doc._id),
-          beforeId && Meteor.idStringify(beforeId));
+          LocalCollection._idStringify(doc._id),
+          beforeId && LocalCollection._idStringify(beforeId));
       },
       changed: function (newDoc) {
-        range.get(Meteor.idStringify(newDoc._id)).component.data.$set(newDoc);
+        range.get(LocalCollection._idStringify(newDoc._id)).component.data.$set(newDoc);
       }
     });
   }

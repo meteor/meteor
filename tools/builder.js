@@ -1,5 +1,6 @@
 var path = require('path');
 var files = require(path.join(__dirname, 'files.js'));
+var watch = require('./watch.js');
 var fs = require('fs');
 var _ = require('underscore');
 
@@ -51,7 +52,7 @@ var Builder = function (options) {
   files.rm_recursive(self.buildPath);
   files.mkdir_p(self.buildPath, 0755);
 
-  self.dependencyInfo = { directories: {}, files: {} };
+  self.watchSet = new watch.WatchSet();
 
   // XXX cleaner error handling. don't make the humans read an
   // exception (and, make suitable for use in automated systems)
@@ -115,8 +116,8 @@ _.extend(Builder.prototype, {
       while (true) {
         var candidate = path.join(partsOut.join(path.sep), part + suffix + ext);
         if (candidate.length &&
-            ! (candidate in self.usedAsFile) ||
-            (shouldBeFile === self.usedAsFile[candidate]))
+            (! (candidate in self.usedAsFile) ||
+             (!shouldBeFile && !self.usedAsFile[candidate])))
           // No conflict -- either not used, or it's two paths that
           // share a common ancestor directory (as opposed to one path
           // thinking that a/b should be a file, and another thinking
@@ -151,7 +152,7 @@ _.extend(Builder.prototype, {
   //
   // Returns the final canonicalize relPath that was written to.
   //
-  // If `file` is used then a dependency will be added on that file.
+  // If `file` is used then it will be added to the builder's WatchSet.
   write: function (relPath, options) {
     var self = this;
     options = options || {};
@@ -173,9 +174,7 @@ _.extend(Builder.prototype, {
         throw new Error("May only pass one of data and file, not both");
       data = options.data;
     } else if (options.file) {
-      var sourcePath = path.resolve(options.file);
-      data = fs.readFileSync(sourcePath);
-      self.dependencyInfo.files[sourcePath] = sha1(data);
+      data = watch.readAndWatchFile(self.watchSet, path.resolve(options.file));
     }
 
     self._ensureDirectory(path.dirname(relPath));
@@ -289,9 +288,7 @@ _.extend(Builder.prototype, {
   // bundle. But if the symlink option was passed to the Builder
   // constructor, then make a symlink instead, if possible.
   //
-  // Adds dependencies both on the files that were copied, and on the
-  // contents of the directory tree (respecting 'ignore'.) Disable
-  // this with depend: false.
+  // This does NOT add anything to the WatchSet.
   //
   // Options:
   // - from: source path on local disk to copy from
@@ -299,14 +296,11 @@ _.extend(Builder.prototype, {
   //   receive the files
   // - ignore: array of regexps of filenames (that is, basenames) to
   //   ignore (they may still be visible in the output bundle if
-  //   symlinks are being used)
-  // - depend: Should dependencies be added? Defaults to true.
+  //   symlinks are being used).  Like with WatchSets, they match against
+  //   entries that end with a slash if it's a directory.
   copyDirectory: function (options) {
     var self = this;
     options = options || {};
-
-    var createDependencies =
-      ('depend' in options) ? options.depend : true;
 
     var normOptionsTo = options.to;
     if (normOptionsTo.slice(-1) === path.sep)
@@ -343,33 +337,30 @@ _.extend(Builder.prototype, {
     }
 
     var ignore = options.ignore || [];
-    if (createDependencies) {
-      self.dependencyInfo.directories[absPathTo] = {
-        include: [/.?/],
-        exclude: ignore
-      };
-    }
 
     var walk = function (absFrom, relTo) {
       self._ensureDirectory(relTo);
 
       _.each(fs.readdirSync(absFrom), function (item) {
-        if (_.any(ignore, function (pattern) {
-          return item.match(pattern);
-        })) return; // skip excluded files
-
         var thisAbsFrom = path.resolve(absFrom, item);
         var thisRelTo = path.join(relTo, item);
-        if (fs.statSync(thisAbsFrom).isDirectory()) {
+
+        var isDir = fs.statSync(thisAbsFrom).isDirectory();
+        var itemForMatch = item;
+        if (isDir)
+          itemForMatch += '/';
+
+        if (_.any(ignore, function (pattern) {
+          return itemForMatch.match(pattern);
+        })) return; // skip excluded files
+
+        if (isDir) {
           walk(thisAbsFrom, thisRelTo);
           return;
         }
 
         // XXX avoid reading whole file into memory
         var data = fs.readFileSync(thisAbsFrom);
-
-        if (createDependencies)
-          self.dependencyInfo.files[thisAbsFrom] = sha1(data);
 
         fs.writeFileSync(path.resolve(self.buildPath, thisRelTo), data);
         self.usedAsFile[thisRelTo] = true;
@@ -451,11 +442,11 @@ _.extend(Builder.prototype, {
     files.rm_recursive(self.buildPath);
   },
 
-  // Return all dependency info that has accumulated, in the format
-  // expected by watch.Watcher.
-  getDependencyInfo: function () {
+  // Returns a WatchSet representing all files that were read from disk by the
+  // builder.
+  getWatchSet: function () {
     var self = this;
-    return self.dependencyInfo;
+    return self.watchSet;
   }
 });
 

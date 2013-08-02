@@ -9,7 +9,7 @@ __meteor_runtime_config__.serverId =
 
 var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX ||  "";
 
-Meteor._DdpStreamServer = function () {
+StreamServer = function () {
   var self = this;
   self.registration_callbacks = [];
   self.open_sockets = [];
@@ -80,7 +80,7 @@ Meteor._DdpStreamServer = function () {
 
 };
 
-_.extend(Meteor._DdpStreamServer.prototype, {
+_.extend(StreamServer.prototype, {
   // call my callback when a new socket connects.
   // also call it for all current connections.
   register: function (callback) {

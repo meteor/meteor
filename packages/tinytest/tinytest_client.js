@@ -1,7 +1,8 @@
-// Like Meteor._runTests, but runs the tests on both the client and
+// Like Tinytest._runTests, but runs the tests on both the client and
 // the server. Sets a 'server' flag on test results that came from the
 // server.
-Meteor._runTestsEverywhere = function (onReport, onComplete, pathPrefix) {
+//
+Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix) {
   var runId = Random.id();
   var localComplete = false;
   var remoteComplete = false;
@@ -14,12 +15,12 @@ Meteor._runTestsEverywhere = function (onReport, onComplete, pathPrefix) {
     }
   };
 
-  Meteor._runTests(onReport, function () {
+  Tinytest._runTests(onReport, function () {
     localComplete = true;
     maybeDone();
   }, pathPrefix);
 
-  Meteor.default_connection.registerStore(Meteor._ServerTestResultsCollection, {
+  Meteor.connection.registerStore(Meteor._ServerTestResultsCollection, {
     update: function (msg) {
       // We only should call _runTestsEverywhere once per client-page-load, so
       // we really only should see one runId here.

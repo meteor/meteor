@@ -1,4 +1,3 @@
-// @export DomUtils
 DomUtils = {};
 
 var qsaFindAllBySelector = function (selector, contextNode) {

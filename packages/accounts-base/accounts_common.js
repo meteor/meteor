@@ -1,10 +1,8 @@
-// @export Accounts
-if (typeof Accounts === 'undefined')
-  Accounts = {};
+Accounts = {};
 
-if (!Accounts._options) {
-  Accounts._options = {};
-}
+// Currently this is read directly by packages like accounts-password
+// and accounts-ui-unstyled.
+Accounts._options = {};
 
 // Set up config for the accounts system. Call this on both the client
 // and the server.
@@ -21,6 +19,7 @@ if (!Accounts._options) {
 //     client signups.
 // - forbidClientAccountCreation {Boolean}
 //     Do not allow clients to create accounts directly.
+//
 Accounts.config = function(options) {
   // validate option keys
   var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation"];
@@ -45,6 +44,7 @@ Accounts.config = function(options) {
 // Users table. Don't use the normal autopublish, since we want to hide
 // some fields. Code to autopublish this is in accounts_server.js.
 // XXX Allow users to configure this collection name.
+//
 Meteor.users = new Meteor.Collection("users", {_preventAutopublish: true});
 // There is an allow call in accounts_server that restricts this
 // collection.

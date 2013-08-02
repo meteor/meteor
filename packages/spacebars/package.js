@@ -2,15 +2,15 @@ Package.describe({
   summary: "Handlebars-like template language for Meteor"
 });
 
-Package.on_use(function (api, where) {
-  where = where || ['client', 'server'];
-
-  api.use('random', where);
-  api.use('underscore', where);
-  api.use('jsparse', where);
-  api.use('html5-tokenizer', where);
+Package.on_use(function (api) {
+  api.export('Spacebars');
+  
+  api.use('random');
+  api.use('underscore');
+  api.use('jsparse');
+  api.use('html5-tokenizer');
   api.use('ui');
-  api.add_files(['spacebars.js'], where);
+  api.add_files(['spacebars.js']);
 });
 
 Package.on_test(function (api) {

@@ -57,28 +57,25 @@ assert.doesNotThrow(function () {
                 "program.json")
     )
   );
-  var staticDir;
+  var testTxtPath;
+  var nestedTxtPath;
   var packageTxtPath;
   var unregisteredExtensionPath;
   _.each(serverManifest.load, function (item) {
     if (item.path === "packages/test-package.js") {
-      packageTxtPath = path.join(tmpOutputDir,
-                                 "programs", "server",
-                                 item.staticDirectory, "test-package.txt");
-      unregisteredExtensionPath = path.join(tmpOutputDir,
-                                            "programs", "server",
-                                            item.staticDirectory,
-                                            "test.notregistered");
+      packageTxtPath = path.join(
+        tmpOutputDir, "programs", "server", item.assets['test-package.txt']);
+      unregisteredExtensionPath = path.join(
+        tmpOutputDir, "programs", "server", item.assets["test.notregistered"]);
     }
     if (item.path === "app/test.js") {
-      staticDir = path.join(tmpOutputDir,
-                            "programs", "server",
-                            item.staticDirectory);
+      testTxtPath = path.join(
+        tmpOutputDir, "programs", "server", item.assets['test.txt']);
+      nestedTxtPath = path.join(
+        tmpOutputDir, "programs", "server", item.assets["nested/test.txt"]);
     }
   });
   // check that the files are where the manifest says they are
-  var testTxtPath = path.join(staticDir, "test.txt");
-  var nestedTxtPath = path.join(staticDir, "nested", "test.txt");
   assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
   assert(fs.existsSync(testTxtPath));
   assert(fs.existsSync(nestedTxtPath));

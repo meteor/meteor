@@ -447,9 +447,17 @@ Template.api.reconnect = {
     "This method does nothing if the client is already connected."]
 };
 
+Template.api.disconnect = {
+  id: "meteor_disconnect",
+  name: "Meteor.disconnect()",
+  locus: "Client",
+  descr: [
+    "Disconnect the client from the server."]
+};
+
 Template.api.connect = {
   id: "meteor_connect",
-  name: "Meteor.connect(url)",
+  name: "DDP.connect(url)",
   locus: "Client",
   descr: ["Connect to the server of a different Meteor application to subscribe to its document sets and invoke its remote methods."],
   args: [
@@ -1066,6 +1074,11 @@ Template.api.loginWithExternalService = {
       name: "requestOfflineToken",
       type: "Boolean",
       descr: "If true, asks the user for permission to act on their behalf when offline. This stores an additional offline token in the `services` field of the user document. Currently only supported with Google."
+    },
+    {
+      name: "forceApprovalPrompt",
+      type: "Boolean",
+      descr: "If true, forces the user to approve the app's permissions, even if previously approved. Currently only supported with Google."
     }
   ]
 };
@@ -1572,7 +1585,7 @@ Template.api.equals = {
 
 Template.api.httpcall = {
   id: "meteor_http_call",
-  name: "Meteor.http.call(method, url [, options] [, asyncCallback])",
+  name: "HTTP.call(method, url [, options] [, asyncCallback])",
   locus: "Anywhere",
   descr: ["Perform an outbound HTTP request."],
   args: [
@@ -1619,30 +1632,30 @@ Template.api.httpcall = {
 
 Template.api.http_get = {
   id: "meteor_http_get",
-  name: "Meteor.http.get(url, [options], [asyncCallback])",
+  name: "HTTP.get(url, [options], [asyncCallback])",
   locus: "Anywhere",
-  descr: ["Send an HTTP GET request.  Equivalent to `Meteor.http.call(\"GET\", ...)`."]
+  descr: ["Send an HTTP GET request.  Equivalent to `HTTP.call(\"GET\", ...)`."]
 };
 
 Template.api.http_post = {
   id: "meteor_http_post",
-  name: "Meteor.http.post(url, [options], [asyncCallback])",
+  name: "HTTP.post(url, [options], [asyncCallback])",
   locus: "Anywhere",
-  descr: ["Send an HTTP POST request.  Equivalent to `Meteor.http.call(\"POST\", ...)`."]
+  descr: ["Send an HTTP POST request.  Equivalent to `HTTP.call(\"POST\", ...)`."]
 };
 
 Template.api.http_put = {
   id: "meteor_http_put",
-  name: "Meteor.http.put(url, [options], [asyncCallback])",
+  name: "HTTP.put(url, [options], [asyncCallback])",
   locus: "Anywhere",
-  descr: ["Send an HTTP PUT request.  Equivalent to `Meteor.http.call(\"PUT\", ...)`."]
+  descr: ["Send an HTTP PUT request.  Equivalent to `HTTP.call(\"PUT\", ...)`."]
 };
 
 Template.api.http_del = {
   id: "meteor_http_del",
-  name: "Meteor.http.del(url, [options], [asyncCallback])",
+  name: "HTTP.del(url, [options], [asyncCallback])",
   locus: "Anywhere",
-  descr: ["Send an HTTP DELETE request.  Equivalent to `Meteor.http.call(\"DELETE\", ...)`.  (Named `del` to avoid conflict with JavaScript's `delete`.)"]
+  descr: ["Send an HTTP DELETE request.  Equivalent to `HTTP.call(\"DELETE\", ...)`.  (Named `del` to avoid conflict with JavaScript's `delete`.)"]
 };
 
 

@@ -1,7 +1,17 @@
+Twitter = {};
+
+var urls = {
+  requestToken: "https://api.twitter.com/oauth/request_token",
+  authorize: "https://api.twitter.com/oauth/authorize",
+  accessToken: "https://api.twitter.com/oauth/access_token",
+  authenticate: "https://api.twitter.com/oauth/authenticate"
+};
+
+
 // https://dev.twitter.com/docs/api/1.1/get/account/verify_credentials
 Twitter.whitelistedFields = ['profile_image_url', 'profile_image_url_https', 'lang'];
 
-Oauth.registerService('twitter', 1, Twitter._urls, function(oauthBinding) {
+Oauth.registerService('twitter', 1, urls, function(oauthBinding) {
   var identity = oauthBinding.get('https://api.twitter.com/1.1/account/verify_credentials.json').data;
 
   var serviceData = {

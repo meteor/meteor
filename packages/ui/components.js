@@ -61,7 +61,6 @@ UI.Unless = Component.extend({
 });
 
 // for the demo.....
-// @export FadeyIf
 FadeyIf = Component.extend({
   typeName: 'FadeyIf',
   animationDuration: 1000,
@@ -141,7 +140,6 @@ FadeyIf = Component.extend({
   }
 });
 
-// @export Checkbox
 Checkbox = UI.makeTemplate(Component.extend({
   typeName: 'Checkbox',
   init: function () {

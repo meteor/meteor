@@ -1,4 +1,3 @@
-// @export simulateEvent
 simulateEvent = function (node, event, args) {
   node = (node instanceof $ ? node[0] : node);
 
@@ -14,7 +13,6 @@ simulateEvent = function (node, event, args) {
   }
 };
 
-// @export focusElement
 focusElement = function(elem) {
   // This sequence is for benefit of IE 8 and 9;
   // test there before changing.
@@ -27,14 +25,12 @@ focusElement = function(elem) {
     throw new Error("focus() didn't set activeElement");
 };
 
-// @export blurElement
 blurElement = function(elem) {
   elem.blur();
   if (document.activeElement === elem)
     throw new Error("blur() didn't affect activeElement");
 };
 
-// @export clickElement
 clickElement = function(elem) {
   if (elem.click)
     elem.click(); // supported by form controls cross-browser; most native way

@@ -89,7 +89,7 @@ _.extend(UniversalEventListener._impl.ie.prototype, {
         props = ['onpropertychange'];
       props.push('oncellchange');
     } else if (prop === 'onsubmit')
-      props.push(node, 'ondatasetcomplete');
+      props.push('ondatasetcomplete');
 
     for(var i = 0; i < props.length; i++)
       node[props[i]] = this.curriedHandler;

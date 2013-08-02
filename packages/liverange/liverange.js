@@ -89,8 +89,6 @@ var wrapEndpoints = function (start, end) {
 //
 // XXX Should eventually support LiveRanges where start === end
 // and start.parentNode is null.
-//
-// @export LiveRange
 LiveRange = function (tag, start, end, inner) {
   if (start.nodeType === 11 /* DocumentFragment */) {
     end = start.lastChild;

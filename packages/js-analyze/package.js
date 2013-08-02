@@ -1,5 +1,10 @@
+// IF YOU MAKE ANY CHANGES TO THIS PACKAGE THAT COULD AFFECT ITS OUTPUT, YOU
+// MUST UPDATE BUILT_BY IN tools/packages.js. Otherwise packages may not be
+// rebuilt with the new changes.
+
 Package.describe({
-  summary: "JavaScript code analysis for Meteor"
+  summary: "JavaScript code analysis for Meteor",
+  internal: true
 });
 
 // Use some packages from the Esprima project.  If it turns out we need these on
@@ -22,6 +27,7 @@ Npm.depends({
 // would be impossible to load at link time (or all transitive dependencies
 // packages would need to function without the analysis provided by this
 // package).
-Package.on_use(function (api, where) {
+Package.on_use(function (api) {
+  api.export('JSAnalyze', 'server');
   api.add_files('js_analyze.js', 'server');
 });

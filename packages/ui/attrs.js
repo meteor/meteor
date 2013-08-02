@@ -141,7 +141,6 @@ _extend(AttributeHandler.prototype, {
   }
 });
 
-// @export AttributeHandler
 AttributeHandler.extend = function (options) {
   var curType = this;
   var subType = function AttributeHandlerSubtype(/*arguments*/) {

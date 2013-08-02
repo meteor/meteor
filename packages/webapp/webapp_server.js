@@ -12,8 +12,8 @@ var optimist = Npm.require('optimist');
 var useragent = Npm.require('useragent');
 var send = Npm.require('send');
 
-// @export WebApp
 WebApp = {};
+WebAppInternals = {};
 
 var findGalaxy = _.once(function () {
   if (!('GALAXY' in process.env)) {
@@ -23,7 +23,7 @@ var findGalaxy = _.once(function () {
     process.exit(1);
   }
 
-  return Meteor.connect(process.env['GALAXY']);
+  return DDP.connect(process.env['GALAXY']);
 });
 
 // Keepalives so that when the outer server dies unceremoniously and
@@ -180,7 +180,9 @@ var runWebAppServer = function () {
     throw new Error("Unsupported format for client assets: " +
                     JSON.stringify(clientJson.format));
 
-  // XXX change all this config to something more reasonable
+  // XXX change all this config to something more reasonable.
+  //     and move it out of webapp into a different package so you don't
+  //     have weird things like mongo-livedata weak-dep'ing on webapp
   var deployConfig =
         process.env.METEOR_DEPLOY_CONFIG
         ? JSON.parse(process.env.METEOR_DEPLOY_CONFIG) : {};
@@ -194,6 +196,9 @@ var runWebAppServer = function () {
   // check environment for legacy env variables.
   if (process.env.PORT && !_.has(deployConfig.boot.bind, 'localPort')) {
     deployConfig.boot.bind.localPort = parseInt(process.env.PORT);
+  }
+  if (process.env.BIND_IP && !_.has(deployConfig.boot.bind, 'localIp')) {
+    deployConfig.boot.bind.localIp = process.env.BIND_IP;
   }
   copyEnvVarToDeployConfig(deployConfig, "MONGO_URL", "mongo-livedata", "url");
 
@@ -419,7 +424,6 @@ var runWebAppServer = function () {
   // Let the rest of the packages (and Meteor.startup hooks) insert connect
   // middlewares and update __meteor_runtime_config__, then keep going to set up
   // actually serving HTML.
-  // @export main
   main = function (argv) {
     argv = optimist(argv).boolean('keepalive').argv;
 
@@ -436,12 +440,14 @@ var runWebAppServer = function () {
 
     // only start listening after all the startup code has run.
     var bind = deployConfig.boot.bind;
-    httpServer.listen(bind.localPort || 0, Meteor.bindEnvironment(function() {
+    var localPort = bind.localPort || 0;
+    var localIp = bind.localIp || '0.0.0.0';
+    httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
       if (argv.keepalive || true)
         console.log("LISTENING"); // must match run.js
       var port = httpServer.address().port;
       if (bind.viaProxy && bind.viaProxy.proxyEndpoint) {
-        Meteor._bindToProxy(bind.viaProxy);
+        WebAppInternals.bindToProxy(bind.viaProxy);
       } else if (bind.viaProxy) {
         // bind via the proxy, but we'll have to find it ourselves via
         // ultraworld.
@@ -453,7 +459,7 @@ var runWebAppServer = function () {
         var doBinding = function (proxyService) {
           if (proxyService.providers.proxy) {
             Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
-            Meteor._bindToProxy(_.extend({
+            WebAppInternals.bindToProxy(_.extend({
               proxyEndpoint: proxyService.providers.proxy
             }, bind.viaProxy));
           }
@@ -478,8 +484,7 @@ var runWebAppServer = function () {
   };
 };
 
-Meteor._bindToProxy = function (proxyConfig) {
-
+WebAppInternals.bindToProxy = function (proxyConfig) {
   var securePort = proxyConfig.securePort || 4433;
   var insecurePort = proxyConfig.insecurePort || 8080;
   var bindPathPrefix = proxyConfig.bindPathPrefix || "";
@@ -510,8 +515,8 @@ Meteor._bindToProxy = function (proxyConfig) {
   };
 
   // This is run after packages are loaded (in main) so we can use
-  // Meteor.connect.
-  var proxy = Meteor.connect(proxyConfig.proxyEndpoint);
+  // DDP.connect.
+  var proxy = DDP.connect(proxyConfig.proxyEndpoint);
   var route = process.env.ROUTE;
   var host = route.split(":")[0];
   var port = +route.split(":")[1];

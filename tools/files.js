@@ -39,6 +39,20 @@ var files = exports;
 _.extend(exports, {
   // A sort comparator to order files into load order.
   sort: function (a, b) {
+    // XXX HUGE HACK --
+    // push html (template) files ahead of everything else. this is
+    // important because the user wants to be able to say
+    // Template.foo.events = { ... }
+    //
+    // maybe all of the templates should go in one file? packages should
+    // probably have a way to request this treatment (load order dependency
+    // tags?) .. who knows.
+    var ishtml_a = path.extname(a) === '.html';
+    var ishtml_b = path.extname(b) === '.html';
+    if (ishtml_a !== ishtml_b) {
+      return (ishtml_a ? -1 : 1);
+    }
+
     // main.* loaded last
     var ismain_a = (path.basename(a).indexOf('main.') === 0);
     var ismain_b = (path.basename(b).indexOf('main.') === 0);
@@ -47,8 +61,10 @@ _.extend(exports, {
     }
 
     // /lib/ loaded first
-    var islib_a = (a.indexOf(path.sep + 'lib' + path.sep) !== -1);
-    var islib_b = (b.indexOf(path.sep + 'lib' + path.sep) !== -1);
+    var islib_a = (a.indexOf(path.sep + 'lib' + path.sep) !== -1 ||
+                   a.indexOf('lib' + path.sep) === 0);
+    var islib_b = (b.indexOf(path.sep + 'lib' + path.sep) !== -1 ||
+                   b.indexOf('lib' + path.sep) === 0);
     if (islib_a !== islib_b) {
       return (islib_a ? -1 : 1);
     }
@@ -62,84 +78,6 @@ _.extend(exports, {
 
     // otherwise alphabetical
     return (a < b ? -1 : 1);
-  },
-
-  // Returns true if this is a file we should maybe care about (stat it,
-  // descend if it is a directory, etc).
-  pre_filter: function (filename) {
-    if (!filename) { return false; }
-    // no . files
-    var base = path.basename(filename);
-    if (base && base[0] === '.') { return false; }
-
-    // XXX
-    // first, we only want to exclude APP_ROOT/public, not some deeper public
-    // second, we don't really like this at all
-    // third, we don't update the app now if anything here changes
-    if (base === 'public' || base === 'private') { return false; }
-
-    return true;
-  },
-
-  // Returns true if this is a file we should monitor.  Iterate over
-  // all the interesting files, applying 'func' to each file
-  // path. 'extensions' is an array of extensions to include, without
-  // leading dots (eg ['html', 'js'])
-  file_list_async: function (filepath, extensions, func) {
-    if (!files.pre_filter(filepath)) { return; }
-    fs.stat(filepath, function(err, stats) {
-      if (err) {
-        // XXX!
-        return;
-      }
-
-      if (stats.isDirectory()) {
-        fs.readdir(filepath, function(err, fileNames) {
-          if(err) {
-            // XXX!
-            return;
-          }
-
-          _.each(fileNames, function (fileName) {
-            files.file_list_async(path.join(filepath, fileName),
-                                  extensions, func);
-          });
-        });
-      } else if (files.findExtension(extensions, filepath)) {
-        func(filepath);
-      }
-    });
-  },
-
-  file_list_sync: function (filepath, extensions) {
-    var ret = [];
-    if (!files.pre_filter(filepath)) { return ret; }
-    var stats = fs.statSync(filepath);
-    if (stats.isDirectory()) {
-      var fileNames = fs.readdirSync(filepath);
-      _.each(fileNames, function (fileName) {
-        ret = ret.concat(files.file_list_sync(
-          path.join(filepath, fileName), extensions));
-      });
-    } else if (files.findExtension(extensions, filepath)) {
-      ret.push(filepath);
-    }
-
-    return ret;
-  },
-
-  // given a list of extensions (no leading dots) and a path, return
-  // the file extension provided in the list. If it doesn't find it,
-  // return null.
-  findExtension: function (extensions, filepath) {
-    var len = filepath.length;
-    for (var i = 0; i < extensions.length; ++i) {
-      var ext = "." + extensions[i];
-      if (filepath.indexOf(ext, len - ext.length) !== -1){
-        return ext;
-      }
-    }
-    return null;
   },
 
   // given a path, returns true if it is a meteor application (has a
@@ -159,14 +97,6 @@ _.extend(exports, {
     } catch (e) {
       return false;
     }
-  },
-
-  // given a path, returns true if it is a meteor package (is a
-  // directory with a 'packages.js' file). false otherwise.
-  //
-  // Note that a directory can be both a package _and_ an application.
-  is_package_dir: function (filepath) {
-    return fs.existsSync(path.join(filepath, 'package.js'));
   },
 
   // given a predicate function and a starting path, traverse upwards

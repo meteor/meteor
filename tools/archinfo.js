@@ -14,8 +14,8 @@ var files = require('./files.js');
  *   Old versions of Internet Explorer (not sure yet exactly which
  *   versions to distinguish -- maybe 6 and 8?)
  *
- * native.linux.x86_32
- * native.linux.x86_64
+ * os.linux.x86_32
+ * os.linux.x86_64
  *   Linux on Intel x86 architecture. x86_64 means a system that can
  *   run 64-bit images, furnished with 64-bit builds of shared
  *   libraries (there is no guarantee that 32-bit builds of shared
@@ -37,16 +37,16 @@ var files = require('./files.js');
  *   architecture.
  *
  *   Basically the punchline is: if you installed the 32-bit version
- *   of Ubuntu, you've got a native.linux.x86_32 system and you will
- *   use exclusively native.linux.x86_32 packages, and likewise
+ *   of Ubuntu, you've got a os.linux.x86_32 system and you will
+ *   use exclusively os.linux.x86_32 packages, and likewise
  *   64-bit. They are two parallel universes and which one you're in
  *   is determined by which version of Red Hat or Ubuntu you
  *   installed.
  *
- * native.osx.x86_64
+ * os.osx.x86_64
  *   OS X (technically speaking, Darwin) on Intel x86 architecture,
  *   with a kernel capable of loading 64-bit images, and 64-bit builds
- *   of shared libraries available.  If a native.osx.x86_64 package
+ *   of shared libraries available.  If a os.osx.x86_64 package
  *   contains a shared library, it is only required to provide a
  *   64-bit version of the library (it is not required to provide a
  *   fat binary with both 32-bit and 64-bit builds.)
@@ -55,19 +55,19 @@ var files = require('./files.js');
  *   the kernel can load 64-bit images, and the Apple-supplied shared
  *   libraries are fat binaries that include both 32-bit and 64-bit
  *   builds in a single file. So it is technically fine (but
- *   discouraged) for a native.osx.x86_64 to include a 32-bit
+ *   discouraged) for a os.osx.x86_64 to include a 32-bit
  *   executable, if it only uses the system's shared libraries, but
  *   you'll run into problems if shared libraries from other packages
  *   are used.
  *
- *   There is no native.osx.x86_32. Our experience is that such
+ *   There is no os.osx.x86_32. Our experience is that such
  *   hardware is virtually extinct. Meteor has never supported it and
  *   nobody has asked for it.
  *
- * In the future there will be a native.windows architecture, probably
+ * In the future there will be a os.windows architecture, probably
  * also with x86_64 and x86_32 variants.
  *
- * To be (more but far from completely) precise, the ABI for native.*
+ * To be (more but far from completely) precise, the ABI for os.*
  * architectures includes a CPU type, a mode in which the code will be
  * run (eg, 64 bit), an executable file format (eg, ELF), a promise to
  * make any shared libraries available in a particular architecture,
@@ -114,17 +114,11 @@ var files = require('./files.js');
  * Intel", because why should it be?) and didn't imply too close of an
  * equivalence to the precise meanings that other platforms may assign
  * to some of these strings.
- *
- * XXX we don't like the word 'native'. 'server'? confusing since this
- * is also for command-line tools. 'host'? 'os'? 'pc'? What we're
- * really talking about is "something with a hierarchical file system,
- * and with processes that take an argument vector and return an
- * integer" -- like linux, darwin and windows, but unlike the browser.
  */
 
 
 // Returns the fully qualified arch of this host -- something like
-// "native.linux.x86_32" or "native.osx.x86_64". Must be called inside
+// "os.linux.x86_32" or "os.osx.x86_64". Must be called inside
 // a fiber. Throws an error if it's not a supported architecture.
 //
 // If you change this, also change scripts/admin/launch-meteor
@@ -147,15 +141,15 @@ var host = function () {
       if (run('uname', '-p') !== "i386" ||
           run('sysctl', '-n', 'hw.cpu64bit_capable') !== "1")
         throw new Error("Only 64-bit Intel processors are supported on OS X");
-      _host  = "native.osx.x86_64";
+      _host  = "os.osx.x86_64";
     }
 
     else if (uname === "Linux") {
       var machine = run('uname', '-m');
       if (_.contains(["i386", "i686", "x86"], machine))
-        _host = "native.linux.x86_32";
+        _host = "os.linux.x86_32";
       else if (_.contains(["x86_64", "amd64", "ia64"], machine))
-        _host = "native.linux.x86_64";
+        _host = "os.linux.x86_64";
       else
         throw new Error("Unsupported architecture: " + machine);
     }
@@ -167,9 +161,9 @@ var host = function () {
   return _host;
 };
 
-// True if `host` (an architecture name such as 'native.linux.x86_64')
-// can run programs of architecture `program` (which might be
-// something like 'native', 'native.linux', or 'native.linux.x86_64'.)
+// True if `host` (an architecture name such as 'os.linux.x86_64') can run
+// programs of architecture `program` (which might be something like 'os',
+// 'os.linux', or 'os.linux.x86_64'.)
 //
 // `host` and `program` are just mnemonics -- `host` does not
 // necessariy have to be a fully qualified architecture name. This
@@ -207,9 +201,8 @@ var mostSpecificMatch = function (host, programs) {
 // returns the least specific such architecture. Otherwise (the
 // architectures are disjoin) raise an exception.
 //
-// For example, for 'native' and 'native.osx', return
-// 'native.osx'. For 'native' and 'native.linux.x86_64', return
-// 'native.linux.x86_64'. For 'native' and 'browser', throw an
+// For example, for 'os' and 'os.osx', return 'os.osx'. For 'os' and
+// 'os.linux.x86_64', return 'os.linux.x86_64'. For 'os' and 'browser', throw an
 // exception.
 var leastSpecificDescription = function (programs) {
   if (programs.length === 0)

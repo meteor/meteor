@@ -10,24 +10,29 @@ Package.describe({
 
 Package._transitional_registerBuildPlugin({
   name: "compileTemplates",
-  use: ['underscore', 'spacebars'],
+  use: ['spacebars'],
   sources: [
     'plugin/html_scanner.js',
     'plugin/compile-templates.js'
   ]
 });
 
+// This on_use describes the *runtime* implications of using this package.
 Package.on_use(function (api) {
   // XXX would like to do the following only when the first html file
   // is encountered
 
   api.use(['underscore', 'ui', 'spacebars'], 'client');
 
+  api.export('Template', 'client');
+
   // provides the runtime logic to instantiate our templates
   //api.add_files('deftemplate.js', 'client');
 
-  // html_scanner.js emits client code that calls Meteor.startup
-  api.use('startup', 'client');
+  // html_scanner.js emits client code that calls Meteor.startup and
+  // UI, so anybody using templating (eg apps) need to implicitly use
+  // 'meteor' and 'ui'.
+  api.imply(['meteor', 'ui'], 'client');
 });
 
 Package.on_test(function (api) {

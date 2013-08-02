@@ -1,6 +1,8 @@
 
 ## vNEXT
 
+* Fix Mongo selectors of the form: {$regex: /foo/}.
+
 * Calling `findOne()` on the server no longer loads the full query result
   into memory.
 
@@ -17,6 +19,18 @@
   server assets in an application.
 
 * Delete login tokens from server when user logs out.
+
+* Renames (may require doc updates):
+   - `Meteor.default_connection` - `Meteor.connection`
+   - `Meteor.default_server` - `Meteor.server`
+   - `Meteor.connect` - `DDP.connect`
+   - `Meteor.http` - `HTTP`
+
+
+## v0.6.4.1
+
+* Update mongodb driver to use version 0.2.1 of the bson module.
+
 
 ## v0.6.4
 

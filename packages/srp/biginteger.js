@@ -1,7 +1,5 @@
 /// METEOR WRAPPER
-if (typeof Meteor._srp === "undefined")
-  Meteor._srp = {};
-Meteor._srp.BigInteger = (function () {
+BigInteger = (function () {
 
 
 /// BEGIN jsbn.js

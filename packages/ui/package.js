@@ -3,11 +3,13 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
+  api.export(['AttributeHandler', 'UI', 'FadeyIf', 'Checkbox']);
   api.use('deps');
   api.use('random');
   api.use('ejson');
   api.use('underscore'); // very slight
   api.use('ordered-dict');
+  api.use('minimongo');  // for idStringify
 
   api.add_files(['base.js',
                  'attrs.js',

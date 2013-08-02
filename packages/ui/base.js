@@ -8,7 +8,6 @@ _extend = function (tgt, src) {
   return tgt;
 };
 
-// @export UI
 UI = {
   nextGuid: 2, // Component is 1!
 

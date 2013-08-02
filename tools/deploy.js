@@ -189,7 +189,13 @@ var temporaryMongoUrl = function (url) {
   if (password)
     opts.password = password;
   meteor_rpc('mongo', 'GET',
-             parsed_url.hostname, opts, urlFut.resolver());
+             parsed_url.hostname, opts, function (err, body) {
+               if (err) {
+                 process.stderr.write(body + "\n");
+                 process.exit(1);
+               }
+               urlFut.return(body);
+             });
   var mongoUrl = urlFut.wait();
   return mongoUrl;
 };

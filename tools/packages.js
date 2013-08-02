@@ -20,54 +20,18 @@ var sourcemap = require('source-map');
 // unipackage/slice changes, but this version (which is build-tool-specific) can
 // change when the the contents (not structure) of the built output changes. So
 // eg, if we improve the linker's static analysis, this should be bumped.
-exports.BUILD_VERSION = 'meteor/2';
+//
+// You should also update this whenever you update any of the packages used
+// directly by the unipackage creation process (eg js-analyze) since they do not
+// end up as watched dependencies. (At least for now, packages only used in
+// target creation (eg minifiers and dev-bundle-fetcher) don't require you to
+// update BUILT_BY, though you will need to quit and rerun "meteor run".)
+exports.BUILT_BY = 'meteor/8';
 
-// Find all files under `rootPath` that have an extension in
-// `extensions` (an array of extensions without leading dot), and
-// return them as a list of paths relative to rootPath. Ignore files
-// that match a regexp in the ignoreFiles array, if given. As a
-// special case (ugh), push all html files to the head of the list.
-var scanForSources = function (rootPath, extensions, ignoreFiles) {
-  var self = this;
-
-  // find everything in tree, sorted depth-first alphabetically.
-  var fileList = files.file_list_sync(rootPath, extensions);
-  fileList = _.reject(fileList, function (file) {
-    return _.any(ignoreFiles || [], function (pattern) {
-      return file.match(pattern);
-    });
-  });
-  fileList.sort(files.sort);
-
-  // XXX HUGE HACK --
-  // push html (template) files ahead of everything else. this is
-  // important because the user wants to be able to say
-  // Template.foo.events = { ... }
-  //
-  // maybe all of the templates should go in one file? packages
-  // should probably have a way to request this treatment (load
-  // order dependency tags?) .. who knows.
-  var htmls = [];
-  _.each(fileList, function (filename) {
-    if (path.extname(filename) === '.html') {
-      htmls.push(filename);
-      fileList = _.reject(fileList, function (f) { return f === filename;});
-    }
-  });
-  fileList = htmls.concat(fileList);
-
-  // now make everything relative to rootPath
-  var prefix = rootPath;
-  if (prefix[prefix.length - 1] !== path.sep)
-    prefix += path.sep;
-
-  return fileList.map(function (abs) {
-    if (path.relative(prefix, abs).match(/\.\./))
-      // XXX audit to make sure it works in all possible symlink
-      // scenarios
-      throw new Error("internal error: source file outside of parent?");
-    return abs.substr(prefix.length);
-  });
+// Like Perl's quotemeta: quotes all regexp metacharacters. See
+//   https://github.com/substack/quotemeta/blob/master/index.js
+var quotemeta = function (str) {
+    return String(str).replace(/(\W)/g, '\\$1');
 };
 
 var rejectBadPath = function (p) {
@@ -86,12 +50,11 @@ var rejectBadPath = function (p) {
 // - uses
 // - implies
 // - getSourcesFunc
-// - forceExport
-// - dependencyInfo
+// - exports
+// - watchSet
 // - nodeModulesPath
-// - noExports
 //
-// Do not include the source files in dependencyInfo. They will be
+// Do not include the source files in watchSet. They will be
 // added at compile time when the sources are actually read.
 var Slice = function (pkg, options) {
   var self = this;
@@ -151,53 +114,53 @@ var Slice = function (pkg, options) {
   // local plugins in this package) to compute this.
   self.getSourcesFunc = options.getSourcesFunc || null;
 
-  // Symbols that this slice should export even if @export directives
-  // don't appear in the source code. List of symbols (as strings.)
-  // Empty if loaded from unipackage.
-  self.forceExport = options.forceExport || [];
+  // True if this slice is not permitted to have any exports, and in fact should
+  // not even define `Package.name` (ie, test slices).
+  self.noExports = options.noExports || false;
+
+  // Symbols that this slice should export. List of symbols (as strings). Null
+  // on built packages (see packageVariables instead), or in packages where
+  // noExports is set.
+  self.declaredExports = options.declaredExports || null;
 
   // Files and directories that we want to monitor for changes in
-  // development mode, such as source files and package.js, in the
-  // format accepted by watch.Watcher.
-  self.dependencyInfo = options.dependencyInfo ||
-    { files: {}, directories: {} };
+  // development mode, such as source files and package.js, as a watch.WatchSet.
+  self.watchSet = options.watchSet || new watch.WatchSet();
 
   // Has this slice been compiled?
   self.isBuilt = false;
 
-  // All symbols exported from the JavaScript code in this
-  // package. Array of string symbol (eg "Foo", "Bar.baz".) Set only
-  // when isBuilt is true.
-  self.exports = null;
-
-  // Are we allowed to have exports?  (eg, test slices don't export.)
-  self.noExports = !!options.noExports;
-
-  // Prelink output. 'prelinkFiles' is the partially linked JavaScript code (an
+  // Prelink output.
+  //
+  // 'prelinkFiles' is the partially linked JavaScript code (an
   // array of objects with keys 'source' and 'servePath', both strings -- see
-  // prelink() in linker.js) 'packageScopeVariables' are are variables that are
-  // syntactically globals in our input files and which we capture with a
-  // package-scope closure. Both of these are inputs into the final link phase,
-  // which inserts the final JavaScript resources into 'resources'. Set only
-  // when isBuilt is true.
+  // prelink() in linker.js)
+  //
+  // 'packageVariables' are are variables that are syntactically globals in our
+  // input files and which we capture with a package-scope closure. A list of
+  // objects with keys 'name' (required) and 'export' (true, 'tests', or falsy).
+  //
+  // Both of these are saved into slices on disk, and are inputs into the final
+  // link phase, which inserts the final JavaScript resources into
+  // 'resources'. Set only when isBuilt is true.
   self.prelinkFiles = null;
-  self.packageScopeVariables = null;
+  self.packageVariables = null;
 
   // All of the data provided for eventual inclusion in the bundle,
   // other than JavaScript that still needs to be fed through the
   // final link stage. A list of objects with these keys:
   //
-  // type: "js", "css", "head", "body", "static"
+  // type: "js", "css", "head", "body", "asset"
   //
   // data: The contents of this resource, as a Buffer. For example,
   // for "head", the data to insert in <head>; for "js", the
   // JavaScript source code (which may be subject to further
-  // processing such as minification); for "static", the contents of a
+  // processing such as minification); for "asset", the contents of a
   // static resource such as an image.
   //
   // servePath: The (absolute) path at which the resource would prefer
   // to be served. Interpretation varies by type. For example, always
-  // honored for "static", ignored for "head" and "body", sometimes
+  // honored for "asset", ignored for "head" and "body", sometimes
   // honored for CSS but ignored if we are concatenating.
   //
   // sourceMap: Allowed only for "js". If present, a string.
@@ -209,10 +172,6 @@ var Slice = function (pkg, options) {
   // resolve Npm.require() calls in this slice. null if this slice
   // does not have a node_modules.
   self.nodeModulesPath = options.nodeModulesPath;
-
-  // Absolute path to the location on disk where Assets API calls will search in
-  // this slice.
-  self.staticDirectory = options.staticDirectory;
 };
 
 _.extend(Slice.prototype, {
@@ -220,7 +179,7 @@ _.extend(Slice.prototype, {
   // through the appropriate handlers and run the prelink phase on any
   // resulting JavaScript. Also add all provided source files to the
   // package dependencies. Sets fields such as dependencies, exports,
-  // prelinkFiles, packageScopeVariables, and resources.
+  // prelinkFiles, packageVariables, and resources.
   build: function () {
     var self = this;
     var isApp = ! self.pkg.name;
@@ -251,14 +210,26 @@ _.extend(Slice.prototype, {
       self[field] = scrubbed;
     });
 
+    var addAsset = function (contents, relPath) {
+      // XXX hack
+      if (!self.pkg.name)
+        relPath = relPath.replace(/^(private|public)\//, '');
+
+      resources.push({
+        type: "asset",
+        data: contents,
+        path: relPath,
+        servePath: path.join(self.pkg.serveRoot, relPath)
+      });
+    };
+
     _.each(self.getSourcesFunc(), function (source) {
       var relPath = source.relPath;
       var fileOptions = _.clone(source.fileOptions) || {};
       var absPath = path.resolve(self.pkg.sourceRoot, relPath);
       var ext = path.extname(relPath).substr(1);
-      var handler = self._getSourceHandler(ext);
-      var contents = fs.readFileSync(absPath);
-      self.dependencyInfo.files[absPath] = Builder.sha1(contents);
+      var handler = !fileOptions.isAsset && self._getSourceHandler(ext);
+      var contents = watch.readAndWatchFile(self.watchSet, absPath);
 
       if (! handler) {
         // If we don't have an extension handler, serve this file as a
@@ -266,11 +237,7 @@ _.extend(Slice.prototype, {
         //
         // XXX This is pretty confusing, especially if you've
         // accidentally forgotten a plugin -- revisit?
-        resources.push({
-          type: "static",
-          data: contents,
-          servePath: path.join(self.pkg.serveRoot, relPath)
-        });
+        addAsset(contents, relPath);
         return;
       }
 
@@ -299,6 +266,9 @@ _.extend(Slice.prototype, {
       // - fileOptions: any options passed to "api.add_files"; for
       //   use by the plugin. The built-in "js" plugin uses the "bare"
       //   option for files that shouldn't be wrapped in a closure.
+      // - declaredExports: An array of symbols exported by this slice, or null
+      //   if it may not export any symbols (eg, test slices). This is used by
+      //   CoffeeScript to ensure that it doesn't close over those symbols, eg.
       // - read(n): read from the input file. If n is given it should
       //   be an integer, and you will receive the next n bytes of the
       //   file as a Buffer. If n is omitted you get the rest of the
@@ -329,7 +299,7 @@ _.extend(Slice.prototype, {
       //   in the module.
       // - addAsset({ path: "my/image.png", data: Buffer })
       //   Add a file to serve as-is over HTTP (browser targets) or
-      //   to include as-is in the bundle (native targets).
+      //   to include as-is in the bundle (os targets).
       //   This time `data` is a Buffer rather than a string. For
       //   browser targets, it will be served at the exact path you
       //   request (concatenated with rootOutputPath). For server
@@ -345,7 +315,7 @@ _.extend(Slice.prototype, {
       //
       // XXX for now, these handlers must only generate portable code
       // (code that isn't dependent on the arch, other than 'browser'
-      // vs 'native') -- they can look at the arch that is provided
+      // vs 'os') -- they can look at the arch that is provided
       // but they can't rely on the running on that particular arch
       // (in the end, an arch-specific slice will be emitted only if
       // there are native node modules.) Obviously this should
@@ -390,6 +360,7 @@ _.extend(Slice.prototype, {
         rootOutputPath: self.pkg.serveRoot,
         arch: self.arch,
         fileOptions: fileOptions,
+        declaredExports: _.pluck(self.declaredExports, 'name'),
         read: function (n) {
           if (n === undefined || readOffset + n > contents.length)
             n = contents.length - readOffset;
@@ -433,7 +404,6 @@ _.extend(Slice.prototype, {
             source: options.data,
             sourcePath: options.sourcePath,
             servePath: path.join(self.pkg.serveRoot, options.path),
-            linkerFileTransform: options.linkerFileTransform,
             bare: !!options.bare,
             sourceMap: options.sourceMap
           });
@@ -441,11 +411,7 @@ _.extend(Slice.prototype, {
         addAsset: function (options) {
           if (! (options.data instanceof Buffer))
             throw new Error("'data' option to addAsset must be a Buffer");
-          resources.push({
-            type: "static",
-            data: options.data,
-            servePath: path.join(self.pkg.serveRoot, options.path)
-          });
+          addAsset(options.data, options.path);
         },
         error: function (options) {
           buildmessage.error(options.message || ("error building " + relPath), {
@@ -488,30 +454,50 @@ _.extend(Slice.prototype, {
         "/packages/" + self.pkg.name +
         (self.sliceName === "main" ? "" : ("." + self.sliceName)) + ".js",
       name: self.pkg.name || null,
-      forceExport: self.forceExport,
-      noExports: self.noExports,
+      declaredExports: _.pluck(self.declaredExports, 'name'),
       jsAnalyze: jsAnalyze
     });
 
-    // Add dependencies on the source code to any plugins that we
-    // could have used (we need to depend even on plugins that we
-    // didn't use, because if they were changed they might become
-    // relevant to us)
-    //
-    // XXX I guess they're probably properly disjoint since plugins
-    // probably include only file dependencies? Anyway it would be a
-    // strange situation if plugin source directories overlapped with
-    // other parts of your app
+    // Add dependencies on the source code to any plugins that we could have
+    // used. We need to depend even on plugins that we didn't use, because if
+    // they were changed they might become relevant to us. This means that we
+    // end up depending on every source file contributing to all plugins in the
+    // packages we use (including source files from other packages that the
+    // plugin program itself uses), as well as the package.js file from every
+    // package we directly use (since changing the package.js may add or remove
+    // a plugin).
     _.each(self._activePluginPackages(), function (otherPkg) {
-      _.extend(self.dependencyInfo.files,
-               otherPkg.pluginDependencyInfo.files);
-      _.extend(self.dependencyInfo.directories,
-               otherPkg.pluginDependencyInfo.directories);
+      self.watchSet.merge(otherPkg.pluginWatchSet);
+      // XXX this assumes this is not overwriting something different
+      self.pkg.pluginProviderPackageDirs[otherPkg.name] =
+        otherPkg.packageDirectoryForBuildInfo;
     });
 
     self.prelinkFiles = results.files;
-    self.exports = results.exports;
-    self.packageScopeVariables = results.packageScopeVariables;
+
+    self.packageVariables = [];
+    var packageVariableNames = {};
+    _.each(self.declaredExports, function (symbol) {
+      if (_.has(packageVariableNames, symbol.name))
+        return;
+      self.packageVariables.push({
+        name: symbol.name,
+        export: symbol.testOnly? "tests" : true
+      });
+      packageVariableNames[symbol.name] = true;
+    });
+    _.each(results.assignedVariables, function (name) {
+      if (_.has(packageVariableNames, name))
+        return;
+      self.packageVariables.push({
+        name: name
+      });
+      packageVariableNames[name] = true;
+    });
+    // Forget about the *declared* exports; what matters is packageVariables
+    // now.
+    self.declaredExports = null;
+
     self.resources = resources;
     self.isBuilt = true;
   },
@@ -553,8 +539,11 @@ _.extend(Slice.prototype, {
       bundleArch, {skipWeak: true, skipUnordered: true}, function (otherSlice) {
         if (! otherSlice.isBuilt)
           throw new Error("dependency wasn't built?");
-        _.each(otherSlice.exports, function (symbol) {
-          imports[symbol] = otherSlice.pkg.name;
+        _.each(otherSlice.packageVariables, function (symbol) {
+          // Slightly hacky implementation of test-only exports.
+          if (symbol.export === true ||
+              (symbol.export === "tests" && self.sliceName === "tests"))
+            imports[symbol.name] = otherSlice.pkg.name;
         });
       });
 
@@ -566,8 +555,8 @@ _.extend(Slice.prototype, {
       // XXX report an error if there is a package called global-imports
       importStubServePath: isApp && '/packages/global-imports.js',
       prelinkFiles: self.prelinkFiles,
-      exports: self.exports,
-      packageScopeVariables: self.packageScopeVariables,
+      noExports: self.noExports,
+      packageVariables: self.packageVariables,
       includeSourceMapInstructions: archinfo.matches(self.arch, "browser"),
       name: self.pkg.name || null
     });
@@ -578,7 +567,6 @@ _.extend(Slice.prototype, {
         type: "js",
         data: new Buffer(file.source, 'utf8'), // XXX encoding
         servePath: file.servePath,
-        staticDirectory: self.staticDirectory,
         sourceMap: file.sourceMap
       };
     });
@@ -681,6 +669,7 @@ _.extend(Slice.prototype, {
           path: compileStep.inputPath,
           sourcePath: compileStep.inputPath,
           // XXX eventually get rid of backward-compatibility "raw" name
+          // XXX COMPAT WITH 0.6.4
           bare: compileStep.fileOptions.bare || compileStep.fileOptions.raw
         });
       }
@@ -743,7 +732,7 @@ _.extend(Slice.prototype, {
 // (find better names, though.)
 
 var nextPackageId = 1;
-var Package = function (library) {
+var Package = function (library, packageDirectoryForBuildInfo) {
   var self = this;
 
   // A unique ID (guaranteed to not be reused in this process -- if
@@ -770,6 +759,14 @@ var Package = function (library) {
   // bundle, for those that care to open up the bundle and look (but
   // it's still nice to get it right.) null if loaded from unipackage.
   self.serveRoot = null;
+
+  // The package's directory. This is used only by other packages that use this
+  // package in their buildinfo.json (to detect that they need to be rebuilt if
+  // the library's resolution of the package name changes); it is not used to
+  // read files or anything else. Notably, it should be the same if a package is
+  // read from a source tree or read from the .build unipackage inside that
+  // source tree.
+  self.packageDirectoryForBuildInfo = packageDirectoryForBuildInfo;
 
   // Package library that should be used to resolve this package's
   // dependencies
@@ -798,22 +795,31 @@ var Package = function (library) {
   self.testSlices = {};
 
   // The information necessary to build the plugins in this
-  // package. Map from plugin name to object with keys 'name', 'us',
+  // package. Map from plugin name to object with keys 'name', 'use',
   // 'sources', and 'npmDependencies'.
   self.pluginInfo = {};
 
-  // Plugins in this package. Map from plugin name to
-  // bundler.Plugin. Present only when isBuilt is true.
+  // Plugins in this package. Map from plugin name to JsImage. Present only when
+  // pluginsBuilt is true.
   self.plugins = {};
 
-  // Dependencies for any plugins in this package. Present only when
-  // isBuilt is true.
-  // XXX Refactor so that slice and plugin dependencies are handled by
-  // the same mechanism.
-  self.pluginDependencyInfo = { files: {}, directories: {} };
+  // A WatchSet for the full transitive dependencies for all plugins in this
+  // package, as well as this package's package.js. If any of these dependencies
+  // change, our plugins need to be rebuilt... but also, any package that
+  // directly uses this package needs to be rebuilt in case the change to
+  // plugins affected compilation.
+  //
+  // Complete only when pluginsBuilt is true.
+  self.pluginWatchSet = new watch.WatchSet();
 
-  // True if plugins have been initialized (if
-  // _ensurePluginsInitialized has been called)
+  // Map from package name to packageDirectoryForBuildInfo of packages that are
+  // directly used by this package. We use this to figure out that we need to
+  // rebuild if the resolution of the package changes (eg, an app package is
+  // added that overshadows a warehouse package, or the release changes).
+  self.pluginProviderPackageDirs = {};
+
+  // True if plugins have been initialized (if _ensurePluginsInitialized has
+  // been called)
   self._pluginsInitialized = false;
 
   // Source file handlers registered by plugins. Map from extension
@@ -825,7 +831,7 @@ var Package = function (library) {
   // means that doesn't create it in a build state to start with) you
   // will need to call build() before you can use it. We break down
   // the two phases of the build process, plugin building and
-  // building, into two flags.
+  // slice building, into two flags.
   self.pluginsBuilt = false;
   self.slicesBuilt = false;
 };
@@ -841,7 +847,7 @@ _.extend(Package.prototype, {
 
   // Return the slice of the package to use for a given slice name
   // (eg, 'main' or 'test') and target architecture (eg,
-  // 'native.linux.x86_64' or 'browser'), or throw an exception if
+  // 'os.linux.x86_64' or 'browser'), or throw an exception if
   // that packages can't be loaded under these circumstances.
   getSingleSlice: function (name, arch) {
     var self = this;
@@ -997,16 +1003,15 @@ _.extend(Package.prototype, {
                                          info.name))
         });
 
-        if (buildResult.dependencyInfo) {
-          // Merge plugin dependencies
-          // XXX is naive merge sufficient here? should be, because
-          // plugins can't (for now) contain directory dependencies?
-          _.extend(self.pluginDependencyInfo.files,
-                   buildResult.dependencyInfo.files);
-          _.extend(self.pluginDependencyInfo.directories,
-                   buildResult.dependencyInfo.directories);
-        }
+        // Add this plugin's dependencies to our "plugin dependency" WatchSet.
+        self.pluginWatchSet.merge(buildResult.watchSet);
 
+        // Remember the library resolution of all packages used by the plugin.
+        // XXX assumes that this merges cleanly
+        _.extend(self.pluginProviderPackageDirs,
+                 buildResult.pluginProviderPackageDirs);
+
+        // Register the built plugin's code.
         self.plugins[info.name] = buildResult.image;
       });
     });
@@ -1074,7 +1079,7 @@ _.extend(Package.prototype, {
       return source;
     });
 
-    var arch = isPortable ? "native" : archinfo.host();
+    var arch = isPortable ? "os" : archinfo.host();
     var slice = new Slice(self, {
       name: options.sliceName,
       arch: arch,
@@ -1082,25 +1087,17 @@ _.extend(Package.prototype, {
         return { spec: spec };
       }),
       getSourcesFunc: function () { return sources; },
-      nodeModulesPath: nodeModulesPath,
-      staticDirectory: options.sourceRoot
+      nodeModulesPath: nodeModulesPath
     });
     self.slices.push(slice);
 
-    self.defaultSlices = {'native': [options.sliceName]};
+    self.defaultSlices = {'os': [options.sliceName]};
   },
 
   // Initialize a package from a legacy-style (package.js) package
   // directory. This function does not retrieve the package's
   // dependencies from the library, and on return, the package will be
   // in an unbuilt state.
-  //
-  // options:
-  // - skipNpmUpdate: if true, don't refresh .npm/package/node_modules (for
-  //   packages that use Npm.depend). Only use this when you are
-  //   certain that .npm/package/node_modules was previously created by some
-  //   other means, and you're certain that the package's Npm.depend
-  //   instructions haven't changed since then.
   initFromPackageDir: function (name, dir, options) {
     var self = this;
     var isPortable = true;
@@ -1118,6 +1115,12 @@ _.extend(Package.prototype, {
     var packageJsPath = path.join(self.sourceRoot, 'package.js');
     var code = fs.readFileSync(packageJsPath);
     var packageJsHash = Builder.sha1(code);
+
+    // Any package that depends on us needs to be rebuilt if our package.js file
+    // changes, because a change to package.js might add or remove a plugin,
+    // which could change a file from being handled by extension vs treated as
+    // an asset.
+    self.pluginWatchSet.addFile(packageJsPath, packageJsHash);
 
     // == 'Package' object visible in package.js ==
     var Package = {
@@ -1153,6 +1156,7 @@ _.extend(Package.prototype, {
         roleHandlers.test = f;
       },
 
+      // XXX COMPAT WITH 0.6.4
       // extension doesn't contain a dot
       register_extension: function (extension, callback) {
         if (_.has(self.legacyExtensionHandlers, extension)) {
@@ -1400,9 +1404,8 @@ _.extend(Package.prototype, {
     var sources = {use: {client: [], server: []},
                    test: {client: [], server: []}};
 
-    // symbols force-exported
-    var forceExport = {use: {client: [], server: []},
-                       test: {client: [], server: []}};
+    // symbols exported
+    var exports = {client: [], server: []};
 
     // packages used and implied (keys are 'spec', 'unordered', and 'weak').  an
     // "implied" package is a package that will be used by a slice which uses
@@ -1429,6 +1432,33 @@ _.extend(Package.prototype, {
     // one. #OldStylePackageSupport
     _.each(["use", "test"], function (role) {
       if (roleHandlers[role]) {
+        var toArray = function (x) {
+          if (x instanceof Array)
+            return x;
+          return x ? [x] : [];
+        };
+
+        var allWheres = ['client', 'server'];
+        var toWhereArray = function (where) {
+          if (!(where instanceof Array)) {
+            where = where ? [where] : allWheres;
+          }
+          where = _.uniq(where);
+          var realWhere = _.intersection(where, allWheres);
+          if (realWhere.length !== where.length) {
+            var badWheres = _.difference(where, allWheres);
+            // avoid using _.each so as to not add more frames to skip
+            for (var i = 0; i < badWheres.length; ++i) {
+              buildmessage.error(
+                "Invalid 'where' argument: '" + badWheres[i] + "'",
+                // skip toWhereArray in addition to the actual API function
+                {useMyCaller: 1});
+            };
+            // recover by using the real ones only
+          }
+          return realWhere;
+        };
+
         var api = {
           // Called when this package wants to make another package be
           // used. Can also take literal package objects, if you have
@@ -1461,13 +1491,15 @@ _.extend(Package.prototype, {
           //   flag is not tracked per-environment or per-role; this may
           //   change.)
           use: function (names, where, options) {
+            // Support `api.use(package, {weak: true})` without where.
+            if (_.isObject(where) && !_.isArray(where) && !options) {
+              options = where;
+              where = null;
+            }
             options = options || {};
 
-            if (!(names instanceof Array))
-              names = names ? [names] : [];
-
-            if (!(where instanceof Array))
-              where = where ? [where] : ["client", "server"];
+            names = toArray(names);
+            where = toWhereArray(where);
 
             // A normal dependency creates an ordering constraint and a "if I'm
             // used, use that" constraint. Unordered dependencies lack the
@@ -1506,11 +1538,8 @@ _.extend(Package.prototype, {
               return;
             }
 
-            if (!(names instanceof Array))
-              names = names ? [names] : [];
-
-            if (!(where instanceof Array))
-              where = where ? [where] : ["client", "server"];
+            names = toArray(names);
+            where = toWhereArray(where);
 
             _.each(names, function (name) {
               _.each(where, function (w) {
@@ -1527,11 +1556,8 @@ _.extend(Package.prototype, {
           // be processed according to its extension (eg, *.coffee
           // files will be compiled to JavaScript.)
           add_files: function (paths, where, fileOptions) {
-            if (!(paths instanceof Array))
-              paths = paths ? [paths] : [];
-
-            if (!(where instanceof Array))
-              where = where ? [where] : ["client", "server"];
+            paths = toArray(paths);
+            where = toWhereArray(where);
 
             _.each(paths, function (path) {
               _.each(where, function (w) {
@@ -1543,32 +1569,43 @@ _.extend(Package.prototype, {
             });
           },
 
-          // Force the export of a symbol from this package. An
-          // alternative to using @export directives. Possibly helpful
-          // when you don't want to modify the source code of a third
-          // party library.
+          // Export symbols from this package.
           //
-          // @param symbols String (eg "Foo", "Foo.bar") or array of String
+          // @param symbols String (eg "Foo") or array of String
           // @param where 'client', 'server', or an array of those
-          exportSymbol: function (symbols, where) {
+          // @param options 'testOnly', boolean.
+          export: function (symbols, where, options) {
             if (role === "test") {
               buildmessage.error("You cannot export symbols from a test.",
                                  { useMyCaller: true });
               // recover by ignoring
               return;
             }
-            if (!(symbols instanceof Array))
-              symbols = symbols ? [symbols] : [];
+            // Support `api.export("FooTest", {testOnly: true})` without
+            // where.
+            if (_.isObject(where) && !_.isArray(where) && !options) {
+              options = where;
+              where = null;
+            }
+            options = options || {};
 
-            if (!(where instanceof Array))
-              where = where ? [where] : [];
+            symbols = toArray(symbols);
+            where = toWhereArray(where);
 
             _.each(symbols, function (symbol) {
+              // XXX be unicode-friendlier
+              if (!symbol.match(/^([_$a-zA-Z][_$a-zA-Z0-9]*)$/)) {
+                buildmessage.error("Bad exported symbol: " + symbol,
+                                   { useMyCaller: true });
+                // recover by ignoring
+                return;
+              }
               _.each(where, function (w) {
-                forceExport[role][w].push(symbol);
+                exports[w].push({name: symbol, testOnly: !!options.testOnly});
               });
             });
           },
+          // XXX COMPAT WITH 0.6.4
           error: function () {
             // I would try to support this but I don't even know what
             // its signature was supposed to be anymore
@@ -1577,6 +1614,7 @@ _.extend(Package.prototype, {
               { useMyCaller: true });
             // recover by ignoring
           },
+          // XXX COMPAT WITH 0.6.4
           registered_extensions: function () {
             buildmessage.error(
               "api.registered_extensions() is no longer supported",
@@ -1615,40 +1653,34 @@ _.extend(Package.prototype, {
     // XXX maybe there should be separate NPM dirs for use vs test?
     var packageNpmDir =
           path.resolve(path.join(self.sourceRoot, '.npm', 'package'));
-    var npmOk = true;
 
-    if (! options.skipNpmUpdate) {
-      // If this package was previously built with pre-linker versions, it may
-      // have files directly inside `.npm` instead of nested inside
-      // `.npm/package`. Clean them up if they are there.
-      var preLinkerFiles = [
-        'npm-shrinkwrap.json', 'README', '.gitignore', 'node_modules'];
-      _.each(preLinkerFiles, function (f) {
-        files.rm_recursive(path.join(self.sourceRoot, '.npm', f));
-      });
+    // If this package was previously built with pre-linker versions, it may
+    // have files directly inside `.npm` instead of nested inside
+    // `.npm/package`. Clean them up if they are there.
+    var preLinkerFiles = [
+      'npm-shrinkwrap.json', 'README', '.gitignore', 'node_modules'];
+    _.each(preLinkerFiles, function (f) {
+      files.rm_recursive(path.join(self.sourceRoot, '.npm', f));
+    });
 
-      // go through a specialized npm dependencies update process,
-      // ensuring we don't get new versions of any
-      // (sub)dependencies. this process also runs mostly safely
-      // multiple times in parallel (which could happen if you have
-      // two apps running locally using the same package)
-      // We run this even if we have no dependencies, because we might
-      // need to delete dependencies we used to have.
-      npmOk = meteorNpm.updateDependencies(name, packageNpmDir,
-                                           npmDependencies);
-    }
-
+    // go through a specialized npm dependencies update process,
+    // ensuring we don't get new versions of any
+    // (sub)dependencies. this process also runs mostly safely
+    // multiple times in parallel (which could happen if you have
+    // two apps running locally using the same package)
+    // We run this even if we have no dependencies, because we might
+    // need to delete dependencies we used to have.
     var nodeModulesPath = null;
-    if (npmOk) {
+    if (meteorNpm.updateDependencies(name, packageNpmDir, npmDependencies)) {
       nodeModulesPath = path.join(packageNpmDir, 'node_modules');
       if (! meteorNpm.dependenciesArePortable(packageNpmDir))
         isPortable = false;
     }
 
     // Create slices
-    var nativeArch = isPortable ? "native" : archinfo.host();
+    var osArch = isPortable ? "os" : archinfo.host();
     _.each(["use", "test"], function (role) {
-      _.each(["browser", nativeArch], function (arch) {
+      _.each(["browser", osArch], function (arch) {
         var where = (arch === "browser") ? "client" : "server";
 
         // Everything depends on the package 'meteor', which sets up
@@ -1670,10 +1702,12 @@ _.extend(Package.prototype, {
             uses[role][where].unshift({ spec: "meteor" });
         }
 
-        // We need to create a separate (non ===) copy of
-        // dependencyInfo for each slice.
-        var dependencyInfo = { files: {}, directories: {} };
-        dependencyInfo.files[packageJsPath] = packageJsHash;
+        // Each slice has its own separate WatchSet. This is so that, eg, a test
+        // slice's dependencies doesn't end up getting merged into the
+        // pluginWatchSet of a package that uses it: only the use slice's
+        // dependencies need to go there!
+        var watchSet = new watch.WatchSet();
+        watchSet.addFile(packageJsPath, packageJsHash);
 
         self.slices.push(new Slice(self, {
           name: ({ use: "main", test: "tests" })[role],
@@ -1681,21 +1715,17 @@ _.extend(Package.prototype, {
           uses: uses[role][where],
           implies: role === "use" && implies[where] || undefined,
           getSourcesFunc: function () { return sources[role][where]; },
-          forceExport: forceExport[role][where],
-          dependencyInfo: dependencyInfo,
-          nodeModulesPath: arch === nativeArch && nodeModulesPath || undefined,
-          staticDirectory: self.sourceRoot,
-          // test slices don't get used by other packages, so they have nothing
-          // to export.  (And notably, they should NOT stomp on the Package.foo
-          // object defined by their corresponding use slice.)
-          noExports: role === "test"
+          noExports: role === "test",
+          declaredExports: role === "use" ? exports[where] : null,
+          watchSet: watchSet,
+          nodeModulesPath: arch === osArch && nodeModulesPath || undefined
         }));
       });
     });
 
     // Default slices
-    self.defaultSlices = { browser: ['main'], 'native': ['main'] };
-    self.testSlices = { browser: ['tests'], 'native': ['tests'] };
+    self.defaultSlices = { browser: ['main'], 'os': ['main'] };
+    self.testSlices = { browser: ['tests'], 'os': ['tests'] };
   },
 
   // Initialize a package from a legacy-style application directory
@@ -1711,16 +1741,8 @@ _.extend(Package.prototype, {
 
     _.each(["client", "server"], function (sliceName) {
       // Determine used packages
-      var names = _.union(
-          // standard client packages for the classic meteor stack.
-          // XXX remove and make everyone explicitly declare all dependencies
-          ['meteor', 'webapp', 'logging', 'deps', 'session',
-           'livedata', 'mongo-livedata', 'ui', 'spacebars',
-           'templating', 'startup',
-           'past', 'check'],
-        project.get_packages(appDir));
-
-      var arch = sliceName === "server" ? "native" : "browser";
+      var names = project.get_packages(appDir);
+      var arch = sliceName === "server" ? "os" : "browser";
 
       // Create slice
       var slice = new Slice(self, {
@@ -1733,82 +1755,77 @@ _.extend(Package.prototype, {
       self.slices.push(slice);
 
       // Watch control files for changes
-      // XXX this read has a race with the actual read that is used
+      // XXX this read has a race with the actual reads that are used
       _.each([path.join(appDir, '.meteor', 'packages'),
-              path.join(appDir, '.meteor', 'releases')], function (p) {
-                if (fs.existsSync(p)) {
-                  slice.dependencyInfo.files[p] =
-                    Builder.sha1(fs.readFileSync(p));
-                }
+              path.join(appDir, '.meteor', 'release')], function (p) {
+                watch.readAndWatchFile(slice.watchSet, p);
               });
 
       // Determine source files
       slice.getSourcesFunc = function () {
-        var allSources = scanForSources(
-          self.sourceRoot, slice.registeredExtensions(),
-          ignoreFiles || []);
+        var sourceInclude = _.map(slice.registeredExtensions(), function (ext) {
+          return new RegExp('\\.' + quotemeta(ext) + '$');
+        });
+        var sourceExclude = [/^\./].concat(ignoreFiles);
 
-        var withoutAppPackages = _.reject(allSources, function (sourcePath) {
-          // Skip files that are in app packages; they'll get watched if they
-          // are actually listed in the .meteor/packages file. (Directories
-          // named "packages" lower in the tree are OK.)
-          return sourcePath.match(/^packages\//);
+        // Wrapper around watch.readAndWatchDirectory which takes in and returns
+        // sourceRoot-relative directories.
+        var readAndWatchDirectory = function (relDir, filters) {
+          filters = filters || {};
+          var absPath = path.join(self.sourceRoot, relDir);
+          var contents = watch.readAndWatchDirectory(slice.watchSet, {
+            absPath: absPath,
+            include: filters.include,
+            exclude: filters.exclude
+          });
+          return _.map(contents, function (x) {
+            return path.join(relDir, x);
+          });
+        };
+
+        // Read top-level source files.
+        var sources = readAndWatchDirectory('', {
+          include: sourceInclude,
+          exclude: sourceExclude
         });
 
-        var otherSliceName = (sliceName === "server") ? "client" : "server";
-        var withoutOtherSlice =
-          _.reject(withoutAppPackages, function (sourcePath) {
-            return (path.sep + sourcePath + path.sep).indexOf(
-              path.sep + otherSliceName + path.sep) !== -1;
-          });
+        var otherSliceRegExp =
+              (sliceName === "server" ? /^client\/$/ : /^server\/$/);
 
-        var tests = false; /* for now */
-        var withoutOtherRole =
-          _.reject(withoutOtherSlice, function (sourcePath) {
-            var isTest =
-              ((path.sep + sourcePath + path.sep).indexOf(
-                path.sep + 'tests' + path.sep) !== -1);
-            return isTest !== (!!tests);
-          });
+        // Read top-level subdirectories. Ignore subdirectories that have
+        // special handling.
+        var sourceDirectories = readAndWatchDirectory('', {
+          include: [/\/$/],
+          exclude: [/^packages\/$/, /^programs\/$/, /^tests\/$/,
+                    /^public\/$/, /^private\/$/,
+                    otherSliceRegExp].concat(sourceExclude)
+        });
 
-        var withoutOtherPrograms =
-          _.reject(withoutOtherRole, function (sourcePath) {
-            return !! sourcePath.match(/^programs\//);
-          });
+        // XXX avoid infinite recursion with bad symlinks
+        while (!_.isEmpty(sourceDirectories)) {
+          var dir = sourceDirectories.shift();
+          // remove trailing slash
+          dir = dir.substr(0, dir.length - 1);
 
-        // XXX Add directory dependencies to slice at the time that
-        // getSourcesFunc is called. This is kind of a hack but it'll
-        // do for the moment.
+          // Find source files in this directory.
+          Array.prototype.push.apply(sources, readAndWatchDirectory(dir, {
+            include: sourceInclude,
+            exclude: sourceExclude
+          }));
 
-        // XXX nothing here monitors for the no-default-targets file
+          // Find sub-sourceDirectories. Note that we DON'T need to ignore the
+          // directory names that are only special at the top level.
+          Array.prototype.push.apply(sourceDirectories, readAndWatchDirectory(dir, {
+            include: [/\/$/],
+            exclude: [/^tests\/$/, otherSliceRegExp].concat(sourceExclude)
+          }));
+        }
 
-        // Directories to monitor for new files
-        var appIgnores = _.clone(ignoreFiles);
-        slice.dependencyInfo.directories[appDir] = {
-          include: _.map(slice.registeredExtensions(), function (ext) {
-            return new RegExp('\\.' + ext + "$");
-          }),
-          // XXX This excludes watching under *ANY* packages or programs
-          // directory, but we should really only care about top-level ones.
-          // But watcher doesn't let you do that.
-          exclude: ignoreFiles.concat([/^packages$/, /^programs$/,
-                                       /^tests$/])
-        };
-
-        // Inside the programs directory, only look for new program (which we
-        // can detect by the appearance of a package.js file.)  Other than that,
-        // programs explicitly call out the files they use.
-        slice.dependencyInfo.directories[path.resolve(appDir, 'programs')] = {
-          include: [ /^package\.js$/ ],
-          exclude: ignoreFiles
-        };
-
-        // Exclude .meteor/local and everything under it.
-        slice.dependencyInfo.directories[
-          path.resolve(appDir, '.meteor', 'local')] = { exclude: [/.?/] };
+        // We've found all the source files. Sort them!
+        sources.sort(files.sort);
 
         // Convert into relPath/fileOptions objects.
-        return _.map(withoutOtherPrograms, function (relPath) {
+        sources = _.map(sources, function (relPath) {
           var sourceObj = {relPath: relPath};
 
           // Special case: on the client, JavaScript files in a
@@ -1821,10 +1838,52 @@ _.extend(Package.prototype, {
           }
           return sourceObj;
         });
+
+        // Now look for assets for this slice.
+        var assetDir = sliceName === "client" ? "public" : "private";
+        var assetDirs = readAndWatchDirectory('', {
+          include: [new RegExp('^' + assetDir + '/$')]
+        });
+
+        // XXX avoid infinite recursion with bad symlinks
+        if (!_.isEmpty(assetDirs)) {
+          if (!_.isEqual(assetDirs, [assetDir + '/']))
+            throw new Error("Surprising assetDirs: " + JSON.stringify(assetDirs));
+
+          while (!_.isEmpty(assetDirs)) {
+            dir = assetDirs.shift();
+            // remove trailing slash
+            dir = dir.substr(0, dir.length - 1);
+
+            // Find asset files in this directory.
+            var assetsAndSubdirs = readAndWatchDirectory(dir, {
+              include: [/.?/],
+              // we DO look under dot directories here
+              exclude: ignoreFiles
+            });
+
+            _.each(assetsAndSubdirs, function (item) {
+              if (item[item.length - 1] === '/') {
+                // Recurse on this directory.
+                assetDirs.push(item);
+              } else {
+                // This file is an asset.
+                sources.push({
+                  relPath: item,
+                  fileOptions: {
+                    isAsset: true
+                  }
+                });
+              }
+            });
+          }
+        }
+
+        return sources;
       };
     });
 
-    self.defaultSlices = { browser: ['client'], 'native': ['server'] };
+    self.defaultSlices = { browser: ['client'], 'os': ['server'] };
   },
 
   // Initialize a package from a prebuilt Unipackage on disk. On
@@ -1861,23 +1920,31 @@ _.extend(Package.prototype, {
     // XXX should comprehensively sanitize (eg, typecheck) everything
     // read from json files
 
-    // Read the dependency info (if present), and make the strings
-    // back into regexps
-    var dependencies = buildInfoJson.dependencies ||
-      { files: {}, directories: {} };
-    _.each(dependencies.directories, function (d) {
-      _.each(["include", "exclude"], function (k) {
-        d[k] = _.map(d[k], function (s) {
-          return new RegExp(s);
-        });
-      });
+    // Read the watch sets for each slice; keep them separate (for passing to
+    // the Slice constructor below) as well as merging them into one big
+    // WatchSet.
+    var mergedWatchSet = new watch.WatchSet();
+    var sliceWatchSets = {};
+    _.each(buildInfoJson.sliceDependencies, function (watchSetJSON, sliceTag) {
+      var watchSet = watch.WatchSet.fromJSON(watchSetJSON);
+      mergedWatchSet.merge(watchSet);
+      sliceWatchSets[sliceTag] = watchSet;
     });
+
+    // We do NOT put this (or anything!) onto self until we've passed the
+    // onlyIfUpToDate check.
+    var pluginWatchSet = watch.WatchSet.fromJSON(
+      buildInfoJson.pluginDependencies);
+    // This might be redundant (since pluginWatchSet was probably merged into
+    // each slice watchSet when it was built) but shouldn't hurt.
+    mergedWatchSet.merge(pluginWatchSet);
+    var pluginProviderPackageDirs = buildInfoJson.pluginProviderPackages || {};
 
     // If we're supposed to check the dependencies, go ahead and do so
     if (options.onlyIfUpToDate) {
       // Do we think we'll generate different contents than the tool that built
       // this package?
-      if (buildInfoJson.builtBy !== exports.BUILD_VERSION)
+      if (buildInfoJson.builtBy !== exports.BUILT_BY)
         return false;
 
       if (options.buildOfPath &&
@@ -1891,17 +1958,7 @@ _.extend(Package.prototype, {
         return false;
       }
 
-      var isUpToDate = true;
-      var watcher = new watch.Watcher({
-        files: dependencies.files,
-        directories: dependencies.directories,
-        onChange: function () {
-          isUpToDate = false;
-        }
-      });
-      watcher.stop();
-
-      if (! isUpToDate)
+      if (! self.checkUpToDate(mergedWatchSet, pluginProviderPackageDirs))
         return false;
     }
 
@@ -1912,6 +1969,8 @@ _.extend(Package.prototype, {
     };
     self.defaultSlices = mainJson.defaultSlices;
     self.testSlices = mainJson.testSlices;
+    self.pluginWatchSet = pluginWatchSet;
+    self.pluginProviderPackageDirs = pluginProviderPackageDirs;
 
     _.each(mainJson.plugins, function (pluginMeta) {
       rejectBadPath(pluginMeta.path);
@@ -1956,14 +2015,10 @@ _.extend(Package.prototype, {
         nodeModulesPath = path.join(sliceBasePath, sliceJson.node_modules);
       }
 
-      var staticDirectory = null;
-      if (sliceJson.staticDirectory)
-        staticDirectory = path.join(sliceBasePath, sliceJson.staticDirectory);
-
       var slice = new Slice(self, {
         name: sliceMeta.name,
         arch: sliceMeta.arch,
-        dependencyInfo: dependencies,
+        watchSet: sliceWatchSets[sliceMeta.path],
         nodeModulesPath: nodeModulesPath,
         uses: _.map(sliceJson.uses, function (u) {
           return {
@@ -1976,29 +2031,34 @@ _.extend(Package.prototype, {
           return {
             spec: u['package'] + (u.slice ? "." + u.slice : "")
           };
-        }),
-        staticDirectory: staticDirectory
+        })
       });
 
       slice.isBuilt = true;
-      slice.exports = sliceJson.exports || [];
-      slice.packageScopeVariables = sliceJson.packageScopeVariables || [];
+      slice.noExports = !!sliceJson.noExports;
+      slice.packageVariables = sliceJson.packageVariables || [];
       slice.prelinkFiles = [];
       slice.resources = [];
 
       _.each(sliceJson.resources, function (resource) {
         rejectBadPath(resource.file);
 
-        var fd = fs.openSync(path.join(sliceBasePath, resource.file), "r");
-        try {
-          var data = new Buffer(resource.length);
-          var count = fs.readSync(
-            fd, data, 0, resource.length, resource.offset);
-        } finally {
-          fs.closeSync(fd);
+        var data = new Buffer(resource.length);
+        // Read the data from disk, if it is non-empty. Avoid doing IO for empty
+        // files, because (a) unnecessary and (b) fs.readSync with length 0
+        // throws instead of acting like POSIX read:
+        // https://github.com/joyent/node/issues/5685
+        if (resource.length > 0) {
+          var fd = fs.openSync(path.join(sliceBasePath, resource.file), "r");
+          try {
+            var count = fs.readSync(
+              fd, data, 0, resource.length, resource.offset);
+          } finally {
+            fs.closeSync(fd);
+          }
+          if (count !== resource.length)
+            throw new Error("couldn't read entire resource");
         }
-        if (count !== resource.length)
-          throw new Error("couldn't read entire resource");
 
         if (resource.type === "prelink") {
           var prelinkFile = {
@@ -2011,12 +2071,13 @@ _.extend(Package.prototype, {
               path.join(sliceBasePath, resource.sourceMap), 'utf8');
           }
           slice.prelinkFiles.push(prelinkFile);
-        } else if (_.contains(["head", "body", "css", "js", "static"],
+        } else if (_.contains(["head", "body", "css", "js", "asset"],
                               resource.type)) {
           slice.resources.push({
             type: resource.type,
             data: data,
-            servePath: resource.servePath || undefined
+            servePath: resource.servePath || undefined,
+            path: resource.path || undefined
           });
         } else
           throw new Error("bad resource type in unipackage: " +
@@ -2028,6 +2089,42 @@ _.extend(Package.prototype, {
     self.slicesBuilt = true;
 
     return true;
+  },
+
+  // Try to check if this package is up-to-date (that is, whether its source
+  // files have been modified.) True if we have dependency info and it says that
+  // the package is up-to-date. False if a source file has changed.
+  //
+  // The arguments _watchSet and _pluginProviderPackageDirs are used when
+  // reading from disk when there are no slices yet; don't pass them from
+  // outside this file.
+  checkUpToDate: function (_watchSet, _pluginProviderPackageDirs) {
+    var self = this;
+
+    if (!_watchSet) {
+      // This call was on an already-fully-loaded Package and we just want to
+      // see if it's changed. So we have some watchSets inside ourselves.
+      _watchSet = new watch.WatchSet();
+      _watchSet.merge(self.pluginWatchSet);
+      _.each(self.slices, function (slice) {
+        _watchSet.merge(slice.watchSet);
+      });
+    }
+    if (!_pluginProviderPackageDirs) {
+      _pluginProviderPackageDirs = self.pluginProviderPackageDirs;
+    }
+
+    // Are all of the packages we directly use (which can provide plugins which
+    // affect compilation) resolving to the same directory? (eg, have we updated
+    // our release version to something with a new version of a package?)
+    var packageResolutionsSame = _.all(
+      _pluginProviderPackageDirs, function (packageDir, name) {
+        return self.library.findPackageDirectory(name) === packageDir;
+      });
+    if (!packageResolutionsSame)
+      return false;
+
+    return watch.isUpToDate(_watchSet);
   },
 
   // True if this package can be saved as a unipackage
@@ -2044,10 +2141,14 @@ _.extend(Package.prototype, {
   //   then modified.
   saveAsUnipackage: function (outputPath, options) {
     var self = this;
-    var builder = new Builder({ outputPath: outputPath });
+
+    if (!self.pluginsBuilt || !self.slicesBuilt)
+      throw new Error("Unbuilt packages cannot be saved");
 
     if (! self.canBeSavedAsUnipackage())
       throw new Error("This package can not yet be saved as a unipackage");
+
+    var builder = new Builder({ outputPath: outputPath });
 
     try {
 
@@ -2061,9 +2162,16 @@ _.extend(Package.prototype, {
         plugins: []
       };
 
+      // Note: The contents of buildInfoJson (with the root directory of the
+      // Meteor checkout naively deleted) gets its SHA taken to determine the
+      // built package's warehouse version. So it should not contain
+      // platform-dependent data and should contain all sources of change to the
+      // unipackage's output.  See scripts/admin/build-package-tarballs.sh.
       var buildInfoJson = {
-        builtBy: exports.BUILD_VERSION,
-        dependencies: { files: {}, directories: {} },
+        builtBy: exports.BUILT_BY,
+        sliceDependencies: { },
+        pluginDependencies: self.pluginWatchSet.toJSON(),
+        pluginProviderPackages: self.pluginProviderPackageDirs,
         source: options.buildOfPath || undefined
       };
 
@@ -2112,18 +2220,16 @@ _.extend(Package.prototype, {
           path: sliceJsonFile
         });
 
-        // Merge slice dependencies
-        // XXX is naive merge sufficient here?
-        _.extend(buildInfoJson.dependencies.files,
-                 slice.dependencyInfo.files);
-        _.extend(buildInfoJson.dependencies.directories,
-                 slice.dependencyInfo.directories);
+        // Save slice dependencies. Keyed by the json path rather than thinking
+        // too hard about how to encode pair (name, arch).
+        buildInfoJson.sliceDependencies[sliceJsonFile] =
+          slice.watchSet.toJSON();
 
         // Construct slice metadata
         var sliceJson = {
           format: "unipackage-slice-pre1",
-          exports: slice.exports,
-          packageScopeVariables: slice.packageScopeVariables,
+          noExports: slice.noExports || undefined,
+          packageVariables: slice.packageVariables,
           uses: _.map(slice.uses, function (u) {
             var specParts = u.spec.split('.');
             if (specParts.length > 2)
@@ -2146,8 +2252,7 @@ _.extend(Package.prototype, {
                       };
                     })),
           node_modules: slice.nodeModulesPath ? 'npm/node_modules' : undefined,
-          resources: [],
-          staticDirectory: path.join(sliceDir, self.serveRoot)
+          resources: []
         };
 
         // Output 'head', 'body' resources nicely
@@ -2191,7 +2296,8 @@ _.extend(Package.prototype, {
               { data: resource.data }),
             length: resource.data.length,
             offset: 0,
-            servePath: resource.servePath || undefined
+            servePath: resource.servePath || undefined,
+            path: resource.path || undefined
           });
         });
 
@@ -2223,8 +2329,7 @@ _.extend(Package.prototype, {
         if (slice.nodeModulesPath) {
           builder.copyDirectory({
             from: slice.nodeModulesPath,
-            to: 'npm/node_modules',
-            depend: false
+            to: 'npm/node_modules'
           });
         }
 
@@ -2242,16 +2347,6 @@ _.extend(Package.prototype, {
           name: name,
           arch: plugin.arch,
           path: path.join(pluginDir, relPath)
-        });
-      });
-
-      // Prep dependencies for serialization by turning regexps into
-      // strings
-      _.each(buildInfoJson.dependencies.directories, function (d) {
-        _.each(["include", "exclude"], function (k) {
-          d[k] = _.map(d[k], function (r) {
-            return r.source;
-          });
         });
       });
 

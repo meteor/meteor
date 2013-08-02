@@ -40,7 +40,7 @@ Tinytest.add("oauth1 - loginResultForCredentialToken is stored", function (test)
     });
 
     // simulate logging in using twitterfoo
-    Oauth1._requestTokens[credentialToken] = twitterfooAccessToken;
+    OAuth1Test.requestTokens[credentialToken] = twitterfooAccessToken;
 
     var req = {
       method: "POST",
@@ -50,7 +50,7 @@ Tinytest.add("oauth1 - loginResultForCredentialToken is stored", function (test)
         oauth_token: twitterfooAccessToken
       }
     };
-    Oauth._middleware(req, new http.ServerResponse(req));
+    OauthTest.middleware(req, new http.ServerResponse(req));
 
     // Test that right data is placed on the loginResult map
     test.equal(
@@ -67,7 +67,7 @@ Tinytest.add("oauth1 - loginResultForCredentialToken is stored", function (test)
       Oauth._loginResultForCredentialToken[credentialToken].options.option1, twitterOption1);
 
   } finally {
-    Oauth._unregisterService(serviceName);
+    OauthTest.unregisterService(serviceName);
   }
 });
 

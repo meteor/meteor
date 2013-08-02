@@ -124,8 +124,8 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
     if (Meteor.isClient) {
       f();
     } else {
-      var fence = new Meteor._WriteFence;
-      Meteor._CurrentWriteFence.withValue(fence, f);
+      var fence = new DDPServer._WriteFence;
+      DDPServer._CurrentWriteFence.withValue(fence, f);
       fence.armAndWait();
     }
 
@@ -281,8 +281,8 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
     if (Meteor.isClient) {
       f();
     } else {
-      var fence = new Meteor._WriteFence;
-      Meteor._CurrentWriteFence.withValue(fence, f);
+      var fence = new DDPServer._WriteFence;
+      DDPServer._CurrentWriteFence.withValue(fence, f);
       fence.armAndWait();
     }
   };
@@ -360,8 +360,8 @@ var runInFence = function (f) {
   if (Meteor.isClient) {
     f();
   } else {
-    var fence = new Meteor._WriteFence;
-    Meteor._CurrentWriteFence.withValue(fence, f);
+    var fence = new DDPServer._WriteFence;
+    DDPServer._CurrentWriteFence.withValue(fence, f);
     fence.armAndWait();
   }
 };
@@ -744,7 +744,8 @@ testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGenera
 
 testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
   function (test, expect) {
-    var bin = EJSON._base64Decode(
+    // XXX probably shouldn't use EJSON's private test symbols
+    var bin = EJSONTest.base64Decode(
       "TWFuIGlzIGRpc3Rpbmd1aXNoZWQsIG5vdCBvbmx5IGJ5IGhpcyBy" +
         "ZWFzb24sIGJ1dCBieSB0aGlzIHNpbmd1bGFyIHBhc3Npb24gZnJv" +
         "bSBvdGhlciBhbmltYWxzLCB3aGljaCBpcyBhIGx1c3Qgb2YgdGhl" +
@@ -875,7 +876,11 @@ if (Meteor.isServer) {
 Tinytest.add('mongo-livedata - rewrite selector', function (test) {
   test.equal(Meteor.Collection._rewriteSelector({x: /^o+B/im}),
              {x: {$regex: '^o+B', $options: 'im'}});
+  test.equal(Meteor.Collection._rewriteSelector({x: {$regex: /^o+B/im}}),
+             {x: {$regex: '^o+B', $options: 'im'}});
   test.equal(Meteor.Collection._rewriteSelector({x: /^o+B/}),
+             {x: {$regex: '^o+B'}});
+  test.equal(Meteor.Collection._rewriteSelector({x: {$regex: /^o+B/}}),
              {x: {$regex: '^o+B'}});
   test.equal(Meteor.Collection._rewriteSelector('foo'),
              {_id: 'foo'});
@@ -885,13 +890,15 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
       {'$or': [
         {x: /^o/},
         {y: /^p/},
-        {z: 'q'}
+        {z: 'q'},
+        {w: {$regex: /^r/}}
       ]}
     ),
     {'$or': [
       {x: {$regex: '^o'}},
       {y: {$regex: '^p'}},
-      {z: 'q'}
+      {z: 'q'},
+      {w: {$regex: '^r'}}
     ]}
   );
 
@@ -900,22 +907,35 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
       {'$or': [
         {'$and': [
           {x: /^a/i},
-          {y: /^b/}
+          {y: /^b/},
+          {z: {$regex: /^c/i}},
+          {w: {$regex: '^[abc]', $options: 'i'}}, // make sure we don't break vanilla selectors
+          {v: {$regex: /O/, $options: 'i'}}, // $options should override the ones on the RegExp object
+          {u: {$regex: /O/m, $options: 'i'}} // $options should override the ones on the RegExp object
         ]},
         {'$nor': [
-          {s: /^c/},
-          {t: /^d/i}
+          {s: /^d/},
+          {t: /^e/i},
+          {u: {$regex: /^f/i}},
+          // even empty string overrides built-in flags
+          {v: {$regex: /^g/i, $options: ''}}
         ]}
       ]}
     ),
     {'$or': [
       {'$and': [
         {x: {$regex: '^a', $options: 'i'}},
-        {y: {$regex: '^b'}}
+        {y: {$regex: '^b'}},
+        {z: {$regex: '^c', $options: 'i'}},
+        {w: {$regex: '^[abc]', $options: 'i'}},
+        {v: {$regex: 'O', $options: 'i'}},
+        {u: {$regex: 'O', $options: 'i'}}
       ]},
       {'$nor': [
-        {s: {$regex: '^c'}},
-        {t: {$regex: '^d', $options: 'i'}}
+        {s: {$regex: '^d'}},
+        {t: {$regex: '^e', $options: 'i'}},
+        {u: {$regex: '^f', $options: 'i'}},
+        {v: {$regex: '^g', $options: ''}}
       ]}
     ]}
   );
@@ -969,7 +989,7 @@ if (Meteor.isServer) {
         return C.find({a: 0});
       });
 
-      self.conn = Meteor.connect(Meteor.absoluteUrl());
+      self.conn = DDP.connect(Meteor.absoluteUrl());
       pollUntil(expect, function () {
         return self.conn.status().connected;
       }, 10000);
@@ -1022,7 +1042,7 @@ if (Meteor.isServer) {
         return self.C.find();
       });
 
-      self.conn = Meteor.connect(Meteor.absoluteUrl());
+      self.conn = DDP.connect(Meteor.absoluteUrl());
       pollUntil(expect, function () {
         return self.conn.status().connected;
       }, 10000);

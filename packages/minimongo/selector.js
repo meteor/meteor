@@ -258,7 +258,8 @@ var VALUE_OPERATORS = {
   "$regex": function (operand, options) {
     if (options !== undefined) {
       // Options passed in $options (even the empty string) always overrides
-      // options in the RegExp object itself.
+      // options in the RegExp object itself. (See also
+      // Meteor.Collection._rewriteSelector.)
 
       // Be clear that we only support the JS-supported options, not extended
       // ones (eg, Mongo supports x and s). Ideally we would implement x and s
@@ -329,7 +330,7 @@ LocalCollection._f = {
       return 9;
     if (EJSON.isBinary(v))
       return 5;
-    if (v instanceof Meteor.Collection.ObjectID)
+    if (v instanceof LocalCollection._ObjectID)
       return 7;
     return 3; // object
 

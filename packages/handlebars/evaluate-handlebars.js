@@ -1,4 +1,3 @@
-// @export Handlebars
 Handlebars = {};
 
 // XXX we probably forgot to implement the #foo case where foo is not

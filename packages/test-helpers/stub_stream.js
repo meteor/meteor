@@ -1,8 +1,4 @@
-// XXX XXX should really '@export Meteor._StubStream' but we're not
-// there yet (other packages need to cooperate and also export
-// Meteor.foo rather than Meteor)
-
-Meteor._StubStream = function () {
+StubStream = function () {
   var self = this;
 
   self.sent = [];
@@ -10,7 +6,7 @@ Meteor._StubStream = function () {
 };
 
 
-_.extend(Meteor._StubStream.prototype, {
+_.extend(StubStream.prototype, {
   // Methods from Stream
   on: function (name, callback) {
     var self = this;

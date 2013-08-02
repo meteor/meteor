@@ -1,4 +1,3 @@
-// @export HTML5Tokenizer
 HTML5Tokenizer = {
   tokenize: function (inputString) {
     var tokens = [];
