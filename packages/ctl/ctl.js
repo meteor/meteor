@@ -210,7 +210,7 @@ Ctl.Commands.push({
           METEOR_DEPLOY_CONFIG: JSON.stringify(deployConfig)
         }
       }]);
-      console.log("Started migrations.");
+      console.log("Started migrations for app", Ctl.myAppName());
     }
   }
 });
