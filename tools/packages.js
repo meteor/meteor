@@ -365,6 +365,9 @@ _.extend(Slice.prototype, {
         packageName: self.pkg.name,
         rootOutputPath: self.pkg.serveRoot,
         arch: self.arch,
+        archMatches: function (pattern) {
+          return archinfo.matches(self.arch, pattern);
+        },
         fileOptions: fileOptions,
         declaredExports: _.pluck(self.declaredExports, 'name'),
         read: function (n) {
