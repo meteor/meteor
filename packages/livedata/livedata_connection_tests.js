@@ -1287,18 +1287,17 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
 
 var getSelfConnectionUrl = function () {
   if (Meteor.isClient) {
-    return "/";
+    return Meteor._relativeToSiteRootUrl("/");
   } else {
     return Meteor.absoluteUrl();
   }
 };
 
 if (Meteor.isServer) {
-  var reversed = {};
   Meteor.methods({
     reverse: function (arg) {
-      reversed[arg] = true;
-      return arg.split("").reverse().join("");
+      // Return something notably different from reverse.meteor.com.
+      return arg.split("").reverse().join("") + " LOCAL";
     }
   });
 }
@@ -1325,22 +1324,10 @@ testAsyncMulti("livedata connection - reconnect to a different server", [
     if (self.doTest) {
       self.conn.reconnect({url: getSelfConnectionUrl()});
       self.conn.call("reverse", "bar", expect(function (err, res) {
-        test.equal(res, "rab");
-      }));
-    }
-  },
-  function (test, expect) {
-    var self = this;
-    var id = Random.id();
-    if (self.doTest) {
-      self.conn.call("reverse", id, expect(function (err, res) {
-        if (Meteor.isServer) {
-          test.isTrue(reversed[id]);
-        }
+        test.equal(res, "rab LOCAL");
       }));
     }
   }
-
 ]);
 
 Tinytest.addAsync("livedata connection - version negotiation requires renegotiating",
