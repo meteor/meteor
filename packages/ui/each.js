@@ -37,50 +37,15 @@ var isArray = function (x) {
             (x.sort || x.splice));
 };
 
-// A DomRange points to a `start` empty text node,
-// an `end` empty text node, and zero or more
-// keyed children, where a child is a node
-// or a DomRange.  These children all occur
-// as siblings at the DOM top level of the range.
-//
-// A DomRange never throws errors due to children
-// being moved or removed without its knowledge,
-// even if a child is
-// reparented or moved outside the start and
-// end pointers.  A node child is considered
-// removed if it's no longer a sibling (that is,
-// it doesn't have the same parentNode
-// as `start`).  A DomRange child is considered
-// removed if its `start` node is no longer
-// a sibling.  A DomRange *may* error if its
-// `end` pointer is removed or reparented away
-// from its `start` pointer.
-//
-// Children can be added with or without a key.
-// Children added without a key can't be moved
-// or removed.  Children added with a key can be
-// removed, moved to the end, or moved before
-// another keyed child.
-//
-// DomRange inserts and moves children using
-// algorithms that are correct if no nodes have
-// been moved without the DomRange's knowledge,
-// but still well-defined (if not necessarily
-// "what you want") if nodes have been moved.
-// For example, when a DomRange moves a child
-// DomRange, it moves all nodes between the
-// child's `start` and `end` inclusive, even
-// if those aren't the right nodes.  (In contrast,
-// removing a DomRange removes the children
-// no matter where they are.)  Inserting a
-// new DomRange or node before an existing child
-// will see if the child is still present and
-// use the child's `start` and `end` pointers
-// (if it is a DomRange) to find an insertion
-// position.  If someone has shuffled around
-// all the sibling nodes in question, this
-// position won't be very meaningful but it will
-// still exist.
+// Text nodes consisting of only whitespace
+// are "insignificant" nodes.
+var isSignificantNode = function (n) {
+  return ! (n.nodeType === 3 &&
+            (! n.nodeValue ||
+             /^\s+$/.test(n.nodeValue)));
+};
+
+var nextColor = 1;
 
 DomRange = function () {
   var start = document.createTextNode("");
@@ -88,9 +53,12 @@ DomRange = function () {
   var fragment = newFragment([start, end]);
 
   this.start = start;
-  start.$ui = this;
   this.end = end;
+  start.$ui = this;
+  end.$ui = this;
 
+  // XXX Use a different term than "child" to avoid
+  // confusion?  e.g. "item" or "owned"
   this.children = {};
   this.nextChildId = 1;
 };
@@ -99,7 +67,116 @@ _extend(DomRange.prototype, {
   parentNode: function () {
     return this.start.parentNode;
   },
+  eachChild: function (nodeFunc, rangeFunc) {
+    var children = this.children;
+    var parentNode = this.parentNode();
+    for (var k in children) {
+      // x is a DomRange or node
+      var x = children[k];
+      if (x.parentNode === parentNode) {
+        // node, still there
+        nodeFunc && nodeFunc(x);
+      } else if (x.start &&
+                 x.start.parentNode === parentNode) {
+        // DomRange, still there
+        rangeFunc && rangeFunc(x);
+      } else {
+        // not there anymore
+        delete children[k];
+      }
+    }
+  },
+  // "Refreshing" a DomRange moves the `start`
+  // and `end` nodes to immediate before the first,
+  // and after the last, "significant" node the
+  // DomRange contains, where a significant node
+  // is any node except a whitespace-only text-node.
+  // All child ranges are refreshed first.  Adjacent
+  // insignificant child nodes are included between
+  // `start` and `end` as well, but it's possible that
+  // other insignificant nodes remain as siblings
+  // elsewhere.  Nodes with no DomRange owner that are
+  // found between this DomRange's nodes are adopted.
+  //
+  // Performing add/move/remove operations on an "each"
+  // shouldn't require refreshing the entire each, just
+  // the item in question.
+  refresh: function () {
+    var color = nextColor++;
+    this.color = color;
+
+    this.eachChild(null, function (range) {
+      range.refresh();
+      range.color = color;
+    });
+
+    // XXX optimize this so if significant
+    // children are consecutive (ignoring
+    // intervening insignificant nodes),
+    // it isn't O(childNodes.length).
+    var parentNode = this.parentNode();
+    var firstNode = null;
+    var lastNode = null;
+    var inChild = null;
+    for (var node = parentNode.firstChild;
+         node; node = node.nextSibling) {
+      if (inChild && node === inChild.end) {
+        inChild = null;
+        continue;
+      }
+
+      if ((inChild || (
+        node.$ui === this &&
+          node !== this.start &&
+          node !== this.end)) &&
+          isSignificantNode(node)) {
+        if (firstNode) {
+          for (var n = firstNode.previousSibling;
+               n && ! n.$ui;
+               n = n.previousSibling) {
+            // adopt node
+            this.children[this.nextChildId++] = n;
+            n.$ui = this;
+          }
+        }
+        firstNode = (firstNode || node);
+        lastNode = node;
+      }
+
+      if (! inChild && node.$ui &&
+          node.$ui !== this &&
+          node.$ui.color === color &&
+          node.$ui.start === node)
+        inChild = node.$ui;
+    }
+    if (firstNode) {
+      // some significant node found
+      for (var n;
+           (n = firstNode.previousSibling) &&
+           n.$ui && n.$ui.color === color;)
+        firstNode = n;
+      for (var n;
+           (n = lastNode.nextSibling) &&
+           n.$ui && n.$ui.color === color;)
+        lastNode = n;
+
+      if (firstNode !== this.start)
+        insertNode(this.start,
+                   parentNode, firstNode);
+      if (lastNode !== this.end)
+        insertNode(this.end, parentNode,
+                 lastNode.nextSibling);
+    } else {
+      firstNode = this.start;
+      lastNode = this.end;
+      if (firstNode.nextSibling !== lastNode)
+        insertNode(lastNode, parentNode,
+                   firstNode.nextSibling);
+    }
+  },
+
   getNodes: function () {
+    this.refresh();
     var afterNode = this.end.nextSibling;
     var nodes = [];
     for (var n = this.start;
@@ -109,41 +186,41 @@ _extend(DomRange.prototype, {
     return nodes;
   },
   removeAll: function () {
-    var parentNode = this.parentNode();
-    if (! parentNode)
-      return;
+    this.refresh();
 
-    var children = this.children;
-    for (var k in children) {
-      var rangeOrNode = children[k];
-      if (rangeOrNode.parentNode === parentNode) {
-        // node, still there
-        removeNode(rangeOrNode);
-      } else if (rangeOrNode.start &&
-                 rangeOrNode.start.parentNode === parentNode) {
-        // DomRange, still there
-        rangeOrNode.remove();
-      }
-      delete children[k];
-    }
+    // leave start and end
+    var afterNode = this.end;
+    var nodes = [];
+    for (var n = this.start.nextSibling;
+         n && n !== afterNode;
+         n = n.nextSibling)
+      removeNode(n);
+
+    this.children = {};
   },
   getInsertionPoint: function (beforeId) {
     var children = this.children;
     var parentNode = this.parentNode();
 
+    if (! beforeId)
+      return this.end;
+
     beforeId = '_' + beforeId;
-    var nextNode;
+    var x = children[beforeId];
 
-    if (
-      beforeId != null &&
-        children.hasOwnProperty(beforeId) &&
-        (nextNode = children[beforeId]) &&
-        (nextNode.parentNode === parentNode ||
-         (nextNode = nextNode.start) &&
-         nextNode.parentNode === parentNode))
-      return nextNode;
-
-    return this.end;
+    if (x.parentNode === parentNode) {
+      // node, still there
+      return x;
+    } else if (x.start &&
+               x.start.parentNode === parentNode) {
+      // DomRange, still there
+      x.refresh();
+      return x.start;
+    } else {
+      // not there anymore
+      delete children[beforeId];
+      return this.end;
+    }
   },
   add: function (id, rangeNodeOrContent, beforeId) {
     if (id && typeof id !== 'string') {
@@ -184,6 +261,7 @@ _extend(DomRange.prototype, {
         insertNode(nodes[i], parentNode, nextNode);
     } else {
       // node
+      rangeOrNode.$ui = this;
       insertNode(rangeOrNode, parentNode, nextNode);
     }
   },
@@ -192,7 +270,6 @@ _extend(DomRange.prototype, {
       // remove self
       this.removeAll();
       removeNode(this.start);
-      removeNode(this.end);
       return;
     }
 
@@ -239,6 +316,7 @@ _extend(DomRange.prototype, {
     } else if (rangeOrNode.start &&
                rangeOrNode.start.parentNode === parentNode) {
       // DomRange
+      rangeOrNode.refresh();
       var nodes = rangeOrNode.getNodes();
       for (var i = 0; i < nodes.length; i++)
         insertNode(nodes[i], parentNode, nextNode);
@@ -271,7 +349,11 @@ UI.Each = Component.extend({
           || UI.Empty;
 
     var range = new DomRange;
+    // text nodes here are to avoid problems
+    // from old start/end tracking
+    self.append(document.createTextNode(""));
     self.append(range.getNodes());
+    self.append(document.createTextNode(""));
 
     cursor.observe({
         _no_indices: true,
@@ -296,14 +378,9 @@ UI.Each = Component.extend({
         r.component = comp;
         // XXX emulate hypothetical
         // node.$ui.data() API
-        _.each(comp._offscreen.childNodes,
-               function (n) {
-                 n.$ui = {
-                   data: function () {
-                     return data;
-                   }
-                 };
-               });
+        r.data = function () {
+          return data;
+        };
         r.add(_.toArray(
           comp._offscreen.childNodes));
         comp._offscreen = null;
