@@ -13,8 +13,9 @@ check = function (value, pattern) {
   try {
     checkSubtree(value, pattern);
   } catch (err) {
-    if (err.path)
-      err.message += "\nPath: " + err.path;
+    if ((err instanceof Match.Error) && err.path)
+      err.message += " in field " + err.path.replace(/\.\[/g, "[")
+                                            .replace(/.$/, "");
     throw err;
   }
 };
@@ -38,6 +39,7 @@ Match = {
   Error: Meteor.makeErrorType("Match.Error", function (msg) {
     this.message = "Match error: " + msg;
     // Path of the value in the object tree. Eg: "vals[3].entity.created"
+    // Initially is empty and gets populated on the way up the recursion stack.
     this.path = "";
     // If this gets sent over DDP, don't give full internal details but at least
     // provide something better than 500 Internal server error.
