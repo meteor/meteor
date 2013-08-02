@@ -13,34 +13,47 @@ UI.body.name = 'World';
 UI.body.items = Items.find({}, { sort: { rank: 1 }});
 
 
+// XXX this is a Minimal Viable Implementation. Improve:
+//
+// - Strings rather than floating point numbers (making sure not to
+// - add an additional bit on every bisection)
+//
+// - Add some randomization so that if two people reorder into the
+//   same position you don't end up with the same rank. (Elements with
+//   the same rank can't have anything placed in between)
+//
+// - At least prepare the ground for occasional rebalancing, in case
+// - ranks get too long.
+Ranks = {
+  beforeFirst: function (firstRank) {
+    return firstRank - 1;
+  },
+  between: function (beforeRank, afterRank) {
+    return (beforeRank + afterRank) / 2;
+  },
+  afterLast: function (lastRank) {
+    return lastRank + 1;
+  }
+};
 
 // xcxc rendered didn't work and was surprising.
 UI.body.attached = function () {
   $('#list').sortable({
     stop: function (event, ui) {
-      // xcxc use jQuery .prev() instead of previousElementSibling
+      var el = ui.item.get(0);
+      var before = ui.item.prev().get(0);
+      var after = ui.item.next().get(0);
 
-      el = ui.item[0]; // unbox jQuery array
-      var before = el.previousElementSibling;
-      var after = el.nextElementSibling;
-
-      var doc = el.$ui.data();
-
-      // xcxc improve rank generation.
       var newRank;
-      if (before === null) { // moving to the top of the list
-        var firstDoc = after.$ui.data();
-        newRank = firstDoc.rank-1;
-      } else if (after === null) { // moving to the bottom of the list
-        var lastDoc = before.$ui.data();
-        newRank = lastDoc.rank+1;
+      if (!before) { // moving to the top of the list
+        newRank = Ranks.beforeFirst(after.$ui.data().rank);
+      } else if (!after) { // moving to the bottom of the list
+        newRank = Ranks.afterLast(before.$ui.data().rank);
       } else {
-        var beforeDoc = before.$ui.data();
-        var afterDoc = after.$ui.data();
-        newRank = (beforeDoc.rank + afterDoc.rank) / 2;
+        newRank = Ranks.between(before.$ui.data().rank, after.$ui.data().rank);
       }
 
-      Items.update(doc._id, {$set: {rank: newRank}});
+      Items.update(el.$ui.data()._id, {$set: {rank: newRank}});
     }
   });
 };
