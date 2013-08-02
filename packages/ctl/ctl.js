@@ -203,6 +203,10 @@ Ctl.Commands.push({
         }
       };
 
+      // Set migrate to exitPolicy: restart because it could be long-running,
+      // and we want it to pick up where it left off if something goes
+      // wrong. migrate will set itself to done: true and thereby stop itself
+      // when the migrations finish.
       Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), 'migrate', {
         exitPolicy: 'restart',
         env: {
