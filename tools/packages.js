@@ -231,6 +231,12 @@ _.extend(Slice.prototype, {
       var handler = !fileOptions.isAsset && self._getSourceHandler(ext);
       var contents = watch.readAndWatchFile(self.watchSet, absPath);
 
+      if (contents === null) {
+        buildmessage.error("File not found: " + source.relPath);
+        // recover by ignoring
+        return;
+      }
+
       if (! handler) {
         // If we don't have an extension handler, serve this file as a
         // static resource on the client, or ignore it on the server.
