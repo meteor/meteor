@@ -233,7 +233,7 @@ var checkSubtree = function (value, pattern) {
         checkSubtree(subValue, optionalPatterns[key]);
       } else {
         if (!unknownKeysAllowed)
-          throw new Match.Error("Unknown key '" + key + "'");
+          throw new Match.Error("Unknown key");
       }
     } catch (err) {
       if (err instanceof Match.Error) {
