@@ -29,7 +29,7 @@ Plugin.registerSourceHandler("less", function (compileStep) {
     // less.render() is supposed to report any errors via its
     // callback. But sometimes, it throws them instead. This is
     // probably a bug in less. Be prepared for either behavior.
-    throw new Error(source_path + ": Less compiler error: " + e.message);
+    throw new Error(compileStep.inputPath + ": Less compiler error: " + e.message);
   }
 });;
 
