@@ -1,5 +1,4 @@
 // XXX docs
-// XXX on linker branch, export Match and check
 
 // Things we explicitly do NOT support:
 //    - heterogenous arrays
@@ -11,7 +10,13 @@ check = function (value, pattern) {
   var argChecker = currentArgumentChecker.get();
   if (argChecker)
     argChecker.checking(value);
-  checkSubtree(value, pattern);
+  try {
+    checkSubtree(value, pattern);
+  } catch (err) {
+    if (err.path)
+      err.message += "\nPath: " + err.path;
+    throw err;
+  }
 };
 
 Match = {
@@ -29,10 +34,11 @@ Match = {
     return new ObjectIncluding(pattern);
   },
 
-  // XXX should we record the path down the tree in the error message?
   // XXX matchers should know how to describe themselves for errors
   Error: Meteor.makeErrorType("Match.Error", function (msg) {
     this.message = "Match error: " + msg;
+    // Path of the value in the object tree. Eg: "vals[3].entity.created"
+    this.path = "";
     // If this gets sent over DDP, don't give full internal details but at least
     // provide something better than 500 Internal server error.
     this.sanitizedError = new Meteor.Error(400, "Match failed");
@@ -132,8 +138,14 @@ var checkSubtree = function (value, pattern) {
       throw new Match.Error("Expected array, got " + EJSON.stringify(value));
     }
 
-    _.each(value, function (valueElement) {
-      checkSubtree(valueElement, pattern[0]);
+    _.each(value, function (valueElement, index) {
+      try {
+        checkSubtree(valueElement, pattern[0]);
+      } catch (err) {
+        if (err instanceof Match.Error)
+          err.path = "[" + index + "]." + err.path;
+        throw err;
+      }
     });
     return;
   }
@@ -206,14 +218,20 @@ var checkSubtree = function (value, pattern) {
   });
 
   _.each(value, function (subValue, key) {
-    if (_.has(requiredPatterns, key)) {
-      checkSubtree(subValue, requiredPatterns[key]);
-      delete requiredPatterns[key];
-    } else if (_.has(optionalPatterns, key)) {
-      checkSubtree(subValue, optionalPatterns[key]);
-    } else {
-      if (!unknownKeysAllowed)
-        throw new Match.Error("Unknown key '" + key + "'");
+    try {
+      if (_.has(requiredPatterns, key)) {
+        checkSubtree(subValue, requiredPatterns[key]);
+        delete requiredPatterns[key];
+      } else if (_.has(optionalPatterns, key)) {
+        checkSubtree(subValue, optionalPatterns[key]);
+      } else {
+        if (!unknownKeysAllowed)
+          throw new Match.Error("Unknown key '" + key + "'");
+      }
+    } catch (err) {
+      if (err instanceof Match.Error)
+        err.path = key + "." + err.path;
+      throw err;
     }
   });
 
