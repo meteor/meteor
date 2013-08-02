@@ -172,7 +172,7 @@ Ctl.Commands.push({
       // Now start any jobs that are necessary.
       if (s.scale <= 0)
         return;
-      Log("Starting %d jobs for %s", s.scale, s.program);
+      Log("Starting " + s.scale + " jobs for " + s.program);
       _.times(s.scale, function () {
         // XXX args? env?
         Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), s.program, {
@@ -214,9 +214,9 @@ Ctl.Commands.push({
           METEOR_DEPLOY_CONFIG: JSON.stringify(deployConfig)
         }
       }]);
-      Log("Started migrations for app", Ctl.myAppName());
+      Log("Started migrations for app " + Ctl.myAppName());
     } else {
-      Log.warn("Migrations already running for app", Ctl.myAppName());
+      Log.warn("Migrations already running for app " + Ctl.myAppName());
     }
   }
 });
