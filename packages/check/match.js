@@ -14,8 +14,7 @@ check = function (value, pattern) {
     checkSubtree(value, pattern);
   } catch (err) {
     if ((err instanceof Match.Error) && err.path)
-      err.message += " in field " + err.path.replace(/\.\[/g, "[")
-                                            .replace(/.$/, "");
+      err.message += " in field " + err.path;
     throw err;
   }
 };
@@ -38,8 +37,10 @@ Match = {
   // XXX matchers should know how to describe themselves for errors
   Error: Meteor.makeErrorType("Match.Error", function (msg) {
     this.message = "Match error: " + msg;
-    // Path of the value in the object tree. Eg: "vals[3].entity.created"
-    // Initially is empty and gets populated on the way up the recursion stack.
+    // The path of the value that failed to match. Initially empty, this gets
+    // populated by catching and rethrowing the exception as it goes back up the
+    // stack.
+    // E.g.: "vals[3].entity.created"
     this.path = "";
     // If this gets sent over DDP, don't give full internal details but at least
     // provide something better than 500 Internal server error.
@@ -144,8 +145,12 @@ var checkSubtree = function (value, pattern) {
       try {
         checkSubtree(valueElement, pattern[0]);
       } catch (err) {
-        if (err instanceof Match.Error)
-          err.path = "[" + index + "]." + err.path;
+        if (err instanceof Match.Error) {
+          if (err.path && err.path[0] !== '[')
+            err.path = "[" + index + "]." + err.path;
+          else
+            err.path = "[" + index + "]" + err.path;
+        }
         throw err;
       }
     });
@@ -231,8 +236,12 @@ var checkSubtree = function (value, pattern) {
           throw new Match.Error("Unknown key '" + key + "'");
       }
     } catch (err) {
-      if (err instanceof Match.Error)
-        err.path = key + "." + err.path;
+      if (err instanceof Match.Error) {
+        if (err.path && err.path[0] !== "[")
+          err.path = key + "." + err.path;
+        else
+          err.path = key + err.path;
+      }
       throw err;
     }
   });
