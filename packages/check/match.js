@@ -163,9 +163,8 @@ var checkSubtree = function (value, pattern) {
       } catch (err) {
         if (err instanceof Match.Error) {
           if (err.path && err.path[0] !== '[')
-            err.path = "[" + index + "]." + err.path;
-          else
-            err.path = "[" + index + "]" + err.path;
+            err.path = "." + err.path;
+          err.path = "[" + index + "]" + err.path;
         }
         throw err;
       }
@@ -254,9 +253,8 @@ var checkSubtree = function (value, pattern) {
     } catch (err) {
       if (err instanceof Match.Error) {
         if (err.path && err.path[0] !== "[")
-          err.path = key + "." + err.path;
-        else
-          err.path = key + err.path;
+          err.path = "." + err.path;
+        err.path = key + err.path;
       }
       throw err;
     }
