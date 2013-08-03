@@ -242,8 +242,15 @@ _.extend(Library.prototype, {
           if (! buildmessage.jobHasMessages() && // ensure no errors!
               pkg.canBeSavedAsUnipackage()) {
             // Save it, for a fast load next time
-            files.add_to_gitignore(packageDir, '.build*');
-            pkg.saveAsUnipackage(buildDir, { buildOfPath: packageDir });
+            try {
+              files.add_to_gitignore(packageDir, '.build*');
+              pkg.saveAsUnipackage(buildDir, { buildOfPath: packageDir });
+            } catch (e) {
+              // If we can't write to this directory, we don't get to cache our
+              // output, but otherwise life is good.
+              if (!(e && (e.code === 'EACCES' || e.code === 'EPERM')))
+                throw e;
+            }
           }
         });
       }
