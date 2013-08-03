@@ -41,7 +41,7 @@ elif [ "$METEOR_WAREHOUSE_DIR" ]; then
     INSTALLED_METEOR=t
     export METEOR_TEST_NO_SPRINGBOARD=t
     if [ -z "$TEST_RELEASE" ]; then
-        TEST_RELEASE="0.6.0-alpha3"
+        TEST_RELEASE="0.6.5-rc12"
     fi
 
     METEOR="$METEOR --release=$TEST_RELEASE" # some random non-official release
