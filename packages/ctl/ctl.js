@@ -46,49 +46,15 @@ Ctl.Commands.push({
 
       var proxyConfig;
       var bindPathPrefix = "";
-      if (appConfig.admin) {
-        bindPathPrefix = "/" + Ctl.myAppName();
-        proxyConfig = {
-          securePort: 44333,
-          insecurePort: 9414,
-          bindHost: "localhost",
-          bindPathPrefix: bindPathPrefix
-        };
-      } else {
-        proxyConfig = {
-          bindHost: appConfig.sitename
-        };
-      }
 
-      var deployConfig = {
-        boot: {
-          bind: {
-            viaProxy: proxyConfig
-          }
-        },
-        packages: {
-          "mongo-livedata": {
-            url: appConfig.MONGO_URL
-          },
-          "email": {
-            url: appConfig.MAIL_URL
-          }
-        },
-        proxyServiceName: appConfig.proxyServiceName || "proxy"
-      };
-
-      // Merge in any values that might have been added to the app's config in
-      // the database.
-      if (appConfig.deployConfig)
-        deployConfig = mergeObjects(deployConfig, appConfig.deployConfig);
 
       // XXX args? env?
       Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), 'server', {
         exitPolicy: 'restart',
         env: {
-          METEOR_DEPLOY_CONFIG: JSON.stringify(deployConfig),
           ROOT_URL: "https://" + appConfig.sitename + bindPathPrefix,
-          METEOR_SETTINGS: appConfig.METEOR_SETTINGS
+          METEOR_SETTINGS: appConfig.METEOR_SETTINGS,
+          ADMIN_APP: appConfig.admin //TODO: When apps have admin & non-admin sides, set this based on that.
         },
         ports: {
           "main": {

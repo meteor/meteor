@@ -19,7 +19,7 @@ Npm.depends({mongodb: "https://github.com/mongodb/node-mongodb-native/tarball/02
 
 Package.on_use(function (api) {
   api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging',
-           'livedata', 'deps'],
+           'livedata', 'deps', 'galaxy'],
           ['client', 'server']);
   api.use('check', ['client', 'server']);
 
