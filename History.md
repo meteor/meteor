@@ -24,11 +24,13 @@
   * Underscore from 1.4.4 to 1.5.1
   * Fibers from 1.0.0 to 1.0.1
 
-* When removing the last NPM dependency, clean up the `.npm` dir
+* When removing the last NPM dependency, clean up the `.npm` dir. Also, the
+  files move into .npm/package.
 
 * `$ROOT_URL` may now have a path part
 
-* `new Meteor.Collection("name", {connection: null})` works
+* `new Meteor.Collection("name", {connection: null})` works [does this need a
+  doc change?]
 
 * Make server-side Mongo inserts, updates, and removes run asynchronously when a
   callback is passed.
