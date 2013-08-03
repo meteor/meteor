@@ -110,9 +110,25 @@ _.extend(Library.prototype, {
 
     for (var i = 0; i < self.localPackageDirs.length; ++i) {
       var packageDir = path.join(self.localPackageDirs[i], name);
-      // XXX or unipackage.json? see also watchLocalPackageDirs
-      if (fs.existsSync(path.join(packageDir, 'package.js')))
+      // A directory is a package if it either contains 'package.js' (a package
+      // source tree) or 'unipackage.json' (a compiled unipackage). (Actually,
+      // for now, unipackages contain a dummy package.js too.)
+      //
+      // XXX support for putting unipackages in a local package dir is
+      // incomplete! They will be properly loaded, but other packages that
+      // depend on them have no way of knowing when they change! unipackages
+      // that are the .build of a source tree work fine (they have a
+      // buildinfo.json and can be rebuilt), and warehouse unipackages work fine
+      // too (users are not supposed to edit them (they are read-only on disk),
+      // and their pathname specifies a version).  But if you, eg, have a
+      // unipackage of coffeescript in a local package directory, build another
+      // package dependending on it, and substitute another version of the
+      // unipackage in the same location, nothing will ever rebuild your
+      // package!
+      if (fs.existsSync(path.join(packageDir, 'package.js')) ||
+          fs.existsSync(path.join(packageDir, 'unipackage.json'))) {
         return packageDir;
+      }
     }
 
     // Try the Meteor distribution, if we have one.
@@ -120,6 +136,8 @@ _.extend(Library.prototype, {
     if (version) {
       packageDir = path.join(warehouse.getWarehouseDir(),
                              'packages', name, version);
+      // The warehouse is theoretically constructed carefully enough that the
+      // directory really should not exist unless it is complete.
       if (! fs.existsSync(packageDir))
         throw new Error("Package missing from warehouse: " + name +
                         " version " + version);
@@ -224,8 +242,15 @@ _.extend(Library.prototype, {
           if (! buildmessage.jobHasMessages() && // ensure no errors!
               pkg.canBeSavedAsUnipackage()) {
             // Save it, for a fast load next time
-            files.add_to_gitignore(packageDir, '.build*');
-            pkg.saveAsUnipackage(buildDir, { buildOfPath: packageDir });
+            try {
+              files.add_to_gitignore(packageDir, '.build*');
+              pkg.saveAsUnipackage(buildDir, { buildOfPath: packageDir });
+            } catch (e) {
+              // If we can't write to this directory, we don't get to cache our
+              // output, but otherwise life is good.
+              if (!(e && (e.code === 'EACCES' || e.code === 'EPERM')))
+                throw e;
+            }
           }
         });
       }
@@ -272,7 +297,7 @@ _.extend(Library.prototype, {
 
   // Register local package directories with a watchSet. We want to know if a
   // package is created or deleted, which includes both its top-level source
-  // directory or its package.js file.
+  // directory and its main package metadata file.
   watchLocalPackageDirs: function (watchSet) {
     var self = this;
     _.each(self.localPackageDirs, function (packageDir) {
@@ -283,7 +308,8 @@ _.extend(Library.prototype, {
       _.each(packages, function (p) {
         watch.readAndWatchFile(watchSet,
                                path.join(packageDir, p, 'package.js'));
-        // XXX unipackage.json too?
+        watch.readAndWatchFile(watchSet,
+                               path.join(packageDir, p, 'unipackage.json'));
       });
     });
   },

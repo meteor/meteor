@@ -228,9 +228,12 @@ var readDirectory = function (options) {
       // XXX Does the treatment of symlinks make sense?
       var stats = fs.statSync(path.join(options.absPath, entry));
     } catch (e) {
-      // Disappeared after the readdirSync (or a dangling symlink)? Eh, pretend
-      // it was never there in the first place.
-      return;
+      if (e && (e.code === 'ENOENT')) {
+        // Disappeared after the readdirSync (or a dangling symlink)? Eh,
+        // pretend it was never there in the first place.
+        return;
+      }
+      throw e;
     }
     // XXX if we're on windows, I guess it's possible for files to end with '/'.
     if (stats.isDirectory())

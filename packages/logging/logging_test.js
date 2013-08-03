@@ -51,7 +51,7 @@ Tinytest.add("logging - log", function (test) {
           [0, "0", "falsy - 0"],
           [null, "null", "falsy - null"],
           [undefined, "undefined", "falsy - undefined"],
-          ["2013-06-13T01:15:16.000Z", new Date("2013-06-13T01:15:16.000Z"), "date"],
+          [new Date("2013-06-13T01:15:16.000Z"), new Date("2013-06-13T01:15:16.000Z"), "date"],
           [/[^regexp]{0,1}/g, "/[^regexp]{0,1}/g", "regexp"],
           [true, "true", "boolean - true"],
           [false, "false", "boolean - false"],
@@ -72,7 +72,11 @@ Tinytest.add("logging - log", function (test) {
       var recieved = intercepted[index];
       var obj = EJSON.parse(recieved);
 
-      if (_.isDate(expected))
+      // IE8 doesn't support this date format. Skip it.
+      if (expected && expected.toString && expected.toString() === "NaN")
+        return;
+
+      if (_.isDate(testcase[0]))
         obj.message = new Date(obj.message);
       test.equal(obj.message, expected, 'Logging ' + testName);
     });
@@ -137,7 +141,7 @@ Tinytest.add("logging - format", function (test) {
 
     test.equal(
       Log.format({message: "message", time: time, timeInexact: true, level: level}),
-      level.charAt(0).toUpperCase() + "20120908-07:06:05.004" + utcOffsetStr + "?message");
+      level.charAt(0).toUpperCase() + "20120908-07:06:05.004" + utcOffsetStr + "? message");
 
     test.equal(
       Log.format({foo1: "bar1", foo2: "bar2", time: time, level: level}),

@@ -1,6 +1,8 @@
 
 ## vNEXT
 
+## v0.6.5
+
 * linker!  namespacing, exports, unipackages, weak and unordered dependencies,
   etc.  sourcemaps (including for coffee). standard-app-packages.  don't
   implicitly use all app packages. lots of stuff moved from server.js (now

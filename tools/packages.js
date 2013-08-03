@@ -231,6 +231,12 @@ _.extend(Slice.prototype, {
       var handler = !fileOptions.isAsset && self._getSourceHandler(ext);
       var contents = watch.readAndWatchFile(self.watchSet, absPath);
 
+      if (contents === null) {
+        buildmessage.error("File not found: " + source.relPath);
+        // recover by ignoring
+        return;
+      }
+
       if (! handler) {
         // If we don't have an extension handler, serve this file as a
         // static resource on the client, or ignore it on the server.
@@ -359,6 +365,9 @@ _.extend(Slice.prototype, {
         packageName: self.pkg.name,
         rootOutputPath: self.pkg.serveRoot,
         arch: self.arch,
+        archMatches: function (pattern) {
+          return archinfo.matches(self.arch, pattern);
+        },
         fileOptions: fileOptions,
         declaredExports: _.pluck(self.declaredExports, 'name'),
         read: function (n) {
@@ -1792,6 +1801,28 @@ _.extend(Package.prototype, {
         var otherSliceRegExp =
               (sliceName === "server" ? /^client\/$/ : /^server\/$/);
 
+        // The paths that we've called checkForInfiniteRecursion on.
+        var seenPaths = {};
+        // Used internally by fs.realpathSync as an optimization.
+        var realpathCache = {};
+        var checkForInfiniteRecursion = function (relDir) {
+          var absPath = path.join(self.sourceRoot, relDir);
+          try {
+            var realpath = fs.realpathSync(absPath, realpathCache);
+          } catch (e) {
+            if (!e || e.code !== 'ELOOP')
+              throw e;
+            // else leave realpath undefined
+          }
+          if (realpath === undefined || _.has(seenPaths, realpath)) {
+            buildmessage.error("Symlink cycle detected at " + relDir);
+            // recover by returning no files
+            return true;
+          }
+          seenPaths[realpath] = true;
+          return false;
+        };
+
         // Read top-level subdirectories. Ignore subdirectories that have
         // special handling.
         var sourceDirectories = readAndWatchDirectory('', {
@@ -1800,12 +1831,16 @@ _.extend(Package.prototype, {
                     /^public\/$/, /^private\/$/,
                     otherSliceRegExp].concat(sourceExclude)
         });
+        checkForInfiniteRecursion('');
 
-        // XXX avoid infinite recursion with bad symlinks
         while (!_.isEmpty(sourceDirectories)) {
           var dir = sourceDirectories.shift();
+
           // remove trailing slash
           dir = dir.substr(0, dir.length - 1);
+
+          if (checkForInfiniteRecursion(dir))
+            return [];  // pretend we found no files
 
           // Find source files in this directory.
           Array.prototype.push.apply(sources, readAndWatchDirectory(dir, {
@@ -1845,7 +1880,6 @@ _.extend(Package.prototype, {
           include: [new RegExp('^' + assetDir + '/$')]
         });
 
-        // XXX avoid infinite recursion with bad symlinks
         if (!_.isEmpty(assetDirs)) {
           if (!_.isEqual(assetDirs, [assetDir + '/']))
             throw new Error("Surprising assetDirs: " + JSON.stringify(assetDirs));
@@ -1854,6 +1888,9 @@ _.extend(Package.prototype, {
             dir = assetDirs.shift();
             // remove trailing slash
             dir = dir.substr(0, dir.length - 1);
+
+            if (checkForInfiniteRecursion(dir))
+              return [];  // pretend we found no files
 
             // Find asset files in this directory.
             var assetsAndSubdirs = readAndWatchDirectory(dir, {
