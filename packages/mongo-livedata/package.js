@@ -16,7 +16,7 @@ Npm.depends({mongodb: "1.3.17"});
 
 Package.on_use(function (api) {
   api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging',
-           'livedata', 'deps'],
+           'livedata', 'deps', 'galaxy'],
           ['client', 'server']);
   api.use('check', ['client', 'server']);
 

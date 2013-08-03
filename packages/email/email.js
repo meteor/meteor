@@ -36,13 +36,16 @@ var makePool = function (mailUrlString) {
 var smtpPool = null;
 var maybeMakePool = function () {
   // We check MAIL_URL in case someone else set it in Meteor.startup code.
-  var mailUrl = process.env.MAIL_URL ||
-        (typeof __meteor_bootstrap__ !== 'undefined' &&
-         Meteor._get(__meteor_bootstrap__.deployConfig,
-                     'packages', 'email', 'url'));
-  if (!smtpPool && mailUrl) {
-    smtpPool = makePool(mailUrl);
-  }
+  var poolFuture = new Future();
+  Galaxy.configurePackage('email', function (config) {
+    // XXX: do we leak something if we get reconfigured a lot?
+    if (!smtpPool && config.url) {
+      smtpPool = makePool(config.url);
+    }
+    poolFuture.return();
+  });
+
+  poolFuture.wait();
 };
 
 var next_devmode_mail_id = 0;
@@ -146,4 +149,3 @@ Email.send = function (options) {
     devModeSend(mc);
   }
 };
-
