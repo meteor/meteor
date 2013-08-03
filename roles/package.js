@@ -6,6 +6,8 @@ Package.on_use(function (api) {
   var both = ['client', 'server'];
   api.use(['underscore', 'accounts-base'], both);
 
+  api.export && api.export('Roles'); 
+
   api.add_files('roles_server.js', 'server');
   api.add_files('roles_common.js', both);
   api.add_files('roles_client.js', 'client');
