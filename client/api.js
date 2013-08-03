@@ -1849,7 +1849,7 @@ Template.api.assets_getBinary = {
   id: "assets_getBinary",
   name: "Assets.getBinary(assetPath, [asyncCallback])",
   locus: "Server",
-  descr: ["Retrieve the contents of the static server asset as an EJSON Binary."],
+  descr: ["Retrieve the contents of the static server asset as an [EJSON Binary](#ejson_new_binary)."],
   args: [
     {name: "assetPath",
      type: "String",
