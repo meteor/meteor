@@ -439,37 +439,43 @@ var runWebAppServer = function () {
         __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || "");
 
     // only start listening after all the startup code has run.
-    var bind = deployConfig.boot.bind;
+    var bind = deployConfig.boot.bind || appConfig.packages && appConfig.packages.webapp;
     var localPort = bind.localPort || 0;
     var localIp = bind.localIp || '0.0.0.0';
     httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
       if (argv.keepalive || true)
         console.log("LISTENING"); // must match run.js
       var port = httpServer.address().port;
-      if (bind.viaProxy && bind.viaProxy.proxyEndpoint) {
-        WebAppInternals.bindToProxy(bind.viaProxy);
-      } else if (bind.viaProxy) {
-        // bind via the proxy, but we'll have to find it ourselves via
-        // ultraworld.
-        var galaxy = findGalaxy();
-        var proxyServiceName = deployConfig.proxyServiceName || "proxy";
-        galaxy.subscribe('servicesByName', proxyServiceName);
-        var Proxies = new Meteor.Collection('services', {
-          manager: galaxy
-        });
-        var doBinding = function (proxyService) {
-          if (proxyService.providers.proxy) {
-            Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
-            WebAppInternals.bindToProxy(_.extend({
-              proxyEndpoint: proxyService.providers.proxy
-            }, bind.viaProxy));
-         }
-        };
-        Proxies.find().observe({
-          added: doBinding,
-          changed: doBinding
-        });
-      }
+      var proxyBinding;
+      Galaxy.configurePackage('webapp', function (configuration) {
+        if (proxyBinding)
+          proxyBinding.stop();
+        if (configuration && configuration.proxy) {
+          proxyBinding = Galaxy.configureService(function (proxyService) {
+            if (proxyService.providers.proxy) {
+              var proxyConf;
+              if (process.env.ADMIN_APP) {
+                proxyConf = {
+                  securePort: null,
+                  insecurePort: 9414,
+                  bindHost: "localhost",
+                  bindPathPrefix: "/" + process.env.GALAXY_APP
+                };
+              } else {
+                proxyConf = {
+                  // TODO: allow sitename to be a list.
+                  bindHost: configuration.proxy.sitename
+                };
+
+              }
+              Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
+              WebAppInternals.bindToProxy(_.extend({
+                proxyEndpoint: proxyService.providers.proxy
+              }, proxyConf));
+            }
+          });
+        }
+      });
 
       var callbacks = onListeningCallbacks;
       onListeningCallbacks = null;
