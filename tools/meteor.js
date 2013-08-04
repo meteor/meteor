@@ -638,9 +638,10 @@ Fiber(function () {
 
       // Find upgraders (in order) necessary to upgrade the app for the new
       // release (new metadata file formats, etc, or maybe even updating renamed
-      // APIs).
-      var oldManifest = warehouse.ensureReleaseExistsAndReturnManifest(
-        appRelease);
+      // APIs). (If this is a pre-engine app with no .meteor/release file, run
+      // all upgraders.)
+      var oldManifest = appRelease === null ? {}
+          : warehouse.ensureReleaseExistsAndReturnManifest(appRelease);
       // We can only run upgrades from pinned apps.
       if (oldManifest) {
         var upgraders = _.difference(context.releaseManifest.upgraders || [],
