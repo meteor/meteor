@@ -543,7 +543,6 @@ _.extend(Target.prototype, {
           // strong dependency on it, then ignore this edge.
           if (useOptions.weak && ! _.has(getsUsed, usedSlice.id))
             return;
-
           if (onStack[usedSlice.id]) {
             buildmessage.error("circular dependency between packages " +
                                slice.pkg.name + " and " + usedSlice.pkg.name);
