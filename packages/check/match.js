@@ -34,12 +34,6 @@ Match = {
     return new ObjectIncluding(pattern);
   },
   // Matches only signed 32-bit integers
-  // There is no consistent and reliable way to check if variable is a 64-bit
-  // integer. One of the popular solutions is to get reminder of division by 1
-  // but this method fails on really large floats with big precision.
-  // E.g.: 1.348192308491824e+23 % 1 === 0 in V8
-  // Bitwise operators work consistantly but always cast variable to 32-bit
-  // signed integer by JavaScript specs.
   Integer: ['__integer__'],
 
   // XXX matchers should know how to describe themselves for errors
@@ -138,10 +132,16 @@ var checkSubtree = function (value, pattern) {
 
   // Match.Integer is special type encoded with array
   if (pattern === Match.Integer) {
-    if (typeof value !== "number" || (value | 0) !== value)
-      throw new Match.Error("Expected Integer, got "
-                  + (value instanceof Object ? EJSON.stringify(value) : value));
-    return;
+    // There is no consistent and reliable way to check if variable is a 64-bit
+    // integer. One of the popular solutions is to get reminder of division by 1
+    // but this method fails on really large floats with big precision.
+    // E.g.: 1.348192308491824e+23 % 1 === 0 in V8
+    // Bitwise operators work consistantly but always cast variable to 32-bit
+    // signed integer according to JavaScript specs.
+    if (typeof value === "number" && (value | 0) === value)
+      return
+    throw new Match.Error("Expected Integer, got "
+                + (value instanceof Object ? EJSON.stringify(value) : value));
   }
 
   // "Object" is shorthand for Match.ObjectIncluding({});
