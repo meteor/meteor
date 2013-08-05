@@ -5,10 +5,7 @@ Galaxy = {};
 
 Galaxy.findGalaxy = _.once(function () {
   if (!('GALAXY' in process.env || 'ULTRAWORLD_DDP_ENDPOINT' in process.env)) {
-    console.log(
-      "To do Meteor Galaxy operations like binding to a Galaxy " +
-        "proxy, the ULTRAWORLD_DDP_ENDPOINT environment variable must be set.");
-    process.exit(1);
+    return null;
   }
 
   return DDP.connect(process.env.GALAXY || process.env.ULTRAWORLD_DDP_ENDPOINT);
@@ -20,28 +17,41 @@ Galaxy.findGalaxy = _.once(function () {
 var ultra = Galaxy.findGalaxy();
 
 var subFuture = new Future();
-ultra.subscribe("oneApp", process.env.GALAXY_APP, subFuture.resolver());
+if (ultra)
+  ultra.subscribe("oneApp", process.env.GALAXY_APP, subFuture.resolver());
 
 var OneAppApps;
 var Services;
 var collectionFuture = new Future();
 
 Meteor.startup(function () {
-  OneAppApps = new Meteor.Collection("apps", {
-    connection: ultra
-  });
-  Services = new Meteor.Collection('services', {
-    manager: ultra
-  });
-  collectionFuture.return();
+  if (ultra) {
+    OneAppApps = new Meteor.Collection("apps", {
+      connection: ultra
+    });
+    Services = new Meteor.Collection('services', {
+      manager: ultra
+    });
+    collectionFuture.return();
+  }
 });
 
 
 var staticAppConfig;
 
 try {
-  if (process.env.APP_CONFIG)
+  if (process.env.APP_CONFIG) {
+    // TODO: parse env variables into a fake app config if we don't have one.
     staticAppConfig = JSON.parse(process.env.APP_CONFIG);
+  } else {
+    staticAppConfig = {
+      packages: {
+        'mongo-livedata': {
+          url: process.env.MONGO_URL
+        }
+      }
+    };
+  }
 } catch (e) {
   Log.warn("Could not parse initial APP_CONFIG environment variable");
 };
@@ -59,7 +69,10 @@ Galaxy.getAppConfig = function () {
 Galaxy.configurePackage = function (packageName, configure) {
   var appConfig = Galaxy.getAppConfig(); // Will either be based in the env var,
                                          // or wait for galaxy to connect.
-  var lastConfig = null;
+  var lastConfig = appConfig && appConfig.packages && appConfig.packages[packageName];
+  if (lastConfig) {
+    configure(lastConfig);
+  }
   var configureIfDifferent = function (app) {
     if (!EJSON.equals(app.config && app.config.packages && app.config.packages[packageName],
                       lastConfig)) {
@@ -87,11 +100,12 @@ Galaxy.configurePackage = function (packageName, configure) {
 
 
 Galaxy.configureService = function (serviceName, configure) {
-
-  ultra.subscribe('servicesByName', serviceName);
-  return Services.find({name: serviceName}).observe({
-    added: configure,
-    changed: configure
-  });
+  if (ultra) {
+    ultra.subscribe('servicesByName', serviceName);
+    return Services.find({name: serviceName}).observe({
+      added: configure,
+      changed: configure
+    });
+  }
 
 };
