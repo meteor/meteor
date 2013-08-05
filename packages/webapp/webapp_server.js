@@ -452,22 +452,77 @@ var runWebAppServer = function () {
         // bind via the proxy, but we'll have to find it ourselves via
         // ultraworld.
         var galaxy = findGalaxy();
+        // Bind to our preferred proxy service, but fall back to the other if
+        // none is available.
         var proxyServiceName = deployConfig.proxyServiceName || "proxy";
+        var backupProxyServiceName = proxyServiceName === "proxy" ?
+              "adminProxy" : "proxy";
         galaxy.subscribe('servicesByName', proxyServiceName);
+        galaxy.subscribe('servicesByName', backupProxyServiceName);
         var Proxies = new Meteor.Collection('services', {
           manager: galaxy
         });
+        var unpreferredProxies = [];
+
+        // Counts the number of proxy services provided by the "proxy" app.
+        var countProxies = function (proxiesCursor) {
+          var count = 0;
+          proxiesCursor.forEach(function (service) {
+            if (service.providers.proxy)
+              count++;
+          });
+          return count;
+        };
+
+        var removeBindings = function (endpoints) {
+          _.each(endpoints, function (endpoint) {
+            var proxy = DDP.connect(endpoint);
+            if (! process.env.GALAXY_JOB)
+              throw new Error("Missing GALAXY_JOB");
+            proxy.call("removeBindingsForJob", process.env.GALAXY_JOB);
+          });
+        };
+
+        var tryFallbackBinding = function (oldProxyService) {
+          // If we have no preferred proxy service providers and we do have
+          // unpreferred ones, bind to one of those.
+          var preferredProxies = Proxies.find({ name: proxyServiceName });
+          var unpreferredProxy = Proxies.findOne({ name: backupProxyServiceName });
+          if (countProxies(preferredProxies) === 0 && unpreferredProxy &&
+              unpreferredProxy.providers.proxy) {
+            doBinding(unpreferredProxy);
+          }
+        };
+
         var doBinding = function (proxyService) {
           if (proxyService.providers.proxy) {
-            Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
-            WebAppInternals.bindToProxy(_.extend({
-              proxyEndpoint: proxyService.providers.proxy
-            }, bind.viaProxy));
-         }
+            var preferredProxies = Proxies.find({ name: proxyServiceName });
+            var preferredProxyCount = countProxies(preferredProxies);
+
+            if (proxyService.name === proxyServiceName ||
+                (proxyService.name === backupProxyServiceName &&
+                 preferredProxyCount === 0)) {
+              Log("Attempting to bind to proxy at " +
+                  proxyService.providers.proxy);
+
+              WebAppInternals.bindToProxy(_.extend({
+                proxyEndpoint: proxyService.providers.proxy
+              }, bind.viaProxy));
+
+              if (proxyService.name === backupProxyServiceName) {
+                unpreferredProxies.push(proxyService.providers.proxy);
+              } else {
+                // If we've found a preferred proxy service, remove fallback
+                // bindings that we made.
+                removeBindings(unpreferredProxies);
+              }
+            }
+          }
         };
         Proxies.find().observe({
           added: doBinding,
-          changed: doBinding
+          changed: doBinding,
+          removed: tryFallbackBinding
         });
       }
 
