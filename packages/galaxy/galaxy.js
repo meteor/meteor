@@ -41,13 +41,24 @@ var staticAppConfig;
 
 try {
   if (process.env.APP_CONFIG) {
-    // TODO: parse env variables into a fake app config if we don't have one.
     staticAppConfig = JSON.parse(process.env.APP_CONFIG);
   } else {
+    var settings;
+    try {
+      if (process.env.METEOR_SETTINGS) {
+        settings = JSON.parse(process.env.METEOR_SETTINGS);
+      }
+    } catch (e) {
+      Log.warn("Could not parse METEOR_SETTINGS as JSON");
+    }
     staticAppConfig = {
+      settings: settings,
       packages: {
         'mongo-livedata': {
           url: process.env.MONGO_URL
+        },
+        'email': {
+          url: process.env.MAIL_URL
         }
       }
     };
@@ -83,12 +94,16 @@ Galaxy.configurePackage = function (packageName, configure) {
   var subHandle;
   var observed = new Future();
   Meteor.startup(function () {
-    collectionFuture.wait();
-    subHandle = OneAppApps.find().observe({
-      added: configureIfDifferent,
-      changed: configureIfDifferent
+    // This is not required to finish, so defer it so it doesn't block anything
+    // else.
+    Meteor.defer( function () {
+      collectionFuture.wait();
+      subHandle = OneAppApps.find().observe({
+        added: configureIfDifferent,
+        changed: configureIfDifferent
+      });
+      observed.return();
     });
-    observed.return();
   });
   return {
     stop: function () {
