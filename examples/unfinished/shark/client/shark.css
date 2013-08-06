@@ -6,3 +6,10 @@
   font-weight: bold;
   cursor: move;
 }
+
+.isotope .item {
+  padding: 10px;
+  margin: 8px;
+  font-weight: bold;
+  background: #cfc;
+}

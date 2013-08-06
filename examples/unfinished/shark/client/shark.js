@@ -56,4 +56,27 @@ UI.body.attached = function () {
       Items.update(el.$ui.data()._id, {$set: {rank: newRank}});
     }
   });
+  $('.isotope').isotope({
+    itemSelector : '.item',
+    layoutMode: 'straightDown',
+    getSortData: {
+      rank: function (elem) {
+        return elem[0].$ui.data().rank;
+      }
+    },
+    sortBy: 'rank'
+  });
+
+  $('.isotope')[0].$uihooks = {
+    removeElement: function (n) {
+      $(n.parentNode).isotope('remove', $(n));
+    },
+    insertElement: function (n, parent, next) {
+      $(parent).isotope('insert', $(n));
+    },
+    moveElement: function (n, parent, next) {
+      $(parent).isotope('updateSortData', $(n));
+      $(parent).isotope({sortBy: 'rank'});
+    }
+  };
 };

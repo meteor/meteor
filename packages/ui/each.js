@@ -1,18 +1,29 @@
 
 //////////////////////////////
 
-// We probably want to instrument insertNode/
-// removeNode to record who added a node,
-// for the purpose of event handling, and also
-// to notify any jQuery widgets on an element
-// that care about elements coming and going.
+// XXX In the future, `$uihooks` is probably
+// something like `$ui.domHooks` or something,
+// not a separate property on the DOM element.
 
 var removeNode = function (n) {
-  n.parentNode.removeChild(n);
+  if (n.nodeType === 1 && n.parentNode.$uihooks)
+    n.parentNode.$uihooks.removeElement(n);
+  else
+    n.parentNode.removeChild(n);
 };
 
 var insertNode = function (n, parent, next) {
-  parent.insertBefore(n, next || null);
+  if (n.nodeType === 1 && parent.$uihooks)
+    parent.$uihooks.insertElement(n, parent, next);
+  else
+    parent.insertBefore(n, next || null);
+};
+
+var moveNode = function (n, parent, next) {
+  if (n.nodeType === 1 && parent.$uihooks)
+    parent.$uihooks.moveElement(n, parent, next);
+  else
+    parent.insertBefore(n, next || null);
 };
 
 var newFragment = function (nodeArray) {
@@ -312,14 +323,14 @@ _extend(DomRange.prototype, {
 
     if (rangeOrNode.parentNode === parentNode) {
       // node
-      insertNode(rangeOrNode, parentNode, nextNode);
+      moveNode(rangeOrNode, parentNode, nextNode);
     } else if (rangeOrNode.start &&
                rangeOrNode.start.parentNode === parentNode) {
       // DomRange
       rangeOrNode.refresh();
       var nodes = rangeOrNode.getNodes();
       for (var i = 0; i < nodes.length; i++)
-        insertNode(nodes[i], parentNode, nextNode);
+        moveNode(nodes[i], parentNode, nextNode);
     }
   },
   get: function (id) {
