@@ -58,6 +58,8 @@
 
 * Implement "meteor bundle --debug" #748
 
+* Remove deprecated is_client and is_server. XXX check for others.
+
 bugs to describe:
   #1151 (Meteor.disconnect etc)
   #1106
