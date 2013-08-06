@@ -2348,6 +2348,10 @@ Matches any value.
 Matches a primitive of the given type.
 {{/dtdd}}
 
+{{#dtdd "<code>Match.Integer</code>"}}
+Matches a signed 32-bit integer. Doesn't match `Infinity`, `-Infinity`, or `NaN`.
+{{/dtdd}}
+
 {{#dtdd "<code>[<em>pattern</em>]</code>"}}
 A one-element array matches an array of elements, each of which match
 *pattern*. For example, `[Number]` matches a (possibly empty) array of numbers;
@@ -2371,8 +2375,19 @@ Matches any plain Object with any keys; equivalent to
 `Match.ObjectIncluding({})`.
 {{/dtdd}}
 
-{{#dtdd "<code>Match.Optional(<em>pattern</em>)</code>"}}
-Matches either `undefined` or something that matches *pattern*.
+{{#dtdd "<code>Match.Optional(<em>pattern</em>)</code>"}} Matches either
+`undefined` or something that matches pattern. If used in an object this matches
+only if the key is not set as opposed to the value being set to `undefined`.
+
+    // In an object
+    var pat = { name: Match.Optional(String) };
+    check({ name: "something" }, pat) // OK
+    check({}, pat) // OK
+    check({ name: undefined }, pat) // Throws an exception
+
+    // Outside an object
+    check(undefined, Match.Optional(String)); // OK
+
 {{/dtdd}}
 
 {{#dtdd "<code>Match.OneOf(<em>pattern1</em>, <em>pattern2</em>, ...)</code>"}}
