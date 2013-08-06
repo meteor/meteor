@@ -72,8 +72,10 @@ Tinytest.add("logging - log", function (test) {
       var recieved = intercepted[index];
       var obj = EJSON.parse(recieved);
 
-      // IE8 doesn't support this date format. Skip it.
-      if (expected && expected.toString && expected.toString() === "NaN")
+      // IE8 and old Safari don't support this date format. Skip it.
+      if (expected && expected.toString &&
+          (expected.toString() === "NaN" ||
+           expected.toString() === "Invalid Date"))
         return;
 
       if (_.isDate(testcase[0]))
