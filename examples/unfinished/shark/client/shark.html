@@ -6,12 +6,11 @@
 
   <h1>Hello {{name}}</h1>
 
-  <div id="list">{{#each items}}<div>{{text}} {{rank}}</div>{{else}}
+  <div id="list">
+    {{#each items}}
+      <div>{{text}} {{rank}}</div>{{else}}
       <strong>Empty</strong>
-    {{/each}}</div>
-
-  <div class="isotope">{{#each items}}<div class="item">{{text}} {{rank}}</div>{{else}}
-      <strong>Empty</strong>
-    {{/each}}</div>
+    {{/each}}
+  </div>
 
 </body>
