@@ -175,6 +175,17 @@ _.extend(Library.prototype, {
       return self.loadedPackages[name].pkg;
     }
 
+    // Check for invalid package names.
+    //
+    // XXX should we be even stricter and whitelist something like
+    // /\-_A-Za-z0-9/ instead of blacklisting some special characters?
+    // What about unicode package names?
+    if (/[\.\?|'"#<>\(\)]/.test(name)) {
+      if (throwOnError === false)
+        return null;
+      throw new Error("Invalid package name: " + name);
+    }
+
     var packageDir = self.findPackageDirectory(name);
 
     if (! packageDir) {
