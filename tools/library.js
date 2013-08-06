@@ -175,12 +175,15 @@ _.extend(Library.prototype, {
       return self.loadedPackages[name].pkg;
     }
 
-    // Check for invalid package names.
+    // Check for invalid package names. Currently package names can only
+    // contain ASCII alphanumerics and dash, and must contain at least
+    // one non-digit-or-dash.
     //
-    // XXX should we be even stricter and whitelist something like
-    // /\-_A-Za-z0-9/ instead of blacklisting some special characters?
-    // What about unicode package names?
-    if (/[\.\?|'"#<>\(\)]/.test(name)) {
+    // We don't support '.' because it is used as the separator between
+    // a package name and a slice. This might want to change.
+    //
+    // XXX revisit this later. What about unicode package names?
+    if (/[^A-Za-z0-9\-]/.test(name) || !/[A-Za-z]/.test(name) ) {
       if (throwOnError === false)
         return null;
       throw new Error("Invalid package name: " + name);
