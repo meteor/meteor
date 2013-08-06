@@ -49,7 +49,7 @@ Ctl.Commands.push({
       if (appConfig.admin) {
         bindPathPrefix = "/" + Ctl.myAppName();
         proxyConfig = {
-          securePort: null,
+          securePort: 44333,
           insecurePort: 9414,
           bindHost: "localhost",
           bindPathPrefix: bindPathPrefix
@@ -73,7 +73,8 @@ Ctl.Commands.push({
           "email": {
             url: appConfig.MAIL_URL
           }
-        }
+        },
+        proxyServiceName: appConfig.proxyServiceName || "proxy"
       };
 
       // Merge in any values that might have been added to the app's config in
@@ -94,7 +95,8 @@ Ctl.Commands.push({
             bindEnv: "PORT",
             routeEnv: "ROUTE"
           }
-        }
+        },
+        tags: ["runner"]
       }]);
       console.log("Started a server.");
     } else {
