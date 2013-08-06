@@ -6,7 +6,7 @@
 * linker!  namespacing, exports, unipackages, weak and unordered dependencies,
   etc.  sourcemaps (including for coffee). standard-app-packages.  don't
   implicitly use all app packages. lots of stuff moved from server.js (now
-  boot.js) to webapp package. plugins!
+  boot.js) to webapp package. plugins! packages name restrictions.
 
 * Log
 
@@ -28,6 +28,10 @@
   files move into .npm/package.
 
 * `$ROOT_URL` may now have a path part
+
+* Add Match.Integer
+
+* include http response in errors from oauth providers. #1246
 
 * `new Meteor.Collection("name", {connection: null})` works [does this need a
   doc change?]
