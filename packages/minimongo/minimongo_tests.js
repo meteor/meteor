@@ -961,6 +961,22 @@ Tinytest.add("minimongo - projection_compiler", function (test) {
      { foo: { bar: [] } },
      "whitelist nested - path not found in doc"]
   ]);
+
+  testProjection({ 'hope.humanity': 0, 'hope.people': 0 }, [
+    [{ hope: { humanity: "lost", people: 'broken', candies: 'long live!' } },
+     { hope: { candies: 'long live!' } },
+     "blacklist nested"],
+
+    [{ hope: "new" },
+     { hope: "new" },
+     "blacklist nested - path not found in doc"]
+  ]);
+
+  test.throws(function () {
+    testProjection({ 'inc': 1, 'excl': 0 }, [
+      [ { inc: 42, excl: 42 }, { inc: 42 }, "Can't combine incl/excl rules" ]
+    ]);
+  });
 });
 
 Tinytest.add("minimongo - ordering", function (test) {
