@@ -1,6 +1,8 @@
 // XXX another full pass on this all.
 AnimatedEach = {
-  apply: function (el) {
+  apply: function (el, events) {
+    events = events || ['insert', 'remove', 'move'];
+
     var animateIn = function (n, parent, next, onComplete) {
       parent.insertBefore(n, next);
       var $n = $(n);
@@ -87,22 +89,32 @@ AnimatedEach = {
       }
     };
 
-    $(el)[0].$uihooks = {
-      insertElement: function (n, parent, next) {
+    // xcxc chained hooks?
+    $(el)[0].$uihooks = {};
+
+    if (_.contains(events, 'insert')) {
+      $(el)[0].$uihooks.insertElement = function (n, parent, next) {
         runOrQueueIfMoving(function () {
           var onComplete = dequeuePlanned ? null : dequeue;
           dequeuePlanned = true;
           animateIn(n, parent, next, onComplete);
         });
-      },
-      removeElement: function (n) {
+      };
+    }
+
+    if (_.contains(events, 'remove')) {
+      $(el)[0].$uihooks.removeElement = function (n) {
         runOrQueueIfMoving(function () {
           var onComplete = dequeuePlanned ? null : dequeue;
           dequeuePlanned = true;
           animateOut(n, onComplete);
         });
-      },
-      moveElement: function (n, parent, next) {
+      };
+    }
+
+
+    if (_.contains(events, 'move')) {
+      $(el)[0].$uihooks.moveElement = function (n, parent, next) {
         runOrQueue(function () {
           moveActive = true;
 
@@ -143,7 +155,7 @@ AnimatedEach = {
             dequeue();
           });
         });
-      }
-    };
+      };
+    }
   }
 };
