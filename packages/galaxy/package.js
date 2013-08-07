@@ -3,7 +3,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['underscore', 'livedata']);
+  api.use(['underscore', 'livedata', 'ejson']);
   api.use(['mongo-livedata'], {
     unordered: true
   });
