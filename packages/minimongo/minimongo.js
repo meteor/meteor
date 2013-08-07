@@ -259,8 +259,10 @@ _.extend(LocalCollection.Cursor.prototype, {
       sort_f: ordered && self.sort_f,
       results_snapshot: null,
       ordered: ordered,
-      cursor: this,
-      observeChanges: options.observeChanges
+      cursor: self,
+      observeChanges: options.observeChanges,
+      _fields: self._fields,
+      projection_f: self.projection_f
     };
     var qid;
 
@@ -277,15 +279,24 @@ _.extend(LocalCollection.Cursor.prototype, {
     // wrap callbacks we were passed. callbacks only fire when not paused and
     // are never undefined (except that query.moved is undefined for unordered
     // callbacks).
+    // Filters out blacklisted fields according to cursor's projection.
+    // XXX wrong place for this?
 
     // furthermore, callbacks enqueue until the operation we're working on is
     // done.
-    var wrapCallback = function (f) {
+    var wrapCallback = function (f, fieldsIndex, ignoreEmptyFields) {
       if (!f)
         return function () {};
       return function (/*args*/) {
         var context = this;
         var args = arguments;
+
+        if (fieldsIndex !== undefined && self.projection_f) {
+          args[fieldsIndex] = self.projection_f(args[fieldsIndex]);
+          if (ignoreEmptyFields && _.isEmpty(args[fieldsIndex]))
+            return;
+        }
+
         if (!self.collection.paused) {
           self.collection._observeQueue.queueTask(function () {
             f.apply(context, args);
@@ -293,18 +304,23 @@ _.extend(LocalCollection.Cursor.prototype, {
         }
       };
     };
-    query.added = wrapCallback(options.added);
-    query.changed = wrapCallback(options.changed);
+    query.added = wrapCallback(options.added, 1);
+    query.changed = wrapCallback(options.changed, 1, true);
     query.removed = wrapCallback(options.removed);
     if (ordered) {
       query.moved = wrapCallback(options.moved);
-      query.addedBefore = wrapCallback(options.addedBefore);
+      query.addedBefore = wrapCallback(options.addedBefore, 1);
       query.movedBefore = wrapCallback(options.movedBefore);
     }
 
     if (!options._suppress_initial && !self.collection.paused) {
       _.each(query.results, function (doc, i) {
         var fields = EJSON.clone(doc);
+
+        // Apply projection rules if such exist
+        if (self.projection_f)
+          fields = self.projection_f(fields);
+
         delete fields._id;
         if (ordered)
           query.addedBefore(doc._id, fields, null);
@@ -1060,22 +1076,25 @@ LocalCollection._compileProjection = function (fields) {
           if (!_.has(target, key)) {
             if (_.isArray(docTarget[key])) {
               target[key] = [];
+              docTarget = undefined;
               break;
             } else if (_.isObject(docTarget[key]))
               target[key] = {};
-            else
+            else {
+              docTarget = undefined;
               break;
+            }
           }
 
           target = target[key];
           docTarget = docTarget[key];
         }
 
-        if (keyPath.length > 0)
+        if (keyPath.length > 0 && _.has(docTarget, _.last(keyPath)))
           target[_.last(keyPath)] = docTarget[_.last(keyPath)];
       });
 
-      if (_idProjection)
+      if (_idProjection && _.has(doc, '_id'))
         result._id = doc._id;
 
       return result;
