@@ -96,6 +96,11 @@ LocalCollection.Cursor = function (collection, selector, options) {
   }
   self.skip = options.skip;
   self.limit = options.limit;
+  self._fields = options.fields;
+
+  if (self._fields)
+    self.projection_f = LocalCollection._compileProjection(self._fields);
+
   if (options.transform && typeof Deps !== "undefined")
     self._transform = Deps._makeNonreactive(options.transform);
   else
@@ -153,6 +158,8 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
     var elt = EJSON.clone(self.db_objects[self.cursor_pos++]);
     if (self._transform)
       elt = self._transform(elt);
+    if (self.projection_f)
+      elt = self.projection_f(elt);
     callback(elt);
   }
 };
@@ -1005,3 +1012,88 @@ LocalCollection._observeOrderedFromObserveChanges =
   suppressed = false;
   return handle;
 };
+
+LocalCollection._compileProjection = function (fields) {
+  if (!_.isObject(fields))
+    throw MinimongoError("Fields projection should be an object");
+  // XXX give a reasonable error if one key path is a prefix of another
+
+  var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
+  delete fields._id;
+  var including = null; // Unknown
+  var projectionRules = [];
+
+  _.each(fields, function (rule, keyPath) {
+    rule = !!rule;
+    if (including === null)
+      including = rule;
+    if (including !== rule)
+      // This error message is copies from MongoDB shell
+      throw MinimongoError("You cannot currently mix including and excluding fields.");
+    projectionRules.push(keyPath.split('.'));
+  });
+
+  // XXX do these functions share too much in common?
+  if (including)
+    return function (doc) {
+      var result = {};
+
+      _.each(projectionRules, function (keyPath) {
+        var target = result;
+        var docTarget = doc;
+        for (var i = 0; i < keyPath.length - 1; i++) {
+          var key = keyPath[i];
+          // This block simulates MongoDB behavior.
+          if (!_.has(target, key)) {
+            if (_.isArray(docTarget[key])) {
+              target[key] = [];
+              break;
+            } else if (_.isObject(docTarget[key]))
+              target[key] = {};
+            else
+              break;
+          }
+
+          target = target[key];
+          docTarget = docTarget[key];
+        }
+
+        if (keyPath.length > 0)
+          target[_.last(keyPath)] = docTarget[_.last(keyPath)];
+      });
+
+      if (_idProjection)
+        result._id = doc._id;
+
+      return result;
+    };
+  else
+    return function (doc) {
+      // XXX Deep copy on this level might a slowing factor,
+      // In fact we need it only in case of nested excluded fields.
+      var result = EJSON.clone(doc);
+
+      _.each(projectionRules, function (keyPath) {
+        var target = result;
+        var docTarget = doc;
+        for (var i = 0; i < keyPath.length - 1; i++) {
+          var key = keyPath[i];
+          if (!_.has(target, key)) {
+            break;
+          }
+
+          target = target[key];
+          docTarget = docTarget[key];
+        }
+
+        if (keyPath.length > 0)
+          delete target[_.last(keyPath)];
+      });
+
+      if (_idProjection)
+        delete result._id;
+
+      return result;
+    };
+};
+
