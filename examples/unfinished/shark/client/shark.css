@@ -1,15 +1,14 @@
+#list {
+  margin-top: 8px;
+}
+
 #list div {
   padding: 10px;
   background: #eee;
   border: 1px solid #bbb;
-  margin: 8px;
+  margin: 0 8px 8px 8px; /* xcxc we don't support top margins because of "the overlap problem" */
   font-weight: bold;
   cursor: move;
+  width: 400px;
 }
 
-.isotope .item {
-  padding: 10px;
-  margin: 8px;
-  font-weight: bold;
-  background: #cfc;
-}

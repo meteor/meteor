@@ -36,7 +36,39 @@ Ranks = {
   }
 };
 
-// xcxc rendered didn't work and was surprising.
+var randomRank = function () {
+  var first = Items.findOne({}, {sort: {rank: 1}});
+  var last = Items.findOne({}, {sort: {rank: -1}});
+  var newRank;
+  if (first && last)
+    return first.rank-1 + (Random.fraction() * (last.rank - first.rank + 2));
+  else
+    return 0;
+};
+
+Template.buttons({
+  'click #add': function () {
+    var words = ["violet", "unicorn", "flask", "jar", "leitmotif", "rearrange", "right", "ethereal"];
+    Items.insert({text: Random.choice(words) + " " + Random.hexString(2), rank: randomRank()});
+  },
+  'click #remove': function () {
+    var item = Random.choice(Items.find().fetch());
+    Items.remove(item._id);
+  },
+  'click #move': function () {
+    var item = Random.choice(Items.find().fetch());
+    if (item) {
+      var firstRank = Items.findOne({}, {sort: {rank: 1}}).rank;
+      var lastRank = Items.findOne({}, {sort: {rank: -1}}).rank;
+      var newRank = Random.choice([firstRank - 1, lastRank + 1]);
+      Items.update(item._id, {$set: {rank: newRank}});
+    }
+  }
+});
+
+$.fx.speeds._default = 2000;
+
+// xcxc `UI.body.rendered` didn't work. Why?
 UI.body.attached = function () {
   $('#list').sortable({
     stop: function (event, ui) {
@@ -56,27 +88,6 @@ UI.body.attached = function () {
       Items.update(el.$ui.data()._id, {$set: {rank: newRank}});
     }
   });
-  $('.isotope').isotope({
-    itemSelector : '.item',
-    layoutMode: 'straightDown',
-    getSortData: {
-      rank: function (elem) {
-        return elem[0].$ui.data().rank;
-      }
-    },
-    sortBy: 'rank'
-  });
 
-  $('.isotope')[0].$uihooks = {
-    removeElement: function (n) {
-      $(n.parentNode).isotope('remove', $(n));
-    },
-    insertElement: function (n, parent, next) {
-      $(parent).isotope('insert', $(n));
-    },
-    moveElement: function (n, parent, next) {
-      $(parent).isotope('updateSortData', $(n));
-      $(parent).isotope({sortBy: 'rank'});
-    }
-  };
+  AnimatedEach.apply(document.getElementById('list'));
 };

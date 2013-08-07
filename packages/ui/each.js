@@ -16,14 +16,14 @@ var insertNode = function (n, parent, next) {
   if (n.nodeType === 1 && parent.$uihooks && parent.$uihooks.insertElement)
     parent.$uihooks.insertElement(n, parent, next);
   else
-    parent.insertBefore(n, next || null);
+    parent.insertBefore(n, next || null); // xcxc why `|| null`
 };
 
 var moveNode = function (n, parent, next) {
   if (n.nodeType === 1 && parent.$uihooks && parent.$uihooks.moveElement)
     parent.$uihooks.moveElement(n, parent, next);
   else
-    parent.insertBefore(n, next || null);
+    parent.insertBefore(n, next || null); // xcxc why `|| null`
 };
 
 var newFragment = function (nodeArray) {
