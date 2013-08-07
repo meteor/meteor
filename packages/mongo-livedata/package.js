@@ -12,10 +12,7 @@ Package.describe({
   internal: true
 });
 
-// Use soon-to-be-released mongo driver version 1.3.16. It includes a
-// fix for a connection storm that impacted production hosting.
-// Change this to 1.3.16 once NPM is updated.
-Npm.depends({mongodb: "https://github.com/mongodb/node-mongodb-native/tarball/02a5723aa51e9fdbad743a1117655e535880b3db"});
+Npm.depends({mongodb: "1.3.17"});
 
 Package.on_use(function (api) {
   api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging',
