@@ -1028,8 +1028,7 @@ LocalCollection._compileProjection = function (fields) {
   });
 
   if (_.any(_.values(fields), function (x) {
-      return _.indexOf([1, 0, true, false], x) === -1;
-    }))
+      return _.indexOf([1, 0, true, false], x) === -1; }))
     throw MinimongoError("Projection values should be one of 1, 0, true, or false");
 
   var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
@@ -1083,7 +1082,7 @@ LocalCollection._compileProjection = function (fields) {
     };
   else
     return function (doc) {
-      // XXX Deep copy on this level might a slowing factor,
+      // XXX Deep copy on this level might be a slowing factor,
       // In fact we need it only in case of nested excluded fields.
       var result = EJSON.clone(doc);
 
