@@ -404,14 +404,11 @@ var runWebAppServer = function () {
       var port = httpServer.address().port;
       var proxyBinding;
 
-      console.log("pre configurePackage");
       Galaxy.configurePackage('webapp', function (configuration) {
-        console.log("in configurePackage", configuration);
         if (proxyBinding)
           proxyBinding.stop();
         if (configuration && configuration.proxy) {
           proxyBinding = Galaxy.configureService("proxy", function (proxyService) {
-            console.log("in configureService", proxyService);
             if (proxyService.providers.proxy) {
               var proxyConf;
               if (process.env.ADMIN_APP) {
