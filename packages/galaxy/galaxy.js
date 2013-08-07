@@ -117,7 +117,6 @@ Galaxy.configurePackage = function (packageName, configure) {
 Galaxy.configureService = function (serviceName, configure) {
   if (ultra) {
     collectionFuture.wait();
-    console.log("subscribing to", serviceName);
     ultra.subscribe('servicesByName', serviceName);
     return Services.find({name: serviceName}).observe({
       added: configure,
