@@ -377,6 +377,9 @@ var runWebAppServer = function () {
   // middlewares and update __meteor_runtime_config__, then keep going to set up
   // actually serving HTML.
   main = function (argv) {
+    // main happens post startup hooks, so we don't need a Meteor.startup() to
+    // ensure this happens after the galaxy package is loaded.
+    var Galaxy = Package.galaxy.Galaxy;
     argv = optimist(argv).boolean('keepalive').argv;
 
     var boilerplateHtmlPath = path.join(clientDir, clientJson.page);
@@ -400,43 +403,41 @@ var runWebAppServer = function () {
         console.log("LISTENING"); // must match run.js
       var port = httpServer.address().port;
       var proxyBinding;
-      Meteor.startup( function () {
-        console.log("pre configurePackage");
-        Galaxy.configurePackage('webapp', function (configuration) {
-          console.log("in configurePackage", configuration);
-          if (proxyBinding)
-            proxyBinding.stop();
-          if (configuration && configuration.proxy) {
-            proxyBinding = Galaxy.configureService(function (proxyService) {
-              if (proxyService.providers.proxy) {
-                var proxyConf;
-                if (process.env.ADMIN_APP) {
-                  proxyConf = {
-                    securePort: null,
-                    insecurePort: 9414,
-                    bindHost: "localhost",
-                    bindPathPrefix: "/" + process.env.GALAXY_APP
-                  };
-                } else {
-                  proxyConf = {
-                    // TODO: allow sitename to be a list.
-                    bindHost: configuration.proxy.sitename
-                  };
 
-                }
-                Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
-                WebAppInternals.bindToProxy(_.extend({
-                  proxyEndpoint: proxyService.providers.proxy
-                }, proxyConf));
+      console.log("pre configurePackage");
+      Galaxy.configurePackage('webapp', function (configuration) {
+        console.log("in configurePackage", configuration);
+        if (proxyBinding)
+          proxyBinding.stop();
+        if (configuration && configuration.proxy) {
+          proxyBinding = Galaxy.configureService("proxy", function (proxyService) {
+            console.log("in configureService", proxyService);
+            if (proxyService.providers.proxy) {
+              var proxyConf;
+              if (process.env.ADMIN_APP) {
+                proxyConf = {
+                  securePort: null,
+                  insecurePort: 9414,
+                  bindHost: "localhost",
+                  bindPathPrefix: "/" + process.env.GALAXY_APP
+                };
+              } else {
+                proxyConf = configuration.proxy;
+
               }
-            });
-          }
-        });
-
-        var callbacks = onListeningCallbacks;
-        onListeningCallbacks = null;
-        _.each(callbacks, function (x) { x(); });
+              Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
+              WebAppInternals.bindToProxy(_.extend({
+                proxyEndpoint: proxyService.providers.proxy
+              }, proxyConf));
+            }
+          });
+        }
       });
+
+      var callbacks = onListeningCallbacks;
+      onListeningCallbacks = null;
+      _.each(callbacks, function (x) { x(); });
+
     }, function (e) {
       console.error("Error listening:", e);
       console.error(e.stack);

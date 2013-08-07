@@ -71,7 +71,7 @@ Galaxy.getAppConfig = function () {
   if (!subFuture.isResolved() && staticAppConfig)
     return staticAppConfig;
   subFuture.wait();
-  var myApp = oneAppApps.findOne();
+  var myApp = OneAppApps.findOne();
   if (myApp)
     return myApp.config;
   throw new Error("there is no app config for this app");
@@ -93,18 +93,18 @@ Galaxy.configurePackage = function (packageName, configure) {
   };
   var subHandle;
   var observed = new Future();
-  Meteor.startup(function () {
-    // This is not required to finish, so defer it so it doesn't block anything
-    // else.
-    Meteor.defer( function () {
-      collectionFuture.wait();
-      subHandle = OneAppApps.find().observe({
-        added: configureIfDifferent,
-        changed: configureIfDifferent
-      });
-      observed.return();
+
+  // This is not required to finish, so defer it so it doesn't block anything
+  // else.
+  Meteor.defer( function () {
+    collectionFuture.wait();
+    subHandle = OneAppApps.find().observe({
+      added: configureIfDifferent,
+      changed: configureIfDifferent
     });
+    observed.return();
   });
+
   return {
     stop: function () {
       observed.wait();
@@ -116,6 +116,8 @@ Galaxy.configurePackage = function (packageName, configure) {
 
 Galaxy.configureService = function (serviceName, configure) {
   if (ultra) {
+    collectionFuture.wait();
+    console.log("subscribing to", serviceName);
     ultra.subscribe('servicesByName', serviceName);
     return Services.find({name: serviceName}).observe({
       added: configure,
