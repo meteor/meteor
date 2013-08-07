@@ -1016,7 +1016,21 @@ LocalCollection._observeOrderedFromObserveChanges =
 LocalCollection._compileProjection = function (fields) {
   if (!_.isObject(fields))
     throw MinimongoError("Fields projection should be an object");
-  // XXX give a reasonable error if one key path is a prefix of another
+
+  // Check passed projection fields
+  var keyPaths = _.keys(fields);
+  _.each(keyPaths, function (keyPath) {
+    _.each(keyPaths, function (anotherKeyPath) {
+      var idx = keyPath.indexOf(anotherKeyPath);
+      if (keyPath !== anotherKeyPath && !idx && keyPath[anotherKeyPath.length] === '.')
+        throw MinimongoError("both " + keyPath + " and " + anotherKeyPath + " found in projection");
+    });
+  });
+
+  if (_.any(_.values(fields), function (x) {
+      return _.indexOf([1, 0, true, false], x) !== -1;
+    }))
+    throw MinimongoError("Projection values should be on of 1, 0, true, or false");
 
   var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
   delete fields._id;
