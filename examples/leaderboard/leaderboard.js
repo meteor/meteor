@@ -25,6 +25,10 @@ if (Meteor.isClient) {
 
     'click input.inc': function () {
       Players.update(Session.get("selected_player"), {$inc: {score: 5}});
+    },
+
+    rendered: function () {
+      AnimatedEach.apply(this.$('.leaderboard'), ['move']);
     }
   });
 

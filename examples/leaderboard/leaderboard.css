@@ -12,12 +12,13 @@ body {
 
 #outer {
     width: 600px;
-    margin: 0 auto;    
+    margin: 0 auto;
 }
 
 .player {
     cursor: pointer;
     padding: 5px;
+    width: 600px;
 }
 
 .player .name {
