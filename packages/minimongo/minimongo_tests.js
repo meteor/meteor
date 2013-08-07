@@ -894,6 +894,47 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   // - non-scalar arguments to $gt, $lt, etc
 });
 
+Tinytest.add("minimongo - projection_compiler", function (test) {
+  var testProjection = function (projection, tests) {
+    var projection_f = LocalCollection._compileProjection(projection);
+    var equalNonStrict = function (a, b, desc) {
+      test.equal(EJSON.stringify(a), EJSON.stringify(b), desc);
+    };
+
+    _.each(tests, function (testCase) {
+      equalNonStrict(projection_f(testCase[0]), testCase[1], testCase[2]);
+    });
+  };
+
+  testProjection({ 'foo': 1, 'bar': 1 }, [
+    [{ foo: 42, bar: "something", baz: "else" },
+     { foo: 42, bar: "something" },
+     "simplest - whitelist"],
+
+    [{ foo: { nested: 17 }, baz: {} },
+     { foo: { nested: 17 } },
+     "nested whitelisted field"],
+
+    [{ _id: "uid", bazbaz: 42 },
+     { _id: "uid" },
+     "simplest whitelist - preserve _id"]
+  ]);
+
+  testProjection({ 'foo': 0, 'bar': 0 }, [
+    [{ foo: 42, bar: "something", baz: "else" },
+     { baz: "else" },
+     "simplest - blacklist"],
+
+    [{ foo: { nested: 17 }, baz: { foo: "something" } },
+     { baz: { foo: "something" } },
+     "nested blacklisted field"],
+
+    [{ _id: "uid", bazbaz: 42 },
+     { _id: "uid", bazbaz: 42 },
+     "simplest blacklist - preserve _id"]
+  ]);
+});
+
 Tinytest.add("minimongo - ordering", function (test) {
   var shortBinary = EJSON.newBinary(1);
   shortBinary[0] = 128;
