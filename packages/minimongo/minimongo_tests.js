@@ -933,6 +933,34 @@ Tinytest.add("minimongo - projection_compiler", function (test) {
      { _id: "uid", bazbaz: 42 },
      "simplest blacklist - preserve _id"]
   ]);
+
+  testProjection({ _id: 0, foo: 1 }, [
+    [{ foo: 42, bar: 33, _id: "uid" },
+     { foo: 42 },
+     "whitelist - _id blacklisted"]
+  ]);
+
+  testProjection({ _id: 0, foo: 0 }, [
+    [{ foo: 42, bar: 33, _id: "uid" },
+     { bar: 33 },
+     "blacklist - _id blacklisted"]
+  ]);
+
+  testProjection({ 'foo.bar.baz': 1 }, [
+    [{ foo: { meh: "fur", bar: { baz: 42 }, tr: 1 }, bar: 33, baz: 'trolololo' },
+     { foo: { bar: { baz: 42 } } },
+     "whitelist nested"],
+
+    // Behavior of this test is looked up in actual mongo
+    [{ foo: { meh: "fur", bar: "nope", tr: 1 }, bar: 33, baz: 'trolololo' },
+     { foo: {} },
+     "whitelist nested - path not found in doc, different type"],
+
+    // Behavior of this test is looked up in actual mongo
+    [{ foo: { meh: "fur", bar: [], tr: 1 }, bar: 33, baz: 'trolololo' },
+     { foo: { bar: [] } },
+     "whitelist nested - path not found in doc"]
+  ]);
 });
 
 Tinytest.add("minimongo - ordering", function (test) {
