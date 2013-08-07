@@ -1104,7 +1104,7 @@ LocalCollection._compileProjection = function (fields) {
           delete target[_.last(keyPath)];
       });
 
-      if (_idProjection)
+      if (!_idProjection)
         delete result._id;
 
       return result;
