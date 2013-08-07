@@ -521,6 +521,29 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
   var route = process.env.ROUTE;
   var host = route.split(":")[0];
   var port = +route.split(":")[1];
+
+  var completedBindings = {
+    ddp: false,
+    http: false,
+    https: proxyConfig.securePort !== null ? false : undefined
+  };
+
+  var bindingDoneCallback = function (binding) {
+    return function (err, resp) {
+      if (err)
+        throw err;
+
+      completedBindings[binding] = true;
+      var completedAll = _.every(_.keys(completedBindings), function (binding) {
+        return (completedBindings[binding] ||
+          completedBindings[binding] === undefined);
+      });
+      if (completedAll)
+        Log("Bound to proxy.");
+      return completedAll;
+    };
+  };
+
   proxy.call('bindDdp', {
     pid: pid,
     bindTo: ddpBindTo,
@@ -529,7 +552,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
       port: port,
       pathPrefix: bindPathPrefix + '/websocket'
     }
-  });
+  }, bindingDoneCallback("ddp"));
   proxy.call('bindHttp', {
     pid: pid,
     bindTo: {
@@ -542,7 +565,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
       port: port,
       pathPrefix: bindPathPrefix
     }
-  });
+  }, bindingDoneCallback("http"));
   if (proxyConfig.securePort !== null) {
     proxy.call('bindHttp', {
       pid: pid,
@@ -557,9 +580,8 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
         port: port,
         pathPrefix: bindPathPrefix
       }
-    });
+    }, bindingDoneCallback("https"));
   }
-  Log("Bound to proxy");
 };
 
 runWebAppServer();
