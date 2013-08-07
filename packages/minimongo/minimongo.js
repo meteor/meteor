@@ -156,10 +156,10 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
 
   while (self.cursor_pos < self.db_objects.length) {
     var elt = EJSON.clone(self.db_objects[self.cursor_pos++]);
-    if (self._transform)
-      elt = self._transform(elt);
     if (self.projection_f)
       elt = self.projection_f(elt);
+    if (self._transform)
+      elt = self._transform(elt);
     callback(elt);
   }
 };
