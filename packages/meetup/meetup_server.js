@@ -31,7 +31,8 @@ var getAccessToken = function (query) {
         state: query.state
       }});
   } catch (err) {
-    throw new Error("Failed to complete OAuth handshake with Meetup. " + err.message);
+    throw _.extend(new Error("Failed to complete OAuth handshake with Meetup. " + err.message),
+                   {response: err.response});
   }
 
   if (response.data.error) { // if the http response was a json object with an error attribute
@@ -48,7 +49,8 @@ var getIdentity = function (accessToken) {
       {params: {member_id: 'self', access_token: accessToken}});
     return response.data.results && response.data.results[0];
   } catch (err) {
-    throw new Error("Failed to fetch identity from Meetup: " + err.message);
+    throw _.extend(new Error("Failed to fetch identity from Meetup. " + err.message),
+                   {response: err.response});
   }
 };
 

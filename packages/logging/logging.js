@@ -247,7 +247,7 @@ Log.format = function (obj, options) {
     '-',
     timeStamp,
     utcOffsetStr,
-    timeInexact ? '?' : ' ',
+    timeInexact ? '? ' : ' ',
     appInfo,
     sourceInfo,
     stderrIndicator].join('');

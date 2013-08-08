@@ -101,7 +101,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
     self._clearConnectionAndHeartbeatTimers();
     if (self.socket) {
       self.socket.onmessage = self.socket.onclose
-        = self.socket.onerror = function () {};
+        = self.socket.onerror = self.socket.onheartbeat = function () {};
       self.socket.close();
       self.socket = null;
     }

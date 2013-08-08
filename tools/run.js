@@ -471,7 +471,10 @@ exports.run = function (context, options) {
     library: context.library
   };
 
-  var startWatching = function (dependencyInfo) {
+  var startWatching = function (watchSet) {
+    if (process.env.METEOR_DEBUG_WATCHSET)
+      console.log(JSON.stringify(watchSet, null, 2));
+
     if (!Status.shouldRestart)
       return;
 
@@ -479,8 +482,7 @@ exports.run = function (context, options) {
       watcher.stop();
 
     watcher = new watch.Watcher({
-      files: dependencyInfo.files,
-      directories: dependencyInfo.directories,
+      watchSet: watchSet,
       onChange: function () {
         if (Status.crashing)
           logToClients({'system': "=> Modified -- restarting."});
@@ -496,8 +498,14 @@ exports.run = function (context, options) {
   var restartServer = inFiber(function () {
     Status.running = false;
     Status.listening = false;
-    if (serverHandle)
+    if (watcher) {
+      watcher.stop();
+      watcher = null;
+    }
+    if (serverHandle) {
       killServer(serverHandle);
+      serverHandle = null;
+    }
 
     // If the user did not specify a --release on the command line, and
     // simultaneously runs `meteor update` during this run, just exit and let
@@ -524,12 +532,12 @@ exports.run = function (context, options) {
 
     // Bundle up the app
     var bundleResult = bundler.bundle(context.appDir, bundlePath, bundleOpts);
-    var dependencyInfo = bundleResult.dependencyInfo;
+    var watchSet = bundleResult.watchSet;
     if (bundleResult.errors) {
       logToClients({stdout: "=> Errors prevented startup:\n\n" +
                     bundleResult.errors.formatMessages() + "\n"});
       Status.hardCrashed("has errors");
-      startWatching(dependencyInfo);
+      startWatching(watchSet);
       return;
     }
 
@@ -546,40 +554,17 @@ exports.run = function (context, options) {
         Builder.sha1(fs.readFileSync(options.settingsFile, "utf8"));
 
       // Reload if the setting file changes
-      dependencyInfo.files[path.resolve(options.settingsFile)] =
-        settingsHash;
+      watchSet.addFile(path.resolve(options.settingsFile), settingsHash);
     }
-
-    // If using a warehouse, don't do dependency monitoring on any of
-    // the files that are in the warehouse. You should not be editing
-    // those files directly.
-    if (files.usesWarehouse()) {
-      var warehouseDir = path.resolve(warehouse.getWarehouseDir());
-      var filterKeys = function (obj) {
-        _.each(_.keys(obj), function (k) {
-          k = path.resolve(k);
-          if (warehouseDir.length <= k.length &&
-              k.substr(0, warehouseDir.length) === warehouseDir)
-            delete obj[k];
-        });
-      };
-      filterKeys(dependencyInfo.files);
-      filterKeys(dependencyInfo.directories);
-    }
-
-    // Start watching for changes for files. There's no hurry to call
-    // this, since dependencyInfo contains a snapshot of the state of
-    // the world at the time of bundling, in the form of hashes and
-    // lists of matching files in each directory.
-    startWatching(dependencyInfo);
 
     // Start the server
     Status.running = true;
 
 
-    var rootUrl = process.env.ROOT_URL || ('http://localhost:' + outerPort);
+    var rootUrl = process.env.ROOT_URL ||
+          ('http://localhost:' + outerPort + '/');
     if (firstRun) {
-      process.stdout.write("=> Meteor server running on: " + rootUrl + "/\n");
+      process.stdout.write("=> Meteor server running on: " + rootUrl + "\n");
       firstRun = false;
       lastThingThatPrintedWasRestartMessage = false;
     } else {
@@ -623,6 +608,12 @@ exports.run = function (context, options) {
       settings: settings,
       program: options.program
     });
+
+    // Start watching for changes for files. There's no hurry to call
+    // this, since watchSet contains a snapshot of the state of
+    // the world at the time of bundling, in the form of hashes and
+    // lists of matching files in each directory.
+    startWatching(watchSet);
   });
 
   var mongoErrorCount = 0;

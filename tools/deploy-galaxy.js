@@ -113,40 +113,10 @@ exports.discoverGalaxy = function (app) {
 };
 
 exports.deleteApp = function (app, context) {
-  var Package = getPackage(context);
   var galaxy = getGalaxy(context);
-
-  // Subscribe to the jobs for this app so we know when all the jobs have
-  // finished.
-  var Jobs = new Package.meteor.Meteor.Collection("jobs", {
-    connection: galaxy
-  });
-  var readyFut = new Future();
-  var jobsSub = galaxy.subscribe("jobsByApp", app, {
-    onReady: function () {
-      readyFut['return']();
-    },
-    onError: function (e) {
-      readyFut['throw'](e);
-    }
-  });
-  readyFut.wait();
-
-  galaxy.call("stopApp", app);
-
-  Package.deps.Deps.autorun(Package.meteor.Meteor.bindEnvironment(function (c) {
-    var numJobs = Jobs.find({ app: app, done: false }).count();
-    if (numJobs === 0) {
-      c.stop();
-      jobsSub.stop();
-      // Now that all the app's jobs are done, clean up the app (remove it from
-      // the db, delete its stars, etc).
-      galaxy.call("unlistApp", app);
-      galaxy.close();
-    }
-  }, function (e) {
-    throw e;
-  }));
+  galaxy.call("destroyApp", app);
+  galaxy.close();
+  process.stdout.write("Deleted.\n");
 };
 
 // options:
@@ -160,9 +130,6 @@ exports.deleteApp = function (app, context) {
 //     so we can be careful to not rely on any of the app dir context when
 //     in --star mode.
 exports.deploy = function (options) {
-  var galaxy = getGalaxy(options.context);
-  var Package = getPackage(options.context);
-
   var tmpdir = files.mkdtemp('deploy');
   var buildDir = path.join(tmpdir, 'build');
   var topLevelDirName = path.basename(options.appDir);
@@ -195,6 +162,10 @@ exports.deploy = function (options) {
     starball = options.starball;
   }
   process.stdout.write('Uploading...\n');
+
+
+  var galaxy = getGalaxy(options.context);
+  var Package = getPackage(options.context);
 
   var created = true;
   var appConfig = {

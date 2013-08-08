@@ -41,10 +41,11 @@ var go = function (options) {
   }
   fired = false;
 
-  var files = {};
+  var watchSet = new watch.WatchSet();
+
   _.each(options.files, function (value, file) {
     file = path.join(tmp, file);
-    if (typeof value !== "string") {
+    if (value !== null && typeof value !== "string") {
       if (fs.existsSync(file)) {
         var hash = crypto.createHash('sha1');
         hash.update(fs.readFileSync(file));
@@ -53,18 +54,23 @@ var go = function (options) {
         value = 'dummyhash';
       }
     }
-    files[file] = value;
+    watchSet.addFile(file, value);
   });
 
-  var directories = {};
-  _.each(options.directories, function (options, dir) {
-    dir = path.join(tmp, dir);
-    directories[dir] = options;
+  _.each(options.directories, function (dir) {
+    // don't mutate options.directories, since we may reuse it with a no-arg
+    // go() call
+    var realDir = {
+      absPath: path.join(tmp, dir.absPath),
+      include: dir.include,
+      exclude: dir.exclude
+    };
+    realDir.contents = dir.contents || watch.readDirectory(realDir);
+    watchSet.addDirectory(realDir);
   });
 
   theWatcher = new watch.Watcher({
-    files: files,
-    directories: directories,
+    watchSet: watchSet,
     onChange: function () {
       fired = true;
       if (firedFuture)
@@ -97,11 +103,7 @@ var waitForTopOfSecond = function () {
     if (msPastSecond < 100) {
       return;
     }
-    var f = new Future;
-    setTimeout(function () {
-      f.return();
-    }, 25);
-    f.wait();
+    delay(25);
   }
 };
 
@@ -139,15 +141,30 @@ Fiber(function () {
     files: { '/aa/b': true, '/aa/c': true }
   });
   assert(fires()); // look like /aa/c was removed
+  go({
+    files: { '/aa/b': true, '/aa/c': null }
+  });
+  assert(!fires());  // assert that /aa/c doesn't exist
 
   console.log("... directories");
   go({
     files: {'/aa/b': true },
-    directories: {'/aa': {
-      include: [/yes/, /maybe/, /aa/],
-      exclude: [/not/, /never/]
-    }}
+    directories: [
+      {absPath: '/aa',
+       include: [/yes/, /maybe/, /aa/],
+       exclude: [/not/, /never/],
+       contents: []
+      },
+      {absPath: '/bb',
+       include: [/.?/],
+       contents: []
+      }
+    ]
   });
+  assert(fires());  // because /bb doesn't exist
+  touchDir('/bb');
+  go();
+  assert(!fires());
   touchFile('/aa/c');
   assert(!fires());
   touchFile('/aa/maybe-not');
@@ -158,9 +175,10 @@ Fiber(function () {
   assert(!fires());
   touchFile('/aa/yes-for-sure');
   assert(fires());
+
   go();
   touchFile('/aa/nope');
-  assert(fires()); // because yes-for-sure isn't in the file list
+  assert(fires());  // because yes-for-sure isn't in 'contents'
   remove('/aa/yes-for-sure');
   go();
   assert(!fires());
@@ -169,11 +187,18 @@ Fiber(function () {
   go();
   assert(fires()); // maybe-this-time is still there
   go({
-    files: {'/aa/b': true, '/aa/maybe-this-time': true },
-    directories: {'/aa': {
-      include: [/yes/, /maybe/, /aa/],
-      exclude: [/not/, /never/]
-    }}
+    files: {'/aa/b': true},
+    directories: [
+      {absPath: '/aa',
+       include: [/yes/, /maybe/, /aa/],
+       exclude: [/not/, /never/],
+       contents: ['maybe-this-time']
+      },
+      {absPath: '/bb',
+       include: [/.?/],
+       contents: []
+      }
+    ]
   });
   go();
   assert(!fires()); // maybe-this-time is now in the expected file list
@@ -183,84 +208,62 @@ Fiber(function () {
   remove('/aa/maybe-this-time');
   go();
   assert(fires()); // maybe-this-time is missing
-
-  console.log("... recursive directories");
-  touchFile('/aa/b');
+  touchFile('/aa/maybe-this-time');
+  touchDir('/aa/yes-i-said-yes-i-will-yes');
   go({
-    files: {'/aa/b': true },
-    directories: {'/aa': {
-      include: [/yes/, /maybe/, /aa/],
-      exclude: [/not/, /never/]
-    }}
-  });
-  touchDir('/aa/yess');
-  assert(!fires());
-  remove('/aa/yess');
-  assert(!fires());
-  touchFile('/aa/yess/kitten');
-  assert(!fires());
-  touchFile('/aa/yess/maybe');
-  assert(fires());
-  remove('/aa/yess');
-  go();
-  touchFile('/aa/whatever/kitten');
-  assert(!fires());
-  touchFile('/aa/whatever/maybe');
-  assert(fires());
-
-  remove('/aa/whatever');
-  go();
-  touchDir('/aa/i/love/subdirectories');
-  assert(!fires());
-  touchFile('/aa/i/love/subdirectories/yessir');
-  assert(fires());
-  remove('/aa/i/love/subdirectories/yessir');
-  go();
-  touchFile('/aa/i/love/subdirectories/every/day');
-  assert(!fires());
-  remove('/aa/i/love/subdirectories');
-  assert(!fires());
-  touchFile('/aa/i/love/not/nothing/yes');
-  assert(!fires());
-  touchFile('/aa/i/love/not/nothing/maybe/yes');
-  assert(!fires());
-  touchFile('/aa/i/love/maybe');
-  assert(fires());
-  remove('/aa/i');
-  remove('/aa/whatever');
-
-  remove('/aa');
-  touchFile('/aa/b');
-  console.log("... nested directories");
-  go({
-    files: {'/aa/b': true },
-    directories: {
-      '/aa': {
-        include: [/yes/, /maybe/, /aa/],
-        exclude: [/not/, /never/]
-      },
-      '/aa/x': {
-        include: [/kitten/],
-        exclude: [/puppy/]
+    directories: [
+      {absPath: '/aa',
+       include: [/yes/, /maybe/, /aa/],
+       exclude: [/not/, /never/],
+       contents: ['maybe-this-time']
       }
-    }
+    ]
   });
-  touchFile('/aa/kitten');
+  assert(fires());  // yes-i-said-yes-i-will-yes/ is missing
+  go({
+    directories: [
+      {absPath: '/aa',
+       include: [/yes/, /maybe/, /aa/],
+       exclude: [/not/, /never/],
+       contents: ['maybe-this-time', 'yes-i-said-yes-i-will-yes']
+      }
+    ]
+  });
+  assert(fires());  // yes-i-said-yes-i-will-yes is a dir, not a file
+  go({
+    directories: [
+      {absPath: '/aa',
+       include: [/yes/, /maybe/, /aa/],
+       exclude: [/not/, /never/],
+       contents: ['maybe-this-time', 'yes-i-said-yes-i-will-yes/']
+      }
+    ]
+  });
   assert(!fires());
-  touchFile('/aa/maybe.puppy');
-  assert(fires());
-  remove('/aa/maybe.puppy');
-  go();
-  touchFile('/aa/x/kitten');
-  assert(fires());
-  remove('/aa/x/kitten');
-  go();
-  touchFile('/aa/x/yes');
+  // same directory, different filters
+  go({
+    directories: [
+      // dirs
+      {absPath: '/aa',
+       include: [/\/$/],
+       contents: ['yes-i-said-yes-i-will-yes/']
+      },
+      // files
+      {absPath: '/aa',
+       include: [/.?/],
+       exclude: [/\/$/],
+       contents: ['b', 'c', 'maybe-not', 'maybe-this-time', 'never',
+                  'never-yes', 'nope']
+      }
+    ]
+  });
   assert(!fires());
-  touchFile('/aa/x/kitten.not');
+  touchFile('/aa/bla');
   assert(fires());
-  remove('/aa');
 
+  // nb: these are supposed to verify that the "wait a second and try again"
+  // logic works, but I couldn't get them to fail even when I turned that logic
+  // off.
   console.log("... rapid changes to file");
   touchFile('/aa/x');
   waitForTopOfSecond();
@@ -268,51 +271,23 @@ Fiber(function () {
     files: {'/aa/x': true }});
   touchFile('/aa/x');
   assert(fires(2000));
+
   go({
-    directories: {
-      '/aa': {
-        include: [/yes/, /maybe/, /aa/],
-        exclude: [/not/, /never/]
+    directories: [
+      {absPath: '/aa',
+       include: [/yes/, /maybe/, /aa/],
+       exclude: [/not/, /never/]
       }
-    }
+    ]
   });
+  assert(!fires());
+
   waitForTopOfSecond();
-  touchFile('/aa/thing1/whatever');
-  delay(100);
-  touchFile('/aa/thing2/yes');
+  touchFile('/aa/wtf');
+  delay(600);
+  touchFile('/aa/yes-indeed');
   assert(fires(2000));
   remove('/aa');
-
-  console.log("... rapid changes to directory");
-  touchDir('/aa');
-  waitForTopOfSecond();
-  go({
-    directories: {'/aa': {
-      include: [/yes/, /maybe/, /aa/],
-      exclude: [/not/, /never/]
-    }}
-  });
-  touchFile('/aa/x/yes');
-  assert(fires(2000));
-  remove('/aa/x');
-
-  waitForTopOfSecond();
-  go();
-  delay(600);
-  touchFile('/aa/x/not');
-  delay(600);
-  touchFile('/aa/x/yes');
-  assert(fires(2000));
-  remove('/aa/x');
-
-  touchDir('/aa/x');
-  go();
-  delay(2000);
-  waitForTopOfSecond();
-  touchFile('/aa/x/no');
-  delay(600);
-  touchFile('/aa/x/yes');
-  assert(fires(2000));
 
   console.log("Watcher test passed");
   theWatcher.stop();

@@ -3,6 +3,20 @@ var fs = require('fs');
 var path = require('path');
 var project = require('./project.js');
 
+// This file implements "upgraders" --- functions which upgrade a Meteor app to
+// a new version. Each upgrader has a name (registered in upgradersByName).
+//
+// You can test upgraders by running "meteor run-upgrader myupgradername".
+//
+// Upgraders are run automatically by "meteor update" by comparing the
+// "upgraders" field of the release JSON file. Add upgraders to the JSON blob in
+// scripts/admin/build-release.sh. Upgraders are run in the order found in that
+// file, after removing all upgraders in the pre-update release
+// manifest. Basically, once an upgrader is added to the list it should stay
+// there forever (or at least until we no longer are interested in allowing
+// updates from that release).
+
+
 // This upgrader implements two changes made in 0.6.5 as part of the Linker
 // project.
 //

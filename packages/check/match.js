@@ -1,5 +1,4 @@
 // XXX docs
-// XXX on linker branch, export Match and check
 
 // Things we explicitly do NOT support:
 //    - heterogenous arrays
@@ -11,7 +10,13 @@ check = function (value, pattern) {
   var argChecker = currentArgumentChecker.get();
   if (argChecker)
     argChecker.checking(value);
-  checkSubtree(value, pattern);
+  try {
+    checkSubtree(value, pattern);
+  } catch (err) {
+    if ((err instanceof Match.Error) && err.path)
+      err.message += " in field " + err.path;
+    throw err;
+  }
 };
 
 Match = {
@@ -28,11 +33,17 @@ Match = {
   ObjectIncluding: function (pattern) {
     return new ObjectIncluding(pattern);
   },
+  // Matches only signed 32-bit integers
+  Integer: ['__integer__'],
 
-  // XXX should we record the path down the tree in the error message?
   // XXX matchers should know how to describe themselves for errors
   Error: Meteor.makeErrorType("Match.Error", function (msg) {
     this.message = "Match error: " + msg;
+    // The path of the value that failed to match. Initially empty, this gets
+    // populated by catching and rethrowing the exception as it goes back up the
+    // stack.
+    // E.g.: "vals[3].entity.created"
+    this.path = "";
     // If this gets sent over DDP, don't give full internal details but at least
     // provide something better than 500 Internal server error.
     this.sanitizedError = new Meteor.Error(400, "Match failed");
@@ -119,6 +130,20 @@ var checkSubtree = function (value, pattern) {
     throw new Match.Error("Expected null, got " + EJSON.stringify(value));
   }
 
+  // Match.Integer is special type encoded with array
+  if (pattern === Match.Integer) {
+    // There is no consistent and reliable way to check if variable is a 64-bit
+    // integer. One of the popular solutions is to get reminder of division by 1
+    // but this method fails on really large floats with big precision.
+    // E.g.: 1.348192308491824e+23 % 1 === 0 in V8
+    // Bitwise operators work consistantly but always cast variable to 32-bit
+    // signed integer according to JavaScript specs.
+    if (typeof value === "number" && (value | 0) === value)
+      return
+    throw new Match.Error("Expected Integer, got "
+                + (value instanceof Object ? EJSON.stringify(value) : value));
+  }
+
   // "Object" is shorthand for Match.ObjectIncluding({});
   if (pattern === Object)
     pattern = Match.ObjectIncluding({});
@@ -132,8 +157,17 @@ var checkSubtree = function (value, pattern) {
       throw new Match.Error("Expected array, got " + EJSON.stringify(value));
     }
 
-    _.each(value, function (valueElement) {
-      checkSubtree(valueElement, pattern[0]);
+    _.each(value, function (valueElement, index) {
+      try {
+        checkSubtree(valueElement, pattern[0]);
+      } catch (err) {
+        if (err instanceof Match.Error) {
+          if (err.path && err.path[0] !== '[')
+            err.path = "." + err.path;
+          err.path = "[" + index + "]" + err.path;
+        }
+        throw err;
+      }
     });
     return;
   }
@@ -206,14 +240,23 @@ var checkSubtree = function (value, pattern) {
   });
 
   _.each(value, function (subValue, key) {
-    if (_.has(requiredPatterns, key)) {
-      checkSubtree(subValue, requiredPatterns[key]);
-      delete requiredPatterns[key];
-    } else if (_.has(optionalPatterns, key)) {
-      checkSubtree(subValue, optionalPatterns[key]);
-    } else {
-      if (!unknownKeysAllowed)
-        throw new Match.Error("Unknown key '" + key + "'");
+    try {
+      if (_.has(requiredPatterns, key)) {
+        checkSubtree(subValue, requiredPatterns[key]);
+        delete requiredPatterns[key];
+      } else if (_.has(optionalPatterns, key)) {
+        checkSubtree(subValue, optionalPatterns[key]);
+      } else {
+        if (!unknownKeysAllowed)
+          throw new Match.Error("Unknown key");
+      }
+    } catch (err) {
+      if (err instanceof Match.Error) {
+        if (err.path && err.path[0] !== "[")
+          err.path = "." + err.path;
+        err.path = key + err.path;
+      }
+      throw err;
     }
   });
 

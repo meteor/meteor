@@ -424,10 +424,9 @@ Fiber(function () {
           argv._[0] = qualifySitename(argv._[0]);
         prepareForGalaxy(argv._[0], context, argv["ssh-identity"]);
         if (! context.galaxy) {
-          process.stdout.write("You must provide a galaxy to configure " +
-                               "(by setting the GALAXY environment variable " +
-                               "or providing a sitename " +
-                               "(meteor galaxy configure <sitename>).");
+          process.stdout.write(
+            "You must provide a galaxy to configure (by setting the GALAXY environment variable " +
+              "or providing a sitename (meteor galaxy configure <sitename>).\n");
           process.exit(1);
         }
         console.log("Visit http://localhost:" + context.galaxy.port + "/panel to configure your galaxy");
@@ -617,15 +616,9 @@ Fiber(function () {
         return;
       }
 
-      // Otherwise, we have to upgrade the app too.
-
-      // Write the release to .meteor/release if it's changed (or if this is a
-      // pre-engine app).
+      // Otherwise, we have to upgrade the app too, if the release changed.
       var appRelease = project.getMeteorReleaseVersion(context.appDir);
-      if (appRelease === null || appRelease !== context.releaseVersion) {
-        project.writeMeteorReleaseVersion(context.appDir,
-                                          context.releaseVersion);
-      } else {
+      if (appRelease !== null && appRelease === context.releaseVersion) {
         if (triedToGloballyUpdateButFailed) {
           console.log(
             "This project is already at Meteor %s, the latest release\n" +
@@ -639,9 +632,27 @@ Fiber(function () {
         return;
       }
 
+      // Write the release to .meteor/release.
+      project.writeMeteorReleaseVersion(context.appDir,
+                                        context.releaseVersion);
+
+      // Find upgraders (in order) necessary to upgrade the app for the new
+      // release (new metadata file formats, etc, or maybe even updating renamed
+      // APIs). (If this is a pre-engine app with no .meteor/release file, run
+      // all upgraders.)
+      var oldManifest = appRelease === null ? {}
+          : warehouse.ensureReleaseExistsAndReturnManifest(appRelease);
+      // We can only run upgrades from pinned apps.
+      if (oldManifest) {
+        var upgraders = _.difference(context.releaseManifest.upgraders || [],
+                                     oldManifest.upgraders || []);
+        _.each(upgraders, function (upgrader) {
+          require("./upgraders.js").runUpgrader(upgrader, context.appDir);
+        });
+      }
+
       // This is the right spot to do any other changes we need to the app in
-      // order to update it for the new release (new metadata file formats,
-      // etc, or maybe even updating renamed APIs).
+      // order to update it for the new release .
       // XXX add app packages to .meteor/packages here for linker upgrade!
       console.log("%s: updated to Meteor %s.",
                   path.basename(context.appDir), context.releaseVersion);
@@ -793,6 +804,8 @@ Fiber(function () {
     help: "Pack this project up into a tarball",
     argumentParser: function (opt) {
       opt.boolean('for-deploy')
+        .boolean('debug')
+        .describe('debug', "bundle in debug mode (don't minify, etc)")
         .usage("Usage: meteor bundle <output_file.tar.gz>\n" +
                "\n" +
                "Package this project up for deployment. The output is a tarball that\n" +
@@ -821,7 +834,7 @@ Fiber(function () {
       var bundler = require(path.join(__dirname, 'bundler.js'));
       var bundleResult = bundler.bundle(context.appDir, bundle_path, {
         nodeModulesMode: argv['for-deploy'] ? 'skip' : 'copy',
-        minify: true,  // XXX allow --debug
+        minify: !argv.debug,
         releaseStamp: context.releaseVersion,
         library: context.library
       });

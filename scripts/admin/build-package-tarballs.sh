@@ -16,7 +16,7 @@ set -u
 # cd to top level dir
 cd `dirname $0`
 cd ../..
-TOPDIR=$(pwd)
+export TOPDIR=$(pwd)
 
 OUTDIR="$TOPDIR/dist/packages"
 mkdir -p $OUTDIR
@@ -39,11 +39,6 @@ if [ -e "$TOPDIR/.package_manifest_chunk" ]; then
   rm "$TOPDIR/.package_manifest_chunk"
 fi
 
-# The "build version" of the current tools. A change to this should result in a
-# change to all package versions; this will only be incremented when it's
-# important for all packages to be rebuilt, not on every tools release.
-BUILT_BY=$(./meteor --built-by)
-
 FIRST_RUN=true # keep track to place commas correctly
 cd packages
 for PACKAGE in *
@@ -53,7 +48,7 @@ do
       echo "," >> "$TOPDIR/.package_manifest_chunk"
     fi
 
-    PACKAGE_VERSION=$(cat <(echo "$BUILT_BY") <(git ls-tree HEAD $PACKAGE) | shasum | cut -f 1 -d " ") # shasum's output looks like: 'SHA -'
+    PACKAGE_VERSION=$(perl -pe 's/\Q$ENV{TOPDIR}\E//g; s/os\..*\.json/os.json/g' $PACKAGE/.build/buildinfo.json | shasum | cut -c 1-10)
     echo "$PACKAGE version $PACKAGE_VERSION"
     ROOTDIR="$PACKAGE-${PACKAGE_VERSION}-${PLATFORM}"
     TARBALL="$OUTDIR/$PACKAGE-${PACKAGE_VERSION}-${PLATFORM}.tar.gz"

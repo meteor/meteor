@@ -61,10 +61,12 @@ Meteor.Collection = function (name, options) {
 
   if (!options._driver) {
     if (name && self._connection === Meteor.server &&
-        typeof getRemoteCollectionDriver !== "undefined")
-      options._driver = getRemoteCollectionDriver();
-    else
+        typeof MongoInternals !== "undefined" &&
+        MongoInternals.defaultRemoteCollectionDriver) {
+      options._driver = MongoInternals.defaultRemoteCollectionDriver();
+    } else {
       options._driver = LocalCollectionDriver;
+    }
   }
 
   self._collection = options._driver.open(name, self._connection);
@@ -261,17 +263,15 @@ Meteor.Collection._rewriteSelector = function (selector) {
 
   var ret = {};
   _.each(selector, function (value, key) {
+    // Mongo supports both {field: /foo/} and {field: {$regex: /foo/}}
     if (value instanceof RegExp) {
-      ret[key] = {$regex: value.source};
-      var regexOptions = '';
-      // JS RegExp objects support 'i', 'm', and 'g'. Mongo regex $options
-      // support 'i', 'm', 'x', and 's'. So we support 'i' and 'm' here.
-      if (value.ignoreCase)
-        regexOptions += 'i';
-      if (value.multiline)
-        regexOptions += 'm';
-      if (regexOptions)
-        ret[key].$options = regexOptions;
+      ret[key] = convertRegexpToMongoSelector(value);
+    } else if (value && value.$regex instanceof RegExp) {
+      ret[key] = convertRegexpToMongoSelector(value.$regex);
+      // if value is {$regex: /foo/, $options: ...} then $options
+      // override the ones set on $regex.
+      if (value.$options !== undefined)
+        ret[key].$options = value.$options;
     }
     else if (_.contains(['$or','$and','$nor'], key)) {
       // Translate lower levels of $and/$or/$nor
@@ -279,10 +279,30 @@ Meteor.Collection._rewriteSelector = function (selector) {
         return Meteor.Collection._rewriteSelector(v);
       });
     }
-    else
+    else {
       ret[key] = value;
+    }
   });
   return ret;
+};
+
+// convert a JS RegExp object to a Mongo {$regex: ..., $options: ...}
+// selector
+var convertRegexpToMongoSelector = function (regexp) {
+  check(regexp, RegExp); // safety belt
+
+  var selector = {$regex: regexp.source};
+  var regexOptions = '';
+  // JS RegExp objects support 'i', 'm', and 'g'. Mongo regex $options
+  // support 'i', 'm', 'x', and 's'. So we support 'i' and 'm' here.
+  if (regexp.ignoreCase)
+    regexOptions += 'i';
+  if (regexp.multiline)
+    regexOptions += 'm';
+  if (regexOptions)
+    selector.$options = regexOptions;
+
+  return selector;
 };
 
 var throwIfSelectorIsNotId = function (selector, methodName) {

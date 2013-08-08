@@ -12,11 +12,8 @@ var optimist = Npm.require('optimist');
 var useragent = Npm.require('useragent');
 var send = Npm.require('send');
 
-// XXX we have to export WebApp as a single symbol because we modify
-// it (for example, it has an attribute httpServer which isn't known
-// until runWebAppServer-time.) It would be nice to refactor so that
-// this isn't the case and we can export the symbols individually.
 WebApp = {};
+WebAppInternals = {};
 
 var findGalaxy = _.once(function () {
   if (!('GALAXY' in process.env)) {
@@ -183,7 +180,9 @@ var runWebAppServer = function () {
     throw new Error("Unsupported format for client assets: " +
                     JSON.stringify(clientJson.format));
 
-  // XXX change all this config to something more reasonable
+  // XXX change all this config to something more reasonable.
+  //     and move it out of webapp into a different package so you don't
+  //     have weird things like mongo-livedata weak-dep'ing on webapp
   var deployConfig =
         process.env.METEOR_DEPLOY_CONFIG
         ? JSON.parse(process.env.METEOR_DEPLOY_CONFIG) : {};
@@ -197,6 +196,9 @@ var runWebAppServer = function () {
   // check environment for legacy env variables.
   if (process.env.PORT && !_.has(deployConfig.boot.bind, 'localPort')) {
     deployConfig.boot.bind.localPort = parseInt(process.env.PORT);
+  }
+  if (process.env.BIND_IP && !_.has(deployConfig.boot.bind, 'localIp')) {
+    deployConfig.boot.bind.localIp = process.env.BIND_IP;
   }
   copyEnvVarToDeployConfig(deployConfig, "MONGO_URL", "mongo-livedata", "url");
 
@@ -438,27 +440,30 @@ var runWebAppServer = function () {
 
     // only start listening after all the startup code has run.
     var bind = deployConfig.boot.bind;
-    httpServer.listen(bind.localPort || 0, Meteor.bindEnvironment(function() {
+    var localPort = bind.localPort || 0;
+    var localIp = bind.localIp || '0.0.0.0';
+    httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
       if (argv.keepalive || true)
         console.log("LISTENING"); // must match run.js
       var port = httpServer.address().port;
       if (bind.viaProxy && bind.viaProxy.proxyEndpoint) {
-        bindToProxy(bind.viaProxy);
+        WebAppInternals.bindToProxy(bind.viaProxy);
       } else if (bind.viaProxy) {
         // bind via the proxy, but we'll have to find it ourselves via
         // ultraworld.
         var galaxy = findGalaxy();
-        galaxy.subscribe('servicesByName', 'proxy');
+        var proxyServiceName = deployConfig.proxyServiceName || "proxy";
+        galaxy.subscribe('servicesByName', proxyServiceName);
         var Proxies = new Meteor.Collection('services', {
           manager: galaxy
         });
         var doBinding = function (proxyService) {
           if (proxyService.providers.proxy) {
             Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
-            bindToProxy(_.extend({
+            WebAppInternals.bindToProxy(_.extend({
               proxyEndpoint: proxyService.providers.proxy
             }, bind.viaProxy));
-          }
+         }
         };
         Proxies.find().observe({
           added: doBinding,
@@ -480,8 +485,7 @@ var runWebAppServer = function () {
   };
 };
 
-bindToProxy = function (proxyConfig) {
-
+WebAppInternals.bindToProxy = function (proxyConfig) {
   var securePort = proxyConfig.securePort || 4433;
   var insecurePort = proxyConfig.insecurePort || 8080;
   var bindPathPrefix = proxyConfig.bindPathPrefix || "";
@@ -517,6 +521,29 @@ bindToProxy = function (proxyConfig) {
   var route = process.env.ROUTE;
   var host = route.split(":")[0];
   var port = +route.split(":")[1];
+
+  var completedBindings = {
+    ddp: false,
+    http: false,
+    https: proxyConfig.securePort !== null ? false : undefined
+  };
+
+  var bindingDoneCallback = function (binding) {
+    return function (err, resp) {
+      if (err)
+        throw err;
+
+      completedBindings[binding] = true;
+      var completedAll = _.every(_.keys(completedBindings), function (binding) {
+        return (completedBindings[binding] ||
+          completedBindings[binding] === undefined);
+      });
+      if (completedAll)
+        Log("Bound to proxy.");
+      return completedAll;
+    };
+  };
+
   proxy.call('bindDdp', {
     pid: pid,
     bindTo: ddpBindTo,
@@ -525,7 +552,7 @@ bindToProxy = function (proxyConfig) {
       port: port,
       pathPrefix: bindPathPrefix + '/websocket'
     }
-  });
+  }, bindingDoneCallback("ddp"));
   proxy.call('bindHttp', {
     pid: pid,
     bindTo: {
@@ -538,7 +565,7 @@ bindToProxy = function (proxyConfig) {
       port: port,
       pathPrefix: bindPathPrefix
     }
-  });
+  }, bindingDoneCallback("http"));
   if (proxyConfig.securePort !== null) {
     proxy.call('bindHttp', {
       pid: pid,
@@ -553,9 +580,8 @@ bindToProxy = function (proxyConfig) {
         port: port,
         pathPrefix: bindPathPrefix
       }
-    });
+    }, bindingDoneCallback("https"));
   }
-  Log("Bound to proxy");
 };
 
 runWebAppServer();

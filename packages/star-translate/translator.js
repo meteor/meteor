@@ -80,9 +80,9 @@ StarTranslator._getPlatform = function () {
   var self = this;
   // Duplicated from meteor/tools/bundler.js
   var archToPlatform = {
-    'native.linux.x86_32': 'Linux_i686',
-    'native.linux.x86_64': 'Linux_x86_64',
-    'native.osx.x86_64': 'Darwin_x86_64'
+    'os.linux.x86_32': 'Linux_i686',
+    'os.linux.x86_64': 'Linux_x86_64',
+    'os.osx.x86_64': 'Darwin_x86_64'
   };
   return archToPlatform[self._getArch()];
 };

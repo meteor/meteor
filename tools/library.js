@@ -1,6 +1,7 @@
 var path = require('path');
 var _ = require('underscore');
 var files = require('./files.js');
+var watch = require('./watch.js');
 var packages = require('./packages.js');
 var warehouse = require('./warehouse.js');
 var bundler = require('./bundler.js');
@@ -34,15 +35,13 @@ var Library = function (options) {
       return stats.isDirectory();
     });
 
-  self.loadedPackages = {}; // map from package name to Package
   self.overrides = {}; // package name to package directory
 
-  // map from package name to:
+  // both map from package name to:
   // - pkg: cached Package object
   // - packageDir: directory from which it was loaded
-  // - revalidate: true if the package needs to have its dependencies
-  //   checked before it can be reused
   self.softReloadCache = {};
+  self.loadedPackages = {};
 };
 
 _.extend(Library.prototype, {
@@ -53,7 +52,7 @@ _.extend(Library.prototype, {
   // two overrides for the same packageName.
   override: function (packageName, packageDir) {
     var self = this;
-    if (packageName in self.overrides)
+    if (_.has(self.overrides, packageName))
       throw new Error("Duplicate override for package '" + packageName + "'");
     self.overrides[packageName] = path.resolve(packageDir);
   },
@@ -61,7 +60,7 @@ _.extend(Library.prototype, {
   // Undo an override previously set up with override().
   removeOverride: function (packageName) {
     var self = this;
-    if (!(packageName in self.overrides))
+    if (!_.has(self.overrides, packageName))
       throw new Error("No override present for package '" + packageName + "'");
     delete self.loadedPackages[packageName];
     delete self.overrides[packageName];
@@ -73,20 +72,80 @@ _.extend(Library.prototype, {
   // If soft is false, the default, the cache is totally flushed and
   // all packages are reloaded unconditionally.
   //
-  // If soft is true, then packages from the warehouse aren't reloaded
-  // (they are supposed to be immutable, after all), and if we loaded
-  // a built package with dependency info, we won't reload it if the
-  // dependency info says that its source files are still up to
-  // date. The ideas is that assuming the user is "following the
-  // rules", this will correctly reload any changed packages while in
-  // most cases avoiding nearly all reloading.
+  // If soft is true, then built packages without dependency info (such as those
+  // from the warehouse) aren't reloaded (there's no way to rebuild them, after
+  // all), and if we loaded a built package with dependency info, we won't
+  // reload it if the dependency info says that its source files are still up to
+  // date. The ideas is that assuming the user is "following the rules", this
+  // will correctly reload any changed packages while in most cases avoiding
+  // nearly all reloading.
   refresh: function (soft) {
     var self = this;
     soft = soft || false;
 
+    self.softReloadCache = soft ? self.loadedPackages : {};
     self.loadedPackages = {};
-    if (! soft)
-      self.softReloadCache = {};
+  },
+
+  // Given a package name as a string, returns the absolute path to the package
+  // directory (which is the *source* tree in the source-with-built-unipackage
+  // case, not the .build directory), or null if not found.
+  //
+  // Does NOT load the package or make any recursive calls, so can safely be
+  // called from Package initialization code. Intended primarily for comparison
+  // to the packageDirForBuildInfo field on a Package object; also used
+  // internally to implement 'get'.
+  findPackageDirectory: function (name) {
+    var self = this;
+
+    // Packages cached from previous calls
+    if (_.has(self.loadedPackages, name)) {
+      return self.loadedPackages[name].packageDir;
+    }
+
+    // If there's an override for this package, use that without
+    // looking at any other options.
+    if (_.has(self.overrides, name))
+      return self.overrides[name];
+
+    for (var i = 0; i < self.localPackageDirs.length; ++i) {
+      var packageDir = path.join(self.localPackageDirs[i], name);
+      // A directory is a package if it either contains 'package.js' (a package
+      // source tree) or 'unipackage.json' (a compiled unipackage). (Actually,
+      // for now, unipackages contain a dummy package.js too.)
+      //
+      // XXX support for putting unipackages in a local package dir is
+      // incomplete! They will be properly loaded, but other packages that
+      // depend on them have no way of knowing when they change! unipackages
+      // that are the .build of a source tree work fine (they have a
+      // buildinfo.json and can be rebuilt), and warehouse unipackages work fine
+      // too (users are not supposed to edit them (they are read-only on disk),
+      // and their pathname specifies a version).  But if you, eg, have a
+      // unipackage of coffeescript in a local package directory, build another
+      // package dependending on it, and substitute another version of the
+      // unipackage in the same location, nothing will ever rebuild your
+      // package!
+      if (fs.existsSync(path.join(packageDir, 'package.js')) ||
+          fs.existsSync(path.join(packageDir, 'unipackage.json'))) {
+        return packageDir;
+      }
+    }
+
+    // Try the Meteor distribution, if we have one.
+    var version = self.releaseManifest && self.releaseManifest.packages[name];
+    if (version) {
+      packageDir = path.join(warehouse.getWarehouseDir(),
+                             'packages', name, version);
+      // The warehouse is theoretically constructed carefully enough that the
+      // directory really should not exist unless it is complete.
+      if (! fs.existsSync(packageDir))
+        throw new Error("Package missing from warehouse: " + name +
+                        " version " + version);
+      return packageDir;
+    }
+
+    // Nope!
+    return null;
   },
 
   // Given a package name as a string, retrieve a Package object. If
@@ -106,8 +165,6 @@ _.extend(Library.prototype, {
   // refresh().
   get: function (name, throwOnError) {
     var self = this;
-    var packageDir;
-    var fromWarehouse = false;
 
     // Passed a Package?
     if (name instanceof packages.Package)
@@ -115,35 +172,24 @@ _.extend(Library.prototype, {
 
     // Packages cached from previous calls
     if (_.has(self.loadedPackages, name)) {
-      return self.loadedPackages[name];
+      return self.loadedPackages[name].pkg;
     }
 
-    // If there's an override for this package, use that without
-    // looking at any other options.
-    if (name in self.overrides)
-      packageDir = self.overrides[name];
-
-    // Try localPackageDirs
-    if (! packageDir) {
-      for (var i = 0; i < self.localPackageDirs.length; ++i) {
-        var packageDir = path.join(self.localPackageDirs[i], name);
-        // XXX or unipackage.json?
-        if (fs.existsSync(path.join(packageDir, 'package.js')))
-          break;
-        packageDir = null;
-      }
+    // Check for invalid package names. Currently package names can only
+    // contain ASCII alphanumerics and dash, and must contain at least
+    // one non-digit-or-dash.
+    //
+    // We don't support '.' because it is used as the separator between
+    // a package name and a slice. This might want to change.
+    //
+    // XXX revisit this later. What about unicode package names?
+    if (/[^A-Za-z0-9\-]/.test(name) || !/[A-Za-z]/.test(name) ) {
+      if (throwOnError === false)
+        return null;
+      throw new Error("Invalid package name: " + name);
     }
 
-    // Try the Meteor distribution, if we have one.
-    var version = self.releaseManifest && self.releaseManifest.packages[name];
-    if (! packageDir && version) {
-      var packageDir = path.join(warehouse.getWarehouseDir(),
-                                 'packages', name, version);
-      if (! fs.existsSync(packageDir))
-        throw new Error("Package missing from warehouse: " + name +
-                        " version " + version);
-      fromWarehouse = true;
-    }
+    var packageDir = self.findPackageDirectory(name);
 
     if (! packageDir) {
       if (throwOnError === false)
@@ -160,47 +206,36 @@ _.extend(Library.prototype, {
     if (_.has(self.softReloadCache, name)) {
       var entry = self.softReloadCache[name];
 
-      if (entry.packageDir === packageDir &&
-          (! entry.revalidate || entry.pkg.checkUpToDate())) {
+      // Either we will decide that the cache is invalid, or we will "upgrade"
+      // this entry into loadedPackages. Either way, it's not needed in
+      // softReloadCache any more.
+      delete self.softReloadCache[name];
+
+      if (entry.packageDir === packageDir && entry.pkg.checkUpToDate()) {
         // Cache hit
-        self.loadedPackages[name] = entry.pkg;
+        self.loadedPackages[name] = entry;
         return entry.pkg;
       }
-
-      // Package has either changed, or it has been shadowed by a
-      // package in a different location.
-      delete self.softReloadCache[name];
     }
 
     // Load package from disk
-    var pkg = new packages.Package(self);
+    var pkg = new packages.Package(self, packageDir);
     if (fs.existsSync(path.join(packageDir, 'unipackage.json'))) {
       // It's an already-built package
       pkg.initFromUnipackage(name, packageDir);
-      self.loadedPackages[name] = pkg;
+      self.loadedPackages[name] = {pkg: pkg, packageDir: packageDir};
     } else {
-      // It's a source tree
+      // It's a source tree. Does it have a built unipackage inside it?
       var buildDir = path.join(packageDir, '.build');
       if (fs.existsSync(buildDir) &&
           pkg.initFromUnipackage(name, buildDir,
-                                 { onlyIfUpToDate: ! fromWarehouse,
+                                 { onlyIfUpToDate: true,
                                    buildOfPath: packageDir })) {
         // We already had a build and it was up to date.
-        self.loadedPackages[name] = pkg;
+        self.loadedPackages[name] = {pkg: pkg, packageDir: packageDir};
       } else {
-        // Either we didn't have a build, or it was out of date (and
-        // as a transitional matter until the only thing the warehouse
-        // contains is unipackages, we don't do an up-to-date check on
-        // warehouse packages, for efficiency.) Build the package.
-        //
-        // As a temporary, transitional optimization, assume that any
-        // source trees in the warehouse have already had their npm
-        // dependencies fetched. The 0.6.0 installer does this
-        // (rather, it downloads packages that already have their npm
-        // dependencies inside of them), and during the transitional
-        // period where we still have source trees in the warehouse
-        // AND the unipackage format can't handle packages with
-        // extensions, this will reduce startup time.
+        // Either we didn't have a build, or it was out of date. Build the
+        // package.
         buildmessage.enterJob({
           title: "building package `" + name + "`",
           rootPath: packageDir
@@ -214,26 +249,26 @@ _.extend(Library.prototype, {
           // forever. (build() needs the dependencies because it needs
           // to look at the handlers registered by any plugins in the
           // packages that we use.)
-          pkg.initFromPackageDir(name, packageDir,
-                                 { skipNpmUpdate: fromWarehouse });
-          self.loadedPackages[name] = pkg;
+          pkg.initFromPackageDir(name, packageDir);
+          self.loadedPackages[name] = {pkg: pkg, packageDir: packageDir};
           pkg.build();
 
           if (! buildmessage.jobHasMessages() && // ensure no errors!
               pkg.canBeSavedAsUnipackage()) {
             // Save it, for a fast load next time
-            files.add_to_gitignore(packageDir, '.build*');
-            pkg.saveAsUnipackage(buildDir, { buildOfPath: packageDir });
+            try {
+              files.add_to_gitignore(packageDir, '.build*');
+              pkg.saveAsUnipackage(buildDir, { buildOfPath: packageDir });
+            } catch (e) {
+              // If we can't write to this directory, we don't get to cache our
+              // output, but otherwise life is good.
+              if (!(e && (e.code === 'EACCES' || e.code === 'EPERM')))
+                throw e;
+            }
           }
         });
       }
     }
-
-    self.softReloadCache[name] = {
-      packageDir: packageDir,
-      revalidate: ! fromWarehouse,
-      pkg: pkg
-    };
 
     return pkg;
   },
@@ -272,6 +307,25 @@ _.extend(Library.prototype, {
       // message
       throw new Error("Bad slice spec");
     }
+  },
+
+  // Register local package directories with a watchSet. We want to know if a
+  // package is created or deleted, which includes both its top-level source
+  // directory and its main package metadata file.
+  watchLocalPackageDirs: function (watchSet) {
+    var self = this;
+    _.each(self.localPackageDirs, function (packageDir) {
+      var packages = watch.readAndWatchDirectory(watchSet, {
+        absPath: packageDir,
+        include: [/\/$/]
+      });
+      _.each(packages, function (p) {
+        watch.readAndWatchFile(watchSet,
+                               path.join(packageDir, p, 'package.js'));
+        watch.readAndWatchFile(watchSet,
+                               path.join(packageDir, p, 'unipackage.json'));
+      });
+    });
   },
 
   // Get all packages available. Returns a map from the package name

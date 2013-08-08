@@ -10,7 +10,7 @@
 //    - name: short, unique name for program, for referring to it
 //      programmatically
 //    - arch: architecture that this program targets. Something like
-//            "native", "native.linux.x86_64", or "browser.w3c".
+//            "os", "os.linux.x86_64", or "browser.w3c".
 //    - path: directory (relative to star.json) containing this program
 //
 //    XXX in the future this will also contain instructions for
@@ -22,8 +22,8 @@
 //  - plugins: array of plugins in the star, each an object:
 //    - name: short, unique name for plugin, for referring to it
 //      programmatically
-//    - arch: typically 'native' (for a portable plugin) or eg
-//      'native.linux.x86_64' for one that include native node_modules
+//    - arch: typically 'os' (for a portable plugin) or eg
+//      'os.linux.x86_64' for one that include native node_modules
 //    - path: path (relative to star.json) to the control file (eg,
 //      program.json) for this plugin
 //
@@ -82,7 +82,7 @@
 // page is 'app.html'.
 //
 //
-// == Format of a program when arch is "native.*" ==
+// == Format of a program when arch is "os.*" ==
 //
 // Standard:
 //
@@ -145,13 +145,13 @@
 // it's fine and it's probably actually cleaner, because it means that
 // the plugin can be treated as a self-contained unit.
 //
-// Note that while the spec for "native.*" is going to change to
+// Note that while the spec for "os.*" is going to change to
 // represent an arbitrary POSIX (or Windows) process rather than
 // assuming a nodejs host, these plugins will always refer to
 // JavaScript code (that potentially might be a plugin to be loaded
 // into an existing JS VM). But this seems to be a concern that is
 // somewhat orthogonal to arch (these plugins can still use packages
-// of arch "native.*".) There is probably a missing abstraction here
+// of arch "os.*".) There is probably a missing abstraction here
 // somewhere (decoupling target type from architecture) but it can
 // wait until later.
 
@@ -167,6 +167,7 @@ var _ = require('underscore');
 var project = require(path.join(__dirname, 'project.js'));
 var builder = require(path.join(__dirname, 'builder.js'));
 var unipackage = require(path.join(__dirname, 'unipackage.js'));
+var watch = require('./watch.js');
 var Fiber = require('fibers');
 var Future = require(path.join('fibers', 'future'));
 var sourcemap = require('source-map');
@@ -174,9 +175,9 @@ var sourcemap = require('source-map');
 // files to ignore when bundling. node has no globs, so use regexps
 var ignoreFiles = [
     /~$/, /^\.#/, /^#.*#$/,
-    /^\.DS_Store$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/,
-    /^\.meteor$/, /* avoids scanning N^2 files when bundling all packages */
-    /^\.git$/ /* often has too many files to watch */
+    /^\.DS_Store\/?$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/,
+    /^\.meteor\/$/, /* avoids scanning N^2 files when bundling all packages */
+    /^\.git\/$/ /* often has too many files to watch */
 ];
 
 // http://davidshariff.com/blog/javascript-inheritance-patterns/
@@ -389,7 +390,7 @@ var Target = function (options) {
   // Package library to use for resolving package dependenices.
   self.library = options.library;
 
-  // Something like "browser.w3c" or "native" or "native.osx.x86_64"
+  // Something like "browser.w3c" or "os" or "os.osx.x86_64"
   self.arch = options.arch;
 
   // All of the Slices that are to go into this target, in the order
@@ -400,9 +401,11 @@ var Target = function (options) {
   // the order given.
   self.js = [];
 
-  // Files and paths used by this target, in the format used by
-  // watch.Watcher.
-  self.dependencyInfo = {files: {}, directories: {}};
+  // On-disk dependencies of this target.
+  self.watchSet = new watch.WatchSet();
+
+  // Map from package name to package directory of all packages used.
+  self.pluginProviderPackageDirs = {};
 
   // node_modules directories that we need to copy into the target (or
   // otherwise make available at runtime.) A map from an absolute path
@@ -572,7 +575,7 @@ _.extend(Target.prototype, {
     var self = this;
 
     var isBrowser = archinfo.matches(self.arch, "browser");
-    var isNative = archinfo.matches(self.arch, "native");
+    var isOs = archinfo.matches(self.arch, "os");
 
     // Copy their resources into the bundle in order
     _.each(self.slices, function (slice) {
@@ -582,7 +585,7 @@ _.extend(Target.prototype, {
       var resources = slice.getResources(self.arch);
 
       // First, find all the assets, so that we can associate them with each js
-      // resource (for native slices).
+      // resource (for os slices).
       var sliceAssets = {};
       _.each(resources, function (resource) {
         if (resource.type !== "asset")
@@ -590,7 +593,7 @@ _.extend(Target.prototype, {
 
         var f = new File({data: resource.data, cacheable: false});
 
-        var relPath = isNative
+        var relPath = isOs
               ? path.join("assets", resource.servePath)
               : stripLeadingSlash(resource.servePath);
         f.setTargetPathFromRelPath(relPath);
@@ -628,7 +631,7 @@ _.extend(Target.prototype, {
             f.setUrlFromRelPath(resource.servePath);
           }
 
-          if (resource.type === "js" && isNative) {
+          if (resource.type === "js" && isOs) {
             // Hack, but otherwise we'll end up putting app assets on this file.
             if (resource.servePath !== "/packages/global-imports.js")
               f.setAssets(sliceAssets);
@@ -669,13 +672,13 @@ _.extend(Target.prototype, {
         throw new Error("Unknown type " + resource.type);
       });
 
-      // Depend on the source files that produced these
-      // resources. (Since the dependencyInfo.directories should be
-      // disjoint, it should be OK to merge them this way.)
-      _.extend(self.dependencyInfo.files,
-               slice.dependencyInfo.files);
-      _.extend(self.dependencyInfo.directories,
-               slice.dependencyInfo.directories);
+      // Depend on the source files that produced these resources.
+      self.watchSet.merge(slice.watchSet);
+      // Remember the library resolution of all packages used in these
+      // resources.
+      // XXX assumes that this merges cleanly
+      _.extend(self.pluginProviderPackageDirs,
+               slice.pkg.pluginProviderPackageDirs)
     });
   },
 
@@ -705,19 +708,23 @@ _.extend(Target.prototype, {
     });
   },
 
-  // Return all dependency info for this target, in the format
-  // expected by watch.Watcher.
-  getDependencyInfo: function () {
+  // Return the WatchSet for this target's dependency info.
+  getWatchSet: function () {
     var self = this;
-    return self.dependencyInfo;
+    return self.watchSet;
+  },
+
+  getPluginProviderPackageDirs: function () {
+    var self = this;
+    return self.pluginProviderPackageDirs;
   },
 
   // Return the most inclusive architecture with which this target is
   // compatible. For example, if we set out to build a
-  // 'native.linux.x86_64' version of this target (by passing that as
+  // 'os.linux.x86_64' version of this target (by passing that as
   // the 'arch' argument to the constructor), but ended up not
   // including anything that was specific to Linux, the return value
-  // would be 'native'.
+  // would be 'os'.
   mostCompatibleArch: function () {
     var self = this;
     return archinfo.leastSpecificDescription(_.pluck(self.slices, 'arch'));
@@ -764,8 +771,7 @@ _.extend(ClientTarget.prototype, {
     var self = this;
 
     var templatePath = path.join(__dirname, "app.html.in");
-    var template = fs.readFileSync(templatePath);
-    self.dependencyInfo.files[templatePath] = Builder.sha1(template);
+    var template = watch.readAndWatchFile(self.watchSet, templatePath);
 
     var f = require('handlebars').compile(template.toString());
     return new Buffer(f({
@@ -1105,8 +1111,7 @@ _.extend(JsImage.prototype, {
     _.each(nodeModulesDirectories, function (nmd) {
       builder.copyDirectory({
         from: nmd.sourcePath,
-        to: nmd.preferredBundlePath,
-        depend: false
+        to: nmd.preferredBundlePath
       });
     });
 
@@ -1182,7 +1187,7 @@ var JsImageTarget = function (options) {
   var self = this;
   Target.apply(this, arguments);
 
-  if (! archinfo.matches(self.arch, "native"))
+  if (! archinfo.matches(self.arch, "os"))
     // Conceivably we could support targeting the browser as long as
     // no native node modules were used.  No use case for that though.
     throw new Error("JsImageTarget targeting something unusual?");
@@ -1227,7 +1232,7 @@ var ServerTarget = function (options) {
   self.releaseStamp = options.releaseStamp;
   self.library = options.library;
 
-  if (! archinfo.matches(self.arch, "native"))
+  if (! archinfo.matches(self.arch, "os"))
     throw new Error("ServerTarget targeting something that isn't a server?");
 };
 
@@ -1284,9 +1289,9 @@ _.extend(ServerTarget.prototype, {
 
     // Script that fetches the dev_bundle and runs the server bootstrap
     var archToPlatform = {
-      'native.linux.x86_32': 'Linux_i686',
-      'native.linux.x86_64': 'Linux_x86_64',
-      'native.osx.x86_64': 'Darwin_x86_64'
+      'os.linux.x86_32': 'Linux_i686',
+      'os.linux.x86_64': 'Linux_x86_64',
+      'os.osx.x86_64': 'Darwin_x86_64'
     };
     var arch = archinfo.host();
     var platform = archToPlatform[arch];
@@ -1321,8 +1326,7 @@ _.extend(ServerTarget.prototype, {
       builder.copyDirectory({
         from: path.join(files.get_dev_bundle(), 'lib', 'node_modules'),
         to: 'node_modules',
-        ignore: ignoreFiles,
-        depend: false
+        ignore: ignoreFiles
       });
     }
 
@@ -1352,8 +1356,8 @@ var writeFile = function (file, builder) {
 // path of a directory that should be created to contain the generated
 // site archive.
 //
-// Returns dependencyInfo (in the format expected by watch.Watcher)
-// for all files and directories that ultimately went into the bundle.
+// Returns a watch.WatchSet for all files and directories that ultimately went
+// into the bundle.
 //
 // options:
 // - nodeModulesMode: "skip", "symlink", "copy"
@@ -1459,25 +1463,17 @@ var writeSiteArchive = function (targets, outputPath, options) {
     // Control file
     builder.writeJson('star.json', json);
 
-    // Merge the dependencyInfo of everything that went into the
-    // bundle. A naive merge like this doesn't work in general but
-    // should work in this case.
-    var fileDeps = {}, directoryDeps = {};
+    // Merge the WatchSet of everything that went into the bundle.
+    var watchSet = new watch.WatchSet();
     var dependencySources = [builder].concat(_.values(targets));
     _.each(dependencySources, function (s) {
-      var info = s.getDependencyInfo();
-      _.extend(fileDeps, info.files);
-      _.extend(directoryDeps, info.directories);
+      watchSet.merge(s.getWatchSet());
     });
 
     // We did it!
     builder.complete();
 
-    return {
-      files: fileDeps,
-      directories: directoryDeps
-    };
-
+    return watchSet;
   } catch (e) {
     builder.abort();
     throw e;
@@ -1497,10 +1493,9 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
- * - dependencyInfo: Information about files and paths that were
+ * - watchSet: Information about files and paths that were
  *   inputs into the bundle and that we may wish to monitor for
- *   changes when developing interactively. It has two keys, 'files'
- *   and 'directories', in the format expected by watch.Watcher.
+ *   changes when developing interactively, as a watch.WatchSet.
  *
  * On failure ('errors' is truthy), no bundle will be output (in fact,
  * outputPath will have been removed if it existed.)
@@ -1547,7 +1542,7 @@ exports.bundle = function (appDir, outputPath, options) {
                             " " + options.releaseStamp : "");
 
   var success = false;
-  var dependencyInfo = { files: {}, directories: {} };
+  var watchSet = new watch.WatchSet();
   var messages = buildmessage.capture({
     title: "building the application"
   }, function () {
@@ -1604,9 +1599,13 @@ exports.bundle = function (appDir, outputPath, options) {
       return server;
     };
 
-    var includeDefaultTargets = true;
-    if (fs.existsSync(path.join(appDir, 'no-default-targets')))
-      includeDefaultTargets = false;
+    // Include default targets, unless there's a no-default-targets file in the
+    // top level of the app. (This is a very hacky interface which will
+    // change. Note, eg, that .meteor/packages is confusingly ignored in this
+    // case.)
+
+    var includeDefaultTargets = watch.readAndWatchFile(
+      watchSet, path.join(appDir, 'no-default-targets')) === null;
 
     if (includeDefaultTargets) {
       // Create a Package object that represents the app
@@ -1622,73 +1621,83 @@ exports.bundle = function (appDir, outputPath, options) {
     }
 
     // Pick up any additional targets in /programs
-    // Step 1: scan for targets and make a list
+    // Step 1: scan for targets and make a list. We will reload if you create a
+    // new subdir in 'programs', or create 'programs' itself.
     var programsDir = path.join(appDir, 'programs');
     var programs = [];
-    if (fs.existsSync(programsDir)) {
-      _.each(fs.readdirSync(programsDir), function (item) {
-        if (item.match(/^\./))
-          return; // ignore dotfiles
-        var itemPath = path.join(programsDir, item);
+    var programsSubdirs = watch.readAndWatchDirectory(watchSet, {
+      absPath: programsDir,
+      include: [/\/$/],
+      exclude: [/^\./]
+    });
 
-        if (! fs.statSync(itemPath).isDirectory())
-          return; // ignore non-directories
+    _.each(programsSubdirs, function (item) {
+      // Remove trailing slash.
+      item = item.substr(0, item.length - 1);
 
-        if (item in targets) {
-          buildmessage.error("duplicate programs named '" + item + "'");
-          // Recover by ignoring this program
-          return;
+      if (_.has(targets, item)) {
+        buildmessage.error("duplicate programs named '" + item + "'");
+        // Recover by ignoring this program
+        return;
+      }
+      targets[item] = true;  // will be overwritten with actual target later
+
+      // Read attributes.json, if it exists
+      var attrsJsonAbsPath = path.join(programsDir, item, 'attributes.json');
+      var attrsJsonRelPath = path.join('programs', item, 'attributes.json');
+      var attrsJsonContents = watch.readAndWatchFile(
+        watchSet, attrsJsonAbsPath);
+
+      var attrsJson = {};
+      if (attrsJsonContents !== null) {
+        try {
+          attrsJson = JSON.parse(attrsJsonContents);
+        } catch (e) {
+          if (! (e instanceof SyntaxError))
+            throw e;
+          buildmessage.error(e.message, { file: attrsJsonRelPath });
+          // recover by ignoring attributes.json
         }
+      }
 
-        // Read attributes.json, if it exists
-        var attrsJsonPath = path.join(itemPath, 'attributes.json');
-        var attrsJsonRelPath = path.join('programs', item, 'attributes.json');
-        var attrsJson = {};
-        if (fs.existsSync(attrsJsonPath)) {
-          try {
-            attrsJson = JSON.parse(fs.readFileSync(attrsJsonPath));
-          } catch (e) {
-            if (! (e instanceof SyntaxError))
-              throw e;
-            buildmessage.error(e.message, { file: attrsJsonRelPath });
-            // recover by ignoring attributes.json
-          }
-        }
-
-        var isControlProgram = !! attrsJson.isControlProgram;
-        if (isControlProgram) {
-          if (controlProgram !== null) {
-            buildmessage.error(
+      var isControlProgram = !! attrsJson.isControlProgram;
+      if (isControlProgram) {
+        if (controlProgram !== null) {
+          buildmessage.error(
               "there can be only one control program ('" + controlProgram +
-                "' is also marked as the control program)",
-              { file: attrsJsonRelPath });
-            // recover by ignoring that it wants to be the control
-            // program
-          } else {
-            controlProgram = item;
-          }
+              "' is also marked as the control program)",
+            { file: attrsJsonRelPath });
+          // recover by ignoring that it wants to be the control
+          // program
+        } else {
+          controlProgram = item;
         }
+      }
 
-        // Add to list
-        programs.push({
-          type: attrsJson.type || "server",
-          name: item,
-          path: itemPath,
-          client: attrsJson.client,
-          attrsJsonRelPath: attrsJsonRelPath
-        });
+      // Add to list
+      programs.push({
+        type: attrsJson.type || "server",
+        name: item,
+        path: path.join(programsDir, item),
+        client: attrsJson.client,
+        attrsJsonRelPath: attrsJsonRelPath
       });
-    }
+    });
 
     if (! controlProgram) {
-      var target = makeServerTarget("ctl");
-      targets["ctl"] = target;
-      controlProgram = "ctl";
+      if (_.has(targets, 'ctl')) {
+        buildmessage.error(
+          "A program named ctl exists but no program has isControlProgram set");
+        // recover by not making a control program
+      }  else {
+        var target = makeServerTarget("ctl");
+        targets["ctl"] = target;
+        controlProgram = "ctl";
+      }
     }
 
-    // Step 2: sort the list so that programs are built first (because
-    // when we build the servers we need to be able to reference the
-    // clients)
+    // Step 2: sort the list so that client programs are built first (because
+    // when we build the servers we need to be able to reference the clients)
     programs.sort(function (a, b) {
       a = (a.type === "client") ? 0 : 1;
       b = (b.type === "client") ? 0 : 1;
@@ -1713,6 +1722,8 @@ exports.bundle = function (appDir, outputPath, options) {
           if (! blankClientTarget) {
             clientTarget = blankClientTarget = targets._blank =
               makeBlankClientTarget();
+          } else {
+            clientTarget = blankClientTarget;
           }
         } else {
           clientTarget = targets[p.client];
@@ -1748,12 +1759,16 @@ exports.bundle = function (appDir, outputPath, options) {
     if (! (controlProgram in targets))
       controlProgram = undefined;
 
+    // Make sure notice when somebody adds a package to the app packages dir
+    // that may override a warehouse package.
+    library.watchLocalPackageDirs(watchSet);
+
     // Write to disk
-    dependencyInfo = writeSiteArchive(targets, outputPath, {
+    watchSet.merge(writeSiteArchive(targets, outputPath, {
       nodeModulesMode: options.nodeModulesMode,
       builtBy: builtBy,
       controlProgram: controlProgram
-    });
+    }));
 
     success = true;
   });
@@ -1763,8 +1778,8 @@ exports.bundle = function (appDir, outputPath, options) {
 
   return {
     errors: success ? false : messages,
-    dependencyInfo: dependencyInfo
-  } ;
+    watchSet: watchSet
+  };
 };
 
 // Make a JsImage object (a complete, linked, ready-to-go JavaScript
@@ -1774,7 +1789,7 @@ exports.bundle = function (appDir, outputPath, options) {
 //
 // Returns an object with keys:
 // - image: The created JsImage object.
-// - dependencyInfo: Source file dependency info (see bundle().)
+// - watchSet: Source file WatchSet (see bundle().)
 //
 // XXX return an 'errors' key for symmetry with bundle(), rather than
 // letting exceptions escape?
@@ -1828,7 +1843,8 @@ exports.buildJsImage = function (options) {
 
   return {
     image: target.toJsImage(),
-    dependencyInfo: target.getDependencyInfo()
+    watchSet: target.getWatchSet(),
+    pluginProviderPackageDirs: target.getPluginProviderPackageDirs()
   };
 };
 

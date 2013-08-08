@@ -12,7 +12,10 @@ Package.describe({
   internal: true
 });
 
-Npm.depends({mongodb: "1.3.12"});
+// Use soon-to-be-released mongo driver version 1.3.16. It includes a
+// fix for a connection storm that impacted production hosting.
+// Change this to 1.3.16 once NPM is updated.
+Npm.depends({mongodb: "https://github.com/mongodb/node-mongodb-native/tarball/02a5723aa51e9fdbad743a1117655e535880b3db"});
 
 Package.on_use(function (api) {
   api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging',
@@ -26,7 +29,12 @@ Package.on_use(function (api) {
   // Allow us to detect 'autopublish', and publish collections if it's loaded.
   api.use('autopublish', 'server', {weak: true});
 
-  api.export('MongoLivedataTest', 'server', {testOnly: true});
+  // defaultRemoteCollectionDriver gets its deployConfig from something that is
+  // (for questionable reasons) initialized by the webapp package.
+  api.use('webapp', 'server', {weak: true});
+
+  // Stuff that should be exposed via a real API, but we haven't yet.
+  api.export('MongoInternals', 'server');
 
   api.add_files('mongo_driver.js', 'server');
   api.add_files('local_collection_driver.js', ['client', 'server']);

@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['underscore'], 'client');
+  api.use(['underscore', 'domutils'], 'client');
   api.export('UniversalEventListener', 'client');
   api.add_files(['listener.js',
                  'events-w3c.js',
