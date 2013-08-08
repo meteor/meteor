@@ -836,6 +836,7 @@ _extend(UI.Component, {
     this.insertBefore(childOrDom, after.nextSibling, parentNode);
   },
 
+  // Is `elem` between `this.firstNode()` and `this.lastNode()`?
   containsElement: function (elem) {
     if (elem.nodeType !== 1)
       throw new Error("containsElement requires an Element node");
@@ -845,23 +846,26 @@ _extend(UI.Component, {
     self._requireNotDestroyed();
 
     var firstNode = self.firstNode();
-    var prevNode = firstNode.previousSibling;
-    var nextNode = self.lastNode().nextSibling;
-
-    // because we can only do comparisons on elements, find
-    // some elements.
-    while (prevNode && prevNode.nodeType !== 1)
-      prevNode = prevNode.previousSibling;
-    while (nextNode && nextNode.nodeType !== 1)
-      nextNode = nextNode.nextSibling;
-
+    var lastNode = self.lastNode();
     if (! elementContains(firstNode.parentNode, elem))
       return false;
-    // element must not be "at or before" prevNode
-    if (prevNode && compareElementIndex(prevNode, elem) >= 0)
+
+    // because compareElementIndex only works on elements, we find
+    // previous and next element siblings. (previousSiblingElement and
+    // nextSiblingElement do the same thing but they neither work on
+    // IE8 nor are they available on text nodes)
+    var prevElem = firstNode.previousSibling;
+    while (prevElem && prevElem.nodeType !== 1)
+      prevElem = prevElem.previousSibling;
+    var nextElem = lastNode.nextSibling;
+    while (nextElem && nextElem.nodeType !== 1)
+      nextElem = nextElem.nextSibling;
+
+    // element must not be "at or before" prevElem
+    if (prevElem && compareElementIndex(prevElem, elem) >= 0)
       return false;
-    // element must not be "at or after" nextNode
-    if (nextNode && compareElementIndex(elem, nextNode) >= 0)
+    // element must not be "at or after" nextElem
+    if (nextElem && compareElementIndex(elem, nextElem) >= 0)
       return false;
     return true;
   },
