@@ -979,6 +979,99 @@ Tinytest.add("minimongo - projection_compiler", function (test) {
   });
 });
 
+Tinytest.add("minimongo - observe ordered with projection", function (test) {
+  // These tests are copy-paste from "minimongo -observe ordered",
+  // slightly modified to test projection
+  var operations = [];
+  var cbs = log_callbacks(operations);
+  var handle;
+
+  var c = new LocalCollection();
+  handle = c.find({}, {sort: {a: 1}, fields: { a: 1 }}).observe(cbs);
+  test.isTrue(handle.collection === c);
+
+  c.insert({_id: 'foo', a:1, b:2});
+  test.equal(operations.shift(), ['added', {a:1}, 0, null]);
+  c.update({a:1}, {$set: {a: 2, b: 1}});
+  test.equal(operations.shift(), ['changed', {a:2}, 0, {a:1}]);
+  c.insert({_id: 'bar', a:10, c: 33});
+  test.equal(operations.shift(), ['added', {a:10}, 1, null]);
+  c.update({}, {$inc: {a: 1}}, {multi: true});
+  c.update({}, {$inc: {c: 1}}, {multi: true});
+  test.equal(operations.shift(), ['changed', {a:3}, 0, {a:2}]);
+  test.equal(operations.shift(), ['changed', {a:11}, 1, {a:10}]);
+  c.update({a:11}, {a:1, b:44});
+  test.equal(operations.shift(), ['changed', {a:1}, 1, {a:11}]);
+  test.equal(operations.shift(), ['moved', {a:1}, 1, 0, 'foo']);
+  c.remove({a:2});
+  test.equal(operations.shift(), undefined);
+  c.remove({a:3});
+  test.equal(operations.shift(), ['removed', 'foo', 1, {a:3}]);
+
+  // test stop
+  handle.stop();
+  var idA2 = Random.id();
+  c.insert({_id: idA2, a:2});
+  test.equal(operations.shift(), undefined);
+
+  // test initial inserts (and backwards sort)
+  handle = c.find({}, {sort: {a: -1}, fields: { a: 1 } }).observe(cbs);
+  test.equal(operations.shift(), ['added', {a:2}, 0, null]);
+  test.equal(operations.shift(), ['added', {a:1}, 1, null]);
+  handle.stop();
+
+  // test _suppress_initial
+  handle = c.find({}, {sort: {a: -1}, fields: { a: 1 }}).observe(_.extend(cbs, {_suppress_initial: true}));
+  test.equal(operations.shift(), undefined);
+  c.insert({a:100, b: { foo: "bar" }});
+  test.equal(operations.shift(), ['added', {a:100}, 0, idA2]);
+  handle.stop();
+
+  // test skip and limit.
+  c.remove({});
+  handle = c.find({}, {sort: {a: 1}, skip: 1, limit: 2, fields: { 'blacklisted': 0 }}).observe(cbs);
+  test.equal(operations.shift(), undefined);
+  c.insert({a:1, blacklisted:1324});
+  test.equal(operations.shift(), undefined);
+  c.insert({_id: 'foo', a:2, blacklisted:["something"]});
+  test.equal(operations.shift(), ['added', {a:2}, 0, null]);
+  c.insert({a:3, blacklisted: { 2: 3 }});
+  test.equal(operations.shift(), ['added', {a:3}, 1, null]);
+  c.insert({a:4, blacklisted: 6});
+  test.equal(operations.shift(), undefined);
+  c.update({a:1}, {a:0, blacklisted:4444});
+  test.equal(operations.shift(), undefined);
+  c.update({a:0}, {a:5, blacklisted:11111});
+  test.equal(operations.shift(), ['removed', 'foo', 0, {a:2}]);
+  test.equal(operations.shift(), ['added', {a:4}, 1, null]);
+  c.update({a:3}, {a:3.5, blacklisted:333.4444});
+  test.equal(operations.shift(), ['changed', {a:3.5}, 0, {a:3}]);
+  handle.stop();
+
+  // test _no_indices
+
+  c.remove({});
+  handle = c.find({}, {sort: {a: 1}, fields: { a: 1 }}).observe(_.extend(cbs, {_no_indices: true}));
+  c.insert({_id: 'foo', a:1, zoo: "crazy"});
+  test.equal(operations.shift(), ['added', {a:1}, -1, null]);
+  c.update({a:1}, {$set: {a: 2, foobar: "player"}});
+  test.equal(operations.shift(), ['changed', {a:2}, -1, {a:1}]);
+  c.insert({a:10, b:123.45});
+  test.equal(operations.shift(), ['added', {a:10}, -1, null]);
+  c.update({}, {$inc: {a: 1, b:2}}, {multi: true});
+  test.equal(operations.shift(), ['changed', {a:3}, -1, {a:2}]);
+  test.equal(operations.shift(), ['changed', {a:11}, -1, {a:10}]);
+  c.update({a:11, b:125.45}, {a:1, b:444});
+  test.equal(operations.shift(), ['changed', {a:1}, -1, {a:11}]);
+  test.equal(operations.shift(), ['moved', {a:1}, -1, -1, 'foo']);
+  c.remove({a:2});
+  test.equal(operations.shift(), undefined);
+  c.remove({a:3});
+  test.equal(operations.shift(), ['removed', 'foo', -1, {a:3}]);
+  handle.stop();
+});
+
+
 Tinytest.add("minimongo - ordering", function (test) {
   var shortBinary = EJSON.newBinary(1);
   shortBinary[0] = 128;

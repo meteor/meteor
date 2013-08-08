@@ -317,10 +317,6 @@ _.extend(LocalCollection.Cursor.prototype, {
       _.each(query.results, function (doc, i) {
         var fields = EJSON.clone(doc);
 
-        // Apply projection rules if such exist
-        if (self.projection_f)
-          fields = self.projection_f(fields);
-
         delete fields._id;
         if (ordered)
           query.addedBefore(doc._id, fields, null);
