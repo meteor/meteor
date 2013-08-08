@@ -208,6 +208,7 @@ _extend(DomRange.prototype, {
     for (var n = this.start.nextSibling;
          n && n !== afterNode;
          n = n.nextSibling) {
+      // don't remove yet since then we'd lose nextSibling
       nodes.push(n);
     }
     _.each(nodes, removeNode);
