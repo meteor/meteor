@@ -9,11 +9,13 @@
 </body>
 
 <template name="leaderboard">
-  <div class="leaderboard">
-    {{#each players}}
-      {{> player}}
-    {{/each}}
-  </div>
+  {{#AnimatedList events="move"}}
+    <div class="leaderboard">
+      {{#each players}}
+        {{> player}}
+      {{/each}}
+    </div>
+  {{/AnimatedList}}
 
   {{! XXX revert back to if selected_name once we have event delegation }}
   <div class="details" style="display: {{upvote_display}}">

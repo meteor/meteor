@@ -170,6 +170,6 @@ AnimatedList = Package.ui.Component.extend({
     var childEls = this.$('*');
     if (childEls.length !== 1)
       throw new Error("#AnimatedList must have precisely one top-level child element");
-    apply(childEls);
+    apply(childEls, this.events && this.events.split(' '));
   }
 });
