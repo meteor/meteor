@@ -408,7 +408,7 @@ var runWebAppServer = function () {
         if (proxyBinding)
           proxyBinding.stop();
         if (configuration && configuration.proxy) {
-          proxyBinding = Galaxy.configureService("proxy", function (proxyService) {
+          proxyBinding = Galaxy.configureService(configuration.proxyServiceName || "proxy", function (proxyService) {
             if (proxyService.providers.proxy) {
               var proxyConf;
               if (process.env.ADMIN_APP) {
