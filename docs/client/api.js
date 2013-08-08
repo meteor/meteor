@@ -456,9 +456,9 @@ Template.api.disconnect = {
 };
 
 Template.api.connect = {
-  id: "meteor_connect",
+  id: "ddp_connect",
   name: "DDP.connect(url)",
-  locus: "Client",
+  locus: "Anywhere",
   descr: ["Connect to the server of a different Meteor application to subscribe to its document sets and invoke its remote methods."],
   args: [
     {name: "url",
