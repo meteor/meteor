@@ -81,14 +81,14 @@ Copyright (c) 2011 GoalSmashers.com
 ----------
 progress: https://github.com/visionmedia/node-progress
 qs: https://github.com/visionmedia/node-querystring
-node-debug: https://github.com/visionmedia/debug
+debug: https://github.com/visionmedia/debug
 nib: https://github.com/visionmedia/nib
 bytes: https://github.com/visionmedia/bytes.js
 commander: https://github.com/visionmedia/commander.js
 fresh: https://github.com/visionmedia/node-fresh
 github-url-from-git: https://github.com/visionmedia/node-github-url-from-git
 pause: https://github.com/visionmedia/node-pause
-node-range-parser: https://github.com/visionmedia/node-range-parser
+range-parser: https://github.com/visionmedia/node-range-parser
 send: https://github.com/visionmedia/send
 ----------
 
@@ -237,7 +237,7 @@ Copyright (c) 2010 Robert Kieffer
 
 
 ----------
-ansi.js: https://github.com/TooTallNate/ansi.js
+ansi: https://github.com/TooTallNate/ansi.js
 ----------
 
 Copyright (c) 2012 Nathan Rajlich <nathan@tootallnate.net>
@@ -266,16 +266,16 @@ Copyright (c) 2011 Diogo Costa (costa.h4evr@gmail.com)
 
 ----------
 semver: https://github.com/isaacs/node-semver
-abbrev-js: https://github.com/isaacs/abbrev-js
-node-graceful-fs: https://github.com/isaacs/node-graceful-fs
-node-lru-cache: https://github.com/isaacs/node-lru-cache
+abbrev: https://github.com/isaacs/abbrev-js
+graceful-fs: https://github.com/isaacs/node-graceful-fs
+lru-cache: https://github.com/isaacs/node-lru-cache
 proto-list: https://github.com/isaacs/proto-list
 rimraf: https://github.com/isaacs/rimraf
 minimatch: https://github.com/isaacs/minimatch
-node-ini: https://github.com/isaacs/ini
-node-nopt: https://github.com/isaacs/nopt
-slide-flow-control: https://github.com/isaacs/slide-flow-control
-node-which: https://github.com/isaacs/node-which
+ini: https://github.com/isaacs/ini
+nopt: https://github.com/isaacs/nopt
+slide: https://github.com/isaacs/slide-flow-control
+which: https://github.com/isaacs/node-which
 minimatch: https://github.com/isaacs/minimatch
 ----------
 
@@ -285,10 +285,10 @@ All rights reserved.
 
 ----------
 optimist: https://github.com/substack/node-optimist
-node-mkdirp: https://github.com/substack/node-mkdirp
+mkdirp: https://github.com/substack/node-mkdirp
 wordwrap: https://github.com/substack/node-wordwrap
-node-archy: https://github.com/substack/node-archy
-node-shell-quote: https://github.com/substack/node-shell-quote
+archy: https://github.com/substack/node-archy
+shell-quote: https://github.com/substack/node-shell-quote
 deep-equal: https://github.com/substack/node-deep-equal
 editor: https://github.com/substack/node-editor
 ----------
@@ -304,22 +304,22 @@ Copyright (c) 2011 Dominic Tarr
 
 
 ----------
-node-async: https://github.com/caolan/async
+async: https://github.com/caolan/async
 ----------
 
 Copyright (c) 2010 Caolan McMahon
 
 
 ----------
-node-combined-stream: https://github.com/felixge/node-combined-stream
-node-delayed-stream: https://github.com/felixge/node-delayed-stream
+combined-stream: https://github.com/felixge/node-combined-stream
+delayed-stream: https://github.com/felixge/node-delayed-stream
 ----------
 
 Copyright (c) 2011 Debuggable Limited <felix@debuggable.com>
 
 
 ----------
-node-retry: https://github.com/felixge/node-retry
+retry: https://github.com/felixge/node-retry
 ----------
 
 Copyright (c) 2011:
@@ -327,14 +327,14 @@ Tim Koschützki (tim@debuggable.com)
 Felix Geisendörfer (felix@debuggable.com)
 
 ----------
-node-form-data: https://github.com/felixge/node-form-data
+form-data: https://github.com/felixge/node-form-data
 ----------
 
 Copyright (c) 2012 Felix Geisendörfer (felix@debuggable.com) and contributors
 
 
 ----------
-node-kexec: https://github.com/jprichardson/node-kexec
+kexec: https://github.com/jprichardson/node-kexec
 ----------
 
 Copyright (c) 2011-2012 JP Richardson
@@ -446,7 +446,7 @@ Copyright © 2012-2013 AppsAttic Ltd <chilts@appsattic.com>
 
 
 ----------
-node-http-signature: https://github.com/joyent/node-http-signature
+http-signature: https://github.com/joyent/node-http-signature
 ----------
 
 Copyright Joyent, Inc. All rights reserved.
@@ -754,13 +754,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 
 ----------
-node-tar: https://github.com/isaacs/node-tar
+tar: https://github.com/isaacs/node-tar
 fstream: https://github.com/isaacs/fstream
 fstream-npm: https://github.com/isaacs/fstream-npm
 fstream-ignore: https://github.com/isaacs/fstream-ignore
 read: https://github.com/isaacs/read
 block-stream: https://github.com/isaacs/block-stream
-node-glob: https://github.com/isaacs/node-glob
+glob: https://github.com/isaacs/node-glob
 chownr: https://github.com/isaacs/chownr
 uid-number: https://github.com/isaacs/uid-number
 sigmund: https://github.com/isaacs/sigmund
@@ -1369,7 +1369,7 @@ opener: https://github.com/domenic/opener
 
 
 ----------
-node-stream-buffer: https://github.com/samcday/node-stream-buffer
+stream-buffers: https://github.com/samcday/node-stream-buffer
 ----------
 
 This is free and unencumbered software released into the public domain.
