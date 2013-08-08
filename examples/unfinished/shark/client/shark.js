@@ -1,3 +1,5 @@
+_.extend(Template, window.AnimatedEachTemplate);
+
 Meteor.startup(function () {
   /*
   Meteor.setTimeout(function () {
@@ -56,7 +58,7 @@ Template.buttons({
     Items.remove(item._id);
   },
   'click #move': function () {
-    var item = Random.choice(Items.find().fetch());
+    var item = Random.choice(Items.find({}, {sort: {rank: 1}}).fetch().slice(1, -1));
     if (item) {
       var firstRank = Items.findOne({}, {sort: {rank: 1}}).rank;
       var lastRank = Items.findOne({}, {sort: {rank: -1}}).rank;
@@ -86,6 +88,4 @@ UI.body.attached = function () {
       Items.update(el.$ui.data()._id, {$set: {rank: newRank}});
     }
   });
-
-  AnimatedEach.apply(document.getElementById('list'));
 };

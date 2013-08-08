@@ -5,13 +5,16 @@
 <body>
   {{> buttons}}
 
-  <div id="list">
-    {{! xcxc if there is whitespace between each items and div class=item
-         then removing an element doesn't update the dom }}
-    {{#each items}}<div class="item">{{text}}</div>{{else}}
-      <strong>Empty</strong>
-    {{/each}}
-  </div>
+  {{#AnimatedList}}
+    <div id="list">
+      {{! xcxc if there is whitespace between each items and div class=item
+           then removing an element doesn't update the dom }}
+      {{#each items}}<div class="item">{{text}}</div>{{else}}
+        <strong>Empty</strong>
+      {{/each}}
+    </div>
+  {{/AnimatedList}}
+
 </body>
 
 <template name="buttons">

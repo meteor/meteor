@@ -3,7 +3,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.export('AnimatedEach');
-  api.use('jquery');
+  api.export(['AnimatedList']);
+  api.use(['jquery', 'ui']);
   api.add_files(['animated_each.js'], 'client');
 });

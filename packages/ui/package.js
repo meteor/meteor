@@ -3,7 +3,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.export(['AttributeHandler', 'UI', 'FadeyIf', 'Checkbox']);
+  api.export(['AttributeHandler', 'UI', 'FadeyIf', 'Checkbox', 'Component']);
   api.use('deps');
   api.use('random');
   api.use('ejson');
