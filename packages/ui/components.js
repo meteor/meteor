@@ -27,6 +27,7 @@ UI.HTML = Component.extend({
 UI.If = Component.extend({
   typeName: 'If',
   init: function () {
+    // xcxc explain this?
     this.condition = this.data;
     // content doesn't see the condition as `data`
     delete this.data;
@@ -35,12 +36,60 @@ UI.If = Component.extend({
     // or after)?
   },
   render: function (buf) {
+    // all in rendered()
+  },
+  rendered: function () {
     var self = this;
-    // re-render if and only if condition changes
-    var condition = Deps.isolateValue(function () {
-      return !! self.get('condition');
+    var content =
+          (typeof self.content === 'function' ?
+           self.content() : self.content)
+          || UI.Empty;
+
+    var range = new DomRange;
+    // text nodes here are to avoid problems
+    // from old start/end tracking (copied from each.js)
+    self.append(document.createTextNode(""));
+    self.append(range.getNodes());
+    self.append(document.createTextNode(""));
+
+    var componentAdded = false;
+    Deps.autorun(function () {
+      // re-render if and only if condition changes
+      var condition = Deps.isolateValue(function () {
+        return !! self.get('condition');
+      });
+
+      // xcxc go over all of this with Greenspan, implement unless,
+      // think about transition between content/elseContent other than
+      // the {{#AnimatedList}} ones.
+
+      if (condition) {
+        var comp = content.extend({}); // for new guid, xcxc explain
+        self.add(comp);
+        comp.build();
+        var r = new DomRange;
+        r.add(_.toArray(comp._offscreen.childNodes));
+        comp._offscreen = null;
+        comp.isAttached = true;
+        range.add(r);
+        componentAdded = true;
+      } else {
+        if (componentAdded) {
+          // xcxc we never remove the component. is that a problem?
+          // (if there is an outro animation we don't even know when
+          // it's safe to do so). For example, in the sample shark app
+          // run: Meteor.setInterval(function () {
+          // Session.set("showFooter", !Session.get("showFooter")) },
+          // 200);
+          //
+          // notably, each also does not remove the component. does
+          // this mean we have multiple deps computations in the
+          // background that are not used?
+          range.removeAll();
+          componentAdded = false;
+        }
+      }
     });
-    buf.write(condition ? self.content : self.elseContent);
   }
 });
 
@@ -56,6 +105,7 @@ UI.Unless = Component.extend({
     var condition = Deps.isolateValue(function () {
       return !! self.get('condition');
     });
+
     buf.write(condition ? self.elseContent : self.content);
   }
 });

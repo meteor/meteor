@@ -353,6 +353,8 @@ _extend(DomRange.prototype, {
 UI.Each = Component.extend({
   typeName: 'Each',
   render: function (buf) {
+    // xcxc does this work with server-side rendering?
+
     // do nothing
   },
   rendered: function () {

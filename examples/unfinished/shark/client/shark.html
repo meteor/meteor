@@ -6,6 +6,7 @@
   {{> buttons}}
 
   {{#AnimatedList}}
+
     <div id="list">
       {{#each items}}
         <div class="item">
@@ -14,7 +15,14 @@
       {{else}}
         <strong>Empty</strong>
       {{/each}}
+
+      {{#if showFooter}}
+        <div class="footer">
+          A footer. Counter: {{counter}}
+        </div>
+      {{/if}}
     </div>
+
   {{/AnimatedList}}
 
 </body>

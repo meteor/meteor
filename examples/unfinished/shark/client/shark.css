@@ -4,11 +4,18 @@
 
 #list div {
   padding: 10px;
-  background: #eee;
   border: 1px solid #bbb;
   margin: 0 8px 8px 8px; /* xcxc we don't support top margins because of "the overlap problem" */
   font-weight: bold;
   cursor: move;
   width: 400px;
+}
+
+#list div.item {
+  background: #eee;
+}
+
+#list div.footer {
+  background: #39b;
 }
 
