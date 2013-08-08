@@ -1,4 +1,6 @@
 // XXX another full pass on this all.
+$.fx.speeds._default = 2000;
+
 AnimatedEach = {
   apply: function (el, events) {
     events = events || ['insert', 'remove', 'move'];

@@ -66,8 +66,6 @@ Template.buttons({
   }
 });
 
-$.fx.speeds._default = 2000;
-
 // xcxc `UI.body.rendered` didn't work. Why?
 UI.body.attached = function () {
   $('#list').sortable({
