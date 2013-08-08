@@ -6,21 +6,24 @@
 // not a separate property on the DOM element.
 
 var removeNode = function (n) {
-  if (n.nodeType === 1 && n.parentNode.$uihooks && n.parentNode.$uihooks.removeElement)
+  if (n.nodeType === 1 &&
+      n.parentNode.$uihooks && n.parentNode.$uihooks.removeElement)
     n.parentNode.$uihooks.removeElement(n);
   else
     n.parentNode.removeChild(n);
 };
 
 var insertNode = function (n, parent, next) {
-  if (n.nodeType === 1 && parent.$uihooks && parent.$uihooks.insertElement)
+  if (n.nodeType === 1 &&
+      parent.$uihooks && parent.$uihooks.insertElement)
     parent.$uihooks.insertElement(n, parent, next);
   else
     parent.insertBefore(n, next || null); // xcxc why `|| null`
 };
 
 var moveNode = function (n, parent, next) {
-  if (n.nodeType === 1 && parent.$uihooks && parent.$uihooks.moveElement)
+  if (n.nodeType === 1 &&
+      parent.$uihooks && parent.$uihooks.moveElement)
     parent.$uihooks.moveElement(n, parent, next);
   else
     parent.insertBefore(n, next || null); // xcxc why `|| null`
@@ -204,8 +207,10 @@ _extend(DomRange.prototype, {
     var nodes = [];
     for (var n = this.start.nextSibling;
          n && n !== afterNode;
-         n = n.nextSibling)
-      removeNode(n);
+         n = n.nextSibling) {
+      nodes.push(n);
+    }
+    _.each(nodes, removeNode);
 
     this.children = {};
   },
