@@ -132,7 +132,7 @@ AnimatedEach = {
           newPositionPlaceholder.css({visibility: 'hidden'});
           animateIn(newPositionPlaceholder[0], parent, next);
 
-          var oldPositionPlacePlaceholder = $n.clone();
+          var oldPositionPlaceholder = $n.clone();
           $n.css({
             position: 'absolute',
             top: pos.top,
@@ -141,16 +141,16 @@ AnimatedEach = {
 
           var clonePos = newPositionPlaceholder.position();
 
-          oldPositionPlacePlaceholder.css({visibility: 'hidden'});
-          parent.insertBefore(oldPositionPlacePlaceholder[0], $n.next()[0]);
-          animateOut(oldPositionPlacePlaceholder[0]);
+          oldPositionPlaceholder.css({visibility: 'hidden'});
+          parent.insertBefore(oldPositionPlaceholder[0], $n.next()[0]);
+          animateOut(oldPositionPlaceholder[0]);
 
           $n.animate({
             top: clonePos.top,
             left: clonePos.left
           }, function () {
             newPositionPlaceholder.remove();
-            $n.css({position: "static"});
+            $n.removeAttr('style'); // xcxc we shouldn't clear all styles, only positioning
             parent.insertBefore(n, next);
             dequeue();
           });
