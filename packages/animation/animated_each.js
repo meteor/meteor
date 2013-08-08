@@ -94,7 +94,9 @@ var apply = function (el, events) {
   // xcxc chained hooks?
   $(el)[0].$uihooks = {};
 
-  if (_.contains(events, 'insert')) {
+  // xcxc make these events accept functions, so that we can not
+  // animate initial data but still animate subsequent inserts
+  if (_.contains(events, 'insert')) { // xcxc insert -> add
     $(el)[0].$uihooks.insertElement = function (n, parent, next) {
       runOrQueueIfMoving(function () {
         var onComplete = dequeuePlanned ? null : dequeue;
@@ -120,13 +122,14 @@ var apply = function (el, events) {
       runOrQueue(function () {
         moveActive = true;
 
-        // - make an empty clone of `n` that will animate out of existence
+        // - make an empty clone of `n` that will animate out of
+        // - existence
         //
-        // - make an empty clone of `n` that will animate into existence
-        // - at the desired new position
+        // - make an empty clone of `n` that will animate into
+        // - existence at the desired new position
         //
-        // - give `n` absolute positioning, and move it to its desired
-        // - new position
+        // - give `n` absolute positioning, and animate it to its
+        // - desired new position
         var $n = $(n);
         var pos = $n.position();
 
@@ -147,13 +150,17 @@ var apply = function (el, events) {
         parent.insertBefore(oldPositionPlaceholder[0], $n.next()[0]);
         animateOut(oldPositionPlaceholder[0]);
 
+        // Move `n` in the DOM before starting the
+        // animation. Otherwise it won't become contained in the
+        // DomRange currently surrounding it.
+        parent.insertBefore(n, next);
+
         $n.animate({
           top: clonePos.top,
           left: clonePos.left
         }, function () {
           newPositionPlaceholder.remove();
           $n.removeAttr('style'); // xcxc we shouldn't clear all styles, only positioning
-          parent.insertBefore(n, next);
           dequeue();
         });
       });
