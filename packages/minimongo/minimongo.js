@@ -1090,7 +1090,7 @@ LocalCollection._compileProjection = function (fields) {
           docTarget = docTarget[key];
         }
 
-        if (keyPath.length > 0 && _.has(docTarget, _.last(keyPath)))
+        if (keyPath.length > 0 && docTarget && _.has(docTarget, _.last(keyPath)))
           target[_.last(keyPath)] = docTarget[_.last(keyPath)];
       });
 
