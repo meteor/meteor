@@ -130,9 +130,6 @@ exports.deleteApp = function (app, context) {
 //     so we can be careful to not rely on any of the app dir context when
 //     in --star mode.
 exports.deploy = function (options) {
-  var galaxy = getGalaxy(options.context);
-  var Package = getPackage(options.context);
-
   var tmpdir = files.mkdtemp('deploy');
   var buildDir = path.join(tmpdir, 'build');
   var topLevelDirName = path.basename(options.appDir);
@@ -165,6 +162,10 @@ exports.deploy = function (options) {
     starball = options.starball;
   }
   process.stdout.write('Uploading...\n');
+
+
+  var galaxy = getGalaxy(options.context);
+  var Package = getPackage(options.context);
 
   var created = true;
   var appConfig = {
