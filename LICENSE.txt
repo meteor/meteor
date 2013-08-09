@@ -508,6 +508,14 @@ xml2js: https://github.com/Leonidas-from-XIV/node-xml2js
 Copyright 2010, 2011, 2012, 2013. All rights reserved.
 
 
+----------
+ctype: https://github.com/rmustacc/node-ctype
+----------
+
+Copyright 2011, Robert Mustacchi. All rights reserved.
+Copyright 2011, Joyent, Inc. All rights reserved.
+
+
 ==============
 Apache License
 ==============
@@ -2259,6 +2267,33 @@ maintained libraries. The externally maintained libraries used by Node are:
     THE SOFTWARE.
   """
 
+
+
+----------
+jsstyle
+  (Included through the ctype NPM module: lib/node_modules/npm/node_modules/request/node_modules/http-signature/node_modules/ctype/tools/jsstyle)
+----------
+
+The contents of this file are subject to the terms of the
+Common Development and Distribution License (the "License").
+You may not use this file except in compliance with the License.
+
+You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+or http://www.opensolaris.org/os/licensing.
+See the License for the specific language governing permissions
+and limitations under the License.
+
+When distributing Covered Code, include this CDDL HEADER in each
+file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+If applicable, add the following below this CDDL HEADER, with the
+fields enclosed by brackets "[]" replaced with your own identifying
+information: Portions Copyright [yyyy] [name of copyright owner]
+
+
+Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+Use is subject to license terms.
+
+Copyright 2011 Joyent, Inc. All rights reserved.
 
 
 ----------
