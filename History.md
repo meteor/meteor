@@ -3,19 +3,121 @@
 
 ## v0.6.5
 
-* linker!  namespacing, exports, unipackages, weak and unordered dependencies,
-  etc.  sourcemaps (including for coffee). standard-app-packages.  don't
-  implicitly use all app packages. lots of stuff moved from server.js (now
-  boot.js) to webapp package. plugins! packages name restrictions.
+* New package system with package compiler and linker:
 
-* Log
+  * Each package now has it own namespace for variable
+    declarations. Global variables used in a package are limited to
+    package scope.
+
+  * Packages must explicitly declare which symbols they export with
+    `api.export`.
+
+  * Apps and packages only see the exported symbols from packages they
+    explicitly use. For example, if your app uses package A which in
+    turn depends on package B, only package A's symbols will be
+    available in the app.
+
+  * Package names can only contain alphanumeric characters and
+    dashes. Packages with dots, spaces, and underscores must be renamed.
+
+  * Remove hardcoded list of required packages. New default
+    `standard-app-packages` package adds dependencies on the whole
+    Meteor stack. This package can be removed to make an app with only
+    parts of the Meteor stack.
+
+  * Custom app packages in the `packages` directory are no longer
+    automatically used. They must be explicitly added to the app with
+    `meteor add <packagename>`.
+
+  * New "unipackage" format for built packages. Compiled packages are
+    cached and rebuilt only when their source or dependencies change.
+
+  * Add "weak" and "unordered" package dependency modes to allow
+    circular package dependencies and conditional code inclusion.
+
+  * New `registerBuildPlugin` API for declaring compilers,
+    preprocessors, and file extension handlers. The old
+    `register_extension` API is deprecated.
+
+  * Move HTTP serving out of core Meteor into the `webapp` package. This
+    allows building Meteor apps that are not web servers (eg. command
+    line tools, DDP clients, etc.). Connect middlewares can now be
+    registered on the new `WebApp.connectHooks` instead of the old
+    `__meteor_bootstrap__.app`
+
+
+* Add JavaScript sourcemaps in development mode. This includes files
+  compiled by CoffeeScript. XXX how to use.
+
+* Add new `Assets` API and `private` subdirectory for including and
+  accessing static assets on the server. http://docs.meteor.com/#assets
+
+* Add `Meteor.disconnect`. Call this to temporarily disconnect from the
+  server and stop all live data updates. #1151
+
+* Add `Match.Integer` to `check` for 32-bit signed integers.
+
+* New `Log` function which prints with timestamps, color, filenames and
+  linenumbers.
+
+* `Meteor.connect` has been renamed to `DDP.connect` and is now fully
+  supported on the server. Server-to-server DDP connections use
+  websockets, and can be used for both method calls and subscriptions.
+
+* Rename `Meteor.default_connection` to `Meteor.connection` and
+  `Meteor.default_server` to `Meteor.server`.
+
+* Rename `Meteor.http` to `HTTP`.
+
+* `ROOT_URL` may now have a path part. This allows serving multiple
+  Meteor apps on the same domain.
+
+* Allow creating named unmanaged collections with
+  `new Meteor.Collection("name", {connection: null})`
+  XXX note on why useful XXX doc update!
+
+* Include http response in errors from oauth providers. #1246
+
+* The `observe` callback `movedTo` now has a fourth argument `before`.
+
+* Move NPM control files for packages from `.npm` to
+  `.npm/package`. Also, when removing the last NPM dependency, clean up
+  the `.npm` dir.
+
+* Remove deprecated `Meteor.is_client` and `Meteor.is_server` variables.
+
+* Implement "meteor bundle --debug" #748
+
+* Add `forceApprovalPrompt` option to `Meteor.loginWithGoogle`. #1226
+
+* Make server-side Mongo `insert`s, `update`s, and `remove`s run
+  asynchronously when a callback is passed.
+
+* Improve memory usage when calling `findOne()` on the server.
+
+* Delete login tokens from server when user logs out.
+
+* Rename package compatibility mode option to `add_files` from `raw` to
+  `bare`.
 
 * Fix Mongo selectors of the form: {$regex: /foo/}.
 
-* Calling `findOne()` on the server no longer loads the full query result
-  into memory.
-
 * Fix Spark memory leak.  #1157
+
+* Fix EPIPEs during dev mode hot code reload.
+
+* Fix bug where we would never quiesce if we tried to revive subs that errored
+  out (5e7138d)
+
+* Fix bug where `this.fieldname` in handlebars template might refer to a
+  helper instead of a property of the current data context. #1143
+
+* Fix submit events on IE8. #1191
+
+* Handle `Meteor.loginWithX` being called with a callback but no options. #1181
+
+* Work around a Chrome bug where hitting reload could cause a tab to
+  lose the DDP connection and never recover. #1244
 
 * Upgraded dependencies:
   * Node from 0.8.18 to 0.8.24
@@ -23,55 +125,7 @@
   * CleanCSS from 0.8.3 to 1.0.11
   * Underscore from 1.4.4 to 1.5.1
   * Fibers from 1.0.0 to 1.0.1
-
-* When removing the last NPM dependency, clean up the `.npm` dir. Also, the
-  files move into .npm/package.
-
-* `$ROOT_URL` may now have a path part
-
-* Add Match.Integer
-
-* include http response in errors from oauth providers. #1246
-
-* `new Meteor.Collection("name", {connection: null})` works [does this need a
-  doc change?]
-
-* Make server-side Mongo inserts, updates, and removes run asynchronously when a
-  callback is passed.
-
-* Add new `Assets` API and `private` subdirectory for including and accessing
-  server assets in an application.
-
-* Delete login tokens from server when user logs out.
-
-* Renames (may require doc updates):
-   - `Meteor.default_connection` - `Meteor.connection`
-   - `Meteor.default_server` - `Meteor.server`
-   - `Meteor.connect` - `DDP.connect`
-   - `Meteor.http` - `HTTP`
-
-* The `observe` callback `movedTo` now has the fourth argument `before`.
-
-* The `client/compatibility` thing added in 0.6.3 could be used from package.js
-  by passing the `raw` option to `add_files`; this is renamed to `bare`
-
-* Fix EPIPEs during dev mode hot code reload
-
-* Fix bug where we would never quiesce if we tried to revive subs that errored
-  out (5e7138d)
-
-* Implement "meteor bundle --debug" #748
-
-* Remove deprecated is_client and is_server. XXX check for others.
-
-bugs to describe:
-  #1151 (Meteor.disconnect etc)
-  #1106
-  #1143
-  #1191
-  #1226
-  #1181
-  /sockjs/info cache buster (for Chrome bug)
+  * MongoDB Driver from 1.3.7 to 1.3.17
 
 Patches contributed by GitHub users btipling, mizzao, timhaines and zol.
 
