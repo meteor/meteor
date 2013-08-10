@@ -308,10 +308,10 @@ var toc = [
 
     "HTTP", [
       "HTTP.call",
-      {name: "HTTP.get", id: "meteor_http_get"},
-      {name: "HTTP.post", id: "meteor_http_post"},
-      {name: "HTTP.put", id: "meteor_http_put"},
-      {name: "HTTP.del", id: "meteor_http_del"}
+      {name: "HTTP.get"},
+      {name: "HTTP.post"},
+      {name: "HTTP.put"},
+      {name: "HTTP.del"}
     ],
     "Email", [
       "Email.send"
