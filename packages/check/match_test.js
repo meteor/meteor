@@ -217,3 +217,41 @@ Tinytest.add("check - argument checker", function (test) {
     check(x, Boolean);
   }, true, true);
 });
+
+Tinytest.add("check - Match error path", function (test) {
+  var match = function (value, pattern, expectedPath) {
+    try {
+      check(value, pattern);
+    } catch (err) {
+      if (err.path != expectedPath)
+        test.fail({
+          type: "match-error-path",
+          message: "The path of Match.Error doesn't match.",
+          pattern: JSON.stringify(pattern),
+          value: JSON.stringify(value),
+          path: err.path,
+          expectedPath: expectedPath
+        });
+    }
+  };
+
+  match({ foo: [ { bar: 3 }, {bar: "something"} ] }, { foo: [ { bar: Number } ] }, "foo[1].bar");
+  // Complicated case with arrays, $, whitespace and quotes!
+  match([{ $FoO: { "bar baz\n\"'": 3 } }], [{ $FoO: { "bar baz\n\"'": String } }], "[0].$FoO[\"bar baz\\n\\\"'\"]");
+  // Numbers only, can be accessed w/o quotes
+  match({ "1231": 123 }, { "1231": String }, "[1231]");
+  match({ "1234abcd": 123 }, { "1234abcd": String }, "[\"1234abcd\"]");
+  match({ $set: { people: "nice" } }, { $set: { people: [String] } }, "$set.people");
+  match({ _underscore: "should work" }, { _underscore: Number }, "_underscore");
+  // Nested array looks nice
+  match([[["something", "here"], []], [["string", 123]]], [[[String]]], "[1][0][1]");
+  // Object nested in arrays should look nice, too!
+  match([[[{ foo: "something" }, { foo: "here"}],
+          [{ foo: "asdf" }]],
+         [[{ foo: 123 }]]],
+        [[[{ foo: String }]]], "[1][0][0].foo");
+
+  // JS keyword
+  match({ "return": 0 }, { "return": String }, "[\"return\"]");
+});
+
