@@ -39,6 +39,15 @@ var rejectBadPath = function (p) {
     throw new Error("bad path: " + p);
 };
 
+var parseSpec = function (spec) {
+  var parts = spec.split(':');
+  if (parts.length > 2 || parts.length === 0)
+    throw new Error("Bad package spec: " + spec);
+  var ret = {package: parts[0]};
+  if (parts.length === 2)
+    ret.slice = parts[1];
+  return ret;
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Slice
@@ -78,7 +87,8 @@ var Slice = function (pkg, options) {
   // given package could appear more than once in the list, so code
   // that consumes this value will need to guard appropriately. Each
   // element in the array has keys:
-  // - spec: either 'packagename' or 'packagename.slicename'
+  // - package: the package name
+  // - slice: the slice name (optional)
   // - unordered: If true, we don't want the package's imports and we
   //   don't want to force the package to load before us. We just want
   //   to ensure that it loads if we load.
@@ -199,10 +209,9 @@ _.extend(Slice.prototype, {
     _.each(['uses', 'implies'], function (field) {
       var scrubbed = [];
       _.each(self[field], function (u) {
-        var parts = u.spec.split('.');
-        var pkg = self.pkg.library.get(parts[0], /* throwOnError */ false);
+        var pkg = self.pkg.library.get(u.package, /* throwOnError */ false);
         if (! pkg) {
-          buildmessage.error("no such package: '" + parts[0] + "'");
+          buildmessage.error("no such package: '" + u.package + "'");
           // recover by omitting this package from the field
         } else
           scrubbed.push(u);
@@ -461,7 +470,7 @@ _.extend(Slice.prototype, {
       useGlobalNamespace: isApp,
       combinedServePath: isApp ? null :
         "/packages/" + self.pkg.name +
-        (self.sliceName === "main" ? "" : ("." + self.sliceName)) + ".js",
+        (self.sliceName === "main" ? "" : (":" + self.sliceName)) + ".js",
       name: self.pkg.name || null,
       declaredExports: _.pluck(self.declaredExports, 'name'),
       jsAnalyze: jsAnalyze
@@ -608,7 +617,8 @@ _.extend(Slice.prototype, {
     while (!_.isEmpty(usesToProcess)) {
       var use = usesToProcess.shift();
 
-      var slices = self.pkg.library.getSlices(use.spec, arch);
+      var slices =
+            self.pkg.library.getSlices(_.pick(use, 'package', 'spec'), arch);
       _.each(slices, function (slice) {
         if (_.has(processedSliceId, slice.id))
           return;
@@ -1092,9 +1102,7 @@ _.extend(Package.prototype, {
     var slice = new Slice(self, {
       name: options.sliceName,
       arch: arch,
-      uses: _.map(options.use || [], function (spec) {
-        return { spec: spec };
-      }),
+      uses: _.map(options.use, parseSpec),
       getSourcesFunc: function () { return sources; },
       nodeModulesPath: nodeModulesPath
     });
@@ -1416,10 +1424,10 @@ _.extend(Package.prototype, {
     // symbols exported
     var exports = {client: [], server: []};
 
-    // packages used and implied (keys are 'spec', 'unordered', and 'weak').  an
-    // "implied" package is a package that will be used by a slice which uses
-    // us. (since you can't use a test slice, only the use slice can have
-    // "implies".)
+    // packages used and implied (keys are 'package', 'slice', 'unordered', and
+    // 'weak').  an "implied" package is a package that will be used by a slice
+    // which uses us. (since you can't use a test slice, only the use slice can
+    // have "implies".)
     var uses = {use: {client: [], server: []},
                 test: {client: [], server: []}};
     var implies = {client: [], server: []};
@@ -1526,11 +1534,10 @@ _.extend(Package.prototype, {
               _.each(where, function (w) {
                 if (options.role && options.role !== "use")
                   throw new Error("Role override is no longer supported");
-                uses[role][w].push({
-                  spec: name,
+                uses[role][w].push(_.extend(parseSpec(name), {
                   unordered: options.unordered || false,
                   weak: options.weak || false
-                });
+                }));
               });
             });
           },
@@ -1552,11 +1559,9 @@ _.extend(Package.prototype, {
 
             _.each(names, function (name) {
               _.each(where, function (w) {
-                implies[w].push({
-                  spec: name
-                  // We don't allow weak or unordered implies, since the main
-                  // purpose of imply is to provide imports and plugins.
-                });
+                // We don't allow weak or unordered implies, since the main
+                // purpose of imply is to provide imports and plugins.
+                implies[w].push(parseSpec(name));
               });
             });
           },
@@ -1705,10 +1710,10 @@ _.extend(Package.prototype, {
           // in the "meteor" package.)
           var alreadyDependsOnMeteor =
             !! _.find(uses[role][where], function (u) {
-              return u.spec === "meteor";
+              return u.package === "meteor" && !u.slice;
             });
           if (! alreadyDependsOnMeteor)
-            uses[role][where].unshift({ spec: "meteor" });
+            uses[role][where].unshift({ package: "meteor" });
         }
 
         // Each slice has its own separate WatchSet. This is so that, eg, a test
@@ -1757,9 +1762,7 @@ _.extend(Package.prototype, {
       var slice = new Slice(self, {
         name: sliceName,
         arch: arch,
-        uses: _.map(names, function (name) {
-          return { spec: name };
-        })
+        uses: _.map(names, parseSpec)
       });
       self.slices.push(slice);
 
@@ -2057,18 +2060,8 @@ _.extend(Package.prototype, {
         arch: sliceMeta.arch,
         watchSet: sliceWatchSets[sliceMeta.path],
         nodeModulesPath: nodeModulesPath,
-        uses: _.map(sliceJson.uses, function (u) {
-          return {
-            spec: u['package'] + (u.slice ? "." + u.slice : ""),
-            unordered: u.unordered,
-            weak: u.weak
-          };
-        }),
-        implies: _.map(sliceJson.implies, function (u) {
-          return {
-            spec: u['package'] + (u.slice ? "." + u.slice : "")
-          };
-        })
+        uses: sliceJson.uses,
+        implies: sliceJson.implies
       });
 
       slice.isBuilt = true;
@@ -2268,26 +2261,16 @@ _.extend(Package.prototype, {
           noExports: slice.noExports || undefined,
           packageVariables: slice.packageVariables,
           uses: _.map(slice.uses, function (u) {
-            var specParts = u.spec.split('.');
-            if (specParts.length > 2)
-              throw new Error("Bad package spec: " + u.spec);
             return {
-              'package': specParts[0],
-              slice: specParts[1] || undefined,
+              'package': u.package,
+              slice: u.slice || undefined,
+              // For cosmetic value, leave false values for these options out of
+              // the JSON file.
               unordered: u.unordered || undefined,
               weak: u.weak || undefined
             };
           }),
-          implies: (_.isEmpty(slice.implies) ? undefined :
-                    _.map(slice.implies, function (u) {
-                      var specParts = u.spec.split('.');
-                      if (specParts.length > 2)
-                        throw new Error("Bad package spec: " + u.spec);
-                      return {
-                        'package': specParts[0],
-                        slice: specParts[1] || undefined
-                      };
-                    })),
+          implies: (_.isEmpty(slice.implies) ? undefined : slice.implies),
           node_modules: slice.nodeModulesPath ? 'npm/node_modules' : undefined,
           resources: []
         };
@@ -2399,5 +2382,6 @@ _.extend(Package.prototype, {
 
 var packages = exports;
 _.extend(exports, {
-  Package: Package
+  Package: Package,
+  parseSpec: parseSpec
 });

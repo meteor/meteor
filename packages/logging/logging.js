@@ -98,7 +98,7 @@ Log._getCallerDetails = function () {
     }
 
     // XXX probably wants to be / or .js in case no source maps
-    if (!line.match(/packages\/logging(?:\/|(?:\.tests)?\.js)/))
+    if (!line.match(/packages\/logging(?:\/|(?::tests)?\.js)/))
       break;
   }
 
