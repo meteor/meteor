@@ -175,15 +175,12 @@ _.extend(Library.prototype, {
       return self.loadedPackages[name].pkg;
     }
 
-    // Check for invalid package names. Currently package names can only
-    // contain ASCII alphanumerics and dash, and must contain at least
-    // one non-digit-or-dash.
-    //
-    // We don't support '.' because it is used as the separator between
-    // a package name and a slice. This might want to change.
+    // Check for invalid package names. Currently package names can only contain
+    // ASCII alphanumerics, dash, and dot, and must contain at least one
+    // letter.
     //
     // XXX revisit this later. What about unicode package names?
-    if (/[^A-Za-z0-9\-]/.test(name) || !/[A-Za-z]/.test(name) ) {
+    if (/[^A-Za-z0-9.-]/.test(name) || !/[A-Za-z]/.test(name) ) {
       if (throwOnError === false)
         return null;
       throw new Error("Invalid package name: " + name);
@@ -284,29 +281,21 @@ _.extend(Library.prototype, {
     return pkg;
   },
 
-  // Given a slice set spec -- either a package name like "ddp", or a
-  // particular slice within the package like "ddp.client" -- return
-  // the list of matching slices (as an array of Slice objects) for a
-  // given architecture.
+  // Given a slice set spec -- either a package name like "ddp", or a particular
+  // slice within the package like "ddp:client", or a parsed object like
+  // {package: "ddp", slice: "client"} -- return the list of matching slices (as
+  // an array of Slice objects) for a given architecture.
   getSlices: function (spec, arch) {
     var self = this;
-    var parts = spec.split('.');
 
-    if (parts.length === 1) {
-      var pkg = self.get(parts[0], true);
+    if (typeof spec === "string")
+      spec = packages.parseSpec(spec);
+
+    var pkg = self.get(spec.package, true);
+    if (spec.slice)
+      return [pkg.getSingleSlice(spec.slice, arch)];
+    else
       return pkg.getDefaultSlices(arch);
-    }
-
-    else if (parts.length === 2) {
-      var pkg = self.get(parts[0], true);
-      return [pkg.getSingleSlice(parts[1], arch)];
-    }
-
-    else {
-      // XXX figure out if this is user-visible and if so, improve the
-      // message
-      throw new Error("Bad slice spec");
-    }
   },
 
   // Register local package directories with a watchSet. We want to know if a
