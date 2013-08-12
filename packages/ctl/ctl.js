@@ -46,6 +46,9 @@ Ctl.Commands.push({
 
       var proxyConfig;
       var bindPathPrefix = "";
+      if (appConfig.admin) {
+        bindPathPrefix = "/" + Ctl.myAppName();
+      }
 
 
       // XXX args? env?

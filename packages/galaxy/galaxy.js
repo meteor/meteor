@@ -69,8 +69,9 @@ try {
 };
 
 Galaxy.getAppConfig = function () {
-  if (!subFuture.isResolved() && staticAppConfig)
+  if (!subFuture.isResolved() && staticAppConfig) {
     return staticAppConfig;
+  }
   subFuture.wait();
   var myApp = OneAppApps.findOne();
   if (myApp)

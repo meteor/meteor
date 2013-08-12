@@ -412,7 +412,7 @@ var runWebAppServer = function () {
               var proxyConf;
               if (process.env.ADMIN_APP) {
                 proxyConf = {
-                  securePort: null,
+                  securePort: 44333,
                   insecurePort: 9414,
                   bindHost: "localhost",
                   bindPathPrefix: "/" + process.env.GALAXY_APP
