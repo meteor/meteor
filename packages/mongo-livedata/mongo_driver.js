@@ -89,6 +89,14 @@ MongoConnection = function (url) {
   self._connectCallbacks = [];
   self._liveResultsSets = {};
 
+  // track how many successive failure have occured. Use this to detect
+  // when the mongo connection has gone south and may not recover.
+  //
+  // how many read requests have failed.
+  self._failedPolls = 0;
+  // when was the first time a read request failed.
+  self._firstFailedPoll = null;
+
   var options = {db: {safe: true}};
 
   // Set autoReconnect to true, unless passed on the URL. Why someone
@@ -894,7 +902,27 @@ _.extend(LiveResultsSet.prototype, {
       self._synchronousCursor = self._mongoHandle._createSynchronousCursor(
         self._cursorDescription, false /* !useTransform */);
     }
-    var newResults = self._synchronousCursor.getRawObjects(self._ordered);
+
+    // XXX try
+    try {
+      var newResults = self._synchronousCursor.getRawObjects(self._ordered);
+      self._mongoHandle._failedPolls = 0;
+      self._mongoHandle._firstFailedPoll = null;
+    } catch (e) {
+      console.log("XXX", e);
+      if (self._mongoHandle._failedPolls === 0)
+        self._mongoHandle._firstFailedPoll = +(new Date);
+      self._mongoHandle._failedPolls++;
+
+      if (self._mongoHandle._failedPolls >= 20 &&
+          self._mongoHandle._firstFailedPoll + 60*1000 < +(new Date)) {
+        Meteor.defer(function () {
+          // XXX exit 
+          throw new Error("XXX mongo dead for a while");
+        });
+      }
+      throw e;
+    }
     var oldResults = self._results;
 
     // Run diffs. (This can yield too.)
