@@ -1,5 +1,3 @@
-_.extend(Template, window.AnimatedEachTemplate);
-
 Meteor.startup(function () {
   /*
   Meteor.setTimeout(function () {
