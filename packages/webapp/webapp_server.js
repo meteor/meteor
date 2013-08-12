@@ -395,8 +395,7 @@ var runWebAppServer = function () {
 
     // only start listening after all the startup code has run.
     var localPort = parseInt(process.env.PORT) || 0;
-    var route = process.env.ROUTE;
-    var host = route && route.split(":")[0];
+    var host = process.env.BIND_IP;
     var localIp = host || '0.0.0.0';
     httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
       if (argv.keepalive || true)

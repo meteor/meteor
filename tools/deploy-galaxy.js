@@ -175,7 +175,7 @@ exports.deploy = function (options) {
 
   var created = true;
   var appConfig = {
-      METEOR_SETTINGS: options.settings
+      settings: options.settings
   };
 
   if (options.admin)
