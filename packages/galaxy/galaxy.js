@@ -8,7 +8,7 @@ Galaxy.findGalaxy = _.once(function () {
     return null;
   }
 
-  return DDP.connect(process.env.GALAXY || process.env.ULTRAWORLD_DDP_ENDPOINT);
+  return DDP.connect(process.env.ULTRAWORLD_DDP_ENDPOINT || process.env.GALAXY);
 });
 
 
@@ -30,8 +30,9 @@ Meteor.startup(function () {
       connection: ultra
     });
     Services = new Meteor.Collection('services', {
-      manager: ultra
+      connection: ultra
     });
+    // allow us to block on the collections being ready
     collectionFuture.return();
   }
 });
@@ -97,6 +98,8 @@ Galaxy.configurePackage = function (packageName, configure) {
   // This is not required to finish, so defer it so it doesn't block anything
   // else.
   Meteor.defer( function () {
+    // there's a Meteor.startup() that produces the various collections, make
+    // sure it runs first before we continue.
     collectionFuture.wait();
     subHandle = OneAppApps.find().observe({
       added: configureIfDifferent,
@@ -116,6 +119,8 @@ Galaxy.configurePackage = function (packageName, configure) {
 
 Galaxy.configureService = function (serviceName, configure) {
   if (ultra) {
+    // there's a Meteor.startup() that produces the various collections, make
+    // sure it runs first before we continue.
     collectionFuture.wait();
     ultra.subscribe('servicesByName', serviceName);
     return Services.find({name: serviceName}).observe({
