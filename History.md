@@ -32,7 +32,7 @@
   * New "unipackage" format for built packages. Compiled packages are
     cached and rebuilt only when their source or dependencies change.
 
-  * Add "weak" and "unordered" package dependency modes to allow
+  * Add "unordered" and "weak" package dependency modes to allow
     circular package dependencies and conditional code inclusion.
 
   * New `registerBuildPlugin` API for declaring compilers,
