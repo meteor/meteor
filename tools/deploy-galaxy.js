@@ -136,6 +136,12 @@ exports.deploy = function (options) {
   var bundlePath = path.join(buildDir, topLevelDirName);
   var bundler = require('./bundler.js');
   var starball;
+
+  // Don't try to connect to galaxy before the bundle is done. Because bundling
+  // doesn't yield, this will cause the connection to timeout. Eventually we'd
+  // like to have bundle yield, so that we can connect (and make sure auth
+  // works) before bundling.
+
   if (!options.starball) {
     process.stdout.write('Deploying ' + options.app + '. Bundling...\n');
     var bundleResult = bundler.bundle(options.appDir, bundlePath,
