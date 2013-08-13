@@ -18,7 +18,7 @@ body {
 .player {
     cursor: pointer;
     padding: 5px;
-    width: 600px;
+    width: 600px; /* xcxc shouldn't be necessary */
 }
 
 .player .name {
