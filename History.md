@@ -73,7 +73,7 @@
 * Add new `Assets` API and `private` subdirectory for including and
   accessing static assets on the server. http://docs.meteor.com/#assets
 
-* Add `Meteor.disconnect`. Call this to temporarily disconnect from the
+* Add `Meteor.disconnect`. Call this to disconnect from the
   server and stop all live data updates. #1151
 
 * Add `Match.Integer` to `check` for 32-bit signed integers.
