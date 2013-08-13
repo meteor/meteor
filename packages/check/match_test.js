@@ -223,6 +223,8 @@ Tinytest.add("check - Match error path", function (test) {
     try {
       check(value, pattern);
     } catch (err) {
+      // XXX just for FF 3.6, its JSON stringification prefers "\u000a" to "\n"
+      err.path = err.path.replace(/\\u000a/, "\\n");
       if (err.path != expectedPath)
         test.fail({
           type: "match-error-path",
