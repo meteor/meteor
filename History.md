@@ -50,7 +50,7 @@
   * Add `api.imply`, which allows one package to "imply" another. If
     package A implies package B, then anything that depends on package
     A automatically depends on package B as well (and receives package
-    B's imports.) This is useful for creating umbrella packages
+    B's imports). This is useful for creating umbrella packages
     (`standard-app-packages`) or sometimes for factoring common code
     out of related packages (`accounts-base`).
 
