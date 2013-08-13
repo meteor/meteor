@@ -47,12 +47,18 @@
     `_transitional_registerBuildPlugin` are not frozen interfaces and
     are subject to change in future releases.
 
-  * Move HTTP serving out of the server bootstrap into the `webapp`
-    package. This allows building Meteor apps that are not web servers
-    (eg. command line tools, DDP clients, etc.). Connect middlewares can
-    now be registered on the new `WebApp.connectHooks` instead of the
-    old `__meteor_bootstrap__.app`.
+  * Add `api.imply`, which allows one package to "imply" another. If
+    package A implies package B, then anything that depends on package
+    A automatically depends on package B as well (and receives package
+    B's imports.) This is useful for creating umbrella packages
+    (`standard-app-packages`) or sometimes for factoring common code
+    out of related packages (`accounts-base`).
 
+* Move HTTP serving out of the server bootstrap and into the `webapp`
+  package. This allows building Meteor apps that are not web servers
+  (eg. command line tools, DDP clients, etc.). Connect middlewares can
+  now be registered on the new `WebApp.connectHooks` instead of the
+  old `__meteor_bootstrap__.app`.
 
 * The entire Meteor build process now has first-class source map
   support. A source map is maintained for every source file as it
