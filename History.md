@@ -10,44 +10,59 @@
     package scope.
 
   * Packages must explicitly declare which symbols they export with
-    `api.export`.
+    `api.export` in `package.js`.
 
   * Apps and packages only see the exported symbols from packages they
     explicitly use. For example, if your app uses package A which in
     turn depends on package B, only package A's symbols will be
     available in the app.
 
-  * Package names can only contain alphanumeric characters and
-    dashes. Packages with dots, spaces, and underscores must be renamed.
+  * Package names can only contain alphanumeric characters, dashes, and
+    dots. Packages with spaces and underscores must be renamed.
 
   * Remove hardcoded list of required packages. New default
-    `standard-app-packages` package adds dependencies on the whole
-    Meteor stack. This package can be removed to make an app with only
-    parts of the Meteor stack.
+    `standard-app-packages` package adds dependencies on the core Meteor
+    stack. This package can be removed to make an app with only parts of
+    the Meteor stack. `standard-app-packages` will be automatically
+    added to a project when it is updated to Meteor 0.6.5.
 
   * Custom app packages in the `packages` directory are no longer
     automatically used. They must be explicitly added to the app with
-    `meteor add <packagename>`.
+    `meteor add <packagename>`. To help with the transition, all
+    packages in the `packages` directory will be automatically added to
+    the project when it is updated to Meteor 0.6.5.
 
-  * New "unipackage" format for built packages. Compiled packages are
+  * New "unipackage" on-disk format for built packages. Compiled packages are
     cached and rebuilt only when their source or dependencies change.
 
   * Add "unordered" and "weak" package dependency modes to allow
     circular package dependencies and conditional code inclusion.
 
-  * New `registerBuildPlugin` API for declaring compilers,
-    preprocessors, and file extension handlers. The old
-    `register_extension` API is deprecated.
+  * New API (`_transitional_registerBuildPlugin`) for declaring
+    compilers, preprocessors, and file extension handlers. These new
+    build plugins are full compilation targets in their own right, and
+    have their own namespace, source files, NPM requirements, and package
+    dependencies. The old `register_extension` API is deprecated. Please
+    note that the `package.js` format and especially
+    `_transitional_registerBuildPlugin` are not frozen interfaces and
+    are subject to change in future releases.
 
-  * Move HTTP serving out of core Meteor into the `webapp` package. This
-    allows building Meteor apps that are not web servers (eg. command
-    line tools, DDP clients, etc.). Connect middlewares can now be
-    registered on the new `WebApp.connectHooks` instead of the old
-    `__meteor_bootstrap__.app`
+  * Move HTTP serving out of the server bootstrap into the `webapp`
+    package. This allows building Meteor apps that are not web servers
+    (eg. command line tools, DDP clients, etc.). Connect middlewares can
+    now be registered on the new `WebApp.connectHooks` instead of the
+    old `__meteor_bootstrap__.app`.
 
 
-* Add JavaScript sourcemaps in development mode. This includes files
-  compiled by CoffeeScript. XXX how to use.
+* The entire Meteor build process now has first-class source map
+  support. A source map is maintained for every source file as it
+  passes through the build pipeline. Currently, the source maps are
+  only served in development mode. Not all web browsers support source
+  maps yet and for those that do, you may have to turn on an option to
+  enable them. Source maps will always be used when reporting
+  exceptions on the server.
+
+* Update the `coffeescript` package to generate source maps.
 
 * Add new `Assets` API and `private` subdirectory for including and
   accessing static assets on the server. http://docs.meteor.com/#assets
@@ -56,9 +71,6 @@
   server and stop all live data updates. #1151
 
 * Add `Match.Integer` to `check` for 32-bit signed integers.
-
-* New `Log` function which prints with timestamps, color, filenames and
-  linenumbers.
 
 * `Meteor.connect` has been renamed to `DDP.connect` and is now fully
   supported on the server. Server-to-server DDP connections use
@@ -72,17 +84,20 @@
 * `ROOT_URL` may now have a path part. This allows serving multiple
   Meteor apps on the same domain.
 
-* Allow creating named unmanaged collections with
-  `new Meteor.Collection("name", {connection: null})`
-  XXX note on why useful XXX doc update!
+* Support creating named unmanaged collections with
+  `new Meteor.Collection("name", {connection: null})`.
+
+* New `Log` function in the `logging` package which prints with
+  timestamps, color, filenames and linenumbers.
 
 * Include http response in errors from oauth providers. #1246
 
 * The `observe` callback `movedTo` now has a fourth argument `before`.
 
 * Move NPM control files for packages from `.npm` to
-  `.npm/package`. Also, when removing the last NPM dependency, clean up
-  the `.npm` dir.
+  `.npm/package`. This is to allow build plugins such as `coffeescript`
+  to depend on NPM packages. Also, when removing the last NPM
+  dependency, clean up the `.npm` dir.
 
 * Remove deprecated `Meteor.is_client` and `Meteor.is_server` variables.
 
