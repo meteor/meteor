@@ -452,7 +452,8 @@ var runWebAppServer = function () {
         // bind via the proxy, but we'll have to find it ourselves via
         // ultraworld.
         var galaxy = findGalaxy();
-        galaxy.subscribe('servicesByName', 'proxy');
+        var proxyServiceName = deployConfig.proxyServiceName || "proxy";
+        galaxy.subscribe('servicesByName', proxyServiceName);
         var Proxies = new Meteor.Collection('services', {
           manager: galaxy
         });
@@ -462,7 +463,7 @@ var runWebAppServer = function () {
             WebAppInternals.bindToProxy(_.extend({
               proxyEndpoint: proxyService.providers.proxy
             }, bind.viaProxy));
-          }
+         }
         };
         Proxies.find().observe({
           added: doBinding,
@@ -520,6 +521,29 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
   var route = process.env.ROUTE;
   var host = route.split(":")[0];
   var port = +route.split(":")[1];
+
+  var completedBindings = {
+    ddp: false,
+    http: false,
+    https: proxyConfig.securePort !== null ? false : undefined
+  };
+
+  var bindingDoneCallback = function (binding) {
+    return function (err, resp) {
+      if (err)
+        throw err;
+
+      completedBindings[binding] = true;
+      var completedAll = _.every(_.keys(completedBindings), function (binding) {
+        return (completedBindings[binding] ||
+          completedBindings[binding] === undefined);
+      });
+      if (completedAll)
+        Log("Bound to proxy.");
+      return completedAll;
+    };
+  };
+
   proxy.call('bindDdp', {
     pid: pid,
     bindTo: ddpBindTo,
@@ -528,7 +552,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
       port: port,
       pathPrefix: bindPathPrefix + '/websocket'
     }
-  });
+  }, bindingDoneCallback("ddp"));
   proxy.call('bindHttp', {
     pid: pid,
     bindTo: {
@@ -541,7 +565,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
       port: port,
       pathPrefix: bindPathPrefix
     }
-  });
+  }, bindingDoneCallback("http"));
   if (proxyConfig.securePort !== null) {
     proxy.call('bindHttp', {
       pid: pid,
@@ -556,9 +580,8 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
         port: port,
         pathPrefix: bindPathPrefix
       }
-    });
+    }, bindingDoneCallback("https"));
   }
-  Log("Bound to proxy");
 };
 
 runWebAppServer();

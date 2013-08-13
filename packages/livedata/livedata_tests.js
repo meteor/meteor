@@ -600,6 +600,8 @@ if (Meteor.isClient) {
     ]);
 }
 
+var selfUrl = Meteor.isServer
+      ? Meteor.absoluteUrl() : Meteor._relativeToSiteRootUrl('/');
 
 if (Meteor.isServer) {
   Meteor.methods({
@@ -613,7 +615,7 @@ if (Meteor.isServer) {
   testAsyncMulti("livedata - connect works from both client and server", [
     function (test, expect) {
       var self = this;
-      self.conn = DDP.connect(Meteor.absoluteUrl());
+      self.conn = DDP.connect(selfUrl);
       pollUntil(expect, function () {
         return self.conn.status().connected;
       }, 10000);
@@ -637,7 +639,7 @@ if (Meteor.isServer) {
     testAsyncMulti("livedata - method call on server blocks in a fiber way", [
       function (test, expect) {
         var self = this;
-        self.conn = DDP.connect(Meteor.absoluteUrl());
+        self.conn = DDP.connect(selfUrl);
         pollUntil(expect, function () {
           return self.conn.status().connected;
         }, 10000);

@@ -561,9 +561,10 @@ exports.run = function (context, options) {
     Status.running = true;
 
 
-    var rootUrl = process.env.ROOT_URL || ('http://localhost:' + outerPort);
+    var rootUrl = process.env.ROOT_URL ||
+          ('http://localhost:' + outerPort + '/');
     if (firstRun) {
-      process.stdout.write("=> Meteor server running on: " + rootUrl + "/\n");
+      process.stdout.write("=> Meteor server running on: " + rootUrl + "\n");
       firstRun = false;
       lastThingThatPrintedWasRestartMessage = false;
     } else {
