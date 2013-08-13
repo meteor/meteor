@@ -91,13 +91,16 @@ var toc = [
     "Resources"
   ],
   "Concepts", [
+    "What is Meteor?",
     "Structuring your app",
     "Data and security",
     "Reactivity",
     "Live HTML",
     "Templates",
-    "Smart packages",
-    "Deploying"
+    "Using packages",
+    "Namespacing",
+    "Deploying",
+    "Writing packages"
   ],
 
   "API", [
