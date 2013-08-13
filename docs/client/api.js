@@ -456,9 +456,9 @@ Template.api.disconnect = {
 };
 
 Template.api.connect = {
-  id: "meteor_connect",
+  id: "ddp_connect",
   name: "DDP.connect(url)",
-  locus: "Client",
+  locus: "Anywhere",
   descr: ["Connect to the server of a different Meteor application to subscribe to its document sets and invoke its remote methods."],
   args: [
     {name: "url",
@@ -1584,7 +1584,7 @@ Template.api.equals = {
 };
 
 Template.api.httpcall = {
-  id: "meteor_http_call",
+  id: "http_call",
   name: "HTTP.call(method, url [, options] [, asyncCallback])",
   locus: "Anywhere",
   descr: ["Perform an outbound HTTP request."],
@@ -1631,28 +1631,28 @@ Template.api.httpcall = {
 };
 
 Template.api.http_get = {
-  id: "meteor_http_get",
+  id: "http_get",
   name: "HTTP.get(url, [options], [asyncCallback])",
   locus: "Anywhere",
   descr: ["Send an HTTP GET request.  Equivalent to `HTTP.call(\"GET\", ...)`."]
 };
 
 Template.api.http_post = {
-  id: "meteor_http_post",
+  id: "http_post",
   name: "HTTP.post(url, [options], [asyncCallback])",
   locus: "Anywhere",
   descr: ["Send an HTTP POST request.  Equivalent to `HTTP.call(\"POST\", ...)`."]
 };
 
 Template.api.http_put = {
-  id: "meteor_http_put",
+  id: "http_put",
   name: "HTTP.put(url, [options], [asyncCallback])",
   locus: "Anywhere",
   descr: ["Send an HTTP PUT request.  Equivalent to `HTTP.call(\"PUT\", ...)`."]
 };
 
 Template.api.http_del = {
-  id: "meteor_http_del",
+  id: "http_del",
   name: "HTTP.del(url, [options], [asyncCallback])",
   locus: "Anywhere",
   descr: ["Send an HTTP DELETE request.  Equivalent to `HTTP.call(\"DELETE\", ...)`.  (Named `del` to avoid conflict with JavaScript's `delete`.)"]
@@ -1849,7 +1849,7 @@ Template.api.assets_getBinary = {
   id: "assets_getBinary",
   name: "Assets.getBinary(assetPath, [asyncCallback])",
   locus: "Server",
-  descr: ["Retrieve the contents of the static server asset as an EJSON Binary."],
+  descr: ["Retrieve the contents of the static server asset as an [EJSON Binary](#ejson_new_binary)."],
   args: [
     {name: "assetPath",
      type: "String",
