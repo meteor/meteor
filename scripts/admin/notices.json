@@ -46,7 +46,7 @@
   {
     "release": "0.6.5",
     "packageNotices": {
-      "http": ["`Meteor.http` has been renamed `HTTP`."]
+      "http": ["`Meteor.http` has been renamed to `HTTP`."]
     }
   },
   {
