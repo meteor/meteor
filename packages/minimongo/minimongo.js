@@ -1030,8 +1030,8 @@ LocalCollection._compileProjection = function (fields) {
     throw MinimongoError("fields option must be an object");
 
   // Check passed projection fields' keys:
-  // If you have two rules such as 'foo.bar' and 'foo.bar.baz', then the first
-  // one becomes unnecessary. If that happens, there is a probability you are
+  // If you have two rules such as 'foo.bar' and 'foo.bar.baz', then the
+  // result becomes ambiguous. If that happens, there is a probability you are
   // doing something wrong, framework should notify you about such mistake
   // earlier on cursor compilation step than later during runtime.
   // Note, that real mongo doesn't do anything about it and the later rule
@@ -1052,7 +1052,9 @@ LocalCollection._compileProjection = function (fields) {
       // check if one key is path-prefix of another (like "abra" and
       // "abra.cadabra", but not "abra" and "abrab.ra")
       if (keyPath !== anotherKeyPath && !idx && keyPath[anotherKeyPath.length] === '.')
-        throw MinimongoError("both " + keyPath + " and " + anotherKeyPath + " found in projection");
+        throw MinimongoError("both " + keyPath + " and " + anotherKeyPath +
+         " found in fields option, using both of them may trigger " +
+         "unexpected behavior. Did you mean to use only one of them?");
     });
   });
 
