@@ -121,9 +121,7 @@ var startProxy = function (outerPort, innerPort, callback) {
         _.each(log, function(val, key) {
           if (val)
             res.write(val);
-          // deal with mixed line endings! XXX
-          if (key !== 'stdout' && key !== 'stderr')
-            res.write("\n");
+          res.write("\n");
         });
       });
 
@@ -192,24 +190,21 @@ var startProxy = function (outerPort, innerPort, callback) {
   p.listen(outerPort, callback);
 };
 
-////////// MongoDB //////////
-
-var logToClients = function (msg) {
+var saveLog = function (msg) {
   serverLog.push(msg);
   if (serverLog.length > 100) {
     serverLog.shift();
   }
+};
 
-  // log to console
-  //
-  // XXX this is a mess. some lines have newlines, and some don't.
-  // this whole thing should be redone. it is the result of doing it
-  // very differently and changing over quickly.
+var logToClients = function (msg) {
+  saveLog(msg);
+
   _.each(msg, function (val, key) {
     if (key === "stdout")
-      process.stdout.write(val);
+      process.stdout.write(val + "\n");
     else if (key === "stderr")
-      process.stderr.write(val);
+      process.stderr.write(val + "\n");
     else
       console.log(val);
   });
@@ -308,6 +303,7 @@ var startServer = function (options) {
 
     var obj = Log.parse(line) || Log.objFromText(line);
     console.log(Log.format(obj, { color:true }));
+    saveLog({stdout: Log.format(obj)});
   });
 
   proc.stderr.setEncoding('utf8');
@@ -315,6 +311,7 @@ var startServer = function (options) {
     if (!line) return;
     var obj = Log.objFromText(line, { level: 'warn', stderr: true });
     console.log(Log.format(obj, { color: true }));
+    saveLog({stderr: Log.format(obj)});
   });
 
   proc.on('close', function (code, signal) {
@@ -535,7 +532,7 @@ exports.run = function (context, options) {
     var watchSet = bundleResult.watchSet;
     if (bundleResult.errors) {
       logToClients({stdout: "=> Errors prevented startup:\n\n" +
-                    bundleResult.errors.formatMessages() + "\n"});
+                    bundleResult.errors.formatMessages()});
       Status.hardCrashed("has errors");
       startWatching(watchSet);
       return;

@@ -1,4 +1,4 @@
-=> Meteor 0.6.4.1: security fix for upstream MongoDB BSON library.
+=> Meteor 0.6.5: namespacing, modularity, new build system, source maps!
 
    This is being downloaded in the background. Update your project
-   to Meteor 0.6.4.1 by running 'meteor update'.
+   to Meteor 0.6.5 by running 'meteor update'.
