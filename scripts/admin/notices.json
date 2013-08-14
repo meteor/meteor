@@ -48,7 +48,7 @@
     "notices": [
       "Any custom application packages in the `packages` directory",
       "must now specify their exported symbols.  See",
-      "http://docs.meteor.com/#writingpackages"
+      "https://docs.meteor.com/#writingpackages"
     ]
   },
   {
