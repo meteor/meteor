@@ -4,9 +4,7 @@
 {{#each stylesheets}}  <link rel="stylesheet" href="##ROOT_URL_PATH_PREFIX##{{this}}">
 {{/each}}
 
-<script type="text/javascript">
-// ##RUNTIME_CONFIG##
-</script>
+##RUNTIME_CONFIG##
 
 {{#each scripts}}  <script type="text/javascript" src="##ROOT_URL_PATH_PREFIX##{{this}}"></script>
 {{/each}}

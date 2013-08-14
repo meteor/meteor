@@ -1,0 +1,25 @@
+<template name="pkg_starter_browser_policy">
+{{#better_markdown}}
+## `starter-browser-policy`
+
+The `starter-browser-policy` package provides a recommended configuration for the
+`browser-policy` package. When you add `starter-browser-policy` to your app, the
+following policies will be enforced by browsers that support the X-Frame-Options
+and Content-Security-Policy headers:
+
+* Only webpages on the same origin as your app can frame your app.
+* Your app can only load content (images, scripts, fonts, etc.) from its own
+origin, except that XMLHttpRequests and WebSocket connections can go to any
+origin.
+* Your app's client code cannot use functions such as `eval()` that convert
+strings to Javascript code.
+
+If your app does not need any inline Javascript such as inline `<script>` tags,
+we recommend that you modify this policy by calling
+`BrowserPolicy.disallowInlineScripts()` on the server. This will result in one
+extra round trip when your app is loaded, but will help prevent cross-site
+scripting attacks by disabling all scripts except those loaded from a `script
+src` attribute.
+
+{{/better_markdown}}
+</template>
