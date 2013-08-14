@@ -1,4 +1,6 @@
-EJSON = {}; // Global!
+EJSON = {};
+EJSONTest = {};
+
 var customTypes = {};
 // Add a custom type, using a method of your choice to get to and
 // from a basic JSON-able representation.  The factory argument
@@ -9,6 +11,7 @@ var customTypes = {};
 // - A toJSONValue() method, so that Meteor can serialize it
 // - a typeName() method, to show how to look it up in our type table.
 // It is okay if these methods are monkey-patched on.
+//
 EJSON.addType = function (name, factory) {
   if (_.has(customTypes, name))
     throw new Error("Type " + name + " already present");
@@ -39,10 +42,10 @@ var builtinConverters = [
         || (obj && _.has(obj, '$Uint8ArrayPolyfill'));
     },
     toJSONValue: function (obj) {
-      return {$binary: EJSON._base64Encode(obj)};
+      return {$binary: base64Encode(obj)};
     },
     fromJSONValue: function (obj) {
-      return EJSON._base64Decode(obj.$binary);
+      return base64Decode(obj.$binary);
     }
   },
   { // Escaping one level
@@ -98,7 +101,7 @@ EJSON._isCustomType = function (obj) {
 };
 
 
-//for both arrays and objects, in-place modification.
+// for both arrays and objects, in-place modification.
 var adjustTypesToJSONValue =
 EJSON._adjustTypesToJSONValue = function (obj) {
   if (obj === null)
@@ -144,9 +147,10 @@ EJSON.toJSONValue = function (item) {
   return item;
 };
 
-//for both arrays and objects. Tries its best to just
+// for both arrays and objects. Tries its best to just
 // use the object you hand it, but may return something
 // different if the object you hand it itself needs changing.
+//
 var adjustTypesFromJSONValue =
 EJSON._adjustTypesFromJSONValue = function (obj) {
   if (obj === null)

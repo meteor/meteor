@@ -1,5 +1,6 @@
-if (typeof ServiceConfiguration === 'undefined')
+if (typeof ServiceConfiguration === 'undefined') {
   ServiceConfiguration = {};
+}
 
 
 // Table containing documents with configuration options for each

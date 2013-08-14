@@ -1,3 +1,5 @@
+Twitter = {};
+
 // Request Twitter credentials for the user
 // @param options {optional}  XXX support options.requestPermissions
 // @param credentialRequestCompleteCallback {Function} Callback function to call on

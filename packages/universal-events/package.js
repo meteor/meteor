@@ -4,8 +4,8 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['underscore'], 'client');
-
+  api.use(['underscore', 'domutils'], 'client');
+  api.export('UniversalEventListener', 'client');
   api.add_files(['listener.js',
                  'events-w3c.js',
                  'events-ie.js'], 'client');
@@ -13,7 +13,7 @@ Package.on_use(function (api) {
 
 Package.on_test(function (api) {
   api.use('tinytest');
-  api.use(['universal-events', 'test-helpers'], 'client');
+  api.use(['universal-events', 'test-helpers', 'underscore'], 'client');
   api.use('domutils');
   api.use('spark');
 

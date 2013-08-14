@@ -1,9 +1,9 @@
 Tinytest.add("srp - good exchange", function(test) {
   var password = 'hi there!';
-  var verifier = Meteor._srp.generateVerifier(password);
+  var verifier = SRP.generateVerifier(password);
 
-  var C = new Meteor._srp.Client(password);
-  var S = new Meteor._srp.Server(verifier);
+  var C = new SRP.Client(password);
+  var S = new SRP.Server(verifier);
 
   var request = C.startExchange();
   var challenge = S.issueChallenge(request);
@@ -16,10 +16,10 @@ Tinytest.add("srp - good exchange", function(test) {
 });
 
 Tinytest.add("srp - bad exchange", function(test) {
-  var verifier = Meteor._srp.generateVerifier('one password');
+  var verifier = SRP.generateVerifier('one password');
 
-  var C = new Meteor._srp.Client('another password');
-  var S = new Meteor._srp.Server(verifier);
+  var C = new SRP.Client('another password');
+  var S = new SRP.Server(verifier);
 
   var request = C.startExchange();
   var challenge = S.issueChallenge(request);
@@ -43,11 +43,11 @@ Tinytest.add("srp - fixed values", function(test) {
   var a = "dc99c646fa4cb7c24314bb6f4ca2d391297acd0dacb0430a13bbf1e37dcf8071";
   var b = "cf878e00c9f2b6aa48a10f66df9706e64fef2ca399f396d65f5b0a27cb8ae237";
 
-  var verifier = Meteor._srp.generateVerifier(
+  var verifier = SRP.generateVerifier(
     password, {identity: identity, salt: salt});
 
-  var C = new Meteor._srp.Client(password, {a: a});
-  var S = new Meteor._srp.Server(verifier, {b: b});
+  var C = new SRP.Client(password, {a: a});
+  var S = new SRP.Server(verifier, {b: b});
 
   var request = C.startExchange();
   test.equal(request.A, "8a75aa61471a92d4c3b5d53698c910af5ef013c42799876c40612d1d5e0dc41d01f669bc022fadcd8a704030483401a1b86b8670191bd9dfb1fb506dd11c688b2f08e9946756263954db2040c1df1894af7af5f839c9215bb445268439157e65e8f100469d575d5d0458e19e8bd4dd4ea2c0b30b1b3f4f39264de4ec596e0bb7");
@@ -88,14 +88,14 @@ Tinytest.add("srp - options", function(test) {
     b: "2"
   }, baseOptions);
 
-  var verifier = Meteor._srp.generateVerifier('c', verifierOptions);;
+  var verifier = SRP.generateVerifier('c', verifierOptions);;
 
   test.equal(verifier.identity, 'a');
   test.equal(verifier.salt, 'b');
   test.equal(verifier.verifier, '3');
 
-  var C = new Meteor._srp.Client('c', clientOptions);
-  var S = new Meteor._srp.Server(verifier, serverOptions);
+  var C = new SRP.Client('c', clientOptions);
+  var S = new SRP.Server(verifier, serverOptions);
 
   var request = C.startExchange();
   test.equal(request.A, '4');

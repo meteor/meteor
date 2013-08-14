@@ -254,6 +254,19 @@ if (Meteor.isClient) (function () {
         test.equal(err, undefined);
         test.equal(result, null);
       }));
+    },
+    function(test, expect) {
+      var expectLoginError = expect(function (err) {
+        test.isTrue(err);
+      });
+      Meteor.loginWithPassword(username, password2, function (error) {
+        test.equal(error, undefined);
+        test.equal(Meteor.user().username, username);
+        var token = Accounts._storedLoginToken();
+        Meteor.logout(function () {
+          Meteor.loginWithToken(token, expectLoginError);
+        });
+      });
     }
 
   ]);

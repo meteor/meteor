@@ -7,3 +7,4 @@ autopublish
 insecure
 preserve-inputs
 awssum
+standard-app-packages

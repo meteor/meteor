@@ -4,10 +4,16 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use('routepolicy', 'server');
+  api.use('underscore', ['client', 'server']);
+  api.use('random', ['client', 'server']);
+  api.use('check', ['client', 'server']);
+  api.use('webapp', 'server');
+  api.use('accounts-base', ['client', 'server']);
+  // Export Accounts (etc) to packages using this one.
+  api.imply('accounts-base', ['client', 'server']);
   api.use('oauth', 'server');
 
-  api.add_files('oauth_common.js', ['client', 'server']);
+  api.add_files('oauth_common.js');
   api.add_files('oauth_client.js', 'client');
   api.add_files('oauth_server.js', 'server');
 });

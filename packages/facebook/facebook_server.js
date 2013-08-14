@@ -1,3 +1,5 @@
+Facebook = {};
+
 var querystring = Npm.require('querystring');
 
 
@@ -47,7 +49,7 @@ var getTokenResponse = function (query) {
   var responseContent;
   try {
     // Request an access token
-    responseContent = Meteor.http.get(
+    responseContent = HTTP.get(
       "https://graph.facebook.com/oauth/access_token", {
         params: {
           client_id: config.appId,
@@ -57,7 +59,8 @@ var getTokenResponse = function (query) {
         }
       }).content;
   } catch (err) {
-    throw new Error("Failed to complete OAuth handshake with Facebook. " + err.message);
+    throw _.extend(new Error("Failed to complete OAuth handshake with Facebook. " + err.message),
+                   {response: err.response});
   }
 
   // If 'responseContent' parses as JSON, it is an error.
@@ -84,10 +87,11 @@ var getTokenResponse = function (query) {
 
 var getIdentity = function (accessToken) {
   try {
-    return Meteor.http.get("https://graph.facebook.com/me", {
+    return HTTP.get("https://graph.facebook.com/me", {
       params: {access_token: accessToken}}).data;
   } catch (err) {
-    throw new Error("Failed to fetch identity from Facebook. " + err.message);
+    throw _.extend(new Error("Failed to fetch identity from Facebook. " + err.message),
+                   {response: err.response});
   }
 };
 

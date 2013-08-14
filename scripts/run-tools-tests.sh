@@ -41,6 +41,11 @@ unset METEOR_WAREHOUSE_DIR
 ./bundler-test.sh
 
 ###
+### Watcher unit tests
+###
+./watch-test.sh
+
+###
 ### Test the Meteor CLI from a checkout. We do this last because it is least likely to fail.
 ###
 ./cli-test.sh

@@ -49,6 +49,7 @@ if [ ! -x "$METEOR_WAREHOUSE_DIR/meteor" ]; then
       exit 1
   fi
 
+  # If you change this, also change host() in tools/archinfo.js
   if [ "$UNAME" = "Darwin" ] ; then
     if [ "i386" != "$(uname -p)" -o "1" != "$(sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0)" ] ; then
       # Can't just test uname -m = x86_64, because Snow Leopard can

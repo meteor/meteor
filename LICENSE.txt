@@ -80,9 +80,21 @@ Copyright (c) 2011 GoalSmashers.com
 
 ----------
 progress: https://github.com/visionmedia/node-progress
+qs: https://github.com/visionmedia/node-querystring
+debug: https://github.com/visionmedia/debug
+nib: https://github.com/visionmedia/nib
+bytes: https://github.com/visionmedia/bytes.js
+commander: https://github.com/visionmedia/commander.js
+fresh: https://github.com/visionmedia/node-fresh
+github-url-from-git: https://github.com/visionmedia/node-github-url-from-git
+pause: https://github.com/visionmedia/node-pause
+range-parser: https://github.com/visionmedia/node-range-parser
+send: https://github.com/visionmedia/send
 ----------
 
+Copyright (c) 2010 TJ Holowaychuk <tj@vision-media.ca>
 Copyright (c) 2011 TJ Holowaychuk <tj@vision-media.ca>
+Copyright (c) 2012 TJ Holowaychuk <tj@vision-media.ca>
 
 
 ----------
@@ -187,13 +199,6 @@ By Felix Geisendörfer and Tim Koschuetzki, Debuggable, Ltd.
 
 
 ----------
-node-querystring: https://github.com/visionmedia/node-querystring
-----------
-
-Copyright (c) 2010 TJ Holowaychuk <tj@vision-media.ca>
-
-
-----------
 colors: https://github.com/Marak/colors.js
 ----------
 
@@ -232,7 +237,7 @@ Copyright (c) 2010 Robert Kieffer
 
 
 ----------
-ansi.js: https://github.com/TooTallNate/ansi.js
+ansi: https://github.com/TooTallNate/ansi.js
 ----------
 
 Copyright (c) 2012 Nathan Rajlich <nathan@tootallnate.net>
@@ -253,13 +258,6 @@ Copyright (c) Nikita Vasilyev
 
 
 ----------
-node-debug: https://github.com/visionmedia/debug
-----------
-
-Copyright (c) 2011 TJ Holowaychuk <tj@vision-media.ca>
-
-
-----------
 yamlparser: https://github.com/h4evr/commonjs-javascript-yaml-parser
 ----------
 
@@ -268,16 +266,17 @@ Copyright (c) 2011 Diogo Costa (costa.h4evr@gmail.com)
 
 ----------
 semver: https://github.com/isaacs/node-semver
-abbrev-js: https://github.com/isaacs/abbrev-js
-node-graceful-fs: https://github.com/isaacs/node-graceful-fs
-node-lru-cache: https://github.com/isaacs/node-lru-cache
+abbrev: https://github.com/isaacs/abbrev-js
+graceful-fs: https://github.com/isaacs/node-graceful-fs
+lru-cache: https://github.com/isaacs/node-lru-cache
 proto-list: https://github.com/isaacs/proto-list
 rimraf: https://github.com/isaacs/rimraf
 minimatch: https://github.com/isaacs/minimatch
-node-ini: https://github.com/isaacs/ini
-node-nopt: https://github.com/isaacs/nopt
-slide-flow-control: https://github.com/isaacs/slide-flow-control
-node-which: https://github.com/isaacs/node-which
+ini: https://github.com/isaacs/ini
+nopt: https://github.com/isaacs/nopt
+slide: https://github.com/isaacs/slide-flow-control
+which: https://github.com/isaacs/node-which
+minimatch: https://github.com/isaacs/minimatch
 ----------
 
 Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
@@ -286,20 +285,15 @@ All rights reserved.
 
 ----------
 optimist: https://github.com/substack/node-optimist
-node-mkdirp: https://github.com/substack/node-mkdirp
+mkdirp: https://github.com/substack/node-mkdirp
 wordwrap: https://github.com/substack/node-wordwrap
-node-archy: https://github.com/substack/node-archy
-node-shell-quote: https://github.com/substack/node-shell-quote
+archy: https://github.com/substack/node-archy
+shell-quote: https://github.com/substack/node-shell-quote
+deep-equal: https://github.com/substack/node-deep-equal
+editor: https://github.com/substack/node-editor
 ----------
 
-Copyright 2010, 2011, 2012 James Halliday (mail@substack.net)
-
-
-----------
-nib: https://github.com/visionmedia/nib
-----------
-
-Copyright (c) 2011 TJ Holowaychuk <tj@vision-media.ca>
+Copyright 2010, 2011, 2012, 2013 James Halliday (mail@substack.net)
 
 
 ----------
@@ -310,22 +304,22 @@ Copyright (c) 2011 Dominic Tarr
 
 
 ----------
-node-async: https://github.com/caolan/async
+async: https://github.com/caolan/async
 ----------
 
 Copyright (c) 2010 Caolan McMahon
 
 
 ----------
-node-combined-stream: https://github.com/felixge/node-combined-stream
-node-delayed-stream: https://github.com/felixge/node-delayed-stream
+combined-stream: https://github.com/felixge/node-combined-stream
+delayed-stream: https://github.com/felixge/node-delayed-stream
 ----------
 
 Copyright (c) 2011 Debuggable Limited <felix@debuggable.com>
 
 
 ----------
-node-retry: https://github.com/felixge/node-retry
+retry: https://github.com/felixge/node-retry
 ----------
 
 Copyright (c) 2011:
@@ -333,14 +327,14 @@ Tim Koschützki (tim@debuggable.com)
 Felix Geisendörfer (felix@debuggable.com)
 
 ----------
-node-form-data: https://github.com/felixge/node-form-data
+form-data: https://github.com/felixge/node-form-data
 ----------
 
 Copyright (c) 2012 Felix Geisendörfer (felix@debuggable.com) and contributors
 
 
 ----------
-node-kexec: https://github.com/jprichardson/node-kexec
+kexec: https://github.com/jprichardson/node-kexec
 ----------
 
 Copyright (c) 2011-2012 JP Richardson
@@ -351,6 +345,175 @@ setImmediate: https://github.com/NobleJS/setImmediate
 ----------
 
 Copyright (c) 2012 Barnesandnoble.com, llc, Donavon West, and Domenic Denicola
+
+
+----------
+asn1: https://github.com/mcavage/node-asn1
+assert-plus: https://github.com/mcavage/node-assert-plus
+----------
+
+Copyright (c) 2011 Mark Cavage, All rights reserved.
+
+
+----------
+awssum: https://github.com/awssum/awssum
+----------
+
+Copyright 2011-2013 Apps Attic Ltd.  All rights reserved.
+Copyright 2013 Andrew Chilton.  All rights reserved.
+
+
+----------
+data2xml: https://github.com/chilts/data2xml
+----------
+
+Copyright 2011-2012 Apps Attic Ltd.  All rights reserved.
+
+
+----------
+buffer-crc32: https://github.com/brianloveswords/buffer-crc32
+----------
+
+Copyright (c) 2013 Brian J. Brennan
+
+
+----------
+byline: https://github.com/jahewson/node-byline
+----------
+
+node-byline (C) 2011-2013 John Hewson
+
+
+----------
+child-process-close: https://github.com/piscisaureus/child-process-close
+----------
+
+Copyright (C) 2012 Bert Belder
+
+
+----------
+cli-color: https://github.com/medikoo/cli-color
+es5-ext: https://github.com/medikoo/es5-ext
+event-emitter: https://github.com/medikoo/event-emitter
+memoizee: https://github.com/medikoo/memoize
+next-tick: https://github.com/medikoo/next-tick
+----------
+
+Copyright (C) 2011, 2012 Mariusz Nowak (www.medikoo.com)
+
+
+----------
+connect-jsonp: https://github.com/steelThread/connect-jsonp
+----------
+
+Copyright (c) 2010 Sean McDaniel
+
+
+----------
+cookie: https://github.com/shtylman/node-cookie
+----------
+
+Copyright (C) Roman Shtylman <shtylman@gmail.com>
+
+
+----------
+cookie-signature: https://github.com/visionmedia/node-cookie-signature
+----------
+
+Copyright (c) 2012 LearnBoost <tj@learnboost.com>
+
+
+----------
+dateformat: https://github.com/felixge/node-dateformat
+----------
+
+(c) 2007-2009 Steven Levithan <stevenlevithan.com>
+
+
+----------
+eyes: https://github.com/cloudhead/eyes.js
+vows: https://github.com/cloudhead/vows
+----------
+
+Copyright (c) 2009 cloudhead
+
+
+----------
+fmt: https://github.com/appsattic/fmt
+----------
+
+Copyright © 2012-2013 AppsAttic Ltd <chilts@appsattic.com>
+
+
+----------
+http-signature: https://github.com/joyent/node-http-signature
+----------
+
+Copyright Joyent, Inc. All rights reserved.
+
+
+----------
+i: https://github.com/pksunkara/inflect
+----------
+
+Copyright Pavan Kumar Sunkara (pavan.sss1991@gmail.com)
+
+
+----------
+ncp: https://github.com/AvianFlu/ncp
+----------
+
+Copyright (C) 2011 by Charlie McConnell
+
+
+----------
+passgen: https://github.com/SDA/passgen
+----------
+
+Copyright (c) 2011 SDA Software Associates Inc.
+
+
+----------
+sha: https://github.com/ForbesLindesay/sha
+----------
+
+Copyright (c) 2013 Forbes Lindesay
+
+
+----------
+source-map-support: https://github.com/evanw/node-source-map-support
+----------
+
+Copyright Evan Wallace
+
+
+----------
+utile: https://github.com/flatiron/utile
+----------
+
+Copyright (c) 2010 Nodejitsu Inc.
+
+
+----------
+xml: https://github.com/dylang/node-xml
+----------
+
+Copyright (c) 2011 Dylan Greene <dylang@gmail.com>
+
+
+----------
+xml2js: https://github.com/Leonidas-from-XIV/node-xml2js
+----------
+
+Copyright 2010, 2011, 2012, 2013. All rights reserved.
+
+
+----------
+ctype: https://github.com/rmustacc/node-ctype
+----------
+
+Copyright 2011, Robert Mustacchi. All rights reserved.
+Copyright 2011, Joyent, Inc. All rights reserved.
 
 
 ==============
@@ -385,7 +548,7 @@ Copyright (c) 2009-2010 Alexis Sellier
 useragent: https://github.com/fintanf/node-useragent
 ----------
 
-This parser is based on the user agent parser; code.google.com/p/ua-parser/ 
+This parser is based on the user agent parser; code.google.com/p/ua-parser/
 which is released under Apache license:
 
 Copyright 2009 Google Inc.
@@ -393,9 +556,14 @@ Copyright 2009 Google Inc.
 
 ----------
 request: https://github.com/mikeal/request
+aws-sign: https://github.com/mikeal/aws-sign
+cookie-jar: https://github.com/mikeal/cookie-jar
+forever-agent: https://github.com/mikeal/forever-agent
+oauth-sign: https://github.com/mikeal/oauth-sign
+tunnel-agent: https://github.com/mikeal/tunnel-agent
 ----------
 
-Copyright (c) 2011 Mikeal Rogers
+Copyright (c) 2011, 2012, 2013 Mikeal Rogers
 
 
 ----------
@@ -431,6 +599,13 @@ amdefine: https://github.com/jrburke/amdefine
 ----------
 
 Copyright (c) 2011, The Dojo Foundation
+
+
+----------
+nlogger: https://github.com/igo/nlogger
+----------
+
+Copyright (c) 2010 by Igor Urmincek
 
 
 
@@ -534,12 +709,12 @@ openssl: http://www.openssl.org/
 showdown: http://www.attacklab.net/
 ---------
 
-Copyright (c) 2007, John Fraser  
-<http://www.attacklab.net/>  
+Copyright (c) 2007, John Fraser
+<http://www.attacklab.net/>
 All rights reserved.
 
-Original Markdown copyright (c) 2004, John Gruber  
-<http://daringfireball.net/>  
+Original Markdown copyright (c) 2004, John Gruber
+<http://daringfireball.net/>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -587,13 +762,13 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 
 ----------
-node-tar: https://github.com/isaacs/node-tar
+tar: https://github.com/isaacs/node-tar
 fstream: https://github.com/isaacs/fstream
 fstream-npm: https://github.com/isaacs/fstream-npm
 fstream-ignore: https://github.com/isaacs/fstream-ignore
 read: https://github.com/isaacs/read
 block-stream: https://github.com/isaacs/block-stream
-node-glob: https://github.com/isaacs/node-glob
+glob: https://github.com/isaacs/node-glob
 chownr: https://github.com/isaacs/chownr
 uid-number: https://github.com/isaacs/uid-number
 sigmund: https://github.com/isaacs/sigmund
@@ -638,6 +813,10 @@ npmconf: https://github.com/isaacs/npmconf
 read-installed: https://github.com/isaacs/read-installed
 read-package-json: https://github.com/isaacs/read-package-json
 promzard: https://github.com/isaacs/promzard
+chmodr: https://github.com/isaacs/chmodr
+cmd-shim: https://github.com/ForbesLindesay/cmd-shim
+json-stringify-safe: https://github.com/isaacs/json-stringify-safe
+sax: https://github.com/isaacs/sax-js
 ----------
 
 Copyright (c) Isaac Z. Schlueter ("Author")
@@ -719,9 +898,9 @@ the following conditions:
 The above copyright notice and this permission notice shall be
 included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
-EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
-WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND,
+EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY
+WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
 
 IN NO EVENT SHALL TOM WU BE LIABLE FOR ANY SPECIAL, INCIDENTAL,
 INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND, OR ANY DAMAGES WHATSOEVER
@@ -830,6 +1009,262 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
+----------
+boom: https://github.com/spumko/boom
+----------
+
+Copyright (c) 2012-2013, Walmart.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of Walmart nor the
+      names of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL WALMART BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+----------
+hoek: https://github.com/spumko/hoek
+----------
+
+Copyright (c) 2011-2013, Walmart.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of Walmart nor the
+      names of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL WALMART BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+                                  *   *   *
+
+
+Portions of this project were initially based on Postmile, Copyright (c) 2011, Yahoo Inc.
+Postmile is published at https://github.com/yahoo/postmile and its licensing terms are
+published at https://github.com/yahoo/postmile/blob/master/LICENSE.
+
+
+----------
+cryptiles: https://github.com/hueniverse/cryptiles
+hawk: https://github.com/hueniverse/hawk
+sntp: https://github.com/hueniverse/sntp
+----------
+
+Copyright (c) 2012-2013, Eran Hammer.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of Eran Hammer nor the
+      names of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL ERAN HAMMER BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+----------
+diff: https://github.com/kpdecker/jsdiff
+----------
+
+Software License Agreement (BSD License)
+
+Copyright (c) 2009-2011, Kevin Decker <kpdecker@gmail.com>
+
+All rights reserved.
+
+Redistribution and use of this software in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above
+  copyright notice, this list of conditions and the
+  following disclaimer.
+
+* Redistributions in binary form must reproduce the above
+  copyright notice, this list of conditions and the
+  following disclaimer in the documentation and/or other
+  materials provided with the distribution.
+
+* Neither the name of Kevin Decker nor the names of its
+  contributors may be used to endorse or promote products
+  derived from this software without specific prior
+  written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
+IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+----------
+escope: https://github.com/Constellation/escope
+estraverse: https://github.com/Constellation/estraverse
+----------
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+  * Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+  * Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+----------
+esprima: https://github.com/ariya/esprima
+----------
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+  * Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+  * Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+----------
+normalize-package-data: https://github.com/meryn/normalize-package-data
+----------
+
+This package contains code originally written by Isaac Z. Schlueter. 
+Used with permission.
+
+Copyright (c) Meryn Stol ("Author")
+All rights reserved.
+
+The BSD License
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+----------
+npm-user-validate: https://github.com/robertkowalski/npm-user-validate
+----------
+
+Copyright (c) Robert Kowalski
+All rights reserved.
+
+The BSD License
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 =============
@@ -942,7 +1377,7 @@ opener: https://github.com/domenic/opener
 
 
 ----------
-node-stream-buffer: https://github.com/samcday/node-stream-buffer
+stream-buffers: https://github.com/samcday/node-stream-buffer
 ----------
 
 This is free and unencumbered software released into the public domain.
@@ -993,7 +1428,7 @@ MongoDB uses third-party libraries or other resources that may
 be distributed under licenses different than the MongoDB software.
 
 In the event that we accidentally failed to list a required notice,
-please bring it to our attention through any of the ways detailed here : 
+please bring it to our attention through any of the ways detailed here :
 
            mongodb-dev@googlegroups.com
 
@@ -1506,7 +1941,7 @@ maintained libraries. The externally maintained libraries used by Node are:
      * are met:
      *
      * 1. Redistributions of source code must retain the above copyright
-     *    notice, this list of conditions and the following disclaimer. 
+     *    notice, this list of conditions and the following disclaimer.
      *
      * 2. Redistributions in binary form must reproduce the above copyright
      *    notice, this list of conditions and the following disclaimer in
@@ -1577,7 +2012,7 @@ maintained libraries. The externally maintained libraries used by Node are:
     AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-    IN THE SOFTWARE. 
+    IN THE SOFTWARE.
   """
 
 - Closure Linter is located at tools/closure_linter. Closure's license
@@ -1744,8 +2179,8 @@ maintained libraries. The externally maintained libraries used by Node are:
     */
   """
 
-- npm is a package manager program located at deps/npm. 
-  npm's license follows: 
+- npm is a package manager program located at deps/npm.
+  npm's license follows:
   """
     Copyright 2009-2012, Isaac Z. Schlueter (the "Original Author")
     All rights reserved.
@@ -1832,6 +2267,33 @@ maintained libraries. The externally maintained libraries used by Node are:
     THE SOFTWARE.
   """
 
+
+
+----------
+jsstyle
+  (Included through the ctype NPM module: lib/node_modules/npm/node_modules/request/node_modules/http-signature/node_modules/ctype/tools/jsstyle)
+----------
+
+The contents of this file are subject to the terms of the
+Common Development and Distribution License (the "License").
+You may not use this file except in compliance with the License.
+
+You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+or http://www.opensolaris.org/os/licensing.
+See the License for the specific language governing permissions
+and limitations under the License.
+
+When distributing Covered Code, include this CDDL HEADER in each
+file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+If applicable, add the following below this CDDL HEADER, with the
+fields enclosed by brackets "[]" replaced with your own identifying
+information: Portions Copyright [yyyy] [name of copyright owner]
+
+
+Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+Use is subject to license terms.
+
+Copyright 2011 Joyent, Inc. All rights reserved.
 
 
 ----------

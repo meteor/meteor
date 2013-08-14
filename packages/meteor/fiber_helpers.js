@@ -19,9 +19,6 @@ Meteor._noYieldsAllowed = function (f) {
   }
 };
 
-// js2-mode AST blows up when parsing 'future.return()', so alias.
-Future.prototype.ret = Future.prototype['return'];
-
 // Meteor._SynchronousQueue is a queue which runs task functions serially.
 // Tasks are assumed to be synchronous: ie, it's assumed that they are
 // done when they return.
@@ -38,6 +35,7 @@ Future.prototype.ret = Future.prototype['return'];
 // XXX break this out into an NPM module?
 // XXX could maybe use the npm 'schlock' module instead, which would
 //     also support multiple concurrent "read" tasks
+//
 Meteor._SynchronousQueue = function () {
   var self = this;
   // List of tasks to run (not including a currently-running task if any). Each
@@ -71,7 +69,10 @@ _.extend(Meteor._SynchronousQueue.prototype, {
     }
 
     var fut = new Future;
-    self._taskHandles.push({task: task, future: fut});
+    self._taskHandles.push({task: Meteor.bindEnvironment(task, function (e) {
+      Meteor._debug("Exception from task:", e ? e.stack : e);
+      throw e;
+    }), future: fut});
     self._scheduleRun();
     // Yield. We'll get back here after the task is run (and will throw if the
     // task throws).
@@ -159,15 +160,16 @@ _.extend(Meteor._SynchronousQueue.prototype, {
     // the task threw).
     if (taskHandle.future) {
       if (exception)
-        taskHandle.future.throw(exception);
+        taskHandle.future['throw'](exception);
       else
-        taskHandle.future.ret();
+        taskHandle.future['return']();
     }
   }
 });
 
 // Sleep. Mostly used for debugging (eg, inserting latency into server
 // methods).
+//
 Meteor._sleepForMs = function (ms) {
   var fiber = Fiber.current;
   setTimeout(function() {

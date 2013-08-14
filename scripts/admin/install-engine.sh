@@ -59,8 +59,7 @@ trap "echo Installation failed." EXIT
 # install here:
 [ -e "$HOME/.meteor" ] && rm -rf "$HOME/.meteor"
 
-# This is the CloudFront CDN serving com.meteor.warehouse.
-TARBALL_URL="https://d3fm2vapipm3k9.cloudfront.net/bootstrap/__RELEASE__/meteor-bootstrap-${PLATFORM}.tar.gz"
+TARBALL_URL="https://warehouse.meteor.com/bootstrap/__RELEASE__/meteor-bootstrap-${PLATFORM}.tar.gz"
 
 INSTALL_TMPDIR="$HOME/.meteor-install-tmp"
 rm -rf "$INSTALL_TMPDIR"

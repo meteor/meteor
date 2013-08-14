@@ -3,6 +3,12 @@ DONE = false;
 // Failure count for phantomjs exit code
 FAILURES = null;
 
+TEST_STATUS = {
+  DONE: false,
+  FAILURES: null
+};
+
+
 var getName = function (result) {
   return (result.server ? "S: " : "C: ") +
     result.groupPath.join(" - ") + " - " + result.test;
@@ -66,7 +72,7 @@ Meteor.startup(function () {
   setTimeout(sendReports, 500);
   setInterval(sendReports, 2000);
 
-  Meteor._runTestsEverywhere(
+  Tinytest._runTestsEverywhere(
     function (results) {
       var name = getName(results);
       if (!_.has(resultSet, name)) {
@@ -133,12 +139,12 @@ Meteor.startup(function () {
         if (doReport) {
           log("Waiting 3s for any last reports to get sent out");
           setTimeout(function () {
-            FAILURES = failed;
-            DONE = true;
+            TEST_STATUS.FAILURES = FAILURES = failed;
+            TEST_STATUS.DONE = DONE = true;
           }, 3000);
         } else {
-          FAILURES = failed;
-          DONE = true;
+          TEST_STATUS.FAILURES = FAILURES = failed;
+          TEST_STATUS.DONE = DONE = true;
         }
       });
     },

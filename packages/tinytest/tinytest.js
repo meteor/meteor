@@ -35,6 +35,12 @@ _.extend(TestCaseResults.prototype, {
   fail: function (doc) {
     var self = this;
 
+    if (typeof doc === "string") {
+      // Some very old code still tries to call fail() with a
+      // string. Don't do this!
+      doc = { type: "fail", message: doc };
+    }
+
     if (self.stop_at_offset === 0) {
       if (Meteor.isClient) {
         // Only supported on the browser for now..
@@ -485,22 +491,22 @@ _.extend(TestRun.prototype, {
 /* Public API                                                                 */
 /******************************************************************************/
 
-var globals = this;
-globals.Tinytest = {
-  add: function (name, func) {
-    TestManager.addCase(new TestCase(name, func));
-  },
+Tinytest = {};
 
-  addAsync: function (name, func) {
-    TestManager.addCase(new TestCase(name, func, true));
-  }
+Tinytest.add = function (name, func) {
+  TestManager.addCase(new TestCase(name, func));
+};
+
+Tinytest.addAsync = function (name, func) {
+  TestManager.addCase(new TestCase(name, func, true));
 };
 
 // Run every test, asynchronously. Runs the test in the current
 // process only (if called on the server, runs the tests on the
 // server, and likewise for the client.) Report results via
 // onReport. Call onComplete when it's done.
-Meteor._runTests = function (onReport, onComplete, pathPrefix) {
+//
+Tinytest._runTests = function (onReport, onComplete, pathPrefix) {
   var testRun = TestManager.createRun(onReport, pathPrefix);
   testRun.run(onComplete);
 };
@@ -508,7 +514,8 @@ Meteor._runTests = function (onReport, onComplete, pathPrefix) {
 // Run just one test case, and stop the debugger at a particular
 // error, all as indicated by 'cookie', which will have come from a
 // failure event output by _runTests.
-Meteor._debugTest = function (cookie, onReport, onComplete) {
+//
+Tinytest._debugTest = function (cookie, onReport, onComplete) {
   var testRun = TestManager.createRun(onReport);
   testRun.debug(cookie, onComplete);
 };

@@ -1,3 +1,5 @@
+Weibo = {};
+
 Oauth.registerService('weibo', 2, null, function(query) {
 
   var response = getTokenResponse(query);
@@ -35,7 +37,7 @@ var getTokenResponse = function (query) {
 
   var response;
   try {
-    response = Meteor.http.post(
+    response = HTTP.post(
       "https://api.weibo.com/oauth2/access_token", {params: {
         code: query.code,
         client_id: config.clientId,
@@ -44,7 +46,8 @@ var getTokenResponse = function (query) {
         grant_type: 'authorization_code'
       }});
   } catch (err) {
-    throw new Error("Failed to complete OAuth handshake with Weibo. " + err.message);
+    throw _.extend(new Error("Failed to complete OAuth handshake with Weibo. " + err.message),
+                   {response: err.response});
   }
 
   // result.headers["content-type"] is 'text/plain;charset=UTF-8', so
@@ -60,11 +63,12 @@ var getTokenResponse = function (query) {
 
 var getIdentity = function (accessToken, userId) {
   try {
-    return Meteor.http.get(
+    return HTTP.get(
       "https://api.weibo.com/2/users/show.json",
       {params: {access_token: accessToken, uid: userId}}).data;
   } catch (err) {
-    throw new Error("Failed to fetch identity from Weibo. " + err.message);
+    throw _.extend(new Error("Failed to fetch identity from Weibo. " + err.message),
+                   {response: err.response});
   }
 };
 

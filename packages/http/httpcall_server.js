@@ -1,12 +1,10 @@
-Meteor.http = Meteor.http || {};
-
 var path = Npm.require('path');
 var request = Npm.require('request');
 var url_util = Npm.require('url');
-var Future = Npm.require(path.join('fibers', 'future'));
 
-
-Meteor.http.call = function(method, url, options, callback) {
+// _call always runs asynchronously; HTTP.call, defined below,
+// wraps _call and runs synchronously when no callback is provided.
+var _call = function(method, url, options, callback) {
 
   ////////// Process arguments //////////
 
@@ -40,8 +38,8 @@ Meteor.http.call = function(method, url, options, callback) {
   else
     params_for_body = options.params;
 
-  var new_url = Meteor.http._buildUrl(
-    url_parts.protocol+"//"+url_parts.host+url_parts.pathname,
+  var new_url = buildUrl(
+    url_parts.protocol + "//" + url_parts.host + url_parts.pathname,
     url_parts.search, options.query, params_for_url);
 
   if (options.auth) {
@@ -52,26 +50,11 @@ Meteor.http.call = function(method, url, options, callback) {
   }
 
   if (params_for_body) {
-    content = Meteor.http._encodeParams(params_for_body);
+    content = encodeParams(params_for_body);
     headers['Content-Type'] = "application/x-www-form-urlencoded";
   }
 
   _.extend(headers, options.headers || {});
-
-  ////////// Callback wrapping //////////
-
-  var fut;
-  if (! callback) {
-    // Sync mode
-    fut = new Future;
-    callback = fut.resolver(); // throw errors, return results
-  } else {
-    // Async mode
-    // re-enter user code in a Fiber
-    callback = Meteor.bindEnvironment(callback, function(e) {
-      Meteor._debug("Exception in callback of Meteor.http.call", e.stack);
-    });
-  }
 
   // wrap callback to add a 'response' property on an error, in case
   // we have both (http 4xx/5xx error, which has a response payload)
@@ -110,17 +93,15 @@ Meteor.http.call = function(method, url, options, callback) {
       response.content = body;
       response.headers = res.headers;
 
-      Meteor.http._populateData(response);
+      populateData(response);
 
       if (response.statusCode >= 400)
-        error = Meteor.http._makeErrorByStatus(response.statusCode, response.content);
+        error = makeErrorByStatus(response.statusCode, response.content);
     }
 
     callback(error, response);
 
   });
-
-  // If we're in sync mode, block and return the result.
-  if (fut)
-    return fut.wait();
 };
+
+HTTP.call = Meteor._wrapAsync(_call);

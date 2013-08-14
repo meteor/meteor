@@ -1,5 +1,5 @@
 Tinytest.add("routepolicy - declare", function (test) {
-  var policy = new Meteor.__RoutePolicyConstructor();
+  var policy = new RoutePolicyTest.Constructor();
 
   policy.declare('/sockjs/', 'network');
   policy.declare('/bigphoto.jpg', 'static-online');
@@ -37,7 +37,7 @@ Tinytest.add("routepolicy - static conflicts", function (test) {
       "url": "/bigphoto.jpg"
     }
   ];
-  var policy = new Meteor.__RoutePolicyConstructor();
+  var policy = new RoutePolicyTest.Constructor();
 
   test.equal(
     policy.checkForConflictWithStatic('/sockjs/', 'network', manifest),
@@ -51,7 +51,7 @@ Tinytest.add("routepolicy - static conflicts", function (test) {
 });
 
 Tinytest.add("routepolicy - checkUrlPrefix", function (test) {
-  var policy = new Meteor.__RoutePolicyConstructor();
+  var policy = new RoutePolicyTest.Constructor();
   policy.declare('/sockjs/', 'network');
 
   test.equal(

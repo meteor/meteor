@@ -1,6 +1,4 @@
-Meteor.http = Meteor.http || {};
-
-Meteor.http.call = function(method, url, options, callback) {
+HTTP.call = function(method, url, options, callback) {
 
   ////////// Process arguments //////////
 
@@ -33,9 +31,8 @@ Meteor.http.call = function(method, url, options, callback) {
     params_for_body = options.params;
 
   var query_match = /^(.*?)(\?.*)?$/.exec(url);
-  url = Meteor.http._buildUrl(query_match[1], query_match[2],
-                              options.query, params_for_url);
-
+  url = buildUrl(query_match[1], query_match[2],
+                 options.query, params_for_url);
 
   if (options.followRedirects === false)
     throw new Error("Option followRedirects:false not supported on client.");
@@ -50,7 +47,7 @@ Meteor.http.call = function(method, url, options, callback) {
   }
 
   if (params_for_body) {
-    content = Meteor.http._encodeParams(params_for_body);
+    content = encodeParams(params_for_body);
   }
 
   _.extend(headers, options.headers || {});
@@ -146,11 +143,11 @@ Meteor.http.call = function(method, url, options, callback) {
               response.headers[m[1].toLowerCase()] = m[2];
           });
 
-          Meteor.http._populateData(response);
+          populateData(response);
 
           var error = null;
           if (response.statusCode >= 400)
-            error = Meteor.http._makeErrorByStatus(response.statusCode, response.content);
+            error = makeErrorByStatus(response.statusCode, response.content);
 
           callback(error, response);
         }

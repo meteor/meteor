@@ -4,5 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function(api) {
+  api.use('mongo-livedata', ['client', 'server']);
+  api.export('ServiceConfiguration');
   api.add_files('service_configuration_common.js', ['client', 'server']);
 });

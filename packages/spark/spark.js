@@ -26,8 +26,9 @@
 // (not hard to see what it is.)
 
 Spark = {};
+SparkTest = {};
 
-Spark._currentRenderer = (function () {
+var currentRenderer = (function () {
   var current = null;
   return {
     get: function () {
@@ -42,32 +43,49 @@ Spark._currentRenderer = (function () {
   };
 })();
 
-Spark._TAG = "_spark_" + Random.id();
+TAG = "_spark_" + Random.id();
+SparkTest.TAG = TAG;
+
+// We also export this as Spark._TAG due to a historical accident. I
+// don't know if anything uses it (possibly some of Chris Mather's
+// stuff?)  but let's keep exporting it since without it it would be
+// very difficult for code outside the spark package to, eg, walk
+// spark's liverange hierarchy.
+Spark._TAG = TAG;
+
 // XXX document contract for each type of annotation?
-Spark._ANNOTATION_NOTIFY = "notify";
-Spark._ANNOTATION_DATA = "data";
-Spark._ANNOTATION_ISOLATE = "isolate";
-Spark._ANNOTATION_EVENTS = "events";
-Spark._ANNOTATION_WATCH = "watch";
-Spark._ANNOTATION_LABEL = "label";
-Spark._ANNOTATION_LANDMARK = "landmark";
-Spark._ANNOTATION_LIST = "list";
-Spark._ANNOTATION_LIST_ITEM = "item";
+var ANNOTATION_NOTIFY = "notify";
+var ANNOTATION_DATA = "data";
+var ANNOTATION_ISOLATE = "isolate";
+var ANNOTATION_EVENTS = "events";
+var ANNOTATION_WATCH = "watch";
+var ANNOTATION_LABEL = "label";
+var ANNOTATION_LANDMARK = "landmark";
+var ANNOTATION_LIST = "list";
+var ANNOTATION_LIST_ITEM = "item";
 // XXX why do we need, eg, _ANNOTATION_ISOLATE? it has no semantics?
 
-// Set in tests to turn on extra UniversalEventListener sanity checks
-Spark._checkIECompliance = false;
+// Use from tests to turn on extra UniversalEventListener sanity checks
+var checkIECompliance = false;
+SparkTest.setCheckIECompliance = function (value) {
+  checkIECompliance = value;
+};
 
-Spark._globalPreserves = {};
+// Private interface to 'preserve-inputs' package
+var globalPreserves = {};
+Spark._addGlobalPreserve = function (selector, value) {
+  globalPreserves[selector] = value;
+};
+
 
 var makeRange = function (type, start, end, inner) {
-  var range = new LiveRange(Spark._TAG, start, end, inner);
+  var range = new LiveRange(TAG, start, end, inner);
   range.type = type;
   return range;
 };
 
 var findRangeOfType = function (type, node) {
-  var range = LiveRange.findRange(Spark._TAG, node);
+  var range = LiveRange.findRange(TAG, node);
   while (range && range.type !== type)
     range = range.findParent();
 
@@ -83,9 +101,9 @@ var findParentOfType = function (type, range) {
 };
 
 var notifyWatchers = function (start, end) {
-  var tempRange = new LiveRange(Spark._TAG, start, end, true /* innermost */);
+  var tempRange = new LiveRange(TAG, start, end, true /* innermost */);
   for (var walk = tempRange; walk; walk = walk.findParent())
-    if (walk.type === Spark._ANNOTATION_WATCH)
+    if (walk.type === ANNOTATION_WATCH)
       walk.notify();
   tempRange.destroy();
 };
@@ -104,7 +122,7 @@ var withEventGuard = function (func) {
   finally { eventGuardActive = previous; }
 };
 
-Spark._Renderer = function () {
+Renderer = function () {
   // Map from annotation ID to an annotation function, which is called
   // at render time and receives (startNode, endNode).
   this.annotations = {};
@@ -130,7 +148,7 @@ Spark._Renderer = function () {
   this.pc = new PreservationController;
 };
 
-_.extend(Spark._Renderer.prototype, {
+_.extend(Renderer.prototype, {
   // `what` can be a function that takes a LiveRange, or just a set of
   // attributes to add to the liverange.  type and what are optional.
   // if no type is passed, no liverange will be created.
@@ -208,7 +226,7 @@ _.extend(Spark._Renderer.prototype, {
   materialize: function (htmlFunc) {
     var self = this;
 
-    var html = Spark._currentRenderer.withValue(self, htmlFunc);
+    var html = currentRenderer.withValue(self, htmlFunc);
     html = self.annotate(html); // wrap with an anonymous annotation
 
     var fragById = {};
@@ -320,7 +338,7 @@ _.extend(Spark._Renderer.prototype, {
 // if there isn't one returns `html` (the last argument).
 var withRenderer = function (f) {
   return function (/* arguments */) {
-    var renderer = Spark._currentRenderer.get();
+    var renderer = currentRenderer.get();
     var args = _.toArray(arguments);
     if (!renderer)
       return args.pop();
@@ -344,7 +362,7 @@ var withRenderer = function (f) {
 // can call it when manually inserting nodes? (via, eg, jQuery?) -- of
 // course in that case 'landmarkRanges' would be empty.
 var scheduleOnscreenSetup = function (frag, landmarkRanges) {
-  var renderedRange = new LiveRange(Spark._TAG, frag);
+  var renderedRange = new LiveRange(TAG, frag);
   var finalized = false;
   renderedRange.finalize = function () {
     finalized = true;
@@ -394,7 +412,7 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
     // future: include an argument in the callback to distinguish this
     // case from the previous
     var walk = renderedRange;
-    while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
+    while ((walk = findParentOfType(ANNOTATION_LANDMARK, walk)))
       walk.rendered.call(walk.landmark);
 
     // This code can run several times on the same nodes (if the
@@ -407,7 +425,7 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
 };
 
 Spark.render = function (htmlFunc) {
-  var renderer = new Spark._Renderer;
+  var renderer = new Renderer;
   var frag = renderer.materialize(htmlFunc);
   return frag;
 };
@@ -488,12 +506,12 @@ _.extend(PreservationController.prototype, {
     // to temporarily put these in the document as well, because CSS selectors
     // don't care and we will put them back.  `tempRange` will hold our place
     // in the tree `newRange` came from.
-    var tempRange = new LiveRange(Spark._TAG, newRange.firstNode(), newRange.lastNode());
+    var tempRange = new LiveRange(TAG, newRange.firstNode(), newRange.lastNode());
     var commentFrag = document.createDocumentFragment();
     commentFrag.appendChild(document.createComment(""));
     var newRangeFrag = tempRange.replaceContents(commentFrag);
     // `wrapperRange` will mark where we inserted newRange into the document.
-    var wrapperRange = new LiveRange(Spark._TAG, newRangeFrag);
+    var wrapperRange = new LiveRange(TAG, newRangeFrag);
     existingRange.insertBefore(newRangeFrag);
 
     _.each(self.roots, function (root) {
@@ -523,13 +541,14 @@ _.extend(PreservationController.prototype, {
 // XXX debugging
 var pathForRange = function (r) {
   var path = [], r;
-  while ((r = findParentOfType(Spark._ANNOTATION_LABEL, r)))
+  while ((r = findParentOfType(ANNOTATION_LABEL, r)))
     path.unshift(r.label);
   return path.join(' :: ');
 };
 
 // `range` is a region of `document`. Modify it in-place so that it
 // matches the result of Spark.render(htmlFunc), preserving landmarks.
+//
 Spark.renderToRange = function (range, htmlFunc) {
   // `range` may be out-of-document and we don't check here.
   // XXX should we?
@@ -544,7 +563,7 @@ Spark.renderToRange = function (range, htmlFunc) {
   if (! startNode || ! startNode.parentNode)
     return;
 
-  var renderer = new Spark._Renderer();
+  var renderer = new Renderer();
 
   // Call 'func' for each landmark in 'range'. Pass two arguments to
   // 'func', the range, and an extra "notes" object such that two
@@ -555,12 +574,12 @@ Spark.renderToRange = function (range, htmlFunc) {
     var stack = renderer.newLabelStack();
 
     range.visit(function (isStart, r) {
-      if (r.type === Spark._ANNOTATION_LABEL) {
+      if (r.type === ANNOTATION_LABEL) {
         if (isStart)
           stack.pushLabel(r.label);
         else
           stack.popLabel();
-      } else if (r.type === Spark._ANNOTATION_LANDMARK && isStart) {
+      } else if (r.type === ANNOTATION_LANDMARK && isStart) {
         func(r, stack.getNotes());
       }
     });
@@ -587,7 +606,7 @@ Spark.renderToRange = function (range, htmlFunc) {
 
   DomUtils.wrapFragmentForContainer(frag, range.containerNode());
 
-  var tempRange = new LiveRange(Spark._TAG, frag);
+  var tempRange = new LiveRange(TAG, frag);
 
   // find preservation roots from matched landmarks inside the
   // rerendered region
@@ -615,11 +634,11 @@ Spark.renderToRange = function (range, htmlFunc) {
       // on a "malformed" liverange tree
       break;
 
-    if (walk.type === Spark._ANNOTATION_LANDMARK, walk)
+    if (walk.type === ANNOTATION_LANDMARK, walk)
       pc.addRoot(walk.preserve, range, tempRange, walk.containerNode());
   }
 
-  pc.addRoot(Spark._globalPreserves, range, tempRange);
+  pc.addRoot(globalPreserves, range, tempRange);
 
   // compute preservations (must do this before destroying tempRange)
   var preservations = pc.computePreservations(range, tempRange);
@@ -635,8 +654,8 @@ Spark.renderToRange = function (range, htmlFunc) {
       // inside constant regions whose DOM nodes we are going
       // to preserve untouched
       Spark.finalize(start, end);
-      Spark._patch(start.parentNode, frag, start.previousSibling,
-                   end.nextSibling, preservations, results);
+      patch(start.parentNode, frag, start.previousSibling,
+            end.nextSibling, preservations, results);
     });
   });
 
@@ -653,6 +672,7 @@ Spark.renderToRange = function (range, htmlFunc) {
 // Delete all of the liveranges in the range of nodes between `start`
 // and `end`, and call their 'finalize' function if any. Or instead of
 // `start` and `end` you may pass a fragment in `start`.
+//
 Spark.finalize = function (start, end) {
   if (! start.parentNode && start.nodeType !== 11 /* DocumentFragment */) {
     // Workaround for LiveRanges' current inability to contain
@@ -662,7 +682,7 @@ Spark.finalize = function (start, end) {
     start = frag;
     end = null;
   }
-  var wrapper = new LiveRange(Spark._TAG, start, end);
+  var wrapper = new LiveRange(TAG, start, end);
   wrapper.visit(function (isStart, range) {
     isStart && range.finalize && range.finalize();
   });
@@ -675,11 +695,11 @@ Spark.finalize = function (start, end) {
 
 Spark.setDataContext = withRenderer(function (dataContext, html, _renderer) {
   return _renderer.annotate(
-    html, Spark._ANNOTATION_DATA, { data: dataContext });
+    html, ANNOTATION_DATA, { data: dataContext });
 });
 
 Spark.getDataContext = function (node) {
-  var range = findRangeOfType(Spark._ANNOTATION_DATA, node);
+  var range = findRangeOfType(ANNOTATION_DATA, node);
   return range && range.data;
 };
 
@@ -704,16 +724,16 @@ var getListener = function () {
         return;
 
       var ranges = [];
-      var walk = findRangeOfType(Spark._ANNOTATION_EVENTS,
+      var walk = findRangeOfType(ANNOTATION_EVENTS,
                                  event.currentTarget);
       while (walk) {
         ranges.push(walk);
-        walk = findParentOfType(Spark._ANNOTATION_EVENTS, walk);
+        walk = findParentOfType(ANNOTATION_EVENTS, walk);
       }
       _.each(ranges, function (r) {
         r.handler(event);
       });
-    }, Spark._checkIECompliance);
+    }, checkIECompliance);
 
   return universalListener;
 };
@@ -759,7 +779,7 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
   };
 
   html = _renderer.annotate(
-    html, Spark._ANNOTATION_WATCH, {
+    html, ANNOTATION_WATCH, {
       notify: function () {
         installHandlers(this);
       }
@@ -768,7 +788,7 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
   var finalized = false;
 
   html = _renderer.annotate(
-    html, Spark._ANNOTATION_EVENTS, function (range) {
+    html, ANNOTATION_EVENTS, function (range) {
       if (! range)
         return;
 
@@ -807,7 +827,7 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
           // Found a matching handler. Call it.
           var eventData = Spark.getDataContext(event.currentTarget) || {};
           var landmarkRange =
-                findParentOfType(Spark._ANNOTATION_LANDMARK, range);
+                findParentOfType(ANNOTATION_LANDMARK, range);
           var landmark = (landmarkRange && landmarkRange.landmark);
 
           // Note that the handler can do arbitrary things, like call
@@ -834,7 +854,7 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
 /******************************************************************************/
 
 Spark.isolate = function (htmlFunc) {
-  var renderer = Spark._currentRenderer.get();
+  var renderer = currentRenderer.get();
   if (!renderer)
     return htmlFunc();
 
@@ -844,7 +864,7 @@ Spark.isolate = function (htmlFunc) {
   Deps.autorun(function (handle) {
     if (firstRun) {
       retHtml = renderer.annotate(
-        htmlFunc(), Spark._ANNOTATION_ISOLATE,
+        htmlFunc(), ANNOTATION_ISOLATE,
         function (r) {
           if (! r) {
             // annotation not used; kill this autorun
@@ -923,7 +943,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   var handle = cursor.observeChanges(observerCallbacks);
 
   // Get the renderer, if any
-  var renderer = Spark._currentRenderer.get();
+  var renderer = currentRenderer.get();
   var maybeAnnotate = renderer ?
         _.bind(renderer.annotate, renderer) :
     function (html) { return html; };
@@ -953,7 +973,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
     itemDict.forEach(function (elt) {
         html += maybeAnnotate(
           itemFunc(transformedDoc(elt.doc)),
-          Spark._ANNOTATION_LIST_ITEM,
+          ANNOTATION_LIST_ITEM,
           function (range) {
             elt.liveRange = range;
           });
@@ -964,7 +984,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
     handle.stop();
     stopped = true;
   };
-  html = maybeAnnotate(html, Spark._ANNOTATION_LIST, function (range) {
+  html = maybeAnnotate(html, ANNOTATION_LIST, function (range) {
     if (! range) {
       // We never ended up on the screen (caller discarded our return
       // value)
@@ -988,7 +1008,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   // Maybe that will make sense if we give render callbacks subrange info.
   var notifyParentsRendered = function () {
     var walk = outerRange;
-    while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
+    while ((walk = findParentOfType(ANNOTATION_LANDMARK, walk)))
       walk.rendered.call(walk.landmark);
   };
 
@@ -1007,7 +1027,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
         doc._id = id;
         var frag = Spark.render(_.bind(itemFunc, null, transformedDoc(doc)));
         DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
-        var range = makeRange(Spark._ANNOTATION_LIST_ITEM, frag);
+        var range = makeRange(ANNOTATION_LIST_ITEM, frag);
 
         if (itemDict.empty()) {
           Spark.finalize(outerRange.replaceContents(frag));
@@ -1102,8 +1122,9 @@ Spark.UNIQUE_LABEL = ['UNIQUE_LABEL'];
 // label must be a string.
 // or pass label === null to not drop a label after all (meaning that
 // this function is a noop)
+//
 Spark.labelBranch = function (label, htmlFunc) {
-  var renderer = Spark._currentRenderer.get();
+  var renderer = currentRenderer.get();
   if (! renderer || label === null)
     return htmlFunc();
 
@@ -1122,7 +1143,7 @@ Spark.labelBranch = function (label, htmlFunc) {
     return html;
 
   return renderer.annotate(
-    html, Spark._ANNOTATION_LABEL, { label: label });
+    html, ANNOTATION_LABEL, { label: label });
 
   // XXX what happens if the user doesn't use the return value, or
   // doesn't use it directly, eg, swaps the branches of the tree
@@ -1139,7 +1160,7 @@ Spark.labelBranch = function (label, htmlFunc) {
 };
 
 Spark.createLandmark = function (options, htmlFunc) {
-  var renderer = Spark._currentRenderer.get();
+  var renderer = currentRenderer.get();
   if (! renderer) {
     // no renderer -- create and destroy Landmark inline
     var landmark = new Spark.Landmark;
@@ -1182,7 +1203,7 @@ Spark.createLandmark = function (options, htmlFunc) {
 
   var html = htmlFunc(landmark);
   return renderer.annotate(
-    html, Spark._ANNOTATION_LANDMARK, function (range) {
+    html, ANNOTATION_LANDMARK, function (range) {
       if (! range) {
         // annotation not used
         options.destroyed && options.destroyed.call(landmark);
@@ -1205,11 +1226,25 @@ Spark.createLandmark = function (options, htmlFunc) {
 
       landmark._range = range;
       renderer.landmarkRanges.push(range);
+      // Help GC avoid an actual memory leak (#1157) by nulling the
+      // `renderer` local variable, which holds data structures about
+      // the preservation and patching performed during this rendering
+      // pass, including references to the old LiveRanges.  If
+      // `renderer` is retained by the LiveRange we initialize here,
+      // it creates a chain linking the new LiveRanges to the
+      // renderer, to the old LiveRanges, to the old renderer, etc.
+      //
+      // The reason the new LiveRange might retains `renderer` has to
+      // do with how V8 implements closures.  V8 considers
+      // `range.finalize` to close over `renderer`, even though it
+      // doesn't use it.  Because `renderer` is used by *some* nested
+      // closure, it apparently is retained by all nested closures as
+      // part of `Spark.createLandmark`'s function context.
+      renderer = null;
     });
 };
 
-// used by unit tests
-Spark._getEnclosingLandmark = function (node) {
-  var range = findRangeOfType(Spark._ANNOTATION_LANDMARK, node);
+SparkTest.getEnclosingLandmark = function (node) {
+  var range = findRangeOfType(ANNOTATION_LANDMARK, node);
   return range ? range.landmark : null;
 };

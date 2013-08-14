@@ -69,59 +69,56 @@ var tag_names =
    'P PARAM PRE Q S SAMP SCRIPT SELECT SMALL SPAN STRIKE STRONG SUB SUP ' +
    'TABLE TBODY TD TEXTAREA TFOOT TH THEAD TR TT U UL VAR').split(' ');
 
-for (var i = 0; i < tag_names.length; i++) {
-  var tag = tag_names[i];
-
-  // 'this' will end up being the global object (eg, 'window' on the client)
-  this[tag] = (function (tag) {
-    return function (arg1, arg2) {
-      var attrs, contents;
-      if (arg2) {
-        attrs = arg1;
-        contents = arg2;
+_.each(tag_names, function (tag) {
+  var f = function (arg1, arg2) {
+    var attrs, contents;
+    if (arg2) {
+      attrs = arg1;
+      contents = arg2;
+    } else {
+      if (arg1 instanceof Array) {
+        attrs = {};
+        contents = arg1;
       } else {
-        if (arg1 instanceof Array) {
-          attrs = {};
-          contents = arg1;
-        } else {
-          attrs = arg1;
-          contents = [];
-        }
+        attrs = arg1;
+        contents = [];
       }
-      var elt = document.createElement(tag);
-      for (var a in attrs) {
-        if (a === 'cls')
-          elt.setAttribute('class', attrs[a]);
-        else if (a === '_for')
-          elt.setAttribute('for', attrs[a]);
-        else if (a === 'style' && ! styleGetSetSupport)
-          elt.style.cssText = String(attrs[a]);
-        else if (event_names[a]) {
-          if (typeof $ === "undefined")
-            throw new Error("Event binding is supported only if " +
-                            "jQuery or similar is available");
-          ($(elt)[a])(attrs[a]);
-        }
+    }
+    var elt = document.createElement(tag);
+    for (var a in attrs) {
+      if (a === 'cls')
+        elt.setAttribute('class', attrs[a]);
+      else if (a === '_for')
+        elt.setAttribute('for', attrs[a]);
+      else if (a === 'style' && ! styleGetSetSupport)
+        elt.style.cssText = String(attrs[a]);
+      else if (event_names[a]) {
+        if (typeof $ === "undefined")
+          throw new Error("Event binding is supported only if " +
+                          "jQuery or similar is available");
+        ($(elt)[a])(attrs[a]);
+      }
+      else
+        elt.setAttribute(a, attrs[a]);
+    }
+    var addChildren = function (children) {
+      for (var i = 0; i < children.length; i++) {
+        var c = children[i];
+        if (!c && c !== '')
+          throw new Error("Bad value for element body: " + c);
+        else if (c instanceof Array)
+          addChildren(c);
+        else if (typeof c === "string")
+          elt.appendChild(document.createTextNode(c));
+        else if ('element' in c)
+          addChildren([c.element]);
         else
-          elt.setAttribute(a, attrs[a]);
-      }
-      var addChildren = function (children) {
-        for (var i = 0; i < children.length; i++) {
-          var c = children[i];
-          if (!c && c !== '')
-            throw new Error("Bad value for element body: " + c);
-          else if (c instanceof Array)
-            addChildren(c);
-          else if (typeof c === "string")
-            elt.appendChild(document.createTextNode(c));
-          else if ('element' in c)
-            addChildren([c.element]);
-          else
-            elt.appendChild(c);
-        };
+          elt.appendChild(c);
       };
-      addChildren(contents);
-      return elt;
     };
-  })(tag);
-};
+    addChildren(contents);
+    return elt;
+  };
+  // Put the function onto the package-scope variable with this name.
+  eval(tag + " = f;");
+});

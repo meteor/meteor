@@ -5,31 +5,15 @@ Package.describe({
   internal: true
 });
 
-Package.register_extension(
-  "js", function (bundle, source_path, serve_path, where, opt) {
-    bundle.add_resource({
-      type: "js",
-      path: serve_path,
-      source_file: source_path,
-      where: where,
-      raw: opt.raw
-    });
-  }
-);
+Package._transitional_registerBuildPlugin({
+  name: "basicFileTypes",
+  sources: ['plugin/basic-file-types.js']
+});
 
-Package.register_extension(
-  "css", function (bundle, source_path, serve_path, where) {
-    bundle.add_resource({
-      type: "css",
-      path: serve_path,
-      source_file: source_path,
-      where: where
-    });
-  }
-);
-
-Package.on_use(function (api, where) {
+Package.on_use(function (api) {
   api.use('underscore', ['client', 'server']);
+
+  api.export('Meteor');
 
   api.add_files('client_environment.js', 'client');
   api.add_files('server_environment.js', 'server');
@@ -39,10 +23,12 @@ Package.on_use(function (api, where) {
   api.add_files('errors.js', ['client', 'server']);
   api.add_files('fiber_helpers.js', 'server');
   api.add_files('fiber_stubs_client.js', 'client');
+  api.add_files('startup_client.js', ['client']);
+  api.add_files('startup_server.js', ['server']);
+  api.add_files('debug.js', ['client', 'server']);
 
   // dynamic variables, bindEnvironment
   // XXX move into a separate package?
-  api.use('underscore', ['client', 'server']);
   api.add_files('dynamics_browser.js', 'client');
   api.add_files('dynamics_nodejs.js', 'server');
 
@@ -53,7 +39,7 @@ Package.on_use(function (api, where) {
 });
 
 Package.on_test(function (api) {
-  api.use('tinytest');
+  api.use(['underscore', 'tinytest', 'test-helpers']);
 
   api.add_files('client_environment_test.js', 'client');
   api.add_files('server_environment_test.js', 'server');
@@ -62,8 +48,14 @@ Package.on_test(function (api) {
   api.add_files('dynamics_test.js', ['client', 'server']);
 
   api.add_files('fiber_helpers_test.js', ['server']);
+  api.add_files('wrapasync_test.js', ['server']);
 
   api.add_files('url_tests.js', ['client', 'server']);
 
   api.add_files('timers_tests.js', ['client', 'server']);
+
+  api.add_files('debug_test.js', 'client');
+
+  api.add_files('bare_test_setup.js', 'client', {bare: true});
+  api.add_files('bare_tests.js', 'client');
 });

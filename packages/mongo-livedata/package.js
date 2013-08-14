@@ -8,16 +8,30 @@
 // minutiae.
 
 Package.describe({
-  summary: "Adaptor for using MongoDB and Minimongo over Livedata",
+  summary: "Adaptor for using MongoDB and Minimongo over DDP",
   internal: true
 });
 
-Npm.depends({
-  mongodb: "https://github.com/meteor/node-mongodb-native/tarball/20e17040c5eccf3c431788dd281b8099cd2099f8"});
+Npm.depends({mongodb: "1.3.17"});
 
 Package.on_use(function (api) {
-  api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging', 'livedata'],
+  api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging',
+           'livedata', 'deps'],
           ['client', 'server']);
+  api.use('check', ['client', 'server']);
+
+  // Allow us to detect 'insecure'.
+  api.use('insecure', {weak: true});
+
+  // Allow us to detect 'autopublish', and publish collections if it's loaded.
+  api.use('autopublish', 'server', {weak: true});
+
+  // defaultRemoteCollectionDriver gets its deployConfig from something that is
+  // (for questionable reasons) initialized by the webapp package.
+  api.use('webapp', 'server', {weak: true});
+
+  // Stuff that should be exposed via a real API, but we haven't yet.
+  api.export('MongoInternals', 'server');
 
   api.add_files('mongo_driver.js', 'server');
   api.add_files('local_collection_driver.js', ['client', 'server']);
@@ -27,8 +41,9 @@ Package.on_use(function (api) {
 
 Package.on_test(function (api) {
   api.use('mongo-livedata');
-  api.use('tinytest');
-  api.use('test-helpers');
+  api.use('check');
+  api.use(['tinytest', 'underscore', 'test-helpers', 'ejson', 'random',
+           'livedata']);
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
   api.add_files('mongo_livedata_tests.js', ['client', 'server']);
@@ -36,4 +51,3 @@ Package.on_test(function (api) {
   api.add_files('collection_tests.js', ['client', 'server']);
   api.add_files('observe_changes_tests.js', ['client', 'server']);
 });
-

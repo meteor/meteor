@@ -1,9 +1,18 @@
 // URL prefix for tests to talk to
 var _XHR_URL_PREFIX = "/http_test_responder";
+
+var url_base = function () {
+  if (Meteor.isServer) {
+    var address = WebApp.httpServer.address();
+    return "http://127.0.0.1:" + address.port;
+  } else {
+    return "";
+  }
+};
+
 var url_prefix = function () {
   if (Meteor.isServer && _XHR_URL_PREFIX.indexOf("http") !== 0) {
-    var address = __meteor_bootstrap__.httpServer.address();
-    _XHR_URL_PREFIX = "http://127.0.0.1:" + address.port + _XHR_URL_PREFIX;
+    _XHR_URL_PREFIX = url_base() + _XHR_URL_PREFIX;
   }
   return _XHR_URL_PREFIX;
 };
@@ -32,12 +41,12 @@ testAsyncMulti("httpcall - basic", [
       };
 
 
-      Meteor.http.call("GET", url_prefix()+url, options, expect(callback));
+      HTTP.call("GET", url_prefix()+url, options, expect(callback));
 
       if (Meteor.isServer) {
         // test sync version
         try {
-          var result = Meteor.http.call("GET", url_prefix()+url, options);
+          var result = HTTP.call("GET", url_prefix()+url, options);
           callback(undefined, result);
         } catch (e) {
           callback(e, e.response);
@@ -80,12 +89,12 @@ testAsyncMulti("httpcall - errors", [
       test.isFalse(result);
       test.isFalse(error.response);
     };
-    Meteor.http.call("GET", "http://asfd.asfd/", expect(unknownServerCallback));
+    HTTP.call("GET", "http://asfd.asfd/", expect(unknownServerCallback));
 
     if (Meteor.isServer) {
       // test sync version
       try {
-        var unknownServerResult = Meteor.http.call("GET", "http://asfd.asfd/");
+        var unknownServerResult = HTTP.call("GET", "http://asfd.asfd/");
         unknownServerCallback(undefined, unknownServerResult);
       } catch (e) {
         unknownServerCallback(e, e.response);
@@ -93,7 +102,7 @@ testAsyncMulti("httpcall - errors", [
     }
 
     // Server serves 500
-    error500Callback = function(error, result) {
+    var error500Callback = function(error, result) {
       test.isTrue(error);
       test.isTrue(error.message.indexOf("500") !== -1); // message has statusCode
       test.isTrue(error.message.indexOf(
@@ -110,12 +119,12 @@ testAsyncMulti("httpcall - errors", [
       test.isTrue(error.response.content.length > 180);
       test.isTrue(error.message.length < 180); // make sure we truncate.
     };
-    Meteor.http.call("GET", url_prefix()+"/fail", expect(error500Callback));
+    HTTP.call("GET", url_prefix()+"/fail", expect(error500Callback));
 
     if (Meteor.isServer) {
       // test sync version
       try {
-        var error500Result = Meteor.http.call("GET", url_prefix()+"/fail");
+        var error500Result = HTTP.call("GET", url_prefix()+"/fail");
         error500Callback(undefined, error500Result);
       } catch (e) {
         error500Callback(e, e.response);
@@ -134,7 +143,7 @@ testAsyncMulti("httpcall - timeout", [
       test.isFalse(error.response);
     };
     var timeoutUrl = url_prefix()+"/slow-"+Random.id();
-    Meteor.http.call(
+    HTTP.call(
       "GET", timeoutUrl,
       { timeout: 500 },
       expect(timeoutCallback));
@@ -142,7 +151,7 @@ testAsyncMulti("httpcall - timeout", [
     if (Meteor.isServer) {
       // test sync version
       try {
-        var timeoutResult = Meteor.http.call("GET", timeoutUrl, { timeout: 500 });
+        var timeoutResult = HTTP.call("GET", timeoutUrl, { timeout: 500 });
         timeoutCallback(undefined, timeoutResult);
       } catch (e) {
         timeoutCallback(e, e.response);
@@ -159,7 +168,7 @@ testAsyncMulti("httpcall - timeout", [
       test.equal(data.method, "GET");
     };
     var noTimeoutUrl = url_prefix()+"/foo-"+Random.id();
-    Meteor.http.call(
+    HTTP.call(
       "GET", noTimeoutUrl,
       { timeout: 2000 },
       expect(noTimeoutCallback));
@@ -167,7 +176,7 @@ testAsyncMulti("httpcall - timeout", [
     if (Meteor.isServer) {
       // test sync version
       try {
-        var noTimeoutResult = Meteor.http.call("GET", noTimeoutUrl, { timeout: 2000 });
+        var noTimeoutResult = HTTP.call("GET", noTimeoutUrl, { timeout: 2000 });
         noTimeoutCallback(undefined, noTimeoutResult);
       } catch (e) {
         noTimeoutCallback(e, e.response);
@@ -180,7 +189,7 @@ testAsyncMulti("httpcall - redirect", [
 
   function(test, expect) {
     // Test that we follow redirects by default
-    Meteor.http.call("GET", url_prefix()+"/redirect", expect(
+    HTTP.call("GET", url_prefix()+"/redirect", expect(
       function(error, result) {
         test.isFalse(error);
         test.isTrue(result);
@@ -196,7 +205,7 @@ testAsyncMulti("httpcall - redirect", [
     _.each([false, true], function(followRedirects) {
       var do_it = function(should_work) {
         var maybe_expect = should_work ? expect : _.identity;
-        Meteor.http.call(
+        HTTP.call(
           "GET", url_prefix()+"/redirect",
           {followRedirects: followRedirects},
           maybe_expect(function(error, result) {
@@ -232,7 +241,7 @@ testAsyncMulti("httpcall - methods", [
     // non-get methods
     var test_method = function(meth, func_name) {
       func_name = func_name || meth.toLowerCase();
-      Meteor.http[func_name](
+      HTTP[func_name](
         url_prefix()+"/foo",
         expect(function(error, result) {
           test.isFalse(error);
@@ -257,7 +266,7 @@ testAsyncMulti("httpcall - methods", [
 
   function(test, expect) {
     // contents and data
-    Meteor.http.call(
+    HTTP.call(
       "POST", url_prefix()+"/foo",
       { content: "Hello World!" },
       expect(function(error, result) {
@@ -268,7 +277,7 @@ testAsyncMulti("httpcall - methods", [
         test.equal(data.body, "Hello World!");
       }));
 
-    Meteor.http.call(
+    HTTP.call(
       "POST", url_prefix()+"/data-test",
       { data: {greeting: "Hello World!"} },
       expect(function(error, result) {
@@ -281,7 +290,7 @@ testAsyncMulti("httpcall - methods", [
         test.matches(data.headers['content-type'], /^application\/json\b/);
       }));
 
-    Meteor.http.call(
+    HTTP.call(
       "POST", url_prefix()+"/data-test-explicit",
       { data: {greeting: "Hello World!"},
         headers: {'Content-Type': 'text/stupid'} },
@@ -310,7 +319,7 @@ testAsyncMulti("httpcall - http auth", [
     // https://bugzilla.mozilla.org/show_bug.cgi?id=654348
     var password = 'rocks';
     //var password = Random.id().replace(/[^0-9a-zA-Z]/g, '');
-    Meteor.http.call(
+    HTTP.call(
       "GET", url_prefix()+"/login?"+password,
       { auth: "meteor:"+password },
       expect(function(error, result) {
@@ -324,7 +333,7 @@ testAsyncMulti("httpcall - http auth", [
 
     // test fail on malformed username:password
     test.throws(function() {
-      Meteor.http.call(
+      HTTP.call(
         "GET", url_prefix()+"/login?"+password,
         { auth: "fooooo" },
         function() { throw new Error("can't get here"); });
@@ -334,7 +343,7 @@ testAsyncMulti("httpcall - http auth", [
 
 testAsyncMulti("httpcall - headers", [
   function(test, expect) {
-    Meteor.http.call(
+    HTTP.call(
       "GET", url_prefix()+"/foo-with-headers",
       {headers: { "Test-header": "Value",
                   "another": "Value2" } },
@@ -350,7 +359,7 @@ testAsyncMulti("httpcall - headers", [
         test.equal(data.headers['another'], "Value2");
       }));
 
-    Meteor.http.call(
+    HTTP.call(
       "GET", url_prefix()+"/headers",
       expect(function(error, result) {
         test.isFalse(error);
@@ -374,7 +383,7 @@ testAsyncMulti("httpcall - params", [
       } else {
         opts = opt_opts;
       }
-      Meteor.http.call(
+      HTTP.call(
         method, url_prefix()+url,
         _.extend({ params: params }, opts),
         expect(function(error, result) {
@@ -406,6 +415,66 @@ testAsyncMulti("httpcall - params", [
     do_test("PUT", "/put", {foo:"bar"}, "/put", "foo=bar");
   }
 ]);
+
+
+if (Meteor.isServer) {
+  // This is testing the server's static file sending code, not the http
+  // package. It's here because it is very similar to the other tests
+  // here, even though it is testing something else.
+  //
+  // client http library mangles paths before they are requested. only
+  // run this test on the server.
+  testAsyncMulti("httpcall - static file serving", [
+    function(test, expect) {
+      // Suppress error printing for this test (and for any other code that sets
+      // the x-suppress-error header).
+      WebApp.suppressConnectErrors();
+
+      var do_test = function (path, code, match) {
+        HTTP.get(
+          url_base() + path,
+          {headers: {'x-suppress-error': 'true'}},
+          expect(function(error, result) {
+            test.equal(result.statusCode, code);
+            if (match)
+              test.matches(result.content, match);
+          }));
+      };
+
+      // existing static file
+      do_test("/packages/http/test_static.serveme", 200, /static file serving/);
+
+      // no such file, so return the default app HTML.
+      var getsAppHtml = [
+        // This file doesn't exist.
+        "/nosuchfile",
+
+        // Our static file serving doesn't process .. or its encoded version, so
+        // any of these return the app HTML.
+        "/../nosuchfile",
+        "/%2e%2e/nosuchfile",
+        "/%2E%2E/nosuchfile",
+        "/%2d%2d/nosuchfile",
+        "/packages/http/../http/test_static.serveme",
+        "/packages/http/%2e%2e/http/test_static.serveme",
+        "/packages/http/%2E%2E/http/test_static.serveme",
+        "/packages/http/../../packages/http/test_static.serveme",
+        "/packages/http/%2e%2e/%2e%2e/packages/http/test_static.serveme",
+        "/packages/http/%2E%2E/%2E%2E/packages/http/test_static.serveme",
+
+        // ... and they *definitely* shouldn't be able to escape the app bundle.
+        "/packages/http/../../../../../../packages/http/test_static.serveme",
+        "/../../../../../../../../../../../bin/ls",
+        "/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/bin/ls",
+        "/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/bin/ls"
+      ];
+
+      _.each(getsAppHtml, function (x) {
+        do_test(x, 200, /<title>Tests<\/title/);
+      });
+    }
+  ]);
+}
 
 
 // TO TEST/ADD:

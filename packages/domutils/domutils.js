@@ -1,4 +1,5 @@
 DomUtils = {};
+
 var qsaFindAllBySelector = function (selector, contextNode) {
   // If IE7 users report the following error message, you
   // can fix it with "meteor add jquery".

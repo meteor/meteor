@@ -1,12 +1,11 @@
-
-Spark._patch = function(tgtParent, srcParent, tgtBefore, tgtAfter, preservations,
-                        results) {
+patch = function(tgtParent, srcParent, tgtBefore, tgtAfter, preservations,
+                 results) {
 
   var copyFunc = function(t, s) {
-    LiveRange.transplantTag(Spark._TAG, t, s);
+    LiveRange.transplantTag(TAG, t, s);
   };
 
-  var patcher = new Spark._Patcher(
+  var patcher = new Patcher(
     tgtParent, srcParent, tgtBefore, tgtAfter);
 
 
@@ -67,7 +66,7 @@ Spark._patch = function(tgtParent, srcParent, tgtBefore, tgtAfter, preservations
                 // initial contents but may affect the tag's .value in IE) or of
                 // SELECT (which is specially handled in _copyAttributes).
                 // Otherwise recurse!
-                Spark._patch(tgt, src, null, null, preservations);
+                patch(tgt, src, null, null, preservations);
               }
             }
             return false; // tell visitNodes not to recurse
@@ -105,7 +104,7 @@ Spark._patch = function(tgtParent, srcParent, tgtBefore, tgtAfter, preservations
 // in their place.
 //
 // Constructor:
-Spark._Patcher = function(tgtParent, srcParent, tgtBefore, tgtAfter) {
+Patcher = function(tgtParent, srcParent, tgtBefore, tgtAfter) {
   this.tgtParent = tgtParent;
   this.srcParent = srcParent;
 
@@ -161,7 +160,7 @@ Spark._Patcher = function(tgtParent, srcParent, tgtBefore, tgtAfter) {
 // copyCallback is called on every new matched (tgt, src) pair
 // right after copying attributes.  It's a good time to transplant
 // liveranges and patch children.
-Spark._Patcher.prototype.match = function(
+Patcher.prototype.match = function(
   tgtNode, srcNode, copyCallback, onlyAdvance) {
 
   // last nodes "kept" (matched/identified with each other)
@@ -246,7 +245,7 @@ Spark._Patcher.prototype.match = function(
     while (true) {
       if (! (firstIter && onlyAdvance)) {
         if (tgt.nodeType === 1) /* ELEMENT */
-          Spark._Patcher._copyAttributes(tgt, src);
+          Patcher._copyAttributes(tgt, src);
         if (copyCallback)
           copyCallback(tgt, src);
       }
@@ -275,7 +274,7 @@ Spark._Patcher.prototype.match = function(
 
 // After a match, skip ahead to later siblings of the last kept nodes,
 // without performing any replacements.
-Spark._Patcher.prototype.skipToSiblings = function(tgt, src) {
+Patcher.prototype.skipToSiblings = function(tgt, src) {
   var lastTgt = this.lastKeptTgtNode;
   var lastSrc = this.lastKeptSrcNode;
 
@@ -295,7 +294,7 @@ Spark._Patcher.prototype.skipToSiblings = function(tgt, src) {
 //
 // Patchers are single-use, so no more methods can be called
 // on the Patcher.
-Spark._Patcher.prototype.finish = function() {
+Patcher.prototype.finish = function() {
   return this.match(null, null);
 };
 
@@ -305,7 +304,7 @@ Spark._Patcher.prototype.finish = function() {
 //
 // Precondition: tgtBefore and tgtAfter have same parent; either may be falsy,
 // but not both, unless optTgtParent is provided.  Same with srcBefore/srcAfter.
-Spark._Patcher.prototype._replaceNodes = function(
+Patcher.prototype._replaceNodes = function(
   tgtBefore, tgtAfter, srcBefore, srcAfter, optTgtParent, optSrcParent)
 {
   var tgtParent = optTgtParent || (tgtBefore || tgtAfter).parentNode;
@@ -347,7 +346,7 @@ Spark._Patcher.prototype._replaceNodes = function(
 //
 // This is complicated by form controls and the fact that old IE
 // can't keep the difference straight between properties and attributes.
-Spark._Patcher._copyAttributes = function(tgt, src) {
+Patcher._copyAttributes = function(tgt, src) {
   var srcAttrs = src.attributes;
   var tgtAttrs = tgt.attributes;
 
@@ -571,3 +570,5 @@ Spark._Patcher._copyAttributes = function(tgt, src) {
       tgt.removeAttribute("checked");
   }
 };
+
+SparkTest.Patcher = Patcher;

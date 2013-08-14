@@ -1,14 +1,12 @@
-streamBuffers = Npm.require('stream-buffers');
+var streamBuffers = Npm.require('stream-buffers');
 
 Tinytest.add("email - dev mode smoke test", function (test) {
   // This only tests dev mode, so don't run the test if this is deployed.
   if (process.env.MAIL_URL) return;
 
-  var old_stream = Email._output_stream;
   try {
     var stream = new streamBuffers.WritableStreamBuffer;
-    Email._output_stream = stream;
-    Email._next_devmode_mail_id = 0;
+    EmailTest.overrideOutputStream(stream);
     Email.send({
       from: "foo@example.com",
       to: "bar@example.com",
@@ -21,7 +19,7 @@ Tinytest.add("email - dev mode smoke test", function (test) {
     // in case a concurrent test run mutates Email._output_stream too.
     // XXX brittle if mailcomposer changes header order, etc
     test.equal(stream.getContentsAsString("utf8"),
-               "====== BEGIN MAIL #0 ======\n" + 
+               "====== BEGIN MAIL #0 ======\n" +
                "MIME-Version: 1.0\r\n" +
                "X-Meteor-Test: a custom header\r\n" +
                "From: foo@example.com\r\n" +
@@ -36,6 +34,6 @@ Tinytest.add("email - dev mode smoke test", function (test) {
                "From us.\r\n" +
                "====== END MAIL #0 ======\n");
   } finally {
-    Email._output_stream = old_stream;
+    EmailTest.restoreOutputStream();
   }
 });

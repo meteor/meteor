@@ -1,8 +1,10 @@
 // A place to store request tokens pending verification
-Oauth1._requestTokens = {};
+var requestTokens = {};
+
+OAuth1Test = {requestTokens: requestTokens};
 
 // connect middleware
-Oauth1._handleRequest = function (service, query, res) {
+Oauth._requestHandlers['1'] = function (service, query, res) {
 
   var config = ServiceConfiguration.configurations.findOne({service: service.serviceName});
   if (!config) {
@@ -20,7 +22,7 @@ Oauth1._handleRequest = function (service, query, res) {
     oauthBinding.prepareRequestToken(query.requestTokenAndRedirect);
 
     // Keep track of request token so we can verify it on the next step
-    Oauth1._requestTokens[query.state] = oauthBinding.requestToken;
+    requestTokens[query.state] = oauthBinding.requestToken;
 
     // redirect to provider login, which will redirect back to "step 2" below
     var redirectUrl = urls.authenticate + '?oauth_token=' + oauthBinding.requestToken;
@@ -32,8 +34,8 @@ Oauth1._handleRequest = function (service, query, res) {
     // token and access token secret and log in as user
 
     // Get the user's request token so we can verify it and clear it
-    var requestToken = Oauth1._requestTokens[query.state];
-    delete Oauth1._requestTokens[query.state];
+    var requestToken = requestTokens[query.state];
+    delete requestTokens[query.state];
 
     // Verify user authorized access and the oauth_token matches
     // the requestToken from previous step

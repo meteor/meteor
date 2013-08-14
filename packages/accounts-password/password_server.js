@@ -16,11 +16,17 @@ var selectorFromUserQuery = function (user) {
   throw new Error("shouldn't happen (validation missed something)");
 };
 
+// XXX maybe this belongs in the check package
+var NonEmptyString = Match.Where(function (x) {
+  check(x, String);
+  return x.length > 0;
+});
+
 var userQueryValidator = Match.Where(function (user) {
   check(user, {
-    id: Match.Optional(String),
-    username: Match.Optional(String),
-    email: Match.Optional(String)
+    id: Match.Optional(NonEmptyString),
+    username: Match.Optional(NonEmptyString),
+    email: Match.Optional(NonEmptyString)
   });
   if (_.keys(user).length !== 1)
     throw new Match.Error("User property must have exactly one field");
@@ -56,7 +62,7 @@ Meteor.methods({beginPasswordExchange: function (request) {
     throw new Meteor.Error(403, "User has no password set");
 
   var verifier = user.services.password.srp;
-  var srp = new Meteor._srp.Server(verifier);
+  var srp = new SRP.Server(verifier);
   var challenge = srp.issueChallenge({A: request.A});
 
   // save off results in the current session so we can verify them
@@ -76,7 +82,7 @@ Accounts.registerLoginHandler(function (options) {
 
   // we're always called from within a 'login' method, so this should
   // be safe.
-  var currentInvocation = Meteor._CurrentInvocation.get();
+  var currentInvocation = DDP._CurrentInvocation.get();
   var serialized = currentInvocation._sessionData.srpChallenge;
   if (!serialized || serialized.M !== options.srp.M)
     throw new Meteor.Error(403, "Incorrect password");
@@ -121,7 +127,7 @@ Accounts.registerLoginHandler(function (options) {
   // Just check the verifier output when the same identity and salt
   // are passed. Don't bother with a full exchange.
   var verifier = user.services.password.srp;
-  var newVerifier = Meteor._srp.generateVerifier(options.password, {
+  var newVerifier = SRP.generateVerifier(options.password, {
     identity: verifier.identity, salt: verifier.salt});
 
   if (verifier.verifier !== newVerifier.verifier)
@@ -149,7 +155,7 @@ Meteor.methods({changePassword: function (options) {
     // password. For now, we don't allow changePassword without knowing the old
     // password.
     M: String,
-    srp: Match.Optional(Meteor._srp.matchVerifier),
+    srp: Match.Optional(SRP.matchVerifier),
     password: Match.Optional(String)
   });
 
@@ -164,7 +170,7 @@ Meteor.methods({changePassword: function (options) {
 
   var verifier = options.srp;
   if (!verifier && options.password) {
-    verifier = Meteor._srp.generateVerifier(options.password);
+    verifier = SRP.generateVerifier(options.password);
   }
   if (!verifier)
     throw new Meteor.Error(400, "Invalid verifier");
@@ -186,7 +192,7 @@ Accounts.setPassword = function (userId, newPassword) {
   var user = Meteor.users.findOne(userId);
   if (!user)
     throw new Meteor.Error(403, "User not found");
-  var newVerifier = Meteor._srp.generateVerifier(newPassword);
+  var newVerifier = SRP.generateVerifier(newPassword);
 
   Meteor.users.update({_id: user._id}, {
     $set: {'services.password.srp': newVerifier}});
@@ -211,6 +217,7 @@ Meteor.methods({forgotPassword: function (options) {
 
 // send the user an email with a link that when opened allows the user
 // to set a new password, without the old password.
+//
 Accounts.sendResetPasswordEmail = function (userId, email) {
   // Make sure the user exists, and email is one of their addresses.
   var user = Meteor.users.findOne(userId);
@@ -246,8 +253,9 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
 // to choose their password. The email must be one of the addresses in the
 // user's emails field, or undefined to pick the first email automatically.
 //
-// This is not called automatically, it must be called manually if you
+// This is not called automatically. It must be called manually if you
 // want to use enrollment emails.
+//
 Accounts.sendEnrollmentEmail = function (userId, email) {
   // XXX refactor! This is basically identical to sendResetPasswordEmail.
 
@@ -287,7 +295,7 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
 // the users password, and log them in.
 Meteor.methods({resetPassword: function (token, newVerifier) {
   check(token, String);
-  check(newVerifier, Meteor._srp.matchVerifier);
+  check(newVerifier, SRP.matchVerifier);
 
   var user = Meteor.users.findOne({
     "services.password.reset.token": ""+token});
@@ -323,6 +331,7 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
 
 // send the user an email with a link that when opened marks that
 // address as verified
+//
 Accounts.sendVerificationEmail = function (userId, address) {
   // XXX Also generate a link using which someone can delete this
   // account if they own said address but weren't those who created
@@ -422,7 +431,7 @@ var createUser = function (options) {
     username: Match.Optional(String),
     email: Match.Optional(String),
     password: Match.Optional(String),
-    srp: Match.Optional(Meteor._srp.matchVerifier)
+    srp: Match.Optional(SRP.matchVerifier)
   }));
 
   var username = options.username;
@@ -436,7 +445,7 @@ var createUser = function (options) {
   if (options.password) {
     if (options.srp)
       throw new Meteor.Error(400, "Don't pass both password and srp in options");
-    options.srp = Meteor._srp.generateVerifier(options.password);
+    options.srp = SRP.generateVerifier(options.password);
   }
 
   var user = {services: {}};
@@ -487,6 +496,7 @@ Meteor.methods({createUser: function (options) {
 // which is always empty when called from the createUser method? eg, "admin:
 // true", which we want to prevent the client from setting, but which a custom
 // method calling Accounts.createUser could set?
+//
 Accounts.createUser = function (options, callback) {
   options = _.clone(options);
   options.generateLoginToken = false;

@@ -49,15 +49,6 @@ _.extend(exports, {
         ret.push(line);
     });
 
-    // add packages in the app's packages/ directory
-    var appPackagesDir = path.join(app_dir, 'packages');
-    if (fs.existsSync(appPackagesDir)) {
-      _.each(fs.readdirSync(appPackagesDir), function(appPackage) {
-        if (files.is_package_dir(path.join(appPackagesDir, appPackage)))
-          ret.push(appPackage);
-      });
-    }
-
     return ret;
   },
 
@@ -88,6 +79,8 @@ _.extend(exports, {
     // detail: if the file starts with a comment, try to keep a single
     // blank line after the comment (unless the user removes it)
     var current = project.get_packages(app_dir);
+    if (_.contains(current, name))
+      return;
     if (!current.length && lines.length)
       lines.push('');
     lines.push(name);

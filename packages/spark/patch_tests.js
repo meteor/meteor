@@ -1,6 +1,6 @@
 Tinytest.add("spark - patch - basic", function(test) {
 
-  var Patcher = Spark._Patcher;
+  var Patcher = SparkTest.Patcher;
 
   var div = function(html) {
     var n = document.createElement("DIV");
@@ -144,7 +144,7 @@ Tinytest.add("spark - patch - copyAttributes", function(test) {
         if (! node) {
           node = n;
         } else {
-          Spark._Patcher._copyAttributes(node, n);
+          SparkTest.Patcher._copyAttributes(node, n);
         }
         lastAttrs = {};
         _.each(allAttrNames, function(v,k) {
