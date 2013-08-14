@@ -96,10 +96,10 @@ LocalCollection.Cursor = function (collection, selector, options) {
   }
   self.skip = options.skip;
   self.limit = options.limit;
-  self._fields = options.fields;
+  self.fields = options.fields;
 
-  if (self._fields)
-    self.projection_f = LocalCollection._compileProjection(self._fields);
+  if (self.fields)
+    self.projection_f = LocalCollection._compileProjection(self.fields);
 
   if (options.transform && typeof Deps !== "undefined")
     self._transform = Deps._makeNonreactive(options.transform);
@@ -261,7 +261,7 @@ _.extend(LocalCollection.Cursor.prototype, {
       ordered: ordered,
       cursor: self,
       observeChanges: options.observeChanges,
-      _fields: self._fields,
+      fields: self.fields,
       projection_f: self.projection_f
     };
     var qid;
@@ -1027,13 +1027,30 @@ LocalCollection._observeOrderedFromObserveChanges =
 
 LocalCollection._compileProjection = function (fields) {
   if (!_.isObject(fields))
-    throw MinimongoError("Fields projection should be an object");
+    throw MinimongoError("fields option must be an object");
 
-  // Check passed projection fields
+  // Check passed projection fields' keys:
+  // If you have two rules such as 'foo.bar' and 'foo.bar.baz', then the first
+  // one becomes unnecessary. If that happens, there is a probability you are
+  // doing something wrong, framework should notify you about such mistake
+  // earlier on cursor compilation step than later during runtime.
+  // Note, that real mongo doesn't do anything about it and the later rule
+  // appears in projection project, more priority it takes.
+  //
+  // Example, assume following in mongo shell:
+  // > db.coll.insert({ a: { b: 23, c: 44 } })
+  // > db.coll.find({}, { 'a': 1, 'a.b': 1 })
+  // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23 } }
+  // > db.coll.find({}, { 'a.b': 1, 'a': 1 })
+  // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23, "c" : 44 } }
+  //
+  // Note, how second time the return set of keys is different.
   var keyPaths = _.keys(fields);
   _.each(keyPaths, function (keyPath) {
     _.each(keyPaths, function (anotherKeyPath) {
       var idx = keyPath.indexOf(anotherKeyPath);
+      // check if one key is path-prefix of another (like "abra" and
+      // "abra.cadabra", but not "abra" and "abrab.ra")
       if (keyPath !== anotherKeyPath && !idx && keyPath[anotherKeyPath.length] === '.')
         throw MinimongoError("both " + keyPath + " and " + anotherKeyPath + " found in projection");
     });
