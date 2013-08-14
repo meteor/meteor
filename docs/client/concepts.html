@@ -724,7 +724,7 @@ might have two or three (for example, a package that provides several
 classes that work together).
 
 You see only the exports of the packages that you use directly. If you
-use package A, and package B uses package A, then you only see package
+use package A, and package A uses package B, then you only see package
 A's exports. Package B's exports don't "leak" into your namespace just
 because you used package A. This keeps each namespace nice and
 tidy. Each app or package only sees their own globals plus the APIs of
