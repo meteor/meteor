@@ -6,7 +6,7 @@ Roles-based authorization package for Meteor - compatible with built-in accounts
 <br />
 ### Contributors
 
-Thanks to [@mcrider](https://github.com/mcrider)!
+Thanks to [@nickmoylan](https://github.com/nickmoylan) and [@mcrider](https://github.com/mcrider)!
 
 <br />
 
