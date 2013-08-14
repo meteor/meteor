@@ -26,13 +26,10 @@ if (Meteor.isClient) {
   animateToBefore = function ($n, $newNext) {
     // we don't use jQuery's `.css()` for these because we want the
     // element's own style, not the computed style
-    var hasStyle = $n[0].hasAttribute('style');
-    if (hasStyle) {
-      var oldTop = $n[0].style.top;
-      var oldPosition = $n[0].style.position;
-      var oldZIndex = $n[0].style.zIndex;
-      var oldMarginBottom = $n[0].style.marginBottom;
-    }
+    var oldTop = $n[0].style.top;
+    var oldPosition = $n[0].style.position;
+    var oldZIndex = $n[0].style.zIndex;
+    var oldMarginBottom = $n[0].style.marginBottom;
 
     var outerHeight = $n.outerHeight(); // not margin
     var marginBottom = parseInt($n.css('margin-bottom'));
@@ -78,14 +75,10 @@ if (Meteor.isClient) {
       },
       complete: function () {
         placeholder.remove();
-        if (hasStyle) {
-          $n[0].style.top = oldTop;
-          $n[0].style.position = oldPosition;
-          $n[0].style.zIndex = oldZIndex;
-          $n[0].style.marginBottom = oldMarginBottom;
-        } else {
-          $n[0].removeAttribute('style');
-        }
+        $n[0].style.top = oldTop;
+        $n[0].style.position = oldPosition;
+        $n[0].style.zIndex = oldZIndex;
+        $n[0].style.marginBottom = oldMarginBottom;
       }
     });
   };
