@@ -30,7 +30,7 @@ is ready.
 The `startup` callbacks are called in the same order as the calls to
 `Meteor.startup` were made.
 
-On a client, `startup` callbacks from smart packages will be called
+On a client, `startup` callbacks from packages will be called
 first, followed by `<body>` templates from your `.html` files,
 followed by your application code.
 
@@ -452,7 +452,7 @@ to get realtime updates.
 
 {{> api_box disconnect}}
 
-Call this method to temporarily disconnect from the server and stop all
+Call this method to disconnect from the server and stop all
 live data updates. While the client is disconnected it will not receive
 updates to collections, method calls will be queued until the
 connection is reestablished, and hot code push will be disabled.
@@ -2829,7 +2829,7 @@ For example, the `toJSONValue` method for
       return this.toHexString();
     };
 
-<h2 id="HTTP"><span>HTTP</span></h2>
+<h2 id="http"><span>HTTP</span></h2>
 
 `HTTP` provides an HTTP request API on the client and server.  To use
 these functions, add the HTTP package to your project with `$ meteor add
