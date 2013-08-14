@@ -752,6 +752,17 @@ debugger, you've got two options:
   you can access `Package.email.Email.send` even from namespaces that
   don't use the `email` package directly.
 
+When declaring functions, keep in mind that `function x () {}` is just
+shorthard for `var x = function () {}` in JavaScript. Consider these
+examples:
+
+    // This is the same as 'var x = function () ...'. So x() is
+    // file-scope and can be called only from within this one file.
+    function x () { ... }
+
+    // No 'var', so x() is package-scope and can be called from
+    // any file inside this app or package.
+    x = function () { ... }
 
 {{#note}}
 Technically speaking, globals in an app (as opposed to in a package)
@@ -924,14 +935,14 @@ quick tips:
   to load before A. This is occasionally useful for resolving circular
   dependencies.
 
-* It is also for one package to imply another package with
-  `api.imply`. If package A implies package B, then when someone
-  depends on package A, it's as if they also depended on package B as
-  well. In particular, they get B's exports. This can be used to
-  create umbrella packages such as `standard-app-packages` that are a
-  shortcut for pulling in a set of packages, or it can be helpful in
-  factoring common code out of a set of packages as with
-  `accounts-base`.
+* The build system also supports package implication. If package A
+  implies package B, then it means that when someone depends on
+  package A, it's as if they also depended on package B as well. In
+  particular, they get B's exports. This is done with `api.imply` and
+  can be used to create umbrella packages such as
+  `standard-app-packages` that are a shortcut for pulling in a set of
+  packages, or it can be helpful in factoring common code out of a set
+  of packages as with `accounts-base`.
 
 * The build system understands the idea of native code and has a
   system of architecture names to ensure that packages that are
