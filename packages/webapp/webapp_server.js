@@ -15,17 +15,6 @@ var send = Npm.require('send');
 WebApp = {};
 WebAppInternals = {};
 
-var findGalaxy = _.once(function () {
-  if (!('GALAXY' in process.env)) {
-    console.log(
-      "To do Meteor Galaxy operations like binding to a Galaxy " +
-        "proxy, the GALAXY environment variable must be set.");
-    process.exit(1);
-  }
-
-  return DDP.connect(process.env['GALAXY']);
-});
-
 // Keepalives so that when the outer server dies unceremoniously and
 // doesn't kill us, we quit ourselves. A little gross, but better than
 // pidfiles.
@@ -158,16 +147,6 @@ var appUrl = function (url) {
   return true;
 };
 
-// This is used to move legacy environment variables into deployConfig, where
-// other packages look for them. We probably don't want it here forever.
-var copyEnvVarToDeployConfig = function (deployConfig, envVar,
-                                         packageName, configKey) {
-  if (process.env[envVar]) {
-    if (! deployConfig.packages[packageName])
-      deployConfig.packages[packageName] = {};
-    deployConfig.packages[packageName][configKey] = process.env[envVar];
-  }
-};
 
 var runWebAppServer = function () {
   // read the control for the client we'll be serving up
@@ -179,28 +158,6 @@ var runWebAppServer = function () {
   if (clientJson.format !== "browser-program-pre1")
     throw new Error("Unsupported format for client assets: " +
                     JSON.stringify(clientJson.format));
-
-  // XXX change all this config to something more reasonable.
-  //     and move it out of webapp into a different package so you don't
-  //     have weird things like mongo-livedata weak-dep'ing on webapp
-  var deployConfig =
-        process.env.METEOR_DEPLOY_CONFIG
-        ? JSON.parse(process.env.METEOR_DEPLOY_CONFIG) : {};
-  if (!deployConfig.packages)
-    deployConfig.packages = {};
-  if (!deployConfig.boot)
-    deployConfig.boot = {};
-  if (!deployConfig.boot.bind)
-    deployConfig.boot.bind = {};
-
-  // check environment for legacy env variables.
-  if (process.env.PORT && !_.has(deployConfig.boot.bind, 'localPort')) {
-    deployConfig.boot.bind.localPort = parseInt(process.env.PORT);
-  }
-  if (process.env.BIND_IP && !_.has(deployConfig.boot.bind, 'localIp')) {
-    deployConfig.boot.bind.localIp = process.env.BIND_IP;
-  }
-  copyEnvVarToDeployConfig(deployConfig, "MONGO_URL", "mongo-livedata", "url");
 
   // webserver
   var app = connect();
@@ -415,16 +372,14 @@ var runWebAppServer = function () {
     // have test-only NPM dependencies but is overkill here.)
     __basicAuth__: connect.basicAuth
   });
-  // XXX move deployConfig out of __meteor_bootstrap__, after deciding where in
-  // the world it goes. maybe a new deploy-config package?
-  _.extend(__meteor_bootstrap__, {
-    deployConfig: deployConfig
-  });
 
   // Let the rest of the packages (and Meteor.startup hooks) insert connect
   // middlewares and update __meteor_runtime_config__, then keep going to set up
   // actually serving HTML.
   main = function (argv) {
+    // main happens post startup hooks, so we don't need a Meteor.startup() to
+    // ensure this happens after the galaxy package is loaded.
+    var AppConfig = Package["application-configuration"].AppConfig;
     argv = optimist(argv).boolean('keepalive').argv;
 
     var boilerplateHtmlPath = path.join(clientDir, clientJson.page);
@@ -439,41 +394,46 @@ var runWebAppServer = function () {
         __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || "");
 
     // only start listening after all the startup code has run.
-    var bind = deployConfig.boot.bind;
-    var localPort = bind.localPort || 0;
-    var localIp = bind.localIp || '0.0.0.0';
+    var localPort = parseInt(process.env.PORT) || 0;
+    var host = process.env.BIND_IP;
+    var localIp = host || '0.0.0.0';
     httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
       if (argv.keepalive || true)
         console.log("LISTENING"); // must match run.js
       var port = httpServer.address().port;
-      if (bind.viaProxy && bind.viaProxy.proxyEndpoint) {
-        WebAppInternals.bindToProxy(bind.viaProxy);
-      } else if (bind.viaProxy) {
-        // bind via the proxy, but we'll have to find it ourselves via
-        // ultraworld.
-        var galaxy = findGalaxy();
-        var proxyServiceName = deployConfig.proxyServiceName || "proxy";
-        galaxy.subscribe('servicesByName', proxyServiceName);
-        var Proxies = new Meteor.Collection('services', {
-          manager: galaxy
-        });
-        var doBinding = function (proxyService) {
-          if (proxyService.providers.proxy) {
-            Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
-            WebAppInternals.bindToProxy(_.extend({
-              proxyEndpoint: proxyService.providers.proxy
-            }, bind.viaProxy));
-         }
-        };
-        Proxies.find().observe({
-          added: doBinding,
-          changed: doBinding
-        });
-      }
+      var proxyBinding;
+
+      AppConfig.configurePackage('webapp', function (configuration) {
+        if (proxyBinding)
+          proxyBinding.stop();
+        if (configuration && configuration.proxy) {
+          proxyBinding = AppConfig.configureService(configuration.proxyServiceName || "proxy", function (proxyService) {
+            if (proxyService.providers.proxy) {
+              var proxyConf;
+              if (process.env.ADMIN_APP) {
+                proxyConf = {
+                  securePort: 44333,
+                  insecurePort: 9414,
+                  bindHost: "localhost",
+                  bindPathPrefix: "/" + process.env.GALAXY_APP
+                };
+              } else {
+                proxyConf = configuration.proxy;
+
+              }
+              Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
+              WebAppInternals.bindToProxy(_.extend({
+                proxyEndpoint: proxyService.providers.proxy
+              }, proxyConf));
+            }
+          });
+        }
+      });
 
       var callbacks = onListeningCallbacks;
       onListeningCallbacks = null;
       _.each(callbacks, function (x) { x(); });
+
     }, function (e) {
       console.error("Error listening:", e);
       console.error(e.stack);
@@ -494,7 +454,6 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
     throw new Error("missing proxyEndpoint");
   if (!proxyConfig.bindHost)
     throw new Error("missing bindHost");
-  // XXX move these into deployConfig?
   if (!process.env.GALAXY_JOB)
     throw new Error("missing $GALAXY_JOB");
   if (!process.env.GALAXY_APP)

@@ -9,6 +9,9 @@ Npm.depends({connect: "2.7.10",
 
 Package.on_use(function (api) {
   api.use(['logging', 'underscore', 'routepolicy'], 'server');
+  api.use(['application-configuration'], {
+    unordered: true
+  });
   api.export(['WebApp', 'main', 'WebAppInternals'], 'server');
   api.add_files('webapp_server.js', 'server');
 });

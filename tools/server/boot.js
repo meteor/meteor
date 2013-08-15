@@ -76,6 +76,7 @@ sourcemap_support.install({
   handleUncaughtExceptions: false
 });
 
+
 Fiber(function () {
   _.each(serverJson.load, function (fileInfo) {
     var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
