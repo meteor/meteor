@@ -27,7 +27,6 @@ var getToc = function (bookName) {
     var json = eval(Assets.getText(path.join(bookName, 'toc.json')));
   } catch (e) {
     // book not found
-    console.log(e);
     return null;
   }
 
@@ -56,7 +55,7 @@ var getToc = function (bookName) {
           }
         }
 
-        if (! item.article) {
+        if (item.article === undefined) {
           if (! item.anchor && ! lastAnchor) {
             if (item.title)
               item.article = slugify(item.title);

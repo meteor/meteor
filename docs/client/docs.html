@@ -5,10 +5,18 @@
   <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
 </head>
 
-<body>
+<template name="layout">
   <div id="topbar">
     {{> topbar}}
   </div>
+  {{yield}}
+</template>
+
+<template name="topbar">
+  <h1>Documentation {{release}}</h1>
+</template>
+
+<template name="article">
   <div id="nav1">
     {{> outerNav }}
   </div>
@@ -18,11 +26,8 @@
   <div id="main">
     {{> main }}
   </div>
-</body>
-
-<template name="topbar">
-  <h1>Documentation {{release}}</h1>
 </template>
+
 
 <template name="outerNav">
   <div id="nav1-inner">
@@ -30,7 +35,10 @@
       {{#each recommendedBookNames}}
         {{#if name}}
           {{#with thisBook}}
-            <li class="{{maybe_selected}}">{{title}}</li>
+            <li class="{{maybe_selected ../../../book}}">
+              <!-- XXX check if not spacer .. -->
+              <a href="{{bookLink}}">{{title}}</a>
+            </li>
           {{/with}}
         {{else}}
           &nbsp;
@@ -47,7 +55,10 @@
     <div class="spacer"> </div>
   {{else}}
     <div class="toc-item {{type}} {{maybe_current}}">
-      {{#if formal}}<i>{{formal}}</i>.{{/if}}{{title}}
+      <!-- XXX why two '..' segments? is that a spacebars bug? -->
+      <a href="{{articleLinkInBook ../../book}}">
+         {{#if formal}}<i>{{formal}}</i>.{{/if}}{{title}}
+       </a>
     </div>
   {{/if}}
   {{/each}}
@@ -59,9 +70,7 @@
   <a href="http://github.com/meteor/meteor"><img class="github-ribbon visible-desktop" src="/forkme_right_red_aa0000.png" alt="Fork me on GitHub"></a>
 
   <div id="top"></div>
-  {{#with currentArticle}}
-    {{#better_markdown}}{{{contents}}}{{/better_markdown}}
-  {{/with}}
+  {{#better_markdown}}{{{contents}}}{{/better_markdown}}
 </template>
 
 <template name="dtdd_helper">

@@ -1,17 +1,53 @@
-if (! Session.get('selectedBook')) {
-  // XXX sync with URLs/use routes
-  Session.set('selectedBook', 'essentials');
-}
+Router.configure({
+  layout: 'layout'
+});
 
-Meteor.startup(function () {
-  Meteor.autorun(function () {
-    var bookName = Session.get('selectedBook');
-    var articleName = Session.get('selectedArticle');
-    Meteor.setTimeout(function () {
-      fetchBook(bookName);
-      if (articleName !== undefined)
-        fetchArticle(bookName, articleName);
-    }, 0);
+Router.map(function () {
+  this.route('root', {
+    path: '/',
+    template: 'article',
+    data: function () {
+      // XXX select first TOC item in first recommended book
+      return null;
+    }
+  });
+
+  this.route('book', {
+    path: '/:book',
+    template: 'article',
+    data: function () {
+      fetchBook(this.params.book);
+      // select first thing in the TOC
+      var book = Books.findOne(this.params.book);
+      var toc = book && book.toc || [];
+
+      for (var i = 0; i < toc.length; i++)
+        if (toc[i].type !== "spacer") {
+          fetchArticle(this.params.book, toc[i].article);
+          // XXX set anchor to toc.anchor
+          var a = Articles.findOne({book: book._id,
+                                   name: toc[i].article});
+          return Articles.findOne({book: book._id,
+                                   name: toc[i].article});
+        }
+      return null;
+    }
+  });
+
+  this.route('article', {
+    path: '/:book/:article',
+    template: 'article',
+    data: function () {
+      fetchBook(this.params.book);
+      fetchArticle(this.params.book, this.params.article);
+
+      // XXX set anchor
+      return Articles.findOne({book: this.params.book,
+                               name: this.params.article});
+    },
+    onBeforeRun: function () {
+      console.log("onbeforerun", this);
+    }
   });
 });
 
@@ -99,7 +135,6 @@ Meteor.startup(function () {
 });
 
 
-
 //// topbar ////
 
 Template.topbar.release = function () {
@@ -119,25 +154,20 @@ Template.outerNav.thisBook = function () {
 };
 
 
-Template.outerNav.maybe_selected = function () {
-  return Session.get("selectedBook") === this._id ? "selected" : "";
+Template.outerNav.bookLink = function () {
+  // XXX emit correct anchor
+  return Router.path('book', {book: this._id});
 };
 
-Template.outerNav.events = {
-  'click li': function (evt) {
-    if (! this.spacer) {
-      Session.set("selectedBook", this._id);
-      Session.set("selectedArticle", '');
-    }
-  }
+Template.outerNav.maybe_selected = function (selectedBookName) {
+  return selectedBookName === this._id ? "selected" : "";
 };
-
 
 
 //// nav ////
 
 Template.nav.sections = function () {
-  var book = Books.findOne(Session.get('selectedBook'));
+  var book = Books.findOne(this.book);
   return book && book.toc || [];
 };
 
@@ -150,13 +180,12 @@ Template.nav.maybe_current = function () {
 // XXX BROKEN
 };
 
-Template.nav.events = {
-  'click .toc-item': function () {
-    Session.set("selectedArticle", this.article);
-    // XXX go to this.anchor
-    // XXX make this a proper link, for future server-side rendering
-  }
+Template.nav.articleLinkInBook = function (bookName) {
+  // XXX emit correct anchor (this.anchor)
+  return Router.path('article', {book: bookName,
+                                 article: this.article});
 };
+
 
 
 
