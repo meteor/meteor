@@ -1087,7 +1087,9 @@ LocalCollection._compileProjection = function (fields) {
         var docTarget = doc;
         for (var i = 0; i < keyPath.length - 1; i++) {
           var key = keyPath[i];
-          // This block simulates MongoDB behavior.
+          // This block simulates MongoDB behavior for different edge-cases when
+          // object on certain path wasn't found or array found instead of an
+          // object, or vice-versa.
           if (!_.has(target, key)) {
             if (_.isArray(docTarget[key])) {
               target[key] = [];
