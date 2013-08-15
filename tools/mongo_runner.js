@@ -4,6 +4,7 @@ var path = require("path");
 var files = require('./files.js');
 
 var _ = require('underscore');
+var unipackage = require('./unipackage.js');
 
 
 /** Internal.
@@ -24,7 +25,7 @@ var find_mongo_pids = function (app_dir, port, callback) {
 
         _.each(stdout.split('\n'), function (ps_line) {
           // matches mongos we start.
-          var m = ps_line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db\s*$/);
+          var m = ps_line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db --replSet /);
           if (m && m.length === 4) {
             var found_pid =  parseInt(m[1]);
             var found_port = parseInt(m[2]);
@@ -125,10 +126,10 @@ var find_mongo_and_kill_it_dead = function (port, callback) {
   });
 };
 
-exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callback) {
+exports.launchMongo = function (options) {
   var handle = {stop: function (callback) { callback(); } };
-  launch_callback = launch_callback || function () {};
-  on_exit_callback = on_exit_callback || function () {};
+  var onListen = options.onListen || function () {};
+  var onExit = options.onExit || function () {};
 
   // If we are passed an external mongo, assume it is launched and never
   // exits. Matches code in run.js:exports.run.
@@ -136,7 +137,7 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
   // Since it is externally managed, asking it to actually stop would be
   // impolite, so our stoppable handle is a noop
   if (process.env.MONGO_URL) {
-    launch_callback();
+    onListen();
     return handle;
   }
 
@@ -146,24 +147,54 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
                               'mongod');
 
   // store data in app_dir
-  var data_path = path.join(app_dir, '.meteor', 'local', 'db');
-  files.mkdir_p(data_path, 0755);
+  var dbPath = path.join(options.context.appDir, '.meteor', 'local', 'db');
+  files.mkdir_p(dbPath, 0755);
   // add .gitignore if needed.
-  files.add_to_gitignore(path.join(app_dir, '.meteor'), 'local');
+  files.add_to_gitignore(path.join(options.context.appDir, '.meteor'), 'local');
 
-  find_mongo_and_kill_it_dead(port, function (err) {
+  // Load mongo-livedata so we'll be able to talk to it.
+  var mongoNpmModule = unipackage.load({
+    library: options.context.library,
+    packages: [ 'mongo-livedata' ],
+    release: options.context.releaseVersion
+  })['mongo-livedata'].MongoInternals.NpmModule;
+
+  find_mongo_and_kill_it_dead(options.port, function (err) {
     if (err) {
-      launch_callback({reason: "Can't kill running mongo: " + err.reason});
-      return;
+      // XXX this was being passed to onListen and ignored before. should do
+      // something better.
+      throw {reason: "Can't kill running mongo: " + err.reason};
     }
 
+    // Delete the "local" database. This removes any memory that this was part
+    // of a replSet; we will start one from scratch (easier and faster than
+    // falling over from one on a different port).
+    // XXX It's slow to do this every time! We should cache the port number on
+    //     disk and only run this the first time or when the port number
+    //     changes.
+    try {
+      var dbFiles = fs.readdirSync(dbPath);
+    } catch (e) {
+      if (!e || e.code !== 'ENOENT')
+        throw e;
+    }
+    _.each(dbFiles, function (dbFile) {
+      if (/^local\./.test(dbFile))
+        fs.unlinkSync(path.join(dbPath, dbFile));
+    });
+
+    // Start mongod with a dummy replSet and wait for it to listen.
     var child_process = require('child_process');
+    var replSetName = 'dummy';
     var proc = child_process.spawn(mongod_path, [
+      // nb: cli-test.sh and find_mongo_pids assume that the next four arguments
+      // exist in this order without anything in between
       '--bind_ip', '127.0.0.1',
       '--smallfiles',
       '--nohttpinterface',
-      '--port', port,
-      '--dbpath', data_path
+      '--port', options.port,
+      '--dbpath', dbPath,
+      '--replSet', replSetName
     ]);
     var callOnExit = function (code, signal) {
       on_exit_callback(code, signal, stderrOutput);
@@ -187,9 +218,30 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
 
     proc.stdout.setEncoding('utf8');
     proc.stdout.on('data', function (data) {
-      // process.stdout.write(data);
-      if (/ \[initandlisten\] waiting for connections on port/.test(data))
-        launch_callback();
+      //  process.stdout.write("MONGO SAYS: " + data);
+
+      if (/ \[rsMgr\] replSet PRIMARY/.test(data))
+        onListen();
+
+      if (/ \[initandlisten\] waiting for connections on port/.test(data)) {
+        // Connect to it and start a replset.
+        var db = new mongoNpmModule.Db(
+          'meteor', new mongoNpmModule.Server('127.0.0.1', options.port),
+          {safe: true});
+        db.open(function(err, db) {
+          if (err)
+            throw err;
+          db.admin().command({
+            replSetInitiate: {
+              _id: replSetName,
+              members: [{_id : 0, host: '127.0.0.1:' + options.port}]
+            }
+          }, function (err, result) {
+            if (err)
+              throw err;
+          });
+        });
+      }
     });
   });
   return handle;
