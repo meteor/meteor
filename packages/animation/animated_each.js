@@ -4,93 +4,160 @@
 // - Elements being animated may not have margin-top set. This is
 //   because of margin collapsing.
 
-$.fx.speeds._default = 2000;
+var ANIMATION_DURATION = 2000;
+
+// animate margin-bottom more quickly than height
+var MARGIN_ACCEL = 4;
+
+// Assumes `$n` represents one element.
+var scaleTowardsTop = function ($n, fraction) {
+  var t = fraction;
+
+  // Todo: Make this work in IE8.
+  // - Use feature detection (see link) to detect whether we
+  //   have "transform" (with any vendor prefix),
+  //   otherwise whether we have "filter".
+  //   https://github.com/louisremi/jquery.transform.js/blob/master/jquery.transform2d.js
+  // - For IE 8, set 'filter' to
+  //   something like
+  //   `"progid:DXImageTransform.Microsoft.Matrix(M11=1, M12=0, M21=0, M22=0.5, SizingMethod='auto expand')"`
+  $n.css({transform: 'translateY(' +
+          (-(1-t)/2*100) + '%) scaleY(' + t + ')'});
+  $n[0]._scaleTowardsTop_fraction = fraction;
+};
+
+var removeScale = function ($n) {
+  // jQuery handles the vendor prefix for us
+  // (like -webkit-transform)
+  // See: http://caniuse.com/#feat=transforms2d
+  $n.css({transform: ''});
+  try {
+    delete $n[0]._scaleTowardsTop_fraction;
+  } catch (e) {
+    // IE 8 doesn't let you delete expandos?
+    $n[0]._scaleTowardsTop_fraction = null;
+  }
+};
+
+var getScale = function ($n) {
+  var fraction = $n[0]._scaleTowardsTop_fraction;
+  return (typeof fraction === 'number') ? fraction : 1;
+};
 
 var apply = function (el, events) {
-  var animateIn = function (n, parent, next, onComplete) {
+  var animateInsert = function (n, parent, next) {
     parent.insertBefore(n, next);
+
     var $n = $(n);
-    var height = $n.height();
-    var paddingTop = parseInt($n.css("paddingTop"), 10);
-    var paddingBottom = parseInt($n.css("paddingBottom"), 10);
-    var marginTop = parseInt($n.css("marginTop"), 10);
-    var marginBottom = parseInt($n.css("marginBottom"), 10);
-    var borderTop = parseInt($n.css("borderTop"), 10);
-    var borderBottom = parseInt($n.css("borderBottom"), 10);
+    var ownMarginBottom = n.style.marginBottom;
+    var ownOpacity = n.style.opacity;
+    var marginBottom = parseInt($n.css('margin-bottom'));
+    var opacity = parseFloat($n.css('opacity'));
 
-    $n.css({
-      height: 0,
-      paddingTop: 0,
-      paddingBottom: 0,
-      marginTop: 0,
-      marginBottom: 0,
-      borderTopWidth: 0,
-      borderBottomWidth: 0,
-      overflow: "hidden"
-    });
+    var outerHeight = $n.outerHeight(); // without margin
+    $n.css({marginBottom: -outerHeight,
+            opacity: 0});
 
-    $n.animate({
-      height: height,
-      paddingTop: paddingTop,
-      paddingBottom: paddingBottom,
-      marginTop: marginTop,
-      marginBottom: marginBottom,
-      borderTopWidth: borderTop,
-      borderBottomWidth: borderBottom
-    }, function () {
-      onComplete && onComplete();
+    $({t:0}).animate({t:1}, {
+      duration: ANIMATION_DURATION,
+      step: function (t, fx) {
+        var curMarginBottom = -outerHeight + t*outerHeight +
+              Math.round(Math.min(MARGIN_ACCEL*t, 1) * marginBottom);
+        $n.css({marginBottom: curMarginBottom});
+        scaleTowardsTop($n, t);
+        $n.css({opacity: t*opacity});
+      },
+      complete: function () {
+        n.style.marginBottom = ownMarginBottom;
+        n.style.opacity = ownOpacity;
+        removeScale($n);
+      }
     });
   };
 
-  var animateOut = function (n, onComplete) {
+  var animateRemove = function (n) {
     var $n = $(n);
-    $n.css({
-      overflow: "hidden"
-    });
-    var marginTop = $n.css('marginTop');
+    var marginBottom = parseInt($n.css('margin-bottom'));
+    var outerHeight = $n.outerHeight(); // without margin
+    var opacity = parseFloat($n.css('opacity'));
+    var scale = getScale($n);
 
-    $n.animate({
-      height: 0,
-      paddingTop: 0,
-      paddingBottom: 0,
-      marginTop: 0,
-      marginBottom: 0,
-      borderTopWidth: 0,
-      borderBottomWidth: 0
-    }, function () {
-      n.parentNode.removeChild(n);
-      onComplete && onComplete();
+    $({t:0}).animate({t:1}, {
+      duration: ANIMATION_DURATION,
+      step: function (t, fx) {
+        // animate margin-bottom more quickly than height
+        var f = 1 - t;
+        var curMarginBottom = -outerHeight + f*scale*outerHeight +
+              Math.round(Math.min(MARGIN_ACCEL*f, 1) * marginBottom);
+        $n.css({marginBottom: curMarginBottom});
+        scaleTowardsTop($n, f*scale);
+        $n.css({opacity: f*opacity});
+      },
+      complete: function () {
+        n.parentNode.removeChild(n);
+      }
     });
   };
 
-  var animateQueue = [];
-  var animationActive = false;
-  var moveActive = false;
-  var dequeuePlanned = false;
-  var runOrQueue = function(f) {
-    if (animationActive) {
-      animateQueue.push(f);
-    } else {
-      animationActive = true;
-      f();
-    }
-  };
-  var runOrQueueIfMoving = function(f) {
-    if (moveActive) {
-      animateQueue.push(f);
-    } else {
-      animationActive = true;
-      f();
-    }
-  };
-  var dequeue = function () {
-    animationActive = false;
-    moveActive = false;
-    dequeuePlanned = false;
-    if (animateQueue.length > 0) {
-      animationActive = true;
-      animateQueue.shift()();
-    }
+  var animateMove = function (n, next) {
+    var $n = $(n);
+
+    // we don't use jQuery's `.css()` for these because we want the
+    // element's own style, not the computed style
+    var ownTop = $n[0].style.top;
+    var ownPosition = $n[0].style.position;
+    var ownZIndex = $n[0].style.zIndex;
+    var ownMarginBottom = $n[0].style.marginBottom;
+
+    var outerHeight = $n.outerHeight(); // without margin
+    var marginBottom = parseInt($n.css('margin-bottom'));
+
+    // TODO: test interesting elements like table rows, etc.
+    var placeholder = document.createElement($n[0].nodeName);
+    var $placeholder = $(placeholder);
+    var placeholderHeight = outerHeight + marginBottom;
+    $placeholder.css({height: placeholderHeight,
+                      border: 0,
+                      margin: 0,
+                      padding: 0,
+                      visibility: 'hidden'});
+    // insert placeholder
+    n.parentNode.insertBefore(placeholder, n);
+
+    // move node
+    if (next)
+      n.parentNode.insertBefore(n, next);
+    else
+      n.parentNode.appendChild(n);
+
+    // XXX would tracking "left" as well as "top" magically get us
+    // horizontal re-ordering?
+    $n.css({marginBottom: -outerHeight,
+            position: 'relative',
+            zIndex: 2,
+            top: 0});
+    var vOffset = $placeholder.offset().top - $n.offset().top;
+    $n.css('top', vOffset);
+
+    $({t:0}).animate({t:1}, {
+      duration: ANIMATION_DURATION,
+      step: function (t, fx) {
+        var curPlaceholderHeight = Math.round(placeholderHeight * (1-t));
+        var curMarginBottom = marginBottom - curPlaceholderHeight;
+        var curTop = (-curPlaceholderHeight +
+                      Math.round((1-t) * (vOffset + placeholderHeight)));
+        $n.css({marginBottom: curMarginBottom,
+                top: curTop});
+        $placeholder.css('height', curPlaceholderHeight);
+      },
+      complete: function () {
+        $placeholder.remove();
+        n.style.top = ownTop;
+        n.style.position = ownPosition;
+        n.style.zIndex = ownZIndex;
+        n.style.marginBottom = ownMarginBottom;
+      }
+    });
   };
 
   if ($(el)[0].$uihooks)
@@ -103,72 +170,20 @@ var apply = function (el, events) {
   // animate initial data but still animate subsequent inserts
   if (_.contains(events, 'add')) {
     $(el)[0].$uihooks.insertElement = function (n, parent, next) {
-      runOrQueueIfMoving(function () {
-        var onComplete = dequeuePlanned ? null : dequeue;
-        dequeuePlanned = true;
-        animateIn(n, parent, next, onComplete);
-      });
+      animateInsert(n, parent, next);
     };
   }
 
   if (_.contains(events, 'remove')) {
     $(el)[0].$uihooks.removeElement = function (n) {
-      runOrQueueIfMoving(function () {
-        var onComplete = dequeuePlanned ? null : dequeue;
-        dequeuePlanned = true;
-        animateOut(n, onComplete);
-      });
+      animateRemove(n);
     };
   }
 
 
   if (_.contains(events, 'move')) {
     $(el)[0].$uihooks.moveElement = function (n, parent, next) {
-      runOrQueue(function () {
-        moveActive = true;
-
-        // - make an empty clone of `n` that will animate out of
-        // - existence
-        //
-        // - make an empty clone of `n` that will animate into
-        // - existence at the desired new position
-        //
-        // - give `n` absolute positioning, and animate it to its
-        // - desired new position
-        var $n = $(n);
-        var pos = $n.position();
-
-        var newPositionPlaceholder = $n.clone();
-        newPositionPlaceholder.css({visibility: 'hidden'});
-        animateIn(newPositionPlaceholder[0], parent, next);
-
-        var oldPositionPlaceholder = $n.clone();
-        $n.css({
-          position: 'absolute',
-          top: pos.top,
-          left: pos.left
-        });
-
-        var clonePos = newPositionPlaceholder.position();
-
-        oldPositionPlaceholder.css({visibility: 'hidden'});
-        parent.insertBefore(oldPositionPlaceholder[0], $n.next()[0]);
-        animateOut(oldPositionPlaceholder[0]);
-
-        // Move `n` in the DOM before starting the
-        // animation. Otherwise it won't become contained in the
-        // DomRange currently surrounding it.
-        parent.insertBefore(n, next);
-
-        $n.animate({
-          top: clonePos.top,
-          left: clonePos.left
-        }, function () {
-          newPositionPlaceholder.remove();
-          $n.removeAttr('style'); // xcxc we shouldn't clear all styles, only positioning
-          dequeue();
-        });
-      });
+      animateMove(n, next);
     };
   }
 };
