@@ -5,7 +5,7 @@ var files = require('./files.js');
 
 var _ = require('underscore');
 var unipackage = require('./unipackage.js');
-
+var Fiber = require('fibers');
 
 /** Internal.
  *
@@ -152,97 +152,120 @@ exports.launchMongo = function (options) {
   // add .gitignore if needed.
   files.add_to_gitignore(path.join(options.context.appDir, '.meteor'), 'local');
 
-  // Load mongo-livedata so we'll be able to talk to it.
-  var mongoNpmModule = unipackage.load({
-    library: options.context.library,
-    packages: [ 'mongo-livedata' ],
-    release: options.context.releaseVersion
-  })['mongo-livedata'].MongoInternals.NpmModule;
-
   find_mongo_and_kill_it_dead(options.port, function (err) {
-    if (err) {
-      // XXX this was being passed to onListen and ignored before. should do
-      // something better.
-      throw {reason: "Can't kill running mongo: " + err.reason};
-    }
-
-    // Delete the "local" database. This removes any memory that this was part
-    // of a replSet; we will start one from scratch (easier and faster than
-    // falling over from one on a different port).
-    // XXX It's slow to do this every time! We should cache the port number on
-    //     disk and only run this the first time or when the port number
-    //     changes.
-    try {
-      var dbFiles = fs.readdirSync(dbPath);
-    } catch (e) {
-      if (!e || e.code !== 'ENOENT')
-        throw e;
-    }
-    _.each(dbFiles, function (dbFile) {
-      if (/^local\./.test(dbFile))
-        fs.unlinkSync(path.join(dbPath, dbFile));
-    });
-
-    // Start mongod with a dummy replSet and wait for it to listen.
-    var child_process = require('child_process');
-    var replSetName = 'dummy';
-    var proc = child_process.spawn(mongod_path, [
-      // nb: cli-test.sh and find_mongo_pids assume that the next four arguments
-      // exist in this order without anything in between
-      '--bind_ip', '127.0.0.1',
-      '--smallfiles',
-      '--nohttpinterface',
-      '--port', options.port,
-      '--dbpath', dbPath,
-      '--replSet', replSetName
-    ]);
-    var callOnExit = function (code, signal) {
-      on_exit_callback(code, signal, stderrOutput);
-    };
-    handle.stop = function (callback) {
-      var tries = 0;
-      var exited = false;
-      proc.removeListener('exit', callOnExit);
-      proc.kill('SIGINT');
-      callback && callback(err);
-    };
-
-    var stderrOutput = '';
-
-    proc.stderr.setEncoding('utf8');
-    proc.stderr.on('data', function (data) {
-      stderrOutput += data;
-    });
-
-    proc.on('exit', callOnExit);
-
-    proc.stdout.setEncoding('utf8');
-    proc.stdout.on('data', function (data) {
-      //  process.stdout.write("MONGO SAYS: " + data);
-
-      if (/ \[rsMgr\] replSet PRIMARY/.test(data))
-        onListen();
-
-      if (/ \[initandlisten\] waiting for connections on port/.test(data)) {
-        // Connect to it and start a replset.
-        var db = new mongoNpmModule.Db(
-          'meteor', new mongoNpmModule.Server('127.0.0.1', options.port),
-          {safe: true});
-        db.open(function(err, db) {
-          if (err)
-            throw err;
-          db.admin().command({
-            replSetInitiate: {
-              _id: replSetName,
-              members: [{_id : 0, host: '127.0.0.1:' + options.port}]
-            }
-          }, function (err, result) {
-            if (err)
-              throw err;
-          });
-        });
+    Fiber(function (){
+      if (err) {
+        // XXX this was being passed to onListen and ignored before. should do
+        // something better.
+        throw {reason: "Can't kill running mongo: " + err.reason};
       }
-    });
+
+      var portFile = path.join(dbPath, 'METEOR-PORT');
+      var createReplSet = true;
+      try {
+        createReplSet = +(fs.readFileSync(portFile)) !== options.port;
+      } catch (e) {
+        if (!e || e.code !== 'ENOENT')
+          throw e;
+      }
+
+      // If this is the first time we're using this DB, or we changed port since
+      // the last time, then we want to destroying any existing replSet
+      // configuration and create a new one. First we delete the "local" database
+      // if it exists. (It's a pain and slow to change the port in an existing
+      // replSet configuration. It's also a little slow to initiate a new replSet,
+      // thus the attempt to not do it unless the port changes.)
+      if (createReplSet) {
+        try {
+          var dbFiles = fs.readdirSync(dbPath);
+        } catch (e) {
+          if (!e || e.code !== 'ENOENT')
+            throw e;
+        }
+        _.each(dbFiles, function (dbFile) {
+          if (/^local\./.test(dbFile))
+            fs.unlinkSync(path.join(dbPath, dbFile));
+        });
+
+        // Load mongo-livedata so we'll be able to talk to it.
+        var mongoNpmModule = unipackage.load({
+          library: options.context.library,
+          packages: [ 'mongo-livedata' ],
+          release: options.context.releaseVersion
+        })['mongo-livedata'].MongoInternals.NpmModule;
+      }
+
+      // Start mongod with a dummy replSet and wait for it to listen.
+      var child_process = require('child_process');
+      var replSetName = 'dummy';
+      var proc = child_process.spawn(mongod_path, [
+        // nb: cli-test.sh and find_mongo_pids assume that the next four arguments
+        // exist in this order without anything in between
+        '--bind_ip', '127.0.0.1',
+        '--smallfiles',
+        '--nohttpinterface',
+        '--port', options.port,
+        '--dbpath', dbPath,
+        '--replSet', replSetName
+      ]);
+
+      var stderrOutput = '';
+      proc.stderr.setEncoding('utf8');
+      proc.stderr.on('data', function (data) {
+        stderrOutput += data;
+      });
+
+      var callOnExit = function (code, signal) {
+        onExit(code, signal, stderrOutput);
+      };
+      proc.on('exit', callOnExit);
+
+      handle.stop = function (callback) {
+        var tries = 0;
+        var exited = false;
+        proc.removeListener('exit', callOnExit);
+        proc.kill('SIGINT');
+        callback && callback(err);
+      };
+
+      proc.stdout.setEncoding('utf8');
+      var readyMessages = 2;
+      proc.stdout.on('data', function (data) {
+        // process.stdout.write("MONGO SAYS: " + data);
+
+        if (/ \[rsMgr\] replSet PRIMARY/.test(data)) {
+          if (--readyMessages === 0) {
+            if (createReplSet)
+              fs.writeFileSync(portFile, options.port);
+            onListen();
+          }
+        }
+
+        if (/ \[initandlisten\] waiting for connections on port/.test(data)) {
+          if (createReplSet) {
+            // Connect to it and start a replset.
+            var db = new mongoNpmModule.Db(
+              'meteor', new mongoNpmModule.Server('127.0.0.1', options.port),
+              {safe: true});
+            db.open(function(err, db) {
+              if (err)
+                throw err;
+              db.admin().command({
+                replSetInitiate: {
+                  _id: replSetName,
+                  members: [{_id : 0, host: '127.0.0.1:' + options.port}]
+                }
+              }, function (err, result) {
+                if (err)
+                  throw err;
+              });
+            });
+          }
+          if (--readyMessages === 0)
+            onListen();
+        }
+      });
+    }).run();
   });
   return handle;
 };
