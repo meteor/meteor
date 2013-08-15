@@ -1,11 +1,19 @@
-Template.topbar.release = function () {
-  return Meteor.release || "(checkout)";
-};
-
-if (! Session.get('manual')) {
+if (! Session.get('selectedBook')) {
   // XXX sync with URLs/use routes
-  Session.set('manual', 'essentials');
+  Session.set('selectedBook', 'essentials');
 }
+
+Meteor.startup(function () {
+  Meteor.autorun(function () {
+    var bookName = Session.get('selectedBook');
+    var articleName = Session.get('selectedArticle');
+    Meteor.setTimeout(function () {
+      fetchBook(bookName);
+      if (articleName !== undefined)
+        fetchArticle(bookName, articleName);
+    }, 0);
+  });
+});
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -23,6 +31,7 @@ Meteor.startup(function () {
     return $("html, body").stop();
   };
 
+/*
   var sections = [];
   _.each($('#main h1, #main h2, #main h3'), function (elt) {
     var classes = (elt.getAttribute('class') || '').split(/\s+/);
@@ -86,376 +95,83 @@ Meteor.startup(function () {
 
   // Make external links open in a new tab.
   $('a:not([href^="#"])').attr('target', '_blank');
+*/
 });
 
 
 
-var tocMeteor = [
-  "Concepts", [
-    "What is Meteor?",
-    "Structuring your app",
-    "Data and security",
-    "Reactivity",
-    "Live HTML",
-    "Templates",
-    "Using packages",
-    "Namespacing",
-    "Deploying",
-    "Writing packages"
-  ],
-  "Command line", [ [
-    "meteor help",
-    "meteor run",
-    "meteor create",
-    "meteor deploy",
-    "meteor logs",
-    "meteor update",
-    "meteor add",
-    "meteor remove",
-    "meteor list",
-    "meteor mongo",
-    "meteor reset",
-    "meteor bundle"
-  ] ]
-];
+//// topbar ////
 
-var tocEssentials = [
-  {name: "Overview", id: "top"}, [
-    "Quick start",
-    "Seven principles",
-    "Resources"
-  ],
-
-  "API", [
-    "Core", [
-      "Meteor.isClient",
-      "Meteor.isServer",
-      "Meteor.startup",
-      "Meteor.absoluteUrl",
-      "Meteor.settings",
-      "Meteor.release"
-    ],
-
-    "Publish and subscribe", [
-      "Meteor.publish", [
-        {instance: "this", name: "userId", id: "publish_userId"},
-        {instance: "this", name: "added", id: "publish_added"},
-        {instance: "this", name: "changed", id: "publish_changed"},
-        {instance: "this", name: "removed", id: "publish_removed"},
-        {instance: "this", name: "ready", id: "publish_ready"},
-        {instance: "this", name: "onStop", id: "publish_onstop"},
-        {instance: "this", name: "error", id: "publish_error"},
-        {instance: "this", name: "stop", id: "publish_stop"}
-      ],
-      "Meteor.subscribe"
-    ],
-
-    {name: "Methods", id: "methods_header"}, [
-      "Meteor.methods", [
-        {instance: "this", name: "userId", id: "method_userId"},
-        {instance: "this", name: "setUserId", id: "method_setUserId"},
-        {instance: "this", name: "isSimulation", id: "method_issimulation"},
-        {instance: "this", name: "unblock", id: "method_unblock"}
-      ],
-      "Meteor.Error",
-      "Meteor.call",
-      "Meteor.apply"
-    ],
-
-    {name: "Server connections", id: "connections"}, [
-      "Meteor.status",
-      "Meteor.reconnect",
-      "Meteor.disconnect",
-      "DDP.connect"
-    ],
-
-    {name: "Collections", id: "collections"}, [
-      "Meteor.Collection", [
-        {instance: "collection", name: "find"},
-        {instance: "collection", name: "findOne"},
-        {instance: "collection", name: "insert"},
-        {instance: "collection", name: "update"},
-        {instance: "collection", name: "remove"},
-        {instance: "collection", name: "allow"},
-        {instance: "collection", name: "deny"}
-      ],
-
-      "Meteor.Collection.Cursor", [
-        {instance: "cursor", name: "forEach"},
-        {instance: "cursor", name: "map"},
-        {instance: "cursor", name: "fetch"},
-        {instance: "cursor", name: "count"},
-        {instance: "cursor", name: "rewind"},
-        {instance: "cursor", name: "observe"},
-        {instance: "cursor", name: "observeChanges", id: "observe_changes"}
-      ],
-      {type: "spacer"},
-      {name: "Meteor.Collection.ObjectID", id: "collection_object_id"},
-      {type: "spacer"},
-      {name: "Selectors", style: "noncode"},
-      {name: "Modifiers", style: "noncode"},
-      {name: "Sort specifiers", style: "noncode"},
-      {name: "Field specifiers", style: "noncode"}
-    ],
-
-    "Session", [
-      "Session.set",
-      {name: "Session.setDefault", id: "session_set_default"},
-      "Session.get",
-      "Session.equals"
-    ],
-
-    {name: "Accounts", id: "accounts_api"}, [
-      "Meteor.user",
-      "Meteor.userId",
-      "Meteor.users",
-      "Meteor.loggingIn",
-      "Meteor.logout",
-      "Meteor.loginWithPassword",
-      {name: "Meteor.loginWithFacebook", id: "meteor_loginwithexternalservice"},
-      {name: "Meteor.loginWithGithub", id: "meteor_loginwithexternalservice"},
-      {name: "Meteor.loginWithGoogle", id: "meteor_loginwithexternalservice"},
-      {name: "Meteor.loginWithMeetup", id: "meteor_loginwithexternalservice"},
-      {name: "Meteor.loginWithTwitter", id: "meteor_loginwithexternalservice"},
-      {name: "Meteor.loginWithWeibo", id: "meteor_loginwithexternalservice"},
-      {type: "spacer"},
-
-      {name: "{{currentUser}}", id: "template_currentuser"},
-      {name: "{{loggingIn}}", id: "template_loggingin"},
-      {type: "spacer"},
-
-      "Accounts.config",
-      "Accounts.ui.config",
-      "Accounts.validateNewUser",
-      "Accounts.onCreateUser"
-    ],
-
-    {name: "Passwords", id: "accounts_passwords"}, [
-      "Accounts.createUser",
-      "Accounts.changePassword",
-      "Accounts.forgotPassword",
-      "Accounts.resetPassword",
-      "Accounts.setPassword",
-      "Accounts.verifyEmail",
-      {type: "spacer"},
-
-      "Accounts.sendResetPasswordEmail",
-      "Accounts.sendEnrollmentEmail",
-      "Accounts.sendVerificationEmail",
-      "Accounts.emailTemplates"
-    ],
-
-    {name: "Templates", id: "templates_api"}, [
-      {prefix: "Template", instance: "myTemplate", id: "template_call"}, [
-        {name: "rendered", id: "template_rendered"},
-        {name: "created", id: "template_created"},
-        {name: "destroyed", id: "template_destroyed"},
-        {name: "events", id: "template_events"},
-        {name: "helpers", id: "template_helpers"},
-        {name: "preserve", id: "template_preserve"}
-      ],
-      {name: "Template instances", id: "template_inst"}, [
-        {instance: "this", name: "findAll", id: "template_findAll"},
-        {instance: "this", name: "find", id: "template_find"},
-        {instance: "this", name: "firstNode", id: "template_firstNode"},
-        {instance: "this", name: "lastNode", id: "template_lastNode"},
-        {instance: "this", name: "data", id: "template_data"}
-      ],
-      "Meteor.render",
-      "Meteor.renderList",
-      {type: "spacer"},
-      {name: "Event maps", style: "noncode"},
-      {name: "Constant regions", style: "noncode", id: "constant"},
-      {name: "Reactivity isolation", style: "noncode", id: "isolate"}
-     ],
-
-    "Match", [
-      "check",
-      "Match.test",
-      {name: "Match patterns", style: "noncode"}
-    ],
-
-    "Timers", [
-      "Meteor.setTimeout",
-      "Meteor.setInterval",
-      "Meteor.clearTimeout",
-      "Meteor.clearInterval"
-    ],
-
-    "Deps", [
-      "Deps.autorun",
-      "Deps.flush",
-      "Deps.nonreactive",
-      "Deps.active",
-      "Deps.currentComputation",
-      "Deps.onInvalidate",
-      "Deps.afterFlush",
-      "Deps.Computation", [
-        {instance: "computation", name: "stop", id: "computation_stop"},
-        {instance: "computation", name: "invalidate", id: "computation_invalidate"},
-        {instance: "computation", name: "onInvalidate", id: "computation_oninvalidate"},
-        {instance: "computation", name: "stopped", id: "computation_stopped"},
-        {instance: "computation", name: "invalidated", id: "computation_invalidated"},
-        {instance: "computation", name: "firstRun", id: "computation_firstrun"}
-      ],
-      "Deps.Dependency", [
-        {instance: "dependency", name: "changed", id: "dependency_changed"},
-        {instance: "dependency", name: "depend", id: "dependency_depend"},
-        {instance: "dependency", name: "hasDependents", id: "dependency_hasdependents"}
-      ]
-    ],
-
-    // "Environment Variables", [
-    //   "Meteor.EnvironmentVariable", [
-    //     {instance: "env_var", name: "get", id: "env_var_get"},
-    //     {instance: "env_var", name: "withValue", id: "env_var_withvalue"},
-    //     {instance: "env_var", name: "bindEnvironment", id: "env_var_bindenvironment"}
-    //   ]
-    //],
-
-    {name: "EJSON", id: "ejson"}, [
-      {name: "EJSON.parse", id: "ejson_parse"},
-      {name: "EJSON.stringify", id: "ejson_stringify"},
-      {name: "EJSON.fromJSONValue", id: "ejson_from_json_value"},
-      {name: "EJSON.toJSONValue", id: "ejson_to_json_value"},
-      {name: "EJSON.equals", id: "ejson_equals"},
-      {name: "EJSON.clone", id: "ejson_clone"},
-      {name: "EJSON.newBinary", id: "ejson_new_binary"},
-      {name: "EJSON.isBinary", id: "ejson_is_binary"},
-      {name: "EJSON.addType", id: "ejson_add_type"},
-      [
-        {instance: "instance", id: "ejson_type_clone", name: "clone"},
-        {instance: "instance", id: "ejson_type_equals", name: "equals"},
-        {instance: "instance", id: "ejson_type_typeName", name: "typeName"},
-        {instance: "instance", id: "ejson_type_toJSONValue", name: "toJSONValue"}
-      ]
-    ],
-
-
-    "HTTP", [
-      "HTTP.call",
-      {name: "HTTP.get"},
-      {name: "HTTP.post"},
-      {name: "HTTP.put"},
-      {name: "HTTP.del"}
-    ],
-    "Email", [
-      "Email.send"
-    ],
-    {name: "Assets", id: "assets"}, [
-      {name: "Assets.getText", id: "assets_getText"},
-      {name: "Assets.getBinary", id: "assets_getBinary"}
-    ]
-  ],
-
-  "Packages", [ [
-    "accounts-ui",
-    "amplify",
-    "appcache",
-    "audit-argument-checks",
-    "backbone",
-    "bootstrap",
-    "coffeescript",
-    "d3",
-    "force-ssl",
-    "jquery",
-    "less",
-    "random",
-    "spiderable",
-    "stylus",
-    "showdown",
-    "underscore"
-  ] ]
-];
-
-var manualContents = {
-  essentials: tocEssentials,
-  meteor: tocMeteor
+Template.topbar.release = function () {
+  return Meteor.release || "(checkout)";
 };
 
-var manualNames = [
-  "Essentials",
-  null,
-  "Meteor",
-  "Galaxy",
-  "Cookbook",
-  null,
-  "ddp",
-  "spacebars",
-  "deps",
-  "spark",
-  "accounts",
-  "minimongo",
-  "match",
-  "ejson",
-  "http",
-  "email",
-  null,
-  "twilio",
-  "router",
-  "forms",
-  "lispyscript"
-];
 
-var manuals = _.map(manualNames, function (name) {
-  if (! name)
-    return { spacer: true };
 
-  var id = name.toLowerCase();
-  return {
-    name: name,
-    id: id
-  };
-});
+//// outerNav ////
 
-Template.outerNav.sections = manuals;
+Template.outerNav.recommendedBookNames = function () {
+  return RecommendedBooks.find({}, {sort: {order: 1}});
+};
+
+Template.outerNav.thisBook = function () {
+  return Books.findOne(this.name);
+};
+
 
 Template.outerNav.maybe_selected = function () {
-  return Session.get("manual") === this.id ? "selected" : "";
+  return Session.get("selectedBook") === this._id ? "selected" : "";
 };
 
 Template.outerNav.events = {
   'click li': function (evt) {
-    if (! this.spacer)
-      Session.set("manual", this.id);
+    if (! this.spacer) {
+      Session.set("selectedBook", this._id);
+      Session.set("selectedArticle", '');
+    }
   }
 };
 
-var name_to_id = function (name) {
-  var x = name.toLowerCase().replace(/[^a-z0-9_,.]/g, '').replace(/[,.]/g, '_');
-  return x;
-};
+
+
+//// nav ////
 
 Template.nav.sections = function () {
-  var ret = [];
-  var walk = function (items, depth) {
-    _.each(items, function (item) {
-      if (item instanceof Array)
-        walk(item, depth + 1);
-      else {
-        if (typeof(item) === "string")
-          item = {name: item};
-        ret.push(_.extend({
-          type: "section",
-          id: item.name && name_to_id(item.name) || undefined,
-          depth: depth,
-          style: ''
-        }, item));
-      }
-    });
-  };
-
-  walk(manualContents[Session.get('manual')] || [], 1);
-  return ret;
+  var book = Books.findOne(Session.get('selectedBook'));
+  return book && book.toc || [];
 };
 
-Template.nav.type = function (what) {
+Template.nav.typeIs = function (what) {
   return this.type === what;
 }
 
 Template.nav.maybe_current = function () {
-  return Session.equals("section", this.id) ? "current" : "";
+//  return Session.equals("section", this.id) ? "current" : "";
+// XXX BROKEN
 };
+
+Template.nav.events = {
+  'click .toc-item': function () {
+    Session.set("selectedArticle", this.article);
+    // XXX go to this.anchor
+    // XXX make this a proper link, for future server-side rendering
+  }
+};
+
+
+
+//// main ////
+
+Template.main.currentArticle = function () {
+  return Articles.findOne({
+    book: Session.get("selectedBook"),
+    name: Session.get("selectedArticle")
+  });
+};
+
+
+
+//// helpers ////
 
 Handlebars.registerHelper('warning', function(fn) {
   return Template.warning_helper(fn(this));

@@ -16,12 +16,7 @@
     {{> nav }}
   </div>
   <div id="main">
-    <div id="top"></div>
-    {{> introduction }}
-    {{> concepts }}
-    {{> api }}
-    {{> packages }}
-    {{> commandline }}
+    {{> main }}
   </div>
 </body>
 
@@ -32,10 +27,14 @@
 <template name="outerNav">
   <div id="nav1-inner">
     <ul>
-      {{#each sections}}
-      <li class="{{maybe_selected}}">
-        {{#if spacer}}&nbsp;{{else}}{{name}}{{/if}}
-      </li>
+      {{#each recommendedBookNames}}
+        {{#if name}}
+          {{#with thisBook}}
+            <li class="{{maybe_selected}}">{{title}}</li>
+          {{/with}}
+        {{else}}
+          &nbsp;
+        {{/if}}
       {{/each}}
     </ul>
   </div>
@@ -44,16 +43,25 @@
 <template name="nav">
 <div id="nav1-inner">
   {{#each sections}}
-  {{#if type "spacer"}}
+  {{#if typeIs "spacer"}}
     <div class="spacer"> </div>
-  {{/if}}
-  {{#if type "section"}}
-    <h{{depth}}><a href="#{{id}}" class="{{maybe_current}} {{style}}">
-        {{#if prefix}}{{prefix}}.{{/if}}{{#if instance}}<i>{{instance}}</i>.{{/if}}{{name}}
-    </a></h{{depth}}>
+  {{else}}
+    <div class="toc-item {{type}} {{maybe_current}}">
+      {{#if formal}}<i>{{formal}}</i>.{{/if}}{{title}}
+    </div>
   {{/if}}
   {{/each}}
 </div>
+</template>
+
+<template name="main">
+  <!-- https://github.com/blog/273-github-ribbons -->
+  <a href="http://github.com/meteor/meteor"><img class="github-ribbon visible-desktop" src="/forkme_right_red_aa0000.png" alt="Fork me on GitHub"></a>
+
+  <div id="top"></div>
+  {{#with currentArticle}}
+    {{#better_markdown}}{{{contents}}}{{/better_markdown}}
+  {{/with}}
 </template>
 
 <template name="dtdd_helper">

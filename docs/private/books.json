@@ -1,0 +1,41 @@
+{
+  "recommended": [
+    "essentials",
+
+    null,
+
+    "meteor",
+    "galaxy",
+
+    null,
+
+    "appcache",
+    "coffeescript",
+    "spiderable",
+    "accounts",
+    "check",
+    "webapp",
+    "random",
+    "other",
+
+    null,
+
+    "ddp",
+    "spacebars",
+    "deps",
+    "spark",
+    "minimongo",
+    "match",
+    "ejson",
+    "http",
+    "email"
+  ],
+
+  "titles": {
+    "essentials": "Essentials",
+    "meteor": "Meteor",
+    "galaxy": "Galaxy",
+    "accounts": "Accounts system",
+    "other": "Other packages"
+  }
+}

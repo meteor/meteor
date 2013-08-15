@@ -1,0 +1,8 @@
+## `amplify`
+
+[Amplify](http://amplifyjs.com/) provides a simple cross-browser API for HTML5 local storage, an
+in-browser communication channel for loosely coupling application
+components, and several useful utility functions.
+
+Amplify defines a global namespace `amplify` on the client only. It does
+not run on the server.

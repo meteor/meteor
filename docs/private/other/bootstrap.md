@@ -1,0 +1,7 @@
+## `bootstrap`
+
+[Twitter's Bootstrap](http://twitter.github.com/bootstrap/) package is a front-end toolkit for faster, more
+beautiful web development.  Bootstrap provides simple and flexible HTML,
+CSS, and JavaScript for popular user interface components and
+interactions including typography, forms, buttons, tables, grids, and
+navigation.

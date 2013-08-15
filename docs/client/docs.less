@@ -145,28 +145,22 @@ a:hover {
     padding-right: @nav2-padding;
 }
 
-#nav2 a {
-    text-decoration: none;
+.toc-item {
     color: black;
 }
 
-#nav2 a:hover {
-    margin: 0px -5px 0px -5px;
-    padding: 2px 5px 2px 5px;
-}
-
-#nav2 h1 {
+.toc-item.h1 {
     font-size: 1.8em;
     margin: 1.2em 0 .2em 0;
 }
 
-#nav2 h2 {
+.toc-item.h2 {
     font-size: 1.33em;
     font-weight: normal;
     margin: .6em 0 .3em 0;
 }
 
-#nav2 h3 {
+.toc-item.h3, .toc-item.api {
     font-size: .8em;
     font-weight: normal;
     margin: 4px 0px 4px 0px;
@@ -175,7 +169,7 @@ a:hover {
     letter-spacing: 0px;
 }
 
-#nav2 h4 {
+.toc-item.property {
     font-size: .8em;
     font-weight: normal;
     margin: 4px 0px 4px 0px;
@@ -184,15 +178,11 @@ a:hover {
     letter-spacing: 0px;
 }
 
-#nav2 .spacer {
+.toc-item.spacer {
     height: .33em;
 }
 
-#nav2 .noncode {
-    font-style: italic;
-}
-
-#nav2 .current {
+.toc-item.current {
     color: red;
 }
 

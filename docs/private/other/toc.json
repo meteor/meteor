@@ -1,0 +1,11 @@
+[
+  'amplify',
+  'backbone',
+  'bootstrap',
+  'd3',
+  'jquery',
+  'less',
+  'showdown',
+  'stylus',
+  'underscore'
+]

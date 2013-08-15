@@ -1,0 +1,26 @@
+[
+  "What is Meteor?",
+  "Structuring your app",
+  "Data and security",
+  "Reactivity",
+  "Live HTML",
+  "Templates",
+  "Using packages",
+  "Namespacing",
+  "Deploying",
+  "Writing packages",
+  {title: "Command line", article: "command-line"}, [
+    {title: "meteor help", anchor: "meteor-help"},
+    "meteor run",
+    "meteor create",
+    "meteor deploy",
+    "meteor logs",
+    "meteor update",
+    "meteor add",
+    "meteor remove",
+    "meteor list",
+    "meteor mongo",
+    "meteor reset",
+    "meteor bundle"
+  ]
+]

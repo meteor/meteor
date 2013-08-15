@@ -1,0 +1,248 @@
+[
+  {title: "Overview", article: "overview", anchor: "top"}, [
+    "Quick start",
+    "Seven principles",
+    "Resources"
+  ],
+
+  "API", [
+    "Core", [
+      "Meteor.isClient",
+      "Meteor.isServer",
+      "Meteor.startup",
+      "Meteor.absoluteUrl",
+      "Meteor.settings",
+      "Meteor.release"
+    ],
+
+    "Publish and subscribe", [
+      "Meteor.publish", [
+        {formal: "this", title: "userId", anchor: "publish_userId"},
+        {formal: "this", title: "added", anchor: "publish_added"},
+        {formal: "this", title: "changed", anchor: "publish_changed"},
+        {formal: "this", title: "removed", anchor: "publish_removed"},
+        {formal: "this", title: "ready", anchor: "publish_ready"},
+        {formal: "this", title: "onStop", anchor: "publish_onstop"},
+        {formal: "this", title: "error", anchor: "publish_error"},
+        {formal: "this", title: "stop", anchor: "publish_stop"}
+      ],
+      "Meteor.subscribe"
+    ],
+
+    {title: "Methods", anchor: "methods_header"}, [
+      "Meteor.methods", [
+        {formal: "this", title: "userId", anchor: "method_userId"},
+        {formal: "this", title: "setUserId", anchor: "method_setUserId"},
+        {formal: "this", title: "isSimulation", anchor: "method_issimulation"},
+        {formal: "this", title: "unblock", anchor: "method_unblock"}
+      ],
+      "Meteor.Error",
+      "Meteor.call",
+      "Meteor.apply"
+    ],
+
+    {title: "Server connections", anchor: "connections"}, [
+      "Meteor.status",
+      "Meteor.reconnect",
+      "Meteor.disconnect",
+      "DDP.connect"
+    ],
+
+    {title: "Collections", anchor: "collections"}, [
+      "Meteor.Collection", [
+        {formal: "collection", title: "find"},
+        {formal: "collection", title: "findOne"},
+        {formal: "collection", title: "insert"},
+        {formal: "collection", title: "update"},
+        {formal: "collection", title: "remove"},
+        {formal: "collection", title: "allow"},
+        {formal: "collection", title: "deny"}
+      ],
+
+      "Meteor.Collection.Cursor", [
+        {formal: "cursor", title: "forEach"},
+        {formal: "cursor", title: "map"},
+        {formal: "cursor", title: "fetch"},
+        {formal: "cursor", title: "count"},
+        {formal: "cursor", title: "rewind"},
+        {formal: "cursor", title: "observe"},
+        {formal: "cursor", title: "observeChanges", anchor: "observe_changes"}
+      ],
+      {type: "spacer"},
+      {title: "Meteor.Collection.ObjectID", anchor: "collection_object_id"},
+      {type: "spacer"},
+      {title: "Selectors"},
+      {title: "Modifiers"},
+      {title: "Sort specifiers"},
+      {title: "Field specifiers"}
+    ],
+
+    "Session", [
+      "Session.set",
+      {title: "Session.setDefault", anchor: "session_set_default"},
+      "Session.get",
+      "Session.equals"
+    ],
+
+    {title: "Accounts", anchor: "accounts_api"}, [
+      "Meteor.user",
+      "Meteor.userId",
+      "Meteor.users",
+      "Meteor.loggingIn",
+      "Meteor.logout",
+      "Meteor.loginWithPassword",
+      {title: "Meteor.loginWithFacebook", anchor: "meteor_loginwithexternalservice"},
+      {title: "Meteor.loginWithGithub", anchor: "meteor_loginwithexternalservice"},
+      {title: "Meteor.loginWithGoogle", anchor: "meteor_loginwithexternalservice"},
+      {title: "Meteor.loginWithMeetup", anchor: "meteor_loginwithexternalservice"},
+      {title: "Meteor.loginWithTwitter", anchor: "meteor_loginwithexternalservice"},
+      {title: "Meteor.loginWithWeibo", anchor: "meteor_loginwithexternalservice"},
+      {type: "spacer"},
+
+      {title: "{{currentUser}}", anchor: "template_currentuser"},
+      {title: "{{loggingIn}}", anchor: "template_loggingin"},
+      {type: "spacer"},
+
+      "Accounts.config",
+      "Accounts.ui.config",
+      "Accounts.validateNewUser",
+      "Accounts.onCreateUser"
+    ],
+
+    {title: "Passwords", anchor: "accounts_passwords"}, [
+      "Accounts.createUser",
+      "Accounts.changePassword",
+      "Accounts.forgotPassword",
+      "Accounts.resetPassword",
+      "Accounts.setPassword",
+      "Accounts.verifyEmail",
+      {type: "spacer"},
+
+      "Accounts.sendResetPasswordEmail",
+      "Accounts.sendEnrollmentEmail",
+      "Accounts.sendVerificationEmail",
+      "Accounts.emailTemplates"
+    ],
+
+    {title: "Templates", anchor: "templates_api"}, [
+      {formal: "Template.myTemplate", anchor: "template_call"}, [
+        {title: "rendered", anchor: "template_rendered"},
+        {title: "created", anchor: "template_created"},
+        {title: "destroyed", anchor: "template_destroyed"},
+        {title: "events", anchor: "template_events"},
+        {title: "helpers", anchor: "template_helpers"},
+        {title: "preserve", anchor: "template_preserve"}
+      ],
+      {title: "Template instances", anchor: "template_inst"}, [
+        {formal: "this", title: "findAll", anchor: "template_findAll"},
+        {formal: "this", title: "find", anchor: "template_find"},
+        {formal: "this", title: "firstNode", anchor: "template_firstNode"},
+        {formal: "this", title: "lastNode", anchor: "template_lastNode"},
+        {formal: "this", title: "data", anchor: "template_data"}
+      ],
+      "Meteor.render",
+      "Meteor.renderList",
+      {type: "spacer"},
+      {title: "Event maps"},
+      {title: "Constant regions", anchor: "constant"},
+      {title: "Reactivity isolation", anchor: "isolate"}
+     ],
+
+    "Match", [
+      "check",
+      "Match.test",
+      {title: "Match patterns"}
+    ],
+
+    "Timers", [
+      "Meteor.setTimeout",
+      "Meteor.setInterval",
+      "Meteor.clearTimeout",
+      "Meteor.clearInterval"
+    ],
+
+    "Deps", [
+      "Deps.autorun",
+      "Deps.flush",
+      "Deps.nonreactive",
+      "Deps.active",
+      "Deps.currentComputation",
+      "Deps.onInvalidate",
+      "Deps.afterFlush",
+      "Deps.Computation", [
+        {formal: "computation", title: "stop", anchor: "computation_stop"},
+        {formal: "computation", title: "invalidate", anchor: "computation_invalidate"},
+        {formal: "computation", title: "onInvalidate", anchor: "computation_oninvalidate"},
+        {formal: "computation", title: "stopped", anchor: "computation_stopped"},
+        {formal: "computation", title: "invalidated", anchor: "computation_invalidated"},
+        {formal: "computation", title: "firstRun", anchor: "computation_firstrun"}
+      ],
+      "Deps.Dependency", [
+        {formal: "dependency", title: "changed", anchor: "dependency_changed"},
+        {formal: "dependency", title: "depend", anchor: "dependency_depend"},
+        {formal: "dependency", title: "hasDependents", anchor: "dependency_hasdependents"}
+      ]
+    ],
+
+    // "Environment Variables", [
+    //   "Meteor.EnvironmentVariable", [
+    //     {formal: "env_var", title: "get", anchor: "env_var_get"},
+    //     {formal: "env_var", title: "withValue", anchor: "env_var_withvalue"},
+    //     {formal: "env_var", title: "bindEnvironment", anchor: "env_var_bindenvironment"}
+    //   ]
+    //],
+
+    {title: "EJSON", anchor: "ejson"}, [
+      {title: "EJSON.parse", anchor: "ejson_parse"},
+      {title: "EJSON.stringify", anchor: "ejson_stringify"},
+      {title: "EJSON.fromJSONValue", anchor: "ejson_from_json_value"},
+      {title: "EJSON.toJSONValue", anchor: "ejson_to_json_value"},
+      {title: "EJSON.equals", anchor: "ejson_equals"},
+      {title: "EJSON.clone", anchor: "ejson_clone"},
+      {title: "EJSON.newBinary", anchor: "ejson_new_binary"},
+      {title: "EJSON.isBinary", anchor: "ejson_is_binary"},
+      {title: "EJSON.addType", anchor: "ejson_add_type"},
+      [
+        {formal: "instance", anchor: "ejson_type_clone", title: "clone"},
+        {formal: "instance", anchor: "ejson_type_equals", title: "equals"},
+        {formal: "instance", anchor: "ejson_type_typeName", title: "typeName"},
+        {formal: "instance", anchor: "ejson_type_toJSONValue", title: "toJSONValue"}
+      ]
+    ],
+
+
+    "HTTP", [
+      "HTTP.call",
+      {title: "HTTP.get"},
+      {title: "HTTP.post"},
+      {title: "HTTP.put"},
+      {title: "HTTP.del"}
+    ],
+    "Email", [
+      "Email.send"
+    ],
+    {title: "Assets", anchor: "assets"}, [
+      {title: "Assets.getText", anchor: "assets_getText"},
+      {title: "Assets.getBinary", anchor: "assets_getBinary"}
+    ]
+  ],
+
+  "Packages", [ [
+    "accounts-ui",
+    "amplify",
+    "appcache",
+    "audit-argument-checks",
+    "backbone",
+    "bootstrap",
+    "coffeescript",
+    "d3",
+    "force-ssl",
+    "jquery",
+    "less",
+    "random",
+    "spiderable",
+    "stylus",
+    "showdown",
+    "underscore"
+  ] ]
+]
