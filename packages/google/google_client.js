@@ -44,5 +44,8 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
         '&access_type=' + accessType +
         '&approval_prompt=' + approvalPrompt;
 
-  Oauth.initiateLogin(credentialToken, loginUrl, credentialRequestCompleteCallback);
+  Oauth.initiateLogin(credentialToken,
+                      loginUrl,
+                      credentialRequestCompleteCallback,
+                      { height: 406 });
 };
