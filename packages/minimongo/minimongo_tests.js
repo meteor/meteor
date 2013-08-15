@@ -977,6 +977,96 @@ Tinytest.add("minimongo - projection_compiler", function (test) {
       [ { inc: 42, excl: 42 }, { inc: 42 }, "Can't combine incl/excl rules" ]
     ]);
   });
+
+  test.throws(function () {
+    testProjection({ 'a': 1, 'a.b': 1 }, [
+      [ { a: { b: 42 } }, { a: { b: 42 } }, "Can't have ambiguous rules (one is prefix of another)" ]
+    ]);
+  });
+
+  test.throws(function () {
+    testProjection("some string", [
+      [ { a: { b: 42 } }, { a: { b: 42 } }, "Projection is not a hash" ]
+    ]);
+  });
+});
+
+Tinytest.add("minimongo - fetch with fields", function (test) {
+  var c = new LocalCollection();
+  _.times(30, function (i) {
+    c.insert({
+      something: Random.id(),
+      anything: {
+        foo: "bar",
+        cool: "hot"
+      },
+      nothing: i,
+      i: i
+    });
+  });
+
+  // Test just a regular fetch with some projection
+  var fetchResults = c.find({}, { fields: {
+    'something': 1,
+    'anything.foo': 1
+  } }).fetch();
+
+  test.isTrue(_.all(fetchResults, function (x) {
+    return x &&
+           x.something &&
+           x.anything &&
+           x.anything.foo &&
+           x.anything.foo === "bar" &&
+           !_.has(x, 'nothing') &&
+           !_.has(x.anything, 'cool');
+  }));
+
+  // Test with a selector, even field used in the selector is excluded in the
+  // projection
+  fetchResults = c.find({
+    nothing: { $gte: 5 }
+  }, {
+    fields: { nothing: 0 }
+  }).fetch();
+
+  test.isTrue(_.all(fetchResults, function (x) {
+    return x &&
+           x.something &&
+           x.anything &&
+           x.anything.foo === "bar" &&
+           x.anything.cool === "hot" &&
+           !_.has(x, 'nothing') &&
+           x.i &&
+           x.i >= 5;
+  }));
+
+  test.isTrue(fetchResults.length === 25);
+
+  // Test that we can sort, based on field excluded from the projection, use
+  // skip and limit as well!
+  // following find will get indexes [10..20) sorted by nothing
+  fetchResults = c.find({}, {
+    sort: {
+      nothing: 1
+    },
+    limit: 10,
+    skip: 10,
+    fields: {
+      i: 1,
+      something: 1
+    }
+  }).fetch();
+
+  test.isTrue(_.all(fetchResults, function (x) {
+    return x &&
+           x.something &&
+           x.i >= 10 && x.i < 20;
+  }));
+
+  _.each(fetchResults, function (x, i, arr) {
+    if (!i) return;
+    test.isTrue(x.i === arr[i-1].i + 1);
+  });
 });
 
 Tinytest.add("minimongo - observe ordered with projection", function (test) {
