@@ -51,7 +51,7 @@ OAuth1Binding.prototype.prepareAccessToken = function(query) {
   self.accessTokenSecret = tokens.oauth_token_secret;
 };
 
-OAuth1Binding.prototype.call = function(method, url, params, callback) {
+OAuth1Binding.prototype.call = function(method, url, params, content, callback) {
   var self = this;
 
   var headers = self._buildHeader({
@@ -61,8 +61,12 @@ OAuth1Binding.prototype.call = function(method, url, params, callback) {
   if(!params) {
     params = {};
   }
+  
+  if(!content) {
+    content = {};
+  }
 
-  return self._call(method, url, headers, params, callback);
+  return self._call(method, url, headers, params, content, callback);
 };
 
 OAuth1Binding.prototype.get = function(url, params, callback) {
@@ -105,7 +109,7 @@ OAuth1Binding.prototype._getSignature = function(method, url, rawHeaders, access
   return crypto.createHmac('SHA1', signingKey).update(signatureBase).digest('base64');
 };
 
-OAuth1Binding.prototype._call = function(method, url, headers, params, callback) {
+OAuth1Binding.prototype._call = function(method, url, headers, params, content, callback) {
   var self = this;
 
   // Get the signature
@@ -118,6 +122,7 @@ OAuth1Binding.prototype._call = function(method, url, headers, params, callback)
   try {
     return HTTP.call(method, url, {
       params: params,
+      content: content,
       headers: {
         Authorization: authString
       }
