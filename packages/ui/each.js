@@ -18,7 +18,7 @@ var insertNode = function (n, parent, next) {
       parent.$uihooks && parent.$uihooks.insertElement)
     parent.$uihooks.insertElement(n, parent, next);
   else
-    // `|| null` because IE throws an error if passed undefined for 'next'
+    // `|| null` because IE throws an error if 'next' is undefined
     parent.insertBefore(n, next || null);
 };
 
@@ -27,7 +27,7 @@ var moveNode = function (n, parent, next) {
       parent.$uihooks && parent.$uihooks.moveElement)
     parent.$uihooks.moveElement(n, parent, next);
   else
-    // `|| null` because IE throws an error if passed undefined for 'next'
+    // `|| null` because IE throws an error if 'next' is undefined
     parent.insertBefore(n, next || null);
 };
 
