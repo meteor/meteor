@@ -20,6 +20,7 @@ var unipackage = require('./unipackage.js');
 var _ = require('underscore');
 var inFiber = require('./fiber-helpers.js').inFiber;
 var Future = require('fibers/future');
+var Fiber = require('fibers');
 
 ////////// Globals //////////
 //XXX: Refactor to not have globals anymore?
@@ -617,46 +618,49 @@ exports.run = function (context, options) {
   var mongoErrorTimer;
   var mongoStartupPrintTimer;
   var launch = function () {
-    Status.mongoHandle = mongo_runner.launch_mongo(
-      context.appDir,
-      mongoPort,
-      function () { // On Mongo startup complete
-        // don't print mongo startup is slow warning.
-        if (mongoStartupPrintTimer) {
-          clearTimeout(mongoStartupPrintTimer);
-          mongoStartupPrintTimer = null;
-        }
-        restartServer();
-      },
-      function (code, signal) { // On Mongo dead
-        if (Status.shuttingDown) {
-          return;
-        }
-        console.log("Unexpected mongo exit code " + code + ". Restarting.");
+    Fiber(function (){
+      Status.mongoHandle = mongo_runner.launchMongo({
+        context: context,
+        port: mongoPort,
+        onListen: function () { // On Mongo startup complete
+          // don't print mongo startup is slow warning.
+          if (mongoStartupPrintTimer) {
+            clearTimeout(mongoStartupPrintTimer);
+            mongoStartupPrintTimer = null;
+          }
+          restartServer();
+        },
+        onExit: function (code, signal) { // On Mongo dead
+          if (Status.shuttingDown) {
+            return;
+          }
+          console.log("Unexpected mongo exit code " + code + ". Restarting.");
 
-        // if mongo dies 3 times with less than 5 seconds between each,
-        // declare it failed and die.
-        mongoErrorCount += 1;
-        if (mongoErrorCount >= 3) {
-          var explanation = mongoExitCodes.Codes[code];
-          console.log("Can't start mongod\n");
-          if (explanation)
-            console.log(explanation.longText);
-          if (explanation === mongoExitCodes.EXIT_NET_ERROR)
-            console.log("\nCheck for other processes listening on port " + mongoPort +
-                        "\nor other meteors running in the same project.");
-          process.exit(1);
-        }
-        if (mongoErrorTimer)
-          clearTimeout(mongoErrorTimer);
-        mongoErrorTimer = setTimeout(function () {
-          mongoErrorCount = 0;
-          mongoErrorTimer = null;
-        }, 5000);
+          // if mongo dies 3 times with less than 5 seconds between each,
+          // declare it failed and die.
+          mongoErrorCount += 1;
+          if (mongoErrorCount >= 3) {
+            var explanation = mongoExitCodes.Codes[code];
+            console.log("Can't start mongod\n");
+            if (explanation)
+              console.log(explanation.longText);
+            if (explanation === mongoExitCodes.EXIT_NET_ERROR)
+              console.log("\nCheck for other processes listening on port " + mongoPort +
+                          "\nor other meteors running in the same project.");
+            process.exit(1);
+          }
+          if (mongoErrorTimer)
+            clearTimeout(mongoErrorTimer);
+          mongoErrorTimer = setTimeout(function () {
+            mongoErrorCount = 0;
+            mongoErrorTimer = null;
+          }, 5000);
 
-        // Wait a sec to restart.
-        setTimeout(launch, 1000);
+          // Wait a sec to restart.
+          setTimeout(launch, 1000);
+        }
       });
+    }).run();
   };
 
   startProxy(outerPort, innerPort, function () {
