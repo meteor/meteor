@@ -379,7 +379,7 @@ var runWebAppServer = function () {
   main = function (argv) {
     // main happens post startup hooks, so we don't need a Meteor.startup() to
     // ensure this happens after the galaxy package is loaded.
-    var Galaxy = Package.galaxy.Galaxy;
+    var AppConfig = Package["application-configuration"].AppConfig;
     argv = optimist(argv).boolean('keepalive').argv;
 
     var boilerplateHtmlPath = path.join(clientDir, clientJson.page);
@@ -403,11 +403,11 @@ var runWebAppServer = function () {
       var port = httpServer.address().port;
       var proxyBinding;
 
-      Galaxy.configurePackage('webapp', function (configuration) {
+      AppConfig.configurePackage('webapp', function (configuration) {
         if (proxyBinding)
           proxyBinding.stop();
         if (configuration && configuration.proxy) {
-          proxyBinding = Galaxy.configureService(configuration.proxyServiceName || "proxy", function (proxyService) {
+          proxyBinding = AppConfig.configureService(configuration.proxyServiceName || "proxy", function (proxyService) {
             if (proxyService.providers.proxy) {
               var proxyConf;
               if (process.env.ADMIN_APP) {

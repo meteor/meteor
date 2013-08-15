@@ -37,7 +37,7 @@ var smtpPool = null;
 var maybeMakePool = function () {
   // We check MAIL_URL in case someone else set it in Meteor.startup code.
   var poolFuture = new Future();
-  Galaxy.configurePackage('email', function (config) {
+  AppConfig.configurePackage('email', function (config) {
     // TODO: allow reconfiguration.
     if (!smtpPool && (config.url || process.env.MAIL_URL)) {
       smtpPool = makePool(config.url || process.env.MAIL_URL);

@@ -1,9 +1,9 @@
 var Future = Npm.require("fibers/future");
 
-Galaxy = {};
+AppConfig = {};
 
 
-Galaxy.findGalaxy = _.once(function () {
+AppConfig.findGalaxy = _.once(function () {
   if (!('GALAXY' in process.env || 'ULTRAWORLD_DDP_ENDPOINT' in process.env)) {
     return null;
   }
@@ -14,7 +14,7 @@ Galaxy.findGalaxy = _.once(function () {
 
 // TODO: Eventually, keep track of the replica set, and generally be conected to the
 // leader.  Waiting on actually having that concept implemented in ultraworld.
-var ultra = Galaxy.findGalaxy();
+var ultra = AppConfig.findGalaxy();
 
 var subFuture = new Future();
 if (ultra)
@@ -68,7 +68,7 @@ try {
   Log.warn("Could not parse initial APP_CONFIG environment variable");
 };
 
-Galaxy.getAppConfig = function () {
+AppConfig.getAppConfig = function () {
   if (!subFuture.isResolved() && staticAppConfig) {
     return staticAppConfig;
   }
@@ -79,8 +79,8 @@ Galaxy.getAppConfig = function () {
   throw new Error("there is no app config for this app");
 };
 
-Galaxy.configurePackage = function (packageName, configure) {
-  var appConfig = Galaxy.getAppConfig(); // Will either be based in the env var,
+AppConfig.configurePackage = function (packageName, configure) {
+  var appConfig = AppConfig.getAppConfig(); // Will either be based in the env var,
                                          // or wait for galaxy to connect.
   var lastConfig = appConfig && appConfig.packages && appConfig.packages[packageName];
   if (lastConfig) {
@@ -118,7 +118,7 @@ Galaxy.configurePackage = function (packageName, configure) {
 };
 
 
-Galaxy.configureService = function (serviceName, configure) {
+AppConfig.configureService = function (serviceName, configure) {
   if (ultra) {
     // there's a Meteor.startup() that produces the various collections, make
     // sure it runs first before we continue.

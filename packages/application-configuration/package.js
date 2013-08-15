@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Interaction with the galaxy service for your apps"
+  summary: "Interaction with the configuration sources for your apps"
 });
 
 Package.on_use(function (api) {
@@ -7,6 +7,6 @@ Package.on_use(function (api) {
   api.use(['mongo-livedata'], {
     unordered: true
   });
-  api.add_files(['galaxy.js'], 'server');
-  api.export('Galaxy', 'server');
+  api.add_files(['config.js'], 'server');
+  api.export('AppConfig', 'server');
 });
