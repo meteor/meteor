@@ -18,7 +18,8 @@ var insertNode = function (n, parent, next) {
       parent.$uihooks && parent.$uihooks.insertElement)
     parent.$uihooks.insertElement(n, parent, next);
   else
-    parent.insertBefore(n, next || null); // xcxc why `|| null`
+    // `|| null` because IE throws an error if passed undefined for 'next'
+    parent.insertBefore(n, next || null);
 };
 
 var moveNode = function (n, parent, next) {
@@ -26,7 +27,8 @@ var moveNode = function (n, parent, next) {
       parent.$uihooks && parent.$uihooks.moveElement)
     parent.$uihooks.moveElement(n, parent, next);
   else
-    parent.insertBefore(n, next || null); // xcxc why `|| null`
+    // `|| null` because IE throws an error if passed undefined for 'next'
+    parent.insertBefore(n, next || null);
 };
 
 var newFragment = function (nodeArray) {
@@ -353,9 +355,9 @@ _extend(DomRange.prototype, {
 UI.Each = Component.extend({
   typeName: 'Each',
   render: function (buf) {
-    // xcxc does this work with server-side rendering?
+    // do nothing, all in rendered().
 
-    // do nothing
+    // XXX do something for server-side rendering
   },
   rendered: function () {
     var self = this;

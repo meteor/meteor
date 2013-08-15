@@ -27,7 +27,9 @@ UI.HTML = Component.extend({
 UI.If = Component.extend({
   typeName: 'If',
   init: function () {
-    // xcxc explain this?
+    // XXX this probably deserves a better explanation if this code is
+    // going to stay with us.
+
     this.condition = this.data;
     // content doesn't see the condition as `data`
     delete this.data;
@@ -59,12 +61,8 @@ UI.If = Component.extend({
         return !! self.get('condition');
       });
 
-      // xcxc go over all of this with Greenspan, implement unless,
-      // think about transition between content/elseContent other than
-      // the {{#AnimatedList}} ones.
-
       if (condition) {
-        var comp = content.extend({}); // for new guid, xcxc explain
+        var comp = content.extend({});
         self.add(comp);
         comp.build();
         var r = new DomRange;
@@ -75,16 +73,6 @@ UI.If = Component.extend({
         componentAdded = true;
       } else {
         if (componentAdded) {
-          // xcxc we never remove the component. is that a problem?
-          // (if there is an outro animation we don't even know when
-          // it's safe to do so). For example, in the sample shark app
-          // run: Meteor.setInterval(function () {
-          // Session.set("showFooter", !Session.get("showFooter")) },
-          // 200);
-          //
-          // notably, each also does not remove the component. does
-          // this mean we have multiple deps computations in the
-          // background that are not used?
           range.removeAll();
           componentAdded = false;
         }

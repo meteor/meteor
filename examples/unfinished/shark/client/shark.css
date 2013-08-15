@@ -5,7 +5,7 @@
 #list div {
   padding: 10px;
   border: 1px solid #bbb;
-  margin: 0 8px 8px 8px; /* xcxc we don't support top margins because of "the overlap problem" */
+  margin: 0 8px 8px 8px;
   font-weight: bold;
   cursor: move;
   width: 400px;

@@ -79,9 +79,8 @@ Template.buttons({
   }
 });
 
-// xcxc `UI.body.rendered` didn't work. Why?
-UI.body.attached = function () {
-  $('#list').sortable({
+UI.body.rendered = function () {
+  this.$('#list').sortable({
     stop: function (event, ui) {
       var el = ui.item.get(0);
       var before = ui.item.prev().get(0);

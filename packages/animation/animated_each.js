@@ -1,14 +1,8 @@
-// xcxc another full pass on this all.
-// - add configuration (speed, curve)
-// - how do you configure adds and removes?
-//   - similarly, how do you animate a single if/else..
-// - support else on each
-// - make this reuse elements while they're being faded out.
-// - some hook like "animation enabled" for initial data load
-// - figure out the story for changing sort order. do moves animate?
-// - BUG: Load unfinished/shark in two tabs, click 'move element' a few times in one tab.
-// - BUG? If you queue moves does the bug "fixed" by 08d32d2209b643fb2bcd192 still happen?
-// - Test on all browsers, including mobile.
+// To use this package, there are a few restrictions on your markup
+// and css:
+//
+// - Elements being animated may not have margin-top set. This is
+//   because of margin collapsing.
 
 $.fx.speeds._default = 2000;
 
