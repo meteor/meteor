@@ -4,7 +4,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   var both = ['client', 'server'];
-  api.use(['underscore', 'accounts-base'], both);
+  api.use(['underscore', 'handlebars', 'accounts-base'], both);
 
   api.export && api.export('Roles'); 
 

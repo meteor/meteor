@@ -3,7 +3,7 @@
   "description": "Role-based authorization, compatible with Meteor's built-in accounts packages.  Includes example app, unit tests and online API docs.",
   "homepage": "https://github.com/alanning/meteor-roles",
   "author": "Adrian Lanning <alanning@gmail.com>",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "git": "https://github.com/alanning/meteor-roles.git",
   "packages": {}
 }
