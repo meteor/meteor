@@ -12,13 +12,13 @@ often run in both places.  But while code running on the server has
 direct access to the database, code running on the client does *not*.
 This distinction is the basis for Meteor's data security model.
 
-{{#note}}
+<div class="note">
 By default, a new Meteor app includes the `autopublish` and `insecure`
 packages, which together mimic the effect of each client having full
 read/write access to the server's database.  These are useful
 prototyping tools, but typically not appropriate for production
 applications.  When you're ready, just remove the packages.
-{{/note}}
+</div>
 
 Every Meteor client includes an in-memory database cache.  To manage the
 client cache, the server *publishes* sets of JSON documents, and the
@@ -127,12 +127,12 @@ modify data, those modifications can run locally without waiting for the
 confirmation from the server, while still giving the server final say
 over the requested change.
 
-{{#note}}
+<div class="note">
 The current release of Meteor supports MongoDB, the popular document
 database, and the examples in this section use the
         [MongoDB API](http://www.mongodb.org/display/DOCS/Manual).  Future
 releases will include support for other databases.
-{{/note}}
+</div>
 
 <h3 id="dataandsecurity-authentication">Authentication and user accounts</h3>
 

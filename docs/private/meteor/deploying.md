@@ -51,7 +51,7 @@ already have a MongoDB server, we can recommend our friends at
 Other packages may require other environment variables (for example, the `email`
 package requires a `MAIL_URL` environment variable).
 
-{{#warning}}
+<div class="warning">
 For now, bundles will only run on the platform that the bundle was
 created on.  To run on a different platform, you'll need to rebuild
 the native packages included in the bundle.  To do that, make sure you
@@ -60,4 +60,4 @@ have `npm` available, and run the following:
     $ cd bundle/server/node_modules
     $ rm -r fibers
     $ npm install fibers@1.0.1
-{{/warning}}
+</div>

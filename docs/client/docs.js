@@ -256,14 +256,6 @@ Template.main.setUpWaypoints = function () {
 
 //// helpers ////
 
-Handlebars.registerHelper('warning', function(fn) {
-  return Template.warning_helper(fn(this));
-});
-
-Handlebars.registerHelper('note', function(fn) {
-  return Template.note_helper(fn(this));
-});
-
 // "name" argument may be provided as part of options.hash instead.
 Handlebars.registerHelper('dtdd', function(name, options) {
   if (options && options.hash) {
@@ -386,19 +378,6 @@ Handlebars.registerHelper('better_markdown', function(fn) {
   output = output.replace(/<!--(\/?\$.*?)-->/g, '<$1>');
 
   return output;
-});
-
-Handlebars.registerHelper('dstache', function() {
-  return '{{';
-});
-
-Handlebars.registerHelper('tstache', function() {
-  return '{{{';
-});
-
-Handlebars.registerHelper('api_section', function(id, nameFn) {
-  return Template.api_section_helper(
-    {name: nameFn(this), id:id}, true);
 });
 
 Handlebars.registerHelper('api_box_inline', function(box, fn) {

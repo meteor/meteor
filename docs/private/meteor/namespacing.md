@@ -73,7 +73,7 @@ examples:
     // any file inside this app or package.
     x = function () { ... }
 
-{{#note}}
+<div class="note">
 Technically speaking, globals in an app (as opposed to in a package)
 are actually true globals. They can't be captured in a scope that is
 private to the app code, because that would mean that they wouldn't be
@@ -83,4 +83,4 @@ problem for properly written package code (since the app globals will
 still be properly shadowed by declarations in the packages). You
 certainly shouldn't depend on this quirk, and in the future Meteor may
 check for it and throw an error if you do.
-{{/note}}
+</div>

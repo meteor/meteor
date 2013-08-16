@@ -23,8 +23,8 @@ Returns a random string of `n` hexadecimal digits.
 {{/dtdd}}
 </dl>
 
-{{#note}}
+<div class="note">
 In the current implementation, random values do not come from a
 cryptographically strong pseudorandom number generator. Future releases will
 improve this, particularly on the server.
-{{/note}}
+</div>

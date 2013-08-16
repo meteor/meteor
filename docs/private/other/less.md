@@ -8,7 +8,7 @@ With the `less` package installed, `.less` files in your application are
 automatically compiled to CSS and the results are included in the client CSS
 bundle.
 
-{{#note}}
+<div class="note">
 If you want to `@import` a file, give it the extension `.lessimport`
 to prevent Meteor from processing it independently.
-{{/note}}
+</div>

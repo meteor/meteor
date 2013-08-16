@@ -13,12 +13,12 @@ on the client, just on the server, or *Anywhere*.
 {{> api_box isClient}}
 {{> api_box isServer}}
 
-{{#note}}
+<div class="note">
 `Meteor.isServer` can be used to limit where code runs, but it does not
 prevent code from being sent to the client. Any sensitive code that you
 don't want served to the client, such as code containing passwords or
 authentication mechanisms, should be kept in the `server` directory.
-{{/note}}
+</div>
 
 
 {{> api_box startup}}
@@ -66,10 +66,10 @@ will publish that cursor's documents. You can also return an array of
 `Collection.Cursor`s, in which case Meteor will publish all of the
 cursors.
 
-{{#warning}}
+<div class="warning">
 If you return multiple cursors in an array, they currently must all be from
 different collections. We hope to lift this restriction in a future release.
-{{/warning}}
+</div>
 
     // server: publish the rooms collection, minus secret info.
     Meteor.publish("rooms", function () {
@@ -152,11 +152,11 @@ Example:
                 Counts.findOne(Session.get("roomId")).count +
                 " messages.");
 
-{{#warning}}
+<div class="warning">
 Meteor will emit a warning message if you call `Meteor.publish` in a
 project that includes the `autopublish` package.  Your publish function
 will still work.
-{{/warning}}
+</div>
 
 {{> api_box subscription_userId}}
 
@@ -627,7 +627,7 @@ dynamically changing attribute to an object, do it with a function that computes
 the value at the time it's called, not by computing the attribute at `transform`
 time.
 
-{{#warning}}
+<div class="warning">
 In this release, Minimongo has some limitations:
 
 * `$pull` in modifiers can only accept certain kinds
@@ -640,13 +640,13 @@ map/reduce aren't supported.
 All of these will be addressed in a future release. For full
 Minimongo release notes, see packages/minimongo/NOTES
 in the repository.
-{{/warning}}
+</div>
 
-{{#warning}}
+<div class="warning">
 Minimongo doesn't currently have indexes. It's rare for this to be an
 issue, since it's unusual for a client to have enough data that an
 index is worthwhile.
-{{/warning}}
+</div>
 
 {{> api_box find}}
 
@@ -656,12 +656,12 @@ documents.  Cursors provide `fetch` to return all matching documents, `map` and
 `observeChanges` to register callbacks when the set of matching documents
 changes.
 
-{{#warning}}
+<div class="warning">
 Collection cursors are not query snapshots.  If the database changes
 between calling `Collection.find` and fetching the
 results of the cursor, or while fetching results from the cursor,
 those changes may or may not appear in the result set.
-{{/warning}}
+</div>
 
 Cursors are a reactive data source.  The first time you retrieve a
 cursor's documents with `fetch`, `map`, or `forEach` inside a
@@ -766,9 +766,9 @@ Server example:
       }
     });
 
-{{#warning}}
+<div class="warning">
 The Mongo `upsert` feature is not implemented.
-{{/warning}}
+</div>
 
 {{> api_box remove}}
 
@@ -1136,11 +1136,11 @@ stopped when the computation is rerun or stopped.
 only deliver the initial results and will not call any further callbacks;
 it is not necessary to call `stop` on the handle.)
 
-{{#note}}
+<div class="note">
 Unlike `observe`, `observeChanges` does not provide absolute position
 information (that is, `atIndex` positions rather than `before`
 positions.) This is for efficiency.
-{{/note}}
+</div>
 
 Example:
 
@@ -1170,10 +1170,10 @@ compare them; the `===` operator will not work. If you are writing generic code
 that needs to deal with `_id` fields that may be either strings or `ObjectID`s, use
 [`EJSON.equals`](#ejson_equals) instead of `===` to compare them.
 
-{{#note}}
+<div class="note">
   `ObjectID` values created by Meteor will not have meaningful answers to their `getTimestamp`
   method, since Meteor currently constructs them fully randomly.
-{{/note}}
+</div>
 
 {{#api_box_inline selectors}}
 
@@ -1324,17 +1324,17 @@ If value is a scalar, then these two expressions do the same thing:
 Example:
 
     <template name="postsView">
-    {{dstache}}! Show a dynamically updating list of items. Let the user click on an
+    {{! Show a dynamically updating list of items. Let the user click on an
         item to select it. The selected item is given a CSS class so it
         can be rendered differently. }}
 
-    {{dstache}}#each posts}}
-      {{dstache}}> postItem }}
-    {{dstache}}/each}}
+    {{#each posts}}
+      {{> postItem }}
+    {{/each}}
     </{{! }}template>
 
     <template name="postItem">
-      <div class="{{dstache}}postClass}}">{{dstache}}title}}</div>
+      <div class="{{postClass}}">{{title}}</div>
     </{{! }}template>
 
     ///// in JS file
@@ -1854,7 +1854,7 @@ Example:
       }
     });
 
-In Handlebars, this helper would then be invoked as `{{dstache}}foo}}`.
+In Handlebars, this helper would then be invoked as `{{foo}}`.
 
 The following syntax is equivalent, but won't work for reserved property
 names:
@@ -1873,14 +1873,14 @@ contains.  The elements to preserve must be present both as nodes in
 the old DOM and as tags in the new HTML.  Meteor will patch the DOM
 around the preserved elements.
 
-{{#note}}
+<div class="note">
 By default, new Meteor apps automatically include the
 `preserve-inputs` package.  This preserves all elements of type
 `input`, `textarea`, `button`, `select`, and `option` that have unique
 `id` attributes or that have `name` attributes that are unique within
 an enclosing element with an `id` attribute.  To turn off this default
 behavior, simply remove the `preserve-inputs` package.
-{{/note}}
+</div>
 
 Preservation is useful in a variety of cases where replacing a DOM
 element with an identical or modified element would not have the same
@@ -1930,11 +1930,11 @@ can't be changed, and it can't be moved relative to its parent or other
 preserved nodes.  For this reason, nodes that are re-ordered or
 re-parented by an update will not be preserved.
 
-{{#note}}
+<div class="note">
 Previous versions of Meteor had an implicit page-wide `preserve`
 directive that labeled nodes by their "id" and "name" attributes.
 This has been removed in favor of the explicit, opt-in mechanism.
-{{/note}}
+</div>
 
 
 <h2 id="template_inst"><span>Template instances</span></h2>
@@ -2034,7 +2034,7 @@ Example:
 {{> api_box renderList}}
 
 Creates a `DocumentFragment` that automatically updates as the results
-of a database query change. Most Meteor apps use `{{dstache}}#each}}` in
+of a database query change. Most Meteor apps use `{{#each}}` in
 a template instead of calling this directly.
 
 `renderList` is more efficient than using `Meteor.render` to render HTML
@@ -2253,7 +2253,7 @@ browsers.
 
 You can mark a region of a template as "constant" and not subject to
 re-rendering using the
-`{{dstache}}#constant}}...{{dstache}}/constant}}` block helper.
+`{{#constant}}...{{/constant}}` block helper.
 Content inside the `#constant` block helper is preserved exactly as-is
 even if the enclosing template is re-rendered.  Changes to other parts
 of the template are patched in around it in the same manner as
@@ -2271,11 +2271,11 @@ would remove the new children, since the template says it should be
 empty. If the container is wrapped in a `#constant` block, however, it
 is left alone; whatever content is currently in the DOM remains.
 
-{{#note}}
+<div class="note">
 Constant regions are intended for embedding non-Meteor content.
 Event handlers and reactive dependencies don't currently work
 correctly inside constant regions.
-{{/note}}
+</div>
 
 
 {{/api_box_inline}}
@@ -2291,7 +2291,7 @@ is affected by how you've divided your HTML into templates.
 
 Typically, the exact extent of re-rendering is not crucial, but if you
 want more control, such as for performance reasons, you can use the
-`{{dstache}}#isolate}}...{{dstache}}/isolate}}` helper.  Data
+`{{#isolate}}...{{/isolate}}` helper.  Data
 dependencies established inside an `#isolate` block are localized to
 the block and will not in themselves cause the parent template to be
 re-rendered.  This block helper essentially conveys the reactivity
@@ -2796,14 +2796,14 @@ When you add a type to EJSON, Meteor will be able to use that type in:
  - storing your type client-side in Minimongo.
  - allowing your type in [`Session`](#session) variables.
 
-{{#note}}
+<div class="note">
 
   MongoDB cannot store most user-defined types natively on the server.  Your
   type will work in Minimongo, and you can send it to the client using a custom
   publisher, but MongoDB can only store the types defined in
   [BSON](http://bsonspec.org/).
 
-{{/note}}
+</div>
 
 Instances of your type should implement the following interface:
 
@@ -3053,9 +3053,4 @@ code can read `data.txt` by running:
 <dd>{{#better_markdown}}{{{descr}}}{{/better_markdown}}</dd>
 {{/each}}
 </dl>
-</template>
-
-
-<template name="api_section_helper">
-<h2 id="{{id}}"><a href="#{{id}}" class="selflink"><span>{{name}}</span></a></h2>
 </template>

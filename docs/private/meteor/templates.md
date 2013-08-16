@@ -11,20 +11,20 @@ extension. In the file, make a `<template>` tag and give it a
 will precompile the template, ship it down to the client, and make it
 available as a function on the global `Template` object.
 
-{{#note}}
+<div class="note">
 Today, the only templating system that has been packaged for Meteor is
 Handlebars. Let us know what templating systems you'd like to use with
 Meteor. Meanwhile, see the [Handlebars
 documentation](http://www.handlebarsjs.com/) and [Meteor Handlebars
 extensions](https://github.com/meteor/meteor/wiki/Handlebars).
-{{/note}}
+</div>
 
 A template with a `name` of `hello` is rendered by calling the
 function `Template.hello`, passing any data for the template:
 
     <!-- in myapp.html -->
     <template name="hello">
-      <div class="greeting">Hello there, {{dstache}}first}} {{dstache}}last}}!</div>
+      <div class="greeting">Hello there, {{first}} {{last}}!</div>
     </{{! }}template>
 
     // in the JavaScript console
@@ -45,9 +45,9 @@ functions in JavaScript. Just add the helper functions directly on the
 `Template.[template name]` object. For example, in this template:
 
     <template name="players">
-      {{dstache}}#each topScorers}}
-        <div>{{dstache}}name}}</div>
-      {{dstache}}/each}}
+      {{#each topScorers}}
+        <div>{{name}}</div>
+      {{/each}}
     </{{! }}template>
 
 instead of passing in `topScorers` as data when we call the
@@ -72,27 +72,27 @@ in `this`:
 
     <!-- in a HTML file -->
     <template name="players">
-      {{dstache}}#each topScorers}}
-        {{dstache}}#if leagueIs "junior"}}
-          <div>Junior: {{dstache}}name}}</div>
-        {{dstache}}/if}}
-        {{dstache}}#if leagueIs "senior"}}
-          <div>Senior: {{dstache}}name}}</div>
-        {{dstache}}/if}}
-      {{dstache}}/each}}
+      {{#each topScorers}}
+        {{#if leagueIs "junior"}}
+          <div>Junior: {{name}}</div>
+        {{/if}}
+        {{#if leagueIs "senior"}}
+          <div>Senior: {{name}}</div>
+        {{/if}}
+      {{/each}}
     </{{! }}template>
 
-{{#note}}
-Handlebars note: `{{dstache}}#if leagueIs "junior"}}` is
+<div class="note">
+Handlebars note: `{{#if leagueIs "junior"}}` is
 allowed because of a Meteor extension that allows nesting a helper
 in a block helper. (Both `if` and `leagueIs` are
 technically helpers, and stock Handlebars would not invoke
 `leagueIs` here.)
-{{/note}}
+</div>
 
 Helpers can also be used to pass in constant data.
 
-    // Works fine with {{dstache}}#each sections}}
+    // Works fine with {{#each sections}}
     Template.report.sections = ["Situation", "Complication", "Resolution"];
 
 Finally, you can use an `events` declaration on a template function to set up a
@@ -102,13 +102,13 @@ the data context of the element that triggered the event.
 
     <!-- myapp.html -->
     <template name="scores">
-      {{dstache}}#each player}}
-        {{dstache}}> playerScore}}
-      {{dstache}}/each}}
+      {{#each player}}
+        {{> playerScore}}
+      {{/each}}
     </{{! }}template>
 
     <template name="playerScore">
-      <div>{{dstache}}name}}: {{dstache}}score}}
+      <div>{{name}}: {{score}}
         <span class="givePoints">Give points</span>
       </div>
     </{{! }}template>
@@ -127,7 +127,7 @@ discussion.
 
     <!-- in myapp.html -->
     <template name="forecast">
-      <div>It'll be {{dstache}}prediction}} tonight</div>
+      <div>It'll be {{prediction}} tonight</div>
     </{{! }}template>
 
     <!-- in myapp.js -->

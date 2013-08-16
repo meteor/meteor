@@ -34,7 +34,7 @@ sense, of course: browsers can't send email and servers can't capture
 mouse events). Our whole ecosystem has been built from the ground up
 to support this.
 
-{{#note}}
+<div class="note">
 `meteor` cannot yet fetch packages from Atmosphere. If you are using
 Atmosphere packages you should take a look at
 [Meteorite](http://oortcloud.github.io/meteorite/), a tool that will
@@ -42,4 +42,4 @@ help you download and manage your Atmosphere packages.
 
 In Meteor 1.0, the `meteor` build tool will have full support for
 Atmosphere.
-{{/note}}
+</div>

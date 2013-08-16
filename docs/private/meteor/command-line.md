@@ -1,4 +1,4 @@
-{{#api_section "commandline"}}Command line{{/api_section}}
+## Command line
 
 <!-- XXX some intro text? -->
 
@@ -74,20 +74,20 @@ which will first prompt for the current password, then for a new
 password.
 
 
-{{#warning}}
+<div class="warning">
 Password protection only applies to administrative actions with the
 Meteor command.  It does not prevent access to your deployed
 website.  Also, this all is a temporary hack until we have
 full-featured Meteor accounts.
-{{/warning}}
+</div>
 
-{{#warning}}
+<div class="warning">
 If you use a domain name other than `meteor.com`
 you must ensure that the name resolves
 to `origin.meteor.com`.  If you want a top-level
 domain like myapp.com, you'll need a DNS A record, matching the IP
 address of origin.meteor.com.
-{{/warning}}
+</div>
 
 
 
@@ -149,10 +149,10 @@ With `--using`, list the packages that you have added to your project.
 Open a MongoDB shell on your local development database, so that you
 can view or manipulate it directly.
 
-{{#warning}}
+<div class="warning">
 For now, you must already have your application running locally
 with `meteor run`. This will be easier in the future.
-{{/warning}}
+</div>
 
 
 <h3 id="meteorreset">meteor reset</h3>
@@ -160,17 +160,17 @@ with `meteor run`. This will be easier in the future.
 Reset the current project to a fresh state. Removes the local
 mongo database.
 
-{{#warning}}
+<div class="warning">
 This deletes your data! Make sure you do not have any information you
 care about in your local mongo database by running `meteor
 mongo`. From the mongo shell, use `show collections`
 and <code>db.<i>collection</i>.find()</code> to inspect your data.
-{{/warning}}
+</div>
 
-{{#warning}}
+<div class="warning">
 For now, you can not run this while a development server is
 running. Quit all running meteor applications before running this.
-{{/warning}}
+</div>
 
 
 <h3 id="meteorbundle">meteor bundle</h3>
