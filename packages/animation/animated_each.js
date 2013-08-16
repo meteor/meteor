@@ -23,7 +23,6 @@ var scaleTowardsTop = function ($n, fraction) {
   //   `"progid:DXImageTransform.Microsoft.Matrix(M11=1, M12=0, M21=0, M22=0.5, SizingMethod='auto expand')"`
   $n.css({transform: 'translateY(' +
           (-(1-t)/2*100) + '%) scaleY(' + t + ')'});
-  $n[0]._scaleTowardsTop_fraction = fraction;
 };
 
 var removeScale = function ($n) {
@@ -31,17 +30,51 @@ var removeScale = function ($n) {
   // (like -webkit-transform)
   // See: http://caniuse.com/#feat=transforms2d
   $n.css({transform: ''});
+};
+
+var ANIMATION_STATE_EXPANDO = '_meteorUIAnimateState';
+
+var getAnimationState = function ($n) {
+  var n = $n[0];
+  var state = n[ANIMATION_STATE_EXPANDO];
+  if (! state) {
+    state = (n[ANIMATION_STATE_EXPANDO] = {});
+    // values in "style" attribute for restoring at end
+    state.ownMarginBottom = n.style.marginBottom;
+    state.ownOpacity = n.style.opacity;
+    // computed styles to animate towards on insert
+    state.fullMarginBottom = parseInt($n.css('margin-bottom'));
+    state.fullOpacity = parseFloat($n.css('opacity'));
+    state.fullHeight = $n.outerHeight(); // border box, w/o margin
+
+    state.currentAnimation = null;
+    state.$n = $n;
+  }
+  return state;
+};
+
+var clearAnimationState = function ($n) {
+  var n = $n[0];
   try {
-    delete $n[0]._scaleTowardsTop_fraction;
+    delete n[ANIMATION_STATE_EXPANDO];
   } catch (e) {
-    // IE 8 doesn't let you delete expandos?
-    $n[0]._scaleTowardsTop_fraction = null;
+    // IE 8 can't delete expandos?
+    n[ANIMATION_STATE_EXPANDO] = null;
   }
 };
 
-var getScale = function ($n) {
-  var fraction = $n[0]._scaleTowardsTop_fraction;
-  return (typeof fraction === 'number') ? fraction : 1;
+var showHideStep = function (t, fx) {
+  var state = fx.elem;
+  var fullHeight = state.fullHeight;
+  var fullMarginBottom = state.fullMarginBottom;
+  var $n = state.$n;
+  var fullOpacity = state.fullOpacity;
+
+  var curMarginBottom = -fullHeight + t*fullHeight +
+        Math.round(Math.min(MARGIN_ACCEL*t, 1) * fullMarginBottom);
+  $n.css({marginBottom: curMarginBottom});
+  scaleTowardsTop($n, t);
+  $n.css({opacity: t*fullOpacity});
 };
 
 var apply = function (el, events) {
@@ -49,52 +82,54 @@ var apply = function (el, events) {
     parent.insertBefore(n, next);
 
     var $n = $(n);
-    var ownMarginBottom = n.style.marginBottom;
-    var ownOpacity = n.style.opacity;
-    var marginBottom = parseInt($n.css('margin-bottom'));
-    var opacity = parseFloat($n.css('opacity'));
+    var state = getAnimationState($n);
 
-    var outerHeight = $n.outerHeight(); // without margin
-    $n.css({marginBottom: -outerHeight,
+    if (state.currentAnimation)
+      state.currentAnimation.stop();
+    else
+      state.t = 0;
+
+    $n.css({marginBottom: -state.outerHeight,
             opacity: 0});
 
-    $({t:0}).animate({t:1}, {
+    $(state).animate({t:1}, {
       duration: ANIMATION_DURATION,
-      step: function (t, fx) {
-        var curMarginBottom = -outerHeight + t*outerHeight +
-              Math.round(Math.min(MARGIN_ACCEL*t, 1) * marginBottom);
-        $n.css({marginBottom: curMarginBottom});
-        scaleTowardsTop($n, t);
-        $n.css({opacity: t*opacity});
+      step: showHideStep,
+      // If the animation is queued, then even if stopped it
+      // blocks another animation on the same state object.
+      // Note: other possibilities here, like a named queue
+      queue: false,
+      start: function (fx) {
+        state.currentAnimation = fx;
       },
       complete: function () {
-        n.style.marginBottom = ownMarginBottom;
-        n.style.opacity = ownOpacity;
+        n.style.marginBottom = state.ownMarginBottom;
+        n.style.opacity = state.ownOpacity;
         removeScale($n);
+        clearAnimationState($n);
       }
     });
   };
 
   var animateRemove = function (n) {
     var $n = $(n);
-    var marginBottom = parseInt($n.css('margin-bottom'));
-    var outerHeight = $n.outerHeight(); // without margin
-    var opacity = parseFloat($n.css('opacity'));
-    var scale = getScale($n);
+    var state = getAnimationState($n);
 
-    $({t:0}).animate({t:1}, {
+    if (state.currentAnimation)
+      state.currentAnimation.stop();
+    else
+      state.t = 1;
+
+    $(state).animate({t:0}, {
       duration: ANIMATION_DURATION,
-      step: function (t, fx) {
-        // animate margin-bottom more quickly than height
-        var f = 1 - t;
-        var curMarginBottom = -outerHeight + f*scale*outerHeight +
-              Math.round(Math.min(MARGIN_ACCEL*f, 1) * marginBottom);
-        $n.css({marginBottom: curMarginBottom});
-        scaleTowardsTop($n, f*scale);
-        $n.css({opacity: f*opacity});
+      step: showHideStep,
+      queue: false,
+      start: function (fx) {
+        state.currentAnimation = fx;
       },
       complete: function () {
         n.parentNode.removeChild(n);
+        clearAnimationState($n);
       }
     });
   };
