@@ -3,8 +3,12 @@
 //
 // - Elements being animated may not have margin-top set. This is
 //   because of margin collapsing.
+// - Elements are expected to have position "relative" or "static"
+//   (the default).
+// - Elements must have top "auto" or "0", because "top" is used to
+//   animate moves.
 
-var ANIMATION_DURATION = 2000;
+var ANIMATION_DURATION = 500;
 
 // animate margin-bottom more quickly than height
 var MARGIN_ACCEL = 4;
@@ -43,7 +47,7 @@ var getAnimationState = function ($n) {
     state.ownMarginBottom = n.style.marginBottom;
     state.ownOpacity = n.style.opacity;
     // computed styles to animate towards on insert
-    state.fullMarginBottom = parseInt($n.css('margin-bottom'));
+    state.fullMarginBottom = parseInt($n.css('margin-bottom'), 10);
     state.fullOpacity = parseFloat($n.css('opacity'));
     state.fullHeight = $n.outerHeight(); // border box, w/o margin
 
@@ -134,65 +138,94 @@ var apply = function (el, events) {
     });
   };
 
+  var MOVE_QUEUE = "meteor-ui-move";
+
   var animateMove = function (n, next) {
     var $n = $(n);
 
-    // we don't use jQuery's `.css()` for these because we want the
-    // element's own style, not the computed style
-    var ownTop = $n[0].style.top;
-    var ownPosition = $n[0].style.position;
-    var ownZIndex = $n[0].style.zIndex;
-    var ownMarginBottom = $n[0].style.marginBottom;
+    var getFlowHeight = function ($elem) {
+      return $elem.outerHeight() +
+        parseInt($elem.css('margin-bottom'), 10);
+    };
 
-    var outerHeight = $n.outerHeight(); // without margin
-    var marginBottom = parseInt($n.css('margin-bottom'));
+    var addToTop = function ($elem, px) {
+      // We use a queue so that `animateMove` can stop only its own
+      // animations.  We don't actually enqueue more than one
+      // animation at a time.
+      $elem.stop(MOVE_QUEUE, true); // clear queue
+      var top = parseInt($elem.css('top'), 10) || 0;
+      top += px;
+      $elem.css({top: top, position: 'relative'});
+      // after setting `top`, animate it to 0.
+      $elem.animate({top: 0},
+                    {duration: ANIMATION_DURATION,
+                     queue: MOVE_QUEUE,
+                     progress: function (a) {
+                       // in case we were nabbed by a Sortable or
+                       // Draggable or something, end our animation
+                       // early.
+                       if ($elem.css('position') === 'absolute')
+                         a.stop(true); // skip to end of anim
+                     }
+                    }).dequeue(MOVE_QUEUE);
+      // XXX On complete, we'd like to remove 'position: relative' and
+      // 'top: 0', but we have to be careful if there is an "add"
+      // animation happening.  Probably need some cross-animation
+      // mechanism for restoring elements to a pristine state
+      // only when all animations have finished.
+    };
 
-    // TODO: test interesting elements like table rows, etc.
-    var placeholder = document.createElement($n[0].nodeName);
-    var $placeholder = $(placeholder);
-    var placeholderHeight = outerHeight + marginBottom;
-    $placeholder.css({height: placeholderHeight,
-                      border: 0,
-                      margin: 0,
-                      padding: 0,
-                      visibility: 'hidden'});
-    // insert placeholder
-    n.parentNode.insertBefore(placeholder, n);
+    var flowHeight = getFlowHeight($n);
+
+    var nOffset = 0;
+
+    // Determine the vertical displacement that we expect moving
+    // `n` to create in `n` and the elements between `n` and
+    // `next`, and counteract it by adding appropriate positive
+    // or negative amounts to the `top` of each element.
+
+    var mode = 0;
+    for (var m = n.parentNode.firstChild; m; m = m.nextSibling) {
+      var isElement = (m.nodeType === 1);
+      if (mode === 0) {
+        if (m === n) {
+          mode = 1; // move is downwards
+        } else if (m === next) {
+          mode = 2; // move is upwards
+          if (isElement) {
+            var $m = $(m);
+            addToTop($m, -flowHeight);
+            nOffset += getFlowHeight($m);
+          }
+        }
+      } else if (mode === 1) {
+        // move is downwards, have seen n
+        if (m === next)
+          break;
+        if (isElement) {
+          var $m = $(m);
+          addToTop($m, flowHeight);
+          nOffset -= getFlowHeight($m);
+        }
+      } else if (mode === 2) {
+        // move is upwards, have seen next
+        if (m === n)
+          break;
+        if (isElement) {
+          var $m = $(m);
+          addToTop($m, -flowHeight);
+          nOffset += getFlowHeight($m);
+        }
+      }
+    }
+
+    addToTop($n, nOffset);
 
     // move node
     if (next)
       n.parentNode.insertBefore(n, next);
     else
       n.parentNode.appendChild(n);
-
-    // XXX would tracking "left" as well as "top" magically get us
-    // horizontal re-ordering?
-    $n.css({marginBottom: -outerHeight,
-            position: 'relative',
-            zIndex: 2,
-            top: 0});
-    var vOffset = $placeholder.offset().top - $n.offset().top;
-    $n.css('top', vOffset);
-
-    $({t:0}).animate({t:1}, {
-      duration: ANIMATION_DURATION,
-      step: function (t, fx) {
-        var curPlaceholderHeight = Math.round(placeholderHeight * (1-t));
-        var curMarginBottom = marginBottom - curPlaceholderHeight;
-        var curTop = (-curPlaceholderHeight +
-                      Math.round((1-t) * (vOffset + placeholderHeight)));
-        $n.css({marginBottom: curMarginBottom,
-                top: curTop});
-        $placeholder.css('height', curPlaceholderHeight);
-      },
-      complete: function () {
-        $placeholder.remove();
-        n.style.top = ownTop;
-        n.style.position = ownPosition;
-        n.style.zIndex = ownZIndex;
-        n.style.marginBottom = ownMarginBottom;
-      }
-    });
   };
 
   if ($(el)[0].$uihooks)
