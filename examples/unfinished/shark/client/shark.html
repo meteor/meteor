@@ -1,28 +1,9 @@
-<head>
-  <title>Shark Test</title>
-</head>
-
 <body>
-  {{> buttons}}
-
-  {{#AnimatedList}}
-
-    <div id="list">
-      {{#each items}}
-        <div class="item">
-          {{text}}
-        </div>
-      {{else}}
-        <strong>Empty</strong>
-      {{/each}}
-    </div>
-
-  {{/AnimatedList}}
-
+  <div id="list">
+    {{#each items}}
+      <div class="item">
+        {{text}}
+      </div>
+    {{/each}}
+  </div>
 </body>
-
-<template name="buttons">
-  <button id="add">add element</button>
-  <button id="remove">remove element</button>
-  <button id="move">move element</button>
-</template>
