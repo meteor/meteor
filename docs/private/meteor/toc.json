@@ -10,7 +10,7 @@
   "Deploying",
   "Writing packages",
   {title: "Command line", article: "command-line"}, [
-    {title: "meteor help", anchor: "meteor-help"},
+    {title: "meteor help", anchor: "meteorhelp"},
     "meteor run",
     "meteor create",
     "meteor deploy",

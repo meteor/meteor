@@ -5,37 +5,32 @@
   <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
 </head>
 
-<template name="layout">
+<body>
   <div id="topbar">
     {{> topbar}}
   </div>
-  {{yield}}
-</template>
+  <div class="books-outer">
+    {{> outerNav }}
+  </div>
+  <div class="toc-outer">
+    {{> toc }}
+  </div>
+  <div id="main">
+    {{> main }}
+  </div>
+</body>
 
 <template name="topbar">
   <h1>Documentation {{release}}</h1>
 </template>
 
-<template name="article">
-  <div id="nav1">
-    {{> outerNav }}
-  </div>
-  <div id="nav2">
-    {{> nav }}
-  </div>
-  <div id="main">
-    {{> main }}
-  </div>
-</template>
-
-
 <template name="outerNav">
-  <div id="nav1-inner">
+  <div class="books-inner">
     <ul>
       {{#each recommendedBookNames}}
         {{#if name}}
           {{#with thisBook}}
-            <li class="{{maybe_selected ../../../book}}">
+            <li class="{{maybeSelected}}">
               <!-- XXX check if not spacer .. -->
               <a href="{{bookLink}}">{{title}}</a>
             </li>
@@ -48,15 +43,14 @@
   </div>
 </template>
 
-<template name="nav">
-<div id="nav1-inner">
+<template name="toc">
+<div class="toc-inner">
   {{#each sections}}
   {{#if typeIs "spacer"}}
-    <div class="spacer"> </div>
+    <div class="spacer">&nbsp;</div>
   {{else}}
-    <div class="toc-item {{type}} {{maybe_current}}">
-      <!-- XXX why two '..' segments? is that a spacebars bug? -->
-      <a href="{{articleLinkInBook ../../book}}">
+    <div class="toc-item {{type}} {{maybeCurrent}}">
+      <a href="{{articleLink}}">
          {{#if formal}}<i>{{formal}}</i>.{{/if}}{{title}}
        </a>
     </div>
@@ -69,8 +63,11 @@
   <!-- https://github.com/blog/273-github-ribbons -->
   <a href="http://github.com/meteor/meteor"><img class="github-ribbon visible-desktop" src="/forkme_right_red_aa0000.png" alt="Fork me on GitHub"></a>
 
-  <div id="top"></div>
-  {{#better_markdown}}{{{contents}}}{{/better_markdown}}
+  {{#with currentArticle}}
+    <div id="top"></div>
+    {{#better_markdown}}{{{contents}}}{{/better_markdown}}
+    {{setUpWaypoints}}
+  {{/with}}
 </template>
 
 <template name="dtdd_helper">

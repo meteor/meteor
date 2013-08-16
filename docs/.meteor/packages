@@ -13,4 +13,5 @@ less
 spiderable
 appcache
 handlebars
-iron-router
+reactive-dict
+bootstrap

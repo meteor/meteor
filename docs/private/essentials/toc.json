@@ -225,24 +225,5 @@
       {title: "Assets.getText", anchor: "assets_getText"},
       {title: "Assets.getBinary", anchor: "assets_getBinary"}
     ]
-  ],
-
-  "Packages", [ [
-    "accounts-ui",
-    "amplify",
-    "appcache",
-    "audit-argument-checks",
-    "backbone",
-    "bootstrap",
-    "coffeescript",
-    "d3",
-    "force-ssl",
-    "jquery",
-    "less",
-    "random",
-    "spiderable",
-    "stylus",
-    "showdown",
-    "underscore"
-  ] ]
+  ]
 ]

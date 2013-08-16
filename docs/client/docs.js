@@ -1,138 +1,152 @@
-Router.configure({
-  layout: 'layout'
+Page.define('root', '/');
+Page.define('book', '/:book');
+Page.define('article', '/:book/:article#:section');
+
+// XXX maybe autoruns should automatically be held until after startup?
+Meteor.startup(function () {
+  // currentBook, currentArticle, currentSection in Session are derived
+  // from book, article, section in Page, but have defaults.
+  Meteor.autorun(function () {
+    var book = Page.get("book") || defaultBook();
+    if (! book)
+      return;
+    fetchBook(book);
+
+    var article = Page.get("article");
+    var section = Page.get("section");
+    if (! article) {
+      var item = defaultItemInBook(book);
+      if (item) {
+        article = item.article;
+        section = item.anchor;
+      }
+    }
+
+    Session.set('currentBook', book);
+    Session.set('currentArticle', article);
+    Session.set('currentSection', section);
+  });
+
+  // Download the currently selected book and/or article.
+  Meteor.autorun(function () {
+    var book = Session.get("currentBook");
+    if (book)
+      fetchBook(book);
+
+    var article = Session.get("currentArticle");
+    if (book && article !== undefined)
+      fetchArticle(book, article);
+  });
 });
 
-Router.map(function () {
-  this.route('root', {
-    path: '/',
-    template: 'article',
-    data: function () {
-      // XXX select first TOC item in first recommended book
-      return null;
+// Returns a book name, or null if can't be determined (not loaded)
+var defaultBook = function () {
+  var recs = RecommendedBooks.find().fetch();
+  for (var i = 0; i < recs.length; i++)
+    if (recs[i] !== null) {
+      return recs[i].name;
     }
+  return null;
+};
+
+// Returns object with 'article' and possibly 'anchor', or null if
+// can't be determined (no such book or not loaded).
+var defaultItemInBook = function (book) {
+  // find the first thing in the TOC
+  var book = Books.findOne(book);
+  var toc = book && book.toc || [];
+
+  for (var i = 0; i < toc.length; i++)
+    if (toc[i].type !== "spacer") {
+      return {
+        article: toc[i].article,
+        anchor: toc.anchor
+      };
+    }
+  return null;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+// returns a jQuery object suitable for setting scrollTop to
+// scroll the page, either directly for via animate()
+var scroller = function() {
+  return $("html, body").stop();
+};
+
+var ignoreWaypoints = false;
+var lastScrolledArticle = null;
+var lastScrolledSection = null;
+
+Meteor.startup(function () {
+  // When the selected section changes, scroll to it. (Or jump to it
+  // if we also changed to a different article.)
+  Meteor.autorun(function () {
+    var article = Session.get("currentArticle");
+    var section = Session.get("currentSection");
+    if (! section)
+      section = "top";
+
+    if (section === lastScrolledSection &&
+        article === lastScrolledArticle)
+      return;
+
+    var sectionElt = $('#' + section);
+    if (! sectionElt.length) {
+      console.log("No section '" + section + "' to scroll to");
+      return;
+    }
+
+    var animate = (lastScrolledArticle === article);
+    ignoreWaypoints = true;
+    lastScrolledArticle = article;
+    lastScrolledSection = section;
+
+    scroller().animate({
+      scrollTop: sectionElt.offset().top
+    }, animate ? 200 : 0, 'swing', function () {
+      ignoreWaypoints = false;
+    });
   });
 
-  this.route('book', {
-    path: '/:book',
-    template: 'article',
-    data: function () {
-      fetchBook(this.params.book);
-      // select first thing in the TOC
-      var book = Books.findOne(this.params.book);
-      var toc = book && book.toc || [];
-
-      for (var i = 0; i < toc.length; i++)
-        if (toc[i].type !== "spacer") {
-          fetchArticle(this.params.book, toc[i].article);
-          // XXX set anchor to toc.anchor
-          var a = Articles.findOne({book: book._id,
-                                   name: toc[i].article});
-          return Articles.findOne({book: book._id,
-                                   name: toc[i].article});
-        }
-      return null;
+  // When passing a section boundary, update the section
+  // selection. (But not when passing it during an animated scroll.)
+  $('body').delegate('*', 'waypoint.reached', function (evt, dir) {
+    if (ignoreWaypoints)
+      return;
+    var active = (dir === "up") ? this.prev : this;
+    console.log(active && active.id);
+    if (active) {
+      console.log("SET", active.id);
+      Session.set("currentSection", active.id);
+      lastScrolledSection = active.id;
+      lastScrolledArticle = Session.get("currentArticle");
     }
+    evt.stopPropagation();
   });
+});
 
-  this.route('article', {
-    path: '/:book/:article',
-    template: 'article',
-    data: function () {
-      fetchBook(this.params.book);
-      fetchArticle(this.params.book, this.params.article);
 
-      // XXX set anchor
-      return Articles.findOne({book: this.params.book,
-                               name: this.params.article});
-    },
-    onBeforeRun: function () {
-      console.log("onbeforerun", this);
-    }
-  });
+
+///////////////////////////////////////////////////////////////////////////////
+
+// Mixpanel stats. XXX revamp
+
+Meteor.startup(function () {
+  mixpanel.track('docs');
 });
 
 Meteor.startup(function () {
-  // XXX this is broken by the new multi-page layout.  Also, it was
-  // broken before the multi-page layout because it had illegible
-  // colors. Just turn it off for now. We'll fix it and turn it on
-  // later.
-  // prettyPrint();
-
-  //mixpanel tracking
-  mixpanel.track('docs');
-
-  // returns a jQuery object suitable for setting scrollTop to
-  // scroll the page, either directly for via animate()
-  var scroller = function() {
-    return $("html, body").stop();
-  };
-
-/*
-  var sections = [];
-  _.each($('#main h1, #main h2, #main h3'), function (elt) {
-    var classes = (elt.getAttribute('class') || '').split(/\s+/);
-    if (_.indexOf(classes, "nosection") === -1)
-      sections.push(elt);
+  Meteor.autorun(function () {
+    var token = "docs_navigate_" +
+      Session.get('currentBook') + "_" +
+      Session.get('currentArticle') + "_" +
+      (Session.get('currentSection') || '');
+    mixpanel.track(token);
   });
-
-  for (var i = 0; i < sections.length; i++) {
-    var classes = (sections[i].getAttribute('class') || '').split(/\s+/);
-    if (_.indexOf(classes, "nosection") !== -1)
-      continue;
-    sections[i].prev = sections[i-1] || sections[i];
-    sections[i].next = sections[i+1] || sections[i];
-    $(sections[i]).waypoint({offset: 30});
-  }
-  var section = document.location.hash.substr(1) || sections[0].id;
-  Session.set('section', section);
-  if (section) {
-    // WebKit will scroll down to the #id in the URL asynchronously
-    // after the page is rendered, but Firefox won't.
-    Meteor.setTimeout(function() {
-      var elem = $('#'+section);
-      if (elem.length)
-        scroller().scrollTop(elem.offset().top);
-    }, 0);
-  }
-
-  var ignore_waypoints = false;
-  $('body').delegate('h1, h2, h3', 'waypoint.reached', function (evt, dir) {
-    if (!ignore_waypoints) {
-      var active = (dir === "up") ? this.prev : this;
-      Session.set("section", active.id);
-    }
-  });
-
-  window.onhashchange = function () {
-    scrollToSection(location.hash);
-  };
-
-  var scrollToSection = function (section) {
-    if (! $(section).length)
-      return;
-
-    ignore_waypoints = true;
-    Session.set("section", section.substr(1));
-    scroller().animate({
-      scrollTop: $(section).offset().top
-    }, 500, 'swing', function () {
-      window.location.hash = section;
-      ignore_waypoints = false;
-    });
-  };
-
-  $('#main, #nav2').delegate("a[href^='#']", 'click', function (evt) {
-    evt.preventDefault();
-    var sel = $(this).attr('href');
-    scrollToSection(sel);
-
-    mixpanel.track('docs_navigate_' + sel);
-  });
-
-  // Make external links open in a new tab.
-  $('a:not([href^="#"])').attr('target', '_blank');
-*/
 });
+
+///////////////////////////////////////////////////////////////////////////////
 
 
 //// topbar ////
@@ -156,34 +170,38 @@ Template.outerNav.thisBook = function () {
 
 Template.outerNav.bookLink = function () {
   // XXX emit correct anchor
-  return Router.path('book', {book: this._id});
+  return Page.url('book', {book: this._id});
 };
 
-Template.outerNav.maybe_selected = function (selectedBookName) {
-  return selectedBookName === this._id ? "selected" : "";
+Template.outerNav.maybeSelected = function () {
+  return Session.equals("currentBook", this._id) ? "selected" : "";
 };
 
 
-//// nav ////
+//// toc ////
 
-Template.nav.sections = function () {
-  var book = Books.findOne(this.book);
+Template.toc.sections = function () {
+  var book = Books.findOne(Session.get("currentBook"));
   return book && book.toc || [];
 };
 
-Template.nav.typeIs = function (what) {
+Template.toc.typeIs = function (what) {
   return this.type === what;
 }
 
-Template.nav.maybe_current = function () {
-//  return Session.equals("section", this.id) ? "current" : "";
-// XXX BROKEN
+Template.toc.maybeCurrent = function () {
+  var current =
+    Session.equals("currentArticle", this.article) &&
+    Session.equals("currentSection", this.anchor);
+  return current ? "current" : "";
 };
 
-Template.nav.articleLinkInBook = function (bookName) {
-  // XXX emit correct anchor (this.anchor)
-  return Router.path('article', {book: bookName,
-                                 article: this.article});
+Template.toc.articleLink = function () {
+  return Page.url('article', {
+    book: Session.get("currentBook"),
+    article: this.article,
+    section: this.anchor
+  });
 };
 
 
@@ -193,11 +211,47 @@ Template.nav.articleLinkInBook = function (bookName) {
 
 Template.main.currentArticle = function () {
   return Articles.findOne({
-    book: Session.get("selectedBook"),
-    name: Session.get("selectedArticle")
+    book: Session.get("currentBook"),
+    name: Session.get("currentArticle")
   });
 };
 
+// After an article has been rendered, set up its waypoints.
+Template.main.setUpWaypoints = function () {
+  Deps.afterFlush(function () {
+    var book = Books.findOne(Session.get("currentBook"));
+    var toc = book && book.toc;
+    if (! toc) {
+      console.log("No toc for article?");
+      return;
+    }
+
+    var prev = null;
+    _.each(toc, function (item) {
+      if (item.article !== Session.get("currentArticle") ||
+          ! item.anchor)
+        return;
+      var elt = $('#' + item.anchor)[0];
+      if (! elt) {
+        console.log("Missing anchor: " + item.anchor);
+        return;
+      }
+      elt.prev = prev;
+      prev = elt;
+      $(elt).waypoint({offset: 30});
+    });
+
+    // XXX we never shipped this because we couldn't find colors we liked
+    // prettyPrint();
+
+    // XXX XXX need to revamp (need to check for other host, not anchor)
+    // Make external links open in a new tab.
+    // $('a:not([href^="#"])').attr('target', '_blank');
+  });
+};
+
+
+///////////////////////////////////////////////////////////////////////////////
 
 
 //// helpers ////

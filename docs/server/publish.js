@@ -8,6 +8,7 @@ var prettyBookTitle = function (name) {
   return name;
 };
 
+// Should create a pretty string for URLs.
 var slugify = function (s) {
   s = s.split('?')[0];
   s = s.replace(/['.]/g, '');
@@ -15,6 +16,12 @@ var slugify = function (s) {
   s = s.replace(/^-/, '');
   s = s.replace(/-$/, '');
   return s.toLowerCase();
+};
+
+// Should (reasonably) match what Markdown does to generate ids for
+// headers.
+var idify = function (s) {
+  return  s.toLowerCase().replace(/[^a-z0-9_,.]/g, '').replace(/[,.]/g, '_');
 };
 
 var getToc = function (bookName) {
@@ -48,10 +55,14 @@ var getToc = function (bookName) {
           item = {type: "spacer"};
 
         if (! item.type) {
-          switch (depth) {
-          case 1: item.type = "h1"; break;
-          case 2: item.type = "h2"; break;
-          default: item.type = "h3"; break;
+          if (item.formal)
+            item.type = "property";
+          else {
+            switch (depth) {
+            case 1: item.type = "h1"; break;
+            case 2: item.type = "h2"; break;
+            default: item.type = "h3"; break;
+            }
           }
         }
 
@@ -63,7 +74,7 @@ var getToc = function (bookName) {
           else {
             item.article = lastArticle;
             if (! item.anchor && item.title)
-              item.anchor = slugify(item.title);
+              item.anchor = idify(item.title);
           }
         }
 

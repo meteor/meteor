@@ -1,5 +1,6 @@
 /** CSS reset **/
 
+/*
 html, body, div, span, applet, object, iframe,
 h1, h2, h3, h4, h5, h6, p, blockquote, pre,
 a, abbr, acronym, address, big, cite, code,
@@ -29,6 +30,7 @@ ol, ul {
 a img {
   border: none;
 }
+*/
 
 /** Variables **/
 
@@ -39,116 +41,135 @@ a img {
 @nav2-width-tablet: 200px;
 
 @nav1-padding: 10px;
-@nav2-padding: 25px;
+@nav2-padding: 10px;
 
 @topbar-height: 55px;
+@topbar-border-width: 1px;
 
-/** Basics **/
 
-body {
-    font-family: 'Helvetica Neue', Helvetica, Arial;
+/** Mixins **/
+
+.no-select {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
-pre {
-    font-family: monospace;
-}
-
-code {
-    font-family: monospace;
-    font-size: 1.1em;
-    white-space: pre;
-}
-
-ul {
-    list-style-type: disc;
-    margin-top: 1em;
-    margin-bottom: 1em;
-    padding-left: 40px;
-}
-
-dl {
-    margin-top: 1em;
-    margin-bottom: 1em;
-}
-
-dd {
-    margin-left: 40px;
-}
-
-h1, h2, h3, h4 {
-    color: black;
-    font-weight: bold;
-}
-
-h1 {
-    font-size: 2em;
-    letter-spacing: -1px;
-}
-
-h1 {
-    margin: 1.5em 0 .67em 0;
-}
-
-h2 {
-    font-size: 1.5em;
-    margin: 1.25em 0 .5em 0;
-    letter-spacing: -1px;
-}
-
-h3 {
-    font-size: 1.17em;
-    margin: 1em 0 1em 0;
-    letter-spacing: -1px;
-}
-
-h4 {
-}
-
-p {
-    margin-bottom: 1em;
-}
-
-em {
-    font-style: italic;
-}
-
-a:hover {
-    background-color: yellow;
-}
 
 /** Topbar **/
 
 #topbar {
-    border: 1px solid black;
+    border: @topbar-border-width solid black;
     border-style: none none solid none;
-    line-height: @topbar-height;
+    line-height: (@topbar-height - @topbar-border-width);
     background-color: white;
 }
 
+
 #topbar h1 {
-    font-size: 2em;
-    margin: 0 0 0 .25em;
+    font-size: 2.5em;
+    margin: .15em 0 0 .25em;
+    color: #666;
 }
 
-/** Section nav **/
 
-#nav2 {
+/** Book list **/
+
+.books-outer {
     line-height: 1.2;
     border-width: 1px;
     border-color: black;
-    border-style: none dotted none none;
+    border-style: none solid none none;
+    .no-select;
 }
 
-#nav2-inner {
-    padding-top: -10px;
-    padding-left: @nav2-padding;
-    padding-right: @nav2-padding;
+.books-inner {
+    margin-top: 10px;
+    margin-left: @nav1-padding;
+    margin-right: @nav1-padding;
 }
 
-.toc-item {
+.books-outer ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.books-outer li {
+    width: 100%;
+    color: #333;
+}
+
+.books-outer li:hover {
+    background-color: #ccc;
     color: black;
 }
 
+.books-outer li.selected {
+    color: white;
+    background-color: black;
+}
+
+.books-outer a {
+    color: inherit;
+    text-decoration: none;
+    display: block;
+}
+
+
+/** Table of contents **/
+
+.toc-outer {
+    line-height: 1.2;
+    border-width: 1px;
+    border-color: black;
+    border-style: none solid none none;
+    overflow-y: auto;
+    line-height: 20px; /* XXX */
+}
+
+.toc-inner {
+    margin-top: 10px;
+    margin-bottom: @topbar-height;
+    margin-left: @nav2-padding;
+    margin-right: @nav2-padding;
+}
+
+.toc-item a {
+    color: inherit;
+    text-decoration: none;
+    display: block;
+}
+
+.toc-item:hover {
+    color: black;
+    background-color: #ccc;
+}
+
+.toc-item.h1 {
+    margin-top: 20px;
+}
+
+.toc-item.h2 {
+    margin-left: 10px;
+    margin-top: 10px;
+}
+
+.toc-item.h3 {
+    margin-left: 20px;
+    font-style: italic;
+}
+
+.toc-item.property {
+    margin-left: 30px;
+}
+
+
+
+/*
 .toc-item.h1 {
     font-size: 1.8em;
     margin: 1.2em 0 .2em 0;
@@ -178,55 +199,22 @@ a:hover {
     letter-spacing: 0px;
 }
 
+
 .toc-item.spacer {
     height: .33em;
 }
+*/
 
 .toc-item.current {
-    color: red;
+    color: white;
+    background-color: black;
 }
 
-/** Outer nav **/
-
-
-#nav1 {
-    line-height: 1.2;
-    border-width: 1px;
-    border-color: black;
-    border-style: none solid none none;
-}
-
-#nav1-inner {
-    padding-top: 10px;
-    padding-left: @nav1-padding;
-    padding-right: @nav1-padding;
-}
-
-#nav1 ul {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-}
-
-#nav1 li {
-    width: 100%;
-    color: #333;
-}
-
-#nav1 li:hover {
-    color: black;
-    font-weight: bold;
-}
-
-#nav1 li.selected {
-    color: black;
-    font-weight: bold;
-    background-color: yellow;
-}
 
 
 /** Main pane **/
 
+/*
 #main {
     margin: 10px;
     line-height: 1.3;
@@ -236,17 +224,18 @@ a:hover {
 #main strong {
     font-weight: bold;
 }
+*/
 
 #main h1 {
     border-style: solid none none none;
     border-color: #999;
-    border-width: 2px;
+/*    border-width: 2px; */
 }
 
 #main h2 span {
     background-color: yellow;
-    margin: 0px -5px 0px -5px;
-    padding: 2px 5px 2px 5px;
+/*    margin: 0px -5px 0px -5px;
+    padding: 2px 5px 2px 5px; */
 }
 
 #main a:link, #main a:visited {
@@ -257,6 +246,10 @@ a:hover {
 
 #main code a:link, #main code a:visited {
     border: none;
+}
+
+#main a:hover {
+    background-color: yellow;
 }
 
 dl.involved {
@@ -433,6 +426,7 @@ dl.callbacks {
     font-style: italic;
 }
 
+/*
 #main pre {
     -moz-border-radius: 10px;
     -webkit-border-radius: 10px;
@@ -447,10 +441,13 @@ dl.callbacks {
     padding: 5px;
     margin: 1em 0 1em 0;
 }
+*/
 
 #main pre, #main pre code { /* override inline code font and white-space*/
+/*
   font-size: 12px;
   font-weight: bold;
+*/
 }
 
 #main a.selflink:link, #main a.selflink:visited, #main a.selflink:hover {
@@ -470,10 +467,10 @@ mobile/tablet */
 }
 
 /* default to no sidebar */
-#nav1 {
+.books-outer {
     display: none;
 }
-#nav2 {
+.toc-outer {
     display: none;
 }
 .github-ribbon {
@@ -489,7 +486,7 @@ pre {
 #topbar {
     display: block;
     position: fixed;
-    height: @topbar-height;
+    height: (@topbar-height - @topbar-border-width);
     top: 0px;
     left: 0px;
     width: 100%;
@@ -501,21 +498,18 @@ pre {
     margin-left: @nav1-width-tablet + @nav2-width-tablet;
     padding: 30px;
 }
-#nav1 {
+.books-outer {
     display: block;
     width: @nav1-width-tablet;
     position: fixed;
-    overflow: auto;
     height: 100%;
     top: @topbar-height;
     left: 0;
 }
-#nav2 {
+.toc-outer {
     display: block;
     width: @nav1-width-tablet;
     position: fixed;
-    overflow-x: hidden;
-    overflow-y: auto;
     height: 100%;
     top: @topbar-height;
     left: @nav1-width-tablet;
@@ -528,13 +522,13 @@ pre {
 @media (min-width: 1024px) {
 /* ipad landscape and desktop */
 #main {
-    width: 610px; /* XXX */
+    width: 870px; /* XXX XXX */
     margin-left: (@nav1-width + @nav2-width);
 }
-#nav1 {
+.books-outer {
     width: @nav1-width;
 }
-#nav2 {
+.toc-outer {
     width: @nav2-width;
     left: @nav1-width;
 }
