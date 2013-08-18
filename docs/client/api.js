@@ -1626,7 +1626,10 @@ Template.api.httpcall = {
      descr: "Maximum time in milliseconds to wait for the request before failing.  There is no timeout by default."},
     {name: "followRedirects",
      type: "Boolean",
-     descr: "If true, transparently follow HTTP redirects.  Cannot be set to false on the client."}
+     descr: "If true, transparently follow HTTP redirects.  Cannot be set to false on the client."},
+    {name: "encoding",
+     type: "String",
+     descr: "Charset used to interpret the response body. Ignored on the client. Defaults to `utf8`. The node.js documentation has [a list of possible encodings](http://nodejs.org/api/buffer.html#buffer_buffer)."}
   ]
 };
 
