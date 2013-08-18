@@ -84,8 +84,9 @@ var replaceTypes = function (document, atomTransformer) {
 };
 
 
-MongoConnection = function (url) {
+MongoConnection = function (url, connectionOptions) {
   var self = this;
+  connectionOptions = connectionOptions || {};
   self._connectCallbacks = [];
   self._liveResultsSets = {};
 
@@ -122,6 +123,18 @@ MongoConnection = function (url) {
       });
     }).run();
   });
+
+  self._oplogHandle = null;
+  // XXX we should NOT be reading directly from the env here (this should be an
+  // argument to MongoConnection eg) but I want to wait for the AppConfig API to
+  // settle a little before thinking too hard about this
+  if (process.env.XXX_OPLOG_URL && !connectionOptions.isOplog) {
+    var dbName = Npm.require('url').parse(url).pathname.substr(1);
+    // Defer this, because it blocks. If we start observing cursors before the
+    // oplog handle is ready, they just don't get to use the oplog.
+    Meteor.defer(_.bind(self._startOplogTailing,
+                        self, process.env.XXX_OPLOG_URL, dbName));
+  }
 };
 
 MongoConnection.prototype.close = function() {
@@ -175,6 +188,44 @@ MongoConnection.prototype._maybeBeginWrite = function () {
     return fence.beginWrite();
   else
     return {committed: function () {}};
+};
+
+var OPLOG_COLLECTION = 'oplog.rs';
+
+// Like Perl's quotemeta: quotes all regexp metacharacters. See
+//   https://github.com/substack/quotemeta/blob/master/index.js
+var quotemeta = function (str) {
+    return String(str).replace(/(\W)/g, '\\$1');
+};
+
+MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
+  var self = this;
+
+  var oplogConnection = new MongoConnection(oplogUrl, {isOplog: true});
+  // Find the last oplog entry. Blocks until the connection is ready.
+
+  var lastOplogEntry = oplogConnection.findOne(
+    OPLOG_COLLECTION, {}, {sort: {$natural: -1}});
+
+  var oplogSelector = {
+    ns: new RegExp('^' + quotemeta(dbName) + '\\.'),
+    $or: [
+      {op: {$in: ['i', 'u', 'd']}},
+      {op: 'c', 'o.drop': {$exists: true}}
+    ]
+  };
+  if (lastOplogEntry)
+    oplogSelector.ts = {$gt: lastOplogEntry.ts};
+
+  var cursorDescription = new CursorDescription(
+    OPLOG_COLLECTION, oplogSelector, {tailable: true});
+  var handle = oplogConnection.tail(cursorDescription, function (doc) {
+    // Don't register the handle until after we've gotten one doc.
+    if (!self._oplogHandle)
+      self._oplogHandle = handle;
+
+    console.log("OPLOG TAILING SEZ:", doc);
+  });
 };
 
 //////////// Public API //////////
@@ -717,16 +768,20 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options) {
 _.extend(SynchronousCursor.prototype, {
   _nextObject: function () {
     var self = this;
+
     while (true) {
       var doc = self._synchronousNextObject().wait();
-      if (!doc || typeof doc._id === 'undefined') return null;
+
+      if (!doc) return null;
       doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
 
-      if (!self._cursorDescription.options.tailable) {
+      if (!self._cursorDescription.options.tailable && _.has(doc, '_id')) {
         // Did Mongo give us duplicate documents in the same cursor? If so,
         // ignore this one. (Do this before the transform, since transform might
         // return some unrelated value.) We don't do this for tailable cursors,
-        // because we want to maintain O(1) memory usage.
+        // because we want to maintain O(1) memory usage. And if there isn't _id
+        // for some reason (maybe it's the oplog), then we don't do this either.
+        // (Be careful to do this for falsey but existing _id, though.)
         var strId = LocalCollection._idStringify(doc._id);
         if (self._visitedIds[strId]) continue;
         self._visitedIds[strId] = true;
