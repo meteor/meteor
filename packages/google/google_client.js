@@ -44,6 +44,10 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
         '&access_type=' + accessType +
         '&approval_prompt=' + approvalPrompt;
 
+  if (options.hostedDomain) {
+    loginUrl += '&hd=' + encodeURIComponent(options.hostedDomain);
+  }
+
   Oauth.initiateLogin(credentialToken,
                       loginUrl,
                       credentialRequestCompleteCallback,
