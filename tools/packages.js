@@ -703,7 +703,7 @@ _.extend(Slice.prototype, {
           buildmessage.error(
             "conflict: two packages included in " +
               (self.pkg.name || "the app") + ", " +
-              (ret[ext].pkg.name || "the app") + " and " +
+              (ret[ext].pkg && ret[ext].pkg.name || "the app") + " and " +
               (otherPkg.name || "the app") + ", " +
               "are both trying to handle ." + ext);
           // Recover by just going with the first handler we saw
