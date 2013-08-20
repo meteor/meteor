@@ -903,18 +903,13 @@ var applyChanges = function (doc, changeFields) {
 };
 
 
-var idStringify;
-
-if (typeof LocalCollection !== 'undefined') {
-  idStringify = function (id) {
-    if (id === null)
-      return id;
-    else
-      return LocalCollection._idStringify(id);
-  };
-} else {
-  idStringify = function (id) { return id; };
-}
+// If minimongo is available (it's a weak dependency) use its ID stringifier (so
+// that, eg, ObjectId and strings don't overlap). Otherwise just use the
+// identity function.
+// This is also used in convenience.js.
+idStringify = Package.minimongo
+  ? Package.minimongo.LocalCollection._idStringify
+  : function (id) { return id; };
 
 Spark.list = function (cursor, itemFunc, elseFunc) {
   elseFunc = elseFunc || function () { return ''; };
