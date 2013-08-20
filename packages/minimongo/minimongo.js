@@ -191,7 +191,7 @@ LocalCollection.Cursor.prototype.count = function () {
   var self = this;
 
   if (self.reactive)
-    self._depend({added: true, removed: true});
+    self._depend({added: true, removed: true}, true);
 
   if (self.db_objects === null)
     self.db_objects = self._getRawObjects(true);
@@ -250,7 +250,7 @@ _.extend(LocalCollection.Cursor.prototype, {
 
     var ordered = LocalCollection._isOrderedChanges(options);
 
-    if (!ordered && (self.skip || self.limit))
+    if (!options._suppress_ordered && !ordered && (self.skip || self.limit))
       throw new Error("must use ordered observe with skip or limit");
 
     // XXX merge this object w/ "this" Cursor.  they're the same.
@@ -410,7 +410,7 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
 
 // XXX Maybe we need a version of observe that just calls a callback if
 // anything changed.
-LocalCollection.Cursor.prototype._depend = function (changers) {
+LocalCollection.Cursor.prototype._depend = function (changers, _suppress_ordered) {
   var self = this;
 
   if (Deps.active) {
@@ -418,7 +418,10 @@ LocalCollection.Cursor.prototype._depend = function (changers) {
     v.depend();
     var notifyChange = _.bind(v.changed, v);
 
-    var options = {_suppress_initial: true};
+    var options = {
+      _suppress_initial: true,
+      _suppress_ordered: _suppress_ordered
+    };
     _.each(['added', 'changed', 'removed', 'addedBefore', 'movedBefore'],
            function (fnName) {
              if (changers[fnName])
