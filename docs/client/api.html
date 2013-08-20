@@ -2409,7 +2409,7 @@ from the call to `check` or `Match.test`. Examples:
     NonEmptyString = Match.Where(function (x) {
       check(x, String);
       return x.length > 0;
-    }
+    });
     check(arg, NonEmptyString);
 {{/dtdd}}
 </dl>
