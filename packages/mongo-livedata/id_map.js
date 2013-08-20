@@ -14,14 +14,23 @@ _.extend(IdMap.prototype, {
     var key = LocalCollection._idStringify(id);
     self.map[key] = value;
   },
-  remove: function(id) {
+  remove: function (id) {
     var self = this;
     var key = LocalCollection._idStringify(id);
     delete self.map[key];
   },
-  has: function(id) {
+  has: function (id) {
     var self = this;
     var key = LocalCollection._idStringify(id);
     return _.has(self.map, key);
+  },
+  // XXX used?
+  setDefault: function (id, def) {
+    var self = this;
+    var key = LocalCollection._idStringify(id);
+    if (_.has(self.map, key))
+      return self.map[key];
+    self.map[key] = def;
+    return def;
   }
 });

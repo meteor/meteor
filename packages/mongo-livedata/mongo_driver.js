@@ -255,6 +255,18 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
   };
 };
 
+var modifierTopLevelFields = function (mod) {
+  var fields = {};
+  _.each(mod, function (mapping, op) {
+    if (op !== '$set' && op != '$unset')
+      throw new Error("Unknown oplog operation " + op);
+    _.each(mapping, function (value, field) {
+      fields[field.split('.')[0]] = true;
+    });
+  });
+  return _.keys(fields);
+};
+
 MongoConnection.prototype._observeChangesWithOplog = function (
   cursorDescription, callbacks) {
   var self = this;
@@ -282,44 +294,94 @@ MongoConnection.prototype._observeChangesWithOplog = function (
 
   var idSet = new IdMap;
 
+  var changedFields = new IdMap;
+
   var selector = LocalCollection._compileSelector(cursorDescription.selector);
+
+  var add = function (doc) {
+    var id = doc._id;
+    idSet.set(id, true);
+    if (callbacks.added) {
+      delete doc._id;
+      callbacks.added(id, doc);
+    }
+  };
+
+  var remove = function (id) {
+    idSet.remove(id);
+    changedFields.remove(id);
+    if (callbacks.removed) {
+      callbacks.removed(id);
+    }
+  };
 
   var oplogHandle = self._oplogHandle.onOplogEntry(cursorDescription.collectionName, function (op) {
     var id;
     if (op.op === 'd') {
       // XXX check that ObjectId works here
       id = op.o._id;
-      if (idSet.has(id)) {
-        idSet.remove(id);
-        if (callbacks.removed)
-          callbacks.removed(id);
-      }
-    } else if (op.op ==='i') {
+      if (idSet.has(id))
+        remove(id);
+    } else if (op.op === 'i') {
       id = op.o._id;
       if (idSet.has(id))
         throw new Error("insert found for already-existing ID");
 
-      if (selector(op.o)) {
-        idSet.set(id, true);
-        if (callbacks.added) {
-          delete op.o._id;
-          callbacks.added(id, op.o);
-        }
+      if (selector(op.o))
+        add(op.o);
+    } else if (op.op === 'u') {
+      id = op.o2._id;
+      var fields = changedFields.get(id);
+      if (!fields) {
+        fields = {};
+        changedFields.set(id, fields);
+        Fiber(function (){
+          // XXX problem is, the result of this findOne is delivered at a random
+          // time, not necessarily synced with other stuff that may be coming
+          // down the oplog. how much does this matter?
+          var updatedDoc = self.findOne(
+            cursorDescription.collectionName, {_id: id});
+
+          // XXX in what circumstances does this !== fields?
+          var myChangedFields = changedFields.get(id);
+          // Did we process a remove while we were waiting?
+          if (!myChangedFields)
+            return;
+
+          // Delete this record from myChangedFields atomically before anything
+          // that might yield (even selector might yield if it has $where!)
+          changedFields.remove(id);
+
+          var matchesNow = updatedDoc && selector(updatedDoc);
+          var matchedBefore = idSet.has(id);
+
+          if (matchesNow && !matchedBefore) {
+            add(updatedDoc);
+          } else if (matchedBefore && !matchesNow) {
+            remove(id);
+          } else if (matchesNow) {
+            if (callbacks.changed) {
+              // XXX this assumes that every field we saw a set/unset on
+              // actually changed.  otherwise we may send out something
+              // redundant.
+              callbacks.changed(
+                id, _.pick(updatedDoc, _.keys(myChangedFields)));
+            }
+          }
+        }).run();
       }
+      _.each(modifierTopLevelFields(op.o), function (field) {
+        fields[field] = true;
+      });
     } else {
       console.log("A CHANGE TO THE DOC", op);
     }
   });
 
-  if (callbacks.added) {
-    var initialCursor = new Cursor(self, cursorDescription);
-    initialCursor.forEach(function (initialDoc) {
-      var id = initialDoc._id;
-      delete initialDoc._id;
-      idSet.set(id, true);
-      callbacks.added(id, initialDoc);
-    });
-  }
+  var initialCursor = new Cursor(self, cursorDescription);
+  initialCursor.forEach(function (initialDoc) {
+    add(initialDoc);
+  });
 
   var observeHandle = {
     stop: function () {
