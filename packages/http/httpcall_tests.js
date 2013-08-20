@@ -470,7 +470,7 @@ if (Meteor.isServer) {
       ];
 
       _.each(getsAppHtml, function (x) {
-        do_test(x, 200, /<title>Tests<\/title/);
+        do_test(x, 200, /__meteor_runtime_config__ = {/);
       });
     }
   ]);
