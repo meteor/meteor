@@ -12,6 +12,10 @@ Handlebars.json_ast_to_func = function (ast) {
   };
 };
 
+var idStringify = Package.minimongo
+  ? Package.minimongo.LocalCollection._idStringify
+  : function (id) { return id; };
+
 // block helpers take:
 // (N args), options (hash args, plus 'fn' and 'inverse')
 // and return text
@@ -38,7 +42,8 @@ Handlebars._default_helpers = {
     if (data && data.length > 0)
       return _.map(data, function(x, i) {
         // infer a branch key from the data
-        var branch = ((x && x._id) || (typeof x === 'string' ? x : null) ||
+        var branch = ((x && x._id && idStringify(x._id)) ||
+                      (typeof x === 'string' ? x : null) ||
                       Spark.UNIQUE_LABEL);
         return Spark.labelBranch(branch, function() {
           return options.fn(x);
