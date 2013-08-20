@@ -229,12 +229,7 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
 
   var callbacksByCollection = {};
 
-  var handle = oplogConnection.tail(cursorDescription, function (doc) {
-    // Don't register the handle until after we've gotten one doc.
-    // XXX do we want to actually process this doc?
-    if (!self._oplogHandle)
-      self._oplogHandle = handle;
-
+  self._oplogHandle = oplogConnection.tail(cursorDescription, function (doc) {
     if (!doc.ns && doc.ns.length > dbName.length + 1 &&
         doc.ns.substr(0, dbName.length + 1) === (dbName + '.'))
       throw new Error("Unexpected ns");
@@ -247,7 +242,7 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
   });
 
   var nextId = 0;
-  handle.onOplogEntry = function (collectionName, callback) {
+  self._oplogHandle.onOplogEntry = function (collectionName, callback) {
     if (!_.has(callbacksByCollection, collectionName))
       callbacksByCollection[collectionName] = {};
     var callbackId = nextId++;
@@ -263,13 +258,24 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
 MongoConnection.prototype._observeChangesWithOplog = function (
   cursorDescription, callbacks) {
   var self = this;
-  var oplogHandle = self._oplogHandle.onOplogEntry(cursorDescription.collectionName, function (op) {
-    console.log("A CHANGE TO THE DOC", op);
-  });
 
   // XXX let's do this with race conditions first!
 
   var idSet = {};
+
+  var oplogHandle = self._oplogHandle.onOplogEntry(cursorDescription.collectionName, function (op) {
+    if (op.op === 'd') {
+      // XXX check that ObjectId works here.  (ie use idStringify or something)
+      var id = op.o._id;
+      if (_.has(idSet, id)) {
+        delete idSet[id];
+        if (callbacks.removed)
+          callbacks.removed(id);
+      }
+    } else {
+      console.log("A CHANGE TO THE DOC", op);
+    }
+  });
 
   if (callbacks.added) {
     var initialCursor = new Cursor(self, cursorDescription);
