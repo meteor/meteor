@@ -364,8 +364,12 @@ MongoConnection.prototype._observeChangesWithOplog = function (
               // XXX this assumes that every field we saw a set/unset on
               // actually changed.  otherwise we may send out something
               // redundant.
-              callbacks.changed(
-                id, _.pick(updatedDoc, _.keys(myChangedFields)));
+              var changed = {};
+              _.each(myChangedFields, function (unused, fieldName) {
+                changed[fieldName] = _.has(updatedDoc, fieldName)
+                  ? updatedDoc[fieldName] : undefined;
+              });
+              callbacks.changed(id, changed);
             }
           }
         }).run();
