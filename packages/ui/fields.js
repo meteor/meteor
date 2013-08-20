@@ -35,7 +35,7 @@ _extend(UI.Component, {
     } else if ((comp = findComponentWithProp(id, self))) {
       // found a method
       result = comp[id];
-      thisToBind = comp;
+      thisToBind = self;
     } else if (id === 'if') {
       result = UI.If;
     } else if (id === 'each') {
