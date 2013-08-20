@@ -12,6 +12,9 @@ Handlebars.json_ast_to_func = function (ast) {
   };
 };
 
+// If minimongo is available (it's a weak dependency) use its ID stringifier to
+// label branches (so that, eg, ObjectId and strings don't overlap). Otherwise
+// just use the identity function.
 var idStringify = Package.minimongo
   ? Package.minimongo.LocalCollection._idStringify
   : function (id) { return id; };
