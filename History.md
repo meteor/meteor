@@ -1,5 +1,16 @@
 ## vNEXT
 
+* Write dates to Mongo as ISODate rather than Integer #1228
+
+  Existing data can be fixed using the following code:
+
+    ```
+    db.users.find().forEach(function(user) {
+      db.users.update({ _id: user._id }, { $set: {createdAt: new Date(user.createdAt)}});
+      print('Fixed user: ' + user._id);
+    });
+    ```
+
 ## v0.6.5
 
 * New package system with package compiler and linker:
