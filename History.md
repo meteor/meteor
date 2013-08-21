@@ -1,5 +1,8 @@
 ## vNEXT
 
+* Write dates to Mongo as ISODate rather than Integer; existing data can be
+  converted by passing it through `new Date()`. #1228
+
 ## v0.6.5
 
 * New package system with package compiler and linker:
