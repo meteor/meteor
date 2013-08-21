@@ -27,22 +27,24 @@ Meteor._FailureTestCollection =
   new Meteor.Collection("___meteor_failure_test_collection");
 
 // For test "document with a custom type"
-var Dog = function (name, color) {
+var Dog = function (name, color, actions) {
   var self = this;
   self.color = color;
   self.name = name;
+  self.actions = actions || [{name: "wag"}, {name: "swim"}];
 };
 _.extend(Dog.prototype, {
   getName: function () { return this.name;},
   getColor: function () { return this.name;},
   equals: function (other) { return other.name === this.name &&
-                             other.color === this.color; },
-  toJSONValue: function () { return {color: this.color, name: this.name};},
+                             other.color === this.color &&
+                             EJSON.equals(other.actions, this.actions);},
+  toJSONValue: function () { return {color: this.color, name: this.name, actions: this.actions};},
   typeName: function () { return "dog"; },
   clone: function () { return new Dog(this.name, this.color); },
   speak: function () { return "woof"; }
 });
-EJSON.addType("dog", function (o) { return new Dog(o.name, o.color);});
+EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);});
 
 
 // Parameterize tests.
@@ -61,20 +63,30 @@ testAsyncMulti("mongo-livedata - database error reporting. " + idGeneration, [
 
     _.each(["insert", "remove", "update"], function (op) {
       var arg = (op === "insert" ? {} : 'bla');
+      var arg2 = {};
+
+      var callOp = function (callback) {
+        if (op === "update") {
+          ftc[op](arg, arg2, callback);
+        } else {
+          ftc[op](arg, callback);
+        }
+      };
+
       if (Meteor.isServer) {
         test.throws(function () {
-          ftc[op](arg);
+          callOp();
         });
 
-        ftc[op](arg, expect(exception));
+        callOp(expect(exception));
       }
 
       if (Meteor.isClient) {
-        ftc[op](arg, expect(exception));
+        callOp(expect(exception));
 
         // This would log to console in normal operation.
         Meteor._suppress_log(1);
-        ftc[op](arg);
+        callOp();
       }
     });
   }
@@ -112,8 +124,8 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
     if (Meteor.isClient) {
       f();
     } else {
-      var fence = new Meteor._WriteFence;
-      Meteor._CurrentWriteFence.withValue(fence, f);
+      var fence = new DDPServer._WriteFence;
+      DDPServer._CurrentWriteFence.withValue(fence, f);
       fence.armAndWait();
     }
 
@@ -269,8 +281,8 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
     if (Meteor.isClient) {
       f();
     } else {
-      var fence = new Meteor._WriteFence;
-      Meteor._CurrentWriteFence.withValue(fence, f);
+      var fence = new DDPServer._WriteFence;
+      DDPServer._CurrentWriteFence.withValue(fence, f);
       fence.armAndWait();
     }
   };
@@ -348,8 +360,8 @@ var runInFence = function (f) {
   if (Meteor.isClient) {
     f();
   } else {
-    var fence = new Meteor._WriteFence;
-    Meteor._CurrentWriteFence.withValue(fence, f);
+    var fence = new DDPServer._WriteFence;
+    DDPServer._CurrentWriteFence.withValue(fence, f);
     fence.armAndWait();
   }
 };
@@ -569,6 +581,52 @@ if (Meteor.isServer) {
 
     onComplete();
   });
+
+  Tinytest.addAsync("mongo-livedata - async server-side insert, " + idGeneration, function (test, onComplete) {
+    // Tests that insert returns before the callback runs. Relies on the fact
+    // that mongo does not run the callback before spinning off the event loop.
+    var cname = Random.id();
+    var coll = new Meteor.Collection(cname);
+    var doc = { foo: "bar" };
+    var x = 0;
+    coll.insert(doc, function (err, result) {
+      test.equal(err, null);
+      test.equal(x, 1);
+      onComplete();
+    });
+    x++;
+  });
+
+  Tinytest.addAsync("mongo-livedata - async server-side update, " + idGeneration, function (test, onComplete) {
+    // Tests that update returns before the callback runs.
+    var cname = Random.id();
+    var coll = new Meteor.Collection(cname);
+    var doc = { foo: "bar" };
+    var x = 0;
+    var id = coll.insert(doc);
+    coll.update(id, { $set: { foo: "baz" } }, function (err, result) {
+      test.equal(err, null);
+      test.equal(x, 1);
+      onComplete();
+    });
+    x++;
+  });
+
+  Tinytest.addAsync("mongo-livedata - async server-side remove, " + idGeneration, function (test, onComplete) {
+    // Tests that remove returns before the callback runs.
+    var cname = Random.id();
+    var coll = new Meteor.Collection(cname);
+    var doc = { foo: "bar" };
+    var x = 0;
+    var id = coll.insert(doc);
+    coll.remove(id, function (err, result) {
+      test.equal(err, null);
+      test.isFalse(coll.findOne(id));
+      test.equal(x, 1);
+      onComplete();
+    });
+    x++;
+  });
 }
 
 
@@ -686,7 +744,8 @@ testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGenera
 
 testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
   function (test, expect) {
-    var bin = EJSON._base64Decode(
+    // XXX probably shouldn't use EJSON's private test symbols
+    var bin = EJSONTest.base64Decode(
       "TWFuIGlzIGRpc3Rpbmd1aXNoZWQsIG5vdCBvbmx5IGJ5IGhpcyBy" +
         "ZWFzb24sIGJ1dCBieSB0aGlzIHNpbmd1bGFyIHBhc3Npb24gZnJv" +
         "bSBvdGhlciBhbmltYWxzLCB3aGljaCBpcyBhIGx1c3Qgb2YgdGhl" +
@@ -817,10 +876,70 @@ if (Meteor.isServer) {
 Tinytest.add('mongo-livedata - rewrite selector', function (test) {
   test.equal(Meteor.Collection._rewriteSelector({x: /^o+B/im}),
              {x: {$regex: '^o+B', $options: 'im'}});
+  test.equal(Meteor.Collection._rewriteSelector({x: {$regex: /^o+B/im}}),
+             {x: {$regex: '^o+B', $options: 'im'}});
   test.equal(Meteor.Collection._rewriteSelector({x: /^o+B/}),
+             {x: {$regex: '^o+B'}});
+  test.equal(Meteor.Collection._rewriteSelector({x: {$regex: /^o+B/}}),
              {x: {$regex: '^o+B'}});
   test.equal(Meteor.Collection._rewriteSelector('foo'),
              {_id: 'foo'});
+
+  test.equal(
+    Meteor.Collection._rewriteSelector(
+      {'$or': [
+        {x: /^o/},
+        {y: /^p/},
+        {z: 'q'},
+        {w: {$regex: /^r/}}
+      ]}
+    ),
+    {'$or': [
+      {x: {$regex: '^o'}},
+      {y: {$regex: '^p'}},
+      {z: 'q'},
+      {w: {$regex: '^r'}}
+    ]}
+  );
+
+  test.equal(
+    Meteor.Collection._rewriteSelector(
+      {'$or': [
+        {'$and': [
+          {x: /^a/i},
+          {y: /^b/},
+          {z: {$regex: /^c/i}},
+          {w: {$regex: '^[abc]', $options: 'i'}}, // make sure we don't break vanilla selectors
+          {v: {$regex: /O/, $options: 'i'}}, // $options should override the ones on the RegExp object
+          {u: {$regex: /O/m, $options: 'i'}} // $options should override the ones on the RegExp object
+        ]},
+        {'$nor': [
+          {s: /^d/},
+          {t: /^e/i},
+          {u: {$regex: /^f/i}},
+          // even empty string overrides built-in flags
+          {v: {$regex: /^g/i, $options: ''}}
+        ]}
+      ]}
+    ),
+    {'$or': [
+      {'$and': [
+        {x: {$regex: '^a', $options: 'i'}},
+        {y: {$regex: '^b'}},
+        {z: {$regex: '^c', $options: 'i'}},
+        {w: {$regex: '^[abc]', $options: 'i'}},
+        {v: {$regex: 'O', $options: 'i'}},
+        {u: {$regex: 'O', $options: 'i'}}
+      ]},
+      {'$nor': [
+        {s: {$regex: '^d'}},
+        {t: {$regex: '^e', $options: 'i'}},
+        {u: {$regex: '^f', $options: 'i'}},
+        {v: {$regex: '^g', $options: ''}}
+      ]}
+    ]}
+  );
+
   var oid = new Meteor.Collection.ObjectID();
   test.equal(Meteor.Collection._rewriteSelector(oid),
              {_id: oid});
@@ -833,7 +952,7 @@ testAsyncMulti('mongo-livedata - specified _id', [
       Meteor.call('createInsecureCollection', collectionName);
       Meteor.subscribe('c-' + collectionName);
     }
-    var expectError = expect(function (err) {
+    var expectError = expect(function (err, result) {
       test.isTrue(err);
       var doc = coll.findOne();
       test.equal(doc.name, "foo");
@@ -870,7 +989,7 @@ if (Meteor.isServer) {
         return C.find({a: 0});
       });
 
-      self.conn = Meteor.connect(Meteor.absoluteUrl());
+      self.conn = DDP.connect(Meteor.absoluteUrl());
       pollUntil(expect, function () {
         return self.conn.status().connected;
       }, 10000);
@@ -880,7 +999,7 @@ if (Meteor.isServer) {
       var self = this;
       if (self.conn.status().connected) {
         self.miniC = new Meteor.Collection("ServerMinimongo_" + self.id, {
-          manager: self.conn
+          connection: self.conn
         });
         var exp = expect(function (err) {
           test.isFalse(err);
@@ -923,7 +1042,7 @@ if (Meteor.isServer) {
         return self.C.find();
       });
 
-      self.conn = Meteor.connect(Meteor.absoluteUrl());
+      self.conn = DDP.connect(Meteor.absoluteUrl());
       pollUntil(expect, function () {
         return self.conn.status().connected;
       }, 10000);
@@ -933,7 +1052,7 @@ if (Meteor.isServer) {
       var self = this;
       if (self.conn.status().connected) {
         self.miniC = new Meteor.Collection("ServerMinimongoObserve_" + self.id, {
-          manager: self.conn
+          connection: self.conn
         });
         var exp = expect(function (err) {
           test.isFalse(err);
@@ -977,3 +1096,36 @@ if (Meteor.isServer) {
     }
   ]);
 }
+
+Tinytest.addAsync("mongo-livedata - local collections with different connections", function (test, onComplete) {
+  var cname = Random.id();
+  var cname2 = Random.id();
+  var coll1 = new Meteor.Collection(cname);
+  var doc = { foo: "bar" };
+  var coll2 = new Meteor.Collection(cname2, { connection: null });
+  coll2.insert(doc, function (err, id) {
+    test.equal(coll1.find(doc).count(), 0);
+    test.equal(coll2.find(doc).count(), 1);
+    onComplete();
+  });
+});
+
+Tinytest.addAsync("mongo-livedata - local collection with null connection, w/ callback", function (test, onComplete) {
+  var cname = Random.id();
+  var coll1 = new Meteor.Collection(cname, { connection: null });
+  var doc = { foo: "bar" };
+  var docId = coll1.insert(doc, function (err, id) {
+    test.equal(docId, id);
+    test.equal(coll1.findOne(doc)._id, id);
+    onComplete();
+  });
+});
+
+Tinytest.addAsync("mongo-livedata - local collection with null connection, w/o callback", function (test, onComplete) {
+  var cname = Random.id();
+  var coll1 = new Meteor.Collection(cname, { connection: null });
+  var doc = { foo: "bar" };
+  var docId = coll1.insert(doc);
+  test.equal(coll1.findOne(doc)._id, docId);
+  onComplete();
+});

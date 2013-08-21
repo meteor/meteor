@@ -33,7 +33,6 @@ body {
 
 .test_table {
   font-family: Arial, sans-serif;
-  width: 500px;
   font-size: 16px;
 }
 
@@ -50,6 +49,7 @@ body {
 }
 
 .test_table .testname {
+  margin-left: 200px;
   line-height: 24px;
   vertical-align: middle;
   text-decoration: underline;
@@ -71,7 +71,6 @@ body {
   border-left: 2px solid #def;
   padding: 4px;
   position: relative;
-  width: 600px;
 }
 
 .test_table .test .testrow { position: relative; overflow: hidden; /*hasLayout*/ }
@@ -84,7 +83,7 @@ body {
   position: absolute;
   height: 100%;
   width: 100px;
-  right: 80px;
+  left: 0px;
   top: 0;
   text-align: center;
   line-height: 24px;
@@ -96,7 +95,7 @@ body {
   height: 100%;
   width: 75px;
   margin-right: 5px;
-  right: 0;
+  left: 100px;
   top: 0;
   text-align: right;
   line-height: 24px;

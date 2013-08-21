@@ -1,5 +1,3 @@
-Meteor._routePolicy.declare('/sockjs/', 'network');
-
 // unique id for this instantiation of the server. If this changes
 // between client reconnects, the client will reload. You can set the
 // environment variable "SERVER_ID" to control this. For example, if
@@ -9,15 +7,27 @@ Meteor._routePolicy.declare('/sockjs/', 'network');
 __meteor_runtime_config__.serverId =
   process.env.SERVER_ID ? process.env.SERVER_ID : Random.id();
 
-Meteor._DdpStreamServer = function () {
+var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX ||  "";
+
+StreamServer = function () {
   var self = this;
   self.registration_callbacks = [];
   self.open_sockets = [];
 
+  // Because we are installing directly onto WebApp.httpServer instead of using
+  // WebApp.app, we have to process the path prefix ourselves.
+  self.prefix = pathPrefix + '/sockjs';
+  // routepolicy is only a weak dependency, because we don't need it if we're
+  // just doing server-to-server DDP as a client.
+  if (Package.routepolicy) {
+    Package.routepolicy.RoutePolicy.declare(self.prefix + '/', 'network');
+  }
+
   // set up sockjs
   var sockjs = Npm.require('sockjs');
-  self.server = sockjs.createServer({
-    prefix: '/sockjs', log: function(){},
+  var serverOptions = {
+    prefix: self.prefix,
+    log: function() {},
     // this is the default, but we code it explicitly because we depend
     // on it in stream_client:HEARTBEAT_TIMEOUT
     heartbeat_delay: 25000,
@@ -28,8 +38,21 @@ Meteor._DdpStreamServer = function () {
     // combining CPU-heavy processing with SockJS termination (eg a proxy which
     // converts to Unix sockets) but for now, raise the delay.
     disconnect_delay: 60 * 1000,
-    jsessionid: false});
-  self.server.installHandlers(__meteor_bootstrap__.app);
+    jsessionid: false
+  };
+
+  // If you know your server environment (eg, proxies) will prevent websockets
+  // from ever working, set $DISABLE_WEBSOCKETS and SockJS clients (ie,
+  // browsers) will not waste time attempting to use them.
+  // (Your server will still have a /websocket endpoint.)
+  if (process.env.DISABLE_WEBSOCKETS)
+    serverOptions.websocket = false;
+
+  self.server = sockjs.createServer(serverOptions);
+  if (!Package.webapp) {
+    throw new Error("Cannot create a DDP server without the webapp package");
+  }
+  self.server.installHandlers(Package.webapp.WebApp.httpServer);
 
   // Support the /websocket endpoint
   self._redirectWebsocketEndpoint();
@@ -57,7 +80,7 @@ Meteor._DdpStreamServer = function () {
 
 };
 
-_.extend(Meteor._DdpStreamServer.prototype, {
+_.extend(StreamServer.prototype, {
   // call my callback when a new socket connects.
   // also call it for all current connections.
   register: function (callback) {
@@ -77,15 +100,16 @@ _.extend(Meteor._DdpStreamServer.prototype, {
   // Redirect /websocket to /sockjs/websocket in order to not expose
   // sockjs to clients that want to use raw websockets
   _redirectWebsocketEndpoint: function() {
+    var self = this;
     // Unfortunately we can't use a connect middleware here since
     // sockjs installs itself prior to all existing listeners
     // (meaning prior to any connect middlewares) so we need to take
     // an approach similar to overshadowListeners in
     // https://github.com/sockjs/sockjs-node/blob/cf820c55af6a9953e16558555a31decea554f70e/src/utils.coffee
     _.each(['request', 'upgrade'], function(event) {
-      var app = __meteor_bootstrap__.app;
-      var oldAppListeners = app.listeners(event).slice(0);
-      app.removeAllListeners(event);
+      var httpServer = Package.webapp.WebApp.httpServer;
+      var oldHttpServerListeners = httpServer.listeners(event).slice(0);
+      httpServer.removeAllListeners(event);
 
       // request and upgrade have different arguments passed but
       // we only care about the first one which is always request
@@ -93,15 +117,15 @@ _.extend(Meteor._DdpStreamServer.prototype, {
         // Store arguments for use within the closure below
         var args = arguments;
 
-        if (request.url === '/websocket' ||
-            request.url === '/websocket/')
-          request.url = '/sockjs/websocket';
-
-        _.each(oldAppListeners, function(oldListener) {
-          oldListener.apply(app, args);
+        if (request.url === pathPrefix + '/websocket' ||
+            request.url === pathPrefix + '/websocket/') {
+          request.url = self.prefix + '/websocket';
+        }
+        _.each(oldHttpServerListeners, function(oldListener) {
+          oldListener.apply(httpServer, args);
         });
       };
-      app.addListener(event, newListener);
+      httpServer.addListener(event, newListener);
     });
   }
 });

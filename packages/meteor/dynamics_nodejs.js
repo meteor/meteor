@@ -4,6 +4,10 @@ var Fiber = Npm.require('fibers');
 
 var nextSlot = 0;
 
+var noFiberMessage = "Meteor code must always run within a Fiber. " +
+                     "Try wrapping callbacks that you pass to non-Meteor " +
+                     "libraries with Meteor.bindEnvironment.";
+
 Meteor.EnvironmentVariable = function () {
   this.slot = nextSlot++;
 };
@@ -11,7 +15,7 @@ Meteor.EnvironmentVariable = function () {
 _.extend(Meteor.EnvironmentVariable.prototype, {
   get: function () {
     if (!Fiber.current)
-      throw new Error("Meteor code must always run within a Fiber");
+      throw new Error(noFiberMessage);
 
     return Fiber.current._meteor_dynamics &&
       Fiber.current._meteor_dynamics[this.slot];
@@ -19,7 +23,7 @@ _.extend(Meteor.EnvironmentVariable.prototype, {
 
   withValue: function (value, func) {
     if (!Fiber.current)
-      throw new Error("Meteor code must always run within a Fiber");
+      throw new Error(noFiberMessage);
 
     if (!Fiber.current._meteor_dynamics)
       Fiber.current._meteor_dynamics = [];
@@ -50,7 +54,11 @@ _.extend(Meteor.EnvironmentVariable.prototype, {
 // If it's called inside a fiber, it works normally (the
 // return value of the function will be passed through, and no new
 // fiber will be created.)
+//
 Meteor.bindEnvironment = function (func, onException, _this) {
+  if (!Fiber.current)
+    throw new Error(noFiberMessage);
+
   var boundValues = _.clone(Fiber.current._meteor_dynamics || []);
 
   if (!onException)

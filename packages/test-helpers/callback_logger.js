@@ -26,7 +26,7 @@ withCallbackLogger = function (test, callbackNames, async, fun) {
   }
 };
 
-CallbackLogger = function (test, callbackNames) {
+var CallbackLogger = function (test, callbackNames) {
   var self = this;
   self._log = [];
   self._test = test;

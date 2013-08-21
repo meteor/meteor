@@ -3,6 +3,12 @@ DONE = false;
 // Failure count for phantomjs exit code
 FAILURES = null;
 
+TEST_STATUS = {
+  DONE: false,
+  FAILURES: null
+};
+
+
 var getName = function (result) {
   return (result.server ? "S: " : "C: ") +
     result.groupPath.join(" - ") + " - " + result.test;
@@ -15,7 +21,6 @@ var log = function (/*arguments*/) {
 };
 
 
-var finished = 0;
 var passed = 0;
 var failed = 0;
 var expected = 0;
@@ -23,7 +28,7 @@ var resultSet = {};
 var toReport = [];
 
 var hrefPath = document.location.href.split("/");
-var platform = hrefPath.length && hrefPath[hrefPath.length - 1];
+var platform = decodeURIComponent(hrefPath.length && hrefPath[hrefPath.length - 1]);
 if (!platform)
   platform = "local";
 var doReport = Meteor &&
@@ -66,7 +71,7 @@ Meteor.startup(function () {
   setTimeout(sendReports, 500);
   setInterval(sendReports, 2000);
 
-  Meteor._runTestsEverywhere(
+  Tinytest._runTestsEverywhere(
     function (results) {
       var name = getName(results);
       if (!_.has(resultSet, name)) {
@@ -89,6 +94,14 @@ Meteor.startup(function () {
         case "expected_fail":
           if (resultSet[name].status !== "FAIL")
             resultSet[name].status = "EXPECTED";
+          break;
+        case "exception":
+          log(name, ":", "!!!!!!!!! FAIL !!!!!!!!!!!");
+          if (event.details && event.details.stack)
+            log(event.details.stack);
+          else
+            log("Test failed with exception");
+          failed++;
           break;
         case "finish":
           switch (resultSet[name].status) {
@@ -114,7 +127,6 @@ Meteor.startup(function () {
           default:
             log(name, ": unknown state for the test to be in");
           }
-          finished++;
           break;
         default:
           resultSet[name].status = "FAIL";
@@ -133,12 +145,12 @@ Meteor.startup(function () {
         if (doReport) {
           log("Waiting 3s for any last reports to get sent out");
           setTimeout(function () {
-            FAILURES = failed;
-            DONE = true;
+            TEST_STATUS.FAILURES = FAILURES = failed;
+            TEST_STATUS.DONE = DONE = true;
           }, 3000);
         } else {
-          FAILURES = failed;
-          DONE = true;
+          TEST_STATUS.FAILURES = FAILURES = failed;
+          TEST_STATUS.DONE = DONE = true;
         }
       });
     },

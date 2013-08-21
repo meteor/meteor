@@ -7,8 +7,7 @@
 // are by prefix only: if "/foo" is declared NETWORK then "/foobar"
 // will also be treated as a network route.
 //
-// Meteor._routePolicy is a low-level API for declaring the route type
-// of URL prefixes:
+// RoutePolicy is a low-level API for declaring the route type of URL prefixes:
 //
 // "network": for network routes that should not conflict with static
 // resources.  (For example, if "/sockjs/" is a network route, we
@@ -25,12 +24,14 @@
 // routes would break tinytest... so allow policy instances to be
 // constructed for testing.
 
-Meteor.__RoutePolicyConstructor = function () {
+RoutePolicyTest = {};
+
+var RoutePolicyConstructor = RoutePolicyTest.Constructor = function () {
   var self = this;
   self.urlPrefixTypes = {};
 };
 
-_.extend(Meteor.__RoutePolicyConstructor.prototype, {
+_.extend(RoutePolicyConstructor.prototype, {
 
   urlPrefixMatches: function (urlPrefix, url) {
     return url.substr(0, urlPrefix.length) === urlPrefix;
@@ -62,7 +63,17 @@ _.extend(Meteor.__RoutePolicyConstructor.prototype, {
     var self = this;
     if (type === 'static-online')
       return null;
-    var manifest = _testManifest || __meteor_bootstrap__.bundle.manifest;
+    if (!Package.webapp || !Package.webapp.WebApp
+        || !Package.webapp.WebApp.clientProgram
+        || !Package.webapp.WebApp.clientProgram.manifest) {
+      // Hack: If we don't have a manifest, deal with it
+      // gracefully. This lets us load livedata into a nodejs
+      // environment that doesn't have a HTTP server (eg, a
+      // command-line tool).
+      return null;
+    }
+    var manifest =
+          _testManifest || Package.webapp.WebApp.clientProgram.manifest;
     var conflict = _.find(manifest, function (resource) {
       return (resource.type === 'static' &&
               resource.where === 'client' &&
@@ -110,5 +121,4 @@ _.extend(Meteor.__RoutePolicyConstructor.prototype, {
   }
 });
 
-__meteor_bootstrap__._routePolicy = Meteor._routePolicy =
-  new Meteor.__RoutePolicyConstructor();
+RoutePolicy = new RoutePolicyConstructor();

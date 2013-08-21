@@ -149,11 +149,12 @@ _.extend(warehouse, {
   },
 
   packageExistsInWarehouse: function (name, version) {
-    // Look for presence of "package.js" file in directory so we don't count
-    // an empty dir as a package.  An empty dir could be left by a failed
-    // package untarring, for example.
+    // A package exists if its directory exists. (We used to look for a
+    // particular file name ("package.js") inside the directory, but since we
+    // always install packages by untarring to a temporary directory and
+    // renaming atomically, we shouldn't worry about partial packages.)
     return fs.existsSync(
-      path.join(warehouse.getWarehouseDir(), 'packages', name, version, 'package.js'));
+      path.join(warehouse.getWarehouseDir(), 'packages', name, version));
   },
 
   getPackageFreshFile: function (name, version) {
@@ -196,7 +197,7 @@ _.extend(warehouse, {
 
   _packageUpdatesMessage: function (packageNames) {
     var lines = [];
-    var width = 80;  // see packages.format_list for why we hardcode this
+    var width = 80;  // see library.formatList for why we hardcode this
     var currentLine = ' * Package updates:';
     _.each(packageNames, function (name) {
       if (currentLine.length + 1 + name.length <= width) {

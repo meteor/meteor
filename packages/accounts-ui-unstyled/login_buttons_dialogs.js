@@ -53,7 +53,7 @@ Template._resetPasswordDialog.events({
 var resetPassword = function () {
   loginButtonsSession.resetMessages();
   var newPassword = document.getElementById('reset-password-new-password').value;
-  if (!Accounts._loginButtons.validatePassword(newPassword))
+  if (!validatePassword(newPassword))
     return;
 
   Accounts.resetPassword(
@@ -94,7 +94,7 @@ Template._enrollAccountDialog.events({
 var enrollAccount = function () {
   loginButtonsSession.resetMessages();
   var password = document.getElementById('enroll-account-password').value;
-  if (!Accounts._loginButtons.validatePassword(password))
+  if (!validatePassword(password))
     return;
 
   Accounts.resetPassword(
@@ -141,7 +141,7 @@ Template._loginButtonsMessagesDialog.events({
 
 Template._loginButtonsMessagesDialog.visible = function () {
   var hasMessage = loginButtonsSession.get('infoMessage') || loginButtonsSession.get('errorMessage');
-  return !Accounts._loginButtons.dropdown() && hasMessage;
+  return !dropdown() && hasMessage;
 };
 
 
@@ -166,7 +166,7 @@ Template._configureLoginServiceDialog.events({
       _.each(configurationFields(), function(field) {
         configuration[field.property] = document.getElementById(
           'configure-login-service-dialog-' + field.property).value
-          .replace(/^\s*|\s*$/g, ""); // trim;
+          .replace(/^\s*|\s*$/g, ""); // trim() doesnt work on IE8;
       });
 
       // Configure this login service

@@ -1789,7 +1789,7 @@ d3 = function() {
     return dsv;
   }
   d3.csv = d3_dsv(",", "text/csv");
-  d3.tsv = d3_dsv(" ", "text/tab-separated-values");
+  d3.tsv = d3_dsv("\t", "text/tab-separated-values");
   var d3_timer_id = 0, d3_timer_byId = {}, d3_timer_queue = null, d3_timer_interval, d3_timer_timeout;
   d3.timer = function(callback, delay, then) {
     if (arguments.length < 3) {

@@ -1,8 +1,9 @@
-Email = {};
-
 var Future = Npm.require('fibers/future');
 var urlModule = Npm.require('url');
 var MailComposer = Npm.require('mailcomposer').MailComposer;
+
+Email = {};
+EmailTest = {};
 
 var makePool = function (mailUrlString) {
   var mailUrl = urlModule.parse(mailUrlString);
@@ -34,24 +35,40 @@ var makePool = function (mailUrlString) {
 // Meteor.startup code can set $MAIL_URL.
 var smtpPool = null;
 var maybeMakePool = function () {
-  if (!smtpPool && process.env.MAIL_URL) {
-    smtpPool = makePool(process.env.MAIL_URL);
-  }
+  // We check MAIL_URL in case someone else set it in Meteor.startup code.
+  var poolFuture = new Future();
+  AppConfig.configurePackage('email', function (config) {
+    // TODO: allow reconfiguration.
+    if (!smtpPool && (config.url || process.env.MAIL_URL)) {
+      smtpPool = makePool(config.url || process.env.MAIL_URL);
+    }
+    poolFuture.return();
+  });
+
+  poolFuture.wait();
 };
 
-Email._next_devmode_mail_id = 0;
+var next_devmode_mail_id = 0;
+var output_stream = process.stdout;
 
-// Overridden by tests.
-Email._output_stream = process.stdout;
+// Testing hooks
+EmailTest.overrideOutputStream = function (stream) {
+  next_devmode_mail_id = 0;
+  output_stream = stream;
+};
+
+EmailTest.restoreOutputStream = function () {
+  output_stream = process.stdout;
+};
 
 var devModeSend = function (mc) {
-  var devmode_mail_id = Email._next_devmode_mail_id++;
+  var devmode_mail_id = next_devmode_mail_id++;
 
   // Make sure we use whatever stream was set at the time of the Email.send
   // call even in the 'end' callback, in case there are multiple concurrent
   // test runs.
-  var stream = Email._output_stream;
-  
+  var stream = output_stream;
+
   // This approach does not prevent other writers to stdout from interleaving.
   stream.write("====== BEGIN MAIL #" + devmode_mail_id + " ======\n");
   mc.streamMessage();
@@ -59,13 +76,25 @@ var devModeSend = function (mc) {
   var future = new Future;
   mc.on('end', function () {
     stream.write("====== END MAIL #" + devmode_mail_id + " ======\n");
-    future.ret();
+    future['return']();
   });
   future.wait();
 };
 
 var smtpSend = function (mc) {
   smtpPool._future_wrapped_sendMail(mc).wait();
+};
+
+/**
+ * Mock out email sending (eg, during a test.) This is private for now.
+ *
+ * f receives the arguments to Email.send and should return true to go
+ * ahead and send the email (or at least, try subsequent hooks), or
+ * false to skip sending.
+ */
+var sendHooks = [];
+EmailTest.hookSend = function (f) {
+  sendHooks.push(f);
 };
 
 /**
@@ -88,6 +117,10 @@ var smtpSend = function (mc) {
  * @param options.headers {Object} custom RFC5322 headers (dictionary)
  */
 Email.send = function (options) {
+  for (var i = 0; i < sendHooks.length; i++)
+    if (! sendHooks[i](options))
+      return;
+
   var mc = new MailComposer();
 
   // setup message data

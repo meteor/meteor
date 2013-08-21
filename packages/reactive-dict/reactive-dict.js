@@ -11,7 +11,8 @@ var parse = function (serialized) {
   return EJSON.parse(serialized);
 };
 
-// migrationData, if present, should be data previously returned from getMigrationData()
+// migrationData, if present, should be data previously returned from
+// getMigrationData()
 ReactiveDict = function (migrationData) {
   this.keys = migrationData || {}; // key -> value
   this.keyDeps = {}; // key -> Dependency
@@ -61,6 +62,9 @@ _.extend(ReactiveDict.prototype, {
   equals: function (key, value) {
     var self = this;
 
+    // XXX hardcoded awareness of the 'mongo-livedata' package is not ideal
+    var ObjectID = Package['mongo-livedata'] && Meteor.Collection.ObjectID;
+
     // We don't allow objects (or arrays that might include objects) for
     // .equals, because JSON.stringify doesn't canonicalize object key
     // order. (We can make equals have the right return value by parsing the
@@ -75,7 +79,7 @@ _.extend(ReactiveDict.prototype, {
         typeof value !== 'boolean' &&
         typeof value !== 'undefined' &&
         !(value instanceof Date) &&
-        !(typeof Meteor.Collection !== 'undefined' && value instanceof Meteor.Collection.ObjectID) &&
+        !(ObjectID && value instanceof ObjectID) &&
         value !== null)
       throw new Error("ReactiveDict.equals: value must be scalar");
     var serializedValue = stringify(value);

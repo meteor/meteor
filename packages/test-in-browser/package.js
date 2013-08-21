@@ -9,10 +9,12 @@ Package.on_use(function (api) {
   // that tinytest and the driver both implement?
   api.use('tinytest');
   api.use('bootstrap');
+  api.use('underscore');
 
   api.use('session');
+  api.use('reload');
 
-  api.use(['spark', 'livedata', 'templating'], 'client');
+  api.use(['spark', 'livedata', 'templating', 'deps'], 'client');
 
   api.add_files([
     'driver.css',

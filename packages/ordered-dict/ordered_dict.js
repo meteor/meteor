@@ -150,7 +150,7 @@ _.extend(OrderedDict.prototype, {
   prev: function (key) {
     var self = this;
     if (self.has(key)) {
-      var elt = self.get(key);
+      var elt = self._dict[self._k(key)];
       if (elt.prev)
         return elt.prev.key;
     }
@@ -159,7 +159,7 @@ _.extend(OrderedDict.prototype, {
   next: function (key) {
     var self = this;
     if (self.has(key)) {
-      var elt = self.get(key);
+      var elt = self._dict[self._k(key)];
       if (elt.next)
         return elt.next.key;
     }

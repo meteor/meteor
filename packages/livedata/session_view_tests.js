@@ -1,6 +1,6 @@
 var newView = function(test) {
   var results = [];
-  var view = new Meteor._SessionCollectionView('test', {
+  var view = new LivedataTest.SessionCollectionView('test', {
     added: function (collection, id, fields) {
       results.push({fun: 'added', id: id, fields: fields});
     },

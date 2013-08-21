@@ -51,9 +51,9 @@ var log_callbacks = function (operations) {
       delete old_obj._id;
       operations.push(EJSON.clone(['changed', obj, at, old_obj]));
     },
-    movedTo: function (obj, old_at, new_at) {
+    movedTo: function (obj, old_at, new_at, before) {
       delete obj._id;
-      operations.push(EJSON.clone(['moved', obj, old_at, new_at]));
+      operations.push(EJSON.clone(['moved', obj, old_at, new_at, before]));
     },
     removedAt: function (old_obj, at) {
       var id = old_obj._id;
@@ -850,8 +850,8 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({$where: "this.a === 1", a: 2}, {a: 1});
   match({$where: "this.a === 1", b: 2}, {a: 1, b: 2});
   match({$where: "this.a === 1 && this.b === 2"}, {a: 1, b: 2});
-  match({$where: "_.isArray(this.a)"}, {a: []});
-  nomatch({$where: "_.isArray(this.a)"}, {a: 1});
+  match({$where: "this.a instanceof Array"}, {a: []});
+  nomatch({$where: "this.a instanceof Array"}, {a: 1});
 
   // reaching into array
   match({"dogs.0.name": "Fido"}, {dogs: [{name: "Fido"}, {name: "Rex"}]});
@@ -893,6 +893,274 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   // XXX still needs tests:
   // - non-scalar arguments to $gt, $lt, etc
 });
+
+Tinytest.add("minimongo - projection_compiler", function (test) {
+  var testProjection = function (projection, tests) {
+    var projection_f = LocalCollection._compileProjection(projection);
+    var equalNonStrict = function (a, b, desc) {
+      test.equal(EJSON.stringify(a), EJSON.stringify(b), desc);
+    };
+
+    _.each(tests, function (testCase) {
+      equalNonStrict(projection_f(testCase[0]), testCase[1], testCase[2]);
+    });
+  };
+
+  testProjection({ 'foo': 1, 'bar': 1 }, [
+    [{ foo: 42, bar: "something", baz: "else" },
+     { foo: 42, bar: "something" },
+     "simplest - whitelist"],
+
+    [{ foo: { nested: 17 }, baz: {} },
+     { foo: { nested: 17 } },
+     "nested whitelisted field"],
+
+    [{ _id: "uid", bazbaz: 42 },
+     { _id: "uid" },
+     "simplest whitelist - preserve _id"]
+  ]);
+
+  testProjection({ 'foo': 0, 'bar': 0 }, [
+    [{ foo: 42, bar: "something", baz: "else" },
+     { baz: "else" },
+     "simplest - blacklist"],
+
+    [{ foo: { nested: 17 }, baz: { foo: "something" } },
+     { baz: { foo: "something" } },
+     "nested blacklisted field"],
+
+    [{ _id: "uid", bazbaz: 42 },
+     { _id: "uid", bazbaz: 42 },
+     "simplest blacklist - preserve _id"]
+  ]);
+
+  testProjection({ _id: 0, foo: 1 }, [
+    [{ foo: 42, bar: 33, _id: "uid" },
+     { foo: 42 },
+     "whitelist - _id blacklisted"]
+  ]);
+
+  testProjection({ _id: 0, foo: 0 }, [
+    [{ foo: 42, bar: 33, _id: "uid" },
+     { bar: 33 },
+     "blacklist - _id blacklisted"]
+  ]);
+
+  testProjection({ 'foo.bar.baz': 1 }, [
+    [{ foo: { meh: "fur", bar: { baz: 42 }, tr: 1 }, bar: 33, baz: 'trolololo' },
+     { foo: { bar: { baz: 42 } } },
+     "whitelist nested"],
+
+    // Behavior of this test is looked up in actual mongo
+    [{ foo: { meh: "fur", bar: "nope", tr: 1 }, bar: 33, baz: 'trolololo' },
+     { foo: {} },
+     "whitelist nested - path not found in doc, different type"],
+
+    // Behavior of this test is looked up in actual mongo
+    [{ foo: { meh: "fur", bar: [], tr: 1 }, bar: 33, baz: 'trolololo' },
+     { foo: { bar: [] } },
+     "whitelist nested - path not found in doc"]
+  ]);
+
+  testProjection({ 'hope.humanity': 0, 'hope.people': 0 }, [
+    [{ hope: { humanity: "lost", people: 'broken', candies: 'long live!' } },
+     { hope: { candies: 'long live!' } },
+     "blacklist nested"],
+
+    [{ hope: "new" },
+     { hope: "new" },
+     "blacklist nested - path not found in doc"]
+  ]);
+
+  test.throws(function () {
+    testProjection({ 'inc': 1, 'excl': 0 }, [
+      [ { inc: 42, excl: 42 }, { inc: 42 }, "Can't combine incl/excl rules" ]
+    ]);
+  });
+
+  test.throws(function () {
+    testProjection({ 'a': 1, 'a.b': 1 }, [
+      [ { a: { b: 42 } }, { a: { b: 42 } }, "Can't have ambiguous rules (one is prefix of another)" ]
+    ]);
+  });
+
+  test.throws(function () {
+    testProjection("some string", [
+      [ { a: { b: 42 } }, { a: { b: 42 } }, "Projection is not a hash" ]
+    ]);
+  });
+});
+
+Tinytest.add("minimongo - fetch with fields", function (test) {
+  var c = new LocalCollection();
+  _.times(30, function (i) {
+    c.insert({
+      something: Random.id(),
+      anything: {
+        foo: "bar",
+        cool: "hot"
+      },
+      nothing: i,
+      i: i
+    });
+  });
+
+  // Test just a regular fetch with some projection
+  var fetchResults = c.find({}, { fields: {
+    'something': 1,
+    'anything.foo': 1
+  } }).fetch();
+
+  test.isTrue(_.all(fetchResults, function (x) {
+    return x &&
+           x.something &&
+           x.anything &&
+           x.anything.foo &&
+           x.anything.foo === "bar" &&
+           !_.has(x, 'nothing') &&
+           !_.has(x.anything, 'cool');
+  }));
+
+  // Test with a selector, even field used in the selector is excluded in the
+  // projection
+  fetchResults = c.find({
+    nothing: { $gte: 5 }
+  }, {
+    fields: { nothing: 0 }
+  }).fetch();
+
+  test.isTrue(_.all(fetchResults, function (x) {
+    return x &&
+           x.something &&
+           x.anything &&
+           x.anything.foo === "bar" &&
+           x.anything.cool === "hot" &&
+           !_.has(x, 'nothing') &&
+           x.i &&
+           x.i >= 5;
+  }));
+
+  test.isTrue(fetchResults.length === 25);
+
+  // Test that we can sort, based on field excluded from the projection, use
+  // skip and limit as well!
+  // following find will get indexes [10..20) sorted by nothing
+  fetchResults = c.find({}, {
+    sort: {
+      nothing: 1
+    },
+    limit: 10,
+    skip: 10,
+    fields: {
+      i: 1,
+      something: 1
+    }
+  }).fetch();
+
+  test.isTrue(_.all(fetchResults, function (x) {
+    return x &&
+           x.something &&
+           x.i >= 10 && x.i < 20;
+  }));
+
+  _.each(fetchResults, function (x, i, arr) {
+    if (!i) return;
+    test.isTrue(x.i === arr[i-1].i + 1);
+  });
+});
+
+Tinytest.add("minimongo - observe ordered with projection", function (test) {
+  // These tests are copy-paste from "minimongo -observe ordered",
+  // slightly modified to test projection
+  var operations = [];
+  var cbs = log_callbacks(operations);
+  var handle;
+
+  var c = new LocalCollection();
+  handle = c.find({}, {sort: {a: 1}, fields: { a: 1 }}).observe(cbs);
+  test.isTrue(handle.collection === c);
+
+  c.insert({_id: 'foo', a:1, b:2});
+  test.equal(operations.shift(), ['added', {a:1}, 0, null]);
+  c.update({a:1}, {$set: {a: 2, b: 1}});
+  test.equal(operations.shift(), ['changed', {a:2}, 0, {a:1}]);
+  c.insert({_id: 'bar', a:10, c: 33});
+  test.equal(operations.shift(), ['added', {a:10}, 1, null]);
+  c.update({}, {$inc: {a: 1}}, {multi: true});
+  c.update({}, {$inc: {c: 1}}, {multi: true});
+  test.equal(operations.shift(), ['changed', {a:3}, 0, {a:2}]);
+  test.equal(operations.shift(), ['changed', {a:11}, 1, {a:10}]);
+  c.update({a:11}, {a:1, b:44});
+  test.equal(operations.shift(), ['changed', {a:1}, 1, {a:11}]);
+  test.equal(operations.shift(), ['moved', {a:1}, 1, 0, 'foo']);
+  c.remove({a:2});
+  test.equal(operations.shift(), undefined);
+  c.remove({a:3});
+  test.equal(operations.shift(), ['removed', 'foo', 1, {a:3}]);
+
+  // test stop
+  handle.stop();
+  var idA2 = Random.id();
+  c.insert({_id: idA2, a:2});
+  test.equal(operations.shift(), undefined);
+
+  // test initial inserts (and backwards sort)
+  handle = c.find({}, {sort: {a: -1}, fields: { a: 1 } }).observe(cbs);
+  test.equal(operations.shift(), ['added', {a:2}, 0, null]);
+  test.equal(operations.shift(), ['added', {a:1}, 1, null]);
+  handle.stop();
+
+  // test _suppress_initial
+  handle = c.find({}, {sort: {a: -1}, fields: { a: 1 }}).observe(_.extend(cbs, {_suppress_initial: true}));
+  test.equal(operations.shift(), undefined);
+  c.insert({a:100, b: { foo: "bar" }});
+  test.equal(operations.shift(), ['added', {a:100}, 0, idA2]);
+  handle.stop();
+
+  // test skip and limit.
+  c.remove({});
+  handle = c.find({}, {sort: {a: 1}, skip: 1, limit: 2, fields: { 'blacklisted': 0 }}).observe(cbs);
+  test.equal(operations.shift(), undefined);
+  c.insert({a:1, blacklisted:1324});
+  test.equal(operations.shift(), undefined);
+  c.insert({_id: 'foo', a:2, blacklisted:["something"]});
+  test.equal(operations.shift(), ['added', {a:2}, 0, null]);
+  c.insert({a:3, blacklisted: { 2: 3 }});
+  test.equal(operations.shift(), ['added', {a:3}, 1, null]);
+  c.insert({a:4, blacklisted: 6});
+  test.equal(operations.shift(), undefined);
+  c.update({a:1}, {a:0, blacklisted:4444});
+  test.equal(operations.shift(), undefined);
+  c.update({a:0}, {a:5, blacklisted:11111});
+  test.equal(operations.shift(), ['removed', 'foo', 0, {a:2}]);
+  test.equal(operations.shift(), ['added', {a:4}, 1, null]);
+  c.update({a:3}, {a:3.5, blacklisted:333.4444});
+  test.equal(operations.shift(), ['changed', {a:3.5}, 0, {a:3}]);
+  handle.stop();
+
+  // test _no_indices
+
+  c.remove({});
+  handle = c.find({}, {sort: {a: 1}, fields: { a: 1 }}).observe(_.extend(cbs, {_no_indices: true}));
+  c.insert({_id: 'foo', a:1, zoo: "crazy"});
+  test.equal(operations.shift(), ['added', {a:1}, -1, null]);
+  c.update({a:1}, {$set: {a: 2, foobar: "player"}});
+  test.equal(operations.shift(), ['changed', {a:2}, -1, {a:1}]);
+  c.insert({a:10, b:123.45});
+  test.equal(operations.shift(), ['added', {a:10}, -1, null]);
+  c.update({}, {$inc: {a: 1, b:2}}, {multi: true});
+  test.equal(operations.shift(), ['changed', {a:3}, -1, {a:2}]);
+  test.equal(operations.shift(), ['changed', {a:11}, -1, {a:10}]);
+  c.update({a:11, b:125.45}, {a:1, b:444});
+  test.equal(operations.shift(), ['changed', {a:1}, -1, {a:11}]);
+  test.equal(operations.shift(), ['moved', {a:1}, -1, -1, 'foo']);
+  c.remove({a:2});
+  test.equal(operations.shift(), undefined);
+  c.remove({a:3});
+  test.equal(operations.shift(), ['removed', 'foo', -1, {a:3}]);
+  handle.stop();
+});
+
 
 Tinytest.add("minimongo - ordering", function (test) {
   var shortBinary = EJSON.newBinary(1);
@@ -1048,6 +1316,62 @@ Tinytest.add("minimongo - array sort", function (test) {
     _.range(c.find().count()));
 });
 
+Tinytest.add("minimongo - binary search", function (test) {
+  var forwardCmp = function (a, b) {
+    return a - b;
+  };
+
+  var backwardCmp = function (a, b) {
+    return -1 * forwardCmp(a, b);
+  };
+
+  var checkSearch = function (cmp, array, value, expected, message) {
+    var actual = LocalCollection._binarySearch(cmp, array, value);
+    if (expected != actual) {
+      test.fail({type: "minimongo-binary-search",
+                 message: message + " : Expected index " + expected +
+                 " but had " + actual
+      });
+    }
+  };
+
+  var checkSearchForward = function (array, value, expected, message) {
+    checkSearch(forwardCmp, array, value, expected, message);
+  };
+  var checkSearchBackward = function (array, value, expected, message) {
+    checkSearch(backwardCmp, array, value, expected, message);
+  };
+
+  checkSearchForward([1, 2, 5, 7], 4, 2, "Inner insert");
+  checkSearchForward([1, 2, 3, 4], 3, 3, "Inner insert, equal value");
+  checkSearchForward([1, 2, 5], 4, 2, "Inner insert, odd length");
+  checkSearchForward([1, 3, 5, 6], 9, 4, "End insert");
+  checkSearchForward([1, 3, 5, 6], 0, 0, "Beginning insert");
+  checkSearchForward([1], 0, 0, "Single array, less than.");
+  checkSearchForward([1], 1, 1, "Single array, equal.");
+  checkSearchForward([1], 2, 1, "Single array, greater than.");
+  checkSearchForward([], 1, 0, "Empty array");
+  checkSearchForward([1, 1, 1, 2, 2, 2, 2], 1, 3, "Highly degenerate array, lower");
+  checkSearchForward([1, 1, 1, 2, 2, 2, 2], 2, 7, "Highly degenerate array, upper");
+  checkSearchForward([2, 2, 2, 2, 2, 2, 2], 1, 0, "Highly degenerate array, lower");
+  checkSearchForward([2, 2, 2, 2, 2, 2, 2], 2, 7, "Highly degenerate array, equal");
+  checkSearchForward([2, 2, 2, 2, 2, 2, 2], 3, 7, "Highly degenerate array, upper");
+
+  checkSearchBackward([7, 5, 2, 1], 4, 2, "Backward: Inner insert");
+  checkSearchBackward([4, 3, 2, 1], 3, 2, "Backward: Inner insert, equal value");
+  checkSearchBackward([5, 2, 1], 4, 1, "Backward: Inner insert, odd length");
+  checkSearchBackward([6, 5, 3, 1], 9, 0, "Backward: Beginning insert");
+  checkSearchBackward([6, 5, 3, 1], 0, 4, "Backward: End insert");
+  checkSearchBackward([1], 0, 1, "Backward: Single array, less than.");
+  checkSearchBackward([1], 1, 1, "Backward: Single array, equal.");
+  checkSearchBackward([1], 2, 0, "Backward: Single array, greater than.");
+  checkSearchBackward([], 1, 0, "Backward: Empty array");
+  checkSearchBackward([2, 2, 2, 2, 1, 1, 1], 1, 7, "Backward: Degenerate array, lower");
+  checkSearchBackward([2, 2, 2, 2, 1, 1, 1], 2, 4, "Backward: Degenerate array, upper");
+  checkSearchBackward([2, 2, 2, 2, 2, 2, 2], 1, 7, "Backward: Highly degenerate array, upper");
+  checkSearchBackward([2, 2, 2, 2, 2, 2, 2], 2, 7, "Backward: Highly degenerate array, upper");
+  checkSearchBackward([2, 2, 2, 2, 2, 2, 2], 3, 0, "Backward: Highly degenerate array, upper");
+});
 
 Tinytest.add("minimongo - modify", function (test) {
   var modify = function (doc, mod, result) {
@@ -1305,7 +1629,7 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   handle = c.find({}, {sort: {a: 1}}).observe(cbs);
   test.isTrue(handle.collection === c);
 
-  c.insert({a:1});
+  c.insert({_id: 'foo', a:1});
   test.equal(operations.shift(), ['added', {a:1}, 0, null]);
   c.update({a:1}, {$set: {a: 2}});
   test.equal(operations.shift(), ['changed', {a:2}, 0, {a:1}]);
@@ -1316,12 +1640,11 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   test.equal(operations.shift(), ['changed', {a:11}, 1, {a:10}]);
   c.update({a:11}, {a:1});
   test.equal(operations.shift(), ['changed', {a:1}, 1, {a:11}]);
-  test.equal(operations.shift(), ['moved', {a:1}, 1, 0]);
+  test.equal(operations.shift(), ['moved', {a:1}, 1, 0, 'foo']);
   c.remove({a:2});
   test.equal(operations.shift(), undefined);
-  var id = c.findOne({a:3})._id;
   c.remove({a:3});
-  test.equal(operations.shift(), ['removed', id, 1, {a:3}]);
+  test.equal(operations.shift(), ['removed', 'foo', 1, {a:3}]);
 
   // test stop
   handle.stop();
@@ -1348,21 +1671,41 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   test.equal(operations.shift(), undefined);
   c.insert({a:1});
   test.equal(operations.shift(), undefined);
-  c.insert({a:2});
+  c.insert({_id: 'foo', a:2});
   test.equal(operations.shift(), ['added', {a:2}, 0, null]);
   c.insert({a:3});
   test.equal(operations.shift(), ['added', {a:3}, 1, null]);
   c.insert({a:4});
   test.equal(operations.shift(), undefined);
-  id = c.findOne({a:2})._id;
   c.update({a:1}, {a:0});
   test.equal(operations.shift(), undefined);
   c.update({a:0}, {a:5});
-  test.equal(operations.shift(), ['removed', id, 0, {a:2}]);
+  test.equal(operations.shift(), ['removed', 'foo', 0, {a:2}]);
   test.equal(operations.shift(), ['added', {a:4}, 1, null]);
   c.update({a:3}, {a:3.5});
   test.equal(operations.shift(), ['changed', {a:3.5}, 0, {a:3}]);
+  handle.stop();
 
+  // test _no_indices
+
+  c.remove({});
+  handle = c.find({}, {sort: {a: 1}}).observe(_.extend(cbs, {_no_indices: true}));
+  c.insert({_id: 'foo', a:1});
+  test.equal(operations.shift(), ['added', {a:1}, -1, null]);
+  c.update({a:1}, {$set: {a: 2}});
+  test.equal(operations.shift(), ['changed', {a:2}, -1, {a:1}]);
+  c.insert({a:10});
+  test.equal(operations.shift(), ['added', {a:10}, -1, null]);
+  c.update({}, {$inc: {a: 1}}, {multi: true});
+  test.equal(operations.shift(), ['changed', {a:3}, -1, {a:2}]);
+  test.equal(operations.shift(), ['changed', {a:11}, -1, {a:10}]);
+  c.update({a:11}, {a:1});
+  test.equal(operations.shift(), ['changed', {a:1}, -1, {a:11}]);
+  test.equal(operations.shift(), ['moved', {a:1}, -1, -1, 'foo']);
+  c.remove({a:2});
+  test.equal(operations.shift(), undefined);
+  c.remove({a:3});
+  test.equal(operations.shift(), ['removed', 'foo', -1, {a:3}]);
   handle.stop();
 });
 
@@ -1799,4 +2142,41 @@ Tinytest.add("minimongo - immediate invalidate", function (test) {
   coll.update('A', {$set: {x: 42}});
 
   c.stop();
+});
+
+
+Tinytest.add("minimongo - count on cursor with limit", function(test){
+  var coll = new LocalCollection(), count;
+
+  coll.insert({_id: 'A'});
+  coll.insert({_id: 'B'});
+  coll.insert({_id: 'C'});
+  coll.insert({_id: 'D'});
+
+  var c = Deps.autorun(function (c) {
+    var cursor = coll.find({_id: {$exists: true}}, {sort: {_id: 1}, limit: 3});
+    count = cursor.count();
+  });
+
+  test.equal(count, 3);
+
+  coll.remove('A'); // still 3 in the collection
+  Deps.flush();
+  test.equal(count, 3);
+
+  coll.remove('B'); // expect count now 2
+  Deps.flush();
+  test.equal(count, 2);
+
+
+  coll.insert({_id: 'A'}); // now 3 again
+  Deps.flush();
+  test.equal(count, 3);
+
+  coll.insert({_id: 'B'}); // now 4 entries, but count should be 3 still
+  Deps.flush();
+  test.equal(count, 3);
+
+  c.stop();
+
 });

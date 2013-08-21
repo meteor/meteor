@@ -4,15 +4,12 @@ Package.describe({
 
 Package.on_use(function(api) {
   api.use('accounts-base', ['client', 'server']);
-  api.use('accounts-oauth2-helper', ['client', 'server']);
-  api.use('http', ['client', 'server']);
-  api.use('templating', 'client');
+  // Export Accounts (etc) to packages using this one.
+  api.imply('accounts-base', ['client', 'server']);
+  api.use('accounts-oauth', ['client', 'server']);
+  api.use('weibo', ['client', 'server']);
 
-  api.add_files(
-    ['weibo_login_button.css', 'weibo_configure.html', 'weibo_configure.js'],
-    'client');
+  api.add_files('weibo_login_button.css', 'client');
 
-  api.add_files('weibo_common.js', ['client', 'server']);
-  api.add_files('weibo_server.js', 'server');
-  api.add_files('weibo_client.js', 'client');
+  api.add_files("weibo.js");
 });

@@ -51,10 +51,10 @@ Meteor.methods({
     };
 
     var onComplete = function() {
-      future.ret();
+      future['return']();
     };
 
-    Meteor._runTests(onReport, onComplete, pathPrefix);
+    Tinytest._runTests(onReport, onComplete, pathPrefix);
 
     future.wait();
   },

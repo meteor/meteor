@@ -1,0 +1,13 @@
+{
+  "dependencies": {
+    "esprima": {
+      "from": "https://github.com/ariya/esprima/tarball/2a41dbf0ddadade0b09a9a7cc9a0c8df9c434018"
+    },
+    "estraverse": {
+      "version": "1.1.2-1"
+    },
+    "escope": {
+      "from": "https://github.com/meteor/escope/tarball/fef31f03797be5718080f811f9ca6e5297c90d2a"
+    }
+  }
+}

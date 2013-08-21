@@ -1,6 +1,6 @@
 
 
-if (Meteor.is_client) {
+if (Meteor.isClient) {
   Meteor.startup(function () {
     if (! Session.get("input"))
       Session.set("input", "var x = 3");

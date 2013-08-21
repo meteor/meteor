@@ -1,17 +1,23 @@
-// manager, if given, is a LivedataClient or LivedataServer
+// options.connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
 
 Meteor.Collection = function (name, options) {
   var self = this;
+  if (! (self instanceof Meteor.Collection))
+    throw new Error('use "new" to construct a Meteor.Collection');
   if (options && options.methods) {
     // Backwards compatibility hack with original signature (which passed
-    // "manager" directly instead of in options. (Managers must have a "methods"
+    // "connection" directly instead of in options. (Connections must have a "methods"
     // method.)
     // XXX remove before 1.0
-    options = {manager: options};
+    options = {connection: options};
+  }
+  // Backwards compatibility: "connection" used to be called "manager".
+  if (options && options.manager && !options.connection) {
+    options.connection = options.manager;
   }
   options = _.extend({
-    manager: undefined,
+    connection: undefined,
     idGeneration: 'STRING',
     transform: null,
     _driver: undefined,
@@ -43,27 +49,34 @@ Meteor.Collection = function (name, options) {
                   "the collection name to turn off this warning.)");
   }
 
-  // note: nameless collections never have a manager
-  self._manager = name && (options.manager ||
-                           (Meteor.isClient ?
-                            Meteor.default_connection : Meteor.default_server));
+  if (! name || options.connection === null)
+    // note: nameless collections never have a connection
+    self._connection = null;
+  else if (options.connection)
+    self._connection = options.connection;
+  else if (Meteor.isClient)
+    self._connection = Meteor.connection;
+  else
+    self._connection = Meteor.server;
 
   if (!options._driver) {
-    if (name && self._manager === Meteor.default_server &&
-        Meteor._RemoteCollectionDriver)
-      options._driver = Meteor._RemoteCollectionDriver;
-    else
-      options._driver = Meteor._LocalCollectionDriver;
+    if (name && self._connection === Meteor.server &&
+        typeof MongoInternals !== "undefined" &&
+        MongoInternals.defaultRemoteCollectionDriver) {
+      options._driver = MongoInternals.defaultRemoteCollectionDriver();
+    } else {
+      options._driver = LocalCollectionDriver;
+    }
   }
 
-  self._collection = options._driver.open(name);
+  self._collection = options._driver.open(name, self._connection);
   self._name = name;
 
-  if (name && self._manager.registerStore) {
+  if (self._connection && self._connection.registerStore) {
     // OK, we're going to be a slave, replicating some remote
     // database, except possibly with some temporary divergence while
     // we have unacknowledged RPC's.
-    var ok = self._manager.registerStore(name, {
+    var ok = self._connection.registerStore(name, {
       // Called at the beginning of a batch of updates. batchSize is the number
       // of update calls to expect.
       //
@@ -90,7 +103,7 @@ Meteor.Collection = function (name, options) {
       // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
       update: function (msg) {
-        var mongoId = Meteor.idParse(msg.id);
+        var mongoId = LocalCollection._idParse(msg.id);
         var doc = self._collection.findOne(mongoId);
 
         // Is this a "replace the whole doc" message coming from the quiescence
@@ -163,12 +176,12 @@ Meteor.Collection = function (name, options) {
   self._defineMutationMethods();
 
   // autopublish
-  if (!options._preventAutopublish &&
-      self._manager && self._manager.onAutopublish)
-    self._manager.onAutopublish(function () {
-      var handler = function () { return self.find(); };
-      self._manager.publish(null, handler, {is_auto: true});
-    });
+  if (Package.autopublish && !options._preventAutopublish && self._connection
+      && self._connection.publish) {
+    self._connection.publish(null, function () {
+      return self.find();
+    }, {is_auto: true});
+  }
 };
 
 ///
@@ -215,6 +228,25 @@ _.extend(Meteor.Collection.prototype, {
 
 });
 
+Meteor.Collection._publishCursor = function (cursor, sub, collection) {
+  var observeHandle = cursor.observeChanges({
+    added: function (id, fields) {
+      sub.added(collection, id, fields);
+    },
+    changed: function (id, fields) {
+      sub.changed(collection, id, fields);
+    },
+    removed: function (id) {
+      sub.removed(collection, id);
+    }
+  });
+
+  // We don't call sub.ready() here: it gets called in livedata_server, after
+  // possibly calling _publishCursor on multiple returned cursors.
+
+  // register stop callback (expects lambda w/ no args).
+  sub.onStop(function () {observeHandle.stop();});
+};
 
 // protect against dangerous selectors.  falsey and {_id: falsey} are both
 // likely programmer error, and not what you want, particularly for destructive
@@ -231,24 +263,46 @@ Meteor.Collection._rewriteSelector = function (selector) {
 
   var ret = {};
   _.each(selector, function (value, key) {
+    // Mongo supports both {field: /foo/} and {field: {$regex: /foo/}}
     if (value instanceof RegExp) {
-      // XXX should also do this translation at lower levels (eg if the outer
-      // level is $and/$or/$nor, or if there's an $elemMatch)
-      ret[key] = {$regex: value.source};
-      var regexOptions = '';
-      // JS RegExp objects support 'i', 'm', and 'g'. Mongo regex $options
-      // support 'i', 'm', 'x', and 's'. So we support 'i' and 'm' here.
-      if (value.ignoreCase)
-        regexOptions += 'i';
-      if (value.multiline)
-        regexOptions += 'm';
-      if (regexOptions)
-        ret[key].$options = regexOptions;
+      ret[key] = convertRegexpToMongoSelector(value);
+    } else if (value && value.$regex instanceof RegExp) {
+      ret[key] = convertRegexpToMongoSelector(value.$regex);
+      // if value is {$regex: /foo/, $options: ...} then $options
+      // override the ones set on $regex.
+      if (value.$options !== undefined)
+        ret[key].$options = value.$options;
     }
-    else
+    else if (_.contains(['$or','$and','$nor'], key)) {
+      // Translate lower levels of $and/$or/$nor
+      ret[key] = _.map(value, function (v) {
+        return Meteor.Collection._rewriteSelector(v);
+      });
+    }
+    else {
       ret[key] = value;
+    }
   });
   return ret;
+};
+
+// convert a JS RegExp object to a Mongo {$regex: ..., $options: ...}
+// selector
+var convertRegexpToMongoSelector = function (regexp) {
+  check(regexp, RegExp); // safety belt
+
+  var selector = {$regex: regexp.source};
+  var regexOptions = '';
+  // JS RegExp objects support 'i', 'm', and 'g'. Mongo regex $options
+  // support 'i', 'm', 'x', and 's'. So we support 'i' and 'm' here.
+  if (regexp.ignoreCase)
+    regexOptions += 'i';
+  if (regexp.multiline)
+    regexOptions += 'm';
+  if (regexOptions)
+    selector.$options = regexOptions;
+
+  return selector;
 };
 
 var throwIfSelectorIsNotId = function (selector, methodName) {
@@ -322,11 +376,18 @@ _.each(["insert", "update", "remove"], function (name) {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
     }
 
-    if (self._manager && self._manager !== Meteor.default_server) {
+    var wrappedCallback;
+    if (callback) {
+      wrappedCallback = function (error, result) {
+        callback(error, !error && ret);
+      };
+    }
+
+    if (self._connection && self._connection !== Meteor.server) {
       // just remote to another endpoint, propagate return value or
       // exception.
 
-      var enclosing = Meteor._CurrentInvocation.get();
+      var enclosing = DDP._CurrentInvocation.get();
       var alreadyInSimulation = enclosing && enclosing.isSimulation;
       if (!alreadyInSimulation && name !== "insert") {
         // If we're about to actually send an RPC, we should throw an error if
@@ -335,21 +396,12 @@ _.each(["insert", "update", "remove"], function (name) {
         throwIfSelectorIsNotId(args[0], name);
       }
 
-      if (callback) {
-        // asynchronous: on success, callback should return ret
-        // (document ID for insert, undefined for update and
-        // remove), not the method's result.
-        self._manager.apply(self._prefix + name, args, function (error, result) {
-          callback(error, !error && ret);
-        });
-      } else {
-        // synchronous: propagate exception
-        self._manager.apply(self._prefix + name, args);
-      }
+      self._connection.apply(self._prefix + name, args, wrappedCallback);
 
     } else {
       // it's my collection.  descend into the collection object
       // and propagate any exception.
+      args.push(wrappedCallback);
       try {
         self._collection[name].apply(self._collection, args);
       } catch (e) {
@@ -359,9 +411,6 @@ _.each(["insert", "update", "remove"], function (name) {
         }
         throw e;
       }
-
-      // on success, return *ret*, not the manager's return value.
-      callback && callback(null, ret);
     }
 
     // both sync and async, unless we threw an exception, return ret
@@ -383,6 +432,12 @@ Meteor.Collection.prototype._dropIndex = function (index) {
   if (!self._collection._dropIndex)
     throw new Error("Can only call _dropIndex on server collections");
   self._collection._dropIndex(index);
+};
+Meteor.Collection.prototype._createCappedCollection = function (byteSize) {
+  var self = this;
+  if (!self._collection._createCappedCollection)
+    throw new Error("Can only call _createCappedCollection on server collections");
+  self._collection._createCappedCollection(byteSize);
 };
 
 Meteor.Collection.ObjectID = LocalCollection._ObjectID;
@@ -473,10 +528,10 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
   // allow/deny semantics. If false, use insecure mode semantics.
   self._restricted = false;
 
-  // Insecure mode (default to allowing writes). Defaults to 'undefined'
-  // which means use the global Meteor.Collection.insecure.  This
-  // property can be overriden by tests or packages wishing to change
-  // insecure mode behavior of their collections.
+  // Insecure mode (default to allowing writes). Defaults to 'undefined' which
+  // means insecure iff the insecure package is loaded. This property can be
+  // overriden by tests or packages wishing to change insecure mode behavior of
+  // their collections.
   self._insecure = undefined;
 
   self._validators = {
@@ -495,7 +550,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
   self._prefix = '/' + self._name + '/';
 
   // mutation methods
-  if (self._manager) {
+  if (self._connection) {
     var m = {};
 
     _.each(['insert', 'update', 'remove'], function (method) {
@@ -532,8 +587,8 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
             self[validatedMethodName].apply(self, argsWithUserId);
           } else if (self._isInsecure()) {
             // In insecure mode, allow any mutation (with a simple selector).
-            self._collection[method].apply(
-              self._collection, _.toArray(arguments));
+            self._collection[method].apply(self._collection,
+                                           _.toArray(arguments));
           } else {
             // In secure mode, if we haven't called allow or deny, then nothing
             // is permitted.
@@ -551,8 +606,8 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
     // Minimongo on the server gets no stubs; instead, by default
     // it wait()s until its result is ready, yielding.
     // This matches the behavior of macromongo on the server better.
-    if (Meteor.isClient || self._manager === Meteor.default_server)
-      self._manager.methods(m);
+    if (Meteor.isClient || self._connection === Meteor.server)
+      self._connection.methods(m);
   }
 };
 
@@ -574,7 +629,7 @@ Meteor.Collection.prototype._updateFetch = function (fields) {
 Meteor.Collection.prototype._isInsecure = function () {
   var self = this;
   if (self._insecure === undefined)
-    return Meteor.Collection.insecure;
+    return !!Package.insecure;
   return self._insecure;
 };
 

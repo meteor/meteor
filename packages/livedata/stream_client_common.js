@@ -1,4 +1,3 @@
-
 // XXX from Underscore.String (http://epeli.github.com/underscore.string/)
 var startsWith = function(str, starts) {
   return str.length >= starts.length &&
@@ -52,13 +51,27 @@ var translateUrl =  function(url, newSchemeBase, subPath) {
     url = newSchemeBase + "://" + url;
   }
 
+  url = Meteor._relativeToSiteRootUrl(url);
+
   if (endsWith(url, "/"))
     return url + subPath;
   else
     return url + "/" + subPath;
 };
 
-_.extend(Meteor._DdpClientStream.prototype, {
+toSockjsUrl = function (url) {
+  return translateUrl(url, "http", "sockjs");
+};
+
+toWebsocketUrl = function (url) {
+  var ret = translateUrl(url, "ws", "websocket");
+  return ret;
+};
+
+LivedataTest.toSockjsUrl = toSockjsUrl;
+
+
+_.extend(LivedataTest.ClientStream.prototype, {
 
   // Register for callbacks.
   on: function (name, callback) {
@@ -86,8 +99,10 @@ _.extend(Meteor._DdpClientStream.prototype, {
     self.RETRY_BASE_TIMEOUT = 1000;
     // exponential factor to increase timeout each attempt.
     self.RETRY_EXPONENT = 2.2;
-    // maximum time between reconnects.
-    self.RETRY_MAX_TIMEOUT = 1800000; // 30min.
+    // maximum time between reconnects. keep this intentionally
+    // high-ish to ensure a server can recover from a failure caused
+    // by load
+    self.RETRY_MAX_TIMEOUT = 5 * 60000; // 5 minutes
     // time to wait for the first 2 retries.  this helps page reload
     // speed during dev mode restarts, but doesn't hurt prod too
     // much (due to CONNECT_TIMEOUT)
@@ -127,9 +142,14 @@ _.extend(Meteor._DdpClientStream.prototype, {
   // Trigger a reconnect.
   reconnect: function (options) {
     var self = this;
+    options = options || {};
+
+    if (options.url) {
+      self._changeUrl(options.url);
+    }
 
     if (self.currentStatus.connected) {
-      if (options && options._force) {
+      if (options._force || options.url) {
         // force reconnect.
         self._lostConnection();
       } // else, noop.
@@ -148,25 +168,40 @@ _.extend(Meteor._DdpClientStream.prototype, {
     self._retryNow();
   },
 
-  // Permanently disconnect a stream.
-  forceDisconnect: function (optionalErrorMessage) {
+  disconnect: function (options) {
     var self = this;
-    self._forcedToDisconnect = true;
+    options = options || {};
+
+    // Failed is permanent. If we're failed, don't let people go back
+    // online by calling 'disconnect' then 'reconnect'.
+    if (self._forcedToDisconnect)
+      return;
+
+    // If _permanent is set, permanently disconnect a stream. Once a stream
+    // is forced to disconnect, it can never reconnect. This is for
+    // error cases such as ddp version mismatch, where trying again
+    // won't fix the problem.
+    if (options._permanent) {
+      self._forcedToDisconnect = true;
+    }
+
     self._cleanup();
     if (self.retryTimer) {
       clearTimeout(self.retryTimer);
       self.retryTimer = null;
     }
+
     self.currentStatus = {
-      status: "failed",
+      status: (options._permanent ? "failed" : "offline"),
       connected: false,
       retryCount: 0
     };
-    if (optionalErrorMessage)
-      self.currentStatus.reason = optionalErrorMessage;
+
+    if (options._permanent && options._error)
+      self.currentStatus.reason = options._error;
+
     self.statusChanged();
   },
-
 
   _lostConnection: function () {
     var self = this;
@@ -189,6 +224,14 @@ _.extend(Meteor._DdpClientStream.prototype, {
     timeout = timeout * ((Random.fraction() * self.RETRY_FUZZ) +
                          (1 - self.RETRY_FUZZ/2));
     return timeout;
+  },
+
+  // fired when we detect that we've gone online. try to reconnect
+  // immediately.
+  _online: function () {
+    // if we've requested to be offline by disconnecting, don't reconnect.
+    if (this.currentStatus.status != "offline")
+      this.reconnect();
   },
 
   _retryLater: function () {
@@ -227,17 +270,5 @@ _.extend(Meteor._DdpClientStream.prototype, {
     if (self.statusListeners)
       self.statusListeners.depend();
     return self.currentStatus;
-  }
-});
-
-_.extend(Meteor._DdpClientStream, {
-
-  _toSockjsUrl: function (url) {
-    return translateUrl(url, "http", "sockjs");
-  },
-
-  _toWebsocketUrl: function (url) {
-    var ret = translateUrl(url, "ws", "websocket");
-    return ret;
   }
 });

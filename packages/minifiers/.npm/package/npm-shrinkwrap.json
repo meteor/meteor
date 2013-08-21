@@ -1,0 +1,41 @@
+{
+  "dependencies": {
+    "clean-css": {
+      "version": "1.0.11",
+      "dependencies": {
+        "commander": {
+          "version": "1.2.0",
+          "dependencies": {
+            "keypress": {
+              "version": "0.1.0"
+            }
+          }
+        }
+      }
+    },
+    "uglify-js": {
+      "from": "https://github.com/mishoo/UglifyJS2/tarball/b1febde3e9be32b9d88918ed733efc3796e3f143",
+      "dependencies": {
+        "async": {
+          "version": "0.2.9"
+        },
+        "source-map": {
+          "version": "0.1.26",
+          "dependencies": {
+            "amdefine": {
+              "version": "0.0.5"
+            }
+          }
+        },
+        "optimist": {
+          "version": "0.3.7",
+          "dependencies": {
+            "wordwrap": {
+              "version": "0.0.2"
+            }
+          }
+        }
+      }
+    }
+  }
+}

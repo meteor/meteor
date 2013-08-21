@@ -1,7 +1,7 @@
 // @param url {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or
 //   "ddp+sockjs://foo-**.meteor.com/sockjs"
-Meteor._DdpClientStream = function (url) {
+LivedataTest.ClientStream = function (url) {
   var self = this;
   self._initCommon();
 
@@ -24,11 +24,17 @@ Meteor._DdpClientStream = function (url) {
 
   self.heartbeatTimer = null;
 
+  // Listen to global 'online' event if we are running in a browser.
+  // (IE8 does not support addEventListener)
+  if (typeof window !== 'undefined' && window.addEventListener)
+    window.addEventListener("online", _.bind(self._online, self),
+                            false /* useCapture. make FF3.6 happy. */);
+
   //// Kickoff!
   self._launchConnection();
 };
 
-_.extend(Meteor._DdpClientStream.prototype, {
+_.extend(LivedataTest.ClientStream.prototype, {
 
   // data is a utf8 string. Data sent while not connected is dropped on
   // the floor, and it is up the user of this API to retransmit lost
@@ -38,6 +44,12 @@ _.extend(Meteor._DdpClientStream.prototype, {
     if (self.currentStatus.connected) {
       self.socket.send(data);
     }
+  },
+
+  // Changes where this connection points
+  _changeUrl: function (url) {
+    var self = this;
+    self.rawUrl = url;
   },
 
   _connected: function (welcome_message) {
@@ -89,7 +101,7 @@ _.extend(Meteor._DdpClientStream.prototype, {
     self._clearConnectionAndHeartbeatTimers();
     if (self.socket) {
       self.socket.onmessage = self.socket.onclose
-        = self.socket.onerror = function () {};
+        = self.socket.onerror = self.socket.onheartbeat = function () {};
       self.socket.close();
       self.socket = null;
     }
@@ -126,6 +138,27 @@ _.extend(Meteor._DdpClientStream.prototype, {
       self.HEARTBEAT_TIMEOUT);
   },
 
+  _sockjsProtocolsWhitelist: function () {
+    // only allow polling protocols. no streaming.  streaming
+    // makes safari spin.
+    var protocolsWhitelist = [
+      'xdr-polling', 'xhr-polling', 'iframe-xhr-polling', 'jsonp-polling'];
+
+    // iOS 4 and 5 and below crash when using websockets over certain
+    // proxies. this seems to be resolved with iOS 6. eg
+    // https://github.com/LearnBoost/socket.io/issues/193#issuecomment-7308865.
+    //
+    // iOS <4 doesn't support websockets at all so sockjs will just
+    // immediately fall back to http
+    var noWebsockets = navigator &&
+          /iPhone|iPad|iPod/.test(navigator.userAgent) &&
+          /OS 4_|OS 5_/.test(navigator.userAgent);
+
+    if (!noWebsockets)
+      protocolsWhitelist = ['websocket'].concat(protocolsWhitelist);
+
+    return protocolsWhitelist;
+  },
 
   _launchConnection: function () {
     var self = this;
@@ -135,13 +168,9 @@ _.extend(Meteor._DdpClientStream.prototype, {
     // can connect to random hostnames and get around browser per-host
     // connection limits.
     self.socket = new SockJS(
-      Meteor._DdpClientStream._toSockjsUrl(self.rawUrl),
-      undefined, {
-        debug: false, protocols_whitelist: [
-          // only allow polling protocols. no websockets or streaming.
-          // streaming makes safari spin, and websockets hurt chrome.
-          'xdr-polling', 'xhr-polling', 'iframe-xhr-polling', 'jsonp-polling'
-        ]});
+      toSockjsUrl(self.rawUrl), undefined, {
+        debug: false, protocols_whitelist: self._sockjsProtocolsWhitelist()
+      });
     self.socket.onmessage = function (data) {
       self._heartbeat_received();
 

@@ -3,5 +3,8 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.add_files('jquery.js', 'client');
+  api.add_files(['jquery.js', 'post.js'], 'client');
+
+  api.export('$', 'client');
+  api.export('jQuery', 'client');
 });

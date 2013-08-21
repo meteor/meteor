@@ -1,20 +1,216 @@
-
 ## vNEXT
 
-* Files in the 'client/compatibility/' subdirectory of a Meteor app do
-  not get wrapped in a new variable scope.
+## v0.6.5
+
+* New package system with package compiler and linker:
+
+  * Each package now has it own namespace for variable
+    declarations. Global variables used in a package are limited to
+    package scope.
+
+  * Packages must explicitly declare which symbols they export with
+    `api.export` in `package.js`.
+
+  * Apps and packages only see the exported symbols from packages they
+    explicitly use. For example, if your app uses package A which in
+    turn depends on package B, only package A's symbols will be
+    available in the app.
+
+  * Package names can only contain alphanumeric characters, dashes, and
+    dots. Packages with spaces and underscores must be renamed.
+
+  * Remove hardcoded list of required packages. New default
+    `standard-app-packages` package adds dependencies on the core Meteor
+    stack. This package can be removed to make an app with only parts of
+    the Meteor stack. `standard-app-packages` will be automatically
+    added to a project when it is updated to Meteor 0.6.5.
+
+  * Custom app packages in the `packages` directory are no longer
+    automatically used. They must be explicitly added to the app with
+    `meteor add <packagename>`. To help with the transition, all
+    packages in the `packages` directory will be automatically added to
+    the project when it is updated to Meteor 0.6.5.
+
+  * New "unipackage" on-disk format for built packages. Compiled packages are
+    cached and rebuilt only when their source or dependencies change.
+
+  * Add "unordered" and "weak" package dependency modes to allow
+    circular package dependencies and conditional code inclusion.
+
+  * New API (`_transitional_registerBuildPlugin`) for declaring
+    compilers, preprocessors, and file extension handlers. These new
+    build plugins are full compilation targets in their own right, and
+    have their own namespace, source files, NPM requirements, and package
+    dependencies. The old `register_extension` API is deprecated. Please
+    note that the `package.js` format and especially
+    `_transitional_registerBuildPlugin` are not frozen interfaces and
+    are subject to change in future releases.
+
+  * Add `api.imply`, which allows one package to "imply" another. If
+    package A implies package B, then anything that depends on package
+    A automatically depends on package B as well (and receives package
+    B's imports). This is useful for creating umbrella packages
+    (`standard-app-packages`) or sometimes for factoring common code
+    out of related packages (`accounts-base`).
+
+* Move HTTP serving out of the server bootstrap and into the `webapp`
+  package. This allows building Meteor apps that are not web servers
+  (eg. command line tools, DDP clients, etc.). Connect middlewares can
+  now be registered on the new `WebApp.connectHandlers` instead of the
+  old `__meteor_bootstrap__.app`.
+
+* The entire Meteor build process now has first-class source map
+  support. A source map is maintained for every source file as it
+  passes through the build pipeline. Currently, the source maps are
+  only served in development mode. Not all web browsers support source
+  maps yet and for those that do, you may have to turn on an option to
+  enable them. Source maps will always be used when reporting
+  exceptions on the server.
+
+* Update the `coffeescript` package to generate source maps.
+
+* Add new `Assets` API and `private` subdirectory for including and
+  accessing static assets on the server. http://docs.meteor.com/#assets
+
+* Add `Meteor.disconnect`. Call this to disconnect from the
+  server and stop all live data updates. #1151
+
+* Add `Match.Integer` to `check` for 32-bit signed integers.
+
+* `Meteor.connect` has been renamed to `DDP.connect` and is now fully
+  supported on the server. Server-to-server DDP connections use
+  websockets, and can be used for both method calls and subscriptions.
+
+* Rename `Meteor.default_connection` to `Meteor.connection` and
+  `Meteor.default_server` to `Meteor.server`.
+
+* Rename `Meteor.http` to `HTTP`.
+
+* `ROOT_URL` may now have a path part. This allows serving multiple
+  Meteor apps on the same domain.
+
+* Support creating named unmanaged collections with
+  `new Meteor.Collection("name", {connection: null})`.
+
+* New `Log` function in the `logging` package which prints with
+  timestamps, color, filenames and linenumbers.
+
+* Include http response in errors from oauth providers. #1246
+
+* The `observe` callback `movedTo` now has a fourth argument `before`.
+
+* Move NPM control files for packages from `.npm` to
+  `.npm/package`. This is to allow build plugins such as `coffeescript`
+  to depend on NPM packages. Also, when removing the last NPM
+  dependency, clean up the `.npm` dir.
+
+* Remove deprecated `Meteor.is_client` and `Meteor.is_server` variables.
+
+* Implement "meteor bundle --debug" #748
+
+* Add `forceApprovalPrompt` option to `Meteor.loginWithGoogle`. #1226
+
+* Make server-side Mongo `insert`s, `update`s, and `remove`s run
+  asynchronously when a callback is passed.
+
+* Improve memory usage when calling `findOne()` on the server.
+
+* Delete login tokens from server when user logs out.
+
+* Rename package compatibility mode option to `add_files` from `raw` to
+  `bare`.
+
+* Fix Mongo selectors of the form: {$regex: /foo/}.
+
+* Fix Spark memory leak.  #1157
+
+* Fix EPIPEs during dev mode hot code reload.
+
+* Fix bug where we would never quiesce if we tried to revive subs that errored
+  out (5e7138d)
+
+* Fix bug where `this.fieldname` in handlebars template might refer to a
+  helper instead of a property of the current data context. #1143
+
+* Fix submit events on IE8. #1191
+
+* Handle `Meteor.loginWithX` being called with a callback but no options. #1181
+
+* Work around a Chrome bug where hitting reload could cause a tab to
+  lose the DDP connection and never recover. #1244
+
+* Upgraded dependencies:
+  * Node from 0.8.18 to 0.8.24
+  * MongoDB from 2.4.3 to 2.4.4, now with SSL support
+  * CleanCSS from 0.8.3 to 1.0.11
+  * Underscore from 1.4.4 to 1.5.1
+  * Fibers from 1.0.0 to 1.0.1
+  * MongoDB Driver from 1.3.7 to 1.3.17
+
+Patches contributed by GitHub users btipling, mizzao, timhaines and zol.
+
+
+## v0.6.4.1
+
+* Update mongodb driver to use version 0.2.1 of the bson module.
+
+
+## v0.6.4
+
+* Separate OAuth flow logic from Accounts into separate packages. The
+  `facebook`, `github`, `google`, `meetup`, `twitter`, and `weibo`
+  packages can be used to perform an OAuth exchange without creating an
+  account and logging in.  #1024
+
+* If you set the `DISABLE_WEBSOCKETS` environment variable, browsers will not
+  attempt to connect to your app using Websockets. Use this if you know your
+  server environment does not properly proxy Websockets to reduce connection
+  startup time.
+
+* Make `Meteor.defer` work in an inactive tab in iOS.  #1023
+
+* Allow new `Random` instances to be constructed with specified seed. This
+  can be used to create repeatable test cases for code that picks random
+  values.  #1033
+
+* Fix CoffeeScript error reporting to include source file and line
+  number again.  #1052
+
+* Fix Mongo queries which nested JavaScript RegExp objects inside `$or`.  #1089
+
+* Upgraded dependencies:
+  * Underscore from 1.4.2 to 1.4.4  #776
+  * http-proxy from 0.8.5 to 0.10.1  #513
+  * connect from 1.9.2 to 2.7.10
+  * Node mongodb client from 1.2.13 to 1.3.7  #1060
+
+Patches contributed by GitHub users awwx, johnston, and timhaines.
+
+
+## v0.6.3
+
+* Add new `check` package for ensuring that a value matches a required
+  type and structure. This is used to validate untrusted input from the
+  client. See http://docs.meteor.com/#match for details.
+
+* Use Websockets by default on supported browsers. This reduces latency
+  and eliminates the constant network spinner on iOS devices.
 
 * With `autopublish` on, publish many useful fields on `Meteor.users`.
 
-* When using the `http` package on the server synchronously, errors
+* Files in the `client/compatibility/` subdirectory of a Meteor app do
+  not get wrapped in a new variable scope. This is useful for
+  third-party libraries which expect `var` statements at the outermost
+  level to be global.
+
+* Add synthetic `tap` event for use on touch enabled devices. This is a
+  replacement for `click` that fires immediately.
+
+* When using the `http` package synchronously on the server, errors
   are thrown rather than passed in `result.error`
 
-* Cursor transform functions on the server no longer are required to return
-  objects with correct `_id` fields.  #974
-
-* Upgrade CoffeeScript from 1.5.0 to 1.6.2.  #972
-
-* `Email.send` has a new `headers` option to set arbitrary headers.  #963
+* The `manager` option to the `Meteor.Collection` constructor is now called
+  `connection`. The old name still works for now.  #987
 
 * The `localstorage-polyfill` smart package has been replaced by a
   `localstorage` package, which defines a `Meteor._localStorage` API instead of
@@ -22,9 +218,29 @@
   the existence of `window.localStorage` to detect if the full localStorage API
   is supported.)  #979
 
+* Upgrade MongoDB from 2.2.1 to 2.4.3.
+
+* Upgrade CoffeeScript from 1.5.0 to 1.6.2.  #972
+
+* Faster reconnects when regaining connectivity.  #696
+
+* `Email.send` has a new `headers` option to set arbitrary headers.  #963
+
+* Cursor transform functions on the server no longer are required to return
+  objects with correct `_id` fields.  #974
+
+* Rework `observe()` callback ordering in minimongo to improve fiber
+  safety on the server. This makes subscriptions on server to server DDP
+  more usable.
+
+* Use binary search in minimongo when updating ordered queries.  #969
+
+* Fix EJSON base64 decoding bug.  #1001
+
 * Support `appcache` on Chromium.  #958
 
-Patches contributed by GitHub users awwx and spang.
+Patches contributed by GitHub users awwx, jagill, spang, and timhaines.
+
 
 ## v0.6.2.1
 
@@ -119,8 +335,8 @@ Patches contributed by GitHub users andreas-karlsson and awwx.
 * `{{#with}}` helper now only includes its block if its argument is not falsey,
   and runs an `{{else}}` block if provided if the argument is falsey. #770, #866
 
-* Twitter login now stores profile_image_url and profile_image_url_https
-  attributes in the user.services.twitter namespace. #788
+* Twitter login now stores `profile_image_url` and `profile_image_url_https`
+  attributes in the `user.services.twitter` namespace. #788
 
 * Allow packages to register file extensions with dots in the filename.
 
@@ -188,7 +404,7 @@ mquandalle, Primigenus, raix, reustle, and timhaines.
 * Publish functions may now return an array of cursors to publish. Currently,
   the cursors must all be from different collections. #716
 
-* User documents have id's when onCreateUser and validateNewUser hooks run.
+* User documents have id's when `onCreateUser` and `validateNewUser` hooks run.
 
 * Encode and store custom EJSON types in MongoDB.
 

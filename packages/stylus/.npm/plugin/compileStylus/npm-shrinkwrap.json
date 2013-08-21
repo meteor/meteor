@@ -1,0 +1,40 @@
+{
+  "dependencies": {
+    "stylus": {
+      "version": "0.37.0",
+      "dependencies": {
+        "cssom": {
+          "version": "0.2.5"
+        },
+        "mkdirp": {
+          "version": "0.3.5"
+        },
+        "debug": {
+          "version": "0.7.2"
+        },
+        "sax": {
+          "version": "0.5.4"
+        }
+      }
+    },
+    "nib": {
+      "version": "1.0.0",
+      "dependencies": {
+        "stylus": {
+          "version": "0.34.1",
+          "dependencies": {
+            "cssom": {
+              "version": "0.2.5"
+            },
+            "mkdirp": {
+              "version": "0.3.5"
+            },
+            "debug": {
+              "version": "0.7.2"
+            }
+          }
+        }
+      }
+    }
+  }
+}

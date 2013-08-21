@@ -3,6 +3,8 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
+  // Export Accounts (etc) to packages using this one.
+  api.imply('accounts-base', ['client', 'server']);
   api.use('accounts-ui-unstyled', 'client');
   api.use('less', 'client');
 

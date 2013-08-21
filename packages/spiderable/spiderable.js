@@ -2,7 +2,6 @@ var fs = Npm.require('fs');
 var child_process = Npm.require('child_process');
 var querystring = Npm.require('querystring');
 var urlParser = Npm.require('url');
-var app = __meteor_bootstrap__.app;
 
 Spiderable = {};
 
@@ -10,12 +9,18 @@ Spiderable = {};
 // not obey the _escaped_fragment_ protocol. The page is served
 // statically to any client whos user agent matches any of these
 // regexps. Users may modify this array.
-Spiderable.userAgentRegExps = [/^facebookexternalhit/i, /^linkedinbot/i];
+//
+// An original goal with the spiderable package was to avoid doing
+// user-agent based tests. But the reality is not enough bots support
+// the _escaped_fragment_ protocol, so we need to hardcode a list
+// here. I shed a silent tear.
+Spiderable.userAgentRegExps = [
+    /^facebookexternalhit/i, /^linkedinbot/i, /^twitterbot/i];
 
 // how long to let phantomjs run before we kill it
 var REQUEST_TIMEOUT = 15*1000;
 
-app.use(function (req, res, next) {
+WebApp.connectHandlers.use(function (req, res, next) {
   if (/\?.*_escaped_fragment_=/.test(req.url) ||
       _.any(Spiderable.userAgentRegExps, function (re) {
         return re.test(req.headers['user-agent']); })) {
@@ -43,7 +48,7 @@ app.use(function (req, res, next) {
           "        && typeof(Meteor.status) !== 'undefined' " +
           "        && Meteor.status().connected) {" +
           "      Deps.flush();" +
-          "      return Meteor._LivedataConnection._allSubscriptionsReady();" +
+          "      return DDP._allSubscriptionsReady();" +
           "    }" +
           "    return false;" +
           "  });" +

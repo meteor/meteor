@@ -7,13 +7,69 @@ Writing an entire application in one language (JavaScript) with one
 data format (JSON) is a real joy.  Meteor is everything we wanted
 when writing those apps.
 
+{{> whatismeteor }}
 {{> structure }}
 {{> data }}
 {{> reactivity }}
 {{> livehtml }}
 {{> templates }}
 {{> packages_concept }}
+{{> namespacing }}
 {{> deploying }}
+{{> packages_writing }}
+</template>
+
+<template name="whatismeteor">
+
+{{#better_markdown}}
+
+<h2 id="whatismeteor">What is Meteor?</h2>
+
+Meteor is two things:
+
+* A _library of packages_: pre-written, self-contained modules that
+you might need in your app.<br>
+There are about a dozen core Meteor
+packages that most any app will use (for example `webapp`, which
+handles incoming HTTP connections, and `templating`, which lets you
+make HTML templates that automatically update live as data changes).
+Then there are optional packages like `email`, which lets your app
+send emails, or the Meteor Accounts series (`account-password`,
+`accounts-facebook`, `accounts-ui`, and others) which provide a
+full-featured user account system that you can drop right into your
+app. And beyond these "official" packages, there are hundreds of
+community-written packages in [Atmosphere](https://atmosphere.meteor.com/),
+one of which might do just what you need.
+
+* A _command-line tool_ called `meteor`.<br>
+`meteor` is a build tool analogous to `make`, `rake`, or the non-visual parts of
+Visual Studio. It gathers up all of the source files and assets in your
+application, carries out any necessary build steps (such as compiling
+[CoffeeScript](http://coffeescript.org), minifying CSS, building
+[npm](https://npmjs.org/) modules, or generating source maps), fetches the
+packages used by your app, and outputs a standalone, ready-to-run application
+bundle. In development mode it can do all of this interactively, so that
+whenever you change a file you immediately see the changes in your browser. It's
+super easy to use out of the box, but it's also extensible: you can add support
+for new languages and compilers by adding build plugin packages to your app.
+
+The key idea in the Meteor package system is that _everything should
+work identically in the browser and on the server_ (wherever it makes
+sense, of course: browsers can't send email and servers can't capture
+mouse events). Our whole ecosystem has been built from the ground up
+to support this.
+
+{{#note}}
+`meteor` cannot yet fetch packages from Atmosphere. If you are using
+Atmosphere packages you should take a look at
+[Meteorite](http://oortcloud.github.io/meteorite/), a tool that will
+help you download and manage your Atmosphere packages.
+
+In Meteor 1.0, the `meteor` build tool will have full support for
+Atmosphere.
+{{/note}}
+
+{{/better_markdown}}
 </template>
 
 <template name="structure">
@@ -28,17 +84,23 @@ CSS rules, and static assets.  Meteor automates the packaging and transmission
 of these different components.  And, it is quite flexible about how you choose
 to structure those components in your file tree.
 
-The only server asset is JavaScript.  Meteor gathers all your JavaScript
-files, excluding anything under the `client`
-and `public` subdirectories, and loads them into a Node.js
+The only server assets are JavaScript and files in the `private` subdirectory.
+Meteor gathers all your JavaScript
+files, excluding anything under the `client`, `public`, and `private`
+subdirectories, and loads them into a Node.js
 server instance inside a fiber.  In Meteor, your server code runs in
 a single thread per request, not in the asynchronous callback style
 typical of Node.  We find the linear execution model a better fit for
 the typical server code in a Meteor application.
 
+Meteor gathers any files under the `private` subdirectory and makes the contents
+of these files available to server code via the [`Assets`](#assets) API. The
+`private` subdirectory is the place for any files that should be accessible to
+server code but not served to the client, like private data files.
+
 There are more assets to consider on the client side.  Meteor
-gathers all JavaScript files in your tree with the exception of
-the `server` and `public` subdirectories for the
+gathers all JavaScript files in your tree, with the exception of
+the `server`, `public`, and `private` subdirectories, for the
 client.  It minifies this bundle and serves it to each new client.
 You're free to use a single JavaScript file for your entire application, or
 create a nested tree of separate files, or anything in between.
@@ -61,8 +123,8 @@ containing passwords or authentication mechanisms, should be
 kept in the `server` directory.
 
 CSS files are gathered together as well: the client will get a bundle with all
-the CSS in your tree (excluding the `server`
-and `public` subdirectories).
+the CSS in your tree (excluding the `server`,
+`public`, and `private` subdirectories).
 
 In development mode, JavaScript and CSS files are sent individually to make
 debugging easier.
@@ -86,7 +148,7 @@ for images, `favicon.ico`, `robots.txt`, and anything else.
 It is best to write your application in such a way that it is
 insensitive to the order in which files are loaded, for example by
 using [Meteor.startup](#meteor_startup), or by moving load order
-sensitive code into [Smart Packages](#smartpackages), which can explicitly control both
+sensitive code into [packages](#usingpackages), which can explicitly control both
 the load order of their contents and their load order with respect to
 other packages. However sometimes load order dependencies in your
 application are unavoidable. The JavaScript and CSS files in an
@@ -244,6 +306,13 @@ modify data, those modifications can run locally without waiting for the
 confirmation from the server, while still giving the server final say
 over the requested change.
 
+{{#note}}
+The current release of Meteor supports MongoDB, the popular document
+database, and the examples in this section use the
+        [MongoDB API](http://www.mongodb.org/display/DOCS/Manual).  Future
+releases will include support for other databases.
+{{/note}}
+
 <h3 id="dataandsecurity-authentication">Authentication and user accounts</h3>
 
 Meteor includes [Meteor Accounts](#accounts_api), a state-of-the-art
@@ -257,17 +326,8 @@ application-specific user data.
 
 Meteor also includes pre-built forms for common tasks like login, signup,
 password change, and password reset emails. You can add [Accounts
-UI](#accountsui) to your app with just one line of code. The `accounts-ui` smart
-package even provides a configuration wizard that walks you through the steps to
+UI](#accountsui) to your app with just one line of code. The `accounts-ui` package even provides a configuration wizard that walks you through the steps to
 set up the external login services you're using in your app.
-
-{{#note}}
-The current release of Meteor supports MongoDB, the popular document
-database, and the examples in this section use the
-        [MongoDB API](http://www.mongodb.org/display/DOCS/Manual).  Future
-releases will include support for other databases.
-{{/note}}
-
 
 <h3 id="dataandsecurity-validation">Input validation</h3>
 
@@ -587,53 +647,137 @@ discussion.
 <template name="packages_concept">
 {{#better_markdown}}
 
-  <h2 id="smartpackages">Smart packages</h2>
+  <h2 id="usingpackages">Using packages</h2>
 
-Meteor has an unusually powerful package system. All of the
-functionality you've read about so far is implemented as standard
-Meteor packages.
-
-Meteor packages are intelligent: the packages are themselves
-JavaScript programs. They can inject code into the client or the
-server, or hook new functions into the bundler, so they can extend the
-Meteor environment in arbitrary ways. Some examples of packages are:
-
-* The [coffeescript](#coffeescript) package extends the
-  bundler, automatically compiling any `.coffee` files in
-  your tree.  Once added, you can write your application in CoffeeScript
-  instead of JavaScript.
-
-* The [jQuery](#jquery) and [Backbone](#backbone) packages are examples of using
-  Meteor to prepackage client JavaScript libraries. You could get
-  the same result by copying the JavaScript files into your tree, but
-  it's faster to add a package.
-
-* The [underscore](#underscore) package extends both the
-  client and server environments.
-
-Many of the core Meteor features,
-including Minimongo, the Session object, and reactive Handlebars
-templates, are implemented as internal packages automatically
-included with every Meteor application.
+All of the functionality you've read about so far is implemented as
+standard Meteor packages. This is possible thanks to Meteor's
+unusually powerful package and build system. The same packages work in
+the browser and on the server, and packages can contain plugins that
+extend the build process, such as `coffeescript` ([CoffeeScript](http://coffeescript.org)
+compilation) or `templating` (compiling HTML templates).
 
 You can see a list of available packages
 with [`meteor list`](#meteorlist), add packages to your project
 with [`meteor add`](#meteoradd), and remove them
 with [`meteor remove`](#meteorremove).
 
-See the [Package List](#packages) section for a description
-of the existing packages.
+By default all apps include the `standard-app-packages` package. This
+automatically pulls in the packages that make up the core Meteor
+stack. To keep things simple, these core packages are also hidden in
+the output for `meteor list`, but you can read the
+[source code of `standard-app-packages`](https://github.com/meteor/meteor/blob/master/packages/standard-app-packages/package.js)
+to see what they are (as Meteor is pre-1.0, they may change from release to
+release). If you want to build your own custom stack, just remove
+`standard-app-packages` from your app and add back in whichever of the standard
+packages you want to keep.
 
-{{#warning}}
-The package API is rapidly changing and isn't documented, so you can't
-make your own packages just yet. Coming soon.
-{{/warning}}
+In addition to the packages in the official Meteor release being used
+by your app, `meteor list` and `meteor add` also search the `packages`
+directory at the top of your app. If you've downloaded an unofficial
+package from Atmosphere you should unpack it into that directory (the
+unofficial [Meteorite](http://oortcloud.github.io/meteorite/) tool
+streamlines this process). You can also use the `packages` directory
+to break your app into subpackages for your convenience &mdash; if you
+are willing to brave the fact that the Meteor package format is not
+documented yet and will change significantly before Meteor 1.0. See
+[Writing Packages](#writingpackages).
 
 {{/better_markdown}}
 </template>
 
 
+<template name="namespacing">
+{{#better_markdown}}
 
+  <h2 id="namespacing">Namespacing</h2>
+
+Meteor's namespacing support makes it easy to write large applications
+in JavaScript. Each package that you use in your app exists in its own
+separate namespace, meaning that it sees only its own global variables
+and any variables provided by the packages that it specifically
+uses. Here's how it works.
+
+When you declare a top-level variable, you have a choice. You can make
+the variable File Scope or Package Scope.
+
+    // File Scope. This variable will be visible only inside this
+    // one file. Other files in this app or package won't see it.
+    var alicePerson = {name: "alice"};
+
+    // Package Scope. This variable is visible to every file inside
+    // of this package or app. The difference is that 'var' is
+    // omitted.
+    bobPerson = {name: "bob"};
+
+Notice that this is just the normal JavaScript syntax for declaring a
+variable that is local or global. Meteor scans your source code for
+global variable assignments and generates a wrapper that makes sure
+that your globals don't escape their appropriate namespace.
+
+In addition to File Scope and Package Scope, there are also
+Exports. An export is a variable that a package makes available to you
+when you use it. For example, the `email` package exports the `Email`
+variable. If your app uses the `email` package (and _only_ if it uses
+the `email` package!) then your app can see `Email` and you can call
+`Email.send`. Most packages have only one export, but some packages
+might have two or three (for example, a package that provides several
+classes that work together).
+
+You see only the exports of the packages that you use directly. If you
+use package A, and package A uses package B, then you only see package
+A's exports. Package B's exports don't "leak" into your namespace just
+because you used package A. This keeps each namespace nice and
+tidy. Each app or package only sees their own globals plus the APIs of
+the packages that they specifically asked for.
+
+When debugging your app, your browser's JavaScript console behaves as
+if it were attached to your app's namespace. You see your app's
+globals and the exports of the packages that your app uses
+directly. You don't see the variables from inside those packages, and
+you don't see the exports of your transitive dependencies (packages
+that aren't used directly by your app, but that are used by packages
+that are used by your app).
+
+If you want to look inside packages from inside your in-browser
+debugger, you've got two options:
+
+* Set a breakpoint inside package code. While stopped on that
+  breakpoint, the console will be in the package's namespace. You'll
+  see the package's package-scope variables, imports, and also any
+  file-scope variables for the file you're stopped in.
+
+* If a package `foo` is included in your app, regardless of whether
+  your app uses it directly, its exports are available in
+  `Package.foo`. For example, if the `email` package is loaded, then
+  you can access `Package.email.Email.send` even from namespaces that
+  don't use the `email` package directly.
+
+When declaring functions, keep in mind that `function x () {}` is just
+shorthard for `var x = function () {}` in JavaScript. Consider these
+examples:
+
+    // This is the same as 'var x = function () ...'. So x() is
+    // file-scope and can be called only from within this one file.
+    function x () { ... }
+
+    // No 'var', so x() is package-scope and can be called from
+    // any file inside this app or package.
+    x = function () { ... }
+
+{{#note}}
+Technically speaking, globals in an app (as opposed to in a package)
+are actually true globals. They can't be captured in a scope that is
+private to the app code, because that would mean that they wouldn't be
+visible in the console during debugging! This means that app globals
+actually end up being visible in packages. That should never be a
+problem for properly written package code (since the app globals will
+still be properly shadowed by declarations in the packages). You
+certainly shouldn't depend on this quirk, and in the future Meteor may
+check for it and throw an error if you do.
+{{/note}}
+
+{{/better_markdown}}
+</template>
 
 
 <template name="deploying">
@@ -679,12 +823,13 @@ To get started, run
 
     $ meteor bundle myapp.tgz
 
-This command will generate a fully-contained Node.js application in
-the form of a tarball.  To run this application, you need to provide
-Node.js 0.8 and a MongoDB server.  You can then run the application by
-invoking node, specifying the HTTP port for the application to listen
-on, and the MongoDB endpoint.  If you don't already have a MongoDB
-server, we can recommend our friends at [MongoHQ](http://mongohq.com).
+This command will generate a fully-contained Node.js application in the form of
+a tarball.  To run this application, you need to provide Node.js 0.8 and a
+MongoDB server.  (The current release of Meteor has been tested with Node
+0.8.24.) You can then run the application by invoking node, specifying the HTTP
+port for the application to listen on, and the MongoDB endpoint.  If you don't
+already have a MongoDB server, we can recommend our friends at
+[MongoHQ](http://mongohq.com).
 
     $ PORT=3000 MONGO_URL=mongodb://localhost:27017/myapp node bundle/main.js
 
@@ -697,10 +842,115 @@ created on.  To run on a different platform, you'll need to rebuild
 the native packages included in the bundle.  To do that, make sure you
 have `npm` available, and run the following:
 
-    $ cd bundle/server/node_modules
+    $ cd bundle/programs/server/node_modules
     $ rm -r fibers
-    $ npm install fibers@1.0.0
+    $ npm install fibers@1.0.1
 {{/warning}}
+
+{{/better_markdown}}
+</template>
+
+
+<template name="packages_writing">
+{{#better_markdown}}
+
+  <h2 id="writingpackages">Writing packages</h2>
+
+The Meteor package format isn't officially documented and will change
+before Meteor 1.0. But that hasn't stopped people like you from
+creating hundreds of packages by reading the source code of existing
+packages and following the model. If you do decide to create your own
+packages, you will have to do some detective work, but here are some
+quick tips:
+
+* A package is simply a directory with a `package.js` file in it. Look in the
+  [`packages` directory of the Meteor source
+  tree](https://github.com/meteor/meteor/tree/master/packages/) for example
+  `package.js` files. The format and name of the `package.js` file will change
+  significantly before Meteor 1.0, but the functionality will be basically the
+  same even though the syntax is different, so it will be easy to port your
+  code.
+
+* Packages explicitly list all of their source files using `api.add_files`, and
+  the files are loaded exactly in the order specified. (This is different from
+  apps, where Meteor scans a directory tree to find the source files.)  Don't
+  forget to include any build plugin packages (such as `coffeescript` or, if
+  using HTML templates, `templating`) that you require.
+
+* Exporting a symbol from your package (see
+  [Namespacing](#namespacing)) is accomplished with an `api.export` call
+  from inside your `on_use` handler.
+
+* An esoteric point about exports: they are not lvalues. You can't set
+  an exported variable to a new value after exporting it. If you
+  export `a = {name: 'alice'}` then you can change `a.name` anytime
+  you want, but if after startup you set `a` to a whole new object
+  then the packages that import `a` won't see the change. Since your
+  exports are most always objects or functions, this is hardly ever an
+  issue.
+
+* Packages can use [npm modules](https://npmjs.org/). Use `Npm.depends` in your
+  `package.js` to list the npm modules that you need and the specific
+  versions that you want to use. Then use `Npm.require` inside your
+  package to pull in the modules when you need them. Meteor strives to
+  have 100% repeatable builds so that everyone on your team is always
+  running the same code, and that's why you must explicitly lock your
+  npm dependencies to specific versions. Behind the scenes, Meteor
+  will use `npm shrinkwrap` to also lock down the versions of the
+  transitive dependencies of all of the npm modules that you use.
+
+* Whenever your package changes, Meteor will rebuild it (compiling
+  non-JavaScript source files, fetching npm dependencies, constructing
+  namespace wrappers, and so on). The built package will be cached and
+  rebuilt only when a source file changes (tracked by SHA1) or when
+  other dependencies such as build plugins change. To force a rebuild
+  you can use the undocumented command `meteor rebuild-all`, but this
+  should never be necessary (if it is, please send a
+  [bug report](https://github.com/meteor/meteor/blob/devel/Contributing.md#filing-bug-reports)!).
+
+* Build plugins are created with `_transitional_registerBuildPlugin`,
+  an API that is very much in flux. See the `coffeescript` package for
+  an example. Build plugins are fully-fledged Meteor programs in their
+  own right and have their own namespace, package dependencies, source
+  files and npm requirements. The old `register_extension` API is
+  deprecated and should not be used as it will prevent your package
+  from being cached, slowing down builds.
+
+* It is possible to create weak dependencies between packages. If
+  package A has a weak dependency on package B, it means that
+  including A in an app does not force B to be included too &mdash;
+  but, if B _is_ included, say by the app developer or by another
+  package, then B will load before A. You can use this to make
+  packages that optionally integrate with or enhance other packages if
+  those packages are present. To create a weak dependency, pass
+  `{weak: true}` as the third argument to `api.use`. When you weakly
+  depend on a package you don't see its exports. You can detect if
+  the possibly-present weakly-depended-on package is there by seeing
+  if `Package.foo` exists, and get its exports from the same place.
+
+* It is also possible to create unordered dependencies by passing
+  `{unordered: true}`. An unordered dependency is the exact opposite
+  of a weak dependency. If A has an unordered dependency on B, then
+  including A forces B to be included as well, but doesn't require B
+  to load before A. This is occasionally useful for resolving circular
+  dependencies.
+
+* The build system also supports package implication. If package A
+  implies package B, then it means that when someone depends on
+  package A, it's as if they also depended on package B as well. In
+  particular, they get B's exports. This is done with `api.imply` and
+  can be used to create umbrella packages such as
+  `standard-app-packages` that are a shortcut for pulling in a set of
+  packages, or it can be helpful in factoring common code out of a set
+  of packages as with `accounts-base`.
+
+* The build system understands the idea of native code and has a
+  system of architecture names to ensure that packages that are
+  specific to one architecture aren't run on the wrong
+  architecture. For example, if you include an npm module that has a
+  native extension, your built Meteor package will be specific to your
+  machine architecture, but if not your built Meteor package will be
+  portable.
 
 {{/better_markdown}}
 </template>

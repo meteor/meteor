@@ -447,10 +447,18 @@ Template.api.reconnect = {
     "This method does nothing if the client is already connected."]
 };
 
-Template.api.connect = {
-  id: "meteor_connect",
-  name: "Meteor.connect(url)",
+Template.api.disconnect = {
+  id: "meteor_disconnect",
+  name: "Meteor.disconnect()",
   locus: "Client",
+  descr: [
+    "Disconnect the client from the server."]
+};
+
+Template.api.connect = {
+  id: "ddp_connect",
+  name: "DDP.connect(url)",
+  locus: "Anywhere",
   descr: ["Connect to the server of a different Meteor application to subscribe to its document sets and invoke its remote methods."],
   args: [
     {name: "url",
@@ -472,9 +480,9 @@ Template.api.meteor_collection = {
      descr: "The name of the collection.  If null, creates an unmanaged (unsynchronized) local collection."}
   ],
   options: [
-    {name: "manager",
+    {name: "connection",
      type: "Object",
-     descr: "The Meteor connection that will manage this collection, defaults to `Meteor` if null.  Unmanaged (`name` is null) collections cannot specify a manager."
+     descr: "The Meteor connection that will manage this collection. Uses the default connection if not specified. Pass `null` to specify no connection. Unmanaged (`name` is null) collections cannot specify a connection."
     },
     {name: "idGeneration",
      type: "String",
@@ -515,7 +523,7 @@ Template.api.find = {
     {name: "fields",
      type: "Field specifier",
      type_link: "fieldspecifiers",
-     descr: "(Server only) Dictionary of fields to return or exclude."},
+     descr: "Dictionary of fields to return or exclude."},
     {name: "reactive",
      type: "Boolean",
      descr: "(Client only) Default `true`; pass `false` to disable reactivity"},
@@ -547,7 +555,7 @@ Template.api.findone = {
     {name: "fields",
      type: "Field specifier",
      type_link: "fieldspecifiers",
-     descr: "(Server only) Dictionary of fields to return or exclude."},
+     descr: "Dictionary of fields to return or exclude."},
     {name: "reactive",
      type: "Boolean",
      descr: "(Client only) Default true; pass false to disable reactivity"},
@@ -1066,6 +1074,11 @@ Template.api.loginWithExternalService = {
       name: "requestOfflineToken",
       type: "Boolean",
       descr: "If true, asks the user for permission to act on their behalf when offline. This stores an additional offline token in the `services` field of the user document. Currently only supported with Google."
+    },
+    {
+      name: "forceApprovalPrompt",
+      type: "Boolean",
+      descr: "If true, forces the user to approve the app's permissions, even if previously approved. Currently only supported with Google."
     }
   ]
 };
@@ -1571,8 +1584,8 @@ Template.api.equals = {
 };
 
 Template.api.httpcall = {
-  id: "meteor_http_call",
-  name: "Meteor.http.call(method, url [, options] [, asyncCallback])",
+  id: "http_call",
+  name: "HTTP.call(method, url [, options] [, asyncCallback])",
   locus: "Anywhere",
   descr: ["Perform an outbound HTTP request."],
   args: [
@@ -1618,31 +1631,31 @@ Template.api.httpcall = {
 };
 
 Template.api.http_get = {
-  id: "meteor_http_get",
-  name: "Meteor.http.get(url, [options], [asyncCallback])",
+  id: "http_get",
+  name: "HTTP.get(url, [options], [asyncCallback])",
   locus: "Anywhere",
-  descr: ["Send an HTTP GET request.  Equivalent to `Meteor.http.call(\"GET\", ...)`."]
+  descr: ["Send an HTTP GET request.  Equivalent to `HTTP.call(\"GET\", ...)`."]
 };
 
 Template.api.http_post = {
-  id: "meteor_http_post",
-  name: "Meteor.http.post(url, [options], [asyncCallback])",
+  id: "http_post",
+  name: "HTTP.post(url, [options], [asyncCallback])",
   locus: "Anywhere",
-  descr: ["Send an HTTP POST request.  Equivalent to `Meteor.http.call(\"POST\", ...)`."]
+  descr: ["Send an HTTP POST request.  Equivalent to `HTTP.call(\"POST\", ...)`."]
 };
 
 Template.api.http_put = {
-  id: "meteor_http_put",
-  name: "Meteor.http.put(url, [options], [asyncCallback])",
+  id: "http_put",
+  name: "HTTP.put(url, [options], [asyncCallback])",
   locus: "Anywhere",
-  descr: ["Send an HTTP PUT request.  Equivalent to `Meteor.http.call(\"PUT\", ...)`."]
+  descr: ["Send an HTTP PUT request.  Equivalent to `HTTP.call(\"PUT\", ...)`."]
 };
 
 Template.api.http_del = {
-  id: "meteor_http_del",
-  name: "Meteor.http.del(url, [options], [asyncCallback])",
+  id: "http_del",
+  name: "HTTP.del(url, [options], [asyncCallback])",
   locus: "Anywhere",
-  descr: ["Send an HTTP DELETE request.  Equivalent to `Meteor.http.call(\"DELETE\", ...)`.  (Named `del` to avoid conflict with JavaScript's `delete`.)"]
+  descr: ["Send an HTTP DELETE request.  Equivalent to `HTTP.call(\"DELETE\", ...)`.  (Named `del` to avoid conflict with JavaScript's `delete`.)"]
 };
 
 
@@ -1808,6 +1821,46 @@ Template.api.email_send = {
     {name: "headers",
      type: "Object",
      descr: rfc('custom headers (dictionary)')
+    }
+  ]
+};
+
+Template.api.assets_getText = {
+  id: "assets_getText",
+  name: "Assets.getText(assetPath, [asyncCallback])",
+  locus: "Server",
+  descr: ["Retrieve the contents of the static server asset as a UTF8-encoded string."],
+  args: [
+    {name: "assetPath",
+     type: "String",
+     descr: "The path of the asset, relative to the application's " +
+     "`private` subdirectory."
+    },
+    {name: "asyncCallback",
+     type: "Function",
+     descr: "Optional callback, which is called asynchronously with the error " +
+     "or result after the function is complete. If not provided, the function " +
+     "runs synchronously."
+    }
+  ]
+};
+
+Template.api.assets_getBinary = {
+  id: "assets_getBinary",
+  name: "Assets.getBinary(assetPath, [asyncCallback])",
+  locus: "Server",
+  descr: ["Retrieve the contents of the static server asset as an [EJSON Binary](#ejson_new_binary)."],
+  args: [
+    {name: "assetPath",
+     type: "String",
+     descr: "The path of the asset, relative to the application's " +
+     "`private` subdirectory."
+    },
+    {name: "asyncCallback",
+     type: "Function",
+     descr: "Optional callback, which is called asynchronously with the error " +
+     "or result after the function is complete. If not provided, the function " +
+     "runs synchronously."
     }
   ]
 };

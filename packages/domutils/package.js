@@ -12,12 +12,15 @@ Package.on_use(function (api) {
   // cut this dependency.
   api.use('jquery', 'client');
 
+  api.use('underscore', 'client');
+
+  api.export('DomUtils', 'client');
   api.add_files('domutils.js', 'client');
 });
 
 Package.on_test(function (api) {
   api.use(['tinytest']);
-  api.use(['domutils', 'test-helpers'], 'client');
+  api.use(['domutils', 'test-helpers', 'underscore'], 'client');
 
   api.add_files([
     'domutils_tests.js'

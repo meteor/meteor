@@ -1,5 +1,8 @@
 Template.headline.release = function () {
-  return Meteor.release || "(checkout)";
+  // XXX This is commented out because for now galaxy apps have to be on a
+  // different Meteor release that has a bug fix.
+  return "0.6.5";
+  //  return Meteor.release || "(checkout)";
 };
 
 
@@ -91,13 +94,16 @@ var toc = [
     "Resources"
   ],
   "Concepts", [
+    "What is Meteor?",
     "Structuring your app",
     "Data and security",
     "Reactivity",
     "Live HTML",
     "Templates",
-    "Smart packages",
-    "Deploying"
+    "Using packages",
+    "Namespacing",
+    "Deploying",
+    "Writing packages"
   ],
 
   "API", [
@@ -139,7 +145,8 @@ var toc = [
     {name: "Server connections", id: "connections"}, [
       "Meteor.status",
       "Meteor.reconnect",
-      "Meteor.connect"
+      "Meteor.disconnect",
+      "DDP.connect"
     ],
 
     {name: "Collections", id: "collections"}, [
@@ -305,15 +312,19 @@ var toc = [
     ],
 
 
-    "Meteor.http", [
-      "Meteor.http.call",
-      {name: "Meteor.http.get", id: "meteor_http_get"},
-      {name: "Meteor.http.post", id: "meteor_http_post"},
-      {name: "Meteor.http.put", id: "meteor_http_put"},
-      {name: "Meteor.http.del", id: "meteor_http_del"}
+    "HTTP", [
+      "HTTP.call",
+      {name: "HTTP.get"},
+      {name: "HTTP.post"},
+      {name: "HTTP.put"},
+      {name: "HTTP.del"}
     ],
     "Email", [
       "Email.send"
+    ],
+    {name: "Assets", id: "assets"}, [
+      {name: "Assets.getText", id: "assets_getText"},
+      {name: "Assets.getBinary", id: "assets_getBinary"}
     ]
   ],
 

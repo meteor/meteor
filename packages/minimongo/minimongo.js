@@ -7,7 +7,8 @@
 
 // LiveResultsSet: the return value of a live query.
 
-LocalCollection = function () {
+LocalCollection = function (name) {
+  this.name = name;
   this.docs = {}; // _id -> document (also containing id)
 
   this._observeQueue = new Meteor._SynchronousQueue();
@@ -41,13 +42,11 @@ LocalCollection._applyChanges = function (doc, changeFields) {
   });
 };
 
-LocalCollection.MinimongoError = function (message) {
-  var self = this;
-  self.name = "MinimongoError";
-  self.details = message;
+var MinimongoError = function (message) {
+  var e = new Error(message);
+  e.name = "MinimongoError";
+  return e;
 };
-
-LocalCollection.MinimongoError.prototype = new Error;
 
 
 // options may include sort, skip, limit, reactive
@@ -97,6 +96,11 @@ LocalCollection.Cursor = function (collection, selector, options) {
   }
   self.skip = options.skip;
   self.limit = options.limit;
+  self.fields = options.fields;
+
+  if (self.fields)
+    self.projection_f = LocalCollection._compileProjection(self.fields);
+
   if (options.transform && typeof Deps !== "undefined")
     self._transform = Deps._makeNonreactive(options.transform);
   else
@@ -152,6 +156,8 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
 
   while (self.cursor_pos < self.db_objects.length) {
     var elt = EJSON.clone(self.db_objects[self.cursor_pos++]);
+    if (self.projection_f)
+      elt = self.projection_f(elt);
     if (self._transform)
       elt = self._transform(elt);
     callback(elt);
@@ -185,12 +191,23 @@ LocalCollection.Cursor.prototype.count = function () {
   var self = this;
 
   if (self.reactive)
-    self._depend({added: true, removed: true});
+    self._depend({added: true, removed: true},
+                 true /* allow the observe to be unordered */);
 
   if (self.db_objects === null)
     self.db_objects = self._getRawObjects(true);
 
   return self.db_objects.length;
+};
+
+LocalCollection.Cursor.prototype._publishCursor = function (sub) {
+  var self = this;
+  if (! self.collection.name)
+    throw new Error("Can't publish a cursor from a collection without a name.");
+  var collection = self.collection.name;
+
+  // XXX minimongo should not depend on mongo-livedata!
+  return Meteor.Collection._publishCursor(self, sub, collection);
 };
 
 LocalCollection._isOrderedChanges = function (callbacks) {
@@ -234,7 +251,7 @@ _.extend(LocalCollection.Cursor.prototype, {
 
     var ordered = LocalCollection._isOrderedChanges(options);
 
-    if (!ordered && (self.skip || self.limit))
+    if (!options._allow_unordered && !ordered && (self.skip || self.limit))
       throw new Error("must use ordered observe with skip or limit");
 
     // XXX merge this object w/ "this" Cursor.  they're the same.
@@ -243,8 +260,10 @@ _.extend(LocalCollection.Cursor.prototype, {
       sort_f: ordered && self.sort_f,
       results_snapshot: null,
       ordered: ordered,
-      cursor: this,
-      observeChanges: options.observeChanges
+      cursor: self,
+      observeChanges: options.observeChanges,
+      fields: self.fields,
+      projection_f: self.projection_f
     };
     var qid;
 
@@ -261,15 +280,24 @@ _.extend(LocalCollection.Cursor.prototype, {
     // wrap callbacks we were passed. callbacks only fire when not paused and
     // are never undefined (except that query.moved is undefined for unordered
     // callbacks).
+    // Filters out blacklisted fields according to cursor's projection.
+    // XXX wrong place for this?
 
     // furthermore, callbacks enqueue until the operation we're working on is
     // done.
-    var wrapCallback = function (f) {
+    var wrapCallback = function (f, fieldsIndex, ignoreEmptyFields) {
       if (!f)
         return function () {};
       return function (/*args*/) {
         var context = this;
         var args = arguments;
+
+        if (fieldsIndex !== undefined && self.projection_f) {
+          args[fieldsIndex] = self.projection_f(args[fieldsIndex]);
+          if (ignoreEmptyFields && _.isEmpty(args[fieldsIndex]))
+            return;
+        }
+
         if (!self.collection.paused) {
           self.collection._observeQueue.queueTask(function () {
             f.apply(context, args);
@@ -277,18 +305,19 @@ _.extend(LocalCollection.Cursor.prototype, {
         }
       };
     };
-    query.added = wrapCallback(options.added);
-    query.changed = wrapCallback(options.changed);
+    query.added = wrapCallback(options.added, 1);
+    query.changed = wrapCallback(options.changed, 1, true);
     query.removed = wrapCallback(options.removed);
     if (ordered) {
       query.moved = wrapCallback(options.moved);
-      query.addedBefore = wrapCallback(options.addedBefore);
+      query.addedBefore = wrapCallback(options.addedBefore, 1);
       query.movedBefore = wrapCallback(options.movedBefore);
     }
 
     if (!options._suppress_initial && !self.collection.paused) {
       _.each(query.results, function (doc, i) {
         var fields = EJSON.clone(doc);
+
         delete fields._id;
         if (ordered)
           query.addedBefore(doc._id, fields, null);
@@ -382,7 +411,7 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
 
 // XXX Maybe we need a version of observe that just calls a callback if
 // anything changed.
-LocalCollection.Cursor.prototype._depend = function (changers) {
+LocalCollection.Cursor.prototype._depend = function (changers, _allow_unordered) {
   var self = this;
 
   if (Deps.active) {
@@ -390,7 +419,10 @@ LocalCollection.Cursor.prototype._depend = function (changers) {
     v.depend();
     var notifyChange = _.bind(v.changed, v);
 
-    var options = {_suppress_initial: true};
+    var options = {
+      _suppress_initial: true,
+      _allow_unordered: _allow_unordered
+    };
     _.each(['added', 'changed', 'removed', 'addedBefore', 'movedBefore'],
            function (fnName) {
              if (changers[fnName])
@@ -406,7 +438,7 @@ LocalCollection.Cursor.prototype._depend = function (changers) {
 // (real mongodb does in fact enforce this)
 // XXX possibly enforce that 'undefined' does not appear (we assume
 // this in our handling of null and $exists)
-LocalCollection.prototype.insert = function (doc) {
+LocalCollection.prototype.insert = function (doc, callback) {
   var self = this;
   doc = EJSON.clone(doc);
 
@@ -418,8 +450,8 @@ LocalCollection.prototype.insert = function (doc) {
   }
   var id = LocalCollection._idStringify(doc._id);
 
-  if (_.has(self.docs, doc._id))
-    throw new LocalCollection.MinimongoError("Duplicate _id '" + doc._id + "'");
+  if (_.has(self.docs, id))
+    throw MinimongoError("Duplicate _id '" + doc._id + "'");
 
   self._saveOriginal(id, undefined);
   self.docs[id] = doc;
@@ -441,10 +473,13 @@ LocalCollection.prototype.insert = function (doc) {
       LocalCollection._recomputeResults(self.queries[qid]);
   });
   self._observeQueue.drain();
+  // Defer in case the callback returns on a future; gives the caller time to
+  // wait on the future.
+  if (callback) Meteor.defer(function () { callback(null, doc._id); });
   return doc._id;
 };
 
-LocalCollection.prototype.remove = function (selector) {
+LocalCollection.prototype.remove = function (selector, callback) {
   var self = this;
   var remove = [];
 
@@ -498,12 +533,19 @@ LocalCollection.prototype.remove = function (selector) {
       LocalCollection._recomputeResults(query);
   });
   self._observeQueue.drain();
+  // Defer in case the callback returns on a future; gives the caller time to
+  // wait on the future.
+  if (callback) Meteor.defer(callback);
 };
 
 // XXX atomicity: if multi is true, and one modification fails, do
 // we rollback the whole operation, or what?
-LocalCollection.prototype.update = function (selector, mod, options) {
+LocalCollection.prototype.update = function (selector, mod, options, callback) {
   var self = this;
+  if (! callback && options instanceof Function) {
+    callback = options;
+    options = null;
+  }
   if (!options) options = {};
 
   if (options.upsert)
@@ -541,6 +583,9 @@ LocalCollection.prototype.update = function (selector, mod, options) {
                                         qidToOriginalResults[qid]);
   });
   self._observeQueue.drain();
+  // Defer in case the callback returns on a future; gives the caller time to
+  // wait on the future.
+  if (callback) Meteor.defer(callback);
 };
 
 LocalCollection.prototype._modifyAndNotify = function (
@@ -694,21 +739,32 @@ LocalCollection._findInOrderedResults = function (query, doc) {
   throw Error("object missing from query");
 };
 
+// This binary search puts a value between any equal values, and the first
+// lesser value.
+LocalCollection._binarySearch = function (cmp, array, value) {
+  var first = 0, rangeLength = array.length;
+
+  while (rangeLength > 0) {
+    var halfRange = Math.floor(rangeLength/2);
+    if (cmp(value, array[first + halfRange]) >= 0) {
+      first += halfRange + 1;
+      rangeLength -= halfRange + 1;
+    } else {
+      rangeLength = halfRange;
+    }
+  }
+  return first;
+};
+
 LocalCollection._insertInSortedList = function (cmp, array, value) {
   if (array.length === 0) {
     array.push(value);
     return 0;
   }
 
-  for (var i = 0; i < array.length; i++) {
-    if (cmp(value, array[i]) < 0) {
-      array.splice(i, 0, value);
-      return i;
-    }
-  }
-
-  array.push(value);
-  return array.length - 1;
+  var idx = LocalCollection._binarySearch(cmp, array, value);
+  array.splice(idx, 0, value);
+  return idx;
 };
 
 // To track what documents are affected by a piece of code, call saveOriginals()
@@ -791,6 +847,7 @@ LocalCollection.prototype.resumeObservers = function () {
 };
 
 
+// NB: used by livedata
 LocalCollection._idStringify = function (id) {
   if (id instanceof LocalCollection._ObjectID) {
     return id.valueOf();
@@ -807,7 +864,7 @@ LocalCollection._idStringify = function (id) {
     }
   } else if (id === undefined) {
     return '-';
-  } else if (typeof id === 'object') {
+  } else if (typeof id === 'object' && id !== null) {
     throw new Error("Meteor does not currently support objects other than ObjectID as ids");
   } else { // Numbers, true, false, null
     return "~" + JSON.stringify(id);
@@ -815,7 +872,7 @@ LocalCollection._idStringify = function (id) {
 };
 
 
-
+// NB: used by livedata
 LocalCollection._idParse = function (id) {
   if (id === "") {
     return id;
@@ -831,11 +888,6 @@ LocalCollection._idParse = function (id) {
     return id;
   }
 };
-
-if (typeof Meteor !== 'undefined') {
-  Meteor.idParse = LocalCollection._idParse;
-  Meteor.idStringify = LocalCollection._idStringify;
-}
 
 LocalCollection._makeChangedFields = function (newDoc, oldDoc) {
   var fields = {};
@@ -906,14 +958,24 @@ LocalCollection._observeOrderedFromObserveChanges =
     function (cursor, callbacks, transform) {
   var docs = new OrderedDict(LocalCollection._idStringify);
   var suppressed = !!callbacks._suppress_initial;
+  // The "_no_indices" option sets all index arguments to -1
+  // and skips the linear scans required to generate them.
+  // This lets observers that don't need absolute indices
+  // benefit from the other features of this API --
+  // relative order, transforms, and applyChanges -- without
+  // the speed hit.
+  var indices = !callbacks._no_indices;
   var handle = cursor.observeChanges({
     addedBefore: function (id, fields, before) {
       var doc = EJSON.clone(fields);
       doc._id = id;
-      docs.putBefore(id, doc, before ? before : null);
+      // XXX could `before` be a falsy ID?  Technically
+      // idStringify seems to allow for them -- though
+      // OrderedDict won't call stringify on a falsy arg.
+      docs.putBefore(id, doc, before || null);
       if (!suppressed) {
         if (callbacks.addedAt) {
-          var index = docs.indexOf(id);
+          var index = indices ? docs.indexOf(id) : -1;
           callbacks.addedAt(transform(EJSON.clone(doc)),
                             index, before);
         } else if (callbacks.added) {
@@ -929,7 +991,7 @@ LocalCollection._observeOrderedFromObserveChanges =
       // writes through to the doc set
       LocalCollection._applyChanges(doc, fields);
       if (callbacks.changedAt) {
-        var index = docs.indexOf(id);
+        var index = indices ? docs.indexOf(id) : -1;
         callbacks.changedAt(transform(EJSON.clone(doc)),
                             transform(oldDoc), index);
       } else if (callbacks.changed) {
@@ -942,11 +1004,12 @@ LocalCollection._observeOrderedFromObserveChanges =
       var from;
       // only capture indexes if we're going to call the callback that needs them.
       if (callbacks.movedTo)
-        from = docs.indexOf(id);
-      docs.moveBefore(id, before ? before : null);
+        from = indices ? docs.indexOf(id) : -1;
+      docs.moveBefore(id, before || null);
       if (callbacks.movedTo) {
-        var to = docs.indexOf(id);
-        callbacks.movedTo(transform(EJSON.clone(doc)), from, to);
+        var to = indices ? docs.indexOf(id) : -1;
+        callbacks.movedTo(transform(EJSON.clone(doc)), from, to,
+                          before || null);
       } else if (callbacks.moved) {
         callbacks.moved(transform(EJSON.clone(doc)));
       }
@@ -956,7 +1019,7 @@ LocalCollection._observeOrderedFromObserveChanges =
       var doc = docs.get(id);
       var index;
       if (callbacks.removedAt)
-        index = docs.indexOf(id);
+        index = indices ? docs.indexOf(id) : -1;
       docs.remove(id);
       callbacks.removedAt && callbacks.removedAt(transform(doc), index);
       callbacks.removed && callbacks.removed(transform(doc));
@@ -964,4 +1027,125 @@ LocalCollection._observeOrderedFromObserveChanges =
   });
   suppressed = false;
   return handle;
+};
+
+LocalCollection._compileProjection = function (fields) {
+  if (!_.isObject(fields))
+    throw MinimongoError("fields option must be an object");
+
+  // Check passed projection fields' keys:
+  // If you have two rules such as 'foo.bar' and 'foo.bar.baz', then the
+  // result becomes ambiguous. If that happens, there is a probability you are
+  // doing something wrong, framework should notify you about such mistake
+  // earlier on cursor compilation step than later during runtime.
+  // Note, that real mongo doesn't do anything about it and the later rule
+  // appears in projection project, more priority it takes.
+  //
+  // Example, assume following in mongo shell:
+  // > db.coll.insert({ a: { b: 23, c: 44 } })
+  // > db.coll.find({}, { 'a': 1, 'a.b': 1 })
+  // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23 } }
+  // > db.coll.find({}, { 'a.b': 1, 'a': 1 })
+  // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23, "c" : 44 } }
+  //
+  // Note, how second time the return set of keys is different.
+  var keyPaths = _.keys(fields);
+  _.each(keyPaths, function (keyPath) {
+    _.each(keyPaths, function (anotherKeyPath) {
+      var idx = keyPath.indexOf(anotherKeyPath);
+      // check if one key is path-prefix of another (like "abra" and
+      // "abra.cadabra", but not "abra" and "abrab.ra")
+      if (keyPath !== anotherKeyPath && !idx && keyPath[anotherKeyPath.length] === '.')
+        throw MinimongoError("both " + keyPath + " and " + anotherKeyPath +
+         " found in fields option, using both of them may trigger " +
+         "unexpected behavior. Did you mean to use only one of them?");
+    });
+  });
+
+  if (_.any(_.values(fields), function (x) {
+      return _.indexOf([1, 0, true, false], x) === -1; }))
+    throw MinimongoError("Projection values should be one of 1, 0, true, or false");
+
+  var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
+  delete fields._id;
+  var including = null; // Unknown
+  var projectionRules = [];
+
+  _.each(fields, function (rule, keyPath) {
+    rule = !!rule;
+    if (including === null)
+      including = rule;
+    if (including !== rule)
+      // This error message is copies from MongoDB shell
+      throw MinimongoError("You cannot currently mix including and excluding fields.");
+    projectionRules.push(keyPath.split('.'));
+  });
+
+  // XXX do these functions share too much in common?
+  if (including)
+    return function (doc) {
+      var result = {};
+
+      _.each(projectionRules, function (keyPath) {
+        var target = result;
+        var docTarget = doc;
+        for (var i = 0; i < keyPath.length - 1; i++) {
+          var key = keyPath[i];
+          // This block simulates MongoDB behavior for different edge-cases when
+          // object on certain path wasn't found or array found instead of an
+          // object, or vice-versa.
+          if (!_.has(target, key)) {
+            if (_.isArray(docTarget[key])) {
+              target[key] = [];
+              docTarget = undefined;
+              break;
+            } else if (_.isObject(docTarget[key]))
+              target[key] = {};
+            else {
+              docTarget = undefined;
+              break;
+            }
+          }
+
+          target = target[key];
+          docTarget = docTarget[key];
+        }
+
+        if (keyPath.length > 0 && docTarget && _.has(docTarget, _.last(keyPath)))
+          target[_.last(keyPath)] = docTarget[_.last(keyPath)];
+      });
+
+      if (_idProjection && _.has(doc, '_id'))
+        result._id = doc._id;
+
+      return result;
+    };
+  else
+    return function (doc) {
+      // XXX Deep copy on this level might be a slowing factor,
+      // In fact we need it only in case of nested excluded fields.
+      var result = EJSON.clone(doc);
+
+      _.each(projectionRules, function (keyPath) {
+        var target = result;
+        var docTarget = doc;
+        for (var i = 0; i < keyPath.length - 1; i++) {
+          var key = keyPath[i];
+          if (!_.has(target, key)) {
+            break;
+          }
+
+          target = target[key];
+          docTarget = docTarget[key];
+        }
+
+        if (keyPath.length > 0)
+          delete target[_.last(keyPath)];
+      });
+
+      if (!_idProjection)
+        delete result._id;
+
+      return result;
+    };
 };

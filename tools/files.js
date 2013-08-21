@@ -6,20 +6,53 @@
 
 var fs = require("fs");
 var path = require('path');
+var os = require('os');
+var util = require('util');
 var _ = require('underscore');
-var zlib = require("zlib");
-var tar = require("tar");
 var Future = require('fibers/future');
-var request = require('request');
-
-var fstream = require('fstream');
+var sourcemap = require('source-map');
+var sourcemap_support = require('source-map-support');
 
 var cleanup = require('./cleanup.js');
+var buildmessage = require('./buildmessage.js');
+
+var parsedSourceMaps = {};
+var nextStackFilenameCounter = 1;
+var retrieveSourceMap = function (pathForSourceMap) {
+  if (_.has(parsedSourceMaps, pathForSourceMap))
+    return {map: parsedSourceMaps[pathForSourceMap]};
+  return null;
+};
+
+sourcemap_support.install({
+  // Use the source maps specified to runJavaScript instead of parsing source
+  // code for them.
+  retrieveSourceMap: retrieveSourceMap,
+  // For now, don't fix the source line in uncaught exceptions, because we
+  // haven't fixed handleUncaughtExceptions in source-map-support to properly
+  // locate the source files.
+  handleUncaughtExceptions: false
+});
+
 
 var files = exports;
 _.extend(exports, {
   // A sort comparator to order files into load order.
   sort: function (a, b) {
+    // XXX HUGE HACK --
+    // push html (template) files ahead of everything else. this is
+    // important because the user wants to be able to say
+    // Template.foo.events = { ... }
+    //
+    // maybe all of the templates should go in one file? packages should
+    // probably have a way to request this treatment (load order dependency
+    // tags?) .. who knows.
+    var ishtml_a = path.extname(a) === '.html';
+    var ishtml_b = path.extname(b) === '.html';
+    if (ishtml_a !== ishtml_b) {
+      return (ishtml_a ? -1 : 1);
+    }
+
     // main.* loaded last
     var ismain_a = (path.basename(a).indexOf('main.') === 0);
     var ismain_b = (path.basename(b).indexOf('main.') === 0);
@@ -28,8 +61,10 @@ _.extend(exports, {
     }
 
     // /lib/ loaded first
-    var islib_a = (a.indexOf(path.sep + 'lib' + path.sep) !== -1);
-    var islib_b = (b.indexOf(path.sep + 'lib' + path.sep) !== -1);
+    var islib_a = (a.indexOf(path.sep + 'lib' + path.sep) !== -1 ||
+                   a.indexOf('lib' + path.sep) === 0);
+    var islib_b = (b.indexOf(path.sep + 'lib' + path.sep) !== -1 ||
+                   b.indexOf('lib' + path.sep) === 0);
     if (islib_a !== islib_b) {
       return (islib_a ? -1 : 1);
     }
@@ -43,83 +78,6 @@ _.extend(exports, {
 
     // otherwise alphabetical
     return (a < b ? -1 : 1);
-  },
-
-  // Returns true if this is a file we should maybe care about (stat it,
-  // descend if it is a directory, etc).
-  pre_filter: function (filename) {
-    if (!filename) { return false; }
-    // no . files
-    var base = path.basename(filename);
-    if (base && base[0] === '.') { return false; }
-
-    // XXX
-    // first, we only want to exclude APP_ROOT/public, not some deeper public
-    // second, we don't really like this at all
-    // third, we don't update the app now if anything here changes
-    if (base === 'public') { return false; }
-
-    return true;
-  },
-
-  // Returns true if this is a file we should monitor.
-  // Iterate over all the interesting files, applying 'func' to each
-  // file path. 'extensions' is an array of extensions to include (eg
-  // ['.html', '.js'])
-  file_list_async: function (filepath, extensions, func) {
-    if (!files.pre_filter(filepath)) { return; }
-    fs.stat(filepath, function(err, stats) {
-      if (err) {
-        // XXX!
-        return;
-      }
-
-      if (stats.isDirectory()) {
-        fs.readdir(filepath, function(err, fileNames) {
-          if(err) {
-            // XXX!
-            return;
-          }
-
-          _.each(fileNames, function (fileName) {
-            files.file_list_async(path.join(filepath, fileName),
-                                  extensions, func);
-          });
-        });
-      } else if (files.findExtension(extensions, filepath)) {
-        func(filepath);
-      }
-    });
-  },
-
-  file_list_sync: function (filepath, extensions) {
-    var ret = [];
-    if (!files.pre_filter(filepath)) { return ret; }
-    var stats = fs.statSync(filepath);
-    if (stats.isDirectory()) {
-      var fileNames = fs.readdirSync(filepath);
-      _.each(fileNames, function (fileName) {
-        ret = ret.concat(files.file_list_sync(
-          path.join(filepath, fileName), extensions));
-      });
-    } else if (files.findExtension(extensions, filepath)) {
-      ret.push(filepath);
-    }
-
-    return ret;
-  },
-
-  // given a list of extensions and a path, return the file extension
-  // provided in the list. If it doesn't find it, return null.
-  findExtension: function (extensions, filepath) {
-    var len = filepath.length;
-    for (var i = 0; i < extensions.length; ++i) {
-      var ext = extensions[i];
-      if (filepath.indexOf(ext, len - ext.length) !== -1){
-        return ext;
-      }
-    }
-    return null;
   },
 
   // given a path, returns true if it is a meteor application (has a
@@ -139,14 +97,6 @@ _.extend(exports, {
     } catch (e) {
       return false;
     }
-  },
-
-  // given a path, returns true if it is a meteor package (is a
-  // directory with a 'packages.js' file). false otherwise.
-  //
-  // Note that a directory can be both a package _and_ an application.
-  is_package_dir: function (filepath) {
-    return fs.existsSync(path.join(filepath, 'package.js'));
   },
 
   // given a predicate function and a starting path, traverse upwards
@@ -378,7 +328,9 @@ _.extend(exports, {
   },
 
   // Make a temporary directory. Returns the path to the newly created
-  // directory. We clean up on exit.
+  // directory. Only the current user is allowed to read or write the
+  // files in the directory (or add files to it.) The directory will
+  // be cleaned up an exit.
   mkdtemp: function (prefix) {
     var make = function () {
       prefix = prefix || 'meteor-temp-';
@@ -395,7 +347,7 @@ _.extend(exports, {
         var dir_path = path.join(
           tmp_dir, prefix + (Math.random() * 0x100000000 + 1).toString(36));
         try {
-          fs.mkdirSync(dir_path, 0755);
+          fs.mkdirSync(dir_path, 0700);
           return dir_path;
         } catch (err) {
           tries--;
@@ -424,6 +376,8 @@ _.extend(exports, {
 
     var future = new Future;
 
+    var tar = require("tar");
+    var zlib = require("zlib");
     var gunzip = zlib.createGunzip()
           .on('error', function (e) {
             future.throw(e);
@@ -459,6 +413,9 @@ _.extend(exports, {
   // be piped as needed.  The tar archive will contain a top-level
   // directory named after dirPath.
   createTarGzStream: function (dirPath) {
+    var tar = require("tar");
+    var fstream = require('fstream');
+    var zlib = require("zlib");
     return fstream.Reader({ path: dirPath, type: 'Directory' }).pipe(
       tar.Pack()).pipe(zlib.createGzip());
   },
@@ -485,6 +442,43 @@ _.extend(exports, {
     var future = new Future;
     // can't just use Future.wrap, because we want to return "body", not
     // "response".
+
+    urlOrOptions = _.clone(urlOrOptions); // we are going to change it
+    var appVersion;
+    try {
+      appVersion = getToolsVersion();
+    } catch(e) {
+      appVersion = 'checkout';
+    }
+
+    // meteorReleaseContext - an option with information about app directory
+    // release versions, etc, is used to get exact Meteor version used.
+    if (urlOrOptions.hasOwnProperty('meteorReleaseContext')) {
+      // Get meteor app release version: if specified in command line args, take
+      // releaseVersion, if not specified, try global meteor version
+      var meteorReleaseContext = urlOrOptions.meteorReleaseContext;
+      appVersion = meteorReleaseContext.releaseVersion;
+
+      if (appVersion === 'none')
+        appVersion = meteorReleaseContext.appReleaseVersion;
+      if (appVersion === 'none')
+        appVersion = 'checkout';
+
+      delete urlOrOptions.meteorReleaseContext;
+    }
+
+    // Get some kind of User Agent: environment information.
+    var ua = util.format('Meteor/%s OS/%s (%s; %s; %s;)',
+              appVersion, os.platform(), os.type(), os.release(), os.arch());
+
+    var headers = {'User-Agent': ua };
+
+    if (_.isObject(urlOrOptions))
+      urlOrOptions.headers = _.extend(headers, urlOrOptions.headers);
+    else
+      urlOrOptions = { url: urlOrOptions, headers: headers };
+
+    var request = require('request');
     request(urlOrOptions, function (error, response, body) {
       if (error)
         future.throw(new files.OfflineError(error));
@@ -495,6 +489,216 @@ _.extend(exports, {
     });
     return future.wait();
   },
+
+  // Use this if you'd like to replace a directory with another directory as
+  // close to atomically as possible. It's better than recursively deleting the
+  // target directory first and then renaming. (Failure modes here include
+  // "there's a brief moment where toDir does not exist" and "you can end up
+  // with garbage directories sitting around", but not "there's any time where
+  // toDir exists but is in a state other than initial or final".)
+  renameDirAlmostAtomically: function(fromDir, toDir) {
+    var garbageDir = toDir + '-garbage-' + files._randomToken();
+
+    // Get old dir out of the way, if it exists.
+    var movedOldDir = true;
+    try {
+      fs.renameSync(toDir, garbageDir);
+    } catch (e) {
+      if (e.code !== 'ENOENT')
+        throw e;
+      movedOldDir = false;
+    }
+
+    // Now rename the directory.
+    fs.renameSync(fromDir, toDir);
+
+    // ... and delete the old one.
+    if (movedOldDir)
+      files.rm_recursive(garbageDir);
+  },
+
+  // Run a program synchronously and, assuming it returns success (0),
+  // return whatever it wrote to stdout, as a string. Otherwise (if it
+  // did not exit gracefully and return 0) return null. As node has
+  // chosen not to provide a synchronous binding of wait(2), this
+  // function must be called from inside a fiber.
+  //
+  // `command` is the command to run. (We use node's
+  // child_process.execFile, which appears to take the liberty of
+  // searching your path using some mechanism.) Any additional
+  // arguments should be strings and will be passed as arguments to
+  // `command`. It is not necessary to pass `command` twice to set
+  // argv[0] as it is with the traditional POSIX execl(2).
+  //
+  // XXX 'files' is not the ideal place for this but it'll do for now
+  run: function (command /*, arguments */) {
+    var Future = require('fibers/future');
+    var future = new Future;
+    var args = _.toArray(arguments).slice(1);
+
+    var child_process = require("child_process");
+    child_process.execFile(
+      command, args, {}, function (error, stdout, stderr) {
+        if (! (error === null || error.code === 0))
+          future.return(null);
+        future.return(stdout);
+      });
+    return future.wait();
+  },
+
+  // Return the result of evaluating `code` using `runInThisContext`. `code`
+  // will be wrapped in a closure. You can pass additional values to bind in the
+  // closure in `options.symbols`, the keys being the symbols to bind and the
+  // values being their values. `options.filename` is the filename to use in
+  // exceptions that come from inside this code. `options.sourceMap` is an
+  // optional source map that represents the file.
+  //
+  // The really special thing about this function is that if a parse error
+  // occurs, we will raise an exception of type files.FancySyntaxError, from
+  // which you may read 'message', 'file', 'line', and 'column' attributes
+  // ... v8 is normally reluctant to reveal this information but will write it
+  // to stderr if you pass it an undocumented flag. Unforunately though node
+  // doesn't have dup2 so we can't intercept the write. So instead we use a
+  // completely different parser with a better error handling API. Ah well.
+  // The underlying V8 issue is:
+  //    https://code.google.com/p/v8/issues/detail?id=1281
+  runJavaScript: function (code, options) {
+    if (typeof code !== 'string')
+      throw new Error("code must be a string");
+
+    options = options || {};
+    var filename = options.filename || "<anonymous>";
+    var keys = [], values = [];
+    // don't assume that _.keys and _.values are guaranteed to
+    // enumerate in the same order
+    _.each(options.symbols, function (value, name) {
+      keys.push(name);
+      values.push(value);
+    });
+
+    var stackFilename = filename;
+    if (options.sourceMap) {
+      // We want to generate an arbitrary filename that we use to associate the
+      // file with its source map.
+      stackFilename = "<runJavaScript-" + nextStackFilenameCounter++ + ">";
+    }
+
+    var chunks = [];
+    var header = "(function(" + keys.join(',') + "){";
+    chunks.push(header);
+    if (options.sourceMap) {
+      var consumer = new sourcemap.SourceMapConsumer(options.sourceMap);
+      chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
+        code, consumer));
+    } else {
+      chunks.push(code);
+    }
+    // \n is necessary in case final line is a //-comment
+    chunks.push("\n})");
+
+    var wrapped;
+    var parsedSourceMap = null;
+    if (options.sourceMap) {
+      var node = new sourcemap.SourceNode(null, null, null, chunks);
+      var results = node.toStringWithSourceMap({
+        file: stackFilename
+      });
+      wrapped = results.code;
+      parsedSourceMap = results.map.toJSON();
+      if (options.sourceMapRoot) {
+        // Add the specified root to any root that may be in the file.
+        parsedSourceMap.sourceRoot = path.join(
+          options.sourceMapRoot, parsedSourceMap.sourceRoot || '');
+      }
+      // source-map-support doesn't ever look at the sourcesContent field, so
+      // there's no point in keeping it in memory.
+      delete parsedSourceMap.sourcesContent;
+      parsedSourceMaps[stackFilename] = parsedSourceMap;
+    } else {
+
+      wrapped = chunks.join('');
+    };
+
+    try {
+      // See #runInThisContext
+      //
+      // XXX it'd be nice to runInNewContext so that the code can't
+      // mess with our globals, but objects that come out of
+      // runInNewContext have bizarro antimatter prototype chains and
+      // break 'instanceof Array'. for now, steer clear
+      //
+      // Pass 'true' as third argument if we want the parse error on
+      // stderr (which we don't.)
+      var script = require('vm').createScript(wrapped, stackFilename);
+    } catch (nodeParseError) {
+      if (!(nodeParseError instanceof SyntaxError))
+        throw nodeParseError;
+      // Got a parse error. Unfortunately, we can't actually get the location of
+      // the parse error from the SyntaxError; Node has some hacky support for
+      // displaying it over stderr if you pass an undocumented third argument to
+      // stackFilename, but that's not what we want. See
+      //    https://github.com/joyent/node/issues/3452
+      // for more information. One thing to try (and in fact, what an early
+      // version of this function did) is to actually fork a new node
+      // to run the code and parse its output. We instead run an entirely
+      // different JS parser, from the esprima project, but which at least
+      // has a nice API for reporting errors.
+      var esprima = require('esprima');
+      try {
+        esprima.parse(wrapped);
+      } catch (esprimaParseError) {
+        // Is this actually an Esprima syntax error?
+        if (!('index' in esprimaParseError &&
+              'lineNumber' in esprimaParseError &&
+              'column' in esprimaParseError &&
+              'description' in esprimaParseError)) {
+          throw esprimaParseError;
+        }
+        var err = new files.FancySyntaxError;
+
+        err.message = esprimaParseError.description;
+
+        if (parsedSourceMap) {
+          // XXX this duplicates code in computeGlobalReferences
+          var consumer2 = new sourcemap.SourceMapConsumer(parsedSourceMap);
+          var original = consumer2.originalPositionFor({
+            line: esprimaParseError.lineNumber,
+            column: esprimaParseError.column - 1
+          });
+          if (original.source) {
+            err.file = original.source;
+            err.line = original.line;
+            err.column = original.column + 1;
+            throw err;
+          }
+        }
+
+        err.file = filename;  // *not* stackFilename
+        err.line = esprimaParseError.lineNumber;
+        err.column = esprimaParseError.column;
+        // adjust errors on line 1 to account for our header
+        if (err.line === 1) {
+          err.column -= header.length;
+        }
+        throw err;
+      }
+
+      // What? Node thought that this was a parse error and esprima didn't? Eh,
+      // just throw Node's error and don't care too much about the line numbers
+      // being right.
+      throw nodeParseError;
+    }
+
+    var func = script.runInThisContext();
+
+    return (buildmessage.markBoundary(func)).apply(null, values);
+  },
+
+  // - message: an error message from the parser
+  // - file: filename
+  // - line: 1-based
+  // - column: 1-based
+  FancySyntaxError: function () {},
 
   OfflineError: function (error) {
     this.error = error;

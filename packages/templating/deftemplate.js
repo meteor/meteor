@@ -1,9 +1,17 @@
-Meteor._partials = {};
+Template = {};
+
+var registeredPartials = {};
+
+// If minimongo is available (it's a weak dependency) use its ID stringifier to
+// label branches (so that, eg, ObjectId and strings don't overlap). Otherwise
+// just use the identity function.
+var idStringify = Package.minimongo
+  ? Package.minimongo.LocalCollection._idStringify
+  : function (id) { return id; };
 
 // XXX Handlebars hooking is janky and gross
-
-Meteor._hook_handlebars = function () {
-  Meteor._hook_handlebars = function(){}; // install the hook only once
+var hookHandlebars = function () {
+  hookHandlebars = function(){}; // install the hook only once
 
   var orig = Handlebars._default_helpers.each;
   Handlebars._default_helpers.each = function (arg, options) {
@@ -16,7 +24,7 @@ Meteor._hook_handlebars = function () {
       arg,
       function (item) {
         return Spark.labelBranch(
-          (item && item._id) || Spark.UNIQUE_LABEL, function () {
+          (item && item._id && idStringify(item._id)) || Spark.UNIQUE_LABEL, function () {
             var html = Spark.isolate(_.bind(options.fn, null, item));
             return Spark.setDataContext(item, html);
           });
@@ -70,7 +78,7 @@ var templateObjFromLandmark = function (landmark) {
 };
 
 // XXX forms hooks into this to add "bind"?
-Meteor._template_decl_methods = {
+var templateBase = {
   // methods store data here (event map, etc.).  initialized per template.
   _tmpl_data: null,
   // these functions must be generic (i.e. use `this`)
@@ -101,10 +109,12 @@ Meteor._template_decl_methods = {
   }
 };
 
-Meteor._def_template = function (name, raw_func) {
-  Meteor._hook_handlebars();
+Template.__define__ = function (name, raw_func) {
+  hookHandlebars();
 
-  window.Template = window.Template || {};
+  if (name === '__define__')
+    throw new Error("Sorry, '__define__' is a special name and " +
+                    "cannot be used as the name of a template");
 
   // Define the function assigned to Template.<name>.
 
@@ -137,7 +147,7 @@ Meteor._def_template = function (name, raw_func) {
           // (and receive 'landmark')
           return raw_func(data, {
             helpers: _.extend({}, partial, tmplData.helpers || {}),
-            partials: Meteor._partials,
+            partials: registeredPartials,
             name: name
           });
         });
@@ -164,7 +174,7 @@ Meteor._def_template = function (name, raw_func) {
 
         // support old Template.foo.events = {...} format
         var events =
-              (tmpl.events !== Meteor._template_decl_methods.events ?
+              (tmpl.events !== templateBase.events ?
                tmpl.events : tmplData.events);
         // events need to be inside the landmark, not outside, so
         // that when an event fires, you can retrieve the enclosing
@@ -193,10 +203,10 @@ Meteor._def_template = function (name, raw_func) {
                       "'. Each template needs a unique name.");
 
     Template[name] = partial;
-    _.extend(partial, Meteor._template_decl_methods);
+    _.extend(partial, templateBase);
     partial._tmpl_data = {};
 
-    Meteor._partials[name] = partial;
+    registeredPartials[name] = partial;
   }
 
   // useful for unnamed templates, like body
