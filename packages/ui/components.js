@@ -38,46 +38,13 @@ UI.If = Component.extend({
     // or after)?
   },
   render: function (buf) {
-    // all in rendered()
-  },
-  rendered: function () {
     var self = this;
-    var content =
-          (typeof self.content === 'function' ?
-           self.content() : self.content)
-          || UI.Empty;
-
-    var range = new DomRange;
-    // text nodes here are to avoid problems
-    // from old start/end tracking (copied from each.js)
-    self.append(document.createTextNode(""));
-    self.append(range.getNodes());
-    self.append(document.createTextNode(""));
-
-    var componentAdded = false;
-    Deps.autorun(function () {
-      // re-render if and only if condition changes
-      var condition = Deps.isolateValue(function () {
-        return !! self.get('condition');
-      });
-
-      if (condition) {
-        var comp = content.extend({});
-        self.add(comp);
-        comp.build();
-        var r = new DomRange;
-        r.add(_.toArray(comp._offscreen.childNodes));
-        comp._offscreen = null;
-        comp.isAttached = true;
-        range.add(r);
-        componentAdded = true;
-      } else {
-        if (componentAdded) {
-          range.removeAll();
-          componentAdded = false;
-        }
-      }
+    // re-render if and only if condition changes
+    var condition = Deps.isolateValue(function () {
+      return !! self.get('condition');
     });
+
+    buf.write(condition ? self.content : self.elseContent);
   }
 });
 
