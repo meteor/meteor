@@ -2143,3 +2143,40 @@ Tinytest.add("minimongo - immediate invalidate", function (test) {
 
   c.stop();
 });
+
+
+Tinytest.add("minimongo - count on cursor with limit", function(test){
+  var coll = new LocalCollection(), count;
+
+  coll.insert({_id: 'A'});
+  coll.insert({_id: 'B'});
+  coll.insert({_id: 'C'});
+  coll.insert({_id: 'D'});
+
+  var c = Deps.autorun(function (c) {
+    var cursor = coll.find({_id: {$exists: true}}, {sort: {_id: 1}, limit: 3});
+    count = cursor.count();
+  });
+
+  test.equal(count, 3);
+
+  coll.remove('A'); // still 3 in the collection
+  Deps.flush();
+  test.equal(count, 3);
+
+  coll.remove('B'); // expect count now 2
+  Deps.flush();
+  test.equal(count, 2);
+
+
+  coll.insert({_id: 'A'}); // now 3 again
+  Deps.flush();
+  test.equal(count, 3);
+
+  coll.insert({_id: 'B'}); // now 4 entries, but count should be 3 still
+  Deps.flush();
+  test.equal(count, 3);
+
+  c.stop();
+
+});
