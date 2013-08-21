@@ -2408,7 +2408,7 @@ from the call to `check` or `Match.test`. Examples:
     NonEmptyString = Match.Where(function (x) {
       check(x, String);
       return x.length > 0;
-    }
+    });
     check(arg, NonEmptyString);
 {{/dtdd}}
 </dl>
@@ -2831,8 +2831,7 @@ For example, the `toJSONValue` method for
 <h2 id="http"><span>HTTP</span></h2>
 
 `HTTP` provides an HTTP request API on the client and server.  To use
-these functions, add the HTTP package to your project with `$ meteor add
-http`.
+these functions, add the HTTP package to your project with `$ meteor add http`.
 
 {{> api_box httpcall}}
 

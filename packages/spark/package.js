@@ -8,6 +8,9 @@ Package.on_use(function (api) {
            'ordered-dict', 'deps', 'ejson'],
           'client');
 
+  // If we have minimongo available, use its idStringify function.
+  api.use('minimongo', 'client', {weak: true});
+
   api.export('Spark', 'client');
   api.export('SparkTest', 'client', {testOnly: true});
 

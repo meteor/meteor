@@ -11,6 +11,10 @@ Package.on_use(function (api) {
 
   api.export('Handlebars');
 
+
+  // If we have minimongo available, use its idStringify function.
+  api.use('minimongo', 'client', {weak: true});
+
   // XXX these should be split up into two different slices, not
   // different code with totally different APIs that is sent depending
   // on the architecture

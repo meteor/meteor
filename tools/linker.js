@@ -355,7 +355,7 @@ _.extend(File.prototype, {
       _.each(lines, function (line) {
         var suffix = "\n";
 
-        if (line.length <= width) {
+        if (line.length <= width && line[line.length - 1] !== "\\") {
           suffix = padding.slice(line.length, width) + " // " + num + "\n";
         }
         f(line, suffix, num);

@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "Interaction with the configuration sources for your apps"
+  summary: "Interaction with the configuration sources for your apps",
+  internal: true
 });
 
 Package.on_use(function (api) {

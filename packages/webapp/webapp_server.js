@@ -191,10 +191,14 @@ var runWebAppServer = function () {
   // Auto-compress any json, javascript, or text.
   app.use(connect.compress());
 
+  var getItemPathname = function (itemUrl) {
+    return decodeURIComponent(url.parse(itemUrl).pathname);
+  };
+
   var staticFiles = {};
   _.each(clientJson.manifest, function (item) {
     if (item.url && item.where === "client") {
-      staticFiles[url.parse(item.url).pathname] = {
+      staticFiles[getItemPathname(item.url)] = {
         path: item.path,
         cacheable: item.cacheable,
         // Link from source to its map
@@ -204,7 +208,7 @@ var runWebAppServer = function () {
       if (item.sourceMap) {
         // Serve the source map too, under the specified URL. We assume all
         // source maps are cacheable.
-        staticFiles[url.parse(item.sourceMapUrl).pathname] = {
+        staticFiles[getItemPathname(item.sourceMapUrl)] = {
           path: item.sourceMap,
           cacheable: true
         };
