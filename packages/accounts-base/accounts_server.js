@@ -112,7 +112,7 @@ Accounts.registerLoginHandler(function(options) {
 // Semi-public. Used by other login methods to generate tokens.
 //
 Accounts._generateStampedLoginToken = function () {
-  return {token: Random.id(), when: +(new Date)};
+  return {token: Random.id(), when: (new Date)};
 };
 
 removeLoginToken = function (userId, loginToken) {
