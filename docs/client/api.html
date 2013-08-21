@@ -1408,7 +1408,7 @@ user document:
         { address: "cool@example.com", verified: true },
         { address: "another@different.com", verified: false }
       ],
-      createdAt: 1349761684042,
+      createdAt: Wed Aug 21 2013 15:16:52 GMT-0700 (PDT),
       profile: {
         // The profile is writable by the user by default.
         name: "Joe Schmoe"
@@ -1435,8 +1435,7 @@ treats the following fields specially:
   an email address may belong to at most one user. `verified` is
   a Boolean which is true if the user has [verified the
   address](#accounts_verifyemail) with a token sent over email.
-- `createdAt`: a numeric timestamp (milliseconds since January 1 1970)
-   of the time the user document was created.
+- `createdAt`: the Date at which the user document was created.
 - `profile`: an Object which (by default) the user can create
   and update with any data.
 - `services`: an Object containing data used by particular
