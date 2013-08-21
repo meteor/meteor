@@ -11,7 +11,8 @@ Meteor.render = function (htmlFunc) {
 Meteor.renderList = function (cursor, itemFunc, elseFunc) {
   return Spark.render(function () {
     return Spark.list(cursor, function (item) {
-      return Spark.labelBranch(item._id || null, function () {
+      var label = item._id ? idStringify(item._id) : null;
+      return Spark.labelBranch(label, function () {
         return Spark.isolate(_.bind(itemFunc, null, item));
       });
     }, function () {

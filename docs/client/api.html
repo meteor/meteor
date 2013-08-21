@@ -1249,9 +1249,8 @@ it's up to you to be sure.
 
 {{#api_box_inline fieldspecifiers}}
 
-On the server, queries can specify a particular set of fields to include
-or exclude from the result object.  (The field specifier is currently
-ignored on the client.)
+Queries can specify a particular set of fields to include or exclude from the
+result object.
 
 To exclude certain fields from the result objects, the field specifier
 is a dictionary whose keys are field names and whose values are `0`.
@@ -2409,7 +2408,7 @@ from the call to `check` or `Match.test`. Examples:
     NonEmptyString = Match.Where(function (x) {
       check(x, String);
       return x.length > 0;
-    }
+    });
     check(arg, NonEmptyString);
 {{/dtdd}}
 </dl>
@@ -2832,8 +2831,7 @@ For example, the `toJSONValue` method for
 <h2 id="http"><span>HTTP</span></h2>
 
 `HTTP` provides an HTTP request API on the client and server.  To use
-these functions, add the HTTP package to your project with `$ meteor add
-http`.
+these functions, add the HTTP package to your project with `$ meteor add http`.
 
 {{> api_box httpcall}}
 

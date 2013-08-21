@@ -96,6 +96,11 @@ LocalCollection.Cursor = function (collection, selector, options) {
   }
   self.skip = options.skip;
   self.limit = options.limit;
+  self.fields = options.fields;
+
+  if (self.fields)
+    self.projection_f = LocalCollection._compileProjection(self.fields);
+
   if (options.transform && typeof Deps !== "undefined")
     self._transform = Deps._makeNonreactive(options.transform);
   else
@@ -151,6 +156,8 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
 
   while (self.cursor_pos < self.db_objects.length) {
     var elt = EJSON.clone(self.db_objects[self.cursor_pos++]);
+    if (self.projection_f)
+      elt = self.projection_f(elt);
     if (self._transform)
       elt = self._transform(elt);
     callback(elt);
@@ -252,8 +259,10 @@ _.extend(LocalCollection.Cursor.prototype, {
       sort_f: ordered && self.sort_f,
       results_snapshot: null,
       ordered: ordered,
-      cursor: this,
-      observeChanges: options.observeChanges
+      cursor: self,
+      observeChanges: options.observeChanges,
+      fields: self.fields,
+      projection_f: self.projection_f
     };
     var qid;
 
@@ -270,15 +279,24 @@ _.extend(LocalCollection.Cursor.prototype, {
     // wrap callbacks we were passed. callbacks only fire when not paused and
     // are never undefined (except that query.moved is undefined for unordered
     // callbacks).
+    // Filters out blacklisted fields according to cursor's projection.
+    // XXX wrong place for this?
 
     // furthermore, callbacks enqueue until the operation we're working on is
     // done.
-    var wrapCallback = function (f) {
+    var wrapCallback = function (f, fieldsIndex, ignoreEmptyFields) {
       if (!f)
         return function () {};
       return function (/*args*/) {
         var context = this;
         var args = arguments;
+
+        if (fieldsIndex !== undefined && self.projection_f) {
+          args[fieldsIndex] = self.projection_f(args[fieldsIndex]);
+          if (ignoreEmptyFields && _.isEmpty(args[fieldsIndex]))
+            return;
+        }
+
         if (!self.collection.paused) {
           self.collection._observeQueue.queueTask(function () {
             f.apply(context, args);
@@ -286,18 +304,19 @@ _.extend(LocalCollection.Cursor.prototype, {
         }
       };
     };
-    query.added = wrapCallback(options.added);
-    query.changed = wrapCallback(options.changed);
+    query.added = wrapCallback(options.added, 1);
+    query.changed = wrapCallback(options.changed, 1, true);
     query.removed = wrapCallback(options.removed);
     if (ordered) {
       query.moved = wrapCallback(options.moved);
-      query.addedBefore = wrapCallback(options.addedBefore);
+      query.addedBefore = wrapCallback(options.addedBefore, 1);
       query.movedBefore = wrapCallback(options.movedBefore);
     }
 
     if (!options._suppress_initial && !self.collection.paused) {
       _.each(query.results, function (doc, i) {
         var fields = EJSON.clone(doc);
+
         delete fields._id;
         if (ordered)
           query.addedBefore(doc._id, fields, null);
@@ -427,7 +446,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
   }
   var id = LocalCollection._idStringify(doc._id);
 
-  if (_.has(self.docs, doc._id))
+  if (_.has(self.docs, id))
     throw MinimongoError("Duplicate _id '" + doc._id + "'");
 
   self._saveOriginal(id, undefined);
@@ -1005,3 +1024,125 @@ LocalCollection._observeOrderedFromObserveChanges =
   suppressed = false;
   return handle;
 };
+
+LocalCollection._compileProjection = function (fields) {
+  if (!_.isObject(fields))
+    throw MinimongoError("fields option must be an object");
+
+  // Check passed projection fields' keys:
+  // If you have two rules such as 'foo.bar' and 'foo.bar.baz', then the
+  // result becomes ambiguous. If that happens, there is a probability you are
+  // doing something wrong, framework should notify you about such mistake
+  // earlier on cursor compilation step than later during runtime.
+  // Note, that real mongo doesn't do anything about it and the later rule
+  // appears in projection project, more priority it takes.
+  //
+  // Example, assume following in mongo shell:
+  // > db.coll.insert({ a: { b: 23, c: 44 } })
+  // > db.coll.find({}, { 'a': 1, 'a.b': 1 })
+  // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23 } }
+  // > db.coll.find({}, { 'a.b': 1, 'a': 1 })
+  // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23, "c" : 44 } }
+  //
+  // Note, how second time the return set of keys is different.
+  var keyPaths = _.keys(fields);
+  _.each(keyPaths, function (keyPath) {
+    _.each(keyPaths, function (anotherKeyPath) {
+      var idx = keyPath.indexOf(anotherKeyPath);
+      // check if one key is path-prefix of another (like "abra" and
+      // "abra.cadabra", but not "abra" and "abrab.ra")
+      if (keyPath !== anotherKeyPath && !idx && keyPath[anotherKeyPath.length] === '.')
+        throw MinimongoError("both " + keyPath + " and " + anotherKeyPath +
+         " found in fields option, using both of them may trigger " +
+         "unexpected behavior. Did you mean to use only one of them?");
+    });
+  });
+
+  if (_.any(_.values(fields), function (x) {
+      return _.indexOf([1, 0, true, false], x) === -1; }))
+    throw MinimongoError("Projection values should be one of 1, 0, true, or false");
+
+  var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
+  delete fields._id;
+  var including = null; // Unknown
+  var projectionRules = [];
+
+  _.each(fields, function (rule, keyPath) {
+    rule = !!rule;
+    if (including === null)
+      including = rule;
+    if (including !== rule)
+      // This error message is copies from MongoDB shell
+      throw MinimongoError("You cannot currently mix including and excluding fields.");
+    projectionRules.push(keyPath.split('.'));
+  });
+
+  // XXX do these functions share too much in common?
+  if (including)
+    return function (doc) {
+      var result = {};
+
+      _.each(projectionRules, function (keyPath) {
+        var target = result;
+        var docTarget = doc;
+        for (var i = 0; i < keyPath.length - 1; i++) {
+          var key = keyPath[i];
+          // This block simulates MongoDB behavior for different edge-cases when
+          // object on certain path wasn't found or array found instead of an
+          // object, or vice-versa.
+          if (!_.has(target, key)) {
+            if (_.isArray(docTarget[key])) {
+              target[key] = [];
+              docTarget = undefined;
+              break;
+            } else if (_.isObject(docTarget[key]))
+              target[key] = {};
+            else {
+              docTarget = undefined;
+              break;
+            }
+          }
+
+          target = target[key];
+          docTarget = docTarget[key];
+        }
+
+        if (keyPath.length > 0 && docTarget && _.has(docTarget, _.last(keyPath)))
+          target[_.last(keyPath)] = docTarget[_.last(keyPath)];
+      });
+
+      if (_idProjection && _.has(doc, '_id'))
+        result._id = doc._id;
+
+      return result;
+    };
+  else
+    return function (doc) {
+      // XXX Deep copy on this level might be a slowing factor,
+      // In fact we need it only in case of nested excluded fields.
+      var result = EJSON.clone(doc);
+
+      _.each(projectionRules, function (keyPath) {
+        var target = result;
+        var docTarget = doc;
+        for (var i = 0; i < keyPath.length - 1; i++) {
+          var key = keyPath[i];
+          if (!_.has(target, key)) {
+            break;
+          }
+
+          target = target[key];
+          docTarget = docTarget[key];
+        }
+
+        if (keyPath.length > 0)
+          delete target[_.last(keyPath)];
+      });
+
+      if (!_idProjection)
+        delete result._id;
+
+      return result;
+    };
+};
+

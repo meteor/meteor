@@ -2,6 +2,13 @@ Template = {};
 
 var registeredPartials = {};
 
+// If minimongo is available (it's a weak dependency) use its ID stringifier to
+// label branches (so that, eg, ObjectId and strings don't overlap). Otherwise
+// just use the identity function.
+var idStringify = Package.minimongo
+  ? Package.minimongo.LocalCollection._idStringify
+  : function (id) { return id; };
+
 // XXX Handlebars hooking is janky and gross
 var hookHandlebars = function () {
   hookHandlebars = function(){}; // install the hook only once
@@ -17,7 +24,7 @@ var hookHandlebars = function () {
       arg,
       function (item) {
         return Spark.labelBranch(
-          (item && item._id) || Spark.UNIQUE_LABEL, function () {
+          (item && item._id && idStringify(item._id)) || Spark.UNIQUE_LABEL, function () {
             var html = Spark.isolate(_.bind(options.fn, null, item));
             return Spark.setDataContext(item, html);
           });

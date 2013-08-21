@@ -1,4 +1,3 @@
-
 ## vNEXT
 
 ## v0.6.5
@@ -57,7 +56,7 @@
 * Move HTTP serving out of the server bootstrap and into the `webapp`
   package. This allows building Meteor apps that are not web servers
   (eg. command line tools, DDP clients, etc.). Connect middlewares can
-  now be registered on the new `WebApp.connectHooks` instead of the
+  now be registered on the new `WebApp.connectHandlers` instead of the
   old `__meteor_bootstrap__.app`.
 
 * The entire Meteor build process now has first-class source map
