@@ -598,11 +598,16 @@ _.extend(Session.prototype, {
         self._setLoginToken(newToken, oldToken);
       };
 
+      var closeAll = function (tokens) {
+        self._closeAllForTokens(tokens);
+      };
+
       var invocation = new MethodInvocation({
         isSimulation: false,
         userId: self.userId,
         setUserId: setUserId,
         _setLoginToken: setLoginToken,
+        _closeAllForTokens: closeAll,
         unblock: unblock,
         sessionData: self.sessionData
       });
@@ -660,6 +665,11 @@ _.extend(Session.prototype, {
   _setLoginToken: function (newToken, oldToken) {
     var self = this;
     self.server._loginTokenChanged(self, newToken, oldToken);
+  },
+
+  _closeAllForTokens: function (tokens) {
+    var self = this;
+    self.server._closeAllForTokens(tokens);
   },
 
   // Sets the current user id in all appropriate contexts and reruns
@@ -1333,6 +1343,7 @@ _.extend(Server.prototype, {
   },
 
   _loginTokenChanged: function (session, newToken, oldToken) {
+    var self = this;
     if (oldToken) {
       // Remove the session from the list of open sessions for the old token.
       self.sessionsByLoginToken[oldToken] = _.without(
@@ -1343,6 +1354,19 @@ _.extend(Server.prototype, {
     if (! _.has(self.sessionsByLoginToken, newToken))
       self.sessionsByLoginToken[newToken] = [];
     self.sessionsByLoginToken[newToken].push(session.id);
+  },
+
+  _closeAllForTokens: function (tokens) {
+    var self = this;
+    _.each(tokens, function (token) {
+      if (_.has(self.sessionsByLoginToken, token)) {
+        _.each(self.sessionsByLoginToken[token], function (sessionId) {
+          self.sessions[sessionId].cleanup();
+          self.sessions[sessionId].destroy();
+          delete self.sessions[sessionId];
+        });
+      }
+    });
   }
 });
 

@@ -33,6 +33,9 @@ MethodInvocation = function (options) {
   // deleted, etc.
   this._setLoginToken = options._setLoginToken || function () {};
 
+  // Closes all open connections associated with the given tokens.
+  this._closeAllForTokens = options._closeAllForTokens || function () {};
+
   // Scratch data scoped to this connection (livedata_connection on the
   // client, livedata_session on the server). This is only used
   // internally, but we should have real and documented API for this
