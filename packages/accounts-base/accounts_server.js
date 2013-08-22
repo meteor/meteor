@@ -74,15 +74,17 @@ Meteor.methods({
     var result = tryAllLoginHandlers(options);
     if (result !== null) {
       this.setUserId(result.id);
-      this._sessionData.loginToken = result.token;
+      this._setLoginToken(result.token);
     }
     return result;
   },
 
   logout: function() {
-    if (this._sessionData.loginToken && this.userId)
-      removeLoginToken(this.userId, this._sessionData.loginToken);
+    var token = this._getLoginToken();
+    if (token && this.userId)
+      removeLoginToken(this.userId, token);
     this.setUserId(null);
+    this._setLoginToken(null);
   }
 });
 
@@ -115,7 +117,7 @@ Accounts._generateStampedLoginToken = function () {
   return {token: Random.id(), when: (new Date)};
 };
 
-removeLoginToken = function (userId, loginToken) {
+var removeLoginToken = function (userId, loginToken) {
   Meteor.users.update(userId, {
     $pull: {
       "services.resume.loginTokens": { "token": loginToken }

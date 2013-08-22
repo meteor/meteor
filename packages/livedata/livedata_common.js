@@ -29,6 +29,10 @@ MethodInvocation = function (options) {
   // reruns subscriptions
   this._setUserId = options.setUserId || function () {};
 
+  // saves the login token so we can delete it later when the user logs out, is
+  // deleted, etc.
+  this._setLoginToken = options._setLoginToken || function () {};
+
   // Scratch data scoped to this connection (livedata_connection on the
   // client, livedata_session on the server). This is only used
   // internally, but we should have real and documented API for this
@@ -48,6 +52,13 @@ _.extend(MethodInvocation.prototype, {
       throw new Error("Can't call setUserId in a method after calling unblock");
     self.userId = userId;
     self._setUserId(userId);
+  },
+  _setLoginToken: function (token) {
+    this._setLoginToken(token, this._sessionData.loginToken);
+    this._sessionData.loginToken = token;
+  },
+  _getLoginToken: function (token) {
+    return this._sessionData.loginToken;
   }
 });
 

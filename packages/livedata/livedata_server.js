@@ -594,9 +594,15 @@ _.extend(Session.prototype, {
         self._setUserId(userId);
       };
 
+      var setLoginToken = function (newToken, oldToken) {
+        self._setLoginToken(newToken, oldToken);
+      };
+
       var invocation = new MethodInvocation({
         isSimulation: false,
-        userId: self.userId, setUserId: setUserId,
+        userId: self.userId,
+        setUserId: setUserId,
+        _setLoginToken: setLoginToken,
         unblock: unblock,
         sessionData: self.sessionData
       });
@@ -649,6 +655,11 @@ _.extend(Session.prototype, {
         });
       }
     });
+  },
+
+  _setLoginToken: function (newToken, oldToken) {
+    var self = this;
+    self.server._loginTokenChanged(self, newToken, oldToken);
   },
 
   // Sets the current user id in all appropriate contexts and reruns
@@ -1026,6 +1037,12 @@ Server = function () {
 
   self.sessions = {}; // map from id to session
 
+  // Keeps track of the open connections associated with particular login
+  // tokens. Used for logging out all a user's open connections, expiring login
+  // tokens, etc.
+  self.sessionsByLoginToken = {};
+
+
   self.stream_server = new StreamServer;
 
   self.stream_server.register(function (socket) {
@@ -1269,17 +1286,26 @@ _.extend(Server.prototype, {
       var setUserId = function() {
         throw new Error("Can't call setUserId on a server initiated method call");
       };
+      var setLoginToken = function () {
+        throw new Error("Can't call _setLoginToken on a server " +
+                        "initiated method call");
+      };
       var currentInvocation = DDP._CurrentInvocation.get();
       if (currentInvocation) {
         userId = currentInvocation.userId;
         setUserId = function(userId) {
           currentInvocation.setUserId(userId);
         };
+        setLoginToken = function (newToken, oldToken) {
+          currentInvocation._setLoginToken(newToken, oldToken);
+        };
       }
 
       var invocation = new MethodInvocation({
         isSimulation: false,
-        userId: userId, setUserId: setUserId,
+        userId: userId,
+        setUserId: setUserId,
+        _setLoginToken: setLoginToken,
         sessionData: self.sessionData
       });
       try {
@@ -1304,6 +1330,19 @@ _.extend(Server.prototype, {
     if (exception)
       throw exception;
     return result;
+  },
+
+  _loginTokenChanged: function (session, newToken, oldToken) {
+    if (oldToken) {
+      // Remove the session from the list of open sessions for the old token.
+      self.sessionsByLoginToken[oldToken] = _.without(
+        self.sessionsByLoginToken[oldToken],
+        session.id
+      );
+    }
+    if (! _.has(self.sessionsByLoginToken, newToken))
+      self.sessionsByLoginToken[newToken] = [];
+    self.sessionsByLoginToken[newToken].push(session.id);
   }
 });
 
