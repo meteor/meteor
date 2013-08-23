@@ -174,6 +174,18 @@ Meteor.logout = function (callback) {
   });
 };
 
+Meteor._logoutAll = function (callback) {
+  Meteor.apply('_logoutAll', [], {wait: true}, function (error, result) {
+    if (error) {
+      callback && callback(error);
+    } else {
+      // The method should return a new valid token that we should start using.
+      makeClientLoggedIn(Meteor.userId(), result.token);
+      callback && callback();
+    }
+  });
+};
+
 ///
 /// LOGIN SERVICES
 ///

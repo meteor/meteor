@@ -599,7 +599,7 @@ _.extend(Session.prototype, {
       };
 
       var closeAll = function (tokens) {
-        self._closeAllForTokens(tokens);
+        self._closeAllForTokens(tokens, [self.id]);
       };
 
       var invocation = new MethodInvocation({
@@ -669,7 +669,7 @@ _.extend(Session.prototype, {
 
   _closeAllForTokens: function (tokens) {
     var self = this;
-    self.server._closeAllForTokens(tokens);
+    self.server._closeAllForTokens(tokens, [self.id]);
   },
 
   // Sets the current user id in all appropriate contexts and reruns
@@ -1356,14 +1356,18 @@ _.extend(Server.prototype, {
     self.sessionsByLoginToken[newToken].push(session.id);
   },
 
-  _closeAllForTokens: function (tokens) {
+  // Close all open sessions associated with any of the tokens in `tokens`,
+  // except for sessions with ids in `excludeSessions`.
+  _closeAllForTokens: function (tokens, excludeSessions) {
     var self = this;
     _.each(tokens, function (token) {
       if (_.has(self.sessionsByLoginToken, token)) {
         _.each(self.sessionsByLoginToken[token], function (sessionId) {
-          self.sessions[sessionId].cleanup();
-          self.sessions[sessionId].destroy();
-          delete self.sessions[sessionId];
+          if (_.indexOf(excludeSessions, sessionId) === -1) {
+            self.sessions[sessionId].cleanup();
+            self.sessions[sessionId].destroy();
+            delete self.sessions[sessionId];
+          }
         });
       }
     });

@@ -89,9 +89,8 @@ Meteor.methods({
   },
 
   // Nuke everything: delete all the user's tokens and close all open
-  // connections logged in as this user. XXX Should eventually get a fresh new
-  // token on the connection that called it and not get closed.
-  logoutAll: function () {
+  // connections logged in as this user.
+  _logoutAll: function () {
     var user = Meteor.users.findOne(this.userId);
     if (user) {
       var tokens = user.services.resume.loginTokens;
@@ -101,6 +100,15 @@ Meteor.methods({
       this._closeAllForTokens(_.map(tokens, function (token) {
         return token.token;
       }));
+
+      var newToken = Accounts._generateStampedLoginToken();
+      Meteor.users.update(this.userId, {
+        $push: {
+          "services.resume.loginTokens": newToken
+        }
+      });
+      this._setLoginToken(newToken);
+      return newToken;
     }
   }
 });
