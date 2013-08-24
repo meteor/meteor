@@ -89,8 +89,9 @@ Meteor.methods({
   },
 
   // Nuke everything: delete all the user's tokens and close all open
-  // connections logged in as this user.
-  _logoutAll: function () {
+  // connections logged in as this user, except this connection. Returns a fresh
+  // new login token that this client can use.
+  _logoutAllOthers: function () {
     var user = Meteor.users.findOne(this.userId);
     if (user) {
       var tokens = user.services.resume.loginTokens;

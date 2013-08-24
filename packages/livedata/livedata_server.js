@@ -598,6 +598,7 @@ _.extend(Session.prototype, {
         self._setLoginToken(newToken, oldToken);
       };
 
+      // Closes all sessions associated with these tokens except this one.
       var closeAll = function (tokens) {
         self._closeAllForTokens(tokens, [self.id]);
       };

@@ -174,8 +174,8 @@ Meteor.logout = function (callback) {
   });
 };
 
-Meteor._logoutAll = function (callback) {
-  Meteor.apply('_logoutAll', [], {wait: true}, function (error, result) {
+Meteor._logoutAllOthers = function (callback) {
+  Meteor.apply('_logoutAllOthers', [], {wait: true}, function (error, result) {
     if (error) {
       callback && callback(error);
     } else {
