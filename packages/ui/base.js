@@ -8,10 +8,35 @@ _extend = function (tgt, src) {
   return tgt;
 };
 
+// Defines a single non-enumerable, read-only property
+// on `tgt`.
+// It won't be non-enumerable in IE 8, so its
+// non-enumerability can't be relied on for logic
+// purposes, it just makes things prettier in
+// the dev console.
+var _defineNonEnum = function (tgt, name, value) {
+  try {
+    Object.defineProperty(tgt, name, {value: value});
+  } catch (e) {
+    // IE < 9
+    tgt[name] = value;
+  }
+  return tgt;
+};
+
+// Make `typeName` a non-empty string starting with an ASCII
+// letter or underscore and containing only letters, underscores,
+// and numbers.  This makes it safe to insert into evaled JS
+// code.
+var sanitizeTypeName = function (typeName) {
+  return String(typeName).replace(/^[^a-zA-Z_]|[^a-zA-Z_0-9]+/g,
+                                  '') || 'Component';
+};
+
 UI = {
   nextGuid: 2, // Component is 1!
 
-  // Components and Component "classes" are the same thing, just
+  // Components and Component kinds are the same thing, just
   // objects; there are no constructor functions, no `new`,
   // and no `instanceof`.  A Component object is like a class,
   // until it is inited, at which point it becomes more like
@@ -32,52 +57,74 @@ UI = {
     // are a little mysterious, but a function name in
     // the source code (as in `function Component() {}`)
     // seems to be reliable and high precedence.
-    return _extend(new constr, {_constr: constr});
+    return _defineNonEnum(new constr, '_constr', constr);
   })(function Component() {}),
 
   isComponent: function (obj) {
-    return obj && obj.isa === UI.Component.isa;
+    return obj && UI.isKindOf(obj, UI.Component);
   },
-  attachRoot: function (comp, parentNode, beforeNode) {
-    comp._requireNotDestroyed();
-
-    if (! comp.isInited)
-      comp.makeRoot();
-
-    if (comp.parent)
-      throw new Error("Component is inited with a parent (not a root)");
-
-    comp._attach(parentNode, beforeNode);
-  },
-  // global append to body; experimental
-  append: function (comp) {
-    UI.attachRoot(comp, document.body);
+  // `UI.isKindOf(a, b)` where `a` and `b` are Components
+  // (or kinds) asks if `a` is or descends from
+  // (transitively extends) `b`.
+  isKindOf: function (a, b) {
+    while (a) {
+      if (a === b)
+        return true;
+      a = a._super;
+    }
+    return false;
   }
+  // use these to produce error messages for developers
+  // (though throwing a more specific error message is
+  // even better)
+//  _requireNotDestroyed: function (c) {
+//    if (c.isDestroyed)
+//      throw new Error("Component has been destroyed; can't perform this operation");
+//  },
+//  _requireInited: function (c) {
+//    if (! c.isInited)
+//      throw new Error("Component must be inited to perform this operation");
+//  },
+//  _requireDom: function (c) {
+//    if (! c.dom)
+//      throw new Error("Component must be built into DOM to perform this operation");
+//  }
+
 };
 
 Component = UI.Component;
 
 _extend(UI.Component, {
-  // If a Component has a `typeName` property set via `extend`,
+  // If a Component has a `kind` property set via `extend`,
   // we make it use that name when printed in Chrome Dev Tools.
   // If you then extend this Component and don't supply any
-  // new typeName, it should use the same typeName (or the
+  // new `kind`, it should use the same value of kind (or the
   // most specific one in the case of an `extend` chain with
-  // `typeName` set at multiple points).
+  // `kind` set at multiple points).
   //
   // To accomplish this, keeping performance in mind,
-  // any Component where `typeName` is explicitly set
+  // any Component where `kind` is explicitly set
   // also has a function property `_constr` whose source-code
-  // name is `typeName`.  `extend` creates this `_constr`
+  // name is `kind`.  `extend` creates this `_constr`
   // function, which can then be used internally as a
   // constructor to quickly create new instances that
   // pretty-print correctly.
-  typeName: "Component",
-  _constr: function Component() {},
-
-  _super: null,
+  kind: "Component",
   guid: "1",
+  data: null,
+  dom: null,
+  // Has this Component ever been inited?
+  isInited: false,
+  // Has this Component been destroyed?  Only inited Components
+  // can be destroyed.
+  isDestroyed: false,
+  // Component that created this component (typically also
+  // the DOM containment parent).
+  // No child pointers (except in `dom`).
+  parent: null,
 
+  // create a new subkind or instance whose proto pointer
+  // points to this, with additional props set.
   extend: function (props) {
     // this function should never cause `props` to be
     // mutated in case people want to reuse `props` objects
@@ -92,11 +139,11 @@ _extend(UI.Component, {
 
     var constr;
     var constrMade = false;
-    // Any Component with a typeName of "Foo" (say) is given
+    // Any Component with a kind of "Foo" (say) is given
     // a `._constr` of the form `function Foo() {}`.
-    if (props && props.typeName) {
+    if (props && props.kind) {
       constr = Function("return function " +
-                        sanitizeTypeName(props.typeName) +
+                        sanitizeTypeName(props.kind) +
                         "() {};")();
       constrMade = true;
     } else {
@@ -118,116 +165,33 @@ _extend(UI.Component, {
 
     // for efficient Component instantiations, we assign
     // as few things as possible here.
-    c._super = this;
+    _defineNonEnum(c, '_super', this);
     c.guid = String(UI.nextGuid++);
 
     return c;
-  },
-
-  // `x.isa(Foo)` where `x` is a Component returns `true`
-  // if `x` is `Foo` or a Component that descends from
-  // (transitively extends) `Foo`.
-  isa: function (obj) {
-    var x = this;
-    while (x) {
-      if (x === obj)
-        return true;
-      x = x._super;
-    }
-    return false;
   }
 });
 
-Empty = Component.extend({
-  render: function (buf) {}
-});
+_defineNonEnum(UI.Component, '_constr',
+               function Component() {});
+_defineNonEnum(UI.Component, '_super', null);
 
-callChainedCallback = function (comp, propName, orig) {
+//callChainedCallback = function (comp, propName, orig) {
   // Call `comp.foo`, `comp._super.foo`,
   // `comp._super._super.foo`, and so on, but in reverse
   // order, and only if `foo` is an "own property" in each
   // case.  Furthermore, the passed value of `this` should
   // remain `comp` for all calls (which is achieved by
   // filling in `orig` when recursing).
-  if (comp._super)
-    callChainedCallback(comp._super, propName, orig || comp);
+//  if (comp._super)
+//    callChainedCallback(comp._super, propName, orig || comp);
+//
+//  if (comp.hasOwnProperty(propName))
+//    comp[propName].call(orig || comp);
+//};
 
-  if (comp.hasOwnProperty(propName))
-    comp[propName].call(orig || comp);
-};
 
-// Make `typeName` a non-empty string starting with an ASCII
-// letter or underscore and containing only letters, underscores,
-// and numbers.  This makes it safe to insert into evaled JS
-// code.
-var sanitizeTypeName = function (typeName) {
-  return String(typeName).replace(/^[^a-zA-Z_]|[^a-zA-Z_0-9]+/g,
-                                  '') || 'Component';
-};
-
-var SEALED_EMPTY_OBJECT = {};
-if (Object.seal)
-  // IE 9+, FF, Chrome, Safari
-  Object.seal(SEALED_EMPTY_OBJECT);
-
-_extend(UI.Component, {
-  // Has this Component ever been inited?
-  isInited: false,
-  // Has this Component ever been built into DOM nodes?
-  // Implies isInited.
-  isBuilt: false,
-  // Has this Component been destroyed?  Only inited Components
-  // can be destroyed, but built and unbuilt Components
-  // can both be destroyed (and their value of isBuilt
-  // stays the same when they are).
-  isDestroyed: false,
-
-  destroy: function () {
-    if (! this.isInited)
-      throw new Error("Can't destroy an uninited Component");
-
-    if (this.isDestroyed)
-      return;
-
-    this.isDestroyed = true;
-
-    // recursively destroy children as well
-    for (var k in this.children)
-      this.children[k].destroy();
-
-    // clean up any data associated with offscreen nodes
-    if (this._offscreen)
-      $.cleanData(this._offscreen.childNodes);
-
-    // stop all computations (rebuilding and comp.autorun)
-    var comps = this._computations;
-    if (comps)
-      for (var i = 0; i < comps.length; i++)
-        comps[i].stop();
-
-    callChainedCallback(this, 'destroyed');
-  },
-
-  // use this to produce error messages for developers
-  // (though throwing a more specific error message is
-  // even better)
-  _requireNotDestroyed: function () {
-    if (this.isDestroyed)
-      throw new Error("Component has been destroyed; can't perform this operation");
-  },
-
-  _requireInited: function () {
-    if (! this.isInited)
-      throw new Error("Component must be inited to perform this operation");
-  },
-
-  _requireBuilt: function () {
-    if (! this.isBuilt)
-      throw new Error("Component must be built into DOM to perform this operation");
-  }
-
-});
-
+/*
 _extend(UI.Component, {
   // Parent Component in the composition hierarchy.
   // An inited
@@ -1107,7 +1071,7 @@ var compareElementIndex = function (a, b) {
 
 // Returns true if element a contains node b and is not node b.
 var elementContains = function (a, b) {
-  if (a.nodeType !== 1) /* ELEMENT */
+  if (a.nodeType !== 1) // ELEMENT
     return false;
   if (a === b)
     return false;
@@ -1120,7 +1084,7 @@ var elementContains = function (a, b) {
     // IE can't handle b being a text node.  We work around this
     // by doing a direct parent test now.
     b = b.parentNode;
-    if (! (b && b.nodeType === 1)) /* ELEMENT */
+    if (! (b && b.nodeType === 1)) // ELEMENT
       return false;
     if (a === b)
       return true;
@@ -1145,9 +1109,10 @@ var makeSafeDiv = function () {
   var frag = $.buildFragment([div], document);
   return div;
 };
+*/
 
 UI.body = UI.Component.extend({
-  typeName: 'body',
+  kind: 'body',
   contentParts: [],
   render: function (buf) {
     for (var i = 0; i < this.contentParts.length; i++)
