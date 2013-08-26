@@ -1,4 +1,35 @@
 
+UI.renderTo = function (kind, props,
+                        parentNode, beforeNode, parentComp) {
+  if (kind === null)
+    return;
+  if (! UI.isComponent(kind))
+    throw new Error("Expected Component, function, or null");
+  if (kind.isInited)
+    throw new Error("Expected uninited Component");
+  // XXX Handle case where kind is function, be reactive
+  // about it.  Reuse the same DomRange.
+
+  var comp = kind.extend(props);
+  var dom = new DomRange;
+  // Insert new DomRange's start/end markers
+  var nodes = dom.getNodes();
+  for (var i = 0, N = nodes.length; i < N; i++)
+    parentNode.insertBefore(nodes[i], beforeNode);
+
+  comp.dom = dom;
+  comp.isInited = true;
+
+  if (comp.init)
+    comp.init();
+
+  if (comp.render) {
+    var buf = makeRenderBuffer(dom);
+    comp.render(buf);
+    buf.wireUp();
+  }
+};
+
 var ESCAPED_CHARS_UNQUOTED_REGEX = /[&<>]/g;
 var ESCAPED_CHARS_QUOTED_REGEX = /[&<>"]/g;
 
@@ -26,23 +57,7 @@ UI.encodeSpecialEntities = function (text, isQuoted) {
 
 var GT_OR_QUOTE = /[>'"]/;
 
-// Instantiate `comp` with `props` by calling extend, or,
-// in the special case where `comp` is an already-inited
-// component, just return it.  In this latter case, the
-// `props` argument must be falsy.
-constructify = function (comp, props) {
-  if (! comp)
-    throw new Error("No such component");
-  if (props)
-    // comp had better be uninited! (or will throw)
-    return comp.extend(props);
-  else if (comp.isInited)
-    return comp;
-  else
-    return comp.extend();
-};
-
-makeRenderBuffer = function (component, options) {
+makeRenderBuffer = function (range, options) {
   var isPreview = !! options && options.preview;
 
   var strs = [];
