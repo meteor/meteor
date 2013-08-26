@@ -5,9 +5,8 @@ var isValidAttributeName = function (str) {
   return ATTRIBUTE_NAME_REGEX.test(str);
 };
 
-AttributeManager = function (component, dictOrFunc) {
+AttributeManager = function (dictOrFunc) {
   var self = this;
-  self.component = component;
 
   var dict, func;
 
@@ -39,7 +38,7 @@ AttributeManager = function (component, dictOrFunc) {
       throw new Error("Illegal HTML attribute name: " + attrName);
 
     handlers[attrName] = makeAttributeHandler(
-      component, attrName, dict[attrName]);
+      attrName, dict[attrName]);
   }
 };
 
@@ -66,17 +65,11 @@ _extend(AttributeManager.prototype, {
     if (! self.isReactive())
       throw new Error("Can't start a non-reactive AttributeManager");
 
-    var component = self.component;
     var element = self.element;
     var handlers = self.handlers;
 
-    component.autorun(function (c) {
-      if ((! component.isBuilt) ||
-          component.isDestroyed ||
-          ! component.containsElement(element)) {
-        c.stop();
-        return;
-      }
+    // XXX make this be stopped at the right time
+    Deps.autorun(function (c) {
 
       // capture dependencies of this line:
       var newDict = self.func();
@@ -101,7 +94,7 @@ _extend(AttributeManager.prototype, {
             throw new Error("Illegal HTML attribute name: " + attrName);
 
           var h = makeAttributeHandler(
-            component, attrName, newDict[attrName]);
+            attrName, newDict[attrName]);
 
           handlers[attrName] = h;
           h.add(element);
@@ -188,12 +181,10 @@ var ClassHandler = AttributeHandler.extend({
   }
 });
 
-var makeAttributeHandler = function (component, name, value) {
-  //  return new (component.constructor._attributeHandlers[name] ||
-  //               AttributeHandler)(name, value);
-
-  // will need one for 'style' on IE, though modern browsers
+var makeAttributeHandler = function (name, value) {
+  // XXX will need one for 'style' on IE, though modern browsers
   // seem to handle setAttribute ok.
+  // XXX components should be able to hook into this
   if (name === 'class') {
     return new ClassHandler(name, value);
   } else {

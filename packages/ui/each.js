@@ -31,6 +31,23 @@ var moveNode = function (n, parent, next) {
     parent.insertBefore(n, next || null);
 };
 
+// not a UI hook; uses jQuery's html-to-DOM functionality
+// and calls UI hooks
+var insertHtml = function (html, parent, next) {
+  var prev = (next ? next.previousSibling : parent.lastChild);
+  // jQuery does some fancy compatibility stuff here to
+  // insert the HTML as DOM:
+  $(next).before(html);
+  for (var n = (prev ? prev.nextSibling : parent.firstChild);
+       n && (n !== next);
+       n = n.nextSibling)
+    // Call insert on all the nodes, even though they are
+    // already inserted.  We assume the "insertElement" hook
+    // is required to execute immediately, and since it's
+    // idempotent, this works out fine.
+    insertNode(n, parent, n.nextSibling);
+};
+
 var newFragment = function (nodeArray) {
   // jQuery fragments are built specially in
   // IE<9 so that they can safely hold HTML5
@@ -347,6 +364,13 @@ _extend(DomRange.prototype, {
     if (children.hasOwnProperty(id))
       return children[id];
     return null;
+  },
+  getFirstNode: function () {
+    // does not refresh.
+    return this.start;
+  },
+  getLastNode: function () {
+    return this.end;
   }
 });
 

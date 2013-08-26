@@ -2,7 +2,7 @@
 UI.renderTo = function (kind, props,
                         parentNode, beforeNode, parentComp) {
   if (kind === null)
-    return;
+    return null;
   if (! UI.isComponent(kind))
     throw new Error("Expected Component, function, or null");
   if (kind.isInited)
@@ -24,10 +24,12 @@ UI.renderTo = function (kind, props,
     comp.init();
 
   if (comp.render) {
-    var buf = makeRenderBuffer(dom);
+    var buf = makeRenderBuffer();
     comp.render(buf);
-    buf.wireUp();
+    buf.build(comp);
   }
+
+  return comp;
 };
 
 var ESCAPED_CHARS_UNQUOTED_REGEX = /[&<>]/g;
@@ -57,11 +59,11 @@ UI.encodeSpecialEntities = function (text, isQuoted) {
 
 var GT_OR_QUOTE = /[>'"]/;
 
-makeRenderBuffer = function (range, options) {
+makeRenderBuffer = function (options) {
   var isPreview = !! options && options.preview;
 
   var strs = [];
-  var componentsToAttach = null; // {}
+  var componentsToRender = null; // {}
   var randomString = null; // Random.id()
   var commentUid = 1;
   var elementUid = 1;
@@ -110,99 +112,20 @@ makeRenderBuffer = function (range, options) {
     strs.push.apply(strs, arguments);
   };
 
-  var handleComponent = function (comp) {
-    randomString = randomString || Random.id();
-    var commentString = randomString + '_' + (commentUid++);
-    push('<!--', commentString, '-->');
-    componentsToAttach = componentsToAttach || {};
-    componentsToAttach[commentString] = comp;
-    return comp;
-  };
-
   var handle = function (arg) {
     if (arg == null) {
       // nothing to do
     } else if (typeof arg === 'string') {
       // "HTML"
       push(arg);
-    } else if (UI.isComponent(arg)) {
-      // Component
-      if (! arg.isInited)
-        arg = arg.extend();
+    } else if (UI.isComponent(arg) ||
+               (typeof arg) === 'function') {
 
-      return handleComponent(arg);
-    } else if ((typeof arg === 'function') || arg.child) {
-      // `componentFunction`, or
-      // `{child: componentOrFunction, props: object}`
-
-      // In `{child: comp}` with no `props`, it's ok
-      // for `comp` to be already inited.  This lets
-      // you write `{{> foo}}` to insert already-inited
-      // `foo`, with cooperation from the template
-      // compiler (i.e. not emitting an empty props object).
-
-      // `curComp` holds the latest value of the `child`
-      // function if `componentOrFunction` is a function,
-      // or else the value itself if it is not.
-      // In the case where `curComp`
-      // is uninited and we instantiate a copy, `curComp`
-      // is not that copy, it's the original component used
-      // as a prototype.
-      var curComp, props;
-      if (typeof arg === 'function') {
-        curComp = arg;
-        props = null;
-      } else {
-        curComp = arg.child;
-        props = arg.props;
-      }
-
-      if (typeof curComp === 'function') {
-        var compFunc = curComp;
-        // use `Deps.autorun`, not `component.autorun`,
-        // because we *do* want to be stopped when the
-        // enclosing computation is invalidated (i.e.
-        // the rebuilder computation).
-        Deps.autorun(function (c) {
-          // capture dependencies of this line:
-          var comp = compFunc();
-          if (c.firstRun) {
-            // right away
-            curComp = comp;
-          } else {
-            // later (on subsequent runs)...
-            if (! component.isBuilt ||
-                component.isDestroyed ||
-                ! component.hasChild(curChild)) {
-              c.stop();
-            } if (comp !== curComp) {
-              var oldChild = curChild;
-              var oldComp = curComp;
-              curComp = comp;
-              // don't capture any dependencies here
-              Deps.nonreactive(function () {
-                curChild = constructify(curComp, props);
-                if (oldChild === oldComp)
-                  // didn't create the oldChild, just
-                  // used it!  So detach it, don't destroy it.
-                  component.swapChild(oldChild, curChild);
-                else
-                  component.replaceChild(oldChild, curChild);
-              });
-            }
-          }
-        });
-      } else if (! UI.isComponent(curComp)) {
-        throw new Error("Expected function or Component");
-      }
-      // the autorun above closes down over this var:
-      var curChild = constructify(curComp, props);
-      // return something the caller of `buf.write` can't get
-      // any other way if `arg` involved a componentFunction:
-      // the actual component created.  If the arg we are
-      // handling is the last arg to `buf.write`, it will return
-      // this value.
-      return handleComponent(curChild);
+      randomString = randomString || Random.id();
+      var commentString = randomString + '_' + (commentUid++);
+      push('<!--', commentString, '-->');
+      componentsToRender = componentsToRender || {};
+      componentsToRender[commentString] = arg;
     } else if (arg.attrs) {
       // `{attrs: functionOrDictionary }`
       // attrs object inserts zero or more `name="value"` items
@@ -213,7 +136,7 @@ makeRenderBuffer = function (range, options) {
       // they won't cooperate).
       var elemId = null;
 
-      var manager = new AttributeManager(component, arg.attrs);
+      var manager = new AttributeManager(arg.attrs);
 
       if (manager.isReactive()) {
         var elemId = elementUid++;
@@ -239,7 +162,7 @@ makeRenderBuffer = function (range, options) {
       strs.push(' ', manager.getInitialHTML(), ' ');
 
     } else {
-      throw new Error("Expected HTML string, Component, component spec or attrs spec, found: " + arg);
+      throw new Error("Expected HTML string, Component, function, or attrs spec, found: " + arg);
     }
   };
 
@@ -255,26 +178,90 @@ makeRenderBuffer = function (range, options) {
     return strs.join('');
   };
 
-  buf.wireUpDOM = function (root) {
-    var start = root.firstChild;
-    var end = root.lastChild;
+  buf.build = function (component) {
+    var html = buf.getHtml();
 
-    // walk div and replace comments with Components
+    var range = component.dom;
+    // assert: range is empty.
+    var start = range.getFirstNode();
+    var nextNode = start.nextSibling;
+    // jQuery does fancy html-to-DOM compat stuff here:
+    $(start).after(html);
+    // now the DOM elements are physically inside the DomRange,
+    // but they haven't been added yet (so they aren't tracked
+    // and UI hooks haven't been called; they are foreign
+    // matter).
+
+    var wire = function (n) {
+      // returns what ended up in the place of `n`:
+      // component, node, or null
+      if (n.nodeType === 8) { // COMMENT
+        if (componentsToRender) {
+          var kind = componentsToRender[n.nodeValue];
+          if (kind || kind === null) {
+            var comp = UI.renderTo(
+              kind, null,
+              n.parentNode, n, component);
+            n.parentNode.removeChild(n);
+            delete componentsToRender[n.nodeValue];
+            return comp; // may be null
+          }
+        }
+      } else if (n.nodeType === 1) { // ELEMENT
+        if (attrManagersToWire) {
+          // detect elements with reactive attributes
+          for (var i = 0; i < maxDataAttrNumber; i++) {
+            var attrName = dataAttrs[i];
+            var elemId = n.getAttribute(attrName);
+            if (elemId) {
+              var mgr = attrManagersToWire[elemId];
+              if (mgr) {
+                mgr.wire(n);
+                // XXX bad to do this immediately for
+                // some reason?  we used to delay it using
+                // `onNextBuilt`
+                mgr.start();
+              }
+              n.removeAttribute(attrName);
+            }
+          }
+        }
+      }
+      return n;
+    };
+
+    // walk nodes and replace comments with Components
+    var walk = function (parentNode) {
+      // TODO -- this is `recurse` except it just calls `wire`
+      // for the hard stuff.
+    };
+
+    // top level
+    for (var n = start.nextSibling, m;
+         n && n !== nextNode;
+         n = m) {
+      m = n.nextSibling;
+      var result = wire(n);
+      if (result) {
+        if (result.dom)
+          // XXX won't be necessary when DomRange takes
+          // components in:
+          result = result.dom;
+        range.add(result);
+        if (result.firstChild)
+          walk(result);
+      }
+    }
+
 
     var recurse = function (parent) {
       var n = parent.firstChild;
       while (n) {
         var next = n.nextSibling;
         if (n.nodeType === 8) { // COMMENT
-          if (componentsToAttach) {
-            var comp = componentsToAttach[n.nodeValue];
+          if (componentsToRender) {
+            var comp = componentsToRender[n.nodeValue];
             if (comp) {
-              if (parent === root) {
-                if (n === root.firstChild)
-                  start = comp;
-                if (n === root.lastChild)
-                  end = comp;
-              }
               if (! comp.isInited) {
                 component.add(comp);
               } else if (comp.parent !== component) {
@@ -283,7 +270,7 @@ makeRenderBuffer = function (range, options) {
               }
               comp._attach(parent, n);
               parent.removeChild(n);
-              delete componentsToAttach[n.nodeValue];
+              delete componentsToRender[n.nodeValue];
             }
           }
         } else if (n.nodeType === 1) { // ELEMENT
@@ -315,27 +302,22 @@ makeRenderBuffer = function (range, options) {
       }
     };
 
-    if (componentsToAttach || attrManagersToWire)
+    if (componentsToRender || attrManagersToWire)
       recurse(root);
 
     // We should have attached all specified components, but
     // if the comments we generated somehow didn't turn into
     // comments (due to bad HTML) we won't have found them,
     // in which case we clean them up here just to be safe.
-    if (componentsToAttach)
-      for (var k in componentsToAttach)
-        componentsToAttach[k].destroy();
+    //
+    // XXXX revisit when there's "destroy" again
+//    if (componentsToRender)
+//      for (var k in componentsToRender)
+//        componentsToRender[k].destroy();
 
     // aid GC
-    componentsToAttach = null;
+    componentsToRender = null;
     attrManagersToWire = null;
-
-    return {
-      // start and end will both be null if div is empty
-      start: start,
-      end: end
-    };
-
   };
 
   return buf;
