@@ -708,7 +708,7 @@ Spacebars.compile = function (inputString, options) {
     if (path.length === 1)
       compFunc = 'Template[' + toJSLiteral(path[0]) + '] || ' + compFunc;
 
-    return '{child: ' + compFunc + (argCode ? ', props: ' + argCode : '') +
+    return '{kind: ' + compFunc + (argCode ? ', props: ' + argCode : '') +
       '}';
   };
 
