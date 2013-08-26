@@ -207,7 +207,6 @@ _extend(DomRange.prototype, {
                    firstNode.nextSibling);
     }
   },
-
   getNodes: function () {
     this.refresh();
     var afterNode = this.end.nextSibling;
@@ -387,18 +386,16 @@ UI.Each = Component.extend({
     var self = this;
 
     var cursor = self.get();
+    // XXX Avi's code will handle different types of data arg
+    if (! cursor)
+      return;
 
-    var content =
-          (typeof self.content === 'function' ?
-           self.content() : self.content)
-          || UI.Empty;
+    // XXX find `content` via `get()`...
+    var content = self.content;
+    if (typeof content === 'function')
+      content = _.bind(content, self);
 
-    var range = new DomRange;
-    // text nodes here are to avoid problems
-    // from old start/end tracking
-    self.append(document.createTextNode(""));
-    self.append(range.getNodes());
-    self.append(document.createTextNode(""));
+    var range = this.dom;
 
     cursor.observe({
       _no_indices: true,
@@ -407,7 +404,17 @@ UI.Each = Component.extend({
 
         var data = doc;
         var dep = new Deps.Dependency;
-        var comp = content.withData(_extend(
+
+        var r = new DomRange;
+        if (beforeId)
+          beforeId = LocalCollection._idStringify(beforeId);
+        range.add(id, r, beforeId);
+
+        // XXX dynamically rendering a child component
+        // shouldn't be this hard...
+        var comp = UI.renderToRange(
+          content,
+          { data: _extend(
           function () {
             dep.depend();
             return data;
@@ -415,25 +422,16 @@ UI.Each = Component.extend({
             $set: function (v) {
               data = v;
               dep.changed();
-            }}));
+            }
+          }) },
+          r, self);
 
-        self.add(comp);
-        comp.build();
-        var r = new DomRange;
         r.component = comp;
         // XXX emulate hypothetical
         // node.$ui.data() API
         r.data = function () {
           return data;
         };
-        r.add(_.toArray(
-          comp._offscreen.childNodes));
-        comp._offscreen = null;
-        comp.isAttached = true;
-
-        if (beforeId)
-          beforeId = LocalCollection._idStringify(beforeId);
-        range.add(id, r, beforeId);
       },
       removed: function (doc) {
         range.remove(LocalCollection._idStringify(doc._id));

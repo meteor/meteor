@@ -160,9 +160,9 @@ html_scanner = {
         contents, { sourceName: 'Template "' + name + '"' });
 
       results.js += "\nTemplate[" + JSON.stringify(name) +
-        "] = UI.makeTemplate(UI.Component.extend({typeName: " +
+        "] = UI.Component.extend({kind: " +
         JSON.stringify("Template_" + name) + ", render: " +
-        renderFuncCode + "}));\n";
+        renderFuncCode + "});\n";
     } else {
       // <body>
       if (hasAttribs)
@@ -172,7 +172,7 @@ html_scanner = {
         contents, { sourceName: "<body>" });
 
       // We may be one of many `<body>` tags.
-      results.js += "\nUI.body.contentParts.push(UI.Component.extend({render: " + renderFuncCode + "}));\nMeteor.startup(function () { if (! UI.body.isInited) UI.append(UI.body); });\n";
+      results.js += "\nUI.body.contentParts.push(UI.Component.extend({render: " + renderFuncCode + "}));\nMeteor.startup(function () { if (! UI.body.INSTANCE) UI.body.INSTANCE = UI.renderTo(UI.body, null, document.body); });\n";
     }
   }
 };

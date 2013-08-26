@@ -59,7 +59,7 @@ var randomRank = function () {
     return 0;
 };
 
-Template.buttons({
+_.each({
   'click #add': function () {
     var words = ["violet", "unicorn", "flask", "jar", "leitmotif", "rearrange", "right", "ethereal"];
     Items.insert({text: Random.choice(words) + " " + Random.hexString(2), rank: randomRank()});
@@ -77,6 +77,11 @@ Template.buttons({
       Items.update(item._id, {$set: {rank: newRank}});
     }
   }
+}, function (handler, spec) {
+  var space = spec.indexOf(' ');
+  var eventType = spec.slice(0, space);
+  var selector = spec.slice(space+1);
+  $(document).on(eventType, selector, handler);
 });
 
 UI.body.rendered = function () {

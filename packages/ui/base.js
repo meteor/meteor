@@ -57,7 +57,10 @@ UI = {
     // are a little mysterious, but a function name in
     // the source code (as in `function Component() {}`)
     // seems to be reliable and high precedence.
-    return _defineNonEnum(new constr, '_constr', constr);
+    var C = new constr;
+    _defineNonEnum(C, '_constr', constr);
+    _defineNonEnum(C, '_super', null);
+    return C;
   })(function Component() {}),
 
   isComponent: function (obj) {
@@ -73,22 +76,22 @@ UI = {
       a = a._super;
     }
     return false;
-  }
+  },
   // use these to produce error messages for developers
   // (though throwing a more specific error message is
   // even better)
-//  _requireNotDestroyed: function (c) {
-//    if (c.isDestroyed)
-//      throw new Error("Component has been destroyed; can't perform this operation");
-//  },
-//  _requireInited: function (c) {
-//    if (! c.isInited)
-//      throw new Error("Component must be inited to perform this operation");
-//  },
-//  _requireDom: function (c) {
-//    if (! c.dom)
-//      throw new Error("Component must be built into DOM to perform this operation");
-//  }
+  _requireNotDestroyed: function (c) {
+    if (c.isDestroyed)
+      throw new Error("Component has been destroyed; can't perform this operation");
+  },
+  _requireInited: function (c) {
+    if (! c.isInited)
+      throw new Error("Component must be inited to perform this operation");
+  },
+  _requireDom: function (c) {
+    if (! c.dom)
+      throw new Error("Component must be built into DOM to perform this operation");
+  }
 
 };
 
@@ -171,10 +174,6 @@ _extend(UI.Component, {
     return c;
   }
 });
-
-_defineNonEnum(UI.Component, '_constr',
-               function Component() {});
-_defineNonEnum(UI.Component, '_super', null);
 
 //callChainedCallback = function (comp, propName, orig) {
   // Call `comp.foo`, `comp._super.foo`,
@@ -862,22 +861,23 @@ _extend(UI.Component, {
 
     return self;
   },
-
+*/
+_extend(UI.Component, {
   $: function (selector) {
     var self = this;
 
-    self._requireBuilt();
-    self._requireNotDestroyed();
+    UI._requireDom(self);
+    UI._requireNotDestroyed(self);
 
-    var firstNode = self.firstNode();
+    var firstNode = self.dom.getFirstNode();
     var parentNode = firstNode.parentNode;
     var prevNode = firstNode.previousSibling;
-    var nextNode = self.lastNode().nextSibling;
+    var nextNode = self.dom.getLastNode().nextSibling;
 
     // Don't assume `results` has jQuery API; a plain array
     // should do just as well.  However, if we do have a jQuery
     // array, we want to end up with one also.
-    var results = $(selector, self.parentNode());
+    var results = $(selector, self.dom.parentNode());
 
     // Function that selects only elements that are actually in this
     // Component, out of elements that are descendents of the Component's
@@ -913,8 +913,9 @@ _extend(UI.Component, {
     }
 
     return results;
-  },
-
+  }
+});
+/*
   autorun: function (compFunc) {
     var self = this;
 
@@ -1047,7 +1048,7 @@ var createEmptyComment = function (beforeNode) {
 var isEmptyComment = function (node) {
   return node.nodeType === 8 && node[emptyCommentProp] === true;
 };
-
+*/
 // Returns 0 if the nodes are the same or either one contains the other;
 // otherwise, -1 if a comes before b, or else 1 if b comes before a in
 // document order.
@@ -1068,7 +1069,7 @@ var compareElementIndex = function (a, b) {
     return (a.sourceIndex < b.sourceIndex ? -1 : 1);
   }
 };
-
+/*
 // Returns true if element a contains node b and is not node b.
 var elementContains = function (a, b) {
   if (a.nodeType !== 1) // ELEMENT
@@ -1117,5 +1118,7 @@ UI.body = UI.Component.extend({
   render: function (buf) {
     for (var i = 0; i < this.contentParts.length; i++)
       buf.write(this.contentParts[i]);
-  }
+  },
+  // XXX revisit how body works.
+  INSTANCE: null
 });

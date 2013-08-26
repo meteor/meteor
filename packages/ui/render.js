@@ -1,24 +1,41 @@
 
+// Render an instance of a component kind directly into the DOM,
+// optionally with a parentComp (for e.g. name resolution).
 UI.renderTo = function (kind, props,
                         parentNode, beforeNode, parentComp) {
+  // XXX too bad we don't validate arguments before mutating
+  // the DOM
+  var range = new DomRange;
+  // Insert new DomRange's start/end markers
+  var nodes = range.getNodes();
+  for (var i = 0, N = nodes.length; i < N; i++)
+    parentNode.insertBefore(nodes[i],
+                            // IE needs null
+                            beforeNode || null);
+
+  return UI.renderToRange(kind, props, range, parentComp);
+};
+
+UI.renderToRange = function (kind, props, range, parentComp) {
+
+  // XXX Handle case where kind is function reactively.
+  // Reuse the same DomRange.
+  if ((typeof kind) === 'function')
+    kind = kind();
+
   if (kind === null)
     return null;
   if (! UI.isComponent(kind))
     throw new Error("Expected Component, function, or null");
   if (kind.isInited)
     throw new Error("Expected uninited Component");
-  // XXX Handle case where kind is function, be reactive
-  // about it.  Reuse the same DomRange.
 
   var comp = kind.extend(props);
-  var dom = new DomRange;
-  // Insert new DomRange's start/end markers
-  var nodes = dom.getNodes();
-  for (var i = 0, N = nodes.length; i < N; i++)
-    parentNode.insertBefore(nodes[i], beforeNode);
 
-  comp.dom = dom;
+  comp.dom = range;
   comp.isInited = true;
+  if (parentComp)
+    comp.parent = parentComp;
 
   if (comp.init)
     comp.init();
@@ -29,7 +46,12 @@ UI.renderTo = function (kind, props,
     buf.build(comp);
   }
 
+  // XXX think about this callback's semantics
+  if (comp.rendered)
+    comp.rendered();
+
   return comp;
+
 };
 
 var ESCAPED_CHARS_UNQUOTED_REGEX = /[&<>]/g;
@@ -119,8 +141,11 @@ makeRenderBuffer = function (options) {
       // "HTML"
       push(arg);
     } else if (UI.isComponent(arg) ||
-               (typeof arg) === 'function') {
-
+               (typeof arg) === 'function' ||
+               arg.kind) {
+      // component kind, function returning kind-or-null,
+      // or `{kind: componentOrFunction, [props]}`
+      // XXX maybe check validity of the object now if `arg.kind`
       randomString = randomString || Random.id();
       var commentString = randomString + '_' + (commentUid++);
       push('<!--', commentString, '-->');
@@ -191,16 +216,39 @@ makeRenderBuffer = function (options) {
     // but they haven't been added yet (so they aren't tracked
     // and UI hooks haven't been called; they are foreign
     // matter).
+    //
+    // XXX weirdly, as we add them to the range they are
+    // moved to the end, which works out fine unless an
+    // exception stops us in the middle, in which case
+    // it may look weird to the developer that the order is
+    // wrong.  Before fixing this (i.e. making it less weird,
+    // and maybe less costly), figure out if we should be
+    // rendering offscreen via performance testing.
+    var lastNode = nextNode.previousSibling;
 
     var wire = function (n) {
       // returns what ended up in the place of `n`:
       // component, node, or null
       if (n.nodeType === 8) { // COMMENT
         if (componentsToRender) {
-          var kind = componentsToRender[n.nodeValue];
+          var spec = componentsToRender[n.nodeValue];
+          var kind, props;
+          // (components and `{kind: ...}` specs both
+          // have a `kind` property.  check for a spec)
+          if (! UI.isComponent(spec) && spec.kind) {
+            kind = spec.kind;
+            props = spec.props;
+          } else {
+            kind = spec;
+            props = null;
+          }
           if (kind || kind === null) {
+            // XXX ok, we should definitely catch exceptions
+            // here and not totally screw everything up,
+            // since we're walking the DOM and calling into
+            // some potentially major app-dev code
             var comp = UI.renderTo(
-              kind, null,
+              kind, props,
               n.parentNode, n, component);
             n.parentNode.removeChild(n);
             delete componentsToRender[n.nodeValue];
@@ -231,79 +279,34 @@ makeRenderBuffer = function (options) {
     };
 
     // walk nodes and replace comments with Components
-    var walk = function (parentNode) {
-      // TODO -- this is `recurse` except it just calls `wire`
-      // for the hard stuff.
+    var walk = function (element) {
+      for (var n = element.firstChild, m;
+           n; n = m) {
+        m = n.nextSibling;
+        var result = wire(n);
+        // result is DOM node, component, or null.
+        // skip components, only recurse on single element nodes.
+        if (result && result.nodeType === 1 && result.firstChild)
+          walk(result);
+      }
     };
 
     // top level
     for (var n = start.nextSibling, m;
-         n && n !== nextNode;
-         n = m) {
+         n; n = (n === lastNode ? null : m)) {
       m = n.nextSibling;
       var result = wire(n);
+      // `result` is DOM node, component, or null
       if (result) {
         if (result.dom)
           // XXX won't be necessary when DomRange takes
           // components in:
           result = result.dom;
         range.add(result);
-        if (result.firstChild)
+        if (result.nodeType === 1 && result.firstChild)
           walk(result);
       }
     }
-
-
-    var recurse = function (parent) {
-      var n = parent.firstChild;
-      while (n) {
-        var next = n.nextSibling;
-        if (n.nodeType === 8) { // COMMENT
-          if (componentsToRender) {
-            var comp = componentsToRender[n.nodeValue];
-            if (comp) {
-              if (! comp.isInited) {
-                component.add(comp);
-              } else if (comp.parent !== component) {
-                throw new Error("Component used in render must be a child " +
-                                "(or addable as one)");
-              }
-              comp._attach(parent, n);
-              parent.removeChild(n);
-              delete componentsToRender[n.nodeValue];
-            }
-          }
-        } else if (n.nodeType === 1) { // ELEMENT
-          if (attrManagersToWire) {
-            // detect elements with reactive attributes
-            for (var i = 0; i < maxDataAttrNumber; i++) {
-              var attrName = dataAttrs[i];
-              var elemId = n.getAttribute(attrName);
-              if (elemId) {
-                var mgr = attrManagersToWire[elemId];
-                if (mgr) {
-                  mgr.wire(n, component);
-                  // note: this callback will be called inside
-                  // the build autorun, so its internal
-                  // autorun will be stopped on rebuild
-                  component._onNextBuilt((function (mgr) {
-                    return function () { mgr.start(); };
-                  })(mgr));
-                }
-                n.removeAttribute(attrName);
-              }
-            }
-          }
-
-          // recurse through DOM
-          recurse(n);
-        }
-        n = next;
-      }
-    };
-
-    if (componentsToRender || attrManagersToWire)
-      recurse(root);
 
     // We should have attached all specified components, but
     // if the comments we generated somehow didn't turn into
