@@ -104,7 +104,8 @@ _extend(DomRange.prototype, {
       // don't remove yet since then we'd lose nextSibling
       nodes.push(n);
     }
-    _.each(nodes, removeNode);
+    for (var i = 0, N = nodes.length; i < N; i++)
+      removeNode(nodes[i]);
 
     this.members = {};
   },
