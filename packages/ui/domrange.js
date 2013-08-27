@@ -109,7 +109,8 @@ _extend(DomRange.prototype, {
 
     this.members = {};
   },
-  add: function (id, newMemberOrArray, beforeId) {
+  // (_nextNode is internal)
+  add: function (id, newMemberOrArray, beforeId, _nextNode) {
     if (id && typeof id !== 'string') {
       beforeId = newMemberOrArray;
       newMemberOrArray = id;
@@ -120,10 +121,22 @@ _extend(DomRange.prototype, {
       if (id != null)
         throw new Error("Can only add one node or one component if id is given");
       var array = newMemberOrArray;
+      // calculate `nextNode` once in case it involves a refresh
+      _nextNode = this.getInsertionPoint(beforeId);
       for (var i = 0; i < array.length; i++)
-        this.add(array[i], beforeId);
+        this.add(null, array[i], beforeId, _nextNode);
       return;
     }
+
+    var parentNode = this.parentNode();
+    // Consider ourselves removed (and don't mind) if
+    // start marker has no parent.
+    if (! parentNode)
+      return;
+    // because this may call `refresh`, it must be done
+    // early, before we add the new member.
+    var nextNode = (_nextNode ||
+                    this.getInsertionPoint(beforeId));
 
     var newMember = newMemberOrArray;
     if (id == null)
@@ -135,13 +148,6 @@ _extend(DomRange.prototype, {
     if (members.hasOwnProperty(id))
       throw new Error("Member already exists: " + id.slice(1));
     members[id] = newMember;
-
-    var parentNode = this.parentNode();
-    // Consider ourselves removed (and don't mind) if
-    // start marker has no parent.
-    if (! parentNode)
-      return;
-    var nextNode = this.getInsertionPoint(beforeId);
 
     if ('dom' in newMember) {
       if (! newMember.dom)
@@ -245,7 +251,6 @@ _extend(DomRange.prototype, {
     return this.start.parentNode;
   },
   startNode: function () {
-    // does not refresh.
     return this.start;
   },
   endNode: function () {
@@ -274,6 +279,9 @@ _extend(DomRange.prototype, {
       }
     }
   },
+
+  ///////////// INTERNALS below this point, pretty much
+
   // The purpose of "refreshing" a DomRange is to
   // take into account any element removals or moves
   // that may have occurred, and to "fix" the start
@@ -285,6 +293,9 @@ _extend(DomRange.prototype, {
   // node, and this node is moved using jQuery, refreshing
   // the DomRange will look to the element as ground truth
   // and move the start/end markers around the element.
+  // A refreshed DomRange's nodes may surround nodes from
+  // sibling DomRanges (including their marker nodes)
+  // until the sibling DomRange is refreshed.
   //
   // Specifically, `refresh` moves the `start`
   // and `end` nodes to immediate before the first,
@@ -300,58 +311,102 @@ _extend(DomRange.prototype, {
   //
   // Performing add/move/remove operations on an "each"
   // shouldn't require refreshing the entire each, just
-  // the member in question.
+  // the member in question.  (However, adding to the
+  // end may require refreshing the whole "each";
+  // see `getInsertionPoint`.  Adding multiple members
+  // at once using `add(array)` is faster.
   refresh: function () {
     var color = nextColor++;
     this.color = color;
 
-    this.eachMember(null, function (range) {
+    var someNode = null;
+    var someRange = null;
+    var numMembers = 0;
+    // Assign a single unique "color" (an integer) to
+    // our members and us to recognize them easily.
+    this.eachMember(function (node) {
+      someNode = node;
+      numMembers++;
+    }, function (range) {
       range.refresh();
       range.color = color;
+      someRange = range;
+      numMembers++;
     });
 
-    // XXX optimize this so if significant
-    // members are consecutive (ignoring
-    // intervening insignificant nodes),
-    // it isn't O(childNodes.length).
     var parentNode = this.parentNode();
     var firstNode = null;
     var lastNode = null;
-    var memberRangeIn = null;
-    for (var node = parentNode.firstChild;
-         node; node = node.nextSibling) {
-      if (memberRangeIn && node === memberRangeIn.end) {
-        memberRangeIn = null;
-        continue;
-      }
 
-      if ((memberRangeIn || (
-        node.$ui.dom === this &&
-          node !== this.start &&
-          node !== this.end)) &&
-          isSignificantNode(node)) {
-        if (firstNode) {
-          for (var n = firstNode.previousSibling;
-               n && ! n.$ui;
-               n = n.previousSibling) {
-            // adopt node
-            this.members[this.nextMemberId++] = n;
-            n.$ui = this.component;
+    if (numMembers === 0) {
+      // don't scan for members
+    } else if (numMembers === 1) {
+      if (someNode) {
+        firstNode = someNode;
+        lastNode = someNode;
+      } else if (someRange) {
+        firstNode = someRange.start;
+        lastNode = someRange.end;
+      }
+    } else {
+      // This loop is O(childNodes.length), even if our members
+      // are already consecutive.  This means refreshing just one
+      // item in a list is technically order of the total number
+      // of siblings, including in other list items.
+      //
+      // The root cause is we intentionally don't track the
+      // DOM order of our members, so finding the first
+      // and last in sibling order either involves a scan
+      // or a bunch of calls to compareDocumentPosition.
+      //
+      // Fortunately, the common cases of zero and one members
+      // are optimized.  Also, the scan is super-fast because
+      // no work is done for unknown nodes.  It could be possible
+      // to optimize this code further if it becomes a problem.
+      for (var node = parentNode.firstChild;
+           node; node = node.nextSibling) {
+
+        if (node.$ui &&
+            ((node.$ui.dom === this &&
+              node !== this.start &&
+              node !== this.end &&
+              isSignificantNode(node)) ||
+             (node.$ui.dom !== this &&
+              node.$ui.dom.color === color &&
+              node.$ui.dom.start === node))) {
+          // found a member range or node
+          // (excluding "insignificant" empty text nodes,
+          // which won't be moved by, say, jQuery)
+          if (firstNode) {
+            // if we've already found a member in our
+            // scan, see if there are some easy ownerless
+            // nodes to "adopt" by scanning backwards.
+            for (var n = firstNode.previousSibling;
+                 n && ! n.$ui;
+                 n = n.previousSibling) {
+              this.members[this.nextMemberId++] = n;
+              n.$ui = this.component;
+            }
+          }
+          if (node.$ui.dom === this) {
+            // Node
+            firstNode = (firstNode || node);
+            lastNode = node;
+          } else {
+            // Range
+            // skip it and include its nodes in
+            // firstNode/lastNode.
+            firstNode = (firstNode || node);
+            node = node.$ui.dom.end;
+            lastNode = node;
           }
         }
-        firstNode = (firstNode || node);
-        lastNode = node;
       }
-
-      if (! memberRangeIn && node.$ui &&
-          node.$ui.dom !== this &&
-          node.$ui.dom.color === color &&
-          node.$ui.dom.start === node)
-        memberRangeIn = node.$ui.dom;
     }
     if (firstNode) {
-      // some significant node found.
-      // expand to include other nodes we recognize.
+      // some member or significant node was found.
+      // expand to include our insigificant member
+      // nodes as well.
       for (var n;
            (n = firstNode.previousSibling) &&
            n.$ui && n.$ui.dom.color === color;)
@@ -360,7 +415,7 @@ _extend(DomRange.prototype, {
            (n = lastNode.nextSibling) &&
            n.$ui && n.$ui.dom.color === color;)
         lastNode = n;
-
+      // adjust our start/end pointers
       if (firstNode !== this.start)
         insertNode(this.start,
                    parentNode, firstNode);
@@ -373,8 +428,19 @@ _extend(DomRange.prototype, {
     var members = this.members;
     var parentNode = this.parentNode();
 
-    if (! beforeId)
+    if (! beforeId) {
+      // Refreshing here is necessary if we want to
+      // allow elements to move around arbitrarily.
+      // If jQuery is used to reorder elements, it could
+      // easily make our `end` pointer meaningless,
+      // even though all our members continue to make
+      // good reference points as long as they are refreshed.
+      //
+      // However, a refresh is expensive!  Let's
+      // make the developer manually refresh if
+      // elements are being re-ordered externally.
       return this.end;
+    }
 
     beforeId = '_' + beforeId;
     var mem = members[beforeId];
@@ -396,6 +462,7 @@ _extend(DomRange.prototype, {
 
     // not there anymore
     delete members[beforeId];
+    // no good position
     return this.end;
   }
 });
