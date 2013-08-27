@@ -52,6 +52,8 @@ Tinytest.add("ui - DomRange - basic", function (test) {
   s.add(span);
   r.add(s);
   test.equal(_.keys(r.members).length, 2);
+  test.isFalse(r.owner);
+  test.equal(s.owner, r);
 
   // DOM should go: rStart, DIV, sStart, SPAN, sEnd, rEnd.
   test.equal(span.previousSibling, s.startNode());
@@ -73,6 +75,7 @@ Tinytest.add("ui - DomRange - basic", function (test) {
 
   // removal
   s.remove();
+  test.isFalse(s.owner);
   // sStart, SPAN, sEnd are gone from the DOM.
   test.equal(rStart.nextSibling, div);
   test.equal(rEnd.previousSibling, div);
@@ -168,6 +171,11 @@ Tinytest.add("ui - DomRange - shuffling", function (test) {
   test.equal(r.get('I'), I);
   test.equal(r.get('U'), U);
 
+  test.isFalse(r.owner);
+  test.equal(X.dom.owner, r);
+  test.equal(Y.dom.owner, r);
+  test.equal(Z.dom.owner, r);
+
   r.remove('Y');
   test.equal(spellDom(), '((Z)(X)BAAIU)');
   test.equal(r.get('Y'), null);
@@ -203,7 +211,7 @@ Tinytest.add("ui - DomRange - nested", function (test) {
 
   // nest empty ranges; should work even though
   // there are no element nodes
-  var A,B,C,D,E,F,G;
+  var A,B,C,D,E,F;
 
   test.equal(spellDom(), '()');
   r.add(A = new Comp('A'));
@@ -228,9 +236,13 @@ Tinytest.add("ui - DomRange - nested", function (test) {
   test.equal(spellDom(), '(AaCcBFfDdb)');
   r.remove('B');
   test.equal(spellDom(), '(AaCc)');
+
+  test.isFalse(r.owner);
+  test.equal(A.dom.owner, r);
+  test.equal(C.dom.owner, r);
 });
 
-Tinytest.add("ui - DomRange - outside moves", function (test) {
+Tinytest.add("ui - DomRange - external moves", function (test) {
   // In this one, uppercase letters are div elements,
   // lowercase letters are marker text nodes, as follows:
   //
@@ -322,6 +334,13 @@ Tinytest.add("ui - DomRange - outside moves", function (test) {
 
   test.equal(spellDom(),
              strip('(a-X-b - c-d-Y-Z-e-f - g-h-i-W-j-k-l V)'));
+
+  test.equal(ab.dom.owner, r);
+  test.equal(cf.dom.owner, r);
+  test.equal(de.dom.owner, cf);
+  test.equal(gl.dom.owner, r);
+  test.equal(hk.dom.owner, gl);
+  test.equal(ij.dom.owner, hk);
 
   // all right, now let's mess around with these elements!
 
@@ -436,9 +455,19 @@ Tinytest.add("ui - DomRange - outside moves", function (test) {
   //
   // See `range.getInsertionPoint`.
 
-  r.refresh();
+  // Same as `r.refresh()` but tests
+  // the convenience function `DomRange.refresh(element)`:
+  DomRange.refresh(r.parentNode());
+
   r.moveBefore('gl', null);
 
   test.equal(spellDom(),
-             strip('------------- (- aXb ghiWjkl)'));
+             strip('-------------- (aXb ghiWjkl)'));
 });
+
+
+// TO TEST STILL:
+// - external remove element
+// - double-add, double-remove
+// - external entire remove
+// - element adoption during move/remove/refresh

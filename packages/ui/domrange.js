@@ -56,8 +56,6 @@ var isSignificantNode = function (n) {
              /^\s+$/.test(n.nodeValue)));
 };
 
-var nextColor = 1;
-
 var DomRange = function (component) {
   var start = document.createTextNode("");
   var end = document.createTextNode("");
@@ -79,6 +77,7 @@ var DomRange = function (component) {
 
   this.members = {};
   this.nextMemberId = 1;
+  this.owner = null;
 };
 
 _extend(DomRange.prototype, {
@@ -154,6 +153,7 @@ _extend(DomRange.prototype, {
         throw new Error("Component not built");
       // Range
       var range = newMember.dom;
+      range.owner = this.component;
       var nodes = range.getNodes();
       for (var i = 0; i < nodes.length; i++)
         insertNode(nodes[i], parentNode, nextNode);
@@ -172,6 +172,7 @@ _extend(DomRange.prototype, {
       this.removeAll();
       removeNode(this.start);
       removeNode(this.end);
+      this.owner = null;
       return;
     }
 
@@ -194,6 +195,7 @@ _extend(DomRange.prototype, {
     if ('dom' in member) {
       // Range
       var range = member.dom;
+      range.owner = null;
       // Don't mind if range (specifically its start
       // marker) has been removed already.
       if (range.start.parentNode === parentNode)
@@ -265,10 +267,12 @@ _extend(DomRange.prototype, {
       if ('dom' in mem) {
         // Range
         var range = mem.dom;
-        if (range.start.parentNode === parentNode)
+        if (range.start.parentNode === parentNode) {
           rangeFunc && rangeFunc(range); // still there
-        else
+        } else {
+          range.owner = null;
           delete members[k]; // gone
+        }
       } else {
         // Node
         var node = mem;
@@ -316,8 +320,6 @@ _extend(DomRange.prototype, {
   // see `getInsertionPoint`.  Adding multiple members
   // at once using `add(array)` is faster.
   refresh: function () {
-    var color = nextColor++;
-    this.color = color;
 
     var someNode = null;
     var someRange = null;
@@ -329,7 +331,6 @@ _extend(DomRange.prototype, {
       numMembers++;
     }, function (range) {
       range.refresh();
-      range.color = color;
       someRange = range;
       numMembers++;
     });
@@ -366,14 +367,17 @@ _extend(DomRange.prototype, {
       for (var node = parentNode.firstChild;
            node; node = node.nextSibling) {
 
+        var nodeOwner;
         if (node.$ui &&
-            ((node.$ui.dom === this &&
+            (nodeOwner = node.$ui.dom) &&
+            ((nodeOwner === this &&
               node !== this.start &&
               node !== this.end &&
               isSignificantNode(node)) ||
-             (node.$ui.dom !== this &&
-              node.$ui.dom.color === color &&
-              node.$ui.dom.start === node))) {
+             (nodeOwner !== this &&
+              nodeOwner.owner &&
+              nodeOwner.owner.dom === this &&
+              nodeOwner.start === node))) {
           // found a member range or node
           // (excluding "insignificant" empty text nodes,
           // which won't be moved by, say, jQuery)
@@ -409,11 +413,11 @@ _extend(DomRange.prototype, {
       // nodes as well.
       for (var n;
            (n = firstNode.previousSibling) &&
-           n.$ui && n.$ui.dom.color === color;)
+           n.$ui && n.$ui.dom === this;)
         firstNode = n;
       for (var n;
            (n = lastNode.nextSibling) &&
-           n.$ui && n.$ui.dom.color === color;)
+           n.$ui && n.$ui.dom === this;)
         lastNode = n;
       // adjust our start/end pointers
       if (firstNode !== this.start)
@@ -452,6 +456,8 @@ _extend(DomRange.prototype, {
         // still there
         range.refresh();
         return range.start;
+      } else {
+        range.owner = null;
       }
     } else {
       // Node
@@ -466,5 +472,33 @@ _extend(DomRange.prototype, {
     return this.end;
   }
 });
+
+// In a real-life case where you need a refresh,
+// you probably don't have easy
+// access to the appropriate DomRange or component,
+// just the enclosing element:
+//
+// ```
+// {{#Sortable}}
+//   <div>
+//     {{#each}}
+//       ...
+// ```
+//
+// In this case, Sortable wants to call `refresh`
+// on the div, not the each, so it would use this function.
+DomRange.refresh = function (element) {
+  var topLevelRanges = [];
+  for (var n = element.firstChild;
+       n; n = n.nextSibling) {
+    if (n.$ui && n === n.$ui.dom.start &&
+        ! n.$ui.dom.owner)
+      topLevelRanges.push(n.$ui.dom);
+  }
+
+  for (var i = 0, N = topLevelRanges.length;
+       i < N; i++)
+    topLevelRanges[i].refresh();
+};
 
 UI.DomRange = DomRange;
