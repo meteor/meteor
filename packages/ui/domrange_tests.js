@@ -468,6 +468,105 @@ Tinytest.add("ui - DomRange - external moves", function (test) {
              strip('-------------- (aXb ghiWjkl)'));
 });
 
+Tinytest.add("ui - DomRange - tables", function (test) {
+  var range = function (x) {
+    new DomRange(x);
+    if (x.el) {
+      x.dom.add(x.el);
+      if (x.content)
+        DomRange.insert(x.content, x.el);
+    }
+    return x;
+  };
+  var tr, td;
+  var table = range({
+    el: document.createElement('table'),
+    content: tr = range({
+      el: document.createElement('tr'),
+      content: td = range({
+        el: document.createElement('td')
+      })
+    })
+  });
+
+  // TBODY got inserted automatically.
+  // This tests DomRange.insert.
+  test.equal(table.el.childNodes.length, 1);
+  test.equal(table.el.firstChild.nodeName, 'TBODY');
+  // TBODY contains [start, TR, end]
+  test.equal(table.el.firstChild.childNodes.length, 3);
+  test.equal(table.el.firstChild.childNodes[1], tr.el);
+  test.equal(tr.el.childNodes.length, 3);
+  test.equal(tr.el.childNodes[1], td.el);
+
+  // start over
+  $(table.el).empty();
+  test.equal(table.el.childNodes.length, 0);
+
+  table.content = range({});
+  DomRange.insert(table.content, table.el);
+  // table has two children (start/end markers), no elements
+  test.equal(table.el.childNodes.length, 2);
+  test.notEqual(table.el.firstChild.nodeType, 1);
+  test.notEqual(table.el.lastChild.nodeType, 1);
+
+  // shazam, adding a TR should move the whole range
+  // into a TBODY.  This tests range.add(node).
+  table.content.dom.add(document.createElement('tr'));
+
+  test.equal(table.el.childNodes.length, 1);
+  test.equal(table.el.firstChild.nodeName, 'TBODY');
+  test.equal(table.el.firstChild.childNodes.length, 3);
+  test.equal(table.el.firstChild.childNodes[1].nodeName, 'TR');
+
+  // start over.
+  $(table.el).empty();
+  test.equal(table.el.childNodes.length, 0);
+
+  table.content = range({});
+  DomRange.insert(table.content, table.el);
+  var a1 = range({});
+  var a2 = range({});
+  a1.dom.add(a2);
+  table.content.dom.add(a1);
+  // 6 marker nodes in table, no elements
+  test.equal(table.el.childNodes.length, 6);
+  test.equal($(table.el).find("*").length, 0);
+  // shazam, adding a TR to the innermost range
+  // should move all the ranges into a TBODY.
+  a2.dom.add(document.createElement('tr'));
+  test.equal(table.el.childNodes.length, 1);
+  test.equal(table.el.firstChild.nodeName, 'TBODY');
+  test.equal(table.el.firstChild.childNodes.length, 7);
+  test.equal(table.el.firstChild.childNodes[3].nodeName, 'TR');
+
+  // start over.  this time test adding a range containing
+  // a TR.
+  $(table.el).empty();
+  test.equal(table.el.childNodes.length, 0);
+
+  table.content = range({});
+  DomRange.insert(table.content, table.el);
+  var a1 = range({});
+  var a2 = range({});
+  table.content.dom.add(a1);
+  a2.dom.add(document.createElement('tr'));
+  // 4 marker nodes in table, no elements
+  test.equal(table.el.childNodes.length, 4);
+  test.equal($(table.el).find("*").length, 0);
+  // shazam, adding a2, which contains a TR,
+  // should move all the ranges into a TBODY.
+  a1.dom.add(a2);
+  test.equal(table.el.childNodes.length, 1);
+  test.equal(table.el.firstChild.nodeName, 'TBODY');
+  test.equal(table.el.firstChild.childNodes.length, 7);
+  test.equal(table.el.firstChild.childNodes[3].nodeName, 'TR');
+
+  test.equal(a2.dom.parentNode().nodeName, 'TBODY');
+  test.equal(a1.dom.parentNode().nodeName, 'TBODY');
+  test.equal(table.content.dom.parentNode().nodeName, 'TBODY');
+});
+
 
 // TO TEST STILL:
 // - external remove element

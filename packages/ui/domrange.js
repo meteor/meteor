@@ -201,6 +201,10 @@ _extend(DomRange.prototype, {
       var range = newMember.dom;
       range.owner = this.component;
       var nodes = range.getNodes();
+
+      if (tbodyFixNeeded(nodes, parentNode))
+        parentNode = moveWithOwnersIntoTbody(this);
+
       for (var i = 0; i < nodes.length; i++)
         insertNode(nodes[i], parentNode, nextNode);
     } else {
@@ -210,6 +214,10 @@ _extend(DomRange.prototype, {
       var node = newMember;
       if (node.nodeType !== 3)
         node.$ui = this.component;
+
+      if (tbodyFixNeeded(node, parentNode))
+        parentNode = moveWithOwnersIntoTbody(this);
+
       insertNode(node, parentNode, nextNode);
     }
   },
@@ -580,8 +588,66 @@ DomRange.insert = function (component, parentNode, nextNode) {
   if (! range)
     throw new Error("Expected a component with a DomRange");
   var nodes = range.getNodes();
+  if (tbodyFixNeeded(nodes, parentNode))
+    parentNode = makeOrFindTbody(parentNode, nextNode);
   for (var i = 0; i < nodes.length; i++)
     insertNode(nodes[i], parentNode, nextNode);
+};
+
+///// TBODY FIX for compatibility with jQuery.
+//
+// Because people might use jQuery from UI hooks, and
+// jQuery is unable to do $(myTable).append(myTR) without
+// adding a TBODY (for historical reasons), we move any DomRange
+// that gains a TR, and its immediately enclosing DomRanges,
+// into a TBODY.
+//
+// See http://www.quora.com/David-Greenspan/Posts/The-Great-TBODY-Debacle
+var tbodyFixNeeded = function (childOrChildren, parent) {
+  if (parent.nodeName !== 'TABLE')
+    return false;
+
+  if (isArray(childOrChildren)) {
+    var foundTR = false;
+    for (var i = 0, N = childOrChildren.length; i < N; i++) {
+      var n = childOrChildren[i];
+      if (n.nodeType === 1 && n.nodeName === 'TR') {
+        foundTR = true;
+        break;
+      }
+    }
+    if (! foundTR)
+      return false;
+  } else {
+    var n = childOrChildren;
+    if (! (n.nodeType === 1 && n.nodeName === 'TR'))
+      return false;
+  }
+
+  return true;
+};
+
+var makeOrFindTbody = function (parent, next) {
+  // we have a TABLE > TR situation
+  var tbody = parent.getElementsByTagName('tbody')[0];
+  if (! tbody) {
+    tbody = parent.ownerDocument.createElement("tbody");
+    parent.insertBefore(tbody, next || null);
+  }
+  return tbody;
+};
+
+var moveWithOwnersIntoTbody = function (range) {
+  while (range.owner)
+    range = range.owner.dom;
+
+  var nodes = range.getNodes(); // causes refresh
+  var tbody = makeOrFindTbody(range.parentNode(),
+                              range.end.nextSibling);
+  for (var i = 0; i < nodes.length; i++)
+    tbody.appendChild(nodes[i]);
+
+  return tbody;
 };
 
 UI.DomRange = DomRange;
