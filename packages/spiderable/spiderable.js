@@ -9,7 +9,13 @@ Spiderable = {};
 // not obey the _escaped_fragment_ protocol. The page is served
 // statically to any client whos user agent matches any of these
 // regexps. Users may modify this array.
-Spiderable.userAgentRegExps = [/^facebookexternalhit/i, /^linkedinbot/i];
+//
+// An original goal with the spiderable package was to avoid doing
+// user-agent based tests. But the reality is not enough bots support
+// the _escaped_fragment_ protocol, so we need to hardcode a list
+// here. I shed a silent tear.
+Spiderable.userAgentRegExps = [
+    /^facebookexternalhit/i, /^linkedinbot/i, /^twitterbot/i];
 
 // how long to let phantomjs run before we kill it
 var REQUEST_TIMEOUT = 15*1000;

@@ -13,7 +13,7 @@ Package.describe({
 Npm.depends({
   // This code was originally written against the unreleased 1.1 branch. We can
   // probably switch to a built NPM version when it gets released.
-  esprima: "https://github.com/ariya/esprima/tarball/5044b87f94fb802d9609f1426c838874ec2007b3",
+  esprima: "https://github.com/ariya/esprima/tarball/2a41dbf0ddadade0b09a9a7cc9a0c8df9c434018",
   estraverse: "1.1.2-1",
   // Fork to add ignoreEval option.
   // https://github.com/Constellation/escope/pull/18
