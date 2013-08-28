@@ -178,3 +178,32 @@ Tinytest.add('accounts - insertUserDoc email', function (test) {
   Meteor.users.remove(result.id);
   Meteor.users.remove(result3.id);
 });
+
+
+Tinytest.addAsync('accounts - cleanup old login tokens', function(test, onComplete) {
+  var userIn = {
+    username: Random.id()
+  };
+
+  // user does not already exist. create a user object with fields set.
+  var result = Accounts.insertUserDoc(
+    {profile: {name: 'Foo Bar'}, generateLoginToken: true},
+    userIn
+  );
+  var user = Meteor.users.findOne(result.id);
+  test.equal(user.services.resume.loginTokens.length, 1);
+
+  var oldLifetime = Accounts._tokenLifetime;
+  var oldInterval = Accounts._cleanExpiredIntervalInMilliseconds;
+  Accounts._tokenLifetimeInMilliseconds = 10;
+  Accounts._cleanExpiredIntervalInMilliseconds = 10;
+  Meteor.setTimeout(function() {
+    user = Meteor.users.findOne(result.id);
+    test.equal(user.services.resume.loginTokens.length, 0);
+    // cleanup
+    Meteor.users.remove(result.id);
+    Accounts._tokenLifetimeInMilliseconds = oldLifetime;
+    Accounts._cleanExpiredIntervalInMilliseconds = oldInterval;
+    onComplete();
+  }, 200);
+});
