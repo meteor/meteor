@@ -60,7 +60,11 @@ To publish records to clients, call `Meteor.publish` on the server with
 two parameters: the name of the record set, and a *publish function*
 that Meteor will call each time a client subscribes to the name.
 
-Publish functions can return a
+Publish functions interface with the client via three methods - `added`,
+`changed` and `removed`. These are called by a `Cursor` object returned
+by the publish function, or can be called directly by it.
+
+Most commonly, publish functions can return a
 [`Collection.Cursor`](#meteor_collection_cursor), in which case Meteor
 will publish that cursor's documents. You can also return an array of
 `Collection.Cursor`s, in which case Meteor will publish all of the
@@ -100,8 +104,6 @@ documents are removed from the published record set) to inform subscribers about
 documents.  These methods are provided by `this` in your publish function.
 
 
-
-<!-- TODO discuss ready -->
 
 Example:
 
