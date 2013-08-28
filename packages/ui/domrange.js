@@ -1,4 +1,3 @@
-UI = {};
 
 var removeNode = function (n) {
 //  if (n.nodeType === 1 &&
