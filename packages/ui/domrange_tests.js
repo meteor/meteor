@@ -8,6 +8,14 @@ var Comp = function (which) {
   new DomRange(this);
 };
 
+var isStartMarker = function (n) {
+  return (n.$ui && n === n.$ui.dom.start);
+};
+
+var isEndMarker = function (n) {
+  return (n.$ui && n === n.$ui.dom.end);
+};
+
 Tinytest.add("ui - DomRange - basic", function (test) {
   var r = new DomRange;
   r.which = 'R';
@@ -23,8 +31,8 @@ Tinytest.add("ui - DomRange - basic", function (test) {
   var rStart = r.startNode();
   var rEnd = r.endNode();
 
-  test.equal(rStart.nodeType, 3);
-  test.equal(rEnd.nodeType, 3);
+  test.isTrue(isStartMarker(rStart));
+  test.isTrue(isEndMarker(rEnd));
   test.equal(rStart.nextSibling, rEnd);
   test.isTrue(rStart.parentNode);
   test.equal(r.parentNode(), rStart.parentNode);
@@ -105,10 +113,11 @@ Tinytest.add("ui - DomRange - shuffling", function (test) {
     var frag = r.parentNode();
     var str = '';
     _.each(frag.childNodes, function (n) {
-      if (n.nodeType === 3) {
-        if (n.$ui && n.$ui.dom.start === n)
+      if (n.nodeType === 3 || isStartMarker(n) ||
+          isEndMarker(n)) {
+        if (isStartMarker(n))
           str += '(';
-        else if (n.$ui && n.$ui.dom.end === n)
+        else if (isEndMarker(n))
           str += ')';
         else
           str += '-';
@@ -194,17 +203,13 @@ Tinytest.add("ui - DomRange - nested", function (test) {
     var frag = r.parentNode();
     var str = '';
     _.each(frag.childNodes, function (n) {
-      if (n.nodeType === 3 && n.$ui) {
-        var ui = n.$ui;
-        if (ui.dom.start === n)
-          str += (ui.which ? ui.which : '(');
-        else if (n.$ui && n.$ui.dom.end === n)
-          str += (ui.which ? ui.which.toLowerCase() : ')');
-        else
-          str += '?';
-      } else {
+      var ui = n.$ui;
+      if (isStartMarker(n))
+        str += (ui.which ? ui.which : '(');
+      else if (isEndMarker(n))
+        str += (ui.which ? ui.which.toLowerCase() : ')');
+      else
         str += '?';
-      }
     });
     return str;
   };
@@ -314,17 +319,15 @@ Tinytest.add("ui - DomRange - external moves", function (test) {
     var frag = r.parentNode();
     var str = '';
     _.each(frag.childNodes, function (n) {
-      if (n.nodeType === 3 && n.$ui) {
-        var ui = n.$ui;
-        if (ui.dom.start === n)
-          str += (ui.which ? ui.which.charAt(0) : '(');
-        else if (n.$ui && n.$ui.dom.end === n)
-          str += (ui.which ? ui.which.charAt(1) : ')');
-        else
-          str += '-';
-      } else {
+      var ui = n.$ui;
+      if (isStartMarker(n))
+        str += (ui.which ? ui.which.charAt(0) : '(');
+      else if (isEndMarker(n))
+        str += (ui.which ? ui.which.charAt(1) : ')');
+      else if (n.nodeType === 3)
+        str += '-';
+      else
         str += (n.id || '?');
-      }
     });
     return str;
   };
@@ -471,3 +474,11 @@ Tinytest.add("ui - DomRange - external moves", function (test) {
 // - double-add, double-remove
 // - external entire remove
 // - element adoption during move/remove/refresh
+// - first arg of add must be string, errors on `0` for example.
+//   same with remove and move `id` arguments.
+// - can't add multiple members with id, but can add array of 1.
+//   can add 0 with no id.
+// - member named "toString" or "_proto__", something that
+//   is "in" `{}` or is once you add `_` as we do.
+// - add a node or range with the same id as an old member
+//   works if that member is gone.

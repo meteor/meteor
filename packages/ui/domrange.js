@@ -14,7 +14,7 @@ var insertNode = function (n, parent, next) {
 //    parent.$uihooks.insertElement(n, parent, next);
 //  else
     // `|| null` because IE throws an error if 'next' is undefined
-    parent.insertBefore(n, next || null);
+  parent.insertBefore(n, next || null);
 };
 
 var moveNode = function (n, parent, next) {
@@ -43,6 +43,15 @@ var _extend = function (tgt, src) {
   return tgt;
 };
 
+var _contains = function (list, item) {
+  if (! list)
+    return false;
+  for (var i = 0, N = list.length; i < N; i++)
+    if (list[i] === item)
+      return true;
+  return false;
+};
+
 var isArray = function (x) {
   return !!((typeof x.length === 'number') &&
             (x.sort || x.splice));
@@ -57,6 +66,13 @@ var isSignificantNode = function (n) {
 };
 
 var DomRange = function (component) {
+  // This code supports IE 8 if `createTextNode` is changed
+  // to `createComment`.  What we really should do is:
+  // - use comments in IE 8
+  // - use TextNodes in all other browsers
+  // - keep a list of all DomRanges to avoid IE 9+ GC of
+  //   TextNodes; this will probably help DomRange removal
+  //   detection too.
   var start = document.createTextNode("");
   var end = document.createTextNode("");
   var fragment = newFragment([start, end]);
@@ -111,21 +127,33 @@ _extend(DomRange.prototype, {
   },
   // (_nextNode is internal)
   add: function (id, newMemberOrArray, beforeId, _nextNode) {
-    if (id && typeof id !== 'string') {
+    if (id != null && typeof id !== 'string') {
+      if (typeof id !== 'object')
+        // a non-object first argument is probably meant
+        // as an id, NOT a new member, so complain about it
+        // as such.
+        throw new Error("id must be a string");
       beforeId = newMemberOrArray;
       newMemberOrArray = id;
       id = null;
     }
 
+    if (! newMemberOrArray || typeof newMemberOrArray !== 'object')
+      throw new Error("Expected component, node, or array");
+
     if (isArray(newMemberOrArray)) {
-      if (id != null)
-        throw new Error("Can only add one node or one component if id is given");
-      var array = newMemberOrArray;
-      // calculate `nextNode` once in case it involves a refresh
-      _nextNode = this.getInsertionPoint(beforeId);
-      for (var i = 0; i < array.length; i++)
-        this.add(null, array[i], beforeId, _nextNode);
-      return;
+      if (newMemberOrArray.length === 1) {
+        newMemberOrArray = newMemberOrArray[0];
+      } else {
+        if (id != null)
+          throw new Error("Can only add one node or one component if id is given");
+        var array = newMemberOrArray;
+        // calculate `nextNode` once in case it involves a refresh
+        _nextNode = this.getInsertionPoint(beforeId);
+        for (var i = 0; i < array.length; i++)
+          this.add(null, array[i], beforeId, _nextNode);
+        return;
+      }
     }
 
     var parentNode = this.parentNode();
@@ -145,8 +173,26 @@ _extend(DomRange.prototype, {
       id = '_' + id;
 
     var members = this.members;
-    if (members.hasOwnProperty(id))
-      throw new Error("Member already exists: " + id.slice(1));
+    if (members.hasOwnProperty(id)) {
+      var oldMember = members[id];
+      if ('dom' in oldMember) {
+        // range, does it still exist?
+        var oldRange = oldMember.dom;
+        if (oldRange.start.parentNode !== parentNode) {
+          delete members[id];
+          oldRange.owner = null;
+        } else {
+          throw new Error("Member already exists: " + id.slice(1));
+        }
+      } else {
+        // node, does it still exist?
+        var oldNode = oldMember;
+        if (oldNode.parentNode !== parentNode)
+          delete members[id];
+        else
+          throw new Error("Member already exists: " + id.slice(1));
+      }
+    }
     members[id] = newMember;
 
     if ('dom' in newMember) {
@@ -163,7 +209,8 @@ _extend(DomRange.prototype, {
       if (typeof newMember.nodeType !== 'number')
         throw new Error("Expected Component or Node");
       var node = newMember;
-      node.$ui = this.component;
+      if (node.nodeType !== 3)
+        node.$ui = this.component;
       insertNode(node, parentNode, nextNode);
     }
   },
@@ -322,14 +369,25 @@ _extend(DomRange.prototype, {
   // at once using `add(array)` is faster.
   refresh: function () {
 
+    // Using `eachMember`, do several things:
+    // - Refresh all member ranges
+    // - Count our members
+    // - If there's only one, get that one
+    // - Make a list of member TextNodes, which we
+    //   can't detect with a `$ui` property because
+    //   IE 8 doesn't allow user-defined properties
+    //   on TextNodes.
     var someNode = null;
     var someRange = null;
     var numMembers = 0;
-    // Assign a single unique "color" (an integer) to
-    // our members and us to recognize them easily.
+    var textNodes = null;
     this.eachMember(function (node) {
       someNode = node;
       numMembers++;
+      if (node.nodeType === 3) {
+        textNodes = (textNodes || []);
+        textNodes.push(node);
+      }
     }, function (range) {
       range.refresh();
       someRange = range;
@@ -390,7 +448,8 @@ _extend(DomRange.prototype, {
                  n && ! n.$ui;
                  n = n.previousSibling) {
               this.members[this.nextMemberId++] = n;
-              n.$ui = this.component;
+              if (n.nodeType !== 3)
+                n.$ui = this.component;
             }
           }
           if (node.$ui.dom === this) {
@@ -414,11 +473,13 @@ _extend(DomRange.prototype, {
       // nodes as well.
       for (var n;
            (n = firstNode.previousSibling) &&
-           n.$ui && n.$ui.dom === this;)
+           (n.$ui && n.$ui.dom === this ||
+            _contains(textNodes, n));)
         firstNode = n;
       for (var n;
            (n = lastNode.nextSibling) &&
-           n.$ui && n.$ui.dom === this;)
+           (n.$ui && n.$ui.dom === this ||
+            _contains(textNodes, n));)
         lastNode = n;
       // adjust our start/end pointers
       if (firstNode !== this.start)
@@ -474,6 +535,19 @@ _extend(DomRange.prototype, {
   }
 });
 
+DomRange.prototype.elements = function (intoArray) {
+  intoArray = (intoArray || []);
+  this.eachMember(function (node) {
+    if (node.nodeType === 1)
+      intoArray.push(node);
+  }, function (range) {
+    range.elements(intoArray);
+  });
+  return intoArray;
+};
+
+// XXX alias the below as `UI.refresh` and `UI.insert`
+
 // In a real-life case where you need a refresh,
 // you probably don't have easy
 // access to the appropriate DomRange or component,
@@ -500,6 +574,15 @@ DomRange.refresh = function (element) {
   for (var i = 0, N = topLevelRanges.length;
        i < N; i++)
     topLevelRanges[i].refresh();
+};
+
+DomRange.insert = function (component, parentNode, nextNode) {
+  var range = component.dom;
+  if (! range)
+    throw new Error("Expected a component with a DomRange");
+  var nodes = range.getNodes();
+  for (var i = 0; i < nodes.length; i++)
+    insertNode(nodes[i], parentNode, nextNode);
 };
 
 UI.DomRange = DomRange;
