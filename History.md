@@ -3,6 +3,26 @@
 * Write dates to Mongo as ISODate rather than Integer; existing data can be
   converted by passing it through `new Date()`. #1228
 
+
+## v0.6.5.1
+
+* Fix syntax errors on lines that end with a backslash. #1326
+
+* Fix serving static files with special characters in their name. #1339
+
+* Upgrade `esprima` JavaScript parser to fix bug parsing complex regexps.
+
+* Export `Spiderable` from `spiderable` package to allow users to set
+  `Spiderable.userAgentRegExps` to control what user agents are treated
+  as spiders.
+
+* Add EJSON to standard-app-packages. #1343
+
+* Fix bug in d3 tab character parsing.
+
+* Fix regression when using Mongo ObjectIDs in Spark templates.
+
+
 ## v0.6.5
 
 * New package system with package compiler and linker:
