@@ -66,3 +66,9 @@ Accounts.LoginCancelledError.numericError = 0x8acdc2f;
 Accounts.LoginCancelledError.prototype = new Error();
 Accounts.LoginCancelledError.prototype.name = 'Accounts.LoginCancelledError';
 
+// how long (in seconds) until a login token expires
+// XXX maybe should be configurable
+TOKEN_LIFETIME = 604800; // one week
+Accounts._tokenExpiration = function (when) {
+  return new Date(when.getTime() + TOKEN_LIFETIME * 1000);
+};

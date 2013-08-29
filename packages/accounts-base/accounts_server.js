@@ -34,7 +34,11 @@ Meteor.user = function () {
 // @param handler {Function} A function that receives an options object
 // (as passed as an argument to the `login` method) and returns one of:
 // - `undefined`, meaning don't handle;
-// - {id: userId, token: *}, if the user logged in successfully.
+// - {id: userId, token: *, tokenExpires: *}, if the user logged in
+//   successfully. tokenExpires is optional and intends to provide a hint to the
+//   client as to when the token will expire. If not provided, the client
+//   will assume the token expires TOKEN_LIFETIME seconds from when it receives
+//   it.
 // - throw an error, if the user failed to log in.
 //
 Accounts.registerLoginHandler = function(handler) {
@@ -115,7 +119,10 @@ Meteor.methods({
         }
       });
       self._setLoginToken(newToken);
-      return newToken;
+      return {
+        token: newToken.token,
+        tokenExpires: Accounts._tokenExpiration(newToken.when)
+      };
     }
   }
 });
@@ -127,8 +134,6 @@ Meteor.methods({
 
 // how often (in seconds) we check for expired tokens
 var EXPIRE_TOKENS_INTERVAL = 600; // 10 minutes
-// how long (in seconds) until a login token expires
-var TOKEN_LIFETIME = 604800; // one week
 
 // Login handler for resume tokens.
 Accounts.registerLoginHandler(function(options) {
@@ -143,8 +148,13 @@ Accounts.registerLoginHandler(function(options) {
   if (!user)
     throw new Meteor.Error(403, "Couldn't find login token");
 
+  var token = _.find(user.services.resume.loginTokens, function (token) {
+    return token.token === options.resume;
+  });
+
   return {
     token: options.resume,
+    tokenExpires: Accounts._tokenExpiration(token.when),
     id: user._id
   };
 });
@@ -236,6 +246,7 @@ Accounts.insertUserDoc = function (options, user) {
   if (options.generateLoginToken) {
     var stampedToken = Accounts._generateStampedLoginToken();
     result.token = stampedToken.token;
+    result.tokenExpires = Accounts._tokenExpiration(stampedToken.when);
     Meteor._ensure(user, 'services', 'resume');
     if (_.has(user.services.resume, 'loginTokens'))
       user.services.resume.loginTokens.push(stampedToken);
@@ -352,7 +363,11 @@ Accounts.updateOrCreateUserFromExternalService = function(
       user._id,
       {$set: setAttrs,
        $push: {'services.resume.loginTokens': stampedToken}});
-    return {token: stampedToken.token, id: user._id};
+    return {
+      token: stampedToken.token,
+      id: user._id,
+      tokenExpires: Accounts._tokenExpiration(stampedToken.when)
+    };
   } else {
     // Create a new user with the service data. Pass other options through to
     // insertUserDoc.

@@ -139,7 +139,7 @@ Accounts.callLoginMethod = function (options) {
     }
 
     // Make the client logged in. (The user data should already be loaded!)
-    makeClientLoggedIn(result.id, result.token);
+    makeClientLoggedIn(result.id, result.token, result.tokenExpires);
     options.userCallback();
   };
 
@@ -158,8 +158,8 @@ makeClientLoggedOut = function() {
   Meteor.connection.onReconnect = null;
 };
 
-makeClientLoggedIn = function(userId, token) {
-  storeLoginToken(userId, token);
+makeClientLoggedIn = function(userId, token, tokenExpires {
+  storeLoginToken(userId, token, tokenExpires);
   Meteor.connection.setUserId(userId);
 };
 
@@ -180,7 +180,7 @@ Meteor._logoutAllOthers = function (callback) {
       callback && callback(error);
     } else {
       // The method should return a new valid token that we should start using.
-      makeClientLoggedIn(Meteor.userId(), result.token);
+      makeClientLoggedIn(Meteor.userId(), result.token, result.tokenExpires);
       callback && callback();
     }
   });
