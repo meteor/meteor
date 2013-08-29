@@ -36,9 +36,9 @@ Meteor.user = function () {
 // - `undefined`, meaning don't handle;
 // - {id: userId, token: *, tokenExpires: *}, if the user logged in
 //   successfully. tokenExpires is optional and intends to provide a hint to the
-//   client as to when the token will expire. If not provided, the client
-//   will assume the token expires TOKEN_LIFETIME seconds from when it receives
-//   it.
+//   client as to when the token will expire. If not provided, the client will
+//   call Accounts._tokenExpiration, passing it the date that it received the
+//   token.
 // - throw an error, if the user failed to log in.
 //
 Accounts.registerLoginHandler = function(handler) {
@@ -133,7 +133,7 @@ Meteor.methods({
 /// support reconnecting using a meteor login token
 
 // how often (in seconds) we check for expired tokens
-var EXPIRE_TOKENS_INTERVAL = 600; // 10 minutes
+var DEFAULT_EXPIRE_TOKENS_INTERVAL = 600; // 10 minutes
 
 // Login handler for resume tokens.
 Accounts.registerLoginHandler(function(options) {
@@ -175,8 +175,10 @@ var removeLoginToken = function (userId, loginToken) {
 
 // Deletes expired tokens from the database and closes all open connections
 // associated with these tokens.
-expireTokens = function () {
-  var oldestValidDate = new Date(new Date() - TOKEN_LIFETIME * 1000);
+// Exported for tests.
+var expireTokens = Accounts._expireTokens = function () {
+  var tokenLifetime = Accounts._options.tokenLifetime || DEFAULT_TOKEN_LIFETIME;
+  var oldestValidDate = new Date(new Date() - tokenLifetime * 1000);
   var usersWithExpiredTokens = Meteor.users.find({
     "services.resume.loginTokens.when": { $lt: oldestValidDate }
   });
@@ -203,7 +205,9 @@ expireTokens = function () {
 };
 
 Meteor.users._ensureIndex("services.resume.loginTokens.when", { sparse: true });
-Meteor.setInterval(expireTokens, EXPIRE_TOKENS_INTERVAL);
+var expireInterval = Accounts._options.tokenExpirationInterval ||
+      DEFAULT_EXPIRE_TOKENS_INTERVAL;
+Meteor.setInterval(expireTokens, expireInterval * 1000);
 
 
 ///

@@ -19,10 +19,15 @@ Accounts._options = {};
 //     client signups.
 // - forbidClientAccountCreation {Boolean}
 //     Do not allow clients to create accounts directly.
+// - _tokenLifetime {Number}
+//     Seconds until a login token expires.
+// - _tokenExpirationInterval {Number}
+//     How often (in seconds) to check for expired tokens
 //
 Accounts.config = function(options) {
   // validate option keys
-  var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation"];
+  var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation",
+                    "_tokenLifetime", "_tokenExpirationInterval"];
   _.each(_.keys(options), function (key) {
     if (!_.contains(VALID_KEYS, key)) {
       throw new Error("Accounts.config: Invalid key: " + key);
@@ -68,7 +73,9 @@ Accounts.LoginCancelledError.prototype.name = 'Accounts.LoginCancelledError';
 
 // how long (in seconds) until a login token expires
 // XXX maybe should be configurable
-TOKEN_LIFETIME = 604800; // one week
+DEFAULT_TOKEN_LIFETIME = 604800; // one week
 Accounts._tokenExpiration = function (when) {
-  return new Date(when.getTime() + TOKEN_LIFETIME * 1000);
+  var tokenLifetime = Accounts._options._tokenLifetime ||
+        DEFAULT_TOKEN_LIFETIME;
+  return new Date(when.getTime() + tokenLifetime * 1000);
 };

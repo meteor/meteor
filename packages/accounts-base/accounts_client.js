@@ -158,7 +158,7 @@ makeClientLoggedOut = function() {
   Meteor.connection.onReconnect = null;
 };
 
-makeClientLoggedIn = function(userId, token, tokenExpires {
+makeClientLoggedIn = function(userId, token, tokenExpires) {
   storeLoginToken(userId, token, tokenExpires);
   Meteor.connection.setUserId(userId);
 };
