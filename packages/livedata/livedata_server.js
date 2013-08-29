@@ -238,6 +238,7 @@ var Session = function (server, version) {
   self._universalSubs = [];
 
   self.userId = null;
+  self.loginToken = null;
 
   // Per-connection scratch area. This is only used internally, but we
   // should have real and documented API for this sort of thing someday.
@@ -594,8 +595,8 @@ _.extend(Session.prototype, {
         self._setUserId(userId);
       };
 
-      var setLoginToken = function (newToken, oldToken) {
-        self._setLoginToken(newToken, oldToken);
+      var setLoginToken = function (newToken) {
+        self._setLoginToken(newToken);
       };
 
       // Closes all sessions associated with these tokens except this one.
@@ -663,8 +664,10 @@ _.extend(Session.prototype, {
     });
   },
 
-  _setLoginToken: function (newToken, oldToken) {
+  _setLoginToken: function (newToken) {
     var self = this;
+    var oldToken = self.loginToken;
+    self.loginToken = newToken;
     self.server._loginTokenChanged(self, newToken, oldToken);
   },
 
@@ -1127,6 +1130,11 @@ Server = function () {
       }
     });
     _.each(destroyedIds, function (id) {
+      var session = self.sessions[id];
+      self.sessionsByLoginToken[session.loginToken] = _.without(
+        self.sessionsByLoginToken[session.loginToken],
+        id
+      );
       delete self.sessions[id];
     });
   }, 1 * 60 * 1000);
@@ -1307,8 +1315,8 @@ _.extend(Server.prototype, {
         setUserId = function(userId) {
           currentInvocation.setUserId(userId);
         };
-        setLoginToken = function (newToken, oldToken) {
-          currentInvocation._setLoginToken(newToken, oldToken);
+        setLoginToken = function (newToken) {
+          currentInvocation._setLoginToken(newToken);
         };
       }
 

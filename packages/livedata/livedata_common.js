@@ -57,7 +57,7 @@ _.extend(MethodInvocation.prototype, {
     self._setUserId(userId);
   },
   _setLoginToken: function (token) {
-    this._setLoginToken(token, this._sessionData.loginToken);
+    this._setLoginToken(token);
     this._sessionData.loginToken = token;
   },
   _getLoginToken: function (token) {
