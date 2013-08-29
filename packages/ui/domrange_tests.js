@@ -547,24 +547,50 @@ Tinytest.add("ui - DomRange - tables", function (test) {
 
   table.content = range({});
   DomRange.insert(table.content, table.el);
-  var a1 = range({});
-  var a2 = range({});
-  table.content.dom.add(a1);
-  a2.dom.add(document.createElement('tr'));
+  var b1 = range({});
+  var b2 = range({});
+  table.content.dom.add(b1);
+  b2.dom.add(document.createElement('tr'));
   // 4 marker nodes in table, no elements
   test.equal(table.el.childNodes.length, 4);
   test.equal($(table.el).find("*").length, 0);
-  // shazam, adding a2, which contains a TR,
+  // shazam, adding b2, which contains a TR,
   // should move all the ranges into a TBODY.
-  a1.dom.add(a2);
+  b1.dom.add(b2);
   test.equal(table.el.childNodes.length, 1);
   test.equal(table.el.firstChild.nodeName, 'TBODY');
   test.equal(table.el.firstChild.childNodes.length, 7);
   test.equal(table.el.firstChild.childNodes[3].nodeName, 'TR');
 
-  test.equal(a2.dom.parentNode().nodeName, 'TBODY');
-  test.equal(a1.dom.parentNode().nodeName, 'TBODY');
+  test.equal(b2.dom.parentNode().nodeName, 'TBODY');
+  test.equal(b1.dom.parentNode().nodeName, 'TBODY');
   test.equal(table.content.dom.parentNode().nodeName, 'TBODY');
+
+
+  // start over.  now test two TR ranges.
+  $(table.el).empty();
+  test.equal(table.el.childNodes.length, 0);
+
+  var c1 = range({});
+  var c2 = range({});
+  DomRange.insert(c1, table.el);
+  DomRange.insert(c2, table.el);
+  test.equal(table.el.childNodes.length, 4);
+  test.equal($(table.el).find("*").length, 0);
+  c2.dom.add(document.createElement('tr'));
+  test.equal(table.el.childNodes.length, 3);
+  test.equal($(table.el).find("> *").length, 1);
+  test.equal($(table.el).find("> tbody").length, 1);
+  c1.dom.add(document.createElement('tr'));
+  // now there should be a single TBODY with two
+  // ranges in it containing TRs
+  test.equal(table.el.childNodes.length, 1);
+  test.equal(table.el.firstChild.nodeName, 'TBODY');
+  var tbody = table.el.firstChild;
+  test.equal(tbody.childNodes.length, 6);
+  test.equal($(tbody).find("> *").length, 2); // 2 elements
+  test.equal(tbody.childNodes[1].nodeName, 'TR');
+  test.equal(tbody.childNodes[4].nodeName, 'TR');
 });
 
 
