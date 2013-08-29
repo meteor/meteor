@@ -125,6 +125,11 @@ Meteor.methods({
 ///
 /// support reconnecting using a meteor login token
 
+// how often (in seconds) we check for expired tokens
+var EXPIRE_TOKENS_INTERVAL = 600; // 10 minutes
+// how long (in seconds) until a login token expires
+var TOKEN_LIFETIME = 604800; // one week
+
 // Login handler for resume tokens.
 Accounts.registerLoginHandler(function(options) {
   if (!options.resume)
@@ -134,6 +139,7 @@ Accounts.registerLoginHandler(function(options) {
   var user = Meteor.users.findOne({
     "services.resume.loginTokens.token": ""+options.resume
   });
+
   if (!user)
     throw new Meteor.Error(403, "Couldn't find login token");
 
@@ -156,6 +162,38 @@ var removeLoginToken = function (userId, loginToken) {
     }
   });
 };
+
+// Deletes expired tokens from the database and closes all open connections
+// associated with these tokens.
+expireTokens = function () {
+  var oldestValidDate = new Date(new Date() - TOKEN_LIFETIME * 1000);
+  var usersWithExpiredTokens = Meteor.users.find({
+    "services.resume.loginTokens.when": { $lt: oldestValidDate }
+  });
+
+  var oldTokens = [];
+  usersWithExpiredTokens.forEach(function (user) {
+    _.each(user.services.resume.loginTokens, function (token) {
+      if (token.when < oldestValidDate)
+        oldTokens.push(token.token);
+    });
+  });
+
+  Meteor.users.update({
+    "services.resume.loginTokens.when": { $lt: oldestValidDate }
+  }, {
+    $pull: {
+      "services.resume.loginTokens": {
+        when: { $lt: oldestValidDate }
+      }
+    }
+  });
+
+  Meteor.server._closeAllForTokens(oldTokens);
+};
+
+Meteor.users._ensureIndex("services.resume.loginTokens.when", { sparse: true });
+Meteor.setInterval(expireTokens, EXPIRE_TOKENS_INTERVAL);
 
 
 ///
