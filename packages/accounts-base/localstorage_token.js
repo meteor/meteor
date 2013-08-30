@@ -4,9 +4,6 @@
 // browser.
 
 var lastLoginTokenWhenPolled;
-// We don't try to auto-login with a token that is going to expire within
-// MIN_TOKEN_LIFETIME seconds, to avoid abrupt disconnects from expiring tokens.
-var MIN_TOKEN_LIFETIME = 3600; // one hour
 
 // Login with a Meteor access token. This is the only public function
 // here.
@@ -76,8 +73,7 @@ var storedUserId = function() {
 
 var unstoreLoginTokenIfExpiresSoon = function () {
   var tokenExpires = Meteor._localStorage.getItem(loginTokenExpiresKey);
-  if (tokenExpires &&
-      new Date() > (new Date(tokenExpires) - MIN_TOKEN_LIFETIME * 1000))
+  if (tokenExpires && Accounts._tokenExpiresSoon(tokenExpires))
     unstoreLoginToken();
 };
 

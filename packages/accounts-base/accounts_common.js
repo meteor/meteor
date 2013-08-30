@@ -23,11 +23,15 @@ Accounts._options = {};
 //     Seconds until a login token expires.
 // - _tokenExpirationInterval {Number}
 //     How often (in seconds) to check for expired tokens
+// - _minTokenLifetime {Number}
+//     The minimum number of seconds until a token expires in order for the
+//     client to be willing to connect with that token.
 //
 Accounts.config = function(options) {
   // validate option keys
   var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation",
-                    "_tokenLifetime", "_tokenExpirationInterval"];
+                    "_tokenLifetime", "_tokenExpirationInterval",
+                    "_minTokenLifetime"];
   _.each(_.keys(options), function (key) {
     if (!_.contains(VALID_KEYS, key)) {
       throw new Error("Accounts.config: Invalid key: " + key);
@@ -41,6 +45,8 @@ Accounts.config = function(options) {
         throw new Error("Can't set `" + key + "` more than once");
       } else {
         Accounts._options[key] = options[key];
+        if (key === "_tokenExpirationInterval" && Meteor.isServer)
+          initExpireTokenInterval();
       }
     }
   });
@@ -72,10 +78,19 @@ Accounts.LoginCancelledError.prototype = new Error();
 Accounts.LoginCancelledError.prototype.name = 'Accounts.LoginCancelledError';
 
 // how long (in seconds) until a login token expires
-// XXX maybe should be configurable
 DEFAULT_TOKEN_LIFETIME = 604800; // one week
+// We don't try to auto-login with a token that is going to expire within
+// MIN_TOKEN_LIFETIME seconds, to avoid abrupt disconnects from expiring tokens.
+var DEFAULT_MIN_TOKEN_LIFETIME = 3600; // one hour
+
 Accounts._tokenExpiration = function (when) {
   var tokenLifetime = Accounts._options._tokenLifetime ||
         DEFAULT_TOKEN_LIFETIME;
   return new Date(when.getTime() + tokenLifetime * 1000);
+};
+
+Accounts._tokenExpiresSoon = function (when) {
+  var minLifetime = Accounts._options._minTokenLifetime ||
+        DEFAULT_MIN_TOKEN_LIFETIME;
+  return new Date() > (new Date(when) - minLifetime * 1000);
 };

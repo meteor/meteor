@@ -175,9 +175,8 @@ var removeLoginToken = function (userId, loginToken) {
 
 // Deletes expired tokens from the database and closes all open connections
 // associated with these tokens.
-// Exported for tests.
-var expireTokens = Accounts._expireTokens = function () {
-  var tokenLifetime = Accounts._options.tokenLifetime || DEFAULT_TOKEN_LIFETIME;
+var expireTokens = function () {
+  var tokenLifetime = Accounts._options._tokenLifetime || DEFAULT_TOKEN_LIFETIME;
   var oldestValidDate = new Date(new Date() - tokenLifetime * 1000);
   var usersWithExpiredTokens = Meteor.users.find({
     "services.resume.loginTokens.when": { $lt: oldestValidDate }
@@ -186,6 +185,8 @@ var expireTokens = Accounts._expireTokens = function () {
   var oldTokens = [];
   usersWithExpiredTokens.forEach(function (user) {
     _.each(user.services.resume.loginTokens, function (token) {
+      if (typeof token.when === "number")
+        token.when = new Date(token.when);
       if (token.when < oldestValidDate)
         oldTokens.push(token.token);
     });
@@ -199,16 +200,21 @@ var expireTokens = Accounts._expireTokens = function () {
         when: { $lt: oldestValidDate }
       }
     }
-  });
+  }, { multi: true });
 
   Meteor.server._closeAllForTokens(oldTokens);
 };
 
 Meteor.users._ensureIndex("services.resume.loginTokens.when", { sparse: true });
-var expireInterval = Accounts._options.tokenExpirationInterval ||
-      DEFAULT_EXPIRE_TOKENS_INTERVAL;
-Meteor.setInterval(expireTokens, expireInterval * 1000);
-
+var expireTokenInterval;
+initExpireTokenInterval = function () {
+  if (expireTokenInterval)
+    Meteor.clearInterval(expireTokenInterval);
+  var expirePeriod = Accounts._options._tokenExpirationInterval ||
+        DEFAULT_EXPIRE_TOKENS_INTERVAL;
+  expireTokenInterval = Meteor.setInterval(expireTokens, expirePeriod * 1000);
+};
+initExpireTokenInterval();
 
 ///
 /// CREATE USER HOOKS

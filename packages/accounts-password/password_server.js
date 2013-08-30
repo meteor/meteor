@@ -144,7 +144,7 @@ Accounts.registerLoginHandler(function (options) {
 
   return {
     token: stampedLoginToken.token,
-    tokenExpires: Accounts._tokenExpires(stampedLoginToken.when),
+    tokenExpires: Accounts._tokenExpiration(stampedLoginToken.when),
     id: user._id
   };
 });

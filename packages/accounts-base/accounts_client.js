@@ -93,18 +93,24 @@ Accounts.callLoginMethod = function (options) {
     } else {
       Meteor.connection.onReconnect = function() {
         reconnected = true;
-        Accounts.callLoginMethod({
-          methodArguments: [{resume: result.token}],
-          // Reconnect quiescence ensures that the user doesn't see an
-          // intermediate state before the login method finishes. So we don't
-          // need to show a logging-in animation.
-          _suppressLoggingIn: true,
-          userCallback: function (error) {
-            if (error) {
-              makeClientLoggedOut();
-            }
-            options.userCallback(error);
-          }});
+        // XXX A DDP disconnect message would be helpful here, to know if our
+        // connection got closed because of an expired token.
+        if (! result.tokenExpires)
+          result.tokenExpires = Accounts._tokenExpiration(new Date());
+        if (! Accounts._tokenExpiresSoon(result.tokenExpires)) {
+          Accounts.callLoginMethod({
+            methodArguments: [{resume: result.token}],
+            // Reconnect quiescence ensures that the user doesn't see an
+            // intermediate state before the login method finishes. So we don't
+            // need to show a logging-in animation.
+            _suppressLoggingIn: true,
+            userCallback: function (error) {
+              if (error) {
+                makeClientLoggedOut();
+              }
+              options.userCallback(error);
+            }});
+        }
       };
     }
   };

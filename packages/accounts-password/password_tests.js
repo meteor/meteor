@@ -1,3 +1,9 @@
+Accounts.config({
+  _tokenLifetime: 5,
+  _tokenExpirationInterval: 5,
+  _minTokenLifetime: 1
+});
+
 if (Meteor.isClient) (function () {
 
   // XXX note, only one test can do login/logout things at once! for
@@ -255,6 +261,7 @@ if (Meteor.isClient) (function () {
         test.equal(result, null);
       }));
     },
+    logoutStep,
     function(test, expect) {
       var expectLoginError = expect(function (err) {
         test.isTrue(err);
@@ -267,8 +274,35 @@ if (Meteor.isClient) (function () {
           Meteor.loginWithToken(token, expectLoginError);
         });
       });
-    }
-
+    },
+    logoutStep,
+    function(test, expect) {
+      // Test that login tokens get expired. We should get logged out when a
+      // token expires, and not be able to log in again with the same token.
+      var expectLoggedOut = expect(function () {
+        test.equal(Meteor.user(), undefined);
+      });
+      var expectLoginError = expect(function (err) {
+        test.isTrue(err);
+      });
+      var expectNoError = expect(function (err) {
+        test.equal(err, undefined);
+      });
+      var expectToken = expect(function (token) {
+        test.isTrue(token);
+      });
+      var token;
+      Meteor.loginWithPassword(username, password2, function (error) {
+        expectNoError(error);
+        token = Accounts._storedLoginToken();
+      });
+      Meteor.setTimeout(function () {
+        expectToken(token);
+        expectLoggedOut();
+        Meteor.loginWithToken(token, expectLoginError);
+      }, 10*1000);
+    },
+    logoutStep
   ]);
 
 }) ();

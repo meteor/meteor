@@ -238,7 +238,6 @@ var Session = function (server, version) {
   self._universalSubs = [];
 
   self.userId = null;
-  self.loginToken = null;
 
   // Per-connection scratch area. This is only used internally, but we
   // should have real and documented API for this sort of thing someday.
@@ -666,8 +665,8 @@ _.extend(Session.prototype, {
 
   _setLoginToken: function (newToken) {
     var self = this;
-    var oldToken = self.loginToken;
-    self.loginToken = newToken;
+    var oldToken = self.sessionData.loginToken;
+    self.sessionData.loginToken = newToken;
     self.server._loginTokenChanged(self, newToken, oldToken);
   },
 
@@ -1371,13 +1370,21 @@ _.extend(Server.prototype, {
     var self = this;
     _.each(tokens, function (token) {
       if (_.has(self.sessionsByLoginToken, token)) {
+        var destroyedIds = [];
         _.each(self.sessionsByLoginToken[token], function (sessionId) {
           if (_.indexOf(excludeSessions, sessionId) === -1) {
             self.sessions[sessionId].cleanup();
             self.sessions[sessionId].destroy();
             delete self.sessions[sessionId];
+            destroyedIds.push(sessionId);
           }
         });
+        self.sessionsByLoginToken[token] = _.filter(
+          self.sessionsByLoginToken[token],
+          function (sessionId) {
+            return _.indexOf(destroyedIds, sessionId) === -1;
+          }
+        );
       }
     });
   }
