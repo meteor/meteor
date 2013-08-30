@@ -644,6 +644,24 @@ Tinytest.add("ui - DomRange - basic events", function (test) {
       span.click();
       arrayEqual(buf, [['click', span, span]]);
     });
+
+  inDocument(
+    htmlRange("<div><span>Foo</span></div>"),
+    function (r) {
+      var buf = [];
+
+      // test click with no selector; should only
+      // fire on the event target.
+      r.on('click', function (evt) {
+        buf.push([evt.type, evt.target, evt.currentTarget]);
+      });
+
+      arrayEqual(buf, []);
+      var span = r.$('span')[0];
+      span.click();
+      arrayEqual(buf, [['click', span, span]]);
+    });
+
 });
 
 // TO TEST STILL:

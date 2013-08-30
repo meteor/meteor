@@ -650,6 +650,66 @@ var moveWithOwnersIntoTbody = function (range) {
   return tbody;
 };
 
+///// FIND BY SELECTOR
+
+DomRange.prototype.$ = function (selector) {
+  var self = this;
+
+  var parentNode = this.parentNode();
+  if (! parentNode)
+    throw new Error("Can't select in removed DomRange");
+
+  // Strategy: Find all selector matches under parentNode,
+  // then filter out the ones that aren't in this DomRange
+  // using upwards pointers ($ui, owner, parentNode).  This is
+  // asymptotically slow in the presence of O(N) sibling
+  // content that is under parentNode but not in our range,
+  // so if performance is an issue, the selector should be
+  // run on a child element.
+
+  // We don't assume `results` has jQuery API; a plain array
+  // should do just as well.  However, if we do have a jQuery
+  // array, we want to end up with one also.
+  var results = $(selector, parentNode);
+
+  // Function that selects only elements that are actually
+  // in this DomRange, rather than simply descending from
+  // `parentNode`.
+  var filterFunc = function (elem) {
+    // handle jQuery's arguments to filter, where the node
+    // is in `this` and the index is the first argument.
+    if (typeof elem === 'number')
+      elem = this;
+
+    while (elem.parentNode !== parentNode)
+      elem = elem.parentNode;
+
+    var range = elem.$ui && elem.$ui.dom;
+    while (range && range !== self)
+      range = range.owner && range.owner.dom;
+
+    return range === self;
+  };
+
+  if (! results.filter) {
+    // not a jQuery array, and not a browser with
+    // Array.prototype.filter (e.g. IE <9)
+    var newResults = [];
+    for (var i = 0; i < results.length; i++) {
+      var x = results[i];
+      if (filterFunc(x))
+        newResults.push(x);
+    }
+    results = newResults;
+  } else {
+    // `results.filter` is either jQuery's or ECMAScript's `filter`
+    results = results.filter(filterFunc);
+  }
+
+  return results;
+};
+
+
 ///// EVENTS
 
 // XXX could write the form of arguments for this function
