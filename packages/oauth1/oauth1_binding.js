@@ -4,7 +4,9 @@ var querystring = Npm.require("querystring");
 // An OAuth1 wrapper around http calls which helps get tokens and
 // takes care of HTTP headers
 //
-// @param config {Object} Keys, Secrets, etc
+// @param config {Object} 
+//   - consumerKey (String): oauth consumer key
+//   - secret (String): oauth consumer secret
 // @param urls {Object}
 //   - requestToken (String): url
 //   - authorize (String): url
@@ -14,7 +16,6 @@ OAuth1Binding = function(config, urls) {
   this._config = config;
   this._urls = urls;
 };
-
 
 OAuth1Binding.prototype.prepareRequestToken = function(callbackUrl) {
   var self = this;
