@@ -8,7 +8,7 @@ AppConfig.findGalaxy = _.once(function () {
     return null;
   }
 
-  return DDP.connect(process.env.ULTRAWORLD_DDP_ENDPOINT || process.env.GALAXY);
+  return Follower.connect(process.env.ULTRAWORLD_DDP_ENDPOINT || process.env.GALAXY);
 });
 
 

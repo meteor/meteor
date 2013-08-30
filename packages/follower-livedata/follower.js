@@ -87,9 +87,7 @@ Follower = {
 
     tryElector();
 
-
-    var monitorConnection = function () {
-      return Meteor.setInterval(function () {
+    var checkConnection = function () {
         if (conn.status().status !== 'connected' || connected !== leader) {
           tryElector();
         } else {
@@ -102,7 +100,10 @@ Follower = {
             }
           });
         }
-      }, 5*1000); // every 5 seconds
+    };
+
+    var monitorConnection = function () {
+      return Meteor.setInterval(checkConnection, 5*1000); // every 5 seconds
     };
 
     intervalHandle = monitorConnection();
@@ -119,7 +120,12 @@ Follower = {
     conn.reconnect = function () {
       if (!intervalHandle)
         intervalHandle = monitorConnection();
-      conn._reconnectImpl.apply(conn, arguments);
+      if (arguments[0] && arguments[0].url) {
+        electorTries[arguments[0].url] = 0;
+        tryElector(arguments[0].url);
+      } else {
+        conn._reconnectImpl.apply(conn, arguments);
+      }
     };
 
     return conn;
