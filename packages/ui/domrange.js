@@ -650,4 +650,69 @@ var moveWithOwnersIntoTbody = function (range) {
   return tbody;
 };
 
+///// EVENTS
+
+// XXX could write the form of arguments for this function
+// in several different ways, including simply as an event map.
+DomRange.prototype.on = function (events, selector, handler) {
+  var parentNode = this.parentNode();
+  if (! parentNode)
+    // if we're not in the DOM, silently fail.
+    return;
+
+  var eventTypes = [];
+  events.replace(/[^ /]+/g, function (e) {
+    eventTypes.push(e);
+  });
+
+  if (! handler && (typeof selector === 'function')) {
+    // omitted `selector`
+    handler = selector;
+    selector = null;
+  } else if (! selector) {
+    // take `""` to `null`
+    selector = null;
+  }
+
+  for (var i = 0, N = eventTypes.length; i < N; i++) {
+    var type = eventTypes[i];
+
+    var eventDict = parentNode.$_uievents;
+    if (! eventDict)
+      eventDict = (parentNode.$_uievents = {});
+
+    var info = eventDict[type];
+    if (! info) {
+      info = eventDict[type] = {};
+      info.handlers = [];
+    }
+    var handlerRecord = {
+      elem: parentNode,
+      type: type,
+      selector: selector,
+      $ui: this.component,
+      handler: handler
+    };
+    // It's important that lowLevelHandler be a different
+    // instance for each handlerRecord, because its identity
+    // is used to remove it.  Capture handlerRecord in a
+    // closure so that we have access to it, even when
+    // the var changes, and so we don't pull in the rest of
+    // the stack frame.
+    handlerRecord.lowLevelHandler = (function (h) {
+      return function (evt) {
+        if ((! selector) && evt.currentTarget !== evt.target)
+          // no selector means only fire on target
+          return;
+        return h.handler.call(h.$ui, evt);
+      };
+    })(handlerRecord);
+
+    info.handlers.push(handlerRecord);
+
+    $(parentNode).on(type, selector || '*',
+                     handlerRecord.lowLevelHandler);
+  }
+};
+
 UI.DomRange = DomRange;

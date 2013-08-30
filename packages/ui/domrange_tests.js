@@ -1,5 +1,6 @@
 
 var DomRange = UI.DomRange;
+var parseHTML = UI.DomBackend.parseHTML;
 
 // fake component; DomRange host
 var Comp = function (which) {
@@ -14,6 +15,18 @@ var isStartMarker = function (n) {
 
 var isEndMarker = function (n) {
   return (n.$ui && n === n.$ui.dom.end);
+};
+
+var inDocument = function (range, func) {
+  var onscreen = document.createElement("DIV");
+  onscreen.style.display = 'none';
+  document.body.appendChild(onscreen);
+  DomRange.insert(range.component, onscreen);
+  try {
+    func(range);
+  } finally {
+    document.body.removeChild(onscreen);
+  }
 };
 
 Tinytest.add("ui - DomRange - basic", function (test) {
@@ -593,6 +606,45 @@ Tinytest.add("ui - DomRange - tables", function (test) {
   test.equal(tbody.childNodes[4].nodeName, 'TR');
 });
 
+Tinytest.add("ui - DomRange - basic events", function (test) {
+  // test.equal doesn't work on arrays of DOM nodes, so
+  // we need this.  It's `===` that descends recursively
+  // into any arrays.
+  var arrayEqual = function (a, b) {
+    test.equal(_.isArray(a), _.isArray(b));
+    if (_.isArray(a)) {
+      test.equal(a.length, b.length);
+      for (var i = 0; i < a.length; i++) {
+        arrayEqual(a[i], b[i]);
+      }
+    } else {
+      test.isTrue(a[i] === b[i]);
+    }
+  };
+
+  var htmlRange = function (html) {
+    var r = new DomRange;
+    _.each(parseHTML(html), function (node) {
+      r.add(node);
+    });
+    return r;
+  };
+
+  inDocument(
+    htmlRange("<span>Foo</span>"),
+    function (r) {
+      var buf = [];
+
+      r.on('click', 'span', function (evt) {
+        buf.push([evt.type, evt.target, evt.currentTarget]);
+      });
+
+      arrayEqual(buf, []);
+      var span = r.elements()[0];
+      span.click();
+      arrayEqual(buf, [['click', span, span]]);
+    });
+});
 
 // TO TEST STILL:
 // - external remove element
