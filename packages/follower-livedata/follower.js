@@ -1,14 +1,19 @@
 Follower = {
 
   connect: function (urlSet) {
-    if (typeof urlSet === 'string') {
-      urlSet = _.map(urlSet.split(','), function (url) {return url.trim();});
-    }
-    var electorTries = {};
+
+    var electorTries;
     // start each elector as untried/assumed connectable.
-    _.each(urlSet, function (url) {
-      electorTries[url] = 0;
-    });
+    var makeElectorTries = function (urlSet) {
+      electorTries = {};
+      if (typeof urlSet === 'string') {
+        urlSet = _.map(urlSet.split(','), function (url) {return url.trim();});
+      }
+      _.each(urlSet, function (url) {
+        electorTries[url] = 0;
+      });
+    };
+    makeElectorTries(urlSet);
     var tryingUrl = null;
     var conn = null;
     var leader = null;
@@ -43,6 +48,7 @@ Follower = {
 
     var tryElector = function (url) {
       url = url || findFewestTries();
+      console.log("trying", url, electorTries);
       if (conn) {
         conn._reconnectImpl({
           url: url
@@ -121,7 +127,7 @@ Follower = {
       if (!intervalHandle)
         intervalHandle = monitorConnection();
       if (arguments[0] && arguments[0].url) {
-        electorTries[arguments[0].url] = 0;
+        makeElectorTries(arguments[0].url);
         tryElector(arguments[0].url);
       } else {
         conn._reconnectImpl.apply(conn, arguments);
