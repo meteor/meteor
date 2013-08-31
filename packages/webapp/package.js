@@ -8,7 +8,7 @@ Npm.depends({connect: "2.9.0",
              useragent: "2.0.7"});
 
 Package.on_use(function (api) {
-  api.use(['logging', 'underscore', 'routepolicy'], 'server');
+  api.use(['livedata', 'logging', 'underscore', 'routepolicy'], 'server');
   api.use(['application-configuration'], {
     unordered: true
   });
