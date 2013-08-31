@@ -29,6 +29,14 @@ var inDocument = function (range, func) {
   }
 };
 
+var htmlRange = function (html) {
+  var r = new DomRange;
+  _.each(parseHTML(html), function (node) {
+    r.add(node);
+  });
+  return r;
+};
+
 Tinytest.add("ui - DomRange - basic", function (test) {
   var r = new DomRange;
   r.which = 'R';
@@ -622,14 +630,6 @@ Tinytest.add("ui - DomRange - basic events", function (test) {
     }
   };
 
-  var htmlRange = function (html) {
-    var r = new DomRange;
-    _.each(parseHTML(html), function (node) {
-      r.add(node);
-    });
-    return r;
-  };
-
   inDocument(
     htmlRange("<span>Foo</span>"),
     function (r) {
@@ -662,6 +662,78 @@ Tinytest.add("ui - DomRange - basic events", function (test) {
       arrayEqual(buf, [['click', span, span]]);
     });
 
+  inDocument(
+    htmlRange('<div id="yeah"><span>Foo</span></div>' +
+              '<div id="no">Bar</div>'),
+    function (r) {
+      var buf = [];
+
+      // test click on particular div, which is
+      // not the target or the bound element
+      r.on('click', '#yeah', function (evt) {
+        buf.push([evt.type, evt.target, evt.currentTarget]);
+      });
+
+      arrayEqual(buf, []);
+      r.$('#no')[0].click();
+      arrayEqual(buf, []);
+      var yeah = r.$('#yeah')[0];
+      yeah.click();
+      arrayEqual(buf, [['click', yeah, yeah]]);
+    });
+
+  inDocument(
+    new DomRange,
+    function (r) {
+      var s;
+      r.add(s = htmlRange('<div id="one"></div>'));
+      r.add(htmlRange('<div id="two"></div>'));
+      var one = r.$('#one')[0];
+      var two = r.$('#two')[0];
+
+      var buf = [];
+
+      // test that click must be in range to fire
+      // event handler
+      s.on('click', 'div', function (evt) {
+        buf.push([evt.type, evt.target, evt.currentTarget]);
+      });
+
+      arrayEqual(buf, []);
+      two.click();
+      arrayEqual(buf, []);
+      one.click();
+      arrayEqual(buf, [['click', one, one]]);
+    });
+
+});
+
+Tinytest.add("ui - DomRange - contains", function (test) {
+  inDocument(new DomRange, function (r) {
+    var s = htmlRange('<div id="one"><span>Foo</span></div>');
+    var t = new DomRange;
+    t.add(s);
+    r.add(t);
+    r.add(htmlRange('<div id="two"></div>'));
+    var one = r.$('#one')[0];
+    var two = r.$('#two')[0];
+    var span = r.$('span')[0];
+
+    test.isFalse(r.contains(r));
+    test.isTrue(r.contains(s));
+    test.isTrue(r.contains(t));
+    test.isTrue(r.contains(one));
+    test.isTrue(s.contains(one));
+    test.isTrue(t.contains(one));
+    test.isTrue(r.contains(two));
+    test.isFalse(s.contains(two));
+    test.isFalse(t.contains(two));
+    test.isTrue(r.contains(span));
+    test.isTrue(s.contains(span));
+    test.isTrue(t.contains(span));
+    test.isFalse(r.contains(r.parentNode));
+    test.isFalse(r.contains(document.createElement("DIV")));
+  });
 });
 
 // TO TEST STILL:

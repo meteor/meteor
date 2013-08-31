@@ -1,3 +1,4 @@
+var DomBackend = UI.DomBackend;
 
 var removeNode = function (n) {
 //  if (n.nodeType === 1 &&
@@ -23,13 +24,6 @@ var moveNode = function (n, parent, next) {
 //  else
     // `|| null` because IE throws an error if 'next' is undefined
     parent.insertBefore(n, next || null);
-};
-
-var newFragment = function (nodeArray) {
-  // jQuery fragments are built specially in
-  // IE<9 so that they can safely hold HTML5
-  // elements.
-  return $.buildFragment(nodeArray, document);
 };
 
 // A very basic operation like Underscore's `_.extend` that
@@ -74,7 +68,7 @@ var DomRange = function (component) {
   //   detection too.
   var start = document.createTextNode("");
   var end = document.createTextNode("");
-  var fragment = newFragment([start, end]);
+  var fragment = DomBackend.newFragment([start, end]);
 
   if (component) {
     this.component = component;
@@ -212,6 +206,8 @@ _extend(DomRange.prototype, {
       if (typeof newMember.nodeType !== 'number')
         throw new Error("Expected Component or Node");
       var node = newMember;
+      // can't attach `$ui` to a TextNode in IE 8, so
+      // don't bother on any browser.
       if (node.nodeType !== 3)
         node.$ui = this.component;
 
@@ -455,6 +451,8 @@ _extend(DomRange.prototype, {
                  n && ! n.$ui;
                  n = n.previousSibling) {
               this.members[this.nextMemberId++] = n;
+              // can't attach `$ui` to a TextNode in IE 8, so
+              // don't bother on any browser.
               if (n.nodeType !== 3)
                 n.$ui = this.component;
             }
@@ -652,6 +650,52 @@ var moveWithOwnersIntoTbody = function (range) {
 
 ///// FIND BY SELECTOR
 
+DomRange.prototype.contains = function (compOrNode) {
+  if (! compOrNode)
+    throw new Error("Expected Component or Node");
+
+  var parentNode = this.parentNode();
+  if (! parentNode)
+    return false;
+
+  var range;
+  if (! compOrNode)
+    debugger;
+  if ('dom' in compOrNode) {
+    // Component
+    range = compOrNode.dom;
+    var pn = range.parentNode();
+    if (! pn)
+      return false;
+    // If parentNode is different, it must be a node
+    // we contain.
+    if (pn !== parentNode)
+      return this.contains(pn);
+    if (range === this)
+      return false; // don't contain self
+    // Ok, `range` is a same-parent range to see if we
+    // contain.
+  } else {
+    // Node
+    var node = compOrNode;
+    if (! elementContains(parentNode, node))
+      return false;
+
+    while (node.parentNode !== parentNode)
+      node = node.parentNode;
+
+    range = node.$ui && node.$ui.dom;
+  }
+
+  // Now see if `range` is truthy and either `this`
+  // or an immediate subrange
+
+  while (range && range !== this)
+    range = range.owner && range.owner.dom;
+
+  return range === this;
+};
+
 DomRange.prototype.$ = function (selector) {
   var self = this;
 
@@ -667,10 +711,18 @@ DomRange.prototype.$ = function (selector) {
   // so if performance is an issue, the selector should be
   // run on a child element.
 
+  // Since jQuery can't run selectors on a DocumentFragment,
+  // we don't expect findBySelector to work.
+  if (parentNode.nodeType === 11) // DocumentFragment
+    throw new Error("Can't use $ on a detached component");
+
+  var results = DomBackend.findBySelector(selector, parentNode);
+
   // We don't assume `results` has jQuery API; a plain array
   // should do just as well.  However, if we do have a jQuery
-  // array, we want to end up with one also.
-  var results = $(selector, parentNode);
+  // array, we want to end up with one also, so we use
+  // `.filter`.
+
 
   // Function that selects only elements that are actually
   // in this DomRange, rather than simply descending from
@@ -681,14 +733,7 @@ DomRange.prototype.$ = function (selector) {
     if (typeof elem === 'number')
       elem = this;
 
-    while (elem.parentNode !== parentNode)
-      elem = elem.parentNode;
-
-    var range = elem.$ui && elem.$ui.dom;
-    while (range && range !== self)
-      range = range.owner && range.owner.dom;
-
-    return range === self;
+    return self.contains(elem);
   };
 
   if (! results.filter) {
@@ -764,6 +809,8 @@ DomRange.prototype.on = function (events, selector, handler) {
         if ((! selector) && evt.currentTarget !== evt.target)
           // no selector means only fire on target
           return;
+        if (! h.$ui.dom.contains(evt.currentTarget))
+          return;
         return h.handler.call(h.$ui, evt);
       };
     })(handlerRecord);
@@ -774,5 +821,30 @@ DomRange.prototype.on = function (events, selector, handler) {
                      handlerRecord.lowLevelHandler);
   }
 };
+
+  // Returns true if element a contains node b and is not node b.
+  var elementContains = function (a, b) {
+    if (a.nodeType !== 1) // ELEMENT
+      return false;
+    if (a === b)
+      return false;
+
+    if (a.compareDocumentPosition) {
+      return a.compareDocumentPosition(b) & 0x10;
+    } else {
+          // Should be only old IE and maybe other old browsers here.
+          // Modern Safari has both functions but seems to get contains() wrong.
+          // IE can't handle b being a text node.  We work around this
+          // by doing a direct parent test now.
+      b = b.parentNode;
+      if (! (b && b.nodeType === 1)) // ELEMENT
+        return false;
+      if (a === b)
+        return true;
+
+      return a.contains(b);
+    }
+  };
+
 
 UI.DomRange = DomRange;

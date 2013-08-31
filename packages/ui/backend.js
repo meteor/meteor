@@ -12,6 +12,18 @@ if (Meteor.isClient) {
   var $ = Package.jquery.jQuery;
 
   var DomBackend = {
+    // Must use jQuery semantics for `context`, not
+    // querySelectorAll's.  In other words, all the parts
+    // of `selector` must be found under `context`.
+    findBySelector: function (selector, context) {
+      return jQuery.find(selector, context);
+    },
+    newFragment: function (nodeArray) {
+      // jQuery fragments are built specially in
+      // IE<9 so that they can safely hold HTML5
+      // elements.
+      return $.buildFragment(nodeArray, document);
+    },
     parseHTML: function (html) {
       // Return an array of nodes.
       //
