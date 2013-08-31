@@ -222,6 +222,18 @@ The error message contains the following fields:
  * `offendingMessage`: if the original message parsed properly, it is included
    here
 
+## Disconnection
+
+### Messages:
+
+ * `disconnected` (server->client)
+   - `reason`: string ("logged_out" or "token_expired")
+
+### Procedure:
+
+ * Before the server disconnects a client, it can optionally send a disconnected
+   message to indicate the cause of the disconnect.
+
 ## Appendix: EJSON
 
 EJSON is a way of embedding more than the built-in JSON types in JSON.  It

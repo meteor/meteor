@@ -209,6 +209,8 @@ var Connection = function (url, options) {
       self._livedata_nosub(msg);
     else if (msg.msg === 'result')
       self._livedata_result(msg);
+    else if (msg.msg === 'disconnected')
+      self._livedata_disconnected(msg);
     else if (msg.msg === 'error')
       self._livedata_error(msg);
     else
@@ -1317,6 +1319,15 @@ _.extend(Connection.prototype, {
     _.each(self._outstandingMethodBlocks[0].methods, function (m) {
       m.sendMessage();
     });
+  },
+
+  _livedata_disconnected: function (msg) {
+    var self = this;
+    var reason = msg.reason;
+    if (reason === "logged_out" || reason === "token_expired") {
+      self.setUserId(null);
+      self.onReconnect = null;
+    }
   },
 
   _livedata_error: function (msg) {

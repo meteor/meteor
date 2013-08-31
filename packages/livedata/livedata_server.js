@@ -452,6 +452,12 @@ _.extend(Session.prototype, {
     self.send(msg);
   },
 
+  // Send a DDP disconnected message.
+  sendDisconnected: function (reason) {
+    var self = this;
+    self.send({ msg: "disconnected", reason: reason });
+  },
+
   // Process 'msg' as an incoming message. (But as a guard against
   // race conditions during reconnection, ignore the message if
   // 'socket' is not the currently connected socket.)
@@ -599,8 +605,8 @@ _.extend(Session.prototype, {
       };
 
       // Closes all sessions associated with these tokens except this one.
-      var closeAll = function (tokens) {
-        self._closeAllForTokens(tokens, [self.id]);
+      var closeAll = function (tokens, reason) {
+        self._closeAllForTokens(tokens, reason);
       };
 
       var invocation = new MethodInvocation({
@@ -670,9 +676,9 @@ _.extend(Session.prototype, {
     self.server._loginTokenChanged(self, newToken, oldToken);
   },
 
-  _closeAllForTokens: function (tokens) {
+  _closeAllForTokens: function (tokens, reason) {
     var self = this;
-    self.server._closeAllForTokens(tokens, [self.id]);
+    self.server._closeAllForTokens(tokens, reason, [self.id]);
   },
 
   // Sets the current user id in all appropriate contexts and reruns
@@ -1364,21 +1370,37 @@ _.extend(Server.prototype, {
     self.sessionsByLoginToken[newToken].push(session.id);
   },
 
-  // Close all open sessions associated with any of the tokens in `tokens`,
-  // except for sessions with ids in `excludeSessions`.
-  _closeAllForTokens: function (tokens, excludeSessions) {
+  // Close all open sessions associated with any of the tokens in `tokens`. If
+  // `reason` is provided, sends each session a disconnected message before
+  // closing it. `excludeSessions` is an optional array of strings (session ids)
+  // to not close, even if they match a token in `tokens`.
+  _closeAllForTokens: function (tokens, reason, excludeSessions) {
     var self = this;
+
+    if (! excludeSessions && typeof reason === "object") {
+      excludeSessions = reason;
+      reason = undefined;
+    }
+
+    if (tokens.length)
     _.each(tokens, function (token) {
       if (_.has(self.sessionsByLoginToken, token)) {
         var destroyedIds = [];
         _.each(self.sessionsByLoginToken[token], function (sessionId) {
-          if (_.indexOf(excludeSessions, sessionId) === -1) {
-            self.sessions[sessionId].cleanup();
-            self.sessions[sessionId].destroy();
-            delete self.sessions[sessionId];
-            destroyedIds.push(sessionId);
-          }
+          if (_.indexOf(excludeSessions, sessionId) !== -1)
+            return;
+
+          // Destroy session and remove from self.sessions.
+          var session = self.sessions[sessionId];
+          if (reason)
+            session.sendDisconnected(reason);
+          session.cleanup();
+          session.destroy();
+          delete self.sessions[sessionId];
+          destroyedIds.push(sessionId);
         });
+
+        // Remove destroyed sessions from self.sessionsByLoginToken.
         self.sessionsByLoginToken[token] = _.filter(
           self.sessionsByLoginToken[token],
           function (sessionId) {
