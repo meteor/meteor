@@ -95,8 +95,9 @@ Meteor.methods({
   // Nuke everything: delete all the user's tokens and close all open
   // connections logged in as this user, except this connection. Returns a fresh
   // new login token that this client can use.
-  _logoutAllOthers: function () {
+  _logoutAllOthers: function (opts) {
     var self = this;
+    opts = opts || {};
     var user = Meteor.users.findOne(self.userId);
     if (user) {
       var tokens = user.services.resume.loginTokens;
@@ -106,11 +107,12 @@ Meteor.methods({
       // Wait 10 seconds before closing the connections. This is to give other
       // clients using our token a chance to find a new token in localStorage so
       // that when they get disconnected they reconnect with a valid token.
+      var delay = opts._noDelay ? 0 : 10;
       Meteor.setTimeout(function () {
         self._closeAllForTokens(_.map(tokens, function (token) {
           return token.token;
-        }));
-      }, 10*1000);
+        }), "logged_out");
+      }, delay * 1000);
 
       var newToken = Accounts._generateStampedLoginToken();
       Meteor.users.update(self.userId, {
@@ -118,7 +120,7 @@ Meteor.methods({
           "services.resume.loginTokens": newToken
         }
       });
-      self._setLoginToken(newToken);
+      self._setLoginToken(newToken.token);
       return {
         token: newToken.token,
         tokenExpires: Accounts._tokenExpiration(newToken.when)
@@ -202,7 +204,7 @@ var expireTokens = function () {
     }
   }, { multi: true });
 
-  Meteor.server._closeAllForTokens(oldTokens);
+  Meteor.server._closeAllForTokens(oldTokens, "token_expired");
 };
 
 Meteor.users._ensureIndex("services.resume.loginTokens.when", { sparse: true });

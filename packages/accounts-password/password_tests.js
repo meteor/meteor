@@ -277,30 +277,72 @@ if (Meteor.isClient) (function () {
     },
     logoutStep,
     function(test, expect) {
+      // XXX would be nice to write this test in a way that avoids the
+      // possibly-flaky timing stuff (e.g. have a test hook for expiring tokens
+      // on demand rather than waiting for them to expire)
+
       // Test that login tokens get expired. We should get logged out when a
       // token expires, and not be able to log in again with the same token.
       var expectLoggedOut = expect(function () {
-        test.equal(Meteor.user(), undefined);
+        test.equal(Meteor.user(), null);
       });
       var expectLoginError = expect(function (err) {
         test.isTrue(err);
-      });
-      var expectNoError = expect(function (err) {
-        test.equal(err, undefined);
       });
       var expectToken = expect(function (token) {
         test.isTrue(token);
       });
       var token;
       Meteor.loginWithPassword(username, password2, function (error) {
-        expectNoError(error);
+        test.isFalse(error);
         token = Accounts._storedLoginToken();
+        expectToken(token);
       });
       Meteor.setTimeout(function () {
         expectToken(token);
         expectLoggedOut();
         Meteor.loginWithToken(token, expectLoginError);
       }, 10*1000);
+    },
+    logoutStep,
+    function (test, expect) {
+      // Test that Meteor._logoutAllOthers logs out a second authenticated
+      // connection.
+      var expectLoggedIn = expect(function (err, result) {
+        test.isTrue(Meteor.user());
+      });
+      var expectLoginErr = expect(function (err) {
+        test.isTrue(err);
+      });
+
+      var token;
+
+      // copied from livedata/client_convenience.js
+      var ddpUrl = '/';
+      if (typeof __meteor_runtime_config__ !== "undefined") {
+        if (__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL)
+          ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
+      }
+      var secondConn = DDP.connect(ddpUrl);
+
+      Meteor.loginWithPassword(username, password2, function (err, result) {
+        expectLoggedIn(err, result);
+        token = Accounts._storedLoginToken();
+        secondConn.call("login", {
+          resume: token
+        }, function (err, result) {
+          test.isFalse(err);
+          Meteor._logoutAllOthers({ _noDelay: true }, function () {
+            // secondConn should be logged out and subsequently fail resume
+            // login, but Meteor.connection should stay logged in.
+            Meteor.setTimeout(function () {
+              test.isTrue(Meteor.user());
+              test.isFalse(secondConn.userId());
+              secondConn.call("login", { resume: token }, expectLoginErr);
+            }, 50);
+          });
+        });
+      });
     },
     logoutStep
   ]);

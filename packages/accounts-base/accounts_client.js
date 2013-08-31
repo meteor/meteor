@@ -180,16 +180,26 @@ Meteor.logout = function (callback) {
   });
 };
 
-Meteor._logoutAllOthers = function (callback) {
-  Meteor.apply('_logoutAllOthers', [], {wait: true}, function (error, result) {
-    if (error) {
-      callback && callback(error);
-    } else {
-      // The method should return a new valid token that we should start using.
-      makeClientLoggedIn(Meteor.userId(), result.token, result.tokenExpires);
-      callback && callback();
-    }
-  });
+// Set opts._noDelay to close other open connections without any delay, rather
+// than the 10 second default delay. Used by test.
+Meteor._logoutAllOthers = function (opts, callback) {
+  if (! callback && typeof opts === "Function") {
+    callback = opts;
+    opts = {};
+  }
+  Meteor.apply('_logoutAllOthers', [opts], { wait: true },
+               function (error, result) {
+                 console.log("logged out others");
+                 if (error) {
+                   callback && callback(error);
+                 } else {
+                   // The method should return a new valid token that we should
+                   // start using.
+                   makeClientLoggedIn(Meteor.userId(), result.token,
+                                      result.tokenExpires);
+                   callback && callback();
+                 }
+               });
 };
 
 ///

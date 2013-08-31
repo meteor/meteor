@@ -73,7 +73,7 @@ var storedUserId = function() {
 
 var unstoreLoginTokenIfExpiresSoon = function () {
   var tokenExpires = Meteor._localStorage.getItem(loginTokenExpiresKey);
-  if (tokenExpires && Accounts._tokenExpiresSoon(tokenExpires))
+  if (tokenExpires && Accounts._tokenExpiresSoon(new Date(tokenExpires)))
     unstoreLoginToken();
 };
 
