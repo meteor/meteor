@@ -81,6 +81,7 @@ var removeCspSrc = function (directive, src) {
 };
 
 var ensureDirective = function (directive) {
+  cspSrcs = cspSrcs || {};
   if (! _.has(cspSrcs, directive))
     cspSrcs[directive] = [];
 };

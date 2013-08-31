@@ -335,6 +335,7 @@ var toc = [
     "audit-argument-checks",
     "backbone",
     "bootstrap",
+    "browser-policy",
     "coffeescript",
     "d3",
     "force-ssl",
@@ -344,9 +345,8 @@ var toc = [
     "spiderable",
     "stylus",
     "showdown",
-    "underscore",
-    "browser-policy",
-    "starter-browser-policy"
+    "starter-browser-policy",
+    "underscore"
   ] ],
 
   "Command line", [ [

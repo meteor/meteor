@@ -12,6 +12,9 @@ Package.on_use(function (api) {
   api.use(['application-configuration'], {
     unordered: true
   });
+  api.use(['browser-policy'], {
+    unordered: true
+  });
   api.export(['WebApp', 'main', 'WebAppInternals'], 'server');
   api.add_files('webapp_server.js', 'server');
 });
