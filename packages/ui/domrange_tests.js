@@ -736,6 +736,78 @@ Tinytest.add("ui - DomRange - contains", function (test) {
   });
 });
 
+Tinytest.add("ui - DomRange - constructor", function (test) {
+  var r = new DomRange;
+  test.isTrue(r.dom === r);
+  test.isTrue(r.component === r);
+
+  var x = {};
+  var s = new DomRange(x);
+  test.isTrue(x.dom === s);
+  test.isTrue(s.component === x);
+
+  test.isTrue(s.parentNode());
+
+  test.isTrue(s.start.$ui === x);
+  test.isTrue(s.end.$ui === x);
+
+  var div = document.createElement('div');
+  s.add(div);
+  test.isTrue(div.$ui === x);
+});
+
+Tinytest.add("ui - DomRange - get", function (test) {
+  var r = new DomRange;
+  var a = document.createElement('div');
+  var b = document.createElement('div');
+  var c = document.createElement('div');
+  var d = document.createElement('div');
+
+  r.add(a);
+  r.add(null, b);
+  r.add('c', c);
+  test.throws(function () {
+    r.add(0, d);
+  });
+  test.throws(function () {
+    r.add(1, d);
+  });
+  test.throws(function () {
+    r.add('', d);
+  });
+
+  test.isTrue(r.get('toString') === null);
+  test.isTrue(r.get('__proto__') === null);
+  test.isTrue(r.get('_proto__') === null);
+  test.isTrue(r.get('blahblah') === null);
+  r.add('toString', d);
+
+  test.throws(function () {
+    r.get('');
+  });
+  test.throws(function () {
+    r.get(null);
+  });
+  test.throws(function () {
+    r.get(1);
+  });
+
+  test.equal(r.elements().length, 4);
+
+  test.isTrue(r.get('c') === c);
+  test.isTrue(r.get('toString') === d);
+
+  var x = {};
+  var s = new DomRange(x);
+
+  test.throws(function () {
+    r.add('s', s);
+  });
+
+  r.add('x', x);
+  test.isTrue(r.get('x') === x);
+});
+
 // TO TEST STILL:
 // - external remove element
 // - double-add, double-remove
@@ -745,7 +817,5 @@ Tinytest.add("ui - DomRange - contains", function (test) {
 //   same with remove and move `id` arguments.
 // - can't add multiple members with id, but can add array of 1.
 //   can add 0 with no id.
-// - member named "toString" or "_proto__", something that
-//   is "in" `{}` or is once you add `_` as we do.
 // - add a node or range with the same id as an old member
 //   works if that member is gone.

@@ -58,6 +58,13 @@ var isSignificantNode = function (n) {
              /^\s+$/.test(n.nodeValue)));
 };
 
+var checkId = function (id) {
+  if (typeof id !== 'string')
+    throw new Error("id must be a string");
+  if (! id)
+    throw new Error("id may not be empty");
+};
+
 var DomRange = function (component) {
   // This code supports IE 8 if `createTextNode` is changed
   // to `createComment`.  What we really should do is:
@@ -73,6 +80,8 @@ var DomRange = function (component) {
   if (component) {
     this.component = component;
     component.dom = this;
+    // must NOT set `this.dom` to anything (even `null`)
+    // in this case.
   } else {
     // self-host
     this.component = this;
@@ -160,10 +169,12 @@ _extend(DomRange.prototype, {
                     this.getInsertionPoint(beforeId));
 
     var newMember = newMemberOrArray;
-    if (id == null)
+    if (id == null) {
       id = this.nextMemberId++;
-    else
-      id = '_' + id;
+    } else {
+      checkId(id);
+      id = ' ' + id;
+    }
 
     var members = this.members;
     if (members.hasOwnProperty(id)) {
@@ -227,7 +238,8 @@ _extend(DomRange.prototype, {
       return;
     }
 
-    id = '_' + id;
+    checkId(id);
+    id = ' ' + id;
     var members = this.members;
     var member = (members.hasOwnProperty(id) &&
                   members[id]);
@@ -261,7 +273,8 @@ _extend(DomRange.prototype, {
   },
   moveBefore: function (id, beforeId) {
     var nextNode = this.getInsertionPoint(beforeId);
-    id = '_' + id;
+    checkId(id);
+    id = ' ' + id;
     var members = this.members;
     var member =
           (members.hasOwnProperty(id) &&
@@ -294,7 +307,8 @@ _extend(DomRange.prototype, {
     }
   },
   get: function (id) {
-    id = '_' + id;
+    checkId(id);
+    id = ' ' + id;
     var members = this.members;
     if (members.hasOwnProperty(id))
       return members[id];
@@ -513,7 +527,8 @@ _extend(DomRange.prototype, {
       return this.end;
     }
 
-    beforeId = '_' + beforeId;
+    checkId(beforeId);
+    beforeId = ' ' + beforeId;
     var mem = members[beforeId];
 
     if ('dom' in mem) {
