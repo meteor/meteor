@@ -731,7 +731,7 @@ Tinytest.add("ui - DomRange - contains", function (test) {
     test.isTrue(r.contains(span));
     test.isTrue(s.contains(span));
     test.isTrue(t.contains(span));
-    test.isFalse(r.contains(r.parentNode));
+    test.isFalse(r.contains(r.parentNode()));
     test.isFalse(r.contains(document.createElement("DIV")));
   });
 });
@@ -808,6 +808,37 @@ Tinytest.add("ui - DomRange - get", function (test) {
   test.isTrue(r.get('x') === x);
 });
 
+// This test targets IE 9 and 10, which allow properties
+// to be attached to TextNodes but may lose them over time.
+// Specifically, the JavaScript view of a TextNode seems to
+// be only weakly retained by the TextNode itself, so if you
+// hang an object graph off a TextNode, you need some other
+// pointer to the TextNode or an object in the graph to
+// retain it.
+Tinytest.addAsync("ui - DomRange - IE TextNode GC", function (test, onComplete) {
+  var r = new DomRange;
+  var B = document.createElement('B');
+  B.id = 'ie_textnode_gc_test';
+  document.body.appendChild(B);
+  DomRange.insert(r, B);
+  r = null;
+  B = null;
+
+  // trigger GC...
+  if (typeof CollectGarbage === 'function')
+    CollectGarbage();
+
+  // come back later...
+  window.setTimeout(function () {
+    var B = document.getElementById("ie_textnode_gc_test");
+    test.isTrue(B.firstChild.$ui);
+    test.isTrue(B.lastChild.$ui);
+    window.BBB = B;
+    document.body.removeChild(B);
+    onComplete();
+  }, 500);
+});
+
 // TO TEST STILL:
 // - external remove element
 // - double-add, double-remove
@@ -819,3 +850,5 @@ Tinytest.add("ui - DomRange - get", function (test) {
 //   can add 0 with no id.
 // - add a node or range with the same id as an old member
 //   works if that member is gone.
+// - events get wired if declared before adding; get moved
+//   when wrapping in TBODY

@@ -12,7 +12,7 @@ Package.on_use(function (api) {
   api.use('minimongo');  // for idStringify
 
   api.add_files(['backend.js',
-                 'domrange.js']);
+                 'domrange.js'], 'client');
 });
 
 Package.on_test(function (api) {

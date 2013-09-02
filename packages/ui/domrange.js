@@ -65,6 +65,22 @@ var checkId = function (id) {
     throw new Error("id may not be empty");
 };
 
+var textExpandosOk = (function () {
+  var tn = document.createTextNode('');
+  try {
+    tn.blahblah = true;
+    return true;
+  } catch (e) {
+    // IE 8
+    return false;
+  }
+})();
+
+var createMarkerNode = (
+  textExpandosOk ?
+    function () { return document.createTextNode(""); } :
+  function () { return document.createComment(""); });
+
 var DomRange = function (component) {
   // This code supports IE 8 if `createTextNode` is changed
   // to `createComment`.  What we really should do is:
@@ -73,9 +89,10 @@ var DomRange = function (component) {
   // - keep a list of all DomRanges to avoid IE 9+ GC of
   //   TextNodes; this will probably help DomRange removal
   //   detection too.
-  var start = document.createTextNode("");
-  var end = document.createTextNode("");
+  var start = createMarkerNode();
+  var end = createMarkerNode();
   var fragment = DomBackend.newFragment([start, end]);
+  fragment.$_uiIsOffscreen = true;
 
   if (component) {
     this.component = component;
@@ -730,8 +747,9 @@ DomRange.prototype.$ = function (selector) {
 
   // Since jQuery can't run selectors on a DocumentFragment,
   // we don't expect findBySelector to work.
-  if (parentNode.nodeType === 11) // DocumentFragment
-    throw new Error("Can't use $ on a detached component");
+  if (parentNode.nodeType === 11 /* DocumentFragment */ ||
+      parentNode.$_uiIsOffscreen)
+    throw new Error("Can't use $ on an offscreen component");
 
   var results = DomBackend.findBySelector(selector, parentNode);
 
@@ -817,8 +835,17 @@ var HandlerRec = function (elem, type, selector, handler, $ui) {
     };
   })(this);
 
-  var tryCapturing = (! eventsToDelegate.hasOwnProperty(
-    DomBackend.parseEventType(type)));
+  // WHY CAPTURE AND DELEGATE: jQuery can't delegate
+  // non-bubbling events, because
+  // event capture doesn't work in IE 8.  However, there
+  // are all sorts of new-fangled non-bubbling events
+  // like "play" and "touchenter".  We delegate these
+  // events using capture in all browsers except IE 8.
+  // IE 8 doesn't support these events anyway.
+
+  var tryCapturing = elem.addEventListener &&
+        (! eventsToDelegate.hasOwnProperty(
+          DomBackend.parseEventType(type)));
 
   if (tryCapturing) {
     this.capturingHandler = (function (h) {
