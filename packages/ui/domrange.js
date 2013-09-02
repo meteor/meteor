@@ -791,6 +791,88 @@ var EVENT_MODE_TBD = 0;
 var EVENT_MODE_BUBBLING = 1;
 var EVENT_MODE_CAPTURING = 2;
 
+var HandlerRec = function (elem, type, selector, handler, $ui) {
+  this.elem = elem;
+  this.type = type;
+  this.selector = selector;
+  this.handler = handler;
+  this.$ui = $ui;
+
+  this.mode = EVENT_MODE_TBD;
+
+  // It's important that delegatedHandler be a different
+  // instance for each handlerRecord, because its identity
+  // is used to remove it.
+  //
+  // It's also important that the closure have access to
+  // `this` when it is not called with it set.
+  this.delegatedHandler = (function (h) {
+    return function (evt) {
+      if ((! h.selector) && evt.currentTarget !== evt.target)
+        // no selector means only fire on target
+        return;
+      if (! h.$ui.dom.contains(evt.currentTarget))
+        return;
+      return h.handler.call(h.$ui, evt);
+    };
+  })(this);
+
+  var tryCapturing = (! eventsToDelegate.hasOwnProperty(
+    DomBackend.parseEventType(type)));
+
+  if (tryCapturing) {
+    this.capturingHandler = (function (h) {
+      return function (evt) {
+        if (h.mode === EVENT_MODE_TBD) {
+          // must be first time we're called.
+          if (evt.bubbles) {
+            // this type of event bubbles, so don't
+            // get called again.
+            h.mode = EVENT_MODE_BUBBLING;
+            DomBackend.unbindEventCapturer(
+              h.elem, h.type, h.capturingHandler);
+            return;
+          } else {
+            // this type of event doesn't bubble,
+            // so unbind the delegation, preventing
+            // it from ever firing.
+            h.mode = EVENT_MODE_CAPTURING;
+            DomBackend.undelegateEvents(
+              h.elem, h.type, h.delegatedHandler);
+          }
+        }
+
+        h.delegatedHandler(evt);
+      };
+    })(this);
+
+  } else {
+    this.mode = EVENT_MODE_BUBBLING;
+  }
+};
+
+HandlerRec.prototype.setup = function () {
+  if (this.mode === EVENT_MODE_TBD) {
+    DomBackend.bindEventCapturer(
+      this.elem, this.type,
+      this.capturingHandler);
+  }
+
+  DomBackend.delegateEvents(
+    this.elem, this.type,
+    this.selector || '*', this.delegatedHandler);
+};
+
+HandlerRec.prototype.teardown = function () {
+  if (this.mode !== EVENT_MODE_BUBBLING)
+    DomBackend.unbindEventCapturer(this.elem, this.type,
+                                   this.capturingHandler);
+
+  if (this.mode !== EVENT_MODE_CAPTURING)
+    DomBackend.undelegateEvents(this.elem, this.type,
+                                this.delegatedHandler);
+};
+
 // XXX could write the form of arguments for this function
 // in several different ways, including simply as an event map.
 DomRange.prototype.on = function (events, selector, handler) {
@@ -825,74 +907,10 @@ DomRange.prototype.on = function (events, selector, handler) {
       info = eventDict[type] = {};
       info.handlers = [];
     }
-    var handlerRecord = {
-      elem: parentNode,
-      type: type,
-      selector: selector,
-      $ui: this.component,
-      handler: handler,
-      mode: EVENT_MODE_TBD
-    };
-    info.handlers.push(handlerRecord);
-
-    // It's important that delegatedHandler be a different
-    // instance for each handlerRecord, because its identity
-    // is used to remove it.
-    //
-    // Capture handlerRecord in a
-    // closure so that we have access to it, even when
-    // the var changes, and so we don't pull in the rest of
-    // the stack frame.
-    handlerRecord.delegatedHandler = (function (h) {
-      return function (evt) {
-        if ((! selector) && evt.currentTarget !== evt.target)
-          // no selector means only fire on target
-          return;
-        if (! h.$ui.dom.contains(evt.currentTarget))
-          return;
-        return h.handler.call(h.$ui, evt);
-      };
-    })(handlerRecord);
-
-    var tryCapturing = (! eventsToDelegate.hasOwnProperty(
-      DomBackend.parseEventType(type)));
-
-    if (tryCapturing) {
-      handlerRecord.capturingHandler = (function (h) {
-        return function (evt) {
-          if (h.mode === EVENT_MODE_TBD) {
-            // must be first time we're called.
-            if (evt.bubbles) {
-              // this type of event bubbles, so don't
-              // get called again.
-              h.mode = EVENT_MODE_BUBBLING;
-              DomBackend.unbindEventCapturer(
-                h.elem, h.type, h.capturingHandler);
-              return;
-            } else {
-              // this type of event doesn't bubble,
-              // so unbind the delegation, preventing
-              // it from ever firing.
-              h.mode = EVENT_MODE_CAPTURING;
-              DomBackend.undelegateEvents(
-                h.elem. hType, h.delegatedHandler);
-            }
-          }
-
-          h.delegatedHandler(evt);
-        };
-      })(handlerRecord);
-
-      DomBackend.bindEventCapturer(
-        parentNode, type,
-        handlerRecord.capturingHandler);
-    } else {
-      handlerRecord.mode = EVENT_MODE_BUBBLING;
-    }
-
-    DomBackend.delegateEvents(parentNode, type,
-                              selector || '*',
-                              handlerRecord.delegatedHandler);
+    var handlerRec = new HandlerRec(
+      parentNode, type, selector, handler, this.component);
+    handlerRec.setup();
+    info.handlers.push(handlerRec);
   }
 };
 
