@@ -214,7 +214,6 @@ _extend(DomRange.prototype, {
           throw new Error("Member already exists: " + id.slice(1));
       }
     }
-    members[id] = newMember;
 
     if ('dom' in newMember) {
       if (! newMember.dom)
@@ -225,8 +224,11 @@ _extend(DomRange.prototype, {
       var nodes = range.getNodes();
 
       if (tbodyFixNeeded(nodes, parentNode))
+        // may cause a refresh(); important that the
+        // member isn't added yet
         parentNode = moveWithOwnersIntoTbody(this);
 
+      members[id] = newMember;
       for (var i = 0; i < nodes.length; i++)
         insertNode(nodes[i], parentNode, nextNode);
     } else {
@@ -240,8 +242,11 @@ _extend(DomRange.prototype, {
         node.$ui = this.component;
 
       if (tbodyFixNeeded(node, parentNode))
+        // may cause a refresh(); important that the
+        // member isn't added yet
         parentNode = moveWithOwnersIntoTbody(this);
 
+      members[id] = newMember;
       insertNode(node, parentNode, nextNode);
     }
   },
@@ -693,8 +698,6 @@ DomRange.prototype.contains = function (compOrNode) {
     return false;
 
   var range;
-  if (! compOrNode)
-    debugger;
   if ('dom' in compOrNode) {
     // Component
     range = compOrNode.dom;

@@ -846,6 +846,35 @@ Tinytest.addAsync("ui - DomRange - IE TextNode GC", function (test, onComplete) 
   }, 500);
 });
 
+Tinytest.add("ui - DomRange - more TBODY", function (test) {
+  inDocument(htmlRange("<table></table>"), function (r) {
+    var table = r.elements()[0];
+    var tableContent = new DomRange;
+    var buf = [];
+    DomRange.insert(tableContent, table);
+    var trRange = htmlRange("<tr><td>Hello</td></tr>");
+    tableContent.add(trRange);
+    test.isTrue(tableContent.contains(trRange));
+  });
+
+  inDocument(htmlRange("<table></table>"), function (r) {
+    var table = r.elements()[0];
+    var tableContent = new DomRange;
+    var buf = [];
+    DomRange.insert(tableContent, table);
+    var trRange = htmlRange("<tr><td>Hello</td></tr>");
+    var tr = trRange.elements()[0];
+    tableContent.add('tr', tr);
+    test.equal(_.keys(tableContent.members).length, 1);
+    test.isTrue(tableContent.contains(tr));
+    tableContent.remove('tr');
+    // bizarrely, in IE 8, the `tr` still has some
+    // DocumentFragment as its parent even though `removeChild`
+    // has been called on it directly.
+    test.isFalse(tr.parentNode && tr.parentNode.nodeType === 1);
+  });
+});
+
 Tinytest.add("ui - DomRange - events in tables", function (test) {
   inDocument(htmlRange("<table></table>"), function (r) {
     var table = r.elements()[0];
