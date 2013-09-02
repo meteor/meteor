@@ -583,6 +583,8 @@ DomRange.prototype.elements = function (intoArray) {
 // In this case, Sortable wants to call `refresh`
 // on the div, not the each, so it would use this function.
 DomRange.refresh = function (element) {
+  // note: this "top-level ranges" code could be its
+  // own API call.
   var topLevelRanges = [];
   for (var n = element.firstChild;
        n; n = n.nextSibling) {
@@ -772,6 +774,23 @@ DomRange.prototype.$ = function (selector) {
 
 ///// EVENTS
 
+// List of events to always delegate, never capture.
+// Since jQuery fakes bubbling for certain events in
+// certain browsers (like `submit`), we don't want to
+// get in its way.
+//
+// We could list all known bubbling
+// events here to avoid creating speculative capturers
+// for them, but it would only be an optimization.
+var eventsToDelegate = {
+  blur: 1, change: 1, click: 1, focus: 1, focusin: 1,
+  focusout: 1, reset: 1, submit: 1
+};
+
+var EVENT_MODE_TBD = 0;
+var EVENT_MODE_BUBBLING = 1;
+var EVENT_MODE_CAPTURING = 2;
+
 // XXX could write the form of arguments for this function
 // in several different ways, including simply as an event map.
 DomRange.prototype.on = function (events, selector, handler) {
@@ -811,15 +830,20 @@ DomRange.prototype.on = function (events, selector, handler) {
       type: type,
       selector: selector,
       $ui: this.component,
-      handler: handler
+      handler: handler,
+      mode: EVENT_MODE_TBD
     };
-    // It's important that lowLevelHandler be a different
+    info.handlers.push(handlerRecord);
+
+    // It's important that delegatedHandler be a different
     // instance for each handlerRecord, because its identity
-    // is used to remove it.  Capture handlerRecord in a
+    // is used to remove it.
+    //
+    // Capture handlerRecord in a
     // closure so that we have access to it, even when
     // the var changes, and so we don't pull in the rest of
     // the stack frame.
-    handlerRecord.lowLevelHandler = (function (h) {
+    handlerRecord.delegatedHandler = (function (h) {
       return function (evt) {
         if ((! selector) && evt.currentTarget !== evt.target)
           // no selector means only fire on target
@@ -830,10 +854,45 @@ DomRange.prototype.on = function (events, selector, handler) {
       };
     })(handlerRecord);
 
-    info.handlers.push(handlerRecord);
+    var tryCapturing = (! eventsToDelegate.hasOwnProperty(
+      DomBackend.parseEventType(type)));
 
-    $(parentNode).on(type, selector || '*',
-                     handlerRecord.lowLevelHandler);
+    if (tryCapturing) {
+      handlerRecord.capturingHandler = (function (h) {
+        return function (evt) {
+          if (h.mode === EVENT_MODE_TBD) {
+            // must be first time we're called.
+            if (evt.bubbles) {
+              // this type of event bubbles, so don't
+              // get called again.
+              h.mode = EVENT_MODE_BUBBLING;
+              DomBackend.unbindEventCapturer(
+                h.elem, h.type, h.capturingHandler);
+              return;
+            } else {
+              // this type of event doesn't bubble,
+              // so unbind the delegation, preventing
+              // it from ever firing.
+              h.mode = EVENT_MODE_CAPTURING;
+              DomBackend.undelegateEvents(
+                h.elem. hType, h.delegatedHandler);
+            }
+          }
+
+          h.delegatedHandler(evt);
+        };
+      })(handlerRecord);
+
+      DomBackend.bindEventCapturer(
+        parentNode, type,
+        handlerRecord.capturingHandler);
+    } else {
+      handlerRecord.mode = EVENT_MODE_BUBBLING;
+    }
+
+    DomBackend.delegateEvents(parentNode, type,
+                              selector || '*',
+                              handlerRecord.delegatedHandler);
   }
 };
 
