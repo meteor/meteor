@@ -907,6 +907,9 @@ DomRange.prototype.on = function (events, selector, handler) {
   if (! parentNode)
     // if we're not in the DOM, silently fail.
     return;
+  // haven't been added yet; error
+  if (parentNode.$_uiIsOffscreen)
+    throw new Error("Can't bind events before DomRange is inserted");
 
   var eventTypes = [];
   events.replace(/[^ /]+/g, function (e) {

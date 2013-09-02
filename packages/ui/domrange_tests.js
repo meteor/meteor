@@ -630,6 +630,13 @@ Tinytest.add("ui - DomRange - basic events", function (test) {
     }
   };
 
+  var q = new DomRange;
+  test.throws(function () {
+    // can't bind events before DomRange is added to
+    // the DOM
+    q.on('click', function (evt) {});
+  });
+
   inDocument(
     htmlRange("<span>Foo</span>"),
     function (r) {
@@ -839,6 +846,27 @@ Tinytest.addAsync("ui - DomRange - IE TextNode GC", function (test, onComplete) 
   }, 500);
 });
 
+Tinytest.add("ui - DomRange - events in tables", function (test) {
+  inDocument(htmlRange("<table></table>"), function (r) {
+    var table = r.elements()[0];
+    var tableContent = new DomRange;
+    var buf = [];
+    DomRange.insert(tableContent, table);
+    tableContent.on('click', 'tr', function (evt) {
+      buf.push('click ' + evt.currentTarget.nodeName);
+    });
+    var trRange = htmlRange("<tr><td>Hello</td></tr>");
+    tableContent.add(trRange);
+    var tr = trRange.elements()[0];
+    test.equal(buf, []);
+    tr.click();
+    test.equal(buf, ['click TR']);
+    // XXX test something that would break if the event data
+    // is on the TABLE rather than the TBODY (the new
+    // parentNode of `tableContent`).
+  });
+});
+
 // TO TEST STILL:
 // - external remove element
 // - double-add, double-remove
@@ -850,5 +878,4 @@ Tinytest.addAsync("ui - DomRange - IE TextNode GC", function (test, onComplete) 
 //   can add 0 with no id.
 // - add a node or range with the same id as an old member
 //   works if that member is gone.
-// - events get wired if declared before adding; get moved
-//   when wrapping in TBODY
+// - events get moved when wrapping in TBODY
