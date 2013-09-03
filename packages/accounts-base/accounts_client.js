@@ -112,6 +112,13 @@ Accounts.callLoginMethod = function (options) {
             }});
         }
       };
+
+      Meteor.connection._onDisconnect = function (reason) {
+        var loggedOutReasons = ["logged_out", "token_expired",
+                                "user_deleted", "token_deleted"];
+        if (_.indexOf(loggedOutReasons, reason) !== -1)
+          makeClientLoggedOut();
+      };
     }
   };
 
@@ -162,6 +169,7 @@ makeClientLoggedOut = function() {
   unstoreLoginToken();
   Meteor.connection.setUserId(null);
   Meteor.connection.onReconnect = null;
+  Meteor.connection._onDisconnect = null;
 };
 
 makeClientLoggedIn = function(userId, token, tokenExpires) {
@@ -189,7 +197,6 @@ Meteor._logoutAllOthers = function (opts, callback) {
   }
   Meteor.apply('_logoutAllOthers', [opts], { wait: true },
                function (error, result) {
-                 console.log("logged out others");
                  if (error) {
                    callback && callback(error);
                  } else {

@@ -1324,10 +1324,7 @@ _.extend(Connection.prototype, {
   _livedata_disconnected: function (msg) {
     var self = this;
     var reason = msg.reason;
-    if (reason === "logged_out" || reason === "token_expired") {
-      self.setUserId(null);
-      self.onReconnect = null;
-    }
+    self._onDisconnect && self._onDisconnect(reason);
   },
 
   _livedata_error: function (msg) {
