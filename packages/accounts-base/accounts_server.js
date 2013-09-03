@@ -525,3 +525,24 @@ Meteor.users._ensureIndex('username', {unique: 1, sparse: 1});
 Meteor.users._ensureIndex('emails.address', {unique: 1, sparse: 1});
 Meteor.users._ensureIndex('services.resume.loginTokens.token',
                           {unique: 1, sparse: 1});
+
+///
+/// LOGGING OUT DELETED USERS
+///
+
+var closeTokensForUser = function (userTokens, reason) {
+  Meteor.server._closeAllForTokens(_.map(userTokens, function (token) {
+    return token.token;
+  }), reason);
+};
+
+Meteor.users.find().observe({
+  changed: function (newUser, oldUser) {
+    var removedTokens = _.difference(oldUser.services.resume.loginTokens,
+                                     newUser.services.resume.loginTokens);
+    closeTokensForUser(removedTokens, "token_deleted");
+  },
+  removed: function (oldUser) {
+    closeTokensForUser(oldUser.services.resume.loginTokens, "user_deleted");
+  }
+});
