@@ -896,6 +896,42 @@ Tinytest.add("ui - DomRange - events in tables", function (test) {
   });
 });
 
+Tinytest.add("ui - DomRange - nested event order", function (test) {
+  inDocument(new DomRange, function (r) {
+    var a = new DomRange;
+    var b = new DomRange;
+    var c = new DomRange;
+    var d = new DomRange;
+    r.add(a);
+    a.add(b);
+    b.add(c);
+    c.add(d);
+    var div = document.createElement("DIV");
+    d.add(div);
+
+    var buf = [];
+    var appender = function (str) {
+      return function (evt) {
+        buf.push(str);
+      };
+    };
+
+    b.on('click', 'div', appender("B"));
+    a.on('click', 'div', appender("A"));
+    d.on('click', appender("D"));
+    c.on('click', 'div', appender("C"));
+    test.equal(buf, []);
+    div.click();
+    test.equal(buf, ['D', 'C', 'B', 'A']);
+    buf.length = 0;
+
+    b.on('click', appender("B2"));
+    d.on('click', 'div', appender("D2"));
+    div.click();
+    test.equal(buf, ['D', 'D2', 'C', 'B', 'B2', 'A']);
+  });
+});
+
 // TO TEST STILL:
 // - external remove element
 // - double-add, double-remove

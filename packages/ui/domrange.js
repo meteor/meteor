@@ -881,19 +881,20 @@ var HandlerRec = function (elem, type, selector, handler, $ui) {
   }
 };
 
-HandlerRec.prototype.setup = function () {
-  if (this.mode === EVENT_MODE_TBD) {
+HandlerRec.prototype.bind = function () {
+  if (this.mode !== EVENT_MODE_BUBBLING) {
     DomBackend.bindEventCapturer(
       this.elem, this.type,
       this.capturingHandler);
   }
 
-  DomBackend.delegateEvents(
-    this.elem, this.type,
-    this.selector || '*', this.delegatedHandler);
+  if (this.mode !== EVENT_MODE_CAPTURING)
+    DomBackend.delegateEvents(
+      this.elem, this.type,
+      this.selector || '*', this.delegatedHandler);
 };
 
-HandlerRec.prototype.teardown = function () {
+HandlerRec.prototype.unbind = function () {
   if (this.mode !== EVENT_MODE_BUBBLING)
     DomBackend.unbindEventCapturer(this.elem, this.type,
                                    this.capturingHandler);
@@ -902,6 +903,7 @@ HandlerRec.prototype.teardown = function () {
     DomBackend.undelegateEvents(this.elem, this.type,
                                 this.delegatedHandler);
 };
+
 
 // XXX could write the form of arguments for this function
 // in several different ways, including simply as an event map.
@@ -940,10 +942,28 @@ DomRange.prototype.on = function (events, selector, handler) {
       info = eventDict[type] = {};
       info.handlers = [];
     }
+    var handlerList = info.handlers;
     var handlerRec = new HandlerRec(
       parentNode, type, selector, handler, this.component);
-    handlerRec.setup();
-    info.handlers.push(handlerRec);
+    handlerRec.bind();
+    handlerList.push(handlerRec);
+    // move handlers of enclosing ranges to end
+    for (var r = (this.owner && this.owner.dom);
+         r; r = (r.owner && r.owner.dom)) {
+      // r is an enclosing DomRange
+      for (var j = 0, Nj = handlerList.length;
+           j < Nj; j++) {
+        var h = handlerList[j];
+        if (h.$ui && h.$ui.dom === r) {
+          h.unbind();
+          h.bind();
+          handlerList.splice(j, 1); // remove handlerList[j]
+          handlerList.push(h);
+          j--; // account for removed handler
+          Nj--; // don't visit appended handlers
+        }
+      }
+    }
   }
 };
 

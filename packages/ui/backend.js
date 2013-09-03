@@ -34,6 +34,7 @@ if (Meteor.isClient) {
     },
     // `selector` is non-null.  `type` is one type (but
     // may be in backend-specific form, e.g. have namespaces).
+    // Order fired must be order bound.
     delegateEvents: function (elem, type, selector, handler) {
       $(elem).on(type, selector, handler);
     },
