@@ -366,7 +366,23 @@ if (Meteor.isClient) (function () {
         firstLoginCallback = false;
       });
     },
-    logoutStep
+    logoutStep,
+    function (test, expect) {
+      // Test that deleting a user logs out that user's connections.
+      var expectLoginError = expect(function (err) {
+        test.isTrue(err);
+      });
+      var firstLoginCallback = true;
+      Meteor.loginWithPassword(username, password2, function (err) {
+        if (firstLoginCallback) {
+          test.isFalse(err);
+          Meteor.call("removeUser", username);
+        } else {
+          expectLoginError(err);
+        }
+        firstLoginCallback = false;
+      });
+    }
   ]);
 
 }) ();
@@ -377,6 +393,9 @@ if (Meteor.isServer) (function () {
   Meteor.methods({
     expireTokens: function (oldestValidDate) {
       Accounts._expireTokens(oldestValidDate);
+    },
+    removeUser: function (username) {
+      Meteor.users.remove({ "username": username });
     }
   });
 
