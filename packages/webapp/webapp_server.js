@@ -498,7 +498,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
 
   // This is run after packages are loaded (in main) so we can use
   // DDP.connect.
-  var proxy = DDP.connect(proxyConfig.proxyEndpoint);
+  var proxy = Package.livedata.DDP.connect(proxyConfig.proxyEndpoint);
   var route = process.env.ROUTE;
   var host = route.split(":")[0];
   var port = +route.split(":")[1];
