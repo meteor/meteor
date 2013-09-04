@@ -65,7 +65,7 @@ var checkId = function (id) {
     throw new Error("id may not be empty");
 };
 
-var textExpandosOk = (function () {
+var textExpandosSupported = (function () {
   var tn = document.createTextNode('');
   try {
     tn.blahblah = true;
@@ -77,9 +77,56 @@ var textExpandosOk = (function () {
 })();
 
 var createMarkerNode = (
-  textExpandosOk ?
+  textExpandosSupported ?
     function () { return document.createTextNode(""); } :
   function () { return document.createComment(""); });
+
+var rangeParented = function (range) {
+  if (! range.isParented) {
+    range.isParented = true;
+
+    if (! range.owner) {
+      // top-level (unowned) ranges in an element,
+      // keep a pointer to the range on the parent
+      // element.  This is really just for IE 9+
+      // TextNode GC issues, but we can't do reliable
+      // bug detection.
+      var parentNode = range.parentNode();
+      var rangeDict = (
+        parentNode.$_uiranges ||
+          (parentNode.$_uiranges = {}));
+      rangeDict[range._rangeId] = range;
+      range._rangeDict = rangeDict;
+    }
+
+    // recurse on member ranges
+    var members = range.members;
+    for (var k in members) {
+      var mem = members[k];
+      if ('dom' in mem)
+        rangeParented(mem.dom);
+    }
+  }
+};
+
+var rangeRemoved = function (range) {
+  if (! range.isRemoved) {
+    range.isRemoved = true;
+
+    if (range._rangeDict)
+      delete range._rangeDict[range._rangeId];
+
+    // recurse on member ranges
+    var members = range.members;
+    for (var k in members) {
+      var mem = members[k];
+      if ('dom' in mem)
+        rangeRemoved(mem.dom);
+    }
+  }
+};
+
+var nextGuid = 1;
 
 var DomRange = function (component) {
   // This code supports IE 8 if `createTextNode` is changed
@@ -113,6 +160,11 @@ var DomRange = function (component) {
   this.members = {};
   this.nextMemberId = 1;
   this.owner = null;
+  this._rangeId = nextGuid++;
+  this._rangeDict = null;
+
+  this.isParented = false;
+  this.isRemoved = false;
 };
 
 _extend(DomRange.prototype, {
@@ -142,6 +194,13 @@ _extend(DomRange.prototype, {
     for (var i = 0, N = nodes.length; i < N; i++)
       removeNode(nodes[i]);
 
+    // call `rangeRemoved` on each member range
+    var members = this.members;
+    for (var k in members) {
+      var mem = members[k];
+      if ('dom' in mem)
+        rangeRemoved(mem.dom);
+    }
     this.members = {};
   },
   // (_nextNode is internal)
@@ -202,6 +261,7 @@ _extend(DomRange.prototype, {
         if (oldRange.start.parentNode !== parentNode) {
           delete members[id];
           oldRange.owner = null;
+          rangeRemoved(oldRange);
         } else {
           throw new Error("Member already exists: " + id.slice(1));
         }
@@ -231,6 +291,9 @@ _extend(DomRange.prototype, {
       members[id] = newMember;
       for (var i = 0; i < nodes.length; i++)
         insertNode(nodes[i], parentNode, nextNode);
+
+      if (this.isParented)
+        rangeParented(range);
     } else {
       // Node
       if (typeof newMember.nodeType !== 'number')
@@ -257,6 +320,7 @@ _extend(DomRange.prototype, {
       removeNode(this.start);
       removeNode(this.end);
       this.owner = null;
+      rangeRemoved(this);
       return;
     }
 
@@ -349,7 +413,7 @@ _extend(DomRange.prototype, {
     var members = this.members;
     var parentNode = this.parentNode();
     for (var k in members) {
-      // me, is a DomRange or node
+      // mem is a component (hosting a Range) or a Node
       var mem = members[k];
       if ('dom' in mem) {
         // Range
@@ -359,6 +423,7 @@ _extend(DomRange.prototype, {
         } else {
           range.owner = null;
           delete members[k]; // gone
+          rangeRemoved(range);
         }
       } else {
         // Node
@@ -562,6 +627,7 @@ _extend(DomRange.prototype, {
         return range.start;
       } else {
         range.owner = null;
+        rangeRemoved(range);
       }
     } else {
       // Node
@@ -629,6 +695,7 @@ DomRange.insert = function (component, parentNode, nextNode) {
     parentNode = makeOrFindTbody(parentNode, nextNode);
   for (var i = 0; i < nodes.length; i++)
     insertNode(nodes[i], parentNode, nextNode);
+  rangeParented(range);
 };
 
 ///// TBODY FIX for compatibility with jQuery.

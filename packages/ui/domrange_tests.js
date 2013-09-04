@@ -932,6 +932,77 @@ Tinytest.add("ui - DomRange - nested event order", function (test) {
   });
 });
 
+Tinytest.add("ui - DomRange - isParented", function (test) {
+  inDocument(new DomRange, function (r) {
+    test.equal(r.isParented, true);
+    var a = new DomRange;
+    var b = new DomRange;
+    var c = new DomRange;
+    var d = new DomRange;
+    var e = new DomRange;
+    var abcde = function (ap, bp, cp, dp, ep) {
+      test.equal(!! a.isParented, !! ap);
+      test.equal(!! b.isParented, !! bp);
+      test.equal(!! c.isParented, !! cp);
+      test.equal(!! d.isParented, !! dp);
+      test.equal(!! e.isParented, !! ep);
+    };
+    var div = document.createElement("DIV");
+    c.add(div);
+    abcde(0, 0, 0, 0, 0);
+    d.add(e);
+    abcde(0, 0, 0, 0, 0);
+    DomRange.insert(d, div);
+    abcde(0, 0, 0, 1, 1);
+    a.add(b);
+    abcde(0, 0, 0, 1, 1);
+    r.add(a);
+    abcde(1, 1, 0, 1, 1);
+    b.add(c);
+    abcde(1, 1, 1, 1, 1);
+
+    var container = r.parentNode();
+    test.equal(_.keys(container.$_uiranges).length, 1);
+    test.equal(_.keys(div.$_uiranges).length, 1);
+    d.remove();
+    test.equal(_.keys(div.$_uiranges).length, 0);
+    r.remove();
+    test.equal(_.keys(container.$_uiranges).length, 0);
+  });
+});
+
+Tinytest.add("ui - DomRange - structural removal", function (test) {
+  inDocument(new DomRange, function (r) {
+    var a = new DomRange;
+    test.isFalse(a.isRemoved);
+    r.add('a', a);
+    test.isFalse(a.isRemoved);
+    r.remove('a');
+    test.isTrue(a.isRemoved);
+
+    var b = new DomRange;
+    test.isFalse(b.isRemoved);
+    r.add(b);
+    test.isFalse(b.isRemoved);
+    r.removeAll();
+    test.isTrue(b.isRemoved);
+
+    var c = new DomRange;
+    var d = new DomRange;
+    var e = new DomRange;
+    c.add(d);
+    d.add(e);
+    r.add('c', c);
+    test.isFalse(c.isRemoved);
+    test.isFalse(d.isRemoved);
+    test.isFalse(e.isRemoved);
+    r.remove('c');
+    test.isTrue(c.isRemoved);
+    test.isTrue(d.isRemoved);
+    test.isTrue(e.isRemoved);
+  });
+});
+
 // TO TEST STILL:
 // - external remove element
 // - double-add, double-remove
