@@ -63,8 +63,12 @@ unstoreLoginToken = function() {
 // This is private, but it is exported for now because it is used by a
 // test in accounts-password.
 //
-var storedLoginToken = Accounts._storedLoginToken = function() {
+storedLoginToken = Accounts._storedLoginToken = function() {
   return Meteor._localStorage.getItem(loginTokenKey);
+};
+
+storedLoginTokenExpires = function () {
+  return Meteor._localStorage.getItem(loginTokenExpiresKey);
 };
 
 var storedUserId = function() {

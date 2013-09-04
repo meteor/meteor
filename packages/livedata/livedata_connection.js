@@ -1321,12 +1321,6 @@ _.extend(Connection.prototype, {
     });
   },
 
-  _livedata_disconnected: function (msg) {
-    var self = this;
-    var reason = msg.reason;
-    self._onDisconnect && self._onDisconnect(reason);
-  },
-
   _livedata_error: function (msg) {
     Meteor._debug("Received error from server: ", msg.reason);
     if (msg.offendingMessage)

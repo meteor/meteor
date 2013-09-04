@@ -1,7 +1,5 @@
 Accounts.config({
-  _tokenLifetime: 5,
-  _tokenExpirationInterval: 5,
-  _minTokenLifetime: 1
+  _connectionCloseDelay: 0
 });
 
 if (Meteor.isClient) (function () {
@@ -277,10 +275,6 @@ if (Meteor.isClient) (function () {
     },
     logoutStep,
     function(test, expect) {
-      // XXX would be nice to write this test in a way that avoids the
-      // possibly-flaky timing stuff (e.g. have a test hook for expiring tokens
-      // on demand rather than waiting for them to expire)
-
       // Test that login tokens get expired. We should get logged out when a
       // token expires, and not be able to log in again with the same token.
       var expectLoggedOut = expect(function () {
@@ -289,29 +283,43 @@ if (Meteor.isClient) (function () {
       var expectLoginError = expect(function (err) {
         test.isTrue(err);
       });
-      var expectToken = expect(function (token) {
-        test.isTrue(token);
+      var expectNoError = expect(function (err) {
+        test.isFalse(err);
       });
       var token;
+      var firstLoginCallback = true;
       Meteor.loginWithPassword(username, password2, function (error) {
-        test.isFalse(error);
-        token = Accounts._storedLoginToken();
-        expectToken(token);
+        // callback will be called again on reconnect after our token gets
+        // expired.
+        if (firstLoginCallback) {
+          token = Accounts._storedLoginToken();
+          test.isTrue(token);
+          test.isFalse(error);
+          Meteor.call("expireTokens", new Date(), function (error, result) {
+            expectNoError(error);
+          });
+        } else {
+          expectLoggedOut();
+          Meteor.loginWithToken(token, function (err) {
+            test.isFalse(Meteor.userId());
+            expectLoginError(err);
+          });
+        }
+        firstLoginCallback = false;
       });
-      Meteor.setTimeout(function () {
-        expectToken(token);
-        expectLoggedOut();
-        Meteor.loginWithToken(token, expectLoginError);
-      }, 10*1000);
     },
     logoutStep,
     function (test, expect) {
       // Test that Meteor._logoutAllOthers logs out a second authenticated
       // connection.
-      var expectLoggedIn = expect(function (err, result) {
-        test.isTrue(Meteor.user());
+
+      var expectNoError = expect(function (err) {
+        test.isFalse(err);
       });
-      var expectLoginErr = expect(function (err) {
+      var expectSecondConnLoggedOut = expect(function () {
+        test.isFalse(secondConn.userId());
+      });
+      var expectLoginError = expect(function (err) {
         test.isTrue(err);
       });
 
@@ -325,23 +333,37 @@ if (Meteor.isClient) (function () {
       }
       var secondConn = DDP.connect(ddpUrl);
 
-      Meteor.loginWithPassword(username, password2, function (err, result) {
-        expectLoggedIn(err, result);
-        token = Accounts._storedLoginToken();
-        secondConn.call("login", {
-          resume: token
-        }, function (err, result) {
-          test.isFalse(err);
-          Meteor._logoutAllOthers({ _noDelay: true }, function () {
-            // secondConn should be logged out and subsequently fail resume
-            // login, but Meteor.connection should stay logged in.
-            Meteor.setTimeout(function () {
-              test.isTrue(Meteor.user());
-              test.isFalse(secondConn.userId());
-              secondConn.call("login", { resume: token }, expectLoginErr);
-            }, 50);
-          });
+      var firstLoginCallback = true;
+
+      secondConn.onReconnect = function () {
+        expectSecondConnLoggedOut();
+        secondConn.call("login", { resume: token }, function (err, result) {
+          test.isFalse(secondConn.userId());
+          expectLoginError(err);
         });
+      };
+
+      Meteor.loginWithPassword(username, password2, function (err, result) {
+        test.isFalse(err);
+        if (firstLoginCallback) {
+          test.isTrue(Meteor.user());
+          token = Accounts._storedLoginToken();
+          secondConn.call("login", {
+            resume: token
+          }, function (err, result) {
+            test.isFalse(err);
+            Meteor._logoutAllOthers(function (err) {
+              expectNoError(err);
+            });
+          });
+        } else {
+          // Callback fires again after reconnect. We should still be logged in,
+          // but secondConn should be logged out and subsequently fail resume
+          // login.
+          test.isFalse(err);
+          test.isTrue(Meteor.user());
+        }
+        firstLoginCallback = false;
       });
     },
     logoutStep
@@ -351,6 +373,12 @@ if (Meteor.isClient) (function () {
 
 
 if (Meteor.isServer) (function () {
+
+  Meteor.methods({
+    expireTokens: function (oldestValidDate) {
+      Accounts._expireTokens(oldestValidDate);
+    }
+  });
 
   Tinytest.add(
     'passwords - setup more than one onCreateUserHook',

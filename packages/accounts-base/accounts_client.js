@@ -91,13 +91,21 @@ Accounts.callLoginMethod = function (options) {
     if (err || !result || !result.token) {
       Meteor.connection.onReconnect = null;
     } else {
-      Meteor.connection.onReconnect = function() {
+      Meteor.connection.onReconnect = function () {
         reconnected = true;
-        // XXX A DDP disconnect message would be helpful here, to know if our
-        // connection got closed because of an expired token.
+        // If our token was updated in storage, use the latest one.
+        var storedToken = storedLoginToken();
+        if (storedToken) {
+          result = {
+            token: storedToken,
+            tokenExpires: storedLoginTokenExpires()
+          };
+        }
         if (! result.tokenExpires)
           result.tokenExpires = Accounts._tokenExpiration(new Date());
-        if (! Accounts._tokenExpiresSoon(result.tokenExpires)) {
+        if (Accounts._tokenExpiresSoon(result.tokenExpires)) {
+          makeClientLoggedOut();
+        } else {
           Accounts.callLoginMethod({
             methodArguments: [{resume: result.token}],
             // Reconnect quiescence ensures that the user doesn't see an
@@ -111,13 +119,6 @@ Accounts.callLoginMethod = function (options) {
               options.userCallback(error);
             }});
         }
-      };
-
-      Meteor.connection._onDisconnect = function (reason) {
-        var loggedOutReasons = ["logged_out", "token_expired",
-                                "user_deleted", "token_deleted"];
-        if (_.indexOf(loggedOutReasons, reason) !== -1)
-          makeClientLoggedOut();
       };
     }
   };
@@ -169,7 +170,6 @@ makeClientLoggedOut = function() {
   unstoreLoginToken();
   Meteor.connection.setUserId(null);
   Meteor.connection.onReconnect = null;
-  Meteor.connection._onDisconnect = null;
 };
 
 makeClientLoggedIn = function(userId, token, tokenExpires) {
@@ -188,24 +188,26 @@ Meteor.logout = function (callback) {
   });
 };
 
-// Set opts._noDelay to close other open connections without any delay, rather
-// than the 10 second default delay. Used by test.
-Meteor._logoutAllOthers = function (opts, callback) {
-  if (! callback && typeof opts === "Function") {
-    callback = opts;
-    opts = {};
-  }
-  Meteor.apply('_logoutAllOthers', [opts], { wait: true },
+Meteor._logoutAllOthers = function (callback) {
+  // Our connection is going to be closed, but we don't want to call the
+  // onReconnect handler until the result comes back for this method, because
+  // the token will have been deleted on the server. Instead, wait until we get
+  // a new token and call the reconnect handler with that.
+  // XXX this is messy.
+  // XXX what if login gets called before the callback runs?
+  var origOnReconnect = Meteor.connection.onReconnect;
+  var userId = Meteor.userId();
+  Meteor.connection.onReconnect = null;
+  Meteor.apply('_logoutAllOthers', [], { wait: true },
                function (error, result) {
                  if (error) {
-                   callback && callback(error);
-                 } else {
-                   // The method should return a new valid token that we should
-                   // start using.
-                   makeClientLoggedIn(Meteor.userId(), result.token,
-                                      result.tokenExpires);
-                   callback && callback();
+                   if (! Meteor.user())
+                     makeClientLoggedOut();
                  }
+                 Meteor.connection.onReconnect = origOnReconnect;
+                 storeLoginToken(userId, result.token, result.tokenExpires);
+                 Meteor.connection.onReconnect();
+                 callback && callback(error);
                });
 };
 

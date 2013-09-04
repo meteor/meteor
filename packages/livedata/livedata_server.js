@@ -452,12 +452,6 @@ _.extend(Session.prototype, {
     self.send(msg);
   },
 
-  // Send a DDP disconnected message.
-  sendDisconnected: function (reason) {
-    var self = this;
-    self.send({ msg: "disconnected", reason: reason });
-  },
-
   // Process 'msg' as an incoming message. (But as a guard against
   // race conditions during reconnection, ignore the message if
   // 'socket' is not the currently connected socket.)
@@ -604,17 +598,11 @@ _.extend(Session.prototype, {
         self._setLoginToken(newToken);
       };
 
-      // Closes all sessions associated with these tokens except this one.
-      var closeAll = function (tokens, reason) {
-        self._closeAllForTokens(tokens, reason);
-      };
-
       var invocation = new MethodInvocation({
         isSimulation: false,
         userId: self.userId,
         setUserId: setUserId,
         _setLoginToken: setLoginToken,
-        _closeAllForTokens: closeAll,
         unblock: unblock,
         sessionData: self.sessionData
       });
@@ -674,11 +662,6 @@ _.extend(Session.prototype, {
     var oldToken = self.sessionData.loginToken;
     self.sessionData.loginToken = newToken;
     self.server._loginTokenChanged(self, newToken, oldToken);
-  },
-
-  _closeAllForTokens: function (tokens, reason) {
-    var self = this;
-    self.server._closeAllForTokens(tokens, reason, [self.id]);
   },
 
   // Sets the current user id in all appropriate contexts and reruns
@@ -1370,17 +1353,11 @@ _.extend(Server.prototype, {
     self.sessionsByLoginToken[newToken].push(session.id);
   },
 
-  // Close all open sessions associated with any of the tokens in `tokens`. If
-  // `reason` is provided, sends each session a disconnected message before
-  // closing it. `excludeSessions` is an optional array of strings (session ids)
+  // Close all open sessions associated with any of the tokens in
+  // `tokens`. `excludeSessions` is an optional array of strings (session ids)
   // to not close, even if they match a token in `tokens`.
-  _closeAllForTokens: function (tokens, reason, excludeSessions) {
+  _closeAllForTokens: function (tokens, excludeSessions) {
     var self = this;
-
-    if (! excludeSessions && typeof reason === "object") {
-      excludeSessions = reason;
-      reason = undefined;
-    }
 
     if (tokens.length)
     _.each(tokens, function (token) {
@@ -1392,11 +1369,11 @@ _.extend(Server.prototype, {
 
           // Destroy session and remove from self.sessions.
           var session = self.sessions[sessionId];
-          if (reason)
-            session.sendDisconnected(reason);
-          session.cleanup();
-          session.destroy();
-          delete self.sessions[sessionId];
+          if (session) {
+            session.cleanup();
+            session.destroy();
+            delete self.sessions[sessionId];
+          }
           destroyedIds.push(sessionId);
         });
 
