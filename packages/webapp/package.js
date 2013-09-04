@@ -8,8 +8,8 @@ Npm.depends({connect: "2.7.10",
              useragent: "2.0.1"});
 
 Package.on_use(function (api) {
-  api.use(['livedata', 'logging', 'underscore', 'routepolicy'], 'server');
-  api.use(['application-configuration'], {
+  api.use(['logging', 'underscore', 'routepolicy'], 'server');
+  api.use(['application-configuration', 'livedata'], {
     unordered: true
   });
   api.export(['WebApp', 'main', 'WebAppInternals'], 'server');
