@@ -85,11 +85,10 @@ Meteor.methods({
 
   logout: function() {
     var token = this._getLoginToken();
+    this._setLoginToken(null);
     if (token && this.userId)
       removeLoginToken(this.userId, token);
     this.setUserId(null);
-    this._setLoginToken(null);
-    // XXX should close all connections open with this token?
   },
 
   // Nuke everything: delete all the user's tokens and close all open
@@ -160,6 +159,8 @@ Accounts._generateStampedLoginToken = function () {
   return {token: Random.id(), when: (new Date)};
 };
 
+// Deletes the given loginToken from the database. This will cause all
+// connections associated with the token to be closed.
 var removeLoginToken = function (userId, loginToken) {
   Meteor.users.update(userId, {
     $pull: {
