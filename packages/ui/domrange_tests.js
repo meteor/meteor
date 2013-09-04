@@ -980,12 +980,14 @@ Tinytest.add("ui - DomRange - structural removal", function (test) {
     r.remove('a');
     test.isTrue(a.isRemoved);
 
+
     var b = new DomRange;
     test.isFalse(b.isRemoved);
     r.add(b);
     test.isFalse(b.isRemoved);
     r.removeAll();
     test.isTrue(b.isRemoved);
+
 
     var c = new DomRange;
     var d = new DomRange;
@@ -1000,6 +1002,63 @@ Tinytest.add("ui - DomRange - structural removal", function (test) {
     test.isTrue(c.isRemoved);
     test.isTrue(d.isRemoved);
     test.isTrue(e.isRemoved);
+
+
+    for (var scenario = 0; scenario < 2; scenario++) {
+      var f = new DomRange;
+      var g = document.createElement("DIV");
+      var h = new DomRange;
+      var i = document.createElement("DIV");
+      var j = document.createElement("DIV");
+      var k = new DomRange;
+      r.add('f', f);
+      f.add(g);
+      DomRange.insert(h, g);
+      h.add(i);
+      DomRange.insert(k, j);
+      i.appendChild(j);
+      test.isFalse(f.isRemoved);
+      test.isFalse(h.isRemoved);
+      test.isFalse(k.isRemoved);
+      if (scenario === 0)
+        r.removeAll();
+      else if (scenario === 1)
+        r.remove('f');
+      test.isTrue(f.isRemoved);
+      test.isTrue(h.isRemoved);
+      test.isTrue(k.isRemoved);
+    }
+  });
+});
+
+Tinytest.add("ui - DomRange - noticed removal", function (test) {
+  // TODO
+  //
+  // e.g. noticed via `eachMember` or `add`
+});
+
+Tinytest.add("ui - DomRange - jQuery removal", function (test) {
+  inDocument(htmlRange("<div></div>"), function (r) {
+    var g = document.createElement("DIV");
+    var h = new DomRange;
+    var i = document.createElement("DIV");
+    var j = document.createElement("DIV");
+    var k = new DomRange;
+    r.add('g', g);
+    DomRange.insert(h, g);
+    h.add(i);
+    DomRange.insert(k, j);
+    i.appendChild(j);
+    test.isFalse(h.isRemoved);
+    test.isFalse(k.isRemoved);
+
+    $(g).removeData();
+    test.isFalse(h.isRemoved);
+    test.isFalse(k.isRemoved);
+
+    $(g).remove();
+    test.isTrue(h.isRemoved);
+    test.isTrue(k.isRemoved);
   });
 });
 
@@ -1014,4 +1073,5 @@ Tinytest.add("ui - DomRange - structural removal", function (test) {
 //   can add 0 with no id.
 // - add a node or range with the same id as an old member
 //   works if that member is gone.
-// - events get moved when wrapping in TBODY
+// - events (and other stuff) get moved when wrapping in TBODY
+// - event unbinding

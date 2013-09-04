@@ -81,6 +81,10 @@ var createMarkerNode = (
     function () { return document.createTextNode(""); } :
   function () { return document.createComment(""); });
 
+DomBackend.onRemoveElement = function (element) {
+  nodeRemoved(element, true);
+};
+
 var rangeParented = function (range) {
   if (! range.isParented) {
     range.isParented = true;
@@ -97,6 +101,9 @@ var rangeParented = function (range) {
           (parentNode.$_uiranges = {}));
       rangeDict[range._rangeId] = range;
       range._rangeDict = rangeDict;
+
+      // get jQuery to tell us when this node is removed
+      DomBackend.watchElement(parentNode);
     }
 
     // recurse on member ranges
@@ -116,13 +123,29 @@ var rangeRemoved = function (range) {
     if (range._rangeDict)
       delete range._rangeDict[range._rangeId];
 
-    // recurse on member ranges
-    var members = range.members;
-    for (var k in members) {
-      var mem = members[k];
-      if ('dom' in mem)
-        rangeRemoved(mem.dom);
-    }
+    membersRemoved(range);
+  }
+};
+
+var nodeRemoved = function (node, viaBackend) {
+  if (node.nodeType === 1) { // ELEMENT
+    var comps = DomRange.getComponents(node);
+    for (var i = 0, N = comps.length; i < N; i++)
+      rangeRemoved(comps[i].dom);
+
+    if (! viaBackend)
+      DomBackend.removeElement(node);
+  }
+};
+
+var membersRemoved = function (range) {
+  var members = range.members;
+  for (var k in members) {
+    var mem = members[k];
+    if ('dom' in mem)
+      rangeRemoved(mem.dom);
+    else
+      nodeRemoved(mem);
   }
 };
 
@@ -194,13 +217,8 @@ _extend(DomRange.prototype, {
     for (var i = 0, N = nodes.length; i < N; i++)
       removeNode(nodes[i]);
 
-    // call `rangeRemoved` on each member range
-    var members = this.members;
-    for (var k in members) {
-      var mem = members[k];
-      if ('dom' in mem)
-        rangeRemoved(mem.dom);
-    }
+    membersRemoved(this);
+
     this.members = {};
   },
   // (_nextNode is internal)
@@ -268,10 +286,12 @@ _extend(DomRange.prototype, {
       } else {
         // node, does it still exist?
         var oldNode = oldMember;
-        if (oldNode.parentNode !== parentNode)
+        if (oldNode.parentNode !== parentNode) {
+          nodeRemoved(oldNode);
           delete members[id];
-        else
+        } else {
           throw new Error("Member already exists: " + id.slice(1));
+        }
       }
     }
 
@@ -428,10 +448,12 @@ _extend(DomRange.prototype, {
       } else {
         // Node
         var node = mem;
-        if (node.parentNode === parentNode)
+        if (node.parentNode === parentNode) {
           nodeFunc && nodeFunc(node); // still there
-        else
+        } else {
           delete members[k]; // gone
+          nodeRemoved(node);
+        }
       }
     }
   },
@@ -634,6 +656,8 @@ _extend(DomRange.prototype, {
       var node = mem;
       if (node.parentNode === parentNode)
         return node; // still there
+      else
+        nodeRemoved(node);
     }
 
     // not there anymore
@@ -671,19 +695,21 @@ DomRange.prototype.elements = function (intoArray) {
 // In this case, Sortable wants to call `refresh`
 // on the div, not the each, so it would use this function.
 DomRange.refresh = function (element) {
-  // note: this "top-level ranges" code could be its
-  // own API call.
-  var topLevelRanges = [];
+  var comps = DomRange.getComponents(element);
+
+  for (var i = 0, N = comps.length; i < N; i++)
+    comps[i].dom.refresh();
+};
+
+DomRange.getComponents = function (element) {
+  var topLevelComps = [];
   for (var n = element.firstChild;
        n; n = n.nextSibling) {
     if (n.$ui && n === n.$ui.dom.start &&
         ! n.$ui.dom.owner)
-      topLevelRanges.push(n.$ui.dom);
+      topLevelComps.push(n.$ui);
   }
-
-  for (var i = 0, N = topLevelRanges.length;
-       i < N; i++)
-    topLevelRanges[i].refresh();
+  return topLevelComps;
 };
 
 DomRange.insert = function (component, parentNode, nextNode) {

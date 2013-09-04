@@ -70,11 +70,14 @@ if (Meteor.isClient) {
         return type.slice(0, dotLoc);
       return type;
     },
-
-    // XXX EVERYTHING BELOW THIS POINT IS A WORK IN PROGRESS XXX
-
     watchElement: function (elem) {
       jQuery(elem).on('meteor_ui_domrange_gc', jQuery.noop);
+    },
+    // must work even if `elem` is already removed, and
+    // still e.g. fire `onRemoveElement` on `elem` and its
+    // descendants.
+    removeElement: function (elem) {
+      $(elem).remove();
     },
     // Called when an element is removed from the DOM using the
     // back-end library directly, either by removing it directly
@@ -84,7 +87,13 @@ if (Meteor.isClient) {
     onRemoveElement: function (elem) {}
   };
 
-  // See http://bugs.jquery.com/ticket/12213#comment:23
+  // For an explanation of this technique, see:
+  // http://bugs.jquery.com/ticket/12213#comment:23 .
+  //
+  // In short, an element is considered "removed" when jQuery
+  // cleans up its *private* userdata on the element,
+  // which we can detect using a custom event with a teardown
+  // hook.
   jQuery.event.special.meteor_ui_domrange_gc = {
     teardown: function() {
       DomBackend.onRemoveElement(this);
