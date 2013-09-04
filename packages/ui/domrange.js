@@ -192,6 +192,9 @@ var DomRange = function (component) {
 
 _extend(DomRange.prototype, {
   getNodes: function () {
+    if (! this.parentNode())
+      return [];
+
     this.refresh();
 
     var afterNode = this.end.nextSibling;
@@ -203,6 +206,9 @@ _extend(DomRange.prototype, {
     return nodes;
   },
   removeAll: function () {
+    if (! this.parentNode())
+      return;
+
     this.refresh();
 
     // leave start and end
@@ -494,6 +500,9 @@ _extend(DomRange.prototype, {
   // see `getInsertionPoint`.  Adding multiple members
   // at once using `add(array)` is faster.
   refresh: function () {
+    var parentNode = this.parentNode();
+    if (! parentNode)
+      return;
 
     // Using `eachMember`, do several things:
     // - Refresh all member ranges
@@ -520,7 +529,6 @@ _extend(DomRange.prototype, {
       numMembers++;
     });
 
-    var parentNode = this.parentNode();
     var firstNode = null;
     var lastNode = null;
 

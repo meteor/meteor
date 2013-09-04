@@ -1027,6 +1027,8 @@ Tinytest.add("ui - DomRange - structural removal", function (test) {
       test.isTrue(f.isRemoved);
       test.isTrue(h.isRemoved);
       test.isTrue(k.isRemoved);
+
+      r.removeAll();
     }
   });
 });
@@ -1039,26 +1041,46 @@ Tinytest.add("ui - DomRange - noticed removal", function (test) {
 
 Tinytest.add("ui - DomRange - jQuery removal", function (test) {
   inDocument(htmlRange("<div></div>"), function (r) {
-    var g = document.createElement("DIV");
-    var h = new DomRange;
-    var i = document.createElement("DIV");
-    var j = document.createElement("DIV");
-    var k = new DomRange;
-    r.add('g', g);
-    DomRange.insert(h, g);
-    h.add(i);
-    DomRange.insert(k, j);
-    i.appendChild(j);
-    test.isFalse(h.isRemoved);
-    test.isFalse(k.isRemoved);
+    for (var scenario = 0; scenario < 3; scenario++) {
+      var f = document.createElement("DIV");
+      var g = document.createElement("DIV");
+      var h = new DomRange;
+      var i = document.createElement("DIV");
+      var j = document.createElement("DIV");
+      var k = new DomRange;
+      r.add(f);
+      f.appendChild(g);
+      DomRange.insert(h, g);
+      h.add(i);
+      DomRange.insert(k, j);
+      i.appendChild(j);
+      test.isFalse(h.isRemoved);
+      test.isFalse(k.isRemoved);
 
-    $(g).removeData();
-    test.isFalse(h.isRemoved);
-    test.isFalse(k.isRemoved);
+      $(g).removeData();
+      test.isFalse(h.isRemoved);
+      test.isFalse(k.isRemoved);
 
-    $(g).remove();
-    test.isTrue(h.isRemoved);
-    test.isTrue(k.isRemoved);
+      if (scenario === 0)
+        $(g).remove();
+      else if (scenario === 1)
+        $(f).empty();
+      else if (scenario === 2)
+        $(f).html("<br>");
+      else if (scenario === 3)
+        $(g).detach();
+
+      if (scenario !== 3) {
+        test.isTrue(h.isRemoved);
+        test.isTrue(k.isRemoved);
+      } else {
+        // `detach` doesn't remove
+        test.isFalse(h.isRemoved);
+        test.isFalse(k.isRemoved);
+      }
+
+      r.removeAll();
+    }
   });
 });
 
