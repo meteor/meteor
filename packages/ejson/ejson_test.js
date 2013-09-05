@@ -72,3 +72,11 @@ Tinytest.add("ejson - clone", function (test) {
   };
   testCloneArgs(1, 2, "foo", [4]);
 });
+
+Tinytest.add("ejson - parse", function (test) {
+  test.equal(EJSON.parse("[1,2,3]"), [1,2,3]);
+  test.throws(
+    function () { EJSON.parse(null) },
+    /argument should be a string/
+  );
+});

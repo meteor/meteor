@@ -211,6 +211,8 @@ EJSON.stringify = function (item) {
 };
 
 EJSON.parse = function (item) {
+  if (typeof item !== 'string')
+    throw new Error("EJSON.parse argument should be a string");
   return EJSON.fromJSONValue(JSON.parse(item));
 };
 
