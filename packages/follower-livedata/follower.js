@@ -1,19 +1,40 @@
+var fs = Npm.require('fs');
+
+var readFile = Meteor._wrapAsync(fs.readFile);
+
+var writeFile = Meteor._wrapAsync(fs.writeFile);
+
 Follower = {
 
-  connect: function (urlSet) {
-
+  connect: function (urlSet, options) {
     var electorTries;
+    options = options || {};
     // start each elector as untried/assumed connectable.
-    var makeElectorTries = function (urlSet) {
-      electorTries = {};
+
+    // for options.priority, low-priority things are tried first.
+    var makeElectorTries = function (urlSet, options) {
+      if (options.reset || !electorTries)
+        electorTries = {};
       if (typeof urlSet === 'string') {
         urlSet = _.map(urlSet.split(','), function (url) {return url.trim();});
       }
       _.each(urlSet, function (url) {
-        electorTries[url] = 0;
+        electorTries[url] = options.priority || 0;
       });
     };
-    makeElectorTries(urlSet);
+    if (options.file) {
+      var contents;
+      try {
+        contents = readFile(options.file, 'utf8');
+      } catch (e) {
+        console.log("no file to read electors out of");
+      }
+      if (contents)
+        makeElectorTries(contents, { priority: 0, reset: true });
+      makeElectorTries(urlSet, {priority: 1, reset: false});
+    } else {
+      makeElectorTries(urlSet, { priority: 0, reset: true });
+    }
     var tryingUrl = null;
     var conn = null;
     var leader = null;
@@ -44,11 +65,14 @@ Follower = {
           electorTries[elector] = 0; // we haven't heard of this elector yet.
         }
       });
+      if (options.file) {
+        writeFile(options.file, res.electorate.join(','), 'utf8');
+      }
     };
 
     var tryElector = function (url) {
       url = url || findFewestTries();
-      console.log("trying", url, electorTries);
+      console.log("trying", url, electorTries, tryingUrl);
       if (conn) {
         conn._reconnectImpl({
           url: url
@@ -60,6 +84,7 @@ Follower = {
 
       if (tryingUrl) {
         electorTries[tryingUrl]++;
+        tryingUrl = url;
       } else {
         tryingUrl = url;
         conn.call('getElectorate', function (err, res) {
@@ -127,7 +152,7 @@ Follower = {
       if (!intervalHandle)
         intervalHandle = monitorConnection();
       if (arguments[0] && arguments[0].url) {
-        makeElectorTries(arguments[0].url);
+        makeElectorTries(arguments[0].url, {reset: true, priority: 0});
         tryElector(arguments[0].url);
       } else {
         conn._reconnectImpl.apply(conn, arguments);
