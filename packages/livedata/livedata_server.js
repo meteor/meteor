@@ -1294,6 +1294,7 @@ _.extend(Server.prototype, {
         throw new Error("Can't call setUserId on a server initiated method call");
       };
       var setLoginToken = function () {
+        // XXX is this correct?
         throw new Error("Can't call _setLoginToken on a server " +
                         "initiated method call");
       };
@@ -1354,19 +1355,13 @@ _.extend(Server.prototype, {
   },
 
   // Close all open sessions associated with any of the tokens in
-  // `tokens`. `excludeSessions` is an optional array of strings (session ids)
-  // to not close, even if they match a token in `tokens`.
-  _closeAllForTokens: function (tokens, excludeSessions) {
+  // `tokens`.
+  _closeAllForTokens: function (tokens) {
     var self = this;
-
-    if (tokens.length)
     _.each(tokens, function (token) {
       if (_.has(self.sessionsByLoginToken, token)) {
         var destroyedIds = [];
         _.each(self.sessionsByLoginToken[token], function (sessionId) {
-          if (_.indexOf(excludeSessions, sessionId) !== -1)
-            return;
-
           // Destroy session and remove from self.sessions.
           var session = self.sessions[sessionId];
           if (session) {

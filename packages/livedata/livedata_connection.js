@@ -209,8 +209,6 @@ var Connection = function (url, options) {
       self._livedata_nosub(msg);
     else if (msg.msg === 'result')
       self._livedata_result(msg);
-    else if (msg.msg === 'disconnected')
-      self._livedata_disconnected(msg);
     else if (msg.msg === 'error')
       self._livedata_error(msg);
     else

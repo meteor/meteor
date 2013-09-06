@@ -200,12 +200,9 @@ Meteor._logoutAllOthers = function (callback) {
   Meteor.connection.onReconnect = null;
   Meteor.apply('_logoutAllOthers', [], { wait: true },
                function (error, result) {
-                 if (error) {
-                   if (! Meteor.user())
-                     makeClientLoggedOut();
-                 }
                  Meteor.connection.onReconnect = origOnReconnect;
-                 storeLoginToken(userId, result.token, result.tokenExpires);
+                 if (! error)
+                   storeLoginToken(userId, result.token, result.tokenExpires);
                  Meteor.connection.onReconnect();
                  callback && callback(error);
                });

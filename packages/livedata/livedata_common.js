@@ -29,8 +29,8 @@ MethodInvocation = function (options) {
   // reruns subscriptions
   this._setUserId = options.setUserId || function () {};
 
-  // saves the login token so we can delete it later when the user logs out, is
-  // deleted, etc.
+  // used for associating the connection with a login token so that the
+  // connection can be closed if the token is no longer valid
   this._setLoginToken = options._setLoginToken || function () {};
 
   // Scratch data scoped to this connection (livedata_connection on the
