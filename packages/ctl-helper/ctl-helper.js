@@ -3,6 +3,9 @@ var Future = Npm.require('fibers/future');
 
 Ctl = {};
 
+var connection;
+var checkConnection;
+
 _.extend(Ctl, {
   Commands: [],
 
@@ -22,6 +25,7 @@ _.extend(Ctl, {
       cmdName = argv._.splice(0,1)[0];
 
     Ctl.findCommand(cmdName).func(argv);
+    Ctl.disconnect();
     return 0;
   },
 
@@ -42,8 +46,26 @@ _.extend(Ctl, {
       process.exit(1);
     }
 
-    return DDP.connect(process.env['GALAXY']);
+    connection = DDP.connect(process.env['GALAXY']);
+    checkConnection = Meteor.setInterval(function () {
+      if (Ctl.findGalaxy().status().status !== "connected" &&
+          Ctl.findGalaxy().status().retryCount > 2) {
+        console.log("Cannot connect to galaxy; exiting");
+        process.exit(3);
+      }
+    }, 2*1000);
+    return connection;
   }),
+
+  disconnect: function () {
+    if (connection) {
+      connection.disconnect();
+    }
+    if (checkConnection) {
+      Meteor.clearInterval(checkConnection);
+      checkConnection = null;
+    }
+  },
 
   jobsCollection: _.once(function () {
     return new Meteor.Collection("jobs", {manager: Ctl.findGalaxy()});

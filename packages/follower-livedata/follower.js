@@ -72,7 +72,7 @@ Follower = {
 
     var tryElector = function (url) {
       url = url || findFewestTries();
-      console.log("trying", url, electorTries, tryingUrl);
+      //console.log("trying", url, electorTries, tryingUrl);
       if (conn) {
         conn._reconnectImpl({
           url: url
@@ -127,6 +127,7 @@ Follower = {
               electorTries[connected]++;
               tryElector();
             } else {
+              //console.log("updating electorate with", res);
               updateElectorate(res);
             }
           });
@@ -157,6 +158,10 @@ Follower = {
       } else {
         conn._reconnectImpl.apply(conn, arguments);
       }
+    };
+
+    conn.getUrl = function () {
+      return _.keys(electorTries).join(',');
     };
 
     return conn;
