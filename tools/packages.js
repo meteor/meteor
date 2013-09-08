@@ -236,8 +236,8 @@ _.extend(Slice.prototype, {
       var relPath = source.relPath;
       var fileOptions = _.clone(source.fileOptions) || {};
       var absPath = path.resolve(self.pkg.sourceRoot, relPath);
-      var ext = path.extname(relPath).substr(1);
-      var handler = !fileOptions.isAsset && self._getSourceHandler(ext);
+      var filename = path.basename(relPath, '');
+      var handler = !fileOptions.isAsset && self._getSourceHandler(filename);
       var contents = watch.readAndWatchFile(self.watchSet, absPath);
 
       if (contents === null) {
@@ -723,12 +723,17 @@ _.extend(Slice.prototype, {
 
   // Find the function that should be used to handle a source file for
   // this slice, or return null if there isn't one. We'll use handlers
-  // that are defined in this package and in its immediate
-  // dependencies. ('extension' should be the extension of the file
-  // without a leading dot.)
-  _getSourceHandler: function (extension) {
+  // that are defined in this package and in its immediate dependencies.
+  _getSourceHandler: function (filename) {
     var self = this;
-    return (self._allHandlers())[extension] || null;
+    var handlers = self._allHandlers();
+    var parts = filename.split('.');
+    for (var i = 0; i < parts.length; i++) {
+      var extension = parts.slice(i).join('.');
+      if (extension in handlers)
+        return handlers[extension];
+    }
+    return null;
   }
 });
 
@@ -946,7 +951,8 @@ _.extend(Package.prototype, {
       return;
 
     var Plugin = {
-      // 'extension' is a file extension without a dot (eg 'js', 'coffee')
+      // 'extension' is a file extension without the separation dot 
+      // (eg 'js', 'coffee', 'coffee.md')
       //
       // 'handler' is a function that takes a single argument, a
       // CompileStep (#CompileStep)
