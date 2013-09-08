@@ -113,13 +113,17 @@ var addSharedHeader = function (source, sourceMap) {
   };
 };
 
-var handler = function (compileStep) {
+var handler = function (compileStep, isLiterate) {
+  if (typeof isLiterate === "undefined")
+    var isLiterate = false;
+  
   var source = compileStep.read().toString('utf8');
   var outputFile = compileStep.inputPath + ".js";
+
   var options = {
     bare: true,
     filename: compileStep.inputPath,
-    literate: path.extname(compileStep.inputPath) === '.litcoffee',
+    literate: isLiterate,
     // Return a source map.
     sourceMap: true,
     // Include the original source in the source map (sourcesContent field).
@@ -152,6 +156,11 @@ var handler = function (compileStep) {
   });
 };
 
+var literateHandler = function (compileStep) {
+  return handler(compileStep, true);
+}
+
 Plugin.registerSourceHandler("coffee", handler);
-Plugin.registerSourceHandler("litcoffee", handler);
+Plugin.registerSourceHandler("litcoffee", literateHandler);
+Plugin.registerSourceHandler("coffee.md", literateHandler);
 
