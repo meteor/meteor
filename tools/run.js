@@ -105,7 +105,7 @@ var requestQueue = [];
 // calls callback once proxy is actively listening on outer and
 // proxying to inner.
 
-var startProxy = function (outerPort, innerPort, callback) {
+var startProxyWithAddress = function (outerAddr, outerPort, innerPort, callback) {
   callback = callback || function () {};
 
   var httpProxy = require('http-proxy');
@@ -187,7 +187,23 @@ var startProxy = function (outerPort, innerPort, callback) {
     res.end('Unexpected error.');
   });
 
-  p.listen(outerPort, callback);
+  p.listen(outerPort, outerAddr, callback);
+};
+
+var startProxy = function (outerPort, innerPort, callback) {
+  // Use the presence of an IPv6 loopback address to enable proxying
+  // IPv6 connections.
+  var interfaces = require('os').networkInterfaces();
+  var addresses = _.flatten(_.map(interfaces, function (v) { return v; }));
+  var useIpv6 = _.any(addresses, function (a) { return a.address === '::1' });
+
+  startProxyWithAddress('0.0.0.0', outerPort, innerPort, function () {
+    if (useIpv6) {
+      startProxyWithAddress('::', outerPort, innerPort, callback);
+    } else if (callback) {
+      callback();
+    }
+  });
 };
 
 var saveLog = function (msg) {
