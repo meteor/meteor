@@ -1097,3 +1097,4 @@ Tinytest.add("ui - DomRange - jQuery removal", function (test) {
 //   works if that member is gone.
 // - events (and other stuff) get moved when wrapping in TBODY
 // - event unbinding
+// - "noticed" removal due to `eachMembers`, `add`, etc.

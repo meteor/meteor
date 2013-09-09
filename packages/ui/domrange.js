@@ -1,3 +1,10 @@
+// TODO
+// - Lazy removal detection
+// - UI hooks (expose, test)
+// - Quick remove/add (mark "leaving" members; needs UI hooks)
+// - Event removal on removal
+// - Event moving on TBODY move
+
 var DomBackend = UI.DomBackend;
 
 var removeNode = function (n) {
@@ -94,7 +101,10 @@ var rangeParented = function (range) {
       // keep a pointer to the range on the parent
       // element.  This is really just for IE 9+
       // TextNode GC issues, but we can't do reliable
-      // bug detection.
+      // feature detection (i.e. bug detection).
+      // Note that because we keep a direct pointer to
+      // `parentNode.$_uiranges`, it doesn't matter
+      // if we are reparented (e.g. wrapped in a TBODY).
       var parentNode = range.parentNode();
       var rangeDict = (
         parentNode.$_uiranges ||
@@ -122,6 +132,10 @@ var rangeRemoved = function (range) {
 
     if (range._rangeDict)
       delete range._rangeDict[range._rangeId];
+
+    // XXX clean up events in $_uievents
+
+    // XXX notify component of removal
 
     membersRemoved(range);
   }
@@ -784,6 +798,9 @@ var moveWithOwnersIntoTbody = function (range) {
                               range.end.nextSibling);
   for (var i = 0; i < nodes.length; i++)
     tbody.appendChild(nodes[i]);
+
+  // XXX complete the reparenting by moving event
+  // HandlerRecs of `range`.
 
   return tbody;
 };
