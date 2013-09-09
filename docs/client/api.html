@@ -1262,7 +1262,20 @@ the value.  The `_id` field is still included in the result.
 
     // Users.find({}, {fields: {firstname: 1, lastname: 1}})
 
-It is not possible to mix inclusion and exclusion styles.
+It is not possible to mix inclusion and exclusion styles (exception for `_id`).
+Field operators such as `$` and `$slice` are not available on client side yet.
+
+More advanced example:
+
+    Users.insert({ alterEgos: [{ name: "Kira", alliance: "murderer" },
+                               { name: "L", alliance: "police" }],
+                   name: "Yagami Light" });
+
+    Users.findOne({}, { fields: { 'alterEgos.name': 1, _id: 0 } });
+
+    // returns { alterEgos: [{ name: "Kira" }, { name: "L" }] }
+
+Notice the nested field rule and array behavior, learn more in MongoDB docs.
 
 {{/api_box_inline}}
 
