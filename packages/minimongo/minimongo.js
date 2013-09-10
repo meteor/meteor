@@ -1108,13 +1108,13 @@ LocalCollection._compileProjection = function (fields) {
       else
         delete res[key];
     });
-    
+
     return res;
   };
 
   return function (obj) {
     var res = transform(obj, projectionRulesTree);
-    
+
     if (_idProjection && _.has(obj, '_id'))
       res._id = obj._id;
     if (!_idProjection && _.has(res, '_id'))
