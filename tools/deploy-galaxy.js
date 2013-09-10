@@ -12,7 +12,7 @@ var _ = require('underscore');
 var getPackage = _.once(function (context) {
   return unipackage.load({
     library: context.library,
-    packages: [ 'meteor', 'livedata', 'mongo-livedata' ],
+    packages: [ 'meteor', 'livedata' ],
     release: context.releaseVersion
   });
 });
@@ -175,7 +175,7 @@ exports.deploy = function (options) {
 
   var created = true;
   var appConfig = {
-      METEOR_SETTINGS: options.settings
+      settings: options.settings
   };
 
   if (options.admin)

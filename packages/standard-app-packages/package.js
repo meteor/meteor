@@ -40,6 +40,8 @@ Package.on_use(function(api) {
     // $(".usefulToo")
     'jquery',
     // Life isn't always predictable.
-    'random'
+    'random',
+    // People like being able to clone objects.
+    'ejson'
   ]);
 });

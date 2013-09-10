@@ -26,6 +26,9 @@ Package.on_use(function (api) {
 
   api.export('Template', 'client');
 
+
+  // If we have minimongo available, use its idStringify function.
+  api.use('minimongo', 'client', {weak: true});
   // provides the runtime logic to instantiate our templates
   //api.add_files('deftemplate.js', 'client');
 

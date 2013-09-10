@@ -44,6 +44,14 @@
     "release": "0.6.4.1"
   },
   {
+    "release": "0.6.5",
+    "notices": [
+      "Any custom application packages in the `packages` directory",
+      "must now specify their exported symbols.  See",
+      "https://docs.meteor.com/#writingpackages"
+    ]
+  },
+  {
     "release": "NEXT"
   }
 ]

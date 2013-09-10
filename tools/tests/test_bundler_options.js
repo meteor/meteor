@@ -70,7 +70,7 @@ assert.doesNotThrow(function () {
   // verify that tests for the meteor package are included
   var appHtml = fs.readFileSync(path.join(tmpOutputDir, "programs",
                                           "client", "app.html"));
-  assert(/src=\"##ROOT_URL_PATH_PREFIX##\/packages\/meteor\.tests\.js/.test(appHtml));
+  assert(/src=\"##ROOT_URL_PATH_PREFIX##\/packages\/meteor:tests\.js/.test(appHtml));
 });
 
 console.log("nodeModules: 'copy'");

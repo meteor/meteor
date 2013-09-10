@@ -3,7 +3,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.export(['AttributeHandler', 'UI', 'FadeyIf', 'Checkbox', 'Component']);
+  api.export(['UI']);
   api.use('deps');
   api.use('random');
   api.use('ejson');
@@ -27,6 +27,7 @@ Package.on_test(function (api) {
 
   api.add_files([
     'base_tests.js',
-    'render_tests.js'
+    'render_tests.js',
+    'domrange_tests.js'
   ], 'client');
 });

@@ -1,0 +1,18 @@
+/* CSS declarations go here */
+
+
+* { margin: 0; padding: 0 }
+
+#grid td {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.color0 { background: #eee; }
+.color1 { background: #d8f; }
+.color2 { background: #8c3; }
+.color3 { background: #39d; }
+.color4 { background: #d96; }
+.color5 { background: #a95; }

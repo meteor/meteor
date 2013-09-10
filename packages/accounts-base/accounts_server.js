@@ -112,7 +112,7 @@ Accounts.registerLoginHandler(function(options) {
 // Semi-public. Used by other login methods to generate tokens.
 //
 Accounts._generateStampedLoginToken = function () {
-  return {token: Random.id(), when: +(new Date)};
+  return {token: Random.id(), when: (new Date)};
 };
 
 removeLoginToken = function (userId, loginToken) {
@@ -158,7 +158,7 @@ Accounts.insertUserDoc = function (options, user) {
   // the user document (in which you can modify its contents), and
   // one that gets called after (in which you should change other
   // collections)
-  user = _.extend({createdAt: +(new Date), _id: Random.id()}, user);
+  user = _.extend({createdAt: new Date(), _id: Random.id()}, user);
 
   var result = {};
   if (options.generateLoginToken) {
