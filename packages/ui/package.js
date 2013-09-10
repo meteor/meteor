@@ -11,8 +11,12 @@ Package.on_use(function (api) {
   api.use('ordered-dict');
   api.use('minimongo');  // for idStringify
 
-  api.add_files(['base.js',
-                 'attrs.js',
+  api.add_files(['base.js']);
+
+  api.add_files(['dombackend.js',
+                 'domrange.js'], 'client');
+
+  api.add_files(['attrs.js',
                  'render.js',
                  'fields.js',
                  'template.js',

@@ -1,3 +1,5 @@
+UI = {};
+
 // A very basic operation like Underscore's `_.extend` that
 // copies `src`'s own, enumerable properties onto `tgt` and
 // returns `tgt`.
@@ -33,7 +35,7 @@ var sanitizeTypeName = function (typeName) {
                                   '') || 'Component';
 };
 
-UI = {
+_extend(UI, {
   nextGuid: 2, // Component is 1!
 
   // Components and Component kinds are the same thing, just
@@ -92,8 +94,7 @@ UI = {
     if (! c.dom)
       throw new Error("Component must be built into DOM to perform this operation");
   }
-
-};
+});
 
 Component = UI.Component;
 
@@ -1121,4 +1122,14 @@ UI.body = UI.Component.extend({
   },
   // XXX revisit how body works.
   INSTANCE: null
+});
+
+_extend(UI.Component, {
+  // XXX temporary definitions
+  helpers: function (dict) {
+    _extend(this, dict);
+  },
+  events: function (dict) {
+    _extend(this, dict);
+  }
 });

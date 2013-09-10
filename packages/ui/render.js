@@ -1,3 +1,4 @@
+var DomRange = UI.DomRange;
 
 // Render an instance of a component kind directly into the DOM,
 // optionally with a parentComp (for e.g. name resolution).
@@ -208,7 +209,7 @@ makeRenderBuffer = function (options) {
 
     var range = component.dom;
     // assert: range is empty.
-    var start = range.getFirstNode();
+    var start = range.startNode();
     var nextNode = start.nextSibling;
     // jQuery does fancy html-to-DOM compat stuff here:
     $(start).after(html);

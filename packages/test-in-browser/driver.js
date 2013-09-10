@@ -220,7 +220,7 @@ var _testStatus = function(t) {
 
 //// Template - navBars
 
-Template.navBars({
+Template.navBars.helpers({
   running: function() {
     countDep.depend();
     return running;
@@ -254,7 +254,7 @@ Template.navBars({
 
 //// Template - progressBar
 
-Template.progressBar({
+Template.progressBar.helpers({
   running: function () {
     countDep.depend();
     return running;
@@ -304,7 +304,7 @@ var changeToPath = function (path) {
   Reload._reload();
 };
 
-Template.groupNav({
+Template.groupNav.helpers({
   groupPaths: function () {
     var groupPath = Session.get("groupPath");
     var ret = [];
@@ -318,7 +318,7 @@ Template.groupNav({
   }
 });
 
-Template.groupNav({
+Template.groupNav.events({
   'click .group': function () {
     changeToPath(this.path);
   },
@@ -331,7 +331,7 @@ Template.groupNav({
 
 //// Template - failedTests
 
-Template.failedTests({
+Template.failedTests.helpers({
   failedTests: function() {
     countDep.depend();
     return failedTests;
@@ -340,7 +340,7 @@ Template.failedTests({
 
 //// Template - testTable
 
-Template.testTable({
+Template.testTable.helpers({
   testdata: function () {
     topLevelGroupsDep.depend();
     return resultTree;
@@ -349,7 +349,7 @@ Template.testTable({
 
 //// Template - test_group
 
-Template.test_group({
+Template.test_group.helpers({
   'click .groupname': function (evt) {
     changeToPath(this.path);
     // prevent enclosing groups from also triggering on
@@ -363,7 +363,7 @@ Template.test_group({
 
 //// Template - test
 
-Template.test({
+Template.test.helpers({
   test_status_display: function() {
     var status = _testStatus(this);
     if (status == "failed") {
@@ -429,7 +429,7 @@ Template.test({
   }
 });
 
-Template.test({
+Template.test.events({
   'click .testname': function () {
     this.expanded = ! this.expanded;
     this.dep.changed();
@@ -439,7 +439,7 @@ Template.test({
 
 //// Template - event
 
-Template.event({
+Template.event.events({
   'click .debug': function () {
     // the way we manage groupPath, shortName, cookies, etc, is really
     // messy. needs to be aggressively refactored.
@@ -449,7 +449,7 @@ Template.event({
   }
 });
 
-Template.event({
+Template.event.helpers({
   get_details: function() {
 
     var prepare = function(details) {
