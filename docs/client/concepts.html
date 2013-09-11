@@ -697,16 +697,15 @@ separate namespace, meaning that it sees only its own global variables
 and any variables provided by the packages that it specifically
 uses. Here's how it works.
 
-When you declare a top-level variable, you have a choice. You can make
-the variable File Scope or Package Scope.
+When you declare a top-level variable within a package, you have a
+choice. You can make the variable File Scope or Package Scope.
 
     // File Scope. This variable will be visible only inside this
     // one file. Other files in this app or package won't see it.
     var alicePerson = {name: "alice"};
 
     // Package Scope. This variable is visible to every file inside
-    // of this package or app. The difference is that 'var' is
-    // omitted.
+    // of this package. The difference is that 'var' is omitted
     bobPerson = {name: "bob"};
 
 Notice that this is just the normal JavaScript syntax for declaring a
