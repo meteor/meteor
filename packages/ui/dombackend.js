@@ -1,4 +1,3 @@
-UI = {};
 
 if (Meteor.isClient) {
 
