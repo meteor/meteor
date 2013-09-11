@@ -72,3 +72,78 @@ Tinytest.add("ejson - clone", function (test) {
   };
   testCloneArgs(1, 2, "foo", [4]);
 });
+
+Tinytest.add("ejson - stringify", function (test) {
+  test.equal(EJSON.stringify(null), "null");
+  test.equal(EJSON.stringify(true), "true");
+  test.equal(EJSON.stringify(false), "false");
+  test.equal(EJSON.stringify(123), "123");
+  test.equal(EJSON.stringify("abc"), "\"abc\"");
+
+  test.equal(EJSON.stringify([1, 2, 3]),
+     "[1,2,3]"
+  );
+  test.equal(EJSON.stringify([1, 2, 3], {indent: true}),
+    "[\n  1,\n  2,\n  3\n]"
+  );
+  test.equal(EJSON.stringify([1, 2, 3], {keyOrderSensitive: true}),
+    "[1,2,3]"
+  );
+  test.equal(EJSON.stringify([1, 2, 3], {indent: true, keyOrderSensitive: true}),
+    "[\n  1,\n  2,\n  3\n]"
+  );
+
+  test.equal(EJSON.stringify([1, 2, 3], {indent: 4}),
+    "[\n    1,\n    2,\n    3\n]"
+  );
+  test.equal(EJSON.stringify([1, 2, 3], {indent: '--'}),
+    "[\n--1,\n--2,\n--3\n]"
+  );
+
+  test.equal(
+    EJSON.stringify(
+      {b: [2, {d: 4, c: 3}], a: 1}
+    ),
+    "{\"a\":1,\"b\":[2,{\"c\":3,\"d\":4}]}"
+  );
+  test.equal(
+    EJSON.stringify(
+      {b: [2, {d: 4, c: 3}], a: 1},
+      {indent: true}
+    ),
+    "{\n" +
+    "  \"a\": 1,\n" +
+    "  \"b\": [\n" +
+    "    2,\n" +
+    "    {\n" +
+    "      \"c\": 3,\n" +
+    "      \"d\": 4\n" +
+    "    }\n" +
+    "  ]\n" +
+    "}"
+  );
+  test.equal(
+    EJSON.stringify(
+      {b: [2, {d: 4, c: 3}], a: 1},
+      {keyOrderSensitive: true}
+    ),
+    "{\"b\":[2,{\"d\":4,\"c\":3}],\"a\":1}"
+  );
+  test.equal(
+    EJSON.stringify(
+      {b: [2, {d: 4, c: 3}], a: 1},
+      {indent: true, keyOrderSensitive: true}
+    ),
+    "{\n" +
+    "  \"b\": [\n" +
+    "    2,\n" +
+    "    {\n" +
+    "      \"d\": 4,\n" +
+    "      \"c\": 3\n" +
+    "    }\n" +
+    "  ],\n" +
+    "  \"a\": 1\n" +
+    "}"
+
+  );
+});

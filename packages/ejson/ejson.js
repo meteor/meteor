@@ -206,8 +206,16 @@ EJSON.fromJSONValue = function (item) {
   }
 };
 
-EJSON.stringify = function (item) {
-  return JSON.stringify(EJSON.toJSONValue(item));
+EJSON.stringify = function (item, options) {
+  var keyOrderSensitive = !!(options && options.keyOrderSensitive);
+  var indent = options && options.indent || null;
+  if (indent === true)
+    indent = 2;
+  var json = EJSON.toJSONValue(item);
+  if (keyOrderSensitive)
+    return JSON.stringify(json, null, indent);
+  else
+    return canonicalStringify(json, null, indent);
 };
 
 EJSON.parse = function (item) {
