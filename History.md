@@ -3,6 +3,10 @@
 * Write dates to Mongo as ISODate rather than Integer; existing data can be
   converted by passing it through `new Date()`. #1228
 
+* Login token deletion: Expire login tokens periodically. Add
+  Meteor._logoutAllOthers() for logging out other connections logged in as the
+  current user. Log out and close connections for deleted users and tokens.
+
 
 ## v0.6.5.1
 
