@@ -1,9 +1,12 @@
-// We recommend that you use the starter-browser-policy package to enable the
-// following default policy:
-// 1.) Only the same origin can frame the app.
-// 2.) No eval or other string-to-code, and content can only be loaded from the
+// To enable CSP, call BrowserPolicy.enableContentSecurityPolicy(). This enables
+// the following default policy:
+// No eval or other string-to-code, and content can only be loaded from the
 // same origin as the app (except for XHRs and websocket connections, which can
 // go to any origin).
+//
+// Apps should call BrowserPolicy.allowFramingBySameOrigin() to allow only
+// same-origin pages to frame their apps, if they don't explicitly want to be
+// framed by third-party sites.
 //
 // Apps should call BrowserPolicy.disallowInlineScripts() if they are not using
 // any inline script tags and are willing to accept an extra round trip on page
@@ -27,8 +30,8 @@
 // disallow<content type>(): disallows this type of content all together (can't
 // be called for script)
 //
-// The following functions allow you to set defaults for where content can be
-// loaded from when no other rules have been specified for that type of content:
+// The following functions allow you to set rules for all types of content at
+// once:
 // allowAllContentOrigin(origin)
 // allowAllContentDataUrl()
 // allowAllContentSameOrigin()
@@ -43,6 +46,7 @@
 
 var xFrameOptions;
 var cspSrcs;
+//var cspUnsafeAllowed;
 
 // CSP keywords have to be single-quoted.
 var unsafeInline = "'unsafe-inline'";
@@ -50,30 +54,56 @@ var unsafeEval = "'unsafe-eval'";
 var selfKeyword = "'self'";
 var noneKeyword = "'none'";
 
-var constructCsp = function () {
-  _.each(_.keys(cspSrcs), function (directive) {
-    if (_.isEmpty(cspSrcs[directive]))
-      delete cspSrcs[directive];
-  });
+var cspEnabled = false;
+
+BrowserPolicy = {};
+
+// Exported for tests.
+var constructXFrameOptions = BrowserPolicy._constructXFrameOptions =
+      function () {
+        return xFrameOptions;
+      };
+
+var constructCsp = BrowserPolicy._constructCsp = function () {
+  if (! cspEnabled)
+    return null;
+
+  cspSrcs = cspSrcs || {};
 
   var header = _.map(cspSrcs, function (srcs, directive) {
-    return directive + " " + srcs.join(" ") + ";";
-  }).join(" ");
+    srcs = srcs || [];
+    if (_.isEmpty(srcs))
+      srcs = [noneKeyword];
+    var directiveCsp = _.uniq(srcs).join(" ");
+    return directive + " " + directiveCsp + ";";
+  });
 
+  header = header.join(" ");
   return header;
 };
 
 var parseCsp = function (csp) {
   var policies = csp.split("; ");
-  var result = {};
+  cspSrcs = {};
   _.each(policies, function (policy) {
-    if (policy[policy.length-1] === ";")
+    if (policy[policy.length - 1] === ";")
       policy = policy.substring(0, policy.length - 1);
     var srcs = policy.split(" ");
     var directive = srcs[0];
-    result[directive] = srcs.slice(1);
+    if (_.indexOf(srcs, noneKeyword) !== -1)
+      cspSrcs[directive] = null;
+    else
+      cspSrcs[directive] = srcs.slice(1);
   });
-  return result;
+
+  if (cspSrcs["default-src"] === undefined)
+    throw new Error("Content Security Policies used with " +
+                    "browser-policy must specify a default-src.");
+
+  // Copy default-src sources to other directives.
+  _.each(cspSrcs, function (sources, directive) {
+    cspSrcs[directive] = _.union(sources || [], cspSrcs["default-src"] || []);
+  });
 };
 
 var removeCspSrc = function (directive, src) {
@@ -81,28 +111,45 @@ var removeCspSrc = function (directive, src) {
 };
 
 var ensureDirective = function (directive) {
+  throwIfNotEnabled();
   cspSrcs = cspSrcs || {};
   if (! _.has(cspSrcs, directive))
-    cspSrcs[directive] = [];
+    cspSrcs[directive] = _.clone(cspSrcs["default-src"]);
+};
+
+var throwIfNotEnabled = function () {
+  if (! cspEnabled)
+    throw new Error("Enable this function by calling "+
+                    "BrowserPolicy.enableContentSecurityPolicy().");
 };
 
 WebApp.connectHandlers.use(function (req, res, next) {
   if (xFrameOptions)
-    res.setHeader("X-Frame-Options", xFrameOptions);
-  if (cspSrcs)
+    res.setHeader("X-Frame-Options", constructXFrameOptions());
+  if (cspEnabled)
     res.setHeader("Content-Security-Policy", constructCsp());
   next();
 });
 
-BrowserPolicy = {
+BrowserPolicy = _.extend(BrowserPolicy, {
+  _reset: function () {
+    xFrameOptions = null;
+    cspSrcs = null;
+    cspEnabled = false;
+  },
+
   allowFramingBySameOrigin: function () {
     xFrameOptions = "SAMEORIGIN";
   },
   disallowFraming: function () {
     xFrameOptions = "DENY";
   },
+  // ALLOW-FROM not supported in Chrome or Safari.
   allowFramingByOrigin: function (origin) {
-    if (xFrameOptions.indexOf("ALLOW-FROM") === 0)
+    // Trying to specify two allow-from throws to prevent users from
+    // accidentally overwriting an allow-from origin when they think they are
+    // adding multiple origins.
+    if (xFrameOptions && xFrameOptions.indexOf("ALLOW-FROM") === 0)
       throw new Error("You can only specify one origin that is allowed to" +
                       " frame this app.");
     xFrameOptions = "ALLOW-FROM " + origin;
@@ -111,17 +158,38 @@ BrowserPolicy = {
     xFrameOptions = null;
   },
 
+  enableContentSecurityPolicy: function () {
+    // By default, unsafe inline scripts and styles are allowed, since we expect
+    // many apps will use them for analytics, etc. Unsafe eval is disallowed, and
+    // the only allowable content source is the same origin or data, except for
+    // connect which allows anything (since meteor.com apps make websocket
+    // connections to a lot of different origins).
+    cspEnabled = true;
+    cspSrcs = {};
+    BrowserPolicy.setContentSecurityPolicy("default-src 'self'; " +
+                                           "script-src 'self' 'unsafe-inline'; " +
+                                           "connect-src *; " +
+                                           "img-src data: 'self'; " +
+                                           "style-src 'self' 'unsafe-inline';");
+  },
+
   setContentSecurityPolicy: function (csp) {
-    cspSrcs = parseCsp(csp);
+    throwIfNotEnabled();
+    parseCsp(csp);
   },
 
   // Helpers for creating content security policies
 
+  _keywordAllowed: function (directive, keyword) {
+    return ! cspEnabled ||
+      (cspSrcs[directive] &&
+       _.indexOf(cspSrcs[directive], keyword) !== -1);
+  },
+
   // Used by webapp to determine whether we need an extra round trip for
   // __meteor_runtime_config__.
   inlineScriptsAllowed: function () {
-    ensureDirective("script-src");
-    return (_.indexOf(cspSrcs["script-src"], unsafeInline) !== -1);
+    return BrowserPolicy._keywordAllowed("script-src", unsafeInline);
   },
 
   allowInlineScripts: function () {
@@ -151,21 +219,24 @@ BrowserPolicy = {
 
   // Functions for setting defaults
   allowAllContentSameOrigin: function () {
-    ensureDirective("default-src");
-    cspSrcs["default-src"].push(selfKeyword);
+    BrowserPolicy.allowAllContentOrigin(selfKeyword);
   },
   allowAllContentDataUrl: function () {
-    ensureDirective("default-src");
-    cspSrcs["default-src"].push("data:");
+    BrowserPolicy.allowAllContentOrigin("data:");
   },
   allowAllContentOrigin: function (origin) {
     ensureDirective("default-src");
-    cspSrcs["default-src"].push(origin);
+    _.each(_.keys(cspSrcs), function (directive) {
+      cspSrcs[directive].push(origin);
+    });
   },
   disallowAllContent: function () {
-    cspSrcs["default-src"] = [noneKeyword];
+    throwIfNotEnabled();
+    cspSrcs = {
+      "default-src": []
+    };
   }
-};
+});
 
 // allow<Resource>Origin, allow<Resource>Data, allow<Resource>self, and
 // disallow<Resource> methods for each type of resource.
@@ -189,13 +260,16 @@ _.each(["script", "object", "img", "media",
            ensureDirective(directive);
            cspSrcs[directive].push(src);
          };
-         if (resource !== "script") {
-           BrowserPolicy[disallowMethodName] = function () {
-             cspSrcs[directive] = [noneKeyword];
-           };
-         }
+         BrowserPolicy[disallowMethodName] = function () {
+           throwIfNotEnabled();
+           cspSrcs[directive] = [];
+         };
          BrowserPolicy[allowDataMethodName] = function () {
            ensureDirective(directive);
            cspSrcs[directive].push("data:");
+         };
+         BrowserPolicy[allowSelfMethodName] = function () {
+           ensureDirective(directive);
+           cspSrcs[directive].push(selfKeyword);
          };
        });
