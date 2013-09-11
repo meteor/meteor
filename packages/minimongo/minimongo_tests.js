@@ -1121,7 +1121,9 @@ Tinytest.add("minimongo - fetch with projection, subarrays", function (test) {
   c.insert({a:[[{b:1,c:2},{b:2,c:4}],{b:3,c:5},[{b:4, c:9}]]});
 
   testForProjection({ 'a.b': 1, _id: 0 },
-                    {"a" : [  [  {  "b" : 1 },  {  "b" : 2 } ],  {  "b" : 3 },  [  {  "b" : 4 } ] ] });
+                    {a: [ [ { b: 1 }, { b: 2 } ], { b: 3 }, [ { b: 4 } ] ] });
+  testForProjection({ 'a.b': 0, _id: 0 },
+                    {a: [ [ { c: 2 }, { c: 4 } ], { c: 5 }, [ { c: 9 } ] ] });
 });
 
 Tinytest.add("minimongo - observe ordered with projection", function (test) {
