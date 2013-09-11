@@ -46,7 +46,7 @@ _.extend(Ctl, {
       process.exit(1);
     }
 
-    connection = DDP.connect(process.env['GALAXY']);
+    connection = Follower.connect(process.env['ULTRAWORLD_DDP_ENDPOINT']);
     checkConnection = Meteor.setInterval(function () {
       if (Ctl.findGalaxy().status().status !== "connected" &&
           Ctl.findGalaxy().status().retryCount > 2) {
