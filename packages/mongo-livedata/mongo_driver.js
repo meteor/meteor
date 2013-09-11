@@ -199,6 +199,13 @@ MongoConnection.prototype._maybeBeginWrite = function () {
 
 var OPLOG_COLLECTION = 'oplog.rs';
 
+var WRITE_COLLECTION = 'meteor_livedata_Writes';
+// XXX This is problematic if our RNG isn't seeded well enough.
+var myServerId = Random.id();
+var nextWriteId = 1;
+// XXX doc
+var outstandingWrites = [];
+
 // Like Perl's quotemeta: quotes all regexp metacharacters. See
 //   https://github.com/substack/quotemeta/blob/master/index.js
 var quotemeta = function (str) {
@@ -229,12 +236,35 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
 
   var callbacksByCollection = {};
 
+  var processFence = function (doc) {
+    if (doc.op !== 'i' && doc.op !== 'u')
+      return;
+    var serverId = (doc.op === 'i' ? doc.o._id : doc.o2._id);
+    if (serverId !== myServerId)
+      return;
+    var writeId =
+          (doc.op === 'i' ? doc.o.write : (doc.o.$set && doc.o.$set.write));
+    if (typeof writeId !== 'number')
+      return;
+    // Process all writes up to this point.
+    while (!_.isEmpty(outstandingWrites)
+           && outstandingWrites[0].writeId <= writeId) {
+      var write = outstandingWrites.shift();
+      write.write.committed();
+    }
+  };
+
   self._oplogHandle = oplogConnection.tail(cursorDescription, function (doc) {
     if (!doc.ns && doc.ns.length > dbName.length + 1 &&
         doc.ns.substr(0, dbName.length + 1) === (dbName + '.'))
       throw new Error("Unexpected ns");
 
     var collectionName = doc.ns.substr(dbName.length + 1);
+
+    if (collectionName === WRITE_COLLECTION) {
+      processFence(doc);
+      return;
+    }
 
     _.each(callbacksByCollection[collectionName], function (callback) {
       callback(EJSON.clone(doc));
@@ -255,6 +285,9 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
   };
 };
 
+// XXX you can actually get a replacement doc instead of $set/$unset! this
+// completely messes with the attempt to do a non-ID-polling process of
+// updates...
 var modifierTopLevelFields = function (mod) {
   var fields = {};
   _.each(mod, function (mapping, op) {
@@ -381,6 +414,30 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       console.log("A CHANGE TO THE DOC", op);
     }
   });
+
+  // XXX ordering w.r.t. everything else?
+  var listenersHandle = listenAll(
+    cursorDescription, function (notification, complete) {
+      // If we're not in a write fence, we don't have to do anything. That's
+      // because
+      var fence = DDPServer._CurrentWriteFence.get();
+      if (!fence) {
+        complete();
+        return;
+      }
+      var writeId = nextWriteId++;
+      var write = fence.beginWrite();
+      outstandingWrites.push({writeId: writeId, write: write});
+
+      // Use direct write to Node Mongo driver so we don't end up with recursive
+      // fence stuff. Need to disable 'safe' because we aren't providing a
+      // callback.
+      var writeCollection = self._getCollection(WRITE_COLLECTION);
+      writeCollection.update({_id: myServerId}, {$set: {write: writeId}},
+                             {upsert: true, safe: false});
+      complete();
+    }
+  );
 
   var initialCursor = new Cursor(self, cursorDescription);
   initialCursor.forEach(function (initialDoc) {
@@ -1156,6 +1213,38 @@ MongoConnection.prototype._observeChanges = function (
   return observeHandle;
 };
 
+// Listen for the invalidation messages that will trigger us to poll the
+// database for changes. If this selector specifies specific IDs, specify them
+// here, so that updates to different specific IDs don't cause us to poll.
+// listenCallback is the same kind of (notification, complete) callback passed
+// to InvalidationCrossbar.listen.
+var listenAll = function (cursorDescription, listenCallback) {
+  var listeners = [];
+  var listenOnTrigger = function (trigger) {
+    listeners.push(DDPServer._InvalidationCrossbar.listen(
+      trigger, listenCallback));
+  };
+
+  var key = {collection: cursorDescription.collectionName};
+  var specificIds = LocalCollection._idsMatchedBySelector(
+    cursorDescription.selector);
+  if (specificIds) {
+    _.each(specificIds, function (id) {
+      listenOnTrigger(_.extend({id: id}, key));
+    });
+  } else {
+    listenOnTrigger(key);
+  }
+
+  return {
+    stop: function () {
+      _.each(listeners, function (listener) {
+        listener.stop();
+      });
+    }
+  };
+};
+
 var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
                                stopCallback, testOnlyPollCallback) {
   var self = this;
@@ -1194,37 +1283,23 @@ var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
 
   self._taskQueue = new Meteor._SynchronousQueue();
 
-  // Listen for the invalidation messages that will trigger us to poll the
-  // database for changes. If this selector specifies specific IDs, specify them
-  // here, so that updates to different specific IDs don't cause us to poll.
-  var listenOnTrigger = function (trigger) {
-    var listener = DDPServer._InvalidationCrossbar.listen(
-      trigger, function (notification, complete) {
-        // When someone does a transaction that might affect us, schedule a poll
-        // of the database. If that transaction happens inside of a write fence,
-        // block the fence until we've polled and notified observers.
-        var fence = DDPServer._CurrentWriteFence.get();
-        if (fence)
-          self._pendingWrites.push(fence.beginWrite());
-        // Ensure a poll is scheduled... but if we already know that one is,
-        // don't hit the throttled _ensurePollIsScheduled function (which might
-        // lead to us calling it unnecessarily in 50ms).
-        if (self._pollsScheduledButNotStarted === 0)
-          self._ensurePollIsScheduled();
-        complete();
-      });
-    self._stopCallbacks.push(function () { listener.stop(); });
-  };
-  var key = {collection: cursorDescription.collectionName};
-  var specificIds = LocalCollection._idsMatchedBySelector(
-    cursorDescription.selector);
-  if (specificIds) {
-    _.each(specificIds, function (id) {
-      listenOnTrigger(_.extend({id: id}, key));
-    });
-  } else {
-    listenOnTrigger(key);
-  }
+  var listenersHandle = listenAll(
+    cursorDescription, function (notification, complete) {
+      // When someone does a transaction that might affect us, schedule a poll
+      // of the database. If that transaction happens inside of a write fence,
+      // block the fence until we've polled and notified observers.
+      var fence = DDPServer._CurrentWriteFence.get();
+      if (fence)
+        self._pendingWrites.push(fence.beginWrite());
+      // Ensure a poll is scheduled... but if we already know that one is,
+      // don't hit the throttled _ensurePollIsScheduled function (which might
+      // lead to us calling it unnecessarily in 50ms).
+      if (self._pollsScheduledButNotStarted === 0)
+        self._ensurePollIsScheduled();
+      complete();
+    }
+  );
+  self._stopCallbacks.push(function () { listenersHandle.stop(); });
 
   // Map from handle ID to ObserveHandle.
   self._observeHandles = {};
