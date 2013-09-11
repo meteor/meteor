@@ -325,6 +325,10 @@ MongoConnection.prototype._observeChangesWithOplog = function (
   //
   // 6) now that we're in the "steady state", process ops more directly
 
+  // XXX NOW: replace idSet/changedFields with simply currently published
+  // results, ok??? that should simplify things, and allow the implementation of
+  // "replace" (noodles)
+
   var idSet = new IdMap;
 
   var changedFields = new IdMap;
