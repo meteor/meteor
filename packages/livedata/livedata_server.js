@@ -594,9 +594,15 @@ _.extend(Session.prototype, {
         self._setUserId(userId);
       };
 
+      var setLoginToken = function (newToken) {
+        self._setLoginToken(newToken);
+      };
+
       var invocation = new MethodInvocation({
         isSimulation: false,
-        userId: self.userId, setUserId: setUserId,
+        userId: self.userId,
+        setUserId: setUserId,
+        _setLoginToken: setLoginToken,
         unblock: unblock,
         sessionData: self.sessionData
       });
@@ -649,6 +655,13 @@ _.extend(Session.prototype, {
         });
       }
     });
+  },
+
+  _setLoginToken: function (newToken) {
+    var self = this;
+    var oldToken = self.sessionData.loginToken;
+    self.sessionData.loginToken = newToken;
+    self.server._loginTokenChanged(self, newToken, oldToken);
   },
 
   // Sets the current user id in all appropriate contexts and reruns
@@ -1026,6 +1039,12 @@ Server = function () {
 
   self.sessions = {}; // map from id to session
 
+  // Keeps track of the open connections associated with particular login
+  // tokens. Used for logging out all a user's open connections, expiring login
+  // tokens, etc.
+  self.sessionsByLoginToken = {};
+
+
   self.stream_server = new StreamServer;
 
   self.stream_server.register(function (socket) {
@@ -1099,6 +1118,11 @@ Server = function () {
       }
     });
     _.each(destroyedIds, function (id) {
+      var session = self.sessions[id];
+      self.sessionsByLoginToken[session.loginToken] = _.without(
+        self.sessionsByLoginToken[session.loginToken],
+        id
+      );
       delete self.sessions[id];
     });
   }, 1 * 60 * 1000);
@@ -1269,17 +1293,27 @@ _.extend(Server.prototype, {
       var setUserId = function() {
         throw new Error("Can't call setUserId on a server initiated method call");
       };
+      var setLoginToken = function () {
+        // XXX is this correct?
+        throw new Error("Can't call _setLoginToken on a server " +
+                        "initiated method call");
+      };
       var currentInvocation = DDP._CurrentInvocation.get();
       if (currentInvocation) {
         userId = currentInvocation.userId;
         setUserId = function(userId) {
           currentInvocation.setUserId(userId);
         };
+        setLoginToken = function (newToken) {
+          currentInvocation._setLoginToken(newToken);
+        };
       }
 
       var invocation = new MethodInvocation({
         isSimulation: false,
-        userId: userId, setUserId: setUserId,
+        userId: userId,
+        setUserId: setUserId,
+        _setLoginToken: setLoginToken,
         sessionData: self.sessionData
       });
       try {
@@ -1304,6 +1338,49 @@ _.extend(Server.prototype, {
     if (exception)
       throw exception;
     return result;
+  },
+
+  _loginTokenChanged: function (session, newToken, oldToken) {
+    var self = this;
+    if (oldToken) {
+      // Remove the session from the list of open sessions for the old token.
+      self.sessionsByLoginToken[oldToken] = _.without(
+        self.sessionsByLoginToken[oldToken],
+        session.id
+      );
+    }
+    if (! _.has(self.sessionsByLoginToken, newToken))
+      self.sessionsByLoginToken[newToken] = [];
+    self.sessionsByLoginToken[newToken].push(session.id);
+  },
+
+  // Close all open sessions associated with any of the tokens in
+  // `tokens`.
+  _closeAllForTokens: function (tokens) {
+    var self = this;
+    _.each(tokens, function (token) {
+      if (_.has(self.sessionsByLoginToken, token)) {
+        var destroyedIds = [];
+        _.each(self.sessionsByLoginToken[token], function (sessionId) {
+          // Destroy session and remove from self.sessions.
+          var session = self.sessions[sessionId];
+          if (session) {
+            session.cleanup();
+            session.destroy();
+            delete self.sessions[sessionId];
+          }
+          destroyedIds.push(sessionId);
+        });
+
+        // Remove destroyed sessions from self.sessionsByLoginToken.
+        self.sessionsByLoginToken[token] = _.filter(
+          self.sessionsByLoginToken[token],
+          function (sessionId) {
+            return _.indexOf(destroyedIds, sessionId) === -1;
+          }
+        );
+      }
+    });
   }
 });
 

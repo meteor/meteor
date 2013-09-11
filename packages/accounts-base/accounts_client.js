@@ -91,20 +91,34 @@ Accounts.callLoginMethod = function (options) {
     if (err || !result || !result.token) {
       Meteor.connection.onReconnect = null;
     } else {
-      Meteor.connection.onReconnect = function() {
+      Meteor.connection.onReconnect = function () {
         reconnected = true;
-        Accounts.callLoginMethod({
-          methodArguments: [{resume: result.token}],
-          // Reconnect quiescence ensures that the user doesn't see an
-          // intermediate state before the login method finishes. So we don't
-          // need to show a logging-in animation.
-          _suppressLoggingIn: true,
-          userCallback: function (error) {
-            if (error) {
-              makeClientLoggedOut();
-            }
-            options.userCallback(error);
-          }});
+        // If our token was updated in storage, use the latest one.
+        var storedToken = storedLoginToken();
+        if (storedToken) {
+          result = {
+            token: storedToken,
+            tokenExpires: storedLoginTokenExpires()
+          };
+        }
+        if (! result.tokenExpires)
+          result.tokenExpires = Accounts._tokenExpiration(new Date());
+        if (Accounts._tokenExpiresSoon(result.tokenExpires)) {
+          makeClientLoggedOut();
+        } else {
+          Accounts.callLoginMethod({
+            methodArguments: [{resume: result.token}],
+            // Reconnect quiescence ensures that the user doesn't see an
+            // intermediate state before the login method finishes. So we don't
+            // need to show a logging-in animation.
+            _suppressLoggingIn: true,
+            userCallback: function (error) {
+              if (error) {
+                makeClientLoggedOut();
+              }
+              options.userCallback(error);
+            }});
+        }
       };
     }
   };
@@ -139,7 +153,7 @@ Accounts.callLoginMethod = function (options) {
     }
 
     // Make the client logged in. (The user data should already be loaded!)
-    makeClientLoggedIn(result.id, result.token);
+    makeClientLoggedIn(result.id, result.token, result.tokenExpires);
     options.userCallback();
   };
 
@@ -158,8 +172,8 @@ makeClientLoggedOut = function() {
   Meteor.connection.onReconnect = null;
 };
 
-makeClientLoggedIn = function(userId, token) {
-  storeLoginToken(userId, token);
+makeClientLoggedIn = function(userId, token, tokenExpires) {
+  storeLoginToken(userId, token, tokenExpires);
   Meteor.connection.setUserId(userId);
 };
 
@@ -172,6 +186,26 @@ Meteor.logout = function (callback) {
       callback && callback();
     }
   });
+};
+
+Meteor._logoutAllOthers = function (callback) {
+  // Our connection is going to be closed, but we don't want to call the
+  // onReconnect handler until the result comes back for this method, because
+  // the token will have been deleted on the server. Instead, wait until we get
+  // a new token and call the reconnect handler with that.
+  // XXX this is messy.
+  // XXX what if login gets called before the callback runs?
+  var origOnReconnect = Meteor.connection.onReconnect;
+  var userId = Meteor.userId();
+  Meteor.connection.onReconnect = null;
+  Meteor.apply('_logoutAllOthers', [], { wait: true },
+               function (error, result) {
+                 Meteor.connection.onReconnect = origOnReconnect;
+                 if (! error)
+                   storeLoginToken(userId, result.token, result.tokenExpires);
+                 Meteor.connection.onReconnect();
+                 callback && callback(error);
+               });
 };
 
 ///
