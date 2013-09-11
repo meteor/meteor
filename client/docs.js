@@ -345,7 +345,6 @@ var toc = [
     "spiderable",
     "stylus",
     "showdown",
-    "starter-browser-policy",
     "underscore"
   ] ],
 

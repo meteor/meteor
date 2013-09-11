@@ -16,13 +16,26 @@ attacks</a>.
 tells the browser where your app can load content from, which encourages safe
 practices and mitigates the damage of a cross-site-scripting attack.
 
-For most apps, we recommend that you use the
-[`starter-browser-policy`](#starterbrowserpolicy) package to enable reasonable
-policies, and then use the functions below to tighten or relax the policies as
-necessary. For example, an app that only loads content from its own origin and
-that doesn't use inline Javascript should use `starter-browser-policy` and then
-call `BrowserPolicy.disallowInlineScripts()` to gain additional security against
-cross-site scripting attacks.
+For most apps, we recommend that you take the following steps when using
+`browser-policy`:
+
+* Call `BrowserPolicy.enableContentSecurityPolicy()` to enable a starter policy
+for your app. With this starter policy, your app's client code will be able to
+load content (images, scripts, fonts, etc.) only from its own origin, except
+that XMLHttpRequests and WebSocket connections can go to any origin. Further,
+your app's client code will not be able to use functions such as `eval()` that
+convert strings to code.
+* You can use the functions described below to customize the content
+security policy. If your app does not need any inline Javascript such as inline
+`<script>` tags, we recommend that you modify the policy by calling
+`BrowserPolicy.disallowInlineScripts()` in server code. This will result in one
+extra round trip when your app is loaded, but will help prevent cross-site
+scripting attacks by disabling all scripts except those loaded from a `script
+src` attribute.
+* If your app does not need to be framed by other websites, call
+`BrowserPolicy.allowFramingBySameOrigin()` to help prevent clickjacking attacks.
+
+#### Frame options
 
 You can use the following functions to specify which websites are allowed to
 frame your app:
@@ -36,7 +49,9 @@ Your app will only render inside frames loaded by `origin`. You can only call
 this function once with a single origin, and cannot use wildcards or specify
 multiple origins that are allowed to frame your app. (This is a limitation of
 the X-Frame-Options header.) Example values of `origin` include
-"http://example.com" and "https://foo.example.com".
+"http://example.com" and "https://foo.example.com". Note that this value of the
+X-Frame-Options header is not yet supported in Chrome or Safari and will be
+ignored in those browsers.
 {{/dtdd}}
 
 {{#dtdd "BrowserPolicy.allowFramingBySameOrigin()"}}
@@ -49,8 +64,16 @@ Your app can be framed by any website.
 {{/dtdd}}
 </dl>
 
-You can use these functions to tighten or relax restrictions on where Javascript
-and CSS can be run:
+#### Content options
+
+You can use the functions in this section to control how different types of
+content can be loaded on your site. In order to use any of these functions, you
+must first call `BrowserPolicy.enableContentSecurityPolicy()`, which enables the
+starter policy described above. This section covers additional functions that
+you can use to tighten or relax what content your app can use.
+
+You can use the following functions to tighten or relax restrictions on where
+Javascript and CSS can be run:
 
 <dl class="callbacks">
 {{#dtdd "BrowserPolicy.allowInlineScripts()"}}
@@ -107,11 +130,11 @@ Disallows this type of content on your app.
 {{/dtdd}}
 </dl>
 
-These functions are also defined for the content type `AllContent`, which sets
-defaults for content types that you haven't configured using one of the above
-functions. For example, if you want to allow all content to be loaded from your
-app's origin but you want to disable `<object>` tags, you can simply call
-`BrowserPolicy.allowAllContentSameOrigin()` followed by
+These functions are also defined for the content type `AllContent`, which is a
+shorthand for calling one of the above functions once for each content type.
+For example, if you want to allow the origin `https://foo.com` for all types of
+content but you want to disable `<object>` tags, you can call
+`BrowserPolicy.allowAllContentOrigin("https://foo.com")` followed by
 `BrowserPolicy.disallowObject()`.
 
 Other examples of using the `BrowserPolicy` API:
