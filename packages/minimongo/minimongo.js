@@ -1092,17 +1092,19 @@ LocalCollection._compileProjection = function (fields) {
 
   // returns transformed doc according to ruleTree
   var transform = function (doc, ruleTree) {
+    // Special case for "sets"
+    if (_.isArray(doc))
+      return _.map(doc, function (subdoc) { return transform(subdoc, ruleTree); });
+
     var res = including ? {} : EJSON.clone(doc);
     _.each(ruleTree, function (rule, key) {
       if (!_.has(doc, key))
         return;
       if (_.isObject(rule)) {
-        if (_.isArray(doc[key]))
-          res[key] = _.map(doc[key], function (subdoc) {
-            return transform(subdoc, rule);
-          });
-        else if (_.isObject(doc[key]))
+        // For sub-objects/subsets we branch
+        if (_.isObject(doc[key]))
           res[key] = transform(doc[key], rule);
+        // Otherwise we don't even touch this subfield
       } else if (including)
         res[key] = doc[key];
       else
