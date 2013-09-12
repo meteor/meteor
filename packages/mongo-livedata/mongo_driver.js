@@ -329,27 +329,27 @@ MongoConnection.prototype._observeChangesWithOplog = function (
   // results, ok??? that should simplify things, and allow the implementation of
   // "replace" (noodles)
 
-  var idSet = new IdMap;
+  // XXX DOC: map id -> currently published fields
+  //          (which of course is also the same as what is tracked in merge box,
+  //           ah well)
+  var published = new IdMap;
 
+  // XXX KILL THESE
+  var idSet = new IdMap;
   var changedFields = new IdMap;
 
   var selector = LocalCollection._compileSelector(cursorDescription.selector);
 
   var add = function (doc) {
     var id = doc._id;
-    idSet.set(id, true);
-    if (callbacks.added) {
-      delete doc._id;
-      callbacks.added(id, doc);
-    }
+    delete doc._id;
+    published.set(id, doc);
+    callbacks.added && callbacks.added(id, doc);
   };
 
   var remove = function (id) {
-    idSet.remove(id);
-    changedFields.remove(id);
-    if (callbacks.removed) {
-      callbacks.removed(id);
-    }
+    published.remove(id);
+    callbacks.removed && callbacks.removed(id);
   };
 
   var oplogHandle = self._oplogHandle.onOplogEntry(cursorDescription.collectionName, function (op) {
@@ -357,13 +357,15 @@ MongoConnection.prototype._observeChangesWithOplog = function (
     if (op.op === 'd') {
       // XXX check that ObjectId works here
       id = op.o._id;
-      if (idSet.has(id))
+      if (published.has(id))
         remove(id);
     } else if (op.op === 'i') {
       id = op.o._id;
-      if (idSet.has(id))
+      if (published.has(id))
         throw new Error("insert found for already-existing ID");
 
+      // XXX what if selector yields?  for now it can't but later it could have
+      // $where
       if (selector(op.o))
         add(op.o);
     } else if (op.op === 'u') {
