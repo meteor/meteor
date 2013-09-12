@@ -1080,5 +1080,3 @@ MongoConnection.prototype._observeChangesTailable = function (
 // it's only used by tests, but in fact you need it in normal
 // operation to interact with capped collections (eg, Galaxy uses it).
 MongoInternals.MongoTimestamp = MongoDB.Timestamp;
-
-MongoInternals.Connection = MongoConnection;
