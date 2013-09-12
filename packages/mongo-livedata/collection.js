@@ -378,8 +378,8 @@ _.each(["insert", "update", "remove"], function (name) {
 
     var wrappedCallback;
     if (callback) {
-      wrappedCallback = function (error, result) {
-        callback(error, !error && ret);
+      wrappedCallback = function (error, mongoResult) {
+        callback(error, !error && ret, mongoResult);
       };
     }
 

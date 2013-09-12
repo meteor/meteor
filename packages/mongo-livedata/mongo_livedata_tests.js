@@ -612,6 +612,23 @@ if (Meteor.isServer) {
     x++;
   });
 
+  Tinytest.addAsync("mongo-livedata - mongo result from server-side update, " + idGeneration, function (test, onComplete) {
+    var cname = Random.id();
+    var coll = new Meteor.Collection(cname);
+    var doc = { foo: "bar", n: 0 };
+    var id = coll.insert(doc);
+    coll.update({ foo: "zzz" }, { $set: { n: 1 } }, function (err, result, mongoResult) {
+      test.equal(err, null);
+      test.equal(mongoResult, 0);
+
+      coll.update({ foo: "bar" }, { $set: { n : 1 } }, function (err, result, mongoResult) {
+        test.equal(err, null);
+        test.equal(mongoResult, 1);
+        onComplete();
+      });
+    });
+  });
+
   Tinytest.addAsync("mongo-livedata - async server-side remove, " + idGeneration, function (test, onComplete) {
     // Tests that remove returns before the callback runs.
     var cname = Random.id();
