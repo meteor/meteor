@@ -1246,7 +1246,8 @@ _.extend(Package.prototype, {
                                           options.path);
               if (options.type === "js")
                 compileStep.addJavaScript({ path: relPath,
-                                            data: data.toString('utf8') });
+                                            data: data.toString('utf8'),
+                                            sourcePath: compileStep.inputPath });
               else if (options.type === "head" || options.type === "body")
                 compileStep.appendDocument({ section: options.type,
                                              data: data.toString('utf8') });
