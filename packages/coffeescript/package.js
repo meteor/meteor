@@ -16,9 +16,10 @@ Package.on_test(function (api) {
   api.use(['coffeescript-test-helper'], ['client', 'server']);
   api.add_files([
     'coffeescript_test_setup.js',
-    'coffeescript_tests.coffee',
-    'coffeescript_strict_tests.coffee',
-    'litcoffeescript_tests.litcoffee',
+    'tests/coffeescript_tests.coffee',
+    'tests/coffeescript_strict_tests.coffee',
+    'tests/litcoffeescript_tests.litcoffee',
+    'tests/litcoffeescript_tests.coffee.md',
     'coffeescript_tests.js'
   ], ['client', 'server']);
 });
