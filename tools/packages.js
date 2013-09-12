@@ -730,7 +730,7 @@ _.extend(Slice.prototype, {
     var parts = filename.split('.');
     for (var i = 0; i < parts.length; i++) {
       var extension = parts.slice(i).join('.');
-      if (_has(handlers, extension)
+      if (_.has(handlers, extension))
         return handlers[extension];
     }
     return null;
