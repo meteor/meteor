@@ -7,6 +7,10 @@
   Meteor._logoutAllOthers() for logging out other connections logged in as the
   current user. Log out and close connections for deleted users and tokens.
 
+* The pre-0.6.5 `Package.register_extension` API has been removed. Use
+  `Package._transitional_registerBuildPlugin` instead, which was introduced in
+  0.6.5. (A bug prevented the 0.6.5 reimplementation of `register_extension`
+  from working properly anyway.)
 
 ## v0.6.5.1
 

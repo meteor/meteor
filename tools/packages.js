@@ -695,10 +695,7 @@ _.extend(Slice.prototype, {
     });
 
     _.each(self._activePluginPackages(), function (otherPkg) {
-      var all = _.extend({}, otherPkg.sourceHandlers);
-      _.extend(all, otherPkg.legacyExtensionHandlers);
-
-      _.each(all, function (handler, ext) {
+      _.each(otherPkg.sourceHandlers, function (handler, ext) {
         if (ext in ret && ret[ext] !== handler) {
           buildmessage.error(
             "conflict: two packages included in " +
@@ -793,10 +790,6 @@ var Package = function (library, packageDirectoryForBuildInfo) {
 
   // Package metadata. Keys are 'summary' and 'internal'.
   self.metadata = {};
-
-  // File handler extensions defined by this package. Map from file
-  // extension to the handler function.
-  self.legacyExtensionHandlers = {};
 
   // Available editions/subpackages ("slices") of this package. Array
   // of Slice.
@@ -1175,125 +1168,12 @@ _.extend(Package.prototype, {
 
       // XXX COMPAT WITH 0.6.4
       // extension doesn't contain a dot
-      register_extension: function (extension, callback) {
-        if (_.has(self.legacyExtensionHandlers, extension)) {
-          buildmessage.error("duplicate handler for '*." + extension +
-                             "'; only one per package allowed",
-                             { useMyCaller: true });
-          // Recover by ignoring the duplicate
-          return;
-        }
-        self.legacyExtensionHandlers[extension] = function (compileStep) {
-
-          // In the old extension API, there is a 'where' parameter
-          // that conflates architecture and slice name and can be
-          // either "client" or "server".
-          var clientOrServer = archinfo.matches(compileStep.arch, "browser") ?
-            "client" : "server";
-
-          var api = {
-            /**
-             * In the legacy extension API, this is the ultimate low-level
-             * entry point to add data to the bundle.
-             *
-             * type: "js", "css", "head", "body", "static"
-             *
-             * path: the (absolute) path at which the file will be
-             * served. ignored in the case of "head" and "body".
-             *
-             * source_file: the absolute path to read the data from. if
-             * path is set, will default based on that. overridden by
-             * data.
-             *
-             * data: the data to send. overrides source_file if
-             * present. you must still set path (except for "head" and
-             * "body".)
-             */
-            add_resource: function (options) {
-              var sourceFile = options.source_file || options.path;
-
-              var data;
-              if (options.data) {
-                data = options.data;
-                if (!(data instanceof Buffer)) {
-                  if (!(typeof data === "string")) {
-                    buildmessage.error("bad type for 'data'",
-                                       { useMyCaller: true });
-                    // recover by ignoring resource
-                    return;
-                  }
-                  data = new Buffer(data, 'utf8');
-                }
-              } else {
-                if (!sourceFile) {
-                  buildmessage.error("need either 'source_file' or 'data'",
-                                     { useMyCaller: true });
-                  // recover by ignoring resource
-                  return;
-                }
-                data = fs.readFileSync(sourceFile);
-              }
-
-              if (options.where && options.where !== clientOrServer) {
-                buildmessage.error("'where' is deprecated here and if " +
-                                   "provided must be '" + clientOrServer + "'",
-                                   { useMyCaller: true });
-                  // recover by ignoring resource
-                  return;
-              }
-
-              var relPath = path.relative(compileStep.rootOutputPath,
-                                          options.path);
-              if (options.type === "js")
-                compileStep.addJavaScript({ path: relPath,
-                                            data: data.toString('utf8') });
-              else if (options.type === "head" || options.type === "body")
-                compileStep.appendDocument({ section: options.type,
-                                             data: data.toString('utf8') });
-              else if (options.type === "css")
-                compileStep.addStylesheet({ path: relPath,
-                                            data: data.toString('utf8') });
-              else if (options.type === "static")
-                compileStep.addAsset({ path: relPath, data: data });
-            },
-
-            error: function (message) {
-              buildmessage.error(message, { useMyCaller: true });
-              // recover by just continuing
-            }
-          };
-
-          // old-school extension can only take the input as a file on
-          // disk, so write it out to a temporary file for them. take
-          // care to preserve the original extension since some legacy
-          // plugins depend on that (coffeescript.) Also (sigh) put it
-          // in the same directory as the original file so that
-          // relative paths work for include files, for plugins that
-          // care about that.
-          var tmpdir = path.resolve(path.dirname(compileStep._fullInputPath));
-          do {
-            var tempFilePath =
-              path.join(tmpdir, "build" +
-                        Math.floor(Math.random() * 1000000) +
-                        "." + path.basename(compileStep.inputPath));
-          } while (fs.existsSync(tempFilePath));
-          var tempFile = fs.openSync(tempFilePath, "wx");
-          try {
-            var data = compileStep.read();
-            fs.writeSync(tempFile, data, 0, data.length);
-          } finally {
-            fs.closeSync(tempFile);
-          }
-
-          try {
-            callback(api, tempFilePath,
-                     path.join(compileStep.rootOutputPath,
-                               compileStep.inputPath),
-                     clientOrServer);
-          } finally {
-            fs.unlinkSync(tempFilePath);
-          }
-        };
+      register_extension: function () {
+        buildmessage.error(
+          "Package.register_extension() is no longer supported. Use " +
+            "Package._transitional_registerBuildPlugin instead.",
+              { useMyCaller: true });
+            // recover by ignoring
       },
 
       // Define a plugin. A plugin extends the build process for
@@ -1412,7 +1292,6 @@ _.extend(Package.prototype, {
       // principle of least surprise.) Leave the metadata if we have
       // it, though.
       roleHandlers = {use: null, test: null};
-      self.legacyExtensionHandlers = {};
       self.pluginInfo = {};
       npmDependencies = null;
     }
@@ -1649,7 +1528,6 @@ _.extend(Package.prototype, {
           sources = {use: {client: [], server: []},
                      test: {client: [], server: []}};
           roleHandlers = {use: null, test: null};
-          self.legacyExtensionHandlers = {};
           self.pluginInfo = {};
           npmDependencies = null;
         }
@@ -2160,7 +2038,7 @@ _.extend(Package.prototype, {
   // True if this package can be saved as a unipackage
   canBeSavedAsUnipackage: function () {
     var self = this;
-    return _.keys(self.legacyExtensionHandlers || []).length === 0;
+    return true;
   },
 
   // options:
