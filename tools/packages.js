@@ -236,7 +236,7 @@ _.extend(Slice.prototype, {
       var relPath = source.relPath;
       var fileOptions = _.clone(source.fileOptions) || {};
       var absPath = path.resolve(self.pkg.sourceRoot, relPath);
-      var filename = path.basename(relPath, '');
+      var filename = path.basename(relPath);
       var handler = !fileOptions.isAsset && self._getSourceHandler(filename);
       var contents = watch.readAndWatchFile(self.watchSet, absPath);
 
@@ -733,7 +733,7 @@ _.extend(Slice.prototype, {
     var parts = filename.split('.');
     for (var i = 0; i < parts.length; i++) {
       var extension = parts.slice(i).join('.');
-      if (extension in handlers)
+      if (_has(handlers, extension)
         return handlers[extension];
     }
     return null;
