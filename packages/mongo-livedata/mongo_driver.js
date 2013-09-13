@@ -1150,7 +1150,9 @@ MongoConnection.prototype._observeChanges = function (
   }
 
   // XXX maybe this should actually use deduping too?
-  if (self._oplogHandle && !ordered
+  if (self._oplogHandle && !ordered && !callbacks._testOnlyPollCallback
+      // XXX remove this when oplog does de-duping
+      && !cursorDescription.options._dontUseOplog
       && cursorSupportedByOplogTailing(cursorDescription)) {
     return self._observeChangesWithOplog(cursorDescription, callbacks);
   }
