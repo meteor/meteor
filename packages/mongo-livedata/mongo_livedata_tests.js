@@ -572,11 +572,12 @@ if (Meteor.isServer) {
     var coll = new Meteor.Collection("observeInCallback-"+run, collectionOptions);
 
     var callbackCalled = false;
-    var handle = coll.find().observe({
+    // oplog doesn't do de-duping yet, so it doesn't throw on recursive observe
+    var handle = coll.find({}, {_dontUseOplog: true}).observe({
       added: function (newDoc) {
         callbackCalled = true;
         test.throws(function () {
-          coll.find().observe({});
+          coll.find({}, {_dontUseOplog: true}).observe();
         });
       }
     });
@@ -966,8 +967,9 @@ if (Meteor.isServer) {
     var handlesToStop = [];
     var observe = function (name, query) {
       var handle = coll.find(query).observeChanges({
-        // Make sure that we only poll on invalidation, not due to time,
-        // and keep track of when we do.
+        // Make sure that we only poll on invalidation, not due to time, and
+        // keep track of when we do. Note: this option disables the use of
+        // oplogs (which admittedly is somewhat irrelevant to this feature).
         _testOnlyPollCallback: function () {
           polls[name] = (name in polls ? polls[name] + 1 : 1);
         }
