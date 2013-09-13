@@ -10,6 +10,7 @@ Package.on_use(function (api) {
   api.use('underscore'); // very slight
   api.use('ordered-dict');
   api.use('minimongo');  // for idStringify
+  api.use('observe-sequence');
 
   api.add_files(['base.js']);
 

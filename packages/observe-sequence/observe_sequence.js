@@ -27,6 +27,13 @@ ObserveSequence = {
   // XXX the current implementation doesn't do any intelligent array
   // diffing. Instead, it clears and repopulates the sequence by
   // firing a sequence of calls to 'removed' followed by 'addedAt'.
+  //
+  // XXX #each doesn't use the indices (though we'll eventually need
+  // a way to get them when we support `@index`), but calling
+  // `cursor.observe` causes the index to be calculated on every
+  // callback using a linear scan (unless you turn it off by passing
+  // `_no_indices`).  Any way to avoid calculating indices on a pure
+  // cursor observe like we used to?
   observe: function (sequenceFunc, callbacks) {
     var lastSeq = null;
     var activeObserveHandle = null;

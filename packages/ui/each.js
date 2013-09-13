@@ -9,10 +9,6 @@ UI.Each = Component.extend({
   rendered: function () {
     var self = this;
 
-    var cursor = self.get();
-    // XXX Avi's code will handle different types of data arg
-    if (! cursor)
-      return;
 
     // XXX find `content` via `get()`...
     var content = self.content;
@@ -21,15 +17,16 @@ UI.Each = Component.extend({
 
     var range = this.dom;
 
-    cursor.observe({
-      _no_indices: true,
-      addedAt: function (doc, i, beforeId) {
-        var id = LocalCollection._idStringify(doc._id);
+    ObserveSequence.observe(function () {
+      return self.get();
+    }, {
+      addedAt: function (id, item, i, beforeId) {
+        id = LocalCollection._idStringify(id);
 
-        var data = doc;
+        var data = item;
         var dep = new Deps.Dependency;
 
-        var r = new DomRange;
+        var r = new UI.DomRange;
         if (beforeId)
           beforeId = LocalCollection._idStringify(beforeId);
         range.add(id, r, beforeId);
@@ -57,16 +54,16 @@ UI.Each = Component.extend({
           return data;
         };
       },
-      removed: function (doc) {
-        range.remove(LocalCollection._idStringify(doc._id));
+      removed: function (id, item) {
+        range.remove(LocalCollection._idStringify(id));
       },
-      movedTo: function (doc, i, j, beforeId) {
+      movedTo: function (id, item, i, j, beforeId) {
         range.moveBefore(
-          LocalCollection._idStringify(doc._id),
+          LocalCollection._idStringify(id),
           beforeId && LocalCollection._idStringify(beforeId));
       },
-      changed: function (newDoc) {
-        range.get(LocalCollection._idStringify(newDoc._id)).component.data.$set(newDoc);
+      changed: function (id, newItem) {
+        range.get(LocalCollection._idStringify(id)).component.data.$set(newItem);
       }
     });
   }
