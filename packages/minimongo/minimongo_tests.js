@@ -983,6 +983,11 @@ Tinytest.add("minimongo - projection_compiler", function (test) {
       [ { a: { b: 42 } }, { a: { b: 42 } }, "Can't have ambiguous rules (one is prefix of another)" ]
     ]);
   });
+  test.throws(function () {
+    testProjection({ 'a.b.c': 1, 'a.b': 1, 'a': 1 }, [
+      [ { a: { b: 42 } }, { a: { b: 42 } }, "Can't have ambiguous rules (one is prefix of another)" ]
+    ]);
+  });
 
   test.throws(function () {
     testProjection("some string", [
