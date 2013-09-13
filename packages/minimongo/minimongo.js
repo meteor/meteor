@@ -1033,35 +1033,6 @@ LocalCollection._compileProjection = function (fields) {
   if (!_.isObject(fields))
     throw MinimongoError("fields option must be an object");
 
-  // Check passed projection fields' keys:
-  // If you have two rules such as 'foo.bar' and 'foo.bar.baz', then the
-  // result becomes ambiguous. If that happens, there is a probability you are
-  // doing something wrong, framework should notify you about such mistake
-  // earlier on cursor compilation step than later during runtime.
-  // Note, that real mongo doesn't do anything about it and the later rule
-  // appears in projection project, more priority it takes.
-  //
-  // Example, assume following in mongo shell:
-  // > db.coll.insert({ a: { b: 23, c: 44 } })
-  // > db.coll.find({}, { 'a': 1, 'a.b': 1 })
-  // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23 } }
-  // > db.coll.find({}, { 'a.b': 1, 'a': 1 })
-  // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23, "c" : 44 } }
-  //
-  // Note, how second time the return set of keys is different.
-  var keyPaths = _.keys(fields);
-  _.each(keyPaths, function (keyPath) {
-    _.each(keyPaths, function (anotherKeyPath) {
-      var idx = keyPath.indexOf(anotherKeyPath);
-      // check if one key is path-prefix of another (like "abra" and
-      // "abra.cadabra", but not "abra" and "abrab.ra")
-      if (keyPath !== anotherKeyPath && !idx && keyPath[anotherKeyPath.length] === '.')
-        throw MinimongoError("both " + keyPath + " and " + anotherKeyPath +
-         " found in fields option, using both of them may trigger " +
-         "unexpected behavior. Did you mean to use only one of them?");
-    });
-  });
-
   if (_.any(_.values(fields), function (x) {
       return _.indexOf([1, 0, true, false], x) === -1; }))
     throw MinimongoError("Projection values should be one of 1, 0, true, or false");
@@ -1081,9 +1052,34 @@ LocalCollection._compileProjection = function (fields) {
     var treePos = projectionRulesTree;
     keyPath = keyPath.split('.');
 
-    _.each(keyPath.slice(0, -1), function (key) {
+    _.each(keyPath.slice(0, -1), function (key, idx) {
       if (!_.has(treePos, key))
         treePos[key] = {};
+      else if (_.isBoolean(treePos[key])) {
+        // Check passed projection fields' keys: If you have two rules such as
+        // 'foo.bar' and 'foo.bar.baz', then the result becomes ambiguous. If
+        // that happens, there is a probability you are doing something wrong,
+        // framework should notify you about such mistake earlier on cursor
+        // compilation step than later during runtime.  Note, that real mongo
+        // doesn't do anything about it and the later rule appears in projection
+        // project, more priority it takes.
+        //
+        // Example, assume following in mongo shell:
+        // > db.coll.insert({ a: { b: 23, c: 44 } })
+        // > db.coll.find({}, { 'a': 1, 'a.b': 1 })
+        // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23 } }
+        // > db.coll.find({}, { 'a.b': 1, 'a': 1 })
+        // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23, "c" : 44 } }
+        //
+        // Note, how second time the return set of keys is different.
+
+        var currentPath = keyPath.join('.');
+        var anotherPath = keyPath.slice(0, idx + 1).join('.');
+        throw MinimongoError("both " + currentPath + " and " + anotherPath +
+         " found in fields option, using both of them may trigger " +
+         "unexpected behavior. Did you mean to use only one of them?");
+      }
+
       treePos = treePos[key];
     });
 
