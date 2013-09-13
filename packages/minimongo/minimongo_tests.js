@@ -898,7 +898,7 @@ Tinytest.add("minimongo - projection_compiler", function (test) {
   var testProjection = function (projection, tests) {
     var projection_f = LocalCollection._compileProjection(projection);
     var equalNonStrict = function (a, b, desc) {
-      test.equal(EJSON.stringify(a), EJSON.stringify(b), desc);
+      test.isTrue(_.isEqual(a, b), desc);
     };
 
     _.each(tests, function (testCase) {
@@ -1101,7 +1101,7 @@ Tinytest.add("minimongo - fetch with projection, subarrays", function (test) {
   });
 
   var equalNonStrict = function (a, b, desc) {
-    test.equal(EJSON.stringify(a), EJSON.stringify(b), desc);
+    test.isTrue(_.isEqual(a, b), desc);
   };
 
   var testForProjection = function (projection, expected) {
