@@ -35,6 +35,10 @@ src` attribute.
 * If your app does not need to be framed by other websites, call
 `BrowserPolicy.allowFramingBySameOrigin()` to help prevent clickjacking attacks.
 
+Meteor determines the browser policy when the server starts up, so you should
+call `BrowserPolicy` functions in top-level application code or in
+`Meteor.startup`.
+
 #### Frame options
 
 You can use the following functions to specify which websites are allowed to
@@ -70,10 +74,10 @@ You can use the functions in this section to control how different types of
 content can be loaded on your site. In order to use any of these functions, you
 must first call `BrowserPolicy.enableContentSecurityPolicy()`, which enables the
 starter policy described above. This section covers additional functions that
-you can use to tighten or relax what content your app can use.
+you can use to tighten or relax restrictions on what content your app can use.
 
-You can use the following functions to tighten or relax restrictions on where
-Javascript and CSS can be run:
+You can use the following functions to adjust policies on where Javascript and
+CSS can be run:
 
 <dl class="callbacks">
 {{#dtdd "BrowserPolicy.allowInlineScripts()"}}

@@ -46,7 +46,6 @@
 
 var xFrameOptions;
 var cspSrcs;
-//var cspUnsafeAllowed;
 
 // CSP keywords have to be single-quoted.
 var unsafeInline = "'unsafe-inline'";
@@ -55,6 +54,7 @@ var selfKeyword = "'self'";
 var noneKeyword = "'none'";
 
 var cspEnabled = false;
+var cspEnabledForTests = false;
 
 BrowserPolicy = {};
 
@@ -65,9 +65,6 @@ var constructXFrameOptions = BrowserPolicy._constructXFrameOptions =
       };
 
 var constructCsp = BrowserPolicy._constructCsp = function () {
-  if (! cspEnabled)
-    return null;
-
   cspSrcs = cspSrcs || {};
 
   var header = _.map(cspSrcs, function (srcs, directive) {
@@ -118,7 +115,7 @@ var ensureDirective = function (directive) {
 };
 
 var throwIfNotEnabled = function () {
-  if (! cspEnabled)
+  if (! cspEnabled && ! cspEnabledForTests)
     throw new Error("Enable this function by calling "+
                     "BrowserPolicy.enableContentSecurityPolicy().");
 };
@@ -158,13 +155,18 @@ BrowserPolicy = _.extend(BrowserPolicy, {
     xFrameOptions = null;
   },
 
-  enableContentSecurityPolicy: function () {
+  // _enableForTests means that you can call CSP functions, but the header won't
+  // actually be sent.
+  enableContentSecurityPolicy: function (_enableForTests) {
     // By default, unsafe inline scripts and styles are allowed, since we expect
     // many apps will use them for analytics, etc. Unsafe eval is disallowed, and
     // the only allowable content source is the same origin or data, except for
     // connect which allows anything (since meteor.com apps make websocket
     // connections to a lot of different origins).
-    cspEnabled = true;
+    if (! _enableForTests)
+      cspEnabled = true;
+    else
+      cspEnabledForTests = true;
     cspSrcs = {};
     BrowserPolicy.setContentSecurityPolicy("default-src 'self'; " +
                                            "script-src 'self' 'unsafe-inline'; " +
@@ -180,16 +182,23 @@ BrowserPolicy = _.extend(BrowserPolicy, {
 
   // Helpers for creating content security policies
 
-  _keywordAllowed: function (directive, keyword) {
-    return ! cspEnabled ||
+  _keywordAllowed: function (directive, keyword, _calledFromTests) {
+    // All keywords are allowed if csp is not enabled and we're not in a test
+    // run. If csp is enabled or we're in a test run, then look in cspSrcs to
+    // see if it's allowed.
+    return (! cspEnabled && ! _calledFromTests) ||
       (cspSrcs[directive] &&
        _.indexOf(cspSrcs[directive], keyword) !== -1);
   },
 
   // Used by webapp to determine whether we need an extra round trip for
   // __meteor_runtime_config__.
-  inlineScriptsAllowed: function () {
-    return BrowserPolicy._keywordAllowed("script-src", unsafeInline);
+  // _calledFromTests is used to indicate that we should ignore cspEnabled and
+  // instead look directly in cspSrcs to determine if the keyword is allowed.
+  // XXX maybe this test interface could be cleaned up
+  inlineScriptsAllowed: function (_calledFromTests) {
+    return BrowserPolicy._keywordAllowed("script-src",
+                                         unsafeInline, _calledFromTests);
   },
 
   allowInlineScripts: function () {

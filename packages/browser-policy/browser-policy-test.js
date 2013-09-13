@@ -18,11 +18,11 @@ var cspsEqual = function (csp1, csp2) {
 Tinytest.add("browser-policy - csp", function (test) {
   var defaultCsp = "default-src 'self'; script-src 'self' 'unsafe-inline'; " +
         "connect-src * 'self'; img-src data: 'self'; style-src 'self' 'unsafe-inline';"
-  BrowserPolicy.enableContentSecurityPolicy();
+  BrowserPolicy.enableContentSecurityPolicy(true /* enable for tests */);
 
   // Default policy
   test.isTrue(cspsEqual(BrowserPolicy._constructCsp(), defaultCsp));
-  test.isTrue(BrowserPolicy.inlineScriptsAllowed());
+  test.isTrue(BrowserPolicy.inlineScriptsAllowed(true /* tests-only flag */));
 
   // Redundant whitelisting (inline scripts already allowed in default policy)
   BrowserPolicy.allowInlineScripts();
@@ -33,7 +33,7 @@ Tinytest.add("browser-policy - csp", function (test) {
   test.isTrue(cspsEqual(BrowserPolicy._constructCsp(),
                         "default-src 'self'; script-src 'self'; " +
                         "connect-src * 'self'; img-src data: 'self'; style-src 'self' 'unsafe-inline';"));
-  test.isFalse(BrowserPolicy.inlineScriptsAllowed());
+  test.isFalse(BrowserPolicy.inlineScriptsAllowed(true));
 
   // Allow eval
   BrowserPolicy.allowEval();
@@ -54,26 +54,26 @@ Tinytest.add("browser-policy - csp", function (test) {
   // Disallow everything
   BrowserPolicy.disallowAllContent();
   test.isTrue(cspsEqual(BrowserPolicy._constructCsp(), "default-src 'none';"));
-  test.isFalse(BrowserPolicy.inlineScriptsAllowed());
+  test.isFalse(BrowserPolicy.inlineScriptsAllowed(true));
 
   // Put inline scripts back in
   BrowserPolicy.allowInlineScripts();
   test.isTrue(cspsEqual(BrowserPolicy._constructCsp(),
                         "default-src 'none'; script-src 'unsafe-inline';"));
-  test.isTrue(BrowserPolicy.inlineScriptsAllowed());
+  test.isTrue(BrowserPolicy.inlineScriptsAllowed(true));
 
   // Add 'self' to all content types
   BrowserPolicy.allowAllContentSameOrigin();
   test.isTrue(cspsEqual(BrowserPolicy._constructCsp(),
                         "default-src 'self'; script-src 'self' 'unsafe-inline';"));
-  test.isTrue(BrowserPolicy.inlineScriptsAllowed());
+  test.isTrue(BrowserPolicy.inlineScriptsAllowed(true));
 
   // Disallow all content except same-origin scripts
   BrowserPolicy.disallowAllContent();
   BrowserPolicy.allowScriptSameOrigin();
   test.isTrue(cspsEqual(BrowserPolicy._constructCsp(),
                         "default-src 'none'; script-src 'self';"));
-  test.isFalse(BrowserPolicy.inlineScriptsAllowed());
+  test.isFalse(BrowserPolicy.inlineScriptsAllowed(true));
 
   // Starting with all content same origin, disallowScript() and then allow
   // inline scripts. Result should be that that only inline scripts can execute,
