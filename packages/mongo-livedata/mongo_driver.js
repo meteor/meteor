@@ -380,7 +380,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
         // necessary to evaluate selector or to publish.
         newDoc = self.findOne(cursorDescription.collectionName, {_id: id});
       } else {
-        newDoc = op.o;
+        newDoc = _.extend({_id: id}, op.o);
       }
 
       var matchesNow = newDoc && selector(newDoc);
@@ -393,6 +393,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
         var oldDoc = published.get(id);
         if (!oldDoc)
           throw Error("thought that " + id + " was there!");
+        delete newDoc._id;
         published.set(id, newDoc);
         if (callbacks.changed) {
           var changed = LocalCollection._makeChangedFields(newDoc, oldDoc);
