@@ -3,6 +3,7 @@ Tinytest.add("coffeescript - presence", function(test) {
 });
 Tinytest.add("literate coffeescript - presence", function(test) {
   test.isTrue(Meteor.__LITCOFFEESCRIPT_PRESENT);
+  test.isTrue(Meteor.__COFFEEMDSCRIPT_PRESENT);
 });
 
 Tinytest.add("coffeescript - exported variable", function(test) {

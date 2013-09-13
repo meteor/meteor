@@ -98,7 +98,12 @@ Accounts.registerLoginHandler(function (options) {
   Meteor.users.update(
     userId, {$push: {'services.resume.loginTokens': stampedLoginToken}});
 
-  return {token: stampedLoginToken.token, id: userId, HAMK: serialized.HAMK};
+  return {
+    token: stampedLoginToken.token,
+    tokenExpires: Accounts._tokenExpiration(stampedLoginToken.when),
+    id: userId,
+    HAMK: serialized.HAMK
+  };
 });
 
 // Handler to login with plaintext password.
@@ -137,7 +142,11 @@ Accounts.registerLoginHandler(function (options) {
   Meteor.users.update(
     user._id, {$push: {'services.resume.loginTokens': stampedLoginToken}});
 
-  return {token: stampedLoginToken.token, id: user._id};
+  return {
+    token: stampedLoginToken.token,
+    tokenExpires: Accounts._tokenExpiration(stampedLoginToken.when),
+    id: user._id
+  };
 });
 
 
@@ -321,7 +330,11 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
   });
 
   this.setUserId(user._id);
-  return {token: stampedLoginToken.token, id: user._id};
+  return {
+    token: stampedLoginToken.token,
+    tokenExpires: Accounts._tokenExpiration(stampedLoginToken.when),
+    id: user._id
+  };
 }});
 
 ///
@@ -408,7 +421,11 @@ Meteor.methods({verifyEmail: function (token) {
      $push: {'services.resume.loginTokens': stampedLoginToken}});
 
   this.setUserId(user._id);
-  return {token: stampedLoginToken.token, id: user._id};
+  return {
+    token: stampedLoginToken.token,
+    tokenExpires: Accounts._tokenExpiration(stampedLoginToken.when),
+    id: user._id
+  };
 }});
 
 

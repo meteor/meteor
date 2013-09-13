@@ -1,4 +1,5 @@
-=> Meteor 0.6.5: namespacing, modularity, new build system, source maps!
+=> Meteor 0.6.5.1: a few bugfixes, including fixes for lines ending with
+   backslashes, filenames with with spaces, and tab characters in d3.
 
    This is being downloaded in the background. Update your project
-   to Meteor 0.6.5 by running 'meteor update'.
+   to Meteor 0.6.5.1 by running 'meteor update'.

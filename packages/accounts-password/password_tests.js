@@ -1,3 +1,7 @@
+Accounts.config({
+  _connectionCloseDelaySecs: 0
+});
+
 if (Meteor.isClient) (function () {
 
   // XXX note, only one test can do login/logout things at once! for
@@ -255,6 +259,7 @@ if (Meteor.isClient) (function () {
         test.equal(result, null);
       }));
     },
+    logoutStep,
     function(test, expect) {
       var expectLoginError = expect(function (err) {
         test.isTrue(err);
@@ -267,14 +272,111 @@ if (Meteor.isClient) (function () {
           Meteor.loginWithToken(token, expectLoginError);
         });
       });
-    }
+    },
+    logoutStep,
+    function(test, expect) {
+      // Test that login tokens get expired. We should get logged out when a
+      // token expires, and not be able to log in again with the same token.
+      var expectNoError = expect(function (err) {
+        test.isFalse(err);
+      });
+      var expectLoginError = expect(function (err) {
+        test.isTrue(err);
+      });
+      var firstLoginCallback = true;
 
+      Meteor.loginWithPassword(username, password2, function (error) {
+        var token = Accounts._storedLoginToken();
+        if (firstLoginCallback) {
+          test.isTrue(token);
+          expectNoError(error);
+          Meteor.call("expireTokens", new Date());
+        } else {
+          test.isFalse(token);
+          expectLoginError(error);
+        }
+        firstLoginCallback = false;
+      });
+    },
+    logoutStep,
+    function (test, expect) {
+      // copied from livedata/client_convenience.js
+      var ddpUrl = '/';
+      if (typeof __meteor_runtime_config__ !== "undefined") {
+        if (__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL)
+          ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
+      }
+
+      // Test that Meteor._logoutAllOthers logs out a second authenticated
+      // connection while leaving Meteor.connection logged in.
+      var token;
+      var secondConn = DDP.connect(ddpUrl);
+      var firstLoginCallback = true;
+      var userId;
+
+      var expectNoError = expect(function (err) {
+        test.isFalse(err);
+      });
+      var expectLoginError = expect(function (err) {
+        test.isTrue(err);
+      });
+      var expectLoggedIn = expect(function () {
+        test.equal(userId, Meteor.userId());
+      });
+      var expectSecondConnLoggedIn = expect(function (err, result) {
+        test.equal(result.token, token);
+        test.isFalse(err);
+        secondConn.onReconnect = function () {
+          secondConn.call("login", { resume: token }, expectLoginError);
+        };
+        Meteor.call("_logoutAllOthers", expectLoggedIn);
+      });
+
+      Meteor.loginWithPassword(username, password2, function (err) {
+        if (firstLoginCallback) {
+          expectNoError(err);
+          token = Accounts._storedLoginToken();
+          test.isTrue(token);
+          userId = Meteor.userId();
+          secondConn.call("login", { resume: token }, expectSecondConnLoggedIn);
+        }
+        firstLoginCallback = false;
+      });
+    },
+    logoutStep,
+    function (test, expect) {
+      // Test that deleting a user logs out that user's connections.
+      var expectLoginError = expect(function (err) {
+        test.isTrue(err);
+      });
+      var firstLoginCallback = true;
+      Meteor.loginWithPassword(username, password2, function (err) {
+        if (firstLoginCallback) {
+          test.isFalse(err);
+          Meteor.call("removeUser", username);
+          // When the user is deleted, our connection will be closed, triggering
+          // a reconnect, which will trigger a login attempt.
+        } else {
+          expectLoginError(err);
+        }
+        firstLoginCallback = false;
+      });
+    }
   ]);
 
 }) ();
 
 
 if (Meteor.isServer) (function () {
+
+  Meteor.methods({
+    expireTokens: function (oldestValidDate) {
+      Accounts._expireTokens(oldestValidDate);
+    },
+    removeUser: function (username) {
+      Meteor.users.remove({ "username": username });
+    }
+  });
 
   Tinytest.add(
     'passwords - setup more than one onCreateUserHook',

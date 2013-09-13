@@ -1,0 +1,249 @@
+// @param test {Object} as passed to Tinytest.add
+// @param stripIds {Boolean} If true, strip the id arguments. For test
+//     cases with items that aren't objects with an '_id' field.
+// @param sequenceFunc {Function(): sequence type}
+// @param run {Function()} modify the sequence or cause sequenceFunc
+//     to be recomupted
+// @param expectedCallbacks {Array} elements look like {addedAt: arguments}
+runOneObserveSequenceTestCase = function (test, stripIds, sequenceFunc,
+                                       run, expectedCallbacks) {
+  var firedCallbacks = [];
+  var handle = ObserveSequence.observe(sequenceFunc, {
+    addedAt: function () {
+      if (stripIds)
+        // [item, atIndex, before]
+        firedCallbacks.push({addedAt: [arguments[1], arguments[2], arguments[3]]});
+      else
+        firedCallbacks.push({addedAt: _.toArray(arguments)});
+    },
+    changed: function () {
+      if (stripIds)
+        // [newItem, oldItem]
+        firedCallbacks.push({changed: [arguments[1], arguments[2]]});
+      else
+        firedCallbacks.push({changed: _.toArray(arguments)});
+    },
+    removed: function () {
+      if (stripIds)
+        // [oldItem]
+        firedCallbacks.push({removed: [arguments[1]]});
+      else
+        firedCallbacks.push({removed: _.toArray(arguments)});
+    },
+    movedTo: function () {
+      if (stripIds)
+        // [item, fromIndex, toIndex, before]
+        firedCallbacks.push({movedTo: [arguments[1], arguments[2], arguments[3], arguments[4]]});
+      else
+        firedCallbacks.push({movedTo: _.toArray(arguments)});
+    }
+  });
+
+  run();
+  Deps.flush();
+  handle.stop();
+  test.equal(firedCallbacks, expectedCallbacks);
+};
+
+Tinytest.add('observe sequence - initial data for all sequence types', function (test) {
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ true, function () {
+    return null;
+  }, function () {}, []);
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ true, function () {
+    return [];
+  }, function () {}, []);
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ true, function () {
+    return [{foo: 1}, {bar: 2}];
+  }, function () {}, [
+    {addedAt: [{foo: 1}, 0, null]},
+    {addedAt: [{bar: 2}, 1, null]}
+  ]);
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    return [{_id: "13", foo: 1}, {_id: "37", bar: 2}];
+  }, function () {}, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]}
+  ]);
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    var coll = new Meteor.Collection(null);
+    coll.insert({_id: "13", foo: 1});
+    coll.insert({_id: "37", bar: 2});
+    var cursor = coll.find({}, {sort: {_id: 1}});
+    return cursor;
+  }, function () {}, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]}
+  ]);
+});
+
+Tinytest.add('observe sequence - array to other array', function (test) {
+  var dep = new Deps.Dependency;
+  var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}];
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = [{_id: "13", foo: 1}, {_id: "38", bar: 2}];
+    dep.changed();
+  }, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
+    {removed: ["13", {_id: "13", foo: 1}]},           // XXX in a later optimization these two
+    {removed: ["37", {_id: "37", bar: 2}]},
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},  // calls should not need to fire.
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
+  ]);
+});
+
+Tinytest.add('observe sequence - array to null', function (test) {
+  var dep = new Deps.Dependency;
+  var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}];
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = null;
+    dep.changed();
+  }, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
+    {removed: ["13", {_id: "13", foo: 1}]},
+    {removed: ["37", {_id: "37", bar: 2}]}
+  ]);
+});
+
+Tinytest.add('observe sequence - array to cursor', function (test) {
+  var dep = new Deps.Dependency;
+  var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}];
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    var coll = new Meteor.Collection(null);
+    coll.insert({_id: "13", foo: 1});
+    coll.insert({_id: "38", bar: 2});
+    var cursor = coll.find({}, {sort: {_id: 1}});
+    seq = cursor;
+    dep.changed();
+  }, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
+    {removed: ["13", {_id: "13", foo: 1}]},           // XXX in a later optimization these two
+    {removed: ["37", {_id: "37", bar: 2}]},
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},  // calls should not need to fire.
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
+  ]);
+});
+
+
+Tinytest.add('observe sequence - cursor to null', function (test) {
+  var dep = new Deps.Dependency;
+  var coll = new Meteor.Collection(null);
+  coll.insert({_id: "13", foo: 1});
+  coll.insert({_id: "37", bar: 2});
+  var cursor = coll.find({}, {sort: {_id: 1}});
+  var seq = cursor;
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = null;
+    dep.changed();
+  }, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
+    {removed: ["13", {_id: "13", foo: 1}]},
+    {removed: ["37", {_id: "37", bar: 2}]}
+  ]);
+});
+
+Tinytest.add('observe sequence - cursor to array', function (test) {
+  var dep = new Deps.Dependency;
+  var coll = new Meteor.Collection(null);
+  coll.insert({_id: "13", foo: 1});
+  coll.insert({_id: "37", bar: 2});
+  var cursor = coll.find({}, {sort: {_id: 1}});
+  var seq = cursor;
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = [{_id: "13", foo: 1}, {_id: "38", bar: 2}];
+    dep.changed();
+  }, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
+    {removed: ["13", {_id: "13", foo: 1}]},           // XXX in a later optimization these two
+    {removed: ["37", {_id: "37", bar: 2}]},
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},  // calls should not need to fire.
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
+  ]);
+});
+
+Tinytest.add('observe sequence - cursor to other cursor', function (test) {
+  var dep = new Deps.Dependency;
+  var coll = new Meteor.Collection(null);
+  coll.insert({_id: "13", foo: 1});
+  coll.insert({_id: "37", bar: 2});
+  var cursor = coll.find({}, {sort: {_id: 1}});
+  var seq = cursor;
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    var newColl = new Meteor.Collection(null);
+    newColl.insert({_id: "13", foo: 1});
+    newColl.insert({_id: "38", bar: 2});
+    var newCursor = newColl.find({}, {sort: {_id: 1}});
+    seq = newCursor;
+    dep.changed();
+  }, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
+    {removed: ["13", {_id: "13", foo: 1}]},           // XXX in a later optimization these two
+    {removed: ["37", {_id: "37", bar: 2}]},
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},  // calls should not need to fire.
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
+  ]);
+});
+
+Tinytest.add('observe sequence - cursor to same cursor', function (test) {
+  var coll = new Meteor.Collection(null);
+  coll.insert({_id: "13", rank: 1});
+  coll.insert({_id: "37", rank: 2});
+  coll.insert({_id: "77", rank: 3});
+  var cursor = coll.find({}, {sort: {rank: 1}});
+  var seq = cursor;
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    return seq;
+  }, function () {
+    coll.remove({_id: "37"});                           // should fire a 'remove' callback
+    coll.insert({_id: "11", rank: 0});                  // should fire an 'insert' callback
+    coll.update({_id: "13"}, {$set: {updated: true}});  // should fire an 'changed' callback
+    coll.update({_id: "77"}, {$set: {rank: -1}});       // should fire 'changed' and 'move' callback
+  }, [
+    // this case must not fire spurious calls as the array to array
+    // case does. otherwise, the entire power of cursors is lost in
+    // meteor ui.
+    {addedAt: ["13", {_id: "13", rank: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", rank: 2}, 1, null]},
+    {addedAt: ["77", {_id: "77", rank: 3}, 2, null]},
+    {removed: ["37", {_id: "37", rank: 2}]},
+    {addedAt: ["11", {_id: "11", rank: 0}, 0, "13"]},
+    {changed: ["13", {_id: "13", rank: 1, updated: true}, {_id: "13", rank: 1}]},
+    {changed: ["77", {_id: "77", rank: -1}, {_id: "77", rank: 3}]},
+    {movedTo: ["77", {_id: "77", rank: -1}, 2, 0, "11"]}
+  ]);
+});
+
