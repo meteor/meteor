@@ -337,6 +337,12 @@ MongoConnection.prototype._observeChangesWithOplog = function (
     callbacks.removed && callbacks.removed(id);
   };
 
+  // XXX the ordering here is wrong
+  var initialCursor = new Cursor(self, cursorDescription);
+  initialCursor.forEach(function (initialDoc) {
+    add(initialDoc);
+  });
+
   var oplogHandle = self._oplogHandle.onOplogEntry(cursorDescription.collectionName, function (op) {
     var id;
     if (op.op === 'd') {
@@ -353,8 +359,9 @@ MongoConnection.prototype._observeChangesWithOplog = function (
 
       // XXX what if selector yields?  for now it can't but later it could have
       // $where
-      if (selector(op.o))
+      if (selector(op.o)) {
         add(op.o);
+      }
     } else if (op.op === 'u') {
       id = op.o2._id;
 
@@ -422,11 +429,6 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       complete();
     }
   );
-
-  var initialCursor = new Cursor(self, cursorDescription);
-  initialCursor.forEach(function (initialDoc) {
-    add(initialDoc);
-  });
 
   var observeHandle = {
     stop: function () {
