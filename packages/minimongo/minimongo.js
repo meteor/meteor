@@ -1038,12 +1038,12 @@ LocalCollection._compileProjection = function (fields) {
     throw MinimongoError("Projection values should be one of 1, 0, true, or false");
 
   var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
-  delete fields._id;
+  var fieldsKeys = _.reject(_.keys(fields).sort(), function (key) { return key === '_id'; });
   var including = null; // Unknown
   var projectionRulesTree = {}; // Tree represented as nested objects
 
-  _.each(fields, function (rule, keyPath) {
-    rule = !!rule;
+  _.each(fieldsKeys, function (keyPath) {
+    var rule = !!fields[keyPath];
     if (including === null)
       including = rule;
     if (including !== rule)
