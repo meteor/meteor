@@ -199,12 +199,12 @@ MongoConnection.prototype._maybeBeginWrite = function () {
 
 var OPLOG_COLLECTION = 'oplog.rs';
 
-var WRITE_COLLECTION = 'meteor_livedata_Writes';
+var SEQUENCE_COLLECTION = 'meteor_livedata_Sequencer';
 // XXX This is problematic if our RNG isn't seeded well enough.
 var myServerId = Random.id();
-var nextWriteId = 1;
+var nextSequenceId = 1;
 // XXX doc
-var outstandingWrites = [];
+var pendingSequences = [];
 
 // Like Perl's quotemeta: quotes all regexp metacharacters. See
 //   https://github.com/substack/quotemeta/blob/master/index.js
@@ -236,21 +236,21 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
 
   var callbacksByCollection = {};
 
-  var processFence = function (doc) {
+  var processSequence = function (doc) {
     if (doc.op !== 'i' && doc.op !== 'u')
       return;
     var serverId = (doc.op === 'i' ? doc.o._id : doc.o2._id);
     if (serverId !== myServerId)
       return;
-    var writeId =
-          (doc.op === 'i' ? doc.o.write : (doc.o.$set && doc.o.$set.write));
-    if (typeof writeId !== 'number')
+    var sequenceId =
+          (doc.op === 'i' ? doc.o.sequence : (doc.o.$set && doc.o.$set.sequence));
+    if (typeof sequenceId !== 'number')
       return;
-    // Process all writes up to this point.
-    while (!_.isEmpty(outstandingWrites)
-           && outstandingWrites[0].writeId <= writeId) {
-      var write = outstandingWrites.shift();
-      write.write.committed();
+    // Process all sequence points up to this point.
+    while (!_.isEmpty(pendingSequences)
+           && pendingSequences[0].sequenceId <= sequenceId) {
+      var sequence = pendingSequences.shift();
+      sequence.callback();
     }
   };
 
@@ -261,8 +261,8 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
 
     var collectionName = doc.ns.substr(dbName.length + 1);
 
-    if (collectionName === WRITE_COLLECTION) {
-      processFence(doc);
+    if (collectionName === SEQUENCE_COLLECTION) {
+      processSequence(doc);
       return;
     }
 
@@ -417,15 +417,18 @@ MongoConnection.prototype._observeChangesWithOplog = function (
         complete();
         return;
       }
-      var writeId = nextWriteId++;
+      var sequenceId = nextSequenceId++;
       var write = fence.beginWrite();
-      outstandingWrites.push({writeId: writeId, write: write});
+      pendingSequences.push({sequenceId: sequenceId,
+                             callback: function () {
+                               write.committed();
+                             }});
 
       // Use direct write to Node Mongo driver so we don't end up with recursive
       // fence stuff. Need to disable 'safe' because we aren't providing a
       // callback.
-      var writeCollection = self._getCollection(WRITE_COLLECTION);
-      writeCollection.update({_id: myServerId}, {$set: {write: writeId}},
+      var writeCollection = self._getCollection(SEQUENCE_COLLECTION);
+      writeCollection.update({_id: myServerId}, {$set: {sequence: sequenceId}},
                              {upsert: true, safe: false});
       complete();
     }
