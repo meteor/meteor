@@ -433,6 +433,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
 
   var observeHandle = {
     stop: function () {
+      listenersHandle.stop();
       oplogHandle.stop();
     }
   };
