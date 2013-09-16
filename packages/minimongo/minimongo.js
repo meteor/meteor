@@ -623,7 +623,7 @@ LocalCollection.prototype._modifyAndNotify = function (
       // in the output. So it's safe to skip recompute if neither before or
       // after are true.)
       if (before || after)
-	recomputeQids[qid] = true;
+        recomputeQids[qid] = true;
     } else if (before && !after) {
       LocalCollection._removeFromResults(query, doc);
     } else if (!before && after) {
@@ -1033,119 +1033,93 @@ LocalCollection._compileProjection = function (fields) {
   if (!_.isObject(fields))
     throw MinimongoError("fields option must be an object");
 
-  // Check passed projection fields' keys:
-  // If you have two rules such as 'foo.bar' and 'foo.bar.baz', then the
-  // result becomes ambiguous. If that happens, there is a probability you are
-  // doing something wrong, framework should notify you about such mistake
-  // earlier on cursor compilation step than later during runtime.
-  // Note, that real mongo doesn't do anything about it and the later rule
-  // appears in projection project, more priority it takes.
-  //
-  // Example, assume following in mongo shell:
-  // > db.coll.insert({ a: { b: 23, c: 44 } })
-  // > db.coll.find({}, { 'a': 1, 'a.b': 1 })
-  // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23 } }
-  // > db.coll.find({}, { 'a.b': 1, 'a': 1 })
-  // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23, "c" : 44 } }
-  //
-  // Note, how second time the return set of keys is different.
-  var keyPaths = _.keys(fields);
-  _.each(keyPaths, function (keyPath) {
-    _.each(keyPaths, function (anotherKeyPath) {
-      var idx = keyPath.indexOf(anotherKeyPath);
-      // check if one key is path-prefix of another (like "abra" and
-      // "abra.cadabra", but not "abra" and "abrab.ra")
-      if (keyPath !== anotherKeyPath && !idx && keyPath[anotherKeyPath.length] === '.')
-        throw MinimongoError("both " + keyPath + " and " + anotherKeyPath +
-         " found in fields option, using both of them may trigger " +
-         "unexpected behavior. Did you mean to use only one of them?");
-    });
-  });
-
   if (_.any(_.values(fields), function (x) {
       return _.indexOf([1, 0, true, false], x) === -1; }))
     throw MinimongoError("Projection values should be one of 1, 0, true, or false");
 
   var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
-  delete fields._id;
+  // Find the non-_id keys (_id is handled specially because it is included unless
+  // explicitly excluded). Sort the keys, so that our code to detect overlaps
+  // like 'foo' and 'foo.bar' can assume that 'foo' comes first.
+  var fieldsKeys = _.reject(_.keys(fields).sort(), function (key) { return key === '_id'; });
   var including = null; // Unknown
-  var projectionRules = [];
+  var projectionRulesTree = {}; // Tree represented as nested objects
 
-  _.each(fields, function (rule, keyPath) {
-    rule = !!rule;
+  _.each(fieldsKeys, function (keyPath) {
+    var rule = !!fields[keyPath];
     if (including === null)
       including = rule;
     if (including !== rule)
       // This error message is copies from MongoDB shell
       throw MinimongoError("You cannot currently mix including and excluding fields.");
-    projectionRules.push(keyPath.split('.'));
+    var treePos = projectionRulesTree;
+    keyPath = keyPath.split('.');
+
+    _.each(keyPath.slice(0, -1), function (key, idx) {
+      if (!_.has(treePos, key))
+        treePos[key] = {};
+      else if (_.isBoolean(treePos[key])) {
+        // Check passed projection fields' keys: If you have two rules such as
+        // 'foo.bar' and 'foo.bar.baz', then the result becomes ambiguous. If
+        // that happens, there is a probability you are doing something wrong,
+        // framework should notify you about such mistake earlier on cursor
+        // compilation step than later during runtime.  Note, that real mongo
+        // doesn't do anything about it and the later rule appears in projection
+        // project, more priority it takes.
+        //
+        // Example, assume following in mongo shell:
+        // > db.coll.insert({ a: { b: 23, c: 44 } })
+        // > db.coll.find({}, { 'a': 1, 'a.b': 1 })
+        // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23 } }
+        // > db.coll.find({}, { 'a.b': 1, 'a': 1 })
+        // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23, "c" : 44 } }
+        //
+        // Note, how second time the return set of keys is different.
+
+        var currentPath = keyPath.join('.');
+        var anotherPath = keyPath.slice(0, idx + 1).join('.');
+        throw MinimongoError("both " + currentPath + " and " + anotherPath +
+         " found in fields option, using both of them may trigger " +
+         "unexpected behavior. Did you mean to use only one of them?");
+      }
+
+      treePos = treePos[key];
+    });
+
+    treePos[_.last(keyPath)] = including;
   });
 
-  // XXX do these functions share too much in common?
-  if (including)
-    return function (doc) {
-      var result = {};
+  // returns transformed doc according to ruleTree
+  var transform = function (doc, ruleTree) {
+    // Special case for "sets"
+    if (_.isArray(doc))
+      return _.map(doc, function (subdoc) { return transform(subdoc, ruleTree); });
 
-      _.each(projectionRules, function (keyPath) {
-        var target = result;
-        var docTarget = doc;
-        for (var i = 0; i < keyPath.length - 1; i++) {
-          var key = keyPath[i];
-          // This block simulates MongoDB behavior for different edge-cases when
-          // object on certain path wasn't found or array found instead of an
-          // object, or vice-versa.
-          if (!_.has(target, key)) {
-            if (_.isArray(docTarget[key])) {
-              target[key] = [];
-              docTarget = undefined;
-              break;
-            } else if (_.isObject(docTarget[key]))
-              target[key] = {};
-            else {
-              docTarget = undefined;
-              break;
-            }
-          }
+    var res = including ? {} : EJSON.clone(doc);
+    _.each(ruleTree, function (rule, key) {
+      if (!_.has(doc, key))
+        return;
+      if (_.isObject(rule)) {
+        // For sub-objects/subsets we branch
+        if (_.isObject(doc[key]))
+          res[key] = transform(doc[key], rule);
+        // Otherwise we don't even touch this subfield
+      } else if (including)
+        res[key] = doc[key];
+      else
+        delete res[key];
+    });
 
-          target = target[key];
-          docTarget = docTarget[key];
-        }
+    return res;
+  };
 
-        if (keyPath.length > 0 && docTarget && _.has(docTarget, _.last(keyPath)))
-          target[_.last(keyPath)] = docTarget[_.last(keyPath)];
-      });
+  return function (obj) {
+    var res = transform(obj, projectionRulesTree);
 
-      if (_idProjection && _.has(doc, '_id'))
-        result._id = doc._id;
-
-      return result;
-    };
-  else
-    return function (doc) {
-      // XXX Deep copy on this level might be a slowing factor,
-      // In fact we need it only in case of nested excluded fields.
-      var result = EJSON.clone(doc);
-
-      _.each(projectionRules, function (keyPath) {
-        var target = result;
-        var docTarget = doc;
-        for (var i = 0; i < keyPath.length - 1; i++) {
-          var key = keyPath[i];
-          if (!_.has(target, key)) {
-            break;
-          }
-
-          target = target[key];
-          docTarget = docTarget[key];
-        }
-
-        if (keyPath.length > 0)
-          delete target[_.last(keyPath)];
-      });
-
-      if (!_idProjection)
-        delete result._id;
-
-      return result;
-    };
+    if (_idProjection && _.has(obj, '_id'))
+      res._id = obj._id;
+    if (!_idProjection && _.has(res, '_id'))
+      delete res._id;
+    return res;
+  };
 };
