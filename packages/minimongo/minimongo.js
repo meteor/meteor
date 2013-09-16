@@ -1038,6 +1038,9 @@ LocalCollection._compileProjection = function (fields) {
     throw MinimongoError("Projection values should be one of 1, 0, true, or false");
 
   var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
+  // Find the non-_id keys (_id is handled specially because it is included unless
+  // explicitly excluded). Sort the keys, so that our code to detect overlaps
+  // like 'foo' and 'foo.bar' can assume that 'foo' comes first.
   var fieldsKeys = _.reject(_.keys(fields).sort(), function (key) { return key === '_id'; });
   var including = null; // Unknown
   var projectionRulesTree = {}; // Tree represented as nested objects
