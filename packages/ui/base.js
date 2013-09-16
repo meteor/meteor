@@ -1125,7 +1125,10 @@ UI.body = UI.Component.extend({
 });
 
 _extend(UI.Component, {
-  // XXX temporary definitions
+  // XXX temporary definitions.
+  // In particular, we need to implement the old APIs
+  // (how helpers and event handlers are called) for
+  // Meteor UI Stage I.
   helpers: function (dict) {
     _extend(this, dict);
   },
