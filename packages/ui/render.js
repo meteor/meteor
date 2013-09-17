@@ -1,5 +1,23 @@
 var DomRange = UI.DomRange;
 
+// RENDER BUFFER API
+//
+// Used on client (or server) to generate reactive DOM (or static HTML).
+//
+// `buf.write(thing1, thing2, thing3, ...)`
+//
+// Where things can be:
+//
+// - `null` or `undefined`, i.e. `== null` (ignored)
+// - String (any raw HTML substring with no limitations)
+// - Component (a kind to instantiate and insert)
+// - function returning Component (reactive kind)
+// - { kind: functionOrComponent, ... } (reactive kind, instantiated
+//   with props (the `...`)
+// - { attrs: functionOrDictionary } - reactive dictionary of attributes,
+//   only allowed inside an HTML tag.  For example,
+//   `buf.write("<div ", { attrs: { 'class': 'foo' } }, ">text</div>")`.
+
 UI.insert = DomRange && DomRange.insert;
 
 UI.render = function (kind, props, parentComp) {
@@ -7,6 +25,7 @@ UI.render = function (kind, props, parentComp) {
   // Reuse the same DomRange.
   if ((typeof kind) === 'function') {
     // XXX scope this autorun
+    // XXXXXXX THIS IS NOT GOING TO WORK
     Deps.autorun(function (c) {
       if (c.firstRun) {
         kind = kind();

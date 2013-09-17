@@ -10,6 +10,7 @@ UI.Each = Component.extend({
     var self = this;
 
     // XXX find `content` via `get()`...
+    // XXX content kind reactively changes?
     var content = self.content;
     if (typeof content === 'function')
       content = _.bind(content, self);
