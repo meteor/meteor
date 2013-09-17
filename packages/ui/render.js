@@ -2,22 +2,26 @@ var DomRange = UI.DomRange;
 
 // Render an instance of a component kind directly into the DOM,
 // optionally with a parentComp (for e.g. name resolution).
+// `parentNode` must be an ELEMENT, not a fragment.
 UI.renderTo = function (kind, props,
                         parentNode, beforeNode, parentComp) {
   // XXX too bad we don't validate arguments before mutating
   // the DOM
   var range = new DomRange;
   // Insert new DomRange's start/end markers
-  var nodes = range.getNodes();
-  for (var i = 0, N = nodes.length; i < N; i++)
-    parentNode.insertBefore(nodes[i],
-                            // IE needs null
-                            beforeNode || null);
+  DomRange.insert(range, parentNode, beforeNode);
 
-  return UI.renderToRange(kind, props, range, parentComp);
+//  var nodes = range.getNodes();
+//  for (var i = 0, N = nodes.length; i < N; i++)
+//    parentNode.insertBefore(nodes[i],
+                            // IE needs null
+//                            beforeNode || null);
+
+
+  return UI.renderToRange(kind, props, range, parentComp, true);
 };
 
-UI.renderToRange = function (kind, props, range, parentComp) {
+UI.renderToRange = function (kind, props, range, parentComp, _XXXrenderTo) {
 
   // XXX Handle case where kind is function reactively.
   // Reuse the same DomRange.
@@ -42,6 +46,12 @@ UI.renderToRange = function (kind, props, range, parentComp) {
   var comp = kind.extend(props);
 
   comp.dom = range;
+  // XXXXXX
+  if (_XXXrenderTo) {
+    range.component = comp;
+    comp.parented();
+  }
+  // XXXXXX
   comp.isInited = true;
   if (parentComp)
     comp.parent = parentComp;

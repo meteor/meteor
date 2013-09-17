@@ -116,6 +116,11 @@ var rangeParented = function (range) {
       DomBackend.watchElement(parentNode);
     }
 
+    // XXX is this a real callback?  what about chaining? etc.
+    if (range.component.parented) {
+      range.component.parented();
+    }
+
     // recurse on member ranges
     var members = range.members;
     for (var k in members) {
@@ -734,6 +739,7 @@ DomRange.getComponents = function (element) {
   return topLevelComps;
 };
 
+// `parentNode` must be an ELEMENT, not a fragment
 DomRange.insert = function (component, parentNode, nextNode) {
   var range = component.dom;
   if (! range)

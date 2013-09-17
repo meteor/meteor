@@ -1132,6 +1132,38 @@ _extend(UI.Component, {
     _extend(this, dict);
   },
   events: function (dict) {
-    _extend(this, dict);
+    var events;
+    if (this.hasOwnProperty('_events'))
+      events = this._events;
+    else
+      events = (this._events = []);
+
+    _.each(dict, function (handler, spec) {
+      var clauses = spec.split(/,\s+/);
+      // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']
+      _.each(clauses, function (clause) {
+        var parts = clause.split(/\s+/);
+        if (parts.length === 0)
+          return;
+
+        var newEvents = parts.shift();
+        var selector = parts.join(' ');
+        events.push({events: newEvents,
+                     selector: selector,
+                     handler: handler});
+      });
+    });
   }
 });
+
+// XXX
+UI.Component.parented = function () {
+  var self = this;
+  for (var comp = self; comp; comp = comp._super) {
+    var events = comp.hasOwnProperty('_events') && comp._events;
+    _.each(events, function (esh) { // {events, selector, handler}
+      debugger;
+      self.dom.on(esh.events, esh.selector, esh.handler);
+    });
+  }
+};
