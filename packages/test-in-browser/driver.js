@@ -344,12 +344,20 @@ Template.testTable.helpers({
   testdata: function () {
     topLevelGroupsDep.depend();
     return resultTree;
-  }
+  },
+  thisWithDep: function () {
+    this.dep.depend();
+    return this;
+  },
 });
 
 //// Template - test_group
 
-Template.test_group.helpers({
+Template.test_group.events({
+  thisWithDep: function () {
+    this.dep.depend();
+    return this;
+  },
   'click .groupname': function (evt) {
     changeToPath(this.path);
     // prevent enclosing groups from also triggering on
@@ -494,13 +502,3 @@ Template.event.helpers({
     return !!this.cookie;
   }
 });
-
-
-// XXX BAD
-// This is the only way we can currently write a helper
-// that gets the current data context inside an #each --
-// make it global.  D'oh.
-window.ThisWithDep = function () {
-  this.dep.depend();
-  return this;
-};

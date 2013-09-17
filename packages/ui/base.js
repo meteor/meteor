@@ -115,7 +115,6 @@ _extend(UI.Component, {
   // pretty-print correctly.
   kind: "Component",
   guid: "1",
-  data: null,
   dom: null,
   // Has this Component ever been inited?
   isInited: false,

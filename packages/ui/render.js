@@ -21,8 +21,16 @@ UI.renderToRange = function (kind, props, range, parentComp) {
 
   // XXX Handle case where kind is function reactively.
   // Reuse the same DomRange.
-  if ((typeof kind) === 'function')
-    kind = kind();
+  if ((typeof kind) === 'function') {
+    // XXX scope this autorun
+    Deps.autorun(function (c) {
+      if (c.firstRun) {
+        kind = kind();
+      } else {
+        debugger; // XXX
+      }
+    });
+  }
 
   if (kind === null)
     return null;
@@ -42,9 +50,15 @@ UI.renderToRange = function (kind, props, range, parentComp) {
     comp.init();
 
   if (comp.render) {
-    var buf = makeRenderBuffer();
-    comp.render(buf);
-    buf.build(comp);
+    // XXX scope this autorun
+    Deps.autorun(function (c) {
+      if (! c.firstRun) {
+        range.removeAll();
+      }
+      var buf = makeRenderBuffer();
+      comp.render(buf);
+      buf.build(comp);
+    });
   }
 
   // XXX think about this callback's semantics
@@ -212,20 +226,7 @@ makeRenderBuffer = function (options) {
     var start = range.startNode();
     var nextNode = start.nextSibling;
     // jQuery does fancy html-to-DOM compat stuff here:
-    $(start).after(html);
-    // now the DOM elements are physically inside the DomRange,
-    // but they haven't been added yet (so they aren't tracked
-    // and UI hooks haven't been called; they are foreign
-    // matter).
-    //
-    // XXX weirdly, as we add them to the range they are
-    // moved to the end, which works out fine unless an
-    // exception stops us in the middle, in which case
-    // it may look weird to the developer that the order is
-    // wrong.  Before fixing this (i.e. making it less weird,
-    // and maybe less costly), figure out if we should be
-    // rendering offscreen via performance testing.
-    var lastNode = nextNode.previousSibling;
+    var newNodes = UI.DomBackend.parseHTML(html);
 
     var wire = function (n) {
       // returns what ended up in the place of `n`:
@@ -293,16 +294,11 @@ makeRenderBuffer = function (options) {
     };
 
     // top level
-    for (var n = start.nextSibling, m;
-         n; n = (n === lastNode ? null : m)) {
-      m = n.nextSibling;
+    for (var i = 0; i < newNodes.length; i++) {
+      var n = newNodes[i];
       var result = wire(n);
       // `result` is DOM node, component, or null
       if (result) {
-        if (result.dom)
-          // XXX won't be necessary when DomRange takes
-          // components in:
-          result = result.dom;
         range.add(result);
         if (result.nodeType === 1 && result.firstChild)
           walk(result);

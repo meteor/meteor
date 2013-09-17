@@ -29,7 +29,7 @@ if (Meteor.isClient) {
       // jQuery does fancy stuff like creating an appropriate
       // container element and setting innerHTML on it, as well
       // as working around various IE quirks.
-      return jQuery.parseHTML(html);
+      return jQuery.parseHTML(html) || [];
     },
     // `selector` is non-null.  `type` is one type (but
     // may be in backend-specific form, e.g. have namespaces).
