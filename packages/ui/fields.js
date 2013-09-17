@@ -1,21 +1,4 @@
 
-var findComponentWithProp = function (id, comp) {
-  while (comp) {
-    if (id in comp)
-      return comp;
-    comp = comp.parent;
-  }
-  return null;
-};
-
-var getData = function (comp) {
-  comp = findComponentWithProp('data', comp);
-  return (comp ?
-          (typeof comp.data === 'function' ?
-           comp.data() : comp.data) :
-          null);
-};
-
 var global = (function () { return this; })();
 
 _extend(UI.Component, {
@@ -31,11 +14,11 @@ _extend(UI.Component, {
     var comp;
     if (! id) {
       // `id` is `""` or absent/undefined
-      result = getData(self);
+      result = getComponentData(self);
     } else if ((comp = findComponentWithProp(id, self))) {
       // found a method
       result = comp[id];
-      thisToBind = getData(self);
+      thisToBind = getComponentData(self);
     } else if (id === 'if') {
       result = UI.If;
     } else if (id === 'each') {
@@ -49,11 +32,11 @@ _extend(UI.Component, {
       // capitalized.  This avoids have `{{name}}` mean
       // `window.name`.
       result = global[id];
-      thisToBind = getData(self);
+      thisToBind = getComponentData(self);
     } else {
       // check `data()` last, because it establishes
       // a dependency.
-      var data = getData(self);
+      var data = getComponentData(self);
       if (data != null) {
         thisToBind = data;
         result = data[id];

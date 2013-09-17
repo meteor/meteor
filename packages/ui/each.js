@@ -9,7 +9,6 @@ UI.Each = Component.extend({
   rendered: function () {
     var self = this;
 
-
     // XXX find `content` via `get()`...
     var content = self.content;
     if (typeof content === 'function')
@@ -26,14 +25,9 @@ UI.Each = Component.extend({
         var data = item;
         var dep = new Deps.Dependency;
 
-        var r = new UI.DomRange;
-        if (beforeId)
-          beforeId = LocalCollection._idStringify(beforeId);
-        range.add(id, r, beforeId);
-
         // XXX dynamically rendering a child component
         // shouldn't be this hard...
-        var comp = UI.renderToRange(
+        var comp = UI.render(
           content,
           { data: _extend(
           function () {
@@ -44,15 +38,17 @@ UI.Each = Component.extend({
               data = v;
               dep.changed();
             }
-          }) },
-          r, self);
+          }) }, self);
 
-        r.component = comp;
         // XXX emulate hypothetical
         // node.$ui.data() API
-        r.data = function () {
+        comp.data = function () {
           return data;
         };
+
+        if (beforeId)
+          beforeId = LocalCollection._idStringify(beforeId);
+        range.add(id, comp, beforeId);
       },
       removed: function (id, item) {
         range.remove(LocalCollection._idStringify(id));
@@ -63,7 +59,7 @@ UI.Each = Component.extend({
           beforeId && LocalCollection._idStringify(beforeId));
       },
       changed: function (id, newItem) {
-        range.get(LocalCollection._idStringify(id)).component.data.$set(newItem);
+        range.get(LocalCollection._idStringify(id)).data.$set(newItem);
       }
     });
   }

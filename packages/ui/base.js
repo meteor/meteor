@@ -1123,6 +1123,23 @@ UI.body = UI.Component.extend({
   INSTANCE: null
 });
 
+findComponentWithProp = function (id, comp) {
+  while (comp) {
+    if (id in comp)
+      return comp;
+    comp = comp.parent;
+  }
+  return null;
+};
+
+getComponentData = function (comp) {
+  comp = findComponentWithProp('data', comp);
+  return (comp ?
+          (typeof comp.data === 'function' ?
+           comp.data() : comp.data) :
+          null);
+};
+
 _extend(UI.Component, {
   // XXX temporary definitions.
   // In particular, we need to implement the old APIs
@@ -1148,9 +1165,14 @@ _extend(UI.Component, {
 
         var newEvents = parts.shift();
         var selector = parts.join(' ');
+        var wrappedHandler = function (event) {
+          var comp = UI.DomRange.getContainingComponent(event.currentTarget);
+          var data = comp && getComponentData(comp);
+          handler.call(data, event); // XXX template instance
+        };
         events.push({events: newEvents,
                      selector: selector,
-                     handler: handler});
+                     handler: wrappedHandler});
       });
     });
   }
@@ -1162,7 +1184,6 @@ UI.Component.parented = function () {
   for (var comp = self; comp; comp = comp._super) {
     var events = comp.hasOwnProperty('_events') && comp._events;
     _.each(events, function (esh) { // {events, selector, handler}
-      debugger;
       self.dom.on(esh.events, esh.selector, esh.handler);
     });
   }

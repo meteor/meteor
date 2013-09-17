@@ -752,6 +752,12 @@ DomRange.insert = function (component, parentNode, nextNode) {
   rangeParented(range);
 };
 
+DomRange.getContainingComponent = function (element) {
+  while (element && ! element.$ui)
+    element = element.parentNode;
+  return (element && element.$ui) || null;
+};
+
 ///// TBODY FIX for compatibility with jQuery.
 //
 // Because people might use jQuery from UI hooks, and

@@ -1,5 +1,59 @@
 var DomRange = UI.DomRange;
 
+UI.insert = DomRange && DomRange.insert;
+
+UI.render = function (kind, props, parentComp) {
+  // XXX Handle case where kind is function reactively.
+  // Reuse the same DomRange.
+  if ((typeof kind) === 'function') {
+    // XXX scope this autorun
+    Deps.autorun(function (c) {
+      if (c.firstRun) {
+        kind = kind();
+      } else {
+        debugger; // XXX
+      }
+    });
+  }
+
+  if (kind === null)
+    return null;
+  if (! UI.isComponent(kind))
+    throw new Error("Expected Component, function, or null");
+  if (kind.isInited)
+    throw new Error("Expected uninited Component");
+
+  var comp = kind.extend(props);
+  comp.isInited = true;
+  if (parentComp)
+    comp.parent = parentComp;
+
+  if (comp.init)
+    comp.init();
+
+  var range = new DomRange(comp);
+
+  if (comp.render) {
+    // XXX scope this autorun
+    Deps.autorun(function (c) {
+      if (! c.firstRun) {
+        range.removeAll();
+      }
+      var buf = makeRenderBuffer();
+      comp.render(buf);
+      buf.build(comp);
+    });
+  }
+
+  // XXX think about this callback's semantics
+  if (comp.rendered)
+    comp.rendered();
+
+  return comp;
+};
+
+
+/*
 // Render an instance of a component kind directly into the DOM,
 // optionally with a parentComp (for e.g. name resolution).
 // `parentNode` must be an ELEMENT, not a fragment.
@@ -78,6 +132,7 @@ UI.renderToRange = function (kind, props, range, parentComp, _XXXrenderTo) {
   return comp;
 
 };
+*/
 
 var ESCAPED_CHARS_UNQUOTED_REGEX = /[&<>]/g;
 var ESCAPED_CHARS_QUOTED_REGEX = /[&<>"]/g;
@@ -238,7 +293,7 @@ makeRenderBuffer = function (options) {
     // jQuery does fancy html-to-DOM compat stuff here:
     var newNodes = UI.DomBackend.parseHTML(html);
 
-    var wire = function (n) {
+    var wire = function (n, atTopLevel) {
       // returns what ended up in the place of `n`:
       // component, node, or null
       if (n.nodeType === 8) { // COMMENT
@@ -259,9 +314,9 @@ makeRenderBuffer = function (options) {
             // here and not totally screw everything up,
             // since we're walking the DOM and calling into
             // some potentially major app-dev code
-            var comp = UI.renderTo(
-              kind, props,
-              n.parentNode, n, component);
+            var comp = UI.render(kind, props, component);
+            if (! atTopLevel)
+              UI.insert(comp, n.parentNode, n);
             n.parentNode.removeChild(n);
             delete componentsToRender[n.nodeValue];
             return comp; // may be null
@@ -306,7 +361,7 @@ makeRenderBuffer = function (options) {
     // top level
     for (var i = 0; i < newNodes.length; i++) {
       var n = newNodes[i];
-      var result = wire(n);
+      var result = wire(n, true);
       // `result` is DOM node, component, or null
       if (result) {
         range.add(result);
