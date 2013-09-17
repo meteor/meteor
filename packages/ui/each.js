@@ -7,7 +7,7 @@ UI.Each = Component.extend({
     // XXX do something for server-side rendering
   },
   rendered: function () {
-    var self = this;
+    var self = this.__component__;
 
     // XXX find `content` via `get()`...
     // XXX content kind reactively changes?
@@ -15,7 +15,7 @@ UI.Each = Component.extend({
     if (typeof content === 'function')
       content = _.bind(content, self);
 
-    var range = this.dom;
+    var range = self.dom;
 
     ObserveSequence.observe(function () {
       return self.get();

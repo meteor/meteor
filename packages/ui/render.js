@@ -44,11 +44,29 @@ UI.render = function (kind, props, parentComp) {
 
   var comp = kind.extend(props);
   comp.isInited = true;
+  comp.templateInstance = {
+    findAll: function (selector) {
+      return comp.dom.$(selector);
+    },
+    find: function (selector) {
+      var result = this.findAll(selector);
+      return result[0] || null;
+    },
+    firstNode: null,
+    lastNode: null,
+    data: null,
+    __component__: comp
+  };
   if (parentComp)
     comp.parent = parentComp;
 
   if (comp.init)
     comp.init();
+
+  if (comp.created) {
+    updateTemplateInstance(comp);
+    comp.created.call(comp.templateInstance);
+  }
 
   var range = new DomRange(comp);
 
@@ -65,8 +83,10 @@ UI.render = function (kind, props, parentComp) {
   }
 
   // XXX think about this callback's semantics
-  if (comp.rendered)
-    comp.rendered();
+  if (comp.rendered) {
+    updateTemplateInstance(comp);
+    comp.rendered.call(comp.templateInstance);
+  }
 
   return comp;
 };

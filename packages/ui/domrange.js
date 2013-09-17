@@ -140,7 +140,9 @@ var rangeRemoved = function (range) {
 
     // XXX clean up events in $_uievents
 
-    // XXX notify component of removal
+    // notify component of removal
+    if (range.component.removed)
+      range.component.removed();
 
     membersRemoved(range);
   }

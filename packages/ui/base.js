@@ -1140,6 +1140,20 @@ getComponentData = function (comp) {
           null);
 };
 
+updateTemplateInstance = function (comp) {
+  // Populate `comp.templateInstance.{firstNode,lastNode,data}`
+  // on demand.
+  var tmpl = comp.templateInstance;
+  tmpl.data = getComponentData(comp);
+  tmpl.firstNode = comp.dom.startNode().nextSibling;
+  tmpl.lastNode = comp.dom.endNode().previousSibling;
+  // Catch the case where the DomRange is empty and we'd
+  // otherwise pass the out-of-order nodes (end, start)
+  // as (firstNode, lastNode).
+  if (tmpl.lastNode.nextSibling === tmpl.firstNode)
+    tmpl.lastNode = tmpl.firstNode;
+};
+
 _extend(UI.Component, {
   // XXX temporary definitions.
   // In particular, we need to implement the old APIs
@@ -1168,7 +1182,9 @@ _extend(UI.Component, {
         var wrappedHandler = function (event) {
           var comp = UI.DomRange.getContainingComponent(event.currentTarget);
           var data = comp && getComponentData(comp);
-          handler.call(data, event); // XXX template instance
+          if (comp)
+            updateTemplateInstance(comp);
+          handler.call(data, event, comp && comp.templateInstance);
         };
         events.push({events: newEvents,
                      selector: selector,
@@ -1188,3 +1204,14 @@ UI.Component.parented = function () {
     });
   }
 };
+
+// XXX
+UI.Component.removed = function () {
+  var self = this;
+  if (self.destroyed) {
+    updateTemplateInstance(self);
+    self.destroyed.call(self.templateInstance);
+  }
+};
+
+UI.Component.preserve = function () {};

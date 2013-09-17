@@ -4,6 +4,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.export(['UI']);
+  api.use('jquery'); // break this with "DOM backends"
   api.use('deps');
   api.use('random');
   api.use('ejson');
