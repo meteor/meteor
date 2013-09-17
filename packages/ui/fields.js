@@ -1,6 +1,8 @@
 
 var global = (function () { return this; })();
 
+// XXXXXXXX take out the "look up the tree" logic for Stage I
+
 _extend(UI.Component, {
   // _dontCall is for internal use only.
   //
@@ -26,7 +28,7 @@ _extend(UI.Component, {
     } else if (id === 'unless') {
       result = UI.Unless;
     } else if (id === 'with') {
-      result = Component;
+      result = UI.With;
     } else if (/^[A-Z]/.test(id) && (id in global)) {
       // Only look for a global identifier if `id` is
       // capitalized.  This avoids have `{{name}}` mean

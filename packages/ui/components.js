@@ -62,3 +62,10 @@ UI.Unless = Component.extend({
     buf.write(condition ? self.elseContent : self.content);
   }
 });
+
+UI.With = Component.extend({
+  kind: 'With',
+  render: function (buf) {
+    buf.write(this.content);
+  }
+});
