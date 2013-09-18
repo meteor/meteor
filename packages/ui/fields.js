@@ -29,6 +29,14 @@ _extend(UI.Component, {
       result = UI.Unless;
     } else if (id === 'with') {
       result = UI.With;
+    } else if (id === 'constant' || id === 'isolate') {
+      // XXX PAST
+      result = Component.extend({
+        kind: 'PastCompat',
+        render: function (buf) {
+          buf.write(this.content);
+        }
+      });
     } else if (/^[A-Z]/.test(id) && (id in global)) {
       // Only look for a global identifier if `id` is
       // capitalized.  This avoids have `{{name}}` mean
