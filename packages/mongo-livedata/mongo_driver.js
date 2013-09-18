@@ -1617,5 +1617,6 @@ MongoInternals.Connection = MongoConnection;
 MongoInternals.NpmModule = MongoDB;
 
 MongoTest = {
-  cursorSupportedByOplogTailing: cursorSupportedByOplogTailing
+  cursorSupportedByOplogTailing: cursorSupportedByOplogTailing,
+  DocFetcher: DocFetcher
 };
