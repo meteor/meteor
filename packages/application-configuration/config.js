@@ -7,19 +7,14 @@ AppConfig.findGalaxy = _.once(function () {
   if (!('GALAXY' in process.env || 'ULTRAWORLD_DDP_ENDPOINT' in process.env)) {
     return null;
   }
-
   return Follower.connect(process.env.ULTRAWORLD_DDP_ENDPOINT || process.env.GALAXY);
 });
 
-
-// TODO: Eventually, keep track of the replica set, and generally be conected to the
-// leader.  Waiting on actually having that concept implemented in ultraworld.
 var ultra = AppConfig.findGalaxy();
 
 var subFuture = new Future();
 if (ultra)
   ultra.subscribe("oneApp", process.env.GALAXY_APP, subFuture.resolver());
-
 var OneAppApps;
 var Services;
 var collectionFuture = new Future();
@@ -37,6 +32,12 @@ Meteor.startup(function () {
   }
 });
 
+// XXX: Remove this once we allow the same collection to be new'd from multiple
+// places.
+AppConfig._getAppCollection = function () {
+  collectionFuture.wait();
+  return OneAppApps;
+};
 
 var staticAppConfig;
 
@@ -73,7 +74,7 @@ AppConfig.getAppConfig = function () {
     return staticAppConfig;
   }
   subFuture.wait();
-  var myApp = OneAppApps.findOne();
+  var myApp = OneAppApps.findOne(process.env.GALAXY_APP);
   if (myApp)
     return myApp.config;
   throw new Error("there is no app config for this app");
@@ -102,7 +103,7 @@ AppConfig.configurePackage = function (packageName, configure) {
     // there's a Meteor.startup() that produces the various collections, make
     // sure it runs first before we continue.
     collectionFuture.wait();
-    subHandle = OneAppApps.find().observe({
+    subHandle = OneAppApps.find(process.env.GALAXY_APP).observe({
       added: configureIfDifferent,
       changed: configureIfDifferent
     });

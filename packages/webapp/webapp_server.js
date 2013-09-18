@@ -411,7 +411,8 @@ var runWebAppServer = function () {
         if (proxyBinding)
           proxyBinding.stop();
         if (configuration && configuration.proxy) {
-          proxyBinding = AppConfig.configureService(configuration.proxyServiceName || "proxy", function (proxyService) {
+          proxyBinding = AppConfig.configureService(configuration.proxyServiceName ||
+                                                    "proxy", function (proxyService) {
             if (proxyService.providers.proxy) {
               var proxyConf;
               if (process.env.ADMIN_APP) {
