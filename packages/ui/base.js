@@ -1145,13 +1145,20 @@ updateTemplateInstance = function (comp) {
   // on demand.
   var tmpl = comp.templateInstance;
   tmpl.data = getComponentData(comp);
-  tmpl.firstNode = comp.dom.startNode().nextSibling;
-  tmpl.lastNode = comp.dom.endNode().previousSibling;
-  // Catch the case where the DomRange is empty and we'd
-  // otherwise pass the out-of-order nodes (end, start)
-  // as (firstNode, lastNode).
-  if (tmpl.lastNode.nextSibling === tmpl.firstNode)
-    tmpl.lastNode = tmpl.firstNode;
+
+  if (comp.dom) {
+    tmpl.firstNode = comp.dom.startNode().nextSibling;
+    tmpl.lastNode = comp.dom.endNode().previousSibling;
+    // Catch the case where the DomRange is empty and we'd
+    // otherwise pass the out-of-order nodes (end, start)
+    // as (firstNode, lastNode).
+    if (tmpl.lastNode.nextSibling === tmpl.firstNode)
+      tmpl.lastNode = tmpl.firstNode;
+  } else {
+    // on 'created' or 'destroyed' callbacks we don't have a DomRange
+    tmpl.firstNode = null;
+    tmpl.lastNode = null;
+  }
 };
 
 _extend(UI.Component, {
