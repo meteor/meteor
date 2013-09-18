@@ -82,12 +82,6 @@ UI.render = function (kind, props, parentComp) {
     });
   }
 
-  // XXX think about this callback's semantics
-  if (comp.rendered) {
-    updateTemplateInstance(comp);
-    comp.rendered.call(comp.templateInstance);
-  }
-
   return comp;
 };
 

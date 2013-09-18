@@ -1210,6 +1210,12 @@ UI.Component.parented = function () {
       self.dom.on(esh.events, esh.selector, esh.handler);
     });
   }
+
+  // XXX think about this callback's timing
+  if (self.rendered) {
+    updateTemplateInstance(self);
+    self.rendered.call(self.templateInstance);
+  }
 };
 
 // XXX
