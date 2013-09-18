@@ -1,0 +1,136 @@
+{
+  "dependencies": {
+    "html5": {
+      "from": "https://github.com/meteor/html5/tarball/88261534f4f9143eeb083ce47c6389731c905bfe",
+      "dependencies": {
+        "opts": {
+          "version": "1.2.2"
+        },
+        "html5-entities": {
+          "version": "0.5.0"
+        },
+        "jsdom": {
+          "version": "0.8.4",
+          "dependencies": {
+            "htmlparser2": {
+              "version": "3.3.0",
+              "dependencies": {
+                "domhandler": {
+                  "version": "2.1.0"
+                },
+                "domutils": {
+                  "version": "1.1.5"
+                },
+                "domelementtype": {
+                  "version": "1.1.1"
+                },
+                "readable-stream": {
+                  "version": "1.0.17"
+                }
+              }
+            },
+            "nwmatcher": {
+              "version": "1.3.1"
+            },
+            "request": {
+              "version": "2.27.0",
+              "dependencies": {
+                "qs": {
+                  "version": "0.6.5"
+                },
+                "json-stringify-safe": {
+                  "version": "5.0.0"
+                },
+                "forever-agent": {
+                  "version": "0.5.0"
+                },
+                "tunnel-agent": {
+                  "version": "0.3.0"
+                },
+                "http-signature": {
+                  "version": "0.10.0",
+                  "dependencies": {
+                    "assert-plus": {
+                      "version": "0.1.2"
+                    },
+                    "asn1": {
+                      "version": "0.1.11"
+                    },
+                    "ctype": {
+                      "version": "0.5.2"
+                    }
+                  }
+                },
+                "hawk": {
+                  "version": "1.0.0",
+                  "dependencies": {
+                    "hoek": {
+                      "version": "0.9.1"
+                    },
+                    "boom": {
+                      "version": "0.4.2"
+                    },
+                    "cryptiles": {
+                      "version": "0.2.2"
+                    },
+                    "sntp": {
+                      "version": "0.2.4"
+                    }
+                  }
+                },
+                "aws-sign": {
+                  "version": "0.3.0"
+                },
+                "oauth-sign": {
+                  "version": "0.3.0"
+                },
+                "cookie-jar": {
+                  "version": "0.3.0"
+                },
+                "node-uuid": {
+                  "version": "1.4.1"
+                },
+                "mime": {
+                  "version": "1.2.11"
+                },
+                "form-data": {
+                  "version": "0.1.1",
+                  "dependencies": {
+                    "combined-stream": {
+                      "version": "0.0.4",
+                      "dependencies": {
+                        "delayed-stream": {
+                          "version": "0.0.5"
+                        }
+                      }
+                    },
+                    "async": {
+                      "version": "0.2.9"
+                    }
+                  }
+                }
+              }
+            },
+            "xmlhttprequest": {
+              "version": "1.6.0"
+            },
+            "cssom": {
+              "version": "0.2.5"
+            },
+            "cssstyle": {
+              "version": "0.2.3"
+            },
+            "contextify": {
+              "version": "0.1.6",
+              "dependencies": {
+                "bindings": {
+                  "version": "1.1.1"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
