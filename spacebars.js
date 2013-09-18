@@ -980,12 +980,24 @@ Spacebars.extend = function (obj/*, k1, v1, k2, v2, ...*/) {
 };
 
 Spacebars.parseAttrs = function (attrs) {
-  if (! attrs)
+  if (! attrs) {
     return {};
-  else if (typeof attrs === 'object')
+  } else if (typeof attrs === 'object') {
     return attrs;
-  else
-    throw new Error("XXX Should allow strings here");
+  } else {
+    // XXX test this
+    var tokens = HTML5Tokenizer.tokenize(
+      '<x ' + attrs + ' >');
+    var dict = {};
+    if (tokens.length &&
+        tokens[0].type === 'StartTag') {
+      _.each(tokens[0].data, function (kv) {
+        if (UI.isValidAttributeName(kv[0]))
+          dict[kv[0]] = kv[1];
+      });
+    }
+    return dict;
+  }
 };
 
 Spacebars.escapeHtmlComment = function (str) {
