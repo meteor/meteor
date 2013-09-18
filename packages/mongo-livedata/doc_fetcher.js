@@ -25,7 +25,7 @@ _.extend(DocFetcher.prototype, {
     // it's done and return whatever it returns.
     if (_.has(self._futuresForCacheKey, cacheKey)) {
       var f = new Future;
-      self._futuresForCacheKey.push(f);
+      self._futuresForCacheKey[cacheKey].push(f);
       return f.wait();
     }
 
