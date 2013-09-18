@@ -36,7 +36,7 @@ Package.on_use(function (api) {
   // Stuff that should be exposed via a real API, but we haven't yet.
   api.export('MongoInternals', 'server');
   // For tests only.
-  api.export('MongoTest', 'server');
+  api.export('MongoTest', 'server', {testOnly: true});
 
   api.add_files(['id_map.js', 'doc_fetcher.js'], 'server');
   api.add_files('mongo_driver.js', 'server');
@@ -57,4 +57,5 @@ Package.on_test(function (api) {
   api.add_files('collection_tests.js', ['client', 'server']);
   api.add_files('observe_changes_tests.js', ['client', 'server']);
   api.add_files('oplog_tests.js', 'server');
+  api.add_files('doc_fetcher_tests.js', 'server');
 });
