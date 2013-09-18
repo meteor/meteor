@@ -9,19 +9,18 @@
 </body>
 
 <template name="leaderboard">
-  {{#AnimatedList events="move"}}
-    <div class="leaderboard">
-      {{#each players}}
-        {{> player}}
-      {{/each}}
-    </div>
-  {{/AnimatedList}}
+  <div class="leaderboard">
+    {{#each players}}
+      {{> player}}
+    {{/each}}
+  </div>
 
-  {{! XXX revert back to if selected_name once we have event delegation }}
-  <div class="details" style="display: {{upvote_display}}">
+  {{#if selected_name}}
+  <div class="details">
     <div class="name">{{selected_name}}</div>
     <input type="button" class="inc" value="Give 5 points" />
   </div>
+  {{/if}}
 
   {{#unless selected_name}}
   <div class="none">Click a player to select</div>

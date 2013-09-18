@@ -30,6 +30,8 @@ UI.Each = Component.extend({
         // shouldn't be this hard...
         var comp = UI.render(
           content,
+          // XXX emulate hypothetical
+          // node.$ui.data() API
           { data: _extend(
           function () {
             dep.depend();
@@ -40,12 +42,6 @@ UI.Each = Component.extend({
               dep.changed();
             }
           }) }, self);
-
-        // XXX emulate hypothetical
-        // node.$ui.data() API
-        comp.data = function () {
-          return data;
-        };
 
         if (beforeId)
           beforeId = LocalCollection._idStringify(beforeId);
