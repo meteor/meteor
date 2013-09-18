@@ -46,13 +46,20 @@ var startFun = function (argv) {
       bindPathPrefix = "/" + Ctl.myAppName();
     }
 
+    // Allow appConfig settings to be objects or strings. We need to stringify
+    // them to pass them to the app in the env var.
+    // Backwards compat with old app config format.
+    _.each(["settings", "METEOR_SETTINGS"], function (settingsKey) {
+      if (appConfig[settingsKey] && typeof appConfig[settingsKey] === "object")
+        appConfig[settingsKey] = JSON.stringify(appConfig[settingsKey]);
+    });
 
     // XXX args? env?
     Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), 'server', {
       exitPolicy: 'restart',
       env: {
         ROOT_URL: "https://" + appConfig.sitename + bindPathPrefix,
-        METEOR_SETTINGS: appConfig.METEOR_SETTINGS,
+        METEOR_SETTINGS: appConfig.settings || appConfig.METEOR_SETTINGS,
         ADMIN_APP: appConfig.admin //TODO: When apps have admin & non-admin sides, set this based on that.
       },
       ports: {
