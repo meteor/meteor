@@ -5,6 +5,8 @@ var isValidAttributeName = function (str) {
   return ATTRIBUTE_NAME_REGEX.test(str);
 };
 
+UI.isValidAttributeName = isValidAttributeName;
+
 AttributeManager = function (dictOrFunc) {
   var self = this;
 
@@ -35,7 +37,7 @@ AttributeManager = function (dictOrFunc) {
     // perform a sanity check, since we'll be inserting
     // attrName directly into the HTML stream
     if (! isValidAttributeName(attrName))
-      throw new Error("Illegal HTML attribute name: " + attrName);
+      throw new Error("Illegal HTML attribute name: '" + attrName + "'");
 
     handlers[attrName] = makeAttributeHandler(
       attrName, dict[attrName]);
