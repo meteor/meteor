@@ -124,6 +124,7 @@ MongoConnection = function (url, connectionOptions) {
     }).run();
   });
 
+  self._docFetcher = new DocFetcher(self);
   self._oplogHandle = null;
   // XXX we should NOT be reading directly from the env here (this should be an
   // argument to MongoConnection eg) but I want to wait for the AppConfig API to
@@ -375,10 +376,10 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       if (isModifier) {
         // XXX problem is, the result of this findOne is delivered at a random
         // time, not necessarily synced with other stuff that may be coming down
-        // the oplog. also, we should coalesce multiple pings of the same
-        // document ("ID queue"). also, we shouldn't read fields that aren't
+        // the oplog. also, we shouldn't read fields that aren't
         // necessary to evaluate selector or to publish.
-        newDoc = self.findOne(cursorDescription.collectionName, {_id: id});
+        newDoc = self._docFetcher.fetch(cursorDescription.collectionName, id,
+                                        op.ts.toString());
       } else {
         newDoc = _.extend({_id: id}, op.o);
       }
