@@ -38,8 +38,8 @@ Package.on_use(function (api) {
   // For tests only.
   api.export('MongoTest', 'server', {testOnly: true});
 
-  api.add_files(['id_map.js', 'doc_fetcher.js'], 'server');
-  api.add_files('mongo_driver.js', 'server');
+  api.add_files(['id_map.js', 'doc_fetcher.js', 'mongo_driver.js',
+                 'oplog.js'], 'server');
   api.add_files('local_collection_driver.js', ['client', 'server']);
   api.add_files('remote_collection_driver.js', 'server');
   api.add_files('collection.js', ['client', 'server']);
