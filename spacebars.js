@@ -903,7 +903,8 @@ Spacebars.compile = function (inputString, options) {
         renderableString('<!--');
         renderables.push('Spacebars.escapeHtmlComment(' +
                          interpolate(t.name, funcInfo,
-                                     INTERPOLATE_COMMENT));
+                                     INTERPOLATE_COMMENT) +
+                         ')');
         renderableString('-->');
         break;
       case 'DocType':
