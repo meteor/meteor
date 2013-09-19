@@ -244,10 +244,8 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
 
   var oplogSelector = {
     ns: new RegExp('^' + quotemeta(dbName) + '\\.'),
-    $or: [
-      {op: {$in: ['i', 'u', 'd']}},
-      {op: 'c', 'o.drop': {$exists: true}}
-    ]
+    // XXX also handle drop collection, etc
+    op: {$in: ['i', 'u', 'd']}
   };
   if (lastOplogEntry)
     oplogSelector.ts = {$gt: lastOplogEntry.ts};

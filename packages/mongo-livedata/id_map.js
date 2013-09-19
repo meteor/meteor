@@ -24,6 +24,10 @@ _.extend(IdMap.prototype, {
     var key = LocalCollection._idStringify(id);
     return _.has(self._map, key);
   },
+  isEmpty: function () {
+    var self = this;
+    return _.isEmpty(self._map);
+  },
   // XXX used?
   setDefault: function (id, def) {
     var self = this;
