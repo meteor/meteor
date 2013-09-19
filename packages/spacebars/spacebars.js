@@ -213,6 +213,7 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
     if (! run(ends.DOUBLE))
       expected('`}}`');
   } else {
+    // DOUBLE, TRIPLE, BLOCKOPEN, INCLUSION
     tag.path = scanPath();
     tag.args = [];
     while (true) {
