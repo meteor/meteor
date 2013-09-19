@@ -52,20 +52,20 @@ UI.Each = Component.extend({
         var data = item;
         var dep = new Deps.Dependency;
 
-        // XXX dynamically rendering a child component
-        // shouldn't be this hard...
+        // function to become `comp.data`
+        var dataFunc = function () {
+          dep.depend();
+          return data;
+        };
+        // Storing `$set` on `comp.data` lets us
+        // access it from `changed`.
+        dataFunc.$set = function (v) {
+          data = v;
+          dep.changed();
+        };
+
         var comp = UI.render(
-          content,
-          { data: _extend(
-          function () {
-            dep.depend();
-            return data;
-          }, {
-            $set: function (v) {
-              data = v;
-              dep.changed();
-            }
-          }) }, self);
+          content, { data: dataFunc }, self);
 
         if (beforeId)
           beforeId = LocalCollection._idStringify(beforeId);
