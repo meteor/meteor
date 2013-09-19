@@ -23,20 +23,20 @@ UI.Each = Component.extend({
     // if there is an else clause, keep track of the number of
     // rendered items.  use this to display the else clause when count
     // becomes zero, and remove it when count becomes positive.
-    var count = 0;
-    var addToCount = function(diff) {
+    var itemCount = 0;
+    var addToCount = function(delta) {
       if (!elseContent) // if no else, no need to keep track of count
         return;
 
-      if (count + diff < 0)
+      if (itemCount + delta < 0)
         throw new Error("count should never become negative");
 
-      if (count === 0) {
+      if (itemCount === 0) {
         // remove else clause
         range.removeAll();
       }
-      count += diff;
-      if (count === 0) {
+      itemCount += delta;
+      if (itemCount === 0) {
         // display else clause
         range.add(null, UI.render(elseContent, {}, self), null);
       }
@@ -85,6 +85,7 @@ UI.Each = Component.extend({
       }
     });
 
-    addToCount(0); // display the else clause if no displayed items
+    // on initial render, display the else clause if no items
+    addToCount(0);
   }
 });
