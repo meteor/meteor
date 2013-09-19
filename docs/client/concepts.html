@@ -522,7 +522,7 @@ function `Template.hello`, passing any data for the template:
     <!-- in myapp.html -->
     <template name="hello">
       <div class="greeting">Hello there, {{dstache}}first}} {{dstache}}last}}!</div>
-    </{{! }}template>
+    </ template>
 
     // in the JavaScript console
     > Template.hello({first: "Alyssa", last: "Hacker"});
@@ -545,7 +545,7 @@ functions in JavaScript. Just add the helper functions directly on the
       {{dstache}}#each topScorers}}
         <div>{{dstache}}name}}</div>
       {{dstache}}/each}}
-    </{{! }}template>
+    </ template>
 
 instead of passing in `topScorers` as data when we call the
 template function, we could define a function on `Template.players`:
@@ -577,7 +577,7 @@ in `this`:
           <div>Senior: {{dstache}}name}}</div>
         {{dstache}}/if}}
       {{dstache}}/each}}
-    </{{! }}template>
+    </ template>
 
 {{#note}}
 Handlebars note: `{{dstache}}#if leagueIs "junior"}}` is
@@ -602,13 +602,13 @@ the data context of the element that triggered the event.
       {{dstache}}#each player}}
         {{dstache}}> playerScore}}
       {{dstache}}/each}}
-    </{{! }}template>
+    </ template>
 
     <template name="playerScore">
       <div>{{dstache}}name}}: {{dstache}}score}}
         <span class="givePoints">Give points</span>
       </div>
-    </{{! }}template>
+    </ template>
 
     <!-- myapp.js -->
     Template.playerScore.events({
@@ -625,7 +625,7 @@ discussion.
     <!-- in myapp.html -->
     <template name="forecast">
       <div>It'll be {{dstache}}prediction}} tonight</div>
-    </{{! }}template>
+    </ template>
 
     <!-- in myapp.js -->
     // JavaScript: reactive helper function
