@@ -487,7 +487,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
   // XXX rename pid argument to bindTo.
   var pid = {
     job: process.env.GALAXY_JOB,
-    lastStarted: process.env.LAST_START,
+    lastStarted: +(process.env.LAST_START),
     app: process.env.GALAXY_APP
   };
   var myHost = os.hostname();
