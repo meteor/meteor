@@ -332,6 +332,8 @@ makeRenderBuffer = function (options) {
       if (n.nodeType === 8) { // COMMENT
         if (componentsToRender) {
           var spec = componentsToRender[n.nodeValue];
+          if (! spec)
+            return n;
           var kind, props;
           // (components and `{kind: ...}` specs both
           // have a `kind` property.  check for a spec)
