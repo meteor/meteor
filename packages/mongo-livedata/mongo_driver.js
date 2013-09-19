@@ -28,6 +28,14 @@ var replaceNames = function (filter, thing) {
   return thing;
 };
 
+// Ensure that EJSON.clone keeps a Timestamp as a Timestamp (instead of just
+// doing a structural clone).
+// XXX how ok is this? what if there are multiple copies of MongoDB loaded?
+MongoDB.Timestamp.prototype.clone = function () {
+  // Timestamps should be immutable.
+  return this;
+};
+
 var makeMongoLegal = function (name) { return "EJSON" + name; };
 var unmakeMongoLegal = function (name) { return name.substr(5); };
 
@@ -42,6 +50,13 @@ var replaceMongoAtomWithMeteor = function (document) {
   if (document["EJSON$type"] && document["EJSON$value"]) {
     return EJSON.fromJSONValue(replaceNames(unmakeMongoLegal, document));
   }
+  if (document instanceof MongoDB.Timestamp) {
+    // For now, the Meteor representation of a Mongo timestamp type (not a date!
+    // this is a weird internal thing used in the oplog!) is the same as the
+    // Mongo representation. We need to do this explicitly or else we would do a
+    // structural clone and lose the prototype.
+    return document;
+  }
   return undefined;
 };
 
@@ -54,7 +69,15 @@ var replaceMeteorAtomWithMongo = function (document) {
   }
   if (document instanceof Meteor.Collection.ObjectID) {
     return new MongoDB.ObjectID(document.toHexString());
-  } else if (EJSON._isCustomType(document)) {
+  }
+  if (document instanceof MongoDB.Timestamp) {
+    // For now, the Meteor representation of a Mongo timestamp type (not a date!
+    // this is a weird internal thing used in the oplog!) is the same as the
+    // Mongo representation. We need to do this explicitly or else we would do a
+    // structural clone and lose the prototype.
+    return document;
+  }
+  if (EJSON._isCustomType(document)) {
     return replaceNames(makeMongoLegal, EJSON.toJSONValue(document));
   }
   // It is not ordinarily possible to stick dollar-sign keys into mongo
