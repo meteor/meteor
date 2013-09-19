@@ -663,6 +663,8 @@ Spacebars.compile = function (inputString, options) {
           if (i === 0) {
             options = (options || {});
             options[toJSLiteral('data')] = argCode;
+          } else {
+            error("Only one positional argument is allowed");
           }
         } else {
           args = (args || []);
