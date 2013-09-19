@@ -20,7 +20,7 @@ _.each ([{added:'added', forceOrdered: true},
     if (forceOrdered)
       callbacks.push("movedBefore");
     withCallbackLogger(test,
-                       [added, "changed", "removed"],
+                       callbacks,
                        Meteor.isServer,
                        function (logger) {
     var barid = c.insert({thing: "stuff"});
