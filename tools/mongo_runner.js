@@ -229,18 +229,16 @@ exports.launchMongo = function (options) {
       };
 
       proc.stdout.setEncoding('utf8');
-      var readyMessages = 2;
-      proc.stdout.on('data', function (data) {
-        // process.stdout.write("MONGO SAYS: " + data);
-
-        if (/ \[rsMgr\] replSet PRIMARY/.test(data)) {
-          if (--readyMessages === 0) {
-            if (createReplSet)
-              fs.writeFileSync(portFile, options.port);
-            onListen();
-          }
+      var listening = false;
+      var replSetReady = false;
+      var maybeCallOnListen = function () {
+        if (listening && replSetReady) {
+          if (createReplSet)
+            fs.writeFileSync(portFile, options.port);
+          onListen();
         }
-
+      };
+      proc.stdout.on('data', function (data) {
         if (/ \[initandlisten\] waiting for connections on port/.test(data)) {
           if (createReplSet) {
             // Connect to it and start a replset.
@@ -261,8 +259,13 @@ exports.launchMongo = function (options) {
               });
             });
           }
-          if (--readyMessages === 0)
-            onListen();
+          listening = true;
+          maybeCallOnListen();
+        }
+
+        if (/ \[rsMgr\] replSet PRIMARY/.test(data)) {
+          replSetReady = true;
+          maybeCallOnListen();
         }
       });
     }).run();

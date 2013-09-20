@@ -13,7 +13,7 @@ var idForOp = function (op) {
   else if (op.op === 'i')
     return op.o._id;
   else if (op.op === 'u')
-   return op.o2._id;
+    return op.o2._id;
   else
     throw Error("Unknown op: " + EJSON.stringify(op));
 };
@@ -27,6 +27,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
   var published = new IdMap;
   var selector = LocalCollection._compileSelector(cursorDescription.selector);
 
+  // XXX eliminate "curious" name
   var curiousity = new IdMap;
 
   var add = function (doc) {
@@ -72,7 +73,9 @@ MongoConnection.prototype._observeChangesWithOplog = function (
         throw new Error("Surprising phase in beCurious: " + phase);
 
       var futures = [];
-      curiousity.each(function (cacheKey, id) {
+      var currentlyFetching = curiousity;
+      curiousity = new IdMap;
+      currentlyFetching.each(function (cacheKey, id) {
         // Run each until they yield. This implies that curiousity should not be
         // updated during this loop.
         Fiber(function () {
@@ -84,7 +87,6 @@ MongoConnection.prototype._observeChangesWithOplog = function (
           f.return();
         }).run();
       });
-      curiousity.clear();
       Future.wait(futures);
       // Throw if any throw.
       // XXX this means the observe will now be stalled
@@ -125,13 +127,16 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       var isModifier = _.has(op.o, '$set') || _.has(op.o, '$unset');
 
       if (isModifier) {
+        // XXX in many cases, we can just apply the modifier directly (eg, if we
+        // are already publishing the document).
+        // XXX for not-currently-published docs, if we can guarantee the
+        // irrelevance of the change, we can skip it
         curiousity.set(id, op.ts.toString());
         beCurious();
         return;
       }
-      var newDoc = _.extend({_id: id}, op.o);
 
-      handleDoc(id, newDoc);
+      handleDoc(id, _.extend({_id: id}, op.o));
     } else {
       throw Error("XXX SURPRISING OPERATION: " + op);
     }
