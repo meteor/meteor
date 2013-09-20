@@ -127,9 +127,6 @@ Meteor.methods({
 ///
 /// support reconnecting using a meteor login token
 
-// how often (in seconds) we check for expired tokens
-var DEFAULT_EXPIRE_TOKENS_INTERVAL_SECS = 600; // 10 minutes
-
 // Login handler for resume tokens.
 Accounts.registerLoginHandler(function(options) {
   if (!options.resume)
@@ -183,12 +180,13 @@ var removeLoginToken = function (userId, loginToken) {
 var expireTokenInterval;
 
 // Deletes expired tokens from the database and closes all open connections
-// associated with these tokens. Exported for tests.
+// associated with these tokens. Exported for tests. oldestValidDate is used
+// only by tests to simulate expiring tokens without waiting for them to
+// actually expire.
 var expireTokens = Accounts._expireTokens = function (oldestValidDate) {
-  var tokenLifetimeSecs = Accounts._options._tokenLifetimeSecs ||
-        DEFAULT_TOKEN_LIFETIME_SECS;
+  var tokenLifetimeMs = getTokenLifetimeMs();
   oldestValidDate = oldestValidDate ||
-    (new Date(new Date() - tokenLifetimeSecs * 1000));
+    (new Date(new Date() - tokenLifetimeMs));
 
   Meteor.users.update({
     "services.resume.loginTokens.when": { $lt: oldestValidDate }
@@ -203,16 +201,15 @@ var expireTokens = Accounts._expireTokens = function (oldestValidDate) {
   // expired tokens.
 };
 
-Meteor.users._ensureIndex("services.resume.loginTokens.when", { sparse: true });
-
-initExpireTokenInterval = function () {
-  if (expireTokenInterval)
+maybeStopExpireTokensInterval = function () {
+  if (_.has(Accounts._options, "loginExpirationInDays") &&
+      Accounts._options.loginExpirationInDays === null &&
+      expireTokenInterval)
     Meteor.clearInterval(expireTokenInterval);
-  var expirePeriodSecs = Accounts._options._tokenExpirationIntervalSecs ||
-        DEFAULT_EXPIRE_TOKENS_INTERVAL_SECS;
-  expireTokenInterval = Meteor.setInterval(expireTokens, expirePeriodSecs * 1000);
 };
-initExpireTokenInterval();
+
+expireTokenInterval = Meteor.setInterval(expireTokens,
+                                         EXPIRE_TOKENS_INTERVAL_MS);
 
 ///
 /// CREATE USER HOOKS
@@ -561,12 +558,12 @@ Meteor.users._ensureIndex('username', {unique: 1, sparse: 1});
 Meteor.users._ensureIndex('emails.address', {unique: 1, sparse: 1});
 Meteor.users._ensureIndex('services.resume.loginTokens.token',
                           {unique: 1, sparse: 1});
+// For expiring login tokens
+Meteor.users._ensureIndex("services.resume.loginTokens.when", { sparse: 1 });
 
 ///
 /// LOGGING OUT DELETED USERS
 ///
-
-var DEFAULT_CONNECTION_CLOSE_DELAY_SECS = 10;
 
 // By default, connections are closed with a 10 second delay, to give other
 // clients a chance to find a new token in localStorage before
