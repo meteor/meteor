@@ -124,19 +124,25 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       // database to figure out if the whole document matches the selector) or a
       // replacement (in which case we can just directly re-evaluate the
       // selector)?
-      var isModifier = _.has(op.o, '$set') || _.has(op.o, '$unset');
+      var isReplace = !_.has(op.o, '$set') && !_.has(op.o, '$unset');
 
-      if (isModifier) {
-        // XXX in many cases, we can just apply the modifier directly (eg, if we
-        // are already publishing the document).
+      if (isReplace) {
+        handleDoc(id, _.extend({_id: id}, op.o));
+      } else if (published.has(id)) {
+        // Oh great, we actually know what the document is, so we can apply
+        // this directly.
+        // XXX this assumes no field filtering
+        var newDoc = EJSON.clone(published.get(id));
+        newDoc._id = id;
+        LocalCollection._modify(newDoc, op.o);
+        handleDoc(id, newDoc);
+      } else {
         // XXX for not-currently-published docs, if we can guarantee the
         // irrelevance of the change, we can skip it
         curiousity.set(id, op.ts.toString());
         beCurious();
         return;
       }
-
-      handleDoc(id, _.extend({_id: id}, op.o));
     } else {
       throw Error("XXX SURPRISING OPERATION: " + op);
     }
