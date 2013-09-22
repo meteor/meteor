@@ -3,7 +3,7 @@
     "numCollections": 1,
     "maxAgeSeconds": 60,
     "insertsPerSecond": 1,
-    "updatesPerSecond": 1,
+    "updatesPerSecond": 0,
     "documentSize": 1024,
     "documentNumFields": 8
   }
