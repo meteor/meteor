@@ -403,7 +403,7 @@ exports.run = function (context, options) {
   // Allow override and use of external mongo. Matches code in launch_mongo.
   var mongoUrl = process.env.MONGO_URL ||
         ("mongodb://127.0.0.1:" + mongoPort + "/meteor");
-  var oplogUrl = process.env.XXX_OPLOG_URL ? undefined
+  var oplogUrl = process.env.XXX_OPLOG_URL ? process.env.XXX_OPLOG_URL
         : "mongodb://127.0.0.1:" + mongoPort + "/local";
   var firstRun = true;
 
