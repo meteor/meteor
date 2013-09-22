@@ -67,7 +67,8 @@ if (Meteor.isServer) {
   Meteor.startup(function () {
     // clear all the collections.
     _.each(Collections, function (C) {
-      C.remove({});
+      // XXX no, don't remove!
+      // C.remove({});
     });
   });
 
