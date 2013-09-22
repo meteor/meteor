@@ -36,102 +36,70 @@ var randomString = function (length) {
   return ret;
 };
 
-var pickCollection = function () {
-  return Random.choice(Collections);
-};
-
-var generateDoc = function () {
-  var ret = {};
-  ret.fromProcess = processId;
-  _.times(PARAMS.documentNumFields, function (n) {
-    ret['Field' + n] = randomString(PARAMS.documentSize/PARAMS.documentNumFields);
-  });
-
-  return ret;
-};
-
 
 //////////////////////////////
 // Data
 //////////////////////////////
 
 
-var Collections = [];
-_.times(PARAMS.numCollections, function (n) {
-  Collections.push(new Meteor.Collection("Collection" + n));
-});
+Rooms = new Meteor.Collection("rooms");
+Messages = new Meteor.Collection("messages");
 
 
 if (Meteor.isServer) {
   // init
   Meteor.startup(function () {
-    // clear all the collections.
-    _.each(Collections, function (C) {
-      // XXX no, don't remove!
-      // C.remove({});
-    });
+    if (!Rooms.findOne()) {
+      Meteor.call('setNumRooms', PARAMS.initialNumRooms);
+    }
+    Messages._ensureIndex({room: 1});
+    Messages._ensureIndex({when: 1});
   });
 
-  // periodic db check. client list
-  var currentClients = [];
-  var totalDocs = 0;
-  Meteor.setInterval(function () {
-    var newClients = {};
-    var newTotal = 0;
-    // XXX explain 3
-    var since = +(new Date) - 1000*PARAMS.insertsPerSecond * 5;
-    _.each(Collections, function (C) {
-      _.each(C.find({when: {$gt: since}}, {fields: {fromProcess: 1, when: 1}}).fetch(), function (d) {
-        newTotal += 1;
-        if (d.fromProcess && d.when > since)
-          newClients[d.fromProcess] = true;
-      });
-    });
-    currentClients = _.keys(newClients);
-    totalDocs = newTotal;
-    console.log(totalDocs, currentClients.length);
-  }, 3*1000); // XXX hardcoded time
-
   // periodic document cleanup.
-  if (PARAMS.maxAgeSeconds) {
+  // XXX only needs to run on one server.
+  if (PARAMS.messageHistorySeconds) {
     Meteor.setInterval(function () {
-      var when = +(new Date) - PARAMS.maxAgeSeconds*1000;
-      _.each(Collections, function (C) {
-        C.remove({when: {$lt: when}});
-      });
-      // Clear out 5% of the DB each time, steady state. XXX parameterize?
-    }, 1000*PARAMS.maxAgeSeconds / 20);
+      var when = +(new Date) - PARAMS.messageHistorySeconds*1000;
+      Messages.remove({when: {$lt: when}});
+    }, 1000*PARAMS.messageHistorySeconds / 20);
   }
 
-  Meteor.publish("data", function (collection, process) {
-    check(collection, Number);
-    check(process, String);
-    var C = Collections[collection];
-    return C.find({toProcess: process});
+  Meteor.publish("rooms", function () {
+    return Rooms.find({});
+  });
+
+  Meteor.publish("messages", function (roomId) {
+    check(roomId, String);
+    return Messages.find({room: roomId});
   });
 
   Meteor.methods({
     'insert': function (doc) {
-      check(doc, Object);
-      check(doc.fromProcess, String);
-      // pick a random destination. send to ourselves if there is no one
-      // else. by having an entry in the db, we'll end up in the target
-      // list.
-      doc.toProcess = Random.choice(currentClients) || doc.fromProcess;
+      check(doc, {
+        from: String,
+        room: String,
+        message: String
+      });
 
+      // use server clock, don't trust the client.
       doc.when = +(new Date);
 
-      var C = pickCollection();
-      C.insert(doc);
+      Messages.insert(doc);
     },
-    update: function (processId, field, value) {
-      check([processId, field, value], [String]);
-      var modifer = {};
-      modifer[field] = value; // XXX injection attack?
 
-      var C = pickCollection();
-      // update one message.
-      C.update({fromProcess: processId}, {$set: modifer}, {multi: false});
+    setNumRooms: function (numRooms) {
+      check(numRooms, Match.Integer);
+      var current = Rooms.find({}).count();
+      if (current > numRooms) {
+        _.times(current - numRooms, function () {
+          Rooms.remove(Rooms.findOne({}, {fields: {_id: true}}));
+        });
+      } else if (current < numRooms) {
+        _.times(numRooms - current, function () {
+          Rooms.insert({});
+        });
+      }
     }
   });
 
@@ -146,9 +114,15 @@ if (Meteor.isServer) {
 
 
 if (Meteor.isClient) {
-  // sub to data
-  _.times(PARAMS.numCollections, function (n) {
-    Meteor.subscribe("data", n, processId);
+  var myRooms = [];
+  Meteor.subscribe("rooms", function () {
+    var r = Rooms.find({}).fetch();
+    // XXX should pick w/o replacement!
+    _.times(PARAMS.roomsPerClient, function () {
+      var room = Random.choice(r)._id;
+      Meteor.subscribe("messages", room);
+      myRooms.push(room);
+    });
   });
 
   // templates
@@ -169,34 +143,24 @@ if (Meteor.isClient) {
   // XXX count of how many docs are in local collection. don't 
 
   // do stuff periodically
-
-  if (PARAMS.insertsPerSecond) {
-    Meteor.setInterval(function () {
-      Meteor.call('insert', generateDoc());
-    }, 1000 / PARAMS.insertsPerSecond);
-  }
-
-  if (PARAMS.updatesPerSecond) {
-    Meteor.setInterval(function () {
-      Meteor.call('update',
-                  processId,
-                  'Field' + random(PARAMS.documentNumFields),
-                  randomString(PARAMS.documentSize/PARAMS.documentNumFields)
-                 );
-    }, 1000 / PARAMS.updatesPerSecond);
-  }
-
-  // XXX make a method? don't use it for now.
-  if (PARAMS.removesPerSecond) {
-    Meteor.setInterval(function () {
-      var C = pickCollection();
-      var docs = C.find({}).fetch();
-      var doc = Random.choice(docs);
-      if (doc)
-        C.remove(doc._id);
-    }, 1000 / PARAMS.removesPerSecond);
-  }
-
+  Meteor.setInterval(function () {
+    if (Random.fraction() < PARAMS.chanceClientIsTalkative) {
+      console.log("Talking");
+      var room = Random.choice(myRooms);
+      if (!room) return;
+      var numMessages = PARAMS.talkativePeriodSeconds *
+            PARAMS.talkativeMessagesPerSecond;
+      _.times(numMessages, function (i) {
+        Meteor.setTimeout(function () {
+          Meteor.call('insert', {
+            from: processId,
+            room: room,
+            message: randomString(PARAMS.messageSize)
+          });
+        }, 1000 * i / PARAMS.talkativeMessagesPerSecond);
+      });
+    }
+  }, PARAMS.talkativePeriodSeconds * 1000);
 
 
   // XXX very rough per client update rate. we need to measure this
@@ -204,10 +168,8 @@ if (Meteor.isClient) {
   var updateCount = 0;
   var updateHistories = {1: [], 10: [], 100: [], 1000: []};
   var updateFunc = function () { updateCount += 1; };
-  _.each(Collections, function (C) {
-    C.find({}).observeChanges({
-      added: updateFunc, changed: updateFunc, removed: updateFunc
-    });
+  Messages.find({}).observeChanges({
+    added: updateFunc, changed: updateFunc, removed: updateFunc
   });
   Meteor.setInterval(function () {
     _.each(updateHistories, function (h, max) {
