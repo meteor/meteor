@@ -1,10 +1,11 @@
 {
   "params": {
-    "numCollections": 1,
-    "maxAgeSeconds": 60,
-    "insertsPerSecond": 1,
-    "updatesPerSecond": 0,
-    "documentSize": 256,
-    "documentNumFields": 2
+    "initialNumRooms": 20,
+    "roomsPerClient": 10,
+    "messageHistorySeconds": 300,
+    "talkativeMessagesPerSecond": 0.2,
+    "talkativePeriodSeconds": 60,
+    "chanceClientIsTalkative": 0.02,
+    "messageSize": 140
   }
 }
