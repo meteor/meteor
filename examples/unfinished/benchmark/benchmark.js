@@ -79,9 +79,9 @@ if (Meteor.isServer) {
     var newClients = {};
     var newTotal = 0;
     // XXX explain 3
-    var since = +(new Date) - 1000*PARAMS.insertsPerSecond * 3;
+    var since = +(new Date) - 1000*PARAMS.insertsPerSecond * 5;
     _.each(Collections, function (C) {
-      _.each(C.find({}, {fields: {fromProcess: 1, when: 1}}).fetch(), function (d) {
+      _.each(C.find({when: {$gt: since}}, {fields: {fromProcess: 1, when: 1}}).fetch(), function (d) {
         newTotal += 1;
         if (d.fromProcess && d.when > since)
           newClients[d.fromProcess] = true;
