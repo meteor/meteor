@@ -4,7 +4,7 @@
     "maxAgeSeconds": 60,
     "insertsPerSecond": 1,
     "updatesPerSecond": 0,
-    "documentSize": 1024,
-    "documentNumFields": 8
+    "documentSize": 256,
+    "documentNumFields": 2
   }
 }
