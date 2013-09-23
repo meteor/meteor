@@ -47,6 +47,9 @@ var getRefs = function ( token, refs ) {
   }
 };
 
+var quoteStringLiteral = function (str) {
+  return JSON.stringify(String(str));
+};
 
 var stringify = function ( token, refs ) {
   var map = function ( list ) {
@@ -69,7 +72,7 @@ var stringify = function ( token, refs ) {
     return token.v;
 
   case RExpr.STRING_LITERAL:
-    return "'" + token.v.replace( /'/g, "\\'" ) + "'";
+    return quoteStringLiteral(token.v);
 
   case RExpr.ARRAY_LITERAL:
     return '[' + ( token.m ? map(token.m).join( ',' ) : '' ) + ']';
@@ -111,7 +114,7 @@ var stringify = function ( token, refs ) {
 
 var stringifyKey = function ( key ) {
   if ( key.t === RExpr.STRING_LITERAL ) {
-    return identifier.test( key.v ) ? key.v : '"' + key.v.replace( /"/g, '\\"' ) + '"';
+    return identifier.test( key.v ) ? key.v : quoteStringLiteral( key.v );
   }
 
   if ( key.t === RExpr.NUMBER_LITERAL ) {
