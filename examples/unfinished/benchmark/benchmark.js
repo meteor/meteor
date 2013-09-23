@@ -51,9 +51,17 @@ if (Meteor.isServer) {
   Meteor.startup(function () {
     if (!Rooms.findOne()) {
       Meteor.call('setNumRooms', PARAMS.initialNumRooms);
+    } else {
+      // XXX add random to rooms that don't have it
+      // back compat. remove soon.
+      _.each(Rooms.find({random: null}).fetch(), function (r) {
+        Rooms.update(r._id, {$set: {random: Random.fraction()}});
+      });
     }
+
     Messages._ensureIndex({room: 1});
     Messages._ensureIndex({when: 1});
+    Rooms._ensureIndex({random: 1});
   });
 
   // periodic document cleanup.
@@ -66,7 +74,10 @@ if (Meteor.isServer) {
   }
 
   Meteor.publish("rooms", function () {
-    return Rooms.find({});
+    // XXX do a fetch only once. don't update in real time?
+    return Rooms.find({random: {$gte: Random.fraction()}},
+                      {limit: PARAMS.roomsPerClient,
+                       order: {random: 1}});
   });
 
   Meteor.publish("messages", function (roomId) {
@@ -97,7 +108,7 @@ if (Meteor.isServer) {
         });
       } else if (current < numRooms) {
         _.times(numRooms - current, function () {
-          Rooms.insert({});
+          Rooms.insert({random: Random.fraction()});
         });
       }
     }
@@ -116,12 +127,11 @@ if (Meteor.isServer) {
 if (Meteor.isClient) {
   var myRooms = [];
   Meteor.subscribe("rooms", function () {
-    var r = Rooms.find({}).fetch();
-    // XXX should pick w/o replacement!
-    _.times(PARAMS.roomsPerClient, function () {
-      var room = Random.choice(r)._id;
-      Meteor.subscribe("messages", room);
-      myRooms.push(room);
+    // XXX should autorun to change rooms? meh.
+    var r = Rooms.find({}, {limit: PARAMS.roomsPerClient}).fetch();
+    _.each(r, function (room) {
+      Meteor.subscribe("messages", room._id);
+      myRooms.push(room, room._id);
     });
   });
 
