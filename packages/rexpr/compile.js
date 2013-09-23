@@ -101,8 +101,7 @@ var stringify = function ( token, refs ) {
     return '${' + refs.indexOf( token.n ) + '}';
 
   default:
-    console.log( token );
-    throw new Error( 'Could not stringify expression token. This error is unexpected' );
+    throw new Error( 'Could not stringify expression token. This error is unexpected (token.t: ' + token.t + ')' );
   }
 };
 
