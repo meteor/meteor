@@ -1,4 +1,4 @@
-Tinytest.add("rexpr - examples", function (test) {
+Tinytest.add("rexpr - parse", function (test) {
 
   test.equal(RExpr.parse('a+b'),
              { t: RExpr.INFIX_OPERATOR, // type
@@ -151,4 +151,10 @@ Tinytest.add("rexpr - strings", function (test) {
   // escaped newline
   run('"a\\\nb"', "a\nb");
   run("'a\\\nb'", "a\nb");
+});
+
+Tinytest.add("rexpr - compile", function (test) {
+  test.equal(RExpr.compile('1+1'),
+             { refs: [],
+               str: '1+1' });
 });

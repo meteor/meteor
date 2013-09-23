@@ -5,7 +5,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.export('RExpr');
-  api.add_files(['constants.js', 'utils.js', 'parse.js']);
+  api.add_files(['constants.js', 'utils.js', 'parse.js', 'compile.js']);
 });
 
 Package.on_test(function (api) {
