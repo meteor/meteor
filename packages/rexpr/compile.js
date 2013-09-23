@@ -49,8 +49,17 @@ var getRefs = function ( token, refs ) {
 
 
 var stringify = function ( token, refs ) {
-  var map = function ( item ) {
-    return stringify( item, refs );
+  var map = function ( list ) {
+    var out, i;
+
+    out = new Array(list.length);
+
+    i = list.length;
+    while ( i-- ) {
+      out[i] = stringify(list[i], refs);
+    }
+
+    return out;
   };
 
   switch ( token.t ) {
@@ -63,10 +72,10 @@ var stringify = function ( token, refs ) {
     return "'" + token.v.replace( /'/g, "\\'" ) + "'";
 
   case RExpr.ARRAY_LITERAL:
-    return '[' + ( token.m ? token.m.map( map ).join( ',' ) : '' ) + ']';
+    return '[' + ( token.m ? map(token.m).join( ',' ) : '' ) + ']';
 
   case RExpr.OBJECT_LITERAL:
-    return '{' + ( token.m ? token.m.map( map ).join( ',' ) : '' ) + '}';
+    return '{' + ( token.m ? map(token.m).join( ',' ) : '' ) + '}';
 
   case RExpr.KEY_VALUE_PAIR:
     return stringifyKey( token.k ) + ':' + stringify( token.v, refs );
@@ -78,7 +87,7 @@ var stringify = function ( token, refs ) {
     return stringify( token.o[0], refs ) + ( token.s.substr( 0, 2 ) === 'in' ? ' ' + token.s + ' ' : token.s ) + stringify( token.o[1], refs );
 
   case RExpr.INVOCATION:
-    return stringify( token.x, refs ) + '(' + ( token.o ? token.o.map( map ).join( ',' ) : '' ) + ')';
+    return stringify( token.x, refs ) + '(' + ( token.o ? map(token.o).join( ',' ) : '' ) + ')';
 
   case RExpr.BRACKETED:
     return '(' + stringify( token.x, refs ) + ')';
