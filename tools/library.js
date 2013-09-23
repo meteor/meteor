@@ -449,14 +449,20 @@ _.extend(exports, {
     // several methods and none of them work (COLUMNS isn't set in
     // node's environment; `tput cols` returns a constant 80.) maybe
     // node is doing something weird with ptys.
-    var width = 80;
+    // EDIT: node has process.stdout.columns
+    var width = process && process.stdout && process.stdout.columns || 80;
 
     var out = '';
     _.each(pkgs, function (pkg) {
       if (pkg.metadata.internal)
         return;
       var name = pkg.name + pad.substr(pkg.name.length);
-      var summary = pkg.metadata.summary || 'No description';
+      // XXX Should the list show multiline summaries? For now only the first
+      // Line of the summary is shown making it less verbose
+      var summary = pkg.metadata.summary && pkg.metadata.summary.split('\n');
+      // Allow summary to be undefined but set default text
+      summary = summary && summary[0] || 'No description';
+
       out += (name + "  " +
               summary.substr(0, width - 2 - pad.length) + "\n");
     });
