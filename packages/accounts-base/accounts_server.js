@@ -92,7 +92,9 @@ Meteor.methods({
   },
 
   // Delete all the current user's tokens and close all open connections logged
-  // in as this user. Returns a fresh new login token that this client can use.
+  // in as this user. Returns a fresh new login token that this client can
+  // use. Tests set Accounts._noConnectionCloseDelayForTest to delete tokens
+  // immediately instead of using a delay.
   //
   // @returns {Object} Object with token and tokenExpires keys.
   logoutOtherClients: function () {
@@ -103,13 +105,27 @@ Meteor.methods({
       }
     });
     if (user) {
+      // Save the current tokens in the database to be deleted in
+      // CONNECTION_CLOSE_DELAY_MS ms. This gives other connections in the
+      // caller's browser time to find the fresh token in localStorage. We save
+      // the tokens in the database in case we crash before actually deleting
+      // them.
       var tokens = user.services.resume.loginTokens;
       var newToken = Accounts._generateStampedLoginToken();
+      var userId = self.userId;
       Meteor.users.update(self.userId, {
         $set: {
-          "services.resume.loginTokens": [newToken]
-        }
+          "services.resume.loginTokensToDelete": tokens,
+          "services.resume.haveLoginTokensToDelete": true
+        },
+        $push: { "services.resume.loginTokens": newToken }
       });
+      Meteor.setTimeout(function () {
+        // The observe on Meteor.users will take care of closing the connections
+        // associated with `tokens`.
+        deleteSavedTokens(userId, tokens);
+      }, Accounts._noConnectionCloseDelayForTest ? 0 :
+                        CONNECTION_CLOSE_DELAY_MS);
       // We do not set the login token on this connection, but instead the
       // observe closes the connection and the client will reconnect with the
       // new token.
@@ -559,28 +575,59 @@ Meteor.users._ensureIndex('username', {unique: 1, sparse: 1});
 Meteor.users._ensureIndex('emails.address', {unique: 1, sparse: 1});
 Meteor.users._ensureIndex('services.resume.loginTokens.token',
                           {unique: 1, sparse: 1});
+// For taking care of logoutOtherClients calls that crashed before the tokens
+// were deleted.
+Meteor.users._ensureIndex('services.resume.haveLoginTokensToDelete',
+                          { sparse: 1 });
 // For expiring login tokens
 Meteor.users._ensureIndex("services.resume.loginTokens.when", { sparse: 1 });
+
+///
+/// CLEAN UP FOR `logoutOtherClients`
+///
+
+var deleteSavedTokens = function (userId, tokensToDelete) {
+  if (tokensToDelete) {
+    Meteor.users.update(userId, {
+      $unset: {
+        "services.resume.haveLoginTokensToDelete": 1,
+        "services.resume.loginTokensToDelete": 1
+      },
+      $pullAll: {
+        "services.resume.loginTokens": tokensToDelete
+      }
+    });
+  }
+};
+
+Meteor.startup(function () {
+  // If we find users who have saved tokens to delete on startup, delete them
+  // now. It's possible that the server could have crashed and come back up
+  // before new tokens are found in localStorage, but this shouldn't happen very
+  // often. We shouldn't put a delay here because that would give a lot of power
+  // to an attacker with a stolen login token and the ability to crash the
+  // server.
+  var users = Meteor.users.find({
+    "services.resume.haveLoginTokensToDelete": true
+  }, {
+    "services.resume.loginTokensToDelete": 1
+  });
+  users.forEach(function (user) {
+    deleteSavedTokens(user._id, user.services.resume.loginTokensToDelete);
+  });
+});
 
 ///
 /// LOGGING OUT DELETED USERS
 ///
 
-// By default, connections are closed with a 10 second delay, to give other
-// clients a chance to find a new token in localStorage before
-// reconnecting. Delay can be configured with Accounts.config.
 var closeTokensForUser = function (userTokens) {
-  var delaySecs = DEFAULT_CONNECTION_CLOSE_DELAY_SECS;
-  if (_.has(Accounts._options, "_connectionCloseDelaySecs"))
-    delaySecs = Accounts._options._connectionCloseDelaySecs;
-  Meteor.setTimeout(function () {
-    Meteor.server._closeAllForTokens(_.map(userTokens, function (token) {
-      return token.token;
-    }));
-  }, delaySecs * 1000);
+  Meteor.server._closeAllForTokens(_.map(userTokens, function (token) {
+    return token.token;
+  }));
 };
 
-Meteor.users.find({}, {"services.resume": 1}).observe({
+Meteor.users.find({}, { "services.resume": 1 }).observe({
   changed: function (newUser, oldUser) {
     var removedTokens = [];
     if (newUser.services && newUser.services.resume &&

@@ -1,6 +1,4 @@
-Accounts.config({
-  _connectionCloseDelaySecs: 0
-});
+Accounts._noConnectionCloseDelayForTest = true;
 
 if (Meteor.isClient) (function () {
 

@@ -14,7 +14,7 @@ var MIN_TOKEN_LIFETIME_CAP_SECS = 3600; // one hour
 EXPIRE_TOKENS_INTERVAL_MS = 600 * 1000; // 10 minutes
 // how long we wait before logging out clients when Meteor.logoutOtherClients is
 // called
-DEFAULT_CONNECTION_CLOSE_DELAY_SECS = 10;
+CONNECTION_CLOSE_DELAY_MS = 10 * 1000;
 
 // Set up config for the accounts system. Call this on both the client
 // and the server.
@@ -34,16 +34,11 @@ DEFAULT_CONNECTION_CLOSE_DELAY_SECS = 10;
 // - loginExpirationInDays {Number}
 //     Number of days since login until a user is logged out (login token
 //     expires).
-// - _connectionCloseDelaySecs {Number}
-//     The number of seconds to wait before closing connections that when a user
-//     is logged out by the server. Defaults to 10, to allow clients to store a
-//     fresh token in localStorage when calling logoutOtherClients.
 //
 Accounts.config = function(options) {
   // validate option keys
   var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation",
-                    "restrictCreationByEmailDomain", "loginExpirationInDays",
-                    "_connectionCloseDelaySecs"];
+                    "restrictCreationByEmailDomain", "loginExpirationInDays"];
   _.each(_.keys(options), function (key) {
     if (!_.contains(VALID_KEYS, key)) {
       throw new Error("Accounts.config: Invalid key: " + key);
