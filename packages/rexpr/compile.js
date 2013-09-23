@@ -13,11 +13,6 @@ RExpr.compile = function (strOrParse) {
            str: stringify(tree, refs) };
 };
 
-var toString = Object.prototype.toString;
-var isObject = function ( obj ) {
-  return ( typeof obj === 'object' && toString.call( obj ) === '[object Object]' );
-};
-
 var getRefs = function ( token, refs ) {
   var i, list;
 
@@ -29,13 +24,13 @@ var getRefs = function ( token, refs ) {
 
   list = token.o || token.m;
   if ( list ) {
-    if ( isObject( list ) ) {
-      getRefs( list, refs );
-    } else {
+    if ( typeof list.length === 'number' ) {
       i = list.length;
       while ( i-- ) {
 	getRefs( list[i], refs );
       }
+    } else {
+      getRefs( list, refs );
     }
   }
 
