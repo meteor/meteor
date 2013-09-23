@@ -126,3 +126,29 @@ Tinytest.add("rexpr - examples", function (test) {
              });
 
 });
+
+Tinytest.add("rexpr - strings", function (test) {
+  var run = function (input, expectedString) {
+    test.equal(RExpr.parse(input),
+               { t: RExpr.STRING_LITERAL,
+                 v: expectedString });
+  };
+
+  run('"foo"', "foo");
+  run("'foo'", "foo");
+  // \" or \' in string literal
+  run("'fo\"o'", "fo\"o");
+  run('"fo\'o"', "fo'o");
+  // \\ in string literal
+  run('"foo\\\\"', "foo\\");
+  run("'foo\\\\'", "foo\\");
+  // unicode escapes
+  run('"a\\u0062c\\u0064e"', "abcde");
+  run("'a\\u0062c\\u0064e'", "abcde");
+  // various letter escapes
+  run('"a\\b\\f\\n\\r\\tb"', "a\b\f\n\r\tb");
+  run("'a\\b\\f\\n\\r\\tb'", "a\b\f\n\r\tb");
+  // escaped newline
+  run('"a\\\nb"', "a\nb");
+  run("'a\\\nb'", "a\nb");
+});

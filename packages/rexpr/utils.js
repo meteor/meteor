@@ -45,88 +45,57 @@ getRegexMatcher = function ( regex ) {
   };
 };
 
-getSingleQuotedString = function ( tokenizer ) {
-  var start, string, escaped, unescaped, next;
+// Match one or more characters until: ", ', \, or EOL/EOF, written as (?!.)
+// (meaning there's no non-newline char next).
+var getStringMiddle = getRegexMatcher(/^(?=.)[^"'\\]+?(?:(?!.)|(?=["'\\]))/);
 
-  start = tokenizer.pos;
+// Match one escape sequence, including the backslash.
+var getEscapeSequence =
+      getRegexMatcher(/^\\(?:['"\\bfnrt]|0(?![0-9])|x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|(?=.)[^ux0-9])/);
 
-  string = '';
+// Match one ES5 line continuation (backslash + line terminator).
+var getLineContinuation =
+      getRegexMatcher(/^\\(?:\r\n|[\u000A\u000D\u2028\u2029])/);
 
-  escaped = getEscapedChars( tokenizer );
-  if ( escaped ) {
-    string += escaped;
-  }
 
-  unescaped = getUnescapedSingleQuotedChars( tokenizer );
-  if ( unescaped ) {
-    string += unescaped;
-  }
-  if ( string ) {
-    next = getSingleQuotedString( tokenizer );
-    while ( next ) {
-      string += next;
-      next = getSingleQuotedString( tokenizer );
+var getQuotedStringMatcher = function (quote, okQuote) {
+  return function ( tokenizer ) {
+    var start, literal, done, next;
+
+    start = tokenizer.pos;
+
+    literal = '"';
+
+    done = false;
+
+    while (! done) {
+      next = (getStringMiddle( tokenizer ) ||
+              getEscapeSequence( tokenizer ) ||
+              getStringMatch( tokenizer, okQuote));
+      if ( next ) {
+        if ( next === '"' ) {
+          literal += '\\';
+        }
+        literal += next;
+      } else {
+        next = getLineContinuation( tokenizer );
+        if ( next ) {
+          // convert \(newline-like) into a \u escape
+          literal += '\\u' +
+            ('000' + next.charCodeAt(1).toString(16)).slice(-4);
+        } else {
+          done = true;
+        }
+      }
     }
-  }
 
-  return string;
+    literal += '"';
+
+    // use JSON.parse to interpret escapes
+    return JSON.parse(literal);
+  };
 };
 
-var getUnescapedSingleQuotedChars = getRegexMatcher( /^[^\\']+/ );
+getDoubleQuotedString = getQuotedStringMatcher('"', "'");
 
-getDoubleQuotedString = function ( tokenizer ) {
-  var start, string, escaped, unescaped, next;
-
-  start = tokenizer.pos;
-
-  string = '';
-
-  escaped = getEscapedChars( tokenizer );
-  if ( escaped ) {
-    string += escaped;
-  }
-
-  unescaped = getUnescapedDoubleQuotedChars( tokenizer );
-  if ( unescaped ) {
-    string += unescaped;
-  }
-
-  if ( !string ) {
-    return '';
-  }
-
-  next = getDoubleQuotedString( tokenizer );
-  while ( next !== '' ) {
-    string += next;
-  }
-
-  return string;
-};
-
-var getUnescapedDoubleQuotedChars = getRegexMatcher( /^[^\\"]+/ );
-
-
-var getEscapedChars = function ( tokenizer ) {
-  var chars = '', character;
-
-  character = getEscapedChar( tokenizer );
-  while ( character ) {
-    chars += character;
-    character = getEscapedChar( tokenizer );
-  }
-
-  return chars || null;
-};
-
-var getEscapedChar = function ( tokenizer ) {
-  var character;
-
-  if ( !getStringMatch( tokenizer, '\\' ) ) {
-    return null;
-  }
-
-  character = tokenizer.str.charAt( tokenizer.pos );
-  tokenizer.pos += 1;
-
-  return character;
-};
+getSingleQuotedString = getQuotedStringMatcher("'", '"');
