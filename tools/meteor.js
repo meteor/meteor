@@ -24,7 +24,7 @@ Fiber(function () {
 
   var Future = require('fibers/future');
   // This code is duplicated in app/server/server.js.
-  var MIN_NODE_VERSION = 'v0.8.24';
+  var MIN_NODE_VERSION = 'v0.10.18';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
     process.stderr.write(
       'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');

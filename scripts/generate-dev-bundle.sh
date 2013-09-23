@@ -76,7 +76,7 @@ cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of tools/meteor.js and tools/server/server.js, and the text in
 # docs/client/concepts.html and the README in tools/bundler.js.
-git checkout v0.8.24
+git checkout v0.10.18
 
 ./configure --prefix="$DIR"
 make -j4
@@ -102,7 +102,6 @@ npm install semver@1.1.0
 npm install handlebars@1.0.7
 npm install request@2.12.0
 npm install keypress@0.1.0
-npm install http-proxy@0.10.1  # not 0.10.2, which contains a sketchy websocket change
 npm install underscore@1.5.1
 npm install fstream@0.1.21
 npm install tar@0.1.14
@@ -110,6 +109,11 @@ npm install kexec@0.1.1
 npm install shell-quote@0.0.1   # now at 1.3.3, which adds plenty of options to parse but doesn't change quote
 npm install byline@2.0.3  # v3 requires node 0.10
 npm install source-map@0.1.26
+
+# Using the unreleased "caronte" rewrite of http-proxy (which is even called
+# 'caronte', though this may change when this eventually hopefully becomes
+# http-proxy 1.0).
+npm install https://github.com/nodejitsu/node-http-proxy/tarball/94ec6fa5ce6826ca1e8974f7e99b31541aaad76a
 
 # Using the unreleased 1.1 branch. We can probably switch to a built NPM version
 # when it gets released.
