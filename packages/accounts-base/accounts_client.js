@@ -188,7 +188,7 @@ Meteor.logout = function (callback) {
   });
 };
 
-Meteor._logoutAllOthers = function (callback) {
+Meteor.logoutOtherClients = function (callback) {
   // Our connection is going to be closed, but we don't want to call the
   // onReconnect handler until the result comes back for this method, because
   // the token will have been deleted on the server. Instead, wait until we get
@@ -198,7 +198,7 @@ Meteor._logoutAllOthers = function (callback) {
   var origOnReconnect = Meteor.connection.onReconnect;
   var userId = Meteor.userId();
   Meteor.connection.onReconnect = null;
-  Meteor.apply('_logoutAllOthers', [], { wait: true },
+  Meteor.apply('logoutOtherClients', [], { wait: true },
                function (error, result) {
                  Meteor.connection.onReconnect = origOnReconnect;
                  if (! error)

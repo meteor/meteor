@@ -91,10 +91,11 @@ Meteor.methods({
     this.setUserId(null);
   },
 
-  // Nuke everything: delete all the current user's tokens and close all open
-  // connections logged in as this user. Returns a fresh new login token that
-  // this client can use.
-  _logoutAllOthers: function () {
+  // Delete all the current user's tokens and close all open connections logged
+  // in as this user. Returns a fresh new login token that this client can use.
+  //
+  // @returns {Object} Object with token and tokenExpires keys.
+  logoutOtherClients: function () {
     var self = this;
     var user = Meteor.users.findOne(self.userId, {
       fields: {

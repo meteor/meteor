@@ -307,7 +307,7 @@ if (Meteor.isClient) (function () {
           ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
       }
 
-      // Test that Meteor._logoutAllOthers logs out a second authenticated
+      // Test that Meteor.logoutOtherClients logs out a second authenticated
       // connection while leaving Meteor.connection logged in.
       var token;
       var secondConn = DDP.connect(ddpUrl);
@@ -329,7 +329,7 @@ if (Meteor.isClient) (function () {
         secondConn.onReconnect = function () {
           secondConn.call("login", { resume: token }, expectLoginError);
         };
-        Meteor.call("_logoutAllOthers", expectLoggedIn);
+        Meteor.call("logoutOtherClients", expectLoggedIn);
       });
 
       Meteor.loginWithPassword(username, password2, function (err) {

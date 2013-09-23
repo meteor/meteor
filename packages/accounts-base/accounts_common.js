@@ -37,7 +37,7 @@ DEFAULT_CONNECTION_CLOSE_DELAY_SECS = 10;
 // - _connectionCloseDelaySecs {Number}
 //     The number of seconds to wait before closing connections that when a user
 //     is logged out by the server. Defaults to 10, to allow clients to store a
-//     fresh token in localStorage when calling _logoutAllOthers.
+//     fresh token in localStorage when calling logoutOtherClients.
 //
 Accounts.config = function(options) {
   // validate option keys
