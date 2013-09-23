@@ -428,7 +428,8 @@ _.extend(Session.prototype, {
     self._deactivateAllSubscriptions();
     // Drop the merge box data immediately.
     self.collectionViews = {};
-    self.in_queue = self.out_queue = [];
+    self.in_queue = [];
+    self.out_queue = [];
   },
 
   // Send a message (queueing it if no socket is connected right now.)
