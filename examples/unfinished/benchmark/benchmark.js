@@ -74,10 +74,17 @@ if (Meteor.isServer) {
   }
 
   Meteor.publish("rooms", function () {
-    // XXX do a fetch only once. don't update in real time?
-    return Rooms.find({random: {$gte: Random.fraction()}},
-                      {limit: PARAMS.roomsPerClient,
-                       order: {random: 1}});
+    var self = this;
+
+    var rooms = Rooms.find({random: {$gte: Random.fraction()}},
+                           {limit: PARAMS.roomsPerClient,
+                            order: {random: 1}}).fetch();
+
+    _.each(rooms, function (room) {
+      self.added("rooms", room._id, room);
+    });
+
+    self.ready();
   });
 
   Meteor.publish("messages", function (roomId) {
