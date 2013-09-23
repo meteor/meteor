@@ -236,7 +236,7 @@ makePrefixSequenceMatcher = function ( symbol, fallthrough ) {
 
     allowWhitespace( tokenizer );
 
-    expression = getExpression( tokenizer );
+    expression = getTypeOf( tokenizer );
     if ( !expression ) {
       fail( tokenizer, 'an expression' );
     }
@@ -278,34 +278,39 @@ makeInfixSequenceMatcher = function ( symbol, fallthrough ) {
       return null;
     }
 
-    start = tokenizer.pos;
+    // Loop to handle left-recursion in a case like `a * b * c` and produce
+    // left association, i.e. `(a * b) * c`.
+    while (true) {
+      start = tokenizer.pos;
 
-    allowWhitespace( tokenizer );
+      allowWhitespace( tokenizer );
 
-    if ( !getStringMatch( tokenizer, symbol ) ) {
-      tokenizer.pos = start;
-      return left;
+      if ( !getStringMatch( tokenizer, symbol ) ) {
+        tokenizer.pos = start;
+        return left;
+      }
+
+      // special case - in operator must not be followed by [a-zA-Z_$0-9]
+      if ( symbol === 'in' && /[a-zA-Z_$0-9]/.test( tokenizer.remaining().charAt( 0 ) ) ) {
+        tokenizer.pos = start;
+        return left;
+      }
+
+      allowWhitespace( tokenizer );
+
+      // right operand must consist of only lower-precedence operators
+      right = fallthrough( tokenizer );
+      if ( !right ) {
+        tokenizer.pos = start;
+        return left;
+      }
+
+      left = {
+        t: RExpr.INFIX_OPERATOR,
+        s: symbol,
+        o: [ left, right ]
+      };
     }
-
-    // special case - in operator must not be followed by [a-zA-Z_$0-9]
-    if ( symbol === 'in' && /[a-zA-Z_$0-9]/.test( tokenizer.remaining().charAt( 0 ) ) ) {
-      tokenizer.pos = start;
-      return left;
-    }
-
-    allowWhitespace( tokenizer );
-
-    right = getExpression( tokenizer );
-    if ( !right ) {
-      tokenizer.pos = start;
-      return left;
-    }
-
-    return {
-      t: RExpr.INFIX_OPERATOR,
-      s: symbol,
-      o: [ left, right ]
-    };
   };
 };
 

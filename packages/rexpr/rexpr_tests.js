@@ -87,7 +87,6 @@ Tinytest.add("rexpr - parse", function (test) {
                            n: 'C' }] }]
              });
 
-  // XXX fails because order-of-operations code in parser is broken!
   test.equal(RExpr.parse('A * B + C'),
              { t: RExpr.INFIX_OPERATOR,
                s: '+',
@@ -101,7 +100,6 @@ Tinytest.add("rexpr - parse", function (test) {
                      n: 'C' }]
              });
 
-  // XXX fails because order-of-operations code in parser is broken!
   test.equal(RExpr.parse('A === B || C < D && ! E'),
              { t: RExpr.INFIX_OPERATOR,
                s: '||',
@@ -125,6 +123,53 @@ Tinytest.add("rexpr - parse", function (test) {
                                 n: 'E' } }] }]
              });
 
+
+  test.equal(RExpr.parse('typeof a + b'),
+             { t: RExpr.INFIX_OPERATOR,
+               s: '+',
+               o: [{ t: RExpr.PREFIX_OPERATOR,
+                     s: 'typeof',
+                     o: { t: RExpr.REFERENCE,
+                          n: 'a' }},
+                   { t: RExpr.REFERENCE,
+                     n: 'b' }] });
+
+  test.equal(RExpr.parse('typeof typeof a'),
+             { t: RExpr.PREFIX_OPERATOR,
+               s: 'typeof',
+               o: { t: RExpr.PREFIX_OPERATOR,
+                    s: 'typeof',
+                    o: { t: RExpr.REFERENCE,
+                         n: 'a' }}});
+
+  test.equal(RExpr.parse('typeof + a'),
+             { t: RExpr.PREFIX_OPERATOR,
+               s: 'typeof',
+               o: { t: RExpr.PREFIX_OPERATOR,
+                    s: '+',
+                    o: { t: RExpr.REFERENCE,
+                         n: 'a' }}});
+
+  test.equal(RExpr.parse('+ typeof a'),
+             { t: RExpr.PREFIX_OPERATOR,
+               s: '+',
+               o: { t: RExpr.PREFIX_OPERATOR,
+                    s: 'typeof',
+                    o: { t: RExpr.REFERENCE,
+                         n: 'a' }}});
+
+  var ref = function (n) {
+    return { t: RExpr.REFERENCE,
+             n: n };
+  };
+
+  test.equal(RExpr.parse('a * b * c'),
+             { t: RExpr.INFIX_OPERATOR,
+               s: '*',
+               o: [{ t: RExpr.INFIX_OPERATOR,
+                     s: '*',
+                     o: [ref('a'), ref('b')]},
+                   ref('c')] });
 });
 
 Tinytest.add("rexpr - strings", function (test) {
