@@ -74,8 +74,13 @@ var compileValueSelector = function (valueSelector) {
     _.each(valueSelector, function (operand, operator) {
       if (!_.has(VALUE_OPERATORS, operator))
         throw new Error("Unrecognized operator: " + operator);
+      var options = valueSelector.$options;
+      // Special case for location operators
+      if (operator === "$near")
+        options = _.extend(options || {},
+                           { $maxDistance: valueSelector.$maxDistance });
       operatorFunctions.push(VALUE_OPERATORS[operator](
-        operand, valueSelector.$options));
+        operand, options));
     });
     return function (value) {
       return _.all(operatorFunctions, function (f) {
@@ -303,6 +308,24 @@ var VALUE_OPERATORS = {
     return function (value) {
       return !matcher(value);
     };
+  },
+
+  "$near": function (operand, options) {
+    var matcher = compileValueSelector(operand);
+    var distance = options.$maxDistance;
+    if (distance === undefined)
+      distance = -1;
+    return function (value) {
+      return distance
+    };
+  },
+
+  "$maxDistance": function () {
+    // $maxDistance is always considered my $near and is
+    // ignored if the one is not present
+    return function () {
+      return true;
+    }
   }
 };
 
