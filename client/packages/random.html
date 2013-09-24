@@ -3,8 +3,11 @@
 ## `random`
 
 The `random` package provides several functions for generating random
-numbers. It uses a Meteor-provided random number generator that does not depend
-on the browser's facilities.
+numbers. It uses a cryptographically strong pseudorandom number generator when
+possible, but falls back to a weaker random number generator when
+cryptographically strong randomness is not available (on older browsers or on
+servers that don't have enough entropy to seed the cryptographically strong
+generator).
 
 <dl class="callbacks">
 {{#dtdd "Random.id()"}}
@@ -25,10 +28,5 @@ Returns a random string of `n` hexadecimal digits.
 {{/dtdd}}
 </dl>
 
-{{#note}}
-In the current implementation, random values do not come from a
-cryptographically strong pseudorandom number generator. Future releases will
-improve this, particularly on the server.
-{{/note}}
 {{/better_markdown}}
 </template>
