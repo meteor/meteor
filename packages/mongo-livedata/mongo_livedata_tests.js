@@ -176,7 +176,12 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
 
   var cur = coll.find({run: run}, {sort: ["x"]});
   var total = 0;
-  cur.forEach(function (doc) {
+  var index = 0;
+  var context = {};
+  cur.forEach(function (doc, i, cursor) {
+    test.equal(i, index++);
+    test.isTrue(cursor === cur);
+    test.isTrue(context === this);
     total *= 10;
     if (Meteor.isServer) {
       // Verify that the callbacks from forEach run sequentially and that
@@ -190,13 +195,19 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
     total += doc.x;
     // verify the meteor environment is set up here
     coll2.insert({total:total});
-  });
+  }, context);
   test.equal(total, 14);
 
   cur.rewind();
-  test.equal(cur.map(function (doc) {
+  index = 0;
+  test.equal(cur.map(function (doc, i, cursor) {
+    // XXX we could theoretically make map run its iterations in parallel or
+    // something which would make this fail
+    test.equal(i, index++);
+    test.isTrue(cursor === cur);
+    test.isTrue(context === this);
     return doc.x * 2;
-  }), [2, 8]);
+  }, context), [2, 8]);
 
   test.equal(_.pluck(coll.find({run: run}, {sort: {x: -1}}).fetch(), "x"),
              [4, 1]);
