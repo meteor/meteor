@@ -1,5 +1,7 @@
 ## vNEXT
 
+* Better error when passing a string to {{#each}}. #722
+
 * Write dates to Mongo as ISODate rather than Integer; existing data can be
   converted by passing it through `new Date()`. #1228
 
