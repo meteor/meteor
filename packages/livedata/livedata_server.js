@@ -1018,7 +1018,7 @@ Server = function () {
       } catch (e) {
         // XXX print stack nicely
         Meteor._debug("Internal exception while processing message", msg,
-                      e.stack);
+                      e.message, e.stack);
       }
     });
 
