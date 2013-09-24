@@ -675,25 +675,31 @@ Template.api.cursor_fetch = {
 
 Template.api.cursor_foreach = {
   id: "foreach",
-  name: "<em>cursor</em>.forEach(callback)",
+  name: "<em>cursor</em>.forEach(callback, [thisArg])",
   locus: "Anywhere",
   descr: ["Call `callback` once for each matching document, sequentially and synchronously."],
   args: [
     {name: "callback",
      type: "Function",
-     descr: "Function to call."}
+     descr: "Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself."},
+    {name: "thisArg",
+     type: "Any",
+     descr: "An object which will be the value of `this` inside `callback`."}
   ]
 };
 
 Template.api.cursor_map = {
   id: "map",
-  name: "<em>cursor</em>.map(callback)",
+  name: "<em>cursor</em>.map(callback, [thisArg])",
   locus: "Anywhere",
   descr: ["Map callback over all matching documents.  Returns an Array."],
   args: [
     {name: "callback",
      type: "Function",
-     descr: "Function to call."}
+     descr: "Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself."},
+    {name: "thisArg",
+     type: "Any",
+     descr: "An object which will be the value of `this` inside `callback`."}
   ]
 };
 
