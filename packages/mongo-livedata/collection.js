@@ -366,9 +366,9 @@ _.each(["insert", "update", "remove"], function (name) {
       args[0] = _.extend({}, args[0]);
       if ('_id' in args[0]) {
         ret = args[0]._id;
-        if (!(typeof ret === 'string'
+        if (!ret || !(typeof ret === 'string'
               || ret instanceof Meteor.Collection.ObjectID))
-          throw new Error("Meteor requires document _id fields to be strings or ObjectIDs");
+          throw new Error("Meteor requires document _id fields to be non-empty strings or ObjectIDs");
       } else {
         ret = args[0]._id = self._makeNewID();
       }

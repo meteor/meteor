@@ -538,7 +538,7 @@ _.extend(SynchronousCursor.prototype, {
     var self = this;
     while (true) {
       var doc = self._synchronousNextObject().wait();
-      if (!doc || !doc._id) return null;
+      if (!doc || typeof doc._id === 'undefined') return null;
       doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
 
       if (!self._cursorDescription.options.tailable) {

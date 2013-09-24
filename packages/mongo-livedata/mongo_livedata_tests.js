@@ -968,6 +968,39 @@ testAsyncMulti('mongo-livedata - specified _id', [
   }
 ]);
 
+testAsyncMulti('mongo-livedata - empty string _id', [
+  function (test, expect) {
+    var self = this;
+    self.collectionName = Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', self.collectionName);
+      Meteor.subscribe('c-' + self.collectionName);
+    }
+    self.coll = new Meteor.Collection(self.collectionName);
+    try {
+      self.coll.insert({_id: "", f: "foo"});
+      test.fail("Insert with an empty _id should fail");
+    } catch (e) {
+      // ok
+    }
+    self.coll.insert({_id: "realid", f: "bar"}, expect(function (err, res) {
+      test.equal(res, "realid");
+    }));
+  },
+  function (test, expect) {
+    var self = this;
+    var docs = self.coll.find().fetch();
+    test.equal(docs, [{_id: "realid", f: "bar"}]);
+  },
+  function (test, expect) {
+    var self = this;
+    if (Meteor.isServer) {
+      self.coll._collection.insert({_id: "", f: "baz"});
+      test.equal(self.coll.find().fetch().length, 2);
+    }
+  }
+]);
+
 
 if (Meteor.isServer) {
 
