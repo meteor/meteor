@@ -1,5 +1,8 @@
 ## vNEXT
 
+* Pass an index and the cursor itself to the callbacks in `cursor.forEach` and
+  `cursor.map`, just like the corresponding `Array` methods. #63
+
 * Better error when passing a string to {{#each}}. #722
 
 * Write dates to Mongo as ISODate rather than Integer; existing data can be
