@@ -650,8 +650,8 @@ exports.run = function (context, options) {
             console.log("\nCheck for other processes listening on port " + mongoPort +
                         "\nor other meteors running in the same project.");
           if (!explanation && /GLIBC/i.test(stderr))
-            console.log("\nLooks like you are trying to run Meteor on old Linux " +
-                        "distribution. Meteor only supports Linux with glibc " +
+            console.log("\nLooks like you are trying to run Meteor on an old Linux " +
+                        "distribution. Meteor on Linux only supports Linux with glibc " +
                         "version 2.9 and above. Try upgrading your distribution " +
                         "to the latest version.");
           process.exit(1);
