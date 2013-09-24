@@ -161,7 +161,7 @@ make install
 # click 'changelog' under the current version, then 'release notes' in
 # the upper right.
 cd "$DIR/build"
-MONGO_VERSION="2.4.4"
+MONGO_VERSION="2.4.6"
 
 # We use Meteor fork since we added some changes to the building script.
 # Our patches allow us to link most of the libraries statically.

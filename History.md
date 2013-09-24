@@ -12,6 +12,10 @@
   0.6.5. (A bug prevented the 0.6.5 reimplementation of `register_extension`
   from working properly anyway.)
 
+* Build Linux binaries on an older Linux machine. Meteor now supports
+  running on Linux machines with glibc 2.9 or newer (Ubuntu 10.04+, RHEL
+  and CentOS 6+, Fedora 10+, Debian 6+).
+
 ## v0.6.5.1
 
 * Fix syntax errors on lines that end with a backslash. #1326
