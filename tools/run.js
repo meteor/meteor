@@ -115,7 +115,11 @@ var startProxy = function (outerPort, innerPort, callback) {
   // "caronte")
   var caronte = require('caronte');
 
-  var proxy = caronte.createProxyServer({});
+  var proxy = caronte.createProxyServer({
+    // agent is required to handle keep-alive, and caronte is a little buggy
+    // without it: https://github.com/nodejitsu/node-http-proxy/pull/488
+    agent: new http.Agent({maxSockets: 100})
+  });
 
   var server = http.createServer(function (req, res) {
     if (Status.crashing) {
