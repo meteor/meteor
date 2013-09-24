@@ -1876,7 +1876,7 @@ Tinytest.add("spark - leaderboard, " + idGeneration, function(test) {
   }));
   var idGen;
   if (idGeneration === 'STRING')
-    idGen = Random.id;
+    idGen = _.bind(Random.id, Random);
   else
     idGen = function () { return new LocalCollection._ObjectID(); };
 
