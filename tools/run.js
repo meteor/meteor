@@ -628,11 +628,15 @@ exports.run = function (context, options) {
         }
         restartServer();
       },
-      function (code, signal) { // On Mongo dead
+      function (code, signal, stderr) { // On Mongo dead
         if (Status.shuttingDown) {
           return;
         }
-        console.log("Unexpected mongo exit code " + code + ". Restarting.");
+
+        // Print only last 20 lines of stderr.
+        stderr = stderr.split('\n').slice(-20).join('\n');
+
+        console.log(stderr + "Unexpected mongo exit code " + code + ". Restarting.\n");
 
         // if mongo dies 3 times with less than 5 seconds between each,
         // declare it failed and die.
@@ -645,6 +649,11 @@ exports.run = function (context, options) {
           if (explanation === mongoExitCodes.EXIT_NET_ERROR)
             console.log("\nCheck for other processes listening on port " + mongoPort +
                         "\nor other meteors running in the same project.");
+          if (!explanation && /GLIBC/i.test(stderr))
+            console.log("\nLooks like you are trying to run Meteor on old Linux " +
+                        "distribution. Meteor only supports Linux with glibc " +
+                        "version 2.9 and above. Try upgrading your distribution " +
+                        "to the latest version.");
           process.exit(1);
         }
         if (mongoErrorTimer)
