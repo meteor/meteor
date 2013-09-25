@@ -74,13 +74,9 @@ var compileValueSelector = function (valueSelector) {
     _.each(valueSelector, function (operand, operator) {
       if (!_.has(VALUE_OPERATORS, operator))
         throw new Error("Unrecognized operator: " + operator);
-      var options = valueSelector.$options;
       // Special case for location operators
-      if (operator === "$near")
-        options = _.extend(options || {},
-                           { $maxDistance: valueSelector.$maxDistance });
       operatorFunctions.push(VALUE_OPERATORS[operator](
-        operand, options));
+        operand, valueSelector));
     });
     return function (value) {
       return _.all(operatorFunctions, function (f) {
@@ -260,7 +256,8 @@ var VALUE_OPERATORS = {
     };
   },
 
-  "$regex": function (operand, options) {
+  "$regex": function (operand, operators) {
+    var options = operators.$options;
     if (options !== undefined) {
       // Options passed in $options (even the empty string) always overrides
       // options in the RegExp object itself. (See also
@@ -310,22 +307,32 @@ var VALUE_OPERATORS = {
     };
   },
 
-  "$near": function (operand, options) {
+  "$near": function (operand, operators) {
+    function distance (a, b) {
+      var x = a[0] - b[0];
+      var y = a[1] - b[1];
+      return Math.sqrt(x * x + y * y);
+    }
+    // Makes sure we get 2 elements array and assume the first one to be x and
+    // the second one to y no matter what user passes.
+    // In case user passes { lon: x, lat: y } returns [x, y]
+    function pointToArray (point) {
+      var npoint = [];
+      _.each(point, function (xy) { npoint.push(xy); });
+      return npoint;
+    }
     var matcher = compileValueSelector(operand);
-    var distance = options.$maxDistance;
-    if (distance === undefined)
-      distance = -1;
+    var maxDistance = operators.$maxDistance;
+    var point = pointToArray(operand);
     return function (value) {
-      return distance
+      return maxDistance === undefined ? true :
+        distance(point, pointToArray(value)) <= maxDistance;
     };
   },
 
   "$maxDistance": function () {
-    // $maxDistance is always considered my $near and is
-    // ignored if the one is not present
-    return function () {
-      return true;
-    }
+    // evaluation happens in the $near operator
+    return function () { return true; }
   }
 };
 

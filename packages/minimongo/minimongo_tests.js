@@ -2273,6 +2273,7 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
   coll.insert({ rest: { loc: [-3, 3] } });
   coll.insert({ rest: { loc: [5, 5] } });
 
-  test.equal(coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 4 } }).count(), 3);
+  test.equal(coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 30 } }).count(), 3);
+  test.equal(coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 4 } }).count(), 1);
 });
 
