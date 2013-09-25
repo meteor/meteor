@@ -335,13 +335,87 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     // explictly enumerate options that minimongo supports
     if (options.upsert) mongoOpts.upsert = true;
     if (options.multi) mongoOpts.multi = true;
-    collection.update(replaceTypes(selector, replaceMeteorAtomWithMongo),
-                      replaceTypes(mod, replaceMeteorAtomWithMongo),
-                      mongoOpts, numberAffectedCallback(callback));
+
+    var mongoSelector = replaceTypes(selector, replaceMeteorAtomWithMongo);
+    var mongoMod = replaceTypes(mod, replaceMeteorAtomWithMongo);
+
+    var isModify = isModificationMod(mongoMod);
+
+    if (options.upsert &&
+        (isModify ? (! mongoSelector._id) : (! mongoMod._id)) &&
+        options.insertedId) {
+      mongoOpts.insertedId = options.insertedId;
+      simulateUpsertWithInsertedId(collection, mongoSelector, mongoMod,
+                                   isModify, mongoOpts, callback);
+    } else {
+      collection.update(mongoSelector, mongoMod, mongoOpts,
+                        numberAffectedCallback(callback));
+    }
   } catch (e) {
     write.committed();
     throw e;
   }
+};
+
+var isModificationMod = function (mod) {
+  for (var k in mod)
+    if (k.substr(0, 1) === '$')
+      return true;
+  return false;
+};
+
+var simulateUpsertWithInsertedId = function (collection, selector, mod,
+                                             isModify, options, callback) {
+  var insertedId = options.insertedId; // must exist
+
+  var mongoOpts = _.extend({}, options);
+  delete mongoOpts.insertedId;
+  delete mongoOpts.upsert;
+
+  var doUpdate = function () {
+    mongoOpts.upsert = false;
+    collection.update(selector, mod, mongoOpts,
+                      numberAffectedCallback(function (err, result) {
+                        if (err) {
+                          callback(err);
+                        } else if (result.numberAffected) {
+                          callback(null, result);
+                        } else {
+                          doConditionalInsert();
+                        }
+                      }));
+  };
+
+  var doConditionalInsert = function () {
+    mongoOpts.upsert = true;
+    var replacementWithId = _.extend(
+      replaceTypes({_id: insertedId}, replaceMeteorAtomWithMongo),
+      mod);
+    collection.update(selector, replacementWithId, mongoOpts,
+                      numberAffectedCallback(function (err, result) {
+                        if (err) {
+                          // XXX figure out if this is a
+                          // "cannot change _id of document" error, and
+                          // if so, try doUpdate() again, up to 3 times.
+                          // Otherwise, pass err to callback.
+                          Meteor._debug(err);
+                        } else {
+                          callback(null, _.extend(result,
+                                                  { insertedId: insertedId }));
+                        }
+                      }));
+  };
+
+  if (isModify) {
+    // XXX TODO
+  } else {
+    doUpdate();
+  }
+};
+
+var modifyDocument = function (doc, mod) {
+  // XXX use LocalCollection._modify
+  return mod;
 };
 
 _.each(["insert", "update", "remove"], function (method) {

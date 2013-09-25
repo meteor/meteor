@@ -374,6 +374,20 @@ _.each(["insert", "update", "remove"], function (name) {
       }
     } else {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
+
+      if (name === "update") {
+        var options = args[2];
+        if (options && options.upsert) {
+          // set `insertedId` if absent.  `insertedId` is a Meteor extension.
+          if (options.insertedId) {
+            if (!(typeof options.insertedId === 'string'
+                  || options.insertedId instanceof Meteor.Collection.ObjectID))
+              throw new Error("insertedId must be string or ObjectID");
+          } else {
+            options.insertedId = self._makeNewID();
+          }
+        }
+      }
     }
 
     var wrappedCallback;

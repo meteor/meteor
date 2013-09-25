@@ -901,8 +901,42 @@ if (Meteor.isServer) {
     _.each(handlesToStop, function (h) {h.stop();});
     onComplete();
   });
-}
 
+  Tinytest.addAsync("mongo-livedata - upsert, " + idGeneration, function (test, onComplete) {
+    var run = test.runId();
+    var coll = new Meteor.Collection("livedata_upsert_collection_"+run, collectionOptions);
+
+    var result1 = coll.update({foo: 'bar'}, {foo: 'bar'}, {upsert: true});
+    test.equal(result1.numberAffected, 1);
+    test.isTrue(result1.insertedId);
+    test.equal(coll.find().fetch(), [{foo: 'bar', _id: result1.insertedId}]);
+
+    var result2 = coll.update({foo: 'bar'}, {foo: 'baz'}, {upsert: true});
+    test.equal(result2.numberAffected, 1);
+    test.isFalse(result2.insertedId);
+    test.equal(coll.find().fetch(), [{foo: 'baz', _id: result1.insertedId}]);
+
+    coll.remove({});
+
+    // Test values that require transformation to go into Mongo:
+
+    var t1 = new Meteor.Collection.ObjectID();
+    var t2 = new Meteor.Collection.ObjectID();
+    var result3 = coll.update({foo: t1}, {foo: t1}, {upsert: true});
+    test.equal(result3.numberAffected, 1);
+    test.isTrue(result3.insertedId);
+    test.equal(coll.find().fetch(), [{foo: t1, _id: result3.insertedId}]);
+
+    var result4 = coll.update({foo: t1}, {foo: t2}, {upsert: true});
+    test.equal(result2.numberAffected, 1);
+    test.isFalse(result2.insertedId);
+    test.equal(coll.find().fetch(), [{foo: t2, _id: result3.insertedId}]);
+
+
+    onComplete();
+  });
+
+} // end Meteor.isServer
 
 });  // end idGeneration parametrization
 
