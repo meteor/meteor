@@ -193,7 +193,7 @@ _.extend(exports, {
       var oldNodeVersion;
       try {
         oldNodeVersion = fs.readFileSync(
-          path.join(packageNpmDir, 'node_modules', '.node_version'));
+          path.join(packageNpmDir, 'node_modules', '.node_version'), 'utf8');
       } catch (e) {
         if (e.code !== 'ENOENT')
           throw e;
