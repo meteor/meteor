@@ -13,3 +13,17 @@ Tinytest.add('random', function (test) {
   test.equal(random.id(), "shxDnjWWmnKPEoLhM");
   test.equal(random.id(), "6QTjB8C5SEqhmz4ni");
 });
+
+// node crypto and window.crypto.getRandomValues() don't let us specify a seed,
+// but at least test that the output is in the right format.
+Tinytest.add('random - format', function (test) {
+  var idLen = 17;
+  test.equal(Random.id().length, idLen);
+  var numDigits = 9;
+  var hexStr = Random.hexString(numDigits);
+  test.equal(hexStr.length, numDigits);
+  parseInt(hexStr, 16); // should not throw
+  var frac = Random.fraction();
+  test.isTrue(frac < 1.0);
+  test.isTrue(frac >= 0.0);
+});
