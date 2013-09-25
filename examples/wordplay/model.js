@@ -106,7 +106,8 @@ Meteor.methods({
     // that the word is at least three chars, isn't already used, and is
     // possible to make on the board.
     if (game.clock === 0
-        || word.length < 3
+        || !word.word
+        || word.word.length < 3
         || Words.find({game_id: word.game_id, word: word.word}).count() > 1
         || paths_for_word(game.board, word.word).length === 0) {
       Words.update(word._id, {$set: {score: 0, state: 'bad'}});
@@ -129,8 +130,8 @@ Meteor.methods({
 if (Meteor.isServer) {
   DICTIONARY = {};
   _.each(Assets.getText("enable2k.txt").split("\n"), function (line) {
-    // Skip comment lines
-    if (line.indexOf("//") !== 0) {
+    // Skip blanks and comment lines
+    if (line && line.indexOf("//") !== 0) {
       DICTIONARY[line] = true;
     }
   });
