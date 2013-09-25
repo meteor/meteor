@@ -376,6 +376,20 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
 
   var tries = NUM_OPTIMISTIC_TRIES;
 
+  // STRATEGY:  First try doing a plain update.  If it affected 0 documents,
+  // then without affecting the database, we know we should probably do an
+  // insert.  We then do a *conditional* insert that will fail in the case
+  // of a race condition.  This conditional insert is actually an
+  // upsert-replace with an _id, which will never successfully update an
+  // existing document.  If this upsert fails with an error saying it
+  // couldn't change an existing _id, then we know an intervening write has
+  // caused the query to match something.  We go back to step one and repeat.
+  // Like all "optimistic write" schemes, we rely on the fact that it's
+  // unlikely our writes will continue to be interfered with under normal
+  // circumstances (though sufficiently heavy contention with writers
+  // disagreeing on the existence of an object will cause writes to fail
+  // in theory).
+
   var doUpdate = function () {
     tries--;
     if (! tries) {
