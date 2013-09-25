@@ -201,8 +201,14 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
   test.equal(_.pluck(coll.find({run: run}, {sort: {x: -1}}).fetch(), "x"),
              [4, 1]);
 
+  expectObserve('', function () {
+    var count = coll.update({run: run, x: -1}, {$inc: {x: 2}}, {multi: true});
+    test.equal(count, 0);
+  });
+
   expectObserve('c(3,0,1)c(6,1,4)', function () {
-    coll.update({run: run}, {$inc: {x: 2}}, {multi: true});
+    var count = coll.update({run: run}, {$inc: {x: 2}}, {multi: true});
+    test.equal(count, 2);
     test.equal(_.pluck(coll.find({run: run}, {sort: {x: -1}}).fetch(), "x"),
                [6, 3]);
   });
@@ -215,12 +221,19 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
   });
 
   expectObserve('r(13,1)', function () {
-    coll.remove({run: run, x: {$gt: 10}});
+    var count = coll.remove({run: run, x: {$gt: 10}});
+    test.equal(count, 1);
     test.equal(coll.find({run: run}).count(), 1);
   });
 
   expectObserve('r(6,0)', function () {
     coll.remove({run: run});
+    test.equal(coll.find({run: run}).count(), 0);
+  });
+
+  expectObserve('', function () {
+    var count = coll.remove({run: run});
+    test.equal(count, 0);
     test.equal(coll.find({run: run}).count(), 0);
   });
 
