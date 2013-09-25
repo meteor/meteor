@@ -672,7 +672,7 @@ LocalCollection._compileSelector = function (selector, cursor) {
 // first object comes first in order, 1 if the second object comes
 // first, or 0 if neither object comes before the other.
 
-LocalCollection._compileSort = function (spec) {
+LocalCollection._compileSort = function (spec, cursor) {
   var sortSpecParts = [];
 
   if (spec instanceof Array) {
@@ -700,8 +700,14 @@ LocalCollection._compileSort = function (spec) {
     throw Error("Bad sort specification: ", JSON.stringify(spec));
   }
 
+  // If there are no sorting rules specified, try to sort on _distance hidden
+  // fields on cursor we may acquire if query involved $near operator.
   if (sortSpecParts.length === 0)
-    return function () {return 0;};
+    return function (a, b) {
+      if (!cursor || !cursor._distance)
+        return 0;
+      return cursor._distance[a._id] - cursor._distance[b._id];
+    };
 
   // reduceValue takes in all the possible values for the sort key along various
   // branches, and returns the min or max value (according to the bool

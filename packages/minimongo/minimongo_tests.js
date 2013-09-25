@@ -2275,5 +2275,17 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
 
   test.equal(coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 30 } }).count(), 3);
   test.equal(coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 4 } }).count(), 1);
+  var points = coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 6 } }).fetch();
+  _.each(points, function (point, i, points) {
+    test.isTrue(!i || distance([0, 0], point.rest.loc) >= distance([0, 0], points[i - 1].rest.loc));
+  });
+
+  function distance(a, b) {
+    var x = a[0] - b[0];
+    var y = a[1] - b[1];
+    return Math.sqrt(x * x + y * y);
+  }
+
+  // XXX more tests!
 });
 
