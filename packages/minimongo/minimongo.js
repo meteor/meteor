@@ -473,9 +473,12 @@ LocalCollection.prototype.insert = function (doc, callback) {
       LocalCollection._recomputeResults(self.queries[qid]);
   });
   self._observeQueue.drain();
-  // Defer in case the callback returns on a future; gives the caller time to
-  // wait on the future.
-  if (callback) Meteor.defer(function () { callback(null, doc._id); });
+  // Defer because the caller likely doesn't expect the callback to be run
+  // immediately.
+  if (callback)
+    Meteor.defer(function () {
+      callback(null, doc._id);
+    });
   return doc._id;
 };
 
@@ -533,9 +536,11 @@ LocalCollection.prototype.remove = function (selector, callback) {
       LocalCollection._recomputeResults(query);
   });
   self._observeQueue.drain();
-  // Defer in case the callback returns on a future; gives the caller time to
-  // wait on the future.
-  if (callback) Meteor.defer(callback);
+  if (callback)
+    Meteor.defer(function () {
+      callback(null, remove.length);
+    });
+  return remove.length;
 };
 
 // XXX atomicity: if multi is true, and one modification fails, do
@@ -565,12 +570,15 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   });
   var recomputeQids = {};
 
+  var updateCount = 0;
+
   for (var id in self.docs) {
     var doc = self.docs[id];
     if (selector_f(doc)) {
       // XXX Should we save the original even if mod ends up being a no-op?
       self._saveOriginal(id, doc);
       self._modifyAndNotify(doc, mod, recomputeQids);
+      ++updateCount;
       if (!options.multi)
         break;
     }
@@ -583,9 +591,11 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
                                         qidToOriginalResults[qid]);
   });
   self._observeQueue.drain();
-  // Defer in case the callback returns on a future; gives the caller time to
-  // wait on the future.
-  if (callback) Meteor.defer(callback);
+  if (callback)
+    Meteor.defer(function () {
+      callback(null, updateCount);
+    });
+  return updateCount;
 };
 
 LocalCollection.prototype._modifyAndNotify = function (

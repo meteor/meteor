@@ -403,7 +403,9 @@ _.each(["insert", "update", "remove"], function (name) {
       // and propagate any exception.
       args.push(wrappedCallback);
       try {
-        self._collection[name].apply(self._collection, args);
+        var result = self._collection[name].apply(self._collection, args);
+        if (ret === undefined)
+          ret = result;
       } catch (e) {
         if (callback) {
           callback(e);
