@@ -93,13 +93,15 @@ getTokenLifetimeMs = function () {
 };
 
 Accounts._tokenExpiration = function (when) {
-  return new Date(when.getTime() + getTokenLifetimeMs());
+  // We pass when through the Date constructor for backwards compatibility;
+  // `when` used to be a number.
+  return new Date((new Date(when)).getTime() + getTokenLifetimeMs());
 };
 
 Accounts._tokenExpiresSoon = function (when) {
   var minLifetimeMs = .1 * getTokenLifetimeMs();
   var minLifetimeCapMs = MIN_TOKEN_LIFETIME_CAP_SECS * 1000;
   if (minLifetimeMs > minLifetimeCapMs)
-    minLifetimeMs = minLifetimeCapMs
+    minLifetimeMs = minLifetimeCapMs;
   return new Date() > (new Date(when) - minLifetimeMs);
 };

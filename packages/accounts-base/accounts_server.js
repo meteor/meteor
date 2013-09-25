@@ -206,11 +206,17 @@ var expireTokens = Accounts._expireTokens = function (oldestValidDate) {
     (new Date(new Date() - tokenLifetimeMs));
 
   Meteor.users.update({
-    "services.resume.loginTokens.when": { $lt: oldestValidDate }
+    $or: [
+      { "services.resume.loginTokens.when": { $lt: oldestValidDate } },
+      { "services.resume.loginTokens.when": { $lt: +oldestValidDate } }
+    ]
   }, {
     $pull: {
       "services.resume.loginTokens": {
-        when: { $lt: oldestValidDate }
+        $or: [
+          { when: { $lt: oldestValidDate } },
+          { when: { $lt: +oldestValidDate } }
+        ]
       }
     }
   }, { multi: true });
