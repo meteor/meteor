@@ -89,7 +89,7 @@ Tinytest.add("minimongo - basics", function (test) {
   test.length(c.find({type: "cryptographer"}).fetch(), 2);
 
   count = c.update({name: "snookums"}, {$set: {type: "cryptographer"}});
-  test.equal(count, 1);
+  test.equal(count, { numberAffected: 1 });
   test.equal(c.find().count(), 4);
   test.equal(c.find({type: "kitten"}).count(), 1);
   test.equal(c.find({type: "cryptographer"}).count(), 3);
@@ -105,11 +105,11 @@ Tinytest.add("minimongo - basics", function (test) {
   c.remove({_id: false});
   c.remove({_id: undefined});
   count = c.remove();
-  test.equal(count, 0);
+  test.equal(count, { numberAffected: 0 });
   test.equal(c.find().count(), 4);
 
   count = c.remove({});
-  test.equal(count, 4);
+  test.equal(count, { numberAffected: 4 });
   test.equal(c.find().count(), 0);
 
   c.insert({_id: 1, name: "strawberry", tags: ["fruit", "red", "squishy"]});
@@ -2016,7 +2016,7 @@ Tinytest.add("minimongo - saveOriginals", function (test) {
   c.update('bar', {$set: {k: 7}});  // update same doc twice
 
   // Verify returned count is correct
-  test.equal(count, 2);
+  test.equal(count, { numberAffected: 2 });
 
   // Verify the originals.
   var originals = c.retrieveOriginals();

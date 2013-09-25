@@ -536,11 +536,12 @@ LocalCollection.prototype.remove = function (selector, callback) {
       LocalCollection._recomputeResults(query);
   });
   self._observeQueue.drain();
+  var result = { numberAffected: remove.length };
   if (callback)
     Meteor.defer(function () {
-      callback(null, remove.length);
+      callback(null, result);
     });
-  return remove.length;
+  return result;
 };
 
 // XXX atomicity: if multi is true, and one modification fails, do
@@ -591,11 +592,12 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
                                         qidToOriginalResults[qid]);
   });
   self._observeQueue.drain();
+  var result = { numberAffected: updateCount };
   if (callback)
     Meteor.defer(function () {
-      callback(null, updateCount);
+      callback(null, result);
     });
-  return updateCount;
+  return result;
 };
 
 LocalCollection.prototype._modifyAndNotify = function (
