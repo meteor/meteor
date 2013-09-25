@@ -78,9 +78,9 @@ var compileValueSelector = function (valueSelector, selector, cursor) {
       operatorFunctions.push(VALUE_OPERATORS[operator](
         operand, valueSelector, cursor));
     });
-    return function (value) {
+    return function (value, doc) {
       return _.all(operatorFunctions, function (f) {
-        return f(value);
+        return f(value, doc);
       });
     };
   }
@@ -99,12 +99,11 @@ var LOGICAL_OPERATORS = {
   "$and": function(subSelector, operators, cursor) {
     if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
-    var subSelectorFunctions = _.map(
-      subSelector, function (selector) {
-        return compileDocumentSelector(selector, cursor); });
-    return function (doc) {
+    var subSelectorFunctions = _.map(subSelector, function (selector) {
+      return compileDocumentSelector(selector, cursor); });
+    return function (doc, wholeDoc) {
       return _.all(subSelectorFunctions, function (f) {
-        return f(doc);
+        return f(doc, wholeDoc);
       });
     };
   },
@@ -112,12 +111,11 @@ var LOGICAL_OPERATORS = {
   "$or": function(subSelector, operators, cursor) {
     if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
-    var subSelectorFunctions = _.map(
-      subSelector, function (selector) {
-        return compileDocumentSelector(selector, cursor); });
-    return function (doc) {
+    var subSelectorFunctions = _.map(subSelector, function (selector) {
+      return compileDocumentSelector(selector, cursor); });
+    return function (doc, wholeDoc) {
       return _.any(subSelectorFunctions, function (f) {
-        return f(doc);
+        return f(doc, wholeDoc);
       });
     };
   },
@@ -125,12 +123,11 @@ var LOGICAL_OPERATORS = {
   "$nor": function(subSelector, operators, cursor) {
     if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
-    var subSelectorFunctions = _.map(
-      subSelector, function (selector) {
-        return compileDocumentSelector(selector, cursor); });
-    return function (doc) {
+    var subSelectorFunctions = _.map(subSelector, function (selector) {
+      return compileDocumentSelector(selector, cursor); });
+    return function (doc, wholeDoc) {
       return _.all(subSelectorFunctions, function (f) {
-        return !f(doc);
+        return !f(doc, wholeDoc);
       });
     };
   },
@@ -223,11 +220,11 @@ var VALUE_OPERATORS = {
     if (!isArray(operand))
       throw new Error("Argument to $nin must be array");
     var inFunction = VALUE_OPERATORS.$in(operand);
-    return function (value) {
+    return function (value, doc) {
       // Field doesn't exist, so it's not-in operand
       if (value === undefined)
         return true;
-      return !inFunction(value);
+      return !inFunction(value, doc);
     };
   },
 
@@ -301,19 +298,19 @@ var VALUE_OPERATORS = {
 
   "$elemMatch": function (operand, selector, cursor) {
     var matcher = compileDocumentSelector(operand, cursor);
-    return function (value) {
+    return function (value, doc) {
       if (!isArray(value))
         return false;
       return _.any(value, function (x) {
-        return matcher(x);
+        return matcher(x, doc);
       });
     };
   },
 
-  "$not": function (operand) {
-    var matcher = compileValueSelector(operand);
-    return function (value) {
-      return !matcher(value);
+  "$not": function (operand, operators, cursor) {
+    var matcher = compileValueSelector(operand, operators, cursor);
+    return function (value, doc) {
+      return !matcher(value, doc);
     };
   },
 
@@ -332,14 +329,15 @@ var VALUE_OPERATORS = {
       _.each(point, function (xy) { npoint.push(xy); });
       return npoint;
     }
-    var matcher = compileValueSelector(operand);
     var maxDistance = operators.$maxDistance;
     var point = pointToArray(operand);
-    return function (value) {
+    return function (value, doc) {
       var dist = distance(point, pointToArray(value), cursor._2dMode);
       // Used later in sorting by distance, since $near queries are sorted by
       // distance from closest to farthest.
-      cursor._distance[value._id] = dist;
+      if (!cursor._distance)
+        cursor._distance = {};
+      cursor._distance[doc._id] = dist;
       return maxDistance === undefined ? true : dist <= maxDistance;
     };
   },
@@ -594,7 +592,7 @@ var compileDocumentSelector = function (docSelector, cursor) {
       var lookUpByIndex = LocalCollection._makeLookupFunction(key);
       var valueSelectorFunc =
         compileValueSelector(subSelector, docSelector, cursor);
-      perKeySelectors.push(function (doc) {
+      perKeySelectors.push(function (doc, wholeDoc) {
         var branchValues = lookUpByIndex(doc);
         // We apply the selector to each "branched" value and return true if any
         // match. However, for "negative" selectors like $ne or $not we actually
@@ -615,15 +613,19 @@ var compileDocumentSelector = function (docSelector, cursor) {
                         (subSelector.$not || subSelector.$ne ||
                          subSelector.$nin))
               ? _.all : _.any;
-        return combiner(branchValues, valueSelectorFunc);
+        return combiner(branchValues, function (val) {
+          return valueSelectorFunc(val, wholeDoc);
+        });
       });
     }
   });
 
 
-  return function (doc) {
+  return function (doc, wholeDoc) {
+    if (wholeDoc === undefined)
+      wholeDoc = doc;
     return _.all(perKeySelectors, function (f) {
-      return f(doc);
+      return f(doc, wholeDoc);
     });
   };
 };
