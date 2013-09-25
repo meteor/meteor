@@ -364,41 +364,71 @@ var isModificationMod = function (mod) {
   return false;
 };
 
+var NUM_OPTIMISTIC_TRIES = 3;
+
 var simulateUpsertWithInsertedId = function (collection, selector, mod,
                                              isModify, options, callback) {
   var insertedId = options.insertedId; // must exist
 
-  var mongoOpts = _.extend({}, options);
-  delete mongoOpts.insertedId;
-  delete mongoOpts.upsert;
+  var mongoOptsForUpdate = _.extend({}, options);
+  delete mongoOptsForUpdate.insertedId;
+  delete mongoOptsForUpdate.upsert;
+
+  var tries = NUM_OPTIMISTIC_TRIES;
 
   var doUpdate = function () {
-    mongoOpts.upsert = false;
-    collection.update(selector, mod, mongoOpts,
-                      numberAffectedCallback(function (err, result) {
-                        if (err) {
-                          callback(err);
-                        } else if (result.numberAffected) {
-                          callback(null, result);
-                        } else {
-                          doConditionalInsert();
-                        }
-                      }));
+    tries--;
+    if (! tries) {
+      callback(new Error("Upsert failed after " + NUM_OPTIMISTIC_TRIES + " tries."));
+    } else {
+      collection.update(selector, mod, mongoOptsForUpdate,
+                        numberAffectedCallback(function (err, result) {
+                          if (err) {
+                            callback(err);
+                          } else if (result.numberAffected) {
+                            callback(null, result);
+                          } else {
+                            doConditionalInsert();
+                          }
+                        }));
+    }
   };
 
+  var newDoc;
+  // Run this code up front so that it fails fast if someone uses
+  // a Mongo update operator we don't support.
+  if (isModify) {
+    var selectorDoc = {};
+    for (var k in selector)
+      if (k.substr(0, 1) !== '$')
+        selectorDoc[k] = selector[k];
+    // We've already run replaceTypes/replaceMeteorAtomWithMongo on
+    // selector and mod.  We assume it doesn't matter, as far as
+    // the behavior of modifiers is concerned, whether `_modify`
+    // is run on EJSON or on mongo-converted EJSON.
+    LocalCollection._modify(selectorDoc, mod, true);
+    newDoc = selectorDoc;
+  } else {
+    newDoc = mod;
+  }
+
+  var mongoOptsForInsert = _.extend({}, options);
+  delete mongoOptsForUpdate.insertedId;
+  mongoOptsForInsert.upsert = true;
+  delete mongoOptsForInsert.multi;
+
   var doConditionalInsert = function () {
-    mongoOpts.upsert = true;
     var replacementWithId = _.extend(
       replaceTypes({_id: insertedId}, replaceMeteorAtomWithMongo),
-      mod);
-    collection.update(selector, replacementWithId, mongoOpts,
+      newDoc);
+    collection.update(selector, replacementWithId, mongoOptsForInsert,
                       numberAffectedCallback(function (err, result) {
                         if (err) {
                           // XXX figure out if this is a
                           // "cannot change _id of document" error, and
                           // if so, try doUpdate() again, up to 3 times.
-                          // Otherwise, pass err to callback.
                           Meteor._debug(err);
+                          callback(err);
                         } else {
                           callback(null, _.extend(result,
                                                   { insertedId: insertedId }));
@@ -406,16 +436,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
                       }));
   };
 
-  if (isModify) {
-    // XXX TODO
-  } else {
-    doUpdate();
-  }
-};
-
-var modifyDocument = function (doc, mod) {
-  // XXX use LocalCollection._modify
-  return mod;
+  doUpdate();
 };
 
 _.each(["insert", "update", "remove"], function (method) {

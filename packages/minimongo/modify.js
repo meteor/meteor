@@ -5,7 +5,7 @@
 //
 // XXX atomicity: if one modification fails, do we roll back the whole
 // change?
-LocalCollection._modify = function (doc, mod) {
+LocalCollection._modify = function (doc, mod, onInsert) {
   var is_modifier = false;
   for (var k in mod) {
     // IE7 doesn't support indexing into strings (eg, k[0]), so use substr.
@@ -35,6 +35,8 @@ LocalCollection._modify = function (doc, mod) {
 
     for (var op in mod) {
       var mod_func = LocalCollection._modifiers[op];
+      if (onInsert && op === '$setOnInsert')
+        mod_func = LocalCollection._modifiers['$set'];
       if (!mod_func)
         throw Error("Invalid modifier specified " + op);
       for (var keypath in mod[op]) {
