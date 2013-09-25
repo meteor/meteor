@@ -186,6 +186,26 @@ _.extend(exports, {
       throw new Error(
         "Corrupted .npm directory -- can't find npm-shrinkwrap.json in " + packageNpmDir);
 
+    // We need to rebuild all node modules when the Node version changes, in
+    // case there are some binary ones. Technically this is racey, but it
+    // shouldn't fail very often.
+    if (fs.existsSync(path.join(packageNpmDir, 'node_modules'))) {
+      var oldNodeVersion;
+      try {
+        oldNodeVersion = fs.readFileSync(
+          path.join(packageNpmDir, 'node_modules', '.node_version'));
+      } catch (e) {
+        if (e.code !== 'ENOENT')
+          throw e;
+        // Use the Node version from the last release where we didn't drop this
+        // file.
+        oldNodeVersion = 'v0.8.24';
+      }
+
+      if (oldNodeVersion !== process.version)
+        files.rm_recursive(path.join(packageNpmDir, 'node_modules'));
+    }
+
     var installedDependencies = self._installedDependencies(packageNpmDir);
 
     // If we already have the right things installed, life is good.
@@ -276,6 +296,7 @@ _.extend(exports, {
     fs.unlinkSync(path.join(newPackageNpmDir, 'package.json'));
 
     self._createReadme(newPackageNpmDir);
+    self._createNodeVersion(newPackageNpmDir);
     files.renameDirAlmostAtomically(newPackageNpmDir, packageNpmDir);
   },
 
@@ -290,6 +311,12 @@ _.extend(exports, {
         + "You should NOT check in the node_modules directory that Meteor automatically\n"
         + "creates; if you are using git, the .gitignore file tells git to ignore it.\n"
     );
+  },
+
+  _createNodeVersion: function(newPackageNpmDir) {
+    fs.writeFileSync(
+      path.join(newPackageNpmDir, 'node_modules', '.node_version'),
+      process.version);
   },
 
   // Returns object with keys 'stdout', 'stderr', and 'success' (true
