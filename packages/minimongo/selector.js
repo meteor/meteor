@@ -145,6 +145,13 @@ var LOGICAL_OPERATORS = {
   }
 };
 
+// Each value operator is a function with args:
+//  - operand - Anything
+//  - operators - Object - operators on the same level (neighbours)
+//  - cursor - Object - original cursor
+// returns a function with args:
+//  - value - a value the operator is tested against
+//  - doc - the whole document tested in this query
 var VALUE_OPERATORS = {
   "$in": function (operand) {
     if (!isArray(operand))
