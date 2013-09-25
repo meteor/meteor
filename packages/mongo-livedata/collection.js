@@ -378,9 +378,15 @@ _.each(["insert", "update", "remove"], function (name) {
 
     var wrappedCallback;
     if (callback) {
-      wrappedCallback = function (error, result) {
-        callback(error, !error && ret);
-      };
+      if (name === "insert") {
+        // On inserts, always return the id that we generated.
+        wrappedCallback = function (error, result) {
+          callback(error, !error && ret);
+        };
+      } else {
+        // For updates and removes, return whatever the collection returned.
+        wrappedCallback = callback;
+      }
     }
 
     if (self._connection && self._connection !== Meteor.server) {
@@ -403,7 +409,12 @@ _.each(["insert", "update", "remove"], function (name) {
       // and propagate any exception.
       args.push(wrappedCallback);
       try {
-        self._collection[name].apply(self._collection, args);
+        var queryRet = self._collection[name].apply(self._collection, args);
+        // On updates and removes, return whatever the collection returned; on
+        // inserts, always return the id that we generated. If the user provided
+        // a callback, then we expect queryRet to be undefined.
+        if (name !== "insert")
+          ret = queryRet;
       } catch (e) {
         if (callback) {
           callback(e);

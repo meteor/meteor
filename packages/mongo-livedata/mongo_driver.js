@@ -257,6 +257,16 @@ MongoConnection.prototype._refresh = function (collectionName, selector) {
   }
 };
 
+var numberAffectedCallback = function (callback) {
+  return Meteor.bindEnvironment(function (err, numberAffected) {
+    callback && callback(err, ! err && {
+      numberAffected: numberAffected
+    });
+  }, function (err) {
+    Meteor._debug("Error in Mongo write:", err.stack);
+  });
+};
+
 MongoConnection.prototype._remove = function (collection_name, selector,
                                               callback) {
   var self = this;
@@ -279,7 +289,7 @@ MongoConnection.prototype._remove = function (collection_name, selector,
   try {
     var collection = self._getCollection(collection_name);
     collection.remove(replaceTypes(selector, replaceMeteorAtomWithMongo),
-                      {safe: true}, callback);
+                      {safe: true}, numberAffectedCallback(callback));
   } catch (e) {
     write.committed();
     throw e;
@@ -327,7 +337,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     if (options.multi) mongoOpts.multi = true;
     collection.update(replaceTypes(selector, replaceMeteorAtomWithMongo),
                       replaceTypes(mod, replaceMeteorAtomWithMongo),
-                      mongoOpts, callback);
+                      mongoOpts, numberAffectedCallback(callback));
   } catch (e) {
     write.committed();
     throw e;

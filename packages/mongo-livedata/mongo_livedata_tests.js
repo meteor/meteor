@@ -801,6 +801,39 @@ testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, 
 ]);
 
 if (Meteor.isServer) {
+  Tinytest.addAsync("mongo-livedata - update return values, " + idGeneration, function (test, onComplete) {
+    var run = test.runId();
+    var coll = new Meteor.Collection("livedata_update_result_"+run, collectionOptions);
+
+    coll.insert({ foo: "bar" });
+    coll.insert({ foo: "baz" });
+    test.equal(coll.update({}, { $set: { foo: "qux" } }, { multi: true }), {
+      numberAffected: 2
+    });
+    coll.update({}, { $set: { foo: "quux" } }, { multi: true }, function (err, result) {
+      test.isFalse(err);
+      test.equal(result, { numberAffected: 2 });
+      onComplete();
+    });
+  });
+
+  Tinytest.addAsync("mongo-livedata - remove return values, " + idGeneration, function (test, onComplete) {
+    var run = test.runId();
+    var coll = new Meteor.Collection("livedata_update_result_"+run, collectionOptions);
+
+    coll.insert({ foo: "bar" });
+    coll.insert({ foo: "baz" });
+    test.equal(coll.remove({}), { numberAffected: 2 });
+    coll.insert({ foo: "bar" });
+    coll.insert({ foo: "baz" });
+    coll.remove({}, function (err, result) {
+      test.isFalse(err);
+      test.equal(result, { numberAffected: 2 });
+      onComplete();
+    });
+  });
+
+
   Tinytest.addAsync("mongo-livedata - id-based invalidation, " + idGeneration, function (test, onComplete) {
     var run = test.runId();
     var coll = new Meteor.Collection("livedata_invalidation_collection_"+run, collectionOptions);
