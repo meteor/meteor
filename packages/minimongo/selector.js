@@ -96,7 +96,7 @@ var compileValueSelector = function (valueSelector, selector, cursor) {
 
 // XXX can factor out common logic below
 var LOGICAL_OPERATORS = {
-  "$and": function(subSelector, _, cursor) {
+  "$and": function(subSelector, operators, cursor) {
     if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
     var subSelectorFunctions = _.map(
@@ -109,7 +109,7 @@ var LOGICAL_OPERATORS = {
     };
   },
 
-  "$or": function(subSelector, _, cursor) {
+  "$or": function(subSelector, operators, cursor) {
     if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
     var subSelectorFunctions = _.map(
@@ -122,7 +122,7 @@ var LOGICAL_OPERATORS = {
     };
   },
 
-  "$nor": function(subSelector, _, cursor) {
+  "$nor": function(subSelector, operators, cursor) {
     if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
     var subSelectorFunctions = _.map(
