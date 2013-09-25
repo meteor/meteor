@@ -29,7 +29,7 @@ var hasOperators = function(valueSelector) {
   return !!theseAreOperators;  // {} has no operators
 };
 
-var compileValueSelector = function (valueSelector) {
+var compileValueSelector = function (valueSelector, selector, cursor) {
   if (valueSelector == null) {  // undefined or null
     return function (value) {
       return _anyIfArray(value, function (x) {
@@ -76,7 +76,7 @@ var compileValueSelector = function (valueSelector) {
         throw new Error("Unrecognized operator: " + operator);
       // Special case for location operators
       operatorFunctions.push(VALUE_OPERATORS[operator](
-        operand, valueSelector));
+        operand, valueSelector, cursor));
     });
     return function (value) {
       return _.all(operatorFunctions, function (f) {
@@ -96,11 +96,12 @@ var compileValueSelector = function (valueSelector) {
 
 // XXX can factor out common logic below
 var LOGICAL_OPERATORS = {
-  "$and": function(subSelector) {
+  "$and": function(subSelector, _, cursor) {
     if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
     var subSelectorFunctions = _.map(
-      subSelector, compileDocumentSelector);
+      subSelector, function (selector) {
+        return compileDocumentSelector(selector, cursor); });
     return function (doc) {
       return _.all(subSelectorFunctions, function (f) {
         return f(doc);
@@ -108,11 +109,12 @@ var LOGICAL_OPERATORS = {
     };
   },
 
-  "$or": function(subSelector) {
+  "$or": function(subSelector, _, cursor) {
     if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
     var subSelectorFunctions = _.map(
-      subSelector, compileDocumentSelector);
+      subSelector, function (selector) {
+        return compileDocumentSelector(selector, cursor); });
     return function (doc) {
       return _.any(subSelectorFunctions, function (f) {
         return f(doc);
@@ -120,11 +122,12 @@ var LOGICAL_OPERATORS = {
     };
   },
 
-  "$nor": function(subSelector) {
+  "$nor": function(subSelector, _, cursor) {
     if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
     var subSelectorFunctions = _.map(
-      subSelector, compileDocumentSelector);
+      subSelector, function (selector) {
+        return compileDocumentSelector(selector, cursor); });
     return function (doc) {
       return _.all(subSelectorFunctions, function (f) {
         return !f(doc);
@@ -289,8 +292,8 @@ var VALUE_OPERATORS = {
     return function (value) { return true; };
   },
 
-  "$elemMatch": function (operand) {
-    var matcher = compileDocumentSelector(operand);
+  "$elemMatch": function (operand, selector, cursor) {
+    var matcher = compileDocumentSelector(operand, cursor);
     return function (value) {
       if (!isArray(value))
         return false;
@@ -307,8 +310,9 @@ var VALUE_OPERATORS = {
     };
   },
 
-  "$near": function (operand, operators) {
-    function distance (a, b) {
+  "$near": function (operand, operators, cursor) {
+    function distance (a, b, mode) {
+      // XXX if mode is 2dsphere, compute differently
       var x = a[0] - b[0];
       var y = a[1] - b[1];
       return Math.sqrt(x * x + y * y);
@@ -325,8 +329,11 @@ var VALUE_OPERATORS = {
     var maxDistance = operators.$maxDistance;
     var point = pointToArray(operand);
     return function (value) {
-      return maxDistance === undefined ? true :
-        distance(point, pointToArray(value)) <= maxDistance;
+      var dist = distance(point, pointToArray(value), cursor._2dMode);
+      // Used later in sorting by distance, since $near queries are sorted by
+      // distance from closest to farthest.
+      cursor._distance[value._id] = dist;
+      return maxDistance === undefined ? true : dist <= maxDistance;
     };
   },
 
@@ -566,7 +573,7 @@ LocalCollection._makeLookupFunction = function (key) {
 };
 
 // The main compilation function for a given selector.
-var compileDocumentSelector = function (docSelector) {
+var compileDocumentSelector = function (docSelector, cursor) {
   var perKeySelectors = [];
   _.each(docSelector, function (subSelector, key) {
     if (key.substr(0, 1) === '$') {
@@ -574,10 +581,12 @@ var compileDocumentSelector = function (docSelector) {
       // this function), or $where.
       if (!_.has(LOGICAL_OPERATORS, key))
         throw new Error("Unrecognized logical operator: " + key);
-      perKeySelectors.push(LOGICAL_OPERATORS[key](subSelector));
+      perKeySelectors.push(
+        LOGICAL_OPERATORS[key](subSelector, docSelector, cursor));
     } else {
       var lookUpByIndex = LocalCollection._makeLookupFunction(key);
-      var valueSelectorFunc = compileValueSelector(subSelector);
+      var valueSelectorFunc =
+        compileValueSelector(subSelector, docSelector, cursor);
       perKeySelectors.push(function (doc) {
         var branchValues = lookUpByIndex(doc);
         // We apply the selector to each "branched" value and return true if any
@@ -615,7 +624,7 @@ var compileDocumentSelector = function (docSelector) {
 // Given a selector, return a function that takes one argument, a
 // document, and returns true if the document matches the selector,
 // else false.
-LocalCollection._compileSelector = function (selector) {
+LocalCollection._compileSelector = function (selector, cursor) {
   // you can pass a literal function instead of a selector
   if (selector instanceof Function)
     return function (doc) {return selector.call(doc);};
@@ -638,7 +647,7 @@ LocalCollection._compileSelector = function (selector) {
       EJSON.isBinary(selector))
     throw new Error("Invalid selector: " + selector);
 
-  return compileDocumentSelector(selector);
+  return compileDocumentSelector(selector, cursor);
 };
 
 // Give a sort spec, which can be in any of these forms:

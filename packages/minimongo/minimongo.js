@@ -87,11 +87,11 @@ LocalCollection.Cursor = function (collection, selector, options) {
   if (LocalCollection._selectorIsId(selector)) {
     // stash for fast path
     self.selector_id = LocalCollection._idStringify(selector);
-    self.selector_f = LocalCollection._compileSelector(selector);
+    self.selector_f = LocalCollection._compileSelector(selector, self);
     self.sort_f = undefined;
   } else {
     self.selector_id = undefined;
-    self.selector_f = LocalCollection._compileSelector(selector);
+    self.selector_f = LocalCollection._compileSelector(selector, self);
     self.sort_f = options.sort ? LocalCollection._compileSort(options.sort) : null;
   }
   self.skip = options.skip;
@@ -488,7 +488,7 @@ LocalCollection.prototype.remove = function (selector, callback) {
   var remove = [];
 
   var queriesToRecompute = [];
-  var selector_f = LocalCollection._compileSelector(selector);
+  var selector_f = LocalCollection._compileSelector(selector, self);
 
   // Avoid O(n) for "remove a single doc by ID".
   var specificIds = LocalCollection._idsMatchedBySelector(selector);
@@ -555,7 +555,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   }
   if (!options) options = {};
 
-  var selector_f = LocalCollection._compileSelector(selector);
+  var selector_f = LocalCollection._compileSelector(selector, self);
 
   // Save the original results of any query that we might need to
   // _recomputeResults on, because _modifyAndNotify will mutate the objects in
