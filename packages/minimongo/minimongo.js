@@ -549,11 +549,18 @@ LocalCollection.prototype.remove = function (selector, callback) {
 // we rollback the whole operation, or what?
 LocalCollection.prototype.update = function (selector, mod, options, callback) {
   var self = this;
+  var newMod = _.clone(mod);
   if (! callback && options instanceof Function) {
     callback = options;
     options = null;
   }
   if (!options) options = {};
+
+  var setOnInsert;
+  if (newMod.$setOnInsert) {
+    setOnInsert = _.clone(newMod.$setOnInsert);
+    delete newMod.$setOnInsert;
+  }
 
   var selector_f = LocalCollection._compileSelector(selector);
 
@@ -576,7 +583,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
     if (selector_f(doc)) {
       // XXX Should we save the original even if mod ends up being a no-op?
       self._saveOriginal(id, doc);
-      self._modifyAndNotify(doc, mod, recomputeQids);
+      self._modifyAndNotify(doc, newMod, recomputeQids);
       ++updateCount;
       if (!options.multi)
         break;
@@ -591,10 +598,18 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   });
   self._observeQueue.drain();
 
+  if (setOnInsert)
+    newMod.$setOnInsert = setOnInsert;
+
   var insertedId;
   if (updateCount === 0 && options.upsert) {
     var newDoc = _.clone(selector);
-    LocalCollection._modify(newDoc, mod);
+    if (newMod.$setOnInsert) {
+      newMod.$set = _.extend(newMod.$set || {},
+                          _.clone(newMod.$setOnInsert));
+      delete newMod.$setOnInsert;
+    }
+    LocalCollection._modify(newDoc, newMod);
     insertedId = self.insert(newDoc);
     updateCount = 1;
   }
