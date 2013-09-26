@@ -431,6 +431,18 @@ if (Meteor.isClient) {
               test.equal(collection.find({updated: true}).count(), 2);
             }));
         },
+        // upsert not allowed, and has nice error.
+        function (test, expect) {
+          collection.update(
+            {_id: id2},
+            {$set: { upserted: true }},
+            { upsert: true },
+            expect(function (err, res) {
+              test.equal(err.error, 403);
+              test.matches(err.reason, /In a restricted/);
+              test.equal(collection.find({ upserted: true }).count(), 0);
+            }));
+        },
         // update with rename operator not allowed, and has nice error.
         function (test, expect) {
           collection.update(
@@ -778,4 +790,3 @@ if (Meteor.isServer) {
       delete Package.insecure;
   });
 }
-

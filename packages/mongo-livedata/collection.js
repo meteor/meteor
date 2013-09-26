@@ -699,8 +699,14 @@ Meteor.Collection.prototype._validatedUpdate = function(
     userId, selector, mutator, options) {
   var self = this;
 
+  options = options || {};
+
   if (!LocalCollection._selectorIsIdPerhapsAsObject(selector))
     throw new Error("validated update should be of a single ID");
+
+  if (options.upsert)
+    throw new Meteor.Error(403, "Access denied. In a restricted collection " +
+                           "you cannot do upserts.");
 
   // compute modified fields
   var fields = [];
