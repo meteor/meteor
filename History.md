@@ -1,5 +1,8 @@
 ## vNEXT
 
+* `restrictCreationByEmail` option in `Accounts.config` to restrict new users to
+  emails of specific domain (eg. only users with @meteor.com emails).
+
 * Better error when passing a string to {{#each}}. #722
 
 * Write dates to Mongo as ISODate rather than Integer; existing data can be
