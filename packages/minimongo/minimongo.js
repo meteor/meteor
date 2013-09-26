@@ -554,9 +554,6 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   }
   if (!options) options = {};
 
-  if (options.upsert)
-    throw new Error("upsert not yet implemented");
-
   var selector_f = LocalCollection._compileSelector(selector);
 
   // Save the original results of any query that we might need to
