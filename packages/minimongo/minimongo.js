@@ -473,6 +473,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
       LocalCollection._recomputeResults(self.queries[qid]);
   });
   self._observeQueue.drain();
+
   // Defer because the caller likely doesn't expect the callback to be run
   // immediately.
   if (callback)
@@ -589,7 +590,20 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
                                         qidToOriginalResults[qid]);
   });
   self._observeQueue.drain();
-  var result = { numberAffected: updateCount };
+
+  var insertedId;
+  if (updateCount === 0 && options.upsert) {
+    var newDoc = _.clone(selector);
+    LocalCollection._modify(newDoc, mod);
+    insertedId = self.insert(newDoc);
+    updateCount = 1;
+  }
+
+  var result = {
+    numberAffected: updateCount
+  };
+  if (insertedId !== undefined)
+    result.insertedId = insertedId;
   if (callback)
     Meteor.defer(function () {
       callback(null, result);
