@@ -161,6 +161,7 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
     var proc = child_process.spawn(mongod_path, [
       '--bind_ip', '127.0.0.1',
       '--smallfiles',
+      '--nohttpinterface',
       '--port', port,
       '--dbpath', data_path
     ]);
