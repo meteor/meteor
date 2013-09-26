@@ -332,7 +332,7 @@ var VALUE_OPERATORS = {
     var maxDistance = operators.$maxDistance;
     var point = pointToArray(operand);
     return function (value, doc) {
-      var dist = distance(point, pointToArray(value), cursor._2dMode);
+      var dist = distance(point, pointToArray(value), cursor.collection._2dMode);
       // Used later in sorting by distance, since $near queries are sorted by
       // distance from closest to farthest.
       if (!cursor._distance)
