@@ -482,7 +482,7 @@ Template.api.meteor_collection = {
   options: [
     {name: "connection",
      type: "Object",
-     descr: "The Meteor connection that will manage this collection. Uses the default connection if not specified. Pass `null` to specify no connection. Unmanaged (`name` is null) collections cannot specify a connection."
+     descr: "The server connection that will manage this collection. Uses the default connection if not specified.  Pass the return value of calling [`DDP.connect`](#ddp_connect) to specify a different server. Pass `null` to specify no connection. Unmanaged (`name` is null) collections cannot specify a connection."
     },
     {name: "idGeneration",
      type: "String",
