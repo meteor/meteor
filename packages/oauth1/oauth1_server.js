@@ -1,6 +1,5 @@
 // A place to store request tokens pending verification
 var requestTokens = {};
-var querystring = Npm.require("querystring");
 
 OAuth1Test = {requestTokens: requestTokens};
 
@@ -29,7 +28,7 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
 
     // support for scope/name parameters
     var redirectUrl = undefined;
-    if(typeof(urls.authenticate) == "function"){
+    if(typeof urls.authenticate === "function") {
       redirectUrl = urls.authenticate(oauthBinding);
     } else {
       redirectUrl = urls.authenticate + '?oauth_token=' + oauthBinding.requestToken;
@@ -44,7 +43,7 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
     // token and access token secret and log in as user
 
     // Get the user's request token so we can verify it and clear it
-    var requestToken       = requestTokens[query.state].requestToken;
+    var requestToken = requestTokens[query.state].requestToken;
     var requestTokenSecret = requestTokens[query.state].requestTokenSecret;
     delete requestTokens[query.state];
 
@@ -63,10 +62,10 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
 
       // Add the login result to the result map
       Oauth._loginResultForCredentialToken[query.state] = {
-          serviceName: service.serviceName,
-          serviceData: oauthResult.serviceData,
-          options: oauthResult.options
-        };
+        serviceName: service.serviceName,
+        serviceData: oauthResult.serviceData,
+        options: oauthResult.options
+      };
     }
 
     // Either close the window, redirect, or render nothing

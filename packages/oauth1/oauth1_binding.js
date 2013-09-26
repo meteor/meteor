@@ -27,9 +27,10 @@ OAuth1Binding.prototype.prepareRequestToken = function(callbackUrl) {
   var response = self._call('POST', self._urls.requestToken, headers);
   var tokens = querystring.parse(response.content);
 
-  // XXX should we also store oauth_token_secret here? Yes, we should.
   if (!tokens.oauth_callback_confirmed)
-    throw new Error("oauth_callback_confirmed false when requesting oauth1 token", tokens);
+    throw new Error(
+      "oauth_callback_confirmed false when requesting oauth1 token", tokens);
+
   self.requestToken = tokens.oauth_token;
   self.requestTokenSecret = tokens.oauth_token_secret;
 };
@@ -37,9 +38,14 @@ OAuth1Binding.prototype.prepareRequestToken = function(callbackUrl) {
 OAuth1Binding.prototype.prepareAccessToken = function(query, requestTokenSecret) {
   var self = this;
 
-  // support implemntations that use request token secrets
+  // support implementations that use request token secrets. This is
+  // read by self._call.
+  //
+  // XXX make it a param to call, not something stashed on self? It's
+  // kinda confusing right now, everything except this is passed as
+  // arguments, but this is stored.
   if (requestTokenSecret)
-    self.accessTokenSecret = requestTokenSecret
+    self.accessTokenSecret = requestTokenSecret;
 
   var headers = self._buildHeader({
     oauth_token: query.oauth_token
@@ -113,14 +119,14 @@ OAuth1Binding.prototype._getSignature = function(method, url, rawHeaders, access
 OAuth1Binding.prototype._call = function(method, url, headers, params, callback) {
   var self = this;
 
-  
-  // callback functions to support parameters/customization
-  if(typeof(url) == "function"){
+  // all URLs to be functions to support parameters/customization
+  if(typeof url === "function") {
     url = url(self);
   }
 
   // Get the signature
-  headers.oauth_signature = self._getSignature(method, url, headers, self.accessTokenSecret, params);
+  headers.oauth_signature =
+    self._getSignature(method, url, headers, self.accessTokenSecret, params);
 
   // Make a authorization string according to oauth1 spec
   var authString = self._getAuthHeaderString(headers);
