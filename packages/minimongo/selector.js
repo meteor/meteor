@@ -551,9 +551,25 @@ var compileDocumentSelector = function (docSelector) {
       perKeySelectors.push(function (doc) {
         var branchValues = lookUpByIndex(doc);
         // We apply the selector to each "branched" value and return true if any
-        // match. This isn't 100% consistent with MongoDB; eg, see:
-        // https://jira.mongodb.org/browse/SERVER-8585
-        return _.any(branchValues, valueSelectorFunc);
+        // match. However, for "negative" selectors like $ne or $not we actually
+        // require *all* elements to match.
+        //
+        // This is because {'x.tag': {$ne: "foo"}} applied to {x: [{tag: 'foo'},
+        // {tag: 'bar'}]} should NOT match even though there is a branch that
+        // matches. (This matches the fact that $ne uses a negated
+        // _anyIfArrayPlus, for when the last level of the key is the array,
+        // which deMorgans into an 'all'.)
+        //
+        // XXX This isn't 100% consistent with MongoDB in 'null' cases:
+        //     https://jira.mongodb.org/browse/SERVER-8585
+        // XXX this still isn't right.  consider {a: {$ne: 5, $gt: 6}}. the
+        //     $ne needs to use the "all" logic and the $gt needs the "any"
+        //     logic
+        var combiner = (subSelector &&
+                        (subSelector.$not || subSelector.$ne ||
+                         subSelector.$nin))
+              ? _.all : _.any;
+        return combiner(branchValues, valueSelectorFunc);
       });
     }
   });
