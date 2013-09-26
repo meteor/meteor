@@ -62,9 +62,9 @@ that Meteor will call each time a client subscribes to the name.
 
 Publish functions can return a
 [`Collection.Cursor`](#meteor_collection_cursor), in which case Meteor
-will publish that cursor's documents. You can also return an array of
-`Collection.Cursor`s, in which case Meteor will publish all of the
-cursors.
+will publish that cursor's documents to each subscribed client. You can
+also return an array of `Collection.Cursor`s, in which case Meteor will
+publish all of the cursors.
 
 {{#warning}}
 If you return multiple cursors in an array, they currently must all be from
@@ -92,16 +92,15 @@ different collections. We hope to lift this restriction in a future release.
       ];
     });
 
-Otherwise, the publish function should call the functions
-[`added`](#publish_added) (when a new document is added to the published record
-set), [`changed`](#publish_changed) (when some fields on a document in the
-record set are changed or cleared), and [`removed`](#publish_removed) (when
-documents are removed from the published record set) to inform subscribers about
-documents.  These methods are provided by `this` in your publish function.
-
-
-
-<!-- TODO discuss ready -->
+Alternatively, a publish function can directly control its published
+record set by calling the functions [`added`](#publish_added) (to add a
+new document to the published record set), [`changed`](#publish_changed)
+(to change or clear some fields on a document already in the published
+record set), and [`removed`](#publish_removed) (to remove documents from
+the published record set).  Publish functions that use these functions
+should also call [`ready`](#publish_ready) once the initial record set
+is complete.  These methods are provided by `this` in your publish
+function.
 
 Example:
 
