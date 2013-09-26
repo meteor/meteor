@@ -494,7 +494,15 @@ sets, call `DDP.connect` with the URL of the application.
 By default, clients open a connection to the server from which they're loaded.
 When you call `Meteor.subscribe`, `Meteor.status`, `Meteor.call`, and
 `Meteor.apply`, you are using a connection back to that default
-server.
+server. 
+
+Make sure to set your collection manager to the object returned
+from `Meteor.connect` call in order for your subscriptions to work,
+e.g: 
+```
+srv = Meteor.connect('other-server-url');
+MyCollection = new Meteor.Collection('name',{manager: srv});
+```
 
 <h2 id="collections"><span>Collections</span></h2>
 
