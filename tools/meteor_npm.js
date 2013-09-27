@@ -10,7 +10,7 @@ var path = require('path');
 var fs = require('fs');
 var cleanup = require(path.join(__dirname, 'cleanup.js'));
 var files = require(path.join(__dirname, 'files.js'));
-var meteor_http = require('./meteor_http.js');
+var httpHelpers = require('./http-helpers.js');
 var buildmessage = require('./buildmessage.js');
 var _ = require('underscore');
 
@@ -492,7 +492,7 @@ _.extend(exports, {
   // dependencies. `npm install` times out after more than a minute.
   _ensureConnected: function () {
     try {
-      meteor_http.getUrl("http://registry.npmjs.org");
+      httpHelpers.getUrl("http://registry.npmjs.org");
     } catch (e) {
       buildmessage.error("Can't install npm dependencies. " +
                          "Are you connected to the internet?");

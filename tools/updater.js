@@ -6,7 +6,7 @@ var testingUpdater = false;
 var inFiber = require('./fiber-helpers.js').inFiber;
 var files = require('./files.js');
 var warehouse = require('./warehouse.js');
-var meteor_http = require('./meteor_http.js');
+var httpHelpers = require('./http-helpers.js');
 
 var manifestUrl = testingUpdater
       ? 'https://s3.amazonaws.com/com.meteor.static/test/update/manifest.json'
@@ -22,7 +22,7 @@ exports.getManifest = function (context) {
   if (context)
     options.meteorReleaseContext = context;
 
-  return meteor_http.getUrl(options);
+  return httpHelpers.getUrl(options);
 };
 
 exports.startUpdateChecks = function (context) {

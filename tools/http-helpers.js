@@ -12,7 +12,7 @@ var Future = require('fibers/future');
 var files = require('./files.js');
 
 
-var meteor_http = exports;
+var httpHelpers = exports;
 _.extend(exports, {
 
   // A wrapper around request that sets http proxy.
@@ -80,7 +80,7 @@ _.extend(exports, {
     else
       urlOrOptions = { url: urlOrOptions, headers: headers };
 
-    meteor_http.request(urlOrOptions, function (error, response, body) {
+    httpHelpers.request(urlOrOptions, function (error, response, body) {
       if (error)
         future.throw(new files.OfflineError(error));
       else if (response.statusCode >= 400 && response.statusCode < 600)
