@@ -1185,8 +1185,11 @@ LocalCollection.prototype.ensureIndex = function (keys, options) {
       !_.contains(["2d", "2dsphere"], _.values(keys)[0]))
     throw new Error("Can only call _ensureIndex on server collections " +
                     "(exception for geo-location indexes)");
-  
+
   var self = this;
   self._2dMode = _.values(keys)[0];
+
+  if (self._2dMode === "2dsphere" && GeoJSON === undefined)
+    throw new Error("Need geojson-utils package for GeoJSON calculations");
 };
 

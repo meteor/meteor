@@ -315,10 +315,13 @@ var VALUE_OPERATORS = {
   },
 
   "$near": function (operand, operators, cursor) {
-    function distance (a, b, mode) {
-      // XXX if mode is 2dsphere, compute differently
+    function distanceCoordinatePairs (a, b) {
+      a = pointToArray(a);
+      b = pointToArray(b);
       var x = a[0] - b[0];
       var y = a[1] - b[1];
+      if (_.isNaN(x) || _.isNan(y))
+        return null;
       return Math.sqrt(x * x + y * y);
     }
     // Makes sure we get 2 elements array and assume the first one to be x and
@@ -330,14 +333,36 @@ var VALUE_OPERATORS = {
       return npoint;
     }
     var maxDistance = operators.$maxDistance;
-    var point = pointToArray(operand);
+    var point = operand;
     return function (value, doc) {
-      var dist = distance(point, pointToArray(value), cursor.collection._2dMode);
+      var dist = null;
+      switch (cursor.collection._2dMode) {
+        case "2d":
+          dist = distanceCoordinatePairs(point, value);
+          break;
+        case "2dsphere":
+          // XXX: for now, we don't calculate the actual distance between, say,
+          // polygon and circle. If people care about this use-case it will get
+          // a priority.
+          if (value.type === "Point")
+            dist = GeoJSON.pointDistance(point, value);
+          else
+            dist = GeoJSON.geometryWithinRadius(value, point, maxDistance) ?
+                     0 : maxDistance + 1;
+          break;
+        default:
+          throw new Error("Unknown mode for distance calculations.");
+      }
       // Used later in sorting by distance, since $near queries are sorted by
       // distance from closest to farthest.
       if (!cursor._distance)
         cursor._distance = {};
       cursor._distance[doc._id] = dist;
+
+      // Distance couldn't parse a geometry object
+      if (dist === null)
+        return false;
+
       return maxDistance === undefined ? true : dist <= maxDistance;
     };
   },
