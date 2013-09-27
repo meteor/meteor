@@ -177,6 +177,7 @@ var ignoreFiles = [
     /~$/, /^\.#/, /^#.*#$/,
     /^\.DS_Store\/?$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/,
     /^node_modules\/$/, /* avoids bubndling files created by "npm install" */
+    /^Gruntfile.js$/, /* Gruntfile contains "module.exports" which cause ReferenceError */
     /^\.meteor\/$/, /* avoids scanning N^2 files when bundling all packages */
     /^\.git\/$/ /* often has too many files to watch */
 ];
