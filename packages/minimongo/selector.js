@@ -332,11 +332,12 @@ var VALUE_OPERATORS = {
       _.each(point, function (xy) { npoint.push(xy); });
       return npoint;
     }
-    var maxDistance = operators.$maxDistance;
-    var point = operand;
+    var mode = cursor.collection._2dMode || "2d";
+    var maxDistance = mode === "2d" ? operators.$maxDistance : operand.$maxDistance;
+    var point = mode === "2d" ? operand : operand.$geometry;
     return function (value, doc) {
       var dist = null;
-      switch (cursor.collection._2dMode || "2d") {
+      switch (mode) {
         case "2d":
           dist = distanceCoordinatePairs(point, value);
           break;
@@ -351,7 +352,7 @@ var VALUE_OPERATORS = {
                      0 : maxDistance + 1;
           break;
         default:
-          throw new Error("Unknown mode for distance calculations.");
+          throw new Error("Unknown mode for distance calculations: " + mode);
       }
       // Used later in sorting by distance, since $near queries are sorted by
       // distance from closest to farthest.

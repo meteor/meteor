@@ -1180,7 +1180,7 @@ LocalCollection._compileProjection = function (fields) {
 // $near and doesn't actually build any indexes. Function will still throw an
 // exception if you try to ensure index on anything rather than "2d" or
 // "2dsphere" on a single field.
-LocalCollection.prototype.ensureIndex = function (keys, options) {
+LocalCollection.prototype._ensureIndex = function (keys, options) {
   if (options || _.keys(keys).length !== 1 ||
       !_.contains(["2d", "2dsphere"], _.values(keys)[0]))
     throw new Error("Can only call _ensureIndex on server collections " +
