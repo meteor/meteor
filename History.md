@@ -21,6 +21,9 @@
   running on Linux machines with glibc 2.9 or newer (Ubuntu 10.04+, RHEL
   and CentOS 6+, Fedora 10+, Debian 6+).
 
+* Support OAuth1 services that require request token secrets as well as
+  authentication token secrets.  #1253
+
 ## v0.6.5.1
 
 * Fix syntax errors on lines that end with a backslash. #1326
