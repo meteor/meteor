@@ -28,6 +28,7 @@ var _ = require("underscore");
 
 var files = require('./files.js');
 var updater = require('./updater.js');
+var meteor_http = require('./meteor_http.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var logging = require('./logging.js');
 
@@ -235,7 +236,7 @@ _.extend(warehouse, {
     // after we're done writing packages
     if (!releaseAlreadyExists) {
       try {
-        releaseManifestText = files.getUrl(
+        releaseManifestText = meteor_http.getUrl(
           WAREHOUSE_URLBASE + "/releases/" + releaseVersion + ".release.json");
       } catch (e) {
         // just throw, if we're in the background anyway, or if this is the
@@ -303,7 +304,7 @@ _.extend(warehouse, {
       // try getting the releases's notices. only blessed releases have one, so
       // if we can't find it just proceed.
       try {
-        var notices = files.getUrl(
+        var notices = meteor_http.getUrl(
           WAREHOUSE_URLBASE + "/releases/" + releaseVersion + ".notices.json");
 
         // Real notices are valid JSON.
@@ -347,7 +348,7 @@ _.extend(warehouse, {
           "meteor-tools-" + toolsVersion + "-" + platform + ".tar.gz";
     var toolsTarballPath = "/tools/" + toolsVersion + "/"
           + toolsTarballFilename;
-    var toolsTarball = files.getUrl({
+    var toolsTarball = meteor_http.getUrl({
       url: WAREHOUSE_URLBASE + toolsTarballPath,
       encoding: null
     });
@@ -430,7 +431,7 @@ _.extend(warehouse, {
               "/" + version +
               "/" + name + '-' + version + "-" + platform + ".tar.gz";
 
-        var tarball = files.getUrl({url: packageUrl, encoding: null});
+        var tarball = meteor_http.getUrl({url: packageUrl, encoding: null});
         files.extractTarGz(tarball, packageDir);
         if (!dontWriteFreshFile)
           fs.writeFileSync(warehouse.getPackageFreshFile(name, version), '');

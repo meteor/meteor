@@ -7,6 +7,7 @@
 var qs = require('querystring');
 var path = require('path');
 var files = require('./files.js');
+var meteor_http = require('./meteor_http.js');
 var warehouse = require('./warehouse.js');
 var buildmessage = require('./buildmessage.js');
 var _ = require('underscore');
@@ -43,15 +44,16 @@ var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
     url += '?' + qs.stringify(query_params);
   }
 
-  var request = require('request');
-  var r = request({method: method, url: url}, function (error, response, body) {
-    if (error || ((response.statusCode !== 200)
-                  && (response.statusCode !== 201)))
-      // pass some non-falsy error back to callback
-      callback(error || response.statusCode, body);
-    else
-      callback(null, body);
-  });
+  var r = meteor_http.request(
+    {method: method, url: url},
+    function (error, response, body) {
+      if (error || ((response.statusCode !== 200)
+                    && (response.statusCode !== 201)))
+        // pass some non-falsy error back to callback
+        callback(error || response.statusCode, body);
+      else
+        callback(null, body);
+    });
 
   return r;
 };
@@ -345,8 +347,7 @@ var with_password = function (site, callback) {
   // Future.throw. Basically, what Future.wrap does.
   callback = inFiber(callback);
 
-  var request = require('request');
-  request(check_url, function (error, response, body) {
+  meteor_http.request(check_url, function (error, response, body) {
     if (error || response.statusCode !== 200) {
       callback();
 
