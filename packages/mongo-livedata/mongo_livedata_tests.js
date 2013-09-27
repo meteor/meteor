@@ -918,9 +918,9 @@ if (Meteor.isServer) {
   _.each([true, false], function (minimongo) {
     Tinytest.addAsync("mongo-livedata - upsert " + (minimongo ? "minimongo" : "") + ", " + idGeneration, function (test, onComplete) {
       var run = test.runId();
-      var options = collectionOptions;;
+      var options = collectionOptions;
       if (minimongo)
-        options = _.extend(collectionOptions, { connection: null });
+        options = _.extend({}, collectionOptions, { connection: null });
       var coll = new Meteor.Collection("livedata_upsert_collection_"+run, options);
 
       var result1 = coll.update({foo: 'bar'}, {foo: 'bar'}, {upsert: true});
