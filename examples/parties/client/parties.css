@@ -10,8 +10,8 @@
     position: absolute;
     width: 100%;
     height: 100%;
-    top: 0px;
-    left: 0px;
+    top: 0;
+    left: 0;
     background-color: #000000;
     opacity: .4;
     z-index: 1;
