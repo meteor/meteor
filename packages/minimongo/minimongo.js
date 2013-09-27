@@ -142,7 +142,7 @@ LocalCollection.prototype.findOne = function (selector, options) {
 
 LocalCollection.Cursor.prototype.forEach = function (callback) {
   var self = this;
-  var doc;
+  var doc, response;
 
   if (self.db_objects === null)
     self.db_objects = self._getRawObjects(true);
@@ -160,7 +160,9 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
       elt = self.projection_f(elt);
     if (self._transform)
       elt = self._transform(elt);
-    callback(elt);
+    response = callback(elt);
+    if (response === false)
+      break;
   }
 };
 
