@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Meteor's client-side datastore: a port of MongoDB to Javascript",
+  summary: 'GeoJSON utility functions',
   internal: true
 });
 
