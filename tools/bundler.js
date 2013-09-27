@@ -176,6 +176,7 @@ var sourcemap = require('source-map');
 var ignoreFiles = [
     /~$/, /^\.#/, /^#.*#$/,
     /^\.DS_Store\/?$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/,
+    /^node_modules\/$/, /* avoids bubndling files created by "npm install" */
     /^\.meteor\/$/, /* avoids scanning N^2 files when bundling all packages */
     /^\.git\/$/ /* often has too many files to watch */
 ];
