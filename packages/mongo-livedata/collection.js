@@ -347,18 +347,6 @@ _.each(["insert", "update", "remove"], function (name) {
     if (args.length && args[args.length - 1] instanceof Function)
       callback = args.pop();
 
-    if (Meteor.isClient && !callback) {
-      // Client can't block, so it can't report errors by exception,
-      // only by callback. If they forget the callback, give them a
-      // default one that logs the error, so they aren't totally
-      // baffled if their writes don't work because their database is
-      // down.
-      callback = function (err) {
-        if (err)
-          Meteor._debug(name + " failed: " + (err.reason || err.stack));
-      };
-    }
-
     if (name === "insert") {
       if (!args.length)
         throw new Error("insert requires an argument");
@@ -406,6 +394,18 @@ _.each(["insert", "update", "remove"], function (name) {
     if (self._connection && self._connection !== Meteor.server) {
       // just remote to another endpoint, propagate return value or
       // exception.
+
+      if (Meteor.isClient && !wrappedCallback) {
+        // Client can't block, so it can't report errors by exception,
+        // only by callback. If they forget the callback, give them a
+        // default one that logs the error, so they aren't totally
+        // baffled if their writes don't work because their database is
+        // down.
+        wrappedCallback = function (err) {
+          if (err)
+            Meteor._debug(name + " failed: " + (err.reason || err.stack));
+        };
+      }
 
       var enclosing = DDP._CurrentInvocation.get();
       var alreadyInSimulation = enclosing && enclosing.isSimulation;
