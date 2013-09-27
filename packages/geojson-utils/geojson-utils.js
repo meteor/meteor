@@ -157,10 +157,10 @@
 
   // from http://www.movable-type.co.uk/scripts/latlong.html
   gju.pointDistance = function (pt1, pt2) {
-    var lon1 = pt1.coordinates[1],
-      lat1 = pt1.coordinates[0],
-      lon2 = pt2.coordinates[1],
-      lat2 = pt2.coordinates[0],
+    var lon1 = pt1.coordinates[0],
+      lat1 = pt1.coordinates[1],
+      lon2 = pt2.coordinates[0],
+      lat2 = pt2.coordinates[1],
       dLat = gju.numberToRadius(lat2 - lat1),
       dLon = gju.numberToRadius(lon2 - lon1),
       a = Math.pow(Math.sin(dLat / 2), 2) + Math.cos(gju.numberToRadius(lat1))
