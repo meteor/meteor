@@ -10,6 +10,7 @@ Tinytest.add("less - presence", function(test) {
 
   // test @import
   test.equal(getStyleProperty(p, 'border-right-style'), "dotted");
+  test.equal(getStyleProperty(p, 'border-bottom-style'), "double");
 
   d.kill();
 });
