@@ -320,7 +320,7 @@ var VALUE_OPERATORS = {
       b = pointToArray(b);
       var x = a[0] - b[0];
       var y = a[1] - b[1];
-      if (_.isNaN(x) || _.isNan(y))
+      if (_.isNaN(x) || _.isNaN(y))
         return null;
       return Math.sqrt(x * x + y * y);
     }
@@ -336,7 +336,7 @@ var VALUE_OPERATORS = {
     var point = operand;
     return function (value, doc) {
       var dist = null;
-      switch (cursor.collection._2dMode) {
+      switch (cursor.collection._2dMode || "2d") {
         case "2d":
           dist = distanceCoordinatePairs(point, value);
           break;
