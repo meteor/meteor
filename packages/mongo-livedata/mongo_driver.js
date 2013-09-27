@@ -289,7 +289,7 @@ MongoConnection.prototype._remove = function (collection_name, selector,
   try {
     var collection = self._getCollection(collection_name);
     collection.remove(replaceTypes(selector, replaceMeteorAtomWithMongo),
-                      {safe: true}, numberAffectedCallback(callback));
+                      {safe: true}, callback);
   } catch (e) {
     write.committed();
     throw e;

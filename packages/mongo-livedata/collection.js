@@ -337,12 +337,23 @@ var throwIfSelectorIsNotId = function (selector, methodName) {
 // generating their result until the database has acknowledged
 // them. In the future maybe we should provide a flag to turn this
 // off.
-_.each(["insert", "update", "remove"], function (name) {
+_.each(["insert", "update", "remove", "upsert"], function (name) {
   Meteor.Collection.prototype[name] = function (/* arguments */) {
     var self = this;
     var args = _.toArray(arguments);
     var callback;
     var ret;
+
+    // Calling `Collection.upsert()` is just like calling `Collection.update()`
+    // with upsert: true, except that we return the whole object with
+    // `numberAffected` and `idInserted` keys. So we do the same thing as an
+    // update, except that we save `isUpsert` to determine what to return when
+    // we're done.
+    var isUpsert = false;
+    if (name === "upsert") {
+      isUpsert = true;
+      name = "update";
+    }
 
     if (args.length && args[args.length - 1] instanceof Function)
       callback = args.pop();
@@ -364,7 +375,9 @@ _.each(["insert", "update", "remove"], function (name) {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
 
       if (name === "update") {
-        var options = args[2];
+        var options = _.clone(args[2]);
+        if (isUpsert)
+          options.upsert = true;
         if (options && options.upsert) {
           // set `insertedId` if absent.  `insertedId` is a Meteor extension.
           if (options.insertedId) {
@@ -427,8 +440,15 @@ _.each(["insert", "update", "remove"], function (name) {
         // On updates and removes, return whatever the collection returned; on
         // inserts, always return the id that we generated. If the user provided
         // a callback, then we expect queryRet to be undefined.
-        if (name !== "insert")
+        if (name !== "insert") {
           ret = queryRet;
+          // Upsert updates return an object with the number affected and the
+          // inserted id, but for update queries we only return the number
+          // affected to match the mongo api. Meteor.Collection.upsert() can be
+          // used to return the whole object.
+          if (name === "update" && ! isUpsert)
+            ret = ret.numberAffected;
+        }
       } catch (e) {
         if (callback) {
           callback(e);

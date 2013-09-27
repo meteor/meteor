@@ -537,7 +537,7 @@ LocalCollection.prototype.remove = function (selector, callback) {
       LocalCollection._recomputeResults(query);
   });
   self._observeQueue.drain();
-  var result = { numberAffected: remove.length };
+  var result = remove.length;
   if (callback)
     Meteor.defer(function () {
       callback(null, result);
