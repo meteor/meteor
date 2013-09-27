@@ -375,7 +375,7 @@ _.each(["insert", "update", "remove", "upsert"], function (name) {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
 
       if (name === "update") {
-        var options = _.clone(args[2]);
+        var options = _.clone(args[2]) || {};
         if (isUpsert)
           options.upsert = true;
         if (options && options.upsert) {
