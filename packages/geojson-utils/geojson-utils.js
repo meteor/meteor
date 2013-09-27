@@ -166,6 +166,7 @@
       a = Math.pow(Math.sin(dLat / 2), 2) + Math.cos(gju.numberToRadius(lat1))
         * Math.cos(gju.numberToRadius(lat2)) * Math.pow(Math.sin(dLon / 2), 2),
       c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    // Earth radius is 6371 km
     return (6371 * c) * 1000; // returns meters
   },
 
