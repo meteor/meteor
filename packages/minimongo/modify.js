@@ -147,6 +147,9 @@ LocalCollection._modifiers = {
 
     target[field] = EJSON.clone(arg);
   },
+  $setOnInsert: function (target, field, arg) {
+    // converted to `$set` in `_modify`
+  },
   $unset: function (target, field, arg) {
     if (target !== undefined) {
       if (target instanceof Array) {
