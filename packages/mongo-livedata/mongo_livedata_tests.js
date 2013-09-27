@@ -203,12 +203,12 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
 
   expectObserve('', function () {
     var count = coll.update({run: run, x: -1}, {$inc: {x: 2}}, {multi: true});
-    test.equal(count, { numberAffected: 0 });
+    test.equal(count, 0);
   });
 
   expectObserve('c(3,0,1)c(6,1,4)', function () {
     var count = coll.update({run: run}, {$inc: {x: 2}}, {multi: true});
-    test.equal(count, { numberAffected: 2 });
+    test.equal(count, 2);
     test.equal(_.pluck(coll.find({run: run}, {sort: {x: -1}}).fetch(), "x"),
                [6, 3]);
   });
@@ -222,7 +222,7 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
 
   expectObserve('r(13,1)', function () {
     var count = coll.remove({run: run, x: {$gt: 10}});
-    test.equal(count, { numberAffected: 1 });
+    test.equal(count, 1);
     test.equal(coll.find({run: run}).count(), 1);
   });
 
@@ -233,7 +233,7 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
 
   expectObserve('', function () {
     var count = coll.remove({run: run});
-    test.equal(count, { numberAffected: 0 });
+    test.equal(count, 0);
     test.equal(coll.find({run: run}).count(), 0);
   });
 
@@ -820,12 +820,11 @@ if (Meteor.isServer) {
 
     coll.insert({ foo: "bar" });
     coll.insert({ foo: "baz" });
-    test.equal(coll.update({}, { $set: { foo: "qux" } }, { multi: true }), {
-      numberAffected: 2
-    });
+    test.equal(coll.update({}, { $set: { foo: "qux" } }, { multi: true }),
+               2);
     coll.update({}, { $set: { foo: "quux" } }, { multi: true }, function (err, result) {
       test.isFalse(err);
-      test.equal(result, { numberAffected: 2 });
+      test.equal(result, 2);
       onComplete();
     });
   });
@@ -836,12 +835,12 @@ if (Meteor.isServer) {
 
     coll.insert({ foo: "bar" });
     coll.insert({ foo: "baz" });
-    test.equal(coll.remove({}), { numberAffected: 2 });
+    test.equal(coll.remove({}), 2);
     coll.insert({ foo: "bar" });
     coll.insert({ foo: "baz" });
     coll.remove({}, function (err, result) {
       test.isFalse(err);
-      test.equal(result, { numberAffected: 2 });
+      test.equal(result, 2);
       onComplete();
     });
   });
@@ -918,86 +917,118 @@ if (Meteor.isServer) {
 } // end Meteor.isServer
 
 _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
-  Tinytest.addAsync("mongo-livedata - upsert " + (minimongo ? "minimongo" : "") + ", " + idGeneration, function (test, onComplete) {
-    var run = test.runId();
-    var options = collectionOptions;
-    if (minimongo)
-      options = _.extend({}, collectionOptions, { connection: null });
-    var coll = new Meteor.Collection("livedata_upsert_collection_"+run, options);
+  _.each([true, false], function (useUpdate) {
+    Tinytest.addAsync("mongo-livedata - " + (useUpdate ? "update " : "") + "upsert " + (minimongo ? "minimongo" : "") + ", " + idGeneration, function (test, onComplete) {
+      var upsert = function (query, mod, options) {
+        if (useUpdate)
+          return { numberAffected:
+                   coll.update(query, mod,
+                                     _.extend({ upsert: true }, options)) };
+        else
+          return coll.upsert(query, mod, options);
+      };
+      var stripId = function (obj) {
+        delete obj._id;
+      };
+      var compareResults = function (actual, expected) {
+        if (useUpdate) {
+          actual = _.map(actual, stripId);
+          expected = _.map(expected, stripId);
+        }
+        test.equal(actual, expected);
+      };
 
-    var result1 = coll.update({foo: 'bar'}, {foo: 'bar'}, {upsert: true});
-    test.equal(result1.numberAffected, 1);
-    test.isTrue(result1.insertedId);
-    test.equal(coll.find().fetch(), [{foo: 'bar', _id: result1.insertedId}]);
+      var run = test.runId();
+      var options = collectionOptions;
+      if (minimongo)
+        options = _.extend({}, collectionOptions, { connection: null });
+      var coll = new Meteor.Collection("livedata_upsert_collection_"+run, options);
 
-    var result2 = coll.update({foo: 'bar'}, {foo: 'baz'}, {upsert: true});
-    test.equal(result2.numberAffected, 1);
-    test.isFalse(result2.insertedId);
-    test.equal(coll.find().fetch(), [{foo: 'baz', _id: result1.insertedId}]);
+      var result1 = upsert({foo: 'bar'}, {foo: 'bar'});
+      test.equal(result1.numberAffected, 1);
+      if (! useUpdate)
+        test.isTrue(result1.insertedId);
+      compareResults(coll.find().fetch(), [{foo: 'bar', _id: result1.insertedId}]);
 
-    coll.remove({});
+      var result2 = upsert({foo: 'bar'}, {foo: 'baz'});
+      test.equal(result2.numberAffected, 1);
+      if (! useUpdate)
+        test.isFalse(result2.insertedId);
+      compareResults(coll.find().fetch(), [{foo: 'baz', _id: result1.insertedId}]);
 
-    // Test values that require transformation to go into Mongo:
+      coll.remove({});
 
-    var t1 = new Meteor.Collection.ObjectID();
-    var t2 = new Meteor.Collection.ObjectID();
-    var result3 = coll.update({foo: t1}, {foo: t1}, {upsert: true});
-    test.equal(result3.numberAffected, 1);
-    test.isTrue(result3.insertedId);
-    test.equal(coll.find().fetch(), [{foo: t1, _id: result3.insertedId}]);
+      // Test values that require transformation to go into Mongo:
 
-    var result4 = coll.update({foo: t1}, {foo: t2}, {upsert: true});
-    test.equal(result2.numberAffected, 1);
-    test.isFalse(result2.insertedId);
-    test.equal(coll.find().fetch(), [{foo: t2, _id: result3.insertedId}]);
+      var t1 = new Meteor.Collection.ObjectID();
+      var t2 = new Meteor.Collection.ObjectID();
+      var result3 = upsert({foo: t1}, {foo: t1});
+      test.equal(result3.numberAffected, 1);
+      if (! useUpdate)
+        test.isTrue(result3.insertedId);
+      compareResults(coll.find().fetch(), [{foo: t1, _id: result3.insertedId}]);
 
-    coll.remove({});
+      var result4 = upsert({foo: t1}, {foo: t2});
+      test.equal(result2.numberAffected, 1);
+      if (! useUpdate)
+        test.isFalse(result2.insertedId);
+      compareResults(coll.find().fetch(), [{foo: t2, _id: result3.insertedId}]);
 
-    // Test modification
+      coll.remove({});
 
-    var result5 = coll.update({name: 'David'}, {$set: {foo: 1}}, {upsert: true});
-    test.equal(result5.numberAffected, 1);
-    test.isTrue(result5.insertedId);
-    var davidId = result5.insertedId;
-    test.equal(coll.find().fetch(), [{name: 'David', foo: 1, _id: davidId}]);
+      // Test modification
 
-    test.throws(function () {
-      // test that bad modifier fails fast
-      coll.update({name: 'David'}, {$blah: {foo: 2}}, {upsert: true});
+      var result5 = upsert({name: 'David'}, {$set: {foo: 1}});
+      test.equal(result5.numberAffected, 1);
+      if (! useUpdate)
+        test.isTrue(result5.insertedId);
+      var davidId = result5.insertedId;
+      compareResults(coll.find().fetch(), [{name: 'David', foo: 1, _id: davidId}]);
+
+      test.throws(function () {
+        // test that bad modifier fails fast
+        upsert({name: 'David'}, {$blah: {foo: 2}});
+      });
+
+
+      var result6 = upsert({name: 'David'}, {$set: {foo: 2}});
+      test.equal(result6.numberAffected, 1);
+      if (! useUpdate)
+        test.isFalse(result6.insertedId);
+      compareResults(coll.find().fetch(), [{name: 'David', foo: 2,
+                                        _id: result5.insertedId}]);
+
+      var emilyId = coll.insert({name: 'Emily', foo: 2});
+      compareResults(coll.find().fetch(), [{name: 'David', foo: 2, _id: davidId},
+                                           {name: 'Emily', foo: 2, _id: emilyId}]);
+
+      // multi update by upsert
+      var result7 = upsert({foo: 2},
+                           {$set: {bar: 7},
+                            $setOnInsert: {name: 'Fred', foo: 2}},
+                           {multi: true});
+      test.equal(result7.numberAffected, 2);
+      if (! useUpdate)
+        test.isFalse(result7.insertedId);
+      compareResults(coll.find().fetch(), [{name: 'David', foo: 2, bar: 7, _id: davidId},
+                                           {name: 'Emily', foo: 2, bar: 7, _id: emilyId}]);
+
+      // insert by multi upsert
+      var result8 = upsert({foo: 3},
+                           {$set: {bar: 7},
+                            $setOnInsert: {name: 'Fred', foo: 2}},
+                           {multi: true});
+      test.equal(result8.numberAffected, 1);
+      if (! useUpdate)
+        test.isTrue(result8.insertedId);
+      var fredId = result8.insertedId;
+      compareResults(coll.find().fetch(),
+                     [{name: 'David', foo: 2, bar: 7, _id: davidId},
+                      {name: 'Emily', foo: 2, bar: 7, _id: emilyId},
+                      {name: 'Fred', foo: 2, bar: 7, _id: fredId}]);
+
+      onComplete();
     });
-
-
-    var result6 = coll.update({name: 'David'}, {$set: {foo: 2}}, {upsert: true});
-    test.equal(result6.numberAffected, 1);
-    test.isFalse(result6.insertedId);
-    test.equal(coll.find().fetch(), [{name: 'David', foo: 2,
-                                      _id: result5.insertedId}]);
-
-    var emilyId = coll.insert({name: 'Emily', foo: 2});
-    test.equal(coll.find().fetch(), [{name: 'David', foo: 2, _id: davidId},
-                                     {name: 'Emily', foo: 2, _id: emilyId}]);
-
-    // multi update by upsert
-    var result7 = coll.update({foo: 2},
-                              {$set: {bar: 7}, $setOnInsert: {name: 'Fred', foo: 2}},
-                              {upsert: true, multi: true});
-    test.equal(result7.numberAffected, 2);
-    test.isFalse(result7.insertedId);
-    test.equal(coll.find().fetch(), [{name: 'David', foo: 2, bar: 7, _id: davidId},
-                                     {name: 'Emily', foo: 2, bar: 7, _id: emilyId}]);
-
-    // insert by multi upsert
-    var result8 = coll.update({foo: 3},
-                              {$set: {bar: 7}, $setOnInsert: {name: 'Fred', foo: 2}},
-                              {upsert: true, multi: true});
-    test.equal(result8.numberAffected, 1);
-    test.isTrue(result8.insertedId);
-    var fredId = result8.insertedId;
-    test.equal(coll.find().fetch(), [{name: 'David', foo: 2, bar: 7, _id: davidId},
-                                     {name: 'Emily', foo: 2, bar: 7, _id: emilyId},
-                                     {name: 'Fred', foo: 2, bar: 7, _id: fredId}]);
-
-    onComplete();
   });
 });
 
