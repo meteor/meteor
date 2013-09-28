@@ -140,9 +140,8 @@ LocalCollection.prototype.findOne = function (selector, options) {
   return this.find(selector, options).fetch()[0];
 };
 
-LocalCollection.Cursor.prototype.forEach = function (callback) {
+LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
   var self = this;
-  var doc;
 
   if (self.db_objects === null)
     self.db_objects = self._getRawObjects(true);
@@ -155,12 +154,13 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
       movedBefore: true});
 
   while (self.cursor_pos < self.db_objects.length) {
-    var elt = EJSON.clone(self.db_objects[self.cursor_pos++]);
+    var elt = EJSON.clone(self.db_objects[self.cursor_pos]);
     if (self.projection_f)
       elt = self.projection_f(elt);
     if (self._transform)
       elt = self._transform(elt);
-    callback(elt);
+    callback.call(thisArg, elt, self.cursor_pos, self);
+    ++self.cursor_pos;
   }
 };
 
@@ -169,11 +169,11 @@ LocalCollection.Cursor.prototype.getTransform = function () {
   return self._transform;
 };
 
-LocalCollection.Cursor.prototype.map = function (callback) {
+LocalCollection.Cursor.prototype.map = function (callback, thisArg) {
   var self = this;
   var res = [];
-  self.forEach(function (doc) {
-    res.push(callback(doc));
+  self.forEach(function (doc, index) {
+    res.push(callback.call(thisArg, doc, index, self));
   });
   return res;
 };

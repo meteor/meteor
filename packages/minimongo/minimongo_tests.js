@@ -180,16 +180,25 @@ Tinytest.add("minimongo - cursors", function (test) {
 
   // forEach
   var count = 0;
-  q.forEach(function (obj) {
+  var context = {};
+  q.forEach(function (obj, i, cursor) {
     test.equal(obj.i, count++);
-  });
+    test.equal(obj.i, i);
+    test.isTrue(context === this);
+    test.isTrue(cursor === q);
+  }, context);
   test.equal(count, 20);
   // everything empty
   test.length(q.fetch(), 0);
   q.rewind();
 
   // map
-  res = q.map(function (obj) { return obj.i * 2; });
+  res = q.map(function (obj, i, cursor) {
+    test.equal(obj.i, i);
+    test.isTrue(context === this);
+    test.isTrue(cursor === q);
+    return obj.i * 2;
+  }, context);
   test.length(res, 20);
   for (var i = 0; i < 20; i++)
     test.equal(res[i], i * 2);

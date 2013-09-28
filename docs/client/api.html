@@ -965,6 +965,8 @@ cursor, use [`forEach`](#foreach), [`map`](#map), or [`fetch`](#fetch).
 
 {{> api_box cursor_foreach}}
 
+This interface is compatible with [Array.forEach](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach).
+
 When called from a reactive computation, `forEach` registers dependencies on
 the matching documents.
 
@@ -979,6 +981,8 @@ Examples:
     });
 
 {{> api_box cursor_map}}
+
+This interface is compatible with [Array.map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map).
 
 When called from a reactive computation, `map` registers dependencies on
 the matching documents.
