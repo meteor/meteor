@@ -23,6 +23,8 @@ MINIMONGO
 * Fix various bugs with using Mongo ObjectIds. (XXX bad description! this is
   3cfeed and 008847)
 
+* `$near` operator for `2d` and `2dsphere` indices.
+
 * Improve behavior of `$ne`, $nin`, and `$not` selectors with objects containing
   arrays.  #1451
 
