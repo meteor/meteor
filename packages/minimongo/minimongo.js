@@ -92,7 +92,7 @@ LocalCollection.Cursor = function (collection, selector, options) {
   } else {
     self.selector_id = undefined;
     self.selector_f = LocalCollection._compileSelector(selector, self);
-    self.sort_f = options.sort ? LocalCollection._compileSort(options.sort, self) : null;
+    self.sort_f = LocalCollection._compileSort(options.sort || [], self);
   }
   self.skip = options.skip;
   self.limit = options.limit;
