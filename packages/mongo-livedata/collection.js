@@ -343,23 +343,15 @@ _.each(["insert", "update", "remove", "upsert"], function (name) {
     var args = _.toArray(arguments);
     var callback;
     var ret;
-    var methodName = name;
 
-    // Calling `Collection.upsert()` is just like calling `Collection.update()`
-    // with upsert: true, except that we return the whole object with
-    // `numberAffected` and `idInserted` keys. So we do the same thing as an
-    // update, except that we save `isUpsert` to determine what to return when
-    // we're done.
-    var isUpsert = false;
-    if (methodName === "upsert") {
-      isUpsert = true;
-      methodName = "update";
-    }
+    var isUpdateOrUpsert = (name === "update" || name === "upsert");
+    var isUpsert = (name === "update" && options && options.upsert) ||
+          (name === "upsert");
 
     if (args.length && args[args.length - 1] instanceof Function)
       callback = args.pop();
 
-    if (methodName === "insert") {
+    if (name === "insert") {
       if (!args.length)
         throw new Error("insert requires an argument");
       // shallow-copy the document and generate an ID
@@ -375,12 +367,10 @@ _.each(["insert", "update", "remove", "upsert"], function (name) {
     } else {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
 
-      if (methodName === "update") {
+      if (isUpdateOrUpsert) {
         // Mutate args but copy the original options object.
         var options = args[2] = _.clone(args[2]) || {};
-        if (isUpsert)
-          options.upsert = true;
-        if (options && options.upsert) {
+        if (isUpsert) {
           // set `insertedId` if absent.  `insertedId` is a Meteor extension.
           if (options.insertedId) {
             if (!(typeof options.insertedId === 'string'
@@ -393,21 +383,13 @@ _.each(["insert", "update", "remove", "upsert"], function (name) {
       }
     }
 
-    // On inserts, always return the id that we generated. On updates and
-    // removes, return the number of documents we affected. On upsert(), return
-    // the whole object that the collection returns on update (with the number
-    // affected and insertedId).
+    // On inserts, always return the id that we generated; on all other
+    // operations, just return the result from the collection.
     var transformResultFromCollection = function (result) {
-      if (methodName === "insert") {
+      if (name === "insert")
         return ret;
-      } else if (methodName === "update" && ! isUpsert) {
-        if (result)
-          return result.numberAffected;
-        else
-          return undefined;
-      } else {
+      else
         return result;
-      }
     };
 
     var wrappedCallback;
@@ -429,20 +411,20 @@ _.each(["insert", "update", "remove", "upsert"], function (name) {
         // down.
         wrappedCallback = function (err) {
           if (err)
-            Meteor._debug(methodName + " failed: " + (err.reason || err.stack));
+            Meteor._debug(name + " failed: " + (err.reason || err.stack));
         };
       }
 
       var enclosing = DDP._CurrentInvocation.get();
       var alreadyInSimulation = enclosing && enclosing.isSimulation;
-      if (!alreadyInSimulation && methodName !== "insert") {
+      if (!alreadyInSimulation && name !== "insert") {
         // If we're about to actually send an RPC, we should throw an error if
         // this is a non-ID selector, because the mutation methods only allow
         // single-ID selectors. (If we don't throw here, we'll see flicker.)
-        throwIfSelectorIsNotId(args[0], methodName);
+        throwIfSelectorIsNotId(args[0], name);
       }
 
-      self._connection.apply(self._prefix + methodName, args, wrappedCallback);
+      self._connection.apply(self._prefix + name, args, wrappedCallback);
 
     } else {
       // it's my collection.  descend into the collection object
@@ -450,7 +432,7 @@ _.each(["insert", "update", "remove", "upsert"], function (name) {
       args.push(wrappedCallback);
       try {
         // If the user provided a callback, then we expect queryRet to be undefined.
-        var queryRet = self._collection[methodName].apply(self._collection, args);
+        var queryRet = self._collection[name].apply(self._collection, args);
         ret = transformResultFromCollection(queryRet);
       } catch (e) {
         if (callback) {

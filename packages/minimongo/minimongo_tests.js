@@ -89,7 +89,7 @@ Tinytest.add("minimongo - basics", function (test) {
   test.length(c.find({type: "cryptographer"}).fetch(), 2);
 
   count = c.update({name: "snookums"}, {$set: {type: "cryptographer"}});
-  test.equal(count, { numberAffected: 1 });
+  test.equal(count, 1);
   test.equal(c.find().count(), 4);
   test.equal(c.find({type: "kitten"}).count(), 1);
   test.equal(c.find({type: "cryptographer"}).count(), 3);
@@ -2016,7 +2016,7 @@ Tinytest.add("minimongo - saveOriginals", function (test) {
   c.update('bar', {$set: {k: 7}});  // update same doc twice
 
   // Verify returned count is correct
-  test.equal(count, { numberAffected: 2 });
+  test.equal(count, 2);
 
   // Verify the originals.
   var originals = c.retrieveOriginals();

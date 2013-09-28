@@ -257,16 +257,6 @@ MongoConnection.prototype._refresh = function (collectionName, selector) {
   }
 };
 
-var numberAffectedCallback = function (callback) {
-  return Meteor.bindEnvironment(function (err, numberAffected) {
-    callback && callback(err, ! err && {
-      numberAffected: numberAffected
-    });
-  }, function (err) {
-    Meteor._debug("Error in Mongo write:", err.stack);
-  });
-};
-
 MongoConnection.prototype._remove = function (collection_name, selector,
                                               callback) {
   var self = this;
@@ -346,10 +336,20 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         options.insertedId) {
       mongoOpts.insertedId = options.insertedId;
       simulateUpsertWithInsertedId(collection, mongoSelector, mongoMod,
-                                   isModify, mongoOpts, callback);
+                                   isModify, mongoOpts, function (err, result) {
+                                     // If we got here via a upsert() call, then
+                                     // we should return the whole
+                                     // object. Otherwise, we should just return
+                                     // the number of affected docs to match the
+                                     // mongo API.
+                                     if (result && ! options.returnObject)
+                                       callback(err, result.numberAffected);
+                                     else
+                                       callback(err, result);
+                                   });
     } else {
-      collection.update(mongoSelector, mongoMod, mongoOpts,
-                        numberAffectedCallback(callback));
+      // For non-upserts, just return the number of affected documents.
+      collection.update(mongoSelector, mongoMod, mongoOpts, callback);
     }
   } catch (e) {
     write.committed();
@@ -364,13 +364,20 @@ var isModificationMod = function (mod) {
   return false;
 };
 
+// Assumes callback has already been wrapped with bindEnvironment.
+var numberAffectedCallback = function (callback) {
+  return function (err, result) {
+    callback(err, ! err && { numberAffected: result });
+  };
+};
+
 var NUM_OPTIMISTIC_TRIES = 3;
 
 var simulateUpsertWithInsertedId = function (collection, selector, mod,
                                              isModify, options, callback) {
   var insertedId = options.insertedId; // must exist
 
-  var mongoOptsForUpdate = _.extend({}, options);
+  var mongoOptsForUpdate = _.extend({}, options, { returnObject: true });
   delete mongoOptsForUpdate.insertedId;
   delete mongoOptsForUpdate.upsert;
 
@@ -426,7 +433,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
     newDoc = mod;
   }
 
-  var mongoOptsForInsert = _.extend({}, options);
+  var mongoOptsForInsert = _.extend({}, options, { returnObject: true });
   delete mongoOptsForUpdate.insertedId;
   mongoOptsForInsert.upsert = true;
   delete mongoOptsForInsert.multi;
@@ -444,8 +451,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
                           Meteor._debug(err);
                           callback(err);
                         } else {
-                          callback(null, _.extend(result,
-                                                  { insertedId: insertedId }));
+                          callback(null, _.extend(result, { insertedId: insertedId }));
                         }
                       }));
   };
@@ -459,6 +465,21 @@ _.each(["insert", "update", "remove"], function (method) {
     return Meteor._wrapAsync(self["_" + method]).apply(self, arguments);
   };
 });
+
+MongoConnection.prototype.upsert = function (collectionName, selector, mod,
+                                             options, callback) {
+  var self = this;
+  if (typeof options === "function" && ! callback) {
+    callback = options;
+    options = {};
+  }
+
+  return self.update(collectionName, selector, mod,
+                     _.extend({}, options, {
+                       upsert: true,
+                       returnObject: true
+                     }, callback));
+};
 
 MongoConnection.prototype.find = function (collectionName, selector, options) {
   var self = this;

@@ -599,16 +599,30 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
     updateCount = 1;
   }
 
-  var result = {
-    numberAffected: updateCount
-  };
-  if (insertedId !== undefined)
-    result.insertedId = insertedId;
+  var result;
+  if (options.returnObject) {
+    result = {
+      numberAffected: updateCount
+    };
+    if (insertedId !== undefined)
+      result.insertedId = insertedId;
+  } else {
+    result = updateCount;
+  }
+
   if (callback)
     Meteor.defer(function () {
       callback(null, result);
     });
   return result;
+};
+
+LocalCollection.prototype.upsert = function (selector, mod, options, callback) {
+  var self = this;
+  return self.update(selector, mod, _.extend({}, options, {
+    upsert: true,
+    returnObject: true
+  }, callback));
 };
 
 LocalCollection.prototype._modifyAndNotify = function (
