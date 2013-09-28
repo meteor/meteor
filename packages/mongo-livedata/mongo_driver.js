@@ -383,13 +383,6 @@ var isModificationMod = function (mod) {
   return false;
 };
 
-// Assumes callback has already been wrapped with bindEnvironment.
-var numberAffectedCallback = function (callback) {
-  return function (err, result) {
-    callback(err, ! err && { numberAffected: result });
-  };
-};
-
 var NUM_OPTIMISTIC_TRIES = 3;
 
 // exposed for testing
