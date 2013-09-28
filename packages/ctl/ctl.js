@@ -63,6 +63,7 @@ Ctl.Commands.push({
           "main": {
             bindEnv: "PORT",
             routeEnv: "ROUTE"//,
+            // XXX YYY
             //bindIpEnv: "BIND_IP" // Later, we can teach Satellite to do
             //something like recommend the process bind to a particular IP here.
             //For now, we don't have a way of setting this, so Satellite binds

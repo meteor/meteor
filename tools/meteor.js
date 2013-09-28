@@ -363,13 +363,23 @@ Fiber(function () {
     help: "[default] Run this project in local development mode",
     argumentParser: function (opt) {
       // reparse args
-      opt.alias('port', 'p').default('port', 3000)
-        .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
+      // XXX YYY
+      opt
         .boolean('production')
         .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
         .describe('settings',  'Set optional data for Meteor.settings on the server')
         .describe('release', 'Specify the release of Meteor to use')
-        .describe('program', 'The program in the app to run (Advanced)')
+
+      // XXX don't document "program" for now. need a better thing to say.
+      // .describe('program', 'The program in the app to run (Advanced)')
+
+      // XXX YYY
+        .alias('port', 'p').default('port', 3000)
+        .describe('port', 'XXX Port or IP:Port to listen on.')
+
+        .describe('app-port', 'XXX')
+        .describe('mongo-port', 'XXX')
+
       // #Once
       // With --once, meteor does not re-run the project if it crashes and does
       // not monitor for file changes. Intentionally undocumented: intended for
@@ -394,6 +404,8 @@ Fiber(function () {
       maybePrintUserOverrideMessage();
       runner.run(context, {
         port: argv.port,
+        appPort: argv.appPort,
+        mongoPort: argv.mongoPort,
         minify: argv.production,
         once: argv.once,
         settingsFile: argv.settings,
@@ -900,6 +912,7 @@ Fiber(function () {
             process.exit(1);
           }
 
+          // XXX YYY
           fut.return("mongodb://127.0.0.1:" + mongod_port + "/meteor");
         });
         mongoUrl = fut.wait();
@@ -1111,6 +1124,8 @@ Fiber(function () {
     help: "Test one or more packages",
     argumentParser: function (opt) {
       // This help logic should probably move to run.js eventually
+
+      // XXX YYY
       opt .alias('port', 'p').default('port', 3000)
         .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
         .describe('deploy', 'Optionally, specify a domain to deploy to, rather than running locally.')
@@ -1195,6 +1210,7 @@ Fiber(function () {
         });
       } else {
         runner.run(context, {
+          // XXX YYY
           port: argv.port,
           minify: argv.production,
           once: argv.once,
