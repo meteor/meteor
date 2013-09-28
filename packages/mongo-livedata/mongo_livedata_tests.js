@@ -913,6 +913,32 @@ if (Meteor.isServer) {
     onComplete();
   });
 
+  Tinytest.addAsync("mongo-livedata - upsert error parse, " + idGeneration, function (test, onComplete) {
+    var run = test.runId();
+    var coll = new Meteor.Collection("livedata_upsert_errorparse_collection_"+run, collectionOptions);
+
+    coll.insert({_id: 'foobar'});
+    var err;
+    try {
+      coll.update({_id: 'foobar'}, {_id: 'cowbar'});
+    } catch (e) {
+      err = e;
+    }
+    test.isTrue(err);
+    test.isTrue(MongoInternals.Connection._isCannotChangeIdError(err));
+
+    try {
+      coll.insert({_id: 'foobar'});
+    } catch (e) {
+      err = e;
+    }
+    test.isTrue(err);
+    // duplicate id error is not same as change id error
+    test.isFalse(MongoInternals.Connection._isCannotChangeIdError(err));
+
+    onComplete();
+  });
+
 } // end Meteor.isServer
 
 _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {

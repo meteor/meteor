@@ -373,6 +373,13 @@ var numberAffectedCallback = function (callback) {
 
 var NUM_OPTIMISTIC_TRIES = 3;
 
+// exposed for testing
+MongoConnection._isCannotChangeIdError = function (err) {
+  // either of these checks should work, but just to be safe...
+  return (err.code === 13596 ||
+          err.err.indexOf("cannot change _id of a document") === 0);
+};
+
 var simulateUpsertWithInsertedId = function (collection, selector, mod,
                                              isModify, options, callback) {
   var insertedId = options.insertedId; // must exist
@@ -445,11 +452,14 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
     collection.update(selector, replacementWithId, mongoOptsForInsert,
                       numberAffectedCallback(function (err, result) {
                         if (err) {
-                          // XXX figure out if this is a
+                          // figure out if this is a
                           // "cannot change _id of document" error, and
                           // if so, try doUpdate() again, up to 3 times.
-                          Meteor._debug(err);
-                          callback(err);
+                          if (MongoConnection._isCannotChangeIdError(err)) {
+                            doUpdate();
+                          } else {
+                            callback(err);
+                          }
                         } else {
                           callback(null, _.extend(result, { insertedId: insertedId }));
                         }
