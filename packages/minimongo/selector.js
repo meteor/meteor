@@ -342,6 +342,9 @@ var VALUE_OPERATORS = {
           dist = distanceCoordinatePairs(point, value);
           break;
         case "2dsphere":
+          // Presence of this package is checked when user ensures 2dsphere
+          // index on collection.
+          var GeoJSON = Package['geojson-utils'].GeoJSON;
           // XXX: for now, we don't calculate the actual distance between, say,
           // polygon and circle. If people care about this use-case it will get
           // a priority.

@@ -1190,7 +1190,7 @@ LocalCollection.prototype._ensureIndex = function (keys, options) {
   var self = this;
   self._2dMode = _.values(keys)[0];
 
-  if (self._2dMode === "2dsphere" && GeoJSON === undefined)
+  if (self._2dMode === "2dsphere" && !Package['geojson-utils'])
     throw new Error("Need geojson-utils package for GeoJSON calculations");
 };
 

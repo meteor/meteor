@@ -8,7 +8,7 @@ Package.on_use(function (api) {
   api.use(['underscore', 'json', 'ejson', 'ordered-dict', 'deps',
            'random', 'ordered-dict']);
   // If you really want geolocation queries to work, add this package
-  api.imply('geojson-utils');
+  api.use('geojson-utils', { weak: true });
   api.add_files([
     'minimongo.js',
     'selector.js',
@@ -19,8 +19,8 @@ Package.on_use(function (api) {
 });
 
 Package.on_test(function (api) {
-  api.use('minimongo', 'client');
   api.use('geojson-utils', 'client');
+  api.use('minimongo', 'client');
   api.use('test-helpers', 'client');
   api.use(['tinytest', 'underscore', 'ejson', 'ordered-dict',
            'random', 'deps']);
