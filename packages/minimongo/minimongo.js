@@ -92,7 +92,8 @@ LocalCollection.Cursor = function (collection, selector, options) {
   } else {
     self.selector_id = undefined;
     self.selector_f = LocalCollection._compileSelector(selector, self);
-    self.sort_f = LocalCollection._compileSort(options.sort || [], self);
+    self.sort_f = (isGeoQuery(selector) || options.sort) ?
+      LocalCollection._compileSort(options.sort || [], self) : null;
   }
   self.skip = options.skip;
   self.limit = options.limit;
@@ -1191,5 +1192,11 @@ LocalCollection.prototype._ensureIndex = function (keys, options) {
 
   if (self._2dMode === "2dsphere" && GeoJSON === undefined)
     throw new Error("Need geojson-utils package for GeoJSON calculations");
+};
+
+var isGeoQuery = function (selector) {
+  return _.any(selector, function (val, key) {
+    return key === "$near" || (_.isObject(val) && isGeoQuery(val));
+  });
 };
 
