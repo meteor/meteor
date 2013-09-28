@@ -568,6 +568,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
     insert: {allow: [], deny: []},
     update: {allow: [], deny: []},
     remove: {allow: [], deny: []},
+    upsert: {allow: [], deny: []}, // dummy arrays; can't set these!
     fetch: [],
     fetchAllFields: false
   };
@@ -583,7 +584,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
   if (self._connection) {
     var m = {};
 
-    _.each(['insert', 'update', 'remove'], function (method) {
+    _.each(['insert', 'update', 'remove', 'upsert'], function (method) {
       m[self._prefix + method] = function (/* ... */) {
         // All the methods do their own validation, instead of using check().
         check(arguments, [Match.Any]);
@@ -597,8 +598,12 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
             return;
           }
 
-          // This is the server receiving a method call from the client. We
-          // don't allow arbitrary selectors in mutations from the client: only
+          // This is the server receiving a method call from the client.
+
+          if (method === 'upsert' && ! self._isInsecure())
+            throw new Meteor.Error(403, "Not permitted.  Untrusted code may not upsert (not supported by allow/deny).  Upsert from a method instead.");
+
+          // We don't allow arbitrary selectors in mutations from the client: only
           // single-ID selectors.
           if (method !== 'insert')
             throwIfSelectorIsNotId(arguments[0], method);
