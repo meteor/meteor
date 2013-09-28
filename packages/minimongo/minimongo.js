@@ -595,6 +595,8 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   if (updateCount === 0 && options.upsert) {
     var newDoc = _.clone(selector);
     LocalCollection._modify(newDoc, mod, true);
+    if (! newDoc._id && options.insertedId)
+      newDoc._id = options.insertedId;
     insertedId = self.insert(newDoc);
     updateCount = 1;
   }

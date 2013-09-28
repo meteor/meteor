@@ -943,7 +943,7 @@ if (Meteor.isServer) {
 
 _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
   _.each([true, false], function (useUpdate) {
-    Tinytest.addAsync("mongo-livedata - " + (useUpdate ? "update " : "") + "upsert " + (minimongo ? "minimongo" : "") + ", " + idGeneration, function (test, onComplete) {
+    Tinytest.addAsync("mongo-livedata - " + (useUpdate ? "update " : "") + "upsert" + (minimongo ? " minimongo" : "") + ", " + idGeneration, function (test, onComplete) {
       var upsert = function (query, mod, options) {
         if (useUpdate)
           return { numberAffected:
@@ -960,6 +960,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
           actual = _.map(actual, stripId);
           expected = _.map(expected, stripId);
         }
+        // (technically should ignore order in comparison)
         test.equal(actual, expected);
       };
 
@@ -1001,7 +1002,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
 
       coll.remove({});
 
-      // Test modification
+      // Test modification by upsert
 
       var result5 = upsert({name: 'David'}, {$set: {foo: 1}});
       test.equal(result5.numberAffected, 1);
@@ -1051,6 +1052,119 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
                      [{name: 'David', foo: 2, bar: 7, _id: davidId},
                       {name: 'Emily', foo: 2, bar: 7, _id: emilyId},
                       {name: 'Fred', foo: 2, bar: 7, _id: fredId}]);
+
+      // test `insertedId` option
+      var result9 = upsert({name: 'Steve'},
+                           {name: 'Steve'},
+                           {insertedId: 'steve'});
+      test.equal(result9.numberAffected, 1);
+      if (! useUpdate)
+        test.equal(result9.insertedId, 'steve');
+      compareResults(coll.find().fetch(),
+                     [{name: 'David', foo: 2, bar: 7, _id: davidId},
+                      {name: 'Emily', foo: 2, bar: 7, _id: emilyId},
+                      {name: 'Fred', foo: 2, bar: 7, _id: fredId},
+                      {name: 'Steve', _id: 'steve'}]);
+      test.isTrue(coll.findOne('steve'));
+      test.isFalse(coll.findOne('fred'));
+
+      onComplete();
+    });
+  });
+});
+
+_.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
+  _.each([true, false], function (useUpdate) {
+    Tinytest.addAsync("mongo-livedata - " + (useUpdate ? "update " : "") + "upsert by id" + (minimongo ? " minimongo" : "") + ", " + idGeneration, function (test, onComplete) {
+      var upsert = function (query, mod, options) {
+        if (useUpdate)
+          return { numberAffected:
+                   coll.update(query, mod,
+                                     _.extend({ upsert: true }, options)) };
+        else
+          return coll.upsert(query, mod, options);
+      };
+      var stripId = function (obj) {
+        delete obj._id;
+      };
+      var compareResults = function (actual, expected, stripIds) {
+        if (stripIds) {
+          actual = _.map(actual, stripId);
+          expected = _.map(expected, stripId);
+        }
+        // (technically should ignore order in comparison)
+        test.equal(actual, expected);
+      };
+
+      var run = test.runId();
+      var options = collectionOptions;
+      if (minimongo)
+        options = _.extend({}, collectionOptions, { connection: null });
+      var coll = new Meteor.Collection("livedata_upsert_by_id_collection_"+run, options);
+
+      var ret;
+      ret = upsert({_id: 'foo'}, {$set: {x: 1}});
+      test.equal(ret.numberAffected, 1);
+      if (! useUpdate)
+        test.equal(ret.insertedId, 'foo');
+      compareResults(coll.find().fetch(),
+                     [{_id: 'foo', x: 1}]);
+
+      ret = upsert({_id: 'foo'}, {$set: {x: 2}});
+      test.equal(ret.numberAffected, 1);
+      if (! useUpdate)
+        test.isFalse(ret.insertedId);
+      compareResults(coll.find().fetch(),
+                     [{_id: 'foo', x: 2}]);
+
+      ret = upsert({_id: 'bar'}, {$set: {x: 1}});
+      test.equal(ret.numberAffected, 1);
+      if (! useUpdate)
+        test.equal(ret.insertedId, 'bar');
+      compareResults(coll.find().fetch(),
+                     [{_id: 'foo', x: 2},
+                      {_id: 'bar', x: 1}]);
+
+      coll.remove({});
+
+      ret = upsert({_id: 'traz'}, {x: 1});
+      test.equal(ret.numberAffected, 1);
+      var myId = ret.insertedId;
+      if (! useUpdate) {
+        test.isTrue(myId);
+        // upsert with entire document does NOT take _id from
+        // the query.
+        test.notEqual(myId, 'traz');
+      } else {
+        myId = coll.findOne()._id;
+      }
+      compareResults(coll.find().fetch(),
+                     [{x: 1, _id: myId}]);
+
+      // this time, insert as _id 'traz'
+      ret = upsert({_id: 'traz'}, {_id: 'traz', x: 2});
+      test.equal(ret.numberAffected, 1);
+      if (! useUpdate)
+        test.equal(ret.insertedId, 'traz');
+      compareResults(coll.find().fetch(),
+                     [{x: 1, _id: myId},
+                      {x: 2, _id: 'traz'}]);
+
+      // now update _id 'traz'
+      ret = upsert({_id: 'traz'}, {x: 3});
+      test.equal(ret.numberAffected, 1);
+      test.isFalse(ret.insertedId);
+      compareResults(coll.find().fetch(),
+                     [{x: 1, _id: myId},
+                      {x: 3, _id: 'traz'}]);
+
+      // now update, passing _id (which is ok as long as it's the same)
+      ret = upsert({_id: 'traz'}, {_id: 'traz', x: 4});
+      test.equal(ret.numberAffected, 1);
+      test.isFalse(ret.insertedId);
+      compareResults(coll.find().fetch(),
+                     [{x: 1, _id: myId},
+                      {x: 4, _id: 'traz'}]);
 
       onComplete();
     });

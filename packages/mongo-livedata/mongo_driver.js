@@ -257,6 +257,16 @@ MongoConnection.prototype._refresh = function (collectionName, selector) {
   }
 };
 
+var numberAffectedCallback = function (callback) {
+  return Meteor.bindEnvironment(function (err, numberAffected, extraInfo) {
+    callback && callback(err, ! err && {
+      numberAffected: numberAffected
+    }, extraInfo);
+  }, function (err) {
+    Meteor._debug("Error in Mongo write:", err.stack);
+  });
+};
+
 MongoConnection.prototype._remove = function (collection_name, selector,
                                               callback) {
   var self = this;
@@ -330,10 +340,9 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     var mongoMod = replaceTypes(mod, replaceMeteorAtomWithMongo);
 
     var isModify = isModificationMod(mongoMod);
+    var knownId = (isModify ? mongoSelector._id : mongoMod._id);
 
-    if (options.upsert &&
-        (isModify ? (! mongoSelector._id) : (! mongoMod._id)) &&
-        options.insertedId) {
+    if (options.upsert && (! knownId) && options.insertedId) {
       mongoOpts.insertedId = options.insertedId;
       simulateUpsertWithInsertedId(collection, mongoSelector, mongoMod,
                                    isModify, mongoOpts, function (err, result) {
@@ -348,8 +357,18 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
                                        callback(err, result);
                                    });
     } else {
-      // For non-upserts, just return the number of affected documents.
-      collection.update(mongoSelector, mongoMod, mongoOpts, callback);
+      collection.update(mongoSelector, mongoMod, mongoOpts,
+                        numberAffectedCallback(function (err, result, extra) {
+                          if (! err) {
+                            if (options.upsert && (! extra.updatedExisting) &&
+                                knownId) {
+                              result.insertedId = knownId;
+                            }
+                            if (result && ! options.returnObject)
+                              result = result.numberAffected;
+                          }
+                          callback(err, result);
+                        }));
     }
   } catch (e) {
     write.committed();
