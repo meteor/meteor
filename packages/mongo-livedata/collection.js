@@ -619,11 +619,11 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
             var validatedMethodName =
                   '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
             var argsWithUserId = [this.userId].concat(_.toArray(arguments));
-            self[validatedMethodName].apply(self, argsWithUserId);
+            return self[validatedMethodName].apply(self, argsWithUserId);
           } else if (self._isInsecure()) {
             // In insecure mode, allow any mutation (with a simple selector).
-            self._collection[method].apply(self._collection,
-                                           _.toArray(arguments));
+            return self._collection[method].apply(self._collection,
+                                                  _.toArray(arguments));
           } else {
             // In secure mode, if we haven't called allow or deny, then nothing
             // is permitted.

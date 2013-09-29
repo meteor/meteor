@@ -941,6 +941,12 @@ if (Meteor.isServer) {
 
 } // end Meteor.isServer
 
+var stripId = function (obj) {
+  delete obj._id;
+};
+
+// This test is duplicated below (with some changes) for async upserts that go
+// over the network.
 _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
   _.each([true, false], function (useUpdate) {
     Tinytest.addAsync("mongo-livedata - " + (useUpdate ? "update " : "") + "upsert" + (minimongo ? " minimongo" : "") + ", " + idGeneration, function (test, onComplete) {
@@ -952,13 +958,11 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
         else
           return coll.upsert(query, mod, options);
       };
-      var stripId = function (obj) {
-        delete obj._id;
-      };
+
       var compareResults = function (actual, expected) {
         if (useUpdate) {
-          actual = _.map(actual, stripId);
-          expected = _.map(expected, stripId);
+          _.map(actual, stripId);
+          _.map(expected, stripId);
         }
         // (technically should ignore order in comparison)
         test.equal(actual, expected);
@@ -1072,6 +1076,174 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
     });
   });
 });
+
+// This is a duplicate of the test above, with some changes to make it work for
+// async upserts that go over the network.
+if (Meteor.isClient) {
+  _.each([true, false], function (useUpdate) {
+    Tinytest.addAsync("mongo-livedata - async " + (useUpdate ? "update " : "") + "upsert" + ", " + idGeneration, function (test, onComplete) {
+      var coll;
+      var upsert = function (query, mod, options, callback) {
+        if (! callback && typeof options === "function") {
+          callback = options;
+          options = {};
+        }
+        if (useUpdate)
+          coll.update(query, mod, _.extend({ upsert: true }, options), function (err, result) {
+            callback(err, result ? { numberAffected: result } : undefined);
+          });
+        else
+          coll.upsert(query, mod, options, callback);
+      };
+
+      var compareResults = function (actual, expected) {
+        if (useUpdate) {
+          _.map(actual, stripId);
+          _.map(expected, stripId);
+        }
+        // (technically should ignore order in comparison)
+        test.equal(actual, expected);
+      };
+
+      var run = test.runId();
+      var collName = "livedata_upsert_collection_"+run;
+      Meteor.call("createInsecureCollection", collName, collectionOptions);
+      coll = new Meteor.Collection(collName, collectionOptions);
+      Meteor.subscribe("c-" + collName);
+
+      var result1;
+      var next1 = function (err, result) {
+        result1 = result;
+        test.equal(result1.numberAffected, 1);
+        if (! useUpdate) {
+          test.isTrue(result1.insertedId);
+          test.equal(result1.insertedId, 'foo');
+        }
+        compareResults(coll.find().fetch(), [{foo: 'bar', _id: 'foo'}]);
+        upsert({_id: 'foo'}, {foo: 'baz'}, next2);
+      };
+
+      // Test starts here.
+      upsert({_id: 'foo'}, {_id: 'foo', foo: 'bar'}, next1);
+
+      var t1, t2, result2;
+      var next2 = function (err, result) {
+        result2 = result;
+        test.equal(result2.numberAffected, 1);
+        if (! useUpdate)
+          test.isFalse(result2.insertedId);
+        compareResults(coll.find().fetch(), [{foo: 'baz', _id: result1.insertedId}]);
+        coll.remove({_id: 'foo'});
+        compareResults(coll.find().fetch(), []);
+
+        // Test values that require transformation to go into Mongo:
+
+        t1 = new Meteor.Collection.ObjectID();
+        t2 = new Meteor.Collection.ObjectID();
+        upsert({_id: t1}, {_id: t1, foo: 'bar'}, next3);
+      };
+
+      var result3;
+      var next3 = function (err, result) {
+        result3 = result;
+        test.equal(result3.numberAffected, 1);
+        if (! useUpdate) {
+          test.isTrue(result3.insertedId);
+          test.equal(t1, result3.insertedId);
+        }
+        compareResults(coll.find().fetch(), [{_id: t1, foo: 'bar'}]);
+
+        upsert({_id: t1}, {foo: t2}, next4);
+      };
+
+      var next4 = function (err, result4) {
+        test.equal(result2.numberAffected, 1);
+        if (! useUpdate)
+          test.isFalse(result2.insertedId);
+        compareResults(coll.find().fetch(), [{foo: t2, _id: result3.insertedId}]);
+
+        coll.remove({_id: t1});
+
+        // Test modification by upsert
+        upsert({_id: 'David'}, {$set: {foo: 1}}, next5);
+      };
+
+      var result5;
+      var next5 = function (err, result) {
+        result5 = result;
+        test.equal(result5.numberAffected, 1);
+        if (! useUpdate) {
+          test.isTrue(result5.insertedId);
+          test.equal(result5.insertedId, 'David');
+        }
+        var davidId = result5.insertedId;
+        compareResults(coll.find().fetch(), [{foo: 1, _id: davidId}]);
+
+        // test that bad modifier fails
+        upsert({_id: 'David'}, {$blah: {foo: 2}}, function (err) {
+          test.isTrue(err);
+          upsert({_id: 'David'}, {$set: {foo: 2}}, next6);
+        });
+      };
+
+      var result6;
+      var next6 = function (err, result) {
+        result6 = result;
+        test.equal(result6.numberAffected, 1);
+        if (! useUpdate)
+          test.isFalse(result6.insertedId);
+        compareResults(coll.find().fetch(), [{_id: 'David', foo: 2}]);
+
+        var emilyId = coll.insert({_id: 'Emily', foo: 2});
+        compareResults(coll.find().fetch(), [{_id: 'David', foo: 2},
+                                             {_id: 'Emily', foo: 2}]);
+
+        // multi update by upsert.
+        // We can't actually update multiple documents since we have to do it by
+        // id, but at least make sure the multi flag doesn't mess anything up.
+        upsert({_id: 'Emily'},
+               {$set: {bar: 7},
+                $setOnInsert: {name: 'Fred', foo: 2}},
+               {multi: true}, next7);
+      };
+
+      var result7;
+      var next7 = function (err, result) {
+        result7 = result;
+        test.equal(result7.numberAffected, 1);
+        if (! useUpdate)
+          test.isFalse(result7.insertedId);
+        compareResults(coll.find().fetch(), [{_id: 'David', foo: 2},
+                                             {_id: 'Emily', foo: 2, bar: 7}]);
+
+        // insert by multi upsert
+        upsert({_id: 'Fred'},
+               {$set: {bar: 7},
+                $setOnInsert: {name: 'Fred', foo: 2}},
+               {multi: true}, next8);
+
+      };
+
+      var result8;
+      var next8 = function (err, result) {
+        result8 = result;
+
+        test.equal(result8.numberAffected, 1);
+        if (! useUpdate) {
+          test.isTrue(result8.insertedId);
+          test.equal(result8.insertedId, 'Fred');
+        }
+        var fredId = result8.insertedId;
+        compareResults(coll.find().fetch(),
+                       [{_id: 'David', foo: 2},
+                        {_id: 'Emily', foo: 2, bar: 7},
+                        {name: 'Fred', foo: 2, bar: 7, _id: fredId}]);
+        onComplete();
+      };
+    });
+  });
+}
+
 
 _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
   _.each([true, false], function (useUpdate) {

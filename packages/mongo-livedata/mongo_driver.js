@@ -367,7 +367,10 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
                             if (result && ! options.returnObject)
                               result = result.numberAffected;
                           }
-                          callback(err, result);
+                          callback(err, replaceTypes(
+                            result,
+                            replaceMongoAtomWithMeteor
+                          ));
                         }));
     }
   } catch (e) {
@@ -426,7 +429,10 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
                           if (err) {
                             callback(err);
                           } else if (result.numberAffected) {
-                            callback(null, result);
+                            callback(null, replaceTypes(
+                              result,
+                              replaceMongoAtomWithMeteor
+                            ));
                           } else {
                             doConditionalInsert();
                           }
@@ -473,7 +479,9 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
                             callback(err);
                           }
                         } else {
-                          callback(null, _.extend(result, { insertedId: insertedId }));
+                          callback(null, replaceTypes(_.extend(result, {
+                            insertedId: insertedId
+                          }), replaceMongoAtomWithMeteor));
                         }
                       }));
   };

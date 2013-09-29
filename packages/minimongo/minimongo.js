@@ -621,6 +621,10 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
 
 LocalCollection.prototype.upsert = function (selector, mod, options, callback) {
   var self = this;
+  if (! callback && typeof options === "function") {
+    callback = options;
+    options = {};
+  }
   return self.update(selector, mod, _.extend({}, options, {
     upsert: true,
     returnObject: true
