@@ -1473,6 +1473,10 @@ current user with:
                                {fields: {'other': 1, 'things': 1}});
     });
 
+And subscribe on the client side with:
+
+    Meteor.subscribe('userData');
+
 If the autopublish package is installed, information about all users
 on the system is published to all clients. This includes `username`,
 `profile`, and any fields in `services` that are meant to be public
