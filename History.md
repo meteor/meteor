@@ -32,6 +32,10 @@
 * Support OAuth1 services that require request token secrets as well as
   authentication token secrets.  #1253
 
+* Add `browser-policy` package for configuring and sending Content Security
+  Policy and X-Frame-Options HTTP headers.
+
+
 ## v0.6.5.1
 
 * Fix syntax errors on lines that end with a backslash. #1326
