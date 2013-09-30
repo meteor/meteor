@@ -43,10 +43,22 @@ Run locally:
 
 ### Usage
 
-Add this smart package to your project:
+1. Add one of the built-in accounts packages so the Meteor.users collection exists.  From a command prompt:
+```bash
+meteor add accounts-password
+```
 
-  1. install [Meteorite][1]
-  2. ```mrt add roles```
+2. Install [Meteorite][1]
+  
+3. Add this smart package to your project.  From a command prompt:
+```bash
+mrt add roles
+```
+
+4. Run your application using Meteorite (rather than the normal meteor):
+```bash
+mrt
+```
 
 
 <br />
