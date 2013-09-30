@@ -340,7 +340,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     var mongoMod = replaceTypes(mod, replaceMeteorAtomWithMongo);
 
     var isModify = isModificationMod(mongoMod);
-    var knownId = (isModify ? mongoSelector._id : mongoMod._id);
+    var knownId = (isModify ? selector._id : mod._id);
 
     if (options.upsert && (! knownId) && options.insertedId) {
       mongoOpts.insertedId = options.insertedId;
@@ -367,10 +367,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
                             if (result && ! options.returnObject)
                               result = result.numberAffected;
                           }
-                          callback(err, replaceTypes(
-                            result,
-                            replaceMongoAtomWithMeteor
-                          ));
+                          callback(err, result);
                         }));
     }
   } catch (e) {
@@ -429,10 +426,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
                           if (err) {
                             callback(err);
                           } else if (result.numberAffected) {
-                            callback(null, replaceTypes(
-                              result,
-                              replaceMongoAtomWithMeteor
-                            ));
+                            callback(null, result);
                           } else {
                             doConditionalInsert();
                           }
@@ -479,9 +473,9 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
                             callback(err);
                           }
                         } else {
-                          callback(null, replaceTypes(_.extend(result, {
+                          callback(null, _.extend(result, {
                             insertedId: insertedId
-                          }), replaceMongoAtomWithMeteor));
+                          }));
                         }
                       }));
   };
