@@ -1,0 +1,156 @@
+<template name="pkg_browser_policy">
+{{#better_markdown}}
+## `browser-policy`
+
+The `browser-policy` package lets you set security-related policies that will be
+enforced by newer browsers. These policies help you prevent and mitigate common
+attacks like cross-site scripting and clickjacking.
+
+`browser-policy` lets you configure the HTTP headers X-Frame-Options and
+Content-Security-Policy. X-Frame-Options tells the browser which websites are
+allowed to frame your app. You should only let trusted websites frame your app,
+because malicious sites could harm your users
+with <a href="https://www.owasp.org/index.php/Clickjacking">clickjacking
+attacks</a>.
+<a href="https://developer.mozilla.org/en-US/docs/Security/CSP/Introducing_Content_Security_Policy">Content-Security-Policy</a>
+tells the browser where your app can load content from, which encourages safe
+practices and mitigates the damage of a cross-site-scripting attack.
+
+For most apps, we recommend that you take the following steps when using
+`browser-policy`:
+
+* Call `BrowserPolicy.enableContentSecurityPolicy()` to enable a starter policy
+for your app. With this starter policy, your app's client code will be able to
+load content (images, scripts, fonts, etc.) only from its own origin, except
+that XMLHttpRequests and WebSocket connections can go to any origin. Further,
+your app's client code will not be able to use functions such as `eval()` that
+convert strings to code.
+* You can use the functions described below to customize the content
+security policy. If your app does not need any inline Javascript such as inline
+`<script>` tags, we recommend that you modify the policy by calling
+`BrowserPolicy.disallowInlineScripts()` in server code. This will result in one
+extra round trip when your app is loaded, but will help prevent cross-site
+scripting attacks by disabling all scripts except those loaded from a `script
+src` attribute.
+* If your app does not need to be framed by other websites, call
+`BrowserPolicy.allowFramingBySameOrigin()` to help prevent clickjacking attacks.
+
+Meteor determines the browser policy when the server starts up, so you should
+call `BrowserPolicy` functions in top-level application code or in
+`Meteor.startup`.
+
+#### Frame options
+
+You can use the following functions to specify which websites are allowed to
+frame your app:
+<dl class="callbacks">
+{{#dtdd "BrowserPolicy.disallowFraming()"}}
+Your app will never render inside a frame or iframe.
+{{/dtdd}}
+
+{{#dtdd "BrowserPolicy.allowFramingByOrigin(origin)"}}
+Your app will only render inside frames loaded by `origin`. You can only call
+this function once with a single origin, and cannot use wildcards or specify
+multiple origins that are allowed to frame your app. (This is a limitation of
+the X-Frame-Options header.) Example values of `origin` include
+"http://example.com" and "https://foo.example.com". Note that this value of the
+X-Frame-Options header is not yet supported in Chrome or Safari and will be
+ignored in those browsers.
+{{/dtdd}}
+
+{{#dtdd "BrowserPolicy.allowFramingBySameOrigin()"}}
+Your app will only render inside frames loaded by webpages on the same origin as
+your app.
+{{/dtdd}}
+
+{{#dtdd "BrowserPolicy.allowFramingByAnyOrigin()"}}
+Your app can be framed by any website.
+{{/dtdd}}
+</dl>
+
+#### Content options
+
+You can use the functions in this section to control how different types of
+content can be loaded on your site. In order to use any of these functions, you
+must first call `BrowserPolicy.enableContentSecurityPolicy()`, which enables the
+starter policy described above. This section covers additional functions that
+you can use to tighten or relax restrictions on what content your app can use.
+
+You can use the following functions to adjust policies on where Javascript and
+CSS can be run:
+
+<dl class="callbacks">
+{{#dtdd "BrowserPolicy.allowInlineScripts()"}}
+Allows inline `<script>` tags, `javascript:` URLs, and inline event handlers.
+{{/dtdd}}
+
+{{#dtdd "BrowserPolicy.disallowInlineScripts()"}}
+Disallows inline Javascript. Calling this function results in an extra
+round-trip on page load to retrieve Meteor runtime configuration that is usually
+part of an inline script tag.
+{{/dtdd}}
+
+{{#dtdd "BrowserPolicy.allowEval()"}}
+Allows the creation of Javascript code from strings using function such as `eval()`.
+{{/dtdd}}
+
+{{#dtdd "BrowserPolicy.disallowEval()"}}
+Disallows eval and related functions.
+{{/dtdd}}
+
+{{#dtdd "BrowserPolicy.allowInlineStyles()"}}
+Allows inline style tags and style attributes.
+{{/dtdd}}
+
+{{#dtdd "BrowserPolicy.disallowInlineStyles()"}}
+Disallows inline CSS.
+{{/dtdd}}
+</dl>
+
+Finally, you can configure a whitelist of allowed requests that various types of
+content can make. The following functions are defined for the content types
+script, object, image, media, font, and connect.
+
+<dl class="callbacks">
+{{#dtdd "BrowserPolicy.allow&lt;ContentType&gt;Origin(origin)"}}
+Allows this type of content to be loaded from the given origin. `origin` is a
+string and can include an optional scheme (such as `http` or `https`), an
+optional wildcard at the beginning, and an optional port which can be a
+wildcard. Examples include `example.com`, `https://*.example.com`, and
+`example.com:*`. You can call these functions multiple times with different
+origins to specify a whitelist of allowed origins.
+{{/dtdd}}
+
+{{#dtdd "BrowserPolicy.allow&lt;ContentType&gt;DataUrl()"}}
+Allows this type of content to be loaded from a `data:` URL.
+{{/dtdd}}
+
+{{#dtdd "BrowserPolicy.allow&lt;ContentType&gt;SameOrigin()"}}
+Allows this type of content to be loaded from the same origin as your app.
+{{/dtdd}}
+
+{{#dtdd "BrowserPolicy.disallow&lt;ContentType&gt;()"}}
+Disallows this type of content on your app.
+{{/dtdd}}
+</dl>
+
+These functions are also defined for the content type `AllContent`, which is a
+shorthand for calling one of the above functions once for each content type.
+For example, if you want to allow the origin `https://foo.com` for all types of
+content but you want to disable `<object>` tags, you can call
+`BrowserPolicy.allowAllContentOrigin("https://foo.com")` followed by
+`BrowserPolicy.disallowObject()`.
+
+Other examples of using the `BrowserPolicy` API:
+
+* `BrowserPolicy.disallowObject()` causes the browser to disallow all
+`<object>` tags.
+* `BrowserPolicy.allowImageOrigin("https://example.com")`
+allows images to have their `src` attributes point to images served from
+`https://example.com`.
+* `BrowserPolicy.allowConnectOrigin("https://example.com")` allows XMLHttpRequest
+and WebSocket connections to `https://example.com`.
+
+
+{{/better_markdown}}
+</template>

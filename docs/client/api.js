@@ -482,7 +482,7 @@ Template.api.meteor_collection = {
   options: [
     {name: "connection",
      type: "Object",
-     descr: "The Meteor connection that will manage this collection. Uses the default connection if not specified. Pass `null` to specify no connection. Unmanaged (`name` is null) collections cannot specify a connection."
+     descr: "The server connection that will manage this collection. Uses the default connection if not specified.  Pass the return value of calling [`DDP.connect`](#ddp_connect) to specify a different server. Pass `null` to specify no connection. Unmanaged (`name` is null) collections cannot specify a connection."
     },
     {name: "idGeneration",
      type: "String",
@@ -675,25 +675,31 @@ Template.api.cursor_fetch = {
 
 Template.api.cursor_foreach = {
   id: "foreach",
-  name: "<em>cursor</em>.forEach(callback)",
+  name: "<em>cursor</em>.forEach(callback, [thisArg])",
   locus: "Anywhere",
   descr: ["Call `callback` once for each matching document, sequentially and synchronously."],
   args: [
     {name: "callback",
      type: "Function",
-     descr: "Function to call."}
+     descr: "Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself."},
+    {name: "thisArg",
+     type: "Any",
+     descr: "An object which will be the value of `this` inside `callback`."}
   ]
 };
 
 Template.api.cursor_map = {
   id: "map",
-  name: "<em>cursor</em>.map(callback)",
+  name: "<em>cursor</em>.map(callback, [thisArg])",
   locus: "Anywhere",
   descr: ["Map callback over all matching documents.  Returns an Array."],
   args: [
     {name: "callback",
      type: "Function",
-     descr: "Function to call."}
+     descr: "Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself."},
+    {name: "thisArg",
+     type: "Any",
+     descr: "An object which will be the value of `this` inside `callback`."}
   ]
 };
 
@@ -1100,6 +1106,11 @@ Template.api.accounts_config = {
       name: "forbidClientAccountCreation",
       type: "Boolean",
       descr: "Calls to [`createUser`](#accounts_createuser) from the client will be rejected. In addition, if you are using [accounts-ui](#accountsui), the \"Create account\" link will not be available."
+    },
+    {
+      name: "restrictCreationByEmail",
+      type: "String",
+      descr: "If set, only allow new users with an email in the specified domain. Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmail: 'school.edu' })`."
     }
   ]
 };

@@ -1,5 +1,11 @@
 ## vNEXT
 
+* `restrictCreationByEmail` option in `Accounts.config` to restrict new users to
+  emails of specific domain (eg. only users with @meteor.com emails).
+
+* Pass an index and the cursor itself to the callbacks in `cursor.forEach` and
+  `cursor.map`, just like the corresponding `Array` methods. #63
+
 * Better error when passing a string to {{#each}}. #722
 
 * Write dates to Mongo as ISODate rather than Integer; existing data can be
@@ -14,9 +20,21 @@
   0.6.5. (A bug prevented the 0.6.5 reimplementation of `register_extension`
   from working properly anyway.)
 
+* Support using an HTTP proxy in the `meteor` command line tool. This
+  allows the `update`, `deploy`, `logs`, and `mongo` commands to work
+  behind a proxy. Use the standard `http_proxy` environment variable to
+  specify your proxy endpoint.  #429, #689, #1338
+
 * Build Linux binaries on an older Linux machine. Meteor now supports
   running on Linux machines with glibc 2.9 or newer (Ubuntu 10.04+, RHEL
   and CentOS 6+, Fedora 10+, Debian 6+).
+
+* Support OAuth1 services that require request token secrets as well as
+  authentication token secrets.  #1253
+
+* Add `browser-policy` package for configuring and sending Content Security
+  Policy and X-Frame-Options HTTP headers.
+
 
 ## v0.6.5.1
 

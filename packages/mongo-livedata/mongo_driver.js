@@ -607,9 +607,15 @@ _.each(['forEach', 'map', 'rewind', 'fetch', 'count'], function (method) {
     if (self._cursorDescription.options.tailable)
       throw new Error("Cannot call " + method + " on a tailable cursor");
 
-    if (!self._synchronousCursor)
+    if (!self._synchronousCursor) {
       self._synchronousCursor = self._mongo._createSynchronousCursor(
-        self._cursorDescription, true);
+        self._cursorDescription, {
+          // Make sure that the "self" argument to forEach/map callbacks is the
+          // Cursor, not the SynchronousCursor.
+          selfForIteration: self,
+          useTransform: true
+        });
+    }
 
     return self._synchronousCursor[method].apply(
       self._synchronousCursor, arguments);
@@ -651,20 +657,21 @@ Cursor.prototype.observeChanges = function (callbacks) {
     self._cursorDescription, ordered, callbacks);
 };
 
-MongoConnection.prototype._createSynchronousCursor = function(cursorDescription,
-                                                              useTransform) {
+MongoConnection.prototype._createSynchronousCursor = function(
+    cursorDescription, options) {
   var self = this;
+  options = _.pick(options || {}, 'selfForIteration', 'useTransform');
 
   var collection = self._getCollection(cursorDescription.collectionName);
-  var options = cursorDescription.options;
+  var cursorOptions = cursorDescription.options;
   var mongoOptions = {
-    sort: options.sort,
-    limit: options.limit,
-    skip: options.skip
+    sort: cursorOptions.sort,
+    limit: cursorOptions.limit,
+    skip: cursorOptions.skip
   };
 
   // Do we want a tailable cursor (which only works on capped collections)?
-  if (options.tailable) {
+  if (cursorOptions.tailable) {
     // We want a tailable cursor...
     mongoOptions.tailable = true;
     // ... and for the server to wait a bit if any getMore has no data (rather
@@ -677,16 +684,21 @@ MongoConnection.prototype._createSynchronousCursor = function(cursorDescription,
 
   var dbCursor = collection.find(
     replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
-    options.fields, mongoOptions);
+    cursorOptions.fields, mongoOptions);
 
-  return new SynchronousCursor(dbCursor, cursorDescription, useTransform);
+  return new SynchronousCursor(dbCursor, cursorDescription, options);
 };
 
-var SynchronousCursor = function (dbCursor, cursorDescription, useTransform) {
+var SynchronousCursor = function (dbCursor, cursorDescription, options) {
   var self = this;
+  options = _.pick(options || {}, 'selfForIteration', 'useTransform');
+
   self._dbCursor = dbCursor;
   self._cursorDescription = cursorDescription;
-  if (useTransform && cursorDescription.options.transform) {
+  // The "self" argument passed to forEach/map callbacks. If we're wrapped
+  // inside a user-visible Cursor, we want to provide the outer cursor!
+  self._selfForIteration = options.selfForIteration || self;
+  if (options.useTransform && cursorDescription.options.transform) {
     self._transform = Deps._makeNonreactive(
       cursorDescription.options.transform
     );
@@ -728,29 +740,26 @@ _.extend(SynchronousCursor.prototype, {
     }
   },
 
-  // XXX Make more like ECMA forEach:
-  //     https://github.com/meteor/meteor/pull/63#issuecomment-5320050
-  forEach: function (callback) {
+  forEach: function (callback, thisArg) {
     var self = this;
 
     // We implement the loop ourself instead of using self._dbCursor.each,
     // because "each" will call its callback outside of a fiber which makes it
     // much more complex to make this function synchronous.
+    var index = 0;
     while (true) {
       var doc = self._nextObject();
       if (!doc) return;
-      callback(doc);
+      callback.call(thisArg, doc, index++, self._selfForIteration);
     }
   },
 
-  // XXX Make more like ECMA map:
-  //     https://github.com/meteor/meteor/pull/63#issuecomment-5320050
   // XXX Allow overlapping callback executions if callback yields.
-  map: function (callback) {
+  map: function (callback, thisArg) {
     var self = this;
     var res = [];
-    self.forEach(function (doc) {
-      res.push(callback(doc));
+    self.forEach(function (doc, index) {
+      res.push(callback.call(thisArg, doc, index, self._selfForIteration));
     });
     return res;
   },
@@ -1062,7 +1071,7 @@ _.extend(LiveResultsSet.prototype, {
       self._synchronousCursor.rewind();
     } else {
       self._synchronousCursor = self._mongoHandle._createSynchronousCursor(
-        self._cursorDescription, false /* !useTransform */);
+        self._cursorDescription);
     }
     var newResults = self._synchronousCursor.getRawObjects(self._ordered);
     var oldResults = self._results;
@@ -1190,8 +1199,7 @@ MongoConnection.prototype._observeChangesTailable = function (
                     + " tailable cursor without a "
                     + (ordered ? "addedBefore" : "added") + " callback");
   }
-  var cursor = self._createSynchronousCursor(cursorDescription,
-                                            false /* useTransform */);
+  var cursor = self._createSynchronousCursor(cursorDescription);
 
   var stopped = false;
   var lastTS = undefined;
@@ -1233,7 +1241,7 @@ MongoConnection.prototype._observeChangesTailable = function (
         cursor = self._createSynchronousCursor(new CursorDescription(
           cursorDescription.collectionName,
           newSelector,
-          cursorDescription.options), false /* useTransform */);
+          cursorDescription.options));
       }
     }
   });

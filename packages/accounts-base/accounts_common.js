@@ -34,8 +34,9 @@ Accounts._options = {};
 Accounts.config = function(options) {
   // validate option keys
   var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation",
-                    "_tokenLifetimeSecs", "_tokenExpirationIntervalSecs",
-                    "_minTokenLifetimeSecs", "_connectionCloseDelaySecs"];
+                    "restrictCreationByEmail", "_tokenLifetimeSecs",
+                    "_tokenExpirationIntervalSecs", "_minTokenLifetimeSecs",
+                    "_connectionCloseDelaySecs"];
   _.each(_.keys(options), function (key) {
     if (!_.contains(VALID_KEYS, key)) {
       throw new Error("Accounts.config: Invalid key: " + key);

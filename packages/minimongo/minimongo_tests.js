@@ -184,16 +184,25 @@ Tinytest.add("minimongo - cursors", function (test) {
 
   // forEach
   var count = 0;
-  q.forEach(function (obj) {
+  var context = {};
+  q.forEach(function (obj, i, cursor) {
     test.equal(obj.i, count++);
-  });
+    test.equal(obj.i, i);
+    test.isTrue(context === this);
+    test.isTrue(cursor === q);
+  }, context);
   test.equal(count, 20);
   // everything empty
   test.length(q.fetch(), 0);
   q.rewind();
 
   // map
-  res = q.map(function (obj) { return obj.i * 2; });
+  res = q.map(function (obj, i, cursor) {
+    test.equal(obj.i, i);
+    test.isTrue(context === this);
+    test.isTrue(cursor === q);
+    return obj.i * 2;
+  }, context);
   test.length(res, 20);
   for (var i = 0; i < 20; i++)
     test.equal(res[i], i * 2);
@@ -431,6 +440,9 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$ne: 1}}, {a: [1, 2]});
   nomatch({a: {$ne: 2}}, {a: [1, 2]});
   match({a: {$ne: 3}}, {a: [1, 2]});
+  nomatch({'a.b': {$ne: 1}}, {a: [{b: 1}, {b: 2}]});
+  nomatch({'a.b': {$ne: 2}}, {a: [{b: 1}, {b: 2}]});
+  match({'a.b': {$ne: 3}}, {a: [{b: 1}, {b: 2}]});
 
   nomatch({a: {$ne: {x: 1}}}, {a: {x: 1}});
   match({a: {$ne: {x: 1}}}, {a: {x: 2}});
@@ -460,7 +472,9 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$nin: [1, 2, 3]}}, {a: [2]}); // tested against mongodb
   nomatch({a: {$nin: [{x: 1}, {x: 2}, {x: 3}]}}, {a: [{x: 2}]});
   nomatch({a: {$nin: [1, 2, 3]}}, {a: [4, 2]});
+  nomatch({'a.b': {$nin: [1, 2, 3]}}, {a: [{b:4}, {b:2}]});
   match({a: {$nin: [1, 2, 3]}}, {a: [4]});
+  match({'a.b': {$nin: [1, 2, 3]}}, {a: [{b:4}]});
 
   // $size
   match({a: {$size: 0}}, {a: []});
@@ -568,7 +582,9 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({x: {$not: {$lt: 10, $gt: 7}}}, {x: 6});
 
   match({x: {$not: {$gt: 7}}}, {x: [2, 3, 4]});
+  match({'x.y': {$not: {$gt: 7}}}, {x: [{y:2}, {y:3}, {y:4}]});
   nomatch({x: {$not: {$gt: 7}}}, {x: [2, 3, 4, 10]});
+  nomatch({'x.y': {$not: {$gt: 7}}}, {x: [{y:2}, {y:3}, {y:4}, {y:10}]});
 
   match({x: {$not: /a/}}, {x: "dog"});
   nomatch({x: {$not: /a/}}, {x: "cat"});

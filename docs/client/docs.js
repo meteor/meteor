@@ -335,6 +335,7 @@ var toc = [
     "audit-argument-checks",
     "backbone",
     "bootstrap",
+    "browser-policy",
     "coffeescript",
     "d3",
     "force-ssl",

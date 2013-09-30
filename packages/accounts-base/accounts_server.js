@@ -304,6 +304,34 @@ Accounts.validateNewUser = function (func) {
   validateNewUserHooks.push(func);
 };
 
+// Helper function: returns false if email does not match company domain from
+// the configuration.
+var testEmailDomain = function (email) {
+  var domain = Accounts._options.restrictCreationByEmail;
+  return !domain || (new RegExp('@' + domain + '$', 'i')).test(email);
+};
+
+// Validate new user's email or Google/Facebook/Github account's email
+Accounts.validateNewUser(function (user) {
+  var domain = Accounts._options.restrictCreationByEmail;
+  if (!domain)
+    return true;
+
+  var emailIsGood = true;
+  // User with password can have only one email on creation
+  if (user.emails)
+    emailIsGood &= testEmailDomain(user.emails[0].address);
+
+  // Find any email of any service and check it
+  emailIsGood &= _.any(user.services, function (service) {
+    return service.email && testEmailDomain(service.email);
+  });
+
+  if (!emailIsGood)
+    throw new Meteor.Error(403, "@" + domain + " email required");
+
+  return true;
+});
 
 ///
 /// MANAGING USER OBJECTS
