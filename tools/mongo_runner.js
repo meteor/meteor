@@ -2,6 +2,7 @@ var fs = require("fs");
 var path = require("path");
 
 var files = require('./files.js');
+var ports = require('./ports.js');
 
 var _ = require('underscore');
 
@@ -24,6 +25,8 @@ var find_mongo_pids = function (app_dir, port, callback) {
 
         _.each(stdout.split('\n'), function (ps_line) {
           // matches mongos we start.
+
+          // XXX YYY multiple mongos on the same port but diff IP?
           var m = ps_line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db\s*$/);
           if (m && m.length === 4) {
             var found_pid =  parseInt(m[1]);
@@ -125,7 +128,7 @@ var find_mongo_and_kill_it_dead = function (port, callback) {
   });
 };
 
-exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callback) {
+exports.launch_mongo = function (app_dir, addr, launch_callback, on_exit_callback) {
   var handle = {stop: function (callback) { callback(); } };
   launch_callback = launch_callback || function () {};
   on_exit_callback = on_exit_callback || function () {};
@@ -151,6 +154,7 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
   // add .gitignore if needed.
   files.add_to_gitignore(path.join(app_dir, '.meteor'), 'local');
 
+  // XXX YYY
   find_mongo_and_kill_it_dead(port, function (err) {
     if (err) {
       launch_callback({reason: "Can't kill running mongo: " + err.reason});
@@ -159,11 +163,10 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
 
     var child_process = require('child_process');
     var proc = child_process.spawn(mongod_path, [
-      // XXX YYY
-      '--bind_ip', '127.0.0.1',
+      '--bind_ip', ports.ipFromAddr(addr),
       '--smallfiles',
       '--nohttpinterface',
-      '--port', port,
+      '--port', ports.portFromAddr(addr),
       '--dbpath', data_path
     ]);
     handle.stop = function (callback) {

@@ -10,6 +10,7 @@ Fiber(function () {
   var _ = require('underscore');
   var fs = require("fs");
   var cp = require('child_process');
+  var Future = require('fibers/future');
   var files = require('./files.js');
   var deploy = require('./deploy.js');
   var runner = require('./run.js');
@@ -19,10 +20,11 @@ Fiber(function () {
   var project = require('./project.js');
   var warehouse = require('./warehouse.js');
   var logging = require('./logging.js');
-  var deployGalaxy;
   var cleanup = require('./cleanup.js');
+  var ports = require('./ports.js');
 
-  var Future = require('fibers/future');
+  var deployGalaxy;
+
   // This code is duplicated in app/server/server.js.
   var MIN_NODE_VERSION = 'v0.10.19';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
@@ -363,7 +365,6 @@ Fiber(function () {
     help: "[default] Run this project in local development mode",
     argumentParser: function (opt) {
       // reparse args
-      // XXX YYY
       opt
         .boolean('production')
         .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
@@ -372,13 +373,6 @@ Fiber(function () {
 
       // XXX don't document "program" for now. need a better thing to say.
       // .describe('program', 'The program in the app to run (Advanced)')
-
-      // XXX YYY
-        .alias('port', 'p').default('port', 3000)
-        .describe('port', 'XXX Port or IP:Port to listen on.')
-
-        .describe('app-port', 'XXX')
-        .describe('mongo-port', 'XXX')
 
       // #Once
       // With --once, meteor does not re-run the project if it crashes and does
@@ -398,19 +392,19 @@ Fiber(function () {
             "\n" +
             "The application's database persists between runs. It's stored under\n" +
             "the .meteor directory in the root of the project.\n");
+
+      ports.optionsForPorts(opt);
     },
     func: function (argv) {
       requireDirInApp("run");
       maybePrintUserOverrideMessage();
-      runner.run(context, {
-        port: argv.port,
-        appPort: argv.appPort,
-        mongoPort: argv.mongoPort,
+      var addrOptions = ports.addrsFromArgv(argv);
+      runner.run(context, _.extend(addrOptions, {
         minify: argv.production,
         once: argv.once,
         settingsFile: argv.settings,
         program: argv.program || undefined
-      });
+      }));
     }
   });
 
@@ -1125,9 +1119,7 @@ Fiber(function () {
     argumentParser: function (opt) {
       // This help logic should probably move to run.js eventually
 
-      // XXX YYY
-      opt .alias('port', 'p').default('port', 3000)
-        .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
+      opt
         .describe('deploy', 'Optionally, specify a domain to deploy to, rather than running locally.')
         .boolean('production')
         .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
@@ -1154,6 +1146,8 @@ Fiber(function () {
             "deploy' server by using --deploy. This gives you a public URL that you\n" +
             "can use in conjunction with a service like Browserling or BrowserStack\n" +
             "to try the tests against many different browser versions.");
+
+      ports.optionsForPorts(opt);
     },
     func: function (argv) {
       var testPackages;
@@ -1209,15 +1203,14 @@ Fiber(function () {
           settings: argv.settings && runner.getSettings(argv.settings)
         });
       } else {
-        runner.run(context, {
-          // XXX YYY
-          port: argv.port,
+        var addrOptions = ports.addrFromArgv(argv);
+        runner.run(context, _.extend(addrOptions, {
           minify: argv.production,
           once: argv.once,
           testPackages: testPackages,
           settingsFile: argv.settings,
           banner: "Tests"
-        });
+        }));
       }
     }
   });
