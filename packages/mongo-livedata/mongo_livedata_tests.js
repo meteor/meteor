@@ -1179,6 +1179,9 @@ if (Meteor.isClient) {
         compareResults(test, useUpdate, coll.find().fetch(), [{foo: 1, _id: davidId}]);
 
         // test that bad modifier fails
+        // The stub throws an exception about the invalid modifier, which
+        // livedata logs (so we suppress it).
+        Meteor._suppress_log(1);
         upsert({_id: 'David'}, {$blah: {foo: 2}}, function (err) {
           test.isTrue(err);
           upsert({_id: 'David'}, {$set: {foo: 2}}, next6);
