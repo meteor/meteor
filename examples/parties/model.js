@@ -53,7 +53,7 @@ var Coordinate = Match.Where(function (x) {
 });
 
 createParty = function (options) {
-  var id = Meteor.uuid();
+  var id = Random.id();
   Meteor.call('createParty', _.extend({ _id: id }, options));
   return id;
 };
@@ -77,7 +77,7 @@ Meteor.methods({
     if (! this.userId)
       throw new Meteor.Error(403, "You must be logged in");
 
-    var id = options._id || Meteor.uuid();
+    var id = options._id || Random.id();
     Parties.insert({
       _id: id,
       owner: this.userId,
