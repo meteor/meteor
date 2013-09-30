@@ -516,6 +516,12 @@ Copyright 2011, Robert Mustacchi. All rights reserved.
 Copyright 2011, Joyent, Inc. All rights reserved.
 
 
+----------
+geojson-utils: https://github.com/maxogden/geojson-js-utils
+----------
+
+Copyright (c) 2010 Max Ogden
+
 ==============
 Apache License
 ==============
