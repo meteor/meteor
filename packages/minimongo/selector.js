@@ -332,7 +332,8 @@ var VALUE_OPERATORS = {
       _.each(point, function (xy) { npoint.push(xy); });
       return npoint;
     }
-    var mode = cursor.collection._2dMode || "2d";
+    // GeoJSON query is marked as $geometry property
+    var mode = _.isObject(operand) && _.has(operand, '$geometry') ? "2dsphere" : "2d";
     var maxDistance = mode === "2d" ? operators.$maxDistance : operand.$maxDistance;
     var point = mode === "2d" ? operand : operand.$geometry;
     return function (value, doc) {
@@ -342,8 +343,8 @@ var VALUE_OPERATORS = {
           dist = distanceCoordinatePairs(point, value);
           break;
         case "2dsphere":
-          // Presence of this package is checked when user ensures 2dsphere
-          // index on collection.
+          if (!_.has(Package, 'geojson-utils'))
+            throw new Error('Need geojson-utils package for GeoJSON calculations');
           var GeoJSON = Package['geojson-utils'].GeoJSON;
           // XXX: for now, we don't calculate the actual distance between, say,
           // polygon and circle. If people care about this use-case it will get
@@ -354,8 +355,6 @@ var VALUE_OPERATORS = {
             dist = GeoJSON.geometryWithinRadius(value, point, maxDistance) ?
                      0 : maxDistance + 1;
           break;
-        default:
-          throw new Error("Unknown mode for distance calculations: " + mode);
       }
       // Used later in sorting by distance, since $near queries are sorted by
       // distance from closest to farthest.

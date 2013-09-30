@@ -2295,7 +2295,6 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
   { "category" : "BURGLARY", "descript" : "BURGLARY OF STORE, FORCIBLE ENTRY", "address" : "100 Block of 10TH ST", "location" : { "type" : "Point", "coordinates" : [  -122.415449723856,  37.7749518087273 ] }, "_id" : "qm2F7wnB5D6yjKBNn" }];
 
   _.each(data, function (x) { coll.insert(x); });
-  coll._ensureIndex({ location: "2dsphere" });
 
   var close15 = coll.find({ location: { $near: {
     $geometry: { type: "Point",
