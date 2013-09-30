@@ -914,7 +914,7 @@ if (Meteor.isServer) {
     onComplete();
   });
 
-  Tinytest.addAsync("mongo-livedata - upsert error parse, " + idGeneration, function (test, onComplete) {
+  Tinytest.add("mongo-livedata - upsert error parse, " + idGeneration, function (test) {
     var run = test.runId();
     var coll = new Meteor.Collection("livedata_upsert_errorparse_collection_"+run, collectionOptions);
 
@@ -936,8 +936,6 @@ if (Meteor.isServer) {
     test.isTrue(err);
     // duplicate id error is not same as change id error
     test.isFalse(MongoInternals.Connection._isCannotChangeIdError(err));
-
-    onComplete();
   });
 
 } // end Meteor.isServer
@@ -959,7 +957,7 @@ var compareResults = function (test, useUpdate, actual, expected) {
 // over the network.
 _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
   _.each([true, false], function (useUpdate) {
-    Tinytest.addAsync("mongo-livedata - " + (useUpdate ? "update " : "") + "upsert" + (minimongo ? " minimongo" : "") + ", " + idGeneration, function (test, onComplete) {
+    Tinytest.add("mongo-livedata - " + (useUpdate ? "update " : "") + "upsert" + (minimongo ? " minimongo" : "") + ", " + idGeneration, function (test) {
       var upsert = function (query, mod, options) {
         if (useUpdate)
           return { numberAffected:
@@ -1072,8 +1070,6 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
                       {name: 'Steve', _id: 'steve'}]);
       test.isTrue(coll.findOne('steve'));
       test.isFalse(coll.findOne('fred'));
-
-      onComplete();
     });
   });
 });
@@ -1271,7 +1267,7 @@ if (Meteor.isClient) {
 
 _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
   _.each([true, false], function (useUpdate) {
-    Tinytest.addAsync("mongo-livedata - " + (useUpdate ? "update " : "") + "upsert by id" + (minimongo ? " minimongo" : "") + ", " + idGeneration, function (test, onComplete) {
+    Tinytest.add("mongo-livedata - " + (useUpdate ? "update " : "") + "upsert by id" + (minimongo ? " minimongo" : "") + ", " + idGeneration, function (test) {
       var upsert = function (query, mod, options) {
         if (useUpdate)
           return { numberAffected:
@@ -1351,7 +1347,6 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
                      [{x: 1, _id: myId},
                       {x: 4, _id: 'traz'}]);
 
-      onComplete();
     });
   });
 });
