@@ -1033,7 +1033,7 @@ Template.api.logout = {
 };
 
 Template.api.logoutOtherClients = {
-  id: "meteor_logout_other_clients",
+  id: "meteor_logoutotherclients",
   name: "Meteor.logoutOtherClients([callback])",
   locus: "Client",
   descr: ["Log out other clients logged in as the current user, but does not log out the client that calls this function."],
