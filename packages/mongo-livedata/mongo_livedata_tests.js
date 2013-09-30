@@ -946,6 +946,15 @@ var stripId = function (obj) {
   delete obj._id;
 };
 
+var compareResults = function (test, useUpdate, actual, expected) {
+  if (useUpdate) {
+    _.map(actual, stripId);
+    _.map(expected, stripId);
+  }
+  // (technically should ignore order in comparison)
+  test.equal(actual, expected);
+};
+
 // This test is duplicated below (with some changes) for async upserts that go
 // over the network.
 _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
@@ -960,15 +969,6 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
           return coll.upsert(query, mod, options);
       };
 
-      var compareResults = function (actual, expected) {
-        if (useUpdate) {
-          _.map(actual, stripId);
-          _.map(expected, stripId);
-        }
-        // (technically should ignore order in comparison)
-        test.equal(actual, expected);
-      };
-
       var run = test.runId();
       var options = collectionOptions;
       if (minimongo)
@@ -979,13 +979,13 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       test.equal(result1.numberAffected, 1);
       if (! useUpdate)
         test.isTrue(result1.insertedId);
-      compareResults(coll.find().fetch(), [{foo: 'bar', _id: result1.insertedId}]);
+      compareResults(test, useUpdate, coll.find().fetch(), [{foo: 'bar', _id: result1.insertedId}]);
 
       var result2 = upsert({foo: 'bar'}, {foo: 'baz'});
       test.equal(result2.numberAffected, 1);
       if (! useUpdate)
         test.isFalse(result2.insertedId);
-      compareResults(coll.find().fetch(), [{foo: 'baz', _id: result1.insertedId}]);
+      compareResults(test, useUpdate, coll.find().fetch(), [{foo: 'baz', _id: result1.insertedId}]);
 
       coll.remove({});
 
@@ -997,13 +997,13 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       test.equal(result3.numberAffected, 1);
       if (! useUpdate)
         test.isTrue(result3.insertedId);
-      compareResults(coll.find().fetch(), [{foo: t1, _id: result3.insertedId}]);
+      compareResults(test, useUpdate, coll.find().fetch(), [{foo: t1, _id: result3.insertedId}]);
 
       var result4 = upsert({foo: t1}, {foo: t2});
       test.equal(result2.numberAffected, 1);
       if (! useUpdate)
         test.isFalse(result2.insertedId);
-      compareResults(coll.find().fetch(), [{foo: t2, _id: result3.insertedId}]);
+      compareResults(test, useUpdate, coll.find().fetch(), [{foo: t2, _id: result3.insertedId}]);
 
       coll.remove({});
 
@@ -1014,7 +1014,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       if (! useUpdate)
         test.isTrue(result5.insertedId);
       var davidId = result5.insertedId;
-      compareResults(coll.find().fetch(), [{name: 'David', foo: 1, _id: davidId}]);
+      compareResults(test, useUpdate, coll.find().fetch(), [{name: 'David', foo: 1, _id: davidId}]);
 
       test.throws(function () {
         // test that bad modifier fails fast
@@ -1026,11 +1026,11 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       test.equal(result6.numberAffected, 1);
       if (! useUpdate)
         test.isFalse(result6.insertedId);
-      compareResults(coll.find().fetch(), [{name: 'David', foo: 2,
+      compareResults(test, useUpdate, coll.find().fetch(), [{name: 'David', foo: 2,
                                         _id: result5.insertedId}]);
 
       var emilyId = coll.insert({name: 'Emily', foo: 2});
-      compareResults(coll.find().fetch(), [{name: 'David', foo: 2, _id: davidId},
+      compareResults(test, useUpdate, coll.find().fetch(), [{name: 'David', foo: 2, _id: davidId},
                                            {name: 'Emily', foo: 2, _id: emilyId}]);
 
       // multi update by upsert
@@ -1041,7 +1041,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       test.equal(result7.numberAffected, 2);
       if (! useUpdate)
         test.isFalse(result7.insertedId);
-      compareResults(coll.find().fetch(), [{name: 'David', foo: 2, bar: 7, _id: davidId},
+      compareResults(test, useUpdate, coll.find().fetch(), [{name: 'David', foo: 2, bar: 7, _id: davidId},
                                            {name: 'Emily', foo: 2, bar: 7, _id: emilyId}]);
 
       // insert by multi upsert
@@ -1053,7 +1053,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       if (! useUpdate)
         test.isTrue(result8.insertedId);
       var fredId = result8.insertedId;
-      compareResults(coll.find().fetch(),
+      compareResults(test, useUpdate, coll.find().fetch(),
                      [{name: 'David', foo: 2, bar: 7, _id: davidId},
                       {name: 'Emily', foo: 2, bar: 7, _id: emilyId},
                       {name: 'Fred', foo: 2, bar: 7, _id: fredId}]);
@@ -1065,7 +1065,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       test.equal(result9.numberAffected, 1);
       if (! useUpdate)
         test.equal(result9.insertedId, 'steve');
-      compareResults(coll.find().fetch(),
+      compareResults(test, useUpdate, coll.find().fetch(),
                      [{name: 'David', foo: 2, bar: 7, _id: davidId},
                       {name: 'Emily', foo: 2, bar: 7, _id: emilyId},
                       {name: 'Fred', foo: 2, bar: 7, _id: fredId},
@@ -1097,15 +1097,6 @@ if (Meteor.isClient) {
           coll.upsert(query, mod, options, callback);
       };
 
-      var compareResults = function (actual, expected) {
-        if (useUpdate) {
-          _.map(actual, stripId);
-          _.map(expected, stripId);
-        }
-        // (technically should ignore order in comparison)
-        test.equal(actual, expected);
-      };
-
       var run = test.runId();
       var collName = "livedata_upsert_collection_"+run;
       Meteor.call("createInsecureCollection", collName, collectionOptions);
@@ -1120,7 +1111,7 @@ if (Meteor.isClient) {
           test.isTrue(result1.insertedId);
           test.equal(result1.insertedId, 'foo');
         }
-        compareResults(coll.find().fetch(), [{foo: 'bar', _id: 'foo'}]);
+        compareResults(test, useUpdate, coll.find().fetch(), [{foo: 'bar', _id: 'foo'}]);
         upsert({_id: 'foo'}, {foo: 'baz'}, next2);
       };
 
@@ -1133,9 +1124,9 @@ if (Meteor.isClient) {
         test.equal(result2.numberAffected, 1);
         if (! useUpdate)
           test.isFalse(result2.insertedId);
-        compareResults(coll.find().fetch(), [{foo: 'baz', _id: result1.insertedId}]);
+        compareResults(test, useUpdate, coll.find().fetch(), [{foo: 'baz', _id: result1.insertedId}]);
         coll.remove({_id: 'foo'});
-        compareResults(coll.find().fetch(), []);
+        compareResults(test, useUpdate, coll.find().fetch(), []);
 
         // Test values that require transformation to go into Mongo:
 
@@ -1152,7 +1143,7 @@ if (Meteor.isClient) {
           test.isTrue(result3.insertedId);
           test.equal(t1, result3.insertedId);
         }
-        compareResults(coll.find().fetch(), [{_id: t1, foo: 'bar'}]);
+        compareResults(test, useUpdate, coll.find().fetch(), [{_id: t1, foo: 'bar'}]);
 
         upsert({_id: t1}, {foo: t2}, next4);
       };
@@ -1161,7 +1152,7 @@ if (Meteor.isClient) {
         test.equal(result2.numberAffected, 1);
         if (! useUpdate)
           test.isFalse(result2.insertedId);
-        compareResults(coll.find().fetch(), [{foo: t2, _id: result3.insertedId}]);
+        compareResults(test, useUpdate, coll.find().fetch(), [{foo: t2, _id: result3.insertedId}]);
 
         coll.remove({_id: t1});
 
@@ -1178,7 +1169,7 @@ if (Meteor.isClient) {
           test.equal(result5.insertedId, 'David');
         }
         var davidId = result5.insertedId;
-        compareResults(coll.find().fetch(), [{foo: 1, _id: davidId}]);
+        compareResults(test, useUpdate, coll.find().fetch(), [{foo: 1, _id: davidId}]);
 
         // test that bad modifier fails
         upsert({_id: 'David'}, {$blah: {foo: 2}}, function (err) {
@@ -1193,10 +1184,10 @@ if (Meteor.isClient) {
         test.equal(result6.numberAffected, 1);
         if (! useUpdate)
           test.isFalse(result6.insertedId);
-        compareResults(coll.find().fetch(), [{_id: 'David', foo: 2}]);
+        compareResults(test, useUpdate, coll.find().fetch(), [{_id: 'David', foo: 2}]);
 
         var emilyId = coll.insert({_id: 'Emily', foo: 2});
-        compareResults(coll.find().fetch(), [{_id: 'David', foo: 2},
+        compareResults(test, useUpdate, coll.find().fetch(), [{_id: 'David', foo: 2},
                                              {_id: 'Emily', foo: 2}]);
 
         // multi update by upsert.
@@ -1214,7 +1205,7 @@ if (Meteor.isClient) {
         test.equal(result7.numberAffected, 1);
         if (! useUpdate)
           test.isFalse(result7.insertedId);
-        compareResults(coll.find().fetch(), [{_id: 'David', foo: 2},
+        compareResults(test, useUpdate, coll.find().fetch(), [{_id: 'David', foo: 2},
                                              {_id: 'Emily', foo: 2, bar: 7}]);
 
         // insert by multi upsert
@@ -1235,7 +1226,7 @@ if (Meteor.isClient) {
           test.equal(result8.insertedId, 'Fred');
         }
         var fredId = result8.insertedId;
-        compareResults(coll.find().fetch(),
+        compareResults(test, useUpdate,  coll.find().fetch(),
                        [{_id: 'David', foo: 2},
                         {_id: 'Emily', foo: 2, bar: 7},
                         {name: 'Fred', foo: 2, bar: 7, _id: fredId}]);
@@ -1289,17 +1280,6 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
         else
           return coll.upsert(query, mod, options);
       };
-      var stripId = function (obj) {
-        delete obj._id;
-      };
-      var compareResults = function (actual, expected, stripIds) {
-        if (stripIds) {
-          actual = _.map(actual, stripId);
-          expected = _.map(expected, stripId);
-        }
-        // (technically should ignore order in comparison)
-        test.equal(actual, expected);
-      };
 
       var run = test.runId();
       var options = collectionOptions;
@@ -1312,21 +1292,21 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       test.equal(ret.numberAffected, 1);
       if (! useUpdate)
         test.equal(ret.insertedId, 'foo');
-      compareResults(coll.find().fetch(),
+      compareResults(test, useUpdate, coll.find().fetch(),
                      [{_id: 'foo', x: 1}]);
 
       ret = upsert({_id: 'foo'}, {$set: {x: 2}});
       test.equal(ret.numberAffected, 1);
       if (! useUpdate)
         test.isFalse(ret.insertedId);
-      compareResults(coll.find().fetch(),
+      compareResults(test, useUpdate, coll.find().fetch(),
                      [{_id: 'foo', x: 2}]);
 
       ret = upsert({_id: 'bar'}, {$set: {x: 1}});
       test.equal(ret.numberAffected, 1);
       if (! useUpdate)
         test.equal(ret.insertedId, 'bar');
-      compareResults(coll.find().fetch(),
+      compareResults(test, useUpdate, coll.find().fetch(),
                      [{_id: 'foo', x: 2},
                       {_id: 'bar', x: 1}]);
 
@@ -1343,7 +1323,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       } else {
         myId = coll.findOne()._id;
       }
-      compareResults(coll.find().fetch(),
+      compareResults(test, useUpdate, coll.find().fetch(),
                      [{x: 1, _id: myId}]);
 
       // this time, insert as _id 'traz'
@@ -1351,7 +1331,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       test.equal(ret.numberAffected, 1);
       if (! useUpdate)
         test.equal(ret.insertedId, 'traz');
-      compareResults(coll.find().fetch(),
+      compareResults(test, useUpdate, coll.find().fetch(),
                      [{x: 1, _id: myId},
                       {x: 2, _id: 'traz'}]);
 
@@ -1359,7 +1339,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       ret = upsert({_id: 'traz'}, {x: 3});
       test.equal(ret.numberAffected, 1);
       test.isFalse(ret.insertedId);
-      compareResults(coll.find().fetch(),
+      compareResults(test, useUpdate, coll.find().fetch(),
                      [{x: 1, _id: myId},
                       {x: 3, _id: 'traz'}]);
 
@@ -1367,7 +1347,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       ret = upsert({_id: 'traz'}, {_id: 'traz', x: 4});
       test.equal(ret.numberAffected, 1);
       test.isFalse(ret.insertedId);
-      compareResults(coll.find().fetch(),
+      compareResults(test, useUpdate, coll.find().fetch(),
                      [{x: 1, _id: myId},
                       {x: 4, _id: 'traz'}]);
 
