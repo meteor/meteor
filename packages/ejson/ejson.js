@@ -33,6 +33,27 @@ var builtinConverters = [
       return new Date(obj.$date);
     }
   },
+  { //NaN, Inf, -Inf
+    matchJSONValue: function (obj) {
+      return _.has(obj, '$InfNaN') && _.size(obj) === 1;
+    },
+    matchObject: function (obj) {
+      return _.isNaN(obj) || obj === Infinity || obj === -Infinity;
+    },
+    toJSONValue: function (obj) {
+      var sign;
+      if (_.isNaN(obj))
+        sign = 0;
+      else if (obj === Infinity)
+        sign = 1;
+      else
+        sign = -1;
+      return {$InfNaN: sign};
+    },
+    fromJSONValue: function (obj) {
+      return obj.$InfNaN/0;
+    }
+  },
   { // Binary
     matchJSONValue: function (obj) {
       return _.has(obj, '$binary') && _.size(obj) === 1;
@@ -110,6 +131,15 @@ EJSON._adjustTypesToJSONValue = function (obj) {
   if (maybeChanged !== undefined)
     return maybeChanged;
   _.each(obj, function (value, key) {
+    if (typeof value === 'number') {
+      if (_.isNaN(value))
+        obj[key] = {$InfNaN: 0};
+      else if (value === Infinity)
+        obj[key] = {$InfNaN: 1};
+      else if (value === -Infinity)
+        obj[key] = {$InfNaN: -1};
+      return; // continue
+    }
     if (typeof value !== 'object' && value !== undefined)
       return; // continue
     var changed = toJSONValueHelper(value);
@@ -231,6 +261,9 @@ EJSON.equals = function (a, b, options) {
   var keyOrderSensitive = !!(options && options.keyOrderSensitive);
   if (a === b)
     return true;
+  if (_.isNaN(a) && _.isNaN(b))
+    return true; // This differs from the IEEE spec for NaN equality, b/c we don't want
+                 // anything ever with a NaN to be poisoned from becoming equal to anything.
   if (!a || !b) // if either one is falsy, they'd have to be === to be equal
     return false;
   if (!(typeof a === 'object' && typeof b === 'object'))
