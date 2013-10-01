@@ -403,20 +403,24 @@ _.each(["insert", "update", "remove", "upsert"], function (name) {
       // just remote to another endpoint, propagate return value or
       // exception.
 
-      if (Meteor.isClient && !wrappedCallback) {
+      var enclosing = DDP._CurrentInvocation.get();
+      var alreadyInSimulation = enclosing && enclosing.isSimulation;
+
+      if (Meteor.isClient && !wrappedCallback && ! alreadyInSimulation) {
         // Client can't block, so it can't report errors by exception,
         // only by callback. If they forget the callback, give them a
         // default one that logs the error, so they aren't totally
         // baffled if their writes don't work because their database is
         // down.
+        // Don't give a default callback in simulation, because inside stubs we
+        // want to return the results from the local collection immediately and
+        // not force a callback.
         wrappedCallback = function (err) {
           if (err)
             Meteor._debug(name + " failed: " + (err.reason || err.stack));
         };
       }
 
-      var enclosing = DDP._CurrentInvocation.get();
-      var alreadyInSimulation = enclosing && enclosing.isSimulation;
       if (!alreadyInSimulation && name !== "insert") {
         // If we're about to actually send an RPC, we should throw an error if
         // this is a non-ID selector, because the mutation methods only allow
@@ -595,9 +599,8 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
 
             // In a client simulation, you can do any mutation (even with a
             // complex selector).
-            self._collection[method].apply(
+            return self._collection[method].apply(
               self._collection, _.toArray(arguments));
-            return;
           }
 
           // This is the server receiving a method call from the client.

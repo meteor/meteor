@@ -23,6 +23,108 @@ if (Meteor.isServer) {
   });
 }
 
+
+// Helpers for upsert tests
+
+var stripId = function (obj) {
+  delete obj._id;
+};
+
+var compareResults = function (test, useUpdate, actual, expected) {
+  if (useUpdate) {
+    _.map(actual, stripId);
+    _.map(expected, stripId);
+  }
+  // (technically should ignore order in comparison)
+  test.equal(actual, expected);
+};
+
+var upsert = function (coll, useUpdate, query, mod, options, callback) {
+  if (! callback && typeof options === "function") {
+    callback = options;
+    options = {};
+  }
+
+  if (useUpdate) {
+    if (callback)
+      return coll.update(query, mod,
+                         _.extend({ upsert: true }, options),
+                         function (err, result) {
+                           callback(err, ! err && {
+                             numberAffected: result
+                           });
+                         });
+    return {
+      numberAffected: coll.update(query, mod,
+                                  _.extend({ upsert: true }, options))
+    };
+  } else {
+    return coll.upsert(query, mod, options, callback);
+  }
+};
+
+var upsertTestMethod = "livedata_upsert_test_method";
+var upsertTestMethodColl;
+
+// This is the implementation of the upsert test method on both the client and
+// the server. On the client, we get a test object. On the server, we just throw
+// errors if something doesn't go according to plan, and when the client
+// receives those errors it will cause the test to fail.
+//
+// Client-side exceptions in here will NOT cause the test to fail! Because it's
+// a stub, those exceptions will get caught and logged.
+var upsertTestMethodImpl = function (coll, useUpdate, test) {
+  coll.remove({});
+  var result1 = upsert(coll, useUpdate, { foo: "bar" }, { foo: "bar" });
+
+  if (! test) {
+    test = {
+      equal: function (a, b) {
+        if (! EJSON.equals(a, b))
+          throw new Error("Not equal: " +
+                          JSON.stringify(a) + ", " + JSON.stringify(b));
+      },
+      isTrue: function (a) {
+        if (! a)
+          throw new Error("Not truthy: " + JSON.stringify(a));
+      },
+      isFalse: function (a) {
+        if (a)
+          throw new Error("Not falsey: " + JSON.stringify(a));
+      }
+    };
+  }
+
+  // if we don't test this, then testing result1.numberAffected will throw,
+  // which will get caught and logged and the whole test will pass!
+  test.isTrue(result1);
+
+  test.equal(result1.numberAffected, 1);
+  if (! useUpdate)
+    test.isTrue(result1.insertedId);
+  var fooId = result1.insertedId;
+  var obj = coll.findOne({ foo: "bar" });
+  test.isTrue(obj);
+  if (! useUpdate)
+    test.equal(obj._id, result1.insertedId);
+  var result2 = upsert(coll, useUpdate, { _id: fooId },
+                       { $set: { foo: "baz " } });
+  test.isTrue(result2);
+  test.equal(result2.numberAffected, 1);
+  test.isFalse(result2.insertedId);
+};
+
+if (Meteor.isServer) {
+  var m = {};
+  m[upsertTestMethod] = function (run, useUpdate, options) {
+    check(run, String);
+    check(useUpdate, Boolean);
+    upsertTestMethodColl = new Meteor.Collection(upsertTestMethod + "_collection_" + run, options);
+    upsertTestMethodImpl(upsertTestMethodColl, useUpdate);
+  };
+  Meteor.methods(m);
+}
+
 Meteor._FailureTestCollection =
   new Meteor.Collection("___meteor_failure_test_collection");
 
@@ -951,46 +1053,24 @@ if (Meteor.isServer) {
 
 } // end Meteor.isServer
 
-var stripId = function (obj) {
-  delete obj._id;
-};
-
-var compareResults = function (test, useUpdate, actual, expected) {
-  if (useUpdate) {
-    _.map(actual, stripId);
-    _.map(expected, stripId);
-  }
-  // (technically should ignore order in comparison)
-  test.equal(actual, expected);
-};
-
 // This test is duplicated below (with some changes) for async upserts that go
 // over the network.
 _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
   _.each([true, false], function (useUpdate) {
     Tinytest.add("mongo-livedata - " + (useUpdate ? "update " : "") + "upsert" + (minimongo ? " minimongo" : "") + ", " + idGeneration, function (test) {
-      var upsert = function (query, mod, options) {
-        if (useUpdate)
-          return { numberAffected:
-                   coll.update(query, mod,
-                                     _.extend({ upsert: true }, options)) };
-        else
-          return coll.upsert(query, mod, options);
-      };
-
       var run = test.runId();
       var options = collectionOptions;
       if (minimongo)
         options = _.extend({}, collectionOptions, { connection: null });
       var coll = new Meteor.Collection("livedata_upsert_collection_"+run, options);
 
-      var result1 = upsert({foo: 'bar'}, {foo: 'bar'});
+      var result1 = upsert(coll, useUpdate, {foo: 'bar'}, {foo: 'bar'});
       test.equal(result1.numberAffected, 1);
       if (! useUpdate)
         test.isTrue(result1.insertedId);
       compareResults(test, useUpdate, coll.find().fetch(), [{foo: 'bar', _id: result1.insertedId}]);
 
-      var result2 = upsert({foo: 'bar'}, {foo: 'baz'});
+      var result2 = upsert(coll, useUpdate, {foo: 'bar'}, {foo: 'baz'});
       test.equal(result2.numberAffected, 1);
       if (! useUpdate)
         test.isFalse(result2.insertedId);
@@ -1002,13 +1082,13 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
 
       var t1 = new Meteor.Collection.ObjectID();
       var t2 = new Meteor.Collection.ObjectID();
-      var result3 = upsert({foo: t1}, {foo: t1});
+      var result3 = upsert(coll, useUpdate, {foo: t1}, {foo: t1});
       test.equal(result3.numberAffected, 1);
       if (! useUpdate)
         test.isTrue(result3.insertedId);
       compareResults(test, useUpdate, coll.find().fetch(), [{foo: t1, _id: result3.insertedId}]);
 
-      var result4 = upsert({foo: t1}, {foo: t2});
+      var result4 = upsert(coll, useUpdate, {foo: t1}, {foo: t2});
       test.equal(result2.numberAffected, 1);
       if (! useUpdate)
         test.isFalse(result2.insertedId);
@@ -1018,7 +1098,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
 
       // Test modification by upsert
 
-      var result5 = upsert({name: 'David'}, {$set: {foo: 1}});
+      var result5 = upsert(coll, useUpdate, {name: 'David'}, {$set: {foo: 1}});
       test.equal(result5.numberAffected, 1);
       if (! useUpdate)
         test.isTrue(result5.insertedId);
@@ -1027,11 +1107,11 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
 
       test.throws(function () {
         // test that bad modifier fails fast
-        upsert({name: 'David'}, {$blah: {foo: 2}});
+        upsert(coll, useUpdate, {name: 'David'}, {$blah: {foo: 2}});
       });
 
 
-      var result6 = upsert({name: 'David'}, {$set: {foo: 2}});
+      var result6 = upsert(coll, useUpdate, {name: 'David'}, {$set: {foo: 2}});
       test.equal(result6.numberAffected, 1);
       if (! useUpdate)
         test.isFalse(result6.insertedId);
@@ -1043,7 +1123,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
                                            {name: 'Emily', foo: 2, _id: emilyId}]);
 
       // multi update by upsert
-      var result7 = upsert({foo: 2},
+      var result7 = upsert(coll, useUpdate, {foo: 2},
                            {$set: {bar: 7},
                             $setOnInsert: {name: 'Fred', foo: 2}},
                            {multi: true});
@@ -1054,7 +1134,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
                                            {name: 'Emily', foo: 2, bar: 7, _id: emilyId}]);
 
       // insert by multi upsert
-      var result8 = upsert({foo: 3},
+      var result8 = upsert(coll, useUpdate, {foo: 3},
                            {$set: {bar: 7},
                             $setOnInsert: {name: 'Fred', foo: 2}},
                            {multi: true});
@@ -1068,7 +1148,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
                       {name: 'Fred', foo: 2, bar: 7, _id: fredId}]);
 
       // test `insertedId` option
-      var result9 = upsert({name: 'Steve'},
+      var result9 = upsert(coll, useUpdate, {name: 'Steve'},
                            {name: 'Steve'},
                            {insertedId: 'steve'});
       test.equal(result9.numberAffected, 1);
@@ -1091,19 +1171,6 @@ if (Meteor.isClient) {
   _.each([true, false], function (useUpdate) {
     Tinytest.addAsync("mongo-livedata - async " + (useUpdate ? "update " : "") + "upsert" + ", " + idGeneration, function (test, onComplete) {
       var coll;
-      var upsert = function (query, mod, options, callback) {
-        if (! callback && typeof options === "function") {
-          callback = options;
-          options = {};
-        }
-        if (useUpdate)
-          coll.update(query, mod, _.extend({ upsert: true }, options), function (err, result) {
-            callback(err, result ? { numberAffected: result } : undefined);
-          });
-        else
-          coll.upsert(query, mod, options, callback);
-      };
-
       var run = test.runId();
       var collName = "livedata_upsert_collection_"+run;
       Meteor.call("createInsecureCollection", collName, collectionOptions);
@@ -1119,11 +1186,11 @@ if (Meteor.isClient) {
           test.equal(result1.insertedId, 'foo');
         }
         compareResults(test, useUpdate, coll.find().fetch(), [{foo: 'bar', _id: 'foo'}]);
-        upsert({_id: 'foo'}, {foo: 'baz'}, next2);
+        upsert(coll, useUpdate, {_id: 'foo'}, {foo: 'baz'}, next2);
       };
 
       // Test starts here.
-      upsert({_id: 'foo'}, {_id: 'foo', foo: 'bar'}, next1);
+      upsert(coll, useUpdate, {_id: 'foo'}, {_id: 'foo', foo: 'bar'}, next1);
 
       var t1, t2, result2;
       var next2 = function (err, result) {
@@ -1139,7 +1206,7 @@ if (Meteor.isClient) {
 
         t1 = new Meteor.Collection.ObjectID();
         t2 = new Meteor.Collection.ObjectID();
-        upsert({_id: t1}, {_id: t1, foo: 'bar'}, next3);
+        upsert(coll, useUpdate, {_id: t1}, {_id: t1, foo: 'bar'}, next3);
       };
 
       var result3;
@@ -1152,7 +1219,7 @@ if (Meteor.isClient) {
         }
         compareResults(test, useUpdate, coll.find().fetch(), [{_id: t1, foo: 'bar'}]);
 
-        upsert({_id: t1}, {foo: t2}, next4);
+        upsert(coll, useUpdate, {_id: t1}, {foo: t2}, next4);
       };
 
       var next4 = function (err, result4) {
@@ -1164,7 +1231,7 @@ if (Meteor.isClient) {
         coll.remove({_id: t1});
 
         // Test modification by upsert
-        upsert({_id: 'David'}, {$set: {foo: 1}}, next5);
+        upsert(coll, useUpdate, {_id: 'David'}, {$set: {foo: 1}}, next5);
       };
 
       var result5;
@@ -1182,9 +1249,9 @@ if (Meteor.isClient) {
         // The stub throws an exception about the invalid modifier, which
         // livedata logs (so we suppress it).
         Meteor._suppress_log(1);
-        upsert({_id: 'David'}, {$blah: {foo: 2}}, function (err) {
+        upsert(coll, useUpdate, {_id: 'David'}, {$blah: {foo: 2}}, function (err) {
           test.isTrue(err);
-          upsert({_id: 'David'}, {$set: {foo: 2}}, next6);
+          upsert(coll, useUpdate, {_id: 'David'}, {$set: {foo: 2}}, next6);
         });
       };
 
@@ -1203,7 +1270,7 @@ if (Meteor.isClient) {
         // multi update by upsert.
         // We can't actually update multiple documents since we have to do it by
         // id, but at least make sure the multi flag doesn't mess anything up.
-        upsert({_id: 'Emily'},
+        upsert(coll, useUpdate, {_id: 'Emily'},
                {$set: {bar: 7},
                 $setOnInsert: {name: 'Fred', foo: 2}},
                {multi: true}, next7);
@@ -1219,7 +1286,7 @@ if (Meteor.isClient) {
                                              {_id: 'Emily', foo: 2, bar: 7}]);
 
         // insert by multi upsert
-        upsert({_id: 'Fred'},
+        upsert(coll, useUpdate, {_id: 'Fred'},
                {$set: {bar: 7},
                 $setOnInsert: {name: 'Fred', foo: 2}},
                {multi: true}, next8);
@@ -1278,19 +1345,30 @@ if (Meteor.isClient) {
 
 } // end isClient
 
+// Runs a method and its stub which do some upserts. The method throws an error
+// if we don't get the right return values.
+if (Meteor.isClient) {
+  _.each([true, false], function (useUpdate) {
+    Tinytest.addAsync("mongo-livedata - " + (useUpdate ? "update " : "") + "upsert in method, " + idGeneration, function (test, onComplete) {
+      var run = test.runId();
+      upsertTestMethodColl = new Meteor.Collection(upsertTestMethod + "_collection_" + run, collectionOptions);
+      var m = {};
+      delete Meteor.connection._methodHandlers[upsertTestMethod];
+      m[upsertTestMethod] = function (run, useUpdate, options) {
+        upsertTestMethodImpl(upsertTestMethodColl, useUpdate, test);
+      };
+      Meteor.methods(m);
+      Meteor.call(upsertTestMethod, run, useUpdate, collectionOptions, function (err, result) {
+        test.isFalse(err);
+        onComplete();
+      });
+    });
+  });
+}
 
 _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
   _.each([true, false], function (useUpdate) {
     Tinytest.add("mongo-livedata - " + (useUpdate ? "update " : "") + "upsert by id" + (minimongo ? " minimongo" : "") + ", " + idGeneration, function (test) {
-      var upsert = function (query, mod, options) {
-        if (useUpdate)
-          return { numberAffected:
-                   coll.update(query, mod,
-                                     _.extend({ upsert: true }, options)) };
-        else
-          return coll.upsert(query, mod, options);
-      };
-
       var run = test.runId();
       var options = collectionOptions;
       if (minimongo)
@@ -1298,21 +1376,21 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       var coll = new Meteor.Collection("livedata_upsert_by_id_collection_"+run, options);
 
       var ret;
-      ret = upsert({_id: 'foo'}, {$set: {x: 1}});
+      ret = upsert(coll, useUpdate, {_id: 'foo'}, {$set: {x: 1}});
       test.equal(ret.numberAffected, 1);
       if (! useUpdate)
         test.equal(ret.insertedId, 'foo');
       compareResults(test, useUpdate, coll.find().fetch(),
                      [{_id: 'foo', x: 1}]);
 
-      ret = upsert({_id: 'foo'}, {$set: {x: 2}});
+      ret = upsert(coll, useUpdate, {_id: 'foo'}, {$set: {x: 2}});
       test.equal(ret.numberAffected, 1);
       if (! useUpdate)
         test.isFalse(ret.insertedId);
       compareResults(test, useUpdate, coll.find().fetch(),
                      [{_id: 'foo', x: 2}]);
 
-      ret = upsert({_id: 'bar'}, {$set: {x: 1}});
+      ret = upsert(coll, useUpdate, {_id: 'bar'}, {$set: {x: 1}});
       test.equal(ret.numberAffected, 1);
       if (! useUpdate)
         test.equal(ret.insertedId, 'bar');
@@ -1322,7 +1400,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
 
       coll.remove({});
 
-      ret = upsert({_id: 'traz'}, {x: 1});
+      ret = upsert(coll, useUpdate, {_id: 'traz'}, {x: 1});
       test.equal(ret.numberAffected, 1);
       var myId = ret.insertedId;
       if (! useUpdate) {
@@ -1337,7 +1415,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
                      [{x: 1, _id: myId}]);
 
       // this time, insert as _id 'traz'
-      ret = upsert({_id: 'traz'}, {_id: 'traz', x: 2});
+      ret = upsert(coll, useUpdate, {_id: 'traz'}, {_id: 'traz', x: 2});
       test.equal(ret.numberAffected, 1);
       if (! useUpdate)
         test.equal(ret.insertedId, 'traz');
@@ -1346,7 +1424,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
                       {x: 2, _id: 'traz'}]);
 
       // now update _id 'traz'
-      ret = upsert({_id: 'traz'}, {x: 3});
+      ret = upsert(coll, useUpdate, {_id: 'traz'}, {x: 3});
       test.equal(ret.numberAffected, 1);
       test.isFalse(ret.insertedId);
       compareResults(test, useUpdate, coll.find().fetch(),
@@ -1354,7 +1432,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
                       {x: 3, _id: 'traz'}]);
 
       // now update, passing _id (which is ok as long as it's the same)
-      ret = upsert({_id: 'traz'}, {_id: 'traz', x: 4});
+      ret = upsert(coll, useUpdate, {_id: 'traz'}, {_id: 'traz', x: 4});
       test.equal(ret.numberAffected, 1);
       test.isFalse(ret.insertedId);
       compareResults(test, useUpdate, coll.find().fetch(),
