@@ -96,9 +96,9 @@ Template.api.ejsonStringify = {
     {name: "indent",
      type: "Boolean, Integer, or String",
      descr: "Indents objects and arrays for easy readability.  When `true`, indents by 2 spaces; when an integer, indents by that number of spaces; and when a string, uses the string as the indentation pattern."},
-    {name: "keyOrderSensitive",
+    {name: "canonical",
      type: "Boolean",
-     descr: "Stringifies in key sensitive order, when supported by the JavaScript implementation.  Without this option, object keys are emitted in sorted order."}
+     descr: "Stringifies keys in an object in sorted order.  Without this option, object keys are emitted in the native JSON stringifier's order."}
   ],
   descr: ["Serialize a value to a string.\n\nFor EJSON values, the serialization " +
           "fully represents the value. For non-EJSON values, serializes the " +
