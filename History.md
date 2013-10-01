@@ -1,5 +1,8 @@
 ## vNEXT
 
+* Minimongo supports simple fields projections (but still no `$elemMatch` and
+  `$` operators support in projections).
+
 * `restrictCreationByEmail` option in `Accounts.config` to restrict new users to
   emails of specific domain (eg. only users with @meteor.com emails).
 
