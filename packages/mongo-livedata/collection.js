@@ -313,16 +313,21 @@ var throwIfSelectorIsNotId = function (selector, methodName) {
   }
 };
 
-// 'insert' immediately returns the inserted document's new _id.  The
-// others return nothing.
+// 'insert' immediately returns the inserted document's new _id.
+// The others return values immediately if you are in a stub, an in-memory
+// unmanaged collection, or a mongo-backed collection and you don't pass a
+// callback. 'update' and 'remove' return the number of affected
+// documents. 'upsert' returns an object with keys 'numberAffected' and, if an
+// insert happened, 'insertedId'.
 //
 // Otherwise, the semantics are exactly like other methods: they take
 // a callback as an optional last argument; if no callback is
 // provided, they block until the operation is complete, and throw an
 // exception if it fails; if a callback is provided, then they don't
-// necessarily block, and they call the callback when they finish with
-// error and result arguments.  (The insert method provides the
-// document ID as its result; update and remove don't provide a result.)
+// necessarily block, and they call the callback when they finish with error and
+// result arguments.  (The insert method provides the document ID as its result;
+// update and remove provide the number of affected docs as the result; upsert
+// provides an object with numberAffected and maybe insertedId.)
 //
 // On the client, blocking is impossible, so if a callback
 // isn't provided, they just return immediately and any error
@@ -450,7 +455,8 @@ _.each(["insert", "update", "remove", "upsert"], function (name) {
     }
 
     // both sync and async, unless we threw an exception, return ret
-    // (new document ID for insert, undefined otherwise).
+    // (new document ID for insert, num affected for update/remove, object with
+    // numberAffected and maybe insertedId for upsert).
     return ret;
   };
 });
