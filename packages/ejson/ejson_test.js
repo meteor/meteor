@@ -86,10 +86,10 @@ Tinytest.add("ejson - stringify", function (test) {
   test.equal(EJSON.stringify([1, 2, 3], {indent: true}),
     "[\n  1,\n  2,\n  3\n]"
   );
-  test.equal(EJSON.stringify([1, 2, 3], {keyOrderSensitive: true}),
+  test.equal(EJSON.stringify([1, 2, 3], {canonical: false}),
     "[1,2,3]"
   );
-  test.equal(EJSON.stringify([1, 2, 3], {indent: true, keyOrderSensitive: true}),
+  test.equal(EJSON.stringify([1, 2, 3], {indent: true, canonical: false}),
     "[\n  1,\n  2,\n  3\n]"
   );
 
@@ -102,14 +102,18 @@ Tinytest.add("ejson - stringify", function (test) {
 
   test.equal(
     EJSON.stringify(
-      {b: [2, {d: 4, c: 3}], a: 1}
+      {b: [2, {d: 4, c: 3}], a: 1},
+      {canonical: true}
     ),
     "{\"a\":1,\"b\":[2,{\"c\":3,\"d\":4}]}"
   );
   test.equal(
     EJSON.stringify(
       {b: [2, {d: 4, c: 3}], a: 1},
-      {indent: true}
+      {
+        indent: true,
+        canonical: true
+      }
     ),
     "{\n" +
     "  \"a\": 1,\n" +
@@ -125,14 +129,14 @@ Tinytest.add("ejson - stringify", function (test) {
   test.equal(
     EJSON.stringify(
       {b: [2, {d: 4, c: 3}], a: 1},
-      {keyOrderSensitive: true}
+      {canonical: false}
     ),
     "{\"b\":[2,{\"d\":4,\"c\":3}],\"a\":1}"
   );
   test.equal(
     EJSON.stringify(
       {b: [2, {d: 4, c: 3}], a: 1},
-      {indent: true, keyOrderSensitive: true}
+      {indent: true, canonical: false}
     ),
     "{\n" +
     "  \"b\": [\n" +

@@ -207,15 +207,12 @@ EJSON.fromJSONValue = function (item) {
 };
 
 EJSON.stringify = function (item, options) {
-  var keyOrderSensitive = !!(options && options.keyOrderSensitive);
-  var indent = options && options.indent || null;
-  if (indent === true)
-    indent = 2;
   var json = EJSON.toJSONValue(item);
-  if (keyOrderSensitive)
-    return JSON.stringify(json, null, indent);
-  else
-    return EJSON._canonicalStringify(json, null, indent);
+  if (options && (options.canonical || options.indent)) {
+    return EJSON._canonicalStringify(json, options);
+  } else {
+    return JSON.stringify(json);
+  }
 };
 
 EJSON.parse = function (item) {
@@ -315,6 +312,7 @@ EJSON.clone = function (v) {
     }
     return ret;
   }
+  // XXX: Use something better than underscore's isArray
   if (_.isArray(v) || _.isArguments(v)) {
     // For some reason, _.map doesn't work in this context on Opera (weird test
     // failures).
