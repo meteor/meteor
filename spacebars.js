@@ -475,7 +475,7 @@ Spacebars.parse = function (inputString, options) {
     }
 
     if (! isTopLevel && ! block.closeTag)
-      error("Unclosed `" + block.openTag.name +
+      error("Unclosed `" + block.openTag.path.join('.') +
             "` tag at top level");
 
     return block;
