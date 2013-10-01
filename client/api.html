@@ -1266,7 +1266,7 @@ the value. The `_id` field is still included in the result.
     // Users.find({}, {fields: {firstname: 1, lastname: 1}})
 
 It is not possible to mix inclusion and exclusion styles (except for the cases
-when `_id` is included by default or explicitly included). Field operators such
+when `_id` is included by default or explicitly excluded). Field operators such
 as `$` and `$elemMatch` are not available on the client side yet.
 
 More advanced example:
