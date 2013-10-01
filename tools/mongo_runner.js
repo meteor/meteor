@@ -165,10 +165,13 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
       '--port', port,
       '--dbpath', data_path
     ]);
+    var callOnExit = function (code, signal) {
+      on_exit_callback(code, signal, stderrOutput);
+    };
     handle.stop = function (callback) {
       var tries = 0;
       var exited = false;
-      proc.removeListener('exit', on_exit_callback);
+      proc.removeListener('exit', callOnExit);
       proc.kill('SIGINT');
       callback && callback(err);
     };
@@ -180,9 +183,7 @@ exports.launch_mongo = function (app_dir, port, launch_callback, on_exit_callbac
       stderrOutput += data;
     });
 
-    proc.on('exit', function (code, signal) {
-      on_exit_callback(code, signal, stderrOutput);
-    });
+    proc.on('exit', callOnExit);
 
     proc.stdout.setEncoding('utf8');
     proc.stdout.on('data', function (data) {
