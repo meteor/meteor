@@ -424,7 +424,9 @@ _.each(["insert", "update", "remove", "upsert"], function (name) {
         throwIfSelectorIsNotId(args[0], name);
       }
 
-      self._connection.apply(self._prefix + name, args, wrappedCallback);
+      ret = transformResultFromCollection(
+        self._connection.apply(self._prefix + name, args, wrappedCallback)
+      );
 
     } else {
       // it's my collection.  descend into the collection object
