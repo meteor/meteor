@@ -1261,12 +1261,13 @@ is a dictionary whose keys are field names and whose values are `0`.
     // Users.find({}, {fields: {password: 0, hash: 0}})
 
 To return an object that only includes the specified field, use `1` as
-the value.  The `_id` field is still included in the result.
+the value. The `_id` field is still included in the result.
 
     // Users.find({}, {fields: {firstname: 1, lastname: 1}})
 
-It is not possible to mix inclusion and exclusion styles (exception for `_id`).
-Field operators such as `$` and `$elemMatch` are not available on client side yet.
+It is not possible to mix inclusion and exclusion styles (except for the cases
+when `_id` is included by default or explicitly included). Field operators such
+as `$` and `$elemMatch` are not available on the client side yet.
 
 More advanced example:
 
@@ -1278,7 +1279,8 @@ More advanced example:
 
     // returns { alterEgos: [{ name: "Kira" }, { name: "L" }] }
 
-Notice the nested field rule and array behavior, learn more in MongoDB docs.
+See <a href="http://docs.mongodb.org/manual/tutorial/project-fields-from-query-results/#projection">
+the MongoDB docs</a> for details of the nested field rules and array behavior.
 
 {{/api_box_inline}}
 
