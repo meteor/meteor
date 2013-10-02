@@ -322,7 +322,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
   var refresh = function () {
     self._refresh(collection_name, selector);
   };
-  callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
+  callback = writeCallback(write, refresh, callback);
   try {
     var collection = self._getCollection(collection_name);
     var mongoOpts = {safe: true};
