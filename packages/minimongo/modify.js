@@ -5,7 +5,7 @@
 //
 // XXX atomicity: if one modification fails, do we roll back the whole
 // change?
-LocalCollection._modify = function (doc, mod, onInsert) {
+LocalCollection._modify = function (doc, mod, isInsert) {
   var is_modifier = false;
   for (var k in mod) {
     // IE7 doesn't support indexing into strings (eg, k[0]), so use substr.
@@ -35,7 +35,7 @@ LocalCollection._modify = function (doc, mod, onInsert) {
 
     for (var op in mod) {
       var mod_func = LocalCollection._modifiers[op];
-      if (onInsert && op === '$setOnInsert')
+      if (isInsert && op === '$setOnInsert')
         mod_func = LocalCollection._modifiers['$set'];
       if (!mod_func)
         throw Error("Invalid modifier specified " + op);
@@ -63,10 +63,10 @@ LocalCollection._modify = function (doc, mod, onInsert) {
     // work right in Opera. Deleting from a doc while iterating over it
     // would sometimes cause opera to skip some keys.
 
-    // onInsert: if we're constructing a document to insert (via upsert)
+    // isInsert: if we're constructing a document to insert (via upsert)
     // and we're in replacement mode, not modify mode, DON'T take the
     // _id from the query.  This matches mongo's behavior.
-    if (k !== '_id' || onInsert)
+    if (k !== '_id' || isInsert)
       delete doc[k];
   });
   for (var k in new_doc) {
