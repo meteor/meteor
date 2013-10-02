@@ -11,6 +11,8 @@ SECURITY
 
 MINIMONGO
 
+* XXX upsert, update/remove return values  #1046
+
 * Pass an index and the cursor itself to the callbacks in `cursor.forEach` and
   `cursor.map`, just like the corresponding `Array` methods.  #63
 
@@ -109,9 +111,9 @@ MISC
   * XXX: we should try to do more upgrades in this release if possible (in
     conjunction with the Node upgrade)
 
-Patches contributed by GitHub users ansman, awwx, codeinthehole, Maxhodges,
-meawoppl, mitar, mizzao, mquandalle, nathan-muir, RobertLowe, ryw, and
-timhaines.
+Patches contributed by GitHub users ansman, awwx, codeinthehole, jacott,
+Maxhodges, meawoppl, mitar, mizzao, mquandalle, nathan-muir, RobertLowe, ryw,
+and timhaines.
 
 
 ## v0.6.5.1
