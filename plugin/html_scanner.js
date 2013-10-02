@@ -34,8 +34,6 @@ html_scanner = {
     };
 
     var results = html_scanner._initResults();
-    results.js += '\nTemplate = (typeof Template === "undefined") ? {} : Template;\n';
-
     var rOpenTag = /^((<(template|head|body)\b)|(<!--)|(<!DOCTYPE|{{!)|$)/i;
 
     while (rest) {
