@@ -342,16 +342,12 @@ var throwIfSelectorIsNotId = function (selector, methodName) {
 // generating their result until the database has acknowledged
 // them. In the future maybe we should provide a flag to turn this
 // off.
-_.each(["insert", "update", "remove", "upsert"], function (name) {
+_.each(["insert", "update", "remove"], function (name) {
   Meteor.Collection.prototype[name] = function (/* arguments */) {
     var self = this;
     var args = _.toArray(arguments);
     var callback;
     var ret;
-
-    var isUpdateOrUpsert = (name === "update" || name === "upsert");
-    var isUpsert = (name === "update" && options && options.upsert) ||
-          (name === "upsert");
 
     if (args.length && args[args.length - 1] instanceof Function)
       callback = args.pop();
@@ -372,10 +368,10 @@ _.each(["insert", "update", "remove", "upsert"], function (name) {
     } else {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
 
-      if (isUpdateOrUpsert) {
+      if (name === "update") {
         // Mutate args but copy the original options object.
         var options = args[2] = _.clone(args[2]) || {};
-        if (isUpsert) {
+        if (options && typeof options !== "function" && options.upsert) {
           // set `insertedId` if absent.  `insertedId` is a Meteor extension.
           if (options.insertedId) {
             if (!(typeof options.insertedId === 'string'
@@ -460,6 +456,18 @@ _.each(["insert", "update", "remove", "upsert"], function (name) {
     return ret;
   };
 });
+
+Meteor.Collection.prototype.upsert = function (selector, modifier,
+                                               options, callback) {
+  var self = this;
+  if (! callback && typeof options === "function") {
+    callback = options;
+    options = {};
+  }
+  return self.update(selector, modifier,
+              _.extend({}, options, { _returnObject: true, upsert: true }),
+              callback);
+};
 
 // We'll actually design an index API later. For now, we just pass through to
 // Mongo's, but make it synchronous.
@@ -596,7 +604,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
   if (self._connection) {
     var m = {};
 
-    _.each(['insert', 'update', 'remove', 'upsert'], function (method) {
+    _.each(['insert', 'update', 'remove'], function (method) {
       m[self._prefix + method] = function (/* ... */) {
         // All the methods do their own validation, instead of using check().
         check(arguments, [Match.Any]);
@@ -610,9 +618,6 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
           }
 
           // This is the server receiving a method call from the client.
-
-          if (method === 'upsert' && ! self._isInsecure())
-            throw new Meteor.Error(403, "Not permitted.  Untrusted code may not upsert (not supported by allow/deny).  Upsert from a method instead.");
 
           // We don't allow arbitrary selectors in mutations from the client: only
           // single-ID selectors.

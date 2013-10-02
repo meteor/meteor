@@ -602,7 +602,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   }
 
   var result;
-  if (options.returnObject) {
+  if (options._returnObject) {
     result = {
       numberAffected: updateCount
     };
@@ -627,7 +627,7 @@ LocalCollection.prototype.upsert = function (selector, mod, options, callback) {
   }
   return self.update(selector, mod, _.extend({}, options, {
     upsert: true,
-    returnObject: true
+    _returnObject: true
   }, callback));
 };
 

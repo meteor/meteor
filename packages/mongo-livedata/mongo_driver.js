@@ -351,7 +351,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
                                      // object. Otherwise, we should just return
                                      // the number of affected docs to match the
                                      // mongo API.
-                                     if (result && ! options.returnObject)
+                                     if (result && ! options._returnObject)
                                        callback(err, result.numberAffected);
                                      else
                                        callback(err, result);
@@ -364,7 +364,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
                                 knownId) {
                               result.insertedId = knownId;
                             }
-                            if (result && ! options.returnObject)
+                            if (result && ! options._returnObject)
                               result = result.numberAffected;
                           }
                           callback(err, result);
@@ -396,7 +396,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
                                              isModify, options, callback) {
   var insertedId = options.insertedId; // must exist
 
-  var mongoOptsForUpdate = _.extend({}, options, { returnObject: true });
+  var mongoOptsForUpdate = _.extend({}, options, { _returnObject: true });
   delete mongoOptsForUpdate.insertedId;
   delete mongoOptsForUpdate.upsert;
 
@@ -452,7 +452,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
     newDoc = mod;
   }
 
-  var mongoOptsForInsert = _.extend({}, options, { returnObject: true });
+  var mongoOptsForInsert = _.extend({}, options, { _returnObject: true });
   delete mongoOptsForUpdate.insertedId;
   mongoOptsForInsert.upsert = true;
   delete mongoOptsForInsert.multi;
@@ -501,7 +501,7 @@ MongoConnection.prototype.upsert = function (collectionName, selector, mod,
   return self.update(collectionName, selector, mod,
                      _.extend({}, options, {
                        upsert: true,
-                       returnObject: true
+                       _returnObject: true
                      }, callback));
 };
 
