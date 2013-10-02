@@ -98,7 +98,7 @@ Template.api.ejsonStringify = {
      descr: "Indents objects and arrays for easy readability.  When `true`, indents by 2 spaces; when an integer, indents by that number of spaces; and when a string, uses the string as the indentation pattern."},
     {name: "canonical",
      type: "Boolean",
-     descr: "Stringifies keys in an object in sorted order.  Without this option, object keys are emitted in the native JSON stringifier's order."}
+     descr: "When `true`, stringifies keys in an object in sorted order."}
   ],
   descr: ["Serialize a value to a string.\n\nFor EJSON values, the serialization " +
           "fully represents the value. For non-EJSON values, serializes the " +
@@ -131,7 +131,7 @@ Template.api.ejsonEquals = {
   options: [
     {name: "keyOrderSensitive",
      type: "Boolean",
-     descr: "Compare in key sensitive order, if supported by the JavaScript implementation.  For example, `{a: 1, b: 2}` is not equal to `{b: 2, a: 1}` with this option, but they are equal when this option is not specified."}
+     descr: "Compare in key sensitive order, if supported by the JavaScript implementation.  For example, `{a: 1, b: 2}` is equal to `{b: 2, a: 1}` only when `keyOrderSensitive` is `false`.  The default is `false`."}
   ],
   descr: ["Return true if `a` and `b` are equal to each other.  Return false otherwise." +
           "  Uses the `equals` method on `a` if present, otherwise performs a deep comparison."]

@@ -82,10 +82,14 @@ MISC
 
 * Check that the argument to `EJSON.parse` is a string.  #1401
 
+* `EJSON.stringify` now takes options: #1136
+  - `canonical` causes objects keys to be stringified in sorted order
+  - `indent` allows formatting control over the EJSON stringification
+
+* EJSON now supports `Infinity`, `-Infinity` and `NaN`.
+
 * Better error from functions that use `Meteor._wrapAsync` (eg collection write
   methods and `HTTP` methods) and in DDP server message processing.  #1387
-
-* XXX: Does appconfig branch have any visible effects that need to be here?
 
 * Support `appcache` on Chrome for iOS.
 
