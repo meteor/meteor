@@ -34,7 +34,7 @@ Accounts._options = {};
 Accounts.config = function(options) {
   // validate option keys
   var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation",
-                    "restrictCreationByEmail", "_tokenLifetimeSecs",
+                    "restrictCreationByEmailDomain", "_tokenLifetimeSecs",
                     "_tokenExpirationIntervalSecs", "_minTokenLifetimeSecs",
                     "_connectionCloseDelaySecs"];
   _.each(_.keys(options), function (key) {

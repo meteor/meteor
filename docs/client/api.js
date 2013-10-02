@@ -1108,9 +1108,9 @@ Template.api.accounts_config = {
       descr: "Calls to [`createUser`](#accounts_createuser) from the client will be rejected. In addition, if you are using [accounts-ui](#accountsui), the \"Create account\" link will not be available."
     },
     {
-      name: "restrictCreationByEmail",
+      name: "restrictCreationByEmailDomain",
       type: "String",
-      descr: "If set, only allow new users with an email in the specified domain. Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmail: 'school.edu' })`."
+      descr: "If set, only allow new users with an email in the specified domain. Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })`."
     }
   ]
 };

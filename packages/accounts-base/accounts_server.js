@@ -314,7 +314,7 @@ var quotemeta = function (str) {
 // Helper function: returns false if email does not match company domain from
 // the configuration.
 var testEmailDomain = function (email) {
-  var domain = Accounts._options.restrictCreationByEmail;
+  var domain = Accounts._options.restrictCreationByEmailDomain;
   return !domain ||
     (_.isFunction(domain) && domain(email)) ||
     (_.isString(domain) &&
@@ -323,7 +323,7 @@ var testEmailDomain = function (email) {
 
 // Validate new user's email or Google/Facebook/GitHub account's email
 Accounts.validateNewUser(function (user) {
-  var domain = Accounts._options.restrictCreationByEmail;
+  var domain = Accounts._options.restrictCreationByEmailDomain;
   if (!domain)
     return true;
 
