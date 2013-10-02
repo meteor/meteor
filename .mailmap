@@ -1,0 +1,33 @@
+# This makes it easier to find GitHub usernames for History.md.
+#
+# This controls 'git shortlog'. eg, run:
+#   git shortlog -s release/0.6.5.1..HEAD
+# to get a sorted list of all committers to revisions in HEAD but not
+# in 0.6.5.1.
+#
+# For any emails that show up in the shortlog that aren't in one of
+# these lists, figure out their GitHub username and add them.
+
+GITHUB: ansman <nicklas@ansman.se>
+GITHUB: awwx <andrew.wilcox@gmail.com>
+GITHUB: codeinthehole <david.winterbottom@gmail.com>
+GITHUB: Maxhodges <Max@whiterabbitpress.com>
+GITHUB: meawoppl <meawoppl@gmail.com>
+GITHUB: mitar <mitar.git@tnode.com>
+GITHUB: mizzao <mizzao@gmail.com>
+GITHUB: mquandalle <maxime.quandalle@gmail.com>
+GITHUB: nathan-muir <ndmuir@gmail.com>
+GITHUB: RobertLowe <robert@iblargz.com>
+GITHUB: ryw <ry@rywalker.com>
+GITHUB: timhaines <tmhaines@gmail.com>
+
+METEOR: avital <avital@thewe.net>
+METEOR: debergalis <matt@meteor.com>
+METEOR: dgreensp <dgreenspan@alum.mit.edu>
+METEOR: estark37 <emily@meteor.com>
+METEOR: estark37 <estark37@gmail.com>
+METEOR: glasser <glasser@meteor.com>
+METEOR: gschmidt <geoff@geoffschmidt.com>
+METEOR: n1mmy <nim@meteor.com>
+METEOR: sixolet <naomi@meteor.com>
+METEOR: Slava <slava@meteor.com>
