@@ -108,7 +108,7 @@
   `USE_JSESSIONID` environment variable to enable.
 
 * Upgraded dependencies:
-  * Node from 0.8.24 to 0.10.19
+  * Node from 0.8.24 to 0.10.20
   * MongoDB from 2.4.4 to 2.4.6
   * http-proxy from 0.10.1 to a pre-release of 1.0.0
   * stylus from 0.30.1 to 0.37.0

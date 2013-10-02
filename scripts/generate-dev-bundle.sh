@@ -76,7 +76,7 @@ cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of tools/meteor.js and tools/server/boot.js, and the text in
 # docs/client/concepts.html and the README in tools/bundler.js.
-git checkout v0.10.19
+git checkout v0.10.20
 
 ./configure --prefix="$DIR"
 make -j4
