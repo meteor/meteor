@@ -15,8 +15,6 @@ Npm.depends({
   // probably switch to a built NPM version when it gets released.
   esprima: "https://github.com/ariya/esprima/tarball/2a41dbf0ddadade0b09a9a7cc9a0c8df9c434018",
   estraverse: "1.3.1",
-  // Fork to add ignoreEval option.
-  // https://github.com/Constellation/escope/pull/18
   escope: "1.0.0"
 });
 
