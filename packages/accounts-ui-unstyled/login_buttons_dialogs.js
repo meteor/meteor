@@ -226,8 +226,11 @@ Template._configureLoginServiceDialog.configurationSteps = function () {
   return configureLoginServiceDialogTemplateForService()();
 };
 
-Template._configureLoginServiceDialog.saveDisabled = function () {
-  return loginButtonsSession.get('configureLoginServiceDialogSaveDisabled');
+Template._configureLoginServiceDialog.additionalClasses = function () {
+  if (loginButtonsSession.get('configureLoginServiceDialogSaveDisabled'))
+    return "login-button-disabled";
+  else
+    return "";
 };
 
 // XXX from http://epeli.github.com/underscore.string/lib/underscore.string.js
