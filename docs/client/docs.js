@@ -155,6 +155,7 @@ var toc = [
         {instance: "collection", name: "findOne"},
         {instance: "collection", name: "insert"},
         {instance: "collection", name: "update"},
+        {instance: "collection", name: "upsert"},
         {instance: "collection", name: "remove"},
         {instance: "collection", name: "allow"},
         {instance: "collection", name: "deny"}
