@@ -60,7 +60,7 @@ if (Meteor.isClient) {
     },
     unbindEventCapturer: function (elem, type, handler) {
       type = this.parseEventType(type);
-      elem.removeEventListener(type, handler._meteorui_wrapper);
+      elem.removeEventListener(type, handler._meteorui_wrapper, true);
     },
     parseEventType: function (type) {
       // strip off namespaces

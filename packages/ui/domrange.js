@@ -1014,6 +1014,9 @@ var HandlerRec = function (elem, type, selector, handler, $ui) {
 };
 
 HandlerRec.prototype.bind = function () {
+  // `this.mode` may be EVENT_MODE_TBD, in which case we bind both. in
+  // this case, 'capturingHandler' is in charge of detecting the
+  // correct mode and turning off one or the other handlers.
   if (this.mode !== EVENT_MODE_BUBBLING) {
     DomBackend.bindEventCapturer(
       this.elem, this.type,
