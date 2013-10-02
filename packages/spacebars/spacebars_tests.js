@@ -349,22 +349,24 @@ Tinytest.add("spacebars - compiler", function (test) {
   run('abc',
 
       'function (buf) {',
-      '  buf.text("abc");',
+      '  buf.write("abc");',
       '}');
 
   run('<a foo=bar>abc</a>',
 
       'function (buf) {',
-      '  buf.openTag("a", {"foo": "bar"});',
-      '  buf.text("abc");',
-      '  buf.closeTag("a");',
+      '  buf.write("<a",',
+      '    {attrs: {"foo": "bar"}},',
+      '    ">abc</a>");',
       '}');
 
   run('<a foo={{bar}}>',
 
       'function (buf) {',
       '  var self = this;',
-      '  buf.openTag("a", {"foo": function () { return String(Spacebars.call(self.lookup("bar")) || ""); }});',
+      '  buf.write("<a",',
+      '    {attrs: function () { return {"foo": Spacebars.call(self.lookup("bar"))}; }},',
+      '    ">");',
       '}');
 
   run('<a foo={{bar.baz}}>',
