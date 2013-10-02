@@ -925,7 +925,7 @@ Spacebars.compile = function (inputString, options) {
        (funcInfo.usedSelf ?
         '\n' + indent + 'var self = this;' : '') +
        '\n' + indent + 'buf.write(' +
-       renderables.join(',\n' + indent) + ');\n' +
+       renderables.join(',\n' + indent + '  ') + ');\n' +
        oldIndent : '') + '}';
   };
 
