@@ -27,8 +27,8 @@ UI.If = Component.extend({
   init: function () {
     // XXX this probably deserves a better explanation if this code is
     // going to stay with us.
-
     this.condition = this.data;
+
     // content doesn't see the condition as `data`
     delete this.data;
     // XXX I guess this means it's kosher to mutate properties
@@ -39,7 +39,13 @@ UI.If = Component.extend({
     var self = this;
     // re-render if and only if condition changes
     var condition = Deps.isolateValue(function () {
-      return !! self.get('condition');
+      var cond = self.get('condition');
+
+      // empty arrays are treated as falsey values
+      if (cond instanceof Array && cond.length === 0)
+        return false;
+      else
+        return !! cond;
     });
 
     buf.write(condition ? self.content : self.elseContent);
@@ -56,7 +62,13 @@ UI.Unless = Component.extend({
     var self = this;
     // re-render if and only if condition changes
     var condition = Deps.isolateValue(function () {
-      return !! self.get('condition');
+      var cond = self.get('condition');
+
+      // empty arrays are treated as falsey values
+      if (cond instanceof Array && cond.length === 0)
+        return false;
+      else
+        return !! cond;
     });
 
     buf.write(condition ? self.elseContent : self.content);

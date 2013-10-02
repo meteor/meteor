@@ -1,6 +1,6 @@
-/*
-Template = {};
 
+Template = {};
+/*
 var registeredPartials = {};
 
 // If minimongo is available (it's a weak dependency) use its ID stringifier to

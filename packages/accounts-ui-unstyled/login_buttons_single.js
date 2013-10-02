@@ -29,8 +29,11 @@ Template._loginButtonsLoggedOutSingleLoginButton.events({
   }
 });
 
-Template._loginButtonsLoggedOutSingleLoginButton.configured = function () {
-  return !!ServiceConfiguration.configurations.findOne({service: this.name});
+Template._loginButtonsLoggedOutSingleLoginButton.additionalClasses = function () {
+  if (!!ServiceConfiguration.configurations.findOne({service: this.name}))
+    return "";
+  else
+    return "configure-button";
 };
 
 Template._loginButtonsLoggedOutSingleLoginButton.capitalizedName = function () {

@@ -97,12 +97,10 @@
         </div>
         <a class="accounts-close configure-login-service-dismiss-button">&times;</a>
 
-        {{#isolate}}
-          <div class="login-button login-button-configure {{#if saveDisabled}}login-button-disabled{{/if}}"
+        <div class="login-button login-button-configure {{additionalClasses}}"
              id="configure-login-service-dialog-save-configuration">
-            Save Configuration
-          </div>
-        {{/isolate}}
+          Save Configuration
+        </div>
       </div>
     </div>
   {{/if}}
