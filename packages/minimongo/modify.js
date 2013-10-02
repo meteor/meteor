@@ -5,6 +5,10 @@
 //
 // XXX atomicity: if one modification fails, do we roll back the whole
 // change?
+//
+// isInsert is set when _modify is being called to compute the document to
+// insert as part of an upsert operation. We use this primarily to figure out
+// when to set the fields in $setOnInsert, if present.
 LocalCollection._modify = function (doc, mod, isInsert) {
   var is_modifier = false;
   for (var k in mod) {
@@ -35,6 +39,7 @@ LocalCollection._modify = function (doc, mod, isInsert) {
 
     for (var op in mod) {
       var mod_func = LocalCollection._modifiers[op];
+      // Treat $setOnInsert as $set if this is an insert.
       if (isInsert && op === '$setOnInsert')
         mod_func = LocalCollection._modifiers['$set'];
       if (!mod_func)

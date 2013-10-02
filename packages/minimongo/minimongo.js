@@ -591,6 +591,9 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   });
   self._observeQueue.drain();
 
+  // If we are doing an upsert, and we didn't modify any documents yet, then
+  // it's time to do an insert. Figure out what document we are inserting, and
+  // generate an id for it.
   var insertedId;
   if (updateCount === 0 && options.upsert) {
     var newDoc = _.clone(selector);
@@ -601,6 +604,9 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
     updateCount = 1;
   }
 
+  // Return the number of affected documents, or in the upsert case, an object
+  // containing the number of affected docs and the id of the doc that was
+  // inserted, if any.
   var result;
   if (options._returnObject) {
     result = {
@@ -619,6 +625,9 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   return result;
 };
 
+// A convenience wrapper on update. LocalCollection.upsert(sel, mod) is
+// equivalent to LocalCollection.update(sel, mod, { upsert: true, _returnObject:
+// true }).
 LocalCollection.prototype.upsert = function (selector, mod, options, callback) {
   var self = this;
   if (! callback && typeof options === "function") {
