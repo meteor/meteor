@@ -42,29 +42,27 @@ call `BrowserPolicy` functions in top-level application code or in
 #### Frame options
 
 You can use the following functions to specify which websites are allowed to
-frame your app:
+frame your app. By default, any website is allowed.
 <dl class="callbacks">
 {{#dtdd "BrowserPolicy.disallowFraming()"}}
 Your app will never render inside a frame or iframe.
 {{/dtdd}}
 
-{{#dtdd "BrowserPolicy.allowFramingByOrigin(origin)"}}
+{{#dtdd "BrowserPolicy.restrictFramingToOrigin(origin)"}}
 Your app will only render inside frames loaded by `origin`. You can only call
 this function once with a single origin, and cannot use wildcards or specify
 multiple origins that are allowed to frame your app. (This is a limitation of
 the X-Frame-Options header.) Example values of `origin` include
-"http://example.com" and "https://foo.example.com". Note that this value of the
-X-Frame-Options header is not yet supported in Chrome or Safari and will be
-ignored in those browsers.
+"http://example.com" and "https://foo.example.com".
+{{#warning}}
+This value of the X-Frame-Options header is not yet supported in Chrome or
+Safari and will be ignored in those browsers.
+{{/warning}}
 {{/dtdd}}
 
-{{#dtdd "BrowserPolicy.allowFramingBySameOrigin()"}}
+{{#dtdd "BrowserPolicy.restrictFramingToSameOrigin()"}}
 Your app will only render inside frames loaded by webpages on the same origin as
 your app.
-{{/dtdd}}
-
-{{#dtdd "BrowserPolicy.allowFramingByAnyOrigin()"}}
-Your app can be framed by any website.
 {{/dtdd}}
 </dl>
 

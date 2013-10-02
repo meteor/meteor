@@ -40,9 +40,8 @@
 //
 // For controlling which origins can frame this app,
 // BrowserPolicy.disallowFraming()
-// BrowserPolicy.allowFramingByOrigin(origin)
-// BrowserPolicy.allowFramingBySameOrigin()
-// BrowserPolicy.allowFramingByAnyOrigin();
+// BrowserPolicy.restrictFramingToOrigin(origin)
+// BrowserPolicy.restrictFramingToSameOrigin()
 
 var xFrameOptions;
 var cspSrcs;
@@ -135,14 +134,14 @@ BrowserPolicy = _.extend(BrowserPolicy, {
     cspEnabled = false;
   },
 
-  allowFramingBySameOrigin: function () {
+  restrictFramingToSameOrigin: function () {
     xFrameOptions = "SAMEORIGIN";
   },
   disallowFraming: function () {
     xFrameOptions = "DENY";
   },
   // ALLOW-FROM not supported in Chrome or Safari.
-  allowFramingByOrigin: function (origin) {
+  restrictFramingToOrigin: function (origin) {
     // Trying to specify two allow-from throws to prevent users from
     // accidentally overwriting an allow-from origin when they think they are
     // adding multiple origins.
@@ -150,9 +149,6 @@ BrowserPolicy = _.extend(BrowserPolicy, {
       throw new Error("You can only specify one origin that is allowed to" +
                       " frame this app.");
     xFrameOptions = "ALLOW-FROM " + origin;
-  },
-  allowFramingByAnyOrigin: function () {
-    xFrameOptions = null;
   },
 
   // _enableForTests means that you can call CSP functions, but the header won't
