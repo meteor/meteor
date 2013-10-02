@@ -1032,6 +1032,20 @@ Template.api.logout = {
   ]
 };
 
+Template.api.logoutOtherClients = {
+  id: "meteor_logoutotherclients",
+  name: "Meteor.logoutOtherClients([callback])",
+  locus: "Client",
+  descr: ["Log out other clients logged in as the current user, but does not log out the client that calls this function."],
+  args: [
+    {
+      name: "callback",
+      type: "Function",
+      descr: "Optional callback. Called with no arguments on success, or with a single `Error` argument on failure."
+    }
+  ]
+};
+
 
 Template.api.loginWithPassword = {
   id: "meteor_loginwithpassword",
@@ -1111,6 +1125,11 @@ Template.api.accounts_config = {
       name: "restrictCreationByEmailDomain",
       type: "String Or Function",
       descr: "If set, only allow new users with an email in the specified domain or if the predicate function returns true. Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })`."
+    },
+    {
+      name: "loginExpirationInDays",
+      type: "Number",
+      descr: "The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to `null` to disable login expiration."
     }
   ]
 };

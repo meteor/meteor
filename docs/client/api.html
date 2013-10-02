@@ -1500,6 +1500,12 @@ animation while the login request is being processed.
 
 {{> api_box logout}}
 
+{{> api_box logoutOtherClients}}
+
+For example, when called in a user's browser, connections in that browser
+remain logged in, but any other browsers or DDP clients logged in as that user
+will be logged out.
+
 {{> api_box loginWithPassword}}
 
 This function is provided by the `accounts-password` package. See the
