@@ -205,6 +205,8 @@ var expireTokens = Accounts._expireTokens = function (oldestValidDate) {
   oldestValidDate = oldestValidDate ||
     (new Date(new Date() - tokenLifetimeMs));
 
+  // Backwards compatible with older versions of meteor that stored login token
+  // timestamps as numbers.
   Meteor.users.update({
     $or: [
       { "services.resume.loginTokens.when": { $lt: oldestValidDate } },
@@ -227,8 +229,10 @@ var expireTokens = Accounts._expireTokens = function (oldestValidDate) {
 maybeStopExpireTokensInterval = function () {
   if (_.has(Accounts._options, "loginExpirationInDays") &&
       Accounts._options.loginExpirationInDays === null &&
-      expireTokenInterval)
+      expireTokenInterval) {
     Meteor.clearInterval(expireTokenInterval);
+    expireTokenInterval = null;
+  }
 };
 
 expireTokenInterval = Meteor.setInterval(expireTokens,
@@ -633,7 +637,7 @@ var closeTokensForUser = function (userTokens) {
   }));
 };
 
-Meteor.users.find({}, { "services.resume": 1 }).observe({
+Meteor.users.find({}, { fields: { "services.resume": 1 }}).observe({
   changed: function (newUser, oldUser) {
     var removedTokens = [];
     if (newUser.services && newUser.services.resume &&
