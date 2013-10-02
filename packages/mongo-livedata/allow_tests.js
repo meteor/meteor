@@ -439,7 +439,7 @@ if (Meteor.isClient) {
             { upsert: true },
             expect(function (err, res) {
               test.equal(err.error, 403);
-              test.matches(err.reason, /In a restricted/);
+              test.matches(err.reason, /in a restricted/);
               test.equal(collection.find({ upserted: true }).count(), 0);
             }));
         },

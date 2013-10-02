@@ -347,6 +347,7 @@ _.each(["insert", "update", "remove"], function (name) {
     var self = this;
     var args = _.toArray(arguments);
     var callback;
+    var insertId;
     var ret;
 
     if (args.length && args[args.length - 1] instanceof Function)
@@ -358,18 +359,21 @@ _.each(["insert", "update", "remove"], function (name) {
       // shallow-copy the document and generate an ID
       args[0] = _.extend({}, args[0]);
       if ('_id' in args[0]) {
-        ret = args[0]._id;
-        if (!ret || !(typeof ret === 'string'
-              || ret instanceof Meteor.Collection.ObjectID))
+        insertId = args[0]._id;
+        if (!insertId || !(typeof insertId === 'string'
+              || insertId instanceof Meteor.Collection.ObjectID))
           throw new Error("Meteor requires document _id fields to be non-empty strings or ObjectIDs");
       } else {
-        ret = args[0]._id = self._makeNewID();
+        insertId = args[0]._id = self._makeNewID();
       }
     } else {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
 
       if (name === "update") {
-        // Mutate args but copy the original options object.
+        // Mutate args but copy the original options object. We need to add
+        // insertedId to options, but don't want to mutate the caller's options
+        // object. We need to mutate `args` because we pass `args` into the
+        // driver below.
         var options = args[2] = _.clone(args[2]) || {};
         if (options && typeof options !== "function" && options.upsert) {
           // set `insertedId` if absent.  `insertedId` is a Meteor extension.
@@ -386,9 +390,9 @@ _.each(["insert", "update", "remove"], function (name) {
 
     // On inserts, always return the id that we generated; on all other
     // operations, just return the result from the collection.
-    var transformResultFromCollection = function (result) {
+    var chooseReturnValueFromCollectionResult = function (result) {
       if (name === "insert")
-        return ret;
+        return insertId;
       else
         return result;
     };
@@ -396,7 +400,7 @@ _.each(["insert", "update", "remove"], function (name) {
     var wrappedCallback;
     if (callback) {
       wrappedCallback = function (error, result) {
-        callback(error, ! error && transformResultFromCollection(result));
+        callback(error, ! error && chooseReturnValueFromCollectionResult(result));
       };
     }
 
@@ -429,7 +433,7 @@ _.each(["insert", "update", "remove"], function (name) {
         throwIfSelectorIsNotId(args[0], name);
       }
 
-      ret = transformResultFromCollection(
+      ret = chooseReturnValueFromCollectionResult(
         self._connection.apply(self._prefix + name, args, wrappedCallback)
       );
 
@@ -438,9 +442,11 @@ _.each(["insert", "update", "remove"], function (name) {
       // and propagate any exception.
       args.push(wrappedCallback);
       try {
-        // If the user provided a callback, then we expect queryRet to be undefined.
+        // If the user provided a callback and the collection implements this
+        // operation asynchronously, then queryRet will be undefined, and the
+        // result will be returned through the callback instead.
         var queryRet = self._collection[name].apply(self._collection, args);
-        ret = transformResultFromCollection(queryRet);
+        ret = chooseReturnValueFromCollectionResult(queryRet);
       } catch (e) {
         if (callback) {
           callback(e);
@@ -731,8 +737,8 @@ Meteor.Collection.prototype._validatedUpdate = function(
     throw new Error("validated update should be of a single ID");
 
   if (options.upsert)
-    throw new Meteor.Error(403, "Access denied. In a restricted collection " +
-                           "you cannot do upserts.");
+    throw new Meteor.Error(403, "Access denied. Upserts not " +
+                           "allowed in a restricted collection.");
 
   // compute modified fields
   var fields = [];
