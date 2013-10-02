@@ -74,7 +74,10 @@ Template.api.release = {
           "[release](#meteorupdate) with which the project was built (for " +
           "example, `\"" +
           // Put the current release in the docs as the example)
-          (Meteor.release ? Meteor.release : '0.6.0') +
+          // XXX for now this is hard-coded because galaxy apps are on a
+          // different meteor release
+          //         (Meteor.release ? Meteor.release : '0.6.0') +
+          "0.6.5.1" +
           "\"`). It is `undefined` if the project was built using a git " +
           "checkout of Meteor."]
 };
