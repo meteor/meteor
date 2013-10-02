@@ -52,6 +52,31 @@ Tinytest.add("ejson - equality and falsiness", function (test) {
   test.isFalse(EJSON.equals({foo: "foo"}, undefined));
 });
 
+Tinytest.add("ejson - NaN and Inf", function (test) {
+  test.equal(EJSON.parse("{\"$InfNaN\": 1}"), Infinity);
+  test.equal(EJSON.parse("{\"$InfNaN\": -1}"), -Infinity);
+  test.isTrue(_.isNaN(EJSON.parse("{\"$InfNaN\": 0}")));
+  test.equal(EJSON.parse(EJSON.stringify(Infinity)), Infinity);
+  test.equal(EJSON.parse(EJSON.stringify(-Infinity)), -Infinity);
+  test.isTrue(_.isNaN(EJSON.parse(EJSON.stringify(NaN))));
+  test.isTrue(EJSON.equals(NaN, NaN));
+  test.isTrue(EJSON.equals(Infinity, Infinity));
+  test.isTrue(EJSON.equals(-Infinity, -Infinity));
+  test.isFalse(EJSON.equals(Infinity, -Infinity));
+  test.isFalse(EJSON.equals(Infinity, NaN));
+  test.isFalse(EJSON.equals(Infinity, 0));
+  test.isFalse(EJSON.equals(NaN, 0));
+
+  test.isTrue(EJSON.equals(
+    EJSON.parse("{\"a\": {\"$InfNaN\": 1}}"),
+    {a: Infinity}
+  ));
+  test.isTrue(EJSON.equals(
+    EJSON.parse("{\"a\": {\"$InfNaN\": 0}}"),
+    {a: NaN}
+  ));
+});
+
 Tinytest.add("ejson - clone", function (test) {
   var cloneTest = function (x, identical) {
     var y = EJSON.clone(x);
@@ -71,6 +96,85 @@ Tinytest.add("ejson - clone", function (test) {
     test.equal(clonedArgs, [1, 2, "foo", [4]]);
   };
   testCloneArgs(1, 2, "foo", [4]);
+});
+
+Tinytest.add("ejson - stringify", function (test) {
+  test.equal(EJSON.stringify(null), "null");
+  test.equal(EJSON.stringify(true), "true");
+  test.equal(EJSON.stringify(false), "false");
+  test.equal(EJSON.stringify(123), "123");
+  test.equal(EJSON.stringify("abc"), "\"abc\"");
+
+  test.equal(EJSON.stringify([1, 2, 3]),
+     "[1,2,3]"
+  );
+  test.equal(EJSON.stringify([1, 2, 3], {indent: true}),
+    "[\n  1,\n  2,\n  3\n]"
+  );
+  test.equal(EJSON.stringify([1, 2, 3], {canonical: false}),
+    "[1,2,3]"
+  );
+  test.equal(EJSON.stringify([1, 2, 3], {indent: true, canonical: false}),
+    "[\n  1,\n  2,\n  3\n]"
+  );
+
+  test.equal(EJSON.stringify([1, 2, 3], {indent: 4}),
+    "[\n    1,\n    2,\n    3\n]"
+  );
+  test.equal(EJSON.stringify([1, 2, 3], {indent: '--'}),
+    "[\n--1,\n--2,\n--3\n]"
+  );
+
+  test.equal(
+    EJSON.stringify(
+      {b: [2, {d: 4, c: 3}], a: 1},
+      {canonical: true}
+    ),
+    "{\"a\":1,\"b\":[2,{\"c\":3,\"d\":4}]}"
+  );
+  test.equal(
+    EJSON.stringify(
+      {b: [2, {d: 4, c: 3}], a: 1},
+      {
+        indent: true,
+        canonical: true
+      }
+    ),
+    "{\n" +
+    "  \"a\": 1,\n" +
+    "  \"b\": [\n" +
+    "    2,\n" +
+    "    {\n" +
+    "      \"c\": 3,\n" +
+    "      \"d\": 4\n" +
+    "    }\n" +
+    "  ]\n" +
+    "}"
+  );
+  test.equal(
+    EJSON.stringify(
+      {b: [2, {d: 4, c: 3}], a: 1},
+      {canonical: false}
+    ),
+    "{\"b\":[2,{\"d\":4,\"c\":3}],\"a\":1}"
+  );
+  test.equal(
+    EJSON.stringify(
+      {b: [2, {d: 4, c: 3}], a: 1},
+      {indent: true, canonical: false}
+    ),
+    "{\n" +
+    "  \"b\": [\n" +
+    "    2,\n" +
+    "    {\n" +
+    "      \"d\": 4,\n" +
+    "      \"c\": 3\n" +
+    "    }\n" +
+    "  ],\n" +
+    "  \"a\": 1\n" +
+    "}"
+
+  );
 });
 
 Tinytest.add("ejson - parse", function (test) {
