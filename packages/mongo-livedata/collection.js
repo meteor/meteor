@@ -736,6 +736,8 @@ Meteor.Collection.prototype._validatedUpdate = function(
   if (!LocalCollection._selectorIsIdPerhapsAsObject(selector))
     throw new Error("validated update should be of a single ID");
 
+  // We don't support upserts because they don't fit nicely into allow/deny
+  // rules.
   if (options.upsert)
     throw new Meteor.Error(403, "Access denied. Upserts not " +
                            "allowed in a restricted collection.");
