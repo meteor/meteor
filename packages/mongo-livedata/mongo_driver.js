@@ -338,25 +338,22 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
 
     if (options.upsert && (! knownId) && options.insertedId) {
       mongoOpts.insertedId = options.insertedId;
-      simulateUpsertWithInsertedId(collection, mongoSelector, mongoMod,
-                                   isModify, mongoOpts,
-                                   // This callback does not need to be
-                                   // bindEnvironment'ed because
-                                   // simulateUpsertWithInsertedId() wraps it
-                                   // and then passes it through
-                                   // bindEnvironmentForWrite.
-                                   function (err, result) {
-                                     // If we got here via a upsert() call, then
-                                     // options._returnObject will be set and we
-                                     // should return the whole
-                                     // object. Otherwise, we should just return
-                                     // the number of affected docs to match the
-                                     // mongo API.
-                                     if (result && ! options._returnObject)
-                                       callback(err, result.numberAffected);
-                                     else
-                                       callback(err, result);
-                                   });
+      simulateUpsertWithInsertedId(
+        collection, mongoSelector, mongoMod,
+        isModify, mongoOpts,
+        // This callback does not need to be bindEnvironment'ed because
+        // simulateUpsertWithInsertedId() wraps it and then passes it through
+        // bindEnvironmentForWrite.
+        function (err, result) {
+          // If we got here via a upsert() call, then options._returnObject will
+          // be set and we should return the whole object. Otherwise, we should
+          // just return the number of affected docs to match the mongo API.
+          if (result && ! options._returnObject)
+            callback(err, result.numberAffected);
+          else
+            callback(err, result);
+        }
+      );
     } else {
       collection.update(mongoSelector, mongoMod, mongoOpts,
                         bindEnvironmentForWrite(function (err, result, extra) {
