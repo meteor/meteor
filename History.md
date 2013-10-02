@@ -105,6 +105,10 @@ MISC
   * XXX: we should try to do more upgrades in this release if possible (in
     conjunction with the Node upgrade)
 
+Patches contributed by GitHub users ansman, awwx, codeinthehole, Maxhodges,
+meawoppl, mitar, mizzao, mquandalle, nathan-muir, RobertLowe, ryw, and
+timhaines.
+
 
 ## v0.6.5.1
 
