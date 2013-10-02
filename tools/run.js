@@ -109,15 +109,12 @@ var startProxy = function (outerPort, innerPort, callback) {
   callback = callback || function () {};
 
   var http = require('http');
-  // caronte is the code name for http-proxy 1.0 while it's under
-  // development. Once it's released, we may need to adjust the APIs slightly.
-  // (eg, the name of the event on proxy.ev will probably no longer say
-  // "caronte")
-  var caronte = require('caronte');
+  // Note: this uses the pre-release 1.0.0 API.
+  var httpProxy = require('http-proxy');
 
-  var proxy = caronte.createProxyServer({
-    // agent is required to handle keep-alive, and caronte is a little buggy
-    // without it: https://github.com/nodejitsu/node-http-proxy/pull/488
+  var proxy = httpProxy.createProxyServer({
+    // agent is required to handle keep-alive, and http-proxy 1.0 is a little
+    // buggy without it: https://github.com/nodejitsu/node-http-proxy/pull/488
     agent: new http.Agent({maxSockets: 100})
   });
 
@@ -184,9 +181,9 @@ var startProxy = function (outerPort, innerPort, callback) {
   // don't crash if the app doesn't respond. instead return an error
   // immediately. This shouldn't happen much since we try to not send requests
   // if the app is down.
-  // XXX should we also handle caronte:outgoing:ws:error, for a failed
+  // XXX should we also handle http-proxy:outgoing:ws:error, for a failed
   // websocket?
-  proxy.ee.on('caronte:outgoing:web:error', function (err, req, res) {
+  proxy.ee.on('http-proxy:outgoing:web:error', function (err, req, res) {
     res.writeHead(503, {
       'Content-Type': 'text/plain'
     });
