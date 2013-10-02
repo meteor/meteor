@@ -196,7 +196,7 @@ MongoConnection.prototype._maybeBeginWrite = function () {
 // observer "has been notified" if its callback has returned.
 
 var writeCallback = function (write, refresh, callback) {
-  return Meteor.bindEnvironment(function (err, result) {
+  return function (err, result) {
     if (! err) {
       // XXX We don't have to run this on error, right?
       refresh();
@@ -206,7 +206,11 @@ var writeCallback = function (write, refresh, callback) {
       callback(err, result);
     else if (err)
       throw err;
-  }, function (err) {
+  };
+};
+
+var bindEnvironmentForWrite = function (callback) {
+  return Meteor.bindEnvironment(callback, function (err) {
     Meteor._debug("Error in Mongo write:", err.stack);
   });
 };
@@ -227,7 +231,7 @@ MongoConnection.prototype._insert = function (collection_name, document,
   var refresh = function () {
     Meteor.refresh({ collection: collection_name, id: document._id });
   };
-  callback = writeCallback(write, refresh, callback);
+  callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
   try {
     var collection = self._getCollection(collection_name);
     collection.insert(replaceTypes(document, replaceMeteorAtomWithMongo),
@@ -257,16 +261,6 @@ MongoConnection.prototype._refresh = function (collectionName, selector) {
   }
 };
 
-var numberAffectedCallback = function (callback) {
-  return Meteor.bindEnvironment(function (err, numberAffected, extraInfo) {
-    callback && callback(err, ! err && {
-      numberAffected: numberAffected
-    }, extraInfo);
-  }, function (err) {
-    Meteor._debug("Error in Mongo write:", err.stack);
-  });
-};
-
 MongoConnection.prototype._remove = function (collection_name, selector,
                                               callback) {
   var self = this;
@@ -284,7 +278,7 @@ MongoConnection.prototype._remove = function (collection_name, selector,
   var refresh = function () {
     self._refresh(collection_name, selector);
   };
-  callback = writeCallback(write, refresh, callback);
+  callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
 
   try {
     var collection = self._getCollection(collection_name);
@@ -328,7 +322,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
   var refresh = function () {
     self._refresh(collection_name, selector);
   };
-  callback = writeCallback(write, refresh, callback);
+  callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
   try {
     var collection = self._getCollection(collection_name);
     var mongoOpts = {safe: true};
@@ -345,9 +339,16 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     if (options.upsert && (! knownId) && options.insertedId) {
       mongoOpts.insertedId = options.insertedId;
       simulateUpsertWithInsertedId(collection, mongoSelector, mongoMod,
-                                   isModify, mongoOpts, function (err, result) {
+                                   isModify, mongoOpts,
+                                   // This callback does not need to be
+                                   // bindEnvironment'ed because
+                                   // simulateUpsertWithInsertedId() wraps it
+                                   // and then passes it through
+                                   // bindEnvironmentForWrite.
+                                   function (err, result) {
                                      // If we got here via a upsert() call, then
-                                     // we should return the whole
+                                     // options._returnObject will be set and we
+                                     // should return the whole
                                      // object. Otherwise, we should just return
                                      // the number of affected docs to match the
                                      // mongo API.
@@ -358,14 +359,17 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
                                    });
     } else {
       collection.update(mongoSelector, mongoMod, mongoOpts,
-                        numberAffectedCallback(function (err, result, extra) {
+                        bindEnvironmentForWrite(function (err, result, extra) {
                           if (! err) {
-                            if (options.upsert && (! extra.updatedExisting) &&
-                                knownId) {
-                              result.insertedId = knownId;
+                            if (result && options._returnObject) {
+                              result = { numberAffected: result };
+                              // If this was an upsert() call, and we ended up
+                              // inserting a new doc and we know its id, then
+                              // return that id as well.
+                              if (options.upsert && knownId &&
+                                  ! extra.updatedExisting)
+                                result.insertedId = knownId;
                             }
-                            if (result && ! options._returnObject)
-                              result = result.numberAffected;
                           }
                           callback(err, result);
                         }));
@@ -396,7 +400,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
                                              isModify, options, callback) {
   var insertedId = options.insertedId; // must exist
 
-  var mongoOptsForUpdate = _.extend({}, options, { _returnObject: true });
+  var mongoOptsForUpdate = _.extend({}, options);
   delete mongoOptsForUpdate.insertedId;
   delete mongoOptsForUpdate.upsert;
 
@@ -422,14 +426,15 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
       callback(new Error("Upsert failed after " + NUM_OPTIMISTIC_TRIES + " tries."));
     } else {
       collection.update(selector, mod, mongoOptsForUpdate,
-                        numberAffectedCallback(function (err, result) {
-                          if (err) {
+                        bindEnvironmentForWrite(function (err, result) {
+                          if (err)
                             callback(err);
-                          } else if (result.numberAffected) {
-                            callback(null, result);
-                          } else {
+                          else if (result)
+                            callback(null, {
+                              numberAffected: result
+                            });
+                          else
                             doConditionalInsert();
-                          }
                         }));
     }
   };
@@ -452,7 +457,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
     newDoc = mod;
   }
 
-  var mongoOptsForInsert = _.extend({}, options, { _returnObject: true });
+  var mongoOptsForInsert = _.extend({}, options);
   delete mongoOptsForUpdate.insertedId;
   mongoOptsForInsert.upsert = true;
   delete mongoOptsForInsert.multi;
@@ -462,7 +467,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
       replaceTypes({_id: insertedId}, replaceMeteorAtomWithMongo),
       newDoc);
     collection.update(selector, replacementWithId, mongoOptsForInsert,
-                      numberAffectedCallback(function (err, result) {
+                      bindEnvironmentForWrite(function (err, result) {
                         if (err) {
                           // figure out if this is a
                           // "cannot change _id of document" error, and
@@ -473,9 +478,10 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
                             callback(err);
                           }
                         } else {
-                          callback(null, _.extend(result, {
+                          callback(null, {
+                            numberAffected: result,
                             insertedId: insertedId
-                          }));
+                          });
                         }
                       }));
   };
