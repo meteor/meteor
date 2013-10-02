@@ -398,14 +398,6 @@ MongoConnection._isCannotChangeIdError = function (err) {
 
 var simulateUpsertWithInsertedId = function (collection, selector, mod,
                                              isModify, options, callback) {
-  var insertedId = options.insertedId; // must exist
-
-  var mongoOptsForUpdate = _.extend({}, options);
-  delete mongoOptsForUpdate.insertedId;
-  delete mongoOptsForUpdate.upsert;
-
-  var tries = NUM_OPTIMISTIC_TRIES;
-
   // STRATEGY:  First try doing a plain update.  If it affected 0 documents,
   // then without affecting the database, we know we should probably do an
   // insert.  We then do a *conditional* insert that will fail in the case
@@ -419,25 +411,6 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
   // circumstances (though sufficiently heavy contention with writers
   // disagreeing on the existence of an object will cause writes to fail
   // in theory).
-
-  var doUpdate = function () {
-    tries--;
-    if (! tries) {
-      callback(new Error("Upsert failed after " + NUM_OPTIMISTIC_TRIES + " tries."));
-    } else {
-      collection.update(selector, mod, mongoOptsForUpdate,
-                        bindEnvironmentForWrite(function (err, result) {
-                          if (err)
-                            callback(err);
-                          else if (result)
-                            callback(null, {
-                              numberAffected: result
-                            });
-                          else
-                            doConditionalInsert();
-                        }));
-    }
-  };
 
   var newDoc;
   // Run this code up front so that it fails fast if someone uses
@@ -457,10 +430,36 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
     newDoc = mod;
   }
 
+  var insertedId = options.insertedId; // must exist
+  var mongoOptsForUpdate = _.extend({}, options);
+  delete mongoOptsForUpdate.insertedId;
+  delete mongoOptsForUpdate.upsert;
+
   var mongoOptsForInsert = _.extend({}, options);
   delete mongoOptsForUpdate.insertedId;
   mongoOptsForInsert.upsert = true;
   delete mongoOptsForInsert.multi;
+
+  var tries = NUM_OPTIMISTIC_TRIES;
+
+  var doUpdate = function () {
+    tries--;
+    if (! tries) {
+      callback(new Error("Upsert failed after " + NUM_OPTIMISTIC_TRIES + " tries."));
+    } else {
+      collection.update(selector, mod, mongoOptsForUpdate,
+                        bindEnvironmentForWrite(function (err, result) {
+                          if (err)
+                            callback(err);
+                          else if (result)
+                            callback(null, {
+                              numberAffected: result
+                            });
+                          else
+                            doConditionalInsert();
+                        }));
+    }
+  };
 
   var doConditionalInsert = function () {
     var replacementWithId = _.extend(
