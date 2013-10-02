@@ -24,6 +24,7 @@ Package.on_use(function (api) {
 
   api.use(['underscore', 'ui', 'spacebars'], 'client');
 
+  api.add_files('global_template_object.js', 'client');
   api.export('Template', 'client');
 
 
