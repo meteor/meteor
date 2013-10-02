@@ -473,9 +473,13 @@ LocalCollection.prototype.insert = function (doc, callback) {
       LocalCollection._recomputeResults(self.queries[qid]);
   });
   self._observeQueue.drain();
-  // Defer in case the callback returns on a future; gives the caller time to
-  // wait on the future.
-  if (callback) Meteor.defer(function () { callback(null, doc._id); });
+
+  // Defer because the caller likely doesn't expect the callback to be run
+  // immediately.
+  if (callback)
+    Meteor.defer(function () {
+      callback(null, doc._id);
+    });
   return doc._id;
 };
 
@@ -533,9 +537,12 @@ LocalCollection.prototype.remove = function (selector, callback) {
       LocalCollection._recomputeResults(query);
   });
   self._observeQueue.drain();
-  // Defer in case the callback returns on a future; gives the caller time to
-  // wait on the future.
-  if (callback) Meteor.defer(callback);
+  var result = remove.length;
+  if (callback)
+    Meteor.defer(function () {
+      callback(null, result);
+    });
+  return result;
 };
 
 // XXX atomicity: if multi is true, and one modification fails, do
@@ -547,9 +554,6 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
     options = null;
   }
   if (!options) options = {};
-
-  if (options.upsert)
-    throw new Error("upsert not yet implemented");
 
   var selector_f = LocalCollection._compileSelector(selector);
 
@@ -565,12 +569,15 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   });
   var recomputeQids = {};
 
+  var updateCount = 0;
+
   for (var id in self.docs) {
     var doc = self.docs[id];
     if (selector_f(doc)) {
       // XXX Should we save the original even if mod ends up being a no-op?
       self._saveOriginal(id, doc);
       self._modifyAndNotify(doc, mod, recomputeQids);
+      ++updateCount;
       if (!options.multi)
         break;
     }
@@ -583,9 +590,54 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
                                         qidToOriginalResults[qid]);
   });
   self._observeQueue.drain();
-  // Defer in case the callback returns on a future; gives the caller time to
-  // wait on the future.
-  if (callback) Meteor.defer(callback);
+
+  // If we are doing an upsert, and we didn't modify any documents yet, then
+  // it's time to do an insert. Figure out what document we are inserting, and
+  // generate an id for it.
+  var insertedId;
+  if (updateCount === 0 && options.upsert) {
+    var newDoc = _.clone(selector);
+    LocalCollection._modify(newDoc, mod, true);
+    if (! newDoc._id && options.insertedId)
+      newDoc._id = options.insertedId;
+    insertedId = self.insert(newDoc);
+    updateCount = 1;
+  }
+
+  // Return the number of affected documents, or in the upsert case, an object
+  // containing the number of affected docs and the id of the doc that was
+  // inserted, if any.
+  var result;
+  if (options._returnObject) {
+    result = {
+      numberAffected: updateCount
+    };
+    if (insertedId !== undefined)
+      result.insertedId = insertedId;
+  } else {
+    result = updateCount;
+  }
+
+  if (callback)
+    Meteor.defer(function () {
+      callback(null, result);
+    });
+  return result;
+};
+
+// A convenience wrapper on update. LocalCollection.upsert(sel, mod) is
+// equivalent to LocalCollection.update(sel, mod, { upsert: true, _returnObject:
+// true }).
+LocalCollection.prototype.upsert = function (selector, mod, options, callback) {
+  var self = this;
+  if (! callback && typeof options === "function") {
+    callback = options;
+    options = {};
+  }
+  return self.update(selector, mod, _.extend({}, options, {
+    upsert: true,
+    _returnObject: true
+  }, callback));
 };
 
 LocalCollection.prototype._modifyAndNotify = function (
