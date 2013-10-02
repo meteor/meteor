@@ -113,8 +113,16 @@
   * http-proxy from 0.10.1 to a pre-release of 1.0.0
   * stylus from 0.30.1 to 0.37.0
   * nib from 0.8.2 to 1.0.0  #1121 #1315
-  * XXX: we should try to do more upgrades in this release if possible (in
-    conjunction with the Node upgrade)
+  * optimist from 0.3.5 to 0.6.0
+  * semver from 1.1.0 to 2.1.0
+  * request from 2.12.0 to 2.27.0
+  * keypress from 0.1.0 to 0.2.1
+  * underscore from 1.5.1 to 1.5.2
+  * fstream from 0.1.21 to 0.1.24
+  * tar from 0.1.14 to 0.1.18
+  * byline from 2.0.3 to 3.1.2
+  * source-map from 0.1.26 to 0.1.30
+  * source-map-support from a fork of 0.1.8 to 0.2.3
 
 Patches contributed by GitHub users ansman, awwx, codeinthehole, jacott,
 Maxhodges, meawoppl, mitar, mizzao, mquandalle, nathan-muir, RobertLowe, ryw,
