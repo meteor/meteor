@@ -1,6 +1,7 @@
 var _ = require('underscore');
 var library = require('./library.js');
 var bundler = require('./bundler.js');
+var buildmessage = require('./buildmessage.js');
 
 // Load unipackages into the currently running node.js process. Use
 // this to use unipackages (such as the DDP client) from command-line
@@ -69,16 +70,27 @@ var load = function (options) {
     __meteor_runtime_config__: { meteorRelease: options.release }
   };
 
-  // Load the code
-  var image = bundler.buildJsImage({
-    name: "load",
-    library: options.library,
-    use: options.packages || []
-  }).image;
-  var ret = image.load(env);
+  var ret;
+  var messages = buildmessage.capture({
+    title: "loading unipackage"
+  }, function () {
+    // Load the code
+    var image = bundler.buildJsImage({
+      name: "load",
+      library: options.library,
+      use: options.packages || []
+    }).image;
+    ret = image.load(env);
 
-  // Run any user startup hooks.
-  _.each(env.__meteor_bootstrap__.startup_hooks, function (x) { x(); });
+    // Run any user startup hooks.
+    _.each(env.__meteor_bootstrap__.startup_hooks, function (x) { x(); });
+  });
+
+  if (messages.hasMessages()) {
+    process.stdout.write("Errors prevented unipackage load:\n");
+    process.stdout.write(messages.formatMessages());
+    process.exit(1);
+  }
 
   // Save to cache
   cache[cacheKey] = ret;

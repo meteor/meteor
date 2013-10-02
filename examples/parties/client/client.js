@@ -213,19 +213,17 @@ Template.createDialog.events({
     var coords = Session.get("createCoords");
 
     if (title.length && description.length) {
-      Meteor.call('createParty', {
+      var id = createParty({
         title: title,
         description: description,
         x: coords.x,
         y: coords.y,
         public: public
-      }, function (error, party) {
-        if (! error) {
-          Session.set("selected", party);
-          if (! public && Meteor.users.find().count() > 1)
-            openInviteDialog();
-        }
       });
+
+      Session.set("selected", id);
+      if (! public && Meteor.users.find().count() > 1)
+        openInviteDialog();
       Session.set("showCreateDialog", false);
     } else {
       Session.set("createError",

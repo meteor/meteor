@@ -196,7 +196,7 @@ MongoConnection.prototype._maybeBeginWrite = function () {
 // observer "has been notified" if its callback has returned.
 
 var writeCallback = function (write, refresh, callback) {
-  return Meteor.bindEnvironment(function (err, result) {
+  return function (err, result) {
     if (! err) {
       // XXX We don't have to run this on error, right?
       refresh();
@@ -206,7 +206,11 @@ var writeCallback = function (write, refresh, callback) {
       callback(err, result);
     else if (err)
       throw err;
-  }, function (err) {
+  };
+};
+
+var bindEnvironmentForWrite = function (callback) {
+  return Meteor.bindEnvironment(callback, function (err) {
     Meteor._debug("Error in Mongo write:", err.stack);
   });
 };
@@ -227,7 +231,7 @@ MongoConnection.prototype._insert = function (collection_name, document,
   var refresh = function () {
     Meteor.refresh({ collection: collection_name, id: document._id });
   };
-  callback = writeCallback(write, refresh, callback);
+  callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
   try {
     var collection = self._getCollection(collection_name);
     collection.insert(replaceTypes(document, replaceMeteorAtomWithMongo),
@@ -274,7 +278,7 @@ MongoConnection.prototype._remove = function (collection_name, selector,
   var refresh = function () {
     self._refresh(collection_name, selector);
   };
-  callback = writeCallback(write, refresh, callback);
+  callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
 
   try {
     var collection = self._getCollection(collection_name);
@@ -325,13 +329,160 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     // explictly enumerate options that minimongo supports
     if (options.upsert) mongoOpts.upsert = true;
     if (options.multi) mongoOpts.multi = true;
-    collection.update(replaceTypes(selector, replaceMeteorAtomWithMongo),
-                      replaceTypes(mod, replaceMeteorAtomWithMongo),
-                      mongoOpts, callback);
+
+    var mongoSelector = replaceTypes(selector, replaceMeteorAtomWithMongo);
+    var mongoMod = replaceTypes(mod, replaceMeteorAtomWithMongo);
+
+    var isModify = isModificationMod(mongoMod);
+    var knownId = (isModify ? selector._id : mod._id);
+
+    if (options.upsert && (! knownId) && options.insertedId) {
+      mongoOpts.insertedId = options.insertedId;
+      simulateUpsertWithInsertedId(
+        collection, mongoSelector, mongoMod,
+        isModify, mongoOpts,
+        // This callback does not need to be bindEnvironment'ed because
+        // simulateUpsertWithInsertedId() wraps it and then passes it through
+        // bindEnvironmentForWrite.
+        function (err, result) {
+          // If we got here via a upsert() call, then options._returnObject will
+          // be set and we should return the whole object. Otherwise, we should
+          // just return the number of affected docs to match the mongo API.
+          if (result && ! options._returnObject)
+            callback(err, result.numberAffected);
+          else
+            callback(err, result);
+        }
+      );
+    } else {
+      collection.update(mongoSelector, mongoMod, mongoOpts,
+                        bindEnvironmentForWrite(function (err, result, extra) {
+                          if (! err) {
+                            if (result && options._returnObject) {
+                              result = { numberAffected: result };
+                              // If this was an upsert() call, and we ended up
+                              // inserting a new doc and we know its id, then
+                              // return that id as well.
+                              if (options.upsert && knownId &&
+                                  ! extra.updatedExisting)
+                                result.insertedId = knownId;
+                            }
+                          }
+                          callback(err, result);
+                        }));
+    }
   } catch (e) {
     write.committed();
     throw e;
   }
+};
+
+var isModificationMod = function (mod) {
+  for (var k in mod)
+    if (k.substr(0, 1) === '$')
+      return true;
+  return false;
+};
+
+var NUM_OPTIMISTIC_TRIES = 3;
+
+// exposed for testing
+MongoConnection._isCannotChangeIdError = function (err) {
+  // either of these checks should work, but just to be safe...
+  return (err.code === 13596 ||
+          err.err.indexOf("cannot change _id of a document") === 0);
+};
+
+var simulateUpsertWithInsertedId = function (collection, selector, mod,
+                                             isModify, options, callback) {
+  // STRATEGY:  First try doing a plain update.  If it affected 0 documents,
+  // then without affecting the database, we know we should probably do an
+  // insert.  We then do a *conditional* insert that will fail in the case
+  // of a race condition.  This conditional insert is actually an
+  // upsert-replace with an _id, which will never successfully update an
+  // existing document.  If this upsert fails with an error saying it
+  // couldn't change an existing _id, then we know an intervening write has
+  // caused the query to match something.  We go back to step one and repeat.
+  // Like all "optimistic write" schemes, we rely on the fact that it's
+  // unlikely our writes will continue to be interfered with under normal
+  // circumstances (though sufficiently heavy contention with writers
+  // disagreeing on the existence of an object will cause writes to fail
+  // in theory).
+
+  var newDoc;
+  // Run this code up front so that it fails fast if someone uses
+  // a Mongo update operator we don't support.
+  if (isModify) {
+    var selectorDoc = {};
+    for (var k in selector)
+      if (k.substr(0, 1) !== '$')
+        selectorDoc[k] = selector[k];
+    // We've already run replaceTypes/replaceMeteorAtomWithMongo on
+    // selector and mod.  We assume it doesn't matter, as far as
+    // the behavior of modifiers is concerned, whether `_modify`
+    // is run on EJSON or on mongo-converted EJSON.
+    LocalCollection._modify(selectorDoc, mod, true);
+    newDoc = selectorDoc;
+  } else {
+    newDoc = mod;
+  }
+
+  var insertedId = options.insertedId; // must exist
+  var mongoOptsForUpdate = _.extend({}, options);
+  delete mongoOptsForUpdate.insertedId;
+  delete mongoOptsForUpdate.upsert;
+
+  var mongoOptsForInsert = _.extend({}, options);
+  delete mongoOptsForUpdate.insertedId;
+  mongoOptsForInsert.upsert = true;
+  delete mongoOptsForInsert.multi;
+
+  var tries = NUM_OPTIMISTIC_TRIES;
+
+  var doUpdate = function () {
+    tries--;
+    if (! tries) {
+      callback(new Error("Upsert failed after " + NUM_OPTIMISTIC_TRIES + " tries."));
+    } else {
+      collection.update(selector, mod, mongoOptsForUpdate,
+                        bindEnvironmentForWrite(function (err, result) {
+                          if (err)
+                            callback(err);
+                          else if (result)
+                            callback(null, {
+                              numberAffected: result
+                            });
+                          else
+                            doConditionalInsert();
+                        }));
+    }
+  };
+
+  var doConditionalInsert = function () {
+    var replacementWithId = _.extend(
+      replaceTypes({_id: insertedId}, replaceMeteorAtomWithMongo),
+      newDoc);
+    collection.update(selector, replacementWithId, mongoOptsForInsert,
+                      bindEnvironmentForWrite(function (err, result) {
+                        if (err) {
+                          // figure out if this is a
+                          // "cannot change _id of document" error, and
+                          // if so, try doUpdate() again, up to 3 times.
+                          if (MongoConnection._isCannotChangeIdError(err)) {
+                            doUpdate();
+                          } else {
+                            callback(err);
+                          }
+                        } else {
+                          callback(null, {
+                            numberAffected: result,
+                            insertedId: insertedId
+                          });
+                        }
+                      }));
+  };
+
+  doUpdate();
 };
 
 _.each(["insert", "update", "remove"], function (method) {
@@ -340,6 +491,21 @@ _.each(["insert", "update", "remove"], function (method) {
     return Meteor._wrapAsync(self["_" + method]).apply(self, arguments);
   };
 });
+
+MongoConnection.prototype.upsert = function (collectionName, selector, mod,
+                                             options, callback) {
+  var self = this;
+  if (typeof options === "function" && ! callback) {
+    callback = options;
+    options = {};
+  }
+
+  return self.update(collectionName, selector, mod,
+                     _.extend({}, options, {
+                       upsert: true,
+                       _returnObject: true
+                     }, callback));
+};
 
 MongoConnection.prototype.find = function (collectionName, selector, options) {
   var self = this;
@@ -437,9 +603,15 @@ _.each(['forEach', 'map', 'rewind', 'fetch', 'count'], function (method) {
     if (self._cursorDescription.options.tailable)
       throw new Error("Cannot call " + method + " on a tailable cursor");
 
-    if (!self._synchronousCursor)
+    if (!self._synchronousCursor) {
       self._synchronousCursor = self._mongo._createSynchronousCursor(
-        self._cursorDescription, true);
+        self._cursorDescription, {
+          // Make sure that the "self" argument to forEach/map callbacks is the
+          // Cursor, not the SynchronousCursor.
+          selfForIteration: self,
+          useTransform: true
+        });
+    }
 
     return self._synchronousCursor[method].apply(
       self._synchronousCursor, arguments);
@@ -481,20 +653,21 @@ Cursor.prototype.observeChanges = function (callbacks) {
     self._cursorDescription, ordered, callbacks);
 };
 
-MongoConnection.prototype._createSynchronousCursor = function(cursorDescription,
-                                                              useTransform) {
+MongoConnection.prototype._createSynchronousCursor = function(
+    cursorDescription, options) {
   var self = this;
+  options = _.pick(options || {}, 'selfForIteration', 'useTransform');
 
   var collection = self._getCollection(cursorDescription.collectionName);
-  var options = cursorDescription.options;
+  var cursorOptions = cursorDescription.options;
   var mongoOptions = {
-    sort: options.sort,
-    limit: options.limit,
-    skip: options.skip
+    sort: cursorOptions.sort,
+    limit: cursorOptions.limit,
+    skip: cursorOptions.skip
   };
 
   // Do we want a tailable cursor (which only works on capped collections)?
-  if (options.tailable) {
+  if (cursorOptions.tailable) {
     // We want a tailable cursor...
     mongoOptions.tailable = true;
     // ... and for the server to wait a bit if any getMore has no data (rather
@@ -507,16 +680,21 @@ MongoConnection.prototype._createSynchronousCursor = function(cursorDescription,
 
   var dbCursor = collection.find(
     replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
-    options.fields, mongoOptions);
+    cursorOptions.fields, mongoOptions);
 
-  return new SynchronousCursor(dbCursor, cursorDescription, useTransform);
+  return new SynchronousCursor(dbCursor, cursorDescription, options);
 };
 
-var SynchronousCursor = function (dbCursor, cursorDescription, useTransform) {
+var SynchronousCursor = function (dbCursor, cursorDescription, options) {
   var self = this;
+  options = _.pick(options || {}, 'selfForIteration', 'useTransform');
+
   self._dbCursor = dbCursor;
   self._cursorDescription = cursorDescription;
-  if (useTransform && cursorDescription.options.transform) {
+  // The "self" argument passed to forEach/map callbacks. If we're wrapped
+  // inside a user-visible Cursor, we want to provide the outer cursor!
+  self._selfForIteration = options.selfForIteration || self;
+  if (options.useTransform && cursorDescription.options.transform) {
     self._transform = Deps._makeNonreactive(
       cursorDescription.options.transform
     );
@@ -538,7 +716,7 @@ _.extend(SynchronousCursor.prototype, {
     var self = this;
     while (true) {
       var doc = self._synchronousNextObject().wait();
-      if (!doc || !doc._id) return null;
+      if (!doc || typeof doc._id === 'undefined') return null;
       doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
 
       if (!self._cursorDescription.options.tailable) {
@@ -558,29 +736,26 @@ _.extend(SynchronousCursor.prototype, {
     }
   },
 
-  // XXX Make more like ECMA forEach:
-  //     https://github.com/meteor/meteor/pull/63#issuecomment-5320050
-  forEach: function (callback) {
+  forEach: function (callback, thisArg) {
     var self = this;
 
     // We implement the loop ourself instead of using self._dbCursor.each,
     // because "each" will call its callback outside of a fiber which makes it
     // much more complex to make this function synchronous.
+    var index = 0;
     while (true) {
       var doc = self._nextObject();
       if (!doc) return;
-      callback(doc);
+      callback.call(thisArg, doc, index++, self._selfForIteration);
     }
   },
 
-  // XXX Make more like ECMA map:
-  //     https://github.com/meteor/meteor/pull/63#issuecomment-5320050
   // XXX Allow overlapping callback executions if callback yields.
-  map: function (callback) {
+  map: function (callback, thisArg) {
     var self = this;
     var res = [];
-    self.forEach(function (doc) {
-      res.push(callback(doc));
+    self.forEach(function (doc, index) {
+      res.push(callback.call(thisArg, doc, index, self._selfForIteration));
     });
     return res;
   },
@@ -892,7 +1067,7 @@ _.extend(LiveResultsSet.prototype, {
       self._synchronousCursor.rewind();
     } else {
       self._synchronousCursor = self._mongoHandle._createSynchronousCursor(
-        self._cursorDescription, false /* !useTransform */);
+        self._cursorDescription);
     }
     var newResults = self._synchronousCursor.getRawObjects(self._ordered);
     var oldResults = self._results;
@@ -1020,8 +1195,7 @@ MongoConnection.prototype._observeChangesTailable = function (
                     + " tailable cursor without a "
                     + (ordered ? "addedBefore" : "added") + " callback");
   }
-  var cursor = self._createSynchronousCursor(cursorDescription,
-                                            false /* useTransform */);
+  var cursor = self._createSynchronousCursor(cursorDescription);
 
   var stopped = false;
   var lastTS = undefined;
@@ -1063,7 +1237,7 @@ MongoConnection.prototype._observeChangesTailable = function (
         cursor = self._createSynchronousCursor(new CursorDescription(
           cursorDescription.collectionName,
           newSelector,
-          cursorDescription.options), false /* useTransform */);
+          cursorDescription.options));
       }
     }
   });

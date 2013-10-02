@@ -132,9 +132,8 @@ Template.scratchpad.events({
   'click button, keyup input': function (evt) {
     var textbox = $('#scratchpad input');
     // if we clicked the button or hit enter
-    if (evt.type === "click" ||
-        (evt.type === "keyup" && evt.which === 13)) {
-
+    if ((evt.type === "click" || (evt.type === "keyup" && evt.which === 13))
+        && textbox.val()) {
       var word_id = Words.insert({player_id: Session.get('player_id'),
                                   game_id: game() && game()._id,
                                   word: textbox.val().toUpperCase(),

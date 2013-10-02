@@ -108,8 +108,20 @@ var requestQueue = [];
 var startProxy = function (outerPort, innerPort, callback) {
   callback = callback || function () {};
 
-  var httpProxy = require('http-proxy');
-  var p = httpProxy.createServer(function (req, res, proxy) {
+  var http = require('http');
+  // caronte is the code name for http-proxy 1.0 while it's under
+  // development. Once it's released, we may need to adjust the APIs slightly.
+  // (eg, the name of the event on proxy.ev will probably no longer say
+  // "caronte")
+  var caronte = require('caronte');
+
+  var proxy = caronte.createProxyServer({
+    // agent is required to handle keep-alive, and caronte is a little buggy
+    // without it: https://github.com/nodejitsu/node-http-proxy/pull/488
+    agent: new http.Agent({maxSockets: 100})
+  });
+
+  var server = http.createServer(function (req, res) {
     if (Status.crashing) {
       // sad face. send error logs.
       // XXX formatting! text/plain is bad
@@ -126,43 +138,35 @@ var startProxy = function (outerPort, innerPort, callback) {
       });
 
       res.end();
-    } else if (Status.listening) {
-      // server is listening. things are hunky dory!
-      proxy.proxyRequest(req, res, {
-        host: '127.0.0.1', port: innerPort
-      });
-    } else {
-      // Not listening yet. Queue up request.
-      var buffer = httpProxy.buffer(req);
-      requestQueue.push(function () {
-        proxy.proxyRequest(req, res, {
-          host: '127.0.0.1', port: innerPort,
-          buffer: buffer
-        });
-      });
+      return;
     }
-  });
-
-  // Proxy websocket requests using same buffering logic as for regular HTTP requests
-  p.on('upgrade', function(req, socket, head) {
+    var proxyIt = function () {
+      proxy.web(req, res, {target: 'http://127.0.0.1:' + innerPort});
+    };
     if (Status.listening) {
       // server is listening. things are hunky dory!
-      p.proxy.proxyWebSocketRequest(req, socket, head, {
-        host: '127.0.0.1', port: innerPort
-      });
+      proxyIt();
     } else {
-      // Not listening yet. Queue up request.
-      var buffer = httpProxy.buffer(req);
-      requestQueue.push(function () {
-        p.proxy.proxyWebSocketRequest(req, socket, head, {
-          host: '127.0.0.1', port: innerPort,
-          buffer: buffer
-        });
-      });
+      requestQueue.push(proxyIt);
     }
   });
 
-  p.on('error', function (err) {
+  // Proxy websocket requests using same buffering logic as for regular HTTP
+  // requests
+  server.on('upgrade', function(req, socket, head) {
+    var proxyIt = function () {
+      proxy.ws(req, socket, head, { target: 'http://127.0.0.1:' + innerPort});
+    };
+    if (Status.listening) {
+      // server is listening. things are hunky dory!
+      proxyIt();
+    } else {
+      // Not listening yet. Queue up request.
+      requestQueue.push(proxyIt);
+    }
+  });
+
+  server.on('error', function (err) {
     if (err.code == 'EADDRINUSE') {
       process.stderr.write("Can't listen on port " + outerPort
                            + ". Perhaps another Meteor is running?\n");
@@ -177,17 +181,19 @@ var startProxy = function (outerPort, innerPort, callback) {
     process.exit(1);
   });
 
-  // don't spin forever if the app doesn't respond. instead return an
-  // error immediately. This shouldn't happen much since we try to not
-  // send requests if the app is down.
-  p.proxy.on('proxyError', function (err, req, res) {
+  // don't crash if the app doesn't respond. instead return an error
+  // immediately. This shouldn't happen much since we try to not send requests
+  // if the app is down.
+  // XXX should we also handle caronte:outgoing:ws:error, for a failed
+  // websocket?
+  proxy.ee.on('caronte:outgoing:web:error', function (err, req, res) {
     res.writeHead(503, {
       'Content-Type': 'text/plain'
     });
     res.end('Unexpected error.');
   });
 
-  p.listen(outerPort, callback);
+  server.listen(outerPort, callback);
 };
 
 var saveLog = function (msg) {
@@ -402,29 +408,6 @@ exports.run = function (context, options) {
         ("mongodb://127.0.0.1:" + mongoPort + "/meteor");
   var firstRun = true;
 
-  // node-http-proxy doesn't properly handle errors if it has a problem writing
-  // to the proxy target. While we try to not proxy requests when we don't think
-  // the target is listening, there are race conditions here, and in any case
-  // those attempts don't take effect for pre-existing websocket connections.
-  // Error handling in node-http-proxy is really convoluted and will change with
-  // their ongoing Node 0.10.x compatible rewrite, so rather than trying to
-  // debug and send pull request now, we'll wait for them to finish their
-  // rewrite. In the meantime, ignore two common exceptions that we sometimes
-  // see instead of crashing.
-  //
-  // See https://github.com/meteor/meteor/issues/513
-  //
-  // That bug is about "meteor deploy"s use of http-proxy, but it also affects
-  // our use here; see
-  // https://groups.google.com/d/msg/meteor-core/JgbnfKEa5lA/FJHZtJftfSsJ
-  //
-  // XXX remove this once we've upgraded and fixed http-proxy
-  process.on('uncaughtException', function (e) {
-    if (e && (e.errno === 'EPIPE' || e.message === "This socket is closed."))
-      return;
-    throw e;
-  });
-
   var serverHandle;
   var watcher;
 
@@ -628,11 +611,15 @@ exports.run = function (context, options) {
         }
         restartServer();
       },
-      function (code, signal) { // On Mongo dead
+      function (code, signal, stderr) { // On Mongo dead
         if (Status.shuttingDown) {
           return;
         }
-        console.log("Unexpected mongo exit code " + code + ". Restarting.");
+
+        // Print only last 20 lines of stderr.
+        stderr = stderr.split('\n').slice(-20).join('\n');
+
+        console.log(stderr + "Unexpected mongo exit code " + code + ". Restarting.\n");
 
         // if mongo dies 3 times with less than 5 seconds between each,
         // declare it failed and die.
@@ -645,6 +632,11 @@ exports.run = function (context, options) {
           if (explanation === mongoExitCodes.EXIT_NET_ERROR)
             console.log("\nCheck for other processes listening on port " + mongoPort +
                         "\nor other meteors running in the same project.");
+          if (!explanation && /GLIBC/i.test(stderr))
+            console.log("\nLooks like you are trying to run Meteor on an old Linux " +
+                        "distribution. Meteor on Linux only supports Linux with glibc " +
+                        "version 2.9 and above. Try upgrading your distribution " +
+                        "to the latest version.");
           process.exit(1);
         }
         if (mongoErrorTimer)

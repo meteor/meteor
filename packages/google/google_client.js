@@ -44,6 +44,10 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
         '&access_type=' + accessType +
         '&approval_prompt=' + approvalPrompt;
 
+  if (Accounts._options.restrictCreationByEmailDomain) {
+    loginUrl += '&hd=' + encodeURIComponent(Accounts._options.restrictCreationByEmailDomain);
+  }
+
   Oauth.initiateLogin(credentialToken,
                       loginUrl,
                       credentialRequestCompleteCallback,

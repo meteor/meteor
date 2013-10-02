@@ -155,6 +155,7 @@ var toc = [
         {instance: "collection", name: "findOne"},
         {instance: "collection", name: "insert"},
         {instance: "collection", name: "update"},
+        {instance: "collection", name: "upsert"},
         {instance: "collection", name: "remove"},
         {instance: "collection", name: "allow"},
         {instance: "collection", name: "deny"}
@@ -191,6 +192,7 @@ var toc = [
       "Meteor.users",
       "Meteor.loggingIn",
       "Meteor.logout",
+      "Meteor.logoutOtherClients",
       "Meteor.loginWithPassword",
       {name: "Meteor.loginWithFacebook", id: "meteor_loginwithexternalservice"},
       {name: "Meteor.loginWithGithub", id: "meteor_loginwithexternalservice"},
@@ -335,6 +337,7 @@ var toc = [
     "audit-argument-checks",
     "backbone",
     "bootstrap",
+    "browser-policy",
     "coffeescript",
     "d3",
     "force-ssl",

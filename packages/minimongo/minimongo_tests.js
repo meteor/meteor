@@ -66,7 +66,8 @@ var log_callbacks = function (operations) {
 // XXX test shared structure in all MM entrypoints
 Tinytest.add("minimongo - basics", function (test) {
   var c = new LocalCollection(),
-      fluffyKitten_id;
+      fluffyKitten_id,
+      count;
 
   fluffyKitten_id = c.insert({type: "kitten", name: "fluffy"});
   c.insert({type: "kitten", name: "snookums"});
@@ -87,7 +88,8 @@ Tinytest.add("minimongo - basics", function (test) {
   test.length(c.find({type: "kitten"}).fetch(), 2);
   test.length(c.find({type: "cryptographer"}).fetch(), 2);
 
-  c.update({name: "snookums"}, {$set: {type: "cryptographer"}});
+  count = c.update({name: "snookums"}, {$set: {type: "cryptographer"}});
+  test.equal(count, 1);
   test.equal(c.find().count(), 4);
   test.equal(c.find({type: "kitten"}).count(), 1);
   test.equal(c.find({type: "cryptographer"}).count(), 3);
@@ -102,10 +104,12 @@ Tinytest.add("minimongo - basics", function (test) {
   c.remove({_id: null});
   c.remove({_id: false});
   c.remove({_id: undefined});
-  c.remove();
+  count = c.remove();
+  test.equal(count, 0);
   test.equal(c.find().count(), 4);
 
-  c.remove({});
+  count = c.remove({});
+  test.equal(count, 4);
   test.equal(c.find().count(), 0);
 
   c.insert({_id: 1, name: "strawberry", tags: ["fruit", "red", "squishy"]});
@@ -180,16 +184,25 @@ Tinytest.add("minimongo - cursors", function (test) {
 
   // forEach
   var count = 0;
-  q.forEach(function (obj) {
+  var context = {};
+  q.forEach(function (obj, i, cursor) {
     test.equal(obj.i, count++);
-  });
+    test.equal(obj.i, i);
+    test.isTrue(context === this);
+    test.isTrue(cursor === q);
+  }, context);
   test.equal(count, 20);
   // everything empty
   test.length(q.fetch(), 0);
   q.rewind();
 
   // map
-  res = q.map(function (obj) { return obj.i * 2; });
+  res = q.map(function (obj, i, cursor) {
+    test.equal(obj.i, i);
+    test.isTrue(context === this);
+    test.isTrue(cursor === q);
+    return obj.i * 2;
+  }, context);
   test.length(res, 20);
   for (var i = 0; i < 20; i++)
     test.equal(res[i], i * 2);
@@ -427,6 +440,9 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$ne: 1}}, {a: [1, 2]});
   nomatch({a: {$ne: 2}}, {a: [1, 2]});
   match({a: {$ne: 3}}, {a: [1, 2]});
+  nomatch({'a.b': {$ne: 1}}, {a: [{b: 1}, {b: 2}]});
+  nomatch({'a.b': {$ne: 2}}, {a: [{b: 1}, {b: 2}]});
+  match({'a.b': {$ne: 3}}, {a: [{b: 1}, {b: 2}]});
 
   nomatch({a: {$ne: {x: 1}}}, {a: {x: 1}});
   match({a: {$ne: {x: 1}}}, {a: {x: 2}});
@@ -456,7 +472,9 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$nin: [1, 2, 3]}}, {a: [2]}); // tested against mongodb
   nomatch({a: {$nin: [{x: 1}, {x: 2}, {x: 3}]}}, {a: [{x: 2}]});
   nomatch({a: {$nin: [1, 2, 3]}}, {a: [4, 2]});
+  nomatch({'a.b': {$nin: [1, 2, 3]}}, {a: [{b:4}, {b:2}]});
   match({a: {$nin: [1, 2, 3]}}, {a: [4]});
+  match({'a.b': {$nin: [1, 2, 3]}}, {a: [{b:4}]});
 
   // $size
   match({a: {$size: 0}}, {a: []});
@@ -564,7 +582,9 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({x: {$not: {$lt: 10, $gt: 7}}}, {x: 6});
 
   match({x: {$not: {$gt: 7}}}, {x: [2, 3, 4]});
+  match({'x.y': {$not: {$gt: 7}}}, {x: [{y:2}, {y:3}, {y:4}]});
   nomatch({x: {$not: {$gt: 7}}}, {x: [2, 3, 4, 10]});
+  nomatch({'x.y': {$not: {$gt: 7}}}, {x: [{y:2}, {y:3}, {y:4}, {y:10}]});
 
   match({x: {$not: /a/}}, {x: "dog"});
   nomatch({x: {$not: /a/}}, {x: "cat"});
@@ -898,7 +918,7 @@ Tinytest.add("minimongo - projection_compiler", function (test) {
   var testProjection = function (projection, tests) {
     var projection_f = LocalCollection._compileProjection(projection);
     var equalNonStrict = function (a, b, desc) {
-      test.equal(EJSON.stringify(a), EJSON.stringify(b), desc);
+      test.isTrue(_.isEqual(a, b), desc);
     };
 
     _.each(tests, function (testCase) {
@@ -980,6 +1000,11 @@ Tinytest.add("minimongo - projection_compiler", function (test) {
 
   test.throws(function () {
     testProjection({ 'a': 1, 'a.b': 1 }, [
+      [ { a: { b: 42 } }, { a: { b: 42 } }, "Can't have ambiguous rules (one is prefix of another)" ]
+    ]);
+  });
+  test.throws(function () {
+    testProjection({ 'a.b.c': 1, 'a.b': 1, 'a': 1 }, [
       [ { a: { b: 42 } }, { a: { b: 42 } }, "Can't have ambiguous rules (one is prefix of another)" ]
     ]);
   });
@@ -1067,6 +1092,63 @@ Tinytest.add("minimongo - fetch with fields", function (test) {
     if (!i) return;
     test.isTrue(x.i === arr[i-1].i + 1);
   });
+});
+
+Tinytest.add("minimongo - fetch with projection, subarrays", function (test) {
+  // Apparently projection of type 'foo.bar.x' for
+  // { foo: [ { bar: { x: 42 } }, { bar: { x: 3 } } ] }
+  // should return exactly this object. More precisely, arrays are considered as
+  // sets and are queried separately and then merged back to result set
+  var c = new LocalCollection();
+
+  // Insert a test object with two set fields
+  c.insert({
+    setA: [{
+      fieldA: 42,
+      fieldB: 33
+    }, {
+      fieldA: "the good",
+      fieldB: "the bad",
+      fieldC: "the ugly"
+    }],
+    setB: [{
+      anotherA: { },
+      anotherB: "meh"
+    }, {
+      anotherA: 1234,
+      anotherB: 431
+    }]
+  });
+
+  var equalNonStrict = function (a, b, desc) {
+    test.isTrue(_.isEqual(a, b), desc);
+  };
+
+  var testForProjection = function (projection, expected) {
+    var fetched = c.find({}, { fields: projection }).fetch()[0];
+    equalNonStrict(fetched, expected, "failed sub-set projection: " +
+                                      JSON.stringify(projection));
+  };
+
+  testForProjection({ 'setA.fieldA': 1, 'setB.anotherB': 1, _id: 0 },
+                    {
+                      setA: [{ fieldA: 42 }, { fieldA: "the good" }],
+                      setB: [{ anotherB: "meh" }, { anotherB: 431 }]
+                    });
+
+  testForProjection({ 'setA.fieldA': 0, 'setB.anotherA': 0, _id: 0 },
+                    {
+                      setA: [{fieldB:33}, {fieldB:"the bad",fieldC:"the ugly"}],
+                      setB: [{ anotherB: "meh" }, { anotherB: 431 }]
+                    });
+
+  c.remove({});
+  c.insert({a:[[{b:1,c:2},{b:2,c:4}],{b:3,c:5},[{b:4, c:9}]]});
+
+  testForProjection({ 'a.b': 1, _id: 0 },
+                    {a: [ [ { b: 1 }, { b: 2 } ], { b: 3 }, [ { b: 4 } ] ] });
+  testForProjection({ 'a.b': 0, _id: 0 },
+                    {a: [ [ { c: 2 }, { c: 4 } ], { c: 5 }, [ { c: 9 } ] ] });
 });
 
 Tinytest.add("minimongo - observe ordered with projection", function (test) {
@@ -1934,7 +2016,8 @@ Tinytest.add("minimongo - diff", function (test) {
 
 Tinytest.add("minimongo - saveOriginals", function (test) {
   // set up some data
-  var c = new LocalCollection();
+  var c = new LocalCollection(),
+      count;
   c.insert({_id: 'foo', x: 'untouched'});
   c.insert({_id: 'bar', x: 'updateme'});
   c.insert({_id: 'baz', x: 'updateme'});
@@ -1945,8 +2028,11 @@ Tinytest.add("minimongo - saveOriginals", function (test) {
   c.saveOriginals();
   c.insert({_id: "hooray", z: 'insertme'});
   c.remove({y: 'removeme'});
-  c.update({x: 'updateme'}, {$set: {z: 5}}, {multi: true});
+  count = c.update({x: 'updateme'}, {$set: {z: 5}}, {multi: true});
   c.update('bar', {$set: {k: 7}});  // update same doc twice
+
+  // Verify returned count is correct
+  test.equal(count, 2);
 
   // Verify the originals.
   var originals = c.retrieveOriginals();

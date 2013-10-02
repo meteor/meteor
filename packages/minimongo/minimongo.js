@@ -140,9 +140,8 @@ LocalCollection.prototype.findOne = function (selector, options) {
   return this.find(selector, options).fetch()[0];
 };
 
-LocalCollection.Cursor.prototype.forEach = function (callback) {
+LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
   var self = this;
-  var doc;
 
   if (self.db_objects === null)
     self.db_objects = self._getRawObjects(true);
@@ -155,12 +154,13 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
       movedBefore: true});
 
   while (self.cursor_pos < self.db_objects.length) {
-    var elt = EJSON.clone(self.db_objects[self.cursor_pos++]);
+    var elt = EJSON.clone(self.db_objects[self.cursor_pos]);
     if (self.projection_f)
       elt = self.projection_f(elt);
     if (self._transform)
       elt = self._transform(elt);
-    callback(elt);
+    callback.call(thisArg, elt, self.cursor_pos, self);
+    ++self.cursor_pos;
   }
 };
 
@@ -169,11 +169,11 @@ LocalCollection.Cursor.prototype.getTransform = function () {
   return self._transform;
 };
 
-LocalCollection.Cursor.prototype.map = function (callback) {
+LocalCollection.Cursor.prototype.map = function (callback, thisArg) {
   var self = this;
   var res = [];
-  self.forEach(function (doc) {
-    res.push(callback(doc));
+  self.forEach(function (doc, index) {
+    res.push(callback.call(thisArg, doc, index, self));
   });
   return res;
 };
@@ -473,9 +473,13 @@ LocalCollection.prototype.insert = function (doc, callback) {
       LocalCollection._recomputeResults(self.queries[qid]);
   });
   self._observeQueue.drain();
-  // Defer in case the callback returns on a future; gives the caller time to
-  // wait on the future.
-  if (callback) Meteor.defer(function () { callback(null, doc._id); });
+
+  // Defer because the caller likely doesn't expect the callback to be run
+  // immediately.
+  if (callback)
+    Meteor.defer(function () {
+      callback(null, doc._id);
+    });
   return doc._id;
 };
 
@@ -533,9 +537,12 @@ LocalCollection.prototype.remove = function (selector, callback) {
       LocalCollection._recomputeResults(query);
   });
   self._observeQueue.drain();
-  // Defer in case the callback returns on a future; gives the caller time to
-  // wait on the future.
-  if (callback) Meteor.defer(callback);
+  var result = remove.length;
+  if (callback)
+    Meteor.defer(function () {
+      callback(null, result);
+    });
+  return result;
 };
 
 // XXX atomicity: if multi is true, and one modification fails, do
@@ -547,9 +554,6 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
     options = null;
   }
   if (!options) options = {};
-
-  if (options.upsert)
-    throw new Error("upsert not yet implemented");
 
   var selector_f = LocalCollection._compileSelector(selector);
 
@@ -565,12 +569,15 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   });
   var recomputeQids = {};
 
+  var updateCount = 0;
+
   for (var id in self.docs) {
     var doc = self.docs[id];
     if (selector_f(doc)) {
       // XXX Should we save the original even if mod ends up being a no-op?
       self._saveOriginal(id, doc);
       self._modifyAndNotify(doc, mod, recomputeQids);
+      ++updateCount;
       if (!options.multi)
         break;
     }
@@ -583,9 +590,54 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
                                         qidToOriginalResults[qid]);
   });
   self._observeQueue.drain();
-  // Defer in case the callback returns on a future; gives the caller time to
-  // wait on the future.
-  if (callback) Meteor.defer(callback);
+
+  // If we are doing an upsert, and we didn't modify any documents yet, then
+  // it's time to do an insert. Figure out what document we are inserting, and
+  // generate an id for it.
+  var insertedId;
+  if (updateCount === 0 && options.upsert) {
+    var newDoc = _.clone(selector);
+    LocalCollection._modify(newDoc, mod, true);
+    if (! newDoc._id && options.insertedId)
+      newDoc._id = options.insertedId;
+    insertedId = self.insert(newDoc);
+    updateCount = 1;
+  }
+
+  // Return the number of affected documents, or in the upsert case, an object
+  // containing the number of affected docs and the id of the doc that was
+  // inserted, if any.
+  var result;
+  if (options._returnObject) {
+    result = {
+      numberAffected: updateCount
+    };
+    if (insertedId !== undefined)
+      result.insertedId = insertedId;
+  } else {
+    result = updateCount;
+  }
+
+  if (callback)
+    Meteor.defer(function () {
+      callback(null, result);
+    });
+  return result;
+};
+
+// A convenience wrapper on update. LocalCollection.upsert(sel, mod) is
+// equivalent to LocalCollection.update(sel, mod, { upsert: true, _returnObject:
+// true }).
+LocalCollection.prototype.upsert = function (selector, mod, options, callback) {
+  var self = this;
+  if (! callback && typeof options === "function") {
+    callback = options;
+    options = {};
+  }
+  return self.update(selector, mod, _.extend({}, options, {
+    upsert: true,
+    _returnObject: true
+  }, callback));
 };
 
 LocalCollection.prototype._modifyAndNotify = function (
@@ -623,7 +675,7 @@ LocalCollection.prototype._modifyAndNotify = function (
       // in the output. So it's safe to skip recompute if neither before or
       // after are true.)
       if (before || after)
-	recomputeQids[qid] = true;
+        recomputeQids[qid] = true;
     } else if (before && !after) {
       LocalCollection._removeFromResults(query, doc);
     } else if (!before && after) {
@@ -1033,119 +1085,93 @@ LocalCollection._compileProjection = function (fields) {
   if (!_.isObject(fields))
     throw MinimongoError("fields option must be an object");
 
-  // Check passed projection fields' keys:
-  // If you have two rules such as 'foo.bar' and 'foo.bar.baz', then the
-  // result becomes ambiguous. If that happens, there is a probability you are
-  // doing something wrong, framework should notify you about such mistake
-  // earlier on cursor compilation step than later during runtime.
-  // Note, that real mongo doesn't do anything about it and the later rule
-  // appears in projection project, more priority it takes.
-  //
-  // Example, assume following in mongo shell:
-  // > db.coll.insert({ a: { b: 23, c: 44 } })
-  // > db.coll.find({}, { 'a': 1, 'a.b': 1 })
-  // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23 } }
-  // > db.coll.find({}, { 'a.b': 1, 'a': 1 })
-  // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23, "c" : 44 } }
-  //
-  // Note, how second time the return set of keys is different.
-  var keyPaths = _.keys(fields);
-  _.each(keyPaths, function (keyPath) {
-    _.each(keyPaths, function (anotherKeyPath) {
-      var idx = keyPath.indexOf(anotherKeyPath);
-      // check if one key is path-prefix of another (like "abra" and
-      // "abra.cadabra", but not "abra" and "abrab.ra")
-      if (keyPath !== anotherKeyPath && !idx && keyPath[anotherKeyPath.length] === '.')
-        throw MinimongoError("both " + keyPath + " and " + anotherKeyPath +
-         " found in fields option, using both of them may trigger " +
-         "unexpected behavior. Did you mean to use only one of them?");
-    });
-  });
-
   if (_.any(_.values(fields), function (x) {
       return _.indexOf([1, 0, true, false], x) === -1; }))
     throw MinimongoError("Projection values should be one of 1, 0, true, or false");
 
   var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
-  delete fields._id;
+  // Find the non-_id keys (_id is handled specially because it is included unless
+  // explicitly excluded). Sort the keys, so that our code to detect overlaps
+  // like 'foo' and 'foo.bar' can assume that 'foo' comes first.
+  var fieldsKeys = _.reject(_.keys(fields).sort(), function (key) { return key === '_id'; });
   var including = null; // Unknown
-  var projectionRules = [];
+  var projectionRulesTree = {}; // Tree represented as nested objects
 
-  _.each(fields, function (rule, keyPath) {
-    rule = !!rule;
+  _.each(fieldsKeys, function (keyPath) {
+    var rule = !!fields[keyPath];
     if (including === null)
       including = rule;
     if (including !== rule)
       // This error message is copies from MongoDB shell
       throw MinimongoError("You cannot currently mix including and excluding fields.");
-    projectionRules.push(keyPath.split('.'));
+    var treePos = projectionRulesTree;
+    keyPath = keyPath.split('.');
+
+    _.each(keyPath.slice(0, -1), function (key, idx) {
+      if (!_.has(treePos, key))
+        treePos[key] = {};
+      else if (_.isBoolean(treePos[key])) {
+        // Check passed projection fields' keys: If you have two rules such as
+        // 'foo.bar' and 'foo.bar.baz', then the result becomes ambiguous. If
+        // that happens, there is a probability you are doing something wrong,
+        // framework should notify you about such mistake earlier on cursor
+        // compilation step than later during runtime.  Note, that real mongo
+        // doesn't do anything about it and the later rule appears in projection
+        // project, more priority it takes.
+        //
+        // Example, assume following in mongo shell:
+        // > db.coll.insert({ a: { b: 23, c: 44 } })
+        // > db.coll.find({}, { 'a': 1, 'a.b': 1 })
+        // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23 } }
+        // > db.coll.find({}, { 'a.b': 1, 'a': 1 })
+        // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23, "c" : 44 } }
+        //
+        // Note, how second time the return set of keys is different.
+
+        var currentPath = keyPath.join('.');
+        var anotherPath = keyPath.slice(0, idx + 1).join('.');
+        throw MinimongoError("both " + currentPath + " and " + anotherPath +
+         " found in fields option, using both of them may trigger " +
+         "unexpected behavior. Did you mean to use only one of them?");
+      }
+
+      treePos = treePos[key];
+    });
+
+    treePos[_.last(keyPath)] = including;
   });
 
-  // XXX do these functions share too much in common?
-  if (including)
-    return function (doc) {
-      var result = {};
+  // returns transformed doc according to ruleTree
+  var transform = function (doc, ruleTree) {
+    // Special case for "sets"
+    if (_.isArray(doc))
+      return _.map(doc, function (subdoc) { return transform(subdoc, ruleTree); });
 
-      _.each(projectionRules, function (keyPath) {
-        var target = result;
-        var docTarget = doc;
-        for (var i = 0; i < keyPath.length - 1; i++) {
-          var key = keyPath[i];
-          // This block simulates MongoDB behavior for different edge-cases when
-          // object on certain path wasn't found or array found instead of an
-          // object, or vice-versa.
-          if (!_.has(target, key)) {
-            if (_.isArray(docTarget[key])) {
-              target[key] = [];
-              docTarget = undefined;
-              break;
-            } else if (_.isObject(docTarget[key]))
-              target[key] = {};
-            else {
-              docTarget = undefined;
-              break;
-            }
-          }
+    var res = including ? {} : EJSON.clone(doc);
+    _.each(ruleTree, function (rule, key) {
+      if (!_.has(doc, key))
+        return;
+      if (_.isObject(rule)) {
+        // For sub-objects/subsets we branch
+        if (_.isObject(doc[key]))
+          res[key] = transform(doc[key], rule);
+        // Otherwise we don't even touch this subfield
+      } else if (including)
+        res[key] = doc[key];
+      else
+        delete res[key];
+    });
 
-          target = target[key];
-          docTarget = docTarget[key];
-        }
+    return res;
+  };
 
-        if (keyPath.length > 0 && docTarget && _.has(docTarget, _.last(keyPath)))
-          target[_.last(keyPath)] = docTarget[_.last(keyPath)];
-      });
+  return function (obj) {
+    var res = transform(obj, projectionRulesTree);
 
-      if (_idProjection && _.has(doc, '_id'))
-        result._id = doc._id;
-
-      return result;
-    };
-  else
-    return function (doc) {
-      // XXX Deep copy on this level might be a slowing factor,
-      // In fact we need it only in case of nested excluded fields.
-      var result = EJSON.clone(doc);
-
-      _.each(projectionRules, function (keyPath) {
-        var target = result;
-        var docTarget = doc;
-        for (var i = 0; i < keyPath.length - 1; i++) {
-          var key = keyPath[i];
-          if (!_.has(target, key)) {
-            break;
-          }
-
-          target = target[key];
-          docTarget = docTarget[key];
-        }
-
-        if (keyPath.length > 0)
-          delete target[_.last(keyPath)];
-      });
-
-      if (!_idProjection)
-        delete result._id;
-
-      return result;
-    };
+    if (_idProjection && _.has(obj, '_id'))
+      res._id = obj._id;
+    if (!_idProjection && _.has(res, '_id'))
+      delete res._id;
+    return res;
+  };
 };
