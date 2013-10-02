@@ -304,14 +304,24 @@ Accounts.validateNewUser = function (func) {
   validateNewUserHooks.push(func);
 };
 
+// XXX Copied from the middle of oplog-tailing logic
+// Like Perl's quotemeta: quotes all regexp metacharacters. See
+//   https://github.com/substack/quotemeta/blob/master/index.js
+var quotemeta = function (str) {
+    return String(str).replace(/(\W)/g, '\\$1');
+};
+
 // Helper function: returns false if email does not match company domain from
 // the configuration.
 var testEmailDomain = function (email) {
   var domain = Accounts._options.restrictCreationByEmail;
-  return !domain || (new RegExp('@' + domain + '$', 'i')).test(email);
+  return !domain ||
+    (_.isFunction(domain) && domain(email)) ||
+    (_.isString(domain) &&
+      (new RegExp('@' + quotemeta(domain) + '$', 'i')).test(email));
 };
 
-// Validate new user's email or Google/Facebook/Github account's email
+// Validate new user's email or Google/Facebook/GitHub account's email
 Accounts.validateNewUser(function (user) {
   var domain = Accounts._options.restrictCreationByEmail;
   if (!domain)
@@ -320,15 +330,17 @@ Accounts.validateNewUser(function (user) {
   var emailIsGood = true;
   // User with password can have only one email on creation
   if (user.emails)
-    emailIsGood &= testEmailDomain(user.emails[0].address);
+    emailIsGood = emailIsGood && testEmailDomain(user.emails[0].address);
 
   // Find any email of any service and check it
-  emailIsGood &= _.any(user.services, function (service) {
+  emailIsGood = emailIsGood && _.any(user.services, function (service) {
     return service.email && testEmailDomain(service.email);
   });
 
   if (!emailIsGood)
-    throw new Meteor.Error(403, "@" + domain + " email required");
+    if (_.isString(domain))
+      throw new Meteor.Error(403, "@" + domain + " email required");
+    else throw new Meteor.Error(403, "Email doesn't match the criterias.");
 
   return true;
 });
