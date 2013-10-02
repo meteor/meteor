@@ -633,7 +633,7 @@ In this release, Minimongo has some limitations:
 of selectors.
 * `$` to denote the matched array position is not
 supported in modifier.
-* `findAndModify`, upsert, aggregate functions, and
+* `findAndModify`, aggregate functions, and
 map/reduce aren't supported.
 
 All of these will be addressed in a future release. For full
@@ -722,24 +722,27 @@ handlers and a browser's JavaScript console.
   `multi` to true, and can use an arbitrary [Mongo
   selector](#selectors) to find the documents to modify. It bypasses
   any access control rules set up by [`allow`](#allow) and
-  [`deny`](#deny).
+  [`deny`](#deny). The number of affected documents will be returned
+  from the `update` call if you don't pass a callback.
 
 - Untrusted code can only modify a single document at once, specified
   by its `_id`. The modification is allowed only after checking any
-  applicable [`allow`](#allow) and [`deny`](#deny) rules.
+  applicable [`allow`](#allow) and [`deny`](#deny) rules. The number
+  of affected documents will be returned to the callback. Untrusted
+  code cannot perform upserts, except in insecure mode.
 
 On the server, if you don't provide a callback, then `update` blocks
 until the database acknowledges the write, or throws an exception if
 something went wrong.  If you do provide a callback, `update` returns
 immediately.  Once the update completes, the callback is called with a
-single error argument in the case of failure, or no arguments if the
-update was successful.
+single error argument in the case of failure, or a second argument
+indicating the number of affected documents if the update was successful.
 
 On the client, `update` never blocks.  If you do not provide a callback
 and the update fails on the server, then Meteor will log a warning to
 the console.  If you provide a callback, Meteor will call that function
-with an error argument if there was an error, or no arguments if the
-update was successful.
+with an error argument if there was an error, or a second argument
+indicating the number of affected documents if the update was successful.
 
 Client example:
 
@@ -765,9 +768,18 @@ Server example:
       }
     });
 
-{{#warning}}
-The Mongo `upsert` feature is not implemented.
-{{/warning}}
+You can use `update` to perform a Mongo upsert by setting the `upsert`
+option to true. You can also use the [`upsert`](#upsert) method to perform an
+upsert that returns the _id of the document that was inserted (if there was one)
+in addition to the number of affected documents.
+
+{{> api_box upsert}}
+
+Modify documents that match `selector` according to `modifier`, or insert
+a document if no documents were modified. `upsert` is the same as calling
+`update` with the `upsert` option set to true, except that the return
+value of `upsert` is an object that contain the keys `numberAffected`
+and `insertedId`. (`update` returns only the number of affected documents.)
 
 {{> api_box remove}}
 
@@ -783,7 +795,8 @@ handlers and a browser's JavaScript console.
   find the documents to remove, and can remove more than one document
   at once by passing a selector that matches multiple documents. It
   bypasses any access control rules set up by [`allow`](#allow) and
-  [`deny`](#deny).
+  [`deny`](#deny). The number of removed documents will be returned
+  from `remove` if you don't pass a callback.
 
   As a safety measure, if `selector` is omitted (or is `undefined`),
   no documents will be removed. Set `selector` to `{}` if you really
@@ -791,20 +804,22 @@ handlers and a browser's JavaScript console.
 
 - Untrusted code can only remove a single document at a time,
   specified by its `_id`. The document is removed only after checking
-  any applicable [`allow`](#allow) and [`deny`](#deny) rules.
+  any applicable [`allow`](#allow) and [`deny`](#deny) rules. The
+  number of removed documents will be returned to the callback.
 
 On the server, if you don't provide a callback, then `remove` blocks
-until the database acknowledges the write, or throws an exception if
+until the database acknowledges the write and then returns the number
+of removed documents, or throws an exception if
 something went wrong.  If you do provide a callback, `remove` returns
 immediately.  Once the remove completes, the callback is called with a
-single error argument in the case of failure, or no arguments if the
-remove was successful.
+single error argument in the case of failure, or a second argument
+indicating the number of removed documents if the remove was successful.
 
 On the client, `remove` never blocks.  If you do not provide a callback
-and the remove fails on the server, then Meteor will log a warning to
-the console.  If you provide a callback, Meteor will call that function
-with an error argument if there was an error, or no arguments if the
-remove was successful.
+and the remove fails on the server, then Meteor will log a warning to the
+console.  If you provide a callback, Meteor will call that function with an
+error argument if there was an error, or a second argument indicating the number
+of removed documents if the remove was successful.
 
 Client example:
 

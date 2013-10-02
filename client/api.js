@@ -585,7 +585,7 @@ Template.api.update = {
   id: "update",
   name: "<em>collection</em>.update(selector, modifier, [options], [callback])",
   locus: "Anywhere",
-  descr: ["Modify one or more documents in the collection"],
+  descr: ["Modify one or more documents in the collection. Returns the number of affected documents."],
   args: [
     {name: "selector",
      type: "Mongo selector, or object id",
@@ -597,7 +597,37 @@ Template.api.update = {
      descr: "Specifies how to modify the documents"},
     {name: "callback",
      type: "Function",
-     descr: "Optional.  If present, called with an error object as its argument."}
+     descr: "Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second."}
+  ],
+  options: [
+    {name: "multi",
+     type: "Boolean",
+     descr: "True to modify all matching documents; false to only modify one of the matching documents (the default)."},
+    {name: "upsert",
+     type: "Boolean",
+     descr: "True to insert a document if no matching documents are found."}
+  ]
+};
+
+Template.api.upsert = {
+  id: "upsert",
+  name: "<em>collection</em>.upsert(selector, modifier, [options], [callback])",
+  locus: "Anywhere",
+  descr: ["Modify one or more documents in the collection, or insert one if no matching documents were found. " +
+          "Returns an object with keys `numberAffected` (the number of documents modified) " +
+          " and `insertedId` (the unique _id of the document that was inserted, if any)."],
+  args: [
+    {name: "selector",
+     type: "Mongo selector, or object id",
+     type_link: "selectors",
+     descr: "Specifies which documents to modify"},
+    {name: "modifier",
+     type: "Mongo modifier",
+     type_link: "modifiers",
+     descr: "Specifies how to modify the documents"},
+    {name: "callback",
+     type: "Function",
+     descr: "Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second."}
   ],
   options: [
     {name: "multi",
@@ -605,6 +635,7 @@ Template.api.update = {
      descr: "True to modify all matching documents; false to only modify one of the matching documents (the default)."}
   ]
 };
+
 
 Template.api.remove = {
   id: "remove",
