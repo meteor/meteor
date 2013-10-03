@@ -705,7 +705,7 @@ Spacebars.compile = function (inputString, options) {
     // as a string, and then the renderer could choke on
     // that in a way where it ends up in the error message.
 
-    var compFunc = 'function () { return ((' + nameCode +
+    var compFunc = 'function () { return (Spacebars.call(' + nameCode +
           ') || null); }';
 
     if (path.length === 1)
