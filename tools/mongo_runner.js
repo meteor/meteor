@@ -197,7 +197,7 @@ exports.launchMongo = function (options) {
 
       // Start mongod with a dummy replSet and wait for it to listen.
       var child_process = require('child_process');
-      var replSetName = 'dummy';
+      var replSetName = 'meteor';
       var proc = child_process.spawn(mongod_path, [
         // nb: cli-test.sh and find_mongo_pids assume that the next four arguments
         // exist in this order without anything in between
