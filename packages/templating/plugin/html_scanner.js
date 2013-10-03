@@ -19,17 +19,11 @@ html_scanner = {
       index += amount;
     };
 
-    var throwParseError = function (msg/*, atIndex, lineOffset*/) {
-      // XXX figure out how this code from Geoff works with
-      // Spacebars (-dgr)
-
-//      atIndex = atIndex || index;
-//      lineOffset = lineOffset || 0;
-
+    var throwParseError = function (msg) {
       var ret = new html_scanner.ParseError;
       ret.message = msg || "bad formatting in HTML template";
       ret.file = source_name;
-//      ret.line = contents.substring(0, atIndex).split('\n').length + lineOffset;
+      ret.line = contents.substring(0, index).split('\n').length;
       throw ret;
     };
 
