@@ -413,14 +413,11 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
   // Run this code up front so that it fails fast if someone uses
   // a Mongo update operator we don't support.
   if (isModify) {
-    var selectorDoc = {};
-    for (var k in selector)
-      if (k.substr(0, 1) !== '$')
-        selectorDoc[k] = selector[k];
     // We've already run replaceTypes/replaceMeteorAtomWithMongo on
     // selector and mod.  We assume it doesn't matter, as far as
     // the behavior of modifiers is concerned, whether `_modify`
     // is run on EJSON or on mongo-converted EJSON.
+    var selectorDoc = LocalCollection._removeDollarOperators(selector);
     LocalCollection._modify(selectorDoc, mod, true);
     newDoc = selectorDoc;
   } else {

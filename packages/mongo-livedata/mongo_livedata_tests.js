@@ -1161,6 +1161,36 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
                       {name: 'Steve', _id: 'steve'}]);
       test.isTrue(coll.findOne('steve'));
       test.isFalse(coll.findOne('fred'));
+
+      // Test $ operator in selectors.
+
+      var result10 = upsert(coll, useUpdate,
+                            {$or: [{name: 'David'}, {name: 'Emily'}]},
+                            {$set: {foo: 3}}, {multi: true});
+      test.equal(result10.numberAffected, 2);
+      if (! useUpdate)
+        test.isFalse(result10.insertedId);
+      compareResults(test, useUpdate,
+        [coll.findOne({name: 'David'}), coll.findOne({name: 'Emily'})],
+        [{name: 'David', foo: 3, bar: 7, _id: davidId},
+         {name: 'Emily', foo: 3, bar: 7, _id: emilyId}]
+      );
+
+      var result11 = upsert(
+        coll, useUpdate,
+        {
+          name: 'Charlie',
+          $or: [{ foo: 2}, { bar: 7 }]
+        },
+        { $set: { foo: 3 } }
+      );
+      test.equal(result11.numberAffected, 1);
+      if (! useUpdate)
+        test.isTrue(result11.insertedId);
+      var charlieId = result11.insertedId;
+      compareResults(test, useUpdate,
+                     coll.find({ name: 'Charlie' }).fetch(),
+                     [{name: 'Charlie', foo: 3, _id: charlieId}]);
     });
   });
 });
