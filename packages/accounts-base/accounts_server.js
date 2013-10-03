@@ -328,7 +328,7 @@ Accounts.validateNewUser = function (func) {
   validateNewUserHooks.push(func);
 };
 
-// XXX Copied from the middle of oplog-tailing logic
+// XXX Find a better place for this utility function
 // Like Perl's quotemeta: quotes all regexp metacharacters. See
 //   https://github.com/substack/quotemeta/blob/master/index.js
 var quotemeta = function (str) {
@@ -355,16 +355,20 @@ Accounts.validateNewUser(function (user) {
   // User with password can have only one email on creation
   if (user.emails)
     emailIsGood = emailIsGood && testEmailDomain(user.emails[0].address);
+  else {
+    // Find any email of any service and check it
+    if (!_.isEmpty(user.services))
+      emailIsGood = emailIsGood && _.any(user.services, function (service) {
+        return service.email && testEmailDomain(service.email); });
+  }
 
-  // Find any email of any service and check it
-  emailIsGood = emailIsGood && _.any(user.services, function (service) {
-    return service.email && testEmailDomain(service.email);
-  });
 
-  if (!emailIsGood)
+  if (!emailIsGood) {
     if (_.isString(domain))
       throw new Meteor.Error(403, "@" + domain + " email required");
-    else throw new Meteor.Error(403, "Email doesn't match the criterias.");
+    else
+      throw new Meteor.Error(403, "Email doesn't match the criterias.");
+  }
 
   return true;
 });
