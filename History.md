@@ -1,17 +1,19 @@
 ## vNEXT
 
-(XXX format section headers in a more standard way)
-
-SECURITY
+#### Security
 
 * Add `browser-policy` package for configuring and sending Content Security
   Policy and X-Frame-Options HTTP headers.
 
 * Use cryptographically strong pseudorandom number generators when available.
 
-MINIMONGO
+#### MongoDB
 
-* XXX upsert, update/remove return values  #1046
+* Add upsert support. `Collection.update` now supports the `{upsert:
+  true}` option. Additionally, add a `Collection.upsert` method which
+  returns the newly inserted object id if applicable.
+
+* `update` and `remove` now return the number of documents affected.  #1046
 
 * Pass an index and the cursor itself to the callbacks in `cursor.forEach` and
   `cursor.map`, just like the corresponding `Array` methods.  #63
@@ -25,10 +27,10 @@ MINIMONGO
 * Fix various bugs with using Mongo ObjectIds. (XXX bad description! this is
   3cfeed and 008847)
 
-* Improve behavior of `$ne`, $nin`, and `$not` selectors with objects containing
+* Improve behavior of `$ne`, `$nin`, and `$not` selectors with objects containing
   arrays.  #1451
 
-DDP
+#### DDP
 
 * Fix infinite loop if a client disconnects while a long yielding method is
   running.
@@ -38,7 +40,7 @@ DDP
   associated with them as soon as they are disconnected instead of a few minutes
   later.
 
-ACCOUNTS
+#### Accounts
 
 * `restrictCreationByEmailDomain` option in `Accounts.config` to restrict new
   users to emails of specific domain (eg. only users with @meteor.com emails) or
@@ -54,7 +56,7 @@ ACCOUNTS
 * Support OAuth1 services that require request token secrets as well as
   authentication token secrets.  #1253
 
-TOOLS
+#### Tools
 
 * The pre-0.6.5 `Package.register_extension` API has been removed. Use
   `Package._transitional_registerBuildPlugin` instead, which was introduced in
@@ -80,11 +82,11 @@ TOOLS
 * Disable the Mongo http interface. This lets you run meteor on two ports
   differing by 1000 at the same time.
 
-MISC
+#### Misc
 
 * Check that the argument to `EJSON.parse` is a string.  #1401
 
-* `EJSON.stringify` now takes options: #1136
+* `EJSON.stringify` now takes options:
   - `canonical` causes objects keys to be stringified in sorted order
   - `indent` allows formatting control over the EJSON stringification
 
@@ -100,7 +102,7 @@ MISC
 
 * Make `madewith` package work again (broken in 0.6.5).  #1448
 
-* Better error when passing a string to {{#each}}. #722
+* Better error when passing a string to `{{#each}}`. #722
 
 * Upgraded dependencies:
   * Node from 0.8.24 to 0.10.19
