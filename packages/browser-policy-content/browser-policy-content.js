@@ -34,6 +34,8 @@
 //
 
 var cspSrcs;
+var cachedCsp; // Avoid constructing the header out of cspSrcs when possible.
+
 // CSP keywords have to be single-quoted.
 var unsafeInline = "'unsafe-inline'";
 var unsafeEval = "'unsafe-eval'";
@@ -70,8 +72,11 @@ var removeCspSrc = function (directive, src) {
   cspSrcs[directive] = _.without(cspSrcs[directive] || [], src);
 };
 
+// Prepare for a change to cspSrcs. Ensure that we have a key in the dictionary
+// and clear any cached CSP.
 var ensureDirective = function (directive) {
   cspSrcs = cspSrcs || {};
+  cachedCsp = null;
   if (! _.has(cspSrcs, directive))
     cspSrcs[directive] = _.clone(cspSrcs["default-src"]);
 };
@@ -95,6 +100,9 @@ _.extend(BrowserPolicy.content, {
     if (! cspSrcs || _.isEmpty(cspSrcs))
       return null;
 
+    if (cachedCsp)
+      return cachedCsp;
+
     var header = _.map(cspSrcs, function (srcs, directive) {
       srcs = srcs || [];
       if (_.isEmpty(srcs))
@@ -107,10 +115,12 @@ _.extend(BrowserPolicy.content, {
     return header;
   },
   _reset: function () {
+    cachedCsp = null;
     setDefaultPolicy();
   },
 
   setPolicy: function (csp) {
+    cachedCsp = null;
     parseCsp(csp);
   },
 
@@ -174,6 +184,7 @@ _.extend(BrowserPolicy.content, {
     });
   },
   disallowAll: function () {
+    cachedCsp = null;
     cspSrcs = {
       "default-src": []
     };
@@ -203,6 +214,7 @@ _.each(["script", "object", "img", "media",
            cspSrcs[directive].push(src);
          };
          BrowserPolicy.content[disallowMethodName] = function () {
+           cachedCsp = null;
            cspSrcs[directive] = [];
          };
          BrowserPolicy.content[allowDataMethodName] = function () {
