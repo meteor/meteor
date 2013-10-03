@@ -489,6 +489,9 @@ _.each(["insert", "update", "remove"], function (method) {
   };
 });
 
+// XXX MongoConnection.upsert() does not return the id of the inserted document
+// unless you set it explicitly in the selector or modifier (as a replacement
+// doc).
 MongoConnection.prototype.upsert = function (collectionName, selector, mod,
                                              options, callback) {
   var self = this;
@@ -501,7 +504,7 @@ MongoConnection.prototype.upsert = function (collectionName, selector, mod,
                      _.extend({}, options, {
                        upsert: true,
                        _returnObject: true
-                     }, callback));
+                     }), callback);
 };
 
 MongoConnection.prototype.find = function (collectionName, selector, options) {

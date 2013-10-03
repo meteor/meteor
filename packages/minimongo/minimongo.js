@@ -637,7 +637,7 @@ LocalCollection.prototype.upsert = function (selector, mod, options, callback) {
   return self.update(selector, mod, _.extend({}, options, {
     upsert: true,
     _returnObject: true
-  }, callback));
+  }), callback);
 };
 
 LocalCollection.prototype._modifyAndNotify = function (
