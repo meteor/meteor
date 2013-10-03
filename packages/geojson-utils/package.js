@@ -1,6 +1,5 @@
 Package.describe({
-  summary: 'GeoJSON utility functions',
-  url: 'https://github.com/maxogden/geojson-js-utils',
+  summary: 'GeoJSON utility functions (from https://github.com/maxogden/geojson-js-utils)',
   internal: true
 });
 
