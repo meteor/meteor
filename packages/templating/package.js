@@ -22,16 +22,8 @@ Package.on_use(function (api) {
   // XXX would like to do the following only when the first html file
   // is encountered
 
-  api.use(['underscore', 'ui', 'spacebars'], 'client');
-
   api.add_files('global_template_object.js', 'client');
   api.export('Template', 'client');
-
-
-  // If we have minimongo available, use its idStringify function.
-  api.use('minimongo', 'client', {weak: true});
-  // provides the runtime logic to instantiate our templates
-  //api.add_files('deftemplate.js', 'client');
 
   // html_scanner.js emits client code that calls Meteor.startup and
   // UI, so anybody using templating (eg apps) need to implicitly use
