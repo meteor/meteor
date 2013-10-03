@@ -1186,16 +1186,9 @@ _extend(UI.Component, {
 
         var newEvents = parts.shift();
         var selector = parts.join(' ');
-        var wrappedHandler = function (event) {
-          var comp = UI.DomRange.getContainingComponent(event.currentTarget);
-          var data = comp && getComponentData(comp);
-          if (comp)
-            updateTemplateInstance(comp);
-          handler.call(data, event, comp && comp.templateInstance);
-        };
         events.push({events: newEvents,
                      selector: selector,
-                     handler: wrappedHandler});
+                     handler: handler});
       });
     });
   }
@@ -1207,7 +1200,17 @@ UI.Component.parented = function () {
   for (var comp = self; comp; comp = comp._super) {
     var events = comp.hasOwnProperty('_events') && comp._events;
     _.each(events, function (esh) { // {events, selector, handler}
-      self.dom.on(esh.events, esh.selector, esh.handler);
+      // wrap the handler here, per instance of the template that
+      // declares the event map, so we can pass the instance to
+      // the event handler.
+      var wrappedHandler = function (event) {
+        var comp = UI.DomRange.getContainingComponent(event.currentTarget);
+        var data = comp && getComponentData(comp);
+        updateTemplateInstance(self);
+        esh.handler.call(data, event, self.templateInstance);
+      };
+
+      self.dom.on(esh.events, esh.selector, wrappedHandler);
     });
   }
 
