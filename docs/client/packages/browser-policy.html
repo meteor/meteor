@@ -45,8 +45,9 @@ call `BrowserPolicy` functions in top-level application code or in
 
 #### Frame options
 
-By default, only web pages on the same origin as your app are allowed to frame
-your app. You can use the following functions to modify this policy.
+By default, if you add `browser-policy` or `browser-policy-framing`, only web
+pages on the same origin as your app are allowed to frame your app. You can use
+the following functions to modify this policy.
 <dl class="callbacks">
 {{#dtdd "BrowserPolicy.framing.disallow()"}}
 Your app will never render inside a frame or iframe.
