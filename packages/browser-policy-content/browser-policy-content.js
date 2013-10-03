@@ -74,7 +74,7 @@ var removeCspSrc = function (directive, src) {
 
 // Prepare for a change to cspSrcs. Ensure that we have a key in the dictionary
 // and clear any cached CSP.
-var ensureDirective = function (directive) {
+var prepareForCspDirective = function (directive) {
   cspSrcs = cspSrcs || {};
   cachedCsp = null;
   if (! _.has(cspSrcs, directive))
@@ -112,6 +112,7 @@ _.extend(BrowserPolicy.content, {
     });
 
     header = header.join(" ");
+    cachedCsp = header;
     return header;
   },
   _reset: function () {
@@ -146,27 +147,27 @@ _.extend(BrowserPolicy.content, {
   // Helpers for creating content security policies
 
   allowInlineScripts: function () {
-    ensureDirective("script-src");
+    prepareForCspDirective("script-src");
     cspSrcs["script-src"].push(unsafeInline);
   },
   disallowInlineScripts: function () {
-    ensureDirective("script-src");
+    prepareForCspDirective("script-src");
     removeCspSrc("script-src", unsafeInline);
   },
   allowEval: function () {
-    ensureDirective("script-src");
+    prepareForCspDirective("script-src");
     cspSrcs["script-src"].push(unsafeEval);
   },
   disallowEval: function () {
-    ensureDirective("script-src");
+    prepareForCspDirective("script-src");
     removeCspSrc("script-src", unsafeEval);
   },
   allowInlineStyles: function () {
-    ensureDirective("style-src");
+    prepareForCspDirective("style-src");
     cspSrcs["style-src"].push(unsafeInline);
   },
   disallowInlineStyles: function () {
-    ensureDirective("style-src");
+    prepareForCspDirective("style-src");
     removeCspSrc("style-src", unsafeInline);
   },
 
@@ -178,7 +179,7 @@ _.extend(BrowserPolicy.content, {
     BrowserPolicy.content.allowOriginForAll("data:");
   },
   allowOriginForAll: function (origin) {
-    ensureDirective("default-src");
+    prepareForCspDirective("default-src");
     _.each(_.keys(cspSrcs), function (directive) {
       cspSrcs[directive].push(origin);
     });
@@ -210,7 +211,7 @@ _.each(["script", "object", "img", "media",
          var allowSelfMethodName = "allow" + methodResource + "SameOrigin";
 
          BrowserPolicy.content[allowMethodName] = function (src) {
-           ensureDirective(directive);
+           prepareForCspDirective(directive);
            cspSrcs[directive].push(src);
          };
          BrowserPolicy.content[disallowMethodName] = function () {
@@ -218,11 +219,11 @@ _.each(["script", "object", "img", "media",
            cspSrcs[directive] = [];
          };
          BrowserPolicy.content[allowDataMethodName] = function () {
-           ensureDirective(directive);
+           prepareForCspDirective(directive);
            cspSrcs[directive].push("data:");
          };
          BrowserPolicy.content[allowSelfMethodName] = function () {
-           ensureDirective(directive);
+           prepareForCspDirective(directive);
            cspSrcs[directive].push(selfKeyword);
          };
        });
