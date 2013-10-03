@@ -1,8 +1,5 @@
 Template.headline.release = function () {
-  // XXX This is commented out because for now galaxy apps have to be on a
-  // different Meteor release that has a bug fix.
-  return "0.6.5.1";
-  //  return Meteor.release || "(checkout)";
+  return Meteor.release || "(checkout)";
 };
 
 
