@@ -4,7 +4,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.export('Spacebars');
-  
+
   api.use('random');
   api.use('underscore');
   api.use('jsparse');
