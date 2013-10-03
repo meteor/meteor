@@ -10,6 +10,10 @@ Handlebars.registerHelper(
       return new Handlebars.SafeString(Template._loginButtons({align: "left"}));
   });
 
+Template._loginButtons.currentUser = function () {
+  return Meteor.userId();
+};
+
 // shared between dropdown and single mode
 Template._loginButtons.events({
   'click #login-buttons-logout': function() {
