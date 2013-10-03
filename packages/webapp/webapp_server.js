@@ -232,10 +232,10 @@ var runWebAppServer = function () {
     }
 
     var browserPolicyPackage = Package["browser-policy-common"];
-    if (browserPolicyPackage &&
+    if (pathname === "/meteor_runtime_config.js" &&
+        browserPolicyPackage &&
         browserPolicyPackage.BrowserPolicy.content &&
-        ! browserPolicyPackage.BrowserPolicy.content.inlineScriptsAllowed() &&
-        pathname === "/meteor_runtime_config.js") {
+        ! browserPolicyPackage.BrowserPolicy.content.inlineScriptsAllowed()) {
       res.writeHead(200, { 'Content-type': 'application/javascript' });
       res.write("__meteor_runtime_config__ = " +
                 JSON.stringify(__meteor_runtime_config__) + ";");
