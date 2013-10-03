@@ -328,9 +328,7 @@ var VALUE_OPERATORS = {
     // the second one to y no matter what user passes.
     // In case user passes { lon: x, lat: y } returns [x, y]
     function pointToArray (point) {
-      var npoint = [];
-      _.each(point, function (xy) { npoint.push(xy); });
-      return npoint;
+      return _.map(point, _.identity);
     }
     // GeoJSON query is marked as $geometry property
     var mode = _.isObject(operand) && _.has(operand, '$geometry') ? "2dsphere" : "2d";
@@ -344,7 +342,7 @@ var VALUE_OPERATORS = {
           break;
         case "2dsphere":
           if (!_.has(Package, 'geojson-utils'))
-            throw new Error('Need geojson-utils package for GeoJSON calculations');
+            throw new Error('Need geojson-utils package for GeoJSON calculations (such as $near)');
           var GeoJSON = Package['geojson-utils'].GeoJSON;
           // XXX: for now, we don't calculate the actual distance between, say,
           // polygon and circle. If people care about this use-case it will get
@@ -358,9 +356,11 @@ var VALUE_OPERATORS = {
       }
       // Used later in sorting by distance, since $near queries are sorted by
       // distance from closest to farthest.
-      if (!cursor._distance)
-        cursor._distance = {};
-      cursor._distance[doc._id] = dist;
+      if (cursor) {
+        if (!cursor._distance)
+          cursor._distance = {};
+        cursor._distance[doc._id] = dist;
+      }
 
       // Distance couldn't parse a geometry object
       if (dist === null)
@@ -650,6 +650,7 @@ var compileDocumentSelector = function (docSelector, cursor) {
 
 
   return function (doc, wholeDoc) {
+    // If called w/o wholeDoc, doc is considered the original by default
     if (wholeDoc === undefined)
       wholeDoc = doc;
     return _.all(perKeySelectors, function (f) {
