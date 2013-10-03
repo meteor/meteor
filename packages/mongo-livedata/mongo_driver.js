@@ -337,10 +337,9 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     var knownId = (isModify ? selector._id : mod._id);
 
     if (options.upsert && (! knownId) && options.insertedId) {
-      mongoOpts.insertedId = options.insertedId;
       simulateUpsertWithInsertedId(
         collection, mongoSelector, mongoMod,
-        isModify, mongoOpts,
+        isModify, options,
         // This callback does not need to be bindEnvironment'ed because
         // simulateUpsertWithInsertedId() wraps it and then passes it through
         // bindEnvironmentForWrite.
@@ -355,21 +354,22 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         }
       );
     } else {
-      collection.update(mongoSelector, mongoMod, mongoOpts,
-                        bindEnvironmentForWrite(function (err, result, extra) {
-                          if (! err) {
-                            if (result && options._returnObject) {
-                              result = { numberAffected: result };
-                              // If this was an upsert() call, and we ended up
-                              // inserting a new doc and we know its id, then
-                              // return that id as well.
-                              if (options.upsert && knownId &&
-                                  ! extra.updatedExisting)
-                                result.insertedId = knownId;
-                            }
-                          }
-                          callback(err, result);
-                        }));
+      collection.update(
+        mongoSelector, mongoMod, mongoOpts,
+        bindEnvironmentForWrite(function (err, result, extra) {
+          if (! err) {
+            if (result && options._returnObject) {
+              result = { numberAffected: result };
+              // If this was an upsert() call, and we ended up
+              // inserting a new doc and we know its id, then
+              // return that id as well.
+              if (options.upsert && knownId &&
+                  ! extra.updatedExisting)
+                result.insertedId = knownId;
+            }
+          }
+          callback(err, result);
+        }));
     }
   } catch (e) {
     write.committed();
@@ -425,14 +425,14 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
   }
 
   var insertedId = options.insertedId; // must exist
-  var mongoOptsForUpdate = _.extend({}, options);
-  delete mongoOptsForUpdate.insertedId;
-  delete mongoOptsForUpdate.upsert;
-
-  var mongoOptsForInsert = _.extend({}, options);
-  delete mongoOptsForUpdate.insertedId;
-  mongoOptsForInsert.upsert = true;
-  delete mongoOptsForInsert.multi;
+  var mongoOptsForUpdate = {
+    safe: true,
+    multi: options.multi
+  };
+  var mongoOptsForInsert = {
+    safe: true,
+    upsert: true
+  };
 
   var tries = NUM_OPTIMISTIC_TRIES;
 
