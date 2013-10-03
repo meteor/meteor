@@ -786,3 +786,40 @@ LocalCollection._compileSort = function (spec, cursor) {
   };
 };
 
+// Returns true if the modifier applied to some document may change the result
+// of matching the document by selector
+// The modifier is always in a form of Object:
+//  - $set
+//    - 'a.b.22.z': value
+//    - 'foo.bar': 42
+//  - $unset
+//    - 'abc.d': 1
+LocalCollection._isSelectorAffectedByModifier = function (selector, modifier) {
+  // safe check for $set/$unset being objects
+  modifier = _.extend({ $set: {}, $unset: {} }, modifier);
+  var modifiedPaths = _.keys(modifier.$set).concat(_.keys(modifier.$unset));
+  var meaningfulPaths = getPaths(selector);
+  return _.any(modifiedPaths, function (path) {
+    path = removeNumericsKeys(path);
+    return _.any(meaningfulPaths, function (meaningfulPath) {
+      // It's full prefix
+      return path.indexOf(meaningfulPath) === 0;
+    });
+  });
+
+  function removeNumericsKeys (path) {
+    return _.filter(path.split('.'), isNaN).join('.');
+  }
+
+  function getPaths (sel, parentKeys) {
+    parentKeys = parentKeys || [];
+    return _.chain(sel).map(function (v, k) {
+      // we don't know how to handle $where because it can be anything
+      if (k === "$where")
+        return ''; // matches everything
+      if (_.has(LOGICAL_OPERATORS, k))
+        return getPaths(v, parentKeys.concat(k));
+      return parentKeys.concat(k).join('.');
+    }).flatten().uniq().value();
+  }
+};
