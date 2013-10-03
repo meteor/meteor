@@ -43,6 +43,13 @@ _extend(UI.Component, {
       // `window.name`.
       result = global[id];
       thisToBind = getComponentData(self);
+    } else if (Handlebars._globalHelpers[id]) {
+      // Backwards compatibility for helpers defined with
+      // `Handlebars.registerHelper`. XXX what is the future pattern
+      // for this? We should definitely not put it on the Handlebars
+      // namespace.
+      result = Handlebars._globalHelpers[id];
+      thisToBind = getComponentData(self);
     } else {
       // check `data()` last, because it establishes
       // a dependency.

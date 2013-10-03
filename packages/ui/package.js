@@ -3,7 +3,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.export(['UI']);
+  api.export(['UI', 'Handlebars']);
   api.use('jquery'); // break this with "DOM backends"
   api.use('deps');
   api.use('random');
@@ -24,6 +24,8 @@ Package.on_use(function (api) {
                  'template.js',
                  'components.js',
                  'each.js']);
+
+  api.add_files(['handlebars_backcompat.js'], 'client');
 });
 
 Package.on_test(function (api) {
