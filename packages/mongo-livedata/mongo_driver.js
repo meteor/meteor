@@ -337,6 +337,9 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     var knownId = (isModify ? selector._id : mod._id);
 
     if (options.upsert && (! knownId) && options.insertedId) {
+      // XXX In future we could do a real upsert for the mongo id generation
+      // case, if the the node mongo driver gives us back the id of the upserted
+      // doc (which our current version does not).
       simulateUpsertWithInsertedId(
         collection, mongoSelector, mongoMod,
         isModify, options,
