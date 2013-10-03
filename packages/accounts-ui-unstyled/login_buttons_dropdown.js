@@ -3,7 +3,7 @@ var loginButtonsSession = Accounts._loginButtonsSession;
 
 // events shared between loginButtonsLoggedOutDropdown and
 // loginButtonsLoggedInDropdown
-Template._loginButtons.events({
+Template.loginButtons.events({
   'click #login-name-link, click #login-sign-in-link': function () {
     loginButtonsSession.set('dropdownVisible', true);
     Deps.flush();
