@@ -18,6 +18,10 @@ EJSON.addType = function (name, factory) {
   customTypes[name] = factory;
 };
 
+var isInfOrNan = function (obj) {
+  return _.isNaN(obj) || obj === Infinity || obj === -Infinity;
+};
+
 var builtinConverters = [
   { // Date
     matchJSONValue: function (obj) {
@@ -33,13 +37,12 @@ var builtinConverters = [
       return new Date(obj.$date);
     }
   },
-  { //NaN, Inf, -Inf
+  { // NaN, Inf, -Inf. (These are the only objects with typeof !== 'object'
+    // which we match.)
     matchJSONValue: function (obj) {
       return _.has(obj, '$InfNaN') && _.size(obj) === 1;
     },
-    matchObject: function (obj) {
-      return _.isNaN(obj) || obj === Infinity || obj === -Infinity;
-    },
+    matchObject: isInfOrNan,
     toJSONValue: function (obj) {
       var sign;
       if (_.isNaN(obj))
@@ -125,23 +128,23 @@ EJSON._isCustomType = function (obj) {
 // for both arrays and objects, in-place modification.
 var adjustTypesToJSONValue =
 EJSON._adjustTypesToJSONValue = function (obj) {
+  // Is it an atom that we need to adjust?
   if (obj === null)
     return null;
   var maybeChanged = toJSONValueHelper(obj);
   if (maybeChanged !== undefined)
     return maybeChanged;
+
+  // Other atoms are unchanged.
+  if (typeof obj !== 'object')
+    return obj;
+
+  // Iterate over array or object structure.
   _.each(obj, function (value, key) {
-    if (typeof value === 'number') {
-      if (_.isNaN(value))
-        obj[key] = {$InfNaN: 0};
-      else if (value === Infinity)
-        obj[key] = {$InfNaN: 1};
-      else if (value === -Infinity)
-        obj[key] = {$InfNaN: -1};
+    if (typeof value !== 'object' && value !== undefined &&
+        !isInfOrNan(value))
       return; // continue
-    }
-    if (typeof value !== 'object' && value !== undefined)
-      return; // continue
+
     var changed = toJSONValueHelper(value);
     if (changed) {
       obj[key] = changed;
@@ -188,6 +191,11 @@ EJSON._adjustTypesFromJSONValue = function (obj) {
   var maybeChanged = fromJSONValueHelper(obj);
   if (maybeChanged !== obj)
     return maybeChanged;
+
+  // Other atoms are unchanged.
+  if (typeof obj !== 'object')
+    return obj;
+
   _.each(obj, function (value, key) {
     if (typeof value === 'object') {
       var changed = fromJSONValueHelper(value);
