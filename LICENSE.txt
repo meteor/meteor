@@ -378,13 +378,6 @@ Copyright (c) 2013 Brian J. Brennan
 
 
 ----------
-byline: https://github.com/jahewson/node-byline
-----------
-
-node-byline (C) 2011-2013 John Hewson
-
-
-----------
 child-process-close: https://github.com/piscisaureus/child-process-close
 ----------
 

@@ -121,7 +121,6 @@
   * underscore from 1.5.1 to 1.5.2
   * fstream from 0.1.21 to 0.1.24
   * tar from 0.1.14 to 0.1.18
-  * byline from 2.0.3 to 3.1.2
   * source-map from 0.1.26 to 0.1.30
   * source-map-support from a fork of 0.1.8 to 0.2.3
   * escope from a fork of 0.0.15 to 1.0.0
@@ -135,6 +134,7 @@
   * connect from 2.7.10 to 2.9.0
   * send from 0.1.0 to 0.1.4
   * useragent from 2.0.1 to 2.0.7
+  * replaced byline with eachline 2.3.3
 
 Patches contributed by GitHub users ansman, awwx, codeinthehole, jacott,
 Maxhodges, meawoppl, mitar, mizzao, mquandalle, nathan-muir, RobertLowe, ryw,

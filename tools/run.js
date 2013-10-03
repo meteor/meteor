@@ -293,10 +293,8 @@ var startServer = function (options) {
   // print directly in the same format as log messages from other apps
   Log.outputFormat = 'colored-text';
 
-  proc.stdout.setEncoding('utf8');
-  // The byline module ensures that each 'data' call will receive one
-  // line.
-  require('byline')(proc.stdout).on('data', function (line) {
+  var eachline = require('eachline');
+  eachline(proc.stdout, 'utf8', function (line) {
     if (!line) return;
     // string must match server.js
     if (line.match(/^LISTENING\s*$/)) {
@@ -309,8 +307,7 @@ var startServer = function (options) {
     saveLog({stdout: Log.format(obj)});
   });
 
-  proc.stderr.setEncoding('utf8');
-  require('byline')(proc.stderr).on('data', function (line) {
+  eachline(proc.stderr, 'utf8', function (line) {
     if (!line) return;
     var obj = Log.objFromText(line, { level: 'warn', stderr: true });
     console.log(Log.format(obj, { color: true }));

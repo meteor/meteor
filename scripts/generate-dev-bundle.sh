@@ -107,7 +107,7 @@ npm install fstream@0.1.24
 npm install tar@0.1.18
 npm install kexec@0.1.1
 npm install shell-quote@0.0.1   # now at 1.3.3, which adds plenty of options to parse but doesn't change quote
-npm install byline@3.1.2
+npm install eachline@2.3.3
 npm install source-map@0.1.30
 npm install source-map-support@0.2.3
 
