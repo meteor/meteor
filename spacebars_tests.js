@@ -365,7 +365,16 @@ Tinytest.add("spacebars - compiler", function (test) {
       'function (buf) {',
       '  var self = this;',
       '  buf.write("<a",',
-      '    {attrs: function () { return {"foo": Spacebars.call(self.lookup("bar"))}; }},',
+      '    {attrs: function () { return {"foo": Spacebars.dstache(self.lookup("bar"))}; }},',
+      '    ">");',
+      '}');
+
+  run('<a name={{foo bar}}>',
+
+      'function (buf) {',
+      '  var self = this;',
+      '  buf.write("<a",',
+      '    {attrs: function () { return {"name": Spacebars.dstache(self.lookup("foo"), self.lookup("bar"))}; }},',
       '    ">");',
       '}');
 
