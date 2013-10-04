@@ -293,7 +293,7 @@ var read_password = function (callback) {
   var keypress = require('keypress');
   keypress(process.stdin);
   process.stdin.on('keypress', inFiber(function(c, key){
-    if (key && 'enter' === key.name) {
+    if (key && (key.name === 'enter' || key.name === 'return')) {
       console.log();
       process.stdin.pause();
       process.stdin.removeAllListeners('keypress');

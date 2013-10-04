@@ -108,13 +108,33 @@
   `USE_JSESSIONID` environment variable to enable.
 
 * Upgraded dependencies:
-  * Node from 0.8.24 to 0.10.19
+  * Node from 0.8.24 to 0.10.20
   * MongoDB from 2.4.4 to 2.4.6
+  * MongoDB driver from 1.3.17 to 1.3.19
   * http-proxy from 0.10.1 to a pre-release of 1.0.0
   * stylus from 0.30.1 to 0.37.0
   * nib from 0.8.2 to 1.0.0  #1121 #1315
-  * XXX: we should try to do more upgrades in this release if possible (in
-    conjunction with the Node upgrade)
+  * optimist from 0.3.5 to 0.6.0
+  * semver from 1.1.0 to 2.1.0
+  * request from 2.12.0 to 2.27.0
+  * keypress from 0.1.0 to 0.2.1
+  * underscore from 1.5.1 to 1.5.2
+  * fstream from 0.1.21 to 0.1.24
+  * tar from 0.1.14 to 0.1.18
+  * source-map from 0.1.26 to 0.1.30
+  * source-map-support from a fork of 0.1.8 to 0.2.3
+  * escope from a fork of 0.0.15 to 1.0.0
+  * estraverse from 1.1.2-1 to 1.3.1
+  * simplesmtp from 0.1.25 to 0.3.10
+  * stream-buffers from 0.2.3 to 0.2.5
+  * websocket from 1.0.7 to 1.0.8
+  * cli-color from 0.2.2 to 0.2.3
+  * clean-css from 1.0.11 to 1.1.2
+  * UglifyJS2 from a fork of 2.3.6 to a different fork of 2.4.0
+  * connect from 2.7.10 to 2.9.0
+  * send from 0.1.0 to 0.1.4
+  * useragent from 2.0.1 to 2.0.7
+  * replaced byline with eachline 2.3.3
 
 Patches contributed by GitHub users ansman, awwx, codeinthehole, jacott,
 Maxhodges, meawoppl, mitar, mizzao, mquandalle, nathan-muir, RobertLowe, ryw,

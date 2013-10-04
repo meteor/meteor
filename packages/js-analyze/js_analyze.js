@@ -184,7 +184,8 @@ JSAnalyze.findAssignedGlobals = function (source) {
   //
   // Unfortunately, escope's ImplicitGlobalVariable search has several bugs.
   //   https://github.com/Constellation/escope/issues/17
-
+  // This may have been fixed in 1.0.0, though the syntax to use has changed:
+  //   https://github.com/Constellation/escope/commit/6a4c33364fb1643e12285fb9daa04c015c00af63
 
   // Traverse the tree looking for assignments to unreferenced variables.
   estraverse.traverse(parseTree, {

@@ -76,7 +76,7 @@ cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of tools/meteor.js and tools/server/boot.js, and the text in
 # docs/client/concepts.html and the README in tools/bundler.js.
-git checkout v0.10.19
+git checkout v0.10.20
 
 ./configure --prefix="$DIR"
 make -j4
@@ -97,33 +97,27 @@ which npm
 # you update version numbers.
 
 cd "$DIR/lib/node_modules"
-npm install optimist@0.3.5
-npm install semver@1.1.0
+npm install optimist@0.6.0
+npm install semver@2.1.0
 npm install handlebars@1.0.7
-npm install request@2.12.0
-npm install keypress@0.1.0
-npm install underscore@1.5.1
-npm install fstream@0.1.21
-npm install tar@0.1.14
+npm install request@2.27.0
+npm install keypress@0.2.1
+npm install underscore@1.5.2
+npm install fstream@0.1.24
+npm install tar@0.1.18
 npm install kexec@0.1.1
 npm install shell-quote@0.0.1   # now at 1.3.3, which adds plenty of options to parse but doesn't change quote
-npm install byline@2.0.3  # v3 requires node 0.10
-npm install source-map@0.1.26
+npm install eachline@2.3.3
+npm install source-map@0.1.30
+npm install source-map-support@0.2.3
 
-# Using the unreleased "caronte" rewrite of http-proxy (which is even called
-# 'caronte', though this may change when this eventually hopefully becomes
-# http-proxy 1.0).
-npm install https://github.com/nodejitsu/node-http-proxy/tarball/94ec6fa5ce6826ca1e8974f7e99b31541aaad76a
+# Using the unreleased "caronte" branch rewrite of http-proxy (which will become
+# 1.0.0).
+npm install https://github.com/nodejitsu/node-http-proxy/tarball/a51b0622780f48160001f9e74340f7d720cbfce6
 
 # Using the unreleased 1.1 branch. We can probably switch to a built NPM version
 # when it gets released.
 npm install https://github.com/ariya/esprima/tarball/5044b87f94fb802d9609f1426c838874ec2007b3
-
-# Fork of node-source-map-support which allows us to specify our own
-# retrieveSourceMap function, and uses source-map 0.1.26.
-#   https://github.com/evanw/node-source-map-support/pull/18
-#   https://github.com/evanw/node-source-map-support/pull/17
-npm install https://github.com/meteor/node-source-map-support/tarball/980e444c8346bbe29992fd3086bab0456b8d8667
 
 # If you update the version of fibers in the dev bundle, also update the "npm
 # install" command in docs/client/concepts.html and in the README in
