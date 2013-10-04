@@ -58,7 +58,7 @@
 * Support OAuth1 services that require request token secrets as well as
   authentication token secrets.  #1253
 
-* Warn if `Accounts.config` is only called on the client.
+* Warn if `Accounts.config` is only called on the client.  #828
 
 #### Tools
 
