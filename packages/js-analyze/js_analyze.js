@@ -158,81 +158,12 @@ JSAnalyze.findAssignedGlobals = function (source) {
   // But it can't pull references outward, so for our purposes it is safe to
   // ignore.
   var scoper = escope.analyze(parseTree, {ignoreEval: true});
+  var globalScope = scoper.scopes[0];
 
-  var currentScope = null;
   var assignedGlobals = {};
-
-  // XXX This whole traversal is somewhat overkill. escope actually already
-  // calculates the implicit global variables. The following code ALMOST works,
-  // and doesn't even require ignoreEval:
-  //
-  //  var globalScope = scoper.acquire(parseTree);
-  //  if (globalScope.type !== 'global')
-  //    throw new Error("Unexpected scope type " + globalScope.type);
-  //
-  //  // can't use underscore because we want to have no dependencies
-  //  for (var i = 0; i < globalScope.variables.length; ++i) {
-  //    var variable = globalScope.variables[i];
-  //    // Because this is the global scope, and we wrap source in a function,
-  //    // the only variables in it should have a single implicit definition.
-  //    if (variable.defs.length !== 1)
-  //      throw new Error("Unexpected def length", variable.defs.length);
-  //    if (variable.defs[0].type !== escope.Variable.ImplicitGlobalVariable)
-  //      throw new Error("Unexpected def type", variable.defs[0].type);
-  //    assignedGlobals[variable.name] = true;
-  //  }
-  //
-  // Unfortunately, escope's ImplicitGlobalVariable search has several bugs.
-  //   https://github.com/Constellation/escope/issues/17
-  // This may have been fixed in 1.0.0, though the syntax to use has changed:
-  //   https://github.com/Constellation/escope/commit/6a4c33364fb1643e12285fb9daa04c015c00af63
-
-  // Traverse the tree looking for assignments to unreferenced variables.
-  estraverse.traverse(parseTree, {
-    enter: function (node, parent) {
-      currentScope = scoper.acquire(node) || currentScope;
-
-      // We only care about identifiers.
-      if (node.type !== Syntax.Identifier)
-        return;
-      // We already know this one is an assigned global.
-      // (Avoid using _.has here so that we have no Meteor package
-      // dependencies.)
-      if (assignedGlobals.hasOwnProperty(node.name))
-        return;
-
-      var ref = null;
-      // Find an `escope.Reference` in the current Scope whose identifier node
-      // is `===` to `node`.  If found, this means escope determined this site
-      // to be a reference rather than some other identifier (like the `x` in
-      // `var x` or `a.x`).
-      for (var i = 0; i < currentScope.references.length; i++) {
-        if (currentScope.references[i].identifier === node) {
-          ref = currentScope.references[i];
-          break;
-        }
-      }
-      // If this isn't a reference at all, or it's been resolved to a local, do
-      // nothing.
-      if (!ref || ref.resolved)
-        return;
-
-      // OK, it's a global. But is it being assigned to? The situations where a
-      // global is assigned to are:
-      //    - left-hand side of an '=' assignment
-      //    - the `x` in `for (x in y)` (without a `var`)
-      // (You might think that ++, --, and the += family of operators also
-      // write to globals, but they can't in and of themselves conjure up
-      // a reference where none existed before.)
-      if ((parent.type === Syntax.AssignmentExpression && parent.left === node
-           && parent.operator === '=')
-          || (parent.type === Syntax.ForInStatement && parent.left === node)) {
-        assignedGlobals[node.name] = true;
-      }
-    },
-    leave: function (node, parent) {
-      currentScope = scoper.release(node) || currentScope;
-    }
+  // Underscore is not available in this package.
+  globalScope.implicit.variables.forEach(function (variable) {
+    assignedGlobals[variable.name] = true;
   });
 
   return assignedGlobals;
