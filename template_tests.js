@@ -74,3 +74,33 @@ Tinytest.add("spacebars - templates - dynamic attrs", function (test) {
   test.isFalse(span.hasAttribute('selected'));
   test.equal(span.getAttribute('zanzibar'), 'where the heart is');
 });
+
+Tinytest.add("spacebars - templates - triple", function (test) {
+  var tmpl = Template.spacebars_template_test_triple;
+
+  var R = ReactiveVar('<span class="hi">blah</span>');
+  tmpl.html = function () { return R.get(); };
+
+  var div = renderToDiv(tmpl);
+  var elems = $(div).find("> *");
+  test.equal(elems.length, 1);
+  test.equal(elems[0].nodeName, 'SPAN');
+  var span = elems[0];
+  test.equal(span.className, 'hi');
+  test.equal(span.innerHTML, 'blah');
+
+  R.set('asdf');
+  Deps.flush();
+  elems = $(div).find("> *");
+  test.equal(elems.length, 0);
+  test.equal(div.innerHTML, 'asdf');
+
+  R.set('<span class="hi">blah</span>');
+  Deps.flush();
+  elems = $(div).find("> *");
+  test.equal(elems.length, 1);
+  test.equal(elems[0].nodeName, 'SPAN');
+  span = elems[0];
+  test.equal(span.className, 'hi');
+  test.equal(span.innerHTML, 'blah');
+});
