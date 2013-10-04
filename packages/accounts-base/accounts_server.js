@@ -351,26 +351,25 @@ Accounts.validateNewUser(function (user) {
   if (!domain)
     return true;
 
-  var emailIsGood = true;
-  // User with password can have only one email on creation
-  if (user.emails)
-    emailIsGood = emailIsGood && testEmailDomain(user.emails[0].address);
-  else {
+  var emailIsGood = false;
+  if (!_.isEmpty(user.emails)) {
+    emailIsGood = _.any(user.emails, function (email) {
+      return testEmailDomain(email.address);
+    });
+  } else if (!_.isEmpty(user.services)) {
     // Find any email of any service and check it
-    if (!_.isEmpty(user.services))
-      emailIsGood = emailIsGood && _.any(user.services, function (service) {
-        return service.email && testEmailDomain(service.email); });
+    emailIsGood = _.any(user.services, function (service) {
+      return service.email && testEmailDomain(service.email);
+    });
   }
 
+  if (emailIsGood)
+    return true;
 
-  if (!emailIsGood) {
-    if (_.isString(domain))
-      throw new Meteor.Error(403, "@" + domain + " email required");
-    else
-      throw new Meteor.Error(403, "Email doesn't match the criterias.");
-  }
-
-  return true;
+  if (_.isString(domain))
+    throw new Meteor.Error(403, "@" + domain + " email required");
+  else
+    throw new Meteor.Error(403, "Email doesn't match the criteria.");
 });
 
 ///
