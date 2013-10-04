@@ -154,7 +154,7 @@ Follower = {
         intervalHandle = monitorConnection();
       if (arguments[0] && arguments[0].url) {
         makeElectorTries(arguments[0].url, {reset: true, priority: 0});
-        tryElector(arguments[0].url);
+        tryElector();
       } else {
         conn._reconnectImpl.apply(conn, arguments);
       }
