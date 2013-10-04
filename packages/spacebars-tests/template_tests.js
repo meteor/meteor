@@ -162,7 +162,7 @@ Tinytest.add("spacebars - templates - inclusion args 2", function (test) {
   test.equal(div.innerHTML, 'aaa');
 });
 
-Tinytest.add("spacebars - templates - inclusion args 2", function (test) {
+Tinytest.add("spacebars - templates - inclusion args 3", function (test) {
   // `{{> foo bar q=baz}}`
   var tmpl = Template.spacebars_template_test_inclusion_args3;
 
