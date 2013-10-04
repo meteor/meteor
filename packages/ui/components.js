@@ -91,7 +91,10 @@ UI.DynamicComponent = Component.extend({
   render: function (buf) {
     var kind = this.compKind;
     var args = this.compArgs;
+    var isBlock = this.isBlock;
 
+    // kwArgs and posArgs follow a "may be falsy if empty" convention
+    // to reduce the number of empty array objects floating around.
     var kwArgs = args && args.length && args[0];
     var posArgs = args && args.length > 1 && args.slice(1);
 
@@ -111,11 +114,25 @@ UI.DynamicComponent = Component.extend({
         for (var i = 0; i < posArgs.length; i++)
           posArgs[i] = callIfFunction(posArgs[i]);
       }
+      // XXX FIX KEYWORD ARGUMENTS
+      // We should be passing an options dictionary as a final argument
+      // to the `kind` function.  The options are `kwArgs` with the values
+      // run through `callIfFunction`.  Then, we should NOT pass kwArgs in
+      // `props` at the end of this function.
       kind = kind.apply(null, posArgs || []);
     } else {
       if (posArgs && posArgs.length) {
-        if (posArgs.length > 1)
+        if (posArgs.length > 1) {
+          // XXX BLOCK HELPER CALLING CONVENTION
+          // if `isBlock`, run `callIfFunction` on posArgs besides the
+          // first, then apply the first posArg to the rest (unless it
+          // is not a function, in which case ignore the rest).
+          // Should also feed an evaluated version of kwArgs to the
+          // first posArg and then not pass it as props at the end
+          // of this function (I think that's how keyword arguments
+          // work in `{{#foo bar baz x=1}}`, it calls `bar(baz, {x:1})`).
           throw new Error("Can't have more than one argument to a template");
+        }
 
         if (posArgs.length) {
           props.data = posArgs[0];
