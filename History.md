@@ -56,6 +56,8 @@
 * Support OAuth1 services that require request token secrets as well as
   authentication token secrets.  #1253
 
+* Warn if `Accounts.config` is only called on the client.
+
 #### Tools
 
 * The pre-0.6.5 `Package.register_extension` API has been removed. Use
