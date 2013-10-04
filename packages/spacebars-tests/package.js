@@ -8,6 +8,7 @@ Package.on_test(function (api) {
   api.use('underscore');
   api.use('spacebars');
   api.use('tinytest');
+  api.use('jquery');
   api.use('test-helpers');
 
   api.use('templating', 'client');

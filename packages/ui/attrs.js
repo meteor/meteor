@@ -34,10 +34,12 @@ AttributeManager = function (dictOrFunc) {
 
   var handlers = self.handlers;
   for (var attrName in dict) {
+    if (! attrName)
+      continue; // ignore empty attribute names
     // perform a sanity check, since we'll be inserting
     // attrName directly into the HTML stream
     if (! isValidAttributeName(attrName))
-      throw new Error("Illegal HTML attribute name: '" + attrName + "'");
+      throw new Error("Expected single HTML attribute name, found: '" + attrName + "'");
 
     handlers[attrName] = makeAttributeHandler(
       attrName, dict[attrName]);
@@ -88,12 +90,14 @@ _extend(AttributeManager.prototype, {
         h.update(element, oldValue, h.value);
       }
       for (var k in newDict) {
+        if (! k)
+          continue; // ignore empty attributes
         if (! handlers.hasOwnProperty(k)) {
           // need a new handler
           var attrName = k;
 
           if (! isValidAttributeName(attrName))
-            throw new Error("Illegal HTML attribute name: " + attrName);
+            throw new Error("Expected single HTML attribute name, found: " + attrName);
 
           var h = makeAttributeHandler(
             attrName, newDict[attrName]);
