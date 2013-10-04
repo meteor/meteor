@@ -2412,5 +2412,26 @@ Tinytest.add("minimongo - modifier affects selector", function (test) {
     $or: [{ 'a.b': 1 }, { 'a.b.c': { $lt: 22 } },
      {$and: [{ 'x.d': { $ne: 5, $gte: 433 } }, { 'a.b': 234 }]}]
   }, ['a.b', 'a.b.c', 'x.d'], 'group operators + duplicates');
+
+  function testSelectorAffectedByModifier (sel, mod, yes, desc) {
+    if (yes)
+      test.isTrue(LocalCollection._isSelectorAffectedByModifier(sel, mod, desc));
+    else
+      test.isFalse(LocalCollection._isSelectorAffectedByModifier(sel, mod, desc));
+  }
+  
+  function affected(sel, mod, desc) {
+    testSelectorAffectedByModifier(sel, mod, 1, desc);
+  }
+  function notAffected(sel, mod, desc) {
+    testSelectorAffectedByModifier(sel, mod, 0, desc);
+  }
+
+  notAffected({ foo: 0 }, { $set: { bar: 1 } }, "simplest");
+  affected({ foo: 0 }, { $set: { foo: 1 } }, "simplest");
+  affected({ foo: 0 }, { $set: { 'foo.bar': 1 } }, "simplest");
+  notAffected({ 'foo.bar': 0 }, { $set: { 'foo.baz': 1 } }, "simplest");
+  affected({ 'foo.bar': 0 }, { $set: { 'foo.1': 1 } }, "simplest");
+  affected({ 'foo.bar': 0 }, { $set: { 'foo.2.bar': 1 } }, "simplest");
 });
 
