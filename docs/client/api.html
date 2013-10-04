@@ -1363,11 +1363,11 @@ Example:
     {{dstache}}#each posts}}
       {{dstache}}> postItem }}
     {{dstache}}/each}}
-    </{{! }}template>
+    {{lt}}/template>
 
     <template name="postItem">
       <div class="{{dstache}}postClass}}">{{dstache}}title}}</div>
-    </{{! }}template>
+    {{lt}}/template>
 
     ///// in JS file
     Template.postsView.posts = function() {
@@ -1801,9 +1801,9 @@ Example:
 
 <h2 id="templates_api"><span>Templates</span></h2>
 
-A template that you declare as `<{{! }}template name="foo"> ... </{{!
-}}template>` can be accessed as the function `Template.foo`, which
-returns a string of HTML when called.
+A template that you declare as `{{lt}}template name="foo">
+... {{lt}}/template>` can be accessed as the function `Template.foo`,
+which returns a string of HTML when called.
 
 The same template may occur many times on the page, and these
 occurrences are called template instances.  Template instances have a

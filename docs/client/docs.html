@@ -21,18 +21,41 @@
 </body>
 
 <template name="nav">
-<div id="nav-inner">
-  {{#each sections}}
-  {{#if type "spacer"}}
-    <div class="spacer"> </div>
+  <div id="nav-inner">
+    {{#each sections}}
+      {{#if type "spacer"}}
+        <div class="spacer"> </div>
+      {{/if}}
+      {{#if type "section"}}
+        {{#nav_section}}
+          <a href="#{{id}}" class="{{maybe_current}} {{style}}">
+            {{#if prefix}}{{prefix}}.{{/if}}{{#if instance}}<i>{{instance}}</i>.{{/if}}{{name}}
+          </a>
+        {{/nav_section}}
+      {{/if}}
+    {{/each}}
+  </div>
+</template>
+
+<template name="nav_section">
+  {{#if depthIs 1}}
+    <h1>{{> content}}</h1>
   {{/if}}
-  {{#if type "section"}}
-    <h{{depth}}><a href="#{{id}}" class="{{maybe_current}} {{style}}">
-        {{#if prefix}}{{prefix}}.{{/if}}{{#if instance}}<i>{{instance}}</i>.{{/if}}{{name}}
-    </a></h{{depth}}>
+  {{#if depthIs 2}}
+    <h2>{{> content}}</h2>
   {{/if}}
-  {{/each}}
-</div>
+  {{#if depthIs 3}}
+    <h3>{{> content}}</h3>
+  {{/if}}
+  {{#if depthIs 4}}
+    <h4>{{> content}}</h4>
+  {{/if}}
+  {{#if depthIs 5}}
+    <h5>{{> content}}</h5>
+  {{/if}}
+  {{#if depthIs 6}}
+    <h6>{{> content}}</h6>
+  {{/if}}
 </template>
 
 <!-- This only is displayed on narrow displays (eg phone) -->
