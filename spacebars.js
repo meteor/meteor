@@ -577,6 +577,12 @@ var makeObjectLiteral = function (obj) {
   return buf.join('');
 };
 
+// Generates a render function (i.e. JS source code) from a template
+// string or a pre-parsed template string.  Consumes the AST from the
+// parser, which consists of HTML tokens with embedded stache tags.  A
+// "block" (i.e. `{{#foo}}...{{/foo}}`) is represented as a single tag
+// (always as part of an HTML "Characters" token), which has content
+// that contains more HTML.
 Spacebars.compile = function (inputString, options) {
   var tree;
   if (typeof inputString === 'object') {
@@ -641,15 +647,14 @@ Spacebars.compile = function (inputString, options) {
         argCode = toJSLiteral(argValue);
         break;
       case 'PATH':
-        argCode = 'function () { return Spacebars.call(' +
-          codeGenPath(argValue, funcInfo) + '); }';
+        argCode = codeGenPath(argValue, funcInfo);
         break;
       default:
         error("Unexpected arg type: " + argType);
       }
 
       if (arg.length > 2) {
-        // keyword argument
+        // keyword argument (represented as [type, value, name])
         options = (options || {});
         if (! (forComponentWithOpts &&
                (arg[2] in forComponentWithOpts))) {
@@ -719,7 +724,7 @@ Spacebars.compile = function (inputString, options) {
     var nameCode = codeGenPath(tag.path, funcInfo);
     var argCode = codeGenArgs(tag.args, funcInfo);
 
-    return 'Spacebars.call(' + nameCode +
+    return 'Spacebars.mustache(' + nameCode +
       (argCode ? ', ' + argCode.join(', ') : '') + ')';
   };
 
@@ -861,6 +866,7 @@ Spacebars.compile = function (inputString, options) {
             var name = kv.nodeName;
             var value = kv.nodeValue;
             if ((typeof name) === 'string') {
+              // attribute name has no tags
               attrs = (attrs || {});
               attrs[toJSLiteral(name)] =
                 interpolate(value, funcInfo,
@@ -870,6 +876,8 @@ Spacebars.compile = function (inputString, options) {
             } else if (value === '' &&
                        name.length === 1 &&
                        name[0].type === 'TRIPLE') {
+              // attribute name is a triple-stache, no value, as in:
+              // `<div {{{attrs}}}>`.
               renderables.push(
                 '{attrs: function () { return Spacebars.parseAttrs(' +
                   codeGenBasicStache(name[0], funcInfo) + '); }}');
@@ -877,7 +885,7 @@ Spacebars.compile = function (inputString, options) {
               pairsWithReactiveNames.push(
                 interpolate(name, funcInfo,
                             INTERPOLATE_ATTR_VALUE),
-                interpolate(name, funcInfo,
+                interpolate(value, funcInfo,
                             INTERPOLATE_ATTR_VALUE));
               isReactive = true;
             }
@@ -977,6 +985,21 @@ Spacebars.call = function (value/*, args*/) {
   return value.apply(null, args);
 };
 
+// Executes `{{foo bar baz}}` when called on `(foo, bar, baz)`.
+// If `bar` and `baz` are functions, they are called.  `foo`
+// may be a non-function, in which case the arguments are
+// discarded (though they may still be evaluated, i.e. called).
+Spacebars.mustache = function (value/*, args*/) {
+  // call any arg that is a function (checked in Spacebars.call)
+  for (var i = 1; i < arguments.length; i++)
+    arguments[i] = Spacebars.call(arguments[i]);
+
+  var result = Spacebars.call.apply(null, arguments);
+  // map `null` and `undefined` to "", stringify anything else
+  // (e.g. strings, booleans, numbers including 0).
+  return String(result == null ? '' : result);
+};
+
 Spacebars.extend = function (obj/*, k1, v1, k2, v2, ...*/) {
   for (var i = 1; i < arguments.length; i += 2)
     obj[arguments[i]] = arguments[i+1];
@@ -996,8 +1019,8 @@ Spacebars.parseAttrs = function (attrs) {
     if (tokens.length &&
         tokens[0].type === 'StartTag') {
       _.each(tokens[0].data, function (kv) {
-        if (UI.isValidAttributeName(kv[0]))
-          dict[kv[0]] = kv[1];
+        if (UI.isValidAttributeName(kv.nodeName))
+          dict[kv.nodeName] = kv.nodeValue;
       });
     }
     return dict;
