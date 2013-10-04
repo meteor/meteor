@@ -85,7 +85,7 @@ _.each({
 });
 
 UI.body.rendered = function () {
-  this.$('#list').sortable({
+  $(this.find('#list')).sortable({
     stop: function (event, ui) {
       var el = ui.item.get(0);
       var before = ui.item.prev().get(0);
