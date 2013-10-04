@@ -811,15 +811,17 @@ LocalCollection._isSelectorAffectedByModifier = function (selector, modifier) {
     return _.filter(path.split('.'), isNaN).join('.');
   }
 
-  function getPaths (sel, parentKeys) {
-    parentKeys = parentKeys || [];
-    return _.chain(sel).map(function (v, k) {
-      // we don't know how to handle $where because it can be anything
-      if (k === "$where")
-        return ''; // matches everything
-      if (_.has(LOGICAL_OPERATORS, k))
-        return getPaths(v, parentKeys.concat(k));
-      return parentKeys.concat(k).join('.');
-    }).flatten().uniq().value();
-  }
+};
+
+// Returns a list of key paths the given selector is looking for
+var getPaths = LocalCollection._getSelectorPaths = function (sel, parentKeys) {
+  parentKeys = parentKeys || [];
+  return _.chain(sel).map(function (v, k) {
+    // we don't know how to handle $where because it can be anything
+    if (k === "$where")
+      return ''; // matches everything
+    if (_.has(LOGICAL_OPERATORS, k))
+      return _.map(v, function (x) { return getPaths(x, parentKeys); });
+    return parentKeys.concat(k).join('.');
+  }).flatten().uniq().value();
 };
