@@ -7,6 +7,10 @@
 <template name="spacebars_template_test_bbb">
   bbb
 </template>
+
+<template name="spacebars_template_test_bracketed_this">
+  [{{this}}]
+</template>
 <!-- -->
 
 
@@ -29,4 +33,16 @@
 
 <template name="spacebars_template_test_triple">
   {{{html}}}
+</template>
+
+<template name="spacebars_template_test_inclusion_args">
+  {{> foo bar}}
+</template>
+
+<template name="spacebars_template_test_inclusion_args2">
+  {{> foo bar baz}}
+</template>
+
+<template name="spacebars_template_test_inclusion_args3">
+  {{> foo bar q=baz}}
 </template>
