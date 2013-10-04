@@ -803,7 +803,8 @@ LocalCollection._isSelectorAffectedByModifier = function (selector, modifier) {
     path = removeNumericsKeys(path);
     return _.any(meaningfulPaths, function (meaningfulPath) {
       // It's full prefix
-      return path.indexOf(meaningfulPath) === 0;
+      return path.indexOf(meaningfulPath) === 0
+          || meaningfulPath.indexOf(path) === 0;
     });
   });
 
