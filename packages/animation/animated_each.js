@@ -256,7 +256,7 @@ var apply = function (el, events) {
   }
 };
 
-AnimatedList = Package.ui.Component.extend({
+AnimatedList = UI.Component.extend({
   typeName: 'AnimatedList',
   render: function (buf) {
     buf.write(this.content);
