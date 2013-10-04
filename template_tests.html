@@ -18,3 +18,11 @@
 <template name="spacebars_template_test_dynamic_template">
   {{> foo}}
 </template>
+
+<template name="spacebars_template_test_interpolate_attribute">
+  <div class="aaa{{foo bar}}zzz"></div>
+</template>
+
+<template name="spacebars_template_test_dynamic_attrs">
+  <span {{{attrs1}}} {{{attrs2}}} {{k}}={{v}} {{x}} {{nonexistent}}>hi</span>
+</template>
