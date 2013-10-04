@@ -130,7 +130,7 @@
   * websocket from 1.0.7 to 1.0.8
   * cli-color from 0.2.2 to 0.2.3
   * clean-css from 1.0.11 to 1.1.2
-  * UglifyJS2 from a fork of 2.3.6 to 2.4.0
+  * UglifyJS2 from a fork of 2.3.6 to a different fork of 2.4.0
   * connect from 2.7.10 to 2.9.0
   * send from 0.1.0 to 0.1.4
   * useragent from 2.0.1 to 2.0.7
