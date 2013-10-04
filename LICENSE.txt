@@ -90,6 +90,7 @@ github-url-from-git: https://github.com/visionmedia/node-github-url-from-git
 pause: https://github.com/visionmedia/node-pause
 range-parser: https://github.com/visionmedia/node-range-parser
 send: https://github.com/visionmedia/send
+methods: https://github.com/visionmedia/node-methods
 ----------
 
 Copyright (c) 2010 TJ Holowaychuk <tj@vision-media.ca>
@@ -192,13 +193,6 @@ Copyright (c) 2010 Aleksander Williams
 
 
 ----------
-formidable: https://github.com/felixge/node-formidable
-----------
-
-By Felix Geisendörfer and Tim Koschuetzki, Debuggable, Ltd.
-
-
-----------
 colors: https://github.com/Marak/colors.js
 ----------
 
@@ -291,6 +285,7 @@ archy: https://github.com/substack/node-archy
 shell-quote: https://github.com/substack/node-shell-quote
 deep-equal: https://github.com/substack/node-deep-equal
 editor: https://github.com/substack/node-editor
+minimist: https://github.com/substack/node-minimist
 ----------
 
 Copyright 2010, 2011, 2012, 2013 James Halliday (mail@substack.net)
@@ -328,6 +323,7 @@ Felix Geisendörfer (felix@debuggable.com)
 
 ----------
 form-data: https://github.com/felixge/node-form-data
+multiparty: https://github.com/superjoe30/node-multiparty
 ----------
 
 Copyright (c) 2012 Felix Geisendörfer (felix@debuggable.com) and contributors
@@ -468,6 +464,8 @@ Copyright (c) 2011 SDA Software Associates Inc.
 
 ----------
 sha: https://github.com/ForbesLindesay/sha
+type-of: https://github.com/ForbesLindesay/type-of
+uglify-to-browserify: https://github.com/ForbesLindesay/uglify-to-browserify
 ----------
 
 Copyright (c) 2013 Forbes Lindesay
@@ -509,6 +507,33 @@ Copyright 2011, Robert Mustacchi. All rights reserved.
 Copyright 2011, Joyent, Inc. All rights reserved.
 
 
+----------
+eachline: https://github.com/williamwicks/node-eachline
+----------
+
+Copyright (c) 2013 William Wicks
+
+
+----------
+eventemitter2: https://github.com/hij1nx/EventEmitter2
+----------
+
+Copyright (c) 2011 hij1nx http://www.twitter.com/hij1nx
+
+
+----------
+stream-counter: https://github.com/superjoe30/node-stream-counter
+----------
+
+Copyright (c) 2013 Andrew Kelley
+
+----------
+uid2: https://github.com/coreh/uid2
+----------
+
+Copyright (c) 2013 Marco Aurelio
+
+
 ==============
 Apache License
 ==============
@@ -524,7 +549,8 @@ Unless required by applicable law or agreed to in writing, software distributed 
 """
 
 ----------
-mongo-drivers: https://github.com/mongodb/node-mongodb-native
+mongodb: (Node driver) https://github.com/mongodb/node-mongodb-native
+kerberos: https://github.com/christkv/kerberos
 ----------
 
 Copyright 2009 - 2010 Christian Amor Kvalheim.
@@ -1302,7 +1328,7 @@ Other
 =====
 
 ----------
-mimelib: https://github.com/andris9/mimelib
+mimelib-noiconv: https://github.com/andris9/mimelib
 mailcomposer: https://github.com/andris9/mailcomposer
 simplesmtp: https://github.com/andris9/simplesmtp
 rai: https://github.com/andris9/rai
@@ -1400,7 +1426,7 @@ For more information, please refer to <http://unlicense.org/>
 
 
 ----------
-mongodb: http://www.mongodb.org/
+MongoDB: http://www.mongodb.org/
 ----------
 
 LICENSE
@@ -1704,6 +1730,7 @@ The externally maintained libraries used by libuv are:
 
 ----------
 nodejs: http://nodejs.org/
+readable-stream: https://github.com/isaacs/readable-stream/
 ----------
 
 
