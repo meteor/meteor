@@ -402,6 +402,10 @@ Template.nav.maybe_current = function () {
   return Session.equals("section", this.id) ? "current" : "";
 };
 
+Template.nav_section.depthIs = function (n) {
+  return this.depth === n;
+};
+
 Handlebars.registerHelper('warning', function(fn) {
   return Template.warning_helper(fn(this));
 });
@@ -540,6 +544,10 @@ Handlebars.registerHelper('dstache', function() {
 
 Handlebars.registerHelper('tstache', function() {
   return '{{{';
+});
+
+Handlebars.registerHelper('lt', function () {
+  return '<';
 });
 
 Handlebars.registerHelper('api_section', function(id, nameFn) {
