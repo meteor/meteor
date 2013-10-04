@@ -2380,3 +2380,37 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
   });
 });
 
+Tinytest.add("minimongo - modifier affects selector", function (test) {
+  function testSelectorPaths (sel, paths, desc) {
+    test.isTrue(_.isEqual(LocalCollection._getSelectorPaths(sel), paths), desc);
+  }
+
+  testSelectorPaths({
+    foo: {
+      bar: 3,
+      baz: 42
+    }
+  }, ['foo'], "literal");
+
+  testSelectorPaths({
+    foo: 42,
+    bar: 33
+  }, ['foo', 'bar'], "literal");
+
+  testSelectorPaths({
+    foo: [ 'something' ],
+    bar: "asdf"
+  }, ['foo', 'bar'], "literal");
+
+  testSelectorPaths({
+    a: { $lt: 3 },
+    b: "you know, literal",
+    'path.is.complicated': { $not: { $regex: 'acme.*corp' } }
+  }, ['a', 'b', 'path.is.complicated'], "literal + operators");
+
+  testSelectorPaths({
+    $or: [{ 'a.b': 1 }, { 'a.b.c': { $lt: 22 } },
+     {$and: [{ 'x.d': { $ne: 5, $gte: 433 } }, { 'a.b': 234 }]}]
+  }, ['a.b', 'a.b.c', 'x.d'], 'group operators + duplicates');
+});
+
