@@ -1,5 +1,7 @@
 ## vNEXT
 
+## v0.6.6
+
 #### Security
 
 * Add `browser-policy` package for configuring and sending Content Security
