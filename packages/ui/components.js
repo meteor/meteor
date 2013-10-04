@@ -81,3 +81,50 @@ UI.With = Component.extend({
     buf.write(this.content);
   }
 });
+
+var callIfFunction = function (value) {
+  return (typeof value === 'function') ? value() : value;
+};
+
+UI.DynamicComponent = Component.extend({
+  kind: 'DynamicComponent',
+  render: function (buf) {
+    var kind = this.compKind;
+    var args = this.compArgs;
+
+    var kwArgs = args && args.length && args[0];
+    var posArgs = args && args.length > 1 && args.slice(1);
+
+    var props = _.extend({}, kwArgs);
+    if (typeof kind === 'function') {
+      // Calling a helper function as a template.  Evaluate the
+      // arguments and pass them to the function to get back
+      // a component.  Completely different use of args than
+      // when calling a bare component like `Template.foo` or
+      // a "helper" that is a constant component (in which case
+      // the args are used to extend the component).
+      //
+      // `kind` should be already bound with a `this`, so it
+      // doesn't matter what we pass in for the first argument
+      // to `apply`.  Same with arguments.
+      if (posArgs) {
+        for (var i = 0; i < posArgs.length; i++)
+          posArgs[i] = callIfFunction(posArgs[i]);
+      }
+      kind = kind.apply(null, posArgs || []);
+    } else {
+      if (posArgs && posArgs.length) {
+        if (posArgs.length > 1)
+          throw new Error("Can't have more than one argument to a template");
+
+        if (posArgs.length) {
+          props.data = posArgs[0];
+        }
+      }
+    }
+
+    if (kind) {
+      buf.write({kind: kind, props: props});
+    }
+  }
+});

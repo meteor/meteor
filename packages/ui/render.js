@@ -12,8 +12,8 @@ var DomRange = UI.DomRange;
 // - String (any raw HTML substring with no limitations)
 // - Component (a kind to instantiate and insert)
 // - function returning Component (reactive kind)
-// - { kind: functionOrComponent, ... } (reactive kind, instantiated
-//   with props (the `...`)
+// - { kind: functionOrComponent, props: dict } (reactive kind, instantiated
+//   with props
 // - { attrs: functionOrDictionary } - reactive dictionary of attributes,
 //   only allowed inside an HTML tag.  For example,
 //   `buf.write("<div ", { attrs: { 'class': 'foo' } }, ">text</div>")`.

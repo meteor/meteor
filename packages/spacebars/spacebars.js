@@ -662,19 +662,8 @@ Spacebars.compile = function (inputString, options) {
         }
       } else {
         // positional argument
-        if (forComponent) {
-          // for Components, only take one positional
-          // argument, and call it `data`
-          if (i === 0) {
-            options = (options || {});
-            options[toJSLiteral('data')] = argCode;
-          } else {
-            error("Only one positional argument is allowed");
-          }
-        } else {
-          args = (args || []);
-          args.push(argCode);
-        }
+        args = (args || []);
+        args.push(argCode);
       }
     });
 
@@ -683,9 +672,8 @@ Spacebars.compile = function (inputString, options) {
         options = (options || {});
         options[toJSLiteral(k)] = v;
       });
-
-      // components get one argument, the options dictionary
-      args = [options ? makeObjectLiteral(options) : '{}'];
+      // put options as dictionary at beginning of args for component
+      args.unshift(options ? makeObjectLiteral(options) : 'null');
     } else {
       // put options as dictionary at end of args
       if (options) {
@@ -698,26 +686,31 @@ Spacebars.compile = function (inputString, options) {
   };
 
   var codeGenComponent = function (path, args, funcInfo,
-                                   compOptions) {
+                                   compOptions, isBlock) {
 
     var nameCode = codeGenPath(path, funcInfo);
     var argCode = (args.length || compOptions) ?
-          codeGenArgs(args, funcInfo, compOptions || {})[0] : null;
+          codeGenArgs(args, funcInfo, compOptions || {}) : null;
 
     // XXX provide a better error message if
     // `foo` in `{{> foo}}` is not found?
-    // Instead of `null`, we could evaluate to the path
-    // as a string, and then the renderer could choke on
-    // that in a way where it ends up in the error message.
 
-    var compFunc = 'function () { return (Spacebars.call(' + nameCode +
-          ') || null); }';
+    var comp = nameCode;
 
     if (path.length === 1)
-      compFunc = 'Template[' + toJSLiteral(path[0]) + '] || ' + compFunc;
+      comp = '(Template[' + toJSLiteral(path[0]) + '] || ' + comp + ')';
 
-    return '{kind: ' + compFunc + (argCode ? ', props: ' + argCode : '') +
-      '}';
+    // XXX For now, handle the calling convention for `{{> foo}}` and `{{#foo}`
+    // using a wrapper component, which processes the arguments based
+    // on the type of tag and the type of `foo` (component or function).
+    // If `foo` changes reactively, the wrapper component is invalidated.
+    //
+    // This should be cleaned up to make the generated code cleaner and
+    // to not have all the extra components and DomRanges hurting
+    // peformance and showing up during debugging.
+    return '{kind: UI.DynamicComponent, props: {' +
+      (isBlock? 'isBlock: true, ' : '') + 'compKind: ' + comp +
+      (argCode ? ', compArgs: [' + argCode.join(', ') + ']': '') + '}}';
   };
 
   var codeGenBasicStache = function (tag, funcInfo) {
@@ -829,7 +822,7 @@ Spacebars.compile = function (inputString, options) {
                 renderables.push(codeGenComponent(
                   block.openTag.path,
                   block.openTag.args,
-                  funcInfo, extraArgs));
+                  funcInfo, extraArgs, true));
               } else {
                 switch (tag.type) {
                 case 'INCLUSION':
