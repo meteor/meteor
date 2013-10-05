@@ -177,12 +177,26 @@ Tinytest.add("spacebars - templates - inclusion dotted args", function (test) {
   // `{{> foo bar.baz}}`
   var tmpl = Template.spacebars_template_test_inclusion_dotted_args;
 
-  // XXX
+  var initCount = 0;
+  tmpl.foo = Template.spacebars_template_test_bracketed_this.extend({
+    init: function () { initCount++; }
+  });
+  var R = ReactiveVar('david');
+  tmpl.bar = function () {
+    // make sure `this` is bound correctly
+    return { baz: this.symbol + R.get() };
+  };
 
-  // This test should fail when `foo` is `bracketed_this` and `bar` is
-  // a function by detecting that when the return value of `bar` changes
-  // reactively, the whole `bracketed_this` is re-rendered even though
-  // a `data` change shouldn't cause that.  Or something.
+  var div = renderToDiv(tmpl.withData({symbol:'%'}));
+  test.equal(initCount, 1);
+  test.equal(div.innerHTML, '[%david]');
+
+  R.set('avi');
+  Deps.flush();
+  test.equal(div.innerHTML, '[%avi]');
+  // check that invalidating the argument to `foo` doesn't require
+  // creating a new `foo`.
+  test.equal(initCount, 1);
 });
 
 Tinytest.add("spacebars - templates - block helper", function (test) {
