@@ -27,8 +27,9 @@ var authenticate = function () {
   if (Meteor.loggingIn()) {
 
     console.log('filter: loading');
-    this.template = 'loading';
+    this.render('loading');
     this.layout = 'layout_no_header';
+    this.stop();
 
   } else {
 
@@ -37,17 +38,18 @@ var authenticate = function () {
     if (!user) {
 
       console.log('filter: signin');
-      this.template = 'signin';
+      this.render('signin');
       this.layout = 'layout_no_header';
-      return;
-
+      this.stop();
+      return
     }
 
     if (!emailVerified(user)) {
 
       console.log('filter: awaiting-verification');
-      this.template = 'awaiting-verification';
+      this.render('awaiting-verification');
       this.layout = 'layout';
+      this.stop();
 
     } else {
 
@@ -71,23 +73,21 @@ Router.configure({
 Router.map(function () {
   this.route('start', {
     path: '/',
-    controller: 'AuthenticateController'
+    before: authenticate
   });
   this.route('start', {
-    path: '/start',
-    controller: 'AuthenticateController'
+    before: authenticate
   });
 
   this.route('signin');
 
   this.route('secrets', {
-    path: '/secrets',
-    controller: 'AuthenticateController'
+    //controller: 'AuthenticateController'
+    before: authenticate
   });
 
   this.route('manage', {
-    path: '/manage',
-    controller: 'AuthenticateController'
+    before: authenticate
   });
 
   this.route('signout', App.signout);
