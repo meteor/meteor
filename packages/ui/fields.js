@@ -79,9 +79,5 @@ _extend(UI.Component, {
     if (typeof comp[id] !== 'function')
       throw new Error("Not a settable field: " + id);
     comp[id](value);
-  },
-  // convenient syntax
-  withData: function (data) {
-    return this.extend({data: data});
   }
 });
