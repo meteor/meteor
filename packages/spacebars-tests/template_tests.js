@@ -168,3 +168,15 @@ Tinytest.add("spacebars - templates - inclusion args 3", function (test) {
 
   // XXX
 });
+
+Tinytest.add("spacebars - templates - inclusion dotted args", function (test) {
+  // `{{> foo bar.baz}}`
+  var tmpl = Template.spacebars_template_test_inclusion_dotted_args;
+
+  // XXX
+
+  // This test should fail when `foo` is `bracketed_this` and `bar` is
+  // a function by detecting that when the return value of `bar` changes
+  // reactively, the whole `bracketed_this` is re-rendered even though
+  // a `data` change shouldn't cause that.  Or something.
+});
