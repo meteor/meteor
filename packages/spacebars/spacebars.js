@@ -945,12 +945,11 @@ Spacebars.index = function (value/*, identifiers*/) {
     if (typeof value === 'function') {
       // Call a getter -- in `{{foo.bar}}`, call `foo()` if it
       // is a function before indexing it with `bar`.
-      //
-      // In `{{foo blah=FooComponent.Bar}}`, treat
-      // `FooComponent` as a non-function.
       value = value.call(nextThis);
     }
     nextThis = value;
+    // support "soft dot" where if `foo` doesn't exist, you can
+    // still do `{{foo.bar.baz}}`.
     if (value)
       value = value[id];
   });
