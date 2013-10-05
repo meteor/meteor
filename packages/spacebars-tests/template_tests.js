@@ -4,6 +4,10 @@ var renderToDiv = function (comp) {
   return div;
 };
 
+var trim = function (str) {
+  return str.replace(/^\s+|\s+$/g, '');
+};
+
 Tinytest.add("spacebars - templates - simple helper", function (test) {
   var tmpl = Template.spacebars_template_test_simple_helper;
   tmpl.foo = function (x) {
@@ -179,4 +183,78 @@ Tinytest.add("spacebars - templates - inclusion dotted args", function (test) {
   // a function by detecting that when the return value of `bar` changes
   // reactively, the whole `bracketed_this` is re-rendered even though
   // a `data` change shouldn't cause that.  Or something.
+});
+
+Tinytest.add("spacebars - templates - block helper", function (test) {
+  var tmpl = Template.spacebars_template_test_block_helper;
+  var R = ReactiveVar(Template.spacebars_template_test_content);
+  tmpl.foo = function () {
+    return R.get();
+  };
+  var div = renderToDiv(tmpl);
+  test.equal(div.innerHTML.trim(), "bar");
+
+  R.set(Template.spacebars_template_test_else_content);
+  Deps.flush();
+  // XXX this doesn't work.
+  // test.equal(div.innerHTML.trim(), "baz");
+});
+
+Tinytest.add("spacebars - templates - block helper function with one string arg", function (test) {
+  var tmpl = Template.spacebars_template_test_block_helper_function_one_string_arg;
+  tmpl.foo = function (x) {
+    if (x === "bar")
+      return Template.spacebars_template_test_content;
+    else
+      return null;
+  };
+  var div = renderToDiv(tmpl);
+  test.equal(div.innerHTML.trim(), "content");
+});
+
+Tinytest.add("spacebars - templates - block helper function with one helper arg", function (test) {
+  var tmpl = Template.spacebars_template_test_block_helper_function_one_helper_arg;
+  var R = ReactiveVar("bar");
+  tmpl.bar = function () { return R.get(); };
+  tmpl.foo = function (x) {
+    if (x === "bar")
+      return Template.spacebars_template_test_content;
+    else
+      return null;
+  };
+  var div = renderToDiv(tmpl);
+  test.equal(div.innerHTML.trim(), "content");
+
+  R.set("baz");
+  Deps.flush();
+  test.equal(div.innerHTML.trim(), "");
+});
+
+Tinytest.add("spacebars - templates - block helper component with one helper arg", function (test) {
+  var tmpl = Template.spacebars_template_test_block_helper_component_one_helper_arg;
+  var R = ReactiveVar(true);
+  tmpl.bar = function () { return R.get(); };
+  var div = renderToDiv(tmpl);
+  test.equal(div.innerHTML.trim(), "content");
+
+  R.set(false);
+  Deps.flush();
+  test.equal(div.innerHTML.trim(), "");
+});
+
+Tinytest.add("spacebars - templates - block helper component with three helper args", function (test) {
+  var tmpl = Template.spacebars_template_test_block_helper_component_three_helper_args;
+  var R = ReactiveVar("bar");
+  tmpl.bar_or_baz = function () {
+    return R.get();
+  };
+  tmpl.equals = function (x, y) {
+    return x === y;
+  };
+  var div = renderToDiv(tmpl);
+  test.equal(div.innerHTML.trim(), "content");
+
+  R.set("baz");
+  Deps.flush();
+  test.equal(div.innerHTML.trim(), "");
 });

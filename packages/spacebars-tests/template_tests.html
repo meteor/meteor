@@ -11,6 +11,15 @@
 <template name="spacebars_template_test_bracketed_this">
   [{{this}}]
 </template>
+
+<template name="spacebars_template_test_content">
+  {{> content}}
+</template>
+
+<template name="spacebars_template_test_elsecontent">
+  {{> elseContent}}
+</template>
+
 <!-- -->
 
 
@@ -49,4 +58,36 @@
 
 <template name="spacebars_template_test_inclusion_dotted_args">
   {{> foo bar.baz}}
+</template>
+
+<template name="spacebars_template_test_block_helper">
+  {{#foo}}
+    bar
+  {{else}}
+    baz
+  {{/foo}}
+</template>
+
+<template name="spacebars_template_test_block_helper_function_one_string_arg">
+  {{#foo "bar"}}
+    content
+  {{/foo}}
+</template>
+
+<template name="spacebars_template_test_block_helper_function_one_helper_arg">
+  {{#foo bar}}
+    content
+  {{/foo}}
+</template>
+
+<template name="spacebars_template_test_block_helper_component_one_helper_arg">
+  {{#if bar}}
+    content
+  {{/if}}
+</template>
+
+<template name="spacebars_template_test_block_helper_component_three_helper_args">
+  {{#if equals bar_or_baz "bar"}}
+    content
+  {{/if}}
 </template>

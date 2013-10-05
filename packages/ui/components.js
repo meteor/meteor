@@ -124,21 +124,36 @@ UI.DynamicComponent = Component.extend({
       // `props` at the end of this function.
       kind = kind.apply(null, posArgs || []);
     } else {
+      // `kind` is a component (or template). we look at the next argument.
+      // * if it is a value, pass it as `data` for the component.
+      // * if is a function, wrap it to be called with the subseqeunt
+      //   arguments (which could be either a value or a helper, which
+      //   gets called)
+      // XXX IMPLEMENT KWARGS!
       if (posArgs && posArgs.length) {
-        if (posArgs.length > 1) {
-          // XXX BLOCK HELPER CALLING CONVENTION
-          // if `isBlock`, run `callIfFunction` on posArgs besides the
-          // first, then apply the first posArg to the rest (unless it
-          // is not a function, in which case ignore the rest).
-          // Should also feed an evaluated version of kwArgs to the
-          // first posArg and then not pass it as props at the end
-          // of this function (I think that's how keyword arguments
-          // work in `{{#foo bar baz x=1}}`, it calls `bar(baz, {x:1})`).
-          throw new Error("Can't have more than one argument to a template");
-        }
+        if (isBlock) {
+          if (typeof posArgs[0] === 'function') {
+            var f = posArgs[0];
+            posArgs.shift();
+            props.data = function() {
+              var args = _.map(posArgs, callIfFunction);
+              return f.apply(null, args);
+            };
+          } else {
+            if (posArgs.length > 1) {
+              throw new Error("Multiple arguments to block helpers only allowed "
+                              + "if first is a helper");
+            }
+            props.data = posArgs[0];
+          }
+        } else {
+          if (posArgs.length > 1) {
+            throw new Error("Can't have more than one argument to a template");
+          }
 
-        if (posArgs.length) {
-          props.data = posArgs[0];
+          if (posArgs.length) {
+            props.data = posArgs[0];
+          }
         }
       }
     }
