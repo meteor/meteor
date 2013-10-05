@@ -126,6 +126,14 @@ _extend(UI.Component, {
   // No child pointers (except in `dom`).
   parent: null,
 
+  // Extend this component with a given data context. This is
+  // typically used in template helpers generating a dynamic
+  // template. Using this doesn't require understanding the Component
+  // OO system, which we're not document yet and may change.
+  withData: function (data) {
+    return this.extend({data: data});
+  },
+
   // create a new subkind or instance whose proto pointer
   // points to this, with additional props set.
   extend: function (props) {

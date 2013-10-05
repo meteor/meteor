@@ -91,14 +91,12 @@ if (Meteor.isClient) {
     return '';
   };
 
-  Template.page.radio = function (key, value, label) {
-    return new Handlebars.SafeString(
-      Template.radio({key: key, value: value, label: label}));
+  Template.page.radio1 = function (key, value, label) {
+    return Template.radio.withData({key: key, value: value, label: label});
   };
 
-  Template.page.button = function (key, value, label) {
-    return new Handlebars.SafeString(
-      Template.button({key: key, value: value, label: label}));
+  Template.page.button1 = function (key, value, label) {
+    return Template.button.withData({key: key, value: value, label: label});
   };
 
   Template.page.match = function (kv) {
