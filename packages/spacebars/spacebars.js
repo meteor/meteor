@@ -933,6 +933,16 @@ Spacebars.compile = function (inputString, options) {
   return tokensToRenderFunc(tree.bodyTokens);
 };
 
+// `Spacebars.index(foo, "bar", "baz")` achieves a special kind of
+// `foo.bar.baz` used to implement dotted paths in templates:
+//
+// - Indexing a falsy thing just returns the thing (e.g. undefined)
+// - Indexing a function calls the function
+// - Functions that result from indexing have a bound value of `this`.
+//   In JavaScript, `x = foo.bar; x()` won't pass `foo` as `this` in `x`,
+//   but `x = Spacebars.index(foo, "bar"); x()` will call a wrapped
+//   version of the function `foo.bar` that always substitutes
+//   `foo` for `this`.
 Spacebars.index = function (value/*, identifiers*/) {
   var identifiers = Array.prototype.slice.call(arguments, 1);
 
