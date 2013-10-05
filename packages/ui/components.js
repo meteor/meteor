@@ -91,6 +91,9 @@ UI.DynamicComponent = Component.extend({
   render: function (buf) {
     var kind = this.compKind;
     var args = this.compArgs;
+    // `isBlock` means this is a block call like `{{#foo}}...{{/foo}}`
+    // rather than an insertion like `{{>foo}}`.  Note that we can't
+    // tell what kind of call this is otherwise.
     var isBlock = this.isBlock;
 
     // kwArgs and posArgs follow a "may be falsy if empty" convention
