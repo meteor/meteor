@@ -1,6 +1,6 @@
 ;(function () {
 
-  AuthenticateController = {};
+  //AuthenticateController = {};
 
   "use strict";
 
@@ -21,48 +21,65 @@ function emailVerified (user) {
   });
 }
 
-var authenticate = function () {
-  var user;
+var filters = {
 
-  if (Meteor.loggingIn()) {
+  /**
+   * ensure user is logged in and 
+   * email verified
+   */
+  authenticate: function () {
+    var user;
 
-    console.log('filter: loading');
-    this.render('loading');
-    this.layout = 'layout_no_header';
-    this.stop();
+    if (Meteor.loggingIn()) {
 
-  } else {
-
-    user = Meteor.user();
-
-    if (!user) {
-
-      console.log('filter: signin');
-      this.render('signin');
+      console.log('filter: loading');
+      this.render('loading');
       this.layout = 'layout_no_header';
-      this.stop();
-      return
-    }
-
-    if (!emailVerified(user)) {
-
-      console.log('filter: awaiting-verification');
-      this.render('awaiting-verification');
-      this.layout = 'layout';
       this.stop();
 
     } else {
 
-      console.log('filter: done');
-      this.layout = 'layout';
+      user = Meteor.user();
 
+      if (!user) {
+
+        console.log('filter: signin');
+        this.render('signin');
+        this.layout = 'layout_no_header';
+        this.stop();
+        return
+      }
+
+      if (!emailVerified(user)) {
+
+        console.log('filter: awaiting-verification');
+        this.render('awaiting-verification');
+        this.layout = 'layout';
+        this.stop();
+
+      } else {
+
+        console.log('filter: done');
+        this.layout = 'layout';
+
+      }
     }
-  }
-};
+  },  // end authenticate
 
-AuthenticateController = RouteController.extend({
-  before: authenticate
-});
+  /**
+   * nop used to illustrate multiple filters
+   * use-case
+   */
+  testFilter: function () {
+    console.log('test filter')
+  }
+
+};  // end filters
+
+//AuthenticateController = RouteController.extend({
+//  before: authenticate
+//});
+
 
 Router.configure({
   layout: 'layout',
@@ -73,21 +90,21 @@ Router.configure({
 Router.map(function () {
   this.route('start', {
     path: '/',
-    before: authenticate
+    before: [filters.authenticate, filters.testFilter]
   });
   this.route('start', {
-    before: authenticate
+    before: [filters.authenticate, filters.testFilter]
   });
 
   this.route('signin');
 
   this.route('secrets', {
     //controller: 'AuthenticateController'
-    before: authenticate
+    before: filters.authenticate
   });
 
   this.route('manage', {
-    before: authenticate
+    before: filters.authenticate
   });
 
   this.route('signout', App.signout);
