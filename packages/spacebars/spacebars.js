@@ -934,44 +934,59 @@ Spacebars.compile = function (inputString, options) {
   return tokensToRenderFunc(tree.bodyTokens);
 };
 
-// `Spacebars.index(foo, "bar", "baz")` achieves a special kind of
-// `foo.bar.baz` used to implement dotted paths in templates:
+// `Spacebars.index(foo, "bar", "baz")` performs a special kind
+// of `foo.bar.baz` that allows safe indexing of `null` and
+// indexing of functions to get other functions.
 //
-// - Indexing a falsy thing just returns the thing (e.g. undefined)
-// - Indexing a function calls the function
-// - Functions that result from indexing have a bound value of `this`.
-//   In JavaScript, `x = foo.bar; x()` won't pass `foo` as `this` in `x`,
-//   but `x = Spacebars.index(foo, "bar"); x()` will call a wrapped
-//   version of the function `foo.bar` that always substitutes
-//   `foo` for `this`.
-Spacebars.index = function (value/*, identifiers*/) {
-  var identifiers = Array.prototype.slice.call(arguments, 1);
-
-  // The object we got `curValue` from by indexing.
-  // For the value itself, we don't know the appropriate value
-  // of `this`, so we assume it is already bound.
-  var nextThis = null;
-
-  _.each(identifiers, function (id) {
-    if (typeof value === 'function') {
-      // Call a getter -- in `{{foo.bar}}`, call `foo()` if it
-      // is a function before indexing it with `bar`.
-      value = value.call(nextThis);
-    }
-    nextThis = value;
-    // support "soft dot" where if `foo` doesn't exist, you can
-    // still do `{{foo.bar.baz}}`.
-    if (value)
-      value = value[id];
-  });
-
-  if (typeof value === 'function') {
-    // bind `this` for resulting function, so it can be
-    // called with `Spacebars.call`.
-    value = _.bind(value, nextThis);
+// `foo` must be one of three types of values, and the return value
+// is also one of these three types:
+// * Falsy values
+// * Non-functions (i.e. constants)
+// * Fully "bound" functions, which take no arguments and ignore `this`
+//
+// `Spacebars.index("foo", bar)` behaves as follows:
+//
+// * If `foo` is falsy, `foo` is returned.
+//
+// * If either `foo` is a function or `foo.bar` is, then a new
+// fully-bound function is returned that, when called, will calculate
+// a "safe" version of `foo().bar()`, where "dot" on a falsy value
+// just returns the falsy value, and function calls are a no-op on
+// non-functions.
+//
+// * Otherwise, the non-function `foo.bar` is returned.
+Spacebars.index = function (value, id1/*, id2, ...*/) {
+  if (arguments.length > 2) {
+    // Note: doing this recursively is probably less efficient than
+    // doing it in an iterative loop.
+    var argsForRecurse = [];
+    argsForRecurse.push(Spacebars.index(value, id1));
+    argsForRecurse.push.apply(argsForRecurse,
+                              Array.prototype.slice.call(arguments, 2));
+    return Spacebars.index.apply(null, argsForRecurse);
   }
 
-  return value;
+  if (! value)
+    return value; // falsy, don't index, pass through
+
+  if (typeof value !== 'function') {
+    var result = value[id1];
+    if (typeof result !== 'function')
+      return result;
+    return function () {
+      return result.call(value);
+    };
+  }
+
+  return function () {
+    var foo = value();
+    if (! foo)
+      return foo; // falsy, don't index, pass through
+    var bar = foo[id1];
+    if (typeof bar !== 'function')
+      return bar;
+    return bar.call(foo);
+  };
 };
 
 Spacebars.call = function (value/*, args*/) {
