@@ -117,7 +117,7 @@ UI.DynamicComponent = Component.extend({
         for (var i = 0; i < posArgs.length; i++)
           posArgs[i] = callIfFunction(posArgs[i]);
       }
-      // XXX FIX KEYWORD ARGUMENTS
+      // XXX FIX KWARGS!
       // We should be passing an options dictionary as a final argument
       // to the `kind` function.  The options are `kwArgs` with the values
       // run through `callIfFunction`.  Then, we should NOT pass kwArgs in
