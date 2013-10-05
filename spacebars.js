@@ -673,6 +673,7 @@ Spacebars.compile = function (inputString, options) {
         options[toJSLiteral(k)] = v;
       });
       // put options as dictionary at beginning of args for component
+      args = (args || []);
       args.unshift(options ? makeObjectLiteral(options) : 'null');
     } else {
       // put options as dictionary at end of args
