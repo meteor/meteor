@@ -27,7 +27,7 @@ var authenticate = function () {
   if (Meteor.loggingIn()) {
 
     console.log('filter: loading');
-    this.render('loading');
+    this.template = 'loading';
     this.layout = 'layout_no_header';
 
   } else {
@@ -37,7 +37,7 @@ var authenticate = function () {
     if (!user) {
 
       console.log('filter: signin');
-      this.render('signin');
+      this.template = 'signin';
       this.layout = 'layout_no_header';
       return;
 
@@ -46,7 +46,7 @@ var authenticate = function () {
     if (!emailVerified(user)) {
 
       console.log('filter: awaiting-verification');
-      this.render('awaiting-verification');
+      this.template = 'awaiting-verification';
       this.layout = 'layout';
 
     } else {
@@ -64,44 +64,39 @@ AuthenticateController = RouteController.extend({
 
 Router.configure({
   layout: 'layout',
-  loadingTemplate: 'loading'
+  loadingTemplate: 'loading',
+  notFoundTemplate: 'not_found'
 });
 
 Router.map(function () {
   this.route('start', {
     path: '/',
-    onBeforeRun: function () {
-      console.log('start run')
-    },
-    onBeforeReRun: function () {
-      console.log('start re-run')
-    },
+    controller: 'AuthenticateController'
+  });
+  this.route('start', {
+    path: '/start',
     controller: 'AuthenticateController'
   });
 
   this.route('signin');
+
+  this.route('secrets', {
+    path: '/secrets',
+    controller: 'AuthenticateController'
+  });
+
+  this.route('manage', {
+    path: '/manage',
+    controller: 'AuthenticateController'
+  });
+
+  this.route('signout', App.signout);
+
+  // why is this necessary when notFoundTemplate is
+  // set in Router.configure?
+  this.route('*', {
+    template: 'not_found'
+  });
 });
-
-
-/*
-Meteor.pages({
-  '/': { to: 'start', as: 'root', nav: 'start', 
-         before: [authenticate] },
-  '/signin': 'signin',
-  '/start': { to: 'start', nav: 'start', 
-         before: [authenticate] },
-  '/secrets': { to: 'secrets', nav: 'secrets', 
-         before: [authenticate] },
-  '/manage': { to: 'manage', nav: 'manage', 
-         before: [authenticate] },
-  '/signout': App.signout,
-  '*': 'not_found'
-}, {
-  defaults: {
-    layout: 'layout_no_header'
-  }
-});
-*/
-
 
 }());
