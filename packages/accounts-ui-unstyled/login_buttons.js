@@ -10,10 +10,6 @@ Template.loginButtons.events({
   }
 });
 
-Template.loginButtons.preserve({
-  'input[id]': Spark._labelFromIdOrName
-});
-
 //
 // helpers
 //
