@@ -194,10 +194,9 @@ Tinytest.add("spacebars - templates - block helper", function (test) {
   var div = renderToDiv(tmpl);
   test.equal(div.innerHTML.trim(), "bar");
 
-  R.set(Template.spacebars_template_test_else_content);
+  R.set(Template.spacebars_template_test_elsecontent);
   Deps.flush();
-  // XXX this doesn't work.
-  // test.equal(div.innerHTML.trim(), "baz");
+  test.equal(div.innerHTML.trim(), "baz");
 });
 
 Tinytest.add("spacebars - templates - block helper function with one string arg", function (test) {
