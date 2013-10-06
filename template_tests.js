@@ -170,7 +170,37 @@ Tinytest.add("spacebars - templates - inclusion args 3", function (test) {
   // `{{> foo bar q=baz}}`
   var tmpl = Template.spacebars_template_test_inclusion_args3;
 
-  // XXX
+  tmpl.foo = function (a, options) {
+    return UI.Text.withData(a + options.q);
+  };
+  var R1 = ReactiveVar(3);
+  var R2 = ReactiveVar(4);
+  tmpl.bar = function () { return R1.get(); };
+  tmpl.baz = function () { return R2.get(); };
+  var div = renderToDiv(tmpl);
+  test.equal(div.innerHTML, '7');
+  R1.set(11);
+  R2.set(13);
+  Deps.flush();
+  test.equal(div.innerHTML, '24');
+
+  tmpl.foo = UI.Component.extend({
+    render: function (buf) {
+      // note: weird to assume this.data() is a function rather than
+      // calling-if-function.  But what's the best way to write that
+      // in component code?  Probably `this.get()`, and likewise for
+      // `this.get('q')`.
+      buf.write(String(this.data() + this.q()));
+    }
+  });
+  R1 = ReactiveVar(20);
+  R2 = ReactiveVar(23);
+  div = renderToDiv(tmpl);
+  test.equal(div.innerHTML, '43');
+  R1.set(10);
+  R2.set(17);
+  Deps.flush();
+  test.equal(div.innerHTML, '27');
 });
 
 Tinytest.add("spacebars - templates - inclusion dotted args", function (test) {
