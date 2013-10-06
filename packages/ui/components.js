@@ -85,6 +85,13 @@ UI.With = Component.extend({
 var callIfFunction = function (value) {
   return (typeof value === 'function') ? value() : value;
 };
+var evalKeywordArgs = function (dict) {
+  var ret = {};
+  _.each(dict, function (v, k) {
+    ret[k] = callIfFunction(v);
+  });
+  return ret;
+};
 
 UI.DynamicComponent = Component.extend({
   kind: 'DynamicComponent',
@@ -96,10 +103,8 @@ UI.DynamicComponent = Component.extend({
     // tell what kind of call this is otherwise.
     var isBlock = this.isBlock;
 
-    // kwArgs and posArgs follow a "may be falsy if empty" convention
-    // to reduce the number of empty array objects floating around.
-    var kwArgs = args && args.length && args[0];
-    var posArgs = args && args.length > 1 && args.slice(1);
+    var kwArgs = (args && args.length && args[0]) || {};
+    var posArgs = (args && args.length > 1 && args.slice(1)) || [];
 
     var props = _.extend({}, kwArgs);
     if (typeof kind === 'function') {
@@ -113,30 +118,58 @@ UI.DynamicComponent = Component.extend({
       // `kind` should be already bound with a `this`, so it
       // doesn't matter what we pass in for the first argument
       // to `apply`.  Same with arguments.
-      if (posArgs) {
-        for (var i = 0; i < posArgs.length; i++)
-          posArgs[i] = callIfFunction(posArgs[i]);
+      var args = _.map(posArgs, callIfFunction);
+      // May invalidate this render:
+      var evaledKWArgs = evalKeywordArgs(kwArgs);
+      args.push(evaledKWArgs);
+      props = null;
+      if (isBlock) {
+        // Prevent the `content` and `elseContent` keyword arguments
+        // from going to the function; send them to the returned
+        // component instead.  We could send them to the function,
+        // but it would have make sure to use them, which is a pain!
+        //
+        // XXX revisit this when we determine whether `content` and
+        // `elseContent` are really treated as keyword args, e.g.
+        // whether you can say `{{>if content=... elseContent=...}}`,
+        // and when we get rid of DynamicComponent so we don't need
+        // this logic.
+        delete evaledKWArgs.content;
+        delete evaledKWArgs.elseContent;
+        if (kwArgs.content || kwArgs.elseContent) {
+          props = { content: kwArgs.content,
+                    elseContent: kwArgs.elseContent };
+        }
       }
-      // XXX FIX KWARGS!
-      // We should be passing an options dictionary as a final argument
-      // to the `kind` function.  The options are `kwArgs` with the values
-      // run through `callIfFunction`.  Then, we should NOT pass kwArgs in
-      // `props` at the end of this function.
-      kind = kind.apply(null, posArgs || []);
+      // May invalidate this render:
+      kind = kind.apply(null, args);
     } else {
       // `kind` is a component (or template). we look at the next argument.
       // * if it is a value, pass it as `data` for the component.
       // * if is a function, wrap it to be called with the subseqeunt
       //   arguments (which could be either a value or a helper, which
       //   gets called)
-      // XXX IMPLEMENT KWARGS!
       if (posArgs && posArgs.length) {
         if (isBlock) {
+          // don't pass keyword arguments to the component; they will
+          // either go to the function in the first argument or be ignored.
+          props = null;
+          // see earlier comment about special treatment of `content`
+          // and `elseContent` keyword args
+          if (kwArgs.content || kwArgs.elseContent) {
+            props = { content: kwArgs.content,
+                      elseContent: kwArgs.elseContent };
+          }
           if (typeof posArgs[0] === 'function') {
             var f = posArgs[0];
             posArgs.shift();
             props.data = function() {
               var args = _.map(posArgs, callIfFunction);
+              var evaledKWArgs = evalKeywordArgs(kwArgs);
+              // see earlier comment
+              delete evaledKWArgs.content;
+              delete evaledKWArgs.elseContent;
+              args.push(evaledKWArgs);
               return f.apply(null, args);
             };
           } else {
