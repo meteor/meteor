@@ -1206,7 +1206,7 @@ _extend(UI.Component, {
 UI.Component.parented = function () {
   var self = this;
   for (var comp = self; comp; comp = comp._super) {
-    var events = comp.hasOwnProperty('_events') && comp._events;
+    var events = (comp.hasOwnProperty('_events') && comp._events) || null;
     _.each(events, function (esh) { // {events, selector, handler}
       // wrap the handler here, per instance of the template that
       // declares the event map, so we can pass the instance to
