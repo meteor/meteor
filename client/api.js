@@ -967,37 +967,6 @@ Template.api.dependency_hasdependents = {
 // writeFence
 // invalidationCrossbar
 
-Template.api.render = {
-  id: "meteor_render",
-  name: "Meteor.render(htmlFunc)",
-  locus: "Client",
-  descr: ["Create DOM nodes that automatically update themselves as data changes."],
-  args: [
-    {name: "htmlFunc",
-     type: "Function returning a string of HTML",
-     descr: "Function that generates HTML to be rendered.  Called immediately and re-run whenever data changes.  May also be a string of HTML instead of a function."}
-  ]
-};
-
-Template.api.renderList = {
-  id: "meteor_renderlist",
-  name: "Meteor.renderList(observable, docFunc, [elseFunc])",
-  locus: "Client",
-  descr: ["Create DOM nodes that automatically update themselves based on the results of a database query."],
-  args: [
-    {name: "observable",
-     type: "Cursor",
-     type_link: "meteor_collection_cursor",
-     descr: "Query cursor to observe as a reactive source of ordered documents."},
-    {name: "docFunc",
-     type: "Function taking a document and returning HTML",
-     descr: "Render function to be called for each document."},
-    {name: "elseFunc",
-     type: "Function returning HTML",
-     descr: "Optional.  Render function to be called when query is empty."}
-  ]
-};
-
 
 Template.api.eventmaps = {
   id: "eventmaps",
