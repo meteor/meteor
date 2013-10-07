@@ -181,13 +181,14 @@ var startProxy = function (outerPort, innerPort, callback) {
   // don't crash if the app doesn't respond. instead return an error
   // immediately. This shouldn't happen much since we try to not send requests
   // if the app is down.
-  // XXX should we also handle http-proxy:outgoing:ws:error, for a failed
-  // websocket?
   proxy.ee.on('http-proxy:outgoing:web:error', function (err, req, res) {
     res.writeHead(503, {
       'Content-Type': 'text/plain'
     });
     res.end('Unexpected error.');
+  });
+  proxy.ee.on('http-proxy:outgoing:ws:error', function (err, req, socket) {
+    socket.close();
   });
 
   server.listen(outerPort, callback);
