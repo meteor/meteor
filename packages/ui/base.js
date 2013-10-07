@@ -870,6 +870,7 @@ _extend(UI.Component, {
     return self;
   },
 */
+/*
 _extend(UI.Component, {
   $: function (selector) {
     var self = this;
@@ -923,6 +924,7 @@ _extend(UI.Component, {
     return results;
   }
 });
+*/
 /*
   autorun: function (compFunc) {
     var self = this;
