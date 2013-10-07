@@ -439,7 +439,7 @@ Template.api_box.bare = function() {
           (this.options && this.options.length)) ? "" : "bareapi";
 };
 
-var check_links = function() {
+check_links = function() {
   var body = document.body.innerHTML;
 
   var id_set = {};
