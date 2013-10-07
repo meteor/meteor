@@ -175,7 +175,7 @@ UI.DynamicComponent = Component.extend({
           } else {
             if (posArgs.length > 1) {
               throw new Error("Multiple arguments to block helpers only allowed "
-                              + "if first is a helper");
+                              + "if the first argument is a helper");
             }
             props.data = posArgs[0];
           }
