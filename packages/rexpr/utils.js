@@ -45,8 +45,8 @@ getRegexMatcher = function ( regex ) {
   };
 };
 
-// Match one or more characters until: ", ', \, or EOL/EOF, written as (?!.)
-// (meaning there's no non-newline char next).
+// Match one or more characters until: ", ', \, or EOL/EOF.
+// EOL/EOF is written as (?!.) (meaning there's no non-newline char next).
 var getStringMiddle = getRegexMatcher(/^(?=.)[^"'\\]+?(?:(?!.)|(?=["'\\]))/);
 
 // Match one escape sequence, including the backslash.
@@ -80,7 +80,7 @@ var getQuotedStringMatcher = function (quote, okQuote) {
       } else {
         next = getLineContinuation( tokenizer );
         if ( next ) {
-          // convert \(newline-like) into a \u escape
+          // convert \(newline-like) into a \u escape, which is allowed in JSON
           literal += '\\u' +
             ('000' + next.charCodeAt(1).toString(16)).slice(-4);
         } else {
