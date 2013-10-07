@@ -330,6 +330,7 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
   });
 
   this.setUserId(user._id);
+  this._setLoginToken(stampedLoginToken.token);
   return {
     token: stampedLoginToken.token,
     tokenExpires: Accounts._tokenExpiration(stampedLoginToken.when),
@@ -421,6 +422,7 @@ Meteor.methods({verifyEmail: function (token) {
      $push: {'services.resume.loginTokens': stampedLoginToken}});
 
   this.setUserId(user._id);
+  this._setLoginToken(stampedLoginToken.token);
   return {
     token: stampedLoginToken.token,
     tokenExpires: Accounts._tokenExpiration(stampedLoginToken.when),
@@ -499,6 +501,7 @@ Meteor.methods({createUser: function (options) {
 
   // client gets logged in as the new user afterwards.
   this.setUserId(result.id);
+  this._setLoginToken(result.token);
   return result;
 }});
 
