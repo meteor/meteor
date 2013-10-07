@@ -938,21 +938,19 @@ Spacebars.compile = function (inputString, options) {
 // of `foo.bar.baz` that allows safe indexing of `null` and
 // indexing of functions to get other functions.
 //
-// `foo` must be one of three types of values, and the return value
-// is also one of these three types:
-// * Falsy values
-// * Non-functions (i.e. constants)
-// * Fully "bound" functions, which take no arguments and ignore `this`
+// In `Spacebars.index(foo, "bar")`, `foo` is assumed to be either
+// a non-function value or a "fully-bound" function wrapping a value,
+// taking no arguments and ignoring `this`.
 //
-// `Spacebars.index("foo", bar)` behaves as follows:
+// `Spacebars.index(foo, "bar")` behaves as follows:
 //
 // * If `foo` is falsy, `foo` is returned.
 //
 // * If either `foo` is a function or `foo.bar` is, then a new
-// fully-bound function is returned that, when called, will calculate
-// a "safe" version of `foo().bar()`, where "dot" on a falsy value
-// just returns the falsy value, and function calls are a no-op on
-// non-functions.
+// function is returned that, when called on arguments `args...`,
+// calculates a "safe" version of `foo().bar(args...)`,
+// where "dot" on a falsy value just returns the falsy value,
+// and function calls are a no-op on non-functions.
 //
 // * Otherwise, the non-function `foo.bar` is returned.
 Spacebars.index = function (value, id1/*, id2, ...*/) {
@@ -973,19 +971,19 @@ Spacebars.index = function (value, id1/*, id2, ...*/) {
     var result = value[id1];
     if (typeof result !== 'function')
       return result;
-    return function () {
-      return result.call(value);
+    return function (/*arguments*/) {
+      return result.apply(value, arguments);
     };
   }
 
-  return function () {
+  return function (/*arguments*/) {
     var foo = value();
     if (! foo)
       return foo; // falsy, don't index, pass through
     var bar = foo[id1];
     if (typeof bar !== 'function')
       return bar;
-    return bar.call(foo);
+    return bar.apply(foo, arguments);
   };
 };
 

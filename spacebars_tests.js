@@ -521,4 +521,13 @@ Tinytest.add("spacebars - Spacebars.index", function (test) {
   test.equal(Spacebars.index(0, 'abc', 'def'), 0);
   test.equal(Spacebars.index(function () { return null; }, 'abc', 'def')(), null);
   test.equal(Spacebars.index(function () { return 0; }, 'abc', 'def')(), 0);
+
+  // test that in `foo.bar`, `bar` may be a function that takes arguments.
+  test.equal(Spacebars.index(
+    { one: 1, inc: function (x) { return this.one + x; } }, 'inc')(6), 7);
+  test.equal(Spacebars.index(
+    function () {
+      return { one: 1, inc: function (x) { return this.one + x; } };
+    }, 'inc')(8), 9);
+
 });
