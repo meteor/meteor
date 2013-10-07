@@ -357,7 +357,7 @@ Tinytest.add("spacebars - templates - block helper with dotted arg", function (t
   test.equal(initCount, 1);
 });
 
-Tinytest.add("spacebars - templates - content in if", function (test) {
+Tinytest.add("spacebars - templates - nested content", function (test) {
   // Test that `{{> content}}` in an `{{#if}}` works.
 
   // ```
@@ -378,11 +378,23 @@ Tinytest.add("spacebars - templates - content in if", function (test) {
   //  {{/spacebars_template_test_iftemplate}}
   // ```
 
-  var tmpl = Template.spacebars_template_test_content_in_if;
+  var tmpl = Template.spacebars_template_test_nested_content;
   var R = ReactiveVar(true);
   tmpl.flag = function () {
     return R.get();
   };
   var div = renderToDiv(tmpl);
   test.equal(trim(div.innerHTML), 'hello');
+  // XXX test reactive update
+
+  // Also test that `{{> content}}` in a custom block helper works.
+  tmpl = Template.spacebars_template_test_nested_content2;
+  R = ReactiveVar(true);
+  tmpl.x = function () {
+    return R.get();
+  };
+  div = renderToDiv(tmpl);
+  test.equal(trim(div.innerHTML), 'hello');
+  // XXX test reactive update
+
 });
