@@ -197,22 +197,26 @@ var removeLoginToken = function (userId, loginToken) {
 var expireTokenInterval;
 
 // Deletes expired tokens from the database and closes all open connections
-// associated with these tokens. Exported for tests. oldestValidDate is used
-// only by tests to simulate expiring tokens without waiting for them to
-// actually expire.
-var expireTokens = Accounts._expireTokens = function (oldestValidDate) {
+// associated with these tokens.
+//
+// Exported for tests. Also, the arguments are only used by
+// tests. oldestValidDate is simulate expiring tokens without waiting
+// for them to actually expire. userId is used by tests to only expire
+// tokens for the test user.
+var expireTokens = Accounts._expireTokens = function (oldestValidDate, userId) {
   var tokenLifetimeMs = getTokenLifetimeMs();
   oldestValidDate = oldestValidDate ||
     (new Date(new Date() - tokenLifetimeMs));
+  var userFilter = userId ? {_id: userId} : {};
 
   // Backwards compatible with older versions of meteor that stored login token
   // timestamps as numbers.
-  Meteor.users.update({
+  Meteor.users.update(_.extend(userFilter, {
     $or: [
       { "services.resume.loginTokens.when": { $lt: oldestValidDate } },
       { "services.resume.loginTokens.when": { $lt: +oldestValidDate } }
     ]
-  }, {
+  }), {
     $pull: {
       "services.resume.loginTokens": {
         $or: [

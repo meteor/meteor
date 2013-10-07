@@ -42,7 +42,7 @@ Meteor.methods({
   },
 
   expireTokens: function () {
-    Accounts._expireTokens(new Date());
+    Accounts._expireTokens(new Date(), this.userId);
   },
   removeUser: function (username) {
     Meteor.users.remove({ "username": username });
