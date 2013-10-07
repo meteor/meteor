@@ -778,7 +778,7 @@ Template.api.cursor_observe_changes = {
   ]
 };
 
-Template.api.id = {
+Template.api.random_id = {
   id: "meteor_id",
   name: "Random.id()",
   locus: "Anywhere",
