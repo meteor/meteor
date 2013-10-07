@@ -1310,7 +1310,7 @@ you call [`Session.get`](#session_get)`("currentList")`
 from inside a template, the template will automatically be rerendered
 whenever [`Session.set`](#session_set)`("currentList", x)` is called.
 
-{{> api_box set}}
+{{> api_box session_set}}
 
 Example:
 
@@ -1327,7 +1327,7 @@ Example:
 This is useful in initialization code, to avoid re-initializing a session
 variable every time a new version of your app is loaded.
 
-{{> api_box get}}
+{{> api_box session_get}}
 
 Example:
 

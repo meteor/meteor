@@ -69,10 +69,10 @@
 
 
 <template name="dtdd_helper">
-<dt><span class="name">{{{name}}}</span>
-  {{#if type}}<span class="type">{{type}}</span>{{/if}}
-</dt>
-<dd>{{#better_markdown}}{{{descr}}}{{/better_markdown}}</dd>
+  <dt><span class="name">{{{name}}}</span>
+    {{#if type}}<span class="type">{{type}}</span>{{/if}}
+  </dt>
+  <dd>{{#better_markdown}}{{> content}}{{/better_markdown}}</dd>
 </template>
 
 

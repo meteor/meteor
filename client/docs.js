@@ -400,20 +400,19 @@ Template.nav_section.depthIs = function (n) {
   return this.depth === n;
 };
 
-// "name" argument may be provided as part of options.hash instead.
+// "name" argument may be provided as part of options instead.
 Handlebars.registerHelper('dtdd', function(name, options) {
-  if (options && options.hash) {
+  if (options) {
     // {{#dtdd name}}
-    options.hash.name = name;
+    options.name = name;
   } else {
     // {{#dtdd name="foo" type="bar"}}
     options = name;
   }
 
   return Template.dtdd_helper.withData({
-    descr: options.fn(this),
-    name: options.hash.name,
-    type: options.hash.type
+    name: options.name,
+    type: options.type
   });
 });
 

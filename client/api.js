@@ -1568,7 +1568,8 @@ Template.api.bindEnvironment = {
   ]
 };
 
-Template.api.set = {
+// Can't name this '.set', since that's a method on components.
+Template.api.session_set = {
   id: "session_set",
   name: "Session.set(key, value)",
   locus: "Client",
@@ -1598,7 +1599,8 @@ Template.api.setDefault = {
   ]
 };
 
-Template.api.get = {
+// Can't name this '.get', since that's a method on components.
+Template.api.session_get = {
   id: "session_get",
   name: "Session.get(key)",
   locus: "Client",
