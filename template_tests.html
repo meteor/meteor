@@ -20,6 +20,14 @@
   {{> elseContent}}
 </template>
 
+<template name="spacebars_template_test_iftemplate">
+  {{#if condition}}
+    {{> content}}
+  {{else}}
+    {{> elseContent}}
+  {{/if}}
+</template>
+
 <!-- -->
 
 
@@ -95,3 +103,12 @@
 <template name="spacebars_template_test_block_helper_dotted_arg">
   {{#foo bar.baz qux}}{{/foo}}
 </template>
+
+<template name="spacebars_template_test_content_in_if">
+  {{#spacebars_template_test_iftemplate condition=flag}}
+    hello
+  {{else}}
+    world
+  {{/spacebars_template_test_iftemplate}}
+</template>
+
