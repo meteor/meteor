@@ -6,9 +6,6 @@
     module.exports = gju;
   }
 
-  // Export for Meteor uni-package
-  GeoJSON = gju;
-
   // adapted from http://www.kevlindev.com/gui/math/intersection/Intersection.js
   gju.lineStringsIntersect = function (l1, l2) {
     var intersects = [];

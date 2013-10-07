@@ -5,11 +5,12 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.export('GeoJSON');
-  api.add_files(['geojson-utils.js']);
+  api.add_files(['pre.js', 'geojson-utils.js', 'post.js']);
 });
 
 Package.on_test(function (api) {
   api.use('tinytest');
-  api.add_files(['geojson-utils.js', 'geojson-utils.tests.js'], 'client');
+  api.use('geojson-utils');
+  api.add_files(['geojson-utils.tests.js'], 'client');
 });
 
