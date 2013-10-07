@@ -30,6 +30,8 @@
 * Improve behavior of `$ne`, `$nin`, and `$not` selectors with objects containing
   arrays.  #1451
 
+* `$near` operator for `2d` and `2dsphere` indices.
+
 #### DDP
 
 * Fix infinite loop if a client disconnects while a long yielding method is
