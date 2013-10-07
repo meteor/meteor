@@ -116,6 +116,7 @@ Accounts.callLoginMethod = function (options) {
               if (error) {
                 makeClientLoggedOut();
               }
+              // XXX XXX really? remove? _.once?
               options.userCallback(error);
             }});
         }
