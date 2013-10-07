@@ -385,7 +385,12 @@ Tinytest.add("spacebars - templates - nested content", function (test) {
   };
   var div = renderToDiv(tmpl);
   test.equal(trim(div.innerHTML), 'hello');
-  // XXX test reactive update
+  R.set(false);
+  Deps.flush();
+  test.equal(trim(div.innerHTML), 'world');
+  R.set(true);
+  Deps.flush();
+  test.equal(trim(div.innerHTML), 'hello');
 
   // Also test that `{{> content}}` in a custom block helper works.
   tmpl = Template.spacebars_template_test_nested_content2;
@@ -395,6 +400,10 @@ Tinytest.add("spacebars - templates - nested content", function (test) {
   };
   div = renderToDiv(tmpl);
   test.equal(trim(div.innerHTML), 'hello');
-  // XXX test reactive update
-
+  R.set(false);
+  Deps.flush();
+  test.equal(trim(div.innerHTML), 'world');
+  R.set(true);
+  Deps.flush();
+  test.equal(trim(div.innerHTML), 'hello');
 });
