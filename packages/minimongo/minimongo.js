@@ -1186,6 +1186,7 @@ LocalCollection._compileProjection = function (fields) {
 // (including all $or/$and/$nor/$not branches)
 var isGeoQuery = function (selector) {
   return _.any(selector, function (val, key) {
+    // Note: _.isObject matches objects and arrays
     return key === "$near" || (_.isObject(val) && isGeoQuery(val));
   });
 };
@@ -1195,6 +1196,7 @@ var isGeoQuerySpecial = function (selector) {
   return _.any(selector, function (val, key) {
     if (_.contains(['$or', '$and', '$nor', '$not'], key))
       return isGeoQuery(val);
+    // Note: _.isObject matches objects and arrays
     return _.isObject(val) && isGeoQuerySpecial(val);
   });
 };

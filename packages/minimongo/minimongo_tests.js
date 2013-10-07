@@ -2342,5 +2342,22 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
               { x: 0 }]
     });
   });
+  test.throws(function () {
+    coll.find({
+      $and: [{
+        $and: [{
+          location: {
+            $near: {
+              $geometry: {
+                type: "Point",
+                coordinates: [-122.4154282, 37.7746115]
+              },
+              $maxDistance: 1
+            }
+          }
+        }]
+      }]
+    });
+  });
 });
 
