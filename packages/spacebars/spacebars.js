@@ -698,8 +698,17 @@ Spacebars.compile = function (inputString, options) {
 
     var comp = nameCode;
 
-    if (path.length === 1)
+    if (path.length === 1) {
       comp = '(Template[' + toJSLiteral(path[0]) + '] || ' + comp + ')';
+      // XXX MESSAY HACK FOR LEXICAL SCOPE OF CONTENT / ELSECONTENT.
+      // Check for presence of local variables defined at top level of
+      // of template decl, through `preamble` option to `Spacebars.compile`,
+      // passed from `html_scanner`.
+      if (path[0] === 'content' || path[0] === 'elseContent') {
+        comp = '(typeof _local_' + path[0] + ' !== "undefined" ? _local_' +
+          path[0] + ' : ' + comp + ')';
+      }
+    }
 
     // XXX For now, handle the calling convention for `{{> foo}}` and `{{#foo}`
     // using a wrapper component, which processes the arguments based

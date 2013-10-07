@@ -104,11 +104,27 @@
   {{#foo bar.baz qux}}{{/foo}}
 </template>
 
-<template name="spacebars_template_test_content_in_if">
+<template name="spacebars_template_test_nested_content">
   {{#spacebars_template_test_iftemplate condition=flag}}
     hello
   {{else}}
     world
   {{/spacebars_template_test_iftemplate}}
+</template>
+
+<template name="spacebars_template_test_iftemplate2">
+  {{#spacebars_template_test_iftemplate condition=flag}}
+    {{> content}}
+  {{else}}
+    {{> elseContent}}
+  {{/spacebars_template_test_iftemplate}}
+</template>
+
+<template name="spacebars_template_test_nested_content2">
+  {{#spacebars_template_test_iftemplate2 flag=x}}
+    hello
+  {{else}}
+    world
+  {{/spacebars_template_test_iftemplate2}}
 </template>
 
