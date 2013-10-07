@@ -764,7 +764,7 @@ Spacebars.compile = function (inputString, options) {
 //    }
   };
 
-  var tokensToRenderFunc = function (tokens, indent) {
+  var tokensToRenderFunc = function (tokens, indent, isTopLevel) {
     var oldIndent = indent || '';
     indent = oldIndent + '  ';
 
@@ -810,12 +810,12 @@ Spacebars.compile = function (inputString, options) {
                 // aren't created per call to render.
                 var block = tag;
                 var extraArgs = {
-                  content: 'UI.Component.extend({render: ' +
+                  __content: 'UI.Component.extend({render: ' +
                     tokensToRenderFunc(block.bodyTokens, indent) +
                     '})'
                 };
                 if (block.elseTokens) {
-                  extraArgs.elseContent =
+                  extraArgs.__elseContent =
                     'UI.Component.extend({render: ' +
                     tokensToRenderFunc(block.elseTokens, indent) +
                     '})';
@@ -922,7 +922,9 @@ Spacebars.compile = function (inputString, options) {
       }
     });
 
-    return 'function (buf) {' +
+    var preamble = (isTopLevel && options && options.preamble) || '';
+
+    return 'function (buf) {' + preamble +
       (renderables.length ?
        (funcInfo.usedSelf ?
         '\n' + indent + 'var self = this;' : '') +
@@ -931,7 +933,7 @@ Spacebars.compile = function (inputString, options) {
        oldIndent : '') + '}';
   };
 
-  return tokensToRenderFunc(tree.bodyTokens);
+  return tokensToRenderFunc(tree.bodyTokens, '', true);
 };
 
 // `Spacebars.index(foo, "bar", "baz")` performs a special kind
