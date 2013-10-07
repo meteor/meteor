@@ -301,3 +301,58 @@ Tinytest.add("spacebars - templates - block helper component with three helper a
   Deps.flush();
   test.equal(div.innerHTML.trim(), "");
 });
+
+Tinytest.add("spacebars - templates - block helper with dotted arg", function (test) {
+  var tmpl = Template.spacebars_template_test_block_helper_dotted_arg;
+  var R1 = ReactiveVar(1);
+  var R2 = ReactiveVar(10);
+  var R3 = ReactiveVar(100);
+
+  var initCount = 0;
+  tmpl.foo = Template.spacebars_template_test_bracketed_this.extend({
+    init: function () { initCount++; }
+  });
+  tmpl.bar = function () {
+    return {
+      r1: R1.get(),
+      baz: function (r3) {
+        return this.r1 + R2.get() + r3;
+      }
+    };
+  };
+  tmpl.qux = function () { return R3.get(); };
+
+  var div = renderToDiv(tmpl);
+  test.equal(div.innerHTML, "[111]");
+  test.equal(initCount, 1);
+
+  R1.set(2);
+  Deps.flush();
+  test.equal(div.innerHTML, "[112]");
+  test.equal(initCount, 1);
+
+  R2.set(20);
+  Deps.flush();
+  test.equal(div.innerHTML, "[122]");
+  test.equal(initCount, 1);
+
+  R3.set(200);
+  Deps.flush();
+  test.equal(div.innerHTML, "[222]");
+  test.equal(initCount, 1);
+
+  R2.set(30);
+  Deps.flush();
+  test.equal(div.innerHTML, "[232]");
+  test.equal(initCount, 1);
+
+  R1.set(3);
+  Deps.flush();
+  test.equal(div.innerHTML, "[233]");
+  test.equal(initCount, 1);
+
+  R3.set(300);
+  Deps.flush();
+  test.equal(div.innerHTML, "[333]");
+  test.equal(initCount, 1);
+});
