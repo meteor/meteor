@@ -48,7 +48,7 @@ UI.If = Component.extend({
         return !! cond;
     });
 
-    buf.write(condition ? self.content : self.elseContent);
+    buf.write(condition ? self.__content : self.__elseContent);
   }
 });
 
@@ -71,14 +71,14 @@ UI.Unless = Component.extend({
         return !! cond;
     });
 
-    buf.write(condition ? self.elseContent : self.content);
+    buf.write(condition ? self.__elseContent : self.__content);
   }
 });
 
 UI.With = Component.extend({
   kind: 'With',
   render: function (buf) {
-    buf.write(this.content);
+    buf.write(this.__content);
   }
 });
 
@@ -134,11 +134,11 @@ UI.DynamicComponent = Component.extend({
         // whether you can say `{{>if content=... elseContent=...}}`,
         // and when we get rid of DynamicComponent so we don't need
         // this logic.
-        delete evaledKWArgs.content;
-        delete evaledKWArgs.elseContent;
-        if (kwArgs.content || kwArgs.elseContent) {
-          props = { content: kwArgs.content,
-                    elseContent: kwArgs.elseContent };
+        delete evaledKWArgs.__content;
+        delete evaledKWArgs.__elseContent;
+        if (kwArgs.__content || kwArgs.__elseContent) {
+          props = { __content: kwArgs.__content,
+                    __elseContent: kwArgs.__elseContent };
         }
       }
       // May invalidate this render:
@@ -156,9 +156,9 @@ UI.DynamicComponent = Component.extend({
           props = null;
           // see earlier comment about special treatment of `content`
           // and `elseContent` keyword args
-          if (kwArgs.content || kwArgs.elseContent) {
-            props = { content: kwArgs.content,
-                      elseContent: kwArgs.elseContent };
+          if (kwArgs.__content || kwArgs.__elseContent) {
+            props = { __content: kwArgs.__content,
+                      __elseContent: kwArgs.__elseContent };
           }
           if (typeof posArgs[0] === 'function') {
             var f = posArgs[0];
@@ -167,8 +167,8 @@ UI.DynamicComponent = Component.extend({
               var args = _.map(posArgs, callIfFunction);
               var evaledKWArgs = evalKeywordArgs(kwArgs);
               // see earlier comment
-              delete evaledKWArgs.content;
-              delete evaledKWArgs.elseContent;
+              delete evaledKWArgs.__content;
+              delete evaledKWArgs.__elseContent;
               args.push(evaledKWArgs);
               return f.apply(null, args);
             };

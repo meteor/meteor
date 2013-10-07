@@ -11,10 +11,10 @@ UI.Each = Component.extend({
 
     // XXX find `content` via `get()`...
     // XXX content kind reactively changes?
-    var content = self.content;
+    var content = self.__content;
     if (typeof content === 'function')
       content = _.bind(content, self);
-    var elseContent = self.elseContent;
+    var elseContent = self.__elseContent;
     if (typeof elseContent === 'function')
       elseContent = _.bind(elseContent, self);
 

@@ -356,3 +356,33 @@ Tinytest.add("spacebars - templates - block helper with dotted arg", function (t
   test.equal(div.innerHTML, "[333]");
   test.equal(initCount, 1);
 });
+
+Tinytest.add("spacebars - templates - content in if", function (test) {
+  // Test that `{{> content}}` in an `{{#if}}` works.
+
+  // ```
+  // <template name="spacebars_template_test_iftemplate">
+  //   {{#if condition}}
+  //     {{> content}}
+  //   {{else}}
+  //     {{> elseContent}}
+  //   {{/if}}
+  // </template>
+  // ```
+
+  // ```
+  //  {{#spacebars_template_test_iftemplate flag}}
+  //    hello
+  //  {{else}}
+  //    world
+  //  {{/spacebars_template_test_iftemplate}}
+  // ```
+
+  var tmpl = Template.spacebars_template_test_content_in_if;
+  var R = ReactiveVar(true);
+  tmpl.flag = function () {
+    return R.get();
+  };
+  var div = renderToDiv(tmpl);
+  test.equal(trim(div.innerHTML), 'hello');
+});
