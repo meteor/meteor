@@ -231,9 +231,11 @@ var runWebAppServer = function () {
       return;
     }
 
-    if (Package["browser-policy"] &&
-        ! Package["browser-policy"].BrowserPolicy.inlineScriptsAllowed() &&
-        pathname === "/meteor_runtime_config.js") {
+    var browserPolicyPackage = Package["browser-policy-common"];
+    if (pathname === "/meteor_runtime_config.js" &&
+        browserPolicyPackage &&
+        browserPolicyPackage.BrowserPolicy.content &&
+        ! browserPolicyPackage.BrowserPolicy.content.inlineScriptsAllowed()) {
       res.writeHead(200, { 'Content-type': 'application/javascript' });
       res.write("__meteor_runtime_config__ = " +
                 JSON.stringify(__meteor_runtime_config__) + ";");
@@ -401,8 +403,10 @@ var runWebAppServer = function () {
 
     // Include __meteor_runtime_config__ in the app html, as an inline script if
     // it's not forbidden by CSP.
-    if (! Package["browser-policy"] ||
-        Package["browser-policy"].BrowserPolicy.inlineScriptsAllowed()) {
+    var browserPolicyPackage = Package["browser-policy-common"];
+    if (! browserPolicyPackage ||
+        ! browserPolicyPackage.BrowserPolicy.content ||
+        browserPolicyPackage.BrowserPolicy.content.inlineScriptsAllowed()) {
       boilerplateHtml = boilerplateHtml.replace(
           /##RUNTIME_CONFIG##/,
         "<script type='text/javascript'>__meteor_runtime_config__ = " +

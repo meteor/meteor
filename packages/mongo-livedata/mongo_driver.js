@@ -337,10 +337,12 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     var knownId = (isModify ? selector._id : mod._id);
 
     if (options.upsert && (! knownId) && options.insertedId) {
-      mongoOpts.insertedId = options.insertedId;
+      // XXX In future we could do a real upsert for the mongo id generation
+      // case, if the the node mongo driver gives us back the id of the upserted
+      // doc (which our current version does not).
       simulateUpsertWithInsertedId(
         collection, mongoSelector, mongoMod,
-        isModify, mongoOpts,
+        isModify, options,
         // This callback does not need to be bindEnvironment'ed because
         // simulateUpsertWithInsertedId() wraps it and then passes it through
         // bindEnvironmentForWrite.
@@ -355,21 +357,22 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         }
       );
     } else {
-      collection.update(mongoSelector, mongoMod, mongoOpts,
-                        bindEnvironmentForWrite(function (err, result, extra) {
-                          if (! err) {
-                            if (result && options._returnObject) {
-                              result = { numberAffected: result };
-                              // If this was an upsert() call, and we ended up
-                              // inserting a new doc and we know its id, then
-                              // return that id as well.
-                              if (options.upsert && knownId &&
-                                  ! extra.updatedExisting)
-                                result.insertedId = knownId;
-                            }
-                          }
-                          callback(err, result);
-                        }));
+      collection.update(
+        mongoSelector, mongoMod, mongoOpts,
+        bindEnvironmentForWrite(function (err, result, extra) {
+          if (! err) {
+            if (result && options._returnObject) {
+              result = { numberAffected: result };
+              // If this was an upsert() call, and we ended up
+              // inserting a new doc and we know its id, then
+              // return that id as well.
+              if (options.upsert && knownId &&
+                  ! extra.updatedExisting)
+                result.insertedId = knownId;
+            }
+          }
+          callback(err, result);
+        }));
     }
   } catch (e) {
     write.committed();
@@ -413,14 +416,11 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
   // Run this code up front so that it fails fast if someone uses
   // a Mongo update operator we don't support.
   if (isModify) {
-    var selectorDoc = {};
-    for (var k in selector)
-      if (k.substr(0, 1) !== '$')
-        selectorDoc[k] = selector[k];
     // We've already run replaceTypes/replaceMeteorAtomWithMongo on
     // selector and mod.  We assume it doesn't matter, as far as
     // the behavior of modifiers is concerned, whether `_modify`
     // is run on EJSON or on mongo-converted EJSON.
+    var selectorDoc = LocalCollection._removeDollarOperators(selector);
     LocalCollection._modify(selectorDoc, mod, true);
     newDoc = selectorDoc;
   } else {
@@ -428,14 +428,14 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
   }
 
   var insertedId = options.insertedId; // must exist
-  var mongoOptsForUpdate = _.extend({}, options);
-  delete mongoOptsForUpdate.insertedId;
-  delete mongoOptsForUpdate.upsert;
-
-  var mongoOptsForInsert = _.extend({}, options);
-  delete mongoOptsForUpdate.insertedId;
-  mongoOptsForInsert.upsert = true;
-  delete mongoOptsForInsert.multi;
+  var mongoOptsForUpdate = {
+    safe: true,
+    multi: options.multi
+  };
+  var mongoOptsForInsert = {
+    safe: true,
+    upsert: true
+  };
 
   var tries = NUM_OPTIMISTIC_TRIES;
 
@@ -492,6 +492,9 @@ _.each(["insert", "update", "remove"], function (method) {
   };
 });
 
+// XXX MongoConnection.upsert() does not return the id of the inserted document
+// unless you set it explicitly in the selector or modifier (as a replacement
+// doc).
 MongoConnection.prototype.upsert = function (collectionName, selector, mod,
                                              options, callback) {
   var self = this;
@@ -504,7 +507,7 @@ MongoConnection.prototype.upsert = function (collectionName, selector, mod,
                      _.extend({}, options, {
                        upsert: true,
                        _returnObject: true
-                     }, callback));
+                     }), callback);
 };
 
 MongoConnection.prototype.find = function (collectionName, selector, options) {

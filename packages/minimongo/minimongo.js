@@ -596,7 +596,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   // generate an id for it.
   var insertedId;
   if (updateCount === 0 && options.upsert) {
-    var newDoc = _.clone(selector);
+    var newDoc = LocalCollection._removeDollarOperators(selector);
     LocalCollection._modify(newDoc, mod, true);
     if (! newDoc._id && options.insertedId)
       newDoc._id = options.insertedId;
@@ -637,7 +637,7 @@ LocalCollection.prototype.upsert = function (selector, mod, options, callback) {
   return self.update(selector, mod, _.extend({}, options, {
     upsert: true,
     _returnObject: true
-  }, callback));
+  }), callback);
 };
 
 LocalCollection.prototype._modifyAndNotify = function (
