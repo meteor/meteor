@@ -74,9 +74,12 @@ var getQuotedStringMatcher = function (quote, okQuote) {
               getStringMatch( tokenizer, okQuote));
       if ( next ) {
         if ( next === '"' ) {
-          literal += '\\';
+          literal += '\\"';
+        } else if (next === "\\'") {
+          literal += "'";
+        } else {
+          literal += next;
         }
-        literal += next;
       } else {
         next = getLineContinuation( tokenizer );
         if ( next ) {

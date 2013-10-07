@@ -196,6 +196,9 @@ Tinytest.add("rexpr - strings", function (test) {
   // escaped newline
   run('"a\\\nb"', "a\nb");
   run("'a\\\nb'", "a\nb");
+
+  run('"\\\\ \\" \\\\"', "\\ \" \\");
+  run("'\\\\ \\' \\\\'", "\\ ' \\");
 });
 
 Tinytest.add("rexpr - compile", function (test) {
