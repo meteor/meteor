@@ -7,8 +7,8 @@ Package.on_use(function (api) {
   api.export('LocalCollection');
   api.use(['underscore', 'json', 'ejson', 'ordered-dict', 'deps',
            'random', 'ordered-dict']);
-  // If you really want geolocation queries to work, add this package
-  api.use('geojson-utils', { weak: true });
+  // This package is used for geo-location queries such as $near
+  api.use('geojson-utils');
   api.add_files([
     'minimongo.js',
     'selector.js',
