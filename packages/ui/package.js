@@ -21,7 +21,6 @@ Package.on_use(function (api) {
   api.add_files(['attrs.js',
                  'render.js',
                  'fields.js',
-                 'template.js',
                  'components.js',
                  'each.js']);
 
