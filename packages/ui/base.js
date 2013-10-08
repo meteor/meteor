@@ -1156,13 +1156,13 @@ updateTemplateInstance = function (comp) {
   var tmpl = comp.templateInstance;
   tmpl.data = getComponentData(comp);
 
-  if (comp.dom) {
+  if (comp.dom && !comp.isDestroyed) {
     tmpl.firstNode = comp.dom.startNode().nextSibling;
     tmpl.lastNode = comp.dom.endNode().previousSibling;
     // Catch the case where the DomRange is empty and we'd
     // otherwise pass the out-of-order nodes (end, start)
     // as (firstNode, lastNode).
-    if (tmpl.lastNode.nextSibling === tmpl.firstNode)
+    if (tmpl.lastNode && tmpl.lastNode.nextSibling === tmpl.firstNode)
       tmpl.lastNode = tmpl.firstNode;
   } else {
     // on 'created' or 'destroyed' callbacks we don't have a DomRange
@@ -1234,6 +1234,7 @@ UI.Component.parented = function () {
 // XXX
 UI.Component.removed = function () {
   var self = this;
+  self.isDestroyed = true;
   if (self.destroyed) {
     updateTemplateInstance(self);
     self.destroyed.call(self.templateInstance);
