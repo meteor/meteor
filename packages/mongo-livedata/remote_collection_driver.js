@@ -32,5 +32,11 @@ MongoInternals.defaultRemoteCollectionDriver = _.once(function () {
   if (! mongoUrl)
     throw new Error("MONGO_URL must be set in environment");
 
-  return new MongoInternals.RemoteCollectionDriver(mongoUrl);
+  var connectionOptions = {};
+  // XXX we should NOT be reading directly from the env here; need to consult
+  // with naomi re: AppConfig
+  if (process.env.XXX_OPLOG_URL)
+    connectionOptions.oplogUrl = process.env.XXX_OPLOG_URL;
+
+  return new MongoInternals.RemoteCollectionDriver(mongoUrl, connectionOptions);
 });
