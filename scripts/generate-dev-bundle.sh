@@ -112,8 +112,9 @@ npm install source-map@0.1.30
 npm install source-map-support@0.2.3
 
 # Using the unreleased "caronte" branch rewrite of http-proxy (which will become
-# 1.0.0).
-npm install https://github.com/nodejitsu/node-http-proxy/tarball/a51b0622780f48160001f9e74340f7d720cbfce6
+# 1.0.0), plus this PR:
+#   https://github.com/nodejitsu/node-http-proxy/pull/495
+npm install https://github.com/meteor/node-http-proxy/tarball/f17186f781c6f00b359d25df424ad74922cd1977
 
 # Using the unreleased 1.1 branch. We can probably switch to a built NPM version
 # when it gets released.
