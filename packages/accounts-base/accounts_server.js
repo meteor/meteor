@@ -205,9 +205,16 @@ var expireTokenInterval;
 // tokens for the test user.
 var expireTokens = Accounts._expireTokens = function (oldestValidDate, userId) {
   var tokenLifetimeMs = getTokenLifetimeMs();
+
+  // when calling from a test with extra arguments, you must specify both!
+  if ((oldestValidDate && !userId) || (!oldestValidDate && userId)) {
+    throw new Error("Bad test. Must specify both oldestValidDate and userId.");
+  }
+
   oldestValidDate = oldestValidDate ||
     (new Date(new Date() - tokenLifetimeMs));
   var userFilter = userId ? {_id: userId} : {};
+
 
   // Backwards compatible with older versions of meteor that stored login token
   // timestamps as numbers.
