@@ -332,8 +332,8 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
     };
 
     tailHandle = oplogConnection.tail(cursorDescription, function (doc) {
-      if (!doc.ns && doc.ns.length > dbName.length + 1 &&
-          doc.ns.substr(0, dbName.length + 1) === (dbName + '.'))
+      if (!(doc.ns && doc.ns.length > dbName.length + 1 &&
+            doc.ns.substr(0, dbName.length + 1) === (dbName + '.')))
         throw new Error("Unexpected ns");
 
       var collectionName = doc.ns.substr(dbName.length + 1);
