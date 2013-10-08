@@ -316,27 +316,33 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
 
   var stampedLoginToken = Accounts._generateStampedLoginToken();
 
-  // NOTE: this must come _before_ we update the user record. Otherwise,
-  // we may be logged out if we are using a token that just got removed
-  // from the record.
-  //
-  // XXX If for some reason the update fails and throws, the token we're
-  // marked as using will not match the token the client has.
+  // NOTE: We're about to invalidate tokens on the user, who we might be
+  // logged in as. Make sure to avoid logging ourselves out if this
+  // happens. But also make sure not to leave the connection in a state
+  // of having a bad token set if things fail.
+  var oldToken = this._getLoginToken();
+  this._setLoginToken(null);
+
+  try {
+    // Update the user record by:
+    // - Changing the password verifier to the new one
+    // - Replacing all valid login tokens with new ones (changing
+    //   password should invalidate existing sessions).
+    // - Forgetting about the reset token that was just used
+    // - Verifying their email, since they got the password reset via email.
+    Meteor.users.update({_id: user._id, 'emails.address': email}, {
+      $set: {'services.password.srp': newVerifier,
+             'services.resume.loginTokens': [stampedLoginToken],
+             'emails.$.verified': true},
+      $unset: {'services.password.reset': 1}
+    });
+  } catch (err) {
+    // update failed somehow. reset to old token.
+    this._setLoginToken(oldToken);
+    throw err;
+  }
+
   this._setLoginToken(stampedLoginToken.token);
-
-  // Update the user record by:
-  // - Changing the password verifier to the new one
-  // - Replacing all valid login tokens with new ones (changing
-  //   password should invalidate existing sessions).
-  // - Forgetting about the reset token that was just used
-  // - Verifying their email, since they got the password reset via email.
-  Meteor.users.update({_id: user._id, 'emails.address': email}, {
-    $set: {'services.password.srp': newVerifier,
-           'services.resume.loginTokens': [stampedLoginToken],
-           'emails.$.verified': true},
-    $unset: {'services.password.reset': 1}
-  });
-
   this.setUserId(user._id);
 
   return {
