@@ -288,6 +288,7 @@ shell-quote: https://github.com/substack/node-shell-quote
 deep-equal: https://github.com/substack/node-deep-equal
 editor: https://github.com/substack/node-editor
 minimist: https://github.com/substack/node-minimist
+quotemeta: https://github.com/substack/quotemeta
 ----------
 
 Copyright 2010, 2011, 2012, 2013 James Halliday (mail@substack.net)

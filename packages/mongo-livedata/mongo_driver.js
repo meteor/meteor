@@ -228,6 +228,7 @@ var pendingSequences = [];
 
 // Like Perl's quotemeta: quotes all regexp metacharacters. See
 //   https://github.com/substack/quotemeta/blob/master/index.js
+// XXX this is duplicated with accounts_server.js
 var quotemeta = function (str) {
     return String(str).replace(/(\W)/g, '\\$1');
 };
