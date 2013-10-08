@@ -316,6 +316,14 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
 
   var stampedLoginToken = Accounts._generateStampedLoginToken();
 
+  // NOTE: this must come _before_ we update the user record. Otherwise,
+  // we may be logged out if we are using a token that just got removed
+  // from the record.
+  //
+  // XXX If for some reason the update fails and throws, the token we're
+  // marked as using will not match the token the client has.
+  this._setLoginToken(stampedLoginToken.token);
+
   // Update the user record by:
   // - Changing the password verifier to the new one
   // - Replacing all valid login tokens with new ones (changing
@@ -330,7 +338,7 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
   });
 
   this.setUserId(user._id);
-  this._setLoginToken(stampedLoginToken.token);
+
   return {
     token: stampedLoginToken.token,
     tokenExpires: Accounts._tokenExpiration(stampedLoginToken.when),
