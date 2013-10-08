@@ -36,8 +36,18 @@ Run locally:
 ### Changes to default Meteor behavior
 
   1. User entries in the ```Meteor.users``` collection gain a new field named ```roles``` which is an array of strings corresponding to the user's roles.
-  2. A new collection ```Meteor.roles``` contains a global list of defined role names.
+  2. A new collection ```Meteor.roles``` ** contains a global list of defined role names.
   3. The currently logged-in user's ```roles``` field is automatically published to the client.
+
+<br />
+** ```Meteor.roles``` is not published by default.  Here's how you would publish it to every client without needing a subscription:
+
+```js
+// in server/publish.js
+Meteor.publish(null, function (){ 
+  return Meteor.roles.find({})
+})
+```
 
 <br />
 
