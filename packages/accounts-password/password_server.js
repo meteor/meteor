@@ -544,5 +544,5 @@ Accounts.createUser = function (options, callback) {
 ///
 Meteor.users._ensureIndex('emails.validationTokens.token',
                           {unique: 1, sparse: 1});
-Meteor.users._ensureIndex('emails.password.reset.token',
+Meteor.users._ensureIndex('services.password.reset.token',
                           {unique: 1, sparse: 1});
