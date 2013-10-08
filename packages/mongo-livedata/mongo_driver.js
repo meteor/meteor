@@ -107,19 +107,19 @@ var replaceTypes = function (document, atomTransformer) {
 };
 
 
-MongoConnection = function (url, connectionOptions) {
+MongoConnection = function (url, options) {
   var self = this;
-  connectionOptions = connectionOptions || {};
+  options = options || {};
   self._connectCallbacks = [];
   self._liveResultsSets = {};
 
-  var options = {db: {safe: true}};
+  var mongoOptions = {db: {safe: true}};
 
   // Set autoReconnect to true, unless passed on the URL. Why someone
   // would want to set autoReconnect to false, I'm not really sure, but
   // keeping this for backwards compatibility for now.
   if (!(/[\?&]auto_?[rR]econnect=/.test(url))) {
-    options.server = {auto_reconnect: true};
+    mongoOptions.server = {auto_reconnect: true};
   }
 
   // Disable the native parser by default, unless specifically enabled
@@ -131,10 +131,10 @@ MongoConnection = function (url, connectionOptions) {
   //   to a different platform (aka deploy)
   // We should revisit this after binary npm module support lands.
   if (!(/[\?&]native_?[pP]arser=/.test(url))) {
-    options.db.native_parser = false;
+    mongoOptions.db.native_parser = false;
   }
 
-  MongoDB.connect(url, options, function(err, db) {
+  MongoDB.connect(url, mongoOptions, function(err, db) {
     if (err)
       throw err;
     self.db = db;
@@ -152,7 +152,7 @@ MongoConnection = function (url, connectionOptions) {
   // XXX we should NOT be reading directly from the env here (this should be an
   // argument to MongoConnection eg) but I want to wait for the AppConfig API to
   // settle a little before thinking too hard about this
-  if (process.env.XXX_OPLOG_URL && !connectionOptions.isOplog) {
+  if (process.env.XXX_OPLOG_URL && !options.isOplog) {
     var dbName = Npm.require('url').parse(url).pathname.substr(1);
     self._startOplogTailing(process.env.XXX_OPLOG_URL, dbName);
   }
