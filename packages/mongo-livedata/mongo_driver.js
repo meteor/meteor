@@ -1004,6 +1004,8 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
         // (unless the failure was because the observe got stopped).
         doc = null;
       }
+      // Since cursor._nextObject can yield, we need to check again to see if
+      // we've been stopped before calling the callback.
       if (stopped)
         return;
       if (doc) {
