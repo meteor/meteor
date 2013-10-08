@@ -32,6 +32,8 @@
 * Improve behavior of `$ne`, `$nin`, and `$not` selectors with objects containing
   arrays.  #1451
 
+* `$near` operator for `2d` and `2dsphere` indices.
+
 #### DDP
 
 * Fix infinite loop if a client disconnects while a long yielding method is
@@ -66,6 +68,9 @@
   authentication token secrets.  #1253
 
 * Warn if `Accounts.config` is only called on the client.  #828
+
+* Fix bug where callbacks to login functions could be called multiple
+  times when the client reconnects.
 
 #### Tools
 

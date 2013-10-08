@@ -1678,11 +1678,8 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: {b: 12}}, {$rename: {'a.b': 'x'}}, {a: {}, x: 12}); // tested
   modify({a: {b: 12}}, {$rename: {'a.b': 'q.r'}}, {a: {}, q: {r: 12}});
   modify({a: {b: 12}}, {$rename: {'a.b': 'q.2.r'}}, {a: {}, q: {2: {r: 12}}});
-  // Opera weirdly reorders the output. But what it does tends to be close
-  // enough.
   modify({a: {b: 12}, q: {}}, {$rename: {'a.b': 'q.2.r'}},
-         (typeof opera === 'undefined' ? {a: {}, q: {2: {r: 12}}}
-                                       : {q: {2: {r: 12}}, a: {}}));
+         {a: {}, q: {2: {r: 12}}});
   exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2'}}); // tested
   exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2.r'}}); // tested
   test.expect_fail();
@@ -2266,3 +2263,98 @@ Tinytest.add("minimongo - count on cursor with limit", function(test){
   c.stop();
 
 });
+
+Tinytest.add("minimongo - $near operator tests", function (test) {
+  var coll = new LocalCollection();
+  coll.insert({ rest: { loc: [2, 3] } });
+  coll.insert({ rest: { loc: [-3, 3] } });
+  coll.insert({ rest: { loc: [5, 5] } });
+
+  test.equal(coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 30 } }).count(), 3);
+  test.equal(coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 4 } }).count(), 1);
+  var points = coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 6 } }).fetch();
+  _.each(points, function (point, i, points) {
+    test.isTrue(!i || distance([0, 0], point.rest.loc) >= distance([0, 0], points[i - 1].rest.loc));
+  });
+
+  function distance(a, b) {
+    var x = a[0] - b[0];
+    var y = a[1] - b[1];
+    return Math.sqrt(x * x + y * y);
+  }
+
+  // GeoJSON tests
+  coll = new LocalCollection();
+  var data = [{ "category" : "BURGLARY", "descript" : "BURGLARY OF STORE, FORCIBLE ENTRY", "address" : "100 Block of 10TH ST", "location" : { "type" : "Point", "coordinates" : [  -122.415449723856,  37.7749518087273 ] } },
+    { "category" : "WEAPON LAWS", "descript" : "POSS OF PROHIBITED WEAPON", "address" : "900 Block of MINNA ST", "location" : { "type" : "Point", "coordinates" : [  -122.415386041221,  37.7747879744156 ] } },
+    { "category" : "LARCENY/THEFT", "descript" : "GRAND THEFT OF PROPERTY", "address" : "900 Block of MINNA ST", "location" : { "type" : "Point", "coordinates" : [  -122.41538270191,  37.774683628213 ] } },
+    { "category" : "LARCENY/THEFT", "descript" : "PETTY THEFT FROM LOCKED AUTO", "address" : "900 Block of MINNA ST", "location" : { "type" : "Point", "coordinates" : [  -122.415396041221,  37.7747879744156 ] } },
+    { "category" : "OTHER OFFENSES", "descript" : "POSSESSION OF BURGLARY TOOLS", "address" : "900 Block of MINNA ST", "location" : { "type" : "Point", "coordinates" : [  -122.415386041221,  37.7747879734156 ] } }
+  ];
+
+  _.each(data, function (x, i) { coll.insert(_.extend(x, { x: i })); });
+
+  var close15 = coll.find({ location: { $near: {
+    $geometry: { type: "Point",
+                 coordinates: [-122.4154282, 37.7746115] },
+    $maxDistance: 15 } } }).fetch();
+  test.length(close15, 1);
+  test.equal(close15[0].descript, "GRAND THEFT OF PROPERTY");
+
+  var close20 = coll.find({ location: { $near: {
+    $geometry: { type: "Point",
+                 coordinates: [-122.4154282, 37.7746115] },
+    $maxDistance: 20 } } }).fetch();
+  test.length(close20, 4);
+  test.equal(close20[0].descript, "GRAND THEFT OF PROPERTY");
+  test.equal(close20[1].descript, "PETTY THEFT FROM LOCKED AUTO");
+  test.equal(close20[2].descript, "POSSESSION OF BURGLARY TOOLS");
+  test.equal(close20[3].descript, "POSS OF PROHIBITED WEAPON");
+
+  // Any combinations of $near with $or/$and/$nor/$not should throw an error
+  test.throws(function () {
+    coll.find({ location: {
+      $not: {
+        $near: {
+          $geometry: {
+            type: "Point",
+            coordinates: [-122.4154282, 37.7746115]
+          }, $maxDistance: 20 } } } });
+  });
+  test.throws(function () {
+    coll.find({
+      $and: [ { location: { $near: { $geometry: { type: "Point", coordinates: [-122.4154282, 37.7746115] }, $maxDistance: 20 }}},
+              { x: 0 }]
+    });
+  });
+  test.throws(function () {
+    coll.find({
+      $or: [ { location: { $near: { $geometry: { type: "Point", coordinates: [-122.4154282, 37.7746115] }, $maxDistance: 20 }}},
+             { x: 0 }]
+    });
+  });
+  test.throws(function () {
+    coll.find({
+      $nor: [ { location: { $near: { $geometry: { type: "Point", coordinates: [-122.4154282, 37.7746115] }, $maxDistance: 1 }}},
+              { x: 0 }]
+    });
+  });
+  test.throws(function () {
+    coll.find({
+      $and: [{
+        $and: [{
+          location: {
+            $near: {
+              $geometry: {
+                type: "Point",
+                coordinates: [-122.4154282, 37.7746115]
+              },
+              $maxDistance: 1
+            }
+          }
+        }]
+      }]
+    });
+  });
+});
+

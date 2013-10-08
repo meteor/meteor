@@ -206,5 +206,5 @@ Tinytest.addAsync('accounts - expire numeric token', function (test, onComplete)
       }
     }
   });
-  Accounts._expireTokens(new Date());
+  Accounts._expireTokens(new Date(), result.id);
 });

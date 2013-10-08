@@ -533,6 +533,11 @@ uid2: https://github.com/coreh/uid2
 
 Copyright (c) 2013 Marco Aurelio
 
+----------
+geojson-utils: https://github.com/maxogden/geojson-js-utils
+----------
+
+Copyright (c) 2010 Max Ogden
 
 ==============
 Apache License
