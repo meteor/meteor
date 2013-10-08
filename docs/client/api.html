@@ -1193,7 +1193,7 @@ that needs to deal with `_id` fields that may be either strings or `ObjectID`s, 
   method, since Meteor currently constructs them fully randomly.
 {{/note}}
 
-{{#api_box_inline selectors}}
+{{#api_box selectors}}
 
 In its simplest form, a selector is just a set of keys that must
 match in a document:
@@ -1221,9 +1221,9 @@ But they can also contain more complicated tests:
 See the [complete
 documentation](http://www.mongodb.org/display/DOCS/Advanced+Queries).
 
-{{/api_box_inline}}
+{{/api_box}}
 
-{{#api_box_inline modifiers}}
+{{#api_box modifiers}}
 
 A modifier is an object that describes how to update a document in
 place by changing some of its fields. Some examples:
@@ -1246,9 +1246,9 @@ supported by [validated updates](#allow).)
 See the [full list of
 modifiers](http://www.mongodb.org/display/DOCS/Updating#Updating-ModifierOperations).
 
-{{/api_box_inline}}
+{{/api_box}}
 
-{{#api_box_inline sortspecifiers}}
+{{#api_box sortspecifiers}}
 
 Sorts may be specified using your choice of several syntaxes:
 
@@ -1263,9 +1263,9 @@ The last form will only work if your JavaScript implementation
 preserves the order of keys in objects. Most do, most of the time, but
 it's up to you to be sure.
 
-{{/api_box_inline}}
+{{/api_box}}
 
-{{#api_box_inline fieldspecifiers}}
+{{#api_box fieldspecifiers}}
 
 Queries can specify a particular set of fields to include or exclude from the
 result object.
@@ -1297,7 +1297,7 @@ More advanced example:
 See <a href="http://docs.mongodb.org/manual/tutorial/project-fields-from-query-results/#projection">
 the MongoDB docs</a> for details of the nested field rules and array behavior.
 
-{{/api_box_inline}}
+{{/api_box}}
 
 <h2 id="session"><span>Session</span></h2>
 
@@ -1310,7 +1310,7 @@ you call [`Session.get`](#session_get)`("currentList")`
 from inside a template, the template will automatically be rerendered
 whenever [`Session.set`](#session_set)`("currentList", x)` is called.
 
-{{> api_box set}}
+{{> api_box session_set}}
 
 Example:
 
@@ -1327,7 +1327,7 @@ Example:
 This is useful in initialization code, to avoid re-initializing a session
 variable every time a new version of your app is loaded.
 
-{{> api_box get}}
+{{> api_box session_get}}
 
 Example:
 
@@ -1355,7 +1355,7 @@ If value is a scalar, then these two expressions do the same thing:
 
 Example:
 
-    <template name="postsView">
+    {{lt}}template name="postsView">
     {{dstache}}! Show a dynamically updating list of items. Let the user click on an
         item to select it. The selected item is given a CSS class so it
         can be rendered differently. }}
@@ -1363,11 +1363,11 @@ Example:
     {{dstache}}#each posts}}
       {{dstache}}> postItem }}
     {{dstache}}/each}}
-    </{{! }}template>
+    {{lt}}/template>
 
-    <template name="postItem">
+    {{lt}}template name="postItem">
       <div class="{{dstache}}postClass}}">{{dstache}}title}}</div>
-    </{{! }}template>
+    {{lt}}/template>
 
     ///// in JS file
     Template.postsView.posts = function() {
@@ -1801,9 +1801,9 @@ Example:
 
 <h2 id="templates_api"><span>Templates</span></h2>
 
-A template that you declare as `<{{! }}template name="foo"> ... </{{!
-}}template>` can be accessed as the function `Template.foo`, which
-returns a string of HTML when called.
+A template that you declare as `{{lt}}template name="foo">
+... {{lt}}/template>` can be accessed as the function `Template.foo`,
+which returns a string of HTML when called.
 
 The same template may occur many times on the page, and these
 occurrences are called template instances.  Template instances have a
@@ -2029,88 +2029,8 @@ the template.  It is updated each time the template is re-rendered.
 Access is read-only and non-reactive.
 
 
-{{> api_box render}}
 
-`Meteor.render` creates a `DocumentFragment` (a sequence of DOM nodes)
-that automatically updates in realtime. Most Meteor apps don't need to
-call this directly; they use templates and Meteor handles the rendering.
-
-Pass in `htmlFunc`, a function that returns an HTML
-string. `Meteor.render` calls the function and turns the output into
-DOM nodes. Meanwhile, it tracks the data that was used when `htmlFunc`
-ran, and automatically wires up callbacks so that whenever any of the
-data changes, `htmlFunc` is re-run and the DOM nodes are updated in
-place.
-
-You may insert the returned `DocumentFragment` directly into the DOM
-wherever you would like it to appear. The inserted nodes will continue
-to update until they are taken off the screen. Then they will be
-automatically cleaned up. For more details about clean-up, see
-[`Deps.flush`](#deps_flush).
-
-`Meteor.render` tracks the data dependencies of `htmlFunc` by running
-it in a reactive computation, so it can respond to changes in any reactive
-data sources used by that function. For more information, or to learn
-how to make your own reactive data sources, see
-[Reactivity](#reactivity).
-
-Example:
-
-    // Client side: show the number of players online.
-    var frag = Meteor.render(function () {
-      return "<p>There are " + Players.find({online: true}).count() +
-        " players online.</p>";
-    });
-    document.body.appendChild(frag);
-
-    // Server side: find all players that have been idle for a while,
-    // and mark them as offline. The count on the screen will
-    // automatically update on all clients.
-    Players.update({idleTime: {$gt: 30}}, {$set: {online: false}});
-
-{{> api_box renderList}}
-
-Creates a `DocumentFragment` that automatically updates as the results
-of a database query change. Most Meteor apps use `{{dstache}}#each}}` in
-a template instead of calling this directly.
-
-`renderList` is more efficient than using `Meteor.render` to render HTML
-for a list of documents.  For example, if a new document is created in
-the database that matches the query, a new item will be rendered and
-inserted at the appropriate place in the DOM without re-rendering the
-other elements.  Similarly, if a document changes position in a sorted
-query, the DOM nodes will simply be moved and not re-rendered.
-
-`docFunc` is called as needed to generate HTML for each document.  If
-you provide `elseFunc`, then whenever the query returns no results, it
-will be called to render alternate content. You might use this to show
-a message like "No records match your query."
-
-Each call to `docFunc` or `elseFunc` is run in its own reactive
-computation so that if it has other external data dependencies, it will be
-individually re-run when the data changes.
-
-Example:
-
-    // List the titles of all of the posts that have the tag
-    // "frontpage". Keep the list updated as new posts are made, as tags
-    // change, etc.  Display the selected post differently.
-    var frag = Meteor.renderList(
-      Posts.find({tags: "frontpage"}),
-      function(post) {
-        var style = Session.equals("selectedId", post._id) ? "selected" : "";
-        // A real app would need to quote/sanitize post.name
-        return '<div class="' + style + '">' + post.name + '</div>';
-      });
-    document.body.appendChild(frag);
-
-    // Select a post.  This will cause only the selected item and the
-    // previously selected item to update.
-    var somePost = Posts.findOne({tags: "frontpage"});
-    Session.set("selectedId", somePost._id);
-
-
-{{#api_box_inline eventmaps}}
+{{#api_box eventmaps}}
 
 Several functions take event maps. An event map is an object where
 the properties specify a set of events to handle, and the values are
@@ -2282,11 +2202,11 @@ Other DOM events are available as well, but for the events above,
 Meteor has taken some care to ensure that they work uniformly in all
 browsers.
 
-{{/api_box_inline}}
+{{/api_box}}
 
 
 
-{{#api_box_inline constant}}
+{{#api_box constant}}
 
 You can mark a region of a template as "constant" and not subject to
 re-rendering using the
@@ -2315,9 +2235,9 @@ correctly inside constant regions.
 {{/note}}
 
 
-{{/api_box_inline}}
+{{/api_box}}
 
-{{#api_box_inline isolate}}
+{{#api_box isolate}}
 
 Each template runs as its own reactive computation.  When the template
 accesses a reactive data source, such as by calling `Session.get` or
@@ -2335,7 +2255,7 @@ re-rendered.  This block helper essentially conveys the reactivity
 benefits you would get by pulling the content out into a new
 sub-template.
 
-{{/api_box_inline}}
+{{/api_box}}
 
 <h2 id="match"><span>Match</span></h2>
 
@@ -2371,7 +2291,7 @@ server logs but not revealed to the client.
 
 {{> api_box match_test}}
 
-{{#api_box_inline matchpatterns}}
+{{#api_box matchpatterns}}
 
 The following patterns can be used as pattern arguments to `check` and `Match.test`:
 
@@ -2451,7 +2371,7 @@ from the call to `check` or `Match.test`. Examples:
 {{/dtdd}}
 </dl>
 
-{{/api_box_inline}}
+{{/api_box}}
 
 <h2 id="timers"><span>Timers</span></h2>
 
@@ -3065,8 +2985,8 @@ code can read `data.txt` by running:
 {{> api_box_args options}}
 {{/if}}
 
-{{#if body}}
-{{#better_markdown}}{{{body}}}{{/better_markdown}}
+{{#if content}}
+{{#better_markdown}}{{> content}}{{/better_markdown}}
 {{/if}}
 
 </div>
@@ -3092,6 +3012,6 @@ code can read `data.txt` by running:
 </template>
 
 
-<template name="api_section_helper">
+<template name="api_section">
 <h2 id="{{id}}"><a href="#{{id}}" class="selflink"><span>{{name}}</span></a></h2>
 </template>

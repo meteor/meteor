@@ -149,7 +149,11 @@ html_scanner = {
         throwParseError("Template has no 'name' attribute");
 
       var renderFuncCode = Spacebars.compile(
-        contents, { sourceName: 'Template "' + name + '"' });
+        contents, {
+          sourceName: 'Template "' + name + '"',
+          // XXX MESSY HACK - make only Templates expose
+          // `content` and `elseContent`
+          preamble: ' var _local_content = this.content = this.__content, _local_elseContent = this.elseContent = this.__elseContent' });
 
       results.js += "\nTemplate[" + JSON.stringify(name) +
         "] = UI.Component.extend({kind: " +

@@ -126,6 +126,14 @@ _extend(UI.Component, {
   // No child pointers (except in `dom`).
   parent: null,
 
+  // Extend this component with a given data context. This is
+  // typically used in template helpers generating a dynamic
+  // template. Using this doesn't require understanding the Component
+  // OO system, which we're not document yet and may change.
+  withData: function (data) {
+    return this.extend({data: data});
+  },
+
   // create a new subkind or instance whose proto pointer
   // points to this, with additional props set.
   extend: function (props) {
@@ -862,6 +870,7 @@ _extend(UI.Component, {
     return self;
   },
 */
+/*
 _extend(UI.Component, {
   $: function (selector) {
     var self = this;
@@ -915,6 +924,7 @@ _extend(UI.Component, {
     return results;
   }
 });
+*/
 /*
   autorun: function (compFunc) {
     var self = this;
@@ -1198,7 +1208,7 @@ _extend(UI.Component, {
 UI.Component.parented = function () {
   var self = this;
   for (var comp = self; comp; comp = comp._super) {
-    var events = comp.hasOwnProperty('_events') && comp._events;
+    var events = (comp.hasOwnProperty('_events') && comp._events) || null;
     _.each(events, function (esh) { // {events, selector, handler}
       // wrap the handler here, per instance of the template that
       // declares the event map, so we can pass the instance to

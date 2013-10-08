@@ -313,3 +313,11 @@ LocalCollection._modifiers = {
     throw Error("$bit is not supported");
   }
 };
+
+LocalCollection._removeDollarOperators = function (selector) {
+  var selectorDoc = {};
+  for (var k in selector)
+    if (k.substr(0, 1) !== '$')
+      selectorDoc[k] = selector[k];
+  return selectorDoc;
+};

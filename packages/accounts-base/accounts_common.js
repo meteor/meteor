@@ -31,11 +31,28 @@ CONNECTION_CLOSE_DELAY_MS = 10 * 1000;
 //     client signups.
 // - forbidClientAccountCreation {Boolean}
 //     Do not allow clients to create accounts directly.
+// - restrictCreationByEmailDomain {Function or String}
+//     Require created users to have an email matching the function or
+//     having the string as domain.
 // - loginExpirationInDays {Number}
 //     Number of days since login until a user is logged out (login token
 //     expires).
 //
 Accounts.config = function(options) {
+  // We don't want users to accidentally only call Accounts.config on the
+  // client, where some of the options will have partial effects (eg removing
+  // the "create account" button from accounts-ui if forbidClientAccountCreation
+  // is set, or redirecting Google login to a specific-domain page) without
+  // having their full effects.
+  if (Meteor.isServer) {
+    __meteor_runtime_config__.accountsConfigCalled = true;
+  } else if (!__meteor_runtime_config__.accountsConfigCalled) {
+    // XXX would be nice to "crash" the client and replace the UI with an error
+    // message, but there's no trivial way to do this.
+    Meteor._debug("Accounts.config was called on the client but not on the " +
+                  "server; some configuration options may not take effect.");
+  }
+
   // validate option keys
   var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation",
                     "restrictCreationByEmailDomain", "loginExpirationInDays"];

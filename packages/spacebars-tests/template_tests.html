@@ -7,6 +7,27 @@
 <template name="spacebars_template_test_bbb">
   bbb
 </template>
+
+<template name="spacebars_template_test_bracketed_this">
+  [{{this}}]
+</template>
+
+<template name="spacebars_template_test_content">
+  {{> content}}
+</template>
+
+<template name="spacebars_template_test_elsecontent">
+  {{> elseContent}}
+</template>
+
+<template name="spacebars_template_test_iftemplate">
+  {{#if condition}}
+    {{> content}}
+  {{else}}
+    {{> elseContent}}
+  {{/if}}
+</template>
+
 <!-- -->
 
 
@@ -18,3 +39,92 @@
 <template name="spacebars_template_test_dynamic_template">
   {{> foo}}
 </template>
+
+<template name="spacebars_template_test_interpolate_attribute">
+  <div class="aaa{{foo bar}}zzz"></div>
+</template>
+
+<template name="spacebars_template_test_dynamic_attrs">
+  <span {{{attrs1}}} {{{attrs2}}} {{k}}={{v}} {{x}} {{nonexistent}}>hi</span>
+</template>
+
+<template name="spacebars_template_test_triple">
+  {{{html}}}
+</template>
+
+<template name="spacebars_template_test_inclusion_args">
+  {{> foo bar}}
+</template>
+
+<template name="spacebars_template_test_inclusion_args2">
+  {{> foo bar baz}}
+</template>
+
+<template name="spacebars_template_test_inclusion_args3">
+  {{> foo bar q=baz}}
+</template>
+
+<template name="spacebars_template_test_inclusion_dotted_args">
+  {{> foo bar.baz}}
+</template>
+
+<template name="spacebars_template_test_block_helper">
+  {{#foo}}
+    bar
+  {{else}}
+    baz
+  {{/foo}}
+</template>
+
+<template name="spacebars_template_test_block_helper_function_one_string_arg">
+  {{#foo "bar"}}
+    content
+  {{/foo}}
+</template>
+
+<template name="spacebars_template_test_block_helper_function_one_helper_arg">
+  {{#foo bar}}
+    content
+  {{/foo}}
+</template>
+
+<template name="spacebars_template_test_block_helper_component_one_helper_arg">
+  {{#if bar}}
+    content
+  {{/if}}
+</template>
+
+<template name="spacebars_template_test_block_helper_component_three_helper_args">
+  {{#if equals bar_or_baz "bar"}}
+    content
+  {{/if}}
+</template>
+
+<template name="spacebars_template_test_block_helper_dotted_arg">
+  {{#foo bar.baz qux}}{{/foo}}
+</template>
+
+<template name="spacebars_template_test_nested_content">
+  {{#spacebars_template_test_iftemplate condition=flag}}
+    hello
+  {{else}}
+    world
+  {{/spacebars_template_test_iftemplate}}
+</template>
+
+<template name="spacebars_template_test_iftemplate2">
+  {{#spacebars_template_test_iftemplate condition=flag}}
+    {{> content}}
+  {{else}}
+    {{> elseContent}}
+  {{/spacebars_template_test_iftemplate}}
+</template>
+
+<template name="spacebars_template_test_nested_content2">
+  {{#spacebars_template_test_iftemplate2 flag=x}}
+    hello
+  {{else}}
+    world
+  {{/spacebars_template_test_iftemplate2}}
+</template>
+

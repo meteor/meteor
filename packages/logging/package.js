@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Npm.depends({
-  "cli-color": "0.2.2"
+  "cli-color": "0.2.3"
 });
 
 Package.on_use(function (api) {

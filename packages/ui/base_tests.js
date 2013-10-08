@@ -1,4 +1,9 @@
 
+/*
+THESE TESTS ARE OUT OF DATE.
+
+TODO: WRITE TESTS AGAINST THE LATEST base.js
+
 Tinytest.add("ui - Component basics", function (test) {
   var Foo = UI.Component.extend();
   var Bar = Foo.extend({x: 1, y: 2});
@@ -205,3 +210,5 @@ Tinytest.add("ui - Component add/remove", function (test) {
     x.remove(z);
   });
 });
+
+*/

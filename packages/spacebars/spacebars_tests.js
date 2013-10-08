@@ -360,6 +360,12 @@ Tinytest.add("spacebars - compiler", function (test) {
       '    ">abc</a>");',
       '}');
 
+  // NOTE: These are old tests of code generation from various previous versions
+  // of the compiler.  Once the form of generated code stabilizes, it would be
+  // nice to have these tests as a way of seeing that code generation is working
+  // as intended and pretty-printing remains correct, as well as as a form of
+  // documentation.
+  /*
   run('<a foo={{bar}}>',
 
       'function (buf) {',
@@ -457,4 +463,71 @@ Tinytest.add("spacebars - compiler", function (test) {
       '    buf.text("baz");',
       '  }})}); });',
       '}');
+   */
+});
+
+Tinytest.add("spacebars - Spacebars.index", function (test) {
+  test.equal(Spacebars.index(null, 'foo'), null);
+  test.equal(Spacebars.index('foo', 'foo'), undefined);
+  test.equal(Spacebars.index({x:1}, 'x'), 1);
+  test.equal(Spacebars.index(
+    {x:1, y: function () { return this.x+1; }}, 'y')(), 2);
+  test.equal(Spacebars.index(
+    function () {
+      return {x:1, y: function () { return this.x+1; }};
+    }, 'y')(), 2);
+
+  var m = 1;
+  var mget = function () {
+    return {
+      answer: m,
+      getAnswer: function () {
+        return this.answer;
+      }
+    };
+  };
+  var mgetDotAnswer = Spacebars.index(mget, 'answer');
+  test.equal(mgetDotAnswer(), 1);
+  m = 2;
+  test.equal(mgetDotAnswer(), 2);
+
+  m = 3;
+  var mgetDotGetAnswer = Spacebars.index(mget, 'getAnswer');
+  test.equal(mgetDotGetAnswer(), 3);
+  m = 4;
+  test.equal(mgetDotGetAnswer(), 4);
+
+  var closet = {
+    mget: mget,
+    mget2: function () {
+      return this.mget();
+    }
+  };
+
+  m = 5;
+  var f1 = Spacebars.index(closet, 'mget', 'answer');
+  test.equal(f1(), 5);
+  m = 6;
+  test.equal(f1(), 6);
+  var f2 = Spacebars.index(closet, 'mget2', 'answer');
+  m = 7;
+  test.equal(f2(), 7);
+  m = 8;
+  test.equal(f2(), 8);
+  var f3 = Spacebars.index(closet, 'mget2', 'getAnswer');
+  m = 9;
+  test.equal(f3(), 9);
+
+  test.equal(Spacebars.index(0, 'abc', 'def'), 0);
+  test.equal(Spacebars.index(function () { return null; }, 'abc', 'def')(), null);
+  test.equal(Spacebars.index(function () { return 0; }, 'abc', 'def')(), 0);
+
+  // test that in `foo.bar`, `bar` may be a function that takes arguments.
+  test.equal(Spacebars.index(
+    { one: 1, inc: function (x) { return this.one + x; } }, 'inc')(6), 7);
+  test.equal(Spacebars.index(
+    function () {
+      return { one: 1, inc: function (x) { return this.one + x; } };
+    }, 'inc')(8), 9);
+
 });

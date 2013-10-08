@@ -38,7 +38,10 @@ StreamServer = function () {
     // combining CPU-heavy processing with SockJS termination (eg a proxy which
     // converts to Unix sockets) but for now, raise the delay.
     disconnect_delay: 60 * 1000,
-    jsessionid: false
+    // Set the USE_JSESSIONID environment variable to enable setting the
+    // JSESSIONID cookie. This is useful for setting up proxies with
+    // session affinity.
+    jsessionid: !!process.env.USE_JSESSIONID
   };
 
   // If you know your server environment (eg, proxies) will prevent websockets

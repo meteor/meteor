@@ -73,11 +73,7 @@ Template.api.release = {
   descr: ["`Meteor.release` is a string containing the name of the " +
           "[release](#meteorupdate) with which the project was built (for " +
           "example, `\"" +
-          // Put the current release in the docs as the example)
-          // XXX for now this is hard-coded because galaxy apps are on a
-          // different meteor release
-          //         (Meteor.release ? Meteor.release : '0.6.0') +
-          "0.6.5.1" +
+          Meteor.release +
           "\"`). It is `undefined` if the project was built using a git " +
           "checkout of Meteor."]
 };
@@ -782,7 +778,7 @@ Template.api.cursor_observe_changes = {
   ]
 };
 
-Template.api.id = {
+Template.api.random_id = {
   id: "meteor_id",
   name: "Random.id()",
   locus: "Anywhere",
@@ -970,37 +966,6 @@ Template.api.dependency_hasdependents = {
 
 // writeFence
 // invalidationCrossbar
-
-Template.api.render = {
-  id: "meteor_render",
-  name: "Meteor.render(htmlFunc)",
-  locus: "Client",
-  descr: ["Create DOM nodes that automatically update themselves as data changes."],
-  args: [
-    {name: "htmlFunc",
-     type: "Function returning a string of HTML",
-     descr: "Function that generates HTML to be rendered.  Called immediately and re-run whenever data changes.  May also be a string of HTML instead of a function."}
-  ]
-};
-
-Template.api.renderList = {
-  id: "meteor_renderlist",
-  name: "Meteor.renderList(observable, docFunc, [elseFunc])",
-  locus: "Client",
-  descr: ["Create DOM nodes that automatically update themselves based on the results of a database query."],
-  args: [
-    {name: "observable",
-     type: "Cursor",
-     type_link: "meteor_collection_cursor",
-     descr: "Query cursor to observe as a reactive source of ordered documents."},
-    {name: "docFunc",
-     type: "Function taking a document and returning HTML",
-     descr: "Render function to be called for each document."},
-    {name: "elseFunc",
-     type: "Function returning HTML",
-     descr: "Optional.  Render function to be called when query is empty."}
-  ]
-};
 
 
 Template.api.eventmaps = {
@@ -1603,7 +1568,8 @@ Template.api.bindEnvironment = {
   ]
 };
 
-Template.api.set = {
+// Can't name this '.set', since that's a method on components.
+Template.api.session_set = {
   id: "session_set",
   name: "Session.set(key, value)",
   locus: "Client",
@@ -1633,7 +1599,8 @@ Template.api.setDefault = {
   ]
 };
 
-Template.api.get = {
+// Can't name this '.get', since that's a method on components.
+Template.api.session_get = {
   id: "session_get",
   name: "Session.get(key)",
   locus: "Client",

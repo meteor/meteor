@@ -577,6 +577,12 @@ var makeObjectLiteral = function (obj) {
   return buf.join('');
 };
 
+// Generates a render function (i.e. JS source code) from a template
+// string or a pre-parsed template string.  Consumes the AST from the
+// parser, which consists of HTML tokens with embedded stache tags.  A
+// "block" (i.e. `{{#foo}}...{{/foo}}`) is represented as a single tag
+// (always as part of an HTML "Characters" token), which has content
+// that contains more HTML.
 Spacebars.compile = function (inputString, options) {
   var tree;
   if (typeof inputString === 'object') {
@@ -641,15 +647,14 @@ Spacebars.compile = function (inputString, options) {
         argCode = toJSLiteral(argValue);
         break;
       case 'PATH':
-        argCode = 'function () { return Spacebars.call(' +
-          codeGenPath(argValue, funcInfo) + '); }';
+        argCode = codeGenPath(argValue, funcInfo);
         break;
       default:
         error("Unexpected arg type: " + argType);
       }
 
       if (arg.length > 2) {
-        // keyword argument
+        // keyword argument (represented as [type, value, name])
         options = (options || {});
         if (! (forComponentWithOpts &&
                (arg[2] in forComponentWithOpts))) {
@@ -657,19 +662,8 @@ Spacebars.compile = function (inputString, options) {
         }
       } else {
         // positional argument
-        if (forComponent) {
-          // for Components, only take one positional
-          // argument, and call it `data`
-          if (i === 0) {
-            options = (options || {});
-            options[toJSLiteral('data')] = argCode;
-          } else {
-            error("Only one positional argument is allowed");
-          }
-        } else {
-          args = (args || []);
-          args.push(argCode);
-        }
+        args = (args || []);
+        args.push(argCode);
       }
     });
 
@@ -678,9 +672,9 @@ Spacebars.compile = function (inputString, options) {
         options = (options || {});
         options[toJSLiteral(k)] = v;
       });
-
-      // components get one argument, the options dictionary
-      args = [options ? makeObjectLiteral(options) : '{}'];
+      // put options as dictionary at beginning of args for component
+      args = (args || []);
+      args.unshift(options ? makeObjectLiteral(options) : 'null');
     } else {
       // put options as dictionary at end of args
       if (options) {
@@ -693,33 +687,47 @@ Spacebars.compile = function (inputString, options) {
   };
 
   var codeGenComponent = function (path, args, funcInfo,
-                                   compOptions) {
+                                   compOptions, isBlock) {
 
     var nameCode = codeGenPath(path, funcInfo);
     var argCode = (args.length || compOptions) ?
-          codeGenArgs(args, funcInfo, compOptions || {})[0] : null;
+          codeGenArgs(args, funcInfo, compOptions || {}) : null;
 
     // XXX provide a better error message if
     // `foo` in `{{> foo}}` is not found?
-    // Instead of `null`, we could evaluate to the path
-    // as a string, and then the renderer could choke on
-    // that in a way where it ends up in the error message.
 
-    var compFunc = 'function () { return (Spacebars.call(' + nameCode +
-          ') || null); }';
+    var comp = nameCode;
 
-    if (path.length === 1)
-      compFunc = 'Template[' + toJSLiteral(path[0]) + '] || ' + compFunc;
+    if (path.length === 1) {
+      comp = '(Template[' + toJSLiteral(path[0]) + '] || ' + comp + ')';
+      // XXX MESSAY HACK FOR LEXICAL SCOPE OF CONTENT / ELSECONTENT.
+      // Check for presence of local variables defined at top level of
+      // of template decl, through `preamble` option to `Spacebars.compile`,
+      // passed from `html_scanner`.
+      if (path[0] === 'content' || path[0] === 'elseContent') {
+        comp = '(typeof _local_' + path[0] + ' !== "undefined" ? _local_' +
+          path[0] + ' : ' + comp + ')';
+      }
+    }
 
-    return '{kind: ' + compFunc + (argCode ? ', props: ' + argCode : '') +
-      '}';
+    // XXX For now, handle the calling convention for `{{> foo}}` and `{{#foo}`
+    // using a wrapper component, which processes the arguments based
+    // on the type of tag and the type of `foo` (component or function).
+    // If `foo` changes reactively, the wrapper component is invalidated.
+    //
+    // This should be cleaned up to make the generated code cleaner and
+    // to not have all the extra components and DomRanges hurting
+    // peformance and showing up during debugging.
+    return '{kind: UI.DynamicComponent, props: {' +
+      (isBlock? 'isBlock: true, ' : '') + 'compKind: ' + comp +
+      (argCode ? ', compArgs: [' + argCode.join(', ') + ']': '') + '}}';
   };
 
   var codeGenBasicStache = function (tag, funcInfo) {
     var nameCode = codeGenPath(tag.path, funcInfo);
     var argCode = codeGenArgs(tag.args, funcInfo);
 
-    return 'Spacebars.call(' + nameCode +
+    return 'Spacebars.mustache(' + nameCode +
       (argCode ? ', ' + argCode.join(', ') : '') + ')';
   };
 
@@ -765,7 +773,7 @@ Spacebars.compile = function (inputString, options) {
 //    }
   };
 
-  var tokensToRenderFunc = function (tokens, indent) {
+  var tokensToRenderFunc = function (tokens, indent, isTopLevel) {
     var oldIndent = indent || '';
     indent = oldIndent + '  ';
 
@@ -811,12 +819,12 @@ Spacebars.compile = function (inputString, options) {
                 // aren't created per call to render.
                 var block = tag;
                 var extraArgs = {
-                  content: 'UI.Component.extend({render: ' +
+                  __content: 'UI.Component.extend({render: ' +
                     tokensToRenderFunc(block.bodyTokens, indent) +
                     '})'
                 };
                 if (block.elseTokens) {
-                  extraArgs.elseContent =
+                  extraArgs.__elseContent =
                     'UI.Component.extend({render: ' +
                     tokensToRenderFunc(block.elseTokens, indent) +
                     '})';
@@ -824,7 +832,7 @@ Spacebars.compile = function (inputString, options) {
                 renderables.push(codeGenComponent(
                   block.openTag.path,
                   block.openTag.args,
-                  funcInfo, extraArgs));
+                  funcInfo, extraArgs, true));
               } else {
                 switch (tag.type) {
                 case 'INCLUSION':
@@ -861,6 +869,7 @@ Spacebars.compile = function (inputString, options) {
             var name = kv.nodeName;
             var value = kv.nodeValue;
             if ((typeof name) === 'string') {
+              // attribute name has no tags
               attrs = (attrs || {});
               attrs[toJSLiteral(name)] =
                 interpolate(value, funcInfo,
@@ -870,6 +879,8 @@ Spacebars.compile = function (inputString, options) {
             } else if (value === '' &&
                        name.length === 1 &&
                        name[0].type === 'TRIPLE') {
+              // attribute name is a triple-stache, no value, as in:
+              // `<div {{{attrs}}}>`.
               renderables.push(
                 '{attrs: function () { return Spacebars.parseAttrs(' +
                   codeGenBasicStache(name[0], funcInfo) + '); }}');
@@ -877,7 +888,7 @@ Spacebars.compile = function (inputString, options) {
               pairsWithReactiveNames.push(
                 interpolate(name, funcInfo,
                             INTERPOLATE_ATTR_VALUE),
-                interpolate(name, funcInfo,
+                interpolate(value, funcInfo,
                             INTERPOLATE_ATTR_VALUE));
               isReactive = true;
             }
@@ -920,7 +931,9 @@ Spacebars.compile = function (inputString, options) {
       }
     });
 
-    return 'function (buf) {' +
+    var preamble = (isTopLevel && options && options.preamble) || '';
+
+    return 'function (buf) {' + preamble +
       (renderables.length ?
        (funcInfo.usedSelf ?
         '\n' + indent + 'var self = this;' : '') +
@@ -929,38 +942,60 @@ Spacebars.compile = function (inputString, options) {
        oldIndent : '') + '}';
   };
 
-  return tokensToRenderFunc(tree.bodyTokens);
+  return tokensToRenderFunc(tree.bodyTokens, '', true);
 };
 
-Spacebars.index = function (value/*, identifiers*/) {
-  var identifiers = Array.prototype.slice.call(arguments, 1);
-
-  // The object we got `curValue` from by indexing.
-  // For the value itself, we don't know the appropriate value
-  // of `this`, so we assume it is already bound.
-  var nextThis = null;
-
-  _.each(identifiers, function (id) {
-    if (typeof value === 'function') {
-      // Call a getter -- in `{{foo.bar}}`, call `foo()` if it
-      // is a function before indexing it with `bar`.
-      //
-      // In `{{foo blah=FooComponent.Bar}}`, treat
-      // `FooComponent` as a non-function.
-      value = value.call(nextThis);
-    }
-    nextThis = value;
-    if (value)
-      value = value[id];
-  });
-
-  if (typeof value === 'function') {
-    // bind `this` for resulting function, so it can be
-    // called with `Spacebars.call`.
-    value = _.bind(value, nextThis);
+// `Spacebars.index(foo, "bar", "baz")` performs a special kind
+// of `foo.bar.baz` that allows safe indexing of `null` and
+// indexing of functions to get other functions.
+//
+// In `Spacebars.index(foo, "bar")`, `foo` is assumed to be either
+// a non-function value or a "fully-bound" function wrapping a value,
+// taking no arguments and ignoring `this`.
+//
+// `Spacebars.index(foo, "bar")` behaves as follows:
+//
+// * If `foo` is falsy, `foo` is returned.
+//
+// * If either `foo` is a function or `foo.bar` is, then a new
+// function is returned that, when called on arguments `args...`,
+// calculates a "safe" version of `foo().bar(args...)`,
+// where "dot" on a falsy value just returns the falsy value,
+// and function calls are a no-op on non-functions.
+//
+// * Otherwise, the non-function `foo.bar` is returned.
+Spacebars.index = function (value, id1/*, id2, ...*/) {
+  if (arguments.length > 2) {
+    // Note: doing this recursively is probably less efficient than
+    // doing it in an iterative loop.
+    var argsForRecurse = [];
+    argsForRecurse.push(Spacebars.index(value, id1));
+    argsForRecurse.push.apply(argsForRecurse,
+                              Array.prototype.slice.call(arguments, 2));
+    return Spacebars.index.apply(null, argsForRecurse);
   }
 
-  return value;
+  if (! value)
+    return value; // falsy, don't index, pass through
+
+  if (typeof value !== 'function') {
+    var result = value[id1];
+    if (typeof result !== 'function')
+      return result;
+    return function (/*arguments*/) {
+      return result.apply(value, arguments);
+    };
+  }
+
+  return function (/*arguments*/) {
+    var foo = value();
+    if (! foo)
+      return foo; // falsy, don't index, pass through
+    var bar = foo[id1];
+    if (typeof bar !== 'function')
+      return bar;
+    return bar.apply(foo, arguments);
+  };
 };
 
 Spacebars.call = function (value/*, args*/) {
@@ -975,6 +1010,21 @@ Spacebars.call = function (value/*, args*/) {
   // is actually a wrapper which ignores its `this`
   // and supplies one).
   return value.apply(null, args);
+};
+
+// Executes `{{foo bar baz}}` when called on `(foo, bar, baz)`.
+// If `bar` and `baz` are functions, they are called.  `foo`
+// may be a non-function, in which case the arguments are
+// discarded (though they may still be evaluated, i.e. called).
+Spacebars.mustache = function (value/*, args*/) {
+  // call any arg that is a function (checked in Spacebars.call)
+  for (var i = 1; i < arguments.length; i++)
+    arguments[i] = Spacebars.call(arguments[i]);
+
+  var result = Spacebars.call.apply(null, arguments);
+  // map `null` and `undefined` to "", stringify anything else
+  // (e.g. strings, booleans, numbers including 0).
+  return String(result == null ? '' : result);
 };
 
 Spacebars.extend = function (obj/*, k1, v1, k2, v2, ...*/) {
@@ -996,8 +1046,8 @@ Spacebars.parseAttrs = function (attrs) {
     if (tokens.length &&
         tokens[0].type === 'StartTag') {
       _.each(tokens[0].data, function (kv) {
-        if (UI.isValidAttributeName(kv[0]))
-          dict[kv[0]] = kv[1];
+        if (UI.isValidAttributeName(kv.nodeName))
+          dict[kv.nodeName] = kv.nodeValue;
       });
     }
     return dict;

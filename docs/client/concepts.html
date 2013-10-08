@@ -522,7 +522,7 @@ function `Template.hello`, passing any data for the template:
     <!-- in myapp.html -->
     <template name="hello">
       <div class="greeting">Hello there, {{dstache}}first}} {{dstache}}last}}!</div>
-    </{{! }}template>
+    {{lt}}/template>
 
     // in the JavaScript console
     > Template.hello({first: "Alyssa", last: "Hacker"});
@@ -545,7 +545,7 @@ functions in JavaScript. Just add the helper functions directly on the
       {{dstache}}#each topScorers}}
         <div>{{dstache}}name}}</div>
       {{dstache}}/each}}
-    </{{! }}template>
+    {{lt}}/template>
 
 instead of passing in `topScorers` as data when we call the
 template function, we could define a function on `Template.players`:
@@ -577,7 +577,7 @@ in `this`:
           <div>Senior: {{dstache}}name}}</div>
         {{dstache}}/if}}
       {{dstache}}/each}}
-    </{{! }}template>
+    {{lt}}/template>
 
 {{#note}}
 Handlebars note: `{{dstache}}#if leagueIs "junior"}}` is
@@ -602,13 +602,13 @@ the data context of the element that triggered the event.
       {{dstache}}#each player}}
         {{dstache}}> playerScore}}
       {{dstache}}/each}}
-    </{{! }}template>
+    {{lt}}/template>
 
     <template name="playerScore">
       <div>{{dstache}}name}}: {{dstache}}score}}
         <span class="givePoints">Give points</span>
       </div>
-    </{{! }}template>
+    {{lt}}/template>
 
     <!-- myapp.js -->
     Template.playerScore.events({
@@ -625,7 +625,7 @@ discussion.
     <!-- in myapp.html -->
     <template name="forecast">
       <div>It'll be {{dstache}}prediction}} tonight</div>
-    </{{! }}template>
+    {{lt}}/template>
 
     <!-- in myapp.js -->
     // JavaScript: reactive helper function
@@ -826,7 +826,7 @@ To get started, run
 This command will generate a fully-contained Node.js application in the form of
 a tarball.  To run this application, you need to provide Node.js 0.10 and a
 MongoDB server.  (The current release of Meteor has been tested with Node
-0.10.19.) You can then run the application by invoking node, specifying the HTTP
+0.10.20.) You can then run the application by invoking node, specifying the HTTP
 port for the application to listen on, and the MongoDB endpoint.  If you don't
 already have a MongoDB server, we can recommend our friends at
 [MongoHQ](http://mongohq.com).
