@@ -19,6 +19,25 @@ if (Meteor.isClient) (function () {
       test.equal(Meteor.user().username, someUsername);
     });
   };
+  var waitForLoggedOutStep = function (test, expect) {
+    var done = expect();
+    var count = 100;
+    var interval = Meteor.setInterval(function () {
+      if (Meteor.userId() === null) {
+        Meteor.clearInterval(interval);
+        test.ok({message: "user is logged out"});
+        done();
+      }
+
+      count -= 1;
+      if (count === 0) {
+        Meteor.clearInterval(interval);
+        test.fail({message: "user did not log out in time"});
+        done();
+      }
+    }, 100);
+  };
+
 
 
   testAsyncMulti("passwords - basic login with password", [
@@ -357,27 +376,22 @@ if (Meteor.isClient) (function () {
       var expectNoError = expect(function (err) {
         test.isFalse(err);
       });
-      var expectLoginError = expect(function (err) {
-        test.isTrue(err);
-      });
-      // XXX XXX this relies on possibly broken behavior on loginWithPassword!
-      var firstLoginCallback = true;
 
       Meteor.loginWithPassword(this.username, this.password, function (error) {
         var token = Accounts._storedLoginToken();
-        if (firstLoginCallback) {
-          test.isTrue(token);
-          expectNoError(error);
-          Meteor.call("expireTokens");
-        } else {
-          test.isFalse(token);
-          expectLoginError(error);
-        }
-        firstLoginCallback = false;
+        test.isTrue(token);
+        expectNoError(error);
+        Meteor.call("expireTokens");
       });
     },
-    logoutStep,
+    waitForLoggedOutStep,
     function (test, expect) {
+      var token = Accounts._storedLoginToken();
+      test.isFalse(token);
+    },
+    function (test, expect) {
+      var self = this;
+
       // copied from livedata/client_convenience.js
       var ddpUrl = '/';
       if (typeof __meteor_runtime_config__ !== "undefined") {
@@ -390,9 +404,9 @@ if (Meteor.isClient) (function () {
       // Test that Meteor.logoutOtherClients logs out a second authenticated
       // connection while leaving Meteor.connection logged in.
       var token;
-      var secondConn = DDP.connect(ddpUrl);
-      var firstLoginCallback = true;
       var userId;
+      self.secondConn = DDP.connect(ddpUrl);
+
 
       var expectNoError = expect(function (err) {
         test.isFalse(err);
@@ -406,44 +420,36 @@ if (Meteor.isClient) (function () {
       var expectSecondConnLoggedIn = expect(function (err, result) {
         test.equal(result.token, token);
         test.isFalse(err);
-        secondConn.onReconnect = function () {
-          secondConn.call("login", { resume: token }, expectLoginError);
+        self.secondConn.onReconnect = function () {
+          self.secondConn.call("login", { resume: token }, expectLoginError);
         };
         Meteor.call("logoutOtherClients", expectLoggedIn);
       });
 
       Meteor.loginWithPassword(this.username, this.password, function (err) {
-        if (firstLoginCallback) {
-          expectNoError(err);
-          token = Accounts._storedLoginToken();
-          test.isTrue(token);
-          userId = Meteor.userId();
-          secondConn.call("login", { resume: token }, expectSecondConnLoggedIn);
-        }
-        firstLoginCallback = false;
+        expectNoError(err);
+        token = Accounts._storedLoginToken();
+        test.isTrue(token);
+        userId = Meteor.userId();
+        self.secondConn.call("login", { resume: token },
+                             expectSecondConnLoggedIn);
       });
     },
-    logoutStep,
+    waitForLoggedOutStep,
+    function (test, expect) {
+      var token = Accounts._storedLoginToken();
+      test.isFalse(token);
+      this.secondConn.close();
+    },
     function (test, expect) {
       var self = this;
       // Test that deleting a user logs out that user's connections.
-      var expectLoginError = expect(function (err) {
-        test.isTrue(err);
-      });
-      var firstLoginCallback = true;
       Meteor.loginWithPassword(this.username, this.password, function (err) {
-        if (firstLoginCallback) {
-          test.isFalse(err);
-          Meteor.call("removeUser", self.username);
-          // When the user is deleted, our connection will be closed, triggering
-          // a reconnect, which will trigger a login attempt.
-        } else {
-          expectLoginError(err);
-        }
-        firstLoginCallback = false;
+        test.isFalse(err);
+        Meteor.call("removeUser", self.username);
       });
     },
-    logoutStep
+    waitForLoggedOutStep
   ]);
 }) ();
 
