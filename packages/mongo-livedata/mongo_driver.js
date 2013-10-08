@@ -149,12 +149,11 @@ MongoConnection = function (url, options) {
 
   self._docFetcher = new DocFetcher(self);
   self._oplogHandle = null;
-  // XXX we should NOT be reading directly from the env here (this should be an
-  // argument to MongoConnection eg) but I want to wait for the AppConfig API to
-  // settle a little before thinking too hard about this
-  if (process.env.XXX_OPLOG_URL && !options.isOplog) {
+
+  if (options.oplogUrl) {
+    // XXX this parse fails on mongo URLs with commas!
     var dbName = Npm.require('url').parse(url).pathname.substr(1);
-    self._startOplogTailing(process.env.XXX_OPLOG_URL, dbName);
+    self._startOplogTailing(options.oplogUrl, dbName);
   }
 };
 
@@ -295,7 +294,7 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
 
   // Actually setting up the connection and tail blocks, so we do it "later".
   Meteor.defer(function () {
-    var oplogConnection = new MongoConnection(oplogUrl, {isOplog: true});
+    var oplogConnection = new MongoConnection(oplogUrl);
 
     // Find the last oplog entry. Blocks until the connection is ready.
     var lastOplogEntry = oplogConnection.findOne(
