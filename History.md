@@ -60,6 +60,9 @@
 
 * Warn if `Accounts.config` is only called on the client.
 
+* Fix bug where callbacks to login functions could be called multiple
+  times when the client reconnects.
+
 #### Tools
 
 * The pre-0.6.5 `Package.register_extension` API has been removed. Use

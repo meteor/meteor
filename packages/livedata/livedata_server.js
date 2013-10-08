@@ -1269,9 +1269,11 @@ _.extend(Server.prototype, {
       if (_.isEmpty(self.sessionsByLoginToken[oldToken]))
         delete self.sessionsByLoginToken[oldToken];
     }
-    if (! _.has(self.sessionsByLoginToken, newToken))
-      self.sessionsByLoginToken[newToken] = [];
-    self.sessionsByLoginToken[newToken].push(session.id);
+    if (newToken) {
+      if (! _.has(self.sessionsByLoginToken, newToken))
+        self.sessionsByLoginToken[newToken] = [];
+      self.sessionsByLoginToken[newToken].push(session.id);
+    }
   },
 
   // Close all open sessions associated with any of the tokens in
