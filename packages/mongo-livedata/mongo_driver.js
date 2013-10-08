@@ -1490,6 +1490,7 @@ var cursorSupportedByOplogTailing = function (cursorDescription) {
 
   // We don't yet implement field filtering for oplog tailing (just because it's
   // not implemented, not because there's a deep problem with implementing it).
+  // XXX Implementing field filtering should be a priority.
   if (options.fields) return false;
 
   // This option (which are mostly used for sorted cursors) require us to figure
