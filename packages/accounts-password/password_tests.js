@@ -271,6 +271,7 @@ if (Meteor.isClient) (function () {
     function(test, expect) {
       var clientUser = Meteor.user();
       test.equal(clientUser, null);
+      test.equal(Meteor.userId(), null);
       Meteor.call('testMeteorUser', expect(function (err, result) {
         test.equal(err, undefined);
         test.equal(result, null);
@@ -429,6 +430,9 @@ if (Meteor.isClient) (function () {
       var expectSecondConnLoggedIn = expect(function (err, result) {
         test.equal(result.token, token);
         test.isFalse(err);
+        // This test will fail if an unrelated reconnect triggers before the
+        // connection is logged out. In general our tests aren't resilient to
+        // mid-test reconnects.
         self.secondConn.onReconnect = function () {
           self.secondConn.call("login", { resume: token }, expectLoginError);
         };
