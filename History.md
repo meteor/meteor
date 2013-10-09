@@ -156,7 +156,7 @@
 
 Patches contributed by GitHub users ansman, awwx, codeinthehole, jacott,
 Maxhodges, meawoppl, mitar, mizzao, mquandalle, nathan-muir, RobertLowe, ryw,
-and timhaines.
+sdarnell, and timhaines.
 
 
 ## v0.6.5.1
