@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "enable the application cache in the browser"
+  summary: "Enable the application cache in the browser"
 });
 
 Package.on_use(function (api) {
