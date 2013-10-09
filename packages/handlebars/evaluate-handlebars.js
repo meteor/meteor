@@ -238,7 +238,18 @@ Handlebars.evaluate = function (ast, data, options) {
           args[i] = args[i](); // `this` already bound by eval_value
       if (extra)
         args.push(extra);
-      return values[0].apply(stack.data, args);
+
+      try {
+        
+        return values[0].apply(stack.data, args);
+
+      } catch (e) {
+
+        console.error("Exception thrown in helper", e.stack);
+        return null;
+
+      }
+
     };
 
     var values = new Array(params.length);
