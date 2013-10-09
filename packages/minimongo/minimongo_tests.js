@@ -2438,6 +2438,9 @@ Tinytest.add("minimongo - modifier affects selector", function (test) {
   notAffected({ 'foobar': 0 }, { $unset: { 'foo': 1 } }, "correct prefix check");
   notAffected({ 'foo.bar': 0 }, { $unset: { 'foob': 1 } }, "correct prefix check");
 
+  notAffected({ 'foo.Infinity.x': 0 }, { $unset: { 'foo.x': 1 } }, "we convert integer fields correctly");
+  notAffected({ 'foo.1e3.x': 0 }, { $unset: { 'foo.x': 1 } }, "we convert integer fields correctly");
+
   // XXX once we consider all the array/non-array operators separately, this
   // should become notAffected. Until then it's fine to let it "match" and
   // affect.
