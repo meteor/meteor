@@ -371,6 +371,7 @@ if (Meteor.isClient) (function () {
     },
 
     function(test, expect) {
+      var self = this;
       // Test that login tokens get expired. We should get logged out when a
       // token expires, and not be able to log in again with the same token.
       var expectNoError = expect(function (err) {
@@ -378,8 +379,8 @@ if (Meteor.isClient) (function () {
       });
 
       Meteor.loginWithPassword(this.username, this.password, function (error) {
-        var token = Accounts._storedLoginToken();
-        test.isTrue(token);
+        self.token = Accounts._storedLoginToken();
+        test.isTrue(self.token);
         expectNoError(error);
         Meteor.call("expireTokens");
       });
@@ -388,6 +389,14 @@ if (Meteor.isClient) (function () {
     function (test, expect) {
       var token = Accounts._storedLoginToken();
       test.isFalse(token);
+    },
+    function (test, expect) {
+      // Test that once expireTokens is finished, we can't login again with our
+      // previous token.
+      Meteor.loginWithToken(this.token, expect(function (err, result) {
+        test.isTrue(err);
+        test.equal(Meteor.userId(), null);
+      }));
     },
     function (test, expect) {
       var self = this;
