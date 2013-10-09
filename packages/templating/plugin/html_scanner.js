@@ -153,7 +153,7 @@ html_scanner = {
           sourceName: 'Template "' + name + '"',
           // XXX MESSY HACK - make only Templates expose
           // `content` and `elseContent`
-          preamble: ' var _local_content = this.content = this.__content, _local_elseContent = this.elseContent = this.__elseContent' });
+          preamble: '\n  var _local_content = this.content = this.__content;\n  var _local_elseContent = this.elseContent = this.__elseContent' });
 
       results.js += "\nTemplate[" + JSON.stringify(name) +
         "] = UI.Component.extend({kind: " +
