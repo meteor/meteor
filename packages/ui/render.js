@@ -64,8 +64,10 @@ UI.render = function (kind, props, parentComp) {
     comp.init();
 
   if (comp.created) {
-    updateTemplateInstance(comp);
-    comp.created.call(comp.templateInstance);
+    Deps.nonreactive(function () {
+      updateTemplateInstance(comp);
+      comp.created.call(comp.templateInstance);
+    });
   }
 
   var range = new DomRange(comp);

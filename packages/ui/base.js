@@ -1226,8 +1226,10 @@ UI.Component.parented = function () {
 
   // XXX think about this callback's timing
   if (self.rendered) {
-    updateTemplateInstance(self);
-    self.rendered.call(self.templateInstance);
+    Deps.nonreactive(function () {
+      updateTemplateInstance(self);
+      self.rendered.call(self.templateInstance);
+    });
   }
 };
 
@@ -1236,8 +1238,10 @@ UI.Component.removed = function () {
   var self = this;
   self.isDestroyed = true;
   if (self.destroyed) {
-    updateTemplateInstance(self);
-    self.destroyed.call(self.templateInstance);
+    Deps.nonreactive(function () {
+      updateTemplateInstance(self);
+      self.destroyed.call(self.templateInstance);
+    });
   }
 };
 
