@@ -8,7 +8,9 @@ Follower = {
 
   connect: function (urlSet, options) {
     var electorTries;
-    options = options || {};
+    options = _.extend({
+      group: "package.leadershipLivedata"
+    }, options);
     // start each elector as untried/assumed connectable.
 
     // for options.priority, low-priority things are tried first.
@@ -72,7 +74,7 @@ Follower = {
 
     var tryElector = function (url) {
       url = url || findFewestTries();
-      //console.log("trying", url, electorTries, tryingUrl);
+      console.log("trying", url, electorTries, tryingUrl);
       if (conn) {
         conn._reconnectImpl({
           url: url
@@ -87,11 +89,12 @@ Follower = {
         tryingUrl = url;
       } else {
         tryingUrl = url;
-        conn.call('getElectorate', function (err, res) {
+        conn.call('getElectorate', options.group, function (err, res) {
           connected = tryingUrl;
           tryingUrl = null;
           if (err) {
             electorTries[url]++;
+            tryElector();
             return;
           }
           // we got an answer!  Connected!
@@ -122,7 +125,7 @@ Follower = {
         if (conn.status().status !== 'connected' || connected !== leader) {
           tryElector();
         } else {
-          conn.call('getElectorate', function (err, res) {
+          conn.call('getElectorate', options.group, function (err, res) {
             if (err) {
               electorTries[connected]++;
               tryElector();
@@ -162,6 +165,10 @@ Follower = {
 
     conn.getUrl = function () {
       return _.keys(electorTries).join(',');
+    };
+
+    conn.tries = function () {
+      return electorTries;
     };
 
     return conn;
