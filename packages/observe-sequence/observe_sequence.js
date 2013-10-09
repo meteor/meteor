@@ -64,7 +64,8 @@ ObserveSequence = {
 
       } else if (seq._publishCursor) { // XXX is there a better way to
                                        // check if 'seq' is a cursor?
-        if (lastSeq !== seq) { // fresh cursor.
+        var cursor = seq;
+        if (lastSeq !== cursor) { // fresh cursor.
           naivelyReplaceArray();
 
           // fetch all elements and start observing.
@@ -73,7 +74,7 @@ ObserveSequence = {
             activeObserveHandle.stop();
           }
 
-          activeObserveHandle = seq.observe({
+          activeObserveHandle = cursor.observe({
             addedAt: function (document, atIndex, before) {
               callbacks.addedAt(document._id, document, atIndex, before);
             },
@@ -89,7 +90,7 @@ ObserveSequence = {
           });
 
           Deps.nonreactive(function () {
-            seqArray = _.map(seq.fetch(), function (item) {
+            seqArray = _.map(cursor.fetch(), function (item) {
               return {id: item._id, item: item};
             });
           });
