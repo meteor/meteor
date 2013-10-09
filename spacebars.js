@@ -718,9 +718,11 @@ Spacebars.compile = function (inputString, options) {
     // This should be cleaned up to make the generated code cleaner and
     // to not have all the extra components and DomRanges hurting
     // peformance and showing up during debugging.
-    return '{kind: UI.DynamicComponent, props: {' +
-      (isBlock? 'isBlock: true, ' : '') + 'compKind: ' + comp +
-      (argCode ? ', compArgs: [' + argCode.join(', ') + ']': '') + '}}';
+    return 'Spacebars.component("' + (isBlock ? '#' : '>') + '", ' + comp +
+      (argCode ? ', [' + argCode.join(', ') + ']' : '') + ')';
+//    return '{kind: UI.DynamicComponent, props: {' +
+//      (isBlock? 'isBlock: true, ' : '') + 'compKind: ' + comp +
+//      (argCode ? ', compArgs: [' + argCode.join(', ') + ']': '') + '}}';
   };
 
   var codeGenBasicStache = function (tag, funcInfo) {
@@ -820,13 +822,13 @@ Spacebars.compile = function (inputString, options) {
                 var block = tag;
                 var extraArgs = {
                   __content: 'UI.Component.extend({render: ' +
-                    tokensToRenderFunc(block.bodyTokens, indent) +
+                    tokensToRenderFunc(block.bodyTokens, indent + '  ') +
                     '})'
                 };
                 if (block.elseTokens) {
                   extraArgs.__elseContent =
                     'UI.Component.extend({render: ' +
-                    tokensToRenderFunc(block.elseTokens, indent) +
+                    tokensToRenderFunc(block.elseTokens, indent + '  ') +
                     '})';
                 }
                 renderables.push(codeGenComponent(
@@ -843,9 +845,9 @@ Spacebars.compile = function (inputString, options) {
                 case 'TRIPLE':
                   renderables.push(
                     'UI.' + (tag.type === 'TRIPLE' ? 'HTML' : 'Text') +
-                      '.withData(function () { return ' +
+                      '.withData(function () {\n' + indent + '    return ' +
                       codeGenBasicStache(tag, funcInfo) +
-                      '; })');
+                      ';\n' + indent + '  })');
                   break;
                 case 'COMMENT':
                   break;
@@ -1060,4 +1062,13 @@ Spacebars.escapeHtmlComment = function (str) {
   if ((typeof str) === 'string')
     return str.replace(/--/g, '');
   return str;
+};
+
+// XXX we want to get rid of UI.DynamicComponent.  See the code that
+// emits calls to this function.
+Spacebars.component = function (hashOrGreaterThan, kind, args) {
+  return { kind: UI.DynamicComponent,
+           props: { isBlock: (hashOrGreaterThan === '#'),
+                    compKind: kind,
+                    compArgs: args } };
 };
