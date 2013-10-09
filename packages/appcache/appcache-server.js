@@ -113,13 +113,14 @@ WebApp.connectHandlers.use(function(req, res, next) {
   _.each(WebApp.clientProgram.manifest, function (resource) {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url)) {
-      if (resource.cacheable)
+      if (resource.cacheable) {
         manifest += resource.url;
+        manifest += "\n";
+      }
       // If the resource is not already cacheable (has a query
       // parameter, presumably with a hash or version of some sort),
       // put a version with a hash in the fallback section instead.
 
-      manifest += "\n";
     }
   });
   manifest += "\n";
