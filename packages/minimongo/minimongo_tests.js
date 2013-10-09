@@ -2441,12 +2441,11 @@ Tinytest.add("minimongo - modifier affects selector", function (test) {
   notAffected({ 'foo.Infinity.x': 0 }, { $unset: { 'foo.x': 1 } }, "we convert integer fields correctly");
   notAffected({ 'foo.1e3.x': 0 }, { $unset: { 'foo.x': 1 } }, "we convert integer fields correctly");
 
-  // XXX once we consider all the array/non-array operators separately, this
-  // should become notAffected. Until then it's fine to let it "match" and
-  // affect.
-  //notAffected({ 'foo.3.bar': 0 }, { $set: { 'foo.2.bar': 1 } }, "observe for an array element");
-  affected({ 'foo.3.bar': 0 }, { $set: { 'foo.2.bar': 1 } }, "observe for an array element");
-
   affected({ 'foo.3.bar': 0 }, { $set: { 'foo.3.bar': 1 } }, "observe for an array element");
+
+  notAffected({ 'foo.4.bar.baz': 0 }, { $unset: { 'foo.3.bar': 1 } }, "delicate work with numeric fields in selector");
+  notAffected({ 'foo.4.bar.baz': 0 }, { $unset: { 'foo.bar': 1 } }, "delicate work with numeric fields in selector");
+  affected({ 'foo.4.bar.baz': 0 }, { $unset: { 'foo.4.bar': 1 } }, "delicate work with numeric fields in selector");
+  affected({ 'foo.bar.baz': 0 }, { $unset: { 'foo.3.bar': 1 } }, "delicate work with numeric fields in selector");
 });
 
