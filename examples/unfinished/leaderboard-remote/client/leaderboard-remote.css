@@ -8,8 +8,8 @@ body {
 
 #meteor {
     position: absolute;
-    left: 0px;
-    bottom: 0px;
+    left: 0;
+    bottom: 0;
     opacity: .25;
     z-index: -1;
 }

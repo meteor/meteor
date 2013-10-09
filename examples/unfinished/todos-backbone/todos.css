@@ -122,7 +122,7 @@ html {
       line-height: 1.6em;
       border: 0;
       outline: none;
-      padding: 10px 7px 0px 27px;
+      padding: 10px 7px 0 27px;
       border: 1px solid #999999;
       -moz-box-shadow: rgba(0, 0, 0, 0.2) 0 1px 2px 0 inset;
       -webkit-box-shadow: rgba(0, 0, 0, 0.2) 0 1px 2px 0 inset;

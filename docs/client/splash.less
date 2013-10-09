@@ -57,7 +57,7 @@
 
     ul {
         padding-left: 30px;
-        margin: 30px 0px;
+        margin: 30px 0;
     }
 
     li {
@@ -92,7 +92,7 @@
 .buttonify (@hue: 150, @sat: 26%, @light: 45%) {
     /* vars defined inside mixin so we can pass in the @hue param */
     @button_bg: hsla(@hue, @sat, @light, 1);
-    @button_bg_light: spin(saturate(lighten(@button_bg, 5%), -10%), 22); 
+    @button_bg_light: spin(saturate(lighten(@button_bg, 5%), -10%), 22);
     @button_border: spin(saturate(lighten(@button_bg, 19%), -10%), 22);
     @button_hover: spin(lighten(@button_bg, 3%), 10);
     @button_active: spin(saturate(lighten(@button_bg, -15%), 5%), 18);

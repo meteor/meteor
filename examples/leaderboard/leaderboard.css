@@ -12,7 +12,7 @@ body {
 
 #outer {
     width: 600px;
-    margin: 0 auto;    
+    margin: 0 auto;
 }
 
 .player {
@@ -50,7 +50,7 @@ body {
     border-color: #ccc;
     border-width: 4px;
     margin: 50px 10px;
-    padding: 10px 0px;
+    padding: 10px 0;
 }
 
 .none {

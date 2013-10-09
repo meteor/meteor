@@ -125,7 +125,7 @@ a:hover {
 }
 
 #nav a:hover {
-    margin: 0px -5px 0px -5px;
+    margin: 0 -5px 0 -5px;
     padding: 2px 5px 2px 5px;
 }
 
@@ -143,19 +143,19 @@ a:hover {
 #nav h3 {
     font-size: .8em;
     font-weight: normal;
-    margin: 4px 0px 4px 0px;
+    margin: 4px 0 4px 0;
     padding-left: 10px;
     color: #333333;
-    letter-spacing: 0px;
+    letter-spacing: 0;
 }
 
 #nav h4 {
     font-size: .8em;
     font-weight: normal;
-    margin: 4px 0px 4px 0px;
+    margin: 4px 0 4px 0;
     padding-left: 20px;
     color: #333333;
-    letter-spacing: 0px;
+    letter-spacing: 0;
 }
 
 #nav .spacer {
@@ -190,7 +190,7 @@ a:hover {
 
 #main h2 span {
     background-color: yellow;
-    margin: 0px -5px 0px -5px;
+    margin: 0 -5px 0 -5px;
     padding: 2px 5px 2px 5px;
 }
 
@@ -279,20 +279,20 @@ dl.callbacks {
 /** API **/
 
 .warning {
-    border-width: 0px 0px 0px 3px;
+    border-width: 0 0 0 3px;
     border-style: solid;
     border-color: red;
-    margin: 21px 0px 21px 10px;
+    margin: 21px 0 21px 10px;
     padding-left: 15px;
     font-weight: bold;
     color: red;
 }
 
 .note {
-    border-width: 0px 0px 0px 2px;
+    border-width: 0 0 0 2px;
     border-style: solid;
     border-color: black;
-    margin: 21px 0px 21px 10px;
+    margin: 21px 0 21px 10px;
     padding-left: 15px;
     font-style: italic;
     color: black;
@@ -303,7 +303,7 @@ dl.callbacks {
 }
 
 .api {
-    border-width: 0px 0px 2px 0px;
+    border-width: 0 0 2px 0;
     border-style: dashed;
     border-color: #ccc;
     padding-top: 2em;
@@ -315,8 +315,8 @@ dl.callbacks {
 }
 
 .api h3 {
-    margin: 0px 0px 1.33em 0px;
-    border-width: 2px 0px 2px 0px;
+    margin: 0 0 1.33em 0;
+    border-width: 2px 0 2px 0;
     border-style: solid;
     border-color: black;
     padding-bottom: 1px;

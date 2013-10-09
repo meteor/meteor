@@ -17,13 +17,13 @@ h2 {
 }
 
 @-webkit-keyframes spinForward {
-    from {-webkit-transform: rotate(0deg);}
+    from {-webkit-transform: rotate(0);}
     to {-webkit-transform: rotate(360deg);}
 }
 
 @-webkit-keyframes spinBackward {
     from {-webkit-transform: rotate(360deg);}
-    to {-webkit-transform: rotate(0deg);}
+    to {-webkit-transform: rotate(0);}
 }
 
 .spinner {
