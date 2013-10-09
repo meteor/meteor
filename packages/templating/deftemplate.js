@@ -137,17 +137,29 @@ Template.__define__ = function (name, raw_func) {
         created: function () {
           var template = templateObjFromLandmark(this);
           template.data = data;
-          tmpl.created && tmpl.created.call(template);
+          try {
+            tmpl.created && tmpl.created.call(template);
+          } catch (e) {
+            console.error("Exception thrown in created()",e.stack);
+          }
         },
         rendered: function () {
           var template = templateObjFromLandmark(this);
           template.data = data;
-          tmpl.rendered && tmpl.rendered.call(template);
+          try {
+            tmpl.rendered && tmpl.rendered.call(template);
+          } catch (e) {
+            console.error("Exception thrown in rendered()",e.stack);
+          }
         },
         destroyed: function () {
           // template.data is already set from previous callbacks
-          tmpl.destroyed &&
-            tmpl.destroyed.call(templateObjFromLandmark(this));
+          try {
+            tmpl.destroyed &&
+              tmpl.destroyed.call(templateObjFromLandmark(this));
+          } catch (e) {
+            console.error("Exception thrown in destroyed()",e.stack);
+          }
           delete templateInstanceData[this.id];
         }
       }, function (landmark) {
