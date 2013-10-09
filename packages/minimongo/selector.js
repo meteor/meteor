@@ -809,13 +809,18 @@ LocalCollection._isSelectorAffectedByModifier = function (selector, modifier) {
   });
 
   function removeNumericsKeys (path) {
-    return _.filter(path.split('.'), isNaN).join('.');
+    return _.filter(path.split('.'), notNumber).join('.');
   }
 
   function isPathPrefix (s, t) {
     var pos = t.indexOf(s);
     return pos === 0
         && (pos + s.length === t.length || t[pos + s.length] === '.');
+  }
+
+  // returns true if string can't be converted to integer
+  function notNumber (s) {
+    return !/^[0-9]+$/.test(s);
   }
 };
 
