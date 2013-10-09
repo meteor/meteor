@@ -2433,5 +2433,17 @@ Tinytest.add("minimongo - modifier affects selector", function (test) {
   notAffected({ 'foo.bar': 0 }, { $set: { 'foo.baz': 1 } }, "simplest");
   affected({ 'foo.bar': 0 }, { $set: { 'foo.1': 1 } }, "simplest");
   affected({ 'foo.bar': 0 }, { $set: { 'foo.2.bar': 1 } }, "simplest");
+
+  notAffected({ 'foo': 0 }, { $set: { 'foobaz': 1 } }, "correct prefix check");
+  notAffected({ 'foobar': 0 }, { $unset: { 'foo': 1 } }, "correct prefix check");
+  notAffected({ 'foo.bar': 0 }, { $unset: { 'foob': 1 } }, "correct prefix check");
+
+  // XXX once we consider all the array/non-array operators separately, this
+  // should become notAffected. Until then it's fine to let it "match" and
+  // affect.
+  //notAffected({ 'foo.3.bar': 0 }, { $set: { 'foo.2.bar': 1 } }, "observe for an array element");
+  affected({ 'foo.3.bar': 0 }, { $set: { 'foo.2.bar': 1 } }, "observe for an array element");
+
+  affected({ 'foo.3.bar': 0 }, { $set: { 'foo.3.bar': 1 } }, "observe for an array element");
 });
 

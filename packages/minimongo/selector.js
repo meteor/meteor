@@ -802,9 +802,9 @@ LocalCollection._isSelectorAffectedByModifier = function (selector, modifier) {
   return _.any(modifiedPaths, function (path) {
     path = removeNumericsKeys(path);
     return _.any(meaningfulPaths, function (meaningfulPath) {
-      // It's full prefix
-      return path.indexOf(meaningfulPath) === 0
-          || meaningfulPath.indexOf(path) === 0;
+      meaningfulPath = removeNumericsKeys(meaningfulPath);
+      return isPathPrefix(path, meaningfulPath)
+          || isPathPrefix(meaningfulPath, path);
     });
   });
 
@@ -812,6 +812,11 @@ LocalCollection._isSelectorAffectedByModifier = function (selector, modifier) {
     return _.filter(path.split('.'), isNaN).join('.');
   }
 
+  function isPathPrefix (s, t) {
+    var pos = t.indexOf(s);
+    return pos === 0
+        && (pos + s.length === t.length || t[pos + s.length] === '.');
+  }
 };
 
 // Returns a list of key paths the given selector is looking for
