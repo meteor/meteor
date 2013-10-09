@@ -20,25 +20,10 @@ if (Meteor.isClient) (function () {
     });
   };
   var waitForLoggedOutStep = function (test, expect) {
-    var done = expect();
-    var count = 100;
-    var interval = Meteor.setInterval(function () {
-      if (Meteor.userId() === null) {
-        Meteor.clearInterval(interval);
-        test.ok({message: "user is logged out"});
-        done();
-      }
-
-      count -= 1;
-      if (count === 0) {
-        Meteor.clearInterval(interval);
-        test.fail({message: "user did not log out in time"});
-        done();
-      }
-    }, 100);
+    pollUntil(expect, function () {
+      return Meteor.userId() === null;
+    }, 10 * 1000, 100);
   };
-
-
 
   testAsyncMulti("passwords - basic login with password", [
     function (test, expect) {
