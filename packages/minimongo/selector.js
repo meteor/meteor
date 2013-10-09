@@ -800,27 +800,38 @@ LocalCollection._isSelectorAffectedByModifier = function (selector, modifier) {
   var modifiedPaths = _.keys(modifier.$set).concat(_.keys(modifier.$unset));
   var meaningfulPaths = getPaths(selector);
   return _.any(modifiedPaths, function (path) {
-    path = removeNumericsKeys(path);
+    var mod = path.split('.');
     return _.any(meaningfulPaths, function (meaningfulPath) {
-      meaningfulPath = removeNumericsKeys(meaningfulPath);
-      return isPathPrefix(path, meaningfulPath)
-          || isPathPrefix(meaningfulPath, path);
+      var sel = meaningfulPath.split('.');
+      var i = 0, j = 0;
+
+      while (i < sel.length && j < mod.length) {
+        if (numericKey(sel[i]) && numericKey(mod[j])) {
+          // foo.4.bar, foo.4 => good
+          // foo.3.bar, foo.4 => bad
+          if (sel[i] == mod[j])
+            i++, j++;
+          else
+            return false;
+        } else if (numericKey(sel[i])) {
+          // foo.4.bar, foo.bar => bad
+          return false;
+        } else if (numericKey(mod[j])) {
+          j++;
+        } else if (sel[i] == mod[j])
+          i++, j++;
+        else
+          return false;
+      }
+
+      // One is a prefix of another, taking numeric fields into account
+      return true;
     });
   });
 
-  function removeNumericsKeys (path) {
-    return _.filter(path.split('.'), notNumber).join('.');
-  }
-
-  function isPathPrefix (s, t) {
-    var pos = t.indexOf(s);
-    return pos === 0
-        && (pos + s.length === t.length || t[pos + s.length] === '.');
-  }
-
-  // returns true if string can't be converted to integer
-  function notNumber (s) {
-    return !/^[0-9]+$/.test(s);
+  // string can be converted to integer
+  function numericKey (s) {
+    return /^[0-9]+$/.test(s);
   }
 };
 
