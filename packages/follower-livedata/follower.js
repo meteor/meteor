@@ -74,7 +74,7 @@ Follower = {
 
     var tryElector = function (url) {
       url = url || findFewestTries();
-      console.log("trying", url, electorTries, tryingUrl);
+      //console.log("trying", url, electorTries, tryingUrl);
       if (conn) {
         conn._reconnectImpl({
           url: url
