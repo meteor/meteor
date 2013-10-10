@@ -2419,7 +2419,7 @@ Tinytest.add("minimongo - modifier affects selector", function (test) {
     else
       test.isFalse(LocalCollection._isSelectorAffectedByModifier(sel, mod, desc));
   }
-  
+
   function affected(sel, mod, desc) {
     testSelectorAffectedByModifier(sel, mod, 1, desc);
   }
@@ -2447,5 +2447,7 @@ Tinytest.add("minimongo - modifier affects selector", function (test) {
   notAffected({ 'foo.4.bar.baz': 0 }, { $unset: { 'foo.bar': 1 } }, "delicate work with numeric fields in selector");
   affected({ 'foo.4.bar.baz': 0 }, { $unset: { 'foo.4.bar': 1 } }, "delicate work with numeric fields in selector");
   affected({ 'foo.bar.baz': 0 }, { $unset: { 'foo.3.bar': 1 } }, "delicate work with numeric fields in selector");
+
+  affected({ 'foo.0.bar': 0 }, { $set: { 'foo.0.0.bar' } }, "delicate work with nested arrays and selectors by indecies");
 });
 
