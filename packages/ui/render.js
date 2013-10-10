@@ -370,8 +370,8 @@ makeRenderBuffer = function (options) {
               if (mgr) {
                 mgr.wire(n);
                 // XXX bad to do this immediately for
-                // some reason?  we used to delay it using
-                // `onNextBuilt`
+                // some reason?  in previous shark revs we
+                // used to delay it using `onNextBuilt`
                 mgr.start();
               }
               n.removeAttribute(attrName);

@@ -1172,10 +1172,8 @@ updateTemplateInstance = function (comp) {
 };
 
 _extend(UI.Component, {
-  // XXX temporary definitions.
-  // In particular, we need to implement the old APIs
-  // (how helpers and event handlers are called) for
-  // Meteor UI Stage I.
+  // We implement the old APIs here, including how data is passed
+  // to helpers in `this`.
   helpers: function (dict) {
     _extend(this, dict);
   },
@@ -1204,7 +1202,8 @@ _extend(UI.Component, {
   }
 });
 
-// XXX
+// XXX we don't really want this to be a user-visible callback,
+// it's just a particular signal we need from DomRange.
 UI.Component.parented = function () {
   var self = this;
   for (var comp = self; comp; comp = comp._super) {
@@ -1241,7 +1240,8 @@ UI.Component.parented = function () {
   }
 };
 
-// XXX
+// XXX we don't really want this to be a user-visible callback,
+// it's just a particular signal we need from DomRange.
 UI.Component.removed = function () {
   var self = this;
   self.isDestroyed = true;
@@ -1253,4 +1253,5 @@ UI.Component.removed = function () {
   }
 };
 
+// past compat
 UI.Component.preserve = function () {};
