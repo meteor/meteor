@@ -648,6 +648,16 @@ exports.run = function (context, options) {
             }
             process.exit(1);
           }
+
+          if (mongoErrorTimer)
+            clearTimeout(mongoErrorTimer);
+          mongoErrorTimer = setTimeout(function () {
+            mongoErrorCount = 0;
+            mongoErrorTimer = null;
+          }, 5000);
+
+          // Wait a sec to restart.
+          setTimeout(launch, 1000);
         }
       });
     }).run();
