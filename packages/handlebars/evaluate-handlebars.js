@@ -240,12 +240,12 @@ Handlebars.evaluate = function (ast, data, options) {
         args.push(extra);
 
       try {
-        
+
         return values[0].apply(stack.data, args);
 
       } catch (e) {
 
-        console.error("Exception thrown in helper", e.stack);
+        console.error("Exception thrown in helper ["+e+"], returning null. Stack trace: ", e.stack);
         return null;
 
       }

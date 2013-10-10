@@ -131,6 +131,12 @@ Template.__define__ = function (name, raw_func) {
     var tmpl = name && Template[name] || {};
     var tmplData = tmpl._tmpl_data || {};
 
+    function handleTemplateException(e,method) {
+
+      console.error("Exception thrown in template ["+name+"], method ["+method+"]: ["+e+"], stack trace: ", e.stack);
+
+    }
+
     var html = Spark.labelBranch("Template."+name, function () {
       var html = Spark.createLandmark({
         preserve: tmplData.preserve || {},
@@ -140,7 +146,7 @@ Template.__define__ = function (name, raw_func) {
           try {
             tmpl.created && tmpl.created.call(template);
           } catch (e) {
-            console.error("Exception thrown in created()",e.stack);
+            handleTemplateException(e,"created");
           }
         },
         rendered: function () {
@@ -149,7 +155,7 @@ Template.__define__ = function (name, raw_func) {
           try {
             tmpl.rendered && tmpl.rendered.call(template);
           } catch (e) {
-            console.error("Exception thrown in rendered()",e.stack);
+            handleTemplateException(e,"rendered");
           }
         },
         destroyed: function () {
@@ -158,7 +164,7 @@ Template.__define__ = function (name, raw_func) {
             tmpl.destroyed &&
               tmpl.destroyed.call(templateObjFromLandmark(this));
           } catch (e) {
-            console.error("Exception thrown in destroyed()",e.stack);
+            handleTemplateException(e,"destroyed");
           }
           delete templateInstanceData[this.id];
         }
