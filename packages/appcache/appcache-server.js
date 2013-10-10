@@ -5,6 +5,7 @@ var path = Npm.require('path');
 var knownBrowsers = [
   'android',
   'chrome',
+  'opera',
   'chromium',
   'chromeMobileIOS',
   'firefox',
@@ -16,6 +17,7 @@ var knownBrowsers = [
 var browsersEnabledByDefault = [
   'android',
   'chrome',
+  'opera',
   'chromium',
   'chromeMobileIOS',
   'ie',
