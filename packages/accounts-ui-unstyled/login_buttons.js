@@ -10,6 +10,10 @@ Template.loginButtons.events({
   }
 });
 
+Handlebars.registerHelper('loginButtons', function () {
+  throw new Error("Use {{> loginButtons}} instead of {{loginButtons}}");
+});
+
 //
 // helpers
 //
