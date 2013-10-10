@@ -20,9 +20,10 @@ Package.on_use(function (api) {
 
   api.add_files(['attrs.js',
                  'render.js',
-                 'fields.js',
                  'components.js',
-                 'each.js']);
+                 'each.js',
+                 'fields.js'
+                ]);
 
   api.add_files(['handlebars_backcompat.js'], 'client');
 });
