@@ -130,6 +130,8 @@
   `USE_JSESSIONID` environment variable to enable placing a JSESSIONID
   cookie on sockjs requests.
 
+* Simplify the static analysis used to detect package-scope variables.
+
 * Upgraded dependencies:
   * Node from 0.8.24 to 0.10.20
   * MongoDB from 2.4.4 to 2.4.6
