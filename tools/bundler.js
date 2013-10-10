@@ -543,7 +543,6 @@ _.extend(Target.prototype, {
           // strong dependency on it, then ignore this edge.
           if (useOptions.weak && ! _.has(getsUsed, usedSlice.id))
             return;
-
           if (onStack[usedSlice.id]) {
             buildmessage.error("circular dependency between packages " +
                                slice.pkg.name + " and " + usedSlice.pkg.name);
@@ -1443,8 +1442,8 @@ var writeSiteArchive = function (targets, outputPath, options) {
 
       builder.write('README', { data: new Buffer(
 "This is a Meteor application bundle. It has only one dependency:\n" +
-"Node.js 0.8 (with the 'fibers' package). The current release of Meteor\n" +
-"has been tested with Node 0.8.24. To run the application:\n" +
+"Node.js 0.10 (with the 'fibers' package). The current release of Meteor\n" +
+"has been tested with Node 0.10.20. To run the application:\n" +
 "\n" +
 "  $ npm install fibers@1.0.1\n" +
 "  $ export MONGO_URL='mongodb://user:password@host:port/databasename'\n" +

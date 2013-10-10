@@ -8,8 +8,8 @@ _.extend(MongoInternals.RemoteCollectionDriver.prototype, {
     var self = this;
     var ret = {};
     _.each(
-      ['find', 'findOne', 'insert', 'update', 'remove', '_ensureIndex',
-       '_dropIndex', '_createCappedCollection'],
+      ['find', 'findOne', 'insert', 'update', , 'upsert',
+       'remove', '_ensureIndex', '_dropIndex', '_createCappedCollection'],
       function (m) {
         ret[m] = _.bind(self.mongo[m], self.mongo, name);
       });
@@ -22,11 +22,12 @@ _.extend(MongoInternals.RemoteCollectionDriver.prototype, {
 // only require Mongo configuration if it's actually used (eg, not if
 // you're only trying to receive data from a remote DDP server.)
 MongoInternals.defaultRemoteCollectionDriver = _.once(function () {
-  // XXX kind of hacky
-  var mongoUrl = (
-    typeof __meteor_bootstrap__ !== 'undefined' &&
-      Meteor._get(__meteor_bootstrap__,
-                  'deployConfig', 'packages', 'mongo-livedata', 'url'));
+  var mongoUrl;
+  AppConfig.configurePackage("mongo-livedata", function (config) {
+    // This will keep running if mongo gets reconfigured.  That's not ideal, but
+    // should be ok for now.
+    mongoUrl = config.url;
+  });
   // XXX bad error since it could also be set directly in METEOR_DEPLOY_CONFIG
   if (! mongoUrl)
     throw new Error("MONGO_URL must be set in environment");

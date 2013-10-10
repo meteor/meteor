@@ -4,9 +4,9 @@ Package.describe({
 });
 
 Npm.depends({
-  "clean-css": "1.0.11",
-  // We depend on this commit, which has not been released yet.
-  "uglify-js": "https://github.com/mishoo/UglifyJS2/tarball/b1febde3e9be32b9d88918ed733efc3796e3f143"
+  "clean-css": "1.1.2",
+  // Fork of 2.4.0 fixing https://github.com/mishoo/UglifyJS2/pull/308
+  "uglify-js": "https://github.com/meteor/UglifyJS2/tarball/bb0a762d12d2ecd058b9d7b57f16b4c289378d9c"
 });
 
 Package.on_use(function (api) {

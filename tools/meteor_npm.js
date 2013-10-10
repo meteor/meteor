@@ -10,6 +10,7 @@ var path = require('path');
 var fs = require('fs');
 var cleanup = require(path.join(__dirname, 'cleanup.js'));
 var files = require(path.join(__dirname, 'files.js'));
+var httpHelpers = require('./http-helpers.js');
 var buildmessage = require('./buildmessage.js');
 var _ = require('underscore');
 
@@ -186,6 +187,26 @@ _.extend(exports, {
       throw new Error(
         "Corrupted .npm directory -- can't find npm-shrinkwrap.json in " + packageNpmDir);
 
+    // We need to rebuild all node modules when the Node version changes, in
+    // case there are some binary ones. Technically this is racey, but it
+    // shouldn't fail very often.
+    if (fs.existsSync(path.join(packageNpmDir, 'node_modules'))) {
+      var oldNodeVersion;
+      try {
+        oldNodeVersion = fs.readFileSync(
+          path.join(packageNpmDir, 'node_modules', '.node_version'), 'utf8');
+      } catch (e) {
+        if (e.code !== 'ENOENT')
+          throw e;
+        // Use the Node version from the last release where we didn't drop this
+        // file.
+        oldNodeVersion = 'v0.8.24';
+      }
+
+      if (oldNodeVersion !== process.version)
+        files.rm_recursive(path.join(packageNpmDir, 'node_modules'));
+    }
+
     var installedDependencies = self._installedDependencies(packageNpmDir);
 
     // If we already have the right things installed, life is good.
@@ -276,6 +297,7 @@ _.extend(exports, {
     fs.unlinkSync(path.join(newPackageNpmDir, 'package.json'));
 
     self._createReadme(newPackageNpmDir);
+    self._createNodeVersion(newPackageNpmDir);
     files.renameDirAlmostAtomically(newPackageNpmDir, packageNpmDir);
   },
 
@@ -290,6 +312,12 @@ _.extend(exports, {
         + "You should NOT check in the node_modules directory that Meteor automatically\n"
         + "creates; if you are using git, the .gitignore file tells git to ignore it.\n"
     );
+  },
+
+  _createNodeVersion: function(newPackageNpmDir) {
+    fs.writeFileSync(
+      path.join(newPackageNpmDir, 'node_modules', '.node_version'),
+      process.version);
   },
 
   // Returns object with keys 'stdout', 'stderr', and 'success' (true
@@ -407,9 +435,18 @@ _.extend(exports, {
     // We don't use npm.commands.install since we couldn't
     // figure out how to silence all output (specifically the
     // installed tree which is printed out with `console.log`)
+    //
+    // We use --force, because the NPM cache is broken! See
+    // https://github.com/isaacs/npm/issues/3265 Basically, switching back and
+    // forth between a tarball fork of version X and the real version X can
+    // confuse NPM. But the main reason to use tarball URLs is to get a fork of
+    // the latest version with some fix, so it's easy to trigger this! So
+    // instead, always use --force. (Even with --force, we still WRITE to the
+    // cache, so we can corrupt the cache for other invocations of npm... ah
+    // well.)
     var result =
       this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
-                         ["install", installArg],
+                         ["install", "--force", installArg],
                          {cwd: dir});
 
     if (! result.success) {
@@ -436,10 +473,11 @@ _.extend(exports, {
 
     this._ensureConnected();
 
-    // `npm install`, which reads npm-shrinkwrap.json
+    // `npm install`, which reads npm-shrinkwrap.json.  See above for why
+    // --force.
     var result =
       this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
-                         ["install"], {cwd: dir});
+                         ["install", "--force"], {cwd: dir});
 
 
     if (! result.success) {
@@ -454,7 +492,7 @@ _.extend(exports, {
   // dependencies. `npm install` times out after more than a minute.
   _ensureConnected: function () {
     try {
-      files.getUrl("http://registry.npmjs.org");
+      httpHelpers.getUrl("http://registry.npmjs.org");
     } catch (e) {
       buildmessage.error("Can't install npm dependencies. " +
                          "Are you connected to the internet?");

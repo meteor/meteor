@@ -4,6 +4,8 @@ var Fiber = Npm.require("fibers");
 var Future = Npm.require("fibers/future");
 var child_process = Npm.require("child_process");
 
+var WAREHOUSE_BUCKET = "meteor-warehouse";
+
 var die = function (msg) {
   console.error(msg);
   process.exit(1);
@@ -73,7 +75,7 @@ var getManifest = function(s3, gitSha) {
     s3, ["unpublished", gitSha, "release.json-"].join("/"));
   var manifests = _.map(manifestMetas, function (meta) {
     return s3.GetObject({
-      BucketName: "com.meteor.warehouse",
+      BucketName: WAREHOUSE_BUCKET,
       ObjectName: meta.Key
     }).Body;
   });
@@ -89,7 +91,7 @@ var getManifest = function(s3, gitSha) {
 // are there any files with this prefix?
 var anyWithPrefix = function(s3, prefix) {
   var files = s3.ListObjects({
-    BucketName: "com.meteor.warehouse",
+    BucketName: WAREHOUSE_BUCKET,
     Prefix: prefix
   });
   return !_.isEmpty(files.Body.ListBucketResult.Contents);
@@ -97,7 +99,7 @@ var anyWithPrefix = function(s3, prefix) {
 
 var list3FilesWithPrefix = function (s3, prefix) {
   var artifacts = s3.ListObjects({
-    BucketName: "com.meteor.warehouse",
+    BucketName: WAREHOUSE_BUCKET,
     Prefix: prefix
   }).Body.ListBucketResult.Contents;
 
@@ -117,9 +119,9 @@ var copy3FilesWithPrefix = function (s3, prefix, destDir) {
     var destKey = [destDir, filename].join("/");
 
     var opts = {
-      BucketName: "com.meteor.warehouse",
+      BucketName: WAREHOUSE_BUCKET,
       ObjectName: destKey,
-      SourceBucket: "com.meteor.warehouse",
+      SourceBucket: WAREHOUSE_BUCKET,
       SourceObject: sourceKey,
       Acl: "public-read"
     };
@@ -128,8 +130,8 @@ var copy3FilesWithPrefix = function (s3, prefix, destDir) {
 };
 
 // publish a given tools, copying multiple files from
-// s3://com.meteor.warehouse/unpublished/GITSHA/ to
-// s3://com.meteor.warehouse/tools/VERSION/
+// s3://meteor-warehouse/unpublished/GITSHA/ to
+// s3://meteor-warehouse/tools/VERSION/
 var publishTools = function(s3, gitSha, version) {
   var destDir = ["tools", version].join("/");
 
@@ -147,8 +149,8 @@ var publishTools = function(s3, gitSha, version) {
 };
 
 // publish a given package, copying from
-// s3://com.meteor.warehouse/unpublished/GITSHA/NAME-VERSION-{PLATFORM}.tar.gz to
-// s3://com.meteor.warehouse/packages/NAME-VERSION-{PLATFORM}.tar.gz
+// s3://meteor-warehouse/unpublished/GITSHA/NAME-VERSION-{PLATFORM}.tar.gz to
+// s3://meteor-warehouse/packages/NAME-VERSION-{PLATFORM}.tar.gz
 var publishPackage = function(s3, gitSha, name, version) {
   var destDir = ["packages", name, version].join("/");
   var sourcePrefix = ["unpublished", gitSha,
@@ -166,7 +168,7 @@ var publishPackage = function(s3, gitSha, name, version) {
 };
 
 // publish the release manifest at
-// s3://com.meteor.warehouse/releases/RELEASE.release.json
+// s3://meteor-warehouse/releases/RELEASE.release.json
 var publishManifest = function(s3, manifestText, release) {
   var destKey = ["releases", release + ".release.json"].join("/");
 
@@ -180,7 +182,7 @@ var publishManifest = function(s3, manifestText, release) {
   }
 
   var opts = {
-    BucketName: "com.meteor.warehouse",
+    BucketName: WAREHOUSE_BUCKET,
     ObjectName: destKey,
     ContentLength: manifestText.length,
     Body: manifestText,

@@ -5,14 +5,14 @@ var fs = require('fs');
 var unipackage = require('./unipackage.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var Fiber = require('fibers');
-var request = require('request');
+var httpHelpers = require('./http-helpers.js');
 var _ = require('underscore');
 
 // a bit of a hack
 var getPackage = _.once(function (context) {
   return unipackage.load({
     library: context.library,
-    packages: [ 'meteor', 'livedata', 'mongo-livedata' ],
+    packages: [ 'meteor', 'livedata' ],
     release: context.releaseVersion
   });
 });
@@ -90,7 +90,7 @@ exports.discoverGalaxy = function (app) {
 
   // At some point we may want to send a version in the request so that galaxy
   // can respond differently to different versions of meteor.
-  request({
+  httpHelpers.request({
     url: url,
     json: true,
     strictSSL: true,
@@ -130,15 +130,18 @@ exports.deleteApp = function (app, context) {
 //     so we can be careful to not rely on any of the app dir context when
 //     in --star mode.
 exports.deploy = function (options) {
-  var galaxy = getGalaxy(options.context);
-  var Package = getPackage(options.context);
-
   var tmpdir = files.mkdtemp('deploy');
   var buildDir = path.join(tmpdir, 'build');
   var topLevelDirName = path.basename(options.appDir);
   var bundlePath = path.join(buildDir, topLevelDirName);
   var bundler = require('./bundler.js');
   var starball;
+
+  // Don't try to connect to galaxy before the bundle is done. Because bundling
+  // doesn't yield, this will cause the connection to timeout. Eventually we'd
+  // like to have bundle yield, so that we can connect (and make sure auth
+  // works) before bundling.
+
   if (!options.starball) {
     process.stdout.write('Deploying ' + options.app + '. Bundling...\n');
     var bundleResult = bundler.bundle(options.appDir, bundlePath,
@@ -166,9 +169,13 @@ exports.deploy = function (options) {
   }
   process.stdout.write('Uploading...\n');
 
+
+  var galaxy = getGalaxy(options.context);
+  var Package = getPackage(options.context);
+
   var created = true;
   var appConfig = {
-      METEOR_SETTINGS: options.settings
+      settings: options.settings
   };
 
   if (options.admin)
@@ -203,7 +210,8 @@ exports.deploy = function (options) {
   var fileSize = fs.statSync(starball).size;
   var fileStream = fs.createReadStream(starball);
   var future = new Future;
-  var req = request.put({
+  var req = httpHelpers.request({
+    method: "PUT",
     url: info.put,
     headers: { 'content-length': fileSize,
                'content-type': 'application/octet-stream' },

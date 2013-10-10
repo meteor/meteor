@@ -6,7 +6,7 @@ var _ = require('underscore');
 var sourcemap_support = require('source-map-support');
 
 // This code is duplicated in tools/server/server.js.
-var MIN_NODE_VERSION = 'v0.8.24';
+var MIN_NODE_VERSION = 'v0.10.20';
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
     'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
@@ -75,6 +75,7 @@ sourcemap_support.install({
   // locate the source files.
   handleUncaughtExceptions: false
 });
+
 
 Fiber(function () {
   _.each(serverJson.load, function (fileInfo) {

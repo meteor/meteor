@@ -1211,7 +1211,7 @@ SockJS.prototype._applyInfo = function(info, rtt, protocols_whitelist) {
     // Servers can override base_url, eg to provide a randomized domain name and
     // avoid browser per-domain connection limits.
     if (info.base_url)
-      that._base_url = info.base_url;
+      that._base_url = utils.amendUrl(info.base_url);
     var probed = utils.probeProtocols();
     that._protocols = utils.detectProtocols(probed, protocols_whitelist, info);
 // <METEOR>

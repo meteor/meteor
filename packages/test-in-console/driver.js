@@ -21,7 +21,6 @@ var log = function (/*arguments*/) {
 };
 
 
-var finished = 0;
 var passed = 0;
 var failed = 0;
 var expected = 0;
@@ -96,6 +95,14 @@ Meteor.startup(function () {
           if (resultSet[name].status !== "FAIL")
             resultSet[name].status = "EXPECTED";
           break;
+        case "exception":
+          log(name, ":", "!!!!!!!!! FAIL !!!!!!!!!!!");
+          if (event.details && event.details.stack)
+            log(event.details.stack);
+          else
+            log("Test failed with exception");
+          failed++;
+          break;
         case "finish":
           switch (resultSet[name].status) {
           case "OK":
@@ -120,7 +127,6 @@ Meteor.startup(function () {
           default:
             log(name, ": unknown state for the test to be in");
           }
-          finished++;
           break;
         default:
           resultSet[name].status = "FAIL";

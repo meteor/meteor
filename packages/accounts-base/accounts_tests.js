@@ -107,7 +107,7 @@ Tinytest.add('accounts - insertUserDoc username', function (test) {
   );
   var userOut = Meteor.users.findOne(result.id);
 
-  test.equal(typeof userOut.createdAt, 'number');
+  test.equal(typeof userOut.createdAt, 'object');
   test.equal(userOut.profile.name, 'Foo Bar');
   test.equal(userOut.username, userIn.username);
 
@@ -140,7 +140,7 @@ Tinytest.add('accounts - insertUserDoc email', function (test) {
   );
   var userOut = Meteor.users.findOne(result.id);
 
-  test.equal(typeof userOut.createdAt, 'number');
+  test.equal(typeof userOut.createdAt, 'object');
   test.equal(userOut.profile.name, 'Foo Bar');
   test.equal(userOut.emails, userIn.emails);
 
@@ -172,9 +172,39 @@ Tinytest.add('accounts - insertUserDoc email', function (test) {
       {}, {emails: [{address: email3}]}
   );
   var user3 = Meteor.users.findOne(result3.id);
-  test.equal(typeof user3.createdAt, 'number');
+  test.equal(typeof user3.createdAt, 'object');
 
   // cleanup
   Meteor.users.remove(result.id);
   Meteor.users.remove(result3.id);
+});
+
+// More token expiration tests are in accounts-password
+Tinytest.addAsync('accounts - expire numeric token', function (test, onComplete) {
+  var userIn = { username: Random.id() };
+  var result = Accounts.insertUserDoc({ profile: {
+    name: 'Foo Bar'
+  } }, userIn);
+  var date = new Date(new Date() - 5000);
+  Meteor.users.update(result.id, {
+    $set: {
+      "services.resume.loginTokens": [{
+        token: Random.id(),
+        when: date
+      }, {
+        token: Random.id(),
+        when: +date
+      }]
+    }
+  });
+  var observe = Meteor.users.find(result.id).observe({
+    changed: function (newUser) {
+      if (newUser.services && newUser.services.resume &&
+          _.isEmpty(newUser.services.resume.loginTokens)) {
+        observe.stop();
+        onComplete();
+      }
+    }
+  });
+  Accounts._expireTokens(new Date(), result.id);
 });

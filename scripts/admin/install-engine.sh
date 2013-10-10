@@ -46,7 +46,7 @@ elif [ "$UNAME" = "Linux" ] ; then
   ### Linux ###
   ARCH=$(uname -m)
   if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
-    echo "Unable architecture: $ARCH"
+    echo "Unusable architecture: $ARCH"
     echo "Meteor only supports i686 and x86_64 for now."
     exit 1
   fi

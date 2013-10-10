@@ -46,7 +46,7 @@ It just hasn't been looked at/thought about yet.
 upsert combined with $-operators might work, but hasn't actually been
 looked at or tested.
 
-In general, the API needs tests, espectially update. (On the other
+In general, the API needs tests, especially update. (On the other
 hand, the underlying selector and mutator code is quite well tested.)
 
 ## OTHER STUFF ##

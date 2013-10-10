@@ -124,6 +124,8 @@ testAsyncMulti("livedata - basic method invocation", [
   echoTest({$date: 30}), // literal
   echoTest({$literal: {$date: 30}}),
   echoTest(12),
+  echoTest(Infinity),
+  echoTest(-Infinity),
 
   function (test, expect) {
     if (Meteor.isServer)
