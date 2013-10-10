@@ -25,6 +25,7 @@ var Future = require('fibers/future');
 var _ = require('underscore');
 
 var files = require('../../tools/files.js');
+var httpHelpers = require('../../tools/http-helpers.js');
 var warehouse = require('../../tools/warehouse.js');
 
 var PLATFORMS = [
@@ -56,7 +57,7 @@ var execFileSync = function (binary, args) {
 };
 
 var getWarehouseFile = function (path, json) {
-  return files.getUrl({
+  return httpHelpers.getUrl({
     url: "https://s3.amazonaws.com/meteor-warehouse/" + path,
     json: json
   });

@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Makes the application crawlable to web spiders."
+  summary: "Makes the application crawlable to web spiders"
 });
 
 Package.on_use(function (api) {
