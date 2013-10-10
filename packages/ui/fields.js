@@ -90,9 +90,10 @@ _extend(UI.Component, {
     }
 
     return function (/*arguments*/) {
-      var data = getComponentData(self);
-      if (typeof result === 'function')
+      if (typeof result === 'function') {
+        var data = getComponentData(self);
         return result.apply(data, arguments);
+      }
       return result;
     };
   },
