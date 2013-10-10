@@ -315,7 +315,7 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
         }
 
         pendingSequencers.push({ts: ts,
-                               callback: callback});
+                                callback: callback});
       }).run();
     }
   };
@@ -863,6 +863,11 @@ MongoConnection.prototype._createSynchronousCursor = function(
     // ... and to keep querying the server indefinitely rather than just 5 times
     // if there's no more data.
     mongoOptions.numberOfRetries = -1;
+    // And if this cursor specifies a 'ts', then set the undocumented oplog
+    // replay flag, which does a special scan to find the first document
+    // (instead of creating an index on ts).
+    if (cursorDescription.selector.ts)
+      mongoOptions.oplogReplay = true;
   }
 
   var dbCursor = collection.find(
