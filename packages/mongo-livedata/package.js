@@ -12,7 +12,10 @@ Package.describe({
   internal: true
 });
 
-Npm.depends({mongodb: "1.3.19"});
+Npm.depends({
+  // 1.3.19, plus a patch to add oplogReplay flag.
+  mongodb: "https://github.com/meteor/node-mongodb-native/tarball/ab633e288bf0b77b7b7444897f42a76cb09aea0e"
+});
 
 Package.on_use(function (api) {
   api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging',
