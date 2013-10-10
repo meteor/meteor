@@ -24,3 +24,12 @@ Handlebars._escape = (function() {
     return x.replace(/[&<>"'`]/g, escape_one);
   };
 })();
+
+// Return these from {{...}} helpers to achieve the same as returning
+// strings from {{{...}}} helpers
+Handlebars.SafeString = function(string) {
+  this.string = string;
+};
+Handlebars.SafeString.prototype.toString = function() {
+  return this.string.toString();
+};

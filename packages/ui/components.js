@@ -7,7 +7,11 @@ UI.Text = Component.extend({
   },
   render: function (buf) {
     var data = this.get();
-    buf.write(this._encodeEntities(this._stringify(data)));
+
+    if (data instanceof Handlebars.SafeString)
+      buf.write(this._stringify(data.toString())); // don't escape
+    else
+      buf.write(this._encodeEntities(this._stringify(data)));
   }
 });
 

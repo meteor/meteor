@@ -1024,9 +1024,15 @@ Spacebars.mustache = function (value/*, args*/) {
     arguments[i] = Spacebars.call(arguments[i]);
 
   var result = Spacebars.call.apply(null, arguments);
-  // map `null` and `undefined` to "", stringify anything else
-  // (e.g. strings, booleans, numbers including 0).
-  return String(result == null ? '' : result);
+
+  if (result instanceof Handlebars.SafeString)
+    // keep as type Handlebars.SafeString since the UI.Text
+    // component treats these differently.
+    return result;
+  else
+    // map `null` and `undefined` to "", stringify anything else
+    // (e.g. strings, booleans, numbers including 0).
+    return String(result == null ? '' : result);
 };
 
 Spacebars.extend = function (obj/*, k1, v1, k2, v2, ...*/) {
