@@ -836,14 +836,15 @@ LocalCollection._isSelectorAffectedByModifier = function (selector, modifier) {
 };
 
 // Returns a list of key paths the given selector is looking for
-var getPaths = LocalCollection._getSelectorPaths = function (sel, parentKeys) {
-  parentKeys = parentKeys || [];
+var getPaths = LocalCollection._getSelectorPaths = function (sel) {
   return _.chain(sel).map(function (v, k) {
     // we don't know how to handle $where because it can be anything
     if (k === "$where")
       return ''; // matches everything
+    // we branch from $or/$and/$nor operator
     if (_.has(LOGICAL_OPERATORS, k))
-      return _.map(v, function (x) { return getPaths(x, parentKeys); });
-    return parentKeys.concat(k).join('.');
+      return _.map(v, getPaths);
+    // the value is a literal or some comparison operator
+    return k;
   }).flatten().uniq().value();
 };
