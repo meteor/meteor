@@ -2448,6 +2448,6 @@ Tinytest.add("minimongo - modifier affects selector", function (test) {
   affected({ 'foo.4.bar.baz': 0 }, { $unset: { 'foo.4.bar': 1 } }, "delicate work with numeric fields in selector");
   affected({ 'foo.bar.baz': 0 }, { $unset: { 'foo.3.bar': 1 } }, "delicate work with numeric fields in selector");
 
-  affected({ 'foo.0.bar': 0 }, { $set: { 'foo.0.0.bar' } }, "delicate work with nested arrays and selectors by indecies");
+  affected({ 'foo.0.bar': 0 }, { $set: { 'foo.0.0.bar': 1 } }, "delicate work with nested arrays and selectors by indecies");
 });
 
