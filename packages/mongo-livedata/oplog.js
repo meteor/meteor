@@ -172,7 +172,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       }
       var write = fence.beginWrite();
       // XXX this also has to wait for steady!!!
-      self._callWhenOplogProcessed(function () {
+      self._oplogHandle.callWhenProcessedLatest(function () {
         write.committed();
       });
       complete();
@@ -185,7 +185,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
   });
 
   var catchUpFuture = new Future;
-  self._callWhenOplogProcessed(catchUpFuture.resolver());
+  self._oplogHandle.callWhenProcessedLatest(catchUpFuture.resolver());
   catchUpFuture.wait();
 
   if (phase !== PHASE.INITIALIZING)
