@@ -1,7 +1,6 @@
-=> Meteor 0.6.6: Many improvements and upgrades. Mongo support for
-   upsert and $near, new browser-policy package for security headers,
-   NodeJS 0.10, and much much more. For details, see:
-     https://github.com/meteor/meteor/blob/devel/History.md
+=> Meteor 0.6.6: Mongo upsert and $near queries, new browser-policy
+   package for security headers, NodeJS 0.10, and much more. For
+   details, see: https://github.com/meteor/meteor/blob/devel/History.md
 
    This is being downloaded in the background. Update your project
    to Meteor 0.6.6 by running 'meteor update'.
