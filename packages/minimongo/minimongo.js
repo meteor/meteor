@@ -87,12 +87,18 @@ LocalCollection.Cursor = function (collection, selector, options) {
   if (LocalCollection._selectorIsId(selector)) {
     // stash for fast path
     self.selector_id = LocalCollection._idStringify(selector);
-    self.selector_f = LocalCollection._compileSelector(selector);
+    self.selector_f = LocalCollection._compileSelector(selector, self);
     self.sort_f = undefined;
   } else {
+    // MongoDB throws different errors on different branching operators
+    // containing $near
+    if (isGeoQuerySpecial(selector))
+      throw new Error("$near can't be inside $or/$and/$nor/$not");
+
     self.selector_id = undefined;
-    self.selector_f = LocalCollection._compileSelector(selector);
-    self.sort_f = options.sort ? LocalCollection._compileSort(options.sort) : null;
+    self.selector_f = LocalCollection._compileSelector(selector, self);
+    self.sort_f = (isGeoQuery(selector) || options.sort) ?
+      LocalCollection._compileSort(options.sort || [], self) : null;
   }
   self.skip = options.skip;
   self.limit = options.limit;
@@ -488,7 +494,7 @@ LocalCollection.prototype.remove = function (selector, callback) {
   var remove = [];
 
   var queriesToRecompute = [];
-  var selector_f = LocalCollection._compileSelector(selector);
+  var selector_f = LocalCollection._compileSelector(selector, self);
 
   // Avoid O(n) for "remove a single doc by ID".
   var specificIds = LocalCollection._idsMatchedBySelector(selector);
@@ -555,7 +561,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   }
   if (!options) options = {};
 
-  var selector_f = LocalCollection._compileSelector(selector);
+  var selector_f = LocalCollection._compileSelector(selector, self);
 
   // Save the original results of any query that we might need to
   // _recomputeResults on, because _modifyAndNotify will mutate the objects in
@@ -1175,3 +1181,23 @@ LocalCollection._compileProjection = function (fields) {
     return res;
   };
 };
+
+// Searches $near operator in the selector recursively
+// (including all $or/$and/$nor/$not branches)
+var isGeoQuery = function (selector) {
+  return _.any(selector, function (val, key) {
+    // Note: _.isObject matches objects and arrays
+    return key === "$near" || (_.isObject(val) && isGeoQuery(val));
+  });
+};
+
+// Checks if $near appears under some $or/$and/$nor/$not branch
+var isGeoQuerySpecial = function (selector) {
+  return _.any(selector, function (val, key) {
+    if (_.contains(['$or', '$and', '$nor', '$not'], key))
+      return isGeoQuery(val);
+    // Note: _.isObject matches objects and arrays
+    return _.isObject(val) && isGeoQuerySpecial(val);
+  });
+};
+

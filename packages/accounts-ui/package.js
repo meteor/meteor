@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Simple templates to add login widgets to an app."
+  summary: "Simple templates to add login widgets to an app"
 });
 
 Package.on_use(function (api) {

@@ -94,6 +94,11 @@ var setDefaultPolicy = function () {
                                   "style-src 'self' 'unsafe-inline';");
 };
 
+var setWebAppInlineScripts = function (value) {
+  if (! BrowserPolicy._runningTest())
+    WebAppInternals.setInlineScriptsAllowed(value);
+};
+
 _.extend(BrowserPolicy.content, {
   // Exported for tests and browser-policy-common.
   _constructCsp: function () {
@@ -123,6 +128,9 @@ _.extend(BrowserPolicy.content, {
   setPolicy: function (csp) {
     cachedCsp = null;
     parseCsp(csp);
+    setWebAppInlineScripts(
+      BrowserPolicy.content._keywordAllowed("script-src", unsafeInline)
+    );
   },
 
   _keywordAllowed: function (directive, keyword) {
@@ -130,29 +138,17 @@ _.extend(BrowserPolicy.content, {
             _.indexOf(cspSrcs[directive], keyword) !== -1);
   },
 
-  // Used by webapp to determine whether we need an extra round trip for
-  // __meteor_runtime_config__.  If we're in a test run, we should always return
-  // true, since CSP headers are never sent on tests -- unless the
-  // _calledFromTests flag is set, in which case a test is testing what
-  // inlineScriptsAllowed() would return if we weren't in a test. Wphew.
-  // XXX maybe this test interface could be cleaned up
-  inlineScriptsAllowed: function (_calledFromTests) {
-    if (BrowserPolicy._runningTest() && ! _calledFromTests)
-      return true;
-
-    return BrowserPolicy.content._keywordAllowed("script-src",
-                                                 unsafeInline);
-  },
-
   // Helpers for creating content security policies
 
   allowInlineScripts: function () {
     prepareForCspDirective("script-src");
     cspSrcs["script-src"].push(unsafeInline);
+    setWebAppInlineScripts(true);
   },
   disallowInlineScripts: function () {
     prepareForCspDirective("script-src");
     removeCspSrc("script-src", unsafeInline);
+    setWebAppInlineScripts(false);
   },
   allowEval: function () {
     prepareForCspDirective("script-src");
@@ -189,6 +185,7 @@ _.extend(BrowserPolicy.content, {
     cspSrcs = {
       "default-src": []
     };
+    setWebAppInlineScripts(false);
   }
 });
 
@@ -210,14 +207,23 @@ _.each(["script", "object", "img", "media",
          var allowDataMethodName = "allow" + methodResource + "DataUrl";
          var allowSelfMethodName = "allow" + methodResource + "SameOrigin";
 
+         var disallow = function () {
+           cachedCsp = null;
+           cspSrcs[directive] = [];
+         };
+
          BrowserPolicy.content[allowMethodName] = function (src) {
            prepareForCspDirective(directive);
            cspSrcs[directive].push(src);
          };
-         BrowserPolicy.content[disallowMethodName] = function () {
-           cachedCsp = null;
-           cspSrcs[directive] = [];
-         };
+         if (resource === "script") {
+           BrowserPolicy.content[disallowMethodName] = function () {
+             disallow();
+             setWebAppInlineScripts(false);
+           };
+         } else {
+           BrowserPolicy.content[disallowMethodName] = disallow;
+         }
          BrowserPolicy.content[allowDataMethodName] = function () {
            prepareForCspDirective(directive);
            cspSrcs[directive].push("data:");

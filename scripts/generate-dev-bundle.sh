@@ -112,8 +112,9 @@ npm install source-map@0.1.30
 npm install source-map-support@0.2.3
 
 # Using the unreleased "caronte" branch rewrite of http-proxy (which will become
-# 1.0.0).
-npm install https://github.com/nodejitsu/node-http-proxy/tarball/a51b0622780f48160001f9e74340f7d720cbfce6
+# 1.0.0), plus this PR:
+#   https://github.com/nodejitsu/node-http-proxy/pull/495
+npm install https://github.com/meteor/node-http-proxy/tarball/f17186f781c6f00b359d25df424ad74922cd1977
 
 # Using the unreleased 1.1 branch. We can probably switch to a built NPM version
 # when it gets released.
@@ -169,16 +170,15 @@ git checkout ssl-r$MONGO_VERSION
 
 # Compile
 
-MONGO_FLAGS="--ssl --release "
+MONGO_FLAGS="--ssl --release -j4 "
 MONGO_FLAGS+="--cpppath $DIR/build/openssl-out/include --libpath $DIR/build/openssl-out/lib "
 
 if [ "$MONGO_OS" == "osx" ]; then
     # NOTE: '--64' option breaks the compilation, even it is on by default on x64 mac: https://jira.mongodb.org/browse/SERVER-5575
-    MONGO_FLAGS+="-j4 "
     MONGO_FLAGS+="--openssl $DIR/build/openssl-out/lib "
     /usr/local/bin/scons $MONGO_FLAGS mongo mongod
 elif [ "$MONGO_OS" == "linux" ]; then
-    MONGO_FLAGS+="-j2 --no-glibc-check --prefix=./ "
+    MONGO_FLAGS+="--no-glibc-check --prefix=./ "
     if [ "$ARCH" == "x86_64" ]; then
       MONGO_FLAGS+="--64"
     fi

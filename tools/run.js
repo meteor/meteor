@@ -188,7 +188,7 @@ var startProxy = function (outerPort, innerPort, callback) {
     res.end('Unexpected error.');
   });
   proxy.ee.on('http-proxy:outgoing:ws:error', function (err, req, socket) {
-    socket.close();
+    socket.end();
   });
 
   server.listen(outerPort, callback);

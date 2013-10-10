@@ -249,11 +249,16 @@ testAsyncMulti("httpcall - methods", [
           test.equal(result.statusCode, 200);
           var data = result.data;
           test.equal(data.url, "/foo");
+
           // IE <= 8 turns seems to turn POSTs with no body into
           // GETs, inexplicably.
-          if (Meteor.isClient && $.browser.msie && $.browser.version <= 8
-              && meth === "POST")
-            meth = "GET";
+          //
+          // XXX Except now it doesn't!? Not sure what changed, but
+          // these lines now break the test...
+          // if (Meteor.isClient && $.browser.msie && $.browser.version <= 8
+          //     && meth === "POST")
+          //   meth = "GET";
+
           test.equal(data.method, meth);
         }));
     };

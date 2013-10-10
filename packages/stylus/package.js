@@ -1,5 +1,5 @@
 Package.describe({
-  summary: 'Expressive, dynamic, robust CSS.'
+  summary: 'Expressive, dynamic, robust CSS'
 });
 
 Package._transitional_registerBuildPlugin({
