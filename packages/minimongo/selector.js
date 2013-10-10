@@ -807,18 +807,18 @@ LocalCollection._isSelectorAffectedByModifier = function (selector, modifier) {
 
       while (i < sel.length && j < mod.length) {
         if (numericKey(sel[i]) && numericKey(mod[j])) {
-          // foo.4.bar, foo.4 => good
-          // foo.3.bar, foo.4 => bad
-          if (sel[i] == mod[j])
+          // foo.4.bar selector affected by foo.4 modifier
+          // foo.3.bar selector unaffected by foo.4 modifier
+          if (sel[i] === mod[j])
             i++, j++;
           else
             return false;
         } else if (numericKey(sel[i])) {
-          // foo.4.bar, foo.bar => bad
+          // foo.4.bar selector unaffected by foo.bar modifier
           return false;
         } else if (numericKey(mod[j])) {
           j++;
-        } else if (sel[i] == mod[j])
+        } else if (sel[i] === mod[j])
           i++, j++;
         else
           return false;
