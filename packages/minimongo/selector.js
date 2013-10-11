@@ -540,7 +540,7 @@ LocalCollection._f = {
 
 // For unit tests. True if the given document matches the given
 // selector.
-LocalCollection._matches = function (selector, doc) {
+MinimongoTest.matches = function (selector, doc) {
   return (LocalCollection._compileSelector(selector))(doc);
 };
 
@@ -799,6 +799,7 @@ LocalCollection._isSelectorAffectedByModifier = function (selector, modifier) {
   modifier = _.extend({ $set: {}, $unset: {} }, modifier);
   var modifiedPaths = _.keys(modifier.$set).concat(_.keys(modifier.$unset));
   var meaningfulPaths = getPaths(selector);
+
   return _.any(modifiedPaths, function (path) {
     var mod = path.split('.');
     return _.any(meaningfulPaths, function (meaningfulPath) {
@@ -836,7 +837,7 @@ LocalCollection._isSelectorAffectedByModifier = function (selector, modifier) {
 };
 
 // Returns a list of key paths the given selector is looking for
-var getPaths = LocalCollection._getSelectorPaths = function (sel) {
+var getPaths = MinimongoTest.getSelectorPaths = function (sel) {
   return _.chain(sel).map(function (v, k) {
     // we don't know how to handle $where because it can be anything
     if (k === "$where")
