@@ -122,8 +122,6 @@ WebApp.connectHandlers.use(function(req, res, next) {
 
   manifest += "FALLBACK:\n";
   manifest += "/ /" + "\n";
-
-
   manifest += "\n";
 
   manifest += "NETWORK:\n";
