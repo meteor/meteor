@@ -32,6 +32,9 @@ LocalCollection = function (name) {
   this.paused = false;
 };
 
+// Object exported only for unit testing.
+// Use it to export private functions to test in Tinytest.
+MinimongoTest = {};
 
 LocalCollection._applyChanges = function (doc, changeFields) {
   _.each(changeFields, function (value, key) {
