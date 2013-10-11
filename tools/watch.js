@@ -435,7 +435,7 @@ _.extend(Watcher.prototype, {
       // Notice that we poll very frequently (500 ms)
       try {
         self.directoryWatches.push(
-          fs.watch(info.absPath, {interval: 500}, function () {
+          fsWatchDir(info.absPath, {interval: 500}, function () {
             self._fireIfDirectoryChanged(info);
           })
         );
@@ -535,6 +535,61 @@ var sha1 = function (contents) {
   hash.update(contents);
   return hash.digest('hex');
 };
+
+
+// Obey the same contract as fs.watch(directory), but don't use
+// fs.watch. On Node 0.10 on MacOS, fs.watch is weird and buggy.
+//
+// https://github.com/meteor/meteor/issues/1483
+// https://github.com/joyent/node/issues/5463
+// https://github.com/joyent/libuv/commit/684e212
+// https://groups.google.com/forum/#!topic/meteor-talk/Zy1XxEcxe8o
+// https://github.com/joyent/libuv/commit/38df93cf
+var fsWatchDir = function (path, options, callback) {
+  if (typeof options === "function") {
+    callback = options;
+    options = {};
+  }
+  callback = callback || function () {};
+
+  // do the first read synchronously. errors (eg, not a directory) will
+  // be thrown.
+  var contents = fs.readdirSync(path);
+
+  // now poll the directory contents periodically.
+  var interval = setInterval(function () {
+    // can do these async. if for some reason it takes longer than the
+    // interval timeout, thats OK.
+    fs.readdir(path, function (err, newContents) {
+      if (err) {
+        // directory no longer exists. fire and stop watching.
+        if (err.code === 'ENOENT' || err.code === 'ENOTDIR') {
+          callback();
+          clearInterval(interval);
+          return;
+        }
+        // unhandled error. rethrow.
+        throw err;
+      }
+
+      if (newContents.length !== contents.length ||
+          _.union(contents, newContents).length !== contents.length) {
+        callback();
+      }
+      contents = newContents;
+    });
+  }, options.interval || 500);
+
+  return {
+    close: function () {
+      // make sure callback is never called again, even if some
+      // fs.readdirs are outstnding.
+      callback = function () {};
+      clearInterval(interval);
+    }
+  };
+};
+
 
 _.extend(exports, {
   WatchSet: WatchSet,
