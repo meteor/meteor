@@ -77,11 +77,11 @@ cd node
 # the top of tools/meteor.js and tools/server/boot.js, and the text in
 # docs/client/concepts.html and the README in tools/bundler.js.
 #
-# Use 0.10.17 instead of 0.10.20 to avoid bugs introduced in an FSEvents
+# Use 0.10.XXX instead of 0.10.20 to avoid bugs introduced in an FSEvents
 # rewrite.
 # https://github.com/joyent/libuv/commit/38df93c
 # https://github.com/joyent/node/issues/6251
-git checkout v0.10.17
+git checkout v0.10
 
 ./configure --prefix="$DIR"
 make -j4
