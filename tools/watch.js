@@ -435,7 +435,7 @@ _.extend(Watcher.prototype, {
       // Notice that we poll very frequently (500 ms)
       try {
         self.directoryWatches.push(
-          fs.watch(info.absPath, {interval: 500}, function () {
+          xxxWatchDir(info.absPath, {interval: 500}, function () {
             self._fireIfDirectoryChanged(info);
           })
         );
@@ -534,6 +534,25 @@ var sha1 = function (contents) {
   var hash = crypto.createHash('sha1');
   hash.update(contents);
   return hash.digest('hex');
+};
+
+var xxxWatchDir = function (path, options, callback) {
+  // XXX error handling?
+  var contents = fs.readdirSync(path);
+  var interval = setInterval(function () {
+    var newContents = fs.readdirSync(path);
+    if (newContents.length !== contents.length ||
+        _.union(contents, newContents).length !== contents.length) {
+      callback && callback();
+    }
+    contents = newContents;
+  }, options.interval || 500);
+
+  return {
+    close: function () {
+      clearInterval(interval);
+    }
+  };
 };
 
 _.extend(exports, {
