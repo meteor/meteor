@@ -5,6 +5,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.export('LocalCollection');
+  api.export('MinimongoTest', { testOnly: true });
   api.use(['underscore', 'json', 'ejson', 'ordered-dict', 'deps',
            'random', 'ordered-dict']);
   // This package is used for geo-location queries such as $near
