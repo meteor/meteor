@@ -126,6 +126,10 @@ WebApp.connectHandlers.use(function(req, res, next) {
   manifest += "\n";
 
   manifest += "FALLBACK:\n";
+
+  // Add fallback strategy for routes not allready defined in the appcache
+  manifest += "/ /" + "\n";
+
   // Add a fallback entry for each uncacheable asset we added above.
   //
   // This means requests for the bare url (/image.png instead of
