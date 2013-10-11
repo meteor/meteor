@@ -334,7 +334,7 @@ _.extend(Watcher.prototype, {
     return true;
   },
 
-  _fireIfDirectoryChanged: function (info, isDoubleCheck) {
+  _fireIfDirectoryChanged: function (info) {
     var self = this;
 
     if (self.stopped)
@@ -350,20 +350,6 @@ _.extend(Watcher.prototype, {
     if (!_.isEqual(info.contents, newContents)) {
       self._fire();
       return true;
-    }
-
-    if (!isDoubleCheck && !self.justCheckOnce) {
-      // Whenever a directory changes, scan it soon as we notice,
-      // but then scan it again one secord later just to make sure
-      // that we haven't missed any changes. See commentary at
-      // #WorkAroundLowPrecisionMtimes
-      // XXX not sure why this uses a different strategy than files
-      var timerId = self.nextTimerId++;
-      self.timers[timerId] = setTimeout(function () {
-        delete self.timers[timerId];
-        if (! self.stopped)
-          self._fireIfDirectoryChanged(info, true);
-      }, 1000);
     }
 
     return false;
