@@ -264,7 +264,7 @@ Tinytest.add("minimongo - lookup", function (test) {
 
 Tinytest.add("minimongo - selector_compiler", function (test) {
   var matches = function (should_match, selector, doc) {
-    var does_match = LocalCollection._matches(selector, doc);
+    var does_match = MinimongoTest.matches(selector, doc);
     if (does_match != should_match) {
       // XXX super janky
       test.fail({type: "minimongo-ordering",
@@ -2382,7 +2382,7 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
 
 Tinytest.add("minimongo - modifier affects selector", function (test) {
   function testSelectorPaths (sel, paths, desc) {
-    test.isTrue(_.isEqual(LocalCollection._getSelectorPaths(sel), paths), desc);
+    test.isTrue(_.isEqual(MinimongoTest.getSelectorPaths(sel), paths), desc);
   }
 
   testSelectorPaths({
