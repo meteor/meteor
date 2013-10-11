@@ -81,10 +81,7 @@ cd node
 # rewrite.
 # https://github.com/joyent/libuv/commit/38df93c
 # https://github.com/joyent/node/issues/6251
-git checkout v0.10.20
-cd deps/uv
-curl https://github.com/joyent/libuv/commit/38df93cfed1921b4682179c04c298be1b69e6841.patch | patch -p1
-cd ../..
+git checkout v0.10.10
 
 ./configure --prefix="$DIR"
 make -j4
