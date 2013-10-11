@@ -137,8 +137,13 @@ MongoConnection.prototype._observeChangesWithOplog = function (
         LocalCollection._modify(newDoc, op.o);
         handleDoc(id, newDoc);
       } else {
-        // XXX for not-currently-published docs, if we can guarantee the
-        // irrelevance of the change, we can skip it
+        // If the selector is not affected by the modifier, no need to do
+        // anything!
+        if (!LocalCollection._isSelectorAffectedByModifier(
+          cursorDescription.selector, op.o)) {
+          return;
+        }
+
         curiousity.set(id, op.ts.toString());
         beCurious();
         return;
