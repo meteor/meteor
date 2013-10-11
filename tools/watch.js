@@ -1,6 +1,8 @@
 var fs = require("fs");
 var path = require("path");
 var _ = require('underscore');
+var Future = require('fibers/future');
+var fiberHelpers = require('./fiber-helpers.js');
 
 // Watch for changes to a set of files, and the first time that any of
 // the files change, call a user-provided callback. (If you want a
@@ -52,8 +54,6 @@ var _ = require('underscore');
 // they point to (ie, as a directory if they point to a directory, as
 // nonexistent if they point to something nonexist, etc). Not sure if this is
 // correct.
-
-
 
 var WatchSet = function () {
   var self = this;
@@ -209,9 +209,10 @@ WatchSet.fromJSON = function (json) {
 };
 
 var readDirectory = function (options) {
+  var yielding = !!options._yielding;
   // Read the directory.
   try {
-    var contents = fs.readdirSync(options.absPath);
+    var contents = readdirSyncOrYield(options.absPath, yielding);
   } catch (e) {
     // If the path is not a directory, return null; let other errors through.
     if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR'))
@@ -226,7 +227,7 @@ var readDirectory = function (options) {
       // We do stat instead of lstat here, so that we treat symlinks to
       // directories just like directories themselves.
       // XXX Does the treatment of symlinks make sense?
-      var stats = fs.statSync(path.join(options.absPath, entry));
+      var stats = statSyncOrYield(path.join(options.absPath, entry), yielding);
     } catch (e) {
       if (e && (e.code === 'ENOENT')) {
         // Disappeared after the readdirSync (or a dangling symlink)? Eh,
@@ -334,7 +335,7 @@ _.extend(Watcher.prototype, {
     return true;
   },
 
-  _fireIfDirectoryChanged: function (info) {
+  _fireIfDirectoryChanged: function (info, yielding) {
     var self = this;
 
     if (self.stopped)
@@ -343,7 +344,8 @@ _.extend(Watcher.prototype, {
     var newContents = exports.readDirectory({
       absPath: info.absPath,
       include: info.include,
-      exclude: info.exclude
+      exclude: info.exclude,
+      _yielding: yielding
     });
 
     // If the directory has changed (including being deleted or created).
@@ -431,7 +433,9 @@ _.extend(Watcher.prototype, {
 
       // Notice that we poll very frequently (500 ms)
       self.directoryWatches.push(
-        setInterval(function () { self._fireIfDirectoryChanged(info) }, 500)
+        setInterval(fiberHelpers.inFiber(function () {
+          self._fireIfDirectoryChanged(info, true);
+        }), 500)
       );
     });
   },
@@ -518,6 +522,25 @@ var sha1 = function (contents) {
   var hash = crypto.createHash('sha1');
   hash.update(contents);
   return hash.digest('hex');
+};
+
+// XXX We should eventually rewrite the whole meteor tools to use yielding fs
+// calls instead of sync (so that meteor is responsive to C-c during bundling,
+// so that the proxy accepts connections, etc) but we don't want to do this in
+// the point release in which we are adding these functions.
+var readdirSyncOrYield = function (path, yielding) {
+  if (yielding) {
+    return Future.wrap(fs.readdir)(path).wait();
+  } else {
+    return fs.readdirSync(path);
+  }
+};
+var statSyncOrYield = function (path, yielding) {
+  if (yielding) {
+    return Future.wrap(fs.stat)(path).wait();
+  } else {
+    return fs.statSync(path);
+  }
 };
 
 _.extend(exports, {
