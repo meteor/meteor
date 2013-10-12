@@ -1,4 +1,4 @@
-=> Meteor 0.6.6.1: Fix file watching on MacOS (work around Node issue #6251)
+=> Meteor 0.6.6.1: Fix file watching on OSX (work around Node issue #6251)
 
    This is being downloaded in the background. Update your project
    to Meteor 0.6.6.1 by running 'meteor update'.
