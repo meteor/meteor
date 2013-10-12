@@ -164,7 +164,7 @@ LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
     if (self.projection_f)
       elt = self.projection_f(elt);
     if (self._transform)
-      elt = self._transform(elt);
+      elt = self._transform(elt, self.collection);
     callback.call(thisArg, elt, self.cursor_pos, self);
     ++self.cursor_pos;
   }
@@ -250,7 +250,7 @@ LocalCollection.LiveResultsSet = function () {};
 _.extend(LocalCollection.Cursor.prototype, {
   observe: function (options) {
     var self = this;
-    return LocalCollection._observeFromObserveChanges(self, options);
+    return LocalCollection._observeFromObserveChanges(self, options, self.collection);
   },
   observeChanges: function (options) {
     var self = this;
@@ -964,10 +964,10 @@ LocalCollection._makeChangedFields = function (newDoc, oldDoc) {
   return fields;
 };
 
-LocalCollection._observeFromObserveChanges = function (cursor, callbacks) {
+LocalCollection._observeFromObserveChanges = function (cursor, callbacks, collection) {
   var transform = cursor.getTransform();
   if (!transform)
-    transform = function (doc) {return doc;};
+    transform = function (doc, collection) {return doc;};
   if (callbacks.addedAt && callbacks.added)
     throw new Error("Please specify only one of added() and addedAt()");
   if (callbacks.changedAt && callbacks.changed)
@@ -976,13 +976,13 @@ LocalCollection._observeFromObserveChanges = function (cursor, callbacks) {
     throw new Error("Please specify only one of removed() and removedAt()");
   if (callbacks.addedAt || callbacks.movedTo ||
       callbacks.changedAt || callbacks.removedAt)
-    return LocalCollection._observeOrderedFromObserveChanges(cursor, callbacks, transform);
+    return LocalCollection._observeOrderedFromObserveChanges(cursor, callbacks, collection, transform);
   else
-    return LocalCollection._observeUnorderedFromObserveChanges(cursor, callbacks, transform);
+    return LocalCollection._observeUnorderedFromObserveChanges(cursor, callbacks, collection, transform);
 };
 
 LocalCollection._observeUnorderedFromObserveChanges =
-    function (cursor, callbacks, transform) {
+    function (cursor, callbacks, collection, transform) {
   var docs = {};
   var suppressed = !!callbacks._suppress_initial;
   var handle = cursor.observeChanges({
@@ -991,7 +991,7 @@ LocalCollection._observeUnorderedFromObserveChanges =
       var doc = EJSON.clone(fields);
       doc._id = id;
       docs[strId] = doc;
-      suppressed || callbacks.added && callbacks.added(transform(doc));
+      suppressed || callbacks.added && callbacks.added(transform(doc, collection));
     },
     changed: function (id, fields) {
       var strId = LocalCollection._idStringify(id);
@@ -999,13 +999,13 @@ LocalCollection._observeUnorderedFromObserveChanges =
       var oldDoc = EJSON.clone(doc);
       // writes through to the doc set
       LocalCollection._applyChanges(doc, fields);
-      suppressed || callbacks.changed && callbacks.changed(transform(doc), transform(oldDoc));
+      suppressed || callbacks.changed && callbacks.changed(transform(doc, collection), transform(oldDoc, collection));
     },
     removed: function (id) {
       var strId = LocalCollection._idStringify(id);
       var doc = docs[strId];
       delete docs[strId];
-      suppressed || callbacks.removed && callbacks.removed(transform(doc));
+      suppressed || callbacks.removed && callbacks.removed(transform(doc, collection));
     }
   });
   suppressed = false;
@@ -1013,7 +1013,7 @@ LocalCollection._observeUnorderedFromObserveChanges =
 };
 
 LocalCollection._observeOrderedFromObserveChanges =
-    function (cursor, callbacks, transform) {
+    function (cursor, callbacks, collection, transform) {
   var docs = new OrderedDict(LocalCollection._idStringify);
   var suppressed = !!callbacks._suppress_initial;
   // The "_no_indices" option sets all index arguments to -1
@@ -1034,10 +1034,10 @@ LocalCollection._observeOrderedFromObserveChanges =
       if (!suppressed) {
         if (callbacks.addedAt) {
           var index = indices ? docs.indexOf(id) : -1;
-          callbacks.addedAt(transform(EJSON.clone(doc)),
+          callbacks.addedAt(transform(EJSON.clone(doc), collection),
                             index, before);
         } else if (callbacks.added) {
-          callbacks.added(transform(EJSON.clone(doc)));
+          callbacks.added(transform(EJSON.clone(doc), collection));
         }
       }
     },
@@ -1050,11 +1050,11 @@ LocalCollection._observeOrderedFromObserveChanges =
       LocalCollection._applyChanges(doc, fields);
       if (callbacks.changedAt) {
         var index = indices ? docs.indexOf(id) : -1;
-        callbacks.changedAt(transform(EJSON.clone(doc)),
-                            transform(oldDoc), index);
+        callbacks.changedAt(transform(EJSON.clone(doc), collection),
+                            transform(oldDoc, collection), index);
       } else if (callbacks.changed) {
-        callbacks.changed(transform(EJSON.clone(doc)),
-                          transform(oldDoc));
+        callbacks.changed(transform(EJSON.clone(doc), collection),
+                          transform(oldDoc, collection));
       }
     },
     movedBefore: function (id, before) {
@@ -1066,10 +1066,10 @@ LocalCollection._observeOrderedFromObserveChanges =
       docs.moveBefore(id, before || null);
       if (callbacks.movedTo) {
         var to = indices ? docs.indexOf(id) : -1;
-        callbacks.movedTo(transform(EJSON.clone(doc)), from, to,
+        callbacks.movedTo(transform(EJSON.clone(doc), collection), from, to,
                           before || null);
       } else if (callbacks.moved) {
-        callbacks.moved(transform(EJSON.clone(doc)));
+        callbacks.moved(transform(EJSON.clone(doc), collection));
       }
 
     },
@@ -1079,8 +1079,8 @@ LocalCollection._observeOrderedFromObserveChanges =
       if (callbacks.removedAt)
         index = indices ? docs.indexOf(id) : -1;
       docs.remove(id);
-      callbacks.removedAt && callbacks.removedAt(transform(doc), index);
-      callbacks.removed && callbacks.removed(transform(doc));
+      callbacks.removedAt && callbacks.removedAt(transform(doc, collection), index);
+      callbacks.removed && callbacks.removed(transform(doc, collection));
     }
   });
   suppressed = false;
