@@ -603,7 +603,7 @@ can also specify `transform` on a particular `find`, `findOne`, `allow`, or
 `deny` call.
 
     // An Animal class that takes a document in its constructor
-    Animal = function (doc) {
+    Animal = function (doc, collection) {
       _.extend(this, doc);
     };
     _.extend(Animal.prototype, {
@@ -614,7 +614,7 @@ can also specify `transform` on a particular `find`, `findOne`, `allow`, or
 
     // Define a Collection that uses Animal as its document
     Animals = new Meteor.Collection("Animals", {
-      transform: function (doc) { return new Animal(doc); }
+      transform: function (doc, collection) { return new Animal(doc); }
     });
 
     // Create an Animal and call its makeNoise method
@@ -625,6 +625,9 @@ can also specify `transform` on a particular `find`, `findOne`, `allow`, or
 dynamically changing attribute to an object, do it with a function that computes
 the value at the time it's called, not by computing the attribute at `transform`
 time.
+
+`transform` functions get as a second argument a collection object so that
+you can reuse the same function for various collections.
 
 {{#warning}}
 In this release, Minimongo has some limitations:
