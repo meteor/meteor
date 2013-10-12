@@ -67,20 +67,21 @@ if (Meteor.isServer) {
     var restrictedCollectionForFetchAllTest = defineCollection(
       "collection-restrictedForFetchAllTest", true /*insecure*/);
     var restrictedCollectionWithTransform = defineCollection(
-      "withTransform", false, function (doc) {
+      "withTransform", false, function (doc, collection) {
+        doc.a._collection = !!collection;
         return doc.a;
       });
 
     if (needToConfigure) {
       restrictedCollectionWithTransform.allow({
         insert: function (userId, doc) {
-          return doc.foo === "foo";
+          return doc.foo === "foo" && doc._collection === true;
         },
         update: function (userId, doc) {
-          return doc.foo === "foo";
+          return doc.foo === "foo" && doc._collection === true;
         },
         remove: function (userId, doc) {
-          return doc.bar === "bar";
+          return doc.bar === "bar" && doc._collection === true;
         }
       });
 
@@ -242,7 +243,8 @@ if (Meteor.isClient) {
     var restrictedCollectionForFetchAllTest = defineCollection(
       "collection-restrictedForFetchAllTest");
     var restrictedCollectionWithTransform = defineCollection(
-      "withTransform", function (doc) {
+      "withTransform", function (doc, collection) {
+        doc.a._collection = !!collection;
         return doc.a;
       });
 
@@ -336,7 +338,7 @@ if (Meteor.isClient) {
         function (test, expect) {
           test.equal(
             restrictedCollectionWithTransform.findOne({"a.bar": "bar"}),
-            {foo: "foo", bar: "bar", baz: "baz"});
+            {foo: "foo", bar: "bar", baz: "baz", _collection: true});
           restrictedCollectionWithTransform.remove(item1, expect(function (e, res) {
             test.isFalse(e);
           }));
