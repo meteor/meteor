@@ -68,7 +68,7 @@ if (Meteor.isServer) {
       "collection-restrictedForFetchAllTest", true /*insecure*/);
     var restrictedCollectionWithTransform = defineCollection(
       "withTransform", false, function (doc, collection) {
-        doc.a._collection = !!collection;
+        doc.a._collection = collection instanceof Meteor.Collection;
         return doc.a;
       });
 
@@ -244,7 +244,7 @@ if (Meteor.isClient) {
       "collection-restrictedForFetchAllTest");
     var restrictedCollectionWithTransform = defineCollection(
       "withTransform", function (doc, collection) {
-        doc.a._collection = !!collection;
+        doc.a._collection = collection instanceof LocalCollection;
         return doc.a;
       });
 

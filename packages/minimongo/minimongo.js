@@ -175,6 +175,11 @@ LocalCollection.Cursor.prototype.getTransform = function () {
   return self._transform;
 };
 
+LocalCollection.Cursor.prototype.getTransformCollection = function () {
+  var self = this;
+  return self.collection;
+};
+
 LocalCollection.Cursor.prototype.map = function (callback, thisArg) {
   var self = this;
   var res = [];
@@ -250,7 +255,7 @@ LocalCollection.LiveResultsSet = function () {};
 _.extend(LocalCollection.Cursor.prototype, {
   observe: function (options) {
     var self = this;
-    return LocalCollection._observeFromObserveChanges(self, options, self.collection);
+    return LocalCollection._observeFromObserveChanges(self, options);
   },
   observeChanges: function (options) {
     var self = this;
@@ -964,7 +969,7 @@ LocalCollection._makeChangedFields = function (newDoc, oldDoc) {
   return fields;
 };
 
-LocalCollection._observeFromObserveChanges = function (cursor, callbacks, collection) {
+LocalCollection._observeFromObserveChanges = function (cursor, callbacks) {
   var transform = cursor.getTransform();
   if (!transform)
     transform = function (doc, collection) {return doc;};
@@ -976,9 +981,9 @@ LocalCollection._observeFromObserveChanges = function (cursor, callbacks, collec
     throw new Error("Please specify only one of removed() and removedAt()");
   if (callbacks.addedAt || callbacks.movedTo ||
       callbacks.changedAt || callbacks.removedAt)
-    return LocalCollection._observeOrderedFromObserveChanges(cursor, callbacks, collection, transform);
+    return LocalCollection._observeOrderedFromObserveChanges(cursor, callbacks, cursor.getTransformCollection(), transform);
   else
-    return LocalCollection._observeUnorderedFromObserveChanges(cursor, callbacks, collection, transform);
+    return LocalCollection._observeUnorderedFromObserveChanges(cursor, callbacks, cursor.getTransformCollection(), transform);
 };
 
 LocalCollection._observeUnorderedFromObserveChanges =
