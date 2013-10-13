@@ -642,7 +642,7 @@ Cursor.prototype._publishCursor = function (sub) {
 Cursor.prototype._getCollectionName = function () {
   var self = this;
   return self._cursorDescription.collectionName;
-}
+};
 
 Cursor.prototype.observe = function (callbacks) {
   var self = this;
