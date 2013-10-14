@@ -169,13 +169,65 @@ LocalCollection._modifiers = {
     }
   },
   $push: function (target, field, arg) {
-    var x = target[field];
-    if (x === undefined)
-      target[field] = [arg];
-    else if (!(x instanceof Array))
+    if (target[field] === undefined)
+      target[field] = [];
+    if (!(target[field] instanceof Array))
       throw Error("Cannot apply $push modifier to non-array");
-    else
-      x.push(EJSON.clone(arg));
+
+    if (!(arg && arg.$each)) {
+      // Simple mode: not $each
+      target[field].push(EJSON.clone(arg));
+      return;
+    }
+
+    // Fancy mode: $each (and maybe $slice and $sort)
+    var toPush = arg.$each;
+    if (!(toPush instanceof Array))
+      throw Error("$each must be an array");
+
+    // Parse $slice.
+    var slice = undefined;
+    if ('$slice' in arg) {
+      if (typeof arg.$slice !== "number")
+        throw Error("$slice must be a numeric value");
+      // XXX should check to make sure integer
+      if (arg.$slice > 0)
+        throw Error("$slice in $push must be zero or negative");
+      slice = arg.$slice;
+    }
+
+    // Parse $sort.
+    var sortFunction = undefined;
+    if (arg.$sort) {
+      if (slice === undefined)
+        throw Error("$sort requires $slice to be present");
+      // XXX this allows us to use a $sort whose value is an array, but that's
+      // actually an extension of the Node driver, so it won't work
+      // server-side. Could be confusing!
+      sortFunction = LocalCollection._compileSort(arg.$sort);
+      for (var i = 0; i < toPush.length; i++) {
+        if (LocalCollection._f._type(toPush[i]) !== 3) {
+          throw Error("$push like modifiers using $sort " +
+                      "require all elements to be objects");
+        }
+      }
+    }
+
+    // Actually push.
+    for (var j = 0; j < toPush.length; j++)
+      target[field].push(EJSON.clone(toPush[j]));
+
+    // Actually sort.
+    if (sortFunction)
+      target[field].sort(sortFunction);
+
+    // Actually slice.
+    if (slice !== undefined) {
+      if (slice === 0)
+        target[field] = [];  // differs from Array.slice!
+      else
+        target[field] = target[field].slice(slice);
+    }
   },
   $pushAll: function (target, field, arg) {
     if (!(typeof arg === "object" && arg instanceof Array))

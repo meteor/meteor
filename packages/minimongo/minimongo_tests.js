@@ -1577,6 +1577,28 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: [1]}, {$push: {a: [2]}}, {a: [1, [2]]});
   modify({a: []}, {$push: {'a.1': 99}}, {a: [null, [99]]}); // tested
   modify({a: {}}, {$push: {'a.x': 99}}, {a: {x: [99]}});
+  modify({}, {$push: {a: {$each: [1, 2, 3]}}},
+         {a: [1, 2, 3]});
+  modify({a: []}, {$push: {a: {$each: [1, 2, 3]}}},
+         {a: [1, 2, 3]});
+  modify({a: [true]}, {$push: {a: {$each: [1, 2, 3]}}},
+         {a: [true, 1, 2, 3]});
+  // No positive numbers for $slice
+  exception({}, {$push: {a: {$each: [], $slice: 5}}});
+  modify({a: [true]}, {$push: {a: {$each: [1, 2, 3], $slice: -2}}},
+         {a: [2, 3]});
+  modify({a: [false, true]}, {$push: {a: {$each: [1], $slice: -2}}},
+         {a: [true, 1]});
+  modify(
+    {a: [{x: 3}, {x: 1}]},
+    {$push: {a: {
+      $each: [{x: 4}, {x: 2}],
+      $slice: -2,
+      $sort: {x: 1}
+    }}},
+    {a: [{x: 3}, {x: 4}]});
+  modify({}, {$push: {a: {$each: [1, 2, 3], $slice: 0}}}, {a: []});
+  modify({a: [1, 2]}, {$push: {a: {$each: [1, 2, 3], $slice: 0}}}, {a: []});
 
   // $pushAll
   modify({}, {$pushAll: {a: [1]}}, {a: [1]});
