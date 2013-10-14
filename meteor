@@ -1,6 +1,8 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.3.19
+BUNDLE_VERSION=0.3.19 # 0.3.20 is already built but was not used. next
+# time you bump this version number, go to 0.3.21 and remove this
+# comment.
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
