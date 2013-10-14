@@ -210,7 +210,7 @@ LocalCollection._modifiers = {
         for (var i = 0; i < x.length; i++)
           if (LocalCollection._f._equal(value, x[i]))
             return;
-        x.push(value);
+        x.push(EJSON.clone(value));
       });
     }
   },
