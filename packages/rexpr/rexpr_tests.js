@@ -217,4 +217,8 @@ Tinytest.add("rexpr - compile", function (test) {
   test.equal(RExpr.compile('{\'\\\\\': "\\\\"}'),
              { refs: [],
                str: '{"\\\\":"\\\\"}' });
+
+  test.equal(RExpr.compile('f(a,b)'),
+             { refs: ['f', 'a', 'b'],
+               str: '${0}(${1},${2})' });
 });

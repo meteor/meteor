@@ -1,4 +1,7 @@
 RExpr = {
+////////////////////
+// from: Ractive/wrapper/begin.js
+
   NUMBER_LITERAL    : 20,
   STRING_LITERAL    : 21,
   ARRAY_LITERAL     : 22,
@@ -17,4 +20,23 @@ RExpr = {
   INFIX_OPERATOR    : 36,
 
   INVOCATION        : 40
+////////////////////
 };
+
+// Expose all these constants as package-private variables so we
+// can use them unqualified from any file.
+NUMBER_LITERAL = RExpr.NUMBER_LITERAL;
+STRING_LITERAL = RExpr.STRING_LITERAL;
+ARRAY_LITERAL = RExpr.ARRAY_LITERAL;
+OBJECT_LITERAL = RExpr.OBJECT_LITERAL;
+BOOLEAN_LITERAL = RExpr.BOOLEAN_LITERAL;
+GLOBAL = RExpr.GLOBAL;
+KEY_VALUE_PAIR = RExpr.KEY_VALUE_PAIR;
+REFERENCE = RExpr.REFERENCE;
+REFINEMENT = RExpr.REFINEMENT;
+MEMBER = RExpr.MEMBER;
+PREFIX_OPERATOR = RExpr.PREFIX_OPERATOR;
+BRACKETED = RExpr.BRACKETED;
+CONDITIONAL = RExpr.CONDITIONAL;
+INFIX_OPERATOR = RExpr.INFIX_OPERATOR;
+INVOCATION = RExpr.INVOCATION;
