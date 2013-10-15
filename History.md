@@ -1,11 +1,19 @@
 ## vNEXT
 
+* Implement `$each`, `$sort`, and `$slice` options for minimongo's `$push`
+  modifier.
+
+* Upgraded dependencies:
+  * SockJS server from 0.3.7 to 0.3.8
+
+
 ## v0.6.6.1
 
 * Fix file watching on OSX. Work around Node issue #6251 by not using
   fs.watch. #1483
 
 ## v0.6.6
+
 
 #### Security
 
