@@ -7,7 +7,7 @@ SimpleRationalRanks = {
 };
 
 UI.body.rendered = function () {
-  this.$('#list').sortable({ // uses the 'sortable' interaction from jquery ui
+  $(this.find('#list')).sortable({ // uses the 'sortable' interaction from jquery ui
     stop: function (event, ui) { // fired when an item is dropped
       var el = ui.item.get(0), before = ui.item.prev().get(0), after = ui.item.next().get(0);
 
