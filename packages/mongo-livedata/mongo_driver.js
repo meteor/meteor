@@ -229,8 +229,9 @@ var quotemeta = function (str) {
 MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
   var self = this;
 
+  var oplogQueryConnection = null;
+  var oplogTailConnection = null;
   var stopped = false;
-  var oplogConnection = null;
   var tailHandle = null;
   var readyFuture = new Future();
   var nextId = 0;
@@ -292,7 +293,7 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
         // We need to make the selector at least as restrictive as the actual
         // tailing selector (ie, we need to specify the DB name) or else we
         // might find a TS that won't show up in the actual tail stream.
-        var lastEntry = oplogConnection.findOne(
+        var lastEntry = oplogQueryConnection.findOne(
           OPLOG_COLLECTION, baseOplogSelector, {sort: {$natural: -1}});
         if (!lastEntry) {
           // Really, nothing in the oplog? Well, we've processed everything.
@@ -320,12 +321,23 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
     }
   };
 
-  // Actually setting up the connection and tail blocks, so we do it "later".
+  // Setting up the connections and tail handler is a blocking operation, so we
+  // do it "later".
   Meteor.defer(function () {
-    oplogConnection = new MongoConnection(oplogUrl);
+    // We make two separate connections to Mongo. The Node Mongo driver
+    // implements a naive round-robin connection pool: each "connection" is a
+    // pool of several (5 by default) TCP connections, and each request is
+    // rotated through the pools. Tailable cursor queries block on the server
+    // until there is some data to return (or until a few seconds have
+    // passed). So if the connection pool used for tailing cursors is the same
+    // pool used for other queries, the other queries will be delayed by seconds
+    // 1/5 of the time.
+    // XXX set the pool size for oplogTailConnection to 1
+    oplogTailConnection = new MongoConnection(oplogUrl);
+    oplogQueryConnection = new MongoConnection(oplogUrl);
 
     // Find the last oplog entry. Blocks until the connection is ready.
-    var lastOplogEntry = oplogConnection.findOne(
+    var lastOplogEntry = oplogQueryConnection.findOne(
       OPLOG_COLLECTION, {}, {sort: {$natural: -1}});
 
     var oplogSelector = _.clone(baseOplogSelector);
@@ -341,7 +353,7 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
     var cursorDescription = new CursorDescription(
       OPLOG_COLLECTION, oplogSelector, {tailable: true});
 
-    tailHandle = oplogConnection.tail(cursorDescription, function (doc) {
+    tailHandle = oplogTailConnection.tail(cursorDescription, function (doc) {
       if (!(doc.ns && doc.ns.length > dbName.length + 1 &&
             doc.ns.substr(0, dbName.length + 1) === (dbName + '.')))
         throw new Error("Unexpected ns");
