@@ -113,13 +113,13 @@ MongoConnection = function (url, options) {
   self._connectCallbacks = [];
   self._liveResultsSets = {};
 
-  var mongoOptions = {db: {safe: true}};
+  var mongoOptions = {db: {safe: true}, server: {}};
 
   // Set autoReconnect to true, unless passed on the URL. Why someone
   // would want to set autoReconnect to false, I'm not really sure, but
   // keeping this for backwards compatibility for now.
   if (!(/[\?&]auto_?[rR]econnect=/.test(url))) {
-    mongoOptions.server = {auto_reconnect: true};
+    mongoOptions.server.auto_reconnect = true;
   }
 
   // Disable the native parser by default, unless specifically enabled
@@ -132,6 +132,12 @@ MongoConnection = function (url, options) {
   // We should revisit this after binary npm module support lands.
   if (!(/[\?&]native_?[pP]arser=/.test(url))) {
     mongoOptions.db.native_parser = false;
+  }
+
+  // XXX maybe we should have a better way of allowing users to configure the
+  // underlying Mongo driver
+  if (_.has(options, 'poolSize')) {
+    mongoOptions.server.poolSize = 1;
   }
 
   MongoDB.connect(url, mongoOptions, function(err, db) {
@@ -332,8 +338,10 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
     // passed). So if the connection pool used for tailing cursors is the same
     // pool used for other queries, the other queries will be delayed by seconds
     // 1/5 of the time.
-    // XXX set the pool size for oplogTailConnection to 1
-    oplogTailConnection = new MongoConnection(oplogUrl);
+    //
+    // The tail connection will only ever be running a single tail command, so
+    // it only needs to make one underlying TCP connection.
+    oplogTailConnection = new MongoConnection(oplogUrl, {poolSize: 1});
     oplogQueryConnection = new MongoConnection(oplogUrl);
 
     // Find the last oplog entry. Blocks until the connection is ready.
