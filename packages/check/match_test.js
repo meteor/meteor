@@ -178,31 +178,34 @@ Tinytest.add("check - argument checker", function (test) {
     check(_.toArray(arguments).slice(1), [String]);
   }, 1, "foo", "bar", "baz");
 
-  var doesntCheckAllArguments = function (f /*arguments*/) {
+  var doesntCheckAllArguments = function (message, f /*arguments*/) {
     try {
       Match._failIfArgumentsAreNotAllChecked(
-        f, {}, _.toArray(arguments).slice(1), "test");
+        f, {}, _.toArray(arguments).slice(2), "test");
       test.fail({message: "expected _failIfArgumentsAreNotAllChecked to throw"});
     } catch (e) {
-      test.equal(e.message, "Did not check() all arguments during test");
+      test.equal(e.message, message);
     }
   };
 
-  doesntCheckAllArguments(function () {}, undefined);
-  doesntCheckAllArguments(function () {}, null);
-  doesntCheckAllArguments(function () {}, 1);
-  doesntCheckAllArguments(function () {
+  var tooMany = "Passed too many arguments to function test";
+  var yUnchecked = "Some arguments (y) left unchecked during test";
+
+  doesntCheckAllArguments(tooMany, function () {}, undefined);
+  doesntCheckAllArguments(tooMany, function () {}, null);
+  doesntCheckAllArguments(tooMany, function () {}, 1);
+  doesntCheckAllArguments(tooMany, function () {
     check(_.toArray(arguments).slice(1), [String]);
   }, 1, "asdf", "foo");
-  doesntCheckAllArguments(function (x, y) {
+  doesntCheckAllArguments(yUnchecked, function (x, y) {
     check(x, Boolean);
   }, true, false);
   // One "true" check doesn't count for all.
-  doesntCheckAllArguments(function (x, y) {
+  doesntCheckAllArguments(yUnchecked, function (x, y) {
     check(x, Boolean);
   }, true, true);
   // For non-primitives, we really do require that each arg gets checked.
-  doesntCheckAllArguments(function (x, y) {
+  doesntCheckAllArguments(yUnchecked, function (x, y) {
     check(x, [Boolean]);
     check(x, [Boolean]);
   }, [true], [true]);
