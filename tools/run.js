@@ -359,18 +359,18 @@ var killServer = function (handle) {
 
 // Also used by "meteor deploy" in meteor.js.
 
-exports.getSettings = function (filename) {
-  var str;
-  try {
-    str = fs.readFileSync(filename, "utf8");
-  } catch (e) {
+exports.getSettings = function (filename, watchSet) {
+  var absPath = path.resolve(filename);
+  var buffer = watch.readAndWatchFile(watchSet, absPath);
+  if (!buffer)
     throw new Error("Could not find settings file " + filename);
-  }
-  if (str.length > 0x10000) {
+  if (buffer.length > 0x10000)
     throw new Error("Settings file must be less than 64 KB long");
-  }
-  // Ensure that the string is parseable in JSON, but there's
-  // no reason to use the object value of it yet.
+
+  var str = buffer.toString('utf8');
+
+  // Ensure that the string is parseable in JSON, but there's no reason to use
+  // the object value of it yet.
   if (str.match(/\S/)) {
     JSON.parse(str);
     return str;
@@ -518,19 +518,8 @@ exports.run = function (context, options) {
 
     // Read the settings file, if any
     var settings = null;
-    if (options.settingsFile) {
-      settings = exports.getSettings(options.settingsFile);
-
-      // 'getSettings' will collapse any amount of whitespace down to
-      // the empty string, so to get the sha1 for change monitoring,
-      // we need to reread the file, which creates a tiny race
-      // condition (not a big enough deal to care about right now.)
-      var settingsHash =
-        Builder.sha1(fs.readFileSync(options.settingsFile, "utf8"));
-
-      // Reload if the setting file changes
-      watchSet.addFile(path.resolve(options.settingsFile), settingsHash);
-    }
+    if (options.settingsFile)
+      settings = exports.getSettings(options.settingsFile, watchSet);
 
     // Start the server
     Status.running = true;
