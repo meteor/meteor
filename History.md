@@ -9,6 +9,7 @@
   to 5MB.
 
 * Upgraded dependencies:
+  * Node from 0.10.20 to 0.10.21
   * SockJS server from 0.3.7 to 0.3.8
 
 Patches contributed by GitHub user mcbain.
