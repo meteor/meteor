@@ -1,5 +1,7 @@
 ## vNEXT
 
+* Fail explicitly when publishing non-cursors.
+
 * Implement `$each`, `$sort`, and `$slice` options for minimongo's `$push`
   modifier.
 
