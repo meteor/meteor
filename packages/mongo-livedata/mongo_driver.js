@@ -235,7 +235,7 @@ var quotemeta = function (str) {
 MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
   var self = this;
 
-  var oplogQueryConnection = null;
+  var oplogLastEntryConnection = null;
   var oplogTailConnection = null;
   var stopped = false;
   var tailHandle = null;
@@ -299,7 +299,7 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
         // We need to make the selector at least as restrictive as the actual
         // tailing selector (ie, we need to specify the DB name) or else we
         // might find a TS that won't show up in the actual tail stream.
-        var lastEntry = oplogQueryConnection.findOne(
+        var lastEntry = oplogLastEntryConnection.findOne(
           OPLOG_COLLECTION, baseOplogSelector, {sort: {$natural: -1}});
         if (!lastEntry) {
           // Really, nothing in the oplog? Well, we've processed everything.
@@ -342,10 +342,13 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
     // The tail connection will only ever be running a single tail command, so
     // it only needs to make one underlying TCP connection.
     oplogTailConnection = new MongoConnection(oplogUrl, {poolSize: 1});
-    oplogQueryConnection = new MongoConnection(oplogUrl);
+    // XXX better docs, but: it's to get monotonic results
+    // XXX is it safe to say "if there's an in flight query, just use its
+    //     results"? I don't think so but should consider that
+    oplogLastEntryConnection = new MongoConnection(oplogUrl, {poolSize: 1});
 
     // Find the last oplog entry. Blocks until the connection is ready.
-    var lastOplogEntry = oplogQueryConnection.findOne(
+    var lastOplogEntry = oplogLastEntryConnection.findOne(
       OPLOG_COLLECTION, {}, {sort: {$natural: -1}});
 
     var oplogSelector = _.clone(baseOplogSelector);
