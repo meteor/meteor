@@ -3,6 +3,9 @@
 * Write dates to Mongo as ISODate rather than Integer; existing data can be
   converted by passing it through `new Date()`. #1228
 
+* Increase the maximum size spiderable will return for a page from 200kB
+  to 5MB.
+
 
 ## v0.6.5.2
 
