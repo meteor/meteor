@@ -833,6 +833,12 @@ _.extend(Subscription.prototype, {
         cur._publishCursor(self);
       });
       self.ready();
+    } else if (res) {
+      // truthy values other than cursors or arrays are probably a
+      // user mistake (possible returning a Mongo document via, say,
+      // `coll.findOne()`).
+      self.error(new Error("Publish function can only return a Cursor or "
+                           + "an array of Cursors"));
     }
   },
 
