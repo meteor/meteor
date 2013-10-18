@@ -1815,3 +1815,55 @@ Tinytest.addAsync("mongo-livedata - local collection with null connection, w/o c
   test.equal(coll1.findOne(doc)._id, docId);
   onComplete();
 });
+
+Tinytest.add("mongo-livedata - update handles $push with $each correctly", function (test) {
+  var collection = new Meteor.Collection(Random.id());
+
+  var id = collection.insert({name: 'jens', elements: ['X', 'Y']});
+
+  var result = collection.update(id, {
+    $push: {
+      elements: {
+        $each: ['A', 'B', 'C'],
+        $slice: -4
+      }}});
+
+  test.equal(collection.findOne(id), {
+    _id: id,
+    name: 'jens',
+    elements: ['Y', 'A', 'B', 'C']
+  });
+});
+
+if (Meteor.isServer) {
+  Tinytest.add("mongo-livedata - upsert handles $push with $each correctly", function (test) {
+    var collection = new Meteor.Collection(Random.id());
+
+    var result = collection.upsert(
+      {name: 'jens'},
+      {$push: {
+        elements: {
+          $each: ['A', 'B', 'C'],
+          $slice: -4
+        }}});
+
+    test.equal(collection.findOne(result.insertedId),
+               {_id: result.insertedId,
+                name: 'jens',
+                elements: ['A', 'B', 'C']});
+
+    var id = collection.insert({name: "david", elements: ['X', 'Y']});
+    result = collection.upsert(
+      {name: 'david'},
+      {$push: {
+        elements: {
+          $each: ['A', 'B', 'C'],
+          $slice: -4
+        }}});
+
+    test.equal(collection.findOne(id),
+               {_id: id,
+                name: 'david',
+                elements: ['Y', 'A', 'B', 'C']});
+  });
+}

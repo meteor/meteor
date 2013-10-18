@@ -3,13 +3,15 @@
 * Fail explicitly when publishing non-cursors.
 
 * Implement `$each`, `$sort`, and `$slice` options for minimongo's `$push`
-  modifier.
+  modifier.  #1492
 
 * Increase the maximum size spiderable will return for a page from 200kB
   to 5MB.
 
 * Upgraded dependencies:
   * SockJS server from 0.3.7 to 0.3.8
+
+Patches contributed by GitHub user mcbain.
 
 
 ## v0.6.6.1
