@@ -79,3 +79,13 @@ Meteor.Error = Meteor.makeErrorType(
     else
       self.message = '[' + self.error + ']';
   });
+
+// Meteor.Error is basically data and is sent over DDP, so you should be able to
+// properly EJSON-clone it. This is especially important because if a
+// Meteor.Error is thrown through a Future, the error, reason, and details
+// properties become non-enumerable so a standard Object clone won't preserve
+// them and they will be lost from DDP.
+Meteor.Error.prototype.clone = function () {
+  var self = this;
+  return new Meteor.Error(self.error, self.reason, self.details);
+};
