@@ -216,6 +216,9 @@ sdarnell, and timhaines.
 * Fix regression when using Mongo ObjectIDs in Spark templates.
 
 
+* Increase the maximum size spiderable will return for a page from 200kB
+  to 5MB.
+
 
 ## v0.6.5.2
 
