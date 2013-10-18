@@ -318,7 +318,9 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
 
         if (!_.isEmpty(pendingSequencers)
             && _.last(pendingSequencers).ts.greaterThan(ts)) {
-          throw Error("found misordered oplog");
+          throw Error("found misordered oplog: "
+                      + _.last(pendingSequencers).ts.toString() + " vs "
+                      + ts.toString());
         }
 
         pendingSequencers.push({ts: ts,
