@@ -626,6 +626,11 @@ Cursor.prototype.getTransform = function () {
   return self._cursorDescription.options.transform;
 };
 
+Cursor.prototype.getTransformCollection = function () {
+  var self = this;
+  return self._cursorDescription.options.transformCollection;
+};
+
 // When you call Meteor.publish() with a function that returns a Cursor, we need
 // to transmute it into the equivalent subscription.  This is the function that
 // does that.
@@ -642,7 +647,7 @@ Cursor.prototype._publishCursor = function (sub) {
 Cursor.prototype._getCollectionName = function () {
   var self = this;
   return self._cursorDescription.collectionName;
-}
+};
 
 Cursor.prototype.observe = function (callbacks) {
   var self = this;
@@ -701,8 +706,10 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options) {
     self._transform = Deps._makeNonreactive(
       cursorDescription.options.transform
     );
+    self._transformCollection = cursorDescription.options.transformCollection;
   } else {
     self._transform = null;
+    self._transformCollection = null;
   }
 
   // Need to specify that the callback is the first argument to nextObject,
@@ -732,8 +739,9 @@ _.extend(SynchronousCursor.prototype, {
         self._visitedIds[strId] = true;
       }
 
-      if (self._transform)
-        doc = self._transform(doc);
+      if (self._transform) {
+        doc = self._transform(doc, self._transformCollection);
+      }
 
       return doc;
     }
@@ -830,8 +838,9 @@ MongoConnection.prototype._observeChanges = function (
     return self._observeChangesTailable(cursorDescription, ordered, callbacks);
   }
 
-  var observeKey = JSON.stringify(
-    _.extend({ordered: ordered}, cursorDescription));
+  var observeKeyObject = _.extend({ordered: ordered}, cursorDescription);
+  observeKeyObject.options = _.omit(observeKeyObject.options, 'transformCollection');
+  var observeKey = JSON.stringify(observeKeyObject);
 
   var liveResultsSet;
   var observeHandle;

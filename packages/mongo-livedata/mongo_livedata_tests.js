@@ -838,9 +838,11 @@ testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGenera
       test.equal(cursor.fetch()[0].seconds(), 50);
       test.equal(self.coll.findOne().seconds(), 50);
       test.equal(self.coll.findOne({}, {transform: null}).seconds, undefined);
-      test.equal(self.coll.findOne({}, {
-        transform: function (doc) {return {seconds: doc.d.getSeconds()};}
-      }).seconds, 50);
+      var res = self.coll.findOne({}, {
+        transform: function (doc, collection) {return {seconds: doc.d.getSeconds(), _collection: collection};}
+      });
+      test.equal(res.seconds, 50);
+      test.instanceOf(res._collection, Meteor.isClient ? LocalCollection : Meteor.Collection);
       self.coll.remove(id);
     }));
   },
@@ -862,7 +864,7 @@ testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGenera
     // Test that a transform that returns something other than a document with
     // an _id (eg, a number) works. Regression test for #974.
     test.equal(self.coll.find({}, {
-      transform: function (doc) { return doc.d.getSeconds(); },
+      transform: function (doc, collection) { return doc.d.getSeconds(); },
       sort: {d: 1}
     }).fetch(), [50, 51]);
   }

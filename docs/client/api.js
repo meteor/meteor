@@ -505,7 +505,7 @@ Template.api.meteor_collection = {
     },
     {name: "transform",
      type: "Function",
-     descr: "An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `allow`, and `deny`."
+     descr: "An optional transformation function. Called with a document object as the first argument and a collection object as the second. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `allow`, and `deny`."
     }
   ]
 };
