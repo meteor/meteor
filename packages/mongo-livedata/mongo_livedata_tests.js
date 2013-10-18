@@ -1815,3 +1815,23 @@ Tinytest.addAsync("mongo-livedata - local collection with null connection, w/o c
   test.equal(coll1.findOne(doc)._id, docId);
   onComplete();
 });
+
+Tinytest.addAsync("mongo-livedata - bulk insertion of models", function (test, onComplete) {
+  var cname = Random.id();
+  var coll1 = new Meteor.Collection(cname);
+  var doc = { score: 5 };
+  var docTwo = { score: 10 };
+
+  // Test that passing an array of documents performs a bulk insertion
+  var docIds = coll1.insert([ doc, docTwo ]);
+  test.equal(coll1.find().count(), 2);
+  test.equal(coll1.find({ score: 5 }).count(), 1);
+  test.equal(coll1.find({ score: 10 }).count(), 1);
+
+  // Check that a bulk insertion returns a list of ids for the inserted documents
+  test.equal(docIds.length, 2);
+  test.equal(coll1.findOne(doc)._id, docIds[0]);
+  test.equal(coll1.findOne(docTwo)._id, docIds[1]);
+
+  onComplete();
+});
