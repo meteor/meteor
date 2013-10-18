@@ -265,15 +265,6 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
   test.equal(coll.findOne({run: run}, {sort: {x: -1}, skip: 0}).x, 4);
   test.equal(coll.findOne({run: run}, {sort: {x: -1}, skip: 1}).x, 1);
 
-  // sleep function from fibers docs.
-  var sleep = function(ms) {
-    var Fiber = Npm.require('fibers');
-    var fiber = Fiber.current;
-    setTimeout(function() {
-      fiber.run();
-    }, ms);
-    Fiber.yield();
-  };
 
   var cur = coll.find({run: run}, {sort: ["x"]});
   var total = 0;
@@ -291,7 +282,7 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
       // callback's sleep sleep and the *= 10 will occur before the += 1, then
       // total (at test.equal time) will be 5. If forEach does not wait for the
       // callbacks to complete, then total (at test.equal time) will be 0.
-      sleep(5);
+      Meteor._sleepForMs(5);
     }
     total += doc.x;
     // verify the meteor environment is set up here
