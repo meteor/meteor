@@ -94,7 +94,17 @@ MongoConnection.prototype._observeChangesWithOplog = function (
         f.get();
       });
     }
+    beSteady();
+  };
+
+  var writesToCommitWhenWeReachSteady = [];
+  var beSteady = function () {
     phase = PHASE.STEADY;
+    var writes = writesToCommitWhenWeReachSteady;
+    writesToCommitWhenWeReachSteady = [];
+    _.each(writes, function (w) {
+      w.committed();
+    });
   };
 
   var oplogEntryHandlers = {};
@@ -163,17 +173,20 @@ MongoConnection.prototype._observeChangesWithOplog = function (
   // XXX ordering w.r.t. everything else?
   var listenersHandle = listenAll(
     cursorDescription, function (notification, complete) {
-      // If we're not in a write fence, we don't have to do anything. That's
-      // because
+      // If we're not in a write fence, we don't have to do anything.
       var fence = DDPServer._CurrentWriteFence.get();
       if (!fence) {
         complete();
         return;
       }
       var write = fence.beginWrite();
-      // XXX this also has to wait for steady!!!
+      // This write cannot complete until we've caught up to "this point" in the
+      // oplog, and then made it back to the steady state.
       self._oplogHandle.callWhenProcessedLatest(function () {
-        write.committed();
+        if (phase === PHASE.STEADY)
+          write.committed();
+        else
+          writesToCommitWhenWeReachSteady.push(write);
       });
       complete();
     }
@@ -192,7 +205,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
     throw Error("Phase unexpectedly " + phase);
 
   if (curiousity.isEmpty()) {
-    phase = PHASE.STEADY;
+    beSteady();
   } else {
     phase = PHASE.FETCHING;
     Meteor.defer(beCurious);
