@@ -1,5 +1,10 @@
 ## vNEXT
 
+* Fix `meteor run` with settings files containing non-ASCII characters.  #1497
+
+* Support `EJSON.clone` for `Meteor.Error`. As a result, they are properly
+  stringified in DDP even if thrown through a `Future`.  #1482
+
 * Fail explicitly when publishing non-cursors.
 
 * Implement `$each`, `$sort`, and `$slice` options for minimongo's `$push`
