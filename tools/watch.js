@@ -500,11 +500,13 @@ var readAndWatchDirectory = function (watchSet, options) {
 
 var readAndWatchFile = function (watchSet, absPath) {
   var contents = readFile(absPath);
-  var hash = contents === null ? null : sha1(contents);
-  // Allow null watchSet, if we want to use a readFile-style error handling in a
+  // Allow null watchSet, if we want to use readFile-style error handling in a
   // context where we might not always have a WatchSet (eg, reading
   // settings.json where we watch for "meteor run" but not for "meteor deploy").
-  watchSet && watchSet.addFile(absPath, hash);
+  if (watchSet) {
+    var hash = contents === null ? null : sha1(contents);
+    watchSet.addFile(absPath, hash);
+  }
   return contents;
 };
 
