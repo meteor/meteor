@@ -157,9 +157,11 @@ MongoConnection = function (url, options) {
   self._oplogHandle = null;
 
   if (options.oplogUrl) {
-    // XXX this parse fails on mongo URLs with commas!
-    var dbName = Npm.require('url').parse(url).pathname.substr(1);
-    self._startOplogTailing(options.oplogUrl, dbName);
+    var dbNameFuture = new Future;
+    self._withDb(function (db) {
+      dbNameFuture.return(db.databaseName);
+    });
+    self._startOplogTailing(options.oplogUrl, dbNameFuture);
   }
 };
 
@@ -232,7 +234,8 @@ var quotemeta = function (str) {
     return String(str).replace(/(\W)/g, '\\$1');
 };
 
-MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
+MongoConnection.prototype._startOplogTailing = function (oplogUrl,
+                                                         dbNameFuture) {
   var self = this;
 
   var oplogLastEntryConnection = null;
@@ -243,11 +246,15 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
   var nextId = 0;
   var callbacksByCollection = {};
   var lastProcessedTS = null;
-  var baseOplogSelector = {
-    ns: new RegExp('^' + quotemeta(dbName) + '\\.'),
-    // XXX also handle drop collection, etc
-    op: {$in: ['i', 'u', 'd']}
-  };
+  // Lazily calculate the basic selector. Don't call baseOplogSelector() at the
+  // top level of this function, because we don't want this function to block.
+  var baseOplogSelector = _.once(function () {
+    return {
+      ns: new RegExp('^' + quotemeta(dbNameFuture.wait()) + '\\.'),
+      // XXX also handle drop collection, etc
+      op: {$in: ['i', 'u', 'd']}
+    };
+  });
   // XXX doc
   var pendingSequencers = [];
 
@@ -300,7 +307,7 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
         // tailing selector (ie, we need to specify the DB name) or else we
         // might find a TS that won't show up in the actual tail stream.
         var lastEntry = oplogLastEntryConnection.findOne(
-          OPLOG_COLLECTION, baseOplogSelector, {sort: {$natural: -1}});
+          OPLOG_COLLECTION, baseOplogSelector(), {sort: {$natural: -1}});
         if (!lastEntry) {
           // Really, nothing in the oplog? Well, we've processed everything.
           callback();
@@ -353,7 +360,9 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl, dbName) {
     var lastOplogEntry = oplogLastEntryConnection.findOne(
       OPLOG_COLLECTION, {}, {sort: {$natural: -1}});
 
-    var oplogSelector = _.clone(baseOplogSelector);
+    var dbName = dbNameFuture.wait();
+
+    var oplogSelector = _.clone(baseOplogSelector());
     if (lastOplogEntry) {
       // Start after the last entry that currently exists.
       oplogSelector.ts = {$gt: lastOplogEntry.ts};
