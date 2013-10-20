@@ -2341,7 +2341,7 @@ var isLegalCodepoint = function (cp) {
 // http://www.whatwg.org/specs/web-apps/current-work/multipage/tokenization.html#consume-a-character-reference
 //
 // Matches a character reference if possible, including the initial `&`.
-// Fails fatally in error cases, like a disallowed codepoint
+// Fails fatally in error cases (assuming an initial `&` is matched), like a disallowed codepoint
 // number or a bad named character reference.
 //
 // `inAttribute` is truthy if we are in an attribute value.
