@@ -3,6 +3,7 @@ HTML = {
     // stuff exposed for testing
     Scanner: Scanner,
     getCharacterReference: getCharacterReference,
-    getComment: getComment
+    getComment: getComment,
+    getDoctype: getDoctype
   }
 };

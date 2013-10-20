@@ -2367,7 +2367,7 @@ getCharacterReference = function (scanner, inAttribute, allowedChar) {
     if (! refNumber)
       scanner.fatal("Invalid numerical character reference starting with &#");
     var codepoint;
-    if (refNumber.charAt(0).toLowerCase() === 'x') {
+    if (refNumber.charAt(0) === 'x' || refNumber.charAt(0) === 'X') {
       // hex
       var hex = refNumber.slice(1, -1);
       while (hex.charAt(0) === '0')

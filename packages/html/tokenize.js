@@ -1,5 +1,11 @@
 
+var HTML_SPACE = /^[\u0009\u000A\u000C\u0020]/;
 
+var asciiLowerCase = function (str) {
+  return str.replace(/[A-Z]/g, function (c) {
+    return String.fromCharCode(c.charCodeAt(0) + 32);
+  });
+};
 
 getComment = function (scanner) {
   if (scanner.rest().slice(0, 4) !== '<!--')
@@ -29,4 +35,42 @@ getComment = function (scanner) {
 
   return { t: 'Comment',
            v: commentContents };
+};
+
+var skipSpaces = function (scanner) {
+  while (HTML_SPACE.test(scanner.peek()))
+    scanner.pos++;
+};
+
+var requireSpaces = function (scanner) {
+  if (! HTML_SPACE.test(scanner.peek()))
+    scanner.fatal("Expected whitespace");
+  skipSpaces(scanner);
+};
+
+getDoctype = function (scanner) {
+  if (scanner.rest().slice(0, 9) !== '<!DOCTYPE')
+    return null;
+  scanner.pos += 9;
+
+  requireSpaces(scanner);
+
+  var ch = scanner.peek();
+  if ((! ch) || (ch === '>') || (ch === '\u0000'))
+    scanner.fatal('Malformed DOCTYPE');
+  var name = ch;
+
+  while ((ch = scanner.peek()), ! (HTML_SPACE.test(ch) || ch === '>')) {
+    if ((! ch) || (ch === '\u0000'))
+      scanner.fatal('Malformed DOCTYPE');
+    name += ch;
+  }
+  name = asciiLowerCase(name);
+
+  if (ch !== '>') {
+    // XXX
+  }
+
+  return { t: 'Doctype',
+           name: name };
 };
