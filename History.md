@@ -1,9 +1,15 @@
 
 ## vNEXT
 
+## v0.6.4.2
+
+* Upgrade Node from 0.8.18 to 0.8.26 (security update).
+
+
 ## v0.6.4.1
 
 * Update mongodb driver to use version 0.2.1 of the bson module.
+
 
 ## v0.6.4
 
