@@ -48,8 +48,35 @@ var requireSpaces = function (scanner) {
   skipSpaces(scanner);
 };
 
+var getDoctypeQuotedString = function (scanner) {
+  var quote = scanner.peek();
+  if (! (quote === '"' || quote === "'"))
+    scanner.fatal("Expected single or double quote in DOCTYPE");
+  scanner.pos++;
+
+  if (scanner.peek() === quote)
+    // prevent a falsy return value (empty string)
+    scanner.fatal("Malformed DOCTYPE");
+
+  var str = '';
+  var ch;
+  while ((ch = scanner.peek()), ch !== quote) {
+    if ((! ch) || (ch === '\u0000') || (ch === '>'))
+      scanner.fatal("Malformed DOCTYPE");
+    str += ch;
+    scanner.pos++;
+  }
+
+  scanner.pos++;
+
+  return str;
+};
+
+// See http://www.whatwg.org/specs/web-apps/current-work/multipage/syntax.html#the-doctype.
+//
+// If `getDocType` sees "<!doctype" in any case, it will match or fail fatally.
 getDoctype = function (scanner) {
-  if (scanner.rest().slice(0, 9) !== '<!DOCTYPE')
+  if (asciiLowerCase(scanner.rest().slice(0, 9)) !== '<!doctype')
     return null;
   var start = scanner.pos;
   scanner.pos += 9;
@@ -73,23 +100,51 @@ getDoctype = function (scanner) {
   // Now we're looking at a space or a `>`.
   skipSpaces(scanner);
 
-  if (scanner.peek() === '>') {
-    scanner.pos++;
-    return { t: 'Doctype',
-             v: scanner.input.slice(start, scanner.pos),
-             name: name };
+  var systemId = null;
+  var publicId = null;
+
+  if (scanner.peek() !== '>') {
+    // Now we're essentially in the "After DOCTYPE name state" of the tokenizer,
+    // but we're not looking at space or `>`.
+
+    // this should be "public" or "system".
+    var publicOrSystem = asciiLowerCase(scanner.rest().slice(0, 6));
+
+    if (publicOrSystem === 'system') {
+      scanner.pos += 6;
+      requireSpaces(scanner);
+      systemId = getDoctypeQuotedString(scanner);
+      skipSpaces(scanner);
+      if (scanner.peek() !== '>')
+        scanner.fatal("Malformed DOCTYPE");
+    } else if (publicOrSystem === 'public') {
+      scanner.pos += 6;
+      requireSpaces(scanner);
+      publicId = getDoctypeQuotedString(scanner);
+      if (scanner.peek() !== '>') {
+        requireSpaces(scanner);
+        if (scanner.peek() !== '>') {
+          systemId = getDoctypeQuotedString(scanner);
+          skipSpaces(scanner);
+          if (scanner.peek() !== '>')
+            scanner.fatal("Malformed DOCTYPE");
+        }
+      }
+    } else {
+      scanner.fatal("Expected PUBLIC or SYSTEM in DOCTYPE");
+    }
   }
 
-  // Now we're essentially in the "After DOCTYPE name state" of the tokenizer,
-  // but we're not looking at space or `>`.
+  // looking at `>`
+  scanner.pos++;
+  var result = { t: 'Doctype',
+                 v: scanner.input.slice(start, scanner.pos),
+                 name: name };
 
-  var publicOrSystem = scanner.rest().slice(0, 6);
-  // this should be PUBLIC or SYSTEM.
-  // See http://dev.w3.org/html5/html-author/#doctype-declaration about legacy doctypes.
+  if (systemId)
+    result.systemId = systemId;
+  if (publicId)
+    result.publicId = publicId;
 
-  // XXX how to we parse something like <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"
-  // SYSTEM "http://www.w3.org/TR/html4/strict.dtd"> with both PUBLIC and SYSTEM?
-  // I don't see in the spec where it parses SYSTEM in that case.
-
-  return null;
+  return result;
 };
