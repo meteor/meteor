@@ -148,3 +148,44 @@ getDoctype = function (scanner) {
 
   return result;
 };
+
+var getChars = makeRegexMatcher(/^[^&<\u0000]+/);
+
+getData = function (scanner) {
+  var chars = getChars(scanner);
+  if (chars)
+    return { t: 'Chars',
+             v: chars };
+
+  var ch = scanner.peek();
+  if (! ch)
+
+    return null;
+  if (ch === '\u0000')
+    scanner.fatal("Illegal NULL character");
+
+  if (ch === '&') {
+    var charRef = getCharacterReference(scanner);
+    if (charRef)
+      return charRef;
+
+    scanner.pos++;
+    return { t: 'Chars',
+             v: '&' };
+  }
+
+  return getTag(scanner);
+};
+
+getTag = function (scanner) {
+  return null;
+};
+
+tokenize = function (input) {
+  var scanner = new Scanner(input);
+  var tokens = [];
+  while (! scanner.isEOF())
+    tokens.push(getData(scanner));
+
+  return tokens;
+};

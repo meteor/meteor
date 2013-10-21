@@ -181,3 +181,16 @@ Tinytest.add("html - doctype", function (test) {
   fatal('<!DOCTYPE html public>');
   fatal('<!DOCTYPE html public "-//W3C//DTD HTML 4.0//EN""http://www.w3.org/TR/REC-html40/strict.dtd">');
 });
+
+Tinytest.add("html - tokenize", function (test) {
+  var tokenize = HTML.tokenize;
+
+  test.equal(tokenize(''), []);
+  test.equal(tokenize('abc'), [{t: 'Chars', v: 'abc'}]);
+  test.equal(tokenize('&'), [{t: 'Chars', v: '&'}]);
+  test.equal(tokenize('&amp;'), [{t: 'CharRef', v: '&amp;', cp: [38]}]);
+  test.equal(tokenize('ok&#32;fine'),
+             [{t: 'Chars', v: 'ok'},
+              {t: 'CharRef', v: '&#32;', cp: [32]},
+              {t: 'Chars', v: 'fine'}]);
+});

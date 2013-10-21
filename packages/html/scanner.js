@@ -24,6 +24,9 @@ Scanner.prototype.fatal = function (msg) {
 // Peek at the next character, or run a provided "matcher" function
 // but reset the current position afterwards.  Fatal failure of the
 // matcher is not suppressed.
+//
+// It's safe to peek at the next character at EOF; you just get an
+// empty string.
 Scanner.prototype.peek = function (matcher) {
   if (! matcher)
     return this.rest().charAt(0);
