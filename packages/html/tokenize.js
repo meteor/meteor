@@ -44,13 +44,14 @@ var skipSpaces = function (scanner) {
 
 var requireSpaces = function (scanner) {
   if (! HTML_SPACE.test(scanner.peek()))
-    scanner.fatal("Expected whitespace");
+    scanner.fatal("Expected space");
   skipSpaces(scanner);
 };
 
 getDoctype = function (scanner) {
   if (scanner.rest().slice(0, 9) !== '<!DOCTYPE')
     return null;
+  var start = scanner.pos;
   scanner.pos += 9;
 
   requireSpaces(scanner);
@@ -59,18 +60,36 @@ getDoctype = function (scanner) {
   if ((! ch) || (ch === '>') || (ch === '\u0000'))
     scanner.fatal('Malformed DOCTYPE');
   var name = ch;
+  scanner.pos++;
 
   while ((ch = scanner.peek()), ! (HTML_SPACE.test(ch) || ch === '>')) {
     if ((! ch) || (ch === '\u0000'))
       scanner.fatal('Malformed DOCTYPE');
     name += ch;
+    scanner.pos++;
   }
   name = asciiLowerCase(name);
 
-  if (ch !== '>') {
-    // XXX
+  // Now we're looking at a space or a `>`.
+  skipSpaces(scanner);
+
+  if (scanner.peek() === '>') {
+    scanner.pos++;
+    return { t: 'Doctype',
+             v: scanner.input.slice(start, scanner.pos),
+             name: name };
   }
 
-  return { t: 'Doctype',
-           name: name };
+  // Now we're essentially in the "After DOCTYPE name state" of the tokenizer,
+  // but we're not looking at space or `>`.
+
+  var publicOrSystem = scanner.rest().slice(0, 6);
+  // this should be PUBLIC or SYSTEM.
+  // See http://dev.w3.org/html5/html-author/#doctype-declaration about legacy doctypes.
+
+  // XXX how to we parse something like <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"
+  // SYSTEM "http://www.w3.org/TR/html4/strict.dtd"> with both PUBLIC and SYSTEM?
+  // I don't see in the spec where it parses SYSTEM in that case.
+
+  return null;
 };

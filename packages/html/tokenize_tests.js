@@ -1,5 +1,6 @@
 var Scanner = HTML._$.Scanner;
 var getComment = HTML._$.getComment;
+var getDoctype = HTML._$.getDoctype;
 
 Tinytest.add("html - comments", function (test) {
   var succeed = function (input, content) {
@@ -57,4 +58,46 @@ Tinytest.add("html - comments", function (test) {
   succeed('<!---x-->', '-x');
   succeed('<!--x-->', 'x');
   succeed('<!-- hello - - world -->', ' hello - - world ');
+});
+
+Tinytest.add("html - doctype", function (test) {
+  var succeed = function (input, expectedProps) {
+    var scanner = new Scanner(input);
+    var result = getDoctype(scanner);
+    test.isTrue(result);
+    test.equal(scanner.pos, result.v.length);
+    test.equal(input.slice(0, result.v.length), result.v);
+    var actualProps = _.extend({}, result);
+    delete actualProps.t;
+    delete actualProps.v;
+    test.equal(actualProps, expectedProps);
+  };
+
+  var fatal = function (input, messageContains) {
+    var scanner = new Scanner(input);
+    var error;
+    try {
+      getDoctype(scanner);
+    } catch (e) {
+      error = e;
+    }
+    test.isTrue(error);
+    if (error)
+      test.isTrue(messageContains && error.message.indexOf(messageContains) >= 0, error.message);
+  };
+
+  succeed('<!DOCTYPE html>', {name: 'html'});
+  succeed('<!DOCTYPE htML>', {name: 'html'});
+  succeed('<!DOCTYPE HTML>', {name: 'html'});
+  fatal('<!DOCTYPE', 'Expected space');
+  fatal('<!DOCTYPE ', 'Malformed DOCTYPE');
+  fatal('<!DOCTYPE  ', 'Malformed DOCTYPE');
+  fatal('<!DOCTYPE>', 'Expected space');
+  fatal('<!DOCTYPE >', 'Malformed DOCTYPE');
+  fatal('<!DOCTYPE\u0000', 'Expected space');
+  fatal('<!DOCTYPE \u0000', 'Malformed DOCTYPE');
+  fatal('<!DOCTYPE html\u0000>', 'Malformed DOCTYPE');
+  fatal('<!DOCTYPE html', 'Malformed DOCTYPE');
+  succeed('<!DOCTYPE html \u000c>', {name: 'html'});
+
 });
