@@ -23,19 +23,10 @@ var mergeObjects = function (obj1, obj2) {
   return result;
 };
 
-var startFun = function (argv) {
-  if (argv.help || argv._.length !== 0) {
-    process.stderr.write(
-      "Usage: ctl start\n" +
-        "\n" +
-        "Starts the app. For now, this just means that it runs the 'server'\n" +
-        "program.\n"
-    );
-    process.exit(1);
-  }
+var startProgram = function (program, tags, admin) {
 
   var numServers = Ctl.getJobsByApp(
-    Ctl.myAppName(), {program: 'server', done: false}).count();
+    Ctl.myAppName(), {program: program, done: false}).count();
   if (numServers === 0) {
     var appConfig = Ctl.prettyCall(
       Ctl.findGalaxy(), 'getAppConfiguration', [Ctl.myAppName()]);
@@ -54,13 +45,16 @@ var startFun = function (argv) {
         appConfig[settingsKey] = JSON.stringify(appConfig[settingsKey]);
     });
 
+    if (typeof admin === 'undefined')
+      admin = appConfig.admin;
+
     // XXX args? env?
-    Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), 'server', {
+    Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), program, {
       exitPolicy: 'restart',
       env: {
         ROOT_URL: "https://" + appConfig.sitename + bindPathPrefix,
         METEOR_SETTINGS: appConfig.settings || appConfig.METEOR_SETTINGS,
-        ADMIN_APP: appConfig.admin //TODO: When apps have admin & non-admin sides, set this based on that.
+        ADMIN_APP: admin
       },
       ports: {
         "main": {
@@ -72,12 +66,28 @@ var startFun = function (argv) {
           //to 0.0.0.0
         }
       },
-      tags: ["runner"]
+      tags: tags
     }]);
-    console.log("Started a server.");
+    console.log("Started", program);
   } else {
-    console.log("Server already running.");
+    console.log(program, "already running.");
   }
+};
+
+var startFun = function (argv) {
+  if (argv.help || argv._.length !== 0) {
+    process.stderr.write(
+      "Usage: ctl start\n" +
+        "\n" +
+        "Starts the app. For now, this just means that it runs the 'server'\n" +
+        "program.\n"
+    );
+    process.exit(1);
+  }
+  if (Ctl.hasProgram("console")) {
+    startProgram("console", ["admin"], true);
+  }
+  startProgram("server", ["runner"]);
 };
 
 Ctl.Commands.push({

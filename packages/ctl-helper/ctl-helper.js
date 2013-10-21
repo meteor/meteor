@@ -39,6 +39,16 @@ _.extend(Ctl, {
     return cmd;
   },
 
+  hasProgram: function (name) {
+    Ctl.subscribeToAppJobs(Ctl.myAppName());
+    var myJob = Ctl.jobsCollection().findOne(Ctl.myJobId());
+    var manifest = Ctl.prettyCall(Ctl.findGalaxy(), 'getStarManifest', [myJob.star]);
+    if (!manifest)
+      return false;
+    var found = false;
+    return _.find(manifest.programs, function (prog) { return prog.name === name; });
+  },
+
   findGalaxy: _.once(function () {
     if (!('GALAXY' in process.env)) {
       console.log(
