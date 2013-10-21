@@ -74,7 +74,7 @@ var getDoctypeQuotedString = function (scanner) {
 
 // See http://www.whatwg.org/specs/web-apps/current-work/multipage/syntax.html#the-doctype.
 //
-// If `getDocType` sees "<!doctype" in any case, it will match or fail fatally.
+// If `getDocType` sees "<!DOCTYPE" (case-insensitive), it will match or fail fatally.
 getDoctype = function (scanner) {
   if (asciiLowerCase(scanner.rest().slice(0, 9)) !== '<!doctype')
     return null;
