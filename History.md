@@ -1,6 +1,10 @@
 
 ## vNEXT
 
+## v0.6.5.2
+
+* Upgrade Node from 0.8.24 to 0.8.26 (security patch)
+
 ## v0.6.5.1
 
 * Fix syntax errors on lines that end with a backslash. #1326
