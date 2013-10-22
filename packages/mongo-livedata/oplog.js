@@ -34,11 +34,15 @@ MongoConnection.prototype._observeChangesWithOplog = function (
     var id = doc._id;
     var fields = EJSON.clone(doc);
     delete fields._id;
+    if (published.has(id))
+      throw Error("tried to add something already published " + id);
     published.set(id, fields);
     callbacks.added && callbacks.added(id, EJSON.clone(fields));
   };
 
   var remove = function (id) {
+    if (!published.has(id))
+      throw Error("tried to remove something unpublished " + id);
     published.remove(id);
     callbacks.removed && callbacks.removed(id);
   };
