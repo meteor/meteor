@@ -256,6 +256,7 @@ exports.launchMongo = function (options) {
               }, function (err, result) {
                 if (err)
                   throw err;
+                db.close(true);
               });
             });
           }
