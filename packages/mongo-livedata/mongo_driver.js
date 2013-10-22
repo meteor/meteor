@@ -113,7 +113,7 @@ MongoConnection = function (url, options) {
   self._connectCallbacks = [];
   self._liveResultsSets = {};
 
-  var mongoOptions = {db: {safe: true}, server: {}};
+  var mongoOptions = {db: {safe: true}, server: {}, replSet: {}};
 
   // Set autoReconnect to true, unless passed on the URL. Why someone
   // would want to set autoReconnect to false, I'm not really sure, but
@@ -137,7 +137,10 @@ MongoConnection = function (url, options) {
   // XXX maybe we should have a better way of allowing users to configure the
   // underlying Mongo driver
   if (_.has(options, 'poolSize')) {
-    mongoOptions.server.poolSize = 1;
+    // If we just set this for "server", replSet will override it. If we just
+    // set it for replSet, it will be ignored if we're not using a replSet.
+    mongoOptions.server.poolSize = options.poolSize;
+    mongoOptions.replSet.poolSize = options.poolSize;
   }
 
   MongoDB.connect(url, mongoOptions, function(err, db) {
