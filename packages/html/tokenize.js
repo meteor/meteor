@@ -1,5 +1,5 @@
 
-var HTML_SPACE = /^[\u0009\u000A\u000C\u0020]/;
+var HTML_SPACE = /^[\f\n\t ]/;
 
 var asciiLowerCase = function (str) {
   return str.replace(/[A-Z]/g, function (c) {
@@ -174,11 +174,182 @@ getData = function (scanner) {
              v: '&' };
   }
 
-  return getTag(scanner);
+  // if here, looking at `<`
+  return getTag(scanner) || getComment(scanner) || getDoctype(scanner);
+};
+
+var getTagName = makeRegexMatcher(/^[a-zA-Z][^\f\n\t />]*/);
+var getClangle = makeRegexMatcher(/^>/);
+var getSlash = makeRegexMatcher(/^\//);
+var getAttributeName = makeRegexMatcher(/^[^>/\u0000"'<=\f\n\t ][^\f\n\t /=>"'<\u0000]*/);
+
+// Try to parse `>` or `/>`, mutating `tag` to be self-closing in the latter
+// case (and failing fatally if `/` isn't followed by `>`).
+// Return tag if successful.
+var handleEndOfTag = function (scanner, tag) {
+  if (getClangle(scanner))
+    return tag;
+
+  if (getSlash(scanner)) {
+    if (! getClangle(scanner))
+      scanner.fatal("Expected `>` after `/`");
+    tag.isSelfClosing = true;
+    return tag;
+  }
+
+  return null;
+};
+
+var getQuotedAttributeValue = function (scanner, quote) {
+  if (scanner.peek() !== quote)
+    return null;
+  scanner.pos++;
+
+  var tokens = [];
+  var charsTokenToExtend = null;
+
+  var charRef;
+  while (true) {
+    var ch = scanner.peek();
+    if (ch === quote) {
+      scanner.pos++;
+      return tokens;
+    } else if (! ch) {
+      scanner.fatal("Unclosed quoted attribute in tag");
+    } else if (ch === '\u0000') {
+      scanner.fatal("Unexpected NULL character in attribute value");
+    } else if (ch === '&' && (charRef = getCharacterReference(scanner, true, quote))) {
+      tokens.push(charRef);
+      charsTokenToExtend = null;
+    } else {
+      if (! charsTokenToExtend) {
+        charsTokenToExtend = { t: 'Chars', v: '' };
+        tokens.push(charsTokenToExtend);
+      }
+      charsTokenToExtend.v += ch;
+      scanner.pos++;
+    }
+  }
+};
+
+var getUnquotedAttributeValue = function (scanner) {
+  var tokens = [];
+  var charsTokenToExtend = null;
+
+  var charRef;
+  while (true) {
+    var ch = scanner.peek();
+    if (HTML_SPACE.test(ch) || ch === '>') {
+      return tokens;
+    } else if (! ch) {
+      scanner.fatal("Unclosed attribute in tag");
+    } else if ('\u0000"\'<=`'.indexOf(ch) >= 0) {
+      scanner.fatal("Unexpected character in attribute value");
+    } else if (ch === '&' && (charRef = getCharacterReference(scanner, true, '>'))) {
+      tokens.push(charRef);
+      charsTokenToExtend = null;
+    } else {
+      if (! charsTokenToExtend) {
+        charsTokenToExtend = { t: 'Chars', v: '' };
+        tokens.push(charsTokenToExtend);
+      }
+      charsTokenToExtend.v += ch;
+      scanner.pos++;
+    }
+  }
 };
 
 getTag = function (scanner) {
-  return null;
+  if (! (scanner.peek() === '<' && scanner.rest().charAt(1) !== '!'))
+    return null;
+  scanner.pos++;
+
+  var tag = { t: 'Tag' };
+
+  // now looking at the character after `<`, which is not a `!`
+  var isEndTag = false;
+  if (scanner.peek() === '/') {
+    tag.isEnd = true;
+    scanner.pos++;
+  }
+
+  var tagName = getTagName(scanner);
+  if (! tagName)
+    scanner.fatal("Expected tag name after `<`");
+  tag.n = asciiLowerCase(tagName);
+
+  if (handleEndOfTag(scanner, tag))
+    return tag;
+
+  if (scanner.isEOF())
+    scanner.fatal("Unclosed `<`");
+
+  // ok, we must be looking at a space of some sort!
+  // we're now in "Before attribute name state" of the tokenizer
+  skipSpaces(scanner);
+
+  if (handleEndOfTag(scanner, tag))
+    return tag;
+
+  tag.attrs = {};
+
+  while (true) {
+    var attributeName = getAttributeName(scanner);
+    if (! attributeName)
+      scanner.fatal("Expected attribute name in tag");
+    attributeName = asciiLowerCase(attributeName);
+
+    if (tag.attrs.hasOwnProperty(attributeName))
+      scanner.fatal("Duplicate attribute in tag: " + attributeName);
+
+    tag.attrs[attributeName] = [];
+
+    skipSpaces(scanner);
+
+    if (handleEndOfTag(scanner, tag))
+      return tag;
+
+    var ch = scanner.peek();
+    if (! ch)
+      scanner.fatal("Unclosed <");
+    if ('\u0000"\'<'.indexOf(ch) >= 0)
+      scanner.fatal("Unexpected character after attribute name in tag");
+
+    if (ch === '=') {
+      scanner.pos++;
+
+      skipSpaces(scanner);
+
+      ch = scanner.peek();
+      if (! ch)
+        scanner.fatal("Unclosed <");
+      if ('\u0000><=`'.indexOf(ch) >= 0)
+        scanner.fatal("Unexpected character after = in tag");
+
+      var valueWasQuoted;
+      if ((ch === '"') || (ch === "'")) {
+        valueWasQuoted = true;
+        tag.attrs[attributeName] = getQuotedAttributeValue(scanner, ch);
+      } else {
+        valueWasQuoted = false;
+        tag.attrs[attributeName] = getUnquotedAttributeValue(scanner);
+      }
+
+      if (handleEndOfTag(scanner, tag))
+        return tag;
+
+      if (scanner.isEOF())
+        scanner.fatal("Unclosed `<`");
+
+      if (valueWasQuoted)
+        requireSpaces(scanner);
+      else
+        skipSpaces(scanner);
+
+      if (handleEndOfTag(scanner, tag))
+        return tag;
+    }
+  }
 };
 
 tokenize = function (input) {

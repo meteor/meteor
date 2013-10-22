@@ -185,6 +185,19 @@ Tinytest.add("html - doctype", function (test) {
 Tinytest.add("html - tokenize", function (test) {
   var tokenize = HTML.tokenize;
 
+  var fatal = function (input, messageContains) {
+    var error;
+    try {
+      tokenize(input);
+    } catch (e) {
+      error = e;
+    }
+    test.isTrue(error);
+    if (messageContains)
+      test.isTrue(error.message.indexOf(messageContains) >= 0, error.message);
+  };
+
+
   test.equal(tokenize(''), []);
   test.equal(tokenize('abc'), [{t: 'Chars', v: 'abc'}]);
   test.equal(tokenize('&'), [{t: 'Chars', v: '&'}]);
@@ -193,4 +206,114 @@ Tinytest.add("html - tokenize", function (test) {
              [{t: 'Chars', v: 'ok'},
               {t: 'CharRef', v: '&#32;', cp: [32]},
               {t: 'Chars', v: 'fine'}]);
+
+  test.equal(tokenize('a<!--b-->c'),
+             [{t: 'Chars',
+               v: 'a'},
+              {t: 'Comment',
+               v: 'b'},
+              {t: 'Chars',
+               v: 'c'}]);
+
+  test.equal(tokenize('<a>'), [{t: 'Tag', n: 'a'}]);
+
+  fatal('<');
+  fatal('<x');
+  fatal('<x ');
+  fatal('<x a');
+  fatal('<x a ');
+  fatal('<x a =');
+  fatal('<x a = ');
+  fatal('<x a = b');
+  fatal('<x a = "b');
+  fatal('<x a = \'b');
+  fatal('<x a = b ');
+  fatal('<x a = b /');
+  test.equal(tokenize('<x a = b />'),
+             [{t: 'Tag', n: 'x',
+               attrs: { a: [{t: 'Chars', v: 'b'}] },
+               isSelfClosing: true}]);
+
+  test.equal(tokenize('<a>X</a>'),
+             [{t: 'Tag', n: 'a'},
+              {t: 'Chars', v: 'X'},
+              {t: 'Tag', n: 'a', isEnd: true}]);
+
+  fatal('<x a a>'); // duplicate attribute value
+  test.equal(tokenize('<a b  >'),
+             [{t: 'Tag', n: 'a', attrs: { b: [] }}]);
+  fatal('< a>');
+  fatal('< /a>');
+  fatal('</ a>');
+
+  // Slash does not end an unquoted attribute, interestingly
+  test.equal(tokenize('<a b=/>'),
+             [{t: 'Tag', n: 'a', attrs: { b: [{t: 'Chars', v: '/'}] }}]);
+
+  test.equal(tokenize('</a b="c" d=e f=\'g\' h \t>'),
+             [{t: 'Tag', n: 'a', isEnd: true,
+               attrs: { b: [{t: 'Chars', v: 'c'}],
+                        d: [{t: 'Chars', v: 'e'}],
+                        f: [{t: 'Chars', v: 'g'}],
+                        h: [] }}]);
+
+  fatal('</a b="c" d=e f=\'g\' h \t\u0000>');
+  fatal('</a b="c" d=ef=\'g\' h \t>');
+  fatal('</a b="c"d=e f=\'g\' h \t>');
+
+  test.equal(tokenize('<a/>'), [{t: 'Tag', n: 'a', isSelfClosing: true}]);
+
+  fatal('<a/ >');
+  fatal('<a/b>');
+  fatal('<a b=c`>');
+  fatal('<a b=c<>');
+
+  test.equal(tokenize('</a# b0="c@" d1=e2 f#=\'g  \' h \t>'),
+             [{t: 'Tag', n: 'a#', isEnd: true,
+               attrs: { b0: [{t: 'Chars', v: 'c@'}],
+                        d1: [{t: 'Chars', v: 'e2'}],
+                        'f#': [{t: 'Chars', v: 'g  '}],
+                        h: [] }}]);
+
+  test.equal(tokenize('<div class=""></div>'),
+             [{t: 'Tag', n: 'div', attrs: { 'class': [] }},
+              {t: 'Tag', n: 'div', isEnd: true}]);
+
+  test.equal(tokenize('<div class="&">'),
+             [{t: 'Tag', n: 'div', attrs: { 'class': [{t: 'Chars', v: '&'}] }}]);
+  test.equal(tokenize('<div class=&>'),
+             [{t: 'Tag', n: 'div', attrs: { 'class': [{t: 'Chars', v: '&'}] }}]);
+  test.equal(tokenize('<div class=&amp;>'),
+             [{t: 'Tag', n: 'div', attrs: { 'class': [{t: 'CharRef', v: '&amp;', cp: [38]}] }}]);
+
+  test.equal(tokenize('<div class=aa&&zopf;&acE;&bb>'),
+             [{t: 'Tag', n: 'div', attrs: { 'class': [
+               {t: 'Chars', v: 'aa&'},
+               {t: 'CharRef', v: '&zopf;', cp: [120171]},
+               {t: 'CharRef', v: '&acE;', cp: [8766, 819]},
+               {t: 'Chars', v: '&bb'}
+             ] }}]);
+
+  test.equal(tokenize('<div class="aa &&zopf;&acE;& bb">'),
+             [{t: 'Tag', n: 'div', attrs: { 'class': [
+               {t: 'Chars', v: 'aa &'},
+               {t: 'CharRef', v: '&zopf;', cp: [120171]},
+               {t: 'CharRef', v: '&acE;', cp: [8766, 819]},
+               {t: 'Chars', v: '& bb'}
+             ] }}]);
+
+  test.equal(tokenize('<a b="\'`<>&">'),
+             [{t: 'Tag', n: 'a', attrs: { b: [{t: 'Chars', v: '\'`<>&'}] }}]);
+  test.equal(tokenize('<a b=\'"`<>&\'>'),
+             [{t: 'Tag', n: 'a', attrs: { b: [{t: 'Chars', v: '"`<>&'}] }}]);
+
+  fatal('&gt');
+  fatal('&gtc');
+  test.equal(tokenize('<a b=&gtc>'),
+             [{t: 'Tag', n: 'a', attrs: { b: [{t: 'Chars', v: '&gtc' }] }}]);
+  test.equal(tokenize('<a b="&gtc">'),
+             [{t: 'Tag', n: 'a', attrs: { b: [{t: 'Chars', v: '&gtc' }] }}]);
+  fatal('<a b=&gt>');
+  fatal('<a b="&gt">');
+  fatal('<a b="&gt=">');
 });
