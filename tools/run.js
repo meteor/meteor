@@ -511,6 +511,8 @@ exports.run = function (context, options) {
     if (bundleResult.errors) {
       logToClients({stdout: "=> Errors prevented startup:\n\n" +
                     bundleResult.errors.formatMessages()});
+      // Ensure that if we are running under --once, we exit with a non-0 code.
+      Status.code = 1;
       Status.hardCrashed("has errors");
       startWatching(watchSet);
       return;
