@@ -22,7 +22,7 @@ var fiberHelpers = require('./fiber-helpers.js');
 //
 // In a directory watch, you provide an absolute path to a directory,
 // two lists of regular expressions specifying the entries to
-// include and exclude, and an array of which entries to expect
+// include and exclude, and an array of which entries to expect.
 //
 // For directory watches, the regular expressions work as follows. You provide
 // two arrays of regular expressions, an include list and an exclude list. An
@@ -275,7 +275,6 @@ var Watcher = function (options) {
   self.justCheckOnce = !!options._justCheckOnce;
 
   self.fileWatches = []; // array of paths
-  self.directoryWatches = []; // array of interval handles
 
   // We track all of the currently active timers so that we can cancel
   // them at stop() time. This stops the process from hanging at
@@ -292,7 +291,7 @@ var Watcher = function (options) {
   }
 
   self._startFileWatches();
-  self._startDirectoryWatches();
+  self._checkDirectories();
 };
 
 _.extend(Watcher.prototype, {
@@ -403,7 +402,7 @@ _.extend(Watcher.prototype, {
     }, 1000);
   },
 
-  _startDirectoryWatches: function () {
+  _checkDirectories: function (yielding) {
     var self = this;
 
     // fs.watchFile doesn't work for directories (as tested on ubuntu)
@@ -413,11 +412,16 @@ _.extend(Watcher.prototype, {
     // https://github.com/joyent/node/issues/5463
     // https://github.com/joyent/libuv/commit/38df93cf
     //
-    // Instead, just use setInterval. _fireIfDirectoryChanged already
-    // does checking to see if anything really changed. When node has a
-    // stable directory watching API that is more efficient than just
-    // polling, look at the history for this file around release 0.6.5
-    // for a version that uses fs.watch.
+    // Instead, just check periodically with setTimeout.  (We use setTimeout to
+    // ensure that there is a 500 ms pause between the *end* of one poll cycle
+    // and the *beginning* of another instead of using setInterval which still
+    // can lead to permanent 100% CPU usage.) When node has a stable directory
+    // watching API that is more efficient than just polling, look at the
+    // history for this file around release 0.6.5 for a version that uses
+    // fs.watch.
+
+    if (self.stopped)
+      return;
 
     _.each(self.watchSet.directories, function (info) {
       if (self.stopped)
@@ -425,19 +429,15 @@ _.extend(Watcher.prototype, {
 
       // Check for the case where by the time we created the watch, the
       // directory has already changed.
-      if (self._fireIfDirectoryChanged(info))
+      if (self._fireIfDirectoryChanged(info, yielding))
         return;
-
-      if (self.stopped || self.justCheckOnce)
-        return;
-
-      // Notice that we poll very frequently (500 ms)
-      self.directoryWatches.push(
-        setInterval(fiberHelpers.inFiber(function () {
-          self._fireIfDirectoryChanged(info, true);
-        }), 500)
-      );
     });
+
+    if (!self.stopped && !self.justCheckOnce) {
+      setTimeout(fiberHelpers.inFiber(function () {
+        self._checkDirectories(true);
+      }), 500);
+    }
   },
 
   _fire: function () {
@@ -465,12 +465,6 @@ _.extend(Watcher.prototype, {
       fs.unwatchFile(absPath);
     });
     self.fileWatches = [];
-
-    // Clean up directory watches
-    _.each(self.directoryWatches, function (watch) {
-      clearInterval(watch);
-    });
-    self.directoryWatches = [];
   }
 });
 
