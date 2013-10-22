@@ -29,6 +29,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
 
   // XXX eliminate "curious" name
   var curiousity = new IdMap;
+  var currentlyFetching = new IdMap;
 
   var add = function (doc) {
     var id = doc._id;
@@ -73,7 +74,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
         throw new Error("Surprising phase in beCurious: " + phase);
 
       var futures = [];
-      var currentlyFetching = curiousity;
+      currentlyFetching = curiousity;
       curiousity = new IdMap;
       currentlyFetching.each(function (cacheKey, id) {
         // Run each until they yield. This implies that curiousity should not be
@@ -93,6 +94,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       _.each(futures, function (f) {
         f.get();
       });
+      currentlyFetching = new IdMap;
     }
     beSteady();
   };
@@ -112,12 +114,23 @@ MongoConnection.prototype._observeChangesWithOplog = function (
     curiousity.set(idForOp(op), op.ts.toString());
   };
   oplogEntryHandlers[PHASE.FETCHING] = function (op) {
-    // XXX we can probably actually handle some operations directly (eg,
-    // insert/remove/replace if they don't conflict with "outstanding" fetches)
-    curiousity.set(idForOp(op), op.ts.toString());
+    var id = idForOp(op);
+    // We can handle non-modify changes to things that we aren't fetching,
+    // directly.
   };
+  // We can use the same handler for STEADY and FETCHING; the main difference is
+  // that FETCHING has non-empty currentlyFetching and/or curiousity.
   oplogEntryHandlers[PHASE.STEADY] = function (op) {
     var id = idForOp(op);
+    // If we're already fetching this one, or about to, we can't optimize; make
+    // sure that we fetch it again if necessary.
+    if (currentlyFetching.has(id) || curiousity.has(id)) {
+      if (phase !== PHASE.FETCHING)
+        throw Error("map not empty during steady phase");
+      curiousity.set(id, op.ts.toString());
+      return;
+    }
+
     if (op.op === 'd') {
       if (published.has(id))
         remove(id);
@@ -155,13 +168,15 @@ MongoConnection.prototype._observeChangesWithOplog = function (
         }
 
         curiousity.set(id, op.ts.toString());
-        beCurious();
+        if (phase === PHASE.STEADY)
+          beCurious();
         return;
       }
     } else {
       throw Error("XXX SURPRISING OPERATION: " + op);
     }
   };
+  oplogEntryHandlers[PHASE.FETCHING] = oplogEntryHandlers[PHASE.STEADY];
 
 
   var oplogHandle = self._oplogHandle.onOplogEntry(
