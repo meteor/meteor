@@ -237,6 +237,10 @@ var quotemeta = function (str) {
     return String(str).replace(/(\W)/g, '\\$1');
 };
 
+var showTS = function (ts) {
+  return "Timestamp(" + ts.getHighBits() + ", " + ts.getLowBits() + ")";
+};
+
 MongoConnection.prototype._startOplogTailing = function (oplogUrl,
                                                          dbNameFuture) {
   var self = this;
@@ -329,8 +333,8 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
         if (!_.isEmpty(pendingSequencers)
             && _.last(pendingSequencers).ts.greaterThan(ts)) {
           throw Error("found misordered oplog: "
-                      + _.last(pendingSequencers).ts.toString() + " vs "
-                      + ts.toString());
+                      + showTS(_.last(pendingSequencers).ts) + " vs "
+                      + showTS(ts));
         }
 
         pendingSequencers.push({ts: ts,
