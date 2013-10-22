@@ -1,8 +1,10 @@
+@import "less_tests_constants.lessimport";
 
 #less-tests { zoom: 1; /* prop this rule open */ }
 
-@unlucky: 13px;
+@dashy: dashed;
 
-.less-unlucky-left-border {
-  border-left: @unlucky solid white;
+.less-dashy-left-border {
+  border-left: @dashy;
+  border-right: @external-dotty;
 }

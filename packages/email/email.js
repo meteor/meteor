@@ -1,130 +1,169 @@
+var Future = Npm.require('fibers/future');
+var urlModule = Npm.require('url');
+var MailComposer = Npm.require('mailcomposer').MailComposer;
+
 Email = {};
+EmailTest = {};
 
-(function () {
-  var Future = __meteor_bootstrap__.require('fibers/future');
-  var urlModule = __meteor_bootstrap__.require('url');
-  var MailComposer = __meteor_bootstrap__.require('mailcomposer').MailComposer;
+var makePool = function (mailUrlString) {
+  var mailUrl = urlModule.parse(mailUrlString);
+  if (mailUrl.protocol !== 'smtp:')
+    throw new Error("Email protocol in $MAIL_URL (" +
+                    mailUrlString + ") must be 'smtp'");
 
-  var makePool = function (mailUrlString) {
-    var mailUrl = urlModule.parse(mailUrlString);
-    if (mailUrl.protocol !== 'smtp:')
-      throw new Error("Email protocol in $MAIL_URL (" +
-                      mailUrlString + ") must be 'smtp'");
+  var port = +(mailUrl.port);
+  var auth = false;
+  if (mailUrl.auth) {
+    var parts = mailUrl.auth.split(':', 2);
+    auth = {user: parts[0] && decodeURIComponent(parts[0]),
+            pass: parts[1] && decodeURIComponent(parts[1])};
+  }
 
-    var port = +(mailUrl.port);
-    var auth = false;
-    if (mailUrl.auth) {
-      var parts = mailUrl.auth.split(':', 2);
-      auth = {user: parts[0] && decodeURIComponent(parts[0]),
-              pass: parts[1] && decodeURIComponent(parts[1])};
+  var simplesmtp = Npm.require('simplesmtp');
+  var pool = simplesmtp.createClientPool(
+    port,  // Defaults to 25
+    mailUrl.hostname,  // Defaults to "localhost"
+    { secureConnection: (port === 465),
+      // XXX allow maxConnections to be configured?
+      auth: auth });
+
+  pool._future_wrapped_sendMail = _.bind(Future.wrap(pool.sendMail), pool);
+  return pool;
+};
+
+// We construct smtpPool at the first call to Email.send, so that
+// Meteor.startup code can set $MAIL_URL.
+var smtpPool = null;
+var maybeMakePool = function () {
+  // We check MAIL_URL in case someone else set it in Meteor.startup code.
+  var poolFuture = new Future();
+  AppConfig.configurePackage('email', function (config) {
+    // TODO: allow reconfiguration.
+    if (!smtpPool && (config.url || process.env.MAIL_URL)) {
+      smtpPool = makePool(config.url || process.env.MAIL_URL);
     }
+    poolFuture.return();
+  });
 
-    var simplesmtp = __meteor_bootstrap__.require('simplesmtp');
-    var pool = simplesmtp.createClientPool(
-      port,  // Defaults to 25
-      mailUrl.hostname,  // Defaults to "localhost"
-      { secureConnection: (port === 465),
-        // XXX allow maxConnections to be configured?
-        auth: auth });
+  poolFuture.wait();
+};
 
-    pool._future_wrapped_sendMail = _.bind(Future.wrap(pool.sendMail), pool);
-    return pool;
-  };
+var next_devmode_mail_id = 0;
+var output_stream = process.stdout;
 
-  // We construct smtpPool at the first call to Email.send, so that
-  // Meteor.startup code can set $MAIL_URL.
-  var smtpPool = null;
-  var maybeMakePool = function () {
-    if (!smtpPool && process.env.MAIL_URL) {
-      smtpPool = makePool(process.env.MAIL_URL);
-    }
-  };
+// Testing hooks
+EmailTest.overrideOutputStream = function (stream) {
+  next_devmode_mail_id = 0;
+  output_stream = stream;
+};
 
-  Email._next_devmode_mail_id = 0;
+EmailTest.restoreOutputStream = function () {
+  output_stream = process.stdout;
+};
 
-  // Overridden by tests.
-  Email._output_stream = process.stdout;
+var devModeSend = function (mc) {
+  var devmode_mail_id = next_devmode_mail_id++;
 
-  var devModeSend = function (mc) {
-    var devmode_mail_id = Email._next_devmode_mail_id++;
+  // Make sure we use whatever stream was set at the time of the Email.send
+  // call even in the 'end' callback, in case there are multiple concurrent
+  // test runs.
+  var stream = output_stream;
 
-    // This approach does not prevent other writers to stdout from interleaving.
-    Email._output_stream.write("====== BEGIN MAIL #" + devmode_mail_id +
-                               " ======\n");
-    mc.streamMessage();
-    mc.pipe(Email._output_stream, {end: false});
-    var future = new Future;
-    mc.on('end', function () {
-      Email._output_stream.write("====== END MAIL #" + devmode_mail_id +
-                                 " ======\n");
-      future.ret();
-    });
-    future.wait();
-  };
+  // This approach does not prevent other writers to stdout from interleaving.
+  stream.write("====== BEGIN MAIL #" + devmode_mail_id + " ======\n");
+  mc.streamMessage();
+  mc.pipe(stream, {end: false});
+  var future = new Future;
+  mc.on('end', function () {
+    stream.write("====== END MAIL #" + devmode_mail_id + " ======\n");
+    future['return']();
+  });
+  future.wait();
+};
 
-  var smtpSend = function (mc) {
-    smtpPool._future_wrapped_sendMail(mc).wait();
-  };
+var smtpSend = function (mc) {
+  smtpPool._future_wrapped_sendMail(mc).wait();
+};
 
-  /**
-   * Send an email.
-   *
-   * Connects to the mail server configured via the MAIL_URL environment
-   * variable. If unset, prints formatted message to stdout. The "from" option
-   * is required, and at least one of "to", "cc", and "bcc" must be provided;
-   * all other options are optional.
-   *
-   * @param options
-   * @param options.from {String} RFC5322 "From:" address
-   * @param options.to {String|String[]} RFC5322 "To:" address[es]
-   * @param options.cc {String|String[]} RFC5322 "Cc:" address[es]
-   * @param options.bcc {String|String[]} RFC5322 "Bcc:" address[es]
-   * @param options.replyTo {String|String[]} RFC5322 "Reply-To:" address[es]
-   * @param options.subject {String} RFC5322 "Subject:" line
-   * @param options.text {String} RFC5322 mail body (plain text)
-   * @param options.html {String} RFC5322 mail body (HTML)
-   * @param options.attachments {Object[]} Array of attachment objects, with
-   *        required key "contents" (String of attachment contents,
-   *        base64-encoded) and optional keys "fileName" (the filename the
-   *        client should save the attachment as), "contentType" (MIME type for
-   *        the file; if unspecified and fileName is specified, will derive from
-   *        fileName), and "cid" (the Content-Id which can be referenced from
-   *        HTML IMG tags).
-   */
-  Email.send = function (options) {
-    var mc = new MailComposer();
+/**
+ * Mock out email sending (eg, during a test.) This is private for now.
+ *
+ * f receives the arguments to Email.send and should return true to go
+ * ahead and send the email (or at least, try subsequent hooks), or
+ * false to skip sending.
+ */
+var sendHooks = [];
+EmailTest.hookSend = function (f) {
+  sendHooks.push(f);
+};
 
-    // setup message data
-    // XXX support arbitrary headers
-    mc.setMessageOption({
-      from: options.from,
-      to: options.to,
-      cc: options.cc,
-      bcc: options.bcc,
-      replyTo: options.replyTo,
-      subject: options.subject,
-      text: options.text,
-      html: options.html
-    });
+/**
+ * Send an email.
+ *
+ * Connects to the mail server configured via the MAIL_URL environment
+ * variable. If unset, prints formatted message to stdout. The "from" option
+ * is required, and at least one of "to", "cc", and "bcc" must be provided;
+ * all other options are optional.
+ *
+ * @param options
+ * @param options.from {String} RFC5322 "From:" address
+ * @param options.to {String|String[]} RFC5322 "To:" address[es]
+ * @param options.cc {String|String[]} RFC5322 "Cc:" address[es]
+ * @param options.bcc {String|String[]} RFC5322 "Bcc:" address[es]
+ * @param options.replyTo {String|String[]} RFC5322 "Reply-To:" address[es]
+ * @param options.subject {String} RFC5322 "Subject:" line
+ * @param options.text {String} RFC5322 mail body (plain text)
+ * @param options.html {String} RFC5322 mail body (HTML)
+ * @param options.attachments {Object[]} Array of attachment objects, with
+ *        required key "contents" (String of attachment contents,
+ *        base64-encoded) and optional keys "fileName" (the filename the
+ *        client should save the attachment as), "contentType" (MIME type for
+ *        the file; if unspecified and fileName is specified, will derive from
+ *        fileName), and "cid" (the Content-Id which can be referenced from
+ *        HTML IMG tags).
+ * @param options.headers {Object} custom RFC5322 headers (dictionary)
+ */
+Email.send = function (options) {
+  for (var i = 0; i < sendHooks.length; i++)
+    if (! sendHooks[i](options))
+      return;
 
-    _.each(options.attachments, function (attachment) {
-      var mcAttachment = _.pick(attachment, 'fileName', 'contentType', 'cid');
-      // There is no Meteor abstraction for binary buffers, reading from files
-      // on the server, or node-style streams, so we only support base64-encoded
-      // strings. Once we have APIs for these things, we should support them
-      // here too. (We don't want to just expose Node's Buffer class directly,
-      // because it does not exist on the client.)
-      mcAttachment.contents = new Buffer(attachment.contents, 'base64');
-      mc.addAttachment(mcAttachment);
-    });
+  var mc = new MailComposer();
 
-    maybeMakePool();
+  // setup message data
+  // XXX support attachments (once we have a client/server-compatible binary
+  //     Buffer class)
+  mc.setMessageOption({
+    from: options.from,
+    to: options.to,
+    cc: options.cc,
+    bcc: options.bcc,
+    replyTo: options.replyTo,
+    subject: options.subject,
+    text: options.text,
+    html: options.html
+  });
 
-    if (smtpPool) {
-      smtpSend(mc);
-    } else {
-      devModeSend(mc);
-    }
-  };
+  _.each(options.headers, function (value, name) {
+    mc.addHeader(name, value);
+  });
 
-})();
+  _.each(options.attachments, function (attachment) {
+    var mcAttachment = _.pick(attachment, 'fileName', 'contentType', 'cid');
+    // There is no Meteor abstraction for binary buffers, reading from files
+    // on the server, or node-style streams, so we only support base64-encoded
+    // strings. Once we have APIs for these things, we should support them
+    // here too. (We don't want to just expose Node's Buffer class directly,
+    // because it does not exist on the client.)
+    mcAttachment.contents = new Buffer(attachment.contents, 'base64');
+    mc.addAttachment(mcAttachment);
+  });
+  
+  maybeMakePool();
+
+  if (smtpPool) {
+    smtpSend(mc);
+  } else {
+    devModeSend(mc);
+  }
+};

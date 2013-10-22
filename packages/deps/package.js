@@ -5,9 +5,15 @@ Package.describe({
   internal: true
 });
 
-Package.on_use(function (api, where) {
-  where = where || ['client', 'server'];
+Package.on_use(function (api) {
+  api.use('underscore');
+  api.export('Deps');
+  api.add_files('deps.js');
+  api.add_files('deprecated.js');
+});
 
-  api.use('underscore', where);
-  api.add_files('deps.js', where);
+Package.on_test(function (api) {
+  api.use('tinytest');
+  api.use('deps');
+  api.add_files('deps_tests.js', 'client');
 });

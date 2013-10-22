@@ -1,0 +1,20 @@
+<template name="configureLoginServiceDialogForMeetup">
+  <p>
+    First, you'll need to get a Meetup Client ID. Follow these steps:
+  </p>
+  <ol>
+    <li>
+      Visit <a href="http://www.meetup.com/meetup_api/oauth_consumers/create/" target="blank">http://www.meetup.com/meetup_api/oauth_consumers/create/</a>
+    </li>
+    <li>
+      Set the Consumer name to the name of your application.
+    </li>
+    <li>
+      Optionally set the Application Website to the URL of your
+      website.  You can leave this blank.
+    </li>
+    <li>
+      Set the <b>Redirect URI</b> to: <span class="url">{{siteUrl}}</span>  (Do not append a path to this URL.)
+    </li>
+  </ol>
+</template>

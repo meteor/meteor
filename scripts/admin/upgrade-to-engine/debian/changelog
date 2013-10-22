@@ -1,0 +1,5 @@
+meteor (0.6.0-1) unstable; urgency=low
+
+  * Automated debian build.
+
+ -- Meteor Deb Packager <debian@meteor.com>  Tue, 21 Feb 2012 04:21:07 +0000

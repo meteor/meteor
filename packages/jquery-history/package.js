@@ -3,6 +3,10 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use('jquery');
-  api.add_files('jquery.history.js', 'client');
+  api.use('json', 'client');
+  api.use('jquery', 'client');
+  api.add_files(['history.adapter.jquery.js',
+                 'history.html4.js',
+                 'history.js'],
+                'client');
 });

@@ -1,19 +1,29 @@
-// XXX namespacing
-Meteor._LocalCollectionDriver = function () {
+LocalCollectionDriver = function () {
   var self = this;
-  self.collections = {};
+  self.noConnCollections = {};
 };
 
-_.extend(Meteor._LocalCollectionDriver.prototype, {
-  open: function (name) {
+var ensureCollection = function (name, collections) {
+  if (!(name in collections))
+    collections[name] = new LocalCollection(name);
+  return collections[name];
+};
+
+_.extend(LocalCollectionDriver.prototype, {
+  open: function (name, conn) {
     var self = this;
     if (!name)
       return new LocalCollection;
-    if (!(name in self.collections))
-      self.collections[name] = new LocalCollection;
-    return self.collections[name];
+    if (! conn) {
+      return ensureCollection(name, self.noConnCollections);
+    }
+    if (! conn._mongo_livedata_collections)
+      conn._mongo_livedata_collections = {};
+    // XXX is there a way to keep track of a connection's collections without
+    // dangling it off the connection object?
+    return ensureCollection(name, conn._mongo_livedata_collections);
   }
 });
 
 // singleton
-Meteor._LocalCollectionDriver = new Meteor._LocalCollectionDriver;
+LocalCollectionDriver = new LocalCollectionDriver;

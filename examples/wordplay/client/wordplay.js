@@ -13,19 +13,6 @@ var game = function () {
   return me && me.game_id && Games.findOne(me.game_id);
 };
 
-var create_my_player = function (name) {
-  // kill my bad words after 5 seconds.
-  Words.find({player_id: Session.get('player_id'), state: 'bad'})
-    .observe({
-      added: function (word) {
-        setTimeout(function () {
-          $('#word_' + word._id).fadeOut(1000, function () {
-            Words.remove(word._id);
-          });
-        }, 5000);
-      }});
-};
-
 var set_selected_positions = function (word) {
   var paths = paths_for_word(game().board, word.toUpperCase());
   var in_a_path = [];
@@ -50,11 +37,6 @@ var clear_selected_positions = function () {
   for (var pos = 0; pos < 16; pos++)
     Session.set('selected_' + pos, false);
 };
-
-Template.page.preserve({
-  'input[id]': function (n) { return n.id; },
-  'button[name=submit]': true
-});
 
 //////
 ////// lobby template: shows everyone not currently playing, and
@@ -150,9 +132,8 @@ Template.scratchpad.events({
   'click button, keyup input': function (evt) {
     var textbox = $('#scratchpad input');
     // if we clicked the button or hit enter
-    if (evt.type === "click" ||
-        (evt.type === "keyup" && evt.which === 13)) {
-
+    if ((evt.type === "click" || (evt.type === "keyup" && evt.which === 13))
+        && textbox.val()) {
       var word_id = Words.insert({player_id: Session.get('player_id'),
                                   game_id: game() && game()._id,
                                   word: textbox.val().toUpperCase(),
@@ -230,7 +211,7 @@ Meteor.startup(function () {
 
   // subscribe to all the players, the game i'm in, and all
   // the words in that game.
-  Meteor.autosubscribe(function () {
+  Deps.autorun(function () {
     Meteor.subscribe('players');
 
     if (Session.get('player_id')) {

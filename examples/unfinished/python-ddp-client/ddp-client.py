@@ -5,10 +5,14 @@ import json
 import time
 import argparse
 import thread
+import threading
+import traceback
 
 from ws4py.client.threadedclient import WebSocketClient
 from cmd import Cmd
 
+
+DDP_VERSIONS = ["pre1"]
 
 def log(msg):
     """A shortcut to write to the standard error file descriptor"""
@@ -45,6 +49,7 @@ class DDPClient(WebSocketClient):
         #
         #   Flag to make sure we received the correct data from the
         #   message we were waiting for.
+        self.pending_condition = threading.Condition()
         self.pending = {}
 
 
@@ -68,26 +73,28 @@ class DDPClient(WebSocketClient):
 
     def block_until_return(self, msg_type, msg_id):
         """Wait until the msg_id that was sent to the server is answered"""
-        self.pending = {'id': msg_id}
+        with self.pending_condition:
+            self.pending = {'id': msg_id}
 
-        while self.pending.get('id') is not None:
-            if msg_type == 'method':
-                # Methods must validate both data and result flag
-                we_are_good = all((
-                    self.pending.get('result_acked'),
-                    self.pending.get('data_acked')))
-            else:
-                # Subs just need to validate data flag
-                we_are_good = self.pending.get('data_acked')
+            while self.pending.get('id') is not None:
+                if msg_type == 'method':
+                    # Methods must validate both data and result flag
+                    we_are_good = all((
+                            self.pending.get('result_acked'),
+                            self.pending.get('data_acked')))
+                else:
+                    # Subs just need to validate data flag
+                    we_are_good = self.pending.get('data_acked')
 
-            if we_are_good:
-                return
-            time.sleep(0)
+                if we_are_good:
+                    return
+                self.pending_condition.wait()
 
     def opened(self):
         """Set the connecte flag to true and send the connect message to
         the server."""
-        self.send({"msg": "connect"})
+        self.send({"msg": "connect", "version": DDP_VERSIONS[0],
+                   "support": DDP_VERSIONS})
 
     def received_message(self, data):
         """Parse an incoming message and print it. Also update
@@ -97,55 +104,85 @@ class DDPClient(WebSocketClient):
 
         msg = json.loads(str(data))
 
-        if msg.get('msg') == 'error':
-            log("* ERROR {}".format(msg['reason']))
-            # Reset all pending state
-            self.pending = {}
+        changed_pending = False
 
-        elif msg.get('msg') == 'connected':
-            log("* CONNECTED")
+        with self.pending_condition:
+            if msg.get('msg') == 'error':
+                log("* ERROR {}".format(msg['reason']))
+                # Reset all pending state
+                self.pending = {}
+                changed_pending = True
 
-        elif msg.get('msg') == 'result':
-            if msg['id'] == self.pending.get('id'):
-                if msg.get('result'):
-                    log("* METHOD RESULT {}".format(msg['result']))
-                elif msg.get('error'):
-                    log("* ERROR {}".format(msg['error']['reason']))
-                self.pending.update({'result_acked': True})
+            elif msg.get('msg') == 'connected':
+                log("* CONNECTED")
 
-        elif msg.get('msg') == 'data':
-            if msg.get('collection'):
-                if msg.get('set'):
-                    for key, value in msg['set'].items():
-                        log("* SET {} {} {} {}".format(
-                                msg['collection'], msg['id'], key, value))
-                if msg.get('unset'):
-                    for key in msg['unset']:
-                        log("* UNSET {} {} {}".format(
-                                msg['collection'], msg['id'], key))
+            elif msg.get('msg') == 'failed':
+                log("* FAILED; suggested version {}".format(msg['version']))
 
-            if msg.get('methods'):
-                if self.pending.get('id') in msg['methods']:
-                    log("* UPDATED")
-                    self.pending.update({'data_acked': True})
+            elif msg.get('msg') == 'result':
+                if msg['id'] == self.pending.get('id'):
+                    if msg.get('result'):
+                        log("* METHOD RESULT {}".format(msg['result']))
+                    elif msg.get('error'):
+                        log("* ERROR {}".format(msg['error']['reason']))
+                    else:
+                        log("* METHOD FINISHED")
+                    self.pending.update({'result_acked': True})
+                    changed_pending = True
 
-            if msg.get('subs'):
+            elif msg.get('msg') == 'added':
+                log("* ADDED {} {}".format(
+                        msg['collection'], msg['id']))
+                if 'fields' in msg:
+                    for key, value in msg['fields'].items():
+                        log("  - FIELD {} {}".format(key, value))
+            elif msg.get('msg') == 'changed':
+                log("* CHANGED {} {}".format(
+                        msg['collection'], msg['id']))
+                if 'fields' in msg:
+                    for key, value in msg['fields'].items():
+                        log("  - FIELD {} {}".format(key, value))
+                if 'cleared' in msg:
+                    for key in msg['cleared']:
+                        log("  - CLEARED {}".format(key));
+            elif msg.get('msg') == 'removed':
+                log("* REMOVED {} {}".format(
+                        msg['collection'], ", ".join(msg['ids'])))
+            elif msg.get('msg') == 'ready':
+                assert 'subs' in msg
                 if self.pending.get('id') in msg['subs']:
                     log("* READY")
                     self.pending.update({'data_acked': True})
+                    changed_pending = True
+            elif msg.get('msg') == 'updated':
+                if self.pending.get('id') in msg['methods']:
+                    log("* UPDATED")
+                    self.pending.update({'data_acked': True})
+                    changed_pending = True
+            elif msg.get('msg') == 'nosub':
+                log("* NOSUB")
+                self.pending.update({'data_acked': True})
+                changed_pending = True
 
-        elif msg.get('msg') == 'nosub':
-            log("* NO SUCH SUB")
-            self.pending.update({'data_acked': True})
+            if changed_pending:
+                self.pending_condition.notify()
 
     def closed(self, code, reason=None):
         """Called when the connection is closed"""
-        log('* CONNECTION CLOSED {}'.format(code, reason))
+        log('* CONNECTION CLOSED {} {}'.format(code, reason))
 
-        # Send a KeyboardInterrupt error to the main thread. For some
-        # reason Cmd doesn't immediately respect this so the client only
-        # dies once you press Enter.
-        thread.interrupt_main()
+    # Overrides WebSocket to run to ensure that if an unhandled exception is
+    # thrown in the thread, we print the exception and *then* kill the main
+    # thread.
+    def run(self):
+        try:
+            super(DDPClient, self).run()
+        except:
+            traceback.print_exc()
+        finally:
+            with self.pending_condition:
+                self.pending_condition.notify()
+            thread.interrupt_main()
 
 
 class App(Cmd):
@@ -257,7 +294,12 @@ def main():
     args = parser.parse_args()
 
     app = App(args.ddp_endpoint, args.print_raw)
-    app.cmdloop()
+    try:
+        app.cmdloop()
+    except KeyboardInterrupt:
+        # On Ctrl-C or thread.interrupt_main(), just exit without printing a
+        # traceback.
+        pass
 
 
 if __name__ == '__main__':

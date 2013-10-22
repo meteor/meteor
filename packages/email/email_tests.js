@@ -1,21 +1,27 @@
-streamBuffers = __meteor_bootstrap__.require('stream-buffers');
+var streamBuffers = Npm.require('stream-buffers');
 
 Tinytest.add("email - dev mode smoke test", function (test) {
-  var old_stream = Email._output_stream;
+  // This only tests dev mode, so don't run the test if this is deployed.
+  if (process.env.MAIL_URL) return;
+
   try {
-    Email._output_stream = new streamBuffers.WritableStreamBuffer;
-    Email._next_devmode_mail_id = 0;
+    var stream = new streamBuffers.WritableStreamBuffer;
+    EmailTest.overrideOutputStream(stream);
     Email.send({
       from: "foo@example.com",
       to: "bar@example.com",
       cc: ["friends@example.com", "enemies@example.com"],
       subject: "This is the subject",
-      text: "This is the body\nof the message\nFrom us."
+      text: "This is the body\nof the message\nFrom us.",
+      headers: {'X-Meteor-Test': 'a custom header'}
     });
+    // Note that we use the local "stream" here rather than Email._output_stream
+    // in case a concurrent test run mutates Email._output_stream too.
     // XXX brittle if mailcomposer changes header order, etc
-    test.equal(Email._output_stream.getContentsAsString("utf8"),
-               "====== BEGIN MAIL #0 ======\n" + 
+    test.equal(stream.getContentsAsString("utf8"),
+               "====== BEGIN MAIL #0 ======\n" +
                "MIME-Version: 1.0\r\n" +
+               "X-Meteor-Test: a custom header\r\n" +
                "From: foo@example.com\r\n" +
                "To: bar@example.com\r\n" +
                "Cc: friends@example.com, enemies@example.com\r\n" +
@@ -28,6 +34,6 @@ Tinytest.add("email - dev mode smoke test", function (test) {
                "From us.\r\n" +
                "====== END MAIL #0 ======\n");
   } finally {
-    Email._output_stream = old_stream;
+    EmailTest.restoreOutputStream();
   }
 });

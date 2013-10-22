@@ -16,6 +16,8 @@ var DICE = ['PCHOAS', 'OATTOW', 'LRYTTE', 'VTHRWE',
             'MTOICU', 'AFPKFS', 'XLDERI', 'ENSIEU',
             'YLDEVR', 'ZNRNHL', 'NMIQHU', 'OBBAOJ'];
 
+var DICTIONARY = null;
+
 // board is an array of length 16, in row-major order.  ADJACENCIES
 // lists the board positions adjacent to each board position.
 var ADJACENCIES = [
@@ -38,13 +40,13 @@ var ADJACENCIES = [
 ];
 
 // generate a new random selection of letters.
-var new_board = function () {
+new_board = function () {
   var board = [];
   var i;
 
   // pick random letter from each die
   for (i = 0; i < 16; i += 1) {
-    board[i] = DICE[i].split('')[Math.floor(Math.random() * 6)];
+    board[i] = Random.choice(DICE[i]);
   }
 
   // knuth shuffle
@@ -62,7 +64,7 @@ var new_board = function () {
 // board.  each path is an array of board positions 0-15.  a valid
 // path can use each position only once, and each position must be
 // adjacent to the previous position.
-var paths_for_word = function (board, word) {
+paths_for_word = function (board, word) {
   var valid_paths = [];
 
   var check_path = function (word, path, positions_to_try) {
@@ -96,12 +98,16 @@ var paths_for_word = function (board, word) {
 
 Meteor.methods({
   score_word: function (word_id) {
+    check(word_id, String);
     var word = Words.findOne(word_id);
     var game = Games.findOne(word.game_id);
 
-    // client and server can both check: must be at least three chars
-    // long, not already used, and possible to make on the board.
-    if (word.length < 3
+    // client and server can both check that the game has time remaining, and
+    // that the word is at least three chars, isn't already used, and is
+    // possible to make on the board.
+    if (game.clock === 0
+        || !word.word
+        || word.word.length < 3
         || Words.find({game_id: word.game_id, word: word.word}).count() > 1
         || paths_for_word(game.board, word.word).length === 0) {
       Words.update(word._id, {$set: {score: 0, state: 'bad'}});
@@ -109,19 +115,27 @@ Meteor.methods({
     }
 
     // now only on the server, check against dictionary and score it.
-    if (Meteor.is_server) {
-      if (DICTIONARY.indexOf(word.word.toLowerCase()) === -1) {
-        Words.update(word._id, {$set: {score: 0, state: 'bad'}});
-      } else {
+    if (Meteor.isServer) {
+      if (_.has(DICTIONARY, word.word.toLowerCase())) {
         var score = Math.pow(2, word.word.length - 3);
         Words.update(word._id, {$set: {score: score, state: 'good'}});
+      } else {
+        Words.update(word._id, {$set: {score: 0, state: 'bad'}});
       }
     }
   }
 });
 
 
-if (Meteor.is_server) {
+if (Meteor.isServer) {
+  DICTIONARY = {};
+  _.each(Assets.getText("enable2k.txt").split("\n"), function (line) {
+    // Skip blanks and comment lines
+    if (line && line.indexOf("//") !== 0) {
+      DICTIONARY[line] = true;
+    }
+  });
+
   // publish all the non-idle players.
   Meteor.publish('players', function () {
     return Players.find({idle: false});
@@ -129,14 +143,16 @@ if (Meteor.is_server) {
 
   // publish single games
   Meteor.publish('games', function (id) {
+    check(id, String);
     return Games.find({_id: id});
   });
 
   // publish all my words and opponents' words that the server has
   // scored as good.
   Meteor.publish('words', function (game_id, player_id) {
+    check(game_id, String);
+    check(player_id, String);
     return Words.find({$or: [{game_id: game_id, state: 'good'},
                              {player_id: player_id}]});
   });
 }
-

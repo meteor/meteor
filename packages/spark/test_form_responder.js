@@ -1,5 +1,3 @@
-(function () {
-
 var TEST_RESPONDER_ROUTE = "/spark_test_responder";
 
 var respond = function(req, res) {
@@ -16,11 +14,8 @@ var respond = function(req, res) {
 };
 
 var run_responder = function() {
-
-  var app = __meteor_bootstrap__.app;
-  app.stack.unshift({ route: TEST_RESPONDER_ROUTE, handle: respond });
+  WebApp.connectHandlers.stack.unshift(
+    { route: TEST_RESPONDER_ROUTE, handle: respond });
 };
 
 run_responder();
-
-})();

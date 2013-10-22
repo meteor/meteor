@@ -1,6 +1,6 @@
 Tinytest.add("spark - patch - basic", function(test) {
 
-  var Patcher = Spark._Patcher;
+  var Patcher = SparkTest.Patcher;
 
   var div = function(html) {
     var n = document.createElement("DIV");
@@ -132,16 +132,19 @@ Tinytest.add("spark - patch - copyAttributes", function(test) {
         buf.push('<', tagName);
         _.each(kv, function(v,k) {
           allAttrNames[k] = true;
-          buf.push(' ', k, '="', v, '"');
+          buf.push(' ', k);
+          if (v !== 'NO_VALUE')
+            buf.push('="', v, '"');
         });
         buf.push('></', tagName, '>');
         var nodeHtml = buf.join('');
         var frag = DomUtils.htmlToFragment(nodeHtml);
         var n = frag.firstChild;
+        n._sparkOriginalRenderedChecked = [n.checked];
         if (! node) {
           node = n;
         } else {
-          Spark._Patcher._copyAttributes(node, n);
+          SparkTest.Patcher._copyAttributes(node, n);
         }
         lastAttrs = {};
         _.each(allAttrNames, function(v,k) {
@@ -159,18 +162,20 @@ Tinytest.add("spark - patch - copyAttributes", function(test) {
       check: function() {
         _.each(lastAttrs, function(v,k) {
           var actualAttr;
+          var expectedAttr = v || "";
           if (k === "style") {
             actualAttr = node.style.cssText;
           } else if (k === "class") {
             actualAttr = node.className;
           } else if (k === "checked") {
             actualAttr = String(node.getAttribute(k) || "");
+            if (expectedAttr === "NO_VALUE")
+              expectedAttr = "checked";
             if (actualAttr === "true")
               actualAttr = "checked"; // save IE's butt
           } else {
             actualAttr = String(node.getAttribute(k) || "");
           }
-          var expectedAttr = v || "";
           test.equal(actualAttr, expectedAttr, k);
         });
       },
@@ -185,11 +190,11 @@ Tinytest.add("spark - patch - copyAttributes", function(test) {
                      {id:'foo', 'class':'bar',
                       style:'border:1px solid blue;', name:'baz'});
   a.check();
-  test.equal(a.node().style.borderColor, "blue");
+  test.equal(a.node().style.borderLeftColor, "blue");
 
   a.copy({id: "foo", style:'border:1px solid red'});
   a.check();
-  test.equal(a.node().style.borderColor, "red");
+  test.equal(a.node().style.borderLeftColor, "red");
 
   a.copy({id: "foo", 'class':'ha'});
   a.check();
@@ -225,6 +230,12 @@ Tinytest.add("spark - patch - copyAttributes", function(test) {
   c.check();
   test.equal(c.node().checked, false);
   c.copy({type:'checkbox', name:'foo', checked:'checked'});
+  c.check();
+  test.equal(c.node().checked, true);
+  c.copy({type:'checkbox', name:'foo'});
+  c.check();
+  test.equal(c.node().checked, false);
+  c.copy({type:'checkbox', name:'foo', checked:'NO_VALUE'});
   c.check();
   test.equal(c.node().checked, true);
 

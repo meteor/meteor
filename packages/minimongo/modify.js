@@ -5,7 +5,11 @@
 //
 // XXX atomicity: if one modification fails, do we roll back the whole
 // change?
-LocalCollection._modify = function (doc, mod) {
+//
+// isInsert is set when _modify is being called to compute the document to
+// insert as part of an upsert operation. We use this primarily to figure out
+// when to set the fields in $setOnInsert, if present.
+LocalCollection._modify = function (doc, mod, isInsert) {
   var is_modifier = false;
   for (var k in mod) {
     // IE7 doesn't support indexing into strings (eg, k[0]), so use substr.
@@ -18,23 +22,26 @@ LocalCollection._modify = function (doc, mod) {
   var new_doc;
 
   if (!is_modifier) {
-    if (mod._id && doc._id !== mod._id)
+    if (mod._id && !EJSON.equals(doc._id, mod._id))
       throw Error("Cannot change the _id of a document");
 
     // replace the whole document
     for (var k in mod) {
       if (k.substr(0, 1) === '$')
-        throw Error("Field name may not start with '$'");
+        throw Error("When replacing document, field name may not start with '$'");
       if (/\./.test(k))
-        throw Error("Field name may not contain '.'");
+        throw Error("When replacing document, field name may not contain '.'");
     }
     new_doc = mod;
   } else {
     // apply modifiers
-    var new_doc = LocalCollection._deepcopy(doc);
+    var new_doc = EJSON.clone(doc);
 
     for (var op in mod) {
       var mod_func = LocalCollection._modifiers[op];
+      // Treat $setOnInsert as $set if this is an insert.
+      if (isInsert && op === '$setOnInsert')
+        mod_func = LocalCollection._modifiers['$set'];
       if (!mod_func)
         throw Error("Invalid modifier specified " + op);
       for (var keypath in mod[op]) {
@@ -55,11 +62,18 @@ LocalCollection._modify = function (doc, mod) {
     }
   }
 
-  // move new document into place
-  for (var k in doc) {
-    if (k !== '_id')
+  // move new document into place.
+  _.each(_.keys(doc), function (k) {
+    // Note: this used to be for (var k in doc) however, this does not
+    // work right in Opera. Deleting from a doc while iterating over it
+    // would sometimes cause opera to skip some keys.
+
+    // isInsert: if we're constructing a document to insert (via upsert)
+    // and we're in replacement mode, not modify mode, DON'T take the
+    // _id from the query.  This matches mongo's behavior.
+    if (k !== '_id' || isInsert)
       delete doc[k];
-  }
+  });
   for (var k in new_doc) {
     doc[k] = new_doc[k];
   }
@@ -137,7 +151,13 @@ LocalCollection._modifiers = {
     }
   },
   $set: function (target, field, arg) {
-    target[field] = LocalCollection._deepcopy(arg);
+    if (field === '_id' && !EJSON.equals(arg, target._id))
+      throw Error("Cannot change the _id of a document");
+
+    target[field] = EJSON.clone(arg);
+  },
+  $setOnInsert: function (target, field, arg) {
+    // converted to `$set` in `_modify`
   },
   $unset: function (target, field, arg) {
     if (target !== undefined) {
@@ -149,13 +169,65 @@ LocalCollection._modifiers = {
     }
   },
   $push: function (target, field, arg) {
-    var x = target[field];
-    if (x === undefined)
-      target[field] = [arg];
-    else if (!(x instanceof Array))
+    if (target[field] === undefined)
+      target[field] = [];
+    if (!(target[field] instanceof Array))
       throw Error("Cannot apply $push modifier to non-array");
-    else
-      x.push(LocalCollection._deepcopy(arg));
+
+    if (!(arg && arg.$each)) {
+      // Simple mode: not $each
+      target[field].push(EJSON.clone(arg));
+      return;
+    }
+
+    // Fancy mode: $each (and maybe $slice and $sort)
+    var toPush = arg.$each;
+    if (!(toPush instanceof Array))
+      throw Error("$each must be an array");
+
+    // Parse $slice.
+    var slice = undefined;
+    if ('$slice' in arg) {
+      if (typeof arg.$slice !== "number")
+        throw Error("$slice must be a numeric value");
+      // XXX should check to make sure integer
+      if (arg.$slice > 0)
+        throw Error("$slice in $push must be zero or negative");
+      slice = arg.$slice;
+    }
+
+    // Parse $sort.
+    var sortFunction = undefined;
+    if (arg.$sort) {
+      if (slice === undefined)
+        throw Error("$sort requires $slice to be present");
+      // XXX this allows us to use a $sort whose value is an array, but that's
+      // actually an extension of the Node driver, so it won't work
+      // server-side. Could be confusing!
+      sortFunction = LocalCollection._compileSort(arg.$sort);
+      for (var i = 0; i < toPush.length; i++) {
+        if (LocalCollection._f._type(toPush[i]) !== 3) {
+          throw Error("$push like modifiers using $sort " +
+                      "require all elements to be objects");
+        }
+      }
+    }
+
+    // Actually push.
+    for (var j = 0; j < toPush.length; j++)
+      target[field].push(EJSON.clone(toPush[j]));
+
+    // Actually sort.
+    if (sortFunction)
+      target[field].sort(sortFunction);
+
+    // Actually slice.
+    if (slice !== undefined) {
+      if (slice === 0)
+        target[field] = [];  // differs from Array.slice!
+      else
+        target[field] = target[field].slice(slice);
+    }
   },
   $pushAll: function (target, field, arg) {
     if (!(typeof arg === "object" && arg instanceof Array))
@@ -190,7 +262,7 @@ LocalCollection._modifiers = {
         for (var i = 0; i < x.length; i++)
           if (LocalCollection._f._equal(value, x[i]))
             return;
-        x.push(value);
+        x.push(EJSON.clone(value));
       });
     }
   },
@@ -292,4 +364,12 @@ LocalCollection._modifiers = {
     // native javascript numbers (doubles) so far, so we can't support $bit
     throw Error("$bit is not supported");
   }
+};
+
+LocalCollection._removeDollarOperators = function (selector) {
+  var selectorDoc = {};
+  for (var k in selector)
+    if (k.substr(0, 1) !== '$')
+      selectorDoc[k] = selector[k];
+  return selectorDoc;
 };

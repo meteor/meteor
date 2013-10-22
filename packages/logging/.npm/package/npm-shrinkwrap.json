@@ -1,0 +1,23 @@
+{
+  "dependencies": {
+    "cli-color": {
+      "version": "0.2.3",
+      "dependencies": {
+        "es5-ext": {
+          "version": "0.9.2"
+        },
+        "memoizee": {
+          "version": "0.2.5",
+          "dependencies": {
+            "event-emitter": {
+              "version": "0.2.2"
+            },
+            "next-tick": {
+              "version": "0.1.0"
+            }
+          }
+        }
+      }
+    }
+  }
+}

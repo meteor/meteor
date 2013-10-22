@@ -43,6 +43,7 @@ pre {
 code {
     font-family: monospace;
     font-size: 1.1em;
+    white-space: pre;
 }
 
 ul {
@@ -265,6 +266,10 @@ dl.callbacks dt .name, dl.methods dt .name {
   font-size: 1.1em;
 }
 
+dl.callbacks {
+  margin-left: 1.5em;
+}
+
 #main dd p {
     margin-top: 0.5em;
 }
@@ -367,6 +372,12 @@ dl.callbacks dt .name, dl.methods dt .name {
     padding-right: 5px;
 }
 
+.or {
+    font-size: .9em;
+    text-decoration: underline;
+    font-style: italic;
+}
+
 #main pre {
     -moz-border-radius: 10px;
     -webkit-border-radius: 10px;
@@ -432,11 +443,11 @@ pre {
 @media (min-width: 1024px) {
 /* ipad landscape and desktop */
 #main {
-    width: 600px;
-    margin-left: 310px; /* nav width + padding */
+    width: 610px;
+    margin-left: 330px; /* nav width + padding */
 }
 #nav {
-    width: 250px;
+    width: 270px;
 }
 .github-ribbon {
     display: block;

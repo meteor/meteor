@@ -1,8 +1,6 @@
 Package.describe({
-  summary: "Automatically publish all data in the database to every client"
+  summary: "Automatically publish the entire database to all clients"
 });
 
-Package.on_use(function (api, where) {
-  api.use('livedata', 'server');
-  api.add_files("autopublish.js", "server");
-});
+// This package is empty; its presence is detected by livedata and
+// accounts-base.

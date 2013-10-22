@@ -1,0 +1,11 @@
+# Each individual example should include 'local' in foo/.meteor/.gitignore.
+# However, we also include this top-level .gitignore so that the following
+# situation:
+#    $ git checkout some-branch-with-a-new-example
+#    $ (cd examples/unfinished/new-example; meteor)
+#    $ git checkout devel
+# doesn't leave you with tons of files in
+# examples/unfinished/new-example/.meteor/local showing up in your 'git status'.
+
+*/.meteor/local
+*/*/.meteor/local

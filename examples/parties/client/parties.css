@@ -1,0 +1,81 @@
+.header {
+    padding: 20px 0;
+}
+
+.details {
+    margin-top: -18px;
+}
+
+.mask {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0px;
+    left: 0px;
+    background-color: #000000;
+    opacity: .4;
+    z-index: 1;
+}
+
+.invite-row .invite {
+    margin: 10px 10px 10px 0;
+}
+
+.rsvp-buttons {
+    text-align: center;
+    margin: 40px 0 40px 0;
+}
+
+.description {
+    margin: 20px 0 20px 0;
+}
+
+.attendance .who {
+    margin-bottom: 5px;
+}
+
+.attendance .invite {
+    text-align: center;
+}
+
+input.chosen {
+    font-weight: bold;
+}
+
+.map {
+    position: relative;
+    background-image: url('/soma.png');
+    background-position: -20px -20px;
+    width: 500px;
+    height: 500px;
+}
+
+.map circle.public {
+    fill: #49AFCD;
+}
+
+.map circle.private {
+    fill: #DA4F49;
+}
+
+.map text {
+    text-anchor: middle;
+    fill: white;
+    font-weight: bold;
+}
+
+.map circle.callout {
+    stroke-width: 5px;
+    stroke-dasharray: 9, 5;
+    stroke-opacity: .8;
+    fill: none;
+    stroke: red;
+}
+
+.attribution {
+    position: absolute;
+    bottom: 0;
+    background-color: white;
+    padding: 3px;
+    padding-bottom: 0;
+}

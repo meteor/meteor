@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "optimist": {
+      "version": "0.6.0",
+      "dependencies": {
+        "wordwrap": {
+          "version": "0.0.2"
+        },
+        "minimist": {
+          "version": "0.0.5"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+<template name="configureLoginServiceDialogForFacebook">
+  <p>
+    First, you'll need to register your app on Facebook. Follow these steps:
+  </p>
+  <ol>
+    <li>
+      Visit <a href="https://developers.facebook.com/apps" target="_blank">https://developers.facebook.com/apps</a>
+    </li>
+    <li>
+      Create New App (Only a name is required.)
+    </li>
+    <li>
+      Set "Sandbox Mode" to "Disabled"
+    </li>
+    <li>
+      Under "Select how your app integrates with Facebook", expand "Website with Facebook Login".
+    </li>
+    <li>
+      Set Site URL to: <span class="url">{{siteUrl}}</span>
+    </li>
+  </ol>
+</template>

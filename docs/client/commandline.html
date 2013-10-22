@@ -8,8 +8,8 @@
 
 <h3 id="meteorhelp">meteor help</h3>
 
-Get help on meteor command line usage. Running `meteor
-help` by itself will list the common meteor
+Get help on meteor command line usage. Running `meteor help` by
+itself will list the common meteor
 commands. Running <code>meteor help <i>command</i></code> will print
 detailed help about the command.
 
@@ -29,12 +29,15 @@ required.
 This is the default command. Simply running `meteor` is the
 same as `meteor run`.
 
+To pass additional options to Node.js use the `NODE_OPTIONS` environment variable.
+For example: `NODE_OPTIONS='--debug'` or `NODE_OPTIONS='--debug-brk'`
+
 Run `meteor help run` to see the full list of options.
 
 
 <h3 id="meteorcreate">meteor create <i>name</i></h3>
 
-Create a new Meteor project. Makes a subdirectory named <i>name</i>
+Create a new Meteor project. Makes a subdirectory named *name*
 and copies in the template app. You can pass an absolute or relative
 path.
 
@@ -90,6 +93,17 @@ domain like myapp.com, you'll need a DNS A record, matching the IP
 address of origin.meteor.com.
 {{/warning}}
 
+
+
+You can add information specific to a particular deployment of your application
+by using the `--settings` option.  The argument to `--settings` is a file
+containing any JSON string.  The object in your settings file will appear on the
+server side of your application in [`Meteor.settings`](#meteor_settings).
+
+Settings are persistent.  When you redeploy your app, the old value will be
+preserved unless you explicitly pass new settings using the `--settings` option.
+To unset `Meteor.settings`, pass an empty settings file.
+
 <h3 id="meteorlogs">meteor logs <i>site</i></h3>
 
 Retrieves the server logs for the named Meteor application.
@@ -104,10 +118,13 @@ inspector, just like any other client-side JavaScript.
 
 <h3 id="meteorupdate">meteor update</h3>
 
-Upgrade to the latest Meteor version. Checks to see if a new
-version of Meteor is available, and if so, downloads and installs
-it. You must be connected to the internet.
+Sets the version of Meteor to use with the current project. If a
+release is specified with `--release`, set the project to use that
+version. Otherwise download and use the latest release of Meteor.
 
+Every project is pinned to a specific release of Meteor. You can temporarily try
+using your package with another release by passing the `--release` option to any
+command; `meteor update` simply changes the pinned release.
 
 <h3 id="meteoradd">meteor add <i>package</i></h3>
 

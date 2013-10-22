@@ -4,21 +4,25 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['underscore', 'uuid', 'domutils', 'liverange', 'universal-events'],
+  api.use(['underscore', 'random', 'domutils', 'liverange', 'universal-events',
+           'ordered-dict', 'deps', 'ejson'],
           'client');
 
-  // XXX Depends on jquery because we need a selector engine to resolve
-  // event maps. What would be nice is, if you've included jquery or
-  // zepto, use one of those; if not, ship our own copy of sizzle (but,
-  // you still want the event object normalization that jquery provides?)
-  api.use('jquery');
+  // If we have minimongo available, use its idStringify function.
+  api.use('minimongo', 'client', {weak: true});
 
-  api.add_files(['spark.js', 'patch.js', 'convenience.js'], 'client');
+  api.export('Spark', 'client');
+  api.export('SparkTest', 'client', {testOnly: true});
+
+  api.add_files(['spark.js', 'patch.js', 'convenience.js',
+                 'utils.js'], 'client');
 });
 
 Package.on_test(function (api) {
-  api.use('tinytest');
-  api.use(['spark', 'test-helpers'], 'client');
+  api.use('webapp', 'server');
+  api.use(['tinytest', 'underscore', 'liverange', 'deps', 'domutils',
+           'minimongo', 'random']);
+  api.use(['spark', 'test-helpers', 'jquery'], 'client');
 
   api.add_files('test_form_responder.js', 'server');
 

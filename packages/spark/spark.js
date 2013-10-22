@@ -22,39 +22,70 @@
 
 // XXX in landmark-demo, if Template.timer.created throws an exception,
 // then it is never called again, even if you push the 'create a
-// timer' button again. the problem is almost certainly in atFlushTime
+// timer' button again. the problem is almost certainly in afterFlush
 // (not hard to see what it is.)
 
-(function() {
-
 Spark = {};
+SparkTest = {};
 
-Spark._currentRenderer = new Meteor.EnvironmentVariable;
+var currentRenderer = (function () {
+  var current = null;
+  return {
+    get: function () {
+      return current;
+    },
+    withValue: function (v, func) {
+      var previous = current;
+      current = v;
+      try { return func(); }
+      finally { current = previous; }
+    }
+  };
+})();
 
-Spark._TAG = "_spark_" + Meteor.uuid();
+TAG = "_spark_" + Random.id();
+SparkTest.TAG = TAG;
+
+// We also export this as Spark._TAG due to a historical accident. I
+// don't know if anything uses it (possibly some of Chris Mather's
+// stuff?)  but let's keep exporting it since without it it would be
+// very difficult for code outside the spark package to, eg, walk
+// spark's liverange hierarchy.
+Spark._TAG = TAG;
+
 // XXX document contract for each type of annotation?
-Spark._ANNOTATION_NOTIFY = "notify";
-Spark._ANNOTATION_DATA = "data";
-Spark._ANNOTATION_ISOLATE = "isolate";
-Spark._ANNOTATION_EVENTS = "events";
-Spark._ANNOTATION_WATCH = "watch";
-Spark._ANNOTATION_LABEL = "label";
-Spark._ANNOTATION_LANDMARK = "landmark";
-Spark._ANNOTATION_LIST = "list";
-Spark._ANNOTATION_LIST_ITEM = "item";
+var ANNOTATION_NOTIFY = "notify";
+var ANNOTATION_DATA = "data";
+var ANNOTATION_ISOLATE = "isolate";
+var ANNOTATION_EVENTS = "events";
+var ANNOTATION_WATCH = "watch";
+var ANNOTATION_LABEL = "label";
+var ANNOTATION_LANDMARK = "landmark";
+var ANNOTATION_LIST = "list";
+var ANNOTATION_LIST_ITEM = "item";
 // XXX why do we need, eg, _ANNOTATION_ISOLATE? it has no semantics?
 
-// Set in tests to turn on extra UniversalEventListener sanity checks
-Spark._checkIECompliance = false;
+// Use from tests to turn on extra UniversalEventListener sanity checks
+var checkIECompliance = false;
+SparkTest.setCheckIECompliance = function (value) {
+  checkIECompliance = value;
+};
+
+// Private interface to 'preserve-inputs' package
+var globalPreserves = {};
+Spark._addGlobalPreserve = function (selector, value) {
+  globalPreserves[selector] = value;
+};
+
 
 var makeRange = function (type, start, end, inner) {
-  var range = new LiveRange(Spark._TAG, start, end, inner);
+  var range = new LiveRange(TAG, start, end, inner);
   range.type = type;
   return range;
 };
 
 var findRangeOfType = function (type, node) {
-  var range = LiveRange.findRange(Spark._TAG, node);
+  var range = LiveRange.findRange(TAG, node);
   while (range && range.type !== type)
     range = range.findParent();
 
@@ -70,23 +101,28 @@ var findParentOfType = function (type, range) {
 };
 
 var notifyWatchers = function (start, end) {
-  var tempRange = new LiveRange(Spark._TAG, start, end, true /* innermost */);
+  var tempRange = new LiveRange(TAG, start, end, true /* innermost */);
   for (var walk = tempRange; walk; walk = walk.findParent())
-    if (walk.type === Spark._ANNOTATION_WATCH)
+    if (walk.type === ANNOTATION_WATCH)
       walk.notify();
   tempRange.destroy();
 };
 
-Spark._createId = function () {
-  var chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-  var id = "";
-  for (var i = 0; i < 8; i++)
-    id += chars.substr(Math.floor(Meteor.random() * 64), 1);
-  return id;
+var eventGuardActive = false;
+// Spark does DOM manipulation inside an event guard to prevent events
+// like "blur" from firing.  It would be nice to deliver these events
+// in some cases, but running fresh event handling code on an invalid
+// LiveRange tree can easily produce errors.
+// This guard was motivated by seeing errors in Todos when switching
+// windows while an input field is focused.
+var withEventGuard = function (func) {
+  var previous = eventGuardActive;
+  eventGuardActive = true;
+  try { return func(); }
+  finally { eventGuardActive = previous; }
 };
 
-Spark._Renderer = function () {
+Renderer = function () {
   // Map from annotation ID to an annotation function, which is called
   // at render time and receives (startNode, endNode).
   this.annotations = {};
@@ -112,11 +148,21 @@ Spark._Renderer = function () {
   this.pc = new PreservationController;
 };
 
-_.extend(Spark._Renderer.prototype, {
+_.extend(Renderer.prototype, {
   // `what` can be a function that takes a LiveRange, or just a set of
-  // attributes to add to the liverange.  tag and what are optional.
-  // if no tag is passed, no liverange will be created.
-  annotate: function (html, type, what, unusedFunc) {
+  // attributes to add to the liverange.  type and what are optional.
+  // if no type is passed, no liverange will be created.
+  // If what is a function, it will be called no matter what, even
+  // if the annotated HTML was not used and no LiveRange was created,
+  // in which case it gets null as an argument.
+  annotate: function (html, type, what) {
+    if (typeof what !== 'function') {
+      var attribs = what;
+      what = function (range) {
+        if (range)
+          _.extend(range, attribs);
+      };
+    }
     // The annotation tags that we insert into HTML strings must be
     // unguessable in order to not create potential cross-site scripting
     // attack vectors, so we use random strings.  Even a well-written app
@@ -124,22 +170,17 @@ _.extend(Spark._Renderer.prototype, {
     // unescaped < and > in HTML attribute values, where they are normally
     // safe.  We can't assume that a string like '<1>' came from us
     // and not arbitrary user-entered data.
-    var id = (type || '') + ":" + Spark._createId();
+    var id = (type || '') + ":" + Random.id();
     this.annotations[id] = function (start, end) {
-      if (! start) {
-        // materialize called us with no args because this annotation
-        // wasn't used
-        unusedFunc && unusedFunc();
+      if ((! start) || (! type)) {
+        // ! start: materialize called us with no args because this
+        // annotation wasn't used
+        // ! type: no type given, don't generate a LiveRange
+        what(null);
         return;
       }
-      if (! type)
-        // no type given; don't generate a LiveRange
-        return;
       var range = makeRange(type, start, end);
-      if (what instanceof Function)
-        what(range);
-      else
-        _.extend(range, what);
+      what(range);
     };
 
     return "<$" + id + ">" + html + "</$" + id + ">";
@@ -185,7 +226,7 @@ _.extend(Spark._Renderer.prototype, {
   materialize: function (htmlFunc) {
     var self = this;
 
-    var html = Spark._currentRenderer.withValue(self, htmlFunc);
+    var html = currentRenderer.withValue(self, htmlFunc);
     html = self.annotate(html); // wrap with an anonymous annotation
 
     var fragById = {};
@@ -269,6 +310,23 @@ _.extend(Spark._Renderer.prototype, {
     });
     self.annotations = {};
 
+    // Save original versions of every 'value' property. We want elements that
+    // have a value *attribute*, as well as form elements that have a value
+    // property but no value attribute (textarea and select).
+    //
+    // We save it in a one-element array expando. We use the array because IE8
+    // gets confused by expando properties with scalar values and exposes them
+    // as HTML attributes.
+    //
+    // We also save the values of CHECKED for radio and checkboxes.
+    _.each(DomUtils.findAll(ret, '[value], textarea, select'), function (node) {
+      node._sparkOriginalRenderedValue = [DomUtils.getElementValue(node)];
+    });
+    _.each(DomUtils.findAll(ret, 'input[type=checkbox], input[type=radio]'),
+           function (node) {
+      node._sparkOriginalRenderedChecked = [!!node.checked];
+    });
+
     return ret;
   }
 
@@ -280,7 +338,7 @@ _.extend(Spark._Renderer.prototype, {
 // if there isn't one returns `html` (the last argument).
 var withRenderer = function (f) {
   return function (/* arguments */) {
-    var renderer = Spark._currentRenderer.get();
+    var renderer = currentRenderer.get();
     var args = _.toArray(arguments);
     if (!renderer)
       return args.pop();
@@ -304,14 +362,13 @@ var withRenderer = function (f) {
 // can call it when manually inserting nodes? (via, eg, jQuery?) -- of
 // course in that case 'landmarkRanges' would be empty.
 var scheduleOnscreenSetup = function (frag, landmarkRanges) {
-  var renderedRange = new LiveRange(Spark._TAG, frag);
+  var renderedRange = new LiveRange(TAG, frag);
   var finalized = false;
   renderedRange.finalize = function () {
     finalized = true;
   };
 
-  var ctx = new Meteor.deps.Context;
-  ctx.on_invalidate(function () {
+  Deps.afterFlush(function () {
     if (finalized)
       return;
 
@@ -355,7 +412,7 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
     // future: include an argument in the callback to distinguish this
     // case from the previous
     var walk = renderedRange;
-    while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
+    while ((walk = findParentOfType(ANNOTATION_LANDMARK, walk)))
       walk.rendered.call(walk.landmark);
 
     // This code can run several times on the same nodes (if the
@@ -365,12 +422,10 @@ var scheduleOnscreenSetup = function (frag, landmarkRanges) {
     notifyWatchers(renderedRange.firstNode(), renderedRange.lastNode());
     renderedRange.destroy();
   });
-
-  ctx.invalidate();
 };
 
 Spark.render = function (htmlFunc) {
-  var renderer = new Spark._Renderer;
+  var renderer = new Renderer;
   var frag = renderer.materialize(htmlFunc);
   return frag;
 };
@@ -451,12 +506,12 @@ _.extend(PreservationController.prototype, {
     // to temporarily put these in the document as well, because CSS selectors
     // don't care and we will put them back.  `tempRange` will hold our place
     // in the tree `newRange` came from.
-    var tempRange = new LiveRange(Spark._TAG, newRange.firstNode(), newRange.lastNode());
+    var tempRange = new LiveRange(TAG, newRange.firstNode(), newRange.lastNode());
     var commentFrag = document.createDocumentFragment();
     commentFrag.appendChild(document.createComment(""));
     var newRangeFrag = tempRange.replaceContents(commentFrag);
     // `wrapperRange` will mark where we inserted newRange into the document.
-    var wrapperRange = new LiveRange(Spark._TAG, newRangeFrag);
+    var wrapperRange = new LiveRange(TAG, newRangeFrag);
     existingRange.insertBefore(newRangeFrag);
 
     _.each(self.roots, function (root) {
@@ -486,15 +541,29 @@ _.extend(PreservationController.prototype, {
 // XXX debugging
 var pathForRange = function (r) {
   var path = [], r;
-  while ((r = findParentOfType(Spark._ANNOTATION_LABEL, r)))
+  while ((r = findParentOfType(ANNOTATION_LABEL, r)))
     path.unshift(r.label);
   return path.join(' :: ');
 };
 
 // `range` is a region of `document`. Modify it in-place so that it
 // matches the result of Spark.render(htmlFunc), preserving landmarks.
+//
 Spark.renderToRange = function (range, htmlFunc) {
-  var renderer = new Spark._Renderer();
+  // `range` may be out-of-document and we don't check here.
+  // XXX should we?
+  //
+  // Explicit finalization of ranges (done within Spark or by a call to
+  // Spark.finalize) prevents us from being called in the first place.
+  // The newly rendered material will be checked to see if it's in the
+  // document by scheduleOnscreenSetUp's scheduled setup.
+  // However, if range is not valid, bail out now before running
+  // htmlFunc.
+  var startNode = range.firstNode();
+  if (! startNode || ! startNode.parentNode)
+    return;
+
+  var renderer = new Renderer();
 
   // Call 'func' for each landmark in 'range'. Pass two arguments to
   // 'func', the range, and an extra "notes" object such that two
@@ -505,12 +574,12 @@ Spark.renderToRange = function (range, htmlFunc) {
     var stack = renderer.newLabelStack();
 
     range.visit(function (isStart, r) {
-      if (r.type === Spark._ANNOTATION_LABEL) {
+      if (r.type === ANNOTATION_LABEL) {
         if (isStart)
           stack.pushLabel(r.label);
         else
           stack.popLabel();
-      } else if (r.type === Spark._ANNOTATION_LANDMARK && isStart) {
+      } else if (r.type === ANNOTATION_LANDMARK && isStart) {
         func(r, stack.getNotes());
       }
     });
@@ -521,11 +590,23 @@ Spark.renderToRange = function (range, htmlFunc) {
     notes.originalRange = landmarkRange;
   });
 
+  // Once we render the new fragment, as soon as it is placed into the DOM (even
+  // temporarily), if any radio buttons in the new framgent are checked, any
+  // radio buttons with the same name in the entire document will be unchecked
+  // (since only one radio button of a given name can be checked at a time). So
+  // we save the current checked value of all radio buttons in an expando.
+  var radios = DomUtils.findAllClipped(
+    range.containerNode(), 'input[type=radio]',
+    range.firstNode(), range.lastNode());
+  _.each(radios, function (node) {
+    node._currentChecked = [!!node.checked];
+  });
+
   var frag = renderer.materialize(htmlFunc);
 
   DomUtils.wrapFragmentForContainer(frag, range.containerNode());
 
-  var tempRange = new LiveRange(Spark._TAG, frag);
+  var tempRange = new LiveRange(TAG, frag);
 
   // find preservation roots from matched landmarks inside the
   // rerendered region
@@ -544,8 +625,20 @@ Spark.renderToRange = function (range, htmlFunc) {
   // find preservation roots that come from landmarks enclosing the
   // updated region
   var walk = range;
-  while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
-    pc.addRoot(walk.preserve, range, tempRange, walk.containerNode());
+  while ((walk = walk.findParent())) {
+    if (! walk.firstNode().parentNode)
+      // we're in a DOM island with a top-level range (not really
+      // allowed, but could happen if `range` is on nodes that
+      // manually removed.
+      // XXX check for this sooner; hard to reason about this function
+      // on a "malformed" liverange tree
+      break;
+
+    if (walk.type === ANNOTATION_LANDMARK, walk)
+      pc.addRoot(walk.preserve, range, tempRange, walk.containerNode());
+  }
+
+  pc.addRoot(globalPreserves, range, tempRange);
 
   // compute preservations (must do this before destroying tempRange)
   var preservations = pc.computePreservations(range, tempRange);
@@ -555,13 +648,15 @@ Spark.renderToRange = function (range, htmlFunc) {
   var results = {};
 
   // Patch! (using preservations)
-  range.operate(function (start, end) {
-    // XXX this will destroy all liveranges, including ones
-    // inside constant regions whose DOM nodes we are going
-    // to preserve untouched
-    Spark.finalize(start, end);
-    Spark._patch(start.parentNode, frag, start.previousSibling,
-                 end.nextSibling, preservations, results);
+  withEventGuard(function () {
+    range.operate(function (start, end) {
+      // XXX this will destroy all liveranges, including ones
+      // inside constant regions whose DOM nodes we are going
+      // to preserve untouched
+      Spark.finalize(start, end);
+      patch(start.parentNode, frag, start.previousSibling,
+            end.nextSibling, preservations, results);
+    });
   });
 
   _.each(results.regionPreservations, function (landmarkRange) {
@@ -577,6 +672,7 @@ Spark.renderToRange = function (range, htmlFunc) {
 // Delete all of the liveranges in the range of nodes between `start`
 // and `end`, and call their 'finalize' function if any. Or instead of
 // `start` and `end` you may pass a fragment in `start`.
+//
 Spark.finalize = function (start, end) {
   if (! start.parentNode && start.nodeType !== 11 /* DocumentFragment */) {
     // Workaround for LiveRanges' current inability to contain
@@ -586,7 +682,7 @@ Spark.finalize = function (start, end) {
     start = frag;
     end = null;
   }
-  var wrapper = new LiveRange(Spark._TAG, start, end);
+  var wrapper = new LiveRange(TAG, start, end);
   wrapper.visit(function (isStart, range) {
     isStart && range.finalize && range.finalize();
   });
@@ -599,11 +695,11 @@ Spark.finalize = function (start, end) {
 
 Spark.setDataContext = withRenderer(function (dataContext, html, _renderer) {
   return _renderer.annotate(
-    html, Spark._ANNOTATION_DATA, { data: dataContext });
+    html, ANNOTATION_DATA, { data: dataContext });
 });
 
 Spark.getDataContext = function (node) {
-  var range = findRangeOfType(Spark._ANNOTATION_DATA, node);
+  var range = findRangeOfType(ANNOTATION_DATA, node);
   return range && range.data;
 };
 
@@ -623,17 +719,21 @@ var getListener = function () {
       // of enclosing liveranges to defend against the case where user
       // event handlers change the DOM.
 
+      if (eventGuardActive)
+        // swallow the event
+        return;
+
       var ranges = [];
-      var walk = findRangeOfType(Spark._ANNOTATION_EVENTS,
+      var walk = findRangeOfType(ANNOTATION_EVENTS,
                                  event.currentTarget);
       while (walk) {
         ranges.push(walk);
-        walk = findParentOfType(Spark._ANNOTATION_EVENTS, walk);
+        walk = findParentOfType(ANNOTATION_EVENTS, walk);
       }
       _.each(ranges, function (r) {
         r.handler(event);
       });
-    }, Spark._checkIECompliance);
+    }, checkIECompliance);
 
   return universalListener;
 };
@@ -642,9 +742,13 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
   var listener = getListener();
 
   var handlerMap = {}; // type -> [{selector, callback}, ...]
-  // iterate over eventMap, which has form {"type selector, ...": callback},
+  // iterate over eventMap, which has form {"type selector, ...": callbacks},
+  // callbacks can either be a fn, or an array of fns
   // and populate handlerMap
-  _.each(eventMap, function(callback, spec) {
+  _.each(eventMap, function(callbacks, spec) {
+    if ('function' === typeof callbacks) {
+      callbacks = [ callbacks ];
+    }
     var clauses = spec.split(/,\s+/);
     // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']
     _.each(clauses, function (clause) {
@@ -656,7 +760,9 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
       var selector = parts.join(' ');
 
       handlerMap[type] = handlerMap[type] || [];
-      handlerMap[type].push({selector: selector, callback: callback});
+      _.each(callbacks, function(callback) {
+        handlerMap[type].push({selector: selector, callback: callback});
+      });
     });
   });
 
@@ -673,7 +779,7 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
   };
 
   html = _renderer.annotate(
-    html, Spark._ANNOTATION_WATCH, {
+    html, ANNOTATION_WATCH, {
       notify: function () {
         installHandlers(this);
       }
@@ -682,7 +788,10 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
   var finalized = false;
 
   html = _renderer.annotate(
-    html, Spark._ANNOTATION_EVENTS, function (range) {
+    html, ANNOTATION_EVENTS, function (range) {
+      if (! range)
+        return;
+
       _.each(eventTypes, function (t) {
         listener.addType(t);
       });
@@ -704,16 +813,11 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
           var selector = handler.selector;
 
           if (selector) {
-            // This ends up doing O(n) findAllClipped calls when an
-            // event bubbles up N level in the DOM. If this ends up
-            // being too slow, we could memoize findAllClipped across
-            // the processing of each event.
-            var results = DomUtils.findAllClipped(
-              range.containerNode(), selector, range.firstNode(), range.lastNode());
-            // This is a linear search through what could be a large
-            // result set.
-            if (! _.contains(results, event.currentTarget))
+            if (! DomUtils.matchesSelectorClipped(
+              event.currentTarget, range.containerNode(), selector,
+              range.firstNode(), range.lastNode())) {
               continue;
+            }
           } else {
             // if no selector, only match the event target
             if (event.currentTarget !== event.target)
@@ -721,13 +825,13 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
           }
 
           // Found a matching handler. Call it.
-          var eventData = Spark.getDataContext(event.currentTarget);
+          var eventData = Spark.getDataContext(event.currentTarget) || {};
           var landmarkRange =
-                findParentOfType(Spark._ANNOTATION_LANDMARK, range);
+                findParentOfType(ANNOTATION_LANDMARK, range);
           var landmark = (landmarkRange && landmarkRange.landmark);
 
           // Note that the handler can do arbitrary things, like call
-          // Meteor.flush() or otherwise remove and finalize parts of
+          // Deps.flush() or otherwise remove and finalize parts of
           // the DOM.  We can't assume `range` is valid past this point,
           // and we'll check the `finalized` flag at the top of the loop.
           var returnValue = callback.call(eventData, event, landmark);
@@ -750,69 +854,62 @@ Spark.attachEvents = withRenderer(function (eventMap, html, _renderer) {
 /******************************************************************************/
 
 Spark.isolate = function (htmlFunc) {
-  var renderer = Spark._currentRenderer.get();
+  var renderer = currentRenderer.get();
   if (!renderer)
     return htmlFunc();
 
-  var ctx = new Meteor.deps.Context;
-
-  return renderer.annotate(
-    ctx.run(htmlFunc), Spark._ANNOTATION_ISOLATE, function (range) {
-      range.finalize = function () {
-        // Spark.finalize() was called on us (presumably because we were
-        // removed from the document.) Tear down our structures without
-        // doing any more updates. note that range is about to be
-        // destroyed by finalize.
-        range = null;
-        ctx.invalidate();
-      };
-
-      var refresh = function () {
-        if (! range)
-          return; // killed by finalize. range has already been destroyed.
-
-        ctx = new Meteor.deps.Context;
-        Spark.renderToRange(range, function () {
-          return ctx.run(htmlFunc);
+  var range;
+  var firstRun = true;
+  var retHtml;
+  Deps.autorun(function (handle) {
+    if (firstRun) {
+      retHtml = renderer.annotate(
+        htmlFunc(), ANNOTATION_ISOLATE,
+        function (r) {
+          if (! r) {
+            // annotation not used; kill this autorun
+            handle.stop();
+          } else {
+            range = r;
+            range.finalize = function () {
+              // Spark.finalize() was called on our range (presumably
+              // because it was removed from the document.)  Kill
+              // this autorun.
+              handle.stop();
+            };
+          }
         });
-        ctx.on_invalidate(refresh);
-      };
+      firstRun = false;
+    } else {
+      Spark.renderToRange(range, htmlFunc);
+    }
+  });
 
-      ctx.on_invalidate(refresh);
-    });
+  return retHtml;
 };
 
 /******************************************************************************/
 /* Lists                                                                      */
 /******************************************************************************/
 
-// Run 'f' at flush()-time. If atFlushTime is called multiple times,
-// we guarantee that the 'f's will run in the order of their
-// respective atFlushTime calls.
-//
-// XXX either break this out into a separate package or fold it into
-// deps
-var atFlushQueue = [];
-var atFlushContext = null;
-var atFlushTime = function (f) {
-  atFlushQueue.push(f);
-
-  if (! atFlushContext) {
-    atFlushContext = new Meteor.deps.Context;
-    atFlushContext.on_invalidate(function () {
-      var f;
-      while ((f = atFlushQueue.shift())) {
-        // Since atFlushContext is truthy, if f() calls atFlushTime
-        // reentrantly, it's guaranteed to append to atFlushQueue and
-        // not contruct a new atFlushContext.
-        f();
-      }
-      atFlushContext = null;
-    });
-
-    atFlushContext.invalidate();
-  }
+// XXX duplicated code from minimongo.js.  It's small though.
+var applyChanges = function (doc, changeFields) {
+  _.each(changeFields, function (value, key) {
+    if (value === undefined)
+      delete doc[key];
+    else
+      doc[key] = value;
+  });
 };
+
+
+// If minimongo is available (it's a weak dependency) use its ID stringifier (so
+// that, eg, ObjectId and strings don't overlap). Otherwise just use the
+// identity function.
+// This is also used in convenience.js.
+idStringify = Package.minimongo
+  ? Package.minimongo.LocalCollection._idStringify
+  : function (id) { return id; };
 
 Spark.list = function (cursor, itemFunc, elseFunc) {
   elseFunc = elseFunc || function () { return ''; };
@@ -821,62 +918,76 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   // can change them later
   var callbacks = {};
   var observerCallbacks = {};
-  _.each(["added", "removed", "moved", "changed"], function (name) {
+  _.each(["addedBefore", "removed", "movedBefore", "changed"], function (name) {
     observerCallbacks[name] = function () {
       return callbacks[name].apply(null, arguments);
     };
   });
 
   // Get the current contents of the cursor.
-  // XXX currently we count on observe() using only added() to deliver
-  // the initial contents. are we allow to do that, or do we need to
-  // implement removed/moved/changed here as well?
-  var initialContents = [];
+
+  var itemDict = new OrderedDict(idStringify);
   _.extend(callbacks, {
-    added: function (item, beforeIndex) {
-      initialContents.splice(beforeIndex, 0, item);
+    addedBefore: function (id, item, before) {
+      var doc = EJSON.clone(item);
+      doc._id = id;
+      var elt = {doc: doc, liveRange: null};
+      itemDict.putBefore(id, elt, before);
     }
   });
-  var handle = cursor.observe(observerCallbacks);
+  var handle = cursor.observeChanges(observerCallbacks);
 
   // Get the renderer, if any
-  var renderer = Spark._currentRenderer.get();
-  var annotate = renderer ?
-    _.bind(renderer.annotate, renderer) :
+  var renderer = currentRenderer.get();
+  var maybeAnnotate = renderer ?
+        _.bind(renderer.annotate, renderer) :
     function (html) { return html; };
+
+  // Templates should have access to data and methods added by the
+  // transformer, but observeChanges doesn't transform, so we have to do
+  // it here.
+  //
+  // NOTE: this is a little bit of an abstraction violation. Ideally,
+  // the only thing Spark should know about Minimongo is the contract of
+  // observeChanges. In theory, anything that implements observeChanges
+  // could be passed to Spark.list. But meh.
+  var transformedDoc = function (doc) {
+    if (cursor.getTransform && cursor.getTransform())
+      return cursor.getTransform()(EJSON.clone(doc));
+    return doc;
+  };
 
   // Render the initial contents. If we have a renderer, create a
   // range around each item as well as around the list, and save them
   // off for later.
   var html = '';
   var outerRange;
-  var itemRanges = [];
-  if (! initialContents.length)
+  if (itemDict.empty())
     html = elseFunc();
   else {
-    for (var i = 0; i < initialContents.length; i++) {
-      (function (i) {
-        html += annotate(itemFunc(initialContents[i]),
-                         Spark._ANNOTATION_LIST_ITEM,
-                         function (range) {
-                           itemRanges[i] = range;
-                         });
-      })(i); // scope i to closure
-    }
+    itemDict.forEach(function (elt) {
+        html += maybeAnnotate(
+          itemFunc(transformedDoc(elt.doc)),
+          ANNOTATION_LIST_ITEM,
+          function (range) {
+            elt.liveRange = range;
+          });
+    });
   }
-  initialContents = null; // save memory
   var stopped = false;
   var cleanup = function () {
     handle.stop();
     stopped = true;
   };
-  html = annotate(html, Spark._ANNOTATION_LIST, function (range) {
-    outerRange = range;
-    outerRange.finalize = cleanup;
-  }, function () {
-    // We never ended up on the screen (caller discarded our return
-    // value)
-    cleanup();
+  html = maybeAnnotate(html, ANNOTATION_LIST, function (range) {
+    if (! range) {
+      // We never ended up on the screen (caller discarded our return
+      // value)
+      cleanup();
+    } else {
+      outerRange = range;
+      outerRange.finalize = cleanup;
+    }
   });
 
   // No renderer? Then we have no way to update the returned html and
@@ -892,73 +1003,75 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
   // Maybe that will make sense if we give render callbacks subrange info.
   var notifyParentsRendered = function () {
     var walk = outerRange;
-    while ((walk = findParentOfType(Spark._ANNOTATION_LANDMARK, walk)))
+    while ((walk = findParentOfType(ANNOTATION_LANDMARK, walk)))
       walk.rendered.call(walk.landmark);
   };
 
   var later = function (f) {
-    atFlushTime(function () {
+    Deps.afterFlush(function () {
       if (! stopped)
-        f();
+        withEventGuard(f);
     });
   };
 
   // The DOM update callbacks.
   _.extend(callbacks, {
-    added: function (item, beforeIndex) {
+    addedBefore: function (id, fields, before) {
       later(function () {
-        var frag = Spark.render(_.bind(itemFunc, null, item));
+        var doc = EJSON.clone(fields);
+        doc._id = id;
+        var frag = Spark.render(_.bind(itemFunc, null, transformedDoc(doc)));
         DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
-        var range = makeRange(Spark._ANNOTATION_LIST_ITEM, frag);
+        var range = makeRange(ANNOTATION_LIST_ITEM, frag);
 
-        if (! itemRanges.length) {
+        if (itemDict.empty()) {
           Spark.finalize(outerRange.replaceContents(frag));
-        } else if (beforeIndex === itemRanges.length) {
-          itemRanges[itemRanges.length - 1].insertAfter(frag);
+        } else if (before === null) {
+          itemDict.lastValue().liveRange.insertAfter(frag);
         } else {
-          itemRanges[beforeIndex].insertBefore(frag);
+          itemDict.get(before).liveRange.insertBefore(frag);
         }
-
-        itemRanges.splice(beforeIndex, 0, range);
+        itemDict.putBefore(id, {doc: doc, liveRange: range}, before);
       });
     },
 
-    removed: function (item, atIndex) {
+    removed: function (id) {
       later(function () {
-        if (itemRanges.length === 1) {
+        if (itemDict.first() === itemDict.last()) {
           var frag = Spark.render(elseFunc);
           DomUtils.wrapFragmentForContainer(frag, outerRange.containerNode());
           Spark.finalize(outerRange.replaceContents(frag));
         } else
-          Spark.finalize(itemRanges[atIndex].extract());
+          Spark.finalize(itemDict.get(id).liveRange.extract());
 
-        itemRanges.splice(atIndex, 1);
-
-        notifyParentsRendered();
-      });
-    },
-
-    moved: function (item, oldIndex, newIndex) {
-      later(function () {
-        if (oldIndex === newIndex)
-          return;
-
-        var frag = itemRanges[oldIndex].extract();
-        var range = itemRanges.splice(oldIndex, 1)[0];
-        if (newIndex === itemRanges.length)
-          itemRanges[itemRanges.length - 1].insertAfter(frag);
-        else
-          itemRanges[newIndex].insertBefore(frag);
-
-        itemRanges.splice(newIndex, 0, range);
+        itemDict.remove(id);
 
         notifyParentsRendered();
       });
     },
 
-    changed: function (item, atIndex) {
+    movedBefore: function (id, before) {
       later(function () {
-        Spark.renderToRange(itemRanges[atIndex], _.bind(itemFunc, null, item));
+        var frag = itemDict.get(id).liveRange.extract();
+        if (before === null) {
+          itemDict.lastValue().liveRange.insertAfter(frag);
+        }
+        else {
+          itemDict.get(before).liveRange.insertBefore(frag);
+        }
+        itemDict.moveBefore(id, before);
+        notifyParentsRendered();
+      });
+    },
+
+    changed: function (id, fields) {
+      later(function () {
+        var elt = itemDict.get(id);
+        if (!elt)
+          throw new Error("Unknown id for changed: " + id);
+        applyChanges(elt.doc, fields);
+        Spark.renderToRange(elt.liveRange,
+                            _.bind(itemFunc, null, transformedDoc(elt.doc)));
       });
     }
   });
@@ -1004,13 +1117,14 @@ Spark.UNIQUE_LABEL = ['UNIQUE_LABEL'];
 // label must be a string.
 // or pass label === null to not drop a label after all (meaning that
 // this function is a noop)
+//
 Spark.labelBranch = function (label, htmlFunc) {
-  var renderer = Spark._currentRenderer.get();
+  var renderer = currentRenderer.get();
   if (! renderer || label === null)
     return htmlFunc();
 
   if (label === Spark.UNIQUE_LABEL)
-    label = Spark._createId();
+    label = Random.id();
 
   renderer.currentBranch.pushLabel(label);
   var html = htmlFunc();
@@ -1024,7 +1138,7 @@ Spark.labelBranch = function (label, htmlFunc) {
     return html;
 
   return renderer.annotate(
-    html, Spark._ANNOTATION_LABEL, { label: label });
+    html, ANNOTATION_LABEL, { label: label });
 
   // XXX what happens if the user doesn't use the return value, or
   // doesn't use it directly, eg, swaps the branches of the tree
@@ -1041,7 +1155,7 @@ Spark.labelBranch = function (label, htmlFunc) {
 };
 
 Spark.createLandmark = function (options, htmlFunc) {
-  var renderer = Spark._currentRenderer.get();
+  var renderer = currentRenderer.get();
   if (! renderer) {
     // no renderer -- create and destroy Landmark inline
     var landmark = new Spark.Landmark;
@@ -1075,22 +1189,22 @@ Spark.createLandmark = function (options, htmlFunc) {
     landmark = new Spark.Landmark;
     if (options.created) {
       // Run callback outside the current Spark.isolate's deps context.
-      // XXX Can't call run() on null, so this is a hack.  Running inside
-      // a fresh context wouldn't be equivalent.
-      var oldCx = Meteor.deps.Context.current;
-      Meteor.deps.Context.current = null;
-      try {
+      Deps.nonreactive(function () {
         options.created.call(landmark);
-      } finally {
-        Meteor.deps.Context.current = oldCx;
-      }
+      });
     }
   }
   notes.landmark = landmark;
 
   var html = htmlFunc(landmark);
   return renderer.annotate(
-    html, Spark._ANNOTATION_LANDMARK, function (range) {
+    html, ANNOTATION_LANDMARK, function (range) {
+      if (! range) {
+        // annotation not used
+        options.destroyed && options.destroyed.call(landmark);
+        return;
+      }
+
       _.extend(range, {
         preserve: preserve,
         constant: !! options.constant,
@@ -1107,16 +1221,25 @@ Spark.createLandmark = function (options, htmlFunc) {
 
       landmark._range = range;
       renderer.landmarkRanges.push(range);
-    }, function () {
-      // "annotation not used" callback
-      options.destroyed && options.destroyed.call(landmark);
+      // Help GC avoid an actual memory leak (#1157) by nulling the
+      // `renderer` local variable, which holds data structures about
+      // the preservation and patching performed during this rendering
+      // pass, including references to the old LiveRanges.  If
+      // `renderer` is retained by the LiveRange we initialize here,
+      // it creates a chain linking the new LiveRanges to the
+      // renderer, to the old LiveRanges, to the old renderer, etc.
+      //
+      // The reason the new LiveRange might retains `renderer` has to
+      // do with how V8 implements closures.  V8 considers
+      // `range.finalize` to close over `renderer`, even though it
+      // doesn't use it.  Because `renderer` is used by *some* nested
+      // closure, it apparently is retained by all nested closures as
+      // part of `Spark.createLandmark`'s function context.
+      renderer = null;
     });
 };
 
-// used by unit tests
-Spark._getEnclosingLandmark = function (node) {
-  var range = findRangeOfType(Spark._ANNOTATION_LANDMARK, node);
+SparkTest.getEnclosingLandmark = function (node) {
+  var range = findRangeOfType(ANNOTATION_LANDMARK, node);
   return range ? range.landmark : null;
 };
-
-})();

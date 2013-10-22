@@ -1,150 +1,164 @@
-Meteor.http = Meteor.http || {};
+HTTP.call = function(method, url, options, callback) {
 
-(function() {
+  ////////// Process arguments //////////
 
-  Meteor.http.call = function(method, url, options, callback) {
+  if (! callback && typeof options === "function") {
+    // support (method, url, callback) argument list
+    callback = options;
+    options = null;
+  }
 
-    ////////// Process arguments //////////
+  options = options || {};
 
-    if (! callback && typeof options === "function") {
-      // support (method, url, callback) argument list
-      callback = options;
-      options = null;
-    }
+  if (typeof callback !== "function")
+    throw new Error(
+      "Can't make a blocking HTTP call from the client; callback required.");
 
-    options = options || {};
+  method = (method || "").toUpperCase();
 
-    if (typeof callback !== "function")
-      throw new Error(
-        "Can't make a blocking HTTP call from the client; callback required.");
+  var headers = {};
 
-    method = (method || "").toUpperCase();
+  var content = options.content;
+  if (options.data) {
+    content = JSON.stringify(options.data);
+    headers['Content-Type'] = 'application/json';
+  }
 
-    var content = options.content;
-    if (options.data)
-      content = JSON.stringify(options.data);
+  var params_for_url, params_for_body;
+  if (content || method === "GET" || method === "HEAD")
+    params_for_url = options.params;
+  else
+    params_for_body = options.params;
 
-    var params_for_url, params_for_body;
-    if (content || method === "GET" || method === "HEAD")
-      params_for_url = options.params;
+  var query_match = /^(.*?)(\?.*)?$/.exec(url);
+  url = buildUrl(query_match[1], query_match[2],
+                 options.query, params_for_url);
+
+  if (options.followRedirects === false)
+    throw new Error("Option followRedirects:false not supported on client.");
+
+  var username, password;
+  if (options.auth) {
+    var colonLoc = options.auth.indexOf(':');
+    if (colonLoc < 0)
+      throw new Error('auth option should be of the form "username:password"');
+    username = options.auth.substring(0, colonLoc);
+    password = options.auth.substring(colonLoc+1);
+  }
+
+  if (params_for_body) {
+    content = encodeParams(params_for_body);
+  }
+
+  _.extend(headers, options.headers || {});
+
+  ////////// Callback wrapping //////////
+
+  // wrap callback to add a 'response' property on an error, in case
+  // we have both (http 4xx/5xx error, which has a response payload)
+  callback = (function(callback) {
+    return function(error, response) {
+      if (error && response)
+        error.response = response;
+      callback(error, response);
+    };
+  })(callback);
+
+  // safety belt: only call the callback once.
+  callback = _.once(callback);
+
+
+  ////////// Kickoff! //////////
+
+  // from this point on, errors are because of something remote, not
+  // something we should check in advance. Turn exceptions into error
+  // results.
+  try {
+    // setup XHR object
+    var xhr;
+    if (typeof XMLHttpRequest !== "undefined")
+      xhr = new XMLHttpRequest();
+    else if (typeof ActiveXObject !== "undefined")
+      xhr = new ActiveXObject("Microsoft.XMLHttp"); // IE6
     else
-      params_for_body = options.params;
+      throw new Error("Can't create XMLHttpRequest"); // ???
 
-    var query_match = /^(.*?)(\?.*)?$/.exec(url);
-    url = Meteor.http._buildUrl(query_match[1], query_match[2],
-                                options.query, params_for_url);
+    xhr.open(method, url, true, username, password);
 
-
-    if (options.followRedirects === false)
-      throw new Error("Option followRedirects:false not supported on client.");
-
-    var username, password;
-    if (options.auth) {
-      var colonLoc = options.auth.indexOf(':');
-      if (colonLoc < 0)
-        throw new Error('auth option should be of the form "username:password"');
-      username = options.auth.substring(0, colonLoc);
-      password = options.auth.substring(colonLoc+1);
-    }
-
-    if (params_for_body) {
-      content = Meteor.http._encodeParams(params_for_body);
-    }
-
-    ////////// Callback wrapping //////////
-
-    // wrap callback to always return a result object, and always
-    // have an 'error' property in result
-    callback = (function(callback) {
-      return function(error, result) {
-        result = result || {};
-        result.error = error;
-        callback(error, result);
-      };
-    })(callback);
-
-    // safety belt: only call the callback once.
-    callback = _.once(callback);
+    for (var k in headers)
+      xhr.setRequestHeader(k, headers[k]);
 
 
-    ////////// Kickoff! //////////
+    // setup timeout
+    var timed_out = false;
+    var timer;
+    if (options.timeout) {
+      timer = Meteor.setTimeout(function() {
+        timed_out = true;
+        xhr.abort();
+      }, options.timeout);
+    };
 
-    // from this point on, errors are because of something remote, not
-    // something we should check in advance. Turn exceptions into error
-    // results.
-    try {
-      // setup XHR object
-      var xhr;
-      if (typeof XMLHttpRequest !== "undefined")
-        xhr = new XMLHttpRequest();
-      else if (typeof ActiveXObject !== "undefined")
-        xhr = new ActiveXObject("Microsoft.XMLHttp"); // IE6
-      else
-        throw new Error("Can't create XMLHttpRequest"); // ???
+    // callback on complete
+    xhr.onreadystatechange = function(evt) {
+      if (xhr.readyState === 4) { // COMPLETE
+        if (timer)
+          Meteor.clearTimeout(timer);
 
-      xhr.open(method, url, true, username, password);
+        if (timed_out) {
+          callback(new Error("timeout"));
+        } else if (! xhr.status) {
+          // no HTTP response
+          callback(new Error("network"));
+        } else {
 
-      if (options.headers)
-        for (var k in options.headers)
-          xhr.setRequestHeader(k, options.headers[k]);
+          var response = {};
+          response.statusCode = xhr.status;
+          response.content = xhr.responseText;
 
+          response.headers = {};
+          var header_str = xhr.getAllResponseHeaders();
 
-      // setup timeout
-      var timed_out = false;
-      var timer;
-      if (options.timeout) {
-        timer = Meteor.setTimeout(function() {
-          timed_out = true;
-          xhr.abort();
-        }, options.timeout);
-      };
+          // https://github.com/meteor/meteor/issues/553
+          //
+          // In Firefox there is a weird issue, sometimes
+          // getAllResponseHeaders returns the empty string, but
+          // getResponseHeader returns correct results. Possibly this
+          // issue:
+          // https://bugzilla.mozilla.org/show_bug.cgi?id=608735
+          //
+          // If this happens we can't get a full list of headers, but
+          // at least get content-type so our JSON decoding happens
+          // correctly. In theory, we could try and rescue more header
+          // values with a list of common headers, but content-type is
+          // the only vital one for now.
+          if ("" === header_str && xhr.getResponseHeader("content-type"))
+            header_str =
+            "content-type: " + xhr.getResponseHeader("content-type");
 
-      // callback on complete
-      xhr.onreadystatechange = function(evt) {
-        if (xhr.readyState === 4) { // COMPLETE
-          if (timer)
-            Meteor.clearTimeout(timer);
+          var headers_raw = header_str.split(/\r?\n/);
+          _.each(headers_raw, function (h) {
+            var m = /^(.*?):(?:\s+)(.*)$/.exec(h);
+            if (m && m.length === 3)
+              response.headers[m[1].toLowerCase()] = m[2];
+          });
 
-          if (timed_out) {
-            callback(new Error("timeout"));
-          } else if (! xhr.status) {
-            // no HTTP response
-            callback(new Error("network"));
-          } else {
+          populateData(response);
 
-            var response = {};
-            response.statusCode = xhr.status;
-            response.content = xhr.responseText;
+          var error = null;
+          if (response.statusCode >= 400)
+            error = makeErrorByStatus(response.statusCode, response.content);
 
-            response.headers = {};
-            var header_str = xhr.getAllResponseHeaders();
-            var headers_raw = header_str.split(/\r?\n/);
-            _.each(headers_raw, function (h) {
-              var m = /^(.*?):(?:\s+)(.*)$/.exec(h);
-              if (m && m.length === 3)
-                response.headers[m[1].toLowerCase()] = m[2];
-            });
-
-            Meteor.http._populateData(response);
-
-            var error = null;
-            if (xhr.status >= 400)
-              error = new Error("failed");
-
-            callback(error, response);
-          }
+          callback(error, response);
         }
-      };
+      }
+    };
 
-      // send it on its way
-      xhr.send(content);
+    // send it on its way
+    xhr.send(content);
 
-    } catch (err) {
-      callback(err);
-    }
+  } catch (err) {
+    callback(err);
+  }
 
-  };
-
-
-})();
-
+};

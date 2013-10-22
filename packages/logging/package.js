@@ -3,12 +3,18 @@ Package.describe({
   internal: true
 });
 
-Package.on_use(function (api, where) {
-  where = where || ['client', 'server'];
-  api.add_files('logging.js', where);
+Npm.depends({
+  "cli-color": "0.2.3"
+});
+
+Package.on_use(function (api) {
+  api.export('Log');
+  api.use(['underscore', 'ejson']);
+  api.add_files('logging.js');
 });
 
 Package.on_test(function (api) {
-  api.use('logging', 'client');
-  api.add_files('logging_test.js', 'client');
+  api.use(['tinytest', 'underscore', 'ejson']);
+  api.use('logging', ['client', 'server']);
+  api.add_files('logging_test.js', ['server', 'client']);
 });

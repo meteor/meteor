@@ -4,6 +4,8 @@
 // bundle-time on the server, not in the client. (though I'd like to
 // support both..)
 
+var path = Npm.require('path');
+
 Package.describe({
   summary: "Syntax highlighting of code, from Google"
 });
@@ -14,5 +16,5 @@ Package.on_use(function (api) {
   api.add_files([
     'prettify.js',
     'prettify.css',
-    'styles/sunburst.css'], "client");
+    path.join('styles', 'sunburst.css')], "client");
 });

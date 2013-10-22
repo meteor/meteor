@@ -131,6 +131,9 @@
   daisy.X={{daisy.X}}
   tree.X={{tree.X}}
   warthog.X={{warthog.X}}
+  getNull.X={{getNull.X}}
+  getUndefined.X={{getUndefined.X}}
+  getUndefined.X.Y={{getUndefined.X.Y}}
 </template>
 
 <template name="test_helpers_d">
@@ -267,6 +270,10 @@
   <b>foo</b><u>bar</u><i>baz</i>
 </template>
 
+<template name="test_template_events_c">
+  <b>foo</b><u>bar</u><i>baz</i>
+</template>
+
 <template name="test_template_eachrender_a">
   {{#each entries}}
     <div>{{x}}</div>
@@ -312,4 +319,44 @@
 
 <template name="test_unlabeled_cursor_a1">
   <div>foo</div>
+</template>
+
+<template name="test_constant_text_a0">
+  <div><p>preserved P:{{v}}</p>{{#constant}}text{{/constant}}</div>
+</template>
+
+
+<!-- Test for Issue 617 - Type casting for helpers -->
+<template name="test_type_casting">
+{{testTypeCasting 'true' 'false' true false 0 1 -1 10 -10 1asdf -1asdf}}
+</template>
+
+<!-- Test for issue #724 - template branches are labeled wrong -->
+
+<template name="test_template_trickylabels_a0">
+  {{#unless loading}}
+    {{> test_template_trickylabels_a1}}
+  {{/unless}}
+</template>
+
+<template name="test_template_trickylabels_a1">
+  {{#isolate}}
+    {{> test_template_trickylabels_a2}}
+    {{v}}
+  {{/isolate}}
+  <div>bar</div>
+</template>
+
+<template name="test_template_trickylabels_a2">
+  <div>foo</div>
+</template>
+
+<!-- Test for issue #801 - Each handling of falsy values eg. [1, 2, null, undefined] -->
+<template name="test_template_issue801">
+{{#each values}}{{this}}{{/each}}
+</template>
+
+<!-- Test for issue #770 - falsy value for with. (newlines break this test on IE8) -->
+<template name="test_template_issue770">
+{{# with value1}}{{this}}{{else}}xxx{{/with}}{{# with value2}}{{this}}{{else}}xxx{{/with}}{{# with value1}}{{this}}{{/with}}{{# with value2}}{{this}}{{/with}}
 </template>

@@ -1,0 +1,86 @@
+{
+  "dependencies": {
+    "connect": {
+      "version": "2.9.0",
+      "dependencies": {
+        "qs": {
+          "version": "0.6.5"
+        },
+        "cookie-signature": {
+          "version": "1.0.1"
+        },
+        "buffer-crc32": {
+          "version": "0.2.1"
+        },
+        "cookie": {
+          "version": "0.1.0"
+        },
+        "send": {
+          "version": "0.1.4",
+          "dependencies": {
+            "mime": {
+              "version": "1.2.11"
+            },
+            "range-parser": {
+              "version": "0.0.4"
+            }
+          }
+        },
+        "bytes": {
+          "version": "0.2.0"
+        },
+        "fresh": {
+          "version": "0.2.0"
+        },
+        "pause": {
+          "version": "0.0.1"
+        },
+        "uid2": {
+          "version": "0.0.2"
+        },
+        "debug": {
+          "version": "0.7.2"
+        },
+        "methods": {
+          "version": "0.0.1"
+        },
+        "multiparty": {
+          "version": "2.1.8",
+          "dependencies": {
+            "readable-stream": {
+              "version": "1.0.17"
+            },
+            "stream-counter": {
+              "version": "0.1.0"
+            }
+          }
+        }
+      }
+    },
+    "send": {
+      "version": "0.1.4",
+      "dependencies": {
+        "debug": {
+          "version": "0.7.2"
+        },
+        "mime": {
+          "version": "1.2.11"
+        },
+        "fresh": {
+          "version": "0.2.0"
+        },
+        "range-parser": {
+          "version": "0.0.4"
+        }
+      }
+    },
+    "useragent": {
+      "version": "2.0.7",
+      "dependencies": {
+        "lru-cache": {
+          "version": "2.2.4"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+<template name="pkg_random">
+{{#better_markdown}}
+## `random`
+
+The `random` package provides several functions for generating random
+numbers. It uses a cryptographically strong pseudorandom number generator when
+possible, but falls back to a weaker random number generator when
+cryptographically strong randomness is not available (on older browsers or on
+servers that don't have enough entropy to seed the cryptographically strong
+generator).
+
+<dl class="callbacks">
+{{#dtdd "Random.id()"}}
+Returns a unique identifier, such as `"Jjwjg6gouWLXhMGKW"`, that is likely to
+be unique in the whole world.
+{{/dtdd}}
+
+{{#dtdd "Random.fraction()"}}
+Returns a number between 0 and 1, like `Math.random`.
+{{/dtdd}}
+
+{{#dtdd "Random.choice(arrayOrString)"}}
+Returns a random element of the given array or string.
+{{/dtdd}}
+
+{{#dtdd "Random.hexString(n)"}}
+Returns a random string of `n` hexadecimal digits.
+{{/dtdd}}
+</dl>
+
+{{/better_markdown}}
+</template>

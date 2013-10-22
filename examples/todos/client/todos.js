@@ -5,24 +5,23 @@ Lists = new Meteor.Collection("lists");
 Todos = new Meteor.Collection("todos");
 
 // ID of currently selected list
-Session.set('list_id', null);
+Session.setDefault('list_id', null);
 
 // Name of currently selected tag for filtering
-Session.set('tag_filter', null);
+Session.setDefault('tag_filter', null);
 
 // When adding tag to a todo, ID of the todo
-Session.set('editing_addtag', null);
+Session.setDefault('editing_addtag', null);
 
 // When editing a list name, ID of the list
-Session.set('editing_listname', null);
+Session.setDefault('editing_listname', null);
 
 // When editing todo text, ID of the todo
-Session.set('editing_itemname', null);
-
+Session.setDefault('editing_itemname', null);
 
 // Subscribe to 'lists' collection on startup.
 // Select a list once data has arrived.
-Meteor.subscribe('lists', function () {
+var listsHandle = Meteor.subscribe('lists', function () {
   if (!Session.get('list_id')) {
     var list = Lists.findOne({}, {sort: {name: 1}});
     if (list)
@@ -30,11 +29,14 @@ Meteor.subscribe('lists', function () {
   }
 });
 
+var todosHandle = null;
 // Always be subscribed to the todos for the selected list.
-Meteor.autosubscribe(function () {
+Deps.autorun(function () {
   var list_id = Session.get('list_id');
   if (list_id)
-    Meteor.subscribe('todos', list_id);
+    todosHandle = Meteor.subscribe('todos', list_id);
+  else
+    todosHandle = null;
 });
 
 
@@ -64,6 +66,7 @@ var okCancelEvents = function (selector, callbacks) {
           cancel.call(this, evt);
       }
     };
+
   return events;
 };
 
@@ -73,6 +76,10 @@ var activateInput = function (input) {
 };
 
 ////////// Lists //////////
+
+Template.lists.loading = function () {
+  return !listsHandle.ready();
+};
 
 Template.lists.lists = function () {
   return Lists.find({}, {sort: {name: 1}});
@@ -88,7 +95,7 @@ Template.lists.events({
   },
   'dblclick .list': function (evt, tmpl) { // start editing list name
     Session.set('editing_listname', this._id);
-    Meteor.flush(); // force DOM redraw, so we can focus the edit field
+    Deps.flush(); // force DOM redraw, so we can focus the edit field
     activateInput(tmpl.find("#list-name-input"));
   }
 });
@@ -128,11 +135,11 @@ Template.lists.editing = function () {
   return Session.equals('editing_listname', this._id);
 };
 
-// Preserve text input fields so that they aren't replaced
-// while the user is typing in them.
-Template.lists.preserve(['#list-name-input', '#new-list']);
-
 ////////// Todos //////////
+
+Template.todos.loading = function () {
+  return todosHandle && !todosHandle.ready();
+};
 
 Template.todos.any_list_selected = function () {
   return !Session.equals('list_id', null);
@@ -170,8 +177,6 @@ Template.todos.todos = function () {
   return Todos.find(sel, {sort: {timestamp: 1}});
 };
 
-Template.todos.preserve(['#new-todo']);
-
 Template.todo_item.tag_objs = function () {
   var todo_id = this._id;
   return _.map(this.tags || [], function (tag) {
@@ -206,13 +211,13 @@ Template.todo_item.events({
 
   'click .addtag': function (evt, tmpl) {
     Session.set('editing_addtag', this._id);
-    Meteor.flush(); // update DOM before focus
+    Deps.flush(); // update DOM before focus
     activateInput(tmpl.find("#edittag-input"));
   },
 
   'dblclick .display .todo-text': function (evt, tmpl) {
     Session.set('editing_itemname', this._id);
-    Meteor.flush(); // update DOM before focus
+    Deps.flush(); // update DOM before focus
     activateInput(tmpl.find("#todo-input"));
   },
 
@@ -251,8 +256,6 @@ Template.todo_item.events(okCancelEvents(
       Session.set('editing_addtag', null);
     }
   }));
-
-Template.todo_item.preserve(['#todo-input', '#edittag-input']);
 
 ////////// Tag Filter //////////
 
@@ -302,8 +305,11 @@ var TodosRouter = Backbone.Router.extend({
     ":list_id": "main"
   },
   main: function (list_id) {
-    Session.set("list_id", list_id);
-    Session.set("tag_filter", null);
+    var oldList = Session.get("list_id");
+    if (oldList !== list_id) {
+      Session.set("list_id", list_id);
+      Session.set("tag_filter", null);
+    }
   },
   setList: function (list_id) {
     this.navigate(list_id, true);

@@ -1,0 +1,4 @@
+=> Meteor 0.6.6.2: Upstream security fix: update to Node 0.10.21.
+
+   This is being downloaded in the background. Update your project
+   to Meteor 0.6.6.2 by running 'meteor update'.

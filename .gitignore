@@ -1,7 +1,16 @@
 .DS_Store
+/.meteor
 *~
 /dev_bundle
 /dev_bundle*.tar.gz
 /dist
-\#*#
+\#*\#
+.\#*
 .idea
+*.iml
+*.sublime-project
+*.sublime-workspace
+TAGS
+*.log
+*.out
+npm-debug.log

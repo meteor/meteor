@@ -1,4 +1,4 @@
-Meteor._StubStream = function () {
+StubStream = function () {
   var self = this;
 
   self.sent = [];
@@ -6,7 +6,7 @@ Meteor._StubStream = function () {
 };
 
 
-_.extend(Meteor._StubStream.prototype, {
+_.extend(StubStream.prototype, {
   // Methods from Stream
   on: function (name, callback) {
     var self = this;
@@ -36,7 +36,7 @@ _.extend(Meteor._StubStream.prototype, {
     var self = this;
 
     if (typeof data === 'object') {
-      data = JSON.stringify(data);
+      data = EJSON.stringify(data);
     }
 
     _.each(self.callbacks['message'], function (cb) {

@@ -3,25 +3,26 @@ Package.describe({
   internal: true
 });
 
-Package.on_use(function (api, where) {
-  where = where || ['client', 'server'];
-
-  // It would be sort of nice if minimongo didn't depend on
-  // underscore, so we could ship it separately.
-  api.use(['underscore', 'json'], where);
-
+Package.on_use(function (api) {
+  api.export('LocalCollection');
+  api.use(['underscore', 'json', 'ejson', 'ordered-dict', 'deps',
+           'random', 'ordered-dict']);
+  // This package is used for geo-location queries such as $near
+  api.use('geojson-utils');
   api.add_files([
     'minimongo.js',
     'selector.js',
-    'sort.js',
-    'uuid.js',
     'modify.js',
-    'diff.js'
-  ], where);
+    'diff.js',
+    'objectid.js'
+  ]);
 });
 
 Package.on_test(function (api) {
+  api.use('geojson-utils', 'client');
   api.use('minimongo', 'client');
-  api.use('tinytest');
+  api.use('test-helpers', 'client');
+  api.use(['tinytest', 'underscore', 'ejson', 'ordered-dict',
+           'random', 'deps']);
   api.add_files('minimongo_tests.js', 'client');
 });

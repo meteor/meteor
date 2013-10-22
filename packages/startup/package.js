@@ -1,9 +1,11 @@
 Package.describe({
-  summary: "Provides Meteor.startup",
+  summary: "Deprecated package (now empty)",
   internal: true
 });
 
 Package.on_use(function (api) {
-  api.add_files('startup_client.js', 'client');
-  api.add_files('startup_server.js', 'server');
+  // Deprecated -- Meteor.startup has been folded into the main
+  // 'meteor' package for now, because it seems reasonable to expect
+  // that Meteor.startup would always be available without having to
+  // include a special package.
 });

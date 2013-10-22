@@ -18,40 +18,48 @@
 
 <template name="lists">
   <h3>Todo Lists</h3>
-  <div id="lists">
-    {{#each lists}}
-      <div class="list {{selected}}">
-        {{#if editing}}
-          <div class="edit">
-            <input class="list-name-input" id="list-name-input" type="text" value="{{name}}" />
-          </div>
-        {{else}}
-          <div class="display">
-            <a class="list-name {{name_class}}" href="/{{_id}}">
-              {{name}}
-            </a>
-          </div>
-        {{/if}}
-      </div>
-    {{/each}}
-  </div>
-  <div id="createList">
-    <input type="text" id="new-list" placeholder="New list" />
-  </div>
+  {{#if loading}}
+    <div id="lists">Loading...</div>
+  {{else}}
+    <div id="lists">
+      {{#each lists}}
+        <div class="list {{selected}}">
+          {{#if editing}}
+            <div class="edit">
+              <input class="list-name-input" id="list-name-input" type="text" value="{{name}}" />
+            </div>
+          {{else}}
+            <div class="display">
+              <a class="list-name {{name_class}}" href="/{{_id}}">
+                {{name}}
+              </a>
+            </div>
+          {{/if}}
+        </div>
+      {{/each}}
+    </div>
+    <div id="createList">
+      <input type="text" id="new-list" placeholder="New list" />
+    </div>
+  {{/if}}
 </template>
 
 <template name="todos">
   {{#if any_list_selected}}
-  <div id="items-view">
-    <div id="new-todo-box">
-      <input type="text" id="new-todo" placeholder="New item" />
+    <div id="items-view">
+      {{#if loading}}
+        Loading...
+      {{else}}
+        <div id="new-todo-box">
+          <input type="text" id="new-todo" placeholder="New item" />
+        </div>
+        <ul id="item-list">
+          {{#each todos}}
+            {{> todo_item}}
+          {{/each}}
+        </ul>
+      {{/if}}
     </div>
-    <ul id="item-list">
-      {{#each todos}}
-        {{> todo_item}}
-      {{/each}}
-    </ul>
-  </div>
   {{/if}}
 </template>
 
@@ -98,5 +106,3 @@
     {{/each}}
   </div>
 </template>
-
-

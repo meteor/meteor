@@ -3,34 +3,101 @@
 </head>
 
 <body>
-  {{> test_table}}
+  <div class="container-fluid">
+  {{> navBars}}
+  {{> failedTests}}
+  {{> testTable}}
+  </div>
 </body>
 
-<template name="test_table">
-  {{#if running}}
-  <div class="header in-progress">Testing in progress ...</div>
-  {{else}}
-    {{#if passed}}
-      <div class="header pass">All tests pass!
-        <span class="time">{{total_test_time}} ms</span>
+<template name="navBars">
+  <div class="navbar navbar-fixed-top navbar-inverse">
+    <div class="navbar-inner">
+      <div class="row-fluid">
+        <div class="span3"><a class="brand" href="#">
+          &nbsp;
+          {{#if running}}
+            Testing in progress...
+          {{else}}
+            {{#if passed}}
+              All tests pass!
+            {{else}}
+              There are failures.
+            {{/if}}
+          {{/if}}
+        </a></div>
+        <div class="span2">
+          {{#unless running}}
+            <p class="navbar-text">{{total_test_time}} ms</p>
+          {{/unless}}
+        </div>
+        <div class="span6">
+          {{> progressBar}}
+        </div>
+        <div class="span1"></div>
       </div>
-    {{else}}
-      <div class="header fail">There are failures.
-        <span class="time">{{total_test_time}} ms</span>
-      </div>
-    {{/if}}
-  {{/if}}
+    </div>
+  </div>
+  {{> groupNav}}
+</template>
 
+<template name="progressBar">
+  <div id="testProgressBar" class="progress {{barOuterClass}}">
+    <span class="in-progress">Passed {{passedCount}} of {{totalCount}}</span>
+    <div class="bar bar-danger" style="width: {{percentFail}}%;"></div>
+    <div class="bar {{barInnerClass}}" style="width: {{percentPass}}%;"></div>
+  </div>
+</template>
+
+<template name="groupNav">
+  <div class="navbar navbar-fixed-bottom navbar-inverse">
+    <div class="navbar-inner">
+      <ul class="nav">
+      {{#each groupPaths}}
+        <li class="navbar-text">&nbsp;-&nbsp;</li>
+        <li><a class="group" href="#">{{name}}</a></li>
+      {{/each}}
+      </ul>
+      <form class="navbar-form pull-right">
+        <a class="btn rerun">
+          {{#if rerunScheduled}}
+          <i class="icon-time"></i>
+          Rerun scheduled...
+          {{else}}
+          <i class="icon-repeat"></i>
+          Rerun
+          {{/if}}
+        </a>
+      </form>
+      &nbsp;
+    </div>
+  </div>
+</template>
+
+<template name="failedTests">
+  <div class="row-fluid"><div class="span12">
+  <ul class="failedTests">
+    {{#each failedTests}}
+      <li>{{this}}</li>
+    {{/each}}
+  </ul>
+  </div></div>
+</template>
+
+<template name="testTable">
+  <div class="row-fluid"><div class="span12">
   <div class="test_table">
     {{#each data}}
       {{> test_group this}}
     {{/each}}
   </div>
+  </div></div>
 </template>
 
 <template name="test_group">
+  {{groupDep}}
   <div class="group">
-    <div class="groupname">{{name}}</div>
+    <div class="groupname"><a>{{name}}</a></div>
     {{#each tests}}
       {{> test}}
     {{/each}}
@@ -41,17 +108,18 @@
 </template>
 
 <template name="test">
+  {{testDep}}
   <div class="test {{test_class}}">
     <div class="testrow">
-      <div class="testname">
-        {{#if server}}S:{{else}}C:{{/if}}
-        {{name}}
-      </div>
       <div class="teststatus">
         {{test_status_display}}
       </div>
       <div class="testtime">
         {{test_time_display}}
+      </div>
+      <div class="testname">
+        {{#if server}}S:{{else}}C:{{/if}}
+        {{name}}
       </div>
     </div>
     {{#if expanded}}
@@ -74,8 +142,26 @@
       {{/if}}
       {{#with get_details}}
         {{#if this}}
-          &mdash; {{this}}
+          {{!
+            `type` can be any of the following or a
+            custom assertion type
+
+            * assert_equal
+            * instanceOf
+            * throws
+            * true
+            * null
+            * undefined
+            * NaN
+            * include
+            * length
+          }}
+          {{#if type}}&mdash; {{type}}{{/if}}
+          {{#each details}}
+            - <span class="failkey">{{key}}</span> {{val}}
+          {{/each}}
         {{/if}}
+        {{#if stack}}<pre>{{stack}}</pre>{{/if}}
       {{/with}}
       {{#if is_debuggable}}
         <span class="debug">[Debug]</span>

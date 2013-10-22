@@ -1,0 +1,75 @@
+[
+  {
+    "release": "0.6.0",
+    "notices": [
+        "Variables declared with `var` at the outermost level of a JavaScript",
+        "source file are now private to that file. Remove the `var` to share",
+        "a value between files."
+    ]
+  },
+  {
+    "release": "0.6.1"
+  },
+  {
+    "release": "0.6.2",
+    "packageNotices": {
+        "d3": ["The d3 package has been upgraded to 3.1.4. See ",
+               "https://github.com/mbostock/d3/wiki/Upgrading-to-3.0"]
+    }
+  },
+  {
+    "release": "0.6.2.1"
+  },
+  {
+    "release": "0.6.3",
+    "packageNotices": {
+      "coffeescript": ["CoffeeScript has been updated to 1.6.2 from 1.5.0. See",
+                       "http://coffeescript.org/#changelog"],
+      "localstorage-polyfill": [
+          "The localstorage-polyfill package has been replaced by the localstorage",
+          "package, which creates an object at Meteor._localStorage instead of",
+          "pretending to be window.localStorage."],
+      "http": [
+        "When using the `http` package synchronously on the server, errors",
+        "are now thrown rather than passed in `result.error`."]
+    }
+  },
+  {
+    "release": "0.6.3.1"
+  },
+  {
+    "release": "0.6.4"
+  },
+  {
+    "release": "0.6.4.1"
+  },
+  {
+    "release": "0.6.4.2"
+  },
+  {
+    "release": "0.6.5",
+    "notices": [
+      "Any custom application packages in the `packages` directory",
+      "must now specify their exported symbols.  See",
+      "https://docs.meteor.com/#writingpackages"
+    ]
+  },
+  {
+    "release": "0.6.5.1"
+  },
+  {
+    "release": "0.6.5.2"
+  },
+  {
+    "release": "0.6.6"
+  },
+  {
+    "release": "0.6.6.1"
+  },
+  {
+    "release": "0.6.6.2"
+  },
+  {
+    "release": "NEXT"
+  }
+]

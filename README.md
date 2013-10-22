@@ -44,7 +44,7 @@ with the provided script. If you do not run this script, Meteor will
 automatically download pre-compiled binaries when you first run it.
 
     # OPTIONAL
-    ./admin/generate-dev-bundle.sh
+    ./scripts/generate-dev-bundle.sh
 
 Now you can run meteor directly from the checkout (if you did not
 build the dependency bundle above, this will take a few moments to
@@ -52,26 +52,37 @@ download a pre-build version).
 
     ./meteor --help
 
-Or install to ```/usr/local``` like the normal install process. This
-will cause ```meteor``` to be in your ```PATH```.
+From your checkout, you can read the docs locally. The `/docs` directory is a
+meteor application, so simply change into the `/docs` directory and launch
+the app:
 
-    ./install.sh
-    meteor --help
-    
-After installing, you can read the docs locally. The ```/docs``` directory is a meteor application, so simply change into the ```/docs``` directory and launch the app:
-	
-	cd docs/
-	meteor
+    cd docs/
+    ../meteor
 
-You'll then be able to read the docs locally in your browser at ```http://localhost:3000/```
+You'll then be able to read the docs locally in your browser at
+`http://localhost:3000/`
+
+Note that if you run Meteor from a git checkout, you cannot pin apps to specific
+Meteor releases or run using different Meteor releases using `--release`.
+
+## Uninstalling Meteor
+
+Aside from a short launcher shell script, Meteor installs itself inside your
+home directory. To uninstall Meteor, run:
+
+    rm -rf ~/.meteor/
+    sudo rm /usr/local/bin/meteor
 
 ## Developer Resources
 
-Get in touch! We'd love to hear what you think. You can get involved
-in several ways:
+Building an application with Meteor?
 
 * Announcement list: sign up at http://www.meteor.com/
-* IRC: ```#meteor``` on ```irc.freenode.net```
 * Ask a question: http://stackoverflow.com/questions/tagged/meteor
-* Email us: ```contact@meteor.com```
-* How to contribute to Meteor: https://github.com/meteor/meteor/wiki
+* Meteor help and discussion mailing list: https://groups.google.com/group/meteor-talk
+* IRC: `#meteor` on `irc.freenode.net`
+
+Interested in contributing to Meteor?
+
+* Core framework design mailing list: https://groups.google.com/group/meteor-core
+* Contribution guidelines: https://github.com/meteor/meteor/tree/devel/Contributing.md

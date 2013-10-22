@@ -1,4 +1,7 @@
-METEOR_VERSION = "0.4.0";
+Template.headline.release = function () {
+  return Meteor.release || "(checkout)";
+};
+
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -6,6 +9,9 @@ Meteor.startup(function () {
   // colors. Just turn it off for now. We'll fix it and turn it on
   // later.
   // prettyPrint();
+
+  //mixpanel tracking
+  mixpanel.track('docs');
 
   // returns a jQuery object suitable for setting scrollTop to
   // scroll the page, either directly for via animate()
@@ -48,59 +54,84 @@ Meteor.startup(function () {
     }
   });
 
+  window.onhashchange = function () {
+    scrollToSection(location.hash);
+  };
+
+  var scrollToSection = function (section) {
+    if (! $(section).length)
+      return;
+
+    ignore_waypoints = true;
+    Session.set("section", section.substr(1));
+    scroller().animate({
+      scrollTop: $(section).offset().top
+    }, 500, 'swing', function () {
+      window.location.hash = section;
+      ignore_waypoints = false;
+    });
+  };
+
   $('#main, #nav').delegate("a[href^='#']", 'click', function (evt) {
     evt.preventDefault();
     var sel = $(this).attr('href');
-    ignore_waypoints = true;
-    Session.set("section", sel.substr(1));
-    scroller().animate({
-      scrollTop: $(sel).offset().top
-    }, 500, 'swing', function () {
-      window.location.hash = sel;
-      ignore_waypoints = false;
-    });
+    scrollToSection(sel);
+
+    mixpanel.track('docs_navigate_' + sel);
   });
+
+  // Make external links open in a new tab.
+  $('a:not([href^="#"])').attr('target', '_blank');
 });
 
 var toc = [
-  {name: "Meteor " + METEOR_VERSION, id: "top"}, [
+  {name: "Meteor " + Template.headline.release(), id: "top"}, [
     "Quick start",
     "Seven principles",
     "Resources"
   ],
   "Concepts", [
+    "What is Meteor?",
     "Structuring your app",
-    "Data",
+    "Data and security",
     "Reactivity",
     "Live HTML",
     "Templates",
-    "Smart Packages",
-    "Deploying"
+    "Using packages",
+    "Namespacing",
+    "Deploying",
+    "Writing packages"
   ],
 
   "API", [
     "Core", [
-      "Meteor.is_client",
-      "Meteor.is_server",
-      "Meteor.startup"
+      "Meteor.isClient",
+      "Meteor.isServer",
+      "Meteor.startup",
+      "Meteor.absoluteUrl",
+      "Meteor.settings",
+      "Meteor.release"
     ],
 
     "Publish and subscribe", [
       "Meteor.publish", [
-        {instance: "this", name: "set", id: "publish_set"},
-        {instance: "this", name: "unset", id: "publish_unset"},
-        {instance: "this", name: "complete", id: "publish_complete"},
-        {instance: "this", name: "flush", id: "publish_flush"},
+        {instance: "this", name: "userId", id: "publish_userId"},
+        {instance: "this", name: "added", id: "publish_added"},
+        {instance: "this", name: "changed", id: "publish_changed"},
+        {instance: "this", name: "removed", id: "publish_removed"},
+        {instance: "this", name: "ready", id: "publish_ready"},
         {instance: "this", name: "onStop", id: "publish_onstop"},
+        {instance: "this", name: "error", id: "publish_error"},
         {instance: "this", name: "stop", id: "publish_stop"}
       ],
-      "Meteor.subscribe",
-      "Meteor.autosubscribe"
+      "Meteor.subscribe"
     ],
 
     {name: "Methods", id: "methods_header"}, [
       "Meteor.methods", [
-        {instance: "this", name: "is_simulation", id: "method_is_simulation"},
+        {instance: "this", name: "userId", id: "method_userId"},
+        {instance: "this", name: "setUserId", id: "method_setUserId"},
+        {instance: "this", name: "isSimulation", id: "method_issimulation"},
         {instance: "this", name: "unblock", id: "method_unblock"}
       ],
       "Meteor.Error",
@@ -111,7 +142,8 @@ var toc = [
     {name: "Server connections", id: "connections"}, [
       "Meteor.status",
       "Meteor.reconnect",
-      "Meteor.connect"
+      "Meteor.disconnect",
+      "DDP.connect"
     ],
 
     {name: "Collections", id: "collections"}, [
@@ -120,7 +152,10 @@ var toc = [
         {instance: "collection", name: "findOne"},
         {instance: "collection", name: "insert"},
         {instance: "collection", name: "update"},
-        {instance: "collection", name: "remove"}
+        {instance: "collection", name: "upsert"},
+        {instance: "collection", name: "remove"},
+        {instance: "collection", name: "allow"},
+        {instance: "collection", name: "deny"}
       ],
 
       "Meteor.Collection.Cursor", [
@@ -129,18 +164,64 @@ var toc = [
         {instance: "cursor", name: "fetch"},
         {instance: "cursor", name: "count"},
         {instance: "cursor", name: "rewind"},
-        {instance: "cursor", name: "observe"}
+        {instance: "cursor", name: "observe"},
+        {instance: "cursor", name: "observeChanges", id: "observe_changes"}
       ],
+      {type: "spacer"},
+      {name: "Meteor.Collection.ObjectID", id: "collection_object_id"},
       {type: "spacer"},
       {name: "Selectors", style: "noncode"},
       {name: "Modifiers", style: "noncode"},
-      {name: "Sort specifiers", style: "noncode"}
+      {name: "Sort specifiers", style: "noncode"},
+      {name: "Field specifiers", style: "noncode"}
     ],
 
     "Session", [
       "Session.set",
+      {name: "Session.setDefault", id: "session_set_default"},
       "Session.get",
       "Session.equals"
+    ],
+
+    {name: "Accounts", id: "accounts_api"}, [
+      "Meteor.user",
+      "Meteor.userId",
+      "Meteor.users",
+      "Meteor.loggingIn",
+      "Meteor.logout",
+      "Meteor.logoutOtherClients",
+      "Meteor.loginWithPassword",
+      {name: "Meteor.loginWithFacebook", id: "meteor_loginwithexternalservice"},
+      {name: "Meteor.loginWithGithub", id: "meteor_loginwithexternalservice"},
+      {name: "Meteor.loginWithGoogle", id: "meteor_loginwithexternalservice"},
+      {name: "Meteor.loginWithMeetup", id: "meteor_loginwithexternalservice"},
+      {name: "Meteor.loginWithTwitter", id: "meteor_loginwithexternalservice"},
+      {name: "Meteor.loginWithWeibo", id: "meteor_loginwithexternalservice"},
+      {type: "spacer"},
+
+      {name: "{{currentUser}}", id: "template_currentuser"},
+      {name: "{{loggingIn}}", id: "template_loggingin"},
+      {type: "spacer"},
+
+      "Accounts.config",
+      "Accounts.ui.config",
+      "Accounts.validateNewUser",
+      "Accounts.onCreateUser"
+    ],
+
+    {name: "Passwords", id: "accounts_passwords"}, [
+      "Accounts.createUser",
+      "Accounts.changePassword",
+      "Accounts.forgotPassword",
+      "Accounts.resetPassword",
+      "Accounts.setPassword",
+      "Accounts.verifyEmail",
+      {type: "spacer"},
+
+      "Accounts.sendResetPasswordEmail",
+      "Accounts.sendEnrollmentEmail",
+      "Accounts.sendVerificationEmail",
+      "Accounts.emailTemplates"
     ],
 
     {name: "Templates", id: "templates_api"}, [
@@ -167,6 +248,12 @@ var toc = [
       {name: "Reactivity isolation", style: "noncode", id: "isolate"}
      ],
 
+    "Match", [
+      "check",
+      "Match.test",
+      {name: "Match patterns", style: "noncode"}
+    ],
+
     "Timers", [
       "Meteor.setTimeout",
       "Meteor.setInterval",
@@ -174,15 +261,28 @@ var toc = [
       "Meteor.clearInterval"
     ],
 
-    "Meteor.deps", [
-      {name: "Meteor.deps.Context", id: "context"}, [
-        {instance: "context", name: "run"},
-        {instance: "context", name: "on_invalidate"},
-        {instance: "context", name: "invalidate"}
+    "Deps", [
+      "Deps.autorun",
+      "Deps.flush",
+      "Deps.nonreactive",
+      "Deps.active",
+      "Deps.currentComputation",
+      "Deps.onInvalidate",
+      "Deps.afterFlush",
+      "Deps.Computation", [
+        {instance: "computation", name: "stop", id: "computation_stop"},
+        {instance: "computation", name: "invalidate", id: "computation_invalidate"},
+        {instance: "computation", name: "onInvalidate", id: "computation_oninvalidate"},
+        {instance: "computation", name: "stopped", id: "computation_stopped"},
+        {instance: "computation", name: "invalidated", id: "computation_invalidated"},
+        {instance: "computation", name: "firstRun", id: "computation_firstrun"}
       ],
-      {name: "Meteor.deps.Context.current", id: "current"},
-      "Meteor.flush"
-    // ],
+      "Deps.Dependency", [
+        {instance: "dependency", name: "changed", id: "dependency_changed"},
+        {instance: "dependency", name: "depend", id: "dependency_depend"},
+        {instance: "dependency", name: "hasDependents", id: "dependency_hasdependents"}
+      ]
+    ],
 
     // "Environment Variables", [
     //   "Meteor.EnvironmentVariable", [
@@ -190,30 +290,57 @@ var toc = [
     //     {instance: "env_var", name: "withValue", id: "env_var_withvalue"},
     //     {instance: "env_var", name: "bindEnvironment", id: "env_var_bindenvironment"}
     //   ]
+    //],
+
+    {name: "EJSON", id: "ejson"}, [
+      {name: "EJSON.parse", id: "ejson_parse"},
+      {name: "EJSON.stringify", id: "ejson_stringify"},
+      {name: "EJSON.fromJSONValue", id: "ejson_from_json_value"},
+      {name: "EJSON.toJSONValue", id: "ejson_to_json_value"},
+      {name: "EJSON.equals", id: "ejson_equals"},
+      {name: "EJSON.clone", id: "ejson_clone"},
+      {name: "EJSON.newBinary", id: "ejson_new_binary"},
+      {name: "EJSON.isBinary", id: "ejson_is_binary"},
+      {name: "EJSON.addType", id: "ejson_add_type"},
+      [
+        {instance: "instance", id: "ejson_type_clone", name: "clone"},
+        {instance: "instance", id: "ejson_type_equals", name: "equals"},
+        {instance: "instance", id: "ejson_type_typeName", name: "typeName"},
+        {instance: "instance", id: "ejson_type_toJSONValue", name: "toJSONValue"}
+      ]
     ],
 
-    "Meteor.http", [
-      "Meteor.http.call",
-      {name: "Meteor.http.get", id: "meteor_http_get"},
-      {name: "Meteor.http.post", id: "meteor_http_post"},
-      {name: "Meteor.http.put", id: "meteor_http_put"},
-      {name: "Meteor.http.del", id: "meteor_http_del"}
+
+    "HTTP", [
+      "HTTP.call",
+      {name: "HTTP.get"},
+      {name: "HTTP.post"},
+      {name: "HTTP.put"},
+      {name: "HTTP.del"}
     ],
     "Email", [
       "Email.send"
+    ],
+    {name: "Assets", id: "assets"}, [
+      {name: "Assets.getText", id: "assets_getText"},
+      {name: "Assets.getBinary", id: "assets_getBinary"}
     ]
   ],
 
   "Packages", [ [
-    "absolute-url",
+    "accounts-ui",
     "amplify",
+    "appcache",
+    "audit-argument-checks",
     "backbone",
     "bootstrap",
+    "browser-policy",
     "coffeescript",
+    "d3",
     "force-ssl",
     "jquery",
     "less",
-    "sass",
+    "random",
     "spiderable",
     "stylus",
     "showdown",
@@ -280,21 +407,19 @@ Handlebars.registerHelper('note', function(fn) {
   return Template.note_helper(fn(this));
 });
 
-Handlebars.registerHelper('dtdd', function(nameOrOptions, maybeFn) {
-  var name, type, fn;
-  if (nameOrOptions.hash) {
-    // {{#dtdd name="foo" type="bar}}
-    name = nameOrOptions.hash.name;
-    type = nameOrOptions.hash.type;
-    fn = nameOrOptions.fn;
+// "name" argument may be provided as part of options.hash instead.
+Handlebars.registerHelper('dtdd', function(name, options) {
+  if (options && options.hash) {
+    // {{#dtdd name}}
+    options.hash.name = name;
   } else {
-    // {#dtdd name}}
-    name = nameOrOptions;
-    fn = maybeFn.fn;
-    // no type
+    // {{#dtdd name="foo" type="bar"}}
+    options = name;
   }
 
-  return Template.dtdd_helper({descr: fn(this), name: name, type: type});
+  return Template.dtdd_helper({descr: options.fn(this),
+                               name: options.hash.name,
+                               type: options.hash.type});
 });
 
 Handlebars.registerHelper('better_markdown', function(fn) {

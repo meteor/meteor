@@ -1,11 +1,5 @@
 ## CORE FUNCTIONALITY THAT'S MISSING ##
 
-Dot notation is not supported at all in selectors. (Specifically: it's
-implemented but not tested, and ordinal indexing (into lists) isn't
-implemented at all.)
-
-In selectors, $elemMatch is not implemented.
-
 In update, $pull can't take a selector like {$gt: 3} (but it can take
 {x: 3}, or {x: {$gt: 3}} -- basically, selectors that match documents
 can be used, but selectors that are intended to match non-document
@@ -18,11 +12,9 @@ Sort does not support subkeys. You can sort on 'a', but not 'a.b'.
 
 ## ON TYPES ##
 
-Only the basic JSON types are implemented (string, number, boolean,
-null, array, object). These additional Mongo types aren't implemented,
-or aren't implemented completely: object id, binary data, date,
-timestamp, symbol, javascript code (with or without scope),
-minkey/maxkey, regexp (stored in the database.)
+We don't implement these Mongo types completely: timestamp (but date works),
+symbol, javascript code (with or without scope), minkey/maxkey, regexp (stored
+in the database), fixed-precision integers.
 
 If your Javascript implementation enumerates the keys of objects in a
 consistent order, then we implement object equality and object
@@ -37,25 +29,15 @@ integer type, and we don't support the integer type yet.)
 
 ## API ##
 
-Our findLive() extension needs a full set of tests (it doesn't have
-any yet.)
-
 find() doesn't support retrieving a subset of fields. It always
-returns the whole doc. findLive() doesn't support it either (it might
-be nice, to limit what changes you'll receive notifications on.)
-
-There's no such thing as a cursor. find() just returns the whole
-result set.
+returns the whole doc.
 
 find() doesn't support the min and max parameters.
 
 findAndModify isn't supported.
 
-The aggregate functions count(), distinct(), and group() aren't
-supported. Map/reduce isn't supported.
-
-findLive() doesn't support any kind of pagination. You always get all
-of the results.
+The aggregate functions distinct(), and group() aren't supported. Map/reduce
+isn't supported.
 
 update() should have a clear stance on atomicity (both in terms of
 multiple ops on a single document, and on multi-document update mode.)
@@ -64,7 +46,7 @@ It just hasn't been looked at/thought about yet.
 upsert combined with $-operators might work, but hasn't actually been
 looked at or tested.
 
-In general, the API needs tests, espectially update. (On the other
+In general, the API needs tests, especially update. (On the other
 hand, the underlying selector and mutator code is quite well tested.)
 
 ## OTHER STUFF ##

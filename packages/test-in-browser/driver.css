@@ -1,3 +1,12 @@
+body {
+    padding-top: 60px;
+    padding-bottom: 40px;
+}
+
+#testProgressBar {
+    margin-top: 10px;
+}
+
 .header {
   font-family: Arial, sans-serif;
   font-size: 24px;
@@ -24,7 +33,6 @@
 
 .test_table {
   font-family: Arial, sans-serif;
-  width: 500px;
   font-size: 16px;
 }
 
@@ -41,9 +49,11 @@
 }
 
 .test_table .testname {
+  margin-left: 200px;
   line-height: 24px;
   vertical-align: middle;
   text-decoration: underline;
+  cursor: pointer;
 }
 
 .test_table .groupname {
@@ -61,7 +71,6 @@
   border-left: 2px solid #def;
   padding: 4px;
   position: relative;
-  width: 600px;
 }
 
 .test_table .test .testrow { position: relative; overflow: hidden; /*hasLayout*/ }
@@ -74,7 +83,7 @@
   position: absolute;
   height: 100%;
   width: 100px;
-  right: 80px;
+  left: 0px;
   top: 0;
   text-align: center;
   line-height: 24px;
@@ -86,7 +95,7 @@
   height: 100%;
   width: 75px;
   margin-right: 5px;
-  right: 0;
+  left: 100px;
   top: 0;
   text-align: right;
   line-height: 24px;
@@ -103,7 +112,8 @@
 .test_table .event .fail { color: #d00; }
 .test_table .event .exception { color: #d00; }
 .test_table .event .nodata { color: #ccc; font-style: italic; }
-.test_table .event .xtimes { font-weight: bold; }
+
+.test_table .event .xtimes, .test_table .event .failkey { font-weight: bold; }
 
 .test_table .event .debug {
     display: none;
@@ -116,3 +126,9 @@
     cursor: pointer;
 }
 
+.in-progress {
+    position: absolute;
+    padding-left: 10px;
+    top: 10px;
+    z-index: 2;
+}

@@ -109,12 +109,13 @@ _.extend(ExpectationManager.prototype, {
   }
 });
 
-var testAsyncMulti = function (name, funcs) {
+testAsyncMulti = function (name, funcs) {
   // XXX Tests on remote browsers are _slow_. We need a better solution.
   var timeout = 180000;
 
   Tinytest.addAsync(name, function (test, onComplete) {
     var remaining = _.clone(funcs);
+    var context = {};
 
     var runNext = function () {
       var func = remaining.shift();
@@ -122,11 +123,11 @@ var testAsyncMulti = function (name, funcs) {
         onComplete();
       else {
         var em = new ExpectationManager(test, function () {
-          Tinytest.clearTimeout(timer);
+          Meteor.clearTimeout(timer);
           runNext();
         });
 
-        var timer = Tinytest.setTimeout(function () {
+        var timer = Meteor.setTimeout(function () {
           if (em.cancel()) {
             test.fail({type: "timeout", message: "Async batch timed out"});
             onComplete();
@@ -135,11 +136,11 @@ var testAsyncMulti = function (name, funcs) {
         }, timeout);
 
         try {
-          func(test, _.bind(em.expect, em));
+          func.apply(context, [test, _.bind(em.expect, em)]);
         } catch (exception) {
           if (em.cancel())
             test.exception(exception);
-          Tinytest.clearTimeout(timer);
+          Meteor.clearTimeout(timer);
           // Because we called test.exception, we're not to call onComplete.
           return;
         }
@@ -151,3 +152,21 @@ var testAsyncMulti = function (name, funcs) {
   });
 };
 
+pollUntil = function (expect, f, timeout, step, noFail) {
+  noFail = noFail || false;
+  step = step || 100;
+  var expectation = expect(true);
+  var start = (new Date()).valueOf();
+  var helper = function () {
+    if (f()) {
+      expectation(true);
+      return;
+    }
+    if (start + timeout < (new Date()).valueOf()) {
+      expectation(noFail);
+      return;
+    }
+    Meteor.setTimeout(helper, step);
+  };
+  helper();
+};

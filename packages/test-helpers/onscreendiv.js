@@ -9,7 +9,7 @@
 
 // Constructor, with optional 'new':
 // var d = [new] OnscreenDiv([frag])
-var OnscreenDiv = function(optFrag) {
+OnscreenDiv = function(optFrag) {
   if (! (this instanceof OnscreenDiv))
     return new OnscreenDiv(optFrag);
 
@@ -43,18 +43,16 @@ OnscreenDiv.prototype.node = function() {
 };
 
 // remove the DIV from the document and trigger
-// "fast GC" -- i.e., after the next Meteor.flush()
+// "fast GC" -- i.e., after the next Deps.flush()
 // the DIV will be fully cleaned up by LiveUI.
 OnscreenDiv.prototype.kill = function() {
   var self = this;
   if (self.div.parentNode)
     self.div.parentNode.removeChild(self.div);
 
-  var cx = new Meteor.deps.Context;
-  cx.on_invalidate(function() {
+  Deps.afterFlush(function () {
     Spark.finalize(self.div);
   });
-  cx.invalidate();
 };
 
 // remove the DIV from the document

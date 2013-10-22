@@ -3,7 +3,7 @@ Meteor.subscribe('rooms');
 Session.set('current_room', null);
 Session.set('editing_room_name', false);
 
-Meteor.autosubscribe(function () {
+Deps.autorun(function () {
   var room_id = Session.get('current_room');
   if (room_id) Meteor.subscribe('room-detail', room_id);
 });
@@ -51,7 +51,7 @@ Template.add_room.events = {
     //
     // [No idea if the comment above is still current]
     Session.set('editing_room_name', true);
-    Meteor.flush();
+    Deps.flush();
     $('#room_name_input').focus();
   }
 };
@@ -64,7 +64,7 @@ Template.room.events = {
     Session.set('editing_room_name', true);
     // XXX XXX doesn't generalize.. the element might very reasonably
     // not have a unique id. may need a different strategy..
-    Meteor.flush();
+    Deps.flush();
     $('#room_name_input').focus();
   },
   'blur input': function (evt) {

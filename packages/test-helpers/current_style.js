@@ -1,7 +1,5 @@
-
 // Cross-browser implementation of getting the computed style of an element.
-
-var getStyleProperty = function(n, prop) {
+getStyleProperty = function(n, prop) {
   if (n.currentStyle) {
     // camelCase it for IE
     return n.currentStyle[prop.replace(

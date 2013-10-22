@@ -18,10 +18,10 @@ Tinytest.add("templating - assembly", function (test) {
   document.body.appendChild(onscreen);
   test.equal(canonicalizeHtml(onscreen.innerHTML), "xyhi");
   Session.set("stuff", false);
-  Meteor.flush();
+  Deps.flush();
   test.equal(canonicalizeHtml(onscreen.innerHTML), "xhi");
   document.body.removeChild(onscreen);
-  Meteor.flush();
+  Deps.flush();
 });
 
 // Test that if a template throws an error, then pending_partials is
@@ -71,7 +71,7 @@ Tinytest.add("templating - table assembly", function(test) {
 
 
   document.body.removeChild(onscreen);
-  Meteor.flush();
+  Deps.flush();
 });
 
 Tinytest.add("templating - event handler this", function(test) {
@@ -111,7 +111,7 @@ Tinytest.add("templating - event handler this", function(test) {
   event_buf.length = 0;
 
   tmpl.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 Tinytest.add("templating - safestring", function(test) {
@@ -192,6 +192,8 @@ Tinytest.add("templating - helpers and dots", function(test) {
     daisy: 'petal',
     tree: function() { return 'leaf'; },
     thisTest: function() { return this.tree(); },
+    getNull: function() { return null; },
+    getUndefined: function () { return; },
     fancy: getFancyObject(),
     methodListFour: listFour
   };
@@ -217,7 +219,10 @@ Tinytest.add("templating - helpers and dots", function(test) {
     'watermelon.X=',
     'daisy.X=',
     'tree.X=',
-    'warthog.X='
+    'warthog.X=',
+    'getNull.X=',
+    'getUndefined.X=',
+    'getUndefined.X.Y='
   ]);
 
   test.equal(Template.test_helpers_d(dataObj).match(/\S+/g), [
@@ -340,7 +345,7 @@ Tinytest.add("templating - rendered template", function(test) {
   test.isTrue(hr1);
 
   R.set('bar');
-  Meteor.flush();
+  Deps.flush();
   var br2 = div.node().getElementsByTagName('br')[0];
   var hr2 = div.node().getElementsByTagName('hr')[0];
   test.isTrue(br2);
@@ -349,7 +354,7 @@ Tinytest.add("templating - rendered template", function(test) {
   test.isFalse(hr1 === hr2);
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   /////
 
@@ -374,7 +379,7 @@ Tinytest.add("templating - rendered template", function(test) {
   test.isTrue(hr1);
 
   R.set('bar');
-  Meteor.flush();
+  Deps.flush();
   var br2 = div.node().getElementsByTagName('br')[0];
   var hr2 = div.node().getElementsByTagName('hr')[0];
   test.isTrue(br2);
@@ -383,7 +388,7 @@ Tinytest.add("templating - rendered template", function(test) {
   test.isFalse(hr1 === hr2);
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   /////
 
@@ -404,7 +409,7 @@ Tinytest.add("templating - rendered template", function(test) {
   test.isTrue(hr1);
 
   stuff.update({foo:'bar'}, {$set: {foo: 'baz'}});
-  Meteor.flush();
+  Deps.flush();
   var br2 = div.node().getElementsByTagName('br')[0];
   var hr2 = div.node().getElementsByTagName('hr')[0];
   test.isTrue(br2);
@@ -413,7 +418,7 @@ Tinytest.add("templating - rendered template", function(test) {
   test.isFalse(hr1 === hr2);
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   /////
 
@@ -431,7 +436,7 @@ Tinytest.add("templating - rendered template", function(test) {
   test.isTrue(hr1);
 
   stuff.update({foo:'bar'}, {$set: {foo: 'baz'}});
-  Meteor.flush();
+  Deps.flush();
   var br2 = div.node().getElementsByTagName('br')[0];
   var hr2 = div.node().getElementsByTagName('hr')[0];
   test.isTrue(br2);
@@ -440,7 +445,7 @@ Tinytest.add("templating - rendered template", function(test) {
   test.isFalse(hr1 === hr2);
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
 });
 
@@ -472,12 +477,12 @@ Tinytest.add("templating - branch labels", function(test) {
   };
 
   var div = OnscreenDiv(Meteor.render(Template.test_branches_a));
-  Meteor.flush();
+  Deps.flush();
   test.equal(DomUtils.find(div.node(), 'span').innerHTML, 'foo');
   test.equal(elems.length, 3);
 
   R.set('bar');
-  Meteor.flush();
+  Deps.flush();
   var elems2 = DomUtils.findAll(div.node(), 'hr');
   elems2.sort(function(a, b) { return a.myIndex - b.myIndex; });
   test.equal(elems[0], elems2[0]);
@@ -486,7 +491,7 @@ Tinytest.add("templating - branch labels", function(test) {
   test.equal(DomUtils.find(div.node(), 'span').innerHTML, 'bar');
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 Tinytest.add("templating - matching in list", function (test) {
@@ -514,7 +519,7 @@ Tinytest.add("templating - matching in list", function (test) {
 
   var R = ReactiveVar('foo');
   var div = OnscreenDiv(Spark.render(Template.test_listmatching_a0));
-  Meteor.flush();
+  Deps.flush();
 
   test.equal(DomUtils.find(div.node(), 'span').innerHTML, 'foo');
   test.equal(div.html().match(/<p>(.*?)<\/p>/)[1].match(/\S+/g), ['a','b','c']);
@@ -522,13 +527,13 @@ Tinytest.add("templating - matching in list", function (test) {
 
   buf.length = 0;
   R.set('bar');
-  Meteor.flush();
+  Deps.flush();
   test.equal(DomUtils.find(div.node(), 'span').innerHTML, 'bar');
   test.equal(div.html().match(/<p>(.*?)<\/p>/)[1].match(/\S+/g), ['a','b','c']);
   test.equal(buf.join(''), '*a*b*c');
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
 });
 
@@ -555,19 +560,19 @@ Tinytest.add("templating - isolate helper", function (test) {
     test.equal(getTallies().join(','), str);
   };
 
-  Meteor.flush();
+  Deps.flush();
   expect("1,1,1,1");
-  bump(1);  Meteor.flush();  expect("2,2,2,2");
-  bump(2);  Meteor.flush();  expect("2,3,3,3");
-  bump(3);  Meteor.flush();  expect("2,3,4,4");
-  bump(4);  Meteor.flush();  expect("2,3,4,5");
-  Meteor.flush(); expect("2,3,4,5");
-  bump(3);  Meteor.flush();  expect("2,3,5,6");
-  bump(2);  Meteor.flush();  expect("2,4,6,7");
-  bump(1);  Meteor.flush();  expect("3,5,7,8");
+  bump(1);  Deps.flush();  expect("2,2,2,2");
+  bump(2);  Deps.flush();  expect("2,3,3,3");
+  bump(3);  Deps.flush();  expect("2,3,4,4");
+  bump(4);  Deps.flush();  expect("2,3,4,5");
+  Deps.flush(); expect("2,3,4,5");
+  bump(3);  Deps.flush();  expect("2,3,5,6");
+  bump(2);  Deps.flush();  expect("2,4,6,7");
+  bump(1);  Deps.flush();  expect("3,5,7,8");
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
 });
 
@@ -613,13 +618,13 @@ Tinytest.add("templating - template arg", function (test) {
   }));
 
   test.equal(div.text(), "Foo Bar Baz");
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.text(), "Greetings 1-bold Line");
   clickElement(DomUtils.find(div.node(), 'i'));
   test.equal(div.text(), "Hello 3-element World (the secret is strawberry pie)");
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 Tinytest.add("templating - preserve", function (test) {
@@ -636,7 +641,7 @@ Tinytest.add("templating - preserve", function (test) {
   tmpl['var'] = function () { return R.get(); };
 
   var div = OnscreenDiv(Meteor.render(tmpl));
-  Meteor.flush();
+  Deps.flush();
   test.equal(DomUtils.find(div.node(), 'u').firstChild.nodeValue.match(
       /\S+/)[0], 'foo');
   var spans1 = {};
@@ -645,7 +650,7 @@ Tinytest.add("templating - preserve", function (test) {
   });
 
   R.set('bar');
-  Meteor.flush();
+  Deps.flush();
   test.equal(DomUtils.find(div.node(), 'u').firstChild.nodeValue.match(
       /\S+/)[0], 'bar');
   var spans2 = {};
@@ -663,7 +668,7 @@ Tinytest.add("templating - preserve", function (test) {
   test.isFalse(spans1.z === spans2.z);
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 Tinytest.add("templating - helpers", function (test) {
@@ -677,7 +682,7 @@ Tinytest.add("templating - helpers", function (test) {
   var div = OnscreenDiv(Meteor.render(tmpl));
   test.equal(div.text().match(/\S+/)[0], 'abc');
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   tmpl = Template.test_template_helpers_b;
 
@@ -702,14 +707,14 @@ Tinytest.add("templating - helpers", function (test) {
   test.expect_fail();
   test.equal(txt, 'ABC4D');
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // test that helpers don't "leak"
   tmpl = Template.test_template_helpers_c;
   div = OnscreenDiv(Meteor.render(tmpl));
   test.equal(div.text(), 'x');
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 Tinytest.add("templating - events", function (test) {
@@ -726,7 +731,7 @@ Tinytest.add("templating - events", function (test) {
   clickElement(DomUtils.find(div.node(), 'b'));
   test.equal(buf, ['b']);
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   ///
 
@@ -745,8 +750,25 @@ Tinytest.add("templating - events", function (test) {
   clickElement(DomUtils.find(div.node(), 'i'));
   test.equal(buf, ['u', 'i']);
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
+  //Test for identical callbacks for issue #650
+  tmpl = Template.test_template_events_c;
+  buf = [];
+  tmpl.events({
+    'click u': function () { buf.push('a'); }
+  });
+  tmpl.events({
+    'click u': function () { buf.push('b'); }
+  });
+
+  div = OnscreenDiv(Meteor.render(tmpl));
+  clickElement(DomUtils.find(div.node(), 'u'));
+  test.equal(buf.length, 2);
+  test.isTrue(_.contains(buf, 'a'));
+  test.isTrue(_.contains(buf, 'b'));
+  div.kill();
+  Deps.flush();
 });
 
 Tinytest.add("templating - #each rendered callback", function (test) {
@@ -768,34 +790,34 @@ Tinytest.add("templating - #each rendered callback", function (test) {
       DomUtils.rangeToHtml(this.firstNode, this.lastNode)).replace(/\s/g, ''));
   };
   var div = OnscreenDiv(Meteor.render(tmpl));
-  Meteor.flush();
+  Deps.flush();
   test.equal(buf, ['<div>a</div><div>b</div><div>c</div>']);
   buf.length = 0;
 
   // added
   entries.insert({x:'d'});
   test.equal(buf, []);
-  Meteor.flush();
+  Deps.flush();
   test.equal(buf, ['<div>a</div><div>b</div><div>c</div><div>d</div>']);
   buf.length = 0;
 
   // removed
   entries.remove({x:'a'});
   test.equal(buf, []);
-  Meteor.flush();
+  Deps.flush();
   test.equal(buf, ['<div>b</div><div>c</div><div>d</div>']);
   buf.length = 0;
 
   // moved/changed
   entries.update({x:'b'}, {$set: {x: 'z'}});
   test.equal(buf, []);
-  Meteor.flush();
+  Deps.flush();
   test.equal(buf, ['<div>c</div><div>d</div><div>z</div>',
                    '<div>c</div><div>d</div><div>z</div>']);
   buf.length = 0;
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 
   // test pure "moved"
 
@@ -803,10 +825,10 @@ Tinytest.add("templating - #each rendered callback", function (test) {
   var cbks = [];
   var xs = ['a','b','c'];
   tmpl.helpers({entries: function() {
-    return { observe: function (callbacks) {
+    return { observeChanges: function (callbacks) {
       cbks.push(callbacks);
-      _.each(xs, function(x, i) {
-        callbacks.added({x:x}, i);
+      _.each(xs, function(x) {
+        callbacks.addedBefore(x, {x:x}, null);
       });
       return {
         stop: function () {
@@ -822,22 +844,22 @@ Tinytest.add("templating - #each rendered callback", function (test) {
   buf = [];
   var div = OnscreenDiv(Meteor.render(tmpl));
   test.equal(buf, []);
-  Meteor.flush();
+  Deps.flush();
   test.equal(buf, ['<div>a</div><div>b</div><div>c</div>']);
   buf.length = 0;
 
   _.each(cbks, function (callbacks) {
-    callbacks.moved({x:'a'}, 0, 2);
+    callbacks.movedBefore('a', null);
   });
   test.equal(buf, []);
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html().replace(/\s/g, ''),
              '<div>b</div><div>c</div><div>a</div>');
   test.equal(buf, ['<div>b</div><div>c</div><div>a</div>']);
   buf.length = 0;
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
 });
 
 Tinytest.add("templating - landmarks in helpers", function (test) {
@@ -859,19 +881,19 @@ Tinytest.add("templating - landmarks in helpers", function (test) {
 
   var div = OnscreenDiv(Meteor.render(tmpl));
   test.equal(div.text().match(/\S+/)[0], 'xxxxfoo');
-  Meteor.flush();
+  Deps.flush();
   buf.sort();
   test.equal(buf.join(''), 'ccccrrrr');
   buf.length = 0;
 
   R.set('bar');
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.text().match(/\S+/)[0], 'xxxxbar');
   test.equal(buf.join(''), 'rrrr');
   buf.length = 0;
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
   test.equal(buf.join(''), 'dddd');
 });
 
@@ -894,19 +916,19 @@ Tinytest.add("templating - bare each has no matching", function (test) {
   };
 
   var div = OnscreenDiv(Meteor.render(tmpl));
-  Meteor.flush();
+  Deps.flush();
   buf.sort();
   test.equal(buf.join(''), 'cccrrr');
   buf.length = 0;
 
   R.set('bar');
-  Meteor.flush();
+  Deps.flush();
   buf.sort();
   test.equal(buf.join(''), 'cccdddrrr');
   buf.length = 0;
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
   test.equal(buf.join(''), 'ddd');
 });
 
@@ -929,21 +951,21 @@ Tinytest.add("templating - templates are labeled", function (test) {
   });
 
   var div = OnscreenDiv(Meteor.render(tmpls[0]));
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), "<hr><hr><hr>foo");
   buf.sort();
   test.equal(buf.join(''), 'cccrrr');
   buf.length = 0;
 
   R.set('bar');
-  Meteor.flush();
+  Deps.flush();
   test.equal(div.html(), "<hr><hr><hr>bar");
   buf.sort();
   test.equal(buf.join(''), 'rrr');
   buf.length = 0;
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
   test.equal(buf.join(''), 'ddd');
 });
 
@@ -953,10 +975,10 @@ Tinytest.add("templating - unlabeled cursor", function (test) {
   var div = OnscreenDiv(Meteor.render(function () {
     R.get(); // create dependency
     return Template.test_unlabeled_cursor_a0(
-      {observe: function (callbacks) {
-        callbacks.added({}, 0);
-        callbacks.added({}, 1);
-        callbacks.added({}, 2);
+      {observeChanges: function (callbacks) {
+        callbacks.addedBefore('0', {}, null);
+        callbacks.addedBefore('1', {}, null);
+        callbacks.addedBefore('2', {}, null);
         return { stop: function () {} };
       }}
     );
@@ -966,8 +988,114 @@ Tinytest.add("templating - unlabeled cursor", function (test) {
   // This will fail with "can't create second landmark in branch"
   // unless _id-less objects returned from a cursor are given
   // unique branch labels in an {{#each}}.
-  Meteor.flush();
+  Deps.flush();
 
   div.kill();
-  Meteor.flush();
+  Deps.flush();
+});
+
+Tinytest.add("templating - constant text patching", function (test) {
+  // Issue #323.
+
+  var tmpl = Template.test_constant_text_a0;
+
+  var R = ReactiveVar("foo");
+
+  tmpl.preserve(['p']);
+  tmpl.v = function () {
+    return R.get();
+  };
+
+  var div = OnscreenDiv(Meteor.render(tmpl));
+  Deps.flush();
+
+  R.set("bar");
+  // This flush will fail if we can't patch the constant region,
+  // which starts with a text node, after preserving the preceding
+  // paragraph.
+  Deps.flush();
+
+  div.kill();
+  Deps.flush();
+});
+
+
+Tinytest.add('templating - helper typecast Issue #617', function (test) {
+
+  Handlebars.registerHelper('testTypeCasting', function (/*arguments*/) {
+    // Return a string representing the arguments passed to this
+    // function, including types. eg:
+    // (1, true) -> "[number,1][boolean,true]"
+    return _.reduce(_.toArray(arguments), function (memo, arg) {
+      if (typeof arg === 'object')
+        return memo + "[object]";
+      return memo + "[" + typeof arg + "," + arg + "]";
+    }, "");
+    return x;
+  });
+
+  var frag = Meteor.render(Template.test_type_casting);
+  var result = canonicalizeHtml(DomUtils.fragmentToHtml(frag));
+  test.equal(
+    result,
+    // This corresponds to entries in templating_tests.html.
+    // true/faslse
+    "[string,true][string,false][boolean,true][boolean,false]" +
+      // numbers
+      "[number,0][number,1][number,-1][number,10][number,-10]" +
+      // errors
+      "[undefined,undefined][undefined,undefined]" +
+      // handlebars 'options' argument. appended to args of all helpers.
+      "[object]");
+});
+
+Tinytest.add("templating - tricky branch labels", function (test) {
+  // regression test for issue #724
+
+  var loading = ReactiveVar(true);
+  var v = ReactiveVar(1);
+
+  var x = [];
+
+  Template.test_template_trickylabels_a0.loading = function () {
+    return loading.get();
+  };
+
+  Template.test_template_trickylabels_a1.v = function () {
+    return v.get();
+  };
+
+  _.extend(Template.test_template_trickylabels_a2, {
+    created: function () { x.push('c'); },
+    rendered: function () { x.push('r'); },
+    destroyed: function () { x.push('d'); }
+  });
+
+  var div = OnscreenDiv(Meteor.render(Template.test_template_trickylabels_a0));
+  Deps.flush();
+  loading.set(false);
+  Deps.flush();
+  x.length = 0;
+
+  v.set(2);
+  Deps.flush();
+  test.equal(x.join(''), 'r'); // no 'c' or 'd'
+  test.equal(div.html().replace(/\s+/g, ''), '<div>foo</div>2<div>bar</div>');
+
+  div.kill();
+  Deps.flush();
+});
+
+Tinytest.add('templating - each falsy Issue #801', function (test) {
+  //Minor test for issue #801
+  Template.test_template_issue801.values = function() { return [1,2,null,undefined]; };
+  var frag = Meteor.render(Template.test_template_issue801);
+  test.equal(canonicalizeHtml(DomUtils.fragmentToHtml(frag)), "12null");
+});
+
+Tinytest.add('templating - with falsy Issue #770', function (test) {
+  Template.test_template_issue770.value1 = function () { return "abc"; };
+  Template.test_template_issue770.value2 = function () { return false; };
+  var frag = Meteor.render(Template.test_template_issue770);
+  test.equal(canonicalizeHtml(DomUtils.fragmentToHtml(frag)), "abcxxxabc");
 });

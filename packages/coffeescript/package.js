@@ -2,28 +2,24 @@ Package.describe({
   summary: "Javascript dialect with fewer braces and semicolons"
 });
 
-var coffee = require('coffee-script');
-var fs = require('fs');
-
-Package.register_extension(
-  "coffee", function (bundle, source_path, serve_path, where) {
-    serve_path = serve_path + '.js';
-
-    var contents = fs.readFileSync(source_path);
-    var options = {bare: true};
-    contents = new Buffer(coffee.compile(contents.toString('utf8'), options));
-    // XXX report coffee compile failures better?
-
-    bundle.add_resource({
-      type: "js",
-      path: serve_path,
-      data: contents,
-      where: where
-    });
-  }
-);
+Package._transitional_registerBuildPlugin({
+  name: "compileCoffeescript",
+  use: [],
+  sources: [
+    'plugin/compile-coffeescript.js'
+  ],
+  npmDependencies: {"coffee-script": "1.6.3", "source-map": "0.1.24"}
+});
 
 Package.on_test(function (api) {
-  api.add_files(['coffeescript_tests.coffee', 'coffeescript_tests.js'],
-                ['client', 'server']);
+  api.use(['coffeescript', 'tinytest']);
+  api.use(['coffeescript-test-helper'], ['client', 'server']);
+  api.add_files([
+    'coffeescript_test_setup.js',
+    'tests/coffeescript_tests.coffee',
+    'tests/coffeescript_strict_tests.coffee',
+    'tests/litcoffeescript_tests.litcoffee',
+    'tests/litcoffeescript_tests.coffee.md',
+    'coffeescript_tests.js'
+  ], ['client', 'server']);
 });

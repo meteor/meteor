@@ -1,0 +1,128 @@
+<head>
+  <title>accounts-ui-viewer</title>
+</head>
+
+<body>
+  {{> page}}
+</body>
+
+<template name="radio">
+  <span class="radio"><input id="{{key}}:{{value}}" {{{maybeChecked}}} type="radio" name="{{key}}" value="{{value}}" />{{! no whitespace}}<label for="{{key}}:{{value}}">{{label}}</label></span>
+</template>
+
+<template name="button">
+  <button>{{label}}</button>
+</template>
+
+<template name="page">
+  <div id="controlpane">
+    <div class="group">
+      <h3>Dropdown align edge:</h3>
+      {{radio "alignRight" "false" "Left"}}
+      {{radio "alignRight" "true" "Right"}}
+    </div>
+    <div class="group">
+      <h3>Positioning:</h3>
+      {{radio "positioning" "relative" "Relative"}}
+      {{radio "positioning" "absolute" "Absolute"}}
+      {{radio "positioning" "floatRight" "Float:right"}}
+      {{radio "positioning" "inline" "Inline"}}
+    </div>
+    <div class="group">
+      <h3>How many third-party services?</h3>
+      {{radio "numServices" "0" "0"}}
+      {{radio "numServices" "1" "1"}}
+      {{radio "numServices" "2" "2"}}
+      {{radio "numServices" "3" "3"}}
+    </div>
+    <div class="group">
+      <h3>Has password accounts?</h3>
+      {{radio "hasPasswords" "false" "No"}}
+      {{radio "hasPasswords" "true" "Yes"}}
+    </div>
+    <div class="group">
+      <h3>Password sign-up fields:</h3>
+      {{radio "signupFields" "EMAIL_ONLY" "Email"}}
+      {{radio "signupFields" "USERNAME_ONLY" "Username"}}
+      {{radio "signupFields" "USERNAME_AND_EMAIL" "Username & Email"}}
+      {{radio "signupFields" "USERNAME_AND_OPTIONAL_EMAIL" "Username & Optional Email"}}
+    </div>
+    <div class="group">
+      <h3>Fake-Configure:</h3>
+      {{button "fakeConfig" "facebook" "Facebook"}}
+      {{button "fakeConfig" "github" "GitHub"}}
+      {{button "fakeConfig" "google" "Google"}}
+    </div>
+    <div class="group">
+      <h3>Show Configure Dialog:</h3>
+      {{button "showConfig" "facebook" "Facebook"}}
+      {{button "showConfig" "github" "GitHub"}}
+      {{button "showConfig" "google" "Google"}}
+    </div>
+    <div class="group">
+      <h3>Unconfigure:</h3>
+      {{button "unconfig" "facebook" "Facebook"}}
+      {{button "unconfig" "github" "GitHub"}}
+      {{button "unconfig" "google" "Google"}}
+    </div>
+    <div class="group">
+      <h3>Messages:</h3>
+      {{button "messages" "error" "Error"}}
+      {{button "messages" "info" "Info"}}
+      {{button "messages" "clear" "Clear"}}
+    </div>
+    <div class="group">
+      <h3>Signing in/out</h3>
+      {{button "sign" "in" "Fake sign-in"}}
+      {{button "sign" "out" "Sign out"}}
+    </div>
+    <div class="group">
+      <h3>Logged-out Views</h3>
+      {{button "lov" "signIn" "Sign In"}}
+      {{button "lov" "createAccount" "Create Account"}}
+      {{button "lov" "forgotPassword" "Forgot Password"}}
+    </div>
+    <div class="group">
+      <h3>Logged-in Views</h3>
+      {{button "liv" "accountButtons" "Account Buttons"}}
+      {{button "liv" "changePassword" "Change Password"}}
+      {{button "liv" "messageOnly" "Message Only"}}
+    </div>
+    <div class="group">
+      <h3>Other Modals</h3>
+      {{button "modals" "resetPassword" "Reset Password"}}
+      {{button "modals" "enrollAccount" "Enroll Account"}}
+      {{button "modals" "justVerifiedEmail" "Verified Email"}}
+    </div>
+    <div class="group">
+      <h3>Logging-in Spinner</h3>
+      {{radio "fakeLoggingIn" "false" "Off"}}
+      {{radio "fakeLoggingIn" "true" "Pretend loggingIn=true"}}
+    </div>
+    <div class="group">
+      <h3>Background Color</h3>
+      {{radio "bgcolor" "white" "White"}}
+      {{radio "bgcolor" "black" "Black"}}
+      {{radio "bgcolor" "red" "Red"}}
+    </div>
+  </div>
+  {{#with settings}}
+  <div id="previewpane" class="{{settingsClass}}" style="background:{{bgcolor}}">
+    <div id="preview-wrapper">
+      {{#if match "positioning:inline"}}
+        Here is a place to sign in, yay!
+      {{/if}}
+      {{loginButtons align=dropdownAlign}}
+      {{#if match "positioning:inline"}}
+        Isn't that great?
+      {{/if}}
+    </div>
+    <div id="pos-indicator"></div>
+    {{#unless match "positioning:absolute"}}
+      <div style="clear:both">
+        A line that shouldn't move when logging in and logging out
+      </div>
+    {{/unless}}
+  </div>
+  {{/with}}
+</template>

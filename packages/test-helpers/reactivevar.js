@@ -12,26 +12,17 @@
 // Constructor, with optional 'new':
 // var R = [new] ReactiveVar([initialValue])
 
-
-var ReactiveVar = function(initialValue) {
+ReactiveVar = function(initialValue) {
   if (! (this instanceof ReactiveVar))
     return new ReactiveVar(initialValue);
 
   this._value = (typeof initialValue === "undefined" ? null :
                  initialValue);
-  this._deps = {};
+  this._deps = new Deps.Dependency;
 };
 
 ReactiveVar.prototype.get = function() {
-  var context = Meteor.deps.Context.current;
-  if (context && !(context.id in this._deps)) {
-    this._deps[context.id] = context;
-    var self = this;
-    context.on_invalidate(function() {
-      delete self._deps[context.id];
-    });
-  }
-
+  this._deps.depend();
   return this._value;
 };
 
@@ -43,11 +34,10 @@ ReactiveVar.prototype.set = function(newValue) {
 
   this._value = newValue;
 
-  for(var id in this._deps)
-    this._deps[id].invalidate();
-
+  this._deps.changed();
 };
 
 ReactiveVar.prototype.numListeners = function() {
-  return _.keys(this._deps).length;
+  // accesses private field (tests want to know)
+  return _.keys(this._deps._dependentsById).length;
 };
