@@ -330,15 +330,25 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
           return;
         }
 
-        if (!_.isEmpty(pendingSequencers)
-            && _.last(pendingSequencers).ts.greaterThan(ts)) {
+        var insertAfter = pendingSequencers.length;
+        while (insertAfter - 1 > 0
+               && pendingSequencers[insertAfter - 1].ts.greaterThan(ts)) {
+          insertAfter--;
+        }
+
+        // XXX this can occur if we fail over from one primary to another.  so
+        // this check needs to be removed before we merge oplog.  that said, it
+        // has been helpful so far at proving that we are properly using
+        // poolSize 1. Also, we could keep something like it if we could
+        // actually detect failover; see
+        // https://github.com/mongodb/node-mongodb-native/issues/1120
+        if (insertAfter !== pendingSequencers.length) {
           throw Error("found misordered oplog: "
                       + showTS(_.last(pendingSequencers).ts) + " vs "
                       + showTS(ts));
         }
 
-        pendingSequencers.push({ts: ts,
-                                callback: callback});
+        pendingSequencers.splice(insertAfter, 0, {ts: ts, callback: callback});
       }).run();
     }
   };
