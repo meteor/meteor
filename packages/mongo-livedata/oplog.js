@@ -27,8 +27,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
   var published = new IdMap;
   var selector = LocalCollection._compileSelector(cursorDescription.selector);
 
-  // XXX eliminate "curious" name
-  var curiousity = new IdMap;
+  var needToFetch = new IdMap;
   var currentlyFetching = new IdMap;
 
   var add = function (doc) {
@@ -67,17 +66,17 @@ MongoConnection.prototype._observeChangesWithOplog = function (
     }
   };
 
-  var beCurious = function () {
+  var fetchModifiedDocuments = function () {
     phase = PHASE.FETCHING;
-    while (!curiousity.isEmpty()) {
+    while (!needToFetch.isEmpty()) {
       if (phase !== PHASE.FETCHING)
-        throw new Error("Surprising phase in beCurious: " + phase);
+        throw new Error("Surprising phase in fetchModifiedDocuments: " + phase);
 
       var futures = [];
-      currentlyFetching = curiousity;
-      curiousity = new IdMap;
+      currentlyFetching = needToFetch;
+      needToFetch = new IdMap;
       currentlyFetching.each(function (cacheKey, id) {
-        // Run each until they yield. This implies that curiousity should not be
+        // Run each until they yield. This implies that needToFetch will not be
         // updated during this loop.
         Fiber(function () {
           var f = new Future;
@@ -111,7 +110,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
 
   var oplogEntryHandlers = {};
   oplogEntryHandlers[PHASE.INITIALIZING] = function (op) {
-    curiousity.set(idForOp(op), op.ts.toString());
+    needToFetch.set(idForOp(op), op.ts.toString());
   };
   oplogEntryHandlers[PHASE.FETCHING] = function (op) {
     var id = idForOp(op);
@@ -119,15 +118,15 @@ MongoConnection.prototype._observeChangesWithOplog = function (
     // directly.
   };
   // We can use the same handler for STEADY and FETCHING; the main difference is
-  // that FETCHING has non-empty currentlyFetching and/or curiousity.
+  // that FETCHING has non-empty currentlyFetching and/or needToFetch.
   oplogEntryHandlers[PHASE.STEADY] = function (op) {
     var id = idForOp(op);
     // If we're already fetching this one, or about to, we can't optimize; make
     // sure that we fetch it again if necessary.
-    if (currentlyFetching.has(id) || curiousity.has(id)) {
+    if (currentlyFetching.has(id) || needToFetch.has(id)) {
       if (phase !== PHASE.FETCHING)
         throw Error("map not empty during steady phase");
-      curiousity.set(id, op.ts.toString());
+      needToFetch.set(id, op.ts.toString());
       return;
     }
 
@@ -167,9 +166,9 @@ MongoConnection.prototype._observeChangesWithOplog = function (
           return;
         }
 
-        curiousity.set(id, op.ts.toString());
+        needToFetch.set(id, op.ts.toString());
         if (phase === PHASE.STEADY)
-          beCurious();
+          fetchModifiedDocuments();
         return;
       }
     } else {
@@ -219,11 +218,11 @@ MongoConnection.prototype._observeChangesWithOplog = function (
   if (phase !== PHASE.INITIALIZING)
     throw Error("Phase unexpectedly " + phase);
 
-  if (curiousity.isEmpty()) {
+  if (needToFetch.isEmpty()) {
     beSteady();
   } else {
     phase = PHASE.FETCHING;
-    Meteor.defer(beCurious);
+    Meteor.defer(fetchModifiedDocuments);
   }
 
   return {
