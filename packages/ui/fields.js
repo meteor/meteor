@@ -89,11 +89,12 @@ _extend(UI.Component, {
       };
     }
 
-    return function (/*arguments*/) {
-      if (typeof result === 'function') {
+    if (typeof result === 'function') {
+      return function (/*arguments*/) {
         var data = getComponentData(self);
         return result.apply(data, arguments);
-      }
+      };
+    } else {
       return result;
     };
   },
