@@ -262,11 +262,12 @@ var checkSubtree = function (value, pattern) {
 
 var ArgumentChecker = function (f, args, description) {
   var self = this;
-  // Make a SHALLOW copy of the arguments. (We'll be doing identity checks
-  // against its contents.)
-  self.args = _.clone(args);
-  // The argument names will be used to display more precise error messages
-  self.argNames = _argumentNames(f);
+  // Make a SHALLOW copy of the arguments with their indices.
+  // (We'll be doing identity checks against its contents.)
+  self.args = _.map(args, function(arg, i) { return [arg, i]; });
+  // In the case that some arguments are left unchecked, we will need
+  // to extract the argument names from the function.
+  self.f = f;
   self.description = description;
 };
 
@@ -288,9 +289,8 @@ _.extend(ArgumentChecker.prototype, {
       // Is this value one of the arguments? (This can have a false positive if
       // the argument is an interned primitive, but it's still a good enough
       // check.)
-      if (value === self.args[i]) {
+      if (value === self.args[i][0]) {
         self.args.splice(i, 1);
-        self.argNames.splice(i, 1);
         return true;
       }
     }
@@ -300,12 +300,17 @@ _.extend(ArgumentChecker.prototype, {
     var self = this;
     if (!_.isEmpty(self.args)) {
       // Are there any named arguments left unchecked?
-      if (!_.isEmpty(self.argNames))
-        throw new Error("Some arguments (" + self.argNames.join(", ") +
-                        ") left unchecked during " + self.description);
-      else
-        throw new Error("Passed too many arguments to function " +
-                        self.description);
+      var argNames = _argumentNames(self.f);
+      var unchecked = _.map(self.args, function(arg) {
+        if (argNames[arg[1]]) {
+          return argNames[arg[1]];
+        } else {
+          throw new Error("Passed too many arguments to function " +
+                          self.description);
+        }
+      });
+      throw new Error("Some arguments (" + unchecked.join(", ") +
+                      ") left unchecked during " + self.description);
     }
   }
 });
