@@ -1173,6 +1173,11 @@ Template.api.accounts_config = {
       name: "loginExpirationInDays",
       type: "Number",
       descr: "The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to `null` to disable login expiration."
+    },
+    {
+      name: "restrictClientAccountCreation",
+      type: "Function",
+      descr: "If set, allow calls to [`createUser`](#accounts_createuser) from the client only if this predicate function returns true. The function is called with one argument: the `userId` of the connection calling `createUser`."
     }
   ]
 };
@@ -1263,6 +1268,11 @@ Template.api.accounts_createUser = {
       name: "profile",
       type: "Object",
       descr: "The user's profile, typically including the `name` field."
+    },
+    {
+      name: "suppressLogin",
+      type: "Boolean",
+      descr: "Do not log in as the newly created user.  Defaults to `false`."
     }
   ]
 };

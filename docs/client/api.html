@@ -1685,8 +1685,8 @@ include a turn-key user interface for password-based sign-in.
 {{> api_box accounts_createUser}}
 
 On the client, this function logs in as the newly created user on
-successful completion. On the server, it returns the newly created user
-id.
+successful completion, unless the `suppressLogin` option is set to
+`true`.  On the server, it returns the newly created user id.
 
 On the client, you must pass `password` and one of `username` or `email`
 &mdash; enough information for the user to be able to log in again
