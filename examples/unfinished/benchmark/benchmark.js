@@ -125,6 +125,8 @@ if (Meteor.isServer) {
   // - serverId
   // - num ddp sessions
   // - total documents
+
+  Facts.setUserIdFilter(function () {return true;});
 }
 
 
