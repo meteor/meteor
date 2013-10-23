@@ -29,6 +29,59 @@ _.extend(Ctl, {
     return 0;
   },
 
+  startServerlikeProgramIfNotPresent: function (program, tags, admin) {
+    var numServers = Ctl.getJobsByApp(
+      Ctl.myAppName(), {program: program, done: false}).count();
+    if (numServers === 0) {
+      Ctl.startServerlikeProgram(program, tags, admin);
+    } else {
+      console.log(program, "already running.");
+    }
+  },
+
+  startServerlikeProgram: function (program, tags, admin) {
+    var appConfig = Ctl.prettyCall(
+      Ctl.findGalaxy(), 'getAppConfiguration', [Ctl.myAppName()]);
+    if (typeof admin == 'undefined')
+      admin = appConfig.admin;
+
+    var proxyConfig;
+    var bindPathPrefix = "";
+    if (admin) {
+      bindPathPrefix = "/" + encodeURIComponent(Ctl.myAppName()).replace(/\./g, '_');
+    }
+
+    // Allow appConfig settings to be objects or strings. We need to stringify
+    // them to pass them to the app in the env var.
+    // Backwards compat with old app config format.
+    _.each(["settings", "METEOR_SETTINGS"], function (settingsKey) {
+      if (appConfig[settingsKey] && typeof appConfig[settingsKey] === "object")
+        appConfig[settingsKey] = JSON.stringify(appConfig[settingsKey]);
+    });
+
+    // XXX args? env?
+    Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), program, {
+      exitPolicy: 'restart',
+      env: {
+        ROOT_URL: "https://" + appConfig.sitename + bindPathPrefix,
+        METEOR_SETTINGS: appConfig.settings || appConfig.METEOR_SETTINGS,
+        ADMIN_APP: admin
+      },
+      ports: {
+        "main": {
+          bindEnv: "PORT",
+          routeEnv: "ROUTE"//,
+          //bindIpEnv: "BIND_IP" // Later, we can teach Satellite to do
+          //something like recommend the process bind to a particular IP here.
+          //For now, we don't have a way of setting this, so Satellite binds
+          //to 0.0.0.0
+        }
+      },
+      tags: tags
+    }]);
+    console.log("Started", program);
+  },
+
   findCommand: function (name) {
     var cmd = _.where(Ctl.Commands, { name: name })[0];
     if (! cmd) {
