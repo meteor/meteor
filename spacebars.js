@@ -142,7 +142,7 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
 
     if (tokType === 'BOOLEAN') {
       advance(text.length);
-      return ['BOOLEAN', Boolean(tok.text())];
+      return ['BOOLEAN', tok.text() === 'true'];
     } else if (tokType === 'NULL') {
       advance(text.length);
       return ['NULL', null];
