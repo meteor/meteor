@@ -22,6 +22,9 @@ MongoConnection.prototype._observeChangesWithOplog = function (
   cursorDescription, callbacks) {
   var self = this;
 
+  Package.facts && Package.facts.Facts.incrementServerFact(
+    "mongo-livedata", "oplog-observers", 1);
+
   var phase = PHASE.INITIALIZING;
 
   var published = new IdMap;
@@ -233,6 +236,8 @@ MongoConnection.prototype._observeChangesWithOplog = function (
     stop: function () {
       listenersHandle.stop();
       oplogHandle.stop();
+      Package.facts && Package.facts.Facts.incrementServerFact(
+        "mongo-livedata", "oplog-observers", -1);
     }
   };
 };
