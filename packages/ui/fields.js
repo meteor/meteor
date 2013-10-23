@@ -33,17 +33,11 @@ var builtInComponents = {
 };
 
 _extend(UI.Component, {
-  // _dontCall is for internal use only.
-  //
-  // note: `get`/`lookup` will probably take multiple arguments
-  // (forming a path)
-
   lookup: function (id) {
     var self = this;
-
     var result;
-
     var comp;
+
     if (! id) {
       // `id` is `""` or absent/undefined
       return lookupComponentProp(self, 'data');
