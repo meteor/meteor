@@ -98,6 +98,10 @@ Tinytest.add("spacebars - stache tags", function (test) {
                         args: []});
   run('{{[].foo}}', "Path can't start with empty string");
 
+  run('{{foo null}}', {type: 'DOUBLE', path: ['foo'],
+                       args: [['NULL', null]]});
+  run('{{foo false}}', {type: 'DOUBLE', path: ['foo'],
+                       args: [['BOOLEAN', false]]});
   run('{{foo true}}', {type: 'DOUBLE', path: ['foo'],
                        args: [['BOOLEAN', true]]});
   run('{{foo "bar"}}', {type: 'DOUBLE', path: ['foo'],
