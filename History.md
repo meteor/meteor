@@ -1,5 +1,11 @@
 ## vNEXT
 
+* Fix error when publish function callbacks are called during session shutdown.
+
+* Bundler failures cause non-zero exit code in `meteor run`.  #1515
+
+* Ensure more downtime during file watching.  #1506
+
 * Fix `meteor run` with settings files containing non-ASCII characters.  #1497
 
 * Support `EJSON.clone` for `Meteor.Error`. As a result, they are properly
