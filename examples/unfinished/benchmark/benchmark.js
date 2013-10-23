@@ -52,6 +52,7 @@ if (Meteor.isServer) {
     Messages._ensureIndex({room: 1});
     Messages._ensureIndex({when: 1});
     Rooms._ensureIndex({random: 1});
+    Rooms._ensureIndex({when: 1});
   });
 
   // periodic document cleanup.
@@ -70,7 +71,7 @@ if (Meteor.isServer) {
     Meteor.setInterval(function () {
       var when = +(new Date) - PARAMS.roomHistorySeconds*1000;
       Rooms.remove({when: {$lt: when}});
-    }, 1000*PARAMS.roomsHistorySeconds / 20);
+    }, 1000*PARAMS.roomHistorySeconds / 20);
   }
 
 
