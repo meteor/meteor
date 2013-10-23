@@ -49,16 +49,6 @@ Messages = new Meteor.Collection("messages");
 if (Meteor.isServer) {
   // init
   Meteor.startup(function () {
-    if (!Rooms.findOne()) {
-      Meteor.call('setNumRooms', PARAMS.initialNumRooms);
-    } else {
-      // XXX add random to rooms that don't have it
-      // back compat. remove soon.
-      _.each(Rooms.find({random: null}).fetch(), function (r) {
-        Rooms.update(r._id, {$set: {random: Random.fraction()}});
-      });
-    }
-
     Messages._ensureIndex({room: 1});
     Messages._ensureIndex({when: 1});
     Rooms._ensureIndex({random: 1});
@@ -66,6 +56,7 @@ if (Meteor.isServer) {
 
   // periodic document cleanup.
   // XXX only needs to run on one server.
+  // XXX do we even need this with room deletion?
   if (PARAMS.messageHistorySeconds) {
     Meteor.setInterval(function () {
       var when = +(new Date) - PARAMS.messageHistorySeconds*1000;
@@ -73,14 +64,34 @@ if (Meteor.isServer) {
     }, 1000*PARAMS.messageHistorySeconds / 20);
   }
 
-  Meteor.publish("rooms", function () {
+  // periodic room cleanup.
+  // XXX only needs to run on one server.
+  if (PARAMS.roomHistorySeconds) {
+    Meteor.setInterval(function () {
+      var when = +(new Date) - PARAMS.roomHistorySeconds*1000;
+      Rooms.remove({when: {$lt: when}});
+    }, 1000*PARAMS.roomsHistorySeconds / 20);
+  }
+
+
+
+  Meteor.publish("rooms", function (clientId) {
     var self = this;
+    check(clientId, String);
 
-    var rooms = Rooms.find({random: {$gte: Random.fraction()}},
-                           {limit: PARAMS.roomsPerClient,
-                            order: {random: 1}}).fetch();
+    var myRoom = Rooms.findOne(clientId);
+    // yeah, yeah, i'm inserting in a publish function. deal with it.
+    if (!myRoom) {
+      myRoom = {_id: clientId, when: +(new Date()), random: Random.fraction()};
+      Rooms.insert(myRoom);
+    }
+    self.added("rooms", clientId, myRoom);
 
-    _.each(rooms, function (room) {
+    var otherRooms = Rooms.find({random: {$gte: Random.fraction()}},
+                                {limit: PARAMS.roomsPerClient,
+                                 order: {random: 1}}).fetch();
+
+    _.each(otherRooms, function (room) {
       self.added("rooms", room._id, room);
     });
 
@@ -104,20 +115,6 @@ if (Meteor.isServer) {
       doc.when = +(new Date);
 
       Messages.insert(doc);
-    },
-
-    setNumRooms: function (numRooms) {
-      check(numRooms, Match.Integer);
-      var current = Rooms.find({}).count();
-      if (current > numRooms) {
-        _.times(current - numRooms, function () {
-          Rooms.remove(Rooms.findOne({}, {fields: {_id: true}}));
-        });
-      } else if (current < numRooms) {
-        _.times(numRooms - current, function () {
-          Rooms.insert({random: Random.fraction()});
-        });
-      }
     }
   });
 
@@ -133,7 +130,7 @@ if (Meteor.isServer) {
 
 if (Meteor.isClient) {
   var myRooms = [];
-  Meteor.subscribe("rooms", function () {
+  Meteor.subscribe("rooms", processId, function () {
     // XXX should autorun to change rooms? meh.
     var r = Rooms.find({}, {limit: PARAMS.roomsPerClient}).fetch();
     _.each(r, function (room) {
