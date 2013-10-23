@@ -287,10 +287,14 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
       if (!_.has(callbacksByCollection, collectionName))
         callbacksByCollection[collectionName] = {};
       var callbackId = nextId++;
+      Package.facts && Package.facts.Facts.incrementServerFact(
+        "mongo-livedata", "oplog-watchers", 1);
       callbacksByCollection[collectionName][callbackId] = callback;
       return {
         stop: function () {
           delete callbacksByCollection[collectionName][callbackId];
+          Package.facts && Package.facts.Facts.incrementServerFact(
+            "mongo-livedata", "oplog-watchers", -1);
         }
       };
     },
