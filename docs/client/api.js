@@ -1166,8 +1166,8 @@ Template.api.accounts_config = {
     },
     {
       name: "restrictCreationByEmailDomain",
-      type: "String Or Function",
-      descr: "If set, only allow new users with an email in the specified domain or if the predicate function returns true. Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })`."
+      type: "String or Function",
+      descr: "If set to a string, only allows new users if the domain part of their email address matches the string. If set to a function, only allows new users if the function returns true.  The function is passed the full email address of the proposed new user.  Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })`."
     },
     {
       name: "loginExpirationInDays",
