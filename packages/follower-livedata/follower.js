@@ -1,4 +1,5 @@
 var fs = Npm.require('fs');
+var Future = Npm.require('fibers/future');
 
 var readFile = Meteor._wrapAsync(fs.readFile);
 
@@ -42,6 +43,10 @@ Follower = {
     var leader = null;
     var connected = null;
     var intervalHandle = null;
+
+    // Used to defer all method calls until we're sure that we connected to the
+    // right leadership group.
+    var connectedToLeadershipGroup = new Future();
 
     var findFewestTries = function () {
       var min = 10000;
@@ -97,6 +102,9 @@ Follower = {
             tryElector();
             return;
           }
+          if (! connectedToLeadershipGroup.isResolved()) {
+            connectedToLeadershipGroup["return"]();
+          }
           // we got an answer!  Connected!
           electorTries[url] = 0;
           if (res.leader === url) {
@@ -130,6 +138,9 @@ Follower = {
               electorTries[connected]++;
               tryElector();
             } else {
+              if (! connectedToLeadershipGroup.isResolved()) {
+                connectedToLeadershipGroup["return"]();
+              }
               //console.log("updating electorate with", res);
               updateElectorate(res);
             }
@@ -169,6 +180,15 @@ Follower = {
 
     conn.tries = function () {
       return electorTries;
+    };
+
+    // Assumes that `call` is implemented in terms of `apply`. All method calls
+    // should be deferred until we are sure we've connected to the right
+    // leadership group.
+    conn._applyImpl = conn.apply;
+    conn.apply = function (/* arguments */) {
+      connectedToLeadershipGroup.wait();
+      return conn._applyImpl.apply(conn, arguments);
     };
 
     return conn;
