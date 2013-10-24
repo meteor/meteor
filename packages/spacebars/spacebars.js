@@ -85,21 +85,38 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
 
   var scanPath = function () {
     var segments = [];
-    // Initial empty string in segments means `this` or `.`.
-    var dots;
 
-    // handle `.` and `./`, disallow `..`
-    if ((dots = run(/^\.+/))) {
-      if (dots.length > 1)
-        error("`..` is not supported");
-      segments.push('');
-      // only thing that can follow a `.` is a `/`
-      if (! run(/^\//))
+    // handle initial `.`, `..`, `./`, `../`, `../..`, `../../`, etc
+    var dots;
+    if ((dots = run(/^[\.\/]+/))) {
+      var ancestorStr = '.'; // eg `../../..` maps to `....`
+      var endsWithSlash = /\/$/.test(dots);
+
+      if (endsWithSlash)
+        dots = dots.slice(0, -1);
+
+      _.each(dots.split('/'), function(dotClause, index) {
+        if (index === 0) {
+          if (dotClause !== '.' && dotClause !== '..')
+            expected("`.`, `..`, `./` or `../`");
+        } else {
+          if (dotClause !== '..')
+            expected("`..` or `../`");
+        }
+
+        if (dotClause === '..')
+          ancestorStr += '.';
+      });
+
+      segments.push(ancestorStr);
+
+      if (!endsWithSlash)
         return segments;
     }
 
     while (true) {
       // scan a path segment
+
       if (run(/^\[/)) {
         var seg = run(/^[\s\S]*?\]/);
         if (! seg)
@@ -112,7 +129,7 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
         var id = scanIdentifier(! segments.length);
         if (id === 'this' && ! segments.length) {
           // initial `this`
-          segments.push('');
+          segments.push('.');
         } else {
           segments.push(id);
         }
@@ -121,10 +138,6 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
       var sep = run(/^[\.\/]/);
       if (! sep)
         break;
-      if (/^\.\./.test(str))
-        error("`..` is not supported");
-      if (/^\./.test(str))
-        error("`.` is only allowed at start of path");
     }
 
     return segments;

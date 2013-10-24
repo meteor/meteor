@@ -66,8 +66,8 @@ Tinytest.add("spacebars - stache tags", function (test) {
       {type: 'DOUBLE', path: ['foo'],
        args: [['PATH', ['bar']],
               ['PATH', ['qux'], 'baz'],
-              ['PATH', [''], 'x3'],
-              ['PATH', ['', 'foo']],
+              ['PATH', ['.'], 'x3'],
+              ['PATH', ['.', 'foo']],
               ['PATH', ['foo', 'bar']],
               ['PATH', ['a', 'b', 'c']]]});
 
@@ -76,18 +76,22 @@ Tinytest.add("spacebars - stache tags", function (test) {
        args: [['NUMBER', 0.3],
               ['PATH', ['0', '3']],
               ['NUMBER', .4],
-              ['PATH', ['', '4']]]});
+              ['PATH', ['.', '4']]]});
 
   run('{{# foo this this.x null z=null}}',
       {type: 'BLOCKOPEN', path: ['foo'],
-       args: [['PATH', ['']],
-              ['PATH', ['', 'x']],
+       args: [['PATH', ['.']],
+              ['PATH', ['.', 'x']],
               ['NULL', null],
               ['NULL', null, 'z']]});
 
-  run('{{foo ..}}', "`..` is not supported");
-  run('{{foo x/..}}', "`..` is not supported");
-  run('{{foo x/.}}', "`.`");
+  run('{{./foo 3}}', {type: 'DOUBLE', path: ['.', 'foo'], args: [['NUMBER', 3]]});
+  run('{{this/foo 3}}', {type: 'DOUBLE', path: ['.', 'foo'], args: [['NUMBER', 3]]});
+  run('{{../foo 3}}', {type: 'DOUBLE', path: ['..', 'foo'], args: [['NUMBER', 3]]});
+  run('{{../../foo 3}}', {type: 'DOUBLE', path: ['...', 'foo'], args: [['NUMBER', 3]]});
+
+  run('{{foo x/..}}', "Expected");
+  run('{{foo x/.}}', "Expected");
 
   run('{{#a.b.c}}', {type: 'BLOCKOPEN', path: ['a', 'b', 'c'],
                      args: []});
