@@ -252,6 +252,7 @@ var Session = function (server, version, socket) {
   self._pendingReady = [];
 
   socket.send(stringifyDDP({msg: 'connected',
+                            serverTime: Date.now(),
                             session: self.id}));
   // On initial connect, spin up all the universal publishers.
   Fiber(function () {
