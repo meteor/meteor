@@ -106,7 +106,7 @@ A "dotted path" is generally a series of one or more JavaScript identifier names
 
 The use of `/` as a separator instead of `.` is also allowed, as in `foo/bar`.
 
-An "anchored path" is one that has the identifier `this` or the special path element `.` in the first position, as in `this.foo` or `./foo`, which are equivalent.  In the second or later position, `this` is considered a normal identifier with no special meaning and `.` is disallowed.  There is no `..` special element, and `..` never appears in a valid path.
+An "anchored path" is one that has the identifier `this` or the special path elements `.` or `..` in the first position, as in `this.foo` or `./foo`, which are equivalent.  `..` is a special path element that can appear multiple times but not after any non-`..` elements.  After `this`, `.`, or a series of `..`, `this` is considered a normal identifier with no special meaning and `.` or '..` are disallowed.
 
 A path element may also be written in square brackets, in which case it may contain any character except for `]`.  Such an element may even be empty, written as `[]`, but the first element of a path may not be empty.  Brackets are required to use one of the following as the first element of a path: `else`, `this`, `true`, `false`, and `null`.  Brackets are not required around JavaScript keywords and reserved words like `var` and `for`.
 
