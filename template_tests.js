@@ -229,6 +229,25 @@ Tinytest.add("spacebars - templates - inclusion dotted args", function (test) {
   test.equal(initCount, 1);
 });
 
+Tinytest.add("spacebars - templates - inclusion slashed args", function (test) {
+  // `{{> foo bar/baz}}`
+  var tmpl = Template.spacebars_template_test_inclusion_dotted_args;
+
+  var initCount = 0;
+  tmpl.foo = Template.spacebars_template_test_bracketed_this.extend({
+    init: function () { initCount++; }
+  });
+  var R = ReactiveVar('david');
+  tmpl.bar = function () {
+    // make sure `this` is bound correctly
+    return { baz: this.symbol + R.get() };
+  };
+
+  var div = renderToDiv(tmpl.withData({symbol:'%'}));
+  test.equal(initCount, 1);
+  test.equal(div.innerHTML, '[%david]');
+});
+
 Tinytest.add("spacebars - templates - block helper", function (test) {
   var tmpl = Template.spacebars_template_test_block_helper;
   var R = ReactiveVar(Template.spacebars_template_test_content);
@@ -407,3 +426,24 @@ Tinytest.add("spacebars - templates - nested content", function (test) {
   Deps.flush();
   test.equal(trim(div.innerHTML), 'hello');
 });
+
+Tinytest.add("spacebars - templates - ..", function (test) {
+  var tmpl = Template.spacebars_template_test_dots;
+  tmpl.getTitle = function (from) {
+    return from.title;
+  };
+
+  tmpl.foo = {title: "foo"};
+  tmpl.foo.bar = {title: "bar"};
+  tmpl.foo.bar.items = [{title: "item"}];
+  var div = renderToDiv(tmpl);
+
+  test.equal(
+    div.innerHTML.replace(/ |^(\s)+|(\s)+$/g, '').split('\n'),
+    [
+      // {{> spacebars_template_test_dots_subtemplate}}
+      "item", "item", "bar", "foo", "item", "bar", "foo",
+      // {{> spacebars_template_test_dots_subtemplate ..}}
+      "bar", "bar", "item", "bar", "bar", "item", "bar"]);
+});
+
