@@ -312,13 +312,16 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
       // ready.
       readyFuture.wait();
 
-      // Except for during startup, we DON'T block.
-      Fiber(function () {
-        // We need to make the selector at least as restrictive as the actual
-        // tailing selector (ie, we need to specify the DB name) or else we
-        // might find a TS that won't show up in the actual tail stream.
-        var lastEntry = oplogLastEntryConnection.findOne(
-          OPLOG_COLLECTION, baseOplogSelector(), {sort: {$natural: -1}});
+      var coll = oplogLastEntryConnection._getCollection(OPLOG_COLLECTION);
+      // We need to make the selector at least as restrictive as the actual
+      // tailing selector (ie, we need to specify the DB name) or else we
+      // might find a TS that won't show up in the actual tail stream.
+      coll.findOne(baseOplogSelector(), {sort: {$natural: -1}}, function (err, lastEntry) {
+        if (err) {
+          console.log("OH NO ERROR", err);
+          return;
+        }
+
         if (!lastEntry) {
           // Really, nothing in the oplog? Well, we've processed everything.
           callback();
@@ -353,7 +356,7 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
         }
 
         pendingSequencers.splice(insertAfter, 0, {ts: ts, callback: callback});
-      }).run();
+      });
     }
   };
 
