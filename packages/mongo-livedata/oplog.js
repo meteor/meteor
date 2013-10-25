@@ -122,11 +122,6 @@ MongoConnection.prototype._observeChangesWithOplog = function (
   oplogEntryHandlers[PHASE.INITIALIZING] = function (op) {
     needToFetch.set(idForOp(op), op.ts.toString());
   };
-  oplogEntryHandlers[PHASE.FETCHING] = function (op) {
-    var id = idForOp(op);
-    // We can handle non-modify changes to things that we aren't fetching,
-    // directly.
-  };
   // We can use the same handler for STEADY and FETCHING; the main difference is
   // that FETCHING has non-empty currentlyFetching and/or needToFetch.
   oplogEntryHandlers[PHASE.STEADY] = function (op) {
