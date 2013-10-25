@@ -22,6 +22,8 @@ MongoConnection.prototype._observeChangesWithOplog = function (
   cursorDescription, callbacks) {
   var self = this;
 
+  var stopped = false;
+
   Package.facts && Package.facts.Facts.incrementServerFact(
     "mongo-livedata", "oplog-observers", 1);
 
@@ -75,7 +77,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
 
   var fetchModifiedDocuments = function () {
     phase = PHASE.FETCHING;
-    while (!needToFetch.isEmpty()) {
+    while (!stopped && !needToFetch.isEmpty()) {
       if (phase !== PHASE.FETCHING)
         throw new Error("Surprising phase in fetchModifiedDocuments: " + phase);
 
@@ -90,7 +92,8 @@ MongoConnection.prototype._observeChangesWithOplog = function (
           futures.push(f);
           var doc = self._docFetcher.fetch(cursorDescription.collectionName, id,
                                            cacheKey);
-          handleDoc(id, doc);
+          if (!stopped)
+            handleDoc(id, doc);
           f.return();
         }).run();
       });
@@ -234,8 +237,26 @@ MongoConnection.prototype._observeChangesWithOplog = function (
 
   return {
     stop: function () {
+      if (stopped)
+        return;
+      stopped = true;
       listenersHandle.stop();
       oplogHandle.stop();
+
+      published = null;
+      selector = null;
+      needToFetch = null;
+      currentlyFetching = null;
+
+      _.each(writesToCommitWhenWeReachSteady, function (w) {
+        w.committed();
+      });
+      writesToCommitWhenWeReachSteady = null;
+
+      oplogHandle = null;
+      listenersHandle = null;
+      initialCursor = null;
+
       Package.facts && Package.facts.Facts.incrementServerFact(
         "mongo-livedata", "oplog-observers", -1);
     }

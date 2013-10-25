@@ -63,7 +63,7 @@ if (Meteor.isServer) {
   });
 } else {
   Facts.server = new Meteor.Collection(serverFactsCollection);
-  Meteor.subscribe("facts");
+  // Meteor.subscribe("facts");
 
   Template.serverFacts.factsByPackage = function () {
     return Facts.server.find();
