@@ -272,6 +272,7 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
       stopped = true;
       if (tailHandle)
         tailHandle.stop();
+      // XXX should close connections too
     },
 
     onOplogEntry: function (collectionName, callback) {
@@ -316,9 +317,11 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
       // We need to make the selector at least as restrictive as the actual
       // tailing selector (ie, we need to specify the DB name) or else we
       // might find a TS that won't show up in the actual tail stream.
-      coll.findOne(baseOplogSelector(), {sort: {$natural: -1}}, function (err, lastEntry) {
+      coll.findOne(baseOplogSelector(), {fields: {ts: 1}, sort: {$natural: -1}}, function (err, lastEntry) {
         if (err) {
-          console.log("OH NO ERROR", err);
+          console.log("OH NO ERROR", err)
+          // call callback anyway, I guess
+          callback();
           return;
         }
 
