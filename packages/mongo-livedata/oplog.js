@@ -206,13 +206,12 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       var write = fence.beginWrite();
       // This write cannot complete until we've caught up to "this point" in the
       // oplog, and then made it back to the steady state.
-      self._oplogHandle.callWhenProcessedLatest(function () {
-        if (stopped || phase === PHASE.STEADY)
-          write.committed();
-        else
-          writesToCommitWhenWeReachSteady.push(write);
-      });
-      complete();
+      Meteor.defer(complete);
+      self._oplogHandle.waitUntilProcessedLatest();
+      if (stopped || phase === PHASE.STEADY)
+        write.committed();
+      else
+        writesToCommitWhenWeReachSteady.push(write);
     }
   );
 
@@ -221,9 +220,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
     add(initialDoc);
   });
 
-  var catchUpFuture = new Future;
-  self._oplogHandle.callWhenProcessedLatest(catchUpFuture.resolver());
-  catchUpFuture.wait();
+  self._oplogHandle.waitUntilProcessedLatest();
 
   if (phase !== PHASE.INITIALIZING)
     throw Error("Phase unexpectedly " + phase);
