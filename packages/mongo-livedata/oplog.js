@@ -183,7 +183,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
   oplogEntryHandlers[PHASE.FETCHING] = oplogEntryHandlers[PHASE.STEADY];
 
 
-  var oplogHandle = self._oplogHandle.onOplogEntry(
+  var oplogEntryHandle = self._oplogHandle.onOplogEntry(
     cursorDescription.collectionName, function (op) {
       oplogEntryHandlers[phase](op);
     }
@@ -202,7 +202,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       // This write cannot complete until we've caught up to "this point" in the
       // oplog, and then made it back to the steady state.
       Meteor.defer(complete);
-      self._oplogHandle.waitUntilProcessedLatest();
+      self._oplogHandle.waitUntilCaughtUp();
       if (stopped || phase === PHASE.STEADY)
         write.committed();
       else
@@ -215,7 +215,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
     add(initialDoc);
   });
 
-  self._oplogHandle.waitUntilProcessedLatest();
+  self._oplogHandle.waitUntilCaughtUp();
 
   if (phase !== PHASE.INITIALIZING)
     throw Error("Phase unexpectedly " + phase);
@@ -233,7 +233,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
         return;
       stopped = true;
       listenersHandle.stop();
-      oplogHandle.stop();
+      oplogEntryHandle.stop();
 
       published = null;
       selector = null;
@@ -245,7 +245,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       });
       writesToCommitWhenWeReachSteady = null;
 
-      oplogHandle = null;
+      oplogEntryHandle = null;
       listenersHandle = null;
       initialCursor = null;
 
