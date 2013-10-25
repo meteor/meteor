@@ -136,22 +136,22 @@ Follower = {
     tryElector();
 
     var checkConnection = function () {
-        if (conn.status().status !== 'connected' || connected !== leader) {
-          tryElector();
-        } else {
-          conn.call('getElectorate', options.group, function (err, res) {
-            if (err) {
-              electorTries[connected]++;
-              tryElector();
-            } else {
-              if (! connectedToLeadershipGroup.isResolved()) {
-                connectedToLeadershipGroup["return"]();
-              }
-              //console.log("updating electorate with", res);
-              updateElectorate(res);
+      if (conn.status().status !== 'connected' || connected !== leader) {
+        tryElector();
+      } else {
+        conn.call('getElectorate', options.group, function (err, res) {
+          if (err) {
+            electorTries[connected]++;
+            tryElector();
+          } else {
+            if (! connectedToLeadershipGroup.isResolved()) {
+              connectedToLeadershipGroup["return"]();
             }
-          });
-        }
+            //console.log("updating electorate with", res);
+            updateElectorate(res);
+          }
+        });
+      }
     };
 
     var monitorConnection = function () {
