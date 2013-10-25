@@ -207,7 +207,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       // This write cannot complete until we've caught up to "this point" in the
       // oplog, and then made it back to the steady state.
       self._oplogHandle.callWhenProcessedLatest(function () {
-        if (phase === PHASE.STEADY)
+        if (stopped || phase === PHASE.STEADY)
           write.committed();
         else
           writesToCommitWhenWeReachSteady.push(write);
