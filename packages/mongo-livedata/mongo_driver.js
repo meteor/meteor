@@ -263,7 +263,7 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
     };
   });
   // XXX doc
-  var pendingSequencers = [];
+  var catchingUpFutures = [];
 
   self._oplogHandle = {
     stop: function () {
@@ -305,9 +305,9 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
     // currently visible.
     // XXX become convinced that this is actually safe even if oplogConnection
     // is some kind of pool
-    waitUntilProcessedLatest: function () {
+    waitUntilCaughtUp: function () {
       if (stopped)
-        throw new Error("Called waitUntilProcessedLatest on stopped handle!");
+        throw new Error("Called waitUntilCaughtUp on stopped handle!");
 
       // Calling onOplogEntry requries us to wait for the oplog connection to be
       // ready.
@@ -316,9 +316,6 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
       // We need to make the selector at least as restrictive as the actual
       // tailing selector (ie, we need to specify the DB name) or else we
       // might find a TS that won't show up in the actual tail stream.
-      //
-      // We don't want to block here: the whole point is to call callback
-      // asynchronously!
       var lastEntry = oplogLastEntryConnection.findOne(
         OPLOG_COLLECTION, baseOplogSelector(),
         {fields: {ts: 1}, sort: {$natural: -1}});
@@ -337,9 +334,9 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
         return;
       }
 
-      var insertAfter = pendingSequencers.length;
+      var insertAfter = catchingUpFutures.length;
       while (insertAfter - 1 > 0
-             && pendingSequencers[insertAfter - 1].ts.greaterThan(ts)) {
+             && catchingUpFutures[insertAfter - 1].ts.greaterThan(ts)) {
         insertAfter--;
       }
 
@@ -349,13 +346,13 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
       // poolSize 1. Also, we could keep something like it if we could
       // actually detect failover; see
       // https://github.com/mongodb/node-mongodb-native/issues/1120
-      if (insertAfter !== pendingSequencers.length) {
+      if (insertAfter !== catchingUpFutures.length) {
         throw Error("found misordered oplog: "
-                    + showTS(_.last(pendingSequencers).ts) + " vs "
+                    + showTS(_.last(catchingUpFutures).ts) + " vs "
                     + showTS(ts));
       }
       var f = new Future;
-      pendingSequencers.splice(insertAfter, 0, {ts: ts, future: f});
+      catchingUpFutures.splice(insertAfter, 0, {ts: ts, future: f});
       f.wait();
     }
   };
@@ -414,9 +411,9 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
       if (!doc.ts)
         throw Error("oplog entry without ts: " + EJSON.stringify(doc));
       lastProcessedTS = doc.ts;
-      while (!_.isEmpty(pendingSequencers)
-             && pendingSequencers[0].ts.lessThanOrEqual(lastProcessedTS)) {
-        var sequencer = pendingSequencers.shift();
+      while (!_.isEmpty(catchingUpFutures)
+             && catchingUpFutures[0].ts.lessThanOrEqual(lastProcessedTS)) {
+        var sequencer = catchingUpFutures.shift();
         sequencer.future.return();
       }
     });
@@ -1098,7 +1095,6 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
         if (lastTS) {
           newSelector.ts = {$gt: lastTS};
         }
-        // XXX maybe set replay flag
         cursor = self._createSynchronousCursor(new CursorDescription(
           cursorDescription.collectionName,
           newSelector,
