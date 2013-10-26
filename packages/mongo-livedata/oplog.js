@@ -81,28 +81,31 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       if (phase !== PHASE.FETCHING)
         throw new Error("Surprising phase in fetchModifiedDocuments: " + phase);
 
-      var futures = [];
       currentlyFetching = needToFetch;
       needToFetch = new IdMap;
-      currentlyFetching.each(function (cacheKey, id) {
-        // Run each until they yield. This implies that needToFetch will not be
-        // updated during this loop.
-        Fiber(function () {
-          var f = new Future;
-          futures.push(f);
-          var doc = self._docFetcher.fetch(cursorDescription.collectionName, id,
-                                           cacheKey);
-          if (!stopped)
-            handleDoc(id, doc);
-          f.return();
-        }).run();
-      });
-      Future.wait(futures);
-      // Throw if any throw.
-      // XXX this means the observe will now be stalled
-      _.each(futures, function (f) {
-        f.get();
-      });
+      var waiting = 0;
+      var error = null;
+      var fut = new Future;
+      Fiber(function () {
+        currentlyFetching.each(function (cacheKey, id) {
+          // currentlyFetching will not be updated during this loop.
+          waiting++;
+          self._docFetcher.fetch(cursorDescription.collectionName, id, cacheKey, function (err, doc) {
+            if (err) {
+              if (!error)
+                error = err;
+            } else if (!stopped) {
+              handleDoc(id, doc);
+            }
+            waiting--;
+            if (waiting == 0)
+              fut.return();
+          });
+        });
+      }).run();
+      fut.wait();
+      if (error)
+        throw error;
       currentlyFetching = new IdMap;
     }
     beSteady();
