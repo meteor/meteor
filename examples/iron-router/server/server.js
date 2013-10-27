@@ -4,20 +4,6 @@
 
 
 ////////////////////////////////////////////////////////////////////
-// Patches
-//
-
-if (!console || !console.log) {
-  // stub for IE
-  console = { 
-    log: function (msg) {
-      $('#log').append(msg)
-    } 
-  };
-}
-
-
-////////////////////////////////////////////////////////////////////
 // Startup
 //
 
@@ -97,6 +83,7 @@ Meteor.publish("secrets", function () {
   var user = Meteor.users.findOne({_id:this.userId});
 
   if (Roles.userIsInRole(user, ["admin","view-secrets"])) {
+    console.log('publishing secrets', this.userId)
     return Meteor.secrets.find();
   }
 
@@ -109,6 +96,7 @@ Meteor.publish("users", function () {
   var user = Meteor.users.findOne({_id:this.userId});
 
   if (Roles.userIsInRole(user, ["admin","manage-users"])) {
+    console.log('publishing users', this.userId)
     return Meteor.users.find({}, {fields: {emails: 1, profile: 1, roles: 1}});
   } 
 
