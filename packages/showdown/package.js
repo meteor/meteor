@@ -11,8 +11,4 @@ var _ = Npm.require('underscore');
 Package.on_use(function (api) {
   api.add_files("showdown.js");
   api.export('Showdown');
-
-  // Define {{markdown}} if handlebars got included.
-  api.use("handlebars", "client", {weak: true});
-  api.add_files("template-integration.js", "client");
 });
