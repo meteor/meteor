@@ -38,13 +38,14 @@ Package.on_test(function (api) {
   api.use('underscore');
   api.use(['test-helpers', 'domutils', 'session', 'deps',
            'spark', 'minimongo'], 'client');
-//  api.use('handlebars', 'server');
+
+// XXX future of these tests?
 //  api.add_files([
 //    'templating_tests.js',
 //    'templating_tests.html'
 //  ], 'client');
-  api.add_files([
-    'plugin/html_scanner.js',
-    'scanner_tests.js'
-  ], 'server');
+//  api.add_files([
+//    'plugin/html_scanner.js',
+//    'scanner_tests.js'
+//  ], 'server');
 });
