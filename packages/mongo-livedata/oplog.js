@@ -31,13 +31,16 @@ MongoConnection.prototype._observeChangesWithOplog = function (
 
   var published = new IdMap;
   var selector = LocalCollection._compileSelector(cursorDescription.selector);
+  var projection = cursorDescription.options.fields ?
+    LocalCollection._compileProjection(cursorDescription.options.fields) :
+    EJSON.clone;
 
   var needToFetch = new IdMap;
   var currentlyFetching = new IdMap;
 
   var add = function (doc) {
     var id = doc._id;
-    var fields = EJSON.clone(doc);
+    var fields = projection(doc);
     delete fields._id;
     if (published.has(id))
       throw Error("tried to add something already published " + id);
@@ -52,8 +55,10 @@ MongoConnection.prototype._observeChangesWithOplog = function (
     callbacks.removed && callbacks.removed(id);
   };
 
-  // XXX mutates newDoc, that's weird
+  // XXX it doesn't mutate newDoc anymore since we apply projection function but
+  // be careful refactoring and moving out projection.
   var handleDoc = function (id, newDoc) {
+    newDoc = projection(newDoc);
     var matchesNow = newDoc && selector(newDoc);
     var matchedBefore = published.has(id);
     if (matchesNow && !matchedBefore) {
