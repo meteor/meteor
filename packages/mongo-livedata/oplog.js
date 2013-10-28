@@ -14,6 +14,9 @@ var idForOp = function (op) {
     return op.o._id;
   else if (op.op === 'u')
     return op.o2._id;
+  else if (op.op === 'c')
+    throw Error("Operator 'c' doesn't supply an object with id: " +
+                EJSON.stringify(op));
   else
     throw Error("Unknown op: " + EJSON.stringify(op));
 };
@@ -192,7 +195,17 @@ MongoConnection.prototype._observeChangesWithOplog = function (
 
   var oplogEntryHandle = self._oplogHandle.onOplogEntry(
     cursorDescription.collectionName, function (op) {
-      oplogEntryHandlers[phase](op);
+      if (op.op === 'c') {
+        // If it is not db.collection.drop(), ignore it
+        if (op.o && _.isEqual(_.keys(op.o), ['drop'])) {
+          published.each(function (fields, id) {
+            remove(id);
+          });
+        }
+      } else {
+        // All other operators should be handled depending on phase
+        oplogEntryHandlers[phase](op);
+      }
     }
   );
 
