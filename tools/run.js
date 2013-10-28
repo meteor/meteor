@@ -243,7 +243,7 @@ var startServer = function (options) {
 
   env.PORT = options.innerPort;
   env.MONGO_URL = options.mongoUrl;
-  env.XXX_OPLOG_URL = options.oplogUrl;
+  env.OPLOG_URL = options.oplogUrl;
   env.ROOT_URL = options.rootUrl;
   if (options.settings)
     env.METEOR_SETTINGS = options.settings;

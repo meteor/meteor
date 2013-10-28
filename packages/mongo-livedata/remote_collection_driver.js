@@ -24,20 +24,21 @@ _.extend(MongoInternals.RemoteCollectionDriver.prototype, {
 // you're only trying to receive data from a remote DDP server.)
 MongoInternals.defaultRemoteCollectionDriver = _.once(function () {
   var mongoUrl;
+  var connectionOptions = {};
+
   AppConfig.configurePackage("mongo-livedata", function (config) {
     // This will keep running if mongo gets reconfigured.  That's not ideal, but
     // should be ok for now.
     mongoUrl = config.url;
+
+    if (config.oplog)
+      connectionOptions.oplogUrl = config.oplog;
   });
+
   // XXX bad error since it could also be set directly in METEOR_DEPLOY_CONFIG
   if (! mongoUrl)
     throw new Error("MONGO_URL must be set in environment");
 
-  var connectionOptions = {};
-  // XXX we should NOT be reading directly from the env here; need to consult
-  // with naomi re: AppConfig
-  if (process.env.XXX_OPLOG_URL)
-    connectionOptions.oplogUrl = process.env.XXX_OPLOG_URL;
 
   return new MongoInternals.RemoteCollectionDriver(mongoUrl, connectionOptions);
 });
