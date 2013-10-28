@@ -258,8 +258,10 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
   var baseOplogSelector = _.once(function () {
     return {
       ns: new RegExp('^' + quotemeta(dbNameFuture.wait()) + '\\.'),
-      // XXX also handle drop collection, etc
-      op: {$in: ['i', 'u', 'd']}
+      $or: [
+        { op: {$in: ['i', 'u', 'd']} },
+        // If it is not db.collection.drop(), ignore it
+        { op: 'c', 'o.drop': { $exists: true } }]
     };
   });
   // XXX doc
@@ -402,6 +404,11 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
         throw new Error("Unexpected ns");
 
       var collectionName = doc.ns.substr(dbName.length + 1);
+
+      // Is it a special command and the collection name is hidden somewhere in
+      // operator?
+      if (collectionName === "$cmd")
+        collectionName = doc.o.drop;
 
       _.each(callbacksByCollection[collectionName], function (callback) {
         callback(EJSON.clone(doc));
