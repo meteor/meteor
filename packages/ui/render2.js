@@ -56,6 +56,8 @@ UI.Tag.defineTag = function (name) {
 UI.Tag.CharRef = makeTagFunc('CharRef');
 // e.g. `Comment("foo")`
 UI.Tag.Comment = makeTagFunc('Comment');
+// e.g. `EmitCode("foo()")`
+UI.Tag.EmitCode = makeTagFunc('EmitCode');
 
 _.each(allElementNames, UI.Tag.defineTag);
 
@@ -80,6 +82,8 @@ var materialize = function (node, parentNode, beforeNode) {
         parentNode.insertBefore(document.createTextNode(node.attrs.str), beforeNode);
       } else if (node.tagName === 'Comment') {
         parentNode.insertBefore(document.createComment(sanitizeComment(node[0])));
+      } else if (node.tagName === 'EmitCode') {
+        throw new Error("EmitCode node can only be processed by toCode");
       } else {
         var elem = document.createElement(node.tagName);
         if (node.attrs) {
@@ -100,6 +104,9 @@ var materialize = function (node, parentNode, beforeNode) {
     }
   } else if (typeof node === 'string') {
     parentNode.insertBefore(document.createTextNode(node), beforeNode);
+  } else if (typeof node === 'function') {
+    // XXX make this reactive...
+    materialize(node(), parentNode, beforeNode);
   } else if (node == null) {
     // null or undefined.
     // do nothing.
@@ -178,6 +185,8 @@ var toHTML = function (node) {
         result += node.attrs.html;
       } else if (node.tagName === 'Comment') {
         result += '<!--' + sanitizeComment(node[0]) + '-->';
+      } else if (node.tagName === 'EmitCode') {
+        throw new Error("EmitCode node can only be processed by toCode");
       } else {
         // XXX handle void elements, like BR
         result += '<' + properCaseTagName(node.tagName);
@@ -200,6 +209,8 @@ var toHTML = function (node) {
     }
   } else if (typeof node === 'string') {
     result += node.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  } else if (typeof node === 'function') {
+    result += toHTML(node());
   } else if (node == null) {
     // null or undefined.
     // do nothing.
@@ -225,22 +236,26 @@ var toCode = function (node) {
     // Tag or array
     if (node.tagName) {
       // Tag
-      result += 'UI.Tag.' + node.tagName + '(';
-      var argStrs = [];
-      if (node.attrs) {
-        var kvStrs = [];
-        _.each(node.attrs, function (v, k) {
-          kvStrs.push((/^[a-zA-Z]+$/.test(k) ? k : toJSLiteral(k)) + ': ' +
-                      attributeValueToCode(v));
+      if (node.tagName === 'EmitCode') {
+        result += node[0];
+      } else {
+        result += 'UI.Tag.' + node.tagName + '(';
+        var argStrs = [];
+        if (node.attrs) {
+          var kvStrs = [];
+          _.each(node.attrs, function (v, k) {
+            kvStrs.push((/^[a-zA-Z]+$/.test(k) ? k : toJSLiteral(k)) + ': ' +
+                        attributeValueToCode(v));
+          });
+          argStrs.push('{' + kvStrs.join(', ') + '}');
+        }
+
+        _.each(node, function (child) {
+          argStrs.push(toCode(child));
         });
-        argStrs.push('{' + kvStrs.join(', ') + '}');
+
+        result += argStrs.join(', ') + ')';
       }
-
-      _.each(node, function (child) {
-        argStrs.push(toCode(child));
-      });
-
-      result += argStrs.join(', ') + ')';
     } else {
       // array
       result += '[';
@@ -250,6 +265,8 @@ var toCode = function (node) {
     }
   } else if (typeof node === 'string') {
     result += toJSLiteral(node);
+  } else if (typeof node === 'function') {
+    throw new Error("Can't convert function object to code string.  Use EmitCode instead.");
   } else if (node == null) {
     // null or undefined.
     // do nothing.
