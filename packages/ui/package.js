@@ -20,6 +20,7 @@ Package.on_use(function (api) {
 
   api.add_files(['attrs.js',
                  'render.js',
+                 'render2.js',
                  'components.js',
                  'each.js',
                  'fields.js'
