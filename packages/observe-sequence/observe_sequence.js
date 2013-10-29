@@ -89,6 +89,10 @@ ObserveSequence = {
             }
           });
 
+          // XXX this is wrong! we also need to keep track of changes
+          // to the cursor so that if we switch to an array or another
+          // cursor we diff against the right original value of `seqArray`.
+          // write a test for this and fix it.
           Deps.nonreactive(function () {
             seqArray = _.map(cursor.fetch(), function (item) {
               return {id: item._id, item: item};
