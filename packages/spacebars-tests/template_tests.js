@@ -8,6 +8,10 @@ var trim = function (str) {
   return str.replace(/^\s+|\s+$/g, '');
 };
 
+var trimAndRemoveSpaces = function (str) {
+  return trim(str).replace(/ /g, '');
+};
+
 Tinytest.add("spacebars - templates - simple helper", function (test) {
   var tmpl = Template.spacebars_template_test_simple_helper;
   tmpl.foo = function (x) {
@@ -439,7 +443,7 @@ Tinytest.add("spacebars - templates - ..", function (test) {
   var div = renderToDiv(tmpl);
 
   test.equal(
-    div.innerHTML.replace(/ |^(\s)+|(\s)+$/g, '').split('\n'),
+    trim(div.innerHTML).replace(/ /g, '').split('\n'),
     [
       // {{> spacebars_template_test_dots_subtemplate}}
       "item", "item", "bar", "foo", "item", "bar", "foo",
@@ -447,3 +451,96 @@ Tinytest.add("spacebars - templates - ..", function (test) {
       "bar", "bar", "item", "bar", "bar", "item", "bar"]);
 });
 
+Tinytest.add("spacebars - templates - select tags", function (test) {
+  var tmpl = Template.spacebars_template_test_select_tag;
+
+  // {label: (string)}
+  var optgroups = new Meteor.Collection(null);
+
+  // {optgroup: (id), value: (string), selected: (boolean), label: (string)}
+  var options = new Meteor.Collection(null);
+
+  tmpl.optgroups = function () { return optgroups.find(); };
+  tmpl.options = function () { return options.find({optgroup: this._id}); };
+  tmpl.selectedAttr = function () { return this.selected ? "selected" : ""; };
+
+  var div = renderToDiv(tmpl);
+
+  // returns contents of `div` in the form eg ["<select>", "</select>"]
+  var divContent = function () {
+    var lines = div.innerHTML.trim()
+      .replace(/\>\</g, '>\n<')
+      .split('\n');
+    var trimmedLines = _.filter(
+      _.map(lines, trim),
+      function (x) { return x !== ""; });
+
+    // ensure that `selected=""` appears at the end of the attribute list
+    // if present
+    return _.map(trimmedLines, function (line) {
+      if (/^\<option selected="" /.test(line)) {
+        return line.replace('selected="" ', '').replace('>', ' selected="">');
+      } else {
+        return line;
+      }
+    });
+  };
+  test.equal(divContent(), ["<select>", "</select>"]);
+
+  var optgroup1 = optgroups.insert({label: "one"});
+  var optgroup2 = optgroups.insert({label: "two"});
+  test.equal(divContent(), [
+    '<select>',
+    '<optgroup label="one">',
+    '</optgroup>',
+    '<optgroup label="two">',
+    '</optgroup>',
+    '</select>'
+  ]);
+
+  options.insert({optgroup: optgroup1, value: "value1", selected: false, label: "label1"});
+  options.insert({optgroup: optgroup1, value: "value2", selected: true, label: "label2"});
+  test.equal(divContent(), [
+    '<select>',
+    '<optgroup label="one">',
+    '<option value="value1">label1</option>',
+    '<option value="value2" selected="">label2</option>',
+    '</optgroup>',
+    '<optgroup label="two">',
+    '</optgroup>',
+    '</select>'
+  ]);
+
+  // swap selection
+  options.update({value: "value1"}, {$set: {selected: true}});
+  options.update({value: "value2"}, {$set: {selected: false}});
+  Deps.flush();
+
+  test.equal(divContent(), [
+    '<select>',
+    '<optgroup label="one">',
+    '<option value="value1" selected="">label1</option>',
+    '<option value="value2">label2</option>',
+    '</optgroup>',
+    '<optgroup label="two">',
+    '</optgroup>',
+    '</select>'
+  ]);
+
+  // change value and label
+  options.update({value: "value1"}, {$set: {value: "value1.0"}});
+  options.update({value: "value2"}, {$set: {label: "label2.0"}});
+  Deps.flush();
+
+  test.equal(divContent(), [
+    '<select>',
+    '<optgroup label="one">',
+    '<option value="value1.0" selected="">label1</option>',
+    '<option value="value2">label2.0</option>',
+    '</optgroup>',
+    '<optgroup label="two">',
+    '</optgroup>',
+    '</select>'
+  ]);
+
+});
