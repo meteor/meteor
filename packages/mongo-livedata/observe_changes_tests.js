@@ -168,6 +168,36 @@ if (Meteor.isServer) {
       onComplete();
     });
   });
+
+  Tinytest.addAsync("observeChanges - unordered - specific fields + selector on excluded fields", function (test, onComplete) {
+    var c = makeCollection();
+    withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, function (logger) {
+      var handle = c.find({ mac: 1, cheese: 2 },
+                          {fields:{noodles: 1, bacon: 1}}).observeChanges(logger);
+      var barid = c.insert({thing: "stuff", mac: 1, cheese: 2});
+      logger.expectResultOnly("added", [barid, {}]);
+
+      var fooid = c.insert({noodles: "good", bacon: "bad", apples: "ok", mac: 1, cheese: 2});
+
+      logger.expectResultOnly("added", [fooid, {noodles: "good", bacon: "bad"}]);
+
+      c.update(fooid, {noodles: "alright", potatoes: "tasty", apples: "ok", mac: 1, cheese: 2});
+      logger.expectResultOnly("changed",
+                              [fooid, {noodles: "alright", bacon: undefined}]);
+      c.update(fooid, {noodles: "alright", potatoes: "meh", apples: "ok", mac: 1, cheese: 2});
+      c.remove(fooid);
+      logger.expectResultOnly("removed", [fooid]);
+      c.remove(barid);
+      logger.expectResultOnly("removed", [barid]);
+
+      fooid = c.insert({noodles: "good", bacon: "bad", mac: 1, cheese: 2});
+
+      logger.expectResult("added", [fooid, {noodles: "good", bacon: "bad"}]);
+      logger.expectNoResult();
+      handle.stop();
+      onComplete();
+    });
+  });
 }
 
 
