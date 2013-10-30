@@ -46,6 +46,14 @@ var makeTagFunc = function (name) {
 
 var allElementNames = 'a abbr acronym address applet area b base basefont bdo big blockquote body br button caption center cite code col colgroup dd del dfn dir div dl dt em fieldset font form frame frameset h1 h2 h3 h4 h5 h6 head hr html i iframe img input ins isindex kbd label legend li link map menu meta noframes noscript object ol p param pre q s samp script select small span strike strong style sub sup textarea title tt u ul var article aside audio bdi canvas command data datagrid datalist details embed eventsource figcaption figure footer header hgroup keygen mark meter nav output progress ruby rp rt section source summary time track video wbr'.split(' ');
 
+var voidElementNames = 'area base br col command embed hr img input keygen link meta param source track wbr'.split(' ');
+var voidElementSet = (function (set) {
+  _.each(voidElementNames, function (n) {
+    set[n] = 1;
+  });
+  return set;
+})({});
+
 UI.Tag.defineTag = function (name) {
   // XXX maybe sanity-check name?  Like no whitespace.
   name = name.toUpperCase();
@@ -72,7 +80,19 @@ var sanitizeComment = function (content) {
 // Check that Comment has a single string child and no attributes.  Etc.
 
 var insert = function (nodeOrRange, parent, before) {
-  parent.insertBefore(nodeOrRange, before || null); // `null` for IE
+  if (! parent)
+    throw new Error("Materialization parent required");
+
+  if (parent.dom) {
+    // parent is DomRange; add node or range
+    parent.add(nodeOrRange, before);
+  } else if (nodeOrRange.dom) {
+    // parent is an element; inserting a range
+    UI.insert(nodeOrRange, parent, before);
+  } else {
+    // parent is an element; inserting an element
+    parent.insertBefore(nodeOrRange, before || null); // `null` for IE
+  }
 };
 
 var materialize = function (node, parent, before) {
@@ -107,8 +127,14 @@ var materialize = function (node, parent, before) {
   } else if (typeof node === 'string') {
     insert(document.createTextNode(node), parent, before);
   } else if (typeof node === 'function') {
-    // XXX make this reactive...
-    materialize(node(), parent, before);
+    var range = new UI.DomRange;
+    Deps.autorun(function (c) {
+      if (! c.firstRun)
+        range.removeAll();
+
+      materialize(node(), range);
+    });
+    insert(range, parent, before);
   } else if (node == null) {
     // null or undefined.
     // do nothing.
@@ -190,8 +216,8 @@ var toHTML = function (node) {
       } else if (node.tagName === 'EmitCode') {
         throw new Error("EmitCode node can only be processed by toCode");
       } else {
-        // XXX handle void elements, like BR
-        result += '<' + properCaseTagName(node.tagName);
+        var casedTagName = properCaseTagName(node.tagName);
+        result += '<' + casedTagName;
         if (node.attrs) {
           _.each(node.attrs, function (v, k) {
             result += ' ' + k + '=' + attributeValueToQuotedString(v);
@@ -201,7 +227,12 @@ var toHTML = function (node) {
         _.each(node, function (child) {
           result += toHTML(child);
         });
-        result += '</' + properCaseTagName(node.tagName) + '>';
+        if (node.length || voidElementSet[casedTagName] !== 1) {
+          // "Void" elements like BR are the only ones that don't get a close
+          // tag in HTML5.  They shouldn't have contents, either, so we could
+          // throw an error if there were contents.
+          result += '</' + properCaseTagName(node.tagName) + '>';
+        }
       }
     } else {
       // array
@@ -232,6 +263,19 @@ var toJSLiteral = function (obj) {
           }));
 };
 
+var jsReservedWordSet = (function (set) {
+  _.each("abstract else instanceof super boolean enum int switch break export interface synchronized byte extends let this case false long throw catch final native throws char finally new transient class float null true const for package try continue function private typeof debugger goto protected var default if public void delete implements return volatile do import short while double in static with".split(' '), function (w) {
+    set[w] = 1;
+  });
+  return set;
+})({});
+
+var toObjectLiteralKey = function (k) {
+  if (/^[a-zA-Z]+$/.test(k) && jsReservedWordSet[k] !== 1)
+    return k;
+  return toJSLiteral(k);
+};
+
 var toCode = function (node) {
   var result = "";
 
@@ -248,8 +292,7 @@ var toCode = function (node) {
         if (node.attrs) {
           var kvStrs = [];
           _.each(node.attrs, function (v, k) {
-            kvStrs.push((/^[a-zA-Z]+$/.test(k) ? k : toJSLiteral(k)) + ': ' +
-                        attributeValueToCode(v));
+            kvStrs.push(toObjectLiteralKey(k) + ': ' + attributeValueToCode(v));
           });
           argStrs.push('{' + kvStrs.join(', ') + '}');
         }

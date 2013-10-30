@@ -1,16 +1,24 @@
-Tinytest.add("ui - render2", function (test) {
+var materialize = UI.materialize;
+var toHTML = UI.toHTML;
+var toCode = UI.toCode;
+
+var P = UI.Tag.P;
+var CharRef = UI.Tag.CharRef;
+var DIV = UI.Tag.DIV;
+var Comment = UI.Tag.Comment;
+var BR = UI.Tag.BR;
+var A = UI.Tag.A;
+var UL = UI.Tag.UL;
+var LI = UI.Tag.LI;
+
+Tinytest.add("ui - render2 - basic", function (test) {
   var run = function (input, expectedInnerHTML, expectedHTML, expectedCode) {
     var div = document.createElement("DIV");
-    UI.materialize(input, div);
+    materialize(input, div);
     test.equal(canonicalizeHtml(div.innerHTML), expectedInnerHTML);
-    test.equal(UI.toHTML(input), expectedHTML);
-    test.equal(UI.toCode(input), expectedCode);
+    test.equal(toHTML(input), expectedHTML);
+    test.equal(toCode(input), expectedCode);
   };
-
-  var P = UI.Tag.P;
-  var CharRef = UI.Tag.CharRef;
-  var DIV = UI.Tag.DIV;
-  var Comment = UI.Tag.Comment;
 
   run(P('Hello'),
       '<p>Hello</p>',
@@ -35,11 +43,41 @@ Tinytest.add("ui - render2", function (test) {
       '<p id="&zopf;!">Hello</p>',
       'UI.Tag.P({id: [UI.Tag.CharRef({html: "&zopf;", str: "\\ud835\\udd6b"}), "!"]}, "Hello")');
 
-   // Test comments
+  // Test comments
 
   run(DIV(Comment('Test')),
       '<div><!----></div>', // our innerHTML-canonicalization function kills comment contents
       '<div><!--Test--></div>',
       'UI.Tag.DIV(UI.Tag.Comment("Test"))');
 
+  // Test arrays
+
+  run([P('Hello'), P('World')],
+      '<p>Hello</p><p>World</p>',
+      '<p>Hello</p><p>World</p>',
+      '[UI.Tag.P("Hello"), UI.Tag.P("World")]');
+
+  // Test slightly more complicated structure
+
+  run(DIV({'class': 'foo'}, UL(LI(P(A({href: '#one'}, 'One'))),
+                               LI(P('Two', BR(), 'Three')))),
+      '<div class="foo"><ul><li><p><a href="#one">One</a></p></li><li><p>Two<br>Three</p></li></ul></div>',
+      '<div class="foo"><ul><li><p><a href="#one">One</a></p></li><li><p>Two<br>Three</p></li></ul></div>',
+      'UI.Tag.DIV({"class": "foo"}, UI.Tag.UL(UI.Tag.LI(UI.Tag.P(UI.Tag.A({href: "#one"}, "One"))), UI.Tag.LI(UI.Tag.P("Two", UI.Tag.BR(), "Three"))))');
+});
+
+Tinytest.add("ui - render2 - closures", function (test) {
+
+  var R = ReactiveVar('Hello');
+  var test1 = P(function () { return R.get(); });
+
+  test.equal(toHTML(test1), '<p>Hello</p>');
+
+  var div = document.createElement("DIV");
+  materialize(test1, div);
+  test.equal(canonicalizeHtml(div.innerHTML), "<p>Hello</p>");
+
+  R.set('World');
+  Deps.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), "<p>World</p>");
 });
