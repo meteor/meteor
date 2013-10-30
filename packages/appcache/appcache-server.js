@@ -150,6 +150,9 @@ WebApp.connectHandlers.use(function(req, res, next) {
   manifest += "\n";
 
   manifest += "NETWORK:\n";
+  // TODO adding the manifest file to NETWORK should be unnecessary?
+  // Want more testing to be sure.
+  manifest += "/app.manifest" + "\n";
 
   _.each(
     [].concat(
