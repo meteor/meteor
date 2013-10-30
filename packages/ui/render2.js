@@ -75,10 +75,15 @@ var sanitizeComment = function (content) {
   return content.replace(/--+/g, '').replace(/-$/, '');
 };
 
-// XXX should do more error-checking for the case where user is supplying the tags.
-// For example, check that CharRef has `html` and `str` properties and no content.
-// Check that Comment has a single string child and no attributes.  Etc.
-
+// Insert a DOM node or DomRange into a DOM element or DomRange.
+//
+// One of three things happens depending on what needs to be inserted into what:
+// - `range.add` (anything into DomRange)
+// - `UI.insert` (DomRange into element)
+// - `elem.insertBefore` (node into element)
+//
+// The optional `before` argument is an existing node or id to insert before in
+// the parent element or DomRange.
 var insert = function (nodeOrRange, parent, before) {
   if (! parent)
     throw new Error("Materialization parent required");
@@ -95,7 +100,13 @@ var insert = function (nodeOrRange, parent, before) {
   }
 };
 
+// Convert the pseudoDOM `node` into reactive DOM nodes and insert them
+// into the element or DomRange `parent`, before the node or id `before`.
 var materialize = function (node, parent, before) {
+  // XXX should do more error-checking for the case where user is supplying the tags.
+  // For example, check that CharRef has `html` and `str` properties and no content.
+  // Check that Comment has a single string child and no attributes.  Etc.
+
   if (node && (typeof node === 'object') &&
       (typeof node.splice === 'function')) {
     // Tag or array
@@ -143,52 +154,74 @@ var materialize = function (node, parent, before) {
   }
 };
 
+// Take a tag name in any case and make it the proper case for inserting into
+// HTML.
+//
+// The latest HTML standards don't care about case at all, but for
+// compatibility it is customary to use a particular case.  In most cases
+// this means lowercase, but there are some camelCase SVG tags that require a
+// lookup table to get right (for browsers that care).  (Historically,
+// case-sensitivity requirements come from XML.  However, HTML5 is not based
+// on XML, and though it supports direct inclusion of SVG, an XML language,
+// it parses it as HTML with some special parsing rules.)
 var properCaseTagName = function (name) {
-  // XXX SVG camelCase
+  // XXX TODO: SVG camelCase
   return name.toLowerCase();
 };
 
-var attributeValuePartToQuotedStringPart = function (v) {
-  if (typeof v === 'string') {
-    return v.replace(/"/g, '&quot;').replace(/&/g, '&amp;');
-  } else if (v.tagName === 'CharRef') {
-    return v.attrs.html;
-  }
-};
+// Takes an attribute value -- i.e. a string, CharRef, or array of strings and
+// CharRefs -- and renders it as a double-quoted string literal suitable for an
+// HTML attribute value.
+var attributeValueToQuotedString = (function () {
 
-var attributeValueToQuotedString = function (v) {
-  var result = '"';
-  if (typeof v === 'object' && (typeof v.length === 'number') && ! v.tagName) {
-    // array
-    for (var i = 0; i < v.length; i++)
-      result += attributeValuePartToQuotedStringPart(v[i]);
-  } else {
-    result += attributeValuePartToQuotedStringPart(v);
-  }
-  result += '"';
-  return result;
-};
+  var attributeValuePartToQuotedStringPart = function (v) {
+    if (typeof v === 'string') {
+      return v.replace(/"/g, '&quot;').replace(/&/g, '&amp;');
+    } else if (v.tagName === 'CharRef') {
+      return v.attrs.html;
+    }
+  };
 
-var attributeValuePartToString = function (v) {
-  if (typeof v === 'string') {
-    return v;
-  } else if (v.tagName === 'CharRef') {
-    return v.attrs.str;
-  }
-};
-
-var attributeValueToString = function (v) {
-  if (typeof v === 'object' && (typeof v.length === 'number') && ! v.tagName) {
-    // array
-    var result = '';
-    for (var i = 0; i < v.length; i++)
-      result += attributeValuePartToString(v[i]);
+  return function (v) {
+    var result = '"';
+    if (typeof v === 'object' && (typeof v.length === 'number') && ! v.tagName) {
+      // array
+      for (var i = 0; i < v.length; i++)
+        result += attributeValuePartToQuotedStringPart(v[i]);
+    } else {
+      result += attributeValuePartToQuotedStringPart(v);
+    }
+    result += '"';
     return result;
-  } else {
-    return attributeValuePartToString(v);
-  }
-};
+  };
+})();
 
+// Takes an attribute value -- i.e. a string, CharRef, or array of strings and
+// CharRefs -- and converts it to a string suitable for passing to `setAttribute`.
+var attributeValueToString = (function () {
+  var attributeValuePartToString = function (v) {
+    if (typeof v === 'string') {
+      return v;
+    } else if (v.tagName === 'CharRef') {
+      return v.attrs.str;
+    }
+  };
+
+  return function (v) {
+    if (typeof v === 'object' && (typeof v.length === 'number') && ! v.tagName) {
+      // array
+      var result = '';
+      for (var i = 0; i < v.length; i++)
+        result += attributeValuePartToString(v[i]);
+      return result;
+    } else {
+      return attributeValuePartToString(v);
+    }
+  };
+})();
+
+// Takes an attribute value -- i.e. a string, CharRef, or array of strings and
+// CharRefs -- and converts it to JavaScript code.
 var attributeValueToCode = function (v) {
   if (typeof v === 'object' && (typeof v.length === 'number') && ! v.tagName) {
     // array
@@ -201,6 +234,7 @@ var attributeValueToCode = function (v) {
   }
 };
 
+// Convert the pseudoDOM `node` into static HTML.
 var toHTML = function (node) {
   var result = "";
 
@@ -276,6 +310,10 @@ var toObjectLiteralKey = function (k) {
   return toJSLiteral(k);
 };
 
+// Convert the pseudoDOM `node` into JavaScript code that generates it.
+//
+// We can't handle functions in the tree, but we support the special node
+// `EmitCode` for inserting raw JavaScript.
 var toCode = function (node) {
   var result = "";
 

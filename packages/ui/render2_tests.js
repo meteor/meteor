@@ -68,16 +68,19 @@ Tinytest.add("ui - render2 - basic", function (test) {
 
 Tinytest.add("ui - render2 - closures", function (test) {
 
-  var R = ReactiveVar('Hello');
-  var test1 = P(function () { return R.get(); });
+  (function () {
+    var R = ReactiveVar('Hello');
+    var test1 = P(function () { return R.get(); });
 
-  test.equal(toHTML(test1), '<p>Hello</p>');
+    test.equal(toHTML(test1), '<p>Hello</p>');
 
-  var div = document.createElement("DIV");
-  materialize(test1, div);
-  test.equal(canonicalizeHtml(div.innerHTML), "<p>Hello</p>");
+    var div = document.createElement("DIV");
+    materialize(test1, div);
+    test.equal(canonicalizeHtml(div.innerHTML), "<p>Hello</p>");
 
-  R.set('World');
-  Deps.flush();
-  test.equal(canonicalizeHtml(div.innerHTML), "<p>World</p>");
+    R.set('World');
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "<p>World</p>");
+  })();
+
 });
