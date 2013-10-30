@@ -71,17 +71,19 @@ var sanitizeComment = function (content) {
 // For example, check that CharRef has `html` and `str` properties and no content.
 // Check that Comment has a single string child and no attributes.  Etc.
 
-var materialize = function (node, parentNode, beforeNode) {
-  beforeNode = beforeNode || null; // for IE
+var insert = function (nodeOrRange, parent, before) {
+  parent.insertBefore(nodeOrRange, before || null); // `null` for IE
+};
 
+var materialize = function (node, parent, before) {
   if (node && (typeof node === 'object') &&
       (typeof node.splice === 'function')) {
     // Tag or array
     if (node.tagName) {
       if (node.tagName === 'CharRef') {
-        parentNode.insertBefore(document.createTextNode(node.attrs.str), beforeNode);
+        insert(document.createTextNode(node.attrs.str), parent, before);
       } else if (node.tagName === 'Comment') {
-        parentNode.insertBefore(document.createComment(sanitizeComment(node[0])));
+        insert(document.createComment(sanitizeComment(node[0])), parent, before);
       } else if (node.tagName === 'EmitCode') {
         throw new Error("EmitCode node can only be processed by toCode");
       } else {
@@ -94,19 +96,19 @@ var materialize = function (node, parentNode, beforeNode) {
         _.each(node, function (child) {
           materialize(child, elem);
         });
-        parentNode.insertBefore(elem, beforeNode);
+        insert(elem, parent, before);
       }
     } else {
       // array
       _.each(node, function (child) {
-        materialize(child, parentNode, beforeNode);
+        materialize(child, parent, before);
       });
     }
   } else if (typeof node === 'string') {
-    parentNode.insertBefore(document.createTextNode(node), beforeNode);
+    insert(document.createTextNode(node), parent, before);
   } else if (typeof node === 'function') {
     // XXX make this reactive...
-    materialize(node(), parentNode, beforeNode);
+    materialize(node(), parent, before);
   } else if (node == null) {
     // null or undefined.
     // do nothing.
@@ -130,7 +132,7 @@ var attributeValuePartToQuotedStringPart = function (v) {
 
 var attributeValueToQuotedString = function (v) {
   var result = '"';
-  if (typeof v === 'object' && (typeof v.length === 'number')) {
+  if (typeof v === 'object' && (typeof v.length === 'number') && ! v.tagName) {
     // array
     for (var i = 0; i < v.length; i++)
       result += attributeValuePartToQuotedStringPart(v[i]);
@@ -150,7 +152,7 @@ var attributeValuePartToString = function (v) {
 };
 
 var attributeValueToString = function (v) {
-  if (typeof v === 'object' && (typeof v.length === 'number')) {
+  if (typeof v === 'object' && (typeof v.length === 'number') && ! v.tagName) {
     // array
     var result = '';
     for (var i = 0; i < v.length; i++)
@@ -162,7 +164,7 @@ var attributeValueToString = function (v) {
 };
 
 var attributeValueToCode = function (v) {
-  if (typeof v === 'object' && (typeof v.length === 'number')) {
+  if (typeof v === 'object' && (typeof v.length === 'number') && ! v.tagName) {
     // array
     var partStrs = [];
     for (var i = 0; i < v.length; i++)
@@ -222,10 +224,12 @@ var toHTML = function (node) {
 };
 
 var toJSLiteral = function (obj) {
-  // http://timelessrepo.com/json-isnt-a-javascript-subset
+  // See <http://timelessrepo.com/json-isnt-a-javascript-subset> for `\u2028\u2029`.
+  // Also escape Unicode surrogates.
   return (JSON.stringify(obj)
-          .replace(/\u2028/g, '\\u2028')
-          .replace(/\u2029/g, '\\u2029'));
+          .replace(/[\u2028\u2029\ud800-\udfff]/g, function (c) {
+            return '\\u' + ('000' + c.charCodeAt(0).toString(16)).slice(-4);
+          }));
 };
 
 var toCode = function (node) {
@@ -277,6 +281,7 @@ var toCode = function (node) {
   return result;
 };
 
+// XXX we're just exposing these for now
 UI.materialize = materialize;
 UI.toHTML = toHTML;
 UI.toCode = toCode;

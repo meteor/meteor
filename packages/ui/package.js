@@ -37,6 +37,7 @@ Package.on_test(function (api) {
   api.add_files([
     'base_tests.js',
     'render_tests.js',
-    'domrange_tests.js'
+    'domrange_tests.js',
+    'render2_tests.js'
   ], 'client');
 });
