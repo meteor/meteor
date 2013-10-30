@@ -68,6 +68,7 @@ Tinytest.add("ui - render2 - basic", function (test) {
 
 Tinytest.add("ui - render2 - closures", function (test) {
 
+  // Reactively change a text node
   (function () {
     var R = ReactiveVar('Hello');
     var test1 = P(function () { return R.get(); });
@@ -81,6 +82,22 @@ Tinytest.add("ui - render2 - closures", function (test) {
     R.set('World');
     Deps.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "<p>World</p>");
+  })();
+
+  // Reactively change an array of text nodes
+  (function () {
+    var R = ReactiveVar(['Hello', ' World']);
+    var test1 = P(function () { return R.get(); });
+
+    test.equal(toHTML(test1), '<p>Hello World</p>');
+
+    var div = document.createElement("DIV");
+    materialize(test1, div);
+    test.equal(canonicalizeHtml(div.innerHTML), "<p>Hello World</p>");
+
+    R.set(['Goodbye', ' World']);
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "<p>Goodbye World</p>");
   })();
 
 });

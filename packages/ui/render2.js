@@ -6,6 +6,8 @@
 // Tags are created using tag functions, e.g. `DIV(P({id:'foo'}, "Hello"))`.
 // If a tag function is given a first argument that is an object and not a
 // Tag or an array, that object is used as element attributes (`attrs`).
+// The attrs argument may be of the form `{$attrs: function () { ... }}` in
+// which case the function becomes the `attrs` attribute of the tag.
 //
 // Tag functions for all known tags are available as `UI.Tag.DIV`,
 // `UI.Tag.SPAN`, etc., and you can define new ones with
@@ -36,7 +38,11 @@ var makeTagFunc = function (name) {
     // see whether first argument is truthy and not an Array or Tag
     var attrsGiven = (optAttrs && (typeof optAttrs === 'object') &&
                       (typeof optAttrs.splice !== 'function'));
-    var tag = new Tag(attrsGiven ? optAttrs : null);
+    var attrs = (attrsGiven ? optAttrs : null);
+    if (attrsGiven && (typeof attrs.$attrs === 'funciton'))
+      attrs = attrs.$attrs;
+
+    var tag = new Tag(attrs);
     tag.push.apply(tag, (attrsGiven ?
                          Array.prototype.slice.call(arguments, 1) :
                          arguments));
@@ -112,15 +118,21 @@ var materialize = function (node, parent, before) {
     // Tag or array
     if (node.tagName) {
       if (node.tagName === 'CharRef') {
+        checkCharRef(node);
         insert(document.createTextNode(node.attrs.str), parent, before);
       } else if (node.tagName === 'Comment') {
+        checkComment(node);
         insert(document.createComment(sanitizeComment(node[0])), parent, before);
       } else if (node.tagName === 'EmitCode') {
         throw new Error("EmitCode node can only be processed by toCode");
       } else {
         var elem = document.createElement(node.tagName);
         if (node.attrs) {
-          _.each(node.attrs, function (v, k) {
+          var attrs = node.attrs;
+          // XXX make attributes reactive!
+          if (typeof attrs === 'function')
+            attrs = attrs();
+          _.each(attrs, function (v, k) {
             elem.setAttribute(k, attributeValueToString(v));
           });
         }
@@ -234,6 +246,29 @@ var attributeValueToCode = function (v) {
   }
 };
 
+// checks that a pseudoDOM node with tagName "CharRef" is well-formed.
+var checkCharRef = function (charRef) {
+  if (typeof charRef.attrs === 'function')
+    throw new Error("Can't have a reactive character reference (CharRef)");
+
+  var attrs = charRef.attrs;
+  if ((! attrs) || (typeof attrs.html !== 'string') ||
+      (typeof attrs.str !== 'string') || (! attrs.html) || (! attrs.str))
+    throw new Error("CharRef should have simple string attributes " +
+                    "`html` and `str`.");
+
+  if (charRef.length)
+    throw new Error("CharRef should have no content");
+};
+
+// checks that a pseudoDOM node with tagName "Comment" is well-formed.
+var checkComment = function (comment) {
+  if (comment.attrs)
+    throw new Error("Comment can't have attributes");
+  if (comment.length !== 1 || (typeof comment[0] !== 'string'))
+    throw new Error("Comment should have exactly one content item, a simple string");
+};
+
 // Convert the pseudoDOM `node` into static HTML.
 var toHTML = function (node) {
   var result = "";
@@ -244,8 +279,10 @@ var toHTML = function (node) {
     if (node.tagName) {
       // Tag
       if (node.tagName === 'CharRef') {
+        checkCharRef(node);
         result += node.attrs.html;
       } else if (node.tagName === 'Comment') {
+        checkComment(node);
         result += '<!--' + sanitizeComment(node[0]) + '-->';
       } else if (node.tagName === 'EmitCode') {
         throw new Error("EmitCode node can only be processed by toCode");
@@ -253,7 +290,10 @@ var toHTML = function (node) {
         var casedTagName = properCaseTagName(node.tagName);
         result += '<' + casedTagName;
         if (node.attrs) {
-          _.each(node.attrs, function (v, k) {
+          var attrs = node.attrs;
+          if (typeof attrs === 'function')
+            attrs = attrs();
+          _.each(attrs, function (v, k) {
             result += ' ' + k + '=' + attributeValueToQuotedString(v);
           });
         }
@@ -325,6 +365,11 @@ var toCode = function (node) {
       if (node.tagName === 'EmitCode') {
         result += node[0];
       } else {
+        if (node.tagName === 'Comment')
+          checkComment(node);
+        else if (node.tagName === 'CharRef')
+          checkCharRef(node);
+
         result += 'UI.Tag.' + node.tagName + '(';
         var argStrs = [];
         if (node.attrs) {
