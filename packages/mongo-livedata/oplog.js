@@ -43,12 +43,12 @@ MongoConnection.prototype._observeChangesWithOplog = function (
 
   var add = function (doc) {
     var id = doc._id;
-    var fields = projection(doc);
+    var fields = _.clone(doc);
     delete fields._id;
     if (published.has(id))
       throw Error("tried to add something already published " + id);
     published.set(id, fields);
-    callbacks.added && callbacks.added(id, EJSON.clone(fields));
+    callbacks.added && callbacks.added(id, projection(fields));
   };
 
   var remove = function (id) {
@@ -58,10 +58,8 @@ MongoConnection.prototype._observeChangesWithOplog = function (
     callbacks.removed && callbacks.removed(id);
   };
 
-  // XXX it doesn't mutate newDoc anymore since we apply projection function but
-  // be careful refactoring and moving out projection.
   var handleDoc = function (id, newDoc) {
-    newDoc = projection(newDoc);
+    newDoc = _.clone(newDoc);
     var matchesNow = newDoc && selector(newDoc);
     var matchedBefore = published.has(id);
     if (matchesNow && !matchedBefore) {
@@ -77,6 +75,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       if (callbacks.changed) {
         var changed = LocalCollection._makeChangedFields(
           EJSON.clone(newDoc), oldDoc);
+        changed = projection(changed);
         if (!_.isEmpty(changed))
           callbacks.changed(id, changed);
       }
