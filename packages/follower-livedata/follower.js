@@ -38,6 +38,7 @@ Follower = {
       makeElectorTries(urlSet, { priority: 0, reset: true });
     }
     var tryingUrl = null;
+    var outstandingGetElectorate = false;
     var conn = null;
     var leader = null;
     var connected = null;
@@ -73,6 +74,9 @@ Follower = {
     };
 
     var tryElector = function (url) {
+      if (tryingUrl) {
+        electorTries[tryingUrl]++;
+      }
       url = url || findFewestTries();
       //console.log("trying", url, electorTries, tryingUrl);
       if (conn) {
@@ -83,23 +87,21 @@ Follower = {
         conn = DDP.connect(url);
         conn._reconnectImpl = conn.reconnect;
       }
+      tryingUrl = url;
 
-      if (tryingUrl) {
-        electorTries[tryingUrl]++;
-        tryingUrl = url;
-      } else {
-        tryingUrl = url;
+      if (!outstandingGetElectorate) {
+        outstandingGetElectorate = true;
         conn.call('getElectorate', options.group, function (err, res) {
+          outstandingGetElectorate = false;
           connected = tryingUrl;
-          tryingUrl = null;
           if (err) {
-            electorTries[url]++;
             tryElector();
             return;
           }
+          tryingUrl = null;
           // we got an answer!  Connected!
           electorTries[url] = 0;
-          if (res.leader === url) {
+          if (res.leader === connected) {
             // we're good.
 
           } else {
@@ -107,7 +109,6 @@ Follower = {
             // is connectable.
             if (electorTries[res.leader] == 0) {
               tryElector(res.leader);
-
             } else {
               // XXX: leader is probably down, we're probably going to elect
               // soon.  Wait for the next round.
@@ -116,7 +117,8 @@ Follower = {
           }
           updateElectorate(res);
         });
-      };
+      }
+
     };
 
     tryElector();
@@ -129,6 +131,9 @@ Follower = {
             if (err) {
               electorTries[connected]++;
               tryElector();
+            } else if (res.leader !== leader) {
+              updateElectorate(res);
+              tryElector(res.leader);
             } else {
               //console.log("updating electorate with", res);
               updateElectorate(res);
