@@ -62,9 +62,9 @@ that Meteor will call each time a client subscribes to the name.
 
 Publish functions can return a
 [`Collection.Cursor`](#meteor_collection_cursor), in which case Meteor
-will publish that cursor's documents. You can also return an array of
-`Collection.Cursor`s, in which case Meteor will publish all of the
-cursors.
+will publish that cursor's documents to each subscribed client. You can
+also return an array of `Collection.Cursor`s, in which case Meteor will
+publish all of the cursors.
 
 {{#warning}}
 If you return multiple cursors in an array, they currently must all be from
@@ -92,16 +92,15 @@ different collections. We hope to lift this restriction in a future release.
       ];
     });
 
-Otherwise, the publish function should call the functions
-[`added`](#publish_added) (when a new document is added to the published record
-set), [`changed`](#publish_changed) (when some fields on a document in the
-record set are changed or cleared), and [`removed`](#publish_removed) (when
-documents are removed from the published record set) to inform subscribers about
-documents.  These methods are provided by `this` in your publish function.
-
-
-
-<!-- TODO discuss ready -->
+Alternatively, a publish function can directly control its published
+record set by calling the functions [`added`](#publish_added) (to add a
+new document to the published record set), [`changed`](#publish_changed)
+(to change or clear some fields on a document already in the published
+record set), and [`removed`](#publish_removed) (to remove documents from
+the published record set).  Publish functions that use these functions
+should also call [`ready`](#publish_ready) once the initial record set
+is complete.  These methods are provided by `this` in your publish
+function.
 
 Example:
 
@@ -634,7 +633,7 @@ In this release, Minimongo has some limitations:
 of selectors.
 * `$` to denote the matched array position is not
 supported in modifier.
-* `findAndModify`, upsert, aggregate functions, and
+* `findAndModify`, aggregate functions, and
 map/reduce aren't supported.
 
 All of these will be addressed in a future release. For full
@@ -723,24 +722,27 @@ handlers and a browser's JavaScript console.
   `multi` to true, and can use an arbitrary [Mongo
   selector](#selectors) to find the documents to modify. It bypasses
   any access control rules set up by [`allow`](#allow) and
-  [`deny`](#deny).
+  [`deny`](#deny). The number of affected documents will be returned
+  from the `update` call if you don't pass a callback.
 
 - Untrusted code can only modify a single document at once, specified
   by its `_id`. The modification is allowed only after checking any
-  applicable [`allow`](#allow) and [`deny`](#deny) rules.
+  applicable [`allow`](#allow) and [`deny`](#deny) rules. The number
+  of affected documents will be returned to the callback. Untrusted
+  code cannot perform upserts, except in insecure mode.
 
 On the server, if you don't provide a callback, then `update` blocks
 until the database acknowledges the write, or throws an exception if
 something went wrong.  If you do provide a callback, `update` returns
 immediately.  Once the update completes, the callback is called with a
-single error argument in the case of failure, or no arguments if the
-update was successful.
+single error argument in the case of failure, or a second argument
+indicating the number of affected documents if the update was successful.
 
 On the client, `update` never blocks.  If you do not provide a callback
 and the update fails on the server, then Meteor will log a warning to
 the console.  If you provide a callback, Meteor will call that function
-with an error argument if there was an error, or no arguments if the
-update was successful.
+with an error argument if there was an error, or a second argument
+indicating the number of affected documents if the update was successful.
 
 Client example:
 
@@ -766,9 +768,18 @@ Server example:
       }
     });
 
-{{#warning}}
-The Mongo `upsert` feature is not implemented.
-{{/warning}}
+You can use `update` to perform a Mongo upsert by setting the `upsert`
+option to true. You can also use the [`upsert`](#upsert) method to perform an
+upsert that returns the _id of the document that was inserted (if there was one)
+in addition to the number of affected documents.
+
+{{> api_box upsert}}
+
+Modify documents that match `selector` according to `modifier`, or insert
+a document if no documents were modified. `upsert` is the same as calling
+`update` with the `upsert` option set to true, except that the return
+value of `upsert` is an object that contain the keys `numberAffected`
+and `insertedId`. (`update` returns only the number of affected documents.)
 
 {{> api_box remove}}
 
@@ -784,7 +795,8 @@ handlers and a browser's JavaScript console.
   find the documents to remove, and can remove more than one document
   at once by passing a selector that matches multiple documents. It
   bypasses any access control rules set up by [`allow`](#allow) and
-  [`deny`](#deny).
+  [`deny`](#deny). The number of removed documents will be returned
+  from `remove` if you don't pass a callback.
 
   As a safety measure, if `selector` is omitted (or is `undefined`),
   no documents will be removed. Set `selector` to `{}` if you really
@@ -792,20 +804,22 @@ handlers and a browser's JavaScript console.
 
 - Untrusted code can only remove a single document at a time,
   specified by its `_id`. The document is removed only after checking
-  any applicable [`allow`](#allow) and [`deny`](#deny) rules.
+  any applicable [`allow`](#allow) and [`deny`](#deny) rules. The
+  number of removed documents will be returned to the callback.
 
 On the server, if you don't provide a callback, then `remove` blocks
-until the database acknowledges the write, or throws an exception if
+until the database acknowledges the write and then returns the number
+of removed documents, or throws an exception if
 something went wrong.  If you do provide a callback, `remove` returns
 immediately.  Once the remove completes, the callback is called with a
-single error argument in the case of failure, or no arguments if the
-remove was successful.
+single error argument in the case of failure, or a second argument
+indicating the number of removed documents if the remove was successful.
 
 On the client, `remove` never blocks.  If you do not provide a callback
-and the remove fails on the server, then Meteor will log a warning to
-the console.  If you provide a callback, Meteor will call that function
-with an error argument if there was an error, or no arguments if the
-remove was successful.
+and the remove fails on the server, then Meteor will log a warning to the
+console.  If you provide a callback, Meteor will call that function with an
+error argument if there was an error, or a second argument indicating the number
+of removed documents if the remove was successful.
 
 Client example:
 
@@ -966,6 +980,8 @@ cursor, use [`forEach`](#foreach), [`map`](#map), or [`fetch`](#fetch).
 
 {{> api_box cursor_foreach}}
 
+This interface is compatible with [Array.forEach](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach).
+
 When called from a reactive computation, `forEach` registers dependencies on
 the matching documents.
 
@@ -980,6 +996,8 @@ Examples:
     });
 
 {{> api_box cursor_map}}
+
+This interface is compatible with [Array.map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map).
 
 When called from a reactive computation, `map` registers dependencies on
 the matching documents.
@@ -1258,11 +1276,26 @@ is a dictionary whose keys are field names and whose values are `0`.
     // Users.find({}, {fields: {password: 0, hash: 0}})
 
 To return an object that only includes the specified field, use `1` as
-the value.  The `_id` field is still included in the result.
+the value. The `_id` field is still included in the result.
 
     // Users.find({}, {fields: {firstname: 1, lastname: 1}})
 
-It is not possible to mix inclusion and exclusion styles.
+It is not possible to mix inclusion and exclusion styles (except for the cases
+when `_id` is included by default or explicitly excluded). Field operators such
+as `$` and `$elemMatch` are not available on the client side yet.
+
+More advanced example:
+
+    Users.insert({ alterEgos: [{ name: "Kira", alliance: "murderer" },
+                               { name: "L", alliance: "police" }],
+                   name: "Yagami Light" });
+
+    Users.findOne({}, { fields: { 'alterEgos.name': 1, _id: 0 } });
+
+    // returns { alterEgos: [{ name: "Kira" }, { name: "L" }] }
+
+See <a href="http://docs.mongodb.org/manual/tutorial/project-fields-from-query-results/#projection">
+the MongoDB docs</a> for details of the nested field rules and array behavior.
 
 {{/api_box_inline}}
 
@@ -1481,6 +1514,12 @@ For example, [the `accounts-ui` package](#accountsui) uses this to display an
 animation while the login request is being processed.
 
 {{> api_box logout}}
+
+{{> api_box logoutOtherClients}}
+
+For example, when called in a user's browser, connections in that browser
+remain logged in, but any other browsers or DDP clients logged in as that user
+will be logged out.
 
 {{> api_box loginWithPassword}}
 
@@ -2834,17 +2873,18 @@ these functions, add the HTTP package to your project with `$ meteor add http`.
 
 {{> api_box httpcall}}
 
-This function initiates an HTTP request to a remote server. It returns
-a result object with the contents of the HTTP response.  The result
-object is detailed below.
+This function initiates an HTTP request to a remote server.
 
 On the server, this function can be run either synchronously or
-asynchronously.  If the callback is omitted, it runs synchronously,
-and the results are returned once the request completes. This is
+asynchronously.  If the callback is omitted, it runs synchronously
+and the results are returned once the request completes successfully.
+If the request was not successful, an error is thrown.
+This is
 useful when making server-to-server HTTP API calls from within Meteor
 methods, as the method can succeed or fail based on the results of the
 synchronous HTTP call.  In this case, consider using
-[`this.unblock()`](#method_unblock) to allow other methods to run in
+[`this.unblock()`](#method_unblock) to allow other methods on the same
+connection to run in
 the mean time.  On the client, this function must be used
 asynchronously by passing a callback.
 
@@ -2864,7 +2904,8 @@ standard `x-www-form-urlencoded` content type, unless the `content`
 or `data` option is used to specify a body, in which case the
 parameters will be appended to the URL instead.
 
-The callback receives two arguments, `error` and `result`.  The
+When run in asynchronous mode, the callback receives two arguments,
+`error` and `result`.  The
 `error` argument will contain an Error if the request fails in any
 way, including a network error, time-out, or an HTTP status code in
 the 400 or 500 range.  In case of a 4xx/5xx HTTP status code, the
@@ -2899,11 +2940,14 @@ Example server method:
     Meteor.methods({checkTwitter: function (userId) {
       check(userId, String);
       this.unblock();
-      var result = HTTP.call("GET", "http://api.twitter.com/xyz",
-                             {params: {user: userId}});
-      if (result.statusCode === 200)
-         return true
-      return false;
+      try {
+        var result = HTTP.call("GET", "http://api.twitter.com/xyz",
+                               {params: {user: userId}});
+        return true;
+      } catch (e) {
+        // Got a network error, time-out or HTTP error in the 400 or 500 range.
+        return false;
+      }
     }});
 
 Example asynchronous HTTP call:
@@ -2911,7 +2955,7 @@ Example asynchronous HTTP call:
     HTTP.call("POST", "http://api.twitter.com/xyz",
               {data: {some: "json", stuff: 1}},
               function (error, result) {
-                if (result.statusCode === 200) {
+                if (!error) {
                   Session.set("twizzled", true);
                 }
               });
