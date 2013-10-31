@@ -52,6 +52,12 @@ var Coordinate = Match.Where(function (x) {
   return x >= 0 && x <= 1;
 });
 
+createParty = function (options) {
+  var id = Random.id();
+  Meteor.call('createParty', _.extend({ _id: id }, options));
+  return id;
+};
+
 Meteor.methods({
   // options should include: title, description, x, y, public
   createParty: function (options) {
@@ -60,7 +66,8 @@ Meteor.methods({
       description: NonEmptyString,
       x: Coordinate,
       y: Coordinate,
-      public: Match.Optional(Boolean)
+      public: Match.Optional(Boolean),
+      _id: Match.Optional(NonEmptyString)
     });
 
     if (options.title.length > 100)
@@ -70,7 +77,9 @@ Meteor.methods({
     if (! this.userId)
       throw new Meteor.Error(403, "You must be logged in");
 
-    return Parties.insert({
+    var id = options._id || Random.id();
+    Parties.insert({
+      _id: id,
       owner: this.userId,
       x: options.x,
       y: options.y,
@@ -80,6 +89,7 @@ Meteor.methods({
       invited: [],
       rsvps: []
     });
+    return id;
   },
 
   invite: function (partyId, userId) {

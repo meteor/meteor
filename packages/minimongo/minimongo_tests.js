@@ -66,7 +66,8 @@ var log_callbacks = function (operations) {
 // XXX test shared structure in all MM entrypoints
 Tinytest.add("minimongo - basics", function (test) {
   var c = new LocalCollection(),
-      fluffyKitten_id;
+      fluffyKitten_id,
+      count;
 
   fluffyKitten_id = c.insert({type: "kitten", name: "fluffy"});
   c.insert({type: "kitten", name: "snookums"});
@@ -87,7 +88,8 @@ Tinytest.add("minimongo - basics", function (test) {
   test.length(c.find({type: "kitten"}).fetch(), 2);
   test.length(c.find({type: "cryptographer"}).fetch(), 2);
 
-  c.update({name: "snookums"}, {$set: {type: "cryptographer"}});
+  count = c.update({name: "snookums"}, {$set: {type: "cryptographer"}});
+  test.equal(count, 1);
   test.equal(c.find().count(), 4);
   test.equal(c.find({type: "kitten"}).count(), 1);
   test.equal(c.find({type: "cryptographer"}).count(), 3);
@@ -102,10 +104,12 @@ Tinytest.add("minimongo - basics", function (test) {
   c.remove({_id: null});
   c.remove({_id: false});
   c.remove({_id: undefined});
-  c.remove();
+  count = c.remove();
+  test.equal(count, 0);
   test.equal(c.find().count(), 4);
 
-  c.remove({});
+  count = c.remove({});
+  test.equal(count, 4);
   test.equal(c.find().count(), 0);
 
   c.insert({_id: 1, name: "strawberry", tags: ["fruit", "red", "squishy"]});
@@ -180,16 +184,25 @@ Tinytest.add("minimongo - cursors", function (test) {
 
   // forEach
   var count = 0;
-  q.forEach(function (obj) {
+  var context = {};
+  q.forEach(function (obj, i, cursor) {
     test.equal(obj.i, count++);
-  });
+    test.equal(obj.i, i);
+    test.isTrue(context === this);
+    test.isTrue(cursor === q);
+  }, context);
   test.equal(count, 20);
   // everything empty
   test.length(q.fetch(), 0);
   q.rewind();
 
   // map
-  res = q.map(function (obj) { return obj.i * 2; });
+  res = q.map(function (obj, i, cursor) {
+    test.equal(obj.i, i);
+    test.isTrue(context === this);
+    test.isTrue(cursor === q);
+    return obj.i * 2;
+  }, context);
   test.length(res, 20);
   for (var i = 0; i < 20; i++)
     test.equal(res[i], i * 2);
@@ -427,6 +440,9 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$ne: 1}}, {a: [1, 2]});
   nomatch({a: {$ne: 2}}, {a: [1, 2]});
   match({a: {$ne: 3}}, {a: [1, 2]});
+  nomatch({'a.b': {$ne: 1}}, {a: [{b: 1}, {b: 2}]});
+  nomatch({'a.b': {$ne: 2}}, {a: [{b: 1}, {b: 2}]});
+  match({'a.b': {$ne: 3}}, {a: [{b: 1}, {b: 2}]});
 
   nomatch({a: {$ne: {x: 1}}}, {a: {x: 1}});
   match({a: {$ne: {x: 1}}}, {a: {x: 2}});
@@ -456,7 +472,9 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$nin: [1, 2, 3]}}, {a: [2]}); // tested against mongodb
   nomatch({a: {$nin: [{x: 1}, {x: 2}, {x: 3}]}}, {a: [{x: 2}]});
   nomatch({a: {$nin: [1, 2, 3]}}, {a: [4, 2]});
+  nomatch({'a.b': {$nin: [1, 2, 3]}}, {a: [{b:4}, {b:2}]});
   match({a: {$nin: [1, 2, 3]}}, {a: [4]});
+  match({'a.b': {$nin: [1, 2, 3]}}, {a: [{b:4}]});
 
   // $size
   match({a: {$size: 0}}, {a: []});
@@ -564,7 +582,9 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({x: {$not: {$lt: 10, $gt: 7}}}, {x: 6});
 
   match({x: {$not: {$gt: 7}}}, {x: [2, 3, 4]});
+  match({'x.y': {$not: {$gt: 7}}}, {x: [{y:2}, {y:3}, {y:4}]});
   nomatch({x: {$not: {$gt: 7}}}, {x: [2, 3, 4, 10]});
+  nomatch({'x.y': {$not: {$gt: 7}}}, {x: [{y:2}, {y:3}, {y:4}, {y:10}]});
 
   match({x: {$not: /a/}}, {x: "dog"});
   nomatch({x: {$not: /a/}}, {x: "cat"});
@@ -898,7 +918,7 @@ Tinytest.add("minimongo - projection_compiler", function (test) {
   var testProjection = function (projection, tests) {
     var projection_f = LocalCollection._compileProjection(projection);
     var equalNonStrict = function (a, b, desc) {
-      test.equal(EJSON.stringify(a), EJSON.stringify(b), desc);
+      test.isTrue(_.isEqual(a, b), desc);
     };
 
     _.each(tests, function (testCase) {
@@ -980,6 +1000,11 @@ Tinytest.add("minimongo - projection_compiler", function (test) {
 
   test.throws(function () {
     testProjection({ 'a': 1, 'a.b': 1 }, [
+      [ { a: { b: 42 } }, { a: { b: 42 } }, "Can't have ambiguous rules (one is prefix of another)" ]
+    ]);
+  });
+  test.throws(function () {
+    testProjection({ 'a.b.c': 1, 'a.b': 1, 'a': 1 }, [
       [ { a: { b: 42 } }, { a: { b: 42 } }, "Can't have ambiguous rules (one is prefix of another)" ]
     ]);
   });
@@ -1067,6 +1092,63 @@ Tinytest.add("minimongo - fetch with fields", function (test) {
     if (!i) return;
     test.isTrue(x.i === arr[i-1].i + 1);
   });
+});
+
+Tinytest.add("minimongo - fetch with projection, subarrays", function (test) {
+  // Apparently projection of type 'foo.bar.x' for
+  // { foo: [ { bar: { x: 42 } }, { bar: { x: 3 } } ] }
+  // should return exactly this object. More precisely, arrays are considered as
+  // sets and are queried separately and then merged back to result set
+  var c = new LocalCollection();
+
+  // Insert a test object with two set fields
+  c.insert({
+    setA: [{
+      fieldA: 42,
+      fieldB: 33
+    }, {
+      fieldA: "the good",
+      fieldB: "the bad",
+      fieldC: "the ugly"
+    }],
+    setB: [{
+      anotherA: { },
+      anotherB: "meh"
+    }, {
+      anotherA: 1234,
+      anotherB: 431
+    }]
+  });
+
+  var equalNonStrict = function (a, b, desc) {
+    test.isTrue(_.isEqual(a, b), desc);
+  };
+
+  var testForProjection = function (projection, expected) {
+    var fetched = c.find({}, { fields: projection }).fetch()[0];
+    equalNonStrict(fetched, expected, "failed sub-set projection: " +
+                                      JSON.stringify(projection));
+  };
+
+  testForProjection({ 'setA.fieldA': 1, 'setB.anotherB': 1, _id: 0 },
+                    {
+                      setA: [{ fieldA: 42 }, { fieldA: "the good" }],
+                      setB: [{ anotherB: "meh" }, { anotherB: 431 }]
+                    });
+
+  testForProjection({ 'setA.fieldA': 0, 'setB.anotherA': 0, _id: 0 },
+                    {
+                      setA: [{fieldB:33}, {fieldB:"the bad",fieldC:"the ugly"}],
+                      setB: [{ anotherB: "meh" }, { anotherB: 431 }]
+                    });
+
+  c.remove({});
+  c.insert({a:[[{b:1,c:2},{b:2,c:4}],{b:3,c:5},[{b:4, c:9}]]});
+
+  testForProjection({ 'a.b': 1, _id: 0 },
+                    {a: [ [ { b: 1 }, { b: 2 } ], { b: 3 }, [ { b: 4 } ] ] });
+  testForProjection({ 'a.b': 0, _id: 0 },
+                    {a: [ [ { c: 2 }, { c: 4 } ], { c: 5 }, [ { c: 9 } ] ] });
 });
 
 Tinytest.add("minimongo - observe ordered with projection", function (test) {
@@ -1495,6 +1577,28 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: [1]}, {$push: {a: [2]}}, {a: [1, [2]]});
   modify({a: []}, {$push: {'a.1': 99}}, {a: [null, [99]]}); // tested
   modify({a: {}}, {$push: {'a.x': 99}}, {a: {x: [99]}});
+  modify({}, {$push: {a: {$each: [1, 2, 3]}}},
+         {a: [1, 2, 3]});
+  modify({a: []}, {$push: {a: {$each: [1, 2, 3]}}},
+         {a: [1, 2, 3]});
+  modify({a: [true]}, {$push: {a: {$each: [1, 2, 3]}}},
+         {a: [true, 1, 2, 3]});
+  // No positive numbers for $slice
+  exception({}, {$push: {a: {$each: [], $slice: 5}}});
+  modify({a: [true]}, {$push: {a: {$each: [1, 2, 3], $slice: -2}}},
+         {a: [2, 3]});
+  modify({a: [false, true]}, {$push: {a: {$each: [1], $slice: -2}}},
+         {a: [true, 1]});
+  modify(
+    {a: [{x: 3}, {x: 1}]},
+    {$push: {a: {
+      $each: [{x: 4}, {x: 2}],
+      $slice: -2,
+      $sort: {x: 1}
+    }}},
+    {a: [{x: 3}, {x: 4}]});
+  modify({}, {$push: {a: {$each: [1, 2, 3], $slice: 0}}}, {a: []});
+  modify({a: [1, 2]}, {$push: {a: {$each: [1, 2, 3], $slice: 0}}}, {a: []});
 
   // $pushAll
   modify({}, {$pushAll: {a: [1]}}, {a: [1]});
@@ -1596,11 +1700,8 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: {b: 12}}, {$rename: {'a.b': 'x'}}, {a: {}, x: 12}); // tested
   modify({a: {b: 12}}, {$rename: {'a.b': 'q.r'}}, {a: {}, q: {r: 12}});
   modify({a: {b: 12}}, {$rename: {'a.b': 'q.2.r'}}, {a: {}, q: {2: {r: 12}}});
-  // Opera weirdly reorders the output. But what it does tends to be close
-  // enough.
   modify({a: {b: 12}, q: {}}, {$rename: {'a.b': 'q.2.r'}},
-         (typeof opera === 'undefined' ? {a: {}, q: {2: {r: 12}}}
-                                       : {q: {2: {r: 12}}, a: {}}));
+         {a: {}, q: {2: {r: 12}}});
   exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2'}}); // tested
   exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2.r'}}); // tested
   test.expect_fail();
@@ -1934,7 +2035,8 @@ Tinytest.add("minimongo - diff", function (test) {
 
 Tinytest.add("minimongo - saveOriginals", function (test) {
   // set up some data
-  var c = new LocalCollection();
+  var c = new LocalCollection(),
+      count;
   c.insert({_id: 'foo', x: 'untouched'});
   c.insert({_id: 'bar', x: 'updateme'});
   c.insert({_id: 'baz', x: 'updateme'});
@@ -1945,8 +2047,11 @@ Tinytest.add("minimongo - saveOriginals", function (test) {
   c.saveOriginals();
   c.insert({_id: "hooray", z: 'insertme'});
   c.remove({y: 'removeme'});
-  c.update({x: 'updateme'}, {$set: {z: 5}}, {multi: true});
+  count = c.update({x: 'updateme'}, {$set: {z: 5}}, {multi: true});
   c.update('bar', {$set: {k: 7}});  // update same doc twice
+
+  // Verify returned count is correct
+  test.equal(count, 2);
 
   // Verify the originals.
   var originals = c.retrieveOriginals();
@@ -2180,3 +2285,98 @@ Tinytest.add("minimongo - count on cursor with limit", function(test){
   c.stop();
 
 });
+
+Tinytest.add("minimongo - $near operator tests", function (test) {
+  var coll = new LocalCollection();
+  coll.insert({ rest: { loc: [2, 3] } });
+  coll.insert({ rest: { loc: [-3, 3] } });
+  coll.insert({ rest: { loc: [5, 5] } });
+
+  test.equal(coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 30 } }).count(), 3);
+  test.equal(coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 4 } }).count(), 1);
+  var points = coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 6 } }).fetch();
+  _.each(points, function (point, i, points) {
+    test.isTrue(!i || distance([0, 0], point.rest.loc) >= distance([0, 0], points[i - 1].rest.loc));
+  });
+
+  function distance(a, b) {
+    var x = a[0] - b[0];
+    var y = a[1] - b[1];
+    return Math.sqrt(x * x + y * y);
+  }
+
+  // GeoJSON tests
+  coll = new LocalCollection();
+  var data = [{ "category" : "BURGLARY", "descript" : "BURGLARY OF STORE, FORCIBLE ENTRY", "address" : "100 Block of 10TH ST", "location" : { "type" : "Point", "coordinates" : [  -122.415449723856,  37.7749518087273 ] } },
+    { "category" : "WEAPON LAWS", "descript" : "POSS OF PROHIBITED WEAPON", "address" : "900 Block of MINNA ST", "location" : { "type" : "Point", "coordinates" : [  -122.415386041221,  37.7747879744156 ] } },
+    { "category" : "LARCENY/THEFT", "descript" : "GRAND THEFT OF PROPERTY", "address" : "900 Block of MINNA ST", "location" : { "type" : "Point", "coordinates" : [  -122.41538270191,  37.774683628213 ] } },
+    { "category" : "LARCENY/THEFT", "descript" : "PETTY THEFT FROM LOCKED AUTO", "address" : "900 Block of MINNA ST", "location" : { "type" : "Point", "coordinates" : [  -122.415396041221,  37.7747879744156 ] } },
+    { "category" : "OTHER OFFENSES", "descript" : "POSSESSION OF BURGLARY TOOLS", "address" : "900 Block of MINNA ST", "location" : { "type" : "Point", "coordinates" : [  -122.415386041221,  37.7747879734156 ] } }
+  ];
+
+  _.each(data, function (x, i) { coll.insert(_.extend(x, { x: i })); });
+
+  var close15 = coll.find({ location: { $near: {
+    $geometry: { type: "Point",
+                 coordinates: [-122.4154282, 37.7746115] },
+    $maxDistance: 15 } } }).fetch();
+  test.length(close15, 1);
+  test.equal(close15[0].descript, "GRAND THEFT OF PROPERTY");
+
+  var close20 = coll.find({ location: { $near: {
+    $geometry: { type: "Point",
+                 coordinates: [-122.4154282, 37.7746115] },
+    $maxDistance: 20 } } }).fetch();
+  test.length(close20, 4);
+  test.equal(close20[0].descript, "GRAND THEFT OF PROPERTY");
+  test.equal(close20[1].descript, "PETTY THEFT FROM LOCKED AUTO");
+  test.equal(close20[2].descript, "POSSESSION OF BURGLARY TOOLS");
+  test.equal(close20[3].descript, "POSS OF PROHIBITED WEAPON");
+
+  // Any combinations of $near with $or/$and/$nor/$not should throw an error
+  test.throws(function () {
+    coll.find({ location: {
+      $not: {
+        $near: {
+          $geometry: {
+            type: "Point",
+            coordinates: [-122.4154282, 37.7746115]
+          }, $maxDistance: 20 } } } });
+  });
+  test.throws(function () {
+    coll.find({
+      $and: [ { location: { $near: { $geometry: { type: "Point", coordinates: [-122.4154282, 37.7746115] }, $maxDistance: 20 }}},
+              { x: 0 }]
+    });
+  });
+  test.throws(function () {
+    coll.find({
+      $or: [ { location: { $near: { $geometry: { type: "Point", coordinates: [-122.4154282, 37.7746115] }, $maxDistance: 20 }}},
+             { x: 0 }]
+    });
+  });
+  test.throws(function () {
+    coll.find({
+      $nor: [ { location: { $near: { $geometry: { type: "Point", coordinates: [-122.4154282, 37.7746115] }, $maxDistance: 1 }}},
+              { x: 0 }]
+    });
+  });
+  test.throws(function () {
+    coll.find({
+      $and: [{
+        $and: [{
+          location: {
+            $near: {
+              $geometry: {
+                type: "Point",
+                coordinates: [-122.4154282, 37.7746115]
+              },
+              $maxDistance: 1
+            }
+          }
+        }]
+      }]
+    });
+  });
+});
+

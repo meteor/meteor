@@ -6,6 +6,7 @@ var knownBrowsers = [
   'android',
   'chrome',
   'chromium',
+  'chromeMobileIOS',
   'firefox',
   'ie',
   'mobileSafari',
@@ -16,6 +17,7 @@ var browsersEnabledByDefault = [
   'android',
   'chrome',
   'chromium',
+  'chromeMobileIOS',
   'ie',
   'mobileSafari',
   'safari'

@@ -1,8 +1,9 @@
 Package.describe({
-  summary: "Helpers for control programs"
+  summary: "Helpers for control programs",
+  internal: true
 });
 
-Npm.depends({optimist: '0.4.0'});
+Npm.depends({optimist: '0.6.0'});
 
 Package.on_use(function (api) {
   api.use(['underscore', 'livedata', 'mongo-livedata', 'follower-livedata'], 'server');

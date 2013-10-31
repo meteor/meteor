@@ -1,4 +1,5 @@
 var fs = Npm.require('fs');
+var Future = Npm.require('fibers/future');
 
 var readFile = Meteor._wrapAsync(fs.readFile);
 
@@ -38,11 +39,14 @@ Follower = {
       makeElectorTries(urlSet, { priority: 0, reset: true });
     }
     var tryingUrl = null;
-    var outstandingGetElectorate = false;
     var conn = null;
     var leader = null;
     var connected = null;
     var intervalHandle = null;
+
+    // Used to defer all method calls until we're sure that we connected to the
+    // right leadership group.
+    var connectedToLeadershipGroup = new Future();
 
     var findFewestTries = function () {
       var min = 10000;
@@ -74,11 +78,14 @@ Follower = {
     };
 
     var tryElector = function (url) {
-      if (tryingUrl) {
-        electorTries[tryingUrl]++;
-      }
       url = url || findFewestTries();
-      //console.log("trying", url, electorTries, tryingUrl);
+      // console.log("trying", url, electorTries, tryingUrl);
+
+      // Don't keep trying the same url as fast as we can if it's not working.
+      if (electorTries[url] > 2) {
+        Meteor._sleepForMs(3 * 1000);
+      }
+
       if (conn) {
         conn._reconnectImpl({
           url: url
@@ -87,21 +94,26 @@ Follower = {
         conn = DDP.connect(url);
         conn._reconnectImpl = conn.reconnect;
       }
-      tryingUrl = url;
 
-      if (!outstandingGetElectorate) {
-        outstandingGetElectorate = true;
+      if (tryingUrl) {
+        electorTries[tryingUrl]++;
+        tryingUrl = url;
+      } else {
+        tryingUrl = url;
         conn.call('getElectorate', options.group, function (err, res) {
-          outstandingGetElectorate = false;
           connected = tryingUrl;
+          tryingUrl = null;
           if (err) {
+            electorTries[url]++;
             tryElector();
             return;
           }
-          tryingUrl = null;
+          if (! connectedToLeadershipGroup.isResolved()) {
+            connectedToLeadershipGroup["return"]();
+          }
           // we got an answer!  Connected!
           electorTries[url] = 0;
-          if (res.leader === connected) {
+          if (res.leader === url) {
             // we're good.
 
           } else {
@@ -109,6 +121,7 @@ Follower = {
             // is connectable.
             if (electorTries[res.leader] == 0) {
               tryElector(res.leader);
+
             } else {
               // XXX: leader is probably down, we're probably going to elect
               // soon.  Wait for the next round.
@@ -117,29 +130,28 @@ Follower = {
           }
           updateElectorate(res);
         });
-      }
-
+      };
     };
 
     tryElector();
 
     var checkConnection = function () {
-        if (conn.status().status !== 'connected' || connected !== leader) {
-          tryElector();
-        } else {
-          conn.call('getElectorate', options.group, function (err, res) {
-            if (err) {
-              electorTries[connected]++;
-              tryElector();
-            } else if (res.leader !== leader) {
-              updateElectorate(res);
-              tryElector(res.leader);
-            } else {
-              //console.log("updating electorate with", res);
-              updateElectorate(res);
+      if (conn.status().status !== 'connected' || connected !== leader) {
+        tryElector();
+      } else {
+        conn.call('getElectorate', options.group, function (err, res) {
+          if (err) {
+            electorTries[connected]++;
+            tryElector();
+          } else {
+            if (! connectedToLeadershipGroup.isResolved()) {
+              connectedToLeadershipGroup["return"]();
             }
-          });
-        }
+            //console.log("updating electorate with", res);
+            updateElectorate(res);
+          }
+        });
+      }
     };
 
     var monitorConnection = function () {
@@ -174,6 +186,15 @@ Follower = {
 
     conn.tries = function () {
       return electorTries;
+    };
+
+    // Assumes that `call` is implemented in terms of `apply`. All method calls
+    // should be deferred until we are sure we've connected to the right
+    // leadership group.
+    conn._applyImpl = conn.apply;
+    conn.apply = function (/* arguments */) {
+      connectedToLeadershipGroup.wait();
+      return conn._applyImpl.apply(conn, arguments);
     };
 
     return conn;

@@ -34,7 +34,11 @@ Meteor.user = function () {
 // @param handler {Function} A function that receives an options object
 // (as passed as an argument to the `login` method) and returns one of:
 // - `undefined`, meaning don't handle;
-// - {id: userId, token: *}, if the user logged in successfully.
+// - {id: userId, token: *, tokenExpires: *}, if the user logged in
+//   successfully. tokenExpires is optional and intends to provide a hint to the
+//   client as to when the token will expire. If not provided, the client will
+//   call Accounts._tokenExpiration, passing it the date that it received the
+//   token.
 // - throw an error, if the user failed to log in.
 //
 Accounts.registerLoginHandler = function(handler) {
@@ -74,15 +78,64 @@ Meteor.methods({
     var result = tryAllLoginHandlers(options);
     if (result !== null) {
       this.setUserId(result.id);
-      this._sessionData.loginToken = result.token;
+      this._setLoginToken(result.token);
     }
     return result;
   },
 
   logout: function() {
-    if (this._sessionData.loginToken && this.userId)
-      removeLoginToken(this.userId, this._sessionData.loginToken);
+    var token = this._getLoginToken();
+    this._setLoginToken(null);
+    if (token && this.userId)
+      removeLoginToken(this.userId, token);
     this.setUserId(null);
+  },
+
+  // Delete all the current user's tokens and close all open connections logged
+  // in as this user. Returns a fresh new login token that this client can
+  // use. Tests set Accounts._noConnectionCloseDelayForTest to delete tokens
+  // immediately instead of using a delay.
+  //
+  // @returns {Object} Object with token and tokenExpires keys.
+  logoutOtherClients: function () {
+    var self = this;
+    var user = Meteor.users.findOne(self.userId, {
+      fields: {
+        "services.resume.loginTokens": true
+      }
+    });
+    if (user) {
+      // Save the current tokens in the database to be deleted in
+      // CONNECTION_CLOSE_DELAY_MS ms. This gives other connections in the
+      // caller's browser time to find the fresh token in localStorage. We save
+      // the tokens in the database in case we crash before actually deleting
+      // them.
+      var tokens = user.services.resume.loginTokens;
+      var newToken = Accounts._generateStampedLoginToken();
+      var userId = self.userId;
+      Meteor.users.update(self.userId, {
+        $set: {
+          "services.resume.loginTokensToDelete": tokens,
+          "services.resume.haveLoginTokensToDelete": true
+        },
+        $push: { "services.resume.loginTokens": newToken }
+      });
+      Meteor.setTimeout(function () {
+        // The observe on Meteor.users will take care of closing the connections
+        // associated with `tokens`.
+        deleteSavedTokens(userId, tokens);
+      }, Accounts._noConnectionCloseDelayForTest ? 0 :
+                        CONNECTION_CLOSE_DELAY_MS);
+      // We do not set the login token on this connection, but instead the
+      // observe closes the connection and the client will reconnect with the
+      // new token.
+      return {
+        token: newToken.token,
+        tokenExpires: Accounts._tokenExpiration(newToken.when)
+      };
+    } else {
+      throw new Error("You are not logged in.");
+    }
   }
 });
 
@@ -100,11 +153,23 @@ Accounts.registerLoginHandler(function(options) {
   var user = Meteor.users.findOne({
     "services.resume.loginTokens.token": ""+options.resume
   });
-  if (!user)
-    throw new Meteor.Error(403, "Couldn't find login token");
+
+  if (!user) {
+    throw new Meteor.Error(403, "You've been logged out by the server. " +
+    "Please login again.");
+  }
+
+  var token = _.find(user.services.resume.loginTokens, function (token) {
+    return token.token === options.resume;
+  });
+
+  var tokenExpires = Accounts._tokenExpiration(token.when);
+  if (new Date() >= tokenExpires)
+    throw new Meteor.Error(403, "Your session has expired. Please login again.");
 
   return {
     token: options.resume,
+    tokenExpires: tokenExpires,
     id: user._id
   };
 });
@@ -115,7 +180,9 @@ Accounts._generateStampedLoginToken = function () {
   return {token: Random.id(), when: (new Date)};
 };
 
-removeLoginToken = function (userId, loginToken) {
+// Deletes the given loginToken from the database. This will cause all
+// connections associated with the token to be closed.
+var removeLoginToken = function (userId, loginToken) {
   Meteor.users.update(userId, {
     $pull: {
       "services.resume.loginTokens": { "token": loginToken }
@@ -123,6 +190,64 @@ removeLoginToken = function (userId, loginToken) {
   });
 };
 
+///
+/// TOKEN EXPIRATION
+///
+
+var expireTokenInterval;
+
+// Deletes expired tokens from the database and closes all open connections
+// associated with these tokens.
+//
+// Exported for tests. Also, the arguments are only used by
+// tests. oldestValidDate is simulate expiring tokens without waiting
+// for them to actually expire. userId is used by tests to only expire
+// tokens for the test user.
+var expireTokens = Accounts._expireTokens = function (oldestValidDate, userId) {
+  var tokenLifetimeMs = getTokenLifetimeMs();
+
+  // when calling from a test with extra arguments, you must specify both!
+  if ((oldestValidDate && !userId) || (!oldestValidDate && userId)) {
+    throw new Error("Bad test. Must specify both oldestValidDate and userId.");
+  }
+
+  oldestValidDate = oldestValidDate ||
+    (new Date(new Date() - tokenLifetimeMs));
+  var userFilter = userId ? {_id: userId} : {};
+
+
+  // Backwards compatible with older versions of meteor that stored login token
+  // timestamps as numbers.
+  Meteor.users.update(_.extend(userFilter, {
+    $or: [
+      { "services.resume.loginTokens.when": { $lt: oldestValidDate } },
+      { "services.resume.loginTokens.when": { $lt: +oldestValidDate } }
+    ]
+  }), {
+    $pull: {
+      "services.resume.loginTokens": {
+        $or: [
+          { when: { $lt: oldestValidDate } },
+          { when: { $lt: +oldestValidDate } }
+        ]
+      }
+    }
+  }, { multi: true });
+  // The observe on Meteor.users will take care of closing connections for
+  // expired tokens.
+};
+
+maybeStopExpireTokensInterval = function () {
+  if (_.has(Accounts._options, "loginExpirationInDays") &&
+      Accounts._options.loginExpirationInDays === null &&
+      expireTokenInterval) {
+    Meteor.clearInterval(expireTokenInterval);
+    expireTokenInterval = null;
+  }
+};
+
+expireTokenInterval = Meteor.setInterval(expireTokens,
+                                         EXPIRE_TOKENS_INTERVAL_MS);
 
 ///
 /// CREATE USER HOOKS
@@ -164,6 +289,7 @@ Accounts.insertUserDoc = function (options, user) {
   if (options.generateLoginToken) {
     var stampedToken = Accounts._generateStampedLoginToken();
     result.token = stampedToken.token;
+    result.tokenExpires = Accounts._tokenExpiration(stampedToken.when);
     Meteor._ensure(user, 'services', 'resume');
     if (_.has(user.services.resume, 'loginTokens'))
       user.services.resume.loginTokens.push(stampedToken);
@@ -213,6 +339,49 @@ Accounts.validateNewUser = function (func) {
   validateNewUserHooks.push(func);
 };
 
+// XXX Find a better place for this utility function
+// Like Perl's quotemeta: quotes all regexp metacharacters. See
+//   https://github.com/substack/quotemeta/blob/master/index.js
+var quotemeta = function (str) {
+    return String(str).replace(/(\W)/g, '\\$1');
+};
+
+// Helper function: returns false if email does not match company domain from
+// the configuration.
+var testEmailDomain = function (email) {
+  var domain = Accounts._options.restrictCreationByEmailDomain;
+  return !domain ||
+    (_.isFunction(domain) && domain(email)) ||
+    (_.isString(domain) &&
+      (new RegExp('@' + quotemeta(domain) + '$', 'i')).test(email));
+};
+
+// Validate new user's email or Google/Facebook/GitHub account's email
+Accounts.validateNewUser(function (user) {
+  var domain = Accounts._options.restrictCreationByEmailDomain;
+  if (!domain)
+    return true;
+
+  var emailIsGood = false;
+  if (!_.isEmpty(user.emails)) {
+    emailIsGood = _.any(user.emails, function (email) {
+      return testEmailDomain(email.address);
+    });
+  } else if (!_.isEmpty(user.services)) {
+    // Find any email of any service and check it
+    emailIsGood = _.any(user.services, function (service) {
+      return service.email && testEmailDomain(service.email);
+    });
+  }
+
+  if (emailIsGood)
+    return true;
+
+  if (_.isString(domain))
+    throw new Meteor.Error(403, "@" + domain + " email required");
+  else
+    throw new Meteor.Error(403, "Email doesn't match the criteria.");
+});
 
 ///
 /// MANAGING USER OBJECTS
@@ -280,7 +449,11 @@ Accounts.updateOrCreateUserFromExternalService = function(
       user._id,
       {$set: setAttrs,
        $push: {'services.resume.loginTokens': stampedToken}});
-    return {token: stampedToken.token, id: user._id};
+    return {
+      token: stampedToken.token,
+      id: user._id,
+      tokenExpires: Accounts._tokenExpiration(stampedToken.when)
+    };
   } else {
     // Create a new user with the service data. Pass other options through to
     // insertUserDoc.
@@ -426,3 +599,72 @@ Meteor.users._ensureIndex('username', {unique: 1, sparse: 1});
 Meteor.users._ensureIndex('emails.address', {unique: 1, sparse: 1});
 Meteor.users._ensureIndex('services.resume.loginTokens.token',
                           {unique: 1, sparse: 1});
+// For taking care of logoutOtherClients calls that crashed before the tokens
+// were deleted.
+Meteor.users._ensureIndex('services.resume.haveLoginTokensToDelete',
+                          { sparse: 1 });
+// For expiring login tokens
+Meteor.users._ensureIndex("services.resume.loginTokens.when", { sparse: 1 });
+
+///
+/// CLEAN UP FOR `logoutOtherClients`
+///
+
+var deleteSavedTokens = function (userId, tokensToDelete) {
+  if (tokensToDelete) {
+    Meteor.users.update(userId, {
+      $unset: {
+        "services.resume.haveLoginTokensToDelete": 1,
+        "services.resume.loginTokensToDelete": 1
+      },
+      $pullAll: {
+        "services.resume.loginTokens": tokensToDelete
+      }
+    });
+  }
+};
+
+Meteor.startup(function () {
+  // If we find users who have saved tokens to delete on startup, delete them
+  // now. It's possible that the server could have crashed and come back up
+  // before new tokens are found in localStorage, but this shouldn't happen very
+  // often. We shouldn't put a delay here because that would give a lot of power
+  // to an attacker with a stolen login token and the ability to crash the
+  // server.
+  var users = Meteor.users.find({
+    "services.resume.haveLoginTokensToDelete": true
+  }, {
+    "services.resume.loginTokensToDelete": 1
+  });
+  users.forEach(function (user) {
+    deleteSavedTokens(user._id, user.services.resume.loginTokensToDelete);
+  });
+});
+
+///
+/// LOGGING OUT DELETED USERS
+///
+
+var closeTokensForUser = function (userTokens) {
+  Meteor.server._closeAllForTokens(_.map(userTokens, function (token) {
+    return token.token;
+  }));
+};
+
+Meteor.users.find({}, { fields: { "services.resume": 1 }}).observe({
+  changed: function (newUser, oldUser) {
+    var removedTokens = [];
+    if (newUser.services && newUser.services.resume &&
+        oldUser.services && oldUser.services.resume) {
+      removedTokens = _.difference(oldUser.services.resume.loginTokens || [],
+                                   newUser.services.resume.loginTokens || []);
+    } else if (oldUser.services && oldUser.services.resume) {
+      removedTokens = oldUser.services.resume.loginTokens || [];
+    }
+    closeTokensForUser(removedTokens);
+  },
+  removed: function (oldUser) {
+    if (oldUser.services && oldUser.services.resume)
+      closeTokensForUser(oldUser.services.resume.loginTokens || []);
+  }
+});

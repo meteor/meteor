@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "Default control program for an application"
+  summary: "Default control program for an application",
+  internal: true
 });
 
 Package.on_use(function (api) {

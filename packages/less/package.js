@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "The dynamic stylesheet language."
+  summary: "The dynamic stylesheet language"
 });
 
 Package._transitional_registerBuildPlugin({

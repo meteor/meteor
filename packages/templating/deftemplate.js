@@ -15,6 +15,15 @@ var hookHandlebars = function () {
 
   var orig = Handlebars._default_helpers.each;
   Handlebars._default_helpers.each = function (arg, options) {
+    var isArgValid = function () {
+      return !arg // falsey
+        || (arg instanceof Array)
+        || (arg instanceof Object && 'observeChanges' in arg);
+    };
+    if (!isArgValid())
+      throw new Error("{{#each}} only accepts arrays, cursors, or falsey "
+                      + "values. You passed: " + arg);
+
     // if arg isn't an observable (like LocalCollection.Cursor),
     // don't use this reactive implementation of #each.
     if (!(arg && 'observeChanges' in arg))

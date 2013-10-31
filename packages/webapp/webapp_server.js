@@ -147,7 +147,6 @@ var appUrl = function (url) {
   return true;
 };
 
-
 var runWebAppServer = function () {
   // read the control for the client we'll be serving up
   var clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
@@ -231,6 +230,16 @@ var runWebAppServer = function () {
       next();
       return;
     }
+
+    if (pathname === "/meteor_runtime_config.js" &&
+        ! WebAppInternals.inlineScriptsAllowed()) {
+      res.writeHead(200, { 'Content-type': 'application/javascript' });
+      res.write("__meteor_runtime_config__ = " +
+                JSON.stringify(__meteor_runtime_config__) + ";");
+      res.end();
+      return;
+    }
+
     if (!_.has(staticFiles, pathname)) {
       next();
       return;
@@ -387,15 +396,24 @@ var runWebAppServer = function () {
     argv = optimist(argv).boolean('keepalive').argv;
 
     var boilerplateHtmlPath = path.join(clientDir, clientJson.page);
-    boilerplateHtml =
-      fs.readFileSync(boilerplateHtmlPath, 'utf8')
-      .replace(
-        "// ##RUNTIME_CONFIG##",
-        "__meteor_runtime_config__ = " +
-          JSON.stringify(__meteor_runtime_config__) + ";")
-      .replace(
-          /##ROOT_URL_PATH_PREFIX##/g,
-        __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || "");
+    boilerplateHtml = fs.readFileSync(boilerplateHtmlPath, 'utf8');
+
+    // Include __meteor_runtime_config__ in the app html, as an inline script if
+    // it's not forbidden by CSP.
+    if (WebAppInternals.inlineScriptsAllowed()) {
+      boilerplateHtml = boilerplateHtml.replace(
+          /##RUNTIME_CONFIG##/,
+        "<script type='text/javascript'>__meteor_runtime_config__ = " +
+          JSON.stringify(__meteor_runtime_config__) + ";</script>");
+    } else {
+      boilerplateHtml = boilerplateHtml.replace(
+        /##RUNTIME_CONFIG##/,
+        "<script type='text/javascript' src='##ROOT_URL_PATH_PREFIX##/meteor_runtime_config.js'></script>"
+      );
+    }
+    boilerplateHtml = boilerplateHtml.replace(
+        /##ROOT_URL_PATH_PREFIX##/g,
+      __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || "");
 
     // only start listening after all the startup code has run.
     var localPort = parseInt(process.env.PORT) || 0;
@@ -411,8 +429,8 @@ var runWebAppServer = function () {
         if (proxyBinding)
           proxyBinding.stop();
         if (configuration && configuration.proxy) {
-          proxyBinding = AppConfig.configureService(configuration.proxyServiceName ||
-                                                    "proxy", function (proxyService) {
+          var proxyServiceName = configuration.proxyServiceName || "proxy";
+          proxyBinding = AppConfig.configureService(proxyServiceName, function (proxyService) {
             if (proxyService.providers.proxy) {
               var proxyConf;
               if (process.env.ADMIN_APP) {
@@ -429,7 +447,7 @@ var runWebAppServer = function () {
               Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
               WebAppInternals.bindToProxy(_.extend({
                 proxyEndpoint: proxyService.providers.proxy
-              }, proxyConf));
+              }, proxyConf), proxyServiceName);
             }
           });
         }
@@ -450,7 +468,7 @@ var runWebAppServer = function () {
   };
 };
 
-WebAppInternals.bindToProxy = function (proxyConfig) {
+WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
   var securePort = proxyConfig.securePort || 4433;
   var insecurePort = proxyConfig.insecurePort || 8080;
   var bindPathPrefix = proxyConfig.bindPathPrefix || "";
@@ -480,8 +498,12 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
   };
 
   // This is run after packages are loaded (in main) so we can use
-  // DDP.connect.
-  var proxy = Package.livedata.DDP.connect(proxyConfig.proxyEndpoint);
+  // Follower.connect.
+  var proxy = Package["follower-livedata"].Follower.connect(
+    proxyConfig.proxyEndpoint, {
+      group: proxyServiceName
+    }
+  );
   var route = process.env.ROUTE;
   var host = route.split(":")[0];
   var port = +route.split(":")[1];
@@ -549,3 +571,14 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
 };
 
 runWebAppServer();
+
+
+var inlineScriptsAllowed = true;
+
+WebAppInternals.inlineScriptsAllowed = function () {
+  return inlineScriptsAllowed;
+};
+
+WebAppInternals.setInlineScriptsAllowed = function (value) {
+  inlineScriptsAllowed = value;
+};

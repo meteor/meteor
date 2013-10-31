@@ -27,6 +27,7 @@ Accounts._enableAutoLogin = function () {
 
 // Key names to use in localStorage
 var loginTokenKey = "Meteor.loginToken";
+var loginTokenExpiresKey = "Meteor.loginTokenExpires";
 var userIdKey = "Meteor.userId";
 
 // Call this from the top level of the test file for any test that does
@@ -37,9 +38,12 @@ Accounts._isolateLoginTokenForTest = function () {
   userIdKey = userIdKey + Random.id();
 };
 
-storeLoginToken = function(userId, token) {
+storeLoginToken = function(userId, token, tokenExpires) {
   Meteor._localStorage.setItem(userIdKey, userId);
   Meteor._localStorage.setItem(loginTokenKey, token);
+  if (! tokenExpires)
+    tokenExpires = Accounts._tokenExpiration(new Date());
+  Meteor._localStorage.setItem(loginTokenExpiresKey, tokenExpires);
 
   // to ensure that the localstorage poller doesn't end up trying to
   // connect a second time
@@ -49,6 +53,7 @@ storeLoginToken = function(userId, token) {
 unstoreLoginToken = function() {
   Meteor._localStorage.removeItem(userIdKey);
   Meteor._localStorage.removeItem(loginTokenKey);
+  Meteor._localStorage.removeItem(loginTokenExpiresKey);
 
   // to ensure that the localstorage poller doesn't end up trying to
   // connect a second time
@@ -58,14 +63,23 @@ unstoreLoginToken = function() {
 // This is private, but it is exported for now because it is used by a
 // test in accounts-password.
 //
-var storedLoginToken = Accounts._storedLoginToken = function() {
+storedLoginToken = Accounts._storedLoginToken = function() {
   return Meteor._localStorage.getItem(loginTokenKey);
+};
+
+storedLoginTokenExpires = function () {
+  return Meteor._localStorage.getItem(loginTokenExpiresKey);
 };
 
 var storedUserId = function() {
   return Meteor._localStorage.getItem(userIdKey);
 };
 
+var unstoreLoginTokenIfExpiresSoon = function () {
+  var tokenExpires = Meteor._localStorage.getItem(loginTokenExpiresKey);
+  if (tokenExpires && Accounts._tokenExpiresSoon(new Date(tokenExpires)))
+    unstoreLoginToken();
+};
 
 ///
 /// AUTO-LOGIN
@@ -74,6 +88,7 @@ var storedUserId = function() {
 if (autoLoginEnabled) {
   // Immediately try to log in via local storage, so that any DDP
   // messages are sent after we have established our user account
+  unstoreLoginTokenIfExpiresSoon();
   var token = storedLoginToken();
   if (token) {
     // On startup, optimistically present us as logged in while the
