@@ -94,7 +94,11 @@ Tinytest.add('observe sequence - array to other array', function (test) {
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
     {removed: ["37", {_id: "37", bar: 2}]},
-    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]},
+    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]}
+    // XXX yeah, it didn't change at all but current implementation is too lazy
+    // to diff objects (and it's not always possible, since you can't diff
+    // objects with circular refferences)
   ]);
 });
 
@@ -113,8 +117,9 @@ Tinytest.add('observe sequence - array to other array, changes', function (test)
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
     {addedAt: ["42", {_id: "42", baz: 42}, 2, null]},
     {removed: ["37", {_id: "37", bar: 2}]},
-    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]},
-    {changedAt: ["42", {_id: "42", baz: 42}, {_id: "42", baz: 43}, null]} // XXX: this thing is not guaranteed to be correct xcxc
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, "42"]},
+    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]}, // XXX doesn't really change
+    {changed: ["42", {_id: "42", baz: 42}, {_id: "42", baz: 43}]}
   ]);
 });
 
@@ -132,8 +137,10 @@ Tinytest.add('observe sequence - array to other array, movedTo', function (test)
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
     {addedAt: ["42", {_id: "42", baz: 42}, 2, null]},
-    {movedTo: [{_id: "37", bar: 2}, 1, 0, null]}, // is it really null? xcxc
-    {movedTo: [{_id: "13", foo: 1}, 0, 1, null]}  // is it really null? xcxc
+    {movedTo: ["37", {_id: "37", bar: 2}, 1, 0, "13"]},
+    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]}, // XXX doesn't really change
+    {changed: ["37", {_id: "37", bar: 2}, {_id: "37", bar: 2}]}, // XXX doesn't really change
+    {changed: ["42", {_id: "42", baz: 42}, {_id: "42", baz: 42}]} // XXX doesn't really change
   ]);
 });
 
@@ -173,7 +180,8 @@ Tinytest.add('observe sequence - array to cursor', function (test) {
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
     {removed: ["37", {_id: "37", bar: 2}]},
-    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]},
+    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]} // XXX doesn't actually change
   ]);
 });
 
@@ -212,44 +220,19 @@ Tinytest.add('observe sequence - cursor to array', function (test) {
     return seq;
   }, function () {
     coll.insert({_id: "37", bar: 2});
+    dep.changed();
     seq = [{_id: "13", foo: 1}, {_id: "38", bar: 2}];
     dep.changed();
   }, [
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
     {removed: ["37", {_id: "37", bar: 2}]},
-    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]},
+    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]}
   ]);
 });
 
-Tinytest.add('observe sequence - cursor to other cursor', function (test) {
-  var dep = new Deps.Dependency;
-  var coll = new Meteor.Collection(null);
-  coll.insert({_id: "13", foo: 1});
-  var cursor = coll.find({}, {sort: {_id: 1}});
-  var seq = cursor;
-
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
-    dep.depend();
-    return seq;
-  }, function () {
-    coll.insert({_id: "37", bar: 2});
-    
-    var newColl = new Meteor.Collection(null);
-    newColl.insert({_id: "13", foo: 1});
-    newColl.insert({_id: "38", bar: 2});
-    var newCursor = newColl.find({}, {sort: {_id: 1}});
-    seq = newCursor;
-    dep.changed();
-  }, [
-    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
-    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
-    {removed: ["37", {_id: "37", bar: 2}]},
-    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
-  ]);
-});
-
-Tinytest.add('observe sequence - cursor to same cursor', function (test) {
+Tinytest.add('observe sequence - cursor', function (test) {
   var coll = new Meteor.Collection(null);
   coll.insert({_id: "13", rank: 1});
   var cursor = coll.find({}, {sort: {rank: 1}});
@@ -277,5 +260,48 @@ Tinytest.add('observe sequence - cursor to same cursor', function (test) {
     {changed: ["77", {_id: "77", rank: -1}, {_id: "77", rank: 3}]},
     {movedTo: ["77", {_id: "77", rank: -1}, 2, 0, "11"]}
   ]);
+});
+
+Tinytest.add('observe sequence - cursor to other cursor', function (test) {
+  var dep = new Deps.Dependency;
+  var coll = new Meteor.Collection(null);
+  coll.insert({_id: "13", foo: 1});
+  var cursor = coll.find({}, {sort: {_id: 1}});
+  var seq = cursor;
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    coll.insert({_id: "37", bar: 2});
+
+    var newColl = new Meteor.Collection(null);
+    newColl.insert({_id: "13", foo: 1});
+    newColl.insert({_id: "38", bar: 2});
+    var newCursor = newColl.find({}, {sort: {_id: 1}});
+    seq = newCursor;
+    dep.changed();
+  }, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
+    {removed: ["37", {_id: "37", bar: 2}]},
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]},
+    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]} // XXX this doesn't really change
+  ]);
+});
+
+Tinytest.add('observe sequence - cursor to same cursor', function (test) {
+  var coll = new Meteor.Collection(null);
+  coll.insert({_id: "13", rank: 1});
+  var cursor = coll.find({}, {sort: {rank: 1}});
+  var seq = cursor;
+  var dep = new Deps.Dependency;
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    dep.changed();
+  }, [ {addedAt: ["13", {_id: "13", rank: 1}, 0, null]} ]);
 });
 
