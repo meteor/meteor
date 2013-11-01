@@ -1,4 +1,5 @@
-=> Meteor 0.6.6.2: Upstream security fix: update to Node 0.10.21.
+=> Meteor 0.6.6.3: Improve `meteor run` CPU usage, fix error with
+   publish during session shutdown.
 
    This is being downloaded in the background. Update your project
-   to Meteor 0.6.6.2 by running 'meteor update'.
+   to Meteor 0.6.6.3 by running 'meteor update'.
