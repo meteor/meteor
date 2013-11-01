@@ -52,18 +52,29 @@ ObserveSequence = {
         // XXX we assume every element has a unique '_id' field
         var diffFn = Package.minimongo.LocalCollection._diffQueryOrderedChanges;
         // XXX after invert the values are stringified indexes
-        var posOld = _.invert(_.pluck(lastSeqArray, '_id'));
-        var posNew = _.invert(_.pluck(seqArray, '_id'));
+        var oldIdObjects = [];
+        var newIdObjects = [];
+        var posOld = {};
+        var posNew = {};
+
+        _.each(seqArray, function (doc, i) {
+          newIdObjects.push(_.pick(doc, '_id'));
+          posNew[doc._id] = i;
+        });
+        _.each(lastSeqArray, function (doc, i) {
+          oldIdObjects.push(_.pick(doc, '_id'));
+          posOld[doc._id] = i;
+        });
 
         // Notice that we don't specify 'changed' callback, which means we don't
         // want diff algo to find changes in documents. It's not always possible
         // to do so: algo doesn't know how to compare not EJSONable objects.
-        diffFn(lastSeqArray, seqArray, {
+        diffFn(oldIdObjects, newIdObjects, {
           addedBefore: function (id, doc, before) {
-            callbacks.addedAt(id, doc.item, +posNew[id], before);
+            callbacks.addedAt(id, seqArray[posNew[id]].item, posNew[id], before);
           },
           movedBefore: function (id, before) {
-            callbacks.movedTo(id, seqArray[posNew[id]].item, +posOld[id], +posNew[id], before);
+            callbacks.movedTo(id, seqArray[posNew[id]].item, posOld[id], posNew[id], before);
           },
           removed: function (id) {
             callbacks.removed(id, lastSeqArray[posOld[id]].item);
