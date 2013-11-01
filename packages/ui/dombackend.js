@@ -3,7 +3,7 @@ if (Meteor.isClient) {
 
   // XXX in the future, make the jQuery adapter a separate
   // package and make the choice of back-end library
-  // configurable.  Adapters all expose the DomBackend interface.
+  // configurable.  Adapters all expose the same DomBackend interface.
 
   if (! Package.jquery)
     throw new Error("Meteor UI jQuery adapter: jQuery not found.");
