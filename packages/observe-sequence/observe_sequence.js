@@ -44,10 +44,21 @@ ObserveSequence = {
       };
 
       var naivelyReplaceArray = function () {
+        //_.each(lastSeqArray, function (idAndItem) {
+        //  callbacks.removed(idAndItem.id, idAndItem.item);
+        //});
+        //_.each(seqArray, function (idAndItem, index) {
+        //  callbacks.addedAt(idAndItem.id, idAndItem.item, index, null);
+        //});
+        //return;
         _.each(lastSeqArray, function (item) {
+          if (!item._id)
+            console.log(item)
           callbacks.removed(item._id, item);
         });
         _.each(seqArray, function (item, index) {
+          if (!item._id)
+            console.log(item)
           callbacks.addedAt(item._id, item, index, null);
         });
         return;
@@ -83,14 +94,20 @@ ObserveSequence = {
       } else if (seq instanceof Array) {
         // XXX if id is not set, we just set it to the index in array
         seqArray = _.map(seq, function (doc, i) {
-          return doc._id ? doc : _.extend({ _id: i }, doc);
+          return _.extend({ _id: i.toString() }, doc);
         });
+        //seqArray = _.map(seq, function (doc, i) {
+        //  return { id: doc._id || i, item: doc };
+        //});
         naivelyReplaceArray();
       } else if (isMinimongoCursor(seq)) {
         var cursor = seq;
         if (lastSeq !== cursor) { // fresh cursor.
           Deps.nonreactive(function () {
             seqArray = cursor.fetch();
+            //seqArray = _.map(cursor.fetch(), function (doc) {
+            //  return {id: doc._id, item: doc};
+            //});
           });
           naivelyReplaceArray();
 
@@ -121,6 +138,9 @@ ObserveSequence = {
           // write a test for this and fix it.
           Deps.nonreactive(function () {
             seqArray = cursor.fetch();
+            //seqArray = _.map(cursor.fetch(), function (item) {
+            //  return {id: item._id, item: item};
+            //});
           });
         }
       } else {
