@@ -24,10 +24,6 @@ ObserveSequence = {
   // XXX currently only supports the callbacks used by our
   // implementation of {{#each}}, but this can be expanded.
   //
-  // XXX the current implementation doesn't do any intelligent array
-  // diffing. Instead, it clears and repopulates the sequence by
-  // firing a sequence of calls to 'removed' followed by 'addedAt'.
-  //
   // XXX #each doesn't use the indices (though we'll eventually need
   // a way to get them when we support `@index`), but calling
   // `cursor.observe` causes the index to be calculated on every
@@ -37,35 +33,65 @@ ObserveSequence = {
   observe: function (sequenceFunc, callbacks) {
     var lastSeq = null;
     var activeObserveHandle = null;
-    var lastSeqArray = []; // elements are objects of form {id, item}
+    var lastSeqArray = [];
     var computation = Deps.autorun(function () {
       var seq = sequenceFunc();
       var seqArray;
 
+      var isMinimongoCursor = function (seq) {
+        var minimongo = Package.minimongo;
+        return !!minimongo && (seq instanceof minimongo.LocalCollection.Cursor);
+      };
+
       var naivelyReplaceArray = function () {
-        _.each(lastSeqArray, function (idAndItem) {
-          callbacks.removed(idAndItem.id, idAndItem.item);
+        _.each(lastSeqArray, function (item) {
+          callbacks.removed(item._id, item);
         });
-        _.each(seqArray, function (idAndItem, index) {
-          callbacks.addedAt(idAndItem.id, idAndItem.item, index, null);
+        _.each(seqArray, function (item, index) {
+          callbacks.addedAt(item._id, item, index, null);
+        });
+        return;
+        // XXX we assume every element has a unique '_id' field
+        var diffFn = Package.minimongo.LocalCollection._diffQueryOrderedChanges;
+        var posOld = _.invert(_.pluck(lastSeqArray, '_id'));
+        var posNew = _.invert(_.pluck(seqArray, '_id'));
+
+        //console.log(lastSeqArray, seqArray)
+        diffFn(lastSeqArray, seqArray, {
+          addedBefore: function (id, doc, before) {
+            //console.log('addedBefore ', id, doc, posNew[id], before);
+            callbacks.addedAt(id, doc, posNew[id], before);
+          },
+          movedBefore: function (id, before) {
+            //console.log('moved before ', arguments);
+            callbacks.movedTo(id, seqArray[posNew[id]], posOld[id], posNew[id], before);
+          },
+          changed: function (id, doc) {
+            //console.log('changed ', id, lastSeqArray[posOld[id]], doc);
+            callbacks.changed(id, lastSeqArray[posOld[id]], doc);
+          },
+          removed: function (id) {
+            //console.log('removed ', id, lastSeqArray[posOld[id]]);
+            callbacks.removed(id, lastSeqArray[posOld[id]]);
+          }
         });
       };
 
       if (!seq) {
         seqArray = [];
         naivelyReplaceArray();
-
       } else if (seq instanceof Array) {
-        seqArray = _.map(seq, function (item) {
-          var id = item._id || Random.id();
-          return {id: id, item: item};
+        // XXX if id is not set, we just set it to the index in array
+        seqArray = _.map(seq, function (doc, i) {
+          return doc._id ? doc : _.extend({ _id: i }, doc);
         });
         naivelyReplaceArray();
-
-      } else if (seq._publishCursor) { // XXX is there a better way to
-                                       // check if 'seq' is a cursor?
+      } else if (isMinimongoCursor(seq)) {
         var cursor = seq;
         if (lastSeq !== cursor) { // fresh cursor.
+          Deps.nonreactive(function () {
+            seqArray = cursor.fetch();
+          });
           naivelyReplaceArray();
 
           // fetch all elements and start observing.
@@ -94,9 +120,7 @@ ObserveSequence = {
           // cursor we diff against the right original value of `seqArray`.
           // write a test for this and fix it.
           Deps.nonreactive(function () {
-            seqArray = _.map(cursor.fetch(), function (item) {
-              return {id: item._id, item: item};
-            });
+            seqArray = cursor.fetch();
           });
         }
       } else {

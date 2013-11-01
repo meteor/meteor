@@ -93,10 +93,47 @@ Tinytest.add('observe sequence - array to other array', function (test) {
   }, [
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
-    {removed: ["13", {_id: "13", foo: 1}]},           // XXX in a later optimization these two
     {removed: ["37", {_id: "37", bar: 2}]},
-    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},  // calls should not need to fire.
     {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
+  ]);
+});
+
+Tinytest.add('observe sequence - array to other array, changes', function (test) {
+  var dep = new Deps.Dependency;
+  var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}, {_id: "42", baz: 42}];
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = [{_id: "13", foo: 1}, {_id: "38", bar: 2}, {_id: "42", baz: 43}];
+    dep.changed();
+  }, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
+    {addedAt: ["42", {_id: "42", baz: 42}, 2, null]},
+    {removed: ["37", {_id: "37", bar: 2}]},
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]},
+    {changedAt: ["42", {_id: "42", baz: 42}, {_id: "42", baz: 43}, null]} // XXX: this thing is not guaranteed to be correct xcxc
+  ]);
+});
+
+Tinytest.add('observe sequence - array to other array, movedTo', function (test) {
+  var dep = new Deps.Dependency;
+  var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}, {_id: "42", baz: 42}];
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = [{_id: "37", bar: 2}, {_id: "13", foo: 1}, {_id: "42", baz: 42}];
+    dep.changed();
+  }, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
+    {addedAt: ["42", {_id: "42", baz: 42}, 2, null]},
+    {movedTo: [{_id: "37", bar: 2}, 1, 0, null]}, // is it really null? xcxc
+    {movedTo: [{_id: "13", foo: 1}, 0, 1, null]}  // is it really null? xcxc
   ]);
 });
 
@@ -135,9 +172,7 @@ Tinytest.add('observe sequence - array to cursor', function (test) {
   }, [
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
-    {removed: ["13", {_id: "13", foo: 1}]},           // XXX in a later optimization these two
     {removed: ["37", {_id: "37", bar: 2}]},
-    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},  // calls should not need to fire.
     {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
   ]);
 });
@@ -182,9 +217,7 @@ Tinytest.add('observe sequence - cursor to array', function (test) {
   }, [
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
-    {removed: ["13", {_id: "13", foo: 1}]},           // XXX in a later optimization these two
     {removed: ["37", {_id: "37", bar: 2}]},
-    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},  // calls should not need to fire.
     {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
   ]);
 });
@@ -210,9 +243,7 @@ Tinytest.add('observe sequence - cursor to other cursor', function (test) {
   }, [
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
-    {removed: ["13", {_id: "13", foo: 1}]},           // XXX in a later optimization these two
     {removed: ["37", {_id: "37", bar: 2}]},
-    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},  // calls should not need to fire.
     {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
   ]);
 });
@@ -244,6 +275,25 @@ Tinytest.add('observe sequence - cursor to same cursor', function (test) {
     {changed: ["13", {_id: "13", rank: 1, updated: true}, {_id: "13", rank: 1}]},
     {changed: ["77", {_id: "77", rank: -1}, {_id: "77", rank: 3}]},
     {movedTo: ["77", {_id: "77", rank: -1}, 2, 0, "11"]}
+  ]);
+});
+
+Tinytest.add('observe sequence - play with diff XXX remove it', function (test) {
+  var dep = new Deps.Dependency;
+  var seq = [{_id: 'a'}, {_id: 'b'}, {_id: 'c'}, {_id: 'd'}];
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = [{_id: 'b'}, {_id: 'a'}, {_id: 'e'}, {_id: 'f'}];
+    dep.changed();
+  }, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
+    {addedAt: ["42", {_id: "42", baz: 42}, 2, null]},
+    {movedTo: [{_id: "37", bar: 2}, 1, 0, null]}, // is it really null? xcxc
+    {movedTo: [{_id: "13", foo: 1}, 0, 1, null]}  // is it really null? xcxc
   ]);
 });
 
