@@ -35,6 +35,7 @@ ObserveSequence = {
     var activeObserveHandle = null;
     var lastSeqArray = [];
     var computation = Deps.autorun(function () {
+      console.log('start<><><>');
       var seq = sequenceFunc();
       var seqArray;
 
@@ -44,70 +45,57 @@ ObserveSequence = {
       };
 
       var naivelyReplaceArray = function () {
-        //_.each(lastSeqArray, function (idAndItem) {
-        //  callbacks.removed(idAndItem.id, idAndItem.item);
-        //});
-        //_.each(seqArray, function (idAndItem, index) {
-        //  callbacks.addedAt(idAndItem.id, idAndItem.item, index, null);
-        //});
-        //return;
-        _.each(lastSeqArray, function (item) {
-          if (!item._id)
-            console.log(item)
-          callbacks.removed(item._id, item);
-        });
-        _.each(seqArray, function (item, index) {
-          if (!item._id)
-            console.log(item)
-          callbacks.addedAt(item._id, item, index, null);
-        });
-        return;
+        try{
+          console.log(JSON.stringify(lastSeqArray), JSON.stringify(seqArray));
+        }catch(e){
+          console.log(lastSeqArray, seqArray);
+        }
         // XXX we assume every element has a unique '_id' field
         var diffFn = Package.minimongo.LocalCollection._diffQueryOrderedChanges;
+        // XXX after invert the values are stringified indexes
         var posOld = _.invert(_.pluck(lastSeqArray, '_id'));
         var posNew = _.invert(_.pluck(seqArray, '_id'));
 
-        //console.log(lastSeqArray, seqArray)
         diffFn(lastSeqArray, seqArray, {
           addedBefore: function (id, doc, before) {
-            //console.log('addedBefore ', id, doc, posNew[id], before);
-            callbacks.addedAt(id, doc, posNew[id], before);
+            console.log('addedBefore ', [id, doc.item, posNew[id], before]);
+            callbacks.addedAt(id, doc.item, +posNew[id], before);
           },
           movedBefore: function (id, before) {
-            //console.log('moved before ', arguments);
-            callbacks.movedTo(id, seqArray[posNew[id]], posOld[id], posNew[id], before);
-          },
-          changed: function (id, doc) {
-            //console.log('changed ', id, lastSeqArray[posOld[id]], doc);
-            callbacks.changed(id, lastSeqArray[posOld[id]], doc);
+            console.log('moved before ', arguments);
+            callbacks.movedTo(id, seqArray[posNew[id]].item, +posOld[id].item, posNew[id], before);
           },
           removed: function (id) {
-            //console.log('removed ', id, lastSeqArray[posOld[id]]);
-            callbacks.removed(id, lastSeqArray[posOld[id]]);
+            console.log('removed ', id, lastSeqArray[posOld[id]].item);
+            callbacks.removed(id, lastSeqArray[posOld[id]].item);
           }
+        });
+
+        _.each(posNew, function (pos, id) {
+          if (!_.isUndefined(posOld[id]))
+            callbacks.changed(id, lastSeqArray[posNew[id]].item, seqArray[pos].item);
         });
       };
 
       if (!seq) {
         seqArray = [];
         naivelyReplaceArray();
+        console.log('something to empty');
       } else if (seq instanceof Array) {
         // XXX if id is not set, we just set it to the index in array
         seqArray = _.map(seq, function (doc, i) {
-          return _.extend({ _id: i.toString() }, doc);
+          return { _id: doc._id || Random.id(), item: doc };
         });
-        //seqArray = _.map(seq, function (doc, i) {
-        //  return { id: doc._id || i, item: doc };
-        //});
+        console.log('something to array');
         naivelyReplaceArray();
       } else if (isMinimongoCursor(seq)) {
+        console.log('something to cursor');
         var cursor = seq;
         if (lastSeq !== cursor) { // fresh cursor.
           Deps.nonreactive(function () {
-            seqArray = cursor.fetch();
-            //seqArray = _.map(cursor.fetch(), function (doc) {
-            //  return {id: doc._id, item: doc};
-            //});
+            seqArray = _.map(cursor.fetch(), function (doc) {
+              return {_id: doc._id, item: doc};
+            });
           });
           naivelyReplaceArray();
 
@@ -119,7 +107,8 @@ ObserveSequence = {
 
           activeObserveHandle = cursor.observe({
             addedAt: function (document, atIndex, before) {
-              callbacks.addedAt(document._id, document, atIndex, before);
+              if (!initial)
+                callbacks.addedAt(document._id, document, atIndex, before);
             },
             changed: function (newDocument, oldDocument) {
               callbacks.changed(newDocument._id, newDocument, oldDocument);
@@ -131,16 +120,17 @@ ObserveSequence = {
               callbacks.movedTo(document._id, document, fromIndex, toIndex, before);
             }
           });
+          
+          initial = false;
 
           // XXX this is wrong! we also need to keep track of changes
           // to the cursor so that if we switch to an array or another
           // cursor we diff against the right original value of `seqArray`.
           // write a test for this and fix it.
           Deps.nonreactive(function () {
-            seqArray = cursor.fetch();
-            //seqArray = _.map(cursor.fetch(), function (item) {
-            //  return {id: item._id, item: item};
-            //});
+            seqArray = _.map(cursor.fetch(), function (item) {
+              return {_id: item._id, item: item};
+            });
           });
         }
       } else {

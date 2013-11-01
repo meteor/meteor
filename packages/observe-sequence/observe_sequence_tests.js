@@ -204,7 +204,6 @@ Tinytest.add('observe sequence - cursor to array', function (test) {
   var dep = new Deps.Dependency;
   var coll = new Meteor.Collection(null);
   coll.insert({_id: "13", foo: 1});
-  coll.insert({_id: "37", bar: 2});
   var cursor = coll.find({}, {sort: {_id: 1}});
   var seq = cursor;
 
@@ -212,6 +211,7 @@ Tinytest.add('observe sequence - cursor to array', function (test) {
     dep.depend();
     return seq;
   }, function () {
+    coll.insert({_id: "37", bar: 2});
     seq = [{_id: "13", foo: 1}, {_id: "38", bar: 2}];
     dep.changed();
   }, [
@@ -226,7 +226,6 @@ Tinytest.add('observe sequence - cursor to other cursor', function (test) {
   var dep = new Deps.Dependency;
   var coll = new Meteor.Collection(null);
   coll.insert({_id: "13", foo: 1});
-  coll.insert({_id: "37", bar: 2});
   var cursor = coll.find({}, {sort: {_id: 1}});
   var seq = cursor;
 
@@ -234,6 +233,8 @@ Tinytest.add('observe sequence - cursor to other cursor', function (test) {
     dep.depend();
     return seq;
   }, function () {
+    coll.insert({_id: "37", bar: 2});
+    
     var newColl = new Meteor.Collection(null);
     newColl.insert({_id: "13", foo: 1});
     newColl.insert({_id: "38", bar: 2});
@@ -251,14 +252,14 @@ Tinytest.add('observe sequence - cursor to other cursor', function (test) {
 Tinytest.add('observe sequence - cursor to same cursor', function (test) {
   var coll = new Meteor.Collection(null);
   coll.insert({_id: "13", rank: 1});
-  coll.insert({_id: "37", rank: 2});
-  coll.insert({_id: "77", rank: 3});
   var cursor = coll.find({}, {sort: {rank: 1}});
   var seq = cursor;
 
   runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
     return seq;
   }, function () {
+    coll.insert({_id: "37", rank: 2});
+    coll.insert({_id: "77", rank: 3});
     coll.remove({_id: "37"});                           // should fire a 'remove' callback
     coll.insert({_id: "11", rank: 0});                  // should fire an 'insert' callback
     coll.update({_id: "13"}, {$set: {updated: true}});  // should fire an 'changed' callback
@@ -275,25 +276,6 @@ Tinytest.add('observe sequence - cursor to same cursor', function (test) {
     {changed: ["13", {_id: "13", rank: 1, updated: true}, {_id: "13", rank: 1}]},
     {changed: ["77", {_id: "77", rank: -1}, {_id: "77", rank: 3}]},
     {movedTo: ["77", {_id: "77", rank: -1}, 2, 0, "11"]}
-  ]);
-});
-
-Tinytest.add('observe sequence - play with diff XXX remove it', function (test) {
-  var dep = new Deps.Dependency;
-  var seq = [{_id: 'a'}, {_id: 'b'}, {_id: 'c'}, {_id: 'd'}];
-
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
-    dep.depend();
-    return seq;
-  }, function () {
-    seq = [{_id: 'b'}, {_id: 'a'}, {_id: 'e'}, {_id: 'f'}];
-    dep.changed();
-  }, [
-    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
-    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
-    {addedAt: ["42", {_id: "42", baz: 42}, 2, null]},
-    {movedTo: [{_id: "37", bar: 2}, 1, 0, null]}, // is it really null? xcxc
-    {movedTo: [{_id: "13", foo: 1}, 0, 1, null]}  // is it really null? xcxc
   ]);
 });
 
