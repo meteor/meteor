@@ -1807,24 +1807,38 @@ Tinytest.addAsync("mongo-livedata - local collection with null connection, w/o c
   onComplete();
 });
 
-Tinytest.add("mongo-livedata - update handles $push with $each correctly", function (test) {
-  var collection = new Meteor.Collection(Random.id());
+testAsyncMulti("mongo-livedata - update handles $push with $each correctly", [
+  function (test, expect) {
+    var self = this;
+    var collectionName = Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName);
+      Meteor.subscribe('c-' + collectionName);
+    }
 
-  var id = collection.insert({name: 'jens', elements: ['X', 'Y']});
+    self.collection = new Meteor.Collection(collectionName);
 
-  var result = collection.update(id, {
-    $push: {
-      elements: {
-        $each: ['A', 'B', 'C'],
-        $slice: -4
-      }}});
-
-  test.equal(collection.findOne(id), {
-    _id: id,
-    name: 'jens',
-    elements: ['Y', 'A', 'B', 'C']
-  });
-});
+    self.id = self.collection.insert(
+      {name: 'jens', elements: ['X', 'Y']}, expect(function (err, res) {
+        test.isFalse(err);
+        test.equal(self.id, res);
+        }));
+  },
+  function (test, expect) {
+    var self = this;
+    self.collection.update(self.id, {
+      $push: {
+        elements: {
+          $each: ['A', 'B', 'C'],
+          $slice: -4
+        }}}, expect(function (err, res) {
+          test.isFalse(err);
+          test.equal(
+            self.collection.findOne(self.id),
+            {_id: self.id, name: 'jens', elements: ['Y', 'A', 'B', 'C']});
+        }));
+  }
+]);
 
 if (Meteor.isServer) {
   Tinytest.add("mongo-livedata - upsert handles $push with $each correctly", function (test) {
