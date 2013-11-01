@@ -13,13 +13,14 @@ Package.on_use(function (api) {
   api.use('minimongo');  // for idStringify
   api.use('observe-sequence');
 
-  api.add_files(['base.js']);
+  api.add_files(['exceptions.js', 'base.js']);
 
   api.add_files(['dombackend.js',
                  'dombackend2.js',
                  'domrange.js'], 'client');
 
   api.add_files(['attrs.js',
+                 'attrs2.js',
                  'render.js',
                  'render2.js',
                  'components.js',

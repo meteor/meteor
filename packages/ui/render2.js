@@ -106,6 +106,46 @@ var insert = function (nodeOrRange, parent, before) {
   }
 };
 
+// Update attributes on `elem` to the dictionary `attrs`, using the
+// dictionary of existing `handlers` if provided.
+//
+// Values in the `attrs` dictionary are in pseudo-DOM form -- a string,
+// CharRef, or array of strings and CharRefs -- but they are passed to
+// the AttributeHandler in string form.
+var updateAttributes = function(elem, attrs, handlers) {
+  if (handlers) {
+    for (var k in handlers) {
+      if (! attrs.hasOwnProperty(k)) {
+        // remove old attributes (and handlers)
+        var handler = handlers[k];
+        var oldValue = handler.value;
+        handler.value = null;
+        handler.update(elem, oldValue, null);
+        delete handlers[k];
+      }
+    }
+  }
+
+  for (var k in attrs) {
+    var handler;
+    var oldValue;
+    var value = attributeValueToString(attrs[k]);
+    if ((! handlers) || (! handlers.hasOwnProperty(k))) {
+      // make new handler
+      checkAttributeName(k);
+      handler = makeAttributeHandler2(k, value);
+      if (handlers)
+        handlers[k] = handler;
+      oldValue = null;
+    } else {
+      handler = handlers[k];
+      oldValue = handler.value;
+    }
+    handler.value = value;
+    handler.update(elem, oldValue, value);
+  }
+};
+
 // Convert the pseudoDOM `node` into reactive DOM nodes and insert them
 // into the element or DomRange `parent`, before the node or id `before`.
 var materialize = function (node, parent, before) {
@@ -129,13 +169,23 @@ var materialize = function (node, parent, before) {
         var elem = document.createElement(node.tagName);
         if (node.attrs) {
           var attrs = node.attrs;
-          // XXX make attributes reactive!
-          if (typeof attrs === 'function')
-            attrs = attrs();
-          _.each(attrs, function (v, k) {
-            checkAttributeName(k);
-            elem.setAttribute(k, attributeValueToString(v));
-          });
+          if (typeof attrs === 'function') {
+            var attrUpdater = Deps.autorun(function (c) {
+              if (! c.handlers)
+                c.handlers = {};
+
+              try {
+                updateAttributes(elem, attrs(), c.handlers);
+              } catch (e) {
+                reportUIException(e);
+              }
+            });
+            UI.DomBackend2.onRemoveElement(elem, function () {
+              attrUpdater.stop();
+            });
+          } else {
+            updateAttributes(elem, attrs);
+          }
         }
         _.each(node, function (child) {
           materialize(child, elem);
