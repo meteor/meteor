@@ -43,7 +43,7 @@ ObserveSequence = {
         return !!minimongo && (seq instanceof minimongo.LocalCollection.Cursor);
       };
 
-      var naivelyReplaceArray = function () {
+      var replaceArray = function () {
         // XXX we assume every element has a unique '_id' field
         var diffFn = Package.minimongo.LocalCollection._diffQueryOrderedChanges;
         // XXX after invert the values are stringified indexes
@@ -55,7 +55,7 @@ ObserveSequence = {
             callbacks.addedAt(id, doc.item, +posNew[id], before);
           },
           movedBefore: function (id, before) {
-            callbacks.movedTo(id, seqArray[posNew[id]].item, +posOld[id].item, posNew[id], before);
+            callbacks.movedTo(id, seqArray[posNew[id]].item, +posOld[id], +posNew[id], before);
           },
           removed: function (id) {
             callbacks.removed(id, lastSeqArray[posOld[id]].item);
@@ -63,29 +63,42 @@ ObserveSequence = {
         });
 
         _.each(posNew, function (pos, id) {
-          if (!_.isUndefined(posOld[id]))
-            callbacks.changed(id, lastSeqArray[posNew[id]].item, seqArray[pos].item);
+          if (_.has(posOld, id))
+            callbacks.changed(id, lastSeqArray[posOld[id]].item, seqArray[pos].item);
         });
       };
 
+      Deps.nonreactive(function () {
+        if (isMinimongoCursor(lastSeq)) {
+          lastSeq.rewind();
+          lastSeqArray = _.map(lastSeq.fetch(), function (doc) {
+            return {_id: doc._id, item: doc};
+          });
+          lastSeq.rewind();
+        }
+      });
+
       if (!seq) {
         seqArray = [];
-        naivelyReplaceArray();
+        replaceArray();
       } else if (seq instanceof Array) {
         // XXX if id is not set, we just set it to the index in array
         seqArray = _.map(seq, function (doc, i) {
           return { _id: doc._id || Random.id(), item: doc };
         });
-        naivelyReplaceArray();
+        replaceArray();
       } else if (isMinimongoCursor(seq)) {
         var cursor = seq;
         if (lastSeq !== cursor) { // fresh cursor.
           Deps.nonreactive(function () {
+            cursor.rewind();
             seqArray = _.map(cursor.fetch(), function (doc) {
               return {_id: doc._id, item: doc};
             });
+            cursor.rewind();
           });
-          naivelyReplaceArray();
+
+          replaceArray();
 
           // fetch all elements and start observing.
           var initial = true;
@@ -108,18 +121,7 @@ ObserveSequence = {
               callbacks.movedTo(document._id, document, fromIndex, toIndex, before);
             }
           });
-          
           initial = false;
-
-          // XXX this is wrong! we also need to keep track of changes
-          // to the cursor so that if we switch to an array or another
-          // cursor we diff against the right original value of `seqArray`.
-          // write a test for this and fix it.
-          Deps.nonreactive(function () {
-            seqArray = _.map(cursor.fetch(), function (item) {
-              return {_id: item._id, item: item};
-            });
-          });
         }
       } else {
         throw new Error("Not a recognized sequence type. Currently only arrays, cursors or "
