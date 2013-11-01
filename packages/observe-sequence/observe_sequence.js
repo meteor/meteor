@@ -35,7 +35,6 @@ ObserveSequence = {
     var activeObserveHandle = null;
     var lastSeqArray = [];
     var computation = Deps.autorun(function () {
-      console.log('start<><><>');
       var seq = sequenceFunc();
       var seqArray;
 
@@ -45,11 +44,6 @@ ObserveSequence = {
       };
 
       var naivelyReplaceArray = function () {
-        try{
-          console.log(JSON.stringify(lastSeqArray), JSON.stringify(seqArray));
-        }catch(e){
-          console.log(lastSeqArray, seqArray);
-        }
         // XXX we assume every element has a unique '_id' field
         var diffFn = Package.minimongo.LocalCollection._diffQueryOrderedChanges;
         // XXX after invert the values are stringified indexes
@@ -58,15 +52,12 @@ ObserveSequence = {
 
         diffFn(lastSeqArray, seqArray, {
           addedBefore: function (id, doc, before) {
-            console.log('addedBefore ', [id, doc.item, posNew[id], before]);
             callbacks.addedAt(id, doc.item, +posNew[id], before);
           },
           movedBefore: function (id, before) {
-            console.log('moved before ', arguments);
             callbacks.movedTo(id, seqArray[posNew[id]].item, +posOld[id].item, posNew[id], before);
           },
           removed: function (id) {
-            console.log('removed ', id, lastSeqArray[posOld[id]].item);
             callbacks.removed(id, lastSeqArray[posOld[id]].item);
           }
         });
@@ -80,16 +71,13 @@ ObserveSequence = {
       if (!seq) {
         seqArray = [];
         naivelyReplaceArray();
-        console.log('something to empty');
       } else if (seq instanceof Array) {
         // XXX if id is not set, we just set it to the index in array
         seqArray = _.map(seq, function (doc, i) {
           return { _id: doc._id || Random.id(), item: doc };
         });
-        console.log('something to array');
         naivelyReplaceArray();
       } else if (isMinimongoCursor(seq)) {
-        console.log('something to cursor');
         var cursor = seq;
         if (lastSeq !== cursor) { // fresh cursor.
           Deps.nonreactive(function () {
