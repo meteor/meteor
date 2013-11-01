@@ -15,6 +15,10 @@ var send = Npm.require('send');
 WebApp = {};
 WebAppInternals = {};
 
+
+var makeAppNamePathPrefix = function (appName) {
+  return encodeURIComponent(appName).replace(/\./g, '_');
+};
 // Keepalives so that when the outer server dies unceremoniously and
 // doesn't kill us, we quit ourselves. A little gross, but better than
 // pidfiles.
@@ -429,7 +433,11 @@ var runWebAppServer = function () {
         if (proxyBinding)
           proxyBinding.stop();
         if (configuration && configuration.proxy) {
-          var proxyServiceName = configuration.proxyServiceName || "proxy";
+          var proxyServiceName = process.env.ADMIN_APP ? "adminProxy" : "proxy";
+
+          // TODO: We got rid of the place where this checks the app's
+          // configuration, because this wants to be configured for some things
+          // on a per-job basis.  Discuss w/ teammates.
           proxyBinding = AppConfig.configureService(proxyServiceName, function (proxyService) {
             if (proxyService.providers.proxy) {
               var proxyConf;
@@ -438,13 +446,14 @@ var runWebAppServer = function () {
                   securePort: 44333,
                   insecurePort: 9414,
                   bindHost: "localhost",
-                  bindPathPrefix: "/" + process.env.GALAXY_APP
+                  bindPathPrefix: "/" + makeAppNamePathPrefix(process.env.GALAXY_APP)
                 };
               } else {
                 proxyConf = configuration.proxy;
 
               }
               Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
+              console.log(proxyConf);
               WebAppInternals.bindToProxy(_.extend({
                 proxyEndpoint: proxyService.providers.proxy
               }, proxyConf), proxyServiceName);

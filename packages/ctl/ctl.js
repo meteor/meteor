@@ -23,6 +23,8 @@ var mergeObjects = function (obj1, obj2) {
   return result;
 };
 
+
+
 var startFun = function (argv) {
   if (argv.help || argv._.length !== 0) {
     process.stderr.write(
@@ -33,51 +35,12 @@ var startFun = function (argv) {
     );
     process.exit(1);
   }
-
-  var numServers = Ctl.getJobsByApp(
-    Ctl.myAppName(), {program: 'server', done: false}).count();
-  if (numServers === 0) {
-    var appConfig = Ctl.prettyCall(
-      Ctl.findGalaxy(), 'getAppConfiguration', [Ctl.myAppName()]);
-
-    var proxyConfig;
-    var bindPathPrefix = "";
-    if (appConfig.admin) {
-      bindPathPrefix = "/" + Ctl.myAppName();
-    }
-
-    // Allow appConfig settings to be objects or strings. We need to stringify
-    // them to pass them to the app in the env var.
-    // Backwards compat with old app config format.
-    _.each(["settings", "METEOR_SETTINGS"], function (settingsKey) {
-      if (appConfig[settingsKey] && typeof appConfig[settingsKey] === "object")
-        appConfig[settingsKey] = JSON.stringify(appConfig[settingsKey]);
-    });
-
-    // XXX args? env?
-    Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), 'server', {
-      exitPolicy: 'restart',
-      env: {
-        ROOT_URL: "https://" + appConfig.sitename + bindPathPrefix,
-        METEOR_SETTINGS: appConfig.settings || appConfig.METEOR_SETTINGS,
-        ADMIN_APP: appConfig.admin //TODO: When apps have admin & non-admin sides, set this based on that.
-      },
-      ports: {
-        "main": {
-          bindEnv: "PORT",
-          routeEnv: "ROUTE"//,
-          //bindIpEnv: "BIND_IP" // Later, we can teach Satellite to do
-          //something like recommend the process bind to a particular IP here.
-          //For now, we don't have a way of setting this, so Satellite binds
-          //to 0.0.0.0
-        }
-      },
-      tags: ["runner"]
-    }]);
-    console.log("Started a server.");
-  } else {
-    console.log("Server already running.");
+  if (Ctl.hasProgram("console")) {
+    console.log("starting console for app", Ctl.myAppName());
+    Ctl.startServerlikeProgramIfNotPresent("console", ["admin"], true);
   }
+  console.log("starting server for app", Ctl.myAppName());
+  Ctl.startServerlikeProgramIfNotPresent("server", ["runner"]);
 };
 
 Ctl.Commands.push({

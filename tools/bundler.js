@@ -1355,7 +1355,12 @@ var writeFile = function (file, builder) {
 // path of a directory that should be created to contain the generated
 // site archive.
 //
-// Returns a watch.WatchSet for all files and directories that ultimately went
+// Returns:
+
+// {
+//     watchSet: watch.WatchSet for all files and directories that ultimately went
+//     starManifest: the JSON manifest of the star
+// }
 // into the bundle.
 //
 // options:
@@ -1472,7 +1477,10 @@ var writeSiteArchive = function (targets, outputPath, options) {
     // We did it!
     builder.complete();
 
-    return watchSet;
+    return {
+      watchSet: watchSet,
+      starManifest: json
+    };
   } catch (e) {
     builder.abort();
     throw e;
@@ -1542,6 +1550,7 @@ exports.bundle = function (appDir, outputPath, options) {
 
   var success = false;
   var watchSet = new watch.WatchSet();
+  var starResult = null;
   var messages = buildmessage.capture({
     title: "building the application"
   }, function () {
@@ -1763,11 +1772,12 @@ exports.bundle = function (appDir, outputPath, options) {
     library.watchLocalPackageDirs(watchSet);
 
     // Write to disk
-    watchSet.merge(writeSiteArchive(targets, outputPath, {
+    starResult = writeSiteArchive(targets, outputPath, {
       nodeModulesMode: options.nodeModulesMode,
       builtBy: builtBy,
       controlProgram: controlProgram
-    }));
+    });
+    watchSet.merge(starResult.watchSet);
 
     success = true;
   });
@@ -1777,7 +1787,8 @@ exports.bundle = function (appDir, outputPath, options) {
 
   return {
     errors: success ? false : messages,
-    watchSet: watchSet
+    watchSet: watchSet,
+    starManifest: starResult && starResult.starManifest
   };
 };
 

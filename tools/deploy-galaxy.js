@@ -203,7 +203,7 @@ exports.deploy = function (options) {
 
   // Get the upload information from Galaxy. It's a surprise if this
   // fails (we already know the app exists.)
-  var info = prettyCall(galaxy, 'beginUploadStar', [options.app]);
+  var info = prettyCall(galaxy, 'beginUploadStar', [options.app, bundleResult.starManifest]);
 
   // Upload
   // XXX copied from galaxy/tool/galaxy.js
