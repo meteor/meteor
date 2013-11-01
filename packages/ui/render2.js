@@ -133,6 +133,7 @@ var materialize = function (node, parent, before) {
           if (typeof attrs === 'function')
             attrs = attrs();
           _.each(attrs, function (v, k) {
+            checkAttributeName(k);
             elem.setAttribute(k, attributeValueToString(v));
           });
         }
@@ -269,6 +270,24 @@ var checkComment = function (comment) {
     throw new Error("Comment should have exactly one content item, a simple string");
 };
 
+// The HTML spec and the DOM API (in particular `setAttribute`) have different
+// definitions of what characters are legal in an attribute.  The HTML
+// parser is extremely permissive (allowing, for example, `<a %=%>`), while
+// `setAttribute` seems to use something like the XML grammar for names (and
+// throws an error if a name is invalid, making that attribute unsettable).
+// If we knew exactly what grammar browsers used for `setAttribute`, we could
+// include various Unicode ranges in what's legal.  For now, allow ASCII chars
+// that are known to be valid XML, valid HTML, and settable via `setAttribute`:
+//
+// * Starts with `:`, `_`, `A-Z` or `a-z`
+// * Consists of any of those plus `-`, `.`, and `0-9`.
+//
+// See <http://www.w3.org/TR/REC-xml/#NT-Name> and
+// <http://dev.w3.org/html5/markup/syntax.html#syntax-attributes>.
+var checkAttributeName = function (name) {
+  return /^[:_A-Za-z][:_A-Za-z0-9.\-]*/.test(name);
+};
+
 // Convert the pseudoDOM `node` into static HTML.
 var toHTML = function (node) {
   var result = "";
@@ -294,6 +313,7 @@ var toHTML = function (node) {
           if (typeof attrs === 'function')
             attrs = attrs();
           _.each(attrs, function (v, k) {
+            checkAttributeName(k);
             result += ' ' + k + '=' + attributeValueToQuotedString(v);
           });
         }
@@ -375,6 +395,7 @@ var toCode = function (node) {
         if (node.attrs) {
           var kvStrs = [];
           _.each(node.attrs, function (v, k) {
+            checkAttributeName(k);
             kvStrs.push(toObjectLiteralKey(k) + ': ' + attributeValueToCode(v));
           });
           argStrs.push('{' + kvStrs.join(', ') + '}');
