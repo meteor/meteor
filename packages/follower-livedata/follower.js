@@ -1,12 +1,13 @@
 var fs = Npm.require('fs');
 var Future = Npm.require('fibers/future');
 
+
+var MONITOR_INTERVAL = 5*1000; // every 5 seconds
 var readFile = Meteor._wrapAsync(fs.readFile);
 
 var writeFile = Meteor._wrapAsync(fs.writeFile);
 
 Follower = {
-
   connect: function (urlSet, options) {
     var electorTries;
     options = _.extend({
@@ -44,9 +45,14 @@ Follower = {
     var connected = null;
     var intervalHandle = null;
 
+
     // Used to defer all method calls until we're sure that we connected to the
     // right leadership group.
     var connectedToLeadershipGroup = new Future();
+
+    var lost = false;
+    var lostCallbacks = [];
+    var foundCallbacks = [];
 
     var findFewestTries = function () {
       var min = 10000;
@@ -57,6 +63,11 @@ Follower = {
           minElector = elector;
         }
       });
+      if (min > 1 && !lost) {
+        // we've tried everything once; we just became lost.
+        lost = true;
+        _.each(lostCallbacks, function (f) { f(); });
+      }
       return minElector;
     };
 
@@ -68,9 +79,7 @@ Follower = {
         }
       });
       _.each(res.electorate, function (elector) {
-        if (typeof electorTries[elector] === 'undefined') {
-          electorTries[elector] = 0; // we haven't heard of this elector yet.
-        }
+        electorTries[elector] = 0; // verified that this is in the current elector set.
       });
       if (options.file) {
         writeFile(options.file, res.electorate.join(','), 'utf8');
@@ -113,9 +122,14 @@ Follower = {
           }
           // we got an answer!  Connected!
           electorTries[url] = 0;
-          if (res.leader === url) {
-            // we're good.
 
+          if (res.leader === connected) {
+            // we're good.
+            if (lost) {
+              // we're found.
+              lost = false;
+              _.each(foundCallbacks, function (f) { f(); });
+            }
           } else {
             // let's connect to the leader anyway, if we think it
             // is connectable.
@@ -155,7 +169,7 @@ Follower = {
     };
 
     var monitorConnection = function () {
-      return Meteor.setInterval(checkConnection, 5*1000); // every 5 seconds
+      return Meteor.setInterval(checkConnection, MONITOR_INTERVAL);
     };
 
     intervalHandle = monitorConnection();
@@ -188,6 +202,7 @@ Follower = {
       return electorTries;
     };
 
+
     // Assumes that `call` is implemented in terms of `apply`. All method calls
     // should be deferred until we are sure we've connected to the right
     // leadership group.
@@ -195,6 +210,14 @@ Follower = {
     conn.apply = function (/* arguments */) {
       connectedToLeadershipGroup.wait();
       return conn._applyImpl.apply(conn, arguments);
+    };
+
+    conn.onLost = function (callback) {
+      lostCallbacks.push(callback);
+    };
+
+    conn.onFound = function (callback) {
+      foundCallbacks.push(callback);
     };
 
     return conn;

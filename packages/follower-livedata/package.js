@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "Maintain a connection to the leader of an election set"
+  summary: "Maintain a connection to the leader of an election set",
+  internal: true
 });
 
 Package.on_use(function (api) {
