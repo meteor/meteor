@@ -33,6 +33,11 @@ ObserveSequence = {
   observe: function (sequenceFunc, callbacks) {
     var lastSeq = null;
     var activeObserveHandle = null;
+    // Structure of lastSeqArray is a string id and item field containing all
+    // the data attached to that id.
+    // We need to carry out id in a wrapper object because we can't rely there
+    // is always an '_id' field on the document and document can be a string
+    // (attaching new properties to a string instance is not a good idea).
     var lastSeqArray = [];
     var computation = Deps.autorun(function () {
       var seq = sequenceFunc();
@@ -50,6 +55,9 @@ ObserveSequence = {
         var posOld = _.invert(_.pluck(lastSeqArray, '_id'));
         var posNew = _.invert(_.pluck(seqArray, '_id'));
 
+        // Notice that we don't specify 'changed' callback, which means we don't
+        // want diff algo to find changes in documents. It's not always possible
+        // to do so: algo doesn't know how to compare not EJSONable objects.
         diffFn(lastSeqArray, seqArray, {
           addedBefore: function (id, doc, before) {
             callbacks.addedAt(id, doc.item, +posNew[id], before);
@@ -62,6 +70,9 @@ ObserveSequence = {
           }
         });
 
+        // Mark every object whose id suvived this transition. Since we don't
+        // diff documents, we can't say what changed and what not, so report
+        // everything.
         _.each(posNew, function (pos, id) {
           if (_.has(posOld, id))
             callbacks.changed(id, lastSeqArray[posOld[id]].item, seqArray[pos].item);
