@@ -28,7 +28,7 @@ LocalCollection._diffQueryUnorderedChanges = function (oldResults, newResults,
         observer.changed(newDoc._id, LocalCollection._makeChangedFields(newDoc, oldDoc));
       }
     } else {
-      var fields = _.clone(newDoc);
+      var fields = EJSON.clone(newDoc);
       delete fields._id;
       observer.added && observer.added(newDoc._id, fields);
     }
@@ -159,7 +159,7 @@ LocalCollection._diffQueryOrderedChanges = function (old_results, new_results, o
     for (var i = startOfGroup; i < endOfGroup; i++) {
       newDoc = new_results[i];
       if (!_.has(old_index_of_id, newDoc._id)) {
-        fields = _.clone(newDoc);
+        fields = EJSON.clone(newDoc);
         delete fields._id;
         observer.addedBefore && observer.addedBefore(newDoc._id, fields, groupId);
         observer.added && observer.added(newDoc._id, fields);
