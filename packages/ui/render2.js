@@ -39,7 +39,7 @@ var makeTagFunc = function (name) {
     var attrsGiven = (optAttrs && (typeof optAttrs === 'object') &&
                       (typeof optAttrs.splice !== 'function'));
     var attrs = (attrsGiven ? optAttrs : null);
-    if (attrsGiven && (typeof attrs.$attrs === 'funciton'))
+    if (attrsGiven && (typeof attrs.$attrs === 'function'))
       attrs = attrs.$attrs;
 
     var tag = new Tag(attrs);
@@ -112,11 +112,16 @@ var insert = function (nodeOrRange, parent, before) {
 // Values in the `attrs` dictionary are in pseudo-DOM form -- a string,
 // CharRef, or array of strings and CharRefs -- but they are passed to
 // the AttributeHandler in string form.
-var updateAttributes = function(elem, attrs, handlers) {
+var updateAttributes = function(elem, newAttrs, handlers) {
+
   if (handlers) {
     for (var k in handlers) {
-      if (! attrs.hasOwnProperty(k)) {
-        // remove old attributes (and handlers)
+      if (! newAttrs.hasOwnProperty(k)) {
+        // remove attributes (and handlers) for attribute names
+        // that don't exist as keys of `newAttrs` and so won't
+        // be visited when traversing it.  (Attributes that
+        // exist in the `newAttrs` object but are `null`
+        // are handled later.)
         var handler = handlers[k];
         var oldValue = handler.value;
         handler.value = null;
@@ -126,23 +131,29 @@ var updateAttributes = function(elem, attrs, handlers) {
     }
   }
 
-  for (var k in attrs) {
-    var handler;
+  for (var k in newAttrs) {
+    var handler = null;
     var oldValue;
-    var value = attributeValueToString(attrs[k]);
+    var value = attributeValueToString(newAttrs[k]);
     if ((! handlers) || (! handlers.hasOwnProperty(k))) {
-      // make new handler
-      checkAttributeName(k);
-      handler = makeAttributeHandler2(k, value);
-      if (handlers)
-        handlers[k] = handler;
-      oldValue = null;
+      if (value !== null) {
+        // make new handler
+        checkAttributeName(k);
+        handler = makeAttributeHandler2(k, value);
+        if (handlers)
+          handlers[k] = handler;
+        oldValue = null;
+      }
     } else {
       handler = handlers[k];
       oldValue = handler.value;
     }
-    handler.value = value;
-    handler.update(elem, oldValue, value);
+    if (handler) {
+      handler.value = value;
+      handler.update(elem, oldValue, value);
+      if (value === null)
+        delete handlers[k];
+    }
   }
 };
 
@@ -202,12 +213,17 @@ var materialize = function (node, parent, before) {
     insert(document.createTextNode(node), parent, before);
   } else if (typeof node === 'function') {
     var range = new UI.DomRange;
-    Deps.autorun(function (c) {
+    var rangeUpdater = Deps.autorun(function (c) {
       if (! c.firstRun)
         range.removeAll();
 
       materialize(node(), range);
     });
+    range.parented = function () {
+      UI.DomBackend2.onRemoveElement(range.parentNode(), function () {
+        rangeUpdater.stop();
+      });
+    };
     insert(range, parent, before);
   } else if (node == null) {
     // null or undefined.
@@ -233,67 +249,88 @@ var properCaseTagName = function (name) {
 };
 
 // Takes an attribute value -- i.e. a string, CharRef, or array of strings and
-// CharRefs -- and renders it as a double-quoted string literal suitable for an
-// HTML attribute value.
-var attributeValueToQuotedString = (function () {
-
-  var attributeValuePartToQuotedStringPart = function (v) {
-    if (typeof v === 'string') {
-      return v.replace(/"/g, '&quot;').replace(/&/g, '&amp;');
-    } else if (v.tagName === 'CharRef') {
-      return v.attrs.html;
-    }
-  };
-
-  return function (v) {
-    var result = '"';
-    if (typeof v === 'object' && (typeof v.length === 'number') && ! v.tagName) {
-      // array
-      for (var i = 0; i < v.length; i++)
-        result += attributeValuePartToQuotedStringPart(v[i]);
-    } else {
-      result += attributeValuePartToQuotedStringPart(v);
-    }
-    result += '"';
-    return result;
-  };
-})();
-
-// Takes an attribute value -- i.e. a string, CharRef, or array of strings and
-// CharRefs -- and converts it to a string suitable for passing to `setAttribute`.
-var attributeValueToString = (function () {
-  var attributeValuePartToString = function (v) {
-    if (typeof v === 'string') {
-      return v;
-    } else if (v.tagName === 'CharRef') {
-      return v.attrs.str;
-    }
-  };
-
-  return function (v) {
-    if (typeof v === 'object' && (typeof v.length === 'number') && ! v.tagName) {
-      // array
-      var result = '';
-      for (var i = 0; i < v.length; i++)
-        result += attributeValuePartToString(v[i]);
-      return result;
-    } else {
-      return attributeValuePartToString(v);
-    }
-  };
-})();
-
-// Takes an attribute value -- i.e. a string, CharRef, or array of strings and
-// CharRefs -- and converts it to JavaScript code.
-var attributeValueToCode = function (v) {
-  if (typeof v === 'object' && (typeof v.length === 'number') && ! v.tagName) {
+// CharRefs (and arrays) -- and renders it as a double-quoted string literal
+// suitable for an HTML attribute value (without the quotes).  Returns `null`
+// if there's no attribute value (`null`, `undefined`, or empty array).
+var attributeValueToQuotedContents = function (v) {
+  if (v == null) {
+    // null or undefined
+    return null;
+  } else if (typeof v === 'string') {
+    return v.replace(/"/g, '&quot;').replace(/&/g, '&amp;');
+  } else if (v.tagName === 'CharRef') {
+    return v.attrs.html;
+  } else if (typeof v === 'object' && (typeof v.length === 'number')) {
+    // array or tag
+    if (v.tagName)
+      throw new Error("Unexpected tag in attribute value: " + v.tagName);
     // array
-    var partStrs = [];
-    for (var i = 0; i < v.length; i++)
-      partStrs.push(toCode(v[i]));
-    return '[' + partStrs.join(', ') + ']';
+    var parts = [];
+    for (var i = 0; i < v.length; i++) {
+      var part = attributeValueToQuotedContents(v[i]);
+      if (part !== null)
+        parts.push(part);
+    }
+    return parts.length ? parts.join('') : null;
   } else {
+    throw new Error("Unexpected node in attribute value: " + v);
+  }
+};
+
+// Takes an attribute value -- i.e. a string, CharRef, or array of strings and
+// CharRefs (and arrays) -- and converts it to a string suitable for passing
+// to `setAttribute`.  May return `null` to mean no attribute.
+var attributeValueToString = function (v) {
+  if (v == null) {
+    // null or undefined
+    return null;
+  } else if (typeof v === 'string') {
+    return v;
+  } else if (v.tagName === 'CharRef') {
+    return v.attrs.str;
+  } else if (typeof v === 'object' && (typeof v.length === 'number')) {
+    // array or tag
+    if (v.tagName)
+      throw new Error("Unexpected tag in attribute value: " + v.tagName);
+    // array
+    var parts = [];
+    for (var i = 0; i < v.length; i++) {
+      var part = attributeValueToString(v[i]);
+      if (part !== null)
+        parts.push(part);
+    }
+    return parts.length ? parts.join('') : null;
+  } else {
+    throw new Error("Unexpected node in attribute value: " + v);
+  }
+};
+
+// Takes an attribute value -- i.e. a string, CharRef, or array of strings and
+// CharRefs (and arrays) -- and converts it to JavaScript code.  May also return
+// `null` to indicate that the attribute should not be included because it has
+// an identically "nully" value (`null`, `undefined`, `[]`, `[[]]`, etc.).
+var attributeValueToCode = function (v) {
+  if (v == null) {
+    // null or undefined
+    return null;
+  } else if (typeof v === 'string') {
+    return toJSLiteral(v);
+  } else if (v.tagName === 'CharRef') {
     return toCode(v);
+  } else if (typeof v === 'object' && (typeof v.length === 'number')) {
+    // array or tag
+    if (v.tagName)
+      throw new Error("Unexpected tag in attribute value: " + v.tagName);
+    // array
+    var parts = [];
+    for (var i = 0; i < v.length; i++) {
+      var part = attributeValueToCode(v[i]);
+      if (part !== null)
+        parts.push(part);
+    }
+    return parts.length ? ('[' + parts.join(', ') + ']') : null;
+  } else {
+    throw new Error("Unexpected node in attribute value: " + v);
   }
 };
 
@@ -362,9 +399,12 @@ var toHTML = function (node) {
           var attrs = node.attrs;
           if (typeof attrs === 'function')
             attrs = attrs();
+
           _.each(attrs, function (v, k) {
             checkAttributeName(k);
-            result += ' ' + k + '=' + attributeValueToQuotedString(v);
+            v = attributeValueToQuotedContents(v);
+            if (v !== null)
+              result += ' ' + k + '="' + v + '"';
           });
         }
         result += '>';
@@ -446,7 +486,9 @@ var toCode = function (node) {
           var kvStrs = [];
           _.each(node.attrs, function (v, k) {
             checkAttributeName(k);
-            kvStrs.push(toObjectLiteralKey(k) + ': ' + attributeValueToCode(v));
+            v = attributeValueToCode(v);
+            if (v !== null)
+              kvStrs.push(toObjectLiteralKey(k) + ': ' + v);
           });
           argStrs.push('{' + kvStrs.join(', ') + '}');
         }

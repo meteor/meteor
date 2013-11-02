@@ -18,7 +18,11 @@ canonicalizeHtml = function(html) {
     attrs = attrs.replace(/^\s+/g, '');
     attrs = attrs.replace(/\s+$/g, '');
     attrs = attrs.replace(/\s+/g, ' ');
-    var attrList = attrs.split(' ');
+    // for the purpose of splitting attributes in a string like
+    // 'a="b" c="d"', assume they are separated by a single space
+    // and values are double-quoted, but allow for spaces inside
+    // the quotes.  Split on space following quote.
+    var attrList = attrs.replace(/" /g, '"\u0000').split('\u0000');
     // put attributes in alphabetical order
     attrList.sort();
     var tagContents = [tagName];
