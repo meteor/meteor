@@ -96,9 +96,6 @@ Tinytest.add('observe sequence - array to other array', function (test) {
     {removed: ["37", {_id: "37", bar: 2}]},
     {addedAt: ["38", {_id: "38", bar: 2}, 1, null]},
     {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]}
-    // XXX yeah, it didn't change at all but current implementation is too lazy
-    // to diff objects (and it's not always possible, since you can't diff
-    // objects with circular refferences)
   ]);
 });
 
@@ -118,7 +115,7 @@ Tinytest.add('observe sequence - array to other array, changes', function (test)
     {addedAt: ["42", {_id: "42", baz: 42}, 2, null]},
     {removed: ["37", {_id: "37", bar: 2}]},
     {addedAt: ["38", {_id: "38", bar: 2}, 1, "42"]},
-    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]}, // XXX doesn't really change
+    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]},
     {changed: ["42", {_id: "42", baz: 42}, {_id: "42", baz: 43}]}
   ]);
 });
@@ -137,10 +134,11 @@ Tinytest.add('observe sequence - array to other array, movedTo', function (test)
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
     {addedAt: ["42", {_id: "42", baz: 42}, 2, null]},
+    // XXX it could have been the "13" moving but it's a detail of implementation
     {movedTo: ["37", {_id: "37", bar: 2}, 1, 0, "13"]},
-    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]}, // XXX doesn't really change
-    {changed: ["37", {_id: "37", bar: 2}, {_id: "37", bar: 2}]}, // XXX doesn't really change
-    {changed: ["42", {_id: "42", baz: 42}, {_id: "42", baz: 42}]} // XXX doesn't really change
+    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]},
+    {changed: ["37", {_id: "37", bar: 2}, {_id: "37", bar: 2}]},
+    {changed: ["42", {_id: "42", baz: 42}, {_id: "42", baz: 42}]}
   ]);
 });
 
@@ -181,7 +179,7 @@ Tinytest.add('observe sequence - array to cursor', function (test) {
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
     {removed: ["37", {_id: "37", bar: 2}]},
     {addedAt: ["38", {_id: "38", bar: 2}, 1, null]},
-    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]} // XXX doesn't actually change
+    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]}
   ]);
 });
 
@@ -286,7 +284,7 @@ Tinytest.add('observe sequence - cursor to other cursor', function (test) {
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
     {removed: ["37", {_id: "37", bar: 2}]},
     {addedAt: ["38", {_id: "38", bar: 2}, 1, null]},
-    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]} // XXX this doesn't really change
+    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]}
   ]);
 });
 
@@ -304,4 +302,25 @@ Tinytest.add('observe sequence - cursor to same cursor', function (test) {
     dep.changed();
   }, [ {addedAt: ["13", {_id: "13", rank: 1}, 0, null]} ]);
 });
+
+Tinytest.add('observe sequence - string arrays', function (test) {
+  var seq = ['A', 'B'];
+  var dep = new Deps.Dependency;
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ true, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = ['B', 'C'];
+    dep.changed();
+  }, [
+    {addedAt: ['A', 0, null]},
+    {addedAt: ['B', 1, null]},
+    {removed: ['A']},
+    {removed: ['B']},           // XXX we don't need these lines
+    {addedAt: ['B', 0, null]},  // when ids from strings are implemented
+    {addedAt: ['C', 1, null]}
+  ]);
+});
+
 
