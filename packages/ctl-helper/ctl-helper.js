@@ -6,8 +6,14 @@ Ctl = {};
 var connection;
 var checkConnection;
 
+var exitOnLost = true;
+
 _.extend(Ctl, {
   Commands: [],
+
+  exitOnLost: function (b) {
+    exitOnLost = b;
+  },
 
   main: function (argv) {
     var opt = optimist(argv)
@@ -112,7 +118,9 @@ _.extend(Ctl, {
     connection = Follower.connect(process.env['ULTRAWORLD_DDP_ENDPOINT']);
     checkConnection = Meteor.setInterval(function () {
       if (Ctl.findGalaxy().status().status !== "connected" &&
-          Ctl.findGalaxy().status().retryCount > 2) {
+          Ctl.findGalaxy().status().retryCount > 2 &&
+          exitOnLost
+         ) {
         console.log("Cannot connect to galaxy; exiting");
         process.exit(3);
       }

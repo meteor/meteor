@@ -477,6 +477,8 @@ var runWebAppServer = function () {
   };
 };
 
+var proxy;
+
 WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
   var securePort = proxyConfig.securePort || 4433;
   var insecurePort = proxyConfig.insecurePort || 8080;
@@ -508,11 +510,19 @@ WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
 
   // This is run after packages are loaded (in main) so we can use
   // Follower.connect.
-  var proxy = Package["follower-livedata"].Follower.connect(
-    proxyConfig.proxyEndpoint, {
-      group: proxyServiceName
-    }
-  );
+  if (proxy) {
+    Log("reconnecting to proxy " + proxyConfig.proxyEndpoint);
+    proxy.reconnect({
+      url: proxyConfig.proxyEndpoint
+    });
+  } else {
+    Log("connecting for the first time to proxy " + proxyConfig.proxyEndpoint);
+    proxy = Package["follower-livedata"].Follower.connect(
+      proxyConfig.proxyEndpoint, {
+        group: proxyServiceName
+      }
+    );
+  }
   var route = process.env.ROUTE;
   var host = route.split(":")[0];
   var port = +route.split(":")[1];
@@ -533,8 +543,10 @@ WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
         return (completedBindings[binding] ||
           completedBindings[binding] === undefined);
       });
-      if (completedAll)
+      if (completedAll) {
         Log("Bound to proxy.");
+
+      }
       return completedAll;
     };
   };

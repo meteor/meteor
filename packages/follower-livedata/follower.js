@@ -88,7 +88,7 @@ Follower = {
 
     var tryElector = function (url) {
       url = url || findFewestTries();
-      // console.log("trying", url, electorTries, tryingUrl);
+      console.log("trying", url, electorTries, tryingUrl);
 
       // Don't keep trying the same url as fast as we can if it's not working.
       if (electorTries[url] > 2) {
