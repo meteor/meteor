@@ -93,10 +93,52 @@ Tinytest.add('observe sequence - array to other array', function (test) {
   }, [
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
-    {removed: ["13", {_id: "13", foo: 1}]},           // XXX in a later optimization these two
     {removed: ["37", {_id: "37", bar: 2}]},
-    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},  // calls should not need to fire.
-    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]},
+    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]}
+  ]);
+});
+
+Tinytest.add('observe sequence - array to other array, changes', function (test) {
+  var dep = new Deps.Dependency;
+  var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}, {_id: "42", baz: 42}];
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = [{_id: "13", foo: 1}, {_id: "38", bar: 2}, {_id: "42", baz: 43}];
+    dep.changed();
+  }, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
+    {addedAt: ["42", {_id: "42", baz: 42}, 2, null]},
+    {removed: ["37", {_id: "37", bar: 2}]},
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, "42"]},
+    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]},
+    {changed: ["42", {_id: "42", baz: 42}, {_id: "42", baz: 43}]}
+  ]);
+});
+
+Tinytest.add('observe sequence - array to other array, movedTo', function (test) {
+  var dep = new Deps.Dependency;
+  var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}, {_id: "42", baz: 42}];
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = [{_id: "37", bar: 2}, {_id: "13", foo: 1}, {_id: "42", baz: 42}];
+    dep.changed();
+  }, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
+    {addedAt: ["42", {_id: "42", baz: 42}, 2, null]},
+    // XXX it could have been the "13" moving but it's a detail of implementation
+    {movedTo: ["37", {_id: "37", bar: 2}, 1, 0, "13"]},
+    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]},
+    {changed: ["37", {_id: "37", bar: 2}, {_id: "37", bar: 2}]},
+    {changed: ["42", {_id: "42", baz: 42}, {_id: "42", baz: 42}]}
   ]);
 });
 
@@ -135,10 +177,9 @@ Tinytest.add('observe sequence - array to cursor', function (test) {
   }, [
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
-    {removed: ["13", {_id: "13", foo: 1}]},           // XXX in a later optimization these two
     {removed: ["37", {_id: "37", bar: 2}]},
-    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},  // calls should not need to fire.
-    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]},
+    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]}
   ]);
 });
 
@@ -169,7 +210,6 @@ Tinytest.add('observe sequence - cursor to array', function (test) {
   var dep = new Deps.Dependency;
   var coll = new Meteor.Collection(null);
   coll.insert({_id: "13", foo: 1});
-  coll.insert({_id: "37", bar: 2});
   var cursor = coll.find({}, {sort: {_id: 1}});
   var seq = cursor;
 
@@ -177,57 +217,30 @@ Tinytest.add('observe sequence - cursor to array', function (test) {
     dep.depend();
     return seq;
   }, function () {
+    coll.insert({_id: "37", bar: 2});
+    dep.changed();
     seq = [{_id: "13", foo: 1}, {_id: "38", bar: 2}];
     dep.changed();
   }, [
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
-    {removed: ["13", {_id: "13", foo: 1}]},           // XXX in a later optimization these two
     {removed: ["37", {_id: "37", bar: 2}]},
-    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},  // calls should not need to fire.
-    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]},
+    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]}
   ]);
 });
 
-Tinytest.add('observe sequence - cursor to other cursor', function (test) {
-  var dep = new Deps.Dependency;
-  var coll = new Meteor.Collection(null);
-  coll.insert({_id: "13", foo: 1});
-  coll.insert({_id: "37", bar: 2});
-  var cursor = coll.find({}, {sort: {_id: 1}});
-  var seq = cursor;
-
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
-    dep.depend();
-    return seq;
-  }, function () {
-    var newColl = new Meteor.Collection(null);
-    newColl.insert({_id: "13", foo: 1});
-    newColl.insert({_id: "38", bar: 2});
-    var newCursor = newColl.find({}, {sort: {_id: 1}});
-    seq = newCursor;
-    dep.changed();
-  }, [
-    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
-    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
-    {removed: ["13", {_id: "13", foo: 1}]},           // XXX in a later optimization these two
-    {removed: ["37", {_id: "37", bar: 2}]},
-    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},  // calls should not need to fire.
-    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
-  ]);
-});
-
-Tinytest.add('observe sequence - cursor to same cursor', function (test) {
+Tinytest.add('observe sequence - cursor', function (test) {
   var coll = new Meteor.Collection(null);
   coll.insert({_id: "13", rank: 1});
-  coll.insert({_id: "37", rank: 2});
-  coll.insert({_id: "77", rank: 3});
   var cursor = coll.find({}, {sort: {rank: 1}});
   var seq = cursor;
 
   runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
     return seq;
   }, function () {
+    coll.insert({_id: "37", rank: 2});
+    coll.insert({_id: "77", rank: 3});
     coll.remove({_id: "37"});                           // should fire a 'remove' callback
     coll.insert({_id: "11", rank: 0});                  // should fire an 'insert' callback
     coll.update({_id: "13"}, {$set: {updated: true}});  // should fire an 'changed' callback
@@ -246,4 +259,68 @@ Tinytest.add('observe sequence - cursor to same cursor', function (test) {
     {movedTo: ["77", {_id: "77", rank: -1}, 2, 0, "11"]}
   ]);
 });
+
+Tinytest.add('observe sequence - cursor to other cursor', function (test) {
+  var dep = new Deps.Dependency;
+  var coll = new Meteor.Collection(null);
+  coll.insert({_id: "13", foo: 1});
+  var cursor = coll.find({}, {sort: {_id: 1}});
+  var seq = cursor;
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    coll.insert({_id: "37", bar: 2});
+
+    var newColl = new Meteor.Collection(null);
+    newColl.insert({_id: "13", foo: 1});
+    newColl.insert({_id: "38", bar: 2});
+    var newCursor = newColl.find({}, {sort: {_id: 1}});
+    seq = newCursor;
+    dep.changed();
+  }, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
+    {removed: ["37", {_id: "37", bar: 2}]},
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]},
+    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]}
+  ]);
+});
+
+Tinytest.add('observe sequence - cursor to same cursor', function (test) {
+  var coll = new Meteor.Collection(null);
+  coll.insert({_id: "13", rank: 1});
+  var cursor = coll.find({}, {sort: {rank: 1}});
+  var seq = cursor;
+  var dep = new Deps.Dependency;
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    dep.changed();
+  }, [ {addedAt: ["13", {_id: "13", rank: 1}, 0, null]} ]);
+});
+
+Tinytest.add('observe sequence - string arrays', function (test) {
+  var seq = ['A', 'B'];
+  var dep = new Deps.Dependency;
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ true, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = ['B', 'C'];
+    dep.changed();
+  }, [
+    {addedAt: ['A', 0, null]},
+    {addedAt: ['B', 1, null]},
+    {removed: ['A']},
+    {removed: ['B']},           // XXX we don't need these lines
+    {addedAt: ['B', 0, null]},  // when ids from strings are implemented
+    {addedAt: ['C', 1, null]}
+  ]);
+});
+
 
