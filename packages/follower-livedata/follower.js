@@ -40,6 +40,7 @@ Follower = {
       makeElectorTries(urlSet, { priority: 0, reset: true });
     }
     var tryingUrl = null;
+    var outstandingGetElectorate = false;
     var conn = null;
     var leader = null;
     var connected = null;
@@ -87,8 +88,11 @@ Follower = {
     };
 
     var tryElector = function (url) {
+      if (tryingUrl) {
+        electorTries[tryingUrl]++;
+      }
       url = url || findFewestTries();
-      // console.log("trying", url, electorTries, tryingUrl);
+      console.log("trying", url, electorTries, tryingUrl, process.env.GALAXY_JOB);
 
       // Don't keep trying the same url as fast as we can if it's not working.
       if (electorTries[url] > 2) {
@@ -103,20 +107,21 @@ Follower = {
         conn = DDP.connect(url);
         conn._reconnectImpl = conn.reconnect;
       }
+      tryingUrl = url;
 
-      if (tryingUrl) {
-        electorTries[tryingUrl]++;
-        tryingUrl = url;
-      } else {
-        tryingUrl = url;
+      if (!outstandingGetElectorate) {
+        outstandingGetElectorate = true;
         conn.call('getElectorate', options.group, function (err, res) {
+          outstandingGetElectorate = false;
           connected = tryingUrl;
-          tryingUrl = null;
+          if (!_.contains(res.electorate, connected)) {
+            Log.warn("electorate " + res.electorate + " does not contain " + connected);
+          }
           if (err) {
-            electorTries[url]++;
             tryElector();
             return;
           }
+          tryingUrl = null;
           if (! connectedToLeadershipGroup.isResolved()) {
             connectedToLeadershipGroup["return"]();
           }
@@ -135,7 +140,6 @@ Follower = {
             // is connectable.
             if (electorTries[res.leader] == 0) {
               tryElector(res.leader);
-
             } else {
               // XXX: leader is probably down, we're probably going to elect
               // soon.  Wait for the next round.
@@ -144,7 +148,8 @@ Follower = {
           }
           updateElectorate(res);
         });
-      };
+      }
+
     };
 
     tryElector();
@@ -157,6 +162,10 @@ Follower = {
           if (err) {
             electorTries[connected]++;
             tryElector();
+          } else if (res.leader !== leader) {
+            // update the electorate, and then definitely try to connect to the leader.
+            updateElectorate(res);
+            tryElector(res.leader);
           } else {
             if (! connectedToLeadershipGroup.isResolved()) {
               connectedToLeadershipGroup["return"]();
