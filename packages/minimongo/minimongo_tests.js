@@ -2469,3 +2469,87 @@ Tinytest.add("minimongo - modifier affects selector", function (test) {
   affected({ 'foo.0.bar': 0 }, { $set: { 'foo.0.0.bar': 1 } }, "delicate work with nested arrays and selectors by indecies");
 });
 
+Tinytest.add("minimongo - selector and projection combination", function (test) {
+  function testSelProjectionComb (sel, proj, expected, desc) {
+    test.equal(LocalCollection._combineSelectorAndProjection(sel, proj), expected, desc);
+  }
+
+  testSelProjectionComb({ a: 1, b: 2 }, { b: 1, c: 1, d: 1 }, { a: true, b: true, c: true, d: true }, "simplest incl");
+  testSelProjectionComb({ $or: [{ a: 1234, e: {$lt: 5} }], b: 2 }, { b: 1, c: 1, d: 1 }, { a: true, b: true, c: true, d: true, e: true }, "simplest incl, branching");
+  testSelProjectionComb({
+    'a.b': { $lt: 3 },
+    'y.0': -1,
+    'a.c': 15
+  }, {
+    'd': 1,
+    'z': 1
+  }, {
+    'a.b': true,
+    'y': true,
+    'a.c': true,
+    'd': true,
+    'z': true
+  }, "multikey paths in selector");
+
+  testSelProjectionComb({
+    foo: 1234,
+    $and: [{ k: -1 }, { $or: [{ b: 15 }] }]
+  }, {
+    'foo.bar': 1,
+    'foo.zzz': 1,
+    'b.asdf': 1
+  }, {
+    foo: true,
+    b: true,
+    k: true
+  }, "multikey paths in fields");
+
+  testSelProjectionComb({
+    'a.b.c': 123,
+    'a.b.d': 321,
+    'b.c.0': 111,
+    'a.e': 12345
+  }, {
+    'a.b.z': 1,
+    'a.b.d.g': 1,
+    'c.c.c': 1
+  }, {
+    'a.b.c': true,
+    'a.b.d': true,
+    'a.b.z': true,
+    'b.c': true,
+    'a.e': true,
+    'c.c.c': true
+  }, "multikey both paths");
+
+  testSelProjectionComb({
+    'a.b.c.d': 123,
+    'a.b1.c.d': 421,
+    'a.b.c.e': 111
+  }, {
+    'a.b': 1
+  }, {
+    'a.b': true,
+    'a.b1.c.d': true
+  }, "shadowing one another");
+
+  testSelProjectionComb({
+    'a.b': 123,
+    'foo.bar': false
+  }, {
+    'a.b.c.d': 1,
+    'foo': 1
+  }, {
+    'a.b': true,
+    'foo': true
+  }, "shadowing one another");
+
+  testSelProjectionComb({
+    'a.b.c': 1
+  }, {
+    'a.b.c': 1
+  }, {
+    'a.b.c': true
+  }, "same paths");
+});
+
