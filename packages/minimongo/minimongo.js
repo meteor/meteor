@@ -45,7 +45,7 @@ LocalCollection._applyChanges = function (doc, changeFields) {
   });
 };
 
-var MinimongoError = function (message) {
+MinimongoError = function (message) {
   var e = new Error(message);
   e.name = "MinimongoError";
   return e;
