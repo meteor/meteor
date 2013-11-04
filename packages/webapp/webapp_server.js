@@ -152,6 +152,7 @@ var appUrl = function (url) {
 };
 
 var runWebAppServer = function () {
+  var shuttingDown = false;
   // read the control for the client we'll be serving up
   var clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
                                  __meteor_bootstrap__.configJson.client);
@@ -344,9 +345,16 @@ var runWebAppServer = function () {
     if (!boilerplateHtml)
       throw new Error("boilerplateHtml should be set before listening!");
 
+
+    var headers = {
+      'Content-Type':  'text/html; charset=utf-8'
+    };
+    if (shuttingDown)
+      headers['Connection'] = 'Close';
+
     var request = WebApp.categorizeRequest(req);
 
-    res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+    res.writeHead(200, headers);
 
     var requestSpecificHtml = htmlAttributes(boilerplateHtml, request);
     res.write(requestSpecificHtml);
@@ -363,6 +371,32 @@ var runWebAppServer = function () {
 
   var httpServer = http.createServer(app);
   var onListeningCallbacks = [];
+
+  // Set connections' idle timeout to 5 seconds. Allows us to gracefully shut
+  // down with keepalive connections.
+  httpServer.setTimeout(5000, function (socket) {
+    socket.end();
+  });
+
+  // For now, handle SIGHUP here.  Later, this should be in some centralized
+  // Meteor shutdown code.
+  process.on('SIGHUP', Meteor.bindEnvironment(function () {
+    console.log("SIGHUP");
+    shuttingDown = true;
+    // tell others with websockets open that we plan to close this.
+    httpServer.emit('closing');
+    httpServer.close( function () {
+      process.exit(0);
+    });
+    // Ideally we will close before this hits.
+    Meteor.setTimeout(function () {
+      Log.warn("Closed by SIGHUP but one or more HTTP requests may not have finished.");
+      process.exit(1);
+    }, 5000);
+  }, function (err) {
+    console.log(err);
+    process.exit(1);
+  }));
 
   // start up app
   _.extend(WebApp, {

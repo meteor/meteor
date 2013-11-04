@@ -56,6 +56,11 @@ StreamServer = function () {
     throw new Error("Cannot create a DDP server without the webapp package");
   }
   self.server.installHandlers(Package.webapp.WebApp.httpServer);
+  Package.webapp.WebApp.httpServer.on('closing', function () {
+    _.each(self.open_sockets, function (socket) {
+      socket.end();
+    });
+  });
 
   // Support the /websocket endpoint
   self._redirectWebsocketEndpoint();
