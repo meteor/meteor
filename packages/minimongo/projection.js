@@ -41,19 +41,27 @@ LocalCollection._compileProjection = function (fields) {
 // Knows how to combine a mongo selector and a fields projection to a new fields
 // projection taking into account active fields from the passed selector.
 // @returns Object - projection object (same as fields option of mongo cursor)
+// XXX doesn't know how to deal with fields projections like {'foo.0': 1}
 LocalCollection._combineSelectorAndProjection = function (selector, projection)
 {
   var prjDetails = projectionDetails(projection);
   var tree = prjDetails.tree;
   var mergedProjection = {};
+  var selectorPaths = LocalCollection._getPathsWithoutNumericKeys(selector);
 
   if (prjDetails.including) {
     // both selector and projection are pointing on fields to include
-    ;
+    tree = pathsToTree(selectorPaths,
+                       function (path) { return true; },
+                       function (node, path, fullPath) {
+                         return true;
+                       }, tree);
   } else {
     // selector is pointing at fields to include
     // projection is pointing at fields to exclude
   }
+
+  return treeToPaths(tree);
 };
 
 // Traverses the keys of passed projection and constructs a tree where all
@@ -141,7 +149,7 @@ var pathsToTree = function (paths, newLeaveFn, conflictFn, tree) {
         treePos[key] = {};
       else if (!_.isObject(treePos[key])) {
         treePos[key] = conflictFn(treePos[key],
-                                  pathArray.slice(0, idx + 1).join('.'),
+                                  pathArr.slice(0, idx + 1).join('.'),
                                   keyPath);
         // break out of loop if we are failing for this path
         if (!_.isObject(treePos[key]))
@@ -162,5 +170,21 @@ var pathsToTree = function (paths, newLeaveFn, conflictFn, tree) {
   });
 
   return tree;
+};
+
+// Returns a set of key paths similar to
+// { 'foo.bar': 1, 'a.b.c': 1 }
+var treeToPaths = function (tree, prefix) {
+  prefix = prefix || '';
+  var result = {};
+
+  _.each(tree, function (val, key) {
+    if (_.isObject(val))
+      _.extend(result, treeToPaths(val, prefix + key + '.'));
+    else
+      result[prefix + key] = val;
+  });
+
+  return result;
 };
 
