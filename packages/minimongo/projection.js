@@ -49,6 +49,7 @@ LocalCollection._combineSelectorAndProjection = function (selector, projection)
 
   if (prjDetails.including) {
     // both selector and projection are pointing on fields to include
+    ;
   } else {
     // selector is pointing at fields to include
     // projection is pointing at fields to exclude
@@ -124,11 +125,12 @@ var projectionDetails = function (fields) {
 //                        put into list created for that path
 // conflictFn - Function: of form function(node, path, fullPath) is called
 //                        when building a tree path for 'fullPath' node on
-//                        'path' was already a leave with a value. Conflicted
-//                        path is ignored.
+//                        'path' was already a leave with a value. Must return a
+//                        conflict resolution.
+// initial tree - Optional Object: starting tree.
 // @returns - Object: tree represented as a set of nested objects
-var pathsToTree = function (paths, newLeaveFn, conflictFn) {
-  var tree = {};
+var pathsToTree = function (paths, newLeaveFn, conflictFn, tree) {
+  tree = tree || {};
   _.each(paths, function (keyPath) {
     var treePos = tree;
     var pathArr = keyPath.split('.');
@@ -138,19 +140,25 @@ var pathsToTree = function (paths, newLeaveFn, conflictFn) {
       if (!_.has(treePos, key))
         treePos[key] = {};
       else if (!_.isObject(treePos[key])) {
-        conflictFn(treePos[key],
-                   pathArray.slice(0, idx + 1).join('.'),
-                   keyPath);
-        // break out of loop as we are failing for this path
-        return false;
+        treePos[key] = conflictFn(treePos[key],
+                                  pathArray.slice(0, idx + 1).join('.'),
+                                  keyPath);
+        // break out of loop if we are failing for this path
+        if (!_.isObject(treePos[key]))
+          return false;
       }
 
       treePos = treePos[key];
       return true;
     });
 
-    if (sucess)
-      treePos[_.last(pathArr)] = newLeaveFn(keyPath);
+    if (sucess) {
+      var lastKey = _.last(pathArr);
+      if (!_.has(treePos, lastKey))
+        treePos[lastKey] = newLeaveFn(keyPath);
+      else
+        treePos[lastKey] = conflictFn(treePos[lastKey], keyPath, keyPath);
+    }
   });
 
   return tree;
