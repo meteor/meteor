@@ -239,6 +239,7 @@ Tinytest.add("ui - render2 - components", function (test) {
                 (this.number < 3 ? myComponent : HR())];
       },
       rendered: function () {
+        // `this` is the template instance
         var nodeDescr = function (node) {
           if (node.nodeType === 8) // comment
             return '';
@@ -262,6 +263,7 @@ Tinytest.add("ui - render2 - components", function (test) {
                  nodeDescr(end));
       },
       destroyed: function () {
+        // `this` is the template instance
         buf.push('destroyed ' + this.data);
       }
     });
