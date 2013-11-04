@@ -115,8 +115,8 @@ var projectionDetails = function (fields) {
       //
       // Note, how second time the return set of keys is different.
 
-      var currentPath = keyPath.join('.');
-      var anotherPath = keyPath.slice(0, idx + 1).join('.');
+      var currentPath = fullPath;
+      var anotherPath = path;
       throw MinimongoError("both " + currentPath + " and " + anotherPath +
                            " found in fields option, using both of them may trigger " +
                            "unexpected behavior. Did you mean to use only one of them?");
