@@ -57,7 +57,6 @@ var projectionDetails = function (fields) {
   // like 'foo' and 'foo.bar' can assume that 'foo' comes first.
   var fieldsKeys = _.reject(_.keys(fields).sort(), function (key) { return key === '_id'; });
   var including = null; // Unknown
-  var projectionRulesTree = {}; // Tree represented as nested objects
 
   _.each(fieldsKeys, function (keyPath) {
     var rule = !!fields[keyPath];
@@ -66,46 +65,77 @@ var projectionDetails = function (fields) {
     if (including !== rule)
       // This error message is copies from MongoDB shell
       throw MinimongoError("You cannot currently mix including and excluding fields.");
-    var treePos = projectionRulesTree;
-    keyPath = keyPath.split('.');
+  });
 
-    _.each(keyPath.slice(0, -1), function (key, idx) {
-      if (!_.has(treePos, key))
-        treePos[key] = {};
-      else if (_.isBoolean(treePos[key])) {
-        // Check passed projection fields' keys: If you have two rules such as
-        // 'foo.bar' and 'foo.bar.baz', then the result becomes ambiguous. If
-        // that happens, there is a probability you are doing something wrong,
-        // framework should notify you about such mistake earlier on cursor
-        // compilation step than later during runtime.  Note, that real mongo
-        // doesn't do anything about it and the later rule appears in projection
-        // project, more priority it takes.
-        //
-        // Example, assume following in mongo shell:
-        // > db.coll.insert({ a: { b: 23, c: 44 } })
-        // > db.coll.find({}, { 'a': 1, 'a.b': 1 })
-        // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23 } }
-        // > db.coll.find({}, { 'a.b': 1, 'a': 1 })
-        // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23, "c" : 44 } }
-        //
-        // Note, how second time the return set of keys is different.
 
-        var currentPath = keyPath.join('.');
-        var anotherPath = keyPath.slice(0, idx + 1).join('.');
-        throw MinimongoError("both " + currentPath + " and " + anotherPath +
-         " found in fields option, using both of them may trigger " +
-         "unexpected behavior. Did you mean to use only one of them?");
-      }
+  var projectionRulesTree = pathsToTree(
+    fieldsKeys,
+    function (path) { return including; },
+    function (node, path, fullPath) {
+      // Check passed projection fields' keys: If you have two rules such as
+      // 'foo.bar' and 'foo.bar.baz', then the result becomes ambiguous. If
+      // that happens, there is a probability you are doing something wrong,
+      // framework should notify you about such mistake earlier on cursor
+      // compilation step than later during runtime.  Note, that real mongo
+      // doesn't do anything about it and the later rule appears in projection
+      // project, more priority it takes.
+      //
+      // Example, assume following in mongo shell:
+      // > db.coll.insert({ a: { b: 23, c: 44 } })
+      // > db.coll.find({}, { 'a': 1, 'a.b': 1 })
+      // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23 } }
+      // > db.coll.find({}, { 'a.b': 1, 'a': 1 })
+      // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23, "c" : 44 } }
+      //
+      // Note, how second time the return set of keys is different.
 
-      treePos = treePos[key];
+      var currentPath = keyPath.join('.');
+      var anotherPath = keyPath.slice(0, idx + 1).join('.');
+      throw MinimongoError("both " + currentPath + " and " + anotherPath +
+                           " found in fields option, using both of them may trigger " +
+                           "unexpected behavior. Did you mean to use only one of them?");
     });
 
-    treePos[_.last(keyPath)] = including;
-  });
-  
   return {
     tree: projectionRulesTree,
     including: including
   };
+};
+
+// paths - Array: list of mongo style paths
+// newLeaveFn - Function: of form function(path) should return a scalar value to
+//                        put into list created for that path
+// conflictFn - Function: of form function(node, path, fullPath) is called
+//                        when building a tree path for 'fullPath' node on
+//                        'path' was already a leave with a value. Conflicted
+//                        path is ignored.
+// @returns - Object: tree represented as a set of nested objects
+var pathsToTree = function (paths, newLeaveFn, conflictFn) {
+  var tree = {};
+  _.each(paths, function (keyPath) {
+    var treePos = tree;
+    var pathArr = keyPath.split('.');
+
+    // use _.all just for iteration with break
+    var sucess = _.all(pathArr.slice(0, -1), function (key, idx) {
+      if (!_.has(treePos, key))
+        treePos[key] = {};
+      else if (!_.isObject(treePos[key])) {
+        conflictFn(treePos[key],
+                   pathArray.slice(0, idx + 1).join('.'),
+                   keyPath);
+        // break out of loop as we are failing for this path
+        return false;
+      }
+
+      treePos = treePos[key];
+      return true;
+    });
+
+    if (sucess)
+      treePos[_.last(pathArr)] = newLeaveFn(keyPath);
+  });
+
+  return tree;
 };
 
