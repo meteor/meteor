@@ -303,16 +303,26 @@ var startServer = function (options) {
       return;
     }
 
-    var obj = Log.parse(line) || Log.objFromText(line);
-    console.log(Log.format(obj, { color:true }));
-    saveLog({stdout: Log.format(obj)});
+    if (options.rawLogs) {
+      console.log(line);
+      saveLog({stdout: line});
+    } else {
+      var obj = Log.parse(line) || Log.objFromText(line);
+      console.log(Log.format(obj, { color:true }));
+      saveLog({stdout: Log.format(obj)});
+    }
   });
 
   eachline(proc.stderr, 'utf8', function (line) {
     if (!line) return;
-    var obj = Log.objFromText(line, { level: 'warn', stderr: true });
-    console.log(Log.format(obj, { color: true }));
-    saveLog({stderr: Log.format(obj)});
+    if (options.rawLogs) {
+      console.error(line);
+      saveLog({stderr: line});
+    } else {
+      var obj = Log.objFromText(line, { level: 'warn', stderr: true });
+      console.log(Log.format(obj, { color: true }));
+      saveLog({stderr: Log.format(obj)});
+    }
   });
 
   proc.on('close', function (code, signal) {
@@ -555,6 +565,7 @@ exports.run = function (context, options) {
       mongoUrl: mongoUrl,
       rootUrl: rootUrl,
       library: context.library,
+      rawLogs: options.rawLogs,
       onExit: function (code) {
         // on server exit
         Status.running = false;

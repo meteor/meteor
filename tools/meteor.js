@@ -367,6 +367,8 @@ Fiber(function () {
         .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
         .boolean('production')
         .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
+        .boolean('raw-logs')
+        .describe('raw-logs', 'Run without parsing logs from stdout and stderr.')
         .describe('settings',  'Set optional data for Meteor.settings on the server')
         .describe('release', 'Specify the release of Meteor to use')
         .describe('program', 'The program in the app to run (Advanced)')
@@ -394,6 +396,7 @@ Fiber(function () {
       maybePrintUserOverrideMessage();
       runner.run(context, {
         port: argv.port,
+        rawLogs: argv['raw-logs'],
         minify: argv.production,
         once: argv.once,
         settingsFile: argv.settings,
