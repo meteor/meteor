@@ -1,10 +1,6 @@
 ## vNEXT
 
-* Fix error when publish function callbacks are called during session shutdown.
-
 * Bundler failures cause non-zero exit code in `meteor run`.  #1515
-
-* Ensure more downtime during file watching.  #1506
 
 * Fix `meteor run` with settings files containing non-ASCII characters.  #1497
 
@@ -25,6 +21,15 @@
   * SockJS server from 0.3.7 to 0.3.8
 
 Patches contributed by GitHub user mcbain.
+
+
+## v0.6.6.3
+
+* Fix error when publish function callbacks are called during session
+  shutdown.  #1540 #1553
+
+* Improve `meteor run` CPU usage in projects with many
+  directories.  #1506
 
 
 ## v0.6.6.2
