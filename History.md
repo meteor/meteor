@@ -1,5 +1,15 @@
 ## vNEXT
 
+
+## v0.6.6.3
+
+* Fix error when publish function callbacks are called during session
+  shutdown.  #1540 #1553
+
+* Improve `meteor run` CPU usage in projects with many
+  directories.  #1506
+
+
 ## v0.6.6.2
 
 * Upgrade Node from 0.10.20 to 0.10.21 (security update).
