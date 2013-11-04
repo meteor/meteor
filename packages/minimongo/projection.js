@@ -38,6 +38,23 @@ LocalCollection._compileProjection = function (fields) {
   };
 };
 
+// Knows how to combine a mongo selector and a fields projection to a new fields
+// projection taking into account active fields from the passed selector.
+// @returns Object - projection object (same as fields option of mongo cursor)
+LocalCollection._combineSelectorAndProjection = function (selector, projection)
+{
+  var prjDetails = projectionDetails(projection);
+  var tree = prjDetails.tree;
+  var mergedProjection = {};
+
+  if (prjDetails.including) {
+    // both selector and projection are pointing on fields to include
+  } else {
+    // selector is pointing at fields to include
+    // projection is pointing at fields to exclude
+  }
+};
+
 // Traverses the keys of passed projection and constructs a tree where all
 // leaves are either all True or all False
 // @returns Object:
