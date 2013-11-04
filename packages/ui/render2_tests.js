@@ -11,6 +11,7 @@ var A = UI.Tag.A;
 var UL = UI.Tag.UL;
 var LI = UI.Tag.LI;
 var SPAN = UI.Tag.SPAN;
+var HR = UI.Tag.HR;
 
 Tinytest.add("ui - render2 - basic", function (test) {
   var run = function (input, expectedInnerHTML, expectedHTML, expectedCode) {
@@ -206,5 +207,97 @@ Tinytest.add("ui - render2 - reactive attributes", function (test) {
     $(span).remove();
 
     test.equal(R.numListeners(), 0);
+  })();
+});
+
+Tinytest.add("ui - render2 - components", function (test) {
+  (function () {
+    var counter = 1;
+    var buf = [];
+
+    var myComponent = UI.Component.extend({
+      init: function () {
+        // `this` is the component instance
+        var number = counter++;
+        this.number = number;
+
+        if (this.parent)
+          buf.push('parent of ' + this.number + ' is ' + this.parent.number);
+
+        this.data = function () {
+          return this.number;
+        };
+      },
+      created: function () {
+        // `this` is the template instance
+        buf.push('created ' + this.data);
+      },
+      render: function () {
+        // `this` is the component instance
+        return [String(this.number),
+
+                (this.number < 3 ? myComponent : HR())];
+      },
+      rendered: function () {
+        var nodeDescr = function (node) {
+          if (node.nodeType === 8) // comment
+            return '';
+          if (node.nodeType === 3) // text
+            return node.nodeValue;
+
+          return node.nodeName;
+        };
+
+        var start = this.firstNode;
+        var end = this.lastNode;
+        // skip marker nodes
+        while (start !== end && ! nodeDescr(start))
+          start = start.nextSibling;
+        while (end !== start && ! nodeDescr(end))
+          end = end.previousSibling;
+
+
+        // `this` is the template instance
+        buf.push('dom-' + this.data + ' is ' + nodeDescr(start) +'..' +
+                 nodeDescr(end));
+      },
+      destroyed: function () {
+        buf.push('destroyed ' + this.data);
+      }
+    });
+
+    var div = document.createElement("DIV");
+
+    materialize(myComponent, div);
+    test.equal(buf, ['created 1',
+                     'parent of 2 is 1',
+                     'created 2',
+                     'parent of 3 is 2',
+                     'created 3',
+                     'dom-3 is 3..HR',
+                     'dom-2 is 2..HR',
+                     'dom-1 is 1..HR']);
+
+    test.equal(canonicalizeHtml(div.innerHTML), '123<hr>');
+
+    buf.length = 0;
+    $(div).remove();
+    buf.sort();
+    test.equal(buf, ['destroyed 1', 'destroyed 2', 'destroyed 3']);
+
+    // Now use toHTML.  Should still get most of the callbacks (not `rendered`).
+
+    buf.length = 0;
+    counter = 1;
+
+    var html = toHTML(myComponent);
+
+    test.equal(buf, ['created 1',
+                     'parent of 2 is 1',
+                     'created 2',
+                     'parent of 3 is 2',
+                     'created 3']);
+
+    test.equal(html, '123<hr>');
   })();
 });

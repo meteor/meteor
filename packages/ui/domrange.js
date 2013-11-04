@@ -88,10 +88,6 @@ var createMarkerNode = (
     function () { return document.createTextNode(""); } :
   function () { return document.createComment(""); });
 
-DomBackend.onRemoveElement = function (element) {
-  nodeRemoved(element, true);
-};
-
 var rangeParented = function (range) {
   if (! range.isParented) {
     range.isParented = true;
@@ -113,7 +109,9 @@ var rangeParented = function (range) {
       range._rangeDict = rangeDict;
 
       // get jQuery to tell us when this node is removed
-      DomBackend.watchElement(parentNode);
+      UI.DomBackend2.onRemoveElement(parentNode, function () {
+        rangeRemoved(range);
+      });
     }
 
     // XXX is this a real callback?  what about chaining? etc.
@@ -155,7 +153,7 @@ var nodeRemoved = function (node, viaBackend) {
       rangeRemoved(comps[i].dom);
 
     if (! viaBackend)
-      DomBackend.removeElement(node);
+      UI.DomBackend2.removeElement(node);
   }
 };
 

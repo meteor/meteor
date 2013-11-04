@@ -77,6 +77,49 @@ _.each(allElementNames, UI.Tag.defineTag);
 
 ////////////////////////////////////////
 
+var instantiate = function (kind, parent) {
+  // check arguments
+  if (UI.isComponent(kind)) {
+    if (kind.isInited)
+      throw new Error("A component kind is required, not an instance");
+  } else {
+    throw new Error("Expected Component kind");
+  }
+
+  var inst = kind.extend(); // XXX args go here
+  inst.isInited = true;
+
+  // XXX messy to define this here
+  inst.templateInstance = {
+    findAll: function (selector) {
+      // XXX check that `.dom` exists here?
+      return inst.dom.$(selector);
+    },
+    find: function (selector) {
+      var result = this.findAll(selector);
+      return result[0] || null;
+    },
+    firstNode: null,
+    lastNode: null,
+    data: null,
+    __component__: inst
+  };
+
+  inst.parent = (parent || null);
+
+  if (inst.init)
+    inst.init();
+
+  if (inst.created) {
+    updateTemplateInstance(inst);
+    inst.created.call(inst.templateInstance);
+  }
+
+  return inst;
+};
+
+////////////////////////////////////////
+
 var sanitizeComment = function (content) {
   return content.replace(/--+/g, '').replace(/-$/, '');
 };
@@ -94,12 +137,12 @@ var insert = function (nodeOrRange, parent, before) {
   if (! parent)
     throw new Error("Materialization parent required");
 
-  if (parent.dom) {
+  if (parent.component && parent.component.dom) {
     // parent is DomRange; add node or range
-    parent.add(nodeOrRange, before);
-  } else if (nodeOrRange.dom) {
+    parent.add(nodeOrRange.component || nodeOrRange, before);
+  } else if (nodeOrRange.component && nodeOrRange.component.dom) {
     // parent is an element; inserting a range
-    UI.insert(nodeOrRange, parent, before);
+    UI.insert(nodeOrRange.component, parent, before);
   } else {
     // parent is an element; inserting an element
     parent.insertBefore(nodeOrRange, before || null); // `null` for IE
@@ -159,12 +202,43 @@ var updateAttributes = function(elem, newAttrs, handlers) {
 
 // Convert the pseudoDOM `node` into reactive DOM nodes and insert them
 // into the element or DomRange `parent`, before the node or id `before`.
-var materialize = function (node, parent, before) {
+var materialize = function (node, parent, before, parentComponent) {
   // XXX should do more error-checking for the case where user is supplying the tags.
   // For example, check that CharRef has `html` and `str` properties and no content.
   // Check that Comment has a single string child and no attributes.  Etc.
 
-  if (node && (typeof node === 'object') &&
+  if (UI.isComponent(node)) {
+    if (node.isInited)
+      throw new Error("Can't render component instance, only component kind");
+    var inst = instantiate(node, parentComponent);
+
+    var content = null;
+    try {
+      content = (inst.render && inst.render());
+    } catch (e) {
+      reportUIException(e);
+    }
+
+    var range = new UI.DomRange(inst);
+    materialize(content, range, null, inst);
+
+    inst.parented = function () {}; // XXX override old base
+    inst.removed = function () {
+      inst.isDestroyed = true;
+      if (inst.destroyed) {
+        updateTemplateInstance(inst);
+        inst.destroyed.call(inst.templateInstance);
+      }
+    };
+    insert(range, parent, before);
+
+    // TODO: defer this until template is in document
+    if (inst.rendered) {
+      updateTemplateInstance(inst);
+      inst.rendered.call(inst.templateInstance);
+    }
+
+  } else if (node && (typeof node === 'object') &&
       (typeof node.splice === 'function')) {
     // Tag or array
     if (node.tagName) {
@@ -199,14 +273,14 @@ var materialize = function (node, parent, before) {
           }
         }
         _.each(node, function (child) {
-          materialize(child, elem);
+          materialize(child, elem, null, parentComponent);
         });
         insert(elem, parent, before);
       }
     } else {
       // array
       _.each(node, function (child) {
-        materialize(child, parent, before);
+        materialize(child, parent, before, parentComponent);
       });
     }
   } else if (typeof node === 'string') {
@@ -217,12 +291,19 @@ var materialize = function (node, parent, before) {
       if (! c.firstRun)
         range.removeAll();
 
-      materialize(node(), range);
-    });
-    range.parented = function () {
-      UI.DomBackend2.onRemoveElement(range.parentNode(), function () {
-        rangeUpdater.stop();
+      var content = null;
+      try {
+        content = node();
+      } catch (e) {
+        reportUIException(e);
+      }
+
+      Deps.nonreactive(function () {
+        materialize(content, range, null, parentComponent);
       });
+    });
+    range.removed = function () {
+      rangeUpdater.stop();
     };
     insert(range, parent, before);
   } else if (node == null) {
@@ -376,10 +457,24 @@ var checkAttributeName = function (name) {
 };
 
 // Convert the pseudoDOM `node` into static HTML.
-var toHTML = function (node) {
+var toHTML = function (node, parentComponent) {
   var result = "";
 
-  if (node && (typeof node === 'object') &&
+  if (UI.isComponent(node)) {
+    if (node.isInited)
+      throw new Error("Can't render component instance, only component kind");
+    var inst = instantiate(node, parentComponent);
+
+    var content = null;
+    try {
+      content = (inst.render && inst.render());
+    } catch (e) {
+      reportUIException(e);
+    }
+
+    result += toHTML(content, inst);
+
+  } else if (node && (typeof node === 'object') &&
       (typeof node.splice === 'function')) {
     // Tag or array
     if (node.tagName) {
@@ -409,7 +504,7 @@ var toHTML = function (node) {
         }
         result += '>';
         _.each(node, function (child) {
-          result += toHTML(child);
+          result += toHTML(child, parentComponent);
         });
         if (node.length || voidElementSet[casedTagName] !== 1) {
           // "Void" elements like BR are the only ones that don't get a close
@@ -421,13 +516,20 @@ var toHTML = function (node) {
     } else {
       // array
       _.each(node, function (child) {
-        result += toHTML(child);
+        result += toHTML(child, parentComponent);
       });
     }
   } else if (typeof node === 'string') {
     result += node.replace(/&/g, '&amp;').replace(/</g, '&lt;');
   } else if (typeof node === 'function') {
-    result += toHTML(node());
+    var content = null;
+    try {
+      content = node();
+    } catch (e) {
+      reportUIException(e);
+    }
+
+    result += toHTML(content, parentComponent);
   } else if (node == null) {
     // null or undefined.
     // do nothing.
@@ -467,7 +569,9 @@ var toObjectLiteralKey = function (k) {
 var toCode = function (node) {
   var result = "";
 
-  if (node && (typeof node === 'object') &&
+  if (UI.isComponent(node)) {
+    throw new Error("Can't convert Component object to code string.  Use EmitCode instead.");
+  } else if (node && (typeof node === 'object') &&
       (typeof node.splice === 'function')) {
     // Tag or array
     if (node.tagName) {
