@@ -2474,6 +2474,7 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
     test.equal(LocalCollection._combineSelectorAndProjection(sel, proj), expected, desc);
   }
 
+  // Test with inclusive projection
   testSelProjectionComb({ a: 1, b: 2 }, { b: 1, c: 1, d: 1 }, { a: true, b: true, c: true, d: true }, "simplest incl");
   testSelProjectionComb({ $or: [{ a: 1234, e: {$lt: 5} }], b: 2 }, { b: 1, c: 1, d: 1 }, { a: true, b: true, c: true, d: true, e: true }, "simplest incl, branching");
   testSelProjectionComb({
@@ -2489,7 +2490,7 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
     'a.c': true,
     'd': true,
     'z': true
-  }, "multikey paths in selector");
+  }, "multikey paths in selector - incl");
 
   testSelProjectionComb({
     foo: 1234,
@@ -2502,7 +2503,7 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
     foo: true,
     b: true,
     k: true
-  }, "multikey paths in fields");
+  }, "multikey paths in fields - incl");
 
   testSelProjectionComb({
     'a.b.c': 123,
@@ -2520,7 +2521,7 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
     'b.c': true,
     'a.e': true,
     'c.c.c': true
-  }, "multikey both paths");
+  }, "multikey both paths - incl");
 
   testSelProjectionComb({
     'a.b.c.d': 123,
@@ -2531,7 +2532,7 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
   }, {
     'a.b': true,
     'a.b1.c.d': true
-  }, "shadowing one another");
+  }, "shadowing one another - incl");
 
   testSelProjectionComb({
     'a.b': 123,
@@ -2542,7 +2543,7 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
   }, {
     'a.b': true,
     'foo': true
-  }, "shadowing one another");
+  }, "shadowing one another - incl");
 
   testSelProjectionComb({
     'a.b.c': 1
