@@ -1,16 +1,25 @@
 Twitter = {};
 
 // Request Twitter credentials for the user
-// @param options {optional}  XXX support options.requestPermissions
+// @param options {optional Object} with fields:
+// - requestPermissions {'read' or 'write'}
+//     Request a specific permission level from Twitter (Twitter's x_auth_access_type)
+//     If you nead RWD, leave this blank, and configure it in your Twitter app config
+// - forceLogin {Boolean}
+//     If true, tells Twitter to prompt for a new login
 // @param credentialRequestCompleteCallback {Function} Callback function to call on
 //   completion. Takes one argument, credentialToken on success, or Error on
 //   error.
 Twitter.requestCredential = function (options, credentialRequestCompleteCallback) {
-  // support both (options, callback) and (callback).
+  // Support both (options, callback) and (callback).
   if (!credentialRequestCompleteCallback && typeof options === 'function') {
     credentialRequestCompleteCallback = options;
     options = {};
   }
+
+  // If options is null or undefined, default it to an empty object
+  if (!options)
+    options = {};
 
   var config = ServiceConfiguration.configurations.findOne({service: 'twitter'});
   if (!config) {
@@ -33,5 +42,28 @@ Twitter.requestCredential = function (options, credentialRequestCompleteCallback
         + encodeURIComponent(callbackUrl)
         + '&state=' + credentialToken;
 
+  // Prepare authentication options
+  var authenticationOptions = [];
+
+  if (options.forceLogin === true) {
+    url += '&force_login=true';
+    authenticationOptions.push('force_login');
+  }
+
+  if (authenticationOptions.length > 0)
+    url += '&authenticationOptions=' + authenticationOptions.join(',');
+
+  // Prepare request token options
+  var requestTokenOptions = [];
+
+  if (options.requestPermissions) {
+    url += '&x_auth_access_type=' + options.requestPermissions;
+    requestTokenOptions.push('x_auth_access_type');
+  }
+
+  if (requestTokenOptions.length > 0)
+    url += '&requestTokenOptions=' + requestTokenOptions.join(',');
+
+  // Initiate the login
   Oauth.initiateLogin(credentialToken, url, credentialRequestCompleteCallback);
 };
