@@ -92,7 +92,7 @@ Follower = {
         electorTries[tryingUrl]++;
       }
       url = url || findFewestTries();
-      console.log("trying", url, electorTries, tryingUrl, process.env.GALAXY_JOB);
+      //console.log("trying", url, electorTries, tryingUrl, process.env.GALAXY_JOB);
 
       // Don't keep trying the same url as fast as we can if it's not working.
       if (electorTries[url] > 2) {
@@ -217,8 +217,18 @@ Follower = {
     // leadership group.
     conn._applyImpl = conn.apply;
     conn.apply = function (/* arguments */) {
-      connectedToLeadershipGroup.wait();
-      return conn._applyImpl.apply(conn, arguments);
+      var args = _.toArray(arguments);
+      if (typeof args[args.length-1] === 'function') {
+        // this needs to be independent of this fiber if there is a callback.
+        Meteor.defer(function () {
+          connectedToLeadershipGroup.wait();
+          return conn._applyImpl.apply(conn, args);
+        });
+        return null; // if there is a callback, the return value is not used
+      } else {
+        connectedToLeadershipGroup.wait();
+        return conn._applyImpl.apply(conn, args);
+      }
     };
 
     conn.onLost = function (callback) {

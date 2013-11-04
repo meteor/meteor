@@ -450,7 +450,6 @@ var runWebAppServer = function () {
                 };
               } else {
                 proxyConf = configuration.proxy;
-
               }
               Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
               console.log(proxyConf);
@@ -477,6 +476,8 @@ var runWebAppServer = function () {
   };
 };
 
+
+var proxy;
 WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
   var securePort = proxyConfig.securePort || 4433;
   var insecurePort = proxyConfig.insecurePort || 8080;
@@ -508,11 +509,18 @@ WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
 
   // This is run after packages are loaded (in main) so we can use
   // Follower.connect.
-  var proxy = Package["follower-livedata"].Follower.connect(
-    proxyConfig.proxyEndpoint, {
-      group: proxyServiceName
-    }
-  );
+  if (proxy) {
+    proxy.reconnect({
+      url: proxyConfig.proxyEndpoint
+    });
+  } else {
+    proxy = Package["follower-livedata"].Follower.connect(
+      proxyConfig.proxyEndpoint, {
+        group: proxyServiceName
+      }
+    );
+  }
+
   var route = process.env.ROUTE;
   var host = route.split(":")[0];
   var port = +route.split(":")[1];
