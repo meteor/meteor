@@ -83,7 +83,7 @@ the server having been upgraded.
    - `id`: string (the id passed to 'sub')
  * `nosub` (server -> client):
    - `id`: string (the id passed to 'sub')
- * `error`: optional Error (an error raised by the subscription as it
+   - `error`: optional Error (an error raised by the subscription as it
     concludes, or sub-not-found)
  * `added` (server -> client):
    - `collection`: string (collection name)
