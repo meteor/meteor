@@ -2551,6 +2551,100 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
     'a.b.c': 1
   }, {
     'a.b.c': true
-  }, "same paths");
+  }, "same paths - incl");
+
+  // Test with exclusive projection
+  testSelProjectionComb({ a: 1, b: 2 }, { b: 0, c: 0, d: 0 }, { c: false, d: false }, "simplest excl");
+  testSelProjectionComb({ $or: [{ a: 1234, e: {$lt: 5} }], b: 2 }, { b: 0, c: 0, d: 0 }, { c: false, d: false }, "simplest excl, branching");
+  testSelProjectionComb({
+    'a.b': { $lt: 3 },
+    'y.0': -1,
+    'a.c': 15
+  }, {
+    'd': 0,
+    'z': 0
+  }, {
+    d: false,
+    z: false
+  }, "multikey paths in selector - excl");
+
+  testSelProjectionComb({
+    foo: 1234,
+    $and: [{ k: -1 }, { $or: [{ b: 15 }] }]
+  }, {
+    'foo.bar': 0,
+    'foo.zzz': 0,
+    'b.asdf': 0
+  }, {
+  }, "multikey paths in fields - excl");
+
+  testSelProjectionComb({
+    'a.b.c': 123,
+    'a.b.d': 321,
+    'b.c.0': 111,
+    'a.e': 12345
+  }, {
+    'a.b.z': 0,
+    'a.b.d.g': 0,
+    'c.c.c': 0
+  }, {
+    'a.b.z': false,
+    'c.c.c': false
+  }, "multikey both paths - excl");
+
+  testSelProjectionComb({
+    'a.b.c.d': 123,
+    'a.b1.c.d': 421,
+    'a.b.c.e': 111
+  }, {
+    'a.b': 0
+  }, {
+  }, "shadowing one another - excl");
+
+  testSelProjectionComb({
+    'a.b': 123,
+    'foo.bar': false
+  }, {
+    'a.b.c.d': 0,
+    'foo': 0
+  }, {
+  }, "shadowing one another - excl");
+
+  testSelProjectionComb({
+    'a.b.c': 1
+  }, {
+    'a.b.c': 0
+  }, {
+  }, "same paths - excl");
+
+  testSelProjectionComb({
+    'a.b': 123,
+    'a.c.d': 222,
+    'ddd': 123
+  }, {
+    'a.b': 0,
+    'a.c.e': 0,
+    'asdf': 0
+  }, {
+    'a.c.e': false,
+    'asdf': false
+  }, "intercept the selector path - excl");
+
+  testSelProjectionComb({
+    'a.b.c': 14
+  }, {
+    'a.b.d': 0
+  }, {
+    'a.b.d': false
+  }, "different branches - excl");
+
+  testSelProjectionComb({
+    'a.b.c.d': "124",
+    'foo.bar.baz.que': "some value"
+  }, {
+    'a.b.c.d.e': 0,
+    'foo.bar': 0
+  }, {
+  }, "excl on incl paths - excl");
 });
 
