@@ -11,11 +11,15 @@ Twitter = {};
 //   completion. Takes one argument, credentialToken on success, or Error on
 //   error.
 Twitter.requestCredential = function (options, credentialRequestCompleteCallback) {
-  // support both (options, callback) and (callback).
+  // Support both (options, callback) and (callback).
   if (!credentialRequestCompleteCallback && typeof options === 'function') {
     credentialRequestCompleteCallback = options;
     options = {};
   }
+
+  // If options is null or undefined, default it to an empty object
+  if(!options)
+    options = {};
 
   var config = ServiceConfiguration.configurations.findOne({service: 'twitter'});
   if (!config) {
