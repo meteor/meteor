@@ -23,6 +23,7 @@ pkill -f "$PROJDIR/.meteor/local/db" || true
 ../../../meteor --production --settings "scenarios/${SCENARIO}.json" --port 9000 &
 OUTER_PID=$!
 
+sleep 10
 
 # start a bunch of phantomjs processes
 PHANTOMSCRIPT=`mktemp -t benchmark-XXXXXXXX`
