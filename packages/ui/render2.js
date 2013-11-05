@@ -226,6 +226,36 @@ UI.emboxValue = function (funcOrValue, equals) {
   }
 };
 
+UI.bind = function (kindOrFunc, options) {
+  var boxedOptions = {};
+  for (var k in options)
+    boxedOptions[k] = UI.emboxValue(options[k]);
+
+  if (typeof kindOrFunc === 'function') {
+    return function () {
+      var kind = kindOrFunc();
+
+      if (! kind)
+        return null;
+
+      if ((! UI.isComponent(kind)) || kind.isInited)
+        throw new Error("Expected Component kind");
+
+      return kind.extend(boxedOptions);
+    };
+  } else {
+    var kind = kindOrFunc;
+
+    if (! kind)
+      return null;
+
+    if ((! UI.isComponent(kind)) || kind.isInited)
+      throw new Error("Expected Component kind");
+
+    return kind.extend(boxedOptions);
+  }
+};
+
 ////////////////////////////////////////
 
 var sanitizeComment = function (content) {
