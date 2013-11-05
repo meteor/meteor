@@ -74,7 +74,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       published.set(id, newDoc);
       if (callbacks.changed) {
         var changed = LocalCollection._makeChangedFields(
-          EJSON.clone(newDoc), oldDoc);
+          newDoc, oldDoc);
         changed = projection(changed);
         if (!_.isEmpty(changed))
           callbacks.changed(id, changed);
@@ -169,7 +169,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
         // Oh great, we actually know what the document is, so we can apply
         // this directly.
         // XXX this assumes no field filtering
-        var newDoc = EJSON.clone(published.get(id));
+        var newDoc = _.clone(published.get(id));
         newDoc._id = id;
         LocalCollection._modify(newDoc, op.o);
         handleDoc(id, newDoc);
