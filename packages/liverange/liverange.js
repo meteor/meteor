@@ -317,6 +317,12 @@ LiveRange.prototype.visit = function(visitRange, visitNode) {
 
   var recurse = function(start, end, startRangeSkip) {
     var startIndex = startRangeSkip || 0;
+    
+    if (!end || !end.nextSibling) {
+      Meteor._debug('empty end-range detected in liveRange.prototype.visit - recurse()');
+      return;
+    }
+    
     var after = end.nextSibling;
     for(var n = start; n && n !== after; n = n.nextSibling) {
       var startData = n[tag] && n[tag][0];
