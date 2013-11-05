@@ -41,34 +41,33 @@ var sanitizeTypeName = function (typeName) {
 // executed. We already have a top-level `Component` var so we create
 // a new function scope to not write it over in IE.
 (function () {
-  _extend(UI, {
-    // Components and Component kinds are the same thing, just
-    // objects; there are no constructor functions, no `new`,
-    // and no `instanceof`.  A Component object is like a class,
-    // until it is inited, at which point it becomes more like
-    // an instance.
-    //
-    // `y = x.extend({ ...new props })` creates a new Component
-    // `y` with `x` as its prototype, plus additional properties
-    // on `y` itself.  `extend` is used both to subclass and to
-    // create instances (and the hope is we can gloss over the
-    // difference in the docs).
 
-    Component: (function (constr) {
-      // Make sure the "class name" that Chrome infers for
-      // UI.Component is "Component", and that
-      // `new UI.Component._constr` (which is what `extend`
-      // does) also produces objects whose inferred class
-      // name is "Component".  Chrome's name inference rules
-      // are a little mysterious, but a function name in
-      // the source code (as in `function Component() {}`)
-      // seems to be reliable and high precedence.
-      var C = new constr;
-      _defineNonEnum(C, '_constr', constr);
-      _defineNonEnum(C, '_super', null);
-      return C;
-    })(function Component() {})
-  });
+  // Components and Component kinds are the same thing, just
+  // objects; there are no constructor functions, no `new`,
+  // and no `instanceof`.  A Component object is like a class,
+  // until it is inited, at which point it becomes more like
+  // an instance.
+  //
+  // `y = x.extend({ ...new props })` creates a new Component
+  // `y` with `x` as its prototype, plus additional properties
+  // on `y` itself.  `extend` is used both to subclass and to
+  // create instances (and the hope is we can gloss over the
+  // difference in the docs).
+  UI.Component = (function (constr) {
+
+    // Make sure the "class name" that Chrome infers for
+    // UI.Component is "Component", and that
+    // `new UI.Component._constr` (which is what `extend`
+    // does) also produces objects whose inferred class
+    // name is "Component".  Chrome's name inference rules
+    // are a little mysterious, but a function name in
+    // the source code (as in `function Component() {}`)
+    // seems to be reliable and high precedence.
+    var C = new constr;
+    _defineNonEnum(C, '_constr', constr);
+    _defineNonEnum(C, '_super', null);
+    return C;
+  })(function Component() {});
 })();
 
 _extend(UI, {
