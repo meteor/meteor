@@ -63,7 +63,11 @@ Template.api.settings = {
           "If you provide the `--settings` option, `Meteor.settings` will be the " +
           "JSON object in the file you specify.  Otherwise, `Meteor.settings` will " +
           "be an empty object. If the object contains a key named `public`, then " +
-          "`Meteor.settings.public` will also be available on the client."]
+          "`Meteor.settings.public` will also be available on the client.  " +
+          "On a self-hosted production environment, use an environment variable " +
+          "`METEOR_SETTINGS` to specify the settings.  The value of `METEOR_SETTINGS` " +
+          "should be the JSON string representing the settings, i.e., the same as the " + 
+          "contents of the settings file."]
 };
 
 Template.api.release = {
