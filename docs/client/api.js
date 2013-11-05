@@ -58,12 +58,12 @@ Template.api.settings = {
   id: "meteor_settings",
   name: "Meteor.settings",
   locus: "Anywhere",
-  descr: ["`Meteor.settings` contains any deployment-specific options that were " +
-          "provided using the `--settings` option for `meteor run` or `meteor deploy`. " +
-          "If you provide the `--settings` option, `Meteor.settings` will be the " +
-          "JSON object in the file you specify.  Otherwise, `Meteor.settings` will " +
-          "be an empty object. If the object contains a key named `public`, then " +
-          "`Meteor.settings.public` will also be available on the client."]
+  descr: ["`Meteor.settings` contains deployment-specific configuration options. " +
+          "You can initialize settings by passing the `--settings` option (which takes a file containing JSON data) to " +
+          "`meteor run` or `meteor deploy`, " +
+          "or by setting your server process's `METEOR_SETTINGS` environment variable to a JSON string. " +
+          "If you don't provide any settings, `Meteor.settings` will be an empty object.  If the settings object contains a key named `public`, then " +
+          "`Meteor.settings.public` will be available on the client as well as the server.  All other properties of `Meteor.settings` are only defined on the server."]
 };
 
 Template.api.release = {
