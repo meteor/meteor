@@ -174,6 +174,21 @@ var Connection = function (url, options) {
     });
   }
 
+  // Client/server time/date difference inclusive transport time
+  var clientServerTimeDiff = 0;
+
+  // Calculate the client server time/date difference
+  var calculateTimeDiff = function(serverTime) {
+    if (typeof serverTime !== 'undefined') {
+      clientServerTimeDiff = serverTime - Date.now();
+    }
+  };
+
+  // Return the current time/date added the client server difference
+  self.serverTime = function() {
+    return new Date( Date.now() + clientServerTimeDiff );
+  };
+
   var onMessage = function (raw_msg) {
     try {
       var msg = parseDDP(raw_msg);
@@ -188,6 +203,7 @@ var Connection = function (url, options) {
     }
 
     if (msg.msg === 'connected') {
+      calculateTimeDiff(msg.serverTime);
       self._version = self._versionSuggestion;
       options.onConnected();
       self._livedata_connected(msg);
