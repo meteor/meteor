@@ -20,7 +20,7 @@
 * Upgraded dependencies:
   * SockJS server from 0.3.7 to 0.3.8
 
-Patches contributed by GitHub user mcbain.
+Patches contributed by GitHub users mcbain, rzymek.
 
 
 ## v0.6.6.3
