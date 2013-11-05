@@ -259,11 +259,11 @@ Tinytest.add("spacebars - templates - block helper", function (test) {
     return R.get();
   };
   var div = renderToDiv(tmpl);
-  test.equal(div.innerHTML.trim(), "bar");
+  test.equal(trim(div.innerHTML), "bar");
 
   R.set(Template.spacebars_template_test_elsecontent);
   Deps.flush();
-  test.equal(div.innerHTML.trim(), "baz");
+  test.equal(trim(div.innerHTML), "baz");
 });
 
 Tinytest.add("spacebars - templates - block helper function with one string arg", function (test) {
@@ -275,7 +275,7 @@ Tinytest.add("spacebars - templates - block helper function with one string arg"
       return null;
   };
   var div = renderToDiv(tmpl);
-  test.equal(div.innerHTML.trim(), "content");
+  test.equal(trim(div.innerHTML), "content");
 });
 
 Tinytest.add("spacebars - templates - block helper function with one helper arg", function (test) {
@@ -289,11 +289,11 @@ Tinytest.add("spacebars - templates - block helper function with one helper arg"
       return null;
   };
   var div = renderToDiv(tmpl);
-  test.equal(div.innerHTML.trim(), "content");
+  test.equal(trim(div.innerHTML), "content");
 
   R.set("baz");
   Deps.flush();
-  test.equal(div.innerHTML.trim(), "");
+  test.equal(trim(div.innerHTML), "");
 });
 
 Tinytest.add("spacebars - templates - block helper component with one helper arg", function (test) {
@@ -301,11 +301,11 @@ Tinytest.add("spacebars - templates - block helper component with one helper arg
   var R = ReactiveVar(true);
   tmpl.bar = function () { return R.get(); };
   var div = renderToDiv(tmpl);
-  test.equal(div.innerHTML.trim(), "content");
+  test.equal(trim(div.innerHTML), "content");
 
   R.set(false);
   Deps.flush();
-  test.equal(div.innerHTML.trim(), "");
+  test.equal(trim(div.innerHTML), "");
 });
 
 Tinytest.add("spacebars - templates - block helper component with three helper args", function (test) {
@@ -318,11 +318,11 @@ Tinytest.add("spacebars - templates - block helper component with three helper a
     return x === y;
   };
   var div = renderToDiv(tmpl);
-  test.equal(div.innerHTML.trim(), "content");
+  test.equal(trim(div.innerHTML), "content");
 
   R.set("baz");
   Deps.flush();
-  test.equal(div.innerHTML.trim(), "");
+  test.equal(trim(div.innerHTML), "");
 });
 
 Tinytest.add("spacebars - templates - block helper with dotted arg", function (test) {
@@ -468,7 +468,7 @@ Tinytest.add("spacebars - templates - select tags", function (test) {
 
   // returns contents of `div` in the form eg ["<select>", "</select>"]
   var divContent = function () {
-    var lines = div.innerHTML.trim()
+    var lines = trim(div.innerHTML)
       .replace(/\>\</g, '>\n<')
       .split('\n');
     var trimmedLines = _.filter(
@@ -544,3 +544,4 @@ Tinytest.add("spacebars - templates - select tags", function (test) {
   ]);
 
 });
+
