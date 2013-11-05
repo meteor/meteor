@@ -1,0 +1,25 @@
+<head>
+  <title>benchmark</title>
+</head>
+
+<body>
+  {{> status}}
+
+  {{> params}}
+
+  {{> serverFacts}}
+</body>
+
+<template name="status">
+  <p>Status: {{status}}</p>
+  <p>Update Rate: {{updateRate}}</p>
+</template>
+
+<template name="params">
+  <dl>
+  {{#each params}}
+  <dt>{{key}}</dt><dd>{{value}}</dd>
+  {{/each}}
+  </dl>
+</template>
+
