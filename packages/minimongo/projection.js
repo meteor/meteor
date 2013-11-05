@@ -49,19 +49,28 @@ LocalCollection._combineSelectorAndProjection = function (selector, projection)
   var mergedProjection = {};
   var selectorPaths = LocalCollection._getPathsWithoutNumericKeys(selector);
 
+  // merge the paths to include
+  tree = pathsToTree(selectorPaths,
+                     function (path) { return true; },
+                     function (node, path, fullPath) { return true; },
+                     tree);
+  mergedProjection = treeToPaths(tree);
   if (prjDetails.including) {
     // both selector and projection are pointing on fields to include
-    tree = pathsToTree(selectorPaths,
-                       function (path) { return true; },
-                       function (node, path, fullPath) {
-                         return true;
-                       }, tree);
+    // so we can just return the merged tree
+    return mergedProjection;
   } else {
     // selector is pointing at fields to include
     // projection is pointing at fields to exclude
-  }
+    // make sure we don't exclude important paths
+    var mergedExclProjection = {};
+    _.each(mergedProjection, function (incl, path) {
+      if (!incl)
+        mergedExclProjection[path] = false;
+    });
 
-  return treeToPaths(tree);
+    return mergedExclProjection;
+  }
 };
 
 // Traverses the keys of passed projection and constructs a tree where all
