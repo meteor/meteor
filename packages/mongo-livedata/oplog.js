@@ -33,10 +33,14 @@ MongoConnection.prototype._observeChangesWithOplog = function (
   var phase = PHASE.INITIALIZING;
 
   var published = new IdMap;
-  var selector = LocalCollection._compileSelector(cursorDescription.selector);
-  var projection = cursorDescription.options.fields ?
-    LocalCollection._compileProjection(cursorDescription.options.fields) :
-    EJSON.clone;
+  var selector = cursorDescription.selector;
+  var selectorFn = LocalCollection._compileSelector(selector);
+  var projection = cursorDescription.options.fields || {};
+  var projectionFn = LocalCollection._compileProjection(projection);
+  // Projection function, result of combining important fields for selector and
+  // existing fields projection
+  var sharedProjection = LocalCollection._combineSelectorAndProjection(selector, projection);
+  var sharedProjectionFn = LocalCollection._compileProjection(sharedProjection);
 
   var needToFetch = new IdMap;
   var currentlyFetching = new IdMap;
@@ -47,9 +51,8 @@ MongoConnection.prototype._observeChangesWithOplog = function (
     delete fields._id;
     if (published.has(id))
       throw Error("tried to add something already published " + id);
-    published.set(id, fields);
-    // projection will deep copy object
-    callbacks.added && callbacks.added(id, projection(fields));
+    published.set(id, sharedProjectionFn(fields));
+    callbacks.added && callbacks.added(id, projectionFn(fields));
   };
 
   var remove = function (id) {
@@ -61,7 +64,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
 
   var handleDoc = function (id, newDoc) {
     newDoc = _.clone(newDoc);
-    var matchesNow = newDoc && selector(newDoc);
+    var matchesNow = newDoc && selectorFn(newDoc);
     var matchedBefore = published.has(id);
     if (matchesNow && !matchedBefore) {
       add(newDoc);
@@ -72,12 +75,11 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       if (!oldDoc)
         throw Error("thought that " + id + " was there!");
       delete newDoc._id;
-      published.set(id, newDoc);
+      published.set(id, sharedProjectionFn(newDoc));
       if (callbacks.changed) {
         var changed = LocalCollection._makeChangedFields(
-          newDoc, oldDoc);
-        // projection will deep copy the changed object
-        changed = projection(changed);
+          _.clone(newDoc), oldDoc);
+        changed = projectionFn(changed);
         if (!_.isEmpty(changed))
           callbacks.changed(id, changed);
       }
@@ -156,7 +158,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
 
       // XXX what if selector yields?  for now it can't but later it could have
       // $where
-      if (selector(op.o))
+      if (selectorFn(op.o))
         add(op.o);
     } else if (op.op === 'u') {
       // Is this a modifier ($set/$unset, which may require us to poll the
