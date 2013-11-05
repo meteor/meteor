@@ -49,20 +49,38 @@ Accounts.registerLoginHandler = function(handler) {
 loginHandlers = [];
 
 
-// Try all of the registered login handlers until one of them doesn'
-// return `undefined`, meaning it handled this call to `login`. Return
-// that return value, which ought to be a {id/token} pair.
-var tryAllLoginHandlers = function (options) {
+// Checks a user's credentials against all the registered login handlers, and
+// returns a newly created login token if the credentials are valid. It is like
+// the login method, except that it doesn't set the logged-in user on the
+// connection. Returns null if none of the login handlers handled the login
+// request (meaning that they all returned undefined). Otherwise, returns
+// {id: userId, token: *, tokenExpires: *}.
+//
+// For example, if you want to login with a plaintext password, `options` could be
+//   { user: { username: <username> }, password: <password> }, or
+//   { user: { email: <email> }, password: <password> }.
+Accounts.createToken = function (options) {
+  // Try all of the registered login handlers until one of them doesn' return
+  // `undefined`, meaning it handled this call to `login`. Return that return
+  // value, which ought to be a {id/token} pair.
   for (var i = 0; i < loginHandlers.length; ++i) {
     var handler = loginHandlers[i];
     var result = handler(options);
     if (result !== undefined)
       return result;
   }
-
-  throw new Meteor.Error(400, "Unrecognized options for login request");
+  return null;
 };
 
+// Deletes the given loginToken from the database. This will cause all
+// connections associated with the token to be closed.
+Accounts.destroyToken = function (userId, loginToken) {
+  Meteor.users.update(userId, {
+    $pull: {
+      "services.resume.loginTokens": { "token": loginToken }
+    }
+  });
+};
 
 // Actual methods for login and logout. This is the entry point for
 // clients to actually log in.
@@ -75,10 +93,12 @@ Meteor.methods({
     // Login handlers should really also check whatever field they look at in
     // options, but we don't enforce it.
     check(options, Object);
-    var result = tryAllLoginHandlers(options);
+    var result = Accounts.createToken(options);
     if (result !== null) {
       this.setUserId(result.id);
       this._setLoginToken(result.token);
+    } else {
+      throw new Meteor.Error(400, "Unrecognized options for login request");
     }
     return result;
   },
@@ -87,7 +107,7 @@ Meteor.methods({
     var token = this._getLoginToken();
     this._setLoginToken(null);
     if (token && this.userId)
-      removeLoginToken(this.userId, token);
+      Accounts.destroyToken(this.userId, token);
     this.setUserId(null);
   },
 
@@ -180,15 +200,6 @@ Accounts._generateStampedLoginToken = function () {
   return {token: Random.id(), when: (new Date)};
 };
 
-// Deletes the given loginToken from the database. This will cause all
-// connections associated with the token to be closed.
-var removeLoginToken = function (userId, loginToken) {
-  Meteor.users.update(userId, {
-    $pull: {
-      "services.resume.loginTokens": { "token": loginToken }
-    }
-  });
-};
 
 ///
 /// TOKEN EXPIRATION
