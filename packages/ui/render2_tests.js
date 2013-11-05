@@ -303,3 +303,165 @@ Tinytest.add("ui - render2 - components", function (test) {
     test.equal(html, '123<hr>');
   })();
 });
+
+
+Tinytest.add("ui - render2 - emboxValue", function (test) {
+  var R = ReactiveVar('ALPHA');
+
+  var numCalcs = [0, 0, 0];
+
+  var firstLetter = UI.emboxValue(function () {
+    numCalcs[0]++;
+    return R.get().charAt(0);
+  });
+
+  var secondLetter = UI.emboxValue(function () {
+    numCalcs[1]++;
+    return R.get().charAt(1);
+  });
+
+  var thirdLetter = UI.emboxValue(function () {
+    numCalcs[2]++;
+    return R.get().charAt(2);
+  });
+
+  var setSink = function (n, value) {
+    if (sinks[n] === value)
+      sinks[n] += '-error'; // duplicate, shouldn't happen!
+    else
+      sinks[n] = value;
+  };
+
+
+  test.equal(R.numListeners(), 0);
+  test.equal(numCalcs, [0, 0, 0]);
+
+  var comps = [];
+  var sinks = [];
+  comps[0] = Deps.autorun(function () {
+    setSink(0, firstLetter());
+  });
+  comps[1] = Deps.autorun(function () {
+    setSink(1, firstLetter());
+  });
+
+  test.equal(R.numListeners(), 1);
+  test.equal(numCalcs, [1, 0, 0]);
+  test.equal(sinks, ['A', 'A']);
+
+  R.set('APPLE');
+  Deps.flush();
+  test.equal(R.numListeners(), 1);
+  test.equal(numCalcs, [2, 0, 0]);
+  test.equal(sinks, ['A', 'A']);
+
+  // This non-reactive call to firstLetter piggybacks on the
+  // existing computation, which already has the value handy.
+  test.equal(firstLetter(), 'A');
+  test.equal(numCalcs, [2, 0, 0]);
+
+  comps[0].stop();
+  comps[1].stop();
+  Deps.flush();
+  test.equal(R.numListeners(), 0);
+  test.equal(numCalcs, [2, 0, 0]);
+  test.equal(sinks, ['A', 'A']);
+
+  // *This* non-reactive call to firstLetter, on the other hand,
+  // happens at a time when the emboxed value has no running
+  // computation, so it gets calculated directly.
+  test.equal(firstLetter(), 'A');
+  test.equal(numCalcs, [3, 0, 0]);
+  test.equal(R.numListeners(), 0);
+
+  // Start some new autoruns.
+  sinks = [];
+  comps[0] = Deps.autorun(function () {
+    setSink(0, firstLetter());
+  });
+  comps[1] = Deps.autorun(function () {
+    firstLetter(); // extra call shouldn't matter
+    setSink(1, firstLetter());
+  });
+
+  test.equal(R.numListeners(), 1);
+  test.equal(numCalcs, [4, 0, 0]);
+  test.equal(sinks, ['A', 'A']);
+
+  R.set('BANANA');
+  Deps.flush();
+  test.equal(R.numListeners(), 1);
+  // it's important that exactly one calculation happened,
+  // which indicates that the inner computation of the
+  // emboxValue has been re-run but not torn down and
+  // re-established.
+  test.equal(numCalcs, [5, 0, 0]);
+  test.equal(sinks, ['B', 'B']);
+
+  R.set('CUCUMBER');
+  Deps.flush();
+  test.equal(R.numListeners(), 1);
+  test.equal(numCalcs, [6, 0, 0]);
+  test.equal(sinks, ['C', 'C']);
+
+  comps[2] = Deps.autorun(function () {
+    setSink(2, secondLetter());
+  });
+
+  test.equal(R.numListeners(), 2);
+  test.equal(numCalcs, [6, 1, 0]);
+  test.equal(sinks, ['C', 'C', 'U']);
+
+  R.set('DOILY');
+  Deps.flush();
+  test.equal(R.numListeners(), 2);
+  test.equal(numCalcs, [7, 2, 0]);
+  test.equal(sinks, ['D', 'D', 'O']);
+
+  comps[3] = Deps.autorun(function () {
+    setSink(3, firstLetter() + secondLetter() + thirdLetter());
+  });
+
+  test.equal(R.numListeners(), 3);
+  test.equal(numCalcs, [7, 2, 1]);
+  test.equal(sinks, ['D', 'D', 'O', 'DOI']);
+
+
+  R.set('ENVY');
+  Deps.flush();
+  test.equal(R.numListeners(), 3);
+  test.equal(numCalcs, [8, 3, 2]);
+  test.equal(sinks, ['E', 'E', 'N', 'ENV']);
+
+  R.set('EMPTY');
+  Deps.flush();
+  test.equal(R.numListeners(), 3);
+  test.equal(numCalcs, [9, 4, 3]);
+  test.equal(sinks, ['E', 'E', 'M', 'EMP']);
+
+  comps[0].stop();
+  Deps.flush();
+  // comps[3] still listens to first, second, and third, which
+  // listen to R.
+  test.equal(R.numListeners(), 3);
+
+  comps[1].stop();
+  Deps.flush();
+  test.equal(R.numListeners(), 3);
+
+  comps[2].stop();
+  Deps.flush();
+  test.equal(R.numListeners(), 3);
+
+  comps[3].stop();
+  test.equal(firstLetter() + secondLetter() + thirdLetter(), 'EMP');
+  Deps.flush();
+  // BAM, all listeners gone!
+  test.equal(R.numListeners(), 0);
+
+  ////// Test non-function case
+
+  test.equal(UI.emboxValue(3)(), 3);
+  test.equal(UI.emboxValue(null)(), null);
+  test.equal(UI.emboxValue({x:1})(), {x:1});
+});

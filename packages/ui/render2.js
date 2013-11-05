@@ -118,6 +118,114 @@ var instantiate = function (kind, parent) {
   return inst;
 };
 
+
+// Takes a reactive function (call it `inner`) and returns a reactive function
+// `outer` which is equivalent except in its reactive behavior.  Specifically,
+// `outer` has the following two special properties:
+//
+// 1. Isolation:  An invocation of `outer()` only invalidates its context
+//    when the value of `inner()` changes.  For example, `inner` may be a
+//    function that gets one or more Session variables and calculates a
+//    true/false value.  `outer` blocks invalidation signals caused by the
+//    Session variables changing and sends a signal out only when the value
+//    changes between true and false (in this example).  The value can be
+//    of any type, and it is compared with `===` unless an `equals` function
+//    is provided.
+//
+// 2. Value Sharing:  The `outer` function returned by `emboxValue` can be
+//    shared between different contexts, for example by assigning it to an
+//    object as a method that can be accessed at any time, such as by
+//    different templates or different parts of a template.  No matter
+//    how many times `outer` is called, `inner` is only called once until
+//    it changes.  The most recent value is stored internally.
+//
+// Conceptually, an emboxed value is much like a Session variable which is
+// kept up to date by an autorun.  Session variables provide storage
+// (value sharing) and they don't notify their listeners unless a value
+// actually changes (isolation).  The biggest difference is that such an
+// autorun would never be stopped, and the Session variable would never be
+// deleted even if it wasn't used any more.  An emboxed value, on the other
+// hand, automatically stops computing when it's not being used, and starts
+// again when called from a reactive context.  This means that when it stops
+// being used, it can be completely garbage-collected.
+//
+// If a non-function value is supplied to `emboxValue` instead of a reactive
+// function, then `outer` is still a function but it simply returns the value.
+//
+UI.emboxValue = function (funcOrValue, equals) {
+  if (typeof funcOrValue === 'function') {
+    var func = funcOrValue;
+
+    var curResult = null;
+    // There's one shared Dependency and Computation for all callers of
+    // our box function.  It gets kicked off if necessary, and when
+    // there are no more dependents, it gets stopped to avoid leaking
+    // memory.
+    var resultDep = null;
+    var computation = null;
+
+    return function () {
+      if (! computation) {
+        if (! Deps.active) {
+          // Not in a reactive context.  Just call func, and don't start a
+          // computation if there isn't one running already.
+          return func();
+        }
+
+        // No running computation, so kick one off.  Since this computation
+        // will be shared, avoid any association with the current computation
+        // by using `Deps.nonreactive`.
+        resultDep = new Deps.Dependency;
+
+        computation = Deps.nonreactive(function () {
+          return Deps.autorun(function (c) {
+            var oldResult = curResult;
+            curResult = func();
+            if (! c.firstRun) {
+              if (! (equals ? equals(curResult, oldResult) :
+                     curResult === oldResult))
+                resultDep.changed();
+            }
+          });
+        });
+      }
+
+      if (Deps.active) {
+        var isNew = resultDep.depend();
+        if (isNew) {
+          // For each new dependent, schedule a task for after that dependent's
+          // invalidation time and the subsequent flush. The task checks
+          // whether the computation should be torn down.
+          Deps.onInvalidate(function () {
+            if (resultDep && ! resultDep.hasDependents()) {
+              Deps.afterFlush(function () {
+                // use a second afterFlush to bump ourselves to the END of the
+                // flush, after computation re-runs have had a chance to
+                // re-establish their connections to our computation.
+                Deps.afterFlush(function () {
+                  if (resultDep && ! resultDep.hasDependents()) {
+                    computation.stop();
+                    computation = null;
+                    resultDep = null;
+                  }
+                });
+              });
+            }
+          });
+        }
+      }
+
+      return curResult;
+    };
+
+  } else {
+    var value = funcOrValue;
+    return function () {
+      return value;
+    };
+  }
+};
+
 ////////////////////////////////////////
 
 var sanitizeComment = function (content) {
