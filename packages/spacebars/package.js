@@ -17,5 +17,5 @@ Package.on_test(function (api) {
   api.use('underscore');
   api.use('spacebars');
   api.use('tinytest');
-  api.add_files('spacebars_tests.js', ['client', 'server']);
+  api.add_files('spacebars_tests.js', ['server']);
 });
