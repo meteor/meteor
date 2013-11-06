@@ -141,6 +141,79 @@ Fiber(function () {
     }
   };
 
+  // Given an object 'data' in the format returned by readSession,
+  // modify it to make the user logged out.
+  var logOutSession = function (data) {
+    var crypto = require('crypto');
+
+    _.each(data.sessions, function (info, domain) {
+      if (_.has(info, 'token')) {
+        if (! (info.invalidate instanceof Array))
+          info.invalidate = [];
+
+        // Delete the auth token, but save a hashed copy (SHA256) that
+        // is useless for authentication. The next time we're online,
+        // we'll send this hash to the server to revoke the token on
+        // the server side too.
+        if (typeof info.token === "string") {
+          var hash =
+            crypto.createHash('sha256').update(info.token).digest('base64')
+          info.invalidate.push(data.username + ":" + hash);
+        }
+        delete info.token;
+      }
+    });
+
+    delete data.username;
+  };
+
+  // If there are any logged out (invalidated) tokens that haven't
+  // been sent to the server for revocation yet, try to send
+  // them. Reads the session file and then writes it back out to
+  // disk. If the server can't be contacted, fail silently (and leave
+  // the pending invalidations in the session file for next time.)
+  //
+  // options:
+  //  - timeout: request timeout in milliseconds
+  var tryInvalidateTokens = function (options) {
+    options = _.extend({
+      timeout: 5000
+    }, options || {});
+
+    // XXX support domains other than ACCOUNTS_DOMAIN
+
+    var data = readSession();
+    var session = data.sessions[ACCOUNTS_DOMAIN];
+    if (! session)
+      return;
+    var hashes = session.invalidate || [];
+    if (! hashes.length)
+      return;
+    try {
+      var result = httpHelpers.request({
+        url: ACCOUNTS_URL + "/logout",
+        method: "POST",
+        form: {
+          hash: hashes.join(',')
+        },
+        timeout: options.timeout
+      });
+    } catch (e) {
+      // most likely we don't have a net connection
+      return;
+    }
+    var response = result.response;
+
+    if (response.statusCode === 200) {
+      // Server confirms that the tokens have been revoked
+      delete session.invalidate;
+      writeSession(data);
+    } else {
+      // This isn't ideal but is probably better that saying nothing at all
+      process.stderr.write("warning: couldn't confirm logout with server\n");
+    }
+  };
+
   var Commands = [];
 
   var usage = function() {
@@ -445,6 +518,9 @@ Fiber(function () {
     func: function (argv) {
       requireDirInApp("run");
       maybePrintUserOverrideMessage();
+
+      tryInvalidateTokens({timeout: 1000});
+
       runner.run(context, {
         port: argv.port,
         rawLogs: argv['raw-logs'],
@@ -1407,13 +1483,6 @@ Fiber(function () {
 
       var byEmail = !! argv.email;
 
-      var data = readSession();
-      if (data.username) {
-        // XXX log them out rather than failing
-        process.stderr.write("XXX you are already logged in\n");
-        process.exit(1);
-      }
-
       var loginData = {};
       if (byEmail) {
         loginData.email = utils.readLine({ prompt: "Email: " });
@@ -1458,6 +1527,7 @@ Fiber(function () {
       var body = JSON.parse(result.body);
 
       var data = readSession();
+      logOutSession(data);
       data.username = body.username;
       if (typeof (data.sessions) !== "object")
         data.sessions = {};
@@ -1466,7 +1536,41 @@ Fiber(function () {
       data.sessions[ACCOUNTS_DOMAIN].token = meteorAuth;
       writeSession(data);
 
-      console.log("\nHello,", body.username + "!");
+      tryInvalidateTokens();
+
+      process.stdout.write("\n" + "Logged in as " + body.username + ".\n" +
+                           "Thanks for being a Meteor developer!\n");
+    }
+  });
+
+  Commands.push({
+    name: "logout",
+    help: "Log out of your Meteor account",
+    hidden: true,
+    argumentParser: function (opt) {
+      opt.usage(
+"Usage: meteor logout\n" +
+"\n" +
+"Log out of your Meteor account.\n");
+    },
+
+    func: function (argv, showUsage) {
+      if (argv._.length !== 0)
+        showUsage();
+
+      var data = readSession();
+      var wasLoggedIn = !! data.username;
+      logOutSession(data);
+      writeSession(data);
+
+      tryInvalidateTokens();
+
+      if (wasLoggedIn)
+        process.stderr.write("Logged out.\n");
+      else
+        // We called logOutSession/writeSession anyway, out of an
+        // abundance of caution.
+        process.stderr.write("Not logged in.\n");
     }
   });
 
