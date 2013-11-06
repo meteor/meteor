@@ -63,6 +63,15 @@ _.times(PARAMS.numCollections, function (n) {
 
 if (Meteor.isServer) {
 
+  // Make sure we have indexes. Helps mongo CPU usage.
+  Meteor.startup(function () {
+    _.each(Collections, function (C) {
+      C._ensureIndex({toProcess: 1});
+      C._ensureIndex({fromProcess: 1});
+      C._ensureIndex({when: 1});
+    });
+  });
+
   // periodic db check. generate a client list.
   var currentClients = [];
   var totalDocs = 0;
