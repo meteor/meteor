@@ -80,7 +80,6 @@ if (Meteor.isServer) {
     });
     currentClients = _.keys(newClients);
     totalDocs = newTotal;
-    console.log(totalDocs, currentClients.length);
   }, 3*1000); // XXX hardcoded time
 
   // periodic document cleanup.
