@@ -1470,6 +1470,35 @@ Fiber(function () {
     }
   });
 
+  Commands.push({
+    name: "whoami",
+    help: "Prints the username of your Meteor developer account",
+    hidden: true,
+    argumentParser: function (opt) {
+      opt.usage(
+"Usage: meteor whoami\n" +
+"\n" +
+"Prints the username of the currently logged-in Meteor developer.\n" +
+"\n" +
+"See 'meteor login' to log into or 'meteor logout' to log out of of your\n" +
+"Meteor account.");
+    },
+
+    func: function (argv, showUsage) {
+      if (argv._.length !== 0)
+        showUsage();
+
+      var data = readSession();
+      if (data.username) {
+        process.stdout.write(data.username + "\n");
+        process.exit(0);
+      } else {
+        process.stderr.write("Not logged in. 'meteor login' to log in.\n");
+        process.exit(1);
+      }
+    }
+  });
+
   // Prints a message if $METEOR_TOOLS_DEBUG is set.
   // XXX We really should have a better logging system.
   var toolsDebugMessage = function (msg) {
