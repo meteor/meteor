@@ -48,6 +48,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
     if (published.has(id))
       throw Error("tried to add something already published " + id);
     published.set(id, fields);
+    // projection will deep copy object
     callbacks.added && callbacks.added(id, projection(fields));
   };
 
@@ -75,6 +76,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       if (callbacks.changed) {
         var changed = LocalCollection._makeChangedFields(
           newDoc, oldDoc);
+        // projection will deep copy the changed object
         changed = projection(changed);
         if (!_.isEmpty(changed))
           callbacks.changed(id, changed);
@@ -169,7 +171,8 @@ MongoConnection.prototype._observeChangesWithOplog = function (
         // Oh great, we actually know what the document is, so we can apply
         // this directly.
         // XXX this assumes no field filtering
-        var newDoc = _.clone(published.get(id));
+        // XXX get rid of this deep clone once we run it though projection
+        var newDoc = EJSON.clone(published.get(id));
         newDoc._id = id;
         LocalCollection._modify(newDoc, op.o);
         handleDoc(id, newDoc);
