@@ -146,28 +146,26 @@ Fiber(function () {
   var logOutSession = function (data) {
     var crypto = require('crypto');
 
+    delete data.username;
+
     _.each(data.sessions, function (info, domain) {
       if (_.has(info, 'token')) {
-        if (! (info.invalidate instanceof Array))
-          info.invalidate = [];
+        if (! (info.pendingRevoke instanceof Array))
+          info.pendingRevoke = [];
 
-        // Delete the auth token, but save a hashed copy (SHA256) that
+        // Delete the auth token itself, but save the tokenId, which
         // is useless for authentication. The next time we're online,
-        // we'll send this hash to the server to revoke the token on
+        // we'll send the tokenId to the server to revoke the token on
         // the server side too.
-        if (typeof info.token === "string") {
-          var hash =
-            crypto.createHash('sha256').update(info.token).digest('base64')
-          info.invalidate.push(data.username + ":" + hash);
-        }
+        if (typeof info.tokenId === "string")
+          info.pendingRevoke.push(info.tokenId);
         delete info.token;
+        delete info.tokenId;
       }
     });
-
-    delete data.username;
   };
 
-  // If there are any logged out (invalidated) tokens that haven't
+  // If there are any logged out (pendingRevoke) tokens that haven't
   // been sent to the server for revocation yet, try to send
   // them. Reads the session file and then writes it back out to
   // disk. If the server can't be contacted, fail silently (and leave
@@ -175,7 +173,7 @@ Fiber(function () {
   //
   // options:
   //  - timeout: request timeout in milliseconds
-  var tryInvalidateTokens = function (options) {
+  var tryRevokeOldTokens = function (options) {
     options = _.extend({
       timeout: 5000
     }, options || {});
@@ -186,15 +184,15 @@ Fiber(function () {
     var session = data.sessions[ACCOUNTS_DOMAIN];
     if (! session)
       return;
-    var hashes = session.invalidate || [];
-    if (! hashes.length)
+    var tokenIds = session.pendingRevoke || [];
+    if (! tokenIds.length)
       return;
     try {
       var result = httpHelpers.request({
-        url: ACCOUNTS_URL + "/logout",
+        url: ACCOUNTS_URL + "/logoutById",
         method: "POST",
         form: {
-          hash: hashes.join(',')
+          tokenId: tokenIds.join(',')
         },
         timeout: options.timeout
       });
@@ -206,7 +204,7 @@ Fiber(function () {
 
     if (response.statusCode === 200) {
       // Server confirms that the tokens have been revoked
-      delete session.invalidate;
+      delete session.pendingRevoke;
       writeSession(data);
     } else {
       // This isn't ideal but is probably better that saying nothing at all
@@ -519,7 +517,7 @@ Fiber(function () {
       requireDirInApp("run");
       maybePrintUserOverrideMessage();
 
-      tryInvalidateTokens({timeout: 1000});
+      tryRevokeOldTokens({timeout: 1000});
 
       runner.run(context, {
         port: argv.port,
@@ -1519,12 +1517,12 @@ Fiber(function () {
           break;
         }
       }
-      if (! meteorAuth || response.statusCode !== 200) {
+      var body = JSON.parse(result.body);
+
+      if (! meteorAuth || response.statusCode !== 200 || ! body.tokenId) {
         process.stdout.write("Login failed.\n");
         process.exit(1);
       }
-
-      var body = JSON.parse(result.body);
 
       var data = readSession();
       logOutSession(data);
@@ -1534,9 +1532,10 @@ Fiber(function () {
       if (typeof (data.sessions[ACCOUNTS_DOMAIN]) !== "object")
         data.sessions[ACCOUNTS_DOMAIN] = {};
       data.sessions[ACCOUNTS_DOMAIN].token = meteorAuth;
+      data.sessions[ACCOUNTS_DOMAIN].tokenId = body.tokenId;
       writeSession(data);
 
-      tryInvalidateTokens();
+      tryRevokeOldTokens();
 
       process.stdout.write("\n" + "Logged in as " + body.username + ".\n" +
                            "Thanks for being a Meteor developer!\n");
@@ -1563,7 +1562,7 @@ Fiber(function () {
       logOutSession(data);
       writeSession(data);
 
-      tryInvalidateTokens();
+      tryRevokeOldTokens();
 
       if (wasLoggedIn)
         process.stderr.write("Logged out.\n");
