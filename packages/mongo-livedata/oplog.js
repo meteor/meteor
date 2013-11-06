@@ -172,12 +172,10 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       } else if (published.has(id)) {
         // Oh great, we actually know what the document is, so we can apply
         // this directly.
-        // XXX this assumes no field filtering
-        // XXX get rid of this deep clone once we run it though projection
         var newDoc = EJSON.clone(published.get(id));
         newDoc._id = id;
         LocalCollection._modify(newDoc, op.o);
-        handleDoc(id, newDoc);
+        handleDoc(id, sharedProjectionFn(newDoc));
       } else if (LocalCollection._isSelectorAffectedByModifier(
           cursorDescription.selector, op.o)) {
         // XXX _isSelectorAffectedByModifier should actually be
