@@ -15,11 +15,28 @@ var files = require('./files.js');
 var httpHelpers = exports;
 _.extend(exports, {
 
-  // A wrapper around request that sets http proxy.
+  // A wrapper around request that sets http proxy. Runs synchronously if no
+  // callback is passed. Returns the request if you pass a callback, and the
+  // response if you don't.
   request: function (urlOrOptions, callback) {
 
     if (!_.isObject(urlOrOptions))
       urlOrOptions = { url: urlOrOptions };
+
+    var fut;
+    if (! callback) {
+      fut = new Future();
+      callback = function (err, response, body) {
+        if (err) {
+          fut.throw(err);
+        } else {
+          fut.return({
+            response: response,
+            body: body
+          });
+        }
+      };
+    }
 
     var url = urlOrOptions.url;
 
@@ -33,7 +50,11 @@ _.extend(exports, {
       urlOrOptions.proxy = proxy;
     }
 
-    return request(urlOrOptions, callback);
+    var req = request(urlOrOptions, callback);
+    if (fut)
+      return fut.wait();
+    else
+      return req;
   },
 
 

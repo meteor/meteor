@@ -21,8 +21,13 @@ Fiber(function () {
   var logging = require('./logging.js');
   var deployGalaxy;
   var cleanup = require('./cleanup.js');
+  var utils = require('./utils.js');
+  var httpHelpers = require('./http-helpers.js');
 
   var Future = require('fibers/future');
+
+  var ACCOUNTS_URL = "http://localhost:3000";
+
   // This code is duplicated in app/server/server.js.
   var MIN_NODE_VERSION = 'v0.10.21';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
@@ -1334,6 +1339,64 @@ Fiber(function () {
         ret = 1;
       ret = +ret; // cast to integer
       process.exit(ret);
+    }
+  });
+
+  Commands.push({
+    name: "login",
+    help: "Log in to your Meteor account",
+    hidden: true,
+    argumentParser: function (opt) {
+      opt.usage("Usage: meteor login\n" +
+                "\n" +
+                "Prompts for your username and password and logs you in to your\n" +
+                "Meteor account.\n");
+    },
+
+    func: function (argv, showUsage) {
+      var username = utils.readLine({ prompt: "Username: " });
+      var password = utils.readLine({
+        echo: false,
+        prompt: "Password: "
+      });
+      process.stdout.write("\n");
+
+      var loginData = {
+        username: username,
+        password: password
+      };
+
+      var loginUrl = ACCOUNTS_URL + "/login";
+      var result;
+      try {
+        result = httpHelpers.request({
+          url: loginUrl,
+          method: "POST",
+          form: loginData
+        });
+      } catch (e) {
+        process.stdout.write("\nCouldn't connect to server. " +
+                             "Check your internet connection.\n");
+        process.exit(1);
+      }
+      var response = result.response;
+
+      var cookies = response.headers["set-cookie"] || [];
+      var meteorAuth;
+      for (var i = 0; i < cookies.length; i++) {
+        var match = cookies[i].match(/^METEOR_AUTH=(\w+)/);
+        if (match) {
+          meteorAuth = match[1];
+          break;
+        }
+      }
+      if (! meteorAuth || response.statusCode !== 200) {
+        process.stdout.write("Login failed.\n");
+        process.exit(1);
+      }
+
+      var body = JSON.parse(result.body);
+      console.log("\nHello,", body.username + "!");
     }
   });
 

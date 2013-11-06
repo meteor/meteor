@@ -52,8 +52,8 @@ loginHandlers = [];
 // Checks a user's credentials against all the registered login handlers, and
 // returns a newly created login token if the credentials are valid. It is like
 // the login method, except that it doesn't set the logged-in user on the
-// connection. Returns null if none of the login handlers handled the login
-// request (meaning that they all returned undefined). Otherwise, returns
+// connection. Throws a Meteor.Error if logging in fails, including the case
+// where none of the login handlers handled the login request. Otherwise, returns
 // {id: userId, token: *, tokenExpires: *}.
 //
 // For example, if you want to login with a plaintext password, `options` could be
@@ -69,7 +69,7 @@ Accounts.createToken = function (options) {
     if (result !== undefined)
       return result;
   }
-  return null;
+  throw new Meteor.Error(400, "Unrecognized options for login request");
 };
 
 // Deletes the given loginToken from the database. This will cause all
@@ -97,8 +97,6 @@ Meteor.methods({
     if (result !== null) {
       this.setUserId(result.id);
       this._setLoginToken(result.token);
-    } else {
-      throw new Meteor.Error(400, "Unrecognized options for login request");
     }
     return result;
   },
