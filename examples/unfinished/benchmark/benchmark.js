@@ -1,9 +1,7 @@
-// Pick which scenario we run. Pass the 'SCENARIO' environment variable
-// to change this. See 'benchmark-scenarios.js' for the list of
-// scenarios.
 
-var PARAMS = {};
+// Pick scenario from settings.
 // XXX settings now has public. could move stuff there and avoid this.
+var PARAMS = {};
 if (Meteor.isServer) {
   if (!Meteor.settings.params)
     throw new Error("Must set scenario with Meteor.settings");
@@ -12,9 +10,10 @@ if (Meteor.isServer) {
   PARAMS = __meteor_runtime_config__.PARAMS;
 }
 
+
 // id for this client or server.
 var processId = Random.id();
-console.log("SSS", processId);
+console.log("processId", processId);
 
 
 //////////////////////////////
@@ -63,22 +62,14 @@ _.times(PARAMS.numCollections, function (n) {
 
 
 if (Meteor.isServer) {
-  // init
-  Meteor.startup(function () {
-    // clear all the collections.
-    _.each(Collections, function (C) {
-      // XXX no, don't remove!
-      // C.remove({});
-    });
-  });
 
-  // periodic db check. client list
+  // periodic db check. generate a client list.
   var currentClients = [];
   var totalDocs = 0;
   Meteor.setInterval(function () {
     var newClients = {};
     var newTotal = 0;
-    // XXX explain 3
+    // XXX hardcoded time
     var since = +(new Date) - 1000*PARAMS.insertsPerSecond * 5;
     _.each(Collections, function (C) {
       _.each(C.find({when: {$gt: since}}, {fields: {fromProcess: 1, when: 1}}).fetch(), function (d) {
