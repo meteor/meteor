@@ -122,6 +122,14 @@ if (Meteor.isServer) {
       var C = pickCollection();
       // update one message.
       C.update({fromProcess: processId}, {$set: modifer}, {multi: false});
+    },
+    remove: function (processId) {
+      check(processId, String);
+      var C = pickCollection();
+      // remove one message.
+      var obj = C.findOne({fromProcess: processId});
+      if (obj)
+        C.remove(obj._id);
     }
   });
 
@@ -156,7 +164,8 @@ if (Meteor.isClient) {
     return (Session.get('updateAvgs') || []).join(", ");
   };
 
-  // XXX count of how many docs are in local collection. don't 
+  // XXX count of how many docs are in local collection?
+
 
   // do stuff periodically
 
@@ -176,14 +185,9 @@ if (Meteor.isClient) {
     }, 1000 / PARAMS.updatesPerSecond);
   }
 
-  // XXX make a method? don't use it for now.
   if (PARAMS.removesPerSecond) {
     Meteor.setInterval(function () {
-      var C = pickCollection();
-      var docs = C.find({}).fetch();
-      var doc = Random.choice(docs);
-      if (doc)
-        C.remove(doc._id);
+      Meteor.call('remove', processId);
     }, 1000 / PARAMS.removesPerSecond);
   }
 
