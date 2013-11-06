@@ -27,6 +27,7 @@ Fiber(function () {
   var Future = require('fibers/future');
 
   var ACCOUNTS_URL = "http://localhost:3000";
+  var ACCOUNTS_DOMAIN = "localhost:3000";
 
   // This code is duplicated in app/server/server.js.
   var MIN_NODE_VERSION = 'v0.10.21';
@@ -93,6 +94,51 @@ Fiber(function () {
       }).run();
     });
     return tunnelResult;
+  };
+
+  var getSessionFilePath = function () {
+    return path.join(process.env.HOME, '.meteorsession');
+  };
+
+  var readSession = function () {
+    var sessionPath = getSessionFilePath();
+    if (! fs.existsSync(sessionPath))
+      return {};
+    return JSON.parse(fs.readFileSync(sessionPath, { encoding: 'utf8' }));
+  };
+
+  var writeSession = function (data) {
+    var sessionPath = getSessionFilePath();
+
+    var tries = 0;
+    while (true) {
+      if (tries++ > 10)
+        throw new Error("can't find a unique name for temporary file?");
+
+      // Create a temporary file in the same directory where we
+      // ultimately want to write the session file. Use the exclusive
+      // flag to atomically ensure that the file doesn't exist, create
+      // it, and make it readable and writable only by the current
+      // user (mode 0600).
+      var tempPath =
+        path.join(path.dirname(sessionPath), '.meteorsession.' +
+                  Math.floor(Math.random() * 999999));
+      try {
+        var fd = fs.openSync(tempPath, 'wx', 0600);
+      } catch (e) {
+        continue;
+      }
+
+      // Write `data` to the file.
+      var buf = new Buffer(JSON.stringify(data, undefined, 2), 'utf8');
+      fs.writeSync(fd, buf, 0, buf.length, 0);
+      fs.closeSync(fd);
+
+      // Atomically remove the old file (if any) and replace it with
+      // the temporary file we just created.
+      fs.renameSync(tempPath, sessionPath);
+      return;
+    }
   };
 
   var Commands = [];
@@ -1347,24 +1393,38 @@ Fiber(function () {
     help: "Log in to your Meteor account",
     hidden: true,
     argumentParser: function (opt) {
-      opt.usage("Usage: meteor login\n" +
-                "\n" +
-                "Prompts for your username and password and logs you in to your\n" +
-                "Meteor account.\n");
+      opt.usage(
+"Usage: meteor login [--email]\n" +
+"\n" +
+"Prompts for your username and password and logs you in to your\n" +
+"Meteor account. Pass --email to log in by email address instead of\n" +
+"username.");
     },
 
     func: function (argv, showUsage) {
-      var username = utils.readLine({ prompt: "Username: " });
-      var password = utils.readLine({
+      if (argv._.length !== 0)
+        showUsage();
+
+      var byEmail = !! argv.email;
+
+      var data = readSession();
+      if (data.username) {
+        // XXX log them out rather than failing
+        process.stderr.write("XXX you are already logged in\n");
+        process.exit(1);
+      }
+
+      var loginData = {};
+      if (byEmail) {
+        loginData.email = utils.readLine({ prompt: "Email: " });
+      } else {
+        loginData.username = utils.readLine({ prompt: "Username: " });
+      }
+      loginData.password = utils.readLine({
         echo: false,
         prompt: "Password: "
       });
       process.stdout.write("\n");
-
-      var loginData = {
-        username: username,
-        password: password
-      };
 
       var loginUrl = ACCOUNTS_URL + "/login";
       var result;
@@ -1396,6 +1456,16 @@ Fiber(function () {
       }
 
       var body = JSON.parse(result.body);
+
+      var data = readSession();
+      data.username = body.username;
+      if (typeof (data.sessions) !== "object")
+        data.sessions = {};
+      if (typeof (data.sessions[ACCOUNTS_DOMAIN]) !== "object")
+        data.sessions[ACCOUNTS_DOMAIN] = {};
+      data.sessions[ACCOUNTS_DOMAIN].token = meteorAuth;
+      writeSession(data);
+
       console.log("\nHello,", body.username + "!");
     }
   });
