@@ -53,13 +53,38 @@ var writeSession = function (data) {
   }
 };
 
+var getSessionToken = function (sessionData, domain) {
+  return (sessionData.sessions &&
+          sessionData.sessions[domain] &&
+          sessionData.sessions[domain].token) || null;
+};
+
 var setSessionToken = function (sessionData, domain, token, tokenId) {
   if (typeof (sessionData.sessions) !== "object")
     sessionData.sessions = {};
   if (typeof (sessionData.sessions[domain]) !== "object")
     sessionData.sessions[domain] = {};
+
+  clearSessionToken(sessionData, domain);
   sessionData.sessions[domain].token = token;
   sessionData.sessions[domain].tokenId = tokenId;
+};
+
+var clearSessionToken = function (sessionData, domain) {
+  var session = sessionData.sessions[domain] || {};
+  if (_.has(session, 'token')) {
+    if (! (session.pendingRevoke instanceof Array))
+      session.pendingRevoke = [];
+
+    // Delete the auth token itself, but save the tokenId, which
+    // is useless for authentication. The next time we're online,
+    // we'll send the tokenId to the server to revoke the token on
+    // the server side too.
+    if (typeof session.tokenId === "string")
+      session.pendingRevoke.push(session.tokenId);
+    delete session.token;
+    delete session.tokenId;
+  }
 };
 
 // Given an object 'data' in the format returned by readSession,
@@ -70,19 +95,7 @@ var logOutSession = function (data) {
   delete data.username;
 
   _.each(data.sessions, function (info, domain) {
-    if (_.has(info, 'token')) {
-      if (! (info.pendingRevoke instanceof Array))
-        info.pendingRevoke = [];
-
-      // Delete the auth token itself, but save the tokenId, which
-      // is useless for authentication. The next time we're online,
-      // we'll send the tokenId to the server to revoke the token on
-      // the server side too.
-      if (typeof info.tokenId === "string")
-        info.pendingRevoke.push(info.tokenId);
-      delete info.token;
-      delete info.tokenId;
-    }
+    clearSessionToken(data, domain);
   });
 };
 
@@ -215,47 +228,55 @@ exports.loginCommand = function (argv, showUsage) {
   var byEmail = !! argv.email;
   var galaxy = argv.galaxy;
 
-  var loginData = {};
-  if (byEmail) {
-    loginData.email = utils.readLine({ prompt: "Email: " });
-  } else {
-    loginData.username = utils.readLine({ prompt: "Username: " });
-  }
-  loginData.password = utils.readLine({
-    echo: false,
-    prompt: "Password: "
-  });
-  process.stdout.write("\n");
-
-  var loginUrl = ACCOUNTS_URL + "/login";
-  var result;
-  try {
-    result = httpHelpers.request({
-      url: loginUrl,
-      method: "POST",
-      form: loginData
-    });
-  } catch (e) {
-    process.stdout.write("\nCouldn't connect to server. " +
-                         "Check your internet connection.\n");
-    process.exit(1);
-  }
-
-  var loginResult = getLoginResult(result.response, result.body, 'METEOR_AUTH');
-  if (! loginResult) {
-    process.stdout.write("Login failed.\n");
-    process.exit(1);
-  }
-
-  var meteorAuth = loginResult.authToken;
-  var tokenId = loginResult.tokenId;
-
   var data = readSession();
-  logOutSession(data);
-  data.username = loginResult.username;
-  setSessionToken(data, ACCOUNTS_DOMAIN, meteorAuth, tokenId);
+  var loginData = {};
+  var meteorAuth;
+
+  if (! galaxy || ! getSessionToken(data, ACCOUNTS_DOMAIN)) {
+    if (byEmail) {
+      loginData.email = utils.readLine({ prompt: "Email: " });
+    } else {
+      loginData.username = utils.readLine({ prompt: "Username: " });
+    }
+    loginData.password = utils.readLine({
+      echo: false,
+      prompt: "Password: "
+    });
+    process.stdout.write("\n");
+
+    var loginUrl = ACCOUNTS_URL + "/login";
+    var result;
+    try {
+      result = httpHelpers.request({
+        url: loginUrl,
+        method: "POST",
+        form: loginData
+      });
+    } catch (e) {
+      process.stdout.write("\nCouldn't connect to server. " +
+                           "Check your internet connection.\n");
+      process.exit(1);
+    }
+
+    var loginResult = getLoginResult(result.response, result.body, 'METEOR_AUTH');
+    if (! loginResult) {
+      process.stdout.write("Login failed.\n");
+      process.exit(1);
+    }
+
+    meteorAuth = loginResult.authToken;
+    var tokenId = loginResult.tokenId;
+
+    data = readSession();
+    logOutSession(data);
+    data.username = loginResult.username;
+    setSessionToken(data, ACCOUNTS_DOMAIN, meteorAuth, tokenId);
+    writeSession(data);
+  }
 
   if (galaxy) {
+    data = readSession();
+    meteorAuth = getSessionToken(data, ACCOUNTS_DOMAIN);
     var galaxyLoginResult = logInToGalaxy(galaxy, meteorAuth);
     if (! galaxyLoginResult) {
       process.stdout.write('Login to ' + galaxy + ' failed.\n');
@@ -263,9 +284,9 @@ exports.loginCommand = function (argv, showUsage) {
     }
     setSessionToken(data, galaxy, galaxyLoginResult.authToken,
                     galaxyLoginResult.tokenId);
+    writeSession(data);
   }
 
-  writeSession(data);
   tryRevokeOldTokens();
 
   process.stdout.write("\n");
