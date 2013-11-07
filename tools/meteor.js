@@ -181,6 +181,7 @@ Fiber(function () {
     // XXX support domains other than ACCOUNTS_DOMAIN
 
     var data = readSession();
+    data.sessions = data.sessions || {};
     var session = data.sessions[ACCOUNTS_DOMAIN];
     if (! session)
       return;
