@@ -1,5 +1,7 @@
 var crypto = Npm.require('crypto');
 
+AutoUpdate = {};
+
 
 // Everything that goes into the client code and resources as
 // downloaded by the browser.
@@ -30,9 +32,9 @@ var autoUpdateVersion = null;
 var callbacks = [];
 
 
-// Calls the callback when the version is available.
+// Calls the callback `cb` when the version is available.
 
-var withAutoUpdateVersion = function (cb) {
+AutoUpdate.withAutoUpdateVersion = function (cb) {
   if (autoUpdateVersion === null)
     callbacks.push(cb);
   else
@@ -40,17 +42,21 @@ var withAutoUpdateVersion = function (cb) {
 };
 
 
-Meteor.publish("meteor_autoupdate_clientVersions", function () {
-  var self = this;
-  withAutoUpdateVersion(function (autoUpdateVersion) {
-    self.added(
-      "meteor_autoupdate_clientVersions",
-      autoUpdateVersion,
-      {current: true}
-    );
-    self.ready();
-  });
-});
+Meteor.publish(
+  "meteor_autoupdate_clientVersions",
+  function () {
+    var self = this;
+    AutoUpdate.withAutoUpdateVersion(function (autoUpdateVersion) {
+      self.added(
+        "meteor_autoupdate_clientVersions",
+        autoUpdateVersion,
+        {current: true}
+      );
+      self.ready();
+    });
+  },
+  {is_auto: true}
+);
 
 
 // Wait until all packages have loaded and have had a chance to

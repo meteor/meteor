@@ -89,88 +89,79 @@ WebApp.connectHandlers.use(function(req, res, next) {
   // *only* connect to the server and reload the application if the
   // *contents* of the app manifest file has changed.
   //
-  // So we have to ensure that if any static client resources change,
-  // something changes in the manifest file.  We compute a hash of
-  // everything that gets delivered to the client during the initial
-  // web page load, and include that hash as a comment in the app
-  // manifest.  That way if anything changes, the comment changes, and
-  // the browser will reload resources.
+  // So to ensure that the client updates if the auto update client
+  // version id changes (which defaults to a hash of the client
+  // resources), include the version id in the manifest.
 
-  var hash = crypto.createHash('sha1');
-  hash.update(JSON.stringify(__meteor_runtime_config__), 'utf8');
-  _.each(WebApp.clientProgram.manifest, function (resource) {
-    if (resource.where === 'client' || resource.where === 'internal') {
-      hash.update(resource.hash);
-    }
+  AutoUpdate.withAutoUpdateVersion(function (autoUpdateVersion) {
+
+    var manifest = "CACHE MANIFEST\n\n";
+    manifest += '# ' + autoUpdateVersion + "\n\n";
+
+    manifest += "CACHE:" + "\n";
+    manifest += "/" + "\n";
+    _.each(WebApp.clientProgram.manifest, function (resource) {
+      if (resource.where === 'client' &&
+          ! RoutePolicy.classify(resource.url)) {
+        manifest += resource.url;
+        // If the resource is not already cacheable (has a query
+        // parameter, presumably with a hash or version of some sort),
+        // put a version with a hash in the cache.
+        //
+        // Avoid putting a non-cacheable asset into the cache, otherwise
+        // the user can't modify the asset until the cache headers
+        // expire.
+        if (!resource.cacheable)
+          manifest += "?" + resource.hash;
+
+        manifest += "\n";
+      }
+    });
+    manifest += "\n";
+
+    manifest += "FALLBACK:\n";
+    manifest += "/ /" + "\n";
+    // Add a fallback entry for each uncacheable asset we added above.
+    //
+    // This means requests for the bare url (/image.png instead of
+    // /image.png?hash) will work offline. Online, however, the browser
+    // will send a request to the server. Users can remove this extra
+    // request to the server and have the asset served from cache by
+    // specifying the full URL with hash in their code (manually, with
+    // some sort of URL rewriting helper)
+    _.each(WebApp.clientProgram.manifest, function (resource) {
+      if (resource.where === 'client' &&
+          ! RoutePolicy.classify(resource.url) &&
+          !resource.cacheable) {
+        manifest += resource.url + " " + resource.url +
+          "?" + resource.hash + "\n";
+      }
+    });
+
+    manifest += "\n";
+
+    manifest += "NETWORK:\n";
+    // TODO adding the manifest file to NETWORK should be unnecessary?
+    // Want more testing to be sure.
+    manifest += "/app.manifest" + "\n";
+    _.each(
+      [].concat(
+        RoutePolicy.urlPrefixesFor('network'),
+        RoutePolicy.urlPrefixesFor('static-online')
+      ),
+      function (urlPrefix) {
+        manifest += urlPrefix + "\n";
+      }
+    );
+    manifest += "*" + "\n";
+
+    // content length needs to be based on bytes
+    var body = new Buffer(manifest);
+
+    res.setHeader('Content-Type', 'text/cache-manifest');
+    res.setHeader('Content-Length', body.length);
+    return res.end(body);
   });
-  var digest = hash.digest('hex');
-
-  var manifest = "CACHE MANIFEST\n\n";
-  manifest += '# ' + digest + "\n\n";
-
-  manifest += "CACHE:" + "\n";
-  manifest += "/" + "\n";
-  _.each(WebApp.clientProgram.manifest, function (resource) {
-    if (resource.where === 'client' &&
-        ! RoutePolicy.classify(resource.url)) {
-      manifest += resource.url;
-      // If the resource is not already cacheable (has a query
-      // parameter, presumably with a hash or version of some sort),
-      // put a version with a hash in the cache.
-      //
-      // Avoid putting a non-cacheable asset into the cache, otherwise
-      // the user can't modify the asset until the cache headers
-      // expire.
-      if (!resource.cacheable)
-        manifest += "?" + resource.hash;
-
-      manifest += "\n";
-    }
-  });
-  manifest += "\n";
-
-  manifest += "FALLBACK:\n";
-  manifest += "/ /" + "\n";
-  // Add a fallback entry for each uncacheable asset we added above.
-  //
-  // This means requests for the bare url (/image.png instead of
-  // /image.png?hash) will work offline. Online, however, the browser
-  // will send a request to the server. Users can remove this extra
-  // request to the server and have the asset served from cache by
-  // specifying the full URL with hash in their code (manually, with
-  // some sort of URL rewriting helper)
-  _.each(WebApp.clientProgram.manifest, function (resource) {
-    if (resource.where === 'client' &&
-        ! RoutePolicy.classify(resource.url) &&
-        !resource.cacheable) {
-      manifest += resource.url + " " + resource.url +
-        "?" + resource.hash + "\n";
-    }
-  });
-
-  manifest += "\n";
-
-  manifest += "NETWORK:\n";
-  // TODO adding the manifest file to NETWORK should be unnecessary?
-  // Want more testing to be sure.
-  manifest += "/app.manifest" + "\n";
-  _.each(
-    [].concat(
-      RoutePolicy.urlPrefixesFor('network'),
-      RoutePolicy.urlPrefixesFor('static-online')
-    ),
-    function (urlPrefix) {
-      manifest += urlPrefix + "\n";
-    }
-  );
-  manifest += "*" + "\n";
-
-  // content length needs to be based on bytes
-  var body = new Buffer(manifest);
-
-  res.setHeader('Content-Type', 'text/cache-manifest');
-  res.setHeader('Content-Length', body.length);
-  return res.end(body);
 });
 
 var sizeCheck = function() {
