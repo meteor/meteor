@@ -837,6 +837,57 @@ getPathsWithoutNumericKeys = function (sel) {
   });
 };
 
+// @param selector - Object: MongoDB selector. Currently doesn't support
+//                           $-operators and arrays well.
+// @param modifier - Object: MongoDB-styled modifier with `$set`s and `$unsets`
+//                           only. (assumed to come from oplog)
+// @returns - Boolean: if after applying the modifier, selector can start
+//                     accepting the modified value.
+LocalCollection._canSelectorBecomeTrueByModifier = function (selector, modifier)
+{
+  if (!LocalCollection._isSelectorAffectedByModifier(selector, modifier))
+    return false;
+
+  modifier = _.extend({$set:{}, $unset:{}}, modifier);
+
+  if (_.any(_.keys(selector), pathHasNumericKeys) ||
+      _.any(_.keys(modifier.$unset), pathHasNumericKeys) ||
+      _.any(_.keys(modifier.$set), pathHasNumericKeys))
+    return true;
+
+  if (!isLiteralSelector(selector))
+    return true;
+
+  // convert a selector into an object matching the selector
+  // { 'a.b': { ans: 42 }, 'foo.bar': null, 'foo.baz': "something" }
+  // => { a: { b: { ans: 42 } }, foo: { bar: null, baz: "something" } }
+  var doc = pathsToTree(_.keys(selector),
+                        function (path) { return selector[path]; },
+                        _.identity /*conflict resolution is no resolution*/);
+
+  var selectorFn = LocalCollection._compileSelector(selector);
+
+  try {
+    LocalCollection._modify(doc, modifier);
+  } catch (e) {
+    // Couldn't set a property on a field which is a scalar or null in the
+    // selector.
+    // Example:
+    // real document: { 'a.b': 3 }
+    // selector: { 'a': 12 }
+    // converted selector (ideal document): { 'a': 12 }
+    // modifier: { $set: { 'a.b': 4 } }
+    // We don't know what real document was like but from the error raised by
+    // $set on a scalar field we can reason that the structure of real document
+    // is completely different.
+    if (e.name === "MinimongoError" && e.setPropertyError)
+      return false;
+    throw e;
+  }
+
+  return selectorFn(doc);
+};
+
 // Returns a list of key paths the given selector is looking for
 var getPaths = MinimongoTest.getSelectorPaths = function (sel) {
   return _.chain(sel).map(function (v, k) {
@@ -851,8 +902,24 @@ var getPaths = MinimongoTest.getSelectorPaths = function (sel) {
   }).flatten().uniq().value();
 };
 
+function pathHasNumericKeys (path) {
+  return _.any(path.split('.'), numericKey);
+}
+
 // string can be converted to integer
 function numericKey (s) {
   return /^[0-9]+$/.test(s);
+}
+
+function isLiteralSelector (selector) {
+  return _.all(selector, function (subSelector, keyPath) {
+    if (keyPath.substr(0, 1) === "$" || _.isRegExp(subSelector))
+      return false;
+    if (!_.isObject(subSelector) || _.isArray(subSelector))
+      return true;
+    return _.all(subSelector, function (value, key) {
+      return key.substr(0, 1) !== "$";
+    });
+  });
 }
 
