@@ -1,14 +1,4 @@
 
-var voidElementNames = 'area base br col command embed hr img input keygen link meta param source track wbr'.split(' ');
-var voidElementSet = (function (set) {
-  _.each(voidElementNames, function (n) {
-    set[n] = 1;
-  });
-  return set;
-})({});
-
-////////////////////////////////////////
-
 var instantiate = function (kind, parent) {
   // check arguments
   if (UI.isComponent(kind)) {
@@ -384,21 +374,6 @@ var materialize = function (node, parent, before, parentComponent) {
   }
 };
 
-// Take a tag name in any case and make it the proper case for inserting into
-// HTML.
-//
-// The latest HTML standards don't care about case at all, but for
-// compatibility it is customary to use a particular case.  In most cases
-// this means lowercase, but there are some camelCase SVG tags that require a
-// lookup table to get right (for browsers that care).  (Historically,
-// case-sensitivity requirements come from XML.  However, HTML5 is not based
-// on XML, and though it supports direct inclusion of SVG, an XML language,
-// it parses it as HTML with some special parsing rules.)
-var properCaseTagName = function (name) {
-  // XXX TODO: SVG camelCase
-  return name.toLowerCase();
-};
-
 // Takes an attribute value -- i.e. a string, CharRef, or array of strings and
 // CharRefs (and arrays) -- and renders it as a double-quoted string literal
 // suitable for an HTML attribute value (without the quotes).  Returns `null`
@@ -558,8 +533,7 @@ var toHTML = function (node, parentComponent) {
       } else if (node.tagName === 'EmitCode') {
         throw new Error("EmitCode node can only be processed by toCode");
       } else {
-        var casedTagName = properCaseTagName(node.tagName);
-        result += '<' + casedTagName;
+        result += '<' + HTML.properCaseTagName(node.tagName);
         if (node.attrs) {
           var attrs = node.attrs;
           if (typeof attrs === 'function')
@@ -567,6 +541,7 @@ var toHTML = function (node, parentComponent) {
 
           _.each(attrs, function (v, k) {
             checkAttributeName(k);
+            k = HTML.properCaseAttributeName(k);
             v = attributeValueToQuotedContents(v);
             if (v !== null)
               result += ' ' + k + '="' + v + '"';
@@ -576,11 +551,11 @@ var toHTML = function (node, parentComponent) {
         _.each(node, function (child) {
           result += toHTML(child, parentComponent);
         });
-        if (node.length || voidElementSet[casedTagName] !== 1) {
+        if (node.length || ! HTML.isVoidElement(node.tagName)) {
           // "Void" elements like BR are the only ones that don't get a close
           // tag in HTML5.  They shouldn't have contents, either, so we could
           // throw an error if there were contents.
-          result += '</' + properCaseTagName(node.tagName) + '>';
+          result += '</' + HTML.properCaseTagName(node.tagName) + '>';
         }
       }
     } else {

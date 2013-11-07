@@ -10,6 +10,12 @@ HTML = {
   // e.g. `EmitCode("foo()")`
   EmitCode: makeTagFunc('EmitCode'),
 
+  asciiLowerCase: asciiLowerCase,
+  properCaseTagName: properCaseTagName,
+  properCaseAttributeName: properCaseAttributeName,
+
+  isVoidElement: isVoidElement,
+
   _$: {
     // stuff exposed for testing
     Scanner: Scanner,

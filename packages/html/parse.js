@@ -1,4 +1,16 @@
 
+var voidElementNames = 'area base br col command embed hr img input keygen link meta param source track wbr'.split(' ');
+var voidElementSet = (function (set) {
+  for (var i = 0; i < voidElementNames.length; i++)
+    set[voidElementNames[i]] = 1;
+
+  return set;
+})({});
+
+isVoidElement = function (name) {
+  return voidElementSet[properCaseTagName(name)] === 1;
+};
+
 parseFragment = function (input) {
   var scanner = new Scanner(input);
 

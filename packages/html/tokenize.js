@@ -1,10 +1,31 @@
 
 var HTML_SPACE = /^[\f\n\t ]/;
 
-var asciiLowerCase = function (str) {
+asciiLowerCase = function (str) {
   return str.replace(/[A-Z]/g, function (c) {
     return String.fromCharCode(c.charCodeAt(0) + 32);
   });
+};
+
+// Take a tag name in any case and make it the proper case for HTML.
+//
+// The latest HTML standards don't care about case at all, but for
+// compatibility it is customary to use a particular case.  In most cases
+// this means lowercase, but there are some camelCase SVG tags that require a
+// lookup table to get right (for browsers that care).  (Historically,
+// case-sensitivity requirements in HTML were imposed by the XHTML movement.
+// However, HTML5 is not based on XML, and though it supports direct
+// inclusion of SVG, an XML language, it parses it as HTML with some special
+// parsing rules.)
+properCaseTagName = function (name) {
+  // XXX TODO: SVG camelCase
+  return asciiLowerCase(name);
+};
+
+// See docs for properCaseTagName.
+properCaseAttributeName = function (name) {
+  // XXX TODO: SVG camelCase
+  return asciiLowerCase(name);
 };
 
 getComment = function (scanner) {
