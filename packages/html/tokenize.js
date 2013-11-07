@@ -1,3 +1,40 @@
+// Token types:
+//
+// { t: 'Doctype',
+//   v: String (entire Doctype declaration from the source),
+//   name: String,
+//   systemId: String (optional),
+//   publicId: String (optional)
+// }
+//
+// { t: 'Comment',
+//   v: String (not including "<!--" and "-->")
+// }
+//
+// { t: 'Chars',
+//   v: String (pure text like you might pass to document.createTextNode,
+//              no character references)
+// }
+//
+// { t: 'Tag',
+//   isEnd: Boolean (optional),
+//   isSelfClosing: Boolean (optional),
+//   n: String (tag name, ASCII-lowercased),
+//   attrs: { String: [zero or more 'Chars' or 'CharRef' objects] }
+// }
+//
+// { t: 'CharRef',
+//   v: String (entire character reference from the source, e.g. "&amp;"),
+//   cp: [Integer] (array of Unicode code point numbers it expands to)
+// }
+//
+// We keep around both the original form of the character reference and its
+// expansion so that subsequent processing steps have the option to
+// re-emit it (if they are generating HTML) or interpret it.  Named and
+// numerical code points may be more than 16 bits, in which case they
+// need to passed through codePointToString to make a JavaScript string.
+// Most named entities and all numeric character references are one codepoint
+// (e.g. "&amp;" is [38]), but a few are two codepoints.
 
 var HTML_SPACE = /^[\f\n\t ]/;
 

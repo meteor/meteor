@@ -22,7 +22,7 @@ parseFragment = function (input) {
 //
 // Adapted from
 // http://stackoverflow.com/questions/7126384/expressing-utf-16-unicode-characters-in-javascript/7126661.
-var codePointToString = function(cp) {
+codePointToString = function(cp) {
   if (cp >= 0 && cp <= 0xD7FF || cp >= 0xE000 && cp <= 0xFFFF) {
     return String.fromCharCode(cp);
   } else if (cp >= 0x10000 && cp <= 0x10FFFF) {

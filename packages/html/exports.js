@@ -13,6 +13,7 @@ HTML = {
   asciiLowerCase: asciiLowerCase,
   properCaseTagName: properCaseTagName,
   properCaseAttributeName: properCaseAttributeName,
+  codePointToString: codePointToString,
 
   isVoidElement: isVoidElement,
 
