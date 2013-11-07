@@ -44,7 +44,6 @@ getContent = function (scanner) {
 
     var token = getHTMLToken(scanner);
 
-    // XXX cover all token types
     if (token.t === 'Doctype') {
       scanner.fatal("Unexpected Doctype");
     } else if (token.t === 'Chars') {
@@ -61,8 +60,17 @@ getContent = function (scanner) {
                                 str: str }));
     } else if (token.t === 'Comment') {
       items.push(HTML.Comment(token.v));
+    } else if (token.t === 'Tag') {
+      if (token.isEnd)
+        // we've already screened for `</` so this shouldn't be
+        // possible.
+        throw new Error("Assertion failed: didn't expect end tag");
+
+      // XXX parse start tag and, possibly, content (recursively)
+      // and end tag
+      throw new Error("XXX implement");
     } else {
-      throw new Error(token.t);
+      throw new Error("Unknown token type: " + token.t);
     }
   }
 
