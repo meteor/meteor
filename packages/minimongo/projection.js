@@ -159,7 +159,7 @@ var projectionDetails = function (fields) {
 //                        conflict resolution.
 // initial tree - Optional Object: starting tree.
 // @returns - Object: tree represented as a set of nested objects
-var pathsToTree = function (paths, newLeafFn, conflictFn, tree) {
+pathsToTree = function (paths, newLeafFn, conflictFn, tree) {
   tree = tree || {};
   _.each(paths, function (keyPath) {
     var treePos = tree;

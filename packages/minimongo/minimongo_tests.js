@@ -2737,3 +2737,134 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
 
 });
 
+(function () {
+  // TODO: Tests for "can selector become true by modifier" are incomplete,
+  // absent or test the functionality of "not ideal" implementation (test checks
+  // that certain case always returns true as implementation is incomplete)
+  // - tests with $and/$or/$nor/$not branches (are absent)
+  // - more tests with arrays fields and numeric keys (incomplete and test "not
+  // ideal" implementation)
+  // - tests when numeric keys actually mean numeric keys, not array indexes
+  // (are absent)
+  // - tests with $-operators in the selector (are incomplete and test "not
+  // ideal" implementation)
+
+  var test = null; // set this global in the beginning of every test
+  // T - should return true
+  // F - should return false
+  function T (sel, mod, desc) {
+    test.isTrue(LocalCollection._canSelectorBecomeTrueByModifier(sel, mod), desc);
+  }
+  function F (sel, mod, desc) {
+    test.isFalse(LocalCollection._canSelectorBecomeTrueByModifier(sel, mod), desc);
+  }
+
+  Tinytest.add("minimongo - can selector become true by modifier - literals (structured tests)", function (t) {
+    test = t;
+
+    var selector = {
+      'a.b.c': 2,
+      'foo.bar': {
+        z: { y: 1 }
+      },
+      'foo.baz': [ {ans: 42}, "string", false, undefined ],
+      'empty.field': null
+    };
+
+    T(selector, {$set:{ 'a.b.c': 2 }});
+    F(selector, {$unset:{ 'a': 1 }});
+    F(selector, {$unset:{ 'a.b': 1 }});
+    F(selector, {$unset:{ 'a.b.c': 1 }});
+    T(selector, {$set:{ 'a.b': { c: 2 } }});
+    F(selector, {$set:{ 'a.b': {} }});
+    T(selector, {$set:{ 'a.b': { c: 2, x: 5 } }});
+    F(selector, {$set:{ 'a.b.c.k': 3 }});
+    F(selector, {$set:{ 'a.b.c.k': {} }});
+
+    F(selector, {$unset:{ 'foo': 1 }});
+    F(selector, {$unset:{ 'foo.bar': 1 }});
+    F(selector, {$unset:{ 'foo.bar.z': 1 }});
+    F(selector, {$unset:{ 'foo.bar.z.y': 1 }});
+    F(selector, {$set:{ 'foo.bar.x': 1 }});
+    F(selector, {$set:{ 'foo.bar': {} }});
+    F(selector, {$set:{ 'foo.bar': 3 }});
+    T(selector, {$set:{ 'foo.bar': { z: { y: 1 } } }});
+    T(selector, {$set:{ 'foo.bar.z': { y: 1 } }});
+    T(selector, {$set:{ 'foo.bar.z.y': 1 }});
+
+    F(selector, {$set:{ 'empty.field': {} }});
+    T(selector, {$set:{ 'empty': {} }});
+    T(selector, {$set:{ 'empty.field': null }});
+    T(selector, {$set:{ 'empty.field': undefined }});
+    F(selector, {$set:{ 'empty.field.a': 3 }});
+  });
+
+  Tinytest.add("minimongo - can selector become true by modifier - literals (adhoc tests)", function (t) {
+    test = t;
+    T({x:1}, {$set:{x:1}}, "simple set scalar");
+    T({x:"a"}, {$set:{x:"a"}}, "simple set scalar");
+    T({x:false}, {$set:{x:false}}, "simple set scalar");
+    F({x:true}, {$set:{x:false}}, "simple set scalar");
+    F({x:2}, {$set:{x:3}}, "simple set scalar");
+
+    F({'foo.bar.baz': 1, x:1}, {$unset:{'foo.bar.baz': 1}, $set:{x:1}}, "simple unset of the interesting path");
+    F({'foo.bar.baz': 1, x:1}, {$unset:{'foo.bar': 1}, $set:{x:1}}, "simple unset of the interesting path prefix");
+    F({'foo.bar.baz': 1, x:1}, {$unset:{'foo': 1}, $set:{x:1}}, "simple unset of the interesting path prefix");
+    F({'foo.bar.baz': 1}, {$unset:{'foo.baz': 1}}, "simple unset of the interesting path prefix");
+    F({'foo.bar.baz': 1}, {$unset:{'foo.bar.bar': 1}}, "simple unset of the interesting path prefix");
+  });
+
+  Tinytest.add("minimongo - can selector become true by modifier - regexps", function (t) {
+    test = t;
+
+    // Regexp
+    T({ 'foo.bar': /^[0-9]+$/i }, { $set: {'foo.bar': '01233'} }, "set of regexp");
+    // XXX this test should be False, should be fixed within improved implementation
+    T({ 'foo.bar': /^[0-9]+$/i, x: 1 }, { $set: {'foo.bar': '0a1233', x: 1} }, "set of regexp");
+    // XXX this test should be False, should be fixed within improved implementation
+    T({ 'foo.bar': /^[0-9]+$/i, x: 1 }, { $unset: {'foo.bar': 1}, $set: { x: 1 } }, "unset of regexp");
+    T({ 'foo.bar': /^[0-9]+$/i, x: 1 }, { $set: { x: 1 } }, "don't touch regexp");
+  });
+
+  Tinytest.add("minimongo - can selector become true by modifier - undefined/null", function (t) {
+    test = t;
+    // Nulls / Undefined
+    T({ 'foo.bar': null }, {$set:{'foo.bar': null}}, "set of null looking for null");
+    T({ 'foo.bar': null }, {$set:{'foo.bar': undefined}}, "set of undefined looking for null");
+    T({ 'foo.bar': undefined }, {$set:{'foo.bar': null}}, "set of null looking for undefined");
+    T({ 'foo.bar': undefined }, {$set:{'foo.bar': undefined}}, "set of undefined looking for undefined");
+    T({ 'foo.bar': null }, {$set:{'foo': null}}, "set of null of parent path looking for null");
+    F({ 'foo.bar': null }, {$set:{'foo.bar.baz': null}}, "set of null of different path looking for null");
+    T({ 'foo.bar': null }, { $unset: { 'foo': 1 } }, "unset the parent");
+    T({ 'foo.bar': null }, { $unset: { 'foo.bar': 1 } }, "unset tracked path");
+    T({ 'foo.bar': null }, { $set: { 'foo': 3 } }, "set the parent");
+    T({ 'foo.bar': null }, { $set: { 'foo': {baz:1} } }, "set the parent");
+
+  });
+
+  Tinytest.add("minimongo - can selector become true by modifier - literals with arrays", function (t) {
+    test = t;
+    // These tests are incomplete and in theory they all should return true as we
+    // don't support any case with numeric fields yet.
+    T({'a.1.b': 1, x:1}, {$unset:{'a.1.b': 1}, $set:{x:1}}, "unset of array element's field with exactly the same index as selector");
+    F({'a.2.b': 1}, {$unset:{'a.1.b': 1}}, "unset of array element's field with different index as selector");
+    // This is false, because if you are looking for array but in reality it is an
+    // object, it just can't get to true.
+    F({'a.2.b': 1}, {$unset:{'a.b': 1}}, "unset of field while selector is looking for index");
+    T({ 'foo.bar': null }, {$set:{'foo.1.bar': null}}, "set array's element's field to null looking for null");
+    T({ 'foo.bar': null }, {$set:{'foo.0.bar': 1, 'foo.1.bar': null}}, "set array's element's field to null looking for null");
+    // This is false, because there may remain other array elements that match
+    // but we modified this test as we don't support this case yet
+    T({'a.b': 1}, {$unset:{'a.1.b': 1}}, "unset of array element's field");
+  });
+
+  Tinytest.add("minimongo - can selector become true by modifier - set an object literal whose fields are selected", function (t) {
+    test = t;
+    T({ 'a.b.c': 1 }, { $set: { 'a.b': { c: 1 } } }, "a simple scalar selector and simple set");
+    F({ 'a.b.c': 1 }, { $set: { 'a.b': { c: 2 } } }, "a simple scalar selector and simple set to false");
+    F({ 'a.b.c': 1 }, { $set: { 'a.b': { d: 1 } } }, "a simple scalar selector and simple set a wrong literal");
+    F({ 'a.b.c': 1 }, { $set: { 'a.b': 222 } }, "a simple scalar selector and simple set a wrong type");
+  });
+
+})();
+
