@@ -1,57 +1,4 @@
 
-// A Tag is an array of zero or more content items, with additional properties
-// `tagName` (String, required) and `attrs` (Object or `null`).  In addition to
-// be arrays, Tags are `instanceof UI.Tag`.
-//
-// Tags are created using tag functions, e.g. `DIV(P({id:'foo'}, "Hello"))`.
-// If a tag function is given a first argument that is an object and not a
-// Tag or an array, that object is used as element attributes (`attrs`).
-// The attrs argument may be of the form `{$attrs: function () { ... }}` in
-// which case the function becomes the `attrs` attribute of the tag.
-//
-// Tag functions for all known tags are available as `UI.Tag.DIV`,
-// `UI.Tag.SPAN`, etc., and you can define new ones with
-// `UI.Tag.defineTag("FOO")`, which makes a tag function available at
-// `UI.Tag.FOO` henceforth.
-
-UI.Tag = function (tagName, attrs) {
-  this.tagName = tagName;
-  this.attrs = attrs; // may be falsy
-};
-UI.Tag.prototype = [];
-
-var objToString = Object.prototype.toString;
-
-var makeTagFunc = function (name) {
-  // Do a little dance so that tags print nicely in the Chrome console.
-  // First make tag name suitable for insertion into evaluated JS code,
-  // for security reasons mainly.
-  var sanitizedName = String(name).replace(/^[^a-zA-Z_]|[^a-zA-Z_0-9]+/g,
-                                           '') || 'Tag';
-  // Generate a constructor function whose name is the tag name.
-  var Tag = (new Function('return function ' +
-                          sanitizedName +
-                          '(attrs) { this.attrs = attrs; };'))();
-  Tag.prototype = new UI.Tag(name);
-
-  return function (optAttrs/*, children*/) {
-    // see whether first argument is truthy and not an Array or Tag
-    var attrsGiven = (optAttrs && (typeof optAttrs === 'object') &&
-                      (typeof optAttrs.splice !== 'function'));
-    var attrs = (attrsGiven ? optAttrs : null);
-    if (attrsGiven && (typeof attrs.$attrs === 'function'))
-      attrs = attrs.$attrs;
-
-    var tag = new Tag(attrs);
-    tag.push.apply(tag, (attrsGiven ?
-                         Array.prototype.slice.call(arguments, 1) :
-                         arguments));
-    return tag;
-  };
-};
-
-var allElementNames = 'a abbr acronym address applet area b base basefont bdo big blockquote body br button caption center cite code col colgroup dd del dfn dir div dl dt em fieldset font form frame frameset h1 h2 h3 h4 h5 h6 head hr html i iframe img input ins isindex kbd label legend li link map menu meta noframes noscript object ol p param pre q s samp script select small span strike strong style sub sup textarea title tt u ul var article aside audio bdi canvas command data datagrid datalist details embed eventsource figcaption figure footer header hgroup keygen mark meter nav output progress ruby rp rt section source summary time track video wbr'.split(' ');
-
 var voidElementNames = 'area base br col command embed hr img input keygen link meta param source track wbr'.split(' ');
 var voidElementSet = (function (set) {
   _.each(voidElementNames, function (n) {
@@ -59,21 +6,6 @@ var voidElementSet = (function (set) {
   });
   return set;
 })({});
-
-UI.Tag.defineTag = function (name) {
-  // XXX maybe sanity-check name?  Like no whitespace.
-  name = name.toUpperCase();
-  UI.Tag[name] = makeTagFunc(name);
-};
-
-// e.g. `CharRef({html: '&mdash;', str: '\u2014'})`
-UI.Tag.CharRef = makeTagFunc('CharRef');
-// e.g. `Comment("foo")`
-UI.Tag.Comment = makeTagFunc('Comment');
-// e.g. `EmitCode("foo()")`
-UI.Tag.EmitCode = makeTagFunc('EmitCode');
-
-_.each(allElementNames, UI.Tag.defineTag);
 
 ////////////////////////////////////////
 
@@ -717,12 +649,16 @@ var toCode = function (node) {
       if (node.tagName === 'EmitCode') {
         result += node[0];
       } else {
-        if (node.tagName === 'Comment')
+        var isNonTag = false;
+        if (node.tagName === 'Comment') {
           checkComment(node);
-        else if (node.tagName === 'CharRef')
+          isNonTag = true;
+        } else if (node.tagName === 'CharRef') {
           checkCharRef(node);
+          isNonTag = true;
+        }
 
-        result += 'UI.Tag.' + node.tagName + '(';
+        result += 'HTML.' + (isNonTag ? '' : 'Tag.') + node.tagName + '(';
         var argStrs = [];
         if (node.attrs) {
           var kvStrs = [];

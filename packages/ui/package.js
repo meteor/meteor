@@ -13,6 +13,8 @@ Package.on_use(function (api) {
   api.use('minimongo');  // for idStringify
   api.use('observe-sequence');
 
+  api.use('html');
+
   api.add_files(['exceptions.js', 'base.js']);
 
   api.add_files(['dombackend.js',
@@ -36,6 +38,8 @@ Package.on_test(function (api) {
   api.use('jquery'); // strong dependency, for testing jQuery backend
   api.use('ui');
   api.use(['test-helpers', 'underscore'], 'client');
+
+  api.use('html');
 
   api.add_files([
     'base_tests.js',

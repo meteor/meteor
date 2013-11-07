@@ -6,12 +6,20 @@ Package.describe({
 Package.on_use(function (api) {
   api.export('HTML');
 
-  api.add_files(['scanner.js', 'charref.js', 'tokenize.js', 'exports.js']);
+  api.add_files(['scanner.js',
+                 'charref.js',
+                 'tokenize.js',
+                 'tags.js',
+                 'parse.js',
+                 'exports.js']);
 });
 
 Package.on_test(function (api) {
   api.use('tinytest');
   api.use('html');
   api.use('underscore');
-  api.add_files(['charref_tests.js', 'tokenize_tests.js']);
+  api.use('ui'); // for `toCode`
+  api.add_files(['charref_tests.js',
+                 'tokenize_tests.js',
+                 'parse_tests.js']);
 });

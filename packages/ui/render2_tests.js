@@ -2,16 +2,16 @@ var materialize = UI.materialize;
 var toHTML = UI.toHTML;
 var toCode = UI.toCode;
 
-var P = UI.Tag.P;
-var CharRef = UI.Tag.CharRef;
-var DIV = UI.Tag.DIV;
-var Comment = UI.Tag.Comment;
-var BR = UI.Tag.BR;
-var A = UI.Tag.A;
-var UL = UI.Tag.UL;
-var LI = UI.Tag.LI;
-var SPAN = UI.Tag.SPAN;
-var HR = UI.Tag.HR;
+var P = HTML.Tag.P;
+var CharRef = HTML.CharRef;
+var DIV = HTML.Tag.DIV;
+var Comment = HTML.Comment;
+var BR = HTML.Tag.BR;
+var A = HTML.Tag.A;
+var UL = HTML.Tag.UL;
+var LI = HTML.Tag.LI;
+var SPAN = HTML.Tag.SPAN;
+var HR = HTML.Tag.HR;
 
 Tinytest.add("ui - render2 - basic", function (test) {
   var run = function (input, expectedInnerHTML, expectedHTML, expectedCode) {
@@ -25,7 +25,7 @@ Tinytest.add("ui - render2 - basic", function (test) {
   run(P('Hello'),
       '<p>Hello</p>',
       '<p>Hello</p>',
-      'UI.Tag.P("Hello")');
+      'HTML.Tag.P("Hello")');
 
   // Test crazy character references
 
@@ -33,31 +33,31 @@ Tinytest.add("ui - render2 - basic", function (test) {
   run(P(CharRef({html: '&zopf;', str: '\ud835\udd6b'})),
       '<p>\ud835\udd6b</p>',
       '<p>&zopf;</p>',
-      'UI.Tag.P(UI.Tag.CharRef({html: "&zopf;", str: "\\ud835\\udd6b"}))');
+      'HTML.Tag.P(HTML.CharRef({html: "&zopf;", str: "\\ud835\\udd6b"}))');
 
   run(P({id: CharRef({html: '&zopf;', str: '\ud835\udd6b'})}, 'Hello'),
       '<p id="\ud835\udd6b">Hello</p>',
       '<p id="&zopf;">Hello</p>',
-      'UI.Tag.P({id: UI.Tag.CharRef({html: "&zopf;", str: "\\ud835\\udd6b"})}, "Hello")');
+      'HTML.Tag.P({id: HTML.CharRef({html: "&zopf;", str: "\\ud835\\udd6b"})}, "Hello")');
 
   run(P({id: [CharRef({html: '&zopf;', str: '\ud835\udd6b'}), '!']}, 'Hello'),
       '<p id="\ud835\udd6b!">Hello</p>',
       '<p id="&zopf;!">Hello</p>',
-      'UI.Tag.P({id: [UI.Tag.CharRef({html: "&zopf;", str: "\\ud835\\udd6b"}), "!"]}, "Hello")');
+      'HTML.Tag.P({id: [HTML.CharRef({html: "&zopf;", str: "\\ud835\\udd6b"}), "!"]}, "Hello")');
 
   // Test comments
 
   run(DIV(Comment('Test')),
       '<div><!----></div>', // our innerHTML-canonicalization function kills comment contents
       '<div><!--Test--></div>',
-      'UI.Tag.DIV(UI.Tag.Comment("Test"))');
+      'HTML.Tag.DIV(HTML.Comment("Test"))');
 
   // Test arrays
 
   run([P('Hello'), P('World')],
       '<p>Hello</p><p>World</p>',
       '<p>Hello</p><p>World</p>',
-      '[UI.Tag.P("Hello"), UI.Tag.P("World")]');
+      '[HTML.Tag.P("Hello"), HTML.Tag.P("World")]');
 
   // Test slightly more complicated structure
 
@@ -65,7 +65,7 @@ Tinytest.add("ui - render2 - basic", function (test) {
                                LI(P('Two', BR(), 'Three')))),
       '<div class="foo"><ul><li><p><a href="#one">One</a></p></li><li><p>Two<br>Three</p></li></ul></div>',
       '<div class="foo"><ul><li><p><a href="#one">One</a></p></li><li><p>Two<br>Three</p></li></ul></div>',
-      'UI.Tag.DIV({"class": "foo"}, UI.Tag.UL(UI.Tag.LI(UI.Tag.P(UI.Tag.A({href: "#one"}, "One"))), UI.Tag.LI(UI.Tag.P("Two", UI.Tag.BR(), "Three"))))');
+      'HTML.Tag.DIV({"class": "foo"}, HTML.Tag.UL(HTML.Tag.LI(HTML.Tag.P(HTML.Tag.A({href: "#one"}, "One"))), HTML.Tag.LI(HTML.Tag.P("Two", HTML.Tag.BR(), "Three"))))');
 });
 
 Tinytest.add("ui - render2 - closures", function (test) {
@@ -184,7 +184,7 @@ Tinytest.add("ui - render2 - reactive attributes", function (test) {
 
     test.equal(toHTML(spanCode), '<span id="foo" ggg="xyz"></span>');
     test.equal(toCode(SPAN(R.get())),
-               'UI.Tag.SPAN({id: "foo", ggg: ["x", ["y", ["z"]]]})');
+               'HTML.Tag.SPAN({id: "foo", ggg: ["x", ["y", ["z"]]]})');
 
     var div = document.createElement("DIV");
     materialize(spanCode, div);
