@@ -1,3 +1,8 @@
+// Run a function named `run` which modifies a sequence. While it
+// executes, observe changes to the sequence and accumulate them in an
+// array, canonicalizing as necessary. Then make sure the results are
+// the same as passed in `expectedCallbacks`.
+//
 // @param test {Object} as passed to Tinytest.add
 // @param stripIds {Boolean} If true, strip the id arguments. For test
 //     cases with items that aren't objects with an '_id' field.
@@ -6,7 +11,7 @@
 //     to be recomupted
 // @param expectedCallbacks {Array} elements look like {addedAt: arguments}
 runOneObserveSequenceTestCase = function (test, stripIds, sequenceFunc,
-                                       run, expectedCallbacks) {
+                                          run, expectedCallbacks) {
   var firedCallbacks = [];
   var handle = ObserveSequence.observe(sequenceFunc, {
     addedAt: function () {
@@ -24,10 +29,12 @@ runOneObserveSequenceTestCase = function (test, stripIds, sequenceFunc,
       else
         obj = {changed: _.toArray(arguments)};
 
-      // different browsers cause callbacks to fire in different
-      // orders. place the object corresponding to this 'changed'
-      // callback in a canonical position relative to the last
-      // contiguous block of 'changed' objects.
+      // Browsers are inconsistent about the order in which 'changed'
+      // callbacks fire. To ensure consistent behavior of these tests,
+      // we can't simply push `obj` at the end of `firedCallbacks` as
+      // we do for the other callbacks. Instead, we use insertion sort
+      // to place `obj` in a canonical position within the chunk of
+      // contiguously recently fired 'changed' callbacks.
       for (var i = firedCallbacks.length; i > 0; i--) {
 
         var compareTo = firedCallbacks[i - 1];
