@@ -153,10 +153,10 @@ var tryRevokeOldTokens = function (options) {
 // - authToken: the value of the cookie named `authCookieName` in the response
 // - tokenId: the id of the auth token (from the response body)
 // - username: the username of the logged-in user
-// Returns undefined if the login failed.
+// Returns null if the login failed.
 var getLoginResult = function (response, body, authCookieName) {
   if (response.statusCode !== 200)
-    return undefined;
+    return null;
 
   var cookies = response.headers["set-cookie"] || [];
   var authCookie;
@@ -169,11 +169,11 @@ var getLoginResult = function (response, body, authCookieName) {
     }
   }
   if (! authCookie)
-    return undefined;
+    return null;
 
   var parsedBody = body ? JSON.parse(body) : {};
   if (! parsedBody.tokenId || ! parsedBody.username)
-    return undefined;
+    return null;
 
   return {
     authToken: authCookie,
@@ -182,14 +182,42 @@ var getLoginResult = function (response, body, authCookieName) {
   };
 };
 
+// Sends a request to https://<galaxyName>:<DISCOVERY_PORT> to find out the
+// galaxy's OAuth client id and redirect_uri that should be used for
+// authorization codes for this galaxy. Returns an object with keys
+// 'oauthClientId' and 'redirectUri', or null if the request failed.
+var fetchGalaxyOAuthInfo = function (galaxyName) {
+  var galaxyAuthUrl = 'https://' + galaxyName + ':' +
+        (process.env.DISCOVERY_PORT || 443) + '/_GALAXYAUTH_';
+  var result = httpHelpers.request({
+    url: galaxyAuthUrl,
+    json: true,
+    strictSSL: true, // on by default in our version of request, but just in case
+    followRedirect: false
+  });
+
+  if (result.response.statusCode === 200 &&
+      result.body &&
+      result.body.oauthClientId &&
+      result.body.redirectUri) {
+    return result.body;
+  } else {
+    return null;
+  }
+};
+
 // Uses meteor accounts to log in to the specified galaxy. Must be called with a
 // valid cookie for METEOR_AUTH. Returns an object with keys `authToken`,
-// `username` and `tokenId` if the login was successful, and undefined
-// otherwise.
+// `username` and `tokenId` if the login was successful. If an error occurred,
+// returns either { error: 'access-denied' } or { error: 'no-galaxy' }.
 var logInToGalaxy = function (galaxyName, meteorAuthCookie) {
-  // XXX these are for testing. will be replaced by galaxy discovery.
-  var galaxyClientId = 'abc';
-  var galaxyRedirect = 'http://localhost:9414/auth/token';
+  var oauthInfo = fetchGalaxyOAuthInfo(galaxyName);
+  if (! oauthInfo) {
+    return { error: 'no-galaxy' };
+  }
+
+  var galaxyClientId = oauthInfo.oauthClientId;
+  var galaxyRedirect = oauthInfo.redirectUri;
 
   // Ask the accounts server for an authorization code.
   var state = crypto.randomBytes(16).toString('hex');
@@ -204,21 +232,27 @@ var logInToGalaxy = function (galaxyName, meteorAuthCookie) {
     url: authCodeUrl,
     method: 'POST',
     followRedirect: false,
+    strictSSL: true,
     headers: {
       cookie: 'METEOR_AUTH=' + meteorAuthCookie
     }
   });
   var response = codeResult.response;
   if (response.statusCode !== 302 || ! response.headers.location) {
-    return false;
+    return { error: 'access-denied' };
   }
 
+  // Ask the galaxy to log us in with our auth code.
   var galaxyResult = httpHelpers.request({
     url: response.headers.location,
-    method: 'POST'
+    method: 'POST',
+    strictSSL: true
   });
-  return getLoginResult(galaxyResult.response, galaxyResult.body,
-                        'GALAXY_AUTH');
+  var loginResult = getLoginResult(galaxyResult.response, galaxyResult.body,
+                                   'GALAXY_AUTH');
+  // 'access-denied' isn't exactly right because it's possible that the galaxy
+  // went down since our last request, but close enough.
+  return loginResult || { error: 'access-denied' };
 };
 
 exports.loginCommand = function (argv, showUsage) {
@@ -278,8 +312,9 @@ exports.loginCommand = function (argv, showUsage) {
     data = readSession();
     meteorAuth = getSessionToken(data, ACCOUNTS_DOMAIN);
     var galaxyLoginResult = logInToGalaxy(galaxy, meteorAuth);
-    if (! galaxyLoginResult) {
-      process.stdout.write('Login to ' + galaxy + ' failed.\n');
+    if (galaxyLoginResult.error) {
+      process.stdout.write('Login to ' + galaxy + ' failed: ' +
+                           galaxyLoginResult.error + '\n');
       process.exit(1);
     }
     setSessionToken(data, galaxy, galaxyLoginResult.authToken,
