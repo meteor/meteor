@@ -20,8 +20,6 @@ LivedataTest.ClientStream = function (url) {
   self.rawUrl = url;
   self.socket = null;
 
-  self.sent_update_available = false;
-
   self.heartbeatTimer = null;
 
   // Listen to global 'online' event if we are running in a browser.
@@ -52,6 +50,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
     self.rawUrl = url;
   },
 
+  // The welcome_message is deprecated and is ignored.
   _connected: function (welcome_message) {
     var self = this;
 
@@ -64,24 +63,6 @@ _.extend(LivedataTest.ClientStream.prototype, {
       // already connected. do nothing. this probably shouldn't happen.
       return;
     }
-
-    // inspect the welcome data and decide if we have to reload
-    try {
-      var welcome_data = JSON.parse(welcome_message);
-    } catch (err) {
-      Meteor._debug("DEBUG: malformed welcome packet", welcome_message);
-    }
-
-    if (welcome_data && welcome_data.server_id) {
-      if (__meteor_runtime_config__.serverId &&
-          __meteor_runtime_config__.serverId !== welcome_data.server_id &&
-          !self.sent_update_available) {
-        self.sent_update_available = true;
-        _.each(self.eventCallbacks.update_available,
-               function (callback) { callback(); });
-      }
-    } else
-      Meteor._debug("DEBUG: invalid welcome packet", welcome_data);
 
     // update status
     self.currentStatus.status = "connected";

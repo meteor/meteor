@@ -7,14 +7,11 @@ if (Meteor.isServer) {
 // @param url {String|Object} URL to Meteor app,
 //   or an object as a test hook (see code)
 // Options:
-//   reloadOnUpdate: should we try to reload when the server says
-//                      there's new code available?
 //   reloadWithOutstanding: is it OK to reload if there are outstanding methods?
 var Connection = function (url, options) {
   var self = this;
   options = _.extend({
-    reloadOnUpdate: false,
-    // The rest of these options are only for testing.
+    // These options are only for testing.
     reloadWithOutstanding: false,
     supportedDDPVersions: SUPPORTED_DDP_VERSIONS,
     onConnectionFailure: function (reason) {
@@ -162,7 +159,7 @@ var Connection = function (url, options) {
 
   // Block auto-reload while we're waiting for method responses.
   if (Meteor.isClient && Package.reload && !options.reloadWithOutstanding) {
-    Reload._onMigrate(function (retry) {
+    Package.reload.Reload._onMigrate(function (retry) {
       if (!self._readyToMigrate()) {
         if (self._retryMigrate)
           throw new Error("Two migrations in progress?");
@@ -277,17 +274,6 @@ var Connection = function (url, options) {
     self._stream.on('message', onMessage);
     self._stream.on('reset', onReset);
   }
-
-
-  if (Meteor.isClient && Package.reload && options.reloadOnUpdate) {
-    self._stream.on('update_available', function () {
-      // Start trying to migrate to a new version. Until all packages
-      // signal that they're ready for a migration, the app will
-      // continue running normally.
-      Reload._reload();
-    });
-  }
-
 };
 
 // A MethodInvoker manages sending a method to the server and calling the user's
@@ -1392,9 +1378,8 @@ LivedataTest.Connection = Connection;
 //     "/",
 //     "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"
 //
-DDP.connect = function (url, _reloadOnUpdate) {
-  var ret = new Connection(
-    url, {reloadOnUpdate: _reloadOnUpdate});
+DDP.connect = function (url) {
+  var ret = new Connection(url);
   allConnections.push(ret); // hack. see below.
   return ret;
 };
