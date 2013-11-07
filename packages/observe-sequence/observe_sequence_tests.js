@@ -17,11 +17,29 @@ runOneObserveSequenceTestCase = function (test, stripIds, sequenceFunc,
         firedCallbacks.push({addedAt: _.toArray(arguments)});
     },
     changed: function () {
+      var obj;
       if (stripIds)
         // [newItem, oldItem]
-        firedCallbacks.push({changed: [arguments[1], arguments[2]]});
+        obj = {changed: [arguments[1], arguments[2]]};
       else
-        firedCallbacks.push({changed: _.toArray(arguments)});
+        obj = {changed: _.toArray(arguments)};
+
+      // different browsers cause callbacks to fire in different
+      // orders. place the object corresponding to this 'changed'
+      // callback in a canonical position relative to the last
+      // contiguous block of 'changed' objects.
+      for (var i = firedCallbacks.length; i > 0; i--) {
+
+        var compareTo = firedCallbacks[i - 1];
+        if (!compareTo.changed)
+          break;
+
+        if (EJSON.stringify(compareTo, {canonical: true}) <
+            EJSON.stringify(obj, {canonical: true}))
+          break;
+      }
+
+      firedCallbacks.splice(i, 0, obj);
     },
     removed: function () {
       if (stripIds)
@@ -42,6 +60,7 @@ runOneObserveSequenceTestCase = function (test, stripIds, sequenceFunc,
   run();
   Deps.flush();
   handle.stop();
+
   test.equal(firedCallbacks, expectedCallbacks);
 };
 
