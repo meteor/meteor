@@ -1351,11 +1351,11 @@ Fiber(function () {
     hidden: true,
     argumentParser: function (opt) {
       opt.usage(
-"Usage: meteor login [--email]\n" +
+"Usage: meteor login [--email] [--galaxy <galaxy.example.com>]\n" +
 "\n" +
 "Prompts for your username and password and logs you in to your\n" +
 "Meteor account. Pass --email to log in by email address instead of\n" +
-"username.");
+"username. Pass --galaxy to specify a galaxy to log in to.");
     },
 
     func: auth.loginCommand
