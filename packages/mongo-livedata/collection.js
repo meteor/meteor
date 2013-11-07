@@ -349,13 +349,27 @@ _.each(["insert", "update", "remove"], function (name) {
     var callback;
     var insertId;
     var ret;
+    var argLimit = (name === 'update')? 4 : 2;
 
-    if (args.length && args[args.length - 1] instanceof Function)
+    // Pop callback function and undefined
+    if (args.length > 1 && (typeof args[args.length - 1] === 'undefined' ||
+            typeof args[args.length - 1] === 'function')) {
       callback = args.pop();
+    }
 
+    // insert/update/remove all requires an argument
+    if (!args.length) { 
+      throw new Error(name + ' requires an argument');
+    }
+    // Throw errors if we got too many arguments or callback is not a function
+    if (args.length > argLimit - 1) {
+      if (callback || args.length > argLimit) {
+        throw new Error(name + ' got too many arguments');
+      } else {
+        throw new Error(name + ' callback must be a function');
+      }
+    }
     if (name === "insert") {
-      if (!args.length)
-        throw new Error("insert requires an argument");
       // shallow-copy the document and generate an ID
       args[0] = _.extend({}, args[0]);
       if ('_id' in args[0]) {
@@ -370,6 +384,10 @@ _.each(["insert", "update", "remove"], function (name) {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
 
       if (name === "update") {
+        // Make sure that modifier is valid
+        if (typeof args[1] !== 'object' || args[1] === null) {
+          throw new Error('update, invalid modifier');
+        }
         // Mutate args but copy the original options object. We need to add
         // insertedId to options, but don't want to mutate the caller's options
         // object. We need to mutate `args` because we pass `args` into the

@@ -571,8 +571,14 @@ _.extend(Connection.prototype, {
     // if it's a function, the last argument is the result callback,
     // not a parameter to the remote method.
     var args = Array.prototype.slice.call(arguments, 1);
-    if (args.length && typeof args[args.length - 1] === "function")
-      var callback = args.pop();
+    var callback;
+    if (args.length && (typeof args[args.length - 1] === 'function' ||
+            typeof args[args.length - 1] === 'undefined')) {
+      callback = args.pop();
+    }
+    if (typeof callback !== 'undefined' && typeof callback !== 'function') {
+      throw new Error('Callback must be a function');
+    }
     return this.apply(name, args, callback);
   },
 
@@ -596,6 +602,13 @@ _.extend(Connection.prototype, {
     }
     options = options || {};
 
+    if (arguments.length > 4) {
+      throw new Error('apply, too many arguments');
+    }
+
+    if (typeof callback !== 'undefined' && typeof callback !== 'function') {
+      throw new Error('Callback must be a function');
+    }
     if (callback) {
       // XXX would it be better form to do the binding in stream.on,
       // or caller, instead of here?
