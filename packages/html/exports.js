@@ -7,7 +7,7 @@ HTML = {
     getCharacterReference: getCharacterReference,
     getComment: getComment,
     getDoctype: getDoctype,
-    getData: getData,
+    getHTMLToken: getHTMLToken,
     getTag: getTag
   }
 };

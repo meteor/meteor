@@ -316,4 +316,7 @@ Tinytest.add("html - tokenize", function (test) {
   fatal('<a b=&gt>');
   fatal('<a b="&gt">');
   fatal('<a b="&gt=">');
+
+  fatal('<!');
+  fatal('<!x>');
 });

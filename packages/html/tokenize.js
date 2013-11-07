@@ -151,7 +151,7 @@ getDoctype = function (scanner) {
 
 var getChars = makeRegexMatcher(/^[^&<\u0000]+/);
 
-getData = function (scanner) {
+getHTMLToken = function (scanner) {
   var chars = getChars(scanner);
   if (chars)
     return { t: 'Chars',
@@ -159,8 +159,8 @@ getData = function (scanner) {
 
   var ch = scanner.peek();
   if (! ch)
+    return null; // EOF
 
-    return null;
   if (ch === '\u0000')
     scanner.fatal("Illegal NULL character");
 
@@ -174,8 +174,15 @@ getData = function (scanner) {
              v: '&' };
   }
 
-  // if here, looking at `<`
-  return getTag(scanner) || getComment(scanner) || getDoctype(scanner);
+  // If we're here, we're looking at `<`.
+  // `getTag` will claim anything starting with `<` not followed by `!`.
+  // `getComment` takes `<!--` and getDoctype takes `<!doctype`.
+  var result = (getTag(scanner) || getComment(scanner) || getDoctype(scanner));
+
+  if (result)
+    return result;
+
+  scanner.fatal("Unexpected `<!` directive.");
 };
 
 var getTagName = makeRegexMatcher(/^[a-zA-Z][^\f\n\t />]*/);
@@ -356,7 +363,7 @@ tokenize = function (input) {
   var scanner = new Scanner(input);
   var tokens = [];
   while (! scanner.isEOF())
-    tokens.push(getData(scanner));
+    tokens.push(getHTMLToken(scanner));
 
   return tokens;
 };
