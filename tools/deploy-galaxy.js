@@ -27,7 +27,18 @@ var getGalaxy = _.once(function (context) {
     process.exit(1);
   }
 
-  var galaxy = Package.livedata.DDP.connect(context.galaxy.url);
+  if (! context.galaxy.authToken) {
+    // XXX get the galaxy name from the hostname of context.galaxy.url, and run
+    // the login command for that galaxy.
+    process.stderr.write("You must be logged in before you can use " +
+                         "this galaxy. Try logging in with " +
+                         "'meteor login'.\n");
+    process.exit(1);
+  }
+
+  var galaxy = Package.livedata.DDP.connect(context.galaxy.url, {
+    cookie: "GALAXY_AUTH=" + context.galaxy.authToken
+  });
   var timeout = Package.meteor.Meteor.setTimeout(function () {
     if (galaxy.status().status !== "connected") {
       process.stderr.write("Could not connect to galaxy " + context.galaxy.url
@@ -104,7 +115,7 @@ exports.discoverGalaxy = function (app) {
         _.has(body, "galaxyDiscoveryVersion") &&
         _.has(body, "galaxyUrl") &&
         (body.galaxyDiscoveryVersion === "galaxy-discovery-pre0")) {
-      fut.return(body.galaxyUrl);
+      fut.return("https://" + body.galaxyUrl);
     } else {
       fut.return(null);
     }

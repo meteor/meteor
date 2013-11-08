@@ -23,6 +23,7 @@ Fiber(function () {
   var cleanup = require('./cleanup.js');
   var httpHelpers = require('./http-helpers.js');
   var auth = require('./auth.js');
+  var url = require('url');
 
   var Future = require('fibers/future');
 
@@ -142,29 +143,14 @@ Fiber(function () {
     toolsDebugMessage("Running Meteor Release " + context.releaseVersion);
   };
 
-  var calculateGalaxyContextAndTunnel = function (deployEndpoint,
-                                                  context, sshIdentity) {
+  var setGalaxyContext = function (deployEndpoint, context) {
     var galaxyContext = {};
-    var tunnel;
-    // 9414 because 9414xy (gAlAxy) in 1337
-    galaxyContext.port = process.env.PORT || 9414;
-    if (deployEndpoint && deployEndpoint.indexOf("ssh://") === 0) {
-      galaxyContext.url = "localhost:" + galaxyContext.port +
-        "/ultraworld";
-      galaxyContext.adminBaseUrl = "localhost:" +
-        galaxyContext.port + "/";
-      galaxyContext.host = deployEndpoint.substr("ssh://".length);
-      galaxyContext.sshIdentity = sshIdentity;
-      tunnel = sshTunnel(galaxyContext.host, galaxyContext.port,
-                         "localhost:9414", galaxyContext.sshIdentity);
-      tunnel.waitConnected();
-      context.galaxy = galaxyContext;
-    } else if (deployEndpoint) {
-      galaxyContext.url = deployEndpoint + "/ultraworld";
-      galaxyContext.adminBaseUrl = deployEndpoint + "/";
-      context.galaxy = galaxyContext;
-    }
-    return tunnel;
+    var parsedEndpoint = url.parse(deployEndpoint);
+    var authToken = auth.getSessionToken(parsedEndpoint.hostname);
+    galaxyContext.url = deployEndpoint + "/ultraworld";
+    galaxyContext.adminBaseUrl = deployEndpoint + "/";
+    galaxyContext.authToken = authToken;
+    context.galaxy = galaxyContext;
   };
 
   var qualifySitename = function (site) {
@@ -182,30 +168,23 @@ Fiber(function () {
     if (! deployGalaxy)
       deployGalaxy = require('./deploy-galaxy.js');
     var deployEndpoint = deployGalaxy.discoverGalaxy(site);
-    return calculateGalaxyContextAndTunnel(deployEndpoint, context,
-                                           sshIdentity);
+    setGalaxyContext(deployEndpoint, context);
+    return;
   };
 
   // A command wrapped with galaxyCommand does the following:
   // 1. Looks for the first non-hyphenated argument, and assumes that that is the
-  // site.
-  // 2. Tries to discover and set up a connection to a galaxy. If the galaxy
-  // discovery process indicates that a ssh tunnel needs to be set up, the optional
-  // ssh-identity argument is used to set it up.
-  // 3. Runs the command, and kills the tunnel, if any, when it finishes.
+  // app name.
+  // 2. Uses galaxy discovery if necessary to find the galaxy's
+  // information. Adds a `galaxyContext` object to `context` that includes
+  // `url`, `adminBaseUrl`, and `authToken`, if we have one.
+  // 3. Runs the command.
   var galaxyCommand = function (cmd) {
     return function (argv, showUsage) {
       if (argv._[0]) {
         argv._[0] = qualifySitename(argv._[0]);
-        var tunnel = prepareForGalaxy(argv._[0], context, argv["ssh-identity"]);
-        var result;
-        try {
-          result = cmd(argv, showUsage);
-        } finally {
-          if (tunnel)
-            killTunnel(tunnel);
-        }
-        return result;
+        prepareForGalaxy(argv._[0], context);
+        return cmd(argv, showUsage);
       } else {
         return cmd(argv, showUsage);
       }

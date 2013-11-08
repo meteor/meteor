@@ -414,3 +414,8 @@ exports.whoAmICommand = function (argv, showUsage) {
 };
 
 exports.tryRevokeOldTokens = tryRevokeOldTokens;
+
+exports.getSessionToken = function (domain) {
+  var sessionData = readSession();
+  return getSessionToken(sessionData, domain);
+};
