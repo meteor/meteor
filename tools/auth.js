@@ -326,7 +326,7 @@ exports.loginCommand = function (argv, showUsage) {
 
   process.stdout.write("\n");
   process.stdout.write("Logged in " + (galaxy ? "to " + galaxy + " " : "") +
-                       "as " + loginResult.username + ".\n" +
+                       "as " + data.username + ".\n" +
                        "Thanks for being a Meteor developer!\n");
 };
 
