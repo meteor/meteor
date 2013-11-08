@@ -3,6 +3,7 @@ var getContent = HTML._$.getContent;
 
 var CharRef = HTML.CharRef;
 var Comment = HTML.Comment;
+var Special = HTML.Special;
 
 var BR = HTML.Tag.BR;
 var HR = HTML.Tag.HR;
@@ -110,6 +111,10 @@ Tinytest.add("html - getSpecialTag", function (test) {
   // match only a very simple tag like `{{foo}}`
   var mustache = /^\{\{([a-zA-Z]+)\}\}/;
 
+  // This implementation of `getSpecialTag` looks for "{{" and if it
+  // finds it, it will match the regex above or fail fatally trying.
+  // The object it returns is opaque to the tokenizer/parser and can
+  // be anything we want.
   var getSpecialTag = function (scanner, position) {
     if (! (scanner.peek() === '{' &&
            scanner.rest().slice(0, 2) === '{{'))
@@ -118,6 +123,8 @@ Tinytest.add("html - getSpecialTag", function (test) {
     var match = mustache.exec(scanner.rest());
     if (! match)
       scanner.fatal("Bad mustache");
+
+    scanner.pos += match[0].length;
 
     return { name: match[1] };
   };
@@ -151,5 +158,28 @@ Tinytest.add("html - getSpecialTag", function (test) {
   };
 
 
-  succeed('{{a}}', Special({name: 'a'}));
+  succeed('{{foo}}', Special({name: 'foo'}));
+
+  succeed('<a href=http://www.apple.com/>{{foo}}</a>',
+          A({href: "http://www.apple.com/"}, Special({name: 'foo'})));
+
+  // tags not parsed in comments
+  succeed('<!--{{foo}}-->', Comment("{{foo}}"));
+  succeed('<!--{{foo-->', Comment("{{foo"));
+
+  succeed('&am{{foo}}p;', ['&am', Special({name: 'foo'}), 'p;']);
+
+  // can't start a mustache and not finish it
+  fatal('{{foo');
+  fatal('<a>{{</a>');
+
+  // no mustache allowed in tag name
+  fatal('<{{a}}>');
+  fatal('<{{a}}b>');
+  fatal('<a{{b}}>');
+
+  // single curly brace is no biggie
+  succeed('a{b', 'a{b');
+  succeed('<br x={ />', BR({x:'{'}));
+  succeed('<br x={foo} />', BR({x:'{foo}'}));
 });
