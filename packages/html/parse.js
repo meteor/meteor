@@ -23,8 +23,16 @@ isKnownElement = function (name) {
   return knownElementSet[properCaseTagName(name)] === 1;
 };
 
-parseFragment = function (input) {
+parseFragment = function (input, options) {
   var scanner = new Scanner(input);
+
+  // ```
+  // { getSpecialTag: function (scanner, templateTagPosition) {
+  //     if (templateTagPosition === HTML.TEMPLATE_TAG_POSITION.ELEMENT) {
+  //       ...
+  // ```
+  if (options && options.getSpecialTag)
+    scanner.getSpecialTag = options.getSpecialTag;
 
   var result = getContent(scanner);
   if (! scanner.isEOF())

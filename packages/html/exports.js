@@ -23,6 +23,8 @@ HTML = {
 
   typeOf: typeOf,
 
+  TEMPLATE_TAG_POSITION: TEMPLATE_TAG_POSITION,
+
   _$: {
     // stuff exposed for testing
     Scanner: Scanner,

@@ -207,9 +207,17 @@ getDoctype = function (scanner) {
   return result;
 };
 
-var getChars = makeRegexMatcher(/^[^&<\u0000]+/);
+// The special character `{` is only allowed as the first character
+// of a Chars, so that we have a chance to detect template tags.
+var getChars = makeRegexMatcher(/^[^&<\u0000][^&<\u0000{]*/);
 
 getHTMLToken = function (scanner) {
+  if (scanner.getSpecialTag) {
+    var result = scanner.getSpecialTag(scanner, TEMPLATE_TAG_POSITION.ELEMENT);
+    if (result)
+      return result;
+  }
+
   var chars = getChars(scanner);
   if (chars)
     return { t: 'Chars',
@@ -235,7 +243,7 @@ getHTMLToken = function (scanner) {
   // If we're here, we're looking at `<`.
   // `getTag` will claim anything starting with `<` not followed by `!`.
   // `getComment` takes `<!--` and getDoctype takes `<!doctype`.
-  var result = (getTagToken(scanner) || getComment(scanner) || getDoctype(scanner));
+  result = (getTagToken(scanner) || getComment(scanner) || getDoctype(scanner));
 
   if (result)
     return result;
@@ -424,4 +432,8 @@ tokenize = function (input) {
     tokens.push(getHTMLToken(scanner));
 
   return tokens;
+};
+
+TEMPLATE_TAG_POSITION = {
+  ELEMENT: 1
 };
