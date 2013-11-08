@@ -362,6 +362,8 @@ var materialize = function (node, parent, before, parentComponent) {
     } else if (type === 'null') {
       // null or undefined.
       // do nothing.
+    } else if (type === 'special') {
+      throw new Error("Can't materialize Special tag, it's just an intermediate rep");
     } else {
       // can't get here
       throw new Error("Unexpected type: " + type);
@@ -542,6 +544,8 @@ var toHTML = function (node, parentComponent) {
     } else if (type === 'null') {
       // null or undefined.
       // do nothing.
+    } else if (type === 'special') {
+      throw new Error("Can't toHTML a Special tag, it's just an intermediate rep");
     } else {
       // can't get here
       throw new Error("Unexpected type: " + type);
@@ -586,7 +590,8 @@ var toCode = function (node) {
     var type = HTML.typeOf(node);
     if (type === 'emitcode') {
       result += node[0];
-    } else if (type === 'comment' || type === 'charref' || type === 'tag') {
+    } else if (type === 'comment' || type === 'charref' ||
+               type === 'tag' || type === 'special') {
 
       var isNonTag = (type !== 'tag');
 

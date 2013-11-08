@@ -98,6 +98,13 @@ var checkEmitCode = function (node) {
     throw new Error("EmitCode should have exactly one content item, a simple string");
 };
 
+var checkSpecial = function (node) {
+  if (! node.attrs)
+    throw new Error("Special tag must have attributes");
+  if (node.length > 0)
+    throw new Error("Special tag must not have content");
+};
+
 typeOf = function (node) {
   if (node && (typeof node === 'object') &&
       (typeof node.splice === 'function')) {
@@ -112,6 +119,9 @@ typeOf = function (node) {
       } else if (node.tagName === 'EmitCode') {
         checkEmitCode(node);
         return 'emitcode';
+      } else if (node.tagName === 'Special') {
+        checkSpecial(node);
+        return 'special';
       } else {
         return 'tag';
       }

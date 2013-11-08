@@ -104,3 +104,52 @@ Tinytest.add("html - parseFragment", function (test) {
     HTML.parseFragment('asdf</a>');
   });
 });
+
+Tinytest.add("html - getSpecialTag", function (test) {
+
+  // match only a very simple tag like `{{foo}}`
+  var mustache = /^\{\{([a-zA-Z]+)\}\}/;
+
+  var getSpecialTag = function (scanner, position) {
+    if (! (scanner.peek() === '{' &&
+           scanner.rest().slice(0, 2) === '{{'))
+      return null;
+
+    var match = mustache.exec(scanner.rest());
+    if (! match)
+      scanner.fatal("Bad mustache");
+
+    return { name: match[1] };
+  };
+
+
+
+  var succeed = function (input, expected) {
+    var endPos = input.indexOf('^^^');
+    if (endPos < 0)
+      endPos = input.length;
+
+    var scanner = new Scanner(input.replace('^^^', ''));
+    scanner.getSpecialTag = getSpecialTag;
+    var result = getContent(scanner);
+    test.equal(scanner.pos, endPos);
+    test.equal(UI.toCode(result), UI.toCode(expected));
+  };
+
+  var fatal = function (input, messageContains) {
+    var scanner = new Scanner(input);
+    scanner.getSpecialTag = getSpecialTag;
+    var error;
+    try {
+      getContent(scanner);
+    } catch (e) {
+      error = e;
+    }
+    test.isTrue(error);
+    if (messageContains)
+      test.isTrue(messageContains && error.message.indexOf(messageContains) >= 0, error.message);
+  };
+
+
+  succeed('{{a}}', Special({name: 'a'}));
+});

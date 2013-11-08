@@ -36,6 +36,10 @@
 // need to passed through codePointToString to make a JavaScript string.
 // Most named entities and all numeric character references are one codepoint
 // (e.g. "&amp;" is [38]), but a few are two codepoints.
+//
+// { t: 'Special',
+//   v: { ... anything ... }
+// }
 
 var HTML_SPACE = /^[\f\n\t ]/;
 
@@ -216,7 +220,7 @@ getHTMLToken = function (scanner) {
   if (scanner.getSpecialTag) {
     var result = scanner.getSpecialTag(scanner, TEMPLATE_TAG_POSITION.ELEMENT);
     if (result)
-      return result;
+      return { t: 'Special', v: result };
   }
 
   var chars = getChars(scanner);

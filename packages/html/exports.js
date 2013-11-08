@@ -12,6 +12,8 @@ HTML = {
   Comment: makeTagFunc('Comment'),
   // e.g. `EmitCode("foo()")`
   EmitCode: makeTagFunc('EmitCode'),
+  // e.g. `Special({ ... stuff ... })`
+  Special: makeTagFunc('Special'),
 
   asciiLowerCase: asciiLowerCase,
   properCaseTagName: properCaseTagName,

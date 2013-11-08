@@ -91,6 +91,9 @@ getContent = function (scanner) {
       items.push(convertCharRef(token));
     } else if (token.t === 'Comment') {
       items.push(HTML.Comment(token.v));
+    } else if (token.t === 'Special') {
+      // token.v is an object `{ ... }`
+      items.push(HTML.Special(token.v));
     } else if (token.t === 'Tag') {
       if (token.isEnd)
         // we've already screened for `</` so this shouldn't be
