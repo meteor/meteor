@@ -7,7 +7,9 @@ var Comment = HTML.Comment;
 var BR = HTML.Tag.BR;
 var HR = HTML.Tag.HR;
 var INPUT = HTML.Tag.INPUT;
-var A = HTML.Tag.A;
+var A = HTML.Tag.A
+var DIV = HTML.Tag.DIV;
+var P = HTML.Tag.P;
 
 Tinytest.add("html - parse content", function (test) {
 
@@ -89,4 +91,12 @@ Tinytest.add("html - parse content", function (test) {
 
   // XXX support implied end tags in cases allowed by the spec
   fatal('<p>');
+
+
+  test.equal(UI.toCode(HTML.parseFragment("<div><p id=foo>Hello</p></div>")),
+             UI.toCode(DIV(P({id:'foo'}, 'Hello'))));
+
+  test.throws(function() {
+    HTML.parseFragment('asdf</a>');
+  });
 });

@@ -1,5 +1,6 @@
 HTML = {
   tokenize: tokenize,
+  parseFragment: parseFragment,
 
   Tag: Tag,
   getTag: getTag,

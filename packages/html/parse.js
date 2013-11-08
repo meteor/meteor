@@ -26,7 +26,11 @@ isKnownElement = function (name) {
 parseFragment = function (input) {
   var scanner = new Scanner(input);
 
-  // XXX
+  var result = getContent(scanner);
+  if (! scanner.isEOF())
+    scanner.fatal("Expected EOF");
+
+  return result;
 };
 
 // Take a numeric Unicode code point, which may be larger than 16 bits,
