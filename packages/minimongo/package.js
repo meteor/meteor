@@ -13,6 +13,7 @@ Package.on_use(function (api) {
   api.add_files([
     'minimongo.js',
     'selector.js',
+    'projection.js',
     'modify.js',
     'diff.js',
     'objectid.js'
