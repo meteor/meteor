@@ -112,39 +112,56 @@ var tryRevokeOldTokens = function (options) {
     timeout: 5000
   }, options || {});
 
-  // XXX support domains other than ACCOUNTS_DOMAIN
+  var warned = false;
+  var domainsWithRevokedTokens = [];
+  _.each(readSession().sessions || {}, function (session, domain) {
+    if (session.pendingRevoke &&
+        session.pendingRevoke.length)
+      domainsWithRevokedTokens.push(domain);
+  });
 
-  var data = readSession();
-  data.sessions = data.sessions || {};
-  var session = data.sessions[ACCOUNTS_DOMAIN];
-  if (! session)
-    return;
-  var tokenIds = session.pendingRevoke || [];
-  if (! tokenIds.length)
-    return;
-  try {
-    var result = httpHelpers.request({
-      url: ACCOUNTS_URL + "/logoutById",
-      method: "POST",
-      form: {
-        tokenId: tokenIds.join(',')
-      },
-      timeout: options.timeout
-    });
-  } catch (e) {
-    // most likely we don't have a net connection
-    return;
-  }
-  var response = result.response;
+  _.each(domainsWithRevokedTokens, function (domain) {
+    var data = readSession();
+    var session = data.sessions[domain] || {};
+    var tokenIds = session.pendingRevoke || [];
+    if (! tokenIds.length)
+      return;
 
-  if (response.statusCode === 200) {
-    // Server confirms that the tokens have been revoked
-    delete session.pendingRevoke;
-    writeSession(data);
-  } else {
-    // This isn't ideal but is probably better that saying nothing at all
-    process.stderr.write("warning: couldn't confirm logout with server\n");
-  }
+    var url;
+    if (domain === ACCOUNTS_DOMAIN) {
+      url = ACCOUNTS_URL + "/logoutById";
+    } else {
+      var oauthInfo = fetchGalaxyOAuthInfo(domain, options.timeout);
+      url = oauthInfo.revokeUri;
+    }
+
+    try {
+      var result = httpHelpers.request({
+        url: url,
+        method: "POST",
+        form: {
+          tokenId: tokenIds.join(',')
+        },
+        timeout: options.timeout
+      });
+    } catch (e) {
+      // most likely we don't have a net connection
+      return;
+    }
+    var response = result.response;
+
+    if (response.statusCode === 200) {
+      // Server confirms that the tokens have been revoked
+      delete session.pendingRevoke;
+      writeSession(data);
+    } else {
+      if (! warned) {
+        // This isn't ideal but is probably better that saying nothing at all
+        process.stderr.write("warning: couldn't confirm logout with server\n");
+        warned = true;
+      }
+    }
+  });
 };
 
 // Given a response and body for a login request (either to meteor accounts or
@@ -185,8 +202,11 @@ var getLoginResult = function (response, body, authCookieName) {
 // Sends a request to https://<galaxyName>:<DISCOVERY_PORT> to find out the
 // galaxy's OAuth client id and redirect_uri that should be used for
 // authorization codes for this galaxy. Returns an object with keys
-// 'oauthClientId' and 'redirectUri', or null if the request failed.
-var fetchGalaxyOAuthInfo = function (galaxyName) {
+// 'oauthClientId', 'redirectUri', and 'revokeUri', or null if the
+// request failed.
+//
+// 'timeout' is an optional request timeout in milliseconds.
+var fetchGalaxyOAuthInfo = function (galaxyName, timeout) {
   var galaxyAuthUrl = 'https://' + galaxyName + ':' +
         (process.env.DISCOVERY_PORT || 443) + '/_GALAXYAUTH_';
   try {
@@ -195,7 +215,8 @@ var fetchGalaxyOAuthInfo = function (galaxyName) {
       json: true,
       // on by default in our version of request, but just in case
       strictSSL: true,
-      followRedirect: false
+      followRedirect: false,
+      timeout: timeout || 5000
     });
   } catch (e) {
     return null;
@@ -204,7 +225,8 @@ var fetchGalaxyOAuthInfo = function (galaxyName) {
   if (result.response.statusCode === 200 &&
       result.body &&
       result.body.oauthClientId &&
-      result.body.redirectUri) {
+      result.body.redirectUri &&
+      result.body.revokeUri) {
     return result.body;
   } else {
     return null;
@@ -214,7 +236,10 @@ var fetchGalaxyOAuthInfo = function (galaxyName) {
 // Uses meteor accounts to log in to the specified galaxy. Must be called with a
 // valid cookie for METEOR_AUTH. Returns an object with keys `authToken`,
 // `username` and `tokenId` if the login was successful. If an error occurred,
-// returns either { error: 'access-denied' } or { error: 'no-galaxy' }.
+// returns one of:
+//   { error: 'access-denied' }
+//   { error: 'no-galaxy' }
+//   { error: 'no-account-server' }
 var logInToGalaxy = function (galaxyName, meteorAuthCookie) {
   var oauthInfo = fetchGalaxyOAuthInfo(galaxyName);
   if (! oauthInfo) {
@@ -234,15 +259,19 @@ var logInToGalaxy = function (galaxyName, meteorAuthCookie) {
   // but instead issue the second request ourselves. This is because request
   // does not appear to segregate cookies by origin, so we would end up with our
   // METEOR_AUTH cookie going to the galaxy.
-  var codeResult = httpHelpers.request({
-    url: authCodeUrl,
-    method: 'POST',
-    followRedirect: false,
-    strictSSL: true,
-    headers: {
-      cookie: 'METEOR_AUTH=' + meteorAuthCookie
-    }
-  });
+  try {
+    var codeResult = httpHelpers.request({
+      url: authCodeUrl,
+      method: 'POST',
+      followRedirect: false,
+      strictSSL: true,
+      headers: {
+        cookie: 'METEOR_AUTH=' + meteorAuthCookie
+      }
+    });
+  } catch (e) {
+    return { error: 'no-account-server' };
+  }
   var response = codeResult.response;
   if (response.statusCode !== 302 || ! response.headers.location) {
     return { error: 'access-denied' };
@@ -259,11 +288,15 @@ var logInToGalaxy = function (galaxyName, meteorAuthCookie) {
   }
 
   // Ask the galaxy to log us in with our auth code.
-  var galaxyResult = httpHelpers.request({
-    url: response.headers.location,
-    method: 'POST',
-    strictSSL: true
-  });
+  try {
+    var galaxyResult = httpHelpers.request({
+      url: response.headers.location,
+      method: 'POST',
+      strictSSL: true
+    });
+  } catch (e) {
+    return { error: 'no-galaxy' };
+  }
   var loginResult = getLoginResult(galaxyResult.response, galaxyResult.body,
                                    'GALAXY_AUTH');
   // 'access-denied' isn't exactly right because it's possible that the galaxy
@@ -322,6 +355,7 @@ exports.loginCommand = function (argv, showUsage) {
     data.username = loginResult.username;
     setSessionToken(data, ACCOUNTS_DOMAIN, meteorAuth, tokenId);
     writeSession(data);
+    process.stdout.write("\n");
   }
 
   if (galaxy) {
@@ -329,6 +363,7 @@ exports.loginCommand = function (argv, showUsage) {
     meteorAuth = getSessionToken(data, ACCOUNTS_DOMAIN);
     var galaxyLoginResult = logInToGalaxy(galaxy, meteorAuth);
     if (galaxyLoginResult.error) {
+      // XXX add human readable error messages
       process.stdout.write('Login to ' + galaxy + ' failed: ' +
                            galaxyLoginResult.error + '\n');
       process.exit(1);
@@ -340,7 +375,6 @@ exports.loginCommand = function (argv, showUsage) {
 
   tryRevokeOldTokens();
 
-  process.stdout.write("\n");
   process.stdout.write("Logged in " + (galaxy ? "to " + galaxy + " " : "") +
                        "as " + data.username + ".\n" +
                        "Thanks for being a Meteor developer!\n");
