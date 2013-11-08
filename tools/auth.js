@@ -3,7 +3,7 @@ var path = require('path');
 var fs = require('fs');
 var utils = require('./utils.js');
 var httpHelpers = require('./http-helpers.js');
-var crypto = require('crypto');
+var url = require('url');
 
 var ACCOUNTS_URL = "http://localhost:3000";
 var ACCOUNTS_DOMAIN = "localhost:3000";
@@ -189,12 +189,17 @@ var getLoginResult = function (response, body, authCookieName) {
 var fetchGalaxyOAuthInfo = function (galaxyName) {
   var galaxyAuthUrl = 'https://' + galaxyName + ':' +
         (process.env.DISCOVERY_PORT || 443) + '/_GALAXYAUTH_';
-  var result = httpHelpers.request({
-    url: galaxyAuthUrl,
-    json: true,
-    strictSSL: true, // on by default in our version of request, but just in case
-    followRedirect: false
-  });
+  try {
+    var result = httpHelpers.request({
+      url: galaxyAuthUrl,
+      json: true,
+      // on by default in our version of request, but just in case
+      strictSSL: true,
+      followRedirect: false
+    });
+  } catch (e) {
+    return null;
+  }
 
   if (result.response.statusCode === 200 &&
       result.body &&
@@ -220,6 +225,7 @@ var logInToGalaxy = function (galaxyName, meteorAuthCookie) {
   var galaxyRedirect = oauthInfo.redirectUri;
 
   // Ask the accounts server for an authorization code.
+  var crypto = require('crypto');
   var state = crypto.randomBytes(16).toString('hex');
   var authCodeUrl = ACCOUNTS_URL + "/authorize?state=" + state +
         "&response_type=code&client_id=" + galaxyClientId +
@@ -239,6 +245,16 @@ var logInToGalaxy = function (galaxyName, meteorAuthCookie) {
   });
   var response = codeResult.response;
   if (response.statusCode !== 302 || ! response.headers.location) {
+    return { error: 'access-denied' };
+  }
+
+  if (url.parse(response.headers.location).hostname !== galaxyName) {
+    // If we didn't get an immediate redirect to the redirectUri
+    // (which had better be in DNS namespace that belongs to the
+    // Galaxy) then presumably the oauth server is trying to interact
+    // with us (make us log in, authorize the client, or something
+    // like that). We're not a web browser so we can't participate in
+    // such things.
     return { error: 'access-denied' };
   }
 
