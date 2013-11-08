@@ -131,19 +131,10 @@ _extend(AttributeHandler.prototype, {
   },
   update: function (element, oldValue, value) {
     if (value == null) {
-      if (oldValue != null) {
-        // `setAttribute`/`removeAttribute` don't behave consistently
-        // between browsers for the 'selected' attribute.
-        if (this.name === 'selected')
-          element.selected = false;
-        else
-          element.removeAttribute(this.name);
-      }
+      if (oldValue != null)
+        element.removeAttribute(this.name);
     } else {
-      if (this.name === 'selected')
-        element.selected = true;
-      else
-        element.setAttribute(this.name, this.stringifyValue(value));
+      element.setAttribute(this.name, this.stringifyValue(value));
     }
   }
 });
@@ -195,12 +186,25 @@ var ClassHandler = AttributeHandler.extend({
   }
 });
 
+var SelectedHandler = AttributeHandler.extend({
+  update: function (element, oldValue, value) {
+    if (value == null) {
+      if (oldValue != null)
+        element.selected = false;
+    } else {
+      element.selected = true;
+    }
+  }
+});
+
 var makeAttributeHandler = function (name, value) {
   // XXX will need one for 'style' on IE, though modern browsers
   // seem to handle setAttribute ok.
   // XXX components should be able to hook into this
   if (name === 'class') {
     return new ClassHandler(name, value);
+  } else if (name === 'selected') {
+    return new SelectedHandler(name, value);
   } else {
     return new AttributeHandler(name, value);
   }
