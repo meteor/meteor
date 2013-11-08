@@ -172,7 +172,7 @@ var getLoginResult = function (response, body, authCookieName) {
     return null;
 
   var parsedBody = body ? JSON.parse(body) : {};
-  if (! parsedBody.tokenId || ! parsedBody.username)
+  if (! parsedBody.tokenId)
     return null;
 
   return {
@@ -293,7 +293,7 @@ exports.loginCommand = function (argv, showUsage) {
     }
 
     var loginResult = getLoginResult(result.response, result.body, 'METEOR_AUTH');
-    if (! loginResult) {
+    if (! loginResult || ! loginResult.username) {
       process.stdout.write("Login failed.\n");
       process.exit(1);
     }
