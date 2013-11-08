@@ -1043,8 +1043,6 @@ Tinytest.add('templating - helper typecast Issue #617', function (test) {
     "[string,true][string,false][boolean,true][boolean,false]" +
       // numbers
       "[number,0][number,1][number,-1][number,10][number,-10]" +
-      // errors
-      "[undefined,undefined][undefined,undefined]" +
       // handlebars 'options' argument. appended to args of all helpers.
       "[object]");
 });
