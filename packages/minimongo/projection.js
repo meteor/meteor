@@ -1,4 +1,50 @@
+// Knows how to compile a fields projection to a predicate function.
 LocalCollection._compileProjection = function (fields) {
+  var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
+  var details = projectionDetails(fields);
+
+  // returns transformed doc according to ruleTree
+  var transform = function (doc, ruleTree) {
+    // Special case for "sets"
+    if (_.isArray(doc))
+      return _.map(doc, function (subdoc) { return transform(subdoc, ruleTree); });
+
+    var res = details.including ? {} : EJSON.clone(doc);
+    _.each(ruleTree, function (rule, key) {
+      if (!_.has(doc, key))
+        return;
+      if (_.isObject(rule)) {
+        // For sub-objects/subsets we branch
+        if (_.isObject(doc[key]))
+          res[key] = transform(doc[key], rule);
+        // Otherwise we don't even touch this subfield
+      } else if (details.including)
+        res[key] = doc[key];
+      else
+        delete res[key];
+    });
+
+    return res;
+  };
+
+  return function (obj) {
+    var res = transform(obj, details.tree);
+
+    if (_idProjection && _.has(obj, '_id'))
+      res._id = obj._id;
+    if (!_idProjection && _.has(res, '_id'))
+      delete res._id;
+    return res;
+  };
+};
+
+// Traverses the keys of passed projection and constructs a tree where all
+// leaves are either all True or all False
+// @returns Object:
+//  - tree - Object - tree representation of keys involved in projection
+//  (exception for '_id' as it is a special case handled separately)
+//  - including - Boolean - "take only certain fields" type of projection
+var projectionDetails = function (fields) {
   if (!_.isObject(fields))
     throw MinimongoError("fields option must be an object");
 
@@ -6,7 +52,6 @@ LocalCollection._compileProjection = function (fields) {
       return _.indexOf([1, 0, true, false], x) === -1; }))
     throw MinimongoError("Projection values should be one of 1, 0, true, or false");
 
-  var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
   // Find the non-_id keys (_id is handled specially because it is included unless
   // explicitly excluded). Sort the keys, so that our code to detect overlaps
   // like 'foo' and 'foo.bar' can assume that 'foo' comes first.
@@ -57,38 +102,10 @@ LocalCollection._compileProjection = function (fields) {
 
     treePos[_.last(keyPath)] = including;
   });
-
-  // returns transformed doc according to ruleTree
-  var transform = function (doc, ruleTree) {
-    // Special case for "sets"
-    if (_.isArray(doc))
-      return _.map(doc, function (subdoc) { return transform(subdoc, ruleTree); });
-
-    var res = including ? {} : EJSON.clone(doc);
-    _.each(ruleTree, function (rule, key) {
-      if (!_.has(doc, key))
-        return;
-      if (_.isObject(rule)) {
-        // For sub-objects/subsets we branch
-        if (_.isObject(doc[key]))
-          res[key] = transform(doc[key], rule);
-        // Otherwise we don't even touch this subfield
-      } else if (including)
-        res[key] = doc[key];
-      else
-        delete res[key];
-    });
-
-    return res;
-  };
-
-  return function (obj) {
-    var res = transform(obj, projectionRulesTree);
-
-    if (_idProjection && _.has(obj, '_id'))
-      res._id = obj._id;
-    if (!_idProjection && _.has(res, '_id'))
-      delete res._id;
-    return res;
+  
+  return {
+    tree: projectionRulesTree,
+    including: including
   };
 };
+
