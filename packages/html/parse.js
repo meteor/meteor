@@ -7,8 +7,20 @@ var voidElementSet = (function (set) {
   return set;
 })({});
 
+knownElementNames = 'a abbr acronym address applet area b base basefont bdo big blockquote body br button caption center cite code col colgroup dd del dfn dir div dl dt em fieldset font form frame frameset h1 h2 h3 h4 h5 h6 head hr html i iframe img input ins isindex kbd label legend li link map menu meta noframes noscript object ol p param pre q s samp script select small span strike strong style sub sup textarea title tt u ul var article aside audio bdi canvas command data datagrid datalist details embed eventsource figcaption figure footer header hgroup keygen mark meter nav output progress ruby rp rt section source summary time track video wbr'.split(' ');
+var knownElementSet = (function (set) {
+  for (var i = 0; i < knownElementNames.length; i++)
+    set[knownElementNames[i]] = 1;
+
+  return set;
+})({});
+
 isVoidElement = function (name) {
   return voidElementSet[properCaseTagName(name)] === 1;
+};
+
+isKnownElement = function (name) {
+  return knownElementSet[properCaseTagName(name)] === 1;
 };
 
 parseFragment = function (input) {
@@ -64,25 +76,34 @@ getContent = function (scanner) {
       else
         items.push(token.v);
     } else if (token.t === 'CharRef') {
-      var codePoints = token.cp;
-      var str = '';
-      for (var i = 0; i < codePoints.length; i++)
-        str += codePointToString(codePoints[i]);
-      items.push(HTML.CharRef({ html: token.v,
-                                str: str }));
+      items.push(convertCharRef(token));
     } else if (token.t === 'Comment') {
       items.push(HTML.Comment(token.v));
     } else if (token.t === 'Tag') {
       if (token.isEnd)
         // we've already screened for `</` so this shouldn't be
         // possible.
-        throw new Error("Assertion failed: didn't expect end tag");
+        scanner.fatal("Assertion failed: didn't expect end tag");
 
-      // XXX parse start tag and, possibly, content (recursively)
-      // and end tag
-      throw new Error("XXX implement");
+      var tagName = token.n;
+      // is this an element with no close tag (a BR, HR, IMG, etc.) based
+      // on its name?
+      var isVoid = isVoidElement(tagName);
+      if (! isVoid) {
+        if (token.isSelfClosing)
+          scanner.fatal('Only certain elements like BR, HR, IMG, etc. are allowed to self-close');
+      }
+
+      // may be null
+      var attrs = parseAttrs(token.attrs);
+
+      if (isVoid) {
+        items.push(HTML.getTag(tagName)(attrs));
+      } else {
+        throw new Error("XXX");
+      }
     } else {
-      throw new Error("Unknown token type: " + token.t);
+      scanner.fatal("Unknown token type: " + token.t);
     }
   }
 
@@ -92,4 +113,56 @@ getContent = function (scanner) {
     return items[0];
   else
     return items;
+};
+
+// Input: A token like `{ t: 'CharRef', v: '&amp;', cp: [38] }`.
+//
+// Output: A tag like `HTML.CharRef({ html: '&amp;', str: '&' })`.
+var convertCharRef = function (token) {
+  var codePoints = token.cp;
+  var str = '';
+  for (var i = 0; i < codePoints.length; i++)
+    str += codePointToString(codePoints[i]);
+  return HTML.CharRef({ html: token.v, str: str });
+};
+
+// Input is always a dictionary (even if zero attributes) and each
+// value in the dictionary is an array of `Chars` and `CharRef`
+// tokens.  An empty array means the attribute has a value of "".
+//
+// Output is null if there are zero attributes, and otherwise a
+// dictionary.  Each value in the dictionary is a string (possibly
+// empty) or an array of non-empty strings and CharRef tags.
+var parseAttrs = function (attrs) {
+  var result = null;
+
+  for (var k in attrs) {
+    if (! result)
+      result = {};
+
+    var inValue = attrs[k];
+    var outValue = '';
+    for (var i = 0; i < inValue.length; i++) {
+      var token = inValue[i];
+      if (token.t === 'CharRef') {
+        if (! outValue)
+          outValue = [];
+        else if (typeof outValue === 'string')
+          outValue = [outValue];
+
+        outValue.push(convertCharRef(token));
+      } else if (token.t === 'Chars') {
+        var str = token.v;
+
+        if (typeof outValue === 'string')
+          outValue += str;
+        else
+          outValue.push(str);
+      }
+    }
+
+    result[k] = outValue;
+  }
+
+  return result;
 };

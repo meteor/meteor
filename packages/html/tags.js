@@ -2,6 +2,9 @@
 // `tagName` (String, required) and `attrs` (Object or `null`).  In addition to
 // be arrays, Tags are `instanceof HTML.Tag`.
 //
+// An attribute value may be null, a string, a CharRef tag, or an array of
+// strings, CharRef tags, arrays, and nulls.
+//
 // Tags are created using tag functions, e.g. `DIV(P({id:'foo'}, "Hello"))`.
 // If a tag function is given a first argument that is an object and not a
 // Tag or an array, that object is used as element attributes (`attrs`).
@@ -10,8 +13,9 @@
 //
 // Tag functions for all known tags are available as `HTML.Tag.DIV`,
 // `HTML.Tag.SPAN`, etc., and you can define new ones with
-// `HTML.Tag.defineTag("FOO")`, which makes a tag function available at
-// `HTML.Tag.FOO` henceforth.
+// `HTML.defineTag("FOO")`, which makes a tag function available at
+// `HTML.Tag.FOO` henceforth. You can also use `HTML.getTag("FOO")` to
+// define (if necessary) and return a tag function.
 
 Tag = function (tagName, attrs) {
   this.tagName = tagName;
@@ -51,8 +55,14 @@ makeTagFunc = function (name) {
   };
 };
 
-Tag.defineTag = function (name) {
+defineTag = function (name) {
   // XXX maybe sanity-check name?  Like no whitespace.
   name = name.toUpperCase();
   Tag[name] = makeTagFunc(name);
+  return Tag[name];
+};
+
+getTag = function (name) {
+  name = name.toUpperCase();
+  return Tag[name] || defineTag(name);
 };

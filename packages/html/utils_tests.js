@@ -13,4 +13,10 @@ Tinytest.add("html - utils", function (test) {
   test.isFalse(HTML.isVoidElement("div"));
   test.isFalse(HTML.isVoidElement("DIV"));
 
+
+  test.isTrue(HTML.isKnownElement("div"));
+  test.isTrue(HTML.isKnownElement("DIV"));
+  test.isFalse(HTML.isKnownElement("asdf"));
+  test.isFalse(HTML.isKnownElement("ASDF"));
+
 });

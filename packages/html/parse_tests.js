@@ -4,6 +4,10 @@ var getContent = HTML._$.getContent;
 var CharRef = HTML.CharRef;
 var Comment = HTML.Comment;
 
+var BR = HTML.Tag.BR;
+var HR = HTML.Tag.HR;
+var INPUT = HTML.Tag.INPUT;
+
 Tinytest.add("html - parse content", function (test) {
 
   var succeed = function (input, expected) {
@@ -45,4 +49,17 @@ Tinytest.add("html - parse content", function (test) {
   fatal('&gt&');
   // tests for other failure cases
   fatal('<');
+
+  succeed('<br>', BR());
+  succeed('<br/>', BR());
+  fatal('<div/>', 'self-close');
+
+  succeed('<hr id=foo>', HR({id:'foo'}));
+  succeed('<hr id=&lt;foo&gt;>', HR({id:[CharRef({html:'&lt;', str:'<'}),
+                                         'foo',
+                                         CharRef({html:'&gt;', str:'>'})]}));
+  succeed('<input selected>', INPUT({selected: ''}));
+  succeed('<br x=&&&>', BR({x: '&&&'}));
+  succeed('<br><br><br>', [BR(), BR(), BR()]);
+  succeed('aaa<br>\nbbb<br>\nccc<br>', ['aaa', BR(), '\nbbb', BR(), '\nccc', BR()]);
 });

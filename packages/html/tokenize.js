@@ -235,7 +235,7 @@ getHTMLToken = function (scanner) {
   // If we're here, we're looking at `<`.
   // `getTag` will claim anything starting with `<` not followed by `!`.
   // `getComment` takes `<!--` and getDoctype takes `<!doctype`.
-  var result = (getTag(scanner) || getComment(scanner) || getDoctype(scanner));
+  var result = (getTagToken(scanner) || getComment(scanner) || getDoctype(scanner));
 
   if (result)
     return result;
@@ -324,7 +324,7 @@ var getUnquotedAttributeValue = function (scanner) {
   }
 };
 
-getTag = function (scanner) {
+getTagToken = function (scanner) {
   if (! (scanner.peek() === '<' && scanner.rest().charAt(1) !== '!'))
     return null;
   scanner.pos++;
