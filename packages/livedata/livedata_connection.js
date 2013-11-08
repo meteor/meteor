@@ -8,16 +8,17 @@ if (Meteor.isServer) {
 //   or an object as a test hook (see code)
 // Options:
 //   reloadWithOutstanding: is it OK to reload if there are outstanding methods?
+//   onDDPNegotiationVersionFailure: callback with the server requested version.
 var Connection = function (url, options) {
   var self = this;
   options = _.extend({
+    onConnected: function () {},
+    onDDPVersionNegotiationFailure: function (serverRequestedVersion, error) {
+      Meteor._debug("Failed DDP connection: " + error);
+    },
     // These options are only for testing.
     reloadWithOutstanding: false,
-    supportedDDPVersions: SUPPORTED_DDP_VERSIONS,
-    onConnectionFailure: function (reason) {
-      Meteor._debug("Failed DDP connection: " + reason);
-    },
-    onConnected: function () {}
+    supportedDDPVersions: SUPPORTED_DDP_VERSIONS
   }, options);
 
   // If set, called when we reconnect, queuing method calls _before_ the
@@ -197,7 +198,7 @@ var Connection = function (url, options) {
         var error =
               "Version negotiation failed; server requested version " + msg.version;
         self._stream.disconnect({_permanent: true, _error: error});
-        options.onConnectionFailure(error);
+        options.onDDPVersionNegotiationFailure(msg.version, error);
       }
     }
     else if (_.include(['added', 'changed', 'removed', 'ready', 'updated'], msg.msg))
@@ -1378,8 +1379,8 @@ LivedataTest.Connection = Connection;
 //     "/",
 //     "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"
 //
-DDP.connect = function (url) {
-  var ret = new Connection(url);
+DDP.connect = function (url, options) {
+  var ret = new Connection(url, options);
   allConnections.push(ret); // hack. see below.
   return ret;
 };
