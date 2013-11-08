@@ -464,8 +464,6 @@ var runWebAppServer = function () {
         if (proxyBinding)
           proxyBinding.stop();
         if (configuration && configuration.proxy) {
-          var proxyServiceName = process.env.ADMIN_APP ? "adminProxy" : "proxy";
-
           // TODO: We got rid of the place where this checks the app's
           // configuration, because this wants to be configured for some things
           // on a per-job basis.  Discuss w/ teammates.
@@ -579,7 +577,8 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
       port: port,
       pathPrefix: bindPathPrefix + '/websocket'
     },
-    requiresAuth: proxyConfig.requiresAuth
+    // Send a boolean, not null, for requiresAuth, to pass the check.
+    requiresAuth: proxyConfig.requiresAuth || false
   }, bindingDoneCallback("ddp"));
   proxy.call('bindHttp', {
     pid: pid,
@@ -593,7 +592,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
       port: port,
       pathPrefix: bindPathPrefix
     },
-    requiresAuth: proxyConfig.requiresAuth
+    requiresAuth: proxyConfig.requiresAuth || false
   }, bindingDoneCallback("http"));
   if (proxyConfig.securePort !== null) {
     proxy.call('bindHttp', {
@@ -609,7 +608,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
         port: port,
         pathPrefix: bindPathPrefix
       },
-      requiresAuth: proxyConfig.requiresAuth
+      requiresAuth: proxyConfig.requiresAuth || false
     }, bindingDoneCallback("https"));
   }
 };
