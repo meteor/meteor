@@ -114,12 +114,12 @@ Follower = {
         conn.call('getElectorate', options.group, function (err, res) {
           outstandingGetElectorate = false;
           connected = tryingUrl;
-          if (!_.contains(res.electorate, connected)) {
-            Log.warn("electorate " + res.electorate + " does not contain " + connected);
-          }
           if (err) {
             tryElector();
             return;
+          }
+          if (!_.contains(res.electorate, connected)) {
+            Log.warn("electorate " + res.electorate + " does not contain " + connected);
           }
           tryingUrl = null;
           if (! connectedToLeadershipGroup.isResolved()) {
