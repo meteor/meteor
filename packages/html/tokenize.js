@@ -21,6 +21,7 @@
 //   isSelfClosing: Boolean (optional),
 //   n: String (tag name, ASCII-lowercased),
 //   attrs: { String: [zero or more 'Chars' or 'CharRef' objects] }
+//     (only for start tags; required)
 // }
 //
 // { t: 'CharRef',
@@ -251,7 +252,7 @@ getHTMLToken = function (scanner) {
   scanner.fatal("Unexpected `<!` directive.");
 };
 
-var getTagName = makeRegexMatcher(/^[a-zA-Z][^\f\n\t />]*/);
+var getTagName = makeRegexMatcher(/^[a-zA-Z][^\f\n\t />{]*/);
 var getClangle = makeRegexMatcher(/^>/);
 var getSlash = makeRegexMatcher(/^\//);
 var getAttributeName = makeRegexMatcher(/^[^>/\u0000"'<=\f\n\t ][^\f\n\t /=>"'<\u0000]*/);
@@ -340,7 +341,6 @@ getTagToken = function (scanner) {
   var tag = { t: 'Tag' };
 
   // now looking at the character after `<`, which is not a `!`
-  var isEndTag = false;
   if (scanner.peek() === '/') {
     tag.isEnd = true;
     scanner.pos++;
@@ -351,18 +351,28 @@ getTagToken = function (scanner) {
     scanner.fatal("Expected tag name after `<`");
   tag.n = asciiLowerCase(tagName);
 
+  if (scanner.peek() === '/' && tag.isEnd)
+    scanner.fatal("End tag can't have trailing slash");
   if (handleEndOfTag(scanner, tag))
     return tag;
 
   if (scanner.isEOF())
     scanner.fatal("Unclosed `<`");
 
-  // ok, we must be looking at a space of some sort!
+  if (! HTML_SPACE.test(scanner.peek()))
+    // e.g. `<a{{b}}>`
+    scanner.fatal("Expected space after tag name");
+
   // we're now in "Before attribute name state" of the tokenizer
   skipSpaces(scanner);
 
+  if (scanner.peek() === '/' && tag.isEnd)
+    scanner.fatal("End tag can't have trailing slash");
   if (handleEndOfTag(scanner, tag))
     return tag;
+
+  if (tag.isEnd)
+    scanner.fatal("End tag can't have attributes");
 
   tag.attrs = {};
 

@@ -250,8 +250,8 @@ Tinytest.add("html - tokenize", function (test) {
   test.equal(tokenize('<a b=/>'),
              [{t: 'Tag', n: 'a', attrs: { b: [{t: 'Chars', v: '/'}] }}]);
 
-  test.equal(tokenize('</a b="c" d=e f=\'g\' h \t>'),
-             [{t: 'Tag', n: 'a', isEnd: true,
+  test.equal(tokenize('<a b="c" d=e f=\'g\' h \t>'),
+             [{t: 'Tag', n: 'a',
                attrs: { b: [{t: 'Chars', v: 'c'}],
                         d: [{t: 'Chars', v: 'e'}],
                         f: [{t: 'Chars', v: 'g'}],
@@ -268,8 +268,8 @@ Tinytest.add("html - tokenize", function (test) {
   fatal('<a b=c`>');
   fatal('<a b=c<>');
 
-  test.equal(tokenize('</a# b0="c@" d1=e2 f#=\'g  \' h \t>'),
-             [{t: 'Tag', n: 'a#', isEnd: true,
+  test.equal(tokenize('<a# b0="c@" d1=e2 f#=\'g  \' h \t>'),
+             [{t: 'Tag', n: 'a#',
                attrs: { b0: [{t: 'Chars', v: 'c@'}],
                         d1: [{t: 'Chars', v: 'e2'}],
                         'f#': [{t: 'Chars', v: 'g  '}],
@@ -319,4 +319,10 @@ Tinytest.add("html - tokenize", function (test) {
 
   fatal('<!');
   fatal('<!x>');
+
+  fatal('<a{{b}}>');
+  fatal('<{{a}}>');
+  fatal('</a b=c>'); // end tag can't have attributes
+  fatal('</a/>'); // end tag can't be self-closing
+  fatal('</a  />');
 });

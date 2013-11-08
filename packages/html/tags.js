@@ -90,6 +90,14 @@ var checkComment = function (comment) {
     throw new Error("Comment should have exactly one content item, a simple string");
 };
 
+// checks that a pseudoDOM node with tagName "Comment" is well-formed.
+var checkEmitCode = function (node) {
+  if (node.attrs)
+    throw new Error("EmitCode can't have attributes");
+  if (node.length !== 1 || (typeof node[0] !== 'string'))
+    throw new Error("EmitCode should have exactly one content item, a simple string");
+};
+
 typeOf = function (node) {
   if (node && (typeof node === 'object') &&
       (typeof node.splice === 'function')) {
@@ -102,6 +110,7 @@ typeOf = function (node) {
         checkComment(node);
         return 'comment';
       } else if (node.tagName === 'EmitCode') {
+        checkEmitCode(node);
         return 'emitcode';
       } else {
         return 'tag';

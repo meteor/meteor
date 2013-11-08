@@ -146,18 +146,6 @@ getContent = function (scanner) {
     return items;
 };
 
-// Takes a token with `{ t: 'Tag', isEnd: true }` and makes sure it
-// doesn't have weird stuff like attributes.
-var checkEndTag = function (token, scanner) {
-  if (token.isSelfClosing)
-    scanner.fatal("End tag can't have trailing slash");
-
-  // token has an `attrs` property but there shouldn't be any
-  // attributes in it.
-  for (var k in token.attrs)
-    scanner.fatal("End tag can't have attributes");
-};
-
 // Input: A token like `{ t: 'CharRef', v: '&amp;', cp: [38] }`.
 //
 // Output: A tag like `HTML.CharRef({ html: '&amp;', str: '&' })`.

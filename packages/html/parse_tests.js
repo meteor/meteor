@@ -11,7 +11,7 @@ var A = HTML.Tag.A
 var DIV = HTML.Tag.DIV;
 var P = HTML.Tag.P;
 
-Tinytest.add("html - parse content", function (test) {
+Tinytest.add("html - parser getContent", function (test) {
 
   var succeed = function (input, expected) {
     var endPos = input.indexOf('^^^');
@@ -92,7 +92,11 @@ Tinytest.add("html - parse content", function (test) {
   // XXX support implied end tags in cases allowed by the spec
   fatal('<p>');
 
+  fatal('<a>Foo</a/>');
+  fatal('<a>Foo</a b=c>');
+});
 
+Tinytest.add("html - parseFragment", function (test) {
   test.equal(UI.toCode(HTML.parseFragment("<div><p id=foo>Hello</p></div>")),
              UI.toCode(DIV(P({id:'foo'}, 'Hello'))));
 
