@@ -153,6 +153,16 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
     if (/^[\.\[]/.test(str) && tokType !== 'NUMBER')
       return ['PATH', scanPath()];
 
+    if (tokType === 'PUNCTUATION' && text === '-') {
+      // unary minus
+      advance(text.length);
+      var numberTok = scanToken();
+      if (numberTok.type() !== 'NUMBER')
+        expected('identifier, number, string, boolean, or null');
+      advance(numberTok.text().length);
+      return ['NUMBER', -Number(numberTok.text())];
+    }
+
     if (tokType === 'BOOLEAN') {
       advance(text.length);
       return ['BOOLEAN', tok.text() === 'true'];
