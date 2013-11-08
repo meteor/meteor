@@ -16,9 +16,6 @@ WebApp = {};
 WebAppInternals = {};
 
 
-var makeAppNamePathPrefix = function (appName) {
-  return encodeURIComponent(appName).replace(/\./g, '_');
-};
 // Keepalives so that when the outer server dies unceremoniously and
 // doesn't kill us, we quit ourselves. A little gross, but better than
 // pidfiles.
@@ -472,26 +469,19 @@ var runWebAppServer = function () {
           // TODO: We got rid of the place where this checks the app's
           // configuration, because this wants to be configured for some things
           // on a per-job basis.  Discuss w/ teammates.
-          proxyBinding = AppConfig.configureService(proxyServiceName, function (proxyService) {
-            if (proxyService.providers.proxy) {
-              var proxyConf;
-              if (process.env.ADMIN_APP) {
-                proxyConf = {
-                  securePort: 44333,
-                  insecurePort: 9414,
-                  bindHost: "localhost",
-                  bindPathPrefix: "/" + makeAppNamePathPrefix(process.env.GALAXY_APP)
-                };
-              } else {
-                proxyConf = configuration.proxy;
+          proxyBinding = AppConfig.configureService(
+            "proxy",
+            function (proxyService) {
+              if (proxyService.providers.proxy) {
+                var proxyConf = configuration.proxy;
+                Log("Attempting to bind to proxy at " +
+                    proxyService.providers.proxy);
+                WebAppInternals.bindToProxy(_.extend({
+                  proxyEndpoint: proxyService.providers.proxy
+                }, proxyConf));
               }
-              Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
-              console.log(proxyConf);
-              WebAppInternals.bindToProxy(_.extend({
-                proxyEndpoint: proxyService.providers.proxy
-              }, proxyConf), proxyServiceName);
             }
-          });
+          );
         }
       });
 
@@ -512,7 +502,7 @@ var runWebAppServer = function () {
 
 
 var proxy;
-WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
+WebAppInternals.bindToProxy = function (proxyConfig) {
   var securePort = proxyConfig.securePort || 4433;
   var insecurePort = proxyConfig.insecurePort || 8080;
   var bindPathPrefix = proxyConfig.bindPathPrefix || "";
@@ -550,7 +540,7 @@ WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
   } else {
     proxy = Package["follower-livedata"].Follower.connect(
       proxyConfig.proxyEndpoint, {
-        group: proxyServiceName
+        group: "proxy"
       }
     );
   }
@@ -588,7 +578,8 @@ WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
       host: host,
       port: port,
       pathPrefix: bindPathPrefix + '/websocket'
-    }
+    },
+    requiresAuth: proxyConfig.requiresAuth
   }, bindingDoneCallback("ddp"));
   proxy.call('bindHttp', {
     pid: pid,
@@ -601,7 +592,8 @@ WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
       host: host,
       port: port,
       pathPrefix: bindPathPrefix
-    }
+    },
+    requiresAuth: proxyConfig.requiresAuth
   }, bindingDoneCallback("http"));
   if (proxyConfig.securePort !== null) {
     proxy.call('bindHttp', {
@@ -616,7 +608,8 @@ WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
         host: host,
         port: port,
         pathPrefix: bindPathPrefix
-      }
+      },
+      requiresAuth: proxyConfig.requiresAuth
     }, bindingDoneCallback("https"));
   }
 };
