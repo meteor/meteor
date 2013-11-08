@@ -13,3 +13,10 @@ Package.on_use(function (api) {
   api.export(['CleanCSSProcess', 'UglifyJSMinify']);
   api.add_files('minifiers.js', 'server');
 });
+
+Package.on_test(function (api) {
+  api.use('tinytest');
+  api.use('minifiers');
+
+  api.add_files(['beautify_tests.js'], 'server');
+});
