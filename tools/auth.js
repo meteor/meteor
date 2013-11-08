@@ -120,6 +120,14 @@ var tryRevokeOldTokens = function (options) {
       domainsWithRevokedTokens.push(domain);
   });
 
+  var logoutFailWarning = function () {
+    if (! warned) {
+      // This isn't ideal but is probably better that saying nothing at all
+      process.stderr.write("warning: couldn't confirm logout with server\n");
+      warned = true;
+    }
+  };
+
   _.each(domainsWithRevokedTokens, function (domain) {
     var data = readSession();
     var session = data.sessions[domain] || {};
@@ -132,7 +140,12 @@ var tryRevokeOldTokens = function (options) {
       url = ACCOUNTS_URL + "/logoutById";
     } else {
       var oauthInfo = fetchGalaxyOAuthInfo(domain, options.timeout);
-      url = oauthInfo.revokeUri;
+      if (oauthInfo) {
+        url = oauthInfo.revokeUri;
+      } else {
+        logoutFailWarning();
+        return;
+      }
     }
 
     try {
@@ -155,11 +168,7 @@ var tryRevokeOldTokens = function (options) {
       delete session.pendingRevoke;
       writeSession(data);
     } else {
-      if (! warned) {
-        // This isn't ideal but is probably better that saying nothing at all
-        process.stderr.write("warning: couldn't confirm logout with server\n");
-        warned = true;
-      }
+      logoutFailWarning();
     }
   });
 };
