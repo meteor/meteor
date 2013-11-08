@@ -10,6 +10,8 @@ if (Meteor.isServer) {
 //   reloadOnUpdate: should we try to reload when the server says
 //                      there's new code available?
 //   reloadWithOutstanding: is it OK to reload if there are outstanding methods?
+//   headers: extra headers to send on the websockets connection, for
+//     server-to-server DDP only
 var Connection = function (url, options) {
   var self = this;
   options = _.extend({
@@ -32,7 +34,9 @@ var Connection = function (url, options) {
   if (typeof url === "object") {
     self._stream = url;
   } else {
-    self._stream = new LivedataTest.ClientStream(url);
+    self._stream = new LivedataTest.ClientStream(url, {
+      headers: options.headers
+    });
   }
 
   self._lastSessionId = null;
@@ -1392,9 +1396,18 @@ LivedataTest.Connection = Connection;
 //     "/",
 //     "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"
 //
-DDP.connect = function (url, _reloadOnUpdate) {
+DDP.connect = function (url, _reloadOnUpdate, _headers) {
+  if (typeof _reloadOnUpdate === "object" && _headers === undefined) {
+    _headers = _reloadOnUpdate;
+    _reloadOnUpdate = false;
+  }
   var ret = new Connection(
-    url, {reloadOnUpdate: _reloadOnUpdate});
+    url,
+    {
+      reloadOnUpdate: _reloadOnUpdate,
+      headers: _headers
+    }
+  );
   allConnections.push(ret); // hack. see below.
   return ret;
 };

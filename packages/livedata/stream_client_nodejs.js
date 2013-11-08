@@ -9,7 +9,10 @@
 // We don't do any heartbeating. (The logic that did this in sockjs was removed,
 // because it used a built-in sockjs mechanism. We could do it with WebSocket
 // ping frames or with DDP-level messages.)
-LivedataTest.ClientStream = function (endpoint) {
+//
+// Options:
+//   headers: an object with http headers to use on the websockets connection.
+LivedataTest.ClientStream = function (endpoint, options) {
   var self = this;
 
   // WebSocket-Node https://github.com/Worlize/WebSocket-Node
@@ -30,6 +33,9 @@ LivedataTest.ClientStream = function (endpoint) {
   self.client = new (Npm.require('websocket').client)();
   self.endpoint = endpoint;
   self.currentConnection = null;
+
+  options = options || {};
+  self.headers = options.headers || {};
 
   self.client.on('connect', function (connection) {
     return self._onConnect(connection);
@@ -171,7 +177,10 @@ _.extend(LivedataTest.ClientStream.prototype, {
     // a protocol and the server doesn't send one back (and sockjs
     // doesn't). also, related: I guess we have to accept that
     // 'stream' is ddp-specific
-    self.client.connect(toWebsocketUrl(self.endpoint));
+    self.client.connect(toWebsocketUrl(self.endpoint),
+                        undefined, // protocols
+                        undefined, // origin
+                        self.headers);
 
     if (self.connectionTimer)
       clearTimeout(self.connectionTimer);
