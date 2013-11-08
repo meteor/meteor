@@ -144,6 +144,8 @@ Fiber(function () {
   };
 
   var setGalaxyContext = function (deployEndpoint, context) {
+    if (! deployEndpoint)
+      return;
     var galaxyContext = {};
     var parsedEndpoint = url.parse(deployEndpoint);
     var authToken = auth.getSessionToken(parsedEndpoint.hostname);
