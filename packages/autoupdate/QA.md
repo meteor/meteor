@@ -7,6 +7,22 @@ change to the leaderboard.html file, see the client reload, and see
 that the name is still selected.
 
 
+## AUTOUPDATE_VERSION
+
+Set the `AUTOUPDATE_VERSION` environment variable when running the
+application:
+
+    $ AUTOUPDATE_VERSION=abc meteor
+
+Now when you make an HTML change, it won't appear in the client
+automatically.  (Note the leader list flickers when the server
+subscription restarts, but that's not a window reload).
+
+Conversely, you can force a client reload (even without making any
+client code changes) by restarting the server with a new value for
+`AUTOUPDATE_VERSION`.
+
+
 ## Test with the appcache
 
 Add the appcache package:
@@ -49,17 +65,18 @@ Add to leaderboard.js:
 
     Template.leaderboard.available = AutoUpdate.newClientAvailable;
 
-And add {{available}} to the leaderboard template in eaderboard.html.
+And add `{{available}}` to the leaderboard template in
+leaderboard.html.
 
 Initially you'll see `false`, and then when you make a change to the
 leaderboard HTML you'll see the variable change to `true`.  (You won't
 see the new HTML on the client because you disabled reload).
 
 Amusingly, you can undo the addition you made to the HTML and the "new
-client available" variable will go back to `false` (you now don't now
-have client code on the server different than what's running in the
-browser), because by default the client version is based on a hash of
-the client files.
+client available" variable will go back to `false` (you now don't have
+client code available on the server different than what's running in
+the browser), because by default the client version is based on a hash
+of the client files.
 
 
 ## DDP Version Negotiation Failure
