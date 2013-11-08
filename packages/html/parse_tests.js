@@ -7,6 +7,7 @@ var Comment = HTML.Comment;
 var BR = HTML.Tag.BR;
 var HR = HTML.Tag.HR;
 var INPUT = HTML.Tag.INPUT;
+var A = HTML.Tag.A;
 
 Tinytest.add("html - parse content", function (test) {
 
@@ -62,4 +63,30 @@ Tinytest.add("html - parse content", function (test) {
   succeed('<br x=&&&>', BR({x: '&&&'}));
   succeed('<br><br><br>', [BR(), BR(), BR()]);
   succeed('aaa<br>\nbbb<br>\nccc<br>', ['aaa', BR(), '\nbbb', BR(), '\nccc', BR()]);
+
+  succeed('<a></a>', A());
+  fatal('<');
+  fatal('<a');
+  fatal('<a>');
+  fatal('<a><');
+  fatal('<a></');
+  fatal('<a></a');
+
+  succeed('<a href="http://www.apple.com/">Apple</a>',
+          A({href: "http://www.apple.com/"}, 'Apple'));
+
+  (function () {
+    var A = HTML.getTag('A');
+    var B = HTML.getTag('B');
+    var C = HTML.getTag('C');
+    var D = HTML.getTag('D');
+
+    succeed('<a>1<b>2<c>3<d>4</d>5</c>6</b>7</a>8',
+            [A('1', B('2', C('3', D('4'), '5'), '6'), '7'), '8']);
+  })();
+
+  fatal('<b>hello <i>there</b> world</i>');
+
+  // XXX support implied end tags in cases allowed by the spec
+  fatal('<p>');
 });

@@ -97,10 +97,29 @@ getContent = function (scanner) {
       // may be null
       var attrs = parseAttrs(token.attrs);
 
+      var tagFunc = HTML.getTag(tagName);
       if (isVoid) {
-        items.push(HTML.getTag(tagName)(attrs));
+        items.push(attrs ? tagFunc(attrs) : tagFunc());
       } else {
-        throw new Error("XXX");
+        var content = getContent(scanner);
+
+        if (scanner.rest().slice(0, 2) !== '</')
+          scanner.fatal('Expected "' + tagName + '" end tag');
+
+        var endTag = getTagToken(scanner);
+
+        if (! (endTag.t === 'Tag' && endTag.isEnd))
+          // we've already seen `</` so this shouldn't be possible
+          // without erroring.
+          scanner.fatal("Assertion failed: expected end tag");
+
+        // XXX support implied end tags in cases allowed by the spec
+        if (endTag.n !== tagName)
+          scanner.fatal('Expected "' + tagName + '" end tag, found "' + endTag.n + '"');
+
+        items.push(HTML.getTag(tagName).apply(
+          null, (attrs ? [attrs] : []).concat(
+            HTML.typeOf(content) === 'array' ? content : [content])));
       }
     } else {
       scanner.fatal("Unknown token type: " + token.t);
@@ -113,6 +132,18 @@ getContent = function (scanner) {
     return items[0];
   else
     return items;
+};
+
+// Takes a token with `{ t: 'Tag', isEnd: true }` and makes sure it
+// doesn't have weird stuff like attributes.
+var checkEndTag = function (token, scanner) {
+  if (token.isSelfClosing)
+    scanner.fatal("End tag can't have trailing slash");
+
+  // token has an `attrs` property but there shouldn't be any
+  // attributes in it.
+  for (var k in token.attrs)
+    scanner.fatal("End tag can't have attributes");
 };
 
 // Input: A token like `{ t: 'CharRef', v: '&amp;', cp: [38] }`.

@@ -66,3 +66,17 @@ getTag = function (name) {
   name = name.toUpperCase();
   return Tag[name] || defineTag(name);
 };
+
+typeOf = function (node) {
+  // XXX TODO
+  if (node && (typeof node === 'object') &&
+      (typeof node.splice === 'function')) {
+    // Tag or array
+    if (node.tagName) {
+      return '';
+    } else {
+      return 'array';
+    }
+  }
+  return '';
+};

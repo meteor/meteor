@@ -20,6 +20,8 @@ HTML = {
   isVoidElement: isVoidElement,
   isKnownElement: isKnownElement,
 
+  typeOf: typeOf,
+
   _$: {
     // stuff exposed for testing
     Scanner: Scanner,
