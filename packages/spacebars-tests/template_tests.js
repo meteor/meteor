@@ -76,7 +76,7 @@ Tinytest.add("spacebars - templates - dynamic attrs", function (test) {
   test.equal(span.innerHTML, 'hi');
   test.equal(span.getAttribute('n'), "1");
   test.equal(span.getAttribute('x'), 'y');
-  test.isTrue(span.hasAttribute('selected'));
+  test.isTrue(span.selected);
 
   R1.set('zanzibar="where the heart is"');
   R2.set('');
@@ -84,7 +84,7 @@ Tinytest.add("spacebars - templates - dynamic attrs", function (test) {
   Deps.flush();
   test.equal(stripComments(span.innerHTML), 'hi');
   test.isFalse(span.hasAttribute('n'));
-  test.isFalse(span.hasAttribute('selected'));
+  test.isFalse(span.selected);
   test.equal(span.getAttribute('zanzibar'), 'where the heart is');
 });
 
@@ -473,21 +473,21 @@ Tinytest.add("spacebars - templates - select tags", function (test) {
   tmpl.selectedAttr = function () { return this.selected ? "selected" : ""; };
 
   var div = renderToDiv(tmpl);
-  // Find <select> element. Not `div.firstChild` since that's the
-  // DomRange marker (a text or comment node)
-  var selectEl = div.firstChild.nextSibling;
+  var selectEl = $(div).find('select')[0];
 
   // returns canonicalized contents of `div` in the form eg
-  // ["<select>", "</select>"].
+  // ["<select>", "</select>"]. strip out selected attributes -- we
+  // verify correctness by observing the `selected` property
   var divContent = function () {
-    var lines = trim(canonicalizeHtml(div.innerHTML))
-      .replace(/selected="selected"/g, 'selected=""')
-      .replace(/\>\s*\</g, '>\n<')
-      .split('\n');
+    var lines = trim(canonicalizeHtml(
+      div.innerHTML.replace(/selected="[^"]*"/g, '').replace(/selected/g, '')))
+          .replace(/\>\s*\</g, '>\n<')
+          .split('\n');
     return trimmedLines = _.filter(
       _.map(lines, trim),
       function (x) { return x !== ""; });
   };
+
   test.equal(divContent(), ["<select>", "</select>"]);
 
   var optgroup1 = optgroups.insert({label: "one"});
@@ -507,13 +507,15 @@ Tinytest.add("spacebars - templates - select tags", function (test) {
     '<select>',
     '<optgroup label="one">',
     '<option value="value1">label1</option>',
-    '<option selected="" value="value2">label2</option>',
+    '<option value="value2">label2</option>',
     '</optgroup>',
     '<optgroup label="two">',
     '</optgroup>',
     '</select>'
   ]);
   test.equal(selectEl.value, "value2");
+  test.equal($(selectEl).find('option')[0].selected, false);
+  test.equal($(selectEl).find('option')[1].selected, true);
 
   // swap selection
   options.update({value: "value1"}, {$set: {selected: true}});
@@ -523,7 +525,7 @@ Tinytest.add("spacebars - templates - select tags", function (test) {
   test.equal(divContent(), [
     '<select>',
     '<optgroup label="one">',
-    '<option selected="" value="value1">label1</option>',
+    '<option value="value1">label1</option>',
     '<option value="value2">label2</option>',
     '</optgroup>',
     '<optgroup label="two">',
@@ -531,6 +533,8 @@ Tinytest.add("spacebars - templates - select tags", function (test) {
     '</select>'
   ]);
   test.equal(selectEl.value, "value1");
+  test.equal($(selectEl).find('option')[0].selected, true);
+  test.equal($(selectEl).find('option')[1].selected, false);
 
   // change value and label
   options.update({value: "value1"}, {$set: {value: "value1.0"}});
@@ -540,7 +544,7 @@ Tinytest.add("spacebars - templates - select tags", function (test) {
   test.equal(divContent(), [
     '<select>',
     '<optgroup label="one">',
-    '<option selected="" value="value1.0">label1</option>',
+    '<option value="value1.0">label1</option>',
     '<option value="value2">label2.0</option>',
     '</optgroup>',
     '<optgroup label="two">',
@@ -548,7 +552,27 @@ Tinytest.add("spacebars - templates - select tags", function (test) {
     '</select>'
   ]);
   test.equal(selectEl.value, "value1.0");
+  test.equal($(selectEl).find('option')[0].selected, true);
+  test.equal($(selectEl).find('option')[1].selected, false);
 
+  // unselect and then select both options. normally, the second is
+  // selected (since it got selected later). then switch to <select
+  // multiple="">. both should be selected.
+  options.update({}, {$set: {selected: false}}, {multi: true});
+  Deps.flush();
+  options.update({}, {$set: {selected: true}}, {multi: true});
+  Deps.flush();
+  test.equal($(selectEl).find('option')[0].selected, false);
+  test.equal($(selectEl).find('option')[1].selected, true);
+
+  selectEl.multiple = true; // allow multiple selection
+  options.update({}, {$set: {selected: false}}, {multi: true});
+  Deps.flush();
+  options.update({}, {$set: {selected: true}}, {multi: true});
+  window.avital = true;
+  Deps.flush();
+  test.equal($(selectEl).find('option')[0].selected, true);
+  test.equal($(selectEl).find('option')[1].selected, true);
 });
 
 Tinytest.add('spacebars - templates - {{#with}} falsy; issue #770', function (test) {

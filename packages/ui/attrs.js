@@ -74,7 +74,6 @@ _extend(AttributeManager.prototype, {
 
     // XXX make this be stopped at the right time
     Deps.autorun(function (c) {
-
       // capture dependencies of this line:
       var newDict = self.func();
 
@@ -132,10 +131,19 @@ _extend(AttributeHandler.prototype, {
   },
   update: function (element, oldValue, value) {
     if (value == null) {
-      if (oldValue != null)
-        element.removeAttribute(this.name);
+      if (oldValue != null) {
+        // `setAttribute`/`removeAttribute` don't behave consistently
+        // between browsers for the 'selected' attribute.
+        if (this.name === 'selected')
+          element.selected = false;
+        else
+          element.removeAttribute(this.name);
+      }
     } else {
-      element.setAttribute(this.name, this.stringifyValue(value));
+      if (this.name === 'selected')
+        element.selected = true;
+      else
+        element.setAttribute(this.name, this.stringifyValue(value));
     }
   }
 });
