@@ -787,8 +787,12 @@ _.extend(Connection.prototype, {
   _unsubscribeAll: function () {
     var self = this;
     _.each(_.clone(self._subscriptions), function (sub, id) {
-      self._send({msg: 'unsub', id: id});
-      delete self._subscriptions[id];
+      // Avoid killing the autoupdate subscription so that developers
+      // still get hot code pushes when writing tests.
+      if (sub.name !== 'meteor_autoupdate_clientVersions') {
+        self._send({msg: 'unsub', id: id});
+        delete self._subscriptions[id];
+      }
     });
   },
 
