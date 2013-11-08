@@ -298,79 +298,74 @@ var materialize = function (node, parent, before, parentComponent) {
       inst.rendered.call(inst.templateInstance);
     }
 
-  } else if (node && (typeof node === 'object') &&
-      (typeof node.splice === 'function')) {
-    // Tag or array
-    if (node.tagName) {
-      if (node.tagName === 'CharRef') {
-        checkCharRef(node);
+  } else {
+    var type = HTML.typeOf(node);
+    if (type === 'charref') {
         insert(document.createTextNode(node.attrs.str), parent, before);
-      } else if (node.tagName === 'Comment') {
-        checkComment(node);
-        insert(document.createComment(sanitizeComment(node[0])), parent, before);
-      } else if (node.tagName === 'EmitCode') {
-        throw new Error("EmitCode node can only be processed by toCode");
-      } else {
-        var elem = document.createElement(node.tagName);
-        if (node.attrs) {
-          var attrs = node.attrs;
-          if (typeof attrs === 'function') {
-            var attrUpdater = Deps.autorun(function (c) {
-              if (! c.handlers)
-                c.handlers = {};
+    } else if (type === 'comment') {
+      insert(document.createComment(sanitizeComment(node[0])), parent, before);
+    } else if (type === 'emitcode') {
+      throw new Error("EmitCode node can only be processed by toCode");
+    } else if (type === 'tag') {
+      var elem = document.createElement(node.tagName);
+      if (node.attrs) {
+        var attrs = node.attrs;
+        if (typeof attrs === 'function') {
+          var attrUpdater = Deps.autorun(function (c) {
+            if (! c.handlers)
+              c.handlers = {};
 
-              try {
-                updateAttributes(elem, attrs(), c.handlers);
-              } catch (e) {
-                reportUIException(e);
-              }
-            });
-            UI.DomBackend2.onRemoveElement(elem, function () {
-              attrUpdater.stop();
-            });
-          } else {
-            updateAttributes(elem, attrs);
-          }
+            try {
+              updateAttributes(elem, attrs(), c.handlers);
+            } catch (e) {
+              reportUIException(e);
+            }
+          });
+          UI.DomBackend2.onRemoveElement(elem, function () {
+            attrUpdater.stop();
+          });
+        } else {
+          updateAttributes(elem, attrs);
         }
-        _.each(node, function (child) {
-          materialize(child, elem, null, parentComponent);
-        });
-        insert(elem, parent, before);
       }
-    } else {
-      // array
+      _.each(node, function (child) {
+        materialize(child, elem, null, parentComponent);
+      });
+      insert(elem, parent, before);
+    } else if (type === 'array') {
       _.each(node, function (child) {
         materialize(child, parent, before, parentComponent);
       });
-    }
-  } else if (typeof node === 'string') {
-    insert(document.createTextNode(node), parent, before);
-  } else if (typeof node === 'function') {
-    var range = new UI.DomRange;
-    var rangeUpdater = Deps.autorun(function (c) {
-      if (! c.firstRun)
-        range.removeAll();
+    } else if (type === 'string') {
+      insert(document.createTextNode(node), parent, before);
+    } else if (type === 'function') {
+      var range = new UI.DomRange;
+      var rangeUpdater = Deps.autorun(function (c) {
+        if (! c.firstRun)
+          range.removeAll();
 
-      var content = null;
-      try {
-        content = node();
-      } catch (e) {
-        reportUIException(e);
-      }
+        var content = null;
+        try {
+          content = node();
+        } catch (e) {
+          reportUIException(e);
+        }
 
-      Deps.nonreactive(function () {
-        materialize(content, range, null, parentComponent);
+        Deps.nonreactive(function () {
+          materialize(content, range, null, parentComponent);
+        });
       });
-    });
-    range.removed = function () {
-      rangeUpdater.stop();
-    };
-    insert(range, parent, before);
-  } else if (node == null) {
-    // null or undefined.
-    // do nothing.
-  } else {
-    throw new Error("Unexpected item in HTML tree: " + node);
+      range.removed = function () {
+        rangeUpdater.stop();
+      };
+      insert(range, parent, before);
+    } else if (type === 'null') {
+      // null or undefined.
+      // do nothing.
+    } else {
+      // can't get here
+      throw new Error("Unexpected type: " + type);
+    }
   }
 };
 
@@ -460,29 +455,6 @@ var attributeValueToCode = function (v) {
   }
 };
 
-// checks that a pseudoDOM node with tagName "CharRef" is well-formed.
-var checkCharRef = function (charRef) {
-  if (typeof charRef.attrs === 'function')
-    throw new Error("Can't have a reactive character reference (CharRef)");
-
-  var attrs = charRef.attrs;
-  if ((! attrs) || (typeof attrs.html !== 'string') ||
-      (typeof attrs.str !== 'string') || (! attrs.html) || (! attrs.str))
-    throw new Error("CharRef should have simple string attributes " +
-                    "`html` and `str`.");
-
-  if (charRef.length)
-    throw new Error("CharRef should have no content");
-};
-
-// checks that a pseudoDOM node with tagName "Comment" is well-formed.
-var checkComment = function (comment) {
-  if (comment.attrs)
-    throw new Error("Comment can't have attributes");
-  if (comment.length !== 1 || (typeof comment[0] !== 'string'))
-    throw new Error("Comment should have exactly one content item, a simple string");
-};
-
 // The HTML spec and the DOM API (in particular `setAttribute`) have different
 // definitions of what characters are legal in an attribute.  The HTML
 // parser is extremely permissive (allowing, for example, `<a %=%>`), while
@@ -519,67 +491,61 @@ var toHTML = function (node, parentComponent) {
 
     result += toHTML(content, inst);
 
-  } else if (node && (typeof node === 'object') &&
-      (typeof node.splice === 'function')) {
-    // Tag or array
-    if (node.tagName) {
-      // Tag
-      if (node.tagName === 'CharRef') {
-        checkCharRef(node);
-        result += node.attrs.html;
-      } else if (node.tagName === 'Comment') {
-        checkComment(node);
-        result += '<!--' + sanitizeComment(node[0]) + '-->';
-      } else if (node.tagName === 'EmitCode') {
-        throw new Error("EmitCode node can only be processed by toCode");
-      } else {
-        result += '<' + HTML.properCaseTagName(node.tagName);
-        if (node.attrs) {
-          var attrs = node.attrs;
-          if (typeof attrs === 'function')
-            attrs = attrs();
+  } else {
+    var type = HTML.typeOf(node);
+    if (type === 'charref') {
+      result += node.attrs.html;
+    } else if (type === 'comment') {
+      result += '<!--' + sanitizeComment(node[0]) + '-->';
+    } else if (type === 'emitcode') {
+      throw new Error("EmitCode node can only be processed by toCode");
+    } else if (type === 'tag') {
+      result += '<' + HTML.properCaseTagName(node.tagName);
+      if (node.attrs) {
+        var attrs = node.attrs;
+        if (typeof attrs === 'function')
+          attrs = attrs();
 
-          _.each(attrs, function (v, k) {
-            checkAttributeName(k);
-            k = HTML.properCaseAttributeName(k);
-            v = attributeValueToQuotedContents(v);
-            if (v !== null)
-              result += ' ' + k + '="' + v + '"';
-          });
-        }
-        result += '>';
-        _.each(node, function (child) {
-          result += toHTML(child, parentComponent);
+        _.each(attrs, function (v, k) {
+          checkAttributeName(k);
+          k = HTML.properCaseAttributeName(k);
+          v = attributeValueToQuotedContents(v);
+          if (v !== null)
+            result += ' ' + k + '="' + v + '"';
         });
-        if (node.length || ! HTML.isVoidElement(node.tagName)) {
-          // "Void" elements like BR are the only ones that don't get a close
-          // tag in HTML5.  They shouldn't have contents, either, so we could
-          // throw an error if there were contents.
-          result += '</' + HTML.properCaseTagName(node.tagName) + '>';
-        }
       }
-    } else {
-      // array
+      result += '>';
       _.each(node, function (child) {
         result += toHTML(child, parentComponent);
       });
-    }
-  } else if (typeof node === 'string') {
-    result += node.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-  } else if (typeof node === 'function') {
-    var content = null;
-    try {
-      content = node();
-    } catch (e) {
-      reportUIException(e);
-    }
+      if (node.length || ! HTML.isVoidElement(node.tagName)) {
+        // "Void" elements like BR are the only ones that don't get a close
+        // tag in HTML5.  They shouldn't have contents, either, so we could
+        // throw an error if there were contents.
+        result += '</' + HTML.properCaseTagName(node.tagName) + '>';
+      }
+    } else if (type === 'array') {
+      _.each(node, function (child) {
+        result += toHTML(child, parentComponent);
+      });
+    } else if (type === 'string') {
+      result += node.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    } else if (type === 'function') {
+      var content = null;
+      try {
+        content = node();
+      } catch (e) {
+        reportUIException(e);
+      }
 
-    result += toHTML(content, parentComponent);
-  } else if (node == null) {
-    // null or undefined.
-    // do nothing.
-  } else {
-    throw new Error("Unexpected item in HTML tree: " + node);
+      result += toHTML(content, parentComponent);
+    } else if (type === 'null') {
+      // null or undefined.
+      // do nothing.
+    } else {
+      // can't get here
+      throw new Error("Unexpected type: " + type);
+    }
   }
 
   return result;
@@ -616,58 +582,47 @@ var toCode = function (node) {
 
   if (UI.isComponent(node)) {
     throw new Error("Can't convert Component object to code string.  Use EmitCode instead.");
-  } else if (node && (typeof node === 'object') &&
-      (typeof node.splice === 'function')) {
-    // Tag or array
-    if (node.tagName) {
-      // Tag
-      if (node.tagName === 'EmitCode') {
-        result += node[0];
-      } else {
-        var isNonTag = false;
-        if (node.tagName === 'Comment') {
-          checkComment(node);
-          isNonTag = true;
-        } else if (node.tagName === 'CharRef') {
-          checkCharRef(node);
-          isNonTag = true;
-        }
+  } else {
+    var type = HTML.typeOf(node);
+    if (type === 'emitcode') {
+      result += node[0];
+    } else if (type === 'comment' || type === 'charref' || type === 'tag') {
 
-        result += 'HTML.' + (isNonTag ? '' : 'Tag.') + node.tagName + '(';
-        var argStrs = [];
-        if (node.attrs) {
-          var kvStrs = [];
-          _.each(node.attrs, function (v, k) {
-            checkAttributeName(k);
-            v = attributeValueToCode(v);
-            if (v !== null)
-              kvStrs.push(toObjectLiteralKey(k) + ': ' + v);
-          });
-          argStrs.push('{' + kvStrs.join(', ') + '}');
-        }
+      var isNonTag = (type !== 'tag');
 
-        _.each(node, function (child) {
-          argStrs.push(toCode(child));
+      result += 'HTML.' + (isNonTag ? '' : 'Tag.') + node.tagName + '(';
+      var argStrs = [];
+      if (node.attrs) {
+        var kvStrs = [];
+        _.each(node.attrs, function (v, k) {
+          checkAttributeName(k);
+          v = attributeValueToCode(v);
+          if (v !== null)
+            kvStrs.push(toObjectLiteralKey(k) + ': ' + v);
         });
-
-        result += argStrs.join(', ') + ')';
+        argStrs.push('{' + kvStrs.join(', ') + '}');
       }
-    } else {
-      // array
+
+      _.each(node, function (child) {
+        argStrs.push(toCode(child));
+      });
+
+      result += argStrs.join(', ') + ')';
+    } else if (type === 'array') {
       result += '[';
       result += _.map(node, toCode).join(', ');
       result += ']';
-      return result;
+    } else if (type === 'string') {
+      result += toJSLiteral(node);
+    } else if (type === 'function') {
+      throw new Error("Can't convert function object to code string.  Use EmitCode instead.");
+    } else if (type === 'null') {
+      // null or undefined.
+      // do nothing.
+    } else {
+      // can't get here
+      throw new Error("Unexpected type: " + type);
     }
-  } else if (typeof node === 'string') {
-    result += toJSLiteral(node);
-  } else if (typeof node === 'function') {
-    throw new Error("Can't convert function object to code string.  Use EmitCode instead.");
-  } else if (node == null) {
-    // null or undefined.
-    // do nothing.
-  } else {
-    throw new Error("Unexpected item in HTML tree: " + node);
   }
 
   return result;

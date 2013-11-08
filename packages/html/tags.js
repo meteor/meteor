@@ -67,16 +67,55 @@ getTag = function (name) {
   return Tag[name] || defineTag(name);
 };
 
+// checks that a pseudoDOM node with tagName "CharRef" is well-formed.
+var checkCharRef = function (charRef) {
+  if (typeof charRef.attrs === 'function')
+    throw new Error("Can't have a reactive character reference (CharRef)");
+
+  var attrs = charRef.attrs;
+  if ((! attrs) || (typeof attrs.html !== 'string') ||
+      (typeof attrs.str !== 'string') || (! attrs.html) || (! attrs.str))
+    throw new Error("CharRef should have simple string attributes " +
+                    "`html` and `str`.");
+
+  if (charRef.length)
+    throw new Error("CharRef should have no content");
+};
+
+// checks that a pseudoDOM node with tagName "Comment" is well-formed.
+var checkComment = function (comment) {
+  if (comment.attrs)
+    throw new Error("Comment can't have attributes");
+  if (comment.length !== 1 || (typeof comment[0] !== 'string'))
+    throw new Error("Comment should have exactly one content item, a simple string");
+};
+
 typeOf = function (node) {
-  // XXX TODO
   if (node && (typeof node === 'object') &&
       (typeof node.splice === 'function')) {
     // Tag or array
     if (node.tagName) {
-      return '';
+      if (node.tagName === 'CharRef') {
+        checkCharRef(node);
+        return 'charref';
+      } else if (node.tagName === 'Comment') {
+        checkComment(node);
+        return 'comment';
+      } else if (node.tagName === 'EmitCode') {
+        return 'emitcode';
+      } else {
+        return 'tag';
+      }
     } else {
       return 'array';
     }
+  } else if (typeof node === 'string') {
+    return 'string';
+  } else if (typeof node === 'function') {
+    return 'function';
+  } else if (node == null) {
+    return 'null';
+  } else {
+    throw new Error("Unexpected item in HTML tree: " + node);
   }
-  return '';
 };
