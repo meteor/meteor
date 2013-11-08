@@ -551,3 +551,10 @@ Tinytest.add("spacebars - templates - select tags", function (test) {
 
 });
 
+Tinytest.add('spacebars - templates - {{#with}} falsy; issue #770', function (test) {
+  Template.test_template_issue770.value1 = function () { return "abc"; };
+  Template.test_template_issue770.value2 = function () { return false; };
+  var div = renderToDiv(Template.test_template_issue770);
+  test.equal(canonicalizeHtml(trimAndRemoveSpaces(div.innerHTML)),
+             "abcxxxabc");
+});
