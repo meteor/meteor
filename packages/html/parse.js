@@ -175,27 +175,34 @@ var parseAttrs = function (attrs) {
       result = {};
 
     var inValue = attrs[k];
-    var outValue = '';
+    var outParts = [];
     for (var i = 0; i < inValue.length; i++) {
       var token = inValue[i];
       if (token.t === 'CharRef') {
-        if (! outValue)
-          outValue = [];
-        else if (typeof outValue === 'string')
-          outValue = [outValue];
-
-        outValue.push(convertCharRef(token));
+        outParts.push(convertCharRef(token));
+      } else if (token.t === 'Special') {
+        outParts.push(HTML.Special(token.v));
       } else if (token.t === 'Chars') {
         var str = token.v;
+        var N = outParts.length;
 
-        if (typeof outValue === 'string')
-          outValue += str;
+        if (N && (typeof outParts[N - 1] === 'string'))
+          outParts[N - 1] += str;
         else
-          outValue.push(str);
+          outParts.push(str);
       }
     }
 
-    result[k] = outValue;
+    if (k === '$specials') {
+      // the `$specials` pseudo-attribute should always get an
+      // array, even if there is only one Special.
+      result[k] = outParts;
+    } else {
+      var outValue = (outParts.length === 0 ? '' :
+                      (outParts.length === 1 ? outParts[0] :
+                       outParts));
+      result[k] = outValue;
+    }
   }
 
   return result;

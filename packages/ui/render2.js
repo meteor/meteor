@@ -383,6 +383,8 @@ var attributeValueToQuotedContents = function (v) {
     return v.replace(/"/g, '&quot;').replace(/&/g, '&amp;');
   } else if (v.tagName === 'CharRef') {
     return v.attrs.html;
+  } else if (v.tagName === 'Special') {
+    throw new Error("Can't convert Special to string");
   } else if (typeof v === 'object' && (typeof v.length === 'number')) {
     // array or tag
     if (v.tagName)
@@ -411,6 +413,8 @@ var attributeValueToString = function (v) {
     return v;
   } else if (v.tagName === 'CharRef') {
     return v.attrs.str;
+  } else if (v.tagName === 'Special') {
+    throw new Error("Can't convert Special to string");
   } else if (typeof v === 'object' && (typeof v.length === 'number')) {
     // array or tag
     if (v.tagName)
@@ -438,7 +442,7 @@ var attributeValueToCode = function (v) {
     return null;
   } else if (typeof v === 'string') {
     return toJSLiteral(v);
-  } else if (v.tagName === 'CharRef') {
+  } else if (v.tagName === 'CharRef' || v.tagName === 'Special') {
     return toCode(v);
   } else if (typeof v === 'object' && (typeof v.length === 'number')) {
     // array or tag

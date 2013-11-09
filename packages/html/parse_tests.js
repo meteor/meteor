@@ -109,7 +109,7 @@ Tinytest.add("html - parseFragment", function (test) {
 Tinytest.add("html - getSpecialTag", function (test) {
 
   // match only a very simple tag like `{{foo}}`
-  var mustache = /^\{\{([a-zA-Z]+)\}\}/;
+  var mustache = /^\{\{([a-zA-Z 0-9]+)\}\}/;
 
   // This implementation of `getSpecialTag` looks for "{{" and if it
   // finds it, it will match the regex above or fail fatally trying.
@@ -126,7 +126,7 @@ Tinytest.add("html - getSpecialTag", function (test) {
 
     scanner.pos += match[0].length;
 
-    return { name: match[1] };
+    return { stuff: match[1] };
   };
 
 
@@ -138,7 +138,12 @@ Tinytest.add("html - getSpecialTag", function (test) {
 
     var scanner = new Scanner(input.replace('^^^', ''));
     scanner.getSpecialTag = getSpecialTag;
-    var result = getContent(scanner);
+    var result;
+    try {
+      result = getContent(scanner);
+    } catch (e) {
+      result = String(e);
+    }
     test.equal(scanner.pos, endPos);
     test.equal(UI.toCode(result), UI.toCode(expected));
   };
@@ -158,16 +163,16 @@ Tinytest.add("html - getSpecialTag", function (test) {
   };
 
 
-  succeed('{{foo}}', Special({name: 'foo'}));
+  succeed('{{foo}}', Special({stuff: 'foo'}));
 
   succeed('<a href=http://www.apple.com/>{{foo}}</a>',
-          A({href: "http://www.apple.com/"}, Special({name: 'foo'})));
+          A({href: "http://www.apple.com/"}, Special({stuff: 'foo'})));
 
   // tags not parsed in comments
   succeed('<!--{{foo}}-->', Comment("{{foo}}"));
   succeed('<!--{{foo-->', Comment("{{foo"));
 
-  succeed('&am{{foo}}p;', ['&am', Special({name: 'foo'}), 'p;']);
+  succeed('&am{{foo}}p;', ['&am', Special({stuff: 'foo'}), 'p;']);
 
   // can't start a mustache and not finish it
   fatal('{{foo');
@@ -182,4 +187,43 @@ Tinytest.add("html - getSpecialTag", function (test) {
   succeed('a{b', 'a{b');
   succeed('<br x={ />', BR({x:'{'}));
   succeed('<br x={foo} />', BR({x:'{foo}'}));
+
+  succeed('<br {{x}}>', BR({$specials: [Special({stuff: 'x'})]}));
+  succeed('<br {{x}} {{y}}>', BR({$specials: [Special({stuff: 'x'}),
+                                              Special({stuff: 'y'})]}));
+  succeed('<br {{x}} y>', BR({$specials: [Special({stuff: 'x'})], y:''}));
+  fatal('<br {{x}}y>');
+  fatal('<br {{x}}=y>');
+  succeed('<br x={{y}} z>', BR({x: Special({stuff: 'y'}), z: ''}));
+  succeed('<br x=y{{z}}w>', BR({x: ['y', Special({stuff: 'z'}), 'w']}));
+  succeed('<br x="y{{z}}w">', BR({x: ['y', Special({stuff: 'z'}), 'w']}));
+  succeed('<br x="y {{z}}{{w}} v">', BR({x: ['y ', Special({stuff: 'z'}),
+                                             Special({stuff: 'w'}), ' v']}));
+  // Slash is parsed as part of unquoted attribute!  This is consistent with
+  // the HTML tokenization spec.  It seems odd for some inputs but is probably
+  // for cases like `<a href=http://foo.com/>` or `<a href=/foo/>`.
+  succeed('<br x={{y}}/>', BR({x: [Special({stuff: 'y'}), '/']}));
+  succeed('<br x={{z}}{{w}}>', BR({x: [Special({stuff: 'z'}),
+                                       Special({stuff: 'w'})]}));
+  fatal('<br x="y"{{z}}>');
+
+  succeed('<br x=&amp;>', BR({x:CharRef({html: '&amp;', str: '&'})}));
+
+
+  // check tokenization of stache tags with spaces
+  succeed('<br {{x 1}}>', BR({$specials: [Special({stuff: 'x 1'})]}));
+  succeed('<br {{x 1}} {{y 2}}>', BR({$specials: [Special({stuff: 'x 1'}),
+                                                  Special({stuff: 'y 2'})]}));
+  succeed('<br {{x 1}} y>', BR({$specials: [Special({stuff: 'x 1'})], y:''}));
+  fatal('<br {{x 1}}y>');
+  fatal('<br {{x 1}}=y>');
+  succeed('<br x={{y 2}} z>', BR({x: Special({stuff: 'y 2'}), z: ''}));
+  succeed('<br x=y{{z 3}}w>', BR({x: ['y', Special({stuff: 'z 3'}), 'w']}));
+  succeed('<br x="y{{z 3}}w">', BR({x: ['y', Special({stuff: 'z 3'}), 'w']}));
+  succeed('<br x="y {{z 3}}{{w 4}} v">', BR({x: ['y ', Special({stuff: 'z 3'}),
+                                                 Special({stuff: 'w 4'}), ' v']}));
+  succeed('<br x={{y 2}}/>', BR({x: [Special({stuff: 'y 2'}), '/']}));
+  succeed('<br x={{z 3}}{{w 4}}>', BR({x: [Special({stuff: 'z 3'}),
+                                           Special({stuff: 'w 4'})]}));
+
 });

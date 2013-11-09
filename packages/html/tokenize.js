@@ -289,6 +289,7 @@ var getQuotedAttributeValue = function (scanner, quote) {
   var charRef;
   while (true) {
     var ch = scanner.peek();
+    var special;
     if (ch === quote) {
       scanner.pos++;
       return tokens;
@@ -298,6 +299,11 @@ var getQuotedAttributeValue = function (scanner, quote) {
       scanner.fatal("Unexpected NULL character in attribute value");
     } else if (ch === '&' && (charRef = getCharacterReference(scanner, true, quote))) {
       tokens.push(charRef);
+      charsTokenToExtend = null;
+    } else if (scanner.getSpecialTag &&
+               (special = scanner.getSpecialTag(scanner,
+                                                TEMPLATE_TAG_POSITION.IN_ATTRIBUTE))) {
+      tokens.push({t: 'Special', v: special});
       charsTokenToExtend = null;
     } else {
       if (! charsTokenToExtend) {
@@ -317,6 +323,7 @@ var getUnquotedAttributeValue = function (scanner) {
   var charRef;
   while (true) {
     var ch = scanner.peek();
+    var special;
     if (HTML_SPACE.test(ch) || ch === '>') {
       return tokens;
     } else if (! ch) {
@@ -325,6 +332,11 @@ var getUnquotedAttributeValue = function (scanner) {
       scanner.fatal("Unexpected character in attribute value");
     } else if (ch === '&' && (charRef = getCharacterReference(scanner, true, '>'))) {
       tokens.push(charRef);
+      charsTokenToExtend = null;
+    } else if (scanner.getSpecialTag &&
+               (special = scanner.getSpecialTag(scanner,
+                                                TEMPLATE_TAG_POSITION.IN_ATTRIBUTE))) {
+      tokens.push({t: 'Special', v: special});
       charsTokenToExtend = null;
     } else {
       if (! charsTokenToExtend) {
@@ -381,61 +393,68 @@ getTagToken = function (scanner) {
   tag.attrs = {};
 
   while (true) {
-    var attributeName = getAttributeName(scanner);
-    if (! attributeName)
-      scanner.fatal("Expected attribute name in tag");
-    attributeName = asciiLowerCase(attributeName);
+    // we've already skipped any spaces.
 
-    if (tag.attrs.hasOwnProperty(attributeName))
-      scanner.fatal("Duplicate attribute in tag: " + attributeName);
+    // first try for a special tag.
+    var special;
+    if (scanner.getSpecialTag &&
+        (special = scanner.getSpecialTag(scanner,
+                                         TEMPLATE_TAG_POSITION.IN_START_TAG))) {
+      tag.attrs.$specials = (tag.attrs.$specials || []);
+      tag.attrs.$specials.push({ t: 'Special', v: special });
+    } else {
 
-    tag.attrs[attributeName] = [];
+      var attributeName = getAttributeName(scanner);
+      if (! attributeName)
+        scanner.fatal("Expected attribute name in tag");
+      attributeName = asciiLowerCase(attributeName);
 
-    skipSpaces(scanner);
+      if (tag.attrs.hasOwnProperty(attributeName))
+        scanner.fatal("Duplicate attribute in tag: " + attributeName);
+
+      tag.attrs[attributeName] = [];
+
+      skipSpaces(scanner);
+
+      if (handleEndOfTag(scanner, tag))
+        return tag;
+
+      var ch = scanner.peek();
+      if (! ch)
+        scanner.fatal("Unclosed <");
+      if ('\u0000"\'<'.indexOf(ch) >= 0)
+        scanner.fatal("Unexpected character after attribute name in tag");
+
+      if (ch === '=') {
+        scanner.pos++;
+
+        skipSpaces(scanner);
+
+        ch = scanner.peek();
+        if (! ch)
+          scanner.fatal("Unclosed <");
+        if ('\u0000><=`'.indexOf(ch) >= 0)
+          scanner.fatal("Unexpected character after = in tag");
+
+        if ((ch === '"') || (ch === "'"))
+          tag.attrs[attributeName] = getQuotedAttributeValue(scanner, ch);
+        else
+          tag.attrs[attributeName] = getUnquotedAttributeValue(scanner);
+      }
+    }
+    // post-attribute, whether it was a special attribute (like `{{x}}`) or a normal
+    // one (like `x` or `x=y`).
 
     if (handleEndOfTag(scanner, tag))
       return tag;
 
-    var ch = scanner.peek();
-    if (! ch)
-      scanner.fatal("Unclosed <");
-    if ('\u0000"\'<'.indexOf(ch) >= 0)
-      scanner.fatal("Unexpected character after attribute name in tag");
+    if (scanner.isEOF())
+      scanner.fatal("Unclosed `<`");
 
-    if (ch === '=') {
-      scanner.pos++;
+    requireSpaces(scanner);
 
-      skipSpaces(scanner);
-
-      ch = scanner.peek();
-      if (! ch)
-        scanner.fatal("Unclosed <");
-      if ('\u0000><=`'.indexOf(ch) >= 0)
-        scanner.fatal("Unexpected character after = in tag");
-
-      var valueWasQuoted;
-      if ((ch === '"') || (ch === "'")) {
-        valueWasQuoted = true;
-        tag.attrs[attributeName] = getQuotedAttributeValue(scanner, ch);
-      } else {
-        valueWasQuoted = false;
-        tag.attrs[attributeName] = getUnquotedAttributeValue(scanner);
-      }
-
-      if (handleEndOfTag(scanner, tag))
-        return tag;
-
-      if (scanner.isEOF())
-        scanner.fatal("Unclosed `<`");
-
-      if (valueWasQuoted)
-        requireSpaces(scanner);
-      else
-        skipSpaces(scanner);
-
-      if (handleEndOfTag(scanner, tag))
-        return tag;
-    }
+    if (handleEndOfTag(scanner, tag))
+      return tag;
   }
 };
 
@@ -449,5 +468,7 @@ tokenize = function (input) {
 };
 
 TEMPLATE_TAG_POSITION = {
-  ELEMENT: 1
+  ELEMENT: 1,
+  IN_START_TAG: 2,
+  IN_ATTRIBUTE: 3
 };
