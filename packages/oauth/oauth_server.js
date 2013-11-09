@@ -131,13 +131,36 @@ middleware = function (req, res, next) {
 
 OauthTest.middleware = middleware;
 
-// Handle /_oauth/* paths and extract the service name
+// Handle /_oauth/* paths and extract the service name. Hack: If we find a
+// <service name>+<action> path, extract the action and put it into
+// req.query. These paths are used for services that don't allow query
+// parameters in redirect_uris.
 //
 // @returns {String|null} e.g. "facebook", or null if this isn't an
 // oauth request
 var oauthServiceName = function (req) {
-  // req.url will be "/_oauth/<service name>?<action>"
-  var barePath = req.url.substring(0, req.url.indexOf('?'));
+  // req.url will be "/_oauth/<service name>?<action>", or for services that
+  // don't support query parameters in req.url (*cough*meteoraccounts*cough*),
+  // "<service name>/<action>".
+  var barePath;
+  var url = req.url;
+  var questionIndex = url.indexOf("?");
+  var slashIndex = url.indexOf("/",
+                               url.indexOf("/_oauth/") + "/_oauth/".length);
+  if (slashIndex !== -1 &&
+      (questionIndex === -1 || questionIndex > slashIndex)) {
+    barePath = url.substring(0, slashIndex);
+    var action = url.substring(
+      slashIndex + 1,
+      questionIndex === -1 ? undefined : questionIndex
+    );
+    if (action)
+      req.query[action] = true;
+  } else if (questionIndex !== -1) {
+    barePath = url.substring(0, questionIndex);
+  } else {
+    barePath = url;
+  }
   var splitPath = barePath.split('/');
 
   // Any non-oauth request will continue down the default
@@ -178,4 +201,3 @@ var closePopup = function(res) {
         '<html><head><script>window.close()</script></head></html>';
   res.end(content, 'utf-8');
 };
-
