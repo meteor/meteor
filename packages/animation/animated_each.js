@@ -234,8 +234,6 @@ var apply = function (el, events) {
 
   events = events || ['add', 'remove', 'move'];
 
-  // xcxc make these events accept functions, so that we can not
-  // animate initial data but still animate subsequent inserts
   if (_.contains(events, 'add')) {
     $(el)[0].$uihooks.insertElement = function (n, parent, next) {
       animateInsert(n, parent, next);
@@ -265,7 +263,7 @@ AnimatedList = Package.ui.Component.extend({
     var self = this;
     var childEls = _.filter(self.$('*'), function (n) {
       return n.parentNode === self.firstNode().parentNode;
-    }); // xcxc we'd like something like jquery's `.children()`
+    }); // XXX we'd like something like jquery's `.children()`
     if (childEls.length !== 1)
       throw new Error("#AnimatedList must have precisely one top-level child element");
     apply(childEls, self.events && self.events.split(' '));

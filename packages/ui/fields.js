@@ -38,9 +38,22 @@ _extend(UI.Component, {
     var result;
     var comp;
 
-    if (! id) {
-      // `id` is `""` or absent/undefined
-      return lookupComponentProp(self, 'data');
+    if (!id)
+      throw new Error("must pass id to lookup");
+
+    if (/^\./.test(id)) {
+      // starts with a dot. must be a series of dots which maps to an
+      // ancestor of the appropriate height.
+      if (!/^(\.)+$/.test(id)) {
+        throw new Error("id starting with dot must be a series of dots");
+      }
+
+      var compWithData = findComponentWithProp('data', self);
+      for (var i = 1; i < id.length; i++) {
+        compWithData = compWithData ? findComponentWithProp('data', compWithData.parent) : null;
+      }
+
+      return compWithData.data;
 
     } else if ((comp = findComponentWithProp(id, self))) {
       // found a property or method of a component
@@ -93,6 +106,10 @@ _extend(UI.Component, {
     };
   },
   get: function (id) {
+    // support `this.get()` to get the data context.
+    if (id === undefined)
+      id = ".";
+
     var result = this.lookup(id);
     return (typeof result === 'function' ? result() : result);
   },

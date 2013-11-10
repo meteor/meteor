@@ -4,8 +4,17 @@ var renderToDiv = function (comp) {
   return div;
 };
 
+// strip empty comments created by DomRange on IE
+var stripComments = function (str) {
+  return str.replace(/\<\!--IE--\>/g, '');
+};
+
 var trim = function (str) {
   return str.replace(/^\s+|\s+$/g, '');
+};
+
+var trimAndRemoveSpaces = function (str) {
+  return trim(str).replace(/ /g, '');
 };
 
 Tinytest.add("spacebars - templates - simple helper", function (test) {
@@ -18,7 +27,7 @@ Tinytest.add("spacebars - templates - simple helper", function (test) {
   };
   var div = renderToDiv(tmpl);
 
-  test.equal(div.innerHTML, "124");
+  test.equal(stripComments(div.innerHTML), "124");
 });
 
 Tinytest.add("spacebars - templates - dynamic template", function (test) {
@@ -30,12 +39,12 @@ Tinytest.add("spacebars - templates - dynamic template", function (test) {
     return R.get() === 'aaa' ? aaa : bbb;
   };
   var div = renderToDiv(tmpl);
-  test.equal(div.innerHTML, "aaa");
+  test.equal(stripComments(div.innerHTML), "aaa");
 
   R.set('bbb');
   Deps.flush();
 
-  test.equal(div.innerHTML, "bbb");
+  test.equal(stripComments(div.innerHTML), "bbb");
 });
 
 Tinytest.add("spacebars - templates - interpolate attribute", function (test) {
@@ -67,15 +76,15 @@ Tinytest.add("spacebars - templates - dynamic attrs", function (test) {
   test.equal(span.innerHTML, 'hi');
   test.equal(span.getAttribute('n'), "1");
   test.equal(span.getAttribute('x'), 'y');
-  test.isTrue(span.hasAttribute('selected'));
+  test.isTrue(span.selected);
 
   R1.set('zanzibar="where the heart is"');
   R2.set('');
   R3.set('');
   Deps.flush();
-  test.equal(span.innerHTML, 'hi');
+  test.equal(stripComments(span.innerHTML), 'hi');
   test.isFalse(span.hasAttribute('n'));
-  test.isFalse(span.hasAttribute('selected'));
+  test.isFalse(span.selected);
   test.equal(span.getAttribute('zanzibar'), 'where the heart is');
 });
 
@@ -97,7 +106,7 @@ Tinytest.add("spacebars - templates - triple", function (test) {
   Deps.flush();
   elems = $(div).find("> *");
   test.equal(elems.length, 0);
-  test.equal(div.innerHTML, 'asdf');
+  test.equal(stripComments(div.innerHTML), 'asdf');
 
   R.set('<span class="hi">blah</span>');
   Deps.flush();
@@ -106,7 +115,7 @@ Tinytest.add("spacebars - templates - triple", function (test) {
   test.equal(elems[0].nodeName, 'SPAN');
   span = elems[0];
   test.equal(span.className, 'hi');
-  test.equal(span.innerHTML, 'blah');
+  test.equal(stripComments(span.innerHTML), 'blah');
 });
 
 Tinytest.add("spacebars - templates - inclusion args", function (test) {
@@ -118,31 +127,31 @@ Tinytest.add("spacebars - templates - inclusion args", function (test) {
   var div = renderToDiv(tmpl);
   // `{{> foo bar}}`, with `foo` resolving to Template.aaa,
   // which consists of "aaa"
-  test.equal(div.innerHTML, 'aaa');
+  test.equal(stripComments(div.innerHTML), 'aaa');
   R.set(Template.spacebars_template_test_bbb);
   Deps.flush();
-  test.equal(div.innerHTML, 'bbb');
+  test.equal(stripComments(div.innerHTML), 'bbb');
 
   ////// Ok, now `foo` *is* Template.aaa
   tmpl.foo = Template.spacebars_template_test_aaa;
   div = renderToDiv(tmpl);
-  test.equal(div.innerHTML, 'aaa');
+  test.equal(stripComments(div.innerHTML), 'aaa');
 
   ////// Ok, now `foo` is a template that takes an argument; bar is a string.
   tmpl.foo = Template.spacebars_template_test_bracketed_this;
   tmpl.bar = 'david';
   div = renderToDiv(tmpl);
-  test.equal(div.innerHTML, '[david]');
+  test.equal(stripComments(div.innerHTML), '[david]');
 
   ////// Now `foo` is a template that takes an arg; bar is a function.
   tmpl.foo = Template.spacebars_template_test_bracketed_this;
   R = ReactiveVar('david');
   tmpl.bar = function () { return R.get(); };
   div = renderToDiv(tmpl);
-  test.equal(div.innerHTML, '[david]');
+  test.equal(stripComments(div.innerHTML), '[david]');
   R.set('avi');
   Deps.flush();
-  test.equal(div.innerHTML, '[avi]');
+  test.equal(stripComments(div.innerHTML), '[avi]');
 });
 
 Tinytest.add("spacebars - templates - inclusion args 2", function (test) {
@@ -157,13 +166,13 @@ Tinytest.add("spacebars - templates - inclusion args 2", function (test) {
   tmpl.bar = 4;
   tmpl.baz = function () { return R.get(); };
   var div = renderToDiv(tmpl);
-  test.equal(div.innerHTML, '[7]');
+  test.equal(stripComments(div.innerHTML), '[7]');
   R.set(11);
   Deps.flush();
-  test.equal(div.innerHTML, '[15]');
+  test.equal(stripComments(div.innerHTML), '[15]');
   R.set(999);
   Deps.flush();
-  test.equal(div.innerHTML, 'aaa');
+  test.equal(stripComments(div.innerHTML), 'aaa');
 });
 
 Tinytest.add("spacebars - templates - inclusion args 3", function (test) {
@@ -178,11 +187,11 @@ Tinytest.add("spacebars - templates - inclusion args 3", function (test) {
   tmpl.bar = function () { return R1.get(); };
   tmpl.baz = function () { return R2.get(); };
   var div = renderToDiv(tmpl);
-  test.equal(div.innerHTML, '7');
+  test.equal(stripComments(div.innerHTML), '7');
   R1.set(11);
   R2.set(13);
   Deps.flush();
-  test.equal(div.innerHTML, '24');
+  test.equal(stripComments(div.innerHTML), '24');
 
   tmpl.foo = UI.Component.extend({
     render: function (buf) {
@@ -196,11 +205,11 @@ Tinytest.add("spacebars - templates - inclusion args 3", function (test) {
   R1 = ReactiveVar(20);
   R2 = ReactiveVar(23);
   div = renderToDiv(tmpl);
-  test.equal(div.innerHTML, '43');
+  test.equal(stripComments(div.innerHTML), '43');
   R1.set(10);
   R2.set(17);
   Deps.flush();
-  test.equal(div.innerHTML, '27');
+  test.equal(stripComments(div.innerHTML), '27');
 });
 
 Tinytest.add("spacebars - templates - inclusion dotted args", function (test) {
@@ -219,14 +228,33 @@ Tinytest.add("spacebars - templates - inclusion dotted args", function (test) {
 
   var div = renderToDiv(tmpl.withData({symbol:'%'}));
   test.equal(initCount, 1);
-  test.equal(div.innerHTML, '[%david]');
+  test.equal(stripComments(div.innerHTML), '[%david]');
 
   R.set('avi');
   Deps.flush();
-  test.equal(div.innerHTML, '[%avi]');
+  test.equal(stripComments(div.innerHTML), '[%avi]');
   // check that invalidating the argument to `foo` doesn't require
   // creating a new `foo`.
   test.equal(initCount, 1);
+});
+
+Tinytest.add("spacebars - templates - inclusion slashed args", function (test) {
+  // `{{> foo bar/baz}}`
+  var tmpl = Template.spacebars_template_test_inclusion_dotted_args;
+
+  var initCount = 0;
+  tmpl.foo = Template.spacebars_template_test_bracketed_this.extend({
+    init: function () { initCount++; }
+  });
+  var R = ReactiveVar('david');
+  tmpl.bar = function () {
+    // make sure `this` is bound correctly
+    return { baz: this.symbol + R.get() };
+  };
+
+  var div = renderToDiv(tmpl.withData({symbol:'%'}));
+  test.equal(initCount, 1);
+  test.equal(stripComments(div.innerHTML), '[%david]');
 });
 
 Tinytest.add("spacebars - templates - block helper", function (test) {
@@ -236,11 +264,11 @@ Tinytest.add("spacebars - templates - block helper", function (test) {
     return R.get();
   };
   var div = renderToDiv(tmpl);
-  test.equal(div.innerHTML.trim(), "bar");
+  test.equal(trim(stripComments(div.innerHTML)), "bar");
 
   R.set(Template.spacebars_template_test_elsecontent);
   Deps.flush();
-  test.equal(div.innerHTML.trim(), "baz");
+  test.equal(trim(stripComments(div.innerHTML)), "baz");
 });
 
 Tinytest.add("spacebars - templates - block helper function with one string arg", function (test) {
@@ -252,7 +280,7 @@ Tinytest.add("spacebars - templates - block helper function with one string arg"
       return null;
   };
   var div = renderToDiv(tmpl);
-  test.equal(div.innerHTML.trim(), "content");
+  test.equal(trim(stripComments(div.innerHTML)), "content");
 });
 
 Tinytest.add("spacebars - templates - block helper function with one helper arg", function (test) {
@@ -266,11 +294,11 @@ Tinytest.add("spacebars - templates - block helper function with one helper arg"
       return null;
   };
   var div = renderToDiv(tmpl);
-  test.equal(div.innerHTML.trim(), "content");
+  test.equal(trim(stripComments(div.innerHTML)), "content");
 
   R.set("baz");
   Deps.flush();
-  test.equal(div.innerHTML.trim(), "");
+  test.equal(trim(stripComments(div.innerHTML)), "");
 });
 
 Tinytest.add("spacebars - templates - block helper component with one helper arg", function (test) {
@@ -278,11 +306,11 @@ Tinytest.add("spacebars - templates - block helper component with one helper arg
   var R = ReactiveVar(true);
   tmpl.bar = function () { return R.get(); };
   var div = renderToDiv(tmpl);
-  test.equal(div.innerHTML.trim(), "content");
+  test.equal(trim(stripComments(div.innerHTML)), "content");
 
   R.set(false);
   Deps.flush();
-  test.equal(div.innerHTML.trim(), "");
+  test.equal(trim(stripComments(div.innerHTML)), "");
 });
 
 Tinytest.add("spacebars - templates - block helper component with three helper args", function (test) {
@@ -295,11 +323,11 @@ Tinytest.add("spacebars - templates - block helper component with three helper a
     return x === y;
   };
   var div = renderToDiv(tmpl);
-  test.equal(div.innerHTML.trim(), "content");
+  test.equal(trim(stripComments(div.innerHTML)), "content");
 
   R.set("baz");
   Deps.flush();
-  test.equal(div.innerHTML.trim(), "");
+  test.equal(trim(stripComments(div.innerHTML)), "");
 });
 
 Tinytest.add("spacebars - templates - block helper with dotted arg", function (test) {
@@ -323,37 +351,37 @@ Tinytest.add("spacebars - templates - block helper with dotted arg", function (t
   tmpl.qux = function () { return R3.get(); };
 
   var div = renderToDiv(tmpl);
-  test.equal(div.innerHTML, "[111]");
+  test.equal(stripComments(stripComments(div.innerHTML)), "[111]");
   test.equal(initCount, 1);
 
   R1.set(2);
   Deps.flush();
-  test.equal(div.innerHTML, "[112]");
+  test.equal(stripComments(div.innerHTML), "[112]");
   test.equal(initCount, 1);
 
   R2.set(20);
   Deps.flush();
-  test.equal(div.innerHTML, "[122]");
+  test.equal(stripComments(div.innerHTML), "[122]");
   test.equal(initCount, 1);
 
   R3.set(200);
   Deps.flush();
-  test.equal(div.innerHTML, "[222]");
+  test.equal(stripComments(div.innerHTML), "[222]");
   test.equal(initCount, 1);
 
   R2.set(30);
   Deps.flush();
-  test.equal(div.innerHTML, "[232]");
+  test.equal(stripComments(div.innerHTML), "[232]");
   test.equal(initCount, 1);
 
   R1.set(3);
   Deps.flush();
-  test.equal(div.innerHTML, "[233]");
+  test.equal(stripComments(div.innerHTML), "[233]");
   test.equal(initCount, 1);
 
   R3.set(300);
   Deps.flush();
-  test.equal(div.innerHTML, "[333]");
+  test.equal(stripComments(div.innerHTML), "[333]");
   test.equal(initCount, 1);
 });
 
@@ -384,13 +412,13 @@ Tinytest.add("spacebars - templates - nested content", function (test) {
     return R.get();
   };
   var div = renderToDiv(tmpl);
-  test.equal(trim(div.innerHTML), 'hello');
+  test.equal(trim(stripComments(div.innerHTML)), 'hello');
   R.set(false);
   Deps.flush();
-  test.equal(trim(div.innerHTML), 'world');
+  test.equal(trim(stripComments(div.innerHTML)), 'world');
   R.set(true);
   Deps.flush();
-  test.equal(trim(div.innerHTML), 'hello');
+  test.equal(trim(stripComments(div.innerHTML)), 'hello');
 
   // Also test that `{{> content}}` in a custom block helper works.
   tmpl = Template.spacebars_template_test_nested_content2;
@@ -399,11 +427,158 @@ Tinytest.add("spacebars - templates - nested content", function (test) {
     return R.get();
   };
   div = renderToDiv(tmpl);
-  test.equal(trim(div.innerHTML), 'hello');
+  test.equal(trim(stripComments(div.innerHTML)), 'hello');
   R.set(false);
   Deps.flush();
-  test.equal(trim(div.innerHTML), 'world');
+  test.equal(trim(stripComments(div.innerHTML)), 'world');
   R.set(true);
   Deps.flush();
-  test.equal(trim(div.innerHTML), 'hello');
+  test.equal(trim(stripComments(div.innerHTML)), 'hello');
+});
+
+Tinytest.add("spacebars - templates - ..", function (test) {
+  var tmpl = Template.spacebars_template_test_dots;
+  tmpl.getTitle = function (from) {
+    return from.title;
+  };
+
+  tmpl.foo = {title: "foo"};
+  tmpl.foo.bar = {title: "bar"};
+  tmpl.foo.bar.items = [{title: "item"}];
+  var div = renderToDiv(tmpl);
+
+  // XXX this is disgusting, i know.
+  var htmlWithWhitespace = div.innerHTML.replace(/\<\!--IE--\>/g, ' ');
+  var lines = _.filter(trim(htmlWithWhitespace).split(/\s/), function (line) {
+    return line !== "";
+  });
+  test.equal(lines, [
+    // {{> spacebars_template_test_dots_subtemplate}}
+    "item", "item", "bar", "foo", "item", "bar", "foo",
+    // {{> spacebars_template_test_dots_subtemplate ..}}
+    "bar", "bar", "item", "bar", "bar", "item", "bar"]);
+});
+
+Tinytest.add("spacebars - templates - select tags", function (test) {
+  var tmpl = Template.spacebars_template_test_select_tag;
+
+  // {label: (string)}
+  var optgroups = new Meteor.Collection(null);
+
+  // {optgroup: (id), value: (string), selected: (boolean), label: (string)}
+  var options = new Meteor.Collection(null);
+
+  tmpl.optgroups = function () { return optgroups.find(); };
+  tmpl.options = function () { return options.find({optgroup: this._id}); };
+  tmpl.selectedAttr = function () { return this.selected ? "selected" : ""; };
+
+  var div = renderToDiv(tmpl);
+  var selectEl = $(div).find('select')[0];
+
+  // returns canonicalized contents of `div` in the form eg
+  // ["<select>", "</select>"]. strip out selected attributes -- we
+  // verify correctness by observing the `selected` property
+  var divContent = function () {
+    var lines = trim(canonicalizeHtml(
+      div.innerHTML.replace(/selected="[^"]*"/g, '').replace(/selected/g, '')))
+          .replace(/\>\s*\</g, '>\n<')
+          .split('\n');
+    return trimmedLines = _.filter(
+      _.map(lines, trim),
+      function (x) { return x !== ""; });
+  };
+
+  test.equal(divContent(), ["<select>", "</select>"]);
+
+  var optgroup1 = optgroups.insert({label: "one"});
+  var optgroup2 = optgroups.insert({label: "two"});
+  test.equal(divContent(), [
+    '<select>',
+    '<optgroup label="one">',
+    '</optgroup>',
+    '<optgroup label="two">',
+    '</optgroup>',
+    '</select>'
+  ]);
+
+  options.insert({optgroup: optgroup1, value: "value1", selected: false, label: "label1"});
+  options.insert({optgroup: optgroup1, value: "value2", selected: true, label: "label2"});
+  test.equal(divContent(), [
+    '<select>',
+    '<optgroup label="one">',
+    '<option value="value1">label1</option>',
+    '<option value="value2">label2</option>',
+    '</optgroup>',
+    '<optgroup label="two">',
+    '</optgroup>',
+    '</select>'
+  ]);
+  test.equal(selectEl.value, "value2");
+  test.equal($(selectEl).find('option')[0].selected, false);
+  test.equal($(selectEl).find('option')[1].selected, true);
+
+  // swap selection
+  options.update({value: "value1"}, {$set: {selected: true}});
+  options.update({value: "value2"}, {$set: {selected: false}});
+  Deps.flush();
+
+  test.equal(divContent(), [
+    '<select>',
+    '<optgroup label="one">',
+    '<option value="value1">label1</option>',
+    '<option value="value2">label2</option>',
+    '</optgroup>',
+    '<optgroup label="two">',
+    '</optgroup>',
+    '</select>'
+  ]);
+  test.equal(selectEl.value, "value1");
+  test.equal($(selectEl).find('option')[0].selected, true);
+  test.equal($(selectEl).find('option')[1].selected, false);
+
+  // change value and label
+  options.update({value: "value1"}, {$set: {value: "value1.0"}});
+  options.update({value: "value2"}, {$set: {label: "label2.0"}});
+  Deps.flush();
+
+  test.equal(divContent(), [
+    '<select>',
+    '<optgroup label="one">',
+    '<option value="value1.0">label1</option>',
+    '<option value="value2">label2.0</option>',
+    '</optgroup>',
+    '<optgroup label="two">',
+    '</optgroup>',
+    '</select>'
+  ]);
+  test.equal(selectEl.value, "value1.0");
+  test.equal($(selectEl).find('option')[0].selected, true);
+  test.equal($(selectEl).find('option')[1].selected, false);
+
+  // unselect and then select both options. normally, the second is
+  // selected (since it got selected later). then switch to <select
+  // multiple="">. both should be selected.
+  options.update({}, {$set: {selected: false}}, {multi: true});
+  Deps.flush();
+  options.update({}, {$set: {selected: true}}, {multi: true});
+  Deps.flush();
+  test.equal($(selectEl).find('option')[0].selected, false);
+  test.equal($(selectEl).find('option')[1].selected, true);
+
+  selectEl.multiple = true; // allow multiple selection
+  options.update({}, {$set: {selected: false}}, {multi: true});
+  Deps.flush();
+  options.update({}, {$set: {selected: true}}, {multi: true});
+  window.avital = true;
+  Deps.flush();
+  test.equal($(selectEl).find('option')[0].selected, true);
+  test.equal($(selectEl).find('option')[1].selected, true);
+});
+
+Tinytest.add('spacebars - templates - {{#with}} falsy; issue #770', function (test) {
+  Template.test_template_issue770.value1 = function () { return "abc"; };
+  Template.test_template_issue770.value2 = function () { return false; };
+  var div = renderToDiv(Template.test_template_issue770);
+  test.equal(canonicalizeHtml(trimAndRemoveSpaces(div.innerHTML)),
+             "abcxxxabc");
 });

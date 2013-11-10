@@ -74,7 +74,6 @@ _extend(AttributeManager.prototype, {
 
     // XXX make this be stopped at the right time
     Deps.autorun(function (c) {
-
       // capture dependencies of this line:
       var newDict = self.func();
 
@@ -187,12 +186,25 @@ var ClassHandler = AttributeHandler.extend({
   }
 });
 
+var SelectedHandler = AttributeHandler.extend({
+  update: function (element, oldValue, value) {
+    if (value == null) {
+      if (oldValue != null)
+        element.selected = false;
+    } else {
+      element.selected = true;
+    }
+  }
+});
+
 var makeAttributeHandler = function (name, value) {
   // XXX will need one for 'style' on IE, though modern browsers
   // seem to handle setAttribute ok.
   // XXX components should be able to hook into this
   if (name === 'class') {
     return new ClassHandler(name, value);
+  } else if (name === 'selected') {
+    return new SelectedHandler(name, value);
   } else {
     return new AttributeHandler(name, value);
   }

@@ -86,7 +86,7 @@ var textExpandosSupported = (function () {
 var createMarkerNode = (
   textExpandosSupported ?
     function () { return document.createTextNode(""); } :
-  function () { return document.createComment(""); });
+  function () { return document.createComment("IE"); });
 
 var rangeParented = function (range) {
   if (! range.isParented) {

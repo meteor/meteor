@@ -82,7 +82,12 @@ UI.Unless = Component.extend({
 UI.With = Component.extend({
   kind: 'With',
   render: function (buf) {
-    buf.write(this.__content);
+    var self = this;
+    var condition = Deps.isolateValue(function () {
+      return !! self.get('data');
+    });
+
+    buf.write(condition ? self.__content : self.__elseContent);
   }
 });
 

@@ -2,7 +2,12 @@
 UI.Each = Component.extend({
   typeName: 'Each',
   render: function (buf) {
-    // do nothing, all in rendered().
+    // don't keep `this.data` around so that `{{..}}` skips over this
+    // component
+    this.sequence = this.data;
+    delete this.data;
+
+    // real logic in in rendered().
 
     // XXX do something for server-side rendering
   },
@@ -43,7 +48,7 @@ UI.Each = Component.extend({
     };
 
     ObserveSequence.observe(function () {
-      return self.get();
+      return self.get('sequence');
     }, {
       addedAt: function (id, item, i, beforeId) {
         addToCount(1);

@@ -12,5 +12,5 @@ Package.on_use(function (api) {
 Package.on_test(function (api) {
   api.use('html5-tokenizer');
   api.use('tinytest');
-  api.add_files('tokenizer_tests.js', ['client', 'server']);
+  api.add_files('tokenizer_tests.js', ['server']);
 });

@@ -182,7 +182,7 @@ makeRenderBuffer = function (options) {
       // XXX maybe check validity of the object now if `arg.kind`
       randomString = randomString || Random.id();
       var commentString = randomString + '_' + (commentUid++);
-      push('<!--', commentString, '-->');
+      push('<script type="', commentString, '"></script>');
       componentsToRender = componentsToRender || {};
       componentsToRender[commentString] = arg;
     } else if (arg.attrs) {
@@ -250,9 +250,9 @@ makeRenderBuffer = function (options) {
     var wire = function (n, atTopLevel) {
       // returns what ended up in the place of `n`:
       // component, node, or null
-      if (n.nodeType === 8) { // COMMENT
+      if (n.tagName === 'SCRIPT') {
         if (componentsToRender) {
-          var spec = componentsToRender[n.nodeValue];
+          var spec = componentsToRender[n.getAttribute('type')];
           if (! spec)
             return n;
           var kind, props;

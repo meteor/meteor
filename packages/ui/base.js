@@ -35,8 +35,12 @@ var sanitizeTypeName = function (typeName) {
                                   '') || 'Component';
 };
 
-_extend(UI, {
-  nextGuid: 2, // Component is 1!
+// Named function (like `function Component() {}` below) make
+// inspection in debuggers more descriptive. In IE, this sets the
+// value of the `Component` var in the function scope in which it's
+// executed. We already have a top-level `Component` var so we create
+// a new function scope to not write it over in IE.
+(function () {
 
   // Components and Component kinds are the same thing, just
   // objects; there are no constructor functions, no `new`,
@@ -49,8 +53,8 @@ _extend(UI, {
   // on `y` itself.  `extend` is used both to subclass and to
   // create instances (and the hope is we can gloss over the
   // difference in the docs).
+  UI.Component = (function (constr) {
 
-  Component: (function (constr) {
     // Make sure the "class name" that Chrome infers for
     // UI.Component is "Component", and that
     // `new UI.Component._constr` (which is what `extend`
@@ -63,7 +67,11 @@ _extend(UI, {
     _defineNonEnum(C, '_constr', constr);
     _defineNonEnum(C, '_super', null);
     return C;
-  })(function Component() {}),
+  })(function Component() {});
+})();
+
+_extend(UI, {
+  nextGuid: 2, // Component is 1!
 
   isComponent: function (obj) {
     return obj && UI.isKindOf(obj, UI.Component);

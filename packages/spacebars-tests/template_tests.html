@@ -68,6 +68,10 @@
   {{> foo bar.baz}}
 </template>
 
+<template name="spacebars_template_test_inclusion_slashed_args">
+  {{> foo bar/baz}}
+</template>
+
 <template name="spacebars_template_test_block_helper">
   {{#foo}}
     bar
@@ -128,3 +132,62 @@
   {{/spacebars_template_test_iftemplate2}}
 </template>
 
+<template name="spacebars_template_test_dots">
+  {{#with foo}}
+    {{#with bar}}
+      {{! #if shouldn't add a data context }}
+      {{#if true}}
+        {{#each items}}
+          {{! inclusion should only add a data context if passed explicitly }}
+          {{> spacebars_template_test_dots_subtemplate}}
+          {{> spacebars_template_test_dots_subtemplate ..}}
+        {{/each}}
+      {{/if}}
+    {{/with}}
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_dots_subtemplate">
+  {{title}}
+  {{./title}}
+  {{../title}}
+  {{../../title}}
+  {{getTitle .}}
+  {{getTitle ..}}
+  {{getTitle ../..}}
+</template>
+
+<template name="spacebars_template_test_select_tag">
+  <select>
+    {{#each optgroups}}
+      <optgroup label={{label}}>
+        {{#each options}}
+          <option value={{value}} {{selectedAttr}}>{{label}}</option>
+        {{/each}}
+      </optgroup>
+    {{/each}}
+  </select>
+</template>
+
+<!-- Test for issue #770 - falsy value for with. (newlines break this test on IE8) -->
+<template name="test_template_issue770">
+  {{# with value1}}
+    {{this}}
+  {{else}}
+    xxx
+  {{/with}}
+
+  {{# with value2}}
+    {{this}}
+  {{else}}
+    xxx
+  {{/with}}
+
+  {{# with value1}}
+    {{this}}
+  {{/with}}
+
+  {{# with value2}}
+    {{this}}
+  {{/with}}
+</template>
