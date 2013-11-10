@@ -51,7 +51,7 @@ AttributeHandler2.extend = function (options) {
 };
 
 // Value of a ClassHandler is either a string or an array.
-var ClassHandler = AttributeHandler2.extend({
+var ClassHandler2 = AttributeHandler2.extend({
   update: function (element, oldValue, value) {
     var oldClasses = oldValue ? _.compact(oldValue.split(' ')) : [];
     var newClasses = value ? _.compact(value.split(' ')) : [];
@@ -74,12 +74,25 @@ var ClassHandler = AttributeHandler2.extend({
   }
 });
 
+var SelectedHandler2 = AttributeHandler2.extend({
+  update: function (element, oldValue, value) {
+    if (value == null) {
+      if (oldValue != null)
+        element.selected = false;
+    } else {
+      element.selected = true;
+    }
+  }
+});
+
 // XXX make it possible for users to register attribute handlers!
 makeAttributeHandler2 = function (name, value) {
   // XXX will need one for 'style' on IE, though modern browsers
   // seem to handle setAttribute ok.
   if (name === 'class') {
-    return new ClassHandler(name, value);
+    return new ClassHandler2(name, value);
+  } else if (name === 'selected') {
+    return new SelectedHandler2(name, value);
   } else {
     return new AttributeHandler2(name, value);
   }
