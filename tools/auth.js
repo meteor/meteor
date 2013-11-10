@@ -3,6 +3,7 @@ var path = require('path');
 var fs = require('fs');
 var utils = require('./utils.js');
 var httpHelpers = require('./http-helpers.js');
+var querystring = require('querystring');
 var url = require('url');
 
 var ACCOUNTS_URL = "http://localhost:3000";
@@ -260,10 +261,16 @@ var logInToGalaxy = function (galaxyName, meteorAuthCookie) {
 
   // Ask the accounts server for an authorization code.
   var crypto = require('crypto');
-  var state = crypto.randomBytes(16).toString('hex');
-  var authCodeUrl = ACCOUNTS_URL + "/authorize?state=" + state +
-        "&response_type=code&client_id=" + galaxyClientId +
-        "&redirect_uri=" + encodeURIComponent(galaxyRedirect);
+  var session = crypto.randomBytes(16).toString('hex');
+  var stateInfo = { session: session };
+
+  var authCodeUrl = ACCOUNTS_URL + "/authorize?" + querystring.stringify({
+    state: new Buffer(JSON.stringify(stateInfo), 'utf8').toString('base64'),
+    response_type: "code",
+    client_id: galaxyClientId,
+    redirect_uri: galaxyRedirect
+  });
+
   // It's very important that we don't have request follow the redirect for us,
   // but instead issue the second request ourselves. This is because request
   // does not appear to segregate cookies by origin, so we would end up with our
@@ -300,8 +307,11 @@ var logInToGalaxy = function (galaxyName, meteorAuthCookie) {
   try {
     var galaxyResult = httpHelpers.request({
       url: response.headers.location,
-      method: 'POST',
-      strictSSL: true
+      method: 'GET',
+      strictSSL: true,
+      headers: {
+        cookie: 'GALAXY_OAUTH_SESSION=' + session
+      }
     });
   } catch (e) {
     return { error: 'no-galaxy' };
