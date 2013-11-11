@@ -25,7 +25,7 @@ LocalCollection._compileProjection = function (fields) {
           res[key] = transform(doc[key], rule);
         // Otherwise we don't even touch this subfield
       } else if (details.including)
-        res[key] = doc[key];
+        res[key] = EJSON.clone(doc[key]);
       else
         delete res[key];
     });
