@@ -23,19 +23,7 @@ client code changes) by restarting the server with a new value for
 `AUTOUPDATE_VERSION`.
 
 
-## Test with the appcache
-
-Add the appcache package:
-
-    $ meteor add appcache
-
-And do the above "Hot Code Push Reload" test again.
-
-
 ## No Client Reload on Server-only Change
-
-Undo previous changes made, such as by using `git checkout .` Reload
-the client, which will cause the browser to stop using the app cache.
 
 Note that it might look like the browser is reloading because the page
 content in the leaderboard example will flicker when the server
@@ -50,7 +38,28 @@ and add `foo.js`.  See in the browser console that `a` is still
 defined, indicating the browser hasn't reloaded.
 
 
+## Test with the appcache
+
+Add the appcache package:
+
+    $ meteor add appcache
+
+And do the above tests again.
+
+Note that if 1) AUTOUPDATE_VERSION is set so the client doesn't
+automatically reload, 2) you make a client change, and 3) you manually
+reload the browser page, you usually *won't* see the updated HTML the
+*first* time you reload (unless the browser happened to check the app
+cache manifest between steps 2 and 3).  This is normal browser app
+cache behavior: the browser populates the app cache in the background,
+so it doesn't wait for new files to download before displaying the web
+page.
+
+
 ## AutoUpdate.newClientAvailable
+
+Undo previous changes made, such as by using `git checkout .` Reload
+the client, which will cause the browser to stop using the app cache.
 
 It's hard to see the `newClientAvailable` reactive variable when the
 client automatically reloads.  Remove the `reload` package so you can
