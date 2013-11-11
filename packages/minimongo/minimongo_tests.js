@@ -2584,6 +2584,17 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
     'a.b.c': true
   }, "same paths - incl");
 
+  testSelProjectionComb({
+    'x.4.y': 42,
+    'z.0.1': 33
+  }, {
+    'x.x': 1
+  }, {
+    'x.x': true,
+    'x.y': true,
+    'z': true
+  }, "numbered keys in selector - incl");
+
   // Test with exclusive projection
   testSelProjectionComb({ a: 1, b: 2 }, { b: 0, c: 0, d: 0 }, { c: false, d: false }, "simplest excl");
   testSelProjectionComb({ $or: [{ a: 1234, e: {$lt: 5} }], b: 2 }, { b: 0, c: 0, d: 0 }, { c: false, d: false }, "simplest excl, branching");
@@ -2677,5 +2688,16 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
     'foo.bar': 0
   }, {
   }, "excl on incl paths - excl");
+
+  testSelProjectionComb({
+    'x.4.y': 42,
+    'z.0.1': 33
+  }, {
+    'x.x': 0,
+    'x.y': 0
+  }, {
+    'x.x': false,
+  }, "numbered keys in selector - excl");
+
 });
 
