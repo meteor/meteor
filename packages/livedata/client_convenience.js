@@ -12,20 +12,19 @@ if (Meteor.isClient) {
       ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
   }
 
-  var negotiationFailuresKey = "Meteor.DDPVersionNegotiationFailures";
-
-  var onConnected = function () {
-    Meteor._localStorage.removeItem(negotiationFailuresKey);
-  };
-
   var exponentialBackoff = function (failures) {
     return Math.pow(failures, 1.5) * 1000;
   };
 
-  var onDDPVersionNegotiationFailure = function (serverRequestedVersion) {
+  var onDDPVersionNegotiationFailure = function (description) {
+    Meteor._debug(description);
     if (Package.reload) {
-      var failures = parseInt(Meteor._localStorage.getItem(negotiationFailuresKey) || "0") + 1;
-      Meteor._localStorage.setItem(negotiationFailuresKey, "" + failures);
+      var migrationData = Package.reload.Reload._migrationData('livedata') || {};
+      var failures = migrationData.DDPVersionNegotiationFailures || 0;
+      ++failures;
+      Package.reload.Reload._onMigrate('livedata', function () {
+        return [true, {DDPVersionNegotiationFailures: failures}];
+      });
       Meteor.setTimeout(
         function () {
           Package.reload.Reload._reload();
@@ -33,14 +32,10 @@ if (Meteor.isClient) {
         exponentialBackoff(failures)
       );
     }
-    else {
-      Meteor._debug("DDP version negotiation failed; server requested version " + serverRequestedVersion);
-    }
   };
 
   Meteor.connection =
     DDP.connect(ddpUrl, {
-      onConnected: onConnected,
       onDDPVersionNegotiationFailure: onDDPVersionNegotiationFailure
     });
 
