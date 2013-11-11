@@ -1,4 +1,10 @@
 // Knows how to compile a fields projection to a predicate function.
+// @returns - Function: a closure that filters out an object according to the
+//            fields projection rules:
+//            @param obj - Object: MongoDB-styled document
+//            @returns - Object: a document with the fields filtered out
+//                       according to projection rules. Doesn't retain subfields
+//                       of passed argument.
 LocalCollection._compileProjection = function (fields) {
   var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
   var details = projectionDetails(fields);

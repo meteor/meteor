@@ -1151,6 +1151,37 @@ Tinytest.add("minimongo - fetch with projection, subarrays", function (test) {
                     {a: [ [ { c: 2 }, { c: 4 } ], { c: 5 }, [ { c: 9 } ] ] });
 });
 
+Tinytest.add("minimongo - fetch with projection, deep copy", function (test) {
+  // Compiled fields projection defines the contract: returned document doesn't
+  // retain anything from the passed argument.
+  var doc = {
+    a: { x: 42 },
+    b: {
+      y: { z: 33 }
+    },
+    c: "asdf"
+  };
+
+  var fields = {
+    'a': 1,
+    'b.y': 1
+  };
+
+  var projectionFn = LocalCollection._compileProjection(fields);
+  var filteredDoc = projectionFn(doc);
+  doc.a.x++;
+  doc.b.y.z--;
+  test.equal(filteredDoc.a.x, 42, "projection returning deep copy - including");
+  test.equal(filteredDoc.b.y.z, 33, "projection returning deep copy - including");
+
+  fields = { c: 0 };
+  projectionFn = LocalCollection._compileProjection(fields);
+  filteredDoc = projectionFn(doc);
+
+  doc.a.x = 5;
+  test.equal(filteredDoc.a.x, 43, "projection returning deep copy - excluding");
+});
+
 Tinytest.add("minimongo - observe ordered with projection", function (test) {
   // These tests are copy-paste from "minimongo -observe ordered",
   // slightly modified to test projection
