@@ -1351,7 +1351,7 @@ Tinytest.addAsync("livedata connection - version negotiation error",
     supportedDDPVersions: ["garbled", "more garbled"],
     onDDPVersionNegotiationFailure: function () {
       test.equal(connection.status().status, "failed");
-      test.matches(connection.status().reason, /Version negotiation failed/);
+      test.matches(connection.status().reason, /DDP version negotiation failed/);
       test.isFalse(connection.status().connected);
       onComplete();
     },

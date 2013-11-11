@@ -8,13 +8,13 @@ if (Meteor.isServer) {
 //   or an object as a test hook (see code)
 // Options:
 //   reloadWithOutstanding: is it OK to reload if there are outstanding methods?
-//   onDDPNegotiationVersionFailure: callback with the server requested version.
+//   onDDPNegotiationVersionFailure: callback when version negotiation fails.
 var Connection = function (url, options) {
   var self = this;
   options = _.extend({
     onConnected: function () {},
-    onDDPVersionNegotiationFailure: function (serverRequestedVersion, error) {
-      Meteor._debug("Failed DDP connection: " + error);
+    onDDPVersionNegotiationFailure: function (description) {
+      Meteor._debug(description);
     },
     // These options are only for testing.
     reloadWithOutstanding: false,
@@ -195,10 +195,10 @@ var Connection = function (url, options) {
         self._versionSuggestion = msg.version;
         self._stream.reconnect({_force: true});
       } else {
-        var error =
-              "Version negotiation failed; server requested version " + msg.version;
-        self._stream.disconnect({_permanent: true, _error: error});
-        options.onDDPVersionNegotiationFailure(msg.version, error);
+        var description =
+              "DDP version negotiation failed; server requested version " + msg.version;
+        self._stream.disconnect({_permanent: true, _error: description});
+        options.onDDPVersionNegotiationFailure(description);
       }
     }
     else if (_.include(['added', 'changed', 'removed', 'ready', 'updated'], msg.msg))
