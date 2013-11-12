@@ -28,6 +28,9 @@ _.each(browsersEnabledByDefault, function (browser) {
   enabledBrowsers[browser] = true;
 });
 
+// Then runtime bundle contains dynamic file reference to runtime bundles
+var runtimeBundle; // {} is initialized if needed
+
 Meteor.AppCache = {
   config: function(options) {
     _.each(options, function (value, option) {
@@ -49,6 +52,21 @@ Meteor.AppCache = {
         throw new Error('Invalid AppCache config option: ' + option);
       }
     });
+  },
+  addRuntimeBundle: function(url, forceHash) {
+    if (url !== ''+url || url === '') {
+      throw new Error('Invalid AppCache addRuntimeBundle url');
+    }
+
+    if (!runtimeBundle) {
+      // Initialize runtime bundle list
+      runtimeBundle = {};
+    }
+    // Add the url to the runtime bundle list
+    runtimeBundle[url] = {
+      url: url,
+      useQueryString: !forceHash
+    };
   }
 };
 
@@ -58,13 +76,13 @@ var browserEnabled = function(request) {
 
 WebApp.addHtmlAttributeHook(function (request) {
   if (browserEnabled(request))
-    return 'manifest="/app.manifest"';
+    return 'manifest="/app.manifest' + ((runtimeBundle)?request.url.search:'') + '"';
   else
     return null;
 });
 
 WebApp.connectHandlers.use(function(req, res, next) {
-  if (req.url !== '/app.manifest') {
+  if (req._parsedUrl.pathname !== '/app.manifest') {
     return next();
   }
 
@@ -127,6 +145,30 @@ WebApp.connectHandlers.use(function(req, res, next) {
       manifest += "\n";
     }
   });
+
+  _.each(runtimeBundle, function(bundle) {
+    // Added hook for dynamic runtime bundles
+    // these could be files that should run before or after Meteor
+    // or files to lazyload - but still have the offline capabillity
+    if (! RoutePolicy.classify(bundle.url)) {
+      // We pass on the parametre
+      manifest += bundle.url;
+
+      if (bundle.useQueryString && req._parsedUrl.search) {
+        // Add the query string
+        manifest += req._parsedUrl.search + '\n';
+      } else {
+        // Generate a pr. bundle hash
+        var myHash = crypto.createHash('sha1');
+        
+        // Generate the file hash based on manifest digest and bundle url
+        myHash.update(digest + bundle.url);
+        var myDigest = myHash.digest('hex');
+
+        manifest += '?' + myDigest + '\n';
+      }
+    }
+  });
   manifest += "\n";
 
   manifest += "FALLBACK:\n";
@@ -153,7 +195,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
   manifest += "NETWORK:\n";
   // TODO adding the manifest file to NETWORK should be unnecessary?
   // Want more testing to be sure.
-  manifest += "/app.manifest" + "\n";
+  manifest += "/app.manifest" + ((runtimeBundle)?req._parsedUrl.search:'') + "\n";
   _.each(
     [].concat(
       RoutePolicy.urlPrefixesFor('network'),
