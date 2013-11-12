@@ -325,8 +325,14 @@ Tinytest.add('observe sequence - cursor to same cursor', function (test) {
     dep.depend();
     return seq;
   }, function () {
+    coll.insert({_id: "24", rank: 2});
     dep.changed();
-  }, [ {addedAt: ["13", {_id: "13", rank: 1}, 0, null]} ]);
+    coll.insert({_id: "78", rank: 3});
+  }, [
+    {addedAt: ["13", {_id: "13", rank: 1}, 0, null]},
+    {addedAt: ["24", {_id: "24", rank: 2}, 1, null]},
+    {addedAt: ["78", {_id: "78", rank: 3}, 2, null]}
+  ]);
 });
 
 Tinytest.add('observe sequence - string arrays', function (test) {
@@ -348,5 +354,3 @@ Tinytest.add('observe sequence - string arrays', function (test) {
     {addedAt: ['C', 1, null]}
   ]);
 });
-
-
