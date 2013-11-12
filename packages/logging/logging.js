@@ -213,10 +213,10 @@ Log.format = function (obj, options) {
     message += EJSON.stringify(obj);
   }
 
-  var pad2 = function(n) { return n < 10 ? '0' + n : n; };
-  var pad3 = function(n) { return n < 100 ? '0' + pad2(n) : n; };
+  var pad2 = function(n) { return n < 10 ? '0' + n : n.toString(); };
+  var pad3 = function(n) { return n < 100 ? '0' + pad2(n) : n.toString(); };
 
-  var dateStamp = time.getFullYear() +
+  var dateStamp = time.getFullYear().toString() +
     pad2(time.getMonth() + 1 /*0-based*/) +
     pad2(time.getDate());
   var timeStamp = pad2(time.getHours()) +

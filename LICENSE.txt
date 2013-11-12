@@ -239,9 +239,11 @@ Copyright (c) 2012 Nathan Rajlich <nathan@tootallnate.net>
 
 ----------
 faye-websocket: https://github.com/faye/faye-websocket-node
+websocket-driver: https://github.com/faye/websocket-driver-node
 ----------
 
-Copyright (c) 2009-2012 James Coglan
+Copyright (c) 2009-2013 James Coglan
+Copyright (c) 2010-2013 James Coglan
 
 
 ----------

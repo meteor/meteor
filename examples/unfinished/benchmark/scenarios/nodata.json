@@ -1,7 +1,5 @@
 {
   "params": {
-    "numCollections": 1,
-    "numBuckets": 1,
-    "initialDocuments": 0
+    "numCollections": 1
   }
 }

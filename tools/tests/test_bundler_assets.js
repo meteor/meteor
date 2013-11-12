@@ -91,7 +91,8 @@ assert.doesNotThrow(function () {
   var cp = require('child_process');
   var meteor = path.join(__dirname, "..", "..", "meteor"); // XXX is this allowed?
   var fut = new Future();
-  var proc = cp.spawn(meteor, ["--once"], {
+  // use a non-default port so we don't fail if someone is running an app now
+  var proc = cp.spawn(meteor, ["--once", "--port", "4123"], {
     cwd: path.join(__dirname, "app-with-private"),
     stdio: 'inherit'
   });

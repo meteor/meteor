@@ -2793,17 +2793,18 @@ these functions, add the HTTP package to your project with `$ meteor add http`.
 
 {{> api_box httpcall}}
 
-This function initiates an HTTP request to a remote server. It returns
-a result object with the contents of the HTTP response.  The result
-object is detailed below.
+This function initiates an HTTP request to a remote server.
 
 On the server, this function can be run either synchronously or
-asynchronously.  If the callback is omitted, it runs synchronously,
-and the results are returned once the request completes. This is
+asynchronously.  If the callback is omitted, it runs synchronously
+and the results are returned once the request completes successfully.
+If the request was not successful, an error is thrown.
+This is
 useful when making server-to-server HTTP API calls from within Meteor
 methods, as the method can succeed or fail based on the results of the
 synchronous HTTP call.  In this case, consider using
-[`this.unblock()`](#method_unblock) to allow other methods to run in
+[`this.unblock()`](#method_unblock) to allow other methods on the same
+connection to run in
 the mean time.  On the client, this function must be used
 asynchronously by passing a callback.
 
@@ -2823,7 +2824,8 @@ standard `x-www-form-urlencoded` content type, unless the `content`
 or `data` option is used to specify a body, in which case the
 parameters will be appended to the URL instead.
 
-The callback receives two arguments, `error` and `result`.  The
+When run in asynchronous mode, the callback receives two arguments,
+`error` and `result`.  The
 `error` argument will contain an Error if the request fails in any
 way, including a network error, time-out, or an HTTP status code in
 the 400 or 500 range.  In case of a 4xx/5xx HTTP status code, the
@@ -2858,11 +2860,14 @@ Example server method:
     Meteor.methods({checkTwitter: function (userId) {
       check(userId, String);
       this.unblock();
-      var result = HTTP.call("GET", "http://api.twitter.com/xyz",
-                             {params: {user: userId}});
-      if (result.statusCode === 200)
-         return true
-      return false;
+      try {
+        var result = HTTP.call("GET", "http://api.twitter.com/xyz",
+                               {params: {user: userId}});
+        return true;
+      } catch (e) {
+        // Got a network error, time-out or HTTP error in the 400 or 500 range.
+        return false;
+      }
     }});
 
 Example asynchronous HTTP call:
@@ -2870,7 +2875,7 @@ Example asynchronous HTTP call:
     HTTP.call("POST", "http://api.twitter.com/xyz",
               {data: {some: "json", stuff: 1}},
               function (error, result) {
-                if (result.statusCode === 200) {
+                if (!error) {
                   Session.set("twizzled", true);
                 }
               });
