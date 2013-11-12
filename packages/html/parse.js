@@ -24,7 +24,15 @@ isKnownElement = function (name) {
 };
 
 parseFragment = function (input, options) {
-  var scanner = new Scanner(input);
+  var scanner;
+  if (typeof input === 'string')
+    scanner = new Scanner(input);
+  else
+    // input can be a scanner.  We'd better not have a different
+    // value for the "getSpecialTag" option as when the scanner
+    // was created, because we don't do anything special to reset
+    // the value (which is attached to the scanner).
+    scanner = input;
 
   // ```
   // { getSpecialTag: function (scanner, templateTagPosition) {
@@ -34,8 +42,11 @@ parseFragment = function (input, options) {
   if (options && options.getSpecialTag)
     scanner.getSpecialTag = options.getSpecialTag;
 
-  var result = getContent(scanner);
-  if (! scanner.isEOF())
+  // function (scanner) -> boolean
+  var shouldStop = options && options.shouldStop;
+
+  var result = getContent(scanner, shouldStop);
+  if ((! shouldStop) && (! scanner.isEOF()))
     scanner.fatal("Expected EOF");
 
   return result;
@@ -69,7 +80,7 @@ codePointToString = function(cp) {
   }
 };
 
-getContent = function (scanner) {
+getContent = function (scanner, shouldStopFunc) {
   var items = [];
 
   while (! scanner.isEOF()) {
@@ -78,7 +89,14 @@ getContent = function (scanner) {
     if (scanner.rest().slice(0, 2) === '</')
       break;
 
+    if (shouldStopFunc && shouldStopFunc(scanner))
+      break;
+
     var token = getHTMLToken(scanner);
+    if (! token)
+      // tokenizer reached EOF on its own, e.g. while scanning
+      // template comments like `{{! foo}}`.
+      continue;
 
     if (token.t === 'Doctype') {
       scanner.fatal("Unexpected Doctype");

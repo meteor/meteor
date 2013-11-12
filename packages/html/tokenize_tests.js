@@ -1,6 +1,23 @@
 var Scanner = HTML._$.Scanner;
 var getComment = HTML._$.getComment;
 var getDoctype = HTML._$.getDoctype;
+var getHTMLToken = HTML._$.getHTMLToken;
+
+// "tokenize" is not really a great operation for real use, because
+// it ignores the special content rules for tags like "style" and
+// "script".
+var tokenize = function (input) {
+  var scanner = new Scanner(input);
+  var tokens = [];
+  while (! scanner.isEOF()) {
+    var token = getHTMLToken(scanner);
+    if (token)
+      tokens.push(token);
+  }
+
+  return tokens;
+};
+
 
 Tinytest.add("html - comments", function (test) {
   var succeed = function (input, content) {
@@ -183,7 +200,6 @@ Tinytest.add("html - doctype", function (test) {
 });
 
 Tinytest.add("html - tokenize", function (test) {
-  var tokenize = HTML.tokenize;
 
   var fatal = function (input, messageContains) {
     var error;

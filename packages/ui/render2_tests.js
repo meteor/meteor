@@ -27,6 +27,10 @@ Tinytest.add("ui - render2 - basic", function (test) {
       '<p>Hello</p>',
       'HTML.Tag.P("Hello")');
 
+  run(null, '', '', 'null');
+  run([], '', '', '[]');
+  run([null, null], '', '', '[null, null]');
+
   // Test crazy character references
 
   // `&zopf;` is "Mathematical double-struck small z" a.k.a. "open-face z"

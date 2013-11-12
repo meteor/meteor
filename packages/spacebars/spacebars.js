@@ -1101,3 +1101,91 @@ Spacebars.component = function (hashOrGreaterThan, kind, args) {
                     compKind: kind,
                     compArgs: args } };
 };
+
+//////////////////////////////////////////////////
+
+Spacebars.parse2 = function (input) {
+  // This implementation of `getSpecialTag` looks for "{{" and if it
+  // finds it, it will parse a stache tag or fail fatally trying.
+  // The object it returns is opaque to the tokenizer/parser and can
+  // be anything we want.
+  //
+  // Parsing a block tag parses its contents and end tag too!
+  var getSpecialTag = function (scanner, position) {
+    if (! (scanner.peek() === '{' && // one-char peek is just an optimization
+           scanner.rest().slice(0, 2) === '{{'))
+      return null;
+
+    // `parseStacheTag` will succeed or die trying.
+    //
+    // TODO: make `parseStacheTag` use the same `scanner`, and `scanner.fatal`
+    // for errors, which should be made to still have nice line numbers.
+    var stache = Spacebars.parseStacheTag(scanner.input, scanner.pos);
+
+    if (stache.type === 'ELSE')
+      scanner.fatal("Found unexpected {{else}}}");
+    else if (stache.type === 'BLOCKCLOSE')
+      scanner.fatal("Found unexpected closing stache tag");
+
+    scanner.pos += stache.charLength;
+    // TODO: Change `parseStacheTag` to not generate these
+    delete stache.charLength;
+    delete stache.charPos;
+
+    if (stache.type === 'COMMENT') {
+      return null; // consume the tag from the input but emit no Special
+    } else if (stache.type === 'BLOCKOPEN') {
+      var blockName = stache.path.join(','); // for comparisons, errors
+
+      stache.content = HTML.parseFragment(scanner, {
+        getSpecialTag: getSpecialTag,
+        shouldStop: isAtBlockCloseOrElse });
+
+      if (scanner.rest().slice(0, 2) !== '{{')
+        scanner.fatal("Expected {{else}} or block close for " + blockName);
+
+      var stache2 = Spacebars.parseStacheTag(scanner.input, scanner.pos);
+
+      if (stache2.type === 'ELSE') {
+        scanner.pos += stache2.charLength;
+        stache.elseContent = HTML.parseFragment(scanner, {
+          getSpecialTag: getSpecialTag,
+          shouldStop: isAtBlockCloseOrElse });
+
+        if (scanner.rest().slice(0, 2) !== '{{')
+          scanner.fatal("Expected block close for " + blockName);
+
+        stache2 = Spacebars.parseStacheTag(scanner.input, scanner.pos);
+      }
+
+      if (stache2.type === 'BLOCKCLOSE') {
+        var blockName2 = stache2.path.join(',');
+        if (blockName !== blockName2)
+          scanner.fatal('Expected tag to close ' + blockName + ', found ' +
+                        + blockName2);
+        scanner.pos += stache2.charLength;
+      } else {
+        scanner.fatal('Expected tag to close ' + blockName + ', found ' +
+                      stache2.type);
+      }
+    }
+
+    return stache;
+  };
+
+  var isAtBlockCloseOrElse = function (scanner) {
+    // we could just call parseStacheTag, but this function is called
+    // for every token in the input stream, so we add some shortcuts.
+    var rest, type;
+    return (scanner.peek() === '{' &&
+            (rest = scanner.rest()).slice(0, 2) === '{{' &&
+            /^\{\{\s*(\/|else\b)/.test(rest) &&
+            (type = Spacebars.parseStacheTag(scanner.input,
+                                             scanner.pos).type) &&
+            (type === 'BLOCKCLOSE' || type === 'ELSE'));
+  };
+
+  var tree = HTML.parseFragment(input, { getSpecialTag: getSpecialTag });
+
+  return tree;
+};

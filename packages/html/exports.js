@@ -1,5 +1,4 @@
 HTML = {
-  tokenize: tokenize,
   parseFragment: parseFragment,
 
   Tag: Tag,

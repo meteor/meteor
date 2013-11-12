@@ -634,7 +634,7 @@ var toCode = function (node) {
     }
   }
 
-  return result;
+  return result || 'null';
 };
 
 // XXX we're just exposing these for now

@@ -216,9 +216,27 @@ getDoctype = function (scanner) {
 // of a Chars, so that we have a chance to detect template tags.
 var getChars = makeRegexMatcher(/^[^&<\u0000][^&<\u0000{]*/);
 
+// Returns the next HTML token, or `null` if we reach EOF.
+//
+// Note that if we have a `getSpecialTag` function that sometimes
+// consumes characters and emits nothing (e.g. in the case of template
+// comments), we may go from not-at-EOF to at-EOF and return `null`,
+// while otherwise we always find some token to return.
 getHTMLToken = function (scanner) {
+  var result = null;
   if (scanner.getSpecialTag) {
-    var result = scanner.getSpecialTag(scanner, TEMPLATE_TAG_POSITION.ELEMENT);
+    var lastPos = -1;
+    // Try to parse a "special tag" by calling out to the provided
+    // `getSpecialTag` function.  If the function returns `null` but
+    // consumes characters, it must have parsed a comment or something,
+    // so we loop and try it again.  If it ever returns `null` without
+    // consuming anything, that means it didn't see anything interesting
+    // so we look for a normal token.  If it returns a truthy value,
+    // the value must be an object.  We wrap it in a Special token.
+    while ((! result) && scanner.pos > lastPos) {
+      lastPos = scanner.pos;
+      result = scanner.getSpecialTag(scanner, TEMPLATE_TAG_POSITION.ELEMENT);
+    }
     if (result)
       return { t: 'Special', v: result };
   }
@@ -456,15 +474,6 @@ getTagToken = function (scanner) {
     if (handleEndOfTag(scanner, tag))
       return tag;
   }
-};
-
-tokenize = function (input) {
-  var scanner = new Scanner(input);
-  var tokens = [];
-  while (! scanner.isEOF())
-    tokens.push(getHTMLToken(scanner));
-
-  return tokens;
 };
 
 TEMPLATE_TAG_POSITION = {

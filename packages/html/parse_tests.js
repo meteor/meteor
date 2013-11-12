@@ -158,15 +158,16 @@ Tinytest.add("html - parseFragment", function (test) {
 
 Tinytest.add("html - getSpecialTag", function (test) {
 
-  // match only a very simple tag like `{{foo}}`
-  var mustache = /^\{\{([a-zA-Z 0-9]+)\}\}/;
+  // match a simple tag consisting of `{{`, an optional `!`, one
+  // or more ASCII letters or spaces, and a closing `}}`.
+  var mustache = /^\{\{(!?[a-zA-Z 0-9]+)\}\}/;
 
   // This implementation of `getSpecialTag` looks for "{{" and if it
   // finds it, it will match the regex above or fail fatally trying.
   // The object it returns is opaque to the tokenizer/parser and can
   // be anything we want.
   var getSpecialTag = function (scanner, position) {
-    if (! (scanner.peek() === '{' &&
+    if (! (scanner.peek() === '{' && // one-char peek is just an optimization
            scanner.rest().slice(0, 2) === '{{'))
       return null;
 
@@ -175,6 +176,9 @@ Tinytest.add("html - getSpecialTag", function (test) {
       scanner.fatal("Bad mustache");
 
     scanner.pos += match[0].length;
+
+    if (match[1].charAt(0) === '!')
+      return null; // `{{!foo}}` is like a comment
 
     return { stuff: match[1] };
   };
@@ -277,4 +281,14 @@ Tinytest.add("html - getSpecialTag", function (test) {
                                            Special({stuff: 'w 4'})]}));
 
   succeed('<p></p>', P());
+
+  succeed('x{{foo}}{{bar}}y', ['x', Special({stuff: 'foo'}),
+                               Special({stuff: 'bar'}), 'y']);
+  succeed('x{{!foo}}{{!bar}}y', 'xy');
+  succeed('x{{!foo}}{{bar}}y', ['x', Special({stuff: 'bar'}), 'y']);
+  succeed('x{{foo}}{{!bar}}y', ['x', Special({stuff: 'foo'}), 'y']);
+
+  succeed('', null);
+  succeed('{{!foo}}', null);
+
 });
