@@ -72,6 +72,38 @@ var builtinConverters = [
       return base64Decode(obj.$binary);
     }
   },
+  { // Reference
+    matchJSONValue: function (obj) {
+      return _.has(obj, '$reference') && _.size(obj) === 1;
+    },
+    matchObject: function (obj) {
+      // This is handled in clone
+      if (typeof obj === 'object' && obj !== null) {
+        return _.has(obj, '$reference') && _.size(obj) === 1;
+      }
+    },
+    toJSONValue: function (obj) {
+      // This is handled in clone
+      return obj;
+    },
+    fromJSONValue: function (obj, references) {
+      return references && references[obj.$reference] || obj;
+    }
+  },
+  { // Globals
+    matchJSONValue: function (obj) {
+      return _.has(obj, '$global') && _.size(obj) === 1;
+    },
+    matchObject: function (obj) {
+      return EJSON._isGlobal(obj);
+    },
+    toJSONValue: function (obj) {
+      return {$global: 'global'}; // XXX: We could detect the actual global
+    },
+    fromJSONValue: function (obj) {
+      return {}; // XXX: We could have this return the global if it exists
+    }
+  },
   { // Escaping one level
     matchJSONValue: function (obj) {
       return _.has(obj, '$escape') && _.size(obj) === 1;
@@ -174,7 +206,7 @@ EJSON.toJSONValue = function (item) {
   if (changed !== undefined)
     return changed;
   if (typeof item === 'object') {
-    item = EJSON.clone(item);
+    item = EJSON.clone(item, [], true);
     adjustTypesToJSONValue(item);
   }
   return item;
@@ -185,10 +217,11 @@ EJSON.toJSONValue = function (item) {
 // different if the object you hand it itself needs changing.
 //
 var adjustTypesFromJSONValue =
-EJSON._adjustTypesFromJSONValue = function (obj) {
+EJSON._adjustTypesFromJSONValue = function (obj, references) {
+  var references = references || [];
   if (obj === null)
     return null;
-  var maybeChanged = fromJSONValueHelper(obj);
+  var maybeChanged = fromJSONValueHelper(obj, references);
   if (maybeChanged !== obj)
     return maybeChanged;
 
@@ -196,16 +229,19 @@ EJSON._adjustTypesFromJSONValue = function (obj) {
   if (typeof obj !== 'object')
     return obj;
 
+  // Save object as reference
+  references.push(obj);
+
   _.each(obj, function (value, key) {
     if (typeof value === 'object') {
-      var changed = fromJSONValueHelper(value);
+      var changed = fromJSONValueHelper(value, references);
       if (value !== changed) {
         obj[key] = changed;
         return;
       }
       // if we get here, value is an object but not adjustable
       // at this level.  recurse.
-      adjustTypesFromJSONValue(value);
+      adjustTypesFromJSONValue(value, references);
     }
   });
   return obj;
@@ -216,7 +252,7 @@ EJSON._adjustTypesFromJSONValue = function (obj) {
 
 // DOES NOT RECURSE.  For actually getting the fully-changed value, use
 // EJSON.fromJSONValue
-var fromJSONValueHelper = function (value) {
+var fromJSONValueHelper = function (value, references) {
   if (typeof value === 'object' && value !== null) {
     if (_.size(value) <= 2
         && _.all(value, function (v, k) {
@@ -225,7 +261,7 @@ var fromJSONValueHelper = function (value) {
       for (var i = 0; i < builtinConverters.length; i++) {
         var converter = builtinConverters[i];
         if (converter.matchJSONValue(value)) {
-          return converter.fromJSONValue(value);
+          return converter.fromJSONValue(value, references);
         }
       }
     }
@@ -338,16 +374,44 @@ EJSON.equals = function (a, b, options) {
   }
 };
 
-EJSON.clone = function (v) {
+EJSON._isGlobal = function (v) {
+  return Object.prototype.toString.call(v) === '[object global]';
+};
+
+EJSON.clone = function (v, references, ejsonizeReferences) {
   var ret;
+  var references = references || [];
+
   if (typeof v !== "object")
     return v;
   if (v === null)
     return null; // null has typeof "object"
+
+  // We dont clone global references either return the global reference or
+  // return an empty object
+  if (EJSON._isGlobal(v)) {
+    return v; // or {};
+  }
+
+  // Check for circular refernce arrays/objects/binary
+  // if v points to reference its a circular reference we return the
+  // coresponding cloned reference
+  for (var i = 0; i < references.length; i++) {
+    if (v === references[i].org) {
+      if (ejsonizeReferences) {
+        return { $reference: i };
+      } else {
+        return references[i].clone;
+      }
+    }
+  }
+
   if (v instanceof Date)
     return new Date(v.getTime());
   if (EJSON.isBinary(v)) {
     ret = EJSON.newBinary(v.length);
+    // Save this reference to recreate circular or internal references
+    references.push({ org: v, clone: ret });
     for (var i = 0; i < v.length; i++) {
       ret[i] = v[i];
     }
@@ -358,8 +422,10 @@ EJSON.clone = function (v) {
     // For some reason, _.map doesn't work in this context on Opera (weird test
     // failures).
     ret = [];
+    // Save this reference to recreate circular or internal references
+    references.push({ org: v, clone: ret });
     for (i = 0; i < v.length; i++)
-      ret[i] = EJSON.clone(v[i]);
+      ret[i] = EJSON.clone(v[i], references, ejsonizeReferences);
     return ret;
   }
   // handle general user-defined typed Objects if they have a clone method
@@ -368,8 +434,10 @@ EJSON.clone = function (v) {
   }
   // handle other objects
   ret = {};
+  // Save this reference to recreate circular or internal references
+  references.push({ org: v, clone: ret });
   _.each(v, function (value, key) {
-    ret[key] = EJSON.clone(value);
+    ret[key] = EJSON.clone(value, references, ejsonizeReferences);
   });
   return ret;
 };

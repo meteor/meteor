@@ -184,3 +184,100 @@ Tinytest.add("ejson - parse", function (test) {
     /argument should be a string/
   );
 });
+
+Tinytest.add("ejson - circular - clone", function (test) {
+  var a = {
+    text: 'bar'
+  };
+
+  a.circular = a;
+
+  b = EJSON.clone(a);
+
+  b.text = 'foo';
+
+  test.isFalse(a.text === b.text, 'a and b should be different objects');
+  test.isTrue(b.text === b.circular.text, 'circular reference should be preserved');
+  test.isFalse(a.text === b.circular.text, 'a and b.circular should be different objects');
+
+});
+
+Tinytest.add("ejson - circular - stringify", function (test) {
+  var a = {
+    text: 'bar',
+    c : {
+      text: 'internal'
+    }
+  };
+  a.circular = a;
+  a.internal = a.c;
+
+  stringA = EJSON.stringify(a);
+
+  var stringifiedA = '{"text":"bar","c":{"text":"internal"},"circular":{"$reference":0},"internal":{"$reference":1}}';
+
+  test.isTrue(stringA == stringifiedA, 'References are not correctly stringified');
+
+});
+
+Tinytest.add("ejson - circular - parse", function (test) {
+  var stringifiedA = '{"text":"bar","c":{"text":"internal"},"circular":{"$reference":0},"internal":{"$reference":1}}';
+  
+  var a = EJSON.parse(stringifiedA);
+
+  test.isTrue(a.text === 'bar', 'Basic text did not survice parsing');
+  test.isTrue(a.c.text === 'internal', 'Basic text did not survice parsing');
+  test.isTrue(a === a.circular, 'Circular root reference invalid');
+  test.isTrue(a.internal === a.c, 'Circular internal reference invalid');
+
+});
+
+
+Tinytest.add("ejson - global - clone", function (test) {
+  var a = {
+    text: 'bar'
+  };
+
+  if (Meteor.isClient) {
+    a.global = window;
+  } else {
+    a.global = global;
+  }
+
+  b = EJSON.clone(a);
+
+  b.text = 'foo';
+
+  test.isFalse(a.text === b.text, 'a and b should be different objects');
+  test.isTrue(a.global === b.global, 'globals should be preserved');
+
+});
+
+Tinytest.add("ejson - global - stringify", function (test) {
+  var a = {
+    text: 'bar'
+  };
+
+  if (Meteor.isClient) {
+    a.global = window;
+  } else {
+    a.global = global;
+  }
+
+  stringA = EJSON.stringify(a);
+
+  var stringifiedA = '{"text":"bar","global":{"$global":"global"}}';
+
+  test.isTrue(stringA == stringifiedA, 'References are not correctly stringified');
+
+});
+
+Tinytest.add("ejson - global - parse", function (test) {
+  var stringifiedA = '{"text":"bar","global":{"$global":"global"}}';
+
+  var a = EJSON.parse(stringifiedA);
+
+  test.isTrue(a.text === 'bar', 'Basic text did not survice parsing');
+  test.isTrue(typeof a.global === 'object', 'Global should be an object');
+
+});
