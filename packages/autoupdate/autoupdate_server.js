@@ -28,9 +28,9 @@
 // `current` field set to `true`.  This is the version of the client
 // code that the browser will receive from the server if it reloads.
 //
-// In this implementation only one such document is published, the
-// current client version.  Developers can easily experiment with
-// different versioning and updating models by forking this package.
+// In this implementation only one document is published, the current
+// client version.  Developers can easily experiment with different
+// versioning and updating models by forking this package.
 
 var crypto = Npm.require('crypto');
 
