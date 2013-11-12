@@ -1084,6 +1084,28 @@ LocalCollection._observeOrderedFromObserveChanges =
     }
   });
   suppressed = false;
+
+  // Fetches the current list of documents, in order, as an array.  Can be
+  // called at any time.  Internal API assumed by the `observe-sequence`
+  // package (used by Meteor UI for `#each` blocks).  Only defined on
+  // ordered observes (those that listen on `addedAt` or similar).
+  // Continues to work after `stop()` is called on the handle.
+  //
+  // Because we already materialize the full OrderedDict of all documents,
+  // it seems nice to provide access to the view rather than making the
+  // data consumer reconstitute it.  This gives the consumer a shot at
+  // doing something smart with the feed like proxying it, since firing
+  // callbacks like `changed` and `movedTo` basically requires omniscience
+  // (knowing old and new documents, old and new indices, and the correct
+  // value for `before`).
+  handle._fetch = function () {
+    var docsArray = [];
+    docs.forEach(function (doc) {
+      docsArray.push(doc);
+    });
+    return docsArray;
+  };
+
   return handle;
 };
 
@@ -1200,4 +1222,3 @@ var isGeoQuerySpecial = function (selector) {
     return _.isObject(val) && isGeoQuerySpecial(val);
   });
 };
-

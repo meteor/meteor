@@ -651,13 +651,22 @@ var closeTokensForUser = function (userTokens) {
   }));
 };
 
+// Like _.difference, but uses EJSON.equals to compute which values to return.
+var differenceObj = function (array1, array2) {
+  return _.filter(array1, function (array1Value) {
+    return ! _.some(array2, function (array2Value) {
+      return EJSON.equals(array1Value, array2Value);
+    });
+  });
+};
+
 Meteor.users.find({}, { fields: { "services.resume": 1 }}).observe({
   changed: function (newUser, oldUser) {
     var removedTokens = [];
     if (newUser.services && newUser.services.resume &&
         oldUser.services && oldUser.services.resume) {
-      removedTokens = _.difference(oldUser.services.resume.loginTokens || [],
-                                   newUser.services.resume.loginTokens || []);
+      removedTokens = differenceObj(oldUser.services.resume.loginTokens || [],
+                                    newUser.services.resume.loginTokens || []);
     } else if (oldUser.services && oldUser.services.resume) {
       removedTokens = oldUser.services.resume.loginTokens || [];
     }

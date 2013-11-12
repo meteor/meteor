@@ -1,6 +1,50 @@
 ## vNEXT
 
+* Bundler failures cause non-zero exit code in `meteor run`.  #1515
+
+* Fix `meteor run` with settings files containing non-ASCII characters.  #1497
+
+* Support `EJSON.clone` for `Meteor.Error`. As a result, they are properly
+  stringified in DDP even if thrown through a `Future`.  #1482
+
+* Fail explicitly when publishing non-cursors.
+
+* Implement `$each`, `$sort`, and `$slice` options for minimongo's `$push`
+  modifier.  #1492
+
+* Increase the maximum size spiderable will return for a page from 200kB
+  to 5MB.
+
+* New 'facts' package publishes internal statistics about Meteor.
+
+* Upgraded dependencies:
+  * SockJS server from 0.3.7 to 0.3.8
+
+Patches contributed by GitHub users mcbain, rzymek.
+
+
+## v0.6.6.3
+
+* Fix error when publish function callbacks are called during session
+  shutdown.  #1540 #1553
+
+* Improve `meteor run` CPU usage in projects with many
+  directories.  #1506
+
+
+## v0.6.6.2
+
+* Upgrade Node from 0.10.20 to 0.10.21 (security update).
+
+
+## v0.6.6.1
+
+* Fix file watching on OSX. Work around Node issue #6251 by not using
+  fs.watch. #1483
+
+
 ## v0.6.6
+
 
 #### Security
 

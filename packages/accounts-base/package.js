@@ -9,6 +9,7 @@ Package.on_use(function (api) {
   api.use('check', 'server');
   api.use('random', ['client', 'server']);
   api.use('service-configuration', ['client', 'server']);
+  api.use('ejson', 'server');
 
   // needed for getting the currently logged-in user
   api.use('livedata', ['client', 'server']);

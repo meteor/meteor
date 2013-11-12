@@ -44,6 +44,9 @@
     "release": "0.6.4.1"
   },
   {
+    "release": "0.6.4.2"
+  },
+  {
     "release": "0.6.5",
     "notices": [
       "Any custom application packages in the `packages` directory",
@@ -55,7 +58,19 @@
     "release": "0.6.5.1"
   },
   {
+    "release": "0.6.5.2"
+  },
+  {
     "release": "0.6.6"
+  },
+  {
+    "release": "0.6.6.1"
+  },
+  {
+    "release": "0.6.6.2"
+  },
+  {
+    "release": "0.6.6.3"
   },
   {
     "release": "NEXT"

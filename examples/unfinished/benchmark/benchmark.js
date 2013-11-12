@@ -1,7 +1,6 @@
-// Pick which scenario we run. Pass the 'SCENARIO' environment variable
-// to change this. See 'benchmark-scenarios.js' for the list of
-// scenarios.
 
+// Pick scenario from settings.
+// XXX settings now has public. could move stuff there and avoid this.
 var PARAMS = {};
 if (Meteor.isServer) {
   if (!Meteor.settings.params)
@@ -10,6 +9,12 @@ if (Meteor.isServer) {
 } else {
   PARAMS = __meteor_runtime_config__.PARAMS;
 }
+
+
+// id for this client or server.
+var processId = Random.id();
+console.log("processId", processId);
+
 
 //////////////////////////////
 // Helper Functions
@@ -36,9 +41,7 @@ var pickCollection = function () {
 
 var generateDoc = function () {
   var ret = {};
-  ret.bucket = random(PARAMS.numBuckets);
-  // XXX trusting client clock is wrong!!
-  ret.when = +(new Date);
+  ret.fromProcess = processId;
   _.times(PARAMS.documentNumFields, function (n) {
     ret['Field' + n] = randomString(PARAMS.documentSize/PARAMS.documentNumFields);
   });
@@ -59,18 +62,36 @@ _.times(PARAMS.numCollections, function (n) {
 
 
 if (Meteor.isServer) {
-  Meteor.startup(function () {
-    // clear all the collections.
-    _.each(Collections, function (C) {
-      C.remove({});
-    });
 
-    // insert initial docs
-    _.times(PARAMS.initialDocuments, function () {
-      pickCollection().insert(generateDoc());
+  // Make sure we have indexes. Helps mongo CPU usage.
+  Meteor.startup(function () {
+    _.each(Collections, function (C) {
+      C._ensureIndex({toProcess: 1});
+      C._ensureIndex({fromProcess: 1});
+      C._ensureIndex({when: 1});
     });
   });
 
+  // periodic db check. generate a client list.
+  var currentClients = [];
+  var totalDocs = 0;
+  Meteor.setInterval(function () {
+    var newClients = {};
+    var newTotal = 0;
+    // XXX hardcoded time
+    var since = +(new Date) - 1000*PARAMS.insertsPerSecond * 5;
+    _.each(Collections, function (C) {
+      _.each(C.find({when: {$gt: since}}, {fields: {fromProcess: 1, when: 1}}).fetch(), function (d) {
+        newTotal += 1;
+        if (d.fromProcess && d.when > since)
+          newClients[d.fromProcess] = true;
+      });
+    });
+    currentClients = _.keys(newClients);
+    totalDocs = newTotal;
+  }, 3*1000); // XXX hardcoded time
+
+  // periodic document cleanup.
   if (PARAMS.maxAgeSeconds) {
     Meteor.setInterval(function () {
       var when = +(new Date) - PARAMS.maxAgeSeconds*1000;
@@ -81,11 +102,52 @@ if (Meteor.isServer) {
     }, 1000*PARAMS.maxAgeSeconds / 20);
   }
 
-  Meteor.publish("data", function (collection, bucket) {
+  Meteor.publish("data", function (collection, process) {
+    check(collection, Number);
+    check(process, String);
     var C = Collections[collection];
-    return C.find({bucket: bucket});
+    return C.find({toProcess: process});
   });
 
+  Meteor.methods({
+    'insert': function (doc) {
+      check(doc, Object);
+      check(doc.fromProcess, String);
+      // pick a random destination. send to ourselves if there is no one
+      // else. by having an entry in the db, we'll end up in the target
+      // list.
+      doc.toProcess = Random.choice(currentClients) || doc.fromProcess;
+
+      doc.when = +(new Date);
+
+      var C = pickCollection();
+      C.insert(doc);
+    },
+    update: function (processId, field, value) {
+      check([processId, field, value], [String]);
+      var modifer = {};
+      modifer[field] = value; // XXX injection attack?
+
+      var C = pickCollection();
+      // update one message.
+      C.update({fromProcess: processId}, {$set: modifer}, {multi: false});
+    },
+    remove: function (processId) {
+      check(processId, String);
+      var C = pickCollection();
+      // remove one message.
+      var obj = C.findOne({fromProcess: processId});
+      if (obj)
+        C.remove(obj._id);
+    }
+  });
+
+
+  // XXX publish stats
+  // - currentClients.length
+  // - serverId
+  // - num ddp sessions
+  // - total documents
 }
 
 
@@ -93,7 +155,7 @@ if (Meteor.isServer) {
 if (Meteor.isClient) {
   // sub to data
   _.times(PARAMS.numCollections, function (n) {
-    Meteor.subscribe("data", n, random(PARAMS.numBuckets));
+    Meteor.subscribe("data", n, processId);
   });
 
   // templates
@@ -108,60 +170,59 @@ if (Meteor.isClient) {
   };
 
   Template.status.updateRate = function () {
-    return Session.get('updateRate') + ", " + Session.get('updateAvg');
+    return (Session.get('updateAvgs') || []).join(", ");
   };
+
+  // XXX count of how many docs are in local collection?
+
 
   // do stuff periodically
 
   if (PARAMS.insertsPerSecond) {
     Meteor.setInterval(function () {
-      pickCollection().insert(generateDoc());
+      Meteor.call('insert', generateDoc());
     }, 1000 / PARAMS.insertsPerSecond);
-  }
-
-  if (PARAMS.removesPerSecond) {
-    Meteor.setInterval(function () {
-      var C = pickCollection();
-      var docs = C.find({}).fetch();
-      var doc = Random.choice(docs);
-      if (doc)
-        C.remove(doc._id);
-    }, 1000 / PARAMS.removesPerSecond);
   }
 
   if (PARAMS.updatesPerSecond) {
     Meteor.setInterval(function () {
-      var C = pickCollection();
-      var docs = C.find({}).fetch();
-      var doc = Random.choice(docs);
-      if (doc) {
-        var field = 'Field' + random(PARAMS.documentNumFields);
-        var modifer = {};
-        modifer[field] =
-          randomString(PARAMS.documentSize/PARAMS.documentNumFields);
-        C.update(doc._id, {$set: modifer});
-      }
+      Meteor.call('update',
+                  processId,
+                  'Field' + random(PARAMS.documentNumFields),
+                  randomString(PARAMS.documentSize/PARAMS.documentNumFields)
+                 );
     }, 1000 / PARAMS.updatesPerSecond);
   }
+
+  if (PARAMS.removesPerSecond) {
+    Meteor.setInterval(function () {
+      Meteor.call('remove', processId);
+    }, 1000 / PARAMS.removesPerSecond);
+  }
+
 
 
   // XXX very rough per client update rate. we need to measure this
   // better. ideally, on the server we could get the global update rate
   var updateCount = 0;
-  var updateHistory = [];
+  var updateHistories = {1: [], 10: [], 100: [], 1000: []};
   var updateFunc = function () { updateCount += 1; };
   _.each(Collections, function (C) {
-    C.find({}).observe({
+    C.find({}).observeChanges({
       added: updateFunc, changed: updateFunc, removed: updateFunc
     });
   });
   Meteor.setInterval(function () {
-    updateHistory.push(updateCount);
-    if (updateHistory.length > 10)
-      updateHistory.shift();
-    Session.set('updateRate', updateCount);
-    Session.set('updateAvg', _.reduce(updateHistory, function(memo, num){
-      return memo + num; }, 0) / updateHistory.length);;
+    _.each(updateHistories, function (h, max) {
+      h.push(updateCount);
+      if (h.length > max)
+        h.shift();
+    });
+    Session.set('updateAvgs', _.map(updateHistories, function (h) {
+      return _.reduce(h, function(memo, num) {
+        return memo + num;
+      }, 0) / h.length;
+    }));;
     updateCount = 0;
   }, 1000);
 

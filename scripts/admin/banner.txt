@@ -1,6 +1,5 @@
-=> Meteor 0.6.6: Mongo upsert and $near queries, new browser-policy
-   package for security headers, NodeJS 0.10, and much more. For
-   details, see: https://github.com/meteor/meteor/blob/devel/History.md
+=> Meteor 0.6.6.3: Fix CPU runaway while watching files in large
+   projects and occasional server crash on session disconnect.
 
-   This is being downloaded in the background. Update your project
-   to Meteor 0.6.6 by running 'meteor update'.
+   This release is being downloaded in the background. Update your
+   project to Meteor 0.6.6.3 by running 'meteor update'.

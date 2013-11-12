@@ -303,16 +303,26 @@ var startServer = function (options) {
       return;
     }
 
-    var obj = Log.parse(line) || Log.objFromText(line);
-    console.log(Log.format(obj, { color:true }));
-    saveLog({stdout: Log.format(obj)});
+    if (options.rawLogs) {
+      console.log(line);
+      saveLog({stdout: line});
+    } else {
+      var obj = Log.parse(line) || Log.objFromText(line);
+      console.log(Log.format(obj, { color:true }));
+      saveLog({stdout: Log.format(obj)});
+    }
   });
 
   eachline(proc.stderr, 'utf8', function (line) {
     if (!line) return;
-    var obj = Log.objFromText(line, { level: 'warn', stderr: true });
-    console.log(Log.format(obj, { color: true }));
-    saveLog({stderr: Log.format(obj)});
+    if (options.rawLogs) {
+      console.error(line);
+      saveLog({stderr: line});
+    } else {
+      var obj = Log.objFromText(line, { level: 'warn', stderr: true });
+      console.log(Log.format(obj, { color: true }));
+      saveLog({stderr: Log.format(obj)});
+    }
   });
 
   proc.on('close', function (code, signal) {
@@ -359,18 +369,18 @@ var killServer = function (handle) {
 
 // Also used by "meteor deploy" in meteor.js.
 
-exports.getSettings = function (filename) {
-  var str;
-  try {
-    str = fs.readFileSync(filename, "utf8");
-  } catch (e) {
+exports.getSettings = function (filename, watchSet) {
+  var absPath = path.resolve(filename);
+  var buffer = watch.readAndWatchFile(watchSet, absPath);
+  if (!buffer)
     throw new Error("Could not find settings file " + filename);
-  }
-  if (str.length > 0x10000) {
+  if (buffer.length > 0x10000)
     throw new Error("Settings file must be less than 64 KB long");
-  }
-  // Ensure that the string is parseable in JSON, but there's
-  // no reason to use the object value of it yet.
+
+  var str = buffer.toString('utf8');
+
+  // Ensure that the string is parseable in JSON, but there's no reason to use
+  // the object value of it yet.
   if (str.match(/\S/)) {
     JSON.parse(str);
     return str;
@@ -511,6 +521,8 @@ exports.run = function (context, options) {
     if (bundleResult.errors) {
       logToClients({stdout: "=> Errors prevented startup:\n\n" +
                     bundleResult.errors.formatMessages()});
+      // Ensure that if we are running under --once, we exit with a non-0 code.
+      Status.code = 1;
       Status.hardCrashed("has errors");
       startWatching(watchSet);
       return;
@@ -518,19 +530,8 @@ exports.run = function (context, options) {
 
     // Read the settings file, if any
     var settings = null;
-    if (options.settingsFile) {
-      settings = exports.getSettings(options.settingsFile);
-
-      // 'getSettings' will collapse any amount of whitespace down to
-      // the empty string, so to get the sha1 for change monitoring,
-      // we need to reread the file, which creates a tiny race
-      // condition (not a big enough deal to care about right now.)
-      var settingsHash =
-        Builder.sha1(fs.readFileSync(options.settingsFile, "utf8"));
-
-      // Reload if the setting file changes
-      watchSet.addFile(path.resolve(options.settingsFile), settingsHash);
-    }
+    if (options.settingsFile)
+      settings = exports.getSettings(options.settingsFile, watchSet);
 
     // Start the server
     Status.running = true;
@@ -564,6 +565,7 @@ exports.run = function (context, options) {
       mongoUrl: mongoUrl,
       rootUrl: rootUrl,
       library: context.library,
+      rawLogs: options.rawLogs,
       onExit: function (code) {
         // on server exit
         Status.running = false;

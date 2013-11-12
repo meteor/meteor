@@ -30,6 +30,9 @@ Package.on_use(function (api) {
   // (for questionable reasons) initialized by the webapp package.
   api.use('webapp', 'server', {weak: true});
 
+  // If the facts package is loaded, publish some statistics.
+  api.use('facts', 'server', {weak: true});
+
   // Stuff that should be exposed via a real API, but we haven't yet.
   api.export('MongoInternals', 'server');
 

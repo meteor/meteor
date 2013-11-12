@@ -257,6 +257,9 @@ var Session = function (server, version, socket) {
   Fiber(function () {
     self.startUniversalSubs();
   }).run();
+
+  Package.facts && Package.facts.Facts.incrementServerFact(
+    "livedata", "sessions", 1);
 };
 
 _.extend(Session.prototype, {
@@ -341,7 +344,6 @@ _.extend(Session.prototype, {
     view.changed(subscriptionHandle, id, fields);
   },
 
-
   startUniversalSubs: function () {
     var self = this;
     // Make a shallow copy of the set of universal handlers and start them. If
@@ -364,11 +366,15 @@ _.extend(Session.prototype, {
     Meteor.defer(function () {
       // stop callbacks can yield, so we defer this on destroy.
       // see also _closeAllForTokens and its desire to destroy things in a loop.
+      // that said, sub._isDeactivated() detects that we set inQueue to null and
+      // treats it as semi-deactivated (it will ignore incoming callbacks, etc).
       self._deactivateAllSubscriptions();
     });
     // Drop the merge box data immediately.
     self.collectionViews = {};
     self.inQueue = null;
+    Package.facts && Package.facts.Facts.incrementServerFact(
+      "livedata", "sessions", -1);
   },
 
   // Send a message (doing nothing if no socket is connected right now.)
@@ -766,6 +772,9 @@ var Subscription = function (
     idStringify: LocalCollection._idStringify,
     idParse: LocalCollection._idParse
   };
+
+  Package.facts && Package.facts.Facts.incrementServerFact(
+    "livedata", "subscriptions", 1);
 };
 
 _.extend(Subscription.prototype, {
@@ -781,7 +790,7 @@ _.extend(Subscription.prototype, {
     }
 
     // Did the handler call this.error or this.stop?
-    if (self._deactivated)
+    if (self._isDeactivated())
       return;
 
     // SPECIAL CASE: Instead of writing their own callbacks that invoke
@@ -833,6 +842,12 @@ _.extend(Subscription.prototype, {
         cur._publishCursor(self);
       });
       self.ready();
+    } else if (res) {
+      // truthy values other than cursors or arrays are probably a
+      // user mistake (possible returning a Mongo document via, say,
+      // `coll.findOne()`).
+      self.error(new Error("Publish function can only return a Cursor or "
+                           + "an array of Cursors"));
     }
   },
 
@@ -847,6 +862,8 @@ _.extend(Subscription.prototype, {
       return;
     self._deactivated = true;
     self._callStopCallbacks();
+    Package.facts && Package.facts.Facts.incrementServerFact(
+      "livedata", "subscriptions", -1);
   },
 
   _callStopCallbacks: function () {
@@ -886,7 +903,7 @@ _.extend(Subscription.prototype, {
 
   error: function (error) {
     var self = this;
-    if (self._deactivated)
+    if (self._isDeactivated())
       return;
     self._session._stopSubscription(self._subscriptionId, error);
   },
@@ -897,22 +914,30 @@ _.extend(Subscription.prototype, {
   // triggers if there is an error).
   stop: function () {
     var self = this;
-    if (self._deactivated)
+    if (self._isDeactivated())
       return;
     self._session._stopSubscription(self._subscriptionId);
   },
 
   onStop: function (callback) {
     var self = this;
-    if (self._deactivated)
+    if (self._isDeactivated())
       callback();
     else
       self._stopCallbacks.push(callback);
   },
 
+  // This returns true if the sub has been deactivated, *OR* if the session was
+  // destroyed but the deferred call to _deactivateAllSubscriptions hasn't
+  // happened yet.
+  _isDeactivated: function () {
+    var self = this;
+    return self._deactivated || self._session.inQueue === null;
+  },
+
   added: function (collectionName, id, fields) {
     var self = this;
-    if (self._deactivated)
+    if (self._isDeactivated())
       return;
     id = self._idFilter.idStringify(id);
     Meteor._ensure(self._documents, collectionName)[id] = true;
@@ -921,7 +946,7 @@ _.extend(Subscription.prototype, {
 
   changed: function (collectionName, id, fields) {
     var self = this;
-    if (self._deactivated)
+    if (self._isDeactivated())
       return;
     id = self._idFilter.idStringify(id);
     self._session.changed(self._subscriptionHandle, collectionName, id, fields);
@@ -929,7 +954,7 @@ _.extend(Subscription.prototype, {
 
   removed: function (collectionName, id) {
     var self = this;
-    if (self._deactivated)
+    if (self._isDeactivated())
       return;
     id = self._idFilter.idStringify(id);
     // We don't bother to delete sets of things in a collection if the
@@ -940,7 +965,7 @@ _.extend(Subscription.prototype, {
 
   ready: function () {
     var self = this;
-    if (self._deactivated)
+    if (self._isDeactivated())
       return;
     if (!self._subscriptionId)
       return;  // unnecessary but ignored for universal sub

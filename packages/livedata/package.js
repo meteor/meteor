@@ -3,8 +3,7 @@ Package.describe({
   internal: true
 });
 
-Npm.depends({sockjs: "0.3.7",
-             websocket: "1.0.8"});
+Npm.depends({sockjs: "0.3.8", websocket: "1.0.8"});
 
 Package.on_use(function (api) {
   api.use(['check', 'random', 'ejson', 'json', 'underscore', 'deps', 'logging'],
@@ -22,6 +21,9 @@ Package.on_use(function (api) {
   // Allow us to detect 'autopublish', so we can print a warning if the user
   // runs Meteor.publish while it's loaded.
   api.use('autopublish', 'server', {weak: true});
+
+  // If the facts package is loaded, publish some statistics.
+  api.use('facts', 'server', {weak: true});
 
   api.export('DDP');
   api.export('DDPServer', 'server');
