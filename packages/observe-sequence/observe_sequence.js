@@ -45,18 +45,15 @@ ObserveSequence = {
       var seq = sequenceFunc();
       var seqArray; // same structure as `lastSeqArray` above.
 
-      // If this is not the first time this `autorun` block executes
-      // and the last sequence was a cursor, fetch its contents so
-      // that we can diff against the new sequence.
-      Deps.nonreactive(function () {
-        if (isMinimongoCursor(lastSeq)) {
-	  lastSeq.rewind(); // so that we can fetch
-          lastSeqArray = _.map(lastSeq.fetch(), function (doc) {
-            return {_id: doc._id, item: doc};
-          });
-          lastSeq.rewind(); // so that the user can still fetch
-        }
-      });
+      // If we were previously observing a cursor, replace lastSeqArray
+      // with more up-to-date information (specifically, the state of
+      // the observe before it was stopped, which may be older than the DB).
+      if (activeObserveHandle) {
+        lastSeqArray = _.map(activeObserveHandle._fetch(), function (doc) {
+          return {_id: doc._id, item: doc};
+        });
+        activeObserveHandle = null;
+      }
 
       if (!seq) {
         seqArray = [];
@@ -71,46 +68,41 @@ ObserveSequence = {
         diffArray(lastSeqArray, seqArray, callbacks);
       } else if (isMinimongoCursor(seq)) {
         var cursor = seq;
-        if (lastSeq !== cursor) { // fresh cursor.
-	  // Fetch the contents of the new cursor so that we can diff
-	  // from the old sequence.
-          Deps.nonreactive(function () { 
-	    cursor.rewind(); // so that we can fetch
-            seqArray = _.map(cursor.fetch(), function (doc) {
-              return {_id: doc._id, item: doc};
-            });
-            cursor.rewind(); // so that the user can still fetch
+
+	// Fetch the contents of the new cursor so that we can diff
+	// from the old sequence.
+        Deps.nonreactive(function () {
+	  cursor.rewind(); // so that we can fetch
+          seqArray = _.map(cursor.fetch(), function (doc) {
+            return {_id: doc._id, item: doc};
           });
+          cursor.rewind(); // so that the user can still fetch
+        });
 
-	  // diff the old sequnce with initial data in the new cursor. this will fire
-	  // `addedAt` callbacks on the initial data.
-          diffArray(lastSeqArray, seqArray, callbacks);
+	// diff the old sequnce with initial data in the new cursor. this will fire
+	// `addedAt` callbacks on the initial data.
+        diffArray(lastSeqArray, seqArray, callbacks);
 
-          if (activeObserveHandle) {
-            activeObserveHandle.stop();
+	// make sure to not fire duplicate `addedAt` callbacks for
+	// initial data
+        var initial = true;
+
+        activeObserveHandle = cursor.observe({
+          addedAt: function (document, atIndex, before) {
+            if (!initial)
+              callbacks.addedAt(document._id, document, atIndex, before);
+          },
+          changed: function (newDocument, oldDocument) {
+            callbacks.changed(newDocument._id, newDocument, oldDocument);
+          },
+          removed: function (oldDocument) {
+            callbacks.removed(oldDocument._id, oldDocument);
+          },
+          movedTo: function (document, fromIndex, toIndex, before) {
+            callbacks.movedTo(document._id, document, fromIndex, toIndex, before);
           }
-
-	  // make sure to not fire duplicate `addedAt` callbacks for
-	  // initial data
-          var initial = true;
-
-          activeObserveHandle = cursor.observe({
-            addedAt: function (document, atIndex, before) {
-              if (!initial)
-                callbacks.addedAt(document._id, document, atIndex, before);
-            },
-            changed: function (newDocument, oldDocument) {
-              callbacks.changed(newDocument._id, newDocument, oldDocument);
-            },
-            removed: function (oldDocument) {
-              callbacks.removed(oldDocument._id, oldDocument);
-            },
-            movedTo: function (document, fromIndex, toIndex, before) {
-              callbacks.movedTo(document._id, document, fromIndex, toIndex, before);
-            }
-          });
-          initial = false;
-        }
+        });
+        initial = false;
       } else {
         throw new Error("Not a recognized sequence type. Currently only arrays, cursors or "
                         + "falsey values accepted.");
@@ -173,4 +165,3 @@ var diffArray = function (lastSeqArray, seqArray, callbacks) {
       callbacks.changed(id, lastSeqArray[posOld[id]].item, seqArray[pos].item);
   });
 };
-
