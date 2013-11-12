@@ -1098,6 +1098,10 @@ LocalCollection._observeOrderedFromObserveChanges =
   // callbacks like `changed` and `movedTo` basically requires omniscience
   // (knowing old and new documents, old and new indices, and the correct
   // value for `before`).
+  //
+  // NOTE: If called from an observe callback for a certain change,
+  // the result is *not* guaranteed to be a snapshot of the cursor up
+  // to that change. This is because callbacks are deferred.
   handle._fetch = function () {
     var docsArray = [];
     docs.forEach(function (doc) {
