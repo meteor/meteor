@@ -104,6 +104,56 @@ Tinytest.add("html - parseFragment", function (test) {
   test.throws(function() {
     HTML.parseFragment('asdf</a>');
   });
+
+  (function () {
+    var p = HTML.parseFragment('<p></p>');
+    test.equal(p.tagName, 'P');
+    test.equal(p.attrs, null);
+    test.equal(HTML.typeOf(p), 'tag');
+    test.equal(p.length, 0);
+  })();
+
+  (function () {
+    var p = HTML.parseFragment('<p>x</p>');
+    test.equal(p.tagName, 'P');
+    test.equal(p.attrs, null);
+    test.equal(HTML.typeOf(p), 'tag');
+    test.equal(p.length, 1);
+    test.equal(p[0], 'x');
+  })();
+
+  (function () {
+    var p = HTML.parseFragment('<p>x&#65;</p>');
+    test.equal(p.tagName, 'P');
+    test.equal(p.attrs, null);
+    test.equal(HTML.typeOf(p), 'tag');
+    test.equal(p.length, 2);
+    test.equal(p[0], 'x');
+
+    test.equal(p[1].tagName, 'CharRef');
+    test.equal(p[1].length, 0);
+    test.equal(p[1].attrs, { html: '&#65;', str: 'A' });
+    test.equal(HTML.typeOf(p[1]), 'charref');
+  })();
+
+  (function () {
+    var pp = HTML.parseFragment('<p>x</p><p>y</p>');
+    test.equal(HTML.typeOf(pp), 'array');
+    test.equal(pp.length, 2);
+
+    test.equal(pp[0].tagName, 'P');
+    test.equal(pp[0].attrs, null);
+    test.equal(HTML.typeOf(pp[0]), 'tag');
+    test.equal(pp[0].length, 1);
+    test.equal(pp[0][0], 'x');
+
+    test.equal(pp[1].tagName, 'P');
+    test.equal(pp[1].attrs, null);
+    test.equal(HTML.typeOf(pp[1]), 'tag');
+    test.equal(pp[1].length, 1);
+    test.equal(pp[1][0], 'y');
+  })();
+
 });
 
 Tinytest.add("html - getSpecialTag", function (test) {
@@ -226,4 +276,5 @@ Tinytest.add("html - getSpecialTag", function (test) {
   succeed('<br x={{z 3}}{{w 4}}>', BR({x: [Special({stuff: 'z 3'}),
                                            Special({stuff: 'w 4'})]}));
 
+  succeed('<p></p>', P());
 });

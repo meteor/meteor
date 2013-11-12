@@ -132,9 +132,15 @@ getContent = function (scanner) {
         if (endTag.n !== tagName)
           scanner.fatal('Expected "' + tagName + '" end tag, found "' + endTag.n + '"');
 
+        // make `content` into an array suitable for applying tag constructor
+        // as in `FOO.apply(null, content)`.
+        if (HTML.typeOf(content) === 'null')
+          content = [];
+        else if (HTML.typeOf(content) !== 'array')
+          content = [content];
+
         items.push(HTML.getTag(tagName).apply(
-          null, (attrs ? [attrs] : []).concat(
-            HTML.typeOf(content) === 'array' ? content : [content])));
+          null, (attrs ? [attrs] : []).concat(content)));
       }
     } else {
       scanner.fatal("Unknown token type: " + token.t);
