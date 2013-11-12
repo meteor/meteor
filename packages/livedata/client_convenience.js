@@ -12,9 +12,7 @@ if (Meteor.isClient) {
       ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
   }
 
-  var exponentialBackoff = function (failures) {
-    return Math.pow(failures, 1.5) * 1000;
-  };
+  var retry = new Retry();
 
   var onDDPVersionNegotiationFailure = function (description) {
     Meteor._debug(description);
@@ -25,12 +23,9 @@ if (Meteor.isClient) {
       Package.reload.Reload._onMigrate('livedata', function () {
         return [true, {DDPVersionNegotiationFailures: failures}];
       });
-      Meteor.setTimeout(
-        function () {
-          Package.reload.Reload._reload();
-        },
-        exponentialBackoff(failures)
-      );
+      retry.retryLater(failures, function () {
+        Package.reload.Reload._reload();
+      });
     }
   };
 
