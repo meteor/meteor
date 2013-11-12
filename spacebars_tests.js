@@ -541,3 +541,19 @@ Tinytest.add("spacebars - Spacebars.index", function (test) {
     }, 'inc')(8), 9);
 
 });
+
+//////////////////////////////////////////////////
+
+Tinytest.add("spacebars - parse2", function (test) {
+  test.equal(UI.toCode(Spacebars.parse2('{{foo}}')),
+             'HTML.Special({type: "DOUBLE", path: ["foo"]})');
+
+  test.equal(UI.toCode(Spacebars.parse2('{{!foo}}')), 'null');
+  test.equal(UI.toCode(Spacebars.parse2('x{{!foo}}y')), '"xy"');
+
+  test.equal(UI.toCode(Spacebars.parse2('{{#foo}}x{{/foo}}')),
+             'HTML.Special({type: "BLOCKOPEN", path: ["foo"], content: "x"})');
+
+  test.equal(UI.toCode(Spacebars.parse2('{{#foo}}{{#bar}}{{/bar}}{{/foo}}')),
+             'HTML.Special({type: "BLOCKOPEN", path: ["foo"], content: HTML.Special({type: "BLOCKOPEN", path: ["bar"]})})');
+});
