@@ -50,8 +50,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
     self.rawUrl = url;
   },
 
-  // The welcome_message is deprecated and is ignored.
-  _connected: function (welcome_message) {
+  _connected: function () {
     var self = this;
 
     if (self.connectionTimer) {
@@ -152,15 +151,13 @@ _.extend(LivedataTest.ClientStream.prototype, {
       toSockjsUrl(self.rawUrl), undefined, {
         debug: false, protocols_whitelist: self._sockjsProtocolsWhitelist()
       });
+    self.socket.onopen = function (data) {
+      self._connected();
+    };
     self.socket.onmessage = function (data) {
       self._heartbeat_received();
 
-      // first message we get when we're connecting goes to _connected,
-      // which connects us. All subsequent messages (while connected) go to
-      // the callback.
-      if (self.currentStatus.status === "connecting")
-        self._connected(data.data);
-      else if (self.currentStatus.connected)
+      if (self.currentStatus.connected)
         _.each(self.eventCallbacks.message, function (callback) {
           callback(data.data);
         });

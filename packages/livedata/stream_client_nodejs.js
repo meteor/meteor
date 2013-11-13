@@ -42,7 +42,6 @@ LivedataTest.ClientStream = function (endpoint) {
 
   self._initCommon();
 
-  self.expectingWelcome = false;
   //// Kickoff!
   self._launchConnection();
 };
@@ -106,18 +105,9 @@ _.extend(LivedataTest.ClientStream.prototype, {
       self._lostConnection();
     });
 
-    self.expectingWelcome = true;
     connection.on('message', function (message) {
       if (self.currentConnection !== this)
         return; // old connection still emitting messages
-
-      if (self.expectingWelcome) {
-        // Discard the first message that comes across the
-        // connection. It is the hot code push version identifier and
-        // is not actually part of DDP.
-        self.expectingWelcome = false;
-        return;
-      }
 
       if (message.type === "utf8") // ignore binary frames
         _.each(self.eventCallbacks.message, function (callback) {
