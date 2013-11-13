@@ -83,7 +83,11 @@ if (Meteor.isClient) {
     // or by removing a parent.
     //
     // To use this, override it (set it).
-    onRemoveElement: function (elem) {}
+    onRemoveElement: function (elem) {},
+
+    trigger: function (elem, event, params) {
+      $(elem).trigger(event, params);
+    }
   };
 
   // For an explanation of this technique, see:
