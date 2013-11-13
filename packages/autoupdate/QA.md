@@ -25,6 +25,9 @@ client code changes) by restarting the server with a new value for
 
 ## No Client Reload on Server-only Change
 
+Revert previous changes and run the example without setting
+AUTOUPDATE_VERSION.
+
 Note that it might look like the browser is reloading because the page
 content in the leaderboard example will flicker when the server
 restarts because the example is using autopublish, but that the window
