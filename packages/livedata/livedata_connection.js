@@ -181,7 +181,9 @@ var Connection = function (url, options) {
     }
 
     if (msg === null || !msg.msg) {
-      Meteor._debug("discarding invalid livedata message", msg);
+      // ignore the old welcome message
+      if (! (msg && msg.server_id))
+        Meteor._debug("discarding invalid livedata message", msg);
       return;
     }
 
