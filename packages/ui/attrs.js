@@ -134,7 +134,12 @@ _extend(AttributeHandler.prototype, {
       if (oldValue != null)
         element.removeAttribute(this.name);
     } else {
-      element.setAttribute(this.name, this.stringifyValue(value));
+      value = this.stringifyValue(value);
+      // We have to be careful here, because some attributes on some browsers
+      // aren't settable, even to the same value as before -- notably `<input>`
+      // `type` on IE8.  I'm not sure if this applies to any modern browsers.
+      if (element.getAttribute(this.name) !== value)
+        element.setAttribute(this.name, value);
     }
   }
 });

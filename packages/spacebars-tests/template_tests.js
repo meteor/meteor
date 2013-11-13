@@ -579,3 +579,21 @@ Tinytest.add('spacebars - templates - {{#with}} falsy; issue #770', function (te
   test.equal(canonicalizeHtml(trimAndRemoveSpaces(div.innerHTML)),
              "abcxxxabc");
 });
+
+Tinytest.add("spacebars - templates - tricky attrs", function (test) {
+  var tmpl = Template.spacebars_template_test_tricky_attrs;
+  tmpl.theType = function () { return 'text'; };
+  var R = ReactiveVar('foo');
+  tmpl.theClass = function () { return R.get(); };
+
+  var div = renderToDiv(tmpl);
+  console.log(div.innerHTML);
+  test.equal(trim(canonicalizeHtml(div.innerHTML)).slice(0, 30),
+             '<input type="text"><input class="foo" type="checkbox">'.slice(0, 30));
+
+  R.set('bar');
+  Deps.flush();
+  test.equal(trim(canonicalizeHtml(div.innerHTML)),
+             '<input type="text"><input class="bar" type="checkbox">');
+
+});
