@@ -53,7 +53,7 @@ if (typeof Session.get("spinForward") !== 'boolean') {
 Template.preserveDemo.preserve([ '.spinner', '.spinforward' ]);
 
 Template.preserveDemo.spinForwardChecked = function () {
-  return Session.get('spinForward') ? 'checked="checked"' : '';
+  return Session.get('spinForward') ? 'checked' : '';
 };
 
 Template.preserveDemo.spinAnim = function () {
@@ -69,7 +69,7 @@ Template.preserveDemo.events({
 ///////////////////////////////////////////////////////////////////////////////
 
 Template.constantDemo.checked = function (which) {
-  return Session.get('mapchecked' + which) ? 'checked="checked"' : '';
+  return Session.get('mapchecked' + which) ? 'checked' : '';
 };
 
 Template.constantDemo.show = function (which) {
@@ -193,7 +193,7 @@ Template.circles.count = function () {
 
 Template.circles.disabled = function () {
   return Session.get("selectedCircle:" + this.group) ?
-    '' : 'disabled="disabled"';
+    '' : 'disabled';
 };
 
 Template.circles.created = function () {

@@ -87,7 +87,7 @@ if (Meteor.isClient) {
   Template.radio.maybeChecked = function () {
     var curValue = Session.get('settings')[this.key];
     if (castValue(this.value) === curValue)
-      return 'checked="checked"';
+      return 'checked';
     return '';
   };
 

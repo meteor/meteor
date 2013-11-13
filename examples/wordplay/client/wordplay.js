@@ -68,7 +68,7 @@ Template.lobby.disabled = function () {
   var me = player();
   if (me && me.name)
     return '';
-  return 'disabled="disabled"';
+  return 'disabled';
 };
 
 
