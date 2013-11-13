@@ -20,26 +20,33 @@ canonicalizeHtml = function(html) {
     attrs = attrs.replace(/^\s+/g, '');
     attrs = attrs.replace(/\s+$/g, '');
     attrs = attrs.replace(/\s+/g, ' ');
+    // for the purpose of splitting attributes in a string like
+    // 'a="b" c="d"', assume they are separated by a single space
+    // and values are double-quoted, but allow for spaces inside
+    // the quotes.  Split on space following quote.
+    var attrList = attrs.replace(/" /g, '"\u0000').split('\u0000');
+    // put attributes in alphabetical order
+    attrList.sort();
+
     var tagContents = [tagName];
 
-    if (attrs !== '') {
-      var attrList = attrs.split(' ');
-      // put attributes in alphabetical order
-      attrList.sort();
-      for(var i=0; i<attrList.length; i++) {
-        var a = attrList[i].split('=');
+    for(var i=0; i<attrList.length; i++) {
+      // If there were no attrs, attrList could be `[""]`,
+      // so skip falsy values.
+      if (! attrList[i])
+        continue;
+      var a = attrList[i].split('=');
         if (a.length < 2)
           a.push(a[0]); // things like checked=checked, in theory
-        var key = a[0];
-        // Drop another expando property used by Sizzle.
-        if (key === 'sizset')
-          continue;
-        var value = a[1];
-        value = value.replace(/["'`]/g, '"');
-        if (value.charAt(0) !== '"')
-          value = '"'+value+'"';
-        tagContents.push(key+'='+value);
-      }
+      var key = a[0];
+      // Drop another expando property used by Sizzle.
+      if (key === 'sizset')
+        continue;
+      var value = a[1];
+      value = value.replace(/["'`]/g, '"');
+      if (value.charAt(0) !== '"')
+        value = '"'+value+'"';
+      tagContents.push(key+'='+value);
     }
     return '<'+tagContents.join(' ')+'>';
   });
