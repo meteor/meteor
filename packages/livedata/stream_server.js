@@ -60,7 +60,6 @@ StreamServer = function () {
     });
     self.open_sockets.push(socket);
 
-
     // Send the old style welcome message, which will force old
     // clients to reload.
     socket.send(JSON.stringify({server_id: "0"}));

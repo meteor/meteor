@@ -13,6 +13,9 @@
 // which you only change when something worth pushing to clients
 // immediately happens.
 //
+// For backwards compatibility, SERVER_ID can be used instead of
+// AUTOUPDATE_VERSION.
+//
 // The server publishes a `meteor_autoupdate_clientVersions`
 // collection.  The contract of this collection is that each document
 // in the collection represents an acceptable client version, with the
@@ -44,13 +47,13 @@ AutoUpdate = {};
 AutoUpdate.autoUpdateVersion = null;
 
 Meteor.startup(function () {
-  AutoUpdate.autoUpdateVersion =
-    process.env.AUTOUPDATE_VERSION ||
-    // also accept SERVER_ID for backwards compatibility.
-    process.env.SERVER_ID ||
-    WebApp.clientHash;
+  if (AutoUpdate.autoUpdateVersion === null)
+    AutoUpdate.autoUpdateVersion =
+      process.env.AUTOUPDATE_VERSION ||
+      process.env.SERVER_ID ||
+      WebApp.clientHash;
 
-  // also make the autoUpdateVersion available on the client.
+  // Make autoUpdateVersion available on the client.
   __meteor_runtime_config__.autoUpdateVersion = AutoUpdate.autoUpdateVersion;
 });
 
