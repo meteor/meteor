@@ -904,6 +904,7 @@ Spacebars.compile = function (inputString, options) {
             } else if (value === '' &&
                        name.length === 1 &&
                        name[0].type === 'TRIPLE') {
+              throw new Error("Triple-stache for attributes is no longer supported.  See https://github.com/meteor/meteor/commit/84b123e");
               // attribute name is a triple-stache, no value, as in:
               // `<div {{{attrs}}}>`.
               renderables.push(
