@@ -20,6 +20,9 @@ canonicalizeHtml = function(html) {
     attrs = attrs.replace(/^\s+/g, '');
     attrs = attrs.replace(/\s+$/g, '');
     attrs = attrs.replace(/\s+/g, ' ');
+    // quote unquoted attribute values, as in `type=checkbox`.  This
+    // will do the wrong thing if there's an `=` in an attribute value.
+    attrs = attrs.replace(/(\w)=([^" >/]+)/g, '$1="$2"');
     // for the purpose of splitting attributes in a string like
     // 'a="b" c="d"', assume they are separated by a single space
     // and values are double-quoted, but allow for spaces inside
@@ -44,6 +47,8 @@ canonicalizeHtml = function(html) {
         continue;
       var value = a[1];
       value = value.replace(/["'`]/g, '"');
+      // this check is probably made unreachable by a regex above
+      // that quotes unquoted attribute values
       if (value.charAt(0) !== '"')
         value = '"'+value+'"';
       tagContents.push(key+'='+value);

@@ -63,10 +63,8 @@ Tinytest.add("spacebars - templates - interpolate attribute", function (test) {
 Tinytest.add("spacebars - templates - dynamic attrs", function (test) {
   var tmpl = Template.spacebars_template_test_dynamic_attrs;
 
-  var R1 = ReactiveVar('');
-  var R2 = ReactiveVar('n=1');
+  var R2 = ReactiveVar('');
   var R3 = ReactiveVar('selected');
-  tmpl.attrs1 = function () { return R1.get(); };
   tmpl.attrs2 = function () { return R2.get(); };
   tmpl.k = 'x';
   tmpl.v = 'y';
@@ -74,18 +72,17 @@ Tinytest.add("spacebars - templates - dynamic attrs", function (test) {
   var div = renderToDiv(tmpl);
   var span = $(div).find('span')[0];
   test.equal(span.innerHTML, 'hi');
-  test.equal(span.getAttribute('n'), "1");
+  test.isFalse(span.hasAttribute('foo'));
   test.equal(span.getAttribute('x'), 'y');
   test.isTrue(span.selected);
 
-  R1.set('zanzibar="where the heart is"');
-  R2.set('');
+  R2.set('foo');
   R3.set('');
   Deps.flush();
   test.equal(stripComments(span.innerHTML), 'hi');
-  test.isFalse(span.hasAttribute('n'));
+  test.isTrue(span.hasAttribute('foo'));
+  test.equal(span.getAttribute('foo'), '');
   test.isFalse(span.selected);
-  test.equal(span.getAttribute('zanzibar'), 'where the heart is');
 });
 
 Tinytest.add("spacebars - templates - triple", function (test) {
@@ -581,4 +578,22 @@ Tinytest.add('spacebars - templates - {{#with}} falsy; issue #770', function (te
   var div = renderToDiv(Template.test_template_issue770);
   test.equal(canonicalizeHtml(trimAndRemoveSpaces(div.innerHTML)),
              "abcxxxabc");
+});
+
+Tinytest.add("spacebars - templates - tricky attrs", function (test) {
+  var tmpl = Template.spacebars_template_test_tricky_attrs;
+  tmpl.theType = function () { return 'text'; };
+  var R = ReactiveVar('foo');
+  tmpl.theClass = function () { return R.get(); };
+
+  var div = renderToDiv(tmpl);
+  console.log(div.innerHTML);
+  test.equal(trim(canonicalizeHtml(div.innerHTML)).slice(0, 30),
+             '<input type="text"><input class="foo" type="checkbox">'.slice(0, 30));
+
+  R.set('bar');
+  Deps.flush();
+  test.equal(trim(canonicalizeHtml(div.innerHTML)),
+             '<input type="text"><input class="bar" type="checkbox">');
+
 });
