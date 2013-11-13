@@ -555,5 +555,9 @@ Tinytest.add("spacebars - parse2", function (test) {
              'HTML.Special({type: "BLOCKOPEN", path: ["foo"], content: "x"})');
 
   test.equal(UI.toCode(Spacebars.parse2('{{#foo}}{{#bar}}{{/bar}}{{/foo}}')),
-             'HTML.Special({type: "BLOCKOPEN", path: ["foo"], content: HTML.Special({type: "BLOCKOPEN", path: ["bar"]})})');
+             'HTML.Special({type: "BLOCKOPEN", path: ["foo"], content: HTML.Special({type: "BLOCKOPEN", path: ["bar"], content: null})})');
+
+  test.equal(UI.toCode(Spacebars.parse2('<div>hello</div> {{#foo}}<div>{{#bar}}world{{/bar}}</div>{{/foo}}')),
+             '[HTML.Tag.DIV("hello"), " ", HTML.Special({type: "BLOCKOPEN", path: ["foo"], content: HTML.Tag.DIV(HTML.Special({type: "BLOCKOPEN", path: ["bar"], content: "world"}))})]');
+
 });
