@@ -25,8 +25,6 @@ Package.on_use(function (api) {
   // If the facts package is loaded, publish some statistics.
   api.use('facts', 'server', {weak: true});
 
-  api.use('localstorage', 'client');
-
   api.export('DDP');
   api.export('DDPServer', 'server');
 
