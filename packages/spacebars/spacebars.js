@@ -1121,6 +1121,9 @@ Spacebars.parse2 = function (input) {
     // TODO: make `parseStacheTag` use the same `scanner`, and `scanner.fatal`
     // for errors, which should be made to still have nice line numbers.
     var stache = Spacebars.parseStacheTag(scanner.input, scanner.pos);
+    // kill any `args: []` cluttering up the object
+    if (stache.args && ! stache.args.length)
+      delete stache.args;
 
     if (stache.type === 'ELSE')
       scanner.fatal("Found unexpected {{else}}}");

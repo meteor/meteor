@@ -603,12 +603,18 @@ var toCode = function (node) {
       var argStrs = [];
       if (node.attrs) {
         var kvStrs = [];
-        _.each(node.attrs, function (v, k) {
-          checkAttributeName(k);
-          v = attributeValueToCode(v);
-          if (v !== null)
-            kvStrs.push(toObjectLiteralKey(k) + ': ' + v);
-        });
+        if (type === 'special') {
+          _.each(node.attrs, function (v, k) {
+            kvStrs.push(toObjectLiteralKey(k) + ': ' + toCode(v));
+          });
+        } else {
+          _.each(node.attrs, function (v, k) {
+            checkAttributeName(k);
+            v = attributeValueToCode(v);
+            if (v !== null)
+              kvStrs.push(toObjectLiteralKey(k) + ': ' + v);
+          });
+        }
         argStrs.push('{' + kvStrs.join(', ') + '}');
       }
 
