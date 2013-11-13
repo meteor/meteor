@@ -7,7 +7,7 @@
 </body>
 
 <template name="radio">
-  <span class="radio"><input id="{{key}}:{{value}}" {{{maybeChecked}}} type="radio" name="{{key}}" value="{{value}}" />{{! no whitespace}}<label for="{{key}}:{{value}}">{{label}}</label></span>
+  <span class="radio"><input id="{{key}}:{{value}}" {{maybeChecked}} type="radio" name="{{key}}" value="{{value}}" />{{! no whitespace}}<label for="{{key}}:{{value}}">{{label}}</label></span>
 </template>
 
 <template name="button">
