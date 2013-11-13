@@ -51,14 +51,12 @@ asciiLowerCase = function (str) {
 
 // Take a tag name in any case and make it the proper case for HTML.
 //
-// The latest HTML standards don't care about case at all, but for
-// compatibility it is customary to use a particular case.  In most cases
-// this means lowercase, but there are some camelCase SVG tags that require a
-// lookup table to get right (for browsers that care).  (Historically,
-// case-sensitivity requirements in HTML were imposed by the XHTML movement.
-// However, HTML5 is not based on XML, and though it supports direct
-// inclusion of SVG, an XML language, it parses it as HTML with some special
-// parsing rules.)
+// Modern browsers let you embed SVG in HTML, but SVG elements are special
+// in that they have a case-sensitive DOM API (nodeName, getAttribute,
+// setAttribute).  For example, it has to be `setAttribute("viewBox")`,
+// not `"viewbox"`.  However, the HTML parser will fix the case for you,
+// so if you write `<svg viewbox="...">` you actually get a `"viewBox"`
+// attribute.
 properCaseTagName = function (name) {
   // XXX TODO: SVG camelCase
   return asciiLowerCase(name);
