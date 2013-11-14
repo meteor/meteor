@@ -64,6 +64,7 @@ Package.on_test(function (api) {
   api.use('test-helpers', ['client', 'server']);
   api.use(['underscore', 'tinytest', 'random', 'deps', 'minimongo']);
 
+  api.add_files('livedata_server_tests.js', 'server');
   api.add_files('livedata_connection_tests.js', ['client', 'server']);
   api.add_files('livedata_tests.js', ['client', 'server']);
   api.add_files('livedata_test_service.js', ['client', 'server']);
