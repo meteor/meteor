@@ -791,6 +791,10 @@ _.extend(Connection.prototype, {
     _.each(_.clone(self._subscriptions), function (sub, id) {
       // Avoid killing the autoupdate subscription so that developers
       // still get hot code pushes when writing tests.
+      //
+      // XXX it's a hack to encode knowledge about autoupdate here,
+      // but it doesn't seem worth it yet to have a special API for
+      // subscriptions to preserve after unit tests.
       if (sub.name !== 'meteor_autoupdate_clientVersions') {
         self._send({msg: 'unsub', id: id});
         delete self._subscriptions[id];
