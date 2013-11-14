@@ -251,6 +251,30 @@ var Session = function (server, version, socket) {
   // we want to buffer up for when we are done rerunning subscriptions
   self._pendingReady = [];
 
+  // List of callbacks to call when this session is closed.
+  self.closeCallbacks = [];
+
+  // The `SessionHandle` for this session, passed to
+  // `Meteor.server.onConnection` callbacks.
+  self.sessionHandle = {
+    id: self.id,
+    close: function () {
+      self.server._destroySession(self);
+    },
+    onClose: function (fn) {
+      fn = Meteor.bindEnvironment(
+        fn,
+        function (err) {
+          Meteor._debug(
+            "Exception in connection session onClose callback",
+            err && err.stack
+          );
+        }
+      );
+      self.closeCallbacks.push(fn);
+    }
+  };
+
   socket.send(stringifyDDP({msg: 'connected',
                             session: self.id}));
   // On initial connect, spin up all the universal publishers.
@@ -373,6 +397,10 @@ _.extend(Session.prototype, {
     // Drop the merge box data immediately.
     self.collectionViews = {};
     self.inQueue = null;
+    // XXX do we need to use Meteor.defer here as well?
+    _.each(self.closeCallbacks, function (callback) {
+      callback();
+    });
     Package.facts && Package.facts.Facts.incrementServerFact(
       "livedata", "sessions", -1);
   },
@@ -537,6 +565,7 @@ _.extend(Session.prototype, {
         setUserId: setUserId,
         _setLoginToken: setLoginToken,
         unblock: unblock,
+        sessionId: self.id,
         sessionData: self.sessionData
       });
       try {
@@ -983,6 +1012,10 @@ _.extend(Subscription.prototype, {
 Server = function () {
   var self = this;
 
+  // List of callbacks to call when a new connection comes in to the
+  // server and completes DDP version negotiation.
+  self.connectionCallbacks = [];
+
   self.publish_handlers = {};
   self.universal_publish_handlers = [];
 
@@ -1064,6 +1097,28 @@ Server = function () {
 
 _.extend(Server.prototype, {
 
+  onConnection: function (fn) {
+    var self = this;
+
+    fn = Meteor.bindEnvironment(
+      fn,
+      function (err) {
+        Meteor._debug(
+          "Exception in Meteor.server.onConnection callback",
+          err && err.stack
+        );
+      }
+    );
+
+    self.connectionCallbacks.push(fn);
+
+    return {
+      stop: function () {
+        self.connectionCallbacks = _.without(self.connectionCallbacks, fn);
+      }
+    };
+  },
+
   _handleConnect: function (socket, msg) {
     var self = this;
     // In the future, handle session resumption: something like:
@@ -1074,6 +1129,9 @@ _.extend(Server.prototype, {
       // Creating a new session
       socket._meteorSession = new Session(self, version, socket);
       self.sessions[socket._meteorSession.id] = socket._meteorSession;
+      _.each(self.connectionCallbacks, function (callback) {
+        callback(socket._meteorSession.sessionHandle);
+      });
     } else if (!msg.version) {
       // connect message without a version. This means an old (pre-pre1)
       // client is trying to connect. If we just disconnect the
@@ -1241,6 +1299,7 @@ _.extend(Server.prototype, {
         throw new Error("Can't call _setLoginToken on a server " +
                         "initiated method call");
       };
+      var sessionId = null;
       var currentInvocation = DDP._CurrentInvocation.get();
       if (currentInvocation) {
         userId = currentInvocation.userId;
@@ -1250,6 +1309,7 @@ _.extend(Server.prototype, {
         setLoginToken = function (newToken) {
           currentInvocation._setLoginToken(newToken);
         };
+        sessionId = currentInvocation.sessionId;
       }
 
       var invocation = new MethodInvocation({
@@ -1257,6 +1317,8 @@ _.extend(Server.prototype, {
         userId: userId,
         setUserId: setUserId,
         _setLoginToken: setLoginToken,
+        sessionId: sessionId,
+        // XXX the Server object doesn't have a `sessionData` field.
         sessionData: self.sessionData
       });
       try {

@@ -33,6 +33,10 @@ MethodInvocation = function (options) {
   // connection can be closed if the token is no longer valid
   this._setLoginToken = options._setLoginToken || function () {};
 
+  // On the server, the session id of the connection this method call
+  // came in on.
+  this.sessionId = options.sessionId;
+
   // Scratch data scoped to this connection (livedata_connection on the
   // client, livedata_session on the server). This is only used
   // internally, but we should have real and documented API for this
