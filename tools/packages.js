@@ -26,7 +26,7 @@ var sourcemap = require('source-map');
 // end up as watched dependencies. (At least for now, packages only used in
 // target creation (eg minifiers and dev-bundle-fetcher) don't require you to
 // update BUILT_BY, though you will need to quit and rerun "meteor run".)
-exports.BUILT_BY = 'meteor/8';
+exports.BUILT_BY = 'meteor/10';
 
 // Like Perl's quotemeta: quotes all regexp metacharacters. See
 //   https://github.com/substack/quotemeta/blob/master/index.js

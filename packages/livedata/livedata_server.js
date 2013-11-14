@@ -583,6 +583,12 @@ _.extend(Session.prototype, {
     });
   },
 
+  // XXX This mixes accounts concerns (login tokens) into livedata, which is not
+  // ideal. Eventually we'll have an API that allows accounts to keep track of
+  // which connections are associated with tokens and close them when necessary,
+  // rather than the current state of things where accounts tells livedata which
+  // connections are associated with which tokens, and when to close connections
+  // associated with a given token.
   _setLoginToken: function (newToken) {
     var self = this;
     var oldToken = self.sessionData.loginToken;
@@ -652,13 +658,6 @@ _.extend(Session.prototype, {
         self._pendingReady = [];
       }
     });
-
-
-    // XXX figure out the login token that was just used, and set up an observe
-    // on the user doc so that deleting the user or the login token disconnects
-    // the session. For now, if you want to make sure that your deleted users
-    // don't have any continuing sessions, you can restart the server, but we
-    // should make it automatic.
   },
 
   _startSubscription: function (handler, subId, params, name) {
@@ -834,6 +833,12 @@ _.extend(Subscription.prototype, {
         cur._publishCursor(self);
       });
       self.ready();
+    } else if (res) {
+      // truthy values other than cursors or arrays are probably a
+      // user mistake (possible returning a Mongo document via, say,
+      // `coll.findOne()`).
+      self.error(new Error("Publish function can only return a Cursor or "
+                           + "an array of Cursors"));
     }
   },
 
@@ -969,6 +974,12 @@ Server = function () {
   // Keeps track of the open connections associated with particular login
   // tokens. Used for logging out all a user's open connections, expiring login
   // tokens, etc.
+  // XXX This mixes accounts concerns (login tokens) into livedata, which is not
+  // ideal. Eventually we'll have an API that allows accounts to keep track of
+  // which connections are associated with tokens and close them when necessary,
+  // rather than the current state of things where accounts tells livedata which
+  // connections are associated with which tokens, and when to close connections
+  // associated with a given token.
   self.sessionsByLoginToken = {};
 
 
@@ -1018,7 +1029,7 @@ Server = function () {
       } catch (e) {
         // XXX print stack nicely
         Meteor._debug("Internal exception while processing message", msg,
-                      e.stack);
+                      e.message, e.stack);
       }
     });
 
@@ -1264,9 +1275,11 @@ _.extend(Server.prototype, {
       if (_.isEmpty(self.sessionsByLoginToken[oldToken]))
         delete self.sessionsByLoginToken[oldToken];
     }
-    if (! _.has(self.sessionsByLoginToken, newToken))
-      self.sessionsByLoginToken[newToken] = [];
-    self.sessionsByLoginToken[newToken].push(session.id);
+    if (newToken) {
+      if (! _.has(self.sessionsByLoginToken, newToken))
+        self.sessionsByLoginToken[newToken] = [];
+      self.sessionsByLoginToken[newToken].push(session.id);
+    }
   },
 
   // Close all open sessions associated with any of the tokens in

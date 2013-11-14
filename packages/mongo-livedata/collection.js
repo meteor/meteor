@@ -313,16 +313,21 @@ var throwIfSelectorIsNotId = function (selector, methodName) {
   }
 };
 
-// 'insert' immediately returns the inserted document's new _id.  The
-// others return nothing.
+// 'insert' immediately returns the inserted document's new _id.
+// The others return values immediately if you are in a stub, an in-memory
+// unmanaged collection, or a mongo-backed collection and you don't pass a
+// callback. 'update' and 'remove' return the number of affected
+// documents. 'upsert' returns an object with keys 'numberAffected' and, if an
+// insert happened, 'insertedId'.
 //
 // Otherwise, the semantics are exactly like other methods: they take
 // a callback as an optional last argument; if no callback is
 // provided, they block until the operation is complete, and throw an
 // exception if it fails; if a callback is provided, then they don't
-// necessarily block, and they call the callback when they finish with
-// error and result arguments.  (The insert method provides the
-// document ID as its result; update and remove don't provide a result.)
+// necessarily block, and they call the callback when they finish with error and
+// result arguments.  (The insert method provides the document ID as its result;
+// update and remove provide the number of affected docs as the result; upsert
+// provides an object with numberAffected and maybe insertedId.)
 //
 // On the client, blocking is impossible, so if a callback
 // isn't provided, they just return immediately and any error
@@ -342,22 +347,11 @@ _.each(["insert", "update", "remove"], function (name) {
     var self = this;
     var args = _.toArray(arguments);
     var callback;
+    var insertId;
     var ret;
 
     if (args.length && args[args.length - 1] instanceof Function)
       callback = args.pop();
-
-    if (Meteor.isClient && !callback) {
-      // Client can't block, so it can't report errors by exception,
-      // only by callback. If they forget the callback, give them a
-      // default one that logs the error, so they aren't totally
-      // baffled if their writes don't work because their database is
-      // down.
-      callback = function (err) {
-        if (err)
-          Meteor._debug(name + " failed: " + (err.reason || err.stack));
-      };
-    }
 
     if (name === "insert") {
       if (!args.length)
@@ -365,21 +359,48 @@ _.each(["insert", "update", "remove"], function (name) {
       // shallow-copy the document and generate an ID
       args[0] = _.extend({}, args[0]);
       if ('_id' in args[0]) {
-        ret = args[0]._id;
-        if (!ret || !(typeof ret === 'string'
-              || ret instanceof Meteor.Collection.ObjectID))
+        insertId = args[0]._id;
+        if (!insertId || !(typeof insertId === 'string'
+              || insertId instanceof Meteor.Collection.ObjectID))
           throw new Error("Meteor requires document _id fields to be non-empty strings or ObjectIDs");
       } else {
-        ret = args[0]._id = self._makeNewID();
+        insertId = args[0]._id = self._makeNewID();
       }
     } else {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
+
+      if (name === "update") {
+        // Mutate args but copy the original options object. We need to add
+        // insertedId to options, but don't want to mutate the caller's options
+        // object. We need to mutate `args` because we pass `args` into the
+        // driver below.
+        var options = args[2] = _.clone(args[2]) || {};
+        if (options && typeof options !== "function" && options.upsert) {
+          // set `insertedId` if absent.  `insertedId` is a Meteor extension.
+          if (options.insertedId) {
+            if (!(typeof options.insertedId === 'string'
+                  || options.insertedId instanceof Meteor.Collection.ObjectID))
+              throw new Error("insertedId must be string or ObjectID");
+          } else {
+            options.insertedId = self._makeNewID();
+          }
+        }
+      }
     }
+
+    // On inserts, always return the id that we generated; on all other
+    // operations, just return the result from the collection.
+    var chooseReturnValueFromCollectionResult = function (result) {
+      if (name === "insert")
+        return insertId;
+      else
+        return result;
+    };
 
     var wrappedCallback;
     if (callback) {
       wrappedCallback = function (error, result) {
-        callback(error, !error && ret);
+        callback(error, ! error && chooseReturnValueFromCollectionResult(result));
       };
     }
 
@@ -389,6 +410,22 @@ _.each(["insert", "update", "remove"], function (name) {
 
       var enclosing = DDP._CurrentInvocation.get();
       var alreadyInSimulation = enclosing && enclosing.isSimulation;
+
+      if (Meteor.isClient && !wrappedCallback && ! alreadyInSimulation) {
+        // Client can't block, so it can't report errors by exception,
+        // only by callback. If they forget the callback, give them a
+        // default one that logs the error, so they aren't totally
+        // baffled if their writes don't work because their database is
+        // down.
+        // Don't give a default callback in simulation, because inside stubs we
+        // want to return the results from the local collection immediately and
+        // not force a callback.
+        wrappedCallback = function (err) {
+          if (err)
+            Meteor._debug(name + " failed: " + (err.reason || err.stack));
+        };
+      }
+
       if (!alreadyInSimulation && name !== "insert") {
         // If we're about to actually send an RPC, we should throw an error if
         // this is a non-ID selector, because the mutation methods only allow
@@ -396,14 +433,20 @@ _.each(["insert", "update", "remove"], function (name) {
         throwIfSelectorIsNotId(args[0], name);
       }
 
-      self._connection.apply(self._prefix + name, args, wrappedCallback);
+      ret = chooseReturnValueFromCollectionResult(
+        self._connection.apply(self._prefix + name, args, wrappedCallback)
+      );
 
     } else {
       // it's my collection.  descend into the collection object
       // and propagate any exception.
       args.push(wrappedCallback);
       try {
-        self._collection[name].apply(self._collection, args);
+        // If the user provided a callback and the collection implements this
+        // operation asynchronously, then queryRet will be undefined, and the
+        // result will be returned through the callback instead.
+        var queryRet = self._collection[name].apply(self._collection, args);
+        ret = chooseReturnValueFromCollectionResult(queryRet);
       } catch (e) {
         if (callback) {
           callback(e);
@@ -414,10 +457,23 @@ _.each(["insert", "update", "remove"], function (name) {
     }
 
     // both sync and async, unless we threw an exception, return ret
-    // (new document ID for insert, undefined otherwise).
+    // (new document ID for insert, num affected for update/remove, object with
+    // numberAffected and maybe insertedId for upsert).
     return ret;
   };
 });
+
+Meteor.Collection.prototype.upsert = function (selector, modifier,
+                                               options, callback) {
+  var self = this;
+  if (! callback && typeof options === "function") {
+    callback = options;
+    options = {};
+  }
+  return self.update(selector, modifier,
+              _.extend({}, options, { _returnObject: true, upsert: true }),
+              callback);
+};
 
 // We'll actually design an index API later. For now, we just pass through to
 // Mongo's, but make it synchronous.
@@ -538,6 +594,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
     insert: {allow: [], deny: []},
     update: {allow: [], deny: []},
     remove: {allow: [], deny: []},
+    upsert: {allow: [], deny: []}, // dummy arrays; can't set these!
     fetch: [],
     fetchAllFields: false
   };
@@ -562,13 +619,13 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
 
             // In a client simulation, you can do any mutation (even with a
             // complex selector).
-            self._collection[method].apply(
+            return self._collection[method].apply(
               self._collection, _.toArray(arguments));
-            return;
           }
 
-          // This is the server receiving a method call from the client. We
-          // don't allow arbitrary selectors in mutations from the client: only
+          // This is the server receiving a method call from the client.
+
+          // We don't allow arbitrary selectors in mutations from the client: only
           // single-ID selectors.
           if (method !== 'insert')
             throwIfSelectorIsNotId(arguments[0], method);
@@ -584,11 +641,11 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
             var validatedMethodName =
                   '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
             var argsWithUserId = [this.userId].concat(_.toArray(arguments));
-            self[validatedMethodName].apply(self, argsWithUserId);
+            return self[validatedMethodName].apply(self, argsWithUserId);
           } else if (self._isInsecure()) {
             // In insecure mode, allow any mutation (with a simple selector).
-            self._collection[method].apply(self._collection,
-                                           _.toArray(arguments));
+            return self._collection[method].apply(self._collection,
+                                                  _.toArray(arguments));
           } else {
             // In secure mode, if we haven't called allow or deny, then nothing
             // is permitted.
@@ -674,8 +731,16 @@ Meteor.Collection.prototype._validatedUpdate = function(
     userId, selector, mutator, options) {
   var self = this;
 
+  options = options || {};
+
   if (!LocalCollection._selectorIsIdPerhapsAsObject(selector))
     throw new Error("validated update should be of a single ID");
+
+  // We don't support upserts because they don't fit nicely into allow/deny
+  // rules.
+  if (options.upsert)
+    throw new Meteor.Error(403, "Access denied. Upserts not " +
+                           "allowed in a restricted collection.");
 
   // compute modified fields
   var fields = [];

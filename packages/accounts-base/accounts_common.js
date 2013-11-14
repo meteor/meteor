@@ -4,6 +4,18 @@ Accounts = {};
 // and accounts-ui-unstyled.
 Accounts._options = {};
 
+// how long (in days) until a login token expires
+var DEFAULT_LOGIN_EXPIRATION_DAYS = 90;
+// Clients don't try to auto-login with a token that is going to expire within
+// .1 * DEFAULT_LOGIN_EXPIRATION_DAYS, capped at MIN_TOKEN_LIFETIME_CAP_SECS.
+// Tries to avoid abrupt disconnects from expiring tokens.
+var MIN_TOKEN_LIFETIME_CAP_SECS = 3600; // one hour
+// how often (in milliseconds) we check for expired tokens
+EXPIRE_TOKENS_INTERVAL_MS = 600 * 1000; // 10 minutes
+// how long we wait before logging out clients when Meteor.logoutOtherClients is
+// called
+CONNECTION_CLOSE_DELAY_MS = 10 * 1000;
+
 // Set up config for the accounts system. Call this on both the client
 // and the server.
 //
@@ -19,23 +31,31 @@ Accounts._options = {};
 //     client signups.
 // - forbidClientAccountCreation {Boolean}
 //     Do not allow clients to create accounts directly.
-// - _tokenLifetimeSecs {Number}
-//     Seconds until a login token expires.
-// - _tokenExpirationIntervalSecs {Number}
-//     How often (in seconds) to check for expired tokens
-// - _minTokenLifetimeSecs {Number}
-//     The minimum number of seconds until a token expires in order for the
-//     client to be willing to connect with that token.
-// - _connectionCloseDelaySecs {Number}
-//     The number of seconds to wait before closing connections that when a user
-//     is logged out by the server. Defaults to 10, to allow clients to store a
-//     fresh token in localStorage when calling _logoutAllOthers.
+// - restrictCreationByEmailDomain {Function or String}
+//     Require created users to have an email matching the function or
+//     having the string as domain.
+// - loginExpirationInDays {Number}
+//     Number of days since login until a user is logged out (login token
+//     expires).
 //
 Accounts.config = function(options) {
+  // We don't want users to accidentally only call Accounts.config on the
+  // client, where some of the options will have partial effects (eg removing
+  // the "create account" button from accounts-ui if forbidClientAccountCreation
+  // is set, or redirecting Google login to a specific-domain page) without
+  // having their full effects.
+  if (Meteor.isServer) {
+    __meteor_runtime_config__.accountsConfigCalled = true;
+  } else if (!__meteor_runtime_config__.accountsConfigCalled) {
+    // XXX would be nice to "crash" the client and replace the UI with an error
+    // message, but there's no trivial way to do this.
+    Meteor._debug("Accounts.config was called on the client but not on the " +
+                  "server; some configuration options may not take effect.");
+  }
+
   // validate option keys
   var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation",
-                    "_tokenLifetimeSecs", "_tokenExpirationIntervalSecs",
-                    "_minTokenLifetimeSecs", "_connectionCloseDelaySecs"];
+                    "restrictCreationByEmailDomain", "loginExpirationInDays"];
   _.each(_.keys(options), function (key) {
     if (!_.contains(VALID_KEYS, key)) {
       throw new Error("Accounts.config: Invalid key: " + key);
@@ -49,11 +69,14 @@ Accounts.config = function(options) {
         throw new Error("Can't set `" + key + "` more than once");
       } else {
         Accounts._options[key] = options[key];
-        if (key === "_tokenExpirationInterval" && Meteor.isServer)
-          initExpireTokenInterval();
       }
     }
   });
+
+  // If the user set loginExpirationInDays to null, then we need to clear the
+  // timer that periodically expires tokens.
+  if (Meteor.isServer)
+    maybeStopExpireTokensInterval();
 };
 
 // Users table. Don't use the normal autopublish, since we want to hide
@@ -81,20 +104,21 @@ Accounts.LoginCancelledError.numericError = 0x8acdc2f;
 Accounts.LoginCancelledError.prototype = new Error();
 Accounts.LoginCancelledError.prototype.name = 'Accounts.LoginCancelledError';
 
-// how long (in seconds) until a login token expires
-DEFAULT_TOKEN_LIFETIME_SECS = 604800; // one week
-// We don't try to auto-login with a token that is going to expire within
-// MIN_TOKEN_LIFETIME seconds, to avoid abrupt disconnects from expiring tokens.
-var DEFAULT_MIN_TOKEN_LIFETIME_SECS = 3600; // one hour
+getTokenLifetimeMs = function () {
+  return (Accounts._options.loginExpirationInDays ||
+          DEFAULT_LOGIN_EXPIRATION_DAYS) * 24 * 60 * 60 * 1000;
+};
 
 Accounts._tokenExpiration = function (when) {
-  var tokenLifetimeSecs = Accounts._options._tokenLifetimeSecs ||
-        DEFAULT_TOKEN_LIFETIME_SECS;
-  return new Date(when.getTime() + tokenLifetimeSecs * 1000);
+  // We pass when through the Date constructor for backwards compatibility;
+  // `when` used to be a number.
+  return new Date((new Date(when)).getTime() + getTokenLifetimeMs());
 };
 
 Accounts._tokenExpiresSoon = function (when) {
-  var minLifetimeSecs = Accounts._options._minTokenLifetimeSecs ||
-        DEFAULT_MIN_TOKEN_LIFETIME_SECS;
-  return new Date() > (new Date(when) - minLifetimeSecs * 1000);
+  var minLifetimeMs = .1 * getTokenLifetimeMs();
+  var minLifetimeCapMs = MIN_TOKEN_LIFETIME_CAP_SECS * 1000;
+  if (minLifetimeMs > minLifetimeCapMs)
+    minLifetimeMs = minLifetimeCapMs;
+  return new Date() > (new Date(when) - minLifetimeMs);
 };

@@ -5,7 +5,7 @@ var fs = require('fs');
 var unipackage = require('./unipackage.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var Fiber = require('fibers');
-var request = require('request');
+var httpHelpers = require('./http-helpers.js');
 var _ = require('underscore');
 
 // a bit of a hack
@@ -90,7 +90,7 @@ exports.discoverGalaxy = function (app) {
 
   // At some point we may want to send a version in the request so that galaxy
   // can respond differently to different versions of meteor.
-  request({
+  httpHelpers.request({
     url: url,
     json: true,
     strictSSL: true,
@@ -210,7 +210,8 @@ exports.deploy = function (options) {
   var fileSize = fs.statSync(starball).size;
   var fileStream = fs.createReadStream(starball);
   var future = new Future;
-  var req = request.put({
+  var req = httpHelpers.request({
+    method: "PUT",
     url: info.put,
     headers: { 'content-length': fileSize,
                'content-type': 'application/octet-stream' },

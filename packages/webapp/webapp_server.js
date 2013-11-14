@@ -147,7 +147,6 @@ var appUrl = function (url) {
   return true;
 };
 
-
 var runWebAppServer = function () {
   // read the control for the client we'll be serving up
   var clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
@@ -231,6 +230,16 @@ var runWebAppServer = function () {
       next();
       return;
     }
+
+    if (pathname === "/meteor_runtime_config.js" &&
+        ! WebAppInternals.inlineScriptsAllowed()) {
+      res.writeHead(200, { 'Content-type': 'application/javascript' });
+      res.write("__meteor_runtime_config__ = " +
+                JSON.stringify(__meteor_runtime_config__) + ";");
+      res.end();
+      return;
+    }
+
     if (!_.has(staticFiles, pathname)) {
       next();
       return;
@@ -387,15 +396,24 @@ var runWebAppServer = function () {
     argv = optimist(argv).boolean('keepalive').argv;
 
     var boilerplateHtmlPath = path.join(clientDir, clientJson.page);
-    boilerplateHtml =
-      fs.readFileSync(boilerplateHtmlPath, 'utf8')
-      .replace(
-        "// ##RUNTIME_CONFIG##",
-        "__meteor_runtime_config__ = " +
-          JSON.stringify(__meteor_runtime_config__) + ";")
-      .replace(
-          /##ROOT_URL_PATH_PREFIX##/g,
-        __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || "");
+    boilerplateHtml = fs.readFileSync(boilerplateHtmlPath, 'utf8');
+
+    // Include __meteor_runtime_config__ in the app html, as an inline script if
+    // it's not forbidden by CSP.
+    if (WebAppInternals.inlineScriptsAllowed()) {
+      boilerplateHtml = boilerplateHtml.replace(
+          /##RUNTIME_CONFIG##/,
+        "<script type='text/javascript'>__meteor_runtime_config__ = " +
+          JSON.stringify(__meteor_runtime_config__) + ";</script>");
+    } else {
+      boilerplateHtml = boilerplateHtml.replace(
+        /##RUNTIME_CONFIG##/,
+        "<script type='text/javascript' src='##ROOT_URL_PATH_PREFIX##/meteor_runtime_config.js'></script>"
+      );
+    }
+    boilerplateHtml = boilerplateHtml.replace(
+        /##ROOT_URL_PATH_PREFIX##/g,
+      __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || "");
 
     // only start listening after all the startup code has run.
     var localPort = parseInt(process.env.PORT) || 0;
@@ -548,3 +566,14 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
 };
 
 runWebAppServer();
+
+
+var inlineScriptsAllowed = true;
+
+WebAppInternals.inlineScriptsAllowed = function () {
+  return inlineScriptsAllowed;
+};
+
+WebAppInternals.setInlineScriptsAllowed = function (value) {
+  inlineScriptsAllowed = value;
+};
