@@ -35,8 +35,6 @@
 // client version.  Developers can easily experiment with different
 // versioning and updating models by forking this package.
 
-var crypto = Npm.require('crypto');
-
 AutoUpdate = {};
 
 // The client hash includes __meteor_runtime_config__, so wait until

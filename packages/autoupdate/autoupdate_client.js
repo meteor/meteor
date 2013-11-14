@@ -49,7 +49,7 @@ Meteor.subscribe("meteor_autoupdate_clientVersions", {
   },
   onReady: function () {
     if (Package.reload) {
-      Meteor.autorun(function (computation) {
+      Deps.autorun(function (computation) {
         if (ClientVersions.findOne({current: true}) &&
             (! ClientVersions.findOne({_id: autoUpdateVersion}))) {
           computation.stop();
