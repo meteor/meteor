@@ -120,8 +120,7 @@ Tinytest.add('observe sequence - array to other array', function (test) {
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
     {removed: ["37", {_id: "37", bar: 2}]},
-    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]},
-    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]}
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
   ]);
 });
 
@@ -141,9 +140,6 @@ Tinytest.add('observe sequence - array to other array, changes', function (test)
     {addedAt: ["42", {_id: "42", baz: 42}, 2, null]},
     {removed: ["37", {_id: "37", bar: 2}]},
     {addedAt: ["38", {_id: "38", bar: 2}, 1, "42"]},
-    // XXX not sure why 'changed' is being fired for something that didn't
-    // change
-    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]},
     {changed: ["42", {_id: "42", baz: 43}, {_id: "42", baz: 42}]}
   ]);
 });
@@ -163,10 +159,7 @@ Tinytest.add('observe sequence - array to other array, movedTo', function (test)
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
     {addedAt: ["42", {_id: "42", baz: 42}, 2, null]},
     // XXX it could have been the "13" moving but it's a detail of implementation
-    {movedTo: ["37", {_id: "37", bar: 2}, 1, 0, "13"]},
-    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]},
-    {changed: ["37", {_id: "37", bar: 2}, {_id: "37", bar: 2}]},
-    {changed: ["42", {_id: "42", baz: 42}, {_id: "42", baz: 42}]}
+    {movedTo: ["37", {_id: "37", bar: 2}, 1, 0, "13"]}
   ]);
 });
 
@@ -206,8 +199,7 @@ Tinytest.add('observe sequence - array to cursor', function (test) {
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
     {removed: ["37", {_id: "37", bar: 2}]},
-    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]},
-    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]}
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
   ]);
 });
 
@@ -253,8 +245,7 @@ Tinytest.add('observe sequence - cursor to array', function (test) {
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
     {removed: ["37", {_id: "37", bar: 2}]},
-    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]},
-    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]}
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
   ]);
 });
 
@@ -311,8 +302,7 @@ Tinytest.add('observe sequence - cursor to other cursor', function (test) {
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]},
     {removed: ["37", {_id: "37", bar: 2}]},
-    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]},
-    {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]}
+    {addedAt: ["38", {_id: "38", bar: 2}, 1, null]}
   ]);
 });
 
@@ -333,13 +323,7 @@ Tinytest.add('observe sequence - cursor to same cursor', function (test) {
   }, [
     {addedAt: ["13", {_id: "13", rank: 1}, 0, null]},
     {addedAt: ["24", {_id: "24", rank: 2}, 1, null]},
-    {addedAt: ["78", {_id: "78", rank: 3}, 2, null]},
-    // even if the cursor changes to the same cursor, we diff to see if we
-    // missed anything during the invalidation, which leads to these
-    // "changed" events.
-    {changed: ["13", {_id: "13", rank: 1}, {_id: "13", rank: 1}]},
-    {changed: ["24", {_id: "24", rank: 2}, {_id: "24", rank: 2}]},
-    {changed: ["78", {_id: "78", rank: 3}, {_id: "78", rank: 3}]}
+    {addedAt: ["78", {_id: "78", rank: 3}, 2, null]}
   ]);
 });
 
