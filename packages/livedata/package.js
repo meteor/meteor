@@ -3,7 +3,8 @@ Package.describe({
   internal: true
 });
 
-Npm.depends({sockjs: "0.3.8", websocket: "1.0.8"});
+Npm.depends({sockjs: "0.3.7",
+             websocket: "1.0.8"});
 
 Package.on_use(function (api) {
   api.use(['check', 'random', 'ejson', 'json', 'underscore', 'deps', 'logging'],
