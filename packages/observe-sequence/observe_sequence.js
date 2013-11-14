@@ -163,12 +163,7 @@ var diffArray = function (lastSeqArray, seqArray, callbacks) {
   });
 
   _.each(posNew, function (pos, id) {
-    if (_.has(posOld, id)) {
-      var oldDoc = lastSeqArray[posOld[id]].item;
-      var newDoc = seqArray[pos].item;
-      if (!EJSON.equals(oldDoc, newDoc)) {
-        callbacks.changed(id, newDoc, oldDoc);
-      }
-    }
+    if (_.has(posOld, id))
+      callbacks.changed(id, seqArray[pos].item, lastSeqArray[posOld[id]].item);
   });
 };
