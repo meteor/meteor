@@ -1,45 +1,77 @@
-### Filing Bug Reports
+## Contributing to Meteor
 
-If you've found a bug in Meteor, file a bug report in [our issue
-tracker](https://github.com/meteor/meteor/issues). If the issue contains
-sensitive information or raises a security concern, email
-<code>security[]()@[]()meteor.com</code> instead, which will page the
-security team.
+We hope you will join us in building Meteor -- both the platform and the
+community behind it -- and share in the rewards of getting in early on
+something great.
 
-A Meteor app has many moving parts, and it's often difficult to reproduce a bug
-based on just a few lines of code. If you want somebody to be able to fix a bug
-(or verify a fix that you've contributed), the best way is:
+Please see our
+[contributing guidelines](https://github.com/meteor/meteor/wiki/Contributing-to-Meteor)
+on GitHub for more details on how to file a bug report or submit a
+pull request.
 
-* Create a new Meteor app that displays the bug with as little code as possible. Try to delete any code that is unrelated to the precise bug you're reporting.
-* Create a new GitHub repository with a name like `meteor-reactivity-bug` (or if you're adding a new reproduction recipe to an existing issue, `meteor-issue-321`) and push your code to it. (Make sure to include the `.meteor/packages` file!)
-* Reproduce the bug from scratch, starting with a `git clone` command. Copy and paste the entire command-line input and output, starting with the `git clone` command, into the issue description of a new GitHub issue. Also describe any web browser interaction you need to do.
-* Specify what version of Meteor (`$ meteor --version`) and what web browser you used.
+### Bug reports
 
-By making it as easy as possible for others to reproduce your bug, you make it easier for your bug to be fixed. **We're not always able to tackle issues opened without a reproduction recipe. In those cases we'll close them with a pointer to this wiki section and a request for more information.**
+If you've found a bug in Meteor that isn't a security risk, you can file
+a report in
+[our issue tracker](https://github.com/meteor/meteor/issues).
 
+> There is a separate procedure for security-related issues.  If the
+> issue you've found contains sensitive information or raises a security
+> concern, email <code>security[]()@[]()meteor.com</code> instead, which
+> will page the security team.
 
-### Contributing code to the Meteor project
+Please don't use GitHub issues for feature requests or proposals.  Most
+additions deserve a fair bit of discussion, which doesn't work super
+well inside a GitHub issue.  Read on for how to get changes into Meteor.
 
-Before submitting a pull request, make sure that it follows these guidelines:
+A Meteor app has many moving parts, and it's often difficult to
+reproduce a bug based on just a few lines of code.  So your report
+should include a reproduction recipe.  By making it as easy as possible
+for others to reproduce your bug, you make it easier for your bug to be
+fixed. **We may not be able to tackle an issue opened without a
+reproduction recipe. If we can't, we'll close them it a pointer to this
+wiki section and a request for more information.**
 
-* Make sure that your branch is based off of the **devel** branch. The **devel** branch is where active development happens.  **We can't merge non-trivial patches off master.**
-* Sign the [contributor's agreement](http://contribute.meteor.com/).
-* Follow the [Meteor style guide](https://github.com/meteor/meteor/wiki/Meteor-Style-Guide).
-* Limit yourself to one feature or bug fix per pull request.
-* Name your branch to match the feature/bug fix that you are submitting.
-* Write clear, descriptive commit messages.
-* Describe your pull request in as much detail as possible: why this pull request is important enough for us to consider, what changes it contains, what you had to do to get it to work, how you tested it, etc.  Be detailed but be clear: use bullets, examples if needed, and simple, straightforward language.
+A reproduction recipe works like this:
 
-If you're working on a big ticket item, please check in on [meteor-core](http://groups.google.com/group/meteor-core).  We'd hate to have to steer you in a different direction after you've already put in a lot of hard work.
+ * Create a new Meteor app that displays the bug with as little code as
+   possible. Try to delete any code that is unrelated to the precise bug
+   you're reporting, including extraneous Atmosphere packages.
 
-### Package Submission Guidelines
+ * Create a new GitHub repository with a name like
+   `meteor-reactivity-bug` (or if you're adding a new reproduction
+   recipe to an existing issue, `meteor-issue-321`) and push your code
+   to it. (Make sure to include the `.meteor/packages` and `.meteor/release` files!)
 
-We recommend submitting most new smart packages to [Atmosphere](https://atmosphere.meteor.com), rather than submitting a pull request.
+ * Reproduce the bug from scratch, starting with a `git clone`
+   command. Copy and paste the entire command-line input and output,
+   starting with the `git clone` command, into the issue description of
+   a new GitHub issue. Also describe any web browser interaction you
+   need to do.
 
-If you submit a smart package pull request, we want to see strong community interest in the package before we include it in a Meteor release. Usage on atmosphere or comments on the pull request are great for this. This helps us keep Meteor core clean and streamlined.
+ * If you reproduced the issue using a checkout of Meteor instead of using
+   a released version that was pinned with a `.meteor/release` file,
+   specify what commit in the Meteor repository was checked out.
 
-* Your package should have tests. See `packages/coffeescript` or `packages/less` for examples.
-* Your package should be documented. See `docs/client/packages`.
-* Because the package API is still in flux, and because you can include client-side JS/CSS files directly in your project's `client/lib` directory, the bar is higher for new packages that only include client-side JS/CSS files.
-* Similarly, the bar is higher for new packages that only include JS files with minimal integration. Generally, the test is whether a file can simply be put into your project's `lib` or `server/lib` directory, or if additional effort is needed to make it work.
-* Meteor minifies all JS/CSS.  Packages should include only the original JS/CSS files, not the minified versions.
+If you want to submit a pull request that fixes your bug, that's even
+better.  We love getting bugfix pull requests.  Just make sure they're
+written to the MDG style guide and *come with tests*.  Read further down
+for more details on proposing changes to core code.
+
+### Pull requests
+
+Before submitting a pull request, please read the
+[contributing guidelines](https://github.com/meteor/meteor/wiki/Contributing-to-Meteor)
+on GitHub.  In brief:
+
+* If possible, publish new features as separate packages on
+  [Atmosphere](https://atmosphere.meteor.com).
+
+* Most changes to core packages should be discussed first on
+  [`meteor-core`](https://groups.google.com/group/meteor-core), where
+  you can build consensus and work out most of the design.  Submit a
+  pull request once you have a core developer on board.
+  
+* The `meteor-core` list is also a fine place to request new features
+  without a specific proposal.  GitHub issues aren't as good place for
+  those that sort of thing: we'll close "feature request" issues.
