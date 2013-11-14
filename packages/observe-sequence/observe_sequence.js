@@ -21,6 +21,13 @@ ObserveSequence = {
   // @returns {Object(stop: Function)} call 'stop' on the return value
   //     to stop observing this sequence function.
   //
+  // We don't make any assumptions about our ability to compare sequence
+  // elements (ie, we don't assume EJSON.equals works; maybe there is extra
+  // state/random methods on the objects) so unlike cursor.observe, we may
+  // sometimes call changed() when nothing actually changed.
+  // XXX consider if we *can* make the stronger assumption and avoid
+  //     no-op changed calls (in some cases?)
+  //
   // XXX currently only supports the callbacks used by our
   // implementation of {{#each}}, but this can be expanded.
   //
