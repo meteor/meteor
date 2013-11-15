@@ -1,4 +1,5 @@
 # Meteor
+[![Code Climate](https://codeclimate.com/github/meteor/meteor.png)](https://codeclimate.com/github/meteor/meteor)
 
 Meteor is an ultra-simple environment for building modern web
 applications.
