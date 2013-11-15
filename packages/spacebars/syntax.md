@@ -2,17 +2,19 @@
 
 ## HTML Syntax
 
-Meteor templates are written in [standard (WHATWG) HTML](http://developers.whatwg.org/syntax.html) with some additional syntax.  It's a compile-time error if Meteor can't parse your template into a sequence of well-formed start tags, end tags, comments, character references, and so on, and match the end tags to the start tags.  All start tags normally have a corresponding end tag, except for a short list of "void" elements, including the familiar `<br>`, `<hr>`, `<img>`, and `<input>`.  Certain other end tags can optionally be omitted according to the spec (like `<p>` and `<li>`), but this feature is not currently implemented in Meteor.
+Meteor templates are written in [standard HTML](http://developers.whatwg.org/syntax.html) with some additional syntax.
 
-In short:
+Meteor validates your HTML as it goes and is not as lenient as a web browser, which will typically bend over backwards to recover from even wildly malformed markup.  Meteor will throw a compile-time error if you violate basic HTML syntax in a way that prevents Meteor from determining the structure of your code.
 
-* Close your HTML tags!
+You must close your element tags, with a few exceptions:
 
-* Meteor will throw a compile-time error if you violate basic HTML syntax.
+* The well-known BR, HR, IMG, and INPUT tags, along with a few others, have no end tag.  You can write them in self-closing style if you like (`<br/>`) or simply write the start tag (`<br>`).
+
+* Some tags can be implicitly closed for convenience, like P and LI, according to the spec.  Meteor doesn't currently implement this feature.
 
 ## Template Tag Basics
 
-Template tags let you insert calculated text or other content in certain places in the HTML, and Meteor will automatically keep that part of the HTML up-to-date.  Template tags can only be used in the places described below; they can't be used to insert arbitrary snippets of HTML such as just an HTML start tag or just the name of a tag.
+Template tags let you insert text or other content in certain places in the HTML.  Meteor calculates the current value of the template tag and automatically keeps that part of the HTML up-to-date.  Template tags can only be used in the places described below.  They can't be used to insert arbitrary snippets of HTML such as just an HTML start tag or just the name of a tag.
 
 ### Template Tags in Element Positions
 
@@ -32,9 +34,9 @@ Anywhere you could write an HTML start tag, you can use any of the five major te
 {{! This is a comment}}
 ```
 
-The double-brace tag is used to insert text, while the triple-brace is used to insert HTML.  Inclusion tags insert other templates.
+The double-brace tag `{{foo}}` is used to insert text, while the triple-brace `{{{foo}}}` is used to insert HTML.  Inclusion tags like `{{> foo}}` are used to insert other templates.
 
-Block tags take a block of template code as input and are often used as control structures.  The contents of the block must contain balanced HTML tags!
+The contents of a block `{{#foo}}...{{/foo}}` must contain balanced HTML tags!  Block tags take a block of template code as input and are often used as control structures.  
 
 A block tag can optionally take "else content" as well:
 
@@ -50,7 +52,7 @@ Template tags may have dotted names and take positional and keyword arguments, a
 
 ### Template Tags in Attribute Values
 
-A double-brace tag will insert a string into a quoted or unquoted attribute value:
+You can use double-braces, blocks, and comments inside an attribute value of an HTML start tag.  The attribute value is the part that comes after the `=` sign, and it may be surrounded in quotes or not:
 
 ```
 <div class="{{myClass1}} {{myClass2}}">...</div>
@@ -62,7 +64,7 @@ A double-brace tag will insert a string into a quoted or unquoted attribute valu
 
 Using a template tag never requires additional quotes, because each template tag is parsed as a single token during HTML parsing (as if it were, say, a letter A, regardless of what it evaluates to at runtime).
 
-Blocks are also allowed in attribute values, but their contents are parsed in a mode that disallows HTML tags, while allowing text, character references, double-brace tags, and other block tags:
+If you use a block inside an attribute value, the block contents are parsed with the same restrictions as an attribute value.  That is, you can't have HTML elements, and you can only use the template tags that are allowed in an attribute value.
 
 ```
 <div class="{{#if done}}done{{else}}notdone{{/if}}">...</div>
@@ -74,7 +76,7 @@ Comment tags (`{{! This is a comment}}`) are allowed in attribute values. Triple
 
 ### Dynamic Attributes
 
-As a special form, a double-brace tag can be used inside an HTML start tag to supply arbitrary reactive attributes:
+As a special form, a double-brace tag can be used inside an HTML start tag to specify an arbitrary, reactively changing set of attributes:
 
 ```
 <div {{attrs}}>...</div>
@@ -82,7 +84,9 @@ As a special form, a double-brace tag can be used inside an HTML start tag to su
 <input type=checkbox {{isChecked}}>
 ```
 
-The tag must evaluate to an object that serves as a dictionary of attribute name and value strings.  (XXX not fully implemented)  For convenience, the value may also be a string or null.  Null or an empty string mean `{}`.  A non-empty string value must be an attribute name, which is expanded to an empty attribute.  For example, `"checked"` is expanded to `{checked: ""}`.  (It may seem odd that an empty string means a checkbox is checked, but this is how HTML works, it looks only at whether the attribute is present.  When you write `<input type=checkbox checked>`, modern browsers interpret this as `<input type="checkbox" checked="">`, and it means the checkbox is checked.)
+The tag must evaluate to an object that serves as a dictionary of attribute name and value strings.  (XXX not fully implemented)  For convenience, the value may also be a string or null.
+
+Null or an empty string expands to `{}`.  A non-empty string value must be an attribute name, which is expanded to an empty attribute.  For example, `"checked"` is expanded to `{checked: ""}` (which, as far as HTML is concerned, means the checkbox is checked; the value of the attribute is ignored as long as it is present).
 
 To summarize:
 
@@ -90,11 +94,15 @@ To summarize:
 |------------|---------------|
 |`""` or `null` or `{}`| |
 |`"checked"` or `{checked: ""}`|`checked`|
-|`{checked: "checked"}`|`checked=checked` (some prefer this style)|
 |`{checked: "", 'class': "foo"}`|`checked class=foo`|
-|`"checked=checked"`|ERROR, string is not an attribute name|
 |`"checked class=foo"`|ERROR, string is not an attribute name|
 
-You can have more than one reactive attribute double-brace in the same HTML start tag, along with normal attributes.  They are combined from left to right, with later attribute values overwriting previous ones.  (Multiple attribute values for the same attribute are not merged in any way.)  Whenever any dependency of the overall calculation changes, the element's attributes are recalculated and updated.
+You can combine multiple dynamic attributes tags with other attributes:
+
+```
+<div id=foo class={{myClass}} {{attrs1}} {{attrs2}}>...</div>
+```
+
+Attributes are combined from left to right, with later attribute values overwriting previous ones.  Multiple attribute values for the same attribute are not merged in any way, so if `attrs1` specifies a value for the `class` attribute, it will overwrite `{{myClass}}`.  Whenever any dependency of the overall calculation changes, the element's attributes are recalculated and updated.
 
 Comment tags are allowed in the reactive attribute position, but no other template tags are.
