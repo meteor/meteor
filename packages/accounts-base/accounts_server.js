@@ -1,3 +1,5 @@
+var crypto = Npm.require('crypto');
+
 ///
 /// CURRENT USER
 ///
@@ -78,7 +80,7 @@ Meteor.methods({
     var result = tryAllLoginHandlers(options);
     if (result !== null) {
       this.setUserId(result.id);
-      Accounts._setLoginToken(this, result.token);
+      Accounts._setLoginToken(this, Accounts._hashLoginToken(result.token));
     }
     return result;
   },
@@ -118,7 +120,7 @@ Meteor.methods({
           "services.resume.loginTokensToDelete": tokens,
           "services.resume.haveLoginTokensToDelete": true
         },
-        $push: { "services.resume.loginTokens": newToken }
+        $push: { "services.resume.loginTokens": Accounts._hashStampedToken(newToken) }
       });
       Meteor.setTimeout(function () {
         // The observe on Meteor.users will take care of closing the connections
@@ -143,6 +145,23 @@ Meteor.methods({
 /// RECONNECT TOKENS
 ///
 /// support reconnecting using a meteor login token
+
+
+Accounts._hashLoginToken = function (loginToken) {
+  var hash = crypto.createHash('sha256');
+  hash.update(loginToken);
+  return hash.digest('base64');
+};
+
+
+// {token, when} => {hashedToken, when}
+Accounts._hashStampedToken = function (stampedToken) {
+  return {
+    hashedToken: Accounts._hashLoginToken(stampedToken.token),
+    when: stampedToken.when
+  };
+};
+
 
 // token -> list of session ids
 var sessionsByLoginToken = {};
@@ -218,22 +237,65 @@ Accounts.registerLoginHandler(function(options) {
     return undefined;
 
   check(options.resume, String);
+
+  var oldUnhashedStyleToken = false;
+
   var user = Meteor.users.findOne({
-    "services.resume.loginTokens.token": ""+options.resume
+    "services.resume.loginTokens.hashedToken": Accounts._hashLoginToken(options.resume)
   });
 
-  if (!user) {
-    throw new Meteor.Error(403, "You've been logged out by the server. " +
-    "Please login again.");
+  if (user) {
+    oldUnhashedStyleToken = false;
+  }
+  else {
+    user = Meteor.users.findOne({
+      "services.resume.loginTokens.token": options.resume
+    });
+
+    if (user) {
+      oldUnhashedStyleToken = true;
+    }
+    else {
+      throw new Meteor.Error(403, "You've been logged out by the server. " +
+      "Please login again.");
+    }
   }
 
-  var token = _.find(user.services.resume.loginTokens, function (token) {
-    return token.token === options.resume;
-  });
+  var hashedToken = Accounts._hashLoginToken(options.resume);
+  var token;
+  if (oldUnhashedStyleToken) {
+    token = _.find(user.services.resume.loginTokens, function (token) {
+      return token.token === options.resume;
+    });
+  }
+  else {
+    token = _.find(user.services.resume.loginTokens, function (token) {
+      return token.hashedToken === hashedToken;
+    });
+  }
 
   var tokenExpires = Accounts._tokenExpiration(token.when);
   if (new Date() >= tokenExpires)
     throw new Meteor.Error(403, "Your session has expired. Please login again.");
+
+  // Update to a hashed token when an unhashed token is encountered.
+  if (oldUnhashedStyleToken) {
+    Meteor.users.update(user._id, {
+      $pull: {
+        "services.resume.loginTokens": { "token": options.resume }
+      },
+    });
+    // Apparently needs to be two separate updates, otherwise get
+    // "Field name duplication not allowed with modifiers".
+    Meteor.users.update(user._id, {
+      $push: {
+        "services.resume.loginTokens": {
+          "hashedToken": hashedToken,
+          "when": token.when
+        }
+      }
+    });
+  }
 
   return {
     token: options.resume,
@@ -253,7 +315,7 @@ Accounts._generateStampedLoginToken = function () {
 var removeLoginToken = function (userId, loginToken) {
   Meteor.users.update(userId, {
     $pull: {
-      "services.resume.loginTokens": { "token": loginToken }
+      "services.resume.loginTokens": { "hashedToken": loginToken }
     }
   });
 };
@@ -358,11 +420,17 @@ Accounts.insertUserDoc = function (options, user) {
     var stampedToken = Accounts._generateStampedLoginToken();
     result.token = stampedToken.token;
     result.tokenExpires = Accounts._tokenExpiration(stampedToken.when);
+    var token;
+    if (options._testInsecureToken)
+      // Generate an old style unhashed token for unit test.
+      token = stampedToken;
+    else
+      token = Accounts._hashStampedToken(stampedToken);
     Meteor._ensure(user, 'services', 'resume');
     if (_.has(user.services.resume, 'loginTokens'))
-      user.services.resume.loginTokens.push(stampedToken);
+      user.services.resume.loginTokens.push(token);
     else
-      user.services.resume.loginTokens = [stampedToken];
+      user.services.resume.loginTokens = [token];
   }
 
   var fullUser;
@@ -516,7 +584,7 @@ Accounts.updateOrCreateUserFromExternalService = function(
     Meteor.users.update(
       user._id,
       {$set: setAttrs,
-       $push: {'services.resume.loginTokens': stampedToken}});
+       $push: {'services.resume.loginTokens': Accounts._hashStampedToken(stampedToken)}});
     return {
       token: stampedToken.token,
       id: user._id,
@@ -665,6 +733,8 @@ Meteor.users.allow({
 /// DEFAULT INDEXES ON USERS
 Meteor.users._ensureIndex('username', {unique: 1, sparse: 1});
 Meteor.users._ensureIndex('emails.address', {unique: 1, sparse: 1});
+Meteor.users._ensureIndex('services.resume.loginTokens.hashedToken',
+                          {unique: 1, sparse: 1});
 Meteor.users._ensureIndex('services.resume.loginTokens.token',
                           {unique: 1, sparse: 1});
 // For taking care of logoutOtherClients calls that crashed before the tokens
@@ -714,7 +784,10 @@ Meteor.startup(function () {
 ///
 
 var closeTokensForUser = function (userTokens) {
-  closeSessionsForTokens(_.pluck(userTokens, "token"));
+  closeSessionsForTokens(_.compact(_.union(
+    _.pluck(userTokens, "token"),
+    _.pluck(userTokens, "hashedToken")
+  )));
 };
 
 // Like _.difference, but uses EJSON.equals to compute which values to return.
