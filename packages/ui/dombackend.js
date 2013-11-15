@@ -85,8 +85,12 @@ if (Meteor.isClient) {
     // To use this, override it (set it).
     onRemoveElement: function (elem) {},
 
-    trigger: function (elem, event, params) {
-      $(elem).trigger(event, params);
+    trigger: function (elem, event, eventData, params) {
+      var evt = new jQuery.Event(event);
+      _.each(eventData || {}, function (val, key) {
+        evt[key] = val;
+      });
+      $(elem).trigger(evt, params);
     }
   };
 
