@@ -1,3 +1,72 @@
+// token -> list of session ids
+var sessionsByLoginToken = {};
+
+// Remove the session from the list of open sessions for the token.
+var removeSessionFromToken = function (token, sessionId) {
+  sessionsByLoginToken[token] = _.without(
+    sessionsByLoginToken[token],
+    sessionId
+  );
+  if (_.isEmpty(sessionsByLoginToken[token]))
+    delete sessionsByLoginToken[token];
+};
+
+var loginTokenChanged = function (sessionId, newToken, oldToken) {
+  var self = this;
+  if (oldToken) {
+    removeSessionFromToken(oldToken, sessionId);
+  }
+  if (newToken) {
+    if (! _.has(sessionsByLoginToken, newToken))
+      sessionsByLoginToken[newToken] = [];
+    sessionsByLoginToken[newToken].push(sessionId);
+  }
+};
+
+
+Accounts.getLoginToken = function (methodInvocation) {
+  return methodInvocation._sessionData.loginToken;
+};
+
+Accounts.setLoginToken = function (methodInvocation, newToken) {
+  var oldToken = methodInvocation._sessionData.loginToken;
+  methodInvocation._sessionData.loginToken = newToken;
+  loginTokenChanged(methodInvocation.sessionId, newToken, oldToken);
+};
+
+
+// sessionId -> SessionHandle
+var sessionHandles = {};
+
+Meteor.server.onConnection(function (sessionHandle) {
+  var sessionId = sessionHandle.id;
+  sessionHandles[sessionId] = sessionHandle;
+  sessionHandle.onClose(function () {
+    var token = sessionHandle._sessionData.loginToken;
+    if (token)
+      removeSessionFromToken(token, sessionId);
+    delete sessionHandles[sessionId];
+  });
+});
+
+
+
+// Close all open sessions associated with any of the tokens in
+// `tokens`.
+var closeSessionsForTokens = function (tokens) {
+  _.each(tokens, function (token) {
+    if (_.has(sessionsByLoginToken, token)) {
+      // closing a session triggers the onClose callback which
+      // modifies sessionsByLoginToken, so we clone it.
+      _.each(EJSON.clone(sessionsByLoginToken[token]), function (sessionId) {
+        sessionHandles[sessionId] && sessionHandles[sessionId].close();
+      });
+    }
+  });
+};
+
+
+
 ///
 /// CURRENT USER
 ///
@@ -78,14 +147,14 @@ Meteor.methods({
     var result = tryAllLoginHandlers(options);
     if (result !== null) {
       this.setUserId(result.id);
-      this._setLoginToken(result.token);
+      Accounts.setLoginToken(this, result.token);
     }
     return result;
   },
 
   logout: function() {
-    var token = this._getLoginToken();
-    this._setLoginToken(null);
+    var token = Accounts.getLoginToken(this);
+    Accounts.setLoginToken(this, null);
     if (token && this.userId)
       removeLoginToken(this.userId, token);
     this.setUserId(null);
@@ -646,7 +715,7 @@ Meteor.startup(function () {
 ///
 
 var closeTokensForUser = function (userTokens) {
-  Meteor.server._closeAllForTokens(_.map(userTokens, function (token) {
+  closeSessionsForTokens(_.map(userTokens, function (token) {
     return token.token;
   }));
 };

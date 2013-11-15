@@ -29,10 +29,6 @@ MethodInvocation = function (options) {
   // reruns subscriptions
   this._setUserId = options.setUserId || function () {};
 
-  // used for associating the connection with a login token so that the
-  // connection can be closed if the token is no longer valid
-  this._setLoginToken = options._setLoginToken || function () {};
-
   // On the server, the session id of the connection this method call
   // came in on.
   this.sessionId = options.sessionId;
@@ -57,13 +53,6 @@ _.extend(MethodInvocation.prototype, {
     self.userId = userId;
     self._setUserId(userId);
   },
-  _setLoginToken: function (token) {
-    this._setLoginToken(token);
-    this._sessionData.loginToken = token;
-  },
-  _getLoginToken: function (token) {
-    return this._sessionData.loginToken;
-  }
 });
 
 parseDDP = function (stringMessage) {
