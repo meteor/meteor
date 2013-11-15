@@ -272,7 +272,8 @@ var Session = function (server, version, socket) {
         }
       );
       self.closeCallbacks.push(fn);
-    }
+    },
+    _sessionData: self.sessionData
   };
 
   socket.send(stringifyDDP({msg: 'connected',
@@ -389,8 +390,7 @@ _.extend(Session.prototype, {
     }
     Meteor.defer(function () {
       // stop callbacks can yield, so we defer this on destroy.
-      // see also _closeAllForTokens and its desire to destroy things in a loop.
-      // that said, sub._isDeactivated() detects that we set inQueue to null and
+      // sub._isDeactivated() detects that we set inQueue to null and
       // treats it as semi-deactivated (it will ignore incoming callbacks, etc).
       self._deactivateAllSubscriptions();
     });
@@ -555,15 +555,10 @@ _.extend(Session.prototype, {
         self._setUserId(userId);
       };
 
-      var setLoginToken = function (newToken) {
-        self._setLoginToken(newToken);
-      };
-
       var invocation = new MethodInvocation({
         isSimulation: false,
         userId: self.userId,
         setUserId: setUserId,
-        _setLoginToken: setLoginToken,
         unblock: unblock,
         sessionId: self.id,
         sessionData: self.sessionData
@@ -616,19 +611,6 @@ _.extend(Session.prototype, {
         });
       }
     });
-  },
-
-  // XXX This mixes accounts concerns (login tokens) into livedata, which is not
-  // ideal. Eventually we'll have an API that allows accounts to keep track of
-  // which connections are associated with tokens and close them when necessary,
-  // rather than the current state of things where accounts tells livedata which
-  // connections are associated with which tokens, and when to close connections
-  // associated with a given token.
-  _setLoginToken: function (newToken) {
-    var self = this;
-    var oldToken = self.sessionData.loginToken;
-    self.sessionData.loginToken = newToken;
-    self.server._loginTokenChanged(self, newToken, oldToken);
   },
 
   // Sets the current user id in all appropriate contexts and reruns
@@ -1023,18 +1005,6 @@ Server = function () {
 
   self.sessions = {}; // map from id to session
 
-  // Keeps track of the open connections associated with particular login
-  // tokens. Used for logging out all a user's open connections, expiring login
-  // tokens, etc.
-  // XXX This mixes accounts concerns (login tokens) into livedata, which is not
-  // ideal. Eventually we'll have an API that allows accounts to keep track of
-  // which connections are associated with tokens and close them when necessary,
-  // rather than the current state of things where accounts tells livedata which
-  // connections are associated with which tokens, and when to close connections
-  // associated with a given token.
-  self.sessionsByLoginToken = {};
-
-
   self.stream_server = new StreamServer;
 
   self.stream_server.register(function (socket) {
@@ -1228,15 +1198,6 @@ _.extend(Server.prototype, {
   _destroySession: function (session) {
     var self = this;
     delete self.sessions[session.id];
-    if (session.sessionData.loginToken) {
-      self.sessionsByLoginToken[session.sessionData.loginToken] = _.without(
-        self.sessionsByLoginToken[session.sessionData.loginToken],
-        session.id
-      );
-      if (_.isEmpty(self.sessionsByLoginToken[session.sessionData.loginToken])) {
-        delete self.sessionsByLoginToken[session.sessionData.loginToken];
-      }
-    }
     session.destroy();
   },
 
@@ -1294,20 +1255,12 @@ _.extend(Server.prototype, {
       var setUserId = function() {
         throw new Error("Can't call setUserId on a server initiated method call");
       };
-      var setLoginToken = function () {
-        // XXX is this correct?
-        throw new Error("Can't call _setLoginToken on a server " +
-                        "initiated method call");
-      };
       var sessionId = null;
       var currentInvocation = DDP._CurrentInvocation.get();
       if (currentInvocation) {
         userId = currentInvocation.userId;
         setUserId = function(userId) {
           currentInvocation.setUserId(userId);
-        };
-        setLoginToken = function (newToken) {
-          currentInvocation._setLoginToken(newToken);
         };
         sessionId = currentInvocation.sessionId;
       }
@@ -1316,7 +1269,6 @@ _.extend(Server.prototype, {
         isSimulation: false,
         userId: userId,
         setUserId: setUserId,
-        _setLoginToken: setLoginToken,
         sessionId: sessionId,
         // XXX the Server object doesn't have a `sessionData` field.
         sessionData: self.sessionData
@@ -1343,42 +1295,6 @@ _.extend(Server.prototype, {
     if (exception)
       throw exception;
     return result;
-  },
-
-  _loginTokenChanged: function (session, newToken, oldToken) {
-    var self = this;
-    if (oldToken) {
-      // Remove the session from the list of open sessions for the old token.
-      self.sessionsByLoginToken[oldToken] = _.without(
-        self.sessionsByLoginToken[oldToken],
-        session.id
-      );
-      if (_.isEmpty(self.sessionsByLoginToken[oldToken]))
-        delete self.sessionsByLoginToken[oldToken];
-    }
-    if (newToken) {
-      if (! _.has(self.sessionsByLoginToken, newToken))
-        self.sessionsByLoginToken[newToken] = [];
-      self.sessionsByLoginToken[newToken].push(session.id);
-    }
-  },
-
-  // Close all open sessions associated with any of the tokens in
-  // `tokens`.
-  _closeAllForTokens: function (tokens) {
-    var self = this;
-    _.each(tokens, function (token) {
-      if (_.has(self.sessionsByLoginToken, token)) {
-        // _destroySession modifies sessionsByLoginToken, so we clone it.
-        _.each(EJSON.clone(self.sessionsByLoginToken[token]), function (sessionId) {
-          // Destroy session and remove from self.sessions.
-          var session = self.sessions[sessionId];
-          if (session) {
-            self._destroySession(session);
-          }
-        });
-      }
-    });
   }
 });
 

@@ -320,8 +320,8 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
   // logged in as. Make sure to avoid logging ourselves out if this
   // happens. But also make sure not to leave the connection in a state
   // of having a bad token set if things fail.
-  var oldToken = this._getLoginToken();
-  this._setLoginToken(null);
+  var oldToken = Accounts.getLoginToken(this);
+  Accounts.setLoginToken(this, null);
 
   try {
     // Update the user record by:
@@ -338,11 +338,11 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
     });
   } catch (err) {
     // update failed somehow. reset to old token.
-    this._setLoginToken(oldToken);
+    Accounts.setLoginToken(this, oldToken);
     throw err;
   }
 
-  this._setLoginToken(stampedLoginToken.token);
+  Accounts.setLoginToken(this, stampedLoginToken.token);
   this.setUserId(user._id);
 
   return {
@@ -436,7 +436,7 @@ Meteor.methods({verifyEmail: function (token) {
      $push: {'services.resume.loginTokens': stampedLoginToken}});
 
   this.setUserId(user._id);
-  this._setLoginToken(stampedLoginToken.token);
+  Accounts.setLoginToken(this, stampedLoginToken.token);
   return {
     token: stampedLoginToken.token,
     tokenExpires: Accounts._tokenExpiration(stampedLoginToken.when),
@@ -515,7 +515,7 @@ Meteor.methods({createUser: function (options) {
 
   // client gets logged in as the new user afterwards.
   this.setUserId(result.id);
-  this._setLoginToken(result.token);
+  Accounts.setLoginToken(this, result.token);
   return result;
 }});
 
