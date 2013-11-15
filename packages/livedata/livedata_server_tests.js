@@ -20,10 +20,12 @@ Tinytest.addAsync(
   "livedata server - sessionHandle.close()",
   function (test, onComplete) {
 
-    // XXX I don't understand why using `bindEnvironment` here is
-    // necessary, but I get "Meteor code must always run within a
-    // Fiber. Try wrapping callbacks that you pass to non-Meteor
-    // libraries with Meteor.bindEnvironment" if I don't.
+    // XXX stream_client_nodejs.js should not be requiring a developer
+    // to use Meteor.bindEnvironment themselves when using Meteor's
+    // public API.  The problem is that the computation rerunning is
+    // triggered by the close event firing on the stream's connection
+    // object, and that callback in stream_client_nodejs.js is not
+    // wrapped in a Meteor.bindEnvironment for us.
     done = Meteor.bindEnvironment(
       function () {
         Meteor.defer(onComplete);
