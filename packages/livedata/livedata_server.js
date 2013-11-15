@@ -252,7 +252,7 @@ var Session = function (server, version, socket) {
   self._pendingReady = [];
 
   // List of callbacks to call when this session is closed.
-  self.closeCallbacks = [];
+  self._closeCallbacks = [];
 
   // The `SessionHandle` for this session, passed to
   // `Meteor.server.onConnection` callbacks.
@@ -271,7 +271,7 @@ var Session = function (server, version, socket) {
           );
         }
       );
-      self.closeCallbacks.push(fn);
+      self._closeCallbacks.push(fn);
     },
     _sessionData: self.sessionData
   };
@@ -397,9 +397,10 @@ _.extend(Session.prototype, {
     // Drop the merge box data immediately.
     self.collectionViews = {};
     self.inQueue = null;
-    // XXX do we need to use Meteor.defer here as well?
-    _.each(self.closeCallbacks, function (callback) {
-      callback();
+    Meteor.defer(function () {
+      _.each(self._closeCallbacks, function (callback) {
+        callback();
+      });
     });
     Package.facts && Package.facts.Facts.incrementServerFact(
       "livedata", "sessions", -1);
