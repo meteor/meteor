@@ -10,7 +10,7 @@ You must close your element tags, with a few exceptions:
 
 * The well-known BR, HR, IMG, and INPUT tags, along with a few others, have no end tag.  You can write them in self-closing style if you like (`<br/>`) or simply write the start tag (`<br>`).
 
-* Some tags can be implicitly closed for convenience, like P and LI, according to the spec.  Meteor doesn't currently implement this feature.
+* You can omit the end tag of certain elements, like P and LI, according to the spec, but Meteor doesn't currently implement this feature.
 
 ## Template Tag Basics
 
@@ -103,6 +103,6 @@ You can combine multiple dynamic attributes tags with other attributes:
 <div id=foo class={{myClass}} {{attrs1}} {{attrs2}}>...</div>
 ```
 
-Attributes are combined from left to right, with later attribute values overwriting previous ones.  Multiple attribute values for the same attribute are not merged in any way, so if `attrs1` specifies a value for the `class` attribute, it will overwrite `{{myClass}}`.  Whenever any dependency of the overall calculation changes, the element's attributes are recalculated and updated.
+Attributes are combined from left to right, with later attribute values overwriting previous ones.  Multiple values for the same attribute are not merged in any way, so if `attrs1` specifies a value for the `class` attribute, it will overwrite `{{myClass}}`.  Meteor takes care of recalculating the element's attributes if any of `myClass`, `attrs1`, or `attrs2` changes reactively.
 
-Comment tags are allowed in the reactive attribute position, but no other template tags are.
+Comment tags are allowed in the reactive attribute position.
