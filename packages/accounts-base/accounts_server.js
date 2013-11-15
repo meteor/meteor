@@ -24,11 +24,11 @@ var loginTokenChanged = function (sessionId, newToken, oldToken) {
 };
 
 
-Accounts.getLoginToken = function (methodInvocation) {
+Accounts._getLoginToken = function (methodInvocation) {
   return methodInvocation._sessionData.loginToken;
 };
 
-Accounts.setLoginToken = function (methodInvocation, newToken) {
+Accounts._setLoginToken = function (methodInvocation, newToken) {
   var oldToken = methodInvocation._sessionData.loginToken;
   methodInvocation._sessionData.loginToken = newToken;
   loginTokenChanged(methodInvocation.sessionId, newToken, oldToken);
@@ -56,9 +56,7 @@ Meteor.server.onConnection(function (sessionHandle) {
 var closeSessionsForTokens = function (tokens) {
   _.each(tokens, function (token) {
     if (_.has(sessionsByLoginToken, token)) {
-      // closing a session triggers the onClose callback which
-      // modifies sessionsByLoginToken, so we clone it.
-      _.each(EJSON.clone(sessionsByLoginToken[token]), function (sessionId) {
+      _.each(sessionsByLoginToken[token], function (sessionId) {
         sessionHandles[sessionId] && sessionHandles[sessionId].close();
       });
     }
@@ -147,14 +145,14 @@ Meteor.methods({
     var result = tryAllLoginHandlers(options);
     if (result !== null) {
       this.setUserId(result.id);
-      Accounts.setLoginToken(this, result.token);
+      Accounts._setLoginToken(this, result.token);
     }
     return result;
   },
 
   logout: function() {
-    var token = Accounts.getLoginToken(this);
-    Accounts.setLoginToken(this, null);
+    var token = Accounts._getLoginToken(this);
+    Accounts._setLoginToken(this, null);
     if (token && this.userId)
       removeLoginToken(this.userId, token);
     this.setUserId(null);
@@ -715,9 +713,7 @@ Meteor.startup(function () {
 ///
 
 var closeTokensForUser = function (userTokens) {
-  closeSessionsForTokens(_.map(userTokens, function (token) {
-    return token.token;
-  }));
+  closeSessionsForTokens(_.pluck(userTokens, "token"));
 };
 
 // Like _.difference, but uses EJSON.equals to compute which values to return.
