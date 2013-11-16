@@ -460,7 +460,6 @@ var runWebAppServer = function () {
     httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
       if (argv.keepalive || true)
         console.log("LISTENING"); // must match run.js
-      var port = httpServer.address().port;
       var proxyBinding;
 
       AppConfig.configurePackage('webapp', function (configuration) {
