@@ -194,22 +194,20 @@ Meteor.logout = function (callback) {
 };
 
 Meteor.logoutOtherClients = function (callback) {
-  // Our connection is going to be closed, but we don't want to call the
-  // onReconnect handler until the result comes back for this method, because
-  // the token will have been deleted on the server. Instead, wait until we get
-  // a new token and call the reconnect handler with that.
-  // XXX this is messy.
-  // XXX what if login gets called before the callback runs?
-  var origOnReconnect = Meteor.connection.onReconnect;
-  var userId = Meteor.userId();
-  Meteor.connection.onReconnect = null;
-  Meteor.apply('logoutOtherClients', [], { wait: true },
+  // Call the `logoutOtherClients` method and store the login token that we get
+  // back. The server is not supposed to close connections on the old token for
+  // 10 seconds, so we should have time to store our new token before being
+  // disconnected. If we get disconnected, then we'll immediately reconnect with
+  // the new token. If for some reason we get disconnected before storing the
+  // new token, then the worst that will happen is that we'll have a flicker
+  // from trying to log in with the old token before storing and logging in with
+  // the new one.
+  Meteor.apply('logoutOtherClients', [],
                function (error, result) {
-                 Meteor.connection.onReconnect = origOnReconnect;
-                 if (! error)
+                 if (! error) {
+                   var userId = Meteor.userId();
                    storeLoginToken(userId, result.token, result.tokenExpires);
-                 Meteor.connection.onReconnect();
-                 callback && callback(error);
+                 }
                });
 };
 
