@@ -202,12 +202,13 @@ Meteor.logoutOtherClients = function (callback) {
   // new token, then the worst that will happen is that we'll have a flicker
   // from trying to log in with the old token before storing and logging in with
   // the new one.
-  Meteor.apply('logoutOtherClients', [],
+  Meteor.apply('logoutOtherClients', [], { wait: true },
                function (error, result) {
                  if (! error) {
                    var userId = Meteor.userId();
                    storeLoginToken(userId, result.token, result.tokenExpires);
                  }
+                 callback && callback(error);
                });
 };
 
