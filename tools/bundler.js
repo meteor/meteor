@@ -27,6 +27,9 @@
 //    - path: path (relative to star.json) to the control file (eg,
 //      program.json) for this plugin
 //
+// - meteorRelease: the value used in Meteor.release for programs inside the
+//     star, or "none"
+//
 // /README: human readable instructions
 //
 // /main.js: script that can be run in node.js to start the site
@@ -1355,13 +1358,19 @@ var writeFile = function (file, builder) {
 // path of a directory that should be created to contain the generated
 // site archive.
 //
-// Returns a watch.WatchSet for all files and directories that ultimately went
+// Returns:
+
+// {
+//     watchSet: watch.WatchSet for all files and directories that ultimately went
+//     starManifest: the JSON manifest of the star
+// }
 // into the bundle.
 //
 // options:
 // - nodeModulesMode: "skip", "symlink", "copy"
 // - builtBy: vanity identification string to write into metadata
 // - controlProgram: name of the control program (should be a target name)
+// - releaseStamp: The Meteor release version
 var writeSiteArchive = function (targets, outputPath, options) {
   var builder = new Builder({
     outputPath: outputPath,
@@ -1377,7 +1386,8 @@ var writeSiteArchive = function (targets, outputPath, options) {
       format: "site-archive-pre1",
       builtBy: options.builtBy,
       programs: [],
-      control: options.controlProgram || undefined
+      control: options.controlProgram || undefined,
+      meteorRelease: options.releaseStamp
     };
 
     // Pick a path in the bundle for each target
@@ -1473,7 +1483,10 @@ var writeSiteArchive = function (targets, outputPath, options) {
     // We did it!
     builder.complete();
 
-    return watchSet;
+    return {
+      watchSet: watchSet,
+      starManifest: json
+    };
   } catch (e) {
     builder.abort();
     throw e;
@@ -1543,6 +1556,7 @@ exports.bundle = function (appDir, outputPath, options) {
 
   var success = false;
   var watchSet = new watch.WatchSet();
+  var starResult = null;
   var messages = buildmessage.capture({
     title: "building the application"
   }, function () {
@@ -1764,11 +1778,13 @@ exports.bundle = function (appDir, outputPath, options) {
     library.watchLocalPackageDirs(watchSet);
 
     // Write to disk
-    watchSet.merge(writeSiteArchive(targets, outputPath, {
+    starResult = writeSiteArchive(targets, outputPath, {
       nodeModulesMode: options.nodeModulesMode,
       builtBy: builtBy,
-      controlProgram: controlProgram
-    }));
+      controlProgram: controlProgram,
+      releaseStamp: options.releaseStamp
+    });
+    watchSet.merge(starResult.watchSet);
 
     success = true;
   });
@@ -1778,7 +1794,8 @@ exports.bundle = function (appDir, outputPath, options) {
 
   return {
     errors: success ? false : messages,
-    watchSet: watchSet
+    watchSet: watchSet,
+    starManifest: starResult && starResult.starManifest
   };
 };
 

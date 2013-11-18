@@ -142,8 +142,9 @@ _.extend(LivedataTest.ClientStream.prototype, {
 
     self._clearConnectionTimer();
     if (self.currentConnection) {
-      self.currentConnection.close();
+      var conn = self.currentConnection;
       self.currentConnection = null;
+      conn.close();
     }
   },
 

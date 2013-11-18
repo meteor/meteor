@@ -15,6 +15,10 @@ var send = Npm.require('send');
 WebApp = {};
 WebAppInternals = {};
 
+
+var makeAppNamePathPrefix = function (appName) {
+  return encodeURIComponent(appName).replace(/\./g, '_');
+};
 // Keepalives so that when the outer server dies unceremoniously and
 // doesn't kill us, we quit ourselves. A little gross, but better than
 // pidfiles.
@@ -148,6 +152,7 @@ var appUrl = function (url) {
 };
 
 var runWebAppServer = function () {
+  var shuttingDown = false;
   // read the control for the client we'll be serving up
   var clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
                                  __meteor_bootstrap__.configJson.client);
@@ -340,9 +345,16 @@ var runWebAppServer = function () {
     if (!boilerplateHtml)
       throw new Error("boilerplateHtml should be set before listening!");
 
+
+    var headers = {
+      'Content-Type':  'text/html; charset=utf-8'
+    };
+    if (shuttingDown)
+      headers['Connection'] = 'Close';
+
     var request = WebApp.categorizeRequest(req);
 
-    res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+    res.writeHead(200, headers);
 
     var requestSpecificHtml = htmlAttributes(boilerplateHtml, request);
     res.write(requestSpecificHtml);
@@ -359,6 +371,32 @@ var runWebAppServer = function () {
 
   var httpServer = http.createServer(app);
   var onListeningCallbacks = [];
+
+  // Set connections' idle timeout to 5 seconds. Allows us to gracefully shut
+  // down with keepalive connections.
+  httpServer.setTimeout(5000, function (socket) {
+    socket.end();
+  });
+
+  // For now, handle SIGHUP here.  Later, this should be in some centralized
+  // Meteor shutdown code.
+  process.on('SIGHUP', Meteor.bindEnvironment(function () {
+    console.log("SIGHUP");
+    shuttingDown = true;
+    // tell others with websockets open that we plan to close this.
+    httpServer.emit('closing');
+    httpServer.close( function () {
+      process.exit(0);
+    });
+    // Ideally we will close before this hits.
+    Meteor.setTimeout(function () {
+      Log.warn("Closed by SIGHUP but one or more HTTP requests may not have finished.");
+      process.exit(1);
+    }, 5000);
+  }, function (err) {
+    console.log(err);
+    process.exit(1);
+  }));
 
   // start up app
   _.extend(WebApp, {
@@ -429,7 +467,12 @@ var runWebAppServer = function () {
         if (proxyBinding)
           proxyBinding.stop();
         if (configuration && configuration.proxy) {
-          proxyBinding = AppConfig.configureService(configuration.proxyServiceName || "proxy", function (proxyService) {
+          var proxyServiceName = process.env.ADMIN_APP ? "adminProxy" : "proxy";
+
+          // TODO: We got rid of the place where this checks the app's
+          // configuration, because this wants to be configured for some things
+          // on a per-job basis.  Discuss w/ teammates.
+          proxyBinding = AppConfig.configureService(proxyServiceName, function (proxyService) {
             if (proxyService.providers.proxy) {
               var proxyConf;
               if (process.env.ADMIN_APP) {
@@ -437,16 +480,16 @@ var runWebAppServer = function () {
                   securePort: 44333,
                   insecurePort: 9414,
                   bindHost: "localhost",
-                  bindPathPrefix: "/" + process.env.GALAXY_APP
+                  bindPathPrefix: "/" + makeAppNamePathPrefix(process.env.GALAXY_APP)
                 };
               } else {
                 proxyConf = configuration.proxy;
-
               }
               Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
+              console.log(proxyConf);
               WebAppInternals.bindToProxy(_.extend({
                 proxyEndpoint: proxyService.providers.proxy
-              }, proxyConf));
+              }, proxyConf), proxyServiceName);
             }
           });
         }
@@ -467,7 +510,9 @@ var runWebAppServer = function () {
   };
 };
 
-WebAppInternals.bindToProxy = function (proxyConfig) {
+
+var proxy;
+WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
   var securePort = proxyConfig.securePort || 4433;
   var insecurePort = proxyConfig.insecurePort || 8080;
   var bindPathPrefix = proxyConfig.bindPathPrefix || "";
@@ -486,7 +531,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
   // XXX rename pid argument to bindTo.
   var pid = {
     job: process.env.GALAXY_JOB,
-    lastStarted: process.env.LAST_START,
+    lastStarted: +(process.env.LAST_START),
     app: process.env.GALAXY_APP
   };
   var myHost = os.hostname();
@@ -497,8 +542,19 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
   };
 
   // This is run after packages are loaded (in main) so we can use
-  // DDP.connect.
-  var proxy = DDP.connect(proxyConfig.proxyEndpoint);
+  // Follower.connect.
+  if (proxy) {
+    proxy.reconnect({
+      url: proxyConfig.proxyEndpoint
+    });
+  } else {
+    proxy = Package["follower-livedata"].Follower.connect(
+      proxyConfig.proxyEndpoint, {
+        group: proxyServiceName
+      }
+    );
+  }
+
   var route = process.env.ROUTE;
   var host = route.split(":")[0];
   var port = +route.split(":")[1];
