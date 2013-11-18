@@ -1,5 +1,13 @@
 Accounts._noConnectionCloseDelayForTest = true;
 
+if (Meteor.isServer) {
+  Meteor.methods({
+    getUserId: function () {
+      return this.userId;
+    }
+  });
+}
+
 if (Meteor.isClient) (function () {
 
   // XXX note, only one test can do login/logout things at once! for
@@ -404,10 +412,10 @@ if (Meteor.isClient) (function () {
       var self = this;
 
       // copied from livedata/client_convenience.js
-      var ddpUrl = '/';
+      self.ddpUrl = '/';
       if (typeof __meteor_runtime_config__ !== "undefined") {
         if (__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL)
-          ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
+          self.ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
       }
       // XXX can we get the url from the existing connection somehow
       // instead?
@@ -416,7 +424,7 @@ if (Meteor.isClient) (function () {
       // connection while leaving Meteor.connection logged in.
       var token;
       var userId;
-      self.secondConn = DDP.connect(ddpUrl);
+      self.secondConn = DDP.connect(self.ddpUrl);
 
       var expectLoginError = expect(function (err) {
         test.isTrue(err);
@@ -473,6 +481,41 @@ if (Meteor.isClient) (function () {
         expect(function (err) {
           test.isFalse(err);
           test.isTrue(Meteor.userId());
+        })
+      );
+    },
+    logoutStep,
+    function (test, expect) {
+      var self = this;
+      // Test that, when we call logoutOtherClients, if the server disconnects
+      // us before the logoutOtherClients callback runs, then we still end up
+      // logged in.
+      var expectServerLoggedIn = expect(function (err, result) {
+        test.isFalse(err);
+        test.isTrue(Meteor.userId());
+        test.equal(result, Meteor.userId());
+      });
+
+      Meteor.loginWithPassword(
+        self.username,
+        self.password,
+        expect(function (err) {
+          test.isFalse(err);
+          test.isTrue(Meteor.userId());
+
+          // The test is only useful if things interleave in the following order:
+          // - logoutOtherClients runs on the server
+          // - onReconnect fires and sends a login method with the old token,
+          //   which results in an error
+          // - logoutOtherClients callback runs and stores the new token and
+          //   logs in with it
+          // In practice they seem to interleave this way, but I'm not sure how
+          // to make sure that they do.
+
+          Meteor.logoutOtherClients(function (err) {
+            test.isFalse(err);
+            Meteor.call("getUserId", expectServerLoggedIn);
+          });
         })
       );
     },
