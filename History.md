@@ -1,5 +1,11 @@
 ## vNEXT
 
+* Rework hot code push. The new `autoupdate` package drives automatic
+  reloads on update using standard DDP messages instead of a hardcoded
+  message at DDP startup. Now the hot code push only triggers when
+  client code changes; server only code changes will not cause the page
+  to reload.
+
 * Bundler failures cause non-zero exit code in `meteor run`.  #1515
 
 * Fix `meteor run` with settings files containing non-ASCII characters.  #1497
@@ -20,7 +26,7 @@
 * Upgraded dependencies:
   * SockJS server from 0.3.7 to 0.3.8
 
-Patches contributed by GitHub users mcbain, rzymek.
+Patches contributed by GitHub users awwx, mcbain, rzymek.
 
 
 ## v0.6.6.3
