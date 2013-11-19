@@ -8,8 +8,8 @@ var interceptedLines = [];
 var suppress = 0;
 
 Log.process = function(logMsg, raw) {
-  if(raw) {
-    console.log(logMsg.message);
+  if(this.rawLogs) {
+    console[logMsg.level](logMsg.message);
   } else {
     Meteor.logger[logMsg.level](logMsg.message)
   }
