@@ -358,7 +358,7 @@ var with_password = function (site, callback) {
       callback();
 
     } else {
-      process.stdout.write("Password: ");
+      process.stderr.write("Password: ");
       read_password(callback);
     }
   });

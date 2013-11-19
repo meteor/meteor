@@ -1335,7 +1335,7 @@ Tinytest.addAsync("livedata connection - version negotiation requires renegotiat
   var connection = new LivedataTest.Connection(getSelfConnectionUrl(), {
     reloadWithOutstanding: true,
     supportedDDPVersions: ["garbled", LivedataTest.SUPPORTED_DDP_VERSIONS[0]],
-    onConnectionFailure: function () { test.fail(); onComplete(); },
+    onDDPVersionNegotiationFailure: function () { test.fail(); onComplete(); },
     onConnected: function () {
       test.equal(connection._version, LivedataTest.SUPPORTED_DDP_VERSIONS[0]);
       connection._stream.disconnect({_permanent: true});
@@ -1349,9 +1349,9 @@ Tinytest.addAsync("livedata connection - version negotiation error",
   var connection = new LivedataTest.Connection(getSelfConnectionUrl(), {
     reloadWithOutstanding: true,
     supportedDDPVersions: ["garbled", "more garbled"],
-    onConnectionFailure: function () {
+    onDDPVersionNegotiationFailure: function () {
       test.equal(connection.status().status, "failed");
-      test.matches(connection.status().reason, /Version negotiation failed/);
+      test.matches(connection.status().reason, /DDP version negotiation failed/);
       test.isFalse(connection.status().connected);
       onComplete();
     },

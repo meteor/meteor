@@ -21,4 +21,8 @@ Package.on_use(function (api) {
     'driver.html',
     'driver.js'
   ], "client");
+
+  api.use('autoupdate', 'server', {weak: true});
+  api.use('random', 'server');
+  api.add_files('autoupdate.js', 'server');
 });
