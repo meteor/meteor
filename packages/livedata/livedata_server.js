@@ -384,26 +384,31 @@ _.extend(Session.prototype, {
   // down. If a socket was attached, close it.
   destroy: function () {
     var self = this;
+
     if (self.socket) {
       self.socket.close();
       self.socket._meteorSession = null;
     }
+
+    // Drop the merge box data immediately.
+    self.collectionViews = {};
+    self.inQueue = null;
+
+    Package.facts && Package.facts.Facts.incrementServerFact(
+      "livedata", "sessions", -1);
+
     Meteor.defer(function () {
       // stop callbacks can yield, so we defer this on destroy.
       // sub._isDeactivated() detects that we set inQueue to null and
       // treats it as semi-deactivated (it will ignore incoming callbacks, etc).
       self._deactivateAllSubscriptions();
-    });
-    // Drop the merge box data immediately.
-    self.collectionViews = {};
-    self.inQueue = null;
-    Meteor.defer(function () {
+
+      // Defer calling the close callbacks, so that the caller closing
+      // the session isn't waiting for all the callbacks to complete.
       _.each(self._closeCallbacks, function (callback) {
         callback();
       });
     });
-    Package.facts && Package.facts.Facts.incrementServerFact(
-      "livedata", "sessions", -1);
   },
 
   // Send a message (doing nothing if no socket is connected right now.)
