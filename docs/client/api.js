@@ -479,6 +479,18 @@ Template.api.connect = {
   ]
 };
 
+Template.api.serverOnConnection = {
+  id: "meteor_server_onconnection",
+  name: "Meteor.server.onConnection(callback)",
+  locus: "server",
+  descr: ["Register a callback to be called when a new DDP connection is made to the server."],
+  args: [
+    {name: "callback",
+     type: "function",
+     descr: "The function to call when a new DDP connection is received."}
+  ]
+};
+    
 // onAutopublish
 
 Template.api.meteor_collection = {
