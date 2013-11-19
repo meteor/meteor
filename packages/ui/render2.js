@@ -594,7 +594,7 @@ var toCode = function (node) {
     var type = HTML.typeOf(node);
     if (type === 'emitcode') {
       result += node[0];
-    } else if (type === 'comment' || type === 'charref' ||
+    } else if (type === 'comment' || type === 'charref' || type === 'raw' ||
                type === 'tag' || type === 'special') {
 
       var isNonTag = (type !== 'tag');

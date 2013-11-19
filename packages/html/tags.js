@@ -90,6 +90,14 @@ var checkComment = function (comment) {
     throw new Error("Comment should have exactly one content item, a simple string");
 };
 
+// checks that a pseudoDOM node with tagName "Raw" is well-formed.
+var checkRaw = function (raw) {
+  if (raw.attrs)
+    throw new Error("Raw can't have attributes");
+  if (raw.length !== 1 || (typeof raw[0] !== 'string'))
+    throw new Error("Raw should have exactly one content item, a simple string");
+};
+
 // checks that a pseudoDOM node with tagName "Comment" is well-formed.
 var checkEmitCode = function (node) {
   if (node.attrs)
@@ -122,6 +130,9 @@ typeOf = function (node) {
       } else if (node.tagName === 'Special') {
         checkSpecial(node);
         return 'special';
+      } else if (node.tagName === 'Raw') {
+        checkRaw(node);
+        return 'raw';
       } else {
         return 'tag';
       }

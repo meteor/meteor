@@ -13,6 +13,8 @@ HTML = {
   EmitCode: makeTagFunc('EmitCode'),
   // e.g. `Special({ ... stuff ... })`
   Special: makeTagFunc('Special'),
+  // e.g. `Raw("<br>")`
+  Raw: makeTagFunc('Raw'),
 
   asciiLowerCase: asciiLowerCase,
   properCaseTagName: properCaseTagName,
