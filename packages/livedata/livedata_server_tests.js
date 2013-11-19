@@ -1,3 +1,5 @@
+var Fiber = Npm.require('fibers');
+
 Tinytest.addAsync(
   "livedata server - sessionHandle.onClose()",
   function (test, onComplete) {
@@ -16,45 +18,43 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync(
-  "livedata server - sessionHandle.close()",
-  function (test, onComplete) {
+// like pollUntil but doesn't have to be called from testAsyncMulti.
+var poll = function (test, onComplete, fn) {
+  var timeout = 10000;
+  var step = 200;
+  var start = (new Date()).valueOf();
+  var helper = function () {
+    if (fn()) {
+      test.ok();
+      onComplete();
+      return;
+    }
+    if (start + timeout < (new Date()).valueOf()) {
+      test.fail();
+      onComplete();
+      return;
+    }
+    Meteor.setTimeout(helper, step);
+  };
+  helper();
+};
+  
+Tinytest.addAsync("livedata server - sessionHandle.close()", function (test, onComplete) {
+  var connection;
+  var callbackHandle = Meteor.server.onConnection(function (sessionHandle) {
+    callbackHandle.stop();
 
-    // XXX stream_client_nodejs.js should not be requiring a developer
-    // to use Meteor.bindEnvironment themselves when using Meteor's
-    // public API.  The problem is that the computation rerunning is
-    // triggered by the close event firing on the stream's connection
-    // object, and that callback in stream_client_nodejs.js is not
-    // wrapped in a Meteor.bindEnvironment for us.
-    done = Meteor.bindEnvironment(
-      function () {
-        Meteor.defer(onComplete);
-      },
-      function (err) {
-        Meteor._debug("Exception thrown from Meteor.defer", err && err.stack);
-      }
-    );
-
-    var connection;
-    var callbackHandle = Meteor.server.onConnection(function (sessionHandle) {
-      callbackHandle.stop();
-      // Wait for connection to be closed on the client side.
-      Deps.autorun(function (computation) {
-        if (computation.firstRun)
-          test.isTrue(connection.status().connected);
-        if (! connection.status().connected) {
-          computation.stop();
-          // Avoid reconnecting from the client.
-          connection.disconnect();
-          done();
-        }
-      });
-      // Close the connection from the server.
-      sessionHandle.close();
+    poll(test, onComplete, function () {
+      return ! connection.status().connected;
     });
-    connection = DDP.connect(Meteor.absoluteUrl());
-  }
-);  
+
+    // Close the connection from the server.
+    sessionHandle.close();
+  });
+
+  connection = DDP.connect(Meteor.absoluteUrl(), {retry: false});
+});
+
 
 
 var innerCalled = null;

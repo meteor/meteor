@@ -6,6 +6,7 @@ Package.on_use(function (api) {
   api.use('webapp', 'server');
   api.use('deps', 'client');
   api.use(['livedata', 'mongo-livedata'], ['client', 'server']);
+  api.use('deps', 'client');
   api.use('reload', 'client', {weak: true});
 
   api.export('Autoupdate');
