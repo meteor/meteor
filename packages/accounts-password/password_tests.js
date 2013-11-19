@@ -1,5 +1,13 @@
 Accounts._noConnectionCloseDelayForTest = true;
 
+if (Meteor.isServer) {
+  Meteor.methods({
+    getUserId: function () {
+      return this.userId;
+    }
+  });
+}
+
 if (Meteor.isClient) (function () {
 
   // XXX note, only one test can do login/logout things at once! for
@@ -388,10 +396,10 @@ if (Meteor.isClient) (function () {
       var self = this;
 
       // copied from livedata/client_convenience.js
-      var ddpUrl = '/';
+      self.ddpUrl = '/';
       if (typeof __meteor_runtime_config__ !== "undefined") {
         if (__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL)
-          ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
+          self.ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
       }
       // XXX can we get the url from the existing connection somehow
       // instead?
@@ -400,7 +408,7 @@ if (Meteor.isClient) (function () {
       // connection while leaving Meteor.connection logged in.
       var token;
       var userId;
-      self.secondConn = DDP.connect(ddpUrl);
+      self.secondConn = DDP.connect(self.ddpUrl);
 
       var expectLoginError = expect(function (err) {
         test.isTrue(err);
@@ -459,6 +467,48 @@ if (Meteor.isClient) (function () {
           test.isTrue(Meteor.userId());
         })
       );
+    },
+    logoutStep,
+    function (test, expect) {
+      var self = this;
+      // Use a second connection to get a login token to use in the next test.
+      var conn = DDP.connect(self.ddpUrl);
+      conn.call("login", {
+        user: { username: self.username },
+        password: self.password
+      }, expect(function (err, result) {
+        test.isFalse(err);
+        test.isTrue(result.token);
+        self.tokenForLoginAndLogoutOthers = result.token;
+      }));
+    },
+    function (test, expect) {
+      var self = this;
+
+      var expectServerLoggedIn = expect(function (err, result) {
+        test.isFalse(err);
+        test.isTrue(Meteor.userId());
+        test.equal(result, Meteor.userId());
+      });
+
+      Meteor.loginWithToken(
+        self.tokenForLoginAndLogoutOthers,
+        expect(function (err) {
+          test.isFalse(err);
+          test.isTrue(Meteor.userId());
+        })
+      );
+      Meteor.logoutOtherClients(expect(function (err) {
+        test.isFalse(err);
+        // Because the server is set to close connections with no delay, by now
+        // we've probably been disconnected and then set a reconnect with a
+        // login on the old token. Wait until we find our new token in
+        // localStorage, and then make sure that no only do we think we're
+        // logged in but that the server agrees.
+        Meteor.setTimeout(function () {
+          Meteor.call("getUserId", expectServerLoggedIn);
+        }, 4 * 1000);
+      }));
     },
     logoutStep,
     function (test, expect) {
