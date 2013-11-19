@@ -1,70 +1,3 @@
-// token -> list of session ids
-var sessionsByLoginToken = {};
-
-// Remove the session from the list of open sessions for the token.
-var removeSessionFromToken = function (token, sessionId) {
-  sessionsByLoginToken[token] = _.without(
-    sessionsByLoginToken[token],
-    sessionId
-  );
-  if (_.isEmpty(sessionsByLoginToken[token]))
-    delete sessionsByLoginToken[token];
-};
-
-var loginTokenChanged = function (sessionId, newToken, oldToken) {
-  var self = this;
-  if (oldToken) {
-    removeSessionFromToken(oldToken, sessionId);
-  }
-  if (newToken) {
-    if (! _.has(sessionsByLoginToken, newToken))
-      sessionsByLoginToken[newToken] = [];
-    sessionsByLoginToken[newToken].push(sessionId);
-  }
-};
-
-
-Accounts._getLoginToken = function (methodInvocation) {
-  return methodInvocation._sessionData.loginToken;
-};
-
-Accounts._setLoginToken = function (methodInvocation, newToken) {
-  var oldToken = methodInvocation._sessionData.loginToken;
-  methodInvocation._sessionData.loginToken = newToken;
-  loginTokenChanged(methodInvocation.sessionId, newToken, oldToken);
-};
-
-
-// sessionId -> SessionHandle
-var sessionHandles = {};
-
-Meteor.server.onConnection(function (sessionHandle) {
-  var sessionId = sessionHandle.id;
-  sessionHandles[sessionId] = sessionHandle;
-  sessionHandle.onClose(function () {
-    var token = sessionHandle._sessionData.loginToken;
-    if (token)
-      removeSessionFromToken(token, sessionId);
-    delete sessionHandles[sessionId];
-  });
-});
-
-
-
-// Close all open sessions associated with any of the tokens in
-// `tokens`.
-var closeSessionsForTokens = function (tokens) {
-  _.each(tokens, function (token) {
-    if (_.has(sessionsByLoginToken, token)) {
-      _.each(sessionsByLoginToken[token], function (sessionId) {
-        sessionHandles[sessionId] && sessionHandles[sessionId].close();
-      });
-    }
-  });
-};
-
-
-
 ///
 /// CURRENT USER
 ///
@@ -210,6 +143,74 @@ Meteor.methods({
 /// RECONNECT TOKENS
 ///
 /// support reconnecting using a meteor login token
+
+// token -> list of session ids
+var sessionsByLoginToken = {};
+
+// Remove the session from the list of open sessions for the token.
+var removeSessionFromToken = function (token, sessionId) {
+  sessionsByLoginToken[token] = _.without(
+    sessionsByLoginToken[token],
+    sessionId
+  );
+  if (_.isEmpty(sessionsByLoginToken[token]))
+    delete sessionsByLoginToken[token];
+};
+
+var loginTokenChanged = function (sessionId, newToken, oldToken) {
+  var self = this;
+  if (oldToken) {
+    removeSessionFromToken(oldToken, sessionId);
+  }
+  if (newToken) {
+    if (! _.has(sessionsByLoginToken, newToken))
+      sessionsByLoginToken[newToken] = [];
+    sessionsByLoginToken[newToken].push(sessionId);
+  }
+};
+
+
+Accounts._getLoginToken = function (methodInvocation) {
+  return methodInvocation._sessionData.loginToken;
+};
+
+Accounts._setLoginToken = function (methodInvocation, newToken) {
+  var oldToken = methodInvocation._sessionData.loginToken;
+  methodInvocation._sessionData.loginToken = newToken;
+  loginTokenChanged(methodInvocation.sessionId, newToken, oldToken);
+};
+
+
+// sessionId -> SessionHandle
+// XXX Wouldn't be necessary if there was an API to get the session or
+// session handle from a session id.
+var sessionHandles = {};
+
+Meteor.server.onConnection(function (sessionHandle) {
+  var sessionId = sessionHandle.id;
+  sessionHandles[sessionId] = sessionHandle;
+  sessionHandle.onClose(function () {
+    var token = sessionHandle._sessionData.loginToken;
+    if (token)
+      removeSessionFromToken(token, sessionId);
+    delete sessionHandles[sessionId];
+  });
+});
+
+
+
+// Close all open sessions associated with any of the tokens in
+// `tokens`.
+var closeSessionsForTokens = function (tokens) {
+  _.each(tokens, function (token) {
+    if (_.has(sessionsByLoginToken, token)) {
+      _.each(sessionsByLoginToken[token], function (sessionId) {
+        sessionHandles[sessionId] && sessionHandles[sessionId].close();
+      });
+    }
+  });
+};
+
 
 // Login handler for resume tokens.
 Accounts.registerLoginHandler(function(options) {
