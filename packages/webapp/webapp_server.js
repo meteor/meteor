@@ -166,6 +166,7 @@ var calculateClientHash = function () {
   hash.update(JSON.stringify(__meteor_runtime_config__), 'utf8');
   _.each(WebApp.clientProgram.manifest, function (resource) {
     if (resource.where === 'client' || resource.where === 'internal') {
+      hash.update(resource.path);
       hash.update(resource.hash);
     }
   });
