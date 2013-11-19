@@ -602,6 +602,8 @@ var toCode = function (node) {
       result += 'HTML.' + (isNonTag ? '' : 'Tag.') + node.tagName + '(';
       var argStrs = [];
       if (node.attrs) {
+        if (typeof node.attrs === 'function')
+          throw new Error("Can't convert function object to code string.  Use EmitCode instead.");
         var kvStrs = [];
         if (type === 'special') {
           _.each(node.attrs, function (v, k) {

@@ -1193,3 +1193,153 @@ Spacebars.parse2 = function (input) {
 
   return tree;
 };
+
+var optimize = function (tree) {
+
+  var pushRawHTML = function (array, html, dontCoallesce) {
+    if ((! dontCoallesce) && array.length > 0 &&
+        array[array.length - 1].tagName === 'Raw') {
+      array[array.length - 1][0] += html;
+    } else {
+      array.push(HTML.Raw(html));
+    }
+  };
+
+  var optimizeArrayParts = function (array, optimizePartsFunc, dontCoallesce) {
+    var result = null;
+    for (var i = 0, N = array.length; i < N; i++) {
+      var part = optimizePartsFunc(array[i]);
+      if (part !== null) {
+        // something special found
+        if (result === null) {
+          // This is our first special item.  Stringify the other parts.
+          result = [];
+          for (var j = 0; j < i; j++)
+            pushRawHTML(result, UI.toHTML(array[j]), dontCoallesce);
+        }
+        result.push(part);
+      } else {
+        // just plain HTML found
+        if (result !== null) {
+          // we've already found something special, so convert this to Raw
+          pushRawHTML(result, UI.toHTML(array[i]), dontCoallesce);
+        }
+      }
+    }
+    return result;
+  };
+
+  var optimizeAttributeValueParts = function (v) {
+    // If we have nothing special going on, returns `null` (so that the
+    // parent can optimize).  Otherwise returns a replacement for `v`
+    // with optimized parts.
+    var type = HTML.typeOf(v);
+    if (type === 'null' || type === 'string' || type === 'charref') {
+      return null;
+    } else if (type === 'special') {
+      return v;
+    } else if (type === 'array') {
+      return optimizeArrayParts(v, optimizeAttributeValueParts);
+    } else {
+      throw new Error("Unexpected node in attribute value: " + v);
+    }
+  };
+
+  var optimizeParts = function (node) {
+    // If we have nothing special going on, returns `null` (so that the
+    // parent can optimize).  Otherwise returns a replacement for `node`
+    // with optimized parts.
+    if (UI.isComponent(node)) {
+      return node;
+    } else {
+      var type = HTML.typeOf(node);
+      if (type === 'charref') {
+        return null;
+      } else if (type === 'comment') {
+        return null;
+      } else if (type === 'emitcode') {
+        return node;
+      } else if (type === 'tag') {
+        var mustOptimize = false;
+
+        var newChildren = optimizeArrayParts(node, optimizeParts);
+
+        var newAttrs = null;
+        if (node.attrs) {
+          var attrs = node.attrs;
+          if (typeof attrs === 'function') {
+            newAttrs = attrs;
+          } else {
+            var attrNames = [];
+            var attrValues = [];
+            _.each(attrs, function (v, n) {
+              attrNames.push(n);
+              attrValues.push(v);
+            });
+            if (newChildren) {
+              // forced by special children of tag to optimize now.
+              // trick optimizeArrayParts into doing that by adding
+              // a fake attrValue that won't be picked up when we
+              // iterate over attrNames.
+              attrValues.push(function () {});
+            }
+            var newValues = optimizeArrayParts(attrValues,
+                                               optimizeAttributeValueParts,
+                                               true);
+            if (newValues) {
+              newAttrs = {};
+              for (var i = 0; i < attrNames.length; i++)
+                newAttrs[attrNames[i]] = newValues[i];
+            }
+          }
+        }
+
+        if ((! newAttrs) && (! newChildren))
+          return null;
+
+        if (! newChildren)
+          newChildren = [HTML.Raw(UI.toHTML(Array.prototype.slice.call(node)))];
+
+        var newTag = HTML.getTag(node.tagName).apply(null, newChildren);
+        newTag.attrs = newAttrs;
+
+        return newTag;
+      } else if (type === 'array') {
+        return optimizeArrayParts(node, optimizeParts);
+      } else if (type === 'string') {
+        return null;
+      } else if (type === 'function') {
+        return node;
+      } else if (type === 'null') {
+        return null;
+      } else if (type === 'special') {
+        return node;
+      } else {
+        // can't get here
+        throw new Error("Unexpected type: " + type);
+      }
+    };
+  };
+
+  return optimizeParts(tree) || HTML.Raw(UI.toHTML(tree));
+};
+
+Spacebars.compile2 = function (input) {
+  var tree;
+
+  // Accept string or output of Spacebars.parse
+  if (typeof input === 'string')
+    tree = Spacebars.parse2(input);
+  else
+    tree = input;
+
+  tree = optimize(tree);
+
+  var code = '(function () { var self = this; return ';
+
+  code += UI.toCode(tree);
+
+  code += '; })';
+
+  return code;
+};
