@@ -1196,17 +1196,23 @@ Spacebars.parse2 = function (input) {
 
 var optimize = function (tree) {
 
-  var pushRawHTML = function (array, html, dontCoallesce) {
-    if ((! dontCoallesce) && array.length > 0 &&
-        array[array.length - 1].tagName === 'Raw') {
-      array[array.length - 1][0] += html;
+  var pushRawHTML = function (array, html) {
+    var N = array.length;
+    if (N > 0 && array[N-1].tagName === 'Raw') {
+      array[N-1][0] += html;
     } else {
       array.push(HTML.Raw(html));
     }
   };
 
-  var optimizeArrayParts = function (array, optimizePartsFunc, dontCoallesce) {
+  var isPureChars = function (html) {
+    return (html.indexOf('&') < 0 && html.indexOf('<') < 0);
+  };
+
+  var optimizeArrayParts = function (array, optimizePartsFunc, forceOptimize) {
     var result = null;
+    if (forceOptimize)
+      result = [];
     for (var i = 0, N = array.length; i < N; i++) {
       var part = optimizePartsFunc(array[i]);
       if (part !== null) {
@@ -1215,31 +1221,40 @@ var optimize = function (tree) {
           // This is our first special item.  Stringify the other parts.
           result = [];
           for (var j = 0; j < i; j++)
-            pushRawHTML(result, UI.toHTML(array[j]), dontCoallesce);
+            pushRawHTML(result, UI.toHTML(array[j]));
         }
         result.push(part);
       } else {
         // just plain HTML found
         if (result !== null) {
           // we've already found something special, so convert this to Raw
-          pushRawHTML(result, UI.toHTML(array[i]), dontCoallesce);
+          pushRawHTML(result, UI.toHTML(array[i]));
         }
+      }
+    }
+    if (result !== null) {
+      // clean up unnecessary HTML.Raw wrappers around pure character data
+      for (var j = 0; j < result.length; j++) {
+        if (result[j].tagName === 'Raw' &&
+            isPureChars(result[j][0]))
+          // replace HTML.Raw with simple string
+          result[j] = result[j][0];
       }
     }
     return result;
   };
 
-  var optimizeAttributeValueParts = function (v) {
-    // If we have nothing special going on, returns `null` (so that the
-    // parent can optimize).  Otherwise returns a replacement for `v`
-    // with optimized parts.
+  var doesAttributeValueHaveSpecials = function (v) {
     var type = HTML.typeOf(v);
     if (type === 'null' || type === 'string' || type === 'charref') {
-      return null;
+      return false;
     } else if (type === 'special') {
-      return v;
+      return true;
     } else if (type === 'array') {
-      return optimizeArrayParts(v, optimizeAttributeValueParts);
+      for (var i = 0; i < v.length; i++)
+        if (doesAttributeValueHaveSpecials(v[i]))
+          return true;
+      return false;
     } else {
       throw new Error("Unexpected node in attribute value: " + v);
     }
@@ -1262,46 +1277,27 @@ var optimize = function (tree) {
       } else if (type === 'tag') {
         var mustOptimize = false;
 
-        var newChildren = optimizeArrayParts(node, optimizeParts);
-
-        var newAttrs = null;
         if (node.attrs) {
           var attrs = node.attrs;
           if (typeof attrs === 'function') {
-            newAttrs = attrs;
+            mustOptimize = true;
           } else {
-            var attrNames = [];
-            var attrValues = [];
-            _.each(attrs, function (v, n) {
-              attrNames.push(n);
-              attrValues.push(v);
-            });
-            if (newChildren) {
-              // forced by special children of tag to optimize now.
-              // trick optimizeArrayParts into doing that by adding
-              // a fake attrValue that won't be picked up when we
-              // iterate over attrNames.
-              attrValues.push(function () {});
-            }
-            var newValues = optimizeArrayParts(attrValues,
-                                               optimizeAttributeValueParts,
-                                               true);
-            if (newValues) {
-              newAttrs = {};
-              for (var i = 0; i < attrNames.length; i++)
-                newAttrs[attrNames[i]] = newValues[i];
+            for (var k in attrs) {
+              if (doesAttributeValueHaveSpecials(attrs[k])) {
+                mustOptimize = true;
+                break;
+              }
             }
           }
         }
 
-        if ((! newAttrs) && (! newChildren))
+        var newChildren = optimizeArrayParts(node, optimizeParts, mustOptimize);
+
+        if (newChildren === null)
           return null;
 
-        if (! newChildren)
-          newChildren = [HTML.Raw(UI.toHTML(Array.prototype.slice.call(node)))];
-
         var newTag = HTML.getTag(node.tagName).apply(null, newChildren);
-        newTag.attrs = newAttrs;
+        newTag.attrs = node.attrs;
 
         return newTag;
       } else if (type === 'array') {
@@ -1321,7 +1317,40 @@ var optimize = function (tree) {
     };
   };
 
-  return optimizeParts(tree) || HTML.Raw(UI.toHTML(tree));
+  var optTree = optimizeParts(tree);
+  if (optTree !== null)
+    // tree was optimized in parts
+    return optTree;
+
+  optTree = HTML.Raw(UI.toHTML(tree));
+
+  if (isPureChars(optTree[0]))
+    return optTree[0];
+
+  return optTree;
+};
+
+var specialsToSessionGet = function (node) {
+  if (UI.isComponent(node)) {
+    return node;
+  } else {
+    var type = HTML.typeOf(node);
+    if (type === 'tag') {
+      // potential optimization: don't always create a new tag
+      var newChildren = _.map(Array.prototype.slice.call(node), specialsToSessionGet);
+      var newTag = HTML.getTag(node.tagName).apply(null, newChildren);
+      newTag.attrs = node.attrs;
+      return newTag;
+    } else if (type === 'array') {
+      return _.map(node, specialsToSessionGet);
+    } else if (type === 'special') {
+      if (node.attrs.type !== 'DOUBLE')
+        return node;
+      return HTML.EmitCode('function () { return Session.get("' + node.attrs.path.join('.') + '"); }');
+    } else {
+      return node;
+    }
+  };
 };
 
 Spacebars.compile2 = function (input) {
@@ -1334,6 +1363,8 @@ Spacebars.compile2 = function (input) {
     tree = input;
 
   tree = optimize(tree);
+
+  tree = specialsToSessionGet(tree);
 
   var code = '(function () { var self = this; return ';
 
