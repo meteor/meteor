@@ -259,7 +259,7 @@ var Session = function (server, version, socket) {
   self.sessionHandle = {
     id: self.id,
     close: function () {
-      self.server._destroySession(self);
+      self.server._closeSession(self);
     },
     onClose: function (fn) {
       fn = Meteor.bindEnvironment(
@@ -1059,7 +1059,7 @@ Server = function () {
     socket.on('close', function () {
       if (socket._meteorSession) {
         Fiber(function () {
-          self._destroySession(socket._meteorSession);
+          self._closeSession(socket._meteorSession);
         }).run();
       }
     });
@@ -1196,10 +1196,12 @@ _.extend(Server.prototype, {
     }
   },
 
-  _destroySession: function (session) {
+  _closeSession: function (session) {
     var self = this;
-    delete self.sessions[session.id];
-    session.destroy();
+    if (self.sessions[session.id]) {
+      delete self.sessions[session.id];
+      session.destroy();
+    }
   },
 
   methods: function (methods) {
