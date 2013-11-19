@@ -496,6 +496,38 @@ When you call `Meteor.subscribe`, `Meteor.status`, `Meteor.call`, and
 `Meteor.apply`, you are using a connection back to that default
 server.
 
+{{> api_box serverOnConnection}}
+
+The `onConnection` callback is called only once for a session.  When
+the session reconnection feature is implemented, a client reconnecting
+to the same session won't cause the callback to be called again.
+
+The callback is called with a single argument, a `SessionHandle`.
+The `SessionHandle` is an object containing the following fields:
+
+<dl class="objdesc">
+{{#dtdd name="id" type="String"}}
+ The session id, unique to this session.
+{{/dtdd}}
+
+{{#dtdd name="close" type="Function"}}
+ Close this session and the associated DDP connection.  The
+ client is free to reconnect, but will receive a different session if
+ it does.
+{{/dtdd}}
+
+{{#dtdd name="onClose" type="Function"}}
+ Register a callback to be called when the session is closed.
+
+ When session reconnections are implemented, the client closing the
+ DDP connection won't cause the session is close right away because
+ the client might reconnect; instead the session will close after a
+ timeout.  Once the session has been closed, a reconnect from the
+ client attempting to reuse the session will receive a new session.
+{{/dtdd}}
+</dl>
+
+
 <h2 id="collections"><span>Collections</span></h2>
 
 Meteor stores data in *collections*.  To get started, declare a
