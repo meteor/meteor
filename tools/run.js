@@ -210,7 +210,7 @@ var logToClients = function (msg) {
     else if (key === "stderr")
       process.stderr.write(val + "\n");
     else
-      console.log(val);
+      Log.process(val, 'log');
   });
 };
 
@@ -304,11 +304,11 @@ var startServer = function (options) {
     }
 
     if (options.rawLogs) {
-      console.log(line);
+      Log.process(line, 'log');
       saveLog({stdout: line});
     } else {
       var obj = Log.parse(line) || Log.objFromText(line);
-      console.log(Log.format(obj, { color:true }));
+      Log.process(obj, 'log');
       saveLog({stdout: Log.format(obj)});
     }
   });
@@ -316,11 +316,11 @@ var startServer = function (options) {
   eachline(proc.stderr, 'utf8', function (line) {
     if (!line) return;
     if (options.rawLogs) {
-      console.error(line);
+      Log.process(line, 'log');
       saveLog({stderr: line});
     } else {
       var obj = Log.objFromText(line, { level: 'warn', stderr: true });
-      console.log(Log.format(obj, { color: true }));
+      Log.process(obj, 'log');
       saveLog({stderr: Log.format(obj)});
     }
   });
@@ -458,7 +458,7 @@ exports.run = function (context, options) {
 
   var startWatching = function (watchSet) {
     if (process.env.METEOR_DEBUG_WATCHSET)
-      console.log(JSON.stringify(watchSet, null, 2));
+      Log.process(JSON.stringify(watchSet, null, 2), 'log');
 
     if (!Status.shouldRestart)
       return;
@@ -505,10 +505,10 @@ exports.run = function (context, options) {
       var newAppRelease = project.getMeteorReleaseVersion(context.appDir) ||
             warehouse.latestRelease();
       if (newAppRelease !== context.appReleaseVersion) {
-        console.error("Your app has been updated to Meteor %s from " +
+        Log.process("Your app has been updated to Meteor %s from " +
                       "Meteor %s.\nRestart meteor to use the new release.",
                       newAppRelease,
-                      context.appReleaseVersion);
+                      context.appReleaseVersion, 'error');
         process.exit(1);
       }
     }
@@ -616,24 +616,24 @@ exports.run = function (context, options) {
         // Print only last 20 lines of stderr.
         stderr = stderr.split('\n').slice(-20).join('\n');
 
-        console.log(stderr + "Unexpected mongo exit code " + code + ". Restarting.\n");
+        Log.process(stderr + "Unexpected mongo exit code " + code + ". Restarting.\n", 'log');
 
         // if mongo dies 3 times with less than 5 seconds between each,
         // declare it failed and die.
         mongoErrorCount += 1;
         if (mongoErrorCount >= 3) {
           var explanation = mongoExitCodes.Codes[code];
-          console.log("Can't start mongod\n");
+          Log.process("Can't start mongod\n", 'log');
           if (explanation)
-            console.log(explanation.longText);
+            Log.process(explanation.longText, 'log');
           if (explanation === mongoExitCodes.EXIT_NET_ERROR)
-            console.log("\nCheck for other processes listening on port " + mongoPort +
-                        "\nor other meteors running in the same project.");
+            Log.process("\nCheck for other processes listening on port " + mongoPort +
+                        "\nor other meteors running in the same project.", 'log');
           if (!explanation && /GLIBC/i.test(stderr))
-            console.log("\nLooks like you are trying to run Meteor on an old Linux " +
+            Log.process("\nLooks like you are trying to run Meteor on an old Linux " +
                         "distribution. Meteor on Linux only supports Linux with glibc " +
                         "version 2.9 and above. Try upgrading your distribution " +
-                        "to the latest version.");
+                        "to the latest version.", 'log');
           process.exit(1);
         }
         if (mongoErrorTimer)

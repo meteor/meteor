@@ -7,6 +7,14 @@ var intercept = 0;
 var interceptedLines = [];
 var suppress = 0;
 
+Log.process = function(log, type) {
+  if(typeof log === 'string') {
+    console[type](log)
+  } else if(typeof log === 'object') {
+    console[type](Log.format(log, { color:true }))
+  }
+}
+
 // Intercept the next 'count' calls to a Log function. The actual
 // lines printed to the console can be cleared and read by calling
 // Log._intercepted().
