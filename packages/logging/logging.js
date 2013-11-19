@@ -7,11 +7,11 @@ var intercept = 0;
 var interceptedLines = [];
 var suppress = 0;
 
-Log.process = function(log, type) {
-  if(typeof log === 'string') {
-    console[type](log)
-  } else if(typeof log === 'object') {
-    console[type](Log.format(log, { color:true }))
+Log.process = function(logMsg, raw) {
+  if(raw) {
+    console.log(logMsg.message);
+  } else {
+    Meteor.logger[logMsg.level](logMsg.message)
   }
 }
 
