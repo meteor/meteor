@@ -18,7 +18,8 @@ var Connection = function (url, options) {
     },
     // These options are only for testing.
     reloadWithOutstanding: false,
-    supportedDDPVersions: SUPPORTED_DDP_VERSIONS
+    supportedDDPVersions: SUPPORTED_DDP_VERSIONS,
+    retry: true
   }, options);
 
   // If set, called when we reconnect, queuing method calls _before_ the
@@ -30,7 +31,9 @@ var Connection = function (url, options) {
   if (typeof url === "object") {
     self._stream = url;
   } else {
-    self._stream = new LivedataTest.ClientStream(url);
+    self._stream = new LivedataTest.ClientStream(url, {
+      retry: options.retry
+    });
   }
 
   self._lastSessionId = null;

@@ -73,5 +73,6 @@ Package.on_test(function (api) {
 
   api.use('http', 'client');
   api.add_files(['stream_tests.js'], 'client');
+  api.add_files('stream_client_tests.js', 'server');
   api.use('check', ['client', 'server']);
 });
