@@ -55,9 +55,10 @@ MeteorAccounts.requestCredential = function (options, credentialRequestCompleteC
   if (options._redirectToLogin) {
     window.location.assign(loginUrl);
   } else {
-    Oauth.initiateLogin(credentialToken,
-                        loginUrl,
-                        credentialRequestCompleteCallback,
-                        { height: 406 });
+    Oauth.showPopup(
+      loginUrl,
+      _.bind(credentialRequestCompleteCallback, null, credentialToken),
+      { height: 406 }
+    );
   }
 };

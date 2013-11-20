@@ -53,8 +53,9 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
     loginUrl += '&hd=' + encodeURIComponent(Accounts._options.restrictCreationByEmailDomain);
   }
 
-  Oauth.initiateLogin(credentialToken,
-                      loginUrl,
-                      credentialRequestCompleteCallback,
-                      { height: 406 });
+  Oauth.showPopup(
+    loginUrl,
+    _.bind(credentialRequestCompleteCallback, null, credentialToken),
+    { height: 406 }
+  );
 };

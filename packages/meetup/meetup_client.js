@@ -34,6 +34,9 @@ Meetup.requestCredential = function (options, credentialRequestCompleteCallback)
   if (_.without(scope, 'basic').length)
     height += 130;
 
-  Oauth.initiateLogin(credentialToken, loginUrl, credentialRequestCompleteCallback,
-                              {width: 900, height: height});
+  Oauth.showPopup(
+    loginUrl,
+    _.bind(credentialRequestCompleteCallback, null, credentialToken),
+    {width: 900, height: height}
+  );
 };
