@@ -24,14 +24,14 @@ if (Package.webapp) {
 
   // Proxy the public methods of Meteor.server so they can
   // be called directly on Meteor.
-  _.each(['publish', 'methods', 'call', 'apply'],
+  _.each(['publish', 'methods', 'call', 'apply', 'onConnection'],
          function (name) {
            Meteor[name] = _.bind(Meteor.server[name], Meteor.server);
          });
 } else {
   // No server? Make these empty/no-ops.
   Meteor.server = null;
-  Meteor.refresh = function (notificatio) {
+  Meteor.refresh = function (notification) {
   };
 }
 
