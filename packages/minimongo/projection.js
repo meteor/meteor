@@ -151,15 +151,15 @@ var projectionDetails = function (fields) {
 };
 
 // paths - Array: list of mongo style paths
-// newLeaveFn - Function: of form function(path) should return a scalar value to
-//                        put into list created for that path
+// newLeafFn - Function: of form function(path) should return a scalar value to
+//                       put into list created for that path
 // conflictFn - Function: of form function(node, path, fullPath) is called
 //                        when building a tree path for 'fullPath' node on
 //                        'path' was already a leaf with a value. Must return a
 //                        conflict resolution.
 // initial tree - Optional Object: starting tree.
 // @returns - Object: tree represented as a set of nested objects
-var pathsToTree = function (paths, newLeaveFn, conflictFn, tree) {
+var pathsToTree = function (paths, newLeafFn, conflictFn, tree) {
   tree = tree || {};
   _.each(paths, function (keyPath) {
     var treePos = tree;
@@ -185,7 +185,7 @@ var pathsToTree = function (paths, newLeaveFn, conflictFn, tree) {
     if (success) {
       var lastKey = _.last(pathArr);
       if (!_.has(treePos, lastKey))
-        treePos[lastKey] = newLeaveFn(keyPath);
+        treePos[lastKey] = newLeafFn(keyPath);
       else
         treePos[lastKey] = conflictFn(treePos[lastKey], keyPath, keyPath);
     }
