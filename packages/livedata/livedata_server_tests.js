@@ -61,9 +61,9 @@ var innerCalled = null;
 
 Meteor.methods({
   livedata_server_test_inner: function () {
-    var sessionId = this.sessionId;
+    var self = this;
     Meteor.defer(function () {
-      innerCalled(sessionId);
+      innerCalled(self);
     });
   },
 
@@ -81,8 +81,8 @@ Tinytest.addAsync(
       callbackHandle.stop();
       sessionId = sessionHandle.id;
     });
-    innerCalled = function (methodSessionId) {
-      test.equal(methodSessionId, sessionId);
+    innerCalled = function (methodInvocation) {
+      test.equal(methodInvocation.session.id, sessionId);
       onComplete();
     };
     var connection = DDP.connect(Meteor.absoluteUrl());
@@ -93,15 +93,33 @@ Tinytest.addAsync(
 
 
 Tinytest.addAsync(
-  "livedata server - sessionId in nested method invocation",
+  "livedata server - session in nested method invocation",
   function (test, onComplete) {
     var sessionId;
     var callbackHandle = Meteor.server.onConnection(function (sessionHandle) {
       callbackHandle.stop();
       sessionId = sessionHandle.id;
     });
-    innerCalled = function (methodSessionId) {
-      test.equal(methodSessionId, sessionId);
+    innerCalled = function (methodInvocation) {
+      test.equal(methodInvocation.session.id, sessionId);
+      onComplete();
+    };
+    var connection = DDP.connect(Meteor.absoluteUrl());
+    connection.call('livedata_server_test_outer');
+    connection.disconnect();
+  }
+);
+
+
+Tinytest.addAsync(
+  "livedata server - session data in nested method invocation",
+  function (test, onComplete) {
+    var callbackHandle = Meteor.server.onConnection(function (session) {
+      callbackHandle.stop();
+      session._sessionData.foo = 123;
+    });
+    innerCalled = function (methodInvocation) {
+      test.equal(methodInvocation._sessionData.foo, 123);
       onComplete();
     };
     var connection = DDP.connect(Meteor.absoluteUrl());
