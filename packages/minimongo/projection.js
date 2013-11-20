@@ -52,7 +52,7 @@ LocalCollection._combineSelectorAndProjection = function (selector, projection)
   var prjDetails = projectionDetails(projection);
   var tree = prjDetails.tree;
   var mergedProjection = {};
-  var selectorPaths = LocalCollection._getPathsWithoutNumericKeys(selector);
+  var selectorPaths = getPathsWithoutNumericKeys(selector);
 
   // merge the paths to include
   tree = pathsToTree(selectorPaths,
