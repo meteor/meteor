@@ -47,7 +47,6 @@ LocalCollection._compileProjection = function (fields) {
 // Knows how to combine a mongo selector and a fields projection to a new fields
 // projection taking into account active fields from the passed selector.
 // @returns Object - projection object (same as fields option of mongo cursor)
-// XXX doesn't know how to deal with fields projections like {'foo.0': 1}
 LocalCollection._combineSelectorAndProjection = function (selector, projection)
 {
   var prjDetails = projectionDetails(projection);
@@ -148,7 +147,7 @@ var projectionDetails = function (fields) {
 //                        put into list created for that path
 // conflictFn - Function: of form function(node, path, fullPath) is called
 //                        when building a tree path for 'fullPath' node on
-//                        'path' was already a leave with a value. Must return a
+//                        'path' was already a leaf with a value. Must return a
 //                        conflict resolution.
 // initial tree - Optional Object: starting tree.
 // @returns - Object: tree represented as a set of nested objects
@@ -159,7 +158,7 @@ var pathsToTree = function (paths, newLeaveFn, conflictFn, tree) {
     var pathArr = keyPath.split('.');
 
     // use _.all just for iteration with break
-    var sucess = _.all(pathArr.slice(0, -1), function (key, idx) {
+    var success = _.all(pathArr.slice(0, -1), function (key, idx) {
       if (!_.has(treePos, key))
         treePos[key] = {};
       else if (!_.isObject(treePos[key])) {
@@ -175,7 +174,7 @@ var pathsToTree = function (paths, newLeaveFn, conflictFn, tree) {
       return true;
     });
 
-    if (sucess) {
+    if (success) {
       var lastKey = _.last(pathArr);
       if (!_.has(treePos, lastKey))
         treePos[lastKey] = newLeaveFn(keyPath);
