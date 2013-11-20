@@ -243,7 +243,7 @@ var startServer = function (options) {
 
   env.PORT = options.innerPort;
   env.MONGO_URL = options.mongoUrl;
-  env.OPLOG_URL = options.oplogUrl;
+  env.MONGO_OPLOG_URL = options.oplogUrl;
   env.ROOT_URL = options.rootUrl;
   if (options.settings)
     env.METEOR_SETTINGS = options.settings;
@@ -414,10 +414,10 @@ exports.run = function (context, options) {
   // Allow override and use of external mongo. Matches code in launch_mongo.
   var mongoUrl = process.env.MONGO_URL ||
         ("mongodb://127.0.0.1:" + mongoPort + "/meteor");
-  // Allow people to specify an OPLOG_URL override. If someone specifies
-  // a MONGO_URL but not an OPLOG_URL, disable the oplog. If neither is
+  // Allow people to specify an MONGO_OPLOG_URL override. If someone specifies a
+  // MONGO_URL but not an MONGO_OPLOG_URL, disable the oplog. If neither is
   // specified, use the default internal mongo oplog.
-  var oplogUrl = process.env.OPLOG_URL ||
+  var oplogUrl = process.env.MONGO_OPLOG_URL ||
         (process.env.MONGO_URL ? undefined
          : "mongodb://127.0.0.1:" + mongoPort + "/local");
   var firstRun = true;
