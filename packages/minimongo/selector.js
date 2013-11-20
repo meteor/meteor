@@ -831,7 +831,7 @@ LocalCollection._isSelectorAffectedByModifier = function (selector, modifier) {
   });
 };
 
-LocalCollection._getPathsWithoutNumericKeys = function (sel) {
+getPathsWithoutNumericKeys = function (sel) {
   return _.map(getPaths(sel), function (path) {
     return _.reject(path.split('.'), numericKey).join('.');
   });
