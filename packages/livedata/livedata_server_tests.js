@@ -4,7 +4,7 @@ Tinytest.addAsync(
   "livedata server - sessionHandle.onClose()",
   function (test, onComplete) {
     var connection;
-    var callbackHandle = Meteor.server.onConnection(function (sessionHandle) {
+    var callbackHandle = Meteor.onConnection(function (sessionHandle) {
       callbackHandle.stop();
       test.isTrue(_.isString(sessionHandle.id), "sessionHandle.id exists and is a string");
       // On the server side, wait for the connection to be closed.
@@ -41,7 +41,7 @@ var poll = function (test, onComplete, fn) {
   
 Tinytest.addAsync("livedata server - sessionHandle.close()", function (test, onComplete) {
   var connection;
-  var callbackHandle = Meteor.server.onConnection(function (sessionHandle) {
+  var callbackHandle = Meteor.onConnection(function (sessionHandle) {
     callbackHandle.stop();
 
     poll(test, onComplete, function () {
@@ -77,7 +77,7 @@ Tinytest.addAsync(
   "livedata server - sessionId in method invocation",
   function (test, onComplete) {
     var sessionId;
-    var callbackHandle = Meteor.server.onConnection(function (sessionHandle) {
+    var callbackHandle = Meteor.onConnection(function (sessionHandle) {
       callbackHandle.stop();
       sessionId = sessionHandle.id;
     });
@@ -96,7 +96,7 @@ Tinytest.addAsync(
   "livedata server - session in nested method invocation",
   function (test, onComplete) {
     var sessionId;
-    var callbackHandle = Meteor.server.onConnection(function (sessionHandle) {
+    var callbackHandle = Meteor.onConnection(function (sessionHandle) {
       callbackHandle.stop();
       sessionId = sessionHandle.id;
     });
@@ -114,7 +114,7 @@ Tinytest.addAsync(
 Tinytest.addAsync(
   "livedata server - session data in nested method invocation",
   function (test, onComplete) {
-    var callbackHandle = Meteor.server.onConnection(function (session) {
+    var callbackHandle = Meteor.onConnection(function (session) {
       callbackHandle.stop();
       session._sessionData.foo = 123;
     });
