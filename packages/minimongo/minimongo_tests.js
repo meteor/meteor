@@ -2595,6 +2595,24 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
     'z': true
   }, "numbered keys in selector - incl");
 
+  testSelProjectionComb({
+    'a.b.c': 42,
+    $where: function () { return true; }
+  }, {
+    'a.b': 1,
+    'z.z': 1
+  }, {}, "$where in the selector - incl");
+
+  testSelProjectionComb({
+    $or: [
+      {'a.b.c': 42},
+      {$where: function () { return true; } }
+    ]
+  }, {
+    'a.b': 1,
+    'z.z': 1
+  }, {}, "$where in the selector - incl");
+
   // Test with exclusive projection
   testSelProjectionComb({ a: 1, b: 2 }, { b: 0, c: 0, d: 0 }, { c: false, d: false }, "simplest excl");
   testSelProjectionComb({ $or: [{ a: 1234, e: {$lt: 5} }], b: 2 }, { b: 0, c: 0, d: 0 }, { c: false, d: false }, "simplest excl, branching");
@@ -2698,6 +2716,24 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
   }, {
     'x.x': false,
   }, "numbered keys in selector - excl");
+
+  testSelProjectionComb({
+    'a.b.c': 42,
+    $where: function () { return true; }
+  }, {
+    'a.b': 0,
+    'z.z': 0
+  }, {}, "$where in the selector - excl");
+
+  testSelProjectionComb({
+    $or: [
+      {'a.b.c': 42},
+      {$where: function () { return true; } }
+    ]
+  }, {
+    'a.b': 0,
+    'z.z': 0
+  }, {}, "$where in the selector - excl");
 
 });
 
