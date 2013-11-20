@@ -1151,6 +1151,37 @@ Tinytest.add("minimongo - fetch with projection, subarrays", function (test) {
                     {a: [ [ { c: 2 }, { c: 4 } ], { c: 5 }, [ { c: 9 } ] ] });
 });
 
+Tinytest.add("minimongo - fetch with projection, deep copy", function (test) {
+  // Compiled fields projection defines the contract: returned document doesn't
+  // retain anything from the passed argument.
+  var doc = {
+    a: { x: 42 },
+    b: {
+      y: { z: 33 }
+    },
+    c: "asdf"
+  };
+
+  var fields = {
+    'a': 1,
+    'b.y': 1
+  };
+
+  var projectionFn = LocalCollection._compileProjection(fields);
+  var filteredDoc = projectionFn(doc);
+  doc.a.x++;
+  doc.b.y.z--;
+  test.equal(filteredDoc.a.x, 42, "projection returning deep copy - including");
+  test.equal(filteredDoc.b.y.z, 33, "projection returning deep copy - including");
+
+  fields = { c: 0 };
+  projectionFn = LocalCollection._compileProjection(fields);
+  filteredDoc = projectionFn(doc);
+
+  doc.a.x = 5;
+  test.equal(filteredDoc.a.x, 43, "projection returning deep copy - excluding");
+});
+
 Tinytest.add("minimongo - observe ordered with projection", function (test) {
   // These tests are copy-paste from "minimongo -observe ordered",
   // slightly modified to test projection
@@ -2467,5 +2498,242 @@ Tinytest.add("minimongo - modifier affects selector", function (test) {
   affected({ 'foo.bar.baz': 0 }, { $unset: { 'foo.3.bar': 1 } }, "delicate work with numeric fields in selector");
 
   affected({ 'foo.0.bar': 0 }, { $set: { 'foo.0.0.bar': 1 } }, "delicate work with nested arrays and selectors by indecies");
+});
+
+Tinytest.add("minimongo - selector and projection combination", function (test) {
+  function testSelProjectionComb (sel, proj, expected, desc) {
+    test.equal(LocalCollection._combineSelectorAndProjection(sel, proj), expected, desc);
+  }
+
+  // Test with inclusive projection
+  testSelProjectionComb({ a: 1, b: 2 }, { b: 1, c: 1, d: 1 }, { a: true, b: true, c: true, d: true }, "simplest incl");
+  testSelProjectionComb({ $or: [{ a: 1234, e: {$lt: 5} }], b: 2 }, { b: 1, c: 1, d: 1 }, { a: true, b: true, c: true, d: true, e: true }, "simplest incl, branching");
+  testSelProjectionComb({
+    'a.b': { $lt: 3 },
+    'y.0': -1,
+    'a.c': 15
+  }, {
+    'd': 1,
+    'z': 1
+  }, {
+    'a.b': true,
+    'y': true,
+    'a.c': true,
+    'd': true,
+    'z': true
+  }, "multikey paths in selector - incl");
+
+  testSelProjectionComb({
+    foo: 1234,
+    $and: [{ k: -1 }, { $or: [{ b: 15 }] }]
+  }, {
+    'foo.bar': 1,
+    'foo.zzz': 1,
+    'b.asdf': 1
+  }, {
+    foo: true,
+    b: true,
+    k: true
+  }, "multikey paths in fields - incl");
+
+  testSelProjectionComb({
+    'a.b.c': 123,
+    'a.b.d': 321,
+    'b.c.0': 111,
+    'a.e': 12345
+  }, {
+    'a.b.z': 1,
+    'a.b.d.g': 1,
+    'c.c.c': 1
+  }, {
+    'a.b.c': true,
+    'a.b.d': true,
+    'a.b.z': true,
+    'b.c': true,
+    'a.e': true,
+    'c.c.c': true
+  }, "multikey both paths - incl");
+
+  testSelProjectionComb({
+    'a.b.c.d': 123,
+    'a.b1.c.d': 421,
+    'a.b.c.e': 111
+  }, {
+    'a.b': 1
+  }, {
+    'a.b': true,
+    'a.b1.c.d': true
+  }, "shadowing one another - incl");
+
+  testSelProjectionComb({
+    'a.b': 123,
+    'foo.bar': false
+  }, {
+    'a.b.c.d': 1,
+    'foo': 1
+  }, {
+    'a.b': true,
+    'foo': true
+  }, "shadowing one another - incl");
+
+  testSelProjectionComb({
+    'a.b.c': 1
+  }, {
+    'a.b.c': 1
+  }, {
+    'a.b.c': true
+  }, "same paths - incl");
+
+  testSelProjectionComb({
+    'x.4.y': 42,
+    'z.0.1': 33
+  }, {
+    'x.x': 1
+  }, {
+    'x.x': true,
+    'x.y': true,
+    'z': true
+  }, "numbered keys in selector - incl");
+
+  testSelProjectionComb({
+    'a.b.c': 42,
+    $where: function () { return true; }
+  }, {
+    'a.b': 1,
+    'z.z': 1
+  }, {}, "$where in the selector - incl");
+
+  testSelProjectionComb({
+    $or: [
+      {'a.b.c': 42},
+      {$where: function () { return true; } }
+    ]
+  }, {
+    'a.b': 1,
+    'z.z': 1
+  }, {}, "$where in the selector - incl");
+
+  // Test with exclusive projection
+  testSelProjectionComb({ a: 1, b: 2 }, { b: 0, c: 0, d: 0 }, { c: false, d: false }, "simplest excl");
+  testSelProjectionComb({ $or: [{ a: 1234, e: {$lt: 5} }], b: 2 }, { b: 0, c: 0, d: 0 }, { c: false, d: false }, "simplest excl, branching");
+  testSelProjectionComb({
+    'a.b': { $lt: 3 },
+    'y.0': -1,
+    'a.c': 15
+  }, {
+    'd': 0,
+    'z': 0
+  }, {
+    d: false,
+    z: false
+  }, "multikey paths in selector - excl");
+
+  testSelProjectionComb({
+    foo: 1234,
+    $and: [{ k: -1 }, { $or: [{ b: 15 }] }]
+  }, {
+    'foo.bar': 0,
+    'foo.zzz': 0,
+    'b.asdf': 0
+  }, {
+  }, "multikey paths in fields - excl");
+
+  testSelProjectionComb({
+    'a.b.c': 123,
+    'a.b.d': 321,
+    'b.c.0': 111,
+    'a.e': 12345
+  }, {
+    'a.b.z': 0,
+    'a.b.d.g': 0,
+    'c.c.c': 0
+  }, {
+    'a.b.z': false,
+    'c.c.c': false
+  }, "multikey both paths - excl");
+
+  testSelProjectionComb({
+    'a.b.c.d': 123,
+    'a.b1.c.d': 421,
+    'a.b.c.e': 111
+  }, {
+    'a.b': 0
+  }, {
+  }, "shadowing one another - excl");
+
+  testSelProjectionComb({
+    'a.b': 123,
+    'foo.bar': false
+  }, {
+    'a.b.c.d': 0,
+    'foo': 0
+  }, {
+  }, "shadowing one another - excl");
+
+  testSelProjectionComb({
+    'a.b.c': 1
+  }, {
+    'a.b.c': 0
+  }, {
+  }, "same paths - excl");
+
+  testSelProjectionComb({
+    'a.b': 123,
+    'a.c.d': 222,
+    'ddd': 123
+  }, {
+    'a.b': 0,
+    'a.c.e': 0,
+    'asdf': 0
+  }, {
+    'a.c.e': false,
+    'asdf': false
+  }, "intercept the selector path - excl");
+
+  testSelProjectionComb({
+    'a.b.c': 14
+  }, {
+    'a.b.d': 0
+  }, {
+    'a.b.d': false
+  }, "different branches - excl");
+
+  testSelProjectionComb({
+    'a.b.c.d': "124",
+    'foo.bar.baz.que': "some value"
+  }, {
+    'a.b.c.d.e': 0,
+    'foo.bar': 0
+  }, {
+  }, "excl on incl paths - excl");
+
+  testSelProjectionComb({
+    'x.4.y': 42,
+    'z.0.1': 33
+  }, {
+    'x.x': 0,
+    'x.y': 0
+  }, {
+    'x.x': false,
+  }, "numbered keys in selector - excl");
+
+  testSelProjectionComb({
+    'a.b.c': 42,
+    $where: function () { return true; }
+  }, {
+    'a.b': 0,
+    'z.z': 0
+  }, {}, "$where in the selector - excl");
+
+  testSelProjectionComb({
+    $or: [
+      {'a.b.c': 42},
+      {$where: function () { return true; } }
+    ]
+  }, {
+    'a.b': 0,
+    'z.z': 0
+  }, {}, "$where in the selector - excl");
+
 });
 

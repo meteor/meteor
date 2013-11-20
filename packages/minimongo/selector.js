@@ -829,11 +829,12 @@ LocalCollection._isSelectorAffectedByModifier = function (selector, modifier) {
       return true;
     });
   });
+};
 
-  // string can be converted to integer
-  function numericKey (s) {
-    return /^[0-9]+$/.test(s);
-  }
+getPathsWithoutNumericKeys = function (sel) {
+  return _.map(getPaths(sel), function (path) {
+    return _.reject(path.split('.'), numericKey).join('.');
+  });
 };
 
 // Returns a list of key paths the given selector is looking for
@@ -849,3 +850,9 @@ var getPaths = MinimongoTest.getSelectorPaths = function (sel) {
     return k;
   }).flatten().uniq().value();
 };
+
+// string can be converted to integer
+function numericKey (s) {
+  return /^[0-9]+$/.test(s);
+}
+
