@@ -569,6 +569,9 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
     };
   };
 
+  var requiresDdpAuth = !! proxyConfig.requiresAuth;
+  var requiresHttpAuth = (!! proxyConfig.requiresAuth) && pid.app !== "panel";
+
   proxy.call('bindDdp', {
     pid: pid,
     bindTo: ddpBindTo,
@@ -577,8 +580,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
       port: port,
       pathPrefix: bindPathPrefix + '/websocket'
     },
-    // Send a boolean, not null, for requiresAuth, to pass the check.
-    requiresAuth: proxyConfig.requiresAuth || false
+    requiresAuth: requiresDdpAuth
   }, bindingDoneCallback("ddp"));
   proxy.call('bindHttp', {
     pid: pid,
@@ -592,7 +594,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
       port: port,
       pathPrefix: bindPathPrefix
     },
-    requiresAuth: proxyConfig.requiresAuth || false
+    requiresAuth: requiresHttpAuth
   }, bindingDoneCallback("http"));
   if (proxyConfig.securePort !== null) {
     proxy.call('bindHttp', {
@@ -608,7 +610,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
         port: port,
         pathPrefix: bindPathPrefix
       },
-      requiresAuth: proxyConfig.requiresAuth || false
+      requiresAuth: requiresHttpAuth
     }, bindingDoneCallback("https"));
   }
 };
