@@ -49,10 +49,18 @@ LocalCollection._compileProjection = function (fields) {
 // @returns Object - projection object (same as fields option of mongo cursor)
 LocalCollection._combineSelectorAndProjection = function (selector, projection)
 {
+  var selectorPaths = getPathsWithoutNumericKeys(selector);
+
+  // Special case for $where operator in the selector - projection should depend
+  // on all fields of the document. getSelectorPaths returns a list of paths
+  // selector depends on. If one of the paths is '' (empty string) representing
+  // the root or the whole document, complete projection should be returned.
+  if (_.contains(selectorPaths, ''))
+    return {};
+
   var prjDetails = projectionDetails(projection);
   var tree = prjDetails.tree;
   var mergedProjection = {};
-  var selectorPaths = getPathsWithoutNumericKeys(selector);
 
   // merge the paths to include
   tree = pathsToTree(selectorPaths,
