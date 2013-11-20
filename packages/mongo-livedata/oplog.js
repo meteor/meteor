@@ -32,7 +32,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
 
   var phase = PHASE.INITIALIZING;
 
-  var published = new IdMap;
+  var published = new LocalCollection._IdMap;
   var selector = cursorDescription.selector;
   var selectorFn = LocalCollection._compileSelector(selector);
   var projection = cursorDescription.options.fields || {};
@@ -42,8 +42,8 @@ MongoConnection.prototype._observeChangesWithOplog = function (
   var sharedProjection = LocalCollection._combineSelectorAndProjection(selector, projection);
   var sharedProjectionFn = LocalCollection._compileProjection(sharedProjection);
 
-  var needToFetch = new IdMap;
-  var currentlyFetching = new IdMap;
+  var needToFetch = new LocalCollection._IdMap;
+  var currentlyFetching = new LocalCollection._IdMap;
 
   var add = function (doc) {
     var id = doc._id;
@@ -93,7 +93,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
         throw new Error("Surprising phase in fetchModifiedDocuments: " + phase);
 
       currentlyFetching = needToFetch;
-      needToFetch = new IdMap;
+      needToFetch = new LocalCollection._IdMap;
       var waiting = 0;
       var error = null;
       var fut = new Future;
@@ -117,7 +117,7 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       fut.wait();
       if (error)
         throw error;
-      currentlyFetching = new IdMap;
+      currentlyFetching = new LocalCollection._IdMap;
     }
     beSteady();
   };

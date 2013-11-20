@@ -16,6 +16,7 @@ Package.on_use(function (api) {
     'projection.js',
     'modify.js',
     'diff.js',
+    'id_map.js',
     'observe.js',
     'objectid.js'
   ]);
