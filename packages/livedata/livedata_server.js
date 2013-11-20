@@ -1106,7 +1106,8 @@ _.extend(Server.prototype, {
       socket._meteorSession = new Session(self, version, socket);
       self.sessions[socket._meteorSession.id] = socket._meteorSession;
       _.each(self.connectionCallbacks, function (callback) {
-        callback(socket._meteorSession.sessionHandle);
+        if (socket._meteorSession)
+          callback(socket._meteorSession.sessionHandle);
       });
     } else if (!msg.version) {
       // connect message without a version. This means an old (pre-pre1)
