@@ -903,7 +903,7 @@ Cursor.prototype.observe = function (callbacks) {
 
 Cursor.prototype.observeChanges = function (callbacks) {
   var self = this;
-  var ordered = LocalCollection._isOrderedChanges(callbacks);
+  var ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
   return self._mongo._observeChanges(
     self._cursorDescription, ordered, callbacks);
 };
@@ -1126,7 +1126,6 @@ var ObserveHandle = function (liveResultsSet, callbacks) {
   self._addedBefore = callbacks.addedBefore;
   self._changed = callbacks.changed;
   self._removed = callbacks.removed;
-  self._moved = callbacks.moved;
   self._movedBefore = callbacks.movedBefore;
   self._observeHandleId = nextObserveHandleId++;
 };
@@ -1291,7 +1290,6 @@ var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
   self._callbackMultiplexer = {};
   var callbackNames = ['added', 'changed', 'removed'];
   if (self._ordered) {
-    callbackNames.push('moved');
     callbackNames.push('addedBefore');
     callbackNames.push('movedBefore');
   }

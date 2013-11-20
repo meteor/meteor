@@ -3,8 +3,6 @@
 // old_results and new_results: collections of documents.
 //    if ordered, they are arrays.
 //    if unordered, they are maps {_id: doc}.
-// observer: object with 'added', 'changed', 'removed',
-//           and (if ordered) 'moved' functions (each optional)
 LocalCollection._diffQueryChanges = function (ordered, oldResults, newResults,
                                        observer) {
   if (ordered)
@@ -17,8 +15,8 @@ LocalCollection._diffQueryChanges = function (ordered, oldResults, newResults,
 
 LocalCollection._diffQueryUnorderedChanges = function (oldResults, newResults,
                                                 observer) {
-  if (observer.moved) {
-    throw new Error("_diffQueryUnordered called with a moved observer!");
+  if (observer.movedBefore) {
+    throw new Error("_diffQueryUnordered called with a movedBefore observer!");
   }
 
   _.each(newResults, function (newDoc) {

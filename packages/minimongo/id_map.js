@@ -1,9 +1,9 @@
-IdMap = function () {
+LocalCollection._IdMap = function () {
   var self = this;
   self._map = {};
 };
 
-_.extend(IdMap.prototype, {
+_.extend(LocalCollection._IdMap.prototype, {
   get: function (id) {
     var self = this;
     var key = LocalCollection._idStringify(id);

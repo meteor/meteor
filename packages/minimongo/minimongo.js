@@ -16,8 +16,7 @@ LocalCollection = function (name) {
   this.next_qid = 1; // live query id generator
 
   // qid -> live query object. keys:
-  //  ordered: bool. ordered queries have moved callbacks and callbacks
-  //           take indices.
+  //  ordered: bool. ordered queries have addedBefore/movedBefore callbacks.
   //  results: array (ordered) or object (unordered) of current results
   //  results_snapshot: snapshot of results. null if not paused.
   //  cursor: Cursor object for the query.
@@ -219,11 +218,22 @@ LocalCollection.Cursor.prototype._publishCursor = function (sub) {
   return Meteor.Collection._publishCursor(self, sub, collection);
 };
 
-LocalCollection._isOrderedChanges = function (callbacks) {
+LocalCollection._observeChangesCallbacksAreOrdered = function (callbacks) {
   if (callbacks.added && callbacks.addedBefore)
     throw new Error("Please specify only one of added() and addedBefore()");
-  return typeof callbacks.addedBefore == 'function' ||
-    typeof callbacks.movedBefore === 'function';
+  return !!(callbacks.addedBefore || callbacks.movedBefore);
+};
+
+LocalCollection._observeCallbacksAreOrdered = function (callbacks) {
+  if (callbacks.addedAt && callbacks.added)
+    throw new Error("Please specify only one of added() and addedAt()");
+  if (callbacks.changedAt && callbacks.changed)
+    throw new Error("Please specify only one of changed() and changedAt()");
+  if (callbacks.removed && callbacks.removedAt)
+    throw new Error("Please specify only one of removed() and removedAt()");
+
+  return !!(callbacks.addedAt || callbacks.movedTo || callbacks.changedAt
+            || callbacks.removedAt);
 };
 
 // the handle that comes back from observe.
@@ -258,7 +268,7 @@ _.extend(LocalCollection.Cursor.prototype, {
   observeChanges: function (options) {
     var self = this;
 
-    var ordered = LocalCollection._isOrderedChanges(options);
+    var ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
 
     if (!options._allow_unordered && !ordered && (self.skip || self.limit))
       throw new Error("must use ordered observe with skip or limit");
@@ -287,8 +297,7 @@ _.extend(LocalCollection.Cursor.prototype, {
       query.results_snapshot = (ordered ? [] : {});
 
     // wrap callbacks we were passed. callbacks only fire when not paused and
-    // are never undefined (except that query.moved is undefined for unordered
-    // callbacks).
+    // are never undefined
     // Filters out blacklisted fields according to cursor's projection.
     // XXX wrong place for this?
 
@@ -318,7 +327,6 @@ _.extend(LocalCollection.Cursor.prototype, {
     query.changed = wrapCallback(options.changed, 1, true);
     query.removed = wrapCallback(options.removed);
     if (ordered) {
-      query.moved = wrapCallback(options.moved);
       query.addedBefore = wrapCallback(options.addedBefore, 1);
       query.movedBefore = wrapCallback(options.movedBefore);
     }
