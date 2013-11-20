@@ -566,7 +566,7 @@ _.extend(Session.prototype, {
         userId: self.userId,
         setUserId: setUserId,
         unblock: unblock,
-        sessionId: self.id,
+        session: self.sessionHandle,
         sessionData: self.sessionData
       });
       try {
@@ -1263,23 +1263,22 @@ _.extend(Server.prototype, {
       var setUserId = function() {
         throw new Error("Can't call setUserId on a server initiated method call");
       };
-      var sessionId = null;
+      var session = null;
       var currentInvocation = DDP._CurrentInvocation.get();
       if (currentInvocation) {
         userId = currentInvocation.userId;
         setUserId = function(userId) {
           currentInvocation.setUserId(userId);
         };
-        sessionId = currentInvocation.sessionId;
+        session = currentInvocation.session;
       }
 
       var invocation = new MethodInvocation({
         isSimulation: false,
         userId: userId,
         setUserId: setUserId,
-        sessionId: sessionId,
-        // XXX the Server object doesn't have a `sessionData` field.
-        sessionData: self.sessionData
+        session: session,
+        sessionData: session && session._sessionData
       });
       try {
         var result = DDP._CurrentInvocation.withValue(invocation, function () {

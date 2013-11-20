@@ -177,23 +177,23 @@ Accounts._getLoginToken = function (methodInvocation) {
 Accounts._setLoginToken = function (methodInvocation, newToken) {
   var oldToken = methodInvocation._sessionData.loginToken;
   methodInvocation._sessionData.loginToken = newToken;
-  loginTokenChanged(methodInvocation.sessionId, newToken, oldToken);
+  loginTokenChanged(methodInvocation.session.id, newToken, oldToken);
 };
 
 
 // sessionId -> SessionHandle
-// XXX Wouldn't be necessary if there was an API to get the session or
-// session handle from a session id.
-var sessionHandles = {};
+// XXX Wouldn't be necessary if there was an API to get the session
+// from a session id via Meteor.server.sessions[sessionId].sessionHandle
+var sessions = {};
 
-Meteor.server.onConnection(function (sessionHandle) {
-  var sessionId = sessionHandle.id;
-  sessionHandles[sessionId] = sessionHandle;
-  sessionHandle.onClose(function () {
-    var token = sessionHandle._sessionData.loginToken;
+Meteor.server.onConnection(function (session) {
+  var sessionId = session.id;
+  sessions[sessionId] = session;
+  session.onClose(function () {
+    var token = session._sessionData.loginToken;
     if (token)
       removeSessionFromToken(token, sessionId);
-    delete sessionHandles[sessionId];
+    delete sessions[sessionId];
   });
 });
 
@@ -205,7 +205,7 @@ var closeSessionsForTokens = function (tokens) {
   _.each(tokens, function (token) {
     if (_.has(sessionsByLoginToken, token)) {
       _.each(sessionsByLoginToken[token], function (sessionId) {
-        sessionHandles[sessionId] && sessionHandles[sessionId].close();
+        sessions[sessionId] && sessions[sessionId].close();
       });
     }
   });
