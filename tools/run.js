@@ -311,7 +311,7 @@ var startServer = function (options) {
 
   eachline(proc.stderr, 'utf8', function (line) {
     if (!line) return;
-    var obj = Log.objFromText(line, { level: 'warn', stderr: true });
+    var obj = Log.objFromText(line, { level: 'error', stderr: true });
     Log.process(obj);
     if (options.rawLogs) {
       saveLog({stderr: line});

@@ -2,16 +2,45 @@ Log = function () {
   return Log.info.apply(this, arguments);
 };
 
+Log.logger = console;
+Log.logger.debug = console.log;
+Log.logger.trace = console.log;
+Log.logger.verbose = console.log;
+
+Log._levels = {
+  levels: {
+    trace: 0,
+    debug: 1,
+    verbose: 2,
+    warn: 3,
+    info: 4,
+    error: 5
+  },
+  colors: {
+    trace: 'bold',
+    debug: 'magenta',
+    verbose: 'cyan',
+    warn: 'yellow',
+    info: 'white',
+    error: 'red'
+  }
+}
+
+
 /// FOR TESTING
 var intercept = 0;
 var interceptedLines = [];
 var suppress = 0;
 
-Log.process = function(logMsg, raw) {
+// There are only two log-levels from stdout and stderr
+// Other log-levels are called diretly from Meteor.logger
+Log.process = function(logMsg) {
   if(this.rawLogs) {
-    console[logMsg.level](logMsg.message);
+    this.logger[logMsg.level](logMsg.message);
   } else {
-    Meteor.logger[logMsg.level](logMsg.message)
+    logMsg.time = new Date();
+    logMsg.timeInexact = true;
+    this.logger[logMsg.level](Log.format(logMsg, { color: true }));
   }
 }
 
@@ -48,13 +77,6 @@ Log._intercepted = function () {
 // other process that will be reading its standard output.
 Log.outputFormat = 'json';
 
-var LEVEL_COLORS = {
-  debug: 'green',
-  // leave info as the default color
-  warn: 'magenta',
-  error: 'red'
-};
-
 var META_COLOR = 'blue';
 
 // XXX package
@@ -64,6 +86,7 @@ var RESTRICTED_KEYS = ['time', 'timeInexact', 'level', 'file', 'line',
 var FORMATTED_KEYS = RESTRICTED_KEYS.concat(['app', 'message']);
 
 var logInBrowser = function (obj) {
+  console.log('Browser log')
   var str = Log.format(obj);
 
   // XXX Some levels should be probably be sent to the server
@@ -129,7 +152,7 @@ Log._getCallerDetails = function () {
   return details;
 };
 
-_.each(['debug', 'info', 'warn', 'error'], function (level) {
+_.each(Object.keys(Log._levels.levels), function (level) {
   // @param arg {String|Object}
   Log[level] = function (arg) {
     if (suppress) {
@@ -158,9 +181,6 @@ _.each(['debug', 'info', 'warn', 'error'], function (level) {
     obj.time = new Date();
     obj.level = level;
 
-    // XXX allow you to enable 'debug', probably per-package
-    if (level === 'debug')
-      return;
 
     if (intercepted) {
       interceptedLines.push(EJSON.stringify(obj));
@@ -266,7 +286,7 @@ Log.format = function (obj, options) {
   };
 
   return prettify(metaPrefix, META_COLOR)
-    + prettify(message, LEVEL_COLORS[level]);
+    + prettify(message, this._levels.colors[level]);
 };
 
 // Turn a line of text into a loggable object.
