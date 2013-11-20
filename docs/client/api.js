@@ -479,9 +479,9 @@ Template.api.connect = {
   ]
 };
 
-Template.api.serverOnConnection = {
-  id: "meteor_server_onconnection",
-  name: "Meteor.server.onConnection(callback)",
+Template.api.onConnection = {
+  id: "meteor_onconnection",
+  name: "Meteor.onConnection(callback)",
   locus: "server",
   descr: ["Register a callback to be called when a new DDP connection is made to the server."],
   args: [
