@@ -251,6 +251,10 @@ var Session = function (server, version, socket) {
   // we want to buffer up for when we are done rerunning subscriptions
   self._pendingReady = [];
 
+  // XXX HACK: If a sockjs connection, save off the URL. This is
+  // temporary and will go away in the near future.
+  self.sessionData._url = socket.url;
+
   socket.send(stringifyDDP({msg: 'connected',
                             session: self.id}));
   // On initial connect, spin up all the universal publishers.
