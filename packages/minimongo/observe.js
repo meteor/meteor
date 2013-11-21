@@ -1,17 +1,31 @@
 // XXX maybe move these into another ObserveHelpers package or something
 
 // Wrapped callbacks should not mutate self.docs.
-LocalCollection._CachingChangeObserver = function (callbacks) {
+LocalCollection._CachingChangeObserver = function (options) {
   var self = this;
-  self.ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
+  options = options || {};
+
+  var orderedFromCallbacks = options.callbacks &&
+        LocalCollection._observeChangesCallbacksAreOrdered(options.callbacks);
+  if (_.has(options, 'ordered')) {
+    self.ordered = options.ordered;
+    if (options.callbacks && options.ordered !== orderedFromCallbacks)
+      throw Error("ordered option doesn't match callbacks");
+  } else if (options.callbacks) {
+    self.ordered = orderedFromCallbacks;
+  } else {
+    throw Error("must provide ordered or callbacks");
+  }
+  var callbacks = options.callbacks || {};
 
   if (self.ordered) {
     self.docs = new OrderedDict(LocalCollection._idStringify);
-    self.callbacks = {
+    self.applyChange = {
       addedBefore: function (id, fields, before) {
         var doc = EJSON.clone(fields);
         doc._id = id;
-        callbacks.addedBefore && callbacks.addedBefore.call(self, id, fields, before);
+        callbacks.addedBefore && callbacks.addedBefore.call(
+          self, id, fields, before);
         // This line triggers if we provide added with movedBefore.
         callbacks.added && callbacks.added.call(self, id, fields);
         // XXX could `before` be a falsy ID?  Technically
@@ -27,7 +41,7 @@ LocalCollection._CachingChangeObserver = function (callbacks) {
     };
   } else {
     self.docs = new LocalCollection._IdMap;
-    self.callbacks = {
+    self.applyChange = {
       added: function (id, fields) {
         var doc = EJSON.clone(fields);
         callbacks.added && callbacks.added.call(self, id, fields);
@@ -39,7 +53,7 @@ LocalCollection._CachingChangeObserver = function (callbacks) {
 
   // The methods in _IdMap and OrderedDict used by these callbacks are
   // identical.
-  self.callbacks.changed = function (id, fields) {
+  self.applyChange.changed = function (id, fields) {
     var doc = self.docs.get(id);
     if (!doc)
       throw new Error("Unknown id for changed: " + id);
@@ -47,7 +61,7 @@ LocalCollection._CachingChangeObserver = function (callbacks) {
       self, id, EJSON.clone(fields));
     LocalCollection._applyChanges(doc, fields);
   };
-  self.callbacks.removed = function (id) {
+  self.applyChange.removed = function (id) {
     callbacks.removed && callbacks.removed.call(self, id);
     self.docs.remove(id);
   };
@@ -152,8 +166,8 @@ LocalCollection._observeFromObserveChanges = function (cursor, observeCallbacks)
   }
 
   var changeObserver = new LocalCollection._CachingChangeObserver(
-    observeChangesCallbacks);
-  var handle = cursor.observeChanges(changeObserver.callbacks);
+    {callbacks: observeChangesCallbacks});
+  var handle = cursor.observeChanges(changeObserver.applyChange);
   suppressed = false;
   return handle;
 };

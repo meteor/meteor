@@ -3,6 +3,11 @@ LocalCollection._IdMap = function () {
   self._map = {};
 };
 
+// Some of these methods are designed to match methods on OrderedDict, since
+// (eg) ObserveMultiplex and _CachingChangeObserver use them interchangeably.
+// (Conceivably, this should be replaced with "UnorderedDict" with a specific
+// set of methods that overlap between the two.)
+
 _.extend(LocalCollection._IdMap.prototype, {
   get: function (id) {
     var self = this;
@@ -32,7 +37,7 @@ _.extend(LocalCollection._IdMap.prototype, {
     var self = this;
     self._map = {};
   },
-  each: function (iterator) {
+  forEach: function (iterator) {
     var self = this;
     _.each(self._map, function (value, key, obj) {
       var context = this;

@@ -42,7 +42,7 @@ Package.on_use(function (api) {
   // For tests only.
   api.export('MongoTest', 'server', {testOnly: true});
 
-  api.add_files(['doc_fetcher.js', 'mongo_driver.js',
+  api.add_files(['doc_fetcher.js', 'mongo_driver.js', 'observe_multiplex.js',
                  'oplog.js'], 'server');
   api.add_files('local_collection_driver.js', ['client', 'server']);
   api.add_files('remote_collection_driver.js', 'server');
