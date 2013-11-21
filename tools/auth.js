@@ -265,7 +265,7 @@ var logInToGalaxy = function (galaxyName, meteorAuthCookie) {
   var stateInfo = { session: session };
 
   var authCodeUrl = ACCOUNTS_URL + "/authorize?" + querystring.stringify({
-    state: new Buffer(JSON.stringify(stateInfo), 'utf8').toString('base64'),
+    state: encodeURIComponent(JSON.stringify(stateInfo)),
     response_type: "code",
     client_id: galaxyClientId,
     redirect_uri: galaxyRedirect
