@@ -63,6 +63,8 @@ if (Meteor.isServer) {
   });
 } else {
   Facts.server = new Meteor.Collection(serverFactsCollection);
+  // XXX making all clients subscribe all the time is wasteful.
+  //     add an interface here
   // Meteor.subscribe("facts");
 
   Template.serverFacts.factsByPackage = function () {

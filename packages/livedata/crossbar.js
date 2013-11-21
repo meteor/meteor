@@ -21,7 +21,7 @@ _.extend(DDPServer._InvalidationCrossbar.prototype, {
   // XXX It should be legal to call fire() from inside a listen()
   // callback?
   //
-  // Note: the LiveResultsSet constructor assumes that a call to listen() never
+  // Note: the MongoPollster constructor assumes that a call to listen() never
   // yields.
   listen: function (trigger, callback) {
     var self = this;

@@ -5,7 +5,7 @@
 // Cursor: a specification for a particular subset of documents, w/
 // a defined order, limit, and offset.  creating a Cursor with LocalCollection.find(),
 
-// LiveResultsSet: the return value of a live query.
+// ObserveHandle: the return value of a live query.
 
 LocalCollection = function (name) {
   this.name = name;
@@ -237,7 +237,7 @@ LocalCollection._observeCallbacksAreOrdered = function (callbacks) {
 };
 
 // the handle that comes back from observe.
-LocalCollection.LiveResultsSet = function () {};
+LocalCollection.ObserveHandle = function () {};
 
 // options to contain:
 //  * callbacks for observe():
@@ -254,7 +254,7 @@ LocalCollection.LiveResultsSet = function () {};
 //  * collection: the collection this query is querying
 //
 // iff x is a returned query handle, (x instanceof
-// LocalCollection.LiveResultsSet) is true
+// LocalCollection.ObserveHandle) is true
 //
 // initial results delivered through added callback
 // XXX maybe callbacks should take a list of objects, to expose transactions?
@@ -342,7 +342,7 @@ _.extend(LocalCollection.Cursor.prototype, {
       });
     }
 
-    var handle = new LocalCollection.LiveResultsSet;
+    var handle = new LocalCollection.ObserveHandle;
     _.extend(handle, {
       collection: self.collection,
       stop: function () {

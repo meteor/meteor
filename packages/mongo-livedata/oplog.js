@@ -21,10 +21,9 @@ var idForOp = function (op) {
     throw Error("Unknown op: " + EJSON.stringify(op));
 };
 
-MongoConnection.prototype._observeChangesWithOplog = function (
-  cursorDescription, callbacks) {
-  var self = this;
-
+observeChangesWithOplog = function (cursorDescription,
+                                    mongoHandle,
+                                    multiplexer) {
   var stopped = false;
 
   Package.facts && Package.facts.Facts.incrementServerFact(
@@ -52,14 +51,14 @@ MongoConnection.prototype._observeChangesWithOplog = function (
     if (published.has(id))
       throw Error("tried to add something already published " + id);
     published.set(id, sharedProjectionFn(fields));
-    callbacks.added && callbacks.added(id, projectionFn(fields));
+    multiplexer.added(id, projectionFn(fields));
   };
 
   var remove = function (id) {
     if (!published.has(id))
       throw Error("tried to remove something unpublished " + id);
     published.remove(id);
-    callbacks.removed && callbacks.removed(id);
+    multiplexer.removed(id);
   };
 
   var handleDoc = function (id, newDoc) {
@@ -76,13 +75,11 @@ MongoConnection.prototype._observeChangesWithOplog = function (
         throw Error("thought that " + id + " was there!");
       delete newDoc._id;
       published.set(id, sharedProjectionFn(newDoc));
-      if (callbacks.changed) {
-        var changed = LocalCollection._makeChangedFields(
-          _.clone(newDoc), oldDoc);
-        changed = projectionFn(changed);
-        if (!_.isEmpty(changed))
-          callbacks.changed(id, changed);
-      }
+      var changed = LocalCollection._makeChangedFields(
+        _.clone(newDoc), oldDoc);
+      changed = projectionFn(changed);
+      if (!_.isEmpty(changed))
+        multiplexer.changed(id, changed);
     }
   };
 
@@ -98,10 +95,10 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       var error = null;
       var fut = new Future;
       Fiber(function () {
-        currentlyFetching.each(function (cacheKey, id) {
+        currentlyFetching.forEach(function (cacheKey, id) {
           // currentlyFetching will not be updated during this loop.
           waiting++;
-          self._docFetcher.fetch(cursorDescription.collectionName, id, cacheKey, function (err, doc) {
+          mongoHandle._docFetcher.fetch(cursorDescription.collectionName, id, cacheKey, function (err, doc) {
             if (err) {
               if (!error)
                 error = err;
@@ -195,10 +192,10 @@ MongoConnection.prototype._observeChangesWithOplog = function (
   oplogEntryHandlers[PHASE.FETCHING] = oplogEntryHandlers[PHASE.STEADY];
 
 
-  var oplogEntryHandle = self._oplogHandle.onOplogEntry(
+  var oplogEntryHandle = mongoHandle._oplogHandle.onOplogEntry(
     cursorDescription.collectionName, function (op) {
       if (op.op === 'c') {
-        published.each(function (fields, id) {
+        published.forEach(function (fields, id) {
           remove(id);
         });
       } else {
@@ -221,32 +218,57 @@ MongoConnection.prototype._observeChangesWithOplog = function (
       // This write cannot complete until we've caught up to "this point" in the
       // oplog, and then made it back to the steady state.
       Meteor.defer(complete);
-      self._oplogHandle.waitUntilCaughtUp();
-      if (stopped || phase === PHASE.STEADY)
-        write.committed();
-      else
-        writesToCommitWhenWeReachSteady.push(write);
+      mongoHandle._oplogHandle.waitUntilCaughtUp();
+      // Make sure that all of the callbacks have made it through the
+      // multiplexer and been delivered to ObserveHandles before committing
+      // writes.
+      multiplexer.onFlush(function (){
+        if (stopped || phase === PHASE.STEADY) {
+          write.committed();
+        } else {
+          writesToCommitWhenWeReachSteady.push(write);
+        }
+      });
     }
   );
 
-  var initialCursor = new Cursor(self, cursorDescription);
-  initialCursor.forEach(function (initialDoc) {
-    add(initialDoc);
+  // observeChangesWithOplog cannot yield (because the manipulation of
+  // mongoHandle._observeMultiplexers needs to be yield-free); calling
+  // multiplexer.ready() is the equivalent of the observeChanges "synchronous"
+  // return.
+  Meteor.defer(function () {
+    if (stopped)
+      throw new Error("oplog stopped surprisingly early");
+
+    var initialCursor = new Cursor(mongoHandle, cursorDescription);
+    initialCursor.forEach(function (initialDoc) {
+      add(initialDoc);
+    });
+    if (stopped)
+      throw new Error("oplog stopped quite early");
+    // Actually send out the initial adds to the ObserveHandles.
+    multiplexer.ready();
+
+    if (stopped)
+      return;
+    mongoHandle._oplogHandle.waitUntilCaughtUp();
+
+    if (stopped)
+      return;
+    if (phase !== PHASE.INITIALIZING)
+      throw Error("Phase unexpectedly " + phase);
+
+    if (needToFetch.isEmpty()) {
+      beSteady();
+    } else {
+      fetchModifiedDocuments();
+    }
   });
 
-  self._oplogHandle.waitUntilCaughtUp();
-
-  if (phase !== PHASE.INITIALIZING)
-    throw Error("Phase unexpectedly " + phase);
-
-  if (needToFetch.isEmpty()) {
-    beSteady();
-  } else {
-    phase = PHASE.FETCHING;
-    Meteor.defer(fetchModifiedDocuments);
-  }
-
   return {
+    // This stop function is invoked from the onStop of the ObserveMultiplexer,
+    // so it shouldn't actually be possible to call it until the multiplexer is
+    // ready.
     stop: function () {
       if (stopped)
         return;
@@ -266,7 +288,6 @@ MongoConnection.prototype._observeChangesWithOplog = function (
 
       oplogEntryHandle = null;
       listenersHandle = null;
-      initialCursor = null;
 
       Package.facts && Package.facts.Facts.incrementServerFact(
         "mongo-livedata", "oplog-observers", -1);
