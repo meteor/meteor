@@ -68,9 +68,9 @@ ObserveSequence = {
           seqArray = [];
           diffArray(lastSeqArray, seqArray, callbacks);
         } else if (seq instanceof Array) {
-	  // XXX if id is not set, we just set it randomly for now.  We
-	  // can do better so that diffing the arrays ["A", "B"] and
-	  // ["A"] doesn't cause "A" to be removed.
+          // XXX if id is not set, we just set it randomly for now.  We
+          // can do better so that diffing the arrays ["A", "B"] and
+          // ["A"] doesn't cause "A" to be removed.
           seqArray = _.map(seq, function (doc, i) {
             return { _id: doc._id || Random.id(), item: doc };
           });
@@ -78,20 +78,20 @@ ObserveSequence = {
         } else if (isMinimongoCursor(seq)) {
           var cursor = seq;
 
-	  // Fetch the contents of the new cursor so that we can diff from the
-	  // old sequence.
-	  cursor.rewind(); // so that we can fetch
+          // Fetch the contents of the new cursor so that we can diff from the
+          // old sequence.
+          cursor.rewind(); // so that we can fetch
           seqArray = _.map(cursor.fetch(), function (doc) {
             return {_id: doc._id, item: doc};
           });
           cursor.rewind(); // so that the user can still fetch
 
-	  // diff the old sequnce with initial data in the new cursor. this will
-	  // fire `addedAt` callbacks on the initial data.
+          // diff the old sequnce with initial data in the new cursor. this will
+          // fire `addedAt` callbacks on the initial data.
           diffArray(lastSeqArray, seqArray, callbacks);
 
-	  // make sure to not fire duplicate `addedAt` callbacks for initial
-	  // data
+          // make sure to not fire duplicate `addedAt` callbacks for initial
+          // data
           var initial = true;
 
           activeObserveHandle = cursor.observe({
