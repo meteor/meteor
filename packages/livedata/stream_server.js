@@ -1,3 +1,5 @@
+var url = Npm.require('url');
+
 // unique id for this instantiation of the server. If this changes
 // between client reconnects, the client will reload. You can set the
 // environment variable "SERVER_ID" to control this. For example, if
@@ -125,9 +127,13 @@ _.extend(StreamServer.prototype, {
         // Store arguments for use within the closure below
         var args = arguments;
 
-        if (request.url === pathPrefix + '/websocket' ||
-            request.url === pathPrefix + '/websocket/') {
-          request.url = self.prefix + '/websocket';
+        // Rewrite /websocket and /websocket/ urls to /sockjs/websocket while
+        // preserving query string.
+        var parsedUrl = url.parse(request.url);
+        if (parsedUrl.pathname === pathPrefix + '/websocket' ||
+            parsedUrl.pathname === pathPrefix + '/websocket/') {
+          parsedUrl.pathname = self.prefix + '/websocket';
+          request.url = url.format(parsedUrl);
         }
         _.each(oldHttpServerListeners, function(oldListener) {
           oldListener.apply(httpServer, args);
