@@ -2,7 +2,7 @@
 
 Spacebars is a Meteor template language inspired by [Handlebars](http://handlebarsjs.com/).  It shares much of the spirit and syntax of Handlebars, but it's tailored to produce specifications of reactive Meteor UI components when compiled.
 
-NOTE: This is the eventual spec that will be supported by this branch. Parts of this spec aren't yet implemented.
+NOTE: This is the eventual spec that will be supported by this branch. It's not fully implemented yet.
 
 ## Syntax
 
