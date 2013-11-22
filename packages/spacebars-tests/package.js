@@ -13,7 +13,7 @@ Package.on_test(function (api) {
 
   api.use('templating', 'client');
   api.add_files([
-    'template_tests.html',
+    'template_tests.html2',
     'template_tests.js'
   ], 'client');
 });

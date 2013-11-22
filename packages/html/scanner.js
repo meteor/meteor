@@ -18,7 +18,10 @@ Scanner.prototype.fatal = function (msg) {
 
   // XXX show line/col information, etc.
   // XXX attach information to the error object.
-  throw new Error("Index " + this.pos + ": " + msg);
+  throw new Error("Around: \"" +
+                  this.input.substring(this.pos - 10, this.pos) +
+                  "(HERE>>>)" + this.input.substring(this.pos, this.pos + 10) +
+                  "\": " + msg);
 };
 
 // Peek at the next character, or run a provided "matcher" function
