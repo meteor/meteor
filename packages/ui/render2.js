@@ -359,6 +359,12 @@ var materialize = function (node, parent, before, parentComponent) {
         rangeUpdater.stop();
       };
       insert(range, parent, before);
+    } else if (type === 'raw') {
+      // Get an array of DOM nodes by using the browser's HTML parser
+      // (like innerHTML).
+      var htmlNodes = UI.DomBackend2.parseHTML(node[0]);
+      for (var i = 0; i < htmlNodes.length; i++)
+        insert(htmlNodes[i], parent, before);
     } else if (type === 'null') {
       // null or undefined.
       // do nothing.
@@ -545,6 +551,8 @@ var toHTML = function (node, parentComponent) {
       }
 
       result += toHTML(content, parentComponent);
+    } else if (type === 'raw') {
+      result += node[0];
     } else if (type === 'null') {
       // null or undefined.
       // do nothing.
@@ -649,3 +657,13 @@ var toCode = function (node) {
 UI.materialize = materialize;
 UI.toHTML = toHTML;
 UI.toCode = toCode;
+
+UI.body2 = UI.Component.extend({
+  kind: 'body',
+  contentParts: [],
+  render: function () {
+    return this.contentParts;
+  },
+  // XXX revisit how body works.
+  INSTANTIATED: false
+});

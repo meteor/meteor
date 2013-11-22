@@ -14,6 +14,7 @@ Package.on_use(function (api) {
   api.use('observe-sequence');
 
   api.use('html');
+  api.imply('html');
 
   api.add_files(['exceptions.js', 'base.js']);
 

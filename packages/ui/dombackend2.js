@@ -63,6 +63,15 @@ if (Meteor.isClient) {
     }
   };
 
+  DomBackend.parseHTML = function (html) {
+    // Return an array of nodes.
+    //
+    // jQuery does fancy stuff like creating an appropriate
+    // container element and setting innerHTML on it, as well
+    // as working around various IE quirks.
+    return jQuery.parseHTML(html) || [];
+  };
+
   UI.DomBackend2 = DomBackend;
 
 }

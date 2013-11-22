@@ -30,5 +30,5 @@ reportUIException = function (e, msg) {
   // In Chrome, `e.stack` is a multiline string that starts with the message
   // and contains a stack trace.  Furthermore, `console.log` makes it clickable.
   // `console.log` supplies the space between the two arguments.
-  debugFunc(msg || 'Exception in Meteor UI:', e.stack || e.message);
+  debugFunc()(msg || 'Exception in Meteor UI:', e.stack || e.message);
 };
