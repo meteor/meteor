@@ -103,7 +103,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
   // reload again trying to get the new code.
 
   if (Package.autoupdate) {
-    var version = Package.autoupdate.AutoUpdate.autoUpdateVersion;
+    var version = Package.autoupdate.Autoupdate.autoupdateVersion;
     if (version !== WebApp.clientHash)    
       manifest += "# " + version + "\n";
   }

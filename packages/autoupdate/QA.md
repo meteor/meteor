@@ -59,7 +59,7 @@ so it doesn't wait for new files to download before displaying the web
 page.
 
 
-## AutoUpdate.newClientAvailable
+## Autoupdate.newClientAvailable
 
 Undo previous changes made, such as by using `git checkout .` Reload
 the client, which will cause the browser to stop using the app cache.
@@ -75,7 +75,7 @@ see the variable without having the client also reload.
 
 Add to leaderboard.js:
 
-    Template.leaderboard.available = AutoUpdate.newClientAvailable;
+    Template.leaderboard.available = Autoupdate.newClientAvailable;
 
 And add `{{available}}` to the leaderboard template in
 leaderboard.html.

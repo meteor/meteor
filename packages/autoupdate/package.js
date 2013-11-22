@@ -7,7 +7,7 @@ Package.on_use(function (api) {
   api.use(['livedata', 'mongo-livedata'], ['client', 'server']);
   api.use('reload', 'client', {weak: true});
 
-  api.export('AutoUpdate');
+  api.export('Autoupdate');
   api.add_files('autoupdate_server.js', 'server');
   api.add_files('autoupdate_client.js', 'client');
 });
