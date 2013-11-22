@@ -264,12 +264,13 @@ var logInToGalaxy = function (galaxyName, meteorAuthCookie) {
   var session = crypto.randomBytes(16).toString('hex');
   var stateInfo = { session: session };
 
-  var authCodeUrl = ACCOUNTS_URL + "/authorize?" + querystring.stringify({
-    state: encodeURIComponent(JSON.stringify(stateInfo)),
-    response_type: "code",
-    client_id: galaxyClientId,
-    redirect_uri: galaxyRedirect
-  });
+  var authCodeUrl = ACCOUNTS_URL + "/oauth2/authorize?" +
+        querystring.stringify({
+          state: encodeURIComponent(JSON.stringify(stateInfo)),
+          response_type: "code",
+          client_id: galaxyClientId,
+          redirect_uri: galaxyRedirect
+        });
 
   // It's very important that we don't have request follow the redirect for us,
   // but instead issue the second request ourselves. This is because request
