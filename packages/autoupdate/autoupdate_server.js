@@ -45,10 +45,12 @@ AutoUpdate = {};
 AutoUpdate.autoUpdateVersion = null;
 
 Meteor.startup(function () {
+  // Allow people to override AutoUpdate.autoUpdateVersion before
+  // startup. Tests do this.
   if (AutoUpdate.autoUpdateVersion === null)
     AutoUpdate.autoUpdateVersion =
       process.env.AUTOUPDATE_VERSION ||
-      process.env.SERVER_ID ||
+      process.env.SERVER_ID || // XXX COMPAT 0.6.6
       WebApp.clientHash;
 
   // Make autoUpdateVersion available on the client.
@@ -63,12 +65,17 @@ Meteor.publish(
     // Using `autoUpdateVersion` here is safe because we can't get a
     // subscription before webapp starts listening, and it doesn't do
     // that until the startup hooks have run.
-    self.added(
-      "meteor_autoupdate_clientVersions",
-      AutoUpdate.autoUpdateVersion,
-      {current: true}
-    );
-    self.ready();
+    if (AutoUpdate.autoUpdateVersion) {
+      self.added(
+        "meteor_autoupdate_clientVersions",
+        AutoUpdate.autoUpdateVersion,
+        {current: true}
+      );
+      self.ready();
+    } else {
+      // huh? shouldn't happen. Just error the sub.
+      self.error(new Meteor.Error(500, "AutoUpdate.autoUpdateVersion not set"));
+    }
   },
   {is_auto: true}
 );

@@ -181,9 +181,9 @@ var Connection = function (url, options) {
     }
 
     if (msg === null || !msg.msg) {
-      // DEPRECATED. ignore the old welcome message for back compat.
-      // Remove this 'if' once the server stops sending welcome messages
-      // (stream_server.js).
+      // XXX COMPAT WITH 0.6.6. ignore the old welcome message for back
+      // compat.  Remove this 'if' once the server stops sending welcome
+      // messages (stream_server.js).
       if (! (msg && msg.server_id))
         Meteor._debug("discarding invalid livedata message", msg);
       return;

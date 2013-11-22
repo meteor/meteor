@@ -1,16 +1,16 @@
 // Subscribe to the `meteor_autoupdate_clientVersions` collection,
 // which contains the set of acceptable client versions.
 //
-// A "hard code push" occurs when the current client version is not in
+// A "hard code push" occurs when the running client version is not in
 // the set of acceptable client versions (or the server updates the
-// collection, and the current client version is no longer in the
-// set).
+// collection, there is a published client version marked `current` and
+// the running client version is no longer in the set).
 //
 // When the `reload` package is loaded, a hard code push causes
 // the browser to reload, so that it will load the latest client
 // version from the server.
 //
-// A "soft code push" represents the situation when the current client
+// A "soft code push" represents the situation when the running client
 // version is in the set of acceptable versions, but there is a newer
 // version available on the server.
 //
@@ -24,7 +24,7 @@
 
 // The client version of the client code currently running in the
 // browser.
-var autoUpdateVersion = __meteor_runtime_config__.autoUpdateVersion;
+var autoUpdateVersion = __meteor_runtime_config__.autoUpdateVersion || "unknown";
 
 
 // The collection of acceptable client versions.
