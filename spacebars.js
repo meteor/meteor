@@ -1330,19 +1330,19 @@ var optimize = function (tree) {
   return optTree;
 };
 
-var specialsToSessionGet = function (node) {
+var replaceSpecials = function (node) {
   if (UI.isComponent(node)) {
     return node;
   } else {
     var type = HTML.typeOf(node);
     if (type === 'tag') {
       // potential optimization: don't always create a new tag
-      var newChildren = _.map(Array.prototype.slice.call(node), specialsToSessionGet);
+      var newChildren = _.map(Array.prototype.slice.call(node), replaceSpecials);
       var newTag = HTML.getTag(node.tagName).apply(null, newChildren);
       newTag.attrs = node.attrs;
       return newTag;
     } else if (type === 'array') {
-      return _.map(node, specialsToSessionGet);
+      return _.map(node, replaceSpecials);
     } else if (type === 'special') {
       if (node.attrs.type !== 'DOUBLE')
         return node;
@@ -1364,7 +1364,7 @@ Spacebars.compile2 = function (input) {
 
   tree = optimize(tree);
 
-  tree = specialsToSessionGet(tree);
+  tree = replaceSpecials(tree);
 
   var code = '(function () { var self = this; return ';
 
