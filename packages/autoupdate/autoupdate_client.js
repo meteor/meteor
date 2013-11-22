@@ -14,7 +14,7 @@
 // version is in the set of acceptable versions, but there is a newer
 // version available on the server.
 //
-// `AutoUpdate.newClientAvailable` is a reactive data source which
+// `Autoupdate.newClientAvailable` is a reactive data source which
 // becomes `true` if there is a new version of the client is available on
 // the server.
 //
@@ -24,20 +24,20 @@
 
 // The client version of the client code currently running in the
 // browser.
-var autoUpdateVersion = __meteor_runtime_config__.autoUpdateVersion || "unknown";
+var autoupdateVersion = __meteor_runtime_config__.autoupdateVersion || "unknown";
 
 
 // The collection of acceptable client versions.
 var ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions");
 
 
-AutoUpdate = {};
+Autoupdate = {};
 
-AutoUpdate.newClientAvailable = function () {
+Autoupdate.newClientAvailable = function () {
   return !! ClientVersions.findOne(
     {$and: [
       {current: true},
-      {_id: {$ne: autoUpdateVersion}}
+      {_id: {$ne: autoupdateVersion}}
     ]}
   );
 };
@@ -51,7 +51,7 @@ Meteor.subscribe("meteor_autoupdate_clientVersions", {
     if (Package.reload) {
       Deps.autorun(function (computation) {
         if (ClientVersions.findOne({current: true}) &&
-            (! ClientVersions.findOne({_id: autoUpdateVersion}))) {
+            (! ClientVersions.findOne({_id: autoupdateVersion}))) {
           computation.stop();
           Package.reload.Reload._reload();
         }

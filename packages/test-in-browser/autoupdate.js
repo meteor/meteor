@@ -4,4 +4,4 @@
 // different value when the server restarts accomplishes this.
 
 if (Package.autoupdate)
-  Package.autoupdate.AutoUpdate.autoUpdateVersion = Random.id();
+  Package.autoupdate.Autoupdate.autoupdateVersion = Random.id();

@@ -35,26 +35,26 @@
 // client version.  Developers can easily experiment with different
 // versioning and updating models by forking this package.
 
-AutoUpdate = {};
+Autoupdate = {};
 
 // The client hash includes __meteor_runtime_config__, so wait until
 // all packages have loaded and have had a chance to populate the
 // runtime config before using the client hash as our default auto
 // update version id.
 
-AutoUpdate.autoUpdateVersion = null;
+Autoupdate.autoupdateVersion = null;
 
 Meteor.startup(function () {
-  // Allow people to override AutoUpdate.autoUpdateVersion before
+  // Allow people to override Autoupdate.autoupdateVersion before
   // startup. Tests do this.
-  if (AutoUpdate.autoUpdateVersion === null)
-    AutoUpdate.autoUpdateVersion =
+  if (Autoupdate.autoupdateVersion === null)
+    Autoupdate.autoupdateVersion =
       process.env.AUTOUPDATE_VERSION ||
       process.env.SERVER_ID || // XXX COMPAT 0.6.6
       WebApp.clientHash;
 
-  // Make autoUpdateVersion available on the client.
-  __meteor_runtime_config__.autoUpdateVersion = AutoUpdate.autoUpdateVersion;
+  // Make autoupdateVersion available on the client.
+  __meteor_runtime_config__.autoupdateVersion = Autoupdate.autoupdateVersion;
 });
 
 
@@ -62,19 +62,19 @@ Meteor.publish(
   "meteor_autoupdate_clientVersions",
   function () {
     var self = this;
-    // Using `autoUpdateVersion` here is safe because we can't get a
+    // Using `autoupdateVersion` here is safe because we can't get a
     // subscription before webapp starts listening, and it doesn't do
     // that until the startup hooks have run.
-    if (AutoUpdate.autoUpdateVersion) {
+    if (Autoupdate.autoupdateVersion) {
       self.added(
         "meteor_autoupdate_clientVersions",
-        AutoUpdate.autoUpdateVersion,
+        Autoupdate.autoupdateVersion,
         {current: true}
       );
       self.ready();
     } else {
       // huh? shouldn't happen. Just error the sub.
-      self.error(new Meteor.Error(500, "AutoUpdate.autoUpdateVersion not set"));
+      self.error(new Meteor.Error(500, "Autoupdate.autoupdateVersion not set"));
     }
   },
   {is_auto: true}
