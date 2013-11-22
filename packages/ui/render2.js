@@ -596,7 +596,10 @@ var toObjectLiteralKey = function (k) {
 var toCode = function (node) {
   var result = "";
 
-  if (UI.isComponent(node)) {
+  if ((typeof node === 'number') || (typeof node === 'boolean')) {
+    // support toCode on nodes like `HTML.Special({foo: [1, 2, true]})`
+    return toJSLiteral(node);
+  } else if (UI.isComponent(node)) {
     throw new Error("Can't convert Component object to code string.  Use EmitCode instead.");
   } else {
     var type = HTML.typeOf(node);
@@ -614,6 +617,8 @@ var toCode = function (node) {
           throw new Error("Can't convert function object to code string.  Use EmitCode instead.");
         var kvStrs = [];
         if (type === 'special') {
+          // Specials don't occur in the compiled templates, so this is
+          // somewhat of a fringe codepath, but we have it for completeness.
           _.each(node.attrs, function (v, k) {
             kvStrs.push(toObjectLiteralKey(k) + ': ' + toCode(v));
           });
