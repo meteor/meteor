@@ -4,6 +4,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('webapp', 'server');
+  api.use('deps', 'client');
   api.use(['livedata', 'mongo-livedata'], ['client', 'server']);
   api.use('reload', 'client', {weak: true});
 
