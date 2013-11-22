@@ -13,6 +13,7 @@ Package._transitional_registerBuildPlugin({
   use: ['spacebars'],
   sources: [
     'plugin/html_scanner.js',
+    'plugin/html2_scanner.js',
     'plugin/compile-templates.js'
   ]
 });
