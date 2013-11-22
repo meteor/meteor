@@ -45,7 +45,7 @@
 </template>
 
 <template name="spacebars_template_test_dynamic_attrs">
-  <span {{attrs2}} {{k}}={{v}} {{x}} {{nonexistent}}>hi</span>
+  <span {{attrsObj}} {{singleAttr}} {{nonexistent}}>hi</span>
 </template>
 
 <template name="spacebars_template_test_triple">
@@ -136,7 +136,7 @@
   {{#with foo}}
     {{#with bar}}
       {{! #if shouldn't add a data context }}
-      {{#if true}}
+      {{#if false}}
         {{#each items}}
           {{! inclusion should only add a data context if passed explicitly }}
           {{> spacebars_template_test_dots_subtemplate}}

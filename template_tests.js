@@ -1,6 +1,6 @@
 var renderToDiv = function (comp) {
   var div = document.createElement("DIV");
-  UI.insert(UI.render(comp), div);
+  UI.materialize(comp, div);
   return div;
 };
 
@@ -63,26 +63,25 @@ Tinytest.add("spacebars - templates - interpolate attribute", function (test) {
 Tinytest.add("spacebars - templates - dynamic attrs", function (test) {
   var tmpl = Template.spacebars_template_test_dynamic_attrs;
 
-  var R2 = ReactiveVar('');
+  var R2 = ReactiveVar({x: "X"});
   var R3 = ReactiveVar('selected');
-  tmpl.attrs2 = function () { return R2.get(); };
-  tmpl.k = 'x';
-  tmpl.v = 'y';
-  tmpl.x = function () { return R3.get(); };
+  tmpl.attrsObj = function () { return R2.get(); };
+  tmpl.singleAttr = function () { return R3.get(); };
+
   var div = renderToDiv(tmpl);
   var span = $(div).find('span')[0];
   test.equal(span.innerHTML, 'hi');
-  test.isFalse(span.hasAttribute('foo'));
-  test.equal(span.getAttribute('x'), 'y');
   test.isTrue(span.selected);
+  test.equal(span.getAttribute('x'), 'X');
 
-  R2.set('foo');
+  R2.set({y: "Y", z: "Z"});
   R3.set('');
   Deps.flush();
   test.equal(stripComments(span.innerHTML), 'hi');
-  test.isTrue(span.hasAttribute('foo'));
-  test.equal(span.getAttribute('foo'), '');
   test.isFalse(span.selected);
+  test.isFalse(span.hasAttribute('x'));
+  test.equal(span.getAttribute('y'), 'Y');
+  test.equal(span.getAttribute('z'), 'Z');
 });
 
 Tinytest.add("spacebars - templates - triple", function (test) {
