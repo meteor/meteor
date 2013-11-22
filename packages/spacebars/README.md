@@ -1,4 +1,3 @@
-
 # Spacebars
 
 Spacebars is a Meteor template language inspired by [Handlebars](http://handlebarsjs.com/).  It shares much of the spirit and syntax of Handlebars, but it's tailored to produce specifications of reactive Meteor UI components when compiled.
@@ -25,13 +24,16 @@ Double-stache tags may only be used at the level of HTML elements (that is, outs
 
 Any part of an attribute name or value is fair game:
 
-````
+```
 <div data-{{foo}}={{bar}}>
   <input type="checkbox" {{isChecked}}>
+  <input {{myAttrs}}>
 </div>
 ```
 
-If you want to insert multiple `name=value` pairs or a reactively changing set of attributes, use a triple-stache tag as described below.
+If you want to insert multiple `name=value` pairs or a reactively changing set of attributes in `{{myAttrs}}`, use a double-stache tag with a dictionary of attribute name/value pairs as its data context.
+
+For instance, the value of `myAttrs` may be an object whose property values are strings that serves as a name/value dictionary.  If two attributes with the same name are specified using any combination of mechanisms, the resulting behavior is undefined.
 
 If two attributes with the same name are specified using any combination of mechanisms, the resulting behavior is undefined.
 
@@ -48,14 +50,6 @@ Triple-stache tags are used to insert raw HTML into a template:
 ```
 
 The inserted HTML must consist of balanced HTML tags, or else balanced tags with some end tags omitted per the rules of HTML parsing.  You can't, for example, insert `"</div><div>"` to close an existing div and open a new one.  In this form, the tag must occur at HTML element level (not inside any angle brackets).
-
-A second form of the triple-stache is used inside HTML tags to insert zero or more dynamically generated attributes:
-
-```
-<input type="text" {{{myAttrs}}} class="foo">
-```
-
-In this form, the stache tag must occur by itself as shown and not as part of a `name=value` pair.  The value of `myAttrs` may either be a string that parses as zero or more attributes, such as `""` or `"foo=bar id='myInput'"`, or an object whose property values are strings that serves as a name/value dictionary.  If two attributes with the same name are specified using any combination of mechanisms, the resulting behavior is undefined.
 
 #### Blocks and Inclusions
 
