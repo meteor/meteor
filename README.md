@@ -4,6 +4,8 @@ TODO: Merge with syntax.md
 
 Spacebars is a Meteor template language inspired by [Handlebars](http://handlebarsjs.com/).  It shares much of the spirit and syntax of Handlebars, but it's tailored to produce specifications of reactive Meteor UI components when compiled.
 
+NOTE: This is the eventual spec that will be supported by this branch. It's not fully implemented yet.
+
 ## Syntax
 
 A Spacebars template consists of HTML interspersed with "stache tags" (so-called because a curly brace `{` looks a bit like a mustache).  A stache tag starts with `{{` or `{{{` and ends with the same number of curly braces.  Any amount of whitespace is allowed inside the curly braces at the beginning or end of a stache tag, and if there is initial puncutation such as `>` or `#` in `{{>foo}}` or `{{#foo}}`, any amount of whitespace is allowed on either side of the punctuation.
@@ -26,7 +28,7 @@ Double-stache tags may only be used at the level of HTML elements (that is, outs
 
 Any part of an attribute name or value is fair game:
 
-````
+```
 <div data-{{foo}}={{bar}}>
   <input type="checkbox" {{isChecked}}>
 </div>
