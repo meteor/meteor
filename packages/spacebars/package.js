@@ -11,6 +11,7 @@ Package.on_use(function (api) {
   api.use('html5-tokenizer');
   api.use('html');
   api.use('ui');
+  api.use('minifiers', ['server']);
   api.add_files(['spacebars.js']);
 });
 
