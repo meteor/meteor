@@ -318,6 +318,14 @@ Template.api.subscription_userId = {
 };
 
 
+Template.api.subscription_session = {
+  id: "publish_session",
+  name: "<i>this</i>.session",
+  locus: "Server",
+  descr: ["Access inside the publish function. The [session](#meteor_onconnection) this subscription came in on."]
+};
+
+
 Template.api.subscribe = {
   id: "meteor_subscribe",
   name: "Meteor.subscribe(name [, arg1, arg2, ... ] [, callbacks])",
