@@ -1345,12 +1345,18 @@ var replaceSpecials = function (node) {
       return _.map(node, replaceSpecials);
     } else if (type === 'special') {
       var tag = node.attrs;
+      // XXX make sure we only pass a string through from the helper to the
+      // Render API, except in the case of DOUBLE with a SafeString-like
+      // situation.  Support our equivalent of SafeString.
       if (node.attrs.type === 'DOUBLE') {
+        return HTML.EmitCode('function () { return ' +
+                             codeGenMustache(tag) + '; }');
+      } else if (node.attrs.type === 'TRIPLE') {
         var nameCode = codeGenPath2(tag.path);
         var argCode = codeGenArgs2(tag.args);
 
-        return HTML.EmitCode('function () { return Spacebars.mustache(' + nameCode +
-                             (argCode ? ', ' + argCode.join(', ') : '') + '); }');
+        return HTML.EmitCode('function () { return HTML.Raw(' +
+                             codeGenMustache(tag) + '); }');
       } else {
         return node;
       }
@@ -1358,6 +1364,14 @@ var replaceSpecials = function (node) {
       return node;
     }
   };
+};
+
+var codeGenMustache = function (tag) {
+  var nameCode = codeGenPath2(tag.path);
+  var argCode = codeGenArgs2(tag.args);
+
+  return 'Spacebars.mustache(' + nameCode +
+    (argCode ? ', ' + argCode.join(', ') : '') + ')';
 };
 
 Spacebars.compile2 = function (input) {
