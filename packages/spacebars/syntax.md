@@ -103,6 +103,6 @@ You can combine multiple dynamic attributes tags with other attributes:
 <div id=foo class={{myClass}} {{attrs1}} {{attrs2}}>...</div>
 ```
 
-Attributes are combined from left to right, with later attribute values overwriting previous ones.  Multiple values for the same attribute are not merged in any way, so if `attrs1` specifies a value for the `class` attribute, it will overwrite `{{myClass}}`.  Meteor takes care of recalculating the element's attributes if any of `myClass`, `attrs1`, or `attrs2` changes reactively.
+Attributes from dynamic attribute tags are combined from left to right, after normal attributes, with later attribute values overwriting previous ones.  Multiple values for the same attribute are not merged in any way, so if `attrs1` specifies a value for the `class` attribute, it will overwrite `{{myClass}}`.  Meteor takes care of recalculating the element's attributes if any of `myClass`, `attrs1`, or `attrs2` changes reactively.
 
 Comment tags are allowed in the reactive attribute position.

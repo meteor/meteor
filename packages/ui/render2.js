@@ -450,6 +450,8 @@ var attributeValueToCode = function (v) {
     return toJSLiteral(v);
   } else if (v.tagName === 'CharRef' || v.tagName === 'Special') {
     return toCode(v);
+  } else if (v.tagName === 'EmitCode') {
+    return v[0];
   } else if (typeof v === 'object' && (typeof v.length === 'number')) {
     // array or tag
     if (v.tagName)
