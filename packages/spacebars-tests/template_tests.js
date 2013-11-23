@@ -19,8 +19,9 @@ var trimAndRemoveSpaces = function (str) {
 
 Tinytest.add("spacebars - templates - simple helper", function (test) {
   var tmpl = Template.spacebars_template_test_simple_helper;
+  var R = ReactiveVar(1);
   tmpl.foo = function (x) {
-    return x+1;
+    return x + R.get();
   };
   tmpl.bar = function () {
     return 123;
@@ -28,6 +29,9 @@ Tinytest.add("spacebars - templates - simple helper", function (test) {
   var div = renderToDiv(tmpl);
 
   test.equal(stripComments(div.innerHTML), "124");
+  R.set(2);
+  Deps.flush();
+  test.equal(stripComments(div.innerHTML), "125");
 });
 
 Tinytest.add("spacebars - templates - dynamic template", function (test) {
