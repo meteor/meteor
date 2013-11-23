@@ -318,6 +318,14 @@ Template.api.subscription_userId = {
 };
 
 
+Template.api.subscription_session = {
+  id: "publish_session",
+  name: "<i>this</i>.session",
+  locus: "Server",
+  descr: ["Access inside the publish function. The [session](#meteor_onconnection) this subscription came in on."]
+};
+
+
 Template.api.subscribe = {
   id: "meteor_subscribe",
   name: "Meteor.subscribe(name [, arg1, arg2, ... ] [, callbacks])",
@@ -487,7 +495,7 @@ Template.api.onConnection = {
   args: [
     {name: "callback",
      type: "function",
-     descr: "The function to call when a new DDP connection is received."}
+     descr: "The function to call with the session when a new DDP connection is established."}
   ]
 };
     

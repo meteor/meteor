@@ -204,3 +204,33 @@ Tinytest.addAsync(
     );
   }
 );
+
+
+// sessionId -> callback
+var onSubscription = {};
+
+Meteor.publish("livedata_server_test_sub", function (sessionId) {
+  var callback = onSubscription[sessionId];
+  if (callback)
+    callback(this);
+  this.stop();
+});
+
+
+Tinytest.addAsync(
+  "livedata server - session in publish function",
+  function (test, onComplete) {
+    establishConnection(
+      test,
+      function (connection, session) {
+        onSubscription[session.id] = function (subscription) {
+          delete onSubscription[session.id];
+          test.equal(subscription.session.id, session.id);
+          connection.disconnect();
+          onComplete();
+        };
+        connection.subscribe("livedata_server_test_sub", session.id);
+      }
+    );
+  }
+);

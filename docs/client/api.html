@@ -175,6 +175,8 @@ publish handler, this is the place to stop the observes.
 {{> api_box subscription_error}}
 {{> api_box subscription_stop}}
 
+{{> api_box subscription_session}}
+
 {{> api_box subscribe}}
 
 When you subscribe to a record set, it tells the server to send records to the
@@ -276,7 +278,7 @@ invocation object, which provides the following:
 begin running.
 * `userId`: the id of the current user.
 * `setUserId`: a function that associates the current client with a user.
-* `session`: on the server, a reference to the [session handle](#meteor_onconnection) of the session this method call came in on.
+* `session`: on the server, the [session](#meteor_onconnection) this method call came in on.
 
 Calling `methods` on the client defines *stub* functions associated with
 server methods of the same name.  You don't have to define a stub for
@@ -500,11 +502,11 @@ server.
 {{> api_box onConnection}}
 
 `onConnection` returns an object with a single method `stop`.  Calling
-`stop` unregisters the callback, so that the callback will no longer
+`stop` unregisters the callback, so that this callback will no longer
 be called on new connections.
 
-The callback is called with a single argument, a `SessionHandle`.
-The `SessionHandle` is an object containing the following fields:
+The callback is called with a single argument, the `session`.
+The session is an object containing the following fields:
 
 <dl class="objdesc">
 {{#dtdd name="id" type="String"}}
@@ -537,9 +539,9 @@ called again.
 The client closing the connection won't cause the session to close
 right away because the client might reconnect; instead the session
 will close after a timeout.  Once the session has been closed
-(including when the session handle `close` method is called), a
-reconnect from the client attempting to reuse the session will receive
-a new session.
+(including when the session `close` method is called), a reconnect
+from the client attempting to reuse the session will receive a new
+session instead.
 {{/note}}
 
 <h2 id="collections"><span>Collections</span></h2>

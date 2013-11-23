@@ -122,7 +122,8 @@ var toc = [
         {instance: "this", name: "ready", id: "publish_ready"},
         {instance: "this", name: "onStop", id: "publish_onstop"},
         {instance: "this", name: "error", id: "publish_error"},
-        {instance: "this", name: "stop", id: "publish_stop"}
+        {instance: "this", name: "stop", id: "publish_stop"},
+        {instance: "this", name: "session", id: "publish_session"}
       ],
       "Meteor.subscribe"
     ],

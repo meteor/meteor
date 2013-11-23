@@ -741,6 +741,7 @@ var Subscription = function (
     session, handler, subscriptionId, params, name) {
   var self = this;
   self._session = session; // type is Session
+  self.session = session.sessionHandle; // public API object
 
   self._handler = handler;
 
