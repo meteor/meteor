@@ -487,7 +487,7 @@ Template.api.onConnection = {
   args: [
     {name: "callback",
      type: "function",
-     descr: "The function to call when a new DDP connection is received."}
+     descr: "The function to call with the session when a new DDP connection is established."}
   ]
 };
     
