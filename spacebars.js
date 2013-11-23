@@ -1268,11 +1268,9 @@ var optimize = function (tree) {
       return node;
     } else {
       var type = HTML.typeOf(node);
-      if (type === 'charref') {
-        return null;
-      } else if (type === 'comment') {
-        return null;
-      } else if (type === 'emitcode') {
+      if (type === 'special' || type === 'function' || type === 'emitcode') {
+        // return node, which is special and thus already optimized as
+        // much as possible
         return node;
       } else if (type === 'tag') {
         var mustOptimize = false;
@@ -1302,14 +1300,10 @@ var optimize = function (tree) {
         return newTag;
       } else if (type === 'array') {
         return optimizeArrayParts(node, optimizeParts);
-      } else if (type === 'string') {
+      } else if (type === 'charref' || type === 'comment' || type === 'string' ||
+                 type === 'null') {
+        // not special; let parent decide how whether to optimize
         return null;
-      } else if (type === 'function') {
-        return node;
-      } else if (type === 'null') {
-        return null;
-      } else if (type === 'special') {
-        return node;
       } else {
         // can't get here
         throw new Error("Unexpected type: " + type);
@@ -1339,7 +1333,7 @@ var replaceSpecials = function (node) {
       // potential optimization: don't always create a new tag
       var newChildren = _.map(Array.prototype.slice.call(node), replaceSpecials);
       var newTag = HTML.getTag(node.tagName).apply(null, newChildren);
-      newTag.attrs = node.attrs;
+      newTag.attrs = Spacebars._handleSpecialAttributes(node.attrs);
       return newTag;
     } else if (type === 'array') {
       return _.map(node, replaceSpecials);
@@ -1364,6 +1358,14 @@ var replaceSpecials = function (node) {
       return node;
     }
   };
+};
+
+// (expose for testing)
+Spacebars._handleSpecialAttributes = function (oldAttrs) {
+  var dynamics = null;
+
+  if (oldAttrs.$specials && oldAttrs.$specials.length)
+  return oldAttrs;
 };
 
 var codeGenMustache = function (tag) {
