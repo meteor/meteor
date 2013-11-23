@@ -195,3 +195,7 @@
 <template name="spacebars_template_test_tricky_attrs">
   <input type={{theType}}><input type=checkbox class={{theClass}}>
 </template>
+
+<template name="spacebars_template_test_no_data">
+  {{this.foo}}{{#unless this.bar}}asdf{{/unless}}
+</template>
