@@ -107,9 +107,7 @@
 
 <template name="test_safestring_a">
   {{foo}} {{{foo}}} {{bar}} {{{bar}}}
-  {{#foo}}{{/foo}} {{#bar}}{{/bar}}
   {{fooprop}} {{{fooprop}}} {{barprop}} {{{barprop}}}
-  {{#fooprop}}{{/fooprop}} {{#barprop}}{{/barprop}}
 </template>
 
 <template name="test_helpers_a">
@@ -176,15 +174,6 @@
   (methodListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns={{methodListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns}})
   (helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns={{helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns}})
   (helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns={{helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns}})
-</template>
-
-<template name="test_helpers_i">
-  (uppercase apple={{#uppercase}}apple{{/uppercase}})
-  (altered banana={{#tr a="o" n="d"}}banana{{/tr}})
-  (nokeys={{#arg_and_dict "foo" x="foo"}}{{/arg_and_dict}})
-  (nokeys={{#arg_and_dict tree x="foo"}}{{/arg_and_dict}})
-  (biggie={{#get_arg helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns}}{{/get_arg}})
-  (twoArgBlock={{#two_args "foo" "foo"}}{{/two_args}})
 </template>
 
 <template name="test_render_a">
@@ -356,7 +345,3 @@
 {{#each values}}{{this}}{{/each}}
 </template>
 
-<!-- Test for issue #770 - falsy value for with. (newlines break this test on IE8) -->
-<template name="test_template_issue770">
-{{# with value1}}{{this}}{{else}}xxx{{/with}}{{# with value2}}{{this}}{{else}}xxx{{/with}}{{# with value1}}{{this}}{{/with}}{{# with value2}}{{this}}{{/with}}
-</template>
