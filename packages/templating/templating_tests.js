@@ -1,10 +1,27 @@
+// render and put in the document
+var renderToDiv = function (comp) {
+  var div = document.createElement("DIV");
+  UI.insert(UI.render(comp), div);
+  return div;
+};
+
+// for events to bubble an element needs to be in the DOM.
+// @return {Function} call this for cleanup
+var addToBody = function (el) {
+  el.style.display = "none";
+  document.body.appendChild(el);
+  return function () {
+    document.body.removeChild(el);
+  };
+};
+
 
 Tinytest.add("templating - assembly", function (test) {
 
   // Test for a bug that made it to production -- after a replacement,
   // we need to also check the newly replaced node for replacements
-  var frag = Meteor.render(Template.test_assembly_a0);
-  test.equal(canonicalizeHtml(DomUtils.fragmentToHtml(frag)),
+  var div = renderToDiv(Template.test_assembly_a0);
+  test.equal(canonicalizeHtml(div.innerHTML),
                "Hi");
 
   // Another production bug -- we must use LiveRange to replace the
@@ -13,14 +30,11 @@ Tinytest.add("templating - assembly", function (test) {
   Template.test_assembly_b1.stuff = function () {
     return Session.get("stuff");
   };
-  var onscreen = DIV({style: "display: none"}, [
-    Meteor.render(Template.test_assembly_b0)]);
-  document.body.appendChild(onscreen);
-  test.equal(canonicalizeHtml(onscreen.innerHTML), "xyhi");
+  var onscreen = renderToDiv(Template.test_assembly_b0);
+  test.equal(onscreen.innerHTML, "xyhi");
   Session.set("stuff", false);
   Deps.flush();
-  test.equal(canonicalizeHtml(onscreen.innerHTML), "xhi");
-  document.body.removeChild(onscreen);
+  test.equal(onscreen.innerHTML, "xhi");
   Deps.flush();
 });
 
@@ -40,8 +54,7 @@ Tinytest.add("templating - table assembly", function(test) {
   };
 
   var table;
-
-  table = childWithTag(Meteor.render(Template.test_table_a0), "TABLE");
+  table = childWithTag(renderToDiv(Template.test_table_a0), "TABLE");
 
   // table.rows is a great test, as it fails not only when TR/TD tags are
   // stripped due to improper html-to-fragment, but also when they are present
@@ -49,17 +62,14 @@ Tinytest.add("templating - table assembly", function(test) {
   test.equal(table.rows.length, 3);
 
   // this time with an explicit TBODY
-  table = childWithTag(Meteor.render(Template.test_table_b0), "TABLE");
+  table = childWithTag(renderToDiv(Template.test_table_b0), "TABLE");
   test.equal(table.rows.length, 3);
 
   var c = new LocalCollection();
   c.insert({bar:'a'});
   c.insert({bar:'b'});
   c.insert({bar:'c'});
-  var onscreen = DIV({style: "display: none;"});
-  onscreen.appendChild(
-    Meteor.render(_.bind(Template.test_table_each, null, {foo: c.find()})));
-  document.body.appendChild(onscreen);
+  var onscreen = renderToDiv(Template.test_table_each.withData({foo: c.find()}));
   table = childWithTag(onscreen, "TABLE");
 
   test.equal(table.rows.length, 3, table.parentNode.innerHTML);
@@ -70,7 +80,6 @@ Tinytest.add("templating - table assembly", function(test) {
   test.equal(tds[2].innerHTML, "c");
 
 
-  document.body.removeChild(onscreen);
   Deps.flush();
 });
 
@@ -89,13 +98,11 @@ Tinytest.add("templating - event handler this", function(test) {
   });
 
   var event_buf = [];
-  var tmpl = OnscreenDiv(
-    Meteor.render(function () {
-      return Template.test_event_data_with(
-        Template.test_event_data_with.ONE);
-    }));
+  var containerDiv = renderToDiv(Template.test_event_data_with.withData(
+    Template.test_event_data_with.ONE));
+  var cleanupDiv = addToBody(containerDiv);
 
-  var divs = tmpl.node().getElementsByTagName("div");
+  var divs = containerDiv.getElementsByTagName("div");
   test.equal(3, divs.length);
 
   clickElement(divs[0]);
@@ -110,25 +117,26 @@ Tinytest.add("templating - event handler this", function(test) {
   test.equal(event_buf, ['three']);
   event_buf.length = 0;
 
-  tmpl.kill();
+  cleanupDiv();
   Deps.flush();
 });
 
 Tinytest.add("templating - safestring", function(test) {
 
   Template.test_safestring_a.foo = function() {
-    return "1<2";
+    return "<br>";
   };
   Template.test_safestring_a.bar = function() {
-    return new Handlebars.SafeString("3<4");
+    return new Handlebars.SafeString("<hr>");
   };
 
-  var obj = {fooprop: "1<2",
-             barprop: new Handlebars.SafeString("3<4")};
+  var obj = {fooprop: "<br>",
+             barprop: new Handlebars.SafeString("<hr>")};
+  var html = renderToDiv(Template.test_safestring_a.withData(obj)).innerHTML;
 
-  test.equal(Template.test_safestring_a(obj).replace(/\s+/g, ' '),
-             "1&lt;2 1<2 3<4 3<4 1<2 3<4 "+
-             "1&lt;2 1<2 3<4 3<4 1<2 3<4");
+  test.equal(html.replace(/\s+/g, ' '),
+             "&lt;br&gt; <br> <hr> <hr> "+
+             "&lt;br&gt; <br> <hr> <hr>");
 
 });
 
@@ -198,7 +206,9 @@ Tinytest.add("templating - helpers and dots", function(test) {
     methodListFour: listFour
   };
 
-  test.equal(Template.test_helpers_a(dataObj).match(/\S+/g), [
+  var html;
+  html = renderToDiv(Template.test_helpers_a.withData(dataObj)).innerHTML;
+  test.equal(html.match(/\S+/g), [
     'platypus=bill', // helpers on Template object take first priority
     'watermelon=seeds', // global helpers take second priority
     'daisy=petal', // unshadowed object property
@@ -206,14 +216,16 @@ Tinytest.add("templating - helpers and dots", function(test) {
     'warthog=snout' // function Template property
   ]);
 
-  test.equal(Template.test_helpers_b(dataObj).match(/\S+/g), [
+  html = renderToDiv(Template.test_helpers_b.withData(dataObj)).innerHTML;
+  test.equal(html.match(/\S+/g), [
     // unknown properties silently fail
     'unknown=',
     // falsy property comes through
     'zero=0'
   ]);
 
-  test.equal(Template.test_helpers_c(dataObj).match(/\S+/g), [
+  html = renderToDiv(Template.test_helpers_c.withData(dataObj)).innerHTML;
+  test.equal(html.match(/\S+/g), [
     // property gets are supposed to silently fail
     'platypus.X=',
     'watermelon.X=',
@@ -225,7 +237,8 @@ Tinytest.add("templating - helpers and dots", function(test) {
     'getUndefined.X.Y='
   ]);
 
-  test.equal(Template.test_helpers_d(dataObj).match(/\S+/g), [
+  html = renderToDiv(Template.test_helpers_d.withData(dataObj)).innerHTML;
+  test.equal(html.match(/\S+/g), [
     // helpers should get current data context in `this`
     'daisygetter=petal',
     // object methods should get object in `this`
@@ -237,7 +250,8 @@ Tinytest.add("templating - helpers and dots", function(test) {
     '../fancy.currentFruit=guava'
   ]);
 
-  test.equal(Template.test_helpers_e(dataObj).match(/\S+/g), [
+  html = renderToDiv(Template.test_helpers_e.withData(dataObj)).innerHTML;
+  test.equal(html.match(/\S+/g), [
     'fancy.foo=bar',
     'fancy.apple.banana=smoothie',
     'fancy.currentFruit=guava',
@@ -246,7 +260,8 @@ Tinytest.add("templating - helpers and dots", function(test) {
     'fancy.currentCountry.unicorns=0'
   ]);
 
-  test.equal(Template.test_helpers_f(dataObj).match(/\S+/g), [
+  html = renderToDiv(Template.test_helpers_f.withData(dataObj)).innerHTML;
+  test.equal(html.match(/\S+/g), [
     'fancyhelper.foo=bar',
     'fancyhelper.apple.banana=smoothie',
     'fancyhelper.currentFruit=guava',
@@ -257,7 +272,8 @@ Tinytest.add("templating - helpers and dots", function(test) {
 
   // test significance of 'this', which prevents helper from
   // shadowing property
-  test.equal(Template.test_helpers_g(dataObj).match(/\S+/g), [
+  html = renderToDiv(Template.test_helpers_g.withData(dataObj)).innerHTML;
+  test.equal(html.match(/\S+/g), [
     'platypus=eggs',
     'this.platypus=weird'
   ]);
@@ -266,8 +282,9 @@ Tinytest.add("templating - helpers and dots", function(test) {
 
   Template.test_helpers_h.helperListFour = listFour;
 
+  html = renderToDiv(Template.test_helpers_h.withData(dataObj)).innerHTML;
   var trials =
-        Template.test_helpers_h(dataObj).match(/\(.*?\)/g);
+        html.match(/\(.*?\)/g);
   test.equal(trials[0],
              '(methodListFour 6 7 8 9=6 7 8 9)');
   test.equal(trials[1],
@@ -280,46 +297,6 @@ Tinytest.add("templating - helpers and dots", function(test) {
              '(helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns=eggs leaf guava 0 a:eggs b:leaf c:guava d:0)');
   test.equal(trials.length, 5);
 
-  // test interpretation of block helper invocation
-
-  Template.test_helpers_i.uppercase = function(fn) {
-    return fn().toUpperCase();
-  };
-  Template.test_helpers_i.tr = function(options) {
-    var str = options.fn();
-    _.each(options.hash, function(v,k) {
-      str = str.replace(new RegExp(k, 'g'), v);
-    });
-    return str;
-  };
-  Template.test_helpers_i.arg_and_dict = function(arg, options) {
-    if (typeof options.hash !== "object")
-      throw new Error();
-    return _.keys(options.hash).length;
-  };
-  Template.test_helpers_i.get_arg = function(arg) {
-    return arg;
-  };
-  Template.test_helpers_i.two_args = function(arg1, arg2) {
-    return [typeof arg1 === "string",
-            typeof arg2 === "string"].join();
-  };
-  Template.test_helpers_i.helperListFour = listFour;
-
-  trials =
-        Template.test_helpers_i(dataObj).match(/\(.*?\)/g);
-  test.equal(trials[0], "(uppercase apple=APPLE)");
-  test.equal(trials[1], "(altered banana=bododo)");
-  // presence of arg should prevent keyword arguments from
-  // being passed to block helper, whether or not the arg
-  // is a function.
-  test.equal(trials[2], "(nokeys=0)");
-  test.equal(trials[3], "(nokeys=0)");
-  test.equal(trials[4],
-             '(biggie=eggs leaf guava 0 a:eggs b:leaf c:guava d:0)');
-  // can't pass > 1 positional arg to block helper
-  test.equal(trials[5], "(twoArgBlock=true,false)");
-  test.equal(trials.length, 6);
 });
 
 

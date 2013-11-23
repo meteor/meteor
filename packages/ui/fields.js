@@ -53,7 +53,7 @@ _extend(UI.Component, {
         compWithData = compWithData ? findComponentWithProp('data', compWithData.parent) : null;
       }
 
-      return compWithData.data;
+      return (compWithData ? compWithData.data : null);
 
     } else if ((comp = findComponentWithProp(id, self))) {
       // found a property or method of a component

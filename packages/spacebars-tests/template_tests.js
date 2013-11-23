@@ -590,7 +590,6 @@ Tinytest.add("spacebars - templates - tricky attrs", function (test) {
   tmpl.theClass = function () { return R.get(); };
 
   var div = renderToDiv(tmpl);
-  console.log(div.innerHTML);
   test.equal(trim(canonicalizeHtml(div.innerHTML)).slice(0, 30),
              '<input type="text"><input class="foo" type="checkbox">'.slice(0, 30));
 
@@ -599,4 +598,12 @@ Tinytest.add("spacebars - templates - tricky attrs", function (test) {
   test.equal(trim(canonicalizeHtml(div.innerHTML)),
              '<input type="text"><input class="bar" type="checkbox">');
 
+});
+
+Tinytest.add('spacebars - templates - no data context', function (test) {
+  var tmpl = Template.spacebars_template_test_no_data;
+
+  // failure is if an exception is thrown here
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), 'asdf');
 });
