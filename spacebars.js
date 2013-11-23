@@ -1344,9 +1344,16 @@ var replaceSpecials = function (node) {
     } else if (type === 'array') {
       return _.map(node, replaceSpecials);
     } else if (type === 'special') {
-      if (node.attrs.type !== 'DOUBLE')
+      var tag = node.attrs;
+      if (node.attrs.type === 'DOUBLE') {
+        var nameCode = codeGenPath2(tag.path);
+        var argCode = codeGenArgs2(tag.args);
+
+        return HTML.EmitCode('function () { return Spacebars.mustache(' + nameCode +
+                             (argCode ? ', ' + argCode.join(', ') : '') + '); }');
+      } else {
         return node;
-      return HTML.EmitCode('function () { return Session.get("' + node.attrs.path.join('.') + '"); }');
+      }
     } else {
       return node;
     }
@@ -1367,10 +1374,111 @@ Spacebars.compile2 = function (input) {
   tree = replaceSpecials(tree);
 
   var code = '(function () { var self = this; return ';
-
   code += UI.toCode(tree);
-
   code += '; })';
 
+  code = beautify(code);
+
   return code;
+};
+
+var beautify = function (code) {
+  if (Package.minifiers) {
+    var result = UglifyJSMinify(code,
+                                { fromString: true,
+                                  mangle: false,
+                                  compress: false,
+                                  output: { beautify: true,
+                                            indent_level: 2,
+                                            width: 80 } });
+    var output = result.code;
+    // Uglify interprets our expression as a statement and may add a semicolon.
+    // Strip trailing semicolon.
+    output = output.replace(/;$/, '');
+    return output;
+  } else {
+    // don't actually beautify; no UglifyJS
+    return code;
+  }
+};
+
+  // `path` is an array of at least one string
+var codeGenPath2 = function (path) {
+  var code = 'self.lookup(' + toJSLiteral(path[0]) + ')';
+
+  if (path.length > 1) {
+    code = 'Spacebars.index(' + code + ', ' +
+      _.map(path.slice(1), toJSLiteral).join(', ') + ')';
+  }
+
+  return code;
+};
+
+// returns: array of source strings, or null if no
+// args at all.
+//
+// if forComponentWithOpts is truthy, perform
+// component invocation argument handling.
+// forComponentWithOpts is a map from name of keyword
+// argument to source code.  For example,
+// `{ content: "Component.extend(..." }`.
+// In this case, we return an array of exactly one string
+// containing the source code of an object literal.
+var codeGenArgs2 = function (tagArgs, forComponentWithOpts) {
+  var options = null; // source -> source
+  var args = null; // [source]
+
+  var forComponent = !! forComponentWithOpts;
+
+  _.each(tagArgs, function (arg, i) {
+    var argType = arg[0];
+    var argValue = arg[1];
+
+    var argCode;
+    switch (argType) {
+    case 'STRING':
+    case 'NUMBER':
+    case 'BOOLEAN':
+    case 'NULL':
+      argCode = toJSLiteral(argValue);
+      break;
+    case 'PATH':
+      argCode = codeGenPath2(argValue);
+      break;
+    default:
+      // can't get here
+      throw new Error("Unexpected arg type: " + argType);
+    }
+
+    if (arg.length > 2) {
+      // keyword argument (represented as [type, value, name])
+      options = (options || {});
+      if (! (forComponentWithOpts &&
+             (arg[2] in forComponentWithOpts))) {
+        options[toJSLiteral(arg[2])] = argCode;
+      }
+    } else {
+      // positional argument
+      args = (args || []);
+      args.push(argCode);
+    }
+  });
+
+  if (forComponent) {
+    _.each(forComponentWithOpts, function (v, k) {
+      options = (options || {});
+      options[toJSLiteral(k)] = v;
+    });
+    // put options as dictionary at beginning of args for component
+    args = (args || []);
+    args.unshift(options ? makeObjectLiteral(options) : 'null');
+  } else {
+    // put options as dictionary at end of args
+    if (options) {
+      args = (args || []);
+      args.push(makeObjectLiteral(options));
+    }
+  }
+
+  return args;
 };
