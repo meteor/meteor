@@ -37,7 +37,7 @@ Package.on_test(function (api) {
   api.use('templating');
   api.use('underscore');
   api.use(['test-helpers', 'domutils', 'session', 'deps',
-           'spark', 'minimongo'], 'client');
+           'minimongo'], 'client');
 
   api.add_files([
     'templating_tests.js',
