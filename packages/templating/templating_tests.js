@@ -551,7 +551,8 @@ Tinytest.add('templating - each falsy Issue #801', function (test) {
   //Minor test for issue #801
   Template.test_template_issue801.values = function() { return [1,2,null,undefined]; };
   var div = renderToDiv(Template.test_template_issue801);
-  // XXX fails. on devel, {{null}} outputs "null". on shark, {{null}} outputs ""
+  // XXX fails. on devel, if a helper `foo` returns `null`, then
+  // {{foo}} outputs "null". on shark, {{foo}} outputs ""
   test.equal(canonicalizeHtml(div.innerHTML), "12null");
 });
 
