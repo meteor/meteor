@@ -29,7 +29,7 @@ _.extend(LocalCollection._IdMap.prototype, {
     var key = LocalCollection._idStringify(id);
     return _.has(self._map, key);
   },
-  isEmpty: function () {
+  empty: function () {
     var self = this;
     return _.isEmpty(self._map);
   },
