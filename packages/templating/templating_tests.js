@@ -1,7 +1,7 @@
 // render and put in the document
 var renderToDiv = function (comp) {
   var div = document.createElement("DIV");
-  UI.insert(UI.render(comp), div);
+  UI.materialize(comp, div);
   return div;
 };
 

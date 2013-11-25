@@ -42,7 +42,7 @@ Package.on_test(function (api) {
 
   api.add_files([
     'templating_tests.js',
-    'templating_tests.html'
+    'templating_tests.html2'
   ], 'client');
   api.add_files([
     'plugin/html_scanner.js',
