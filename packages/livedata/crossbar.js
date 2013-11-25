@@ -65,10 +65,9 @@ _.extend(DDPServer._Crossbar.prototype, {
     });
 
     if (onComplete)
-      onComplete = Meteor.bindEnvironment(onComplete, function (e) {
-        Meteor._debug("Exception in Crossbar fire complete " +
-                      "callback", e.stack);
-      });
+      onComplete = Meteor.bindEnvironment(
+        onComplete,
+        "Crossbar fire complete callback");
 
     var outstanding = callbacks.length;
     if (!outstanding)
