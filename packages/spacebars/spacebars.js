@@ -1059,6 +1059,26 @@ Spacebars.mustache = function (value/*, args*/) {
     return String(result == null ? '' : result);
 };
 
+Spacebars.attrMustache = function (value/*, args*/) {
+  // call any arg that is a function (checked in Spacebars.call)
+  for (var i = 1; i < arguments.length; i++)
+    arguments[i] = Spacebars.call(arguments[i]);
+
+  var result = Spacebars.call.apply(null, arguments);
+
+  if (result == null || result === '') {
+    return null;
+  } else if (typeof result === 'object') {
+    return result;
+  } else if (typeof result === 'string' && UI.isValidAttributeName(result)) {
+    var obj = {};
+    obj[result] = '';
+    return obj;
+  } else {
+    throw new Error("Expected valid attribute name, '', null, or object");
+  }
+};
+
 Spacebars.extend = function (obj/*, k1, v1, k2, v2, ...*/) {
   for (var i = 1; i < arguments.length; i += 2)
     obj[arguments[i]] = arguments[i+1];
@@ -1360,19 +1380,104 @@ var replaceSpecials = function (node) {
   };
 };
 
-// (expose for testing)
+// Input: Attribute dictionary, or null.  Attribute values may have `Special`
+// nodes representing template tags.  In addition, the synthetic attribute
+// `$specials` may be present and contain an array of `Special` nodes
+// representing template tags in the attribute name position (i.e. "dynamic
+// attributes" like `<div {{attrs}}>`).
+//
+// Output: If there are no Specials in the attribute values and no $specials,
+// returns the input.  Otherwise, returns an object of the form `{$attrs:
+// EmitCode("function () { return ... }")}`, which when converted to code
+// will create code like `DIV({$attrs: function () { ... }}, ...)`.  The
+// special key `$attrs` is interpreted at node construction time and causes
+// the DIV node to have a function as its `.attrs`.
+//
+// (exposed for testing)
 Spacebars._handleSpecialAttributes = function (oldAttrs) {
-  var dynamics = null;
+  if (! oldAttrs)
+    return oldAttrs;
 
+  // array of Special nodes wrapping template tags
+  var dynamics = null;
   if (oldAttrs.$specials && oldAttrs.$specials.length)
-  return oldAttrs;
+    dynamics = oldAttrs.$specials;
+
+  var foundSpecials = false;
+
+  // Runs on an attribute value, or part of an attribute value.
+  // If Specials are found, converts them to EmitCode with
+  // the appropriate generated code.  Otherwise, returns the
+  // input.
+  //
+  // If specials are found, sets `foundSpecials` to true.
+  var convertSpecialToEmitCode = function (v) {
+    var type = HTML.typeOf(v);
+    if (type === 'null' || type === 'string' || type === 'charref') {
+      return v;
+    } else if (type === 'special') {
+      foundSpecials = true;
+      return HTML.EmitCode(codeGenMustache(v.attrs));
+    } else if (type === 'array') {
+      return _.map(v, convertSpecialToEmitCode);
+    } else {
+      throw new Error("Unexpected node in attribute value: " + v);
+    }
+  };
+
+  var newAttrs = null;
+  _.each(oldAttrs, function (value, name) {
+    if (name.charAt(0) !== '$') {
+      if (! newAttrs)
+        newAttrs = {};
+      newAttrs[name] = convertSpecialToEmitCode(value);
+    }
+  });
+
+  if ((! dynamics) && (! foundSpecials))
+    return oldAttrs;
+
+  // strings of JS code evaluating to attribute dictionaries
+  var attrObjectStrings = [];
+  if (newAttrs)
+    attrObjectStrings.push(UI.attributesToCode(newAttrs));
+  if (dynamics) {
+    _.each(dynamics, function (special) {
+      var tag = special.attrs;
+      attrObjectStrings.push(codeGenMustache(tag, 'attrMustache'));
+    });
+  }
+
+  var finalAttrObjectString;
+  if (attrObjectStrings.length > 1) {
+    finalAttrObjectString =
+      'Spacebars.combineAttributes(' + attrObjectStrings.join(', ') + ')';
+  } else {
+    finalAttrObjectString = attrObjectStrings[0];
+  }
+
+  return { $attrs: HTML.EmitCode("function () { return " +
+                                 finalAttrObjectString +
+                                 "; }") };
 };
 
-var codeGenMustache = function (tag) {
+// Takes zero or more dictionaries as arguments.  Returns a new object created
+// by starting with an empty object and copying the attributes from each
+// argument object, from left to right, with later attributes taking precedence
+// if two objects have attributes of the same name.
+Spacebars.combineAttributes = function (/*attrObjects*/) {
+  // Use _.extend({}, arg1, arg2, arg3, ...)
+  var args = [{}];
+  args.push.apply(args, arguments);
+  return _.extend.apply(_, args);
+};
+
+var codeGenMustache = function (tag, mustacheType) {
   var nameCode = codeGenPath2(tag.path);
   var argCode = codeGenArgs2(tag.args);
+  var mustache = (mustacheType || 'mustache');
 
-  return 'Spacebars.mustache(' + nameCode +
+  return 'Spacebars.' + mustache + '(' + nameCode +
     (argCode ? ', ' + argCode.join(', ') : '') + ')';
 };
 
@@ -1492,7 +1597,7 @@ var codeGenArgs2 = function (tagArgs, forComponentWithOpts) {
     // put options as dictionary at end of args
     if (options) {
       args = (args || []);
-      args.push(makeObjectLiteral(options));
+      args.push('{hash: ' + makeObjectLiteral(options) + '}');
     }
   }
 

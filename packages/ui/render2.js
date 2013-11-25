@@ -483,8 +483,13 @@ var attributeValueToCode = function (v) {
 //
 // See <http://www.w3.org/TR/REC-xml/#NT-Name> and
 // <http://dev.w3.org/html5/markup/syntax.html#syntax-attributes>.
-var checkAttributeName = function (name) {
+var isValidAttributeName = function (name) {
   return /^[:_A-Za-z][:_A-Za-z0-9.\-]*/.test(name);
+};
+
+var checkAttributeName = function (name) {
+  if (! isValidAttributeName(name))
+    throw new Error("Invalid attribute name: " + name);
 };
 
 // Convert the pseudoDOM `node` into static HTML.
@@ -617,22 +622,17 @@ var toCode = function (node) {
       if (node.attrs) {
         if (typeof node.attrs === 'function')
           throw new Error("Can't convert function object to code string.  Use EmitCode instead.");
-        var kvStrs = [];
         if (type === 'special') {
           // Specials don't occur in the compiled templates, so this is
           // somewhat of a fringe codepath, but we have it for completeness.
+          var kvStrs = [];
           _.each(node.attrs, function (v, k) {
             kvStrs.push(toObjectLiteralKey(k) + ': ' + toCode(v));
           });
+          argStrs.push('{' + kvStrs.join(', ') + '}');
         } else {
-          _.each(node.attrs, function (v, k) {
-            checkAttributeName(k);
-            v = attributeValueToCode(v);
-            if (v !== null)
-              kvStrs.push(toObjectLiteralKey(k) + ': ' + v);
-          });
+          argStrs.push(attributesToCode(node.attrs));
         }
-        argStrs.push('{' + kvStrs.join(', ') + '}');
       }
 
       _.each(node, function (child) {
@@ -660,10 +660,29 @@ var toCode = function (node) {
   return result || 'null';
 };
 
-// XXX we're just exposing these for now
+var attributesToCode = function (attrs) {
+  var kvStrs = [];
+  if (attrs) {
+    _.each(attrs, function (v, k) {
+      if (k.charAt(0) !== '$')
+        // allow `$attrs`, `$specials`
+        checkAttributeName(k);
+      v = attributeValueToCode(v);
+      if (v !== null)
+        kvStrs.push(toObjectLiteralKey(k) + ': ' + v);
+    });
+  }
+  return '{' + kvStrs.join(', ') + '}';
+};
+
+
+// XXX figure out the right names, and namespace, for these.
+// for example, maybe some of them go in the HTML package.
 UI.materialize = materialize;
 UI.toHTML = toHTML;
 UI.toCode = toCode;
+UI.attributesToCode = attributesToCode;
+UI.isValidAttributeName = isValidAttributeName;
 
 UI.body2 = UI.Component.extend({
   kind: 'body',
