@@ -173,13 +173,8 @@ observeChangesWithOplog = function (cursorDescription,
         newDoc._id = id;
         LocalCollection._modify(newDoc, op.o);
         handleDoc(id, sharedProjectionFn(newDoc));
-      } else if (LocalCollection._isSelectorAffectedByModifier(
+      } else if (LocalCollection._canSelectorBecomeTrueByModifier(
           cursorDescription.selector, op.o)) {
-        // XXX _isSelectorAffectedByModifier should actually be
-        // _canModifierChangeSelectorToTrue.  because {x: 9} is affected by
-        // {$set: {x: 7}} but not in a way that is relevant here, because either
-        // x was already 9 (and this was handled by the previous clause), or x
-        // was not 9 and this isn't going to affect the selector
         needToFetch.set(id, op.ts.toString());
         if (phase === PHASE.STEADY)
           fetchModifiedDocuments();
