@@ -15,6 +15,10 @@ ObserveMultiplexer = function (options) {
   self._handles = {};
   self._ready = false;
   self._readyFuture = new Future;
+  // Any handles added between creation and the first doc being added (or the
+  // cursor being made ready while empty) get special handling: their adds get
+  // delivered immediately instead of waiting for ready.
+  self._initialHandles = {};
   self._cache = new LocalCollection._CachingChangeObserver({
     ordered: options.ordered});
   // Number of addHandleAndSendInitialAdds tasks scheduled but not yet
@@ -47,8 +51,11 @@ _.extend(ObserveMultiplexer.prototype, {
 
     self._queue.runTask(function () {
       self._handles[handle._id] = handle;
-      if (self._ready)
+      if (self._ready) {
         self._sendAdds(handle);
+      } else if (self._cache.docs.empty()) {
+        self._initialHandles[handle._id] = handle;
+      }
       --self._addHandleTasksScheduledButNotPerformed;
     });
     // *outside* the task, since otherwise we'd deadlock
@@ -63,6 +70,13 @@ _.extend(ObserveMultiplexer.prototype, {
   // that we have to be careful when we iterate over _handles.
   removeHandle: function (id) {
     var self = this;
+
+    // This should not be possible: you can only call removeHandle by having
+    // access to the ObserveHandle, which isn't returned to user code until the
+    // multiplex is ready.
+    if (!self._ready || self._initialHandles)
+      throw new Error("Can't remove handles until the multiplex is ready");
+
     delete self._handles[id];
 
     Package.facts && Package.facts.Facts.incrementServerFact(
@@ -83,8 +97,10 @@ _.extend(ObserveMultiplexer.prototype, {
     self._handles = null;
     // It shouldn't be possible for us to stop when all our handles still
     // haven't been returned from observeChanges!
+    if (!self._ready)
+      throw Error("surprising _stop: not ready");
     if (!self._readyFuture.isResolved())
-      throw Error("surprising _stop");
+      throw Error("surprising _stop: unresolved");
 
     Package.facts && Package.facts.Facts.incrementServerFact(
       "mongo-livedata", "observe-multiplexers", -1);
@@ -99,12 +115,17 @@ _.extend(ObserveMultiplexer.prototype, {
     self._queue.queueTask(function () {
       if (self._ready)
         throw Error("can't make ObserveMultiplex ready twice!");
-      self._ready = true;
-      // Use _.keys iteration in case removeHandle is called concurrently.
-      _.each(_.keys(self._handles), function (handleId) {
-        var handle = self._handles[handleId];
-        handle && self._sendAdds(handle);
+      // We can assume that removeHandle isn't called during this loop because
+      // you can't stop a handle until the synchronous bit is done. (If it is,
+      // removeHandle will throw due to _ready being false.)
+      _.each(self._handles, function (handle, handleId) {
+        // If this was an "initial handle", we already sent its adds.
+        if (_.has(self._initialHandles, handleId))
+          return;
+        self._sendAdds(handle);
       });
+      self._initialHandles = null;
+      self._ready = true;
       self._readyFuture.return();
     });
   },
@@ -128,15 +149,24 @@ _.extend(ObserveMultiplexer.prototype, {
       // don't) and skip this clone. Currently 'changed' hangs on to state
       // though.
       self._cache.applyChange[callbackName].apply(null, EJSON.clone(args));
-      // If we haven't finished the initial adds, we have nothing more to do.
-      if (!self._ready)
-        return;
+
+      var handleIds = _.keys(self._handles);
+      // If we haven't finished the initial adds, then the only callbacks that
+      // we multiplex out are those to the "initial handles": handles that got
+      // added before any initial adds were received. (This allows us to stream
+      // the first handle's adds out rather than buffering them until ready().)
+      if (!self._ready) {
+        if (callbackName !== 'added' && callbackName !== 'addedBefore')
+          throw new Error("Got " + callbackName + " during initial adds");
+        handleIds = _.keys(self._initialHandles);
+      }
+
       // Now multiplex the callbacks out to all observe handles. It's OK if
       // these calls yield; since we're inside a task, no other use of our queue
       // can continue until these are done. (But we do have to be careful to not
       // use a handle that got removed, because removeHandle does not use the
-      // queue.)
-      _.each(_.keys(self._handles), function (handleId) {
+      // queue; thus, we iterate over an array of keys that we control.)
+      _.each(handleIds, function (handleId) {
         var handle = self._handles[handleId];
         if (!handle)
           return;
@@ -147,8 +177,7 @@ _.extend(ObserveMultiplexer.prototype, {
     });
   },
 
-  // Sends initial adds to a handle. It should only be called once the handle is
-  // ready (ie, the ready callback has been called) and from within a task
+  // Sends initial adds to a handle. It should only be called from within a task
   // (either the task that is processing the ready() call or the task that is
   // processing the addHandleAndSendInitialAdds call). It synchronously invokes
   // the handle's added or addedBefore; there's no need to flush the queue
@@ -157,8 +186,6 @@ _.extend(ObserveMultiplexer.prototype, {
     var self = this;
     if (self._queue.safeToRunTask())
       throw Error("_sendAdds may only be called from within a task!");
-    if (!self._ready)
-      throw Error("_sendAdds may only be called once ready!");
     var add = self._ordered ? handle._addedBefore : handle._added;
     if (!add)
       return;

@@ -85,7 +85,7 @@ observeChangesWithOplog = function (cursorDescription,
 
   var fetchModifiedDocuments = function () {
     phase = PHASE.FETCHING;
-    while (!stopped && !needToFetch.isEmpty()) {
+    while (!stopped && !needToFetch.empty()) {
       if (phase !== PHASE.FETCHING)
         throw new Error("Surprising phase in fetchModifiedDocuments: " + phase);
 
@@ -258,7 +258,7 @@ observeChangesWithOplog = function (cursorDescription,
     if (phase !== PHASE.INITIALIZING)
       throw Error("Phase unexpectedly " + phase);
 
-    if (needToFetch.isEmpty()) {
+    if (needToFetch.empty()) {
       beSteady();
     } else {
       fetchModifiedDocuments();
