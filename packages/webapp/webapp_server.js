@@ -545,7 +545,7 @@ var runWebAppServer = function () {
 
     }, function (e) {
       console.error("Error listening:", e);
-      console.error(e.stack);
+      console.error(e && e.stack);
     }));
 
     if (argv.keepalive)
