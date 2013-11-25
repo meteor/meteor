@@ -60,7 +60,7 @@ _.extend(Meteor.EnvironmentVariable.prototype, {
 // an exception.  If it is a string, it should be a description of the
 // callback, and when an exception is raised a debug message will be
 // printed with the description.
-Meteor.bindEnvironment = function (func, onException, _this, context) {
+Meteor.bindEnvironment = function (func, onException, _this) {
   if (!Fiber.current)
     throw new Error(noFiberMessage);
 

@@ -105,7 +105,7 @@ _.extend(Meteor, {
           callback = fut.resolver();
         }
       }
-      newArgs.push(Meteor.bindEnvironment(callback, logErr));
+      newArgs.push(Meteor.bindEnvironment(callback));
       var result = fn.apply(self, newArgs);
       if (fut)
         return fut.wait();
