@@ -146,10 +146,19 @@ _.extend(ObserveMultiplexer.prototype, {
       });
     });
   },
+
+  // Sends initial adds to a handle. It should only be called once the handle is
+  // ready (ie, the ready callback has been called) and from within a task
+  // (either the task that is processing the ready() call or the task that is
+  // processing the addHandleAndSendInitialAdds call). It synchronously invokes
+  // the handle's added or addedBefore; there's no need to flush the queue
+  // afterwards to ensure that the callbacks get out.
   _sendAdds: function (handle) {
     var self = this;
     if (self._queue.safeToRunTask())
       throw Error("_sendAdds may only be called from within a task!");
+    if (!self._ready)
+      throw Error("_sendAdds may only be called once ready!");
     var add = self._ordered ? handle._addedBefore : handle._added;
     if (!add)
       return;
