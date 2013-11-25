@@ -46,7 +46,10 @@ UI.render = function (kind, props, parentComp) {
   comp.isInited = true;
   comp.templateInstance = {
     findAll: function (selector) {
-      return comp.dom.$(selector);
+      if (comp.dom)
+        return comp.dom.$(selector);
+      else
+        throw new Error("Component not rendered");
     },
     find: function (selector) {
       var result = this.findAll(selector);

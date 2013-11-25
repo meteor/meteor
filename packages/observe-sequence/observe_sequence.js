@@ -72,7 +72,7 @@ ObserveSequence = {
           // can do better so that diffing the arrays ["A", "B"] and
           // ["A"] doesn't cause "A" to be removed.
           seqArray = _.map(seq, function (doc, i) {
-            return { _id: doc._id || Random.id(), item: doc };
+            return { _id: (doc && doc._id) || Random.id(), item: doc };
           });
           diffArray(lastSeqArray, seqArray, callbacks);
         } else if (isMinimongoCursor(seq)) {
@@ -82,7 +82,7 @@ ObserveSequence = {
           // old sequence.
           cursor.rewind(); // so that we can fetch
           seqArray = _.map(cursor.fetch(), function (doc) {
-            return {_id: doc._id, item: doc};
+            return {_id: (doc && doc._id), item: doc};
           });
           cursor.rewind(); // so that the user can still fetch
 
