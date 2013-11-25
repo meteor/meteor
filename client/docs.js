@@ -133,7 +133,8 @@ var toc = [
         {instance: "this", name: "userId", id: "method_userId"},
         {instance: "this", name: "setUserId", id: "method_setUserId"},
         {instance: "this", name: "isSimulation", id: "method_issimulation"},
-        {instance: "this", name: "unblock", id: "method_unblock"}
+        {instance: "this", name: "unblock", id: "method_unblock"},
+        {instance: "this", name: "session", id: "method_session"}
       ],
       "Meteor.Error",
       "Meteor.call",
@@ -144,8 +145,9 @@ var toc = [
       "Meteor.status",
       "Meteor.reconnect",
       "Meteor.disconnect",
-      "DDP.connect",
-      "Meteor.onConnection"
+      "Meteor.onConnection",
+      "DDP.Session",
+      "DDP.connect"
     ],
 
     {name: "Collections", id: "collections"}, [
