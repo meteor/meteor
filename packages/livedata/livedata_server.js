@@ -262,16 +262,9 @@ var Session = function (server, version, socket) {
       self.server._closeSession(self);
     },
     onClose: function (fn) {
-      fn = Meteor.bindEnvironment(
-        fn,
-        function (err) {
-          Meteor._debug(
-            "Exception in connection session onClose callback",
-            err && err.stack
-          );
-        }
+      self._closeCallbacks.push(
+        Meteor.bindEnvironment(fn, "connection session onClose callback")
       );
-      self._closeCallbacks.push(fn);
     },
     _sessionData: self.sessionData
   };
@@ -1077,15 +1070,7 @@ _.extend(Server.prototype, {
   onConnection: function (fn) {
     var self = this;
 
-    fn = Meteor.bindEnvironment(
-      fn,
-      function (err) {
-        Meteor._debug(
-          "Exception in Meteor.server.onConnection callback",
-          err && err.stack
-        );
-      }
-    );
+    fn = Meteor.bindEnvironment(fn, "onConnection callback");
 
     self.connectionCallbacks.push(fn);
 
@@ -1246,11 +1231,11 @@ _.extend(Server.prototype, {
       // It's not really necessary to do this, since we immediately
       // run the callback in this fiber before returning, but we do it
       // anyway for regularity.
-      callback = Meteor.bindEnvironment(callback, function (e) {
-        // XXX improve error message (and how we report it)
-        Meteor._debug("Exception while delivering result of invoking '" +
-                      name + "'", e.stack);
-      });
+      // XXX improve error message (and how we report it)
+      callback = Meteor.bindEnvironment(
+        callback,
+        "delivering result of invoking '" + name + "'"
+      );
 
     // Run the handler
     var handler = self.method_handlers[name];

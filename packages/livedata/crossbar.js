@@ -56,10 +56,10 @@ _.extend(DDPServer._InvalidationCrossbar.prototype, {
     });
 
     if (onComplete)
-      onComplete = Meteor.bindEnvironment(onComplete, function (e) {
-        Meteor._debug("Exception in InvalidationCrossbar fire complete " +
-                      "callback", e.stack);
-      });
+      onComplete = Meteor.bindEnvironment(
+        onComplete,
+        "InvalidationCrossbar fire complete"
+      );
 
     var outstanding = callbacks.length;
     if (!outstanding)
