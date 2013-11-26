@@ -1007,20 +1007,63 @@ Spacebars.index = function (value, id1/*, id2, ...*/) {
   if (typeof value !== 'function') {
     var result = value[id1];
     if (typeof result !== 'function')
+      // neither `value` nor `value[id1]` are functions
       return result;
+    // `value[id1]` is a function.  bind it so that when called, `value`
+    // will be placed in `this`.
     return function (/*arguments*/) {
       return result.apply(value, arguments);
     };
   }
 
+  // `value` is a function.
   return function (/*arguments*/) {
     var foo = value();
     if (! foo)
+      // `value()[id1]` is falsy
       return foo; // falsy, don't index, pass through
     var bar = foo[id1];
     if (typeof bar !== 'function')
+      // `value()[id1]` is a non-function
       return bar;
+    // call `value()[id1](...arguments...)`
     return bar.apply(foo, arguments);
+  };
+};
+
+// Like `Spacebars.index`, but does not defer calling a function when
+// indexing it.  In other words, in `Spacebars.dot(foo, "bar")`, if
+// `foo` is a function, it is called immediately, and the result is
+// a function if `foo().bar` is a function and not if it is not.
+//
+// (In contrast, `Spacebars.index` will always return a reactive
+// function if `foo` is a function, since it merely composes reactive
+// computations without running them.)
+Spacebars.dot = function (value, id1/*, id2, ...*/) {
+  if (arguments.length > 2) {
+    // Note: doing this recursively is probably less efficient than
+    // doing it in an iterative loop.
+    var argsForRecurse = [];
+    argsForRecurse.push(Spacebars.dot(value, id1));
+    argsForRecurse.push.apply(argsForRecurse,
+                              Array.prototype.slice.call(arguments, 2));
+    return Spacebars.dot.apply(null, argsForRecurse);
+  }
+
+  if (typeof value === 'function')
+    value = value();
+
+  if (! value)
+    return value; // falsy, don't index, pass through
+
+  var result = value[id1];
+  if (typeof result !== 'function')
+    // neither `value` nor `value[id1]` are functions
+    return result;
+  // `value[id1]` is a function.  bind it so that when called, `value`
+  // will be placed in `this`.
+  return function (/*arguments*/) {
+    return result.apply(value, arguments);
   };
 };
 
