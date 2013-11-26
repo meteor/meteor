@@ -581,6 +581,7 @@ Spacebars.parse = function (inputString, options) {
   return tree;
 };
 
+// XXX beef this up from ui/render2.js
 var toJSLiteral = function (obj) {
   // http://timelessrepo.com/json-isnt-a-javascript-subset
   return (JSON.stringify(obj)
@@ -588,6 +589,7 @@ var toJSLiteral = function (obj) {
           .replace(/\u2029/g, '\\u2029'));
 };
 
+// XXX use toObjectLiteralKey from ui/render2.js
 // takes an object whose keys and values are strings of
 // JavaScript source code and returns the source code
 // of an object literal.
@@ -1405,7 +1407,12 @@ var replaceSpecials = function (node) {
         if (path.length === 1)
           compCode = '(Template[' + toJSLiteral(path[0]) + '] || ' + compCode + ')';
 
-        return HTML.EmitCode('function () { return Spacebars.include(' + compCode + '); }');
+        var includeArgs = codeGenIncludeArgs(tag);
+
+        return HTML.EmitCode(
+          'function () { return Spacebars.include(' + compCode +
+            (includeArgs.length ? ', ' + includeArgs.join(', ') : '') +
+            '); }');
       } else {
         throw new Error("Unexpected template tag type: " + tag.type);
       }
@@ -1415,10 +1422,85 @@ var replaceSpecials = function (node) {
   };
 };
 
-// XXX handle args
-Spacebars.include = function (kindOrFunc) {
-  var kind = (typeof kindOrFunc === 'function' ? kindOrFunc() : kindOrFunc);
-  return kind;
+var codeGenIncludeArgs = function (tag) {
+  var args = null;
+
+  _.each(tag.args, function (arg) {
+    var argType = arg[0];
+    var argValue = arg[1];
+
+    var argCode;
+    switch (argType) {
+    case 'STRING':
+    case 'NUMBER':
+    case 'BOOLEAN':
+    case 'NULL':
+      argCode = toJSLiteral(argValue);
+      break;
+    case 'PATH':
+      var path = argValue;
+      argCode = codeGenPath2(path);
+      // a single-segment path will compile to something like
+      // `self.lookup("foo")` which never establishes any dependencies,
+      // while `Spacebars.dot(self.lookup("foo"), "bar")` may establish
+      // dependencies.
+      if (path.length > 1)
+        argCode = 'function () { return ' + argCode + '; }';
+      break;
+    default:
+      // can't get here
+      throw new Error("Unexpected arg type: " + argType);
+    }
+
+    if (arg.length > 2) {
+      // keyword argument (represented as [type, value, name])
+      args = (args || {});
+      args[toJSLiteral(arg[2])] = argCode;
+    } else {
+      // positional argument
+      // XXX deal with >1 posArgs
+      args = (args || []);
+      args.data = argCode;
+    }
+  });
+
+  if (args)
+    return [makeObjectLiteral(args)];
+
+  return [];
+};
+
+Spacebars.include = function (kindOrFunc, args) {
+  if (typeof kindOrFunc === 'function') {
+    // function block helper
+    var func = kindOrFunc;
+
+    var hash = {};
+    for (var k in args) {
+      if (k !== 'data') {
+        var v = args[k];
+        hash[k] = (typeof v === 'function' ? v() : v);
+      }
+    }
+
+    if ('data' in args) {
+      var data = args.data;
+      data = (typeof data === 'function' ? data() : data);
+      return func(data, { hash: hash });
+    } else {
+      return func({ hash: hash });
+    }
+  } else {
+    // Component
+    var kind = kindOrFunc;
+    if (! UI.isComponent(kind))
+      throw new Error("Expected template, found: " + kind);
+
+    if (args)
+      return kind.extend(args);
+    else
+      return kind;
+  }
 };
 
 // Input: Attribute dictionary, or null.  Attribute values may have `Special`
@@ -1634,21 +1716,11 @@ var codeGenPath2 = function (path) {
 
 // returns: array of source strings, or null if no
 // args at all.
-//
-// if forComponentWithOpts is truthy, perform
-// component invocation argument handling.
-// forComponentWithOpts is a map from name of keyword
-// argument to source code.  For example,
-// `{ content: "Component.extend(..." }`.
-// In this case, we return an array of exactly one string
-// containing the source code of an object literal.
-var codeGenArgs2 = function (tagArgs, forComponentWithOpts) {
+var codeGenArgs2 = function (tagArgs) {
   var options = null; // source -> source
   var args = null; // [source]
 
-  var forComponent = !! forComponentWithOpts;
-
-  _.each(tagArgs, function (arg, i) {
+  _.each(tagArgs, function (arg) {
     var argType = arg[0];
     var argValue = arg[1];
 
@@ -1671,10 +1743,7 @@ var codeGenArgs2 = function (tagArgs, forComponentWithOpts) {
     if (arg.length > 2) {
       // keyword argument (represented as [type, value, name])
       options = (options || {});
-      if (! (forComponentWithOpts &&
-             (arg[2] in forComponentWithOpts))) {
-        options[toJSLiteral(arg[2])] = argCode;
-      }
+      options[toJSLiteral(arg[2])] = argCode;
     } else {
       // positional argument
       args = (args || []);
@@ -1682,20 +1751,10 @@ var codeGenArgs2 = function (tagArgs, forComponentWithOpts) {
     }
   });
 
-  if (forComponent) {
-    _.each(forComponentWithOpts, function (v, k) {
-      options = (options || {});
-      options[toJSLiteral(k)] = v;
-    });
-    // put options as dictionary at beginning of args for component
+  // put options as dictionary at end of args
+  if (options) {
     args = (args || []);
-    args.unshift(options ? makeObjectLiteral(options) : 'null');
-  } else {
-    // put options as dictionary at end of args
-    if (options) {
-      args = (args || []);
-      args.push('{hash: ' + makeObjectLiteral(options) + '}');
-    }
+    args.push('{hash: ' + makeObjectLiteral(options) + '}');
   }
 
   return args;
