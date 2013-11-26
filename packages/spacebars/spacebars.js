@@ -1388,22 +1388,37 @@ var replaceSpecials = function (node) {
       // XXX make sure we only pass a string through from the helper to the
       // Render API, except in the case of DOUBLE with a SafeString-like
       // situation.  Support our equivalent of SafeString.
-      if (node.attrs.type === 'DOUBLE') {
+      if (tag.type === 'DOUBLE') {
         return HTML.EmitCode('function () { return ' +
                              codeGenMustache(tag) + '; }');
-      } else if (node.attrs.type === 'TRIPLE') {
+      } else if (tag.type === 'TRIPLE') {
         var nameCode = codeGenPath2(tag.path);
         var argCode = codeGenArgs2(tag.args);
 
         return HTML.EmitCode('function () { return HTML.Raw(' +
                              codeGenMustache(tag) + '); }');
+      } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
+        // XXX handle more stuff
+        var path = tag.path;
+        var compCode = codeGenPath2(path);
+
+        if (path.length === 1)
+          compCode = '(Template[' + toJSLiteral(path[0]) + '] || ' + compCode + ')';
+
+        return HTML.EmitCode('function () { return Spacebars.include(' + compCode + '); }');
       } else {
-        return node;
+        throw new Error("Unexpected template tag type: " + tag.type);
       }
     } else {
       return node;
     }
   };
+};
+
+// XXX handle args
+Spacebars.include = function (kindOrFunc) {
+  var kind = (typeof kindOrFunc === 'function' ? kindOrFunc() : kindOrFunc);
+  return kind;
 };
 
 // Input: Attribute dictionary, or null.  Attribute values may have `Special`
