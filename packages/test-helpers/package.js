@@ -12,7 +12,8 @@ Package.on_use(function (api) {
     'pollUntil', 'WrappedFrag', 'try_all_permutations', 'StubStream',
     'SeededRandom', 'ReactiveVar', 'OnscreenDiv', 'clickElement', 'blurElement',
     'focusElement', 'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',
-    'withCallbackLogger', 'testAsyncMulti'], {testOnly: true});
+    'withCallbackLogger', 'testAsyncMulti', 'simplePoll',
+    'establishConnection'], {testOnly: true});
 
   api.add_files('try_all_permutations.js');
   api.add_files('async_multi.js');
@@ -25,6 +26,7 @@ Package.on_use(function (api) {
   api.add_files('current_style.js');
   api.add_files('reactivevar.js');
   api.add_files('callback_logger.js');
+  api.add_files('connection.js', 'server');
 });
 
 Package.on_test(function (api) {

@@ -563,4 +563,35 @@ if (Meteor.isServer) (function () {
   });
 
   // XXX would be nice to test Accounts.config({forbidClientAccountCreation: true})
+
+  Tinytest.addAsync(
+    'passwords - login tokens cleaned up',
+    function (test, onComplete) {
+      var username = Random.id();
+      Accounts.createUser({
+        username: username,
+        password: 'password'
+      });
+        
+      establishConnection(
+        test,
+        function (connection, session) {
+          session.onClose(function () {
+            test.isFalse(_.contains(Accounts._getTokenSessions(token), session.id));
+            onComplete();
+          });
+          var result = connection.call('login', {
+            user: {username: username},
+            password: 'password'
+          });
+          test.isTrue(result);
+          var token = Accounts._getAccountData(session.id, 'loginToken');
+          test.isTrue(token);
+          test.isTrue(_.contains(Accounts._getTokenSessions(token), session.id));
+          connection.disconnect();
+        },
+        onComplete
+      );
+    }
+  );
 }) ();

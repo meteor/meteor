@@ -31,12 +31,6 @@ MethodInvocation = function (options) {
 
   // On the server, the session this method call came in on.
   this.session = options.session;
-
-  // Scratch data scoped to this connection (livedata_connection on the
-  // client, livedata_session on the server). This is only used
-  // internally, but we should have real and documented API for this
-  // sort of thing someday.
-  this._sessionData = options.sessionData;
 };
 
 _.extend(MethodInvocation.prototype, {
