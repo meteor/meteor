@@ -250,8 +250,9 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
   var stopped = false;
   var tailHandle = null;
   var readyFuture = new Future();
-  var nextId = 0;
-  var callbacksByCollection = {};
+  var crossbar = new DDPServer._Crossbar({
+    factPackage: "mongo-livedata", factName: "oplog-watchers"
+  });
   var lastProcessedTS = null;
   // Lazily calculate the basic selector. Don't call baseOplogSelector() at the
   // top level of this function, because we don't want this function to block.
@@ -277,27 +278,28 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
       // XXX should close connections too
     },
 
-    onOplogEntry: function (collectionName, callback) {
+    onOplogEntry: function (trigger, callback) {
       if (stopped)
         throw new Error("Called onOplogEntry on stopped handle!");
 
       // Calling onOplogEntry requires us to wait for the tailing to be ready.
       readyFuture.wait();
 
-      callback = Meteor.bindEnvironment(callback, function (err) {
+      var originalCallback = callback;
+      callback = Meteor.bindEnvironment(function (notification, onComplete) {
+        // XXX can we avoid this clone by making oplog.js careful?
+        try {
+          originalCallback(EJSON.clone(notification));
+        } finally {
+          onComplete();
+        }
+      }, function (err) {
         Meteor._debug("Error in oplog callback", err.stack);
       });
-      if (!_.has(callbacksByCollection, collectionName))
-        callbacksByCollection[collectionName] = {};
-      var callbackId = nextId++;
-      Package.facts && Package.facts.Facts.incrementServerFact(
-        "mongo-livedata", "oplog-watchers", 1);
-      callbacksByCollection[collectionName][callbackId] = callback;
+      var listenHandle = crossbar.listen(trigger, callback);
       return {
         stop: function () {
-          delete callbacksByCollection[collectionName][callbackId];
-          Package.facts && Package.facts.Facts.incrementServerFact(
-            "mongo-livedata", "oplog-watchers", -1);
+          listenHandle.stop();
         }
       };
     },
@@ -311,8 +313,8 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
       if (stopped)
         throw new Error("Called waitUntilCaughtUp on stopped handle!");
 
-      // Calling onOplogEntry requries us to wait for the oplog connection to be
-      // ready.
+      // Calling waitUntilCaughtUp requries us to wait for the oplog connection
+      // to be ready.
       readyFuture.wait();
 
       // We need to make the selector at least as restrictive as the actual
@@ -403,16 +405,21 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
             doc.ns.substr(0, dbName.length + 1) === (dbName + '.')))
         throw new Error("Unexpected ns");
 
-      var collectionName = doc.ns.substr(dbName.length + 1);
+      var trigger = {collection: doc.ns.substr(dbName.length + 1), op: doc};
 
       // Is it a special command and the collection name is hidden somewhere in
       // operator?
-      if (collectionName === "$cmd")
-        collectionName = doc.o.drop;
+      if (trigger.collection === "$cmd") {
+        trigger.collection = doc.o.drop;
+        trigger.dropCollection = true;
+      } else {
+        // All other ops have an id.
+        trigger.id = idForOp(doc);
+      }
 
-      _.each(callbacksByCollection[collectionName], function (callback) {
-        callback(EJSON.clone(doc));
-      });
+      var f = new Future;
+      crossbar.fire(trigger, f.resolver());
+      f.wait();
 
       // Now that we've processed this operation, process pending sequencers.
       if (!doc.ts)
@@ -1181,23 +1188,17 @@ MongoConnection.prototype._observeChanges = function (
 // here, so that updates to different specific IDs don't cause us to poll.
 // listenCallback is the same kind of (notification, complete) callback passed
 // to InvalidationCrossbar.listen.
+
 listenAll = function (cursorDescription, listenCallback) {
   var listeners = [];
-  var listenOnTrigger = function (trigger) {
+  forEachTrigger(cursorDescription, function (trigger) {
+    // The "drop collection" event is used by the oplog crossbar, not the
+    // invalidation crossbar.
+    if (trigger.dropCollection)
+      return;
     listeners.push(DDPServer._InvalidationCrossbar.listen(
       trigger, listenCallback));
-  };
-
-  var key = {collection: cursorDescription.collectionName};
-  var specificIds = LocalCollection._idsMatchedBySelector(
-    cursorDescription.selector);
-  if (specificIds) {
-    _.each(specificIds, function (id) {
-      listenOnTrigger(_.extend({id: id}, key));
-    });
-  } else {
-    listenOnTrigger(key);
-  }
+  });
 
   return {
     stop: function () {
@@ -1206,6 +1207,20 @@ listenAll = function (cursorDescription, listenCallback) {
       });
     }
   };
+};
+
+forEachTrigger = function (cursorDescription, triggerCallback) {
+  var key = {collection: cursorDescription.collectionName};
+  var specificIds = LocalCollection._idsMatchedBySelector(
+    cursorDescription.selector);
+  if (specificIds) {
+    _.each(specificIds, function (id) {
+      triggerCallback(_.extend({id: id}, key));
+    });
+    triggerCallback(_.extend({dropCollection: true}, key));
+  } else {
+    triggerCallback(key);
+  }
 };
 
 var MongoPollster = function (cursorDescription, mongoHandle, ordered,
