@@ -1139,13 +1139,13 @@ MongoConnection.prototype._observeChanges = function (
   var observeKey = JSON.stringify(
     _.extend({ordered: ordered}, cursorDescription));
 
-  var multiplexer, observeHandle;
+  var multiplexer, observeImplementation;
+  var firstHandle = false;
 
   // Find a matching ObserveMultiplexer, or create a new one. This next block is
   // guaranteed to not yield (and it doesn't call anything that can observe a
   // new query), so no other calls to this function can interleave with it.
   Meteor._noYieldsAllowed(function () {
-    var observeImplementation;
     if (_.has(self._observeMultiplexers, observeKey)) {
       multiplexer = self._observeMultiplexers[observeKey];
     } else {
@@ -1158,27 +1158,32 @@ MongoConnection.prototype._observeChanges = function (
         }
       });
       self._observeMultiplexers[observeKey] = multiplexer;
-
-      if (self._oplogHandle && !ordered && !callbacks._testOnlyPollCallback
-          && cursorSupportedByOplogTailing(cursorDescription)) {
-        observeImplementation = observeChangesWithOplog(
-          cursorDescription, self, multiplexer);
-      } else {
-        // Start polling.
-        observeImplementation = new MongoPollster(
-          cursorDescription,
-          self,
-          ordered,
-          multiplexer,
-          callbacks._testOnlyPollCallback);
-      }
+      firstHandle = true;
     }
-    observeHandle = new ObserveHandle(multiplexer, callbacks);
+  });
+
+  var observeHandle = new ObserveHandle(multiplexer, callbacks);
+
+  if (firstHandle) {
+    if (self._oplogHandle && !ordered && !callbacks._testOnlyPollCallback
+        && cursorSupportedByOplogTailing(cursorDescription)) {
+      // Can yield!
+      observeImplementation = observeChangesWithOplog(
+        cursorDescription, self, multiplexer);
+    } else {
+      // Start polling.
+      observeImplementation = new MongoPollster(
+        cursorDescription,
+        self,
+        ordered,
+        multiplexer,
+        callbacks._testOnlyPollCallback);
+    }
+
     // This field is only set for the first ObserveHandle in an
     // ObserveMultiplexer. It is only there for use by one test.
-    if (observeImplementation)
-      observeHandle._observeImplementation = observeImplementation;
-  });
+    observeHandle._observeImplementation = observeImplementation;
+  }
 
   // Blocks until the initial adds have been sent.
   multiplexer.addHandleAndSendInitialAdds(observeHandle);
