@@ -1105,26 +1105,6 @@ Spacebars.mustache = function (value/*, args*/) {
     return String(result == null ? '' : result);
 };
 
-Spacebars.attrMustache = function (value/*, args*/) {
-  // call any arg that is a function (checked in Spacebars.call)
-  for (var i = 1; i < arguments.length; i++)
-    arguments[i] = Spacebars.call(arguments[i]);
-
-  var result = Spacebars.call.apply(null, arguments);
-
-  if (result == null || result === '') {
-    return null;
-  } else if (typeof result === 'object') {
-    return result;
-  } else if (typeof result === 'string' && UI.isValidAttributeName(result)) {
-    var obj = {};
-    obj[result] = '';
-    return obj;
-  } else {
-    throw new Error("Expected valid attribute name, '', null, or object");
-  }
-};
-
 Spacebars.extend = function (obj/*, k1, v1, k2, v2, ...*/) {
   for (var i = 1; i < arguments.length; i += 2)
     obj[arguments[i]] = arguments[i+1];
@@ -1518,10 +1498,66 @@ Spacebars.combineAttributes = function (/*attrObjects*/) {
   return _.extend.apply(_, args);
 };
 
+// Executes `{{foo bar baz}}` when called on `(foo, bar, baz)`.
+// If `bar` and `baz` are functions, they are called.  `foo`
+// may be a non-function, in which case the arguments are
+// discarded (though they may still be evaluated, i.e. called).
+Spacebars.mustache2 = function (value/*, args*/) {
+  var result = Spacebars.call2.apply(null, arguments);
+
+  if (result instanceof Handlebars.SafeString)
+    // keep as type Handlebars.SafeString since the UI.Text
+    // component treats these differently.
+    return result;
+  else
+    // map `null` and `undefined` to "", stringify anything else
+    // (e.g. strings, booleans, numbers including 0).
+    return String(result == null ? '' : result);
+};
+
+// If `value` is a function, called it on the `args`, after
+// evaluating the args themselves (by calling them if they are
+// functions).  Otherwise, simply return `value` (and assert that
+// there are no args).
+Spacebars.call2 = function (value/*, args*/) {
+  if (typeof value === 'function') {
+    // evaluate arguments if they are functions (by calling them)
+    var newArgs = [];
+    for (var i = 1; i < arguments.length; i++) {
+      var arg = arguments[i];
+      newArgs[i-1] = (typeof arg === 'function' ? arg() : arg);
+    }
+
+    return value.apply(null, newArgs);
+  } else {
+    if (arguments.length > 1)
+      throw new Error("Can't call non-function: " + value);
+
+    return value;
+  }
+};
+
+Spacebars.attrMustache = function (value/*, args*/) {
+
+  var result = Spacebars.call2.apply(null, arguments);
+
+  if (result == null || result === '') {
+    return null;
+  } else if (typeof result === 'object') {
+    return result;
+  } else if (typeof result === 'string' && UI.isValidAttributeName(result)) {
+    var obj = {};
+    obj[result] = '';
+    return obj;
+  } else {
+    throw new Error("Expected valid attribute name, '', null, or object");
+  }
+};
+
 var codeGenMustache = function (tag, mustacheType) {
   var nameCode = codeGenPath2(tag.path);
   var argCode = codeGenArgs2(tag.args);
-  var mustache = (mustacheType || 'mustache');
+  var mustache = (mustacheType || 'mustache2');
 
   return 'Spacebars.' + mustache + '(' + nameCode +
     (argCode ? ', ' + argCode.join(', ') : '') + ')';
@@ -1574,7 +1610,7 @@ var codeGenPath2 = function (path) {
   var code = 'self.lookup(' + toJSLiteral(path[0]) + ')';
 
   if (path.length > 1) {
-    code = 'Spacebars.index(' + code + ', ' +
+    code = 'Spacebars.dot(' + code + ', ' +
       _.map(path.slice(1), toJSLiteral).join(', ') + ')';
   }
 
