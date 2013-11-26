@@ -2,13 +2,16 @@
 // The "invalidation crossbar" is a specific instance used by the DDP server to
 // implement write fence notifications.
 
-DDPServer._Crossbar = function () {
+DDPServer._Crossbar = function (options) {
   var self = this;
+  options = options || {};
 
-  self.next_id = 1;
+  self.nextId = 1;
   // map from listener id to object. each object has keys 'trigger',
   // 'callback'.
   self.listeners = {};
+  self.factPackage = options.factPackage || "livedata";
+  self.factName = options.factName || null;
 };
 
 _.extend(DDPServer._Crossbar.prototype, {
@@ -29,14 +32,18 @@ _.extend(DDPServer._Crossbar.prototype, {
   // yields.
   listen: function (trigger, callback) {
     var self = this;
-    var id = self.next_id++;
+    var id = self.nextId++;
     self.listeners[id] = {trigger: EJSON.clone(trigger), callback: callback};
-    Package.facts && Package.facts.Facts.incrementServerFact(
-      "livedata", "crossbar-listeners", 1);
+    if (self.factName && Package.facts) {
+      Package.facts.Facts.incrementServerFact(
+        self.factPackage, self.factName, 1);
+    }
     return {
       stop: function () {
-        Package.facts && Package.facts.Facts.incrementServerFact(
-          "livedata", "crossbar-listeners", -1);
+        if (self.factName && Package.facts) {
+          Package.facts.Facts.incrementServerFact(
+            self.factPackage, self.factName, -1);
+        }
         delete self.listeners[id];
       }
     };
@@ -54,6 +61,7 @@ _.extend(DDPServer._Crossbar.prototype, {
   fire: function (notification, onComplete) {
     var self = this;
     var callbacks = [];
+    // XXX consider refactoring to "index" on "collection"
     _.each(self.listeners, function (l) {
       if (self._matches(notification, l.trigger))
         callbacks.push(l.callback);
@@ -103,4 +111,6 @@ _.extend(DDPServer._Crossbar.prototype, {
   }
 });
 
-DDPServer._InvalidationCrossbar = new DDPServer._Crossbar;
+DDPServer._InvalidationCrossbar = new DDPServer._Crossbar({
+  factName: "invalidation-crossbar-listeners"
+});

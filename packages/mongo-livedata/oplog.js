@@ -7,7 +7,7 @@ var PHASE = {
   STEADY: 3
 };
 
-var idForOp = function (op) {
+idForOp = function (op) {
   if (op.op === 'd')
     return op.o._id;
   else if (op.op === 'i')
@@ -25,6 +25,7 @@ observeChangesWithOplog = function (cursorDescription,
                                     mongoHandle,
                                     multiplexer) {
   var stopped = false;
+  var stopHandles = [];
 
   Package.facts && Package.facts.Facts.incrementServerFact(
     "mongo-livedata", "oplog-observers", 1);
@@ -186,22 +187,26 @@ observeChangesWithOplog = function (cursorDescription,
   };
   oplogEntryHandlers[PHASE.FETCHING] = oplogEntryHandlers[PHASE.STEADY];
 
-
-  var oplogEntryHandle = mongoHandle._oplogHandle.onOplogEntry(
-    cursorDescription.collectionName, function (op) {
-      if (op.op === 'c') {
-        published.forEach(function (fields, id) {
-          remove(id);
-        });
-      } else {
-        // All other operators should be handled depending on phase
-        oplogEntryHandlers[phase](op);
+  forEachTrigger(cursorDescription, function (trigger) {
+    stopHandles.push(mongoHandle._oplogHandle.onOplogEntry(
+      trigger, function (notification) {
+        var op = notification.op;
+        if (op.op === 'c') {
+          // XXX actually, drop collection needs to be handled by doing a
+          // re-query
+          published.forEach(function (fields, id) {
+            remove(id);
+          });
+        } else {
+          // All other operators should be handled depending on phase
+          oplogEntryHandlers[phase](op);
+        }
       }
-    }
-  );
+    ));
+  });
 
   // XXX ordering w.r.t. everything else?
-  var listenersHandle = listenAll(
+  stopHandles.push(listenAll(
     cursorDescription, function (notification, complete) {
       // If we're not in a write fence, we don't have to do anything.
       var fence = DDPServer._CurrentWriteFence.get();
@@ -225,7 +230,7 @@ observeChangesWithOplog = function (cursorDescription,
         }
       });
     }
-  );
+  ));
 
   // observeChangesWithOplog cannot yield (because the manipulation of
   // mongoHandle._observeMultiplexers needs to be yield-free); calling
@@ -268,8 +273,9 @@ observeChangesWithOplog = function (cursorDescription,
       if (stopped)
         return;
       stopped = true;
-      listenersHandle.stop();
-      oplogEntryHandle.stop();
+      _.each(stopHandles, function (handle) {
+        handle.stop();
+      });
 
       published = null;
       selector = null;
