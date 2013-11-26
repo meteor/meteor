@@ -405,13 +405,16 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
             doc.ns.substr(0, dbName.length + 1) === (dbName + '.')))
         throw new Error("Unexpected ns");
 
-      var trigger = {collection: doc.ns.substr(dbName.length + 1), op: doc};
+      var trigger = {collection: doc.ns.substr(dbName.length + 1),
+                     dropCollection: false,
+                     op: doc};
 
       // Is it a special command and the collection name is hidden somewhere in
       // operator?
       if (trigger.collection === "$cmd") {
         trigger.collection = doc.o.drop;
         trigger.dropCollection = true;
+        trigger.id = null;
       } else {
         // All other ops have an id.
         trigger.id = idForOp(doc);
