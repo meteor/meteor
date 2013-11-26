@@ -1,4 +1,8 @@
-DDPServer._InvalidationCrossbar = function () {
+// A "crossbar" is a class that provides structured notification registration.
+// The "invalidation crossbar" is a specific instance used by the DDP server to
+// implement write fence notifications.
+
+DDPServer._Crossbar = function () {
   var self = this;
 
   self.next_id = 1;
@@ -7,7 +11,7 @@ DDPServer._InvalidationCrossbar = function () {
   self.listeners = {};
 };
 
-_.extend(DDPServer._InvalidationCrossbar.prototype, {
+_.extend(DDPServer._Crossbar.prototype, {
   // Listen for notification that match 'trigger'. A notification
   // matches if it has the key-value pairs in trigger as a
   // subset. When a notification matches, call 'callback', passing two
@@ -57,7 +61,7 @@ _.extend(DDPServer._InvalidationCrossbar.prototype, {
 
     if (onComplete)
       onComplete = Meteor.bindEnvironment(onComplete, function (e) {
-        Meteor._debug("Exception in InvalidationCrossbar fire complete " +
+        Meteor._debug("Exception in Crossbar fire complete " +
                       "callback", e.stack);
       });
 
@@ -99,5 +103,4 @@ _.extend(DDPServer._InvalidationCrossbar.prototype, {
   }
 });
 
-// singleton
-DDPServer._InvalidationCrossbar = new DDPServer._InvalidationCrossbar;
+DDPServer._InvalidationCrossbar = new DDPServer._Crossbar;
