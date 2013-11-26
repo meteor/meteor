@@ -927,7 +927,9 @@ proposed update.) Return `true` to permit the change.
 
 `fieldNames` is an array of the (top-level) fields in `doc` that the
 client wants to modify, for example
-`['name',`&nbsp;`'score']`. `modifier` is the raw Mongo modifier that
+`['name',`&nbsp;`'score']`.
+
+`modifier` is the raw Mongo modifier that
 the client wants to execute, for example `{$set: {'name.first':
 "Alice"}, $inc: {score: 1}}`.
 
