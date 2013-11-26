@@ -232,10 +232,6 @@ var Session = function (server, version, socket) {
 
   self.userId = null;
 
-  // Per-connection scratch area. This is only used internally, but we
-  // should have real and documented API for this sort of thing someday.
-  self.sessionData = {};
-
   self.collectionViews = {};
 
   // Set this to false to not send messages when collectionViews are
@@ -265,8 +261,7 @@ var Session = function (server, version, socket) {
       self._closeCallbacks.push(
         Meteor.bindEnvironment(fn, "connection session onClose callback")
       );
-    },
-    _sessionData: self.sessionData
+    }
   };
 
   socket.send(stringifyDDP({msg: 'connected',
@@ -559,8 +554,7 @@ _.extend(Session.prototype, {
         userId: self.userId,
         setUserId: setUserId,
         unblock: unblock,
-        session: self.sessionHandle,
-        sessionData: self.sessionData
+        session: self.sessionHandle
       });
       try {
         var result = DDPServer._CurrentWriteFence.withValue(fence, function () {
@@ -1264,8 +1258,7 @@ _.extend(Server.prototype, {
         isSimulation: false,
         userId: userId,
         setUserId: setUserId,
-        session: session,
-        sessionData: session && session._sessionData
+        session: session
       });
       try {
         var result = DDP._CurrentInvocation.withValue(invocation, function () {

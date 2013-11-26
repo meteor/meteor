@@ -78,14 +78,14 @@ Meteor.methods({
     var result = tryAllLoginHandlers(options);
     if (result !== null) {
       this.setUserId(result.id);
-      Accounts._setLoginToken(this, result.token);
+      Accounts._setLoginToken(this.session.id, result.token);
     }
     return result;
   },
 
   logout: function() {
-    var token = Accounts._getLoginToken(this);
-    Accounts._setLoginToken(this, null);
+    var token = Accounts._getLoginToken(this.session.id);
+    Accounts._setLoginToken(this.session.id, null);
     if (token && this.userId)
       removeLoginToken(this.userId, token);
     this.setUserId(null);
@@ -140,6 +140,35 @@ Meteor.methods({
 });
 
 ///
+/// ACCOUNT DATA
+///
+
+// sessionId -> {session, loginToken, srpChallenge}
+var accountData = {};
+
+Accounts._getAccountData = function (sessionId, field) {
+  var data = accountData[sessionId];
+  return data && data[field];
+};
+
+Accounts._setAccountData = function (sessionId, field, value) {
+  var data = accountData[sessionId];
+  if (data === undefined)
+    delete data[field];
+  else
+    data[field] = value;
+};
+
+Meteor.server.onConnection(function (session) {
+  accountData[session.id] = {session: session};
+  session.onClose(function () {
+    removeSessionFromToken(session.id);
+    delete accountData[session.id];
+  });
+});
+
+
+///
 /// RECONNECT TOKENS
 ///
 /// support reconnecting using a meteor login token
@@ -147,21 +176,33 @@ Meteor.methods({
 // token -> list of session ids
 var sessionsByLoginToken = {};
 
-// Remove the session from the list of open sessions for the token.
-var removeSessionFromToken = function (token, sessionId) {
-  sessionsByLoginToken[token] = _.without(
-    sessionsByLoginToken[token],
-    sessionId
-  );
-  if (_.isEmpty(sessionsByLoginToken[token]))
-    delete sessionsByLoginToken[token];
+// test hook
+Accounts._getTokenSessions = function (token) {
+  return sessionsByLoginToken[token];
 };
 
-var loginTokenChanged = function (sessionId, newToken, oldToken) {
-  var self = this;
-  if (oldToken) {
-    removeSessionFromToken(oldToken, sessionId);
+// Remove the session from the list of open sessions for the token.
+var removeSessionFromToken = function (sessionId) {
+  var token = Accounts._getLoginToken(sessionId);
+  if (token) {
+    sessionsByLoginToken[token] = _.without(
+      sessionsByLoginToken[token],
+      sessionId
+    );
+    if (_.isEmpty(sessionsByLoginToken[token]))
+      delete sessionsByLoginToken[token];
   }
+};
+
+Accounts._getLoginToken = function (sessionId) {
+  return Accounts._getAccountData(sessionId, 'loginToken');
+};
+
+Accounts._setLoginToken = function (sessionId, newToken) {
+  removeSessionFromToken(sessionId);
+
+  Accounts._setAccountData(sessionId, 'loginToken', newToken);
+
   if (newToken) {
     if (! _.has(sessionsByLoginToken, newToken))
       sessionsByLoginToken[newToken] = [];
@@ -169,43 +210,15 @@ var loginTokenChanged = function (sessionId, newToken, oldToken) {
   }
 };
 
-
-Accounts._getLoginToken = function (methodInvocation) {
-  return methodInvocation._sessionData.loginToken;
-};
-
-Accounts._setLoginToken = function (methodInvocation, newToken) {
-  var oldToken = methodInvocation._sessionData.loginToken;
-  methodInvocation._sessionData.loginToken = newToken;
-  loginTokenChanged(methodInvocation.session.id, newToken, oldToken);
-};
-
-
-// sessionId -> SessionHandle
-// XXX Wouldn't be necessary if there was an API to get the session
-// from a session id via Meteor.server.sessions[sessionId].sessionHandle
-var sessions = {};
-
-Meteor.server.onConnection(function (session) {
-  var sessionId = session.id;
-  sessions[sessionId] = session;
-  session.onClose(function () {
-    var token = session._sessionData.loginToken;
-    if (token)
-      removeSessionFromToken(token, sessionId);
-    delete sessions[sessionId];
-  });
-});
-
-
-
 // Close all open sessions associated with any of the tokens in
 // `tokens`.
 var closeSessionsForTokens = function (tokens) {
   _.each(tokens, function (token) {
     if (_.has(sessionsByLoginToken, token)) {
       _.each(sessionsByLoginToken[token], function (sessionId) {
-        sessions[sessionId] && sessions[sessionId].close();
+        var session = Accounts._getAccountData(sessionId, 'session');
+        if (session)
+          session.close();
       });
     }
   });
