@@ -1,6 +1,12 @@
 // XXX maybe move these into another ObserveHelpers package or something
 
-// Wrapped callbacks should not mutate self.docs.
+// _CachingChangeObserver is an object which receives observeChanges callbacks
+// and keeps a cache of the current cursor state up to date in self.docs. Users
+// of this class should read the docs field but not modify it. You should pass
+// the "applyChange" field as the callbacks to the underlying observeChanges
+// call. Optionally, you can specify your own observeChanges callbacks which are
+// invoked immediately before the docs field is updated; this object is made
+// available as `this` to those callbacks.
 LocalCollection._CachingChangeObserver = function (options) {
   var self = this;
   options = options || {};

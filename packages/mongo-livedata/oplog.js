@@ -125,8 +125,10 @@ observeChangesWithOplog = function (cursorDescription,
     phase = PHASE.STEADY;
     var writes = writesToCommitWhenWeReachSteady;
     writesToCommitWhenWeReachSteady = [];
-    _.each(writes, function (w) {
-      w.committed();
+    multiplexer.onFlush(function () {
+      _.each(writes, function (w) {
+        w.committed();
+      });
     });
   };
 
@@ -222,13 +224,13 @@ observeChangesWithOplog = function (cursorDescription,
       // Make sure that all of the callbacks have made it through the
       // multiplexer and been delivered to ObserveHandles before committing
       // writes.
-      multiplexer.onFlush(function (){
-        if (stopped || phase === PHASE.STEADY) {
+      if (stopped || phase === PHASE.STEADY) {
+        multiplexer.onFlush(function () {
           write.committed();
-        } else {
-          writesToCommitWhenWeReachSteady.push(write);
-        }
-      });
+        });
+      } else {
+        writesToCommitWhenWeReachSteady.push(write);
+      }
     }
   ));
 
@@ -282,6 +284,11 @@ observeChangesWithOplog = function (cursorDescription,
       needToFetch = null;
       currentlyFetching = null;
 
+      // Note: we *don't* use multiplexer.onFlush here because this stop
+      // callback is actually invoked by the multiplexer itself when it has
+      // determined that there are no handles left. So nothing is actually going
+      // to get flushed (and it's probably not valid to call methods on the
+      // dying multiplexer).
       _.each(writesToCommitWhenWeReachSteady, function (w) {
         w.committed();
       });

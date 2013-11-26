@@ -14,10 +14,13 @@ ObserveMultiplexer = function (options) {
   self._queue = new Meteor._SynchronousQueue();
   self._handles = {};
   self._ready = false;
+  self._becomingReady = false;
   self._readyFuture = new Future;
   // Any handles added between creation and the first doc being added (or the
   // cursor being made ready while empty) get special handling: their adds get
-  // delivered immediately instead of waiting for ready.
+  // delivered immediately instead of waiting for ready. This is so that new
+  // queries get their results streamed to the user rather than waiting until
+  // the whole query is done.
   self._initialHandles = {};
   self._cache = new LocalCollection._CachingChangeObserver({
     ordered: options.ordered});
@@ -92,6 +95,8 @@ _.extend(ObserveMultiplexer.prototype, {
     // Call stop callback (which kills the underlying process which sends us
     // callbacks and removes us from the connection's dictionary).
     self._onStop();
+    Package.facts && Package.facts.Facts.incrementServerFact(
+      "mongo-livedata", "observe-multiplexers", -1);
     // Cause future addHandleAndSendInitialAdds calls to throw (but the onStop
     // callback should make our connection forget about us).
     self._handles = null;
@@ -101,9 +106,6 @@ _.extend(ObserveMultiplexer.prototype, {
       throw Error("surprising _stop: not ready");
     if (!self._readyFuture.isResolved())
       throw Error("surprising _stop: unresolved");
-
-    Package.facts && Package.facts.Facts.incrementServerFact(
-      "mongo-livedata", "observe-multiplexers", -1);
   },
   _waitUntilReady: function (handle) {
     var self = this;
@@ -112,6 +114,7 @@ _.extend(ObserveMultiplexer.prototype, {
   // Sends initial adds to all the handles we know about so far. Does not block.
   ready: function () {
     var self = this;
+    self._becomingReady = true;
     self._queue.queueTask(function () {
       if (self._ready)
         throw Error("can't make ObserveMultiplex ready twice!");
@@ -125,12 +128,18 @@ _.extend(ObserveMultiplexer.prototype, {
         self._sendAdds(handle);
       });
       self._initialHandles = null;
+      self._becomingReady = false;
       self._ready = true;
       self._readyFuture.return();
     });
   },
+  // Calls "cb" once the effects of all "ready", "addHandleAndSendInitialAdds"
+  // and observe callbacks which came before this call have been propagated to
+  // all handles.
   onFlush: function (cb) {
     var self = this;
+    if (!self._ready && !self._becomingReady)
+      throw Error("can only call onFlush on a multiplexer that will be ready");
     self._queue.queueTask(cb);
   },
   callbackNames: function () {
