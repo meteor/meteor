@@ -238,6 +238,9 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
   } else {
     // DOUBLE, TRIPLE, BLOCKOPEN, INCLUSION
     tag.path = scanPath();
+    if (tag.path.length > 1 && (type === 'INCLUSION' || type === 'BLOCKOPEN'))
+      error("Can't have paths in {{> foo}} or {{# foo}}, " +
+            "only single identifier");
     tag.args = [];
     while (true) {
       run(/^\s*/);

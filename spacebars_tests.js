@@ -93,10 +93,14 @@ Tinytest.add("spacebars - stache tags", function (test) {
   run('{{foo x/..}}', "Expected");
   run('{{foo x/.}}', "Expected");
 
-  run('{{#a.b.c}}', {type: 'BLOCKOPEN', path: ['a', 'b', 'c'],
-                     args: []});
-  run('{{> a.b.c}}', {type: 'INCLUSION', path: ['a', 'b', 'c'],
-                      args: []});
+  test.throws(function () {
+    run('{{#a.b.c}}', {type: 'BLOCKOPEN', path: ['a', 'b', 'c'],
+                       args: []});
+  });
+  test.throws(function () {
+    run('{{> a.b.c}}', {type: 'INCLUSION', path: ['a', 'b', 'c'],
+                        args: []});
+  });
 
   run('{{foo.[]/[]}}', {type: 'DOUBLE', path: ['foo', '', ''],
                         args: []});
