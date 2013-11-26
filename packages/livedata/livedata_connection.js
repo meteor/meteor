@@ -153,10 +153,6 @@ var Connection = function (url, options) {
   //                    an error)
   self._subscriptions = {};
 
-  // Per-connection scratch area. This is only used internally, but we
-  // should have real and documented API for this sort of thing someday.
-  self._sessionData = {};
-
   // Reactive userId.
   self._userId = null;
   self._userIdDeps = (typeof Deps !== "undefined") && new Deps.Dependency;
@@ -632,8 +628,7 @@ _.extend(Connection.prototype, {
       };
       var invocation = new MethodInvocation({
         isSimulation: true,
-        userId: self.userId(), setUserId: setUserId,
-        sessionData: self._sessionData
+        userId: self.userId(), setUserId: setUserId
       });
 
       if (!alreadyInSimulation)
