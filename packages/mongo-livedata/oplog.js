@@ -234,10 +234,8 @@ observeChangesWithOplog = function (cursorDescription,
     }
   ));
 
-  // observeChangesWithOplog cannot yield (because the manipulation of
-  // mongoHandle._observeMultiplexers needs to be yield-free); calling
-  // multiplexer.ready() is the equivalent of the observeChanges "synchronous"
-  // return.
+  // Give _observeChanges a chance to add the new ObserveHandle to our
+  // multiplexer, so that the added calls get streamed.
   Meteor.defer(function () {
     if (stopped)
       throw new Error("oplog stopped surprisingly early");
@@ -248,7 +246,7 @@ observeChangesWithOplog = function (cursorDescription,
     });
     if (stopped)
       throw new Error("oplog stopped quite early");
-    // Actually send out the initial adds to the ObserveHandles.
+    // Allow observeChanges calls to return.
     multiplexer.ready();
 
     if (stopped)
