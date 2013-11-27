@@ -107,7 +107,7 @@ var getPaths = MinimongoTest.getSelectorPaths = function (sel) {
     if (k === "$where")
       return ''; // matches everything
     // we branch from $or/$and/$nor operator
-    if (_.has(LOGICAL_OPERATORS, k))
+    if (_.contains(['$or', '$and', '$nor'], k))
       return _.map(v, getPaths);
     // the value is a literal or some comparison operator
     return k;
