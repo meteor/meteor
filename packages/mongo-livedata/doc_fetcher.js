@@ -57,3 +57,5 @@ _.extend(DocFetcher.prototype, {
     }).run();
   }
 });
+
+MongoTest.DocFetcher = DocFetcher;
