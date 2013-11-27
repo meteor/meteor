@@ -95,7 +95,7 @@ var compileValueSelector = function (valueSelector, selector, cursor) {
 };
 
 // XXX can factor out common logic below
-LOGICAL_OPERATORS = {
+var LOGICAL_OPERATORS = {
   "$and": function(subSelector, operators, cursor) {
     if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
