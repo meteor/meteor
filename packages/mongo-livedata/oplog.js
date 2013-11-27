@@ -310,6 +310,38 @@ _.extend(OplogObserveDriver.prototype, {
   }
 });
 
+// Does our oplog tailing code support this cursor? For now, we are being very
+// conservative and allowing only simple queries with simple options.
+// (This is a "static method".)
+OplogObserveDriver.cursorSupported = function (cursorDescription) {
+  // First, check the options.
+  var options = cursorDescription.options;
+
+  // This option (which are mostly used for sorted cursors) require us to figure
+  // out where a given document fits in an order to know if it's included or
+  // not, and we don't track that information when doing oplog tailing.
+  if (options.limit || options.skip) return false;
+
+  // For now, we're just dealing with equality queries: no $operators, regexps,
+  // or $and/$or/$where/etc clauses. We can expand the scope of what we're
+  // comfortable processing later. ($where will get pretty scary since it will
+  // allow selector processing to yield!)
+  return _.all(cursorDescription.selector, function (value, field) {
+    // No logical operators like $and.
+    if (field.substr(0, 1) === '$')
+      return false;
+    // We only allow scalars, not sub-documents or $operators or RegExp.
+    // XXX Date would be easy too, though I doubt anyone is doing equality
+    // lookups on dates
+    return typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean" ||
+      value === null ||
+      value instanceof Meteor.Collection.ObjectID;
+  });
+};
+
+
 idForOp = function (op) {
   if (op.op === 'd')
     return op.o._id;
@@ -323,3 +355,5 @@ idForOp = function (op) {
   else
     throw Error("Unknown op: " + EJSON.stringify(op));
 };
+
+MongoTest.OplogObserveDriver = OplogObserveDriver;

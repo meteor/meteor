@@ -1,10 +1,10 @@
 var OplogCollection = new Meteor.Collection("oplog-" + Random.id());
 
-Tinytest.add("mongo-livedata - oplog - cursorSupportedByOplogTailing", function (test) {
+Tinytest.add("mongo-livedata - oplog - cursorSupported", function (test) {
   var supported = function (expected, selector) {
     var cursor = OplogCollection.find(selector);
     test.equal(
-      MongoTest.cursorSupportedByOplogTailing(cursor._cursorDescription),
+      MongoTest.OplogObserveDriver.cursorSupported(cursor._cursorDescription),
       expected);
   };
 
