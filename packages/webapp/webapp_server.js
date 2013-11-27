@@ -417,17 +417,42 @@ var runWebAppServer = function () {
   var httpServer = http.createServer(app);
   var onListeningCallbacks = [];
 
-  // Set connections' idle timeout to 5 seconds. Allows us to gracefully shut
-  // down with keepalive connections.
-  httpServer.setTimeout(5000, function (socket) {
-    socket.end();
-  });
+  var longPollingSockets = {};
+
+  // After 5 seconds of a socket being open, assume it is a long-polling
+  // connection that we have to keep track of to shut down when we're shutting
+  // down the server overall.
+  httpServer.setTimeout(5000, Meteor.bindEnvironment(function (socket) {
+    if (shuttingDown) {
+      socket.end();
+    } else {
+      socket._meteorLongPollingId = Random.id();
+      longPollingSockets[socket._meteorLongPollingId] = socket;
+      // give the socket another minute to live.
+      var destroy = Meteor.setTimeout(function () {
+        delete longPollingSockets[socket._meteorLongPollingId];
+        socket.removeListener('close', onClose);
+        socket.destroy();
+      }, 60*1000);
+
+      var onClose =  function () {
+        delete longPollingSockets[socket._meteorLongPollingId];
+        Meteor.clearTimeout(destroy);
+      };
+      socket.on('close', onClose);
+    }
+  }, function (err) {
+    console.log(err);
+  }));
+
 
   // For now, handle SIGHUP here.  Later, this should be in some centralized
   // Meteor shutdown code.
   process.on('SIGHUP', Meteor.bindEnvironment(function () {
-    console.log("SIGHUP");
     shuttingDown = true;
+    _.each(longPollingSockets, function (socket, id) {
+      socket.end();
+    });
     // tell others with websockets open that we plan to close this.
     httpServer.emit('closing');
     httpServer.close( function () {
