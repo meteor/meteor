@@ -1,5 +1,5 @@
-MongoPollster = function (cursorDescription, mongoHandle, ordered,
-                          multiplexer, testOnlyPollCallback) {
+MongoPollster = function (cursorDescription, mongoHandle, multiplexer,
+                          ordered, testOnlyPollCallback) {
   var self = this;
 
   self._cursorDescription = cursorDescription;

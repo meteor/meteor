@@ -842,8 +842,14 @@ MongoConnection.prototype._dropIndex = function (collectionName, index) {
 // ObserveMultiplexer allows multiple identical ObserveHandles to be driven by a
 // single low-level observe process such as a MongoPollster.
 //
-// A MongoPollster caches the results of a query and reruns it when necessary.
-// It is hooked up to an ObserveMultiplexer.
+// There are two "observe implementations" which drive ObserveMultiplexers:
+//   - MongoPollster caches the results of a query and reruns it when
+//     necessary.
+//   - OplogTailer follows the Mongo operation log to directly observe
+//     database changes.
+// Both implementations follow the same simple interface: when you create them,
+// they start sending observeChanges callbacks (and a ready() invocation) to
+// their ObserveMultiplexer, and you stop them by calling their stop() method.
 
 var CursorDescription = function (collectionName, selector, options) {
   var self = this;
@@ -1168,15 +1174,15 @@ MongoConnection.prototype._observeChanges = function (
     if (self._oplogHandle && !ordered && !callbacks._testOnlyPollCallback
         && cursorSupportedByOplogTailing(cursorDescription)) {
       // Can yield!
-      observeImplementation = observeChangesWithOplog(
+      observeImplementation = new OplogTailer(
         cursorDescription, self, multiplexer);
     } else {
       // Start polling.
       observeImplementation = new MongoPollster(
         cursorDescription,
         self,
-        ordered,
         multiplexer,
+        ordered,
         callbacks._testOnlyPollCallback);
     }
 
