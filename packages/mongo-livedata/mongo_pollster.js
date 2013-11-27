@@ -9,9 +9,8 @@ MongoPollster = function (cursorDescription, mongoHandle, ordered,
   self._stopCallbacks = [];
   self._stopped = false;
 
-  // This constructor cannot yield, so we don't create the synchronousCursor yet
-  // (since that can yield).
-  self._synchronousCursor = null;
+  self._synchronousCursor = self._mongoHandle._createSynchronousCursor(
+    self._cursorDescription);
 
   // previous results snapshot.  on each poll cycle, diffs against
   // results drives the callbacks.
@@ -142,12 +141,8 @@ _.extend(MongoPollster.prototype, {
     self._pendingWrites = [];
 
     // Get the new query results. (These calls can yield.)
-    if (self._synchronousCursor) {
+    if (!first)
       self._synchronousCursor.rewind();
-    } else {
-      self._synchronousCursor = self._mongoHandle._createSynchronousCursor(
-        self._cursorDescription);
-    }
     var newResults = self._synchronousCursor.getRawObjects(self._ordered);
     var oldResults = self._results;
 
