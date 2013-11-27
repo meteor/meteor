@@ -840,12 +840,12 @@ MongoConnection.prototype._dropIndex = function (collectionName, index) {
 // reference to an ObserveMultiplexer.
 //
 // ObserveMultiplexer allows multiple identical ObserveHandles to be driven by a
-// single low-level observe process such as a MongoPollster.
+// single observe driver.
 //
-// There are two "observe implementations" which drive ObserveMultiplexers:
-//   - MongoPollster caches the results of a query and reruns it when
+// There are two "observe drivers" which drive ObserveMultiplexers:
+//   - PollingObserveDriver caches the results of a query and reruns it when
 //     necessary.
-//   - OplogTailer follows the Mongo operation log to directly observe
+//   - OplogObserveDriver follows the Mongo operation log to directly observe
 //     database changes.
 // Both implementations follow the same simple interface: when you create them,
 // they start sending observeChanges callbacks (and a ready() invocation) to
@@ -1145,7 +1145,7 @@ MongoConnection.prototype._observeChanges = function (
   var observeKey = JSON.stringify(
     _.extend({ordered: ordered}, cursorDescription));
 
-  var multiplexer, observeImplementation;
+  var multiplexer, observeDriver;
   var firstHandle = false;
 
   // Find a matching ObserveMultiplexer, or create a new one. This next block is
@@ -1155,40 +1155,38 @@ MongoConnection.prototype._observeChanges = function (
     if (_.has(self._observeMultiplexers, observeKey)) {
       multiplexer = self._observeMultiplexers[observeKey];
     } else {
+      firstHandle = true;
       // Create a new ObserveMultiplexer.
       multiplexer = new ObserveMultiplexer({
         ordered: ordered,
         onStop: function () {
-          observeImplementation.stop();
+          observeDriver.stop();
           delete self._observeMultiplexers[observeKey];
         }
       });
       self._observeMultiplexers[observeKey] = multiplexer;
-      firstHandle = true;
     }
   });
 
   var observeHandle = new ObserveHandle(multiplexer, callbacks);
 
   if (firstHandle) {
+    var driverClass = PollingObserveDriver;
     if (self._oplogHandle && !ordered && !callbacks._testOnlyPollCallback
         && cursorSupportedByOplogTailing(cursorDescription)) {
-      // Can yield!
-      observeImplementation = new OplogTailer(
-        cursorDescription, self, multiplexer);
-    } else {
-      // Start polling.
-      observeImplementation = new MongoPollster(
-        cursorDescription,
-        self,
-        multiplexer,
-        ordered,
-        callbacks._testOnlyPollCallback);
+      driverClass = OplogObserveDriver;
     }
+    observeDriver = new driverClass({
+      cursorDescription: cursorDescription,
+      mongoHandle: self,
+      multiplexer: multiplexer,
+      ordered: ordered,
+      _testOnlyPollCallback: callbacks._testOnlyPollCallback
+    });
 
     // This field is only set for the first ObserveHandle in an
     // ObserveMultiplexer. It is only there for use by one test.
-    observeHandle._observeImplementation = observeImplementation;
+    observeHandle._observeDriver = observeDriver;
   }
 
   // Blocks until the initial adds have been sent.

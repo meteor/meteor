@@ -387,8 +387,8 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
   //     run.
   if (Meteor.isServer) {
     // For now, has to be polling (not oplog).
-    test.isTrue(obs._observeImplementation);
-    test.isTrue(obs._observeImplementation._suspendPolling);
+    test.isTrue(obs._observeDriver);
+    test.isTrue(obs._observeDriver._suspendPolling);
   }
 
   var step = 0;
@@ -423,7 +423,7 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
 
     finishObserve(function () {
       if (Meteor.isServer)
-        obs._observeImplementation._suspendPolling();
+        obs._observeDriver._suspendPolling();
 
       // Do a batch of 1-10 operations
       var batch_count = rnd(10) + 1;
@@ -456,7 +456,7 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
         }
       }
       if (Meteor.isServer)
-        obs._observeImplementation._resumePolling();
+        obs._observeDriver._resumePolling();
 
     });
 

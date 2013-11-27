@@ -43,7 +43,7 @@ Package.on_use(function (api) {
   api.export('MongoTest', 'server', {testOnly: true});
 
   api.add_files(['doc_fetcher.js', 'mongo_driver.js', 'observe_multiplex.js',
-                 'mongo_pollster.js', 'oplog.js'], 'server');
+                 'polling.js', 'oplog.js'], 'server');
   api.add_files('local_collection_driver.js', ['client', 'server']);
   api.add_files('remote_collection_driver.js', 'server');
   api.add_files('collection.js', ['client', 'server']);
