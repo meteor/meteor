@@ -1,11 +1,10 @@
-MongoPollster = function (cursorDescription, mongoHandle, multiplexer,
-                          ordered, testOnlyPollCallback) {
+PollingObserveDriver = function (options) {
   var self = this;
 
-  self._cursorDescription = cursorDescription;
-  self._mongoHandle = mongoHandle;
-  self._ordered = ordered;
-  self._multiplexer = multiplexer;
+  self._cursorDescription = options.cursorDescription;
+  self._mongoHandle = options.mongoHandle;
+  self._ordered = options.ordered;
+  self._multiplexer = options.multiplexer;
   self._stopCallbacks = [];
   self._stopped = false;
 
@@ -26,8 +25,8 @@ MongoPollster = function (cursorDescription, mongoHandle, multiplexer,
   self._pollsScheduledButNotStarted = 0;
   self._pendingWrites = []; // people to notify when polling completes
 
-  // Make sure to create a separately throttled function for each MongoPollster
-  // object.
+  // Make sure to create a separately throttled function for each
+  // PollingObserveDriver object.
   self._ensurePollIsScheduled = _.throttle(
     self._unthrottledEnsurePollIsScheduled, 50 /* ms */);
 
@@ -35,7 +34,7 @@ MongoPollster = function (cursorDescription, mongoHandle, multiplexer,
   self._taskQueue = new Meteor._SynchronousQueue();
 
   var listenersHandle = listenAll(
-    cursorDescription, function (notification, complete) {
+    self._cursorDescription, function (notification, complete) {
       // When someone does a transaction that might affect us, schedule a poll
       // of the database. If that transaction happens inside of a write fence,
       // block the fence until we've polled and notified observers.
@@ -59,8 +58,8 @@ MongoPollster = function (cursorDescription, mongoHandle, multiplexer,
   // For testing, there's an undocumented callback argument to observeChanges
   // which disables time-based polling and gets called at the beginning of each
   // poll.
-  if (testOnlyPollCallback) {
-    self._testOnlyPollCallback = testOnlyPollCallback;
+  if (options._testOnlyPollCallback) {
+    self._testOnlyPollCallback = options._testOnlyPollCallback;
   } else {
     var intervalHandle = Meteor.setInterval(
       _.bind(self._ensurePollIsScheduled, self), 10 * 1000);
@@ -76,7 +75,7 @@ MongoPollster = function (cursorDescription, mongoHandle, multiplexer,
     "mongo-livedata", "mongo-pollsters", 1);
 };
 
-_.extend(MongoPollster.prototype, {
+_.extend(PollingObserveDriver.prototype, {
   // This is always called through _.throttle (except once at startup).
   _unthrottledEnsurePollIsScheduled: function () {
     var self = this;
@@ -131,7 +130,7 @@ _.extend(MongoPollster.prototype, {
     if (!self._results) {
       first = true;
       // XXX maybe use _IdMap/OrderedDict instead?
-      self._results = self.ordered ? [] : {};
+      self._results = self._ordered ? [] : {};
     }
 
     self._testOnlyPollCallback && self._testOnlyPollCallback();

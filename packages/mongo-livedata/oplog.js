@@ -7,17 +7,19 @@ var PHASE = {
   STEADY: 3
 };
 
-// OplogTailer is an alternative to MongoPollster which follows the Mongo
-// operation log instead of just re-polling the query. It obeys the same simple
-// interface: constructing it starts sending observeChanges callbacks (and a
-// ready() invocation) to the ObserveMultiplexer, and you stop it by calling
-// the stop() method.
-OplogTailer = function (cursorDescription, mongoHandle, multiplexer) {
+// OplogObserveDriver is an alternative to PollingObserveDriver which follows
+// the Mongo operation log instead of just re-polling the query. It obeys the
+// same simple interface: constructing it starts sending observeChanges
+// callbacks (and a ready() invocation) to the ObserveMultiplexer, and you stop
+// it by calling the stop() method.
+OplogObserveDriver = function (options) {
   var self = this;
 
-  self._cursorDescription = cursorDescription;
-  self._mongoHandle = mongoHandle;
-  self._multiplexer = multiplexer;
+  self._cursorDescription = options.cursorDescription;
+  self._mongoHandle = options.mongoHandle;
+  self._multiplexer = options.multiplexer;
+  if (options.ordered)
+    throw Error("OplogObserveDriver only supports unordered observeChanges");
 
   self._stopped = false;
   self._stopHandles = [];
@@ -28,9 +30,10 @@ OplogTailer = function (cursorDescription, mongoHandle, multiplexer) {
   self._phase = PHASE.INITIALIZING;
 
   self._published = new LocalCollection._IdMap;
-  var selector = cursorDescription.selector;
-  self._selectorFn = LocalCollection._compileSelector(selector);
-  var projection = cursorDescription.options.fields || {};
+  var selector = self._cursorDescription.selector;
+  self._selectorFn = LocalCollection._compileSelector(
+    self._cursorDescription.selector);
+  var projection = self._cursorDescription.options.fields || {};
   self._projectionFn = LocalCollection._compileProjection(projection);
   // Projection function, result of combining important fields for selector and
   // existing fields projection
@@ -44,7 +47,7 @@ OplogTailer = function (cursorDescription, mongoHandle, multiplexer) {
 
   self._writesToCommitWhenWeReachSteady = [];
 
-  forEachTrigger(cursorDescription, function (trigger) {
+  forEachTrigger(self._cursorDescription, function (trigger) {
     self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntry(
       trigger, function (notification) {
         var op = notification.op;
@@ -67,7 +70,7 @@ OplogTailer = function (cursorDescription, mongoHandle, multiplexer) {
 
   // XXX ordering w.r.t. everything else?
   self._stopHandles.push(listenAll(
-    cursorDescription, function (notification, complete) {
+    self._cursorDescription, function (notification, complete) {
       // If we're not in a write fence, we don't have to do anything.
       var fence = DDPServer._CurrentWriteFence.get();
       if (!fence) {
@@ -102,7 +105,7 @@ OplogTailer = function (cursorDescription, mongoHandle, multiplexer) {
   });
 };
 
-_.extend(OplogTailer.prototype, {
+_.extend(OplogObserveDriver.prototype, {
   _add: function (doc) {
     var self = this;
     var id = doc._id;
