@@ -131,6 +131,24 @@ DomUtils.htmlToFragment = function (html) {
     var container = doc.createElement("div");
     // insert wrapped HTML into a DIV
     container.innerHTML = fullHtml;
+
+    // If the first child is an HTMLUnknownElement..
+    if (container.firstElementChild instanceof HTMLUnknownElement) {
+      // ..the fullHtml isn't HTML, but perhaps SVG so wrap it in a SVG tag to
+      // force the correct namespace..
+      container.innerHTML = ["<svg>", fullHtml, "</svg>"].join("");
+      // ..and then unwrap the result to proceed
+      container = container.firstChild;
+
+      // Using document.createElementNS isn't useful since the resulting SVG
+      // container element wouldn't support .innerHTML
+
+      // XXX main issue with this approach is other posible non-HTML code such
+      // as MathML or simple XML. Perhaps a hint could be given in the template
+      // attributes or as an extra element. Or an iterative approach could be
+      // used: first test a 'svg' wrapper, then a 'math' wrapper, etc..
+    }
+
     // set "container" to inner node of wrapper
     var unwraps = wrapData[0];
     while (unwraps--) {
