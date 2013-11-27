@@ -44,8 +44,8 @@ Package.on_use(function (api) {
 
   api.add_files(['mongo_driver.js', 'oplog_tailing.js',
                  'observe_multiplex.js', 'doc_fetcher.js',
-                 // XXX rename to have _observe_driver
-                 'polling.js', 'oplog.js'], 'server');
+                 'polling_observe_driver.js','oplog_observe_driver.js'],
+                'server');
   api.add_files('local_collection_driver.js', ['client', 'server']);
   api.add_files('remote_collection_driver.js', 'server');
   api.add_files('collection.js', ['client', 'server']);
