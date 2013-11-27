@@ -13,24 +13,40 @@ var showTS = function (ts) {
   return "Timestamp(" + ts.getHighBits() + ", " + ts.getLowBits() + ")";
 };
 
-MongoConnection.prototype._startOplogTailing = function (oplogUrl,
-                                                         dbNameFuture) {
-  var self = this;
+idForOp = function (op) {
+  if (op.op === 'd')
+    return op.o._id;
+  else if (op.op === 'i')
+    return op.o._id;
+  else if (op.op === 'u')
+    return op.o2._id;
+  else if (op.op === 'c')
+    throw Error("Operator 'c' doesn't supply an object with id: " +
+                EJSON.stringify(op));
+  else
+    throw Error("Unknown op: " + EJSON.stringify(op));
+};
 
-  var oplogLastEntryConnection = null;
-  var oplogTailConnection = null;
-  var stopped = false;
-  var tailHandle = null;
-  var readyFuture = new Future();
-  var crossbar = new DDPServer._Crossbar({
+OplogHandle = function (oplogUrl, dbNameFuture) {
+  var self = this;
+  self._oplogUrl = oplogUrl;
+  self._dbNameFuture = dbNameFuture;
+
+  self._oplogLastEntryConnection = null;
+  self._oplogTailConnection = null;
+  self._stopped = false;
+  self._tailHandle = null;
+  self._readyFuture = new Future();
+  self._crossbar = new DDPServer._Crossbar({
     factPackage: "mongo-livedata", factName: "oplog-watchers"
   });
-  var lastProcessedTS = null;
-  // Lazily calculate the basic selector. Don't call baseOplogSelector() at the
-  // top level of this function, because we don't want this function to block.
-  var baseOplogSelector = _.once(function () {
+  self._lastProcessedTS = null;
+  // Lazily calculate the basic selector. Don't call _baseOplogSelector() at the
+  // top level of the constructor, because we don't want the constructor to
+  // block. Note that the _.once is per-handle.
+  self._baseOplogSelector = _.once(function () {
     return {
-      ns: new RegExp('^' + quotemeta(dbNameFuture.wait()) + '\\.'),
+      ns: new RegExp('^' + quotemeta(self._dbNameFuture.wait()) + '\\.'),
       $or: [
         { op: {$in: ['i', 'u', 'd']} },
         // If it is not db.collection.drop(), ignore it
@@ -38,104 +54,108 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
     };
   });
   // XXX doc
-  var catchingUpFutures = [];
-
-  self._oplogHandle = {
-    stop: function () {
-      if (stopped)
-        return;
-      stopped = true;
-      if (tailHandle)
-        tailHandle.stop();
-      // XXX should close connections too
-    },
-
-    onOplogEntry: function (trigger, callback) {
-      if (stopped)
-        throw new Error("Called onOplogEntry on stopped handle!");
-
-      // Calling onOplogEntry requires us to wait for the tailing to be ready.
-      readyFuture.wait();
-
-      var originalCallback = callback;
-      callback = Meteor.bindEnvironment(function (notification, onComplete) {
-        // XXX can we avoid this clone by making oplog.js careful?
-        try {
-          originalCallback(EJSON.clone(notification));
-        } finally {
-          onComplete();
-        }
-      }, function (err) {
-        Meteor._debug("Error in oplog callback", err.stack);
-      });
-      var listenHandle = crossbar.listen(trigger, callback);
-      return {
-        stop: function () {
-          listenHandle.stop();
-        }
-      };
-    },
-
-    // Calls `callback` once the oplog has been processed up to a point that is
-    // roughly "now": specifically, once we've processed all ops that are
-    // currently visible.
-    // XXX become convinced that this is actually safe even if oplogConnection
-    // is some kind of pool
-    waitUntilCaughtUp: function () {
-      if (stopped)
-        throw new Error("Called waitUntilCaughtUp on stopped handle!");
-
-      // Calling waitUntilCaughtUp requries us to wait for the oplog connection
-      // to be ready.
-      readyFuture.wait();
-
-      // We need to make the selector at least as restrictive as the actual
-      // tailing selector (ie, we need to specify the DB name) or else we
-      // might find a TS that won't show up in the actual tail stream.
-      var lastEntry = oplogLastEntryConnection.findOne(
-        OPLOG_COLLECTION, baseOplogSelector(),
-        {fields: {ts: 1}, sort: {$natural: -1}});
-
-      if (!lastEntry) {
-        // Really, nothing in the oplog? Well, we've processed everything.
-        return;
-      }
-
-      var ts = lastEntry.ts;
-      if (!ts)
-        throw Error("oplog entry without ts: " + EJSON.stringify(lastEntry));
-
-      if (lastProcessedTS && ts.lessThanOrEqual(lastProcessedTS)) {
-        // We've already caught up to here.
-        return;
-      }
-
-      var insertAfter = catchingUpFutures.length;
-      while (insertAfter - 1 > 0
-             && catchingUpFutures[insertAfter - 1].ts.greaterThan(ts)) {
-        insertAfter--;
-      }
-
-      // XXX this can occur if we fail over from one primary to another.  so
-      // this check needs to be removed before we merge oplog.  that said, it
-      // has been helpful so far at proving that we are properly using
-      // poolSize 1. Also, we could keep something like it if we could
-      // actually detect failover; see
-      // https://github.com/mongodb/node-mongodb-native/issues/1120
-      if (insertAfter !== catchingUpFutures.length) {
-        throw Error("found misordered oplog: "
-                    + showTS(_.last(catchingUpFutures).ts) + " vs "
-                    + showTS(ts));
-      }
-      var f = new Future;
-      catchingUpFutures.splice(insertAfter, 0, {ts: ts, future: f});
-      f.wait();
-    }
-  };
+  self._catchingUpFutures = [];
 
   // Setting up the connections and tail handler is a blocking operation, so we
   // do it "later".
   Meteor.defer(function () {
+    self._startTailing();
+  });
+};
+
+_.extend(OplogHandle.prototype, {
+  stop: function () {
+    var self = this;
+    if (self._stopped)
+      return;
+    self._stopped = true;
+    if (self._tailHandle)
+      self._tailHandle.stop();
+    // XXX should close connections too
+  },
+  onOplogEntry: function (trigger, callback) {
+    var self = this;
+    if (self._stopped)
+      throw new Error("Called onOplogEntry on stopped handle!");
+
+    // Calling onOplogEntry requires us to wait for the tailing to be ready.
+    self._readyFuture.wait();
+
+    var originalCallback = callback;
+    callback = Meteor.bindEnvironment(function (notification, onComplete) {
+      // XXX can we avoid this clone by making oplog.js careful?
+      try {
+        originalCallback(EJSON.clone(notification));
+      } finally {
+        onComplete();
+      }
+    }, function (err) {
+      Meteor._debug("Error in oplog callback", err.stack);
+    });
+    var listenHandle = self._crossbar.listen(trigger, callback);
+    return {
+      stop: function () {
+        listenHandle.stop();
+      }
+    };
+  },
+  // Calls `callback` once the oplog has been processed up to a point that is
+  // roughly "now": specifically, once we've processed all ops that are
+  // currently visible.
+  // XXX become convinced that this is actually safe even if oplogConnection
+  // is some kind of pool
+  waitUntilCaughtUp: function () {
+    var self = this;
+    if (self._stopped)
+      throw new Error("Called waitUntilCaughtUp on stopped handle!");
+
+    // Calling waitUntilCaughtUp requries us to wait for the oplog connection to
+    // be ready.
+    self._readyFuture.wait();
+
+    // We need to make the selector at least as restrictive as the actual
+    // tailing selector (ie, we need to specify the DB name) or else we might
+    // find a TS that won't show up in the actual tail stream.
+    var lastEntry = self._oplogLastEntryConnection.findOne(
+      OPLOG_COLLECTION, self._baseOplogSelector(),
+      {fields: {ts: 1}, sort: {$natural: -1}});
+
+    if (!lastEntry) {
+      // Really, nothing in the oplog? Well, we've processed everything.
+      return;
+    }
+
+    var ts = lastEntry.ts;
+    if (!ts)
+      throw Error("oplog entry without ts: " + EJSON.stringify(lastEntry));
+
+    if (self._lastProcessedTS && ts.lessThanOrEqual(self._lastProcessedTS)) {
+      // We've already caught up to here.
+      return;
+    }
+
+    var insertAfter = self._catchingUpFutures.length;
+    while (insertAfter - 1 > 0
+           && self._catchingUpFutures[insertAfter - 1].ts.greaterThan(ts)) {
+      insertAfter--;
+    }
+
+    // XXX this can occur if we fail over from one primary to another.  so this
+    // check needs to be removed before we merge oplog.  that said, it has been
+    // helpful so far at proving that we are properly using poolSize 1. Also, we
+    // could keep something like it if we could actually detect failover; see
+    // https://github.com/mongodb/node-mongodb-native/issues/1120
+    if (insertAfter !== self._catchingUpFutures.length) {
+      throw Error("found misordered oplog: "
+                  + showTS(_.last(self._catchingUpFutures).ts) + " vs "
+                  + showTS(ts));
+    }
+    var f = new Future;
+    self._catchingUpFutures.splice(insertAfter, 0, {ts: ts, future: f});
+    f.wait();
+  },
+  _startTailing: function () {
+    var self = this;
     // We make two separate connections to Mongo. The Node Mongo driver
     // implements a naive round-robin connection pool: each "connection" is a
     // pool of several (5 by default) TCP connections, and each request is
@@ -147,65 +167,69 @@ MongoConnection.prototype._startOplogTailing = function (oplogUrl,
     //
     // The tail connection will only ever be running a single tail command, so
     // it only needs to make one underlying TCP connection.
-    oplogTailConnection = new MongoConnection(oplogUrl, {poolSize: 1});
+    self._oplogTailConnection = new MongoConnection(
+      self._oplogUrl, {poolSize: 1});
     // XXX better docs, but: it's to get monotonic results
     // XXX is it safe to say "if there's an in flight query, just use its
     //     results"? I don't think so but should consider that
-    oplogLastEntryConnection = new MongoConnection(oplogUrl, {poolSize: 1});
+    self._oplogLastEntryConnection = new MongoConnection(
+      self._oplogUrl, {poolSize: 1});
 
     // Find the last oplog entry. Blocks until the connection is ready.
-    var lastOplogEntry = oplogLastEntryConnection.findOne(
+    var lastOplogEntry = self._oplogLastEntryConnection.findOne(
       OPLOG_COLLECTION, {}, {sort: {$natural: -1}});
 
-    var dbName = dbNameFuture.wait();
+    var dbName = self._dbNameFuture.wait();
 
-    var oplogSelector = _.clone(baseOplogSelector());
+    var oplogSelector = _.clone(self._baseOplogSelector());
     if (lastOplogEntry) {
       // Start after the last entry that currently exists.
       oplogSelector.ts = {$gt: lastOplogEntry.ts};
       // If there are any calls to callWhenProcessedLatest before any other
       // oplog entries show up, allow callWhenProcessedLatest to call its
       // callback immediately.
-      lastProcessedTS = lastOplogEntry.ts;
+      self._lastProcessedTS = lastOplogEntry.ts;
     }
 
     var cursorDescription = new CursorDescription(
       OPLOG_COLLECTION, oplogSelector, {tailable: true});
 
-    tailHandle = oplogTailConnection.tail(cursorDescription, function (doc) {
-      if (!(doc.ns && doc.ns.length > dbName.length + 1 &&
-            doc.ns.substr(0, dbName.length + 1) === (dbName + '.')))
-        throw new Error("Unexpected ns");
+    self._tailHandle = self._oplogTailConnection.tail(
+      cursorDescription, function (doc) {
+        if (!(doc.ns && doc.ns.length > dbName.length + 1 &&
+              doc.ns.substr(0, dbName.length + 1) === (dbName + '.')))
+          throw new Error("Unexpected ns");
 
-      var trigger = {collection: doc.ns.substr(dbName.length + 1),
-                     dropCollection: false,
-                     op: doc};
+        var trigger = {collection: doc.ns.substr(dbName.length + 1),
+                       dropCollection: false,
+                       op: doc};
 
-      // Is it a special command and the collection name is hidden somewhere in
-      // operator?
-      if (trigger.collection === "$cmd") {
-        trigger.collection = doc.o.drop;
-        trigger.dropCollection = true;
-        trigger.id = null;
-      } else {
-        // All other ops have an id.
-        trigger.id = idForOp(doc);
-      }
+        // Is it a special command and the collection name is hidden somewhere
+        // in operator?
+        if (trigger.collection === "$cmd") {
+          trigger.collection = doc.o.drop;
+          trigger.dropCollection = true;
+          trigger.id = null;
+        } else {
+          // All other ops have an id.
+          trigger.id = idForOp(doc);
+        }
 
-      var f = new Future;
-      crossbar.fire(trigger, f.resolver());
-      f.wait();
+        var f = new Future;
+        self._crossbar.fire(trigger, f.resolver());
+        f.wait();
 
-      // Now that we've processed this operation, process pending sequencers.
-      if (!doc.ts)
-        throw Error("oplog entry without ts: " + EJSON.stringify(doc));
-      lastProcessedTS = doc.ts;
-      while (!_.isEmpty(catchingUpFutures)
-             && catchingUpFutures[0].ts.lessThanOrEqual(lastProcessedTS)) {
-        var sequencer = catchingUpFutures.shift();
-        sequencer.future.return();
-      }
-    });
-    readyFuture.return();
-  });
-};
+        // Now that we've processed this operation, process pending sequencers.
+        if (!doc.ts)
+          throw Error("oplog entry without ts: " + EJSON.stringify(doc));
+        self._lastProcessedTS = doc.ts;
+        while (!_.isEmpty(self._catchingUpFutures)
+               && self._catchingUpFutures[0].ts.lessThanOrEqual(
+                 self._lastProcessedTS)) {
+          var sequencer = self._catchingUpFutures.shift();
+          sequencer.future.return();
+        }
+      });
+    self._readyFuture.return();
+  }
+});

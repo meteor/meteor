@@ -342,18 +342,4 @@ OplogObserveDriver.cursorSupported = function (cursorDescription) {
 };
 
 
-idForOp = function (op) {
-  if (op.op === 'd')
-    return op.o._id;
-  else if (op.op === 'i')
-    return op.o._id;
-  else if (op.op === 'u')
-    return op.o2._id;
-  else if (op.op === 'c')
-    throw Error("Operator 'c' doesn't supply an object with id: " +
-                EJSON.stringify(op));
-  else
-    throw Error("Unknown op: " + EJSON.stringify(op));
-};
-
 MongoTest.OplogObserveDriver = OplogObserveDriver;
