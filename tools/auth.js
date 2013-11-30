@@ -136,7 +136,7 @@ var tryRevokeOldTokens = function (options) {
 
     var url;
     if (domain === config.getAccountsDomain()) {
-      url = config.getAccountsApiUrl() + "/logoutById";
+      url = config.getAccountsApiUrl() + "/revoke";
     } else {
       var oauthInfo = fetchGalaxyOAuthInfo(domain, options.timeout);
       if (oauthInfo) {
