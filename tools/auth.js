@@ -2,12 +2,10 @@ var _ = require('underscore');
 var path = require('path');
 var fs = require('fs');
 var utils = require('./utils.js');
+var config = require('./config.js');
 var httpHelpers = require('./http-helpers.js');
 var querystring = require('querystring');
 var url = require('url');
-
-var ACCOUNTS_URL = "http://localhost:3000";
-var ACCOUNTS_DOMAIN = "localhost:3000";
 
 var getSessionFilePath = function () {
   return path.join(process.env.HOME, '.meteorsession');
@@ -137,8 +135,8 @@ var tryRevokeOldTokens = function (options) {
       return;
 
     var url;
-    if (domain === ACCOUNTS_DOMAIN) {
-      url = ACCOUNTS_URL + "/logoutById";
+    if (domain === config.getAccountsDomain()) {
+      url = config.getAccountsApiUrl() + "/logoutById";
     } else {
       var oauthInfo = fetchGalaxyOAuthInfo(domain, options.timeout);
       if (oauthInfo) {
@@ -218,7 +216,7 @@ var getLoginResult = function (response, body, authCookieName) {
 // 'timeout' is an optional request timeout in milliseconds.
 var fetchGalaxyOAuthInfo = function (galaxyName, timeout) {
   var galaxyAuthUrl = 'https://' + galaxyName + ':' +
-        (process.env.DISCOVERY_PORT || 443) + '/_GALAXYAUTH_';
+    config.getDiscoveryPort() + '/_GALAXYAUTH_';
   try {
     var result = httpHelpers.request({
       url: galaxyAuthUrl,
@@ -264,7 +262,7 @@ var logInToGalaxy = function (galaxyName, meteorAuthCookie) {
   var session = crypto.randomBytes(16).toString('hex');
   var stateInfo = { session: session };
 
-  var authCodeUrl = ACCOUNTS_URL + "/oauth2/authorize?" +
+  var authCodeUrl = config.getOauthUrl() + "/authorize?" +
         querystring.stringify({
           state: encodeURIComponent(JSON.stringify(stateInfo)),
           response_type: "code",
@@ -335,7 +333,7 @@ exports.loginCommand = function (argv, showUsage) {
   var loginData = {};
   var meteorAuth;
 
-  if (! galaxy || ! getSessionToken(data, ACCOUNTS_DOMAIN)) {
+  if (! galaxy || ! getSessionToken(data, config.getAccountsDomain())) {
     if (byEmail) {
       loginData.email = utils.readLine({ prompt: "Email: " });
     } else {
@@ -347,7 +345,7 @@ exports.loginCommand = function (argv, showUsage) {
     });
     process.stdout.write("\n");
 
-    var loginUrl = ACCOUNTS_URL + "/login";
+    var loginUrl = config.getAccountsApiUrl() + "/login";
     var result;
     try {
       result = httpHelpers.request({
@@ -373,14 +371,14 @@ exports.loginCommand = function (argv, showUsage) {
     data = readSession();
     logOutSession(data);
     data.username = loginResult.username;
-    setSessionToken(data, ACCOUNTS_DOMAIN, meteorAuth, tokenId);
+    setSessionToken(data, config.getAccountsDomain(), meteorAuth, tokenId);
     writeSession(data);
     process.stdout.write("\n");
   }
 
   if (galaxy) {
     data = readSession();
-    meteorAuth = getSessionToken(data, ACCOUNTS_DOMAIN);
+    meteorAuth = getSessionToken(data, config.getAccountsDomain());
     var galaxyLoginResult = logInToGalaxy(galaxy, meteorAuth);
     if (galaxyLoginResult.error) {
       // XXX add human readable error messages

@@ -10,6 +10,7 @@ var files = require('./files.js');
 var httpHelpers = require('./http-helpers.js');
 var warehouse = require('./warehouse.js');
 var buildmessage = require('./buildmessage.js');
+var config = require('./config.js');
 var _ = require('underscore');
 var inFiber = require('./fiber-helpers.js').inFiber;
 var Future = require('fibers/future');
@@ -17,8 +18,6 @@ var Future = require('fibers/future');
 //
 // configuration
 //
-
-var DEPLOY_HOSTNAME = process.env.DEPLOY_HOSTNAME || 'deploy.meteor.com';
 
 if (process.env.EMACS == "t") {
   // Hack to set stdin to be blocking, reversing node's normal setting of
@@ -34,12 +33,7 @@ if (process.env.EMACS == "t") {
 // interactively prompt for here.
 
 var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
-  var url;
-  if (DEPLOY_HOSTNAME.indexOf("http://") === 0)
-    url = DEPLOY_HOSTNAME + '/' + rpc_name + '/' + site;
-  else
-    url = "https://" + DEPLOY_HOSTNAME + '/' + rpc_name + '/' + site;
-
+  var url = config.getDeployUrl() + '/' + rpc_name + '/' + site;
   if (!_.isEmpty(query_params)) {
     url += '?' + qs.stringify(query_params);
   }
@@ -137,6 +131,11 @@ var deployToServer = function (app_dir, bundleOptions, deployOptions) {
     }
 
     process.stdout.write('Now serving at ' + hostname + '\n');
+    if (! config.isProduction())
+      // It's easy to forget that you're in an alternate
+      // universe. Give them a hint about why they're not seeing their
+      // deploys on the real servers.
+      process.stdout.write('[Universe: ' + config.getUniverse() + ']\n');
     files.rm_recursive(build_dir);
 
 
@@ -340,7 +339,7 @@ var read_password = function (callback) {
 // called exactly once. Calls callback with the entered password, or
 // undefined if no password is required.
 var with_password = function (site, callback) {
-  var check_url = "https://" + DEPLOY_HOSTNAME + "/has_password/" + site;
+  var check_url = config.getDeployUrl() + "/has_password/" + site;
 
   // XXX we've been using `inFiber` as needed, but I wish we'd instead
   // always have callbacks that do nothing other than Future.ret or

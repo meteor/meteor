@@ -1,5 +1,6 @@
 var Future = require('fibers/future');
 var files = require('./files.js');
+var config = require('./config.js');
 var path = require('path');
 var fs = require('fs');
 var unipackage = require('./unipackage.js');
@@ -97,7 +98,7 @@ var prettySub = function (galaxy, name, args, messages) {
 };
 
 exports.discoverGalaxy = function (app) {
-  app = app + ":" + (process.env.DISCOVERY_PORT || 443);
+  app = app + ":" + config.getDiscoveryPort();
   var url = "https://" + app + "/_GALAXY_";
   var fut = new Future();
 
