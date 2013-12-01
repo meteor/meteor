@@ -123,5 +123,15 @@ _.extend(exports, {
       return parseInt(process.env.DISCOVERY_PORT);
     else
       return 443;
+  },
+
+  // It's easy to forget that you're in an alternate universe (and
+  // that that is the reason you're not seeing your deploys). If not
+  // in production mode, print a quick hint about the universe you're
+  // in.
+  printUniverseBanner: function () {
+    if (! config.isProduction())
+      process.stderr.write('[Universe: ' + config.getUniverse() + ']\n');
   }
+
 });

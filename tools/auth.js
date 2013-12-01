@@ -326,6 +326,8 @@ exports.loginCommand = function (argv, showUsage) {
   if (argv._.length !== 0)
     showUsage();
 
+  config.printUniverseBanner();
+
   var byEmail = !! argv.email;
   var galaxy = argv.galaxy;
 
@@ -402,6 +404,8 @@ exports.logoutCommand = function (argv, showUsage) {
   if (argv._.length !== 0)
     showUsage();
 
+  config.printUniverseBanner();
+
   var data = readSession();
   var wasLoggedIn = !! data.username;
   logOutSession(data);
@@ -421,6 +425,8 @@ exports.whoAmICommand = function (argv, showUsage) {
   if (argv._.length !== 0)
     showUsage();
 
+  config.printUniverseBanner();
+
   var data = readSession();
   if (data.username) {
     process.stdout.write(data.username + "\n");
@@ -436,4 +442,19 @@ exports.tryRevokeOldTokens = tryRevokeOldTokens;
 exports.getSessionToken = function (domain) {
   var sessionData = readSession();
   return getSessionToken(sessionData, domain);
+};
+
+exports.isLoggedIn = function () {
+  // XXX will need to change with deferred registration!
+  var data = readSession();
+  return !! data.username;
+};
+
+// Return the username of the currently logged in user, or false if
+// not logged in, or null if the logged in user doesn't have a
+// username.
+exports.loggedInUsername = function () {
+  // XXX will need to change with deferred registration!
+  var data = readSession();
+  return data.username ? data.username : false;
 };

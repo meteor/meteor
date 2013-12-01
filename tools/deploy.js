@@ -11,83 +11,274 @@ var httpHelpers = require('./http-helpers.js');
 var warehouse = require('./warehouse.js');
 var buildmessage = require('./buildmessage.js');
 var config = require('./config.js');
+var auth = require('./auth.js');
+var utils = require('./utils.js');
 var _ = require('underscore');
 var inFiber = require('./fiber-helpers.js').inFiber;
 var Future = require('fibers/future');
 
+// Make a synchronous RPC to the "classic" MDG deploy API. The deploy
+// API has the following contract:
 //
-// configuration
+// - Parameters are always sent in the query string.
+// - A tarball can be sent in the body (when deploying an app).
+// - On success, all calls return HTTP 200. Those that return a value
+//   either return a JSON payload or a plaintext payload and the
+//   Content-Type header is set appropriately.
+// - On failure, calls return some non-200 HTTP status code and
+//   provide a human-readable error message in the body.
+// - URLs are of the form "/[operation]/[site]".
+// - Body encodings are always utf8.
+// - Meteor Accounts auth is possible using first-party MDG cookies
+//   (rather than OAuth).
 //
+// Options include:
+// - method: GET, POST, or DELETE. default GET
+// - operation: "info", "logs", "mongo", "deploy"
+// - site: site name
+// - expectPayload: an array of key names. if present, then we expect
+//   the server to return JSON content on success and to return an
+//   object with all of these key names.
+// - expectMessage: if true, then we expect the server to return text
+//   content on success.
+// - bodyStream: if provided, a stream to use as the request body
+// - any other parameters accepted by the node 'request' module, for example
+//   'qs' to set query string parameters
+//
+// Waits until server responds, then returns an object with the
+// following keys:
+//
+// - statusCode: HTTP status code, or null if the server couldn't be
+//   contacted
+// - payload: if successful, and the server returned a JSON body, the
+//   parsed JSON body
+// - message: if successful, and the server returned a text body, the
+//   body as a string
+// - errorMessage: if unsuccessful, a human-readable error message,
+//   derived from either a transport-level exception, the response
+//   body, or a generic 'try again later' message, as appropriate
 
-if (process.env.EMACS == "t") {
-  // Hack to set stdin to be blocking, reversing node's normal setting of
-  // O_NONBLOCK on the evaluation of process.stdin (because Node unblocks stdio
-  // when forking). This fixes execution of Mongo from within Emacs shell.
-  process.stdin;
-  var child_process = require('child_process');
-  child_process.spawn('true', [], {stdio: 'inherit'});
-}
+var deployRpc = function (options) {
+  var genericError = "Server error (please try again later)";
 
-// available RPCs are: deploy (with set-password), delete, logs,
-// mongo_cred.  each RPC might require a password, which we
-// interactively prompt for here.
+  options = _.clone(options);
+  options.headers = _.clone(options.headers || {});
+  if (options.headers.cookie)
+    throw new Error("sorry, can't combine cookie headers yet");
 
-var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
-  var url = config.getDeployUrl() + '/' + rpc_name + '/' + site;
-  if (!_.isEmpty(query_params)) {
-    url += '?' + qs.stringify(query_params);
+  var token = auth.getSessionToken(config.getAccountsDomain());
+  if (token)
+    options.headers.cookie = 'METEOR_AUTH=' + token;
+
+  // XXX pass meteorReleaseContext
+  try {
+    var result = httpHelpers.request(_.extend(options, {
+      url: config.getDeployUrl() + '/' + options.operation + '/' + options.site,
+      method: options.method || 'GET',
+      bodyStream: options.bodyStream,
+      encoding: 'utf8' // Hack, but good enough for the deploy server..
+    }));
+  } catch (e) {
+    return {
+      statusCode: null,
+      errorMessage: "Connection error (" + e.message + ")"
+    };
   }
 
-  var r = httpHelpers.request(
-    {method: method, url: url},
-    function (error, response, body) {
-      if (error || ((response.statusCode !== 200)
-                    && (response.statusCode !== 201)))
-        // pass some non-falsy error back to callback
-        callback(error || response.statusCode, body);
-      else
-        callback(null, body);
-    });
+  var response = result.response;
+  var body = result.body;
+  var ret = { statusCode: response.statusCode };
 
-  return r;
+  if (response.statusCode !== 200) {
+    ret.errorMessage = body.length > 0 ? body : genericError;
+    return ret;
+  }
+
+  var contentType = response.headers["content-type"] || '';
+  if (contentType === "application/json; charset=utf-8") {
+    try {
+      ret.payload = JSON.parse(body);
+    } catch (e) {
+      ret.errorMessage = genericError;
+      return ret;
+    }
+  } else if (contentType === "text/plain; charset=utf-8") {
+    ret.message = body;
+  }
+
+  var hasAllExpectedKeys = _.all(_.map(
+    options.expectPayload || [], function (key) {
+      return ret.payload && _.has(ret.payload, key);
+    }));
+
+  if ((options.expectPayload && ! _.has(ret, 'payload')) ||
+      (options.expectMessage && ! _.has(ret, 'message')) ||
+      ! hasAllExpectedKeys) {
+    delete ret.payload;
+    delete ret.message;
+
+    ret.errorMessage = genericError;
+  }
+
+  return ret;
 };
 
-// called by command-line `meteor deploy`
-var deployCmd = function (options) {
-  var parsed_url = parse_url(options.url);
+// Just like deployRpc, but also presents authentication. It will
+// prompt the user for a password, or use a Meteor Accounts
+// credential, as necessary.
+//
+// Additional options (beyond deployRpc):
+//
+// - preflight: if true, do everything but the actual RPC. The only
+//   other necessary option is 'site' and possibly 'acceptNew'. On
+//   failure, returns an object with errorMessage (just like
+//   deployRpc). On success, returns an object without an errorMessage
+//   key and possibly with a 'preflightPassword' key (if password was
+//   collected).
+// - preflightPassword: if previously called for this app with the
+//   'preflight' option and a 'preflightPassword' was returned, you
+//   can pass 'preflightPassword' back in on a subsequent call to skip
+//   the password prompt.
+var authedRpc = function (options) {
+  options = _.clone(options);
+  var preflight = options.preflight;
+  var preflightPassword = options.preflightPassword;
+  delete options.preflight;
+  delete options.preflightPassword;
 
-  // a bit contorted here to make sure we ask for the password before
-  // launching the slow bundle process.
-  with_password(parsed_url.hostname, function (password) {
-    var deployOptions = {
-      site: parsed_url.hostname,
-      password: password,
-      settings: options.settings
-    };
-    if (options.setPassword)
-      get_new_password(function (newPassword) {
-        deployOptions.setPassword = newPassword;
-        deployToServer(options.appDir, options.bundleOptions, deployOptions);
-      });
-    else
-      deployToServer(options.appDir, options.bundleOptions, deployOptions);
+  // Fetch auth info
+  var infoResult = deployRpc({
+    operation: 'info',
+    site: options.site,
+    expectPayload: []
   });
+
+  if (infoResult.statusCode === 404) {
+    // Doesn't exist, therefore not protected.
+    return preflight ? { } : deployRpc(options);
+  }
+
+  if (infoResult.errorMessage)
+    return infoResult;
+  var info = infoResult.payload;
+
+  if (! _.has(info, 'protection')) {
+    // Not protected.
+    //
+    // XXX should prompt the user to claim the app (only if deploying?)
+    return preflight ? { } : deployRpc(options);
+  }
+
+  if (info.protection === "password") {
+    // Password protected. Read a password, hash it, and include the
+    // hashed password as a query parameter when doing the RPC.
+    var password = preflightPassword;
+    if (! password) {
+      var password = utils.readLine({
+        echo: false,
+        prompt: "Password: ",
+        stream: process.stderr
+      });
+
+      // Hash the password so we never send plaintext over the
+      // wire. Doesn't actually make us more secure, but it means we
+      // won't leak a user's password, which they might use on other
+      // sites too.
+      var crypto = require('crypto');
+      var hash = crypto.createHash('sha1');
+      hash.update('S3krit Salt!');
+      hash.update(password);
+      password = hash.digest('hex');
+
+      options = _.clone(options);
+      options.qs = _.clone(options.qs || {});
+      options.qs.password = password;
+    }
+
+    return preflight ? { preflightPassword: password } : deployRpc(options);
+  }
+
+  if (info.protection === "account") {
+    if (! _.has(info, 'authorized')) {
+      // Absence of this implies that we are not an authorized user on
+      // this app
+      return {
+        statusCode: null,
+        errorMessage: auth.isLoggedIn() ?
+          // XXX better error message (probably need to break out of
+          // the 'errorMessage printed with brief prefix' pattern)
+          "Not an authorized user on this site" :
+          "Not logged in"
+      }
+    }
+
+    // Sweet, we're an authorized user.
+    return preflight ? { } : deployRpc(options);
+  }
+
+  return {
+    statusCode: null,
+    errorMessage: "You need a newer version of Meteor to work with this site"
+  }
 };
 
-// a utility used by `meteor deploy` and `meteor test-packages`
-var deployToServer = function (app_dir, bundleOptions, deployOptions) {
-  // might be parsing twice if called from deploy_app but that's fine
-  var site = parse_url(deployOptions.site).hostname;
+// Take a proposed sitename for deploying to. If it looks
+// syntactically good, canonicalize it (this essentially means
+// stripping 'http://' or a trailing '/' if present) and return it. If
+// not, print an error message to stderr and return null.
+var canonicalizeSite = function (site) {
+  var url = site;
+  if (!url.match(':\/\/'))
+    url = 'http://' + url;
 
-  var password = deployOptions.password;
-  var set_password = deployOptions.setPassword;
-  var settings = deployOptions.settings;
-  var build_dir = path.join(app_dir, '.meteor', 'local', 'build_tar');
+  var parsed = require('url').parse(url);
+
+  if (! parsed.hostname) {
+    process.stdout.write(
+"Please specify a domain to connect to, such as www.example.com or\n" +
+"http://www.example.com/\n");
+    return false;
+  }
+
+  if (parsed.pathname != '/' || parsed.hash || parsed.query) {
+    process.stdout.write(
+"Sorry, Meteor does not yet support specific path URLs, such as\n" +
+"http://www.example.com/blog .  Please specify the root of a domain.\n");
+    return false;
+  }
+
+  return parsed.hostname;
+};
+
+// Run the bundler and deploy the result.
+//
+// Options:
+// - appDir: root directory of app to bundle up
+// - site: site to deploy as
+// - settings: deploy settings to use, if any (omit to leave unchanged
+//   from previous deploy of the app, if any)
+// - bundleOptions: additional options to pass to the bundler
+var bundleAndDeploy = function (options) {
+  var site = canonicalizeSite(options.site);
+  if (! site)
+    process.exit(1);
+
+  // Check auth up front, rather than after the (potentially lengthy)
+  // bundling process.
+  var preflight = authedRpc({ site: site, preflight: true });
+  if (preflight.errorMessage) {
+    process.stderr.write("\nError deploying application: " +
+                         preflight.errorMessage + "\n");
+    process.exit(1);
+  }
+
+  var build_dir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
   var bundle_path = path.join(build_dir, 'bundle');
 
   process.stdout.write('Deploying to ' + site + '.  Bundling...\n');
   var bundler = require('./bundler.js');
-  var bundleResult = bundler.bundle(app_dir, bundle_path, bundleOptions);
+  var bundleResult = bundler.bundle(options.appDir, bundle_path,
+                                    options.bundleOptions);
   if (bundleResult.errors) {
     process.stdout.write("\n\nErrors prevented deploying:\n");
     process.stdout.write(bundleResult.errors.formatMessages());
@@ -96,159 +287,237 @@ var deployToServer = function (app_dir, bundleOptions, deployOptions) {
 
   process.stdout.write('Uploading...\n');
 
-  var rpcOptions = {};
-  if (password) rpcOptions.password = password;
-  if (set_password) rpcOptions.set_password = set_password;
+  var result = authedRpc({
+    method: 'POST',
+    operation: 'deploy',
+    site: site,
+    qs: options.settings ? { settings: options.settings} : {},
+    bodyStream: files.createTarGzStream(path.join(build_dir, 'bundle')),
+    expectPayload: ['url'],
+    preflightPassword: preflight.preflightPassword
+  });
 
-  // When it hits the wire, all these opts will be URL-encoded.
-  if (settings !== undefined) rpcOptions.settings = settings;
+  if (result.errorMessage) {
+    process.stderr.write("\nError deploying application: " +
+                         result.errorMessage + "\n");
+    process.exit(1);
+  }
 
-  var tar = files.createTarGzStream(path.join(build_dir, 'bundle'));
+  var deployedAt = require('url').parse(result.payload.url);
+  var hostname = deployedAt.hostname;
 
-  var rpc = meteor_rpc('deploy', 'POST', site, rpcOptions, function (err, body) {
-    if (err) {
-      var errorMessage = (body || ("Connection error (" + err.message + ")"));
-      process.stderr.write("\nError deploying application: " + errorMessage + "\n");
-      process.exit(1);
-    }
+  process.stdout.write('Now serving at ' + hostname + '\n');
+  files.rm_recursive(build_dir);
 
-    var hostname = null;
-    var response = null;
-    try {
-      response = JSON.parse(body);
-    } catch (e) {
-      // ... leave null
-    }
-    if (response && response.url) {
-      var url = require('url').parse(response.url);
-      if (url && url.hostname)
-        hostname = url.hostname;
-    }
-
-    if (!hostname) {
-      process.stdout.write('Error receiving hostname from deploy server.\n');
-      process.exit(1);
-    }
-
-    process.stdout.write('Now serving at ' + hostname + '\n');
-    if (! config.isProduction())
-      // It's easy to forget that you're in an alternate
-      // universe. Give them a hint about why they're not seeing their
-      // deploys on the real servers.
-      process.stdout.write('[Universe: ' + config.getUniverse() + ']\n');
-    files.rm_recursive(build_dir);
-
-
-    if (hostname && !hostname.match(/meteor\.com$/)) {
-      var dns = require('dns');
-      dns.resolve(hostname, 'CNAME', function (err, cnames) {
-        if (err || cnames[0] !== 'origin.meteor.com') {
-          dns.resolve(hostname, 'A', function (err, addresses) {
-            if (err || addresses[0] !== '107.22.210.133') {
-              process.stdout.write('-------------\n');
-              process.stdout.write("You've deployed to a custom domain.\n");
-              process.stdout.write("Please be sure to CNAME your hostname to origin.meteor.com,\n");
-              process.stdout.write("or set an A record to 107.22.210.133.\n");
-              process.stdout.write('-------------\n');
-            }
-          });
+  if (! hostname.match(/meteor\.com$/)) {
+    var dns = require('dns');
+    dns.resolve(hostname, 'CNAME', function (err, cnames) {
+      if (err || cnames[0] !== 'origin.meteor.com') {
+        dns.resolve(hostname, 'A', function (err, addresses) {
+          if (err || addresses[0] !== '107.22.210.133') {
+            process.stdout.write('-------------\n');
+            process.stdout.write("You've deployed to a custom domain.\n");
+            process.stdout.write("Please be sure to CNAME your hostname to origin.meteor.com,\n");
+            process.stdout.write("or set an A record to 107.22.210.133.\n");
+            process.stdout.write('-------------\n');
+          }
+        });
         }
-      });
+    });
+  }
+};
+
+var deleteApp = function (site) {
+  site = canonicalizeSite(site);
+  if (! site)
+    process.exit(1);
+
+  var result = authedRpc({
+    method: 'DELETE',
+    operation: 'deploy',
+    site: site,
+  });
+
+  if (result.errorMessage) {
+    process.stderr.write("Couldn't delete application: " +
+                         result.errorMessage + "\n");
+    process.exit(1);
+  }
+
+  process.stdout.write("Deleted.\n");
+};
+
+var temporaryMongoUrl = function (site) {
+  site = canonicalizeSite(site);
+  if (! site)
+    process.exit(1);
+
+  var result = authedRpc({
+    operation: 'mongo',
+    site: site,
+    expectMessage: true
+  });
+
+  if (result.errorMessage) {
+    process.stderr.write("Couldn't open Mongo connection: " +
+                         result.errorMessage + "\n");
+    process.exit(1);
+  }
+
+  return result.message;
+};
+
+var logs = function (site) {
+  site = canonicalizeSite(site);
+  if (! site)
+    process.exit(1);
+
+  var result = authedRpc({
+    operation: 'logs',
+    site: site,
+    expectMessage: true
+  });
+
+  if (result.errorMessage) {
+    process.stderr.write("Couldn't get logs: " +
+                         result.errorMessage + "\n");
+    process.exit(1);
+  }
+
+  process.stdout.write(result.message);
+};
+
+var listAuthorized = function (site) {
+  site = canonicalizeSite(site);
+  if (! site)
+    process.exit(1);
+
+  var result = deployRpc({
+    operation: 'info',
+    site: site,
+    expectPayload: []
+  });
+  if (result.errorMessage) {
+    process.stderr.write("Couldn't get authorized users list: " +
+                         result.errorMessage + "\n");
+    process.exit(1);
+  }
+  var info = result.payload;
+
+  if (! _.has(info, 'protection')) {
+    process.stdout.write("<anyone>\n");
+    process.exit(0);
+  }
+
+  if (info.protection === "password") {
+    process.stdout.write("<password>\n");
+    process.exit(0);
+  }
+
+  if (info.protection === "account") {
+    if (! _.has(info, 'authorized')) {
+      process.stderr.write("Couldn't get authorized users list: " +
+                           "You are not authorized\n");
+      process.exit(1);
     }
-  });
 
-  tar.pipe(rpc);
-};
-
-var delete_app = function (url) {
-  var parsed_url = parse_url(url);
-
-  with_password(parsed_url.hostname, function (password) {
-    var opts = {};
-    if (password) opts.password = password;
-
-    meteor_rpc('deploy', 'DELETE', parsed_url.hostname, opts, function (err, body) {
-      if (err) {
-        process.stderr.write("Error deleting application: " + body + "\n");
-        process.exit(1);
-      }
-
-      process.stdout.write("Deleted.\n");
+    process.stdout.write((auth.loggedInUsername() || "<you>") + "\n");
+    _.each(info.authorized, function (username) {
+      process.stdout.write(username + "\n");
     });
-  });
+    process.exit(0);
+  }
 };
 
-var temporaryMongoUrl = function (url) {
-  var parsed_url = parse_url(url);
-  var passwordFut = new Future();
-  with_password(parsed_url.hostname, function (password) {
-    passwordFut.return(password);
+// action is "add" or "remove"
+var changeAuthorized = function (site, action, username) {
+  site = canonicalizeSite(site);
+  if (! site)
+    process.exit(1);
+
+  var result = authedRpc({
+    method: 'POST',
+    operation: 'authorized',
+    site: site,
+    qs: action === "add" ? { add: username } : { remove: username }
   });
-  var password = passwordFut.wait();
-  var urlFut = new Future();
-  var opts = {};
-  if (password)
-    opts.password = password;
-  meteor_rpc('mongo', 'GET',
-             parsed_url.hostname, opts, function (err, body) {
-               if (err) {
-                 process.stderr.write(body + "\n");
-                 process.exit(1);
-               }
-               urlFut.return(body);
-             });
-  var mongoUrl = urlFut.wait();
-  return mongoUrl;
-};
 
-var logs = function (url) {
-  var parsed_url = parse_url(url);
-
-  with_password(parsed_url.hostname, function (password) {
-    var opts = {};
-    if (password) opts.password = password;
-
-    meteor_rpc('logs', 'GET', parsed_url.hostname, opts, function (err, body) {
-      if (err) {
-        process.stderr.write(body + '\n');
-        process.exit(1);
-      }
-
-      process.stdout.write(body);
-    });
-  });
-};
-
-// accepts www.host.com, defaults domain to meteor, defaults
-// protocol to http.  on bad URL, prints error and exits the process.
-//
-// XXX shared w/ proxy.js
-var parse_url = function (url) {
-  if (!url.match(':\/\/'))
-    url = 'http://' + url;
-
-  var parsed = require('url').parse(url);
-
-  delete parsed.host; // we use hostname
-
-  if (!parsed.hostname) {
-    process.stdout.write(
-"Please specify a domain to connect to, such as www.example.com or\n" +
-"http://www.example.com/\n");
+  if (result.errorMessage) {
+    process.stderr.write("Couldn't change authorized users: " +
+                         result.errorMessage + "\n");
     process.exit(1);
   }
 
-  if (parsed.pathname != '/' || parsed.hash || parsed.query) {
-    process.stdout.write(
-"Sorry, Meteor does not yet support specific path URLs, such as\n" +
-"http://www.example.com/blog .  Please specify the root of a domain.\n");
+  process.stdout.write(site + ": " +
+                       (action === "add" ? "added " : "removed ")
+                       + username + "\n");
+  process.exit(0);
+};
+
+var claim = function (site) {
+  site = canonicalizeSite(site);
+  if (! site)
+    process.exit(1);
+
+  // Check to see if it's even a claimable site, so that we can print
+  // a more appropriate message than we'd get if we called authedRpc
+  // straight away (at a cost of an extra REST call)
+  var infoResult = deployRpc({
+    operation: 'info',
+    site: site
+  });
+
+  if (infoResult.statusCode === 404) {
+    process.stderr.write(
+"There isn't a site deployed at that address. Use 'meteor deploy' if\n" +
+"you'd like to deploy your app here.\n");
     process.exit(1);
   }
 
-  return parsed;
+  if (infoResult.payload && infoResult.payload.protection === "account") {
+    if (infoResult.payload.authorized)
+      process.stderr.write("That site already belongs to you.\n");
+    else
+      process.stderr.write("Sorry, that site belongs to someone else.\n");
+    process.exit(1);
+  }
+
+  if (infoResult && infoResult.payload.protection === "password") {
+    process.stdout.write(
+"To claim this site and transfer it to your account, enter the\n" +
+"site password one last time.\n\n");
+  }
+
+  var result = authedRpc({
+    method: 'POST',
+    operation: 'claim',
+    site: site
+  });
+
+  if (result.errorMessage) {
+    process.stderr.write("Couldn't claim site: " +
+                         result.errorMessage + "\n");
+    process.exit(1);
+  }
+
+  process.stdout.write(
+site + ": " + "successfully transferred to your account.\n" +
+"\n" +
+"Show authorized users with:\n" +
+"  meteor authorized " + site + "\n" +
+"\n" +
+"Add authorized users with:\n" +
+"  meteor authorized " + site + " --add <username>\n" +
+"\n" +
+"Remove authorized users with:\n" +
+"  meteor authorized " + site + " --remove <user>\n" +
+"\n");
+  process.exit(0);
 };
 
-var run_mongo_shell = function (url) {
+
+
+var runMongoShell = function (url) {
   var mongo_path = path.join(files.get_dev_bundle(), 'mongodb', 'bin', 'mongo');
   var mongo_url = require('url').parse(url);
   var auth = mongo_url.auth && mongo_url.auth.split(':');
@@ -266,124 +535,13 @@ var run_mongo_shell = function (url) {
                                  { stdio: 'inherit' });
 };
 
-// hash the password so we never send plaintext over the wire. Doesn't
-// actually make us more secure, but it means we won't leak a user's
-// password, which they might use on other sites too.
-var transform_password = function (password) {
-  var crypto = require('crypto');
-  var hash = crypto.createHash('sha1');
-  hash.update('S3krit Salt!');
-  hash.update(password);
-  return hash.digest('hex');
-};
 
-// read a password from stdin. return it in a callback.
-var read_password = function (callback) {
-  // Password prompt code adapted from
-  // https://github.com/visionmedia/commander.js/blob/master/lib/commander.js
-
-  var buf = '';
-  if (process.stdin.setRawMode) {
-    // when piping password from bash to meteor we have no setRawMode() available
-    process.stdin.setRawMode(true);
-  }
-
-  // keypress
-  var keypress = require('keypress');
-  keypress(process.stdin);
-  process.stdin.on('keypress', inFiber(function(c, key){
-    if (key && (key.name === 'enter' || key.name === 'return')) {
-      console.log();
-      process.stdin.pause();
-      process.stdin.removeAllListeners('keypress');
-      if (process.stdin.setRawMode) {
-        // when piping password from bash to meteor we have no setRawMode() available
-        process.stdin.setRawMode(false);
-      }
-
-      // if they just hit enter, prompt again. let's not do this.
-      // This means empty password is a valid password.
-      //if (!buf.trim().length) return self.password(str, mask, fn);
-
-      callback(transform_password(buf));
-      return;
-    }
-
-    // deal with backspace
-    if (key && 'backspace' === key.name) {
-      buf = buf.substring(0, buf.length - 1);
-      return;
-    }
-
-    // raw mode masks control-c. make sure users can get out.
-    if (key && key.ctrl && 'c' === key.name) {
-      console.log();
-      process.stdin.pause();
-      process.stdin.removeAllListeners('keypress');
-      process.stdin.setRawMode(false);
-
-      process.kill(process.pid, 'SIGINT');
-      return;
-    }
-
-    buf += c;
-  }));
-
-  process.stdin.resume();
-};
-
-// Check if a particular endpoint requires a password. If so, prompt for
-// it.
-//
-// takes an site name and callback function(password). This is always
-// called exactly once. Calls callback with the entered password, or
-// undefined if no password is required.
-var with_password = function (site, callback) {
-  var check_url = config.getDeployUrl() + "/has_password/" + site;
-
-  // XXX we've been using `inFiber` as needed, but I wish we'd instead
-  // always have callbacks that do nothing other than Future.ret or
-  // Future.throw. Basically, what Future.wrap does.
-  callback = inFiber(callback);
-
-  httpHelpers.request(check_url, function (error, response, body) {
-    if (error || response.statusCode !== 200) {
-      callback();
-
-    } else if (body === "false") {
-      // XXX in theory we should JSON parse the result, and use
-      // that. But we happen to know we'll only ever get 'true' or
-      // 'false' if we got a 200, so don't bother.
-      callback();
-
-    } else {
-      process.stderr.write("Password: ");
-      read_password(callback);
-    }
-  });
-};
-
-// Prompts for a new password, asking you twice so you don't typo
-// it. Keeps prompting you until you have two that match.
-var get_new_password = function (callback) {
-  process.stdout.write("New Password: ");
-  read_password(function (p1) {
-    process.stdout.write("New Password (again): ");
-    read_password(function (p2) {
-      if (p1 === p2) {
-        callback(p1);
-        return;
-      }
-      process.stdout.write("Passwords do not match! Try again.\n");
-      get_new_password(callback);
-    });
-  });
-};
-
-exports.deployCmd = deployCmd;
-exports.deployToServer = deployToServer;
-exports.delete_app = delete_app;
+exports.bundleAndDeploy = bundleAndDeploy;
+exports.deleteApp = deleteApp;
 exports.temporaryMongoUrl = temporaryMongoUrl;
 exports.logs = logs;
+exports.listAuthorized = listAuthorized;
+exports.changeAuthorized = changeAuthorized;
+exports.claim = claim;
 
-exports.run_mongo_shell = run_mongo_shell;
+exports.runMongoShell = runMongoShell;
