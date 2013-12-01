@@ -84,6 +84,8 @@ HTTP.call = function(method, url, options, callback) {
       throw new Error("Can't create XMLHttpRequest"); // ???
 
     xhr.open(method, url, true, username, password);
+    // responseType: "" = "text" = default value
+    xhr.responseType = options.responseType || "";
 
     for (var k in headers)
       xhr.setRequestHeader(k, headers[k]);
@@ -114,7 +116,7 @@ HTTP.call = function(method, url, options, callback) {
 
           var response = {};
           response.statusCode = xhr.status;
-          response.content = xhr.responseText;
+          response.content = xhr.response || xhr.responseText;
 
           response.headers = {};
           var header_str = xhr.getAllResponseHeaders();

@@ -42,6 +42,16 @@ var respond = function(req, res) {
     res.setHeader("Another-Silly-Header", "Silly place.");
     res.end("A RESPONSE WITH SOME HEADERS");
     return;
+  } else if (req.url === "/binary") {
+    res.statusCode = 200;
+    var b = new Buffer('Hello world!');
+    res.end(b, "binary");
+    return;
+  } else if (req.url === "/document") {
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "text/html");
+    res.end("<html></html>");
+    return;
   }
 
   var chunks = [];
