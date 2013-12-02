@@ -46,7 +46,14 @@ StreamServer = function () {
   if (!Package.webapp) {
     throw new Error("Cannot create a DDP server without the webapp package");
   }
+  // Install the sockjs handlers, but we want to keep around our own particular
+  // request handler that adjusts idle timeouts while we have an outstanding
+  // request.  This compensates for the fact that sockjs removes all listeners
+  // for "request" to add its own.
+  Package.webapp.WebApp.httpServer.removeListener('request', Package.webapp.WebApp._timeoutAdjustmentRequestCallback);
   self.server.installHandlers(Package.webapp.WebApp.httpServer);
+  Package.webapp.WebApp.httpServer.addListener('request', Package.webapp.WebApp._timeoutAdjustmentRequestCallback);
+
   Package.webapp.WebApp.httpServer.on('closing', function () {
     _.each(self.open_sockets, function (socket) {
       socket.end();
