@@ -39,8 +39,8 @@ var maybeMakePool = function () {
   var poolFuture = new Future();
   AppConfig.configurePackage('email', function (config) {
     // TODO: allow reconfiguration.
-    if (!smtpPool && (config.url || process.env.MAIL_URL)) {
-      smtpPool = makePool(config.url || process.env.MAIL_URL);
+    if (!smtpPool && (process.env.MAIL_URL || config.url)) {
+      smtpPool = makePool(process.env.MAIL_URL || config.url);
     }
     poolFuture.return();
   });
