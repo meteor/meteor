@@ -12,7 +12,7 @@ var optimist = Npm.require('optimist');
 var useragent = Npm.require('useragent');
 var send = Npm.require('send');
 
-var SHORT_SOCKET_TIMEOUT = 3*1000;
+var SHORT_SOCKET_TIMEOUT = 5*1000;
 var LONG_SOCKET_TIMEOUT = 120*1000;
 
 WebApp = {};
@@ -206,12 +206,16 @@ Meteor.startup(function () {
 // quickly, so that we can shut down relatively promptly but cleanly, without
 // cutting off anyone's response.
 WebApp._timeoutAdjustmentRequestCallback = function (req, res) {
-  req.setTimeout(LONG_SOCKET_TIMEOUT);  // this is really just req.socket.setTimeout(LONG_AMOUNT);
-  // Insert our new finish listener to run BEFORE the existing one which removes the response from the socket.
+  // this is really just req.socket.setTimeout(LONG_SOCKET_TIMEOUT);
+  req.setTimeout(LONG_SOCKET_TIMEOUT);
+  // Insert our new finish listener to run BEFORE the existing one which removes
+  // the response from the socket.
   var finishListeners = res.listeners('finish');
+  // XXX Apparently in Node 0.12 this event is now called 'prefinish'.
+  // https://github.com/joyent/node/commit/7c9b6070
   res.removeAllListeners('finish');
   res.on('finish', function () {
-    res.setTimeout(SHORT_SOCKET_TIMEOUT);  // again, basically just res.socket.setTimeout
+    res.setTimeout(SHORT_SOCKET_TIMEOUT);
   });
   _.each(finishListeners, function (l) { res.on('finish', l); });
 };
@@ -437,9 +441,9 @@ var runWebAppServer = function () {
   var httpServer = http.createServer(app);
   var onListeningCallbacks = [];
 
-  // After 5 seconds of a socket being open, assume it is a long-polling
-  // connection that we have to keep track of to shut down when we're shutting
-  // down the server overall.
+  // After 5 seconds w/o data on a socket, kill it.  On the other hand, if
+  // there's an outstanding request, give it a higher timeout instead (to avoid
+  // killing long-polling requests)
   httpServer.setTimeout(SHORT_SOCKET_TIMEOUT);
 
   // Do this here, and then also in livedata/stream_server.js, because
@@ -453,6 +457,8 @@ var runWebAppServer = function () {
   process.on('SIGHUP', Meteor.bindEnvironment(function () {
     shuttingDown = true;
     // tell others with websockets open that we plan to close this.
+    // XXX: Eventually, this should be done with a standard meteor shut-down
+    // logic path.
     httpServer.emit('closing');
     httpServer.close( function () {
       process.exit(0);
