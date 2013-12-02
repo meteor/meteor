@@ -141,8 +141,8 @@ Tinytest.add('observe sequence - array to other array, changes', function (test)
     {addedAt: ["42", {_id: "42", baz: 42}, 2, null]},
     {removed: ["37", {_id: "37", bar: 2}]},
     {addedAt: ["38", {_id: "38", bar: 2}, 1, "42"]},
-    // XXX not sure why 'changed' is being fired for something that didn't
-    // change
+    // change fires for all elements, because we don't diff the actual
+    // objects.
     {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]},
     {changed: ["42", {_id: "42", baz: 43}, {_id: "42", baz: 42}]}
   ]);
