@@ -1099,7 +1099,14 @@ LocalCollection._compileProjection = function (fields) {
   // Find the non-_id keys (_id is handled specially because it is included unless
   // explicitly excluded). Sort the keys, so that our code to detect overlaps
   // like 'foo' and 'foo.bar' can assume that 'foo' comes first.
-  var fieldsKeys = _.reject(_.keys(fields).sort(), function (key) { return key === '_id'; });
+  var fieldsKeys = _.keys(fields).sort();
+
+  // If there are other rules other than '_id', treat '_id' differently in a
+  // separate case. If '_id' is the only rule, use it to understand if it is
+  // including/excluding projection.
+  if (fieldsKeys.length > 0 && !(fieldsKeys.length === 1 && fieldsKeys[0] === '_id'))
+    fieldsKeys = _.reject(fieldsKeys, function (key) { return key === '_id'; });
+
   var including = null; // Unknown
   var projectionRulesTree = {}; // Tree represented as nested objects
 
