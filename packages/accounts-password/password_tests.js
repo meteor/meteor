@@ -488,18 +488,14 @@ if (Meteor.isServer) (function () {
   Tinytest.add(
     'passwords - createUser hooks',
     function (test) {
-      var email = Random.id() + '@example.com';
+      var username = Random.id();
       test.throws(function () {
         // should fail the new user validators
-        Accounts.createUser({email: email, profile: {invalid: true}});
-        });
+        Accounts.createUser({username: username, profile: {invalid: true}});
+      });
 
-      // disable sending emails
-      var oldEmailSend = Email.send;
-      Email.send = function() {};
-      var userId = Accounts.createUser({email: email,
+      var userId = Accounts.createUser({username: username,
                                         testOnCreateUserHook: true});
-      Email.send = oldEmailSend;
 
       test.isTrue(userId);
       var user = Meteor.users.findOne(userId);
