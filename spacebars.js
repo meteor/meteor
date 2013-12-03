@@ -1384,6 +1384,14 @@ var optimize = function (tree) {
   return optTree;
 };
 
+var builtInComponents = {
+  'content': '__content',
+  'elseContent': '__elseContent',
+  'if': 'UI.If2',
+  'unless': 'UI.Unless2',
+  'with': 'UI.With2'
+};
+
 var replaceSpecials = function (node) {
   if (UI.isComponent(node)) {
     return node;
@@ -1416,8 +1424,15 @@ var replaceSpecials = function (node) {
         var path = tag.path;
         var compCode = codeGenPath2(path);
 
-        if (path.length === 1)
-          compCode = '(Template[' + toJSLiteral(path[0]) + '] || ' + compCode + ')';
+        if (path.length === 1) {
+          var compName = path[0];
+          if (builtInComponents.hasOwnProperty(compName)) {
+            compCode = builtInComponents[compName];
+          } else {
+            compCode = ('(Template[' + toJSLiteral(path[0]) +
+                        '] || ' + compCode + ')');
+          }
+        }
 
         var includeArgs = codeGenInclusionArgs(tag);
 
@@ -1436,6 +1451,17 @@ var replaceSpecials = function (node) {
 
 var codeGenInclusionArgs = function (tag) {
   var args = null;
+
+  if ('content' in tag) {
+    args = (args || {});
+    args.__content = (
+      'UI.block(' + Spacebars.compile2(tag.content) + ')');
+  }
+  if ('elseContent' in tag) {
+    args = (args || {});
+    args.__elseContent = (
+      'UI.block(' + Spacebars.compile2(tag.elseContent) + ')');
+  }
 
   _.each(tag.args, function (arg) {
     var argType = arg[0];
@@ -1466,8 +1492,9 @@ var codeGenInclusionArgs = function (tag) {
 
     if (arg.length > 2) {
       // keyword argument (represented as [type, value, name])
+      var name = arg[2];
       args = (args || {});
-      args[toJSLiteral(arg[2])] = argCode;
+      args[toJSLiteral(name)] = argCode;
     } else {
       // positional argument
       // XXX deal with >1 posArgs for #foo helpers
@@ -1483,6 +1510,7 @@ var codeGenInclusionArgs = function (tag) {
 };
 
 Spacebars.include = function (kindOrFunc, args) {
+  args = args || {};
   if (typeof kindOrFunc === 'function') {
     // function block helper
     var func = kindOrFunc;
@@ -1495,13 +1523,27 @@ Spacebars.include = function (kindOrFunc, args) {
       }
     }
 
+    var result;
     if ('data' in args) {
       var data = args.data;
       data = (typeof data === 'function' ? data() : data);
-      return func(data, { hash: hash });
+      result = func(data, { hash: hash });
     } else {
-      return func({ hash: hash });
+      result = func({ hash: hash });
     }
+    // In `{{#foo}}...{{/foo}}`, if `foo` is a function that
+    // returns a component, attach __content and __elseContent
+    // to it.
+    if (UI.isComponent(result) &&
+        (('__content' in args) || ('__elseContent' in args))) {
+      var extra = {};
+      if ('__content' in args)
+        extra.__content = args.__content;
+      if ('__elseContent' in args)
+        extra.__elseContent = args.__elseContent;
+      result = result.extend(extra);
+    }
+    return result;
   } else {
     // Component
     var kind = kindOrFunc;
@@ -1677,7 +1719,7 @@ var codeGenMustache = function (tag, mustacheType) {
     (argCode ? ', ' + argCode.join(', ') : '') + ')';
 };
 
-Spacebars.compile2 = function (input) {
+Spacebars.compile2 = function (input, options) {
   var tree;
 
   // Accept string or output of Spacebars.parse
@@ -1690,7 +1732,19 @@ Spacebars.compile2 = function (input) {
 
   tree = replaceSpecials(tree);
 
-  var code = '(function () { var self = this; return ';
+  // is this a template, rather than a block passed to
+  // a block helper, say
+  var isTemplate = (options && options.isTemplate);
+
+  var code = '(function () { var self = this; ';
+  if (isTemplate) {
+    // support `{{> content}}` and `{{> elseContent}}` with
+    // lexical scope by creating a local variable in the
+    // template's render function.
+    code += 'var __content = self.__content, ' +
+      '__elseContent = self.__elseContent; ';
+  }
+  code += 'return ';
   code += UI.toCode(tree);
   code += '; })';
 
