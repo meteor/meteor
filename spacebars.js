@@ -258,6 +258,21 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
     }
   }
 
+  var checkTag = function (tag) {
+    if (tag.type === 'INCLUSION') {
+      // throw error on >1 positional arguments
+      var numPosArgs = 0;
+      var args = tag.args;
+      for (var i = 0; i < args.length; i++)
+        if (args[i].length === 2)
+          numPosArgs++;
+      if (numPosArgs > 1)
+        error("Only one positional argument is allowed here");
+    }
+  };
+
+  checkTag(tag);
+
   tag.charPos = startPos;
   tag.charLength = pos - startPos;
   return tag;
@@ -1421,7 +1436,6 @@ var replaceSpecials = function (node) {
 
 var codeGenInclusionArgs = function (tag) {
   var args = null;
-  var numPosArgs = 0;
 
   _.each(tag.args, function (arg) {
     var argType = arg[0];
@@ -1456,10 +1470,7 @@ var codeGenInclusionArgs = function (tag) {
       args[toJSLiteral(arg[2])] = argCode;
     } else {
       // positional argument
-      // XXX deal with >1 posArgs
-      if (numPosArgs)
-        throw new Error("Only one positional argument is allowed here");
-      numPosArgs++;
+      // XXX deal with >1 posArgs for #foo helpers
       args = (args || {});
       args.data = argCode;
     }
