@@ -505,7 +505,7 @@ Template.api.onConnection = {
      descr: "The function to call with the session when a new DDP connection is established."}
   ]
 };
-    
+
 Template.api.ddp_session = {
   id: "ddp_session",
   name: "DDP.Session",
