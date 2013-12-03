@@ -58,6 +58,7 @@ Tinytest.add("spacebars - stache tags", function (test) {
   run('{{ # foo  3 }}', {type: 'BLOCKOPEN', path: ['foo'],
                          args: [['NUMBER', 3]]});
   run('{{>foo 3}}', {type: 'INCLUSION', path: ['foo'], args: [['NUMBER', 3]]});
+  run('{{>foo 3 4}}', "Only one positional argument");
   run('{{ > foo  3 }}', {type: 'INCLUSION', path: ['foo'],
                          args: [['NUMBER', 3]]});
   run('{{{foo 3}}}', {type: 'TRIPLE', path: ['foo'], args: [['NUMBER', 3]]});
