@@ -19,7 +19,7 @@ Tinytest.addAsync(
   }
 );
 
-  
+
 Tinytest.addAsync(
   "livedata server - sessionHandle.close()",
   function (test, onComplete) {
@@ -47,18 +47,13 @@ Tinytest.addAsync(
 );
 
 
-var innerCalled = null;
-
 Meteor.methods({
   livedata_server_test_inner: function () {
-    var self = this;
-    Meteor.defer(function () {
-      innerCalled(self);
-    });
+    return this.session.id;
   },
 
   livedata_server_test_outer: function () {
-    Meteor.call('livedata_server_test_inner');
+    return Meteor.call('livedata_server_test_inner');
   }
 });
 
@@ -69,12 +64,10 @@ Tinytest.addAsync(
     establishConnection(
       test,
       function (connection, session) {
-        innerCalled = function (methodInvocation) {
-          test.equal(methodInvocation.session.id, session.id);
-          onComplete();
-        };
-        connection.call('livedata_server_test_inner');
+        var res = connection.call('livedata_server_test_inner');
+        test.equal(res, session.id);
         connection.disconnect();
+        onComplete();
       },
       onComplete
     );
@@ -88,18 +81,16 @@ Tinytest.addAsync(
     establishConnection(
       test,
       function (connection, session) {
-        innerCalled = function (methodInvocation) {
-          test.equal(methodInvocation.session.id, session.id);
-          onComplete();
-        };
-        connection.call('livedata_server_test_outer');
+        var res = connection.call('livedata_server_test_outer');
+        test.equal(res, session.id);
         connection.disconnect();
+        onComplete();
       },
       onComplete
     );
   }
 );
-    
+
 
 // sessionId -> callback
 var onSubscription = {};
