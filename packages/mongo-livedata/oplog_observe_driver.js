@@ -322,6 +322,11 @@ OplogObserveDriver.cursorSupported = function (cursorDescription) {
   // not, and we don't track that information when doing oplog tailing.
   if (options.limit || options.skip) return false;
 
+  // If a fields projection option is given check if it is supported by
+  // minimongo (some operators are not supported).
+  if (options.fields && !LocalCollection._supportedProjection(options.fields))
+    return false;
+
   // For now, we're just dealing with equality queries: no $operators, regexps,
   // or $and/$or/$where/etc clauses. We can expand the scope of what we're
   // comfortable processing later. ($where will get pretty scary since it will
