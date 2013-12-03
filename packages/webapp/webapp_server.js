@@ -459,7 +459,7 @@ var runWebAppServer = function () {
     // tell others with websockets open that we plan to close this.
     // XXX: Eventually, this should be done with a standard meteor shut-down
     // logic path.
-    httpServer.emit('closing');
+    httpServer.emit('meteor-closing');
     httpServer.close( function () {
       process.exit(0);
     });

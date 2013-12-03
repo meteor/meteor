@@ -54,7 +54,7 @@ StreamServer = function () {
   self.server.installHandlers(Package.webapp.WebApp.httpServer);
   Package.webapp.WebApp.httpServer.addListener('request', Package.webapp.WebApp._timeoutAdjustmentRequestCallback);
 
-  Package.webapp.WebApp.httpServer.on('closing', function () {
+  Package.webapp.WebApp.httpServer.on('meteor-closing', function () {
     _.each(self.open_sockets, function (socket) {
       socket.end();
     });
