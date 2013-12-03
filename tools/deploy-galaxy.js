@@ -17,6 +17,13 @@ var getPackage = _.once(function (context) {
   });
 });
 
+var authenticatedDDPConnect = function (url, context) {
+  var Package = getPackage(context);
+  return Package.livedata.DDP.connect(url, {
+    cookie: "GALAXY_AUTH=" + context.galaxy.authToken
+  });
+};
+
 var getGalaxy = _.once(function (context) {
   var Package = getPackage(context);
   if (!context.galaxy) {
@@ -36,9 +43,7 @@ var getGalaxy = _.once(function (context) {
     process.exit(1);
   }
 
-  var galaxy = Package.livedata.DDP.connect(context.galaxy.url, {
-    cookie: "GALAXY_AUTH=" + context.galaxy.authToken
-  });
+  var galaxy = authenticatedDDPConnect(context.galaxy.url, context);
   var timeout = Package.meteor.Meteor.setTimeout(function () {
     if (galaxy.status().status !== "connected") {
       process.stderr.write("Could not connect to galaxy " + context.galaxy.url
@@ -274,8 +279,7 @@ exports.logs = function (options) {
   }
 
   var lastLogId = null;
-  var logReader =
-        getPackage(options.context).livedata.DDP.connect(logReaderURL);
+  var logReader = authenticatedDDPConnect(logReaderURL, options.context);
   var Log = unipackage.load({
     library: options.context.library,
     packages: [ 'logging' ],

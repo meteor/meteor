@@ -35,66 +35,6 @@ Fiber(function () {
     process.exit(1);
   }
 
-  var killTunnel = function (tunnel) {
-    if (! tunnel.exitFuture.isResolved()) {
-      tunnel.proc.kill("SIGHUP");
-      tunnel.exitFuture.wait();
-    }
-  };
-
-  var sshTunnel = function (to, localPort, remoteEnd, keyfile) {
-    var args = [];
-    if (to.split(':')[1]){
-      var hostPort = to.split(':');
-      to = hostPort[0];
-      args = ['-p', hostPort[1]].concat(args);
-    }
-    args = args.concat([to, '-L', localPort+':'+remoteEnd, 'echo __CONNECTED__ && cat -']);
-    if (keyfile)
-      args = ["-i", keyfile].concat(args);
-    var tunnel = cp.spawn('ssh', args, {
-      stdio: [process.stdin, 'pipe', 'pipe']
-    });
-
-    var exitFuture = new Future();
-    var connectedFuture = new Future();
-
-    tunnel.on('exit', function (code, signal) {
-      if (!connectedFuture.isResolved()) {
-        connectedFuture.throw(new Error("ssh exited without making a connection"));
-      }
-      exitFuture.return(signal || code);
-    });
-
-    tunnel.stdout.setEncoding('utf8');
-    tunnel.stdout.on('data', function (str) {
-      if (!connectedFuture.isResolved() && str.match(/__CONNECTED__/)) {
-        connectedFuture.return(true);
-      }
-    });
-
-    tunnel.stderr.setEncoding('utf8');
-    tunnel.stderr.on('data', function (str) {
-      if (str.match(/Killed by/))
-        return;
-      process.stderr.write(str);
-    });
-
-    var tunnelResult = {
-      waitConnected: _.bind(connectedFuture.wait, connectedFuture),
-      exitFuture: exitFuture,
-      proc: tunnel
-    };
-
-    cleanup.onExit(function () {
-      Fiber(function () {
-        killTunnel(tunnelResult);
-      }).run();
-    });
-    return tunnelResult;
-  };
-
-
   var Commands = [];
 
   var usage = function() {
@@ -166,7 +106,7 @@ Fiber(function () {
     return site;
   };
 
-  var prepareForGalaxy = function (site, context, sshIdentity) {
+  var prepareForGalaxy = function (site, context) {
     if (! deployGalaxy)
       deployGalaxy = require('./deploy-galaxy.js');
     var deployEndpoint = deployGalaxy.discoverGalaxy(site);
@@ -391,41 +331,6 @@ Fiber(function () {
         settingsFile: argv.settings,
         program: argv.program || undefined
       });
-    }
-  });
-
-  Commands.push({
-    name: "galaxy",
-    help: "Interact with your galaxy server",
-    // Remove this once Galaxy support is official.
-    hidden: true,
-    argumentParser: function (opt) {
-      opt.usage(
-        "Usage: meteor galaxy configure <sitename>\n" +
-          "\n" +
-          "Allows you to interact with a Galaxy server.\n");
-    },
-    func: function (argv) {
-      var cmd = argv._.shift();
-      switch (cmd) {
-      case "configure":
-        // We don't use galaxyCommand here because we want the tunnel to stay
-        // open (galaxyCommand closes the tunnel as soon as the command finishes
-        // running). The tunnel will be cleaned up when the process exits.
-        if (argv._[0])
-          argv._[0] = qualifySitename(argv._[0]);
-        prepareForGalaxy(argv._[0], context, argv["ssh-identity"]);
-        if (! context.galaxy) {
-          process.stdout.write(
-            "You must provide a galaxy to configure (by setting the GALAXY environment variable " +
-              "or providing a sitename (meteor galaxy configure <sitename>).\n");
-          process.exit(1);
-        }
-        console.log("Visit http://localhost:" + context.galaxy.port + "/panel to configure your galaxy");
-        break;
-      default:
-        break;
-      }
     }
   });
 
@@ -932,8 +837,6 @@ Fiber(function () {
         .boolean('debug')
         .describe('debug', 'deploy in debug mode (don\'t minify, etc)')
         .describe('settings', 'set optional data for Meteor.settings')
-        .alias('ssh-identity', 'i')
-        .describe('ssh-identity', 'Selects a file from which the identity (private key) is read. See ssh(1) for details.')
         .describe('star', 'a star (tarball) to deploy instead of the current meteor app')
         .boolean('admin')
       // Shouldn't be documented until the Galaxy release
@@ -1037,15 +940,11 @@ Fiber(function () {
                "\n" +
                "Retrieves the server logs for the requested site.\n");
     },
-    func: function (argv, showUsage) {
+    func: galaxyCommand(function (argv, showUsage) {
       if (argv._.length !== 1)
         showUsage();
 
-      // We don't use galaxyCommand here because we want the tunnel to stay
-      // open (galaxyCommand closes the tunnel as soon as the command finishes
-      // running). The tunnel will be cleaned up when the process exits.
-      var site = qualifySitename(argv._[0]);
-      var tunnel = prepareForGalaxy(site, context, argv["ssh-identity"]);
+      var site = argv._[0];
       var useGalaxy = !!context.galaxy;
 
       if (useGalaxy) {
@@ -1055,12 +954,10 @@ Fiber(function () {
           app: site,
           streaming: streaming
         });
-        if (! streaming && tunnel)
-          killTunnel(tunnel);
       } else {
         deploy.logs(site);
       }
-    }
+    })
   });
 
   Commands.push({
@@ -1462,8 +1359,7 @@ Fiber(function () {
           .boolean("version")
           .boolean("built-by")
           .boolean("arch")
-          .boolean("debug")
-          .alias("i", "ssh-identity");
+          .boolean("debug");
 
     var argv = optimist.argv;
 
