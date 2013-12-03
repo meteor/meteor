@@ -4,7 +4,7 @@ var Fiber = Npm.require('fibers');
 Tinytest.addAsync(
   "livedata server - sessionHandle.onClose()",
   function (test, onComplete) {
-    establishConnection(
+    makeTestConnection(
       test,
       function (connection, session) {
         // On the server side, wait for the connection to be closed.
@@ -23,7 +23,7 @@ Tinytest.addAsync(
 Tinytest.addAsync(
   "livedata server - sessionHandle.close()",
   function (test, onComplete) {
-    establishConnection(
+    makeTestConnection(
       test,
       function (connection, session) {
         // Wait for the connection to be closed from the server side.
@@ -61,7 +61,7 @@ Meteor.methods({
 Tinytest.addAsync(
   "livedata server - session in method invocation",
   function (test, onComplete) {
-    establishConnection(
+    makeTestConnection(
       test,
       function (connection, session) {
         var res = connection.call('livedata_server_test_inner');
@@ -78,7 +78,7 @@ Tinytest.addAsync(
 Tinytest.addAsync(
   "livedata server - session in nested method invocation",
   function (test, onComplete) {
-    establishConnection(
+    makeTestConnection(
       test,
       function (connection, session) {
         var res = connection.call('livedata_server_test_outer');
@@ -106,7 +106,7 @@ Meteor.publish("livedata_server_test_sub", function (sessionId) {
 Tinytest.addAsync(
   "livedata server - session in publish function",
   function (test, onComplete) {
-    establishConnection(
+    makeTestConnection(
       test,
       function (connection, session) {
         onSubscription[session.id] = function (subscription) {
