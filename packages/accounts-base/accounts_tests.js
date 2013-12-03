@@ -213,7 +213,7 @@ Tinytest.addAsync('accounts - expire numeric token', function (test, onComplete)
 Tinytest.addAsync(
   'accounts - session data cleaned up',
   function (test, onComplete) {
-    establishConnection(
+    makeTestConnection(
       test,
       function (connection, session) {
         // onClose callbacks are called in order, so we run after the

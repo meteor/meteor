@@ -553,7 +553,7 @@ if (Meteor.isServer) (function () {
         password: 'password'
       });
         
-      establishConnection(
+      makeTestConnection(
         test,
         function (connection, session) {
           session.onClose(function () {
