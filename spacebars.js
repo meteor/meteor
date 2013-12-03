@@ -1404,7 +1404,7 @@ var replaceSpecials = function (node) {
         if (path.length === 1)
           compCode = '(Template[' + toJSLiteral(path[0]) + '] || ' + compCode + ')';
 
-        var includeArgs = codeGenIncludeArgs(tag);
+        var includeArgs = codeGenInclusionArgs(tag);
 
         return HTML.EmitCode(
           'function () { return Spacebars.include(' + compCode +
@@ -1419,8 +1419,9 @@ var replaceSpecials = function (node) {
   };
 };
 
-var codeGenIncludeArgs = function (tag) {
+var codeGenInclusionArgs = function (tag) {
   var args = null;
+  var numPosArgs = 0;
 
   _.each(tag.args, function (arg) {
     var argType = arg[0];
@@ -1456,7 +1457,10 @@ var codeGenIncludeArgs = function (tag) {
     } else {
       // positional argument
       // XXX deal with >1 posArgs
-      args = (args || []);
+      if (numPosArgs)
+        throw new Error("Only one positional argument is allowed here");
+      numPosArgs++;
+      args = (args || {});
       args.data = argCode;
     }
   });
