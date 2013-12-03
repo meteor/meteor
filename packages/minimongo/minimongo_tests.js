@@ -1116,6 +1116,18 @@ Tinytest.add("minimongo - fetch with fields", function (test) {
     if (!i) return;
     test.isTrue(x.i === arr[i-1].i + 1);
   });
+
+  // Temporary unsupported operators
+  // queries are taken from MongoDB docs examples
+  test.throws(function () {
+    c.find({}, { fields: { 'grades.$': 1 } });
+  });
+  test.throws(function () {
+    c.find({}, { fields: { grades: { $elemMatch: { mean: 70 } } } });
+  });
+  test.throws(function () {
+    c.find({}, { fields: { grades: { $slice: [20, 10] } } });
+  });
 });
 
 Tinytest.add("minimongo - fetch with projection, subarrays", function (test) {

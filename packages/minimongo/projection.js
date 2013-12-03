@@ -6,6 +6,11 @@
 //                       according to projection rules. Doesn't retain subfields
 //                       of passed argument.
 LocalCollection._compileProjection = function (fields) {
+  // XXX: $-operators are not supported in fields projections yet
+  if (! LocalCollection._supportedProjection(fields))
+    throw MinimongoError("Minimongo doesn't support fields projections "
+                         + "with $-operators yet");
+
   var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
   var details = projectionDetails(fields);
 
@@ -157,5 +162,14 @@ pathsToTree = function (paths, newLeafFn, conflictFn, tree) {
   });
 
   return tree;
+};
+
+LocalCollection._supportedProjection = function (fields) {
+  return _.all(fields, function (val, keyPath) {
+    if (_.contains(keyPath.split('.'), '$'))
+      return false;
+    return !_.isObject(val) ||
+      (!_.has(val, '$slice') && !_.has(val, '$elemMatch'));
+  });
 };
 
