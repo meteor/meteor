@@ -155,29 +155,8 @@ Tinytest.add("spacebars - templates - inclusion args", function (test) {
 });
 
 Tinytest.add("spacebars - templates - inclusion args 2", function (test) {
-  ///// `foo` is a function in `{{> foo bar baz}}`.
-  // `bar` and `baz` should be called and passed as an arg to it.
-  var tmpl = Template.spacebars_template_test_inclusion_args2;
-  tmpl.foo = function (x, y) {
-    return y === 999 ? Template.spacebars_template_test_aaa :
-      Template.spacebars_template_test_bracketed_this.withData(x + y);
-  };
-  var R = ReactiveVar(3);
-  tmpl.bar = 4;
-  tmpl.baz = function () { return R.get(); };
-  var div = renderToDiv(tmpl);
-  test.equal(stripComments(div.innerHTML), '[7]');
-  R.set(11);
-  Deps.flush();
-  test.equal(stripComments(div.innerHTML), '[15]');
-  R.set(999);
-  Deps.flush();
-  test.equal(stripComments(div.innerHTML), 'aaa');
-});
-
-Tinytest.add("spacebars - templates - inclusion args 3", function (test) {
   // `{{> foo bar q=baz}}`
-  var tmpl = Template.spacebars_template_test_inclusion_args3;
+  var tmpl = Template.spacebars_template_test_inclusion_args2;
 
   tmpl.foo = function (a, options) {
     return UI.Text.withData(a + options.q);
