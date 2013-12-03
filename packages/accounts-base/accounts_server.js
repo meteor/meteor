@@ -187,10 +187,10 @@ Accounts._hashLoginToken = function (loginToken) {
 
 // {token, when} => {hashedToken, when}
 Accounts._hashStampedToken = function (stampedToken) {
-  return {
-    hashedToken: Accounts._hashLoginToken(stampedToken.token),
-    when: stampedToken.when
-  };
+  return _.extend(
+    _.omit(stampedToken, 'token'),
+    {hashedToken: Accounts._hashLoginToken(stampedToken.token)}
+  );
 };
 
 
@@ -330,7 +330,12 @@ Accounts._generateStampedLoginToken = function () {
 var removeLoginToken = function (userId, loginToken) {
   Meteor.users.update(userId, {
     $pull: {
-      "services.resume.loginTokens": { "hashedToken": loginToken }
+      "services.resume.loginTokens": {
+        $or: [
+          {hashedToken: loginToken },
+          {token: loginToken}
+        ]
+      }
     }
   });
 };
