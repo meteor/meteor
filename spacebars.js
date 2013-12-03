@@ -1508,10 +1508,15 @@ Spacebars.include = function (kindOrFunc, args) {
     if (! UI.isComponent(kind))
       throw new Error("Expected template, found: " + kind);
 
-    if (args)
-      return kind.extend(args);
-    else
+    if (args) {
+      var emboxedArgs = {};
+      for (var k in args)
+        emboxedArgs[k] = UI.emboxValue(args[k]);
+
+      return kind.extend(emboxedArgs);
+    } else {
       return kind;
+    }
   }
 };
 
