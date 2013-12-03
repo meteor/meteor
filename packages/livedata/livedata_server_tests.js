@@ -4,7 +4,7 @@ var Fiber = Npm.require('fibers');
 Tinytest.addAsync(
   "livedata server - sessionHandle.onClose()",
   function (test, onComplete) {
-    establishConnection(
+    makeTestConnection(
       test,
       function (connection, session) {
         // On the server side, wait for the connection to be closed.
@@ -19,11 +19,10 @@ Tinytest.addAsync(
   }
 );
 
-  
 Tinytest.addAsync(
   "livedata server - sessionHandle.close()",
   function (test, onComplete) {
-    establishConnection(
+    makeTestConnection(
       test,
       function (connection, session) {
         // Wait for the connection to be closed from the server side.
@@ -47,18 +46,13 @@ Tinytest.addAsync(
 );
 
 
-var innerCalled = null;
-
 Meteor.methods({
   livedata_server_test_inner: function () {
-    var self = this;
-    Meteor.defer(function () {
-      innerCalled(self);
-    });
+    return this.session.id;
   },
 
   livedata_server_test_outer: function () {
-    Meteor.call('livedata_server_test_inner');
+    return Meteor.call('livedata_server_test_inner');
   }
 });
 
@@ -66,15 +60,13 @@ Meteor.methods({
 Tinytest.addAsync(
   "livedata server - session in method invocation",
   function (test, onComplete) {
-    establishConnection(
+    makeTestConnection(
       test,
       function (connection, session) {
-        innerCalled = function (methodInvocation) {
-          test.equal(methodInvocation.session.id, session.id);
-          onComplete();
-        };
-        connection.call('livedata_server_test_inner');
+        var res = connection.call('livedata_server_test_inner');
+        test.equal(res, session.id);
         connection.disconnect();
+        onComplete();
       },
       onComplete
     );
@@ -85,21 +77,19 @@ Tinytest.addAsync(
 Tinytest.addAsync(
   "livedata server - session in nested method invocation",
   function (test, onComplete) {
-    establishConnection(
+    makeTestConnection(
       test,
       function (connection, session) {
-        innerCalled = function (methodInvocation) {
-          test.equal(methodInvocation.session.id, session.id);
-          onComplete();
-        };
-        connection.call('livedata_server_test_outer');
+        var res = connection.call('livedata_server_test_outer');
+        test.equal(res, session.id);
         connection.disconnect();
+        onComplete();
       },
       onComplete
     );
   }
 );
-    
+
 
 // sessionId -> callback
 var onSubscription = {};
@@ -115,7 +105,7 @@ Meteor.publish("livedata_server_test_sub", function (sessionId) {
 Tinytest.addAsync(
   "livedata server - session in publish function",
   function (test, onComplete) {
-    establishConnection(
+    makeTestConnection(
       test,
       function (connection, session) {
         onSubscription[session.id] = function (subscription) {

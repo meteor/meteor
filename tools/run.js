@@ -115,7 +115,8 @@ var startProxy = function (outerPort, innerPort, callback) {
   var proxy = httpProxy.createProxyServer({
     // agent is required to handle keep-alive, and http-proxy 1.0 is a little
     // buggy without it: https://github.com/nodejitsu/node-http-proxy/pull/488
-    agent: new http.Agent({maxSockets: 100})
+    agent: new http.Agent({maxSockets: 100}),
+    xfwd: true
   });
 
   var server = http.createServer(function (req, res) {

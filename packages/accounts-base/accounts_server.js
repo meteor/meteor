@@ -178,7 +178,6 @@ Meteor.server.onConnection(function (session) {
 ///
 /// support reconnecting using a meteor login token
 
-
 Accounts._hashLoginToken = function (loginToken) {
   var hash = crypto.createHash('sha256');
   hash.update(loginToken);

@@ -3,7 +3,7 @@
 // id.  On success call `succeeded` with two arguments, the client
 // side `connection` and the server side `session`.  Call `failed` on
 // failure.
-establishConnection = function (test, succeeded, failed) {
+makeTestConnection = function (test, succeeded, failed) {
   // The connection from the client side.
   var connection;
 

@@ -104,12 +104,12 @@ WebApp.connectHandlers.use(function(req, res, next) {
 
   if (Package.autoupdate) {
     var version = Package.autoupdate.Autoupdate.autoupdateVersion;
-    if (version !== WebApp.clientHash)    
+    if (version !== WebApp.clientHash)
       manifest += "# " + version + "\n";
   }
 
   manifest += "\n";
-  
+
   manifest += "CACHE:" + "\n";
   manifest += "/" + "\n";
   _.each(WebApp.clientProgram.manifest, function (resource) {
