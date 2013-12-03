@@ -44,8 +44,7 @@ Meteor.AppCache = {
         _.each(value, function (urlPrefix) {
           RoutePolicy.declare(urlPrefix, 'static-online');
         });
-      }
-      else {
+      } else {
         throw new Error('Invalid AppCache config option: ' + option);
       }
     });

@@ -261,16 +261,14 @@ Accounts.registerLoginHandler(function(options) {
 
   if (user) {
     oldUnhashedStyleToken = false;
-  }
-  else {
+  } else {
     user = Meteor.users.findOne({
       "services.resume.loginTokens.token": options.resume
     });
 
     if (user) {
       oldUnhashedStyleToken = true;
-    }
-    else {
+    } else {
       throw new Meteor.Error(403, "You've been logged out by the server. " +
       "Please login again.");
     }
@@ -282,8 +280,7 @@ Accounts.registerLoginHandler(function(options) {
     token = _.find(user.services.resume.loginTokens, function (token) {
       return token.token === options.resume;
     });
-  }
-  else {
+  } else {
     token = _.find(user.services.resume.loginTokens, function (token) {
       return token.hashedToken === hashedToken;
     });

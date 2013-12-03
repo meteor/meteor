@@ -17,8 +17,7 @@ makeTestConnection = function (test, succeeded, failed) {
     if (sessions[session.id]) {
       test.fail("onConnection callback called multiple times for same session id");
       failed();
-    }
-    else {
+    } else {
       sessions[session.id] = session;
     }
   });
@@ -30,8 +29,7 @@ makeTestConnection = function (test, succeeded, failed) {
     if (! session) {
       test.fail("No onConnection received server side for connected client");
       failed();
-    }
-    else {
+    } else {
       onConnectionHandle.stop();
       succeeded(connection, session);
     }
