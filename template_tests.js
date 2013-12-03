@@ -159,7 +159,11 @@ Tinytest.add("spacebars - templates - inclusion args 2", function (test) {
   var tmpl = Template.spacebars_template_test_inclusion_args2;
 
   tmpl.foo = function (a, options) {
-    return UI.Text.withData(a + options.q);
+    return UI.Component.extend({
+      render: function () {
+        return String(a + options.hash.q);
+      }
+    });
   };
   var R1 = ReactiveVar(3);
   var R2 = ReactiveVar(4);
@@ -173,12 +177,11 @@ Tinytest.add("spacebars - templates - inclusion args 2", function (test) {
   test.equal(stripComments(div.innerHTML), '24');
 
   tmpl.foo = UI.Component.extend({
-    render: function (buf) {
-      // note: weird to assume this.data() is a function rather than
-      // calling-if-function.  But what's the best way to write that
-      // in component code?  Probably `this.get()`, and likewise for
-      // `this.get('q')`.
-      buf.write(String(this.data() + this.q()));
+    render: function () {
+      var self = this;
+      return function () {
+        return String(self.data() + self.q());
+      };
     }
   });
   R1 = ReactiveVar(20);
