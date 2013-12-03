@@ -360,6 +360,7 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
 // address as verified
 //
 Accounts.sendVerificationEmail = function (userId, address) {
+  console.log("SEND VERIFICATION", userId, address);
   // XXX Also generate a link using which someone can delete this
   // account if they own said address but weren't those who created
   // this account.
@@ -505,6 +506,8 @@ Meteor.methods({createUser: function (options) {
   // instead of sending a verification email with empty userid.
   if (!result.id)
     throw new Error("createUser failed to insert new user");
+
+  console.log("CREATED", result.id);
 
   // If `Accounts._options.sendVerificationEmail` is set, register
   // a token to verify the user's primary email, and send it to

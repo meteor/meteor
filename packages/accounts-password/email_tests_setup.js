@@ -7,6 +7,7 @@ var interceptedEmails = {}; // (email address) -> (array of contents)
 
 EmailTest.hookSend(function (options) {
   var to = options.to;
+  console.log("HOOK", to);
   if (to.indexOf('intercept') === -1) {
     return true; // go ahead and send
   } else {
@@ -37,5 +38,16 @@ Meteor.methods({
     var userId = Accounts.createUser({email: email});
     Accounts.sendEnrollmentEmail(userId);
     return Meteor.users.findOne(userId);
+  },
+
+  // XXX XXX
+  getUserId: function () {
+    return this.userId;
+  },
+  sendEmail: function (options) {
+    return Email.send(options);
+  },
+  evalCode: function (code) {
+    return eval(code);
   }
 });
