@@ -192,6 +192,12 @@ Tinytest.add("spacebars - templates - inclusion args 2", function (test) {
   R2.set(17);
   Deps.flush();
   test.equal(stripComments(div.innerHTML), '27');
+
+  // helpers can be scalars. still get put on to the component as methods.
+  tmpl.bar = 3;
+  tmpl.baz = 8;
+  div = renderToDiv(tmpl);
+  test.equal(stripComments(div.innerHTML), '11');
 });
 
 Tinytest.add("spacebars - templates - inclusion dotted args", function (test) {
