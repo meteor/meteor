@@ -335,7 +335,7 @@ if (Meteor.isClient) {
         },
         function (test, expect) {
           test.equal(
-            restrictedCollectionWithTransform.findOne({"a.bar": "bar"}),
+            _.omit(restrictedCollectionWithTransform.findOne({"a.bar": "bar"}), '_id'),
             {foo: "foo", bar: "bar", baz: "baz"});
           restrictedCollectionWithTransform.remove(item1, expect(function (e, res) {
             test.isFalse(e);
