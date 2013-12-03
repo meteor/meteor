@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Library for manipulating documents based on data."
+  summary: "Library for manipulating documents based on data"
 });
 
 Package.on_use(function (api) {

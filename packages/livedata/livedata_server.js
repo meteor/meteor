@@ -364,6 +364,8 @@ _.extend(Session.prototype, {
     Meteor.defer(function () {
       // stop callbacks can yield, so we defer this on destroy.
       // see also _closeAllForTokens and its desire to destroy things in a loop.
+      // that said, sub._isDeactivated() detects that we set inQueue to null and
+      // treats it as semi-deactivated (it will ignore incoming callbacks, etc).
       self._deactivateAllSubscriptions();
     });
     // Drop the merge box data immediately.
@@ -583,6 +585,12 @@ _.extend(Session.prototype, {
     });
   },
 
+  // XXX This mixes accounts concerns (login tokens) into livedata, which is not
+  // ideal. Eventually we'll have an API that allows accounts to keep track of
+  // which connections are associated with tokens and close them when necessary,
+  // rather than the current state of things where accounts tells livedata which
+  // connections are associated with which tokens, and when to close connections
+  // associated with a given token.
   _setLoginToken: function (newToken) {
     var self = this;
     var oldToken = self.sessionData.loginToken;
@@ -652,13 +660,6 @@ _.extend(Session.prototype, {
         self._pendingReady = [];
       }
     });
-
-
-    // XXX figure out the login token that was just used, and set up an observe
-    // on the user doc so that deleting the user or the login token disconnects
-    // the session. For now, if you want to make sure that your deleted users
-    // don't have any continuing sessions, you can restart the server, but we
-    // should make it automatic.
   },
 
   _startSubscription: function (handler, subId, params, name) {
@@ -782,7 +783,7 @@ _.extend(Subscription.prototype, {
     }
 
     // Did the handler call this.error or this.stop?
-    if (self._deactivated)
+    if (self._isDeactivated())
       return;
 
     // SPECIAL CASE: Instead of writing their own callbacks that invoke
@@ -887,7 +888,7 @@ _.extend(Subscription.prototype, {
 
   error: function (error) {
     var self = this;
-    if (self._deactivated)
+    if (self._isDeactivated())
       return;
     self._session._stopSubscription(self._subscriptionId, error);
   },
@@ -898,22 +899,30 @@ _.extend(Subscription.prototype, {
   // triggers if there is an error).
   stop: function () {
     var self = this;
-    if (self._deactivated)
+    if (self._isDeactivated())
       return;
     self._session._stopSubscription(self._subscriptionId);
   },
 
   onStop: function (callback) {
     var self = this;
-    if (self._deactivated)
+    if (self._isDeactivated())
       callback();
     else
       self._stopCallbacks.push(callback);
   },
 
+  // This returns true if the sub has been deactivated, *OR* if the session was
+  // destroyed but the deferred call to _deactivateAllSubscriptions hasn't
+  // happened yet.
+  _isDeactivated: function () {
+    var self = this;
+    return self._deactivated || self._session.inQueue === null;
+  },
+
   added: function (collectionName, id, fields) {
     var self = this;
-    if (self._deactivated)
+    if (self._isDeactivated())
       return;
     id = self._idFilter.idStringify(id);
     Meteor._ensure(self._documents, collectionName)[id] = true;
@@ -922,7 +931,7 @@ _.extend(Subscription.prototype, {
 
   changed: function (collectionName, id, fields) {
     var self = this;
-    if (self._deactivated)
+    if (self._isDeactivated())
       return;
     id = self._idFilter.idStringify(id);
     self._session.changed(self._subscriptionHandle, collectionName, id, fields);
@@ -930,7 +939,7 @@ _.extend(Subscription.prototype, {
 
   removed: function (collectionName, id) {
     var self = this;
-    if (self._deactivated)
+    if (self._isDeactivated())
       return;
     id = self._idFilter.idStringify(id);
     // We don't bother to delete sets of things in a collection if the
@@ -941,7 +950,7 @@ _.extend(Subscription.prototype, {
 
   ready: function () {
     var self = this;
-    if (self._deactivated)
+    if (self._isDeactivated())
       return;
     if (!self._subscriptionId)
       return;  // unnecessary but ignored for universal sub
@@ -969,6 +978,12 @@ Server = function () {
   // Keeps track of the open connections associated with particular login
   // tokens. Used for logging out all a user's open connections, expiring login
   // tokens, etc.
+  // XXX This mixes accounts concerns (login tokens) into livedata, which is not
+  // ideal. Eventually we'll have an API that allows accounts to keep track of
+  // which connections are associated with tokens and close them when necessary,
+  // rather than the current state of things where accounts tells livedata which
+  // connections are associated with which tokens, and when to close connections
+  // associated with a given token.
   self.sessionsByLoginToken = {};
 
 
@@ -1018,7 +1033,7 @@ Server = function () {
       } catch (e) {
         // XXX print stack nicely
         Meteor._debug("Internal exception while processing message", msg,
-                      e.stack);
+                      e.message, e.stack);
       }
     });
 
@@ -1264,9 +1279,11 @@ _.extend(Server.prototype, {
       if (_.isEmpty(self.sessionsByLoginToken[oldToken]))
         delete self.sessionsByLoginToken[oldToken];
     }
-    if (! _.has(self.sessionsByLoginToken, newToken))
-      self.sessionsByLoginToken[newToken] = [];
-    self.sessionsByLoginToken[newToken].push(session.id);
+    if (newToken) {
+      if (! _.has(self.sessionsByLoginToken, newToken))
+        self.sessionsByLoginToken[newToken] = [];
+      self.sessionsByLoginToken[newToken].push(session.id);
+    }
   },
 
   // Close all open sessions associated with any of the tokens in

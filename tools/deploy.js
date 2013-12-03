@@ -7,6 +7,7 @@
 var qs = require('querystring');
 var path = require('path');
 var files = require('./files.js');
+var httpHelpers = require('./http-helpers.js');
 var warehouse = require('./warehouse.js');
 var buildmessage = require('./buildmessage.js');
 var _ = require('underscore');
@@ -43,15 +44,16 @@ var meteor_rpc = function (rpc_name, method, site, query_params, callback) {
     url += '?' + qs.stringify(query_params);
   }
 
-  var request = require('request');
-  var r = request({method: method, url: url}, function (error, response, body) {
-    if (error || ((response.statusCode !== 200)
-                  && (response.statusCode !== 201)))
-      // pass some non-falsy error back to callback
-      callback(error || response.statusCode, body);
-    else
-      callback(null, body);
-  });
+  var r = httpHelpers.request(
+    {method: method, url: url},
+    function (error, response, body) {
+      if (error || ((response.statusCode !== 200)
+                    && (response.statusCode !== 201)))
+        // pass some non-falsy error back to callback
+        callback(error || response.statusCode, body);
+      else
+        callback(null, body);
+    });
 
   return r;
 };
@@ -291,7 +293,7 @@ var read_password = function (callback) {
   var keypress = require('keypress');
   keypress(process.stdin);
   process.stdin.on('keypress', inFiber(function(c, key){
-    if (key && 'enter' === key.name) {
+    if (key && (key.name === 'enter' || key.name === 'return')) {
       console.log();
       process.stdin.pause();
       process.stdin.removeAllListeners('keypress');
@@ -345,8 +347,7 @@ var with_password = function (site, callback) {
   // Future.throw. Basically, what Future.wrap does.
   callback = inFiber(callback);
 
-  var request = require('request');
-  request(check_url, function (error, response, body) {
+  httpHelpers.request(check_url, function (error, response, body) {
     if (error || response.statusCode !== 200) {
       callback();
 

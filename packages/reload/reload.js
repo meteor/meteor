@@ -26,6 +26,11 @@
  * the client's session to render properly.
  */
 
+// XXX when making this API public, also expose a flag for the app
+// developer to know whether a hot code push is happening. This is
+// useful for apps using `window.onbeforeunload`. See
+// https://github.com/meteor/meteor/pull/657
+
 var KEY_NAME = 'Meteor_Reload';
 // after how long should we consider this no longer an automatic
 // reload, but a fresh restart. This only happens if a reload is

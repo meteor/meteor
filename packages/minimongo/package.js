@@ -7,6 +7,8 @@ Package.on_use(function (api) {
   api.export('LocalCollection');
   api.use(['underscore', 'json', 'ejson', 'ordered-dict', 'deps',
            'random', 'ordered-dict']);
+  // This package is used for geo-location queries such as $near
+  api.use('geojson-utils');
   api.add_files([
     'minimongo.js',
     'selector.js',
@@ -17,6 +19,7 @@ Package.on_use(function (api) {
 });
 
 Package.on_test(function (api) {
+  api.use('geojson-utils', 'client');
   api.use('minimongo', 'client');
   api.use('test-helpers', 'client');
   api.use(['tinytest', 'underscore', 'ejson', 'ordered-dict',

@@ -12,8 +12,7 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
   }
 
   var urls = service.urls;
-  var oauthBinding = new OAuth1Binding(
-    config.consumerKey, config.secret, urls);
+  var oauthBinding = new OAuth1Binding(config, urls);
 
   if (query.requestTokenAndRedirect) {
     // step 1 - get and store a request token
@@ -22,10 +21,20 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
     oauthBinding.prepareRequestToken(query.requestTokenAndRedirect);
 
     // Keep track of request token so we can verify it on the next step
-    requestTokens[query.state] = oauthBinding.requestToken;
+    requestTokens[query.state] = {
+      requestToken: oauthBinding.requestToken, 
+      requestTokenSecret: oauthBinding.requestTokenSecret
+    };
+
+    // support for scope/name parameters
+    var redirectUrl = undefined;
+    if(typeof urls.authenticate === "function") {
+      redirectUrl = urls.authenticate(oauthBinding);
+    } else {
+      redirectUrl = urls.authenticate + '?oauth_token=' + oauthBinding.requestToken;
+    }
 
     // redirect to provider login, which will redirect back to "step 2" below
-    var redirectUrl = urls.authenticate + '?oauth_token=' + oauthBinding.requestToken;
     res.writeHead(302, {'Location': redirectUrl});
     res.end();
   } else {
@@ -34,7 +43,8 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
     // token and access token secret and log in as user
 
     // Get the user's request token so we can verify it and clear it
-    var requestToken = requestTokens[query.state];
+    var requestToken = requestTokens[query.state].requestToken;
+    var requestTokenSecret = requestTokens[query.state].requestTokenSecret;
     delete requestTokens[query.state];
 
     // Verify user authorized access and the oauth_token matches
@@ -45,17 +55,17 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
       // subsequent call to the `login` method will be immediate.
 
       // Get the access token for signing requests
-      oauthBinding.prepareAccessToken(query);
+      oauthBinding.prepareAccessToken(query, requestTokenSecret);
 
       // Run service-specific handler.
       var oauthResult = service.handleOauthRequest(oauthBinding);
 
       // Add the login result to the result map
       Oauth._loginResultForCredentialToken[query.state] = {
-          serviceName: service.serviceName,
-          serviceData: oauthResult.serviceData,
-          options: oauthResult.options
-        };
+        serviceName: service.serviceName,
+        serviceData: oauthResult.serviceData,
+        options: oauthResult.options
+      };
     }
 
     // Either close the window, redirect, or render nothing

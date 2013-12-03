@@ -316,20 +316,35 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
 
   var stampedLoginToken = Accounts._generateStampedLoginToken();
 
-  // Update the user record by:
-  // - Changing the password verifier to the new one
-  // - Replacing all valid login tokens with new ones (changing
-  //   password should invalidate existing sessions).
-  // - Forgetting about the reset token that was just used
-  // - Verifying their email, since they got the password reset via email.
-  Meteor.users.update({_id: user._id, 'emails.address': email}, {
-    $set: {'services.password.srp': newVerifier,
-           'services.resume.loginTokens': [stampedLoginToken],
-           'emails.$.verified': true},
-    $unset: {'services.password.reset': 1}
-  });
+  // NOTE: We're about to invalidate tokens on the user, who we might be
+  // logged in as. Make sure to avoid logging ourselves out if this
+  // happens. But also make sure not to leave the connection in a state
+  // of having a bad token set if things fail.
+  var oldToken = this._getLoginToken();
+  this._setLoginToken(null);
 
+  try {
+    // Update the user record by:
+    // - Changing the password verifier to the new one
+    // - Replacing all valid login tokens with new ones (changing
+    //   password should invalidate existing sessions).
+    // - Forgetting about the reset token that was just used
+    // - Verifying their email, since they got the password reset via email.
+    Meteor.users.update({_id: user._id, 'emails.address': email}, {
+      $set: {'services.password.srp': newVerifier,
+             'services.resume.loginTokens': [stampedLoginToken],
+             'emails.$.verified': true},
+      $unset: {'services.password.reset': 1}
+    });
+  } catch (err) {
+    // update failed somehow. reset to old token.
+    this._setLoginToken(oldToken);
+    throw err;
+  }
+
+  this._setLoginToken(stampedLoginToken.token);
   this.setUserId(user._id);
+
   return {
     token: stampedLoginToken.token,
     tokenExpires: Accounts._tokenExpiration(stampedLoginToken.when),
@@ -421,6 +436,7 @@ Meteor.methods({verifyEmail: function (token) {
      $push: {'services.resume.loginTokens': stampedLoginToken}});
 
   this.setUserId(user._id);
+  this._setLoginToken(stampedLoginToken.token);
   return {
     token: stampedLoginToken.token,
     tokenExpires: Accounts._tokenExpiration(stampedLoginToken.when),
@@ -499,6 +515,7 @@ Meteor.methods({createUser: function (options) {
 
   // client gets logged in as the new user afterwards.
   this.setUserId(result.id);
+  this._setLoginToken(result.token);
   return result;
 }});
 
@@ -533,5 +550,5 @@ Accounts.createUser = function (options, callback) {
 ///
 Meteor.users._ensureIndex('emails.validationTokens.token',
                           {unique: 1, sparse: 1});
-Meteor.users._ensureIndex('emails.password.reset.token',
+Meteor.users._ensureIndex('services.password.reset.token',
                           {unique: 1, sparse: 1});

@@ -70,6 +70,8 @@ Accounts.callLoginMethod = function (options) {
     if (!options[f])
       options[f] = function () {};
   });
+  // make sure we only call the user's callback once.
+  var onceUserCallback = _.once(options.userCallback);
 
   var reconnected = false;
 
@@ -116,7 +118,7 @@ Accounts.callLoginMethod = function (options) {
               if (error) {
                 makeClientLoggedOut();
               }
-              options.userCallback(error);
+              onceUserCallback(error);
             }});
         }
       };
@@ -142,19 +144,19 @@ Accounts.callLoginMethod = function (options) {
     if (error || !result) {
       error = error || new Error(
         "No result from call to " + options.methodName);
-      options.userCallback(error);
+      onceUserCallback(error);
       return;
     }
     try {
       options.validateResult(result);
     } catch (e) {
-      options.userCallback(e);
+      onceUserCallback(e);
       return;
     }
 
     // Make the client logged in. (The user data should already be loaded!)
     makeClientLoggedIn(result.id, result.token, result.tokenExpires);
-    options.userCallback();
+    onceUserCallback();
   };
 
   if (!options._suppressLoggingIn)
@@ -188,7 +190,7 @@ Meteor.logout = function (callback) {
   });
 };
 
-Meteor._logoutAllOthers = function (callback) {
+Meteor.logoutOtherClients = function (callback) {
   // Our connection is going to be closed, but we don't want to call the
   // onReconnect handler until the result comes back for this method, because
   // the token will have been deleted on the server. Instead, wait until we get
@@ -198,7 +200,7 @@ Meteor._logoutAllOthers = function (callback) {
   var origOnReconnect = Meteor.connection.onReconnect;
   var userId = Meteor.userId();
   Meteor.connection.onReconnect = null;
-  Meteor.apply('_logoutAllOthers', [], { wait: true },
+  Meteor.apply('logoutOtherClients', [], { wait: true },
                function (error, result) {
                  Meteor.connection.onReconnect = origOnReconnect;
                  if (! error)

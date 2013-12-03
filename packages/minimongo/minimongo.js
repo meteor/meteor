@@ -87,12 +87,18 @@ LocalCollection.Cursor = function (collection, selector, options) {
   if (LocalCollection._selectorIsId(selector)) {
     // stash for fast path
     self.selector_id = LocalCollection._idStringify(selector);
-    self.selector_f = LocalCollection._compileSelector(selector);
+    self.selector_f = LocalCollection._compileSelector(selector, self);
     self.sort_f = undefined;
   } else {
+    // MongoDB throws different errors on different branching operators
+    // containing $near
+    if (isGeoQuerySpecial(selector))
+      throw new Error("$near can't be inside $or/$and/$nor/$not");
+
     self.selector_id = undefined;
-    self.selector_f = LocalCollection._compileSelector(selector);
-    self.sort_f = options.sort ? LocalCollection._compileSort(options.sort) : null;
+    self.selector_f = LocalCollection._compileSelector(selector, self);
+    self.sort_f = (isGeoQuery(selector) || options.sort) ?
+      LocalCollection._compileSort(options.sort || [], self) : null;
   }
   self.skip = options.skip;
   self.limit = options.limit;
@@ -140,9 +146,8 @@ LocalCollection.prototype.findOne = function (selector, options) {
   return this.find(selector, options).fetch()[0];
 };
 
-LocalCollection.Cursor.prototype.forEach = function (callback) {
+LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
   var self = this;
-  var doc;
 
   if (self.db_objects === null)
     self.db_objects = self._getRawObjects(true);
@@ -155,12 +160,13 @@ LocalCollection.Cursor.prototype.forEach = function (callback) {
       movedBefore: true});
 
   while (self.cursor_pos < self.db_objects.length) {
-    var elt = EJSON.clone(self.db_objects[self.cursor_pos++]);
+    var elt = EJSON.clone(self.db_objects[self.cursor_pos]);
     if (self.projection_f)
       elt = self.projection_f(elt);
     if (self._transform)
       elt = self._transform(elt);
-    callback(elt);
+    callback.call(thisArg, elt, self.cursor_pos, self);
+    ++self.cursor_pos;
   }
 };
 
@@ -169,11 +175,11 @@ LocalCollection.Cursor.prototype.getTransform = function () {
   return self._transform;
 };
 
-LocalCollection.Cursor.prototype.map = function (callback) {
+LocalCollection.Cursor.prototype.map = function (callback, thisArg) {
   var self = this;
   var res = [];
-  self.forEach(function (doc) {
-    res.push(callback(doc));
+  self.forEach(function (doc, index) {
+    res.push(callback.call(thisArg, doc, index, self));
   });
   return res;
 };
@@ -473,9 +479,13 @@ LocalCollection.prototype.insert = function (doc, callback) {
       LocalCollection._recomputeResults(self.queries[qid]);
   });
   self._observeQueue.drain();
-  // Defer in case the callback returns on a future; gives the caller time to
-  // wait on the future.
-  if (callback) Meteor.defer(function () { callback(null, doc._id); });
+
+  // Defer because the caller likely doesn't expect the callback to be run
+  // immediately.
+  if (callback)
+    Meteor.defer(function () {
+      callback(null, doc._id);
+    });
   return doc._id;
 };
 
@@ -484,7 +494,7 @@ LocalCollection.prototype.remove = function (selector, callback) {
   var remove = [];
 
   var queriesToRecompute = [];
-  var selector_f = LocalCollection._compileSelector(selector);
+  var selector_f = LocalCollection._compileSelector(selector, self);
 
   // Avoid O(n) for "remove a single doc by ID".
   var specificIds = LocalCollection._idsMatchedBySelector(selector);
@@ -533,9 +543,12 @@ LocalCollection.prototype.remove = function (selector, callback) {
       LocalCollection._recomputeResults(query);
   });
   self._observeQueue.drain();
-  // Defer in case the callback returns on a future; gives the caller time to
-  // wait on the future.
-  if (callback) Meteor.defer(callback);
+  var result = remove.length;
+  if (callback)
+    Meteor.defer(function () {
+      callback(null, result);
+    });
+  return result;
 };
 
 // XXX atomicity: if multi is true, and one modification fails, do
@@ -548,10 +561,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   }
   if (!options) options = {};
 
-  if (options.upsert)
-    throw new Error("upsert not yet implemented");
-
-  var selector_f = LocalCollection._compileSelector(selector);
+  var selector_f = LocalCollection._compileSelector(selector, self);
 
   // Save the original results of any query that we might need to
   // _recomputeResults on, because _modifyAndNotify will mutate the objects in
@@ -565,12 +575,15 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   });
   var recomputeQids = {};
 
+  var updateCount = 0;
+
   for (var id in self.docs) {
     var doc = self.docs[id];
     if (selector_f(doc)) {
       // XXX Should we save the original even if mod ends up being a no-op?
       self._saveOriginal(id, doc);
       self._modifyAndNotify(doc, mod, recomputeQids);
+      ++updateCount;
       if (!options.multi)
         break;
     }
@@ -583,9 +596,54 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
                                         qidToOriginalResults[qid]);
   });
   self._observeQueue.drain();
-  // Defer in case the callback returns on a future; gives the caller time to
-  // wait on the future.
-  if (callback) Meteor.defer(callback);
+
+  // If we are doing an upsert, and we didn't modify any documents yet, then
+  // it's time to do an insert. Figure out what document we are inserting, and
+  // generate an id for it.
+  var insertedId;
+  if (updateCount === 0 && options.upsert) {
+    var newDoc = LocalCollection._removeDollarOperators(selector);
+    LocalCollection._modify(newDoc, mod, true);
+    if (! newDoc._id && options.insertedId)
+      newDoc._id = options.insertedId;
+    insertedId = self.insert(newDoc);
+    updateCount = 1;
+  }
+
+  // Return the number of affected documents, or in the upsert case, an object
+  // containing the number of affected docs and the id of the doc that was
+  // inserted, if any.
+  var result;
+  if (options._returnObject) {
+    result = {
+      numberAffected: updateCount
+    };
+    if (insertedId !== undefined)
+      result.insertedId = insertedId;
+  } else {
+    result = updateCount;
+  }
+
+  if (callback)
+    Meteor.defer(function () {
+      callback(null, result);
+    });
+  return result;
+};
+
+// A convenience wrapper on update. LocalCollection.upsert(sel, mod) is
+// equivalent to LocalCollection.update(sel, mod, { upsert: true, _returnObject:
+// true }).
+LocalCollection.prototype.upsert = function (selector, mod, options, callback) {
+  var self = this;
+  if (! callback && typeof options === "function") {
+    callback = options;
+    options = {};
+  }
+  return self.update(selector, mod, _.extend({}, options, {
+    upsert: true,
+    _returnObject: true
+  }), callback);
 };
 
 LocalCollection.prototype._modifyAndNotify = function (
@@ -1123,3 +1181,23 @@ LocalCollection._compileProjection = function (fields) {
     return res;
   };
 };
+
+// Searches $near operator in the selector recursively
+// (including all $or/$and/$nor/$not branches)
+var isGeoQuery = function (selector) {
+  return _.any(selector, function (val, key) {
+    // Note: _.isObject matches objects and arrays
+    return key === "$near" || (_.isObject(val) && isGeoQuery(val));
+  });
+};
+
+// Checks if $near appears under some $or/$and/$nor/$not branch
+var isGeoQuerySpecial = function (selector) {
+  return _.any(selector, function (val, key) {
+    if (_.contains(['$or', '$and', '$nor', '$not'], key))
+      return isGeoQuery(val);
+    // Note: _.isObject matches objects and arrays
+    return _.isObject(val) && isGeoQuerySpecial(val);
+  });
+};
+

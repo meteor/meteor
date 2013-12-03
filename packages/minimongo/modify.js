@@ -5,7 +5,11 @@
 //
 // XXX atomicity: if one modification fails, do we roll back the whole
 // change?
-LocalCollection._modify = function (doc, mod) {
+//
+// isInsert is set when _modify is being called to compute the document to
+// insert as part of an upsert operation. We use this primarily to figure out
+// when to set the fields in $setOnInsert, if present.
+LocalCollection._modify = function (doc, mod, isInsert) {
   var is_modifier = false;
   for (var k in mod) {
     // IE7 doesn't support indexing into strings (eg, k[0]), so use substr.
@@ -35,6 +39,9 @@ LocalCollection._modify = function (doc, mod) {
 
     for (var op in mod) {
       var mod_func = LocalCollection._modifiers[op];
+      // Treat $setOnInsert as $set if this is an insert.
+      if (isInsert && op === '$setOnInsert')
+        mod_func = LocalCollection._modifiers['$set'];
       if (!mod_func)
         throw Error("Invalid modifier specified " + op);
       for (var keypath in mod[op]) {
@@ -60,7 +67,11 @@ LocalCollection._modify = function (doc, mod) {
     // Note: this used to be for (var k in doc) however, this does not
     // work right in Opera. Deleting from a doc while iterating over it
     // would sometimes cause opera to skip some keys.
-    if (k !== '_id')
+
+    // isInsert: if we're constructing a document to insert (via upsert)
+    // and we're in replacement mode, not modify mode, DON'T take the
+    // _id from the query.  This matches mongo's behavior.
+    if (k !== '_id' || isInsert)
       delete doc[k];
   });
   for (var k in new_doc) {
@@ -144,6 +155,9 @@ LocalCollection._modifiers = {
       throw Error("Cannot change the _id of a document");
 
     target[field] = EJSON.clone(arg);
+  },
+  $setOnInsert: function (target, field, arg) {
+    // converted to `$set` in `_modify`
   },
   $unset: function (target, field, arg) {
     if (target !== undefined) {
@@ -298,4 +312,12 @@ LocalCollection._modifiers = {
     // native javascript numbers (doubles) so far, so we can't support $bit
     throw Error("$bit is not supported");
   }
+};
+
+LocalCollection._removeDollarOperators = function (selector) {
+  var selectorDoc = {};
+  for (var k in selector)
+    if (k.substr(0, 1) !== '$')
+      selectorDoc[k] = selector[k];
+  return selectorDoc;
 };
