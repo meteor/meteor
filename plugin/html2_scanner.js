@@ -150,10 +150,9 @@ html2_scanner = {
 
       var renderFuncCode = Spacebars.compile2(
         contents, {
-          sourceName: 'Template "' + name + '"',
-          // XXX MESSY HACK - make only Templates expose
-          // `content` and `elseContent`
-          preamble: '\n  var _local_content = this.content = this.__content;\n  var _local_elseContent = this.elseContent = this.__elseContent' });
+          isTemplate: true,
+          sourceName: 'Template "' + name + '"'
+        });
 
       results.js += "\nTemplate[" + JSON.stringify(name) +
         "] = UI.Component.extend({kind: " +
