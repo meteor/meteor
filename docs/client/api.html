@@ -2989,6 +2989,29 @@ If `MAIL_URL` is not set (eg, when running your application locally),
 You must provide the `from` option and at least one of `to`, `cc`, and `bcc`;
 all other options are optional.
 
+`attachments` is an array of objects with the following keys:
+
+<dl class="objdesc">
+{{#dtdd name="contents" type="String (base64 encoded)"}}
+The contents of the attached file; required.
+{{/dtdd}}
+
+{{#dtdd name="fileName" type="String"}}
+The filename the client should save the attachment as.
+{{/dtdd}}
+
+{{#dtdd name="contentType" type="String"}}
+The <a href="http://en.wikipedia.org/wiki/MIME#Content-Type"
+target="_blank">MIME Content-Type</a> of the file; if not provided
+and `fileName` is, Meteor guesses it based on `fileName`.
+{{/dtdd}}
+
+{{#dtdd name="cid" type="String"}}
+A globally-unique content ID for the file; if provided, the email's HTML body
+can refer to it using syntax like `<img src="cid:THE_CID">`.
+{{/dtdd}}
+</dl>
+
 `Email.send` only works on the server. Here is an example of how a
 client could use a server method call to send an email. (In an actual
 application, you'd need to be careful to limit the emails that a
