@@ -992,6 +992,30 @@ Tinytest.add("minimongo - projection_compiler", function (test) {
      "blacklist nested - path not found in doc"]
   ]);
 
+  testProjection({ _id: 1 }, [
+    [{ _id: 42, x: 1, y: { z: "2" } },
+     { _id: 42 },
+     "_id whitelisted"],
+    [{ _id: 33 },
+     { _id: 33 },
+     "_id whitelisted, _id only"],
+    [{ x: 1 },
+     {},
+     "_id whitelisted, no _id"]
+  ]);
+
+  testProjection({ _id: 0 }, [
+    [{ _id: 42, x: 1, y: { z: "2" } },
+     { x: 1, y: { z: "2" } },
+     "_id blacklisted"],
+    [{ _id: 33 },
+     {},
+     "_id blacklisted, _id only"],
+    [{ x: 1 },
+     { x: 1 },
+     "_id blacklisted, no _id"]
+  ]);
+
   test.throws(function () {
     testProjection({ 'inc': 1, 'excl': 0 }, [
       [ { inc: 42, excl: 42 }, { inc: 42 }, "Can't combine incl/excl rules" ]
