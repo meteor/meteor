@@ -693,3 +693,7 @@ UI.body2 = UI.Component.extend({
   // XXX revisit how body works.
   INSTANTIATED: false
 });
+
+UI.block = function (renderFunc) {
+  return UI.Component.extend({ render: renderFunc });
+};
