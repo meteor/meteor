@@ -23,7 +23,22 @@ pkill -f "$PROJDIR/.meteor/local/db" || true
 ../../../meteor --production --settings "scenarios/${SCENARIO}.json" --port 9000 &
 OUTER_PID=$!
 
+echo "Waiting for server to come up"
+function wait_for_port {
+    local N=0
+    while ! curl -v "$1" 2>&1 | grep ' 200 ' > /dev/null ; do
+        sleep 1
+        N=$(($N+1))
+        if [ $N -ge $2 ] ; then
+            echo "Timed out waiting for port $1"
+            exit 2
+        fi
+    done
+}
+wait_for_port "http://localhost:9001" 60
 
+
+echo "Starting phantoms"
 # start a bunch of phantomjs processes
 PHANTOMSCRIPT=`mktemp -t benchmark-XXXXXXXX`
 cat > "$PHANTOMSCRIPT" <<EOF
