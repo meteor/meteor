@@ -25,15 +25,7 @@ var Library = function (options) {
 
   // Trim down localPackageDirs to just those that actually exist (and
   // that are actually directories)
-  self.localPackageDirs = _.filter(options.localPackageDirs, function (dir) {
-      try {
-        // use stat rather than lstat since symlink to dir is OK
-        var stats = fs.statSync(dir);
-      } catch (e) {
-        return false;
-      }
-      return stats.isDirectory();
-    });
+  self.localPackageDirs = _.filter(options.localPackageDirs, isDirectory);
 
   self.overrides = {}; // package name to package directory
 
@@ -95,6 +87,9 @@ _.extend(Library.prototype, {
   // called from Package initialization code. Intended primarily for comparison
   // to the packageDirForBuildInfo field on a Package object; also used
   // internally to implement 'get'.
+  //
+  // If it finds a directory named name inside one of the localPackageDirs which
+  // contains nothing but ".build", it deletes that directory.
   findPackageDirectory: function (name) {
     var self = this;
 
@@ -110,6 +105,9 @@ _.extend(Library.prototype, {
 
     for (var i = 0; i < self.localPackageDirs.length; ++i) {
       var packageDir = path.join(self.localPackageDirs[i], name);
+      if (!isDirectory(packageDir))
+        continue;
+
       // A directory is a package if it either contains 'package.js' (a package
       // source tree) or 'unipackage.json' (a compiled unipackage). (Actually,
       // for now, unipackages contain a dummy package.js too.)
@@ -129,6 +127,13 @@ _.extend(Library.prototype, {
           fs.existsSync(path.join(packageDir, 'unipackage.json'))) {
         return packageDir;
       }
+
+      // Does this package directory just contain a ".build" subdirectory and
+      // nothing else? Most likely, this package was created on another branch
+      // of meteor, and when you checked this branch out it left around the
+      // gitignored .build directory. Clean it up.
+      if (_.isEqual(fs.readdirSync(packageDir), ['.build']))
+        files.rm_recursive(packageDir);
     }
 
     // Try the Meteor distribution, if we have one.
@@ -464,3 +469,13 @@ _.extend(exports, {
     return out;
   }
 });
+
+var isDirectory = function (dir) {
+  try {
+    // use stat rather than lstat since symlink to dir is OK
+    var stats = fs.statSync(dir);
+  } catch (e) {
+    return false;
+  }
+  return stats.isDirectory();
+};

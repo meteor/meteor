@@ -71,12 +71,13 @@ umask 022
 mkdir build
 cd build
 
-git clone git://github.com/joyent/node.git
+# Temporarily use a fork of 0.10.21 plus a change to fix websockets.
+git clone git://github.com/meteor/node.git
 cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of tools/meteor.js and tools/server/boot.js, and the text in
 # docs/client/concepts.html and the README in tools/bundler.js.
-git checkout v0.10.21
+git checkout dev-bundle-0.3.24
 
 ./configure --prefix="$DIR"
 make -j4
@@ -99,7 +100,6 @@ which npm
 cd "$DIR/lib/node_modules"
 npm install optimist@0.6.0
 npm install semver@2.1.0
-npm install handlebars@1.0.7
 npm install request@2.27.0
 npm install keypress@0.2.1
 npm install underscore@1.5.2

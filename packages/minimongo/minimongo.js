@@ -1105,7 +1105,7 @@ LocalCollection._observeOrderedFromObserveChanges =
   handle._fetch = function () {
     var docsArray = [];
     docs.forEach(function (doc) {
-      docsArray.push(doc);
+      docsArray.push(transform(doc));
     });
     return docsArray;
   };

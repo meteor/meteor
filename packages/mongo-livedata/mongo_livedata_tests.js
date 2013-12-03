@@ -789,6 +789,36 @@ testAsyncMulti('mongo-livedata - document with a date, ' + idGeneration, [
   }
 ]);
 
+testAsyncMulti('mongo-livedata - transform must return an object, ' + idGeneration, [
+  function (test, expect) {
+    var self = this;
+    var justId = function (doc) {
+      return doc._id;
+    };
+    TRANSFORMS["justId"] = justId;
+    var collectionOptions = {
+      idGeneration: idGeneration,
+      transform: justId,
+      transformName: "justId"
+    };
+    var collectionName = Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
+      Meteor.subscribe('c-' + collectionName);
+    }
+    self.coll = new Meteor.Collection(collectionName, collectionOptions);
+    self.coll.insert({}, expect(function (err, id) {
+      test.isFalse(err);
+      test.isTrue(id);
+      test.throws(function () {
+        self.coll.findOne();
+      });
+      // you can still override the transform though.
+      test.equal(self.coll.findOne({}, {transform: null})._id, id);
+    }));
+  }
+]);
+
 testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGeneration, [
   function (test, expect) {
     var self = this;
@@ -847,15 +877,63 @@ testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGenera
       test.isTrue(id);
       self.id2 = id;
     }));
-  },
+  }
+]);
+
+testAsyncMulti('mongo-livedata - transformed object can\'t have conflicting _id, ' + idGeneration, [
   function (test, expect) {
     var self = this;
-    // Test that a transform that returns something other than a document with
-    // an _id (eg, a number) works. Regression test for #974.
-    test.equal(self.coll.find({}, {
-      transform: function (doc) { return doc.d.getSeconds(); },
-      sort: {d: 1}
-    }).fetch(), [50, 51]);
+    var justId = function (doc) {
+      doc._id = "foo";
+      return doc;
+    };
+    TRANSFORMS["justId"] = justId;
+    var collectionOptions = {
+      idGeneration: idGeneration,
+      transform: justId,
+      transformName: "justId"
+    };
+    var collectionName = Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
+      Meteor.subscribe('c-' + collectionName);
+    }
+    self.coll = new Meteor.Collection(collectionName, collectionOptions);
+    self.coll.insert({}, expect(function (err, id) {
+      test.isFalse(err);
+      test.isTrue(id);
+      test.throws(function () {
+        self.coll.findOne();
+      });
+      // you can still override the transform though.
+      test.equal(self.coll.findOne({}, {transform: null})._id, id);
+    }));
+  }
+]);
+
+testAsyncMulti('mongo-livedata - transform sets _id if not present, ' + idGeneration, [
+  function (test, expect) {
+    var self = this;
+    var justId = function (doc) {
+      return _.omit(doc, '_id');
+    };
+    TRANSFORMS["justId"] = justId;
+    var collectionOptions = {
+      idGeneration: idGeneration,
+      transform: justId,
+      transformName: "justId"
+    };
+    var collectionName = Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
+      Meteor.subscribe('c-' + collectionName);
+    }
+    self.coll = new Meteor.Collection(collectionName, collectionOptions);
+    self.coll.insert({}, expect(function (err, id) {
+      test.isFalse(err);
+      test.isTrue(id);
+      test.equal(self.coll.findOne()._id, id);
+    }));
   }
 ]);
 

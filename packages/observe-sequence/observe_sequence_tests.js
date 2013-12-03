@@ -141,8 +141,8 @@ Tinytest.add('observe sequence - array to other array, changes', function (test)
     {addedAt: ["42", {_id: "42", baz: 42}, 2, null]},
     {removed: ["37", {_id: "37", bar: 2}]},
     {addedAt: ["38", {_id: "38", bar: 2}, 1, "42"]},
-    // XXX not sure why 'changed' is being fired for something that didn't
-    // change
+    // change fires for all elements, because we don't diff the actual
+    // objects.
     {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]},
     {changed: ["42", {_id: "42", baz: 43}, {_id: "42", baz: 42}]}
   ]);
@@ -313,6 +313,38 @@ Tinytest.add('observe sequence - cursor to other cursor', function (test) {
     {removed: ["37", {_id: "37", bar: 2}]},
     {addedAt: ["38", {_id: "38", bar: 2}, 1, null]},
     {changed: ["13", {_id: "13", foo: 1}, {_id: "13", foo: 1}]}
+  ]);
+});
+
+Tinytest.add('observe sequence - cursor to other cursor with transform', function (test) {
+  var dep = new Deps.Dependency;
+  var transform = function(doc) {
+    return _.extend({idCopy: doc._id}, doc);
+  };
+
+  var coll = new Meteor.Collection(null, {transform: transform});
+  coll.insert({_id: "13", foo: 1});
+  var cursor = coll.find({}, {sort: {_id: 1}});
+  var seq = cursor;
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    coll.insert({_id: "37", bar: 2});
+
+    var newColl = new Meteor.Collection(null, {transform: transform});
+    newColl.insert({_id: "13", foo: 1});
+    newColl.insert({_id: "38", bar: 2});
+    var newCursor = newColl.find({}, {sort: {_id: 1}});
+    seq = newCursor;
+    dep.changed();
+  }, [
+    {addedAt: ["13", {_id: "13", foo: 1, idCopy: "13"}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2, idCopy: "37"}, 1, null]},
+    {removed: ["37", {_id: "37", bar: 2, idCopy: "37"}]},
+    {addedAt: ["38", {_id: "38", bar: 2, idCopy: "38"}, 1, null]},
+    {changed: ["13", {_id: "13", foo: 1, idCopy: "13"}, {_id: "13", foo: 1, idCopy: "13"}]}
   ]);
 });
 

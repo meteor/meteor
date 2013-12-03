@@ -38,10 +38,11 @@ Meteor.Collection = function (name, options) {
     break;
   }
 
-  if (options.transform)
-    self._transform = Deps._makeNonreactive(options.transform);
-  else
+  if (options.transform) {
+    self._transform = Deps._makeNonreactive(transformTransform(options.transform));
+  } else {
     self._transform = null;
+  }
 
   if (!name && (name !== null)) {
     Meteor._debug("Warning: creating anonymous collection. It will not be " +
@@ -182,6 +183,39 @@ Meteor.Collection = function (name, options) {
       return self.find();
     }, {is_auto: true});
   }
+};
+
+// Transform a transform function to return objects that have the
+// original _id field. Used by transform functions passed into `new
+// Meteor.Collection`. This ensures that subsystems such as the
+// observe-sequence package that call `observe` can keep track of the
+// documents identities.
+//
+// - Require that it returns objects
+// - If the return value has an _id field, verify that it matches the
+//   original _id field
+// - If the return value doesn't have an _id field, add it back.
+var transformTransform = function(transform) {
+  return function (doc) {
+    var id = doc._id;
+    var transformed = transform(doc);
+    if (typeof transformed !== 'object' ||
+        // Even though fine technically, don't let Mongo ObjectIDs
+        // through. It would suck to think your app works until
+        // you insert the first document using Meteor.
+        transformed instanceof Meteor.Collection.ObjectID) {
+      throw new Error("transform must return object");
+    }
+
+    if (transformed._id) {
+      if (transformed._id !== id) {
+        throw new Error("transformed document can't have different _id");
+      }
+    } else {
+      transformed._id = id;
+    }
+    return transformed;
+  };
 };
 
 ///
