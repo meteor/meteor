@@ -1789,6 +1789,9 @@ var beautify = function (code) {
   }
 };
 
+// expose for compiler output tests
+Spacebars._beautify = beautify;
+
 // `path` is an array of at least one string.
 //
 // If `path.length > 1`, the generated code may be reactive
