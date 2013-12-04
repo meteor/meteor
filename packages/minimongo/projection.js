@@ -9,10 +9,7 @@ LocalCollection._compileProjection = function (fields) {
   if (!_.isObject(fields))
     throw MinimongoError("fields option must be an object");
 
-  // XXX: $-operators are not supported in fields projections yet
-  if (! LocalCollection._supportedProjection(fields))
-    throw MinimongoError("Minimongo doesn't support fields projections "
-                         + "with $-operators yet");
+  LocalCollection._checkSupportedProjection(fields);
 
   var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
   var details = projectionDetails(fields);
@@ -160,11 +157,12 @@ pathsToTree = function (paths, newLeafFn, conflictFn, tree) {
   return tree;
 };
 
-LocalCollection._supportedProjection = function (fields) {
-  return _.all(fields, function (val, keyPath) {
+LocalCollection._checkSupportedProjection = function (fields) {
+  _.each(fields, function (val, keyPath) {
     if (_.contains(keyPath.split('.'), '$'))
-      return false;
-    return _.indexOf([1, 0, true, false], val) !== -1;
+      throw MinimongoError("Minimongo doesn't support $ operator in projections yet.");
+    if (_.indexOf([1, 0, true, false], val) === -1)
+      throw MinimongoError("Projection values should be one of 1, 0, true, or false");
   });
 };
 

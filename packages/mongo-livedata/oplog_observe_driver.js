@@ -324,8 +324,16 @@ OplogObserveDriver.cursorSupported = function (cursorDescription) {
 
   // If a fields projection option is given check if it is supported by
   // minimongo (some operators are not supported).
-  if (options.fields && !LocalCollection._supportedProjection(options.fields))
-    return false;
+  if (options.fields) {
+    try {
+      LocalCollection._checkSupportedProjection(options.fields);
+    } catch (e) {
+      if (e.name === "MinimongoError")
+        return false;
+      else
+        throw e;
+    }
+  }
 
   // For now, we're just dealing with equality queries: no $operators, regexps,
   // or $and/$or/$where/etc clauses. We can expand the scope of what we're
