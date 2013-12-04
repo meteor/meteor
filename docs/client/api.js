@@ -318,11 +318,11 @@ Template.api.subscription_userId = {
 };
 
 
-Template.api.subscription_session = {
-  id: "publish_session",
-  name: "<i>this</i>.session",
+Template.api.subscription_connection = {
+  id: "publish_connection",
+  name: "<i>this</i>.connection",
   locus: "Server",
-  descr: ["Access inside the publish function. The [session](#ddp_session) this subscription came in on."]
+  descr: ["Access inside the publish function. The incoming [connection](#meteor_onconnection) for this subscription."]
 };
 
 
@@ -389,11 +389,11 @@ Template.api.method_invocation_isSimulation = {
   descr: ["Access inside a method invocation.  Boolean value, true if this invocation is a stub."]
 };
 
-Template.api.method_invocation_session = {
-  id: "method_session",
-  name: "<i>this</i>.session",
+Template.api.method_invocation_connection = {
+  id: "method_connection",
+  name: "<i>this</i>.connection",
   locus: "Server",
-  descr: ["Access inside a method invocation. The [session](#meteor_onconnection) this method call came in on."]
+  descr: ["Access inside a method invocation. The [connection](#meteor_onconnection) this method was received on."]
 };
 
 Template.api.error = {
@@ -502,31 +502,9 @@ Template.api.onConnection = {
   args: [
     {name: "callback",
      type: "function",
-     descr: "The function to call with the session when a new DDP connection is established."}
+     descr: "The function to call when a new DDP connection is established."}
   ]
 };
-
-Template.api.ddp_session = {
-  id: "ddp_session",
-  name: "DDP.Session",
-  locus: "Server",
-  descr: ["On the server, this object represents a connection from a client."],
-  fields: [
-    {name: "id",
-     type: "String",
-     descr: "The globally unique session id."
-    },
-    {name: "close",
-     type: "Function",
-     descr: "Close this session and the associated DDP connection. The client is free to reconnect, but will receive a different session if it does."
-    },
-    {name: "onClose",
-     type: "Function",
-     descr: "Register a callback to be called when the session is closed."
-    }
-  ]
-};
-
 
 // onAutopublish
 
