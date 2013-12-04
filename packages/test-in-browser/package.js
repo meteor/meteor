@@ -16,6 +16,8 @@ Package.on_use(function (api) {
   api.use(['ui', 'templating', 'spacebars',
            'livedata', 'deps'], 'client');
 
+  api.add_files('diff_match_patch_uncompressed.js', 'client');
+
   api.add_files([
     'driver.css',
     'driver.html',

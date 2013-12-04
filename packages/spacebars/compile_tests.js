@@ -18,13 +18,9 @@ Tinytest.add("spacebars - compiler output", function (test) {
     } else {
       var output = Spacebars.compile2(input);
       // compare using Function .toString()!
-      var wrapForTestDisplay = function (str) {
-        return str.replace(/\n/g, ' ');
-      };
-      test.equal(
-        wrapForTestDisplay(output.toString()),
-        wrapForTestDisplay(
-          Spacebars._beautify('(' + expected.toString() + ')')));
+      test._stringEqual(
+        output.toString(),
+        Spacebars._beautify('(' + expected.toString() + ')'));
     }
   };
 
@@ -51,4 +47,13 @@ Tinytest.add("spacebars - compiler output", function (test) {
           return Spacebars.mustache2(self.lookup("foo"), self.lookup("bar"));
         };
       });
+
+  run("{{#foo}}abc{{/foo}}",
+      function() {
+        var self = this;
+        return function() {
+          return Spacebars.mustache2(self.lookup("foo"), self.lookup("bar"));
+        };
+      });
+
 });

@@ -457,25 +457,16 @@ Template.event.events({
   }
 });
 
+// e.g. doDiff('abc', 'bcd') => [[-1, 'a'], [0, 'bc'], [1, 'd']]
+var doDiff = function (str1, str2) {
+  var D = new diff_match_patch();
+  var pieces = D.diff_main(str1, str2, false);
+  D.diff_cleanupSemantic(pieces);
+  return pieces;
+};
+
 Template.event.helpers({
   get_details: function() {
-
-    var prepare = function(details) {
-      return _.compact(_.map(details, function(val, key) {
-
-        // You can end up with a an undefined value, e.g. using
-        // isNull without providing a message attribute: isNull(1).
-        // No need to display those.
-        if (!_.isUndefined(val)) {
-          return {
-            key: key,
-            val: val
-          };
-        } else {
-          return undefined;
-        }
-      }));
-    };
 
     var details = this.details;
 
@@ -489,6 +480,49 @@ Template.event.helpers({
       details = _.clone(details);
       delete details.type;
       delete details.stack;
+
+      var prepare = function(details) {
+        if (type === 'string_equal') {
+          var diff = doDiff(details.actual,
+                            details.expected);
+        }
+
+        return _.compact(_.map(details, function(val, key) {
+
+          // make test._stringEqual results print nicely,
+          // in particular for multiline strings
+          if (type === 'string_equal' &&
+              (key === 'actual' || key === 'expected')) {
+            var html = '<pre class="string_equal string_equal_'+key+'">';
+            _.each(diff, function (piece) {
+              var which = piece[0];
+              var text = piece[1];
+              if (which === 0 ||
+                  which === (key === 'actual' ? -1 : 1)) {
+                var htmlBit = Handlebars._escape(text).replace(
+                    /\n/g, '<br>');
+                if (which !== 0)
+                  htmlBit = '<ins>' + htmlBit + '</ins>';
+                html += htmlBit;
+              }
+            });
+            html += '</pre>';
+            val = new Handlebars.SafeString(html);
+          }
+
+          // You can end up with a an undefined value, e.g. using
+          // isNull without providing a message attribute: isNull(1).
+          // No need to display those.
+          if (!_.isUndefined(val)) {
+            return {
+              key: key,
+              val: val
+            };
+          } else {
+            return undefined;
+          }
+        }));
+      };
 
       return {
         type: type,
