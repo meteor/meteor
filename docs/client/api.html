@@ -2462,7 +2462,9 @@ these variables have the right values, you need to use
 instead of `setInterval`.
 
 These functions work just like their native JavaScript equivalents.
-You'll get an error if you call the native function.
+If you call the native function, you'll get an error stating that Meteor
+code must always run within a Fiber, and advising to use
+`Meteor.bindEnvironment`.
 
 {{> api_box setTimeout}}
 
