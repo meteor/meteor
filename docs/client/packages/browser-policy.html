@@ -40,8 +40,8 @@ cross-site scripting attacks by disabling all scripts except those loaded from a
 `script src` attribute.
 
 Meteor determines the browser policy when the server starts up, so you should
-call `BrowserPolicy` functions in top-level application code or in
-`Meteor.startup`.
+call `BrowserPolicy` functions on the server in top-level application code or in
+`Meteor.startup`. `BrowserPolicy` functions cannot be used in client code.
 
 #### Frame options
 
