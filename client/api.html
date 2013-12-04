@@ -175,7 +175,7 @@ publish handler, this is the place to stop the observes.
 {{> api_box subscription_error}}
 {{> api_box subscription_stop}}
 
-{{> api_box subscription_session}}
+{{> api_box subscription_connection}}
 
 {{> api_box subscribe}}
 
@@ -278,8 +278,7 @@ invocation object, which provides the following:
 begin running.
 * `userId`: the id of the current user.
 * `setUserId`: a function that associates the current client with a user.
-* `session`: on the server, the [session](#ddp_session) this method
-call came in on.
+* `connection`: on the server, the [connection](#meteor_onconnection) this method call was received on.
 
 Calling `methods` on the client defines *stub* functions associated with
 server methods of the same name.  You don't have to define a stub for
@@ -332,7 +331,7 @@ invocation from a client won't start until the Nth invocation
 returns. However, you can change this by calling `this.unblock`. This
 will allow the N+1th invocation to start running in a new fiber.
 
-{{> api_box method_invocation_session}}
+{{> api_box method_invocation_connection}}
 
 {{> api_box error}}
 
@@ -479,26 +478,29 @@ The callback is called with a single argument, the server-side
 [session](#ddp_session) representing the connection from the client.
 
 
-{{> api_box ddp_session}}
+<dl class="objdesc">
+{{#dtdd name="id" type="String"}}
+A globally unique id for this connection.
+{{/dtdd}}
+
+{{#dtdd name="close" type="Function"}}
+Close this DDP connection. The client is free to reconnect, but will
+receive a different connection with a new `id` if it does.
+{{/dtdd}}
+
+{{#dtdd name="onClose" type="Function"}}
+Register a callback to be called when the connection is closed.
+{{/dtdd}}
+</dl>
 
 {{#note}}
 Currently when a client reconnects to the server (such as after
 temporarily losing its Internet connection), it will get a new session
 each time.
 
-When session reconnects are implemented, clients will be able to
-reconnect to the same session.
+In the future, when session reconnection is implemented, clients will be
+able to reconnect and resume the same session.
 
-The `Meteor.onConnection` callback will be called only once for a
-session.  A client reconnecting to the same session won't cause the
-callback to be called again.
-
-The client closing the connection won't cause the session to close
-right away because the client might reconnect; instead the session
-will close after a timeout.  Once the session has been closed
-(including when the session `close` method is called), a reconnect
-from the client attempting to reuse the session will receive a new
-session instead.
 {{/note}}
 
 
@@ -3109,11 +3111,6 @@ code can read `data.txt` by running:
 {{#if options}}
 <h4>Options</h4>
 {{> api_box_args options}}
-{{/if}}
-
-{{#if fields}}
-<h4>Fields</h4>
-{{> api_box_args fields}}
 {{/if}}
 
 {{#if body}}
