@@ -268,7 +268,6 @@ Accounts.registerLoginHandler(function(options) {
   check(options.resume, String);
 
   var hashedToken = Accounts._hashLoginToken(options.resume);
-  var oldUnhashedStyleToken = false;
 
   // First look for just the new-style hashed login token, to avoid
   // sending the unhashed token to the database in a query if we don't
@@ -277,31 +276,38 @@ Accounts.registerLoginHandler(function(options) {
     {"services.resume.loginTokens.hashedToken": hashedToken});
 
   if (! user) {
-    // If we didn't find the hashed login token, try the old-style
-    // unhashed token.
-    user = Meteor.users.findOne(
-      {"services.resume.loginTokens.token": options.resume});
+    // If we didn't find the hashed login token, try also looking for
+    // the old-style unhashed token.  But we need to look for either
+    // the old-style token OR the new-style token, because another
+    // client connection logging in simultaneously might have already
+    // converted the token.
+    user = Meteor.users.findOne({
+      $or: [
+        {"services.resume.loginTokens.hashedToken": hashedToken},
+        {"services.resume.loginTokens.token": options.resume}
+      ]
+    });
+  }
 
-    if (user) {
-      oldUnhashedStyleToken = true;
-    } else {
-      throw new Meteor.Error(403, "You've been logged out by the server. " +
-      "Please login again.");
-    }
+  if (! user) {
+    throw new Meteor.Error(403, "You've been logged out by the server. " +
+    "Please login again.");
   }
 
   // Find the token, which will either be an object with fields
   // {hashToken, when} for a hashed token or {token, when} for an
   // unhashed token.
-  var token;
-  if (oldUnhashedStyleToken) {
+  var oldUnhashedStyleToken;
+  var token = _.find(user.services.resume.loginTokens, function (token) {
+    return token.hashedToken === hashedToken;
+  });
+  if (token) {
+    oldUnhashedStyleToken = false;
+  } else {
     token = _.find(user.services.resume.loginTokens, function (token) {
       return token.token === options.resume;
     });
-  } else {
-    token = _.find(user.services.resume.loginTokens, function (token) {
-      return token.hashedToken === hashedToken;
-    });
+    oldUnhashedStyleToken = true;
   }
 
   var tokenExpires = Accounts._tokenExpiration(token.when);
