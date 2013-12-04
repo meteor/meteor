@@ -495,12 +495,15 @@ Register a callback to be called when the connection is closed.
 
 {{#note}}
 Currently when a client reconnects to the server (such as after
-temporarily losing its Internet connection), it will get a new session
-each time.
+temporarily losing its Internet connection), it will get a new
+connection each time.  The `onConnection` callbacks will be called
+again, and the new connection will have a new connection `id`.
 
-In the future, when session reconnection is implemented, clients will be
-able to reconnect and resume the same session.
-
+In the future, when client reconnection is fully implemented,
+reconnecting from the client will reconnect to the same connection on
+the server: the `onConnection` callback won't be called for that
+connection again, and the connection will still have the same
+connection `id`.
 {{/note}}
 
 
