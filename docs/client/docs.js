@@ -123,7 +123,7 @@ var toc = [
         {instance: "this", name: "onStop", id: "publish_onstop"},
         {instance: "this", name: "error", id: "publish_error"},
         {instance: "this", name: "stop", id: "publish_stop"},
-        {instance: "this", name: "session", id: "publish_session"}
+        {instance: "this", name: "connection", id: "publish_connection"}
       ],
       "Meteor.subscribe"
     ],
@@ -134,7 +134,7 @@ var toc = [
         {instance: "this", name: "setUserId", id: "method_setUserId"},
         {instance: "this", name: "isSimulation", id: "method_issimulation"},
         {instance: "this", name: "unblock", id: "method_unblock"},
-        {instance: "this", name: "session", id: "method_session"}
+        {instance: "this", name: "connection", id: "method_connection"}
       ],
       "Meteor.Error",
       "Meteor.call",
@@ -146,7 +146,6 @@ var toc = [
       "Meteor.reconnect",
       "Meteor.disconnect",
       "Meteor.onConnection",
-      "DDP.Session",
       "DDP.connect"
     ],
 
