@@ -6,6 +6,11 @@
   client code changes; server only code changes will not cause the page
   to reload.
 
+* Add `Meteor.onConnection` and add `this.connection` to method
+  invocations and publish functions. These can be used to store data
+  associated with individual clients between subscriptions and method
+  calls. See http://docs.meteor.com/#meteor_onconnection for details.
+
 * Bundler failures cause non-zero exit code in `meteor run`.  #1515
 
 * Fix `meteor run` with settings files containing non-ASCII characters.  #1497
