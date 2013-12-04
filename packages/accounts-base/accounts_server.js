@@ -194,7 +194,7 @@ Accounts._hashStampedToken = function (stampedToken) {
 };
 
 
-// token -> list of session ids
+// hashed token -> list of session ids
 var sessionsByLoginToken = {};
 
 // test hook
@@ -255,8 +255,10 @@ Accounts.registerLoginHandler(function(options) {
 
   var oldUnhashedStyleToken = false;
 
+  var hashedToken = Accounts._hashLoginToken(options.resume);
+
   var user = Meteor.users.findOne({
-    "services.resume.loginTokens.hashedToken": Accounts._hashLoginToken(options.resume)
+    "services.resume.loginTokens.hashedToken": hashedToken
   });
 
   if (user) {
@@ -274,7 +276,6 @@ Accounts.registerLoginHandler(function(options) {
     }
   }
 
-  var hashedToken = Accounts._hashLoginToken(options.resume);
   var token;
   if (oldUnhashedStyleToken) {
     token = _.find(user.services.resume.loginTokens, function (token) {
@@ -437,12 +438,7 @@ Accounts.insertUserDoc = function (options, user) {
     var stampedToken = Accounts._generateStampedLoginToken();
     result.token = stampedToken.token;
     result.tokenExpires = Accounts._tokenExpiration(stampedToken.when);
-    var token;
-    if (options._testInsecureToken)
-      // Generate an old style unhashed token for unit test.
-      token = stampedToken;
-    else
-      token = Accounts._hashStampedToken(stampedToken);
+    var token = Accounts._hashStampedToken(stampedToken);
     Meteor._ensure(user, 'services', 'resume');
     if (_.has(user.services.resume, 'loginTokens'))
       user.services.resume.loginTokens.push(token);
@@ -800,11 +796,14 @@ Meteor.startup(function () {
 /// LOGGING OUT DELETED USERS
 ///
 
+// When login tokens are removed from the database, close any sessions
+// logged in with those tokens.
+//
+// Because we upgrade unhashed login tokens to hashed tokens at login
+// time, sessions will only be logged in with a hashed token.  Thus we
+// only need to pull out hashed tokens here.
 var closeTokensForUser = function (userTokens) {
-  closeSessionsForTokens(_.compact(_.union(
-    _.pluck(userTokens, "token"),
-    _.pluck(userTokens, "hashedToken")
-  )));
+  closeSessionsForTokens(_.compact(_.pluck(userTokens, "hashedToken")));
 };
 
 // Like _.difference, but uses EJSON.equals to compute which values to return.

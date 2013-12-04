@@ -214,15 +214,20 @@ Tinytest.addAsync('accounts - expire numeric token', function (test, onComplete)
 // to make sure users can still login after upgrading.
 
 var userWithUnhashedLoginToken = function () {
-  return Accounts.insertUserDoc(
-    {
-      generateLoginToken: true,
-      _testInsecureToken: true
-    },
-    {
-      username: Random.id()
-    }
+  var result = Accounts.insertUserDoc({}, {username: Random.id()});
+
+  // Construct an old-style unhashed login token.
+  var stampedToken = Accounts._generateStampedLoginToken();
+
+  Meteor.users.update(
+    result.id,
+    {$push: {'services.resume.loginTokens': stampedToken}}
   );
+
+  // Return result, as if from Accounts.insertUserDoc.
+  result.token = stampedToken.token;
+  result.tokenExpires = Accounts._tokenExpiration(stampedToken.when);
+  return result;
 };
 
 Tinytest.addAsync('accounts - login token', function (test, onComplete) {
