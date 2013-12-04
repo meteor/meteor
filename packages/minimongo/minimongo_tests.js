@@ -1016,6 +1016,12 @@ Tinytest.add("minimongo - projection_compiler", function (test) {
      "_id blacklisted, no _id"]
   ]);
 
+  testProjection({}, [
+    [{ a: 1, b: 2, c: "3" },
+     { a: 1, b: 2, c: "3" },
+     "empty projection"]
+  ]);
+
   test.throws(function () {
     testProjection({ 'inc': 1, 'excl': 0 }, [
       [ { inc: 42, excl: 42 }, { inc: 42 }, "Can't combine incl/excl rules" ]
