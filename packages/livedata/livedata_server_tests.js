@@ -2,17 +2,17 @@ var Fiber = Npm.require('fibers');
 
 
 Tinytest.addAsync(
-  "livedata server - sessionHandle.onClose()",
+  "livedata server - connectionHandle.onClose()",
   function (test, onComplete) {
     makeTestConnection(
       test,
-      function (connection, session) {
+      function (clientConn, serverConn) {
         // On the server side, wait for the connection to be closed.
-        session.onClose(function () {
+        serverConn.onClose(function () {
           onComplete();
         });
         // Close the connection from the client.
-        connection.disconnect();
+        clientConn.disconnect();
       },
       onComplete
     );
@@ -21,15 +21,15 @@ Tinytest.addAsync(
 
 
 Tinytest.addAsync(
-  "livedata server - sessionHandle.close()",
+  "livedata server - connectionHandle.close()",
   function (test, onComplete) {
     makeTestConnection(
       test,
-      function (connection, session) {
+      function (clientConn, serverConn) {
         // Wait for the connection to be closed from the server side.
         simplePoll(
           function () {
-            return ! connection.status().connected;
+            return ! clientConn.status().connected;
           },
           onComplete,
           function () {
@@ -39,7 +39,7 @@ Tinytest.addAsync(
         );
 
         // Close the connection from the server.
-        session.close();
+        serverConn.close();
       },
       onComplete
     );
@@ -49,7 +49,7 @@ Tinytest.addAsync(
 
 Meteor.methods({
   livedata_server_test_inner: function () {
-    return this.session.id;
+    return this.connection.id;
   },
 
   livedata_server_test_outer: function () {
@@ -59,14 +59,14 @@ Meteor.methods({
 
 
 Tinytest.addAsync(
-  "livedata server - session in method invocation",
+  "livedata server - connection in method invocation",
   function (test, onComplete) {
     makeTestConnection(
       test,
-      function (connection, session) {
-        var res = connection.call('livedata_server_test_inner');
-        test.equal(res, session.id);
-        connection.disconnect();
+      function (clientConn, serverConn) {
+        var res = clientConn.call('livedata_server_test_inner');
+        test.equal(res, serverConn.id);
+        clientConn.disconnect();
         onComplete();
       },
       onComplete
@@ -76,14 +76,14 @@ Tinytest.addAsync(
 
 
 Tinytest.addAsync(
-  "livedata server - session in nested method invocation",
+  "livedata server - connection in nested method invocation",
   function (test, onComplete) {
     makeTestConnection(
       test,
-      function (connection, session) {
-        var res = connection.call('livedata_server_test_outer');
-        test.equal(res, session.id);
-        connection.disconnect();
+      function (clientConn, serverConn) {
+        var res = clientConn.call('livedata_server_test_outer');
+        test.equal(res, serverConn.id);
+        clientConn.disconnect();
         onComplete();
       },
       onComplete
@@ -92,11 +92,11 @@ Tinytest.addAsync(
 );
 
 
-// sessionId -> callback
+// connectionId -> callback
 var onSubscription = {};
 
-Meteor.publish("livedata_server_test_sub", function (sessionId) {
-  var callback = onSubscription[sessionId];
+Meteor.publish("livedata_server_test_sub", function (connectionId) {
+  var callback = onSubscription[connectionId];
   if (callback)
     callback(this);
   this.stop();
@@ -104,18 +104,18 @@ Meteor.publish("livedata_server_test_sub", function (sessionId) {
 
 
 Tinytest.addAsync(
-  "livedata server - session in publish function",
+  "livedata server - connection in publish function",
   function (test, onComplete) {
     makeTestConnection(
       test,
-      function (connection, session) {
-        onSubscription[session.id] = function (subscription) {
-          delete onSubscription[session.id];
-          test.equal(subscription.session.id, session.id);
-          connection.disconnect();
+      function (clientConn, serverConn) {
+        onSubscription[serverConn.id] = function (subscription) {
+          delete onSubscription[serverConn.id];
+          test.equal(subscription.connection.id, serverConn.id);
+          clientConn.disconnect();
           onComplete();
         };
-        connection.subscribe("livedata_server_test_sub", session.id);
+        clientConn.subscribe("livedata_server_test_sub", serverConn.id);
       }
     );
   }

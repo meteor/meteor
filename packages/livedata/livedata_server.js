@@ -247,19 +247,19 @@ var Session = function (server, version, socket) {
   // we want to buffer up for when we are done rerunning subscriptions
   self._pendingReady = [];
 
-  // List of callbacks to call when this session is closed.
+  // List of callbacks to call when this connection is closed.
   self._closeCallbacks = [];
 
-  // The `SessionHandle` for this session, passed to
+  // The `ConnectionHandle` for this session, passed to
   // `Meteor.server.onConnection` callbacks.
-  self.sessionHandle = {
+  self.connectionHandle = {
     id: self.id,
     close: function () {
       self.server._closeSession(self);
     },
     onClose: function (fn) {
       self._closeCallbacks.push(
-        Meteor.bindEnvironment(fn, "connection session onClose callback")
+        Meteor.bindEnvironment(fn, "connection onClose callback")
       );
     }
   };
@@ -554,7 +554,7 @@ _.extend(Session.prototype, {
         userId: self.userId,
         setUserId: setUserId,
         unblock: unblock,
-        session: self.sessionHandle
+        connection: self.connectionHandle
       });
       try {
         var result = DDPServer._CurrentWriteFence.withValue(fence, function () {
@@ -728,7 +728,7 @@ var Subscription = function (
     session, handler, subscriptionId, params, name) {
   var self = this;
   self._session = session; // type is Session
-  self.session = session.sessionHandle; // public API object
+  self.connection = session.connectionHandle; // public API object
 
   self._handler = handler;
 
@@ -1087,7 +1087,7 @@ _.extend(Server.prototype, {
       self.sessions[socket._meteorSession.id] = socket._meteorSession;
       _.each(self.connectionCallbacks, function (callback) {
         if (socket._meteorSession)
-          callback(socket._meteorSession.sessionHandle);
+          callback(socket._meteorSession.connectionHandle);
       });
     } else if (!msg.version) {
       // connect message without a version. This means an old (pre-pre1)
@@ -1244,21 +1244,21 @@ _.extend(Server.prototype, {
       var setUserId = function() {
         throw new Error("Can't call setUserId on a server initiated method call");
       };
-      var session = null;
+      var connection = null;
       var currentInvocation = DDP._CurrentInvocation.get();
       if (currentInvocation) {
         userId = currentInvocation.userId;
         setUserId = function(userId) {
           currentInvocation.setUserId(userId);
         };
-        session = currentInvocation.session;
+        connection = currentInvocation.connection;
       }
 
       var invocation = new MethodInvocation({
         isSimulation: false,
         userId: userId,
         setUserId: setUserId,
-        session: session
+        connection: connection
       });
       try {
         var result = DDP._CurrentInvocation.withValue(invocation, function () {
