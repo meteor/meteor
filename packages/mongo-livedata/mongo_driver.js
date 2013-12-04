@@ -160,7 +160,7 @@ MongoConnection = function (url, options) {
   self._docFetcher = new DocFetcher(self);
   self._oplogHandle = null;
 
-  if (options.oplogUrl) {
+  if (options.oplogUrl && !Package['disable-oplog']) {
     var dbNameFuture = new Future;
     self._withDb(function (db) {
       dbNameFuture.return(db.databaseName);
