@@ -6,6 +6,9 @@
 //                       according to projection rules. Doesn't retain subfields
 //                       of passed argument.
 LocalCollection._compileProjection = function (fields) {
+  if (!_.isObject(fields))
+    throw MinimongoError("fields option must be an object");
+
   // XXX: $-operators are not supported in fields projections yet
   if (! LocalCollection._supportedProjection(fields))
     throw MinimongoError("Minimongo doesn't support fields projections "
@@ -56,13 +59,6 @@ LocalCollection._compileProjection = function (fields) {
 //  (exception for '_id' as it is a special case handled separately)
 //  - including - Boolean - "take only certain fields" type of projection
 projectionDetails = function (fields) {
-  if (!_.isObject(fields))
-    throw MinimongoError("fields option must be an object");
-
-  if (_.any(_.values(fields), function (x) {
-      return _.indexOf([1, 0, true, false], x) === -1; }))
-    throw MinimongoError("Projection values should be one of 1, 0, true, or false");
-
   // Find the non-_id keys (_id is handled specially because it is included unless
   // explicitly excluded). Sort the keys, so that our code to detect overlaps
   // like 'foo' and 'foo.bar' can assume that 'foo' comes first.
@@ -168,8 +164,7 @@ LocalCollection._supportedProjection = function (fields) {
   return _.all(fields, function (val, keyPath) {
     if (_.contains(keyPath.split('.'), '$'))
       return false;
-    return !_.isObject(val) ||
-      (!_.has(val, '$slice') && !_.has(val, '$elemMatch'));
+    return _.indexOf([1, 0, true, false], val) !== -1;
   });
 };
 
