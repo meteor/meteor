@@ -29,8 +29,8 @@ MethodInvocation = function (options) {
   // reruns subscriptions
   this._setUserId = options.setUserId || function () {};
 
-  // On the server, the session this method call came in on.
-  this.session = options.session;
+  // On the server, the connection this method call came in on.
+  this.connection = options.connection;
 };
 
 _.extend(MethodInvocation.prototype, {

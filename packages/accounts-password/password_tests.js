@@ -571,20 +571,22 @@ if (Meteor.isServer) (function () {
 
       makeTestConnection(
         test,
-        function (connection, session) {
-          session.onClose(function () {
-            test.isFalse(_.contains(Accounts._getTokenSessions(token), session.id));
+        function (clientConn, serverConn) {
+          serverConn.onClose(function () {
+            test.isFalse(_.contains(
+              Accounts._getTokenConnections(token), serverConn.id));
             onComplete();
           });
-          var result = connection.call('login', {
+          var result = clientConn.call('login', {
             user: {username: username},
             password: 'password'
           });
           test.isTrue(result);
-          var token = Accounts._getAccountData(session.id, 'loginToken');
+          var token = Accounts._getAccountData(serverConn.id, 'loginToken');
           test.isTrue(token);
-          test.isTrue(_.contains(Accounts._getTokenSessions(token), session.id));
-          connection.disconnect();
+          test.isTrue(_.contains(
+            Accounts._getTokenConnections(token), serverConn.id));
+          clientConn.disconnect();
         },
         onComplete
       );

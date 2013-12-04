@@ -82,7 +82,7 @@ Meteor.methods({
       this.setUserId(result.id);
       Accounts._setLoginToken(
         result.id,
-        this.session,
+        this.connection,
         Accounts._hashLoginToken(result.token)
       );
     }
@@ -90,8 +90,8 @@ Meteor.methods({
   },
 
   logout: function() {
-    var token = Accounts._getLoginToken(this.session.id);
-    Accounts._setLoginToken(this.userId, this.session, null);
+    var token = Accounts._getLoginToken(this.connection.id);
+    Accounts._setLoginToken(this.userId, this.connection, null);
     if (token && this.userId)
       removeLoginToken(this.userId, token);
     this.setUserId(null);
@@ -149,27 +149,27 @@ Meteor.methods({
 /// ACCOUNT DATA
 ///
 
-// sessionId -> {session, loginToken, srpChallenge}
+// connectionId -> {connection, loginToken, srpChallenge}
 var accountData = {};
 
-Accounts._getAccountData = function (sessionId, field) {
-  var data = accountData[sessionId];
+Accounts._getAccountData = function (connectionId, field) {
+  var data = accountData[connectionId];
   return data && data[field];
 };
 
-Accounts._setAccountData = function (sessionId, field, value) {
-  var data = accountData[sessionId];
+Accounts._setAccountData = function (connectionId, field, value) {
+  var data = accountData[connectionId];
   if (data === undefined)
     delete data[field];
   else
     data[field] = value;
 };
 
-Meteor.server.onConnection(function (session) {
-  accountData[session.id] = {session: session};
-  session.onClose(function () {
-    removeSessionFromToken(session.id);
-    delete accountData[session.id];
+Meteor.server.onConnection(function (connection) {
+  accountData[connection.id] = {connection: connection};
+  connection.onClose(function () {
+    removeConnectionFromToken(connection.id);
+    delete accountData[connection.id];
   });
 });
 
@@ -195,65 +195,65 @@ Accounts._hashStampedToken = function (stampedToken) {
 };
 
 
-// hashed token -> list of session ids
-var sessionsByLoginToken = {};
+// hashed token -> list of connection ids
+var connectionsByLoginToken = {};
 
 // test hook
-Accounts._getTokenSessions = function (token) {
-  return sessionsByLoginToken[token];
+Accounts._getTokenConnections = function (token) {
+  return connectionsByLoginToken[token];
 };
 
-// Remove the session from the list of open sessions for the token.
-var removeSessionFromToken = function (sessionId) {
-  var token = Accounts._getLoginToken(sessionId);
+// Remove the connection from the list of open connections for the token.
+var removeConnectionFromToken = function (connectionId) {
+  var token = Accounts._getLoginToken(connectionId);
   if (token) {
-    sessionsByLoginToken[token] = _.without(
-      sessionsByLoginToken[token],
-      sessionId
+    connectionsByLoginToken[token] = _.without(
+      connectionsByLoginToken[token],
+      connectionId
     );
-    if (_.isEmpty(sessionsByLoginToken[token]))
-      delete sessionsByLoginToken[token];
+    if (_.isEmpty(connectionsByLoginToken[token]))
+      delete connectionsByLoginToken[token];
   }
 };
 
-Accounts._getLoginToken = function (sessionId) {
-  return Accounts._getAccountData(sessionId, 'loginToken');
+Accounts._getLoginToken = function (connectionId) {
+  return Accounts._getAccountData(connectionId, 'loginToken');
 };
 
-Accounts._setLoginToken = function (userId, session, newToken) {
-  removeSessionFromToken(session.id);
+Accounts._setLoginToken = function (userId, connection, newToken) {
+  removeConnectionFromToken(connection.id);
 
-  Accounts._setAccountData(session.id, 'loginToken', newToken);
+  Accounts._setAccountData(connection.id, 'loginToken', newToken);
 
   if (newToken) {
-    // Once we add the session to the sessionsByLoginToken map for the
-    // token, the session will be closed if the token is removed from
-    // the database.  But since we haven't added it to the map yet,
-    // the token might have been already deleted since the time we
-    // read it.  So close the session if the token is no longer
-    // present.
+    // Once we add the connection to the connectionsByLoginToken map
+    // for the token, the connection will be closed if the token is
+    // removed from the database.  But since we haven't added it to
+    // the map yet, the token might have been already deleted since
+    // the time we read it.  So close the connection if the token is
+    // no longer present.
     if (! Meteor.users.findOne({
       _id: userId,
       "services.resume.loginTokens.hashedToken": newToken
     })) {
-      session.close();
+      connection.close();
     } else {
-      if (! _.has(sessionsByLoginToken, newToken))
-        sessionsByLoginToken[newToken] = [];
-      sessionsByLoginToken[newToken].push(session.id);
+      if (! _.has(connectionsByLoginToken, newToken))
+        connectionsByLoginToken[newToken] = [];
+      connectionsByLoginToken[newToken].push(connection.id);
     }
   }
 };
 
-// Close all open sessions associated with any of the tokens in
+// Close all open connections associated with any of the tokens in
 // `tokens`.
-var closeSessionsForTokens = function (tokens) {
+var closeConnectionsForTokens = function (tokens) {
   _.each(tokens, function (token) {
-    if (_.has(sessionsByLoginToken, token)) {
-      _.each(sessionsByLoginToken[token], function (sessionId) {
-        var session = Accounts._getAccountData(sessionId, 'session');
-        if (session)
-          session.close();
+    if (_.has(connectionsByLoginToken, token)) {
+      _.each(connectionsByLoginToken[token], function (connectionId) {
+        var connection = Accounts._getAccountData(connectionId, 'connection');
+        if (connection)
+          connection.close();
       });
     }
   });
@@ -824,7 +824,7 @@ Meteor.startup(function () {
 // time, sessions will only be logged in with a hashed token.  Thus we
 // only need to pull out hashed tokens here.
 var closeTokensForUser = function (userTokens) {
-  closeSessionsForTokens(_.compact(_.pluck(userTokens, "hashedToken")));
+  closeConnectionsForTokens(_.compact(_.pluck(userTokens, "hashedToken")));
 };
 
 // Like _.difference, but uses EJSON.equals to compute which values to return.

@@ -283,20 +283,20 @@ Tinytest.addAsync('accounts - login token', function (test, onComplete) {
 });
 
 Tinytest.addAsync(
-  'accounts - session data cleaned up',
+  'accounts - connection data cleaned up',
   function (test, onComplete) {
     makeTestConnection(
       test,
-      function (connection, session) {
+      function (clientConn, serverConn) {
         // onClose callbacks are called in order, so we run after the
         // close callback in accounts.
-        session.onClose(function () {
-          test.isFalse(Accounts._getAccountData(session.id, 'session'));
+        serverConn.onClose(function () {
+          test.isFalse(Accounts._getAccountData(serverConn.id, 'connection'));
           onComplete();
         });
 
-        test.isTrue(Accounts._getAccountData(session.id, 'session'));
-        session.close();
+        test.isTrue(Accounts._getAccountData(serverConn.id, 'connection'));
+        serverConn.close();
       },
       onComplete
     );
