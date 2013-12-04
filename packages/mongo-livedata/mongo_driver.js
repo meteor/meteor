@@ -976,7 +976,7 @@ MongoConnection.prototype._observeChanges = function (
     });
 
     // This field is only set for the first ObserveHandle in an
-    // ObserveMultiplexer. It is only there for use by one test.
+    // ObserveMultiplexer. It is only there for use tests.
     observeHandle._observeDriver = observeDriver;
   }
 

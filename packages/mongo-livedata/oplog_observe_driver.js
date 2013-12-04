@@ -15,6 +15,8 @@ var PHASE = {
 OplogObserveDriver = function (options) {
   var self = this;
 
+  self._usesOplog = true;  // tests look at this
+
   self._cursorDescription = options.cursorDescription;
   self._mongoHandle = options.mongoHandle;
   self._multiplexer = options.multiplexer;
@@ -316,6 +318,10 @@ _.extend(OplogObserveDriver.prototype, {
 OplogObserveDriver.cursorSupported = function (cursorDescription) {
   // First, check the options.
   var options = cursorDescription.options;
+
+  // Did the user say no explicitly?
+  if (options._disableOplog)
+    return false;
 
   // This option (which are mostly used for sorted cursors) require us to figure
   // out where a given document fits in an order to know if it's included or

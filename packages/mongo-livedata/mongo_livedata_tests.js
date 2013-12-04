@@ -1879,3 +1879,21 @@ if (Meteor.isServer) {
                 elements: ['Y', 'A', 'B', 'C']});
   });
 }
+
+// This is a VERY white-box test.
+Meteor.isServer && Tinytest.add("mongo-livedata - oplog - _disableOplog", function (test) {
+  var collName = Random.id();
+  var coll = new Meteor.Collection(collName);
+  if (MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle) {
+    var observeWithOplog = coll.find({x: 5})
+          .observeChanges({added: function () {}});
+    test.isTrue(observeWithOplog._observeDriver);
+    test.isTrue(observeWithOplog._observeDriver._usesOplog);
+    observeWithOplog.stop();
+  }
+  var observeWithoutOplog = coll.find({x: 6}, {_disableOplog: true})
+        .observeChanges({added: function () {}});
+  test.isTrue(observeWithoutOplog._observeDriver);
+  test.isFalse(observeWithoutOplog._observeDriver._usesOplog);
+  observeWithoutOplog.stop();
+});
