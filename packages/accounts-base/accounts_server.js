@@ -268,33 +268,40 @@ Accounts.registerLoginHandler(function(options) {
   check(options.resume, String);
 
   var hashedToken = Accounts._hashLoginToken(options.resume);
+  var oldUnhashedStyleToken = false;
 
-  // Look for either the new-style hashed token or the old-style
-  // unhashed token in the database.
-  var user = Meteor.users.findOne({
-    $or: [
-      {"services.resume.loginTokens.hashedToken": hashedToken},
-      {"services.resume.loginTokens.token": options.resume}
-    ]
-  });
+  // First look for just the new-style hashed login token, to avoid
+  // sending the unhashed token to the database in a query if we don't
+  // need to.
+  var user = Meteor.users.findOne(
+    {"services.resume.loginTokens.hashedToken": hashedToken});
 
   if (! user) {
-    throw new Meteor.Error(403, "You've been logged out by the server. " +
-    "Please login again.");
+    // If we didn't find the hashed login token, try the old-style
+    // unhashed token.
+    user = Meteor.users.findOne(
+      {"services.resume.loginTokens.token": options.resume});
+
+    if (user) {
+      oldUnhashedStyleToken = true;
+    } else {
+      throw new Meteor.Error(403, "You've been logged out by the server. " +
+      "Please login again.");
+    }
   }
 
   // Find the token, which will either be an object with fields
   // {hashToken, when} for a hashed token or {token, when} for an
   // unhashed token.
-  var oldUnhashedStyleToken = false;
-  var token = _.find(user.services.resume.loginTokens, function (token) {
-    return token.hashedToken === hashedToken;
-  });
-  if (! token) {
+  var token;
+  if (oldUnhashedStyleToken) {
     token = _.find(user.services.resume.loginTokens, function (token) {
       return token.token === options.resume;
     });
-    oldUnhashedStyleToken = true;
+  } else {
+    token = _.find(user.services.resume.loginTokens, function (token) {
+      return token.hashedToken === hashedToken;
+    });
   }
 
   var tokenExpires = Accounts._tokenExpiration(token.when);
