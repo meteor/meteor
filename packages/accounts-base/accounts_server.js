@@ -81,7 +81,8 @@ Meteor.methods({
     if (result !== null) {
       this.setUserId(result.id);
       Accounts._setLoginToken(
-        this.session.id,
+        result.id,
+        this.session,
         Accounts._hashLoginToken(result.token)
       );
     }
@@ -90,7 +91,7 @@ Meteor.methods({
 
   logout: function() {
     var token = Accounts._getLoginToken(this.session.id);
-    Accounts._setLoginToken(this.session.id, null);
+    Accounts._setLoginToken(this.userId, this.session, null);
     if (token && this.userId)
       removeLoginToken(this.userId, token);
     this.setUserId(null);
@@ -219,15 +220,28 @@ Accounts._getLoginToken = function (sessionId) {
   return Accounts._getAccountData(sessionId, 'loginToken');
 };
 
-Accounts._setLoginToken = function (sessionId, newToken) {
-  removeSessionFromToken(sessionId);
+Accounts._setLoginToken = function (userId, session, newToken) {
+  removeSessionFromToken(session.id);
 
-  Accounts._setAccountData(sessionId, 'loginToken', newToken);
+  Accounts._setAccountData(session.id, 'loginToken', newToken);
 
   if (newToken) {
-    if (! _.has(sessionsByLoginToken, newToken))
-      sessionsByLoginToken[newToken] = [];
-    sessionsByLoginToken[newToken].push(sessionId);
+    // Once we add the session to the sessionsByLoginToken map for the
+    // token, the session will be closed if the token is removed from
+    // the database.  But since we haven't added it to the map yet,
+    // the token might have been already deleted since the time we
+    // read it.  So close the session if the token is no longer
+    // present.
+    if (! Meteor.users.findOne({
+      _id: userId,
+      "services.resume.loginTokens.hashedToken": newToken
+    })) {
+      session.close();
+    } else {
+      if (! _.has(sessionsByLoginToken, newToken))
+        sessionsByLoginToken[newToken] = [];
+      sessionsByLoginToken[newToken].push(session.id);
+    }
   }
 };
 
