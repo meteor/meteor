@@ -253,38 +253,34 @@ Accounts.registerLoginHandler(function(options) {
 
   check(options.resume, String);
 
-  var oldUnhashedStyleToken = false;
-
   var hashedToken = Accounts._hashLoginToken(options.resume);
 
+  // Look for either the new-style hashed token or the old-style
+  // unhashed token in the database.
   var user = Meteor.users.findOne({
-    "services.resume.loginTokens.hashedToken": hashedToken
+    $or: [
+      {"services.resume.loginTokens.hashedToken": hashedToken},
+      {"services.resume.loginTokens.token": options.resume}
+    ]
   });
 
-  if (user) {
-    oldUnhashedStyleToken = false;
-  } else {
-    user = Meteor.users.findOne({
-      "services.resume.loginTokens.token": options.resume
-    });
-
-    if (user) {
-      oldUnhashedStyleToken = true;
-    } else {
-      throw new Meteor.Error(403, "You've been logged out by the server. " +
-      "Please login again.");
-    }
+  if (! user) {
+    throw new Meteor.Error(403, "You've been logged out by the server. " +
+    "Please login again.");
   }
 
-  var token;
-  if (oldUnhashedStyleToken) {
+  // Find the token, which will either be an object with fields
+  // {hashToken, when} for a hashed token or {token, when} for an
+  // unhashed token.
+  var oldUnhashedStyleToken = false;
+  var token = _.find(user.services.resume.loginTokens, function (token) {
+    return token.hashedToken === hashedToken;
+  });
+  if (! token) {
     token = _.find(user.services.resume.loginTokens, function (token) {
       return token.token === options.resume;
     });
-  } else {
-    token = _.find(user.services.resume.loginTokens, function (token) {
-      return token.hashedToken === hashedToken;
-    });
+    oldUnhashedStyleToken = true;
   }
 
   var tokenExpires = Accounts._tokenExpiration(token.when);
@@ -293,20 +289,31 @@ Accounts.registerLoginHandler(function(options) {
 
   // Update to a hashed token when an unhashed token is encountered.
   if (oldUnhashedStyleToken) {
-    Meteor.users.update(user._id, {
-      $pull: {
-        "services.resume.loginTokens": { "token": options.resume }
+    // Only add the new hashed token if the old unhashed token still
+    // exists (this avoids resurrecting the token if it was deleted
+    // after we read it).  Using $addToSet avoids getting an index
+    // error if another client logging in simultaneously has already
+    // inserted the new hashed token.
+    Meteor.users.update(
+      {
+        _id: user._id,
+        "services.resume.loginTokens.token": options.resume
       },
-    });
-    // Apparently needs to be two separate updates, otherwise get
-    // "Field name duplication not allowed with modifiers".
-    Meteor.users.update(user._id, {
-      $push: {
+      {$addToSet: {
         "services.resume.loginTokens": {
           "hashedToken": hashedToken,
           "when": token.when
         }
-      }
+      }}
+    );
+
+    // Remove the old token *after* adding the new, since otherwise
+    // another client trying to login between our removing the old and
+    // adding the new wouldn't find a token to login with.
+    Meteor.users.update(user._id, {
+      $pull: {
+        "services.resume.loginTokens": { "token": options.resume }
+      },
     });
   }
 
