@@ -1451,6 +1451,7 @@ var replaceSpecials = function (node) {
 
 var codeGenInclusionArgs = function (tag) {
   var args = null;
+  var posArgs = [];
 
   if ('content' in tag) {
     args = (args || {});
@@ -1467,6 +1468,8 @@ var codeGenInclusionArgs = function (tag) {
     var argType = arg[0];
     var argValue = arg[1];
 
+    var isKeyword = (arg.length > 2);
+
     var argCode;
     switch (argType) {
     case 'STRING':
@@ -1482,7 +1485,12 @@ var codeGenInclusionArgs = function (tag) {
       // `self.lookup("foo")` which never establishes any dependencies,
       // while `Spacebars.dot(self.lookup("foo"), "bar")` may establish
       // dependencies.
-      if (path.length > 1)
+      //
+      // In the multi-positional-arg construct, no point wrapping
+      // pos args after the first in a closure, as we have to
+      // rerun the whole thing anyway if one changes.
+      if (! ((path.length === 1) ||
+             ((! isKeyword) && posArgs.length)))
         argCode = 'function () { return ' + argCode + '; }';
       break;
     default:
@@ -1490,18 +1498,27 @@ var codeGenInclusionArgs = function (tag) {
       throw new Error("Unexpected arg type: " + argType);
     }
 
-    if (arg.length > 2) {
+    if (isKeyword) {
       // keyword argument (represented as [type, value, name])
       var name = arg[2];
       args = (args || {});
       args[toJSLiteral(name)] = argCode;
     } else {
       // positional argument
-      // XXX deal with >1 posArgs for #foo helpers
-      args = (args || {});
-      args.data = argCode;
+      posArgs.push(argCode);
     }
   });
+
+  if (posArgs.length === 1) {
+    args = (args || {});
+    args.data = posArgs[0];
+  } else if (posArgs.length > 1) {
+    // only allowed for block helper (which has already been
+    // checked at parse time); call first
+    // argument as a function on the others
+    args = (args || {});
+    args.data = 'function () { return Spacebars.call2(' + posArgs.join(', ') + '); }';
+  }
 
   if (args)
     return [makeObjectLiteral(args)];
@@ -1655,9 +1672,8 @@ Spacebars.combineAttributes = function (/*attrObjects*/) {
 };
 
 // Executes `{{foo bar baz}}` when called on `(foo, bar, baz)`.
-// If `bar` and `baz` are functions, they are called.  `foo`
-// may be a non-function, in which case the arguments are
-// discarded (though they may still be evaluated, i.e. called).
+// If `bar` and `baz` are functions, they are called before
+// `foo` is called on them.
 Spacebars.mustache2 = function (value/*, args*/) {
   var result = Spacebars.call2.apply(null, arguments);
 
@@ -1773,7 +1789,12 @@ var beautify = function (code) {
   }
 };
 
-  // `path` is an array of at least one string
+// `path` is an array of at least one string.
+//
+// If `path.length > 1`, the generated code may be reactive
+// (i.e. it may invalidate the current computation).
+//
+// No code is generated to call the result if it's a function.
 var codeGenPath2 = function (path) {
   var code = 'self.lookup(' + toJSLiteral(path[0]) + ')';
 
@@ -1788,7 +1809,7 @@ var codeGenPath2 = function (path) {
 // returns: array of source strings, or null if no
 // args at all.
 var codeGenArgs2 = function (tagArgs) {
-  var options = null; // source -> source
+  var kwArgs = null; // source -> source
   var args = null; // [source]
 
   _.each(tagArgs, function (arg) {
@@ -1813,8 +1834,8 @@ var codeGenArgs2 = function (tagArgs) {
 
     if (arg.length > 2) {
       // keyword argument (represented as [type, value, name])
-      options = (options || {});
-      options[toJSLiteral(arg[2])] = argCode;
+      kwArgs = (kwArgs || {});
+      kwArgs[toJSLiteral(arg[2])] = argCode;
     } else {
       // positional argument
       args = (args || []);
@@ -1822,10 +1843,10 @@ var codeGenArgs2 = function (tagArgs) {
     }
   });
 
-  // put options as dictionary at end of args
-  if (options) {
+  // put kwArgs in options dictionary at end of args
+  if (kwArgs) {
     args = (args || []);
-    args.push('{hash: ' + makeObjectLiteral(options) + '}');
+    args.push('{hash: ' + makeObjectLiteral(kwArgs) + '}');
   }
 
   return args;
