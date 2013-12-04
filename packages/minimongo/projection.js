@@ -6,9 +6,6 @@
 //                       according to projection rules. Doesn't retain subfields
 //                       of passed argument.
 LocalCollection._compileProjection = function (fields) {
-  if (!_.isObject(fields))
-    throw MinimongoError("fields option must be an object");
-
   LocalCollection._checkSupportedProjection(fields);
 
   var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
@@ -158,6 +155,9 @@ pathsToTree = function (paths, newLeafFn, conflictFn, tree) {
 };
 
 LocalCollection._checkSupportedProjection = function (fields) {
+  if (!_.isObject(fields) || _.isArray(fields))
+    throw MinimongoError("fields option must be an object");
+
   _.each(fields, function (val, keyPath) {
     if (_.contains(keyPath.split('.'), '$'))
       throw MinimongoError("Minimongo doesn't support $ operator in projections yet.");
