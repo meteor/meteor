@@ -20,4 +20,5 @@ Package.on_test(function (api) {
   api.use('spacebars');
   api.use('tinytest');
   api.add_files('spacebars_tests.js', ['server']);
+  api.add_files('compile_tests.js', ['server']);
 });
