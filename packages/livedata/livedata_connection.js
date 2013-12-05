@@ -628,7 +628,8 @@ _.extend(Connection.prototype, {
       };
       var invocation = new MethodInvocation({
         isSimulation: true,
-        userId: self.userId(), setUserId: setUserId
+        userId: self.userId(),
+        setUserId: setUserId
       });
 
       if (!alreadyInSimulation)
