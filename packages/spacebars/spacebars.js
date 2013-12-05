@@ -1534,6 +1534,8 @@ Spacebars.include = function (kindOrFunc, args) {
     var func = kindOrFunc;
 
     var hash = {};
+    // Call arguments if they are functions.  This may cause
+    // reactive dependencies!
     for (var k in args) {
       if (k !== 'data') {
         var v = args[k];
@@ -1568,6 +1570,7 @@ Spacebars.include = function (kindOrFunc, args) {
     if (! UI.isComponent(kind))
       throw new Error("Expected template, found: " + kind);
 
+    // Note that there are no reactive dependencies established here.
     if (args) {
       var emboxedArgs = {};
       for (var k in args) {

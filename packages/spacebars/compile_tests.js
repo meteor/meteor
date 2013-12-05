@@ -17,10 +17,16 @@ Tinytest.add("spacebars - compiler output", function (test) {
                  expectedMessage);
     } else {
       var output = Spacebars.compile2(input);
+      var postProcess = function (string) {
+        // remove initial and trailing parens
+        return string.replace(/^\(([\S\s]*)\)$/, '$1');
+      };
       // compare using Function .toString()!
       test._stringEqual(
-        output.toString(),
-        Spacebars._beautify('(' + expected.toString() + ')'));
+        postProcess(output.toString()),
+        postProcess(
+          Spacebars._beautify('(' + expected.toString() + ')')),
+        input);
     }
   };
 
@@ -48,11 +54,62 @@ Tinytest.add("spacebars - compiler output", function (test) {
         };
       });
 
+  run("{{foo.bar baz}}",
+      function() {
+        var self = this;
+        return function() {
+          return Spacebars.mustache2(Spacebars.dot(self.lookup("foo"), "bar"), self.lookup("baz"));
+        };
+      });
+
+  run("{{foo bar.baz}}",
+      function() {
+        var self = this;
+        return function() {
+          return Spacebars.mustache2(self.lookup("foo"), Spacebars.dot(self.lookup("bar"), "baz"));
+        };
+      });
+
+  run("{{foo x=bar.baz}}",
+      function() {
+        var self = this;
+        return function() {
+          return Spacebars.mustache2(self.lookup("foo"), {
+            hash: {
+              x: Spacebars.dot(self.lookup("bar"), "baz")
+            }
+          });
+        };
+      });
+
   run("{{#foo}}abc{{/foo}}",
       function() {
         var self = this;
         return function() {
-          return Spacebars.mustache2(self.lookup("foo"), self.lookup("bar"));
+          return Spacebars.include(Template["foo"] || self.lookup("foo"), {
+            __content: UI.block(function() {
+              var self = this;
+              return "abc";
+            })
+          });
+        };
+      });
+
+  run("{{#if cond}}aaa{{else}}bbb{{/if}}",
+      function() {
+        var self = this;
+        return function() {
+          return Spacebars.include(UI.If2, {
+            __content: UI.block(function() {
+              var self = this;
+              return "aaa";
+            }),
+            __elseContent: UI.block(function() {
+              var self = this;
+              return "bbb";
+            }),
+            data: self.lookup("cond")
+          });
         };
       });
 
