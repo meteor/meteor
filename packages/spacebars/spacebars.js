@@ -1570,8 +1570,12 @@ Spacebars.include = function (kindOrFunc, args) {
 
     if (args) {
       var emboxedArgs = {};
-      for (var k in args)
-        emboxedArgs[k] = UI.emboxValue(args[k]);
+      for (var k in args) {
+        if (k === '__content' || k === '__elseContent')
+          emboxedArgs[k] = args[k];
+        else
+          emboxedArgs[k] = UI.emboxValue(args[k]);
+      }
 
       return kind.extend(emboxedArgs);
     } else {

@@ -10,16 +10,10 @@ UI.Each2 = Component.extend({
   rendered: function () {
     var self = this.__component__;
 
-    // XXX find `content` via `get()`...
-    // XXX content kind reactively changes?
-    var content = self.__content;
-    if (typeof content === 'function')
-      content = _.bind(content, self);
-    var elseContent = self.__elseContent;
-    if (typeof elseContent === 'function')
-      elseContent = _.bind(elseContent, self);
-
     var range = self.dom;
+
+    var content = self.__content;
+    var elseContent = self.__elseContent;
 
     // if there is an else clause, keep track of the number of
     // rendered items.  use this to display the else clause when count
@@ -38,7 +32,7 @@ UI.Each2 = Component.extend({
       }
       itemCount += delta;
       if (itemCount === 0) {
-        UI.materialize(elseContent(), range, null, self);
+        UI.materialize(elseContent, range, null, self);
       }
     };
 
@@ -67,7 +61,7 @@ UI.Each2 = Component.extend({
         if (beforeId)
           beforeId = LocalCollection._idStringify(beforeId);
 
-        var renderedItem = UI.render2(content().withData(dataFunc), self);
+        var renderedItem = UI.render2(content.withData(dataFunc), self);
         range.add(id, renderedItem, beforeId);
       },
       removed: function (id, item) {
