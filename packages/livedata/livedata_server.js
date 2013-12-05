@@ -222,7 +222,10 @@ var Session = function (server, version, socket) {
   self.initialized = false;
   self.socket = socket;
 
+  // set to null when the session is destroyed. multiple places below
+  // use this to determine if the session is alive or not.
   self.inQueue = [];
+
   self.blocked = false;
   self.workerRunning = false;
 
@@ -258,9 +261,13 @@ var Session = function (server, version, socket) {
       self.server._closeSession(self);
     },
     onClose: function (fn) {
-      self._closeCallbacks.push(
-        Meteor.bindEnvironment(fn, "connection onClose callback")
-      );
+      var cb = Meteor.bindEnvironment(fn, "connection onClose callback");
+      if (self.inQueue) {
+        self._closeCallbacks.push(cb);
+      } else {
+        // if we're already closed, call the callback.
+        Meteor.defer(cb);
+      }
     }
   };
 
@@ -988,9 +995,12 @@ _.extend(Subscription.prototype, {
 Server = function () {
   var self = this;
 
-  // List of callbacks to call when a new connection comes in to the
-  // server and completes DDP version negotiation.
-  self.connectionCallbacks = [];
+  // Map of callbacks to call when a new connection comes in to the
+  // server and completes DDP version negotiation. Use an object instead
+  // of an array so we can safely remove one from the list while
+  // iterating over it.
+  self.connectionCallbacks = {};
+  self.nextConnectionCallbackId = 0;
 
   self.publish_handlers = {};
   self.universal_publish_handlers = [];
@@ -1066,11 +1076,12 @@ _.extend(Server.prototype, {
 
     fn = Meteor.bindEnvironment(fn, "onConnection callback");
 
-    self.connectionCallbacks.push(fn);
+    var id = self.nextConnectionCallbackId++;
+    self.connectionCallbacks[id] = fn;
 
     return {
       stop: function () {
-        self.connectionCallbacks = _.without(self.connectionCallbacks, fn);
+        delete self.connectionCallbacks[id];
       }
     };
   },
@@ -1085,9 +1096,11 @@ _.extend(Server.prototype, {
       // Creating a new session
       socket._meteorSession = new Session(self, version, socket);
       self.sessions[socket._meteorSession.id] = socket._meteorSession;
-      _.each(self.connectionCallbacks, function (callback) {
-        if (socket._meteorSession)
+      _.each(_.keys(self.connectionCallbacks), function (id) {
+        if (_.has(self.connectionCallbacks, id) && socket._meteorSession) {
+          var callback = self.connectionCallbacks[id];
           callback(socket._meteorSession.connectionHandle);
+        }
       });
     } else if (!msg.version) {
       // connect message without a version. This means an old (pre-pre1)

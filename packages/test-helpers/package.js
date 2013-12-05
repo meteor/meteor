@@ -11,7 +11,9 @@ Package.on_use(function (api) {
   // XXX for connection.js. Not sure this really belongs in
   // test-helpers. It probably would be better off in livedata. But it's
   // unclear how to put it in livedata so that it can both be used by
-  // other package tests and not included in the non-test bundle.
+  // other package tests and not included in the non-test bundle. One
+  // idea would be to make a new separate package 'ddp-test-helpers' or
+  // the like.
   api.use('livedata');
 
 

@@ -393,7 +393,7 @@ Template.api.method_invocation_connection = {
   id: "method_connection",
   name: "<i>this</i>.connection",
   locus: "Server",
-  descr: ["Access inside a method invocation. The [connection](#meteor_onconnection) this method was received on."]
+  descr: ["Access inside a method invocation. The [connection](#meteor_onconnection) this method was received on. `null` if the method is not associated with a connection, eg. a server initiated method call."]
 };
 
 Template.api.error = {
@@ -497,7 +497,7 @@ Template.api.connect = {
 Template.api.onConnection = {
   id: "meteor_onconnection",
   name: "Meteor.onConnection(callback)",
-  locus: "server",
+  locus: "Server",
   descr: ["Register a callback to be called when a new DDP connection is made to the server."],
   args: [
     {name: "callback",

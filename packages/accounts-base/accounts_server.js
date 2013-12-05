@@ -159,7 +159,13 @@ Accounts._getAccountData = function (connectionId, field) {
 
 Accounts._setAccountData = function (connectionId, field, value) {
   var data = accountData[connectionId];
-  if (data === undefined)
+
+  // safety belt. shouldn't happen. accountData is set in onConnection,
+  // we don't have a connectionId until it is set.
+  if (!data)
+    return;
+
+  if (value === undefined)
     delete data[field];
   else
     data[field] = value;
@@ -250,10 +256,13 @@ Accounts._setLoginToken = function (userId, connection, newToken) {
 var closeConnectionsForTokens = function (tokens) {
   _.each(tokens, function (token) {
     if (_.has(connectionsByLoginToken, token)) {
-      _.each(connectionsByLoginToken[token], function (connectionId) {
-        var connection = Accounts._getAccountData(connectionId, 'connection');
-        if (connection)
-          connection.close();
+      // safety belt. close should defer potentially yielding callbacks.
+      Meteor._noYieldsAllowed(function () {
+        _.each(connectionsByLoginToken[token], function (connectionId) {
+          var connection = Accounts._getAccountData(connectionId, 'connection');
+          if (connection)
+            connection.close();
+        });
       });
     }
   });
