@@ -1417,7 +1417,7 @@ var replaceSpecials = function (node) {
         var nameCode = codeGenPath2(tag.path);
         var argCode = codeGenArgs2(tag.args);
 
-        return HTML.EmitCode('function () { return HTML.Raw(' +
+        return HTML.EmitCode('function () { return Spacebars.makeRaw(' +
                              codeGenMustache(tag) + '); }');
       } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
         // XXX handle more stuff
@@ -1678,13 +1678,22 @@ Spacebars.mustache2 = function (value/*, args*/) {
   var result = Spacebars.call2.apply(null, arguments);
 
   if (result instanceof Handlebars.SafeString)
-    // keep as type Handlebars.SafeString since the UI.Text
-    // component treats these differently.
-    return result;
+    return HTML.Raw(result.toString());
   else
     // map `null` and `undefined` to "", stringify anything else
     // (e.g. strings, booleans, numbers including 0).
     return String(result == null ? '' : result);
+};
+
+// Idempotently wrap in `HTML.Raw`.
+//
+// Called on the return value from `Spacebars.mustache2` in case the
+// template uses triple-stache (`{{{foo bar baz}}}`).
+Spacebars.makeRaw = function (value) {
+  if (typeof value === 'object' && value.tagName === 'Raw')
+    return value;
+  else
+    return HTML.Raw(value);
 };
 
 // If `value` is a function, called it on the `args`, after
