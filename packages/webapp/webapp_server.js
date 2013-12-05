@@ -12,6 +12,9 @@ var optimist = Npm.require('optimist');
 var useragent = Npm.require('useragent');
 var send = Npm.require('send');
 
+var SHORT_SOCKET_TIMEOUT = 5*1000;
+var LONG_SOCKET_TIMEOUT = 120*1000;
+
 WebApp = {};
 WebAppInternals = {};
 
@@ -192,6 +195,27 @@ Meteor.startup(function () {
   WebApp.clientHash = calculateClientHash();
 });
 
+
+
+// When we have a request pending, we want the socket timeout to be long, to
+// give ourselves a while to serve it, and to allow sockjs long polls to
+// complete.  On the other hand, we want to close idle sockets relatively
+// quickly, so that we can shut down relatively promptly but cleanly, without
+// cutting off anyone's response.
+WebApp._timeoutAdjustmentRequestCallback = function (req, res) {
+  // this is really just req.socket.setTimeout(LONG_SOCKET_TIMEOUT);
+  req.setTimeout(LONG_SOCKET_TIMEOUT);
+  // Insert our new finish listener to run BEFORE the existing one which removes
+  // the response from the socket.
+  var finishListeners = res.listeners('finish');
+  // XXX Apparently in Node 0.12 this event is now called 'prefinish'.
+  // https://github.com/joyent/node/commit/7c9b6070
+  res.removeAllListeners('finish');
+  res.on('finish', function () {
+    res.setTimeout(SHORT_SOCKET_TIMEOUT);
+  });
+  _.each(finishListeners, function (l) { res.on('finish', l); });
+};
 
 var runWebAppServer = function () {
   var shuttingDown = false;
@@ -414,44 +438,25 @@ var runWebAppServer = function () {
   var httpServer = http.createServer(app);
   var onListeningCallbacks = [];
 
-  var longPollingSockets = {};
+  // After 5 seconds w/o data on a socket, kill it.  On the other hand, if
+  // there's an outstanding request, give it a higher timeout instead (to avoid
+  // killing long-polling requests)
+  httpServer.setTimeout(SHORT_SOCKET_TIMEOUT);
 
-  // After 5 seconds of a socket being open, assume it is a long-polling
-  // connection that we have to keep track of to shut down when we're shutting
-  // down the server overall.
-  httpServer.setTimeout(5000, Meteor.bindEnvironment(function (socket) {
-    if (shuttingDown) {
-      socket.end();
-    } else {
-      socket._meteorLongPollingId = Random.id();
-      longPollingSockets[socket._meteorLongPollingId] = socket;
-      // give the socket another minute to live.
-      var destroy = Meteor.setTimeout(function () {
-        delete longPollingSockets[socket._meteorLongPollingId];
-        socket.removeListener('close', onClose);
-        socket.destroy();
-      }, 60*1000);
-
-      var onClose =  function () {
-        delete longPollingSockets[socket._meteorLongPollingId];
-        Meteor.clearTimeout(destroy);
-      };
-      socket.on('close', onClose);
-    }
-  }, function (err) {
-    console.log(err);
-  }));
+  // Do this here, and then also in livedata/stream_server.js, because
+  // stream_server.js kills all the current request handlers when installing its
+  // own.
+  httpServer.on('request', WebApp._timeoutAdjustmentRequestCallback);
 
 
   // For now, handle SIGHUP here.  Later, this should be in some centralized
   // Meteor shutdown code.
   process.on('SIGHUP', Meteor.bindEnvironment(function () {
     shuttingDown = true;
-    _.each(longPollingSockets, function (socket, id) {
-      socket.end();
-    });
     // tell others with websockets open that we plan to close this.
-    httpServer.emit('closing');
+    // XXX: Eventually, this should be done with a standard meteor shut-down
+    // logic path.
+    httpServer.emit('meteor-closing');
     httpServer.close( function () {
       process.exit(0);
     });

@@ -100,7 +100,6 @@ which npm
 cd "$DIR/lib/node_modules"
 npm install optimist@0.6.0
 npm install semver@2.1.0
-npm install handlebars@1.0.7
 npm install request@2.27.0
 npm install keypress@0.2.1
 npm install underscore@1.5.2

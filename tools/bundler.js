@@ -769,19 +769,39 @@ _.extend(ClientTarget.prototype, {
     self.css[0].setUrlToHash(".css");
   },
 
+  // XXX Instead of packaging the boilerplate in the client program, the
+  // template should be part of WebApp, and we should make sure that all
+  // information that it needs is in the manifest (ie, make sure to include head
+  // and body).  Then it will just need to do one level of templating instead
+  // of two.  Alternatively, use spacebars with unipackage.load here.
   generateHtmlBoilerplate: function () {
     var self = this;
 
-    var templatePath = path.join(__dirname, "app.html.in");
-    var template = watch.readAndWatchFile(self.watchSet, templatePath);
-
-    var f = require('handlebars').compile(template.toString());
-    return new Buffer(f({
-      scripts: _.pluck(self.js, 'url'),
-      stylesheets: _.pluck(self.css, 'url'),
-      head_extra: self.head.join('\n'),
-      body_extra: self.body.join('\n')
-    }), 'utf8');
+    var html = [];
+    html.push('<!DOCTYPE html>\n' +
+              '<html##HTML_ATTRIBUTES##>\n' +
+              '<head>\n');
+    _.each(self.css, function (css) {
+      html.push('  <link rel="stylesheet" href="##ROOT_URL_PATH_PREFIX##');
+      html.push(_.escape(css.url));
+      html.push('">\n');
+    });
+    html.push('\n\n##RUNTIME_CONFIG##\n\n');
+    _.each(self.js, function (js) {
+      html.push('  <script type="text/javascript" src="##ROOT_URL_PATH_PREFIX##');
+      html.push(_.escape(js.url));
+      html.push('"></script>\n');
+    });
+    html.push('\n\n');
+    html.push(self.head.join('\n'));  // unescaped!
+    html.push('\n' +
+              '</head>\n' +
+              '<body>\n');
+    html.push(self.body.join('\n'));  // unescaped!
+    html.push('\n' +
+              '</body>\n' +
+              '</html>\n');
+    return new Buffer(html.join(''), 'utf8');
   },
 
   // Output the finished target to disk

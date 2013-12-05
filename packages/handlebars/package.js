@@ -3,7 +3,11 @@ Package.describe({
   internal: true
 });
 
-Npm.depends({handlebars: '1.0.7'});
+Npm.depends({
+  // Fork of 1.0.7 dropping a used-only-by-bin/handlebars dependency on the very
+  // large uglify-js 1.2.6.
+  handlebars: 'https://github.com/meteor/handlebars.js/tarball/543ec6689cf663cfda2d8f26c3c27de40aad7bd5'
+});
 
 Package.on_use(function (api) {
   api.use('underscore');

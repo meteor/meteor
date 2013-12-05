@@ -10,7 +10,7 @@
           "version": "0.7.0",
           "dependencies": {
             "websocket-driver": {
-              "version": "0.3.0"
+              "version": "0.3.1"
             }
           }
         }
