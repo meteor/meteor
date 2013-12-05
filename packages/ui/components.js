@@ -64,7 +64,7 @@ UI.If2 = Component.extend({
     this.condition = this.data;
 
     // content doesn't see the condition as `data`
-    delete this.data;
+    this.data = undefined;
     // XXX I guess this means it's kosher to mutate properties
     // of a Component during init (but presumably not before
     // or after)?
@@ -109,7 +109,7 @@ UI.Unless2 = Component.extend({
   kind: 'Unless',
   init: function () {
     this.condition = this.data;
-    delete this.data;
+    this.data = undefined;
   },
   render: function (buf) {
     var self = this;

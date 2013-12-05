@@ -4,7 +4,7 @@ UI.Each2 = Component.extend({
     // don't keep `this.data` around so that `{{..}}` skips over this
     // component
     this.sequence = this.data;
-    delete this.data;
+    this.data = undefined;
   },
   // xcxc -> parented
   rendered: function () {

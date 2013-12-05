@@ -240,7 +240,7 @@ UI.body = UI.Component.extend({
 
 findComponentWithProp = function (id, comp) {
   while (comp) {
-    if (id in comp)
+    if (comp[id])
       return comp;
     comp = comp.parent;
   }
