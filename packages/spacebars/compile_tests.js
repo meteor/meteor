@@ -113,4 +113,84 @@ Tinytest.add("spacebars - compiler output", function (test) {
         };
       });
 
+  run("{{> foo bar}}",
+      function() {
+        var self = this;
+        return function() {
+          return Spacebars.include(Template["foo"] || self.lookup("foo"), {
+            data: self.lookup("bar")
+          });
+        };
+      });
+
+  run("{{> foo x=bar}}",
+      function() {
+        var self = this;
+        return function() {
+          return Spacebars.include(Template["foo"] || self.lookup("foo"), {
+            x: self.lookup("bar")
+          });
+        };
+      });
+
+  run("{{> foo bar.baz}}",
+      function() {
+        var self = this;
+        return function() {
+          return Spacebars.include(Template["foo"] || self.lookup("foo"), {
+            data: function() {
+              return Spacebars.dot(self.lookup("bar"), "baz");
+            }
+          });
+        };
+      });
+
+  run("{{> foo x=bar.baz}}",
+      function() {
+        var self = this;
+        return function() {
+          return Spacebars.include(Template["foo"] || self.lookup("foo"), {
+            x: function() {
+              return Spacebars.dot(self.lookup("bar"), "baz");
+            }
+          });
+        };
+      });
+
+  run("{{> foo bar baz}}",
+      {fail: 'Only one positional argument'});
+
+  run("{{#foo bar baz}}aaa{{/foo}}",
+      function() {
+        var self = this;
+        return function() {
+          return Spacebars.include(Template["foo"] || self.lookup("foo"), {
+            __content: UI.block(function() {
+              var self = this;
+              return "aaa";
+            }),
+            data: function() {
+              return Spacebars.call2(self.lookup("bar"), self.lookup("baz"));
+            }
+          });
+        };
+      });
+
+  run("{{#foo p.q r.s}}aaa{{/foo}}",
+      function() {
+        var self = this;
+        return function() {
+          return Spacebars.include(Template["foo"] || self.lookup("foo"), {
+            __content: UI.block(function() {
+              var self = this;
+              return "aaa";
+            }),
+            data: function() {
+              return Spacebars.call2(
+                Spacebars.dot(self.lookup("p"), "q"),
+                Spacebars.dot(self.lookup("r"), "s"));
+            }
+          });
+        };
+      });
 });
