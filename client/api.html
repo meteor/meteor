@@ -489,7 +489,8 @@ receive a different connection with a new `id` if it does.
 {{/dtdd}}
 
 {{#dtdd name="onClose" type="Function"}}
-Register a callback to be called when the connection is closed.
+Register a callback to be called when the connection is closed. If the
+connection is already closed, the callback will be called immediately.
 {{/dtdd}}
 </dl>
 
