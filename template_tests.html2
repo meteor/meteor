@@ -128,6 +128,14 @@
   {{/spacebars_template_test_iftemplate2}}
 </template>
 
+<template name="spacebars_template_test_each">
+  {{#each items}}
+    {{text}}
+  {{else}}
+    else-clause
+  {{/each}}
+</template>
+
 <template name="spacebars_template_test_dots">
   {{#with foo}}
     {{#with bar}}
