@@ -433,6 +433,7 @@ Tinytest.add("spacebars - templates - each on cursor", function (test) {
 
   var div = renderToDiv(tmpl);
   var rendersTo = function (expected) {
+    Deps.flush();
     var actual = div.innerHTML.replace(/\s/g, '');
     test.equal(actual, expected);
   };
