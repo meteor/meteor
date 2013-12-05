@@ -153,7 +153,7 @@ Accounts._getAccountData = function (connectionId, field) {
 
 Accounts._setAccountData = function (connectionId, field, value) {
   var data = accountData[connectionId];
-  if (data === undefined)
+  if (value === undefined)
     delete data[field];
   else
     data[field] = value;
