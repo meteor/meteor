@@ -52,6 +52,38 @@ Tinytest.addAsync(
 );
 
 
+testAsyncMulti(
+  "livedata server - onConnection doesn't get callback after stop.",
+  [function (test, expect) {
+    var afterStop = false;
+    var expectStop1 = expect();
+    var stopHandle1 = Meteor.onConnection(function (conn) {
+      stopHandle2.stop();
+      stopHandle1.stop();
+      afterStop = true;
+      // yield to the event loop for a moment to see that no other calls
+      // to listener2 are called.
+      Meteor.setTimeout(expectStop1, 10);
+    });
+    var stopHandle2 = Meteor.onConnection(function (conn) {
+      test.isFalse(afterStop);
+    });
+
+    // trigger a connection
+    var expectConnection = expect();
+    makeTestConnection(
+      test,
+      function (clientConn, serverConn) {
+        // Close the connection from the client.
+        clientConn.disconnect();
+        expectConnection();
+      },
+      expectConnection
+    );
+  }]
+);
+
+
 Meteor.methods({
   livedata_server_test_inner: function () {
     return this.connection.id;
