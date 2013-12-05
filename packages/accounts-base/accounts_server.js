@@ -263,7 +263,6 @@ Accounts._setLoginToken = function (userId, connection, newToken) {
     })) {
       removeConnectionFromToken(newToken, connection.id);
       connection.close();
-    } else {
     }
   }
 };
@@ -321,7 +320,7 @@ Accounts.registerLoginHandler(function(options) {
   }
 
   // Find the token, which will either be an object with fields
-  // {hashToken, when} for a hashed token or {token, when} for an
+  // {hashedToken, when} for a hashed token or {token, when} for an
   // unhashed token.
   var oldUnhashedStyleToken;
   var token = _.find(user.services.resume.loginTokens, function (token) {
@@ -383,8 +382,14 @@ Accounts._generateStampedLoginToken = function () {
   return {token: Random.id(), when: (new Date)};
 };
 
-// Deletes the given loginToken from the database. This will cause all
-// connections associated with the token to be closed.
+// Deletes the given loginToken from the database.
+//
+// For new-style hashed token, this will cause all connections
+// associated with the token to be closed.
+//
+// Any connections associated with old-style unhashed tokens will be
+// in the process of becoming associated with hashed tokens and then
+// they'll get closed.
 var removeLoginToken = function (userId, loginToken) {
   Meteor.users.update(userId, {
     $pull: {
