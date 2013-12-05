@@ -54,7 +54,7 @@ _.extend(Retry.prototype, {
 
   // Call `fn` after a delay, based on the `count` of which retry this is.
   retryLater: function (count, fn) {
-    var self = this;    
+    var self = this;
     var timeout = self._timeout(count);
     if (self.retryTimer)
       clearTimeout(self.retryTimer);

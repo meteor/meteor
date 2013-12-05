@@ -78,14 +78,14 @@ Meteor.methods({
     var result = tryAllLoginHandlers(options);
     if (result !== null) {
       this.setUserId(result.id);
-      this._setLoginToken(result.token);
+      Accounts._setLoginToken(this.connection.id, result.token);
     }
     return result;
   },
 
   logout: function() {
-    var token = this._getLoginToken();
-    this._setLoginToken(null);
+    var token = Accounts._getLoginToken(this.connection.id);
+    Accounts._setLoginToken(this.connection.id, null);
     if (token && this.userId)
       removeLoginToken(this.userId, token);
     this.setUserId(null);
@@ -140,9 +140,99 @@ Meteor.methods({
 });
 
 ///
+/// ACCOUNT DATA
+///
+
+// connectionId -> {connection, loginToken, srpChallenge}
+var accountData = {};
+
+Accounts._getAccountData = function (connectionId, field) {
+  var data = accountData[connectionId];
+  return data && data[field];
+};
+
+Accounts._setAccountData = function (connectionId, field, value) {
+  var data = accountData[connectionId];
+
+  // safety belt. shouldn't happen. accountData is set in onConnection,
+  // we don't have a connectionId until it is set.
+  if (!data)
+    return;
+
+  if (value === undefined)
+    delete data[field];
+  else
+    data[field] = value;
+};
+
+Meteor.server.onConnection(function (connection) {
+  accountData[connection.id] = {connection: connection};
+  connection.onClose(function () {
+    removeConnectionFromToken(connection.id);
+    delete accountData[connection.id];
+  });
+});
+
+
+///
 /// RECONNECT TOKENS
 ///
 /// support reconnecting using a meteor login token
+
+// token -> list of connection ids
+var connectionsByLoginToken = {};
+
+// test hook
+Accounts._getTokenConnections = function (token) {
+  return connectionsByLoginToken[token];
+};
+
+// Remove the connection from the list of open connections for the token.
+var removeConnectionFromToken = function (connectionId) {
+  var token = Accounts._getLoginToken(connectionId);
+  if (token) {
+    connectionsByLoginToken[token] = _.without(
+      connectionsByLoginToken[token],
+      connectionId
+    );
+    if (_.isEmpty(connectionsByLoginToken[token]))
+      delete connectionsByLoginToken[token];
+  }
+};
+
+Accounts._getLoginToken = function (connectionId) {
+  return Accounts._getAccountData(connectionId, 'loginToken');
+};
+
+Accounts._setLoginToken = function (connectionId, newToken) {
+  removeConnectionFromToken(connectionId);
+
+  Accounts._setAccountData(connectionId, 'loginToken', newToken);
+
+  if (newToken) {
+    if (! _.has(connectionsByLoginToken, newToken))
+      connectionsByLoginToken[newToken] = [];
+    connectionsByLoginToken[newToken].push(connectionId);
+  }
+};
+
+// Close all open connections associated with any of the tokens in
+// `tokens`.
+var closeConnectionsForTokens = function (tokens) {
+  _.each(tokens, function (token) {
+    if (_.has(connectionsByLoginToken, token)) {
+      // safety belt. close should defer potentially yielding callbacks.
+      Meteor._noYieldsAllowed(function () {
+        _.each(connectionsByLoginToken[token], function (connectionId) {
+          var connection = Accounts._getAccountData(connectionId, 'connection');
+          if (connection)
+            connection.close();
+        });
+      });
+    }
+  });
+};
+
 
 // Login handler for resume tokens.
 Accounts.registerLoginHandler(function(options) {
@@ -646,9 +736,7 @@ Meteor.startup(function () {
 ///
 
 var closeTokensForUser = function (userTokens) {
-  Meteor.server._closeAllForTokens(_.map(userTokens, function (token) {
-    return token.token;
-  }));
+  closeConnectionsForTokens(_.pluck(userTokens, "token"));
 };
 
 // Like _.difference, but uses EJSON.equals to compute which values to return.

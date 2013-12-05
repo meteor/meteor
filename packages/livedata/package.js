@@ -64,6 +64,8 @@ Package.on_test(function (api) {
   api.use('test-helpers', ['client', 'server']);
   api.use(['underscore', 'tinytest', 'random', 'deps', 'minimongo']);
 
+  api.add_files('stub_stream.js');
+  api.add_files('livedata_server_tests.js', 'server');
   api.add_files('livedata_connection_tests.js', ['client', 'server']);
   api.add_files('livedata_tests.js', ['client', 'server']);
   api.add_files('livedata_test_service.js', ['client', 'server']);
@@ -72,5 +74,6 @@ Package.on_test(function (api) {
 
   api.use('http', 'client');
   api.add_files(['stream_tests.js'], 'client');
+  api.add_files('stream_client_tests.js', 'server');
   api.use('check', ['client', 'server']);
 });

@@ -45,5 +45,6 @@ Package.on_test(function (api) {
   api.use('accounts-base');
   api.use('tinytest');
   api.use('random');
+  api.use('test-helpers');
   api.add_files('accounts_tests.js', 'server');
 });

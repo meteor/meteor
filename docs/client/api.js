@@ -318,6 +318,14 @@ Template.api.subscription_userId = {
 };
 
 
+Template.api.subscription_connection = {
+  id: "publish_connection",
+  name: "<i>this</i>.connection",
+  locus: "Server",
+  descr: ["Access inside the publish function. The incoming [connection](#meteor_onconnection) for this subscription."]
+};
+
+
 Template.api.subscribe = {
   id: "meteor_subscribe",
   name: "Meteor.subscribe(name [, arg1, arg2, ... ] [, callbacks])",
@@ -379,6 +387,13 @@ Template.api.method_invocation_isSimulation = {
   name: "<i>this</i>.isSimulation",
   locus: "Anywhere",
   descr: ["Access inside a method invocation.  Boolean value, true if this invocation is a stub."]
+};
+
+Template.api.method_invocation_connection = {
+  id: "method_connection",
+  name: "<i>this</i>.connection",
+  locus: "Server",
+  descr: ["Access inside a method invocation. The [connection](#meteor_onconnection) this method was received on. `null` if the method is not associated with a connection, eg. a server initiated method call."]
 };
 
 Template.api.error = {
@@ -476,6 +491,18 @@ Template.api.connect = {
     {name: "url",
      type: "String",
      descr: "The URL of another Meteor application."}
+  ]
+};
+
+Template.api.onConnection = {
+  id: "meteor_onconnection",
+  name: "Meteor.onConnection(callback)",
+  locus: "Server",
+  descr: ["Register a callback to be called when a new DDP connection is made to the server."],
+  args: [
+    {name: "callback",
+     type: "function",
+     descr: "The function to call when a new DDP connection is established."}
   ]
 };
 
