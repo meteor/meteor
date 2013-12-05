@@ -96,7 +96,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
     }
 
     var onError = Meteor.bindEnvironment(
-      function (_this) {
+      function (_this, error) {
         if (self.currentConnection !== _this)
           return;
 
@@ -110,7 +110,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
     connection.on('error', function (error) {
       // We have to pass in `this` explicitly because bindEnvironment
       // doesn't propagate it for us.
-      onError(this);
+      onError(this, error);
     });
 
     var onClose = Meteor.bindEnvironment(
