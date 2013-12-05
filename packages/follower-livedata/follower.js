@@ -100,9 +100,9 @@ Follower = {
       }
 
       if (conn) {
-        prevReconnect.apply(conn, {
+        prevReconnect.apply(conn, [{
           url: url
-        });
+        }]);
       } else {
         conn = DDP.connect(url);
         prevReconnect = conn.reconnect;
