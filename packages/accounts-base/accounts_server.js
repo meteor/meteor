@@ -174,7 +174,10 @@ Accounts._setAccountData = function (connectionId, field, value) {
 Meteor.server.onConnection(function (connection) {
   accountData[connection.id] = {connection: connection};
   connection.onClose(function () {
-    removeConnectionFromToken(connection.id);
+    removeConnectionFromToken(
+      Accounts._getLoginToken(connection.id),
+      connection.id
+    );
     delete accountData[connection.id];
   });
 });
@@ -210,7 +213,7 @@ Accounts._getTokenConnections = function (token) {
 };
 
 // Remove the connection from the list of open connections for the token.
-var removeConnectionFromToken = function (connectionId) {
+var removeConnectionFromToken = function (token, connectionId) {
   var token = Accounts._getLoginToken(connectionId);
   if (token) {
     connectionsByLoginToken[token] = _.without(
@@ -226,27 +229,41 @@ Accounts._getLoginToken = function (connectionId) {
   return Accounts._getAccountData(connectionId, 'loginToken');
 };
 
+// newToken is a hashed token.
 Accounts._setLoginToken = function (userId, connection, newToken) {
-  removeConnectionFromToken(connection.id);
+  removeConnectionFromToken(
+    Accounts._getLoginToken(connection.id),
+    connection.id
+  );
 
   Accounts._setAccountData(connection.id, 'loginToken', newToken);
 
   if (newToken) {
-    // Once we add the connection to the connectionsByLoginToken map
-    // for the token, the connection will be closed if the token is
-    // removed from the database.  But since we haven't added it to
-    // the map yet, the token might have been already deleted since
-    // the time we read it.  So close the connection if the token is
-    // no longer present.
+    if (! _.has(connectionsByLoginToken, newToken))
+      connectionsByLoginToken[newToken] = [];
+    connectionsByLoginToken[newToken].push(connection.id);
+
+    // Now that we've added the connection to the
+    // connectionsByLoginToken map for the token, the connection will
+    // be closed if the token is removed from the database.  However
+    // at this point the token might have already been deleted, which
+    // wouldn't have closed the connection because it wasn't in the
+    // map yet.
+    //
+    // We also did need to first add the connection to the map above
+    // (and now remove it here if the token was deleted), because we
+    // could be getting a response from the database that the token
+    // still exists, but then it could be deleted in another fiber
+    // before our `findOne` call returns... and then that other fiber
+    // would need for the connection to be in the map for it to close
+    // the connection.
     if (! Meteor.users.findOne({
       _id: userId,
       "services.resume.loginTokens.hashedToken": newToken
     })) {
+      removeConnectionFromToken(newToken, connection.id);
       connection.close();
     } else {
-      if (! _.has(connectionsByLoginToken, newToken))
-        connectionsByLoginToken[newToken] = [];
-      connectionsByLoginToken[newToken].push(connection.id);
     }
   }
 };
