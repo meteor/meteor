@@ -9,7 +9,12 @@ Tinytest.addAsync(
       function (clientConn, serverConn) {
         // On the server side, wait for the connection to be closed.
         serverConn.onClose(function () {
-          onComplete();
+          test.isTrue(true);
+          // Add a new onClose after the connection is already
+          // closed. See that it fires.
+          serverConn.onClose(function () {
+            onComplete();
+          });
         });
         // Close the connection from the client.
         clientConn.disconnect();

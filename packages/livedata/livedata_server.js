@@ -222,7 +222,10 @@ var Session = function (server, version, socket) {
   self.initialized = false;
   self.socket = socket;
 
+  // set to null when the session is destroyed. multiple places below
+  // use this to determine if the session is alive or not.
   self.inQueue = [];
+
   self.blocked = false;
   self.workerRunning = false;
 
@@ -258,9 +261,13 @@ var Session = function (server, version, socket) {
       self.server._closeSession(self);
     },
     onClose: function (fn) {
-      self._closeCallbacks.push(
-        Meteor.bindEnvironment(fn, "connection onClose callback")
-      );
+      var cb = Meteor.bindEnvironment(fn, "connection onClose callback");
+      if (self.inQueue) {
+        self._closeCallbacks.push(cb);
+      } else {
+        // if we're already closed, call the callback.
+        Meteor.defer(cb);
+      }
     }
   };
 
