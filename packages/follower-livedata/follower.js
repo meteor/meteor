@@ -30,7 +30,6 @@ Follower = {
     }, options);
     // start each elector as untried/assumed connectable.
 
-    // for options.priority, low-priority things are tried first.
     var makeElectorTries = function (urlSet) {
 
       electorTries = {};
@@ -197,7 +196,7 @@ Follower = {
       if (!intervalHandle)
         intervalHandle = monitorConnection();
       if (arguments[0] && arguments[0].url) {
-        makeElectorTries(arguments[0].url, {reset: true});
+        makeElectorTries(arguments[0].url);
         tryElector();
       } else {
         prevReconnect.apply(conn, arguments);
