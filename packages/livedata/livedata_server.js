@@ -250,6 +250,10 @@ var Session = function (server, version, socket) {
   // List of callbacks to call when this connection is closed.
   self._closeCallbacks = [];
 
+  // XXX HACK: If a sockjs connection, save off the URL. This is
+  // temporary and will go away in the near future.
+  self._socketUrl = socket.url;
+
   // The `ConnectionHandle` for this session, passed to
   // `Meteor.server.onConnection` callbacks.
   self.connectionHandle = {
@@ -1282,6 +1286,15 @@ _.extend(Server.prototype, {
     if (exception)
       throw exception;
     return result;
+  },
+
+  _urlForSession: function (sessionId) {
+    var self = this;
+    var session = self.sessions[sessionId];
+    if (session)
+      return session._socketUrl;
+    else
+      return null;
   }
 });
 
