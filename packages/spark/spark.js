@@ -1055,8 +1055,7 @@ Spark.list = function (cursor, itemFunc, elseFunc) {
         var frag = itemDict.get(id).liveRange.extract();
         if (before === null) {
           itemDict.lastValue().liveRange.insertAfter(frag);
-        }
-        else {
+        } else {
           itemDict.get(before).liveRange.insertBefore(frag);
         }
         itemDict.moveBefore(id, before);

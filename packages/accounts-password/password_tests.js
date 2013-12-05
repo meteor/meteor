@@ -344,7 +344,23 @@ if (Meteor.isClient) (function () {
         loggedInAs(this.username, test, expect));
     },
 
-    function(test, expect) {
+    function (test, expect) {
+      // we can't login with an invalid token
+      var expectLoginError = expect(function (err) {
+        test.isTrue(err);
+      });
+      Meteor.loginWithToken('invalid', expectLoginError);
+    },
+
+    function (test, expect) {
+      // we can login with a valid token
+      var expectLoginOK = expect(function (err) {
+        test.isFalse(err);
+      });
+      Meteor.loginWithToken(Accounts._storedLoginToken(), expectLoginOK);
+    },
+
+    function (test, expect) {
       // test logging out invalidates our token
       var expectLoginError = expect(function (err) {
         test.isTrue(err);
@@ -356,7 +372,7 @@ if (Meteor.isClient) (function () {
       });
     },
 
-    function(test, expect) {
+    function (test, expect) {
       var self = this;
       // Test that login tokens get expired. We should get logged out when a
       // token expires, and not be able to log in again with the same token.
@@ -488,18 +504,14 @@ if (Meteor.isServer) (function () {
   Tinytest.add(
     'passwords - createUser hooks',
     function (test) {
-      var email = Random.id() + '@example.com';
+      var username = Random.id();
       test.throws(function () {
         // should fail the new user validators
-        Accounts.createUser({email: email, profile: {invalid: true}});
-        });
+        Accounts.createUser({username: username, profile: {invalid: true}});
+      });
 
-      // disable sending emails
-      var oldEmailSend = Email.send;
-      Email.send = function() {};
-      var userId = Accounts.createUser({email: email,
+      var userId = Accounts.createUser({username: username,
                                         testOnCreateUserHook: true});
-      Email.send = oldEmailSend;
 
       test.isTrue(userId);
       var user = Meteor.users.findOne(userId);
@@ -547,4 +559,37 @@ if (Meteor.isServer) (function () {
   });
 
   // XXX would be nice to test Accounts.config({forbidClientAccountCreation: true})
+
+  Tinytest.addAsync(
+    'passwords - login tokens cleaned up',
+    function (test, onComplete) {
+      var username = Random.id();
+      Accounts.createUser({
+        username: username,
+        password: 'password'
+      });
+
+      makeTestConnection(
+        test,
+        function (clientConn, serverConn) {
+          serverConn.onClose(function () {
+            test.isFalse(_.contains(
+              Accounts._getTokenConnections(token), serverConn.id));
+            onComplete();
+          });
+          var result = clientConn.call('login', {
+            user: {username: username},
+            password: 'password'
+          });
+          test.isTrue(result);
+          var token = Accounts._getAccountData(serverConn.id, 'loginToken');
+          test.isTrue(token);
+          test.isTrue(_.contains(
+            Accounts._getTokenConnections(token), serverConn.id));
+          clientConn.disconnect();
+        },
+        onComplete
+      );
+    }
+  );
 }) ();

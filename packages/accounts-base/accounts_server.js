@@ -1,3 +1,5 @@
+var crypto = Npm.require('crypto');
+
 ///
 /// CURRENT USER
 ///
@@ -78,14 +80,18 @@ Meteor.methods({
     var result = tryAllLoginHandlers(options);
     if (result !== null) {
       this.setUserId(result.id);
-      this._setLoginToken(result.token);
+      Accounts._setLoginToken(
+        result.id,
+        this.connection,
+        Accounts._hashLoginToken(result.token)
+      );
     }
     return result;
   },
 
   logout: function() {
-    var token = this._getLoginToken();
-    this._setLoginToken(null);
+    var token = Accounts._getLoginToken(this.connection.id);
+    Accounts._setLoginToken(this.userId, this.connection, null);
     if (token && this.userId)
       removeLoginToken(this.userId, token);
     this.setUserId(null);
@@ -118,7 +124,7 @@ Meteor.methods({
           "services.resume.loginTokensToDelete": tokens,
           "services.resume.haveLoginTokensToDelete": true
         },
-        $push: { "services.resume.loginTokens": newToken }
+        $push: { "services.resume.loginTokens": Accounts._hashStampedToken(newToken) }
       });
       Meteor.setTimeout(function () {
         // The observe on Meteor.users will take care of closing the connections
@@ -140,9 +146,119 @@ Meteor.methods({
 });
 
 ///
+/// ACCOUNT DATA
+///
+
+// connectionId -> {connection, loginToken, srpChallenge}
+var accountData = {};
+
+Accounts._getAccountData = function (connectionId, field) {
+  var data = accountData[connectionId];
+  return data && data[field];
+};
+
+Accounts._setAccountData = function (connectionId, field, value) {
+  var data = accountData[connectionId];
+  if (data === undefined)
+    delete data[field];
+  else
+    data[field] = value;
+};
+
+Meteor.server.onConnection(function (connection) {
+  accountData[connection.id] = {connection: connection};
+  connection.onClose(function () {
+    removeConnectionFromToken(connection.id);
+    delete accountData[connection.id];
+  });
+});
+
+
+///
 /// RECONNECT TOKENS
 ///
 /// support reconnecting using a meteor login token
+
+Accounts._hashLoginToken = function (loginToken) {
+  var hash = crypto.createHash('sha256');
+  hash.update(loginToken);
+  return hash.digest('base64');
+};
+
+
+// {token, when} => {hashedToken, when}
+Accounts._hashStampedToken = function (stampedToken) {
+  return _.extend(
+    _.omit(stampedToken, 'token'),
+    {hashedToken: Accounts._hashLoginToken(stampedToken.token)}
+  );
+};
+
+
+// hashed token -> list of connection ids
+var connectionsByLoginToken = {};
+
+// test hook
+Accounts._getTokenConnections = function (token) {
+  return connectionsByLoginToken[token];
+};
+
+// Remove the connection from the list of open connections for the token.
+var removeConnectionFromToken = function (connectionId) {
+  var token = Accounts._getLoginToken(connectionId);
+  if (token) {
+    connectionsByLoginToken[token] = _.without(
+      connectionsByLoginToken[token],
+      connectionId
+    );
+    if (_.isEmpty(connectionsByLoginToken[token]))
+      delete connectionsByLoginToken[token];
+  }
+};
+
+Accounts._getLoginToken = function (connectionId) {
+  return Accounts._getAccountData(connectionId, 'loginToken');
+};
+
+Accounts._setLoginToken = function (userId, connection, newToken) {
+  removeConnectionFromToken(connection.id);
+
+  Accounts._setAccountData(connection.id, 'loginToken', newToken);
+
+  if (newToken) {
+    // Once we add the connection to the connectionsByLoginToken map
+    // for the token, the connection will be closed if the token is
+    // removed from the database.  But since we haven't added it to
+    // the map yet, the token might have been already deleted since
+    // the time we read it.  So close the connection if the token is
+    // no longer present.
+    if (! Meteor.users.findOne({
+      _id: userId,
+      "services.resume.loginTokens.hashedToken": newToken
+    })) {
+      connection.close();
+    } else {
+      if (! _.has(connectionsByLoginToken, newToken))
+        connectionsByLoginToken[newToken] = [];
+      connectionsByLoginToken[newToken].push(connection.id);
+    }
+  }
+};
+
+// Close all open connections associated with any of the tokens in
+// `tokens`.
+var closeConnectionsForTokens = function (tokens) {
+  _.each(tokens, function (token) {
+    if (_.has(connectionsByLoginToken, token)) {
+      _.each(connectionsByLoginToken[token], function (connectionId) {
+        var connection = Accounts._getAccountData(connectionId, 'connection');
+        if (connection)
+          connection.close();
+      });
+    }
+  });
+};
+
 
 // Login handler for resume tokens.
 Accounts.registerLoginHandler(function(options) {
@@ -150,22 +266,83 @@ Accounts.registerLoginHandler(function(options) {
     return undefined;
 
   check(options.resume, String);
-  var user = Meteor.users.findOne({
-    "services.resume.loginTokens.token": ""+options.resume
-  });
 
-  if (!user) {
+  var hashedToken = Accounts._hashLoginToken(options.resume);
+
+  // First look for just the new-style hashed login token, to avoid
+  // sending the unhashed token to the database in a query if we don't
+  // need to.
+  var user = Meteor.users.findOne(
+    {"services.resume.loginTokens.hashedToken": hashedToken});
+
+  if (! user) {
+    // If we didn't find the hashed login token, try also looking for
+    // the old-style unhashed token.  But we need to look for either
+    // the old-style token OR the new-style token, because another
+    // client connection logging in simultaneously might have already
+    // converted the token.
+    user = Meteor.users.findOne({
+      $or: [
+        {"services.resume.loginTokens.hashedToken": hashedToken},
+        {"services.resume.loginTokens.token": options.resume}
+      ]
+    });
+  }
+
+  if (! user) {
     throw new Meteor.Error(403, "You've been logged out by the server. " +
     "Please login again.");
   }
 
+  // Find the token, which will either be an object with fields
+  // {hashToken, when} for a hashed token or {token, when} for an
+  // unhashed token.
+  var oldUnhashedStyleToken;
   var token = _.find(user.services.resume.loginTokens, function (token) {
-    return token.token === options.resume;
+    return token.hashedToken === hashedToken;
   });
+  if (token) {
+    oldUnhashedStyleToken = false;
+  } else {
+    token = _.find(user.services.resume.loginTokens, function (token) {
+      return token.token === options.resume;
+    });
+    oldUnhashedStyleToken = true;
+  }
 
   var tokenExpires = Accounts._tokenExpiration(token.when);
   if (new Date() >= tokenExpires)
     throw new Meteor.Error(403, "Your session has expired. Please login again.");
+
+  // Update to a hashed token when an unhashed token is encountered.
+  if (oldUnhashedStyleToken) {
+    // Only add the new hashed token if the old unhashed token still
+    // exists (this avoids resurrecting the token if it was deleted
+    // after we read it).  Using $addToSet avoids getting an index
+    // error if another client logging in simultaneously has already
+    // inserted the new hashed token.
+    Meteor.users.update(
+      {
+        _id: user._id,
+        "services.resume.loginTokens.token": options.resume
+      },
+      {$addToSet: {
+        "services.resume.loginTokens": {
+          "hashedToken": hashedToken,
+          "when": token.when
+        }
+      }}
+    );
+
+    // Remove the old token *after* adding the new, since otherwise
+    // another client trying to login between our removing the old and
+    // adding the new wouldn't find a token to login with.
+    Meteor.users.update(user._id, {
+      $pull: {
+        "services.resume.loginTokens": { "token": options.resume }
+      },
+    });
+  }
 
   return {
     token: options.resume,
@@ -185,7 +362,12 @@ Accounts._generateStampedLoginToken = function () {
 var removeLoginToken = function (userId, loginToken) {
   Meteor.users.update(userId, {
     $pull: {
-      "services.resume.loginTokens": { "token": loginToken }
+      "services.resume.loginTokens": {
+        $or: [
+          {hashedToken: loginToken },
+          {token: loginToken}
+        ]
+      }
     }
   });
 };
@@ -290,11 +472,12 @@ Accounts.insertUserDoc = function (options, user) {
     var stampedToken = Accounts._generateStampedLoginToken();
     result.token = stampedToken.token;
     result.tokenExpires = Accounts._tokenExpiration(stampedToken.when);
+    var token = Accounts._hashStampedToken(stampedToken);
     Meteor._ensure(user, 'services', 'resume');
     if (_.has(user.services.resume, 'loginTokens'))
-      user.services.resume.loginTokens.push(stampedToken);
+      user.services.resume.loginTokens.push(token);
     else
-      user.services.resume.loginTokens = [stampedToken];
+      user.services.resume.loginTokens = [token];
   }
 
   var fullUser;
@@ -448,7 +631,7 @@ Accounts.updateOrCreateUserFromExternalService = function(
     Meteor.users.update(
       user._id,
       {$set: setAttrs,
-       $push: {'services.resume.loginTokens': stampedToken}});
+       $push: {'services.resume.loginTokens': Accounts._hashStampedToken(stampedToken)}});
     return {
       token: stampedToken.token,
       id: user._id,
@@ -597,6 +780,8 @@ Meteor.users.allow({
 /// DEFAULT INDEXES ON USERS
 Meteor.users._ensureIndex('username', {unique: 1, sparse: 1});
 Meteor.users._ensureIndex('emails.address', {unique: 1, sparse: 1});
+Meteor.users._ensureIndex('services.resume.loginTokens.hashedToken',
+                          {unique: 1, sparse: 1});
 Meteor.users._ensureIndex('services.resume.loginTokens.token',
                           {unique: 1, sparse: 1});
 // For taking care of logoutOtherClients calls that crashed before the tokens
@@ -645,10 +830,14 @@ Meteor.startup(function () {
 /// LOGGING OUT DELETED USERS
 ///
 
+// When login tokens are removed from the database, close any sessions
+// logged in with those tokens.
+//
+// Because we upgrade unhashed login tokens to hashed tokens at login
+// time, sessions will only be logged in with a hashed token.  Thus we
+// only need to pull out hashed tokens here.
 var closeTokensForUser = function (userTokens) {
-  Meteor.server._closeAllForTokens(_.map(userTokens, function (token) {
-    return token.token;
-  }));
+  closeConnectionsForTokens(_.compact(_.pluck(userTokens, "hashedToken")));
 };
 
 // Like _.difference, but uses EJSON.equals to compute which values to return.
