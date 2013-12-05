@@ -37,9 +37,10 @@ Meteor.user = function () {
 
 // Call a login method on the server.
 //
-// A login method is a method which on success calls `this.setUserId(id)` on
-// the server and returns an object with fields 'id' (containing the user id)
-// and 'token' (containing a resume token).
+// A login method is a method which on success calls `this.setUserId(id)` and
+// `Accounts._setLoginToken` on the server and returns an object with fields
+// 'id' (containing the user id), 'token' (containing a resume token), and
+// optionally `tokenExpires`.
 //
 // This function takes care of:
 //   - Updating the Meteor.loggingIn() reactive data source
