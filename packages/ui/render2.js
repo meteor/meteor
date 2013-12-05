@@ -260,6 +260,39 @@ var updateAttributes = function(elem, newAttrs, handlers) {
   }
 };
 
+UI.render2 = function (kind, parentComponent) {
+  if (kind.isInited)
+    throw new Error("Can't render component instance, only component kind");
+  var inst = instantiate(kind, parentComponent);
+
+  var content = null;
+  try {
+    content = (inst.render && inst.render());
+  } catch (e) {
+    reportUIException(e);
+  }
+
+  var range = new UI.DomRange(inst);
+  materialize(content, range, null, inst);
+
+  inst.parented = function () {}; // XXX override old base
+  inst.removed = function () {
+    inst.isDestroyed = true;
+    if (inst.destroyed) {
+      updateTemplateInstance(inst);
+      inst.destroyed.call(inst.templateInstance);
+    }
+  };
+
+  // TODO: defer this until template is in document
+  if (inst.rendered) {
+    updateTemplateInstance(inst);
+    inst.rendered.call(inst.templateInstance);
+  }
+
+  return inst;
+};
+
 // Convert the pseudoDOM `node` into reactive DOM nodes and insert them
 // into the element or DomRange `parent`, before the node or id `before`.
 var materialize = function (node, parent, before, parentComponent) {
@@ -268,36 +301,9 @@ var materialize = function (node, parent, before, parentComponent) {
   // Check that Comment has a single string child and no attributes.  Etc.
 
   if (UI.isComponent(node)) {
-    if (node.isInited)
-      throw new Error("Can't render component instance, only component kind");
-    var inst = instantiate(node, parentComponent);
+    var inst = UI.render2(node, parentComponent);
 
-    var content = null;
-    try {
-      content = (inst.render && inst.render());
-    } catch (e) {
-      reportUIException(e);
-    }
-
-    var range = new UI.DomRange(inst);
-    materialize(content, range, null, inst);
-
-    inst.parented = function () {}; // XXX override old base
-    inst.removed = function () {
-      inst.isDestroyed = true;
-      if (inst.destroyed) {
-        updateTemplateInstance(inst);
-        inst.destroyed.call(inst.templateInstance);
-      }
-    };
-    insert(range, parent, before);
-
-    // TODO: defer this until template is in document
-    if (inst.rendered) {
-      updateTemplateInstance(inst);
-      inst.rendered.call(inst.templateInstance);
-    }
-
+    insert(inst.dom, parent, before);
   } else {
     var type = HTML.typeOf(node);
     if (type === 'charref') {
