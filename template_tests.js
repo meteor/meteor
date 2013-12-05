@@ -17,6 +17,12 @@ var trimAndRemoveSpaces = function (str) {
   return trim(str).replace(/ /g, '');
 };
 
+var divRendersTo = function (test, div, html) {
+  Deps.flush();
+  var actual = div.innerHTML.replace(/\s/g, '');
+  test.equal(actual, html);
+};
+
 Tinytest.add("spacebars - templates - simple helper", function (test) {
   var tmpl = Template.spacebars_template_test_simple_helper;
   var R = ReactiveVar(1);
@@ -424,6 +430,31 @@ Tinytest.add("spacebars - templates - nested content", function (test) {
   test.equal(trim(stripComments(div.innerHTML)), 'hello');
 });
 
+Tinytest.add("spacebars - template - if", function (test) {
+  var tmpl = Template.spacebars_template_test_if;
+  var R = ReactiveVar(true);
+  tmpl.foo = function () {
+    return R.get();
+  };
+  tmpl.bar = 1;
+  tmpl.baz = 2;
+
+  var div = renderToDiv(tmpl);
+  var rendersTo = function (html) { divRendersTo(test, div, html); };
+
+  rendersTo("1");
+  R.set(false);
+  rendersTo("2");
+});
+
+Tinytest.add("spacebars - template - if in with", function (test) {
+  var tmpl = Template.spacebars_template_test_if_in_with;
+  tmpl.foo = {bar: "bar"};
+
+  var div = renderToDiv(tmpl);
+  divRendersTo(test, div, "barbar");
+});
+
 Tinytest.add("spacebars - templates - each on cursor", function (test) {
   var tmpl = Template.spacebars_template_test_each;
   var coll = new Meteor.Collection(null);
@@ -432,11 +463,7 @@ Tinytest.add("spacebars - templates - each on cursor", function (test) {
   };
 
   var div = renderToDiv(tmpl);
-  var rendersTo = function (expected) {
-    Deps.flush();
-    var actual = div.innerHTML.replace(/\s/g, '');
-    test.equal(actual, expected);
-  };
+  var rendersTo = function (html) { divRendersTo(test, div, html); };
 
   rendersTo("else-clause");
   coll.insert({text: "one", pos: 1});
@@ -467,11 +494,12 @@ Tinytest.add("spacebars - templates - ..", function (test) {
   var lines = _.filter(trim(htmlWithWhitespace).split(/\s/), function (line) {
     return line !== "";
   });
-  test.equal(lines, [
+  test.equal(lines.join(" "), [
+    "A", "B", "C", "D",
     // {{> spacebars_template_test_dots_subtemplate}}
-    "item", "item", "bar", "foo", "item", "bar", "foo",
+    "TITLE", "1item", "2item", "3bar", "4foo", "GETTITLE", "5item", "6bar", "7foo",
     // {{> spacebars_template_test_dots_subtemplate ..}}
-    "bar", "bar", "item", "bar", "bar", "item", "bar"]);
+    "TITLE", "1bar", "2bar", "3item", "4bar", "GETTITLE", "5bar", "6item", "7bar"].join(" "));
 });
 
 Tinytest.add("spacebars - templates - select tags", function (test) {
