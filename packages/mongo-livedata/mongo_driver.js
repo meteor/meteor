@@ -210,9 +210,7 @@ var writeCallback = function (write, refresh, callback) {
 };
 
 var bindEnvironmentForWrite = function (callback) {
-  return Meteor.bindEnvironment(callback, function (err) {
-    Meteor._debug("Error in Mongo write:", err.stack);
-  });
+  return Meteor.bindEnvironment(callback, "Mongo write");
 };
 
 MongoConnection.prototype._insert = function (collection_name, document,

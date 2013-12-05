@@ -208,3 +208,25 @@ Tinytest.addAsync('accounts - expire numeric token', function (test, onComplete)
   });
   Accounts._expireTokens(new Date(), result.id);
 });
+
+
+Tinytest.addAsync(
+  'accounts - session data cleaned up',
+  function (test, onComplete) {
+    establishConnection(
+      test,
+      function (connection, session) {
+        // onClose callbacks are called in order, so we run after the
+        // close callback in accounts.
+        session.onClose(function () {
+          test.isFalse(Accounts._getAccountData(session.id, 'session'));
+          onComplete();
+        });
+
+        test.isTrue(Accounts._getAccountData(session.id, 'session'));
+        session.close();
+      },
+      onComplete
+    );
+  }
+);
