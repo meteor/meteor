@@ -28,6 +28,7 @@ Package.on_use(function (api) {
                  'render2.js',
                  'components.js',
                  'each.js',
+                 'each2.js',
                  'fields.js'
                 ]);
 

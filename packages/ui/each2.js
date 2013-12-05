@@ -1,15 +1,12 @@
-UI.Each = Component.extend({
+UI.Each2 = Component.extend({
   typeName: 'Each',
-  render: function (buf) {
+  init: function () {
     // don't keep `this.data` around so that `{{..}}` skips over this
     // component
     this.sequence = this.data;
     delete this.data;
-
-    // real logic in in rendered().
-
-    // XXX do something for server-side rendering
   },
+  // xcxc -> parented
   rendered: function () {
     var self = this.__component__;
 
@@ -41,8 +38,7 @@ UI.Each = Component.extend({
       }
       itemCount += delta;
       if (itemCount === 0) {
-        // display else clause
-        range.add(null, UI.render(elseContent, {}, self), null);
+        UI.materialize(elseContent(), range, null, self);
       }
     };
 
@@ -68,12 +64,11 @@ UI.Each = Component.extend({
           dep.changed();
         };
 
-        var comp = UI.render(
-          content, { data: dataFunc }, self);
-
         if (beforeId)
           beforeId = LocalCollection._idStringify(beforeId);
-        range.add(id, comp, beforeId);
+
+        var renderedItem = UI.render2(content().withData(dataFunc), self);
+        range.add(id, renderedItem, beforeId);
       },
       removed: function (id, item) {
         addToCount(-1);

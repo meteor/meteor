@@ -424,6 +424,32 @@ Tinytest.add("spacebars - templates - nested content", function (test) {
   test.equal(trim(stripComments(div.innerHTML)), 'hello');
 });
 
+Tinytest.add("spacebars - templates - each on cursor", function (test) {
+  var tmpl = Template.spacebars_template_test_each;
+  var coll = new Meteor.Collection(null);
+  tmpl.items = function () {
+    return coll.find({}, {sort: {pos: 1}});
+  };
+
+  var div = renderToDiv(tmpl);
+  var rendersTo = function (expected) {
+    var actual = div.innerHTML.replace(/\s/g, '');
+    test.equal(actual, expected);
+  };
+
+  rendersTo("else-clause");
+  coll.insert({text: "one", pos: 1});
+  rendersTo("one");
+  coll.insert({text: "two", pos: 2});
+  rendersTo("onetwo");
+  coll.update({text: "two"}, {$set: {text: "three"}});
+  rendersTo("onethree");
+  coll.update({text: "three"}, {$set: {pos: 0}});
+  rendersTo("threeone");
+  coll.remove({});
+  rendersTo("else-clause");
+});
+
 Tinytest.add("spacebars - templates - ..", function (test) {
   var tmpl = Template.spacebars_template_test_dots;
   tmpl.getTitle = function (from) {

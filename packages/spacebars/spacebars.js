@@ -1389,7 +1389,8 @@ var builtInComponents = {
   'elseContent': '__elseContent',
   'if': 'UI.If2',
   'unless': 'UI.Unless2',
-  'with': 'UI.With2'
+  'with': 'UI.With2',
+  'each': 'UI.Each2'
 };
 
 var replaceSpecials = function (node) {
