@@ -1465,6 +1465,13 @@ var codeGenInclusionArgs = function (tag) {
       'UI.block(' + Spacebars.compile2(tag.elseContent) + ')');
   }
 
+  // precalculate the number of positional args
+  var numPosArgs = 0;
+  _.each(tag.args, function (arg) {
+    if (arg.length === 2)
+      numPosArgs++;
+  });
+
   _.each(tag.args, function (arg) {
     var argType = arg[0];
     var argValue = arg[1];
@@ -1487,11 +1494,8 @@ var codeGenInclusionArgs = function (tag) {
       // while `Spacebars.dot(self.lookup("foo"), "bar")` may establish
       // dependencies.
       //
-      // In the multi-positional-arg construct, no point wrapping
-      // pos args after the first in a closure, as we have to
-      // rerun the whole thing anyway if one changes.
-      if (! ((path.length === 1) ||
-             ((! isKeyword) && posArgs.length)))
+      // In the multi-positional-arg construct, don't wrap pos args.
+      if (! ((path.length === 1) || (numPosArgs > 1)))
         argCode = 'function () { return ' + argCode + '; }';
       break;
     default:
