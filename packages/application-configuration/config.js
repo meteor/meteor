@@ -57,7 +57,8 @@ try {
       settings: settings,
       packages: {
         'mongo-livedata': {
-          url: process.env.MONGO_URL
+          url: process.env.MONGO_URL,
+          oplog: process.env.MONGO_OPLOG_URL
         }
       }
     };

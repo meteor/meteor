@@ -264,7 +264,7 @@ Tinytest.add("minimongo - lookup", function (test) {
 
 Tinytest.add("minimongo - selector_compiler", function (test) {
   var matches = function (should_match, selector, doc) {
-    var does_match = LocalCollection._matches(selector, doc);
+    var does_match = MinimongoTest.matches(selector, doc);
     if (does_match != should_match) {
       // XXX super janky
       test.fail({type: "minimongo-ordering",
@@ -1016,6 +1016,12 @@ Tinytest.add("minimongo - projection_compiler", function (test) {
      "_id blacklisted, no _id"]
   ]);
 
+  testProjection({}, [
+    [{ a: 1, b: 2, c: "3" },
+     { a: 1, b: 2, c: "3" },
+     "empty projection"]
+  ]);
+
   test.throws(function () {
     testProjection({ 'inc': 1, 'excl': 0 }, [
       [ { inc: 42, excl: 42 }, { inc: 42 }, "Can't combine incl/excl rules" ]
@@ -1116,6 +1122,18 @@ Tinytest.add("minimongo - fetch with fields", function (test) {
     if (!i) return;
     test.isTrue(x.i === arr[i-1].i + 1);
   });
+
+  // Temporary unsupported operators
+  // queries are taken from MongoDB docs examples
+  test.throws(function () {
+    c.find({}, { fields: { 'grades.$': 1 } });
+  });
+  test.throws(function () {
+    c.find({}, { fields: { grades: { $elemMatch: { mean: 70 } } } });
+  });
+  test.throws(function () {
+    c.find({}, { fields: { grades: { $slice: [20, 10] } } });
+  });
 });
 
 Tinytest.add("minimongo - fetch with projection, subarrays", function (test) {
@@ -1173,6 +1191,37 @@ Tinytest.add("minimongo - fetch with projection, subarrays", function (test) {
                     {a: [ [ { b: 1 }, { b: 2 } ], { b: 3 }, [ { b: 4 } ] ] });
   testForProjection({ 'a.b': 0, _id: 0 },
                     {a: [ [ { c: 2 }, { c: 4 } ], { c: 5 }, [ { c: 9 } ] ] });
+});
+
+Tinytest.add("minimongo - fetch with projection, deep copy", function (test) {
+  // Compiled fields projection defines the contract: returned document doesn't
+  // retain anything from the passed argument.
+  var doc = {
+    a: { x: 42 },
+    b: {
+      y: { z: 33 }
+    },
+    c: "asdf"
+  };
+
+  var fields = {
+    'a': 1,
+    'b.y': 1
+  };
+
+  var projectionFn = LocalCollection._compileProjection(fields);
+  var filteredDoc = projectionFn(doc);
+  doc.a.x++;
+  doc.b.y.z--;
+  test.equal(filteredDoc.a.x, 42, "projection returning deep copy - including");
+  test.equal(filteredDoc.b.y.z, 33, "projection returning deep copy - including");
+
+  fields = { c: 0 };
+  projectionFn = LocalCollection._compileProjection(fields);
+  filteredDoc = projectionFn(doc);
+
+  doc.a.x = 5;
+  test.equal(filteredDoc.a.x, 43, "projection returning deep copy - excluding");
 });
 
 Tinytest.add("minimongo - observe ordered with projection", function (test) {

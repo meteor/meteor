@@ -540,7 +540,7 @@ LocalCollection._f = {
 
 // For unit tests. True if the given document matches the given
 // selector.
-LocalCollection._matches = function (selector, doc) {
+MinimongoTest.matches = function (selector, doc) {
   return (LocalCollection._compileSelector(selector))(doc);
 };
 
