@@ -148,6 +148,51 @@ var appUrl = function (url) {
   return true;
 };
 
+
+// Calculate a hash of all the client resources downloaded by the
+// browser, including the application HTML, runtime config, code, and
+// static files.
+//
+// This hash *must* change if any resources seen by the browser
+// change, and ideally *doesn't* change for any server-only changes
+// (but the second is a performance enhancement, not a hard
+// requirement).
+
+var calculateClientHash = function () {
+  var hash = crypto.createHash('sha1');
+  hash.update(JSON.stringify(__meteor_runtime_config__), 'utf8');
+  _.each(WebApp.clientProgram.manifest, function (resource) {
+    if (resource.where === 'client' || resource.where === 'internal') {
+      hash.update(resource.path);
+      hash.update(resource.hash);
+    }
+  });
+  return hash.digest('hex');
+};
+
+
+// We need to calculate the client hash after all packages have loaded
+// to give them a chance to populate __meteor_runtime_config__.
+//
+// Calculating the hash during startup means that packages can only
+// populate __meteor_runtime_config__ during load, not during startup.
+//
+// Calculating instead it at the beginning of main after all startup
+// hooks had run would allow packages to also populate
+// __meteor_runtime_config__ during startup, but that's too late for
+// autoupdate because it needs to have the client hash at startup to
+// insert the auto update version itself into
+// __meteor_runtime_config__ to get it to the client.
+//
+// An alternative would be to give autoupdate a "post-start,
+// pre-listen" hook to allow it to insert the auto update version at
+// the right moment.
+
+Meteor.startup(function () {
+  WebApp.clientHash = calculateClientHash();
+});
+
+
 var runWebAppServer = function () {
   var shuttingDown = false;
   // read the control for the client we'll be serving up
@@ -369,17 +414,42 @@ var runWebAppServer = function () {
   var httpServer = http.createServer(app);
   var onListeningCallbacks = [];
 
-  // Set connections' idle timeout to 5 seconds. Allows us to gracefully shut
-  // down with keepalive connections.
-  httpServer.setTimeout(5000, function (socket) {
-    socket.end();
-  });
+  var longPollingSockets = {};
+
+  // After 5 seconds of a socket being open, assume it is a long-polling
+  // connection that we have to keep track of to shut down when we're shutting
+  // down the server overall.
+  httpServer.setTimeout(5000, Meteor.bindEnvironment(function (socket) {
+    if (shuttingDown) {
+      socket.end();
+    } else {
+      socket._meteorLongPollingId = Random.id();
+      longPollingSockets[socket._meteorLongPollingId] = socket;
+      // give the socket another minute to live.
+      var destroy = Meteor.setTimeout(function () {
+        delete longPollingSockets[socket._meteorLongPollingId];
+        socket.removeListener('close', onClose);
+        socket.destroy();
+      }, 60*1000);
+
+      var onClose =  function () {
+        delete longPollingSockets[socket._meteorLongPollingId];
+        Meteor.clearTimeout(destroy);
+      };
+      socket.on('close', onClose);
+    }
+  }, function (err) {
+    console.log(err);
+  }));
+
 
   // For now, handle SIGHUP here.  Later, this should be in some centralized
   // Meteor shutdown code.
   process.on('SIGHUP', Meteor.bindEnvironment(function () {
-    console.log("SIGHUP");
     shuttingDown = true;
+    _.each(longPollingSockets, function (socket, id) {
+      socket.end();
+    });
     // tell others with websockets open that we plan to close this.
     httpServer.emit('closing');
     httpServer.close( function () {
@@ -457,7 +527,6 @@ var runWebAppServer = function () {
     httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
       if (argv.keepalive || true)
         console.log("LISTENING"); // must match run.js
-      var port = httpServer.address().port;
       var proxyBinding;
 
       AppConfig.configurePackage('webapp', function (configuration) {
@@ -489,7 +558,7 @@ var runWebAppServer = function () {
 
     }, function (e) {
       console.error("Error listening:", e);
-      console.error(e.stack);
+      console.error(e && e.stack);
     }));
 
     if (argv.keepalive)

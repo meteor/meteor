@@ -42,4 +42,13 @@ Package.on_use(function(api) {
     // People like being able to clone objects.
     'ejson'
   ]);
+
+  // These are useful too!  But you don't have to see their exports
+  // unless you want to.
+  api.use([
+    // We can reload the client without messing up methods in flight.
+    'reload',
+    // And update automatically when new client code is available!
+    'autoupdate'
+  ], ['client', 'server']);
 });

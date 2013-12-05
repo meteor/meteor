@@ -1,14 +1,5 @@
 var url = Npm.require('url');
 
-// unique id for this instantiation of the server. If this changes
-// between client reconnects, the client will reload. You can set the
-// environment variable "SERVER_ID" to control this. For example, if
-// you want to only force a reload on major changes, you can use a
-// custom serverId which you only change when something worth pushing
-// to clients immediately happens.
-__meteor_runtime_config__.serverId =
-  process.env.SERVER_ID ? process.env.SERVER_ID : Random.id();
-
 var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX ||  "";
 
 StreamServer = function () {
@@ -76,10 +67,12 @@ StreamServer = function () {
     });
     self.open_sockets.push(socket);
 
-
-    // Send a welcome message with the serverId. Client uses this to
-    // reload if needed.
-    socket.send(JSON.stringify({server_id: __meteor_runtime_config__.serverId}));
+    // XXX COMPAT WITH 0.6.6. Send the old style welcome message, which
+    // will force old clients to reload. Remove this once we're not
+    // concerned about people upgrading from a pre-0.6.7 release. Also,
+    // remove the clause in the client that ignores the welcome message
+    // (livedata_connection.js)
+    socket.send(JSON.stringify({server_id: "0"}));
 
     // call all our callbacks when we get a new socket. they will do the
     // work of setting up handlers and such for specific messages.

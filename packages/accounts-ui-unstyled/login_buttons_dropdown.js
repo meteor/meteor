@@ -156,7 +156,7 @@ Template._loginButtonsLoggedOutDropdown.events({
 
 // additional classes that can be helpful in styling the dropdown
 Template._loginButtonsLoggedOutDropdown.additionalClasses = function () {
-  if (!Accounts.password) {
+  if (!hasPasswordService()) {
     return false;
   } else {
     if (loginButtonsSession.get('inSignupFlow')) {

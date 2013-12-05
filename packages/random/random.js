@@ -95,7 +95,6 @@ var RandomGenerator = function (seedArray) {
   var self = this;
   if (seedArray !== undefined)
     self.alea = Alea.apply(null, seedArray);
-  self._Alea = Alea;
 };
 
 RandomGenerator.prototype.fraction = function () {
@@ -138,7 +137,6 @@ RandomGenerator.prototype.hexString = function (digits) {
     return hexDigits.join('');
   }
 };
-
 RandomGenerator.prototype.id = function () {
   var digits = [];
   var self = this;

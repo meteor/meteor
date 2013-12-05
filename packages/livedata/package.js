@@ -31,8 +31,9 @@ Package.on_use(function (api) {
   api.export('LivedataTest', {testOnly: true});
 
   // Transport
-  api.use('reload', 'client');
+  api.use('reload', 'client', {weak: true});
   api.add_files('common.js');
+  api.add_files('retry.js', ['client', 'server']);
   api.add_files(['sockjs-0.3.4.js', 'stream_client_sockjs.js'], 'client');
   api.add_files('stream_client_nodejs.js', 'server');
   api.add_files('stream_client_common.js', ['client', 'server']);
@@ -63,6 +64,8 @@ Package.on_test(function (api) {
   api.use('test-helpers', ['client', 'server']);
   api.use(['underscore', 'tinytest', 'random', 'deps', 'minimongo']);
 
+  api.add_files('stub_stream.js');
+  api.add_files('livedata_server_tests.js', 'server');
   api.add_files('livedata_connection_tests.js', ['client', 'server']);
   api.add_files('livedata_tests.js', ['client', 'server']);
   api.add_files('livedata_test_service.js', ['client', 'server']);
@@ -71,5 +74,6 @@ Package.on_test(function (api) {
 
   api.use('http', 'client');
   api.add_files(['stream_tests.js'], 'client');
+  api.add_files('stream_client_tests.js', 'server');
   api.use('check', ['client', 'server']);
 });

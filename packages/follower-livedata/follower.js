@@ -3,10 +3,25 @@ var Future = Npm.require('fibers/future');
 
 
 var MONITOR_INTERVAL = 5*1000; // every 5 seconds
-var readFile = Meteor._wrapAsync(fs.readFile);
 
-var writeFile = Meteor._wrapAsync(fs.writeFile);
-
+/**
+ * Follower.connect() replaces DDP.connect() for connecting to DDP services that
+ * implement a leadership set.  The follower connection tries to keep connected
+ * to the leader, and fails over as the leader changes.
+ *
+ * Options: {
+ * group: The name of the leadership group to connect to.  Default "package.leadershipLivedata"
+ * }
+ *
+ * A Follower connection implements the following interfaces over and above a
+ * normal DDP connection:
+ *
+ * onLost(callback): calls callback when the library considers itself to have
+ * tried all its known options for the leadership group.
+ *
+ * onFound(callback): Called when the follower was previously lost, but has now
+ * successfully connected to something in the right leadership group.
+ */
 Follower = {
   connect: function (urlSet, options) {
     var electorTries;
@@ -16,34 +31,27 @@ Follower = {
     // start each elector as untried/assumed connectable.
 
     // for options.priority, low-priority things are tried first.
-    var makeElectorTries = function (urlSet, options) {
-      if (options.reset || !electorTries)
-        electorTries = {};
+    var makeElectorTries = function (urlSet) {
+
+      electorTries = {};
       if (typeof urlSet === 'string') {
         urlSet = _.map(urlSet.split(','), function (url) {return url.trim();});
       }
       _.each(urlSet, function (url) {
-        electorTries[url] = options.priority || 0;
+        electorTries[url] = 0;
       });
     };
-    if (options.file) {
-      var contents;
-      try {
-        contents = readFile(options.file, 'utf8');
-      } catch (e) {
-        console.log("no file to read electors out of");
-      }
-      if (contents)
-        makeElectorTries(contents, { priority: 0, reset: true });
-      makeElectorTries(urlSet, {priority: 1, reset: false});
-    } else {
-      makeElectorTries(urlSet, { priority: 0, reset: true });
-    }
+
+    makeElectorTries(urlSet);
+
     var tryingUrl = null;
     var outstandingGetElectorate = false;
     var conn = null;
+    var prevReconnect = null;
+    var prevDisconnect = null;
+    var prevApply = null;
     var leader = null;
-    var connected = null;
+    var connectedTo = null;
     var intervalHandle = null;
 
 
@@ -74,17 +82,10 @@ Follower = {
 
     var updateElectorate = function (res) {
       leader = res.leader;
-      _.each(electorTries, function (state, elector) {
-        if (!_.contains(res.electorate, elector)) {
-          delete electorTries[elector];
-        }
-      });
+      electorTries = {};
       _.each(res.electorate, function (elector) {
         electorTries[elector] = 0; // verified that this is in the current elector set.
       });
-      if (options.file) {
-        writeFile(options.file, res.electorate.join(','), 'utf8');
-      }
     };
 
     var tryElector = function (url) {
@@ -100,12 +101,14 @@ Follower = {
       }
 
       if (conn) {
-        conn._reconnectImpl({
+        prevReconnect.apply(conn, {
           url: url
         });
       } else {
         conn = DDP.connect(url);
-        conn._reconnectImpl = conn.reconnect;
+        prevReconnect = conn.reconnect;
+        prevDisconnect = conn.disconnect;
+        prevApply = conn.apply;
       }
       tryingUrl = url;
 
@@ -113,13 +116,13 @@ Follower = {
         outstandingGetElectorate = true;
         conn.call('getElectorate', options.group, function (err, res) {
           outstandingGetElectorate = false;
-          connected = tryingUrl;
+          connectedTo = tryingUrl;
           if (err) {
             tryElector();
             return;
           }
-          if (!_.contains(res.electorate, connected)) {
-            Log.warn("electorate " + res.electorate + " does not contain " + connected);
+          if (!_.contains(res.electorate, connectedTo)) {
+            Log.warn("electorate " + res.electorate + " does not contain " + connectedTo);
           }
           tryingUrl = null;
           if (! connectedToLeadershipGroup.isResolved()) {
@@ -128,7 +131,7 @@ Follower = {
           // we got an answer!  Connected!
           electorTries[url] = 0;
 
-          if (res.leader === connected) {
+          if (res.leader === connectedTo) {
             // we're good.
             if (lost) {
               // we're found.
@@ -155,12 +158,12 @@ Follower = {
     tryElector();
 
     var checkConnection = function () {
-      if (conn.status().status !== 'connected' || connected !== leader) {
+      if (conn.status().status !== 'connected' || connectedTo !== leader) {
         tryElector();
       } else {
         conn.call('getElectorate', options.group, function (err, res) {
           if (err) {
-            electorTries[connected]++;
+            electorTries[connectedTo]++;
             tryElector();
           } else if (res.leader !== leader) {
             // update the electorate, and then definitely try to connect to the leader.
@@ -183,8 +186,6 @@ Follower = {
 
     intervalHandle = monitorConnection();
 
-
-    var prevDisconnect = conn.disconnect;
     conn.disconnect = function () {
       if (intervalHandle)
         Meteor.clearInterval(intervalHandle);
@@ -196,10 +197,10 @@ Follower = {
       if (!intervalHandle)
         intervalHandle = monitorConnection();
       if (arguments[0] && arguments[0].url) {
-        makeElectorTries(arguments[0].url, {reset: true, priority: 0});
+        makeElectorTries(arguments[0].url, {reset: true});
         tryElector();
       } else {
-        conn._reconnectImpl.apply(conn, arguments);
+        prevReconnect.apply(conn, arguments);
       }
     };
 
@@ -215,19 +216,18 @@ Follower = {
     // Assumes that `call` is implemented in terms of `apply`. All method calls
     // should be deferred until we are sure we've connected to the right
     // leadership group.
-    conn._applyImpl = conn.apply;
     conn.apply = function (/* arguments */) {
       var args = _.toArray(arguments);
       if (typeof args[args.length-1] === 'function') {
         // this needs to be independent of this fiber if there is a callback.
         Meteor.defer(function () {
           connectedToLeadershipGroup.wait();
-          return conn._applyImpl.apply(conn, args);
+          return prevApply.apply(conn, args);
         });
         return null; // if there is a callback, the return value is not used
       } else {
         connectedToLeadershipGroup.wait();
-        return conn._applyImpl.apply(conn, args);
+        return prevApply.apply(conn, args);
       }
     };
 
@@ -240,6 +240,6 @@ Follower = {
     };
 
     return conn;
-
   }
+
 };

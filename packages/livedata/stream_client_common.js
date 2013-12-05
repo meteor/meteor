@@ -77,7 +77,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
   on: function (name, callback) {
     var self = this;
 
-    if (name !== 'message' && name !== 'reset' && name !== 'update_available')
+    if (name !== 'message' && name !== 'reset')
       throw new Error("unknown event type: " + name);
 
     if (!self.eventCallbacks[name])
@@ -93,27 +93,6 @@ _.extend(LivedataTest.ClientStream.prototype, {
     // how long to wait until we declare the connection attempt
     // failed.
     self.CONNECT_TIMEOUT = 10000;
-
-
-    // time for initial reconnect attempt.
-    self.RETRY_BASE_TIMEOUT = 1000;
-    // exponential factor to increase timeout each attempt.
-    self.RETRY_EXPONENT = 2.2;
-    // maximum time between reconnects. keep this intentionally
-    // high-ish to ensure a server can recover from a failure caused
-    // by load
-    self.RETRY_MAX_TIMEOUT = 5 * 60000; // 5 minutes
-    // time to wait for the first 2 retries.  this helps page reload
-    // speed during dev mode restarts, but doesn't hurt prod too
-    // much (due to CONNECT_TIMEOUT)
-    self.RETRY_MIN_TIMEOUT = 10;
-    // how many times to try to reconnect 'instantly'
-    self.RETRY_MIN_COUNT = 2;
-    // fuzz factor to randomize reconnect times by. avoid reconnect
-    // storms.
-    self.RETRY_FUZZ = 0.5; // +- 25%
-
-
 
     self.eventCallbacks = {}; // name -> [callback]
 
@@ -134,7 +113,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
     };
 
     //// Retry logic
-    self.retryTimer = null;
+    self._retry = new Retry;
     self.connectionTimer = null;
 
   },
@@ -161,9 +140,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
       self._lostConnection();
     }
 
-    if (self.retryTimer)
-      clearTimeout(self.retryTimer);
-    self.retryTimer = null;
+    self._retry.clear();
     self.currentStatus.retryCount -= 1; // don't count manual retries
     self._retryNow();
   },
@@ -186,10 +163,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
     }
 
     self._cleanup();
-    if (self.retryTimer) {
-      clearTimeout(self.retryTimer);
-      self.retryTimer = null;
-    }
+    self._retry.clear();
 
     self.currentStatus = {
       status: (options._permanent ? "failed" : "offline"),
@@ -210,22 +184,6 @@ _.extend(LivedataTest.ClientStream.prototype, {
     self._retryLater(); // sets status. no need to do it here.
   },
 
-  _retryTimeout: function (count) {
-    var self = this;
-
-    if (count < self.RETRY_MIN_COUNT)
-      return self.RETRY_MIN_TIMEOUT;
-
-    var timeout = Math.min(
-      self.RETRY_MAX_TIMEOUT,
-      self.RETRY_BASE_TIMEOUT * Math.pow(self.RETRY_EXPONENT, count));
-    // fuzz the timeout randomly, to avoid reconnect storms when a
-    // server goes down.
-    timeout = timeout * ((Random.fraction() * self.RETRY_FUZZ) +
-                         (1 - self.RETRY_FUZZ/2));
-    return timeout;
-  },
-
   // fired when we detect that we've gone online. try to reconnect
   // immediately.
   _online: function () {
@@ -237,10 +195,13 @@ _.extend(LivedataTest.ClientStream.prototype, {
   _retryLater: function () {
     var self = this;
 
-    var timeout = self._retryTimeout(self.currentStatus.retryCount);
-    if (self.retryTimer)
-      clearTimeout(self.retryTimer);
-    self.retryTimer = setTimeout(_.bind(self._retryNow, self), timeout);
+    var timeout = 0;
+    if (self.options.retry) {
+      timeout = self._retry.retryLater(
+        self.currentStatus.retryCount,
+        _.bind(self._retryNow, self)
+      );
+    }
 
     self.currentStatus.status = "waiting";
     self.currentStatus.connected = false;

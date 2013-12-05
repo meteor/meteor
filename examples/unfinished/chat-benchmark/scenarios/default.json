@@ -1,0 +1,11 @@
+{
+  "params": {
+    "roomsPerClient": 5,
+    "messageHistorySeconds": 600,
+    "roomHistorySeconds": 500,
+    "talkativeMessagesPerSecond": 0.2,
+    "talkativePeriodSeconds": 60,
+    "chanceClientIsTalkative": 0.10,
+    "messageSize": 140
+  }
+}

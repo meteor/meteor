@@ -9,11 +9,11 @@
 // We don't do any heartbeating. (The logic that did this in sockjs was removed,
 // because it used a built-in sockjs mechanism. We could do it with WebSocket
 // ping frames or with DDP-level messages.)
-//
-// Options:
-//   headers: an object with http headers to use on the websockets connection.
 LivedataTest.ClientStream = function (endpoint, options) {
   var self = this;
+  self.options = _.extend({
+    retry: true
+  }, options);
 
   // WebSocket-Node https://github.com/Worlize/WebSocket-Node
   // Chosen because it can run without native components. It has a
@@ -37,9 +37,12 @@ LivedataTest.ClientStream = function (endpoint, options) {
   options = options || {};
   self.headers = options.headers || {};
 
-  self.client.on('connect', function (connection) {
-    return self._onConnect(connection);
-  });
+  self.client.on('connect', Meteor.bindEnvironment(
+    function (connection) {
+      return self._onConnect(connection);
+    },
+    "stream connect callback"
+  ));
 
   self.client.on('connectFailed', function (error) {
     // XXX: Make this do something better than make the tests hang if it does not work.
@@ -48,7 +51,6 @@ LivedataTest.ClientStream = function (endpoint, options) {
 
   self._initCommon();
 
-  self.expectingWelcome = false;
   //// Kickoff!
   self._launchConnection();
 };
@@ -96,34 +98,46 @@ _.extend(LivedataTest.ClientStream.prototype, {
       self.connectionTimer = null;
     }
 
-    connection.on('error', function (error) {
-      if (self.currentConnection !== this)
-        return;
+    var onError = Meteor.bindEnvironment(
+      function (_this) {
+        if (self.currentConnection !== _this)
+          return;
 
-      Meteor._debug("stream error", error.toString(),
-                    (new Date()).toDateString());
-      self._lostConnection();
+        Meteor._debug("stream error", error.toString(),
+                      (new Date()).toDateString());
+        self._lostConnection();
+      },
+      "stream error callback"
+    );
+
+    connection.on('error', function (error) {
+      // We have to pass in `this` explicitly because bindEnvironment
+      // doesn't propagate it for us.
+      onError(this);
     });
+
+    var onClose = Meteor.bindEnvironment(
+      function (_this) {
+        if (self.options._testOnClose)
+          self.options._testOnClose();
+
+        if (self.currentConnection !== _this)
+          return;
+
+        self._lostConnection();
+      },
+      "stream close callback"
+    );
 
     connection.on('close', function () {
-      if (self.currentConnection !== this)
-        return;
-
-      self._lostConnection();
+      // We have to pass in `this` explicitly because bindEnvironment
+      // doesn't propagate it for us.
+      onClose(this);
     });
 
-    self.expectingWelcome = true;
     connection.on('message', function (message) {
       if (self.currentConnection !== this)
         return; // old connection still emitting messages
-
-      if (self.expectingWelcome) {
-        // Discard the first message that comes across the
-        // connection. It is the hot code push version identifier and
-        // is not actually part of DDP.
-        self.expectingWelcome = false;
-        return;
-      }
 
       if (message.type === "utf8") // ignore binary frames
         _.each(self.eventCallbacks.message, function (callback) {
