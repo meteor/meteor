@@ -313,6 +313,17 @@ UI.Component.parented = function () {
   var self = this;
   for (var comp = self; comp; comp = comp._super) {
     var events = (comp.hasOwnProperty('_events') && comp._events) || null;
+    if ((! events) && comp.hasOwnProperty('events') &&
+        typeof comp.events === 'object') {
+      // Provide limited back-compat support for `.events = {...}`
+      // syntax.  Pass `comp.events` to the original `.events(...)`
+      // function.  This code must run only once per component, in
+      // order to not bind the handlers more than once, which is
+      // ensured by the fact that we only do this when `comp._events`
+      // is falsy, and we cause it to be set now.
+      UI.Component.events.call(comp, comp.events);
+      events = comp._events;
+    }
     _.each(events, function (esh) { // {events, selector, handler}
       // wrap the handler here, per instance of the template that
       // declares the event map, so we can pass the instance to
