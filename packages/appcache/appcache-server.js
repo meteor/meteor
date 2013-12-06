@@ -178,7 +178,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
 var sizeCheck = function() {
   var totalSize = 0;
   _.each(WebApp.clientProgram.manifest, function (resource) {
-    if (resource.where === 'client') {
+    if (resource.cacheable && resource.where === 'client') {
       totalSize += resource.size;
     }
   });
