@@ -10,6 +10,8 @@ With the `less` package installed, `.less` files in your application are
 automatically compiled to CSS and the results are included in the client CSS
 bundle.
 
+You can set options for LESS by creating a file called `.lessrc` in your application's root directory. `.lessrc` should be a valid JSON file containing the options you would like to pass to the compiler.
+
 {{#note}}
 If you want to `@import` a file, give it the extension `.lessimport`
 to prevent Meteor from processing it independently.

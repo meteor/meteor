@@ -2,7 +2,7 @@
 Tinytest.add("less - presence", function(test) {
 
   var d = OnscreenDiv(Meteor.render(function() {
-    return '<p class="less-dashy-left-border"></p>'; }));
+    return '<p class="less-dashy-dotty-double-border"></p>'; }));
   d.node().style.display = 'block';
 
   var p = d.node().firstChild;
@@ -10,6 +10,9 @@ Tinytest.add("less - presence", function(test) {
 
   // test @import
   test.equal(getStyleProperty(p, 'border-right-style'), "dotted");
+
+  // test .lessrc config
+  test.equal(getStyleProperty(p, 'border-bottom-style'), "double");
 
   d.kill();
 });
