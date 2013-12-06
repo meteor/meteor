@@ -1415,9 +1415,6 @@ var replaceSpecials = function (node) {
         return HTML.EmitCode('function () { return ' +
                              codeGenMustache(tag) + '; }');
       } else if (tag.type === 'TRIPLE') {
-        var nameCode = codeGenPath2(tag.path);
-        var argCode = codeGenArgs2(tag.args);
-
         return HTML.EmitCode('function () { return Spacebars.makeRaw(' +
                              codeGenMustache(tag) + '); }');
       } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
