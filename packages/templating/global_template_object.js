@@ -4,7 +4,7 @@ Template = {};
 
 Template.__define__ = function (templateName, renderFunc) {
   if (Template.hasOwnProperty(templateName))
-    throw new Error("Can't have two templates named: " + templateName);
+    throw new Error("There are multiple templates named '" + templateName + "'. Each template needs a unique name.");
 
   Template[templateName] = UI.Component.extend({
     kind: "Template_" + templateName,
