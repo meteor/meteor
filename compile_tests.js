@@ -7,7 +7,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       var msg = '';
       test.throws(function () {
         try {
-          Spacebars.compile2(input);
+          Spacebars.compile(input);
         } catch (e) {
           msg = e.message;
           throw e;
@@ -16,7 +16,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       test.equal(msg.slice(0, expectedMessage.length),
                  expectedMessage);
     } else {
-      var output = Spacebars.compile2(input);
+      var output = Spacebars.compile(input);
       var postProcess = function (string) {
         // remove initial and trailing parens
         return string.replace(/^\(([\S\s]*)\)$/, '$1');
@@ -42,7 +42,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       function() {
         var self = this;
         return function() {
-          return Spacebars.mustache2(self.lookup("foo"));
+          return Spacebars.mustache(self.lookup("foo"));
         };
       });
 
@@ -50,7 +50,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       function() {
         var self = this;
         return function() {
-          return Spacebars.mustache2(self.lookup("foo"), self.lookup("bar"));
+          return Spacebars.mustache(self.lookup("foo"), self.lookup("bar"));
         };
       });
 
@@ -58,7 +58,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       function() {
         var self = this;
         return function() {
-          return Spacebars.mustache2(self.lookup("foo"), Spacebars.kw({
+          return Spacebars.mustache(self.lookup("foo"), Spacebars.kw({
             x: self.lookup("bar")
           }));
         };
@@ -68,7 +68,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       function() {
         var self = this;
         return function() {
-          return Spacebars.mustache2(Spacebars.dot(self.lookup("foo"), "bar"), self.lookup("baz"));
+          return Spacebars.mustache(Spacebars.dot(self.lookup("foo"), "bar"), self.lookup("baz"));
         };
       });
 
@@ -76,7 +76,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       function() {
         var self = this;
         return function() {
-          return Spacebars.mustache2(self.lookup("foo"), Spacebars.dot(self.lookup("bar"), "baz"));
+          return Spacebars.mustache(self.lookup("foo"), Spacebars.dot(self.lookup("bar"), "baz"));
         };
       });
 
@@ -84,7 +84,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       function() {
         var self = this;
         return function() {
-          return Spacebars.mustache2(self.lookup("foo"), Spacebars.kw({
+          return Spacebars.mustache(self.lookup("foo"), Spacebars.kw({
             x: Spacebars.dot(self.lookup("bar"), "baz")
           }));
         };
