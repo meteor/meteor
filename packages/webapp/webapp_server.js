@@ -18,6 +18,7 @@ var LONG_SOCKET_TIMEOUT = 120*1000;
 WebApp = {};
 WebAppInternals = {};
 
+var bundledJsCssPrefix;
 
 var makeAppNamePathPrefix = function (appName) {
   return encodeURIComponent(appName).replace(/\./g, '_');
@@ -528,6 +529,11 @@ var runWebAppServer = function () {
         /##ROOT_URL_PATH_PREFIX##/g,
       __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || "");
 
+    boilerplateHtml = boilerplateHtml.replace(
+        /##BUNDLED_JS_CSS_PREFIX##/g,
+      bundledJsCssPrefix ||
+        __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || "");
+
     // only start listening after all the startup code has run.
     var localPort = parseInt(process.env.PORT) || 0;
     var host = process.env.BIND_IP;
@@ -706,4 +712,8 @@ WebAppInternals.inlineScriptsAllowed = function () {
 
 WebAppInternals.setInlineScriptsAllowed = function (value) {
   inlineScriptsAllowed = value;
+};
+
+WebAppInternals.setBundledJsCssPrefix = function (prefix) {
+  bundledJsCssPrefix = prefix;
 };

@@ -782,13 +782,13 @@ _.extend(ClientTarget.prototype, {
               '<html##HTML_ATTRIBUTES##>\n' +
               '<head>\n');
     _.each(self.css, function (css) {
-      html.push('  <link rel="stylesheet" href="##ROOT_URL_PATH_PREFIX##');
+      html.push('  <link rel="stylesheet" href="##BUNDLED_JS_CSS_PREFIX##');
       html.push(_.escape(css.url));
       html.push('">\n');
     });
     html.push('\n\n##RUNTIME_CONFIG##\n\n');
     _.each(self.js, function (js) {
-      html.push('  <script type="text/javascript" src="##ROOT_URL_PATH_PREFIX##');
+      html.push('  <script type="text/javascript" src="##BUNDLED_JS_CSS_PREFIX##');
       html.push(_.escape(js.url));
       html.push('"></script>\n');
     });
