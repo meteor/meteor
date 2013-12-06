@@ -460,8 +460,6 @@ Tinytest.add("templating - events", function (test) {
   var div = renderToDiv(tmpl);
   var cleanupDiv = addToBody(div);
   clickElement($(div).find('b')[0]);
-  // XXX this fails; replacing `tmpl.events = {` above with
-  // `tmpl.events({` makes it pass.
   test.equal(buf, ['b']);
   cleanupDiv();
   Deps.flush();
