@@ -556,3 +556,9 @@ Tinytest.add('templating - each falsy Issue #801', function (test) {
   test.equal(canonicalizeHtml(div.innerHTML), "12null");
 });
 
+Tinytest.add('templating - duplicate template error', function (test) {
+  Template.__define__("foo", function () {});
+  test.throws(function () {
+    Template.__define__("foo", function () {});
+  });
+});
