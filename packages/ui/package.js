@@ -18,13 +18,13 @@ Package.on_use(function (api) {
 
   api.add_files(['exceptions.js', 'base.js']);
 
-  api.add_files(['dombackend2.js',
+  api.add_files(['dombackend.js',
                  'domrange.js'], 'client');
 
-  api.add_files(['attrs2.js',
-                 'render2.js',
+  api.add_files(['attrs.js',
+                 'render.js',
                  'components.js',
-                 'each2.js',
+                 'each.js',
                  'fields.js'
                 ]);
 
@@ -41,9 +41,8 @@ Package.on_test(function (api) {
 
   api.add_files([
     'base_tests.js',
-    'render_tests.js',
     'domrange_tests.js',
-    'render2_tests.js',
+    'render_tests.js',
     'dombackend_tests.js'
   ], 'client');
 });

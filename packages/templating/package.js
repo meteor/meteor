@@ -12,7 +12,7 @@ Package._transitional_registerBuildPlugin({
   name: "compileTemplates",
   use: ['spacebars'],
   sources: [
-    'plugin/html2_scanner.js',
+    'plugin/html_scanner.js',
     'plugin/compile-templates.js'
   ]
 });
@@ -45,7 +45,7 @@ Package.on_test(function (api) {
     'templating_tests.html'
   ], 'client');
   api.add_files([
-    'plugin/html2_scanner.js',
+    'plugin/html_scanner.js',
     'scanner_tests.js'
   ], 'server');
 });
