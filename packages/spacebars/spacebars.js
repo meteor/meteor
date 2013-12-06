@@ -1491,9 +1491,9 @@ var codeGenInclusionArgs = function (tag) {
       // while `Spacebars.dot(self.lookup("foo"), "bar")` may establish
       // dependencies.
       //
-      // In the multi-positional-arg construct, don't wrap pos args.
+      // In the multi-positional-arg construct, don't wrap pos args here.
       if (! ((path.length === 1) || (numPosArgs > 1)))
-        argCode = 'function () { return ' + argCode + '; }';
+        argCode = 'function () { return Spacebars.call2(' + argCode + '); }';
       break;
     default:
       // can't get here
@@ -1684,7 +1684,8 @@ Spacebars.combineAttributes = function (/*attrObjects*/) {
 // If `bar` and `baz` are functions, they are called before
 // `foo` is called on them.
 Spacebars.mustache2 = function (value/*, args*/) {
-  var result = Spacebars.call2.apply(null, arguments);
+  var args = ensureHash(arguments);
+  var result = Spacebars.call2.apply(null, args);
 
   if (result instanceof Handlebars.SafeString)
     return HTML.Raw(result.toString());
@@ -1727,9 +1728,21 @@ Spacebars.call2 = function (value/*, args*/) {
   }
 };
 
-Spacebars.attrMustache = function (value/*, args*/) {
+// If the last element of `args` is not a `Spacebars.kw` object,
+// return a new array with an appended `Spacebars.kw` object.
+// Otherwise just return `args`.  `args` may be an arguments
+// object; we won't mutate it.
+var ensureHash = function (args) {
+  if (! (args[args.length - 1] instanceof Spacebars.kw)) {
+    args = Array.prototype.slice.call(args);
+    args.push(Spacebars.kw());
+  }
+  return args;
+};
 
-  var result = Spacebars.call2.apply(null, arguments);
+Spacebars.attrMustache = function (value/*, args*/) {
+  var args = ensureHash(arguments);
+  var result = Spacebars.call2.apply(null, args);
 
   if (result == null || result === '') {
     return null;
@@ -1867,8 +1880,17 @@ var codeGenArgs2 = function (tagArgs) {
   // put kwArgs in options dictionary at end of args
   if (kwArgs) {
     args = (args || []);
-    args.push('{hash: ' + makeObjectLiteral(kwArgs) + '}');
+    args.push('Spacebars.kw(' + makeObjectLiteral(kwArgs) + ')');
   }
 
   return args;
+};
+
+// Call this as `Spacebars.kw({ ... })`.  The return value
+// is `instanceof Spacebars.kw`.
+Spacebars.kw = function (hash) {
+  if (! (this instanceof Spacebars.kw))
+    return new Spacebars.kw(hash);
+
+  this.hash = hash || {};
 };
