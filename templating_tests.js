@@ -550,8 +550,8 @@ Tinytest.add('templating - each falsy Issue #801', function (test) {
 });
 
 Tinytest.add('templating - duplicate template error', function (test) {
-  Template.__define__("foo", function () {});
+  Template.__define__("test_duplicate_template", function () {});
   test.throws(function () {
-    Template.__define__("foo", function () {});
+    Template.__define__("test_duplicate_template", function () {});
   });
 });
