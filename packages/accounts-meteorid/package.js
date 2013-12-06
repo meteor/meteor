@@ -9,7 +9,7 @@ Package.on_use(function (api) {
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);
   api.use('accounts-oauth', ['client', 'server']);
-  api.use('meteor-auth', ['client', 'server']);
+  api.use('meteorid', ['client', 'server']);
 
-  api.add_files("accounts-meteor.js");
+  api.add_files("accounts-meteorid.js");
 });

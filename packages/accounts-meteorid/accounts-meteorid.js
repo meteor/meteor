@@ -1,8 +1,8 @@
-Accounts.oauth.registerService("meteor");
+Accounts.oauth.registerService("meteorid");
 
 if (Meteor.isClient) {
   // Options are documented in the meteor-auth package.
-  Meteor.loginWithMeteor = function (options, callback) {
+  Meteor.loginWithMeteorId = function (options, callback) {
     // support a callback without options
     if (! callback && typeof options === "function") {
       callback = options;
@@ -10,6 +10,6 @@ if (Meteor.isClient) {
     }
 
     var credentialRequestCompleteCallback = Accounts.oauth.credentialRequestCompleteHandler(callback);
-    MeteorAccounts.requestCredential(options, credentialRequestCompleteCallback);
+    MeteorId.requestCredential(options, credentialRequestCompleteCallback);
   };
 }

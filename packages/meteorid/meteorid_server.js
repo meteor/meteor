@@ -1,6 +1,6 @@
-MeteorAccounts = {};
+MeteorId = {};
 
-Oauth.registerService("meteor", 2, null, function (query) {
+Oauth.registerService("meteorid", 2, null, function (query) {
   var response = getTokens(query);
   var accessToken = response.accessToken;
   var identity = getIdentity(accessToken);
@@ -37,7 +37,7 @@ var getTokens = function (query) {
   var response;
   try {
     response = HTTP.post(
-      "https://accounts.meteor.com/token", {
+      METEORID_URL + "/token", {
         params: {
           grant_type: "authorization_code",
           code: query.code,
@@ -50,14 +50,14 @@ var getTokens = function (query) {
       }
     );
   } catch (err) {
-    throw _.extend(new Error("Failed to complete OAuth handshake with Meteor Accounts. "
+    throw _.extend(new Error("Failed to complete OAuth handshake with MeteorId. "
                              + err.message),
                    {response: err.response});
   }
 
   if (! response.data || response.data.error) {
     // if the http response was a json object with an error attribute
-    throw new Error("Failed to complete OAuth handshake with Meteor Accounts. " +
+    throw new Error("Failed to complete OAuth handshake with MeteorId. " +
                     response.data.error);
   } else {
     return {
@@ -71,14 +71,14 @@ var getTokens = function (query) {
 var getIdentity = function (accessToken) {
   try {
     return HTTP.get(
-      "https://accounts.meteor.com/identity",
+      METEORID_URL + "/identity",
       {params: {access_token: accessToken}}).data;
   } catch (err) {
-    throw _.extend(new Error("Failed to fetch identity from Meteor Accounts. " + err.message),
+    throw _.extend(new Error("Failed to fetch identity from MeteorId. " + err.message),
                    {response: err.response});
   }
 };
 
-MeteorAccounts.retrieveCredential = function(credentialToken) {
+MeteorId.retrieveCredential = function(credentialToken) {
   return Oauth.retrieveCredential(credentialToken);
 };
