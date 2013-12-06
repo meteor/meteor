@@ -42,6 +42,19 @@ var getUniverse = function () {
   return universe;
 };
 
+var getAuthServiceBaseUrl = function () {
+  var match = getUniverse().match(/^localhost(:([\d]+))?$/);
+  if (! match)
+    return universe;
+  else {
+    // Special case for local development. Point
+    // $METEOR_CHECKOUT/universe at the place where you are running
+    // frontpage (eg, localhost:3000), and run the accounts server ten
+    // port numbers higher (cd meteor-accounts && meteor -p 3010).
+    return "localhost:" + (parseInt(match[2] || "80") + 10);
+  }
+}
+
 // Given a hostname, add "http://" or "https://" as
 // appropriate. (localhost gets http; anything else is always https.)
 var addScheme = function (host) {
@@ -69,14 +82,14 @@ _.extend(exports, {
   // "https://www.meteor.com/oauth2". Endpoints include /authorize and
   // /token.
   getOauthUrl: function () {
-    return addScheme(getUniverse()) + "/oauth2";
+    return addScheme(getAuthServiceBaseUrl()) + "/oauth2";
   },
 
   // Base URL for Meteor Accounts API, typically
   // "https://www.meteor.com/api/v1". Endpoints include '/login' and
   // '/logoutById'.
   getAccountsApiUrl: function () {
-    return addScheme(getUniverse()) + "/api/v1";
+    return addScheme(getAuthServiceBaseUrl()) + "/api/v1";
   },
 
   // Return the domain name of the current Meteor Accounts server in
