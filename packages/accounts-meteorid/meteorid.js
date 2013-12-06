@@ -1,16 +1,10 @@
 Accounts.oauth.registerService("meteorid");
 
 if (Meteor.isClient) {
-  Meteor.loginWithMeteorId = function (options, callback) {
-    // support a callback without options
-    if (! callback && typeof options === "function") {
-      callback = options;
-      options = null;
-    }
-
+  Meteor.loginWithMeteorId = function (callback) {
     var credentialRequestCompleteCallback =
           Accounts.oauth.credentialRequestCompleteHandler(callback);
-    MeteorId.requestCredential(options, credentialRequestCompleteCallback);
+    MeteorId.requestCredential(credentialRequestCompleteCallback);
   };
 } else {
   Accounts.addAutopublishFields({

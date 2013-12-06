@@ -11,5 +11,6 @@ Package.on_use(function (api) {
   api.use('accounts-oauth', ['client', 'server']);
   api.use('meteorid', ['client', 'server']);
 
-  api.add_files("accounts-meteorid.js");
+  api.add_files("meteorid.js");
+  api.add_files("meteorid_login_button.css", "client");
 });
