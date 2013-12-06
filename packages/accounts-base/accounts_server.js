@@ -645,6 +645,8 @@ if (Package.autopublish) {
 
 // Publish all login service configuration fields other than secret.
 Meteor.publish("meteor.loginServiceConfiguration", function () {
+  var ServiceConfiguration =
+    Package['service-configuration'].ServiceConfiguration;
   return ServiceConfiguration.configurations.find({}, {fields: {secret: 0}});
 }, {is_auto: true}); // not techincally autopublish, but stops the warning.
 
@@ -663,6 +665,9 @@ Meteor.methods({
           && _.contains(Accounts.oauth.serviceNames(), options.service))) {
       throw new Meteor.Error(403, "Service unknown");
     }
+
+    var ServiceConfiguration =
+      Package['service-configuration'].ServiceConfiguration;
     if (ServiceConfiguration.configurations.findOne({service: options.service}))
       throw new Meteor.Error(403, "Service " + options.service + " already configured");
     ServiceConfiguration.configurations.insert(options);

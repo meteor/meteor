@@ -50,7 +50,9 @@ var getAuthServiceBaseUrl = function () {
     // Special case for local development. Point
     // $METEOR_CHECKOUT/universe at the place where you are running
     // frontpage (eg, localhost:3000), and run the accounts server ten
-    // port numbers higher (cd meteor-accounts && meteor -p 3010).
+    // port numbers higher. Like so:
+    //   cd meteor-accounts
+    //   ROOT_URL=http://localhost:3010/auth curmeteor -p 3010
     return "localhost:" + (parseInt(match[2] || "80") + 10);
   }
 }

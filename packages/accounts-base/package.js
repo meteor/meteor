@@ -8,8 +8,11 @@ Package.on_use(function (api) {
   api.use('deps', 'client');
   api.use('check', 'server');
   api.use('random', ['client', 'server']);
-  api.use('service-configuration', ['client', 'server']);
   api.use('ejson', 'server');
+
+  // use unordered to work around a circular dependency
+  // (service-configuration needs Accounts.connection)
+  api.use('service-configuration', ['client', 'server'], { unordered: true });
 
   // needed for getting the currently logged-in user
   api.use('livedata', ['client', 'server']);

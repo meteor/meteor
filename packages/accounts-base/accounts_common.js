@@ -79,17 +79,48 @@ Accounts.config = function(options) {
     maybeStopExpireTokensInterval();
 };
 
+if (Meteor.isClient) {
+  // The connection used by the Accounts system. This is the connection
+  // that will get logged in by Meteor.login(), and this is the
+  // connection whose login state will be reflected by Meteor.userId().
+  //
+  // It would be much preferable for this to be in accounts_client.js,
+  // but it has to be here because it's needed to create the
+  // Meteor.users collection.
+  Accounts.connection = Meteor.connection;
+
+  if (typeof __meteor_runtime_config__ !== "undefined" &&
+      __meteor_runtime_config__.ACCOUNTS_CONNECTION_URL) {
+    // Temporary, internal hook to allow the server to point the client
+    // to a different authentication server. This is for a very
+    // particular use case that comes up when implementing a oauth
+    // server. Unsupported and may go away at any point in time.
+    //
+    // We will eventually provide a general way to use account-base
+    // against any DDP connection, not just one special one.
+    Accounts.connection = DDP.connect(
+      __meteor_runtime_config__.ACCOUNTS_CONNECTION_URL)
+  }
+}
+
 // Users table. Don't use the normal autopublish, since we want to hide
 // some fields. Code to autopublish this is in accounts_server.js.
 // XXX Allow users to configure this collection name.
 //
-Meteor.users = new Meteor.Collection("users", {_preventAutopublish: true});
+Meteor.users = new Meteor.Collection("users", {
+  _preventAutopublish: true,
+  connection: Meteor.isClient ? Accounts.connection : Meteor.connection
+});
 // There is an allow call in accounts_server that restricts this
 // collection.
 
 // loginServiceConfiguration and ConfigError are maintained for backwards compatibility
-Accounts.loginServiceConfiguration = ServiceConfiguration.configurations;
-Accounts.ConfigError = ServiceConfiguration.ConfigError;
+Meteor.startup(function () {
+  var ServiceConfiguration =
+    Package['service-configuration'].ServiceConfiguration;
+  Accounts.loginServiceConfiguration = ServiceConfiguration.configurations;
+  Accounts.ConfigError = ServiceConfiguration.ConfigError;
+});
 
 // Thrown when the user cancels the login process (eg, closes an oauth
 // popup, declines retina scan, etc)

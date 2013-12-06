@@ -170,12 +170,15 @@ Template._configureLoginServiceDialog.events({
       });
 
       // Configure this login service
-      Meteor.call("configureLoginService", configuration, function (error, result) {
-        if (error)
-          Meteor._debug("Error configuring login service " + serviceName, error);
-        else
-          loginButtonsSession.set('configureLoginServiceDialogVisible', false);
-      });
+      Accounts.connection.call(
+        "configureLoginService", configuration, function (error, result) {
+          if (error)
+            Meteor._debug("Error configuring login service " + serviceName,
+                          error);
+          else
+            loginButtonsSession.set('configureLoginServiceDialogVisible',
+                                    false);
+        });
     }
   },
   // IE8 doesn't support the 'input' event, so we'll run this on the keyup as
