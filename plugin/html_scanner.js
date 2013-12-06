@@ -148,7 +148,7 @@ html_scanner = {
       if (! name)
         throwParseError("Template has no 'name' attribute");
 
-      var renderFuncCode = Spacebars.compile2(
+      var renderFuncCode = Spacebars.compile(
         contents, {
           isTemplate: true,
           sourceName: 'Template "' + name + '"'
@@ -161,7 +161,7 @@ html_scanner = {
       if (hasAttribs)
         throwParseError("Attributes on <body> not supported");
 
-      var renderFuncCode = Spacebars.compile2(
+      var renderFuncCode = Spacebars.compile(
         contents, { sourceName: "<body>" });
 
       // We may be one of many `<body>` tags.
