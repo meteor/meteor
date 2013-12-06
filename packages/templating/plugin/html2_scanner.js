@@ -154,10 +154,8 @@ html2_scanner = {
           sourceName: 'Template "' + name + '"'
         });
 
-      results.js += "\nTemplate[" + JSON.stringify(name) +
-        "] = UI.Component.extend({kind: " +
-        JSON.stringify("Template_" + name) + ", render: " +
-        renderFuncCode + "});\n";
+      results.js += "\nTemplate.__define__(" + JSON.stringify(name) +
+        ", " + renderFuncCode + ");\n";
     } else {
       // <body>
       if (hasAttribs)

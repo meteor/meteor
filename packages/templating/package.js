@@ -45,7 +45,7 @@ Package.on_test(function (api) {
     'templating_tests.html2'
   ], 'client');
   api.add_files([
-    'plugin/html_scanner.js',
+    'plugin/html2_scanner.js',
     'scanner_tests.js'
   ], 'server');
 });
