@@ -107,7 +107,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       function() {
         var self = this;
         return function() {
-          return Spacebars.include(UI.If2, {
+          return Spacebars.include(UI.If, {
             __content: UI.block(function() {
               var self = this;
               return "aaa";
@@ -147,7 +147,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
         return function() {
           return Spacebars.include(Template["foo"] || self.lookup("foo"), {
             data: function() {
-              return Spacebars.call2(Spacebars.dot(self.lookup("bar"), "baz"));
+              return Spacebars.call(Spacebars.dot(self.lookup("bar"), "baz"));
             }
           });
         };
@@ -159,7 +159,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
         return function() {
           return Spacebars.include(Template["foo"] || self.lookup("foo"), {
             x: function() {
-              return Spacebars.call2(Spacebars.dot(self.lookup("bar"), "baz"));
+              return Spacebars.call(Spacebars.dot(self.lookup("bar"), "baz"));
             }
           });
         };
@@ -178,7 +178,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
               return "aaa";
             }),
             data: function() {
-              return Spacebars.call2(self.lookup("bar"), self.lookup("baz"));
+              return Spacebars.call(self.lookup("bar"), self.lookup("baz"));
             }
           });
         };
@@ -194,7 +194,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
               return "aaa";
             }),
             data: function() {
-              return Spacebars.call2(
+              return Spacebars.call(
                 Spacebars.dot(self.lookup("p"), "q"),
                 Spacebars.dot(self.lookup("r"), "s"));
             }

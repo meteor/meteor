@@ -576,10 +576,10 @@ var optimize = function (tree) {
 var builtInComponents = {
   'content': '__content',
   'elseContent': '__elseContent',
-  'if': 'UI.If2',
-  'unless': 'UI.Unless2',
-  'with': 'UI.With2',
-  'each': 'UI.Each2'
+  'if': 'UI.If',
+  'unless': 'UI.Unless',
+  'with': 'UI.With',
+  'each': 'UI.Each'
 };
 
 var replaceSpecials = function (node) {
@@ -609,7 +609,7 @@ var replaceSpecials = function (node) {
       } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
         // XXX handle more stuff
         var path = tag.path;
-        var compCode = codeGenPath2(path);
+        var compCode = codeGenPath(path);
 
         if (path.length === 1) {
           var compName = path[0];
@@ -674,7 +674,7 @@ var codeGenInclusionArgs = function (tag) {
       break;
     case 'PATH':
       var path = argValue;
-      argCode = codeGenPath2(path);
+      argCode = codeGenPath(path);
       // a single-segment path will compile to something like
       // `self.lookup("foo")` which never establishes any dependencies,
       // while `Spacebars.dot(self.lookup("foo"), "bar")` may establish
@@ -682,7 +682,7 @@ var codeGenInclusionArgs = function (tag) {
       //
       // In the multi-positional-arg construct, don't wrap pos args here.
       if (! ((path.length === 1) || (numPosArgs > 1)))
-        argCode = 'function () { return Spacebars.call2(' + argCode + '); }';
+        argCode = 'function () { return Spacebars.call(' + argCode + '); }';
       break;
     default:
       // can't get here
@@ -708,7 +708,7 @@ var codeGenInclusionArgs = function (tag) {
     // checked at parse time); call first
     // argument as a function on the others
     args = (args || {});
-    args.data = 'function () { return Spacebars.call2(' + posArgs.join(', ') + '); }';
+    args.data = 'function () { return Spacebars.call(' + posArgs.join(', ') + '); }';
   }
 
   if (args)
@@ -899,7 +899,7 @@ Spacebars.mustacheImpl = function (value/*, args*/) {
     }
   }
 
-  return Spacebars.call2.apply(null, args);
+  return Spacebars.call.apply(null, args);
 };
 
 Spacebars.mustache = function (value/*, args*/) {
@@ -944,7 +944,7 @@ Spacebars.makeRaw = function (value) {
 // evaluating the args themselves (by calling them if they are
 // functions).  Otherwise, simply return `value` (and assert that
 // there are no args).
-Spacebars.call2 = function (value/*, args*/) {
+Spacebars.call = function (value/*, args*/) {
   if (typeof value === 'function') {
     // evaluate arguments if they are functions (by calling them)
     var newArgs = [];
@@ -963,8 +963,8 @@ Spacebars.call2 = function (value/*, args*/) {
 };
 
 var codeGenMustache = function (tag, mustacheType) {
-  var nameCode = codeGenPath2(tag.path);
-  var argCode = codeGenArgs2(tag.args);
+  var nameCode = codeGenPath(tag.path);
+  var argCode = codeGenArgs(tag.args);
   var mustache = (mustacheType || 'mustache');
 
   return 'Spacebars.' + mustache + '(' + nameCode +
@@ -1034,7 +1034,7 @@ Spacebars._beautify = beautify;
 // (i.e. it may invalidate the current computation).
 //
 // No code is generated to call the result if it's a function.
-var codeGenPath2 = function (path) {
+var codeGenPath = function (path) {
   var code = 'self.lookup(' + toJSLiteral(path[0]) + ')';
 
   if (path.length > 1) {
@@ -1047,7 +1047,7 @@ var codeGenPath2 = function (path) {
 
 // returns: array of source strings, or null if no
 // args at all.
-var codeGenArgs2 = function (tagArgs) {
+var codeGenArgs = function (tagArgs) {
   var kwArgs = null; // source -> source
   var args = null; // [source]
 
@@ -1064,7 +1064,7 @@ var codeGenArgs2 = function (tagArgs) {
       argCode = toJSLiteral(argValue);
       break;
     case 'PATH':
-      argCode = codeGenPath2(argValue);
+      argCode = codeGenPath(argValue);
       break;
     default:
       // can't get here
