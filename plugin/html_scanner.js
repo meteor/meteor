@@ -1,4 +1,4 @@
-html2_scanner = {
+html_scanner = {
   // Scan a template file for <head>, <body>, and <template>
   // tags and extract their contents.
   //
@@ -20,14 +20,14 @@ html2_scanner = {
     };
 
     var throwParseError = function (msg) {
-      var ret = new html2_scanner.ParseError;
+      var ret = new html_scanner.ParseError;
       ret.message = msg || "bad formatting in HTML template";
       ret.file = source_name;
       ret.line = contents.substring(0, index).split('\n').length;
       throw ret;
     };
 
-    var results = html2_scanner._initResults();
+    var results = html_scanner._initResults();
     var rOpenTag = /^((<(template|head|body)\b)|(<!--)|(<!DOCTYPE|{{!)|$)/i;
 
     while (rest) {
@@ -99,7 +99,7 @@ html2_scanner = {
       advance(end.index + end[0].length);
 
       // act on the tag
-      html2_scanner._handleTag(results, tagName, tagAttribs, tagContents,
+      html_scanner._handleTag(results, tagName, tagAttribs, tagContents,
                               throwParseError, contentsStartIndex,
                               tagStartIndex);
     }
