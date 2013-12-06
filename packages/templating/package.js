@@ -12,7 +12,6 @@ Package._transitional_registerBuildPlugin({
   name: "compileTemplates",
   use: ['spacebars'],
   sources: [
-    'plugin/html_scanner.js',
     'plugin/html2_scanner.js',
     'plugin/compile-templates.js'
   ]
@@ -29,6 +28,7 @@ Package.on_use(function (api) {
   // html_scanner.js emits client code that calls Meteor.startup and
   // UI, so anybody using templating (eg apps) need to implicitly use
   // 'meteor' and 'ui'.
+  api.use('ui');
   api.imply(['meteor', 'ui'], 'client');
 });
 
@@ -42,7 +42,7 @@ Package.on_test(function (api) {
 
   api.add_files([
     'templating_tests.js',
-    'templating_tests.html2'
+    'templating_tests.html'
   ], 'client');
   api.add_files([
     'plugin/html2_scanner.js',

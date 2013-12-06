@@ -348,7 +348,7 @@ Template.testTable.helpers({
   thisWithDep: function () {
     this.dep.depend();
     return this;
-  },
+  }
 });
 
 //// Template - test_group

@@ -104,8 +104,9 @@ UI.emboxValue = function (funcOrValue, equals) {
             var oldResult = curResult;
             curResult = func();
             if (! c.firstRun) {
-              if (! (equals ? equals(curResult, oldResult) :
-                     curResult === oldResult))
+// XXX THE `===` CHECK BREAKS TEST-IN-BROWSER
+//              if (! (equals ? equals(curResult, oldResult) :
+//                     curResult === oldResult))
                 resultDep.changed();
             }
           });
