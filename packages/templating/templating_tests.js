@@ -549,11 +549,9 @@ Tinytest.add('templating - helper typecast Issue #617', function (test) {
 
 Tinytest.add('templating - each falsy Issue #801', function (test) {
   //Minor test for issue #801
-  Template.test_template_issue801.values = function() { return [1,2,null,undefined]; };
+  Template.test_template_issue801.values = function() { return [0,1,2,null,undefined,false]; };
   var div = renderToDiv(Template.test_template_issue801);
-  // XXX fails. on devel, if a helper `foo` returns `null`, then
-  // {{foo}} outputs "null". on shark, {{foo}} outputs ""
-  test.equal(canonicalizeHtml(div.innerHTML), "12null");
+  test.equal(canonicalizeHtml(div.innerHTML), "012false");
 });
 
 Tinytest.add('templating - duplicate template error', function (test) {
