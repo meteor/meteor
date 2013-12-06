@@ -5,7 +5,7 @@
 // - Event removal on removal
 // - Event moving on TBODY move
 
-var DomBackend = UI.DomBackend;
+var DomBackend = UI.DomBackend2;
 
 var removeNode = function (n) {
 //  if (n.nodeType === 1 &&
@@ -109,7 +109,7 @@ var rangeParented = function (range) {
       range._rangeDict = rangeDict;
 
       // get jQuery to tell us when this node is removed
-      UI.DomBackend2.onRemoveElement(parentNode, function () {
+      DomBackend.onRemoveElement(parentNode, function () {
         rangeRemoved(range);
       });
     }
@@ -153,7 +153,7 @@ var nodeRemoved = function (node, viaBackend) {
       rangeRemoved(comps[i].dom);
 
     if (! viaBackend)
-      UI.DomBackend2.removeElement(node);
+      DomBackend.removeElement(node);
   }
 };
 

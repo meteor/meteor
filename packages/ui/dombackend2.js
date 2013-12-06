@@ -72,6 +72,62 @@ if (Meteor.isClient) {
     return jQuery.parseHTML(html) || [];
   };
 
-  UI.DomBackend2 = DomBackend;
+  // Must use jQuery semantics for `context`, not
+  // querySelectorAll's.  In other words, all the parts
+  // of `selector` must be found under `context`.
+  DomBackend.findBySelector = function (selector, context) {
+    return jQuery.find(selector, context);
+  };
 
+  DomBackend.newFragment = function (nodeArray) {
+    // jQuery fragments are built specially in
+    // IE<9 so that they can safely hold HTML5
+    // elements.
+    return jQuery.buildFragment(nodeArray, document);
+  };
+
+  // `selector` is non-null.  `type` is one type (but
+  // may be in backend-specific form, e.g. have namespaces).
+  // Order fired must be order bound.
+  DomBackend.delegateEvents = function (elem, type, selector, handler) {
+    $(elem).on(type, selector, handler);
+  };
+
+  DomBackend.undelegateEvents = function (elem, type, handler) {
+    $(elem).off(type, handler);
+  };
+
+  DomBackend.bindEventCapturer = function (elem, type, handler) {
+    var wrapper = function (event) {
+      event = jQuery.event.fix(event);
+      event.currentTarget = event.target;
+      // XXX maybe could fire more jQuery-specific stuff
+      // here, like special event hooks?  At the end of the
+      // day, though, jQuery just can't bind capturing
+      // handlers, and if we're not putting the handler
+      // in jQuery's queue, we can't call high-level
+      // internal funcs like `dispatch`.
+      handler.call(elem, event);
+    };
+    handler._meteorui_wrapper = wrapper;
+
+    type = this.parseEventType(type);
+    // add *capturing* event listener
+    elem.addEventListener(type, wrapper, true);
+  };
+
+  DomBackend.unbindEventCapturer = function (elem, type, handler) {
+    type = this.parseEventType(type);
+    elem.removeEventListener(type, handler._meteorui_wrapper, true);
+  };
+
+  DomBackend.parseEventType = function (type) {
+    // strip off namespaces
+    var dotLoc = type.indexOf('.');
+    if (dotLoc >= 0)
+      return type.slice(0, dotLoc);
+    return type;
+  };
+
+  UI.DomBackend2 = DomBackend;
 }

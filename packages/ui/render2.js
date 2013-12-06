@@ -149,37 +149,10 @@ UI.emboxValue = function (funcOrValue, equals) {
   }
 };
 
-UI.bind = function (kindOrFunc, options) {
-  var boxedOptions = {};
-  for (var k in options)
-    boxedOptions[k] = UI.emboxValue(options[k]);
-
-  if (typeof kindOrFunc === 'function') {
-    return function () {
-      var kind = kindOrFunc();
-
-      if (! kind)
-        return null;
-
-      if ((! UI.isComponent(kind)) || kind.isInited)
-        throw new Error("Expected Component kind");
-
-      return kind.extend(boxedOptions);
-    };
-  } else {
-    var kind = kindOrFunc;
-
-    if (! kind)
-      return null;
-
-    if ((! UI.isComponent(kind)) || kind.isInited)
-      throw new Error("Expected Component kind");
-
-    return kind.extend(boxedOptions);
-  }
-};
 
 ////////////////////////////////////////
+
+UI.insert = UI.DomRange && UI.DomRange.insert;
 
 var sanitizeComment = function (content) {
   return content.replace(/--+/g, '').replace(/-$/, '');
