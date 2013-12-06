@@ -1,0 +1,2 @@
+// This should import if the path is defined in .lessrc file
+@config-double: double;

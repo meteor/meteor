@@ -2,6 +2,7 @@ var fs = Npm.require('fs');
 var path = Npm.require('path');
 var less = Npm.require('less');
 var Future = Npm.require('fibers/future');
+var _ = Npm.require('underscore');
 
 Plugin.registerSourceHandler("less", function (compileStep) {
   // XXX annoying that this is replicated in .css, .less, and .styl
@@ -14,6 +15,7 @@ Plugin.registerSourceHandler("less", function (compileStep) {
   }
 
   var source = compileStep.read().toString('utf8');
+  var inputRoot = compileStep._fullInputPath.substring(0, compileStep._fullInputPath.indexOf(compileStep.inputPath));
   var options = {
     // Use fs.readFileSync to process @imports. This is the bundler, so
     // that's not going to cause concurrency issues, and it means that (a)
@@ -22,6 +24,18 @@ Plugin.registerSourceHandler("less", function (compileStep) {
     syncImport: true,
     paths: [path.dirname(compileStep._fullInputPath)] // for @import
   };
+
+  // Load and merge options from .lessrc file in root directory.
+  var configPath = path.join(inputRoot, '.lessrc');
+  if(fs.existsSync(configPath)) {
+    var config = JSON.parse(fs.readFileSync(configPath));
+
+    _.each(config.paths, function(lessPath) {
+      options.paths.push(path.join(inputRoot, lessPath));
+    });
+
+    options = _.extend(config, options);
+  }
 
   var f = new Future;
   var css;
