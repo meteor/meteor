@@ -1683,9 +1683,26 @@ Spacebars.combineAttributes = function (/*attrObjects*/) {
 // Executes `{{foo bar baz}}` when called on `(foo, bar, baz)`.
 // If `bar` and `baz` are functions, they are called before
 // `foo` is called on them.
+//
+// This is the shared part of Spacebars.mustache and
+// Spacebars.attrMustache, which differ in how they post-process the
+// result.
+Spacebars.mustacheImpl = function (value/*, args*/) {
+  var args = arguments;
+  // if we have any arguments (pos or kw), add an options argument
+  // if there isn't one.
+  if (args.length > 1 &&
+      ! (args[args.length - 1] instanceof Spacebars.kw)) {
+    // clone arguments into an actual array, then push.
+    args = Array.prototype.slice.call(arguments);
+    args.push(Spacebars.kw());
+  }
+
+  return Spacebars.call2.apply(null, args);
+};
+
 Spacebars.mustache2 = function (value/*, args*/) {
-  var args = ensureHash(arguments);
-  var result = Spacebars.call2.apply(null, args);
+  var result = Spacebars.mustacheImpl.apply(null, arguments);
 
   if (result instanceof Handlebars.SafeString)
     return HTML.Raw(result.toString());
@@ -1693,6 +1710,22 @@ Spacebars.mustache2 = function (value/*, args*/) {
     // map `null` and `undefined` to "", stringify anything else
     // (e.g. strings, booleans, numbers including 0).
     return String(result == null ? '' : result);
+};
+
+Spacebars.attrMustache = function (value/*, args*/) {
+  var result = Spacebars.mustacheImpl.apply(null, arguments);
+
+  if (result == null || result === '') {
+    return null;
+  } else if (typeof result === 'object') {
+    return result;
+  } else if (typeof result === 'string' && UI.isValidAttributeName(result)) {
+    var obj = {};
+    obj[result] = '';
+    return obj;
+  } else {
+    throw new Error("Expected valid attribute name, '', null, or object");
+  }
 };
 
 // Idempotently wrap in `HTML.Raw`.
@@ -1725,35 +1758,6 @@ Spacebars.call2 = function (value/*, args*/) {
       throw new Error("Can't call non-function: " + value);
 
     return value;
-  }
-};
-
-// If the last element of `args` is not a `Spacebars.kw` object,
-// return a new array with an appended `Spacebars.kw` object.
-// Otherwise just return `args`.  `args` may be an arguments
-// object; we won't mutate it.
-var ensureHash = function (args) {
-  if (! (args[args.length - 1] instanceof Spacebars.kw)) {
-    args = Array.prototype.slice.call(args);
-    args.push(Spacebars.kw());
-  }
-  return args;
-};
-
-Spacebars.attrMustache = function (value/*, args*/) {
-  var args = ensureHash(arguments);
-  var result = Spacebars.call2.apply(null, args);
-
-  if (result == null || result === '') {
-    return null;
-  } else if (typeof result === 'object') {
-    return result;
-  } else if (typeof result === 'string' && UI.isValidAttributeName(result)) {
-    var obj = {};
-    obj[result] = '';
-    return obj;
-  } else {
-    throw new Error("Expected valid attribute name, '', null, or object");
   }
 };
 
