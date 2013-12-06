@@ -650,3 +650,21 @@ Tinytest.add('spacebars - templates - no data context', function (test) {
   var div = renderToDiv(tmpl);
   test.equal(canonicalizeHtml(div.innerHTML), 'asdf');
 });
+
+// test that #isolate is a no-op, for back compat
+Tinytest.add('spacebars - templates - isolate', function (test) {
+  var tmpl = Template.spacebars_template_test_isolate;
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), 'hello');
+
+});
+
+// test that #constant is a no-op, for back compat
+Tinytest.add('spacebars - templates - constant', function (test) {
+  var tmpl = Template.spacebars_template_test_constant;
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), 'hello');
+
+});

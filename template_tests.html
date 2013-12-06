@@ -227,3 +227,11 @@
 <template name="spacebars_template_test_no_data">
   {{this.foo}}{{#unless this.bar}}asdf{{/unless}}
 </template>
+
+<template name="spacebars_template_test_isolate">
+  {{#isolate}}hello{{/isolate}}
+</template>
+
+<template name="spacebars_template_test_constant">
+  {{#constant}}hello{{/constant}}
+</template>
