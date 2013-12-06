@@ -283,14 +283,6 @@ Tinytest.add("templating - helpers and dots", function(test) {
 
   Template.test_helpers_h.helperListFour = listFour;
 
-  // XXX this fails because helpers passed as values to kwargs get passed
-  // as functions, not values. ie, in the function `listFour`, replace:
-  //   var val = options[k]
-  //
-  // to:
-  //   var val = (typeof options[k] === 'function') ? options[k]() : options[k]
-  //
-  // and the test passes.
   html = renderToDiv(Template.test_helpers_h.withData(dataObj)).innerHTML;
   var trials =
         html.match(/\(.*?\)/g);
