@@ -74,11 +74,9 @@ Tinytest.add("spacebars - compiler output", function (test) {
       function() {
         var self = this;
         return function() {
-          return Spacebars.mustache2(self.lookup("foo"), {
-            hash: {
-              x: Spacebars.dot(self.lookup("bar"), "baz")
-            }
-          });
+          return Spacebars.mustache2(self.lookup("foo"), Spacebars.kw({
+            x: Spacebars.dot(self.lookup("bar"), "baz")
+          }));
         };
       });
 
@@ -139,7 +137,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
         return function() {
           return Spacebars.include(Template["foo"] || self.lookup("foo"), {
             data: function() {
-              return Spacebars.dot(self.lookup("bar"), "baz");
+              return Spacebars.call2(Spacebars.dot(self.lookup("bar"), "baz"));
             }
           });
         };
@@ -151,7 +149,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
         return function() {
           return Spacebars.include(Template["foo"] || self.lookup("foo"), {
             x: function() {
-              return Spacebars.dot(self.lookup("bar"), "baz");
+              return Spacebars.call2(Spacebars.dot(self.lookup("bar"), "baz"));
             }
           });
         };

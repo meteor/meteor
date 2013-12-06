@@ -187,9 +187,6 @@ Tinytest.add("templating - helpers and dots", function(test) {
   };
 
   var listFour = function(a, b, c, d, options) {
-    // XXX this fails because `options` is sometimes undefined.  on
-    // devel, options is always passed, with an empty hash even if
-    // there are no kwargs
     var keywordArgs = _.map(_.keys(options.hash), function(k) {
       var val = options.hash[k];
       return k+':'+val;
@@ -534,8 +531,6 @@ Tinytest.add('templating - helper typecast Issue #617', function (test) {
 
   var div = renderToDiv(Template.test_type_casting);
   var result = canonicalizeHtml(div.innerHTML);
-  // XXX this fails because of the missing last object argument.
-  // (see XXX comment within `listFour`)
   test.equal(
     result,
     // This corresponds to entries in templating_tests.html.
