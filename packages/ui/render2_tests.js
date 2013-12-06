@@ -280,9 +280,10 @@ Tinytest.add("ui - render2 - components", function (test) {
                      'created 2',
                      'parent of 3 is 2',
                      'created 3',
-                     'dom-3 is 3..HR',
+                     // (proper order for these has not be thought out:)
+                     'dom-1 is 1..HR',
                      'dom-2 is 2..HR',
-                     'dom-1 is 1..HR']);
+                     'dom-3 is 3..HR']);
 
     test.equal(canonicalizeHtml(div.innerHTML), '123<hr>');
 
