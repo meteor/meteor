@@ -150,15 +150,12 @@ html_scanner = {
 
       var renderFuncCode = Spacebars.compile(
         contents, {
-          sourceName: 'Template "' + name + '"',
-          // XXX MESSY HACK - make only Templates expose
-          // `content` and `elseContent`
-          preamble: '\n  var _local_content = this.content = this.__content;\n  var _local_elseContent = this.elseContent = this.__elseContent' });
+          isTemplate: true,
+          sourceName: 'Template "' + name + '"'
+        });
 
-      results.js += "\nTemplate[" + JSON.stringify(name) +
-        "] = UI.Component.extend({kind: " +
-        JSON.stringify("Template_" + name) + ", render: " +
-        renderFuncCode + "});\n";
+      results.js += "\nTemplate.__define__(" + JSON.stringify(name) +
+        ", " + renderFuncCode + ");\n";
     } else {
       // <body>
       if (hasAttribs)
@@ -168,7 +165,7 @@ html_scanner = {
         contents, { sourceName: "<body>" });
 
       // We may be one of many `<body>` tags.
-      results.js += "\nUI.body.contentParts.push(UI.Component.extend({render: " + renderFuncCode + "}));\nMeteor.startup(function () { if (! UI.body.INSTANCE) { UI.body.INSTANCE = UI.render(UI.body); UI.insert(UI.body.INSTANCE, document.body); } });\n";
+      results.js += "\nUI.body2.contentParts.push(UI.Component.extend({render: " + renderFuncCode + "}));\nMeteor.startup(function () { if (! UI.body2.INSTANTIATED) { UI.materialize(UI.body2, document.body); } });\n";
     }
   }
 };

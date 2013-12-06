@@ -4,7 +4,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.export(['UI', 'Handlebars']);
-  api.use('jquery'); // break this with "DOM backends"
+  api.use('jquery'); // should be a weak dep, by having multiple "DOM backends"
   api.use('deps');
   api.use('random');
   api.use('ejson');
@@ -13,7 +13,10 @@ Package.on_use(function (api) {
   api.use('minimongo');  // for idStringify
   api.use('observe-sequence');
 
-  api.add_files(['base.js']);
+  api.use('html');
+  api.imply('html');
+
+  api.add_files(['exceptions.js', 'base.js']);
 
   api.add_files(['dombackend.js',
                  'domrange.js'], 'client');
@@ -30,12 +33,16 @@ Package.on_use(function (api) {
 
 Package.on_test(function (api) {
   api.use('tinytest');
+  api.use('jquery'); // strong dependency, for testing jQuery backend
   api.use('ui');
   api.use(['test-helpers', 'underscore'], 'client');
 
+  api.use('html');
+
   api.add_files([
     'base_tests.js',
+    'domrange_tests.js',
     'render_tests.js',
-    'domrange_tests.js'
+    'dombackend_tests.js'
   ], 'client');
 });

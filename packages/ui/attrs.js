@@ -1,113 +1,26 @@
 
-var ATTRIBUTE_NAME_REGEX = /^[^\s"'>/=]+$/;
-
-var isValidAttributeName = function (str) {
-  return ATTRIBUTE_NAME_REGEX.test(str);
-};
-
-UI.isValidAttributeName = isValidAttributeName;
-
-AttributeManager = function (dictOrFunc) {
-  var self = this;
-
-  var dict, func;
-
-  if (typeof dictOrFunc === 'function') {
-    func = dictOrFunc;
-    // Calculate the initial value without capturing any
-    // dependencies.  Once the element exists, we'll recalculate
-    // it in an autorun.  This makes the overall logic simpler.
-    Deps.nonreactive(function () {
-      dict = func();
-    });
-  } else {
-    // non-reactive attrs
-    func = null;
-    dict = dictOrFunc;
-  }
-
-  if ((! dict) || (typeof dict !== 'object'))
-    throw new Error("Expected object containing attribute names/values");
-
-  self.func = func;
-  self.handlers = {};
-
-  var handlers = self.handlers;
-  for (var attrName in dict) {
-    if (! attrName)
-      continue; // ignore empty attribute names
-    // perform a sanity check, since we'll be inserting
-    // attrName directly into the HTML stream
-    if (! isValidAttributeName(attrName))
-      throw new Error("Expected single HTML attribute name, found: '" + attrName + "'");
-
-    handlers[attrName] = makeAttributeHandler(
-      attrName, dict[attrName]);
-  }
-};
-
-_extend(AttributeManager.prototype, {
-  element: null,
-  isReactive: function () {
-    return !! this.func;
-  },
-  wire: function (n) {
-    this.element = n;
-  },
-  getInitialHTML: function () {
-    var self = this;
-    var handlers = self.handlers;
-
-    var strs = [];
-    for (var attrName in handlers)
-      strs.push(handlers[attrName].getHTML());
-
-    return strs.join(' ');
-  },
-  start: function () {
-    var self = this;
-    if (! self.isReactive())
-      throw new Error("Can't start a non-reactive AttributeManager");
-
-    var element = self.element;
-    var handlers = self.handlers;
-
-    // XXX make this be stopped at the right time
-    Deps.autorun(function (c) {
-      // capture dependencies of this line:
-      var newDict = self.func();
-
-      // update all handlers.
-      //
-      // don't GC handlers for properties that
-      // go away (which would be necessary if someone really attaches
-      // O(N) different attributes to an element over time).
-      for (var k in handlers) {
-        var h = handlers[k];
-        var oldValue = h.value;
-        h.value = newDict.hasOwnProperty(k) ? newDict[k] : null;
-        h.update(element, oldValue, h.value);
-      }
-      for (var k in newDict) {
-        if (! k)
-          continue; // ignore empty attributes
-        if (! handlers.hasOwnProperty(k)) {
-          // need a new handler
-          var attrName = k;
-
-          if (! isValidAttributeName(attrName))
-            throw new Error("Expected single HTML attribute name, found: " + attrName);
-
-          var h = makeAttributeHandler(
-            attrName, newDict[attrName]);
-
-          handlers[attrName] = h;
-          h.add(element);
-        }
-      }
-    });
-  }
-});
+// An AttributeHandler object is responsible for updating a particular attribute
+// of a particular element.  AttributeHandler subclasses implement
+// browser-specific logic for dealing with particular attributes across
+// different browsers.
+//
+// To define a new type of AttributeHandler, use
+// `var FooHandler = AttributeHandler.extend({ update: function ... })`
+// where the `update` function takes arguments `(element, oldValue, value)`.
+// The `element` argument is always the same between calls to `update` on
+// the same instance.  `oldValue` and `value` are each either `null` or
+// a Unicode string of the type that might be passed to the value argument
+// of `setAttribute` (i.e. not an HTML string with character references).
+// When an AttributeHandler is installed, an initial call to `update` is
+// always made with `oldValue = null`.  The `update` method can access
+// `this.name` if the AttributeHandler class is a generic one that applies
+// to multiple attribute names.
+//
+// AttributeHandlers can store custom properties on `this`, as long as they
+// don't use the names `element`, `name`, `value`, and `oldValue`.
+//
+// AttributeHandlers can't influence how attributes appear in rendered HTML,
+// only how they are updated after materialization as DOM.
 
 AttributeHandler = function (name, value) {
   this.name = name;
@@ -115,31 +28,12 @@ AttributeHandler = function (name, value) {
 };
 
 _extend(AttributeHandler.prototype, {
-  getHTML: function () {
-    var value = this.value;
-    if (value == null)
-      return '';
-
-    return this.name + '="' +
-      UI.encodeSpecialEntities(this.stringifyValue(value), true) + '"';
-  },
-  stringifyValue: function (value) {
-    return String(value);
-  },
-  add: function (element) {
-    this.update(element, null, this.value);
-  },
   update: function (element, oldValue, value) {
-    if (value == null) {
-      if (oldValue != null)
+    if (value === null) {
+      if (oldValue !== null)
         element.removeAttribute(this.name);
     } else {
-      value = this.stringifyValue(value);
-      // We have to be careful here, because some attributes on some browsers
-      // aren't settable, even to the same value as before -- notably `<input>`
-      // `type` on IE8.  I'm not sure if this applies to any modern browsers.
-      if (element.getAttribute(this.name) !== value)
-        element.setAttribute(this.name, value);
+      element.setAttribute(this.name, this.value);
     }
   }
 });
@@ -152,31 +46,20 @@ AttributeHandler.extend = function (options) {
   subType.prototype = new curType;
   subType.extend = curType.extend;
   if (options)
-    _extend(subType.prototype, options);
+    _.extend(subType.prototype, options);
   return subType;
 };
 
+// Value of a ClassHandler is either a string or an array.
 var ClassHandler = AttributeHandler.extend({
-  stringifyValue: function (value) {
-    if (typeof value === 'string')
-      return value;
-    else if (typeof value.length === 'number') {
-      return Array.prototype.join.call(value, ' ');
-    } else {
-      return String(value);
-    }
-  },
   update: function (element, oldValue, value) {
-    var oldClasses = oldValue;
-    if (typeof oldClasses === 'string')
-      oldClasses = _.compact(oldClasses.split(' '));
-    var newClasses = value;
-    if (typeof newClasses === 'string')
-      newClasses = _.compact(newClasses.split(' '));
+    var oldClasses = oldValue ? _.compact(oldValue.split(' ')) : [];
+    var newClasses = value ? _.compact(value.split(' ')) : [];
 
+    // the current classes on the element, which we will mutate.
     var classes = _.compact(element.className.split(' '));
 
-    // XXX optimize this later
+    // optimize this later (to be asymptotically faster) if necessary
     _.each(oldClasses, function (c) {
       if (_.indexOf(newClasses, c) < 0)
         classes = _.without(classes, c);
@@ -202,10 +85,10 @@ var SelectedHandler = AttributeHandler.extend({
   }
 });
 
-var makeAttributeHandler = function (name, value) {
+// XXX make it possible for users to register attribute handlers!
+makeAttributeHandler = function (name, value) {
   // XXX will need one for 'style' on IE, though modern browsers
   // seem to handle setAttribute ok.
-  // XXX components should be able to hook into this
   if (name === 'class') {
     return new ClassHandler(name, value);
   } else if (name === 'selected') {

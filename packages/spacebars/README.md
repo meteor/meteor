@@ -1,3 +1,5 @@
+TODO: Merge with syntax.md
+
 # Spacebars
 
 Spacebars is a Meteor template language inspired by [Handlebars](http://handlebarsjs.com/).  It shares much of the spirit and syntax of Handlebars, but it's tailored to produce specifications of reactive Meteor UI components when compiled.

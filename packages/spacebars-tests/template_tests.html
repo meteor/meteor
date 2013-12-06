@@ -45,7 +45,7 @@
 </template>
 
 <template name="spacebars_template_test_dynamic_attrs">
-  <span {{attrs2}} {{k}}={{v}} {{x}} {{nonexistent}}>hi</span>
+  <span {{attrsObj}} {{singleAttr}} {{nonexistent}}>hi</span>
 </template>
 
 <template name="spacebars_template_test_triple">
@@ -57,10 +57,6 @@
 </template>
 
 <template name="spacebars_template_test_inclusion_args2">
-  {{> foo bar baz}}
-</template>
-
-<template name="spacebars_template_test_inclusion_args3">
   {{> foo bar q=baz}}
 </template>
 
@@ -132,12 +128,41 @@
   {{/spacebars_template_test_iftemplate2}}
 </template>
 
+<template name="spacebars_template_test_if">
+  {{#if foo}}
+    {{bar}}
+  {{else}}
+    {{baz}}
+  {{/if}}
+</template>
+
+<template name="spacebars_template_test_if_in_with">
+  {{#with foo}}
+    {{bar}}
+    {{#if true}}
+      {{bar}}
+    {{/if}}
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_each">
+  {{#each items}}
+    {{text}}
+  {{else}}
+    else-clause
+  {{/each}}
+</template>
+
 <template name="spacebars_template_test_dots">
   {{#with foo}}
+    A
     {{#with bar}}
+      B
       {{! #if shouldn't add a data context }}
       {{#if true}}
+        C
         {{#each items}}
+          D
           {{! inclusion should only add a data context if passed explicitly }}
           {{> spacebars_template_test_dots_subtemplate}}
           {{> spacebars_template_test_dots_subtemplate ..}}
@@ -148,13 +173,16 @@
 </template>
 
 <template name="spacebars_template_test_dots_subtemplate">
-  {{title}}
-  {{./title}}
-  {{../title}}
-  {{../../title}}
-  {{getTitle .}}
-  {{getTitle ..}}
-  {{getTitle ../..}}
+  TITLE
+  1{{title}}
+  2{{./title}}
+  3{{../title}}
+  4{{../../title}}
+
+  GETTITLE
+  5{{getTitle .}}
+  6{{getTitle ..}}
+  7{{getTitle ../..}}
 </template>
 
 <template name="spacebars_template_test_select_tag">
@@ -169,7 +197,7 @@
   </select>
 </template>
 
-<!-- Test for issue #770 - falsy value for with. (newlines break this test on IE8) -->
+<!-- Test for issue #770 - falsy value for with. -->
 <template name="test_template_issue770">
   {{# with value1}}
     {{this}}
@@ -198,4 +226,12 @@
 
 <template name="spacebars_template_test_no_data">
   {{this.foo}}{{#unless this.bar}}asdf{{/unless}}
+</template>
+
+<template name="spacebars_template_test_isolate">
+  {{#isolate}}hello{{/isolate}}
+</template>
+
+<template name="spacebars_template_test_constant">
+  {{#constant}}hello{{/constant}}
 </template>

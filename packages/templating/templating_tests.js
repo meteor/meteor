@@ -1,7 +1,7 @@
 // render and put in the document
 var renderToDiv = function (comp) {
   var div = document.createElement("DIV");
-  UI.insert(UI.render(comp), div);
+  UI.materialize(comp, div);
   return div;
 };
 
@@ -187,9 +187,6 @@ Tinytest.add("templating - helpers and dots", function(test) {
   };
 
   var listFour = function(a, b, c, d, options) {
-    // XXX this fails because `options` is sometimes undefined.  on
-    // devel, options is always passed, with an empty hash even if
-    // there are no kwargs
     var keywordArgs = _.map(_.keys(options.hash), function(k) {
       var val = options.hash[k];
       return k+':'+val;
@@ -286,14 +283,6 @@ Tinytest.add("templating - helpers and dots", function(test) {
 
   Template.test_helpers_h.helperListFour = listFour;
 
-  // XXX this fails because helpers passed as values to kwargs get passed
-  // as functions, not values. ie, in the function `listFour`, replace:
-  //   var val = options[k]
-  //
-  // to:
-  //   var val = (typeof options[k] === 'function') ? options[k]() : options[k]
-  //
-  // and the test passes.
   html = renderToDiv(Template.test_helpers_h.withData(dataObj)).innerHTML;
   var trials =
         html.match(/\(.*?\)/g);
@@ -408,7 +397,7 @@ Tinytest.add("templating - template arg", function (test) {
   var div = renderToDiv(Template.test_template_arg_a.withData({food: "pie"}));
   var cleanupDiv = addToBody(div);
   test.equal($(div).text(), "Greetings 1-bold Line");
-  clickElement(DomUtils.find(div, 'i')[0]);
+  clickElement(DomUtils.find(div, 'i'));
   test.equal($(div).text(), "Hello 3-element World (the secret is strawberry pie)");
 
   cleanupDiv();
@@ -534,8 +523,6 @@ Tinytest.add('templating - helper typecast Issue #617', function (test) {
 
   var div = renderToDiv(Template.test_type_casting);
   var result = canonicalizeHtml(div.innerHTML);
-  // XXX this fails because of the missing last object argument.
-  // (see XXX comment within `listFour`)
   test.equal(
     result,
     // This corresponds to entries in templating_tests.html.
@@ -549,10 +536,14 @@ Tinytest.add('templating - helper typecast Issue #617', function (test) {
 
 Tinytest.add('templating - each falsy Issue #801', function (test) {
   //Minor test for issue #801
-  Template.test_template_issue801.values = function() { return [1,2,null,undefined]; };
+  Template.test_template_issue801.values = function() { return [0,1,2,null,undefined,false]; };
   var div = renderToDiv(Template.test_template_issue801);
-  // XXX fails. on devel, if a helper `foo` returns `null`, then
-  // {{foo}} outputs "null". on shark, {{foo}} outputs ""
-  test.equal(canonicalizeHtml(div.innerHTML), "12null");
+  test.equal(canonicalizeHtml(div.innerHTML), "012false");
 });
 
+Tinytest.add('templating - duplicate template error', function (test) {
+  Template.__define__("test_duplicate_template", function () {});
+  test.throws(function () {
+    Template.__define__("test_duplicate_template", function () {});
+  });
+});

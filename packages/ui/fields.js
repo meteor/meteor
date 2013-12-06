@@ -15,18 +15,14 @@ var lookupComponentProp = function (comp, prop) {
 // `{{#foo}}...{{/foo}}`.
 var noOpComponent = Component.extend({
   kind: 'NoOp',
-  render: function (buf) {
-    buf.write(this.content);
+  render: function () {
+    return this.__content;
   }
 });
 
-// This map is searched first when you do something like `{{#if}}` in
+// This map is searched first when you do something like `{{#foo}}` in
 // a template.
 var builtInComponents = {
-  'if': UI.If,
-  'each': UI.Each,
-  'unless': UI.Unless,
-  'with': UI.With,
   // for past compat:
   'constant': noOpComponent,
   'isolate': noOpComponent

@@ -1,6 +1,7 @@
 var path = Npm.require('path');
 
-Plugin.registerSourceHandler("html", function (compileStep) {
+var doHTMLScanning = function (compileStep, htmlScanner) {
+
   // XXX use archinfo rather than rolling our own
   if (! compileStep.arch.match(/^browser(\.|$)/))
     // XXX might be nice to throw an error here, but then we'd have to
@@ -14,9 +15,9 @@ Plugin.registerSourceHandler("html", function (compileStep) {
   // religion on that
   var contents = compileStep.read().toString('utf8');
   try {
-    var results = html_scanner.scan(contents, compileStep.inputPath);
+    var results = htmlScanner.scan(contents, compileStep.inputPath);
   } catch (e) {
-    if (e instanceof html_scanner.ParseError) {
+    if (e instanceof htmlScanner.ParseError) {
       compileStep.error({
         message: e.message,
         sourcePath: compileStep.inputPath,
@@ -50,4 +51,8 @@ Plugin.registerSourceHandler("html", function (compileStep) {
       data: results.js
     });
   }
+};
+
+Plugin.registerSourceHandler("html", function (compileStep) {
+  doHTMLScanning(compileStep, html_scanner);
 });

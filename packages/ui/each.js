@@ -1,29 +1,19 @@
-
 UI.Each = Component.extend({
   typeName: 'Each',
-  render: function (buf) {
+  init: function () {
     // don't keep `this.data` around so that `{{..}}` skips over this
     // component
     this.sequence = this.data;
-    delete this.data;
-
-    // real logic in in rendered().
-
-    // XXX do something for server-side rendering
+    this.data = undefined;
   },
+  // xcxc -> parented
   rendered: function () {
     var self = this.__component__;
 
-    // XXX find `content` via `get()`...
-    // XXX content kind reactively changes?
-    var content = self.__content;
-    if (typeof content === 'function')
-      content = _.bind(content, self);
-    var elseContent = self.__elseContent;
-    if (typeof elseContent === 'function')
-      elseContent = _.bind(elseContent, self);
-
     var range = self.dom;
+
+    var content = self.__content;
+    var elseContent = self.__elseContent;
 
     // if there is an else clause, keep track of the number of
     // rendered items.  use this to display the else clause when count
@@ -42,8 +32,7 @@ UI.Each = Component.extend({
       }
       itemCount += delta;
       if (itemCount === 0) {
-        // display else clause
-        range.add(null, UI.render(elseContent, {}, self), null);
+        UI.materialize(elseContent, range, null, self);
       }
     };
 
@@ -69,12 +58,11 @@ UI.Each = Component.extend({
           dep.changed();
         };
 
-        var comp = UI.render(
-          content, { data: dataFunc }, self);
-
         if (beforeId)
           beforeId = LocalCollection._idStringify(beforeId);
-        range.add(id, comp, beforeId);
+
+        var renderedItem = UI.render(content.withData(dataFunc), self);
+        range.add(id, renderedItem, beforeId);
       },
       removed: function (id, item) {
         addToCount(-1);

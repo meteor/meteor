@@ -1,6 +1,6 @@
 var renderToDiv = function (comp) {
   var div = document.createElement("DIV");
-  UI.insert(UI.render(comp), div);
+  UI.materialize(comp, div);
   return div;
 };
 
@@ -17,10 +17,17 @@ var trimAndRemoveSpaces = function (str) {
   return trim(str).replace(/ /g, '');
 };
 
+var divRendersTo = function (test, div, html) {
+  Deps.flush();
+  var actual = div.innerHTML.replace(/\s/g, '');
+  test.equal(actual, html);
+};
+
 Tinytest.add("spacebars - templates - simple helper", function (test) {
   var tmpl = Template.spacebars_template_test_simple_helper;
+  var R = ReactiveVar(1);
   tmpl.foo = function (x) {
-    return x+1;
+    return x + R.get();
   };
   tmpl.bar = function () {
     return 123;
@@ -28,6 +35,9 @@ Tinytest.add("spacebars - templates - simple helper", function (test) {
   var div = renderToDiv(tmpl);
 
   test.equal(stripComments(div.innerHTML), "124");
+  R.set(2);
+  Deps.flush();
+  test.equal(stripComments(div.innerHTML), "125");
 });
 
 Tinytest.add("spacebars - templates - dynamic template", function (test) {
@@ -63,26 +73,25 @@ Tinytest.add("spacebars - templates - interpolate attribute", function (test) {
 Tinytest.add("spacebars - templates - dynamic attrs", function (test) {
   var tmpl = Template.spacebars_template_test_dynamic_attrs;
 
-  var R2 = ReactiveVar('');
+  var R2 = ReactiveVar({x: "X"});
   var R3 = ReactiveVar('selected');
-  tmpl.attrs2 = function () { return R2.get(); };
-  tmpl.k = 'x';
-  tmpl.v = 'y';
-  tmpl.x = function () { return R3.get(); };
+  tmpl.attrsObj = function () { return R2.get(); };
+  tmpl.singleAttr = function () { return R3.get(); };
+
   var div = renderToDiv(tmpl);
   var span = $(div).find('span')[0];
   test.equal(span.innerHTML, 'hi');
-  test.isFalse(span.hasAttribute('foo'));
-  test.equal(span.getAttribute('x'), 'y');
   test.isTrue(span.selected);
+  test.equal(span.getAttribute('x'), 'X');
 
-  R2.set('foo');
+  R2.set({y: "Y", z: "Z"});
   R3.set('');
   Deps.flush();
   test.equal(stripComments(span.innerHTML), 'hi');
-  test.isTrue(span.hasAttribute('foo'));
-  test.equal(span.getAttribute('foo'), '');
   test.isFalse(span.selected);
+  test.isFalse(span.hasAttribute('x'));
+  test.equal(span.getAttribute('y'), 'Y');
+  test.equal(span.getAttribute('z'), 'Z');
 });
 
 Tinytest.add("spacebars - templates - triple", function (test) {
@@ -152,32 +161,15 @@ Tinytest.add("spacebars - templates - inclusion args", function (test) {
 });
 
 Tinytest.add("spacebars - templates - inclusion args 2", function (test) {
-  ///// `foo` is a function in `{{> foo bar baz}}`.
-  // `bar` and `baz` should be called and passed as an arg to it.
-  var tmpl = Template.spacebars_template_test_inclusion_args2;
-  tmpl.foo = function (x, y) {
-    return y === 999 ? Template.spacebars_template_test_aaa :
-      Template.spacebars_template_test_bracketed_this.withData(x + y);
-  };
-  var R = ReactiveVar(3);
-  tmpl.bar = 4;
-  tmpl.baz = function () { return R.get(); };
-  var div = renderToDiv(tmpl);
-  test.equal(stripComments(div.innerHTML), '[7]');
-  R.set(11);
-  Deps.flush();
-  test.equal(stripComments(div.innerHTML), '[15]');
-  R.set(999);
-  Deps.flush();
-  test.equal(stripComments(div.innerHTML), 'aaa');
-});
-
-Tinytest.add("spacebars - templates - inclusion args 3", function (test) {
   // `{{> foo bar q=baz}}`
-  var tmpl = Template.spacebars_template_test_inclusion_args3;
+  var tmpl = Template.spacebars_template_test_inclusion_args2;
 
   tmpl.foo = function (a, options) {
-    return UI.Text.withData(a + options.q);
+    return UI.Component.extend({
+      render: function () {
+        return String(a + options.hash.q);
+      }
+    });
   };
   var R1 = ReactiveVar(3);
   var R2 = ReactiveVar(4);
@@ -191,12 +183,11 @@ Tinytest.add("spacebars - templates - inclusion args 3", function (test) {
   test.equal(stripComments(div.innerHTML), '24');
 
   tmpl.foo = UI.Component.extend({
-    render: function (buf) {
-      // note: weird to assume this.data() is a function rather than
-      // calling-if-function.  But what's the best way to write that
-      // in component code?  Probably `this.get()`, and likewise for
-      // `this.get('q')`.
-      buf.write(String(this.data() + this.q()));
+    render: function () {
+      var self = this;
+      return function () {
+        return String(self.data() + self.q());
+      };
     }
   });
   R1 = ReactiveVar(20);
@@ -207,6 +198,12 @@ Tinytest.add("spacebars - templates - inclusion args 3", function (test) {
   R2.set(17);
   Deps.flush();
   test.equal(stripComments(div.innerHTML), '27');
+
+  // helpers can be scalars. still get put on to the component as methods.
+  tmpl.bar = 3;
+  tmpl.baz = 8;
+  div = renderToDiv(tmpl);
+  test.equal(stripComments(div.innerHTML), '11');
 });
 
 Tinytest.add("spacebars - templates - inclusion dotted args", function (test) {
@@ -433,6 +430,54 @@ Tinytest.add("spacebars - templates - nested content", function (test) {
   test.equal(trim(stripComments(div.innerHTML)), 'hello');
 });
 
+Tinytest.add("spacebars - template - if", function (test) {
+  var tmpl = Template.spacebars_template_test_if;
+  var R = ReactiveVar(true);
+  tmpl.foo = function () {
+    return R.get();
+  };
+  tmpl.bar = 1;
+  tmpl.baz = 2;
+
+  var div = renderToDiv(tmpl);
+  var rendersTo = function (html) { divRendersTo(test, div, html); };
+
+  rendersTo("1");
+  R.set(false);
+  rendersTo("2");
+});
+
+Tinytest.add("spacebars - template - if in with", function (test) {
+  var tmpl = Template.spacebars_template_test_if_in_with;
+  tmpl.foo = {bar: "bar"};
+
+  var div = renderToDiv(tmpl);
+  divRendersTo(test, div, "barbar");
+});
+
+Tinytest.add("spacebars - templates - each on cursor", function (test) {
+  var tmpl = Template.spacebars_template_test_each;
+  var coll = new Meteor.Collection(null);
+  tmpl.items = function () {
+    return coll.find({}, {sort: {pos: 1}});
+  };
+
+  var div = renderToDiv(tmpl);
+  var rendersTo = function (html) { divRendersTo(test, div, html); };
+
+  rendersTo("else-clause");
+  coll.insert({text: "one", pos: 1});
+  rendersTo("one");
+  coll.insert({text: "two", pos: 2});
+  rendersTo("onetwo");
+  coll.update({text: "two"}, {$set: {text: "three"}});
+  rendersTo("onethree");
+  coll.update({text: "three"}, {$set: {pos: 0}});
+  rendersTo("threeone");
+  coll.remove({});
+  rendersTo("else-clause");
+});
+
 Tinytest.add("spacebars - templates - ..", function (test) {
   var tmpl = Template.spacebars_template_test_dots;
   tmpl.getTitle = function (from) {
@@ -449,11 +494,12 @@ Tinytest.add("spacebars - templates - ..", function (test) {
   var lines = _.filter(trim(htmlWithWhitespace).split(/\s/), function (line) {
     return line !== "";
   });
-  test.equal(lines, [
+  test.equal(lines.join(" "), [
+    "A", "B", "C", "D",
     // {{> spacebars_template_test_dots_subtemplate}}
-    "item", "item", "bar", "foo", "item", "bar", "foo",
+    "TITLE", "1item", "2item", "3bar", "4foo", "GETTITLE", "5item", "6bar", "7foo",
     // {{> spacebars_template_test_dots_subtemplate ..}}
-    "bar", "bar", "item", "bar", "bar", "item", "bar"]);
+    "TITLE", "1bar", "2bar", "3item", "4bar", "GETTITLE", "5bar", "6item", "7bar"].join(" "));
 });
 
 Tinytest.add("spacebars - templates - select tags", function (test) {
@@ -603,4 +649,22 @@ Tinytest.add('spacebars - templates - no data context', function (test) {
   // failure is if an exception is thrown here
   var div = renderToDiv(tmpl);
   test.equal(canonicalizeHtml(div.innerHTML), 'asdf');
+});
+
+// test that #isolate is a no-op, for back compat
+Tinytest.add('spacebars - templates - isolate', function (test) {
+  var tmpl = Template.spacebars_template_test_isolate;
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), 'hello');
+
+});
+
+// test that #constant is a no-op, for back compat
+Tinytest.add('spacebars - templates - constant', function (test) {
+  var tmpl = Template.spacebars_template_test_constant;
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), 'hello');
+
 });
