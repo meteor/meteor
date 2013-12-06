@@ -83,6 +83,14 @@ if (Meteor.isServer) {
           return doc.bar === "bar";
         }
       });
+      restrictedCollectionWithTransform.allow({
+        // transform: null means that doc here is the top level, not the 'a'
+        // element.
+        transform: null,
+        insert: function (userId, doc) {
+          return !!doc.topLevelField;
+        }
+      });
 
       // two calls to allow to verify that either validator is sufficient.
       var allows = [{
@@ -331,6 +339,13 @@ if (Meteor.isClient) {
             b: "potato"
           }, expect(function (e, res) {
             test.isTrue(e);
+          }));
+          restrictedCollectionWithTransform.insert({
+            a: {foo: "bar"},
+            topLevelField: true
+          }, expect(function (e, res) {
+            test.isFalse(e);
+            test.isTrue(res);
           }));
         },
         function (test, expect) {
