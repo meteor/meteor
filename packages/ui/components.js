@@ -1,5 +1,5 @@
 
-UI.If2 = Component.extend({
+UI.If = Component.extend({
   kind: 'If',
   init: function () {
     // XXX this probably deserves a better explanation if this code is
@@ -48,7 +48,7 @@ var getCondition = function (self) {
   });
 };
 
-UI.Unless2 = Component.extend({
+UI.Unless = Component.extend({
   kind: 'Unless',
   init: function () {
     this.condition = this.data;
@@ -63,7 +63,7 @@ UI.Unless2 = Component.extend({
   }
 });
 
-UI.With2 = Component.extend({
+UI.With = Component.extend({
   kind: 'With',
   init: function () {
     this.condition = this.data;

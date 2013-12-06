@@ -216,7 +216,7 @@ var updateAttributes = function(elem, newAttrs, handlers) {
       if (value !== null) {
         // make new handler
         checkAttributeName(k);
-        handler = makeAttributeHandler2(k, value);
+        handler = makeAttributeHandler(k, value);
         if (handlers)
           handlers[k] = handler;
         oldValue = null;

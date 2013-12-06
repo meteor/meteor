@@ -22,12 +22,12 @@
 // AttributeHandlers can't influence how attributes appear in rendered HTML,
 // only how they are updated after materialization as DOM.
 
-AttributeHandler2 = function (name, value) {
+AttributeHandler = function (name, value) {
   this.name = name;
   this.value = value;
 };
 
-_extend(AttributeHandler2.prototype, {
+_extend(AttributeHandler.prototype, {
   update: function (element, oldValue, value) {
     if (value === null) {
       if (oldValue !== null)
@@ -38,10 +38,10 @@ _extend(AttributeHandler2.prototype, {
   }
 });
 
-AttributeHandler2.extend = function (options) {
+AttributeHandler.extend = function (options) {
   var curType = this;
   var subType = function AttributeHandlerSubtype(/*arguments*/) {
-    AttributeHandler2.apply(this, arguments);
+    AttributeHandler.apply(this, arguments);
   };
   subType.prototype = new curType;
   subType.extend = curType.extend;
@@ -51,7 +51,7 @@ AttributeHandler2.extend = function (options) {
 };
 
 // Value of a ClassHandler is either a string or an array.
-var ClassHandler2 = AttributeHandler2.extend({
+var ClassHandler = AttributeHandler.extend({
   update: function (element, oldValue, value) {
     var oldClasses = oldValue ? _.compact(oldValue.split(' ')) : [];
     var newClasses = value ? _.compact(value.split(' ')) : [];
@@ -74,7 +74,7 @@ var ClassHandler2 = AttributeHandler2.extend({
   }
 });
 
-var SelectedHandler2 = AttributeHandler2.extend({
+var SelectedHandler = AttributeHandler.extend({
   update: function (element, oldValue, value) {
     if (value == null) {
       if (oldValue != null)
@@ -86,14 +86,14 @@ var SelectedHandler2 = AttributeHandler2.extend({
 });
 
 // XXX make it possible for users to register attribute handlers!
-makeAttributeHandler2 = function (name, value) {
+makeAttributeHandler = function (name, value) {
   // XXX will need one for 'style' on IE, though modern browsers
   // seem to handle setAttribute ok.
   if (name === 'class') {
-    return new ClassHandler2(name, value);
+    return new ClassHandler(name, value);
   } else if (name === 'selected') {
-    return new SelectedHandler2(name, value);
+    return new SelectedHandler(name, value);
   } else {
-    return new AttributeHandler2(name, value);
+    return new AttributeHandler(name, value);
   }
 };

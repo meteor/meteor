@@ -1,4 +1,4 @@
-UI.Each2 = Component.extend({
+UI.Each = Component.extend({
   typeName: 'Each',
   init: function () {
     // don't keep `this.data` around so that `{{..}}` skips over this
