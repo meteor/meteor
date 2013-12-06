@@ -930,8 +930,8 @@ client wants to modify, for example
 `['name',`&nbsp;`'score']`.
 
 `modifier` is the raw Mongo modifier that
-the client wants to execute, for example `{$set: {'name.first':
-"Alice"}, $inc: {score: 1}}`.
+the client wants to execute; for example,
+`{$set: {'name.first': "Alice"}, $inc: {score: 1}}`.
 
 Only Mongo modifiers are supported (operations like `$set` and `$push`).
 If the user tries to replace the entire document rather than use
