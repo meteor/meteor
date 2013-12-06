@@ -275,7 +275,6 @@ UI.render2 = function (kind, parentComponent) {
   var range = new UI.DomRange(inst);
   materialize(content, range, null, inst);
 
-  inst.parented = function () {}; // XXX override old base
   inst.removed = function () {
     inst.isDestroyed = true;
     if (inst.destroyed) {
@@ -283,12 +282,6 @@ UI.render2 = function (kind, parentComponent) {
       inst.destroyed.call(inst.templateInstance);
     }
   };
-
-  // TODO: defer this until template is in document
-  if (inst.rendered) {
-    updateTemplateInstance(inst);
-    inst.rendered.call(inst.templateInstance);
-  }
 
   return inst;
 };
