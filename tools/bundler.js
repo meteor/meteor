@@ -60,9 +60,9 @@
 //  - format: "browser-program-pre1" for this version
 //
 //  - page: path to the template for the HTML to serve when a browser
-//    loads a page that is part of the application. In the file
-//    ##HTML_ATTRIBUTES## and ##RUNTIME_CONFIG## will be replaced with
-//    appropriate values at runtime.
+//    loads a page that is part of the application. In the file,
+//    some strings of the format ##FOO## will be replaced with
+//    appropriate values at runtime by the webapp package.
 //
 //  - manifest: array of resources to serve with HTTP, each an object:
 //    - path: path of file relative to program.json
