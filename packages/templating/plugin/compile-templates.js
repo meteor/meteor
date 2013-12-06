@@ -54,5 +54,5 @@ var doHTMLScanning = function (compileStep, htmlScanner) {
 };
 
 Plugin.registerSourceHandler("html", function (compileStep) {
-  doHTMLScanning(compileStep, html2_scanner);
+  doHTMLScanning(compileStep, html_scanner);
 });

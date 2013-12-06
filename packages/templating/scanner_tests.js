@@ -40,8 +40,6 @@ Tinytest.add("templating - html scanner", function (test) {
     test.equal(results.head, expectHead || '');
   };
 
-  var html_scanner = html2_scanner;
-
   checkError(function() {
     return html_scanner.scan("asdf");
   }, "formatting in HTML template", 1);
