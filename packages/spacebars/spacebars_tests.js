@@ -181,20 +181,20 @@ Tinytest.add("spacebars - Spacebars.dot", function (test) {
 
 //////////////////////////////////////////////////
 
-Tinytest.add("spacebars - parse2", function (test) {
-  test.equal(UI.toCode(Spacebars.parse2('{{foo}}')),
+Tinytest.add("spacebars - parse", function (test) {
+  test.equal(UI.toCode(Spacebars.parse('{{foo}}')),
              'HTML.Special({type: "DOUBLE", path: ["foo"]})');
 
-  test.equal(UI.toCode(Spacebars.parse2('{{!foo}}')), 'null');
-  test.equal(UI.toCode(Spacebars.parse2('x{{!foo}}y')), '"xy"');
+  test.equal(UI.toCode(Spacebars.parse('{{!foo}}')), 'null');
+  test.equal(UI.toCode(Spacebars.parse('x{{!foo}}y')), '"xy"');
 
-  test.equal(UI.toCode(Spacebars.parse2('{{#foo}}x{{/foo}}')),
+  test.equal(UI.toCode(Spacebars.parse('{{#foo}}x{{/foo}}')),
              'HTML.Special({type: "BLOCKOPEN", path: ["foo"], content: "x"})');
 
-  test.equal(UI.toCode(Spacebars.parse2('{{#foo}}{{#bar}}{{/bar}}{{/foo}}')),
+  test.equal(UI.toCode(Spacebars.parse('{{#foo}}{{#bar}}{{/bar}}{{/foo}}')),
              'HTML.Special({type: "BLOCKOPEN", path: ["foo"], content: HTML.Special({type: "BLOCKOPEN", path: ["bar"], content: null})})');
 
-  test.equal(UI.toCode(Spacebars.parse2('<div>hello</div> {{#foo}}<div>{{#bar}}world{{/bar}}</div>{{/foo}}')),
+  test.equal(UI.toCode(Spacebars.parse('<div>hello</div> {{#foo}}<div>{{#bar}}world{{/bar}}</div>{{/foo}}')),
              '[HTML.Tag.DIV("hello"), " ", HTML.Special({type: "BLOCKOPEN", path: ["foo"], content: HTML.Tag.DIV(HTML.Special({type: "BLOCKOPEN", path: ["bar"], content: "world"}))})]');
 
 });

@@ -227,17 +227,6 @@ var compareElementIndex = function (a, b) {
   }
 };
 
-UI.body = UI.Component.extend({
-  kind: 'body',
-  contentParts: [],
-  render: function (buf) {
-    for (var i = 0; i < this.contentParts.length; i++)
-      buf.write(this.contentParts[i]);
-  },
-  // XXX revisit how body works.
-  INSTANCE: null
-});
-
 findComponentWithProp = function (id, comp) {
   while (comp) {
     if (comp[id])

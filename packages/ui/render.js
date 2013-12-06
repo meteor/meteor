@@ -234,7 +234,7 @@ var updateAttributes = function(elem, newAttrs, handlers) {
   }
 };
 
-UI.render2 = function (kind, parentComponent) {
+UI.render = function (kind, parentComponent) {
   if (kind.isInited)
     throw new Error("Can't render component instance, only component kind");
   var inst = instantiate(kind, parentComponent);
@@ -268,7 +268,7 @@ var materialize = function (node, parent, before, parentComponent) {
   // Check that Comment has a single string child and no attributes.  Etc.
 
   if (UI.isComponent(node)) {
-    var inst = UI.render2(node, parentComponent);
+    var inst = UI.render(node, parentComponent);
 
     insert(inst.dom, parent, before);
   } else {

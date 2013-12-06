@@ -13,7 +13,7 @@ var LI = HTML.Tag.LI;
 var SPAN = HTML.Tag.SPAN;
 var HR = HTML.Tag.HR;
 
-Tinytest.add("ui - render2 - basic", function (test) {
+Tinytest.add("ui - render - basic", function (test) {
   var run = function (input, expectedInnerHTML, expectedHTML, expectedCode) {
     var div = document.createElement("DIV");
     materialize(input, div);
@@ -72,7 +72,7 @@ Tinytest.add("ui - render2 - basic", function (test) {
       'HTML.Tag.DIV({"class": "foo"}, HTML.Tag.UL(HTML.Tag.LI(HTML.Tag.P(HTML.Tag.A({href: "#one"}, "One"))), HTML.Tag.LI(HTML.Tag.P("Two", HTML.Tag.BR(), "Three"))))');
 });
 
-Tinytest.add("ui - render2 - closures", function (test) {
+Tinytest.add("ui - render - closures", function (test) {
 
   // Reactively change a text node
   (function () {
@@ -108,7 +108,7 @@ Tinytest.add("ui - render2 - closures", function (test) {
 
 });
 
-Tinytest.add("ui - render2 - closure GC", function (test) {
+Tinytest.add("ui - render - closure GC", function (test) {
   // test that removing parent element removes listeners and stops autoruns.
   (function () {
     var R = ReactiveVar('Hello');
@@ -136,7 +136,7 @@ Tinytest.add("ui - render2 - closure GC", function (test) {
 
 });
 
-Tinytest.add("ui - render2 - reactive attributes", function (test) {
+Tinytest.add("ui - render - reactive attributes", function (test) {
   (function () {
     var R = ReactiveVar({'class': ['david gre', CharRef({html: '&euml;', str: '\u00eb'}), 'nspan'],
                          id: 'foo'});
@@ -214,7 +214,7 @@ Tinytest.add("ui - render2 - reactive attributes", function (test) {
   })();
 });
 
-Tinytest.add("ui - render2 - components", function (test) {
+Tinytest.add("ui - render - components", function (test) {
   (function () {
     var counter = 1;
     var buf = [];
@@ -310,7 +310,7 @@ Tinytest.add("ui - render2 - components", function (test) {
 });
 
 
-Tinytest.add("ui - render2 - emboxValue", function (test) {
+Tinytest.add("ui - render - emboxValue", function (test) {
   var R = ReactiveVar('ALPHA');
 
   var numCalcs = [0, 0, 0];

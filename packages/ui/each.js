@@ -61,7 +61,7 @@ UI.Each2 = Component.extend({
         if (beforeId)
           beforeId = LocalCollection._idStringify(beforeId);
 
-        var renderedItem = UI.render2(content.withData(dataFunc), self);
+        var renderedItem = UI.render(content.withData(dataFunc), self);
         range.add(id, renderedItem, beforeId);
       },
       removed: function (id, item) {

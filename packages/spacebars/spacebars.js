@@ -279,7 +279,7 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
 };
 
 
-// XXX beef this up from ui/render2.js
+// XXX beef this up from ui/render.js
 var toJSLiteral = function (obj) {
   // http://timelessrepo.com/json-isnt-a-javascript-subset
   return (JSON.stringify(obj)
@@ -287,7 +287,7 @@ var toJSLiteral = function (obj) {
           .replace(/\u2029/g, '\\u2029'));
 };
 
-// XXX use toObjectLiteralKey from ui/render2.js
+// XXX use toObjectLiteralKey from ui/render.js
 // takes an object whose keys and values are strings of
 // JavaScript source code and returns the source code
 // of an object literal.
@@ -354,7 +354,7 @@ Spacebars.dot = function (value, id1/*, id2, ...*/) {
 
 //////////////////////////////////////////////////
 
-Spacebars.parse2 = function (input) {
+Spacebars.parse = function (input) {
   // This implementation of `getSpecialTag` looks for "{{" and if it
   // finds it, it will parse a stache tag or fail fatally trying.
   // The object it returns is opaque to the tokenizer/parser and can
@@ -643,12 +643,12 @@ var codeGenInclusionArgs = function (tag) {
   if ('content' in tag) {
     args = (args || {});
     args.__content = (
-      'UI.block(' + Spacebars.compile2(tag.content) + ')');
+      'UI.block(' + Spacebars.compile(tag.content) + ')');
   }
   if ('elseContent' in tag) {
     args = (args || {});
     args.__elseContent = (
-      'UI.block(' + Spacebars.compile2(tag.elseContent) + ')');
+      'UI.block(' + Spacebars.compile(tag.elseContent) + ')');
   }
 
   // precalculate the number of positional args
@@ -902,7 +902,7 @@ Spacebars.mustacheImpl = function (value/*, args*/) {
   return Spacebars.call2.apply(null, args);
 };
 
-Spacebars.mustache2 = function (value/*, args*/) {
+Spacebars.mustache = function (value/*, args*/) {
   var result = Spacebars.mustacheImpl.apply(null, arguments);
 
   if (result instanceof Handlebars.SafeString)
@@ -931,7 +931,7 @@ Spacebars.attrMustache = function (value/*, args*/) {
 
 // Idempotently wrap in `HTML.Raw`.
 //
-// Called on the return value from `Spacebars.mustache2` in case the
+// Called on the return value from `Spacebars.mustache` in case the
 // template uses triple-stache (`{{{foo bar baz}}}`).
 Spacebars.makeRaw = function (value) {
   if (typeof value === 'object' && value.tagName === 'Raw')
@@ -965,18 +965,18 @@ Spacebars.call2 = function (value/*, args*/) {
 var codeGenMustache = function (tag, mustacheType) {
   var nameCode = codeGenPath2(tag.path);
   var argCode = codeGenArgs2(tag.args);
-  var mustache = (mustacheType || 'mustache2');
+  var mustache = (mustacheType || 'mustache');
 
   return 'Spacebars.' + mustache + '(' + nameCode +
     (argCode ? ', ' + argCode.join(', ') : '') + ')';
 };
 
-Spacebars.compile2 = function (input, options) {
+Spacebars.compile = function (input, options) {
   var tree;
 
   // Accept string or output of Spacebars.parse
   if (typeof input === 'string')
-    tree = Spacebars.parse2(input);
+    tree = Spacebars.parse(input);
   else
     tree = input;
 
