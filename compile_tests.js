@@ -54,6 +54,16 @@ Tinytest.add("spacebars - compiler output", function (test) {
         };
       });
 
+  run("{{foo x=bar}}",
+      function() {
+        var self = this;
+        return function() {
+          return Spacebars.mustache2(self.lookup("foo"), Spacebars.kw({
+            x: self.lookup("bar")
+          }));
+        };
+      });
+
   run("{{foo.bar baz}}",
       function() {
         var self = this;

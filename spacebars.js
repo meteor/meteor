@@ -1691,11 +1691,23 @@ Spacebars.mustacheImpl = function (value/*, args*/) {
   var args = arguments;
   // if we have any arguments (pos or kw), add an options argument
   // if there isn't one.
-  if (args.length > 1 &&
-      ! (args[args.length - 1] instanceof Spacebars.kw)) {
-    // clone arguments into an actual array, then push.
-    args = Array.prototype.slice.call(arguments);
-    args.push(Spacebars.kw());
+  if (args.length > 1) {
+    var kw = args[args.length - 1];
+    if (! (kw instanceof Spacebars.kw)) {
+      kw = Spacebars.kw();
+      // clone arguments into an actual array, then push
+      // the empty kw object.
+      args = Array.prototype.slice.call(arguments);
+      args.push(kw);
+    } else {
+      // For each keyword arg, call it if it's a function
+      var newHash = {};
+      for (var k in kw.hash) {
+        var v = kw.hash[k];
+        newHash[k] = (typeof v === 'function' ? v() : v);
+      }
+      args[args.length - 1] = Spacebars.kw(newHash);
+    }
   }
 
   return Spacebars.call2.apply(null, args);
