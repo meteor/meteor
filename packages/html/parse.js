@@ -101,10 +101,7 @@ getContent = function (scanner, shouldStopFunc) {
     if (token.t === 'Doctype') {
       scanner.fatal("Unexpected Doctype");
     } else if (token.t === 'Chars') {
-      if (items.length && typeof items[items.length - 1] === 'string')
-        items[items.length - 1] += token.v;
-      else
-        items.push(token.v);
+      pushOrAppendString(items, token.v);
     } else if (token.t === 'CharRef') {
       items.push(convertCharRef(token));
     } else if (token.t === 'Comment') {
@@ -134,7 +131,15 @@ getContent = function (scanner, shouldStopFunc) {
       if (isVoid) {
         items.push(attrs ? tagFunc(attrs) : tagFunc());
       } else {
-        var content = getContent(scanner);
+
+        var content;
+        if (token.n === 'textarea') {
+          if (scanner.peek() === '\n')
+            scanner.pos++;
+          content = getRCData(scanner, token.n, shouldStopFunc);
+        } else {
+          content = getContent(scanner, shouldStopFunc);
+        }
 
         if (scanner.rest().slice(0, 2) !== '</')
           scanner.fatal('Expected "' + tagName + '" end tag');
@@ -162,6 +167,60 @@ getContent = function (scanner, shouldStopFunc) {
       }
     } else {
       scanner.fatal("Unknown token type: " + token.t);
+    }
+  }
+
+  if (items.length === 0)
+    return null;
+  else if (items.length === 1)
+    return items[0];
+  else
+    return items;
+};
+
+var pushOrAppendString = function (items, string) {
+  if (items.length &&
+      typeof items[items.length - 1] === 'string')
+    items[items.length - 1] += string;
+  else
+    items.push(string);
+};
+
+// get RCDATA to go in the lowercase tagName (e.g. "textarea")
+getRCData = function (scanner, tagName, shouldStopFunc) {
+  var items = [];
+
+  while (! scanner.isEOF()) {
+    // break at appropriate end tag
+    if (isLookingAtEndTag(scanner, tagName))
+      break;
+
+    if (shouldStopFunc && shouldStopFunc(scanner))
+      break;
+
+    if (scanner.peek() === '<') {
+      pushOrAppendString(items, '<');
+      scanner.pos++;
+      continue;
+    }
+
+    var token = getHTMLToken(scanner);
+    if (! token)
+      // tokenizer reached EOF on its own, e.g. while scanning
+      // template comments like `{{! foo}}`.
+      continue;
+
+    if (token.t === 'Chars') {
+      pushOrAppendString(items, token.v);
+    } else if (token.t === 'CharRef') {
+      items.push(convertCharRef(token));
+    } else if (token.t === 'Special') {
+      scanner.fatal("NOT IMPLEMENTED: Can't have template tags in " + tagName);
+      // token.v is an object `{ ... }`
+      //items.push(HTML.Special(token.v));
+    } else {
+      // (can't happen)
+      scanner.fatal("Unknown or unexpected token type: " + token.t);
     }
   }
 

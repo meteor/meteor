@@ -98,6 +98,7 @@ Tinytest.add("html - parser getContent", function (test) {
   fatal('<a>Foo</a b=c>');
 
   succeed('<textarea>asdf</textarea>', TEXTAREA("asdf"));
+  succeed('<textarea x=y>asdf</textarea>', TEXTAREA({x: "y"}, "asdf"));
   succeed('<textarea><p></textarea>', TEXTAREA("<p>"));
   succeed('<textarea>a&amp;b</textarea>',
           TEXTAREA("a", CharRef({html: '&amp;', str: '&'}), "b"));
@@ -109,12 +110,13 @@ Tinytest.add("html - parser getContent", function (test) {
   succeed('<textarea>\n\n</textarea>', TEXTAREA("\n"));
   succeed('<textarea>\nasdf\n</textarea>', TEXTAREA("asdf\n"));
   succeed('<textarea><!-- --></textarea>', TEXTAREA("<!-- -->"));
-  succeed('<textarea x=y>asdf</textarea>', TEXTAREA({x: "y"}, "asdf"));
-  succeed('<tExTaReA>asdf</TEXTarea>', TEXTAREA({x: "y"}, "asdf"));
+  succeed('<tExTaReA>asdf</TEXTarea>', TEXTAREA("asdf"));
   fatal('<textarea>asdf');
   fatal('<textarea>asdf</textarea');
   fatal('<textarea>&davidgreenspan;</textarea>');
   succeed('<textarea>&</textarea>', TEXTAREA("&"));
+  succeed('<textarea></textarea  \n<</textarea  \n>asdf',
+          [TEXTAREA("</textarea  \n<"), "asdf"]);
 
 });
 

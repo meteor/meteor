@@ -479,3 +479,20 @@ TEMPLATE_TAG_POSITION = {
   IN_START_TAG: 2,
   IN_ATTRIBUTE: 3
 };
+
+// tagName is lowercase
+isLookingAtEndTag = function (scanner, tagName) {
+  var rest = scanner.rest();
+  var pos = 0; // into rest
+  var firstPart = /^<\/([a-zA-Z]+)/.exec(rest);
+  if (firstPart &&
+      asciiLowerCase(firstPart[1]) === tagName) {
+    // we've seen `</foo`, now see if the end tag continues
+    pos += firstPart[0].length;
+    while (pos < rest.length && HTML_SPACE.test(rest.charAt(pos)))
+      pos++;
+    if (pos < rest.length && rest.charAt(pos) === '>')
+      return true;
+  }
+  return false;
+};
