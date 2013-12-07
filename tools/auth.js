@@ -345,7 +345,6 @@ exports.loginCommand = function (argv, showUsage) {
       echo: false,
       prompt: "Password: "
     });
-    process.stdout.write("\n");
 
     var loginUrl = config.getAccountsApiUrl() + "/login";
     var result;
@@ -363,7 +362,7 @@ exports.loginCommand = function (argv, showUsage) {
 
     var loginResult = getLoginResult(result.response, result.body, 'METEOR_AUTH');
     if (! loginResult || ! loginResult.username) {
-      process.stdout.write("Login failed.\n");
+      process.stdout.write("\nLogin failed.\n");
       process.exit(1);
     }
 
@@ -375,7 +374,6 @@ exports.loginCommand = function (argv, showUsage) {
     data.username = loginResult.username;
     setSessionToken(data, config.getAccountsDomain(), meteorAuth, tokenId);
     writeSession(data);
-    process.stdout.write("\n");
   }
 
   if (galaxy) {
@@ -384,7 +382,7 @@ exports.loginCommand = function (argv, showUsage) {
     var galaxyLoginResult = logInToGalaxy(galaxy, meteorAuth);
     if (galaxyLoginResult.error) {
       // XXX add human readable error messages
-      process.stdout.write('Login to ' + galaxy + ' failed: ' +
+      process.stdout.write('\nLogin to ' + galaxy + ' failed: ' +
                            galaxyLoginResult.error + '\n');
       process.exit(1);
     }
@@ -395,7 +393,7 @@ exports.loginCommand = function (argv, showUsage) {
 
   tryRevokeOldTokens();
 
-  process.stdout.write("Logged in " + (galaxy ? "to " + galaxy + " " : "") +
+  process.stdout.write("\nLogged in " + (galaxy ? "to " + galaxy + " " : "") +
                        "as " + data.username + ".\n" +
                        "Thanks for being a Meteor developer!\n");
 };
