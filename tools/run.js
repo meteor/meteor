@@ -124,7 +124,8 @@ var startProxy = function (outerPort, innerPort, callback) {
     if (Status.crashing) {
       // sad face. send error logs.
       // XXX formatting! text/plain is bad
-      res.writeHead(200, {'Content-Type': 'text/plain'});
+      res.writeHead(200, {'Content-Type': 'text/plain',
+        'Access-Control-Allow-Origin': '*'});
 
       res.write("Your app is crashing. Here's the latest log.\n\n");
 
