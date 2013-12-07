@@ -11,6 +11,7 @@ var INPUT = HTML.Tag.INPUT;
 var A = HTML.Tag.A
 var DIV = HTML.Tag.DIV;
 var P = HTML.Tag.P;
+var TEXTAREA = HTML.Tag.TEXTAREA;
 
 Tinytest.add("html - parser getContent", function (test) {
 
@@ -95,6 +96,26 @@ Tinytest.add("html - parser getContent", function (test) {
 
   fatal('<a>Foo</a/>');
   fatal('<a>Foo</a b=c>');
+
+  succeed('<textarea>asdf</textarea>', TEXTAREA("asdf"));
+  succeed('<textarea><p></textarea>', TEXTAREA("<p>"));
+  succeed('<textarea>a&amp;b</textarea>',
+          TEXTAREA("a", CharRef({html: '&amp;', str: '&'}), "b"));
+  succeed('<textarea></textarea</textarea>', TEXTAREA("</textarea"));
+  // absorb up to one initial newline, as per HTML parsing spec
+  succeed('<textarea>\n</textarea>', TEXTAREA());
+  succeed('<textarea>\nasdf</textarea>', TEXTAREA("asdf"));
+  succeed('<textarea>\n\nasdf</textarea>', TEXTAREA("\nasdf"));
+  succeed('<textarea>\n\n</textarea>', TEXTAREA("\n"));
+  succeed('<textarea>\nasdf\n</textarea>', TEXTAREA("asdf\n"));
+  succeed('<textarea><!-- --></textarea>', TEXTAREA("<!-- -->"));
+  succeed('<textarea x=y>asdf</textarea>', TEXTAREA({x: "y"}, "asdf"));
+  succeed('<tExTaReA>asdf</TEXTarea>', TEXTAREA({x: "y"}, "asdf"));
+  fatal('<textarea>asdf');
+  fatal('<textarea>asdf</textarea');
+  fatal('<textarea>&davidgreenspan;</textarea>');
+  succeed('<textarea>&</textarea>', TEXTAREA("&"));
+
 });
 
 Tinytest.add("html - parseFragment", function (test) {
