@@ -44,7 +44,7 @@ var getTokens = function (query) {
           code: query.code,
           client_id: config.clientId,
           client_secret: config.secret,
-          redirect_uri: Meteor.absoluteUrl("_oauth/meteorId/close")
+          redirect_uri: Meteor.absoluteUrl("_oauth/meteorId?close")
         }
       }
     );

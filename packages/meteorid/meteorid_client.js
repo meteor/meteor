@@ -21,7 +21,7 @@ MeteorId.requestCredential = function (credentialRequestCompleteCallback) {
         "state=" + credentialToken +
         "&response_type=code&" +
         "client_id=" + config.clientId +
-        "&redirect_uri=" + Meteor.absoluteUrl("_oauth/meteorId/close");
+        "&redirect_uri=" + Meteor.absoluteUrl("_oauth/meteorId?close");
 
   Oauth.showPopup(
     loginUrl,
