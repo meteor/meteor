@@ -301,9 +301,19 @@ var materialize = function (node, parent, before, parentComponent) {
           updateAttributes(elem, attrs);
         }
       }
-      _.each(node, function (child) {
-        materialize(child, elem, null, parentComponent);
-      });
+      if (node.tagName === 'TEXTAREA') {
+        var value = '';
+        _.each(node, function (child) {
+          // XXX put the functionality of attributeValueToString in
+          // something like UI.toText(node)
+          value += attributeValueToString(child);
+        });
+        elem.value = value;
+      } else {
+        _.each(node, function (child) {
+          materialize(child, elem, null, parentComponent);
+        });
+      }
       insert(elem, parent, before);
     } else if (type === 'array') {
       _.each(node, function (child) {
@@ -507,9 +517,17 @@ var toHTML = function (node, parentComponent) {
         });
       }
       result += '>';
+      var contents = '';
       _.each(node, function (child) {
-        result += toHTML(child, parentComponent);
+        contents += toHTML(child, parentComponent);
       });
+      if (node.tagName === 'TEXTAREA' &&
+          contents.slice(0, 1) === '\n') {
+        // TEXTAREA will absorb a newline, so if we see one, add
+        // another one.
+        result += '\n';
+      }
+      result += contents;
       if (node.length || ! HTML.isVoidElement(node.tagName)) {
         // "Void" elements like BR are the only ones that don't get a close
         // tag in HTML5.  They shouldn't have contents, either, so we could

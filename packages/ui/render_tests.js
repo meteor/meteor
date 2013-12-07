@@ -12,6 +12,7 @@ var UL = HTML.Tag.UL;
 var LI = HTML.Tag.LI;
 var SPAN = HTML.Tag.SPAN;
 var HR = HTML.Tag.HR;
+var TEXTAREA = HTML.Tag.TEXTAREA;
 
 Tinytest.add("ui - render - basic", function (test) {
   var run = function (input, expectedInnerHTML, expectedHTML, expectedCode) {
@@ -70,6 +71,44 @@ Tinytest.add("ui - render - basic", function (test) {
       '<div class="foo"><ul><li><p><a href="#one">One</a></p></li><li><p>Two<br>Three</p></li></ul></div>',
       '<div class="foo"><ul><li><p><a href="#one">One</a></p></li><li><p>Two<br>Three</p></li></ul></div>',
       'HTML.Tag.DIV({"class": "foo"}, HTML.Tag.UL(HTML.Tag.LI(HTML.Tag.P(HTML.Tag.A({href: "#one"}, "One"))), HTML.Tag.LI(HTML.Tag.P("Two", HTML.Tag.BR(), "Three"))))');
+
+});
+
+Tinytest.add("ui - render - textarea", function (test) {
+  var run = function (optNode, text, html, code) {
+    if (typeof optNode === 'string') {
+      // called with args (text, html, code)
+      code = html;
+      html = text;
+      text = optNode;
+      optNode = null;
+    }
+    var div = document.createElement("DIV");
+    var node = TEXTAREA(optNode || text);
+    materialize(node, div);
+    test.equal(div.querySelector('textarea').value, text);
+
+    test.equal(UI.toHTML(node), html);
+    test.equal(UI.toCode(node), code);
+  };
+
+  run('Hello',
+      '<textarea>Hello</textarea>',
+      'HTML.Tag.TEXTAREA("Hello")');
+
+  run('\nHello',
+      '<textarea>\n\nHello</textarea>',
+      'HTML.Tag.TEXTAREA("\\nHello")');
+
+  run('</textarea>',
+      '<textarea>&lt;/textarea></textarea>',
+      'HTML.Tag.TEXTAREA("</textarea>")');
+
+  run(CharRef({html: '&amp;', str: '&'}),
+      '&',
+      '<textarea>&amp;</textarea>',
+      'HTML.Tag.TEXTAREA(HTML.CharRef({html: "&amp;", str: "&"}))');
+
 });
 
 Tinytest.add("ui - render - closures", function (test) {
