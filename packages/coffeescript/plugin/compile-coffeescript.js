@@ -155,9 +155,8 @@ var handler = function (compileStep, isLiterate) {
 
 var literateHandler = function (compileStep) {
   return handler(compileStep, true);
-}
+};
 
 Plugin.registerSourceHandler("coffee", handler);
 Plugin.registerSourceHandler("litcoffee", literateHandler);
 Plugin.registerSourceHandler("coffee.md", literateHandler);
-
