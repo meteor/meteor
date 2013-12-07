@@ -1,7 +1,7 @@
-Accounts.oauth.registerService("meteorid");
+Accounts.oauth.registerService("meteorId");
 
 if (Meteor.isClient) {
-  Meteor.loginWithMeteorId = function (callback) {
+  Meteor.loginWithMeteorId = function (options, callback) {
     var credentialRequestCompleteCallback =
           Accounts.oauth.credentialRequestCompleteHandler(callback);
     MeteorId.requestCredential(credentialRequestCompleteCallback);
@@ -10,11 +10,11 @@ if (Meteor.isClient) {
   Accounts.addAutopublishFields({
     // publish all fields including access token, which can legitimately be used
     // from the client (if transmitted over ssl or on localhost).
-    forLoggedInUser: ['services.meteorid'],
+    forLoggedInUser: ['services.meteorId'],
     forOtherUsers: [
-      'services.meteorid.username',
-      'services.meteorid.profile',
-      'services.meteorid.id'
+      'services.meteorId.username',
+      'services.meteorId.profile',
+      'services.meteorId.id'
     ]
   });
 }

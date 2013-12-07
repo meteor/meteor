@@ -5,7 +5,7 @@ MeteorId = {};
 //   completion. Takes one argument, credentialToken on success, or Error on
 //   error.
 MeteorId.requestCredential = function (credentialRequestCompleteCallback) {
-  var config = ServiceConfiguration.configurations.findOne({service: 'meteorid'});
+  var config = ServiceConfiguration.configurations.findOne({service: 'meteorId'});
   if (!config) {
     credentialRequestCompleteCallback &&
       credentialRequestCompleteCallback(
@@ -17,11 +17,11 @@ MeteorId.requestCredential = function (credentialRequestCompleteCallback) {
   var credentialToken = Random.id();
 
   var loginUrl =
-        METEORID_URL + "/authorize?" +
+        METEORID_URL + "/oauth2/authorize?" +
         "state=" + credentialToken +
         "&response_type=code&" +
         "client_id=" + config.clientId +
-        "&redirect_uri=" + Meteor.absoluteUrl("_oauth/meteor/close");
+        "&redirect_uri=" + Meteor.absoluteUrl("_oauth/meteorId/close");
 
   Oauth.showPopup(
     loginUrl,

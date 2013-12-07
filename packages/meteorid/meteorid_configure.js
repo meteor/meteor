@@ -1,8 +1,8 @@
-Template.configureLoginServiceDialogForMeteor.siteUrl = function () {
+Template.configureLoginServiceDialogForMeteorId.siteUrl = function () {
   return Meteor.absoluteUrl();
 };
 
-Template.configureLoginServiceDialogForMeteor.fields = function () {
+Template.configureLoginServiceDialogForMeteorId.fields = function () {
   return [
     {property: 'clientId', label: 'Client ID'},
     {property: 'secret', label: 'Client secret'}
