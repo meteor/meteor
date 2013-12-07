@@ -346,7 +346,7 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
 
 Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, onComplete) {
 
-  var run = test.runId();
+  var run = Random.id();
   var coll;
   if (Meteor.isClient) {
     coll = new Meteor.Collection(null, collectionOptions); // local, unmanaged
@@ -382,6 +382,15 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
     }
   });
 
+  // XXX What if there are multiple observe handles on the ObserveMultiplexer?
+  //     There shouldn't be because the collection has a name unique to this
+  //     run.
+  if (Meteor.isServer) {
+    // For now, has to be polling (not oplog).
+    test.isTrue(obs._observeDriver);
+    test.isTrue(obs._observeDriver._suspendPolling);
+  }
+
   var step = 0;
 
   // Use non-deterministic randomness so we can have a shorter fuzz
@@ -413,11 +422,8 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
     var max_counters = _.clone(counters);
 
     finishObserve(function () {
-      // XXX What if there are multiple observe handles on the LiveResultsSet?
-      //     There shouldn't be because the collection has a name unique to this
-      //     run.
       if (Meteor.isServer)
-        obs._liveResultsSet._suspendPolling();
+        obs._observeDriver._suspendPolling();
 
       // Do a batch of 1-10 operations
       var batch_count = rnd(10) + 1;
@@ -450,7 +456,7 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
         }
       }
       if (Meteor.isServer)
-        obs._liveResultsSet._resumePolling();
+        obs._observeDriver._resumePolling();
 
     });
 
@@ -513,7 +519,7 @@ Tinytest.addAsync("mongo-livedata - scribbling, " + idGeneration, function (test
 });
 
 Tinytest.addAsync("mongo-livedata - stop handle in callback, " + idGeneration, function (test, onComplete) {
-  var run = test.runId();
+  var run = Random.id();
   var coll;
   if (Meteor.isClient) {
     coll = new Meteor.Collection(null, collectionOptions); // local, unmanaged
@@ -572,11 +578,11 @@ if (Meteor.isServer) {
     var coll = new Meteor.Collection("observeInCallback-"+run, collectionOptions);
 
     var callbackCalled = false;
-    var handle = coll.find().observe({
+    var handle = coll.find({}).observe({
       added: function (newDoc) {
         callbackCalled = true;
         test.throws(function () {
-          coll.find().observe({});
+          coll.find({}).observe();
         });
       }
     });
@@ -599,12 +605,12 @@ if (Meteor.isServer) {
     var observer = function (noAdded) {
       var output = [];
       var callbacks = {
-        changedAt: function (newDoc) {
+        changed: function (newDoc) {
           output.push({changed: newDoc._id});
         }
       };
       if (!noAdded) {
-        callbacks.addedAt = function (doc) {
+        callbacks.added = function (doc) {
           output.push({added: doc._id});
         };
       }
@@ -639,11 +645,10 @@ if (Meteor.isServer) {
     // Original observe not affected.
     test.length(o1.output, 0);
 
-    // White-box test: both observes should have the same underlying
-    // LiveResultsSet.
-    var liveResultsSet = o1.handle._liveResultsSet;
-    test.isTrue(liveResultsSet);
-    test.isTrue(liveResultsSet === o2.handle._liveResultsSet);
+    // White-box test: both observes should share an ObserveMultiplexer.
+    var observeMultiplexer = o1.handle._multiplexer;
+    test.isTrue(observeMultiplexer);
+    test.isTrue(observeMultiplexer === o2.handle._multiplexer);
 
     // Update. Both observes fire.
     runInFence(function () {
@@ -667,14 +672,15 @@ if (Meteor.isServer) {
     test.length(o2.output, 1);
     test.equal(o2.output.shift(), {changed: docId2});
 
-    // Stop second handle. Nothing should happen, but the liveResultsSet should
+    // Stop second handle. Nothing should happen, but the multiplexer should
     // be stopped.
+    test.isTrue(observeMultiplexer._handles);  // This will change.
     o2.handle.stop();
     test.length(o1.output, 0);
     test.length(o2.output, 0);
-    // White-box: liveResultsSet has nulled its _observeHandles so you can't
+    // White-box: ObserveMultiplexer has nulled its _handles so you can't
     // accidentally join to it.
-    test.isNull(liveResultsSet._observeHandles);
+    test.isNull(observeMultiplexer._handles);
 
     // Start yet another handle on the same query.
     var o3 = observer();
@@ -686,8 +692,8 @@ if (Meteor.isServer) {
     // Old observers not called.
     test.length(o1.output, 0);
     test.length(o2.output, 0);
-    // White-box: Different LiveResultsSet.
-    test.isTrue(liveResultsSet !== o3.handle._liveResultsSet);
+    // White-box: Different ObserveMultiplexer.
+    test.isTrue(observeMultiplexer !== o3.handle._multiplexer);
 
     // Start another handle with no added callback. Regression test for #589.
     var o4 = observer(true);
@@ -966,8 +972,9 @@ if (Meteor.isServer) {
     var handlesToStop = [];
     var observe = function (name, query) {
       var handle = coll.find(query).observeChanges({
-        // Make sure that we only poll on invalidation, not due to time,
-        // and keep track of when we do.
+        // Make sure that we only poll on invalidation, not due to time, and
+        // keep track of when we do. Note: this option disables the use of
+        // oplogs (which admittedly is somewhat irrelevant to this feature).
         _testOnlyPollCallback: function () {
           polls[name] = (name in polls ? polls[name] + 1 : 1);
         }
@@ -1872,3 +1879,21 @@ if (Meteor.isServer) {
                 elements: ['Y', 'A', 'B', 'C']});
   });
 }
+
+// This is a VERY white-box test.
+Meteor.isServer && Tinytest.add("mongo-livedata - oplog - _disableOplog", function (test) {
+  var collName = Random.id();
+  var coll = new Meteor.Collection(collName);
+  if (MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle) {
+    var observeWithOplog = coll.find({x: 5})
+          .observeChanges({added: function () {}});
+    test.isTrue(observeWithOplog._observeDriver);
+    test.isTrue(observeWithOplog._observeDriver._usesOplog);
+    observeWithOplog.stop();
+  }
+  var observeWithoutOplog = coll.find({x: 6}, {_disableOplog: true})
+        .observeChanges({added: function () {}});
+  test.isTrue(observeWithoutOplog._observeDriver);
+  test.isFalse(observeWithoutOplog._observeDriver._usesOplog);
+  observeWithoutOplog.stop();
+});

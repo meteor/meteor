@@ -549,7 +549,7 @@ Meteor.Collection.ObjectID = LocalCollection._ObjectID;
         if (!(options[name] instanceof Function)) {
           throw new Error(allowOrDeny + ": Value for `" + name + "` must be a function");
         }
-        if (self._transform)
+        if (self._transform && options.transform !== null)
           options[name].transform = self._transform;
         if (options.transform)
           options[name].transform = Deps._makeNonreactive(options.transform);

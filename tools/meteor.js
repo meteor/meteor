@@ -1006,6 +1006,10 @@ Fiber(function () {
         .boolean('production')
         .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
         .boolean('once') // See #Once
+        // To ensure that QA covers both PollingObserveDriver and
+        // OplogObserveDriver, this option disables oplog for tests.
+        // (It still creates a replset, it just doesn't do oplog tailing.)
+        .boolean('disable-oplog')
         .describe('settings',  'Set optional data for Meteor.settings on the server')
         .usage(
           "Usage: meteor test-packages [--release <release>] [options] [package...]\n" +
@@ -1087,6 +1091,7 @@ Fiber(function () {
           port: argv.port,
           minify: argv.production,
           once: argv.once,
+          disableOplog: argv['disable-oplog'],
           testPackages: testPackages,
           settingsFile: argv.settings,
           banner: "Tests"

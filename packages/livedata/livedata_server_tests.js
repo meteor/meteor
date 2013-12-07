@@ -9,7 +9,12 @@ Tinytest.addAsync(
       function (clientConn, serverConn) {
         // On the server side, wait for the connection to be closed.
         serverConn.onClose(function () {
-          onComplete();
+          test.isTrue(true);
+          // Add a new onClose after the connection is already
+          // closed. See that it fires.
+          serverConn.onClose(function () {
+            onComplete();
+          });
         });
         // Close the connection from the client.
         clientConn.disconnect();
@@ -44,6 +49,38 @@ Tinytest.addAsync(
       onComplete
     );
   }
+);
+
+
+testAsyncMulti(
+  "livedata server - onConnection doesn't get callback after stop.",
+  [function (test, expect) {
+    var afterStop = false;
+    var expectStop1 = expect();
+    var stopHandle1 = Meteor.onConnection(function (conn) {
+      stopHandle2.stop();
+      stopHandle1.stop();
+      afterStop = true;
+      // yield to the event loop for a moment to see that no other calls
+      // to listener2 are called.
+      Meteor.setTimeout(expectStop1, 10);
+    });
+    var stopHandle2 = Meteor.onConnection(function (conn) {
+      test.isFalse(afterStop);
+    });
+
+    // trigger a connection
+    var expectConnection = expect();
+    makeTestConnection(
+      test,
+      function (clientConn, serverConn) {
+        // Close the connection from the client.
+        clientConn.disconnect();
+        expectConnection();
+      },
+      expectConnection
+    );
+  }]
 );
 
 

@@ -6,15 +6,16 @@
 // deep meaning to the matching function, and it could be changed later
 // as long as it preserves that property.
 Tinytest.add('livedata - crossbar', function (test) {
-  test.isTrue(DDPServer._InvalidationCrossbar._matches(
-    {collection: "C"}, {collection: "C"}));
-  test.isTrue(DDPServer._InvalidationCrossbar._matches(
-    {collection: "C", id: "X"}, {collection: "C"}));
-  test.isTrue(DDPServer._InvalidationCrossbar._matches(
-    {collection: "C"}, {collection: "C", id: "X"}));
-  test.isTrue(DDPServer._InvalidationCrossbar._matches(
-    {collection: "C", id: "X"}, {collection: "C"}));
+  var crossbar = new DDPServer._Crossbar;
+  test.isTrue(crossbar._matches({collection: "C"},
+                                {collection: "C"}));
+  test.isTrue(crossbar._matches({collection: "C", id: "X"},
+                                {collection: "C"}));
+  test.isTrue(crossbar._matches({collection: "C"},
+                                {collection: "C", id: "X"}));
+  test.isTrue(crossbar._matches({collection: "C", id: "X"},
+                                {collection: "C"}));
 
-  test.isFalse(DDPServer._InvalidationCrossbar._matches(
-    {collection: "C", id: "X"}, {collection: "C", id: "Y"}));
+  test.isFalse(crossbar._matches({collection: "C", id: "X"},
+                                 {collection: "C", id: "Y"}));
 });

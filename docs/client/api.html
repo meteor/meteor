@@ -475,8 +475,8 @@ updates are not required.
 be called on new connections.
 
 The callback is called with a single argument, the server-side
-[session](#ddp_session) representing the connection from the client.
-
+`connection` representing the connection from the client.  This object
+contains the following fields:
 
 <dl class="objdesc">
 {{#dtdd name="id" type="String"}}
@@ -489,18 +489,22 @@ receive a different connection with a new `id` if it does.
 {{/dtdd}}
 
 {{#dtdd name="onClose" type="Function"}}
-Register a callback to be called when the connection is closed.
+Register a callback to be called when the connection is closed. If the
+connection is already closed, the callback will be called immediately.
 {{/dtdd}}
 </dl>
 
 {{#note}}
 Currently when a client reconnects to the server (such as after
-temporarily losing its Internet connection), it will get a new session
-each time.
+temporarily losing its Internet connection), it will get a new
+connection each time.  The `onConnection` callbacks will be called
+again, and the new connection will have a new connection `id`.
 
-In the future, when session reconnection is implemented, clients will be
-able to reconnect and resume the same session.
-
+In the future, when client reconnection is fully implemented,
+reconnecting from the client will reconnect to the same connection on
+the server: the `onConnection` callback won't be called for that
+connection again, and the connection will still have the same
+connection `id`.
 {{/note}}
 
 
@@ -923,9 +927,11 @@ proposed update.) Return `true` to permit the change.
 
 `fieldNames` is an array of the (top-level) fields in `doc` that the
 client wants to modify, for example
-`['name',`&nbsp;`'score']`. `modifier` is the raw Mongo modifier that
-the client wants to execute, for example `{$set: {'name.first':
-"Alice"}, $inc: {score: 1}}`.
+`['name',`&nbsp;`'score']`.
+
+`modifier` is the raw Mongo modifier that
+the client wants to execute; for example,
+`{$set: {'name.first': "Alice"}, $inc: {score: 1}}`.
 
 Only Mongo modifiers are supported (operations like `$set` and `$push`).
 If the user tries to replace the entire document rather than use
@@ -2505,7 +2511,9 @@ these variables have the right values, you need to use
 instead of `setInterval`.
 
 These functions work just like their native JavaScript equivalents.
-You'll get an error if you call the native function.
+If you call the native function, you'll get an error stating that Meteor
+code must always run within a Fiber, and advising to use
+`Meteor.bindEnvironment`.
 
 {{> api_box setTimeout}}
 
