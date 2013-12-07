@@ -28,6 +28,8 @@
 
 * New 'facts' package publishes internal statistics about Meteor.
 
+* Hash login tokens before storing them in the database.
+
 * Upgraded dependencies:
   * SockJS server from 0.3.7 to 0.3.8
 
