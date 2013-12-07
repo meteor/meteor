@@ -45,7 +45,7 @@ OplogObserveDriver = function (options) {
     sharedProjection);
 
   self._needToFetch = new LocalCollection._IdMap;
-  self._currentlyFetching = new LocalCollection._IdMap;
+  self._currentlyFetching = null;
 
   self._writesToCommitWhenWeReachSteady = [];
 
@@ -179,7 +179,7 @@ _.extend(OplogObserveDriver.prototype, {
       fut.wait();
       if (anyError)
         throw anyError;
-      self._currentlyFetching = new LocalCollection._IdMap;
+      self._currentlyFetching = null;
     }
     self._beSteady();
   },
@@ -203,9 +203,8 @@ _.extend(OplogObserveDriver.prototype, {
     var id = idForOp(op);
     // If we're already fetching this one, or about to, we can't optimize; make
     // sure that we fetch it again if necessary.
-    if (self._currentlyFetching.has(id) || self._needToFetch.has(id)) {
-      if (self._phase !== PHASE.FETCHING)
-        throw Error("map not empty during steady phase");
+    if (self._phase === PHASE.FETCHING &&
+        (self._currentlyFetching.has(id) || self._needToFetch.has(id))) {
       self._needToFetch.set(id, op.ts.toString());
       return;
     }
