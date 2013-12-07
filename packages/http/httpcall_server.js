@@ -75,7 +75,7 @@ var _call = function(method, url, options, callback) {
   var req_options = {
     url: new_url,
     method: method,
-    encoding: "utf8",
+    encoding: _.isUndefined(options._encoding) ? "utf8" : options._encoding,
     jar: false,
     timeout: options.timeout,
     body: content,
