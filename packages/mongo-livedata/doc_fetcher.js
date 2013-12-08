@@ -15,6 +15,9 @@ _.extend(DocFetcher.prototype, {
   // If you make multiple calls to fetch() with the same cacheKey (a string),
   // DocFetcher may assume that they all return the same document. (It does
   // not check to see if collectionName/id match.)
+  //
+  // You may assume that callback is never called synchronously (and in fact
+  // OplogObserveDriver does so).
   fetch: function (collectionName, id, cacheKey, callback) {
     var self = this;
 
