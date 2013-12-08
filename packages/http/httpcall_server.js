@@ -31,6 +31,14 @@ var _call = function(method, url, options, callback) {
     headers['Content-Type'] = 'application/json';
   }
 
+  var responseType = options.responseType || "string";
+  var encoding = _.isUndefined(options._encoding) ? "utf8" : options._encoding;
+
+  // If responseType requires getting a Buffer back, override encoding
+  // to null, which tells request to return a Buffer
+  if (_.contains(["arraybuffer", "buffer", "ejson-binary"], responseType)) {
+    encoding = null;
+  }
 
   var params_for_url, params_for_body;
   if (content || method === "GET" || method === "HEAD")
@@ -39,14 +47,14 @@ var _call = function(method, url, options, callback) {
     params_for_body = options.params;
 
   var new_url = buildUrl(
-    url_parts.protocol + "//" + url_parts.host + url_parts.pathname,
-    url_parts.search, options.query, params_for_url);
+          url_parts.protocol + "//" + url_parts.host + url_parts.pathname,
+          url_parts.search, options.query, params_for_url);
 
   if (options.auth) {
     if (options.auth.indexOf(':') < 0)
       throw new Error('auth option should be of the form "username:password"');
     headers['Authorization'] = "Basic "+
-      (new Buffer(options.auth, "ascii")).toString("base64");
+            (new Buffer(options.auth, "ascii")).toString("base64");
   }
 
   if (params_for_body) {
@@ -75,7 +83,7 @@ var _call = function(method, url, options, callback) {
   var req_options = {
     url: new_url,
     method: method,
-    encoding: "utf8",
+    encoding: encoding,
     jar: false,
     timeout: options.timeout,
     body: content,
@@ -90,6 +98,38 @@ var _call = function(method, url, options, callback) {
 
       response = {};
       response.statusCode = res.statusCode;
+
+      // Convert body into requested type
+      switch (responseType) {
+        case "arraybuffer":
+          var len = body.length;
+          var ab = new ArrayBuffer(len);
+          var view = new Uint8Array(ab);
+          for (var i = 0; i < len; i++) {
+            view[i] = body[i];
+          }
+          body = ab;
+          break;
+        case "ejson-binary":
+          var len = body.length;
+          var binary = EJSON.newBinary(len);
+          for (var i = 0; i < len; i++) {
+            binary[i] = body[i];
+          }
+          body = binary;
+          break;
+        case "json":
+          if (typeof body === "string") {
+            try {
+              body = JSON.parse(body);
+            } catch (err) {
+              // leave it as a string
+            }
+          }
+          break;
+      }
+
+
       response.content = body;
       response.headers = res.headers;
 

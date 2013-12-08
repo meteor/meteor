@@ -421,9 +421,12 @@ testAsyncMulti("httpcall - params", [
   }
 ]);
 
-if (Meteor.isClient) {
-  testAsyncMulti("httpcall - binary", [
-    function(test, expect) {
+
+testAsyncMulti("httpcall - binary", [
+  function(test, expect) {
+    
+    // "blob" and "document" are client-only
+    if (Meteor.isClient) {
       HTTP.call(
               "GET", url_prefix() + "/binary",
               {responseType: "blob"},
@@ -435,16 +438,6 @@ if (Meteor.isClient) {
       }));
       
       HTTP.call(
-              "GET", url_prefix() + "/binary",
-              {responseType: "arraybuffer"},
-      expect(function(error, result) {
-        test.isFalse(error);
-        test.isTrue(result);
-        test.equal(result.statusCode, 200);
-        test.instanceOf(result.content, ArrayBuffer);
-      }));
-      
-      HTTP.call(
               "GET", url_prefix() + "/document",
               {responseType: "document"},
       expect(function(error, result) {
@@ -453,21 +446,40 @@ if (Meteor.isClient) {
         test.equal(result.statusCode, 200);
         test.instanceOf(result.content, Document);
       }));
-      
-      HTTP.call(
-              "GET", url_prefix() + "/foo",
-              {responseType: "json"},
-      expect(function(error, result) {
-        test.isFalse(error);
-        test.isTrue(result);
-        test.equal(result.statusCode, 200);
-        //Safari does not support type "json" yet so this fails on Safari
-        //test.instanceOf(result.content, Object);
-      }));
-
     }
-  ]);
-}
+
+    HTTP.call(
+            "GET", url_prefix() + "/binary",
+            {responseType: "arraybuffer"},
+    expect(function(error, result) {
+      test.isFalse(error);
+      test.isTrue(result);
+      test.equal(result.statusCode, 200);
+      test.instanceOf(result.content, ArrayBuffer);
+    }));
+
+    HTTP.call(
+            "GET", url_prefix() + "/binary",
+            {responseType: "ejson-binary"},
+    expect(function(error, result) {
+      test.isFalse(error);
+      test.isTrue(result);
+      test.equal(result.statusCode, 200);
+      test.isTrue(EJSON.isBinary(result.content));
+    }));
+
+    HTTP.call(
+            "GET", url_prefix() + "/foo",
+            {responseType: "json"},
+    expect(function(error, result) {
+      test.isFalse(error);
+      test.isTrue(result);
+      test.equal(result.statusCode, 200);
+      test.instanceOf(result.content, Object);
+    }));
+
+  }
+]);
 
 if (Meteor.isServer) {
   // This is testing the server's static file sending code, not the http

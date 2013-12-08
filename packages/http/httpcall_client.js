@@ -84,8 +84,16 @@ HTTP.call = function(method, url, options, callback) {
       throw new Error("Can't create XMLHttpRequest"); // ???
 
     xhr.open(method, url, true, username, password);
-    // responseType: "" = "text" = default value
-    xhr.responseType = options.responseType || "";
+    
+    // support custom "ejson-binary" response type
+    // and all browser-supported types
+    var convertToBinary;
+    if (options.responseType === "ejson-binary") {
+      xhr.responseType = "arraybuffer";
+      convertToBinary = true;
+    } else {
+      xhr.responseType = options.responseType;
+    }
 
     for (var k in headers)
       xhr.setRequestHeader(k, headers[k]);
@@ -116,7 +124,31 @@ HTTP.call = function(method, url, options, callback) {
 
           var response = {};
           response.statusCode = xhr.status;
-          response.content = xhr.response || xhr.responseText;
+          
+          var body = xhr.response || xhr.responseText;
+          
+          // Some browsers don't yet support "json" responseType,
+          // but we can replicate it
+          if (options.responseType === "json" && typeof body === "string") {
+            try {
+              body = JSON.parse(body);
+            } catch (err) {
+              body = null;
+            }
+          }
+          
+          // Add support for a custom responseType: "ejson-binary"
+          if (convertToBinary && typeof ArrayBuffer !== "undefined" && typeof Uint8Array !== "undefined" && body instanceof ArrayBuffer) {
+            var view = new Uint8Array(body);
+            var len = body.byteLength;
+            var binaryBody = EJSON.newBinary(len);
+            for (var i = 0; i < len; i++) {
+              binaryBody[i] = view[i];
+            }
+            body = binaryBody;
+          }
+          
+          response.content = body;
 
           response.headers = {};
           var header_str = xhr.getAllResponseHeaders();
