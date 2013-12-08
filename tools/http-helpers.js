@@ -10,6 +10,8 @@ var request = require('request');
 var Future = require('fibers/future');
 
 var files = require('./files.js');
+var auth = require('./auth.js');
+var config = require('./config.js');
 
 // Compose a User-Agent header. 'meteorReleaseContext' is optional. If
 // provided, it is used to give more precise information about the
@@ -61,7 +63,16 @@ _.extend(exports, {
   // - You can provide a 'bodyStream' option which is a stream that
   //   will be used for the body of the request.
   //
+  // - For authenticated MDG services, you can set the
+  //   'useSessionCookie' and/or 'useAuthCookie' options (to true) to
+  //   send the appropriate cookies from the session file.
+  //
   // - forceSSL is always set to true. Always.
+  //
+  // NB: With useSessionCookie and useAuthCookie, this function will
+  // read *and possibly write to* the session file, so if you are
+  // writing auth code (in auth.js) and you call it, be sure to reread
+  // the session file afterwards.
   request: function (urlOrOptions, callback) {
     var options;
     if (!_.isObject(urlOrOptions))
@@ -88,6 +99,31 @@ _.extend(exports, {
 
     options.forceSSL = true;
 
+    var cookies = {};
+    var useSessionCookie = options.useSessionCookie;
+    delete options.useSessionCookie;
+    var useAuthCookie = options.useAuthCookie;
+    delete options.useAuthCookie;
+    if (useSessionCookie || useAuthCookie) {
+      var sessionCookie = auth.getSessionId(config.getAccountsDomain());
+      if (sessionCookie)
+        cookies['METEOR_SESSION'] = sessionCookie;
+      if (callback)
+        throw new Error("session cookie can't be used with callback");
+    }
+    if (useAuthCookie) {
+      var authCookie = auth.getSessionToken(config.getAccountsDomain());
+      if (authCookie)
+        cookies['METEOR_AUTH'] = authCookie;
+    }
+    if (_.keys(cookies).length) {
+      if (_.has(options.headers, 'cookie'))
+        throw new Error("already has cookies? sorry, not implemented");
+      options.headers.cookie = _.map(cookies, function (value, key) {
+        return key + "=" + value;
+      }).join(";");
+    }
+
     var fut;
     if (! callback) {
       fut = new Future();
@@ -95,6 +131,17 @@ _.extend(exports, {
         if (err) {
           fut.throw(err);
         } else {
+          if (useSessionCookie) {
+            var sessionId;
+            _.each(response.headers["set-cookie"] || [], function (h) {
+              var match = h.match(/^METEOR_SESSION=([^;\s]+)/);
+              if (match)
+                sessionId = match[1];
+            });
+
+            if (sessionId)
+              auth.setSessionId(config.getAccountsDomain(), sessionId);
+          }
           fut.return({
             response: response,
             body: body

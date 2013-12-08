@@ -66,16 +66,13 @@ var deployRpc = function (options) {
   if (options.headers.cookie)
     throw new Error("sorry, can't combine cookie headers yet");
 
-  var token = auth.getSessionToken(config.getAccountsDomain());
-  if (token)
-    options.headers.cookie = 'METEOR_AUTH=' + token;
-
   // XXX pass meteorReleaseContext
   try {
     var result = httpHelpers.request(_.extend(options, {
       url: config.getDeployUrl() + '/' + options.operation + '/' + options.site,
       method: options.method || 'GET',
       bodyStream: options.bodyStream,
+      useAuthCookie: true,
       encoding: 'utf8' // Hack, but good enough for the deploy server..
     }));
   } catch (e) {

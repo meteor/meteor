@@ -7,17 +7,21 @@ var inFiber = require('./fiber-helpers.js').inFiber;
 var files = require('./files.js');
 var warehouse = require('./warehouse.js');
 var httpHelpers = require('./http-helpers.js');
+var config = require('./config.js');
 
-var manifestUrl = testingUpdater
-      ? 'https://s3.amazonaws.com/com.meteor.static/test/update/manifest.json'
-      : 'https://update.meteor.com/manifest.json';
+if (testingUpdater)
+  config.setTestingUpdater(true);
 
 /**
  * Downloads the current manifest file and returns it via a callback (or
  * null on error)
  */
 exports.getManifest = function (context) {
-  var options = {url: manifestUrl, json: true};
+  var options = {
+    url: config.getUpdateManifestUrl(),
+    json: true,
+    useSessionCookie: true
+  };
 
   if (context)
     options.meteorReleaseContext = context;

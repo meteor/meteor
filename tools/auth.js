@@ -54,10 +54,18 @@ var writeSession = function (data) {
   }
 };
 
-var getSessionToken = function (sessionData, domain) {
+var getSessionKey = function (sessionData, domain, key) {
   return (sessionData.sessions &&
           sessionData.sessions[domain] &&
-          sessionData.sessions[domain].token) || null;
+          sessionData.sessions[domain][key]) || null;
+};
+
+var setSessionId = function (sessionData, domain, sessionId) {
+  if (typeof (sessionData.sessions) !== "object")
+    sessionData.sessions = {};
+  if (typeof (sessionData.sessions[domain]) !== "object")
+    sessionData.sessions[domain] = {};
+  sessionData.sessions[domain].session = sessionId;
 };
 
 var setSessionToken = function (sessionData, domain, token, tokenId) {
@@ -156,6 +164,7 @@ var tryRevokeOldTokens = function (options) {
         form: {
           tokenId: tokenIds.join(',')
         },
+        useSessionCookie: true,
         timeout: options.timeout
       });
     } catch (e) {
@@ -166,7 +175,12 @@ var tryRevokeOldTokens = function (options) {
 
     if (response.statusCode === 200) {
       // Server confirms that the tokens have been revoked
-      delete session.pendingRevoke;
+      // (Be careful to reread session data in case httpHelpers changed it)
+      data = readSession();
+      var session = data.sessions[domain] || {};
+      session.pendingRevoke = _.without(session.pendingRevoke, tokenIds);
+      if (! session.pendingRevoke.length)
+        delete session.pendingRevoke;
       writeSession(data);
     } else {
       logoutFailWarning();
@@ -243,14 +257,13 @@ var fetchGalaxyOAuthInfo = function (galaxyName, timeout) {
   }
 };
 
-// Uses meteor accounts to log in to the specified galaxy. Must be called with a
-// valid cookie for METEOR_AUTH. Returns an object with keys `authToken`,
-// `username` and `tokenId` if the login was successful. If an error occurred,
-// returns one of:
+// Uses meteor accounts to log in to the specified galaxy. Returns an
+// object with keys `authToken`, `username` and `tokenId` if the login
+// was successful. If an error occurred, returns one of:
 //   { error: 'access-denied' }
 //   { error: 'no-galaxy' }
 //   { error: 'no-account-server' }
-var logInToGalaxy = function (galaxyName, meteorAuthCookie) {
+var logInToGalaxy = function (galaxyName) {
   var oauthInfo = fetchGalaxyOAuthInfo(galaxyName);
   if (! oauthInfo) {
     return { error: 'no-galaxy' };
@@ -282,9 +295,7 @@ var logInToGalaxy = function (galaxyName, meteorAuthCookie) {
       method: 'POST',
       followRedirect: false,
       strictSSL: true,
-      headers: {
-        cookie: 'METEOR_AUTH=' + meteorAuthCookie
-      }
+      useAuthCookie: true
     });
   } catch (e) {
     return { error: 'no-account-server' };
@@ -337,7 +348,7 @@ exports.loginCommand = function (argv, showUsage) {
   var loginData = {};
   var meteorAuth;
 
-  if (! galaxy || ! getSessionToken(data, config.getAccountsDomain())) {
+  if (! galaxy || ! getSessionKey(data, config.getAccountsDomain(), 'token')) {
     if (byEmail) {
       loginData.email = utils.readLine({ prompt: "Email: " });
     } else {
@@ -363,7 +374,8 @@ exports.loginCommand = function (argv, showUsage) {
       result = httpHelpers.request({
         url: loginUrl,
         method: "POST",
-        form: loginData
+        form: loginData,
+        useSessionCookie: true
       });
     } catch (e) {
       process.stdout.write("\nCouldn't connect to server. " +
@@ -388,15 +400,14 @@ exports.loginCommand = function (argv, showUsage) {
   }
 
   if (galaxy) {
-    data = readSession();
-    meteorAuth = getSessionToken(data, config.getAccountsDomain());
-    var galaxyLoginResult = logInToGalaxy(galaxy, meteorAuth);
+    var galaxyLoginResult = logInToGalaxy(galaxy);
     if (galaxyLoginResult.error) {
       // XXX add human readable error messages
       process.stdout.write('\nLogin to ' + galaxy + ' failed: ' +
                            galaxyLoginResult.error + '\n');
       process.exit(1);
     }
+    data = readSession(); // be careful to reread data file after RPC
     setSessionToken(data, galaxy, galaxyLoginResult.authToken,
                     galaxyLoginResult.tokenId);
     writeSession(data);
@@ -448,9 +459,18 @@ exports.whoAmICommand = function (argv, showUsage) {
 
 exports.tryRevokeOldTokens = tryRevokeOldTokens;
 
-exports.getSessionToken = function (domain) {
+exports.getSessionId = function (domain) {
+  return getSessionKey(readSession(), domain, 'session');
+};
+
+exports.setSessionId = function (domain, sessionId) {
   var sessionData = readSession();
-  return getSessionToken(sessionData, domain);
+  setSessionId(sessionData, domain, sessionId);
+  writeSession(sessionData);
+};
+
+exports.getSessionToken = function (domain) {
+  return getSessionKey(readSession(), domain, 'token');
 };
 
 exports.isLoggedIn = function () {

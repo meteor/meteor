@@ -66,6 +66,8 @@ var addScheme = function (host) {
     return "https://" + host;
 };
 
+var testingUpdater = false;
+
 var config = exports;
 _.extend(exports, {
   // True if this the production universe (www.meteor.com)
@@ -115,13 +117,31 @@ _.extend(exports, {
     } else {
       // Otherwise, base it on the universe.
       var u = getUniverse();
-      if (u === "www.meteor.com") // special case
-        host = "deploy.meteor.com";
+      if (u.match(/^localhost(:|\/)/))
+        throw new Error("local development of deploy server not supported");
       else
-        host = u.replace(/^www\./, ''); // otherwise just chop off the 'www'
+        host = u.replace(/^www\./, 'deploy.');
     }
 
     return addScheme(host);
+  },
+
+  // URL from which the update manifest may be fetched, eg
+  // 'https://update.meteor.com/manifest.json'
+  getUpdateManifestUrl: function () {
+    if (testingUpdater)
+      return 'https://s3.amazonaws.com/com.meteor.static/test/update/manifest.json';
+    var u = getUniverse();
+    if (u.match(/^localhost(:|\/)/))
+      u = "www.meteor.com"; // localhost can't run the manifest server
+    var host = u.replace(/^www\./, 'update.');
+
+    return addScheme(host) + "/manifest.json";
+  },
+
+  // update.js calls this to set up automated tests
+  setTestingUpdater: function (value) {
+    testingUpdater = value;
   },
 
   // Port to use when querying URLs for the deploy server that backs
@@ -148,5 +168,4 @@ _.extend(exports, {
     if (! config.isProduction())
       process.stderr.write('[Universe: ' + config.getUniverse() + ']\n');
   }
-
 });
