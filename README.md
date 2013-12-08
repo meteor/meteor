@@ -65,7 +65,7 @@ meteor add accounts-password
 mrt add roles
 ```
 
-4. Run your application using Meteorite (rather than the normal meteor):
+4. Run your application:
 ```bash
 meteor
 ```
