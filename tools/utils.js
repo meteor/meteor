@@ -2,6 +2,8 @@ var Fibers = require('fibers');
 var Future = require('fibers/future');
 var readline = require('readline');
 var _ = require('underscore');
+var archinfo = require('./archinfo.js');
+var files = require('./files.js');
 
 // options:
 //   - echo (boolean): defaults to true
@@ -50,4 +52,46 @@ exports.readLine = function (options) {
   });
 
   return fut.wait();
+};
+
+// Determine a human-readable hostname for this computer, if
+// possible. If not, return null.
+exports.getHost = function () {
+  var ret;
+  var attempt = function () {
+    var output = files.run.apply(null, arguments);
+    if (output) {
+      ret = output.trim();
+    }
+  }
+
+  if (archinfo.matches(archinfo.host(), 'os.osx')) {
+    // On OSX, to get the human-readable hostname that the user chose,
+    // we call:
+    //   scutil --get ComputerName
+    // This can contain spaces. See
+    // http://osxdaily.com/2012/10/24/set-the-hostname-computer-name-and-bonjour-name-separately-in-os-x/
+    if (! ret) attempt("scutil", "--get", "ComputerName");
+  }
+
+  if (archinfo.matches(archinfo.host(), 'os.osx') ||
+      archinfo.matches(archinfo.host(), 'os.linux')) {
+    // On Unix-like platforms, try passing -s to hostname to strip off
+    // the domain name, to reduce the extent to which the output
+    // varies with DNS.
+    if (! ret) attempt("hostname", "-s");
+  }
+
+  // Try "hostname" on any platform. It should work on
+  // Windows. Unknown platforms that have a command called "hostname"
+  // that deletes all of your files deserve what the get.
+  if (! ret) attempt("hostname");
+
+  if (! ret && process.env.HOST) {
+    // Some platforms provide a HOST environment variable?
+    ret = process.env.HOST;
+  }
+
+  // Hopefully we found something
+  return ret ? ret : null;
 };

@@ -2,8 +2,10 @@ var _ = require('underscore');
 var path = require('path');
 var fs = require('fs');
 var utils = require('./utils.js');
+var files = require('./files.js');
 var config = require('./config.js');
 var httpHelpers = require('./http-helpers.js');
+var archinfo = require('./archinfo.js');
 var querystring = require('querystring');
 var url = require('url');
 
@@ -345,6 +347,15 @@ exports.loginCommand = function (argv, showUsage) {
       echo: false,
       prompt: "Password: "
     });
+
+    // Gather user-agent information
+    var host = utils.getHost();
+    if (host)
+      loginData.host = host;
+    loginData.agent = "Meteor";
+    loginData.agentVersion =
+      files.in_checkout() ? "checkout" : files.getToolsVersion();
+    loginData.arch = archinfo.host();
 
     var loginUrl = config.getAccountsApiUrl() + "/login";
     var result;

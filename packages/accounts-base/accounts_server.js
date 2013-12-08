@@ -164,6 +164,8 @@ Meteor.methods({
 // connectionId -> {connection, loginToken, srpChallenge}
 var accountData = {};
 
+// HACK: This is used by 'meteor-accounts' to get the loginToken for a
+// connection. Maybe there should be a public way to do that.
 Accounts._getAccountData = function (connectionId, field) {
   var data = accountData[connectionId];
   return data && data[field];
