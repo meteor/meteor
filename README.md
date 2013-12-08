@@ -156,6 +156,31 @@ Prevent non-authorized users from creating new users:
 
 <br />
 
+Prevent access to certain functionality:
+```js
+// server/userMethods.js
+
+Meteor.methods({
+  /**
+   * delete a user
+   * 
+   * @method deleteUser
+   * @param {String} userId _id of user to delete
+   */
+  deleteUser: function (userId) {
+    var loggedInUser = Meteor.user()
+
+    if (!loggedInUser ||
+        !Roles.userIsInRole(loggedInUser, ['manage-users','admin']))
+      throw new Meteor.Error(403, "Access denied")
+
+    // perform user deletion...
+  }
+})
+```
+
+<br />
+
 -- **Client** --
 
 Client javascript has access to all the same Roles functions as the server with the addition of a ```isInRole``` handlebars helper which is automatically registered by the Roles package.
