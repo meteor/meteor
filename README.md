@@ -28,7 +28,7 @@ Run locally:
   3. either
     * ```cd meteor-roles/examples/router``` or
     * ```cd meteor-roles/examples/mini-pages```
-  4. ```mrt```
+  4. ```meteor```
   5. point browser to ```http://localhost:3000```
 
 <br />
@@ -67,7 +67,7 @@ mrt add roles
 
 4. Run your application using Meteorite (rather than the normal meteor):
 ```bash
-mrt
+meteor
 ```
 
 
