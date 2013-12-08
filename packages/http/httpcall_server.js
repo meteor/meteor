@@ -47,14 +47,14 @@ var _call = function(method, url, options, callback) {
     params_for_body = options.params;
 
   var new_url = buildUrl(
-          url_parts.protocol + "//" + url_parts.host + url_parts.pathname,
-          url_parts.search, options.query, params_for_url);
+    url_parts.protocol + "//" + url_parts.host + url_parts.pathname,
+    url_parts.search, options.query, params_for_url);
 
   if (options.auth) {
     if (options.auth.indexOf(':') < 0)
       throw new Error('auth option should be of the form "username:password"');
     headers['Authorization'] = "Basic "+
-            (new Buffer(options.auth, "ascii")).toString("base64");
+      (new Buffer(options.auth, "ascii")).toString("base64");
   }
 
   if (params_for_body) {
