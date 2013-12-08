@@ -1,12 +1,24 @@
 meteor-roles
 ============
 
-Roles-based authorization package for Meteor - compatible with built-in accounts package.
+Authorization package for Meteor - compatible with built-in accounts package.
 
 <br />
 ### Contributors
 
 Thanks to [@nickmoylan](https://github.com/nickmoylan) and [@mcrider](https://github.com/mcrider)!
+
+<br />
+
+### Authorization
+
+This package lets you attach permissions to a user which you can then check against later when deciding whether to grant access to Meteor methods or publish data.  The core concept is very simple, essentially you are attaching strings to a user object and then checking for the existance of those strings later. In some sense, it is very similar to tags on blog posts. This package provides helper methods to make the process of adding, removing, and verifying those permissions easier.
+
+<br />
+
+### What's in a name...
+
+Although the name of this package is 'roles', you can define your permissions however you like.  You can have traditional roles like, "admin" or "webmaster".  But you can also assign more granular permissions such as, "view-secrets" or "manage-users".  Often times this is actually better because you are able to handle all those pesky edge cases that come up in real life usage without creating a ton of higher-level 'roles'.  To the roles package, its all strings.
 
 <br />
 
