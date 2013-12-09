@@ -96,54 +96,6 @@ Ctl.Commands.push({
   func: stopFun
 });
 
-Ctl.Commands.push({
-  name: "scale",
-  help: "Scale jobs",
-  func: function (argv) {
-    if (argv.help || argv._.length === 0 || _.contains(argv._, 'ctl')) {
-      process.stderr.write(
-"Usage: ctl scale program1=n [...] \n" +
- "\n" +
-"Scales some programs. Runs or kills jobs until there are n non-done jobs\n" +
-"in that state.\n"
-);
-      process.exit(1);
-    }
-
-    var scales = _.map(argv._, function (arg) {
-      var m = arg.match(/^(.+)=(\d+)$/);
-      if (!m) {
-        console.log("Bad scaling argument; should be program=number.");
-        process.exit(1);
-      }
-      return {program: m[1], scale: parseInt(m[2])};
-    });
-
-    _.each(scales, function (s) {
-      var jobs = Ctl.getJobsByApp(
-        Ctl.myAppName(), {program: s.program, done: false});
-      jobs.forEach(function (job) {
-        --s.scale;
-        // Is this an extraneous job, more than the number that we need? Kill
-        // it!
-        if (s.scale < 0) {
-          Ctl.kill(s.program, job._id);
-        }
-      });
-      // Now start any jobs that are necessary.
-      if (s.scale <= 0)
-        return;
-      console.log("Starting %d jobs for %s", s.scale, s.program);
-      _.times(s.scale, function () {
-        // XXX args? env?
-        Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), s.program, {
-          exitPolicy: 'restart'
-        }]);
-      });
-    });
-  }
-});
-
 main = function (argv) {
   return Ctl.main(argv);
 };
