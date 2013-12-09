@@ -29,68 +29,82 @@ exports.getManifest = function (context) {
   return httpHelpers.getUrl(options);
 };
 
-exports.startUpdateChecks = function (context) {
-  var updateCheck = inFiber(function () {
-    var manifest = null;
-    try {
-      manifest = exports.getManifest(context);
-    } catch (e) {
-      // Ignore error (eg, offline), but still do the "can we update this app
-      // with a locally available release" check.
-    }
+/**
+ * Call inside a fiber. Check for updates once, blocking as necessary,
+ * and then return. If an update is found, download and install it.
+ * If 'silent' is true, suppress chatter.
+ */
+exports.performOneUpdateCheck = function (context, silent) {
+  var manifest = null;
+  try {
+    manifest = exports.getManifest(context);
+  } catch (e) {
+    // Ignore error (eg, offline), but still do the "can we update this app
+    // with a locally available release" check.
+  }
 
-    if (!files.usesWarehouse())
-      return;
+  if (!files.usesWarehouse())
+    return;
 
-    // XXX in the future support release channels other than stable
-    var manifestLatestRelease =
-          manifest && manifest.releases && manifest.releases.stable &&
-          manifest.releases.stable.version;
-    var localLatestRelease = warehouse.latestRelease();
-    if (manifestLatestRelease && manifestLatestRelease !== localLatestRelease) {
-      // The manifest is telling us about a release that isn't our latest
-      // release! First, print a banner... but only if we've never printed a
-      // banner for this release before. (Or, well... only if this release isn't
-      // the last release which has had a banner printed.)
-      if (manifest.releases.stable.banner &&
-          warehouse.lastPrintedBannerRelease() !== manifestLatestRelease) {
+  // XXX in the future support release channels other than stable
+  var manifestLatestRelease =
+    manifest && manifest.releases && manifest.releases.stable &&
+    manifest.releases.stable.version;
+  var localLatestRelease = warehouse.latestRelease();
+  if (manifestLatestRelease && manifestLatestRelease !== localLatestRelease) {
+    // The manifest is telling us about a release that isn't our latest
+    // release! First, print a banner... but only if we've never printed a
+    // banner for this release before. (Or, well... only if this release isn't
+    // the last release which has had a banner printed.)
+    if (manifest.releases.stable.banner &&
+        warehouse.lastPrintedBannerRelease() !== manifestLatestRelease) {
+      if (! silent) {
         console.log();
         console.log(manifest.releases.stable.banner);
         console.log();
-        warehouse.writeLastPrintedBannerRelease(manifestLatestRelease);
-      } else {
-        // Already printed this banner, or maybe there is no banner.
+      }
+      warehouse.writeLastPrintedBannerRelease(manifestLatestRelease);
+    } else {
+      // Already printed this banner, or maybe there is no banner.
+      if (! silent) {
         console.log("=> Meteor %s is being downloaded in the background.",
                     manifestLatestRelease);
       }
-      try {
-        warehouse.fetchLatestRelease(true /* background */);
-      } catch (e) {
-        // oh well, this was the background. no need to show any errors.
-        return;
-      }
-      // We should now have fetched the latest release, which *probably* is
-      // manifestLatestRelease. As long as it's changed from the one it was
-      // before we tried to fetch it, print that out.
-      var newLatestRelease = warehouse.latestRelease();
-      if (newLatestRelease !== localLatestRelease) {
-        console.log(
-          "=> Meteor %s is available. Update this project with 'meteor update'.",
-          newLatestRelease);
-      }
+    }
+    try {
+      warehouse.fetchLatestRelease(true /* background */);
+    } catch (e) {
+      // oh well, this was the background. no need to show any errors.
       return;
     }
-
-    // We didn't do a global update (or we're not online), but do we need to
-    // update this app? Specifically: is our local latest release something
-    // other than this app's release, and the user didn't specify a specific
-    // release at the command line with --release?
-    if (localLatestRelease !== context.releaseVersion &&
-        !context.userReleaseOverride) {
-        console.log(
-          "=> Meteor %s is available. Update this project with 'meteor update'.",
-          localLatestRelease);
+    // We should now have fetched the latest release, which *probably* is
+    // manifestLatestRelease. As long as it's changed from the one it was
+    // before we tried to fetch it, print that out.
+    var newLatestRelease = warehouse.latestRelease();
+    if (newLatestRelease !== localLatestRelease && ! silent) {
+      console.log(
+        "=> Meteor %s is available. Update this project with 'meteor update'.",
+        newLatestRelease);
     }
+    return;
+  }
+
+  // We didn't do a global update (or we're not online), but do we need to
+  // update this app? Specifically: is our local latest release something
+  // other than this app's release, and the user didn't specify a specific
+  // release at the command line with --release?
+  if (localLatestRelease !== context.releaseVersion &&
+      !context.userReleaseOverride &&
+      !silent) {
+    console.log(
+      "=> Meteor %s is available. Update this project with 'meteor update'.",
+      localLatestRelease);
+  }
+};
+
+exports.startUpdateChecks = function (context) {
+  var updateCheck = inFiber(function () {
+    exports.performOneUpdateCheck(context, false);
   });
   setInterval(updateCheck, 12*60*60*1000); // twice a day
   updateCheck(); // and now.

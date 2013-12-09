@@ -1451,18 +1451,25 @@ Fiber(function () {
     process.exit(0);
   };
 
-  // Implements "meteor --get-ready", which you run to ensure that your
-  // checkout's Meteor is "complete" (dev bundle downloaded and all NPM modules
-  // installed).
+  // Implements "meteor --get-ready", which makes sure that your
+  // Meteor install is totally good to go (is "airplane safe" and
+  // won't do any lengthy building on first run).
+  //
+  // In a checkout, this makes sure that the checkout is "complete"
+  // (dev bundle downloaded and all NPM modules installed). Otherwise,
+  // this runs one full update cycle, to make sure that you have the
+  // latest manifest and all of the packages in it.
   var getReady = function () {
     if (files.usesWarehouse()) {
-      logging.die("meteor --get-ready only works in a checkout");
+      var updater = require('./updater.js');
+      updater.performOneUpdateCheck(context, true /* silent */);
+    } else {
+      // dev bundle is downloaded by the wrapper script. We just need
+      // to install NPM dependencies.
+      _.each(context.library.list(), function (p) {
+        p.preheat();
+      });
     }
-    // dev bundle is downloaded by the wrapper script. We just need to install
-    // NPM dependencies.
-    _.each(context.library.list(), function (p) {
-      p.preheat();
-    });
     process.exit(0);
   };
 
