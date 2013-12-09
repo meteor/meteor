@@ -51,7 +51,7 @@ var META_COLOR = 'blue';
 
 // XXX package
 var RESTRICTED_KEYS = ['time', 'timeInexact', 'level', 'file', 'line',
-                        'program', 'originApp', 'stderr'];
+                        'program', 'originApp', 'satellite', 'stderr'];
 
 var FORMATTED_KEYS = RESTRICTED_KEYS.concat(['app', 'message']);
 
@@ -202,6 +202,7 @@ Log.format = function (obj, options) {
   var originApp = obj.originApp;
   var message = obj.message || '';
   var program = obj.program || '';
+  var satellite = obj.satellite;
   var stderr = obj.stderr || '';
 
   _.each(FORMATTED_KEYS, function(key) {
@@ -238,6 +239,9 @@ Log.format = function (obj, options) {
   var sourceInfo = (file && lineNumber) ?
       ['(', (program ? program + ':' : ''), file, ':', lineNumber, ') '].join('')
       : '';
+
+  if (satellite)
+    sourceInfo += ['[', satellite, ']'].join('');
 
   var stderrIndicator = stderr ? '(STDERR) ' : '';
 
