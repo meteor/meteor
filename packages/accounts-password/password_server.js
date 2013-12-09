@@ -119,24 +119,38 @@ Accounts.registerLoginHandler(function (options) {
 
   check(options, {user: userQueryValidator, password: String});
 
+  var usePBKDF2 = !! Package["password-pbkdf2"].PasswordPBKDF2;
+
   var selector = selectorFromUserQuery(options.user);
   var user = Meteor.users.findOne(selector);
   if (!user)
     throw new Meteor.Error(403, "User not found");
 
-  if (!user.services || !user.services.password ||
-      !user.services.password.srp)
-    throw new Meteor.Error(403, "User has no password set");
+  if (usePBKDF2) {
+    if (!user.services || !user.services.password ||
+        !user.services.password.pbkdf2)
+      throw new Meteor.Error(403, "User has no password set");
 
-  // Just check the verifier output when the same identity and salt
-  // are passed. Don't bother with a full exchange.
-  var verifier = user.services.password.srp;
-  var newVerifier = SRP.generateVerifier(options.password, {
-    identity: verifier.identity, salt: verifier.salt});
+    if (! Package["password-pbkdf2"].PasswordPBKDF2.check(
+      options.password,
+      user.services.password.pbkdf2
+    )) {
+      throw new Meteor.Error(403, "Incorrect password");
+    }
+  } else {
+    if (!user.services || !user.services.password ||
+        !user.services.password.srp)
+      throw new Meteor.Error(403, "User has no password set");
 
-  if (verifier.verifier !== newVerifier.verifier)
-    throw new Meteor.Error(403, "Incorrect password");
+    // Just check the verifier output when the same identity and salt
+    // are passed. Don't bother with a full exchange.
+    var verifier = user.services.password.srp;
+    var newVerifier = SRP.generateVerifier(options.password, {
+      identity: verifier.identity, salt: verifier.salt});
 
+    if (verifier.verifier !== newVerifier.verifier)
+      throw new Meteor.Error(403, "Incorrect password");
+  }
   var stampedLoginToken = Accounts._generateStampedLoginToken();
   Meteor.users.update(
     user._id, {$push: {'services.resume.loginTokens': stampedLoginToken}});
@@ -477,12 +491,20 @@ var createUser = function (options) {
   if (options.password) {
     if (options.srp)
       throw new Meteor.Error(400, "Don't pass both password and srp in options");
-    options.srp = SRP.generateVerifier(options.password);
+    if (Package["password-pbkdf2"].PasswordPBKDF2) {
+      options.pbkdf2 = Package["password-pbkdf2"].PasswordPBKDF2.hash(
+        options.password
+      );
+    } else {
+      options.srp = SRP.generateVerifier(options.password);
+    }
   }
 
   var user = {services: {}};
   if (options.srp)
     user.services.password = {srp: options.srp}; // XXX validate verifier
+  if (options.pbkdf2)
+    user.services.password = {pbkdf2: options.pbkdf2};
   if (username)
     user.username = username;
   if (email)

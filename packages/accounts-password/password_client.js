@@ -8,39 +8,52 @@
 // @param password {String}
 // @param callback {Function(error|undefined)}
 Meteor.loginWithPassword = function (selector, password, callback) {
-  var srp = new SRP.Client(password);
-  var request = srp.startExchange();
 
   if (typeof selector === 'string')
     if (selector.indexOf('@') === -1)
       selector = {username: selector};
-    else
-      selector = {email: selector};
+  else
+    selector = {email: selector};
 
-  request.user = selector;
-
-  // Normally, we only set Meteor.loggingIn() to true within
-  // Accounts.callLoginMethod, but we'd also like it to be true during the
-  // password exchange. So we set it to true here, and clear it on error; in
-  // the non-error case, it gets cleared by callLoginMethod.
-  Accounts._setLoggingIn(true);
-  Meteor.apply('beginPasswordExchange', [request], function (error, result) {
-    if (error || !result) {
-      Accounts._setLoggingIn(false);
-      error = error || new Error("No result from call to beginPasswordExchange");
-      callback && callback(error);
-      return;
-    }
-
-    var response = srp.respondToChallenge(result);
+  if (Package['password-pbkdf2'].PasswordPBKDF2) {
+    // XXX SHA256 password before sending over the wire?
     Accounts.callLoginMethod({
-      methodArguments: [{srp: response}],
-      validateResult: function (result) {
-        if (!srp.verifyConfirmation({HAMK: result.HAMK}))
-          throw new Error("Server is cheating!");
-      },
-      userCallback: callback});
-  });
+      methodArguments: [{
+        user: selector,
+        password: password
+      }],
+      userCallback: callback
+    });
+  } else {
+
+    var srp = new SRP.Client(password);
+    var request = srp.startExchange();
+
+    request.user = selector;
+
+    // Normally, we only set Meteor.loggingIn() to true within
+    // Accounts.callLoginMethod, but we'd also like it to be true during the
+    // password exchange. So we set it to true here, and clear it on error; in
+    // the non-error case, it gets cleared by callLoginMethod.
+    Accounts._setLoggingIn(true);
+    Meteor.apply('beginPasswordExchange', [request], function (error, result) {
+      if (error || !result) {
+        Accounts._setLoggingIn(false);
+        error = error || new Error("No result from call to beginPasswordExchange");
+        callback && callback(error);
+        return;
+      }
+
+      var response = srp.respondToChallenge(result);
+      Accounts.callLoginMethod({
+        methodArguments: [{srp: response}],
+        validateResult: function (result) {
+          if (!srp.verifyConfirmation({HAMK: result.HAMK}))
+            throw new Error("Server is cheating!");
+        },
+        userCallback: callback});
+    });
+  }
 };
 
 
@@ -50,10 +63,12 @@ Accounts.createUser = function (options, callback) {
 
   if (!options.password)
     throw new Error("Must set options.password");
-  var verifier = SRP.generateVerifier(options.password);
-  // strip old password, replacing with the verifier object
-  delete options.password;
-  options.srp = verifier;
+  if (!Package["password-pbkdf2"].PasswordPBKDF2) {
+    var verifier = SRP.generateVerifier(options.password);
+    // strip old password, replacing with the verifier object
+    delete options.password;
+    options.srp = verifier;
+  }
 
   Accounts.callLoginMethod({
     methodName: 'createUser',

@@ -13,6 +13,12 @@ Package.on_use(function(api) {
   api.use('underscore');
   api.use('livedata', ['client', 'server']);
 
+  // Weak depend on password-pbkdf2; if included, we'll use pbkdf2 to store
+  // passwords instead of doing SRP.
+  api.use('password-pbkdf2',
+          ['client', 'server'],
+          { weak: true });
+
   api.add_files('email_templates.js', 'server');
   api.add_files('password_server.js', 'server');
   api.add_files('password_client.js', 'client');
