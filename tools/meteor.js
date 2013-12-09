@@ -1044,7 +1044,7 @@ Fiber(function () {
 
   Commands.push({
     name: "claim",
-    help: "Claim a site deployed with an old Meteor version into your account",
+    help: "Claim a site deployed with an old Meteor version",
     argumentParser: function (opt) {
       opt.usage(
 "Usage: meteor claim <site>\n" +
@@ -1341,7 +1341,6 @@ Fiber(function () {
   Commands.push({
     name: "login",
     help: "Log in to your Meteor account",
-    hidden: true,
     argumentParser: function (opt) {
       opt.usage(
 "Usage: meteor login [--email] [--galaxy <galaxy.example.com>]\n" +
@@ -1357,7 +1356,6 @@ Fiber(function () {
   Commands.push({
     name: "logout",
     help: "Log out of your Meteor account",
-    hidden: true,
     argumentParser: function (opt) {
       opt.usage(
 "Usage: meteor logout\n" +
@@ -1371,7 +1369,6 @@ Fiber(function () {
   Commands.push({
     name: "whoami",
     help: "Prints the username of your Meteor developer account",
-    hidden: true,
     argumentParser: function (opt) {
       opt.usage(
 "Usage: meteor whoami\n" +

@@ -285,6 +285,7 @@ Accounts.registerLoginHandler(function(options) {
 });
 
 // Semi-public. Used by other login methods to generate tokens.
+// (Also used by Meteor Accounts server)
 //
 Accounts._generateStampedLoginToken = function () {
   return {token: Random.id(), when: (new Date)};
