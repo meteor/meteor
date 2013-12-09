@@ -4,6 +4,7 @@ var readline = require('readline');
 var _ = require('underscore');
 var archinfo = require('./archinfo.js');
 var files = require('./files.js');
+var os = require('os');
 
 // options:
 //   - echo (boolean): defaults to true
@@ -54,8 +55,10 @@ exports.readLine = function (options) {
   return fut.wait();
 };
 
-// Determine a human-readable hostname for this computer, if
-// possible. If not, return null.
+// Determine a human-readable hostname for this computer. Prefer names
+// that make sense to users (eg, the name they manually gave their
+// computer on OS X, which might contain spaces) over names that have
+// any particular technical significance (eg, might resolve in DNS).
 exports.getHost = function () {
   var ret;
   var attempt = function () {
@@ -87,11 +90,6 @@ exports.getHost = function () {
   // that deletes all of your files deserve what the get.
   if (! ret) attempt("hostname");
 
-  if (! ret && process.env.HOST) {
-    // Some platforms provide a HOST environment variable?
-    ret = process.env.HOST;
-  }
-
-  // Hopefully we found something
-  return ret ? ret : null;
+  // Otherwise, see what Node can come up with.
+  return os.hostname();
 };
