@@ -1,3 +1,5 @@
+var Future = Npm.require("fibers/future");
+
 Ctl.Commands.push({
   name: "help",
   func: function (argv) {
@@ -89,11 +91,77 @@ Ctl.Commands.push({
   func: stopFun
 });
 
+var waitForDone = function (jobCollection, jobId) {
+  var fut = new Future();
+  var found = false;
+  try {
+    var observation = jobCollection.find(jobId).observe({
+      added: function (doc) {
+        found = true;
+        if (doc.done)
+          fut['return']();
+      },
+      changed: function (doc) {
+        if (doc.done)
+          fut['return']();
+      },
+      removed: function (doc) {
+        fut['return']();
+      }
+    });
+    // if the document doesn't exist at all, it's certainly done.
+    if (!found)
+      fut['return']();
+    fut.wait();
+  } finally {
+    observation.stop();
+  }
+};
+
 
 Ctl.Commands.push({
   name: "beginUpdate",
   help: "Stop this app to begin an update",
-  func: stopFun
+  func: function (argv) {
+    Ctl.subscribeToAppJobs(Ctl.myAppName());
+    var jobs = Ctl.jobsCollection();
+    var thisJob = jobs.findOne(Ctl.myJobId());
+    // Look at all the server jobs that are on the old star.
+    var oldJobSelector = {
+      app: Ctl.myAppName(),
+      star: {$ne: thisJob.star},
+      program: "server",
+      done: false
+    };
+    var oldServers = jobs.find(oldJobSelector).fetch();
+    // Start a new job for each of them.
+    _.each(oldServers, function (oldServer) {
+      Ctl.startServerlikeProgram("server", oldServer.tags, oldServer.env.ADMIN_APP);
+    });
+    // Wait for them all to come up and bind to the proxy.
+    Meteor._sleepForMs(5000); // XXX: Eventually make sure they're proxy-bound.
+    // (eventually) tell the proxy to switch over to using the new star
+    // One by one, kill all the old star's server jobs.
+    var jobToKill = jobs.findOne(oldJobSelector);
+    while (jobToKill) {
+      Ctl.kill("server", jobToKill._id);
+      // Wait for it to go down
+      waitForDone(jobs, jobToKill._id);
+      // Spend some time in between to allow any reconnect storm to die down.
+      Meteor._sleepForMs(1000);
+      jobToKill = jobs.findOne(oldJobSelector);
+    }
+    // Now kill all non-server jobs.  They're less important.
+    jobs.find({
+      app: Ctl.myAppName(),
+      star: {$ne: thisJob.star},
+      program: {$ne: "server"},
+      done: false
+    }).forEach(function (job) {
+      Ctl.kill(job.program, job._id);
+    });
+    // fin
+  }
 });
 
 main = function (argv) {
