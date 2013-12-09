@@ -178,7 +178,7 @@ var tryRevokeOldTokens = function (options) {
       // (Be careful to reread session data in case httpHelpers changed it)
       data = readSession();
       var session = data.sessions[domain] || {};
-      session.pendingRevoke = _.without(session.pendingRevoke, tokenIds);
+      session.pendingRevoke = _.difference(session.pendingRevoke, tokenIds);
       if (! session.pendingRevoke.length)
         delete session.pendingRevoke;
       writeSession(data);
