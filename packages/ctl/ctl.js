@@ -151,7 +151,7 @@ Ctl.Commands.push({
       Meteor._sleepForMs(1000);
       jobToKill = jobs.findOne(oldJobSelector);
     }
-    // Now kill all non-server jobs.  They're less important.
+    // Now kill all old non-server jobs.  They're less important.
     jobs.find({
       app: Ctl.myAppName(),
       star: {$ne: thisJob.star},

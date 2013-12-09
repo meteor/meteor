@@ -33,10 +33,11 @@ _.extend(Ctl, {
     var numServers = Ctl.getJobsByApp(
       Ctl.myAppName(), {program: program, done: false}).count();
     if (numServers === 0) {
-      Ctl.startServerlikeProgram(program, tags, admin);
+      return Ctl.startServerlikeProgram(program, tags, admin);
     } else {
       console.log(program, "already running.");
     }
+    return null;
   },
 
   startServerlikeProgram: function (program, tags, admin) {
@@ -47,6 +48,7 @@ _.extend(Ctl, {
 
     var proxyConfig;
     var bindPathPrefix = "";
+    var jobId = null;
     if (admin) {
       bindPathPrefix = "/" + encodeURIComponent(Ctl.myAppName()).replace(/\./g, '_');
     }
@@ -60,7 +62,7 @@ _.extend(Ctl, {
     });
 
     // XXX args? env?
-    Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), program, {
+    jobId = Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), program, {
       exitPolicy: 'restart',
       env: {
         ROOT_URL: "https://" + appConfig.sitename + bindPathPrefix,
@@ -80,6 +82,7 @@ _.extend(Ctl, {
       tags: tags
     }]);
     console.log("Started", program);
+    return jobId;
   },
 
   findCommand: function (name) {
