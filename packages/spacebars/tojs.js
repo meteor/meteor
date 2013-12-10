@@ -1,4 +1,28 @@
-var HTML = HTML2;
+
+// Turns any JSONable value into a JavaScript literal.
+toJSLiteral = function (obj) {
+  // See <http://timelessrepo.com/json-isnt-a-javascript-subset> for `\u2028\u2029`.
+  // Also escape Unicode surrogates.
+  return (JSON.stringify(obj)
+          .replace(/[\u2028\u2029\ud800-\udfff]/g, function (c) {
+            return '\\u' + ('000' + c.charCodeAt(0).toString(16)).slice(-4);
+          }));
+};
+
+
+
+var jsReservedWordSet = (function (set) {
+  _.each("abstract else instanceof super boolean enum int switch break export interface synchronized byte extends let this case false long throw catch final native throws char finally new transient class float null true const for package try continue function private typeof debugger goto protected var default if public void delete implements return volatile do import short while double in static with".split(' '), function (w) {
+    set[w] = 1;
+  });
+  return set;
+})({});
+
+toObjectLiteralKey = function (k) {
+  if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(k) && jsReservedWordSet[k] !== 1)
+    return k;
+  return toJSLiteral(k);
+};
 
 // This method is generic, i.e. it can be transplanted to non-Tags
 // and it will still work by accessing `this.tagName`, `this.attrs`,
@@ -8,7 +32,7 @@ HTML.Tag.prototype.toJS = function (options) {
   if (this.attrs) {
     var kvStrs = [];
     for (var k in this.attrs) {
-      kvStrs.push(toJSLiteral(k) + ': ' + HTML.toJS(this.attrs[k], options));
+      kvStrs.push(toObjectLiteralKey(k) + ': ' + HTML.toJS(this.attrs[k], options));
     }
     argStrs.push('{' + kvStrs.join(', ') + '}');
   }
@@ -44,16 +68,6 @@ HTML.Raw.prototype.toJS = function (options) {
 
 HTML.EmitCode.prototype.toJS = function (options) {
   return this.value;
-};
-
-// Turns any JSONable value into a JavaScript literal.
-var toJSLiteral = function (obj) {
-  // See <http://timelessrepo.com/json-isnt-a-javascript-subset> for `\u2028\u2029`.
-  // Also escape Unicode surrogates.
-  return (JSON.stringify(obj)
-          .replace(/[\u2028\u2029\ud800-\udfff]/g, function (c) {
-            return '\\u' + ('000' + c.charCodeAt(0).toString(16)).slice(-4);
-          }));
 };
 
 HTML.toJS = function (node, options) {

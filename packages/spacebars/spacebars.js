@@ -278,29 +278,11 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
   return tag;
 };
 
-
-// XXX beef this up from ui/render.js
-var toJSLiteral = function (obj) {
-  // http://timelessrepo.com/json-isnt-a-javascript-subset
-  return (JSON.stringify(obj)
-          .replace(/\u2028/g, '\\u2028')
-          .replace(/\u2029/g, '\\u2029'));
-};
-
-// XXX use toObjectLiteralKey from ui/render.js
-// takes an object whose keys and values are strings of
-// JavaScript source code and returns the source code
-// of an object literal.
 var makeObjectLiteral = function (obj) {
-  var buf = [];
-  buf.push('{');
-  for (var k in obj) {
-    if (buf.length > 1)
-      buf.push(', ');
-    buf.push(k, ': ', obj[k]);
-  }
-  buf.push('}');
-  return buf.join('');
+  var parts = [];
+  for (var k in obj)
+    parts.push(toObjectLiteralKey(k) + ': ' + obj[k]);
+  return '{' + parts.join(', ') + '}';
 };
 
 
@@ -672,7 +654,7 @@ var codeGenInclusionArgs = function (tag) {
       // keyword argument (represented as [type, value, name])
       var name = arg[2];
       args = (args || {});
-      args[toJSLiteral(name)] = argCode;
+      args[name] = argCode;
     } else {
       // positional argument
       posArgs.push(argCode);
@@ -809,6 +791,8 @@ Spacebars._handleSpecialAttributes = function (oldAttrs) {
     return oldAttrs;
 
   if (dynamics) {
+    if (! newAttrs)
+      newAttrs = {};
     newAttrs.$dynamic = _.map(dynamics, function (special) {
       var tag = special.value;
       return HTML.EmitCode('function () { return ' +
@@ -1024,7 +1008,7 @@ var codeGenArgs = function (tagArgs) {
     if (arg.length > 2) {
       // keyword argument (represented as [type, value, name])
       kwArgs = (kwArgs || {});
-      kwArgs[toJSLiteral(arg[2])] = argCode;
+      kwArgs[arg[2]] = argCode;
     } else {
       // positional argument
       args = (args || []);

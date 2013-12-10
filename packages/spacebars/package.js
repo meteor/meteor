@@ -10,7 +10,7 @@ Package.on_use(function (api) {
   api.use('html');
   api.use('ui');
   api.use('minifiers', ['server']);
-  api.add_files(['spacebars.js']);
+  api.add_files(['tojs.js', 'spacebars.js']);
 });
 
 Package.on_test(function (api) {

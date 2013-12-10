@@ -21,6 +21,5 @@ Package.on_test(function (api) {
   api.use('ui'); // for `toCode`
   api.add_files(['charref_tests.js',
                  'tokenize_tests.js',
-                 'parse_tests.js',
-                 'utils_tests.js']);
+                 'parse_tests.js']);
 });
