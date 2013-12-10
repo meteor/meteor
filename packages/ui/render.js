@@ -324,7 +324,7 @@ var materialize = function (node, parent, before, parentComponent) {
       });
     }
     if (node.tagName === 'TEXTAREA') {
-      elem.value = HTML.toText(node.children, HTML.TEXTMODE.RCDATA, parentComponent);
+      elem.value = HTML.toText(node.children, HTML.TEXTMODE.STRING, parentComponent);
     } else {
       materialize(node.children, elem, null, parentComponent);
     }

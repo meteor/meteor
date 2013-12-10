@@ -1,18 +1,18 @@
 var materialize = UI.materialize;
-var toHTML = UI.toHTML;
-var toCode = UI.toCode;
+var toHTML = HTML.toHTML;
+var toCode = HTML.toJS;
 
-var P = HTML.Tag.P;
+var P = HTML.P;
 var CharRef = HTML.CharRef;
-var DIV = HTML.Tag.DIV;
+var DIV = HTML.DIV;
 var Comment = HTML.Comment;
-var BR = HTML.Tag.BR;
-var A = HTML.Tag.A;
-var UL = HTML.Tag.UL;
-var LI = HTML.Tag.LI;
-var SPAN = HTML.Tag.SPAN;
-var HR = HTML.Tag.HR;
-var TEXTAREA = HTML.Tag.TEXTAREA;
+var BR = HTML.BR;
+var A = HTML.A;
+var UL = HTML.UL;
+var LI = HTML.LI;
+var SPAN = HTML.SPAN;
+var HR = HTML.HR;
+var TEXTAREA = HTML.TEXTAREA;
 
 Tinytest.add("ui - render - basic", function (test) {
   var run = function (input, expectedInnerHTML, expectedHTML, expectedCode) {
@@ -26,7 +26,7 @@ Tinytest.add("ui - render - basic", function (test) {
   run(P('Hello'),
       '<p>Hello</p>',
       '<p>Hello</p>',
-      'HTML.Tag.P("Hello")');
+      'HTML.P("Hello")');
 
   run(null, '', '', 'null');
   run([], '', '', '[]');
@@ -38,31 +38,31 @@ Tinytest.add("ui - render - basic", function (test) {
   run(P(CharRef({html: '&zopf;', str: '\ud835\udd6b'})),
       '<p>\ud835\udd6b</p>',
       '<p>&zopf;</p>',
-      'HTML.Tag.P(HTML.CharRef({html: "&zopf;", str: "\\ud835\\udd6b"}))');
+      'HTML.P(HTML.CharRef({html: "&zopf;", str: "\\ud835\\udd6b"}))');
 
   run(P({id: CharRef({html: '&zopf;', str: '\ud835\udd6b'})}, 'Hello'),
       '<p id="\ud835\udd6b">Hello</p>',
       '<p id="&zopf;">Hello</p>',
-      'HTML.Tag.P({id: HTML.CharRef({html: "&zopf;", str: "\\ud835\\udd6b"})}, "Hello")');
+      'HTML.P({id: HTML.CharRef({html: "&zopf;", str: "\\ud835\\udd6b"})}, "Hello")');
 
   run(P({id: [CharRef({html: '&zopf;', str: '\ud835\udd6b'}), '!']}, 'Hello'),
       '<p id="\ud835\udd6b!">Hello</p>',
       '<p id="&zopf;!">Hello</p>',
-      'HTML.Tag.P({id: [HTML.CharRef({html: "&zopf;", str: "\\ud835\\udd6b"}), "!"]}, "Hello")');
+      'HTML.P({id: [HTML.CharRef({html: "&zopf;", str: "\\ud835\\udd6b"}), "!"]}, "Hello")');
 
   // Test comments
 
   run(DIV(Comment('Test')),
       '<div><!----></div>', // our innerHTML-canonicalization function kills comment contents
       '<div><!--Test--></div>',
-      'HTML.Tag.DIV(HTML.Comment("Test"))');
+      'HTML.DIV(HTML.Comment("Test"))');
 
   // Test arrays
 
   run([P('Hello'), P('World')],
       '<p>Hello</p><p>World</p>',
       '<p>Hello</p><p>World</p>',
-      '[HTML.Tag.P("Hello"), HTML.Tag.P("World")]');
+      '[HTML.P("Hello"), HTML.P("World")]');
 
   // Test slightly more complicated structure
 
@@ -70,7 +70,7 @@ Tinytest.add("ui - render - basic", function (test) {
                                LI(P('Two', BR(), 'Three')))),
       '<div class="foo"><ul><li><p><a href="#one">One</a></p></li><li><p>Two<br>Three</p></li></ul></div>',
       '<div class="foo"><ul><li><p><a href="#one">One</a></p></li><li><p>Two<br>Three</p></li></ul></div>',
-      'HTML.Tag.DIV({"class": "foo"}, HTML.Tag.UL(HTML.Tag.LI(HTML.Tag.P(HTML.Tag.A({href: "#one"}, "One"))), HTML.Tag.LI(HTML.Tag.P("Two", HTML.Tag.BR(), "Three"))))');
+      'HTML.DIV({"class": "foo"}, HTML.UL(HTML.LI(HTML.P(HTML.A({href: "#one"}, "One"))), HTML.LI(HTML.P("Two", HTML.BR(), "Three"))))');
 
 });
 
@@ -88,26 +88,26 @@ Tinytest.add("ui - render - textarea", function (test) {
     materialize(node, div);
     test.equal(div.querySelector('textarea').value, text);
 
-    test.equal(UI.toHTML(node), html);
-    test.equal(UI.toCode(node), code);
+    test.equal(toHTML(node), html);
+    test.equal(toCode(node), code);
   };
 
   run('Hello',
       '<textarea>Hello</textarea>',
-      'HTML.Tag.TEXTAREA("Hello")');
+      'HTML.TEXTAREA("Hello")');
 
   run('\nHello',
       '<textarea>\n\nHello</textarea>',
-      'HTML.Tag.TEXTAREA("\\nHello")');
+      'HTML.TEXTAREA("\\nHello")');
 
   run('</textarea>',
       '<textarea>&lt;/textarea></textarea>',
-      'HTML.Tag.TEXTAREA("</textarea>")');
+      'HTML.TEXTAREA("</textarea>")');
 
   run(CharRef({html: '&amp;', str: '&'}),
       '&',
       '<textarea>&amp;</textarea>',
-      'HTML.Tag.TEXTAREA(HTML.CharRef({html: "&amp;", str: "&"}))');
+      'HTML.TEXTAREA(HTML.CharRef({html: "&amp;", str: "&"}))');
 
 });
 
@@ -227,7 +227,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
 
     test.equal(toHTML(spanCode), '<span id="foo" ggg="xyz"></span>');
     test.equal(toCode(SPAN(R.get())),
-               'HTML.Tag.SPAN({id: "foo", ggg: ["x", ["y", ["z"]]]})');
+               'HTML.SPAN({id: "foo", ggg: ["x", ["y", ["z"]]]})');
 
     var div = document.createElement("DIV");
     materialize(spanCode, div);
