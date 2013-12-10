@@ -49,12 +49,28 @@ Run locally:
 
 ### Changes to default Meteor behavior
 
-  1. User entries in the ```Meteor.users``` collection gain a new field named ```roles``` corresponding to the user's roles.  The type of the ```roles``` field will be an array of strings when groups are not used.  When groups are used, the type will be an object which is a key/value hash of group names to string arrays.
-  2. A new collection ```Meteor.roles``` ** contains a global list of defined role names.
-  3. The currently logged-in user's ```roles``` field is automatically published to the client.
+  1. User entries in the `Meteor.users` collection gain a new field named `roles` corresponding to the user's roles. †
+  2. A new collection `Meteor.roles` contains a global list of defined role names. ††
+  3. The currently logged-in user's `roles` field is automatically published to the client.
 
 <br />
-** ```Meteor.roles``` is not published by default.  Here's how you would publish it to every client without needing a subscription:
+
+† The type of the `roles` field depends on whether groups are used or not:
+```js
+    Roles.addUsersToRoles(bobsUserId, ['manage-team','schedule-game'])
+    // internal representation - no groups 
+    // user.roles = ['manage-team','schedule-game']
+    
+    Roles.addUsersToRoles(joesUserId, ['manage-team','schedule-game'], 'manchester_united')
+    Roles.addUsersToRoles(joesUserId, ['player','goalie'], 'real_madrid')
+    // internal representation - groups
+    // user.roles = { 
+    //   'manchester_united': ['manage-team','schedule-game'],
+    //   'real_madrid': ['player','goalie']
+    // }
+```
+
+†† `Meteor.roles` is not published by default.  Here's how you would publish it to every client without needing a subscription:
 
 ```js
 // in server/publish.js
