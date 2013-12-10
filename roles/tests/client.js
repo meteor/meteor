@@ -10,6 +10,7 @@
     }
   }
 
+  console.log('loaded')
 
   Tinytest.add(
     'roles - can check current users roles via template helper', 

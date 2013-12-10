@@ -24,14 +24,16 @@ Roles._handlebarsHelpers = {
    * Handlebars helper to check if current user is in at least one
    * of the target roles.  For use in client-side templates.
    *
+   * NOTE: This helper does not currently support groups.
+   *
    * @method isInRole
    * @param {String} role name of role or comma-seperated list of roles
    * @return {Boolean} true if current user is in at least one of the target roles
    */
   isInRole: function (role) {
     var user = Meteor.user(),
-      comma = role && role.indexOf(','),
-      roles
+        comma = role && role.indexOf(','),
+        roles
 
     if (!user) return false
 

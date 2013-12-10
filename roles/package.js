@@ -14,9 +14,11 @@ Package.on_use(function (api) {
 });
 
 Package.on_test(function (api) {
-  // include accounts-password so Meteor.users exists
-  api.use(['roles','accounts-password','tinytest'], 'server');
+  var both = ['client', 'server'];
 
-  api.add_files('tests/server.js', 'server');
+  // include accounts-password so Meteor.users exists
+  api.use(['roles','accounts-password','tinytest'], both);
+
   api.add_files('tests/client.js', 'client');
+  api.add_files('tests/server.js', 'server');
 });

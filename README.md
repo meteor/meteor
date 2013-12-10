@@ -14,6 +14,8 @@ Thanks to [@nickmoylan](https://github.com/nickmoylan) and [@mcrider](https://gi
 
 This package lets you attach permissions to a user which you can then check against later when deciding whether to grant access to Meteor methods or publish data.  The core concept is very simple, essentially you are attaching strings to a user object and then checking for the existance of those strings later. In some sense, it is very similar to tags on blog posts. This package provides helper methods to make the process of adding, removing, and verifying those permissions easier.
 
+As of v1.1.0, also supports per-group roles.
+
 <br />
 
 ### What's in a name...
@@ -47,7 +49,7 @@ Run locally:
 
 ### Changes to default Meteor behavior
 
-  1. User entries in the ```Meteor.users``` collection gain a new field named ```roles``` which is an array of strings corresponding to the user's roles.
+  1. User entries in the ```Meteor.users``` collection gain a new field named ```roles``` corresponding to the user's roles.  The type of the ```roles``` field will be an array of strings when groups are not used.  When groups are used, the type will be an object which is a key/value hash of group names to string arrays.
   2. A new collection ```Meteor.roles``` ** contains a global list of defined role names.
   3. The currently logged-in user's ```roles``` field is automatically published to the client.
 
@@ -123,11 +125,11 @@ Check user roles before publishing sensitive data:
 ```js
 // server/publish.js
 
-// Give authorized users access to sensitive data
-Meteor.publish('secrets', function () {
-  if (Roles.userIsInRole(this.userId, ['view-secrets','admin'])) {
+// Give authorized users access to sensitive data by group
+Meteor.publish('secrets', function (group) {
+  if (Roles.userIsInRole(this.userId, ['view-secrets','admin'], group)) {
     
-    return Meteor.secrets.find();
+    return Meteor.secrets.find({group: group});
     
   } else {
     
@@ -162,19 +164,19 @@ Prevent access to certain functionality:
 
 Meteor.methods({
   /**
-   * delete a user
+   * delete a user from a specific group
    * 
    * @method deleteUser
    * @param {String} userId _id of user to delete
    */
-  deleteUser: function (userId) {
+  deleteUser: function (userId, group) {
     var loggedInUser = Meteor.user()
 
-    if (!loggedInUser ||
-        !Roles.userIsInRole(loggedInUser, ['manage-users','admin']))
+    if (!loggedInUser
+        || !Roles.userIsInRole(loggedInUser, ['manage-users','admin'], group))
       throw new Meteor.Error(403, "Access denied")
 
-    // perform user deletion...
+    // remove user from group...
   }
 })
 ```

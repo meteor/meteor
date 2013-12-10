@@ -1,3 +1,10 @@
+## v1.1.0
+
+* Add support for per-group roles
+* Fix for Issue #12 - Roles.userIsInRole returns whole user record
+  This is a breaking change for code that relied on the undocumented (and incorrect) behavior!
+
+
 ## v1.0.6
 
 * Add compatibility with Meteor 0.6.5 package system
@@ -12,7 +19,7 @@
 
 ## v1.0.4
 
-* remove need for client subscribe by using 'null' publish
+* Remove need for client subscribe by using 'null' publish
 
 
 ## v1.0.3
