@@ -600,6 +600,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
     throw new Error("missing $LAST_START");
 
   // XXX rename pid argument to bindTo.
+  // XXX factor out into a 'getPid' function in a 'galaxy' package?
   var pid = {
     job: process.env.GALAXY_JOB,
     lastStarted: +(process.env.LAST_START),
@@ -607,14 +608,17 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
   };
   var myHost = os.hostname();
 
-  var ddpBindTo = {
-    ddpUrl: 'ddp://' + proxyConfig.bindHost + ':' + securePort + bindPathPrefix + '/',
-    insecurePort: insecurePort
-  };
-
   // This is run after packages are loaded (in main) so we can use
   // Follower.connect.
   if (proxy) {
+    // XXX the concept here is that our configuration has changed and
+    // we have connected to an entirely new follower set, which does
+    // not have the state that we set up on the follower set that we
+    // were previously connected to, and so we need to recreate all of
+    // our bindings -- analogous to getting a SIGHUP and rereading
+    // your configuration file. so probably this should actually tear
+    // down the connection and make a whole new one, rather than
+    // hot-reconnecting to a different URL.
     proxy.reconnect({
       url: proxyConfig.proxyEndpoint
     });
@@ -627,76 +631,216 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
   }
 
   var route = process.env.ROUTE;
-  var host = route.split(":")[0];
-  var port = +route.split(":")[1];
+  var ourHost = route.split(":")[0];
+  var ourPort = +route.split(":")[1];
 
-  var completedBindings = {
-    ddp: false,
-    http: false,
-    https: proxyConfig.securePort !== null ? false : undefined
+  var outstanding = 0;
+  var startedAll = false;
+  var checkComplete = function () {
+    if (startedAll && ! outstanding)
+      Log("Bound to proxy.");
   };
-
-  var bindingDoneCallback = function (binding) {
-    return function (err, resp) {
+  var makeCallback = function () {
+    outstanding++;
+    return function (err) {
       if (err)
         throw err;
-
-      completedBindings[binding] = true;
-      var completedAll = _.every(_.keys(completedBindings), function (binding) {
-        return (completedBindings[binding] ||
-          completedBindings[binding] === undefined);
-      });
-      if (completedAll)
-        Log("Bound to proxy.");
-      return completedAll;
-    };
+      outstanding--;
+      checkComplete();
+    }
   };
 
+  // for now, have our (temporary) requiresAuth flag apply to all
+  // routes created by this process.
   var requiresDdpAuth = !! proxyConfig.requiresAuth;
   var requiresHttpAuth = (!! proxyConfig.requiresAuth) && pid.app !== "panel";
 
-  proxy.call('bindDdp', {
-    pid: pid,
-    bindTo: ddpBindTo,
-    proxyTo: {
-      host: host,
-      port: port,
-      pathPrefix: bindPathPrefix + '/websocket'
-    },
-    requiresAuth: requiresDdpAuth
-  }, bindingDoneCallback("ddp"));
-  proxy.call('bindHttp', {
-    pid: pid,
-    bindTo: {
-      host: proxyConfig.bindHost,
-      port: insecurePort,
-      pathPrefix: bindPathPrefix
-    },
-    proxyTo: {
-      host: host,
-      port: port,
-      pathPrefix: bindPathPrefix
-    },
-    requiresAuth: requiresHttpAuth
-  }, bindingDoneCallback("http"));
-  if (proxyConfig.securePort !== null) {
-    proxy.call('bindHttp', {
-      pid: pid,
-      bindTo: {
-        host: proxyConfig.bindHost,
-        port: securePort,
-        pathPrefix: bindPathPrefix,
-        ssl: true
-      },
-      proxyTo: {
-        host: host,
-        port: port,
-        pathPrefix: bindPathPrefix
-      },
-      requiresAuth: requiresHttpAuth
-    }, bindingDoneCallback("https"));
-  }
+  // XXX a current limitation is that we treat securePort and
+  // insecurePort as a global configuration parameter -- we assume
+  // that if the proxy wants us to ask for 8080 to get port 80 traffic
+  // on our default hostname, that's the same port that we would use
+  // to get traffic on some other hostname that our proxy listens
+  // for. Likewise, we assume that if the proxy can receive secure
+  // traffic for our domain, it can assume secure traffic for any
+  // domain! Hopefully this will get cleaned up before too long by
+  // pushing that logic into the proxy service, so we can just ask for
+  // port 80.
+
+  // XXX BUG: if our configuration changes, and bindPathPrefix
+  // changes, it appears that we will not remove the routes derived
+  // from the old bindPathPrefix from the proxy (until the process
+  // exits). It is not actually normal for bindPathPrefix to change,
+  // certainly not without a process restart for other reasons, but
+  // it'd be nice to fix.
+
+  _.each(routes, function (route) {
+    var parsedUrl = url.parse(route.url, /* parseQueryString */ false,
+                              /* slashesDenoteHost aka workRight */ true);
+    if (parsedUrl.protocol || parsedUrl.port || parsedUrl.search)
+      throw new Error("Bad url");
+    parsedUrl.host = null;
+    parsedUrl.path = null;
+    if (! parsedUrl.hostname) {
+      parsedUrl.hostname = proxyConfig.bindHost;
+      if (! parsedUrl.pathname)
+        parsedUrl.pathname = "";
+      if (! parsedUrl.pathname.indexOf("/") !== 0) {
+        // Relative path
+        parsedUrl.pathname = bindPathPrefix + "/" + parsedUrl.pathname;
+      }
+    }
+
+    var parsedDdpUrl = _.clone(parsedUrl);
+    parsedDdpUrl.protocol = "ddp:";
+    parsedDdpUrl.port = '' + securePort;
+    var ddpUrl = url.format(parsedDdpUrl);
+
+    var proxyToHost, proxyToPort, proxyToPathPrefix;
+    if (! _.has(route, 'forwardTo')) {
+      proxyToHost = ourHost;
+      proxyToPort = ourPort;
+      proxyToPathPrefix = bindPathPrefix;
+    } else {
+      var parsedFwdUrl = url.parse(options.forwardTo);
+      if (! parsedUrl.hostname || parsedUrl.protocol)
+        throw new Error("Bad forward url");
+      proxyToHost = parsedFwdUrl.hostname;
+      proxyToPort = parseInt(parsedFwdUrl.port || "80");
+      proxyToPathPrefix = parsedFwdUrl.pathname || "";
+    }
+
+    if (options.ddp) {
+      proxy.call('bindDdp', {
+        pid: pid,
+        bindTo: {
+          ddpUrl: ddpUrl,
+          insecurePort: insecurePort
+        },
+        proxyTo: {
+          host: proxyToHost,
+          port: proxyToPort,
+          pathPrefix: proxyToPathPrefix + '/websocket'
+        },
+        requiresAuth: requiresDdpAuth
+      }, makeCallback());
+    }
+
+    if (options.http) {
+      proxy.call('bindHttp', {
+        pid: pid,
+        bindTo: {
+          host: parsedUrl.hostname,
+          port: insecurePort,
+          pathPrefix: parsedUrl.pathname
+        },
+        proxyTo: {
+          host: proxyToHost,
+          port: proxyToPort,
+          pathPrefix: proxyToPathPrefix
+        },
+        requiresAuth: requiresHttpAuth
+      }, makeCallback());
+
+      // Only make the secure binding if we've been told that the
+      // proxy knows how terminate secure connections for us (has an
+      // appropriate cert, can bind the necessary port..)
+      if (proxyConfig.securePort !== null) {
+        proxy.call('bindHttp', {
+          pid: pid,
+          bindTo: {
+            host: parsedUrl.hostname,
+            port: securePort,
+            pathPrefix: parsedUrl.pathname,
+            ssl: true
+          },
+          proxyTo: {
+            host: proxyToHost,
+            port: proxyToPort,
+            pathPrefix: proxyToPathPrefix
+          },
+          requiresAuth: requiresHttpAuth
+        }, makeCallback());
+      }
+    }
+  });
+
+  startedAll = true;
+  checkComplete();
 };
+
+// (Internal, unsupported interface -- subject to change)
+//
+// Listen for HTTP and/or DDP traffic and route it somewhere. Only
+// takes effect when using a proxy service.
+//
+// 'url' is the traffic that we want to route, interpreted relative to
+// the default URL where this app has been told to serve itself. It
+// may not have a scheme or port, but it may have a host and a path,
+// and if no host is provided the path need not be absolute. The
+// following cases are possible:
+//
+//   //somehost.com
+//     All incoming traffic for 'somehost.com'
+//   //somehost.com/foo/bar
+//     All incoming traffic for 'somehost.com', but only when
+//     the first two path components are 'foo' and 'bar'.
+//   /foo/bar
+//     Incoming traffic on our default host, but only when the
+//     first two path components are 'foo' and 'bar'.
+//   foo/bar
+//     Incoming traffic on our default host, but only when the path
+//     starts with our default path prefix, followed by 'foo' and
+//     'bar'.
+//
+// (Yes, these scheme-less URLs that start with '//' are legal URLs.)
+//
+// You can select either DDP traffic, HTTP traffic, or both. Both
+// secure and insecure traffic will be gathered (assuming the proxy
+// service is capable, eg, has appropriate certs and port mappings).
+//
+// With no 'forwardTo' option, the traffic is received by this process
+// for service by the hooks in this 'webapp' package. With
+// 'forwardTo', the process is instead sent to some other remote
+// host. Either way, the routing continues until this process exits.
+//
+// Path components in 'url' will be stripped and path components in
+// 'forwardTo' (if used) will be put in their place.
+//
+// For now, all of the routes must be set up ahead of time, before the
+// initial registration with the proxy. Calling addRoute from the top
+// level of your JS should do the trick.
+//
+// When multiple routes are present that match a given request, the
+// most specific route wins. When routes with equal specificity are
+// present, the proxy service will distribute the traffic between
+// them.
+//
+// options may be:
+// - ddp: if true, the default, include DDP traffic. This includes
+//   both secure and insecure traffic, and both websocket and sockjs
+//   transports.
+// - http: if true, the default, include HTTP/HTTPS traffic.
+// - forwardTo: if provided, should be a URL with a host, optional
+//   path and port, and no scheme (the scheme will be derived from the
+//   traffic type; for now it will always be a http or ws connection,
+//   never https or wss, but we could add a forwardSecure flag to
+//   re-encrypt).
+var routes = [];
+WebAppInternals.addRoute = function (url, options) {
+  options = _.extend({
+    ddp: true,
+    http: true
+  }, options || {});
+
+  if (proxy)
+    // In the future, lift this restriction
+    throw new Error("Too late to add routes");
+
+  routes.push(_.extend({ url: url }, options));
+};
+
+// Receive traffic on our default URL.
+WebAppInternals.addRoute("");
 
 runWebAppServer();
 
