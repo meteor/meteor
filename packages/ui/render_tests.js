@@ -180,8 +180,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     var R = ReactiveVar({'class': ['david gre', CharRef({html: '&euml;', str: '\u00eb'}), 'nspan'],
                          id: 'foo'});
 
-    var spanCode = SPAN({$attrs: function () { return R.get(); }});
-    test.equal(typeof spanCode.attrs, 'function');
+    var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
 
     test.equal(toHTML(spanCode), '<span class="david gre&euml;nspan" id="foo"></span>');
 
@@ -223,7 +222,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
                          fff: [[]],
                          ggg: ['x', ['y', ['z']]]});
 
-    var spanCode = SPAN({$attrs: function () { return R.get(); }});
+    var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
 
     test.equal(toHTML(spanCode), '<span id="foo" ggg="xyz"></span>');
     test.equal(toCode(SPAN(R.get())),

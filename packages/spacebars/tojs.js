@@ -32,7 +32,9 @@ HTML.Tag.prototype.toJS = function (options) {
   if (this.attrs) {
     var kvStrs = [];
     for (var k in this.attrs) {
-      kvStrs.push(toObjectLiteralKey(k) + ': ' + HTML.toJS(this.attrs[k], options));
+      if (! HTML.isNully(this.attrs[k]))
+        kvStrs.push(toObjectLiteralKey(k) + ': ' +
+                    HTML.toJS(this.attrs[k], options));
     }
     argStrs.push('{' + kvStrs.join(', ') + '}');
   }

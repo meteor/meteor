@@ -306,7 +306,7 @@ var materialize = function (node, parent, before, parentComponent) {
           c.handlers = {};
 
         try {
-          var attrs = node.evaluateDynamicAttributes();
+          var attrs = node.evaluateDynamicAttributes(parentComponent);
           var stringAttrs = {};
           if (attrs) {
             for (var k in attrs) {
