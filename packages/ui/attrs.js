@@ -27,7 +27,7 @@ AttributeHandler = function (name, value) {
   this.value = value;
 };
 
-_extend(AttributeHandler.prototype, {
+_.extend(AttributeHandler.prototype, {
   update: function (element, oldValue, value) {
     if (value === null) {
       if (oldValue !== null)

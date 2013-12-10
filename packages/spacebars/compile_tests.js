@@ -201,4 +201,36 @@ Tinytest.add("spacebars - compiler output", function (test) {
           });
         };
       });
+
+  run("<a {{b}}></a>",
+      function() {
+        var self = this;
+        return HTML.A({
+          $dynamic: [ function() {
+            return Spacebars.attrMustache(self.lookup("b"));
+          } ]
+        });
+      });
+
+  run("<a {{b}} c=d{{e}}f></a>",
+      function() {
+        var self = this;
+        return HTML.A({
+          c: [ "d", function() {
+            return Spacebars.mustache(self.lookup("e"));
+          }, "f" ],
+          $dynamic: [ function() {
+            return Spacebars.attrMustache(self.lookup("b"));
+          } ]
+        });
+      });
+
+  run("<asdf>{{foo}}</asdf>",
+      function () {
+        var self = this;
+        return HTML.getTag("ASDF")(function () {
+          return Spacebars.mustache(self.lookup("foo"));
+        });
+      });
+
 });

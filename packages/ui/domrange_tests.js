@@ -1,6 +1,6 @@
 
 var DomRange = UI.DomRange;
-var parseHTML = UI.DomBackend2.parseHTML;
+var parseHTML = UI.DomBackend.parseHTML;
 
 // fake component; DomRange host
 var Comp = function (which) {

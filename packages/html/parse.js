@@ -1,26 +1,21 @@
 
-var voidElementNames = 'area base br col command embed hr img input keygen link meta param source track wbr'.split(' ');
-var voidElementSet = (function (set) {
-  for (var i = 0; i < voidElementNames.length; i++)
-    set[voidElementNames[i]] = 1;
+HTML.Special = function (value) {
+  if (! (this instanceof HTML.Special))
+    // called without `new`
+    return new HTML.Special(value);
 
-  return set;
-})({});
-
-knownElementNames = 'a abbr acronym address applet area b base basefont bdo big blockquote body br button caption center cite code col colgroup dd del dfn dir div dl dt em fieldset font form frame frameset h1 h2 h3 h4 h5 h6 head hr html i iframe img input ins isindex kbd label legend li link map menu meta noframes noscript object ol optgroup option p param pre q s samp script select small span strike strong style sub sup table tbody td textarea tfoot th thead title tr tt u ul var article aside audio bdi canvas command data datagrid datalist details embed eventsource figcaption figure footer header hgroup keygen mark meter nav output progress ruby rp rt section source summary time track video wbr'.split(' ');
-var knownElementSet = (function (set) {
-  for (var i = 0; i < knownElementNames.length; i++)
-    set[knownElementNames[i]] = 1;
-
-  return set;
-})({});
-
-isVoidElement = function (name) {
-  return voidElementSet[properCaseTagName(name)] === 1;
+  this.value = value;
 };
+HTML.Special.prototype.toJS = function (options) {
+  var newOptions = {};
+  for (var opt in options)
+    newOptions[opt] = options[opt];
+  newOptions.allowAllPrimitives = true;
 
-isKnownElement = function (name) {
-  return knownElementSet[properCaseTagName(name)] === 1;
+  return HTML.Tag.prototype.toJS.call({tagName: 'Special',
+                                       attrs: this.value,
+                                       children: []},
+                                      newOptions);
 };
 
 parseFragment = function (input, options) {
@@ -118,7 +113,7 @@ getContent = function (scanner, shouldStopFunc) {
       var tagName = token.n;
       // is this an element with no close tag (a BR, HR, IMG, etc.) based
       // on its name?
-      var isVoid = isVoidElement(tagName);
+      var isVoid = HTML.isVoidElement(tagName);
       if (! isVoid) {
         if (token.isSelfClosing)
           scanner.fatal('Only certain elements like BR, HR, IMG, etc. are allowed to self-close');
@@ -157,9 +152,9 @@ getContent = function (scanner, shouldStopFunc) {
 
         // make `content` into an array suitable for applying tag constructor
         // as in `FOO.apply(null, content)`.
-        if (HTML.typeOf(content) === 'null')
+        if (content == null)
           content = [];
-        else if (HTML.typeOf(content) !== 'array')
+        else if (! (content instanceof Array))
           content = [content];
 
         items.push(HTML.getTag(tagName).apply(

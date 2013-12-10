@@ -1,124 +1,189 @@
-/***
- * A convenient way to create DOM elements. ('cls' will be
- * automatically expanded to 'class', since 'class' may not appear as
- * a key of an object, even in quotes, in Safari.)
- *
- * DIV({cls: "mydiv", style: "color: blue;"}, [
- *   "Some text",
- *   A({href: "/some/location"}, ["A link"]),
- *   DIV({cls: "emptydiv"}),
- *   // if an object is inserted, the value of its 'element'
- *   // attribute will be used
- *   myView,
- *   DIV([
- *     "Both the attributes and the contents are optional",
- *     ["Lists", "are", "flattened"]
- *   })
- * ]);
- */
 
-// XXX find a place to document the contract for *View classes -- they
-// should have an attribute named 'element'
-
-// XXX consider not requiring the contents to be wrapped in an
-// array. eg: DIV({stuff: 12}, "thing1", "thing2"). backwards
-// compatible with current behavior due to array flattening. could
-// eliminate spurious wrapper div inserted by Layout.TwoColumnsFixedRight
-
-// XXX allow style to be set as an object
-
-var event_names = {
-  blur: true,
-  change: true,
-  click: true,
-  dblclick: true,
-  error: true,
-  focus: true,
-  focusin: true,
-  focusout: true,
-  keydown: true,
-  keypress: true,
-  keyup: true,
-  load: true,
-  mousedown: true,
-  mouseenter: true,
-  mouseleave: true,
-  mousemove: true,
-  mouseout: true,
-  mouseover: true,
-  mouseup: true,
-  resize: true,
-  scroll: true,
-  select: true,
-  submit: true
+// Tag instances are `instanceof HTML.Tag`.
+//
+// This is a private constructor.  Internally, we set
+// `HTML.P.prototype = new HTML.Tag("P")`.
+HTML.Tag = function (tagName) {
+  this.tagName = tagName;
+  this.attrs = null;
+  this.children = [];
 };
 
-var testDiv = document.createElement("div");
-testDiv.innerHTML = '<a style="top:1px">a</a>';
-var styleGetSetSupport = /top/.test(testDiv.firstChild.getAttribute("style"));
+// Call all functions and instantiate all components, when fine-grained
+// reactivity is not needed (for example, in attributes).
+HTML.evaluate = function (node, parentComponent) {
+  if (node == null) {
+    return node;
+  } else if (typeof node === 'function') {
+    return node();
+  } else if (node instanceof Array) {
+    var result = [];
+    for (var i = 0; i < node.length; i++)
+      result.push(HTML.evaluate(node[i], parentComponent));
+    return result;
+  } else if (typeof node.instantiate === 'function') {
+    // component
+    var instance = node.instantiate(parentComponent || null);
+    var content = instance.render();
+    return HTML.evaluate(content, instance);
+  }  else if (node instanceof HTML.Tag) {
+    var newChildren = [];
+    for (var i = 0; i < node.children.length; i++)
+      newChildren.push(HTML.evaluate(node.children[i], parentComponent));
+    var newTag = HTML.getTag(node.tagName).apply(null, newChildren);
+    newTag.attrs = {};
+    for (var k in node.attrs)
+      newTag.attrs[k] = HTML.evaluate(node.attrs[k], parentComponent);
+    return newTag;
+  } else {
+    return node;
+  }
+};
 
-// All HTML4 elements, excluding deprecated elements
-// http://www.w3.org/TR/html4/index/elements.html
-// also excluding the following elements that seem unlikely to be
-// used in the body:
-// HEAD, HTML, LINK, MAP, META, NOFRAMES, NOSCRIPT, STYLE, TITLE
-var tag_names =
-  ('A ABBR ACRONYM B BDO BIG BLOCKQUOTE BR BUTTON CAPTION CITE CODE COL ' +
-   'COLGROUP DD DEL DFN DIV DL DT EM FIELDSET FORM H1 H2 H3 H4 H5 H6 HR ' +
-   'I IFRAME IMG INPUT INS KBD LABEL LEGEND LI OBJECT OL OPTGROUP OPTION ' +
-   'P PARAM PRE Q S SAMP SCRIPT SELECT SMALL SPAN STRIKE STRONG SUB SUP ' +
-   'TABLE TBODY TD TEXTAREA TFOOT TH THEAD TR TT U UL VAR').split(' ');
+var extendAttrs = function (tgt, src, parentComponent) {
+  for (var k in src) {
+    if (k === '$dynamic')
+      continue;
+    if (! HTML.isValidAttributeName(k))
+      throw new Error("Illegal HTML attribute name: " + k);
+    var value = HTML.evaluate(src[k], parentComponent);
+    if (! HTML.isNully(value))
+      tgt[k] = value;
+  }
+};
 
-_.each(tag_names, function (tag) {
-  var f = function (arg1, arg2) {
-    var attrs, contents;
-    if (arg2) {
-      attrs = arg1;
-      contents = arg2;
-    } else {
-      if (arg1 instanceof Array) {
-        attrs = {};
-        contents = arg1;
-      } else {
-        attrs = arg1;
-        contents = [];
-      }
+HTML.Tag.prototype.evaluateDynamicAttributes = function (parentComponent) {
+  if (this.attrs && (this.attrs.$dynamic instanceof Array)) {
+    var attrs = {};
+    extendAttrs(attrs, this.attrs, parentComponent);
+    // iterate over this.attrs.$dynamic, calling each element if it
+    // is a function and then using it to extend `attrs`.
+    var dynamics = this.attrs.$dynamic;
+    for (var i = 0; i < dynamics.length; i++) {
+      var moreAttrs = dynamics[i];
+      if (typeof moreAttrs === 'function')
+        moreAttrs = moreAttrs();
+      extendAttrs(attrs, moreAttrs, parentComponent);
     }
-    var elt = document.createElement(tag);
-    for (var a in attrs) {
-      if (a === 'cls')
-        elt.setAttribute('class', attrs[a]);
-      else if (a === '_for')
-        elt.setAttribute('for', attrs[a]);
-      else if (a === 'style' && ! styleGetSetSupport)
-        elt.style.cssText = String(attrs[a]);
-      else if (event_names[a]) {
-        if (typeof $ === "undefined")
-          throw new Error("Event binding is supported only if " +
-                          "jQuery or similar is available");
-        ($(elt)[a])(attrs[a]);
-      }
-      else
-        elt.setAttribute(a, attrs[a]);
-    }
-    var addChildren = function (children) {
-      for (var i = 0; i < children.length; i++) {
-        var c = children[i];
-        if (!c && c !== '')
-          throw new Error("Bad value for element body: " + c);
-        else if (c instanceof Array)
-          addChildren(c);
-        else if (typeof c === "string")
-          elt.appendChild(document.createTextNode(c));
-        else if ('element' in c)
-          addChildren([c.element]);
-        else
-          elt.appendChild(c);
-      };
-    };
-    addChildren(contents);
-    return elt;
-  };
-  // Put the function onto the package-scope variable with this name.
-  eval(tag + " = f;");
-});
+    return attrs;
+  } else {
+    return this.attrs;
+  }
+};
+
+// Given "P" create the function `HTML.P`.
+var makeTagConstructor = function (tagName) {
+  // Do a little dance so that tags print nicely in the Chrome console.
+  // First make tag name suitable for insertion into evaluated JS code,
+  // for security reasons mainly.
+  var sanitizedName = String(tagName).replace(
+      /^[^a-zA-Z_]|[^a-zA-Z_0-9]/g, '_') || 'Tag';
+
+  // Generate a constructor function whose name is the tag name.
+  // We try to choose generic-sounding variable names in case V8 infers
+  // them as type names and they show up in the developer console.
+  // HTMLTag is the constructor function for our specific tag type.
+  var HTMLTag = (new Function('_constructTag',
+    'return function ' +
+      sanitizedName +
+      '(/*arguments*/) { return _constructTag(' + sanitizedName +
+      ', this, arguments); };'))(_constructTag);
+
+  HTMLTag.prototype = new HTML.Tag(tagName);
+  HTMLTag.prototype.constructor = HTMLTag;
+
+  return HTMLTag;
+};
+
+// Given "P", create and assign `HTML.P` if it doesn't already exist.
+// Then return it.
+HTML.getTag = function (tagName) {
+  tagName = tagName.toUpperCase();
+
+  if (! HTML[tagName])
+    HTML[tagName] = makeTagConstructor(tagName);
+
+  return HTML[tagName];
+};
+
+// Given "P", make sure `HTML.P` exists.
+HTML.ensureTag = function (tagName) {
+  HTML.getTag(tagName); // don't return it
+};
+
+// When you call either `HTML.P(...)` or `new HTML.P(...)`,
+// this function handles the actual implementation.
+var _constructTag = function (constructor, instance, args) {
+  if (! (instance instanceof HTML.Tag)) {
+    // If you called `HTML.P(...)` without `new`, we don't actually
+    // have an instance in `this`.  Create one by calling `new HTML.P`
+    // with no arguments (which will invoke `_constructTag` reentrantly,
+    // but doing essentially nothing).
+    instance = new constructor;
+  }
+
+  var i = 0;
+  var attrs = (args.length && args[0]);
+  if (attrs && (typeof attrs === 'object') &&
+      (attrs.constructor === Object)) {
+    instance.attrs = attrs;
+    i++;
+  }
+  instance.children = Array.prototype.slice.call(args, i);
+
+  return instance;
+};
+
+HTML.CharRef = function (attrs) {
+  if (! (this instanceof HTML.CharRef))
+    // called without `new`
+    return new HTML.CharRef(attrs);
+
+  if (! (attrs && attrs.html && attrs.str))
+    throw new Error(
+      "HTML.CharRef must be constructed with ({html:..., str:...})");
+
+  this.html = attrs.html;
+  this.str = attrs.str;
+};
+
+HTML.Comment = function (value) {
+  if (! (this instanceof HTML.Comment))
+    // called without `new`
+    return new HTML.Comment(value);
+
+  if (typeof value !== 'string')
+    throw new Error('HTML.Comment must be constructed with a string');
+
+  this.value = value;
+  // Kill illegal hyphens in comment value (no way to escape them in HTML)
+  this.sanitizedValue = value.replace(/^-|--+|-$/g, '');
+};
+
+HTML.Raw = function (value) {
+  if (! (this instanceof HTML.Raw))
+    // called without `new`
+    return new HTML.Raw(value);
+
+  if (typeof value !== 'string')
+    throw new Error('HTML.Raw must be constructed with a string');
+
+  this.value = value;
+};
+
+HTML.EmitCode = function (value) {
+  if (! (this instanceof HTML.EmitCode))
+    // called without `new`
+    return new HTML.EmitCode(value);
+
+  if (typeof value !== 'string')
+    throw new Error('HTML.EmitCode must be constructed with a string');
+
+  this.value = value;
+};
+
+(function () {
+  for (var i = 0; i < HTML.knownElementNames.length; i++) {
+    HTML.ensureTag(HTML.knownElementNames[i]);
+  }
+})();

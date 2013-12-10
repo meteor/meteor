@@ -5,13 +5,13 @@ var CharRef = HTML.CharRef;
 var Comment = HTML.Comment;
 var Special = HTML.Special;
 
-var BR = HTML.Tag.BR;
-var HR = HTML.Tag.HR;
-var INPUT = HTML.Tag.INPUT;
-var A = HTML.Tag.A
-var DIV = HTML.Tag.DIV;
-var P = HTML.Tag.P;
-var TEXTAREA = HTML.Tag.TEXTAREA;
+var BR = HTML.BR;
+var HR = HTML.HR;
+var INPUT = HTML.INPUT;
+var A = HTML.A;
+var DIV = HTML.DIV;
+var P = HTML.P;
+var TEXTAREA = HTML.TEXTAREA;
 
 Tinytest.add("html - parser getContent", function (test) {
 
@@ -23,7 +23,7 @@ Tinytest.add("html - parser getContent", function (test) {
     var scanner = new Scanner(input.replace('^^^', ''));
     var result = getContent(scanner);
     test.equal(scanner.pos, endPos);
-    test.equal(UI.toCode(result), UI.toCode(expected));
+    test.equal(HTML.toJS(result), HTML.toJS(expected));
   };
 
   var fatal = function (input, messageContains) {
@@ -121,8 +121,8 @@ Tinytest.add("html - parser getContent", function (test) {
 });
 
 Tinytest.add("html - parseFragment", function (test) {
-  test.equal(UI.toCode(HTML.parseFragment("<div><p id=foo>Hello</p></div>")),
-             UI.toCode(DIV(P({id:'foo'}, 'Hello'))));
+  test.equal(HTML.toJS(HTML.parseFragment("<div><p id=foo>Hello</p></div>")),
+             HTML.toJS(DIV(P({id:'foo'}, 'Hello'))));
 
   test.throws(function() {
     HTML.parseFragment('asdf</a>');
@@ -132,49 +132,48 @@ Tinytest.add("html - parseFragment", function (test) {
     var p = HTML.parseFragment('<p></p>');
     test.equal(p.tagName, 'P');
     test.equal(p.attrs, null);
-    test.equal(HTML.typeOf(p), 'tag');
-    test.equal(p.length, 0);
+    test.isTrue(p instanceof HTML.Tag);
+    test.equal(p.children.length, 0);
   })();
 
   (function () {
     var p = HTML.parseFragment('<p>x</p>');
     test.equal(p.tagName, 'P');
     test.equal(p.attrs, null);
-    test.equal(HTML.typeOf(p), 'tag');
-    test.equal(p.length, 1);
-    test.equal(p[0], 'x');
+    test.isTrue(p instanceof HTML.Tag);
+    test.equal(p.children.length, 1);
+    test.equal(p.children[0], 'x');
   })();
 
   (function () {
     var p = HTML.parseFragment('<p>x&#65;</p>');
     test.equal(p.tagName, 'P');
     test.equal(p.attrs, null);
-    test.equal(HTML.typeOf(p), 'tag');
-    test.equal(p.length, 2);
-    test.equal(p[0], 'x');
+    test.isTrue(p instanceof HTML.Tag);
+    test.equal(p.children.length, 2);
+    test.equal(p.children[0], 'x');
 
-    test.equal(p[1].tagName, 'CharRef');
-    test.equal(p[1].length, 0);
-    test.equal(p[1].attrs, { html: '&#65;', str: 'A' });
-    test.equal(HTML.typeOf(p[1]), 'charref');
+    test.isTrue(p.children[1] instanceof HTML.CharRef);
+    test.equal(p.children[1].html, '&#65;');
+    test.equal(p.children[1].str, 'A');
   })();
 
   (function () {
     var pp = HTML.parseFragment('<p>x</p><p>y</p>');
-    test.equal(HTML.typeOf(pp), 'array');
+    test.isTrue(pp instanceof Array);
     test.equal(pp.length, 2);
 
     test.equal(pp[0].tagName, 'P');
     test.equal(pp[0].attrs, null);
-    test.equal(HTML.typeOf(pp[0]), 'tag');
-    test.equal(pp[0].length, 1);
-    test.equal(pp[0][0], 'x');
+    test.isTrue(pp[0] instanceof HTML.Tag);
+    test.equal(pp[0].children.length, 1);
+    test.equal(pp[0].children[0], 'x');
 
     test.equal(pp[1].tagName, 'P');
     test.equal(pp[1].attrs, null);
-    test.equal(HTML.typeOf(pp[1]), 'tag');
-    test.equal(pp[1].length, 1);
-    test.equal(pp[1][0], 'y');
+    test.isTrue(pp[1] instanceof HTML.Tag);
+    test.equal(pp[1].children.length, 1);
+    test.equal(pp[1].children[0], 'y');
   })();
 
 });
@@ -222,7 +221,7 @@ Tinytest.add("html - getSpecialTag", function (test) {
       result = String(e);
     }
     test.equal(scanner.pos, endPos);
-    test.equal(UI.toCode(result), UI.toCode(expected));
+    test.equal(HTML.toJS(result), HTML.toJS(expected));
   };
 
   var fatal = function (input, messageContains) {

@@ -8,7 +8,7 @@ Package.on_use(function (api) {
   api.use('deps');
   api.use('random');
   api.use('ejson');
-  api.use('underscore'); // very slight
+  api.use('underscore'); // slight
   api.use('ordered-dict');
   api.use('minimongo');  // for idStringify
   api.use('observe-sequence');

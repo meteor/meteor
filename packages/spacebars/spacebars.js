@@ -278,29 +278,11 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
   return tag;
 };
 
-
-// XXX beef this up from ui/render.js
-var toJSLiteral = function (obj) {
-  // http://timelessrepo.com/json-isnt-a-javascript-subset
-  return (JSON.stringify(obj)
-          .replace(/\u2028/g, '\\u2028')
-          .replace(/\u2029/g, '\\u2029'));
-};
-
-// XXX use toObjectLiteralKey from ui/render.js
-// takes an object whose keys and values are strings of
-// JavaScript source code and returns the source code
-// of an object literal.
 var makeObjectLiteral = function (obj) {
-  var buf = [];
-  buf.push('{');
-  for (var k in obj) {
-    if (buf.length > 1)
-      buf.push(', ');
-    buf.push(k, ': ', obj[k]);
-  }
-  buf.push('}');
-  return buf.join('');
+  var parts = [];
+  for (var k in obj)
+    parts.push(toObjectLiteralKey(k) + ': ' + obj[k]);
+  return '{' + parts.join(', ') + '}';
 };
 
 
@@ -447,8 +429,8 @@ var optimize = function (tree) {
 
   var pushRawHTML = function (array, html) {
     var N = array.length;
-    if (N > 0 && array[N-1].tagName === 'Raw') {
-      array[N-1][0] += html;
+    if (N > 0 && (array[N-1] instanceof HTML.Raw)) {
+      array[N-1] = HTML.Raw(array[N-1].value + html);
     } else {
       array.push(HTML.Raw(html));
     }
@@ -470,94 +452,82 @@ var optimize = function (tree) {
           // This is our first special item.  Stringify the other parts.
           result = [];
           for (var j = 0; j < i; j++)
-            pushRawHTML(result, UI.toHTML(array[j]));
+            pushRawHTML(result, HTML.toHTML(array[j]));
         }
         result.push(part);
       } else {
         // just plain HTML found
         if (result !== null) {
           // we've already found something special, so convert this to Raw
-          pushRawHTML(result, UI.toHTML(array[i]));
+          pushRawHTML(result, HTML.toHTML(array[i]));
         }
       }
     }
     if (result !== null) {
       // clean up unnecessary HTML.Raw wrappers around pure character data
       for (var j = 0; j < result.length; j++) {
-        if (result[j].tagName === 'Raw' &&
-            isPureChars(result[j][0]))
+        if ((result[j] instanceof HTML.Raw) &&
+            isPureChars(result[j].value))
           // replace HTML.Raw with simple string
-          result[j] = result[j][0];
+          result[j] = result[j].value;
       }
     }
     return result;
   };
 
   var doesAttributeValueHaveSpecials = function (v) {
-    var type = HTML.typeOf(v);
-    if (type === 'null' || type === 'string' || type === 'charref') {
-      return false;
-    } else if (type === 'special') {
+    if (v instanceof HTML.Special)
       return true;
-    } else if (type === 'array') {
+    if (typeof v === 'function')
+      return true;
+
+    if (v instanceof Array) {
       for (var i = 0; i < v.length; i++)
         if (doesAttributeValueHaveSpecials(v[i]))
           return true;
       return false;
-    } else {
-      throw new Error("Unexpected node in attribute value: " + v);
     }
+
+    return false;
   };
 
   var optimizeParts = function (node) {
     // If we have nothing special going on, returns `null` (so that the
     // parent can optimize).  Otherwise returns a replacement for `node`
     // with optimized parts.
-    if (UI.isComponent(node)) {
-      return node;
-    } else {
-      var type = HTML.typeOf(node);
-      if (type === 'special' || type === 'function' || type === 'emitcode') {
-        // return node, which is special and thus already optimized as
-        // much as possible
-        return node;
-      } else if (type === 'tag') {
-        var mustOptimize = false;
+    if ((node == null) || (typeof node === 'string') ||
+        (node instanceof HTML.CharRef) || (node instanceof HTML.Comment)) {
+      // not special; let parent decide how whether to optimize
+      return null;
+    } else if (node instanceof HTML.Tag) {
 
-        if (node.attrs) {
-          var attrs = node.attrs;
-          if (typeof attrs === 'function') {
+      var mustOptimize = false;
+
+      if (node.attrs) {
+        var attrs = node.attrs;
+        for (var k in attrs) {
+          if (doesAttributeValueHaveSpecials(attrs[k])) {
             mustOptimize = true;
-          } else {
-            for (var k in attrs) {
-              if (doesAttributeValueHaveSpecials(attrs[k])) {
-                mustOptimize = true;
-                break;
-              }
-            }
+            break;
           }
         }
-
-        var newChildren = optimizeArrayParts(node, optimizeParts, mustOptimize);
-
-        if (newChildren === null)
-          return null;
-
-        var newTag = HTML.getTag(node.tagName).apply(null, newChildren);
-        newTag.attrs = node.attrs;
-
-        return newTag;
-      } else if (type === 'array') {
-        return optimizeArrayParts(node, optimizeParts);
-      } else if (type === 'charref' || type === 'comment' || type === 'string' ||
-                 type === 'null') {
-        // not special; let parent decide how whether to optimize
-        return null;
-      } else {
-        // can't get here
-        throw new Error("Unexpected type: " + type);
       }
-    };
+
+      var newChildren = optimizeArrayParts(node.children, optimizeParts, mustOptimize);
+
+      if (newChildren === null)
+        return null;
+
+      var newTag = HTML.getTag(node.tagName).apply(null, newChildren);
+      newTag.attrs = node.attrs;
+
+      return newTag;
+
+    } else if (node instanceof Array) {
+      return optimizeArrayParts(node, optimizeParts);
+    } else {
+      return node;
+    }
   };
 
   var optTree = optimizeParts(tree);
@@ -565,10 +535,10 @@ var optimize = function (tree) {
     // tree was optimized in parts
     return optTree;
 
-  optTree = HTML.Raw(UI.toHTML(tree));
+  optTree = HTML.Raw(HTML.toHTML(tree));
 
-  if (isPureChars(optTree[0]))
-    return optTree[0];
+  if (isPureChars(optTree.value))
+    return optTree.value;
 
   return optTree;
 };
@@ -583,57 +553,48 @@ var builtInComponents = {
 };
 
 var replaceSpecials = function (node) {
-  if (UI.isComponent(node)) {
-    return node;
-  } else {
-    var type = HTML.typeOf(node);
-    if (type === 'tag') {
-      // potential optimization: don't always create a new tag
-      var newChildren = _.map(Array.prototype.slice.call(node), replaceSpecials);
-      var newTag = HTML.getTag(node.tagName).apply(null, newChildren);
-      newTag.attrs = Spacebars._handleSpecialAttributes(node.attrs);
-      return newTag;
-    } else if (type === 'array') {
-      return _.map(node, replaceSpecials);
-    } else if (type === 'special') {
-      var tag = node.attrs;
-      // XXX make sure we only pass a string through from the helper to the
-      // Render API, except in the case of DOUBLE with a SafeString-like
-      // situation.  Support our equivalent of SafeString.
-      if (tag.type === 'DOUBLE') {
-        return HTML.EmitCode('function () { return ' +
-                             codeGenMustache(tag) + '; }');
-      } else if (tag.type === 'TRIPLE') {
-        return HTML.EmitCode('function () { return Spacebars.makeRaw(' +
-                             codeGenMustache(tag) + '); }');
-      } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
-        // XXX handle more stuff
-        var path = tag.path;
-        var compCode = codeGenPath(path);
+  if (node instanceof HTML.Tag) {
+    // potential optimization: don't always create a new tag
+    var newChildren = _.map(node.children, replaceSpecials);
+    var newTag = HTML.getTag(node.tagName).apply(null, newChildren);
+    newTag.attrs = Spacebars._handleSpecialAttributes(node.attrs);
+    return newTag;
+  } else if (node instanceof Array) {
+    return _.map(node, replaceSpecials);
+  } else if (node instanceof HTML.Special) {
+    var tag = node.value;
+    if (tag.type === 'DOUBLE') {
+      return HTML.EmitCode('function () { return ' +
+                           codeGenMustache(tag) + '; }');
+    } else if (tag.type === 'TRIPLE') {
+      return HTML.EmitCode('function () { return Spacebars.makeRaw(' +
+                           codeGenMustache(tag) + '); }');
+    } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
+      var path = tag.path;
+      var compCode = codeGenPath(path);
 
-        if (path.length === 1) {
-          var compName = path[0];
-          if (builtInComponents.hasOwnProperty(compName)) {
-            compCode = builtInComponents[compName];
-          } else {
-            compCode = ('(Template[' + toJSLiteral(path[0]) +
-                        '] || ' + compCode + ')');
-          }
+      if (path.length === 1) {
+        var compName = path[0];
+        if (builtInComponents.hasOwnProperty(compName)) {
+          compCode = builtInComponents[compName];
+        } else {
+          compCode = ('(Template[' + toJSLiteral(path[0]) +
+                      '] || ' + compCode + ')');
         }
-
-        var includeArgs = codeGenInclusionArgs(tag);
-
-        return HTML.EmitCode(
-          'function () { return Spacebars.include(' + compCode +
-            (includeArgs.length ? ', ' + includeArgs.join(', ') : '') +
-            '); }');
-      } else {
-        throw new Error("Unexpected template tag type: " + tag.type);
       }
+
+      var includeArgs = codeGenInclusionArgs(tag);
+
+      return HTML.EmitCode(
+        'function () { return Spacebars.include(' + compCode +
+          (includeArgs.length ? ', ' + includeArgs.join(', ') : '') +
+          '); }');
     } else {
-      return node;
+      throw new Error("Unexpected template tag type: " + tag.type);
     }
-  };
+  } else {
+    return node;
+  }
 };
 
 var codeGenInclusionArgs = function (tag) {
@@ -693,7 +654,7 @@ var codeGenInclusionArgs = function (tag) {
       // keyword argument (represented as [type, value, name])
       var name = arg[2];
       args = (args || {});
-      args[toJSLiteral(name)] = argCode;
+      args[name] = argCode;
     } else {
       // positional argument
       posArgs.push(argCode);
@@ -784,11 +745,8 @@ Spacebars.include = function (kindOrFunc, args) {
 // attributes" like `<div {{attrs}}>`).
 //
 // Output: If there are no Specials in the attribute values and no $specials,
-// returns the input.  Otherwise, returns an object of the form `{$attrs:
-// EmitCode("function () { return ... }")}`, which when converted to code
-// will create code like `DIV({$attrs: function () { ... }}, ...)`.  The
-// special key `$attrs` is interpreted at node construction time and causes
-// the DIV node to have a function as its `.attrs`.
+// returns the input.  Otherwise, converts any `Special` nodes to functions
+// and converts `$specials` to `$dynamic`.
 //
 // (exposed for testing)
 Spacebars._handleSpecialAttributes = function (oldAttrs) {
@@ -809,16 +767,14 @@ Spacebars._handleSpecialAttributes = function (oldAttrs) {
   //
   // If specials are found, sets `foundSpecials` to true.
   var convertSpecialToEmitCode = function (v) {
-    var type = HTML.typeOf(v);
-    if (type === 'null' || type === 'string' || type === 'charref') {
-      return v;
-    } else if (type === 'special') {
+    if (v instanceof HTML.Special) {
       foundSpecials = true;
-      return HTML.EmitCode(codeGenMustache(v.attrs));
-    } else if (type === 'array') {
+      return HTML.EmitCode('function () { return ' +
+                           codeGenMustache(v.value) + '; }');
+    } else if (v instanceof Array) {
       return _.map(v, convertSpecialToEmitCode);
     } else {
-      throw new Error("Unexpected node in attribute value: " + v);
+      return v;
     }
   };
 
@@ -834,39 +790,17 @@ Spacebars._handleSpecialAttributes = function (oldAttrs) {
   if ((! dynamics) && (! foundSpecials))
     return oldAttrs;
 
-  // strings of JS code evaluating to attribute dictionaries
-  var attrObjectStrings = [];
-  if (newAttrs)
-    attrObjectStrings.push(UI.attributesToCode(newAttrs));
   if (dynamics) {
-    _.each(dynamics, function (special) {
-      var tag = special.attrs;
-      attrObjectStrings.push(codeGenMustache(tag, 'attrMustache'));
+    if (! newAttrs)
+      newAttrs = {};
+    newAttrs.$dynamic = _.map(dynamics, function (special) {
+      var tag = special.value;
+      return HTML.EmitCode('function () { return ' +
+                           codeGenMustache(tag, 'attrMustache') + '; }');
     });
   }
 
-  var finalAttrObjectString;
-  if (attrObjectStrings.length > 1) {
-    finalAttrObjectString =
-      'Spacebars.combineAttributes(' + attrObjectStrings.join(', ') + ')';
-  } else {
-    finalAttrObjectString = attrObjectStrings[0];
-  }
-
-  return { $attrs: HTML.EmitCode("function () { return " +
-                                 finalAttrObjectString +
-                                 "; }") };
-};
-
-// Takes zero or more dictionaries as arguments.  Returns a new object created
-// by starting with an empty object and copying the attributes from each
-// argument object, from left to right, with later attributes taking precedence
-// if two objects have attributes of the same name.
-Spacebars.combineAttributes = function (/*attrObjects*/) {
-  // Use _.extend({}, arg1, arg2, arg3, ...)
-  var args = [{}];
-  args.push.apply(args, arguments);
-  return _.extend.apply(_, args);
+  return newAttrs;
 };
 
 // Executes `{{foo bar baz}}` when called on `(foo, bar, baz)`.
@@ -920,7 +854,7 @@ Spacebars.attrMustache = function (value/*, args*/) {
     return null;
   } else if (typeof result === 'object') {
     return result;
-  } else if (typeof result === 'string' && UI.isValidAttributeName(result)) {
+  } else if (typeof result === 'string' && HTML.isValidAttributeName(result)) {
     var obj = {};
     obj[result] = '';
     return obj;
@@ -934,7 +868,7 @@ Spacebars.attrMustache = function (value/*, args*/) {
 // Called on the return value from `Spacebars.mustache` in case the
 // template uses triple-stache (`{{{foo bar baz}}}`).
 Spacebars.makeRaw = function (value) {
-  if (typeof value === 'object' && value.tagName === 'Raw')
+  if (value instanceof HTML.Raw)
     return value;
   else
     return HTML.Raw(value);
@@ -997,7 +931,7 @@ Spacebars.compile = function (input, options) {
       '__elseContent = self.__elseContent; ';
   }
   code += 'return ';
-  code += UI.toCode(tree);
+  code += HTML.toJS(tree);
   code += '; })';
 
   code = beautify(code);
@@ -1074,7 +1008,7 @@ var codeGenArgs = function (tagArgs) {
     if (arg.length > 2) {
       // keyword argument (represented as [type, value, name])
       kwArgs = (kwArgs || {});
-      kwArgs[toJSLiteral(arg[2])] = argCode;
+      kwArgs[arg[2]] = argCode;
     } else {
       // positional argument
       args = (args || []);

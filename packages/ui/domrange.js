@@ -5,7 +5,7 @@
 // - Event removal on removal
 // - Event moving on TBODY move
 
-var DomBackend = UI.DomBackend2;
+var DomBackend = UI.DomBackend;
 
 var removeNode = function (n) {
 //  if (n.nodeType === 1 &&

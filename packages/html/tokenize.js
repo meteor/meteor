@@ -43,31 +43,6 @@
 
 var HTML_SPACE = /^[\f\n\t ]/;
 
-asciiLowerCase = function (str) {
-  return str.replace(/[A-Z]/g, function (c) {
-    return String.fromCharCode(c.charCodeAt(0) + 32);
-  });
-};
-
-// Take a tag name in any case and make it the proper case for HTML.
-//
-// Modern browsers let you embed SVG in HTML, but SVG elements are special
-// in that they have a case-sensitive DOM API (nodeName, getAttribute,
-// setAttribute).  For example, it has to be `setAttribute("viewBox")`,
-// not `"viewbox"`.  However, the HTML parser will fix the case for you,
-// so if you write `<svg viewbox="...">` you actually get a `"viewBox"`
-// attribute.
-properCaseTagName = function (name) {
-  // XXX TODO: SVG camelCase
-  return asciiLowerCase(name);
-};
-
-// See docs for properCaseTagName.
-properCaseAttributeName = function (name) {
-  // XXX TODO: SVG camelCase
-  return asciiLowerCase(name);
-};
-
 getComment = function (scanner) {
   if (scanner.rest().slice(0, 4) !== '<!--')
     return null;
@@ -137,7 +112,7 @@ var getDoctypeQuotedString = function (scanner) {
 //
 // If `getDocType` sees "<!DOCTYPE" (case-insensitive), it will match or fail fatally.
 getDoctype = function (scanner) {
-  if (asciiLowerCase(scanner.rest().slice(0, 9)) !== '<!doctype')
+  if (HTML.asciiLowerCase(scanner.rest().slice(0, 9)) !== '<!doctype')
     return null;
   var start = scanner.pos;
   scanner.pos += 9;
@@ -156,7 +131,7 @@ getDoctype = function (scanner) {
     name += ch;
     scanner.pos++;
   }
-  name = asciiLowerCase(name);
+  name = HTML.asciiLowerCase(name);
 
   // Now we're looking at a space or a `>`.
   skipSpaces(scanner);
@@ -169,7 +144,7 @@ getDoctype = function (scanner) {
     // but we're not looking at space or `>`.
 
     // this should be "public" or "system".
-    var publicOrSystem = asciiLowerCase(scanner.rest().slice(0, 6));
+    var publicOrSystem = HTML.asciiLowerCase(scanner.rest().slice(0, 6));
 
     if (publicOrSystem === 'system') {
       scanner.pos += 6;
@@ -381,7 +356,7 @@ getTagToken = function (scanner) {
   var tagName = getTagName(scanner);
   if (! tagName)
     scanner.fatal("Expected tag name after `<`");
-  tag.n = asciiLowerCase(tagName);
+  tag.n = HTML.asciiLowerCase(tagName);
 
   if (scanner.peek() === '/' && tag.isEnd)
     scanner.fatal("End tag can't have trailing slash");
@@ -423,7 +398,7 @@ getTagToken = function (scanner) {
       var attributeName = getAttributeName(scanner);
       if (! attributeName)
         scanner.fatal("Expected attribute name in tag");
-      attributeName = asciiLowerCase(attributeName);
+      attributeName = HTML.asciiLowerCase(attributeName);
 
       if (tag.attrs.hasOwnProperty(attributeName))
         scanner.fatal("Duplicate attribute in tag: " + attributeName);
@@ -486,7 +461,7 @@ isLookingAtEndTag = function (scanner, tagName) {
   var pos = 0; // into rest
   var firstPart = /^<\/([a-zA-Z]+)/.exec(rest);
   if (firstPart &&
-      asciiLowerCase(firstPart[1]) === tagName) {
+      HTML.asciiLowerCase(firstPart[1]) === tagName) {
     // we've seen `</foo`, now see if the end tag continues
     pos += firstPart[0].length;
     while (pos < rest.length && HTML_SPACE.test(rest.charAt(pos)))
