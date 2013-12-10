@@ -64,7 +64,7 @@ HTML.Tag.prototype.toHTML = function (parentComponent) {
     if (content.slice(0, 1) === '\n')
       // TEXTAREA will absorb a newline, so if we see one, add
       // another one.
-      content = content + '\n';
+      content = '\n' + content;
 
   } else {
     for (var i = 0; i < this.children.length; i++)
