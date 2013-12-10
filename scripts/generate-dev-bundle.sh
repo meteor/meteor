@@ -109,6 +109,7 @@ npm install shell-quote@0.0.1   # now at 1.3.3, which adds plenty of options to 
 npm install eachline@2.3.3
 npm install source-map@0.1.30
 npm install source-map-support@0.2.3
+npm install bcrypt@0.7.7
 
 # Using the unreleased "caronte" branch rewrite of http-proxy (which will become
 # 1.0.0), plus this PR:
