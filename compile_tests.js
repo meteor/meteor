@@ -233,4 +233,12 @@ Tinytest.add("spacebars - compiler output", function (test) {
         });
       });
 
+  run("<textarea>{{foo}}</textarea>",
+      function () {
+        var self = this;
+        return HTML.TEXTAREA(function () {
+          return Spacebars.mustache(self.lookup("foo"));
+        });
+      });
+
 });
