@@ -448,7 +448,7 @@ var optimize = function (tree) {
   var pushRawHTML = function (array, html) {
     var N = array.length;
     if (N > 0 && (array[N-1] instanceof HTML.Raw)) {
-      array[N-1][0] += html;
+      array[N-1] = HTML.Raw(array[N-1].value + html);
     } else {
       array.push(HTML.Raw(html));
     }
@@ -485,9 +485,9 @@ var optimize = function (tree) {
       // clean up unnecessary HTML.Raw wrappers around pure character data
       for (var j = 0; j < result.length; j++) {
         if ((result[j] instanceof HTML.Raw) &&
-            isPureChars(result[j][0]))
+            isPureChars(result[j].value))
           // replace HTML.Raw with simple string
-          result[j] = result[j][0];
+          result[j] = result[j].value;
       }
     }
     return result;
@@ -785,17 +785,14 @@ Spacebars._handleSpecialAttributes = function (oldAttrs) {
   //
   // If specials are found, sets `foundSpecials` to true.
   var convertSpecialToEmitCode = function (v) {
-    var type = HTML.typeOf(v);
-    if (type === 'null' || type === 'string' || type === 'charref') {
-      return v;
-    } else if (type === 'special') {
+    if (v instanceof HTML.Special) {
       foundSpecials = true;
       return HTML.EmitCode('function () { return ' +
-                           codeGenMustache(v.attrs) + '; }');
-    } else if (type === 'array') {
+                           codeGenMustache(v.value) + '; }');
+    } else if (v instanceof Array) {
       return _.map(v, convertSpecialToEmitCode);
     } else {
-      throw new Error("Unexpected node in attribute value: " + v);
+      return v;
     }
   };
 

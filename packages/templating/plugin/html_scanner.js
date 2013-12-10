@@ -165,7 +165,7 @@ html_scanner = {
         contents, { sourceName: "<body>" });
 
       // We may be one of many `<body>` tags.
-      results.js += "\nUI.body2.contentParts.push(UI.Component.extend({render: " + renderFuncCode + "}));\nMeteor.startup(function () { if (! UI.body2.INSTANTIATED) { UI.materialize(UI.body2, document.body); } });\n";
+      results.js += "\nUI.body.contentParts.push(UI.Component.extend({render: " + renderFuncCode + "}));\nMeteor.startup(function () { if (! UI.body.INSTANTIATED) { UI.materialize(UI.body, document.body); } });\n";
     }
   }
 };

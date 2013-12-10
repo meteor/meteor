@@ -213,11 +213,10 @@ var updateAttributes = function(elem, newAttrs, handlers) {
   for (var k in newAttrs) {
     var handler = null;
     var oldValue;
-    var value = attributeValueToString(newAttrs[k]);
+    var value = newAttrs[k];
     if ((! handlers) || (! handlers.hasOwnProperty(k))) {
       if (value !== null) {
         // make new handler
-        checkAttributeName(k);
         handler = makeAttributeHandler(k, value);
         if (handlers)
           handlers[k] = handler;
@@ -359,7 +358,7 @@ var materialize = function (node, parent, before, parentComponent) {
 // for example, maybe some of them go in the HTML package.
 UI.materialize = materialize;
 
-UI.body2 = UI.Component.extend({
+UI.body = UI.Component.extend({
   kind: 'body',
   contentParts: [],
   render: function () {

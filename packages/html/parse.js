@@ -1,5 +1,9 @@
 
 HTML.Special = function (value) {
+  if (! (this instanceof HTML.Special))
+    // called without `new`
+    return new HTML.Special(value);
+
   this.value = value;
 };
 HTML.Special.prototype.toJS = function (options) {
