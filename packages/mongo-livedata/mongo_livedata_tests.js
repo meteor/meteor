@@ -23,6 +23,15 @@ if (Meteor.isServer) {
   });
 }
 
+var runInFence = function (f) {
+  if (Meteor.isClient) {
+    f();
+  } else {
+    var fence = new DDPServer._WriteFence;
+    DDPServer._CurrentWriteFence.withValue(fence, f);
+    fence.armAndWait();
+  }
+};
 
 // Helpers for upsert tests
 
@@ -477,16 +486,6 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
   doStep();
 
 });
-
-var runInFence = function (f) {
-  if (Meteor.isClient) {
-    f();
-  } else {
-    var fence = new DDPServer._WriteFence;
-    DDPServer._CurrentWriteFence.withValue(fence, f);
-    fence.armAndWait();
-  }
-};
 
 Tinytest.addAsync("mongo-livedata - scribbling, " + idGeneration, function (test, onComplete) {
   var run = test.runId();
@@ -1896,4 +1895,46 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - _disableOplog", functi
   test.isTrue(observeWithoutOplog._observeDriver);
   test.isFalse(observeWithoutOplog._observeDriver._usesOplog);
   observeWithoutOplog.stop();
+});
+
+Meteor.isServer && Tinytest.add("mongo-livedata - oplog - include selector fields", function (test) {
+  var collName = "includeSelector" + Random.id();
+  var coll = new Meteor.Collection(collName);
+
+  var docId = coll.insert({a: 1, b: [3, 2], c: 'foo'});
+  test.isTrue(docId);
+
+  // Wait until we've processed the insert oplog entry. (If the insert shows up
+  // during the observeChanges, the bug in question is not consistently
+  // reproduced.)
+  MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle.waitUntilCaughtUp();
+
+
+  var output = [];
+  var handle = coll.find({a: 1, b: 2}, {fields: {c: 1}}).observeChanges({
+    added: function (id, fields) {
+      output.push(['added', id, fields]);
+    },
+    changed: function (id, fields) {
+      output.push(['changed', id, fields]);
+    },
+    removed: function (id) {
+      output.push(['removed', id]);
+    }
+  });
+  // Initially should match the document.
+  test.length(output, 1);
+  test.equal(output.shift(), ['added', docId, {c: 'foo'}]);
+
+  // Update in such a way that, if we only knew about the published field 'c'
+  // and the changed field 'b' (but not the field 'a'), we would think it didn't
+  // match any more.  (This is a regression test for a bug that existed because
+  // we used to not use the shared projection in the initial query.)
+  runInFence(function () {
+    coll.update(docId, {$set: {'b.0': 2, c: 'bar'}});
+  });
+  test.length(output, 1);
+  test.equal(output.shift(), ['changed', docId, {c: 'bar'}]);
+
+  handle.stop();
 });

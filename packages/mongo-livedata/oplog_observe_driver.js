@@ -39,10 +39,10 @@ OplogObserveDriver = function (options) {
   self._projectionFn = LocalCollection._compileProjection(projection);
   // Projection function, result of combining important fields for selector and
   // existing fields projection
-  var sharedProjection = LocalCollection._combineSelectorAndProjection(
+  self._sharedProjection = LocalCollection._combineSelectorAndProjection(
     selector, projection);
   self._sharedProjectionFn = LocalCollection._compileProjection(
-    sharedProjection);
+    self._sharedProjection);
 
   self._needToFetch = new LocalCollection._IdMap;
   self._currentlyFetching = null;
@@ -333,8 +333,19 @@ _.extend(OplogObserveDriver.prototype, {
 
   _cursorForQuery: function () {
     var self = this;
-    // XXX this is WRONG we need to use the shared projection!!
-    return new Cursor(self._mongoHandle, self._cursorDescription);
+
+    // The query we run is almost the same as the cursor we are observing, with
+    // a few changes. We need to read all the fields that are relevant to the
+    // selector, not just the fields we are going to publish (that's the
+    // "shared" projection).
+    var options = _.clone(self._cursorDescription.options);
+    options.fields = self._sharedProjection;
+    // We are NOT deep cloning fields or selector here, which should be OK.
+    var description = new CursorDescription(
+      self._cursorDescription.collectionName,
+      self._cursorDescription.selector,
+      options);
+    return new Cursor(self._mongoHandle, description);
   },
 
 
