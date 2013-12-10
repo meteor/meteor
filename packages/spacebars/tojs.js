@@ -41,7 +41,13 @@ HTML.Tag.prototype.toJS = function (options) {
     argStrs.push(HTML.toJS(this.children[i], options));
   }
 
-  return 'HTML.' + this.tagName + '(' + argStrs.join(', ') + ')';
+  var tagSymbol = this.tagName;
+  if ((this instanceof HTML.Tag) && ! HTML.isKnownElement(tagSymbol))
+    tagSymbol = 'HTML.getTag(' + toJSLiteral(tagSymbol) + ')';
+  else
+    tagSymbol = 'HTML.' + tagSymbol;
+
+  return tagSymbol + '(' + argStrs.join(', ') + ')';
 };
 
 HTML.CharRef.prototype.toJS = function (options) {
