@@ -14,18 +14,6 @@ if (!Meteor.roles) {
   Meteor.roles = new Meteor.Collection("roles")
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
 /**
  * Role-based authorization compatible with built-in Meteor accounts package.
  *
@@ -116,12 +104,18 @@ Roles.deleteRole = function (role) {
  *     Roles.addUsersToRoles(userId, ['user','editor'])
  *     Roles.addUsersToRoles(userId, ['view-secrets'], 'example.com')
  *     Roles.addUsersToRoles(userId, ['perform-action'], 'example.org')
+ *     Roles.addUsersToRoles(userId, 'admin', '_global')
  *
  * @method addUsersToRoles
  * @param {Array|String} users id(s) of users to add to roles
  * @param {Array|String} roles name(s) of roles/permissions to add users to
- * @param {String} [group] Optional. Group name. If supplied, roles will
- *                         be specific to that group.
+ * @param {String} [group] Optional group name. If supplied, roles will be
+ *                         specific to that group.  
+ *                         The group name '_global' is special and provides a 
+ *                         convenient way to assign blanket roles/permissions
+ *                         across all groups.  The roles/permissions in the 
+ *                         '_global' group will be automatically included in 
+ *                         checks for any group.
  */
 Roles.addUsersToRoles = function (users, roles, group) {
   if (!users) throw new Error ("Missing 'users' param")
@@ -208,8 +202,8 @@ Roles.addUsersToRoles = function (users, roles, group) {
  * @method removeUsersFromRoles
  * @param {Array|String} users id(s) of users to add to roles
  * @param {Array|String} roles name(s) of roles to add users to
- * @param {String} [group] Optional. Group name. If supplied, roles will
- *                         be specific to that group.
+ * @param {String} [group] Optional. Group name. If supplied, only that
+ *                         group will have roles removed.
  */
 Roles.removeUsersFromRoles = function (users, roles, group) {
   var update
@@ -262,14 +256,16 @@ Roles.removeUsersFromRoles = function (users, roles, group) {
  * @param {String|Object} user Id of user or actual user object
  * @param {String|Array} roles Name of role/permission or Array of roles/permissions to check against.  If array, will return true if user is in _any_ role.
  * @param {String} [group] Optional. Name of group.  If supplied, limits check
- *                         to just that group.
+ *                         to just that group & the user's '_global' group, if 
+ *                         any.
  * @return {Boolean} true if user is in _any_ of the target roles
  */
 Roles.userIsInRole = function (user, roles, group) {
   var id,
       userRoles,
       query,
-      found
+      groupQuery,
+      found = false
 
   // ensure array to simplify code
   if (!_.isArray(roles)) {
@@ -287,9 +283,16 @@ Roles.userIsInRole = function (user, roles, group) {
       })
     } else if ('object' === typeof userRoles) {
       // roles field is dictionary of groups
-      return _.isArray(userRoles[group]) && _.some(roles, function (role) {
-               return _.contains(userRoles[group], role)
-             })
+      found = _.isArray(userRoles[group]) && _.some(roles, function (role) {
+        return _.contains(userRoles[group], role)
+      })
+      if (!found) {
+        // not found in regular group.  check '_global' group, if it exists
+        found = _.isArray(userRoles._global) && _.some(roles, function (role) {
+          return _.contains(userRoles[group], role)
+        })
+      }
+      return found
     }
 
     // missing roles field, try going direct via id
@@ -301,8 +304,19 @@ Roles.userIsInRole = function (user, roles, group) {
   if (!id) return false
 
   if (group) {
-    query = {_id: id}
-    query['roles.'+group] = {$in: roles}
+    // structure of group query, including _global
+    //   {_id: id, 
+    //    $or: [
+    //      {'roles.group1':{$in: ['admin']}},
+    //      {'roles._global':{$in: ['admin']}}
+    //    ]}
+    
+    groupQuery = {}
+    groupQuery['roles.'+group] = {$in: roles}
+
+    query = {_id: id, $or: []}
+    query.$or.push(groupQuery)
+    query.$or.push({'roles._global': {$in: roles}})
   } else {
     query = {_id: id, roles: {$in: roles}}
   }
@@ -316,21 +330,24 @@ Roles.userIsInRole = function (user, roles, group) {
  *
  * @method getRolesForUser
  * @param {String} user Id of user
- * @param {String} [group] Optional name of group to restrict roles to
+ * @param {String} [group] Optional name of group to restrict roles to.
+ *                         '_global' group will also be checked.
  * @return {Array} Array of user's roles, unsorted. undefined if user not found
  */
 Roles.getRolesForUser = function (user, group) {
+  var user
+
   if (!user) return
   if (group && 'string' !== typeof group) return
 
-  var user = Meteor.users.findOne(
-               {_id: user},
-               {fields: {roles: 1}})
+  user = Meteor.users.findOne(
+           {_id: user},
+           {fields: {roles: 1}})
 
-  if (!user) return
+  if (!user || !user.roles) return
 
-  if (group) 
-    return user.roles[group]
+  if (group)
+    return _.union(user.roles[group], user.roles._global || [])
 
   return user.roles
 }
@@ -349,18 +366,35 @@ Roles.getAllRoles = function () {
  * Retrieve all users who are in target role
  *
  * @method getUsersInRole
- * @param {String} role Name of role
+ * @param {Array|String} role Name of role/permission.  If array, users 
+ *                            returned will have at least one of the roles
+ *                            specified but need not have _all_ roles.
  * @param {String} [group] Optional name of group to restrict roles to
+ *                         '_global' group will also be checked.
  * @return {Cursor} cursor of users in role
  */
 Roles.getUsersInRole = function (role, group) {
-  var query 
+  var query,
+      roles = role,
+      groupQuery
 
+  // ensure array to simplify query logic
+  if (!_.isArray(roles)) roles = [roles]
+  
   if (group) {
-    query = { }
-    query['roles.'+group] = { $in: [role] }
+    // structure of group query, including _global
+    //   {$or: [
+    //      {'roles.group1':{$in: ['admin']}},
+    //      {'roles._global':{$in: ['admin']}}
+    //    ]}
+    groupQuery = {}
+    groupQuery['roles.'+group] = {$in: roles}
+
+    query = {$or: []}
+    query.$or.push(groupQuery)
+    query.$or.push({'roles._global': {$in: roles}})
   } else {
-    query = { roles: { $in: [role] } }
+    query = { roles: { $in: roles } }
   }
 
   return Meteor.users.find(query)

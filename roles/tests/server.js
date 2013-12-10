@@ -341,7 +341,9 @@
           actual = _.pluck(Roles.getUsersInRole('admin').fetch(), '_id')
 
       // order may be different so check difference instead of equality
+      // difference uses first array as base so have to check both ways
       test.equal(_.difference(actual, expected), [])
+      test.equal(_.difference(expected, actual), [])
     })
 
 
@@ -412,6 +414,55 @@
     })
 
   Tinytest.add(
+    'roles - can use \'_global\' group to assign blanket permissions',
+    function (test) {
+      reset()
+
+      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], '_global')
+
+      testUser(test, 'eve', [], 'group1')
+      testUser(test, 'joe', ['admin'], 'group2')
+      testUser(test, 'joe', ['admin'], 'group1')
+      testUser(test, 'bob', ['admin'], 'group2')
+      testUser(test, 'bob', ['admin'], 'group1')
+
+      Roles.removeUsersFromRoles(users.joe, ['admin'], '_global')
+
+      testUser(test, 'eve', [], 'group1')
+      testUser(test, 'joe', [], 'group2')
+      testUser(test, 'joe', [], 'group1')
+      testUser(test, 'bob', ['admin'], 'group2')
+      testUser(test, 'bob', ['admin'], 'group1')
+    })
+
+  Tinytest.add(
+    'roles - \'_global\' group is independent of other groups',
+    function (test) {
+      reset()
+
+      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], 'group5')
+      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], '_global')
+
+      testUser(test, 'eve', [], 'group1')
+      testUser(test, 'joe', ['admin'], 'group5')
+      testUser(test, 'joe', ['admin'], 'group2')
+      testUser(test, 'joe', ['admin'], 'group1')
+      testUser(test, 'bob', ['admin'], 'group5')
+      testUser(test, 'bob', ['admin'], 'group2')
+      testUser(test, 'bob', ['admin'], 'group1')
+
+      Roles.removeUsersFromRoles(users.joe, ['admin'], '_global')
+
+      testUser(test, 'eve', [], 'group1')
+      testUser(test, 'joe', ['admin'], 'group5')
+      testUser(test, 'joe', [], 'group2')
+      testUser(test, 'joe', [], 'group1')
+      testUser(test, 'bob', ['admin'], 'group5')
+      testUser(test, 'bob', ['admin'], 'group2')
+      testUser(test, 'bob', ['admin'], 'group1')
+    })
+  
+  Tinytest.add(
     'roles - mixing group with non-group throws descriptive error', 
     function (test) {
       var expectedErrorMsg = "Roles error: Can't mix grouped and non-grouped roles for same user"
@@ -450,6 +501,15 @@
     })
 
   Tinytest.add(
+    'roles - can get all roles for user by group including \'_global\'', 
+    function (test) {
+      reset()
+      Roles.addUsersToRoles([users.eve], ['editor'], '_global')
+      Roles.addUsersToRoles([users.eve], ['admin', 'user'], 'group1')
+      test.equal(Roles.getRolesForUser(users.eve, 'group1'), ['admin', 'user', 'editor'])
+    })
+
+  Tinytest.add(
     'roles - can get all users in role by group', 
     function (test) {
       reset()
@@ -460,7 +520,32 @@
           actual = _.pluck(Roles.getUsersInRole('admin','group1').fetch(), '_id')
 
       // order may be different so check difference instead of equality
+      // difference uses first array as base so have to check both ways
       test.equal(_.difference(actual, expected), [])
+      test.equal(_.difference(expected, actual), [])
+    })
+  
+  Tinytest.add(
+    'roles - can get all users in role by group including \'_global\' group', 
+    function (test) {
+      reset()
+      Roles.addUsersToRoles([users.eve], ['admin', 'user'], '_global')
+      Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'group2')
+
+      var expected = [users.eve],
+          actual = _.pluck(Roles.getUsersInRole('admin','group1').fetch(), '_id')
+
+      // order may be different so check difference instead of equality
+      // difference uses first array as base so have to check both ways
+      test.equal(_.difference(actual, expected), [])
+      test.equal(_.difference(expected, actual), [])
+
+      expected = [users.eve, users.bob, users.joe],
+      actual = _.pluck(Roles.getUsersInRole('admin','group2').fetch(), '_id')
+
+      // order may be different so check difference instead of equality
+      test.equal(_.difference(actual, expected), [])
+      test.equal(_.difference(expected, actual), [])
     })
 
   function printException (ex) {

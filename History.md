@@ -1,3 +1,9 @@
+## v1.1.1
+
+* Add support for '_global' group which provides blanket roles/permissions across all groups for that user
+* Update Roles.getUsersInRole to accept an array of roles.
+
+
 ## v1.1.0
 
 * Add support for per-group roles
