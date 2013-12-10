@@ -508,3 +508,59 @@ Tinytest.add("ui - render - emboxValue", function (test) {
   test.equal(UI.emboxValue(null)(), null);
   test.equal(UI.emboxValue({x:1})(), {x:1});
 });
+
+
+Tinytest.add("ui - render - reactive attributes 2", function (test) {
+  var R1 = ReactiveVar(['foo']);
+  var R2 = ReactiveVar(['bar']);
+
+  var spanCode = SPAN({
+    blah: function () { return R1.get(); },
+    $dynamic: [function () { return { blah: [function () { return R2.get(); }] }; }]
+  });
+
+  var div = document.createElement("DIV");
+  materialize(spanCode, div);
+  var check = function (expected) {
+    test.equal(toHTML(spanCode), expected);
+    test.equal(canonicalizeHtml(div.innerHTML), expected);
+  };
+  check('<span blah="bar"></span>');
+
+  test.equal(R1.numListeners(), 1);
+  test.equal(R2.numListeners(), 1);
+
+  R2.set([[]]);
+  Deps.flush();
+  // We combine `['foo']` with what evaluates to `[[[]]]`, which is nully.
+  test.equal(spanCode.evaluateDynamicAttributes().blah, ["foo"]);
+  check('<span blah="foo"></span>');
+
+  R2.set([['']]);
+  Deps.flush();
+  // We combine `['foo']` with what evaluates to `[[['']]]`, which is non-nully.
+  test.equal(spanCode.evaluateDynamicAttributes().blah, [[['']]]);
+  check('<span blah=""></span>');
+
+  R2.set(null);
+  Deps.flush();
+  // We combine `['foo']` with `[null]`, which is nully.
+  test.equal(spanCode.evaluateDynamicAttributes().blah, ['foo']);
+  check('<span blah="foo"></span>');
+
+  R1.set([[], []]);
+  Deps.flush();
+  // We combine two nully values.
+  check('<span></span>');
+
+  R1.set([[], ['foo']]);
+  Deps.flush();
+  check('<span blah="foo"></span>');
+
+  // clean up
+
+  $(div).remove();
+
+  test.equal(R1.numListeners(), 0);
+  test.equal(R2.numListeners(), 0);
+});
