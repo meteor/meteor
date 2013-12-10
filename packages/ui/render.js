@@ -217,7 +217,7 @@ var updateAttributes = function(elem, newAttrs, handlers) {
     if ((! handlers) || (! handlers.hasOwnProperty(k))) {
       if (value !== null) {
         // make new handler
-        handler = makeAttributeHandler(k, value);
+        handler = makeAttributeHandler(elem.tagName, k, value);
         if (handlers)
           handlers[k] = handler;
         oldValue = null;
@@ -300,13 +300,21 @@ var materialize = function (node, parent, before, parentComponent) {
     insert(range, parent, before);
   } else if (node instanceof HTML.Tag) {
     var elem = document.createElement(node.tagName);
-    if (node.attrs) {
+    var rawAttrs = node.attrs;
+    var children = node.children;
+    if (node.tagName === 'TEXTAREA') {
+      rawAttrs = (rawAttrs || {});
+      rawAttrs.value = children;
+      children = [];
+    };
+
+    if (rawAttrs) {
       var attrUpdater = Deps.autorun(function (c) {
         if (! c.handlers)
           c.handlers = {};
 
         try {
-          var attrs = node.evaluateDynamicAttributes(parentComponent);
+          var attrs = HTML.evaluateDynamicAttributes(rawAttrs, parentComponent);
           var stringAttrs = {};
           if (attrs) {
             for (var k in attrs) {
@@ -323,11 +331,8 @@ var materialize = function (node, parent, before, parentComponent) {
         attrUpdater.stop();
       });
     }
-    if (node.tagName === 'TEXTAREA') {
-      elem.value = HTML.toText(node.children, HTML.TEXTMODE.STRING, parentComponent);
-    } else {
-      materialize(node.children, elem, null, parentComponent);
-    }
+    materialize(children, elem, null, parentComponent);
+
     insert(elem, parent, before);
   } else if (typeof node.instantiate === 'function') {
     // component

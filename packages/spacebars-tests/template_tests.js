@@ -668,3 +668,23 @@ Tinytest.add('spacebars - templates - constant', function (test) {
   test.equal(canonicalizeHtml(div.innerHTML), 'hello');
 
 });
+
+Tinytest.add('spacebars - templates - textarea', function (test) {
+  var tmpl = Template.spacebars_template_test_textarea;
+
+  var R = ReactiveVar('hello');
+
+  tmpl.foo = function () {
+    return R.get();
+  };
+
+  debugger;
+  var div = renderToDiv(tmpl);
+  var textarea = div.querySelector('textarea');
+  test.equal(textarea.value, 'hello');
+
+  R.set('world');
+  Deps.flush();
+  test.equal(textarea.value, 'world');
+
+});

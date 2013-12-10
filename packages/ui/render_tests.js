@@ -89,7 +89,8 @@ Tinytest.add("ui - render - textarea", function (test) {
     test.equal(div.querySelector('textarea').value, text);
 
     test.equal(toHTML(node), html);
-    test.equal(toCode(node), code);
+    if (typeof code === 'string')
+      test.equal(toCode(node), code);
   };
 
   run('Hello',
@@ -108,6 +109,10 @@ Tinytest.add("ui - render - textarea", function (test) {
       '&',
       '<textarea>&amp;</textarea>',
       'HTML.TEXTAREA(HTML.CharRef({html: "&amp;", str: "&"}))');
+
+  run(['a', function () { return 'b'; }, 'c'],
+      'abc',
+      '<textarea>abc</textarea>');
 
 });
 

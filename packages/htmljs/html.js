@@ -52,23 +52,27 @@ var extendAttrs = function (tgt, src, parentComponent) {
   }
 };
 
-HTML.Tag.prototype.evaluateDynamicAttributes = function (parentComponent) {
-  if (this.attrs && (this.attrs.$dynamic instanceof Array)) {
-    var attrs = {};
-    extendAttrs(attrs, this.attrs, parentComponent);
-    // iterate over this.attrs.$dynamic, calling each element if it
-    // is a function and then using it to extend `attrs`.
-    var dynamics = this.attrs.$dynamic;
+HTML.evaluateDynamicAttributes = function (attrs, parentComponent) {
+  if (attrs && (attrs.$dynamic instanceof Array)) {
+    var result = {};
+    extendAttrs(result, attrs, parentComponent);
+    // iterate over attrs.$dynamic, calling each element if it
+    // is a function and then using it to extend `result`.
+    var dynamics = attrs.$dynamic;
     for (var i = 0; i < dynamics.length; i++) {
       var moreAttrs = dynamics[i];
       if (typeof moreAttrs === 'function')
         moreAttrs = moreAttrs();
-      extendAttrs(attrs, moreAttrs, parentComponent);
+      extendAttrs(result, moreAttrs, parentComponent);
     }
-    return attrs;
+    return result;
   } else {
-    return this.attrs;
+    return attrs;
   }
+};
+
+HTML.Tag.prototype.evaluateDynamicAttributes = function (parentComponent) {
+  return HTML.evaluateDynamicAttributes(this.attrs, parentComponent);
 };
 
 // Given "P" create the function `HTML.P`.

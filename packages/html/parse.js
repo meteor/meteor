@@ -210,9 +210,8 @@ getRCData = function (scanner, tagName, shouldStopFunc) {
     } else if (token.t === 'CharRef') {
       items.push(convertCharRef(token));
     } else if (token.t === 'Special') {
-      scanner.fatal("NOT IMPLEMENTED: Can't have template tags in " + tagName);
       // token.v is an object `{ ... }`
-      //items.push(HTML.Special(token.v));
+      items.push(HTML.Special(token.v));
     } else {
       // (can't happen)
       scanner.fatal("Unknown or unexpected token type: " + token.t);

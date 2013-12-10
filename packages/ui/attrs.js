@@ -74,25 +74,34 @@ var ClassHandler = AttributeHandler.extend({
   }
 });
 
-var SelectedHandler = AttributeHandler.extend({
+var BooleanHandler = AttributeHandler.extend({
   update: function (element, oldValue, value) {
+    var name = this.name;
     if (value == null) {
       if (oldValue != null)
-        element.selected = false;
+        element[name] = false;
     } else {
-      element.selected = true;
+      element[name] = true;
     }
   }
 });
 
+var ValueHandler = AttributeHandler.extend({
+  update: function (element, oldValue, value) {
+    element.value = value;
+  }
+});
+
 // XXX make it possible for users to register attribute handlers!
-makeAttributeHandler = function (name, value) {
+makeAttributeHandler = function (tagName, name, value) {
   // XXX will need one for 'style' on IE, though modern browsers
   // seem to handle setAttribute ok.
   if (name === 'class') {
     return new ClassHandler(name, value);
   } else if (name === 'selected') {
-    return new SelectedHandler(name, value);
+    return new BooleanHandler(name, value);
+  } else if (tagName === 'TEXTAREA' && name === 'value') {
+    return new ValueHandler(name, value);
   } else {
     return new AttributeHandler(name, value);
   }
