@@ -10,6 +10,7 @@ if (Meteor.isClient) {
   var jQuery = Package.jquery.jQuery;
 
   var DomBackend = {};
+  UI.DomBackend = DomBackend;
 
   ///// Removal detection and interoperability.
 
@@ -129,5 +130,4 @@ if (Meteor.isClient) {
     return type;
   };
 
-  UI.DomBackend2 = DomBackend;
 }

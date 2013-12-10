@@ -1,5 +1,7 @@
 
-var instantiate = function (kind, parent) {
+UI.Component.instantiate = function (parent) {
+  var kind = this;
+
   // check arguments
   if (UI.isComponent(kind)) {
     if (kind.isInited)
@@ -38,6 +40,10 @@ var instantiate = function (kind, parent) {
   }
 
   return inst;
+};
+
+UI.Component.render = function () {
+  return null;
 };
 
 
@@ -154,10 +160,6 @@ UI.emboxValue = function (funcOrValue, equals) {
 
 UI.insert = UI.DomRange && UI.DomRange.insert;
 
-var sanitizeComment = function (content) {
-  return content.replace(/--+/g, '').replace(/-$/, '');
-};
-
 // Insert a DOM node or DomRange into a DOM element or DomRange.
 //
 // One of three things happens depending on what needs to be inserted into what:
@@ -237,7 +239,7 @@ var updateAttributes = function(elem, newAttrs, handlers) {
 UI.render = function (kind, parentComponent) {
   if (kind.isInited)
     throw new Error("Can't render component instance, only component kind");
-  var inst = instantiate(kind, parentComponent);
+  var inst = kind.instantiate(parentComponent);
 
   var content = null;
   try {
@@ -267,280 +269,21 @@ var materialize = function (node, parent, before, parentComponent) {
   // For example, check that CharRef has `html` and `str` properties and no content.
   // Check that Comment has a single string child and no attributes.  Etc.
 
-  if (UI.isComponent(node)) {
-    var inst = UI.render(node, parentComponent);
+  if (node == null) {
+    // null or undefined.
+    // do nothinge.
+  } else if (typeof node === 'string') {
+    insert(document.createTextNode(node), parent, before);
+  } else if (node instanceof Array) {
+    for (var i = 0; i < node.length; i++)
+      materialize(node[i], parent, before, parentComponent);
+  } else if (typeof node === 'function') {
 
-    insert(inst.dom, parent, before);
-  } else {
-    var type = HTML.typeOf(node);
-    if (type === 'charref') {
-        insert(document.createTextNode(node.attrs.str), parent, before);
-    } else if (type === 'comment') {
-      insert(document.createComment(sanitizeComment(node[0])), parent, before);
-    } else if (type === 'emitcode') {
-      throw new Error("EmitCode node can only be processed by toCode");
-    } else if (type === 'tag') {
-      var elem = document.createElement(node.tagName);
-      if (node.attrs) {
-        var attrs = node.attrs;
-        if (typeof attrs === 'function') {
-          var attrUpdater = Deps.autorun(function (c) {
-            if (! c.handlers)
-              c.handlers = {};
+    var range = new UI.DomRange;
+    var rangeUpdater = Deps.autorun(function (c) {
+      if (! c.firstRun)
+        range.removeAll();
 
-            try {
-              updateAttributes(elem, attrs(), c.handlers);
-            } catch (e) {
-              reportUIException(e);
-            }
-          });
-          UI.DomBackend2.onRemoveElement(elem, function () {
-            attrUpdater.stop();
-          });
-        } else {
-          updateAttributes(elem, attrs);
-        }
-      }
-      if (node.tagName === 'TEXTAREA') {
-        var value = '';
-        _.each(node, function (child) {
-          // XXX put the functionality of attributeValueToString in
-          // something like UI.toText(node)
-          value += attributeValueToString(child);
-        });
-        elem.value = value;
-      } else {
-        _.each(node, function (child) {
-          materialize(child, elem, null, parentComponent);
-        });
-      }
-      insert(elem, parent, before);
-    } else if (type === 'array') {
-      _.each(node, function (child) {
-        materialize(child, parent, before, parentComponent);
-      });
-    } else if (type === 'string') {
-      insert(document.createTextNode(node), parent, before);
-    } else if (type === 'function') {
-      var range = new UI.DomRange;
-      var rangeUpdater = Deps.autorun(function (c) {
-        if (! c.firstRun)
-          range.removeAll();
-
-        var content = null;
-        try {
-          content = node();
-        } catch (e) {
-          reportUIException(e);
-        }
-
-        Deps.nonreactive(function () {
-          materialize(content, range, null, parentComponent);
-        });
-      });
-      range.removed = function () {
-        rangeUpdater.stop();
-      };
-      insert(range, parent, before);
-    } else if (type === 'raw') {
-      // Get an array of DOM nodes by using the browser's HTML parser
-      // (like innerHTML).
-      var htmlNodes = UI.DomBackend2.parseHTML(node[0]);
-      for (var i = 0; i < htmlNodes.length; i++)
-        insert(htmlNodes[i], parent, before);
-    } else if (type === 'null') {
-      // null or undefined.
-      // do nothing.
-    } else if (type === 'special') {
-      throw new Error("Can't materialize Special tag, it's just an intermediate rep");
-    } else {
-      // can't get here
-      throw new Error("Unexpected type: " + type);
-    }
-  }
-};
-
-// Takes an attribute value -- i.e. a string, CharRef, or array of strings and
-// CharRefs (and arrays) -- and renders it as a double-quoted string literal
-// suitable for an HTML attribute value (without the quotes).  Returns `null`
-// if there's no attribute value (`null`, `undefined`, or empty array).
-var attributeValueToQuotedContents = function (v) {
-  if (v == null) {
-    // null or undefined
-    return null;
-  } else if (typeof v === 'string') {
-    return v.replace(/"/g, '&quot;').replace(/&/g, '&amp;');
-  } else if (v.tagName === 'CharRef') {
-    return v.attrs.html;
-  } else if (v.tagName === 'Special') {
-    throw new Error("Can't convert Special to string");
-  } else if (typeof v === 'object' && (typeof v.length === 'number')) {
-    // array or tag
-    if (v.tagName)
-      throw new Error("Unexpected tag in attribute value: " + v.tagName);
-    // array
-    var parts = [];
-    for (var i = 0; i < v.length; i++) {
-      var part = attributeValueToQuotedContents(v[i]);
-      if (part !== null)
-        parts.push(part);
-    }
-    return parts.length ? parts.join('') : null;
-  } else {
-    throw new Error("Unexpected node in attribute value: " + v);
-  }
-};
-
-// Takes an attribute value -- i.e. a string, CharRef, or array of strings and
-// CharRefs (and arrays) -- and converts it to a string suitable for passing
-// to `setAttribute`.  May return `null` to mean no attribute.
-var attributeValueToString = function (v) {
-  if (v == null) {
-    // null or undefined
-    return null;
-  } else if (typeof v === 'string') {
-    return v;
-  } else if (v.tagName === 'CharRef') {
-    return v.attrs.str;
-  } else if (v.tagName === 'Special') {
-    throw new Error("Can't convert Special to string");
-  } else if (typeof v === 'object' && (typeof v.length === 'number')) {
-    // array or tag
-    if (v.tagName)
-      throw new Error("Unexpected tag in attribute value: " + v.tagName);
-    // array
-    var parts = [];
-    for (var i = 0; i < v.length; i++) {
-      var part = attributeValueToString(v[i]);
-      if (part !== null)
-        parts.push(part);
-    }
-    return parts.length ? parts.join('') : null;
-  } else {
-    throw new Error("Unexpected node in attribute value: " + v);
-  }
-};
-
-// Takes an attribute value -- i.e. a string, CharRef, or array of strings and
-// CharRefs (and arrays) -- and converts it to JavaScript code.  May also return
-// `null` to indicate that the attribute should not be included because it has
-// an identically "nully" value (`null`, `undefined`, `[]`, `[[]]`, etc.).
-var attributeValueToCode = function (v) {
-  if (v == null) {
-    // null or undefined
-    return null;
-  } else if (typeof v === 'string') {
-    return toJSLiteral(v);
-  } else if (v.tagName === 'CharRef' || v.tagName === 'Special') {
-    return toCode(v);
-  } else if (v.tagName === 'EmitCode') {
-    return v[0];
-  } else if (typeof v === 'object' && (typeof v.length === 'number')) {
-    // array or tag
-    if (v.tagName)
-      throw new Error("Unexpected tag in attribute value: " + v.tagName);
-    // array
-    var parts = [];
-    for (var i = 0; i < v.length; i++) {
-      var part = attributeValueToCode(v[i]);
-      if (part !== null)
-        parts.push(part);
-    }
-    return parts.length ? ('[' + parts.join(', ') + ']') : null;
-  } else {
-    throw new Error("Unexpected node in attribute value: " + v);
-  }
-};
-
-// The HTML spec and the DOM API (in particular `setAttribute`) have different
-// definitions of what characters are legal in an attribute.  The HTML
-// parser is extremely permissive (allowing, for example, `<a %=%>`), while
-// `setAttribute` seems to use something like the XML grammar for names (and
-// throws an error if a name is invalid, making that attribute unsettable).
-// If we knew exactly what grammar browsers used for `setAttribute`, we could
-// include various Unicode ranges in what's legal.  For now, allow ASCII chars
-// that are known to be valid XML, valid HTML, and settable via `setAttribute`:
-//
-// * Starts with `:`, `_`, `A-Z` or `a-z`
-// * Consists of any of those plus `-`, `.`, and `0-9`.
-//
-// See <http://www.w3.org/TR/REC-xml/#NT-Name> and
-// <http://dev.w3.org/html5/markup/syntax.html#syntax-attributes>.
-var isValidAttributeName = function (name) {
-  return /^[:_A-Za-z][:_A-Za-z0-9.\-]*/.test(name);
-};
-
-var checkAttributeName = function (name) {
-  if (! isValidAttributeName(name))
-    throw new Error("Invalid attribute name: " + name);
-};
-
-// Convert the pseudoDOM `node` into static HTML.
-var toHTML = function (node, parentComponent) {
-  var result = "";
-
-  if (UI.isComponent(node)) {
-    if (node.isInited)
-      throw new Error("Can't render component instance, only component kind");
-    var inst = instantiate(node, parentComponent);
-
-    var content = null;
-    try {
-      content = (inst.render && inst.render());
-    } catch (e) {
-      reportUIException(e);
-    }
-
-    result += toHTML(content, inst);
-
-  } else {
-    var type = HTML.typeOf(node);
-    if (type === 'charref') {
-      result += node.attrs.html;
-    } else if (type === 'comment') {
-      result += '<!--' + sanitizeComment(node[0]) + '-->';
-    } else if (type === 'emitcode') {
-      throw new Error("EmitCode node can only be processed by toCode");
-    } else if (type === 'tag') {
-      result += '<' + HTML.properCaseTagName(node.tagName);
-      if (node.attrs) {
-        var attrs = node.attrs;
-        if (typeof attrs === 'function')
-          attrs = attrs();
-
-        _.each(attrs, function (v, k) {
-          checkAttributeName(k);
-          k = HTML.properCaseAttributeName(k);
-          v = attributeValueToQuotedContents(v);
-          if (v !== null)
-            result += ' ' + k + '="' + v + '"';
-        });
-      }
-      result += '>';
-      var contents = '';
-      _.each(node, function (child) {
-        contents += toHTML(child, parentComponent);
-      });
-      if (node.tagName === 'TEXTAREA' &&
-          contents.slice(0, 1) === '\n') {
-        // TEXTAREA will absorb a newline, so if we see one, add
-        // another one.
-        result += '\n';
-      }
-      result += contents;
-      if (node.length || ! HTML.isVoidElement(node.tagName)) {
-        // "Void" elements like BR are the only ones that don't get a close
-        // tag in HTML5.  They shouldn't have contents, either, so we could
-        // throw an error if there were contents.
-        result += '</' + HTML.properCaseTagName(node.tagName) + '>';
-      }
-    } else if (type === 'array') {
-      _.each(node, function (child) {
-        result += toHTML(child, parentComponent);
-      });
-    } else if (type === 'string') {
-      result += node.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-    } else if (type === 'function') {
       var content = null;
       try {
         content = node();
@@ -548,132 +291,73 @@ var toHTML = function (node, parentComponent) {
         reportUIException(e);
       }
 
-      result += toHTML(content, parentComponent);
-    } else if (type === 'raw') {
-      result += node[0];
-    } else if (type === 'null') {
-      // null or undefined.
-      // do nothing.
-    } else if (type === 'special') {
-      throw new Error("Can't toHTML a Special tag, it's just an intermediate rep");
-    } else {
-      // can't get here
-      throw new Error("Unexpected type: " + type);
-    }
-  }
-
-  return result;
-};
-
-var toJSLiteral = function (obj) {
-  // See <http://timelessrepo.com/json-isnt-a-javascript-subset> for `\u2028\u2029`.
-  // Also escape Unicode surrogates.
-  return (JSON.stringify(obj)
-          .replace(/[\u2028\u2029\ud800-\udfff]/g, function (c) {
-            return '\\u' + ('000' + c.charCodeAt(0).toString(16)).slice(-4);
-          }));
-};
-
-var jsReservedWordSet = (function (set) {
-  _.each("abstract else instanceof super boolean enum int switch break export interface synchronized byte extends let this case false long throw catch final native throws char finally new transient class float null true const for package try continue function private typeof debugger goto protected var default if public void delete implements return volatile do import short while double in static with".split(' '), function (w) {
-    set[w] = 1;
-  });
-  return set;
-})({});
-
-var toObjectLiteralKey = function (k) {
-  if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(k) && jsReservedWordSet[k] !== 1)
-    return k;
-  return toJSLiteral(k);
-};
-
-// Convert the pseudoDOM `node` into JavaScript code that generates it.
-//
-// We can't handle functions in the tree, but we support the special node
-// `EmitCode` for inserting raw JavaScript.
-var toCode = function (node) {
-  var result = "";
-
-  if ((typeof node === 'number') || (typeof node === 'boolean')) {
-    // support toCode on nodes like `HTML.Special({foo: [1, 2, true]})`
-    return toJSLiteral(node);
-  } else if (UI.isComponent(node)) {
-    throw new Error("Can't convert Component object to code string.  Use EmitCode instead.");
-  } else {
-    var type = HTML.typeOf(node);
-    if (type === 'emitcode') {
-      result += node[0];
-    } else if (type === 'comment' || type === 'charref' || type === 'raw' ||
-               type === 'tag' || type === 'special') {
-
-      var isNonTag = (type !== 'tag');
-
-      result += 'HTML.' + (isNonTag ? '' : 'Tag.') + node.tagName + '(';
-      var argStrs = [];
-      if (node.attrs) {
-        if (typeof node.attrs === 'function')
-          throw new Error("Can't convert function object to code string.  Use EmitCode instead.");
-        if (type === 'special') {
-          // Specials don't occur in the compiled templates, so this is
-          // somewhat of a fringe codepath, but we have it for completeness.
-          var kvStrs = [];
-          _.each(node.attrs, function (v, k) {
-            kvStrs.push(toObjectLiteralKey(k) + ': ' + toCode(v));
-          });
-          argStrs.push('{' + kvStrs.join(', ') + '}');
-        } else {
-          argStrs.push(attributesToCode(node.attrs));
-        }
-      }
-
-      _.each(node, function (child) {
-        argStrs.push(toCode(child));
+      Deps.nonreactive(function () {
+        materialize(content, range, null, parentComponent);
       });
-
-      result += argStrs.join(', ') + ')';
-    } else if (type === 'array') {
-      result += '[';
-      result += _.map(node, toCode).join(', ');
-      result += ']';
-    } else if (type === 'string') {
-      result += toJSLiteral(node);
-    } else if (type === 'function') {
-      throw new Error("Can't convert function object to code string.  Use EmitCode instead.");
-    } else if (type === 'null') {
-      // null or undefined.
-      // do nothing.
-    } else {
-      // can't get here
-      throw new Error("Unexpected type: " + type);
-    }
-  }
-
-  return result || 'null';
-};
-
-var attributesToCode = function (attrs) {
-  var kvStrs = [];
-  if (attrs) {
-    _.each(attrs, function (v, k) {
-      if (k.charAt(0) !== '$')
-        // allow `$attrs`, `$specials`
-        checkAttributeName(k);
-      v = attributeValueToCode(v);
-      if (v !== null)
-        kvStrs.push(toObjectLiteralKey(k) + ': ' + v);
     });
+    range.removed = function () {
+      rangeUpdater.stop();
+    };
+    insert(range, parent, before);
+  } else if (node instanceof HTML.Tag) {
+    var elem = document.createElement(node.tagName);
+    if (node.attrs) {
+      var attrUpdater = Deps.autorun(function (c) {
+        if (! c.handlers)
+          c.handlers = {};
+
+        try {
+          var attrs = node.evaluateDynamicAttributes();
+          var stringAttrs = {};
+          if (attrs) {
+            for (var k in attrs) {
+              stringAttrs[k] = HTML.toText(attrs[k], HTML.TEXTMODE.STRING,
+                                           parentComponent);
+            }
+            updateAttributes(elem, stringAttrs, c.handlers);
+          }
+        } catch (e) {
+          reportUIException(e);
+        }
+      });
+      UI.DomBackend.onRemoveElement(elem, function () {
+        attrUpdater.stop();
+      });
+    }
+    if (node.tagName === 'TEXTAREA') {
+      elem.value = HTML.toText(node.children, HTML.TEXTMODE.RCDATA, parentComponent);
+    } else {
+      materialize(node.children, elem, null, parentComponent);
+    }
+    insert(elem, parent, before);
+  } else if (typeof node.instantiate === 'function') {
+    // component
+    var instance = UI.render(node, parentComponent);
+
+    insert(instance.dom, parent, before);
+  } else if (node instanceof HTML.CharRef) {
+    insert(document.createTextNode(node.str), parent, before);
+  } else if (node instanceof HTML.Comment) {
+    insert(document.createComment(node.sanitizedValue), parent, before);
+  } else if (node instanceof HTML.Raw) {
+    // Get an array of DOM nodes by using the browser's HTML parser
+    // (like innerHTML).
+    var htmlNodes = UI.DomBackend.parseHTML(node.value);
+    for (var i = 0; i < htmlNodes.length; i++)
+      insert(htmlNodes[i], parent, before);
+  } else if (node instanceof HTML.Special) {
+    throw new Error("Can't materialize Special tag, it's just an intermediate rep");
+  } else {
+    // can't get here
+    throw new Error("Unexpected node in htmljs: " + node);
   }
-  return '{' + kvStrs.join(', ') + '}';
 };
+
 
 
 // XXX figure out the right names, and namespace, for these.
 // for example, maybe some of them go in the HTML package.
 UI.materialize = materialize;
-UI.toHTML = toHTML;
-UI.toCode = toCode;
-UI.attributesToCode = attributesToCode;
-UI.isValidAttributeName = isValidAttributeName;
 
 UI.body2 = UI.Component.extend({
   kind: 'body',

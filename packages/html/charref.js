@@ -2258,17 +2258,26 @@ var getNamedEntityByFirstChar = {};
   }
 })();
 
+// Run a provided "matcher" function but reset the current position afterwards.
+// Fatal failure of the matcher is not suppressed.
+var peekMatcher = function (scanner, matcher) {
+  var start = scanner.pos;
+  var result = matcher(scanner);
+  scanner.pos = start;
+  return result;
+};
+
 // Returns a string like "&amp;" or a falsy value if no match.  Fails fatally
 // if something looks like a named entity but isn't.
 var getNamedCharRef = function (scanner, inAttribute) {
   // look for `&` followed by alphanumeric
-  if (! scanner.peek(getPossibleNamedEntityStart))
+  if (! peekMatcher(scanner, getPossibleNamedEntityStart))
     return null;
 
   var matcher = getNamedEntityByFirstChar[scanner.rest().charAt(1)];
   var entity = null;
   if (matcher)
-    entity = scanner.peek(matcher);
+    entity = peekMatcher(scanner, matcher);
 
   if (entity) {
     if (entity.slice(-1) !== ';') {
@@ -2288,7 +2297,7 @@ var getNamedCharRef = function (scanner, inAttribute) {
   } else {
     // we couldn't match any real entity, so see if this is a bad entity
     // or something we can overlook.
-    var badEntity = scanner.peek(getApparentNamedEntity);
+    var badEntity = peekMatcher(scanner, getApparentNamedEntity);
     if (badEntity)
       scanner.fatal("Invalid character reference: " + badEntity);
     // `&aaaa` is ok with no semicolon

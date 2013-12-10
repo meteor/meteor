@@ -24,20 +24,12 @@ Scanner.prototype.fatal = function (msg) {
                   "\": " + msg);
 };
 
-// Peek at the next character, or run a provided "matcher" function
-// but reset the current position afterwards.  Fatal failure of the
-// matcher is not suppressed.
+// Peek at the next character.
 //
 // It's safe to peek at the next character at EOF; you just get an
 // empty string.
-Scanner.prototype.peek = function (matcher) {
-  if (! matcher)
-    return this.rest().charAt(0);
-
-  var start = this.pos;
-  var result = matcher(this);
-  this.pos = start;
-  return result;
+Scanner.prototype.peek = function () {
+  return this.rest().charAt(0);
 };
 
 // Constructs a `getFoo` function where `foo` is specified with a regex.
@@ -50,7 +42,7 @@ Scanner.prototype.peek = function (matcher) {
 // current position is not advanced and a falsy value (typically null)
 // is returned.
 makeRegexMatcher = function (regex) {
-  return function (scanner, peek) {
+  return function (scanner) {
     var match = regex.exec(scanner.rest());
 
     if (! match)

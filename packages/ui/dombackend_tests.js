@@ -18,7 +18,7 @@ var runDivSpanBTest = function (func) {
   func(div, span, b, buf, func1, func2, func3, func4);
 };
 
-var DomBackend =  UI.DomBackend2;
+var DomBackend =  UI.DomBackend;
 
 Tinytest.add("ui - DomBackend - element removal", function (test) {
 
