@@ -1,7 +1,7 @@
 
-HTML = {}
+HTML = {};
 
-/*HTML.isNully = function (node) {
+HTML.isNully = function (node) {
   if (node == null)
     return true;
 
@@ -13,7 +13,7 @@ HTML = {}
   }
 
   return false;
-};*/
+};
 
 HTML.asciiLowerCase = function (str) {
   return str.replace(/[A-Z]/g, function (c) {

@@ -9,18 +9,53 @@ HTML.Tag = function (tagName) {
   this.children = [];
 };
 
-var extendAttrs = function (tgt, src) {
-  for (var k in src) {
-    if (! HTML.isValidAttributeName(k))
-      throw new Error("Illegal HTML attribute name: " + k);
-    tgt[k] = src[k];
+// Call all functions and instantiate all components, when fine-grained
+// reactivity is not needed (for example, in attributes).
+HTML.evaluate = function (node, parentComponent) {
+  if (node == null) {
+    return node;
+  } else if (typeof node === 'function') {
+    return node();
+  } else if (node instanceof Array) {
+    var result = [];
+    for (var i = 0; i < node.length; i++)
+      result.push(HTML.evaluate(node[i], parentComponent));
+    return result;
+  } else if (typeof node.instantiate === 'function') {
+    // component
+    var instance = node.instantiate(parentComponent || null);
+    var content = instance.render();
+    return HTML.evaluate(content, instance);
+  }  else if (node instanceof HTML.Tag) {
+    var newChildren = [];
+    for (var i = 0; i < node.children.length; i++)
+      newChildren.push(HTML.evaluate(node.children[i], parentComponent));
+    var newTag = HTML.getTag(node.tagName).apply(null, newChildren);
+    newTag.attrs = {};
+    for (var k in node.attrs)
+      newTag.attrs[k] = HTML.evaluate(node.attrs[k], parentComponent);
+    return newTag;
+  } else {
+    return node;
   }
 };
 
-HTML.Tag.prototype.evaluateDynamicAttributes = function () {
+var extendAttrs = function (tgt, src, parentComponent) {
+  for (var k in src) {
+    if (k === '$dynamic')
+      continue;
+    if (! HTML.isValidAttributeName(k))
+      throw new Error("Illegal HTML attribute name: " + k);
+    var value = HTML.evaluate(src[k], parentComponent);
+    if (! HTML.isNully(value))
+      tgt[k] = value;
+  }
+};
+
+HTML.Tag.prototype.evaluateDynamicAttributes = function (parentComponent) {
   if (this.attrs && (this.attrs.$dynamic instanceof Array)) {
     var attrs = {};
-    extendAttrs(attrs, this.attrs);
+    extendAttrs(attrs, this.attrs, parentComponent);
     // iterate over this.attrs.$dynamic, calling each element if it
     // is a function and then using it to extend `attrs`.
     var dynamics = this.attrs.$dynamic;
@@ -28,7 +63,7 @@ HTML.Tag.prototype.evaluateDynamicAttributes = function () {
       var moreAttrs = dynamics[i];
       if (typeof moreAttrs === 'function')
         moreAttrs = moreAttrs();
-      extendAttrs(attrs, moreAttrs);
+      extendAttrs(attrs, moreAttrs, parentComponent);
     }
     return attrs;
   } else {
