@@ -1,6 +1,5 @@
-HTML2 = {};
 
-HTML = HTML2;
+HTML = {}
 
 /*HTML.isNully = function (node) {
   if (node == null)

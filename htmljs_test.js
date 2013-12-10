@@ -57,7 +57,7 @@ Tinytest.add("htmljs - construction", function (test) {
   test.equal(A(new Date).children.length, 1);
 });
 
-Tinytest.add("html - utils", function (test) {
+Tinytest.add("htmljs - utils", function (test) {
 
   test.notEqual("\u00c9".toLowerCase(), "\u00c9");
   test.equal(HTML.asciiLowerCase("\u00c9"), "\u00c9");
