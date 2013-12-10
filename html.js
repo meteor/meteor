@@ -139,7 +139,7 @@ HTML.Raw = function (value) {
 HTML.EmitCode = function (value) {
   if (! (this instanceof HTML.EmitCode))
     // called without `new`
-    return new HTML.Raw(value);
+    return new HTML.EmitCode(value);
 
   if (typeof value !== 'string')
     throw new Error('HTML.EmitCode must be constructed with a string');
