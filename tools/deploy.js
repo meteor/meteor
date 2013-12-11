@@ -420,7 +420,10 @@ var listAuthorized = function (site) {
 
     process.stdout.write((auth.loggedInUsername() || "<you>") + "\n");
     _.each(info.authorized, function (username) {
-      process.stdout.write(username + "\n");
+      if (! username)
+        process.stdout.write("<unknown>" + "\n");
+      else
+        process.stdout.write(username + "\n");
     });
     process.exit(0);
   }
