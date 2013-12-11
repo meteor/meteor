@@ -120,7 +120,10 @@ exports.discoverGalaxy = function (app) {
         _.has(body, "galaxyDiscoveryVersion") &&
         _.has(body, "galaxyUrl") &&
         (body.galaxyDiscoveryVersion === "galaxy-discovery-pre0")) {
-      fut.return("https://" + body.galaxyUrl);
+      var result = body.galaxyUrl;
+      if (result.indexOf("https://") === -1)
+        result = "https://" + result;
+      fut.return(result);
     } else {
       fut.return(null);
     }
