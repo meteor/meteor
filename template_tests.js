@@ -678,7 +678,6 @@ Tinytest.add('spacebars - templates - textarea', function (test) {
     return R.get();
   };
 
-  debugger;
   var div = renderToDiv(tmpl);
   var textarea = div.querySelector('textarea');
   test.equal(textarea.value, 'hello');
@@ -686,5 +685,28 @@ Tinytest.add('spacebars - templates - textarea', function (test) {
   R.set('world');
   Deps.flush();
   test.equal(textarea.value, 'world');
+
+});
+
+Tinytest.add('spacebars - templates - textarea 2', function (test) {
+  var tmpl = Template.spacebars_template_test_textarea2;
+
+  var R = ReactiveVar(true);
+
+  tmpl.foo = function () {
+    return R.get();
+  };
+
+  var div = renderToDiv(tmpl);
+  var textarea = div.querySelector('textarea');
+  test.equal(textarea.value, '</not a tag>');
+
+  R.set(false);
+  Deps.flush();
+  test.equal(textarea.value, '<also not a tag>');
+
+  R.set(true);
+  Deps.flush();
+  test.equal(textarea.value, '</not a tag>');
 
 });
