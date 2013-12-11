@@ -85,9 +85,9 @@ var ensureSessionType = function (session, type) {
 var logOutAllSessions = function (data) {
   var crypto = require('crypto');
 
-  delete data.username;
-
   _.each(data.sessions, function (session, domain) {
+    delete session.username;
+
     if (_.has(session, 'token')) {
       if (! (session.pendingRevoke instanceof Array))
         session.pendingRevoke = [];
@@ -102,6 +102,12 @@ var logOutAllSessions = function (data) {
       delete session.tokenId;
     }
   });
+};
+
+// Given an object 'data' in the format returned by readSession,
+// return the currently logged in user, or null if not logged in.
+var currentUsername = function (data) {
+  return getSession(data, config.getAccountsDomain()).username || null;
 };
 
 // If there are any logged out (pendingRevoke) tokens that haven't
@@ -401,9 +407,9 @@ exports.loginCommand = function (argv, showUsage) {
 
     data = readSession();
     logOutAllSessions(data);
-    data.username = loginResult.username;
     var session = getSession(data, config.getAccountsDomain());
     ensureSessionType(session, "meteor-account");
+    session.username = loginResult.username;
     session.token = meteorAuth;
     session.tokenId = tokenId;
     writeSession(data);
@@ -428,7 +434,7 @@ exports.loginCommand = function (argv, showUsage) {
   tryRevokeOldTokens({ firstTry: true });
 
   process.stdout.write("\nLogged in " + (galaxy ? "to " + galaxy + " " : "") +
-                       "as " + data.username + ".\n" +
+                       "as " + currentUsername(data) + ".\n" +
                        "Thanks for being a Meteor developer!\n");
 };
 
@@ -439,7 +445,7 @@ exports.logoutCommand = function (argv, showUsage) {
   config.printUniverseBanner();
 
   var data = readSession();
-  var wasLoggedIn = !! data.username;
+  var wasLoggedIn = !! currentUsername(data);
   logOutAllSessions(data);
   writeSession(data);
 
@@ -460,8 +466,9 @@ exports.whoAmICommand = function (argv, showUsage) {
   config.printUniverseBanner();
 
   var data = readSession();
-  if (data.username) {
-    process.stdout.write(data.username + "\n");
+  var username = currentUsername(data);
+  if (username) {
+    process.stdout.write(username + "\n");
     process.exit(0);
   } else {
     process.stderr.write("Not logged in. 'meteor login' to log in.\n");
@@ -478,7 +485,7 @@ exports.getSessionId = function (domain) {
 exports.setSessionId = function (domain, sessionId) {
   var data = readSession();
   getSession(data, domain).session = sessionId;
-  writeSession(sessionData);
+  writeSession(data);
 };
 
 exports.getSessionToken = function (domain) {
@@ -487,8 +494,7 @@ exports.getSessionToken = function (domain) {
 
 exports.isLoggedIn = function () {
   // XXX will need to change with deferred registration!
-  var data = readSession();
-  return !! data.username;
+  return !! currentUsername(readSession());
 };
 
 // Return the username of the currently logged in user, or false if
@@ -496,6 +502,5 @@ exports.isLoggedIn = function () {
 // username.
 exports.loggedInUsername = function () {
   // XXX will need to change with deferred registration!
-  var data = readSession();
-  return data.username ? data.username : false;
+  return currentUsername(readSession) || false;
 };
