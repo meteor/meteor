@@ -690,6 +690,18 @@ var codeGenInclusionArgs = function (tag) {
   return [];
 };
 
+// Returns true if `a` and `b` are `===`, unless they are of a mutable type.
+// (Because then, they may be equal references to an object that was mutated,
+// and we'll never know.  We save only a reference to the old object; we don't
+// do any deep-copying or diffing.)
+var safeEquals = function (a, b) {
+  if (a !== b)
+    return false;
+  else
+    return ((!a) || (typeof a === 'number') || (typeof a === 'boolean') ||
+            (typeof a === 'string'));
+};
+
 Spacebars.include = function (kindOrFunc, args) {
   args = args || {};
   if (typeof kindOrFunc === 'function') {
@@ -740,7 +752,7 @@ Spacebars.include = function (kindOrFunc, args) {
         if (k === '__content' || k === '__elseContent')
           emboxedArgs[k] = args[k];
         else
-          emboxedArgs[k] = UI.emboxValue(args[k]);
+          emboxedArgs[k] = UI.emboxValue(args[k], safeEquals);
       }
 
       return kind.extend(emboxedArgs);
