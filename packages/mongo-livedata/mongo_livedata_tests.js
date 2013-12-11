@@ -1906,9 +1906,10 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - include selector field
 
   // Wait until we've processed the insert oplog entry. (If the insert shows up
   // during the observeChanges, the bug in question is not consistently
-  // reproduced.)
-  MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle.waitUntilCaughtUp();
-
+  // reproduced.) We don't have to do this for polling observe (eg
+  // --disable-oplog).
+  var oplog = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+  oplog && oplog.waitUntilCaughtUp();
 
   var output = [];
   var handle = coll.find({a: 1, b: 2}, {fields: {c: 1}}).observeChanges({
