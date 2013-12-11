@@ -69,7 +69,6 @@ try {
 
 AppConfig.getAppConfig = function () {
   if (!subFuture.isResolved() && staticAppConfig) {
-    console.log("STATIC APP CONFIG");
     return staticAppConfig;
   }
   subFuture.wait();
