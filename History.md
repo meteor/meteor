@@ -6,6 +6,8 @@ recommend using this precise version of Node in production so that the patch
 will be applied. If you use a newer version of Node with this version of Meteor,
 Meteor will not apply the patch and will instead disable websockets.
 
+* XXX oplog tailing
+
 * Rework hot code push. The new `autoupdate` package drives automatic
   reloads on update using standard DDP messages instead of a hardcoded
   message at DDP startup. Now the hot code push only triggers when
@@ -24,7 +26,35 @@ Meteor will not apply the patch and will instead disable websockets.
 * Support `EJSON.clone` for `Meteor.Error`. As a result, they are properly
   stringified in DDP even if thrown through a `Future`.  #1482
 
-* Fail explicitly when publishing non-cursors.
+* XXX Fix error on this.removed during session shutdown. 9e7b4bd
+
+* XXX fix issue with logoutOtherConnections 5afd0d5 #1540 #1553
+
+* XXX sighup for clean webapp shutdown. also connection keepalive 5s change.
+
+* XXX Fail explicitly when publishing non-cursors.
+
+* XXX Introduce '--raw-logs' option to `meteor run` to disable logs parsing. ac376b6
+
+* XXX fix install script to create /usr/local on mavericks b20c2c6 (not really part of the release)
+
+* XXX asking for password on stdout so url can be used in scripts 60f88dc
+
+* XXX set x-forwarded-* headers in 'meteor run' 2b5e32
+
+* XXX Clean up package dirs containing only ".build" e11228a
+
+* XXX Properly handle projections where '_id' is the only rule. df95f1e
+
+* XXX Fix 0.6.6 regression in setting MAIL_URL 6582a88
+
+* XXX Only count files that actually go in the cache in the cache size check. #1653.
+
+* XXX Fix so that it is really possible to pass null to disable transformation in validators #1659
+
+* XXX Remove unused line, fix incompatibility with Phusion Passenger 8ca70e9
+
+* XXX Check for matching hostname before doing end-of-oauth redirect a2b0fff
 
 * Implement `$each`, `$sort`, and `$slice` options for minimongo's `$push`
   modifier.  #1492
@@ -37,8 +67,11 @@ Meteor will not apply the patch and will instead disable websockets.
 * Upgraded dependencies:
   * SockJS server from 0.3.7 to 0.3.8
   * Node from 0.10.21 to 0.10.22
+  * MongoDB from 2.4.6 to 2.4.8
+  * Websocket driver from XXX to YYY
 
-Patches contributed by GitHub users awwx, mcbain, rzymek.
+Patches contributed by GitHub users AlexeyMK, awwx, dandv,
+DenisGorbachev, FooBarWidget, mitar, mcbain, rzymek, sdarnell.
 
 
 ## v0.6.6.3
