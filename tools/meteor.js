@@ -888,63 +888,68 @@ Fiber(function () {
           deployGalaxy.deleteApp(site, context);
         else
           deploy.deleteApp(site);
-      } else {
-        var starball = argv.star;
-        // We don't need to be in an app if we're not going to run the bundler.
-        if (!starball)
-          requireDirInApp("deploy");
-        var settings = undefined;
-        if (argv.settings)
-          settings = runner.getSettings(argv.settings);
+        return;
+      }
 
+      if (argv.password) {
         if (context.galaxy) {
-          if (argv.password) {
-            process.stderr.write("Galaxy does not support --password.\n");
-            process.exit(1);
-          }
-
-          deployGalaxy.deploy({
-            app: site,
-            appDir: context.appDir,
-            settings: settings,
-            context: context,
-            starball: starball,
-            bundleOptions: {
-              nodeModulesMode: 'skip',
-              minify: !argv.debug,
-              releaseStamp: context.releaseVersion,
-              library: context.library
-            },
-            admin: argv.admin
-          });
+          process.stderr.write("Galaxy does not support --password.\n");
         } else {
-          if (argv.password) {
-            process.stderr.write(
+          process.stderr.write(
 "Setting passwords on apps is no longer supported. Now there are\n" +
 "user accounts and your apps are associated with your account so that\n" +
 "only you (and people you designate) can access them. See the\n" +
 "'meteor claim' and 'meteor authorized' commands.\n");
-            process.exit(1)
-          }
-
-          if (! auth.isLoggedIn()) {
-            // XXX so log them in ..!
-            process.stderr.write("You must be logged in to deploy an app.\n");
-            process.exit(1);
-          }
-
-          deploy.bundleAndDeploy({
-            appDir: context.appDir,
-            site: site,
-            settings: settings,
-            bundleOptions: {
-              nodeModulesMode: 'skip',
-              minify: !argv.debug,
-              releaseStamp: context.releaseVersion,
-              library: context.library
-            }
-          });
         }
+        process.exit(1)
+      }
+
+      // We don't need to be in an app if we're not going to run the bundler.
+      var starball = argv.star;
+      if (! starball)
+        requireDirInApp("deploy");
+
+      var settings = undefined;
+      if (argv.settings)
+        settings = runner.getSettings(argv.settings);
+
+      if (! auth.isLoggedIn()) {
+          process.stderr.write(
+"To instantly deploy your app on a free testing server, just enter your\n" +
+"email address!\n" +
+"\n");
+
+        if (! auth.registerOrLogIn(context))
+          process.exit(1);
+      }
+
+      if (context.galaxy) {
+        deployGalaxy.deploy({
+          app: site,
+          appDir: context.appDir,
+          settings: settings,
+          context: context,
+          starball: starball,
+          bundleOptions: {
+            nodeModulesMode: 'skip',
+            minify: !argv.debug,
+            releaseStamp: context.releaseVersion,
+            library: context.library
+          },
+          admin: argv.admin
+        });
+      } else {
+        deploy.bundleAndDeploy({
+          appDir: context.appDir,
+          site: site,
+          settings: settings,
+          bundleOptions: {
+            nodeModulesMode: 'skip',
+            minify: !argv.debug,
+            releaseStamp: context.releaseVersion,
+            library: context.library
+          }
+        });
       }
     })
   });

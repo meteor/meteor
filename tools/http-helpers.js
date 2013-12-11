@@ -60,6 +60,14 @@ _.extend(exports, {
   //   the same meaning as the arguments to request's normal
   //   callback), or it will throw.
   //
+  // - If Set-Cookie headers are present on the response, *and* you
+  //   are using a callback, it will parse the cookies and include
+  //   them as a setCookie attribute on the object passed to the
+  //   callback. setCookie is a simple map from cookie name to cookie
+  //   value. If you want expiration time and attributes you'll have
+  //   to parse it yourself. If there are multiple Set-Cookie headers
+  //   for the same cookie it is unspecified which one you'll get.
+  //
   // - You can provide a 'bodyStream' option which is a stream that
   //   will be used for the body of the request.
   //
@@ -128,25 +136,26 @@ _.extend(exports, {
     if (! callback) {
       fut = new Future();
       callback = function (err, response, body) {
-        if (err) {
+        if (err)
           fut.throw(err);
-        } else {
-          if (useSessionCookie) {
-            var sessionId;
-            _.each(response.headers["set-cookie"] || [], function (h) {
-              var match = h.match(/^METEOR_SESSION=([^;\s]+)/);
-              if (match)
-                sessionId = match[1];
-            });
 
-            if (sessionId)
-              auth.setSessionId(config.getAccountsDomain(), sessionId);
-          }
-          fut.return({
-            response: response,
-            body: body
-          });
+        var setCookie = {};
+        _.each(response.headers["set-cookie"] || [], function (h) {
+          var match = h.match(/^([^=\s]+)=([^;\s]+)/);
+          if (match)
+            setCookie[match[1]] = match[2];
+        });
+
+        if (useSessionCookie && setCookie.METEOR_SESSION) {
+          auth.setSessionId(config.getAccountsDomain(),
+                            setCookie.METEOR_SESSION);
         }
+
+        fut.return({
+          response: response,
+          body: body,
+          setCookie: setCookie
+        });
       };
     }
 

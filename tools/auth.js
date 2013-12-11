@@ -9,6 +9,8 @@ var archinfo = require('./archinfo.js');
 var querystring = require('querystring');
 var url = require('url');
 
+var auth = exports;
+
 var getSessionFilePath = function () {
   return path.join(process.env.HOME, '.meteorsession');
 };
@@ -212,11 +214,11 @@ var tryRevokeOldTokens = function (options) {
 // to a galaxy), checks if the login was successful, and if so returns an object
 // with keys:
 // - authToken: the value of the cookie named `authCookieName` in the response
-// - tokenId: the id of the auth token (from the response body)
-// - username: the username of the logged-in user (if provided by server)
-// - userId: the userid of the logged-in user (if provided by server)
+// - any other keys returned from the server (typically tokenId, username,
+//   userId, and/or registrationUrl, depending on the server and method)
 // Returns null if the login failed.
 var getLoginResult = function (response, body, authCookieName) {
+  console.log(response.statusCode, body);
   if (response.statusCode !== 200)
     return null;
 
@@ -237,12 +239,7 @@ var getLoginResult = function (response, body, authCookieName) {
   if (! parsedBody.tokenId)
     return null;
 
-  return {
-    authToken: authCookie,
-    tokenId: parsedBody.tokenId,
-    username: parsedBody.username,
-    userId: parsedBody.userId
-  };
+  return _.extend(parsedBody, { authToken: authCookie });
 };
 
 // Sends a request to https://<galaxyName>:<DISCOVERY_PORT> to find out the
@@ -280,8 +277,8 @@ var fetchGalaxyOAuthInfo = function (galaxyName, timeout) {
 };
 
 // Uses meteor accounts to log in to the specified galaxy. Returns an
-// object with keys `authToken`, `username` and `tokenId` if the login
-// was successful. If an error occurred, returns one of:
+// object with keys `token` and `tokenId` if the login was
+// successful. If an error occurred, returns one of:
 //   { error: 'access-denied' }
 //   { error: 'no-galaxy' }
 //   { error: 'no-account-server' }
@@ -347,14 +344,87 @@ var logInToGalaxy = function (galaxyName) {
         cookie: 'GALAXY_OAUTH_SESSION=' + session
       }
     });
+    var body = JSON.parse(galaxyResult.body);
   } catch (e) {
     return { error: 'no-galaxy' };
   }
-  var loginResult = getLoginResult(galaxyResult.response, galaxyResult.body,
-                                   'GALAXY_AUTH');
+  response = galaxyResult.response;
+
   // 'access-denied' isn't exactly right because it's possible that the galaxy
   // went down since our last request, but close enough.
-  return loginResult || { error: 'access-denied' };
+
+  if (response.statusCode !== 200 ||
+      ! body ||
+      ! _.has(response.setCookie, 'GALAXY_AUTH'))
+    return { error: 'access-denied' };
+
+  return {
+    token: response.setCookie.GALAXY_AUTH,
+    tokenId: body.tokenId
+  };
+};
+
+// Prompt the user for a password, and then log in. Returns true if a
+// successful login was accomplished, else false.
+//
+// Options should include either 'email' or 'username', and may also
+// include:
+// - retry: if true, then if the user gets the password wrong,
+//   reprompt.
+var doInteractivePasswordLogin = function (options) {
+  var loginData = utils.getAgentInfo();
+
+  if (_.has(options, 'username'))
+    loginData.username = options.username;
+  else if (_.has(options, 'email'))
+    loginData.email = options.email;
+  else
+    throw new Error("Need username or email");
+
+  while (true) {
+    loginData.password = utils.readLine({
+      echo: false,
+      prompt: "Password: "
+    });
+
+    var result;
+    try {
+      result = httpHelpers.request({
+        url: config.getAccountsApiUrl() + "/login",
+        method: "POST",
+        form: loginData,
+        useSessionCookie: true
+      });
+      var body = JSON.parse(result.body);
+    } catch (e) {
+      process.stderr.write("\nCouldn't connect to server. " +
+                           "Check your internet connection.\n");
+      return false;
+    }
+
+    if (result.response.statusCode === 200 &&
+        _.has(result.setCookie, 'METEOR_AUTH'))
+      break;
+
+    process.stderr.write("Login failed.\n");
+    if (options.retry) {
+      process.stderr.write("\n");
+      continue;
+    }
+    else
+      return false;
+  }
+
+  var data = readSessionData();
+  logOutAllSessions(data);
+  var session = getSession(data, config.getAccountsDomain());
+  ensureSessionType(session, "meteor-account");
+  session.username = body.username;
+  session.userId = body.userId;
+  session.token = result.setCookie.METEOR_AUTH;
+  session.tokenId = body.tokenId;
+  writeSessionData(data);
+  return true;
 };
 
 exports.loginCommand = function (argv, showUsage) {
@@ -367,63 +437,18 @@ exports.loginCommand = function (argv, showUsage) {
   var galaxy = argv.galaxy;
 
   var data = readSessionData();
-  var loginData = {};
-  var meteorAuth;
 
   if (! galaxy || ! getSession(data, config.getAccountsDomain()).token) {
+    var loginOptions = {};
+
     if (byEmail) {
-      loginData.email = utils.readLine({ prompt: "Email: " });
+      loginOptions.email = utils.readLine({ prompt: "Email: " });
     } else {
-      loginData.username = utils.readLine({ prompt: "Username: " });
+      loginOptions.username = utils.readLine({ prompt: "Username: " });
     }
-    loginData.password = utils.readLine({
-      echo: false,
-      prompt: "Password: "
-    });
 
-    // Gather user-agent information
-    var host = utils.getHost();
-    if (host)
-      loginData.host = host;
-    loginData.agent = "Meteor";
-    loginData.agentVersion =
-      files.in_checkout() ? "checkout" : files.getToolsVersion();
-    loginData.arch = archinfo.host();
-
-    var loginUrl = config.getAccountsApiUrl() + "/login";
-    var result;
-    try {
-      result = httpHelpers.request({
-        url: loginUrl,
-        method: "POST",
-        form: loginData,
-        useSessionCookie: true
-      });
-    } catch (e) {
-      process.stdout.write("\nCouldn't connect to server. " +
-                           "Check your internet connection.\n");
+    if (! doInteractivePasswordLogin(loginOptions))
       process.exit(1);
-    }
-
-    var loginResult = getLoginResult(result.response, result.body,
-                                     'METEOR_AUTH');
-    if (! loginResult || ! loginResult.userId) {
-      process.stdout.write("\nLogin failed.\n");
-      process.exit(1);
-    }
-
-    meteorAuth = loginResult.authToken;
-    var tokenId = loginResult.tokenId;
-
-    data = readSessionData();
-    logOutAllSessions(data);
-    var session = getSession(data, config.getAccountsDomain());
-    ensureSessionType(session, "meteor-account");
-    session.username = loginResult.username;
-    session.userId = loginResult.userId;
-    session.token = meteorAuth;
-    session.tokenId = tokenId;
-    writeSessionData(data);
   }
 
   if (galaxy) {
@@ -437,7 +462,7 @@ exports.loginCommand = function (argv, showUsage) {
     data = readSessionData(); // be careful to reread data file after RPC
     var session = getSession(data, galaxy);
     ensureSessionType(session, "galaxy");
-    session.token = galaxyLoginResult.authToken;
+    session.token = galaxyLoginResult.token;
     session.tokenId = galaxyLoginResult.tokenId;
     writeSessionData(data);
   }
@@ -445,7 +470,8 @@ exports.loginCommand = function (argv, showUsage) {
   tryRevokeOldTokens({ firstTry: true });
 
   process.stdout.write("\nLogged in " + (galaxy ? "to " + galaxy + " " : "") +
-                       "as " + currentUsername(data) + ".\n" +
+                       (currentUsername(data) ?
+                        "as " + currentUsername(data) : "") + ".\n" +
                        "Thanks for being a Meteor developer!\n");
 };
 
@@ -486,10 +512,129 @@ exports.whoAmICommand = function (argv, showUsage) {
   if (username) {
     process.stdout.write(username + "\n");
     process.exit(0);
-  } else {
-    process.stderr.write("You haven't chosen your username yet.\n");
-    process.exit(1);
   }
+
+  var url = getSession(data, config.getAccountsDomain()).registrationUrl;
+  if (url) {
+    process.stderr.write(
+"You haven't chosen your username yet. To pick it, go here:\n" +
+"\n" +
+url + "\n");
+  } else {
+    // Won't happen in normal operation
+    process.stderr.write("You haven't chosen your username yet.\n")
+  }
+
+  process.exit(1);
+};
+
+// Prompt for an email address. If it doesn't belong to a user, create
+// a new deferred registration account and log in as it. If it does,
+// try to log the user into it. Returns true on success (user is now
+// logged in) or false on failure (user gave up, can't talk to
+// network..)
+exports.registerOrLogIn = function (context) {
+  // Get their email
+  while (true) {
+    var email = utils.readLine({ prompt: "Email: " });
+    if (utils.validEmail(email))
+      break;
+    if (email.trim().length)
+      process.stderr.write("Please double-check that address.\n\n");
+  }
+
+  // Try to register
+  var result;
+  try {
+    result = httpHelpers.request({
+      url: config.getAccountsApiUrl() + "/register",
+      method: "POST",
+      form: _.extend(utils.getAgentInfo(), {
+        email: email
+      }),
+      useSessionCookie: true
+    });
+    var body = JSON.parse(result.body);
+  } catch (e) {
+    process.stderr.write("\nCouldn't connect to server. " +
+                         "Check your internet connection.\n");
+    return false;
+  }
+
+  if (result.response.statusCode === 200) {
+    if (! _.has(result.setCookie, 'METEOR_AUTH')) {
+      process.stdout.write("\nSorry, the server is having a problem.\n" +
+                          "Please try again later.\n");
+      return false;
+    }
+
+    var data = readSessionData();
+    logOutAllSessions(data);
+    var session = getSession(data, config.getAccountsDomain());
+    ensureSessionType(session, "meteor-account");
+    session.token = result.setCookie.METEOR_AUTH;
+    session.tokenId = body.tokenId;
+    session.userId = body.userId;
+    session.registrationUrl = body.registrationUrl;
+    writeSessionData(data);
+    return true;
+  }
+
+  if (body.error === "already_registered" &&
+      body.sentRegistrationEmail) {
+    process.stderr.write(
+"\n" +
+"That email address is already in use. We need to confirm that it belongs\n" +
+"to you. Luckily this will only take a moment.\n" +
+"\n" +
+"Check your mail! We've sent you a link. Click it, pick a password,\n" +
+"and then come back here to deploy your app.\n");
+
+    // The link in the registration email will include our session id,
+    // which was sent in the METEOR_SESSION cookie when we did the
+    // call to /register. When the user clicks the link and registers,
+    // credentials will be issued to us which we can pick up over DDP.
+
+    var unipackage = require('./unipackage.js');
+    var Package = unipackage.load({
+      library: context.library,
+      packages: [ 'meteor', 'livedata' ],
+      release: context.releaseVersion
+    })
+    var DDP = Package.livedata.DDP;
+    var authService = DDP.connect(config.getAuthDDPUrl());
+    try {
+      var result = authService.call("waitForRegistration", email);
+    } catch (e) {
+      if (! (e instanceof Package.meteor.Meteor.Error))
+        throw e;
+      process.stderr.write(
+"\nWhen you've picked your password, run 'meteor login' and then you'll\n" +
+"be good to go.\n");
+      return false;
+    }
+
+    process.stderr.write("\nGreat! Nice to meet you, " + result.username +
+                         "! Now log in with your new password.\n");
+    return doInteractivePasswordLogin({
+      username: result.username,
+      retry: true
+    });
+  }
+
+  if (body.error === "already_registered" && body.username) {
+    process.stderr.write("\nLogging in as " + body.username + ".\n");
+
+    return doInteractivePasswordLogin({
+      username: body.username,
+      retry: true
+    });
+  }
+
+  // Hmm, got an email we don't understand.
+  process.stderr.write(
+"\nThere was a problem. Please log in with 'meteor login'.\n");
+  return false;
 };
 
 exports.tryRevokeOldTokens = tryRevokeOldTokens;

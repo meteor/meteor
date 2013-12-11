@@ -6,6 +6,8 @@ var archinfo = require('./archinfo.js');
 var files = require('./files.js');
 var os = require('os');
 
+var utils = exports;
+
 // options:
 //   - echo (boolean): defaults to true
 //   - prompt (string)
@@ -91,5 +93,32 @@ exports.getHost = function () {
   if (! ret) attempt("hostname");
 
   // Otherwise, see what Node can come up with.
-  return os.hostname();
+  return ret || os.hostname();
 };
+
+// Return standard info about this user-agent. Used when logging in to
+// Meteor Accounts, mostly so that when the user is seeing a list of
+// their open sessions in their profile on the web, they have a way to
+// decide which ones they want to revoke.
+exports.getAgentInfo = function () {
+  var ret = {};
+
+  var host = utils.getHost();
+  if (host)
+    ret.host = host;
+  ret.agent = "Meteor";
+  ret.agentVersion =
+    files.in_checkout() ? "checkout" : files.getToolsVersion();
+  ret.arch = archinfo.host();
+
+  return ret;
+};
+
+// True if this looks like a valid email address. We deliberately
+// don't support
+// - quoted usernames (eg, "foo"@bar.com, " "@bar.com, "@"@bar.com)
+// - IP addresses in domains (eg, foo@1.2.3.4 or the IPv6 equivalent)
+// because they're weird and we don't want them in our database.
+exports.validEmail = function (address) {
+  return /^[^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*@([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}$/.test(address);
+}

@@ -96,6 +96,13 @@ _.extend(exports, {
     return addScheme(getAuthServiceBaseUrl()) + "/api/v1";
   },
 
+  // URL for the DDP interface to Meteor Accounts, typically
+  // "https://www.meteor.com/auth". (Really should be a ddp:// URL --
+  // we'll get there soon enough.)
+  getAuthDDPUrl: function () {
+    return addScheme(getAuthServiceBaseUrl()) + "/auth";
+  },
+
   // Return the domain name of the current Meteor Accounts server in
   // use. This is used as a key for storing your Meteor Accounts
   // login token.
