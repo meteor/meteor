@@ -54,78 +54,53 @@ var writeSession = function (data) {
   }
 };
 
-// types:
-// - "meteor-account": a login to your Meteor Account
-// - "galaxy": a login to a Galaxy
-var ensureSessionType = function (sessionData, domain, type) {
+var getSession = function (sessionData, domain) {
   if (typeof (sessionData.sessions) !== "object")
     sessionData.sessions = {};
   if (typeof (sessionData.sessions[domain]) !== "object")
     sessionData.sessions[domain] = {};
+  return sessionData.sessions[domain];
+};
 
-  var existingType = sessionData.sessions[domain].type;
-  if (! existingType)
-    sessionData.sessions[domain].type = type;
-  else if (existingType !== type) {
+// types:
+// - "meteor-account": a login to your Meteor Account
+// - "galaxy": a login to a Galaxy
+var ensureSessionType = function (session, type) {
+  if (! _.has(session, 'type'))
+    session.type = type;
+  else if (session.type !== type) {
     // Blow away whatever was there. We lose pendingRevokes but that's
     // OK since this should never happen in normal operation. (It
     // would happen if the Meteor Accounts server mode somewhere else
     // and a Galaxy was deployed at its old address, for example.)
-    sessionData.sessions[domain] = { type : type };
+    _.each(_.keys(session), function (key) {
+      delete session[key];
+    });
+    session.type = type;
   }
 }
 
-var getSessionKey = function (sessionData, domain, key) {
-  return (sessionData.sessions &&
-          sessionData.sessions[domain] &&
-          sessionData.sessions[domain][key]) || null;
-};
-
-var setSessionId = function (sessionData, domain, sessionId) {
-  if (typeof (sessionData.sessions) !== "object")
-    sessionData.sessions = {};
-  if (typeof (sessionData.sessions[domain]) !== "object")
-    sessionData.sessions[domain] = {};
-  sessionData.sessions[domain].session = sessionId;
-};
-
-var setSessionToken = function (sessionData, domain, token, tokenId) {
-  if (typeof (sessionData.sessions) !== "object")
-    sessionData.sessions = {};
-  if (typeof (sessionData.sessions[domain]) !== "object")
-    sessionData.sessions[domain] = {};
-
-  clearSessionToken(sessionData, domain);
-  sessionData.sessions[domain].token = token;
-  sessionData.sessions[domain].tokenId = tokenId;
-};
-
-var clearSessionToken = function (sessionData, domain) {
-  var session = sessionData.sessions[domain] || {};
-  if (_.has(session, 'token')) {
-    if (! (session.pendingRevoke instanceof Array))
-      session.pendingRevoke = [];
-
-    // Delete the auth token itself, but save the tokenId, which
-    // is useless for authentication. The next time we're online,
-    // we'll send the tokenId to the server to revoke the token on
-    // the server side too.
-    if (typeof session.tokenId === "string")
-      session.pendingRevoke.push(session.tokenId);
-    delete session.token;
-    delete session.tokenId;
-  }
-};
-
 // Given an object 'data' in the format returned by readSession,
 // modify it to make the user logged out.
-var logOutSession = function (data) {
+var logOutAllSessions = function (data) {
   var crypto = require('crypto');
 
   delete data.username;
 
-  _.each(data.sessions, function (info, domain) {
-    clearSessionToken(data, domain);
+  _.each(data.sessions, function (session, domain) {
+    if (_.has(session, 'token')) {
+      if (! (session.pendingRevoke instanceof Array))
+        session.pendingRevoke = [];
+
+      // Delete the auth token itself, but save the tokenId, which
+      // is useless for authentication. The next time we're online,
+      // we'll send the tokenId to the server to revoke the token on
+      // the server side too.
+      if (typeof session.tokenId === "string")
+        session.pendingRevoke.push(session.tokenId);
+      delete session.token;
+      delete session.tokenId;
+    }
   });
 };
 
@@ -208,7 +183,7 @@ var tryRevokeOldTokens = function (options) {
       // Server confirms that the tokens have been revoked
       // (Be careful to reread session data in case httpHelpers changed it)
       data = readSession();
-      var session = data.sessions[domain] || {};
+      var session = getSession(data, domain);
       session.pendingRevoke = _.difference(session.pendingRevoke, tokenIds);
       if (! session.pendingRevoke.length)
         delete session.pendingRevoke;
@@ -379,7 +354,7 @@ exports.loginCommand = function (argv, showUsage) {
   var loginData = {};
   var meteorAuth;
 
-  if (! galaxy || ! getSessionKey(data, config.getAccountsDomain(), 'token')) {
+  if (! galaxy || ! getSession(data, config.getAccountsDomain()).token) {
     if (byEmail) {
       loginData.email = utils.readLine({ prompt: "Email: " });
     } else {
@@ -414,7 +389,8 @@ exports.loginCommand = function (argv, showUsage) {
       process.exit(1);
     }
 
-    var loginResult = getLoginResult(result.response, result.body, 'METEOR_AUTH');
+    var loginResult = getLoginResult(result.response, result.body,
+                                     'METEOR_AUTH');
     if (! loginResult || ! loginResult.username) {
       process.stdout.write("\nLogin failed.\n");
       process.exit(1);
@@ -424,10 +400,12 @@ exports.loginCommand = function (argv, showUsage) {
     var tokenId = loginResult.tokenId;
 
     data = readSession();
-    logOutSession(data);
+    logOutAllSessions(data);
     data.username = loginResult.username;
-    ensureSessionType(data, config.getAccountsDomain(), "meteor-account");
-    setSessionToken(data, config.getAccountsDomain(), meteorAuth, tokenId);
+    var session = getSession(data, config.getAccountsDomain());
+    ensureSessionType(session, "meteor-account");
+    session.token = meteorAuth;
+    session.tokenId = tokenId;
     writeSession(data);
   }
 
@@ -440,9 +418,10 @@ exports.loginCommand = function (argv, showUsage) {
       process.exit(1);
     }
     data = readSession(); // be careful to reread data file after RPC
-    ensureSessionType(data, galaxy, "galaxy");
-    setSessionToken(data, galaxy, galaxyLoginResult.authToken,
-                    galaxyLoginResult.tokenId);
+    var session = getSession(data, galaxy);
+    ensureSessionType(session, "galaxy");
+    session.token = galaxyLoginResult.authToken;
+    session.tokenId = galaxyLoginResult.tokenId;
     writeSession(data);
   }
 
@@ -461,7 +440,7 @@ exports.logoutCommand = function (argv, showUsage) {
 
   var data = readSession();
   var wasLoggedIn = !! data.username;
-  logOutSession(data);
+  logOutAllSessions(data);
   writeSession(data);
 
   tryRevokeOldTokens({ firstTry: true });
@@ -469,7 +448,7 @@ exports.logoutCommand = function (argv, showUsage) {
   if (wasLoggedIn)
     process.stderr.write("Logged out.\n");
   else
-    // We called logOutSession/writeSession anyway, out of an
+    // We called logOutAllSessions/writeSession anyway, out of an
     // abundance of caution.
     process.stderr.write("Not logged in.\n");
 };
@@ -493,17 +472,17 @@ exports.whoAmICommand = function (argv, showUsage) {
 exports.tryRevokeOldTokens = tryRevokeOldTokens;
 
 exports.getSessionId = function (domain) {
-  return getSessionKey(readSession(), domain, 'session');
+  return getSession(readSession(), domain).session;
 };
 
 exports.setSessionId = function (domain, sessionId) {
-  var sessionData = readSession();
-  setSessionId(sessionData, domain, sessionId);
+  var data = readSession();
+  getSession(data, domain).session = sessionId;
   writeSession(sessionData);
 };
 
 exports.getSessionToken = function (domain) {
-  return getSessionKey(readSession(), domain, 'token');
+  return getSession(readSession(), domain).token;
 };
 
 exports.isLoggedIn = function () {
