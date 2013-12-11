@@ -14,7 +14,6 @@ var PHASE = {
 // it by calling the stop() method.
 OplogObserveDriver = function (options) {
   var self = this;
-
   self._usesOplog = true;  // tests look at this
 
   self._cursorDescription = options.cursorDescription;
@@ -47,17 +46,18 @@ OplogObserveDriver = function (options) {
   self._needToFetch = new LocalCollection._IdMap;
   self._currentlyFetching = null;
 
+  self._requeryWhenDoneThisQuery = false;
   self._writesToCommitWhenWeReachSteady = [];
 
   forEachTrigger(self._cursorDescription, function (trigger) {
     self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntry(
       trigger, function (notification) {
         var op = notification.op;
-        if (op.op === 'c') {
-          // XXX actually, drop collection needs to be handled by doing a
-          // re-query
-          self._published.forEach(function (fields, id) {
-            self._remove(id);
+        if (notification.dropCollection) {
+          // Defer because it may block on "wait for oplog to catch up", which
+          // isn't kosher for an oplog entry handler (will cause deadlock).
+          Meteor.defer(function () {
+            self._needToPollQuery();
           });
         } else {
           // All other operators should be handled depending on phase
@@ -82,21 +82,23 @@ OplogObserveDriver = function (options) {
       var write = fence.beginWrite();
       // This write cannot complete until we've caught up to "this point" in the
       // oplog, and then made it back to the steady state.
-      Meteor.defer(complete);
-      self._mongoHandle._oplogHandle.waitUntilCaughtUp();
-      if (self._stopped) {
-        // We're stopped, so just immediately commit.
-        write.committed();
-      } else if (self._phase === PHASE.STEADY) {
-        // Make sure that all of the callbacks have made it through the
-        // multiplexer and been delivered to ObserveHandles before committing
-        // writes.
-        self._multiplexer.onFlush(function () {
+      Meteor.defer(function () {
+        self._mongoHandle._oplogHandle.waitUntilCaughtUp();
+        if (self._stopped) {
+          // We're stopped, so just immediately commit.
           write.committed();
-        });
-      } else {
-        self._writesToCommitWhenWeReachSteady.push(write);
-      }
+        } else if (self._phase === PHASE.STEADY) {
+          // Make sure that all of the callbacks have made it through the
+          // multiplexer and been delivered to ObserveHandles before committing
+          // writes.
+          self._multiplexer.onFlush(function () {
+            write.committed();
+          });
+        } else {
+          self._writesToCommitWhenWeReachSteady.push(write);
+        }
+      });
+      complete();
     }
   ));
 
@@ -176,6 +178,8 @@ _.extend(OplogObserveDriver.prototype, {
               if (!anyError)
                 anyError = err;
             } else if (!self._stopped && self._phase === PHASE.FETCHING) {
+              // XXX this is bad, what if we go into fetching again after
+              //     coming back from _pollQuery?
               // We re-check the phase in case we've had an explicit _pollQuery
               // call which pulls us out of FETCHING and back into QUERYING.
               self._handleDoc(id, doc);
@@ -284,20 +288,12 @@ _.extend(OplogObserveDriver.prototype, {
   _pollQuery: function () {
     var self = this;
 
-    // XXX maybe this should just return?
     if (self._stopped)
-      throw new Error("can't re-poll a stopped query");
+      return;
 
-    // XXX maybe this should either just return, or queue up another poll
-    // somehow?
-    if (self._phase === PHASE.QUERYING)
-      throw new Error("can't re-poll re-entrantly");
-
-    if (self._phase === PHASE.FETCHING) {
-      // Yay, we get to forget about all the things we thought we had to fetch.
-      self._needToFetch = new LocalCollection._IdMap;
-      self._currentlyFetching = null;
-    }
+    // Yay, we get to forget about all the things we thought we had to fetch.
+    self._needToFetch = new LocalCollection._IdMap;
+    self._currentlyFetching = null;
     self._phase = PHASE.QUERYING;
 
     // subtle note: _published does not contain _id fields, but newResults does
@@ -312,6 +308,23 @@ _.extend(OplogObserveDriver.prototype, {
     self._doneQuerying();
   },
 
+  _needToPollQuery: function () {
+    var self = this;
+    if (self._stopped)
+      return;
+
+    // If we're not already in the middle of a query, we can query now (possibly
+    // pausing FETCHING).
+    if (self._phase !== PHASE.QUERYING) {
+      self._pollQuery();
+      return;
+    }
+
+    // We're currently in QUERYING. Set a flag to ensure that we run another
+    // query when we're done.
+    self._requeryWhenDoneThisQuery = true;
+  },
+
   _doneQuerying: function () {
     var self = this;
 
@@ -324,7 +337,10 @@ _.extend(OplogObserveDriver.prototype, {
     if (self._phase !== PHASE.QUERYING)
       throw Error("Phase unexpectedly " + self._phase);
 
-    if (self._needToFetch.empty()) {
+    if (self._requeryWhenDoneThisQuery) {
+      self._requeryWhenDoneThisQuery = false;
+      self._pollQuery();
+    } else if (self._needToFetch.empty()) {
       self._beSteady();
     } else {
       self._fetchModifiedDocuments();
@@ -363,7 +379,7 @@ _.extend(OplogObserveDriver.prototype, {
     // First remove anything that's gone. Be careful not to modify
     // self._published while iterating over it.
     var idsToRemove = [];
-    self._published.each(function (doc, id) {
+    self._published.forEach(function (doc, id) {
       if (!newResults.has(id))
         idsToRemove.push(id);
     });
@@ -372,7 +388,7 @@ _.extend(OplogObserveDriver.prototype, {
     });
 
     // Now do adds and changes.
-    newResults.each(function (doc, id) {
+    newResults.forEach(function (doc, id) {
       // "true" here means to throw if we think this doc doesn't match the
       // selector.
       self._handleDoc(id, doc, true);

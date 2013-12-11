@@ -1979,3 +1979,67 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - transform", function (
   test.equal(transformedOutput.shift(), ['added', {x: 5, y: 9}]);
   transformedHandle.stop();
 });
+
+
+Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection", function (test) {
+  var collName = "dropCollection" + Random.id();
+  var coll = new Meteor.Collection(collName);
+
+  var doc1Id = coll.insert({a: 'foo', c: 1});
+  var doc2Id = coll.insert({b: 'bar'});
+  var doc3Id = coll.insert({a: 'foo', c: 2});
+  var tmp;
+
+  var output = [];
+  var handle = coll.find({a: 'foo'}).observeChanges({
+    added: function (id, fields) {
+      output.push(['added', id, fields]);
+    },
+    changed: function (id) {
+      output.push(['changed']);
+    },
+    removed: function (id) {
+      output.push(['removed', id]);
+    }
+  });
+  test.length(output, 2);
+  // make order consistent
+  if (output.length === 2 && output[0][1] === doc3Id) {
+    tmp = output[0];
+    output[0] = output[1];
+    output[1] = tmp;
+  }
+  test.equal(output.shift(), ['added', doc1Id, {a: 'foo', c: 1}]);
+  test.equal(output.shift(), ['added', doc3Id, {a: 'foo', c: 2}]);
+
+  // Wait until we've processed the insert oplog entry, so that we are in a
+  // steady state (and we don't see the dropped docs because we are FETCHING).
+  var oplog = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+  oplog && oplog.waitUntilCaughtUp();
+
+  // Drop the collection. Should remove all docs.
+  runInFence(function () {
+    coll._dropCollection();
+  });
+
+  test.length(output, 2);
+  // make order consistent
+  if (output.length === 2 && output[0][1] === doc3Id) {
+    tmp = output[0];
+    output[0] = output[1];
+    output[1] = tmp;
+  }
+  test.equal(output.shift(), ['removed', doc1Id]);
+  test.equal(output.shift(), ['removed', doc3Id]);
+
+  // Put something back in.
+  var doc4Id;
+  runInFence(function () {
+    doc4Id = coll.insert({a: 'foo', c: 3});
+  });
+
+  test.length(output, 1);
+  test.equal(output.shift(), ['added', doc4Id, {a: 'foo', c: 3}]);
+
+  handle.stop();
+});
