@@ -3,9 +3,9 @@ HTML.toHTML = function (node, parentComponent) {
   if (node == null) {
     // null or undefined
     return '';
-  } else if (typeof node === 'string') {
+  } else if ((typeof node === 'string') || (typeof node === 'boolean') || (typeof node === 'number')) {
     // string; escape special chars
-    return HTML.escapeData(node);
+    return HTML.escapeData(String(node));
   } else if (node instanceof Array) {
     // array
     var parts = [];
@@ -95,7 +95,8 @@ HTML.toText = function (node, textMode, parentComponent) {
   if (node == null) {
     // null or undefined
     return '';
-  } else if (typeof node === 'string') {
+  } else if ((typeof node === 'string') || (typeof node === 'boolean') || (typeof node === 'number')) {
+    node = String(node);
     // string
     if (textMode === HTML.TEXTMODE.STRING) {
       return node;

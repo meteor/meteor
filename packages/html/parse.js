@@ -7,15 +7,10 @@ HTML.Special = function (value) {
   this.value = value;
 };
 HTML.Special.prototype.toJS = function (options) {
-  var newOptions = {};
-  for (var opt in options)
-    newOptions[opt] = options[opt];
-  newOptions.allowAllPrimitives = true;
-
   return HTML.Tag.prototype.toJS.call({tagName: 'Special',
                                        attrs: this.value,
                                        children: []},
-                                      newOptions);
+                                      options);
 };
 
 parseFragment = function (input, options) {
@@ -123,16 +118,16 @@ getContent = function (scanner, shouldStopFunc) {
       // is this an element with no close tag (a BR, HR, IMG, etc.) based
       // on its name?
       var isVoid = HTML.isVoidElement(tagName);
-      if (! isVoid) {
-        if (token.isSelfClosing)
-          scanner.fatal('Only certain elements like BR, HR, IMG, etc. are allowed to self-close');
+      if (token.isSelfClosing) {
+        if (! (isVoid || HTML.isKnownSVGElement(tagName)))
+          scanner.fatal('Only certain elements like BR, HR, IMG, etc. (and foreign elements like SVG) are allowed to self-close');
       }
 
       // may be null
       var attrs = parseAttrs(token.attrs);
 
       var tagFunc = HTML.getTag(tagName);
-      if (isVoid) {
+      if (isVoid || token.isSelfClosing) {
         items.push(attrs ? tagFunc(attrs) : tagFunc());
       } else {
 

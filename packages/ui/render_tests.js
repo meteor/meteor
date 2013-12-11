@@ -569,3 +569,32 @@ Tinytest.add("ui - render - reactive attributes 2", function (test) {
   test.equal(R1.numListeners(), 0);
   test.equal(R2.numListeners(), 0);
 });
+
+Tinytest.add("ui - render - SVG", function (test) {
+  if (! document.createElementNS) {
+    // IE 8
+    return;
+  }
+
+  var fillColor = ReactiveVar('red');
+
+  var content = DIV({'class': 'container'}, HTML.SVG(
+    {width: 100, height: 100},
+    HTML.CIRCLE({cx: 50, cy: 50, r: 40,
+                 stroke: 'black', 'stroke-width': 3,
+                 fill: function () { return fillColor.get(); }})));
+
+  var div = document.createElement("DIV");
+  materialize(content, div);
+
+  var circle = div.querySelector('.container > svg > circle');
+  test.equal(circle.getAttribute('fill'), 'red');
+
+  fillColor.set('green');
+  Deps.flush();
+  test.equal(circle.getAttribute('fill'), 'green');
+
+  test.equal(circle.nodeName, 'circle');
+  test.equal(circle.namespaceURI, "http://www.w3.org/2000/svg");
+  test.equal(circle.parentNode.namespaceURI, "http://www.w3.org/2000/svg");
+});

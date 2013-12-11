@@ -82,8 +82,8 @@ HTML.toJS = function (node, options) {
   if (node == null) {
     // null or undefined
     return 'null';
-  } else if (typeof node === 'string') {
-    // string
+  } else if ((typeof node === 'string') || (typeof node === 'boolean') || (typeof node === 'number')) {
+    // string (or something that will be rendered as a string)
     return toJSLiteral(node);
   } else if (node instanceof Array) {
     // array
@@ -94,9 +94,6 @@ HTML.toJS = function (node, options) {
   } else if (node.toJS) {
     // Tag or something else
     return node.toJS(options);
-  } else if ((options && options.allowAllPrimitives) &&
-             (typeof node === 'boolean' || typeof node === 'number')) {
-    return toJSLiteral(node);
   } else {
     throw new Error("Expected tag, string, array, null, undefined, or " +
                     "object with a toJS method; found: " + node);

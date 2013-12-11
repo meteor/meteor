@@ -270,7 +270,8 @@ var materialize = function (node, parent, before, parentComponent) {
   if (node == null) {
     // null or undefined.
     // do nothinge.
-  } else if (typeof node === 'string') {
+  } else if ((typeof node === 'string') || (typeof node === 'boolean') || (typeof node === 'number')) {
+    node = String(node);
     insert(document.createTextNode(node), parent, before);
   } else if (node instanceof Array) {
     for (var i = 0; i < node.length; i++)
@@ -298,7 +299,15 @@ var materialize = function (node, parent, before, parentComponent) {
     };
     insert(range, parent, before);
   } else if (node instanceof HTML.Tag) {
-    var elem = document.createElement(node.tagName);
+    var tagName = HTML.properCaseTagName(node.tagName);
+    var elem;
+    if (HTML.isKnownSVGElement(tagName) && (! HTML.isKnownElement(tagName)) &&
+        document.createElementNS) {
+      elem = document.createElementNS('http://www.w3.org/2000/svg', tagName);
+    } else {
+      elem = document.createElement(node.tagName);
+    }
+
     var rawAttrs = node.attrs;
     var children = node.children;
     if (node.tagName === 'TEXTAREA') {
