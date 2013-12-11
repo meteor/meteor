@@ -372,9 +372,16 @@ Spacebars.parse = function (input) {
     } else if (stache.type === 'BLOCKOPEN') {
       var blockName = stache.path.join(','); // for comparisons, errors
 
-      stache.content = HTML.parseFragment(scanner, {
+      var textMode = null;
+      if (position === HTML.TEMPLATE_TAG_POSITION.IN_RCDATA) {
+        textMode = HTML.TEXTMODE.RCDATA;
+      }
+      var parserOptions = {
         getSpecialTag: getSpecialTag,
-        shouldStop: isAtBlockCloseOrElse });
+        shouldStop: isAtBlockCloseOrElse,
+        textMode: textMode
+      };
+      stache.content = HTML.parseFragment(scanner, parserOptions);
 
       if (scanner.rest().slice(0, 2) !== '{{')
         scanner.fatal("Expected {{else}} or block close for " + blockName);
@@ -383,9 +390,7 @@ Spacebars.parse = function (input) {
 
       if (stache2.type === 'ELSE') {
         scanner.pos += stache2.charLength;
-        stache.elseContent = HTML.parseFragment(scanner, {
-          getSpecialTag: getSpecialTag,
-          shouldStop: isAtBlockCloseOrElse });
+        stache.elseContent = HTML.parseFragment(scanner, parserOptions);
 
         if (scanner.rest().slice(0, 2) !== '{{')
           scanner.fatal("Expected block close for " + blockName);
@@ -496,10 +501,17 @@ var optimize = function (tree) {
     // parent can optimize).  Otherwise returns a replacement for `node`
     // with optimized parts.
     if ((node == null) || (typeof node === 'string') ||
-        (node instanceof HTML.CharRef) || (node instanceof HTML.Comment)) {
+        (node instanceof HTML.CharRef) || (node instanceof HTML.Comment) ||
+        (node instanceof HTML.Raw)) {
       // not special; let parent decide how whether to optimize
       return null;
     } else if (node instanceof HTML.Tag) {
+
+      if (node.tagName === 'TEXTAREA') {
+        // optimizing into a TEXTAREA's RCDATA would require being a little
+        // more clever.
+        return node;
+      }
 
       var mustOptimize = false;
 
@@ -604,12 +616,12 @@ var codeGenInclusionArgs = function (tag) {
   if ('content' in tag) {
     args = (args || {});
     args.__content = (
-      'UI.block(' + Spacebars.compile(tag.content) + ')');
+      'UI.block(' + Spacebars.codeGen(tag.content) + ')');
   }
   if ('elseContent' in tag) {
     args = (args || {});
     args.__elseContent = (
-      'UI.block(' + Spacebars.compile(tag.elseContent) + ')');
+      'UI.block(' + Spacebars.codeGen(tag.elseContent) + ')');
   }
 
   // precalculate the number of positional args
@@ -906,15 +918,17 @@ var codeGenMustache = function (tag, mustacheType) {
 };
 
 Spacebars.compile = function (input, options) {
-  var tree;
+  var tree = Spacebars.parse(input);
+  return Spacebars.codeGen(tree, options);
+};
 
-  // Accept string or output of Spacebars.parse
-  if (typeof input === 'string')
-    tree = Spacebars.parse(input);
-  else
-    tree = input;
+Spacebars.codeGen = function (parseTree, options) {
+  var tree = parseTree;
 
-  tree = optimize(tree);
+  if (isTemplate)
+    // optimizing fragments would require being smarter about whether we are
+    // in a TEXTAREA, say.
+    tree = optimize(tree);
 
   tree = replaceSpecials(tree);
 
