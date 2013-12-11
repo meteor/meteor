@@ -186,11 +186,14 @@ HTML.EmitCode = function (value) {
   this.value = value;
 };
 
+HTML.isTagEnsured = function (t) {
+  return HTML.isKnownElement(t) || HTML.isKnownSVGElement(t);
+};
+
 (function () {
   for (var i = 0; i < HTML.knownElementNames.length; i++)
     HTML.ensureTag(HTML.knownElementNames[i]);
 
   for (var i = 0; i < HTML.knownSVGElementNames.length; i++)
     HTML.ensureTag(HTML.knownSVGElementNames[i]);
-
 })();
