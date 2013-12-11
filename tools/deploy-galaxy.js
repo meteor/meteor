@@ -20,7 +20,9 @@ var getPackage = _.once(function (context) {
 var authenticatedDDPConnect = function (url, context) {
   var Package = getPackage(context);
   return Package.livedata.DDP.connect(url, {
-    cookie: "GALAXY_AUTH=" + context.galaxy.authToken
+    headers: {
+      cookie: "GALAXY_AUTH=" + context.galaxy.authToken
+    }
   });
 };
 
