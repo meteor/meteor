@@ -551,7 +551,21 @@ var runWebAppServer = function () {
             "proxy",
             function (proxyService) {
               if (proxyService.providers.proxy) {
-                var proxyConf = configuration.proxy;
+                var proxyConf;
+                // XXX Figure out a per-job way to specify bind location
+                // (besides hardcoding the location for ADMIN_APP jobs).
+                if (process.env.ADMIN_APP) {
+                  proxyConf = {
+                    bindHost: process.env.GALAXY_NAME,
+                    bindPathPrefix: "/" +
+                      encodeURIComponent(
+                        process.env.GALAXY_APP
+                      ).replace(/\./g, '_'),
+                    requiresAuth: true
+                  };
+                } else {
+                  proxyConf = configuration.proxy;
+                }
                 Log("Attempting to bind to proxy at " +
                     proxyService.providers.proxy);
                 WebAppInternals.bindToProxy(_.extend({
