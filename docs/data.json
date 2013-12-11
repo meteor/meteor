@@ -2,7 +2,7 @@
     "project": {
         "name": "The meteor-roles API",
         "description": "The meteor-roles API: a role-based authorization package for Meteor",
-        "version": "1.0"
+        "version": "v1.1.1"
     },
     "files": {
         "roles/roles_client.js": {
@@ -55,7 +55,7 @@
             "namespaces": {},
             "tag": "module",
             "file": "roles/roles_common.js",
-            "line": 18,
+            "line": 17,
             "description": "Provides functions related to user authorization. Compatible with built-in Meteor accounts packages."
         }
     },
@@ -71,8 +71,8 @@
             "module": "Roles",
             "namespace": "",
             "file": "roles/roles_common.js",
-            "line": 18,
-            "description": "<p>Role-based authorization compatible with built-in Meteor accounts package.</p>\n<br />\n<p>Uses 'roles' collection to store existing roles with unique index on 'name' field.</p>\n<p>Adds a 'roles' field to user objects in 'users' collection when they are added to a given role.</p>",
+            "line": 17,
+            "description": "Role-based authorization compatible with built-in Meteor accounts package.\n\nStores user's current roles in a 'roles' field on the user object.",
             "is_constructor": 1
         }
     },
@@ -80,7 +80,7 @@
         {
             "file": "roles/roles_client.js",
             "line": 23,
-            "description": "Handlebars helper to check if current user is in at least one\nof the target roles.  For use in client-side templates.",
+            "description": "Handlebars helper to check if current user is in at least one\nof the target roles.  For use in client-side templates.\n\nNOTE: This helper does not currently support groups.",
             "itemtype": "method",
             "name": "isInRole",
             "params": [
@@ -106,7 +106,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 31,
+            "line": 34,
             "description": "Create a new role. Whitespace will be trimmed.",
             "itemtype": "method",
             "name": "createRole",
@@ -126,8 +126,8 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 64,
-            "description": "Delete an existing role.  Will throw \"Role in use\" error if any users \nare currently assigned to the target role.",
+            "line": 67,
+            "description": "Delete an existing role.  Will throw \"Role in use\" error if any users\nare currently assigned to the target role.",
             "itemtype": "method",
             "name": "deleteRole",
             "params": [
@@ -142,8 +142,11 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 85,
-            "description": "Add users to roles. Will create roles as needed.\n\nMakes 2 calls to database:\n 1. retrieve list of all existing roles\n 2. update users' roles",
+            "line": 91,
+            "description": "Add users to roles. Will create roles as needed.\n\nNOTE: Mixing grouped and non-grouped roles for the same user\n      is not supported and will throw an error.\n\nMakes 2 calls to database:\n 1. retrieve list of all existing roles\n 2. update users' roles",
+            "example": [
+                "\n    Roles.addUsersToRoles(userId, 'admin')\n    Roles.addUsersToRoles(userId, ['user','editor'])\n    Roles.addUsersToRoles(userId, ['view-secrets'], 'example.com')\n    Roles.addUsersToRoles(userId, ['perform-action'], 'example.org')\n    Roles.addUsersToRoles(userId, 'admin', '_global')"
+            ],
             "itemtype": "method",
             "name": "addUsersToRoles",
             "params": [
@@ -154,8 +157,14 @@
                 },
                 {
                     "name": "roles",
-                    "description": "name(s) of roles to add users to",
+                    "description": "name(s) of roles/permissions to add users to",
                     "type": "Array|String"
+                },
+                {
+                    "name": "group",
+                    "description": "Optional group name. If supplied, roles will be\n                        specific to that group.  \n                        The group name '_global' is special and provides a \n                        convenient way to assign blanket roles/permissions\n                        across all groups.  The roles/permissions in the \n                        '_global' group will be automatically included in \n                        checks for any group.",
+                    "type": "String",
+                    "optional": true
                 }
             ],
             "class": "Roles",
@@ -163,7 +172,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 151,
+            "line": 198,
             "description": "Remove users from roles",
             "itemtype": "method",
             "name": "removeUsersFromRoles",
@@ -177,6 +186,12 @@
                     "name": "roles",
                     "description": "name(s) of roles to add users to",
                     "type": "Array|String"
+                },
+                {
+                    "name": "group",
+                    "description": "Optional. Group name. If supplied, only that\n                        group will have roles removed.",
+                    "type": "String",
+                    "optional": true
                 }
             ],
             "class": "Roles",
@@ -184,8 +199,8 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 186,
-            "description": "Check if user is in role",
+            "line": 251,
+            "description": "Check if user has specified permissions/roles",
             "itemtype": "method",
             "name": "userIsInRole",
             "params": [
@@ -196,8 +211,14 @@
                 },
                 {
                     "name": "roles",
-                    "description": "Name of role or Array of roles to check against.  If array, will return true if user is in _any_ role.",
+                    "description": "Name of role/permission or Array of roles/permissions to check against.  If array, will return true if user is in _any_ role.",
                     "type": "String|Array"
+                },
+                {
+                    "name": "group",
+                    "description": "Optional. Name of group.  If supplied, limits check\n                        to just that group & the user's '_global' group, if \n                        any.",
+                    "type": "String",
+                    "optional": true
                 }
             ],
             "return": {
@@ -209,7 +230,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 226,
+            "line": 327,
             "description": "Retrieve users roles",
             "itemtype": "method",
             "name": "getRolesForUser",
@@ -218,10 +239,16 @@
                     "name": "user",
                     "description": "Id of user",
                     "type": "String"
+                },
+                {
+                    "name": "group",
+                    "description": "Optional name of group to restrict roles to.\n                        '_global' group will also be checked.",
+                    "type": "String",
+                    "optional": true
                 }
             ],
             "return": {
-                "description": "Array of user's roles, unsorted",
+                "description": "Array of user's roles, unsorted. undefined if user not found",
                 "type": "Array"
             },
             "class": "Roles",
@@ -229,7 +256,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 242,
+            "line": 354,
             "description": "Retrieve all existing roles",
             "itemtype": "method",
             "name": "getAllRoles",
@@ -242,15 +269,21 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 252,
+            "line": 364,
             "description": "Retrieve all users who are in target role",
             "itemtype": "method",
             "name": "getUsersInRole",
             "params": [
                 {
                     "name": "role",
-                    "description": "Name of role",
-                    "type": "String"
+                    "description": "Name of role/permission.  If array, users \n                           returned will have at least one of the roles\n                           specified but need not have _all_ roles.",
+                    "type": "Array|String"
+                },
+                {
+                    "name": "group",
+                    "description": "Optional name of group to restrict roles to\n                        '_global' group will also be checked.",
+                    "type": "String",
+                    "optional": true
                 }
             ],
             "return": {

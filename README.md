@@ -223,7 +223,7 @@ NOTE: Any sensitive data needs to be controlled server-side to prevent unwanted 
 
 ### Documentation
 
-Online API docs found here: http://alanning.github.com/meteor-roles/
+Online API docs found here: http://alanning.github.io/meteor-roles/classes/Roles.html
 
 API docs generated using [YUIDoc][2]
 

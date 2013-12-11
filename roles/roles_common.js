@@ -17,8 +17,7 @@ if (!Meteor.roles) {
 /**
  * Role-based authorization compatible with built-in Meteor accounts package.
  *
- * Uses 'roles' collection to store existing roles with unique index on 'name' field.
- * Adds a 'roles' field to user objects in 'users' collection when they are added to a given role.
+ * Stores user's current roles in a 'roles' field on the user object.
  *
  * @class Roles
  * @constructor

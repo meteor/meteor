@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>roles&#x2F;roles_common.js - The meteor-roles API</title>
-    <link rel="stylesheet" href="http:&#x2F;&#x2F;yui.yahooapis.com&#x2F;3.8.0&#x2F;build&#x2F;cssgrids&#x2F;cssgrids-min.css">
-    <link rel="stylesheet" href="..&#x2F;assets/vendor/prettify/prettify-min.css">
-    <link rel="stylesheet" href="..&#x2F;assets/css/main.css" id="site_styles">
-    <link rel="shortcut icon" type="image/png" href="..&#x2F;assets/favicon.png">
-    <script src="http:&#x2F;&#x2F;yui.yahooapis.com&#x2F;combo?3.8.0&#x2F;build&#x2F;yui&#x2F;yui-min.js"></script>
+    <title>roles/roles_common.js - The meteor-roles API</title>
+    <link rel="stylesheet" href="http://yui.yahooapis.com/3.9.1/build/cssgrids/cssgrids-min.css">
+    <link rel="stylesheet" href="../assets/vendor/prettify/prettify-min.css">
+    <link rel="stylesheet" href="../assets/css/main.css" id="site_styles">
+    <link rel="shortcut icon" type="image/png" href="../assets/favicon.png">
+    <script src="http://yui.yahooapis.com/combo?3.9.1/build/yui/yui-min.js"></script>
 </head>
 <body class="yui3-skin-sam">
 
@@ -15,11 +15,11 @@
     <div id="hd" class="yui3-g header">
         <div class="yui3-u-3-4">
             
-                <h1><img src="..&#x2F;assets/css/logo.png" title="The meteor-roles API"></h1>
+                <h1><img src="../assets/css/logo.png" title="The meteor-roles API"></h1>
             
         </div>
         <div class="yui3-u-1-4 version">
-            <em>API Docs for: 1.0</em>
+            <em>API Docs for: v1.1.1</em>
         </div>
     </div>
     <div id="bd" class="yui3-g">
@@ -41,15 +41,15 @@
         <div id="api-tabview-panel">
             <ul id="api-classes" class="apis classes">
             
-                <li><a href="..&#x2F;classes/Roles.html">Roles</a></li>
+                <li><a href="../classes/Roles.html">Roles</a></li>
             
             </ul>
 
             <ul id="api-modules" class="apis modules">
             
-                <li><a href="..&#x2F;modules/Helpers.html">Helpers</a></li>
+                <li><a href="../modules/Helpers.html">Helpers</a></li>
             
-                <li><a href="..&#x2F;modules/Roles.html">Roles</a></li>
+                <li><a href="../modules/Roles.html">Roles</a></li>
             
             </ul>
         </div>
@@ -86,66 +86,69 @@
             <div class="apidocs">
                 <div id="docs-main">
                     <div class="content">
-                        <h1 class="file-heading">File: roles&#x2F;roles_common.js</h1>
+                        <h1 class="file-heading">File: roles/roles_common.js</h1>
 
 <div class="file">
     <pre class="code prettyprint linenums">
 ;(function () {
 
-&#x2F;**
+/**
  * Provides functions related to user authorization. Compatible with built-in Meteor accounts packages.
  *
  * @module Roles
- *&#x2F;
+ */
 
-&#x2F;**
+/**
  * Roles collection documents consist only of an id and a role name.
  *   ex: { _id:&lt;uuid&gt;, name: &quot;admin&quot; }
- *&#x2F;
+ */
 if (!Meteor.roles) {
   Meteor.roles = new Meteor.Collection(&quot;roles&quot;)
 }
 
-
-&#x2F;**
- * &lt;p&gt;Role-based authorization compatible with built-in Meteor accounts package.&lt;&#x2F;p&gt;
- * &lt;br &#x2F;&gt;
- * &lt;p&gt;Uses &#x27;roles&#x27; collection to store existing roles with unique index on &#x27;name&#x27; field.&lt;&#x2F;p&gt;
- * &lt;p&gt;Adds a &#x27;roles&#x27; field to user objects in &#x27;users&#x27; collection when they are added to a given role.&lt;&#x2F;p&gt;
+/**
+ * Role-based authorization compatible with built-in Meteor accounts package.
+ *
+ * Stores user&#x27;s current roles in a &#x27;roles&#x27; field on the user object.
  *
  * @class Roles
  * @constructor
- *&#x2F;
+ */
 if (&#x27;undefined&#x27; === typeof Roles) {
   Roles = {}
 }
 
-&#x2F;**
+&quot;use strict&quot;;
+
+var mixingGroupAndNonGroupErrorMsg = &quot;Roles error: Can&#x27;t mix grouped and non-grouped roles for same user&quot;;
+
+
+/**
  * Create a new role. Whitespace will be trimmed.
  *
  * @method createRole
  * @param {String} role Name of role
  * @return {String} id of new role
- *&#x2F;
+ */
 Roles.createRole = function (role) {
   var id,
       match
 
-  if (!role 
-      || &#x27;string&#x27; !== typeof role 
+  if (!role
+      || &#x27;string&#x27; !== typeof role
       || role.trim().length === 0) {
     return
   }
 
   try {
-    id = Meteor.roles.insert({&#x27;name&#x27;:role.trim()})
+    id = Meteor.roles.insert({&#x27;name&#x27;: role.trim()})
     return id
   } catch (e) {
-    &#x2F;&#x2F; (from Meteor accounts-base package, insertUserDoc func)
-    &#x2F;&#x2F; XXX string parsing sucks, maybe
-    &#x2F;&#x2F; https:&#x2F;&#x2F;jira.mongodb.org&#x2F;browse&#x2F;SERVER-3069 will get fixed one day
+    // (from Meteor accounts-base package, insertUserDoc func)
+    // XXX string parsing sucks, maybe
+    // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
     if (e.name !== &#x27;MongoError&#x27;) throw e
-    match = e.err.match(&#x2F;^E11000 duplicate key error index: ([^ ]+)&#x2F;);
+    match = e.err.match(/^E11000 duplicate key error index: ([^ ]+)/)
     if (!match) throw e
     if (match[1].indexOf(&#x27;$name&#x27;) !== -1)
       throw new Meteor.Error(403, &quot;Role already exists.&quot;)
@@ -153,63 +156,86 @@ Roles.createRole = function (role) {
   }
 }
 
-&#x2F;** 
- * Delete an existing role.  Will throw &quot;Role in use&quot; error if any users 
+/**
+ * Delete an existing role.  Will throw &quot;Role in use&quot; error if any users
  * are currently assigned to the target role.
- * 
+ *
  * @method deleteRole
  * @param {String} role Name of role
- *&#x2F;
+ */
 Roles.deleteRole = function (role) {
-  if (!role) {
-    return
-  }
+  if (!role) return
 
-  var foundExistingUser = Meteor.users.findOne({roles: {$in: [role]}}, {_id: 1})
+  var foundExistingUser = Meteor.users.findOne(
+                            {roles: {$in: [role]}},
+                            {fields: {_id: 1}})
 
   if (foundExistingUser) {
     throw new Meteor.Error(403, &#x27;Role in use&#x27;)
   }
 
-  Meteor.roles.remove({ name: role })
+  var thisRole = Meteor.roles.findOne({name: role})
+  if (thisRole) {
+    Meteor.roles.remove({_id: thisRole._id})
+  }
 }
 
-&#x2F;**
+/**
  * Add users to roles. Will create roles as needed.
+ *
+ * NOTE: Mixing grouped and non-grouped roles for the same user
+ *       is not supported and will throw an error.
  *
  * Makes 2 calls to database:
  *  1. retrieve list of all existing roles
  *  2. update users&#x27; roles
  *
+ * @example
+ *     Roles.addUsersToRoles(userId, &#x27;admin&#x27;)
+ *     Roles.addUsersToRoles(userId, [&#x27;user&#x27;,&#x27;editor&#x27;])
+ *     Roles.addUsersToRoles(userId, [&#x27;view-secrets&#x27;], &#x27;example.com&#x27;)
+ *     Roles.addUsersToRoles(userId, [&#x27;perform-action&#x27;], &#x27;example.org&#x27;)
+ *     Roles.addUsersToRoles(userId, &#x27;admin&#x27;, &#x27;_global&#x27;)
+ *
  * @method addUsersToRoles
  * @param {Array|String} users id(s) of users to add to roles
- * @param {Array|String} roles name(s) of roles to add users to
- *&#x2F;
-Roles.addUsersToRoles = function (users, roles) {
+ * @param {Array|String} roles name(s) of roles/permissions to add users to
+ * @param {String} [group] Optional group name. If supplied, roles will be
+ *                         specific to that group.  
+ *                         The group name &#x27;_global&#x27; is special and provides a 
+ *                         convenient way to assign blanket roles/permissions
+ *                         across all groups.  The roles/permissions in the 
+ *                         &#x27;_global&#x27; group will be automatically included in 
+ *                         checks for any group.
+ */
+Roles.addUsersToRoles = function (users, roles, group) {
   if (!users) throw new Error (&quot;Missing &#x27;users&#x27; param&quot;)
   if (!roles) throw new Error (&quot;Missing &#x27;roles&#x27; param&quot;)
+  if (group &amp;&amp; &#x27;string&#x27; !== typeof group)
+    throw new Error (&quot;Invalid parameter &#x27;group&#x27;. Expected &#x27;string&#x27; type&quot;)
 
-  var existingRoles
+  var existingRoles,
+      query,
+      update
 
-  &#x2F;&#x2F; ensure arrays
+  // ensure arrays
   if (!_.isArray(users)) users = [users]
   if (!_.isArray(roles)) roles = [roles]
 
-  &#x2F;&#x2F; remove invalid roles
+  // remove invalid roles
   roles = _.reduce(roles, function (memo, role) {
-    if (role &amp;&amp;
-        &#x27;string&#x27; === typeof role &amp;&amp;
-        role.trim().length &gt; 0) {
+    if (role
+        &amp;&amp; &#x27;string&#x27; === typeof role
+        &amp;&amp; role.trim().length &gt; 0) {
       memo.push(role.trim())
     }
     return memo
   }, [])
 
-  if (roles.length === 0) {
+  if (roles.length === 0)
     return
-  }
 
-  &#x2F;&#x2F; ensure all roles exist in &#x27;roles&#x27; collection
+  // ensure all roles exist in &#x27;roles&#x27; collection
   existingRoles = _.reduce(Meteor.roles.find({}).fetch(), function (memo, role) {
     memo[role.name] = true
     return memo
@@ -220,138 +246,249 @@ Roles.addUsersToRoles = function (users, roles) {
     }
   })
 
-  &#x2F;&#x2F; update all users, adding to roles set
-  if (Meteor.isClient) {
-    _.each(users, function (user) {
-      &#x2F;&#x2F; Iterate over each user to fulfill Meteor&#x27;s &#x27;one update per ID&#x27; policy
-      Meteor.users.update(
-        {       _id: user },
-        { $addToSet: { roles: { $each: roles } } },
-        {     multi: true }
-      )
-    })
+  // update all users, adding to roles set
+  
+  if (group) {
+    // roles is a key/value dict object
+    update = {$addToSet: {}}
+    update.$addToSet[&#x27;roles.&#x27; + group] = {$each: roles}
   } else {
-    &#x2F;&#x2F; On the server we can leverage MongoDB&#x27;s $in operator for performance
-    Meteor.users.update(
-      {       _id: { $in: users } },
-      { $addToSet: { roles: { $each: roles } } },
-      {     multi: true }
-    )
+    // assume roles is an array of strings
+    update = {$addToSet: {roles: {$each: roles}}}
+  }
+
+  try {
+    if (Meteor.isClient) {
+      // On client, iterate over each user to fulfill Meteor&#x27;s 
+      // &#x27;one update per ID&#x27; policy
+      _.each(users, function (user) {
+        Meteor.users.update({_id: user}, update)
+      })
+    } else {
+      // On the server we can use MongoDB&#x27;s $in operator for 
+      // better performance
+      Meteor.users.update(
+        {_id: {$in: users}},
+        update,
+        {multi: true})
+    }
+  }
+  catch (ex) {
+    var addNonGroupToGroupedRolesMsg = &#x27;Cannot apply $addToSet modifier to non-array&#x27;,
+        addGrouped2NonGroupedMsg = &quot;can&#x27;t append to array using string field name&quot;
+
+    if (ex.name === &#x27;MongoError&#x27; &amp;&amp;
+        (ex.err === addNonGroupToGroupedRolesMsg ||
+         ex.err.substring(0, 45) === addGrouped2NonGroupedMsg)) {
+      throw new Error (mixingGroupAndNonGroupErrorMsg)
+    }
+
+    throw ex
   }
 }
 
-&#x2F;**
+/**
  * Remove users from roles
  *
  * @method removeUsersFromRoles
  * @param {Array|String} users id(s) of users to add to roles
  * @param {Array|String} roles name(s) of roles to add users to
- *&#x2F;
-Roles.removeUsersFromRoles = function (users, roles) {
+ * @param {String} [group] Optional. Group name. If supplied, only that
+ *                         group will have roles removed.
+ */
+Roles.removeUsersFromRoles = function (users, roles, group) {
+  var update
+
   if (!users) throw new Error (&quot;Missing &#x27;users&#x27; param&quot;)
   if (!roles) throw new Error (&quot;Missing &#x27;roles&#x27; param&quot;)
+  if (group &amp;&amp; &#x27;string&#x27; !== typeof group) 
+    throw new Error (&quot;Invalid &#x27;group&#x27; param&quot;)
 
-  &#x2F;&#x2F; ensure arrays
+  // ensure arrays
   if (!_.isArray(users)) users = [users]
   if (!_.isArray(roles)) roles = [roles]
 
-  &#x2F;&#x2F; update all users, remove from roles set
-  if (Meteor.isClient) {
-    &#x2F;&#x2F; Iterate over each user to fulfill Meteor&#x27;s &#x27;one update per ID&#x27; policy
-    _.each(users, function (user) {
-      Meteor.users.update(
-        {      _id: user },
-        { $pullAll: { roles: roles } },
-        {    multi: true}
-      )
-    })
+  if (group) {
+    update = {$pullAll: {}}
+    update.$pullAll[&#x27;roles.&#x27;+group] = roles
   } else {
-    &#x2F;&#x2F; On the server we can leverage MongoDB&#x27;s $in operator for performance
-    Meteor.users.update(
-      {      _id: {   $in: users } },
-      { $pullAll: { roles: roles } },
-      {    multi: true}
-    )
+    update = {$pullAll: {roles: roles}}
+  }
+
+  // update all users, remove from roles set
+  
+  try {
+    if (Meteor.isClient) {
+      // Iterate over each user to fulfill Meteor&#x27;s &#x27;one update per ID&#x27; policy
+      _.each(users, function (user) {
+        Meteor.users.update({_id:user}, update)
+      })
+    } else {
+      // On the server we can leverage MongoDB&#x27;s $in operator for performance
+      Meteor.users.update({_id:{$in:users}}, update, {multi: true})
+    }
+  }
+  catch (ex) {
+    var removeNonGroupedRoleFromGroupMsg = &#x27;Cannot apply $pull/$pullAll modifier to non-array&#x27; 
+
+    if (ex.name === &#x27;MongoError&#x27; &amp;&amp;
+        ex.err === removeNonGroupedRoleFromGroupMsg) {
+      throw new Error (mixingGroupAndNonGroupErrorMsg)
+    }
+
+    throw ex
   }
 }
 
-&#x2F;**
- * Check if user is in role
+/**
+ * Check if user has specified permissions/roles
  *
  * @method userIsInRole
  * @param {String|Object} user Id of user or actual user object
- * @param {String|Array} roles Name of role or Array of roles to check against.  If array, will return true if user is in _any_ role.
+ * @param {String|Array} roles Name of role/permission or Array of roles/permissions to check against.  If array, will return true if user is in _any_ role.
+ * @param {String} [group] Optional. Name of group.  If supplied, limits check
+ *                         to just that group &amp; the user&#x27;s &#x27;_global&#x27; group, if 
+ *                         any.
  * @return {Boolean} true if user is in _any_ of the target roles
- *&#x2F;
-Roles.userIsInRole = function (user, roles) {
+ */
+Roles.userIsInRole = function (user, roles, group) {
   var id,
-      userRoles
-    
-  &#x2F;&#x2F; ensure array to simplify code
+      userRoles,
+      query,
+      groupQuery,
+      found = false
+
+  // ensure array to simplify code
   if (!_.isArray(roles)) {
     roles = [roles]
   }
+
+  if (!user) return false
+  if (group &amp;&amp; &#x27;string&#x27; !== typeof group) return false
   
-  if (!user) {
-    return false
-  } else if (&#x27;object&#x27; === typeof user) {
+  if (&#x27;object&#x27; === typeof user) {
     userRoles = user.roles
     if (_.isArray(userRoles)) {
       return _.some(roles, function (role) {
         return _.contains(userRoles, role)
       })
+    } else if (&#x27;object&#x27; === typeof userRoles) {
+      // roles field is dictionary of groups
+      found = _.isArray(userRoles[group]) &amp;&amp; _.some(roles, function (role) {
+        return _.contains(userRoles[group], role)
+      })
+      if (!found) {
+        // not found in regular group.  check &#x27;_global&#x27; group, if it exists
+        found = _.isArray(userRoles._global) &amp;&amp; _.some(roles, function (role) {
+          return _.contains(userRoles[group], role)
+        })
+      }
+      return found
     }
-    &#x2F;&#x2F; missing roles field, try going direct via id
+
+    // missing roles field, try going direct via id
     id = user._id
   } else if (&#x27;string&#x27; === typeof user) {
     id = user
-  } 
+  }
 
   if (!id) return false
 
-  return Meteor.users.findOne(
-    { _id: id, roles: { $in: roles } },
-    { _id: 1 }
-  )
+  if (group) {
+    // structure of group query, including _global
+    //   {_id: id, 
+    //    $or: [
+    //      {&#x27;roles.group1&#x27;:{$in: [&#x27;admin&#x27;]}},
+    //      {&#x27;roles._global&#x27;:{$in: [&#x27;admin&#x27;]}}
+    //    ]}
+    
+    groupQuery = {}
+    groupQuery[&#x27;roles.&#x27;+group] = {$in: roles}
+
+    query = {_id: id, $or: []}
+    query.$or.push(groupQuery)
+    query.$or.push({&#x27;roles._global&#x27;: {$in: roles}})
+  } else {
+    query = {_id: id, roles: {$in: roles}}
+  }
+
+  found = Meteor.users.findOne(query, {fields: {_id: 1}})
+  return found ? true : false
 }
 
-&#x2F;**
+/**
  * Retrieve users roles
  *
  * @method getRolesForUser
  * @param {String} user Id of user
- * @return {Array} Array of user&#x27;s roles, unsorted
- *&#x2F;
-Roles.getRolesForUser = function (user) {
-  var user = Meteor.users.findOne(
-    { _id: user},
-    { _id: 0, roles: 1}
-  )
-  
-  return user ? user.roles : undefined
+ * @param {String} [group] Optional name of group to restrict roles to.
+ *                         &#x27;_global&#x27; group will also be checked.
+ * @return {Array} Array of user&#x27;s roles, unsorted. undefined if user not found
+ */
+Roles.getRolesForUser = function (user, group) {
+  var user
+
+  if (!user) return
+  if (group &amp;&amp; &#x27;string&#x27; !== typeof group) return
+
+  user = Meteor.users.findOne(
+           {_id: user},
+           {fields: {roles: 1}})
+
+  if (!user || !user.roles) return
+
+  if (group)
+    return _.union(user.roles[group], user.roles._global || [])
+
+  return user.roles
 }
 
-&#x2F;**
+/**
  * Retrieve all existing roles
  *
  * @method getAllRoles
  * @return {Cursor} cursor of existing roles
- *&#x2F;
+ */
 Roles.getAllRoles = function () {
-  return Meteor.roles.find({}, { sort: { name: 1 } })
+  return Meteor.roles.find({}, {sort: {name: 1}})
 }
 
-&#x2F;**
+/**
  * Retrieve all users who are in target role
  *
  * @method getUsersInRole
- * @param {String} role Name of role
+ * @param {Array|String} role Name of role/permission.  If array, users 
+ *                            returned will have at least one of the roles
+ *                            specified but need not have _all_ roles.
+ * @param {String} [group] Optional name of group to restrict roles to
+ *                         &#x27;_global&#x27; group will also be checked.
  * @return {Cursor} cursor of users in role
- *&#x2F;
-Roles.getUsersInRole = function (role) {
-  return Meteor.users.find(
-    { roles: { $in: [role] } }
-  )
+ */
+Roles.getUsersInRole = function (role, group) {
+  var query,
+      roles = role,
+      groupQuery
+
+  // ensure array to simplify query logic
+  if (!_.isArray(roles)) roles = [roles]
+  
+  if (group) {
+    // structure of group query, including _global
+    //   {$or: [
+    //      {&#x27;roles.group1&#x27;:{$in: [&#x27;admin&#x27;]}},
+    //      {&#x27;roles._global&#x27;:{$in: [&#x27;admin&#x27;]}}
+    //    ]}
+    groupQuery = {}
+    groupQuery[&#x27;roles.&#x27;+group] = {$in: roles}
+
+    query = {$or: []}
+    query.$or.push(groupQuery)
+    query.$or.push({&#x27;roles._global&#x27;: {$in: roles}})
+  } else {
+    query = { roles: { $in: roles } }
+  }
+
+  return Meteor.users.find(query)
 }
 
 }());
@@ -365,13 +502,13 @@ Roles.getUsersInRole = function (role) {
         </div>
     </div>
 </div>
-<script src="..&#x2F;assets/vendor/prettify/prettify-min.js"></script>
+<script src="../assets/vendor/prettify/prettify-min.js"></script>
 <script>prettyPrint();</script>
-<script src="..&#x2F;assets/js/yui-prettify.js"></script>
-<script src="..&#x2F;assets/../api.js"></script>
-<script src="..&#x2F;assets/js/api-filter.js"></script>
-<script src="..&#x2F;assets/js/api-list.js"></script>
-<script src="..&#x2F;assets/js/api-search.js"></script>
-<script src="..&#x2F;assets/js/apidocs.js"></script>
+<script src="../assets/js/yui-prettify.js"></script>
+<script src="../assets/../api.js"></script>
+<script src="../assets/js/api-filter.js"></script>
+<script src="../assets/js/api-list.js"></script>
+<script src="../assets/js/api-search.js"></script>
+<script src="../assets/js/apidocs.js"></script>
 </body>
 </html>
