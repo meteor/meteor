@@ -1,5 +1,11 @@
 ## vNEXT
 
+This version of Meteor contains a patch for a bug in Node 0.10 which most
+commonly affects websockets. The patch is against Node v0.10.22. We strongly
+recommend using this precise version of Node in production so that the patch
+will be applied. If you use a newer version of Node with this version of Meteor,
+Meteor will not apply the patch and will instead disable websockets.
+
 * Rework hot code push. The new `autoupdate` package drives automatic
   reloads on update using standard DDP messages instead of a hardcoded
   message at DDP startup. Now the hot code push only triggers when
@@ -30,6 +36,7 @@
 
 * Upgraded dependencies:
   * SockJS server from 0.3.7 to 0.3.8
+  * Node from 0.10.21 to 0.10.22
 
 Patches contributed by GitHub users awwx, mcbain, rzymek.
 
