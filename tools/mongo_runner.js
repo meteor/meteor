@@ -206,6 +206,7 @@ exports.launchMongo = function (options) {
         '--nohttpinterface',
         '--port', options.port,
         '--dbpath', dbPath,
+        '--oplogSize', '8',
         '--replSet', replSetName
       ]);
 
