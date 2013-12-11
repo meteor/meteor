@@ -591,11 +591,6 @@ exports.registerOrLogIn = function (context) {
 "Check your mail! We've sent you a link. Click it, pick a password,\n" +
 "and then come back here to deploy your app.\n");
 
-    // The link in the registration email will include our session id,
-    // which was sent in the METEOR_SESSION cookie when we did the
-    // call to /register. When the user clicks the link and registers,
-    // credentials will be issued to us which we can pick up over DDP.
-
     var unipackage = require('./unipackage.js');
     var Package = unipackage.load({
       library: context.library,
