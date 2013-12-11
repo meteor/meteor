@@ -205,6 +205,7 @@ exports.deploy = function (options) {
   // fails (we already know the app exists.)
   var info = prettyCall(galaxy, 'beginUploadStar', [options.app, bundleResult.starManifest]);
 
+  console.log("StarId: ", info.id);
   // Upload
   // XXX copied from galaxy/tool/galaxy.js
   var fileSize = fs.statSync(starball).size;

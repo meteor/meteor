@@ -69,30 +69,36 @@ try {
 
 AppConfig.getAppConfig = function () {
   if (!subFuture.isResolved() && staticAppConfig) {
+    console.log("STATIC APP CONFIG");
     return staticAppConfig;
   }
   subFuture.wait();
   var myApp = OneAppApps.findOne(process.env.GALAXY_APP);
-  if (myApp)
-    return myApp.config;
-  throw new Error("there is no app config for this app");
+  if (!myApp) {
+    throw new Error("there is no app config for this app");
+  }
+  var config = myApp.config;
+  config.version = myApp.currentStar;
+  return config;
 };
 
 AppConfig.configurePackage = function (packageName, configure) {
   var appConfig = AppConfig.getAppConfig(); // Will either be based in the env var,
                                          // or wait for galaxy to connect.
   var lastConfig =
-        (appConfig && appConfig.packages && appConfig.packages[packageName]) || {};
+        (appConfig && appConfig.packages &&
+         appConfig.packages[packageName]) || {};
+
   // Always call the configure callback "soon" even if the initial configuration
   // is empty (synchronously, though deferred would be OK).
   // XXX make sure that all callers of configurePackage deal well with multiple
   // callback invocations!  eg, email does not
-  configure(lastConfig);
+  configure(_.extend({version: appConfig.version}, lastConfig));
   var configureIfDifferent = function (app) {
-    if (!EJSON.equals(app.config && app.config.packages && app.config.packages[packageName],
+    if (!EJSON.equals(app.config && app.config.packages && app.config.packages[packageName] && app.config.version,
                       lastConfig)) {
       lastConfig = app.config.packages[packageName];
-      configure(lastConfig);
+      configure(_.extend({version: appConfig.version}, lastConfig));
     }
   };
   var subHandle;

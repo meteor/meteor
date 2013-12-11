@@ -565,8 +565,8 @@ var runWebAppServer = function () {
               } else {
                 proxyConf = configuration.proxy;
               }
+              proxyConf.version = configuration.version;
               Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
-              console.log(proxyConf);
               WebAppInternals.bindToProxy(_.extend({
                 proxyEndpoint: proxyService.providers.proxy
               }, proxyConf), proxyServiceName);
@@ -661,10 +661,13 @@ WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
     };
   };
 
+  var version = (proxyConfig.version) ? proxyConfig.version : "";
+
   proxy.call('bindDdp', {
     pid: pid,
     bindTo: ddpBindTo,
     proxyTo: {
+      tags: [version],
       host: host,
       port: port,
       pathPrefix: bindPathPrefix + '/websocket'
@@ -678,6 +681,7 @@ WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
       pathPrefix: bindPathPrefix
     },
     proxyTo: {
+      tags: [version],
       host: host,
       port: port,
       pathPrefix: bindPathPrefix
@@ -693,6 +697,7 @@ WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
         ssl: true
       },
       proxyTo: {
+        tags: [version],
         host: host,
         port: port,
         pathPrefix: bindPathPrefix
