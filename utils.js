@@ -26,6 +26,24 @@ HTML.escapeData = function (str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 };
 
+var svgCamelCaseAttributes = 'attributeName attributeType baseFrequency baseProfile calcMode clipPathUnits contentScriptType contentStyleType diffuseConstant edgeMode externalResourcesRequired filterRes filterUnits glyphRef glyphRef gradientTransform gradientTransform gradientUnits gradientUnits kernelMatrix kernelUnitLength kernelUnitLength kernelUnitLength keyPoints keySplines keyTimes lengthAdjust limitingConeAngle markerHeight markerUnits markerWidth maskContentUnits maskUnits numOctaves pathLength patternContentUnits patternTransform patternUnits pointsAtX pointsAtY pointsAtZ preserveAlpha preserveAspectRatio primitiveUnits refX refY repeatCount repeatDur requiredExtensions requiredFeatures specularConstant specularExponent specularExponent spreadMethod spreadMethod startOffset stdDeviation stitchTiles surfaceScale surfaceScale systemLanguage tableValues targetX targetY textLength textLength viewBox viewTarget xChannelSelector yChannelSelector zoomAndPan'.split(' ');
+var svgCamelCaseElements = 'altGlyph altGlyphDef altGlyphItem animateColor animateMotion animateTransform clipPath feBlend feColorMatrix feComponentTransfer feComposite feConvolveMatrix feDiffuseLighting feDisplacementMap feDistantLight feFlood feFuncA feFuncB feFuncG feFuncR feGaussianBlur feImage feMerge feMergeNode feMorphology feOffset fePointLight feSpecularLighting feSpotLight feTile feTurbulence foreignObject glyphRef linearGradient radialGradient textPath vkern'.split(' ');
+var svgCamelCaseAttributesMap = (function (map) {
+  for (var i = 0; i < svgCamelCaseAttributes.length; i++) {
+    var a = svgCamelCaseAttributes[i];
+    map[HTML.asciiLowerCase(a)] = a;
+  }
+  return map;
+})({});
+var svgCamelCaseElementsMap = (function (map) {
+  for (var i = 0; i < svgCamelCaseElements.length; i++) {
+    var e = svgCamelCaseElements[i];
+    map[HTML.asciiLowerCase(e)] = e;
+  }
+  return map;
+})({});
+
+
 // Take a tag name in any case and make it the proper case for HTML.
 //
 // Modern browsers let you embed SVG in HTML, but SVG elements are special
@@ -35,14 +53,16 @@ HTML.escapeData = function (str) {
 // so if you write `<svg viewbox="...">` you actually get a `"viewBox"`
 // attribute.
 HTML.properCaseTagName = function (name) {
-  // XXX TODO: SVG camelCase
-  return HTML.asciiLowerCase(name);
+  var lowered = HTML.asciiLowerCase(name);
+  return svgCamelCaseElementsMap.hasOwnProperty(lowered) ?
+    svgCamelCaseElementsMap[lowered] : lowered;
 };
 
 // See docs for properCaseTagName.
 HTML.properCaseAttributeName = function (name) {
-  // XXX TODO: SVG camelCase
-  return HTML.asciiLowerCase(name);
+  var lowered = HTML.asciiLowerCase(name);
+  return svgCamelCaseAttributesMap.hasOwnProperty(lowered) ?
+    svgCamelCaseAttributesMap[lowered] : lowered;
 };
 
 // The HTML spec and the DOM API (in particular `setAttribute`) have different
@@ -68,23 +88,19 @@ HTML.knownElementNames = 'a abbr acronym address applet area b base basefont bdo
 
 HTML.voidElementNames = 'area base br col command embed hr img input keygen link meta param source track wbr'.split(' ');
 
+HTML.knownSVGElementNames = 'a altGlyph altGlyphDef altGlyphItem animate animateColor animateMotion animateTransform circle clipPath color-profile cursor defs desc ellipse feBlend feColorMatrix feComponentTransfer feComposite feConvolveMatrix feDiffuseLighting feDisplacementMap feDistantLight feFlood feFuncA feFuncB feFuncG feFuncR feGaussianBlur feImage feMerge feMergeNode feMorphology feOffset fePointLight feSpecularLighting feSpotLight feTile feTurbulence filter font font-face font-face-format font-face-name font-face-src font-face-uri foreignObject g glyph glyphRef hkern image line linearGradient marker mask metadata missing-glyph path pattern polygon polyline radialGradient rect script set stop style svg switch symbol text textPath title tref tspan use view vkern'.split(' ');
+
 var YES = {yes:true};
-
-var voidElementSet = (function (set) {
-  var voidElementNames = HTML.voidElementNames;
-  for (var i = 0; i < voidElementNames.length; i++)
-    set[voidElementNames[i]] = YES;
-
+var makeSet = function (array) {
+  var set = {};
+  for (var i = 0; i < array.length; i++)
+    set[array[i]] = YES;
   return set;
-})({});
+};
 
-var knownElementSet = (function (set) {
-  var knownElementNames = HTML.knownElementNames;
-  for (var i = 0; i < knownElementNames.length; i++)
-    set[knownElementNames[i]] = YES;
-
-  return set;
-})({});
+var voidElementSet = makeSet(HTML.voidElementNames);
+var knownElementSet = makeSet(HTML.knownElementNames);
+var knownSVGElementSet = makeSet(HTML.knownSVGElementNames);
 
 HTML.isKnownElement = function (name) {
   return knownElementSet[HTML.properCaseTagName(name)] === YES;
@@ -92,4 +108,8 @@ HTML.isKnownElement = function (name) {
 
 HTML.isVoidElement = function (name) {
   return voidElementSet[HTML.properCaseTagName(name)] === YES;
+};
+
+HTML.isKnownSVGElement = function (name) {
+  return knownSVGElementSet[HTML.properCaseTagName(name)] === YES;
 };

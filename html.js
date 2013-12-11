@@ -187,7 +187,10 @@ HTML.EmitCode = function (value) {
 };
 
 (function () {
-  for (var i = 0; i < HTML.knownElementNames.length; i++) {
+  for (var i = 0; i < HTML.knownElementNames.length; i++)
     HTML.ensureTag(HTML.knownElementNames[i]);
-  }
+
+  for (var i = 0; i < HTML.knownSVGElementNames.length; i++)
+    HTML.ensureTag(HTML.knownSVGElementNames[i]);
+
 })();
