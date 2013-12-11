@@ -40,7 +40,16 @@ parseFragment = function (input, options) {
   // function (scanner) -> boolean
   var shouldStop = options && options.shouldStop;
 
-  var result = getContent(scanner, shouldStop);
+  var result;
+  if (options && options.textMode) {
+    if (options.textMode === HTML.TEXTMODE.RCDATA) {
+      result = getRCData(scanner, null, shouldStop);
+    } else {
+      throw new Error("Unsupported textMode: " + options.textMode);
+    }
+  } else {
+    result = getContent(scanner, shouldStop);
+  }
   if ((! shouldStop) && (! scanner.isEOF()))
     scanner.fatal("Expected EOF");
 
@@ -187,7 +196,7 @@ getRCData = function (scanner, tagName, shouldStopFunc) {
 
   while (! scanner.isEOF()) {
     // break at appropriate end tag
-    if (isLookingAtEndTag(scanner, tagName))
+    if (tagName && isLookingAtEndTag(scanner, tagName))
       break;
 
     if (shouldStopFunc && shouldStopFunc(scanner))
@@ -199,7 +208,7 @@ getRCData = function (scanner, tagName, shouldStopFunc) {
       continue;
     }
 
-    var token = getHTMLToken(scanner);
+    var token = getHTMLToken(scanner, 'rcdata');
     if (! token)
       // tokenizer reached EOF on its own, e.g. while scanning
       // template comments like `{{! foo}}`.

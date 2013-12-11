@@ -195,7 +195,7 @@ var getChars = makeRegexMatcher(/^[^&<\u0000][^&<\u0000{]*/);
 // consumes characters and emits nothing (e.g. in the case of template
 // comments), we may go from not-at-EOF to at-EOF and return `null`,
 // while otherwise we always find some token to return.
-getHTMLToken = function (scanner) {
+getHTMLToken = function (scanner, dataMode) {
   var result = null;
   if (scanner.getSpecialTag) {
     var lastPos = -1;
@@ -208,7 +208,10 @@ getHTMLToken = function (scanner) {
     // the value must be an object.  We wrap it in a Special token.
     while ((! result) && scanner.pos > lastPos) {
       lastPos = scanner.pos;
-      result = scanner.getSpecialTag(scanner, TEMPLATE_TAG_POSITION.ELEMENT);
+      result = scanner.getSpecialTag(
+        scanner,
+        dataMode === 'rcdata' ? TEMPLATE_TAG_POSITION.IN_RCDATA :
+          TEMPLATE_TAG_POSITION.ELEMENT);
     }
     if (result)
       return { t: 'Special', v: result };
@@ -452,7 +455,8 @@ getTagToken = function (scanner) {
 TEMPLATE_TAG_POSITION = {
   ELEMENT: 1,
   IN_START_TAG: 2,
-  IN_ATTRIBUTE: 3
+  IN_ATTRIBUTE: 3,
+  IN_RCDATA: 4
 };
 
 // tagName is lowercase
