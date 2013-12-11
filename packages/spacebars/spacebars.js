@@ -507,9 +507,10 @@ var optimize = function (tree) {
       return null;
     } else if (node instanceof HTML.Tag) {
 
-      if (node.tagName === 'TEXTAREA') {
+      if (node.tagName === 'TEXTAREA' || (! HTML.isKnownElement(node.tagName))) {
         // optimizing into a TEXTAREA's RCDATA would require being a little
-        // more clever.
+        // more clever.  foreign elements like SVG can't be stringified for
+        // innerHTML.
         return node;
       }
 
@@ -935,18 +936,19 @@ Spacebars.compile = function (input, options) {
 };
 
 Spacebars.codeGen = function (parseTree, options) {
-  var tree = parseTree;
-
-  if (isTemplate)
-    // optimizing fragments would require being smarter about whether we are
-    // in a TEXTAREA, say.
-    tree = optimize(tree);
-
-  tree = replaceSpecials(tree);
-
   // is this a template, rather than a block passed to
   // a block helper, say
   var isTemplate = (options && options.isTemplate);
+
+  var tree = parseTree;
+
+  if (isTemplate) {
+    // optimizing fragments would require being smarter about whether we are
+    // in a TEXTAREA, say.
+    tree = optimize(tree);
+  }
+
+  tree = replaceSpecials(tree);
 
   var code = '(function () { var self = this; ';
   if (isTemplate) {

@@ -44,7 +44,7 @@ HTML.Tag.prototype.toJS = function (options) {
   }
 
   var tagSymbol = this.tagName;
-  if ((this instanceof HTML.Tag) && ! HTML.isKnownElement(tagSymbol))
+  if ((this instanceof HTML.Tag) && ! HTML.isTagEnsured(tagSymbol))
     tagSymbol = 'HTML.getTag(' + toJSLiteral(tagSymbol) + ')';
   else
     tagSymbol = 'HTML.' + tagSymbol;
