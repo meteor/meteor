@@ -337,9 +337,11 @@ _.extend(OplogObserveDriver.prototype, {
     // The query we run is almost the same as the cursor we are observing, with
     // a few changes. We need to read all the fields that are relevant to the
     // selector, not just the fields we are going to publish (that's the
-    // "shared" projection).
+    // "shared" projection). And we don't want to apply any transform in the
+    // cursor, because observeChanges shouldn't use the transform.
     var options = _.clone(self._cursorDescription.options);
     options.fields = self._sharedProjection;
+    delete options.transform;
     // We are NOT deep cloning fields or selector here, which should be OK.
     var description = new CursorDescription(
       self._cursorDescription.collectionName,

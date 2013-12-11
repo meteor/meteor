@@ -1939,3 +1939,43 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - include selector field
 
   handle.stop();
 });
+
+Meteor.isServer && Tinytest.add("mongo-livedata - oplog - transform", function (test) {
+  var collName = "oplogTransform" + Random.id();
+  var coll = new Meteor.Collection(collName);
+
+  var docId = coll.insert({a: 25, x: {x: 5, y: 9}});
+  test.isTrue(docId);
+
+  // Wait until we've processed the insert oplog entry. (If the insert shows up
+  // during the observeChanges, the bug in question is not consistently
+  // reproduced.) We don't have to do this for polling observe (eg
+  // --disable-oplog).
+  var oplog = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+  oplog && oplog.waitUntilCaughtUp();
+
+  var cursor = coll.find({}, {transform: function (doc) {
+    return doc.x;
+  }});
+
+  var changesOutput = [];
+  var changesHandle = cursor.observeChanges({
+    added: function (id, fields) {
+      changesOutput.push(['added', fields]);
+    }
+  });
+  // We should get untransformed fields via observeChanges.
+  test.length(changesOutput, 1);
+  test.equal(changesOutput.shift(), ['added', {a: 25, x: {x: 5, y: 9}}]);
+  changesHandle.stop();
+
+  var transformedOutput = [];
+  var transformedHandle = cursor.observe({
+    added: function (doc) {
+      transformedOutput.push(['added', doc]);
+    }
+  });
+  test.length(transformedOutput, 1);
+  test.equal(transformedOutput.shift(), ['added', {x: 5, y: 9}]);
+  transformedHandle.stop();
+});
