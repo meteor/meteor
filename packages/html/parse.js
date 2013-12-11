@@ -282,7 +282,8 @@ var parseAttrs = function (attrs) {
       var outValue = (outParts.length === 0 ? '' :
                       (outParts.length === 1 ? outParts[0] :
                        outParts));
-      result[k] = outValue;
+      var properKey = HTML.properCaseAttributeName(k);
+      result[properKey] = outValue;
     }
   }
 
