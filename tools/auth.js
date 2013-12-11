@@ -54,6 +54,27 @@ var writeSession = function (data) {
   }
 };
 
+// types:
+// - "meteor-account": a login to your Meteor Account
+// - "galaxy": a login to a Galaxy
+var ensureSessionType = function (sessionData, domain, type) {
+  if (typeof (sessionData.sessions) !== "object")
+    sessionData.sessions = {};
+  if (typeof (sessionData.sessions[domain]) !== "object")
+    sessionData.sessions[domain] = {};
+
+  var existingType = sessionData.sessions[domain].type;
+  if (! existingType)
+    sessionData.sessions[domain].type = type;
+  else if (existingType !== type) {
+    // Blow away whatever was there. We lose pendingRevokes but that's
+    // OK since this should never happen in normal operation. (It
+    // would happen if the Meteor Accounts server mode somewhere else
+    // and a Galaxy was deployed at its old address, for example.)
+    sessionData.sessions[domain] = { type : type };
+  }
+}
+
 var getSessionKey = function (sessionData, domain, key) {
   return (sessionData.sessions &&
           sessionData.sessions[domain] &&
@@ -116,6 +137,8 @@ var logOutSession = function (data) {
 //
 // options:
 //  - timeout: request timeout in milliseconds
+//  - firstTry: cosmetic. set to true if we recently logged out a
+//    session. just changes the error message.
 var tryRevokeOldTokens = function (options) {
   options = _.extend({
     timeout: 5000
@@ -129,10 +152,14 @@ var tryRevokeOldTokens = function (options) {
       domainsWithRevokedTokens.push(domain);
   });
 
-  var logoutFailWarning = function () {
+  var logoutFailWarning = function (domain) {
     if (! warned) {
       // This isn't ideal but is probably better that saying nothing at all
-      process.stderr.write("warning: couldn't confirm logout with server\n");
+      process.stderr.write("warning: " +
+                           (options.firstTry ?
+                            "couldn't" : "still trying to") +
+                           " confirm logout with " + domain +
+                           "\n");
       warned = true;
     }
   };
@@ -145,16 +172,20 @@ var tryRevokeOldTokens = function (options) {
       return;
 
     var url;
-    if (domain === config.getAccountsDomain()) {
+    if (session.type === "meteor-account") {
       url = config.getAccountsApiUrl() + "/revoke";
-    } else {
+    } else if (session.type === "galaxy") {
       var oauthInfo = fetchGalaxyOAuthInfo(domain, options.timeout);
       if (oauthInfo) {
         url = oauthInfo.revokeUri;
       } else {
-        logoutFailWarning();
+        logoutFailWarning(domain);
         return;
       }
+    } else {
+      // don't know how to revoke tokens of this type
+      logoutFailWarning(domain);
+      return;
     }
 
     try {
@@ -183,7 +214,7 @@ var tryRevokeOldTokens = function (options) {
         delete session.pendingRevoke;
       writeSession(data);
     } else {
-      logoutFailWarning();
+      logoutFailWarning(domain);
     }
   });
 };
@@ -395,6 +426,7 @@ exports.loginCommand = function (argv, showUsage) {
     data = readSession();
     logOutSession(data);
     data.username = loginResult.username;
+    ensureSessionType(data, config.getAccountsDomain(), "meteor-account");
     setSessionToken(data, config.getAccountsDomain(), meteorAuth, tokenId);
     writeSession(data);
   }
@@ -408,12 +440,13 @@ exports.loginCommand = function (argv, showUsage) {
       process.exit(1);
     }
     data = readSession(); // be careful to reread data file after RPC
+    ensureSessionType(data, galaxy, "galaxy");
     setSessionToken(data, galaxy, galaxyLoginResult.authToken,
                     galaxyLoginResult.tokenId);
     writeSession(data);
   }
 
-  tryRevokeOldTokens();
+  tryRevokeOldTokens({ firstTry: true });
 
   process.stdout.write("\nLogged in " + (galaxy ? "to " + galaxy + " " : "") +
                        "as " + data.username + ".\n" +
@@ -431,7 +464,7 @@ exports.logoutCommand = function (argv, showUsage) {
   logOutSession(data);
   writeSession(data);
 
-  tryRevokeOldTokens();
+  tryRevokeOldTokens({ firstTry: true });
 
   if (wasLoggedIn)
     process.stderr.write("Logged out.\n");
