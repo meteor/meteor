@@ -45,6 +45,7 @@ OplogObserveDriver = function (options) {
 
   self._needToFetch = new LocalCollection._IdMap;
   self._currentlyFetching = null;
+  self._fetchGeneration = 0;
 
   self._requeryWhenDoneThisQuery = false;
   self._writesToCommitWhenWeReachSteady = [];
@@ -163,6 +164,7 @@ _.extend(OplogObserveDriver.prototype, {
         throw new Error("phase in fetchModifiedDocuments: " + self._phase);
 
       self._currentlyFetching = self._needToFetch;
+      var thisGeneration = ++self._fetchGeneration;
       self._needToFetch = new LocalCollection._IdMap;
       var waiting = 0;
       var anyError = null;
@@ -177,11 +179,11 @@ _.extend(OplogObserveDriver.prototype, {
             if (err) {
               if (!anyError)
                 anyError = err;
-            } else if (!self._stopped && self._phase === PHASE.FETCHING) {
-              // XXX this is bad, what if we go into fetching again after
-              //     coming back from _pollQuery?
-              // We re-check the phase in case we've had an explicit _pollQuery
-              // call which pulls us out of FETCHING and back into QUERYING.
+            } else if (!self._stopped && self._phase === PHASE.FETCHING
+                       && self._fetchGeneration === thisGeneration) {
+              // We re-check the generation in case we've had an explicit
+              // _pollQuery call which should effectively cancel this round of
+              // fetches.  (_pollQuery increments the generation.)
               self._handleDoc(id, doc);
             }
             waiting--;
@@ -294,6 +296,7 @@ _.extend(OplogObserveDriver.prototype, {
     // Yay, we get to forget about all the things we thought we had to fetch.
     self._needToFetch = new LocalCollection._IdMap;
     self._currentlyFetching = null;
+    ++self._fetchGeneration;  // ignore any in-flight fetches
     self._phase = PHASE.QUERYING;
 
     // subtle note: _published does not contain _id fields, but newResults does
