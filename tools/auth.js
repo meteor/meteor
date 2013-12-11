@@ -13,14 +13,14 @@ var getSessionFilePath = function () {
   return path.join(process.env.HOME, '.meteorsession');
 };
 
-var readSession = function () {
+var readSessionData = function () {
   var sessionPath = getSessionFilePath();
   if (! fs.existsSync(sessionPath))
     return {};
   return JSON.parse(fs.readFileSync(sessionPath, { encoding: 'utf8' }));
 };
 
-var writeSession = function (data) {
+var writeSessionData = function (data) {
   var sessionPath = getSessionFilePath();
 
   var tries = 0;
@@ -80,13 +80,14 @@ var ensureSessionType = function (session, type) {
   }
 }
 
-// Given an object 'data' in the format returned by readSession,
+// Given an object 'data' in the format returned by readSessionData,
 // modify it to make the user logged out.
 var logOutAllSessions = function (data) {
   var crypto = require('crypto');
 
   _.each(data.sessions, function (session, domain) {
     delete session.username;
+    delete session.userId;
 
     if (_.has(session, 'token')) {
       if (! (session.pendingRevoke instanceof Array))
@@ -104,8 +105,15 @@ var logOutAllSessions = function (data) {
   });
 };
 
-// Given an object 'data' in the format returned by readSession,
-// return the currently logged in user, or null if not logged in.
+// Given an object 'data' in the format returned by readSessionData,
+// return true if logged in, else false.
+var loggedIn = function (data) {
+  return !! getSession(data, config.getAccountsDomain()).userId;
+};
+
+// Given an object 'data' in the format returned by readSessionData,
+// return the currently logged in user, or null if not logged in or if
+// the logged in user doesn't have a username.
 var currentUsername = function (data) {
   return getSession(data, config.getAccountsDomain()).username || null;
 };
@@ -114,7 +122,7 @@ var currentUsername = function (data) {
 // been sent to the server for revocation yet, try to send
 // them. Reads the session file and then writes it back out to
 // disk. If the server can't be contacted, fail silently (and leave
-// the pending invalidations in the session file for next time.)
+// the pending invalidations in the session file for next time).
 //
 // options:
 //  - timeout: request timeout in milliseconds
@@ -127,7 +135,7 @@ var tryRevokeOldTokens = function (options) {
 
   var warned = false;
   var domainsWithRevokedTokens = [];
-  _.each(readSession().sessions || {}, function (session, domain) {
+  _.each(readSessionData().sessions || {}, function (session, domain) {
     if (session.pendingRevoke &&
         session.pendingRevoke.length)
       domainsWithRevokedTokens.push(domain);
@@ -146,7 +154,7 @@ var tryRevokeOldTokens = function (options) {
   };
 
   _.each(domainsWithRevokedTokens, function (domain) {
-    var data = readSession();
+    var data = readSessionData();
     var session = data.sessions[domain] || {};
     var tokenIds = session.pendingRevoke || [];
     if (! tokenIds.length)
@@ -188,12 +196,12 @@ var tryRevokeOldTokens = function (options) {
     if (response.statusCode === 200) {
       // Server confirms that the tokens have been revoked
       // (Be careful to reread session data in case httpHelpers changed it)
-      data = readSession();
+      data = readSessionData();
       var session = getSession(data, domain);
       session.pendingRevoke = _.difference(session.pendingRevoke, tokenIds);
       if (! session.pendingRevoke.length)
         delete session.pendingRevoke;
-      writeSession(data);
+      writeSessionData(data);
     } else {
       logoutFailWarning(domain);
     }
@@ -205,7 +213,8 @@ var tryRevokeOldTokens = function (options) {
 // with keys:
 // - authToken: the value of the cookie named `authCookieName` in the response
 // - tokenId: the id of the auth token (from the response body)
-// - username: the username of the logged-in user
+// - username: the username of the logged-in user (if provided by server)
+// - userId: the userid of the logged-in user (if provided by server)
 // Returns null if the login failed.
 var getLoginResult = function (response, body, authCookieName) {
   if (response.statusCode !== 200)
@@ -231,7 +240,8 @@ var getLoginResult = function (response, body, authCookieName) {
   return {
     authToken: authCookie,
     tokenId: parsedBody.tokenId,
-    username: parsedBody.username
+    username: parsedBody.username,
+    userId: parsedBody.userId
   };
 };
 
@@ -356,7 +366,7 @@ exports.loginCommand = function (argv, showUsage) {
   var byEmail = !! argv.email;
   var galaxy = argv.galaxy;
 
-  var data = readSession();
+  var data = readSessionData();
   var loginData = {};
   var meteorAuth;
 
@@ -397,7 +407,7 @@ exports.loginCommand = function (argv, showUsage) {
 
     var loginResult = getLoginResult(result.response, result.body,
                                      'METEOR_AUTH');
-    if (! loginResult || ! loginResult.username) {
+    if (! loginResult || ! loginResult.userId) {
       process.stdout.write("\nLogin failed.\n");
       process.exit(1);
     }
@@ -405,14 +415,15 @@ exports.loginCommand = function (argv, showUsage) {
     meteorAuth = loginResult.authToken;
     var tokenId = loginResult.tokenId;
 
-    data = readSession();
+    data = readSessionData();
     logOutAllSessions(data);
     var session = getSession(data, config.getAccountsDomain());
     ensureSessionType(session, "meteor-account");
     session.username = loginResult.username;
+    session.userId = loginResult.userId;
     session.token = meteorAuth;
     session.tokenId = tokenId;
-    writeSession(data);
+    writeSessionData(data);
   }
 
   if (galaxy) {
@@ -423,12 +434,12 @@ exports.loginCommand = function (argv, showUsage) {
                            galaxyLoginResult.error + '\n');
       process.exit(1);
     }
-    data = readSession(); // be careful to reread data file after RPC
+    data = readSessionData(); // be careful to reread data file after RPC
     var session = getSession(data, galaxy);
     ensureSessionType(session, "galaxy");
     session.token = galaxyLoginResult.authToken;
     session.tokenId = galaxyLoginResult.tokenId;
-    writeSession(data);
+    writeSessionData(data);
   }
 
   tryRevokeOldTokens({ firstTry: true });
@@ -444,17 +455,17 @@ exports.logoutCommand = function (argv, showUsage) {
 
   config.printUniverseBanner();
 
-  var data = readSession();
-  var wasLoggedIn = !! currentUsername(data);
+  var data = readSessionData();
+  var wasLoggedIn = !! loggedIn(data);
   logOutAllSessions(data);
-  writeSession(data);
+  writeSessionData(data);
 
   tryRevokeOldTokens({ firstTry: true });
 
   if (wasLoggedIn)
     process.stderr.write("Logged out.\n");
   else
-    // We called logOutAllSessions/writeSession anyway, out of an
+    // We called logOutAllSessions/writeSessionData anyway, out of an
     // abundance of caution.
     process.stderr.write("Not logged in.\n");
 };
@@ -465,13 +476,18 @@ exports.whoAmICommand = function (argv, showUsage) {
 
   config.printUniverseBanner();
 
-  var data = readSession();
+  var data = readSessionData();
+  if (! loggedIn(data)) {
+    process.stderr.write("Not logged in. 'meteor login' to log in.\n");
+    process.exit(1);
+  }
+
   var username = currentUsername(data);
   if (username) {
     process.stdout.write(username + "\n");
     process.exit(0);
   } else {
-    process.stderr.write("Not logged in. 'meteor login' to log in.\n");
+    process.stderr.write("You haven't chosen your username yet.\n");
     process.exit(1);
   }
 };
@@ -479,28 +495,27 @@ exports.whoAmICommand = function (argv, showUsage) {
 exports.tryRevokeOldTokens = tryRevokeOldTokens;
 
 exports.getSessionId = function (domain) {
-  return getSession(readSession(), domain).session;
+  return getSession(readSessionData(), domain).session;
 };
 
 exports.setSessionId = function (domain, sessionId) {
-  var data = readSession();
+  var data = readSessionData();
   getSession(data, domain).session = sessionId;
-  writeSession(data);
+  writeSessionData(data);
 };
 
 exports.getSessionToken = function (domain) {
-  return getSession(readSession(), domain).token;
+  return getSession(readSessionData(), domain).token;
 };
 
 exports.isLoggedIn = function () {
-  // XXX will need to change with deferred registration!
-  return !! currentUsername(readSession());
+  return loggedIn(readSessionData());
 };
 
 // Return the username of the currently logged in user, or false if
 // not logged in, or null if the logged in user doesn't have a
 // username.
 exports.loggedInUsername = function () {
-  // XXX will need to change with deferred registration!
-  return currentUsername(readSession) || false;
+  var data = readSessionData();
+  return loggedIn(data) ? currentUsername(data) : false;
 };
