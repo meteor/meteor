@@ -684,7 +684,8 @@ Spacebars._handleSpecialAttributes = function (oldAttrs) {
         return replaceSpecials(v);
       } else if (tag.type === 'BLOCKOPEN') {
         var path = tag.path;
-        if (! (path.length === 1 && builtInComponents.hasOwnProperty(path[0])))
+        if (! (path.length === 1 && builtInComponents.hasOwnProperty(path[0]) &&
+               path[0] !== 'content' && path[0] !== 'elseContent'))
           throw new Error("Can only use built-in block helpers in an attribute, like #each and #if");
         return replaceSpecials(v);
       } else {
