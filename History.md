@@ -8,16 +8,46 @@ Meteor will not apply the patch and will instead disable websockets.
 
 * XXX oplog tailing
 
+* Add `Meteor.onConnection` and add `this.connection` to method
+  invocations and publish functions. These can be used to store data
+  associated with individual clients between subscriptions and method
+  calls. See http://docs.meteor.com/#meteor_onconnection for details.
+
 * Rework hot code push. The new `autoupdate` package drives automatic
   reloads on update using standard DDP messages instead of a hardcoded
   message at DDP startup. Now the hot code push only triggers when
   client code changes; server only code changes will not cause the page
   to reload.
 
-* Add `Meteor.onConnection` and add `this.connection` to method
-  invocations and publish functions. These can be used to store data
-  associated with individual clients between subscriptions and method
-  calls. See http://docs.meteor.com/#meteor_onconnection for details.
+* New 'facts' package publishes internal statistics about Meteor.
+  XXX how to use
+
+* Add an explicit check that publish functions return a cursor, an array
+  of cursors, or a falsey value. This is a safety check to to prevent
+  users from accidentally returning Collection.findOne() or some other
+  value and expecting it to be published.
+
+* Implement `$each`, `$sort`, and `$slice` options for minimongo's `$push`
+  modifier.  #1492
+
+* Introduce '--raw-logs' option to `meteor run` to disable log
+  coloring and timestamps.
+
+* Add `WebAppInternals.setBundledJsCssPrefix()` to control where the
+  client loads bundled JavaScript and CSS files. This allows serving
+  files from a CDN to decrease page load times and reduce server load.
+
+* Attempt to exit cleanly on 'SIGHUP'. Stop accepting incoming
+  connections, kill DDP connections, and finish all outstanding requests
+  for static assets.
+
+* Fix handling of `fields` option in minimongo when only `_id` is present. #1651
+
+* Fix issue where setting `process.env.MAIL_URL` in app code would not
+  alter where mail was sent. This was a regression from 0.6.6. #1649
+
+* Prompt for passwords on stderr instead of stdout for easier automation
+  in shell scripts. #1600
 
 * Bundler failures cause non-zero exit code in `meteor run`.  #1515
 
@@ -26,49 +56,32 @@ Meteor will not apply the patch and will instead disable websockets.
 * Support `EJSON.clone` for `Meteor.Error`. As a result, they are properly
   stringified in DDP even if thrown through a `Future`.  #1482
 
-* XXX Fix error on this.removed during session shutdown. 9e7b4bd
+* Fix passing `transform: null` option to `Collection.find()` to disable
+  transformation in validators.  #1659
 
-* XXX fix issue with logoutOtherConnections 5afd0d5 #1540 #1553
+* Fix livedata error on `this.removed` during session shutdown. #1540 #1553
 
-* XXX sighup for clean webapp shutdown. also connection keepalive 5s change.
+* Fix incompatibility with Phusion Passenger by removing an unused line. #1613
 
-* XXX Fail explicitly when publishing non-cursors.
+* Ensure install script creates /usr/local on machines where it does not
+  exist (eg. fresh install of OSX Mavericks).
 
-* XXX Introduce '--raw-logs' option to `meteor run` to disable logs parsing. ac376b6
+* Set x-forwarded-* headers in `meteor run`.
 
-* XXX fix install script to create /usr/local on mavericks b20c2c6 (not really part of the release)
+* Clean up package dirs containing only ".build".
 
-* XXX asking for password on stdout so url can be used in scripts 60f88dc
+* Check for matching hostname before doing end-of-oauth redirect.
 
-* XXX set x-forwarded-* headers in 'meteor run' 2b5e32
-
-* XXX Clean up package dirs containing only ".build" e11228a
-
-* XXX Properly handle projections where '_id' is the only rule. df95f1e
-
-* XXX Fix 0.6.6 regression in setting MAIL_URL 6582a88
-
-* XXX Only count files that actually go in the cache in the cache size check. #1653.
-
-* XXX Fix so that it is really possible to pass null to disable transformation in validators #1659
-
-* XXX Remove unused line, fix incompatibility with Phusion Passenger 8ca70e9
-
-* XXX Check for matching hostname before doing end-of-oauth redirect a2b0fff
-
-* Implement `$each`, `$sort`, and `$slice` options for minimongo's `$push`
-  modifier.  #1492
+* Only count files that actually go in the cache towards the `appcache`
+  size check. #1653.
 
 * Increase the maximum size spiderable will return for a page from 200kB
   to 5MB.
 
-* New 'facts' package publishes internal statistics about Meteor.
-
 * Upgraded dependencies:
-  * SockJS server from 0.3.7 to 0.3.8
+  * SockJS server from 0.3.7 to 0.3.8, including new faye-websocket module.
   * Node from 0.10.21 to 0.10.22
   * MongoDB from 2.4.6 to 2.4.8
-  * Websocket driver from XXX to YYY
   * clean-css from 1.1.2 to 2.0.2
 
 Patches contributed by GitHub users AlexeyMK, awwx, dandv,
