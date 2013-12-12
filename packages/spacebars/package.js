@@ -18,6 +18,7 @@ Package.on_use(function (api) {
   api.use('jsparse');
   api.use('ui');
   api.use('minifiers', ['server']);
+  api.add_files(['spacebars-runtime.js']);
   api.add_files(['tojs.js', 'spacebars.js']);
 });
 
