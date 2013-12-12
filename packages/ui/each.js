@@ -6,6 +6,44 @@ UI.Each = Component.extend({
     this.sequence = this.data;
     this.data = undefined;
   },
+  render: function (modeHint) {
+    var self = this;
+    var content = self.__content;
+    var elseContent = self.__elseContent;
+
+    if (modeHint === 'STATIC') {
+      // This is a hack.  The caller gives us a hint if the
+      // value we return will be static (in HTML or text)
+      // or dynamic (materialized DOM).  The dynamic path
+      // returns `null` and then we populate the DOM from
+      // the `parented` callback.
+      //
+      // It would be much cleaner to always return the same
+      // value here, and to have that value be some special
+      // object that encapsulates the logic for populating
+      // the #each using a mode-agnostic interface that
+      // works for HTML, text, and DOM.  Alternatively, we
+      // could formalize the current pattern, e.g. defining
+      // a method like component.populate(domRange) and one
+      // like renderStatic() or even renderHTML / renderText.
+      var parts = _.map(
+        ObserveSequence.fetch(self.get('sequence')),
+        function (item) {
+          return content.withData(function () {
+            return item;
+          });
+        });
+
+      if (parts.length) {
+        return parts;
+      } else {
+        return elseContent;
+      }
+      return parts;
+    } else {
+      return null;
+    }
+  },
   parented: function () {
     var self = this.__component__;
 

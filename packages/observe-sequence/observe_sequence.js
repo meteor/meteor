@@ -126,6 +126,22 @@ ObserveSequence = {
         computation.stop();
       }
     };
+  },
+
+  // Fetch the items of `seq` into an array, where `seq` is of one of the
+  // sequence types accepted by `observe`.  If `seq` is a cursor, a
+  // dependency is established.
+  fetch: function (seq) {
+    if (!seq) {
+      return [];
+    } else if (seq instanceof Array) {
+      return seq;
+    } else if (isMinimongoCursor(seq)) {
+      return seq.fetch();
+    } else {
+      throw new Error("Not a recognized sequence type. Currently only " +
+                      "arrays, cursors or falsey values accepted.");
+    }
   }
 };
 
