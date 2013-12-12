@@ -244,8 +244,9 @@ getHTMLToken = function (scanner, dataMode) {
 
   // If we're here, we're looking at `<`.
 
-  if (dataMode) {
+  if (scanner.peek() === '<' && dataMode) {
     // don't interpret tags
+    scanner.pos++;
     return { t: 'Chars',
              v: '<' };
   }
