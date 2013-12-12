@@ -676,8 +676,22 @@ Spacebars._handleSpecialAttributes = function (oldAttrs) {
   var convertSpecialToEmitCode = function (v) {
     if (v instanceof HTML.Special) {
       foundSpecials = true;
-      return HTML.EmitCode('function () { return ' +
-                           codeGenMustache(v.value) + '; }');
+      var tag = v.value;
+      // Note: We end up just deferring back to replaceSpecials after passing
+      // through a whitelist of tag types.  There's probably a better way to
+      // factor this.
+      if (tag.type === 'DOUBLE') {
+        return replaceSpecials(v);
+      } else if (tag.type === 'BLOCKOPEN') {
+        var path = tag.path;
+        if (! (path.length === 1 && builtInComponents.hasOwnProperty(path[0])))
+          throw new Error("Can only use built-in block helpers in an attribute, like #each and #if");
+        return replaceSpecials(v);
+      } else {
+        // XXXX wow, great error message and way to throw it.  This should
+        // go through proper channels.
+        throw new Error("Can't have this template tag in an attribute: " + tag.type);
+      }
     } else if (v instanceof Array) {
       return _.map(v, convertSpecialToEmitCode);
     } else {
