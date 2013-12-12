@@ -294,6 +294,15 @@ _.extend(OplogObserveDriver.prototype, {
 
   // In various circumstances, we may just want to stop processing the oplog and
   // re-run the initial query, just as if we were a PollingObserveDriver.
+  //
+  // XXX We should call this when we detect that we've been in FETCHING for "too
+  // long".
+  //
+  // XXX We should call this when we detect Mongo failover (since that might
+  // mean that some of the oplog entries we have processed have been rolled
+  // back). The Node Mongo driver is in the middle of a bunch of huge
+  // refactorings, including the way that it notifies you when primary
+  // changes. Will put off implementing this until driver 1.4 is out.
   _pollQuery: function () {
     var self = this;
 
