@@ -397,7 +397,7 @@ Tinytest.add("templating - template arg", function (test) {
   var div = renderToDiv(Template.test_template_arg_a.withData({food: "pie"}));
   var cleanupDiv = addToBody(div);
   test.equal($(div).text(), "Greetings 1-bold Line");
-  clickElement(DomUtils.find(div, 'i'));
+  clickElement(div.querySelector('i'));
   test.equal($(div).text(), "Hello 3-element World (the secret is strawberry pie)");
 
   cleanupDiv();
