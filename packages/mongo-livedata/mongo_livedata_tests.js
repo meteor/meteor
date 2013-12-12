@@ -2071,7 +2071,7 @@ EJSON.addType('someCustomType', function (json) {
   return new TestCustomType(json.head, json.tail);
 });
 
-testAsyncMulti("mongo-livedata - oplog - update inside EJSON", [
+testAsyncMulti("mongo-livedata - oplog - update EJSON", [
   function (test, expect) {
     var self = this;
     var collectionName = "ejson" + Random.id();
@@ -2081,9 +2081,12 @@ testAsyncMulti("mongo-livedata - oplog - update inside EJSON", [
     }
 
     self.collection = new Meteor.Collection(collectionName);
+    self.date = new Date;
+    self.objId = new Meteor.Collection.ObjectID;
 
     self.id = self.collection.insert(
-      {name: 'foo', custom: new TestCustomType('a', 'b')},
+      {d: self.date, oi: self.objId,
+       custom: new TestCustomType('a', 'b')},
       expect(function (err, res) {
         test.isFalse(err);
         test.equal(self.id, res);
@@ -2106,7 +2109,8 @@ testAsyncMulti("mongo-livedata - oplog - update inside EJSON", [
     test.length(self.changes, 1);
     test.equal(self.changes.shift(),
                ['a', self.id,
-                {name: 'foo', custom: new TestCustomType('a', 'b')}]);
+                {d: self.date, oi: self.objId,
+                 custom: new TestCustomType('a', 'b')}]);
 
     // First, replace the entire custom object.
     // (runInFence is useful for the server, using expect() is useful for the
@@ -2140,6 +2144,24 @@ testAsyncMulti("mongo-livedata - oplog - update inside EJSON", [
     test.length(self.changes, 1);
     test.equal(self.changes.shift(),
                ['c', self.id, {custom: new TestCustomType('a', 'd')}]);
+
+    // Update a date and an ObjectID too.
+    self.date2 = new Date(self.date.valueOf() + 1000);
+    self.objId2 = new Meteor.Collection.ObjectID;
+    runInFence(function () {
+      self.collection.update(
+        self.id, {$set: {d: self.date2, oi: self.objId2}},
+      expect(function (err) {
+        test.isFalse(err);
+      }));
+    });
+  },
+  function (test, expect) {
+    var self = this;
+    test.length(self.changes, 1);
+    test.equal(self.changes.shift(),
+               ['c', self.id, {d: self.date2, oi: self.objId2}]);
+
     self.handle.stop();
   }
 ]);
