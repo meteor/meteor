@@ -1,5 +1,0 @@
-=> Meteor 0.6.6.3: Fix CPU runaway while watching files in large
-   projects and occasional server crash on session disconnect.
-
-   This release is being downloaded in the background. Update your
-   project to Meteor 0.6.6.3 by running 'meteor update'.
