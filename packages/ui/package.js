@@ -13,8 +13,8 @@ Package.on_use(function (api) {
   api.use('minimongo');  // for idStringify
   api.use('observe-sequence');
 
-  api.use('html');
-  api.imply('html');
+  api.use('htmljs');
+  api.imply('htmljs');
 
   api.add_files(['exceptions.js', 'base.js']);
 
@@ -37,7 +37,7 @@ Package.on_test(function (api) {
   api.use('ui');
   api.use(['test-helpers', 'underscore'], 'client');
 
-  api.use('html');
+  api.use('html-tools');
 
   api.add_files([
     'base_tests.js',

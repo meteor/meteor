@@ -18,7 +18,7 @@ Package.on_use(function (api) {
 
 Package.on_test(function (api) {
   api.use('tinytest');
-  api.use('html');
+  api.use('html-tools');
   api.use('underscore');
   api.use('spacebars'); // for `toJS`
   api.add_files(['charref_tests.js',

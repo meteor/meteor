@@ -6,17 +6,16 @@ Package.on_use(function (api) {
   api.export('Spacebars');
 
   // we attach stuff to the global symbol `HTML`, exported
-  // by `htmljs` via `html`, so we both use and effectively
+  // by `htmljs` via `html-tools`, so we both use and effectively
   // imply it.
   // XXX Should separate out the Spacebars runtime support
-  // from the Spacebars compiler so we don't need html
+  // from the Spacebars compiler so we don't need html-tools
   // at runtime.
-  api.use('html');
-  api.imply('html');
+  api.use('html-tools');
+  api.imply('html-tools');
 
   api.use('underscore');
   api.use('jsparse');
-  api.use('html');
   api.use('ui');
   api.use('minifiers', ['server']);
   api.add_files(['tojs.js', 'spacebars.js']);
