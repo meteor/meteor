@@ -1,13 +1,13 @@
 // Temporary workaround for https://github.com/joyent/node/issues/6506
 // Our fix involves replicating a bunch of files in order to 
 //
-if (process.version !== 'v0.10.22') {
+if (process.version !== 'v0.10.22' && process.version !== 'v0.10.23') {
   if (!process.env.DISABLE_WEBSOCKETS) {
     console.error("This version of Meteor contains a patch for a bug in Node v0.10.");
-    console.error("The patch is against v0.10.22.");
+    console.error("The patch is against only versions 0.10.22 and 0.10.23.");
     console.error("You are using version " + process.version + " instead, so we cannot apply the patch.");
     console.error("To mitigate the most common effect of the bug, websockets will be disabled.");
-    console.error("To enable websockets, use Node v0.10.22 or upgrade to a later version of Meteor (if available).");
+    console.error("To enable websockets, use Node v0.10.22 or .23, or upgrade to a later version of Meteor (if available).");
     process.env.DISABLE_WEBSOCKETS = 't';
   }
 } else {

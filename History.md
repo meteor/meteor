@@ -1,10 +1,11 @@
-## vNEXT
+## v0.6.7
 
-This version of Meteor contains a patch for a bug in Node 0.10 which most
-commonly affects websockets. The patch is against Node v0.10.22. We strongly
-recommend using this precise version of Node in production so that the patch
-will be applied. If you use a newer version of Node with this version of Meteor,
-Meteor will not apply the patch and will instead disable websockets.
+This version of Meteor contains a patch for a bug in Node 0.10 which
+most commonly affects websockets. The patch is against Node version
+0.10.22 and 0.10.23. We strongly recommend using one of these precise
+versions of Node in production so that the patch will be applied. If you
+use a newer version of Node with this version of Meteor, Meteor will not
+apply the patch and will instead disable websockets.
 
 * Rework how Meteor gets realtime database updates from MongoDB. Meteor
   now reads the MongoDB "oplog" -- a special collection that records all
