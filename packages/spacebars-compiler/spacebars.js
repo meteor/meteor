@@ -27,8 +27,6 @@ var ends = {
   TRIPLE: /^\s*\}\}\}/
 };
 
-Spacebars.starts = starts;
-
 // Parse a tag at `pos` in `inputString`.  Succeeds or errors.
 Spacebars.parseStacheTag = function (inputString, pos, options) {
   pos = pos || 0;
@@ -755,7 +753,7 @@ Spacebars.codeGen = function (parseTree, options) {
 };
 
 var beautify = function (code) {
-  if (Package.minifiers) {
+  if (Package.minifiers && Package.minifiers.UglifyJSMinify) {
     var result = UglifyJSMinify(code,
                                 { fromString: true,
                                   mangle: false,
