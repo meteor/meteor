@@ -15,7 +15,7 @@ HTML.toHTML = function (node, parentComponent) {
   } else if (typeof node.instantiate === 'function') {
     // component
     var instance = node.instantiate(parentComponent || null);
-    var content = instance.render();
+    var content = instance.render('STATIC');
     return HTML.toHTML(content, instance);
   } else if (typeof node === 'function') {
     return HTML.toHTML(node(), parentComponent);
@@ -119,7 +119,7 @@ HTML.toText = function (node, textMode, parentComponent) {
   } else if (typeof node.instantiate === 'function') {
     // component
     var instance = node.instantiate(parentComponent || null);
-    var content = instance.render();
+    var content = instance.render('STATIC');
     return HTML.toText(content, textMode, instance);
   } else if (node.toText) {
     // Something else
