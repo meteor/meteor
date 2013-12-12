@@ -6,7 +6,17 @@ recommend using this precise version of Node in production so that the patch
 will be applied. If you use a newer version of Node with this version of Meteor,
 Meteor will not apply the patch and will instead disable websockets.
 
-* XXX oplog tailing
+* Rework how Meteor gets realtime database updates from MongoDB. Meteor
+  now reads the MongoDB "oplog" -- a special collection that records all
+  the write operations as they are applied to your database. This means
+  changes to the database are instantly noticed and reflected in Meteor,
+  whether they originated from Meteor or from an external database
+  client. Oplog tailing is automatically enabled in development mode
+  with `meteor run`, and can be enabled in production with the
+  `MONGO_OPLOG_URL` environment variable. Currently the only supported
+  selectors are equality checks; `$`-operators, `limit` and `skip`
+  queries fall back to the original poll-and-diff algorithm. See <XXX
+  wiki page> for details.
 
 * Add `Meteor.onConnection` and add `this.connection` to method
   invocations and publish functions. These can be used to store data
