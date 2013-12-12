@@ -323,7 +323,11 @@ Spacebars.parse = function (input) {
       var blockName = stache.path.join(','); // for comparisons, errors
 
       var textMode = null;
-      if (position === HTML.TEMPLATE_TAG_POSITION.IN_RCDATA) {
+      if (blockName === 'markdown' ||
+          position === HTML.TEMPLATE_TAG_POSITION.IN_RAWTEXT) {
+        textMode = HTML.TEXTMODE.STRING;
+      } else if (position === HTML.TEMPLATE_TAG_POSITION.IN_RCDATA ||
+                 position === HTML.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
         textMode = HTML.TEXTMODE.RCDATA;
       }
       var parserOptions = {
