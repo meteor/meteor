@@ -5,6 +5,15 @@ Package.describe({
 Package.on_use(function (api) {
   api.export('Spacebars');
 
+  // we attach stuff to the global symbol `HTML`, exported
+  // by `htmljs` via `html`, so we both use and effectively
+  // imply it.
+  // XXX Should separate out the Spacebars runtime support
+  // from the Spacebars compiler so we don't need html
+  // at runtime.
+  api.use('html');
+  api.imply('html');
+
   api.use('underscore');
   api.use('jsparse');
   api.use('html');
