@@ -19,7 +19,7 @@
             
         </div>
         <div class="yui3-u-1-4 version">
-            <em>API Docs for: v1.1.1</em>
+            <em>API Docs for: v1.2.0</em>
         </div>
     </div>
     <div id="bd" class="yui3-g">
@@ -117,6 +117,13 @@ Roles._handlebarsHelpers = {
    * of the target roles.  For use in client-side templates.
    *
    * NOTE: This helper does not currently support groups.
+   *
+   * @example
+   *     {{#if isInRole &#x27;admin&#x27;}}
+   *     {{/if}}
+   *
+   *     {{#if isInRole &#x27;editor,user&#x27;}}
+   *     {{/if}}
    *
    * @method isInRole
    * @param {String} role name of role or comma-seperated list of roles

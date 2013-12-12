@@ -1,7 +1,18 @@
+## v1.2.0
+
+* Use constant property Roles.GLOBAL_GROUP instead of hard-coded string to 
+  assign blanket roles/permissions for a user
+* Check Roles.GLOBAL_GROUP even if no group specified.  This does not affect 
+  normal usage but provides a convenient short-hand for group users:
+    Roles.addUsersToRoles(user, 'admin', Roles.GLOBAL_GROUP)
+    Roles.userIsInRole(user, 'admin') => true
+* Expand test coverage
+
+
 ## v1.1.1
 
-* Add support for '_global' group which provides blanket roles/permissions across all groups for that user
-* Update Roles.getUsersInRole to accept an array of roles.
+* Add support for global group which provides blanket roles/permissions across all groups for that user
+* Update Roles.getUsersInRole to accept an array of roles
 
 
 ## v1.1.0

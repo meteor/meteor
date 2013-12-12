@@ -26,6 +26,13 @@ Roles._handlebarsHelpers = {
    *
    * NOTE: This helper does not currently support groups.
    *
+   * @example
+   *     {{#if isInRole 'admin'}}
+   *     {{/if}}
+   *
+   *     {{#if isInRole 'editor,user'}}
+   *     {{/if}}
+   *
    * @method isInRole
    * @param {String} role name of role or comma-seperated list of roles
    * @return {Boolean} true if current user is in at least one of the target roles

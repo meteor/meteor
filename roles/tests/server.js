@@ -3,6 +3,9 @@
   var users = {},
       roles = ['admin','editor','user']
 
+  // use to run individual tests
+  //Tinytest.oadd = Tinytest.add
+  //Tinytest.add = function () {}
 
   function addUser (name) {
     return Accounts.createUser({'username': name})
@@ -20,18 +23,28 @@
   }
 
 
-  function testUser (test, user, expectedRoles, group) {
-    var userId = users[user]
+  function testUser (test, username, expectedRoles, group) {
+    var userId = users[username],
+        userObj = Meteor.users.findOne({_id: userId})
         
+    // check using user ids (makes db calls)
+    _innerTest(test, userId, username, expectedRoles, group)
+
+    // check using passed-in user object
+    _innerTest(test, userObj, username, expectedRoles, group)
+  }
+
+  function _innerTest (test, userParam, username, expectedRoles, group) {
+    // test that user has only the roles expected and no others
     _.each(roles, function (role) {
       var expected = _.contains(expectedRoles, role),
-          msg = user + ' is not in expected role ' + role,
-          nmsg = user + ' is in un-expected role ' + role
+          msg = username + ' expected to have \'' + role + '\' permission but does not',
+          nmsg = username + ' had un-expected permission ' + role
 
       if (expected) {
-        test.isTrue(Roles.userIsInRole(userId, role, group), msg)
+        test.isTrue(Roles.userIsInRole(userParam, role, group), msg)
       } else {
-        test.isFalse(Roles.userIsInRole(userId, role, group), nmsg)
+        test.isFalse(Roles.userIsInRole(userParam, role, group), nmsg)
       }
     })
   }
@@ -67,216 +80,6 @@
     })
 
   Tinytest.add(
-    'roles - can check if user is in role', 
-    function (test) {
-      reset()
-
-      Meteor.users.update(
-        {"_id":users.eve}, 
-        {$addToSet: { roles: { $each: ['admin', 'user'] } } }
-      )
-      testUser(test, 'eve', ['admin', 'user'])
-    })
-
-  Tinytest.add(
-    'roles - can check if non-existant user is in role', 
-    function (test) {
-      reset()
-
-      _.each(roles, function (role) {
-        Roles.createRole(role)
-      })
-
-      test.isFalse(Roles.userIsInRole('1', 'admin'))
-    })
-
-  Tinytest.add(
-    'roles - can check user in role via object', 
-    function (test) {
-      var user 
-
-      reset()
-
-      _.each(roles, function (role) {
-        Roles.createRole(role)
-      })
-
-      Roles.addUsersToRoles(users.eve, ['admin', 'user'])
-      user = Meteor.users.findOne({_id:users.eve})
-
-      test.isTrue(Roles.userIsInRole(user, 'admin'))
-    })
-
-  Tinytest.add(
-    'roles - userIsInRole returns false when user is null', 
-    function (test) {
-      var user 
-
-      reset()
-
-      _.each(roles, function (role) {
-        Roles.createRole(role)
-      })
-
-      user = null
-
-      test.isFalse(Roles.userIsInRole(user, 'admin'))
-    })
-
-  Tinytest.add(
-    'roles - can check user against several roles at once', 
-    function (test) {
-      var user 
-
-      reset()
-
-      _.each(roles, function (role) {
-        Roles.createRole(role)
-      })
-
-      Roles.addUsersToRoles(users.eve, ['admin', 'user'])
-      user = Meteor.users.findOne({_id:users.eve})
-
-      test.isTrue(Roles.userIsInRole(user, ['editor','admin']))
-    })
-
-  Tinytest.add(
-    'roles - can add individual users to roles', 
-    function (test) {
-      reset() 
-
-      _.each(roles, function (role) {
-        Roles.createRole(role)
-      })
-
-      Roles.addUsersToRoles(users.eve, ['admin', 'user'])
-
-      testUser(test, 'eve', ['admin', 'user'])
-      testUser(test, 'bob', [])
-      testUser(test, 'joe', [])
-
-      Roles.addUsersToRoles(users.joe, ['editor', 'user'])
-
-      testUser(test, 'eve', ['admin', 'user'])
-      testUser(test, 'bob', [])
-      testUser(test, 'joe', ['editor', 'user'])
-    })
-
-  Tinytest.add(
-    'roles - can add user to roles multiple times', 
-    function (test) {
-      reset() 
-
-      _.each(roles, function (role) {
-        Roles.createRole(role)
-      })
-
-      Roles.addUsersToRoles(users.eve, ['admin', 'user'])
-      Roles.addUsersToRoles(users.eve, ['admin', 'user'])
-
-      testUser(test, 'eve', ['admin', 'user'])
-      testUser(test, 'bob', [])
-      testUser(test, 'joe', [])
-    })
-
-  Tinytest.add(
-    'roles - can add multiple users to roles', 
-    function (test) {
-      reset() 
-
-      _.each(roles, function (role) {
-        Roles.createRole(role)
-      })
-
-      Roles.addUsersToRoles([users.eve, users.bob], ['admin', 'user'])
-
-      testUser(test, 'eve', ['admin', 'user'])
-      testUser(test, 'bob', ['admin', 'user'])
-      testUser(test, 'joe', [])
-
-      Roles.addUsersToRoles([users.bob, users.joe], ['editor', 'user'])
-
-      testUser(test, 'eve', ['admin', 'user'])
-      testUser(test, 'bob', ['admin', 'editor', 'user'])
-      testUser(test, 'joe', ['editor', 'user'])
-    })
-
-  Tinytest.add(
-    'roles - can\'t add non-exist user to role', 
-    function (test) {
-      reset()
-
-      _.each(roles, function (role) {
-        Roles.createRole(role)
-      })
-
-      Roles.addUsersToRoles(['1'], ['admin'])
-      test.equal(Meteor.users.findOne({_id:'1'}), undefined)
-    })
-
-  Tinytest.add(
-    'roles - can remove individual users from roles', 
-    function (test) {
-      reset() 
-
-      _.each(roles, function (role) {
-        Roles.createRole(role)
-      })
-
-      // remove user role - one user
-      Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'])
-      testUser(test, 'eve', ['editor', 'user'])
-      testUser(test, 'bob', ['editor', 'user'])
-      Roles.removeUsersFromRoles(users.eve, ['user'])
-      testUser(test, 'eve', ['editor'])
-      testUser(test, 'bob', ['editor', 'user'])
-    })
-  Tinytest.add(
-    'roles - can remove user from roles multiple times',
-    function (test) {
-      reset() 
-
-      _.each(roles, function (role) {
-        Roles.createRole(role)
-      })
-
-      // remove user role - one user
-      Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'])
-      testUser(test, 'eve', ['editor', 'user'])
-      testUser(test, 'bob', ['editor', 'user'])
-      Roles.removeUsersFromRoles(users.eve, ['user'])
-      testUser(test, 'eve', ['editor'])
-      testUser(test, 'bob', ['editor', 'user'])
-
-      // try remove again
-      Roles.removeUsersFromRoles(users.eve, ['user'])
-      testUser(test, 'eve', ['editor'])
-    })
-
-  Tinytest.add(
-    'roles - can remove multiple users from roles', 
-    function (test) {
-      reset() 
-
-      _.each(roles, function (role) {
-        Roles.createRole(role)
-      })
-
-      // remove user role - two users
-      Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'])
-      testUser(test, 'eve', ['editor', 'user'])
-      testUser(test, 'bob', ['editor', 'user'])
-
-      test.isFalse(Roles.userIsInRole(users.joe, 'admin'))
-      Roles.addUsersToRoles([users.bob, users.joe], ['admin', 'user'])
-      testUser(test, 'bob', ['admin', 'user', 'editor'])
-      testUser(test, 'joe', ['admin', 'user'])
-      Roles.removeUsersFromRoles([users.bob, users.joe], ['admin'])
-      testUser(test, 'bob', ['user', 'editor'])
-      testUser(test, 'joe', ['user'])
-    })
-
-  Tinytest.add(
     'roles - can\'t create role with empty names', 
     function (test) {
       reset() 
@@ -291,61 +94,88 @@
     })
 
   Tinytest.add(
-    'roles - can get all roles for user', 
+    'roles - can check if user is in role', 
     function (test) {
       reset()
-      Roles.addUsersToRoles([users.eve], ['admin', 'user'])
-      test.equal(Roles.getRolesForUser(users.eve), ['admin', 'user'])
 
-      reset()
-      Roles.addUsersToRoles([users.eve], ['admin', 'user'], 'group1')
-      test.equal(Roles.getRolesForUser(users.eve, 'group1'), ['admin', 'user'])
+      Meteor.users.update(
+        {"_id":users.eve}, 
+        {$addToSet: { roles: { $each: ['admin', 'user'] } } }
+      )
+      testUser(test, 'eve', ['admin', 'user'])
     })
 
   Tinytest.add(
-    'roles - can\'t get roles for non-existant user', 
+    'roles - can check if user is in role by group', 
     function (test) {
       reset()
-      test.equal(Roles.getRolesForUser('1'), undefined)
-      test.equal(Roles.getRolesForUser('1', 'group1'), undefined)
+
+      Meteor.users.update(
+        {"_id":users.eve}, 
+        {$addToSet: { 'roles.group1': { $each: ['admin', 'user'] } } })
+      Meteor.users.update(
+        {"_id":users.eve}, 
+        {$addToSet: { 'roles.group2': { $each: ['editor'] } } })
+
+      testUser(test, 'eve', ['admin', 'user'], 'group1')
+      testUser(test, 'eve', ['editor'], 'group2')
     })
 
   Tinytest.add(
-    'roles - can get all roles', 
+    'roles - can check if non-existant user is in role', 
     function (test) {
       reset()
-      _.each(roles, function (role) {
-        Roles.createRole(role)
-      })
 
-      // compare roles, sorted alphabetically
-      var expected = roles,
-          actual = _.pluck(Roles.getAllRoles().fetch(), 'name')
-
-      test.equal(actual, expected)
+      test.isFalse(Roles.userIsInRole('1', 'admin'))
     })
-
 
   Tinytest.add(
-    'roles - can get all users in role', 
+    'roles - can check if null user is in role', 
     function (test) {
+      var user = null
       reset()
-      _.each(roles, function (role) {
-        Roles.createRole(role)
-      })
-
-      Roles.addUsersToRoles([users.eve, users.joe], ['admin', 'user'])
-      Roles.addUsersToRoles([users.bob, users.joe], ['editor'])
-
-      var expected = [users.eve, users.joe],
-          actual = _.pluck(Roles.getUsersInRole('admin').fetch(), '_id')
-
-      // order may be different so check difference instead of equality
-      // difference uses first array as base so have to check both ways
-      test.equal(_.difference(actual, expected), [])
-      test.equal(_.difference(expected, actual), [])
+      
+      test.isFalse(Roles.userIsInRole(user, 'admin'))
     })
 
+  Tinytest.add(
+    'roles - can check user against several roles at once', 
+    function (test) {
+      var user 
+      reset()
+
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'])
+      user = Meteor.users.findOne({_id:users.eve})
+
+      test.isTrue(Roles.userIsInRole(user, ['editor','admin']))
+    })
+
+  Tinytest.add(
+    'roles - can\'t add non-existent user to role', 
+    function (test) {
+      reset()
+
+      Roles.addUsersToRoles(['1'], ['admin'])
+      test.equal(Meteor.users.findOne({_id:'1'}), undefined)
+    })
+
+  Tinytest.add(
+    'roles - can add individual users to roles', 
+    function (test) {
+      reset() 
+
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'])
+
+      testUser(test, 'eve', ['admin', 'user'])
+      testUser(test, 'bob', [])
+      testUser(test, 'joe', [])
+
+      Roles.addUsersToRoles(users.joe, ['editor', 'user'])
+
+      testUser(test, 'eve', ['admin', 'user'])
+      testUser(test, 'bob', [])
+      testUser(test, 'joe', ['editor', 'user'])
+    })
 
   Tinytest.add(
     'roles - can add individual users to roles by group', 
@@ -375,6 +205,122 @@
     })
 
   Tinytest.add(
+    'roles - can add user to roles multiple times', 
+    function (test) {
+      reset() 
+
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'])
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'])
+
+      testUser(test, 'eve', ['admin', 'user'])
+      testUser(test, 'bob', [])
+      testUser(test, 'joe', [])
+
+      Roles.addUsersToRoles(users.bob, ['admin'])
+      Roles.addUsersToRoles(users.bob, ['editor'])
+
+      testUser(test, 'eve', ['admin', 'user'])
+      testUser(test, 'bob', ['admin', 'editor'])
+      testUser(test, 'joe', [])
+    })
+
+  Tinytest.add(
+    'roles - can add user to roles multiple times by group', 
+    function (test) {
+      reset() 
+
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'group1')
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'group1')
+
+      testUser(test, 'eve', ['admin', 'user'], 'group1')
+      testUser(test, 'bob', [], 'group1')
+      testUser(test, 'joe', [], 'group1')
+
+      Roles.addUsersToRoles(users.bob, ['admin'], 'group1')
+      Roles.addUsersToRoles(users.bob, ['editor'], 'group1')
+
+      testUser(test, 'eve', ['admin', 'user'], 'group1')
+      testUser(test, 'bob', ['admin', 'editor'], 'group1')
+      testUser(test, 'joe', [], 'group1')
+    })
+
+  Tinytest.add(
+    'roles - can add multiple users to roles', 
+    function (test) {
+      reset() 
+
+      Roles.addUsersToRoles([users.eve, users.bob], ['admin', 'user'])
+
+      testUser(test, 'eve', ['admin', 'user'])
+      testUser(test, 'bob', ['admin', 'user'])
+      testUser(test, 'joe', [])
+
+      Roles.addUsersToRoles([users.bob, users.joe], ['editor', 'user'])
+
+      testUser(test, 'eve', ['admin', 'user'])
+      testUser(test, 'bob', ['admin', 'editor', 'user'])
+      testUser(test, 'joe', ['editor', 'user'])
+    })
+
+  Tinytest.add(
+    'roles - can add multiple users to roles by group', 
+    function (test) {
+      reset() 
+
+      Roles.addUsersToRoles([users.eve, users.bob], ['admin', 'user'], 'group1')
+
+      testUser(test, 'eve', ['admin', 'user'], 'group1')
+      testUser(test, 'bob', ['admin', 'user'], 'group1')
+      testUser(test, 'joe', [], 'group1')
+
+      testUser(test, 'eve', [], 'group2')
+      testUser(test, 'bob', [], 'group2')
+      testUser(test, 'joe', [], 'group2')
+
+      Roles.addUsersToRoles([users.bob, users.joe], ['editor', 'user'], 'group1')
+      Roles.addUsersToRoles([users.bob, users.joe], ['editor', 'user'], 'group2')
+
+      testUser(test, 'eve', ['admin', 'user'], 'group1')
+      testUser(test, 'bob', ['admin', 'editor', 'user'], 'group1')
+      testUser(test, 'joe', ['editor', 'user'], 'group1')
+
+      testUser(test, 'eve', [], 'group2')
+      testUser(test, 'bob', ['editor', 'user'], 'group2')
+      testUser(test, 'joe', ['editor', 'user'], 'group2')
+    })
+
+  Tinytest.add(
+    'roles - can remove individual users from roles', 
+    function (test) {
+      reset() 
+
+      // remove user role - one user
+      Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'])
+      testUser(test, 'eve', ['editor', 'user'])
+      testUser(test, 'bob', ['editor', 'user'])
+      Roles.removeUsersFromRoles(users.eve, ['user'])
+      testUser(test, 'eve', ['editor'])
+      testUser(test, 'bob', ['editor', 'user'])
+    })
+  Tinytest.add(
+    'roles - can remove user from roles multiple times',
+    function (test) {
+      reset() 
+
+      // remove user role - one user
+      Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'])
+      testUser(test, 'eve', ['editor', 'user'])
+      testUser(test, 'bob', ['editor', 'user'])
+      Roles.removeUsersFromRoles(users.eve, ['user'])
+      testUser(test, 'eve', ['editor'])
+      testUser(test, 'bob', ['editor', 'user'])
+
+      // try remove again
+      Roles.removeUsersFromRoles(users.eve, ['user'])
+      testUser(test, 'eve', ['editor'])
+    })
+
+  Tinytest.add(
     'roles - can remove individual users from roles by group', 
     function (test) {
       reset() 
@@ -388,6 +334,7 @@
       testUser(test, 'eve', [], 'group2')
       testUser(test, 'bob', ['admin'], 'group2')
       testUser(test, 'joe', ['admin'], 'group2')
+
       Roles.removeUsersFromRoles(users.eve, ['user'], 'group1')
       testUser(test, 'eve', ['editor'], 'group1')
       testUser(test, 'bob', ['editor', 'user'], 'group1')
@@ -398,27 +345,168 @@
     })
 
   Tinytest.add(
-    'roles - can check if user is in role by group', 
+    'roles - can remove multiple users from roles', 
     function (test) {
-      reset()
+      reset() 
 
-      Meteor.users.update(
-        {"_id":users.eve}, 
-        {$addToSet: { 'roles.group1': { $each: ['admin', 'user'] } } })
-      Meteor.users.update(
-        {"_id":users.eve}, 
-        {$addToSet: { 'roles.group2': { $each: ['editor'] } } })
+      // remove user role - two users
+      Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'])
+      testUser(test, 'eve', ['editor', 'user'])
+      testUser(test, 'bob', ['editor', 'user'])
 
-      testUser(test, 'eve', ['admin', 'user'], 'group1')
-      testUser(test, 'eve', ['editor'], 'group2')
+      test.isFalse(Roles.userIsInRole(users.joe, 'admin'))
+      Roles.addUsersToRoles([users.bob, users.joe], ['admin', 'user'])
+      testUser(test, 'bob', ['admin', 'user', 'editor'])
+      testUser(test, 'joe', ['admin', 'user'])
+      Roles.removeUsersFromRoles([users.bob, users.joe], ['admin'])
+      testUser(test, 'bob', ['user', 'editor'])
+      testUser(test, 'joe', ['user'])
     })
 
   Tinytest.add(
-    'roles - can use \'_global\' group to assign blanket permissions',
+    'roles - can remove multiple users from roles by group', 
+    function (test) {
+      reset() 
+
+      // remove user role - one user
+      Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'], 'group1')
+      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], 'group2')
+      testUser(test, 'eve', ['editor', 'user'], 'group1')
+      testUser(test, 'bob', ['editor', 'user'], 'group1')
+      testUser(test, 'joe', [], 'group1')
+      testUser(test, 'eve', [], 'group2')
+      testUser(test, 'bob', ['admin'], 'group2')
+      testUser(test, 'joe', ['admin'], 'group2')
+
+      Roles.removeUsersFromRoles([users.eve, users.bob], ['user'], 'group1')
+      testUser(test, 'eve', ['editor'], 'group1')
+      testUser(test, 'bob', ['editor'], 'group1')
+      testUser(test, 'joe', [], 'group1')
+      testUser(test, 'eve', [], 'group2')
+      testUser(test, 'bob', ['admin'], 'group2')
+      testUser(test, 'joe', ['admin'], 'group2')
+
+      Roles.removeUsersFromRoles([users.joe, users.bob], ['admin'], 'group2')
+      testUser(test, 'eve', [], 'group2')
+      testUser(test, 'bob', [], 'group2')
+      testUser(test, 'joe', [], 'group2')
+    })
+
+  Tinytest.add(
+    'roles - can get all roles', 
+    function (test) {
+      reset()
+      _.each(roles, function (role) {
+        Roles.createRole(role)
+      })
+
+      // compare roles, sorted alphabetically
+      var expected = roles,
+          actual = _.pluck(Roles.getAllRoles().fetch(), 'name')
+
+      test.equal(actual, expected)
+    })
+
+  Tinytest.add(
+    'roles - can\'t get roles for non-existant user', 
+    function (test) {
+      reset()
+      test.equal(Roles.getRolesForUser('1'), undefined)
+      test.equal(Roles.getRolesForUser('1', 'group1'), undefined)
+    })
+
+  Tinytest.add(
+    'roles - can get all roles for user', 
+    function (test) {
+      reset()
+      Roles.addUsersToRoles([users.eve], ['admin', 'user'])
+      test.equal(Roles.getRolesForUser(users.eve), ['admin', 'user'])
+    })
+
+  Tinytest.add(
+    'roles - can get all roles for user by group', 
+    function (test) {
+      reset()
+      Roles.addUsersToRoles([users.eve], ['admin', 'user'], 'group1')
+      test.equal(Roles.getRolesForUser(users.eve, 'group1'), ['admin', 'user'])
+    })
+
+  Tinytest.add(
+    'roles - can get all roles for user by group including Roles.GLOBAL_GROUP', 
+    function (test) {
+      reset()
+      Roles.addUsersToRoles([users.eve], ['editor'], Roles.GLOBAL_GROUP)
+      Roles.addUsersToRoles([users.eve], ['admin', 'user'], 'group1')
+      test.equal(Roles.getRolesForUser(users.eve, 'group1'), ['admin', 'user', 'editor'])
+    })
+
+
+  Tinytest.add(
+    'roles - can get all users in role', 
+    function (test) {
+      reset()
+      _.each(roles, function (role) {
+        Roles.createRole(role)
+      })
+
+      Roles.addUsersToRoles([users.eve, users.joe], ['admin', 'user'])
+      Roles.addUsersToRoles([users.bob, users.joe], ['editor'])
+
+      var expected = [users.eve, users.joe],
+          actual = _.pluck(Roles.getUsersInRole('admin').fetch(), '_id')
+
+      // order may be different so check difference instead of equality
+      // difference uses first array as base so have to check both ways
+      test.equal(_.difference(actual, expected), [])
+      test.equal(_.difference(expected, actual), [])
+    })
+
+  Tinytest.add(
+    'roles - can get all users in role by group', 
+    function (test) {
+      reset()
+      Roles.addUsersToRoles([users.eve, users.joe], ['admin', 'user'], 'group1')
+      Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'group2')
+
+      var expected = [users.eve, users.joe],
+          actual = _.pluck(Roles.getUsersInRole('admin','group1').fetch(), '_id')
+
+      // order may be different so check difference instead of equality
+      // difference uses first array as base so have to check both ways
+      test.equal(_.difference(actual, expected), [])
+      test.equal(_.difference(expected, actual), [])
+    })
+  
+  Tinytest.add(
+    'roles - can get all users in role by group including Roles.GLOBAL_GROUP', 
+    function (test) {
+      reset()
+      Roles.addUsersToRoles([users.eve], ['admin', 'user'], Roles.GLOBAL_GROUP)
+      Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'group2')
+
+      var expected = [users.eve],
+          actual = _.pluck(Roles.getUsersInRole('admin','group1').fetch(), '_id')
+
+      // order may be different so check difference instead of equality
+      // difference uses first array as base so have to check both ways
+      test.equal(_.difference(actual, expected), [])
+      test.equal(_.difference(expected, actual), [])
+
+      expected = [users.eve, users.bob, users.joe],
+      actual = _.pluck(Roles.getUsersInRole('admin','group2').fetch(), '_id')
+
+      // order may be different so check difference instead of equality
+      test.equal(_.difference(actual, expected), [])
+      test.equal(_.difference(expected, actual), [])
+    })
+
+
+  Tinytest.add(
+    'roles - can use Roles.GLOBAL_GROUP to assign blanket permissions',
     function (test) {
       reset()
 
-      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], '_global')
+      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], Roles.GLOBAL_GROUP)
 
       testUser(test, 'eve', [], 'group1')
       testUser(test, 'joe', ['admin'], 'group2')
@@ -426,7 +514,7 @@
       testUser(test, 'bob', ['admin'], 'group2')
       testUser(test, 'bob', ['admin'], 'group1')
 
-      Roles.removeUsersFromRoles(users.joe, ['admin'], '_global')
+      Roles.removeUsersFromRoles(users.joe, ['admin'], Roles.GLOBAL_GROUP)
 
       testUser(test, 'eve', [], 'group1')
       testUser(test, 'joe', [], 'group2')
@@ -436,12 +524,12 @@
     })
 
   Tinytest.add(
-    'roles - \'_global\' group is independent of other groups',
+    'roles - Roles.GLOBAL_GROUP is independent of other groups',
     function (test) {
       reset()
 
       Roles.addUsersToRoles([users.joe, users.bob], ['admin'], 'group5')
-      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], '_global')
+      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], Roles.GLOBAL_GROUP)
 
       testUser(test, 'eve', [], 'group1')
       testUser(test, 'joe', ['admin'], 'group5')
@@ -451,7 +539,7 @@
       testUser(test, 'bob', ['admin'], 'group2')
       testUser(test, 'bob', ['admin'], 'group1')
 
-      Roles.removeUsersFromRoles(users.joe, ['admin'], '_global')
+      Roles.removeUsersFromRoles(users.joe, ['admin'], Roles.GLOBAL_GROUP)
 
       testUser(test, 'eve', [], 'group1')
       testUser(test, 'joe', ['admin'], 'group5')
@@ -462,6 +550,20 @@
       testUser(test, 'bob', ['admin'], 'group1')
     })
   
+  Tinytest.add(
+    'roles - Roles.GLOBAL_GROUP also checked when group not specified',
+    function (test) {
+      reset()
+
+      Roles.addUsersToRoles(users.joe, 'admin', Roles.GLOBAL_GROUP)
+
+      testUser(test, 'joe', ['admin'])
+
+      Roles.removeUsersFromRoles(users.joe, 'admin', Roles.GLOBAL_GROUP)
+
+      testUser(test, 'joe', [])
+    })
+
   Tinytest.add(
     'roles - mixing group with non-group throws descriptive error', 
     function (test) {
@@ -498,54 +600,6 @@
       Roles.addUsersToRoles(users.bob, ['editor', 'user'])
       // don't expect this to throw error
       Roles.removeUsersFromRoles(users.bob, ['user'], 'group1')
-    })
-
-  Tinytest.add(
-    'roles - can get all roles for user by group including \'_global\'', 
-    function (test) {
-      reset()
-      Roles.addUsersToRoles([users.eve], ['editor'], '_global')
-      Roles.addUsersToRoles([users.eve], ['admin', 'user'], 'group1')
-      test.equal(Roles.getRolesForUser(users.eve, 'group1'), ['admin', 'user', 'editor'])
-    })
-
-  Tinytest.add(
-    'roles - can get all users in role by group', 
-    function (test) {
-      reset()
-      Roles.addUsersToRoles([users.eve, users.joe], ['admin', 'user'], 'group1')
-      Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'group2')
-
-      var expected = [users.eve, users.joe],
-          actual = _.pluck(Roles.getUsersInRole('admin','group1').fetch(), '_id')
-
-      // order may be different so check difference instead of equality
-      // difference uses first array as base so have to check both ways
-      test.equal(_.difference(actual, expected), [])
-      test.equal(_.difference(expected, actual), [])
-    })
-  
-  Tinytest.add(
-    'roles - can get all users in role by group including \'_global\' group', 
-    function (test) {
-      reset()
-      Roles.addUsersToRoles([users.eve], ['admin', 'user'], '_global')
-      Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'group2')
-
-      var expected = [users.eve],
-          actual = _.pluck(Roles.getUsersInRole('admin','group1').fetch(), '_id')
-
-      // order may be different so check difference instead of equality
-      // difference uses first array as base so have to check both ways
-      test.equal(_.difference(actual, expected), [])
-      test.equal(_.difference(expected, actual), [])
-
-      expected = [users.eve, users.bob, users.joe],
-      actual = _.pluck(Roles.getUsersInRole('admin','group2').fetch(), '_id')
-
-      // order may be different so check difference instead of equality
-      test.equal(_.difference(actual, expected), [])
-      test.equal(_.difference(expected, actual), [])
     })
 
   function printException (ex) {

@@ -19,7 +19,7 @@
             
         </div>
         <div class="yui3-u-1-4 version">
-            <em>API Docs for: v1.1.1</em>
+            <em>API Docs for: v1.2.0</em>
         </div>
     </div>
     <div id="bd" class="yui3-g">
@@ -124,6 +124,22 @@ var mixingGroupAndNonGroupErrorMsg = &quot;Roles error: Can&#x27;t mix grouped a
 
 
 /**
+ * Constant used to reference the special &#x27;global&#x27; group that 
+ * can be used to apply blanket permissions across all groups.
+ *
+ * @example
+ *     Roles.addUsersToRoles(user, &#x27;admin&#x27;, Roles.GLOBAL_GROUP)
+ *     Roles.userIsInRole(user, &#x27;admin&#x27;) =&gt; true
+ *
+ * @property GLOBAL_GROUP
+ * @type String
+ * @static
+ * @final
+ */
+Roles.GLOBAL_GROUP = &#x27;__roles_global__&#x27;
+
+
+/**
  * Create a new role. Whitespace will be trimmed.
  *
  * @method createRole
@@ -192,21 +208,21 @@ Roles.deleteRole = function (role) {
  *
  * @example
  *     Roles.addUsersToRoles(userId, &#x27;admin&#x27;)
- *     Roles.addUsersToRoles(userId, [&#x27;user&#x27;,&#x27;editor&#x27;])
  *     Roles.addUsersToRoles(userId, [&#x27;view-secrets&#x27;], &#x27;example.com&#x27;)
- *     Roles.addUsersToRoles(userId, [&#x27;perform-action&#x27;], &#x27;example.org&#x27;)
- *     Roles.addUsersToRoles(userId, &#x27;admin&#x27;, &#x27;_global&#x27;)
+ *     Roles.addUsersToRoles([user1, user2], [&#x27;user&#x27;,&#x27;editor&#x27;])
+ *     Roles.addUsersToRoles([user1, user2], [&#x27;glorious-admin&#x27;, &#x27;perform-action&#x27;], &#x27;example.org&#x27;)
+ *     Roles.addUsersToRoles(userId, &#x27;admin&#x27;, Roles.GLOBAL_GROUP)
  *
  * @method addUsersToRoles
  * @param {Array|String} users id(s) of users to add to roles
  * @param {Array|String} roles name(s) of roles/permissions to add users to
  * @param {String} [group] Optional group name. If supplied, roles will be
  *                         specific to that group.  
- *                         The group name &#x27;_global&#x27; is special and provides a 
- *                         convenient way to assign blanket roles/permissions
+ *                         The group Roles.GLOBAL_GROUP is special and provides 
+ *                         a convenient way to assign blanket roles/permissions
  *                         across all groups.  The roles/permissions in the 
- *                         &#x27;_global&#x27; group will be automatically included in 
- *                         checks for any group.
+ *                         Roles.GLOBAL_GROUP group will be automatically 
+ *                         included in checks for any group.
  */
 Roles.addUsersToRoles = function (users, roles, group) {
   if (!users) throw new Error (&quot;Missing &#x27;users&#x27; param&quot;)
@@ -290,6 +306,12 @@ Roles.addUsersToRoles = function (users, roles, group) {
 /**
  * Remove users from roles
  *
+ * @example
+ *     Roles.removeUsersFromRoles(users.bob, &#x27;admin&#x27;)
+ *     Roles.removeUsersFromRoles([users.bob, users.joe], [&#x27;editor&#x27;])
+ *     Roles.removeUsersFromRoles([users.bob, users.joe], [&#x27;editor&#x27;, &#x27;user&#x27;])
+ *     Roles.removeUsersFromRoles(users.eve, [&#x27;user&#x27;], &#x27;group1&#x27;)
+ *
  * @method removeUsersFromRoles
  * @param {Array|String} users id(s) of users to add to roles
  * @param {Array|String} roles name(s) of roles to add users to
@@ -343,12 +365,31 @@ Roles.removeUsersFromRoles = function (users, roles, group) {
 /**
  * Check if user has specified permissions/roles
  *
+ * @example
+ *     // non-group usage
+ *     Roles.userIsInRole(user, &#x27;admin&#x27;)
+ *     Roles.userIsInRole(user, [&#x27;admin&#x27;,&#x27;editor&#x27;])
+ *     Roles.userIsInRole(userId, &#x27;admin&#x27;)
+ *     Roles.userIsInRole(userId, [&#x27;admin&#x27;,&#x27;editor&#x27;])
+ *
+ *     // per-group usage
+ *     Roles.userIsInRole(user,   [&#x27;admin&#x27;,&#x27;editor&#x27;], &#x27;group1&#x27;)
+ *     Roles.userIsInRole(userId, [&#x27;admin&#x27;,&#x27;editor&#x27;], &#x27;group1&#x27;)
+ *     Roles.userIsInRole(userId, [&#x27;admin&#x27;,&#x27;editor&#x27;], Roles.GLOBAL_GROUP)
+ *
+ *     // this format can also be used as short-hand for Roles.GLOBAL_GROUP
+ *     Roles.userIsInRole(user, &#x27;admin&#x27;)
+ *
+ *    
  * @method userIsInRole
  * @param {String|Object} user Id of user or actual user object
- * @param {String|Array} roles Name of role/permission or Array of roles/permissions to check against.  If array, will return true if user is in _any_ role.
+ * @param {String|Array} roles Name of role/permission or Array of 
+ *                            roles/permissions to check against.  If array, 
+ *                            will return true if user is in _any_ role.
  * @param {String} [group] Optional. Name of group.  If supplied, limits check
- *                         to just that group &amp; the user&#x27;s &#x27;_global&#x27; group, if 
- *                         any.
+ *                         to just that group.
+ *                         The user&#x27;s Roles.GLOBAL_GROUP will always be checked
+ *                         whether group is specified or not.  
  * @return {Boolean} true if user is in _any_ of the target roles
  */
 Roles.userIsInRole = function (user, roles, group) {
@@ -378,9 +419,10 @@ Roles.userIsInRole = function (user, roles, group) {
         return _.contains(userRoles[group], role)
       })
       if (!found) {
-        // not found in regular group.  check &#x27;_global&#x27; group, if it exists
-        found = _.isArray(userRoles._global) &amp;&amp; _.some(roles, function (role) {
-          return _.contains(userRoles[group], role)
+        // not found in regular group or group not specified.  
+        // check Roles.GLOBAL_GROUP, if it exists
+        found = _.isArray(userRoles[Roles.GLOBAL_GROUP]) &amp;&amp; _.some(roles, function (role) {
+          return _.contains(userRoles[Roles.GLOBAL_GROUP], role)
         })
       }
       return found
@@ -394,22 +436,33 @@ Roles.userIsInRole = function (user, roles, group) {
 
   if (!id) return false
 
+
+  query = {_id: id, $or: []}
+
+  // always check Roles.GLOBAL_GROUP
+  groupQuery = {}
+  groupQuery[&#x27;roles.&#x27;+Roles.GLOBAL_GROUP] = {$in: roles}
+  query.$or.push(groupQuery)
+
   if (group) {
-    // structure of group query, including _global
+    // structure of query, when group specified including Roles.GLOBAL_GROUP 
     //   {_id: id, 
     //    $or: [
     //      {&#x27;roles.group1&#x27;:{$in: [&#x27;admin&#x27;]}},
-    //      {&#x27;roles._global&#x27;:{$in: [&#x27;admin&#x27;]}}
+    //      {&#x27;roles.__roles_global__&#x27;:{$in: [&#x27;admin&#x27;]}}
     //    ]}
-    
     groupQuery = {}
     groupQuery[&#x27;roles.&#x27;+group] = {$in: roles}
-
-    query = {_id: id, $or: []}
     query.$or.push(groupQuery)
-    query.$or.push({&#x27;roles._global&#x27;: {$in: roles}})
   } else {
-    query = {_id: id, roles: {$in: roles}}
+    // structure of query, where group not specified. includes 
+    // Roles.GLOBAL_GROUP 
+    //   {_id: id, 
+    //    $or: [
+    //      {roles: {$in: [&#x27;admin&#x27;]}},
+    //      {&#x27;roles.__roles_global__&#x27;: {$in: [&#x27;admin&#x27;]}}
+    //    ]}
+    query.$or.push({roles: {$in: roles}})
   }
 
   found = Meteor.users.findOne(query, {fields: {_id: 1}})
@@ -420,31 +473,31 @@ Roles.userIsInRole = function (user, roles, group) {
  * Retrieve users roles
  *
  * @method getRolesForUser
- * @param {String} user Id of user
+ * @param {String} userId Id of user
  * @param {String} [group] Optional name of group to restrict roles to.
- *                         &#x27;_global&#x27; group will also be checked.
+ *                         User&#x27;s Roles.GLOBAL_GROUP will also be checked.
  * @return {Array} Array of user&#x27;s roles, unsorted. undefined if user not found
  */
-Roles.getRolesForUser = function (user, group) {
+Roles.getRolesForUser = function (userId, group) {
   var user
 
-  if (!user) return
+  if (!userId) return
   if (group &amp;&amp; &#x27;string&#x27; !== typeof group) return
 
   user = Meteor.users.findOne(
-           {_id: user},
+           {_id: userId},
            {fields: {roles: 1}})
 
   if (!user || !user.roles) return
 
   if (group)
-    return _.union(user.roles[group], user.roles._global || [])
+    return _.union(user.roles[group], user.roles[Roles.GLOBAL_GROUP] || [])
 
   return user.roles
 }
 
 /**
- * Retrieve all existing roles
+ * Retrieve set of all existing roles
  *
  * @method getAllRoles
  * @return {Cursor} cursor of existing roles
@@ -454,14 +507,19 @@ Roles.getAllRoles = function () {
 }
 
 /**
- * Retrieve all users who are in target role
+ * Retrieve all users who are in target role.  
+ *
+ * NOTE: This is an expensive query; it performs a full collection scan
+ * on the users collection since there is no index set on the &#x27;roles&#x27; field.  
+ * This is by design as most queries will specify an _id so the _id index is 
+ * used automatically.
  *
  * @method getUsersInRole
  * @param {Array|String} role Name of role/permission.  If array, users 
  *                            returned will have at least one of the roles
  *                            specified but need not have _all_ roles.
- * @param {String} [group] Optional name of group to restrict roles to
- *                         &#x27;_global&#x27; group will also be checked.
+ * @param {String} [group] Optional name of group to restrict roles to.
+ *                         User&#x27;s Roles.GLOBAL_GROUP will also be checked.
  * @return {Cursor} cursor of users in role
  */
 Roles.getUsersInRole = function (role, group) {
@@ -473,17 +531,20 @@ Roles.getUsersInRole = function (role, group) {
   if (!_.isArray(roles)) roles = [roles]
   
   if (group) {
-    // structure of group query, including _global
+    // structure of group query, including Roles.GLOBAL_GROUP
     //   {$or: [
     //      {&#x27;roles.group1&#x27;:{$in: [&#x27;admin&#x27;]}},
-    //      {&#x27;roles._global&#x27;:{$in: [&#x27;admin&#x27;]}}
+    //      {&#x27;roles.__roles_global__&#x27;:{$in: [&#x27;admin&#x27;]}}
     //    ]}
+    query = {$or: []}
+
     groupQuery = {}
     groupQuery[&#x27;roles.&#x27;+group] = {$in: roles}
-
-    query = {$or: []}
     query.$or.push(groupQuery)
-    query.$or.push({&#x27;roles._global&#x27;: {$in: roles}})
+
+    groupQuery = {}
+    groupQuery[&#x27;roles.&#x27;+Roles.GLOBAL_GROUP] = {$in: roles}
+    query.$or.push(groupQuery)
   } else {
     query = { roles: { $in: roles } }
   }

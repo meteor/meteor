@@ -19,7 +19,7 @@
             
         </div>
         <div class="yui3-u-1-4 version">
-            <em>API Docs for: v1.1.1</em>
+            <em>API Docs for: v1.2.0</em>
         </div>
     </div>
     <div id="bd" class="yui3-g">
@@ -182,6 +182,8 @@
             <li class="api-class-tab methods"><a href="#methods">Methods</a></li>
         
         
+            <li class="api-class-tab properties"><a href="#properties">Properties</a></li>
+        
         
         
     </ul>
@@ -264,6 +266,23 @@
             
 
             
+                <div class="index-section properties">
+                    <h3>Properties</h3>
+
+                    <ul class="index-list properties">
+                        
+                            <li class="index-item property">
+                                <a href="#property_GLOBAL_GROUP">GLOBAL_GROUP</a>
+
+                                
+                                    <span class="flag static">static</span>
+                                
+                                
+                            </li>
+                        
+                    </ul>
+                </div>
+            
 
             
 
@@ -329,7 +348,7 @@
             
         
         
-        <a href="../files/roles_roles_common.js.html#l91"><code>roles&#x2F;roles_common.js:91</code></a>
+        <a href="../files/roles_roles_common.js.html#l107"><code>roles&#x2F;roles_common.js:107</code></a>
         
         </p>
 
@@ -400,11 +419,11 @@
 
                     <div class="param-description">
                         <p>Optional group name. If supplied, roles will be
-                        specific to that group.<br>                        The group name &#39;_global&#39; is special and provides a 
-                        convenient way to assign blanket roles/permissions
+                        specific to that group.<br>                        The group Roles.GLOBAL_GROUP is special and provides 
+                        a convenient way to assign blanket roles/permissions
                         across all groups.  The roles/permissions in the 
-                        &#39;_global&#39; group will be automatically included in 
-                        checks for any group.</p>
+                        Roles.GLOBAL_GROUP group will be automatically 
+                        included in checks for any group.</p>
 
                     </div>
 
@@ -423,10 +442,10 @@
 
             <div class="example-content">
                 <pre class="code prettyprint"><code>Roles.addUsersToRoles(userId, &#39;admin&#39;)
-Roles.addUsersToRoles(userId, [&#39;user&#39;,&#39;editor&#39;])
 Roles.addUsersToRoles(userId, [&#39;view-secrets&#39;], &#39;example.com&#39;)
-Roles.addUsersToRoles(userId, [&#39;perform-action&#39;], &#39;example.org&#39;)
-Roles.addUsersToRoles(userId, &#39;admin&#39;, &#39;_global&#39;)</code></pre>
+Roles.addUsersToRoles([user1, user2], [&#39;user&#39;,&#39;editor&#39;])
+Roles.addUsersToRoles([user1, user2], [&#39;glorious-admin&#39;, &#39;perform-action&#39;], &#39;example.org&#39;)
+Roles.addUsersToRoles(userId, &#39;admin&#39;, Roles.GLOBAL_GROUP)</code></pre>
 
             </div>
         </div>
@@ -480,7 +499,7 @@ Roles.addUsersToRoles(userId, &#39;admin&#39;, &#39;_global&#39;)</code></pre>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l34"><code>roles&#x2F;roles_common.js:34</code></a>
+        <a href="../files/roles_roles_common.js.html#l50"><code>roles&#x2F;roles_common.js:50</code></a>
         
         </p>
 
@@ -583,7 +602,7 @@ Roles.addUsersToRoles(userId, &#39;admin&#39;, &#39;_global&#39;)</code></pre>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l67"><code>roles&#x2F;roles_common.js:67</code></a>
+        <a href="../files/roles_roles_common.js.html#l83"><code>roles&#x2F;roles_common.js:83</code></a>
         
         </p>
 
@@ -667,7 +686,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l354"><code>roles&#x2F;roles_common.js:354</code></a>
+        <a href="../files/roles_roles_common.js.html#l407"><code>roles&#x2F;roles_common.js:407</code></a>
         
         </p>
 
@@ -678,7 +697,7 @@ are currently assigned to the target role.</p>
     </div>
 
     <div class="description">
-        <p>Retrieve all existing roles</p>
+        <p>Retrieve set of all existing roles</p>
 
     </div>
 
@@ -713,7 +732,7 @@ are currently assigned to the target role.</p>
             
                 <li class="arg">
                     
-                        <code>user</code>
+                        <code>userId</code>
                     
                 </li>
             
@@ -756,7 +775,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l327"><code>roles&#x2F;roles_common.js:327</code></a>
+        <a href="../files/roles_roles_common.js.html#l380"><code>roles&#x2F;roles_common.js:380</code></a>
         
         </p>
 
@@ -779,7 +798,7 @@ are currently assigned to the target role.</p>
             
                 <li class="param">
                     
-                        <code class="param-name">user</code>
+                        <code class="param-name">userId</code>
                         <span class="type">String</span>
                     
 
@@ -804,7 +823,7 @@ are currently assigned to the target role.</p>
 
                     <div class="param-description">
                         <p>Optional name of group to restrict roles to.
-                        &#39;_global&#39; group will also be checked.</p>
+                        User&#39;s Roles.GLOBAL_GROUP will also be checked.</p>
 
                     </div>
 
@@ -887,7 +906,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l364"><code>roles&#x2F;roles_common.js:364</code></a>
+        <a href="../files/roles_roles_common.js.html#l417"><code>roles&#x2F;roles_common.js:417</code></a>
         
         </p>
 
@@ -898,7 +917,10 @@ are currently assigned to the target role.</p>
     </div>
 
     <div class="description">
-        <p>Retrieve all users who are in target role</p>
+        <p>Retrieve all users who are in target role.  </p>
+<p>NOTE: This is an expensive query; it performs a full collection scan
+on the users collection since there is no index set on the &#39;roles&#39; field.<br>This is by design as most queries will specify an _id so the _id index is 
+used automatically.</p>
 
     </div>
 
@@ -936,8 +958,8 @@ are currently assigned to the target role.</p>
                     
 
                     <div class="param-description">
-                        <p>Optional name of group to restrict roles to
-                        &#39;_global&#39; group will also be checked.</p>
+                        <p>Optional name of group to restrict roles to.
+                        User&#39;s Roles.GLOBAL_GROUP will also be checked.</p>
 
                     </div>
 
@@ -1076,6 +1098,19 @@ of the target roles.  For use in client-side templates.</p>
     
 
     
+        <div class="example">
+            <h4>Example:</h4>
+
+            <div class="example-content">
+                <pre class="code prettyprint"><code>{{#if isInRole &#39;admin&#39;}}
+{{/if}}
+
+{{#if isInRole &#39;editor,user&#39;}}
+{{/if}}</code></pre>
+
+            </div>
+        </div>
+    
 </div>
 
                 
@@ -1133,7 +1168,7 @@ of the target roles.  For use in client-side templates.</p>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l198"><code>roles&#x2F;roles_common.js:198</code></a>
+        <a href="../files/roles_roles_common.js.html#l214"><code>roles&#x2F;roles_common.js:214</code></a>
         
         </p>
 
@@ -1211,6 +1246,18 @@ of the target roles.  For use in client-side templates.</p>
     
 
     
+        <div class="example">
+            <h4>Example:</h4>
+
+            <div class="example-content">
+                <pre class="code prettyprint"><code>Roles.removeUsersFromRoles(users.bob, &#39;admin&#39;)
+Roles.removeUsersFromRoles([users.bob, users.joe], [&#39;editor&#39;])
+Roles.removeUsersFromRoles([users.bob, users.joe], [&#39;editor&#39;, &#39;user&#39;])
+Roles.removeUsersFromRoles(users.eve, [&#39;user&#39;], &#39;group1&#39;)</code></pre>
+
+            </div>
+        </div>
+    
 </div>
 
                 
@@ -1272,7 +1319,7 @@ of the target roles.  For use in client-side templates.</p>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l251"><code>roles&#x2F;roles_common.js:251</code></a>
+        <a href="../files/roles_roles_common.js.html#l273"><code>roles&#x2F;roles_common.js:273</code></a>
         
         </p>
 
@@ -1318,7 +1365,9 @@ of the target roles.  For use in client-side templates.</p>
                     
 
                     <div class="param-description">
-                        <p>Name of role/permission or Array of roles/permissions to check against.  If array, will return true if user is in <em>any</em> role.</p>
+                        <p>Name of role/permission or Array of 
+                           roles/permissions to check against.  If array, 
+                           will return true if user is in <em>any</em> role.</p>
 
                     </div>
 
@@ -1336,8 +1385,9 @@ of the target roles.  For use in client-side templates.</p>
 
                     <div class="param-description">
                         <p>Optional. Name of group.  If supplied, limits check
-                        to just that group &amp; the user&#39;s &#39;_global&#39; group, if 
-                        any.</p>
+                        to just that group.
+                        The user&#39;s Roles.GLOBAL_GROUP will always be checked
+                        whether group is specified or not.</p>
 
                     </div>
 
@@ -1365,12 +1415,99 @@ of the target roles.  For use in client-side templates.</p>
     
 
     
+        <div class="example">
+            <h4>Example:</h4>
+
+            <div class="example-content">
+                <pre class="code prettyprint"><code>// non-group usage
+Roles.userIsInRole(user, &#39;admin&#39;)
+Roles.userIsInRole(user, [&#39;admin&#39;,&#39;editor&#39;])
+Roles.userIsInRole(userId, &#39;admin&#39;)
+Roles.userIsInRole(userId, [&#39;admin&#39;,&#39;editor&#39;])
+
+// per-group usage
+Roles.userIsInRole(user,   [&#39;admin&#39;,&#39;editor&#39;], &#39;group1&#39;)
+Roles.userIsInRole(userId, [&#39;admin&#39;,&#39;editor&#39;], &#39;group1&#39;)
+Roles.userIsInRole(userId, [&#39;admin&#39;,&#39;editor&#39;], Roles.GLOBAL_GROUP)
+
+// this format can also be used as short-hand for Roles.GLOBAL_GROUP
+Roles.userIsInRole(user, &#39;admin&#39;)</code></pre>
+
+            </div>
+        </div>
+    
 </div>
 
                 
             </div>
         
 
+        
+            <div id="properties" class="api-class-tabpanel">
+                <h2 class="off-left">Properties</h2>
+
+                
+                    <div id="property_GLOBAL_GROUP" class="property item">
+    <h3 class="name"><code>GLOBAL_GROUP</code></h3>
+    <span class="type">String</span>
+
+    
+
+    
+
+    
+        <span class="flag final">final</span>
+    
+
+    
+        <span class="flag static">static</span>
+    
+
+    <div class="meta">
+        
+            
+                
+                <p>
+                
+                Defined in
+                
+            
+        
+        
+        <a href="../files/roles_roles_common.js.html#l34"><code>roles&#x2F;roles_common.js:34</code></a>
+        
+        </p>
+
+        
+
+        
+    </div>
+
+    <div class="description">
+        <p>Constant used to reference the special &#39;global&#39; group that 
+can be used to apply blanket permissions across all groups.</p>
+
+    </div>
+
+    
+
+    
+        <div class="example">
+            <h4>Example:</h4>
+
+            <div class="example-content">
+                <pre class="code prettyprint"><code>Roles.addUsersToRoles(user, &#39;admin&#39;, Roles.GLOBAL_GROUP)
+Roles.userIsInRole(user, &#39;admin&#39;) =&gt; true</code></pre>
+
+            </div>
+        </div>
+    
+
+    
+</div>
+
+                
+            </div>
         
 
         
