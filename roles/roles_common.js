@@ -44,7 +44,7 @@ var mixingGroupAndNonGroupErrorMsg = "Roles error: Can't mix grouped and non-gro
  * @static
  * @final
  */
-Roles.GLOBAL_GROUP = '__roles_global__'
+Roles.GLOBAL_GROUP = '__global_roles__'
 
 
 /**
@@ -357,7 +357,7 @@ Roles.userIsInRole = function (user, roles, group) {
     //   {_id: id, 
     //    $or: [
     //      {'roles.group1':{$in: ['admin']}},
-    //      {'roles.__roles_global__':{$in: ['admin']}}
+    //      {'roles.__global_roles__':{$in: ['admin']}}
     //    ]}
     groupQuery = {}
     groupQuery['roles.'+group] = {$in: roles}
@@ -368,7 +368,7 @@ Roles.userIsInRole = function (user, roles, group) {
     //   {_id: id, 
     //    $or: [
     //      {roles: {$in: ['admin']}},
-    //      {'roles.__roles_global__': {$in: ['admin']}}
+    //      {'roles.__global_roles__': {$in: ['admin']}}
     //    ]}
     query.$or.push({roles: {$in: roles}})
   }
@@ -442,7 +442,7 @@ Roles.getUsersInRole = function (role, group) {
     // structure of group query, including Roles.GLOBAL_GROUP
     //   {$or: [
     //      {'roles.group1':{$in: ['admin']}},
-    //      {'roles.__roles_global__':{$in: ['admin']}}
+    //      {'roles.__global_roles__':{$in: ['admin']}}
     //    ]}
     query = {$or: []}
 

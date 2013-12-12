@@ -20,7 +20,7 @@
     'joe': {
       _id: 'joe',
       roles: {
-        '__roles_global__': ['admin'],
+        '__global_roles__': ['admin'],
         'group1': ['editor']
       }
     }

@@ -1,3 +1,8 @@
+## v1.2.1
+
+* Improve internal string value of Roles.GLOBAL_GROUP constant
+
+
 ## v1.2.0
 
 * Use constant property Roles.GLOBAL_GROUP instead of hard-coded string to 

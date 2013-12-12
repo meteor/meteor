@@ -19,7 +19,7 @@
             
         </div>
         <div class="yui3-u-1-4 version">
-            <em>API Docs for: v1.2.0</em>
+            <em>API Docs for: v1.2.1</em>
         </div>
     </div>
     <div id="bd" class="yui3-g">
@@ -136,7 +136,7 @@ var mixingGroupAndNonGroupErrorMsg = &quot;Roles error: Can&#x27;t mix grouped a
  * @static
  * @final
  */
-Roles.GLOBAL_GROUP = &#x27;__roles_global__&#x27;
+Roles.GLOBAL_GROUP = &#x27;__global_roles__&#x27;
 
 
 /**
@@ -449,7 +449,7 @@ Roles.userIsInRole = function (user, roles, group) {
     //   {_id: id, 
     //    $or: [
     //      {&#x27;roles.group1&#x27;:{$in: [&#x27;admin&#x27;]}},
-    //      {&#x27;roles.__roles_global__&#x27;:{$in: [&#x27;admin&#x27;]}}
+    //      {&#x27;roles.__global_roles__&#x27;:{$in: [&#x27;admin&#x27;]}}
     //    ]}
     groupQuery = {}
     groupQuery[&#x27;roles.&#x27;+group] = {$in: roles}
@@ -460,7 +460,7 @@ Roles.userIsInRole = function (user, roles, group) {
     //   {_id: id, 
     //    $or: [
     //      {roles: {$in: [&#x27;admin&#x27;]}},
-    //      {&#x27;roles.__roles_global__&#x27;: {$in: [&#x27;admin&#x27;]}}
+    //      {&#x27;roles.__global_roles__&#x27;: {$in: [&#x27;admin&#x27;]}}
     //    ]}
     query.$or.push({roles: {$in: roles}})
   }
@@ -534,7 +534,7 @@ Roles.getUsersInRole = function (role, group) {
     // structure of group query, including Roles.GLOBAL_GROUP
     //   {$or: [
     //      {&#x27;roles.group1&#x27;:{$in: [&#x27;admin&#x27;]}},
-    //      {&#x27;roles.__roles_global__&#x27;:{$in: [&#x27;admin&#x27;]}}
+    //      {&#x27;roles.__global_roles__&#x27;:{$in: [&#x27;admin&#x27;]}}
     //    ]}
     query = {$or: []}
 
