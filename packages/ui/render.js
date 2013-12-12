@@ -384,3 +384,11 @@ UI.body = UI.Component.extend({
 UI.block = function (renderFunc) {
   return UI.Component.extend({ render: renderFunc });
 };
+
+UI.toHTML = function (content, parentComponent) {
+  return HTML.toHTML(content, parentComponent);
+};
+
+UI.toRawText = function (content, parentComponent) {
+  return HTML.toText(content, HTML.TEXTMODE.STRING, parentComponent);
+};

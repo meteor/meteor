@@ -210,8 +210,9 @@ getHTMLToken = function (scanner, dataMode) {
       lastPos = scanner.pos;
       result = scanner.getSpecialTag(
         scanner,
-        dataMode === 'rcdata' ? TEMPLATE_TAG_POSITION.IN_RCDATA :
-          TEMPLATE_TAG_POSITION.ELEMENT);
+        (dataMode === 'rcdata' ? TEMPLATE_TAG_POSITION.IN_RCDATA :
+         (dataMode === 'rawtext' ? TEMPLATE_TAG_POSITION.IN_RAWTEXT :
+          TEMPLATE_TAG_POSITION.ELEMENT)));
     }
     if (result)
       return { t: 'Special', v: result };
@@ -230,9 +231,11 @@ getHTMLToken = function (scanner, dataMode) {
     scanner.fatal("Illegal NULL character");
 
   if (ch === '&') {
-    var charRef = getCharacterReference(scanner);
-    if (charRef)
-      return charRef;
+    if (dataMode !== 'rawtext') {
+      var charRef = getCharacterReference(scanner);
+      if (charRef)
+        return charRef;
+    }
 
     scanner.pos++;
     return { t: 'Chars',
@@ -240,6 +243,13 @@ getHTMLToken = function (scanner, dataMode) {
   }
 
   // If we're here, we're looking at `<`.
+
+  if (dataMode) {
+    // don't interpret tags
+    return { t: 'Chars',
+             v: '<' };
+  }
+
   // `getTag` will claim anything starting with `<` not followed by `!`.
   // `getComment` takes `<!--` and getDoctype takes `<!doctype`.
   result = (getTagToken(scanner) || getComment(scanner) || getDoctype(scanner));
@@ -456,7 +466,8 @@ TEMPLATE_TAG_POSITION = {
   ELEMENT: 1,
   IN_START_TAG: 2,
   IN_ATTRIBUTE: 3,
-  IN_RCDATA: 4
+  IN_RCDATA: 4,
+  IN_RAWTEXT: 5
 };
 
 // tagName is lowercase

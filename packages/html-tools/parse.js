@@ -37,7 +37,9 @@ parseFragment = function (input, options) {
 
   var result;
   if (options && options.textMode) {
-    if (options.textMode === HTML.TEXTMODE.RCDATA) {
+    if (options.textMode === HTML.TEXTMODE.STRING) {
+      result = getRawText(scanner, null, shouldStop);
+    } else if (options.textMode === HTML.TEXTMODE.RCDATA) {
       result = getRCData(scanner, null, shouldStop);
     } else {
       throw new Error("Unsupported textMode: " + options.textMode);
@@ -197,12 +199,6 @@ getRCData = function (scanner, tagName, shouldStopFunc) {
     if (shouldStopFunc && shouldStopFunc(scanner))
       break;
 
-    if (scanner.peek() === '<') {
-      pushOrAppendString(items, '<');
-      scanner.pos++;
-      continue;
-    }
-
     var token = getHTMLToken(scanner, 'rcdata');
     if (! token)
       // tokenizer reached EOF on its own, e.g. while scanning
@@ -213,6 +209,42 @@ getRCData = function (scanner, tagName, shouldStopFunc) {
       pushOrAppendString(items, token.v);
     } else if (token.t === 'CharRef') {
       items.push(convertCharRef(token));
+    } else if (token.t === 'Special') {
+      // token.v is an object `{ ... }`
+      items.push(HTML.Special(token.v));
+    } else {
+      // (can't happen)
+      scanner.fatal("Unknown or unexpected token type: " + token.t);
+    }
+  }
+
+  if (items.length === 0)
+    return null;
+  else if (items.length === 1)
+    return items[0];
+  else
+    return items;
+};
+
+var getRawText = function (scanner, tagName, shouldStopFunc) {
+  var items = [];
+
+  while (! scanner.isEOF()) {
+    // break at appropriate end tag
+    if (tagName && isLookingAtEndTag(scanner, tagName))
+      break;
+
+    if (shouldStopFunc && shouldStopFunc(scanner))
+      break;
+
+    var token = getHTMLToken(scanner, 'rawtext');
+    if (! token)
+      // tokenizer reached EOF on its own, e.g. while scanning
+      // template comments like `{{! foo}}`.
+      continue;
+
+    if (token.t === 'Chars') {
+      pushOrAppendString(items, token.v);
     } else if (token.t === 'Special') {
       // token.v is an object `{ ... }`
       items.push(HTML.Special(token.v));
