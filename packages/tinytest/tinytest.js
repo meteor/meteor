@@ -132,7 +132,7 @@ _.extend(TestCaseResults.prototype, {
         this.equal(actual[i], expected[i]);
       }
     } else {
-      matched = _.isEqual(expected, actual);
+      matched = EJSON.equals(expected, actual);
     }
 
     if (matched === !!not) {
