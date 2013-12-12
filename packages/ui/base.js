@@ -298,7 +298,7 @@ _extend(UI.Component, {
 
 // XXX we don't really want this to be a user-visible callback,
 // it's just a particular signal we need from DomRange.
-UI.Component.parented = function () {
+UI.Component.notifyParented = function () {
   var self = this;
   for (var comp = self; comp; comp = comp._super) {
     var events = (comp.hasOwnProperty('_events') && comp._events) || null;
@@ -336,10 +336,26 @@ UI.Component.parented = function () {
     });
   }
 
-  // XXX think about this callback's timing
+  var updatedTemplateInstance = false;
+
+  // XXX this is an undocumented callback
+  if (self.parented) {
+    Deps.nonreactive(function () {
+      if (! updatedTemplateInstance) {
+        updateTemplateInstance(self);
+        updatedTemplateInstance = true;
+      }
+      self.parented.call(self.templateInstance);
+    });
+  }
+
+  // XXX fix this callback's timing
   if (self.rendered) {
     Deps.nonreactive(function () {
-      updateTemplateInstance(self);
+      if (! updatedTemplateInstance) {
+        updateTemplateInstance(self);
+        updatedTemplateInstance = true;
+      }
       self.rendered.call(self.templateInstance);
     });
   }

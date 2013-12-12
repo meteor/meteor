@@ -114,10 +114,8 @@ var rangeParented = function (range) {
       });
     }
 
-    // XXX is this a real callback?  what about chaining? etc.
-    if (range.component.parented) {
-      range.component.parented();
-    }
+    if (range.component.notifyParented)
+      range.component.notifyParented();
 
     // recurse on member ranges
     var members = range.members;

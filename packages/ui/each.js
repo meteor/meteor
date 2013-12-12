@@ -6,8 +6,7 @@ UI.Each = Component.extend({
     this.sequence = this.data;
     this.data = undefined;
   },
-  // xcxc -> parented
-  rendered: function () {
+  parented: function () {
     var self = this.__component__;
 
     var range = self.dom;
