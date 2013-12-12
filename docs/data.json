@@ -261,18 +261,18 @@
             "params": [
                 {
                     "name": "user",
-                    "description": "Id of user or actual user object",
+                    "description": "UserId or actual user object",
                     "type": "String|Object"
                 },
                 {
                     "name": "group",
-                    "description": "Optional name of group to restrict roles to.\n                        User's Roles.GLOBAL_GROUP will also be checked.",
+                    "description": "Optional name of group to restrict roles to.\n                        User's Roles.GLOBAL_GROUP will also be included.",
                     "type": "String",
                     "optional": true
                 }
             ],
             "return": {
-                "description": "Array of user's roles, unsorted. undefined if user not found",
+                "description": "Array of user's roles, unsorted.",
                 "type": "Array"
             },
             "class": "Roles",

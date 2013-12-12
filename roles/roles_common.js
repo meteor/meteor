@@ -381,10 +381,10 @@ Roles.userIsInRole = function (user, roles, group) {
  * Retrieve users roles
  *
  * @method getRolesForUser
- * @param {String|Object} user Id of user or actual user object
+ * @param {String|Object} user UserId or actual user object
  * @param {String} [group] Optional name of group to restrict roles to.
- *                         User's Roles.GLOBAL_GROUP will also be checked.
- * @return {Array} Array of user's roles, unsorted. undefined if user not found
+ *                         User's Roles.GLOBAL_GROUP will also be included.
+ * @return {Array} Array of user's roles, unsorted.
  */
 Roles.getRolesForUser = function (user, group) {
   if (!user) return []
