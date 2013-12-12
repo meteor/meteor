@@ -2043,3 +2043,103 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection", func
 
   handle.stop();
 });
+
+var TestCustomType = function (head, tail) {
+  // use different field names on the object than in JSON, to ensure we are
+  // actually treating this as an opaque object.
+  this.myHead = head;
+  this.myTail = tail;
+};
+_.extend(TestCustomType.prototype, {
+  clone: function () {
+    return new TestCustomType(this.myHead, this.myTail);
+  },
+  equals: function (other) {
+    return other instanceof TestCustomType
+      && EJSON.equals(this.myHead, other.myHead)
+      && EJSON.equals(this.myTail, other.myTail);
+  },
+  typeName: function () {
+    return 'someCustomType';
+  },
+  toJSONValue: function () {
+    return {head: this.myHead, tail: this.myTail};
+  }
+});
+
+EJSON.addType('someCustomType', function (json) {
+  return new TestCustomType(json.head, json.tail);
+});
+
+testAsyncMulti("mongo-livedata - oplog - update inside EJSON", [
+  function (test, expect) {
+    var self = this;
+    var collectionName = "ejson" + Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName);
+      Meteor.subscribe('c-' + collectionName);
+    }
+
+    self.collection = new Meteor.Collection(collectionName);
+
+    self.id = self.collection.insert(
+      {name: 'foo', custom: new TestCustomType('a', 'b')},
+      expect(function (err, res) {
+        test.isFalse(err);
+        test.equal(self.id, res);
+      }));
+  },
+  function (test, expect) {
+    var self = this;
+    self.changes = [];
+    self.handle = self.collection.find({}).observeChanges({
+      added: function (id, fields) {
+        self.changes.push(['a', id, fields]);
+      },
+      changed: function (id, fields) {
+        self.changes.push(['c', id, fields]);
+      },
+      removed: function (id) {
+        self.changes.push(['r', id]);
+      }
+    });
+    test.length(self.changes, 1);
+    test.equal(self.changes.shift(),
+               ['a', self.id,
+                {name: 'foo', custom: new TestCustomType('a', 'b')}]);
+
+    // First, replace the entire custom object.
+    // (runInFence is useful for the server, using expect() is useful for the
+    // client)
+    runInFence(function () {
+      self.collection.update(
+        self.id, {$set: {custom: new TestCustomType('a', 'c')}},
+        expect(function (err) {
+          test.isFalse(err);
+        }));
+    });
+  },
+  function (test, expect) {
+    var self = this;
+    test.length(self.changes, 1);
+    test.equal(self.changes.shift(),
+               ['c', self.id, {custom: new TestCustomType('a', 'c')}]);
+
+    // Now, sneakily replace just a piece of it. Meteor won't do this, but
+    // perhaps you are accessing Mongo directly.
+    runInFence(function () {
+      self.collection.update(
+        self.id, {$set: {'custom.EJSON$value.EJSONtail': 'd'}},
+      expect(function (err) {
+        test.isFalse(err);
+      }));
+    });
+  },
+  function (test, expect) {
+    var self = this;
+    test.length(self.changes, 1);
+    test.equal(self.changes.shift(),
+               ['c', self.id, {custom: new TestCustomType('a', 'd')}]);
+    self.handle.stop();
+  }
+]);

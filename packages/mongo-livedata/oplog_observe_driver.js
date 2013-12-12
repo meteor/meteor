@@ -247,18 +247,25 @@ _.extend(OplogObserveDriver.prototype, {
       // replacement (in which case we can just directly re-evaluate the
       // selector)?
       var isReplace = !_.has(op.o, '$set') && !_.has(op.o, '$unset');
+      // If this modifier modifies something inside an EJSON custom type (ie,
+      // anything with EJSON$), then we can't try to use
+      // LocalCollection._modify, since that just mutates the EJSON encoding,
+      // not the actual object.
+      var canDirectlyModifyDoc =
+            !isReplace && modifierCanBeDirectlyApplied(op.o);
 
       if (isReplace) {
         self._handleDoc(id, _.extend({_id: id}, op.o));
-      } else if (self._published.has(id)) {
+      } else if (self._published.has(id) && canDirectlyModifyDoc) {
         // Oh great, we actually know what the document is, so we can apply
         // this directly.
         var newDoc = EJSON.clone(self._published.get(id));
         newDoc._id = id;
         LocalCollection._modify(newDoc, op.o);
         self._handleDoc(id, self._sharedProjectionFn(newDoc));
-      } else if (LocalCollection._canSelectorBecomeTrueByModifier(
-        self._cursorDescription.selector, op.o)) {
+      } else if (!canDirectlyModifyDoc ||
+                 LocalCollection._canSelectorBecomeTrueByModifier(
+                   self._cursorDescription.selector, op.o)) {
         self._needToFetch.set(id, op.ts.toString());
         if (self._phase === PHASE.STEADY)
           self._fetchModifiedDocuments();
@@ -477,6 +484,14 @@ OplogObserveDriver.cursorSupported = function (cursorDescription) {
       typeof value === "boolean" ||
       value === null ||
       value instanceof Meteor.Collection.ObjectID;
+  });
+};
+
+var modifierCanBeDirectlyApplied = function (modifier) {
+  return _.all(modifier, function (fields, operation) {
+    return _.all(fields, function (value, field) {
+      return !/EJSON\$/.test(field);
+    });
   });
 };
 
