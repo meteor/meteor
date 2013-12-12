@@ -10,7 +10,7 @@ Package.describe({
 
 Package._transitional_registerBuildPlugin({
   name: "compileTemplates",
-  use: ['spacebars'],
+  use: ['spacebars-compiler'],
   sources: [
     'plugin/html_scanner.js',
     'plugin/compile-templates.js'
