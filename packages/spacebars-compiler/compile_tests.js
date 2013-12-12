@@ -19,7 +19,19 @@ Tinytest.add("spacebars - compiler output", function (test) {
       var output = Spacebars.compile(input);
       var postProcess = function (string) {
         // remove initial and trailing parens
-        return string.replace(/^\(([\S\s]*)\)$/, '$1');
+        string = string.replace(/^\(([\S\s]*)\)$/, '$1');
+        if (! Package.minifiers) {
+          // these tests work a lot better with access to beautification,
+          // but let's at least do some sort of test without it.
+          // These regexes may have to be adjusted if new tests are added.
+
+          // Remove single-line comments, including line nums from build system.
+          string = string.replace(/\/\/.*$/mg, '');
+          string = string.replace(/\s+/g, ''); // kill whitespace
+          // collapse identical consecutive parens
+          string = string.replace(/\(+/g, '(').replace(/\)+/g, ')');
+        }
+        return string;
       };
       // compare using Function .toString()!
       test._stringEqual(

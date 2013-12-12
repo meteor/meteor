@@ -19,7 +19,7 @@ var jsReservedWordSet = (function (set) {
 })({});
 
 toObjectLiteralKey = function (k) {
-  if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(k) && jsReservedWordSet[k] !== 1)
+  if (/^[a-zA-Z$_][a-zA-Z$0-9_]*$/.test(k) && jsReservedWordSet[k] !== 1)
     return k;
   return toJSLiteral(k);
 };

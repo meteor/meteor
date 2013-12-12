@@ -36,6 +36,7 @@ Package.on_test(function (api) {
   api.use('jquery'); // strong dependency, for testing jQuery backend
   api.use('ui');
   api.use(['test-helpers', 'underscore'], 'client');
+  api.use('spacebars-compiler'); // for `HTML.toJS`
 
   api.use('html-tools');
 
