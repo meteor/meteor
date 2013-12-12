@@ -898,7 +898,7 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
 
   var stopped = false;
   var lastTS = undefined;
-  Meteor.defer(function () {
+  var loop = function () {
     while (true) {
       if (stopped)
         return;
@@ -930,9 +930,16 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
           cursorDescription.collectionName,
           newSelector,
           cursorDescription.options));
+        // Mongo failover takes many seconds.  Retry in a bit.  (Without this
+        // setTimeout, we peg the CPU at 100% and never notice the actual
+        // failover.
+        Meteor.setTimeout(loop, 100);
+        break;
       }
     }
-  });
+  };
+
+  Meteor.defer(loop);
 
   return {
     stop: function () {
