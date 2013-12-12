@@ -15,10 +15,11 @@ Thanks to [@nickmoylan](https://github.com/nickmoylan) and [@mcrider](https://gi
 This package lets you attach permissions to a user which you can then check against later when deciding whether to grant access to Meteor methods or publish data.  The core concept is very simple, essentially you are attaching strings to a user object and then checking for the existance of those strings later. In some sense, it is very similar to tags on blog posts. This package provides helper methods to make the process of adding, removing, and verifying those permissions easier.
 
 
-- per-group support -
+    Now with per-group support!
 
-v1.1.0 - supports per-group usage.
-v1.2.0 - adds the special Roles.GLOBAL_GROUP which can be used to provide blanket permissions for a user across all groups
+    v1.1.0 - adds support for per-group assignment of roles/permissions
+
+    v1.2.0 - adds the special Roles.GLOBAL_GROUP, used to provide blanket permissions across all groups
 
 <br />
 
@@ -61,17 +62,17 @@ Run locally:
 
 † The type of the `roles` field depends on whether groups are used or not:
 ```js
-    Roles.addUsersToRoles(bobsUserId, ['manage-team','schedule-game'])
-    // internal representation - no groups 
-    // user.roles = ['manage-team','schedule-game']
-    
-    Roles.addUsersToRoles(joesUserId, ['manage-team','schedule-game'], 'manchester_united')
-    Roles.addUsersToRoles(joesUserId, ['player','goalie'], 'real_madrid')
-    // internal representation - groups
-    // user.roles = { 
-    //   'manchester_united': ['manage-team','schedule-game'],
-    //   'real_madrid': ['player','goalie']
-    // }
+Roles.addUsersToRoles(bobsUserId, ['manage-team','schedule-game'])
+// internal representation - no groups 
+// user.roles = ['manage-team','schedule-game']
+
+Roles.addUsersToRoles(joesUserId, ['manage-team','schedule-game'], 'manchester_united')
+Roles.addUsersToRoles(joesUserId, ['player','goalie'], 'real_madrid')
+// internal representation - groups
+// user.roles = { 
+//   'manchester_united': ['manage-team','schedule-game'],
+//   'real_madrid': ['player','goalie']
+// }
 ```
 
 †† `Meteor.roles` is not published by default.  Here's how you would publish it to every client without needing a subscription:
