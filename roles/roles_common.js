@@ -381,27 +381,36 @@ Roles.userIsInRole = function (user, roles, group) {
  * Retrieve users roles
  *
  * @method getRolesForUser
- * @param {String} userId Id of user
+ * @param {String|Object} user Id of user or actual user object
  * @param {String} [group] Optional name of group to restrict roles to.
  *                         User's Roles.GLOBAL_GROUP will also be checked.
  * @return {Array} Array of user's roles, unsorted. undefined if user not found
  */
-Roles.getRolesForUser = function (userId, group) {
-  var user
+Roles.getRolesForUser = function (user, group) {
+  if (!user) return []
+  if (group && 'string' !== typeof group) return []
 
-  if (!userId) return
-  if (group && 'string' !== typeof group) return
+  if ('string' === typeof user) {
+    user = Meteor.users.findOne(
+             {_id: user},
+             {fields: {roles: 1}})
 
-  user = Meteor.users.findOne(
-           {_id: userId},
-           {fields: {roles: 1}})
+  } else if ('object' !== typeof user) {
+    // invalid user object
+    return []
+  }
 
-  if (!user || !user.roles) return
+  if (!user || !user.roles) return []
 
-  if (group)
+  if (group) {
     return _.union(user.roles[group], user.roles[Roles.GLOBAL_GROUP] || [])
+  }
 
-  return user.roles
+  if (_.isArray(user.roles))
+    return user.roles
+
+  // using groups but group not specified. return global group, if exists
+  return user.roles[Roles.GLOBAL_GROUP] || []
 }
 
 /**

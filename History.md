@@ -1,3 +1,8 @@
+## v1.2.2
+
+* Support passing user object in addition to _id for Roles.getRolesForUser
+
+
 ## v1.2.1
 
 * Improve internal string value of Roles.GLOBAL_GROUP constant

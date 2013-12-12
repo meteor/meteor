@@ -2,7 +2,7 @@
     "project": {
         "name": "The meteor-roles API",
         "description": "The meteor-roles API: a role-based authorization package for Meteor",
-        "version": "v1.2.1"
+        "version": "v1.2.2"
     },
     "files": {
         "roles/roles_client.js": {
@@ -80,7 +80,7 @@
         {
             "file": "roles/roles_client.js",
             "line": 23,
-            "description": "Handlebars helper to check if current user is in at least one\nof the target roles.  For use in client-side templates.\n\nNOTE: This helper does not currently support groups.",
+            "description": "Handlebars helper to check if current user is in at least one\nof the target roles.  For use in client-side templates.\n\nNOTE: This helper does not currently support specifying a group.  \n      If Meteor.user() has per-group roles, you can use this helper\n      to check for permissions in the Roles.GLOBAL_GROUP but to \n      check for permissions in a specific group you will need to \n      use Roles.userIsInRole() from your own template helper.",
             "example": [
                 "\n    {{#if isInRole 'admin'}}\n    {{/if}}\n\n    {{#if isInRole 'editor,user'}}\n    {{/if}}"
             ],
@@ -260,9 +260,9 @@
             "name": "getRolesForUser",
             "params": [
                 {
-                    "name": "userId",
-                    "description": "Id of user",
-                    "type": "String"
+                    "name": "user",
+                    "description": "Id of user or actual user object",
+                    "type": "String|Object"
                 },
                 {
                     "name": "group",
@@ -280,7 +280,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 407,
+            "line": 416,
             "description": "Retrieve set of all existing roles",
             "itemtype": "method",
             "name": "getAllRoles",
@@ -293,7 +293,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 417,
+            "line": 426,
             "description": "Retrieve all users who are in target role.  \n\nNOTE: This is an expensive query; it performs a full collection scan\non the users collection since there is no index set on the 'roles' field.  \nThis is by design as most queries will specify an _id so the _id index is \nused automatically.",
             "itemtype": "method",
             "name": "getUsersInRole",

@@ -24,7 +24,11 @@ Roles._handlebarsHelpers = {
    * Handlebars helper to check if current user is in at least one
    * of the target roles.  For use in client-side templates.
    *
-   * NOTE: This helper does not currently support groups.
+   * NOTE: This helper does not currently support specifying a group.  
+   *       If Meteor.user() has per-group roles, you can use this helper
+   *       to check for permissions in the Roles.GLOBAL_GROUP but to 
+   *       check for permissions in a specific group you will need to 
+   *       use Roles.userIsInRole() from your own template helper.
    *
    * @example
    *     {{#if isInRole 'admin'}}

@@ -19,7 +19,7 @@
             
         </div>
         <div class="yui3-u-1-4 version">
-            <em>API Docs for: v1.2.1</em>
+            <em>API Docs for: v1.2.2</em>
         </div>
     </div>
     <div id="bd" class="yui3-g">
@@ -686,7 +686,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l407"><code>roles&#x2F;roles_common.js:407</code></a>
+        <a href="../files/roles_roles_common.js.html#l416"><code>roles&#x2F;roles_common.js:416</code></a>
         
         </p>
 
@@ -732,7 +732,7 @@ are currently assigned to the target role.</p>
             
                 <li class="arg">
                     
-                        <code>userId</code>
+                        <code>user</code>
                     
                 </li>
             
@@ -798,14 +798,14 @@ are currently assigned to the target role.</p>
             
                 <li class="param">
                     
-                        <code class="param-name">userId</code>
-                        <span class="type">String</span>
+                        <code class="param-name">user</code>
+                        <span class="type">String | Object</span>
                     
 
                     
 
                     <div class="param-description">
-                        <p>Id of user</p>
+                        <p>Id of user or actual user object</p>
 
                     </div>
 
@@ -906,7 +906,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l417"><code>roles&#x2F;roles_common.js:417</code></a>
+        <a href="../files/roles_roles_common.js.html#l426"><code>roles&#x2F;roles_common.js:426</code></a>
         
         </p>
 
@@ -1051,7 +1051,10 @@ used automatically.</p>
     <div class="description">
         <p>Handlebars helper to check if current user is in at least one
 of the target roles.  For use in client-side templates.</p>
-<p>NOTE: This helper does not currently support groups.</p>
+<p>NOTE: This helper does not currently support specifying a group.<br>      If Meteor.user() has per-group roles, you can use this helper
+      to check for permissions in the Roles.GLOBAL_GROUP but to 
+      check for permissions in a specific group you will need to 
+      use Roles.userIsInRole() from your own template helper.</p>
 
     </div>
 

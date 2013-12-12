@@ -46,10 +46,7 @@
 
   // Mock Meteor.user() for isInRole handlebars helper testing
   Meteor.user = function () {
-    return {
-      _id: 'testId',
-      roles: ['user','manage-users']
-    }
+    return users.eve
   }
 
   Tinytest.add(
@@ -62,11 +59,15 @@
       test.equal(typeof isInRole, 'function', "'isInRole' helper not registered")
 
       expected = true
-      actual = isInRole('admin, manage-users')
+      actual = isInRole('admin, editor')
       test.equal(actual, expected)
       
-      expected = false
+      expected = true
       actual = isInRole('admin')
+      test.equal(actual, expected)
+
+      expected = false
+      actual = isInRole('unknown')
       test.equal(actual, expected)
     })
 
