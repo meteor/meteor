@@ -243,3 +243,7 @@
 <template name="spacebars_template_test_textarea2">
   <textarea>{{#if foo}}</not a tag>{{else}}<also not a tag>{{/if}}</textarea>
 </template>
+
+<template name="spacebars_template_test_textarea_each">
+  <textarea>{{#each foo}}<not a tag {{.}} {{else}}<>{{/each}}</textarea>
+</template>

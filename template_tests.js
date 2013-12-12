@@ -710,3 +710,26 @@ Tinytest.add('spacebars - templates - textarea 2', function (test) {
   test.equal(textarea.value, '</not a tag>');
 
 });
+
+Tinytest.add('spacebars - templates - textarea each', function (test) {
+  var tmpl = Template.spacebars_template_test_textarea_each;
+
+  var R = ReactiveVar(['APPLE', 'BANANA']);
+
+  tmpl.foo = function () {
+    return R.get();
+  };
+
+  var div = renderToDiv(tmpl);
+  var textarea = div.querySelector('textarea');
+  test.equal(textarea.value, '<not a tag APPLE <not a tag BANANA ');
+
+  R.set([]);
+  Deps.flush();
+  test.equal(textarea.value, '<>');
+
+  R.set(['CUCUMBER']);
+  Deps.flush();
+  test.equal(textarea.value, '<not a tag CUCUMBER ');
+
+});
