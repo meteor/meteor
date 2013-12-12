@@ -25,7 +25,7 @@ var find_mongo_pids = function (app_dir, port, callback) {
 
         _.each(stdout.split('\n'), function (ps_line) {
           // matches mongos we start.
-          var m = ps_line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db /);
+          var m = ps_line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db(?: |$)/);
           if (m && m.length === 4) {
             var found_pid =  parseInt(m[1]);
             var found_port = parseInt(m[2]);
