@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "clean-css": {
-      "version": "1.1.2",
+      "version": "2.0.2",
       "dependencies": {
         "commander": {
           "version": "2.0.0"

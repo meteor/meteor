@@ -69,6 +69,7 @@ Meteor will not apply the patch and will instead disable websockets.
   * Node from 0.10.21 to 0.10.22
   * MongoDB from 2.4.6 to 2.4.8
   * Websocket driver from XXX to YYY
+  * clean-css from 1.1.2 to 2.0.2
 
 Patches contributed by GitHub users AlexeyMK, awwx, dandv,
 DenisGorbachev, FooBarWidget, mitar, mcbain, rzymek, sdarnell.
