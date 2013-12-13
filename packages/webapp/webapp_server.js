@@ -721,8 +721,8 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
       proxyToPort = ourPort;
       proxyToPathPrefix = bindPathPrefix;
     } else {
-      var parsedFwdUrl = url.parse(route.forwardTo);
-      if (! parsedUrl.hostname || parsedUrl.protocol)
+      var parsedFwdUrl = url.parse(route.forwardTo, false, true);
+      if (! parsedFwdUrl.hostname || parsedFwdUrl.protocol)
         throw new Error("Bad forward url");
       proxyToHost = parsedFwdUrl.hostname;
       proxyToPort = parseInt(parsedFwdUrl.port || "80");
