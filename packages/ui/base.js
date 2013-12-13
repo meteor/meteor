@@ -336,27 +336,21 @@ UI.Component.notifyParented = function () {
     });
   }
 
-  var updatedTemplateInstance = false;
-
   // XXX this is an undocumented callback
   if (self.parented) {
     Deps.nonreactive(function () {
-      if (! updatedTemplateInstance) {
-        updateTemplateInstance(self);
-        updatedTemplateInstance = true;
-      }
+      updateTemplateInstance(self);
       self.parented.call(self.templateInstance);
     });
   }
 
-  // XXX fix this callback's timing
   if (self.rendered) {
-    Deps.nonreactive(function () {
-      if (! updatedTemplateInstance) {
+    // Defer rendered callback until flush time.
+    Deps.afterFlush(function () {
+      if (! self.isDestroyed) {
         updateTemplateInstance(self);
-        updatedTemplateInstance = true;
+        self.rendered.call(self.templateInstance);
       }
-      self.rendered.call(self.templateInstance);
     });
   }
 };

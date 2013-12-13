@@ -318,11 +318,14 @@ Tinytest.add("ui - render - components", function (test) {
     var div = document.createElement("DIV");
 
     materialize(myComponent, div);
+    buf.push('---flush---');
+    Deps.flush();
     test.equal(buf, ['created 1',
                      'parent of 2 is 1',
                      'created 2',
                      'parent of 3 is 2',
                      'created 3',
+                     '---flush---',
                      // (proper order for these has not be thought out:)
                      'dom-1 is 1..HR',
                      'dom-2 is 2..HR',
