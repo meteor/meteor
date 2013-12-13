@@ -684,8 +684,7 @@ WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
   };
 
   var version = "";
-  var adminPrograms = ["panel", "ultraworld", "proxy"];
-  if (!_.contains(adminPrograms, bindPathPrefix)) {
+  if (!process.env.ADMIN_APP) {
     var AppConfig = Package["application-configuration"].AppConfig;
     version = AppConfig.getStarForThisJob();
   }
