@@ -706,7 +706,12 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
     }
 
     var parsedDdpUrl = _.clone(parsedUrl);
-    parsedDdpUrl.protocol = "ddp:";
+    parsedDdpUrl.protocol = "ddp";
+    // Node has a hardcoded list of protocols that get '://' instead
+    // of ':'. ddp needs to be added to that whitelist. Until then, we
+    // can set the undocumented attribute 'slashes' to get the right
+    // behavior. It's not clear whether than is by design or accident.
+    parsedDdpUrl.slashes = true;
     parsedDdpUrl.port = '' + securePort;
     var ddpUrl = url.format(parsedDdpUrl);
 
@@ -716,7 +721,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
       proxyToPort = ourPort;
       proxyToPathPrefix = bindPathPrefix;
     } else {
-      var parsedFwdUrl = url.parse(options.forwardTo);
+      var parsedFwdUrl = url.parse(route.forwardTo);
       if (! parsedUrl.hostname || parsedUrl.protocol)
         throw new Error("Bad forward url");
       proxyToHost = parsedFwdUrl.hostname;
@@ -724,7 +729,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
       proxyToPathPrefix = parsedFwdUrl.pathname || "";
     }
 
-    if (options.ddp) {
+    if (route.ddp) {
       proxy.call('bindDdp', {
         pid: pid,
         bindTo: {
@@ -740,7 +745,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
       }, makeCallback());
     }
 
-    if (options.http) {
+    if (route.http) {
       proxy.call('bindHttp', {
         pid: pid,
         bindTo: {
