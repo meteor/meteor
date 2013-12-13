@@ -38,6 +38,24 @@ Tinytest.add("spacebars - templates - simple helper", function (test) {
   R.set(2);
   Deps.flush();
   test.equal(stripComments(div.innerHTML), "125");
+
+  // Test that `{{foo bar}}` throws if `foo` is missing or not a function.
+  tmpl.foo = 3;
+  test.throws(function () {
+    renderToDiv(tmpl);
+  });
+
+  delete tmpl.foo;
+  // We'd like this to throw, but it doesn't because of how self.lookup
+  // works.  D'oh.  Fix this as part of "new this".
+  //test.throws(function () {
+    renderToDiv(tmpl);
+  //});
+
+  tmpl.foo = function () {};
+  // doesn't throw
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), '');
 });
 
 Tinytest.add("spacebars - templates - dynamic template", function (test) {
