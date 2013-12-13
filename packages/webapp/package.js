@@ -19,4 +19,5 @@ Package.on_use(function (api) {
   // loaded after webapp.
   api.export(['WebApp', 'main', 'WebAppInternals'], 'server');
   api.add_files('webapp_server.js', 'server');
+  api.add_files('css_detect.css', 'client');
 });

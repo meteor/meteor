@@ -20,6 +20,16 @@ WebAppInternals = {};
 
 var bundledJsCssPrefix;
 
+var RELOAD_SAFETYBELT = "\n" +
+      "if (typeof Meteor === 'undefined' || \n" +
+      "    ! _.find(document.styleSheets, function (sheet) { \n" +
+      "      return _.find(sheet.cssRules, function (rule) { \n" +
+      "         return rule.selectorText === '._meteor_detect_css'; \n" +
+      "      }); \n" +
+      "    })) \n" +
+      "  document.location.reload(); \n";
+
+
 var makeAppNamePathPrefix = function (appName) {
   return encodeURIComponent(appName).replace(/\./g, '_');
 };
@@ -290,6 +300,7 @@ var runWebAppServer = function () {
     }
   });
 
+
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
   app.use(function (req, res, next) {
@@ -306,12 +317,20 @@ var runWebAppServer = function () {
       return;
     }
 
+    var serveStaticJs = function (s) {
+      res.writeHead(200, { 'Content-type': 'application/javascript' });
+      res.write(s);
+      res.end();
+    };
+
     if (pathname === "/meteor_runtime_config.js" &&
         ! WebAppInternals.inlineScriptsAllowed()) {
-      res.writeHead(200, { 'Content-type': 'application/javascript' });
-      res.write("__meteor_runtime_config__ = " +
-                JSON.stringify(__meteor_runtime_config__) + ";");
-      res.end();
+      serveStaticJs("__meteor_runtime_config__ = " +
+                    JSON.stringify(__meteor_runtime_config__) + ";");
+      return;
+    } else if (pathname === "/meteor_reload_safetybelt.js" &&
+               ! WebAppInternals.inlineScriptsAllowed()) {
+      serveStaticJs(RELOAD_SAFETYBELT);
       return;
     }
 
@@ -519,11 +538,18 @@ var runWebAppServer = function () {
           /##RUNTIME_CONFIG##/,
         "<script type='text/javascript'>__meteor_runtime_config__ = " +
           JSON.stringify(__meteor_runtime_config__) + ";</script>");
+      boilerplateHtml = boilerplateHtml.replace(
+          /##RELOAD_SAFETYBELT##/,
+        "<script type='text/javascript'>"+RELOAD_SAFETYBELT+"</script>");
     } else {
       boilerplateHtml = boilerplateHtml.replace(
         /##RUNTIME_CONFIG##/,
         "<script type='text/javascript' src='##ROOT_URL_PATH_PREFIX##/meteor_runtime_config.js'></script>"
       );
+      boilerplateHtml = boilerplateHtml.replace(
+          /##RELOAD_SAFETYBELT##/,
+        "<script type='text/javascript' src='##ROOT_URL_PATH_PREFIX##/meteor_reload_safetybelt.js'></script>");
+
     }
     boilerplateHtml = boilerplateHtml.replace(
         /##ROOT_URL_PATH_PREFIX##/g,
