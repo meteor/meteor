@@ -27,7 +27,7 @@ apply the patch and will instead disable websockets.
 * Rework hot code push. The new `autoupdate` package drives automatic
   reloads on update using standard DDP messages instead of a hardcoded
   message at DDP startup. Now the hot code push only triggers when
-  client code changes; server only code changes will not cause the page
+  client code changes; server-only code changes will not cause the page
   to reload.
 
 * New 'facts' package publishes internal statistics about Meteor.
@@ -67,7 +67,7 @@ apply the patch and will instead disable websockets.
 * Support `EJSON.clone` for `Meteor.Error`. As a result, they are properly
   stringified in DDP even if thrown through a `Future`.  #1482
 
-* Fix passing `transform: null` option to `Collection.find()` to disable
+* Fix passing `transform: null` option to `collection.allow()` to disable
   transformation in validators.  #1659
 
 * Fix livedata error on `this.removed` during session shutdown. #1540 #1553
@@ -97,7 +97,7 @@ apply the patch and will instead disable websockets.
   * uglify-js from a fork of 2.4.0 to 2.4.7
 
 Patches contributed by GitHub users AlexeyMK, awwx, dandv,
-DenisGorbachev, FooBarWidget, mitar, mcbain, rzymek, sdarnell.
+DenisGorbachev, FooBarWidget, mitar, mcbain, rzymek, and sdarnell.
 
 
 ## v0.6.6.3
