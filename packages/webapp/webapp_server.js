@@ -22,11 +22,7 @@ var bundledJsCssPrefix;
 
 var RELOAD_SAFETYBELT = "\n" +
       "if (typeof Meteor === 'undefined' || \n" +
-      "    ! _.find(document.styleSheets, function (sheet) { \n" +
-      "      return _.find(sheet.cssRules, function (rule) { \n" +
-      "         return rule.selectorText === '._meteor_detect_css'; \n" +
-      "      }); \n" +
-      "    })) \n" +
+      "    ! Meteor._isCssLoaded()) \n" +
       "  document.location.reload(); \n";
 
 

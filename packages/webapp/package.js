@@ -9,6 +9,7 @@ Npm.depends({connect: "2.9.0",
 
 Package.on_use(function (api) {
   api.use(['logging', 'underscore', 'routepolicy'], 'server');
+  api.use(['underscore'], 'client');
   api.use(['application-configuration', 'follower-livedata'], {
     unordered: true
   });
@@ -19,5 +20,6 @@ Package.on_use(function (api) {
   // loaded after webapp.
   api.export(['WebApp', 'main', 'WebAppInternals'], 'server');
   api.add_files('webapp_server.js', 'server');
+  api.add_files('webapp_client.js', 'client');
   api.add_files('css_detect.css', 'client');
 });
