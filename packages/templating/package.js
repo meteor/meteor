@@ -39,6 +39,7 @@ Package.on_test(function (api) {
   api.use('underscore');
   api.use(['test-helpers', 'session', 'deps',
            'minimongo'], 'client');
+  api.use('spacebars-compiler');
 
   api.add_files([
     'templating_tests.js',
