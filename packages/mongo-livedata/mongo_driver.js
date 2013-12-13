@@ -280,7 +280,7 @@ MongoConnection.prototype._insert = function (collection_name, document,
 
   var write = self._maybeBeginWrite();
   var refresh = function () {
-    Meteor.refresh({ collection: collection_name, id: document._id });
+    Meteor.refresh({collection: collection_name, id: document._id });
   };
   callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
   try {
@@ -335,6 +335,25 @@ MongoConnection.prototype._remove = function (collection_name, selector,
     var collection = self._getCollection(collection_name);
     collection.remove(replaceTypes(selector, replaceMeteorAtomWithMongo),
                       {safe: true}, callback);
+  } catch (e) {
+    write.committed();
+    throw e;
+  }
+};
+
+MongoConnection.prototype._dropCollection = function (collectionName, cb) {
+  var self = this;
+
+  var write = self._maybeBeginWrite();
+  var refresh = function () {
+    Meteor.refresh({collection: collectionName, id: null,
+                    dropCollection: true});
+  };
+  cb = bindEnvironmentForWrite(writeCallback(write, refresh, cb));
+
+  try {
+    var collection = self._getCollection(collectionName);
+    collection.drop(cb);
   } catch (e) {
     write.committed();
     throw e;
@@ -536,7 +555,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
   doUpdate();
 };
 
-_.each(["insert", "update", "remove"], function (method) {
+_.each(["insert", "update", "remove", "dropCollection"], function (method) {
   MongoConnection.prototype[method] = function (/* arguments */) {
     var self = this;
     return Meteor._wrapAsync(self["_" + method]).apply(self, arguments);
@@ -879,7 +898,7 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
 
   var stopped = false;
   var lastTS = undefined;
-  Meteor.defer(function () {
+  var loop = function () {
     while (true) {
       if (stopped)
         return;
@@ -911,9 +930,16 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
           cursorDescription.collectionName,
           newSelector,
           cursorDescription.options));
+        // Mongo failover takes many seconds.  Retry in a bit.  (Without this
+        // setTimeout, we peg the CPU at 100% and never notice the actual
+        // failover.
+        Meteor.setTimeout(loop, 100);
+        break;
       }
     }
-  });
+  };
+
+  Meteor.defer(loop);
 
   return {
     stop: function () {
@@ -993,10 +1019,6 @@ MongoConnection.prototype._observeChanges = function (
 listenAll = function (cursorDescription, listenCallback) {
   var listeners = [];
   forEachTrigger(cursorDescription, function (trigger) {
-    // The "drop collection" event is used by the oplog crossbar, not the
-    // invalidation crossbar.
-    if (trigger.dropCollection)
-      return;
     listeners.push(DDPServer._InvalidationCrossbar.listen(
       trigger, listenCallback));
   });
@@ -1018,7 +1040,7 @@ forEachTrigger = function (cursorDescription, triggerCallback) {
     _.each(specificIds, function (id) {
       triggerCallback(_.extend({id: id}, key));
     });
-    triggerCallback(_.extend({dropCollection: true}, key));
+    triggerCallback(_.extend({dropCollection: true, id: null}, key));
   } else {
     triggerCallback(key);
   }

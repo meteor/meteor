@@ -677,7 +677,7 @@ exports.run = function (context, options) {
 
     mongoStartupPrintTimer = setTimeout(function () {
       process.stdout.write("Initializing mongo database... this may take a moment.\n");
-    }, 3000);
+    }, 5000);
 
     updater.startUpdateChecks(context);
     launch();

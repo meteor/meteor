@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "Update the client when new client code is available"
+  summary: "Update the client when new client code is available",
+  internal: true
 });
 
 Package.on_use(function (api) {

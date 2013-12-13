@@ -25,7 +25,7 @@ var find_mongo_pids = function (app_dir, port, callback) {
 
         _.each(stdout.split('\n'), function (ps_line) {
           // matches mongos we start.
-          var m = ps_line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db --replSet /);
+          var m = ps_line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db(?: |$)/);
           if (m && m.length === 4) {
             var found_pid =  parseInt(m[1]);
             var found_port = parseInt(m[2]);
@@ -199,13 +199,16 @@ exports.launchMongo = function (options) {
       var child_process = require('child_process');
       var replSetName = 'meteor';
       var proc = child_process.spawn(mongod_path, [
-        // nb: cli-test.sh and find_mongo_pids assume that the next four arguments
-        // exist in this order without anything in between
+        // nb: cli-test.sh and find_mongo_pids make strong assumptions about the
+        // order of the arguments! Check them before changing any arguments.
         '--bind_ip', '127.0.0.1',
         '--smallfiles',
         '--nohttpinterface',
         '--port', options.port,
         '--dbpath', dbPath,
+        // Use an 8MB oplog rather than 256MB. Uses less space on disk and
+        // initializes faster. (Not recommended for production!)
+        '--oplogSize', '8',
         '--replSet', replSetName
       ]);
 

@@ -464,10 +464,10 @@ if (Meteor.isClient) (function () {
     function (test, expect) {
       var self = this;
       // Test that deleting a user logs out that user's connections.
-      Meteor.loginWithPassword(this.username, this.password, function (err) {
+      Meteor.loginWithPassword(this.username, this.password, expect(function (err) {
         test.isFalse(err);
         Accounts.connection.call("removeUser", self.username);
-      });
+      }));
     },
     waitForLoggedOutStep
   ]);
