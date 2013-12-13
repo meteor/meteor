@@ -43,19 +43,34 @@ Autoupdate.newClientAvailable = function () {
 };
 
 
-Meteor.subscribe("meteor_autoupdate_clientVersions", {
-  onError: function (error) {
-    Meteor._debug("autoupdate subscription failed:", error);
-  },
-  onReady: function () {
-    if (Package.reload) {
-      Deps.autorun(function (computation) {
-        if (ClientVersions.findOne({current: true}) &&
-            (! ClientVersions.findOne({_id: autoupdateVersion}))) {
-          computation.stop();
-          Package.reload.Reload._reload();
-        }
+
+// XXX This is a hack. See packages/livedata/livedata_common.js
+var retry = new DDP._Retry();
+// Unlike the stream reconnect use of Retry, which we want to be instant
+// in normal operation, this is a wacky failure. We don't want to retry
+// right away, we can start slowly.
+var failures = 3; // start at about 30 seconds.
+
+Autoupdate._retrySubscription = function () {
+  Meteor.subscribe("meteor_autoupdate_clientVersions", {
+    onError: function (error) {
+      Meteor._debug("autoupdate subscription failed:", error);
+      failures++;
+      retry.retryLater(failures, function () {
+        Autoupdate._retrySubscription();
       });
-    }
+    },
+    onReady: function () {
+      if (Package.reload) {
+        Deps.autorun(function (computation) {
+          if (ClientVersions.findOne({current: true}) &&
+              (! ClientVersions.findOne({_id: autoupdateVersion}))) {
+            computation.stop();
+            Package.reload.Reload._reload();
+          }
+        });
+      }
   }
-});
+  });
+};
+Autoupdate._retrySubscription();
