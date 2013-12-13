@@ -12,7 +12,7 @@ CleanCSSProcess = function (source, options) {
 UglifyJSMinify = Npm.require('uglify-js').minify;
 
 var CSSPullImports = function (source) {
-  var importRegExp = /^\s*@import\s*[^;]*;\s*$/gm;
+  var importRegExp = /^\s*@import\s*[^;]*;\s*/gm;
   var imports = source.match(importRegExp) || [];
   var newSource = source.replace(importRegExp, '');
 
