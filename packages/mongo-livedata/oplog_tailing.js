@@ -134,21 +134,14 @@ _.extend(OplogHandle.prototype, {
       return;
     }
 
+
+    // Insert the future into our list. Almost always, this will be at the end,
+    // but it's conceivable that if we fail over from one primary to another,
+    // the oplog entries we see will go backwards.
     var insertAfter = self._catchingUpFutures.length;
     while (insertAfter - 1 > 0
            && self._catchingUpFutures[insertAfter - 1].ts.greaterThan(ts)) {
       insertAfter--;
-    }
-
-    // XXX this can occur if we fail over from one primary to another.  so this
-    // check needs to be removed before we merge oplog.  that said, it has been
-    // helpful so far at proving that we are properly using poolSize 1. Also, we
-    // could keep something like it if we could actually detect failover; see
-    // https://github.com/mongodb/node-mongodb-native/issues/1120
-    if (insertAfter !== self._catchingUpFutures.length) {
-      throw Error("found misordered oplog: "
-                  + showTS(_.last(self._catchingUpFutures).ts) + " vs "
-                  + showTS(ts));
     }
     var f = new Future;
     self._catchingUpFutures.splice(insertAfter, 0, {ts: ts, future: f});
