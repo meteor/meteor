@@ -140,7 +140,9 @@ Ctl.Commands.push({
     var oldServers = jobs.find(oldJobSelector).fetch();
     // Start a new job for each of them.
     _.each(oldServers, function (oldServer) {
-      Ctl.startServerlikeProgram("server", oldServer.tags, oldServer.env.ADMIN_APP);
+      Ctl.startServerlikeProgram("server",
+                                 oldServer.tags,
+                                 oldServer.env.ADMIN_APP);
     });
     // Wait for them all to come up and bind to the proxy.
     Meteor._sleepForMs(5000); // XXX: Eventually make sure they're proxy-bound.

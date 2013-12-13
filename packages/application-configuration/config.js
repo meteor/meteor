@@ -122,7 +122,7 @@ AppConfig.configurePackage = function (packageName, configure) {
            app.config && app.config.packages && app.config.packages[packageName],
            lastConfig)) {
       lastConfig = app.config.packages[packageName];
-      configure(_.extend({version: appConfig.version}, lastConfig));
+      configure(lastConfig);
     }
   };
   var subHandle;
