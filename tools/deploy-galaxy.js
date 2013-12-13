@@ -21,7 +21,9 @@ var getPackage = _.once(function (context) {
 var authenticatedDDPConnect = function (url, context) {
   var Package = getPackage(context);
   return Package.livedata.DDP.connect(url, {
-    cookie: "GALAXY_AUTH=" + context.galaxy.authToken
+    headers: {
+      cookie: "GALAXY_AUTH=" + context.galaxy.authToken
+    }
   });
 };
 
@@ -121,7 +123,10 @@ exports.discoverGalaxy = function (app) {
         _.has(body, "galaxyDiscoveryVersion") &&
         _.has(body, "galaxyUrl") &&
         (body.galaxyDiscoveryVersion === "galaxy-discovery-pre0")) {
-      fut.return("https://" + body.galaxyUrl);
+      var result = body.galaxyUrl;
+      if (result.indexOf("https://") === -1)
+        result = "https://" + result;
+      fut.return(result);
     } else {
       fut.return(null);
     }
