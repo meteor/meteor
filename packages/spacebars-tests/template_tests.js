@@ -733,3 +733,25 @@ Tinytest.add('spacebars - templates - textarea each', function (test) {
   test.equal(textarea.value, '<not a tag CUCUMBER ');
 
 });
+
+testAsyncMulti('spacebars - template - defer in rendered callbacks', [function (test, expect) {
+  var tmpl = Template.spacebars_template_test_defer_in_rendered;
+  var coll = new Meteor.Collection("xcxc");
+  tmpl.items = function () {
+    return coll.find();
+  };
+
+  var subtmpl = Template.spacebars_template_test_defer_in_rendered_subtemplate;
+  subtmpl.rendered = expect(function () {
+    // will throw if called in a stub
+    Meteor.defer(function () {
+    });
+  });
+
+  var div = renderToDiv(tmpl);
+
+  // cause a new instance of `subtmpl` to be placed in the DOM. verify
+  // that it's not fired directly within a stub, in which
+  // `Meteor.defer` is not allowed.
+  coll.insert({});
+}]);

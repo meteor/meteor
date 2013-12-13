@@ -247,3 +247,13 @@
 <template name="spacebars_template_test_textarea_each">
   <textarea>{{#each foo}}<not a tag {{.}} {{else}}<>{{/each}}</textarea>
 </template>
+
+<template name="spacebars_template_test_defer_in_rendered">
+  {{#each items}}
+    {{> spacebars_template_test_defer_in_rendered_subtemplate}}
+  {{/each}}
+</template>
+
+<template name="spacebars_template_test_defer_in_rendered_subtemplate">
+  {{! see rendered callback }}
+</template>
