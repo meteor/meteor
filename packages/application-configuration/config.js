@@ -16,19 +16,20 @@ var subFuture = new Future();
 var subFutureJobs = new Future();
 if (ultra) {
   ultra.subscribe("oneApp", process.env.GALAXY_APP, subFuture.resolver());
-  ultra.subscribe("oneJob", process.env.GALAXY_APP, subFutureJobs.resolver());
+  ultra.subscribe("oneJob", process.env.GALAXY_JOB, subFutureJobs.resolver());
 }
 
-var OneAppApps;
+var Apps;
+var Jobs;
 var Services;
 var collectionFuture = new Future();
 
 Meteor.startup(function () {
   if (ultra) {
-    OneAppApps = new Meteor.Collection("apps", {
+    Apps = new Meteor.Collection("apps", {
       connection: ultra
     });
-    OneAppJobs = new Meteor.Collection("jobs", {
+    Jobs = new Meteor.Collection("jobs", {
       connection: ultra
     });
     Services = new Meteor.Collection('services', {
@@ -43,12 +44,12 @@ Meteor.startup(function () {
 // places.
 AppConfig._getAppCollection = function () {
   collectionFuture.wait();
-  return OneAppApps;
+  return Apps;
 };
 
 AppConfig._getJobsCollection = function () {
   collectionFuture.wait();
-  return OneAppJobs;
+  return Jobs;
 };
 
 
@@ -85,7 +86,7 @@ AppConfig.getAppConfig = function () {
     return staticAppConfig;
   }
   subFuture.wait();
-  var myApp = OneAppApps.findOne(process.env.GALAXY_APP);
+  var myApp = Apps.findOne(process.env.GALAXY_APP);
   if (!myApp) {
     throw new Error("there is no app config for this app");
   }
@@ -96,12 +97,12 @@ AppConfig.getAppConfig = function () {
 AppConfig.getStarForThisJob = function () {
   if (ultra) {
     subFutureJobs.wait();
-    var job = OneAppJobs.findOne(process.env.GALAXY_JOB);
+    var job = Jobs.findOne(process.env.GALAXY_JOB);
     if (job) {
       return job.star;
     }
   }
-  return "";
+  return null;
 };
 
 AppConfig.configurePackage = function (packageName, configure) {
@@ -133,7 +134,7 @@ AppConfig.configurePackage = function (packageName, configure) {
     // there's a Meteor.startup() that produces the various collections, make
     // sure it runs first before we continue.
     collectionFuture.wait();
-    subHandle = OneAppApps.find(process.env.GALAXY_APP).observe({
+    subHandle = Apps.find(process.env.GALAXY_APP).observe({
       added: configureIfDifferent,
       changed: configureIfDifferent
     });

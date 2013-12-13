@@ -37,6 +37,10 @@ var startFun = function (argv) {
     );
     process.exit(1);
   }
+  Ctl.subscribeToAppJobs(Ctl.myAppName());
+  var jobs = Ctl.jobsCollection();
+  var thisJob = jobs.findOne(Ctl.myJobId());
+  Ctl.updateProxyActiveTags(['', thisJob.star]);
   if (Ctl.hasProgram("console")) {
     console.log("starting console for app", Ctl.myAppName());
     Ctl.startServerlikeProgramIfNotPresent("console", ["admin"], true);
@@ -140,31 +144,7 @@ Ctl.Commands.push({
     });
     // Wait for them all to come up and bind to the proxy.
     Meteor._sleepForMs(5000); // XXX: Eventually make sure they're proxy-bound.
-    var proxy;
-    var proxyTagSwitchFuture = new Future;
-    AppConfig.configureService('proxy', function (proxyService) {
-      try {
-        proxy = Follower.connect(proxyService.providers.proxy, {
-        group: "proxy"
-        });
-        proxy.call('updateTags', Ctl.myAppName(), ['', thisJob.star]);
-        proxy.disconnect();
-        if (!proxyTagSwitchFuture.isResolved())
-          proxyTagSwitchFuture['return']();
-      } catch (e) {
-        if (!proxyTagSwitchFuture.isResolved())
-          proxyTagSwitchFuture['throw'](e);
-      }
-    });
-
-    var proxyTimeout = Meteor.setTimeout(function () {
-      if (!proxyTagSwitchFuture.isResolved())
-        proxyTagSwitchFuture['throw'](new Error("timed out looking for a proxy " +
-                                                "or trying to change tags on it " +
-                                               proxy.status().status));
-    }, 10*1000);
-    proxyTagSwitchFuture.wait();
-    Meteor.clearTimeout(proxyTimeout);
+    Ctl.updateProxyActiveTags(['', thisJob.star]);
 
     // (eventually) tell the proxy to switch over to using the new star
     // One by one, kill all the old star's server jobs.

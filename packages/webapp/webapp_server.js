@@ -685,7 +685,7 @@ WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
   var version = "";
   if (!process.env.ADMIN_APP) {
     var AppConfig = Package["application-configuration"].AppConfig;
-    version = AppConfig.getStarForThisJob();
+    version = AppConfig.getStarForThisJob() || "";
   }
   proxy.call('bindDdp', {
     pid: pid,
