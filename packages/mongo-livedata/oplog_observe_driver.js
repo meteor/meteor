@@ -26,7 +26,7 @@ OplogObserveDriver = function (options) {
   self._stopHandles = [];
 
   Package.facts && Package.facts.Facts.incrementServerFact(
-    "mongo-livedata", "oplog-observers", 1);
+    "mongo-livedata", "observe-drivers-oplog", 1);
 
   self._phase = PHASE.QUERYING;
 
@@ -435,7 +435,7 @@ _.extend(OplogObserveDriver.prototype, {
     self._listenersHandle = null;
 
     Package.facts && Package.facts.Facts.incrementServerFact(
-      "mongo-livedata", "oplog-observers", -1);
+      "mongo-livedata", "observe-drivers-oplog", -1);
   }
 });
 
