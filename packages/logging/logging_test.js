@@ -92,7 +92,8 @@ Tinytest.add("logging - log", function (test) {
     test.throws(function () {
       log({level: 'not the right level'});
     });
-    _.each(['file', 'line', 'program', 'originApp'], function (restrictedKey) {
+    _.each(['file', 'line', 'program', 'originApp', 'satellite'],
+      function (restrictedKey) {
       test.throws(function () {
         var obj = {};
         obj[restrictedKey] = 'usage of restricted key';

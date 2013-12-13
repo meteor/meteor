@@ -30,8 +30,15 @@ Meteor.bindEnvironment = function (func, onException, _this) {
   // values
   var boundValues = _.clone(currentValues);
 
-  if (!onException)
-    throw new Error("onException must be supplied");
+  if (!onException || typeof(onException) === 'string') {
+    var description = onException || "callback of async function";
+    onException = function (error) {
+      Meteor._debug(
+        "Exception in " + description + ":",
+        error && error.stack || error
+      );
+    };
+  }
 
   return function (/* arguments */) {
     var savedValues = currentValues;

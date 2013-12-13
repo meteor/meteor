@@ -60,9 +60,9 @@
 //  - format: "browser-program-pre1" for this version
 //
 //  - page: path to the template for the HTML to serve when a browser
-//    loads a page that is part of the application. In the file
-//    ##HTML_ATTRIBUTES## and ##RUNTIME_CONFIG## will be replaced with
-//    appropriate values at runtime.
+//    loads a page that is part of the application. In the file,
+//    some strings of the format ##FOO## will be replaced with
+//    appropriate values at runtime by the webapp package.
 //
 //  - manifest: array of resources to serve with HTTP, each an object:
 //    - path: path of file relative to program.json
@@ -782,13 +782,13 @@ _.extend(ClientTarget.prototype, {
               '<html##HTML_ATTRIBUTES##>\n' +
               '<head>\n');
     _.each(self.css, function (css) {
-      html.push('  <link rel="stylesheet" href="##ROOT_URL_PATH_PREFIX##');
+      html.push('  <link rel="stylesheet" href="##BUNDLED_JS_CSS_PREFIX##');
       html.push(_.escape(css.url));
       html.push('">\n');
     });
     html.push('\n\n##RUNTIME_CONFIG##\n\n');
     _.each(self.js, function (js) {
-      html.push('  <script type="text/javascript" src="##ROOT_URL_PATH_PREFIX##');
+      html.push('  <script type="text/javascript" src="##BUNDLED_JS_CSS_PREFIX##');
       html.push(_.escape(js.url));
       html.push('"></script>\n');
     });

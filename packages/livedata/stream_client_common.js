@@ -195,10 +195,13 @@ _.extend(LivedataTest.ClientStream.prototype, {
   _retryLater: function () {
     var self = this;
 
-    var timeout = self._retry.retryLater(
-      self.currentStatus.retryCount,
-      _.bind(self._retryNow, self)
-    );
+    var timeout = 0;
+    if (self.options.retry) {
+      timeout = self._retry.retryLater(
+        self.currentStatus.retryCount,
+        _.bind(self._retryNow, self)
+      );
+    }
 
     self.currentStatus.status = "waiting";
     self.currentStatus.connected = false;

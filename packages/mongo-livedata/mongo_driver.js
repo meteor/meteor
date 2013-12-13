@@ -13,6 +13,7 @@ var Fiber = Npm.require('fibers');
 var Future = Npm.require(path.join('fibers', 'future'));
 
 MongoInternals = {};
+MongoTest = {};
 
 var replaceNames = function (filter, thing) {
   if (typeof thing === "object") {
@@ -26,6 +27,14 @@ var replaceNames = function (filter, thing) {
     return ret;
   }
   return thing;
+};
+
+// Ensure that EJSON.clone keeps a Timestamp as a Timestamp (instead of just
+// doing a structural clone).
+// XXX how ok is this? what if there are multiple copies of MongoDB loaded?
+MongoDB.Timestamp.prototype.clone = function () {
+  // Timestamps should be immutable.
+  return this;
 };
 
 var makeMongoLegal = function (name) { return "EJSON" + name; };
@@ -42,6 +51,13 @@ var replaceMongoAtomWithMeteor = function (document) {
   if (document["EJSON$type"] && document["EJSON$value"]) {
     return EJSON.fromJSONValue(replaceNames(unmakeMongoLegal, document));
   }
+  if (document instanceof MongoDB.Timestamp) {
+    // For now, the Meteor representation of a Mongo timestamp type (not a date!
+    // this is a weird internal thing used in the oplog!) is the same as the
+    // Mongo representation. We need to do this explicitly or else we would do a
+    // structural clone and lose the prototype.
+    return document;
+  }
   return undefined;
 };
 
@@ -54,7 +70,15 @@ var replaceMeteorAtomWithMongo = function (document) {
   }
   if (document instanceof Meteor.Collection.ObjectID) {
     return new MongoDB.ObjectID(document.toHexString());
-  } else if (EJSON._isCustomType(document)) {
+  }
+  if (document instanceof MongoDB.Timestamp) {
+    // For now, the Meteor representation of a Mongo timestamp type (not a date!
+    // this is a weird internal thing used in the oplog!) is the same as the
+    // Mongo representation. We need to do this explicitly or else we would do a
+    // structural clone and lose the prototype.
+    return document;
+  }
+  if (EJSON._isCustomType(document)) {
     return replaceNames(makeMongoLegal, EJSON.toJSONValue(document));
   }
   // It is not ordinarily possible to stick dollar-sign keys into mongo
@@ -84,18 +108,19 @@ var replaceTypes = function (document, atomTransformer) {
 };
 
 
-MongoConnection = function (url) {
+MongoConnection = function (url, options) {
   var self = this;
+  options = options || {};
   self._connectCallbacks = [];
-  self._liveResultsSets = {};
+  self._observeMultiplexers = {};
 
-  var options = {db: {safe: true}};
+  var mongoOptions = {db: {safe: true}, server: {}, replSet: {}};
 
   // Set autoReconnect to true, unless passed on the URL. Why someone
   // would want to set autoReconnect to false, I'm not really sure, but
   // keeping this for backwards compatibility for now.
   if (!(/[\?&]auto_?[rR]econnect=/.test(url))) {
-    options.server = {auto_reconnect: true};
+    mongoOptions.server.auto_reconnect = true;
   }
 
   // Disable the native parser by default, unless specifically enabled
@@ -107,10 +132,19 @@ MongoConnection = function (url) {
   //   to a different platform (aka deploy)
   // We should revisit this after binary npm module support lands.
   if (!(/[\?&]native_?[pP]arser=/.test(url))) {
-    options.db.native_parser = false;
+    mongoOptions.db.native_parser = false;
   }
 
-  MongoDB.connect(url, options, function(err, db) {
+  // XXX maybe we should have a better way of allowing users to configure the
+  // underlying Mongo driver
+  if (_.has(options, 'poolSize')) {
+    // If we just set this for "server", replSet will override it. If we just
+    // set it for replSet, it will be ignored if we're not using a replSet.
+    mongoOptions.server.poolSize = options.poolSize;
+    mongoOptions.replSet.poolSize = options.poolSize;
+  }
+
+  MongoDB.connect(url, mongoOptions, function(err, db) {
     if (err)
       throw err;
     self.db = db;
@@ -122,10 +156,28 @@ MongoConnection = function (url) {
       });
     }).run();
   });
+
+  self._docFetcher = new DocFetcher(self);
+  self._oplogHandle = null;
+
+  if (options.oplogUrl && !Package['disable-oplog']) {
+    var dbNameFuture = new Future;
+    self._withDb(function (db) {
+      dbNameFuture.return(db.databaseName);
+    });
+    self._oplogHandle = new OplogHandle(options.oplogUrl, dbNameFuture);
+  }
 };
 
 MongoConnection.prototype.close = function() {
   var self = this;
+
+  // XXX probably untested
+  var oplogHandle = self._oplogHandle;
+  self._oplogHandle = null;
+  if (oplogHandle)
+    oplogHandle.stop();
+
   // Use Future.wrap so that errors get thrown. This happens to
   // work even outside a fiber since the 'close' method is not
   // actually asynchronous.
@@ -177,6 +229,7 @@ MongoConnection.prototype._maybeBeginWrite = function () {
     return {committed: function () {}};
 };
 
+
 //////////// Public API //////////
 
 // The write methods block until the database has confirmed the write (it may
@@ -210,9 +263,7 @@ var writeCallback = function (write, refresh, callback) {
 };
 
 var bindEnvironmentForWrite = function (callback) {
-  return Meteor.bindEnvironment(callback, function (err) {
-    Meteor._debug("Error in Mongo write:", err.stack);
-  });
+  return Meteor.bindEnvironment(callback, "Mongo write");
 };
 
 MongoConnection.prototype._insert = function (collection_name, document,
@@ -229,7 +280,7 @@ MongoConnection.prototype._insert = function (collection_name, document,
 
   var write = self._maybeBeginWrite();
   var refresh = function () {
-    Meteor.refresh({ collection: collection_name, id: document._id });
+    Meteor.refresh({collection: collection_name, id: document._id });
   };
   callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
   try {
@@ -284,6 +335,25 @@ MongoConnection.prototype._remove = function (collection_name, selector,
     var collection = self._getCollection(collection_name);
     collection.remove(replaceTypes(selector, replaceMeteorAtomWithMongo),
                       {safe: true}, callback);
+  } catch (e) {
+    write.committed();
+    throw e;
+  }
+};
+
+MongoConnection.prototype._dropCollection = function (collectionName, cb) {
+  var self = this;
+
+  var write = self._maybeBeginWrite();
+  var refresh = function () {
+    Meteor.refresh({collection: collectionName, id: null,
+                    dropCollection: true});
+  };
+  cb = bindEnvironmentForWrite(writeCallback(write, refresh, cb));
+
+  try {
+    var collection = self._getCollection(collectionName);
+    collection.drop(cb);
   } catch (e) {
     write.committed();
     throw e;
@@ -485,7 +555,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
   doUpdate();
 };
 
-_.each(["insert", "update", "remove"], function (method) {
+_.each(["insert", "update", "remove", "dropCollection"], function (method) {
   MongoConnection.prototype[method] = function (/* arguments */) {
     var self = this;
     return Meteor._wrapAsync(self["_" + method]).apply(self, arguments);
@@ -575,22 +645,28 @@ MongoConnection.prototype._dropIndex = function (collectionName, index) {
 // like fetch or forEach on it).
 //
 // ObserveHandle is the "observe handle" returned from observeChanges. It has a
-// reference to a LiveResultsSet.
+// reference to an ObserveMultiplexer.
 //
-// LiveResultsSet caches the results of a query and reruns it when necessary.
-// It is hooked up to one or more ObserveHandles; a single LiveResultsSet
-// can drive multiple sets of observation callbacks if they are for the
-// same query.
+// ObserveMultiplexer allows multiple identical ObserveHandles to be driven by a
+// single observe driver.
+//
+// There are two "observe drivers" which drive ObserveMultiplexers:
+//   - PollingObserveDriver caches the results of a query and reruns it when
+//     necessary.
+//   - OplogObserveDriver follows the Mongo operation log to directly observe
+//     database changes.
+// Both implementations follow the same simple interface: when you create them,
+// they start sending observeChanges callbacks (and a ready() invocation) to
+// their ObserveMultiplexer, and you stop them by calling their stop() method.
 
-
-var CursorDescription = function (collectionName, selector, options) {
+CursorDescription = function (collectionName, selector, options) {
   var self = this;
   self.collectionName = collectionName;
   self.selector = Meteor.Collection._rewriteSelector(selector);
   self.options = options || {};
 };
 
-var Cursor = function (mongo, cursorDescription) {
+Cursor = function (mongo, cursorDescription) {
   var self = this;
 
   self._mongo = mongo;
@@ -651,7 +727,7 @@ Cursor.prototype.observe = function (callbacks) {
 
 Cursor.prototype.observeChanges = function (callbacks) {
   var self = this;
-  var ordered = LocalCollection._isOrderedChanges(callbacks);
+  var ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
   return self._mongo._observeChanges(
     self._cursorDescription, ordered, callbacks);
 };
@@ -679,6 +755,11 @@ MongoConnection.prototype._createSynchronousCursor = function(
     // ... and to keep querying the server indefinitely rather than just 5 times
     // if there's no more data.
     mongoOptions.numberOfRetries = -1;
+    // And if this cursor specifies a 'ts', then set the undocumented oplog
+    // replay flag, which does a special scan to find the first document
+    // (instead of creating an index on ts).
+    if (cursorDescription.selector.ts)
+      mongoOptions.oplogReplay = true;
   }
 
   var dbCursor = collection.find(
@@ -717,16 +798,20 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options) {
 _.extend(SynchronousCursor.prototype, {
   _nextObject: function () {
     var self = this;
+
     while (true) {
       var doc = self._synchronousNextObject().wait();
-      if (!doc || typeof doc._id === 'undefined') return null;
+
+      if (!doc) return null;
       doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
 
-      if (!self._cursorDescription.options.tailable) {
+      if (!self._cursorDescription.options.tailable && _.has(doc, '_id')) {
         // Did Mongo give us duplicate documents in the same cursor? If so,
         // ignore this one. (Do this before the transform, since transform might
         // return some unrelated value.) We don't do this for tailable cursors,
-        // because we want to maintain O(1) memory usage.
+        // because we want to maintain O(1) memory usage. And if there isn't _id
+        // for some reason (maybe it's the oplog), then we don't do this either.
+        // (Be careful to do this for falsey but existing _id, though.)
         var strId = LocalCollection._idStringify(doc._id);
         if (self._visitedIds[strId]) continue;
         self._visitedIds[strId] = true;
@@ -804,22 +889,64 @@ _.extend(SynchronousCursor.prototype, {
   }
 });
 
-var nextObserveHandleId = 1;
-var ObserveHandle = function (liveResultsSet, callbacks) {
+MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
   var self = this;
-  self._liveResultsSet = liveResultsSet;
-  self._added = callbacks.added;
-  self._addedBefore = callbacks.addedBefore;
-  self._changed = callbacks.changed;
-  self._removed = callbacks.removed;
-  self._moved = callbacks.moved;
-  self._movedBefore = callbacks.movedBefore;
-  self._observeHandleId = nextObserveHandleId++;
-};
-ObserveHandle.prototype.stop = function () {
-  var self = this;
-  self._liveResultsSet._removeObserveHandle(self);
-  self._liveResultsSet = null;
+  if (!cursorDescription.options.tailable)
+    throw new Error("Can only tail a tailable cursor");
+
+  var cursor = self._createSynchronousCursor(cursorDescription);
+
+  var stopped = false;
+  var lastTS = undefined;
+  var loop = function () {
+    while (true) {
+      if (stopped)
+        return;
+      try {
+        var doc = cursor._nextObject();
+      } catch (err) {
+        // There's no good way to figure out if this was actually an error
+        // from Mongo. Ah well. But either way, we need to retry the cursor
+        // (unless the failure was because the observe got stopped).
+        doc = null;
+      }
+      // Since cursor._nextObject can yield, we need to check again to see if
+      // we've been stopped before calling the callback.
+      if (stopped)
+        return;
+      if (doc) {
+        // If a tailable cursor contains a "ts" field, use it to recreate the
+        // cursor on error. ("ts" is a standard that Mongo uses internally for
+        // the oplog, and there's a special flag that lets you do binary search
+        // on it instead of needing to use an index.)
+        lastTS = doc.ts;
+        docCallback(doc);
+      } else {
+        var newSelector = _.clone(cursorDescription.selector);
+        if (lastTS) {
+          newSelector.ts = {$gt: lastTS};
+        }
+        cursor = self._createSynchronousCursor(new CursorDescription(
+          cursorDescription.collectionName,
+          newSelector,
+          cursorDescription.options));
+        // Mongo failover takes many seconds.  Retry in a bit.  (Without this
+        // setTimeout, we peg the CPU at 100% and never notice the actual
+        // failover.
+        Meteor.setTimeout(loop, 100);
+        break;
+      }
+    }
+  };
+
+  Meteor.defer(loop);
+
+  return {
+    stop: function () {
+      stopped = true;
+      cursor.close();
+    }
+  };
 };
 
 MongoConnection.prototype._observeChanges = function (
@@ -833,341 +960,91 @@ MongoConnection.prototype._observeChanges = function (
   var observeKey = JSON.stringify(
     _.extend({ordered: ordered}, cursorDescription));
 
-  var liveResultsSet;
-  var observeHandle;
-  var newlyCreated = false;
+  var multiplexer, observeDriver;
+  var firstHandle = false;
 
-  // Find a matching LiveResultsSet, or create a new one. This next block is
+  // Find a matching ObserveMultiplexer, or create a new one. This next block is
   // guaranteed to not yield (and it doesn't call anything that can observe a
   // new query), so no other calls to this function can interleave with it.
   Meteor._noYieldsAllowed(function () {
-    if (_.has(self._liveResultsSets, observeKey)) {
-      liveResultsSet = self._liveResultsSets[observeKey];
+    if (_.has(self._observeMultiplexers, observeKey)) {
+      multiplexer = self._observeMultiplexers[observeKey];
     } else {
-      // Create a new LiveResultsSet. It is created "locked": no polling can
-      // take place.
-      liveResultsSet = new LiveResultsSet(
-        cursorDescription,
-        self,
-        ordered,
-        function () {
-          delete self._liveResultsSets[observeKey];
-        },
-        callbacks._testOnlyPollCallback);
-      self._liveResultsSets[observeKey] = liveResultsSet;
-      newlyCreated = true;
+      firstHandle = true;
+      // Create a new ObserveMultiplexer.
+      multiplexer = new ObserveMultiplexer({
+        ordered: ordered,
+        onStop: function () {
+          observeDriver.stop();
+          delete self._observeMultiplexers[observeKey];
+        }
+      });
+      self._observeMultiplexers[observeKey] = multiplexer;
     }
-    observeHandle = new ObserveHandle(liveResultsSet, callbacks);
   });
 
-  if (newlyCreated) {
-    // This is the first ObserveHandle on this LiveResultsSet.  Add it and run
-    // the initial synchronous poll (which may yield).
-    liveResultsSet._addFirstObserveHandle(observeHandle);
-  } else {
-    // Not the first ObserveHandle. Add it to the LiveResultsSet. This call
-    // yields until we're not in the middle of a poll, and its invocation of the
-    // initial 'added' callbacks may yield as well. It blocks until the 'added'
-    // callbacks have fired.
-    liveResultsSet._addObserveHandleAndSendInitialAdds(observeHandle);
+  var observeHandle = new ObserveHandle(multiplexer, callbacks);
+
+  if (firstHandle) {
+    var driverClass = PollingObserveDriver;
+    if (self._oplogHandle && !ordered && !callbacks._testOnlyPollCallback
+        && OplogObserveDriver.cursorSupported(cursorDescription)) {
+      driverClass = OplogObserveDriver;
+    }
+    observeDriver = new driverClass({
+      cursorDescription: cursorDescription,
+      mongoHandle: self,
+      multiplexer: multiplexer,
+      ordered: ordered,
+      _testOnlyPollCallback: callbacks._testOnlyPollCallback
+    });
+
+    // This field is only set for the first ObserveHandle in an
+    // ObserveMultiplexer. It is only there for use tests.
+    observeHandle._observeDriver = observeDriver;
   }
+
+  // Blocks until the initial adds have been sent.
+  multiplexer.addHandleAndSendInitialAdds(observeHandle);
 
   return observeHandle;
 };
 
-var LiveResultsSet = function (cursorDescription, mongoHandle, ordered,
-                               stopCallback, testOnlyPollCallback) {
-  var self = this;
+// Listen for the invalidation messages that will trigger us to poll the
+// database for changes. If this selector specifies specific IDs, specify them
+// here, so that updates to different specific IDs don't cause us to poll.
+// listenCallback is the same kind of (notification, complete) callback passed
+// to InvalidationCrossbar.listen.
 
-  self._cursorDescription = cursorDescription;
-  self._mongoHandle = mongoHandle;
-  self._ordered = ordered;
-  self._stopCallbacks = [stopCallback];
+listenAll = function (cursorDescription, listenCallback) {
+  var listeners = [];
+  forEachTrigger(cursorDescription, function (trigger) {
+    listeners.push(DDPServer._InvalidationCrossbar.listen(
+      trigger, listenCallback));
+  });
 
-  // This constructor cannot yield, so we don't create the synchronousCursor yet
-  // (since that can yield).
-  self._synchronousCursor = null;
-
-  // previous results snapshot.  on each poll cycle, diffs against
-  // results drives the callbacks.
-  self._results = ordered ? [] : {};
-
-  // The number of _pollMongo calls that have been added to self._taskQueue but
-  // have not started running. Used to make sure we never schedule more than one
-  // _pollMongo (other than possibly the one that is currently running). It's
-  // also used by _suspendPolling to pretend there's a poll scheduled. Usually,
-  // it's either 0 (for "no polls scheduled other than maybe one currently
-  // running") or 1 (for "a poll scheduled that isn't running yet"), but it can
-  // also be 2 if incremented by _suspendPolling.
-  self._pollsScheduledButNotStarted = 0;
-  // Number of _addObserveHandleAndSendInitialAdds tasks scheduled but not yet
-  // running. _removeObserveHandle uses this to know if it's safe to shut down
-  // this LiveResultsSet.
-  self._addHandleTasksScheduledButNotPerformed = 0;
-  self._pendingWrites = []; // people to notify when polling completes
-
-  // Make sure to create a separately throttled function for each LiveResultsSet
-  // object.
-  self._ensurePollIsScheduled = _.throttle(
-    self._unthrottledEnsurePollIsScheduled, 50 /* ms */);
-
-  self._taskQueue = new Meteor._SynchronousQueue();
-
-  // Listen for the invalidation messages that will trigger us to poll the
-  // database for changes. If this selector specifies specific IDs, specify them
-  // here, so that updates to different specific IDs don't cause us to poll.
-  var listenOnTrigger = function (trigger) {
-    var listener = DDPServer._InvalidationCrossbar.listen(
-      trigger, function (notification, complete) {
-        // When someone does a transaction that might affect us, schedule a poll
-        // of the database. If that transaction happens inside of a write fence,
-        // block the fence until we've polled and notified observers.
-        var fence = DDPServer._CurrentWriteFence.get();
-        if (fence)
-          self._pendingWrites.push(fence.beginWrite());
-        // Ensure a poll is scheduled... but if we already know that one is,
-        // don't hit the throttled _ensurePollIsScheduled function (which might
-        // lead to us calling it unnecessarily in 50ms).
-        if (self._pollsScheduledButNotStarted === 0)
-          self._ensurePollIsScheduled();
-        complete();
+  return {
+    stop: function () {
+      _.each(listeners, function (listener) {
+        listener.stop();
       });
-    self._stopCallbacks.push(function () { listener.stop(); });
+    }
   };
+};
+
+forEachTrigger = function (cursorDescription, triggerCallback) {
   var key = {collection: cursorDescription.collectionName};
   var specificIds = LocalCollection._idsMatchedBySelector(
     cursorDescription.selector);
   if (specificIds) {
     _.each(specificIds, function (id) {
-      listenOnTrigger(_.extend({id: id}, key));
+      triggerCallback(_.extend({id: id}, key));
     });
+    triggerCallback(_.extend({dropCollection: true, id: null}, key));
   } else {
-    listenOnTrigger(key);
+    triggerCallback(key);
   }
-
-  // Map from handle ID to ObserveHandle.
-  self._observeHandles = {};
-
-  self._callbackMultiplexer = {};
-  var callbackNames = ['added', 'changed', 'removed'];
-  if (self._ordered) {
-    callbackNames.push('moved');
-    callbackNames.push('addedBefore');
-    callbackNames.push('movedBefore');
-  }
-  _.each(callbackNames, function (callback) {
-    var handleCallback = '_' + callback;
-    self._callbackMultiplexer[callback] = function () {
-      var args = _.toArray(arguments);
-      // Because callbacks can yield and _removeObserveHandle() (ie,
-      // handle.stop()) doesn't synchronize its actions with _taskQueue,
-      // ObserveHandles can disappear from self._observeHandles during this
-      // dispatch. Thus, we save a copy of the keys of self._observeHandles
-      // before we start to iterate, and we check to see if the handle is still
-      // there each time.
-      _.each(_.keys(self._observeHandles), function (handleId) {
-        var handle = self._observeHandles[handleId];
-        if (handle && handle[handleCallback])
-          handle[handleCallback].apply(null, EJSON.clone(args));
-      });
-    };
-  });
-
-  // every once and a while, poll even if we don't think we're dirty, for
-  // eventual consistency with database writes from outside the Meteor
-  // universe.
-  //
-  // For testing, there's an undocumented callback argument to observeChanges
-  // which disables time-based polling and gets called at the beginning of each
-  // poll.
-  if (testOnlyPollCallback) {
-    self._testOnlyPollCallback = testOnlyPollCallback;
-  } else {
-    var intervalHandle = Meteor.setInterval(
-      _.bind(self._ensurePollIsScheduled, self), 10 * 1000);
-    self._stopCallbacks.push(function () {
-      Meteor.clearInterval(intervalHandle);
-    });
-  }
-
-  Package.facts && Package.facts.Facts.incrementServerFact(
-    "mongo-livedata", "live-results-sets", 1);
 };
-
-_.extend(LiveResultsSet.prototype, {
-  _addFirstObserveHandle: function (handle) {
-    var self = this;
-    if (! _.isEmpty(self._observeHandles))
-      throw new Error("Not the first observe handle!");
-    if (! _.isEmpty(self._results))
-      throw new Error("Call _addFirstObserveHandle before polling!");
-
-    self._observeHandles[handle._observeHandleId] = handle;
-    Package.facts && Package.facts.Facts.incrementServerFact(
-      "mongo-livedata", "observe-handles", 1);
-
-    // Run the first _poll() cycle synchronously (delivering results to the
-    // first ObserveHandle).
-    ++self._pollsScheduledButNotStarted;
-    self._taskQueue.runTask(function () {
-      self._pollMongo();
-    });
-  },
-
-  // This is always called through _.throttle.
-  _unthrottledEnsurePollIsScheduled: function () {
-    var self = this;
-    if (self._pollsScheduledButNotStarted > 0)
-      return;
-    ++self._pollsScheduledButNotStarted;
-    self._taskQueue.queueTask(function () {
-      self._pollMongo();
-    });
-  },
-
-  // test-only interface for controlling polling.
-  //
-  // _suspendPolling blocks until any currently running and scheduled polls are
-  // done, and prevents any further polls from being scheduled. (new
-  // ObserveHandles can be added and receive their initial added callbacks,
-  // though.)
-  //
-  // _resumePolling immediately polls, and allows further polls to occur.
-  _suspendPolling: function() {
-    var self = this;
-    // Pretend that there's another poll scheduled (which will prevent
-    // _ensurePollIsScheduled from queueing any more polls).
-    ++self._pollsScheduledButNotStarted;
-    // Now block until all currently running or scheduled polls are done.
-    self._taskQueue.runTask(function() {});
-
-    // Confirm that there is only one "poll" (the fake one we're pretending to
-    // have) scheduled.
-    if (self._pollsScheduledButNotStarted !== 1)
-      throw new Error("_pollsScheduledButNotStarted is " +
-                      self._pollsScheduledButNotStarted);
-  },
-  _resumePolling: function() {
-    var self = this;
-    // We should be in the same state as in the end of _suspendPolling.
-    if (self._pollsScheduledButNotStarted !== 1)
-      throw new Error("_pollsScheduledButNotStarted is " +
-                      self._pollsScheduledButNotStarted);
-    // Run a poll synchronously (which will counteract the
-    // ++_pollsScheduledButNotStarted from _suspendPolling).
-    self._taskQueue.runTask(function () {
-      self._pollMongo();
-    });
-  },
-
-  _pollMongo: function () {
-    var self = this;
-    --self._pollsScheduledButNotStarted;
-
-    self._testOnlyPollCallback && self._testOnlyPollCallback();
-
-    // Save the list of pending writes which this round will commit.
-    var writesForCycle = self._pendingWrites;
-    self._pendingWrites = [];
-
-    // Get the new query results. (These calls can yield.)
-    if (self._synchronousCursor) {
-      self._synchronousCursor.rewind();
-    } else {
-      self._synchronousCursor = self._mongoHandle._createSynchronousCursor(
-        self._cursorDescription);
-    }
-    var newResults = self._synchronousCursor.getRawObjects(self._ordered);
-    var oldResults = self._results;
-
-    // Run diffs. (This can yield too.)
-    if (!_.isEmpty(self._observeHandles)) {
-      LocalCollection._diffQueryChanges(
-        self._ordered, oldResults, newResults, self._callbackMultiplexer);
-    }
-
-    // Replace self._results atomically.
-    self._results = newResults;
-
-    // Mark all the writes which existed before this call as commmitted. (If new
-    // writes have shown up in the meantime, there'll already be another
-    // _pollMongo task scheduled.)
-    _.each(writesForCycle, function (w) {w.committed();});
-  },
-
-  // Adds the observe handle to this set and sends its initial added
-  // callbacks. Meteor._SynchronousQueue guarantees that this won't interleave
-  // with a call to _pollMongo or another call to this function.
-  _addObserveHandleAndSendInitialAdds: function (handle) {
-    var self = this;
-
-    // Check this before calling runTask (even though runTask does the same
-    // check) so that we don't leak a LiveResultsSet by incrementing
-    // _addHandleTasksScheduledButNotPerformed and never decrementing it.
-    if (!self._taskQueue.safeToRunTask())
-      throw new Error(
-        "Can't call observe() from an observe callback on the same query");
-
-    // Keep track of how many of these tasks are on the queue, so that
-    // _removeObserveHandle knows if it's safe to GC.
-    ++self._addHandleTasksScheduledButNotPerformed;
-
-    self._taskQueue.runTask(function () {
-      if (!self._observeHandles)
-        throw new Error("Can't add observe handle to stopped LiveResultsSet");
-
-      if (_.has(self._observeHandles, handle._observeHandleId))
-        throw new Error("Duplicate observe handle ID");
-      self._observeHandles[handle._observeHandleId] = handle;
-      --self._addHandleTasksScheduledButNotPerformed;
-      Package.facts && Package.facts.Facts.incrementServerFact(
-        "mongo-livedata", "observe-handles", 1);
-
-      // Send initial adds.
-      if (handle._added || handle._addedBefore) {
-        _.each(self._results, function (doc, i) {
-          var fields = EJSON.clone(doc);
-          delete fields._id;
-          if (self._ordered) {
-            handle._added && handle._added(doc._id, fields);
-            handle._addedBefore && handle._addedBefore(doc._id, fields, null);
-          } else {
-            handle._added(doc._id, fields);
-          }
-        });
-      }
-    });
-  },
-
-  // Remove an observe handle. If it was the last observe handle, call all the
-  // stop callbacks; you cannot add any more observe handles after this.
-  //
-  // This is not synchronized with polls and handle additions: this means that
-  // you can safely call it from within an observe callback.
-  _removeObserveHandle: function (handle) {
-    var self = this;
-
-    if (!_.has(self._observeHandles, handle._observeHandleId))
-      throw new Error("Unknown observe handle ID " + handle._observeHandleId);
-    delete self._observeHandles[handle._observeHandleId];
-    Package.facts && Package.facts.Facts.incrementServerFact(
-      "mongo-livedata", "observe-handles", -1);
-
-    if (_.isEmpty(self._observeHandles) &&
-        self._addHandleTasksScheduledButNotPerformed === 0) {
-      // The last observe handle was stopped; call our stop callbacks, which:
-      //  - removes us from the MongoConnection's _liveResultsSets map
-      //  - stops the poll timer
-      //  - removes us from the invalidation crossbar
-      _.each(self._stopCallbacks, function (c) { c(); });
-      Package.facts && Package.facts.Facts.incrementServerFact(
-        "mongo-livedata", "live-results-sets", -1);
-      // This will cause future _addObserveHandleAndSendInitialAdds calls to
-      // throw.
-      self._observeHandles = null;
-    }
-  }
-});
 
 // observeChanges for tailable cursors on capped collections.
 //
@@ -1209,59 +1086,18 @@ MongoConnection.prototype._observeChangesTailable = function (
                     + " tailable cursor without a "
                     + (ordered ? "addedBefore" : "added") + " callback");
   }
-  var cursor = self._createSynchronousCursor(cursorDescription);
 
-  var stopped = false;
-  var lastTS = undefined;
-  Meteor.defer(function () {
-    while (true) {
-      if (stopped)
-        return;
-      try {
-        var doc = cursor._nextObject();
-      } catch (err) {
-        // There's no good way to figure out if this was actually an error from
-        // Mongo. Ah well. But either way, we need to retry the cursor (unless
-        // the failure was because the observe got stopped).
-        doc = null;
-      }
-      if (stopped)
-        return;
-      if (doc) {
-        var id = doc._id;
-        delete doc._id;
-        // If a tailable cursor contains a "ts" field, use it to recreate the
-        // cursor on error, and don't publish the field. ("ts" is a standard
-        // that Mongo uses internally for the oplog, and there's a special flag
-        // that lets you do binary search on it instead of needing to use an
-        // index.)
-        lastTS = doc.ts;
-        delete doc.ts;
-        if (ordered) {
-          callbacks.addedBefore(id, doc, null);
-        } else {
-          callbacks.added(id, doc);
-        }
-      } else {
-        var newSelector = _.clone(cursorDescription.selector);
-        if (lastTS) {
-          newSelector.ts = {$gt: lastTS};
-        }
-        // XXX maybe set replay flag
-        cursor = self._createSynchronousCursor(new CursorDescription(
-          cursorDescription.collectionName,
-          newSelector,
-          cursorDescription.options));
-      }
+  return self.tail(cursorDescription, function (doc) {
+    var id = doc._id;
+    delete doc._id;
+    // The ts is an implementation detail. Hide it.
+    delete doc.ts;
+    if (ordered) {
+      callbacks.addedBefore(id, doc, null);
+    } else {
+      callbacks.added(id, doc);
     }
   });
-
-  return {
-    stop: function () {
-      stopped = true;
-      cursor.close();
-    }
-  };
 };
 
 // XXX We probably need to find a better way to expose this. Right now
@@ -1270,3 +1106,4 @@ MongoConnection.prototype._observeChangesTailable = function (
 MongoInternals.MongoTimestamp = MongoDB.Timestamp;
 
 MongoInternals.Connection = MongoConnection;
+MongoInternals.NpmModule = MongoDB;

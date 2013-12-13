@@ -1,6 +1,6 @@
 Facts = {};
 
-var serverFactsCollection = 'Facts.server';
+var serverFactsCollection = 'meteor_Facts_server';
 
 if (Meteor.isServer) {
   // By default, we publish facts to no user if autopublish is off, and to all
@@ -45,7 +45,7 @@ if (Meteor.isServer) {
   // called?
   Meteor.defer(function () {
     // XXX Also publish facts-by-package.
-    Meteor.publish("facts", function () {
+    Meteor.publish("meteor_facts", function () {
       var sub = this;
       if (!userIdFilter(this.userId)) {
         sub.ready();
@@ -59,11 +59,10 @@ if (Meteor.isServer) {
         activeSubscriptions = _.without(activeSubscriptions, sub);
       });
       sub.ready();
-    });
+    }, {is_auto: true});
   });
 } else {
   Facts.server = new Meteor.Collection(serverFactsCollection);
-  Meteor.subscribe("facts");
 
   Template.serverFacts.factsByPackage = function () {
     return Facts.server.find();
@@ -75,5 +74,18 @@ if (Meteor.isServer) {
         factArray.push({name: name, value: value});
     });
     return factArray;
+  };
+
+  // Subscribe when the template is first made, and unsubscribe when it
+  // is removed. If for some reason puts two copies of the template on
+  // the screen at once, we'll subscribe twice. Meh.
+  Template.serverFacts.created = function () {
+    this._stopHandle = Meteor.subscribe("meteor_facts");
+  };
+  Template.serverFacts.destroyed = function () {
+    if (this._stopHandle) {
+      this._stopHandle.stop();
+      this._stopHandle = null;
+    }
   };
 }

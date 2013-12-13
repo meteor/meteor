@@ -139,7 +139,7 @@ _.extend(TestCaseResults.prototype, {
         this.equal(actual[i], expected[i]);
       }
     } else {
-      matched = _.isEqual(expected, actual);
+      matched = EJSON.equals(expected, actual);
     }
 
     if (matched === !!not) {
@@ -331,7 +331,16 @@ _.extend(TestCase.prototype, {
       return true;
     };
 
-    var results = new TestCaseResults(self, onEvent,
+    var wrappedOnEvent = function (e) {
+      // If this trace prints, it means you ran some test.* function after the
+      // test finished! Another symptom will be that the test will display as
+      // "waiting" even when it counts as passed or failed.
+      if (completed)
+        console.trace("event after complete!");
+      return onEvent(e);
+    };
+
+    var results = new TestCaseResults(self, wrappedOnEvent,
                                       function (e) {
                                         if (markComplete())
                                           onException(e);

@@ -57,10 +57,8 @@ try {
       settings: settings,
       packages: {
         'mongo-livedata': {
-          url: process.env.MONGO_URL
-        },
-        'email': {
-          url: process.env.MAIL_URL
+          url: process.env.MONGO_URL,
+          oplog: process.env.MONGO_OPLOG_URL
         }
       }
     };
@@ -83,10 +81,13 @@ AppConfig.getAppConfig = function () {
 AppConfig.configurePackage = function (packageName, configure) {
   var appConfig = AppConfig.getAppConfig(); // Will either be based in the env var,
                                          // or wait for galaxy to connect.
-  var lastConfig = appConfig && appConfig.packages && appConfig.packages[packageName];
-  if (lastConfig) {
-    configure(lastConfig);
-  }
+  var lastConfig =
+        (appConfig && appConfig.packages && appConfig.packages[packageName]) || {};
+  // Always call the configure callback "soon" even if the initial configuration
+  // is empty (synchronously, though deferred would be OK).
+  // XXX make sure that all callers of configurePackage deal well with multiple
+  // callback invocations!  eg, email does not
+  configure(lastConfig);
   var configureIfDifferent = function (app) {
     if (!EJSON.equals(app.config && app.config.packages && app.config.packages[packageName],
                       lastConfig)) {

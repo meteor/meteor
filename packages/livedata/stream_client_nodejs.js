@@ -9,8 +9,11 @@
 // We don't do any heartbeating. (The logic that did this in sockjs was removed,
 // because it used a built-in sockjs mechanism. We could do it with WebSocket
 // ping frames or with DDP-level messages.)
-LivedataTest.ClientStream = function (endpoint) {
+LivedataTest.ClientStream = function (endpoint, options) {
   var self = this;
+  self.options = _.extend({
+    retry: true
+  }, options);
 
   // WebSocket-Node https://github.com/Worlize/WebSocket-Node
   // Chosen because it can run without native components. It has a
@@ -31,9 +34,12 @@ LivedataTest.ClientStream = function (endpoint) {
   self.endpoint = endpoint;
   self.currentConnection = null;
 
-  self.client.on('connect', function (connection) {
-    return self._onConnect(connection);
-  });
+  self.client.on('connect', Meteor.bindEnvironment(
+    function (connection) {
+      return self._onConnect(connection);
+    },
+    "stream connect callback"
+  ));
 
   self.client.on('connectFailed', function (error) {
     // XXX: Make this do something better than make the tests hang if it does not work.
@@ -89,20 +95,41 @@ _.extend(LivedataTest.ClientStream.prototype, {
       self.connectionTimer = null;
     }
 
-    connection.on('error', function (error) {
-      if (self.currentConnection !== this)
-        return;
+    var onError = Meteor.bindEnvironment(
+      function (_this, error) {
+        if (self.currentConnection !== _this)
+          return;
 
-      Meteor._debug("stream error", error.toString(),
-                    (new Date()).toDateString());
-      self._lostConnection();
+        Meteor._debug("stream error", error.toString(),
+                      (new Date()).toDateString());
+        self._lostConnection();
+      },
+      "stream error callback"
+    );
+
+    connection.on('error', function (error) {
+      // We have to pass in `this` explicitly because bindEnvironment
+      // doesn't propagate it for us.
+      onError(this, error);
     });
 
-    connection.on('close', function () {
-      if (self.currentConnection !== this)
-        return;
+    var onClose = Meteor.bindEnvironment(
+      function (_this) {
+        if (self.options._testOnClose)
+          self.options._testOnClose();
 
-      self._lostConnection();
+        if (self.currentConnection !== _this)
+          return;
+
+        self._lostConnection();
+      },
+      "stream close callback"
+    );
+
+    connection.on('close', function () {
+      // We have to pass in `this` explicitly because bindEnvironment
+      // doesn't propagate it for us.
+      onClose(this);
     });
 
     connection.on('message', function (message) {

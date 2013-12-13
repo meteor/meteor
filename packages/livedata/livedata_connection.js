@@ -18,7 +18,8 @@ var Connection = function (url, options) {
     },
     // These options are only for testing.
     reloadWithOutstanding: false,
-    supportedDDPVersions: SUPPORTED_DDP_VERSIONS
+    supportedDDPVersions: SUPPORTED_DDP_VERSIONS,
+    retry: true
   }, options);
 
   // If set, called when we reconnect, queuing method calls _before_ the
@@ -30,7 +31,9 @@ var Connection = function (url, options) {
   if (typeof url === "object") {
     self._stream = url;
   } else {
-    self._stream = new LivedataTest.ClientStream(url);
+    self._stream = new LivedataTest.ClientStream(url, {
+      retry: options.retry
+    });
   }
 
   self._lastSessionId = null;
@@ -149,10 +152,6 @@ var Connection = function (url, options) {
   //   - errorCallback (an optional callback to call if the sub terminates with
   //                    an error)
   self._subscriptions = {};
-
-  // Per-connection scratch area. This is only used internally, but we
-  // should have real and documented API for this sort of thing someday.
-  self._sessionData = {};
 
   // Reactive userId.
   self._userId = null;
@@ -590,11 +589,11 @@ _.extend(Connection.prototype, {
     if (callback) {
       // XXX would it be better form to do the binding in stream.on,
       // or caller, instead of here?
-      callback = Meteor.bindEnvironment(callback, function (e) {
-        // XXX improve error message (and how we report it)
-        Meteor._debug("Exception while delivering result of invoking '" +
-                      name + "'", e, e.stack);
-      });
+      // XXX improve error message (and how we report it)
+      callback = Meteor.bindEnvironment(
+        callback,
+        "delivering result of invoking '" + name + "'"
+      );
     }
 
     // Lazily allocate method ID once we know that it'll be needed.
@@ -629,8 +628,8 @@ _.extend(Connection.prototype, {
       };
       var invocation = new MethodInvocation({
         isSimulation: true,
-        userId: self.userId(), setUserId: setUserId,
-        sessionData: self._sessionData
+        userId: self.userId(),
+        setUserId: setUserId
       });
 
       if (!alreadyInSimulation)

@@ -55,14 +55,26 @@ _.extend(Meteor.EnvironmentVariable.prototype, {
 // return value of the function will be passed through, and no new
 // fiber will be created.)
 //
+// `onException` should be a function or a string.  When it is a
+// function, it is called as a callback when the bound function raises
+// an exception.  If it is a string, it should be a description of the
+// callback, and when an exception is raised a debug message will be
+// printed with the description.
 Meteor.bindEnvironment = function (func, onException, _this) {
   if (!Fiber.current)
     throw new Error(noFiberMessage);
 
   var boundValues = _.clone(Fiber.current._meteor_dynamics || []);
 
-  if (!onException)
-    throw new Error("onException must be supplied");
+  if (!onException || typeof(onException) === 'string') {
+    var description = onException || "callback of async function";
+    onException = function (error) {
+      Meteor._debug(
+        "Exception in " + description + ":",
+        error && error.stack || error
+      );
+    };
+  }
 
   return function (/* arguments */) {
     var args = _.toArray(arguments);

@@ -1,13 +1,20 @@
-DDPServer._InvalidationCrossbar = function () {
-  var self = this;
+// A "crossbar" is a class that provides structured notification registration.
+// The "invalidation crossbar" is a specific instance used by the DDP server to
+// implement write fence notifications.
 
-  self.next_id = 1;
+DDPServer._Crossbar = function (options) {
+  var self = this;
+  options = options || {};
+
+  self.nextId = 1;
   // map from listener id to object. each object has keys 'trigger',
   // 'callback'.
   self.listeners = {};
+  self.factPackage = options.factPackage || "livedata";
+  self.factName = options.factName || null;
 };
 
-_.extend(DDPServer._InvalidationCrossbar.prototype, {
+_.extend(DDPServer._Crossbar.prototype, {
   // Listen for notification that match 'trigger'. A notification
   // matches if it has the key-value pairs in trigger as a
   // subset. When a notification matches, call 'callback', passing two
@@ -20,19 +27,20 @@ _.extend(DDPServer._InvalidationCrossbar.prototype, {
   //
   // XXX It should be legal to call fire() from inside a listen()
   // callback?
-  //
-  // Note: the LiveResultsSet constructor assumes that a call to listen() never
-  // yields.
   listen: function (trigger, callback) {
     var self = this;
-    var id = self.next_id++;
+    var id = self.nextId++;
     self.listeners[id] = {trigger: EJSON.clone(trigger), callback: callback};
-    Package.facts && Package.facts.Facts.incrementServerFact(
-      "livedata", "crossbar-listeners", 1);
+    if (self.factName && Package.facts) {
+      Package.facts.Facts.incrementServerFact(
+        self.factPackage, self.factName, 1);
+    }
     return {
       stop: function () {
-        Package.facts && Package.facts.Facts.incrementServerFact(
-          "livedata", "crossbar-listeners", -1);
+        if (self.factName && Package.facts) {
+          Package.facts.Facts.incrementServerFact(
+            self.factPackage, self.factName, -1);
+        }
         delete self.listeners[id];
       }
     };
@@ -50,16 +58,16 @@ _.extend(DDPServer._InvalidationCrossbar.prototype, {
   fire: function (notification, onComplete) {
     var self = this;
     var callbacks = [];
+    // XXX consider refactoring to "index" on "collection"
     _.each(self.listeners, function (l) {
       if (self._matches(notification, l.trigger))
         callbacks.push(l.callback);
     });
 
     if (onComplete)
-      onComplete = Meteor.bindEnvironment(onComplete, function (e) {
-        Meteor._debug("Exception in InvalidationCrossbar fire complete " +
-                      "callback", e.stack);
-      });
+      onComplete = Meteor.bindEnvironment(
+        onComplete,
+        "Crossbar fire complete callback");
 
     var outstanding = callbacks.length;
     if (!outstanding)
@@ -99,5 +107,6 @@ _.extend(DDPServer._InvalidationCrossbar.prototype, {
   }
 });
 
-// singleton
-DDPServer._InvalidationCrossbar = new DDPServer._InvalidationCrossbar;
+DDPServer._InvalidationCrossbar = new DDPServer._Crossbar({
+  factName: "invalidation-crossbar-listeners"
+});

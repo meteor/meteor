@@ -1,8 +1,11 @@
 // @param url {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or
 //   "ddp+sockjs://foo-**.meteor.com/sockjs"
-LivedataTest.ClientStream = function (url) {
+LivedataTest.ClientStream = function (url, options) {
   var self = this;
+  self.options = _.extend({
+    retry: true
+  }, options);
   self._initCommon();
 
   //// Constants
