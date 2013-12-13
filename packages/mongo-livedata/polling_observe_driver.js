@@ -72,7 +72,7 @@ PollingObserveDriver = function (options) {
   self._unthrottledEnsurePollIsScheduled();
 
   Package.facts && Package.facts.Facts.incrementServerFact(
-    "mongo-livedata", "mongo-pollsters", 1);
+    "mongo-livedata", "observe-drivers-polling", 1);
 };
 
 _.extend(PollingObserveDriver.prototype, {
@@ -174,6 +174,6 @@ _.extend(PollingObserveDriver.prototype, {
     self._stopped = true;
     _.each(self._stopCallbacks, function (c) { c(); });
     Package.facts && Package.facts.Facts.incrementServerFact(
-      "mongo-livedata", "mongo-pollsters", -1);
+      "mongo-livedata", "observe-drivers-polling", -1);
   }
 });
