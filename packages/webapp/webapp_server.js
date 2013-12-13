@@ -701,8 +701,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
         parsedUrl.pathname = "";
       if (! parsedUrl.pathname.indexOf("/") !== 0) {
         // Relative path
-        parsedUrl.pathname = bindPathPrefix +
-          (parsedUrl.pathname !== "" ? "/" + parsedUrl.pathname : "");
+        parsedUrl.pathname = bindPathPrefix + parsedUrl.pathname;
       }
     }
 
