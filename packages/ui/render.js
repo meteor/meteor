@@ -239,12 +239,7 @@ UI.render = function (kind, parentComponent) {
     throw new Error("Can't render component instance, only component kind");
   var inst = kind.instantiate(parentComponent);
 
-  var content = null;
-  try {
-    content = (inst.render && inst.render());
-  } catch (e) {
-    reportUIException(e);
-  }
+  var content = content = (inst.render && inst.render());
 
   var range = new UI.DomRange(inst);
   materialize(content, range, null, inst);
@@ -283,12 +278,7 @@ var materialize = function (node, parent, before, parentComponent) {
       if (! c.firstRun)
         range.removeAll();
 
-      var content = null;
-      try {
-        content = node();
-      } catch (e) {
-        reportUIException(e);
-      }
+      var content = node();
 
       Deps.nonreactive(function () {
         materialize(content, range, null, parentComponent);
