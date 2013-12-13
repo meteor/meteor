@@ -90,7 +90,6 @@ AppConfig.getAppConfig = function () {
     throw new Error("there is no app config for this app");
   }
   var config = myApp.config;
-  config.version = myApp.currentStar;
   return config;
 };
 
@@ -116,10 +115,11 @@ AppConfig.configurePackage = function (packageName, configure) {
   // is empty (synchronously, though deferred would be OK).
   // XXX make sure that all callers of configurePackage deal well with multiple
   // callback invocations!  eg, email does not
-  configure(_.extend({version: appConfig.version}, lastConfig));
+  configure(lastConfig);
   var configureIfDifferent = function (app) {
-    if (!EJSON.equals(app.config && app.config.packages && app.config.packages[packageName] && app.config.version,
-                      lastConfig)) {
+    if (!EJSON.equals(
+           app.config && app.config.packages && app.config.packages[packageName],
+           lastConfig)) {
       lastConfig = app.config.packages[packageName];
       configure(_.extend({version: appConfig.version}, lastConfig));
     }

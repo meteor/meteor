@@ -587,7 +587,6 @@ var runWebAppServer = function () {
               } else {
                 proxyConf = configuration.proxy;
               }
-              proxyConf.version = configuration.version;
               Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
               WebAppInternals.bindToProxy(_.extend({
                 proxyEndpoint: proxyService.providers.proxy
