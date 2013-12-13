@@ -667,7 +667,8 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
   // for now, have our (temporary) requiresAuth flag apply to all
   // routes created by this process.
   var requiresDdpAuth = !! proxyConfig.requiresAuth;
-  var requiresHttpAuth = (!! proxyConfig.requiresAuth) && pid.app !== "panel";
+  var requiresHttpAuth = (!! proxyConfig.requiresAuth) &&
+        (pid.app !== "panel" && pid.app !== "auth");
 
   // XXX a current limitation is that we treat securePort and
   // insecurePort as a global configuration parameter -- we assume
