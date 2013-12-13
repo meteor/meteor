@@ -20,6 +20,17 @@ WebAppInternals = {};
 
 var bundledJsCssPrefix;
 
+// The reload safetybelt is some js that will be loaded after everything else in
+// the HTML.  In some multi-server deployments, when you update, you have a
+// chance of hitting an old server for the HTML and the new server for the JS or
+// CSS.  This prevents you from displaying the page in that case, and instead
+// reloads it, presumably all on the new version now.
+var RELOAD_SAFETYBELT = "\n" +
+      "if (typeof Meteor === 'undefined' || \n" +
+      "    ! Meteor._isCssLoaded()) \n" +
+      "  document.location.reload(); \n";
+
+
 var makeAppNamePathPrefix = function (appName) {
   return encodeURIComponent(appName).replace(/\./g, '_');
 };
@@ -290,6 +301,7 @@ var runWebAppServer = function () {
     }
   });
 
+
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
   app.use(function (req, res, next) {
@@ -306,12 +318,20 @@ var runWebAppServer = function () {
       return;
     }
 
+    var serveStaticJs = function (s) {
+      res.writeHead(200, { 'Content-type': 'application/javascript' });
+      res.write(s);
+      res.end();
+    };
+
     if (pathname === "/meteor_runtime_config.js" &&
         ! WebAppInternals.inlineScriptsAllowed()) {
-      res.writeHead(200, { 'Content-type': 'application/javascript' });
-      res.write("__meteor_runtime_config__ = " +
-                JSON.stringify(__meteor_runtime_config__) + ";");
-      res.end();
+      serveStaticJs("__meteor_runtime_config__ = " +
+                    JSON.stringify(__meteor_runtime_config__) + ";");
+      return;
+    } else if (pathname === "/meteor_reload_safetybelt.js" &&
+               ! WebAppInternals.inlineScriptsAllowed()) {
+      serveStaticJs(RELOAD_SAFETYBELT);
       return;
     }
 
@@ -519,11 +539,18 @@ var runWebAppServer = function () {
           /##RUNTIME_CONFIG##/,
         "<script type='text/javascript'>__meteor_runtime_config__ = " +
           JSON.stringify(__meteor_runtime_config__) + ";</script>");
+      boilerplateHtml = boilerplateHtml.replace(
+          /##RELOAD_SAFETYBELT##/,
+        "<script type='text/javascript'>"+RELOAD_SAFETYBELT+"</script>");
     } else {
       boilerplateHtml = boilerplateHtml.replace(
         /##RUNTIME_CONFIG##/,
         "<script type='text/javascript' src='##ROOT_URL_PATH_PREFIX##/meteor_runtime_config.js'></script>"
       );
+      boilerplateHtml = boilerplateHtml.replace(
+          /##RELOAD_SAFETYBELT##/,
+        "<script type='text/javascript' src='##ROOT_URL_PATH_PREFIX##/meteor_reload_safetybelt.js'></script>");
+
     }
     boilerplateHtml = boilerplateHtml.replace(
         /##ROOT_URL_PATH_PREFIX##/g,
@@ -566,7 +593,6 @@ var runWebAppServer = function () {
                 proxyConf = configuration.proxy;
               }
               Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
-              console.log(proxyConf);
               WebAppInternals.bindToProxy(_.extend({
                 proxyEndpoint: proxyService.providers.proxy
               }, proxyConf), proxyServiceName);
@@ -661,10 +687,16 @@ WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
     };
   };
 
+  var version = "";
+  if (!process.env.ADMIN_APP) {
+    var AppConfig = Package["application-configuration"].AppConfig;
+    version = AppConfig.getStarForThisJob() || "";
+  }
   proxy.call('bindDdp', {
     pid: pid,
     bindTo: ddpBindTo,
     proxyTo: {
+      tags: [version],
       host: host,
       port: port,
       pathPrefix: bindPathPrefix + '/websocket'
@@ -678,6 +710,7 @@ WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
       pathPrefix: bindPathPrefix
     },
     proxyTo: {
+      tags: [version],
       host: host,
       port: port,
       pathPrefix: bindPathPrefix
@@ -693,6 +726,7 @@ WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
         ssl: true
       },
       proxyTo: {
+        tags: [version],
         host: host,
         port: port,
         pathPrefix: bindPathPrefix
