@@ -30,8 +30,9 @@ apply the patch and will instead disable websockets.
   client code changes; server-only code changes will not cause the page
   to reload.
 
-* New 'facts' package publishes internal statistics about Meteor.
-  XXX how to use
+* New 'facts' package publishes internal statistics about Meteor. To
+  use, simply `meteor add facts` then add `{{> serverFacts}}` somewhere
+  in your interface.
 
 * Add an explicit check that publish functions return a cursor, an array
   of cursors, or a falsey value. This is a safety check to to prevent
