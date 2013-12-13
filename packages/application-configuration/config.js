@@ -13,8 +13,12 @@ AppConfig.findGalaxy = _.once(function () {
 var ultra = AppConfig.findGalaxy();
 
 var subFuture = new Future();
-if (ultra)
+var subFutureJobs = new Future();
+if (ultra) {
   ultra.subscribe("oneApp", process.env.GALAXY_APP, subFuture.resolver());
+  ultra.subscribe("oneJob", process.env.GALAXY_APP, subFutureJobs.resolver());
+}
+
 var OneAppApps;
 var Services;
 var collectionFuture = new Future();
@@ -22,6 +26,9 @@ var collectionFuture = new Future();
 Meteor.startup(function () {
   if (ultra) {
     OneAppApps = new Meteor.Collection("apps", {
+      connection: ultra
+    });
+    OneAppJobs = new Meteor.Collection("jobs", {
       connection: ultra
     });
     Services = new Meteor.Collection('services', {
@@ -38,6 +45,12 @@ AppConfig._getAppCollection = function () {
   collectionFuture.wait();
   return OneAppApps;
 };
+
+AppConfig._getJobsCollection = function () {
+  collectionFuture.wait();
+  return OneAppJobs;
+};
+
 
 var staticAppConfig;
 
@@ -79,6 +92,17 @@ AppConfig.getAppConfig = function () {
   var config = myApp.config;
   config.version = myApp.currentStar;
   return config;
+};
+
+AppConfig.getStarForThisJob = function () {
+  if (ultra) {
+    subFutureJobs.wait();
+    var job = OneAppJobs.findOne(process.env.GALAXY_JOB);
+    if (job) {
+      return job.star;
+    }
+  }
+  return "";
 };
 
 AppConfig.configurePackage = function (packageName, configure) {
@@ -123,7 +147,6 @@ AppConfig.configurePackage = function (packageName, configure) {
     }
   };
 };
-
 
 AppConfig.configureService = function (serviceName, configure) {
   if (ultra) {

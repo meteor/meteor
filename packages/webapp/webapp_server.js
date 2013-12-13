@@ -687,8 +687,12 @@ WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
     };
   };
 
-  var version = (proxyConfig.version) ? proxyConfig.version : "";
-
+  var version = "";
+  var adminPrograms = ["panel", "ultraworld", "proxy"];
+  if (!_.contains(adminPrograms, bindPathPrefix)) {
+    var AppConfig = Package["application-configuration"].AppConfig;
+    version = AppConfig.getStarForThisJob();
+  }
   proxy.call('bindDdp', {
     pid: pid,
     bindTo: ddpBindTo,
