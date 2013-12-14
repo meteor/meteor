@@ -55,7 +55,7 @@ Tinytest.add("spacebars - templates - simple helper", function (test) {
   tmpl.foo = function () {};
   // doesn't throw
   var div = renderToDiv(tmpl);
-  test.equal(canonicalizeHtml(div.innerHTML), '');
+  test.equal(trim(stripComments(div.innerHTML)), '');
 });
 
 Tinytest.add("spacebars - templates - dynamic template", function (test) {
@@ -779,3 +779,45 @@ testAsyncMulti('spacebars - template - defer in rendered callbacks', [function (
   // `Meteor.defer` is not allowed.
   coll.insert({});
 }]);
+
+// Test that in:
+//
+// ```
+// {{#with someData}}
+//   {{foo}} {{bar}}
+// {{/with}}
+// ```
+//
+// ... we run `someData` once even if `foo` re-renders.
+Tinytest.add('spacebars - templates - with someData', function (test) {
+  var tmpl = Template.spacebars_template_test_with_someData;
+
+  var foo = ReactiveVar('AAA');
+  var someDataRuns = 0;
+
+  tmpl.someData = function () {
+    someDataRuns++;
+    return {};
+  };
+  tmpl.foo = function () {
+    return foo.get();
+  };
+  tmpl.bar = function () {
+    return 'YO';
+  };
+
+  var div = renderToDiv(tmpl);
+
+  test.equal(someDataRuns, 1);
+  test.equal(trim(stripComments(div.innerHTML)), 'AAA YO');
+
+  foo.set('BBB');
+  Deps.flush();
+  test.equal(someDataRuns, 1);
+  test.equal(trim(stripComments(div.innerHTML)), 'BBB YO');
+
+  foo.set('CCC');
+  Deps.flush();
+  test.equal(someDataRuns, 1);
+  test.equal(trim(stripComments(div.innerHTML)), 'CCC YO');
+});

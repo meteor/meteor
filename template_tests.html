@@ -257,3 +257,9 @@
 <template name="spacebars_template_test_defer_in_rendered_subtemplate">
   {{! see rendered callback }}
 </template>
+
+<template name="spacebars_template_test_with_someData">
+  {{#with someData}}
+    {{foo}} {{bar}}
+  {{/with}}
+</template>
