@@ -1,16 +1,17 @@
 YUI.add("yuidoc-meta", function(Y) {
    Y.YUIDoc = { meta: {
     "classes": [
+        "HandlebarsHelpers",
         "Roles"
     ],
     "modules": [
-        "Helpers",
+        "HandlebarsHelpers",
         "Roles"
     ],
     "allModules": [
         {
-            "displayName": "Helpers",
-            "name": "Helpers",
+            "displayName": "HandlebarsHelpers",
+            "name": "HandlebarsHelpers",
             "description": "Convenience functions for use on client.\n\nNOTE: You must restrict user actions on the server-side; any\nclient-side checks are strictly for convenience and must not be\ntrusted."
         },
         {

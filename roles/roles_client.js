@@ -7,7 +7,7 @@
  * client-side checks are strictly for convenience and must not be
  * trusted.
  *
- * @module Helpers
+ * @module HandlebarsHelpers
  */
 
 ////////////////////////////////////////////////////////////
@@ -24,12 +24,6 @@ Roles._handlebarsHelpers = {
    * Handlebars helper to check if current user is in at least one
    * of the target roles.  For use in client-side templates.
    *
-   * NOTE: This helper does not currently support specifying a group.  
-   *       If Meteor.user() has per-group roles, you can use this helper
-   *       to check for permissions in the Roles.GLOBAL_GROUP but to 
-   *       check for permissions in a specific group you will need to 
-   *       use Roles.userIsInRole() from your own template helper.
-   *
    * @example
    *     {{#if isInRole 'admin'}}
    *     {{/if}}
@@ -37,16 +31,23 @@ Roles._handlebarsHelpers = {
    *     {{#if isInRole 'editor,user'}}
    *     {{/if}}
    *
+   *     {{#if isInRole 'editor,user' 'group1'}}
+   *     {{/if}}
+   *
    * @method isInRole
-   * @param {String} role name of role or comma-seperated list of roles
+   * @param {String} role Name of role or comma-seperated list of roles
+   * @param {String} [group] Optional, name of group to check
    * @return {Boolean} true if current user is in at least one of the target roles
+   * @static
+   * @for HandlebarsHelpers 
    */
   isInRole: function (role, group) {
     var user = Meteor.user(),
-        comma = role && role.indexOf(','),
+        comma = (role || '').indexOf(','),
         roles
 
     if (!user) return false
+    if (!Match.test(role, String)) return false
 
     if (comma !== -1) {
       roles = _.reduce(role.split(','), function (memo, r) {
@@ -60,10 +61,11 @@ Roles._handlebarsHelpers = {
       roles = [role]
     }
 
-    if (Match.test(group, String))
+    if (Match.test(group, String)) {
       return Roles.userIsInRole(user, roles, group)
-    else
-      return Roles.userIsInRole(user, roles)
+    }
+
+    return Roles.userIsInRole(user, roles)
   }
 }
 

@@ -2,16 +2,18 @@
     "project": {
         "name": "The meteor-roles API",
         "description": "The meteor-roles API: a role-based authorization package for Meteor",
-        "version": "v1.2.2"
+        "version": "v1.2.3"
     },
     "files": {
         "roles/roles_client.js": {
             "name": "roles/roles_client.js",
             "modules": {
-                "Helpers": 1
+                "HandlebarsHelpers": 1
             },
             "classes": {},
-            "fors": {},
+            "fors": {
+                "HandlebarsHelpers": 1
+            },
             "namespaces": {}
         },
         "roles/roles_common.js": {
@@ -34,11 +36,15 @@
         }
     },
     "modules": {
-        "Helpers": {
-            "name": "Helpers",
+        "HandlebarsHelpers": {
+            "name": "HandlebarsHelpers",
             "submodules": {},
-            "classes": {},
-            "fors": {},
+            "classes": {
+                "HandlebarsHelpers": 1
+            },
+            "fors": {
+                "HandlebarsHelpers": 1
+            },
             "namespaces": {},
             "tag": "module",
             "file": "roles/roles_client.js",
@@ -60,6 +66,17 @@
         }
     },
     "classes": {
+        "HandlebarsHelpers": {
+            "name": "HandlebarsHelpers",
+            "shortname": "HandlebarsHelpers",
+            "classitems": [],
+            "plugins": [],
+            "extensions": [],
+            "plugin_for": [],
+            "extension_for": [],
+            "module": "HandlebarsHelpers",
+            "namespace": ""
+        },
         "Roles": {
             "name": "Roles",
             "shortname": "Roles",
@@ -80,25 +97,32 @@
         {
             "file": "roles/roles_client.js",
             "line": 23,
-            "description": "Handlebars helper to check if current user is in at least one\nof the target roles.  For use in client-side templates.\n\nNOTE: This helper does not currently support specifying a group.  \n      If Meteor.user() has per-group roles, you can use this helper\n      to check for permissions in the Roles.GLOBAL_GROUP but to \n      check for permissions in a specific group you will need to \n      use Roles.userIsInRole() from your own template helper.",
+            "description": "Handlebars helper to check if current user is in at least one\nof the target roles.  For use in client-side templates.",
             "example": [
-                "\n    {{#if isInRole 'admin'}}\n    {{/if}}\n\n    {{#if isInRole 'editor,user'}}\n    {{/if}}"
+                "\n    {{#if isInRole 'admin'}}\n    {{/if}}\n\n    {{#if isInRole 'editor,user'}}\n    {{/if}}\n\n    {{#if isInRole 'editor,user' 'group1'}}\n    {{/if}}"
             ],
             "itemtype": "method",
             "name": "isInRole",
             "params": [
                 {
                     "name": "role",
-                    "description": "name of role or comma-seperated list of roles",
+                    "description": "Name of role or comma-seperated list of roles",
                     "type": "String"
+                },
+                {
+                    "name": "group",
+                    "description": "Optional, name of group to check",
+                    "type": "String",
+                    "optional": true
                 }
             ],
             "return": {
                 "description": "true if current user is in at least one of the target roles",
                 "type": "Boolean"
             },
-            "class": "Roles",
-            "module": "Helpers"
+            "static": 1,
+            "class": "HandlebarsHelpers",
+            "module": "HandlebarsHelpers"
         },
         {
             "file": "roles/roles_common.js",

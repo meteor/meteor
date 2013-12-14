@@ -1,3 +1,9 @@
+## v1.2.3
+
+* Support using group in 'isInRole' client handlebars helper. 
+  Contributed by [@pascoual](https://github.com/pascoual)
+
+
 ## v1.2.2
 
 * Support passing user object in addition to _id for Roles.getRolesForUser
