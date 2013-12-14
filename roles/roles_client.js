@@ -41,7 +41,7 @@ Roles._handlebarsHelpers = {
    * @param {String} role name of role or comma-seperated list of roles
    * @return {Boolean} true if current user is in at least one of the target roles
    */
-  isInRole: function (role) {
+  isInRole: function (role, group) {
     var user = Meteor.user(),
         comma = role && role.indexOf(','),
         roles
@@ -60,7 +60,10 @@ Roles._handlebarsHelpers = {
       roles = [role]
     }
 
-    return Roles.userIsInRole(user, roles)
+    if (Match.test(group, String))
+      return Roles.userIsInRole(user, roles, group)
+    else
+      return Roles.userIsInRole(user, roles)
   }
 }
 
