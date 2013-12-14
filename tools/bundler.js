@@ -159,6 +159,7 @@
 // wait until later.
 
 var path = require('path');
+var util = require('util');
 var files = require(path.join(__dirname, 'files.js'));
 var packages = require(path.join(__dirname, 'packages.js'));
 var linker = require(path.join(__dirname, 'linker.js'));
@@ -767,7 +768,12 @@ _.extend(ClientTarget.prototype, {
     };
 
     var cssAsts = _.map(self.css, function (file) {
-      var ast = minifiers.CssParse(file.contents('utf8'));
+      try {
+        var ast = minifiers.CssParse(file.contents('utf8'));
+      } catch (e) {
+        throw new Error(util.format('Parsing %s: %s', file.url, e.message));
+      }
+
       function isImportRule (node) {
         return node.type === 'import';
       }
