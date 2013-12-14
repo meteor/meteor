@@ -61,6 +61,7 @@ ObserveSequence = {
           lastSeqArray = _.map(activeObserveHandle._fetch(), function (doc) {
             return {_id: doc._id, item: doc};
           });
+          activeObserveHandle.stop();
           activeObserveHandle = null;
         }
 
