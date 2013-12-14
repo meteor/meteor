@@ -771,7 +771,9 @@ _.extend(ClientTarget.prototype, {
       try {
         var ast = minifiers.CssParse(file.contents('utf8'));
       } catch (e) {
-        throw new Error(util.format('Parsing %s: %s', file.url, e.message));
+        var file = file.url[0] === '/' ? file.url.slice(1) : file.url;
+        buildmessage.error(e.message, { file: file });
+        return { type: "stylesheet", stylesheet: { rules: [] } };
       }
 
       function isImportRule (node) {
