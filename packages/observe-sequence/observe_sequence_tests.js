@@ -68,7 +68,8 @@ runOneObserveSequenceTestCase = function (test, stripIds, sequenceFunc,
   Deps.flush();
   handle.stop();
 
-  test.equal(firedCallbacks, expectedCallbacks);
+  test.equal(EJSON.stringify(firedCallbacks, {canonical: true}),
+             EJSON.stringify(expectedCallbacks, {canonical: true}));
 };
 
 Tinytest.add('observe sequence - initial data for all sequence types', function (test) {
@@ -246,7 +247,6 @@ Tinytest.add('observe sequence - cursor to array', function (test) {
     return seq;
   }, function () {
     coll.insert({_id: "37", bar: 2});
-    dep.changed();
     seq = [{_id: "13", foo: 1}, {_id: "38", bar: 2}];
     dep.changed();
   }, [
@@ -361,17 +361,17 @@ Tinytest.add('observe sequence - cursor to same cursor', function (test) {
   }, function () {
     coll.insert({_id: "24", rank: 2});
     dep.changed();
+    Deps.flush();
     coll.insert({_id: "78", rank: 3});
   }, [
     {addedAt: ["13", {_id: "13", rank: 1}, 0, null]},
     {addedAt: ["24", {_id: "24", rank: 2}, 1, null]},
-    {addedAt: ["78", {_id: "78", rank: 3}, 2, null]},
     // even if the cursor changes to the same cursor, we diff to see if we
     // missed anything during the invalidation, which leads to these
     // "changed" events.
     {changed: ["13", {_id: "13", rank: 1}, {_id: "13", rank: 1}]},
     {changed: ["24", {_id: "24", rank: 2}, {_id: "24", rank: 2}]},
-    {changed: ["78", {_id: "78", rank: 3}, {_id: "78", rank: 3}]}
+    {addedAt: ["78", {_id: "78", rank: 3}, 2, null]}
   ]);
 });
 
@@ -392,5 +392,31 @@ Tinytest.add('observe sequence - string arrays', function (test) {
     {removed: ['B']},           // XXX we don't need these lines
     {addedAt: ['B', 0, null]},  // when ids from strings are implemented
     {addedAt: ['C', 1, null]}
+  ]);
+});
+
+Tinytest.add('observe sequence - cursor to other cursor, same collection', function (test) {
+  var dep = new Deps.Dependency;
+  var coll = new Meteor.Collection(null);
+  coll.insert({_id: "13", foo: 1});
+  coll.insert({_id: "37", foo: 2});
+  var cursor = coll.find({foo: 1});
+  var seq = cursor;
+
+  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    var newCursor = coll.find({foo: 2});
+    seq = newCursor;
+    dep.changed();
+    Deps.flush();
+    coll.insert({_id: "38", foo: 1});
+    coll.insert({_id: "39", foo: 2});
+  }, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {removed: ["13", {_id: "13", foo: 1}]},
+    {addedAt: ["37", {_id: "37", foo: 2}, 0, null]},
+    {addedAt: ["39", {_id: "39", foo: 2}, 1, null]}
   ]);
 });
