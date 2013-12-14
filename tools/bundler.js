@@ -759,13 +759,32 @@ _.extend(ClientTarget.prototype, {
   minifyCss: function (minifiers) {
     var self = this;
 
-    var allCss = _.map(self.css, function (file) {
-      return file.contents('utf8');
-    }).join('\n');
+    // after concatenation some @import's might be left in the middle of CSS
+    // file but they required to be in the beginning.
+    var importsAst = {
+      type: 'stylesheet',
+      stylesheet: { rules: [] }
+    };
 
-    allCss = minifiers.CleanCSSProcess(allCss);
+    var cssAsts = _.map(self.css, function (file) {
+      var ast = minifiers.CssParse(file.contents('utf8'));
+      function isImportRule (node) {
+        return node.type === 'import';
+      }
 
-    self.css = [new File({ data: new Buffer(allCss, 'utf8') })];
+      var imports = _.filter(ast.stylesheet.rules, isImportRule);
+      importsAst.stylesheet.rules = importsAst.stylesheet.rules.concat(imports);
+
+      ast.stylesheet.rules = _.reject(ast.stylesheet.rules, isImportRule);
+      return ast;
+    });
+
+    var allCss =
+      _.map([importsAst].concat(cssAsts), minifiers.CssStringify).join('\n');
+
+    var minifiedCss = minifiers.CleanCSSProcess(allCss);
+
+    self.css = [new File({ data: new Buffer(minifiedCss, 'utf8') })];
     self.css[0].setUrlToHash(".css");
   },
 
