@@ -73,7 +73,7 @@ UI.Each = Component.extend({
       }
     };
 
-    ObserveSequence.observe(function () {
+    this.observeHandle = ObserveSequence.observe(function () {
       return self.get('sequence');
     }, {
       addedAt: function (id, item, i, beforeId) {
@@ -117,5 +117,9 @@ UI.Each = Component.extend({
 
     // on initial render, display the else clause if no items
     addToCount(0);
+  },
+  destroyed: function () {
+    if (this.observeHandle)
+      this.observeHandle.stop();
   }
 });
