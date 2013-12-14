@@ -821,3 +821,21 @@ Tinytest.add('spacebars - templates - with someData', function (test) {
   test.equal(someDataRuns, 1);
   test.equal(trim(stripComments(div.innerHTML)), 'CCC YO');
 });
+
+Tinytest.add('spacebars - template - #each stops when rendered element is removed', function (test) {
+  var tmpl = Template.spacebars_template_test_each_stops;
+  var coll = new Meteor.Collection(null);
+  coll.insert({});
+  tmpl.items = function () { return coll.find(); };
+
+  var div = renderToDiv(tmpl);
+  divRendersTo(test, div, 'x');
+
+  // trigger #each component destroyed
+  $(div).remove();
+
+  // insert another document. cursor should no longer be observed so
+  // should have no effect.
+  coll.insert({});
+  divRendersTo(test, div, 'x');
+});

@@ -125,6 +125,8 @@ ObserveSequence = {
     return {
       stop: function () {
         computation.stop();
+        if (activeObserveHandle)
+          activeObserveHandle.stop();
       }
     };
   },
