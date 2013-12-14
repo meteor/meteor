@@ -34,6 +34,22 @@
           "version": "1.0.1"
         }
       }
+    },
+    "css-parse": {
+      "version": "1.6.0"
+    },
+    "css-stringify": {
+      "version": "1.4.1",
+      "dependencies": {
+        "source-map": {
+          "version": "0.1.31",
+          "dependencies": {
+            "amdefine": {
+              "version": "0.1.0"
+            }
+          }
+        }
+      }
     }
   }
 }
