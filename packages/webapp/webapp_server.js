@@ -661,7 +661,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
         throw err;
       outstanding--;
       checkComplete();
-    }
+    };
   };
 
   // for now, have our (temporary) requiresAuth flag apply to all
@@ -701,7 +701,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
         parsedUrl.pathname = "";
       if (! parsedUrl.pathname.indexOf("/") !== 0) {
         // Relative path
-        parsedUrl.pathname = bindPathPrefix + "/" + parsedUrl.pathname;
+        parsedUrl.pathname = bindPathPrefix + parsedUrl.pathname;
       }
     }
 
@@ -721,8 +721,8 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
       proxyToPort = ourPort;
       proxyToPathPrefix = parsedUrl.pathname;
     } else {
-      var parsedFwdUrl = url.parse(route.forwardTo);
-      if (! parsedUrl.hostname || parsedUrl.protocol)
+      var parsedFwdUrl = url.parse(route.forwardTo, false, true);
+      if (! parsedFwdUrl.hostname || parsedFwdUrl.protocol)
         throw new Error("Bad forward url");
       proxyToHost = parsedFwdUrl.hostname;
       proxyToPort = parseInt(parsedFwdUrl.port || "80");

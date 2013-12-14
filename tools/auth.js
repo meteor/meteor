@@ -355,11 +355,11 @@ var logInToGalaxy = function (galaxyName) {
 
   if (response.statusCode !== 200 ||
       ! body ||
-      ! _.has(response.setCookie, 'GALAXY_AUTH'))
+      ! _.has(galaxyResult.setCookie, 'GALAXY_AUTH'))
     return { error: 'access-denied' };
 
   return {
-    token: response.setCookie.GALAXY_AUTH,
+    token: galaxyResult.setCookie.GALAXY_AUTH,
     tokenId: body.tokenId
   };
 };
