@@ -719,7 +719,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
     if (! _.has(route, 'forwardTo')) {
       proxyToHost = ourHost;
       proxyToPort = ourPort;
-      proxyToPathPrefix = bindPathPrefix;
+      proxyToPathPrefix = parsedUrl.pathname;
     } else {
       var parsedFwdUrl = url.parse(route.forwardTo);
       if (! parsedUrl.hostname || parsedUrl.protocol)
@@ -819,16 +819,23 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
 // service is capable, eg, has appropriate certs and port mappings).
 //
 // With no 'forwardTo' option, the traffic is received by this process
-// for service by the hooks in this 'webapp' package. With
-// 'forwardTo', the process is instead sent to some other remote
-// host. Either way, the routing continues until this process exits.
+// for service by the hooks in this 'webapp' package. The original URL
+// is preserved (that is, if you bind "/a", and a user visits "/a/b",
+// the app receives a request with a path of "/a/b", not a path of
+// "/b").
 //
-// Path components in 'url' will be stripped and path components in
-// 'forwardTo' (if used) will be put in their place.
+// With 'forwardTo', the process is instead sent to some other remote
+// host. The URL is adjusted by stripping the path components in 'url'
+// and putting the path components in the 'forwardTo' URL in their
+// place. For example, if you forward "//somehost/a" to
+// "//otherhost/x", and the user types "//somehost/a/b" into their
+// browser, then otherhost will receive a request with a Host header
+// of "somehost" and a path of "/x/b".
 //
-// For now, all of the routes must be set up ahead of time, before the
-// initial registration with the proxy. Calling addRoute from the top
-// level of your JS should do the trick.
+// The routing continues until this process exits. For now, all of the
+// routes must be set up ahead of time, before the initial
+// registration with the proxy. Calling addRoute from the top level of
+// your JS should do the trick.
 //
 // When multiple routes are present that match a given request, the
 // most specific route wins. When routes with equal specificity are
