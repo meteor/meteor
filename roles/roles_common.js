@@ -403,7 +403,7 @@ Roles.getRolesForUser = function (user, group) {
   if (!user || !user.roles) return []
 
   if (group) {
-    return _.union(user.roles[group], user.roles[Roles.GLOBAL_GROUP] || [])
+    return _.union(user.roles[group] || [], user.roles[Roles.GLOBAL_GROUP] || [])
   }
 
   if (_.isArray(user.roles))

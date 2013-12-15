@@ -2,7 +2,7 @@
     "project": {
         "name": "The meteor-roles API",
         "description": "The meteor-roles API: a role-based authorization package for Meteor",
-        "version": "v1.2.3"
+        "version": "v1.2.4"
     },
     "files": {
         "roles/roles_client.js": {

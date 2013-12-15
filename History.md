@@ -1,3 +1,8 @@
+## v1.2.4
+
+* Update getRolesForUser to not return null when group is specified but user has no permissions
+
+
 ## v1.2.3
 
 * Support using group in 'isInRole' client handlebars helper. 

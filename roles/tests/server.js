@@ -493,6 +493,37 @@
 
 
   Tinytest.add(
+    'roles - getRolesForUser should not return null entries if user has no roles for group', 
+    function (test) {
+      reset()
+
+      var userId = users.eve,
+          userObj
+
+      // by userId
+      test.equal(Roles.getRolesForUser(userId, 'group1'), [])
+      test.equal(Roles.getRolesForUser(userId), [])
+
+      // by user object
+      userObj = Meteor.users.findOne({_id: userId})
+      test.equal(Roles.getRolesForUser(userObj, 'group1'), [])
+      test.equal(Roles.getRolesForUser(userObj), [])
+
+
+      Roles.addUsersToRoles([users.eve], ['editor'], Roles.GLOBAL_GROUP)
+
+      // by userId
+      test.equal(Roles.getRolesForUser(userId, 'group1'), ['editor'])
+      test.equal(Roles.getRolesForUser(userId), ['editor'])
+
+      // by user object
+      userObj = Meteor.users.findOne({_id: userId})
+      test.equal(Roles.getRolesForUser(userObj, 'group1'), ['editor'])
+      test.equal(Roles.getRolesForUser(userObj), ['editor'])
+    })
+
+
+  Tinytest.add(
     'roles - can get all users in role', 
     function (test) {
       reset()
