@@ -58,7 +58,7 @@ var retry = new Retry({
 });
 var failures = 0;
 
-Autoupdate._retrySubscription = function () {
+var retrySubscription = function () {
   Meteor.subscribe("meteor_autoupdate_clientVersions", {
     onError: function (error) {
       // If the server was downgraded to an earlier version of Meteor
@@ -76,7 +76,7 @@ Autoupdate._retrySubscription = function () {
         Meteor._debug("autoupdate subscription failed:", error);
         failures++;
         retry.retryLater(failures, function () {
-          Autoupdate._retrySubscription();
+          retrySubscription();
         });
       }
     },
@@ -93,4 +93,4 @@ Autoupdate._retrySubscription = function () {
   }
   });
 };
-Autoupdate._retrySubscription();
+retrySubscription();
