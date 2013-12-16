@@ -70,6 +70,8 @@ if (Meteor.isServer) {
       "withTransform", false, function (doc) {
         return doc.a;
       });
+    var restrictedCollectionForInvalidTransformTest = defineCollection(
+      "collection-restictedForInvalidTransform", false /*insecure*/);
 
     if (needToConfigure) {
       restrictedCollectionWithTransform.allow({
@@ -90,6 +92,11 @@ if (Meteor.isServer) {
         insert: function (userId, doc) {
           return !!doc.topLevelField;
         }
+      });
+      restrictedCollectionForInvalidTransformTest.allow({
+        // transform must return an object which is not a mongo id
+        transform: function (doc) { return doc._id; },
+        insert: function () { return true; }
       });
 
       // two calls to allow to verify that either validator is sufficient.
@@ -253,7 +260,8 @@ if (Meteor.isClient) {
       "withTransform", function (doc) {
         return doc.a;
       });
-
+    var restrictedCollectionForInvalidTransformTest = defineCollection(
+      "collection-restictedForInvalidTransform");
 
     // test that if allow is called once then the collection is
     // restricted, and that other mutations aren't allowed
@@ -726,6 +734,13 @@ if (Meteor.isClient) {
           }
         ]);
       });
+    testAsyncMulti(
+      "collection - allow/deny transform must return object",
+      [function (test, expect) {
+        restrictedCollectionForInvalidTransformTest.insert({}, expect(function (err, res) {
+          test.isTrue(err);
+        }));
+      }]);
   });  // end idGeneration loop
 }  // end if isClient
 

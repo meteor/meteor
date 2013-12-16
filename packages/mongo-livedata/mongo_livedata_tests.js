@@ -800,6 +800,9 @@ testAsyncMulti('mongo-livedata - transform must return an object, ' + idGenerati
     var justId = function (doc) {
       return doc._id;
     };
+    var idInArray = function (doc) {
+      return [doc._id];
+    };
     TRANSFORMS["justId"] = justId;
     var collectionOptions = {
       idGeneration: idGeneration,
@@ -818,8 +821,11 @@ testAsyncMulti('mongo-livedata - transform must return an object, ' + idGenerati
       test.throws(function () {
         self.coll.findOne();
       });
+      test.throws(function () {
+        self.coll.findOne({}, {transform: idInArray});
+      });
       // you can still override the transform though.
-      test.equal(self.coll.findOne({}, {transform: null})._id, id);
+      test.equal(self.coll.findOne({}, {transform: null}), {_id: id});
     }));
   }
 ]);

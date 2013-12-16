@@ -698,8 +698,7 @@ _.each(['forEach', 'map', 'rewind', 'fetch', 'count'], function (method) {
 });
 
 Cursor.prototype.getTransform = function () {
-  var self = this;
-  return self._cursorDescription.options.transform;
+  return this._cursorDescription.options.transform;
 };
 
 // When you call Meteor.publish() with a function that returns a Cursor, we need
@@ -780,8 +779,8 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options) {
   self._selfForIteration = options.selfForIteration || self;
   if (options.useTransform && cursorDescription.options.transform) {
     self._transform = Deps._makeNonreactive(
-      cursorDescription.options.transform
-    );
+      Package.minimongo.LocalCollection.wrapTransform(
+        cursorDescription.options.transform));
   } else {
     self._transform = null;
   }

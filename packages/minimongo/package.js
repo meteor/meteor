@@ -12,6 +12,7 @@ Package.on_use(function (api) {
   api.use('geojson-utils');
   api.add_files([
     'minimongo.js',
+    'wrap_transform.js',
     'selector.js',
     'projection.js',
     'modify.js',

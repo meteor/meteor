@@ -216,6 +216,21 @@ Tinytest.add("minimongo - cursors", function (test) {
   test.equal(c.findOne(id).i, 2);
 });
 
+Tinytest.add("minimongo - transform", function (test) {
+  var c = new LocalCollection;
+  c.insert({});
+  // transform functions must return objects
+  var invalidTransform = function (doc) { return doc._id; };
+  test.throws(function () {
+    c.findOne({}, {transform: invalidTransform});
+  });
+
+  // transformed documents get _id field transplanted if not present
+  var transformWithoutId = function (doc) { return _.omit(doc, '_id'); };
+  test.equal(c.findOne({}, {transform: transformWithoutId})._id,
+             c.findOne()._id);
+});
+
 Tinytest.add("minimongo - misc", function (test) {
   // deepcopy
   var a = {a: [1, 2, 3], b: "x", c: true, d: {x: 12, y: [12]},
