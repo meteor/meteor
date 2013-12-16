@@ -470,7 +470,7 @@ exports.loginCommand = function (argv, showUsage) {
   tryRevokeOldTokens({ firstTry: true });
 
   data = readSessionData();
-  process.stdout.write("\nLogged in" + (galaxy ? " to " + galaxy + " " : "") +
+  process.stdout.write("\nLogged in" + (galaxy ? " to " + galaxy : "") +
                        (currentUsername(data) ?
                         " as " + currentUsername(data) : "") + ".\n" +
                        "Thanks for being a Meteor developer!\n");
