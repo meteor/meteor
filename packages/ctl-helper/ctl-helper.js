@@ -45,10 +45,14 @@ _.extend(Ctl, {
     if (typeof admin == 'undefined')
       admin = appConfig.admin;
 
-    var proxyConfig;
-    var bindPathPrefix = "";
-    if (admin) {
-      bindPathPrefix = "/" + encodeURIComponent(Ctl.myAppName()).replace(/\./g, '_');
+
+    var rootUrl = Ctl.rootUrl;
+    if (! rootUrl) {
+      var bindPathPrefix = "";
+      if (admin) {
+        bindPathPrefix = "/" + encodeURIComponent(Ctl.myAppName()).replace(/\./g, '_');
+      }
+      rootUrl = "https://" + appConfig.sitename + bindPathPrefix;
     }
 
     // Allow appConfig settings to be objects or strings. We need to stringify
@@ -63,7 +67,7 @@ _.extend(Ctl, {
     Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), program, {
       exitPolicy: 'restart',
       env: {
-        ROOT_URL: "https://" + appConfig.sitename + bindPathPrefix,
+        ROOT_URL: rootUrl,
         METEOR_SETTINGS: appConfig.settings || appConfig.METEOR_SETTINGS,
         ADMIN_APP: admin
       },
