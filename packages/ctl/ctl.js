@@ -145,7 +145,7 @@ Ctl.Commands.push({
                                  oldServer.env.ADMIN_APP);
     });
     // Wait for them all to come up and bind to the proxy.
-    Meteor._sleepForMs(5000); // XXX: Eventually make sure they're proxy-bound.
+    Meteor._sleepForMs(10000); // XXX: Eventually make sure they're proxy-bound.
     Ctl.updateProxyActiveTags(['', thisJob.star]);
 
     // (eventually) tell the proxy to switch over to using the new star
@@ -156,7 +156,7 @@ Ctl.Commands.push({
       // Wait for it to go down
       waitForDone(jobs, jobToKill._id);
       // Spend some time in between to allow any reconnect storm to die down.
-      Meteor._sleepForMs(1000);
+      Meteor._sleepForMs(5000);
       jobToKill = jobs.findOne(oldJobSelector);
     }
     // Now kill all old non-server jobs.  They're less important.

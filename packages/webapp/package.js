@@ -19,6 +19,7 @@ Package.on_use(function (api) {
   // way on browser-policy here, but we use it when it is loaded, and it can be
   // loaded after webapp.
   api.export(['WebApp', 'main', 'WebAppInternals'], 'server');
+  api.export(['WebApp'], 'client');
   api.add_files('webapp_server.js', 'server');
   api.add_files('webapp_client.js', 'client');
   api.add_files('css_detect.css', 'client');

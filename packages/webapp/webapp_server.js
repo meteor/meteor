@@ -26,8 +26,10 @@ var bundledJsCssPrefix;
 // CSS.  This prevents you from displaying the page in that case, and instead
 // reloads it, presumably all on the new version now.
 var RELOAD_SAFETYBELT = "\n" +
-      "if (typeof Meteor === 'undefined' || \n" +
-      "    ! Meteor._isCssLoaded()) \n" +
+      "if (typeof Package === 'undefined' || \n" +
+      "    ! Package.webapp || \n" +
+      "    ! Package.webapp.WebApp || \n" +
+      "    ! Package.webapp.WebApp._isCssLoaded()) \n" +
       "  document.location.reload(); \n";
 
 
