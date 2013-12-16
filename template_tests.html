@@ -269,3 +269,11 @@
     x
   {{/each}}
 </template>
+
+<template name="spacebars_template_test_block_helpers_in_attribute">
+  <div class="{{#each classes}}{{#if startsLowerCase name}}{{name}} {{/if}}{{else}}none{{/each}}">Hello</div>
+</template>
+
+<template name="spacebars_template_test_block_helpers_in_attribute_2">
+  <input value="{{#if foo}}"{{else}}&&lt;></x>{{/if}}">
+</template>
