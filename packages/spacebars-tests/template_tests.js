@@ -839,3 +839,58 @@ Tinytest.add('spacebars - template - #each stops when rendered element is remove
   coll.insert({});
   divRendersTo(test, div, 'x');
 });
+
+Tinytest.add('spacebars - templates - block helpers in attribute', function (test) {
+  var tmpl = Template.spacebars_template_test_block_helpers_in_attribute;
+
+  var coll = new Meteor.Collection(null);
+  tmpl.classes = function () {
+    return coll.find({}, {sort: {name: 1}});
+  };
+  tmpl.startsLowerCase = function (name) {
+    return /^[a-z]/.test(name);
+  };
+  coll.insert({name: 'David'});
+  coll.insert({name: 'noodle'});
+  coll.insert({name: 'donut'});
+  coll.insert({name: 'frankfurter'});
+  coll.insert({name: 'Steve'});
+
+  var containerDiv = renderToDiv(tmpl);
+  var div = containerDiv.querySelector('div');
+
+  var shouldBe = function (className) {
+    Deps.flush();
+    test.equal(div.innerHTML, "Hello");
+    test.equal(div.className, className);
+    test.equal(canonicalizeHtml(containerDiv.innerHTML), '<div class="' + className + '">Hello</div>');
+  };
+
+  shouldBe('donut frankfurter noodle');
+  coll.remove({name: 'frankfurter'}); // (it was kind of a mouthful)
+  shouldBe('donut noodle');
+  coll.remove({name: 'donut'});
+  shouldBe('noodle');
+  coll.remove({name: 'noodle'});
+  shouldBe(''); // 'David' and 'Steve' appear in the #each but fail the #if
+  coll.remove({});
+  shouldBe('none'); // now the `{{else}}` case kicks in
+  coll.insert({name: 'bubblegum'});
+  shouldBe('bubblegum');
+});
+
+Tinytest.add('spacebars - templates - block helpers in attribute 2', function (test) {
+  var tmpl = Template.spacebars_template_test_block_helpers_in_attribute_2;
+
+  var R = ReactiveVar(true);
+
+  tmpl.foo = function () { return R.get(); };
+
+  var div = renderToDiv(tmpl);
+  var input = div.querySelector('input');
+
+  test.equal(input.value, '"');
+  R.set(false);
+  Deps.flush();
+  test.equal(input.value, '&<></x>');
+});
