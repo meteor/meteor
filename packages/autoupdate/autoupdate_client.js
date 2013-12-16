@@ -44,9 +44,7 @@ Autoupdate.newClientAvailable = function () {
 
 
 
-// XXX Livedata exporting this via DDP is a hack. See
-// packages/livedata/livedata_common.js
-var retry = new DDP._Retry({
+var retry = new Retry({
   // Unlike the stream reconnect use of Retry, which we want to be instant
   // in normal operation, this is a wacky failure. We don't want to retry
   // right away, we can start slowly.
@@ -60,21 +58,27 @@ var retry = new DDP._Retry({
 });
 var failures = 0;
 
-Autoupdate._retrySubscription = function () {
+var retrySubscription = function () {
   Meteor.subscribe("meteor_autoupdate_clientVersions", {
     onError: function (error) {
-      Meteor._debug("autoupdate subscription failed:", error);
-      failures++;
-      retry.retryLater(failures, function () {
-        // Just retry making the subscription, don't reload the whole
-        // page. While reloading would catch more cases (for example,
-        // the server went back a version and is now doing old-style hot
-        // code push), it would also be more prone to reload loops,
-        // which look really bad to the user. Just retrying the
-        // subscription over DDP means it is at least possible to fix by
-        // updating the server.
-        Autoupdate._retrySubscription();
-      });
+      // If the server was downgraded to an earlier version of Meteor
+      // which doesn't have the autoupdate subscription, we'll get an
+      // 404 "subscription not found" here.  Reloading in this case
+      // allows the client to automatically downgrade as well.
+      if (error.error === 404) {
+        if (Package.reload)
+          Package.reload.Reload._reload();
+      } else {
+        // But if the subscription exists and itself has an error,
+        // there's no reason that reloading the client will fix the
+        // problem on the server.  We'll just occasionally retry the
+        // subscription instead.
+        Meteor._debug("autoupdate subscription failed:", error);
+        failures++;
+        retry.retryLater(failures, function () {
+          retrySubscription();
+        });
+      }
     },
     onReady: function () {
       if (Package.reload) {
@@ -89,4 +93,4 @@ Autoupdate._retrySubscription = function () {
   }
   });
 };
-Autoupdate._retrySubscription();
+retrySubscription();
