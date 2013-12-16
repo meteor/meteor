@@ -185,7 +185,7 @@ Prevent non-authorized users from creating new users:
 
 <br />
 
-Prevent access to certain functionality:
+Prevent access to certain functionality, such as deleting a user:
 ```js
 // server/userMethods.js
 
@@ -194,16 +194,50 @@ Meteor.methods({
    * delete a user from a specific group
    * 
    * @method deleteUser
-   * @param {String} userId _id of user to delete
+   * @param {String} targetUserId _id of user to delete
+   * @param {String} group Company to update permissions for
    */
-  deleteUser: function (userId, group) {
+  deleteUser: function (targetUserId, group) {
     var loggedInUser = Meteor.user()
 
-    if (!loggedInUser
-        || !Roles.userIsInRole(loggedInUser, ['manage-users','admin'], group))
+    if (!loggedInUser ||
+        !Roles.userIsInRole(loggedInUser, 
+                            ['manage-users','support-staff'], group)) {
       throw new Meteor.Error(403, "Access denied")
+    }
 
-    // remove user from group...
+    // remove permissions for target group
+    Roles.setUserRoles(targetUserId, [], group)
+
+    // do other actions required when a user is removed...
+  }
+})
+```
+
+<br />
+
+Manage a user's permissions:
+```js
+// server/userMethods.js
+
+Meteor.methods({
+  /**
+   * update a user's permissions
+   *
+   * @param {Object} targetUserId Id of user to update
+   * @param {Array} roles User's new permissions
+   * @param {String} group Company to update permissions for
+   */
+  updateRoles: function (targetUserId, roles, group) {
+    var loggedInUser = Meteor.user()
+
+    if (!loggedInUser ||
+        !Roles.userIsInRole(loggedInUser, 
+                            ['manage-users','support-staff'], group)) {
+      throw new Meteor.Error(403, "Access denied")
+    }
+
+    Roles.setUserRoles(targetUser, roles, group)
   }
 })
 ```

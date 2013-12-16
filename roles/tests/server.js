@@ -39,7 +39,7 @@
     _.each(roles, function (role) {
       var expected = _.contains(expectedRoles, role),
           msg = username + ' expected to have \'' + role + '\' permission but does not',
-          nmsg = username + ' had un-expected permission ' + role
+          nmsg = username + ' had the following un-expected permission: ' + role
 
       if (expected) {
         test.isTrue(Roles.userIsInRole(userParam, role, group), msg)
@@ -205,6 +205,27 @@
     })
 
   Tinytest.add(
+    'roles - can add user to roles via user object', 
+    function (test) {
+      reset() 
+
+      var eve = Meteor.users.findOne({_id: users.eve}),
+          bob = Meteor.users.findOne({_id: users.bob})
+
+      Roles.addUsersToRoles(eve, ['admin', 'user'])
+
+      testUser(test, 'eve', ['admin', 'user'])
+      testUser(test, 'bob', [])
+      testUser(test, 'joe', [])
+
+      Roles.addUsersToRoles(bob, ['editor'])
+
+      testUser(test, 'eve', ['admin', 'user'])
+      testUser(test, 'bob', ['editor'])
+      testUser(test, 'joe', [])
+    })
+
+  Tinytest.add(
     'roles - can add user to roles multiple times', 
     function (test) {
       reset() 
@@ -321,6 +342,24 @@
     })
 
   Tinytest.add(
+    'roles - can remove users from roles via user object', 
+    function (test) {
+      reset() 
+
+      var eve = Meteor.users.findOne({_id: users.eve}),
+          bob = Meteor.users.findOne({_id: users.bob})
+    
+      // remove user role - one user
+      Roles.addUsersToRoles([eve, bob], ['editor', 'user'])
+      testUser(test, 'eve', ['editor', 'user'])
+      testUser(test, 'bob', ['editor', 'user'])
+      Roles.removeUsersFromRoles(eve, ['user'])
+      testUser(test, 'eve', ['editor'])
+      testUser(test, 'bob', ['editor', 'user'])
+    })
+
+
+  Tinytest.add(
     'roles - can remove individual users from roles by group', 
     function (test) {
       reset() 
@@ -391,6 +430,115 @@
       testUser(test, 'bob', [], 'group2')
       testUser(test, 'joe', [], 'group2')
     })
+
+  Tinytest.add(
+    'roles - can set user roles', 
+    function (test) {
+      reset() 
+
+      var eve = Meteor.users.findOne({_id: users.eve}),
+          bob = Meteor.users.findOne({_id: users.bob}),
+          joe = Meteor.users.findOne({_id: users.joe})
+    
+      Roles.setUserRoles([users.eve, bob], ['editor', 'user'])
+      testUser(test, 'eve', ['editor', 'user'])
+      testUser(test, 'bob', ['editor', 'user'])
+      testUser(test, 'joe', [])
+
+      // use addUsersToRoles add some roles
+      Roles.addUsersToRoles([bob, users.joe], ['admin'])
+      testUser(test, 'eve', ['editor', 'user'])
+      testUser(test, 'bob', ['admin', 'editor', 'user'])
+      testUser(test, 'joe', ['admin'])
+
+      Roles.setUserRoles([eve, bob], ['user'])
+      testUser(test, 'eve', ['user'])
+      testUser(test, 'bob', ['user'])
+      testUser(test, 'joe', ['admin'])
+
+      Roles.setUserRoles(bob, 'editor')
+      testUser(test, 'eve', ['user'])
+      testUser(test, 'bob', ['editor'])
+      testUser(test, 'joe', ['admin'])
+
+      Roles.setUserRoles([users.joe, users.bob], [])
+      testUser(test, 'eve', ['user'])
+      testUser(test, 'bob', [])
+      testUser(test, 'joe', [])
+    })
+
+  Tinytest.add(
+    'roles - can set user roles by group', 
+    function (test) {
+      reset() 
+
+      var eve = Meteor.users.findOne({_id: users.eve}),
+          bob = Meteor.users.findOne({_id: users.bob}),
+          joe = Meteor.users.findOne({_id: users.joe})
+    
+      Roles.setUserRoles([users.eve, users.bob], ['editor', 'user'], 'group1')
+      Roles.setUserRoles([users.bob, users.joe], ['admin'], 'group2')
+      testUser(test, 'eve', ['editor', 'user'], 'group1')
+      testUser(test, 'bob', ['editor', 'user'], 'group1')
+      testUser(test, 'joe', [], 'group1')
+      testUser(test, 'eve', [], 'group2')
+      testUser(test, 'bob', ['admin'], 'group2')
+      testUser(test, 'joe', ['admin'], 'group2')
+
+      // use addUsersToRoles add some roles
+      Roles.addUsersToRoles([users.eve, users.bob], ['admin'], 'group1')
+      Roles.addUsersToRoles([users.bob, users.joe], ['editor'], 'group2')
+      testUser(test, 'eve', ['admin', 'editor', 'user'], 'group1')
+      testUser(test, 'bob', ['admin', 'editor', 'user'], 'group1')
+      testUser(test, 'joe', [], 'group1')
+      testUser(test, 'eve', [], 'group2')
+      testUser(test, 'bob', ['admin','editor'], 'group2')
+      testUser(test, 'joe', ['admin','editor'], 'group2')
+
+      Roles.setUserRoles([eve, bob], ['user'], 'group1')
+      Roles.setUserRoles([eve, joe], ['editor'], 'group2')
+      testUser(test, 'eve', ['user'], 'group1')
+      testUser(test, 'bob', ['user'], 'group1')
+      testUser(test, 'joe', [], 'group1')
+      testUser(test, 'eve', ['editor'], 'group2')
+      testUser(test, 'bob', ['admin','editor'], 'group2')
+      testUser(test, 'joe', ['editor'], 'group2')
+
+      Roles.setUserRoles(bob, 'editor', 'group1')
+      testUser(test, 'eve', ['user'], 'group1')
+      testUser(test, 'bob', ['editor'], 'group1')
+      testUser(test, 'joe', [], 'group1')
+      testUser(test, 'eve', ['editor'], 'group2')
+      testUser(test, 'bob', ['admin','editor'], 'group2')
+      testUser(test, 'joe', ['editor'], 'group2')
+
+      Roles.setUserRoles([bob, users.joe], [], 'group1')
+      testUser(test, 'eve', ['user'], 'group1')
+      testUser(test, 'bob', [], 'group1')
+      testUser(test, 'joe', [], 'group1')
+      testUser(test, 'eve', ['editor'], 'group2')
+      testUser(test, 'bob', ['admin','editor'], 'group2')
+      testUser(test, 'joe', ['editor'], 'group2')
+    })
+
+  Tinytest.add(
+    'roles - can set user roles by group including GLOBAL_GROUP', 
+    function (test) {
+      reset() 
+
+      var eve = Meteor.users.findOne({_id: users.eve}),
+          bob = Meteor.users.findOne({_id: users.bob}),
+          joe = Meteor.users.findOne({_id: users.joe})
+    
+      Roles.addUsersToRoles(eve, 'admin', Roles.GLOBAL_GROUP)
+      testUser(test, 'eve', ['admin'], 'group1')
+      testUser(test, 'eve', ['admin'])
+
+      Roles.setUserRoles(eve, 'editor', Roles.GLOBAL_GROUP)
+      testUser(test, 'eve', ['editor'], 'group2')
+      testUser(test, 'eve', ['editor'])
+    })
+
 
   Tinytest.add(
     'roles - can get all roles', 
@@ -655,6 +803,7 @@
       Roles.addUsersToRoles(users.joe, ['editor', 'user'], 'group1')
       try {
         Roles.addUsersToRoles(users.joe, ['admin'])
+        throw new Error("expected exception but didn't get one")
       } 
       catch (ex) {
         test.isTrue(ex.message == expectedErrorMsg)
@@ -664,6 +813,7 @@
       Roles.addUsersToRoles(users.bob, ['editor', 'user'])
       try {
         Roles.addUsersToRoles(users.bob, ['admin'], 'group2')
+        throw new Error("expected exception but didn't get one")
       }
       catch (ex) {
         test.isTrue(ex.message == expectedErrorMsg)
@@ -673,6 +823,17 @@
       Roles.addUsersToRoles(users.bob, ['editor', 'user'], 'group1')
       try {
         Roles.removeUsersFromRoles(users.bob, ['user'])
+        throw new Error("expected exception but didn't get one")
+      }
+      catch (ex) {
+        test.isTrue(ex.message == expectedErrorMsg)
+      }
+
+      reset() 
+      Roles.addUsersToRoles(users.bob, ['editor', 'user'])
+      try {
+        Roles.setUserRoles(users.bob, ['user'], 'group1')
+        throw new Error("expected exception but didn't get one")
       }
       catch (ex) {
         test.isTrue(ex.message == expectedErrorMsg)
@@ -682,6 +843,11 @@
       Roles.addUsersToRoles(users.bob, ['editor', 'user'])
       // don't expect this to throw error
       Roles.removeUsersFromRoles(users.bob, ['user'], 'group1')
+
+      reset() 
+      Roles.addUsersToRoles(users.bob, ['editor', 'user'], 'group1')
+      // this is probably not a good idea but shouldn't throw...
+      Roles.setUserRoles(users.bob, ['user'])
     })
 
   function printException (ex) {

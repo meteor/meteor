@@ -19,7 +19,7 @@
             
         </div>
         <div class="yui3-u-1-4 version">
-            <em>API Docs for: v1.2.4</em>
+            <em>API Docs for: v1.2.5</em>
         </div>
     </div>
     <div id="bd" class="yui3-g">
@@ -200,6 +200,27 @@
 
                     <ul class="index-list methods">
                         
+                            <li class="index-item method protected">
+                                <a href="#method__update_$addToSet_fn">_update_$addToSet_fn</a>
+
+                                
+                                
+                            </li>
+                        
+                            <li class="index-item method protected">
+                                <a href="#method__update_$set_fn">_update_$set_fn</a>
+
+                                
+                                
+                            </li>
+                        
+                            <li class="index-item method protected">
+                                <a href="#method__updateUserRoles">_updateUserRoles</a>
+
+                                
+                                
+                            </li>
+                        
                             <li class="index-item method">
                                 <a href="#method_addUsersToRoles">addUsersToRoles</a>
 
@@ -250,6 +271,13 @@
                             </li>
                         
                             <li class="index-item method">
+                                <a href="#method_setUserRoles">setUserRoles</a>
+
+                                
+                                
+                            </li>
+                        
+                            <li class="index-item method">
                                 <a href="#method_userIsInRole">userIsInRole</a>
 
                                 
@@ -287,6 +315,475 @@
         
             <div id="methods" class="api-class-tabpanel">
                 <h2 class="off-left">Methods</h2>
+
+                
+                    <div id="method__update_$addToSet_fn" class="method item protected">
+    <h3 class="name"><code>_update_$addToSet_fn</code></h3>
+
+    
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+            
+                <li class="arg">
+                    
+                        <code>roles</code>
+                    
+                </li>
+            
+                <li class="arg">
+                    
+                        <code class="optional">[group]</code>
+                    
+                </li>
+            
+            </ul><span class="paren">)</span>
+        </div>
+    
+
+    
+        <span class="returns-inline">
+            <span class="type">Object</span>
+        </span>
+    
+
+    
+
+    
+        <span class="flag protected">protected</span>
+    
+
+    
+
+    
+
+    
+
+    
+
+    <div class="meta">
+        
+            
+                
+                <p>
+                
+                Defined in
+                
+            
+        
+        
+        <a href="../files/roles_roles_common.js.html#l468"><code>roles&#x2F;roles_common.js:468</code></a>
+        
+        </p>
+
+
+        
+
+        
+    </div>
+
+    <div class="description">
+        <p>Private function &#39;template&#39; that uses $addToSet to construct an update 
+object for MongoDB.  Passed to _updateUserRoles</p>
+
+    </div>
+
+    
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+            
+                <li class="param">
+                    
+                        <code class="param-name">roles</code>
+                        <span class="type">Array</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                    
+                </li>
+            
+                <li class="param">
+                    
+                        <code class="param-name optional">[group]</code>
+                        <span class="type">String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                    
+                </li>
+            
+            </ul>
+        </div>
+    
+
+    
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                
+                    
+                        <span class="type">Object</span>:
+                    
+                    <p>update object for use in MongoDB update command</p>
+
+                
+            </div>
+        </div>
+    
+
+    
+</div>
+
+                
+                    <div id="method__update_$set_fn" class="method item protected">
+    <h3 class="name"><code>_update_$set_fn</code></h3>
+
+    
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+            
+                <li class="arg">
+                    
+                        <code>roles</code>
+                    
+                </li>
+            
+                <li class="arg">
+                    
+                        <code class="optional">[group]</code>
+                    
+                </li>
+            
+            </ul><span class="paren">)</span>
+        </div>
+    
+
+    
+        <span class="returns-inline">
+            <span class="type">Object</span>
+        </span>
+    
+
+    
+
+    
+        <span class="flag protected">protected</span>
+    
+
+    
+
+    
+
+    
+
+    
+
+    <div class="meta">
+        
+            
+                
+                <p>
+                
+                Defined in
+                
+            
+        
+        
+        <a href="../files/roles_roles_common.js.html#l443"><code>roles&#x2F;roles_common.js:443</code></a>
+        
+        </p>
+
+
+        
+
+        
+    </div>
+
+    <div class="description">
+        <p>Private function &#39;template&#39; that uses $set to construct an update object
+for MongoDB.  Passed to _updateUserRoles</p>
+
+    </div>
+
+    
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+            
+                <li class="param">
+                    
+                        <code class="param-name">roles</code>
+                        <span class="type">Array</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                    
+                </li>
+            
+                <li class="param">
+                    
+                        <code class="param-name optional">[group]</code>
+                        <span class="type">String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                    
+                </li>
+            
+            </ul>
+        </div>
+    
+
+    
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                
+                    
+                        <span class="type">Object</span>:
+                    
+                    <p>update object for use in MongoDB update command</p>
+
+                
+            </div>
+        </div>
+    
+
+    
+</div>
+
+                
+                    <div id="method__updateUserRoles" class="method item protected">
+    <h3 class="name"><code>_updateUserRoles</code></h3>
+
+    
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+            
+                <li class="arg">
+                    
+                        <code>users</code>
+                    
+                </li>
+            
+                <li class="arg">
+                    
+                        <code>roles</code>
+                    
+                </li>
+            
+                <li class="arg">
+                    
+                        <code>group</code>
+                    
+                </li>
+            
+                <li class="arg">
+                    
+                        <code>updateFactory</code>
+                    
+                </li>
+            
+                <li class="arg">
+                    
+                        <code>roles</code>
+                    
+                </li>
+            
+                <li class="arg">
+                    
+                        <code class="optional">[group]</code>
+                    
+                </li>
+            
+            </ul><span class="paren">)</span>
+        </div>
+    
+
+    
+
+    
+
+    
+        <span class="flag protected">protected</span>
+    
+
+    
+
+    
+
+    
+
+    
+
+    <div class="meta">
+        
+            
+                
+                <p>
+                
+                Defined in
+                
+            
+        
+        
+        <a href="../files/roles_roles_common.js.html#l494"><code>roles&#x2F;roles_common.js:494</code></a>
+        
+        </p>
+
+
+        
+
+        
+    </div>
+
+    <div class="description">
+        <p>Internal function that users the Template pattern to adds or sets roles 
+for users.</p>
+
+    </div>
+
+    
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+            
+                <li class="param">
+                    
+                        <code class="param-name">users</code>
+                        <span class="type">Array | String</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                        <p>user id(s) or object(s) with an _id field</p>
+
+                    </div>
+
+                    
+                </li>
+            
+                <li class="param">
+                    
+                        <code class="param-name">roles</code>
+                        <span class="type">Array | String</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                        <p>name(s) of roles/permissions to add users to</p>
+
+                    </div>
+
+                    
+                </li>
+            
+                <li class="param">
+                    
+                        <code class="param-name">group</code>
+                        <span class="type">String</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                        <p>Group name. If not null or undefined, roles will be
+                        specific to that group.<br>                        The special group Roles.GLOBAL_GROUP provides 
+                        a convenient way to assign blanket roles/permissions
+                        across all groups.  The roles/permissions in the 
+                        Roles.GLOBAL_GROUP group will be automatically 
+                        included in checks for any group.</p>
+
+                    </div>
+
+                    
+                </li>
+            
+                <li class="param">
+                    
+                        <code class="param-name">updateFactory</code>
+                        <span class="type">Function</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                        <p>Func which returns an update object that
+                        will be passed to Mongo.</p>
+
+                    </div>
+
+                    
+                </li>
+            
+                <li class="param">
+                    
+                        <code class="param-name">roles</code>
+                        <span class="type">Array</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                    
+                </li>
+            
+                <li class="param">
+                    
+                        <code class="param-name optional">[group]</code>
+                        <span class="type">String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                    
+                </li>
+            
+            </ul>
+        </div>
+    
+
+    
+
+    
+</div>
 
                 
                     <div id="method_addUsersToRoles" class="method item">
@@ -343,7 +840,7 @@
             
         
         
-        <a href="../files/roles_roles_common.js.html#l107"><code>roles&#x2F;roles_common.js:107</code></a>
+        <a href="../files/roles_roles_common.js.html#l112"><code>roles&#x2F;roles_common.js:112</code></a>
         
         </p>
 
@@ -380,7 +877,7 @@
                     
 
                     <div class="param-description">
-                        <p>id(s) of users to add to roles</p>
+                        <p>User id(s) or object(s) with an _id field</p>
 
                     </div>
 
@@ -396,7 +893,7 @@
                     
 
                     <div class="param-description">
-                        <p>name(s) of roles/permissions to add users to</p>
+                        <p>Name(s) of roles/permissions to add users to</p>
 
                     </div>
 
@@ -414,7 +911,7 @@
 
                     <div class="param-description">
                         <p>Optional group name. If supplied, roles will be
-                        specific to that group.<br>                        The group Roles.GLOBAL_GROUP is special and provides 
+                        specific to that group.<br>                        The special group Roles.GLOBAL_GROUP provides 
                         a convenient way to assign blanket roles/permissions
                         across all groups.  The roles/permissions in the 
                         Roles.GLOBAL_GROUP group will be automatically 
@@ -494,7 +991,7 @@ Roles.addUsersToRoles(userId, &#39;admin&#39;, Roles.GLOBAL_GROUP)</code></pre>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l50"><code>roles&#x2F;roles_common.js:50</code></a>
+        <a href="../files/roles_roles_common.js.html#l55"><code>roles&#x2F;roles_common.js:55</code></a>
         
         </p>
 
@@ -597,7 +1094,7 @@ Roles.addUsersToRoles(userId, &#39;admin&#39;, Roles.GLOBAL_GROUP)</code></pre>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l83"><code>roles&#x2F;roles_common.js:83</code></a>
+        <a href="../files/roles_roles_common.js.html#l88"><code>roles&#x2F;roles_common.js:88</code></a>
         
         </p>
 
@@ -681,7 +1178,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l416"><code>roles&#x2F;roles_common.js:416</code></a>
+        <a href="../files/roles_roles_common.js.html#l386"><code>roles&#x2F;roles_common.js:386</code></a>
         
         </p>
 
@@ -770,7 +1267,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l380"><code>roles&#x2F;roles_common.js:380</code></a>
+        <a href="../files/roles_roles_common.js.html#l350"><code>roles&#x2F;roles_common.js:350</code></a>
         
         </p>
 
@@ -800,7 +1297,7 @@ are currently assigned to the target role.</p>
                     
 
                     <div class="param-description">
-                        <p>UserId or actual user object</p>
+                        <p>User Id or actual user object</p>
 
                     </div>
 
@@ -901,7 +1398,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l426"><code>roles&#x2F;roles_common.js:426</code></a>
+        <a href="../files/roles_roles_common.js.html#l396"><code>roles&#x2F;roles_common.js:396</code></a>
         
         </p>
 
@@ -1039,7 +1536,7 @@ used automatically.</p>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l214"><code>roles&#x2F;roles_common.js:214</code></a>
+        <a href="../files/roles_roles_common.js.html#l171"><code>roles&#x2F;roles_common.js:171</code></a>
         
         </p>
 
@@ -1069,7 +1566,7 @@ used automatically.</p>
                     
 
                     <div class="param-description">
-                        <p>id(s) of users to add to roles</p>
+                        <p>User id(s) or object(s) with an _id field</p>
 
                     </div>
 
@@ -1085,7 +1582,7 @@ used automatically.</p>
                     
 
                     <div class="param-description">
-                        <p>name(s) of roles to add users to</p>
+                        <p>Name(s) of roles to add users to</p>
 
                     </div>
 
@@ -1125,6 +1622,158 @@ used automatically.</p>
 Roles.removeUsersFromRoles([users.bob, users.joe], [&#39;editor&#39;])
 Roles.removeUsersFromRoles([users.bob, users.joe], [&#39;editor&#39;, &#39;user&#39;])
 Roles.removeUsersFromRoles(users.eve, [&#39;user&#39;], &#39;group1&#39;)</code></pre>
+
+            </div>
+        </div>
+    
+</div>
+
+                
+                    <div id="method_setUserRoles" class="method item">
+    <h3 class="name"><code>setUserRoles</code></h3>
+
+    
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+            
+                <li class="arg">
+                    
+                        <code>users</code>
+                    
+                </li>
+            
+                <li class="arg">
+                    
+                        <code>roles</code>
+                    
+                </li>
+            
+                <li class="arg">
+                    
+                        <code class="optional">[group]</code>
+                    
+                </li>
+            
+            </ul><span class="paren">)</span>
+        </div>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    <div class="meta">
+        
+            
+                
+                <p>
+                
+                Defined in
+                
+            
+        
+        
+        <a href="../files/roles_roles_common.js.html#l145"><code>roles&#x2F;roles_common.js:145</code></a>
+        
+        </p>
+
+
+        
+
+        
+    </div>
+
+    <div class="description">
+        <p>Set a users roles/permissions.</p>
+
+    </div>
+
+    
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+            
+                <li class="param">
+                    
+                        <code class="param-name">users</code>
+                        <span class="type">Array | String</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                        <p>User id(s) or object(s) with an _id field</p>
+
+                    </div>
+
+                    
+                </li>
+            
+                <li class="param">
+                    
+                        <code class="param-name">roles</code>
+                        <span class="type">Array | String</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                        <p>Name(s) of roles/permissions to add users to</p>
+
+                    </div>
+
+                    
+                </li>
+            
+                <li class="param">
+                    
+                        <code class="param-name optional">[group]</code>
+                        <span class="type">String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                        <p>Optional group name. If supplied, roles will be
+                        specific to that group.<br>                        The special group Roles.GLOBAL_GROUP provides 
+                        a convenient way to assign blanket roles/permissions
+                        across all groups.  The roles/permissions in the 
+                        Roles.GLOBAL_GROUP group will be automatically 
+                        included in checks for any group.</p>
+
+                    </div>
+
+                    
+                </li>
+            
+            </ul>
+        </div>
+    
+
+    
+
+    
+        <div class="example">
+            <h4>Example:</h4>
+
+            <div class="example-content">
+                <pre class="code prettyprint"><code>Roles.setUserRoles(userId, &#39;admin&#39;)
+Roles.setUserRoles(userId, [&#39;view-secrets&#39;], &#39;example.com&#39;)
+Roles.setUserRoles([user1, user2], [&#39;user&#39;,&#39;editor&#39;])
+Roles.setUserRoles([user1, user2], [&#39;glorious-admin&#39;, &#39;perform-action&#39;], &#39;example.org&#39;)
+Roles.setUserRoles(userId, &#39;admin&#39;, Roles.GLOBAL_GROUP)</code></pre>
 
             </div>
         </div>
@@ -1190,7 +1839,7 @@ Roles.removeUsersFromRoles(users.eve, [&#39;user&#39;], &#39;group1&#39;)</code>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l273"><code>roles&#x2F;roles_common.js:273</code></a>
+        <a href="../files/roles_roles_common.js.html#l244"><code>roles&#x2F;roles_common.js:244</code></a>
         
         </p>
 
@@ -1220,7 +1869,7 @@ Roles.removeUsersFromRoles(users.eve, [&#39;user&#39;], &#39;group1&#39;)</code>
                     
 
                     <div class="param-description">
-                        <p>Id of user or actual user object</p>
+                        <p>User Id or actual user object</p>
 
                     </div>
 
@@ -1345,7 +1994,7 @@ Roles.userIsInRole(user, &#39;admin&#39;)</code></pre>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l34"><code>roles&#x2F;roles_common.js:34</code></a>
+        <a href="../files/roles_roles_common.js.html#l35"><code>roles&#x2F;roles_common.js:35</code></a>
         
         </p>
 
@@ -1368,7 +2017,11 @@ can be used to apply blanket permissions across all groups.</p>
 
             <div class="example-content">
                 <pre class="code prettyprint"><code>Roles.addUsersToRoles(user, &#39;admin&#39;, Roles.GLOBAL_GROUP)
-Roles.userIsInRole(user, &#39;admin&#39;) =&gt; true</code></pre>
+Roles.userIsInRole(user, &#39;admin&#39;) // =&gt; true
+
+Roles.setUserRoles(user, &#39;support-staff&#39;, Roles.GLOBAL_GROUP)
+Roles.userIsInRole(user, &#39;support-staff&#39;) // =&gt; true
+Roles.userIsInRole(user, &#39;admin&#39;) // =&gt; false</code></pre>
 
             </div>
         </div>

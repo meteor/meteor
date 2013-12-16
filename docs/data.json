@@ -2,7 +2,7 @@
     "project": {
         "name": "The meteor-roles API",
         "description": "The meteor-roles API: a role-based authorization package for Meteor",
-        "version": "v1.2.4"
+        "version": "v1.2.5"
     },
     "files": {
         "roles/roles_client.js": {
@@ -133,10 +133,10 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 34,
+            "line": 35,
             "description": "Constant used to reference the special 'global' group that \ncan be used to apply blanket permissions across all groups.",
             "example": [
-                "\n    Roles.addUsersToRoles(user, 'admin', Roles.GLOBAL_GROUP)\n    Roles.userIsInRole(user, 'admin') => true"
+                "\n    Roles.addUsersToRoles(user, 'admin', Roles.GLOBAL_GROUP)\n    Roles.userIsInRole(user, 'admin') // => true\n\n    Roles.setUserRoles(user, 'support-staff', Roles.GLOBAL_GROUP)\n    Roles.userIsInRole(user, 'support-staff') // => true\n    Roles.userIsInRole(user, 'admin') // => false"
             ],
             "itemtype": "property",
             "name": "GLOBAL_GROUP",
@@ -148,7 +148,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 50,
+            "line": 55,
             "description": "Create a new role. Whitespace will be trimmed.",
             "itemtype": "method",
             "name": "createRole",
@@ -168,7 +168,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 83,
+            "line": 88,
             "description": "Delete an existing role.  Will throw \"Role in use\" error if any users\nare currently assigned to the target role.",
             "itemtype": "method",
             "name": "deleteRole",
@@ -184,7 +184,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 107,
+            "line": 112,
             "description": "Add users to roles. Will create roles as needed.\n\nNOTE: Mixing grouped and non-grouped roles for the same user\n      is not supported and will throw an error.\n\nMakes 2 calls to database:\n 1. retrieve list of all existing roles\n 2. update users' roles",
             "example": [
                 "\n    Roles.addUsersToRoles(userId, 'admin')\n    Roles.addUsersToRoles(userId, ['view-secrets'], 'example.com')\n    Roles.addUsersToRoles([user1, user2], ['user','editor'])\n    Roles.addUsersToRoles([user1, user2], ['glorious-admin', 'perform-action'], 'example.org')\n    Roles.addUsersToRoles(userId, 'admin', Roles.GLOBAL_GROUP)"
@@ -194,17 +194,17 @@
             "params": [
                 {
                     "name": "users",
-                    "description": "id(s) of users to add to roles",
+                    "description": "User id(s) or object(s) with an _id field",
                     "type": "Array|String"
                 },
                 {
                     "name": "roles",
-                    "description": "name(s) of roles/permissions to add users to",
+                    "description": "Name(s) of roles/permissions to add users to",
                     "type": "Array|String"
                 },
                 {
                     "name": "group",
-                    "description": "Optional group name. If supplied, roles will be\n                        specific to that group.  \n                        The group Roles.GLOBAL_GROUP is special and provides \n                        a convenient way to assign blanket roles/permissions\n                        across all groups.  The roles/permissions in the \n                        Roles.GLOBAL_GROUP group will be automatically \n                        included in checks for any group.",
+                    "description": "Optional group name. If supplied, roles will be\n                        specific to that group.  \n                        The special group Roles.GLOBAL_GROUP provides \n                        a convenient way to assign blanket roles/permissions\n                        across all groups.  The roles/permissions in the \n                        Roles.GLOBAL_GROUP group will be automatically \n                        included in checks for any group.",
                     "type": "String",
                     "optional": true
                 }
@@ -214,7 +214,37 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 214,
+            "line": 145,
+            "description": "Set a users roles/permissions.",
+            "example": [
+                "\n    Roles.setUserRoles(userId, 'admin')\n    Roles.setUserRoles(userId, ['view-secrets'], 'example.com')\n    Roles.setUserRoles([user1, user2], ['user','editor'])\n    Roles.setUserRoles([user1, user2], ['glorious-admin', 'perform-action'], 'example.org')\n    Roles.setUserRoles(userId, 'admin', Roles.GLOBAL_GROUP)"
+            ],
+            "itemtype": "method",
+            "name": "setUserRoles",
+            "params": [
+                {
+                    "name": "users",
+                    "description": "User id(s) or object(s) with an _id field",
+                    "type": "Array|String"
+                },
+                {
+                    "name": "roles",
+                    "description": "Name(s) of roles/permissions to add users to",
+                    "type": "Array|String"
+                },
+                {
+                    "name": "group",
+                    "description": "Optional group name. If supplied, roles will be\n                        specific to that group.  \n                        The special group Roles.GLOBAL_GROUP provides \n                        a convenient way to assign blanket roles/permissions\n                        across all groups.  The roles/permissions in the \n                        Roles.GLOBAL_GROUP group will be automatically \n                        included in checks for any group.",
+                    "type": "String",
+                    "optional": true
+                }
+            ],
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles_common.js",
+            "line": 171,
             "description": "Remove users from roles",
             "example": [
                 "\n    Roles.removeUsersFromRoles(users.bob, 'admin')\n    Roles.removeUsersFromRoles([users.bob, users.joe], ['editor'])\n    Roles.removeUsersFromRoles([users.bob, users.joe], ['editor', 'user'])\n    Roles.removeUsersFromRoles(users.eve, ['user'], 'group1')"
@@ -224,12 +254,12 @@
             "params": [
                 {
                     "name": "users",
-                    "description": "id(s) of users to add to roles",
+                    "description": "User id(s) or object(s) with an _id field",
                     "type": "Array|String"
                 },
                 {
                     "name": "roles",
-                    "description": "name(s) of roles to add users to",
+                    "description": "Name(s) of roles to add users to",
                     "type": "Array|String"
                 },
                 {
@@ -244,7 +274,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 273,
+            "line": 244,
             "description": "Check if user has specified permissions/roles",
             "example": [
                 "\n    // non-group usage\n    Roles.userIsInRole(user, 'admin')\n    Roles.userIsInRole(user, ['admin','editor'])\n    Roles.userIsInRole(userId, 'admin')\n    Roles.userIsInRole(userId, ['admin','editor'])\n\n    // per-group usage\n    Roles.userIsInRole(user,   ['admin','editor'], 'group1')\n    Roles.userIsInRole(userId, ['admin','editor'], 'group1')\n    Roles.userIsInRole(userId, ['admin','editor'], Roles.GLOBAL_GROUP)\n\n    // this format can also be used as short-hand for Roles.GLOBAL_GROUP\n    Roles.userIsInRole(user, 'admin')"
@@ -254,7 +284,7 @@
             "params": [
                 {
                     "name": "user",
-                    "description": "Id of user or actual user object",
+                    "description": "User Id or actual user object",
                     "type": "String|Object"
                 },
                 {
@@ -278,14 +308,14 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 380,
+            "line": 350,
             "description": "Retrieve users roles",
             "itemtype": "method",
             "name": "getRolesForUser",
             "params": [
                 {
                     "name": "user",
-                    "description": "UserId or actual user object",
+                    "description": "User Id or actual user object",
                     "type": "String|Object"
                 },
                 {
@@ -304,7 +334,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 416,
+            "line": 386,
             "description": "Retrieve set of all existing roles",
             "itemtype": "method",
             "name": "getAllRoles",
@@ -317,7 +347,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 426,
+            "line": 396,
             "description": "Retrieve all users who are in target role.  \n\nNOTE: This is an expensive query; it performs a full collection scan\non the users collection since there is no index set on the 'roles' field.  \nThis is by design as most queries will specify an _id so the _id index is \nused automatically.",
             "itemtype": "method",
             "name": "getUsersInRole",
@@ -338,6 +368,106 @@
                 "description": "cursor of users in role",
                 "type": "Cursor"
             },
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles_common.js",
+            "line": 443,
+            "description": "Private function 'template' that uses $set to construct an update object\nfor MongoDB.  Passed to _updateUserRoles",
+            "itemtype": "method",
+            "name": "_update_$set_fn",
+            "access": "protected",
+            "tagname": "",
+            "params": [
+                {
+                    "name": "roles",
+                    "description": "",
+                    "type": "Array"
+                },
+                {
+                    "name": "group",
+                    "description": "",
+                    "type": "String",
+                    "optional": true
+                }
+            ],
+            "return": {
+                "description": "update object for use in MongoDB update command",
+                "type": "Object"
+            },
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles_common.js",
+            "line": 468,
+            "description": "Private function 'template' that uses $addToSet to construct an update \nobject for MongoDB.  Passed to _updateUserRoles",
+            "itemtype": "method",
+            "name": "_update_$addToSet_fn",
+            "access": "protected",
+            "tagname": "",
+            "params": [
+                {
+                    "name": "roles",
+                    "description": "",
+                    "type": "Array"
+                },
+                {
+                    "name": "group",
+                    "description": "",
+                    "type": "String",
+                    "optional": true
+                }
+            ],
+            "return": {
+                "description": "update object for use in MongoDB update command",
+                "type": "Object"
+            },
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles_common.js",
+            "line": 494,
+            "description": "Internal function that users the Template pattern to adds or sets roles \nfor users.",
+            "itemtype": "method",
+            "name": "_updateUserRoles",
+            "access": "protected",
+            "tagname": "",
+            "params": [
+                {
+                    "name": "users",
+                    "description": "user id(s) or object(s) with an _id field",
+                    "type": "Array|String"
+                },
+                {
+                    "name": "roles",
+                    "description": "name(s) of roles/permissions to add users to",
+                    "type": "Array|String"
+                },
+                {
+                    "name": "group",
+                    "description": "Group name. If not null or undefined, roles will be\n                        specific to that group.  \n                        The special group Roles.GLOBAL_GROUP provides \n                        a convenient way to assign blanket roles/permissions\n                        across all groups.  The roles/permissions in the \n                        Roles.GLOBAL_GROUP group will be automatically \n                        included in checks for any group.",
+                    "type": "String"
+                },
+                {
+                    "name": "updateFactory",
+                    "description": "Func which returns an update object that\n                        will be passed to Mongo.",
+                    "type": "Function"
+                },
+                {
+                    "name": "roles",
+                    "description": "",
+                    "type": "Array"
+                },
+                {
+                    "name": "group",
+                    "description": "",
+                    "type": "String",
+                    "optional": true
+                }
+            ],
             "class": "Roles",
             "module": "Roles"
         },

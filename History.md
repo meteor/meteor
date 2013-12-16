@@ -1,3 +1,10 @@
+## v1.2.5
+
+* Add setUserRoles function
+* Support passing user object for Roles.addUsersToRoles
+* Support passing user object for Roles.removeUsersFromRoles
+
+
 ## v1.2.4
 
 * Update getRolesForUser to not return null when group is specified but user has no permissions
