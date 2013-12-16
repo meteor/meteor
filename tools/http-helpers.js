@@ -136,8 +136,10 @@ _.extend(exports, {
     if (! callback) {
       fut = new Future();
       callback = function (err, response, body) {
-        if (err)
-          fut.throw(err);
+        if (err) {
+          fut['throw'](err);
+          return;
+        }
 
         var setCookie = {};
         _.each(response.headers["set-cookie"] || [], function (h) {
@@ -151,7 +153,7 @@ _.extend(exports, {
                             setCookie.METEOR_SESSION);
         }
 
-        fut.return({
+        fut['return']({
           response: response,
           body: body,
           setCookie: setCookie
