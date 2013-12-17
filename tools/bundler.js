@@ -27,6 +27,9 @@
 //    - path: path (relative to star.json) to the control file (eg,
 //      program.json) for this plugin
 //
+// - meteorRelease: the value used in Meteor.release for programs inside the
+//     star, or "none"
+//
 // /README: human readable instructions
 //
 // /main.js: script that can be run in node.js to start the site
@@ -57,9 +60,9 @@
 //  - format: "browser-program-pre1" for this version
 //
 //  - page: path to the template for the HTML to serve when a browser
-//    loads a page that is part of the application. In the file
-//    ##HTML_ATTRIBUTES## and ##RUNTIME_CONFIG## will be replaced with
-//    appropriate values at runtime.
+//    loads a page that is part of the application. In the file,
+//    some strings of the format ##FOO## will be replaced with
+//    appropriate values at runtime by the webapp package.
 //
 //  - manifest: array of resources to serve with HTTP, each an object:
 //    - path: path of file relative to program.json
@@ -766,19 +769,39 @@ _.extend(ClientTarget.prototype, {
     self.css[0].setUrlToHash(".css");
   },
 
+  // XXX Instead of packaging the boilerplate in the client program, the
+  // template should be part of WebApp, and we should make sure that all
+  // information that it needs is in the manifest (ie, make sure to include head
+  // and body).  Then it will just need to do one level of templating instead
+  // of two.  Alternatively, use spacebars with unipackage.load here.
   generateHtmlBoilerplate: function () {
     var self = this;
 
-    var templatePath = path.join(__dirname, "app.html.in");
-    var template = watch.readAndWatchFile(self.watchSet, templatePath);
-
-    var f = require('handlebars').compile(template.toString());
-    return new Buffer(f({
-      scripts: _.pluck(self.js, 'url'),
-      stylesheets: _.pluck(self.css, 'url'),
-      head_extra: self.head.join('\n'),
-      body_extra: self.body.join('\n')
-    }), 'utf8');
+    var html = [];
+    html.push('<!DOCTYPE html>\n' +
+              '<html##HTML_ATTRIBUTES##>\n' +
+              '<head>\n');
+    _.each(self.css, function (css) {
+      html.push('  <link rel="stylesheet" href="##BUNDLED_JS_CSS_PREFIX##');
+      html.push(_.escape(css.url));
+      html.push('">\n');
+    });
+    html.push('\n\n##RUNTIME_CONFIG##\n\n');
+    _.each(self.js, function (js) {
+      html.push('  <script type="text/javascript" src="##BUNDLED_JS_CSS_PREFIX##');
+      html.push(_.escape(js.url));
+      html.push('"></script>\n');
+    });
+    html.push('\n\n');
+    html.push(self.head.join('\n'));  // unescaped!
+    html.push('\n' +
+              '</head>\n' +
+              '<body>\n');
+    html.push(self.body.join('\n'));  // unescaped!
+    html.push('\n' +
+              '</body>\n' +
+              '</html>\n');
+    return new Buffer(html.join(''), 'utf8');
   },
 
   // Output the finished target to disk
@@ -1355,13 +1378,19 @@ var writeFile = function (file, builder) {
 // path of a directory that should be created to contain the generated
 // site archive.
 //
-// Returns a watch.WatchSet for all files and directories that ultimately went
+// Returns:
+
+// {
+//     watchSet: watch.WatchSet for all files and directories that ultimately went
+//     starManifest: the JSON manifest of the star
+// }
 // into the bundle.
 //
 // options:
 // - nodeModulesMode: "skip", "symlink", "copy"
 // - builtBy: vanity identification string to write into metadata
 // - controlProgram: name of the control program (should be a target name)
+// - releaseStamp: The Meteor release version
 var writeSiteArchive = function (targets, outputPath, options) {
   var builder = new Builder({
     outputPath: outputPath,
@@ -1377,7 +1406,8 @@ var writeSiteArchive = function (targets, outputPath, options) {
       format: "site-archive-pre1",
       builtBy: options.builtBy,
       programs: [],
-      control: options.controlProgram || undefined
+      control: options.controlProgram || undefined,
+      meteorRelease: options.releaseStamp
     };
 
     // Pick a path in the bundle for each target
@@ -1473,7 +1503,10 @@ var writeSiteArchive = function (targets, outputPath, options) {
     // We did it!
     builder.complete();
 
-    return watchSet;
+    return {
+      watchSet: watchSet,
+      starManifest: json
+    };
   } catch (e) {
     builder.abort();
     throw e;
@@ -1543,6 +1576,7 @@ exports.bundle = function (appDir, outputPath, options) {
 
   var success = false;
   var watchSet = new watch.WatchSet();
+  var starResult = null;
   var messages = buildmessage.capture({
     title: "building the application"
   }, function () {
@@ -1764,11 +1798,13 @@ exports.bundle = function (appDir, outputPath, options) {
     library.watchLocalPackageDirs(watchSet);
 
     // Write to disk
-    watchSet.merge(writeSiteArchive(targets, outputPath, {
+    starResult = writeSiteArchive(targets, outputPath, {
       nodeModulesMode: options.nodeModulesMode,
       builtBy: builtBy,
-      controlProgram: controlProgram
-    }));
+      controlProgram: controlProgram,
+      releaseStamp: options.releaseStamp
+    });
+    watchSet.merge(starResult.watchSet);
 
     success = true;
   });
@@ -1778,7 +1814,8 @@ exports.bundle = function (appDir, outputPath, options) {
 
   return {
     errors: success ? false : messages,
-    watchSet: watchSet
+    watchSet: watchSet,
+    starManifest: starResult && starResult.starManifest
   };
 };
 

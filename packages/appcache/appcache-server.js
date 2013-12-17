@@ -84,29 +84,31 @@ WebApp.connectHandlers.use(function(req, res, next) {
     return;
   }
 
+  var manifest = "CACHE MANIFEST\n\n";
+
   // After the browser has downloaded the app files from the server and
   // has populated the browser's application cache, the browser will
   // *only* connect to the server and reload the application if the
   // *contents* of the app manifest file has changed.
   //
-  // So we have to ensure that if any static client resources change,
-  // something changes in the manifest file.  We compute a hash of
-  // everything that gets delivered to the client during the initial
-  // web page load, and include that hash as a comment in the app
-  // manifest.  That way if anything changes, the comment changes, and
-  // the browser will reload resources.
+  // So to ensure that the client updates if client resources change,
+  // include a hash of client resources in the manifest.
 
-  var hash = crypto.createHash('sha1');
-  hash.update(JSON.stringify(__meteor_runtime_config__), 'utf8');
-  _.each(WebApp.clientProgram.manifest, function (resource) {
-    if (resource.where === 'client' || resource.where === 'internal') {
-      hash.update(resource.hash);
-    }
-  });
-  var digest = hash.digest('hex');
+  manifest += "# " + WebApp.clientHash + "\n";
 
-  var manifest = "CACHE MANIFEST\n\n";
-  manifest += '# ' + digest + "\n\n";
+  // When using the autoupdate package, also include
+  // AUTOUPDATE_VERSION.  Otherwise the client will get into an
+  // infinite loop of reloads when the browser doesn't fetch the new
+  // app HTML which contains the new version, and autoupdate will
+  // reload again trying to get the new code.
+
+  if (Package.autoupdate) {
+    var version = Package.autoupdate.Autoupdate.autoupdateVersion;
+    if (version !== WebApp.clientHash)
+      manifest += "# " + version + "\n";
+  }
+
+  manifest += "\n";
 
   manifest += "CACHE:" + "\n";
   manifest += "/" + "\n";
@@ -176,7 +178,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
 var sizeCheck = function() {
   var totalSize = 0;
   _.each(WebApp.clientProgram.manifest, function (resource) {
-    if (resource.where === 'client') {
+    if (resource.cacheable && resource.where === 'client') {
       totalSize += resource.size;
     }
   });

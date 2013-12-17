@@ -9,7 +9,7 @@ Npm.depends({connect: "2.9.0",
 
 Package.on_use(function (api) {
   api.use(['logging', 'underscore', 'routepolicy'], 'server');
-  api.use(['application-configuration'], {
+  api.use(['application-configuration', 'follower-livedata'], {
     unordered: true
   });
   // At response serving time, webapp uses browser-policy if it is loaded. If

@@ -5,7 +5,7 @@
 // Cursor: a specification for a particular subset of documents, w/
 // a defined order, limit, and offset.  creating a Cursor with LocalCollection.find(),
 
-// LiveResultsSet: the return value of a live query.
+// ObserveHandle: the return value of a live query.
 
 LocalCollection = function (name) {
   this.name = name;
@@ -16,8 +16,7 @@ LocalCollection = function (name) {
   this.next_qid = 1; // live query id generator
 
   // qid -> live query object. keys:
-  //  ordered: bool. ordered queries have moved callbacks and callbacks
-  //           take indices.
+  //  ordered: bool. ordered queries have addedBefore/movedBefore callbacks.
   //  results: array (ordered) or object (unordered) of current results
   //  results_snapshot: snapshot of results. null if not paused.
   //  cursor: Cursor object for the query.
@@ -32,6 +31,9 @@ LocalCollection = function (name) {
   this.paused = false;
 };
 
+// Object exported only for unit testing.
+// Use it to export private functions to test in Tinytest.
+MinimongoTest = {};
 
 LocalCollection._applyChanges = function (doc, changeFields) {
   _.each(changeFields, function (value, key) {
@@ -42,7 +44,7 @@ LocalCollection._applyChanges = function (doc, changeFields) {
   });
 };
 
-var MinimongoError = function (message) {
+MinimongoError = function (message) {
   var e = new Error(message);
   e.name = "MinimongoError";
   return e;
@@ -216,15 +218,26 @@ LocalCollection.Cursor.prototype._publishCursor = function (sub) {
   return Meteor.Collection._publishCursor(self, sub, collection);
 };
 
-LocalCollection._isOrderedChanges = function (callbacks) {
+LocalCollection._observeChangesCallbacksAreOrdered = function (callbacks) {
   if (callbacks.added && callbacks.addedBefore)
     throw new Error("Please specify only one of added() and addedBefore()");
-  return typeof callbacks.addedBefore == 'function' ||
-    typeof callbacks.movedBefore === 'function';
+  return !!(callbacks.addedBefore || callbacks.movedBefore);
+};
+
+LocalCollection._observeCallbacksAreOrdered = function (callbacks) {
+  if (callbacks.addedAt && callbacks.added)
+    throw new Error("Please specify only one of added() and addedAt()");
+  if (callbacks.changedAt && callbacks.changed)
+    throw new Error("Please specify only one of changed() and changedAt()");
+  if (callbacks.removed && callbacks.removedAt)
+    throw new Error("Please specify only one of removed() and removedAt()");
+
+  return !!(callbacks.addedAt || callbacks.movedTo || callbacks.changedAt
+            || callbacks.removedAt);
 };
 
 // the handle that comes back from observe.
-LocalCollection.LiveResultsSet = function () {};
+LocalCollection.ObserveHandle = function () {};
 
 // options to contain:
 //  * callbacks for observe():
@@ -241,7 +254,7 @@ LocalCollection.LiveResultsSet = function () {};
 //  * collection: the collection this query is querying
 //
 // iff x is a returned query handle, (x instanceof
-// LocalCollection.LiveResultsSet) is true
+// LocalCollection.ObserveHandle) is true
 //
 // initial results delivered through added callback
 // XXX maybe callbacks should take a list of objects, to expose transactions?
@@ -255,7 +268,7 @@ _.extend(LocalCollection.Cursor.prototype, {
   observeChanges: function (options) {
     var self = this;
 
-    var ordered = LocalCollection._isOrderedChanges(options);
+    var ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
 
     if (!options._allow_unordered && !ordered && (self.skip || self.limit))
       throw new Error("must use ordered observe with skip or limit");
@@ -284,8 +297,7 @@ _.extend(LocalCollection.Cursor.prototype, {
       query.results_snapshot = (ordered ? [] : {});
 
     // wrap callbacks we were passed. callbacks only fire when not paused and
-    // are never undefined (except that query.moved is undefined for unordered
-    // callbacks).
+    // are never undefined
     // Filters out blacklisted fields according to cursor's projection.
     // XXX wrong place for this?
 
@@ -315,7 +327,6 @@ _.extend(LocalCollection.Cursor.prototype, {
     query.changed = wrapCallback(options.changed, 1, true);
     query.removed = wrapCallback(options.removed);
     if (ordered) {
-      query.moved = wrapCallback(options.moved);
       query.addedBefore = wrapCallback(options.addedBefore, 1);
       query.movedBefore = wrapCallback(options.movedBefore);
     }
@@ -331,7 +342,7 @@ _.extend(LocalCollection.Cursor.prototype, {
       });
     }
 
-    var handle = new LocalCollection.LiveResultsSet;
+    var handle = new LocalCollection.ObserveHandle;
     _.extend(handle, {
       collection: self.collection,
       stop: function () {
@@ -962,224 +973,6 @@ LocalCollection._makeChangedFields = function (newDoc, oldDoc) {
     }
   });
   return fields;
-};
-
-LocalCollection._observeFromObserveChanges = function (cursor, callbacks) {
-  var transform = cursor.getTransform();
-  if (!transform)
-    transform = function (doc) {return doc;};
-  if (callbacks.addedAt && callbacks.added)
-    throw new Error("Please specify only one of added() and addedAt()");
-  if (callbacks.changedAt && callbacks.changed)
-    throw new Error("Please specify only one of changed() and changedAt()");
-  if (callbacks.removed && callbacks.removedAt)
-    throw new Error("Please specify only one of removed() and removedAt()");
-  if (callbacks.addedAt || callbacks.movedTo ||
-      callbacks.changedAt || callbacks.removedAt)
-    return LocalCollection._observeOrderedFromObserveChanges(cursor, callbacks, transform);
-  else
-    return LocalCollection._observeUnorderedFromObserveChanges(cursor, callbacks, transform);
-};
-
-LocalCollection._observeUnorderedFromObserveChanges =
-    function (cursor, callbacks, transform) {
-  var docs = {};
-  var suppressed = !!callbacks._suppress_initial;
-  var handle = cursor.observeChanges({
-    added: function (id, fields) {
-      var strId = LocalCollection._idStringify(id);
-      var doc = EJSON.clone(fields);
-      doc._id = id;
-      docs[strId] = doc;
-      suppressed || callbacks.added && callbacks.added(transform(doc));
-    },
-    changed: function (id, fields) {
-      var strId = LocalCollection._idStringify(id);
-      var doc = docs[strId];
-      var oldDoc = EJSON.clone(doc);
-      // writes through to the doc set
-      LocalCollection._applyChanges(doc, fields);
-      suppressed || callbacks.changed && callbacks.changed(transform(doc), transform(oldDoc));
-    },
-    removed: function (id) {
-      var strId = LocalCollection._idStringify(id);
-      var doc = docs[strId];
-      delete docs[strId];
-      suppressed || callbacks.removed && callbacks.removed(transform(doc));
-    }
-  });
-  suppressed = false;
-  return handle;
-};
-
-LocalCollection._observeOrderedFromObserveChanges =
-    function (cursor, callbacks, transform) {
-  var docs = new OrderedDict(LocalCollection._idStringify);
-  var suppressed = !!callbacks._suppress_initial;
-  // The "_no_indices" option sets all index arguments to -1
-  // and skips the linear scans required to generate them.
-  // This lets observers that don't need absolute indices
-  // benefit from the other features of this API --
-  // relative order, transforms, and applyChanges -- without
-  // the speed hit.
-  var indices = !callbacks._no_indices;
-  var handle = cursor.observeChanges({
-    addedBefore: function (id, fields, before) {
-      var doc = EJSON.clone(fields);
-      doc._id = id;
-      // XXX could `before` be a falsy ID?  Technically
-      // idStringify seems to allow for them -- though
-      // OrderedDict won't call stringify on a falsy arg.
-      docs.putBefore(id, doc, before || null);
-      if (!suppressed) {
-        if (callbacks.addedAt) {
-          var index = indices ? docs.indexOf(id) : -1;
-          callbacks.addedAt(transform(EJSON.clone(doc)),
-                            index, before);
-        } else if (callbacks.added) {
-          callbacks.added(transform(EJSON.clone(doc)));
-        }
-      }
-    },
-    changed: function (id, fields) {
-      var doc = docs.get(id);
-      if (!doc)
-        throw new Error("Unknown id for changed: " + id);
-      var oldDoc = EJSON.clone(doc);
-      // writes through to the doc set
-      LocalCollection._applyChanges(doc, fields);
-      if (callbacks.changedAt) {
-        var index = indices ? docs.indexOf(id) : -1;
-        callbacks.changedAt(transform(EJSON.clone(doc)),
-                            transform(oldDoc), index);
-      } else if (callbacks.changed) {
-        callbacks.changed(transform(EJSON.clone(doc)),
-                          transform(oldDoc));
-      }
-    },
-    movedBefore: function (id, before) {
-      var doc = docs.get(id);
-      var from;
-      // only capture indexes if we're going to call the callback that needs them.
-      if (callbacks.movedTo)
-        from = indices ? docs.indexOf(id) : -1;
-      docs.moveBefore(id, before || null);
-      if (callbacks.movedTo) {
-        var to = indices ? docs.indexOf(id) : -1;
-        callbacks.movedTo(transform(EJSON.clone(doc)), from, to,
-                          before || null);
-      } else if (callbacks.moved) {
-        callbacks.moved(transform(EJSON.clone(doc)));
-      }
-
-    },
-    removed: function (id) {
-      var doc = docs.get(id);
-      var index;
-      if (callbacks.removedAt)
-        index = indices ? docs.indexOf(id) : -1;
-      docs.remove(id);
-      callbacks.removedAt && callbacks.removedAt(transform(doc), index);
-      callbacks.removed && callbacks.removed(transform(doc));
-    }
-  });
-  suppressed = false;
-  return handle;
-};
-
-LocalCollection._compileProjection = function (fields) {
-  if (!_.isObject(fields))
-    throw MinimongoError("fields option must be an object");
-
-  if (_.any(_.values(fields), function (x) {
-      return _.indexOf([1, 0, true, false], x) === -1; }))
-    throw MinimongoError("Projection values should be one of 1, 0, true, or false");
-
-  var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
-  // Find the non-_id keys (_id is handled specially because it is included unless
-  // explicitly excluded). Sort the keys, so that our code to detect overlaps
-  // like 'foo' and 'foo.bar' can assume that 'foo' comes first.
-  var fieldsKeys = _.reject(_.keys(fields).sort(), function (key) { return key === '_id'; });
-  var including = null; // Unknown
-  var projectionRulesTree = {}; // Tree represented as nested objects
-
-  _.each(fieldsKeys, function (keyPath) {
-    var rule = !!fields[keyPath];
-    if (including === null)
-      including = rule;
-    if (including !== rule)
-      // This error message is copies from MongoDB shell
-      throw MinimongoError("You cannot currently mix including and excluding fields.");
-    var treePos = projectionRulesTree;
-    keyPath = keyPath.split('.');
-
-    _.each(keyPath.slice(0, -1), function (key, idx) {
-      if (!_.has(treePos, key))
-        treePos[key] = {};
-      else if (_.isBoolean(treePos[key])) {
-        // Check passed projection fields' keys: If you have two rules such as
-        // 'foo.bar' and 'foo.bar.baz', then the result becomes ambiguous. If
-        // that happens, there is a probability you are doing something wrong,
-        // framework should notify you about such mistake earlier on cursor
-        // compilation step than later during runtime.  Note, that real mongo
-        // doesn't do anything about it and the later rule appears in projection
-        // project, more priority it takes.
-        //
-        // Example, assume following in mongo shell:
-        // > db.coll.insert({ a: { b: 23, c: 44 } })
-        // > db.coll.find({}, { 'a': 1, 'a.b': 1 })
-        // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23 } }
-        // > db.coll.find({}, { 'a.b': 1, 'a': 1 })
-        // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23, "c" : 44 } }
-        //
-        // Note, how second time the return set of keys is different.
-
-        var currentPath = keyPath.join('.');
-        var anotherPath = keyPath.slice(0, idx + 1).join('.');
-        throw MinimongoError("both " + currentPath + " and " + anotherPath +
-         " found in fields option, using both of them may trigger " +
-         "unexpected behavior. Did you mean to use only one of them?");
-      }
-
-      treePos = treePos[key];
-    });
-
-    treePos[_.last(keyPath)] = including;
-  });
-
-  // returns transformed doc according to ruleTree
-  var transform = function (doc, ruleTree) {
-    // Special case for "sets"
-    if (_.isArray(doc))
-      return _.map(doc, function (subdoc) { return transform(subdoc, ruleTree); });
-
-    var res = including ? {} : EJSON.clone(doc);
-    _.each(ruleTree, function (rule, key) {
-      if (!_.has(doc, key))
-        return;
-      if (_.isObject(rule)) {
-        // For sub-objects/subsets we branch
-        if (_.isObject(doc[key]))
-          res[key] = transform(doc[key], rule);
-        // Otherwise we don't even touch this subfield
-      } else if (including)
-        res[key] = doc[key];
-      else
-        delete res[key];
-    });
-
-    return res;
-  };
-
-  return function (obj) {
-    var res = transform(obj, projectionRulesTree);
-
-    if (_idProjection && _.has(obj, '_id'))
-      res._id = obj._id;
-    if (!_idProjection && _.has(res, '_id'))
-      delete res._id;
-    return res;
-  };
 };
 
 // Searches $near operator in the selector recursively

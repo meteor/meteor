@@ -23,8 +23,8 @@ Fiber(function () {
   var cleanup = require('./cleanup.js');
 
   var Future = require('fibers/future');
-  // This code is duplicated in app/server/server.js.
-  var MIN_NODE_VERSION = 'v0.10.21';
+  // This code is duplicated in tools/server/boot.js.
+  var MIN_NODE_VERSION = 'v0.10.22';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
     process.stderr.write(
       'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
@@ -367,6 +367,8 @@ Fiber(function () {
         .describe('port', 'Port to listen on. NOTE: Also uses port N+1 and N+2.')
         .boolean('production')
         .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
+        .boolean('raw-logs')
+        .describe('raw-logs', 'Run without parsing logs from stdout and stderr.')
         .describe('settings',  'Set optional data for Meteor.settings on the server')
         .describe('release', 'Specify the release of Meteor to use')
         .describe('program', 'The program in the app to run (Advanced)')
@@ -394,6 +396,7 @@ Fiber(function () {
       maybePrintUserOverrideMessage();
       runner.run(context, {
         port: argv.port,
+        rawLogs: argv['raw-logs'],
         minify: argv.production,
         once: argv.once,
         settingsFile: argv.settings,
@@ -1117,6 +1120,10 @@ Fiber(function () {
         .boolean('production')
         .describe('production', 'Run in production mode. Minify and bundle CSS and JS files.')
         .boolean('once') // See #Once
+        // To ensure that QA covers both PollingObserveDriver and
+        // OplogObserveDriver, this option disables oplog for tests.
+        // (It still creates a replset, it just doesn't do oplog tailing.)
+        .boolean('disable-oplog')
         .describe('settings',  'Set optional data for Meteor.settings on the server')
         .usage(
           "Usage: meteor test-packages [--release <release>] [options] [package...]\n" +
@@ -1198,6 +1205,7 @@ Fiber(function () {
           port: argv.port,
           minify: argv.production,
           once: argv.once,
+          disableOplog: argv['disable-oplog'],
           testPackages: testPackages,
           settingsFile: argv.settings,
           banner: "Tests"

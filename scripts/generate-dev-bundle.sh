@@ -76,7 +76,7 @@ cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of tools/meteor.js and tools/server/boot.js, and the text in
 # docs/client/concepts.html and the README in tools/bundler.js.
-git checkout v0.10.21
+git checkout v0.10.22
 
 ./configure --prefix="$DIR"
 make -j4
@@ -99,7 +99,6 @@ which npm
 cd "$DIR/lib/node_modules"
 npm install optimist@0.6.0
 npm install semver@2.1.0
-npm install handlebars@1.0.7
 npm install request@2.27.0
 npm install keypress@0.2.1
 npm install underscore@1.5.2
@@ -110,6 +109,7 @@ npm install shell-quote@0.0.1   # now at 1.3.3, which adds plenty of options to 
 npm install eachline@2.3.3
 npm install source-map@0.1.30
 npm install source-map-support@0.2.3
+npm install bcrypt@0.7.7
 
 # Using the unreleased "caronte" branch rewrite of http-proxy (which will become
 # 1.0.0), plus this PR:
@@ -160,7 +160,7 @@ make install
 # click 'changelog' under the current version, then 'release notes' in
 # the upper right.
 cd "$DIR/build"
-MONGO_VERSION="2.4.6"
+MONGO_VERSION="2.4.8"
 
 # We use Meteor fork since we added some changes to the building script.
 # Our patches allow us to link most of the libraries statically.

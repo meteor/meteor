@@ -34,8 +34,8 @@ assert.doesNotThrow(function () {
   // verify that contents are minified
   var appHtml = fs.readFileSync(path.join(tmpOutputDir, "programs",
                                           "client", "app.html"), 'utf8');
-  assert(/src=\"##ROOT_URL_PATH_PREFIX##\/[0-9a-f]{40,40}.js\"/.test(appHtml));
-  assert(!(/src=\"##ROOT_URL_PATH_PREFIX##\/packages/.test(appHtml)));
+  assert(/src=\"##BUNDLED_JS_CSS_PREFIX##\/[0-9a-f]{40,40}.js\"/.test(appHtml));
+  assert(!(/src=\"##BUNDLED_JS_CSS_PREFIX##\/packages/.test(appHtml)));
 });
 
 console.log("nodeModules: 'skip', no minify");
@@ -50,11 +50,11 @@ assert.doesNotThrow(function () {
   // verify that contents are not minified
   var appHtml = fs.readFileSync(path.join(tmpOutputDir, "programs",
                                           "client", "app.html"), 'utf8');
-  assert(!(/src=\"##ROOT_URL_PATH_PREFIX##\/[0-9a-f]{40,40}.js\"/.test(appHtml)));
-  assert(/src=\"##ROOT_URL_PATH_PREFIX##\/packages\/meteor/.test(appHtml));
-  assert(/src=\"##ROOT_URL_PATH_PREFIX##\/packages\/deps/.test(appHtml));
+  assert(!(/src=\"##BUNDLED_JS_CSS_PREFIX##\/[0-9a-f]{40,40}.js\"/.test(appHtml)));
+  assert(/src=\"##BUNDLED_JS_CSS_PREFIX##\/packages\/meteor/.test(appHtml));
+  assert(/src=\"##BUNDLED_JS_CSS_PREFIX##\/packages\/deps/.test(appHtml));
   // verify that tests aren't included
-  assert(!(/src=\"##ROOT_URL_PATH_PREFIX##\/package-tests\/meteor/.test(appHtml)));
+  assert(!(/src=\"##BUNDLED_JS_CSS_PREFIX##\/package-tests\/meteor/.test(appHtml)));
 });
 
 console.log("nodeModules: 'skip', no minify, testPackages: ['meteor']");
@@ -70,7 +70,7 @@ assert.doesNotThrow(function () {
   // verify that tests for the meteor package are included
   var appHtml = fs.readFileSync(path.join(tmpOutputDir, "programs",
                                           "client", "app.html"));
-  assert(/src=\"##ROOT_URL_PATH_PREFIX##\/packages\/meteor:tests\.js/.test(appHtml));
+  assert(/src=\"##BUNDLED_JS_CSS_PREFIX##\/packages\/meteor:tests\.js/.test(appHtml));
 });
 
 console.log("nodeModules: 'copy'");

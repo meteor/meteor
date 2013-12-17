@@ -118,6 +118,9 @@ Accounts.callLoginMethod = function (options) {
               if (error) {
                 makeClientLoggedOut();
               }
+              // Possibly a weird callback to call, but better than nothing if
+              // there is a reconnect between "login result received" and "data
+              // ready".
               onceUserCallback(error);
             }});
         }

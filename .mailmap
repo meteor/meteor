@@ -8,9 +8,14 @@
 # For any emails that show up in the shortlog that aren't in one of
 # these lists, figure out their GitHub username and add them.
 
+GITHUB: AlexeyMK <alexey@alexeymk.com>
 GITHUB: ansman <nicklas@ansman.se>
 GITHUB: awwx <andrew.wilcox@gmail.com>
 GITHUB: codeinthehole <david.winterbottom@gmail.com>
+GITHUB: dandv <ddascalescu+github@gmail.com>
+GITHUB: DenisGorbachev <Denis.Gorbachev@faster-than-wind.ru>
+GITHUB: emgee3 <hello@gravitronic.com>
+GITHUB: FooBarWidget <honglilai@gmail.com>
 GITHUB: jacott <geoffjacobsen@gmail.com>
 GITHUB: Maxhodges <Max@whiterabbitpress.com>
 GITHUB: meawoppl <meawoppl@gmail.com>
@@ -20,6 +25,7 @@ GITHUB: mquandalle <maxime.quandalle@gmail.com>
 GITHUB: nathan-muir <ndmuir@gmail.com>
 GITHUB: RobertLowe <robert@iblargz.com>
 GITHUB: ryw <ry@rywalker.com>
+GITHUB: rzymek <rzymek@gmail.com>
 GITHUB: sdarnell <stephen@darnell.plus.com>
 GITHUB: timhaines <tmhaines@gmail.com>
 
@@ -30,6 +36,7 @@ METEOR: estark37 <emily@meteor.com>
 METEOR: estark37 <estark37@gmail.com>
 METEOR: glasser <glasser@meteor.com>
 METEOR: gschmidt <geoff@geoffschmidt.com>
+METEOR: karayu <lele.yu@gmail.com>
 METEOR: n1mmy <nim@meteor.com>
 METEOR: sixolet <naomi@meteor.com>
 METEOR: Slava <slava@meteor.com>

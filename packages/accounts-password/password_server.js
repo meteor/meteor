@@ -65,11 +65,10 @@ Meteor.methods({beginPasswordExchange: function (request) {
   var srp = new SRP.Server(verifier);
   var challenge = srp.issueChallenge({A: request.A});
 
-  // save off results in the current session so we can verify them
-  // later.
-  this._sessionData.srpChallenge =
-    { userId: user._id, M: srp.M, HAMK: srp.HAMK };
-
+  // Save results so we can verify them later.
+  Accounts._setAccountData(this.connection.id, 'srpChallenge',
+    { userId: user._id, M: srp.M, HAMK: srp.HAMK }
+  );
   return challenge;
 }});
 
@@ -83,11 +82,11 @@ Accounts.registerLoginHandler(function (options) {
   // we're always called from within a 'login' method, so this should
   // be safe.
   var currentInvocation = DDP._CurrentInvocation.get();
-  var serialized = currentInvocation._sessionData.srpChallenge;
+  var serialized = Accounts._getAccountData(currentInvocation.connection.id, 'srpChallenge');
   if (!serialized || serialized.M !== options.srp.M)
     throw new Meteor.Error(403, "Incorrect password");
   // Only can use challenges once.
-  delete currentInvocation._sessionData.srpChallenge;
+  Accounts._setAccountData(currentInvocation.connection.id, 'srpChallenge', undefined);
 
   var userId = serialized.userId;
   var user = Meteor.users.findOne(userId);
@@ -168,14 +167,14 @@ Meteor.methods({changePassword: function (options) {
     password: Match.Optional(String)
   });
 
-  var serialized = this._sessionData.srpChallenge;
+  var serialized = Accounts._getAccountData(this.connection.id, 'srpChallenge');
   if (!serialized || serialized.M !== options.M)
     throw new Meteor.Error(403, "Incorrect password");
   if (serialized.userId !== this.userId)
     // No monkey business!
     throw new Meteor.Error(403, "Incorrect password");
   // Only can use challenges once.
-  delete this._sessionData.srpChallenge;
+  Accounts._setAccountData(this.connection.id, 'srpChallenge', undefined);
 
   var verifier = options.srp;
   if (!verifier && options.password) {
@@ -320,8 +319,8 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
   // logged in as. Make sure to avoid logging ourselves out if this
   // happens. But also make sure not to leave the connection in a state
   // of having a bad token set if things fail.
-  var oldToken = this._getLoginToken();
-  this._setLoginToken(null);
+  var oldToken = Accounts._getLoginToken(this.connection.id);
+  Accounts._setLoginToken(this.connection.id, null);
 
   try {
     // Update the user record by:
@@ -338,11 +337,11 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
     });
   } catch (err) {
     // update failed somehow. reset to old token.
-    this._setLoginToken(oldToken);
+    Accounts._setLoginToken(this.connection.id, oldToken);
     throw err;
   }
 
-  this._setLoginToken(stampedLoginToken.token);
+  Accounts._setLoginToken(this.connection.id, stampedLoginToken.token);
   this.setUserId(user._id);
 
   return {
@@ -436,7 +435,7 @@ Meteor.methods({verifyEmail: function (token) {
      $push: {'services.resume.loginTokens': stampedLoginToken}});
 
   this.setUserId(user._id);
-  this._setLoginToken(stampedLoginToken.token);
+  Accounts._setLoginToken(this.connection.id, stampedLoginToken.token);
   return {
     token: stampedLoginToken.token,
     tokenExpires: Accounts._tokenExpiration(stampedLoginToken.when),
@@ -515,7 +514,7 @@ Meteor.methods({createUser: function (options) {
 
   // client gets logged in as the new user afterwards.
   this.setUserId(result.id);
-  this._setLoginToken(result.token);
+  Accounts._setLoginToken(this.connection.id, result.token);
   return result;
 }});
 
