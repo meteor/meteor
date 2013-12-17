@@ -22,7 +22,7 @@ apply the patch and will instead disable websockets.
 * Add `Meteor.onConnection` and add `this.connection` to method
   invocations and publish functions. These can be used to store data
   associated with individual clients between subscriptions and method
-  calls. See http://docs.meteor.com/#meteor_onconnection for details.
+  calls. See http://docs.meteor.com/#meteor_onconnection for details. #1611
 
 * Rework hot code push. The new `autoupdate` package drives automatic
   reloads on update using standard DDP messages instead of a hardcoded
@@ -51,13 +51,16 @@ apply the patch and will instead disable websockets.
   connections, kill DDP connections, and finish all outstanding requests
   for static assets.
 
+* In the HTTP server, only keep sockets with no active HTTP requests alive for 5
+  seconds.
+
 * Fix handling of `fields` option in minimongo when only `_id` is present. #1651
 
 * Fix issue where setting `process.env.MAIL_URL` in app code would not
-  alter where mail was sent. This was a regression from 0.6.6. #1649
+  alter where mail was sent. This was a regression in 0.6.6 from 0.6.5. #1649
 
-* Prompt for passwords on stderr instead of stdout for easier automation
-  in shell scripts. #1600
+* Use stderr instead of stdout (for easier automation in shell scripts) when
+  prompting for passwords and when downloading the dev bundle. #1600
 
 * Bundler failures cause non-zero exit code in `meteor run`.  #1515
 
@@ -94,9 +97,10 @@ apply the patch and will instead disable websockets.
   * MongoDB from 2.4.6 to 2.4.8
   * clean-css from 1.1.2 to 2.0.2
   * uglify-js from a fork of 2.4.0 to 2.4.7
+  * handlebars npm module no longer available outside of handlebars package
 
-Patches contributed by GitHub users AlexeyMK, awwx, dandv,
-DenisGorbachev, FooBarWidget, mitar, mcbain, rzymek, and sdarnell.
+Patches contributed by GitHub users AlexeyMK, awwx, dandv, DenisGorbachev,
+emgee3, FooBarWidget, mitar, mcbain, rzymek, and sdarnell.
 
 
 ## v0.6.6.3
