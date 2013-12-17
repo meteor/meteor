@@ -648,7 +648,7 @@ Tinytest.add("ui - DomRange - basic events", function (test) {
 
       arrayEqual(buf, []);
       var span = r.elements()[0];
-      span.click();
+      clickElement(span);
       arrayEqual(buf, [['click', span, span]]);
     });
 
@@ -665,7 +665,7 @@ Tinytest.add("ui - DomRange - basic events", function (test) {
 
       arrayEqual(buf, []);
       var span = r.$('span')[0];
-      span.click();
+      clickElement(span);
       arrayEqual(buf, [['click', span, span]]);
     });
 
@@ -682,10 +682,10 @@ Tinytest.add("ui - DomRange - basic events", function (test) {
       });
 
       arrayEqual(buf, []);
-      r.$('#no')[0].click();
+      clickElement(r.$('#no')[0]);
       arrayEqual(buf, []);
       var yeah = r.$('#yeah')[0];
-      yeah.click();
+      clickElement(yeah);
       arrayEqual(buf, [['click', yeah, yeah]]);
     });
 
@@ -707,9 +707,9 @@ Tinytest.add("ui - DomRange - basic events", function (test) {
       });
 
       arrayEqual(buf, []);
-      two.click();
+      clickElement(two);
       arrayEqual(buf, []);
-      one.click();
+      clickElement(one);
       arrayEqual(buf, [['click', one, one]]);
     });
 
@@ -888,7 +888,7 @@ Tinytest.add("ui - DomRange - events in tables", function (test) {
     tableContent.add(trRange);
     var tr = trRange.elements()[0];
     test.equal(buf, []);
-    tr.click();
+    clickElement(tr);
     test.equal(buf, ['click TR']);
     // XXX test something that would break if the event data
     // is on the TABLE rather than the TBODY (the new
@@ -921,13 +921,13 @@ Tinytest.add("ui - DomRange - nested event order", function (test) {
     d.on('click', appender("D"));
     c.on('click', 'div', appender("C"));
     test.equal(buf, []);
-    div.click();
+    clickElement(div);
     test.equal(buf, ['D', 'C', 'B', 'A']);
     buf.length = 0;
 
     b.on('click', appender("B2"));
     d.on('click', 'div', appender("D2"));
-    div.click();
+    clickElement(div);
     test.equal(buf, ['D', 'D2', 'C', 'B', 'B2', 'A']);
   });
 });
