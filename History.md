@@ -1,4 +1,4 @@
-## v0.6.7
+## v0.7.0
 
 This version of Meteor contains a patch for a bug in Node 0.10 which
 most commonly affects websockets. The patch is against Node version

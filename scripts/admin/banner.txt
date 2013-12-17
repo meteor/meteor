@@ -1,6 +1,5 @@
-=> Meteor 0.6.7: featuring a new live database driver that uses Mongo's
-   database replication log to watch queries more efficiently without
-   requerying the database on each update.
+=> Meteor 0.7.0: use MongoDB's operations log to observe equality
+   queries instead of polling the database server on each update.
 
    This release is being downloaded in the background. Update your
-   project to Meteor 0.6.7 by running 'meteor update'.
+   project to Meteor 0.7.0 by running 'meteor update'.
