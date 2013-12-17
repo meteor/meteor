@@ -17,5 +17,5 @@ Package.on_test(function (api) {
   api.use('minifiers');
   api.use('tinytest');
 
-  api.add_files(['beautify_tests.js', 'minifiers_tests.js'], 'server');
+  api.add_files('beautify_tests.js', 'server');
 });
