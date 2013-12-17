@@ -41,8 +41,8 @@ fi
 
 FIRST_RUN=true # keep track to place commas correctly
 cd packages
-SORTED_PACKAGE_LIST=$(LC_ALL=C ls .) # Ensure consistent order between platforms
-for PACKAGE in "$SORTED_PACKAGE_LIST"
+SORTED_PACKAGE_LIST=$(LC_ALL=C ls) # Ensure consistent order between platforms
+for PACKAGE in $SORTED_PACKAGE_LIST
 do
   if [ -a "$PACKAGE/package.js" ]; then
     if [ $FIRST_RUN == false ]; then
