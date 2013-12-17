@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "Publish internal app statistics"
+  summary: "Publish internal app statistics",
+  internal: true
 });
 
 Package.on_use(function (api) {
