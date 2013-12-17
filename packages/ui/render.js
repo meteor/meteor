@@ -216,7 +216,7 @@ var updateAttributes = function(elem, newAttrs, handlers) {
     if ((! handlers) || (! handlers.hasOwnProperty(k))) {
       if (value !== null) {
         // make new handler
-        handler = makeAttributeHandler(elem.tagName, k, value);
+        handler = makeAttributeHandler(elem, k, value);
         if (handlers)
           handlers[k] = handler;
         oldValue = null;
