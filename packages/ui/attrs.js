@@ -53,14 +53,14 @@ AttributeHandler.extend = function (options) {
 // Extended below to support both regular and SVG elements
 var BaseClassHandler = AttributeHandler.extend({
   update: function (element, oldValue, value) {
-    if (!this.stringFromValue || !this.setAttribute)
-      throw new Error("Don't use BaseClassHandler directly");
+    if (!this.getCurrentValue || !this.setValue)
+      throw new Error("Missing methods in subclass of 'BaseClassHandler'");
 
-    var oldClasses = oldValue ? _.compact(this.stringFromValue(oldValue).split(' ')) : [];
+    var oldClasses = oldValue ? _.compact(oldValue.split(' ')) : [];
     var newClasses = value ? _.compact(value.split(' ')) : [];
 
     // the current classes on the element, which we will mutate.
-    var classes = _.compact(this.stringFromValue(element.className).split(' '));
+    var classes = _.compact(this.getCurrentValue(element).split(' '));
 
     // optimize this later (to be asymptotically faster) if necessary
     _.each(oldClasses, function (c) {
@@ -73,27 +73,27 @@ var BaseClassHandler = AttributeHandler.extend({
         classes.push(c);
     });
 
-    this.setAttribute(element, classes.join(' '));
+    this.setValue(element, classes.join(' '));
   }
 });
 
+// XXX what does this comment mean? is it in the right place?
 // Value of a ClassHandler is either a string or an array.
 var ClassHandler = BaseClassHandler.extend({
   // @param rawValue {String}
-  stringFromValue: function (rawValue) {
-    return rawValue;
+  getCurrentValue: function (element) {
+    return element.className;
   },
-  setAttribute: function (element, className) {
+  setValue: function (element, className) {
     element.className = className;
   }
 });
 
 var SVGClassHandler = BaseClassHandler.extend({
-  // @param rawValue {SVGAnimatedString}
-  stringFromValue: function (rawValue) {
-    return rawValue.baseVal;
+  getCurrentValue: function (element) {
+    return element.className.baseVal;
   },
-  setAttribute: function (element, className) {
+  setValue: function (element, className) {
     element.setAttribute('class', className);
   }
 });
@@ -116,12 +116,17 @@ var ValueHandler = AttributeHandler.extend({
   }
 });
 
+// cross-browser version of `instanceof SVGElement`
+var isSVGElement = function (elem) {
+  return elem.ownerSVGElement;
+};
+
 // XXX make it possible for users to register attribute handlers!
 makeAttributeHandler = function (elem, name, value) {
   // XXX will need one for 'style' on IE, though modern browsers
   // seem to handle setAttribute ok.
   if (name === 'class') {
-    if (elem instanceof SVGElement) {
+    if (isSVGElement(elem)) {
       return new SVGClassHandler(name, value);
     } else {
       return new ClassHandler(name, value);

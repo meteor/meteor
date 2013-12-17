@@ -580,11 +580,13 @@ Tinytest.add("ui - render - SVG", function (test) {
   }
 
   var fillColor = ReactiveVar('red');
+  var classes = ReactiveVar('one two');
 
   var content = DIV({'class': 'container'}, HTML.SVG(
     {width: 100, height: 100},
     HTML.CIRCLE({cx: 50, cy: 50, r: 40,
                  stroke: 'black', 'stroke-width': 3,
+                 'class': function () { return classes.get(); },
                  fill: function () { return fillColor.get(); }})));
 
   var div = document.createElement("DIV");
@@ -592,12 +594,16 @@ Tinytest.add("ui - render - SVG", function (test) {
 
   var circle = div.querySelector('.container > svg > circle');
   test.equal(circle.getAttribute('fill'), 'red');
+  test.equal(circle.className.baseVal, 'one two');
 
   fillColor.set('green');
+  classes.set('two three');
   Deps.flush();
   test.equal(circle.getAttribute('fill'), 'green');
+  test.equal(circle.className.baseVal, 'two three');
 
   test.equal(circle.nodeName, 'circle');
   test.equal(circle.namespaceURI, "http://www.w3.org/2000/svg");
   test.equal(circle.parentNode.namespaceURI, "http://www.w3.org/2000/svg");
 });
+
