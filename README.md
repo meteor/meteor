@@ -72,12 +72,15 @@ Roles.addUsersToRoles(bobsUserId, ['manage-team','schedule-game'])
 // internal representation - no groups 
 // user.roles = ['manage-team','schedule-game']
 
-Roles.addUsersToRoles(joesUserId, ['manage-team','schedule-game'], 'manchester_united')
-Roles.addUsersToRoles(joesUserId, ['player','goalie'], 'real_madrid')
+Roles.addUsersToRoles(joesUserId, ['manage-team','schedule-game'], 'manchester-united.com')
+Roles.addUsersToRoles(joesUserId, ['player','goalie'], 'real-madrid.com')
 // internal representation - groups
+// NOTE: MongoDB uses periods to represent hierarchy so periods in group names
+//   are converted to underscores
+//
 // user.roles = { 
-//   'manchester_united': ['manage-team','schedule-game'],
-//   'real_madrid': ['player','goalie']
+//   'manchester-united_com': ['manage-team','schedule-game'],
+//   'real-madrid_com': ['player','goalie']
 // }
 ```
 
