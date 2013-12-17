@@ -106,7 +106,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       function() {
         var self = this;
         return function() {
-          return Spacebars.include(Template["foo"] || self.lookup("foo"), {
+          return Spacebars.include(Template.foo || self.lookup("foo"), {
             __content: UI.block(function() {
               var self = this;
               return "abc";
@@ -137,7 +137,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       function() {
         var self = this;
         return function() {
-          return Spacebars.include(Template["foo"] || self.lookup("foo"), {
+          return Spacebars.include(Template.foo || self.lookup("foo"), {
             data: self.lookup("bar")
           });
         };
@@ -147,7 +147,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       function() {
         var self = this;
         return function() {
-          return Spacebars.include(Template["foo"] || self.lookup("foo"), {
+          return Spacebars.include(Template.foo || self.lookup("foo"), {
             x: self.lookup("bar")
           });
         };
@@ -157,7 +157,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       function() {
         var self = this;
         return function() {
-          return Spacebars.include(Template["foo"] || self.lookup("foo"), {
+          return Spacebars.include(Template.foo || self.lookup("foo"), {
             data: function() {
               return Spacebars.call(Spacebars.dot(self.lookup("bar"), "baz"));
             }
@@ -169,7 +169,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       function() {
         var self = this;
         return function() {
-          return Spacebars.include(Template["foo"] || self.lookup("foo"), {
+          return Spacebars.include(Template.foo || self.lookup("foo"), {
             x: function() {
               return Spacebars.call(Spacebars.dot(self.lookup("bar"), "baz"));
             }
@@ -184,7 +184,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       function() {
         var self = this;
         return function() {
-          return Spacebars.include(Template["foo"] || self.lookup("foo"), {
+          return Spacebars.include(Template.foo || self.lookup("foo"), {
             __content: UI.block(function() {
               var self = this;
               return "aaa";
@@ -200,7 +200,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       function() {
         var self = this;
         return function() {
-          return Spacebars.include(Template["foo"] || self.lookup("foo"), {
+          return Spacebars.include(Template.foo || self.lookup("foo"), {
             __content: UI.block(function() {
               var self = this;
               return "aaa";

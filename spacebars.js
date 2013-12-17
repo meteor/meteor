@@ -545,8 +545,13 @@ var replaceSpecials = function (node) {
         if (builtInComponents.hasOwnProperty(compName)) {
           compCode = builtInComponents[compName];
         } else {
-          compCode = ('(Template[' + toJSLiteral(path[0]) +
-                      '] || ' + compCode + ')');
+          // toObjectLiteralKey returns `"foo"` or `foo` depending on
+          // whether `foo` is a safe JavaScript identifier.
+          var member = toObjectLiteralKey(path[0]);
+          var templateDotFoo = (member.charAt(0) === '"' ?
+                                'Template[' + member + ']' :
+                                'Template.' + member);
+          compCode = ('(' + templateDotFoo + ' || ' + compCode + ')');
         }
       }
 
