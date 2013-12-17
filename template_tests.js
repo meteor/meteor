@@ -863,7 +863,10 @@ Tinytest.add('spacebars - templates - block helpers in attribute', function (tes
     Deps.flush();
     test.equal(div.innerHTML, "Hello");
     test.equal(div.className, className);
-    test.equal(canonicalizeHtml(containerDiv.innerHTML), '<div class="' + className + '">Hello</div>');
+    var result = canonicalizeHtml(containerDiv.innerHTML);
+    if (result === '<div>Hello</div>')
+      result = '<div class="">Hello</div>'; // e.g. IE 9 and 10
+    test.equal(result, '<div class="' + className + '">Hello</div>');
   };
 
   shouldBe('donut frankfurter noodle');
