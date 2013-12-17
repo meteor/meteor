@@ -31,7 +31,7 @@ apply the patch and will instead disable websockets.
   client code changes; server-only code changes will not cause the page
   to reload.
 
-* New 'facts' package publishes internal statistics about Meteor.
+* New `facts` package publishes internal statistics about Meteor.
 
 * Add an explicit check that publish functions return a cursor, an array
   of cursors, or a falsey value. This is a safety check to to prevent
@@ -41,14 +41,14 @@ apply the patch and will instead disable websockets.
 * Implement `$each`, `$sort`, and `$slice` options for minimongo's `$push`
   modifier.  #1492
 
-* Introduce '--raw-logs' option to `meteor run` to disable log
+* Introduce `--raw-logs` option to `meteor run` to disable log
   coloring and timestamps.
 
 * Add `WebAppInternals.setBundledJsCssPrefix()` to control where the
   client loads bundled JavaScript and CSS files. This allows serving
   files from a CDN to decrease page load times and reduce server load.
 
-* Attempt to exit cleanly on 'SIGHUP'. Stop accepting incoming
+* Attempt to exit cleanly on `SIGHUP`. Stop accepting incoming
   connections, kill DDP connections, and finish all outstanding requests
   for static assets.
 
