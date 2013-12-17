@@ -175,6 +175,8 @@ publish handler, this is the place to stop the observes.
 {{> api_box subscription_error}}
 {{> api_box subscription_stop}}
 
+{{> api_box subscription_connection}}
+
 {{> api_box subscribe}}
 
 When you subscribe to a record set, it tells the server to send records to the
@@ -276,6 +278,7 @@ invocation object, which provides the following:
 begin running.
 * `userId`: the id of the current user.
 * `setUserId`: a function that associates the current client with a user.
+* `connection`: on the server, the [connection](#meteor_onconnection) this method call was received on.
 
 Calling `methods` on the client defines *stub* functions associated with
 server methods of the same name.  You don't have to define a stub for
@@ -327,6 +330,8 @@ On the server, methods from a given client run one at a time. The N+1th
 invocation from a client won't start until the Nth invocation
 returns. However, you can change this by calling `this.unblock`. This
 will allow the N+1th invocation to start running in a new fiber.
+
+{{> api_box method_invocation_connection}}
 
 {{> api_box error}}
 
@@ -462,6 +467,47 @@ and resume data transfer.
 This can be used to save battery on mobile devices when real time
 updates are not required.
 
+
+{{> api_box onConnection}}
+
+`onConnection` returns an object with a single method `stop`.  Calling
+`stop` unregisters the callback, so that this callback will no longer
+be called on new connections.
+
+The callback is called with a single argument, the server-side
+`connection` representing the connection from the client.  This object
+contains the following fields:
+
+<dl class="objdesc">
+{{#dtdd name="id" type="String"}}
+A globally unique id for this connection.
+{{/dtdd}}
+
+{{#dtdd name="close" type="Function"}}
+Close this DDP connection. The client is free to reconnect, but will
+receive a different connection with a new `id` if it does.
+{{/dtdd}}
+
+{{#dtdd name="onClose" type="Function"}}
+Register a callback to be called when the connection is closed. If the
+connection is already closed, the callback will be called immediately.
+{{/dtdd}}
+</dl>
+
+{{#note}}
+Currently when a client reconnects to the server (such as after
+temporarily losing its Internet connection), it will get a new
+connection each time.  The `onConnection` callbacks will be called
+again, and the new connection will have a new connection `id`.
+
+In the future, when client reconnection is fully implemented,
+reconnecting from the client will reconnect to the same connection on
+the server: the `onConnection` callback won't be called for that
+connection again, and the connection will still have the same
+connection `id`.
+{{/note}}
+
+
 {{> api_box connect}}
 
 To call methods on another Meteor application or subscribe to its data
@@ -495,6 +541,7 @@ By default, clients open a connection to the server from which they're loaded.
 When you call `Meteor.subscribe`, `Meteor.status`, `Meteor.call`, and
 `Meteor.apply`, you are using a connection back to that default
 server.
+
 
 <h2 id="collections"><span>Collections</span></h2>
 
@@ -880,9 +927,11 @@ proposed update.) Return `true` to permit the change.
 
 `fieldNames` is an array of the (top-level) fields in `doc` that the
 client wants to modify, for example
-`['name',`&nbsp;`'score']`. `modifier` is the raw Mongo modifier that
-the client wants to execute, for example `{$set: {'name.first':
-"Alice"}, $inc: {score: 1}}`.
+`['name',`&nbsp;`'score']`.
+
+`modifier` is the raw Mongo modifier that
+the client wants to execute; for example,
+`{$set: {'name.first': "Alice"}, $inc: {score: 1}}`.
 
 Only Mongo modifiers are supported (operations like `$set` and `$push`).
 If the user tries to replace the entire document rather than use
@@ -2462,7 +2511,9 @@ these variables have the right values, you need to use
 instead of `setInterval`.
 
 These functions work just like their native JavaScript equivalents.
-You'll get an error if you call the native function.
+If you call the native function, you'll get an error stating that Meteor
+code must always run within a Fiber, and advising to use
+`Meteor.bindEnvironment`.
 
 {{> api_box setTimeout}}
 
