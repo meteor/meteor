@@ -16,8 +16,9 @@ apply the patch and will instead disable websockets.
   with `meteor run`, and can be enabled in production with the
   `MONGO_OPLOG_URL` environment variable. Currently the only supported
   selectors are equality checks; `$`-operators, `limit` and `skip`
-  queries fall back to the original poll-and-diff algorithm. See <XXX
-  wiki page> for details.
+  queries fall back to the original poll-and-diff algorithm. See
+  https://github.com/meteor/meteor/wiki/Oplog-Observe-Driver
+  for details.
 
 * Add `Meteor.onConnection` and add `this.connection` to method
   invocations and publish functions. These can be used to store data
