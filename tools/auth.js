@@ -12,7 +12,8 @@ var url = require('url');
 var auth = exports;
 
 var getSessionFilePath = function () {
-  return path.join(process.env.HOME, '.meteorsession');
+  return process.env.SESSION_FILE_PATH ||
+    path.join(process.env.HOME, '.meteorsession');
 };
 
 var readSessionData = function () {
