@@ -1,5 +1,6 @@
-=> Meteor 0.6.6.3: Fix CPU runaway while watching files in large
-   projects and occasional server crash on session disconnect.
+=> Meteor 0.6.7: featuring a new live database driver that uses Mongo's
+   database replication log to watch queries more efficiently without
+   requerying the database on each update.
 
    This release is being downloaded in the background. Update your
-   project to Meteor 0.6.6.3 by running 'meteor update'.
+   project to Meteor 0.6.7 by running 'meteor update'.
