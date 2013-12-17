@@ -118,7 +118,7 @@ var ValueHandler = AttributeHandler.extend({
 
 // cross-browser version of `instanceof SVGElement`
 var isSVGElement = function (elem) {
-  return elem.ownerSVGElement;
+  return 'ownerSVGElement' in elem;
 };
 
 // XXX make it possible for users to register attribute handlers!
