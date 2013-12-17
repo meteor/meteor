@@ -20,6 +20,18 @@ WebAppInternals = {};
 
 var bundledJsCssPrefix;
 
+// The reload safetybelt is some js that will be loaded after everything else in
+// the HTML.  In some multi-server deployments, when you update, you have a
+// chance of hitting an old server for the HTML and the new server for the JS or
+// CSS.  This prevents you from displaying the page in that case, and instead
+// reloads it, presumably all on the new version now.
+var RELOAD_SAFETYBELT = "\n" +
+      "if (typeof Package === 'undefined' || \n" +
+      "    ! Package.webapp || \n" +
+      "    ! Package.webapp.WebApp || \n" +
+      "    ! Package.webapp.WebApp._isCssLoaded()) \n" +
+      "  document.location.reload(); \n";
+
 // Keepalives so that when the outer server dies unceremoniously and
 // doesn't kill us, we quit ourselves. A little gross, but better than
 // pidfiles.
@@ -295,6 +307,7 @@ var runWebAppServer = function () {
     }
   });
 
+
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
   app.use(function (req, res, next) {
@@ -311,12 +324,20 @@ var runWebAppServer = function () {
       return;
     }
 
+    var serveStaticJs = function (s) {
+      res.writeHead(200, { 'Content-type': 'application/javascript' });
+      res.write(s);
+      res.end();
+    };
+
     if (pathname === "/meteor_runtime_config.js" &&
         ! WebAppInternals.inlineScriptsAllowed()) {
-      res.writeHead(200, { 'Content-type': 'application/javascript' });
-      res.write("__meteor_runtime_config__ = " +
-                JSON.stringify(__meteor_runtime_config__) + ";");
-      res.end();
+      serveStaticJs("__meteor_runtime_config__ = " +
+                    JSON.stringify(__meteor_runtime_config__) + ";");
+      return;
+    } else if (pathname === "/meteor_reload_safetybelt.js" &&
+               ! WebAppInternals.inlineScriptsAllowed()) {
+      serveStaticJs(RELOAD_SAFETYBELT);
       return;
     }
 
@@ -519,11 +540,18 @@ var runWebAppServer = function () {
           /##RUNTIME_CONFIG##/,
         "<script type='text/javascript'>__meteor_runtime_config__ = " +
           JSON.stringify(__meteor_runtime_config__) + ";</script>");
+      boilerplateHtml = boilerplateHtml.replace(
+          /##RELOAD_SAFETYBELT##/,
+        "<script type='text/javascript'>"+RELOAD_SAFETYBELT+"</script>");
     } else {
       boilerplateHtml = boilerplateHtml.replace(
         /##RUNTIME_CONFIG##/,
         "<script type='text/javascript' src='##ROOT_URL_PATH_PREFIX##/meteor_runtime_config.js'></script>"
       );
+      boilerplateHtml = boilerplateHtml.replace(
+          /##RELOAD_SAFETYBELT##/,
+        "<script type='text/javascript' src='##ROOT_URL_PATH_PREFIX##/meteor_reload_safetybelt.js'></script>");
+
     }
     boilerplateHtml = boilerplateHtml.replace(
         /##ROOT_URL_PATH_PREFIX##/g,
@@ -704,6 +732,11 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
         parsedUrl.pathname = bindPathPrefix + parsedUrl.pathname;
       }
     }
+    var version = "";
+    if (!process.env.ADMIN_APP) {
+      var AppConfig = Package["application-configuration"].AppConfig;
+      version = AppConfig.getStarForThisJob() || "";
+    }
 
     var parsedDdpUrl = _.clone(parsedUrl);
     parsedDdpUrl.protocol = "ddp";
@@ -737,6 +770,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
           insecurePort: insecurePort
         },
         proxyTo: {
+          tags: [version],
           host: proxyToHost,
           port: proxyToPort,
           pathPrefix: proxyToPathPrefix + '/websocket'
@@ -754,6 +788,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
           pathPrefix: parsedUrl.pathname
         },
         proxyTo: {
+          tags: [version],
           host: proxyToHost,
           port: proxyToPort,
           pathPrefix: proxyToPathPrefix
@@ -774,6 +809,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
             ssl: true
           },
           proxyTo: {
+            tags: [version],
             host: proxyToHost,
             port: proxyToPort,
             pathPrefix: proxyToPathPrefix

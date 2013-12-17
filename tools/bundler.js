@@ -792,6 +792,7 @@ _.extend(ClientTarget.prototype, {
       html.push(_.escape(js.url));
       html.push('"></script>\n');
     });
+    html.push('\n\n##RELOAD_SAFETYBELT##');
     html.push('\n\n');
     html.push(self.head.join('\n'));  // unescaped!
     html.push('\n' +
