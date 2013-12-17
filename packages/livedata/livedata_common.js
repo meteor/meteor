@@ -45,7 +45,7 @@ _.extend(MethodInvocation.prototype, {
       throw new Error("Can't call setUserId in a method after calling unblock");
     self.userId = userId;
     self._setUserId(userId);
-  },
+  }
 });
 
 parseDDP = function (stringMessage) {
