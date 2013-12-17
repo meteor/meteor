@@ -19,7 +19,7 @@
             
         </div>
         <div class="yui3-u-1-4 version">
-            <em>API Docs for: v1.2.5</em>
+            <em>API Docs for: v1.2.6</em>
         </div>
     </div>
     <div id="bd" class="yui3-g">
@@ -225,6 +225,9 @@ _.extend(Roles, {
    * @param {Array|String} roles Name(s) of roles/permissions to add users to
    * @param {String} [group] Optional group name. If supplied, roles will be
    *                         specific to that group.  
+   *                         Group names can not start with &#x27;$&#x27;.
+   *                         Periods in names &#x27;.&#x27; are automatically converted
+   *                         to underscores.
    *                         The special group Roles.GLOBAL_GROUP provides 
    *                         a convenient way to assign blanket roles/permissions
    *                         across all groups.  The roles/permissions in the 
@@ -251,6 +254,9 @@ _.extend(Roles, {
    * @param {Array|String} roles Name(s) of roles/permissions to add users to
    * @param {String} [group] Optional group name. If supplied, roles will be
    *                         specific to that group.  
+   *                         Group names can not start with &#x27;$&#x27;.
+   *                         Periods in names &#x27;.&#x27; are automatically converted
+   *                         to underscores.
    *                         The special group Roles.GLOBAL_GROUP provides 
    *                         a convenient way to assign blanket roles/permissions
    *                         across all groups.  The roles/permissions in the 
@@ -282,8 +288,15 @@ _.extend(Roles, {
 
     if (!users) throw new Error (&quot;Missing &#x27;users&#x27; param&quot;)
     if (!roles) throw new Error (&quot;Missing &#x27;roles&#x27; param&quot;)
-    if (group &amp;&amp; &#x27;string&#x27; !== typeof group) 
-      throw new Error (&quot;Invalid &#x27;group&#x27; param&quot;)
+    if (group) {
+      if (&#x27;string&#x27; !== typeof group)
+        throw new Error (&quot;Roles error: Invalid parameter &#x27;group&#x27;. Expected &#x27;string&#x27; type&quot;)
+      if (&#x27;$&#x27; === group[0])
+        throw new Error (&quot;Roles error: groups can not start with &#x27;$&#x27;&quot;)
+
+      // convert any periods to underscores
+      group = group.replace(&#x27;.&#x27;, &#x27;_&#x27;)
+    }
 
     // ensure arrays
     if (!_.isArray(users)) users = [users]
@@ -377,7 +390,13 @@ _.extend(Roles, {
     }
 
     if (!user) return false
-    if (group &amp;&amp; &#x27;string&#x27; !== typeof group) return false
+    if (group) {
+      if (&#x27;string&#x27; !== typeof group) return false
+      if (&#x27;$&#x27; === group[0]) return false
+
+      // convert any periods to underscores
+      group = group.replace(&#x27;.&#x27;, &#x27;_&#x27;)
+    }
     
     if (&#x27;object&#x27; === typeof user) {
       userRoles = user.roles
@@ -452,7 +471,13 @@ _.extend(Roles, {
    */
   getRolesForUser: function (user, group) {
     if (!user) return []
-    if (group &amp;&amp; &#x27;string&#x27; !== typeof group) return []
+    if (group) {
+      if (&#x27;string&#x27; !== typeof group) return []
+      if (&#x27;$&#x27; === group[0]) return []
+
+      // convert any periods to underscores
+      group = group.replace(&#x27;.&#x27;, &#x27;_&#x27;)
+    }
 
     if (&#x27;string&#x27; === typeof user) {
       user = Meteor.users.findOne(
@@ -512,22 +537,41 @@ _.extend(Roles, {
     if (!_.isArray(roles)) roles = [roles]
     
     if (group) {
-      // structure of group query, including Roles.GLOBAL_GROUP
-      //   {$or: [
+      if (&#x27;string&#x27; !== typeof group)
+        throw new Error (&quot;Roles error: Invalid parameter &#x27;group&#x27;. Expected &#x27;string&#x27; type&quot;)
+      if (&#x27;$&#x27; === group[0])
+        throw new Error (&quot;Roles error: groups can not start with &#x27;$&#x27;&quot;)
+
+      // convert any periods to underscores
+      group = group.replace(&#x27;.&#x27;, &#x27;_&#x27;)
+    }
+
+    query = {$or: []}
+
+    // always check Roles.GLOBAL_GROUP
+    groupQuery = {}
+    groupQuery[&#x27;roles.&#x27;+Roles.GLOBAL_GROUP] = {$in: roles}
+    query.$or.push(groupQuery)
+
+    if (group) {
+      // structure of query, when group specified including Roles.GLOBAL_GROUP 
+      //   {
+      //    $or: [
       //      {&#x27;roles.group1&#x27;:{$in: [&#x27;admin&#x27;]}},
       //      {&#x27;roles.__global_roles__&#x27;:{$in: [&#x27;admin&#x27;]}}
       //    ]}
-      query = {$or: []}
-
       groupQuery = {}
       groupQuery[&#x27;roles.&#x27;+group] = {$in: roles}
       query.$or.push(groupQuery)
-
-      groupQuery = {}
-      groupQuery[&#x27;roles.&#x27;+Roles.GLOBAL_GROUP] = {$in: roles}
-      query.$or.push(groupQuery)
     } else {
-      query = { roles: { $in: roles } }
+      // structure of query, where group not specified. includes 
+      // Roles.GLOBAL_GROUP 
+      //   {
+      //    $or: [
+      //      {roles: {$in: [&#x27;admin&#x27;]}},
+      //      {&#x27;roles.__global_roles__&#x27;: {$in: [&#x27;admin&#x27;]}}
+      //    ]}
+      query.$or.push({roles: {$in: roles}})
     }
 
     return Meteor.users.find(query)
@@ -595,6 +639,9 @@ _.extend(Roles, {
    * @param {Array|String} roles name(s) of roles/permissions to add users to
    * @param {String} group Group name. If not null or undefined, roles will be
    *                         specific to that group.  
+   *                         Group names can not start with &#x27;$&#x27;.
+   *                         Periods in names &#x27;.&#x27; are automatically converted
+   *                         to underscores.
    *                         The special group Roles.GLOBAL_GROUP provides 
    *                         a convenient way to assign blanket roles/permissions
    *                         across all groups.  The roles/permissions in the 
@@ -608,8 +655,15 @@ _.extend(Roles, {
   _updateUserRoles: function (users, roles, group, updateFactory) {
     if (!users) throw new Error (&quot;Missing &#x27;users&#x27; param&quot;)
     if (!roles) throw new Error (&quot;Missing &#x27;roles&#x27; param&quot;)
-    if (group &amp;&amp; &#x27;string&#x27; !== typeof group)
-      throw new Error (&quot;Invalid parameter &#x27;group&#x27;. Expected &#x27;string&#x27; type&quot;)
+    if (group) {
+      if (&#x27;string&#x27; !== typeof group)
+        throw new Error (&quot;Roles error: Invalid parameter &#x27;group&#x27;. Expected &#x27;string&#x27; type&quot;)
+      if (&#x27;$&#x27; === group[0])
+        throw new Error (&quot;Roles error: groups can not start with &#x27;$&#x27;&quot;)
+
+      // convert any periods to underscores
+      group = group.replace(&#x27;.&#x27;, &#x27;_&#x27;)
+    }
 
     var existingRoles,
         query,

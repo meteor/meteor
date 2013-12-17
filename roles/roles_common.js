@@ -131,6 +131,9 @@ _.extend(Roles, {
    * @param {Array|String} roles Name(s) of roles/permissions to add users to
    * @param {String} [group] Optional group name. If supplied, roles will be
    *                         specific to that group.  
+   *                         Group names can not start with '$'.
+   *                         Periods in names '.' are automatically converted
+   *                         to underscores.
    *                         The special group Roles.GLOBAL_GROUP provides 
    *                         a convenient way to assign blanket roles/permissions
    *                         across all groups.  The roles/permissions in the 
@@ -157,6 +160,9 @@ _.extend(Roles, {
    * @param {Array|String} roles Name(s) of roles/permissions to add users to
    * @param {String} [group] Optional group name. If supplied, roles will be
    *                         specific to that group.  
+   *                         Group names can not start with '$'.
+   *                         Periods in names '.' are automatically converted
+   *                         to underscores.
    *                         The special group Roles.GLOBAL_GROUP provides 
    *                         a convenient way to assign blanket roles/permissions
    *                         across all groups.  The roles/permissions in the 
@@ -188,8 +194,15 @@ _.extend(Roles, {
 
     if (!users) throw new Error ("Missing 'users' param")
     if (!roles) throw new Error ("Missing 'roles' param")
-    if (group && 'string' !== typeof group) 
-      throw new Error ("Invalid 'group' param")
+    if (group) {
+      if ('string' !== typeof group)
+        throw new Error ("Roles error: Invalid parameter 'group'. Expected 'string' type")
+      if ('$' === group[0])
+        throw new Error ("Roles error: groups can not start with '$'")
+
+      // convert any periods to underscores
+      group = group.replace('.', '_')
+    }
 
     // ensure arrays
     if (!_.isArray(users)) users = [users]
@@ -283,7 +296,13 @@ _.extend(Roles, {
     }
 
     if (!user) return false
-    if (group && 'string' !== typeof group) return false
+    if (group) {
+      if ('string' !== typeof group) return false
+      if ('$' === group[0]) return false
+
+      // convert any periods to underscores
+      group = group.replace('.', '_')
+    }
     
     if ('object' === typeof user) {
       userRoles = user.roles
@@ -358,7 +377,13 @@ _.extend(Roles, {
    */
   getRolesForUser: function (user, group) {
     if (!user) return []
-    if (group && 'string' !== typeof group) return []
+    if (group) {
+      if ('string' !== typeof group) return []
+      if ('$' === group[0]) return []
+
+      // convert any periods to underscores
+      group = group.replace('.', '_')
+    }
 
     if ('string' === typeof user) {
       user = Meteor.users.findOne(
@@ -418,22 +443,41 @@ _.extend(Roles, {
     if (!_.isArray(roles)) roles = [roles]
     
     if (group) {
-      // structure of group query, including Roles.GLOBAL_GROUP
-      //   {$or: [
+      if ('string' !== typeof group)
+        throw new Error ("Roles error: Invalid parameter 'group'. Expected 'string' type")
+      if ('$' === group[0])
+        throw new Error ("Roles error: groups can not start with '$'")
+
+      // convert any periods to underscores
+      group = group.replace('.', '_')
+    }
+
+    query = {$or: []}
+
+    // always check Roles.GLOBAL_GROUP
+    groupQuery = {}
+    groupQuery['roles.'+Roles.GLOBAL_GROUP] = {$in: roles}
+    query.$or.push(groupQuery)
+
+    if (group) {
+      // structure of query, when group specified including Roles.GLOBAL_GROUP 
+      //   {
+      //    $or: [
       //      {'roles.group1':{$in: ['admin']}},
       //      {'roles.__global_roles__':{$in: ['admin']}}
       //    ]}
-      query = {$or: []}
-
       groupQuery = {}
       groupQuery['roles.'+group] = {$in: roles}
       query.$or.push(groupQuery)
-
-      groupQuery = {}
-      groupQuery['roles.'+Roles.GLOBAL_GROUP] = {$in: roles}
-      query.$or.push(groupQuery)
     } else {
-      query = { roles: { $in: roles } }
+      // structure of query, where group not specified. includes 
+      // Roles.GLOBAL_GROUP 
+      //   {
+      //    $or: [
+      //      {roles: {$in: ['admin']}},
+      //      {'roles.__global_roles__': {$in: ['admin']}}
+      //    ]}
+      query.$or.push({roles: {$in: roles}})
     }
 
     return Meteor.users.find(query)
@@ -501,6 +545,9 @@ _.extend(Roles, {
    * @param {Array|String} roles name(s) of roles/permissions to add users to
    * @param {String} group Group name. If not null or undefined, roles will be
    *                         specific to that group.  
+   *                         Group names can not start with '$'.
+   *                         Periods in names '.' are automatically converted
+   *                         to underscores.
    *                         The special group Roles.GLOBAL_GROUP provides 
    *                         a convenient way to assign blanket roles/permissions
    *                         across all groups.  The roles/permissions in the 
@@ -514,8 +561,15 @@ _.extend(Roles, {
   _updateUserRoles: function (users, roles, group, updateFactory) {
     if (!users) throw new Error ("Missing 'users' param")
     if (!roles) throw new Error ("Missing 'roles' param")
-    if (group && 'string' !== typeof group)
-      throw new Error ("Invalid parameter 'group'. Expected 'string' type")
+    if (group) {
+      if ('string' !== typeof group)
+        throw new Error ("Roles error: Invalid parameter 'group'. Expected 'string' type")
+      if ('$' === group[0])
+        throw new Error ("Roles error: groups can not start with '$'")
+
+      // convert any periods to underscores
+      group = group.replace('.', '_')
+    }
 
     var existingRoles,
         query,

@@ -19,7 +19,7 @@
             
         </div>
         <div class="yui3-u-1-4 version">
-            <em>API Docs for: v1.2.5</em>
+            <em>API Docs for: v1.2.6</em>
         </div>
     </div>
     <div id="bd" class="yui3-g">
@@ -371,7 +371,7 @@
             
         
         
-        <a href="../files/roles_roles_common.js.html#l468"><code>roles&#x2F;roles_common.js:468</code></a>
+        <a href="../files/roles_roles_common.js.html#l512"><code>roles&#x2F;roles_common.js:512</code></a>
         
         </p>
 
@@ -502,7 +502,7 @@ object for MongoDB.  Passed to _updateUserRoles</p>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l443"><code>roles&#x2F;roles_common.js:443</code></a>
+        <a href="../files/roles_roles_common.js.html#l487"><code>roles&#x2F;roles_common.js:487</code></a>
         
         </p>
 
@@ -653,7 +653,7 @@ for MongoDB.  Passed to _updateUserRoles</p>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l494"><code>roles&#x2F;roles_common.js:494</code></a>
+        <a href="../files/roles_roles_common.js.html#l538"><code>roles&#x2F;roles_common.js:538</code></a>
         
         </p>
 
@@ -717,7 +717,10 @@ for users.</p>
 
                     <div class="param-description">
                         <p>Group name. If not null or undefined, roles will be
-                        specific to that group.<br>                        The special group Roles.GLOBAL_GROUP provides 
+                        specific to that group.<br>                        Group names can not start with &#39;$&#39;.
+                        Periods in names &#39;.&#39; are automatically converted
+                        to underscores.
+                        The special group Roles.GLOBAL_GROUP provides 
                         a convenient way to assign blanket roles/permissions
                         across all groups.  The roles/permissions in the 
                         Roles.GLOBAL_GROUP group will be automatically 
@@ -911,7 +914,10 @@ for users.</p>
 
                     <div class="param-description">
                         <p>Optional group name. If supplied, roles will be
-                        specific to that group.<br>                        The special group Roles.GLOBAL_GROUP provides 
+                        specific to that group.<br>                        Group names can not start with &#39;$&#39;.
+                        Periods in names &#39;.&#39; are automatically converted
+                        to underscores.
+                        The special group Roles.GLOBAL_GROUP provides 
                         a convenient way to assign blanket roles/permissions
                         across all groups.  The roles/permissions in the 
                         Roles.GLOBAL_GROUP group will be automatically 
@@ -1178,7 +1184,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l386"><code>roles&#x2F;roles_common.js:386</code></a>
+        <a href="../files/roles_roles_common.js.html#l411"><code>roles&#x2F;roles_common.js:411</code></a>
         
         </p>
 
@@ -1267,7 +1273,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l350"><code>roles&#x2F;roles_common.js:350</code></a>
+        <a href="../files/roles_roles_common.js.html#l369"><code>roles&#x2F;roles_common.js:369</code></a>
         
         </p>
 
@@ -1398,7 +1404,7 @@ are currently assigned to the target role.</p>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l396"><code>roles&#x2F;roles_common.js:396</code></a>
+        <a href="../files/roles_roles_common.js.html#l421"><code>roles&#x2F;roles_common.js:421</code></a>
         
         </p>
 
@@ -1536,7 +1542,7 @@ used automatically.</p>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l171"><code>roles&#x2F;roles_common.js:171</code></a>
+        <a href="../files/roles_roles_common.js.html#l177"><code>roles&#x2F;roles_common.js:177</code></a>
         
         </p>
 
@@ -1683,7 +1689,7 @@ Roles.removeUsersFromRoles(users.eve, [&#39;user&#39;], &#39;group1&#39;)</code>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l145"><code>roles&#x2F;roles_common.js:145</code></a>
+        <a href="../files/roles_roles_common.js.html#l148"><code>roles&#x2F;roles_common.js:148</code></a>
         
         </p>
 
@@ -1747,7 +1753,10 @@ Roles.removeUsersFromRoles(users.eve, [&#39;user&#39;], &#39;group1&#39;)</code>
 
                     <div class="param-description">
                         <p>Optional group name. If supplied, roles will be
-                        specific to that group.<br>                        The special group Roles.GLOBAL_GROUP provides 
+                        specific to that group.<br>                        Group names can not start with &#39;$&#39;.
+                        Periods in names &#39;.&#39; are automatically converted
+                        to underscores.
+                        The special group Roles.GLOBAL_GROUP provides 
                         a convenient way to assign blanket roles/permissions
                         across all groups.  The roles/permissions in the 
                         Roles.GLOBAL_GROUP group will be automatically 
@@ -1839,7 +1848,7 @@ Roles.setUserRoles(userId, &#39;admin&#39;, Roles.GLOBAL_GROUP)</code></pre>
             
         
         
-        <a href="../files/roles_roles_common.js.html#l244"><code>roles&#x2F;roles_common.js:244</code></a>
+        <a href="../files/roles_roles_common.js.html#l257"><code>roles&#x2F;roles_common.js:257</code></a>
         
         </p>
 

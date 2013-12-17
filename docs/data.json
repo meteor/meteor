@@ -2,7 +2,7 @@
     "project": {
         "name": "The meteor-roles API",
         "description": "The meteor-roles API: a role-based authorization package for Meteor",
-        "version": "v1.2.5"
+        "version": "v1.2.6"
     },
     "files": {
         "roles/roles_client.js": {
@@ -204,7 +204,7 @@
                 },
                 {
                     "name": "group",
-                    "description": "Optional group name. If supplied, roles will be\n                        specific to that group.  \n                        The special group Roles.GLOBAL_GROUP provides \n                        a convenient way to assign blanket roles/permissions\n                        across all groups.  The roles/permissions in the \n                        Roles.GLOBAL_GROUP group will be automatically \n                        included in checks for any group.",
+                    "description": "Optional group name. If supplied, roles will be\n                        specific to that group.  \n                        Group names can not start with '$'.\n                        Periods in names '.' are automatically converted\n                        to underscores.\n                        The special group Roles.GLOBAL_GROUP provides \n                        a convenient way to assign blanket roles/permissions\n                        across all groups.  The roles/permissions in the \n                        Roles.GLOBAL_GROUP group will be automatically \n                        included in checks for any group.",
                     "type": "String",
                     "optional": true
                 }
@@ -214,7 +214,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 145,
+            "line": 148,
             "description": "Set a users roles/permissions.",
             "example": [
                 "\n    Roles.setUserRoles(userId, 'admin')\n    Roles.setUserRoles(userId, ['view-secrets'], 'example.com')\n    Roles.setUserRoles([user1, user2], ['user','editor'])\n    Roles.setUserRoles([user1, user2], ['glorious-admin', 'perform-action'], 'example.org')\n    Roles.setUserRoles(userId, 'admin', Roles.GLOBAL_GROUP)"
@@ -234,7 +234,7 @@
                 },
                 {
                     "name": "group",
-                    "description": "Optional group name. If supplied, roles will be\n                        specific to that group.  \n                        The special group Roles.GLOBAL_GROUP provides \n                        a convenient way to assign blanket roles/permissions\n                        across all groups.  The roles/permissions in the \n                        Roles.GLOBAL_GROUP group will be automatically \n                        included in checks for any group.",
+                    "description": "Optional group name. If supplied, roles will be\n                        specific to that group.  \n                        Group names can not start with '$'.\n                        Periods in names '.' are automatically converted\n                        to underscores.\n                        The special group Roles.GLOBAL_GROUP provides \n                        a convenient way to assign blanket roles/permissions\n                        across all groups.  The roles/permissions in the \n                        Roles.GLOBAL_GROUP group will be automatically \n                        included in checks for any group.",
                     "type": "String",
                     "optional": true
                 }
@@ -244,7 +244,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 171,
+            "line": 177,
             "description": "Remove users from roles",
             "example": [
                 "\n    Roles.removeUsersFromRoles(users.bob, 'admin')\n    Roles.removeUsersFromRoles([users.bob, users.joe], ['editor'])\n    Roles.removeUsersFromRoles([users.bob, users.joe], ['editor', 'user'])\n    Roles.removeUsersFromRoles(users.eve, ['user'], 'group1')"
@@ -274,7 +274,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 244,
+            "line": 257,
             "description": "Check if user has specified permissions/roles",
             "example": [
                 "\n    // non-group usage\n    Roles.userIsInRole(user, 'admin')\n    Roles.userIsInRole(user, ['admin','editor'])\n    Roles.userIsInRole(userId, 'admin')\n    Roles.userIsInRole(userId, ['admin','editor'])\n\n    // per-group usage\n    Roles.userIsInRole(user,   ['admin','editor'], 'group1')\n    Roles.userIsInRole(userId, ['admin','editor'], 'group1')\n    Roles.userIsInRole(userId, ['admin','editor'], Roles.GLOBAL_GROUP)\n\n    // this format can also be used as short-hand for Roles.GLOBAL_GROUP\n    Roles.userIsInRole(user, 'admin')"
@@ -308,7 +308,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 350,
+            "line": 369,
             "description": "Retrieve users roles",
             "itemtype": "method",
             "name": "getRolesForUser",
@@ -334,7 +334,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 386,
+            "line": 411,
             "description": "Retrieve set of all existing roles",
             "itemtype": "method",
             "name": "getAllRoles",
@@ -347,7 +347,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 396,
+            "line": 421,
             "description": "Retrieve all users who are in target role.  \n\nNOTE: This is an expensive query; it performs a full collection scan\non the users collection since there is no index set on the 'roles' field.  \nThis is by design as most queries will specify an _id so the _id index is \nused automatically.",
             "itemtype": "method",
             "name": "getUsersInRole",
@@ -373,7 +373,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 443,
+            "line": 487,
             "description": "Private function 'template' that uses $set to construct an update object\nfor MongoDB.  Passed to _updateUserRoles",
             "itemtype": "method",
             "name": "_update_$set_fn",
@@ -401,7 +401,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 468,
+            "line": 512,
             "description": "Private function 'template' that uses $addToSet to construct an update \nobject for MongoDB.  Passed to _updateUserRoles",
             "itemtype": "method",
             "name": "_update_$addToSet_fn",
@@ -429,7 +429,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 494,
+            "line": 538,
             "description": "Internal function that users the Template pattern to adds or sets roles \nfor users.",
             "itemtype": "method",
             "name": "_updateUserRoles",
@@ -448,7 +448,7 @@
                 },
                 {
                     "name": "group",
-                    "description": "Group name. If not null or undefined, roles will be\n                        specific to that group.  \n                        The special group Roles.GLOBAL_GROUP provides \n                        a convenient way to assign blanket roles/permissions\n                        across all groups.  The roles/permissions in the \n                        Roles.GLOBAL_GROUP group will be automatically \n                        included in checks for any group.",
+                    "description": "Group name. If not null or undefined, roles will be\n                        specific to that group.  \n                        Group names can not start with '$'.\n                        Periods in names '.' are automatically converted\n                        to underscores.\n                        The special group Roles.GLOBAL_GROUP provides \n                        a convenient way to assign blanket roles/permissions\n                        across all groups.  The roles/permissions in the \n                        Roles.GLOBAL_GROUP group will be automatically \n                        included in checks for any group.",
                     "type": "String"
                 },
                 {

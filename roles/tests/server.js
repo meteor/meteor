@@ -722,8 +722,16 @@
       test.equal(_.difference(actual, expected), [])
       test.equal(_.difference(expected, actual), [])
 
-      expected = [users.eve, users.bob, users.joe],
+      expected = [users.eve, users.bob, users.joe]
       actual = _.pluck(Roles.getUsersInRole('admin','group2').fetch(), '_id')
+
+      // order may be different so check difference instead of equality
+      test.equal(_.difference(actual, expected), [])
+      test.equal(_.difference(expected, actual), [])
+
+
+      expected = [users.eve]
+      actual = _.pluck(Roles.getUsersInRole('admin').fetch(), '_id')
 
       // order may be different so check difference instead of equality
       test.equal(_.difference(actual, expected), [])
@@ -806,7 +814,7 @@
         throw new Error("expected exception but didn't get one")
       } 
       catch (ex) {
-        test.isTrue(ex.message == expectedErrorMsg)
+        test.isTrue(ex.message == expectedErrorMsg, ex.message)
       }
 
       reset() 
@@ -816,7 +824,7 @@
         throw new Error("expected exception but didn't get one")
       }
       catch (ex) {
-        test.isTrue(ex.message == expectedErrorMsg)
+        test.isTrue(ex.message == expectedErrorMsg, ex.message)
       }
 
       reset() 
@@ -826,7 +834,7 @@
         throw new Error("expected exception but didn't get one")
       }
       catch (ex) {
-        test.isTrue(ex.message == expectedErrorMsg)
+        test.isTrue(ex.message == expectedErrorMsg, ex.message)
       }
 
       reset() 
@@ -836,7 +844,7 @@
         throw new Error("expected exception but didn't get one")
       }
       catch (ex) {
-        test.isTrue(ex.message == expectedErrorMsg)
+        test.isTrue(ex.message == expectedErrorMsg, ex.message)
       }
 
       reset() 
@@ -848,6 +856,34 @@
       Roles.addUsersToRoles(users.bob, ['editor', 'user'], 'group1')
       // this is probably not a good idea but shouldn't throw...
       Roles.setUserRoles(users.bob, ['user'])
+    })
+
+  Tinytest.add(
+    "roles - can use '.' in group name",
+    function (test) {
+      reset() 
+
+      Roles.addUsersToRoles(users.joe, ['admin'], 'example.com')
+      testUser(test, 'joe', ['admin'], 'example.com')
+    })
+
+  Tinytest.add(
+    'roles - invalid group name throws descriptive error', 
+    function (test) {
+      var expectedErrorMsg = "Roles error: groups can not start with '$'"
+
+      reset() 
+      try {
+        Roles.addUsersToRoles(users.joe, ['admin'], '$group1')
+        throw new Error("expected exception but didn't get one")
+      } 
+      catch (ex) {
+        test.isTrue(ex.message == expectedErrorMsg, ex.message)
+      }
+
+      reset() 
+      // should not throw error
+      Roles.addUsersToRoles(users.bob, ['editor', 'user'], 'g$roup1')
     })
 
   function printException (ex) {

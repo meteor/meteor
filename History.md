@@ -1,3 +1,9 @@
+## v1.2.6
+
+* Add descriptive error msg when group name starts with $
+* Auto-convert periods in group names to underscores
+
+
 ## v1.2.5
 
 * Add setUserRoles function
