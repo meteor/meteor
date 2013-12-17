@@ -13,15 +13,23 @@ AppConfig.findGalaxy = _.once(function () {
 var ultra = AppConfig.findGalaxy();
 
 var subFuture = new Future();
-if (ultra)
+var subFutureJobs = new Future();
+if (ultra) {
   ultra.subscribe("oneApp", process.env.GALAXY_APP, subFuture.resolver());
-var OneAppApps;
+  ultra.subscribe("oneJob", process.env.GALAXY_JOB, subFutureJobs.resolver());
+}
+
+var Apps;
+var Jobs;
 var Services;
 var collectionFuture = new Future();
 
 Meteor.startup(function () {
   if (ultra) {
-    OneAppApps = new Meteor.Collection("apps", {
+    Apps = new Meteor.Collection("apps", {
+      connection: ultra
+    });
+    Jobs = new Meteor.Collection("jobs", {
       connection: ultra
     });
     Services = new Meteor.Collection('services', {
@@ -36,8 +44,14 @@ Meteor.startup(function () {
 // places.
 AppConfig._getAppCollection = function () {
   collectionFuture.wait();
-  return OneAppApps;
+  return Apps;
 };
+
+AppConfig._getJobsCollection = function () {
+  collectionFuture.wait();
+  return Jobs;
+};
+
 
 var staticAppConfig;
 
@@ -72,25 +86,41 @@ AppConfig.getAppConfig = function () {
     return staticAppConfig;
   }
   subFuture.wait();
-  var myApp = OneAppApps.findOne(process.env.GALAXY_APP);
-  if (myApp)
-    return myApp.config;
-  throw new Error("there is no app config for this app");
+  var myApp = Apps.findOne(process.env.GALAXY_APP);
+  if (!myApp) {
+    throw new Error("there is no app config for this app");
+  }
+  var config = myApp.config;
+  return config;
+};
+
+AppConfig.getStarForThisJob = function () {
+  if (ultra) {
+    subFutureJobs.wait();
+    var job = Jobs.findOne(process.env.GALAXY_JOB);
+    if (job) {
+      return job.star;
+    }
+  }
+  return null;
 };
 
 AppConfig.configurePackage = function (packageName, configure) {
   var appConfig = AppConfig.getAppConfig(); // Will either be based in the env var,
                                          // or wait for galaxy to connect.
   var lastConfig =
-        (appConfig && appConfig.packages && appConfig.packages[packageName]) || {};
+        (appConfig && appConfig.packages &&
+         appConfig.packages[packageName]) || {};
+
   // Always call the configure callback "soon" even if the initial configuration
   // is empty (synchronously, though deferred would be OK).
   // XXX make sure that all callers of configurePackage deal well with multiple
   // callback invocations!  eg, email does not
   configure(lastConfig);
   var configureIfDifferent = function (app) {
-    if (!EJSON.equals(app.config && app.config.packages && app.config.packages[packageName],
-                      lastConfig)) {
+    if (!EJSON.equals(
+           app.config && app.config.packages && app.config.packages[packageName],
+           lastConfig)) {
       lastConfig = app.config.packages[packageName];
       configure(lastConfig);
     }
@@ -104,7 +134,7 @@ AppConfig.configurePackage = function (packageName, configure) {
     // there's a Meteor.startup() that produces the various collections, make
     // sure it runs first before we continue.
     collectionFuture.wait();
-    subHandle = OneAppApps.find(process.env.GALAXY_APP).observe({
+    subHandle = Apps.find(process.env.GALAXY_APP).observe({
       added: configureIfDifferent,
       changed: configureIfDifferent
     });
@@ -118,7 +148,6 @@ AppConfig.configurePackage = function (packageName, configure) {
     }
   };
 };
-
 
 AppConfig.configureService = function (serviceName, configure) {
   if (ultra) {

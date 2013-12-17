@@ -9,14 +9,13 @@ Npm.depends({
 });
 
 Package.on_use(function (api) {
-  api.use('underscore');
   api.export(['CleanCSSProcess', 'UglifyJSMinify']);
   api.add_files('minifiers.js', 'server');
 });
 
 Package.on_test(function (api) {
-  api.use('tinytest');
   api.use('minifiers');
+  api.use('tinytest');
 
   api.add_files(['beautify_tests.js', 'minifiers_tests.js'], 'server');
 });
