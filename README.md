@@ -267,6 +267,18 @@ NOTE: Any sensitive data needs to be controlled server-side to prevent unwanted 
 </template>
 ```
 
+The same with group:
+```handlebars
+<!-- client/myApp.html -->
+
+<template name="header">
+  ... regular header stuff
+  {{#if isInRole 'admin' 'researchAndDevelopment'}}
+    {{> admin_rad_nav}}  
+  {{/if}}
+</template>
+```
+
 <br />
 
 ### Documentation
