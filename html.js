@@ -87,11 +87,11 @@ var makeTagConstructor = function (tagName) {
   // We try to choose generic-sounding variable names in case V8 infers
   // them as type names and they show up in the developer console.
   // HTMLTag is the constructor function for our specific tag type.
-  var HTMLTag = (new Function('_constructTag',
-    'return function ' +
-      sanitizedName +
-      '(/*arguments*/) { return _constructTag(' + sanitizedName +
-      ', this, arguments); };'))(_constructTag);
+  var HTMLTag = (new Function(
+    '_constructTag',
+    'var Tag; return (Tag = function ' +
+      sanitizedName + '_Tag(/*arguments*/) { ' +
+      'return _constructTag(Tag, this, arguments); });'))(_constructTag);
 
   HTMLTag.prototype = new HTML.Tag(tagName);
   HTMLTag.prototype.constructor = HTMLTag;
