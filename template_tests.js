@@ -897,3 +897,36 @@ Tinytest.add('spacebars - templates - block helpers in attribute 2', function (t
   Deps.flush();
   test.equal(input.value, '&<></x>');
 });
+
+
+// Test that if the argument to #each is a constant, it doesn't establish a
+// dependency on the data context, so when the context changes, items of
+// the #each are not "changed" and helpers do not rerun.
+Tinytest.add('spacebars - templates - constant #each argument', function (test) {
+  var tmpl = Template.spacebars_template_test_constant_each_argument;
+
+  var justReturnRuns = 0; // how many times `justReturn` is called
+  var R = ReactiveVar(1);
+
+  tmpl.someData = function () {
+    return R.get();
+  };
+  tmpl.anArray = ['foo', 'bar'];
+  tmpl.justReturn = function (x) {
+    justReturnRuns++;
+    return String(x);
+  };
+
+  var div = renderToDiv(tmpl);
+
+  test.equal(justReturnRuns, 2);
+  test.equal(trim(stripComments(div.innerHTML)).replace(/\s+/g, ' '),
+             'foo bar 1');
+
+  R.set(2);
+  Deps.flush();
+
+  test.equal(justReturnRuns, 2); // still 2, no new runs!
+  test.equal(trim(stripComments(div.innerHTML)).replace(/\s+/g, ' '),
+             'foo bar 2');
+});

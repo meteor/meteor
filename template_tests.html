@@ -277,3 +277,12 @@
 <template name="spacebars_template_test_block_helpers_in_attribute_2">
   <input value="{{#if foo}}"{{else}}&&lt;></x>{{/if}}">
 </template>
+
+<template name="spacebars_template_test_constant_each_argument">
+  {{#with someData}}
+    {{#each anArray}}
+      {{justReturn this}}
+    {{/each}}
+    {{this}}
+  {{/with}}
+</template>
