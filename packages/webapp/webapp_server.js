@@ -586,12 +586,16 @@ var runWebAppServer = function () {
                 // XXX Figure out a per-job way to specify bind location
                 // (besides hardcoding the location for ADMIN_APP jobs).
                 if (process.env.ADMIN_APP) {
-                  proxyConf = {
-                    bindHost: process.env.GALAXY_NAME,
-                    bindPathPrefix: "/" +
+                  var bindPathPrefix = "";
+                  if (process.env.GALAXY_APP !== "panel") {
+                    bindPathPrefix = "/" + bindPathPrefix +
                       encodeURIComponent(
                         process.env.GALAXY_APP
-                      ).replace(/\./g, '_'),
+                      ).replace(/\./g, '_');
+                  }
+                  proxyConf = {
+                    bindHost: process.env.GALAXY_NAME,
+                    bindPathPrefix: bindPathPrefix,
                     requiresAuth: true
                   };
                 } else {
