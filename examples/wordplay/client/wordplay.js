@@ -24,9 +24,9 @@ var set_selected_positions = function (word) {
   }
 
   for (var pos = 0; pos < 16; pos++) {
-    if (last_in_a_path.indexOf(pos) !== -1)
+    if (_.indexOf(last_in_a_path, pos) !== -1)
       Session.set('selected_' + pos, 'last_in_path');
-    else if (in_a_path.indexOf(pos) !== -1)
+    else if (_.indexOf(in_a_path, pos) !== -1)
       Session.set('selected_' + pos, 'in_path');
     else
       Session.set('selected_' + pos, false);
@@ -116,7 +116,9 @@ Template.board.clock = function () {
 Template.board.events({
   'click .square': function (evt) {
     var textbox = $('#scratchpad input');
-    textbox.val(textbox.val() + evt.target.innerHTML);
+    // Note: Getting the letter out of the DOM is kind of a hack
+    var letter = evt.target.textContent || evt.target.innerText;
+    textbox.val(textbox.val() + letter);
     textbox.focus();
   }
 });
