@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "mongodb": {
-      "from": "https://github.com/meteor/node-mongodb-native/tarball/779bbac916a751f305d84c727a6cc7dfddab7924",
+      "version": "https://github.com/meteor/node-mongodb-native/tarball/779bbac916a751f305d84c727a6cc7dfddab7924",
       "dependencies": {
         "bson": {
           "version": "0.2.2"
