@@ -64,6 +64,18 @@ Tinytest.add("html - parser getContent", function (test) {
                                          'foo',
                                          CharRef({html:'&gt;', str:'>'})]}));
   succeed('<input selected>', INPUT({selected: ''}));
+  succeed('<input selected/>', INPUT({selected: ''}));
+  succeed('<input selected />', INPUT({selected: ''}));
+  var FOO = HTML.getTag('FOO');
+  succeed('<foo bar></foo>', FOO({bar: ''}));
+  succeed('<foo bar baz ></foo>', FOO({bar: '', baz: ''}));
+  succeed('<foo bar=x baz qux=y blah ></foo>',
+          FOO({bar: 'x', baz: '', qux: 'y', blah: ''}));
+  succeed('<foo bar="x" baz qux="y" blah ></foo>',
+          FOO({bar: 'x', baz: '', qux: 'y', blah: ''}));
+  fatal('<input bar"baz">');
+  fatal('<input x="y"z >');
+  fatal('<input x=\'y\'z >');
   succeed('<br x=&&&>', BR({x: '&&&'}));
   succeed('<br><br><br>', [BR(), BR(), BR()]);
   succeed('aaa<br>\nbbb<br>\nccc<br>', ['aaa', BR(), '\nbbb', BR(), '\nccc', BR()]);
@@ -312,5 +324,4 @@ Tinytest.add("html - getSpecialTag", function (test) {
 
   succeed('', null);
   succeed('{{!foo}}', null);
-
 });

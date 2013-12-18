@@ -398,15 +398,21 @@ getTagToken = function (scanner) {
   tag.attrs = {};
 
   while (true) {
-    // we've already skipped any spaces.
+    // Note: at the top of this loop, we've already skipped any spaces.
 
-    // first try for a special tag.
+    // This will be set to true if after parsing the attribute, we should
+    // require spaces (or else an end of tag, i.e. `>` or `/>`).
+    var spacesRequiredAfter = false;
+
+    // first, try for a special tag.
     var special;
     if (scanner.getSpecialTag &&
         (special = scanner.getSpecialTag(scanner,
                                          TEMPLATE_TAG_POSITION.IN_START_TAG))) {
       tag.attrs.$specials = (tag.attrs.$specials || []);
       tag.attrs.$specials.push({ t: 'Special', v: special });
+
+      spacesRequiredAfter = true;
     } else {
 
       var attributeName = getAttributeName(scanner);
@@ -445,10 +451,12 @@ getTagToken = function (scanner) {
           tag.attrs[attributeName] = getQuotedAttributeValue(scanner, ch);
         else
           tag.attrs[attributeName] = getUnquotedAttributeValue(scanner);
+
+        spacesRequiredAfter = true;
       }
     }
-    // post-attribute, whether it was a special attribute (like `{{x}}`) or a normal
-    // one (like `x` or `x=y`).
+    // now we are in the "post-attribute" position, whether it was a special attribute
+    // (like `{{x}}`) or a normal one (like `x` or `x=y`).
 
     if (handleEndOfTag(scanner, tag))
       return tag;
@@ -456,7 +464,10 @@ getTagToken = function (scanner) {
     if (scanner.isEOF())
       scanner.fatal("Unclosed `<`");
 
-    requireSpaces(scanner);
+    if (spacesRequiredAfter)
+      requireSpaces(scanner);
+    else
+      skipSpaces(scanner);
 
     if (handleEndOfTag(scanner, tag))
       return tag;
