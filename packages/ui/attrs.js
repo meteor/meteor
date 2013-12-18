@@ -77,8 +77,6 @@ var BaseClassHandler = AttributeHandler.extend({
   }
 });
 
-// XXX what does this comment mean? is it in the right place?
-// Value of a ClassHandler is either a string or an array.
 var ClassHandler = BaseClassHandler.extend({
   // @param rawValue {String}
   getCurrentValue: function (element) {
