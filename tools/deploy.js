@@ -72,7 +72,7 @@ var deployRpc = function (options) {
       url: config.getDeployUrl() + '/' + options.operation + '/' + options.site,
       method: options.method || 'GET',
       bodyStream: options.bodyStream,
-      useAuthCookie: true,
+      useAuthHeader: true,
       encoding: 'utf8' // Hack, but good enough for the deploy server..
     }));
   } catch (e) {

@@ -72,12 +72,15 @@ _.extend(exports, {
   //   will be used for the body of the request.
   //
   // - For authenticated MDG services, you can set the
-  //   'useSessionCookie' and/or 'useAuthCookie' options (to true) to
-  //   send the appropriate cookies from the session file.
+  //   'useSessionHeader' and/or 'useAuthHeader' options (to true) to
+  //   send X-Meteor-Session/X-Meteor-Auth headers using values from
+  //   the session file.
   //
-  // - forceSSL is always set to true. Always.
+  // - forceSSL is always set to true. Always. And followRedirect is
+  //   set to false since it doesn't understand origins (see comment
+  //   in implementation).
   //
-  // NB: With useSessionCookie and useAuthCookie, this function will
+  // NB: With useSessionHeader and useAuthHeader, this function will
   // read *and possibly write to* the session file, so if you are
   // writing auth code (in auth.js) and you call it, be sure to reread
   // the session file afterwards.
@@ -105,31 +108,32 @@ _.extend(exports, {
       'User-Agent': ua
     }, options.headers || {});
 
+    // This should never, ever be false, or else why are you using SSL?
     options.forceSSL = true;
 
-    var cookies = {};
-    var useSessionCookie = options.useSessionCookie;
-    delete options.useSessionCookie;
-    var useAuthCookie = options.useAuthCookie;
-    delete options.useAuthCookie;
-    if (useSessionCookie || useAuthCookie) {
-      var sessionCookie = auth.getSessionId(config.getAccountsDomain());
-      if (sessionCookie)
-        cookies['METEOR_SESSION'] = sessionCookie;
+    // followRedirect is very dangerous because request does not
+    // appear to segregate cookies by origin, so any cookies (and
+    // apparently headers as well, eg X-Meteor-Auth) sent on the
+    // original request could get forwarded to an unexpected domain in
+    // a redirect. This is almost certainly not something you ever
+    // want.
+    options.followRedirect = false;
+
+    var useSessionHeader = options.useSessionHeader;
+    delete options.useSessionHeader;
+    var useAuthHeader = options.useAuthHeader;
+    delete options.useAuthHeader;
+    if (useSessionHeader || useAuthHeader) {
+      var sessionHeader = auth.getSessionId(config.getAccountsDomain());
+      if (sessionHeader)
+        options.headers['X-Meteor-Session'] = sessionHeader;
       if (callback)
-        throw new Error("session cookie can't be used with callback");
+        throw new Error("session header can't be used with callback");
     }
-    if (useAuthCookie) {
-      var authCookie = auth.getSessionToken(config.getAccountsDomain());
-      if (authCookie)
-        cookies['METEOR_AUTH'] = authCookie;
-    }
-    if (_.keys(cookies).length) {
-      if (_.has(options.headers, 'cookie'))
-        throw new Error("already has cookies? sorry, not implemented");
-      options.headers.cookie = _.map(cookies, function (value, key) {
-        return key + "=" + value;
-      }).join(";");
+    if (useAuthHeader) {
+      var authHeader = auth.getSessionToken(config.getAccountsDomain());
+      if (authHeader)
+        options.headers['X-Meteor-Auth'] = authHeader;
     }
 
     var fut;
@@ -148,9 +152,9 @@ _.extend(exports, {
             setCookie[match[1]] = match[2];
         });
 
-        if (useSessionCookie && setCookie.METEOR_SESSION) {
+        if (useSessionHeader && _.has(response.headers, "x-meteor-session")) {
           auth.setSessionId(config.getAccountsDomain(),
-                            setCookie.METEOR_SESSION);
+                            response.headers['x-meteor-session']);
         }
 
         fut['return']({

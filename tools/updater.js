@@ -20,7 +20,7 @@ exports.getManifest = function (context) {
   var options = {
     url: config.getUpdateManifestUrl(),
     json: true,
-    useSessionCookie: true
+    useSessionHeader: true
   };
 
   if (context)

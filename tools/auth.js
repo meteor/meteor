@@ -187,7 +187,7 @@ var tryRevokeOldTokens = function (options) {
         form: {
           tokenId: tokenIds.join(',')
         },
-        useSessionCookie: true,
+        useSessionHeader: true,
         timeout: options.timeout
       });
     } catch (e) {
@@ -209,38 +209,6 @@ var tryRevokeOldTokens = function (options) {
       logoutFailWarning(domain);
     }
   });
-};
-
-// Given a response and body for a login request (either to meteor accounts or
-// to a galaxy), checks if the login was successful, and if so returns an object
-// with keys:
-// - authToken: the value of the cookie named `authCookieName` in the response
-// - any other keys returned from the server (typically tokenId, username,
-//   userId, and/or registrationUrl, depending on the server and method)
-// Returns null if the login failed.
-var getLoginResult = function (response, body, authCookieName) {
-  console.log(response.statusCode, body);
-  if (response.statusCode !== 200)
-    return null;
-
-  var cookies = response.headers["set-cookie"] || [];
-  var authCookie;
-  for (var i = 0; i < cookies.length; i++) {
-    var re = new RegExp("^" + authCookieName + "=(\\w+)");
-    var match = cookies[i].match(re);
-    if (match) {
-      authCookie = match[1];
-      break;
-    }
-  }
-  if (! authCookie)
-    return null;
-
-  var parsedBody = body ? JSON.parse(body) : {};
-  if (! parsedBody.tokenId)
-    return null;
-
-  return _.extend(parsedBody, { authToken: authCookie });
 };
 
 // Sends a request to https://<galaxyName>:<DISCOVERY_PORT> to find out the
@@ -305,17 +273,16 @@ var logInToGalaxy = function (galaxyName) {
           redirect_uri: galaxyRedirect
         });
 
-  // It's very important that we don't have request follow the redirect for us,
-  // but instead issue the second request ourselves. This is because request
-  // does not appear to segregate cookies by origin, so we would end up with our
-  // METEOR_AUTH cookie going to the galaxy.
+  // It's very important that we don't have request follow the
+  // redirect for us, but instead issue the second request ourselves,
+  // since request would pass our credentials along to the redirected
+  // URL. See comments in http-helpers.js.
   try {
     var codeResult = httpHelpers.request({
       url: authCodeUrl,
       method: 'POST',
-      followRedirect: false,
       strictSSL: true,
-      useAuthCookie: true
+      useAuthHeader: true
     });
   } catch (e) {
     return { error: 'no-account-server' };
@@ -394,7 +361,7 @@ var doInteractivePasswordLogin = function (options) {
         url: config.getAccountsApiUrl() + "/login",
         method: "POST",
         form: loginData,
-        useSessionCookie: true
+        useSessionHeader: true
       });
       var body = JSON.parse(result.body);
     } catch (e) {
@@ -404,7 +371,7 @@ var doInteractivePasswordLogin = function (options) {
     }
 
     if (result.response.statusCode === 200 &&
-        _.has(result.setCookie, 'METEOR_AUTH'))
+        _.has(result.response.headers, 'x-meteor-auth'))
       break;
 
     process.stderr.write("Login failed.\n");
@@ -422,7 +389,7 @@ var doInteractivePasswordLogin = function (options) {
   ensureSessionType(session, "meteor-account");
   session.username = body.username;
   session.userId = body.userId;
-  session.token = result.setCookie.METEOR_AUTH;
+  session.token = result.response.headers['x-meteor-auth'];
   session.tokenId = body.tokenId;
   writeSessionData(data);
   return true;
@@ -554,7 +521,7 @@ exports.registerOrLogIn = function (context) {
       form: _.extend(utils.getAgentInfo(), {
         email: email
       }),
-      useSessionCookie: true
+      useSessionHeader: true
     });
     var body = JSON.parse(result.body);
   } catch (e) {
@@ -564,7 +531,7 @@ exports.registerOrLogIn = function (context) {
   }
 
   if (result.response.statusCode === 200) {
-    if (! _.has(result.setCookie, 'METEOR_AUTH')) {
+    if (! _.has(result.response.headers, 'x-meteor-auth')) {
       process.stdout.write("\nSorry, the server is having a problem.\n" +
                           "Please try again later.\n");
       return false;
@@ -574,7 +541,7 @@ exports.registerOrLogIn = function (context) {
     logOutAllSessions(data);
     var session = getSession(data, config.getAccountsDomain());
     ensureSessionType(session, "meteor-account");
-    session.token = result.setCookie.METEOR_AUTH;
+    session.token = result.response.headers['x-meteor-auth'];
     session.tokenId = body.tokenId;
     session.userId = body.userId;
     session.registrationUrl = body.registrationUrl;
