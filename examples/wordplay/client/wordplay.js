@@ -71,10 +71,11 @@ Template.lobby.disabled = function () {
   return 'disabled';
 };
 
+var trim = function (string) { return string.replace(/^\s+|\s+$/g, ''); };
 
 Template.lobby.events({
   'keyup input#myname': function (evt) {
-    var name = $('#lobby input#myname').val().trim();
+    var name = trim($('#lobby input#myname').val());
     Players.update(Session.get('player_id'), {$set: {name: name}});
   },
   'click button.startgame': function () {
