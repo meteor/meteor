@@ -92,7 +92,10 @@ _extend(UI.Component, {
       };
     }
 
-    if (typeof result === 'function') {
+    if (typeof result === 'function' &&! result._isEmboxedConstant) {
+      // Wrap the function `result`, binding `this` to `getComponentData(self)`.
+      // This creates a dependency when the result function is called.
+      // Don't do this if the function is really just an emboxed constant.
       return function (/*arguments*/) {
         var data = getComponentData(self);
         return result.apply(data, arguments);

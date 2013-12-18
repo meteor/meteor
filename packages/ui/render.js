@@ -148,9 +148,11 @@ UI.emboxValue = function (funcOrValue, equals) {
 
   } else {
     var value = funcOrValue;
-    return function () {
+    var result = function () {
       return value;
     };
+    result._isEmboxedConstant = true;
+    return result;
   }
 };
 
