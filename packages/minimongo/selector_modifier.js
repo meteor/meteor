@@ -118,11 +118,6 @@ function pathHasNumericKeys (path) {
   return _.any(path.split('.'), numericKey);
 }
 
-// string can be converted to integer
-function numericKey (s) {
-  return /^[0-9]+$/.test(s);
-}
-
 function isLiteralSelector (selector) {
   return _.all(selector, function (subSelector, keyPath) {
     if (keyPath.substr(0, 1) === "$" || _.isRegExp(subSelector))

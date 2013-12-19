@@ -256,10 +256,11 @@ Tinytest.add("minimongo - lookup", function (test) {
              [1, [2], undefined]);
 
   var lookupA0X = LocalCollection._makeLookupFunction('a.0.x');
-  test.equal(lookupA0X({a: [{x: 1}]}), [1]);
-  test.equal(lookupA0X({a: [{x: [1]}]}), [[1]]);
+  test.equal(lookupA0X({a: [{x: 1}]}), [1, undefined]);
+  test.equal(lookupA0X({a: [{x: [1]}]}), [[1], undefined]);
   test.equal(lookupA0X({a: 5}), [undefined]);
-  test.equal(lookupA0X({a: [{x: 1}, {x: [2]}, {y: 3}]}), [1]);
+  test.equal(lookupA0X({a: [{x: 1}, {x: [2]}, {y: 3}]}),
+             [1, undefined, undefined, undefined]);
 });
 
 Tinytest.add("minimongo - selector_compiler", function (test) {
@@ -600,7 +601,48 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({"a.b": /a/}, {a: {b: "dog"}});
   match({"a.b.c": null}, {});
   match({"a.b.c": null}, {a: 1});
+  match({"a.b": null}, {a: 1});
   match({"a.b.c": null}, {a: {b: 4}});
+
+  // dotted keypaths, nulls, numeric indices, arrays
+  nomatch({"a.b": null}, {a: [1]});
+  match({"a.b": []}, {a: {b: []}});
+  var big = {a: [{b: 1}, 2, {}, {b: [3, 4]}]};
+  match({"a.b": 1}, big);
+  match({"a.b": [3, 4]}, big);
+  test.expect_fail();  // XXX fix by observing dontIterate
+  nomatch({"a.b": 3}, big);
+  test.expect_fail();  // XXX fix by observing dontIterate
+  nomatch({"a.b": 4}, big);
+  match({"a.b": null}, big);  // matches on slot 2
+  match({'a.1': 8}, {a: [7, 8, 9]});
+  nomatch({'a.1': 7}, {a: [7, 8, 9]});
+  nomatch({'a.1': null}, {a: [7, 8, 9]});
+  match({'a.1': [8, 9]}, {a: [7, [8, 9]]});
+  nomatch({'a.1': 6}, {a: [[6, 7], [8, 9]]});
+  nomatch({'a.1': 7}, {a: [[6, 7], [8, 9]]});
+  test.expect_fail();  // XXX fix by observing dontIterate
+  nomatch({'a.1': 8}, {a: [[6, 7], [8, 9]]});
+  test.expect_fail();  // XXX fix by observing dontIterate
+  nomatch({'a.1': 9}, {a: [[6, 7], [8, 9]]});
+  match({"a.1": 2}, {a: [0, {1: 2}, 3]});
+  match({"a.1": {1: 2}}, {a: [0, {1: 2}, 3]});
+  match({"x.1.y": 8}, {x: [7, {y: 8}, 9]});
+  // comes from trying '1' as key in the plain object
+  match({"x.1.y": null}, {x: [7, {y: 8}, 9]});
+  match({"a.1.b": 9}, {a: [7, {b: 9}, {1: {b: 'foo'}}]});
+  match({"a.1.b": 'foo'}, {a: [7, {b: 9}, {1: {b: 'foo'}}]});
+  match({"a.1.b": null}, {a: [7, {b: 9}, {1: {b: 'foo'}}]});
+  match({"a.1.b": 2}, {a: [1, [{b: 2}], 3]});
+  nomatch({"a.1.b": null}, {a: [1, [{b: 2}], 3]});
+  // this is new behavior in mongo 2.5
+  nomatch({"a.0.b": null}, {a: [5]});
+  match({"a.1": 4}, {a: [{1: 4}, 5]});
+  match({"a.1": 5}, {a: [{1: 4}, 5]});
+  nomatch({"a.1": null}, {a: [{1: 4}, 5]});
+  match({"a.1.foo": 4}, {a: [{1: {foo: 4}}, {foo: 5}]});
+  match({"a.1.foo": 5}, {a: [{1: {foo: 4}}, {foo: 5}]});
+  match({"a.1.foo": null}, {a: [{1: {foo: 4}}, {foo: 5}]});
 
   // trying to access a dotted field that is undefined at some point
   // down the chain

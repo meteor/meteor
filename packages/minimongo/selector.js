@@ -1,7 +1,19 @@
 // Like _.isArray, but doesn't regard polyfilled Uint8Arrays on old browsers as
 // arrays.
+// XXX maybe this should be EJSON.isArray
 var isArray = function (x) {
   return _.isArray(x) && !EJSON.isBinary(x);
+};
+
+// XXX maybe this should be EJSON.isObject, though EJSON doesn't know about
+// RegExp
+// XXX note that _type(undefined) === 3!!!!
+var isPlainObject = function (x) {
+  return x && LocalCollection._f._type(x) === 3;
+};
+
+var isIndexable = function (x) {
+  return isArray(x) || isPlainObject(x);
 };
 
 // If x is an array, true if f(e) is true for some e in x
@@ -557,61 +569,132 @@ MinimongoTest.matches = function (selector, doc) {
   return (LocalCollection._compileSelector(selector))(doc);
 };
 
+
+// string can be converted to integer
+numericKey = function (s) {
+  return /^[0-9]+$/.test(s);
+};
+
+// XXX redoc
 // _makeLookupFunction(key) returns a lookup function.
 //
 // A lookup function takes in a document and returns an array of matching
-// values.  This array has more than one element if any segment of the key other
-// than the last one is an array.  ie, any arrays found when doing non-final
-// lookups result in this function "branching"; each element in the returned
-// array represents the value found at this branch. If any branch doesn't have a
-// final value for the full key, its element in the returned list will be
-// undefined. It always returns a non-empty array.
+// values.  If no arrays are found while looking up the key, this array will
+// have exactly one value (possibly 'undefined', if some segment of the key was
+// not found).
+//
+// If arrays are found in the middle, this can have more than one element, since
+// we "branch". When we "branch", if there are more key segments to look up,
+// then we only pursue branches that are plain objects (not arrays or scalars).
+// This means we can actually end up with no entries!
+//
+// At the top level, you may only pass in a plain object.
 //
 // _makeLookupFunction('a.x')({a: {x: 1}}) returns [1]
 // _makeLookupFunction('a.x')({a: {x: [1]}}) returns [[1]]
 // _makeLookupFunction('a.x')({a: 5})  returns [undefined]
+// _makeLookupFunction('a.x')({a: [5]})  returns []
 // _makeLookupFunction('a.x')({a: [{x: 1},
+//                                 [],
+//                                 4,
 //                                 {x: [2]},
 //                                 {y: 3}]})
 //   returns [1, [2], undefined]
-LocalCollection._makeLookupFunction = function (key) {
-  var dotLocation = key.indexOf('.');
-  var first, lookupRest, nextIsNumeric;
-  if (dotLocation === -1) {
-    first = key;
-  } else {
-    first = key.substr(0, dotLocation);
-    var rest = key.substr(dotLocation + 1);
-    lookupRest = LocalCollection._makeLookupFunction(rest);
-    // Is the next (perhaps final) piece numeric (ie, an array lookup?)
-    nextIsNumeric = /^\d+(\.|$)/.test(rest);
+LocalCollection._makeLookupFunction2 = function (key) {
+  var parts = key.split('.');
+  var firstPart = parts.length ? parts[0] : '';
+  var firstPartIsNumeric = numericKey(firstPart);
+  var lookupRest;
+  if (parts.length > 1) {
+    lookupRest = LocalCollection._makeLookupFunction2(parts.slice(1).join('.'));
   }
 
-  return function (doc) {
-    if (doc == null)  // null or undefined
-      return [undefined];
-    var firstLevel = doc[first];
+  // Doc will always be a plain object or an array.
+  // apply an explicit numeric index, an array.
+  return function (doc, firstArrayIndex) {
+    if (isArray(doc)) {
+      // If we're being asked to do an invalid lookup into an array (non-integer
+      // or out-of-bounds), return no results (which is different from returning
+      // a single undefined result, in that `null` equality checks won't match).
+      if (!(firstPartIsNumeric && firstPart < doc.length))
+        return [];
 
-    // We don't "branch" at the final level.
-    if (!lookupRest)
-      return [firstLevel];
+      // If this is the first array index we've seen, remember the index.
+      // (Mongo doesn't support multiple uses of '$', at least not in 2.5.
+      if (firstArrayIndex === undefined)
+        firstArrayIndex = +firstPart;
+    }
 
-    // It's an empty array, and we're not done: we won't find anything.
-    if (isArray(firstLevel) && firstLevel.length === 0)
-      return [undefined];
+    // Do our first lookup.
+    var firstLevel = doc[firstPart];
 
-    // For each result at this level, finish the lookup on the rest of the key,
-    // and return everything we find. Also, if the next result is a number,
-    // don't branch here.
+    // If there is no deeper to dig, return what we found.
     //
-    // Technically, in MongoDB, we should be able to handle the case where
-    // objects have numeric keys, but Mongo doesn't actually handle this
-    // consistently yet itself, see eg
-    // https://jira.mongodb.org/browse/SERVER-2898
-    // https://github.com/mongodb/mongo/blob/master/jstests/array_match2.js
-    if (!isArray(firstLevel) || nextIsNumeric)
-      firstLevel = [firstLevel];
-    return Array.prototype.concat.apply([], _.map(firstLevel, lookupRest));
+    // If what we found is an array, most value selectors will choose to treat
+    // the elements of the array as matchable values in their own right, but
+    // that's done outside of the lookup function. (Exceptions to this are $size
+    // and stuff relating to $elemMatch.  eg, {a: {$size: 2}} does not match {a:
+    // [[1, 2]]}.)
+    //
+    // That said, if we just did an *explicit* array lookup (on doc) to find
+    // firstLevel, and firstLevel is an array too, we do NOT want value
+    // selectors to iterate over it.  eg, {'a.0': 5} does not match {a: [[5]]}.
+    // So in that case, we mark the return value as "don't iterate".
+    if (!lookupRest) {
+      return [{value: firstLevel,
+               dontIterate: isArray(doc) && isArray(firstLevel),
+               arrayIndex: firstArrayIndex}];
+    }
+
+    // We need to dig deeper.  But if we can't, because what we've found is not
+    // an array or plain object, we're done. If we just did a numeric index into
+    // an array, we return nothing here (this is a change in Mongo 2.5 from
+    // Mongo 2.4, where {'a.0.b': null} stopped matching {a: [5]}). Otherwise,
+    // return a single `undefined` (which can, for example, match via equality
+    // with `null`).
+    if (!isIndexable(firstLevel)) {
+      return isArray(doc) ? [] : [{value: undefined,
+                                   arrayIndex: firstArrayIndex}];
+    }
+
+    var result = [];
+    var appendToResult = function (more) {
+      Array.prototype.push.apply(result, more);
+    };
+
+    // Dig deeper: look up the rest of the parts on whatever we've found.
+    // (lookupRest is smart enough to not try to do invalid lookups into
+    // firstLevel if it's an array.)
+    appendToResult(lookupRest(firstLevel, firstArrayIndex));
+
+    // If we found an array, then in *addition* to potentially treating the next
+    // part as a literal integer lookup, we should also "branch": try to do look
+    // up the rest of the parts on each array element in parallel.
+    //
+    // In this case, we *only* dig deeper into array elements that are plain
+    // objects. (Recall that we only got this far if we have further to dig.)
+    // This makes sense: we certainly don't dig deeper into non-indexable
+    // objects. And it would be weird to dig into an array: it's simpler to have
+    // a rule that explicit integer indexes only apply to an outer array, not to
+    // an array you find after a branching search.
+    if (isArray(firstLevel)) {
+      _.each(firstLevel, function (branch, arrayIndex) {
+        if (isPlainObject(branch)) {
+          appendToResult(lookupRest(
+            branch,
+            firstArrayIndex === undefined ? arrayIndex : firstArrayIndex));
+        }
+      });
+    }
+
+    return result;
+  };
+};
+
+LocalCollection._makeLookupFunction = function (key) {
+  var real = LocalCollection._makeLookupFunction2(key);
+  return function (doc) {
+    return _.pluck(real(doc), 'value');
   };
 };
 
