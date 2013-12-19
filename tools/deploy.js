@@ -186,11 +186,11 @@ var authedRpc = function (options) {
       hash.update('S3krit Salt!');
       hash.update(password);
       password = hash.digest('hex');
-
-      options = _.clone(options);
-      options.qs = _.clone(options.qs || {});
-      options.qs.password = password;
     }
+
+    options = _.clone(options);
+    options.qs = _.clone(options.qs || {});
+    options.qs.password = password;
 
     return preflight ? { preflightPassword: password } : deployRpc(options);
   }
