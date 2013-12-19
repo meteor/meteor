@@ -654,6 +654,8 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
   };
   var myHost = os.hostname();
 
+  WebAppInternals.usingDdpProxy = true;
+
   // This is run after packages are loaded (in main) so we can use
   // Follower.connect.
   if (proxy) {

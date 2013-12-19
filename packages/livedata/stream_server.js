@@ -66,6 +66,18 @@ StreamServer = function () {
   self._redirectWebsocketEndpoint();
 
   self.server.on('connection', function (socket) {
+
+    if (Package.webapp.WebAppInternals.usingDdpProxy) {
+      // If we are behind a DDP proxy, immediately close any sockjs connections
+      // that are not using websockets; the proxy will terminate sockjs for us,
+      // so we don't expect to be handling any other transports.
+      if (socket.protocol !== "websocket" &&
+          socket.protocol !== "websocket-raw") {
+        socket.close();
+        return;
+      }
+    }
+
     socket.send = function (data) {
       socket.write(data);
     };
