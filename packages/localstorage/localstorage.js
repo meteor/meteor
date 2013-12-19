@@ -13,8 +13,13 @@ if (window.localStorage) {
     }
   };
 }
-// XXX eliminate dependency on jQuery, detect browsers ourselves
-else if ($.browser.msie) { // If we are on IE, which support userData
+else if (document.all && !window.opera) {
+  /*
+   * If we are on IE before IE 11, which support userData
+   * IE 8 and beyond support localStorage and sessionStorage.
+   * document.all returns false in IE 11.
+   * Pre-webkit Opera document.all may not return false.
+   */
   var userdata = document.createElement('span'); // could be anything
   userdata.style.behavior = 'url("#default#userData")';
   userdata.id = 'localstorage-helper';
