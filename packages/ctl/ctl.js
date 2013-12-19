@@ -1,3 +1,5 @@
+var Future = Npm.require("fibers/future");
+
 Ctl.Commands.push({
   name: "help",
   func: function (argv) {
@@ -24,137 +26,150 @@ var mergeObjects = function (obj1, obj2) {
 };
 
 
+
+var startFun = function (argv) {
+  if (argv.help || argv._.length !== 0) {
+    process.stderr.write(
+      "Usage: ctl start\n" +
+        "\n" +
+        "Starts the app. For now, this just means that it runs the 'server'\n" +
+        "program.\n"
+    );
+    process.exit(1);
+  }
+  Ctl.subscribeToAppJobs(Ctl.myAppName());
+  var jobs = Ctl.jobsCollection();
+  var thisJob = jobs.findOne(Ctl.myJobId());
+  Ctl.updateProxyActiveTags(['', thisJob.star]);
+  if (Ctl.hasProgram("console")) {
+    console.log("starting console for app", Ctl.myAppName());
+    Ctl.startServerlikeProgramIfNotPresent("console", ["admin"], true);
+  }
+  console.log("starting server for app", Ctl.myAppName());
+  Ctl.startServerlikeProgramIfNotPresent("server", ["runner"]);
+};
+
 Ctl.Commands.push({
   name: "start",
   help: "Start this app",
-  func: function (argv) {
-    if (argv.help || argv._.length !== 0) {
-      process.stderr.write(
-"Usage: ctl start\n" +
- "\n" +
-"Starts the app. For now, this just means that it runs the 'server'\n" +
-"program.\n"
-);
-      process.exit(1);
-    }
-
-    var numServers = Ctl.getJobsByApp(
-      Ctl.myAppName(), {program: 'server', done: false}).count();
-    if (numServers === 0) {
-      var appConfig = Ctl.prettyCall(
-        Ctl.findGalaxy(), 'getAppConfiguration', [Ctl.myAppName()]);
-
-      var proxyConfig;
-      var bindPathPrefix = "";
-      if (appConfig.admin) {
-        bindPathPrefix = "/" + Ctl.myAppName();
-      }
-
-
-      // XXX args? env?
-      Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), 'server', {
-        exitPolicy: 'restart',
-        env: {
-          ROOT_URL: "https://" + appConfig.sitename + bindPathPrefix,
-          METEOR_SETTINGS: appConfig.METEOR_SETTINGS,
-          ADMIN_APP: appConfig.admin //TODO: When apps have admin & non-admin sides, set this based on that.
-        },
-        ports: {
-          "main": {
-            bindEnv: "PORT",
-            routeEnv: "ROUTE"//,
-            //bindIpEnv: "BIND_IP" // Later, we can teach Satellite to do
-            //something like recommend the process bind to a particular IP here.
-            //For now, we don't have a way of setting this, so Satellite binds
-            //to 0.0.0.0
-          }
-        },
-        tags: ["runner"]
-      }]);
-      console.log("Started a server.");
-    } else {
-      console.log("Server already running.");
-    }
-  }
+  func: startFun
 });
+
+
+Ctl.Commands.push({
+  name: "endUpdate",
+  help: "Start this app to end an update",
+  func: startFun
+});
+
+var stopFun =  function (argv) {
+  if (argv.help || argv._.length !== 0) {
+    process.stderr.write(
+      "Usage: ctl stop\n" +
+        "\n" +
+        "Stops the app. For now, this just means that it kills all jobs\n" +
+        "other than itself.\n"
+    );
+    process.exit(1);
+  }
+
+  // Get all jobs (other than this job: don't commit suicide!) that are not
+  // already killed.
+  var jobs = Ctl.getJobsByApp(
+    Ctl.myAppName(), {_id: {$ne: Ctl.myJobId()}, done: false});
+  jobs.forEach(function (job) {
+    // Don't commit suicide.
+    if (job._id === Ctl.myJobId())
+      return;
+    // It's dead, Jim.
+    if (job.done)
+      return;
+    Ctl.kill(job.program, job._id);
+  });
+  console.log("Server stopped.");
+};
 
 Ctl.Commands.push({
   name: "stop",
   help: "Stop this app",
-  func: function (argv) {
-    if (argv.help || argv._.length !== 0) {
-      process.stderr.write(
-"Usage: ctl stop\n" +
- "\n" +
-"Stops the app. For now, this just means that it kills all jobs\n" +
-"other than itself.\n"
-);
-      process.exit(1);
-    }
-
-    // Get all jobs (other than this job: don't commit suicide!) that are not
-    // already killed.
-    var jobs = Ctl.getJobsByApp(
-      Ctl.myAppName(), {_id: {$ne: Ctl.myJobId()}, done: false});
-    jobs.forEach(function (job) {
-      // Don't commit suicide.
-      if (job._id === Ctl.myJobId())
-        return;
-      // It's dead, Jim.
-      if (job.done)
-        return;
-      Ctl.kill(job.program, job._id);
-    });
-    console.log("Server stopped.");
-  }
+  func: stopFun
 });
+
+var waitForDone = function (jobCollection, jobId) {
+  var fut = new Future();
+  var found = false;
+  try {
+    var observation = jobCollection.find(jobId).observe({
+      added: function (doc) {
+        found = true;
+        if (doc.done)
+          fut['return']();
+      },
+      changed: function (doc) {
+        if (doc.done)
+          fut['return']();
+      },
+      removed: function (doc) {
+        fut['return']();
+      }
+    });
+    // if the document doesn't exist at all, it's certainly done.
+    if (!found)
+      fut['return']();
+    fut.wait();
+  } finally {
+    observation.stop();
+  }
+};
 
 
 Ctl.Commands.push({
-  name: "scale",
-  help: "Scale jobs",
+  name: "beginUpdate",
+  help: "Stop this app to begin an update",
   func: function (argv) {
-    if (argv.help || argv._.length === 0 || _.contains(argv._, 'ctl')) {
-      process.stderr.write(
-"Usage: ctl scale program1=n [...] \n" +
- "\n" +
-"Scales some programs. Runs or kills jobs until there are n non-done jobs\n" +
-"in that state.\n"
-);
-      process.exit(1);
+    Ctl.subscribeToAppJobs(Ctl.myAppName());
+    var jobs = Ctl.jobsCollection();
+    var thisJob = jobs.findOne(Ctl.myJobId());
+    // Look at all the server jobs that are on the old star.
+    var oldJobSelector = {
+      app: Ctl.myAppName(),
+      star: {$ne: thisJob.star},
+      program: "server",
+      done: false
+    };
+    var oldServers = jobs.find(oldJobSelector).fetch();
+    // Start a new job for each of them.
+    _.each(oldServers, function (oldServer) {
+      Ctl.startServerlikeProgram("server",
+                                 oldServer.tags,
+                                 oldServer.env.ADMIN_APP);
+    });
+    // Wait for them all to come up and bind to the proxy.
+    Meteor._sleepForMs(10000); // XXX: Eventually make sure they're proxy-bound.
+    Ctl.updateProxyActiveTags(['', thisJob.star]);
+
+    // (eventually) tell the proxy to switch over to using the new star
+    // One by one, kill all the old star's server jobs.
+    var jobToKill = jobs.findOne(oldJobSelector);
+    while (jobToKill) {
+      Ctl.kill("server", jobToKill._id);
+      // Wait for it to go down
+      waitForDone(jobs, jobToKill._id);
+      // Spend some time in between to allow any reconnect storm to die down.
+      Meteor._sleepForMs(5000);
+      jobToKill = jobs.findOne(oldJobSelector);
     }
-
-    var scales = _.map(argv._, function (arg) {
-      var m = arg.match(/^(.+)=(\d+)$/);
-      if (!m) {
-        console.log("Bad scaling argument; should be program=number.");
-        process.exit(1);
-      }
-      return {program: m[1], scale: parseInt(m[2])};
+    // Now kill all old non-server jobs.  They're less important.
+    jobs.find({
+      app: Ctl.myAppName(),
+      star: {$ne: thisJob.star},
+      program: {$ne: "server"},
+      done: false
+    }).forEach(function (job) {
+      Ctl.kill(job.program, job._id);
     });
-
-    _.each(scales, function (s) {
-      var jobs = Ctl.getJobsByApp(
-        Ctl.myAppName(), {program: s.program, done: false});
-      jobs.forEach(function (job) {
-        --s.scale;
-        // Is this an extraneous job, more than the number that we need? Kill
-        // it!
-        if (s.scale < 0) {
-          Ctl.kill(s.program, job._id);
-        }
-      });
-      // Now start any jobs that are necessary.
-      if (s.scale <= 0)
-        return;
-      console.log("Starting %d jobs for %s", s.scale, s.program);
-      _.times(s.scale, function () {
-        // XXX args? env?
-        Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), s.program, {
-          exitPolicy: 'restart'
-        }]);
-      });
-    });
+    // fin
+    process.exit(0);
   }
 });
 

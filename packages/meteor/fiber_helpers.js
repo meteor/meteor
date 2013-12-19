@@ -69,10 +69,15 @@ _.extend(Meteor._SynchronousQueue.prototype, {
     }
 
     var fut = new Future;
-    self._taskHandles.push({task: Meteor.bindEnvironment(task, function (e) {
-      Meteor._debug("Exception from task:", e ? e.stack : e);
-      throw e;
-    }), future: fut});
+    var handle = {
+      task: Meteor.bindEnvironment(task, function (e) {
+        Meteor._debug("Exception from task:", e && e.stack || e);
+        throw e;
+      }),
+      future: fut,
+      name: task.name
+    };
+    self._taskHandles.push(handle);
     self._scheduleRun();
     // Yield. We'll get back here after the task is run (and will throw if the
     // task throws).
@@ -80,7 +85,10 @@ _.extend(Meteor._SynchronousQueue.prototype, {
   },
   queueTask: function (task) {
     var self = this;
-    self._taskHandles.push({task: task});
+    self._taskHandles.push({
+      task: task,
+      name: task.name
+    });
     self._scheduleRun();
     // No need to block.
   },
@@ -110,13 +118,11 @@ _.extend(Meteor._SynchronousQueue.prototype, {
 
   _scheduleRun: function () {
     var self = this;
-
     // Already running or scheduled? Do nothing.
     if (self._runningOrRunScheduled)
       return;
 
     self._runningOrRunScheduled = true;
-
     process.nextTick(function () {
       Fiber(function () {
         self._run();

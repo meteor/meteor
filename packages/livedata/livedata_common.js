@@ -29,15 +29,8 @@ MethodInvocation = function (options) {
   // reruns subscriptions
   this._setUserId = options.setUserId || function () {};
 
-  // used for associating the connection with a login token so that the
-  // connection can be closed if the token is no longer valid
-  this._setLoginToken = options._setLoginToken || function () {};
-
-  // Scratch data scoped to this connection (livedata_connection on the
-  // client, livedata_session on the server). This is only used
-  // internally, but we should have real and documented API for this
-  // sort of thing someday.
-  this._sessionData = options.sessionData;
+  // On the server, the connection this method call came in on.
+  this.connection = options.connection;
 };
 
 _.extend(MethodInvocation.prototype, {
@@ -52,13 +45,6 @@ _.extend(MethodInvocation.prototype, {
       throw new Error("Can't call setUserId in a method after calling unblock");
     self.userId = userId;
     self._setUserId(userId);
-  },
-  _setLoginToken: function (token) {
-    this._setLoginToken(token);
-    this._sessionData.loginToken = token;
-  },
-  _getLoginToken: function (token) {
-    return this._sessionData.loginToken;
   }
 });
 
@@ -129,3 +115,8 @@ stringifyDDP = function (msg) {
 // state in the DDP session. Meteor.setTimeout and friends clear
 // it. We can probably find a better way to factor this.
 DDP._CurrentInvocation = new Meteor.EnvironmentVariable;
+
+
+// This is private and a hack. It is used by autoupdate_client. We
+// should refactor. Maybe a separate 'exponential-backoff' package?
+DDP._Retry = Retry;

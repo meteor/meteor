@@ -210,6 +210,10 @@ _.extend(exports, {
     var installedDependencies = self._installedDependencies(packageNpmDir);
 
     // If we already have the right things installed, life is good.
+    // XXX this check is wrong: what if we just pulled a commit that changes
+    //     a sub-module in npm-shrinkwrap.json? See #1648
+    //     But while it might be "correct" to just drop this check we should
+    //     be careful not to make the common case of no changes too slow.
     if (_.isEqual(installedDependencies, npmDependencies))
       return;
 
@@ -539,11 +543,16 @@ _.extend(exports, {
     var topLevel = self._shrinkwrappedDependenciesTree(dir);
 
     var minimizeModule = function (module) {
-      var minimized = {};
-      if (self._isGitHubTarball(module.from))
-        minimized.from = module.from;
-      else
-        minimized.version = module.version;
+      var version;
+      if (module.resolved &&
+          !module.resolved.match(/^https:\/\/registry.npmjs.org\//)) {
+        version = module.resolved;
+      } else if (self._isGitHubTarball(module.from)) {
+        version = module.from;
+      } else {
+        version = module.version;
+      }
+      var minimized = {version: version};
 
       if (module.dependencies) {
         minimized.dependencies = {};

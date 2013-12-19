@@ -10,9 +10,13 @@ Meteor.methods({
     check(arguments, [Match.Any]);
     return arguments[0];
   },
-  exception: function (where, intended) {
+  exception: function (where, options) {
     check(where, String);
-    check(intended, Match.Optional(Boolean));
+    check(options, Match.Optional({
+      intended: Match.Optional(Boolean),
+      throwThroughFuture: Match.Optional(Boolean)
+    }));
+    options = options || {};
     var shouldThrow =
       (Meteor.isServer && where === "server") ||
       (Meteor.isClient && where === "client") ||
@@ -20,16 +24,25 @@ Meteor.methods({
 
     if (shouldThrow) {
       var e;
-      if (intended)
+      if (options.intended)
         e = new Meteor.Error(999, "Client-visible test exception");
       else
         e = new Error("Test method throwing an exception");
       e.expected = true;
+
+      // We used to improperly serialize errors that were thrown through a
+      // future first.
+      if (Meteor.isServer && options.throwThroughFuture) {
+        var Future = Npm.require('fibers/future');
+        var f = new Future;
+        f['throw'](e);
+        e = f.wait();
+      }
       throw e;
     }
   },
   setUserId: function(userId) {
-    check(userId, String);
+    check(userId, Match.OneOf(String, null));
     this.setUserId(userId);
   }
 });

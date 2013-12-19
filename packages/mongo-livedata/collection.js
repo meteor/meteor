@@ -489,6 +489,12 @@ Meteor.Collection.prototype._dropIndex = function (index) {
     throw new Error("Can only call _dropIndex on server collections");
   self._collection._dropIndex(index);
 };
+Meteor.Collection.prototype._dropCollection = function () {
+  var self = this;
+  if (!self._collection.dropCollection)
+    throw new Error("Can only call _dropCollection on server collections");
+  self._collection.dropCollection();
+};
 Meteor.Collection.prototype._createCappedCollection = function (byteSize) {
   var self = this;
   if (!self._collection._createCappedCollection)
@@ -549,7 +555,7 @@ Meteor.Collection.ObjectID = LocalCollection._ObjectID;
         if (!(options[name] instanceof Function)) {
           throw new Error(allowOrDeny + ": Value for `" + name + "` must be a function");
         }
-        if (self._transform)
+        if (self._transform && options.transform !== null)
           options[name].transform = self._transform;
         if (options.transform)
           options[name].transform = Deps._makeNonreactive(options.transform);

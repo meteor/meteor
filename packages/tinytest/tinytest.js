@@ -65,9 +65,9 @@ _.extend(TestCaseResults.prototype, {
       Error.prepareStackTrace = savedPrepareStackTrace;
       for (var i = stack.length - 1; i >= 0; --i) {
         var frame = stack[i];
-        // Heuristic: use the OUTERMOST line which is in a _test.js or _tests.js
+        // Heuristic: use the OUTERMOST line which is in a :tests.js
         // file (this is less likely to be a test helper function).
-        if (frame.getFileName().match(/_tests?\.js/)) {
+        if (frame.getFileName().match(/:tests\.js/)) {
           doc.filename = frame.getFileName();
           doc.line = frame.getLineNumber();
           break;
@@ -132,7 +132,7 @@ _.extend(TestCaseResults.prototype, {
         this.equal(actual[i], expected[i]);
       }
     } else {
-      matched = _.isEqual(expected, actual);
+      matched = EJSON.equals(expected, actual);
     }
 
     if (matched === !!not) {
@@ -309,7 +309,16 @@ _.extend(TestCase.prototype, {
       return true;
     };
 
-    var results = new TestCaseResults(self, onEvent,
+    var wrappedOnEvent = function (e) {
+      // If this trace prints, it means you ran some test.* function after the
+      // test finished! Another symptom will be that the test will display as
+      // "waiting" even when it counts as passed or failed.
+      if (completed)
+        console.trace("event after complete!");
+      return onEvent(e);
+    };
+
+    var results = new TestCaseResults(self, wrappedOnEvent,
                                       function (e) {
                                         if (markComplete())
                                           onException(e);

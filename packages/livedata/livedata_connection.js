@@ -7,20 +7,19 @@ if (Meteor.isServer) {
 // @param url {String|Object} URL to Meteor app,
 //   or an object as a test hook (see code)
 // Options:
-//   reloadOnUpdate: should we try to reload when the server says
-//                      there's new code available?
 //   reloadWithOutstanding: is it OK to reload if there are outstanding methods?
+//   onDDPNegotiationVersionFailure: callback when version negotiation fails.
 var Connection = function (url, options) {
   var self = this;
   options = _.extend({
-    reloadOnUpdate: false,
-    // The rest of these options are only for testing.
+    onConnected: function () {},
+    onDDPVersionNegotiationFailure: function (description) {
+      Meteor._debug(description);
+    },
+    // These options are only for testing.
     reloadWithOutstanding: false,
     supportedDDPVersions: SUPPORTED_DDP_VERSIONS,
-    onConnectionFailure: function (reason) {
-      Meteor._debug("Failed DDP connection: " + reason);
-    },
-    onConnected: function () {}
+    retry: true
   }, options);
 
   // If set, called when we reconnect, queuing method calls _before_ the
@@ -32,7 +31,9 @@ var Connection = function (url, options) {
   if (typeof url === "object") {
     self._stream = url;
   } else {
-    self._stream = new LivedataTest.ClientStream(url);
+    self._stream = new LivedataTest.ClientStream(url, {
+      retry: options.retry
+    });
   }
 
   self._lastSessionId = null;
@@ -152,17 +153,13 @@ var Connection = function (url, options) {
   //                    an error)
   self._subscriptions = {};
 
-  // Per-connection scratch area. This is only used internally, but we
-  // should have real and documented API for this sort of thing someday.
-  self._sessionData = {};
-
   // Reactive userId.
   self._userId = null;
   self._userIdDeps = (typeof Deps !== "undefined") && new Deps.Dependency;
 
   // Block auto-reload while we're waiting for method responses.
   if (Meteor.isClient && Package.reload && !options.reloadWithOutstanding) {
-    Reload._onMigrate(function (retry) {
+    Package.reload.Reload._onMigrate(function (retry) {
       if (!self._readyToMigrate()) {
         if (self._retryMigrate)
           throw new Error("Two migrations in progress?");
@@ -183,7 +180,11 @@ var Connection = function (url, options) {
     }
 
     if (msg === null || !msg.msg) {
-      Meteor._debug("discarding invalid livedata message", msg);
+      // XXX COMPAT WITH 0.6.6. ignore the old welcome message for back
+      // compat.  Remove this 'if' once the server stops sending welcome
+      // messages (stream_server.js).
+      if (! (msg && msg.server_id))
+        Meteor._debug("discarding invalid livedata message", msg);
       return;
     }
 
@@ -197,10 +198,10 @@ var Connection = function (url, options) {
         self._versionSuggestion = msg.version;
         self._stream.reconnect({_force: true});
       } else {
-        var error =
-              "Version negotiation failed; server requested version " + msg.version;
-        self._stream.disconnect({_permanent: true, _error: error});
-        options.onConnectionFailure(error);
+        var description =
+              "DDP version negotiation failed; server requested version " + msg.version;
+        self._stream.disconnect({_permanent: true, _error: description});
+        options.onDDPVersionNegotiationFailure(description);
       }
     }
     else if (_.include(['added', 'changed', 'removed', 'ready', 'updated'], msg.msg))
@@ -277,17 +278,6 @@ var Connection = function (url, options) {
     self._stream.on('message', onMessage);
     self._stream.on('reset', onReset);
   }
-
-
-  if (Meteor.isClient && Package.reload && options.reloadOnUpdate) {
-    self._stream.on('update_available', function () {
-      // Start trying to migrate to a new version. Until all packages
-      // signal that they're ready for a migration, the app will
-      // continue running normally.
-      Reload._reload();
-    });
-  }
-
 };
 
 // A MethodInvoker manages sending a method to the server and calling the user's
@@ -599,11 +589,11 @@ _.extend(Connection.prototype, {
     if (callback) {
       // XXX would it be better form to do the binding in stream.on,
       // or caller, instead of here?
-      callback = Meteor.bindEnvironment(callback, function (e) {
-        // XXX improve error message (and how we report it)
-        Meteor._debug("Exception while delivering result of invoking '" +
-                      name + "'", e, e.stack);
-      });
+      // XXX improve error message (and how we report it)
+      callback = Meteor.bindEnvironment(
+        callback,
+        "delivering result of invoking '" + name + "'"
+      );
     }
 
     // Lazily allocate method ID once we know that it'll be needed.
@@ -638,8 +628,8 @@ _.extend(Connection.prototype, {
       };
       var invocation = new MethodInvocation({
         isSimulation: true,
-        userId: self.userId(), setUserId: setUserId,
-        sessionData: self._sessionData
+        userId: self.userId(),
+        setUserId: setUserId
       });
 
       if (!alreadyInSimulation)
@@ -800,8 +790,16 @@ _.extend(Connection.prototype, {
   _unsubscribeAll: function () {
     var self = this;
     _.each(_.clone(self._subscriptions), function (sub, id) {
-      self._send({msg: 'unsub', id: id});
-      delete self._subscriptions[id];
+      // Avoid killing the autoupdate subscription so that developers
+      // still get hot code pushes when writing tests.
+      //
+      // XXX it's a hack to encode knowledge about autoupdate here,
+      // but it doesn't seem worth it yet to have a special API for
+      // subscriptions to preserve after unit tests.
+      if (sub.name !== 'meteor_autoupdate_clientVersions') {
+        self._send({msg: 'unsub', id: id});
+        delete self._subscriptions[id];
+      }
     });
   },
 
@@ -1392,9 +1390,8 @@ LivedataTest.Connection = Connection;
 //     "/",
 //     "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"
 //
-DDP.connect = function (url, _reloadOnUpdate) {
-  var ret = new Connection(
-    url, {reloadOnUpdate: _reloadOnUpdate});
+DDP.connect = function (url, options) {
+  var ret = new Connection(url, options);
   allConnections.push(ret); // hack. see below.
   return ret;
 };

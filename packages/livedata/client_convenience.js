@@ -11,8 +11,28 @@ if (Meteor.isClient) {
     if (__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL)
       ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
   }
+
+  var retry = new Retry();
+
+  var onDDPVersionNegotiationFailure = function (description) {
+    Meteor._debug(description);
+    if (Package.reload) {
+      var migrationData = Package.reload.Reload._migrationData('livedata') || {};
+      var failures = migrationData.DDPVersionNegotiationFailures || 0;
+      ++failures;
+      Package.reload.Reload._onMigrate('livedata', function () {
+        return [true, {DDPVersionNegotiationFailures: failures}];
+      });
+      retry.retryLater(failures, function () {
+        Package.reload.Reload._reload();
+      });
+    }
+  };
+
   Meteor.connection =
-    DDP.connect(ddpUrl, true /* restart_on_update */);
+    DDP.connect(ddpUrl, {
+      onDDPVersionNegotiationFailure: onDDPVersionNegotiationFailure
+    });
 
   // Proxy the public methods of Meteor.connection so they can
   // be called directly on Meteor.

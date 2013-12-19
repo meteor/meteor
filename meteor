@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.3.23
+BUNDLE_VERSION=0.3.26
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -52,7 +52,7 @@ function install_dev_bundle {
     mkdir "$BUNDLE_TMPDIR"
 
     if [ -f "$SCRIPT_DIR/$TARBALL" ] ; then
-        echo "Skipping download and installing kit from $SCRIPT_DIR/$TARBALL"
+        echo "Skipping download and installing kit from $SCRIPT_DIR/$TARBALL" >&2
         tar -xzf "$SCRIPT_DIR/$TARBALL" -C "$BUNDLE_TMPDIR"
     elif [ -n "$SAVE_DEV_BUNDLE_TARBALL" ] ; then
         # URL duplicated in tools/server/target.sh.in
@@ -68,8 +68,8 @@ function install_dev_bundle {
     rm -rf "$SCRIPT_DIR/dev_bundle"
     mv "$BUNDLE_TMPDIR" "$SCRIPT_DIR/dev_bundle"
 
-    echo "Installed dependency kit v${BUNDLE_VERSION} in dev_bundle."
-    echo
+    echo "Installed dependency kit v${BUNDLE_VERSION} in dev_bundle." >&2
+    echo >&2
 
     trap - EXIT
     set +e
@@ -79,12 +79,12 @@ function install_dev_bundle {
 if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
     # In a checkout.
     if [ ! -d "$SCRIPT_DIR/dev_bundle" ] ; then
-        echo "It's the first time you've run Meteor from a git checkout."
-        echo "I will download a kit containing all of Meteor's dependencies."
+        echo "It's the first time you've run Meteor from a git checkout." >&2
+        echo "I will download a kit containing all of Meteor's dependencies." >&2
         install_dev_bundle
     elif [ ! -f "$SCRIPT_DIR/dev_bundle/.bundle_version.txt" ] ||
         grep -qvx "$BUNDLE_VERSION" "$SCRIPT_DIR/dev_bundle/.bundle_version.txt" ; then
-        echo "Your dependency kit is out of date. I will download the new one."
+        echo "Your dependency kit is out of date. I will download the new one." >&2
         install_dev_bundle
     fi
 
