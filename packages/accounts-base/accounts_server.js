@@ -90,13 +90,23 @@ Meteor.methods({
   //   If unsuccessful (for example, if the user closed the oauth login popup),
   //     returns null
   login: function(options) {
+    var self = this;
+
     // Login handlers should really also check whatever field they look at in
     // options, but we don't enforce it.
     check(options, Object);
     var result = Accounts.createToken(options);
     if (result !== null) {
-      this.setUserId(result.id);
-      Accounts._setLoginToken(this.connection.id, result.token);
+      // This order (and the avoidance of yields) is important to make
+      // sure that when publish functions are rerun, they see a
+      // consistent view of the world: this.userId is set and matches
+      // the login token on the connection (not that there is
+      // currently a public API for reading the login token on a
+      // connection).
+      Meteor._noYieldsAllowed(function () {
+        Accounts._setLoginToken(self.connection.id, result.token);
+      });
+      self.setUserId(result.id);
     }
     return result;
   },
