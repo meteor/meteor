@@ -516,7 +516,8 @@ var builtInComponents = {
   'if': 'UI.If',
   'unless': 'UI.Unless',
   'with': 'UI.With',
-  'each': 'UI.Each'
+  'each': 'UI.Each',
+  'isolate': 'UI.Isolate'
 };
 
 var replaceSpecials = function (node) {

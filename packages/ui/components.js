@@ -76,3 +76,20 @@ UI.With = Component.extend({
     };
   }
 });
+
+UI.Isolate = Component.extend({
+  kind: 'Isolate',
+  init: function () {
+    var self = this;
+    if (typeof self.data === 'undefined') {
+      self.data = Deps.nonreactive(function () {
+        return getComponentData(self);
+      });
+    } else {
+      self.data = UI.emboxValue(self.data, EJSON.equals);
+    }
+  },
+  render: function (buf) {
+    return this.__content;
+  }
+});
