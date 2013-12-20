@@ -1,5 +1,4 @@
-=> Meteor 0.7.0: use MongoDB's operations log to observe equality
-   queries instead of polling the database server on each update.
+=> Meteor 0.7.0.1: Fix failure to initialize local MongoDB server.
 
    This release is being downloaded in the background. Update your
-   project to Meteor 0.7.0 by running 'meteor update'.
+   project to Meteor 0.7.0.1 by running 'meteor update'.
