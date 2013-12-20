@@ -70,6 +70,11 @@ UI.With = Component.extend({
   },
   render: function (buf) {
     var self = this;
+
+    // e.g. `{{#with foo=bar}}`; don't do conditional logic
+    if (typeof self.condition === 'undefined')
+      return self.__content;
+
     return function () {
       var condition = getCondition(self);
       return condition ? self.__content : self.__elseContent;

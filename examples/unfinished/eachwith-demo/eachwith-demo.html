@@ -1,0 +1,23 @@
+<head>
+  <title>EachWith Demo</title>
+</head>
+
+<body>
+  <h3>This is the data:</h3>
+  <div>{{arrayToString}}</div>
+
+  <h3>These should only render once:</h3>
+  {{#each array as="item"}}
+    {{#with name=item._id}}
+      {{> dynamicTemplate name}}
+    {{/with}}
+  {{/each}}
+</body>
+
+<template name="foo">
+  <div>foo - {{.}}</div>
+</template>
+
+<template name="bar">
+  <div>bar - {{.}}</div>
+</template>

@@ -5,6 +5,23 @@ UI.Each = Component.extend({
     // component
     this.sequence = this.data;
     this.data = undefined;
+
+    var as;
+    if ('as' in this) {
+      as = this.as;
+      if (typeof as === 'function')
+        as = this.as = as();
+      if (! (as && typeof as === 'string'))
+        throw new Error('Expected a string for "as" in #each');
+    } else {
+      as = this.as = 'data';
+    }
+
+    this.extendWithDoc = function (component, doc) {
+      var kw = {};
+      kw[as] = doc;
+      return component.extend(kw);
+    };
   },
   render: function (modeHint) {
     var self = this;
@@ -29,9 +46,7 @@ UI.Each = Component.extend({
       var parts = _.map(
         ObserveSequence.fetch(self.get('sequence')),
         function (item) {
-          return content.withData(function () {
-            return item;
-          });
+          return self.extendWithDoc(content, item);
         });
 
       if (parts.length) {
@@ -98,7 +113,7 @@ UI.Each = Component.extend({
         if (beforeId)
           beforeId = LocalCollection._idStringify(beforeId);
 
-        var renderedItem = UI.render(content.withData(dataFunc), self);
+        var renderedItem = UI.render(self.extendWithDoc(content, dataFunc), self);
         range.add(id, renderedItem, beforeId);
       },
       removed: function (id, item) {
@@ -111,7 +126,7 @@ UI.Each = Component.extend({
           beforeId && LocalCollection._idStringify(beforeId));
       },
       changed: function (id, newItem) {
-        range.get(LocalCollection._idStringify(id)).data.$set(newItem);
+        range.get(LocalCollection._idStringify(id))[self.as].$set(newItem);
       }
     });
 
