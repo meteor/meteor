@@ -33,6 +33,7 @@ _.extend(Ctl, {
     var numServers = Ctl.getJobsByApp(
       Ctl.myAppName(), {program: program, done: false}).count();
     if (numServers === 0) {
+      console.log("starting", program, "because it wasn't present");
       return Ctl.startServerlikeProgram(program, tags, admin);
     } else {
       console.log(program, "already running.");
@@ -156,6 +157,7 @@ _.extend(Ctl, {
 
     var proxyTimeout = Meteor.setTimeout(function () {
       if (!proxyTagSwitchFuture.isResolved())
+        /// XXX THis is messy, and proxy isn't even necessarily a defined thing.
         proxyTagSwitchFuture['throw'](
           new Error("timed out looking for a proxy " +
                     "or trying to change tags on it " +
