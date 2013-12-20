@@ -150,9 +150,7 @@ var handler = function (compileStep, isLiterate) {
     sourcePath: compileStep.inputPath,
     data: sourceWithMap.source,
     sourceMap: sourceWithMap.sourceMap,
-    // XXX eventually get rid of backward-compatibility "raw" name
-    // XXX COMPAT WITH 0.6.4
-    bare: compileStep.fileOptions.bare || compileStep.fileOptions.raw
+    bare: compileStep.fileOptions.bare
   });
 };
 
