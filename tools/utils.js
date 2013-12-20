@@ -27,9 +27,7 @@ exports.readLine = function (options) {
     },
     end: function () {
     },
-    isTTY: function () {
-      return options.stream.isTTY();
-    },
+    isTTY: options.stream.isTTY,
     removeListener: function () {
     }
   };
@@ -37,7 +35,10 @@ exports.readLine = function (options) {
   // Read a line, throwing away the echoed characters into our dummy stream.
   var rl = readline.createInterface({
     input: process.stdin,
-    output: options.echo ? options.stream : silentStream
+    output: options.echo ? options.stream : silentStream,
+    // `terminal: options.stream.isTTY` is the default, but emacs shell users
+    // don't want fancy ANSI.
+    terminal: options.stream.isTTY && process.env.EMACS !== 't'
   });
 
   if (! options.echo) {
