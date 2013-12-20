@@ -1,4 +1,4 @@
-## v0.6.7
+## v0.7.0
 
 This version of Meteor contains a patch for a bug in Node 0.10 which
 most commonly affects websockets. The patch is against Node version
@@ -16,13 +16,14 @@ apply the patch and will instead disable websockets.
   with `meteor run`, and can be enabled in production with the
   `MONGO_OPLOG_URL` environment variable. Currently the only supported
   selectors are equality checks; `$`-operators, `limit` and `skip`
-  queries fall back to the original poll-and-diff algorithm. See <XXX
-  wiki page> for details.
+  queries fall back to the original poll-and-diff algorithm. See
+  https://github.com/meteor/meteor/wiki/Oplog-Observe-Driver
+  for details.
 
 * Add `Meteor.onConnection` and add `this.connection` to method
   invocations and publish functions. These can be used to store data
   associated with individual clients between subscriptions and method
-  calls. See http://docs.meteor.com/#meteor_onconnection for details.
+  calls. See http://docs.meteor.com/#meteor_onconnection for details. #1611
 
 * Bundler failures cause non-zero exit code in `meteor run`.  #1515
 
@@ -34,9 +35,7 @@ apply the patch and will instead disable websockets.
   client code changes; server-only code changes will not cause the page
   to reload.
 
-* New 'facts' package publishes internal statistics about Meteor. To
-  use, simply `meteor add facts` then add `{{> serverFacts}}` somewhere
-  in your interface.
+* New `facts` package publishes internal statistics about Meteor.
 
 * Add an explicit check that publish functions return a cursor, an array
   of cursors, or a falsey value. This is a safety check to to prevent
@@ -46,24 +45,27 @@ apply the patch and will instead disable websockets.
 * Implement `$each`, `$sort`, and `$slice` options for minimongo's `$push`
   modifier.  #1492
 
-* Introduce '--raw-logs' option to `meteor run` to disable log
+* Introduce `--raw-logs` option to `meteor run` to disable log
   coloring and timestamps.
 
 * Add `WebAppInternals.setBundledJsCssPrefix()` to control where the
   client loads bundled JavaScript and CSS files. This allows serving
   files from a CDN to decrease page load times and reduce server load.
 
-* Attempt to exit cleanly on 'SIGHUP'. Stop accepting incoming
+* Attempt to exit cleanly on `SIGHUP`. Stop accepting incoming
   connections, kill DDP connections, and finish all outstanding requests
   for static assets.
+
+* In the HTTP server, only keep sockets with no active HTTP requests alive for 5
+  seconds.
 
 * Fix handling of `fields` option in minimongo when only `_id` is present. #1651
 
 * Fix issue where setting `process.env.MAIL_URL` in app code would not
-  alter where mail was sent. This was a regression from 0.6.6. #1649
+  alter where mail was sent. This was a regression in 0.6.6 from 0.6.5. #1649
 
-* Prompt for passwords on stderr instead of stdout for easier automation
-  in shell scripts. #1600
+* Use stderr instead of stdout (for easier automation in shell scripts) when
+  prompting for passwords and when downloading the dev bundle. #1600
 
 * Ensure more downtime during file watching.  #1506
 
@@ -100,9 +102,10 @@ apply the patch and will instead disable websockets.
   * MongoDB from 2.4.6 to 2.4.8
   * clean-css from 1.1.2 to 2.0.2
   * uglify-js from a fork of 2.4.0 to 2.4.7
+  * handlebars npm module no longer available outside of handlebars package
 
-Patches contributed by GitHub users AlexeyMK, awwx, dandv,
-DenisGorbachev, FooBarWidget, mitar, mcbain, rzymek, and sdarnell.
+Patches contributed by GitHub users AlexeyMK, awwx, dandv, DenisGorbachev,
+emgee3, FooBarWidget, mitar, mcbain, rzymek, and sdarnell.
 
 
 ## v0.6.6.3

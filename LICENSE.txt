@@ -217,6 +217,7 @@ Copyright (c) 2011 Esa-Matti Suuronen esa-matti@suuronen.org
 ----------
 node-gyp: https://github.com/TooTallNate/node-gyp
 keypress: https://github.com/TooTallNate/keypress
+bindings: https://github.com/TooTallNate/node-bindings
 ----------
 
 Copyright (c) 2012 Nathan Rajlich <nathan@tootallnate.net>
@@ -542,6 +543,14 @@ geojson-utils: https://github.com/maxogden/geojson-js-utils
 
 Copyright (c) 2010 Max Ogden
 
+
+----------
+bcrypt: https://github.com/ncb000gt/node.bcrypt.js
+----------
+
+Copyright (c) 2010 Nicholas Campbell
+
+
 ==============
 Apache License
 ==============
@@ -641,11 +650,10 @@ BSD Licenses
 ============
 
 ----------
-uglify-js: https://github.com/mishoo/UglifyJS
+uglify-js: https://github.com/mishoo/UglifyJS2
 ----------
 
-Copyright 2010 (c) Mihai Bazon <mihai.bazon@gmail.com>
-Based on parse-js (http://marijn.haverbeke.nl/parse-js/).
+Copyright 2012-2013 (c) Mihai Bazon <mihai.bazon@gmail.com>
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
@@ -1263,6 +1271,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ----------
 npm-user-validate: https://github.com/robertkowalski/npm-user-validate
+github-url-from-username-repo: https://github.com/robertkowalski/github-url-from-username-repo
 ----------
 
 Copyright (c) Robert Kowalski
@@ -1738,7 +1747,9 @@ The externally maintained libraries used by libuv are:
 
 ----------
 nodejs: http://nodejs.org/
-readable-stream: https://github.com/isaacs/readable-stream/
+readable-stream: https://github.com/isaacs/readable-stream
+npm: https://github.com/isaacs/npm
+init-package-json: https://github.com/isaacs/init-package-json
 ----------
 
 

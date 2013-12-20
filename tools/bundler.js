@@ -1675,6 +1675,16 @@ exports.bundle = function (appDir, outputPath, options) {
         // Recover by ignoring this program
         return;
       }
+      // Programs must (for now) contain a `package.js` file. If not, then
+      // perhaps the directory we are seeing is left over from another git
+      // branch or something and we should ignore it.  We don't actually parse
+      // the package.js file here, though (but we do restart if it is later
+      // added or changed).
+      if (watch.readAndWatchFile(
+        watchSet, path.join(programsDir, item, 'package.js')) === null) {
+        return;
+      }
+
       targets[item] = true;  // will be overwritten with actual target later
 
       // Read attributes.json, if it exists

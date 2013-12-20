@@ -20,6 +20,8 @@ Tinytest.add("email - dev mode smoke test", function (test) {
     // XXX brittle if mailcomposer changes header order, etc
     test.equal(stream.getContentsAsString("utf8"),
                "====== BEGIN MAIL #0 ======\n" +
+               "(Mail not sent; to enable sending, set the MAIL_URL " +
+                 "environment variable.)\n" +
                "MIME-Version: 1.0\r\n" +
                "X-Meteor-Test: a custom header\r\n" +
                "From: foo@example.com\r\n" +
