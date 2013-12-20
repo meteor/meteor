@@ -1,3 +1,13 @@
+## v0.7.0.1
+
+* Two fixes to `meteor run` Mongo startup bugs that could lead to hangs with the
+  message "Initializing mongo database... this may take a moment.".
+
+* Apply the Node patch to 0.10.24 as well (see the 0.7.0 section for details).
+
+* Fix gratuitous IE7 incompatibility.
+
+
 ## v0.7.0
 
 This version of Meteor contains a patch for a bug in Node 0.10 which
