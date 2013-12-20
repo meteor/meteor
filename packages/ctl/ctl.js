@@ -139,6 +139,15 @@ Ctl.Commands.push({
     };
     var oldServers = jobs.find(oldJobSelector).fetch();
     // Start a new job for each of them.
+    var newServersAlreadyPresent = jobs.find({
+      app: Ctl.myAppName(),
+      star: thisJob.star,
+      program: "server",
+      done: false
+    }).count();
+    // discount any new servers we've already started.
+    oldServers.splice(0, newServersAlreadyPresent);
+    console.log("starting " + oldServers.length + " new servers to match old");
     _.each(oldServers, function (oldServer) {
       Ctl.startServerlikeProgram("server",
                                  oldServer.tags,
