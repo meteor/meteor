@@ -1,11 +1,11 @@
 ## v0.7.0.1
 
 * Two fixes to `meteor run` Mongo startup bugs that could lead to hangs with the
-  message "Initializing mongo database... this may take a moment.".
+  message "Initializing mongo database... this may take a moment.".  #1696
 
 * Apply the Node patch to 0.10.24 as well (see the 0.7.0 section for details).
 
-* Fix gratuitous IE7 incompatibility.
+* Fix gratuitous IE7 incompatibility.  #1690
 
 
 ## v0.7.0
