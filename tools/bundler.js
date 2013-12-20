@@ -1338,6 +1338,7 @@ _.extend(ServerTarget.prototype, {
     script = script.replace(/##BUNDLE_VERSION##/g, devBundleVersion);
     script = script.replace(/##IMAGE##/g, imageControlFile);
     script = script.replace(/##RUN_FILE##/g, 'boot.js');
+    script = script.replace(/##NODE_OPTIONS##/g, process.env.NODE_OPTIONS || "");
     builder.write(scriptName, { data: new Buffer(script, 'utf8'),
                                 executable: true });
 
