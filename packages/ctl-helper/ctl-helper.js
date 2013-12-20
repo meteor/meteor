@@ -157,9 +157,10 @@ _.extend(Ctl, {
     var proxyTimeout = Meteor.setTimeout(function () {
       if (!proxyTagSwitchFuture.isResolved())
         proxyTagSwitchFuture['throw'](
-          new Error("timed out looking for a proxy " +
-                    "or trying to change tags on it " +
-                    proxy.status().status));
+          new Error("Timed out looking for a proxy " +
+                    "or trying to change tags on it. Status: " +
+                    (proxy ? proxy.status().status : "no connection"))
+        );
     }, 10*1000);
     proxyTagSwitchFuture.wait();
     Meteor.clearTimeout(proxyTimeout);
