@@ -22,20 +22,43 @@ var _debugFunc = function () {
            function () {}));
 };
 
+var _throwOrLog = function (from, e) {
+  if (throwErrors) {
+    reset();
+    throw e;
+  } else {
+    _debugFunc()("Exception from Deps " + from + " function:",
+                 e.stack || e.message);
+  }
+};
+
 var nextId = 1;
+
 // computations whose callbacks we should call at flush time
-var pendingComputations = [];
+var pendingComputations;
 // `true` if a Deps.flush is scheduled, or if we are in Deps.flush now
-var willFlush = false;
+var willFlush;
 // `true` if we are in Deps.flush now
-var inFlush = false;
+var inFlush;
+// `true` if the `_throwErrors` option was passed in to the call to Deps.flush
+// that we are in. When set, always throw errors instead of logging them.
+var throwErrors;
 // `true` if we are computing a computation now, either first time
 // or recompute.  This matches Deps.active unless we are inside
 // Deps.nonreactive, which nullfies currentComputation even though
 // an enclosing computation may still be running.
-var inCompute = false;
+var inCompute;
+var afterFlushCallbacks;
 
-var afterFlushCallbacks = [];
+var reset = function () {
+  pendingComputations = [];
+  willFlush = false;
+  inFlush = false;
+  throwErrors = undefined;
+  inCompute = false;
+  afterFlushCallbacks = [];
+};
+reset();
 
 var requireFlush = function () {
   if (! willFlush) {
@@ -161,7 +184,7 @@ _.extend(Deps.Computation.prototype, {
       try {
         self._compute();
       } catch (e) {
-        _debugFunc()("Exception from Deps recompute:", e.stack || e.message);
+        _throwOrLog("recompute", e);
       }
       // If _compute() invalidated us, we run again immediately.
       // A computation that invalidates itself indefinitely is an
@@ -225,7 +248,7 @@ _.extend(Deps.Dependency.prototype, {
 
 _.extend(Deps, {
   // http://docs.meteor.com/#deps_flush
-  flush: function () {
+  flush: function (opts) {
     // Nested flush could plausibly happen if, say, a flush causes
     // DOM mutation, which causes a "blur" event, which runs an
     // app event handler that calls Deps.flush.  At the moment
@@ -242,6 +265,7 @@ _.extend(Deps, {
 
     inFlush = true;
     willFlush = true;
+    throwErrors = !! (opts && opts._throwErrors);
 
     while (pendingComputations.length ||
            afterFlushCallbacks.length) {
@@ -260,14 +284,14 @@ _.extend(Deps, {
         try {
           func();
         } catch (e) {
-          _debugFunc()("Exception from Deps afterFlush function:",
-                       e.stack || e.message);
+          _throwOrLog("afterFlush function", e);
         }
       }
     }
 
     inFlush = false;
     willFlush = false;
+    throwErrors = undefined;
   },
 
   // http://docs.meteor.com/#deps_autorun
