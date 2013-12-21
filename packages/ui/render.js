@@ -224,7 +224,7 @@ var updateAttributes = function(elem, newAttrs, handlers) {
       handler = handlers[k];
       oldValue = handler.value;
     }
-    if (handler) {
+    if (handler && oldValue !== value) {
       handler.value = value;
       handler.update(elem, oldValue, value);
       if (value === null)

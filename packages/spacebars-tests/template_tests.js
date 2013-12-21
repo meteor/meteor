@@ -1182,12 +1182,38 @@ Tinytest.add('spacebars - templates - attribute helpers are isolated', function 
   var div = renderToDiv(tmpl);
   var pElement = div.querySelector('p');
 
+  test.equal(pElement.getAttribute('attr'), 'foo');
+
   // set the attribute to something else, afterwards check that it
   // hasn't been updated back to the correct value.
   pElement.setAttribute('attr', 'not-foo');
   dep.changed();
   Deps.flush();
   test.equal(pElement.getAttribute('attr'), 'not-foo');
+});
+
+// A helper can return an object with a set of element attributes via
+// `<p {{attrs}}>`. When it re-runs due to a dependency changing the
+// value for a given attribute might stay the same. Test that the
+// attribute is not set on the DOM element.
+Tinytest.add('spacebars - templates - attribute object helpers are isolated', function (test) {
+  var tmpl = Template.spacebars_template_test_attr_object_helpers_are_isolated;
+  var dep = new Deps.Dependency;
+  tmpl.attrs = function () {
+    dep.depend();
+    return {foo: "bar"};
+  };
+  var div = renderToDiv(tmpl);
+  var pElement = div.querySelector('p');
+
+  test.equal(pElement.getAttribute('foo'), 'bar');
+
+  // set the attribute to something else, afterwards check that it
+  // hasn't been updated back to the correct value.
+  pElement.setAttribute('foo', 'not-bar');
+  dep.changed();
+  Deps.flush();
+  test.equal(pElement.getAttribute('foo'), 'not-bar');
 });
 
 // Test that when a helper in an inclusion directive (`{{> foo }}`)
