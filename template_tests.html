@@ -405,3 +405,18 @@ Hi there!
 <template name="spacebars_template_test_just_content">
   {{> content}}
 </template>
+
+<template name="spacebars_template_test_simple_helpers_are_isolated">
+  {{foo}}
+</template>
+
+<template name="spacebars_template_test_attr_helpers_are_isolated">
+  <p attr={{foo}}></p>
+</template>
+
+<template name="spacebars_template_test_inclusion_helpers_are_isolated">
+  {{> foo}}
+</template>
+
+<template name="spacebars_template_test_inclusion_helpers_are_isolated_subtemplate">
+</template>

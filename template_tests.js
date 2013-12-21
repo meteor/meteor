@@ -1133,3 +1133,83 @@ Tinytest.add('spacebars - templates - #markdown - block helpers', function (test
   test.equal(divContentForMarkdown(div), "<p>Hi there!</p>");
 });
 
+// Test that when a simple helper re-runs due to a dependency changing
+// but the return value is the same, the DOM text node is not
+// re-rendered.
+Tinytest.add('spacebars - templates - simple helpers are isolated', function (test) {
+  var tmpl = Template.spacebars_template_test_simple_helpers_are_isolated;
+  var dep = new Deps.Dependency;
+  tmpl.foo = function () {
+    dep.depend();
+    return "foo";
+  };
+  var div = renderToDiv(tmpl);
+  var fooTextNode = _.find(div.childNodes, function (node) {
+    return node.nodeValue === "foo";
+  });
+
+  dep.changed();
+  Deps.flush();
+  var newFooTextNode = _.find(div.childNodes, function (node) {
+    return node.nodeValue === "foo";
+  });
+
+  test.equal(fooTextNode, newFooTextNode);
+});
+
+// Test that when a helper in an element attribute re-runs due to a
+// dependency changing but the return value is the same, the attribute
+// value is not set.
+Tinytest.add('spacebars - templates - attribute helpers are isolated', function (test) {
+  var tmpl = Template.spacebars_template_test_attr_helpers_are_isolated;
+  var dep = new Deps.Dependency;
+  tmpl.foo = function () {
+    dep.depend();
+    return "foo";
+  };
+  var div = renderToDiv(tmpl);
+  var pElement = div.querySelector('p');
+
+  // set the attribute to something else, afterwards check that it
+  // hasn't been updated back to the correct value.
+  pElement.setAttribute('attr', 'not-foo');
+  dep.changed();
+  Deps.flush();
+  test.equal(pElement.getAttribute('attr'), 'not-foo');
+});
+
+// Test that when a helper in an inclusion directive (`{{> foo }}`)
+// re-runs due to a dependency changing but the return value is the
+// same, the template is not re-rendered.
+//
+// Also, verify that an error is thrown if the return value from such
+// a helper is not a component.
+Tinytest.add('spacebars - templates - inclusion helpers are isolated', function (test) {
+  var tmpl = Template.spacebars_template_test_inclusion_helpers_are_isolated;
+  var dep = new Deps.Dependency;
+  var subtmpl = Template.
+        spacebars_template_test_inclusion_helpers_are_isolated_subtemplate
+        .extend({}); // fresh instance
+  var R = new ReactiveVar(subtmpl);
+  tmpl.foo = function () {
+    dep.depend();
+    return R.get();
+  };
+
+  var div = renderToDiv(tmpl);
+  subtmpl.rendered = function () {
+    test.fail("shouldn't re-render when same value returned from helper");
+  };
+
+  dep.changed();
+  Deps.flush({_throwErrors: true}); // `subtmpl.rendered` not called
+
+  R.set(null);
+  Deps.flush({_throwErrors: true}); // no error thrown
+
+  R.set("neither a component nor null");
+
+  test.throws(function () {
+    Deps.flush({_throwErrors: true});
+  }, /Expected null or template/);
+});
