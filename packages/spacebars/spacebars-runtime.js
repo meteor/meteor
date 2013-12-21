@@ -28,14 +28,19 @@ Spacebars.include = function (kindOrFunc, args) {
       }
     }
 
-    var result;
-    if ('data' in args) {
-      var data = args.data;
-      data = (typeof data === 'function' ? data() : data);
-      result = func(data, { hash: hash });
-    } else {
-      result = func({ hash: hash });
-    }
+    var result = Deps.isolateValue(function () {
+      if ('data' in args) {
+        var data = args.data;
+        data = (typeof data === 'function' ? data() : data);
+        return func(data, { hash: hash });
+      } else {
+        return func({ hash: hash });
+      }
+    });
+
+    if (result !== null && !UI.isComponent(result))
+      throw new Error("Expected null or template in return value from helper, found: " + result);
+
     // In `{{#foo}}...{{/foo}}`, if `foo` is a function that
     // returns a component, attach __content and __elseContent
     // to it.
@@ -103,7 +108,9 @@ Spacebars.mustacheImpl = function (value/*, args*/) {
     }
   }
 
-  return Spacebars.call.apply(null, args);
+  return Deps.isolateValue(function () {
+    return Spacebars.call.apply(null, args);
+  });
 };
 
 Spacebars.mustache = function (value/*, args*/) {
