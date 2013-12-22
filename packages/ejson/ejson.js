@@ -8,7 +8,7 @@ var customTypes = {};
 // The type you add must have:
 // - A clone() method, so that Meteor can deep-copy it when necessary.
 // - A equals() method, so that Meteor can compare it
-// - A toJSONValue() method, so that Meteor can serialize it
+// - A toJSONValue() or toEJSONValue() method, so that Meteor can serialize it
 // - a typeName() method, to show how to look it up in our type table.
 // It is okay if these methods are monkey-patched on.
 //
@@ -107,19 +107,37 @@ var builtinConverters = [
       return EJSON._isCustomType(obj);
     },
     toJSONValue: function (obj) {
-      return {$type: obj.typeName(), $value: obj.toJSONValue()};
+      var type = obj.typeName();
+      if (obj.toEJSONValue) {
+        return {$type: type, $value: EJSON.toJSONValue(obj.toEJSONValue())};
+      }
+      return {$type: type, $value: obj.toJSONValue()};
     },
-    fromJSONValue: function (obj) {
+    fromJSONValue: function(obj) {
       var typeName = obj.$type;
       var converter = customTypes[typeName];
-      return converter(obj.$value);
+      var values = obj.$value;
+      if (converter.fromEJSONValue) {
+        for (var key in values) {
+          var value = values[key];
+          if (typeof value === 'object') {
+            values[key] = EJSON.fromJSONValue(value);
+          }
+        }
+        return converter.fromEJSONValue(values);
+      }
+      if (converter.fromJSONValue) {
+        return converter.fromJSONValue(values);
+      }
+      return converter(values);
     }
   }
 ];
 
 EJSON._isCustomType = function (obj) {
   return obj &&
-    typeof obj.toJSONValue === 'function' &&
+    (typeof obj.toEJSONValue === 'function' ||
+     typeof obj.toJSONValue === 'function') &&
     typeof obj.typeName === 'function' &&
     _.has(customTypes, obj.typeName());
 };

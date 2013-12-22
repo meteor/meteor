@@ -206,4 +206,8 @@ Tinytest.add("ejson - custom types", function (test) {
 
   var a = new EJSONTest.Address('Montreal', 'Quebec');
   testRoundTrip( {address: a} );
+
+  var d = new Date;
+  var obj = new EJSONTest.Person("John Doe", d, a);
+  testRoundTrip( obj );
 });
