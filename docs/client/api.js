@@ -1713,8 +1713,7 @@ Template.api.httpcall = {
      descr: "Query string to go in the URL. Overwrites any query string in `url`."},
     {name: "params",
      type: "Object",
-     descr: "Dictionary of request parameters to be encoded and placed in the URL (for GETs) or request body (for POSTs).  If `content` or `data` is specified, `params` will always be placed in the URL."
-    },
+     descr: "Dictionary of request parameters to be encoded and placed in the URL (for GETs) or request body (for POSTs).  If `content` or `data` is specified, `params` will always be placed in the URL."},
     {name: "auth",
      type: "String",
      descr: 'HTTP basic authentication string of the form `"username:password"`'},
@@ -1726,7 +1725,10 @@ Template.api.httpcall = {
      descr: "Maximum time in milliseconds to wait for the request before failing.  There is no timeout by default."},
     {name: "followRedirects",
      type: "Boolean",
-     descr: "If true, transparently follow HTTP redirects.  Cannot be set to false on the client."}
+     descr: "If true, transparently follow HTTP redirects.  Cannot be set to false on the client."},
+    {name: "*",
+     type: "Any",
+     descr: "Any other options will be passed through to the [request](https://github.com/mikeal/request) module, which in turn may pass them on to Node's [http](http://nodejs.org/api/http.html) or [https](http://nodejs.org/api/https.html) modules."}
   ]
 };
 

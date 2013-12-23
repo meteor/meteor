@@ -72,16 +72,14 @@ var _call = function(method, url, options, callback) {
 
   ////////// Kickoff! //////////
 
-  var req_options = {
+  var req_options = _.extend(options, {
     url: new_url,
     method: method,
     encoding: "utf8",
     jar: false,
-    timeout: options.timeout,
     body: content,
-    followRedirect: options.followRedirects,
     headers: headers
-  };
+  });
 
   request(req_options, function(error, res, body) {
     var response = null;
