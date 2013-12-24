@@ -139,18 +139,20 @@ _.extend(Ctl, {
   updateProxyActiveTags: function (tags) {
     var proxy;
     var proxyTagSwitchFuture = new Future;
-    AppConfig.configureService('proxy', function (proxyService) {
-      try {
-        proxy = Follower.connect(proxyService.providers.proxy, {
-        group: "proxy"
-        });
-        proxy.call('updateTags', Ctl.myAppName(), tags);
-        proxy.disconnect();
-        if (!proxyTagSwitchFuture.isResolved())
-          proxyTagSwitchFuture['return']();
-      } catch (e) {
-        if (!proxyTagSwitchFuture.isResolved())
-          proxyTagSwitchFuture['throw'](e);
+    AppConfig.configureService('proxy', 'pre0', function (proxyService) {
+      if (proxyService && ! _.isEmpty(proxyService)) {
+        try {
+          proxy = Follower.connect(proxyService, {
+            group: "proxy"
+          });
+          proxy.call('updateTags', Ctl.myAppName(), tags);
+          proxy.disconnect();
+          if (!proxyTagSwitchFuture.isResolved())
+            proxyTagSwitchFuture['return']();
+        } catch (e) {
+          if (!proxyTagSwitchFuture.isResolved())
+            proxyTagSwitchFuture['throw'](e);
+        }
       }
     });
 

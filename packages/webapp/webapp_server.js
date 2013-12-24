@@ -580,8 +580,9 @@ var runWebAppServer = function () {
           // on a per-job basis.  Discuss w/ teammates.
           proxyBinding = AppConfig.configureService(
             "proxy",
+            "pre0",
             function (proxyService) {
-              if (proxyService.providers.proxy) {
+              if (proxyService && ! _.isEmpty(proxyService)) {
                 var proxyConf;
                 // XXX Figure out a per-job way to specify bind location
                 // (besides hardcoding the location for ADMIN_APP jobs).
@@ -602,9 +603,9 @@ var runWebAppServer = function () {
                   proxyConf = configuration.proxy;
                 }
                 Log("Attempting to bind to proxy at " +
-                    proxyService.providers.proxy);
+                    proxyService);
                 WebAppInternals.bindToProxy(_.extend({
-                  proxyEndpoint: proxyService.providers.proxy
+                  proxyEndpoint: proxyService
                 }, proxyConf));
               }
             }
