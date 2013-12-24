@@ -930,3 +930,55 @@ Tinytest.add('spacebars - templates - constant #each argument', function (test) 
   test.equal(trim(stripComments(div.innerHTML)).replace(/\s+/g, ' '),
              'foo bar 2');
 });
+
+// @returns {String} simplified html content
+var divContentForMarkdown = function (div) {
+  return trim(stripComments(div.innerHTML))
+        .replace(/\<br\>/g, '\n');
+};
+
+Tinytest.add('spacebars - templates - #markdown - basic', function (test) {
+  var tmpl = Template.spacebars_template_test_markdown_basic;
+  tmpl.hi = function () {
+    return "<i>hi</i>";
+  };
+  var div = renderToDiv(tmpl);
+  test.equal(divContentForMarkdown(div), "FIXME");
+});
+
+Tinytest.add('spacebars - templates - #markdown - if', function (test) {
+  var tmpl = Template.spacebars_template_test_markdown_if;
+  var R = new ReactiveVar(false);
+  tmpl.cond = function () { return R.get(); };
+
+  var div = renderToDiv(tmpl);
+  test.equal(divContentForMarkdown(div), "FIXME(false)");
+  R.set(true);
+  Deps.flush();
+  test.equal(divContentForMarkdown(div), "FIXME(true)");
+});
+
+Tinytest.add('spacebars - templates - #markdown - each', function (test) {
+  var tmpl = Template.spacebars_template_test_markdown_each;
+  var R = new ReactiveVar([]);
+  tmpl.seq = function () { return R.get(); };
+
+  var div = renderToDiv(tmpl);
+  test.equal(divContentForMarkdown(div), "FIXME([])");
+  R.set(["item"]);
+  Deps.flush();
+  test.equal(divContentForMarkdown(div), "FIXME([\"item\"])");
+});
+
+Tinytest.add('spacebars - templates - #markdown - inclusion', function (test) {
+  var tmpl = Template.spacebars_template_test_markdown_inclusion;
+  var div = renderToDiv(tmpl);
+  test.equal(divContentForMarkdown(div), "<p>Nothing in particular</p>");
+});
+
+Tinytest.add('spacebars - templates - #markdown - block helpers', function (test) {
+  var tmpl = Template.spacebars_template_test_markdown_block_helpers;
+  var div = renderToDiv(tmpl);
+  test.equal(divContentForMarkdown(div), "<p>Hi there!</p>");
+});
+
