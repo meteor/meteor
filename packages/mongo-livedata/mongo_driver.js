@@ -999,9 +999,8 @@ MongoConnection.prototype._observeChanges = function (
       _testOnlyPollCallback: callbacks._testOnlyPollCallback
     });
 
-    // This field is only set for the first ObserveHandle in an
-    // ObserveMultiplexer. It is only there for use tests.
-    observeHandle._observeDriver = observeDriver;
+    // This field is only set for use in tests.
+    multiplexer._observeDriver = observeDriver;
   }
 
   // Blocks until the initial adds have been sent.
