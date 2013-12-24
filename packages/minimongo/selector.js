@@ -425,6 +425,9 @@ LocalCollection._f = {
 
   // deep equality test: use for literal document and array matches
   _equal: function (a, b) {
+    if (typeof a.test === 'function') {
+      return a.test(b);
+    }
     return EJSON.equals(a, b, {keyOrderSensitive: true});
   },
 
