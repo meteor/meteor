@@ -109,3 +109,25 @@ Tinytest.addAsync("environment - bare bindEnvironment",
     setTimeout(f, 0);
   });
 });
+
+if (Meteor.isServer) {
+  var toNs = function (t) {
+    return t[0] * 1e9 + t[1];
+  };
+  Tinytest.add("profile - roughly the right ratio", function (test) {
+    Meteor._profile("profile test", function () {
+      for (var i = 0; i < 10; i++) {
+        Meteor._sleepForMs(200);
+        var start = process.hrtime();
+        while (true) {
+          var duration = process.hrtime(start);
+          if (duration[0] || duration[1]/1e6 > 10)
+            break;
+        }
+      }
+    });
+    var prof = Meteor._getProfile("profile test");
+    test.isTrue(Math.abs(toNs(prof.totalTime) / toNs(prof.inFiberTime) - 21) < 4);
+  });
+
+}

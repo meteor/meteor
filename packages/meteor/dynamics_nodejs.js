@@ -99,3 +99,119 @@ Meteor.bindEnvironment = function (func, onException, _this) {
     Fiber(runWithEnvironment).run();
   };
 };
+
+
+var profiles = {};
+
+
+
+
+
+var accumHrtime = function (accum, additional) {
+  accum[0] += additional[0];
+  accum[1] += additional[1];
+};
+
+Meteor._profiled = function (tag, f) {
+  return function () {
+    return Meteor._profile(tag, f);
+  };
+};
+
+Meteor._profile = function (tag, f) {
+  if (!Fiber.current._nonProfiledRun) {
+    Fiber.current._nonProfiledRun = Fiber.current.run;
+
+    Fiber.current.run = function (/*arguments*/) {
+      enterFiber(this);
+      return this._nonProfiledRun.apply(this, arguments);
+    };
+    Fiber.current._profileStack = [];
+  }
+  var savedYield = global.yield;
+  var enterFiber = function (fib) {
+    savedYield = global.yield;
+    fib._entered = process.hrtime();
+    Fiber.yield = global.yield = function(/* arguments */) {
+      exitFiber(Fiber.current, true);
+      return savedYield.apply(Fiber.current, arguments);
+    };
+  };
+  var exitFiber = function (fib, isYield) {
+    Fiber.yield = global.yield = savedYield;
+    if (!_.isEmpty(fib._profileStack)) {
+      if (!fib._entered) {
+        console.log("fiber run did not go through normal channels");
+        return null;
+      }
+      var elapsed = process.hrtime(fib._entered);
+      var profile = fib._profileStack[fib._profileStack.length - 1];
+      profile.inFiberTime[0] += elapsed[0];
+      profile.inFiberTime[1] += elapsed[1];
+      if (isYield)
+        profile.yields++;
+      return profile;
+    }
+    return null;
+  };
+  exitFiber(Fiber.current, false);
+  Fiber.current._profileStack.push({
+    tag: tag,
+    inFiberTime: [0, 0],
+    yields: 0
+  });
+  var start = process.hrtime();
+  enterFiber(Fiber.current);
+  try {
+    f();
+  } finally {
+    var profile = exitFiber(Fiber.current, false);
+  }
+  var total = process.hrtime(start);
+  // accumulate this profile in the profiles under its tag
+  if (!profiles[tag]) {
+    profiles[tag] = {
+      tag: tag,
+      inFiberTime: [0, 0],
+      totalTime: [0, 0],
+      runs: 0,
+      yields: 0
+    };
+  }
+  var accum = profiles[tag];
+  accumHrtime(accum.inFiberTime, profile.inFiberTime);
+  accumHrtime(accum.totalTime, total);
+  accum.yields += profile.yields;
+  accum.runs++;
+  Fiber.current._profileStack.pop();
+  // accumulate the inner time as part of the outer.
+  if (!_.isEmpty(Fiber.current._profileStack)) {
+    var upperProfile = Fiber.current._profileStack[Fiber.current._profileStack.length - 1];
+    accumHrtime(upperProfile.inFiberTime, profile.inFiberTime);
+    upperProfile.yields += profile.yields;
+  };
+};
+
+var pad = function (n, width) {
+  n = '' + n;
+  return n.length >= width ? n : new Array(width - n.length + 1).join('0') + n;
+};
+
+var printableTime = function (hrtime) {
+  var ns = hrtime[0]*1e9 + hrtime[1];
+  return "" + Math.floor(ns/1e9) + "." + pad(ns%1e9, 9);
+};
+
+Meteor._printProfile = function (tag) {
+  var prof = profiles[tag];
+  console.log("Profile for", tag);
+  console.log("in-fiber time:", printableTime(prof.inFiberTime));
+  console.log("total time:", printableTime(prof.totalTime));
+  console.log("runs:", prof.runs);
+  console.log("yields:", prof.yields);
+};
+
+
+Meteor._getProfile = function (tag) {
+  return profiles[tag];
+};
