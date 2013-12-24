@@ -286,3 +286,94 @@
     {{this}}
   {{/with}}
 </template>
+
+<template name="spacebars_template_test_markdown_basic">
+  {{#markdown}}
+{{hi}}
+/each}}
+
+<b>{{hi}}</b>
+<b>/each}}</b>
+
+* {{hi}}
+* /each}}</b>
+
+* <b>{{hi}}</b>
+* <b>/each}}</b>
+
+    {{hi}}
+    /each}}
+
+    <b>{{hi}}</b>
+    <b>/each</b>
+
+&gt
+* &gt
+`&gt`
+    &gt
+
+&gt;
+* &gt;
+`&gt;`
+    &gt;
+
+`{{hi}}`
+`/each}}`
+
+`<b>{{hi}}</b>`
+`<b>/each}}`
+
+  {{/markdown}}
+</template>
+
+<template name="spacebars_template_test_markdown_if">
+  {{#markdown}}
+
+{{#if cond}}true{{else}}false{{/if}}
+<b>{{#if cond}}true{{else}}false{{/if}}</b>
+* {{#if cond}}true{{else}}false{{/if}}
+* <b>{{#if cond}}true{{else}}false{{/if}}</b>
+    {{#if cond}}true{{else}}false{{/if}}
+    <b>{{#if cond}}true{{else}}false{{/if}}</b>
+`{{#if cond}}true{{else}}false{{/if}}`
+`<b>{{#if cond}}true{{else}}false{{/if}}</b>`
+
+  {{/markdown}}
+</template>
+
+<template name="spacebars_template_test_markdown_each">
+  {{#markdown}}
+
+{{#each seq}}{{.}}{{/each}}
+<b>{{#each seq}}{{.}}{{/each}}</b>
+* {{#each seq}}{{.}}{{/each}}
+* <b>{{#each seq}}{{.}}{{/each}}</b>
+    {{#each seq}}{{.}}{{/each}}
+    <b>{{#each seq}}{{.}}{{/each}}</b>
+`{{#each seq}}{{.}}{{/each}}`
+`<b>{{#each seq}}{{.}}{{/each}}</b>`
+
+  {{/markdown}}
+</template>
+
+<template name="spacebars_template_test_markdown_inclusion">
+  {{#markdown}}
+{{> spacebars_template_test_markdown_inclusion_subtmpl}}
+  {{/markdown}}
+</template>
+
+<template name="spacebars_template_test_markdown_inclusion_subtmpl">
+  Nothing in particular
+</template>
+
+<template name="spacebars_template_test_markdown_block_helpers">
+  {{#markdown}}
+    {{#spacebars_template_test_just_content}}
+Hi there!
+    {{/spacebars_template_test_just_content}}
+  {{/markdown}}
+</template>
+
+<template name="spacebars_template_test_just_content">
+  {{> content}}
+</template>
