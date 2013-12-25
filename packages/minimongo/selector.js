@@ -414,9 +414,9 @@ LocalCollection._f = {
     if (v === null)
       return 10;
     if (v instanceof RegExp)
+      // note that typeof(/x/) === "object"
       return 11;
     if (typeof v === "function")
-      // note that typeof(/x/) === "function"
       return 13;
     if (v instanceof Date)
       return 9;
