@@ -127,11 +127,7 @@ var LOGICAL_OPERATORS = {
     var subSelectorFunctions = _.map(subSelector, function (selector) {
       return compileDocumentSelector(selector, cursor);
     });
-    return function (doc, wholeDoc) {
-      return _.all(subSelectorFunctions, function (f) {
-        return f(doc, wholeDoc).result;
-      });
-    };
+    return andCompiledDocumentSelectors(subSelectorFunctions);
   },
 
   "$or": function(subSelector, operators, cursor) {
@@ -141,9 +137,11 @@ var LOGICAL_OPERATORS = {
       return compileDocumentSelector(selector, cursor);
     });
     return function (doc, wholeDoc) {
-      return _.any(subSelectorFunctions, function (f) {
+      var result = _.any(subSelectorFunctions, function (f) {
         return f(doc, wholeDoc).result;
       });
+      // XXX arrayIndex!
+      return {result: result};
     };
   },
 
@@ -154,9 +152,12 @@ var LOGICAL_OPERATORS = {
       return compileDocumentSelector(selector, cursor);
     });
     return function (doc, wholeDoc) {
-      return _.all(subSelectorFunctions, function (f) {
+      var result = _.all(subSelectorFunctions, function (f) {
         return !f(doc, wholeDoc).result;
       });
+      // Never set arrayIndex, because we only match if nothing in particular
+      // "matched".
+      return {result: result};
     };
   },
 
@@ -169,13 +170,15 @@ var LOGICAL_OPERATORS = {
     return function (doc) {
       // We make the document available as both `this` and `obj`.
       // XXX not sure what we should do if this throws
-      return selectorValue.call(doc, doc);
+      return {result: selectorValue.call(doc, doc)};
     };
   },
 
+  // This is just used as a comment in the query (in MongoDB, it also ends up in
+  // query logs); it has no effect on the actual selection.
   "$comment": function () {
     return function () {
-      return true;
+      return {result: true};
     };
   }
 };
@@ -722,6 +725,7 @@ var compileDocumentSelector = function (docSelector, cursor) {
       // this function), or $where.
       if (!_.has(LOGICAL_OPERATORS, key))
         throw new Error("Unrecognized logical operator: " + key);
+      // XXX rename perKeySelectors
       perKeySelectors.push(
         LOGICAL_OPERATORS[key](subSelector, docSelector, cursor));
     } else {
@@ -745,13 +749,16 @@ var compileDocumentSelector = function (docSelector, cursor) {
         // XXX this still isn't right.  consider {a: {$ne: 5, $gt: 6}}. the
         //     $ne needs to use the "all" logic and the $gt needs the "any"
         //     logic
+        // XXX add test for this brokenness
         var combiner = (subSelector &&
                         (subSelector.$not || subSelector.$ne ||
                          subSelector.$nin))
               ? _.all : _.any;
-        return combiner(branchValues, function (val) {
+        var result = combiner(branchValues, function (val) {
           return valueSelectorFunc(val, wholeDoc);
         });
+        // XXX rewrite value selectors to use structured return
+        return {result: result};
       });
     }
   });
@@ -803,10 +810,9 @@ var andCompiledDocumentSelectors = function (selectors) {
   // XXX simplify to not involve 'arguments' once _distance is refactored
   return function (/*doc, sometimes wholeDoc*/) {
     var args = _.toArray(arguments);
-    // XXX take arrayIndex, etc into account
+    // XXX arrayIndex!
     var result = _.all(selectors, function (f) {
-      // XXX once sub-selectors return structed thing, add '.result' here
-      return f.apply(null, args);
+      return f.apply(null, args).result;
     });
     return {result: result};
   };
