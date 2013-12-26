@@ -97,7 +97,7 @@ LocalCollection._canSelectorBecomeTrueByModifier = function (selector, modifier)
     throw e;
   }
 
-  return selectorFn(doc);
+  return selectorFn(doc).result;
 };
 
 // Returns a list of key paths the given selector is looking for

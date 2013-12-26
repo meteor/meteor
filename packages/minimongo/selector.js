@@ -125,10 +125,11 @@ var LOGICAL_OPERATORS = {
     if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
     var subSelectorFunctions = _.map(subSelector, function (selector) {
-      return compileDocumentSelector(selector, cursor); });
+      return compileDocumentSelector(selector, cursor);
+    });
     return function (doc, wholeDoc) {
       return _.all(subSelectorFunctions, function (f) {
-        return f(doc, wholeDoc);
+        return f(doc, wholeDoc).result;
       });
     };
   },
@@ -137,10 +138,11 @@ var LOGICAL_OPERATORS = {
     if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
     var subSelectorFunctions = _.map(subSelector, function (selector) {
-      return compileDocumentSelector(selector, cursor); });
+      return compileDocumentSelector(selector, cursor);
+    });
     return function (doc, wholeDoc) {
       return _.any(subSelectorFunctions, function (f) {
-        return f(doc, wholeDoc);
+        return f(doc, wholeDoc).result;
       });
     };
   },
@@ -149,10 +151,11 @@ var LOGICAL_OPERATORS = {
     if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
     var subSelectorFunctions = _.map(subSelector, function (selector) {
-      return compileDocumentSelector(selector, cursor); });
+      return compileDocumentSelector(selector, cursor);
+    });
     return function (doc, wholeDoc) {
       return _.all(subSelectorFunctions, function (f) {
-        return !f(doc, wholeDoc);
+        return !f(doc, wholeDoc).result;
       });
     };
   },
@@ -327,7 +330,7 @@ var VALUE_OPERATORS = {
       if (!isArray(value))
         return false;
       return _.any(value, function (x) {
-        return matcher(x, doc);
+        return matcher(x, doc).result;
       });
     };
   },
@@ -566,7 +569,7 @@ LocalCollection._f = {
 // For unit tests. True if the given document matches the given
 // selector.
 MinimongoTest.matches = function (selector, doc) {
-  return (LocalCollection._compileSelector(selector))(doc);
+  return (LocalCollection._compileSelector(selector))(doc).result;
 };
 
 
@@ -576,6 +579,8 @@ numericKey = function (s) {
 };
 
 // XXX redoc
+// XXX be aware that _compileSort currently assumes that lookup functions
+//     return non-empty arrays but that is no longer the case
 // _makeLookupFunction(key) returns a lookup function.
 //
 // A lookup function takes in a document and returns an array of matching
@@ -746,24 +751,27 @@ var compileDocumentSelector = function (docSelector, cursor) {
     // If called w/o wholeDoc, doc is considered the original by default
     if (wholeDoc === undefined)
       wholeDoc = doc;
-    return _.all(perKeySelectors, function (f) {
+    return {result: _.all(perKeySelectors, function (f) {
       return f(doc, wholeDoc);
-    });
+    })};
   };
 };
 
 // Given a selector, return a function that takes one argument, a
-// document, and returns true if the document matches the selector,
-// else false.
+// document. It returns an object with fields
+//    - result: bool, true if the document matches the selector
+// XXX add "arrayIndex" for use by update with '$'
 LocalCollection._compileSelector = function (selector, cursor) {
   // you can pass a literal function instead of a selector
   if (selector instanceof Function)
-    return function (doc) {return selector.call(doc);};
+    return function (doc) {
+      return {result: !!selector.call(doc)};
+    };
 
   // shorthand -- scalars match _id
   if (LocalCollection._selectorIsId(selector)) {
     return function (doc) {
-      return EJSON.equals(doc._id, selector);
+      return {result: EJSON.equals(doc._id, selector)};
     };
   }
 
@@ -771,7 +779,7 @@ LocalCollection._compileSelector = function (selector, cursor) {
   // likely programmer error, and not what you want, particularly for
   // destructive operations.
   if (!selector || (('_id' in selector) && !selector._id))
-    return function (doc) {return false;};
+    return matchesNothingSelector;
 
   // Top level can't be an array or true or binary.
   if (typeof(selector) === 'boolean' || isArray(selector) ||
@@ -779,4 +787,8 @@ LocalCollection._compileSelector = function (selector, cursor) {
     throw new Error("Invalid selector: " + selector);
 
   return compileDocumentSelector(selector, cursor);
+};
+
+var matchesNothingSelector = function (doc) {
+  return {result: false};
 };

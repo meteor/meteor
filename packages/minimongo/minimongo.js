@@ -403,7 +403,7 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
   // slow path for arbitrary selector, sort, skip, limit
   for (var id in self.collection.docs) {
     var doc = self.collection.docs[id];
-    if (self.selector_f(doc)) {
+    if (self.selector_f(doc).result) {
       if (ordered)
         results.push(doc);
       else
@@ -477,7 +477,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
   // trigger live queries that match
   for (var qid in self.queries) {
     var query = self.queries[qid];
-    if (query.selector_f(doc)) {
+    if (query.selector_f(doc).result) {
       if (query.cursor.skip || query.cursor.limit)
         queriesToRecompute.push(qid);
       else
@@ -514,13 +514,13 @@ LocalCollection.prototype.remove = function (selector, callback) {
       var strId = LocalCollection._idStringify(id);
       // We still have to run selector_f, in case it's something like
       //   {_id: "X", a: 42}
-      if (_.has(self.docs, strId) && selector_f(self.docs[strId]))
+      if (_.has(self.docs, strId) && selector_f(self.docs[strId]).result)
         remove.push(strId);
     });
   } else {
     for (var id in self.docs) {
       var doc = self.docs[id];
-      if (selector_f(doc)) {
+      if (selector_f(doc).result) {
         remove.push(id);
       }
     }
@@ -531,7 +531,7 @@ LocalCollection.prototype.remove = function (selector, callback) {
     var removeId = remove[i];
     var removeDoc = self.docs[removeId];
     _.each(self.queries, function (query, qid) {
-      if (query.selector_f(removeDoc)) {
+      if (query.selector_f(removeDoc).result) {
         if (query.cursor.skip || query.cursor.limit)
           queriesToRecompute.push(qid);
         else
@@ -590,8 +590,10 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
 
   for (var id in self.docs) {
     var doc = self.docs[id];
-    if (selector_f(doc)) {
+    var queryResult = selector_f(doc);
+    if (queryResult.result) {
       // XXX Should we save the original even if mod ends up being a no-op?
+      // XXX queryResult should have arrayIndex on it, useful for '$'
       self._saveOriginal(id, doc);
       self._modifyAndNotify(doc, mod, recomputeQids);
       ++updateCount;
@@ -665,7 +667,7 @@ LocalCollection.prototype._modifyAndNotify = function (
   for (var qid in self.queries) {
     var query = self.queries[qid];
     if (query.ordered) {
-      matched_before[qid] = query.selector_f(doc);
+      matched_before[qid] = query.selector_f(doc).result;
     } else {
       // Because we don't support skip or limit (yet) in unordered queries, we
       // can just do a direct lookup.
@@ -681,7 +683,7 @@ LocalCollection.prototype._modifyAndNotify = function (
   for (qid in self.queries) {
     query = self.queries[qid];
     var before = matched_before[qid];
-    var after = query.selector_f(doc);
+    var after = query.selector_f(doc).result;
 
     if (query.cursor.skip || query.cursor.limit) {
       // We need to recompute any query where the doc may have been in the

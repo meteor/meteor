@@ -131,7 +131,7 @@ _.extend(OplogObserveDriver.prototype, {
     var self = this;
     newDoc = _.clone(newDoc);
 
-    var matchesNow = newDoc && self._selectorFn(newDoc);
+    var matchesNow = newDoc && self._selectorFn(newDoc).result;
     if (mustMatchNow && !matchesNow) {
       throw Error("expected " + EJSON.stringify(newDoc) + " to match "
                   + EJSON.stringify(self._cursorDescription));
@@ -238,7 +238,7 @@ _.extend(OplogObserveDriver.prototype, {
 
       // XXX what if selector yields?  for now it can't but later it could have
       // $where
-      if (self._selectorFn(op.o))
+      if (self._selectorFn(op.o).result)
         self._add(op.o);
     } else if (op.op === 'u') {
       // Is this a modifier ($set/$unset, which may require us to poll the

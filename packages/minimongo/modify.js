@@ -317,8 +317,8 @@ LocalCollection._modifiers = {
         // same issue as $elemMatch possibly?
         var match = LocalCollection._compileSelector(arg);
         for (var i = 0; i < x.length; i++)
-          if (!match(x[i]))
-            out.push(x[i])
+          if (!match(x[i]).result)
+            out.push(x[i]);
       } else {
         for (var i = 0; i < x.length; i++)
           if (!LocalCollection._f._equal(x[i], arg))
