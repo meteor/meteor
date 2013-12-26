@@ -121,7 +121,7 @@ var compileValueSelector = function (valueSelector, selector, cursor) {
 
 // XXX can factor out common logic below
 var LOGICAL_OPERATORS = {
-  "$and": function(subSelector, operators, cursor) {
+  "$and": function(subSelector, cursor) {
     if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
     var subSelectorFunctions = _.map(subSelector, function (selector) {
@@ -130,7 +130,7 @@ var LOGICAL_OPERATORS = {
     return andCompiledDocumentSelectors(subSelectorFunctions);
   },
 
-  "$or": function(subSelector, operators, cursor) {
+  "$or": function(subSelector, cursor) {
     if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
     var subSelectorFunctions = _.map(subSelector, function (selector) {
@@ -145,7 +145,7 @@ var LOGICAL_OPERATORS = {
     };
   },
 
-  "$nor": function(subSelector, operators, cursor) {
+  "$nor": function(subSelector, cursor) {
     if (!isArray(subSelector) || _.isEmpty(subSelector))
       throw Error("$and/$or/$nor must be nonempty array");
     var subSelectorFunctions = _.map(subSelector, function (selector) {
@@ -727,7 +727,7 @@ var compileDocumentSelector = function (docSelector, cursor) {
         throw new Error("Unrecognized logical operator: " + key);
       // XXX rename perKeySelectors
       perKeySelectors.push(
-        LOGICAL_OPERATORS[key](subSelector, docSelector, cursor));
+        LOGICAL_OPERATORS[key](subSelector, cursor));
     } else {
       var lookUpByIndex = LocalCollection._makeLookupFunction(key);
       var valueSelectorFunc =
