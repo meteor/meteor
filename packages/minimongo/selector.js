@@ -119,25 +119,31 @@ var compileValueSelector = function (valueSelector, selector, cursor) {
   };
 };
 
+
+// XXX drop "cursor" when _distance is improved
+var compileArrayOfDocumentSelectors = function (selectors, cursor) {
+  if (!isArray(selectors) || _.isEmpty(selectors))
+    throw Error("$and/$or/$nor must be nonempty array");
+  return _.map(selectors, function (subSelector) {
+    if (!isPlainObject(subSelector))
+      throw Error("$or/$and/$nor entries need to be full objects");
+    return compileDocumentSelector(subSelector, cursor);
+  });
+};
+
+
 // XXX can factor out common logic below
 var LOGICAL_OPERATORS = {
   "$and": function(subSelector, cursor) {
-    if (!isArray(subSelector) || _.isEmpty(subSelector))
-      throw Error("$and/$or/$nor must be nonempty array");
-    var subSelectorFunctions = _.map(subSelector, function (selector) {
-      return compileDocumentSelector(selector, cursor);
-    });
-    return andCompiledDocumentSelectors(subSelectorFunctions);
+    var selectors = compileArrayOfDocumentSelectors(subSelector, cursor);
+    return andCompiledDocumentSelectors(selectors);
   },
 
   "$or": function(subSelector, cursor) {
-    if (!isArray(subSelector) || _.isEmpty(subSelector))
-      throw Error("$and/$or/$nor must be nonempty array");
-    var subSelectorFunctions = _.map(subSelector, function (selector) {
-      return compileDocumentSelector(selector, cursor);
-    });
+    var selectors = compileArrayOfDocumentSelectors(subSelector, cursor);
+    // XXX remove wholeDoc later
     return function (doc, wholeDoc) {
-      var result = _.any(subSelectorFunctions, function (f) {
+      var result = _.any(selectors, function (f) {
         return f(doc, wholeDoc).result;
       });
       // XXX arrayIndex!
@@ -146,13 +152,10 @@ var LOGICAL_OPERATORS = {
   },
 
   "$nor": function(subSelector, cursor) {
-    if (!isArray(subSelector) || _.isEmpty(subSelector))
-      throw Error("$and/$or/$nor must be nonempty array");
-    var subSelectorFunctions = _.map(subSelector, function (selector) {
-      return compileDocumentSelector(selector, cursor);
-    });
+    var selectors = compileArrayOfDocumentSelectors(subSelector, cursor);
+    // XXX remove wholeDoc later
     return function (doc, wholeDoc) {
-      var result = _.all(subSelectorFunctions, function (f) {
+      var result = _.all(selectors, function (f) {
         return !f(doc, wholeDoc).result;
       });
       // Never set arrayIndex, because we only match if nothing in particular

@@ -671,6 +671,9 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
     match({$or: []}, {});
   });
   test.throws(function () {
+    match({$or: [5]}, {});
+  });
+  test.throws(function () {
     match({$or: []}, {a: 1});
   });
   match({$or: [{a: 1}]}, {a: 1});
@@ -752,6 +755,9 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
     match({$nor: []}, {});
   });
   test.throws(function () {
+    match({$nor: [5]}, {});
+  });
+  test.throws(function () {
     match({$nor: []}, {a: 1});
   });
   nomatch({$nor: [{a: 1}]}, {a: 1});
@@ -828,6 +834,9 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
 
   test.throws(function () {
     match({$and: []}, {});
+  });
+  test.throws(function () {
+    match({$and: [5]}, {});
   });
   test.throws(function () {
     match({$and: []}, {a: 1});
