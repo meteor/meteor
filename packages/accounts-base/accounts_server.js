@@ -257,13 +257,19 @@ Accounts._setLoginToken = function (userId, connection, newToken) {
     // before our `findOne` call returns... and then that other fiber
     // would need for the connection to be in the map for it to close
     // the connection.
-    if (! Meteor.users.findOne({
-      _id: userId,
-      "services.resume.loginTokens.hashedToken": newToken
-    })) {
-      removeConnectionFromToken(newToken, connection.id);
-      connection.close();
-    }
+    //
+    // We defer this check because there's no need for it to be on the critical
+    // path for login; we just need to ensure that the connection will get
+    // closed at some point if the token has been deleted.
+    Meteor.defer(function () {
+      if (! Meteor.users.findOne({
+        _id: userId,
+        "services.resume.loginTokens.hashedToken": newToken
+      })) {
+        removeConnectionFromToken(newToken, connection.id);
+        connection.close();
+      }
+    });
   }
 };
 
