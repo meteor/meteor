@@ -746,15 +746,7 @@ var compileDocumentSelector = function (docSelector, cursor) {
     }
   });
 
-
-  return function (doc, wholeDoc) {
-    // If called w/o wholeDoc, doc is considered the original by default
-    if (wholeDoc === undefined)
-      wholeDoc = doc;
-    return {result: _.all(perKeySelectors, function (f) {
-      return f(doc, wholeDoc);
-    })};
-  };
+  return andCompiledDocumentSelectors(perKeySelectors);
 };
 
 // Given a selector, return a function that takes one argument, a
@@ -786,9 +778,26 @@ LocalCollection._compileSelector = function (selector, cursor) {
       EJSON.isBinary(selector))
     throw new Error("Invalid selector: " + selector);
 
-  return compileDocumentSelector(selector, cursor);
+  // XXX get rid of second argument once _distance refactored
+  var s = compileDocumentSelector(selector, cursor);
+  return function (doc) {
+    return s(doc, doc);
+  };
 };
 
 var matchesNothingSelector = function (doc) {
   return {result: false};
+};
+
+var andCompiledDocumentSelectors = function (selectors) {
+  // XXX simplify to not involve 'arguments' once _distance is refactored
+  return function (/*doc, sometimes wholeDoc*/) {
+    var args = _.toArray(arguments);
+    // XXX take arrayIndex, etc into account
+    var result = _.all(selectors, function (f) {
+      // XXX once sub-selectors return structed thing, add '.result' here
+      return f.apply(null, args);
+    });
+    return {result: result};
+  };
 };
