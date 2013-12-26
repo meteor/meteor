@@ -4,12 +4,25 @@ var isArray = function (x) {
   return _.isArray(x) && !EJSON.isBinary(x);
 };
 
+// If x is an array, true if f(e) is true for some e in x
+//    (but never try f(x) directly)
+// Otherwise, true if f(x) is true.
+//
+// Use this in cases where f(Array) should never be true...
+// for example, equality comparisons to non-arrays,
+// ordering comparisons (which should always be false if either side
+// is an array), regexps (need string), mod (needs number)...
+// XXX ensure comparisons are always false if LHS is an array
+// XXX ensure comparisons among different types are false
 var _anyIfArray = function (x, f) {
   if (isArray(x))
     return _.any(x, f);
   return f(x);
 };
 
+// True if f(x) is true, or x is an array and f(e) is true for some e in x.
+//
+// Use this for most operators where an array could satisfy the predicate.
 var _anyIfArrayPlus = function (x, f) {
   if (f(x))
     return true;

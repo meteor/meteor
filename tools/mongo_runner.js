@@ -25,7 +25,7 @@ var find_mongo_pids = function (app_dir, port, callback) {
 
         _.each(stdout.split('\n'), function (ps_line) {
           // matches mongos we start.
-          var m = ps_line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db --replSet /);
+          var m = ps_line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db(?: |$)/);
           if (m && m.length === 4) {
             var found_pid =  parseInt(m[1]);
             var found_port = parseInt(m[2]);
@@ -161,9 +161,11 @@ exports.launchMongo = function (options) {
       }
 
       var portFile = path.join(dbPath, 'METEOR-PORT');
+      var portFileExists = false;
       var createReplSet = true;
       try {
         createReplSet = +(fs.readFileSync(portFile)) !== options.port;
+        portFileExists = true;
       } catch (e) {
         if (!e || e.code !== 'ENOENT')
           throw e;
@@ -176,6 +178,11 @@ exports.launchMongo = function (options) {
       // replSet configuration. It's also a little slow to initiate a new replSet,
       // thus the attempt to not do it unless the port changes.)
       if (createReplSet) {
+        // Delete the port file, so we don't mistakenly believe that the DB is
+        // still configured.
+        if (portFileExists)
+          fs.unlinkSync(portFile);
+
         try {
           var dbFiles = fs.readdirSync(dbPath);
         } catch (e) {
@@ -199,13 +206,16 @@ exports.launchMongo = function (options) {
       var child_process = require('child_process');
       var replSetName = 'meteor';
       var proc = child_process.spawn(mongod_path, [
-        // nb: cli-test.sh and find_mongo_pids assume that the next four arguments
-        // exist in this order without anything in between
+        // nb: cli-test.sh and find_mongo_pids make strong assumptions about the
+        // order of the arguments! Check them before changing any arguments.
         '--bind_ip', '127.0.0.1',
         '--smallfiles',
         '--nohttpinterface',
         '--port', options.port,
         '--dbpath', dbPath,
+        // Use an 8MB oplog rather than 256MB. Uses less space on disk and
+        // initializes faster. (Not recommended for production!)
+        '--oplogSize', '8',
         '--replSet', replSetName
       ]);
 
@@ -231,36 +241,65 @@ exports.launchMongo = function (options) {
       proc.stdout.setEncoding('utf8');
       var listening = false;
       var replSetReady = false;
+      var replSetReadyToBeInitiated = false;
+      var alreadyInitiatedReplSet = false;
+      var alreadyCalledOnListen = false;
       var maybeCallOnListen = function () {
-        if (listening && replSetReady) {
+        if (listening && replSetReady && !alreadyCalledOnListen) {
           if (createReplSet)
             fs.writeFileSync(portFile, options.port);
+          alreadyCalledOnListen = true;
           onListen();
         }
       };
+
+      var maybeInitiateReplset = function () {
+        // We need to want to create a replset, be confident that the server is
+        // listening, be confident that the server's replset implementation is
+        // ready to be initiated, and have not already done it.
+        if (!(createReplSet && listening && replSetReadyToBeInitiated
+              && !alreadyInitiatedReplSet)) {
+          return;
+        }
+
+        alreadyInitiatedReplSet = true;
+
+        // Connect to it and start a replset.
+        var db = new mongoNpmModule.Db(
+          'meteor', new mongoNpmModule.Server('127.0.0.1', options.port),
+          {safe: true});
+        db.open(function(err, db) {
+          if (err)
+            throw err;
+          db.admin().command({
+            replSetInitiate: {
+              _id: replSetName,
+              members: [{_id : 0, host: '127.0.0.1:' + options.port}]
+            }
+          }, function (err, result) {
+            if (err)
+              throw err;
+            // why this isn't in the error is unclear.
+            if (result && result.documents && result.documents[0]
+                && result.documents[0].errmsg) {
+              throw result.document[0].errmsg;
+            }
+            db.close(true);
+          });
+        });
+      };
+
       proc.stdout.on('data', function (data) {
+        // note: don't use "else ifs" in this, because 'data' can have multiple
+        // lines
+        if (/config from self or any seed \(EMPTYCONFIG\)/.test(data)) {
+          replSetReadyToBeInitiated = true;
+          maybeInitiateReplset();
+        }
+
         if (/ \[initandlisten\] waiting for connections on port/.test(data)) {
-          if (createReplSet) {
-            // Connect to it and start a replset.
-            var db = new mongoNpmModule.Db(
-              'meteor', new mongoNpmModule.Server('127.0.0.1', options.port),
-              {safe: true});
-            db.open(function(err, db) {
-              if (err)
-                throw err;
-              db.admin().command({
-                replSetInitiate: {
-                  _id: replSetName,
-                  members: [{_id : 0, host: '127.0.0.1:' + options.port}]
-                }
-              }, function (err, result) {
-                if (err)
-                  throw err;
-                db.close(true);
-              });
-            });
-          }
           listening = true;
+          maybeInitiateReplset();
           maybeCallOnListen();
         }
 

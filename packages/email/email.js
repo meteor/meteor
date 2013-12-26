@@ -78,6 +78,8 @@ var devModeSend = function (mc) {
 
   // This approach does not prevent other writers to stdout from interleaving.
   stream.write("====== BEGIN MAIL #" + devmode_mail_id + " ======\n");
+  stream.write("(Mail not sent; to enable sending, set the MAIL_URL " +
+               "environment variable.)\n");
   mc.streamMessage();
   mc.pipe(stream, {end: false});
   var future = new Future;

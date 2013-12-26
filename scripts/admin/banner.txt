@@ -1,5 +1,4 @@
-=> Meteor 0.6.6.3: Fix CPU runaway while watching files in large
-   projects and occasional server crash on session disconnect.
+=> Meteor 0.7.0.1: Fix failure to initialize local MongoDB server.
 
    This release is being downloaded in the background. Update your
-   project to Meteor 0.6.6.3 by running 'meteor update'.
+   project to Meteor 0.7.0.1 by running 'meteor update'.

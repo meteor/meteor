@@ -149,7 +149,8 @@ var handler = function (compileStep, isLiterate) {
     path: outputFile,
     sourcePath: compileStep.inputPath,
     data: sourceWithMap.source,
-    sourceMap: sourceWithMap.sourceMap
+    sourceMap: sourceWithMap.sourceMap,
+    bare: compileStep.fileOptions.bare
   });
 };
 

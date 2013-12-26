@@ -1,15 +1,82 @@
-## vNEXT
+## v.NEXT
 
-* Rework hot code push. The new `autoupdate` package drives automatic
-  reloads on update using standard DDP messages instead of a hardcoded
-  message at DDP startup. Now the hot code push only triggers when
-  client code changes; server only code changes will not cause the page
-  to reload.
+* Hash login tokens before storing them in the database.
+
+
+## v0.7.0.1
+
+* Two fixes to `meteor run` Mongo startup bugs that could lead to hangs with the
+  message "Initializing mongo database... this may take a moment.".  #1696
+
+* Apply the Node patch to 0.10.24 as well (see the 0.7.0 section for details).
+
+* Fix gratuitous IE7 incompatibility.  #1690
+
+
+## v0.7.0
+
+This version of Meteor contains a patch for a bug in Node 0.10 which
+most commonly affects websockets. The patch is against Node version
+0.10.22 and 0.10.23. We strongly recommend using one of these precise
+versions of Node in production so that the patch will be applied. If you
+use a newer version of Node with this version of Meteor, Meteor will not
+apply the patch and will instead disable websockets.
+
+* Rework how Meteor gets realtime database updates from MongoDB. Meteor
+  now reads the MongoDB "oplog" -- a special collection that records all
+  the write operations as they are applied to your database. This means
+  changes to the database are instantly noticed and reflected in Meteor,
+  whether they originated from Meteor or from an external database
+  client. Oplog tailing is automatically enabled in development mode
+  with `meteor run`, and can be enabled in production with the
+  `MONGO_OPLOG_URL` environment variable. Currently the only supported
+  selectors are equality checks; `$`-operators, `limit` and `skip`
+  queries fall back to the original poll-and-diff algorithm. See
+  https://github.com/meteor/meteor/wiki/Oplog-Observe-Driver
+  for details.
 
 * Add `Meteor.onConnection` and add `this.connection` to method
   invocations and publish functions. These can be used to store data
   associated with individual clients between subscriptions and method
-  calls. See http://docs.meteor.com/#meteor_onconnection for details.
+  calls. See http://docs.meteor.com/#meteor_onconnection for details. #1611
+
+* Rework hot code push. The new `autoupdate` package drives automatic
+  reloads on update using standard DDP messages instead of a hardcoded
+  message at DDP startup. Now the hot code push only triggers when
+  client code changes; server-only code changes will not cause the page
+  to reload.
+
+* New `facts` package publishes internal statistics about Meteor.
+
+* Add an explicit check that publish functions return a cursor, an array
+  of cursors, or a falsey value. This is a safety check to to prevent
+  users from accidentally returning Collection.findOne() or some other
+  value and expecting it to be published.
+
+* Implement `$each`, `$sort`, and `$slice` options for minimongo's `$push`
+  modifier.  #1492
+
+* Introduce `--raw-logs` option to `meteor run` to disable log
+  coloring and timestamps.
+
+* Add `WebAppInternals.setBundledJsCssPrefix()` to control where the
+  client loads bundled JavaScript and CSS files. This allows serving
+  files from a CDN to decrease page load times and reduce server load.
+
+* Attempt to exit cleanly on `SIGHUP`. Stop accepting incoming
+  connections, kill DDP connections, and finish all outstanding requests
+  for static assets.
+
+* In the HTTP server, only keep sockets with no active HTTP requests alive for 5
+  seconds.
+
+* Fix handling of `fields` option in minimongo when only `_id` is present. #1651
+
+* Fix issue where setting `process.env.MAIL_URL` in app code would not
+  alter where mail was sent. This was a regression in 0.6.6 from 0.6.5. #1649
+
+* Use stderr instead of stdout (for easier automation in shell scripts) when
+  prompting for passwords and when downloading the dev bundle. #1600
 
 * Bundler failures cause non-zero exit code in `meteor run`.  #1515
 
@@ -18,22 +85,40 @@
 * Support `EJSON.clone` for `Meteor.Error`. As a result, they are properly
   stringified in DDP even if thrown through a `Future`.  #1482
 
-* Fail explicitly when publishing non-cursors.
+* Fix passing `transform: null` option to `collection.allow()` to disable
+  transformation in validators.  #1659
 
-* Implement `$each`, `$sort`, and `$slice` options for minimongo's `$push`
-  modifier.  #1492
+* Fix livedata error on `this.removed` during session shutdown. #1540 #1553
+
+* Fix incompatibility with Phusion Passenger by removing an unused line. #1613
+
+* Ensure install script creates /usr/local on machines where it does not
+  exist (eg. fresh install of OSX Mavericks).
+
+* Set x-forwarded-* headers in `meteor run`.
+
+* Clean up package dirs containing only ".build".
+
+* Check for matching hostname before doing end-of-oauth redirect.
+
+* Only count files that actually go in the cache towards the `appcache`
+  size check. #1653.
 
 * Increase the maximum size spiderable will return for a page from 200kB
   to 5MB.
 
 * New 'facts' package publishes internal statistics about Meteor.
 
-* Hash login tokens before storing them in the database.
-
 * Upgraded dependencies:
-  * SockJS server from 0.3.7 to 0.3.8
+  * SockJS server from 0.3.7 to 0.3.8, including new faye-websocket module.
+  * Node from 0.10.21 to 0.10.22
+  * MongoDB from 2.4.6 to 2.4.8
+  * clean-css from 1.1.2 to 2.0.2
+  * uglify-js from a fork of 2.4.0 to 2.4.7
+  * handlebars npm module no longer available outside of handlebars package
 
-Patches contributed by GitHub users awwx, mcbain, rzymek.
+Patches contributed by GitHub users AlexeyMK, awwx, dandv, DenisGorbachev,
+emgee3, FooBarWidget, mitar, mcbain, rzymek, and sdarnell.
 
 
 ## v0.6.6.3

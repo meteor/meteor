@@ -488,6 +488,12 @@ Meteor.Collection.prototype._dropIndex = function (index) {
     throw new Error("Can only call _dropIndex on server collections");
   self._collection._dropIndex(index);
 };
+Meteor.Collection.prototype._dropCollection = function () {
+  var self = this;
+  if (!self._collection.dropCollection)
+    throw new Error("Can only call _dropCollection on server collections");
+  self._collection.dropCollection();
+};
 Meteor.Collection.prototype._createCappedCollection = function (byteSize) {
   var self = this;
   if (!self._collection._createCappedCollection)

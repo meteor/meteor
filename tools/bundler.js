@@ -792,6 +792,7 @@ _.extend(ClientTarget.prototype, {
       html.push(_.escape(js.url));
       html.push('"></script>\n');
     });
+    html.push('\n\n##RELOAD_SAFETYBELT##');
     html.push('\n\n');
     html.push(self.head.join('\n'));  // unescaped!
     html.push('\n' +
@@ -1473,7 +1474,8 @@ var writeSiteArchive = function (targets, outputPath, options) {
       builder.write('README', { data: new Buffer(
 "This is a Meteor application bundle. It has only one dependency:\n" +
 "Node.js 0.10 (with the 'fibers' package). The current release of Meteor\n" +
-"has been tested with Node 0.10.21. To run the application:\n" +
+"has been tested with Node 0.10.22 and works best with 0.10.22 through\n" +
+"0.10.24. To run the application:\n" +
 "\n" +
 "  $ rm -r programs/server/node_modules/fibers\n" +
 "  $ npm install fibers@1.0.1\n" +
@@ -1674,6 +1676,16 @@ exports.bundle = function (appDir, outputPath, options) {
         // Recover by ignoring this program
         return;
       }
+      // Programs must (for now) contain a `package.js` file. If not, then
+      // perhaps the directory we are seeing is left over from another git
+      // branch or something and we should ignore it.  We don't actually parse
+      // the package.js file here, though (but we do restart if it is later
+      // added or changed).
+      if (watch.readAndWatchFile(
+        watchSet, path.join(programsDir, item, 'package.js')) === null) {
+        return;
+      }
+
       targets[item] = true;  // will be overwritten with actual target later
 
       // Read attributes.json, if it exists

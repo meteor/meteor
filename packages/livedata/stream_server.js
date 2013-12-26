@@ -74,7 +74,7 @@ StreamServer = function () {
 
     // XXX COMPAT WITH 0.6.6. Send the old style welcome message, which
     // will force old clients to reload. Remove this once we're not
-    // concerned about people upgrading from a pre-0.6.7 release. Also,
+    // concerned about people upgrading from a pre-0.7.0 release. Also,
     // remove the clause in the client that ignores the welcome message
     // (livedata_connection.js)
     socket.send(JSON.stringify({server_id: "0"}));
