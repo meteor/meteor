@@ -952,6 +952,10 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({dogs: {$elemMatch: {name: /e/, age: 5}}},
           {dogs: [{name: "Fido", age: 5}, {name: "Rex", age: 3}]});
 
+  // $comment
+  match({a: 5, $comment: "asdf"}, {a: 5});
+  nomatch({a: 6, $comment: "asdf"}, {a: 5});
+
   // XXX still needs tests:
   // - non-scalar arguments to $gt, $lt, etc
 });

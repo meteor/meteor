@@ -167,6 +167,12 @@ var LOGICAL_OPERATORS = {
     return function (doc) {
       return selectorValue.call(doc);
     };
+  },
+
+  "$comment": function () {
+    return function () {
+      return true;
+    };
   }
 };
 
