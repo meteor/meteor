@@ -908,7 +908,9 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
 
   // $where
   match({$where: "this.a === 1"}, {a: 1});
+  match({$where: "obj.a === 1"}, {a: 1});
   nomatch({$where: "this.a !== 1"}, {a: 1});
+  nomatch({$where: "obj.a !== 1"}, {a: 1});
   nomatch({$where: "this.a === 1", a: 2}, {a: 1});
   match({$where: "this.a === 1", b: 2}, {a: 1, b: 2});
   match({$where: "this.a === 1 && this.b === 2"}, {a: 1, b: 2});

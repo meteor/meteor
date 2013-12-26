@@ -162,10 +162,14 @@ var LOGICAL_OPERATORS = {
 
   "$where": function(selectorValue) {
     if (!(selectorValue instanceof Function)) {
-      selectorValue = Function("return " + selectorValue);
+      // XXX MongoDB seems to have more complex logic to decide where or or not
+      // to add "return"; not sure exactly what it is.
+      selectorValue = Function("obj", "return " + selectorValue);
     }
     return function (doc) {
-      return selectorValue.call(doc);
+      // We make the document available as both `this` and `obj`.
+      // XXX not sure what we should do if this throws
+      return selectorValue.call(doc, doc);
     };
   },
 
