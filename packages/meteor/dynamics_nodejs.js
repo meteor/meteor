@@ -198,7 +198,7 @@ var pad = function (n, width) {
 };
 
 var printableTime = function (hrtime) {
-  var ns = hrtime[0]*1e9 + hrtime[1];
+  var ns = Math.floor(hrtime[0]*1e9 + hrtime[1]);
   return "" + Math.floor(ns/1e9) + "." + pad(ns%1e9, 9);
 };
 
@@ -208,7 +208,13 @@ Meteor._printProfile = function (tag) {
   console.log("in-fiber time:", printableTime(prof.inFiberTime));
   console.log("total time:", printableTime(prof.totalTime));
   console.log("runs:", prof.runs);
-  console.log("yields:", prof.yields);
+  console.log("");
+  if (prof.runs > 0) {
+    console.log("yields:", prof.yields);
+    console.log("in-fiber time per run:", printableTime(_.map(prof.inFiberTime, function (x) { return x / prof.runs;})));
+    console.log("total time per run:", printableTime(_.map(prof.totalTime, function (x) { return x / prof.runs;})));
+    console.log("yields per run:", prof.yields/prof.runs);
+  }
 };
 
 
