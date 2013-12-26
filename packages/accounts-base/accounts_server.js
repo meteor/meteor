@@ -174,10 +174,7 @@ Accounts._setAccountData = function (connectionId, field, value) {
 Meteor.server.onConnection(function (connection) {
   accountData[connection.id] = {connection: connection};
   connection.onClose(function () {
-    removeConnectionFromToken(
-      Accounts._getLoginToken(connection.id),
-      connection.id
-    );
+    removeConnectionFromToken(connection.id);
     delete accountData[connection.id];
   });
 });
@@ -212,8 +209,9 @@ Accounts._getTokenConnections = function (token) {
   return connectionsByLoginToken[token];
 };
 
-// Remove the connection from the list of open connections for the token.
-var removeConnectionFromToken = function (token, connectionId) {
+// Remove the connection from the list of open connections for the connection's
+// token.
+var removeConnectionFromToken = function (connectionId) {
   var token = Accounts._getLoginToken(connectionId);
   if (token) {
     connectionsByLoginToken[token] = _.without(
@@ -231,11 +229,7 @@ Accounts._getLoginToken = function (connectionId) {
 
 // newToken is a hashed token.
 Accounts._setLoginToken = function (userId, connection, newToken) {
-  removeConnectionFromToken(
-    Accounts._getLoginToken(connection.id),
-    connection.id
-  );
-
+  removeConnectionFromToken(connection.id);
   Accounts._setAccountData(connection.id, 'loginToken', newToken);
 
   if (newToken) {
@@ -266,7 +260,7 @@ Accounts._setLoginToken = function (userId, connection, newToken) {
         _id: userId,
         "services.resume.loginTokens.hashedToken": newToken
       })) {
-        removeConnectionFromToken(newToken, connection.id);
+        removeConnectionFromToken(connection.id);
         connection.close();
       }
     });
