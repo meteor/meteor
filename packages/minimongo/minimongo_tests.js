@@ -318,6 +318,13 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({a: 12, b: 13}, {a: [11, 12, 13], b: [13, 14, 15]});
   nomatch({a: 12, b: 13}, {a: [11, 12, 13], b: [14, 15]});
 
+  // dates
+  var date1 = new Date;
+  var date2 = new Date(date1.getTime() + 1000);
+  match({a: date1}, {a: date1});
+  nomatch({a: date1}, {a: date2});
+
+
   // arrays
   match({a: [1,2]}, {a: [1, 2]});
   match({a: [1,2]}, {a: [[1, 2]]});

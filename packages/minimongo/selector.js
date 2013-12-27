@@ -41,20 +41,44 @@ var _anyIfArrayPlus = function (x, f) {
   return isArray(x) && _.any(x, f);
 };
 
-var hasOperators = function(valueSelector) {
+var isOperatorObject = function (valueSelector) {
+  if (!isPlainObject(valueSelector))
+    return false;
+
   var theseAreOperators = undefined;
-  for (var selKey in valueSelector) {
+  _.each(valueSelector, function (value, selKey) {
     var thisIsOperator = selKey.substr(0, 1) === '$';
     if (theseAreOperators === undefined) {
       theseAreOperators = thisIsOperator;
     } else if (theseAreOperators !== thisIsOperator) {
       throw new Error("Inconsistent selector: " + valueSelector);
     }
-  }
+  });
   return !!theseAreOperators;  // {} has no operators
 };
 
+
 var compileValueSelector = function (valueSelector, cursor) {
+  if (valueSelector instanceof RegExp)
+    return regexpValueSelector(valueSelector);
+  else if (isOperatorObject(valueSelector))
+    return operatorValueSelector(valueSelector, cursor);
+  else
+    return equalityValueSelector(valueSelector);
+};
+
+var regexpValueSelector = function (regexp) {
+  return function (value) {
+    if (value === undefined)
+      return false;
+    return _anyIfArray(value, function (x) {
+      return regexp.test(x);
+    });
+  };
+};
+
+// XXX should be able to replace most of this with EJSON.equals
+var equalityValueSelector = function (valueSelector) {
   if (valueSelector == null) {  // undefined or null
     return function (value) {
       return _anyIfArray(value, function (x) {
@@ -72,15 +96,7 @@ var compileValueSelector = function (valueSelector, cursor) {
     };
   }
 
-  if (valueSelector instanceof RegExp) {
-    return function (value) {
-      if (value === undefined)
-        return false;
-      return _anyIfArray(value, function (x) {
-        return valueSelector.test(x);
-      });
-    };
-  }
+  // XXX what about dates?
 
   // Arrays match either identical arrays or arrays that contain it as a value.
   if (isArray(valueSelector)) {
@@ -93,22 +109,8 @@ var compileValueSelector = function (valueSelector, cursor) {
     };
   }
 
-  // It's an object, but not an array or regexp.
-  if (hasOperators(valueSelector)) {
-    var operatorFunctions = [];
-    _.each(valueSelector, function (operand, operator) {
-      if (!_.has(VALUE_OPERATORS, operator))
-        throw new Error("Unrecognized operator: " + operator);
-      // Special case for location operators
-      operatorFunctions.push(VALUE_OPERATORS[operator](
-        operand, valueSelector, cursor));
-    });
-    return function (value, doc) {
-      return _.all(operatorFunctions, function (f) {
-        return f(value, doc);
-      });
-    };
-  }
+  if (isOperatorObject(valueSelector))
+    throw Error("Can't create equalityValueSelector for operator object");
 
   // It's a literal; compare value (or element of value array) directly to the
   // selector.
@@ -119,6 +121,22 @@ var compileValueSelector = function (valueSelector, cursor) {
   };
 };
 
+// XXX get rid of cursor when possible
+var operatorValueSelector = function (valueSelector, cursor) {
+  var operatorFunctions = [];
+  _.each(valueSelector, function (operand, operator) {
+    if (!_.has(VALUE_OPERATORS, operator))
+      throw new Error("Unrecognized operator: " + operator);
+    // Special case for location operators
+    operatorFunctions.push(VALUE_OPERATORS[operator](
+      operand, valueSelector, cursor));
+  });
+  return function (value, doc) {
+    return _.all(operatorFunctions, function (f) {
+      return f(value, doc);
+    });
+  };
+};
 
 // XXX drop "cursor" when _distance is improved
 var compileArrayOfDocumentSelectors = function (selectors, cursor) {
