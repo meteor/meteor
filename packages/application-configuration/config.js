@@ -149,15 +149,50 @@ AppConfig.configurePackage = function (packageName, configure) {
   };
 };
 
-AppConfig.configureService = function (serviceName, configure) {
+AppConfig.configureService = function (serviceName, version, configure) {
+
+  // Collect all the endpoints for this service, from both old- and new-format
+  // documents, and call the `configure` callback with all the service endpoints
+  // that we know about.
+  var callConfigure = function (doc) {
+    var serviceDocs = Services.find({
+      name: serviceName,
+      version: version
+    });
+    var endpoints = [];
+    serviceDocs.forEach(function (serviceDoc) {
+      if (serviceDoc.providers) {
+        _.each(serviceDoc.providers, function (endpoint, app) {
+          endpoints.push(endpoint);
+        });
+      } else {
+        endpoints.push(serviceDoc.endpoint);
+      }
+    });
+    configure(endpoints);
+  };
+
   if (ultra) {
     // there's a Meteor.startup() that produces the various collections, make
     // sure it runs first before we continue.
     collectionFuture.wait();
-    ultra.subscribe('servicesByName', serviceName);
-    return Services.find({name: serviceName}).observe({
-      added: configure,
-      changed: configure
+    // First try to subscribe to the new format service registrations; if that
+    // sub doesn't exist, then ultraworld hasn't updated to the new format yet,
+    // so try the old format `servicesByName` sub instead.
+    ultra.subscribe('services', serviceName, version, {
+      onError: function (err) {
+        if (err.error === 404) {
+          ultra.subscribe('servicesByName', serviceName);
+        }
+      }
+    });
+    return Services.find({
+      name: serviceName,
+      version: version
+    }).observe({
+      added: callConfigure,
+      changed: callConfigure,
+      removed: callConfigure
     });
   }
 
