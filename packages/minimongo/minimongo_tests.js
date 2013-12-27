@@ -449,6 +449,20 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({a: {$ne: {x: 1}}}, {a: {x: 2}});
   match({a: {$ne: {x: 1}}}, {a: {x: 1, y: 2}});
 
+  // This query means: All 'a.b' must be non-5, and some 'a.b' must be >6.
+  // Current bad code parses this as "All 'a.b' must be both non-5 and >6", so
+  // it doesn't allow for some 'a.b' to be <5.
+  test.expect_fail();
+  match({'a.b': {$ne: 5, $gt: 6}}, {a: [{b: 2}, {b: 10}]});
+  nomatch({'a.b': {$ne: 5, $gt: 6}}, {a: [{b: 2}, {b: 4}]});
+  nomatch({'a.b': {$ne: 5, $gt: 6}}, {a: [{b: 2}, {b: 5}]});
+  nomatch({'a.b': {$ne: 5, $gt: 6}}, {a: [{b: 10}, {b: 5}]});
+  // Should work the same if the branch is at the bottom.
+  match({a: {$ne: 5, $gt: 6}}, {a: [2, 10]});
+  nomatch({a: {$ne: 5, $gt: 6}}, {a: [2, 4]});
+  nomatch({a: {$ne: 5, $gt: 6}}, {a: [2, 5]});
+  nomatch({a: {$ne: 5, $gt: 6}}, {a: [10, 5]});
+
   // $in
   match({a: {$in: [1, 2, 3]}}, {a: 2});
   nomatch({a: {$in: [1, 2, 3]}}, {a: 4});

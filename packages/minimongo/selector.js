@@ -751,7 +751,7 @@ var compileDocumentSelector = function (docSelector, cursor) {
         //     https://jira.mongodb.org/browse/SERVER-8585
         // XXX this still isn't right.  consider {a: {$ne: 5, $gt: 6}}. the
         //     $ne needs to use the "all" logic and the $gt needs the "any"
-        //     logic
+        //     logic.  (There is an expect_fail test for this now.)
         // XXX add test for this brokenness
         var combiner = (subSelector &&
                         (subSelector.$not || subSelector.$ne ||
