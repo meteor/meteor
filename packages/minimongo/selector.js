@@ -54,7 +54,7 @@ var hasOperators = function(valueSelector) {
   return !!theseAreOperators;  // {} has no operators
 };
 
-var compileValueSelector = function (valueSelector, selector, cursor) {
+var compileValueSelector = function (valueSelector, cursor) {
   if (valueSelector == null) {  // undefined or null
     return function (value) {
       return _anyIfArray(value, function (x) {
@@ -352,7 +352,7 @@ var VALUE_OPERATORS = {
   },
 
   "$not": function (operand, operators, cursor) {
-    var matcher = compileValueSelector(operand, operators, cursor);
+    var matcher = compileValueSelector(operand, cursor);
     return function (value, doc) {
       return !matcher(value, doc);
     };
@@ -734,7 +734,7 @@ var compileDocumentSelector = function (docSelector, cursor) {
     } else {
       var lookUpByIndex = LocalCollection._makeLookupFunction(key);
       var valueSelectorFunc =
-        compileValueSelector(subSelector, docSelector, cursor);
+        compileValueSelector(subSelector, cursor);
       perKeySelectors.push(function (doc, wholeDoc) {
         var branchValues = lookUpByIndex(doc);
         // We apply the selector to each "branched" value and return true if any
