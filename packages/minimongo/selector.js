@@ -60,7 +60,8 @@ var isOperatorObject = function (valueSelector) {
 
 var compileValueSelector = function (valueSelector, cursor) {
   if (valueSelector instanceof RegExp)
-    return regexpValueSelector(valueSelector);
+    return convertElementSelectorToBranchedSelector(
+      regexpElementSelector(valueSelector));
   else if (isOperatorObject(valueSelector))
     return operatorValueSelector(valueSelector, cursor);
   else {
@@ -69,13 +70,17 @@ var compileValueSelector = function (valueSelector, cursor) {
   }
 };
 
-var regexpValueSelector = function (regexp) {
+var regexpElementSelector = function (regexp) {
   return function (value) {
-    if (value === undefined)
+    if (value instanceof RegExp) {
+      // Comparing two regexps means seeing if the regexps are identical
+      // (really!). Underscore knows how.
+      return _.isEqual(value, regexp);
+    }
+    // Regexps only work against strings.
+    if (typeof value !== 'string')
       return false;
-    return _anyIfArray(value, function (x) {
-      return regexp.test(x);
-    });
+    return regexp.test(value);
   };
 };
 
