@@ -270,7 +270,20 @@ var ELEMENT_OPERATORS = {
   }),
   $gte: makeInequality(function (cmpValue) {
     return cmpValue >= 0;
-  })
+  }),
+  $mod: function (operand) {
+    if (!(isArray(operand) && operand.length === 2
+          && typeof(operand[0]) === 'number'
+          && typeof(operand[1]) === 'number')) {
+      throw Error("argument to $mod must be an array of two numbers");
+    }
+    // XXX could require to be ints or round or something
+    var divisor = operand[0];
+    var remainder = operand[1];
+    return function (value) {
+      return typeof value === 'number' && value % divisor === remainder;
+    };
+  }
 };
 
 var LEGACY_VALUE_OPERATORS = {
