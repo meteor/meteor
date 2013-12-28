@@ -642,9 +642,7 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({'a.1': [8, 9]}, {a: [7, [8, 9]]});
   nomatch({'a.1': 6}, {a: [[6, 7], [8, 9]]});
   nomatch({'a.1': 7}, {a: [[6, 7], [8, 9]]});
-  test.expect_fail();  // XXX fix by observing dontIterate
   nomatch({'a.1': 8}, {a: [[6, 7], [8, 9]]});
-  test.expect_fail();  // XXX fix by observing dontIterate
   nomatch({'a.1': 9}, {a: [[6, 7], [8, 9]]});
   match({"a.1": 2}, {a: [0, {1: 2}, 3]});
   match({"a.1": {1: 2}}, {a: [0, {1: 2}, 3]});
