@@ -95,36 +95,19 @@ var convertElementSelectorToBranchedSelector = function (elementSelector) {
   return f;
 };
 
-// XXX should be able to replace most of this with EJSON.equals
 var equalityElementSelector = function (elementSelector) {
+  if (isOperatorObject(elementSelector))
+    throw Error("Can't create equalityValueSelector for operator object");
+
+  // Special-case: null and undefined are equal (if you got undefined in there
+  // somewhere, or if you got it due to some branch being non-existent in the
+  // weird special case), even though they aren't with EJSON.equals.
   if (elementSelector == null) {  // undefined or null
     return function (value) {
       return value == null;  // undefined or null
     };
   }
 
-  // Selector is a non-null primitive (and not an array or RegExp either).
-  if (!_.isObject(elementSelector)) {
-    return function (value) {
-      return value === elementSelector;
-    };
-  }
-
-  // XXX what about dates?
-  // XXX technically should allow equality between dates and timestamps
-
-  // Arrays match either identical arrays or arrays that contain it as a value.
-  if (isArray(elementSelector)) {
-    return function (value) {
-      return LocalCollection._f._equal(elementSelector, value);
-    };
-  }
-
-  if (isOperatorObject(elementSelector))
-    throw Error("Can't create equalityValueSelector for operator object");
-
-  // It's a literal; compare value (or element of value array) directly to the
-  // selector.
   return function (value) {
     return LocalCollection._f._equal(elementSelector, value);
   };
