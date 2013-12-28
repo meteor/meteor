@@ -222,24 +222,20 @@ var LOGICAL_OPERATORS = {
   }
 };
 
-// XXX redoc
-// Each value operator is a function with args:
-//  - operand - Anything
-//  - operators - Object - operators on the same level (neighbours)
-//  - cursor - Object - original cursor
-// returns a function with args:
-//  - value - a value the operator is tested against
-//  - doc - the whole document tested in this query
-var ELEMENT_OPERATORS = {
-  $lt: function (operand) {
-    // Arrays never compare with non-arrays (except for equality checks).
+var makeInequality = function (cmpValueComparator) {
+  return function (operand) {
+    // Arrays never compare false with non-arrays for any inequality.
     if (isArray(operand)) {
       return function () {
         return false;
       };
     }
+
+    // Special case: consider undefined and null the same (so true with
+    // $gte/$lte).
     if (operand === undefined)
       operand = null;
+
     var operandType = LocalCollection._f._type(operand);
 
     return function (value) {
@@ -249,9 +245,32 @@ var ELEMENT_OPERATORS = {
       // vs undefined).
       if (LocalCollection._f._type(value) !== operandType)
         return false;
-      return LocalCollection._f._cmp(value, operand) < 0;
+      return cmpValueComparator(LocalCollection._f._cmp(value, operand))
     };
-  }
+  };
+};
+
+// XXX redoc
+// Each value operator is a function with args:
+//  - operand - Anything
+//  - operators - Object - operators on the same level (neighbours)
+//  - cursor - Object - original cursor
+// returns a function with args:
+//  - value - a value the operator is tested against
+//  - doc - the whole document tested in this query
+var ELEMENT_OPERATORS = {
+  $lt: makeInequality(function (cmpValue) {
+    return cmpValue < 0;
+  }),
+  $gt: makeInequality(function (cmpValue) {
+    return cmpValue > 0;
+  }),
+  $lte: makeInequality(function (cmpValue) {
+    return cmpValue <= 0;
+  }),
+  $gte: makeInequality(function (cmpValue) {
+    return cmpValue >= 0;
+  })
 };
 
 var LEGACY_VALUE_OPERATORS = {
