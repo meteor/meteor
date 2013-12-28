@@ -631,10 +631,8 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   var big = {a: [{b: 1}, 2, {}, {b: [3, 4]}]};
   match({"a.b": 1}, big);
   match({"a.b": [3, 4]}, big);
-  test.expect_fail();  // XXX fix by observing dontIterate
-  nomatch({"a.b": 3}, big);
-  test.expect_fail();  // XXX fix by observing dontIterate
-  nomatch({"a.b": 4}, big);
+  match({"a.b": 3}, big);
+  match({"a.b": 4}, big);
   match({"a.b": null}, big);  // matches on slot 2
   match({'a.1': 8}, {a: [7, 8, 9]});
   nomatch({'a.1': 7}, {a: [7, 8, 9]});
