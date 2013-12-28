@@ -228,19 +228,26 @@ var LOGICAL_OPERATORS = {
   }
 };
 
+var invertBranchedSelector = function (branchedSelector) {
+  // Note that this implicitly "deMorganizes" the wrapped function.  ie, it
+  // means that ALL branch values need to fail to match innerBranchedSelector.
+  return function (branchValues, doc) {
+    var invertMe = branchedSelector(branchValues, doc);
+    // We explicitly choose to strip arrayIndex here: it doesn't make sense to
+    // say "update the array element that does not match something", at least
+    // in mongo-land.
+    return {result: !invertMe.result};
+  };
+};
+
 // XXX doc
 var VALUE_OPERATORS = {
   $not: function (operand, operator, cursor) {
-    var innerBranchedSelector = compileValueSelector(operand, cursor);
-    // Note that this implicitly "deMorganizes" the wrapped function.  ie, it
-    // means that ALL branch values need to fail to match innerBranchedSelector.
-    return function (branchValues, doc) {
-      var invertMe = innerBranchedSelector(branchValues, doc);
-      // We explicitly choose to strip arrayIndex here: it doesn't make sense to
-      // say "update the array element that does not match something", at least
-      // in mongo-land.
-      return {result: !invertMe.result};
-    };
+    return invertBranchedSelector(compileValueSelector(operand, cursor));
+  },
+  $ne: function (operand) {
+    return invertBranchedSelector(convertElementSelectorToBranchedSelector(
+      equalityElementSelector(operand)));
   }
 };
 
