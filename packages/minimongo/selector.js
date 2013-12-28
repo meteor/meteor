@@ -125,7 +125,8 @@ var GROK = function (f) {
 var operatorValueSelector = function (valueSelector, cursor) {
   // XXX kill this soon
   if (!_.all(valueSelector, function (operand, operator) {
-    return _.has(ELEMENT_OPERATORS, operator);
+    return _.has(ELEMENT_OPERATORS, operator) ||
+      _.has(VALUE_OPERATORS, operator);
   })) {
     return operatorValueSelectorLegacy(valueSelector, cursor);
   }
@@ -136,13 +137,18 @@ var operatorValueSelector = function (valueSelector, cursor) {
 
   var operatorFunctions = [];
   _.each(valueSelector, function (operand, operator) {
-    if (!_.has(ELEMENT_OPERATORS, operator))
+    if (_.has(VALUE_OPERATORS, operator)) {
+      operatorFunctions.push(
+        VALUE_OPERATORS[operator](operand, valueSelector, cursor));
+    } else if (_.has(ELEMENT_OPERATORS, operator)) {
+      // XXX justify three arguments
+      operatorFunctions.push(
+        convertElementSelectorToBranchedSelector(
+          ELEMENT_OPERATORS[operator](
+            operand, valueSelector, cursor)));
+    } else {
       throw new Error("Unrecognized operator: " + operator);
-    // XXX justify three arguments
-    operatorFunctions.push(
-      convertElementSelectorToBranchedSelector(
-        ELEMENT_OPERATORS[operator](
-          operand, valueSelector, cursor)));
+    }
   });
   // NB: this is very similar to andCompiledDocumentSelectors but that one
   // "assumes" the first arg is a doc and here it "assumes" it's a branched
@@ -218,6 +224,22 @@ var LOGICAL_OPERATORS = {
   $comment: function () {
     return function () {
       return {result: true};
+    };
+  }
+};
+
+// XXX doc
+var VALUE_OPERATORS = {
+  $not: function (operand, operator, cursor) {
+    var innerBranchedSelector = compileValueSelector(operand, cursor);
+    // Note that this implicitly "deMorganizes" the wrapped function.  ie, it
+    // means that ALL branch values need to fail to match innerBranchedSelector.
+    return function (branchValues, doc) {
+      var invertMe = innerBranchedSelector(branchValues, doc);
+      // We explicitly choose to strip arrayIndex here: it doesn't make sense to
+      // say "update the array element that does not match something", at least
+      // in mongo-land.
+      return {result: !invertMe.result};
     };
   }
 };

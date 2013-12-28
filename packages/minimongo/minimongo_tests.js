@@ -284,9 +284,6 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   // XXX blog post about what I learned while writing these tests (weird
   // mongo edge cases)
 
-  // XXX fix soon
-  var NOT_WORKS_WELL = false;
-
   // empty selectors
   match({}, {});
   match({}, {a: 12});
@@ -623,23 +620,21 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   });
 
   // $not
-  if (NOT_WORKS_WELL) {
-    match({x: {$not: {$gt: 7}}}, {x: 6});
-    nomatch({x: {$not: {$gt: 7}}}, {x: 8});
-    match({x: {$not: {$lt: 10, $gt: 7}}}, {x: 11});
-    nomatch({x: {$not: {$lt: 10, $gt: 7}}}, {x: 9});
-    match({x: {$not: {$lt: 10, $gt: 7}}}, {x: 6});
+  match({x: {$not: {$gt: 7}}}, {x: 6});
+  nomatch({x: {$not: {$gt: 7}}}, {x: 8});
+  match({x: {$not: {$lt: 10, $gt: 7}}}, {x: 11});
+  nomatch({x: {$not: {$lt: 10, $gt: 7}}}, {x: 9});
+  match({x: {$not: {$lt: 10, $gt: 7}}}, {x: 6});
 
-    match({x: {$not: {$gt: 7}}}, {x: [2, 3, 4]});
-    match({'x.y': {$not: {$gt: 7}}}, {x: [{y:2}, {y:3}, {y:4}]});
-    nomatch({x: {$not: {$gt: 7}}}, {x: [2, 3, 4, 10]});
-    nomatch({'x.y': {$not: {$gt: 7}}}, {x: [{y:2}, {y:3}, {y:4}, {y:10}]});
+  match({x: {$not: {$gt: 7}}}, {x: [2, 3, 4]});
+  match({'x.y': {$not: {$gt: 7}}}, {x: [{y:2}, {y:3}, {y:4}]});
+  nomatch({x: {$not: {$gt: 7}}}, {x: [2, 3, 4, 10]});
+  nomatch({'x.y': {$not: {$gt: 7}}}, {x: [{y:2}, {y:3}, {y:4}, {y:10}]});
 
-    match({x: {$not: /a/}}, {x: "dog"});
-    nomatch({x: {$not: /a/}}, {x: "cat"});
-    match({x: {$not: /a/}}, {x: ["dog", "puppy"]});
-    nomatch({x: {$not: /a/}}, {x: ["kitten", "cat"]});
-  }
+  match({x: {$not: /a/}}, {x: "dog"});
+  nomatch({x: {$not: /a/}}, {x: "cat"});
+  match({x: {$not: /a/}}, {x: ["dog", "puppy"]});
+  nomatch({x: {$not: /a/}}, {x: ["kitten", "cat"]});
 
   // dotted keypaths: bare values
   match({"a.b": 1}, {a: {b: 1}});
@@ -786,16 +781,14 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({$or: [{a: {$ne: 1}}, {b: {$ne: 2}}]}, {a: 1, b: 2});
 
   // $or and $not
-  if (NOT_WORKS_WELL) {
-    match({$or: [{a: {$not: {$mod: [10, 1]}}}]}, {});
-    nomatch({$or: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 1});
-    match({$or: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 2});
-    match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$not: {$mod: [10, 2]}}}]}, {a: 1});
-    nomatch({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 1});
-    match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 2});
-    match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 3});
-    // this is possibly an open-ended task, so we stop here ...
-  }
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}]}, {});
+  nomatch({$or: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 1});
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 2});
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$not: {$mod: [10, 2]}}}]}, {a: 1});
+  nomatch({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 1});
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 2});
+  match({$or: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 3});
+  // this is possibly an open-ended task, so we stop here ...
 
   // $nor
   test.throws(function () {
@@ -869,15 +862,13 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({$nor: [{a: {$ne: 1}}, {b: {$ne: 2}}]}, {a: 1, b: 2});
 
   // $nor and $not
-  if (NOT_WORKS_WELL) {
-    nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}]}, {});
-    match({$nor: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 1});
-    nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 2});
-    nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$not: {$mod: [10, 2]}}}]}, {a: 1});
-    match({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 1});
-    nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 2});
-    nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 3});
-  }
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}]}, {});
+  match({$nor: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 1});
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}]}, {a: 2});
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$not: {$mod: [10, 2]}}}]}, {a: 1});
+  match({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 1});
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 2});
+  nomatch({$nor: [{a: {$not: {$mod: [10, 1]}}}, {a: {$mod: [10, 2]}}]}, {a: 3});
 
   // $and
 
@@ -959,13 +950,10 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({$and: [{a: {$ne: 1}}, {a: {$ne: 3}}]}, {a: 2});
 
   // $and and $not
-  // XXX fix immediately
-  if (NOT_WORKS_WELL) {
-    match({$and: [{a: {$not: {$gt: 2}}}]}, {a: 1});
-    nomatch({$and: [{a: {$not: {$lt: 2}}}]}, {a: 1});
-    match({$and: [{a: {$not: {$lt: 0}}}, {a: {$not: {$gt: 2}}}]}, {a: 1});
-    nomatch({$and: [{a: {$not: {$lt: 2}}}, {a: {$not: {$gt: 0}}}]}, {a: 1});
-  }
+  match({$and: [{a: {$not: {$gt: 2}}}]}, {a: 1});
+  nomatch({$and: [{a: {$not: {$lt: 2}}}]}, {a: 1});
+  match({$and: [{a: {$not: {$lt: 0}}}, {a: {$not: {$gt: 2}}}]}, {a: 1});
+  nomatch({$and: [{a: {$not: {$lt: 2}}}, {a: {$not: {$gt: 0}}}]}, {a: 1});
 
   // $where
   match({$where: "this.a === 1"}, {a: 1});
