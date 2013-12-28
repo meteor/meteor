@@ -81,7 +81,7 @@ var regexpValueSelector = function (regexp) {
 
 
 var convertElementSelectorToBranchedSelector = function (elementSelector) {
-  var f = function (branches, wholeDoc) {
+  return GROK(function (branches, wholeDoc) {
     // XXX in some cases don't do this
     var expanded = expandArraysInBranches(branches);
     var result = _.any(expanded, function (element) {
@@ -89,10 +89,7 @@ var convertElementSelectorToBranchedSelector = function (elementSelector) {
       return elementSelector(element.value, wholeDoc);
     });
     return {result: result};
-  };
-  // XXX take this tag away soon
-  f._groksExtendedLookup_ = true;
-  return f;
+  });
 };
 
 var equalityElementSelector = function (elementSelector) {
@@ -113,21 +110,45 @@ var equalityElementSelector = function (elementSelector) {
   };
 };
 
+// XXX this won't be necessary
+var GROK = function (f) {
+  f._groksExtendedLookup_ = true;
+  return f;
+};
+
 // XXX get rid of cursor when possible
 var operatorValueSelector = function (valueSelector, cursor) {
+  // XXX kill this soon
+  if (!_.all(valueSelector, function (operand, operator) {
+    return _.has(ELEMENT_OPERATORS, operator);
+  })) {
+    return operatorValueSelectorLegacy(valueSelector, cursor);
+  }
+
+  // Each valueSelector works separately on the various branches.  So one
+  // operator can match one branch and another can match another branch.  This
+  // is OK.
+
   var operatorFunctions = [];
   _.each(valueSelector, function (operand, operator) {
-    if (!_.has(VALUE_OPERATORS, operator))
+    if (!_.has(ELEMENT_OPERATORS, operator))
       throw new Error("Unrecognized operator: " + operator);
-    // Special case for location operators
-    operatorFunctions.push(VALUE_OPERATORS[operator](
-      operand, valueSelector, cursor));
+    // XXX justify three arguments
+    operatorFunctions.push(
+      convertElementSelectorToBranchedSelector(
+        ELEMENT_OPERATORS[operator](
+          operand, valueSelector, cursor)));
   });
-  return function (value, doc) {
-    return _.all(operatorFunctions, function (f) {
-      return f(value, doc);
+  // NB: this is very similar to andCompiledDocumentSelectors but that one
+  // "assumes" the first arg is a doc and here it "assumes" it's a branched
+  // value list. The code is identical for now, though.
+  return GROK(function (branches, doc) {
+    // XXX arrayIndex!
+    var result = _.all(operatorFunctions, function (f) {
+      return f(branches, doc).result;
     });
-  };
+    return {result: result};
+  });
 };
 
 // XXX drop "cursor" when _distance is improved
@@ -144,12 +165,12 @@ var compileArrayOfDocumentSelectors = function (selectors, cursor) {
 
 // XXX can factor out common logic below
 var LOGICAL_OPERATORS = {
-  "$and": function(subSelector, cursor) {
+  $and: function(subSelector, cursor) {
     var selectors = compileArrayOfDocumentSelectors(subSelector, cursor);
     return andCompiledDocumentSelectors(selectors);
   },
 
-  "$or": function(subSelector, cursor) {
+  $or: function(subSelector, cursor) {
     var selectors = compileArrayOfDocumentSelectors(subSelector, cursor);
     // XXX remove wholeDoc later
     return function (doc, wholeDoc) {
@@ -161,7 +182,7 @@ var LOGICAL_OPERATORS = {
     };
   },
 
-  "$nor": function(subSelector, cursor) {
+  $nor: function(subSelector, cursor) {
     var selectors = compileArrayOfDocumentSelectors(subSelector, cursor);
     // XXX remove wholeDoc later
     return function (doc, wholeDoc) {
@@ -174,7 +195,7 @@ var LOGICAL_OPERATORS = {
     };
   },
 
-  "$where": function(selectorValue) {
+  $where: function(selectorValue) {
     if (!(selectorValue instanceof Function)) {
       // XXX MongoDB seems to have more complex logic to decide where or or not
       // to add "return"; not sure exactly what it is.
@@ -189,13 +210,14 @@ var LOGICAL_OPERATORS = {
 
   // This is just used as a comment in the query (in MongoDB, it also ends up in
   // query logs); it has no effect on the actual selection.
-  "$comment": function () {
+  $comment: function () {
     return function () {
       return {result: true};
     };
   }
 };
 
+// XXX redoc
 // Each value operator is a function with args:
 //  - operand - Anything
 //  - operators - Object - operators on the same level (neighbours)
@@ -203,7 +225,31 @@ var LOGICAL_OPERATORS = {
 // returns a function with args:
 //  - value - a value the operator is tested against
 //  - doc - the whole document tested in this query
-var VALUE_OPERATORS = {
+var ELEMENT_OPERATORS = {
+  $lt: function (operand) {
+    // Arrays never compare with non-arrays (except for equality checks).
+    if (isArray(operand)) {
+      return function () {
+        return false;
+      };
+    }
+    if (operand === undefined)
+      operand = null;
+    var operandType = LocalCollection._f._type(operand);
+
+    return function (value) {
+      if (value === undefined)
+        value = null;
+      // Comparisons are never true among things of different type (except null
+      // vs undefined).
+      if (LocalCollection._f._type(value) !== operandType)
+        return false;
+      return LocalCollection._f._cmp(value, operand) < 0;
+    };
+  }
+};
+
+var LEGACY_VALUE_OPERATORS = {
   "$in": function (operand) {
     if (!isArray(operand))
       throw new Error("Argument to $in must be array");
@@ -273,7 +319,7 @@ var VALUE_OPERATORS = {
   "$nin": function (operand) {
     if (!isArray(operand))
       throw new Error("Argument to $nin must be array");
-    var inFunction = VALUE_OPERATORS.$in(operand);
+    var inFunction = LEGACY_VALUE_OPERATORS.$in(operand);
     return function (value, doc) {
       // Field doesn't exist, so it's not-in operand
       if (value === undefined)
@@ -425,6 +471,22 @@ var VALUE_OPERATORS = {
     // evaluation happens in the $near operator
     return function () { return true; }
   }
+};
+
+var operatorValueSelectorLegacy = function (valueSelector, cursor) {
+  var operatorFunctions = [];
+  _.each(valueSelector, function (operand, operator) {
+    if (!_.has(LEGACY_VALUE_OPERATORS, operator))
+      throw new Error("Unrecognized legacy operator: " + operator);
+    // Special case for location operators
+    operatorFunctions.push(LEGACY_VALUE_OPERATORS[operator](
+      operand, valueSelector, cursor));
+  });
+  return function (value, doc) {
+    return _.all(operatorFunctions, function (f) {
+      return f(value, doc);
+    });
+  };
 };
 
 // helpers used by compiled selector code
