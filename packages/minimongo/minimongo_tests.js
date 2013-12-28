@@ -492,6 +492,23 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({a: {$in: [1, 2, 3]}}, {a: [4, 2]});
   nomatch({a: {$in: [1, 2, 3]}}, {a: [4]});
 
+  match({a: {$in: ['x', /foo/i]}}, {a: 'x'});
+  match({a: {$in: ['x', /foo/i]}}, {a: 'fOo'});
+  match({a: {$in: ['x', /foo/i]}}, {a: ['f', 'fOo']});
+  nomatch({a: {$in: ['x', /foo/i]}}, {a: ['f', 'fOx']});
+
+  match({a: {$in: [1, null]}}, {});
+  match({'a.b': {$in: [1, null]}}, {});
+  match({'a.b': {$in: [1, null]}}, {a: {}});
+  match({'a.b': {$in: [1, null]}}, {a: {b: null}});
+  nomatch({'a.b': {$in: [1, null]}}, {a: {b: 5}});
+  nomatch({'a.b': {$in: [1]}}, {a: {b: null}});
+  nomatch({'a.b': {$in: [1]}}, {a: {}});
+  nomatch({'a.b': {$in: [1, null]}}, {a: [{b: 5}]});
+  match({'a.b': {$in: [1, null]}}, {a: [{b: 5}, {}]});
+  nomatch({'a.b': {$in: [1, null]}}, {a: [{b: 5}, []]});
+  nomatch({'a.b': {$in: [1, null]}}, {a: [{b: 5}, 5]});
+
   // $nin
   nomatch({a: {$nin: [1, 2, 3]}}, {a: 2});
   match({a: {$nin: [1, 2, 3]}}, {a: 4});

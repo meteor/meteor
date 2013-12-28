@@ -312,6 +312,29 @@ var ELEMENT_OPERATORS = {
     return function (value) {
       return typeof value === 'number' && value % divisor === remainder;
     };
+  },
+  $in: function (operand) {
+    if (!isArray(operand))
+      throw Error("$in needs an array");
+
+    var elementSelectors = [];
+    _.each(operand, function (option) {
+      if (option instanceof RegExp)
+        elementSelectors.push(regexpElementSelector(option));
+      else if (isOperatorObject(option))
+        throw Error("cannot nest $ under $in");
+      else
+        elementSelectors.push(equalityElementSelector(option));
+    });
+
+    return function (value) {
+      // Allow {a: {$in: [null]}} to match when 'a' does not exist.
+      if (value === undefined)
+        value = null;
+      return _.any(elementSelectors, function (e) {
+        return e(value);
+      });
+    };
   }
 };
 
