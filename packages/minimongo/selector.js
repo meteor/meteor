@@ -63,8 +63,10 @@ var compileValueSelector = function (valueSelector, cursor) {
     return regexpValueSelector(valueSelector);
   else if (isOperatorObject(valueSelector))
     return operatorValueSelector(valueSelector, cursor);
-  else
-    return equalityValueSelector(valueSelector);
+  else {
+    return convertElementSelectorToBranchedSelector(
+      equalityElementSelector(valueSelector));
+  }
 };
 
 var regexpValueSelector = function (regexp) {
@@ -77,47 +79,54 @@ var regexpValueSelector = function (regexp) {
   };
 };
 
+
+var convertElementSelectorToBranchedSelector = function (elementSelector) {
+  var f = function (branches, wholeDoc) {
+    // XXX in some cases don't do this
+    var expanded = expandArraysInBranches(branches);
+    var result = _.any(expanded, function (element) {
+      // XXX arrayIndex!  need to save the winner here
+      return elementSelector(element.value, wholeDoc);
+    });
+    return {result: result};
+  };
+  // XXX take this tag away soon
+  f._groksExtendedLookup_ = true;
+  return f;
+};
+
 // XXX should be able to replace most of this with EJSON.equals
-var equalityValueSelector = function (valueSelector) {
-  if (valueSelector == null) {  // undefined or null
+var equalityElementSelector = function (elementSelector) {
+  if (elementSelector == null) {  // undefined or null
     return function (value) {
-      return _anyIfArray(value, function (x) {
-        return x == null;  // undefined or null
-      });
+      return value == null;  // undefined or null
     };
   }
 
   // Selector is a non-null primitive (and not an array or RegExp either).
-  if (!_.isObject(valueSelector)) {
+  if (!_.isObject(elementSelector)) {
     return function (value) {
-      return _anyIfArray(value, function (x) {
-        return x === valueSelector;
-      });
+      return value === elementSelector;
     };
   }
 
   // XXX what about dates?
+  // XXX technically should allow equality between dates and timestamps
 
   // Arrays match either identical arrays or arrays that contain it as a value.
-  if (isArray(valueSelector)) {
+  if (isArray(elementSelector)) {
     return function (value) {
-      if (!isArray(value))
-        return false;
-      return _anyIfArrayPlus(value, function (x) {
-        return LocalCollection._f._equal(valueSelector, x);
-      });
+      return LocalCollection._f._equal(elementSelector, value);
     };
   }
 
-  if (isOperatorObject(valueSelector))
+  if (isOperatorObject(elementSelector))
     throw Error("Can't create equalityValueSelector for operator object");
 
   // It's a literal; compare value (or element of value array) directly to the
   // selector.
   return function (value) {
-    return _anyIfArray(value, function (x) {
-      return LocalCollection._f._equal(valueSelector, x);
-    });
+    return LocalCollection._f._equal(elementSelector, value);
   };
 };
 
@@ -737,6 +746,25 @@ LocalCollection._makeLookupFunction = function (key) {
   };
 };
 
+var expandArraysInBranches = function (branches) {
+  var branchesOut = [];
+  _.each(branches, function (branch) {
+    branchesOut.push({
+      value: branch.value,
+      arrayIndex: branch.arrayIndex
+    });
+    if (isArray(branch.value) && !branch.dontIterate) {
+      _.each(branch.value, function (leaf, i) {
+        branchesOut.push({
+          value: leaf,
+          arrayIndex: branch.arrayIndex === undefined ? i : branch.arrayIndex
+        });
+      });
+    }
+  });
+  return branchesOut;
+};
+
 // The main compilation function for a given selector.
 var compileDocumentSelector = function (docSelector, cursor) {
   var perKeySelectors = [];
@@ -750,11 +778,18 @@ var compileDocumentSelector = function (docSelector, cursor) {
       perKeySelectors.push(
         LOGICAL_OPERATORS[key](subSelector, cursor));
     } else {
-      var lookUpByIndex = LocalCollection._makeLookupFunction(key);
+      var lookUpByIndex = LocalCollection._makeLookupFunction2(key);
       var valueSelectorFunc =
         compileValueSelector(subSelector, cursor);
       perKeySelectors.push(function (doc, wholeDoc) {
         var branchValues = lookUpByIndex(doc);
+
+        if (valueSelectorFunc._groksExtendedLookup_) {
+          return valueSelectorFunc(branchValues, wholeDoc);
+        }
+
+        // XXX get rid of this all later
+        branchValues = _.pluck(branchValues, 'value');
         // We apply the selector to each "branched" value and return true if any
         // match. However, for "negative" selectors like $ne or $not we actually
         // require *all* elements to match.
