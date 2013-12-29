@@ -90,8 +90,10 @@ var convertElementSelectorToBranchedSelector = function (
   options = options || {};
   return GROK(function (branches, wholeDoc) {
     var expanded = branches;
-    if (!options.dontExpandLeafArrays)
-      expanded = expandArraysInBranches(branches);
+    if (!options.dontExpandLeafArrays) {
+      expanded = expandArraysInBranches(
+        branches, options.dontIncludeLeafArrays);
+    }
     var result = _.any(expanded, function (element) {
       // XXX arrayIndex!  need to save the winner here
       return elementSelector(element.value, wholeDoc);
@@ -367,6 +369,21 @@ var ELEMENT_OPERATORS = {
       }
       return function (value) {
         return isArray(value) && value.length === operand;
+      };
+    }
+  },
+  $type: {
+    // {a: [5]} must not match {a: {$type: 4}} (4 means array), but it should
+    // match {a: {$type: 1}} (1 means number), and {a: [[5]]} must match {$a:
+    // {$type: 4}}. Thus, when we see a leaf array, we *should* expand it but
+    // should *not* include it itself.
+    dontIncludeLeafArrays: true,
+    elementSelector: function (operand) {
+      if (typeof operand !== 'number')
+        throw Error("$type needs a number");
+      return function (value) {
+        return value !== undefined
+          && LocalCollection._f._type(value) === operand;
       };
     }
   }
@@ -914,14 +931,17 @@ LocalCollection._makeLookupFunction = function (key) {
   };
 };
 
-var expandArraysInBranches = function (branches) {
+var expandArraysInBranches = function (branches, skipTheArrays) {
   var branchesOut = [];
   _.each(branches, function (branch) {
-    branchesOut.push({
-      value: branch.value,
-      arrayIndex: branch.arrayIndex
-    });
-    if (isArray(branch.value) && !branch.dontIterate) {
+    var thisIsArray = isArray(branch.value);
+    if (!skipTheArrays || !thisIsArray) {
+      branchesOut.push({
+        value: branch.value,
+        arrayIndex: branch.arrayIndex
+      });
+    }
+    if (thisIsArray && !branch.dontIterate) {
       _.each(branch.value, function (leaf, i) {
         branchesOut.push({
           value: leaf,
@@ -1044,7 +1064,6 @@ var andCompiledDocumentSelectors = function (selectors) {
 
 
 // Remaining to update:
-// - $type
 // - $regex/$option
 // - $all
 // - $elemMatch
