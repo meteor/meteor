@@ -85,10 +85,13 @@ var regexpElementSelector = function (regexp) {
 };
 
 
-var convertElementSelectorToBranchedSelector = function (elementSelector) {
+var convertElementSelectorToBranchedSelector = function (
+    elementSelector, options) {
+  options = options || {};
   return GROK(function (branches, wholeDoc) {
-    // XXX in some cases don't do this
-    var expanded = expandArraysInBranches(branches);
+    var expanded = branches;
+    if (!options.dontExpandLeafArrays)
+      expanded = expandArraysInBranches(branches);
     var result = _.any(expanded, function (element) {
       // XXX arrayIndex!  need to save the winner here
       return elementSelector(element.value, wholeDoc);
@@ -142,10 +145,13 @@ var operatorValueSelector = function (valueSelector, cursor) {
         VALUE_OPERATORS[operator](operand, valueSelector, cursor));
     } else if (_.has(ELEMENT_OPERATORS, operator)) {
       // XXX justify three arguments
+      var options = ELEMENT_OPERATORS[operator];
+      if (typeof options === 'function')
+        options = {elementSelector: options};
       operatorFunctions.push(
         convertElementSelectorToBranchedSelector(
-          ELEMENT_OPERATORS[operator](
-            operand, valueSelector, cursor)));
+          options.elementSelector(operand, valueSelector, cursor),
+          options));
     } else {
       throw new Error("Unrecognized operator: " + operator);
     }
@@ -339,6 +345,24 @@ var ELEMENT_OPERATORS = {
         return e(value);
       });
     };
+  },
+  $size: {
+    // {a: [[5, 5]]} must match {a: {$size: 1}} but not {a: {$size: 2}}, so we
+    // don't want to consider the element [5,5] in the leaf array [[5,5]] as a
+    // possible value.
+    dontExpandLeafArrays: true,
+    elementSelector: function (operand) {
+      if (typeof operand === 'string') {
+        // Don't ask me why, but by experimentation, this seems to be what Mongo
+        // does.
+        operand = 0;
+      } else if (typeof operand !== 'number') {
+        throw Error("$size needs a number");
+      }
+      return function (value) {
+        return isArray(value) && value.length === operand;
+      };
+    }
   }
 };
 
@@ -1011,3 +1035,12 @@ var andCompiledDocumentSelectors = function (selectors) {
     return {result: result};
   };
 };
+
+
+// Remaining to update:
+// - $exists
+// - $type
+// - $regex/$option
+// - $all
+// - $elemMatch
+// - $near/$maxDistance
