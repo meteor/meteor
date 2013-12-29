@@ -42,20 +42,29 @@ var getUniverse = function () {
   return universe;
 };
 
-var getAuthServiceBaseUrl = function () {
+var isLocalUniverse = function () {
+  return !! getUniverse().match(/^localhost(:([\d]+))?$/);
+};
+
+var localhostOffset = function (portOffset) {
   var match = getUniverse().match(/^localhost(:([\d]+))?$/);
   if (! match)
+    throw new Error("not a local universe?");
+  return "localhost:" + (parseInt(match[2] || "80") + portOffset);
+};
+
+var getAuthServiceHost = function () {
+  if (! isLocalUniverse())
     return universe;
-  else {
+  else
     // Special case for local development. Point
     // $METEOR_CHECKOUT/universe at the place where you are running
     // frontpage (eg, localhost:3000), and run the accounts server ten
     // port numbers higher. Like so:
     //   cd meteor-accounts
     //   ROOT_URL=http://localhost:3010/auth curmeteor -p 3010
-    return "localhost:" + (parseInt(match[2] || "80") + 10);
-  }
-}
+    return localhostOffset(10);
+};
 
 // Given a hostname, add "http://" or "https://" as
 // appropriate. (localhost gets http; anything else is always https.)
@@ -86,21 +95,38 @@ _.extend(exports, {
   // "https://www.meteor.com/oauth2". Endpoints include /authorize and
   // /token.
   getOauthUrl: function () {
-    return addScheme(getAuthServiceBaseUrl()) + "/oauth2";
+    return addScheme(getAuthServiceHost()) + "/oauth2";
   },
 
   // Base URL for Meteor Accounts API, typically
   // "https://www.meteor.com/api/v1". Endpoints include '/login' and
   // '/logoutById'.
   getAccountsApiUrl: function () {
-    return addScheme(getAuthServiceBaseUrl()) + "/api/v1";
+    return addScheme(getAuthServiceHost()) + "/api/v1";
   },
 
   // URL for the DDP interface to Meteor Accounts, typically
   // "https://www.meteor.com/auth". (Really should be a ddp:// URL --
   // we'll get there soon enough.)
   getAuthDDPUrl: function () {
-    return addScheme(getAuthServiceBaseUrl()) + "/auth";
+    return addScheme(getAuthServiceHost()) + "/auth";
+  },
+
+  // URL for the DDP interface to the package server, typically
+  // "https://packages.meteor.com". (Really should be a ddp:// URL --
+  // we'll get there soon enough.)
+  //
+  // When running everything locally, run the package server at the
+  // base universe port number (that is, the Meteor Accounts port
+  // number) plus 20.
+  getPackageServerUrl: function () {
+    var host;
+    if (isLocalUniverse())
+      host = localhostOffset(20);
+    else
+      host = getUniverse().replace(/^www\./, 'packages.');
+
+    return addScheme(host);
   },
 
   // Return the domain name of the current Meteor Accounts server in
@@ -123,11 +149,10 @@ _.extend(exports, {
         return host; // allow it to contain a URL scheme
     } else {
       // Otherwise, base it on the universe.
-      var u = getUniverse();
-      if (u.match(/^localhost(:|\/)/))
+      if (isLocalUniverse())
         throw new Error("local development of deploy server not supported");
       else
-        host = u.replace(/^www\./, 'deploy.');
+        host = getUniverse().replace(/^www\./, 'deploy.');
     }
 
     return addScheme(host);
@@ -138,10 +163,9 @@ _.extend(exports, {
   getUpdateManifestUrl: function () {
     if (testingUpdater)
       return 'https://s3.amazonaws.com/com.meteor.static/test/update/manifest.json';
-    var u = getUniverse();
-    if (u.match(/^localhost(:|\/)/))
+    if (isLocalUniverse())
       u = "www.meteor.com"; // localhost can't run the manifest server
-    var host = u.replace(/^www\./, 'update.');
+    var host = getUniverse().replace(/^www\./, 'update.');
 
     return addScheme(host) + "/manifest.json";
   },

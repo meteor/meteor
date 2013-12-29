@@ -395,28 +395,23 @@ var doInteractivePasswordLogin = function (options) {
   return true;
 };
 
-exports.loginCommand = function (argv, showUsage) {
-  if (argv._.length !== 0)
-    showUsage();
-
+exports.loginCommand = function (options) {
   config.printUniverseBanner();
 
-  var byEmail = !! argv.email;
-  var galaxy = argv.galaxy;
-
   var data = readSessionData();
+  var galaxy = options.galaxy;
 
   if (! galaxy || ! getSession(data, config.getAccountsDomain()).token) {
     var loginOptions = {};
 
-    if (byEmail) {
+    if (options.email) {
       loginOptions.email = utils.readLine({ prompt: "Email: " });
     } else {
       loginOptions.username = utils.readLine({ prompt: "Username: " });
     }
 
     if (! doInteractivePasswordLogin(loginOptions))
-      process.exit(1);
+      return 1;
   }
 
   if (galaxy) {
@@ -425,7 +420,7 @@ exports.loginCommand = function (argv, showUsage) {
       // XXX add human readable error messages
       process.stdout.write('\nLogin to ' + galaxy + ' failed: ' +
                            galaxyLoginResult.error + '\n');
-      process.exit(1);
+      return 1
     }
     data = readSessionData(); // be careful to reread data file after RPC
     var session = getSession(data, galaxy);
@@ -444,10 +439,7 @@ exports.loginCommand = function (argv, showUsage) {
                        "Thanks for being a Meteor developer!\n");
 };
 
-exports.logoutCommand = function (argv, showUsage) {
-  if (argv._.length !== 0)
-    showUsage();
-
+exports.logoutCommand = function (options) {
   config.printUniverseBanner();
 
   var data = readSessionData();
@@ -465,22 +457,19 @@ exports.logoutCommand = function (argv, showUsage) {
     process.stderr.write("Not logged in.\n");
 };
 
-exports.whoAmICommand = function (argv, showUsage) {
-  if (argv._.length !== 0)
-    showUsage();
-
+exports.whoAmICommand = function (options) {
   config.printUniverseBanner();
 
   var data = readSessionData();
   if (! loggedIn(data)) {
     process.stderr.write("Not logged in. 'meteor login' to log in.\n");
-    process.exit(1);
+    return 1;
   }
 
   var username = currentUsername(data);
   if (username) {
     process.stdout.write(username + "\n");
-    process.exit(0);
+    return 0;
   }
 
   var url = getSession(data, config.getAccountsDomain()).registrationUrl;
@@ -494,7 +483,7 @@ url + "\n");
     process.stderr.write("You haven't chosen your username yet.\n")
   }
 
-  process.exit(1);
+  return 1;
 };
 
 // Prompt for an email address. If it doesn't belong to a user, create

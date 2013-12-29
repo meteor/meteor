@@ -7,6 +7,8 @@ var unipackage = require('./unipackage.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var Fiber = require('fibers');
 var httpHelpers = require('./http-helpers.js');
+var auth = require('./auth.js');
+var url = require('url');
 var _ = require('underscore');
 
 // a bit of a hack
@@ -18,49 +20,66 @@ var getPackage = _.once(function (context) {
   });
 });
 
-var authenticatedDDPConnect = function (url, context) {
-  var Package = getPackage(context);
-  return Package.livedata.DDP.connect(url, {
-    headers: {
-      cookie: "GALAXY_AUTH=" + context.galaxy.authToken
-    }
-  });
-};
+var authenticatedDDPConnect = function (endpointUrl, context) {
+  // Get auth token
+  var parsedEndpoint = url.parse(endpointUrl);
+  var authToken = auth.getSessionToken(parsedEndpoint.hostname);
 
-var getGalaxy = _.once(function (context) {
-  var Package = getPackage(context);
-  if (!context.galaxy) {
-    process.stderr.write("Could not find a deploy endpoint. " +
-                         "You can set the GALAXY environment variable, " +
-                         "or configure your site's DNS to resolve to " +
-                         "your Galaxy's proxy.\n");
-    process.exit(1);
-  }
-
-  if (! context.galaxy.authToken) {
-    // XXX get the galaxy name from the hostname of context.galaxy.url, and run
-    // the login command for that galaxy.
+  // XXX get the galaxy name from the hostname of endpointUrl,
+  // and run the login command for that galaxy.
+  //
+  // XXX of course, that should not be done here (and we should
+  // definitely not call process.exit!) -- it should be done much
+  // further up the stack.
+  if (! authToken) {
     process.stderr.write("You must be logged in before you can use " +
                          "this galaxy. Try logging in with " +
                          "'meteor login'.\n");
     process.exit(1);
   }
 
-  var galaxy = authenticatedDDPConnect(context.galaxy.url, context);
+  var Package = getPackage(context);
+  return Package.livedata.DDP.connect(endpointUrl, {
+    headers: {
+      cookie: "GALAXY_AUTH=" + authToken
+    }
+  });
+};
+
+// Returns a DDP connection to a service within a Galaxy.
+//
+// Does not wait for the connection to succeed. However, if the
+// connection fails (defined as the connection not succeeding after a
+// certain period of time), an error will be printed and the program
+// will be killed!
+//
+// - galaxy: the name of the galaxy to connect to, as returned by
+//   discoverGalaxy (as described theer, should probably be a galaxy
+//   name, is currently a https or http URL)
+// - service: the service to connect to within the Galaxy, such as
+//   'ultraworld' or 'log-reader'.
+// - context: specifies the release of Meteor whose DDP implementation
+//   should be used
+var connectToService = function (galaxy, service, context) {
+  var Package = getPackage(context);
+  var endpointUrl = galaxy + "/" + service;
+
+  var connection = authenticatedDDPConnect(endpointUrl, context);
   var timeout = Package.meteor.Meteor.setTimeout(function () {
-    if (galaxy.status().status !== "connected") {
-      process.stderr.write("Could not connect to galaxy " + context.galaxy.url
-                           + ": " + galaxy.status().status + '\n');
+    if (connection.status().status !== "connected") {
+      process.stderr.write("Could not connect to galaxy " + endpointUrl
+                           + ": " + connection.status().status + '\n');
       process.exit(1);
     }
   }, 10*1000);
-  var close = galaxy.close;
-  galaxy.close = function (/*arguments*/) {
+  var close = connection.close;
+  connection.close = function (/*arguments*/) {
     Package.meteor.Meteor.clearTimeout(timeout);
-    close.apply(galaxy, arguments);
+    close.apply(connection, arguments);
   };
-  return galaxy;
-});
+
+  return connection;
+};
 
 
 var exitWithError = function (error, messages) {
@@ -99,9 +118,29 @@ var prettySub = function (galaxy, name, args, messages) {
   return ret;
 };
 
+// Determine if a particular site is hosted by Galaxy, and if so, by
+// which Galaxy. 'app' should be a hostname, like 'myapp.meteor.com'
+// or 'mysite.com'. Returns the base URL for the Galaxy
+// (https://[galaxyname], or possibly http://[galaxyname] if running
+// locally). The URL will not have a trailing slash. Returns null if
+// the site is not hosted by Galaxy.
+//
+// The result is cached, so there is no penality for calling this
+// function multiple times (during the same run of the
+// tool). (Assuming you wait for the first call to complete before
+// making the subsequent calls. The caching doesn't kick in until the
+// first call returns.)
+//
+// XXX in the future, should probably return the name of the Galaxy,
+// rather than a URL.
+var discoveryCache = {};
 exports.discoverGalaxy = function (app) {
+  var cacheKey = app;
+  if (_.has(discoveryCache, cacheKey))
+    return discoveryCache[cacheKey];
+
   app = app + ":" + config.getDiscoveryPort();
-  var url = "https://" + app + "/_GALAXY_";
+  var discoveryUrl = "https://" + app + "/_GALAXY_";
   var fut = new Future();
 
   if (process.env.GALAXY)
@@ -110,7 +149,7 @@ exports.discoverGalaxy = function (app) {
   // At some point we may want to send a version in the request so that galaxy
   // can respond differently to different versions of meteor.
   httpHelpers.request({
-    url: url,
+    url: discoveryUrl,
     json: true,
     strictSSL: true,
     // We don't want to be confused by, eg, a non-Galaxy-hosted site which
@@ -124,20 +163,29 @@ exports.discoverGalaxy = function (app) {
         _.has(body, "galaxyUrl") &&
         (body.galaxyDiscoveryVersion === "galaxy-discovery-pre0")) {
       var result = body.galaxyUrl;
+
       if (result.indexOf("https://") === -1)
         result = "https://" + result;
+
+      if (result[result.length - 1] === "/")
+        result = result.substring(0, result.length - 1);
+
       fut.return(result);
     } else {
       fut.return(null);
     }
   });
-  return fut.wait();
+
+  var result = fut.wait();
+  discoveryCache[cacheKey] = result;
+  return result;
 };
 
 exports.deleteApp = function (app, context) {
-  var galaxy = getGalaxy(context);
-  galaxy.call("destroyApp", app);
-  galaxy.close();
+  var galaxy = exports.discoverGalaxy(app);
+  var conn = connectToService(galaxy, "ultraworld", context);
+  conn.call("destroyApp", app);
+  conn.close();
   process.stdout.write("Deleted.\n");
 };
 
@@ -191,8 +239,8 @@ exports.deploy = function (options) {
   }
   process.stdout.write('Uploading...\n');
 
-
-  var galaxy = getGalaxy(options.context);
+  var galaxy = exports.discoverGalaxy(options.app);
+  var conn = connectToService(galaxy, "ultraworld", options.context);
   var Package = getPackage(options.context);
 
   var created = true;
@@ -204,7 +252,7 @@ exports.deploy = function (options) {
     appConfig.admin = true;
 
   try {
-    galaxy.call('createApp', options.app, appConfig);
+    conn.call('createApp', options.app, appConfig);
   } catch (e) {
     if (e instanceof Package.meteor.Meteor.Error && e.error === 'already-exists') {
       // Cool, it already exists. No problem. Just set the settings if they were
@@ -212,7 +260,7 @@ exports.deploy = function (options) {
       // to unset settings by passing an empty file.
       if (options.settings !== undefined) {
         try {
-          galaxy.call('updateAppConfiguration', options.app, appConfig);
+          conn.call('updateAppConfiguration', options.app, appConfig);
         } catch (e) {
           exitWithError(e);
         }
@@ -225,7 +273,8 @@ exports.deploy = function (options) {
 
   // Get the upload information from Galaxy. It's a surprise if this
   // fails (we already know the app exists.)
-  var info = prettyCall(galaxy, 'beginUploadStar', [options.app, bundleResult.starManifest]);
+  var info = prettyCall(conn, 'beginUploadStar',
+                        [options.app, bundleResult.starManifest]);
 
   // Upload
   // XXX copied from galaxy/tool/galaxy.js
@@ -255,7 +304,7 @@ exports.deploy = function (options) {
   fileStream.pipe(req);
   future.wait();
 
-  var result = prettyCall(galaxy, 'completeUploadStar', [info.id], {
+  var result = prettyCall(conn, 'completeUploadStar', [info.id], {
     'no-such-upload': 'Upload request expired. Try again.'
   });
 
@@ -265,7 +314,7 @@ exports.deploy = function (options) {
   process.stderr.write(options.app + ": " +
                        "pushed revision " + result.serial + "\n");
   // Close the connection to Galaxy (otherwise Node will continue running).
-  galaxy.close();
+  conn.close();
 };
 
 // options:
@@ -273,19 +322,10 @@ exports.deploy = function (options) {
 // - app
 // - streaming (BOOL)
 exports.logs = function (options) {
-  var logReaderURL;
-  if (options.context.galaxy.adminBaseUrl) {
-    logReaderURL = options.context.galaxy.adminBaseUrl + "log-reader";
-  } else {
-    var galaxy = getGalaxy(options.context);
-    logReaderURL = prettyCall(galaxy, "getLogReaderURL", [], {
-      'no-log-reader': "Can't find log reader service"
-    });
-    galaxy.close();
-  }
+  var galaxy = exports.discoverGalaxy(options.app);
+  var logReader = connectToService(galaxy, "log-reader", options.context);
 
   var lastLogId = null;
-  var logReader = authenticatedDDPConnect(logReaderURL, options.context);
   var Log = unipackage.load({
     library: options.context.library,
     packages: [ 'logging' ],
@@ -304,7 +344,7 @@ exports.logs = function (options) {
     }
   });
 
-  if (!ok)
+  if (! ok)
     throw new Error("Can't listen to messages on the logs collection");
 
   var logsSubscription = null;
@@ -321,9 +361,8 @@ exports.logs = function (options) {
                                {"no-such-app": "No such app: " + options.app});
 
   // if streaming is needed there is no point in closing connection
-  if (!options.streaming) {
-    // Close connections to Galaxy and log-reader
-    // (otherwise Node will continue running).
+  if (! options.streaming) {
+    // Close connection to log-reader (otherwise Node will continue running).
     logReader.close();
   }
 };
@@ -332,8 +371,9 @@ exports.logs = function (options) {
 // - context
 // - app
 exports.temporaryMongoUrl = function (options) {
-  var galaxy = getGalaxy(options.context);
-  var url = galaxy.call('getTemporaryMongoUrl', options.app);
-  galaxy.close();
-  return url;
+  var galaxy = exports.discoverGalaxy(options.app);
+  var conn = connectToService(galaxy, "ultraworld", options.context);
+  var mongoUrl = conn.call('getTemporaryMongoUrl', options.app);
+  conn.close();
+  return mongoUrl;
 };
