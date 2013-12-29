@@ -433,6 +433,15 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$exists: false}}, {a: [1]});
   match({a: {$exists: false}}, {b: [1]});
 
+  match({a: {$exists: 1}}, {a: 5});
+  match({a: {$exists: 0}}, {b: 5});
+
+  nomatch({'a.x':{$exists: false}}, {a: [{}, {x: 5}]});
+  match({'a.x':{$exists: true}}, {a: [{}, {x: 5}]});
+  match({'a.x':{$exists: true}}, {a: [{}, {x: 5}]});
+  match({'a.x':{$exists: true}}, {a: {x: []}});
+  match({'a.x':{$exists: true}}, {a: {x: null}});
+
   // $mod
   match({a: {$mod: [10, 1]}}, {a: 11});
   nomatch({a: {$mod: [10, 1]}}, {a: 12});

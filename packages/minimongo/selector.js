@@ -258,6 +258,12 @@ var VALUE_OPERATORS = {
   $nin: function (operand) {
     return invertBranchedSelector(convertElementSelectorToBranchedSelector(
       ELEMENT_OPERATORS.$in(operand)));
+  },
+  $exists: function (operand) {
+    var exists = convertElementSelectorToBranchedSelector(function (value) {
+      return value !== undefined;
+    });
+    return operand ? exists : invertBranchedSelector(exists);
   }
 };
 
@@ -1038,7 +1044,6 @@ var andCompiledDocumentSelectors = function (selectors) {
 
 
 // Remaining to update:
-// - $exists
 // - $type
 // - $regex/$option
 // - $all
