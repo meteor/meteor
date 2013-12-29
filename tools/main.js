@@ -645,6 +645,7 @@ Fiber(function () {
     if (parsed._.length === 0) {
       // No arguments means 'run'.
       command = commands.run;
+      commandName = "run";
       if (! command)
         throw new Error("no 'run' command?");
     } else {
