@@ -248,6 +248,10 @@ var VALUE_OPERATORS = {
   $ne: function (operand) {
     return invertBranchedSelector(convertElementSelectorToBranchedSelector(
       equalityElementSelector(operand)));
+  },
+  $nin: function (operand) {
+    return invertBranchedSelector(convertElementSelectorToBranchedSelector(
+      ELEMENT_OPERATORS.$in(operand)));
   }
 };
 
@@ -274,7 +278,7 @@ var makeInequality = function (cmpValueComparator) {
       // vs undefined).
       if (LocalCollection._f._type(value) !== operandType)
         return false;
-      return cmpValueComparator(LocalCollection._f._cmp(value, operand))
+      return cmpValueComparator(LocalCollection._f._cmp(value, operand));
     };
   };
 };
