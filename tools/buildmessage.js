@@ -188,7 +188,7 @@ var capture = function (options, f) {
 // by `f` are logged in the Job. Returns the return value of `f`. May
 // be called recursively.
 //
-// Called not from inside capture(), does nothing (except call f.)
+// Called not from inside capture(), does nothing (except call f).
 //
 // options:
 // - title: a title for the job (required)
@@ -302,7 +302,7 @@ var parseStack = function (err) {
 // mark a user-supplied callback function before calling it, you'll be
 // able to show the user just the "user portion" of the stack trace
 // (the part inside their own code, and not all of the innards of the
-// code that called it.)
+// code that called it).
 var markBoundary = function (f) {
   return function __mark__ () {
     return f.apply(this, arguments);
@@ -323,7 +323,7 @@ var markBoundary = function (f) {
 //   name, file, and line). It captures not the information of the
 //   caller of error(), but that caller's caller. It saves them in
 //   'file', 'line', and 'column' (overwriting any values passed in
-//   for those.) It also captures the user portion of the stack,
+//   for those). It also captures the user portion of the stack,
 //   starting at and including the caller's caller.
 //   If this is a number instead of 'true', skips that many stack frames.
 // - downcase: if true, the first character of `message` will be

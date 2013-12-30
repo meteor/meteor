@@ -76,9 +76,9 @@
 //    - sourceMap: optional path to source map file (relative to program.json)
 //    Additionally there will be an entry with where equal to
 //    "internal", path equal to page (above), and hash equal to the
-//    sha1 of page (before replacements.) Currently this is used to
+//    sha1 of page (before replacements). Currently this is used to
 //    trigger HTML5 appcache reloads at the right time (if the
-//    'appcache' package is being used.)
+//    'appcache' package is being used).
 //
 // Convention:
 //
@@ -154,7 +154,7 @@
 // JavaScript code (that potentially might be a plugin to be loaded
 // into an existing JS VM). But this seems to be a concern that is
 // somewhat orthogonal to arch (these plugins can still use packages
-// of arch "os.*".) There is probably a missing abstraction here
+// of arch "os.*"). There is probably a missing abstraction here
 // somewhere (decoupling target type from architecture) but it can
 // wait until later.
 
@@ -217,7 +217,7 @@ var NodeModulesDirectory = function (options) {
   self.sourcePath = options.sourcePath;
 
   // The path (relative to the bundle root) where we would preferably
-  // like the node_modules to be output (essentially cosmetic.)
+  // like the node_modules to be output (essentially cosmetic).
   self.preferredBundlePath = options.preferredBundlePath;
 };
 
@@ -240,7 +240,7 @@ var File = function (options) {
 
   // The absolute path in the filesystem from which we loaded (or will
   // load) this file (null if the file does not correspond to one on
-  // disk.)
+  // disk).
   self.sourcePath = options.sourcePath;
 
   // If this file was generated, a sourceMap (as a string) with debugging
@@ -255,7 +255,7 @@ var File = function (options) {
 
   // The URL at which this file is intended to be served, relative to
   // the base URL at which the target is being served (ignored if this
-  // file is not intended to be served over HTTP.)
+  // file is not intended to be served over HTTP).
   self.url = null;
 
   // Is this file guaranteed to never change, so that we can let it be
@@ -411,7 +411,7 @@ var Target = function (options) {
   self.pluginProviderPackageDirs = {};
 
   // node_modules directories that we need to copy into the target (or
-  // otherwise make available at runtime.) A map from an absolute path
+  // otherwise make available at runtime). A map from an absolute path
   // on disk (NodeModulesDirectory.sourcePath) to a
   // NodeModulesDirectory object that we have created to represent it.
   self.nodeModulesDirectories = {};
@@ -520,7 +520,7 @@ _.extend(Target.prototype, {
     // dependencies, in the correct load order. "Load order" means that if X
     // depends on (uses) Y, and that relationship is not marked as unordered, Y
     // appears before X in the ordering. Raises an exception iff there is no
-    // such ordering (due to circular dependency.)
+    // such ordering (due to circular dependency).
 
     // What slices have not yet been added to self.slices?
     var needed = _.clone(getsUsed);  // Map from slice.id to Slice.
@@ -539,7 +539,7 @@ _.extend(Target.prototype, {
       // `u`, then there's no reason to add it *now*, and for all we know, `u`
       // will depend on `slice` and need to be added after it. So we ignore
       // those edge. Because we did follow those edges in Phase 1, any unordered
-      // slices were at some point in `needed` and will not be left out.)
+      // slices were at some point in `needed` and will not be left out).
       slice.eachUsedSlice(
         self.arch, {skipUnordered: true}, function (usedSlice, useOptions) {
           // If this is a weak dependency, and nothing else in the target had a
@@ -907,7 +907,7 @@ _.extend(ClientTarget.prototype, {
 // A JsImage (JavaScript Image) is a fully linked JavaScript program
 // that is totally ready to go. (Image is used in the sense of "the
 // output of a linker", as in "executable image", rather than in the
-// sense of "visual picture".)
+// sense of "visual picture").
 //
 // A JsImage can be loaded into its own new JavaScript virtual
 // machine, or it can be loaded into an existing virtual machine as a
@@ -925,7 +925,7 @@ var JsImage = function () {
   self.jsToLoad = [];
 
   // node_modules directories that we need to copy into the target (or
-  // otherwise make available at runtime.) A map from an absolute path
+  // otherwise make available at runtime). A map from an absolute path
   // on disk (NodeModulesDirectory.sourcePath) to a
   // NodeModulesDirectory object that we have created to represent it.
   self.nodeModulesDirectories = {};
@@ -1028,7 +1028,7 @@ _.extend(JsImage.prototype, {
       try {
         // XXX XXX Get the actual source file path -- item.targetPath
         // is not actually correct (it's the path in the bundle rather
-        // than in the source tree.)
+        // than in the source tree).
         files.runJavaScript(item.source.toString('utf8'), {
           filename: item.targetPath,
           symbols: env,
@@ -1068,7 +1068,7 @@ _.extend(JsImage.prototype, {
     });
 
     // If multiple load files share the same asset, only write one copy of
-    // each. (eg, for app assets.)
+    // each. (eg, for app assets).
     var assetFilesBySha = {};
 
     // JavaScript sources
@@ -1150,7 +1150,7 @@ _.extend(JsImage.prototype, {
 
 // Create a JsImage by loading a bundle of format
 // 'javascript-image-pre1' from disk (eg, previously written out with
-// write().) `dir` is the path to the control file.
+// write()). `dir` is the path to the control file.
 JsImage.readFromDisk = function (controlFilePath) {
   var ret = new JsImage;
   var json = JSON.parse(fs.readFileSync(controlFilePath));
@@ -1344,7 +1344,7 @@ _.extend(ServerTarget.prototype, {
     // Main, architecture-dependent node_modules from the dependency
     // kit. This one is copied in 'meteor bundle', symlinked in
     // 'meteor run', and omitted by 'meteor deploy' (Galaxy provides a
-    // version that's appropriate for the server architecture.)
+    // version that's appropriate for the server architecture).
     if (! options.omitDependencyKit) {
       builder.copyDirectory({
         from: path.join(files.getDevBundle(), 'lib', 'node_modules'),
@@ -1459,7 +1459,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
     // it can load the right modules. (Include this even if we copied
     // or symlinked a node_modules, since that's probably enough for
     // it to work in spite of the presence of node_modules for the
-    // wrong arch.) The place we stash this is grody for temporary
+    // wrong arch). The place we stash this is grody for temporary
     // reasons of backwards compatibility.
     builder.write(path.join('server', '.bundle_version.txt'), {
       file: path.join(files.getDevBundle(), '.bundle_version.txt')
@@ -1532,7 +1532,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *   changes when developing interactively, as a watch.WatchSet.
  *
  * On failure ('errors' is truthy), no bundle will be output (in fact,
- * outputPath will have been removed if it existed.)
+ * outputPath will have been removed if it existed).
  *
  * options include:
  * - minify : minify the CSS and JS assets
@@ -1637,7 +1637,7 @@ exports.bundle = function (appDir, outputPath, options) {
     // Include default targets, unless there's a no-default-targets file in the
     // top level of the app. (This is a very hacky interface which will
     // change. Note, eg, that .meteor/packages is confusingly ignored in this
-    // case.)
+    // case).
 
     var includeDefaultTargets = watch.readAndWatchFile(
       watchSet, path.join(appDir, 'no-default-targets')) === null;
@@ -1831,13 +1831,13 @@ exports.bundle = function (appDir, outputPath, options) {
 };
 
 // Make a JsImage object (a complete, linked, ready-to-go JavaScript
-// program.) It can either be loaded into memory with load(), which
+// program). It can either be loaded into memory with load(), which
 // returns the `Package` object inside the plugin's namespace, or
 // saved to disk with write(builder).
 //
 // Returns an object with keys:
 // - image: The created JsImage object.
-// - watchSet: Source file WatchSet (see bundle().)
+// - watchSet: Source file WatchSet (see bundle()).
 //
 // XXX return an 'errors' key for symmetry with bundle(), rather than
 // letting exceptions escape?
@@ -1897,7 +1897,7 @@ exports.buildJsImage = function (options) {
 };
 
 // Load a JsImage from disk (that was previously written by calling
-// write() on a JsImage.) `controlFilePath` is the path to the control
+// write() on a JsImage). `controlFilePath` is the path to the control
 // file (eg, program.json).
 exports.readJsImage = function (controlFilePath) {
   return JsImage.readFromDisk(controlFilePath);

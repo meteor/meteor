@@ -114,7 +114,7 @@ var Slice = function (pkg, options) {
   self.pkg = pkg;
 
   // Name for this slice. For example, the "client" in "ddp.client"
-  // (which, NB, we might load on server arches.)
+  // (which, NB, we might load on server arches).
   self.sliceName = options.name;
 
   // The architecture (fully or partially qualified) that can use this
@@ -301,7 +301,7 @@ _.extend(Slice.prototype, {
 
       // This object is called a #CompileStep and it's the interface
       // to plugins that define new source file handlers (eg,
-      // Coffeescript.)
+      // Coffeescript).
       //
       // Fields on CompileStep:
       //
@@ -368,7 +368,7 @@ _.extend(Slice.prototype, {
       //           column: 20, func: "doStuff" })
       //   Flag an error -- at a particular location in a source
       //   file, if you like (you can even indicate a function name
-      //   to show in the error, like in stack traces.) sourcePath,
+      //   to show in the error, like in stack traces). sourcePath,
       //   line, column, and func are all optional.
       //
       // XXX for now, these handlers must only generate portable code
@@ -376,7 +376,7 @@ _.extend(Slice.prototype, {
       // vs 'os') -- they can look at the arch that is provided
       // but they can't rely on the running on that particular arch
       // (in the end, an arch-specific slice will be emitted only if
-      // there are native node modules.) Obviously this should
+      // there are native node modules). Obviously this should
       // change. A first step would be a setOutputArch() function
       // analogous to what we do with native node modules, but maybe
       // what we want is the ability to ask the plugin ahead of time
@@ -793,7 +793,7 @@ _.extend(Slice.prototype, {
 //
 // Package and Slice should each be split into two objects, eg
 // PackageSource and SliceSource versus BuiltPackage and BuiltSlice
-// (find better names, though.)
+// (find better names, though).
 
 var nextPackageId = 1;
 var Package = function (library, packageDirectoryForBuildInfo) {
@@ -812,16 +812,16 @@ var Package = function (library, packageDirectoryForBuildInfo) {
 
   // The path relative to which all source file paths are interpreted
   // in this package. Also used to compute the location of the
-  // package's .npm directory (npm shrinkwrap state.) null if loaded
+  // package's .npm directory (npm shrinkwrap state). null if loaded
   // from unipackage.
   self.sourceRoot = null;
 
   // Path that will be prepended to the URLs of all resources emitted
   // by this package (assuming they don't end up getting
-  // concatenated.) For non-browser targets, the only effect this will
+  // concatenated). For non-browser targets, the only effect this will
   // have is to change the actual on-disk paths of the files in the
   // bundle, for those that care to open up the bundle and look (but
-  // it's still nice to get it right.) null if loaded from unipackage.
+  // it's still nice to get it right). null if loaded from unipackage.
   self.serveRoot = null;
 
   // The package's directory. This is used only by other packages that use this
@@ -983,7 +983,7 @@ _.extend(Package.prototype, {
   },
 
   // If this package has plugins, initialize them (run the startup
-  // code in them so that they register their extensions.) Idempotent.
+  // code in them so that they register their extensions). Idempotent.
   _ensurePluginsInitialized: function () {
     var self = this;
 
@@ -1030,13 +1030,13 @@ _.extend(Package.prototype, {
   },
 
   // Move a package to the built state (by running its source files
-  // through the appropriate compiler plugins.) Once build has
+  // through the appropriate compiler plugins). Once build has
   // completed, any errors detected in the package will have been
   // emitted to buildmessage.
   //
   // build() may retrieve the package's dependencies from the library,
   // so it is illegal to call build() from library.get() (until the
-  // package has actually been put in the loaded package list.)
+  // package has actually been put in the loaded package list).
   build: function () {
     var self = this;
 
@@ -1233,7 +1233,7 @@ _.extend(Package.prototype, {
       //
       // This is an experimental API and for now you should assume
       // that it will change frequently and radically (thus the
-      // '_transitional_'.) For maximum R&D velocity and for the good
+      // '_transitional_'). For maximum R&D velocity and for the good
       // of the platform, we will push changes that break your
       // packages that use this API. You've been warned.
       //
@@ -1496,7 +1496,7 @@ _.extend(Package.prototype, {
 
           // Top-level call to add a source file to a package. It will
           // be processed according to its extension (eg, *.coffee
-          // files will be compiled to JavaScript.)
+          // files will be compiled to JavaScript).
           add_files: function (paths, where, fileOptions) {
             paths = toArray(paths);
             where = toWhereArray(where);
@@ -1634,7 +1634,7 @@ _.extend(Package.prototype, {
           // we'd add here. This is necessary to resolve the circular dependency
           // between meteor and underscore (underscore has an unordered
           // dependency on meteor dating from when the .js extension handler was
-          // in the "meteor" package.)
+          // in the "meteor" package).
           var alreadyDependsOnMeteor =
             !! _.find(uses[role][where], function (u) {
               return u.package === "meteor" && !u.slice;
@@ -1670,7 +1670,7 @@ _.extend(Package.prototype, {
   },
 
   // Initialize a package from a legacy-style application directory
-  // (has .meteor/packages.)  This function does not retrieve the
+  // (has .meteor/packages).  This function does not retrieve the
   // package's dependencies from the library, and on return, the
   // package will be in an unbuilt state.
   initFromAppDir: function (appDir, ignoreFiles) {
@@ -1856,7 +1856,7 @@ _.extend(Package.prototype, {
   // Initialize a package from a prebuilt Unipackage on disk. On
   // return, the package will be a built state. This function does not
   // retrieve the package's dependencies from the library (it is not
-  // necessary.)
+  // necessary).
   //
   // options:
   // - onlyIfUpToDate: if true, then first check the unipackage's
@@ -2049,7 +2049,7 @@ _.extend(Package.prototype, {
   },
 
   // Try to check if this package is up-to-date (that is, whether its source
-  // files have been modified.) True if we have dependency info and it says that
+  // files have been modified). True if we have dependency info and it says that
   // the package is up-to-date. False if a source file has changed.
   //
   // The arguments _watchSet and _pluginProviderPackageDirs are used when

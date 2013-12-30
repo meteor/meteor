@@ -215,7 +215,7 @@ var File = function (inputFile, module) {
   self.servePath = inputFile.servePath;
 
   // The relative path of this input file in its source tree (eg,
-  // package or app.) Used for source maps, error messages..
+  // package or app). Used for source maps, error messages..
   self.sourcePath = inputFile.sourcePath;
 
   // If true, don't wrap this individual file in a closure.
@@ -467,7 +467,7 @@ var bannerPadding = function (bannerWidth) {
 //
 // useGlobalNamespace: make the top level namespace be the same as the
 // global namespace, so that symbols are accessible from the
-// console. typically used when linking apps (as opposed to packages.)
+// console. typically used when linking apps (as opposed to packages).
 //
 // combinedServePath: if we end up combining all of the files into
 // one, use this as the servePath.

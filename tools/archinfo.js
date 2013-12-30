@@ -19,7 +19,7 @@ var files = require('./files.js');
  *   Linux on Intel x86 architecture. x86_64 means a system that can
  *   run 64-bit images, furnished with 64-bit builds of shared
  *   libraries (there is no guarantee that 32-bit builds of shared
- *   libraries will be available.) x86_32 means a system that can run
+ *   libraries will be available). x86_32 means a system that can run
  *   32-bit images, furnished with 32-bit builds of shared libraries.
  *   Additionally, if a package contains shared libraries (for use by
  *   other packages), then if the package is built for x86_64, it
@@ -30,7 +30,7 @@ var files = require('./files.js');
  *   definition it would be possible to build a Linux system that can
  *   run both x86_64 and x86_32 images (eg, by using a 64-bit kernel
  *   and making sure that both versions of all relevant libraries were
- *   installed.) But we require such a host to decide whether it is
+ *   installed). But we require such a host to decide whether it is
  *   x86_64 or x86_32, and stick with it. You can't load a combination
  *   of packages from each and expect them to work together, because
  *   if they contain shared libraries they all need to have the same
@@ -49,7 +49,7 @@ var files = require('./files.js');
  *   of shared libraries available.  If a os.osx.x86_64 package
  *   contains a shared library, it is only required to provide a
  *   64-bit version of the library (it is not required to provide a
- *   fat binary with both 32-bit and 64-bit builds.)
+ *   fat binary with both 32-bit and 64-bit builds).
  *
  *   Note that in modern Darwin, both the 32 and 64 bit versions of
  *   the kernel can load 64-bit images, and the Apple-supplied shared
@@ -77,9 +77,9 @@ var files = require('./files.js');
  * directory where temporary files may be freely written. It does not
  * include any syscalls (beyond those used by code that customarily is
  * statically linked into every executable built on a platform, eg,
- * exit(2).) It does not guarantee the presence of any particular
+ * exit(2)). It does not guarantee the presence of any particular
  * shared libraries or programs (including any particular shell or
- * traditional tools like 'grep' or 'find'.)
+ * traditional tools like 'grep' or 'find').
  *
  * To model the shared libraries that are required on a system (and
  * the particular versions that are required), and to model
@@ -104,11 +104,11 @@ var files = require('./files.js');
  * "i686"?
  * A: We wanted to have one name for 32-bit and one name for 64-bit,
  * rather than several names for each that are virtual synonyms for
- * each (eg, x86_64 vs amd64 vs ia64, i386 vs i686 vs x86.) For the
+ * each (eg, x86_64 vs amd64 vs ia64, i386 vs i686 vs x86). For the
  * moment anyway, we're willing to adopt a "one size fits all"
  * attitude to get there (no ability to have separate builds for 80386
  * CPUs that don't support Pentium Pro extensions, for example --
- * you'll have to do runtime detection if you need that.) And as long
+ * you'll have to do runtime detection if you need that). And as long
  * as we have to pick a name, we wanted to pick one that was super
  * clear (it is not obvious to many people that "i686" means "32-bit
  * Intel", because why should it be?) and didn't imply too close of an
@@ -163,7 +163,7 @@ var host = function () {
 
 // True if `host` (an architecture name such as 'os.linux.x86_64') can run
 // programs of architecture `program` (which might be something like 'os',
-// 'os.linux', or 'os.linux.x86_64'.)
+// 'os.linux', or 'os.linux.x86_64').
 //
 // `host` and `program` are just mnemonics -- `host` does not
 // necessariy have to be a fully qualified architecture name. This
@@ -196,7 +196,7 @@ var mostSpecificMatch = function (host, programs) {
 };
 
 // `programs` is a set of architectures (as an array of string, which
-// may contain duplicates.) Determine if there exists any architecture
+// may contain duplicates). Determine if there exists any architecture
 // that is compatible with all of the architectures in the set. If so,
 // returns the least specific such architecture. Otherwise (the
 // architectures are disjoin) raise an exception.

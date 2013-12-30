@@ -257,7 +257,7 @@ Usage: meteor rebuild-all
 Rebuild all source packages in the library. This includes packages found
 through the PACKAGE_DIRS environment variable, local packages in the
 current application, and packages in the warehouse (but only those in the
-currently effective Meteor release.) It doesn't include any packages for
+currently effective Meteor release). It doesn't include any packages for
 which we don't have the source.
 
 You should never need to use this command. It is intended for use while

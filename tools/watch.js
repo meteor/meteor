@@ -44,7 +44,7 @@ var fiberHelpers = require('./fiber-helpers.js');
 //
 // You can call stop() to stop watching and tear down the
 // watcher. Calling stop() guarantees that you will not receive a
-// callback (if you have not already.) Calling stop() is unnecessary
+// callback (if you have not already). Calling stop() is unnecessary
 // if you've received a callback.
 //
 // To do a "one-shot" (to see if any files have been modified, compared to the

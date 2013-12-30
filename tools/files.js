@@ -142,7 +142,7 @@ files.getToolsVersion = function () {
 };
 
 // Return the root of dev_bundle (probably /usr/local/meteor in an
-// install, or (checkout root)/dev_bundle in a checkout..)
+// install, or (checkout root)/dev_bundle in a checkout.).
 files.getDevBundle = function () {
   if (files.inCheckout())
     return path.join(files.getCurrentToolsDir(), 'dev_bundle');
@@ -239,7 +239,7 @@ files.mkdir_p = function (dir, mode) {
 
 // Roughly like cp -R. 'from' should be a directory. 'to' can either
 // be a directory, or it can not exist (in which case it will be
-// created with mkdir_p.) Doesn't think about file mode at all.
+// created with mkdir_p). Doesn't think about file mode at all.
 //
 // If options.transform{Filename, Contents} is present, it should
 // be a function, and the contents (as a buffer) or filename will be
@@ -287,7 +287,7 @@ files.cp_r = function (from, to, options) {
 
 // Make a temporary directory. Returns the path to the newly created
 // directory. Only the current user is allowed to read or write the
-// files in the directory (or add files to it.) The directory will
+// files in the directory (or add files to it). The directory will
 // be cleaned up an exit.
 var tempDirs = [];
 files.mkdtemp = function (prefix) {
@@ -536,7 +536,7 @@ files.runJavaScript = function (code, options) {
     // Array'. for now, steer clear
     //
     // Pass 'true' as third argument if we want the parse error on
-    // stderr (which we don't.)
+    // stderr (which we don't).
     var script = require('vm').createScript(wrapped, stackFilename);
   } catch (nodeParseError) {
     if (!(nodeParseError instanceof SyntaxError))

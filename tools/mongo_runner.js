@@ -169,12 +169,14 @@ exports.launchMongo = function (options) {
           throw e;
       }
 
-      // If this is the first time we're using this DB, or we changed port since
-      // the last time, then we want to destroying any existing replSet
-      // configuration and create a new one. First we delete the "local" database
-      // if it exists. (It's a pain and slow to change the port in an existing
-      // replSet configuration. It's also a little slow to initiate a new replSet,
-      // thus the attempt to not do it unless the port changes.)
+      // If this is the first time we're using this DB, or we changed
+      // port since the last time, then we want to destroying any
+      // existing replSet configuration and create a new one. First we
+      // delete the "local" database if it exists. (It's a pain and
+      // slow to change the port in an existing replSet
+      // configuration. It's also a little slow to initiate a new
+      // replSet, thus the attempt to not do it unless the port
+      // changes.)
       if (createReplSet) {
         try {
           var dbFiles = fs.readdirSync(dbPath);

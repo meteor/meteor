@@ -212,7 +212,7 @@ _.extend(Builder.prototype, {
   // bundle. This will cause write, when in sanitize mode, to never
   // pick this filename (and will prevent files that from being
   // written that would conflict with paths that we are expecting to
-  // be directories.) Calling this twice on the same relPath will
+  // be directories). Calling this twice on the same relPath will
   // given an exception.
   //
   // options:

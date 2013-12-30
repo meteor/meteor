@@ -270,7 +270,7 @@ exports.deploy = function (options) {
   }
 
   // Get the upload information from Galaxy. It's a surprise if this
-  // fails (we already know the app exists.)
+  // fails (we already know the app exists).
   var info = prettyCall(conn, 'beginUploadStar',
                         [options.app, bundleResult.starManifest]);
 

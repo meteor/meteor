@@ -117,7 +117,7 @@ _.extend(exports, {
       if (e instanceof NpmFailure) {
         // Something happened that was out of our control, but wasn't
         // exactly unexpected (eg, no such npm package, no internet
-        // connection.) Handle it gracefully.
+        // connection). Handle it gracefully.
         return false;
       }
 
