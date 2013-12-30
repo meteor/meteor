@@ -1043,6 +1043,15 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
         {dogs: [{name: "Fido", age: 5}, {name: "Rex", age: 3}]});
   nomatch({dogs: {$elemMatch: {name: /e/, age: 5}}},
           {dogs: [{name: "Fido", age: 5}, {name: "Rex", age: 3}]});
+  match({x: {$elemMatch: {y: 9}}}, {x: [{y: 9}]});
+  nomatch({x: {$elemMatch: {y: 9}}}, {x: [[{y: 9}]]});
+  match({x: {$elemMatch: {$gt: 5, $lt: 9}}}, {x: [8]});
+  nomatch({x: {$elemMatch: {$gt: 5, $lt: 9}}}, {x: [[8]]});
+  match({'a.x': {$elemMatch: {y: 9}}},
+        {a: [{x: []}, {x: [{y: 9}]}]});
+  nomatch({a: {$elemMatch: {x: 5}}}, {a: {x: 5}});
+  match({a: {$elemMatch: {0: {$gt: 5, $lt: 9}}}}, {a: [[6]]});
+  match({a: {$elemMatch: {'0.b': {$gt: 5, $lt: 9}}}}, {a: [[{b:6}]]});
 
   // $comment
   match({a: 5, $comment: "asdf"}, {a: 5});

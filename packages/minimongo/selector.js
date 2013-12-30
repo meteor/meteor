@@ -417,6 +417,49 @@ var ELEMENT_OPERATORS = {
       regexp = new RegExp(operand);
     }
     return regexpElementSelector(regexp);
+  },
+  $elemMatch: {
+    dontExpandLeafArrays: true,
+    elementSelector: function (operand, valueSelector, cursor) {
+      if (!isPlainObject(operand))
+        throw Error("$elemMatch need an object");
+
+      var matcher, isDocMatcher;
+      if (isOperatorObject(operand)) {
+        matcher = compileValueSelector(operand);
+        isDocMatcher = false;
+      } else {
+        // This is NOT the same as compileValueSelector(operand), and not just
+        // because of the slightly different calling convention.
+        // {$elemMatch: {x: 3}} means "an element has a field x:3", not
+        // "consists only of a field x:3". Also, regexps and sub-$ are allowed.
+        matcher = compileDocumentSelector(operand);
+        isDocMatcher = true;
+      }
+
+      return function (value) {
+        if (!isArray(value))
+          return false;
+        return _.any(value, function (arrayElement) {
+          // XXX arrayIndex!
+          // XXX nesting geo stuff in here!
+          var arg;
+          if (isDocMatcher) {
+            // We can only match {$elemMatch: {b: 3}} against objects.
+            // (We can also match against arrays, if there's numeric indices,
+            // eg {$elemMatch: {'0.b': 3}} or {$elemMatch: {0: 3}}.)
+            if (!isPlainObject(arrayElement) && !isArray(arrayElement))
+              return false;
+            arg = arrayElement;
+          } else {
+            // dontIterate ensures that {a: {$elemMatch: {$gt: 5}}} matches
+            // {a: [8]} but not {a: [[8]]}
+            arg = [{value: arrayElement, dontIterate: true}];
+          }
+          return matcher(arg).result;
+        });
+      };
+    }
   }
 };
 
@@ -1100,5 +1143,4 @@ var andCompiledDocumentSelectors = function (selectors) {
 
 // Remaining to update:
 // - $all
-// - $elemMatch
 // - $near/$maxDistance
