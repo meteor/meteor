@@ -58,12 +58,12 @@ var isOperatorObject = function (valueSelector) {
 };
 
 
-var compileValueSelector = function (valueSelector, cursor) {
+var compileValueSelector = function (valueSelector, cursor, inRoot) {
   if (valueSelector instanceof RegExp)
     return convertElementSelectorToBranchedSelector(
       regexpElementSelector(valueSelector));
   else if (isOperatorObject(valueSelector))
-    return operatorValueSelector(valueSelector, cursor);
+    return operatorValueSelector(valueSelector, cursor, inRoot);
   else {
     return convertElementSelectorToBranchedSelector(
       equalityElementSelector(valueSelector));
@@ -127,13 +127,13 @@ var GROK = function (f) {
 };
 
 // XXX get rid of cursor when possible
-var operatorValueSelector = function (valueSelector, cursor) {
+var operatorValueSelector = function (valueSelector, cursor, inRoot) {
   // XXX kill this soon
   if (!_.all(valueSelector, function (operand, operator) {
     return _.has(ELEMENT_OPERATORS, operator) ||
       _.has(VALUE_OPERATORS, operator);
   })) {
-    return operatorValueSelectorLegacy(valueSelector, cursor);
+    return operatorValueSelectorLegacy(valueSelector, cursor, inRoot);
   }
 
   // Each valueSelector works separately on the various branches.  So one
@@ -152,7 +152,7 @@ var operatorValueSelector = function (valueSelector, cursor) {
         options = {elementSelector: options};
       operatorFunctions.push(
         convertElementSelectorToBranchedSelector(
-          options.elementSelector(operand, valueSelector, cursor),
+          options.elementSelector(operand, valueSelector, cursor, inRoot),
           options));
     } else {
       throw new Error("Unrecognized operator: " + operator);
@@ -652,7 +652,10 @@ var LEGACY_VALUE_OPERATORS = {
     };
   },
 
-  "$near": function (operand, operators, cursor) {
+  "$near": function (operand, operators, cursor, inRoot) {
+    if (!inRoot)
+      throw Error("$near can't be inside another $ operator");
+
     function distanceCoordinatePairs (a, b) {
       a = pointToArray(a);
       b = pointToArray(b);
@@ -711,14 +714,14 @@ var LEGACY_VALUE_OPERATORS = {
   }
 };
 
-var operatorValueSelectorLegacy = function (valueSelector, cursor) {
+var operatorValueSelectorLegacy = function (valueSelector, cursor, inRoot) {
   var operatorFunctions = [];
   _.each(valueSelector, function (operand, operator) {
     if (!_.has(LEGACY_VALUE_OPERATORS, operator))
       throw new Error("Unrecognized legacy operator: " + operator);
     // Special case for location operators
     operatorFunctions.push(LEGACY_VALUE_OPERATORS[operator](
-      operand, valueSelector, cursor));
+      operand, valueSelector, cursor, inRoot));
   });
   return function (value, doc) {
     return _.all(operatorFunctions, function (f) {
@@ -1052,7 +1055,7 @@ var expandArraysInBranches = function (branches, skipTheArrays) {
 };
 
 // The main compilation function for a given selector.
-var compileDocumentSelector = function (docSelector, cursor) {
+var compileDocumentSelector = function (docSelector, cursor, isRoot) {
   var perKeySelectors = [];
   _.each(docSelector, function (subSelector, key) {
     if (key.substr(0, 1) === '$') {
@@ -1066,7 +1069,7 @@ var compileDocumentSelector = function (docSelector, cursor) {
     } else {
       var lookUpByIndex = LocalCollection._makeLookupFunction2(key);
       var valueSelectorFunc =
-        compileValueSelector(subSelector, cursor);
+        compileValueSelector(subSelector, cursor, isRoot);
       perKeySelectors.push(function (doc, wholeDoc) {
         var branchValues = lookUpByIndex(doc);
 
@@ -1138,7 +1141,7 @@ LocalCollection._compileSelector = function (selector, cursor) {
     throw new Error("Invalid selector: " + selector);
 
   // XXX get rid of second argument once _distance refactored
-  var s = compileDocumentSelector(selector, cursor);
+  var s = compileDocumentSelector(selector, cursor, true);
   return function (doc) {
     return s(doc, doc);
   };
