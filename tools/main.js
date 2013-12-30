@@ -63,6 +63,10 @@ var messages = {};
 // usage information.
 main.ShowUsage = function () {};
 
+// Exception to throw to skip the process.exit call.
+// usage information.
+main.WaitForExit = function () {};
+
 // Exception to throw from a command to exit, restart, and reinvoke
 // the command with a different Meteor release.
 main.SpringboardToRelease = function (releaseName) {
@@ -145,6 +149,11 @@ main.SpringboardToRelease = function (releaseName) {
 // - If the command-line arguments aren't valid, 'throw new
 //   main.ShowUsage'. This will print usage info for the command and
 //   exit with status 1.
+// - If you have started (for example) a subprocess or worker fiber
+//   and want to wait until it's finished to exit, throw
+//   main.WaitForExit. This will skip the call to process.exit and the
+//   program will keep running until node thinks that everything is
+//   done.
 // - To quit, restart, and rerun the command with a different Meteor
 //   release, 'throw new mainSpringboardToRelease(releaseName)'.
 //
@@ -783,13 +792,13 @@ commandName + ": You're not in a Meteor project directory.\n" +
   try {
     var ret = command.func(options);
   } catch (e) {
-    if (e === main.ShowUsage ||
+    if (e === main.ShowUsage || e === main.WaitForExit ||
         e === main.SpringboardToRelease)
       throw new Error(
         "you meant 'throw new main.Foo', not 'throw main.Foo'");
     if (e instanceof main.ShowUsage) {
       process.stderr.write(longHelp(commandName) + "\n");
-      return 1;
+      process.exit(1);
     }
     if (e instanceof main.SpringboardToRelease) {
       // First we need to load the other release's metadata so that we
@@ -804,8 +813,13 @@ commandName + ": You're not in a Meteor project directory.\n" +
       // Good to go! Now a function call that doesn't return:
       springboard(otherRelease.getToolsVersion(), otherRelease.name);
     }
+    if (e instanceof main.WaitForExit)
+      return;
     throw e;
   }
+
+  // Exit. (We will not get here if the command threw an exception
+  // such as main.WaitForExit).
   if (ret === undefined)
     ret = 0;
   if (typeof ret !== "number")

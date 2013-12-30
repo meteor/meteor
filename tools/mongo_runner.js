@@ -3,6 +3,7 @@ var path = require("path");
 
 var files = require('./files.js');
 var utils = require('./utils.js');
+var release = require('./release.js');
 
 var _ = require('underscore');
 var unipackage = require('./unipackage.js');

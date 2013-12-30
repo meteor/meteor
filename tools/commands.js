@@ -168,6 +168,8 @@ main.registerCommand({
     settingsFile: options.settings,
     program: options.program || undefined
   });
+
+  throw new main.WaitForExit;
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -641,6 +643,7 @@ main.registerCommand({
   } else {
     process.stdin.pause();
     deploy.runMongoShell(mongoUrl);
+    throw new main.WaitForExit;
   }
 });
 
@@ -807,6 +810,8 @@ main.registerCommand({
       app: site,
       streaming: options.stream
     });
+    if (options.stream)
+      throw new main.WaitForExit;
   } else {
     deploy.logs(site);
   }
@@ -976,6 +981,7 @@ main.registerCommand({
       settingsFile: options.settings,
       banner: "Tests"
     });
+    throw new main.WaitForExit;
   }
 });
 
