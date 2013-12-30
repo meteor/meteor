@@ -905,7 +905,7 @@ numericKey = function (s) {
 };
 
 // XXX redoc
-// XXX be aware that _compileSort currently assumes that lookup functions
+// XXX be aware that Sorter currently assumes that lookup functions
 //     return non-empty arrays but that is no longer the case
 // _makeLookupFunction(key) returns a lookup function.
 //
@@ -1167,5 +1167,6 @@ var andCompiledDocumentSelectors = function (selectors) {
 
 // Remaining to update:
 // - $near/$maxDistance
+//     - make sure to switch _distance to be an idmap
 // Remaining to implement:
 // - $all with $elemMatch

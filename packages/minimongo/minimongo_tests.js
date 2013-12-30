@@ -1504,7 +1504,8 @@ Tinytest.add("minimongo - ordering", function (test) {
   // document ordering under a sort specification
   var verify = function (sorts, docs) {
     _.each(sorts, function (sort) {
-      assert_ordering(test, LocalCollection._compileSort(sort), docs);
+      var sorter = new MinimongoTest.Sorter(sort);
+      assert_ordering(test, sorter.getComparator(), docs);
     });
   };
 
@@ -1531,14 +1532,14 @@ Tinytest.add("minimongo - ordering", function (test) {
          [{c: 1}, {a: 1, b: 2}, {a: 1, b: 3}, {a: 2, b: 0}]);
 
   test.throws(function () {
-    LocalCollection._compileSort("a");
+    new MinimongoTest.Sorter("a");
   });
 
   test.throws(function () {
-    LocalCollection._compileSort(123);
+    new MinimongoTest.Sorter(123);
   });
 
-  test.equal(LocalCollection._compileSort({})({a:1}, {a:2}), 0);
+  test.equal(new MinimongoTest.Sorter({}).getComparator()({a:1}, {a:2}), 0);
 });
 
 Tinytest.add("minimongo - sort", function (test) {

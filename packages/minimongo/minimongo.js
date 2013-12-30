@@ -90,7 +90,7 @@ LocalCollection.Cursor = function (collection, selector, options) {
     // stash for fast path
     self.selector_id = LocalCollection._idStringify(selector);
     self.selector_f = LocalCollection._compileSelector(selector, self);
-    self.sort_f = undefined;
+    self.sorter = undefined;
   } else {
     // MongoDB throws different errors on different branching operators
     // containing $near
@@ -99,8 +99,8 @@ LocalCollection.Cursor = function (collection, selector, options) {
 
     self.selector_id = undefined;
     self.selector_f = LocalCollection._compileSelector(selector, self);
-    self.sort_f = (isGeoQuery(selector) || options.sort) ?
-      LocalCollection._compileSort(options.sort || [], self) : null;
+    self.sorter = (isGeoQuery(selector) || options.sort) ?
+      new Sorter(options.sort || []) : null;
   }
   self.skip = options.skip;
   self.limit = options.limit;
@@ -276,7 +276,7 @@ _.extend(LocalCollection.Cursor.prototype, {
     // XXX merge this object w/ "this" Cursor.  they're the same.
     var query = {
       selector_f: self.selector_f, // not fast pathed
-      sort_f: ordered && self.sort_f,
+      sorter: ordered && self.sorter,
       results_snapshot: null,
       ordered: ordered,
       cursor: self,
@@ -371,11 +371,11 @@ _.extend(LocalCollection.Cursor.prototype, {
 
 // Returns a collection of matching objects, but doesn't deep copy them.
 //
-// If ordered is set, returns a sorted array, respecting sort_f, skip, and limit
-// properties of the query.  if sort_f is falsey, no sort -- you get the natural
+// If ordered is set, returns a sorted array, respecting sorter, skip, and limit
+// properties of the query.  if sorter is falsey, no sort -- you get the natural
 // order.
 //
-// If ordered is not set, returns an object mapping from ID to doc (sort_f, skip
+// If ordered is not set, returns an object mapping from ID to doc (sorter, skip
 // and limit should not be set).
 LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
   var self = this;
@@ -410,7 +410,7 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
         results[id] = doc;
     }
     // Fast path for limited unsorted queries.
-    if (self.limit && !self.skip && !self.sort_f &&
+    if (self.limit && !self.skip && !self.sorter &&
         results.length === self.limit)
       return results;
   }
@@ -418,12 +418,19 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
   if (!ordered)
     return results;
 
-  if (self.sort_f)
-    results.sort(self.sort_f);
+  if (self.sorter) {
+    var comparator = self._getComparator();
+    results.sort(comparator);
+  }
 
   var idx_start = self.skip || 0;
   var idx_end = self.limit ? (self.limit + idx_start) : results.length;
   return results.slice(idx_start, idx_end);
+};
+
+LocalCollection.Cursor.prototype._getComparator = function () {
+  var self = this;
+  return self.sorter.getComparator({distances: self._distance});
 };
 
 // XXX Maybe we need a version of observe that just calls a callback if
@@ -715,12 +722,12 @@ LocalCollection._insertInResults = function (query, doc) {
   var fields = EJSON.clone(doc);
   delete fields._id;
   if (query.ordered) {
-    if (!query.sort_f) {
+    if (!query.sorter) {
       query.addedBefore(doc._id, fields, null);
       query.results.push(doc);
     } else {
       var i = LocalCollection._insertInSortedList(
-        query.sort_f, query.results, doc);
+        query.cursor._getComparator(), query.results, doc);
       var next = query.results[i+1];
       if (next)
         next = next._id;
@@ -763,14 +770,14 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
 
   if (!_.isEmpty(changedFields))
     query.changed(doc._id, changedFields);
-  if (!query.sort_f)
+  if (!query.sorter)
     return;
 
   // just take it out and put it back in again, and see if the index
   // changes
   query.results.splice(orig_idx, 1);
   var new_idx = LocalCollection._insertInSortedList(
-    query.sort_f, query.results, doc);
+    query.cursor._getComparator(), query.results, doc);
   if (orig_idx !== new_idx) {
     var next = query.results[new_idx+1];
     if (next)
