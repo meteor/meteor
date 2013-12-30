@@ -189,9 +189,9 @@ exports.launchMongo = function (options) {
 
         // Load mongo-livedata so we'll be able to talk to it.
         var mongoNpmModule = unipackage.load({
-          library: options.context.library,
+          library: release.current.library,
           packages: [ 'mongo-livedata' ],
-          release: options.context.releaseVersion
+          release: release.current.name,
         })['mongo-livedata'].MongoInternals.NpmModule;
       }
 

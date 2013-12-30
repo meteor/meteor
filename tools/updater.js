@@ -16,17 +16,12 @@ if (testingUpdater)
  * Downloads the current manifest file and returns it via a callback (or
  * null on error)
  */
-exports.getManifest = function (context) {
-  var options = {
+exports.getManifest = function () {
+  return httpHelpers.getUrl({
     url: config.getUpdateManifestUrl(),
     json: true,
     useSessionHeader: true
-  };
-
-  if (context)
-    options.meteorReleaseContext = context;
-
-  return httpHelpers.getUrl(options);
+  });
 };
 
 /**
@@ -34,10 +29,10 @@ exports.getManifest = function (context) {
  * and then return. If an update is found, download and install it.
  * If 'silent' is true, suppress chatter.
  */
-exports.performOneUpdateCheck = function (context, silent) {
+exports.performOneUpdateCheck = function (silent) {
   var manifest = null;
   try {
-    manifest = exports.getManifest(context);
+    manifest = exports.getManifest();
   } catch (e) {
     // Ignore error (eg, offline), but still do the "can we update this app
     // with a locally available release" check.
@@ -93,18 +88,18 @@ exports.performOneUpdateCheck = function (context, silent) {
   // update this app? Specifically: is our local latest release something
   // other than this app's release, and the user didn't specify a specific
   // release at the command line with --release?
-  if (localLatestRelease !== context.releaseVersion &&
-      !context.userReleaseOverride &&
-      !silent) {
+  if (localLatestRelease !== release.current.name &&
+      ! release.forced &&
+      ! silent) {
     console.log(
       "=> Meteor %s is available. Update this project with 'meteor update'.",
       localLatestRelease);
   }
 };
 
-exports.startUpdateChecks = function (context) {
+exports.startUpdateChecks = function () {
   var updateCheck = inFiber(function () {
-    exports.performOneUpdateCheck(context, false);
+    exports.performOneUpdateCheck(false);
   });
   setInterval(updateCheck, 12*60*60*1000); // twice a day
   updateCheck(); // and now.

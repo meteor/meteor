@@ -15,10 +15,10 @@
 ///       foo/
 ///         VERSION/
 ///
-/// When running from a checkout, there is only one acceptable release - 'none',
-/// which has an empty manifest, ensuring that we only load local packages (in
-/// CHECKOUT/packages or within a directory in the PACKAGE_DIRS environment
-/// variable)
+/// The warehouse is not used at all when running from a
+/// checkout. Only local packages will be loaded (from
+/// CHECKOUT/packages or within a directory in the PACKAGE_DIRS
+/// environment variable). The setup of that is handled by release.js.
 
 var path = require("path");
 var fs = require("fs");
@@ -69,13 +69,9 @@ _.extend(warehouse, {
     return path.join(warehouse.getWarehouseDir(), 'tools', version, '.fresh');
   },
 
-  // If you're running from a git checkout, only accept 'none' and
-  // return an empty manifest.  Otherwise, ensure the passed release
-  // version is stored in the local warehouse and return its parsed
-  // manifest.
+  // Ensure the passed release version is stored in the local
+  // warehouse and return its parsed manifest.
   ensureReleaseExistsAndReturnManifest: function(release) {
-    if (release === 'none')
-      return null;
     if (!files.usesWarehouse())
       throw new Error("Not in a warehouse but requesting a manifest!");
 

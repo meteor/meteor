@@ -1,10 +1,7 @@
 var main = require('./main.js');
-
-// XXX make sure that all of the following are actually used
 var path = require('path');
 var _ = require('underscore');
 var fs = require("fs");
-var cp = require('child_process');
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var runner = require('./run.js');
@@ -13,12 +10,9 @@ var buildmessage = require('./buildmessage.js');
 var unipackage = require('./unipackage.js');
 var project = require('./project.js');
 var warehouse = require('./warehouse.js');
-var logging = require('./logging.js');
-var cleanup = require('./cleanup.js');
-var httpHelpers = require('./http-helpers.js');
 var auth = require('./auth.js');
-var url = require('url');
 var config = require('./config.js');
+var release= require('./release.js');
 var Future = require('fibers/future');
 
 // Given a site name passed on the command line (eg, 'mysite'), return
@@ -85,19 +79,22 @@ main.registerCommand({
   name: '--version',
   requiresRelease: false
 }, function (options) {
-  var context = options.context;
-
-  if (! files.usesWarehouse()) {
-    logging.die("Unreleased (running from a checkout)");
-  }
-
-  if (context.appReleaseVersion === "none") {
-    logging.die(
+  if (release.current === null) {
+    if (! options.appDir)
+      throw new Error("missing release, but not in an app?");
+    process.stderr.write(
 "This project was created with a checkout of Meteor, rather than an\n" +
 "official release, and doesn't have a release number associated with\n" +
-"it. You can set its release with 'meteor update'.");
+"it. You can set its release with 'meteor update'.\n");
+    return 1;
   }
-  console.log("Release " + context.releaseVersion);
+
+  if (release.current.isCheckout()) {
+    process.stderr.write("Unreleased (running from a checkout)\n");
+    return 1;
+  }
+
+  console.log("Release " + release.current.name);
 });
 
 // Internal use only.
@@ -121,15 +118,16 @@ main.registerCommand({
   name: '--get-ready',
   requiresRelease: false
 }, function (options) {
-  var context = options.context;
-
   if (files.usesWarehouse()) {
     var updater = require('./updater.js');
-    updater.performOneUpdateCheck(context, true /* silent */);
+    updater.performOneUpdateCheck(true /* silent */);
   } else {
     // dev bundle is downloaded by the wrapper script. We just need
     // to install NPM dependencies.
-    _.each(context.library.list(), function (p) {
+    if (! release.current)
+      // This is a weird case. Fail silently.
+      return 0;
+    _.each(release.current.library.list(), function (p) {
       p.preheat();
     });
   }
@@ -155,19 +153,18 @@ main.registerCommand({
     once: { type: Boolean }
   }
 }, function (options) {
-  var context = options.context;
-
-  if (files.usesWarehouse() &&
-      context.appReleaseVersion !== 'none' &&
-      context.appReleaseVersion !== context.releaseVersion) {
-    console.log("=> Using Meteor %s as requested (overriding Meteor %s)",
-                context.releaseVersion, context.appReleaseVersion);
-    console.log();
+  if (release.forced) {
+    var appRelease = project.getMeteorReleaseVersion(options.appDir);
+    if (release.current.name !== appRelease) {
+      console.log("=> Using Meteor %s as requested (overriding Meteor %s)",
+                  release.current.name, appRelease);
+      console.log();
+    }
   }
 
   auth.tryRevokeOldTokens({timeout: 1000});
 
-  runner.run(options.appDir, context, {
+  runner.run(options.appDir, {
     port: options.port,
     rawLogs: options['raw-logs'],
     minify: options.production,
@@ -189,6 +186,21 @@ main.registerCommand({
     example: { type: String }
   }
 }, function (options) {
+  // Suppose you have an app A, and from some directory inside that
+  // app, you run 'meteor create /my/new/app'. The new app should use
+  // the latest available Meteor release, not the release that A
+  // uses. So if we were run from inside an app directory, and the
+  // user didn't force a release with --release, we need to
+  // springboard to the correct release and tools version.
+  //
+  // (In particular, it's not sufficient to create the new app with
+  // this version of the tools, and then stamp on the correct release
+  // at the end.)
+  var desiredRelease = release.forced ? release.current.name :
+    warehouse.latestRelease();
+  if (release.current.name !== desiredRelease)
+    throw new main.SpringboardToRelease(desiredRelease); // does not return
+
   var appPath;
   if (options.args.length === 1)
     appPath = options.args[0];
@@ -252,10 +264,8 @@ main.registerCommand({
     });
   }
 
-  // Use the global release version, so that it isn't influenced by the
-  // release version of the app dir you happen to be inside now.
-  project.writeMeteorReleaseVersion(appPath,
-                                    options.context.globalReleaseVersion);
+  project.writeMeteorReleaseVersion(
+    appPath, release.current.isCheckout() ? "none" : release.current.name);
 
   process.stderr.write(appPath + ": created");
   if (options.example && options.example !== appPath)
@@ -282,24 +292,22 @@ main.registerCommand({
   // update' is how you fix apps that don't have a release.
   requiresRelease: false
 }, function (options) {
-  var context = options.context;
-
   // refuse to update if we're in a git checkout.
   if (! files.usesWarehouse()) {
-    logging.die(
-      "update: can only be run from official releases, not from checkouts");
+    process.stderr.write(
+      "update: can only be run from official releases, not from checkouts\n");
+    return 1;
   }
 
-  var didGlobalUpdateWithoutSpringboarding = false;
-  var triedToGloballyUpdateButFailed = false;
+  var couldNotContactServer = false;
 
-  // Unless the user specified a specific release (or we're doing a
-  // mid-update springboard), go get the latest release.
-  if (! options.release) {
+  // Unless --release was passed (meaning that either the user asked
+  // for a particular release, or that we _just did_ this and
+  // springboarded), go get the latest release and switch to it.
+  if (! release.forced) {
     if (! options["dont-fetch-latest"]) {
       try {
-        didGlobalUpdateWithoutSpringboarding =
-          warehouse.fetchLatestRelease();
+        warehouse.fetchLatestRelease();
       } catch (e) {
         if (! (e instanceof files.OfflineError)) {
           console.error("Failed to update Meteor.");
@@ -308,91 +316,121 @@ main.registerCommand({
         // If the problem appears to be that we're offline, just log and
         // continue.
         console.log("Can't contact the update server. Are you online?");
-        triedToGloballyUpdateButFailed = true;
+        couldNotContactServer = true;
       }
     }
 
-    // sets context.releaseVersion to the latest release (if not
-    // already there), rereads the manifest, and then if we're in a
-    // different version of tools from that release, springboards
-    main.hackContextForUpdateMaybeSpringboard(context);
+    if (! release.current ||
+        release.current.name !== warehouse.latestRelease()) {
+      // The user asked for the latest release (well, they "asked for
+      // it" by not passing --release). We just downloaded a new
+      // release, so springboard to it. (Or, we were run in app with
+      // no release, so springboard to the lastest release we know
+      // about, whether we just download it or not.)
+      // #UpdateSpringboard
+      //
+      // (We used to springboard only if the tools version actually
+      // changed between the old and new releases. Now we do it
+      // unconditionally, because it's not a big deal to do it and it
+      // eliminates the complexity of the current release changing.)
+      throw new main.SpringboardToRelease(warehouse.latestRelease());
+    }
   }
+
+  // At this point we should have a release. (If we didn't to start
+  // with, #UpdateSpringboard fixed that.) And it can't be a checkout,
+  // because we checked for that at the very beginning.
+  if (! release.current || ! release.current.isProperRelease())
+    throw new Error("don't have a proper release?");
 
   // If we're not in an app, then we're done (other than maybe printing some
   // stuff).
   if (! options.appDir) {
     if (options["dont-fetch-latest"])
       return;
-    if (options.release || didGlobalUpdateWithoutSpringboarding) {
-      // If the user specified a specific release, or we just did a global
-      // update (with springboarding, in which case --release is set, or
-      // without springboarding, in which case didGlobalUpdate is set),
-      // print this message.
+    if (release.forced) {
+      // We get here if:
+      // 1) the user ran 'meteor update' and we found a new version
+      // 2) the user ran 'meteor update --release xyz' (regardless of
+      //    whether we found a new release)
       //
-      // (Realize that if they specified --release, the release has
-      // already been installed by virtue of the install/springboard
-      // process that runs at startup even before command starts
-      // running.)
-      console.log("Installed. Run 'meteor update' inside of a particular project\n" +
-                  "directory to update that project to Meteor %s.",
-                  context.releaseVersion);
+      // In case (1), we downloaded and installed the update and then
+      // we springboarded (at #UpdateSpringboard above), causing
+      // release.forced to be true.
+      //
+      // In case (2), we downloaded, installed, and springboarded to
+      // the requested release in the initialization code, before the
+      // command even ran. They could equivalently have run 'meteor
+      // help --release xyz'.
+      console.log(
+"Installed. Run 'meteor update' inside of a particular project\n" +
+"directory to update that project to Meteor %s.", release.current.name);
     } else {
-      // The user just ran "meteor update" (without --release), and we did
-      // not update.
-      console.log("The latest version of Meteor, %s, is already installed on this\n" +
-                  "computer. Run 'meteor update' inside of a particular project\n" +
-                  "directory to update that project to Meteor %s.",
-                  context.releaseVersion, context.releaseVersion);
+      // We get here if the user ran 'meteor update' and we didn't
+      // find a new version.
+
+      if (couldNotContactServer) {
+        // We already printed an error message about our inability to
+        // ask the server if we're up to date.
+      } else {
+        console.log(
+"The latest version of Meteor, %s, is already installed on this\n" +
+"computer. Run 'meteor update' inside of a particular project\n" +
+"directory to update that project to Meteor %s.",
+          release.current.name, release.current.name);
+      }
     }
     return;
   }
 
   // Otherwise, we have to upgrade the app too, if the release changed.
   var appRelease = project.getMeteorReleaseVersion(options.appDir);
-  if (appRelease !== null && appRelease === context.releaseVersion) {
-    if (triedToGloballyUpdateButFailed) {
+  if (appRelease !== null && appRelease === release.current.name) {
+    if (couldNotContactServer) {
       console.log(
-        "This project is already at Meteor %s, the latest release\n" +
-          "installed on this computer.",
-        context.releaseVersion);
+"This project is already at Meteor %s, the latest release\n" +
+"installed on this computer.", appRelease);
     } else {
       console.log(
-        "This project is already at Meteor %s, the latest release.",
-        context.releaseVersion);
+"This project is already at Meteor %s, the latest release.", appRelease);
     }
     return;
   }
 
   // Write the release to .meteor/release.
-  project.writeMeteorReleaseVersion(options.appDir,
-                                    context.releaseVersion);
+  project.writeMeteorReleaseVersion(options.appDir, release.current.name);
 
   // Find upgraders (in order) necessary to upgrade the app for the new
   // release (new metadata file formats, etc, or maybe even updating renamed
-  // APIs). (If this is a pre-engine app with no .meteor/release file, run
-  // all upgraders.)
-  var oldManifest = appRelease === null ? {}
-  : warehouse.ensureReleaseExistsAndReturnManifest(appRelease);
-  // We can only run upgrades from pinned apps.
-  if (oldManifest) {
-    var upgraders = _.difference(context.releaseManifest.upgraders || [],
-                                 oldManifest.upgraders || []);
+  // APIs).
+  //
+  // * If this is a pre-engine app with no .meteor/release file, run
+  //   all upgraders.
+  // * If the app didn't have a release because it was created by a
+  //   checkout, don't run any upgraders.
+  if (appRelease !== "none") {
+    // NB! This call to release.load() may have to fetch the release
+    // from the server. If so, it will print progress messages and
+    // even kill the program if it doesn't get what it wants!
+    var oldUpgraders =
+      appRelease === null ? [] : release.load(appRelease).getUpgraders();
+    var upgraders = _.difference(release.current.getUpgraders(),
+                                 oldUpgraders);
     _.each(upgraders, function (upgrader) {
       require("./upgraders.js").runUpgrader(upgrader, options.appDir);
     });
   }
 
   // This is the right spot to do any other changes we need to the app in
-  // order to update it for the new release .
-  // XXX add app packages to .meteor/packages here for linker upgrade!
+  // order to update it for the new release.
   console.log("%s: updated to Meteor %s.",
-              path.basename(options.appDir), context.releaseVersion);
+              path.basename(options.appDir), release.current.name);
 
   // Print any notices relevant to this upgrade.
   // XXX This doesn't include package-specific notices for packages that
   // are included transitively (eg, packages used by app packages).
   var packages = project.get_packages(options.appDir);
-  warehouse.printNotices(appRelease, context.releaseVersion, packages);
+  warehouse.printNotices(appRelease, release.current.name, packages);
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -407,7 +445,6 @@ main.registerCommand({
   requiresApp: true
 }, function (options) {
   var upgrader = options.args[0];
-  var context = options.context;
 
   var upgraders = require("./upgraders.js");
   console.log("%s: running upgrader %s.",
@@ -425,9 +462,7 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true
 }, function (options) {
-  var context = options.context;
-
-  var all = context.library.list();
+  var all = release.current.library.list();
   var using = {};
   _.each(project.get_packages(options.appDir), function (name) {
     using[name] = true;
@@ -456,8 +491,6 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true
 }, function (options) {
-  var context = options.context;
-
   var using = {};
   _.each(project.get_packages(options.appDir), function (name) {
     using[name] = true;
@@ -484,8 +517,6 @@ main.registerCommand({
     using: { type: Boolean }
   }
 }, function (options) {
-  var context = options.context;
-
   if (options.using) {
     var using = project.get_packages(options.appDir);
 
@@ -504,7 +535,7 @@ main.registerCommand({
     return;
   }
 
-  var list = context.library.list();
+  var list = release.current.library.list();
   var names = _.keys(list);
   names.sort();
   var pkgs = [];
@@ -540,8 +571,6 @@ main.registerCommand({
   // of the file, not a constant 'bundle' (a bit obnoxious for
   // machines, but worth it for humans)
 
-  var context = options.context;
-
   var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
   var bundle_path = path.join(buildDir, 'bundle');
   var output_path = path.resolve(options.args[0]); // get absolute path
@@ -550,8 +579,8 @@ main.registerCommand({
   var bundleResult = bundler.bundle(options.appDir, bundle_path, {
     nodeModulesMode: options['for-deploy'] ? 'skip' : 'copy',
     minify: ! options.debug,
-    releaseStamp: context.releaseVersion,
-    library: context.library
+    releaseStamp: release.current.name,
+    library: release.current.library
   });
   if (bundleResult.errors) {
     process.stdout.write("Errors prevented bundling:\n");
@@ -586,7 +615,6 @@ main.registerCommand({
 
   if (options.args.length === 0) {
     // localhost mode
-    var fut = new Future;
     var mongoPort = findMongoPort(options.appDir);
     if (! mongoPort) {
       process.stdout.write(
@@ -605,10 +633,7 @@ main.registerCommand({
 
     if (hostedWithGalaxy(site)) {
       var deployGalaxy = require('./deploy-galaxy.js');
-      mongoUrl = deployGalaxy.temporaryMongoUrl({
-        app: site,
-        context: options.context
-      });
+      mongoUrl = deployGalaxy.temporaryMongoUrl(site);
     } else {
       mongoUrl = deploy.temporaryMongoUrl(site);
     }
@@ -684,7 +709,6 @@ main.registerCommand({
     return options.delete || options.star ? false : true;
   }
 }, function (options) {
-  var context = options.context;
   var site = qualifySitename(options.args[0]);
   config.printUniverseBanner();
   var useGalaxy = hostedWithGalaxy(site);
@@ -692,7 +716,7 @@ main.registerCommand({
   if (options.delete) {
     if (useGalaxy) {
       var deployGalaxy = require('./deploy-galaxy.js');
-      deployGalaxy.deleteApp(site, context);
+      deployGalaxy.deleteApp(site);
     } else {
       deploy.deleteApp(site);
     }
@@ -712,11 +736,13 @@ main.registerCommand({
     return 1;
   }
 
-  // We don't need to be in an app if we're not going to run the bundler.
   var starball = options.star;
-  // XXX I think this is only supported for deploying to Galaxy, so it
-  // should print an error if you try to pass --starball while
-  // deploying to Meteor.
+  if (starball && ! useGalaxy) {
+    // XXX it would be nice to support this for non-Galaxy deploys too
+    process.stderr.write(
+"--star: only supported when deploying to Galaxy.\n");
+    return 1;
+  }
 
   var settings = undefined;
   if (options.settings)
@@ -728,7 +754,7 @@ main.registerCommand({
 "email address!\n" +
 "\n");
 
-    if (! auth.registerOrLogIn(context))
+    if (! auth.registerOrLogIn())
       return 1;
   }
 
@@ -738,13 +764,12 @@ main.registerCommand({
       app: site,
       appDir: options.appDir,
       settings: settings,
-      context: context,
       starball: starball,
       bundleOptions: {
         nodeModulesMode: 'skip',
         minify: ! options.debug,
-        releaseStamp: context.releaseVersion,
-        library: context.library
+        releaseStamp: release.current.name,
+        library: release.current.library
       },
       admin: options.admin
     });
@@ -756,8 +781,8 @@ main.registerCommand({
       bundleOptions: {
         nodeModulesMode: 'skip',
         minify: ! options.debug,
-        releaseStamp: context.releaseVersion,
-        library: context.library
+        releaseStamp: release.current.name,
+        library: release.current.library
       }
     });
   }
@@ -781,7 +806,6 @@ main.registerCommand({
   if (hostedWithGalaxy(site)) {
     var deployGalaxy = require('./deploy-galaxy.js');
     deployGalaxy.logs({
-      context: options.context,
       app: site,
       streaming: options.stream
     });
@@ -893,7 +917,7 @@ main.registerCommand({
     'driver-package': { type: String }
   }
 }, function (options) {
-  var context = options.context;
+  var library = release.current.library;
 
   var testPackages;
   if (options.args.length === 0) {
@@ -901,7 +925,7 @@ main.registerCommand({
     // can fail (eg, a package has a parse error) and if it does
     // we currently just exit! Which sucks because we don't get
     // reloading.
-    testPackages = _.keys(context.library.list());
+    testPackages = _.keys(library.list());
   } else {
     testPackages = _.map(options.args, function (p) {
       // If it's a package name, just pass it through.
@@ -913,7 +937,7 @@ main.registerCommand({
       // have a trailing slash.
       var packageDir = path.resolve(p);
       var packageName = path.basename(packageDir);
-      context.library.override(packageName, packageDir);
+      library.override(packageName, packageDir);
       return packageName;
     });
   }
@@ -940,12 +964,12 @@ main.registerCommand({
         nodeModulesMode: 'skip',
         testPackages: testPackages,
         minify: options.production,
-        releaseStamp: context.releaseVersion,
-        library: context.library
+        releaseStamp: release.current.name,
+        library: library
       }
     });
   } else {
-    runner.run(testRunnerAppDir, context, {
+    runner.run(testRunnerAppDir, {
       port: options.port,
       minify: options.production,
       once: options.once,
@@ -965,8 +989,6 @@ main.registerCommand({
   name: 'rebuild-all',
   hidden: true
 }, function (options) {
-  var context = options.context;
-
   if (options.appDir) {
     // The library doesn't know about other programs in your app. Let's blow
     // away their .build directories if they have them, and not rebuild
@@ -987,7 +1009,7 @@ main.registerCommand({
 
   var count = null;
   var messages = buildmessage.capture(function () {
-    count = context.library.rebuildAll();
+    count = release.current.library.rebuildAll();
   });
   if (count)
     console.log("Built " + count + " packages.");
@@ -1011,7 +1033,7 @@ main.registerCommand({
   // parsing ourselves. This lets us make sure that the arguments to
   // the command being run don't get accidentally intrepreted.
 
-  var context = options.context;
+  var library = release.current.library;
   var argv = process.argv.slice(3);
   if (! argv.length || argv[0] === "--help")
     throw new main.ShowUsage;
@@ -1031,17 +1053,17 @@ main.registerCommand({
       // bail out if that creates a conflict.
       var packageDir = path.resolve(argv[0]);
       packageName = path.basename(packageDir) + "-tool";
-      if (context.library.get(packageName, false)) {
+      if (library.get(packageName, false)) {
         buildmessage.error("'" + packageName +
                            "' conflicts with the name " +
                            "of a package in the library");
       }
-      context.library.override(packageName, packageDir);
+      library.override(packageName, packageDir);
 
       world = unipackage.load({
-        library: context.library,
+        library: library,
         packages: [ packageName ],
-        release: context.releaseVersion
+        release: release.current.name
       });
     });
   if (messages.hasMessages()) {

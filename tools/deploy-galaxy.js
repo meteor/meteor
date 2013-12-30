@@ -8,19 +8,20 @@ var fiberHelpers = require('./fiber-helpers.js');
 var Fiber = require('fibers');
 var httpHelpers = require('./http-helpers.js');
 var auth = require('./auth.js');
+var release = require('./release.js');
 var url = require('url');
 var _ = require('underscore');
 
 // a bit of a hack
-var getPackage = _.once(function (context) {
+var getPackage = _.once(function () {
   return unipackage.load({
-    library: context.library,
+    library: release.current.library,
     packages: [ 'meteor', 'livedata' ],
-    release: context.releaseVersion
+    release: release.current.name
   });
 });
 
-var authenticatedDDPConnect = function (endpointUrl, context) {
+var authenticatedDDPConnect = function (endpointUrl) {
   // Get auth token
   var parsedEndpoint = url.parse(endpointUrl);
   var authToken = auth.getSessionToken(parsedEndpoint.hostname);
@@ -38,7 +39,7 @@ var authenticatedDDPConnect = function (endpointUrl, context) {
     process.exit(1);
   }
 
-  var Package = getPackage(context);
+  var Package = getPackage();
   return Package.livedata.DDP.connect(endpointUrl, {
     headers: {
       cookie: "GALAXY_AUTH=" + authToken
@@ -58,13 +59,11 @@ var authenticatedDDPConnect = function (endpointUrl, context) {
 //   name, is currently a https or http URL)
 // - service: the service to connect to within the Galaxy, such as
 //   'ultraworld' or 'log-reader'.
-// - context: specifies the release of Meteor whose DDP implementation
-//   should be used
-var connectToService = function (galaxy, service, context) {
-  var Package = getPackage(context);
+var connectToService = function (galaxy, service) {
+  var Package = getPackage();
   var endpointUrl = galaxy + "/" + service;
 
-  var connection = authenticatedDDPConnect(endpointUrl, context);
+  var connection = authenticatedDDPConnect(endpointUrl);
   var timeout = Package.meteor.Meteor.setTimeout(function () {
     if (connection.status().status !== "connected") {
       process.stderr.write("Could not connect to galaxy " + endpointUrl
@@ -181,16 +180,15 @@ exports.discoverGalaxy = function (app) {
   return result;
 };
 
-exports.deleteApp = function (app, context) {
+exports.deleteApp = function (app) {
   var galaxy = exports.discoverGalaxy(app);
-  var conn = connectToService(galaxy, "ultraworld", context);
+  var conn = connectToService(galaxy, "ultraworld");
   conn.call("destroyApp", app);
   conn.close();
   process.stdout.write("Deleted.\n");
 };
 
 // options:
-// - context
 // - app
 // - appDir
 // - settings
@@ -240,8 +238,8 @@ exports.deploy = function (options) {
   process.stdout.write('Uploading...\n');
 
   var galaxy = exports.discoverGalaxy(options.app);
-  var conn = connectToService(galaxy, "ultraworld", options.context);
-  var Package = getPackage(options.context);
+  var conn = connectToService(galaxy, "ultraworld");
+  var Package = getPackage();
 
   var created = true;
   var appConfig = {
@@ -318,18 +316,17 @@ exports.deploy = function (options) {
 };
 
 // options:
-// - context
 // - app
 // - streaming (BOOL)
 exports.logs = function (options) {
   var galaxy = exports.discoverGalaxy(options.app);
-  var logReader = connectToService(galaxy, "log-reader", options.context);
+  var logReader = connectToService(galaxy, "log-reader");
 
   var lastLogId = null;
   var Log = unipackage.load({
-    library: options.context.library,
+    library: release.current.library,
     packages: [ 'logging' ],
-    release: options.context.releaseVersion
+    release: release.current.name
   }).logging.Log;
 
   var ok = logReader.registerStore('logs', {
@@ -367,13 +364,10 @@ exports.logs = function (options) {
   }
 };
 
-// options:
-// - context
-// - app
-exports.temporaryMongoUrl = function (options) {
-  var galaxy = exports.discoverGalaxy(options.app);
-  var conn = connectToService(galaxy, "ultraworld", options.context);
-  var mongoUrl = conn.call('getTemporaryMongoUrl', options.app);
+exports.temporaryMongoUrl = function (app) {
+  var galaxy = exports.discoverGalaxy(app);
+  var conn = connectToService(galaxy, "ultraworld");
+  var mongoUrl = conn.call('getTemporaryMongoUrl', app);
   conn.close();
   return mongoUrl;
 };

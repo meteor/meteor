@@ -12,32 +12,23 @@ var Future = require('fibers/future');
 var files = require('./files.js');
 var auth = require('./auth.js');
 var config = require('./config.js');
+var release = require('./release.js');
 
-// Compose a User-Agent header. 'meteorReleaseContext' is optional. If
-// provided, it is used to give more precise information about the
-// Meteor version we're running.
-var getUserAgent = function (meteorReleaseContext) {
-  var appVersion;
-  try {
-    appVersion = files.getToolsVersion();
-  } catch(e) {
-    appVersion = 'checkout';
-  }
+// Compose a User-Agent header.
+var getUserAgent = function () {
+  var version;
 
-  // meteorReleaseContext - an option with information about app directory
-  // release versions, etc, is used to get exact Meteor version used.
-  if (meteorReleaseContext !== undefined) {
-    // Get meteor app release version: if specified in command line args, take
-    // releaseVersion, if not specified, try global meteor version
-    appVersion = meteorReleaseContext.releaseVersion;
+  if (release.current)
+    version = release.current.isCheckout() ? 'checkout' : release.current.name;
+  else
+    // This happens when we haven't finished starting up yet (say, the
+    // user passed --release 1.2.3 and we have to download 1.2.3
+    // before we can get going), or if we are using an installed copy
+    // of Meteor to 'meteor update'ing a project that was created by a
+    // checkout and doesn't have a version yet.
+    version = files.in_checkout() ? 'checkout' : files.getToolsVersion();
 
-    if (appVersion === 'none')
-      appVersion = meteorReleaseContext.appReleaseVersion;
-    if (appVersion === 'none')
-      appVersion = 'checkout';
-  }
-
-  return util.format('Meteor/%s OS/%s (%s; %s; %s;)', appVersion,
+  return util.format('Meteor/%s OS/%s (%s; %s; %s;)', version,
                      os.platform(), os.type(), os.release(), os.arch());
 };
 
@@ -49,11 +40,7 @@ _.extend(exports, {
   // - It will respect proxy environment variables if present
   //   (HTTP_PROXY or HTTPS_PROXY as appropriate).
   //
-  // - It will set a reasonable User-Agent header. (And if you pass a
-  //   'meteorReleaseContext' option, set to the return value of the
-  //   calculateContext() function in meteor.js, that header will
-  //   include the Meteor release in use, instead of just the tool
-  //   version.)
+  // - It will set a reasonable User-Agent header.
   //
   // - If you omit the callback it will run synchronously. The return
   //   value will be an object with keys 'response' and 'body' (with
@@ -97,15 +84,8 @@ _.extend(exports, {
       delete options.bodyStream;
     }
 
-    var ua;
-    if (_.has(options, 'meteorReleaseContext')) {
-      ua = getUserAgent(options.meteorReleaseContext);
-      delete options.meteorReleaseContext;
-    } else {
-      ua = getUserAgent();
-    }
     options.headers = _.extend({
-      'User-Agent': ua
+      'User-Agent': getUserAgent()
     }, options.headers || {});
 
     // This should never, ever be false, or else why are you using SSL?

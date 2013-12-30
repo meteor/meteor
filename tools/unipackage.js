@@ -33,9 +33,9 @@ var buildmessage = require('./buildmessage.js');
 //
 // Example usage:
 //   var DDP = require('./unipackage.js').load({
-//     library: context.library,
+//     library: release.current.library,
 //     packages: ['livedata'],
-//     release: context.releaseVersion
+//     release: release.current.name
 //   }).livedata.DDP;
 //   var reverse = DDP.connect('reverse.meteor.com');
 //   console.log(reverse.call('reverse', 'hello world'));

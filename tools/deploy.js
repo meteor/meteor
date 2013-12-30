@@ -8,7 +8,6 @@ var qs = require('querystring');
 var path = require('path');
 var files = require('./files.js');
 var httpHelpers = require('./http-helpers.js');
-var warehouse = require('./warehouse.js');
 var buildmessage = require('./buildmessage.js');
 var config = require('./config.js');
 var auth = require('./auth.js');
@@ -66,7 +65,6 @@ var deployRpc = function (options) {
   if (options.headers.cookie)
     throw new Error("sorry, can't combine cookie headers yet");
 
-  // XXX pass meteorReleaseContext
   try {
     var result = httpHelpers.request(_.extend(options, {
       url: config.getDeployUrl() + '/' + options.operation + '/' + options.site,

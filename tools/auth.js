@@ -491,7 +491,7 @@ url + "\n");
 // try to log the user into it. Returns true on success (user is now
 // logged in) or false on failure (user gave up, can't talk to
 // network..)
-exports.registerOrLogIn = function (context) {
+exports.registerOrLogIn = function () {
   // Get their email
   while (true) {
     var email = utils.readLine({ prompt: "Email: " });
@@ -550,9 +550,9 @@ exports.registerOrLogIn = function (context) {
 
     var unipackage = require('./unipackage.js');
     var Package = unipackage.load({
-      library: context.library,
+      library: release.current.library,
       packages: [ 'meteor', 'livedata' ],
-      release: context.releaseVersion
+      release: release.current.name
     })
     var DDP = Package.livedata.DDP;
     var authService = DDP.connect(config.getAuthDDPUrl());
