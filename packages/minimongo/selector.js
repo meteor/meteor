@@ -266,6 +266,12 @@ var VALUE_OPERATORS = {
       return value !== undefined;
     });
     return operand ? exists : invertBranchedSelector(exists);
+  },
+  // $options just provides options for $regex; its logic is inside $regex
+  $options: function (operand, valueSelector) {
+    if (!valueSelector.$regex)
+      throw Error("$options needs a $regex");
+    return matchesEverythingSelector;
   }
 };
 
@@ -386,6 +392,31 @@ var ELEMENT_OPERATORS = {
           && LocalCollection._f._type(value) === operand;
       };
     }
+  },
+  $regex: function (operand, valueSelector) {
+    if (!(typeof operand === 'string' || operand instanceof RegExp))
+      throw Error("$regex has to be a string or RegExp");
+
+    var regexp;
+    if (valueSelector.$options !== undefined) {
+      // Options passed in $options (even the empty string) always overrides
+      // options in the RegExp object itself. (See also
+      // Meteor.Collection._rewriteSelector.)
+
+      // Be clear that we only support the JS-supported options, not extended
+      // ones (eg, Mongo supports x and s). Ideally we would implement x and s
+      // by transforming the regexp, but not today...
+      if (/[^gim]/.test(valueSelector.$options))
+        throw new Error("Only the i, m, and g regexp options are supported");
+
+      var regexSource = operand instanceof RegExp ? operand.source : operand;
+      regexp = new RegExp(regexSource, valueSelector.$options);
+    } else if (operand instanceof RegExp) {
+      regexp = operand;
+    } else {
+      regexp = new RegExp(operand);
+    }
+    return regexpElementSelector(regexp);
   }
 };
 
@@ -1046,8 +1077,12 @@ LocalCollection._compileSelector = function (selector, cursor) {
   };
 };
 
-var matchesNothingSelector = function (doc) {
+var matchesNothingSelector = function (docOrBranchedValues) {
   return {result: false};
+};
+
+var matchesEverythingSelector = function (docOrBranchedValues) {
+  return {result: true};
 };
 
 var andCompiledDocumentSelectors = function (selectors) {
@@ -1064,7 +1099,6 @@ var andCompiledDocumentSelectors = function (selectors) {
 
 
 // Remaining to update:
-// - $regex/$option
 // - $all
 // - $elemMatch
 // - $near/$maxDistance
