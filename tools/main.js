@@ -6,7 +6,6 @@ var _ = require('underscore');
 var Fiber = require('fibers');
 var files = require('./files.js');
 var path = require('path');
-var logging = require('./logging.js');
 var warehouse = require('./warehouse.js');
 var library = require('./library.js');
 var release = require('./release.js');

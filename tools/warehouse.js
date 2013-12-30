@@ -30,7 +30,6 @@ var files = require('./files.js');
 var updater = require('./updater.js');
 var httpHelpers = require('./http-helpers.js');
 var fiberHelpers = require('./fiber-helpers.js');
-var logging = require('./logging.js');
 
 var WAREHOUSE_URLBASE = 'https://warehouse.meteor.com';
 
@@ -123,7 +122,8 @@ _.extend(warehouse, {
     if (!releaseName) {
       if (background)
         return false;  // it's in the background, who cares.
-      logging.die("No stable release found.");
+      process.stderr.write("No stable release found.\n");
+      process.exit(1);
     }
 
     var latestReleaseManifest =
@@ -241,7 +241,8 @@ _.extend(warehouse, {
           throw e;
         // We actually got some response, so we're probably online and we
         // just can't find the release.
-        logging.die(releaseVersion + ": unknown release.");
+        process.stderr.write(releaseVersion + ": unknown release.\n");
+        process.exit(1);
       }
     }
 
