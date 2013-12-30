@@ -9,7 +9,7 @@ _.extend(exports, {
 
   // register a function that will be called on SIGINT (e.g. Cmd-C on
   // mac)
-  onExit: function(func) {
+  onExit: function (func) {
     this._exitHandlers.push(func);
   }
 });

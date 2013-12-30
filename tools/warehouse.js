@@ -70,7 +70,7 @@ _.extend(warehouse, {
 
   // Ensure the passed release version is stored in the local
   // warehouse and return its parsed manifest.
-  ensureReleaseExistsAndReturnManifest: function(release) {
+  ensureReleaseExistsAndReturnManifest: function (release) {
     if (!files.usesWarehouse())
       throw new Error("Not in a warehouse but requesting a manifest!");
 
@@ -86,7 +86,7 @@ _.extend(warehouse, {
 
   // look in the warehouse for the latest release version. if no
   // releases are found, return null.
-  latestRelease: function() {
+  latestRelease: function () {
     var latestReleaseSymlink = warehouse._latestReleaseSymlinkPath();
     // This throws if the symlink doesn't exist, but it really should, since
     // it exists in bootstrap tarballs and is never deleted.
@@ -102,7 +102,7 @@ _.extend(warehouse, {
   // the meteor shell script runs initially). If the symlink doesn't exist
   // (which shouldn't happen, since it is provided in the bootstrap tarball)
   // returns null.
-  latestTools: function() {
+  latestTools: function () {
     var latestToolsSymlink = warehouse._latestToolsSymlinkPath();
     try {
       return fs.readlinkSync(latestToolsSymlink);
@@ -211,7 +211,7 @@ _.extend(warehouse, {
   // fetches the manifest file for the given release version. also fetches
   // all of the missing versioned packages referenced from the release manifest
   // @param releaseVersion {String} eg "0.1"
-  _populateWarehouseForRelease: function(releaseVersion, background) {
+  _populateWarehouseForRelease: function (releaseVersion, background) {
     var future = new Future;
     var releasesDir = path.join(warehouse.getWarehouseDir(), 'releases');
     files.mkdir_p(releasesDir, 0755);
@@ -355,7 +355,7 @@ _.extend(warehouse, {
       fs.writeFileSync(warehouse.getToolsFreshFile(toolsVersion), '');
   },
 
-  printNotices: function(fromRelease, toRelease, packages) {
+  printNotices: function (fromRelease, toRelease, packages) {
     var noticesPath = path.join(
       warehouse.getWarehouseDir(), 'releases', toRelease + '.notices.json');
 

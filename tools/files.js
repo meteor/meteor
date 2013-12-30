@@ -403,7 +403,7 @@ files.createTarball = function (dirPath, tarball) {
 // toDir does not exist" and "you can end up with garbage directories
 // sitting around", but not "there's any time where toDir exists but
 // is in a state other than initial or final".)
-files.renameDirAlmostAtomically = function(fromDir, toDir) {
+files.renameDirAlmostAtomically = function (fromDir, toDir) {
   var garbageDir = toDir + '-garbage-' + randomToken();
 
   // Get old dir out of the way, if it exists.

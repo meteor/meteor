@@ -128,8 +128,8 @@ var startProxy = function (outerPort, innerPort, callback) {
 
       res.write("Your app is crashing. Here's the latest log.\n\n");
 
-      _.each(serverLog, function(log) {
-        _.each(log, function(val, key) {
+      _.each(serverLog, function (log) {
+        _.each(log, function (val, key) {
           if (val)
             res.write(val);
           res.write("\n");
@@ -152,7 +152,7 @@ var startProxy = function (outerPort, innerPort, callback) {
 
   // Proxy websocket requests using same buffering logic as for regular HTTP
   // requests
-  server.on('upgrade', function(req, socket, head) {
+  server.on('upgrade', function (req, socket, head) {
     var proxyIt = function () {
       proxy.ws(req, socket, head, { target: 'http://127.0.0.1:' + innerPort});
     };

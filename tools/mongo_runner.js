@@ -250,7 +250,7 @@ exports.launchMongo = function (options) {
             var db = new mongoNpmModule.Db(
               'meteor', new mongoNpmModule.Server('127.0.0.1', options.port),
               {safe: true});
-            db.open(function(err, db) {
+            db.open(function (err, db) {
               if (err)
                 throw err;
               db.admin().command({

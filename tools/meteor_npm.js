@@ -41,8 +41,8 @@ var isGitHubTarball = function (x) {
 // If there is a version that isn't exact, throws an Error with a
 // human-readable message that is suitable for showing to the user.
 // npmDependencies may be falsey or empty.
-meteorNpm.ensureOnlyExactVersions = function(npmDependencies) {
-  _.each(npmDependencies, function(version, name) {
+meteorNpm.ensureOnlyExactVersions = function (npmDependencies) {
+  _.each(npmDependencies, function (version, name) {
     // We want a given version of a smart package (package.js +
     // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
     // don't want anything too vague. For now, we support semvers and github
@@ -264,7 +264,7 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
   var newInstalledDependencies = getInstalledDependencies(newPackageNpmDir);
 
   // `npm install name@version` for modules that need updating
-  _.each(npmDependencies, function(version, name) {
+  _.each(npmDependencies, function (version, name) {
     if (newInstalledDependencies[name] !== version) {
       installNpmModule(name, version, newPackageNpmDir);
     }
@@ -281,7 +281,7 @@ var createFreshNpmDirectory = function (packageName, newPackageNpmDir,
 
   makeNewPackageNpmDir(newPackageNpmDir);
   // install dependencies
-  _.each(npmDependencies, function(version, name) {
+  _.each(npmDependencies, function (version, name) {
     installNpmModule(name, version, newPackageNpmDir);
   });
 
@@ -384,7 +384,7 @@ var constructPackageJson = function (packageName, newPackageNpmDir,
 //     }
 //   }
 // }
-var getInstalledDependenciesTree = function(dir) {
+var getInstalledDependenciesTree = function (dir) {
   var result =
     meteorNpm._execFileSync(path.join(files.getDevBundle(), "bin", "npm"),
                             ["ls", "--json"],
@@ -437,7 +437,7 @@ var getShrinkwrappedDependencies = function (dir) {
   return treeToDependencies(getShrinkwrappedDependenciesTree(dir));
 };
 
-var installNpmModule = function(name, version, dir) {
+var installNpmModule = function (name, version, dir) {
   ensureConnected();
 
   var installArg = isGitHubTarball(version)

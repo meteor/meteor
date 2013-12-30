@@ -16,8 +16,8 @@ var Future = require("fibers/future");
 //
 // NOTE: It's probably better to not use callbacks. Instead you can
 // use Futures to generate synchronous equivalents.
-exports.inFiber = function(func) {
-  return function(/*arguments*/) {
+exports.inFiber = function (func) {
+  return function (/*arguments*/) {
     var self = this;
     var args = arguments;
     new Fiber(function () {
