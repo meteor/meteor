@@ -1639,7 +1639,7 @@ _.extend(Package.prototype, {
 
     _.each(["client", "server"], function (sliceName) {
       // Determine used packages
-      var names = project.get_packages(appDir);
+      var names = project.getPackages(appDir);
       var arch = sliceName === "server" ? "os" : "browser";
 
       // Create slice

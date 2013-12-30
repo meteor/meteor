@@ -108,6 +108,17 @@ release.usingRightReleaseForApp = function (appDir) {
   return release.current.appRelease === appRelease;
 };
 
+// Return the name of the latest release that is downloaded and ready
+// for use. May not be called when running from a checkout.
+release.latestDownloaded = function () {
+  if (! files.usesWarehouse())
+    throw new Error("called from checkout?");
+  var ret = warehouse.latestRelease();
+  if (! ret)
+    throw new Error("no releases available?");
+  return ret;
+};
+
 // Load a release and return it as a Release object without setting
 // release.current to that release. Unlike release.setCurrent(), this
 // may be called as many times as you like.
@@ -175,4 +186,3 @@ release.setCurrent = function (releaseObject, forced) {
   release.current = releaseObject;
   release.forced = !! forced;
 };
-

@@ -498,12 +498,12 @@ Fiber(function () {
       } else {
         // Use the project's desired release, or if a super old
         // project, use the latest release we know about
-        releaseName = appRelease || warehouse.latestRelease();
+        releaseName = appRelease || release.latestDownloaded();
       }
     } else {
       // Run outside an app dir with no --release flag. Use the latest
       // release we know about.
-      releaseName = warehouse.latestRelease();
+      releaseName = release.latestDownloaded();
     }
   }
 

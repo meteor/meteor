@@ -197,7 +197,7 @@ main.registerCommand({
   // this version of the tools, and then stamp on the correct release
   // at the end.)
   var desiredRelease = release.forced ? release.current.name :
-    warehouse.latestRelease();
+    release.latestDownloaded();
   if (release.current.name !== desiredRelease)
     throw new main.SpringboardToRelease(desiredRelease); // does not return
 
@@ -321,7 +321,7 @@ main.registerCommand({
     }
 
     if (! release.current ||
-        release.current.name !== warehouse.latestRelease()) {
+        release.current.name !== release.latestDownloaded()) {
       // The user asked for the latest release (well, they "asked for
       // it" by not passing --release). We just downloaded a new
       // release, so springboard to it. (Or, we were run in app with
@@ -333,7 +333,7 @@ main.registerCommand({
       // changed between the old and new releases. Now we do it
       // unconditionally, because it's not a big deal to do it and it
       // eliminates the complexity of the current release changing.)
-      throw new main.SpringboardToRelease(warehouse.latestRelease());
+      throw new main.SpringboardToRelease(release.latestDownloaded());
     }
   }
 
@@ -429,7 +429,7 @@ main.registerCommand({
   // Print any notices relevant to this upgrade.
   // XXX This doesn't include package-specific notices for packages that
   // are included transitively (eg, packages used by app packages).
-  var packages = project.get_packages(options.appDir);
+  var packages = project.getPackages(options.appDir);
   warehouse.printNotices(appRelease, release.current.name, packages);
 });
 
@@ -464,7 +464,7 @@ main.registerCommand({
 }, function (options) {
   var all = release.current.library.list();
   var using = {};
-  _.each(project.get_packages(options.appDir), function (name) {
+  _.each(project.getPackages(options.appDir), function (name) {
     using[name] = true;
   });
 
@@ -474,7 +474,7 @@ main.registerCommand({
     } else if (name in using) {
       process.stderr.write(name + ": already using\n");
     } else {
-      project.add_package(options.appDir, name);
+      project.addPackage(options.appDir, name);
       var note = all[name].metadata.summary || '';
       process.stderr.write(name + ": " + note + "\n");
     }
@@ -492,7 +492,7 @@ main.registerCommand({
   requiresApp: true
 }, function (options) {
   var using = {};
-  _.each(project.get_packages(options.appDir), function (name) {
+  _.each(project.getPackages(options.appDir), function (name) {
     using[name] = true;
   });
 
@@ -500,7 +500,7 @@ main.registerCommand({
     if (! (name in using)) {
       process.stderr.write(name + ": not in project\n");
     } else {
-      project.remove_package(options.appDir, name);
+      project.removePackage(options.appDir, name);
       process.stderr.write(name + ": removed\n");
     }
   });
@@ -518,7 +518,7 @@ main.registerCommand({
   }
 }, function (options) {
   if (options.using) {
-    var using = project.get_packages(options.appDir);
+    var using = project.getPackages(options.appDir);
 
     if (using.length) {
       _.each(using, function (name) {
@@ -952,8 +952,8 @@ main.registerCommand({
   // runner app, but finding app packages from the current app (if any).
   var testRunnerAppDir = files.mkdtemp('meteor-test-run');
   files.cp_r(path.join(__dirname, 'test-runner-app'), testRunnerAppDir);
-  project.add_package(testRunnerAppDir,
-                      options['driver-package'] || 'test-in-browser');
+  project.addPackage(testRunnerAppDir,
+                     options['driver-package'] || 'test-in-browser');
 
   if (options.deploy) {
     deploy.bundleAndDeploy({
