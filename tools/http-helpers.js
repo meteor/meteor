@@ -26,7 +26,7 @@ var getUserAgent = function () {
     // before we can get going), or if we are using an installed copy
     // of Meteor to 'meteor update'ing a project that was created by a
     // checkout and doesn't have a version yet.
-    version = files.in_checkout() ? 'checkout' : files.getToolsVersion();
+    version = files.inCheckout() ? 'checkout' : files.getToolsVersion();
 
   return util.format('Meteor/%s OS/%s (%s; %s; %s;)', version,
                      os.platform(), os.type(), os.release(), os.arch());

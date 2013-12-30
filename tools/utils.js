@@ -109,7 +109,7 @@ exports.getAgentInfo = function () {
     ret.host = host;
   ret.agent = "Meteor";
   ret.agentVersion =
-    files.in_checkout() ? "checkout" : files.getToolsVersion();
+    files.inCheckout() ? "checkout" : files.getToolsVersion();
   ret.arch = archinfo.host();
 
   return ret;

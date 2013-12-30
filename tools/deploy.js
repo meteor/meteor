@@ -516,7 +516,7 @@ site + ": " + "successfully transferred to your account.\n" +
 
 
 var runMongoShell = function (url) {
-  var mongo_path = path.join(files.get_dev_bundle(), 'mongodb', 'bin', 'mongo');
+  var mongo_path = path.join(files.getDevBundle(), 'mongodb', 'bin', 'mongo');
   var mongo_url = require('url').parse(url);
   var auth = mongo_url.auth && mongo_url.auth.split(':');
   var ssl = require('querystring').parse(mongo_url.query).ssl === "true";

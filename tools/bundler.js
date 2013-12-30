@@ -1327,7 +1327,7 @@ _.extend(ServerTarget.prototype, {
 
     var devBundleVersion =
       fs.readFileSync(
-        path.join(files.get_dev_bundle(), '.bundle_version.txt'), 'utf8');
+        path.join(files.getDevBundle(), '.bundle_version.txt'), 'utf8');
     devBundleVersion = devBundleVersion.split('\n')[0];
 
     var script = unipackage.load({
@@ -1347,7 +1347,7 @@ _.extend(ServerTarget.prototype, {
     // version that's appropriate for the server architecture.)
     if (! options.omitDependencyKit) {
       builder.copyDirectory({
-        from: path.join(files.get_dev_bundle(), 'lib', 'node_modules'),
+        from: path.join(files.getDevBundle(), 'lib', 'node_modules'),
         to: 'node_modules',
         ignore: ignoreFiles
       });
@@ -1462,7 +1462,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
     // wrong arch.) The place we stash this is grody for temporary
     // reasons of backwards compatibility.
     builder.write(path.join('server', '.bundle_version.txt'), {
-      file: path.join(files.get_dev_bundle(), '.bundle_version.txt')
+      file: path.join(files.getDevBundle(), '.bundle_version.txt')
     });
 
     // Affordances for standalone use

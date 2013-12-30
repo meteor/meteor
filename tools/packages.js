@@ -49,6 +49,49 @@ var parseSpec = function (spec) {
   return ret;
 };
 
+// A sort comparator to order files into load order.
+var loadOrderSort = function (a, b) {
+  // XXX HUGE HACK --
+  // push html (template) files ahead of everything else. this is
+  // important because the user wants to be able to say
+  // Template.foo.events = { ... }
+  //
+  // maybe all of the templates should go in one file? packages should
+  // probably have a way to request this treatment (load order
+  // dependency tags?) .. who knows.
+  var ishtml_a = path.extname(a) === '.html';
+  var ishtml_b = path.extname(b) === '.html';
+  if (ishtml_a !== ishtml_b) {
+    return (ishtml_a ? -1 : 1);
+  }
+
+  // main.* loaded last
+  var ismain_a = (path.basename(a).indexOf('main.') === 0);
+  var ismain_b = (path.basename(b).indexOf('main.') === 0);
+  if (ismain_a !== ismain_b) {
+    return (ismain_a ? 1 : -1);
+  }
+
+  // /lib/ loaded first
+  var islib_a = (a.indexOf(path.sep + 'lib' + path.sep) !== -1 ||
+                 a.indexOf('lib' + path.sep) === 0);
+  var islib_b = (b.indexOf(path.sep + 'lib' + path.sep) !== -1 ||
+                 b.indexOf('lib' + path.sep) === 0);
+  if (islib_a !== islib_b) {
+    return (islib_a ? -1 : 1);
+  }
+
+  // deeper paths loaded first.
+  var len_a = a.split(path.sep).length;
+  var len_b = b.split(path.sep).length;
+  if (len_a !== len_b) {
+    return (len_a < len_b ? 1 : -1);
+  }
+
+  // otherwise alphabetical
+  return (a < b ? -1 : 1);
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Slice
 ///////////////////////////////////////////////////////////////////////////////
@@ -1744,7 +1787,7 @@ _.extend(Package.prototype, {
         }
 
         // We've found all the source files. Sort them!
-        sources.sort(files.sort);
+        sources.sort(loadOrderSort);
 
         // Convert into relPath/fileOptions objects.
         sources = _.map(sources, function (relPath) {

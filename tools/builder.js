@@ -13,11 +13,11 @@ var sha1 = function (contents) {
 
 // Builder encapsulates much of the file-handling logic need to create
 // "bundles" (directory trees such as site archives, programs, or
-// packages.) It can create a temporary directory in which to build
+// packages). It can create a temporary directory in which to build
 // the bundle, moving the bundle atomically into place when and if the
 // build successfully completes; sanitize and generate unique
 // filenames; and track dependencies (files that should be watched for
-// changes when developing interactively.)
+// changes when developing interactively).
 //
 // Options:
 //  - outputPath: Required. Path to the directory that will hold the

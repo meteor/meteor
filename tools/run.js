@@ -665,7 +665,7 @@ exports.run = function (appDir, options) {
   };
 
   startProxy(outerPort, innerPort, function () {
-    var banner = options.banner || files.pretty_path(appDir);
+    var banner = options.banner || files.prettyPath(appDir);
     process.stdout.write("[[[[[ " + banner + " ]]]]]\n\n");
 
     mongoStartupPrintTimer = setTimeout(function () {

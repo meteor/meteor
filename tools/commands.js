@@ -251,10 +251,10 @@ main.registerCommand({
     }
   } else {
     files.cp_r(path.join(__dirname, 'skel'), appPath, {
-      transform_filename: function (f) {
+      transformFilename: function (f) {
         return transform(f);
       },
-      transform_contents: function (contents, f) {
+      transformContents: function (contents, f) {
         if ((/(\.html|\.js|\.css)/).test(f))
           return new Buffer(transform(contents.toString()));
         else

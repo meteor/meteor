@@ -32,7 +32,7 @@ var getUniverse = function () {
   if (! universe) {
     universe = "www.meteor.com";
 
-    if (files.in_checkout()) {
+    if (files.inCheckout()) {
       var p = path.join(files.getCurrentToolsDir(), 'universe');
       if (fs.existsSync(p))
         universe = fs.readFileSync(p, 'utf8').trim();

@@ -259,7 +259,7 @@ _.extend(Library.prototype, {
               pkg.canBeSavedAsUnipackage()) {
             // Save it, for a fast load next time
             try {
-              files.add_to_gitignore(packageDir, '.build*');
+              files.addToGitignore(packageDir, '.build*');
               pkg.saveAsUnipackage(buildDir, { buildOfPath: packageDir });
             } catch (e) {
               // If we can't write to this directory, we don't get to cache our

@@ -378,7 +378,7 @@ _.extend(exports, {
   // }
   _installedDependenciesTree: function(dir) {
     var result =
-      this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
+      this._execFileSync(path.join(files.getDevBundle(), "bin", "npm"),
                          ["ls", "--json"],
                          {cwd: dir});
 
@@ -449,7 +449,7 @@ _.extend(exports, {
     // cache, so we can corrupt the cache for other invocations of npm... ah
     // well.)
     var result =
-      this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
+      this._execFileSync(path.join(files.getDevBundle(), "bin", "npm"),
                          ["install", "--force", installArg],
                          {cwd: dir});
 
@@ -480,7 +480,7 @@ _.extend(exports, {
     // `npm install`, which reads npm-shrinkwrap.json.  See above for why
     // --force.
     var result =
-      this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
+      this._execFileSync(path.join(files.getDevBundle(), "bin", "npm"),
                          ["install", "--force"], {cwd: dir});
 
 
@@ -514,7 +514,7 @@ _.extend(exports, {
     // 2. In various (non-deterministic?) cases we observed the
     //    npm-shrinkwrap.json file not being updated
     var result =
-      this._execFileSync(path.join(files.get_dev_bundle(), "bin", "npm"),
+      this._execFileSync(path.join(files.getDevBundle(), "bin", "npm"),
                          ["shrinkwrap"], {cwd: dir});
 
     if (! result.success) {

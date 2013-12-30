@@ -141,7 +141,7 @@ exports.launchMongo = function (options) {
     return handle;
   }
 
-  var mongod_path = path.join(files.get_dev_bundle(),
+  var mongod_path = path.join(files.getDevBundle(),
                               'mongodb',
                               'bin',
                               'mongod');
@@ -150,7 +150,7 @@ exports.launchMongo = function (options) {
   var dbPath = path.join(options.appDir, '.meteor', 'local', 'db');
   files.mkdir_p(dbPath, 0755);
   // add .gitignore if needed.
-  files.add_to_gitignore(path.join(options.appDir, '.meteor'), 'local');
+  files.addToGitignore(path.join(options.appDir, '.meteor'), 'local');
 
   find_mongo_and_kill_it_dead(options.port, function (err) {
     Fiber(function (){
