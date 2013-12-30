@@ -76,7 +76,7 @@ var load = function (options) {
   }, function () {
     // Load the code
     var image = bundler.buildJsImage({
-      name: "load",
+      name: "unipackage:" + cacheKey,
       library: options.library,
       use: options.packages || []
     }).image;
