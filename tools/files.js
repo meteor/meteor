@@ -124,6 +124,8 @@ _.extend(exports, {
     return test_dir;
   },
 
+  // Determine if 'filepath' (a path, or omit for cwd) is within an
+  // app directory. If so, return the top-level app directory.
   findAppDir: function (filepath) {
     return files.find_upwards(files.is_app_dir, filepath);
   },

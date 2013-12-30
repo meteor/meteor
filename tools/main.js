@@ -19,13 +19,24 @@ var main = exports;
 ///////////////////////////////////////////////////////////////////////////////
 
 var Command = function (options) {
-  this.name = options.name;
-  this.minArgs = options.minArgs || 0;
-  this.maxArgs = this.minArgs || 0;
-  this.options = options.options || {};
-  this.raw = options.raw || false;
-  this.hidden = options.hidden || false;
-  this.func = options.func;
+  options = _.extend({
+    minArgs: 0,
+    options: {},
+    requiresApp: false,
+    requiresRelease: true,
+    raw: false,
+    hidden: false
+  }, options);
+
+  if (! _.has(options, 'maxArgs'))
+    options.maxArgs = options.minArgs;
+
+  _.each(["name", "func"], function (key) {
+    if (! _.has(options, key))
+      throw new Error("command missing '" + key + "'?");
+  });
+
+  _.extend(this, options);
 
   _.each(this.options, function (value, key) {
     if (! _.has(value, 'type'))
@@ -71,6 +82,35 @@ main.ShowUsage = function () {};
 //   - short: single character short alias (eg, 'p' for 'port', to do -p 3000)
 //   - default: value to use if none supplied
 //   - required: true if required (incompatible with 'default')
+// - requiresApp: does this command work with an app? possible values:
+//   - true if an app is required, and command must be run inside an
+//     app. The command will be run using the app's Meteor release
+//     (unless overridden by --release or a checkout). An 'appDir'
+//     option will be passed with the absolute path to the app's
+//     top-level directory, and an error will be printed if the
+//     command isn't run from inside an app.
+//   - false if an app is not required. But if the command does happen
+//     to have been run from an app, 'appDir' will be
+//     provided. Moreover, in that case, we will still use the version
+//     of this program that goes with the Meteor release of the
+//     app. This is not ideal but is necessary for 'meteor help' to
+//     behave in a sane way in our current system. (XXX In the future
+//     we should separate the build system out into a package that is
+//     versioned with the release, and then take the CLI tool out of
+//     the release and always use the latest available version.)
+//   - function: some apps determine whether they use an app based on
+//     their arguments (eg, 'deploy' versus 'deploy --delete'). for
+//     these, set usesApp to a function that takes 'options' (same as
+//     would be received by the actual command function) and returns
+//     true or false.
+// - requiresRelease: defaults to true. Set to false if this command
+//   doesn't need a functioning Meteor release to be available (that
+//   is, if the command does not need the ability to resolve
+//   packages). There is only one case where this comes up: if you
+//   create an app with a checkout (so that it has no release), and
+//   then run that app with released Meteor. Normally this just prints
+//   an error saying that you have to pick a release, but you can
+//   disable that by setting this flag to false.
 // - raw: if true, option parsing is completely skipped (including
 //   --release and --help). To be activated the command will need to be
 //   literally the first argument, and it will need to do its own option
@@ -190,9 +230,6 @@ var setReleaseVersion = function (context, version) {
 //
 // Keys in context:
 //
-// - appDir: if 'meteor' was run from inside a project (a project has a file
-//   .meteor/packages), the absolute path to the top-level project directory
-//
 // - releaseVersion: the actual Meteor release that we are now
 //   using. if running from a checkout, "none". else we have a
 //   release, either from --release on the command line, the release
@@ -239,9 +276,10 @@ var setReleaseVersion = function (context, version) {
 //   - authToken
 //
 // Arguments to calculateContext:
+// - appDir: if non-null, the app
 // - releaseOverride: if non-null, the --release the user asked for on
 //   the command line
-var calculateContext = function (releaseOverride) {
+var calculateContext = function (appDir, releaseOverride) {
   var context = {};
 
   var calculateReleaseVersion = function () {
@@ -264,13 +302,11 @@ var calculateContext = function (releaseOverride) {
       warehouse.latestRelease();
   };
 
-  var appDir = files.findAppDir();
-  context.appDir = appDir && path.resolve(appDir);
   context.globalReleaseVersion = calculateReleaseVersion();
 
-  if (context.appDir) {
+  if (appDir) {
     context.appReleaseVersion =
-      project.getMeteorReleaseVersion(context.appDir) ||
+      project.getMeteorReleaseVersion(appDir) ||
       (files.usesWarehouse() ? warehouse.latestRelease() : 'none');
   }
   context.userReleaseOverride = !!releaseOverride;
@@ -284,14 +320,14 @@ var calculateContext = function (releaseOverride) {
 
 // Prints a message if $METEOR_TOOLS_DEBUG is set.
 // XXX We really should have a better logging system.
-// XXX XXX there is only one call anywhere to this (in toolsSpringboard)
+// XXX XXX there are only two calls anywhere to this (they're here in this file)
 var toolsDebugMessage = function (msg) {
   if (process.env.METEOR_TOOLS_DEBUG)
     console.log("[TOOLS DEBUG] " + msg);
 };
 
 // As the first step of running the Meteor CLI, check which Meteor
-// release we should be running against. Then, check whether the
+// release we shouldb e running against. Then, check whether the
 // tools corresponding to that release is the same as the one
 // we're running. If not, springboard to the right tools (after
 // having fetched it to the local warehouse)
@@ -402,47 +438,6 @@ var longHelp = function (commandName) {
 ///////////////////////////////////////////////////////////////////////////////
 // XXX XXX XXX stuff that should go away
 ///////////////////////////////////////////////////////////////////////////////
-
-// XXX refactor/remove
-//
-// If we're not in an app directory, die with an error message.
-//
-// @param cmd {String} The command that was run. Used when printing
-//   error message.
-main.requireDirInApp = function (context, cmd) {
-  if (context.appDir) {
-    // XXX this is an inelegant place to put these checks, but it is pretty
-    // accurate for now: "all the commands that need an app and don't do
-    // something special with releases" (ie, everything but create, update,
-    // help, logs, mongo SITE, test-packages, and deploy -D).
-    if (!files.usesWarehouse() && context.appReleaseVersion !== 'none') {
-      console.log(
-        "=> Running Meteor from a checkout -- overrides project version (%s)",
-        context.appReleaseVersion);
-      console.log();
-    }
-    if (files.usesWarehouse() && context.releaseVersion === 'none') {
-      logging.die(
-        "You must specify a Meteor version with --release when you work with this\n" +
-          "project. It was created from an unreleased Meteor checkout and doesn't\n" +
-          "have a version associated with it.\n" +
-          "\n" +
-          "You can permanently set a release for this project with 'meteor update'.");
-    }
-    return;
-  }
-  // This is where you end up if you type 'meteor' with no args. Be gentle to
-  // the noobs..
-  logging.die(cmd + ": You're not in a Meteor project directory.\n" +
-        "\n" +
-        "To create a new Meteor project:\n" +
-        "   meteor create <project name>\n" +
-        "For example:\n" +
-        "   meteor create myapp\n" +
-        "\n" +
-        "For more help, see 'meteor --help'.");
-};
-
 
 // XXX refactor/remove
 // called by the update command - we need to find another way to do this
@@ -604,7 +599,35 @@ Fiber(function () {
     delete parsed.release;
   }
 
-  var context = calculateContext(releaseOverride);
+  var appDir = files.findAppDir();
+  if (appDir)
+    appDir = path.resolve(appDir);
+  var context = calculateContext(appDir, releaseOverride);
+
+  // (NB: At this point, we might be in an inconsistent state where we
+  // have context.releaseVersion === 'none' and no manifest, as if we
+  // were in a checkout; yet we are not in a checkout, and thus we
+  // can't resolve packages. This happens if you create a project with
+  // a checkout and then run it with a release. We'll check for this
+  // in a moment.)
+
+  if (files.usesWarehouse() && context.releaseVersion === 'none') {
+    // We are in an app that was created with a checkout and has not
+    // been given a proper release, but we're not running from a
+    // checkout anymore, so we don't know what release to use. The
+    // user needs to tell us either with --release or by 'meteor
+    // update'ing the project to a release.
+    //
+    // We used to allow this for commands that had requiresApp false.
+
+    logging.die(
+        "You must specify a Meteor version with --release when you work with this\n" +
+          "project. It was created from an unreleased Meteor checkout and doesn't\n" +
+          "have a version associated with it.\n" +
+          "\n" +
+          "You can permanently set a release for this project with 'meteor update'.");
+    }
+
 
   // If we're not running the correct tools, fetch it and
   // re-run. Do *not* do this if we are in a checkout, or if
@@ -813,6 +836,52 @@ longHelp(commandName) + "\n");
 commandName + ": too many arguments.\n" +
 longHelp(commandName) + "\n");
     process.exit(1);
+  }
+
+  // We know we have a valid command and options. Now check to see if
+  // the command can only be run from an app dir, and add the appDir
+  // option if running from an app.
+  var requiresApp = command.requiresApp;
+  if (typeof requiresApp === "function")
+    requiresApp = requiresApp(options);
+
+  if (appDir)
+    options.appDir = appDir;
+
+  if (requiresApp && ! options.appDir) {
+    // This is where you end up if you type 'meteor' with no args,
+    // since you'll default to the 'run' command which requires an
+    // app. Be welcoming to our new developers!
+    process.stderr.write(
+commandName + ": You're not in a Meteor project directory.\n" +
+"\n" +
+"To create a new Meteor project:\n" +
+"   meteor create <project name>\n" +
+"For example:\n" +
+"   meteor create myapp\n" +
+"\n" +
+"For more help, see 'meteor --help'.\n");
+    process.exit(1);
+  }
+
+  if (options.requiresRelease &&
+      (files.usesWarehouse() && context.releaseVersion === 'none')) {
+    process.stderr.write(
+"You must specify a Meteor version with --release when you work with this\n" +
+"project. It was created from an unreleased Meteor checkout and doesn't\n" +
+"have a version associated with it.\n" +
+"\n" +
+"You can permanently set a release for this project with 'meteor update'.\n");
+    process.exit(1);
+  }
+
+  if (options.requiresApp &&
+      (! files.usesWarehouse() && context.appReleaseVersion !== 'none')) {
+    // For commands that work with apps, if we have overridden the
+    // app's usual release by using a checkout, print a reminder banner.
+    process.stdout.write(
+"=> Running Meteor from a checkout -- overrides project version (%s)\n\n",
+      context.appReleaseVersion);
   }
 
   // Now that we're ready to start executing the command, if we are in

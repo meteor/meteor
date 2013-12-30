@@ -147,10 +147,10 @@ exports.launchMongo = function (options) {
                               'mongod');
 
   // store data in app_dir
-  var dbPath = path.join(options.context.appDir, '.meteor', 'local', 'db');
+  var dbPath = path.join(options.appDir, '.meteor', 'local', 'db');
   files.mkdir_p(dbPath, 0755);
   // add .gitignore if needed.
-  files.add_to_gitignore(path.join(options.context.appDir, '.meteor'), 'local');
+  files.add_to_gitignore(path.join(options.appDir, '.meteor'), 'local');
 
   find_mongo_and_kill_it_dead(options.port, function (err) {
     Fiber(function (){

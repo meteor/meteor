@@ -53,12 +53,11 @@ var hostedWithGalaxy = function (site) {
 //
 // If called from a run that isn't in an app directory, print an error
 // and kill the process!
-var findMongoPort = function (context, cmd) {
+var findMongoPort = function (appDir) {
   var fut = new Future;
 
-  main.requireDirInApp(context, cmd);
   var mongo_runner = require(path.join(__dirname, 'mongo_runner.js'));
-  mongo_runner.find_mongo_port(context.appDir, function (port) {
+  mongo_runner.find_mongo_port(appDir, function (port) {
     fut.return(port);
   });
 
@@ -72,7 +71,7 @@ var findMongoPort = function (context, cmd) {
 // Prints the Meteor architecture name of this host
 main.registerCommand({
   name: '--arch',
-  maxArgs: 0
+  requiresRelease: false
 }, function (options) {
   var archinfo = require('./archinfo.js');
   console.log(archinfo.host());
@@ -84,7 +83,7 @@ main.registerCommand({
 // (making this useful to scripts).
 main.registerCommand({
   name: '--version',
-  maxArgs: 0
+  requiresRelease: false
 }, function (options) {
   var context = options.context;
 
@@ -104,7 +103,7 @@ main.registerCommand({
 // Internal use only.
 main.registerCommand({
   name: '--built-by',
-  maxArgs: 0
+  requiresRelease: false
 }, function (options) {
   var packages = require('./packages.js');
   console.log(packages.BUILT_BY);
@@ -120,7 +119,7 @@ main.registerCommand({
 // manifest and all of the packages in it.
 main.registerCommand({
   name: '--get-ready',
-  maxArgs: 0
+  requiresRelease: false
 }, function (options) {
   var context = options.context;
 
@@ -142,6 +141,7 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'run',
+  requiresApp: true,
   options: {
     port: { type: Number, short: "p", default: 3000 },
     production: { type: Boolean },
@@ -156,7 +156,6 @@ main.registerCommand({
   }
 }, function (options) {
   var context = options.context;
-  main.requireDirInApp(context, "run");
 
   if (files.usesWarehouse() &&
       context.appReleaseVersion !== 'none' &&
@@ -168,7 +167,7 @@ main.registerCommand({
 
   auth.tryRevokeOldTokens({timeout: 1000});
 
-  runner.run(context, {
+  runner.run(options.appDir, context, {
     port: options.port,
     rawLogs: options['raw-logs'],
     minify: options.production,
@@ -278,7 +277,10 @@ main.registerCommand({
   options: {
     // Undocumented flag (used, eg, by upgrade-to-engine.js).
     'dont-fetch-latest': { type: Boolean }
-  }
+  },
+  // We have to be able to work without a release, since 'meteor
+  // update' is how you fix apps that don't have a release.
+  requiresRelease: false
 }, function (options) {
   var context = options.context;
 
@@ -318,7 +320,7 @@ main.registerCommand({
 
   // If we're not in an app, then we're done (other than maybe printing some
   // stuff).
-  if (! context.appDir) {
+  if (! options.appDir) {
     if (options["dont-fetch-latest"])
       return;
     if (options.release || didGlobalUpdateWithoutSpringboarding) {
@@ -326,6 +328,11 @@ main.registerCommand({
       // update (with springboarding, in which case --release is set, or
       // without springboarding, in which case didGlobalUpdate is set),
       // print this message.
+      //
+      // (Realize that if they specified --release, the release has
+      // already been installed by virtue of the install/springboard
+      // process that runs at startup even before command starts
+      // running.)
       console.log("Installed. Run 'meteor update' inside of a particular project\n" +
                   "directory to update that project to Meteor %s.",
                   context.releaseVersion);
@@ -341,7 +348,7 @@ main.registerCommand({
   }
 
   // Otherwise, we have to upgrade the app too, if the release changed.
-  var appRelease = project.getMeteorReleaseVersion(context.appDir);
+  var appRelease = project.getMeteorReleaseVersion(options.appDir);
   if (appRelease !== null && appRelease === context.releaseVersion) {
     if (triedToGloballyUpdateButFailed) {
       console.log(
@@ -357,7 +364,7 @@ main.registerCommand({
   }
 
   // Write the release to .meteor/release.
-  project.writeMeteorReleaseVersion(context.appDir,
+  project.writeMeteorReleaseVersion(options.appDir,
                                     context.releaseVersion);
 
   // Find upgraders (in order) necessary to upgrade the app for the new
@@ -371,7 +378,7 @@ main.registerCommand({
     var upgraders = _.difference(context.releaseManifest.upgraders || [],
                                  oldManifest.upgraders || []);
     _.each(upgraders, function (upgrader) {
-      require("./upgraders.js").runUpgrader(upgrader, context.appDir);
+      require("./upgraders.js").runUpgrader(upgrader, options.appDir);
     });
   }
 
@@ -379,12 +386,12 @@ main.registerCommand({
   // order to update it for the new release .
   // XXX add app packages to .meteor/packages here for linker upgrade!
   console.log("%s: updated to Meteor %s.",
-              path.basename(context.appDir), context.releaseVersion);
+              path.basename(options.appDir), context.releaseVersion);
 
   // Print any notices relevant to this upgrade.
   // XXX This doesn't include package-specific notices for packages that
   // are included transitively (eg, packages used by app packages).
-  var packages = project.get_packages(context.appDir);
+  var packages = project.get_packages(options.appDir);
   warehouse.printNotices(appRelease, context.releaseVersion, packages);
 });
 
@@ -397,17 +404,15 @@ main.registerCommand({
   hidden: true,
   minArgs: 1,
   maxArgs: 1,
-  options: {
-  }
+  requiresApp: true
 }, function (options) {
   var upgrader = options.args[0];
   var context = options.context;
-  main.requireDirInApp(context, "run-upgrader");
 
   var upgraders = require("./upgraders.js");
   console.log("%s: running upgrader %s.",
-              path.basename(context.appDir), upgrader);
-  upgraders.runUpgrader(upgrader, context.appDir);
+              path.basename(options.appDir), upgrader);
+  upgraders.runUpgrader(upgrader, options.appDir);
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -418,14 +423,13 @@ main.registerCommand({
   name: 'add',
   minArgs: 1,
   maxArgs: Infinity,
+  requiresApp: true
 }, function (options) {
   var context = options.context;
 
-  main.requireDirInApp(context, 'add');
-
   var all = context.library.list();
   var using = {};
-  _.each(project.get_packages(context.appDir), function (name) {
+  _.each(project.get_packages(options.appDir), function (name) {
     using[name] = true;
   });
 
@@ -435,7 +439,7 @@ main.registerCommand({
     } else if (name in using) {
       process.stderr.write(name + ": already using\n");
     } else {
-      project.add_package(context.appDir, name);
+      project.add_package(options.appDir, name);
       var note = all[name].metadata.summary || '';
       process.stderr.write(name + ": " + note + "\n");
     }
@@ -450,14 +454,12 @@ main.registerCommand({
   name: 'remove',
   minArgs: 1,
   maxArgs: Infinity,
-  options: {
-  }
+  requiresApp: true
 }, function (options) {
   var context = options.context;
 
-  main.requireDirInApp(context, 'remove');
   var using = {};
-  _.each(project.get_packages(context.appDir), function (name) {
+  _.each(project.get_packages(options.appDir), function (name) {
     using[name] = true;
   });
 
@@ -465,7 +467,7 @@ main.registerCommand({
     if (! (name in using)) {
       process.stderr.write(name + ": not in project\n");
     } else {
-      project.remove_package(context.appDir, name);
+      project.remove_package(options.appDir, name);
       process.stderr.write(name + ": removed\n");
     }
   });
@@ -477,6 +479,7 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'list',
+  requiresApp: true,
   options: {
     using: { type: Boolean }
   }
@@ -484,8 +487,7 @@ main.registerCommand({
   var context = options.context;
 
   if (options.using) {
-    main.requireDirInApp(context, 'list --using');
-    var using = project.get_packages(context.appDir);
+    var using = project.get_packages(options.appDir);
 
     if (using.length) {
       _.each(using, function (name) {
@@ -502,7 +504,6 @@ main.registerCommand({
     return;
   }
 
-  main.requireDirInApp(context, 'list');
   var list = context.library.list();
   var names = _.keys(list);
   names.sort();
@@ -522,6 +523,7 @@ main.registerCommand({
   name: 'bundle',
   minArgs: 1,
   maxArgs: 1,
+  requiresApp: true,
   options: {
     debug: { type: Boolean },
     // Undocumented
@@ -540,13 +542,12 @@ main.registerCommand({
 
   var context = options.context;
 
-  main.requireDirInApp(context, "bundle");
-  var buildDir = path.join(context.appDir, '.meteor', 'local', 'build_tar');
+  var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
   var bundle_path = path.join(buildDir, 'bundle');
   var output_path = path.resolve(options.args[0]); // get absolute path
 
   var bundler = require(path.join(__dirname, 'bundler.js'));
-  var bundleResult = bundler.bundle(context.appDir, bundle_path, {
+  var bundleResult = bundler.bundle(options.appDir, bundle_path, {
     nodeModulesMode: options['for-deploy'] ? 'skip' : 'copy',
     minify: ! options.debug,
     releaseStamp: context.releaseVersion,
@@ -576,14 +577,17 @@ main.registerCommand({
   maxArgs: 1,
   options: {
     url: { type: Boolean, short: 'U' }
+  },
+  requiresApp: function (options) {
+    return options.args.length === 0;
   }
 }, function (options) {
   var mongoUrl;
 
-  if (options.length === 0) {
+  if (options.args.length === 0) {
     // localhost mode
     var fut = new Future;
-    var mongoPort = findMongoPort(options.context, "mongo");
+    var mongoPort = findMongoPort(options.appDir);
     if (! mongoPort) {
       process.stdout.write(
 "mongo: Meteor isn't running.\n" +
@@ -625,7 +629,8 @@ main.registerCommand({
   name: 'reset',
   // Doesn't actually take an argument, but we want to print an custom
   // error message if they try to pass one.
-  maxArgs: 1
+  maxArgs: 1,
+  requiresApp: true
 }, function (options) {
   if (options.args.length !== 0) {
     process.stderr.write(
@@ -638,7 +643,7 @@ main.registerCommand({
     return 1;
   }
 
-  var isRunning = !! findMongoPort(options.context, "reset");
+  var isRunning = !! findMongoPort(options.appDir);
   if (isRunning) {
     process.stderr.write(
 "reset: Meteor is running.\n" +
@@ -648,7 +653,7 @@ main.registerCommand({
     return 1;
   }
 
-  var localDir = path.join(options.context.appDir, '.meteor', 'local');
+  var localDir = path.join(options.appDir, '.meteor', 'local');
   files.rm_recursive(localDir);
 
   process.stdout.write("Project reset.\n");
@@ -674,6 +679,9 @@ main.registerCommand({
     // application as an admin app, so that it will be available in
     // Galaxy admin interface.
     admin: { type: Boolean }
+  },
+  requiresApp: function (options) {
+    return options.delete || options.star ? false : true;
   }
 }, function (options) {
   var context = options.context;
@@ -706,8 +714,9 @@ main.registerCommand({
 
   // We don't need to be in an app if we're not going to run the bundler.
   var starball = options.star;
-  if (! starball)
-    main.requireDirInApp(context, "deploy");
+  // XXX I think this is only supported for deploying to Galaxy, so it
+  // should print an error if you try to pass --starball while
+  // deploying to Meteor.
 
   var settings = undefined;
   if (options.settings)
@@ -727,7 +736,7 @@ main.registerCommand({
     var deployGalaxy = require('./deploy-galaxy.js');
     deployGalaxy.deploy({
       app: site,
-      appDir: context.appDir,
+      appDir: options.appDir,
       settings: settings,
       context: context,
       starball: starball,
@@ -741,7 +750,7 @@ main.registerCommand({
     });
   } else {
     deploy.bundleAndDeploy({
-      appDir: context.appDir,
+      appDir: options.appDir,
       site: site,
       settings: settings,
       bundleOptions: {
@@ -914,17 +923,17 @@ main.registerCommand({
   // run multiple "test-packages" commands in parallel without them stomping
   // on each other.
   //
-  // Note: context.appDir now is DIFFERENT from
+  // Note: testRunnerAppDir is DIFFERENT from
   // bundleOptions.library.appDir: we are bundling the test
   // runner app, but finding app packages from the current app (if any).
-  context.appDir = files.mkdtemp('meteor-test-run');
-  files.cp_r(path.join(__dirname, 'test-runner-app'), context.appDir);
-  project.add_package(context.appDir,
+  var testRunnerAppDir = files.mkdtemp('meteor-test-run');
+  files.cp_r(path.join(__dirname, 'test-runner-app'), testRunnerAppDir);
+  project.add_package(testRunnerAppDir,
                       options['driver-package'] || 'test-in-browser');
 
   if (options.deploy) {
     deploy.bundleAndDeploy({
-      appDir: context.appDir,
+      appDir: testRunnerAppDir,
       site: options.deploy,
       settings: options.settings && runner.getSettings(options.settings),
       bundleOptions: {
@@ -936,7 +945,7 @@ main.registerCommand({
       }
     });
   } else {
-    runner.run(context, {
+    runner.run(testRunnerAppDir, context, {
       port: options.port,
       minify: options.production,
       once: options.once,
@@ -958,11 +967,11 @@ main.registerCommand({
 }, function (options) {
   var context = options.context;
 
-  if (context.appDir) {
+  if (options.appDir) {
     // The library doesn't know about other programs in your app. Let's blow
     // away their .build directories if they have them, and not rebuild
     // them. Sort of hacky, but eh.
-    var programsDir = path.join(context.appDir, 'programs');
+    var programsDir = path.join(options.appDir, 'programs');
     try {
       var programs = fs.readdirSync(programsDir);
     } catch (e) {
@@ -1086,9 +1095,7 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 
 main.registerCommand({
-  name: 'whoami',
-  options: {
-  }
+  name: 'whoami'
 }, function (options) {
   return auth.whoAmICommand(options);
 });
