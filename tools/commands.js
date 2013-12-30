@@ -12,8 +12,7 @@ var project = require('./project.js');
 var warehouse = require('./warehouse.js');
 var auth = require('./auth.js');
 var config = require('./config.js');
-var release= require('./release.js');
-var Future = require('fibers/future');
+var release = require('./release.js');
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -44,14 +43,11 @@ var hostedWithGalaxy = function (site) {
 // If the app is running (that is, by another 'meteor' process),
 // return the port where mongo is listening. If the app is not
 // running, return falsey.
-//
-// If called from a run that isn't in an app directory, print an error
-// and kill the process!
 var findMongoPort = function (appDir) {
   var fut = new Future;
 
   var mongo_runner = require(path.join(__dirname, 'mongo_runner.js'));
-  mongo_runner.find_mongo_port(appDir, function (port) {
+  mongo_runner.findMongoPort(appDir, function (port) {
     fut.return(port);
   });
 
@@ -196,10 +192,12 @@ main.registerCommand({
   // (In particular, it's not sufficient to create the new app with
   // this version of the tools, and then stamp on the correct release
   // at the end.)
-  var desiredRelease = release.forced ? release.current.name :
-    release.latestDownloaded();
-  if (release.current.name !== desiredRelease)
-    throw new main.SpringboardToRelease(desiredRelease); // does not return
+  if (! release.current.isCheckout()) {
+    var desiredRelease = release.forced ? release.current.name :
+      release.latestDownloaded();
+    if (release.current.name !== desiredRelease)
+      throw new main.SpringboardToRelease(desiredRelease); // does not return
+  }
 
   var appPath;
   if (options.args.length === 1)
