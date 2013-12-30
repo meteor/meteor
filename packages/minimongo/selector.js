@@ -158,12 +158,17 @@ var operatorValueSelector = function (valueSelector, cursor) {
       throw new Error("Unrecognized operator: " + operator);
     }
   });
-  // NB: this is very similar to andCompiledDocumentSelectors but that one
-  // "assumes" the first arg is a doc and here it "assumes" it's a branched
-  // value list. The code is identical for now, though.
+
+  return andBranchedSelectors(operatorFunctions);
+};
+
+// NB: this is very similar to andCompiledDocumentSelectors but that one
+// "assumes" the first arg is a doc and here it "assumes" it's a branched
+// value list. The code is identical for now, though.
+var andBranchedSelectors = function (branchedSelectors) {
   return GROK(function (branches, doc) {
     // XXX arrayIndex!
-    var result = _.all(operatorFunctions, function (f) {
+    var result = _.all(branchedSelectors, function (f) {
       return f(branches, doc).result;
     });
     return {result: result};
@@ -272,6 +277,25 @@ var VALUE_OPERATORS = {
     if (!valueSelector.$regex)
       throw Error("$options needs a $regex");
     return matchesEverythingSelector;
+  },
+  $all: function (operand) {
+    if (!isArray(operand))
+      throw Error("$all requires array");
+    // Not sure why, but this seems to be what MongoDB does.
+    if (_.isEmpty(operand))
+      return matchesNothingSelector;
+
+    var branchedSelectors = [];
+    _.each(operand, function (criterion) {
+      // XXX handle $all/$elemMatch combination
+      if (isOperatorObject(criterion))
+        throw Error("no $ expressions in $all");
+      // This is always a regexp or equality selector.
+      branchedSelectors.push(compileValueSelector(criterion));
+    });
+    // andBranchedSelectors does NOT require all selectors to return true on the
+    // SAME branch.
+    return andBranchedSelectors(branchedSelectors);
   }
 };
 
@@ -1142,5 +1166,6 @@ var andCompiledDocumentSelectors = function (selectors) {
 
 
 // Remaining to update:
-// - $all
 // - $near/$maxDistance
+// Remaining to implement:
+// - $all with $elemMatch

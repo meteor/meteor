@@ -416,6 +416,17 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$all: [1, 2]}}, {a: [[1, 2]]}); // tested against mongodb
   nomatch({a: {$all: [1, 2]}}, {}); // tested against mongodb, field doesn't exist
   nomatch({a: {$all: [1, 2]}}, {a: {foo: 'bar'}}); // tested against mongodb, field is not an object
+  nomatch({a: {$all: []}}, {a: []});
+  nomatch({a: {$all: []}}, {a: [5]});
+  match({a: {$all: [/i/, /e/i]}}, {a: ["foo", "bEr", "biz"]});
+  nomatch({a: {$all: [/i/, /e/i]}}, {a: ["foo", "bar", "biz"]});
+  match({a: {$all: [{b: 3}]}}, {a: [{b: 3}]});
+  // Members of $all other than regexps are *equality matches*, not document
+  // matches.
+  nomatch({a: {$all: [{b: 3}]}}, {a: [{b: 3, k: 4}]});
+  test.throws(function () {
+    match({a: {$all: [{$gt: 4}]}}, {});
+  });
 
   // $exists
   match({a: {$exists: true}}, {a: 12});
