@@ -2610,5 +2610,30 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
       }]
     });
   });
+
+  // array tests
+  coll = new LocalCollection();
+  coll.insert({
+    _id: "x",
+    a: [
+      {b: [
+        [100,  100],
+        [1,  1]]},
+      {b: [150,  150]}]});
+  coll.insert({
+    _id: "y",
+    a: {b: [5, 5]}});
+  var testNear = function (near, md, expected) {
+    test.equal(
+      _.pluck(
+        coll.find({'a.b': {$near: near, $maxDistance: md}}).fetch(), '_id'),
+      expected);
+  };
+  testNear([149, 149], 4, ['x']);
+  testNear([149, 149], 1000, ['x', 'y']);
+  // It's important that we figure out that 'x' is closer than 'y' to [2,2] even
+  // though the first within-1000 point in 'x' (ie, [100,100]) is farther than
+  // 'y'.
+  testNear([2, 2], 1000, ['x', 'y']);
 });
 

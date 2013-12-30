@@ -16,31 +16,6 @@ var isIndexable = function (x) {
   return isArray(x) || isPlainObject(x);
 };
 
-// If x is an array, true if f(e) is true for some e in x
-//    (but never try f(x) directly)
-// Otherwise, true if f(x) is true.
-//
-// Use this in cases where f(Array) should never be true...
-// for example, equality comparisons to non-arrays,
-// ordering comparisons (which should always be false if either side
-// is an array), regexps (need string), mod (needs number)...
-// XXX ensure comparisons are always false if LHS is an array
-// XXX ensure comparisons among different types are false
-var _anyIfArray = function (x, f) {
-  if (isArray(x))
-    return _.any(x, f);
-  return f(x);
-};
-
-// True if f(x) is true, or x is an array and f(e) is true for some e in x.
-//
-// Use this for most operators where an array could satisfy the predicate.
-var _anyIfArrayPlus = function (x, f) {
-  if (f(x))
-    return true;
-  return isArray(x) && _.any(x, f);
-};
-
 var isOperatorObject = function (valueSelector) {
   if (!isPlainObject(valueSelector))
     return false;
@@ -88,7 +63,7 @@ var regexpElementSelector = function (regexp) {
 var convertElementSelectorToBranchedSelector = function (
     elementSelector, options) {
   options = options || {};
-  return GROK(function (branches, wholeDoc) {
+  return function (branches, wholeDoc) {
     var expanded = branches;
     if (!options.dontExpandLeafArrays) {
       expanded = expandArraysInBranches(
@@ -99,7 +74,7 @@ var convertElementSelectorToBranchedSelector = function (
       return elementSelector(element.value, wholeDoc);
     });
     return {result: result};
-  });
+  };
 };
 
 var equalityElementSelector = function (elementSelector) {
@@ -120,22 +95,8 @@ var equalityElementSelector = function (elementSelector) {
   };
 };
 
-// XXX this won't be necessary
-var GROK = function (f) {
-  f._groksExtendedLookup_ = true;
-  return f;
-};
-
 // XXX get rid of cursor when possible
 var operatorValueSelector = function (valueSelector, cursor, inRoot) {
-  // XXX kill this soon
-  if (!_.all(valueSelector, function (operand, operator) {
-    return _.has(ELEMENT_OPERATORS, operator) ||
-      _.has(VALUE_OPERATORS, operator);
-  })) {
-    return operatorValueSelectorLegacy(valueSelector, cursor, inRoot);
-  }
-
   // Each valueSelector works separately on the various branches.  So one
   // operator can match one branch and another can match another branch.  This
   // is OK.
@@ -144,7 +105,7 @@ var operatorValueSelector = function (valueSelector, cursor, inRoot) {
   _.each(valueSelector, function (operand, operator) {
     if (_.has(VALUE_OPERATORS, operator)) {
       operatorFunctions.push(
-        VALUE_OPERATORS[operator](operand, valueSelector, cursor));
+        VALUE_OPERATORS[operator](operand, valueSelector, cursor, inRoot));
     } else if (_.has(ELEMENT_OPERATORS, operator)) {
       // XXX justify three arguments
       var options = ELEMENT_OPERATORS[operator];
@@ -152,7 +113,7 @@ var operatorValueSelector = function (valueSelector, cursor, inRoot) {
         options = {elementSelector: options};
       operatorFunctions.push(
         convertElementSelectorToBranchedSelector(
-          options.elementSelector(operand, valueSelector, cursor, inRoot),
+          options.elementSelector(operand, valueSelector, cursor),
           options));
     } else {
       throw new Error("Unrecognized operator: " + operator);
@@ -166,13 +127,13 @@ var operatorValueSelector = function (valueSelector, cursor, inRoot) {
 // "assumes" the first arg is a doc and here it "assumes" it's a branched
 // value list. The code is identical for now, though.
 var andBranchedSelectors = function (branchedSelectors) {
-  return GROK(function (branches, doc) {
+  return function (branches, doc) {
     // XXX arrayIndex!
     var result = _.all(branchedSelectors, function (f) {
       return f(branches, doc).result;
     });
     return {result: result};
-  });
+  };
 };
 
 // XXX drop "cursor" when _distance is improved
@@ -278,6 +239,12 @@ var VALUE_OPERATORS = {
       throw Error("$options needs a $regex");
     return matchesEverythingSelector;
   },
+  // $maxDistance is basically an argument to $near
+  $maxDistance: function (operand, valueSelector) {
+    if (!valueSelector.$near)
+      throw Error("$maxDistance needs a $near");
+    return matchesEverythingSelector;
+  },
   $all: function (operand) {
     if (!isArray(operand))
       throw Error("$all requires array");
@@ -296,7 +263,95 @@ var VALUE_OPERATORS = {
     // andBranchedSelectors does NOT require all selectors to return true on the
     // SAME branch.
     return andBranchedSelectors(branchedSelectors);
+  },
+
+  $near: function (operand, valueSelector, cursor, inRoot) {
+    if (!inRoot)
+      throw Error("$near can't be inside another $ operator");
+
+    // There are two kinds of geodata in MongoDB: coordinate pairs and
+    // GeoJSON. They use different distance metrics, too. GeoJSON queries are
+    // marked with a $geometry property.
+
+    var maxDistance, point, distance;
+    if (isPlainObject(operand) && _.has(operand, '$geometry')) {
+      // GeoJSON "2dsphere" mode.
+      maxDistance = operand.$maxDistance;
+      point = operand.$geometry;
+      distance = function (value) {
+        // XXX: for now, we don't calculate the actual distance between, say,
+        // polygon and circle. If people care about this use-case it will get
+        // a priority.
+        if (!value || !value.type)
+          return null;
+        if (value.type === "Point") {
+          return GeoJSON.pointDistance(point, value);
+        } else {
+          return GeoJSON.geometryWithinRadius(value, point, maxDistance)
+            ? 0 : maxDistance + 1;
+        }
+      };
+    } else {
+      maxDistance = valueSelector.$maxDistance;
+      if (!isArray(operand) && !isPlainObject(operand))
+        throw Error("$near argument must be coordinate pair or GeoJSON");
+      point = pointToArray(operand);
+      distance = function (value) {
+        if (!isArray(value) && !isPlainObject(value))
+          return null;
+        return distanceCoordinatePairs(point, value);
+      };
+    }
+
+    return function (branchedValues, doc) {
+      // There might be multiple points in the document that match the given
+      // field. Only one of them needs to be within $maxDistance, but we need to
+      // evaluate all of them and use the nearest one for the implicit sort
+      // specifier. (That's why we can't just use ELEMENT_OPERATORS here.)
+      //
+      // Note: This differs from MongoDB's implementation, where a document will
+      // actually show up *multiple times* in the result set, with one entry for
+      // each within-$maxDistance branching point.
+      branchedValues = expandArraysInBranches(branchedValues);
+      var minDistance = null;
+      _.each(branchedValues, function (branch) {
+        var curDistance = distance(branch.value);
+        // Skip branches that aren't real points or are too far away.
+        if (curDistance === null || curDistance > maxDistance)
+          return;
+        // Skip anything that's a tie.
+        if (minDistance !== null && minDistance <= curDistance)
+          return;
+        minDistance = curDistance;
+      });
+      if (minDistance !== null) {
+        if (cursor) {
+          if (!cursor._distance)
+            cursor._distance = {};
+          cursor._distance[doc._id] = minDistance;
+        }
+        // XXX arrayIndex!
+        return {result: true};
+      }
+      return {result: false};
+    };
   }
+};
+
+var distanceCoordinatePairs = function (a, b) {
+  a = pointToArray(a);
+  b = pointToArray(b);
+  var x = a[0] - b[0];
+  var y = a[1] - b[1];
+  if (_.isNaN(x) || _.isNaN(y))
+    return null;
+  return Math.sqrt(x * x + y * y);
+};
+// Makes sure we get 2 elements array and assume the first one to be x and
+// the second one to y no matter what user passes.
+// In case user passes { lon: x, lat: y } returns [x, y]
+var pointToArray = function (point) {
+  return _.map(point, _.identity);
 };
 
 var makeInequality = function (cmpValueComparator) {
@@ -485,249 +540,6 @@ var ELEMENT_OPERATORS = {
       };
     }
   }
-};
-
-var LEGACY_VALUE_OPERATORS = {
-  "$in": function (operand) {
-    if (!isArray(operand))
-      throw new Error("Argument to $in must be array");
-    return function (value) {
-      return _anyIfArrayPlus(value, function (x) {
-        return _.any(operand, function (operandElt) {
-          return LocalCollection._f._equal(operandElt, x);
-        });
-      });
-    };
-  },
-
-  "$all": function (operand) {
-    if (!isArray(operand))
-      throw new Error("Argument to $all must be array");
-    return function (value) {
-      if (!isArray(value))
-        return false;
-      return _.all(operand, function (operandElt) {
-        return _.any(value, function (valueElt) {
-          return LocalCollection._f._equal(operandElt, valueElt);
-        });
-      });
-    };
-  },
-
-  "$lt": function (operand) {
-    return function (value) {
-      return _anyIfArray(value, function (x) {
-        return LocalCollection._f._cmp(x, operand) < 0;
-      });
-    };
-  },
-
-  "$lte": function (operand) {
-    return function (value) {
-      return _anyIfArray(value, function (x) {
-        return LocalCollection._f._cmp(x, operand) <= 0;
-      });
-    };
-  },
-
-  "$gt": function (operand) {
-    return function (value) {
-      return _anyIfArray(value, function (x) {
-        return LocalCollection._f._cmp(x, operand) > 0;
-      });
-    };
-  },
-
-  "$gte": function (operand) {
-    return function (value) {
-      return _anyIfArray(value, function (x) {
-        return LocalCollection._f._cmp(x, operand) >= 0;
-      });
-    };
-  },
-
-  "$ne": function (operand) {
-    return function (value) {
-      return ! _anyIfArrayPlus(value, function (x) {
-        return LocalCollection._f._equal(x, operand);
-      });
-    };
-  },
-
-  "$nin": function (operand) {
-    if (!isArray(operand))
-      throw new Error("Argument to $nin must be array");
-    var inFunction = LEGACY_VALUE_OPERATORS.$in(operand);
-    return function (value, doc) {
-      // Field doesn't exist, so it's not-in operand
-      if (value === undefined)
-        return true;
-      return !inFunction(value, doc);
-    };
-  },
-
-  "$exists": function (operand) {
-    return function (value) {
-      return operand === (value !== undefined);
-    };
-  },
-
-  "$mod": function (operand) {
-    var divisor = operand[0],
-        remainder = operand[1];
-    return function (value) {
-      return _anyIfArray(value, function (x) {
-        return x % divisor === remainder;
-      });
-    };
-  },
-
-  "$size": function (operand) {
-    return function (value) {
-      return isArray(value) && operand === value.length;
-    };
-  },
-
-  "$type": function (operand) {
-    return function (value) {
-      // A nonexistent field is of no type.
-      if (value === undefined)
-        return false;
-      // Definitely not _anyIfArrayPlus: $type: 4 only matches arrays that have
-      // arrays as elements according to the Mongo docs.
-      return _anyIfArray(value, function (x) {
-        return LocalCollection._f._type(x) === operand;
-      });
-    };
-  },
-
-  "$regex": function (operand, operators) {
-    var options = operators.$options;
-    if (options !== undefined) {
-      // Options passed in $options (even the empty string) always overrides
-      // options in the RegExp object itself. (See also
-      // Meteor.Collection._rewriteSelector.)
-
-      // Be clear that we only support the JS-supported options, not extended
-      // ones (eg, Mongo supports x and s). Ideally we would implement x and s
-      // by transforming the regexp, but not today...
-      if (/[^gim]/.test(options))
-        throw new Error("Only the i, m, and g regexp options are supported");
-
-      var regexSource = operand instanceof RegExp ? operand.source : operand;
-      operand = new RegExp(regexSource, options);
-    } else if (!(operand instanceof RegExp)) {
-      operand = new RegExp(operand);
-    }
-
-    return function (value) {
-      if (value === undefined)
-        return false;
-      return _anyIfArray(value, function (x) {
-        return operand.test(x);
-      });
-    };
-  },
-
-  "$options": function (operand) {
-    // evaluation happens at the $regex function above
-    return function (value) { return true; };
-  },
-
-  "$elemMatch": function (operand, selector, cursor) {
-    var matcher = compileDocumentSelector(operand, cursor);
-    return function (value, doc) {
-      if (!isArray(value))
-        return false;
-      return _.any(value, function (x) {
-        return matcher(x, doc).result;
-      });
-    };
-  },
-
-  "$not": function (operand, operators, cursor) {
-    var matcher = compileValueSelector(operand, cursor);
-    return function (value, doc) {
-      return !matcher(value, doc);
-    };
-  },
-
-  "$near": function (operand, operators, cursor, inRoot) {
-    if (!inRoot)
-      throw Error("$near can't be inside another $ operator");
-
-    function distanceCoordinatePairs (a, b) {
-      a = pointToArray(a);
-      b = pointToArray(b);
-      var x = a[0] - b[0];
-      var y = a[1] - b[1];
-      if (_.isNaN(x) || _.isNaN(y))
-        return null;
-      return Math.sqrt(x * x + y * y);
-    }
-    // Makes sure we get 2 elements array and assume the first one to be x and
-    // the second one to y no matter what user passes.
-    // In case user passes { lon: x, lat: y } returns [x, y]
-    function pointToArray (point) {
-      return _.map(point, _.identity);
-    }
-    // GeoJSON query is marked as $geometry property
-    var mode = _.isObject(operand) && _.has(operand, '$geometry') ? "2dsphere" : "2d";
-    var maxDistance = mode === "2d" ? operators.$maxDistance : operand.$maxDistance;
-    var point = mode === "2d" ? operand : operand.$geometry;
-    return function (value, doc) {
-      var dist = null;
-      switch (mode) {
-        case "2d":
-          dist = distanceCoordinatePairs(point, value);
-          break;
-        case "2dsphere":
-          // XXX: for now, we don't calculate the actual distance between, say,
-          // polygon and circle. If people care about this use-case it will get
-          // a priority.
-          if (value.type === "Point")
-            dist = GeoJSON.pointDistance(point, value);
-          else
-            dist = GeoJSON.geometryWithinRadius(value, point, maxDistance) ?
-                     0 : maxDistance + 1;
-          break;
-      }
-      // Used later in sorting by distance, since $near queries are sorted by
-      // distance from closest to farthest.
-      if (cursor) {
-        if (!cursor._distance)
-          cursor._distance = {};
-        cursor._distance[doc._id] = dist;
-      }
-
-      // Distance couldn't parse a geometry object
-      if (dist === null)
-        return false;
-
-      return maxDistance === undefined ? true : dist <= maxDistance;
-    };
-  },
-
-  "$maxDistance": function () {
-    // evaluation happens in the $near operator
-    return function () { return true; }
-  }
-};
-
-var operatorValueSelectorLegacy = function (valueSelector, cursor, inRoot) {
-  var operatorFunctions = [];
-  _.each(valueSelector, function (operand, operator) {
-    if (!_.has(LEGACY_VALUE_OPERATORS, operator))
-      throw new Error("Unrecognized legacy operator: " + operator);
-    // Special case for location operators
-    operatorFunctions.push(LEGACY_VALUE_OPERATORS[operator](
-      operand, valueSelector, cursor, inRoot));
-  });
-  return function (value, doc) {
-    return _.all(operatorFunctions, function (f) {
-      return f(value, doc);
-    });
-  };
 };
 
 // helpers used by compiled selector code
@@ -1072,38 +884,7 @@ var compileDocumentSelector = function (docSelector, cursor, isRoot) {
         compileValueSelector(subSelector, cursor, isRoot);
       perKeySelectors.push(function (doc, wholeDoc) {
         var branchValues = lookUpByIndex(doc);
-
-        if (valueSelectorFunc._groksExtendedLookup_) {
-          return valueSelectorFunc(branchValues, wholeDoc);
-        }
-
-        // XXX get rid of this all later
-        branchValues = _.pluck(branchValues, 'value');
-        // We apply the selector to each "branched" value and return true if any
-        // match. However, for "negative" selectors like $ne or $not we actually
-        // require *all* elements to match.
-        //
-        // This is because {'x.tag': {$ne: "foo"}} applied to {x: [{tag: 'foo'},
-        // {tag: 'bar'}]} should NOT match even though there is a branch that
-        // matches. (This matches the fact that $ne uses a negated
-        // _anyIfArrayPlus, for when the last level of the key is the array,
-        // which deMorgans into an 'all'.)
-        //
-        // XXX This isn't 100% consistent with MongoDB in 'null' cases:
-        //     https://jira.mongodb.org/browse/SERVER-8585
-        // XXX this still isn't right.  consider {a: {$ne: 5, $gt: 6}}. the
-        //     $ne needs to use the "all" logic and the $gt needs the "any"
-        //     logic.  (There is an expect_fail test for this now.)
-        // XXX add test for this brokenness
-        var combiner = (subSelector &&
-                        (subSelector.$not || subSelector.$ne ||
-                         subSelector.$nin))
-              ? _.all : _.any;
-        var result = combiner(branchValues, function (val) {
-          return valueSelectorFunc(val, wholeDoc);
-        });
-        // XXX rewrite value selectors to use structured return
-        return {result: result};
+        return valueSelectorFunc(branchValues, wholeDoc);
       });
     }
   });
