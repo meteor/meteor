@@ -954,6 +954,3 @@ var andSomeSelectors = function (branchedSelectors) {
 
 var andCompiledDocumentSelectors = andSomeSelectors;
 var andBranchedSelectors = andSomeSelectors;
-
-// Remaining to implement:
-// - $all with $elemMatch
