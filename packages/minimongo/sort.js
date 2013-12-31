@@ -53,6 +53,13 @@ Sorter = function (spec) {
   // findMin). Each value can itself be an array, and we look at its values
   // too. (ie, we do a single level of flattening on branchValues, then find the
   // min/max.)
+  //
+  // XXX This is actually wrong! In fact, the whole attempt to compile sort
+  // functions independently of selectors is wrong. In MongoDB, if you have
+  // documents {_id: 'x', a: [1, 10]} and {_id: 'y', a: [5, 15]},
+  // then C.find({}, {sort: {a: 1}}) puts x before y (1 comes before 5).
+  // But C.find({a: {$gt: 3}}, {sort: {a: 1}}) puts y before x (1 does not match
+  // the selector, and 5 comes before 10).
   var reduceValue = function (branchValues, findMin) {
     // Expand any leaf arrays that we find, and ignore those arrays themselves.
     branchValues = expandArraysInBranches(branchValues, true);
