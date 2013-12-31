@@ -463,8 +463,7 @@ exports.run = function (appDir, options) {
     nodeModulesMode: 'symlink',
     minify: options.minify,
     testPackages: options.testPackages,
-    releaseStamp: release.current.name,
-    library: release.current.library
+    release: release.current
   };
 
   var startWatching = function (watchSet) {

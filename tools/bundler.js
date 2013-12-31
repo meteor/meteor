@@ -1246,13 +1246,13 @@ _.extend(JsImageTarget.prototype, {
 
 // options:
 // - clientTarget: the ClientTarget to serve up over HTTP as our client
-// - releaseStamp: the Meteor release name (for retrieval at runtime)
+// - releaseName: the Meteor release name (for retrieval at runtime)
 var ServerTarget = function (options) {
   var self = this;
   JsImageTarget.apply(this, arguments);
 
   self.clientTarget = options.clientTarget;
-  self.releaseStamp = options.releaseStamp;
+  self.releaseName = options.releaseName;
   self.library = options.library;
 
   if (! archinfo.matches(self.arch, "os"))
@@ -1294,8 +1294,7 @@ _.extend(ServerTarget.prototype, {
     // We will write out config.json, the dependency kit, and the
     // server driver alongside the JsImage
     builder.writeJson("config.json", {
-      meteorRelease: self.releaseStamp && self.releaseStamp !== "none" ?
-        self.releaseStamp : undefined,
+      meteorRelease: self.releaseName || undefined,
       client: clientTargetPath || undefined
     });
 
@@ -1391,7 +1390,7 @@ var writeFile = function (file, builder) {
 // - nodeModulesMode: "skip", "symlink", "copy"
 // - builtBy: vanity identification string to write into metadata
 // - controlProgram: name of the control program (should be a target name)
-// - releaseStamp: The Meteor release version
+// - releaseName: The Meteor release version
 var writeSiteArchive = function (targets, outputPath, options) {
   var builder = new Builder({
     outputPath: outputPath,
@@ -1408,7 +1407,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
       builtBy: options.builtBy,
       programs: [],
       control: options.controlProgram || undefined,
-      meteorRelease: options.releaseStamp
+      meteorRelease: options.releaseName
     };
 
     // Pick a path in the bundle for each target
@@ -1519,7 +1518,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
- * Take the Meteor app in projectDir, and compile it into a bundle at
+ * Take the Meteor app in appDir, and compile it into a bundle at
  * outputPath. outputPath will be created if it doesn't exist (it
  * will be a directory), and removed if it does exist. The release
  * version is *not* read from the app's .meteor/release file. Instead,
@@ -1535,45 +1534,48 @@ var writeSiteArchive = function (targets, outputPath, options) {
  * outputPath will have been removed if it existed).
  *
  * options include:
- * - minify : minify the CSS and JS assets
+ * - minify: minify the CSS and JS assets
  *
- * - nodeModulesMode : decide on how to create the bundle's
+ * - nodeModulesMode: decide on how to create the bundle's
  *   node_modules directory. one of:
- *     'skip' : don't create node_modules. used by `meteor deploy`, since
- *              our production servers already have all of the node modules
- *     'copy' : copy from a prebuilt local installation. used by
- *              `meteor bundle`
- *     'symlink' : symlink from a prebuild local installation. used
- *                 by `meteor run`
+ *   - 'skip': don't create node_modules. used by `meteor deploy`, since
+ *             our production servers already have all of the node modules
+ *   - 'copy': copy from a prebuilt local installation. used by
+ *             `meteor bundle`
+ *   - 'symlink': symlink from a prebuild local installation. used
+ *                by `meteor run`
  *
- * - testPackages : array of package objects or package names whose
+ * - testPackages: array of package objects or package names whose
  *   tests should be included in this bundle
  *
- * - releaseStamp : The Meteor release version to use. This is *ONLY*
- *                  used as a stamp (eg Meteor.release). The package
- *                  search path is configured with 'library'.
+ * - release: The release to use (a Release object, such as
+ *   release.current). This is used both to resolve package
+ *   dependencies and to set the value of Meteor.release that the app
+ *   will see.
  *
- * - library : Package library to use to fetch any required
- *   packages. NOTE: if there's an appDir here, it's used for package
- *   searching but it is NOT the appDir that we bundle!  So for
- *   "meteor test-packages" in an app, appDir is the test-runner-app
- *   but library.appDir is the app the user is in.
+ * Note that when you run "meteor test-packages", appDir points to the
+ * test harness, while the local package search paths in 'release'
+ * will point somewhere else -- into the app (if any) whose packages
+ * you are testing!
  */
 exports.bundle = function (appDir, outputPath, options) {
-  if (!options)
+  if (! options)
     throw new Error("Must pass options");
-  if (!options.nodeModulesMode)
+  if (! options.nodeModulesMode)
     throw new Error("Must pass options.nodeModulesMode");
-  if (!options.library)
-    throw new Error("Must pass options.library");
-  if (!options.releaseStamp)
-    throw new Error("Must pass options.releaseStamp or 'none'");
+  if (! options.release)
+    throw new Error("Must pass options.release");
 
-  var library = options.library;
+  // sanity check
+  if (! options.release.compatibleWithRunningVersion())
+    throw new Error("running wrong tools version for release?");
 
-  var builtBy = "Meteor" + (options.releaseStamp &&
-                            options.releaseStamp !== "none" ?
-                            " " + options.releaseStamp : "");
+  var library = options.release.library;
+  var releaseName =
+    options.release.isCheckout() ? "none" : options.release.name;
+
+  var builtBy = "Meteor" + (options.release.name ?
+                            " " + options.release.name : "");
 
   var success = false;
   var watchSet = new watch.WatchSet();
@@ -1618,7 +1620,7 @@ exports.bundle = function (appDir, outputPath, options) {
       var targetOptions = {
         library: library,
         arch: archinfo.host(),
-        releaseStamp: options.releaseStamp
+        releaseName: releaseName
       };
       if (clientTarget)
         targetOptions.clientTarget = clientTarget;
@@ -1813,7 +1815,7 @@ exports.bundle = function (appDir, outputPath, options) {
       nodeModulesMode: options.nodeModulesMode,
       builtBy: builtBy,
       controlProgram: controlProgram,
-      releaseStamp: options.releaseStamp
+      releaseName: releaseName
     });
     watchSet.merge(starResult.watchSet);
 

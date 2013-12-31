@@ -7,6 +7,7 @@
 /*global*/ bundler = require(path.join(__dirname, '..', 'bundler.js'));
 /*global*/ library = require(path.join(__dirname, '..', 'library.js'));
 /*global*/ unipackage = require(path.join(__dirname, '..', 'unipackage.js'));
+/*global*/ release = require(path.join(__dirname, '..', 'release.js'));
 /*global*/ _ = require('underscore');
 /*global*/ assert = require('assert');
 /*global*/ Fiber = require('fibers');

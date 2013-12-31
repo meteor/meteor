@@ -6,14 +6,11 @@ var appWithPrivate = path.join(__dirname, 'app-with-private');
 
 console.log("Bundle app with public/ directory");
 assert.doesNotThrow(function () {
-  var lib = new library.Library({
-    localPackageDirs: [ path.join(files.getCurrentToolsDir(), 'packages') ]
-  });
+  var rel = release.load(null);
   var tmpOutputDir = tmpDir();
   var result = bundler.bundle(appWithPublic, tmpOutputDir, {
     nodeModulesMode: 'skip',
-    library: lib,
-    releaseStamp: 'none'
+    release: rel
   });
   var clientManifest = JSON.parse(
     fs.readFileSync(
@@ -41,15 +38,14 @@ assert.doesNotThrow(function () {
   files.rm_recursive(
     path.join(appWithPrivate, "packages", "test-package", ".build"));
 
-  var lib = new library.Library({
-    localPackageDirs: [ path.join(files.getCurrentToolsDir(), 'packages'),
-                        path.join(appWithPrivate, "packages") ]
+  var rel = release.load(null, {
+    packageDirs: [ path.join(appWithPrivate, "packages") ]
   });
+
   var tmpOutputDir = tmpDir();
   var result = bundler.bundle(appWithPrivate, tmpOutputDir, {
     nodeModulesMode: 'skip',
-    library: lib,
-    releaseStamp: 'none'
+    release: rel
   });
   var serverManifest = JSON.parse(
     fs.readFileSync(
@@ -104,12 +100,12 @@ assert.doesNotThrow(function () {
 
 console.log("Use Assets API from unipackage");
 assert.doesNotThrow(function () {
-  var lib = new library.Library({
-    localPackageDirs: [ path.join(files.getCurrentToolsDir(), "packages"),
-                       path.join(appWithPrivate, "packages") ]
+  var rel = release.load(null, {
+    packageDirs: [ path.join(appWithPrivate, "packages") ]
   });
+
   var testPackage = unipackage.load({
-    library: lib,
+    library: rel.library,
     packages: ['test-package']
   })['test-package'].TestAsset;
   testPackage.go(false /* don't exit when done */);

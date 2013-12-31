@@ -13,6 +13,7 @@ var warehouse = require('./warehouse.js');
 var auth = require('./auth.js');
 var config = require('./config.js');
 var release = require('./release.js');
+var Future = require('fibers/future');
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -38,20 +39,6 @@ var qualifySitename = function (site) {
 var hostedWithGalaxy = function (site) {
   var site = qualifySitename(site);
   return !! require('./deploy-galaxy.js').discoverGalaxy(site);
-};
-
-// If the app is running (that is, by another 'meteor' process),
-// return the port where mongo is listening. If the app is not
-// running, return falsey.
-var findMongoPort = function (appDir) {
-  var fut = new Future;
-
-  var mongo_runner = require(path.join(__dirname, 'mongo_runner.js'));
-  mongo_runner.findMongoPort(appDir, function (port) {
-    fut.return(port);
-  });
-
-  return fut.wait();
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -579,8 +566,7 @@ main.registerCommand({
   var bundleResult = bundler.bundle(options.appDir, bundle_path, {
     nodeModulesMode: options['for-deploy'] ? 'skip' : 'copy',
     minify: ! options.debug,
-    releaseStamp: release.current.name,
-    library: release.current.library
+    release: release.current
   });
   if (bundleResult.errors) {
     process.stdout.write("Errors prevented bundling:\n");
@@ -615,7 +601,8 @@ main.registerCommand({
 
   if (options.args.length === 0) {
     // localhost mode
-    var mongoPort = findMongoPort(options.appDir);
+    var mongo_runner = require(path.join(__dirname, 'mongo_runner.js'));
+    var mongoPort = mongo_runner.findMongoPort(options.appDir);
     if (! mongoPort) {
       process.stdout.write(
 "mongo: Meteor isn't running.\n" +
@@ -624,7 +611,7 @@ main.registerCommand({
 "locally. Start your application first.\n");
       return 1;
     }
-    mongoUrl = "mongodb://127.0.0.1:" + mongod_port + "/meteor";
+    mongoUrl = "mongodb://127.0.0.1:" + mongoPort + "/meteor";
 
   } else {
     // remote mode
@@ -669,7 +656,8 @@ main.registerCommand({
     return 1;
   }
 
-  var isRunning = !! findMongoPort(options.appDir);
+  var mongo_runner = require(path.join(__dirname, 'mongo_runner.js'));
+  var isRunning = !! mongo_runner.findMongoPort(options.appDir);
   if (isRunning) {
     process.stderr.write(
 "reset: Meteor is running.\n" +
@@ -759,6 +747,12 @@ main.registerCommand({
       return 1;
   }
 
+  var bundleOptions = {
+    nodeModulesMode: 'skip',
+    minify: ! options.debug,
+    release: release.current
+  };
+
   if (useGalaxy) {
     var deployGalaxy = require('./deploy-galaxy.js');
     deployGalaxy.deploy({
@@ -766,12 +760,7 @@ main.registerCommand({
       appDir: options.appDir,
       settings: settings,
       starball: starball,
-      bundleOptions: {
-        nodeModulesMode: 'skip',
-        minify: ! options.debug,
-        releaseStamp: release.current.name,
-        library: release.current.library
-      },
+      bundleOptions: bundleOptions,
       admin: options.admin
     });
   } else {
@@ -779,12 +768,7 @@ main.registerCommand({
       appDir: options.appDir,
       site: site,
       settings: settings,
-      bundleOptions: {
-        nodeModulesMode: 'skip',
-        minify: ! options.debug,
-        releaseStamp: release.current.name,
-        library: release.current.library
-      }
+      bundleOptions: bundleOptions
     });
   }
 });
@@ -950,9 +934,10 @@ main.registerCommand({
   // run multiple "test-packages" commands in parallel without them stomping
   // on each other.
   //
-  // Note: testRunnerAppDir is DIFFERENT from
-  // bundleOptions.library.appDir: we are bundling the test
-  // runner app, but finding app packages from the current app (if any).
+  // Note: testRunnerAppDir DOES NOT MATCH the app package search path
+  // baked into release.current.library: we are bundling the test
+  // runner app, but finding app packages from the current app (if
+  // any).
   var testRunnerAppDir = files.mkdtemp('meteor-test-run');
   files.cp_r(path.join(__dirname, 'test-runner-app'), testRunnerAppDir);
   project.addPackage(testRunnerAppDir,
@@ -967,8 +952,7 @@ main.registerCommand({
         nodeModulesMode: 'skip',
         testPackages: testPackages,
         minify: options.production,
-        releaseStamp: release.current.name,
-        library: library
+        release: release.current
       }
     });
   } else {

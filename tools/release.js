@@ -68,6 +68,19 @@ _.extend(Release.prototype, {
     if (! self.isProperRelease())
       throw new Error("not a proper release?");
     return self._manifest.upgraders || [];
+  },
+
+  // True if our version is the tools version called for in the
+  // release.
+  compatibleWithRunningVersion: function () {
+    var self = this;
+
+    if (! files.usesWarehouse())
+      return self.isCheckout();
+    else {
+      return self.isProperRelease() &&
+        self.getToolsVersion() === files.getToolsVersion();
+    }
   }
 });
 
@@ -137,6 +150,8 @@ release.latestDownloaded = function () {
 //     reflect that we're downloading the release because an app needs
 //     it.
 release.load = function (name, options) {
+  options = options || {};
+
   if (! name) {
     return new Release({
       name: null,
