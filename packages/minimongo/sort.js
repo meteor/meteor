@@ -114,9 +114,8 @@ Sorter.prototype.getComparator = function (options) {
     };
   }
 
-  var distances = _.clone(options.distances);
   return function (a, b) {
-    return distances[a._id] - distances[b._id];
+    return options.distances.get(a._id) - options.distances.get(b._id);
   };
 };
 

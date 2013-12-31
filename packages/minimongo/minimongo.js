@@ -270,10 +270,11 @@ _.extend(LocalCollection.Cursor.prototype, {
     if (!options._allow_unordered && !ordered && (self.skip || self.limit))
       throw new Error("must use ordered observe with skip or limit");
 
-    // XXX merge this object w/ "this" Cursor.  they're the same.
     var query = {
       selector: self.selector, // not fast pathed
       sorter: ordered && self.sorter,
+      distances: (
+        self.selector.isGeoQuery() && ordered && new LocalCollection._IdMap),
       results_snapshot: null,
       ordered: ordered,
       cursor: self,
@@ -289,7 +290,7 @@ _.extend(LocalCollection.Cursor.prototype, {
       qid = self.collection.next_qid++;
       self.collection.queries[qid] = query;
     }
-    query.results = self._getRawObjects(ordered);
+    query.results = self._getRawObjects(ordered, query.distances);
     if (self.collection.paused)
       query.results_snapshot = (ordered ? [] : {});
 
@@ -374,7 +375,8 @@ _.extend(LocalCollection.Cursor.prototype, {
 //
 // If ordered is not set, returns an object mapping from ID to doc (sorter, skip
 // and limit should not be set).
-LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
+LocalCollection.Cursor.prototype._getRawObjects = function (ordered,
+                                                            distances) {
   var self = this;
 
   var results = ordered ? [] : {};
@@ -398,13 +400,25 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
   }
 
   // slow path for arbitrary selector, sort, skip, limit
-  for (var id in self.collection.docs) {
-    var doc = self.collection.docs[id];
-    if (self.selector.documentMatches(doc).result) {
-      if (ordered)
+
+  // in the observeChanges case, distances is actually part of the "query" (ie,
+  // live results set) object.  in other cases, distances is only used inside
+  // this function.
+  if (self.selector.isGeoQuery() && ordered && !distances)
+    distances = new LocalCollection._IdMap();
+
+  for (var idStringified in self.collection.docs) {
+    var doc = self.collection.docs[idStringified];
+    var id = LocalCollection._idParse(idStringified);  // XXX use more idmaps
+    var matchResult = self.selector.documentMatches(doc);
+    if (matchResult.result) {
+      if (ordered) {
         results.push(doc);
-      else
-        results[id] = doc;
+        if (distances && matchResult.distance !== undefined)
+          distances.set(id, matchResult.distance);
+      } else {
+        results[idStringified] = doc;
+      }
     }
     // Fast path for limited unsorted queries.
     if (self.limit && !self.skip && !self.sorter &&
@@ -416,18 +430,13 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
     return results;
 
   if (self.sorter) {
-    var comparator = self._getComparator();
+    var comparator = self.sorter.getComparator({distances: distances});
     results.sort(comparator);
   }
 
   var idx_start = self.skip || 0;
   var idx_end = self.limit ? (self.limit + idx_start) : results.length;
   return results.slice(idx_start, idx_end);
-};
-
-LocalCollection.Cursor.prototype._getComparator = function () {
-  var self = this;
-  return self.sorter.getComparator({distances: self._distance});
 };
 
 // XXX Maybe we need a version of observe that just calls a callback if
@@ -481,7 +490,10 @@ LocalCollection.prototype.insert = function (doc, callback) {
   // trigger live queries that match
   for (var qid in self.queries) {
     var query = self.queries[qid];
-    if (query.selector.documentMatches(doc).result) {
+    var matchResult = query.selector.documentMatches(doc);
+    if (matchResult.result) {
+      if (query.distances && matchResult.distance !== undefined)
+        query.distances.set(doc._id, matchResult.distance);
       if (query.cursor.skip || query.cursor.limit)
         queriesToRecompute.push(qid);
       else
@@ -523,10 +535,10 @@ LocalCollection.prototype.remove = function (selector, callback) {
         remove.push(strId);
     });
   } else {
-    for (var id in self.docs) {
-      var doc = self.docs[id];
+    for (var strId in self.docs) {
+      var doc = self.docs[strId];
       if (compiledSelector.documentMatches(doc).result) {
-        remove.push(id);
+        remove.push(strId);
       }
     }
   }
@@ -550,8 +562,10 @@ LocalCollection.prototype.remove = function (selector, callback) {
   // run live query callbacks _after_ we've removed the documents.
   _.each(queryRemove, function (remove) {
     var query = self.queries[remove.qid];
-    if (query)
+    if (query) {
+      query.distances && query.distances.remove(remove.doc._id);
       LocalCollection._removeFromResults(query, remove.doc);
+    }
   });
   _.each(queriesToRecompute, function (qid) {
     var query = self.queries[qid];
@@ -688,7 +702,10 @@ LocalCollection.prototype._modifyAndNotify = function (
   for (qid in self.queries) {
     query = self.queries[qid];
     var before = matched_before[qid];
-    var after = query.selector.documentMatches(doc).result;
+    var afterMatch = query.selector.documentMatches(doc);
+    var after = afterMatch.result;
+    if (after && query.distances && afterMatch.distance !== undefined)
+      query.distances.set(doc._id, afterMatch.distance);
 
     if (query.cursor.skip || query.cursor.limit) {
       // We need to recompute any query where the doc may have been in the
@@ -725,7 +742,8 @@ LocalCollection._insertInResults = function (query, doc) {
       query.results.push(doc);
     } else {
       var i = LocalCollection._insertInSortedList(
-        query.cursor._getComparator(), query.results, doc);
+        query.sorter.getComparator({distances: query.distances}),
+        query.results, doc);
       var next = query.results[i+1];
       if (next)
         next = next._id;
@@ -775,7 +793,8 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
   // changes
   query.results.splice(orig_idx, 1);
   var new_idx = LocalCollection._insertInSortedList(
-    query.cursor._getComparator(), query.results, doc);
+    query.sorter.getComparator({distances: query.distances}),
+    query.results, doc);
   if (orig_idx !== new_idx) {
     var next = query.results[new_idx+1];
     if (next)
@@ -797,7 +816,9 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
 LocalCollection._recomputeResults = function (query, oldResults) {
   if (!oldResults)
     oldResults = query.results;
-  query.results = query.cursor._getRawObjects(query.ordered);
+  if (query.distances)
+    query.distances.clear();
+  query.results = query.cursor._getRawObjects(query.ordered, query.distances);
 
   if (!query.paused) {
     LocalCollection._diffQueryChanges(

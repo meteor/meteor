@@ -2617,7 +2617,7 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
     _id: "x",
     a: [
       {b: [
-        [100,  100],
+        [100, 100],
         [1,  1]]},
       {b: [150,  150]}]});
   coll.insert({
@@ -2635,5 +2635,20 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
   // though the first within-1000 point in 'x' (ie, [100,100]) is farther than
   // 'y'.
   testNear([2, 2], 1000, ['x', 'y']);
+
+  var operations = [];
+  var cbs = log_callbacks(operations);
+  var handle = coll.find({'a.b': {$near: [7,7]}}).observe(cbs);
+
+  test.length(operations, 2);
+  test.equal(operations.shift(), ['added', {a:{b:[5,5]}}, 0, null]);
+  test.equal(operations.shift(),
+             ['added', {a:[{b:[[100,100],[1,1]]},{b:[150,150]}]}, 1, null]);
+  // This needs to be inserted in the MIDDLE of the two existing ones.
+  coll.insert({a: {b: [3,3]}});
+  test.length(operations, 1);
+  test.equal(operations.shift(), ['added', {a: {b: [3, 3]}}, 1, 'x']);
+
+  handle.stop();
 });
 

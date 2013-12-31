@@ -33,12 +33,12 @@ var isOperatorObject = function (valueSelector) {
 };
 
 
-var compileValueSelector = function (valueSelector, cursor, selectorObjIfRoot) {
+var compileValueSelector = function (valueSelector, selectorObjIfRoot) {
   if (valueSelector instanceof RegExp)
     return convertElementSelectorToBranchedSelector(
       regexpElementSelector(valueSelector));
   else if (isOperatorObject(valueSelector))
-    return operatorValueSelector(valueSelector, cursor, selectorObjIfRoot);
+    return operatorValueSelector(valueSelector, selectorObjIfRoot);
   else {
     return convertElementSelectorToBranchedSelector(
       equalityElementSelector(valueSelector));
@@ -63,7 +63,7 @@ var regexpElementSelector = function (regexp) {
 var convertElementSelectorToBranchedSelector = function (
     elementSelector, options) {
   options = options || {};
-  return function (branches, wholeDoc) {
+  return function (branches) {
     var expanded = branches;
     if (!options.dontExpandLeafArrays) {
       expanded = expandArraysInBranches(
@@ -71,7 +71,7 @@ var convertElementSelectorToBranchedSelector = function (
     }
     var result = _.any(expanded, function (element) {
       // XXX arrayIndex!  need to save the winner here
-      return elementSelector(element.value, wholeDoc);
+      return elementSelector(element.value);
     });
     return {result: result};
   };
@@ -95,8 +95,7 @@ var equalityElementSelector = function (elementSelector) {
   };
 };
 
-// XXX get rid of cursor when possible
-var operatorValueSelector = function (valueSelector, cursor, selectorObjIfRoot) {
+var operatorValueSelector = function (valueSelector, selectorObjIfRoot) {
   // Each valueSelector works separately on the various branches.  So one
   // operator can match one branch and another can match another branch.  This
   // is OK.
@@ -105,7 +104,7 @@ var operatorValueSelector = function (valueSelector, cursor, selectorObjIfRoot) 
   _.each(valueSelector, function (operand, operator) {
     if (_.has(VALUE_OPERATORS, operator)) {
       operatorFunctions.push(
-        VALUE_OPERATORS[operator](operand, valueSelector, cursor, selectorObjIfRoot));
+        VALUE_OPERATORS[operator](operand, valueSelector, selectorObjIfRoot));
     } else if (_.has(ELEMENT_OPERATORS, operator)) {
       // XXX justify three arguments
       var options = ELEMENT_OPERATORS[operator];
@@ -113,7 +112,7 @@ var operatorValueSelector = function (valueSelector, cursor, selectorObjIfRoot) 
         options = {elementSelector: options};
       operatorFunctions.push(
         convertElementSelectorToBranchedSelector(
-          options.elementSelector(operand, valueSelector, cursor),
+          options.elementSelector(operand, valueSelector),
           options));
     } else {
       throw new Error("Unrecognized operator: " + operator);
@@ -123,56 +122,40 @@ var operatorValueSelector = function (valueSelector, cursor, selectorObjIfRoot) 
   return andBranchedSelectors(operatorFunctions);
 };
 
-// NB: this is very similar to andCompiledDocumentSelectors but that one
-// "assumes" the first arg is a doc and here it "assumes" it's a branched
-// value list. The code is identical for now, though.
-var andBranchedSelectors = function (branchedSelectors) {
-  return function (branches, doc) {
-    // XXX arrayIndex!
-    var result = _.all(branchedSelectors, function (f) {
-      return f(branches, doc).result;
-    });
-    return {result: result};
-  };
-};
-
-// XXX drop "cursor" when _distance is improved
-var compileArrayOfDocumentSelectors = function (selectors, cursor) {
+var compileArrayOfDocumentSelectors = function (selectors) {
   if (!isArray(selectors) || _.isEmpty(selectors))
     throw Error("$and/$or/$nor must be nonempty array");
   return _.map(selectors, function (subSelector) {
     if (!isPlainObject(subSelector))
       throw Error("$or/$and/$nor entries need to be full objects");
-    return compileDocumentSelector(subSelector, cursor);
+    return compileDocumentSelector(subSelector);
   });
 };
 
 
 // XXX can factor out common logic below
 var LOGICAL_OPERATORS = {
-  $and: function(subSelector, cursor) {
-    var selectors = compileArrayOfDocumentSelectors(subSelector, cursor);
+  $and: function(subSelector) {
+    var selectors = compileArrayOfDocumentSelectors(subSelector);
     return andCompiledDocumentSelectors(selectors);
   },
 
-  $or: function(subSelector, cursor) {
-    var selectors = compileArrayOfDocumentSelectors(subSelector, cursor);
-    // XXX remove wholeDoc later
-    return function (doc, wholeDoc) {
+  $or: function(subSelector) {
+    var selectors = compileArrayOfDocumentSelectors(subSelector);
+    return function (doc) {
       var result = _.any(selectors, function (f) {
-        return f(doc, wholeDoc).result;
+        return f(doc).result;
       });
       // XXX arrayIndex!
       return {result: result};
     };
   },
 
-  $nor: function(subSelector, cursor) {
-    var selectors = compileArrayOfDocumentSelectors(subSelector, cursor);
-    // XXX remove wholeDoc later
-    return function (doc, wholeDoc) {
+  $nor: function(subSelector) {
+    var selectors = compileArrayOfDocumentSelectors(subSelector);
+    return function (doc) {
       var result = _.all(selectors, function (f) {
-        return !f(doc, wholeDoc).result;
+        return !f(doc).result;
       });
       // Never set arrayIndex, because we only match if nothing in particular
       // "matched".
@@ -205,8 +188,8 @@ var LOGICAL_OPERATORS = {
 var invertBranchedSelector = function (branchedSelector) {
   // Note that this implicitly "deMorganizes" the wrapped function.  ie, it
   // means that ALL branch values need to fail to match innerBranchedSelector.
-  return function (branchValues, doc) {
-    var invertMe = branchedSelector(branchValues, doc);
+  return function (branchValues) {
+    var invertMe = branchedSelector(branchValues);
     // We explicitly choose to strip arrayIndex here: it doesn't make sense to
     // say "update the array element that does not match something", at least
     // in mongo-land.
@@ -216,8 +199,8 @@ var invertBranchedSelector = function (branchedSelector) {
 
 // XXX doc
 var VALUE_OPERATORS = {
-  $not: function (operand, operator, cursor) {
-    return invertBranchedSelector(compileValueSelector(operand, cursor));
+  $not: function (operand, operator) {
+    return invertBranchedSelector(compileValueSelector(operand));
   },
   $ne: function (operand) {
     return invertBranchedSelector(convertElementSelectorToBranchedSelector(
@@ -265,7 +248,7 @@ var VALUE_OPERATORS = {
     return andBranchedSelectors(branchedSelectors);
   },
 
-  $near: function (operand, valueSelector, cursor, selectorObjIfRoot) {
+  $near: function (operand, valueSelector, selectorObjIfRoot) {
     if (!selectorObjIfRoot)
       throw Error("$near can't be inside another $ operator");
     selectorObjIfRoot._isGeoQuery = true;
@@ -304,7 +287,7 @@ var VALUE_OPERATORS = {
       };
     }
 
-    return function (branchedValues, doc) {
+    return function (branchedValues) {
       // There might be multiple points in the document that match the given
       // field. Only one of them needs to be within $maxDistance, but we need to
       // evaluate all of them and use the nearest one for the implicit sort
@@ -326,13 +309,8 @@ var VALUE_OPERATORS = {
         minDistance = curDistance;
       });
       if (minDistance !== null) {
-        if (cursor) {
-          if (!cursor._distance)
-            cursor._distance = {};
-          cursor._distance[doc._id] = minDistance;
-        }
         // XXX arrayIndex!
-        return {result: true};
+        return {result: true, distance: minDistance};
       }
       return {result: false};
     };
@@ -387,10 +365,8 @@ var makeInequality = function (cmpValueComparator) {
 // Each value operator is a function with args:
 //  - operand - Anything
 //  - operators - Object - operators on the same level (neighbours)
-//  - cursor - Object - original cursor
 // returns a function with args:
 //  - value - a value the operator is tested against
-//  - doc - the whole document tested in this query
 var ELEMENT_OPERATORS = {
   $lt: makeInequality(function (cmpValue) {
     return cmpValue < 0;
@@ -500,7 +476,7 @@ var ELEMENT_OPERATORS = {
   },
   $elemMatch: {
     dontExpandLeafArrays: true,
-    elementSelector: function (operand, valueSelector, cursor) {
+    elementSelector: function (operand, valueSelector) {
       if (!isPlainObject(operand))
         throw Error("$elemMatch need an object");
 
@@ -868,7 +844,7 @@ var expandArraysInBranches = function (branches, skipTheArrays) {
 };
 
 // The main compilation function for a given selector.
-var compileDocumentSelector = function (docSelector, cursor, selectorObjIfRoot) {
+var compileDocumentSelector = function (docSelector, selectorObjIfRoot) {
   var perKeySelectors = [];
   _.each(docSelector, function (subSelector, key) {
     if (key.substr(0, 1) === '$') {
@@ -877,15 +853,14 @@ var compileDocumentSelector = function (docSelector, cursor, selectorObjIfRoot) 
       if (!_.has(LOGICAL_OPERATORS, key))
         throw new Error("Unrecognized logical operator: " + key);
       // XXX rename perKeySelectors
-      perKeySelectors.push(
-        LOGICAL_OPERATORS[key](subSelector, cursor));
+      perKeySelectors.push(LOGICAL_OPERATORS[key](subSelector));
     } else {
       var lookUpByIndex = LocalCollection._makeLookupFunction2(key);
       var valueSelectorFunc =
-        compileValueSelector(subSelector, cursor, selectorObjIfRoot);
-      perKeySelectors.push(function (doc, wholeDoc) {
+        compileValueSelector(subSelector, selectorObjIfRoot);
+      perKeySelectors.push(function (doc) {
         var branchValues = lookUpByIndex(doc);
-        return valueSelectorFunc(branchValues, wholeDoc);
+        return valueSelectorFunc(branchValues);
       });
     }
   });
@@ -894,11 +869,10 @@ var compileDocumentSelector = function (docSelector, cursor, selectorObjIfRoot) 
 };
 
 // XXX doc and move around
-// XXX remove 'cursor'
-Minimongo.Selector = function (selector, cursor) {
+Minimongo.Selector = function (selector) {
   var self = this;
   self._isGeoQuery = false;  // can get overwritten by compilation
-  self._docSelector = compileSelector(selector, self, cursor);
+  self._docSelector = compileSelector(selector, self);
 };
 
 _.extend(Minimongo.Selector.prototype, {
@@ -914,7 +888,7 @@ _.extend(Minimongo.Selector.prototype, {
 // document. It returns an object with fields
 //    - result: bool, true if the document matches the selector
 // XXX add "arrayIndex" for use by update with '$'
-var compileSelector = function (selector, selectorObject, cursor) {
+var compileSelector = function (selector, selectorObject) {
   // you can pass a literal function instead of a selector
   if (selector instanceof Function)
     return function (doc) {
@@ -939,11 +913,7 @@ var compileSelector = function (selector, selectorObject, cursor) {
       EJSON.isBinary(selector))
     throw new Error("Invalid selector: " + selector);
 
-  // XXX get rid of second argument once _distance refactored
-  var s = compileDocumentSelector(selector, cursor, selectorObject);
-  return function (doc) {
-    return s(doc, doc);
-  };
+  return compileDocumentSelector(selector, selectorObject);
 };
 
 var matchesNothingSelector = function (docOrBranchedValues) {
@@ -954,21 +924,36 @@ var matchesEverythingSelector = function (docOrBranchedValues) {
   return {result: true};
 };
 
-var andCompiledDocumentSelectors = function (selectors) {
-  // XXX simplify to not involve 'arguments' once _distance is refactored
-  return function (/*doc, sometimes wholeDoc*/) {
-    var args = _.toArray(arguments);
+
+// NB: We are cheating and using this function to implement "AND" for both
+// "document selectors" and "branched selectors". They have the same return type
+// but the argument is different: for the former it's a whole doc, whereas for
+// the latter it's an array of "branches" that match a given key path.
+var andSomeSelectors = function (branchedSelectors) {
+  return function (branches, doc) {
     // XXX arrayIndex!
-    var result = _.all(selectors, function (f) {
-      return f.apply(null, args).result;
+    var ret = {};
+    var distance;
+    ret.result = _.all(branchedSelectors, function (f) {
+      var subResult = f(branches, doc);
+      // Copy a 'distance' number out of the first sub-selector that has
+      // one. Yes, this means that if there are multiple $near fields in a
+      // query, something arbitrary happens; this appears to be consistent with
+      // Mongo.
+      if (subResult.result && subResult.distance !== undefined
+          && distance === undefined) {
+        distance = subResult.distance;
+      }
+      return subResult.result;
     });
-    return {result: result};
+    if (ret.result && distance !== undefined)
+      ret.distance = distance;
+    return ret;
   };
 };
 
+var andCompiledDocumentSelectors = andSomeSelectors;
+var andBranchedSelectors = andSomeSelectors;
 
-// Remaining to update:
-// - $near/$maxDistance
-//     - make sure to switch _distance to be an idmap
 // Remaining to implement:
 // - $all with $elemMatch
