@@ -15,7 +15,7 @@ var Future = require('fibers/future');
 // appDir and port act as filters on the list of running mongos.
 //
 // Yields. Returns an object with keys pid, port, appDir.
-var findMongoPids = function (appDir, port, callback) {
+var findMongoPids = function (appDir, port) {
   var fut = new Future;
 
   // 'ps ax' should be standard across all MacOS and Linux.
@@ -57,7 +57,7 @@ var findMongoPids = function (appDir, port, callback) {
 
 // See if mongo is running already. Yields. Returns the port that
 // mongo is running on or null if mongo is not running.
-exports.findMongoPort = function (appDir, callback) {
+exports.findMongoPort = function (appDir) {
   var pids = findMongoPids(appDir);
 
   if (pids.length !== 1) {
@@ -71,7 +71,7 @@ exports.findMongoPort = function (appDir, callback) {
     return null;
   }
 
-  return pid;
+  return pids[0].port;
 };
 
 
@@ -80,7 +80,7 @@ exports.findMongoPort = function (appDir, callback) {
 //
 // This is a big hammer for dealing with still running mongos, but
 // smaller hammers have failed before and it is getting tiresome.
-var find_mongo_and_kill_it_dead = function (port, callback) {
+var find_mongo_and_kill_it_dead = function (port) {
   var pids = findMongoPids(null, port);
 
   if (! pids.length)
