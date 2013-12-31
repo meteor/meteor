@@ -10,6 +10,8 @@ var unipackage = require('./unipackage.js');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
 
+var mongoRunner = exports;
+
 // Find all running Mongo processes that were started by this program
 // (even by other simultaneous runs of this program). If passed,
 // appDir and port act as filters on the list of running mongos.
@@ -57,7 +59,7 @@ var findMongoPids = function (appDir, port) {
 
 // See if mongo is running already. Yields. Returns the port that
 // mongo is running on or null if mongo is not running.
-exports.findMongoPort = function (appDir) {
+mongoRunner.findMongoPort = function (appDir) {
   var pids = findMongoPids(appDir);
 
   if (pids.length !== 1) {
@@ -120,12 +122,12 @@ var find_mongo_and_kill_it_dead = function (port) {
 };
 
 
-exports.launchMongo = function (options) {
+mongoRunner.launchMongo = function (options) {
   var onListen = options.onListen || function () {};
   var onExit = options.onExit || function () {};
 
   // If we are passed an external mongo, assume it is launched and never
-  // exits. Matches code in run.js:exports.run.
+  // exits. Matches code in runner.js:exports.run.
   if (process.env.MONGO_URL) {
     onListen();
     return {
