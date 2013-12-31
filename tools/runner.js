@@ -517,63 +517,6 @@ _.extend(MongoServer.prototype, {
 });
 
 ///////////////////////////////////////////////////////////////////////////////
-// Status
-///////////////////////////////////////////////////////////////////////////////
-
-// options:
-// - logger: Logger
-var Status = function (options) {
-  var self = this;
-
-  // XXX ???
-  self.logger = options.logger;
-
-  // is server running now?
-  self.running = false;
-
-  // does server crash whenever we start it?
-  self.crashing = false;
-
-  // do we expect the server to be listening now.
-  self.listening = false;
-
-  // how many crashes in rapid succession
-  self.counter = 0;
-};
-
-_.extend(Status.prototype, {
-  reset: function () {
-    var self = this;
-    self.crashing = false;
-    self.counter = 0;
-  },
-
-  hardCrashed: function (complaint) {
-    complaint = complaint || "is crashing";
-
-    var self = this;
-    self.logger.log("=> Your application " + complaint +
-                    ". Waiting for file change.");
-    self.crashing = true;
-  },
-
-  softCrashed: function () {
-    var self = this;
-
-    if (self.counter === 0) {
-      setTimeout(function () {
-        self.counter = 0;
-      }, 2000);
-    }
-
-    self.counter ++;
-
-    if (self.counter > 2)
-      Status.hardCrashed("is crashing");
-  }
-});
-
-///////////////////////////////////////////////////////////////////////////////
 // Run
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -613,11 +556,17 @@ var Run = function (appDir, options) {
   self.appServer = null;
   self.watcher = null;
 
+  // is server running now?
+  self.running = false;
+  // does server crash whenever we start it?
+  self.crashing = false;
+  // do we expect the server to be listening now.
+  self.listening = false;
+  // how many crashes in rapid succession
+  self.counter = 0;
+
   self.logger = new Logger({
     rawLogs: options.rawLogs
-  });
-  self.status = new Status({
-    logger: self.logger
   });
   self.proxy = new Proxy({
     listenPort: self.listenPort,
@@ -687,9 +636,10 @@ _.extend(Run.prototype, function () {
     self.watcher = new watch.Watcher({
       watchSet: watchSet,
       onChange: function () {
-        if (self.status.crashing)
+        if (self.crashing)
           self.logger.log("=> Modified -- restarting.");
-        self.status.reset();
+        self.crashing = false;
+        self.counter = 0;
         release.current.library.refresh(true); // pick up changes to packages
         self._restartServer();
       }
@@ -701,8 +651,8 @@ _.extend(Run.prototype, function () {
   _restartServer: function () {
     var self = this;
 
-    self.status.running = false;
-    self.status.listening = false;
+    self.running = false;
+    self.listening = false;
     self.proxy.setMode("hold");
 
     if (self.watcher) {
@@ -747,7 +697,10 @@ _.extend(Run.prototype, function () {
 
       if (self.once)
         self._exit(1);
-      self.status.hardCrashed("has errors");
+
+      self.logger.log("=> Your application has errors. " +
+                      "Waiting for file change.");
+      self.crashing = true;
       self.proxy.setMode("errorpage");
       self._startWatching(watchSet);
       return;
@@ -759,7 +712,7 @@ _.extend(Run.prototype, function () {
       settings = runner.getSettings(self.settingsFile, watchSet);
 
     // Start the server
-    self.status.running = true;
+    self.running = true;
 
     // XXX XXX have this be passed in, not slurped from the environment
     var rootUrl = process.env.ROOT_URL ||
@@ -780,19 +733,32 @@ _.extend(Run.prototype, function () {
       logger: self.logger,
       onExit: function (code) {
         // on server exit
-        self.status.running = false;
-        self.status.listening = false;
+        self.running = false;
+        self.listening = false;
         if (self.once)
           self._exit(code);
-        self.status.softCrashed();
-        self.proxy.setMode(self.status.crashing ? "errorpage" : "hold");
-        if (! self.status.crashing)
+
+        if (self.counter === 0) {
+          setTimeout(function () {
+            self.counter = 0;
+          }, 2000);
+          // XXX cancel timeout at appropriate time..
+        }
+        self.counter ++;
+        if (self.counter > 2) {
+          self.logger.log("=> Your application is crashing. " +
+                          "Waiting for file change.");
+          self.crashing = true;
+        }
+
+        self.proxy.setMode(self.crashing ? "errorpage" : "hold");
+        if (! self.crashing)
           self._restartServer();
       },
       program: self.program,
       onListen: function () {
         // on listen
-        self.status.listening = true;
+        self.listening = true;
         self.proxy.setMode("proxy");
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
