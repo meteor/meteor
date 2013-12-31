@@ -199,10 +199,11 @@ _.extend(Proxy.prototype, {
   // Start the proxy server, block (yield) until it is ready to go
   // (actively listening on outer and proxying to inner), and then
   // return.
-  //
-  // XXX provide a way to stop the proxy server
   start: function () {
     var self = this;
+
+    if (self.server)
+      throw new Error("already running?");
 
     var http = require('http');
     // Note: this uses the pre-release 1.0.0 API.
@@ -262,6 +263,36 @@ _.extend(Proxy.prototype, {
     fut.wait();
   },
 
+  stop: function () {
+    var self = this;
+
+    if (! self.server)
+      throw new Error("not running?");
+
+    // This stops listening but allows existing connections to
+    // complete gracefully.
+    self.server.close();
+    self.server = null;
+
+    // It doesn't seem to be necessary to do anything special to
+    // destroy an httpProxy proxyserver object.
+    self.proxy = null;
+
+    // Drop any held connections.
+    _.each(self.httpQueue, function (c) {
+      c.res.statusCode = 500;
+      c.res.end();
+    });
+    self.httpQueue = [];
+
+    _.each(self.websocketQueue, function (c) {
+      c.socket.destroy();
+    });
+    self.websocketQueue = [];
+
+    self.mode = "hold";
+  },
+
   _tryHandleConnections: function () {
     var self = this;
 
@@ -314,160 +345,37 @@ _.extend(Proxy.prototype, {
 });
 
 ///////////////////////////////////////////////////////////////////////////////
-// Status
+// AppServer
 ///////////////////////////////////////////////////////////////////////////////
 
-// options:
-// - logger: Logger
-// - shouldRestart
-var Status = function (options) {
+// Required options: bundlePath, port, rootUrl, mongoUrl, oplogUrl, logger
+// Optional options: onExit, onListen, program, nodeOptions, settings
+
+var AppServer = function (options) {
   var self = this;
-
-  _.extend({
-    shouldRestart: true
-  }, options);
-
-  // XXX ???
-  self.logger = options.logger;
-
-  // is server running now?
-  self.running = false;
-
-  // does server crash whenever we start it?
-  self.crashing = false;
-
-  // do we expect the server to be listening now.
-  self.listening = false;
-
-  // how many crashes in rapid succession
-  self.counter = 0;
-
-  // exit code last returned
-  self.code = 0;
-
-  // true if we should be restarting the server
-  self.shouldRestart = options.shouldRestart;
-
-  // true if we're on the way to shutting down the server
-  self.shuttingDown = false;
-
-  // XXX ???
-  self.mongoHandle = undefined;
-};
-
-_.extend(Status.prototype, {
-  setMongoHandle: function (mongoHandle) {
-    var self = this;
-    self.mongoHandle = mongoHandle;
-  },
-
-  exitNow: function () {
-    var self = this;
-    self.logger.log("Your application is exiting.");
-    self.shuttingDown = true;
-
-    if (self.mongoHandle) {
-      self.mongoHandle.stop(function (err) {
-        if (err)
-          process.stdout.write(err.reason + "\n");
-        process.exit(self.code);
-      });
-    }
-  },
-
-  reset: function () {
-    var self = this;
-    self.crashing = false;
-    self.counter = 0;
-  },
-
-  hardCrashed: function (complaint) {
-    complaint = complaint || "is crashing";
-
-    var self = this;
-    if (! self.shouldRestart) {
-      self.exitNow();
-      return;
-    }
-    self.logger.log("=> Your application " + complaint +
-                    ". Waiting for file change.");
-    self.crashing = true;
-  },
-
-  softCrashed: function () {
-    var self = this;
-
-    if (! self.shouldRestart) {
-      self.exitNow();
-      return;
-    }
-    if (self.counter === 0) {
-      setTimeout(function () {
-        self.counter = 0;
-      }, 2000);
-    }
-
-    self.counter ++;
-
-    if (self.counter > 2)
-      Status.hardCrashed("is crashing");
-  }
-});
-
-///////////////////////////////////////////////////////////////////////////////
-// Server
-///////////////////////////////////////////////////////////////////////////////
-
-// Takes options:
-// bundlePath
-// port
-// rootUrl
-// mongoUrl
-// oplogUrl
-// logger
-// onExit
-// [program]
-// [onListen]
-// [nodeOptions]
-// [settings]
-
-var Server = function (options) {
-  var self = this;
-
-  options = _.extend({
-    nodeOptions: []
-  }, options);
 
   self.bundlePath = options.bundlePath;
-  self.program = options.program || null;
-  self.nodeOptions = options.nodeOptions;
-  self.onListen = options.onListen;
-  self.onExit = options.onExit;
+  self.port = options.port;
+  self.rootUrl = options.rootUrl;
+  self.oplogUrl = option.oplogUrl;
   self.logger = options.logger;
+  self.onExit = options.onExit;
+
+  self.program = options.program || null;
+  self.onListen = options.onListen;
+  self.nodeOptions = options.nodeOptions || [];
+  self.settings = options.settings;
 
   self.proc = null;
   self.keepaliveTimer = null;
-
-  // Set up environment for server process.
-  self.env = _.extend({}, process.env);
-
-  self.env.PORT = options.port;
-  self.env.MONGO_URL = options.mongoUrl;
-  if (options.oplogUrl)
-    self.env.MONGO_OPLOG_URL = options.oplogUrl;
-  self.env.ROOT_URL = options.rootUrl;
-  if (options.settings)
-    self.env.METEOR_SETTINGS = options.settings;
-  else
-    delete self.env.METEOR_SETTINGS;
-
-  // Display errors from (eg) the NPM connect module over the network.
-  self.env.NODE_ENV = 'development';
 };
 
-_.extend(Server.prototype, {
+_.extend(AppServer.prototype, {
   start: function () {
     var self = this;
+
+    if (self.proc)
+      throw new Error("already started?");
 
     // Start the app!
     self.proc = self._spawn();
@@ -496,7 +404,7 @@ _.extend(Server.prototype, {
         self.logger.log('=> Exited with code: ' + code);
       }
 
-      self.onExit(code);
+      self.onExit && self.onExit(code);
     });
 
     // This happens sometimes when we write a keepalive after the app
@@ -519,12 +427,38 @@ _.extend(Server.prototype, {
 
   stop: function () {
     var self = this;
-    if (self.proc && self.proc.pid) {
+
+    if (! self.proc)
+      throw new Error("not running?");
+
+    if (self.proc.pid) {
       self.proc.removeAllListeners('close');
       self.proc.kill();
     }
+    self.proc = null;
 
     clearInterval(self.keepaliveTimer);
+    self.keepaliveTimer = null;
+  },
+
+  _computeEnvironment: function () {
+    var self = this;
+    var env = _.extend({}, process.env);
+
+    env.PORT = self.port;
+    env.ROOT_URL = self.rootUrl;
+    env.MONGO_URL = self.mongoUrl;
+    if (self.oplogUrl)
+      env.MONGO_OPLOG_URL = self.oplogUrl;
+    if (self.settings)
+      env.METEOR_SETTINGS = self.settings;
+    else
+      delete env.METEOR_SETTINGS;
+
+    // Display errors from (eg) the NPM connect module over the network.
+    env.NODE_ENV = 'development';
+
+    return env;
   },
 
   // Spawn the server process and return the handle from
@@ -540,7 +474,9 @@ _.extend(Server.prototype, {
       opts.push(path.join(self.bundlePath, 'main.js'));
       opts.push('--keepalive');
 
-      return child_process.spawn(process.execPath, opts, { env: self.env });
+      return child_process.spawn(process.execPath, opts, {
+        env: self._computeEnvironment();
+      });
     } else {
       // Star. Read the metadata to find the path to the program to run.
       var starJson = JSON.parse(
@@ -561,8 +497,79 @@ _.extend(Server.prototype, {
       if (! programPath)
         die("Program '" + self.program + "' not found.\n");
 
-      return child_process.spawn(programPath, [], { env: env });
+      return child_process.spawn(programPath, [], {
+        env: self._computeEnvironment()
+      });
     }
+  }
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// Mongo
+///////////////////////////////////////////////////////////////////////////////
+
+var MongoServer = function () {
+  var self = this;
+};
+
+_.extend(MongoServer.prototype, {
+
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// Status
+///////////////////////////////////////////////////////////////////////////////
+
+// options:
+// - logger: Logger
+var Status = function (options) {
+  var self = this;
+
+  // XXX ???
+  self.logger = options.logger;
+
+  // is server running now?
+  self.running = false;
+
+  // does server crash whenever we start it?
+  self.crashing = false;
+
+  // do we expect the server to be listening now.
+  self.listening = false;
+
+  // how many crashes in rapid succession
+  self.counter = 0;
+};
+
+_.extend(Status.prototype, {
+  reset: function () {
+    var self = this;
+    self.crashing = false;
+    self.counter = 0;
+  },
+
+  hardCrashed: function (complaint) {
+    complaint = complaint || "is crashing";
+
+    var self = this;
+    self.logger.log("=> Your application " + complaint +
+                    ". Waiting for file change.");
+    self.crashing = true;
+  },
+
+  softCrashed: function () {
+    var self = this;
+
+    if (self.counter === 0) {
+      setTimeout(function () {
+        self.counter = 0;
+      }, 2000);
+    }
+
+    self.counter ++;
+
+    if (self.counter > 2)
+      Status.hardCrashed("is crashing");
   }
 });
 
@@ -587,8 +594,6 @@ var Run = function (appDir, options) {
   self.appPort = self.listenPort + 1;
   self.mongoPort = self.listenPort + 2;
 
-  self.bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
-
   // Allow override and use of external mongo. Matches code in launch_mongo.
   // XXX make this value be an option, set by command.js from the environment
   self.mongoUrl = process.env.MONGO_URL ||
@@ -605,15 +610,13 @@ var Run = function (appDir, options) {
   }
 
   self.firstRun = true;
-  self.server = null;
+  self.appServer = null;
   self.watcher = null;
-  self.silentRuns = 0;
 
   self.logger = new Logger({
     rawLogs: options.rawLogs
   });
   self.status = new Status({
-    shouldRestart: ! options.once,
     logger: self.logger
   });
   self.proxy = new Proxy({
@@ -621,12 +624,14 @@ var Run = function (appDir, options) {
     proxyToPort: self.appPort,
     logger: self.logger
   });
+  self.mongoHandle = null;
 
   self.testingPackages = !! options.testPackages;
 
   self.settingsFile = options.settingsFile;
   self.program = options.program;
   self.banner = options.banner || files.prettyPath(self.appDir);
+  self.once = options.once;
 
   // XXX have 'release' be passed in? or determined from appDir, for
   // that matter? anyway, be consistent with bundler and other things
@@ -637,6 +642,8 @@ var Run = function (appDir, options) {
     testPackages: options.testPackages,
     release: release.current
   };
+
+  self.shuttingDown = false;
 
   self.mongoErrorCount = 0;
   self.mongoErrorTimer = undefined;
@@ -671,8 +678,7 @@ _.extend(Run.prototype, function () {
     if (process.env.METEOR_DEBUG_WATCHSET)
       self.logger.log(JSON.stringify(watchSet, null, 2));
 
-    // XXX look at our 'once' option instead?
-    if (! self.status.shouldRestart)
+    if (self.once)
       return;
 
     if (self.watcher)
@@ -704,9 +710,9 @@ _.extend(Run.prototype, function () {
       self.watcher = null;
     }
 
-    if (self.server) {
-      self.server.stop();
-      self.server = null;
+    if (self.appServer) {
+      self.appServer.stop();
+      self.appServer = null;
     }
 
     // If the user did not specify a --release on the command line,
@@ -719,25 +725,28 @@ _.extend(Run.prototype, function () {
     // there's not a real app to update there!)
     if (! self.testingPackages &&
         ! release.usingRightReleaseForApp(self.appDir)) {
-      console.error("Your app has been updated to Meteor %s from " +
-                    "Meteor %s.\nRestart meteor to use the new release.",
-                    project.getMeteorReleaseVersion(self.appDir),
-                    release.current.name);
-      process.exit(1);
+      var to = project.getMeteorReleaseVersion(self.appDir);
+      var from = release.current.name;
+      die(
+"Your app has been updated to Meteor " + to + " from " + "Meteor " + from +
+".\n" +
+"Restart meteor to use the new release.\n");
     }
 
     self.logger.clearLog();
 
     // Bundle up the app
-    var bundleResult = bundler.bundle(self.appDir, self.bundlePath,
+
+    var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
+    var bundleResult = bundler.bundle(self.appDir, bundlePath,
                                       self.bundleOpts);
     var watchSet = bundleResult.watchSet;
     if (bundleResult.errors) {
       self.logger.log("=> Errors prevented startup:\n\n" +
                       bundleResult.errors.formatMessages());
 
-      // Ensure that if we are running under --once, we exit with a non-0 code.
-      self.status.code = 1;
+      if (self.once)
+        self._exit(1);
       self.status.hardCrashed("has errors");
       self.proxy.setMode("errorpage");
       self._startWatching(watchSet);
@@ -762,8 +771,8 @@ _.extend(Run.prototype, function () {
       self.logger.logRestart();
     }
 
-    self.server = new Server({
-      bundlePath: self.bundlePath,
+    self.appServer = new AppServer({
+      bundlePath: bundlePath,
       port: self.appPort,
       rootUrl: rootUrl,
       mongoUrl: self.mongoUrl,
@@ -773,7 +782,8 @@ _.extend(Run.prototype, function () {
         // on server exit
         self.status.running = false;
         self.status.listening = false;
-        self.status.code = code;
+        if (self.once)
+          self._exit(code);
         self.status.softCrashed();
         self.proxy.setMode(self.status.crashing ? "errorpage" : "hold");
         if (! self.status.crashing)
@@ -788,6 +798,7 @@ _.extend(Run.prototype, function () {
       nodeOptions: getNodeOptionsFromEnvironment(),
       settings: settings
     });
+    self.appServer.start();
 
     // Start watching for changes for files. There's no hurry to call
     // this, since watchSet contains a snapshot of the state of
@@ -800,7 +811,7 @@ _.extend(Run.prototype, function () {
   // XXX XXX evaluate if that's significant
   _launch: function () {
     var self = this;
-    self.status.mongoHandle = mongoRunner.launchMongo({
+    self.mongoHandle = mongoRunner.launchMongo({
       appDir: self.appDir,
       port: self.mongoPort,
 
@@ -815,7 +826,7 @@ _.extend(Run.prototype, function () {
       },
 
       onExit: function (code, signal, stderr) { // On Mongo dead
-        if (self.status.shuttingDown) {
+        if (self.shuttingDown) {
           return;
         }
 
@@ -863,5 +874,21 @@ _.extend(Run.prototype, function () {
         setTimeout(_.bind(self.launch, self), 1000);
       }
     });
+  },
+
+  // XXX make this go away
+  _exit: function (code) {
+    var self = this;
+
+    self.logger.log("Your application is exiting.");
+    self.shuttingDown = true;
+
+    if (self.mongoHandle) {
+      self.mongoHandle.stop(function (err) {
+        if (err)
+          process.stdout.write(err.reason + "\n");
+        process.exit(code);
+      });
+    }
   }
 });
