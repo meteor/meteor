@@ -135,12 +135,12 @@ var compileArrayOfDocumentSelectors = function (selectors) {
 
 // XXX can factor out common logic below
 var LOGICAL_OPERATORS = {
-  $and: function(subSelector) {
+  $and: function (subSelector) {
     var selectors = compileArrayOfDocumentSelectors(subSelector);
     return andCompiledDocumentSelectors(selectors);
   },
 
-  $or: function(subSelector) {
+  $or: function (subSelector) {
     var selectors = compileArrayOfDocumentSelectors(subSelector);
     return function (doc) {
       var result = _.any(selectors, function (f) {
@@ -151,7 +151,7 @@ var LOGICAL_OPERATORS = {
     };
   },
 
-  $nor: function(subSelector) {
+  $nor: function (subSelector) {
     var selectors = compileArrayOfDocumentSelectors(subSelector);
     return function (doc) {
       var result = _.all(selectors, function (f) {
@@ -163,7 +163,7 @@ var LOGICAL_OPERATORS = {
     };
   },
 
-  $where: function(selectorValue) {
+  $where: function (selectorValue) {
     if (!(selectorValue instanceof Function)) {
       // XXX MongoDB seems to have more complex logic to decide where or or not
       // to add "return"; not sure exactly what it is.
