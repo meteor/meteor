@@ -243,29 +243,40 @@ Tinytest.add("minimongo - misc", function (test) {
 });
 
 Tinytest.add("minimongo - lookup", function (test) {
-  var justValues = function (lookupFunction) {
-    return function (doc) {
-      return _.pluck(lookupFunction(doc), 'value');
-    };
-  };
-  var lookupA = justValues(MinimongoTest.makeLookupFunction('a'));
-  test.equal(lookupA({}), [undefined]);
-  test.equal(lookupA({a: 1}), [1]);
-  test.equal(lookupA({a: [1]}), [[1]]);
+  var lookupA = MinimongoTest.makeLookupFunction('a');
+  test.equal(lookupA({}), [{value: undefined}]);
+  test.equal(lookupA({a: 1}), [{value: 1}]);
+  test.equal(lookupA({a: [1]}), [{value: [1]}]);
 
-  var lookupAX = justValues(MinimongoTest.makeLookupFunction('a.x'));
-  test.equal(lookupAX({a: {x: 1}}), [1]);
-  test.equal(lookupAX({a: {x: [1]}}), [[1]]);
-  test.equal(lookupAX({a: 5}), [undefined]);
+  var lookupAX = MinimongoTest.makeLookupFunction('a.x');
+  test.equal(lookupAX({a: {x: 1}}), [{value: 1}]);
+  test.equal(lookupAX({a: {x: [1]}}), [{value: [1]}]);
+  test.equal(lookupAX({a: 5}), [{value: undefined}]);
   test.equal(lookupAX({a: [{x: 1}, {x: [2]}, {y: 3}]}),
-             [1, [2], undefined]);
+             [{value: 1, arrayIndex: 0},
+              {value: [2], arrayIndex: 1},
+              {value: undefined, arrayIndex: 2}]);
 
-  var lookupA0X = justValues(MinimongoTest.makeLookupFunction('a.0.x'));
-  test.equal(lookupA0X({a: [{x: 1}]}), [1, undefined]);
-  test.equal(lookupA0X({a: [{x: [1]}]}), [[1], undefined]);
-  test.equal(lookupA0X({a: 5}), [undefined]);
-  test.equal(lookupA0X({a: [{x: 1}, {x: [2]}, {y: 3}]}),
-             [1, undefined, undefined, undefined]);
+  var lookupA0X = MinimongoTest.makeLookupFunction('a.0.x');
+  test.equal(lookupA0X({a: [{x: 1}]}), [
+    // From interpreting '0' as "0th array element".
+    {value: 1, arrayIndex: 0},
+    // From interpreting '0' as "after branching in the array, look in the
+    // object {x:1} for a field named 0".
+    {value: undefined, arrayIndex: 0}]);
+  test.equal(lookupA0X({a: [{x: [1]}]}), [
+    {value: [1], arrayIndex: 0},
+    {value: undefined, arrayIndex: 0}]);
+  test.equal(lookupA0X({a: 5}), [{value: undefined}]);
+  test.equal(lookupA0X({a: [{x: 1}, {x: [2]}, {y: 3}]}), [
+    // From interpreting '0' as "0th array element".
+    {value: 1, arrayIndex: 0},
+    // From interpreting '0' as "after branching in the array, look in the
+    // object {x:1} for a field named 0".
+    {value: undefined, arrayIndex: 0},
+    {value: undefined, arrayIndex: 1},
+    {value: undefined, arrayIndex: 2}
+  ]);
 });
 
 Tinytest.add("minimongo - selector_compiler", function (test) {

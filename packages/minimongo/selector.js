@@ -696,33 +696,41 @@ numericKey = function (s) {
   return /^[0-9]+$/.test(s);
 };
 
-// XXX redoc
-// XXX be aware that Sorter currently assumes that lookup functions
-//     return non-empty arrays but that is no longer the case
-// _makeLookupFunction(key) returns a lookup function.
+// makeLookupFunction(key) returns a lookup function.
 //
 // A lookup function takes in a document and returns an array of matching
-// values.  If no arrays are found while looking up the key, this array will
-// have exactly one value (possibly 'undefined', if some segment of the key was
-// not found).
+// branches.  If no arrays are found while looking up the key, this array will
+// have exactly one branches (possibly 'undefined', if some segment of the key
+// was not found).
 //
 // If arrays are found in the middle, this can have more than one element, since
 // we "branch". When we "branch", if there are more key segments to look up,
 // then we only pursue branches that are plain objects (not arrays or scalars).
-// This means we can actually end up with no entries!
+// This means we can actually end up with no branches!
 //
-// At the top level, you may only pass in a plain object.
+// We do *NOT* branch on arrays that are found at the end (ie, at the last
+// dotted member of the key). We just return that array; if you want to
+// effectively "branch" over the array's values, post-process the lookup
+// function with expandArraysInBranches.
 //
-// _makeLookupFunction('a.x')({a: {x: 1}}) returns [1]
-// _makeLookupFunction('a.x')({a: {x: [1]}}) returns [[1]]
-// _makeLookupFunction('a.x')({a: 5})  returns [undefined]
-// _makeLookupFunction('a.x')({a: [5]})  returns []
-// _makeLookupFunction('a.x')({a: [{x: 1},
-//                                 [],
-//                                 4,
-//                                 {x: [2]},
-//                                 {y: 3}]})
-//   returns [1, [2], undefined]
+// Each branch is an object with keys:
+//  - value: the value at the branch
+//  - dontIterate: an optional bool; if true, it means that 'value' is an array
+//    that expandArraysInBranches should NOT expand. This specifically happens
+//    when there is a numeric index in the key, and ensures the
+//    perhaps-surprising MongoDB behavior where {'a.0': 5} does NOT
+//    match {a: [[5]]}.
+//  - arrayIndex: if any array indexing was done during lookup (either
+//    due to explicit numeric indices or implicit branching), this will
+//    be the FIRST (outermost) array index used; it is undefined or absent
+//    if no array index is used. (Make sure to check its value vs undefined,
+//    not just for truth, since '0' is a legit array index!) This is used
+//    to implement the '$' modifier feature.
+//
+// At the top level, you may only pass in a plain object or arraym.
+//
+// See the text 'minimongo - lookup' for some examples of what lookup functions
+// return.
 makeLookupFunction = function (key) {
   var parts = key.split('.');
   var firstPart = parts.length ? parts[0] : '';
@@ -731,6 +739,14 @@ makeLookupFunction = function (key) {
   if (parts.length > 1) {
     lookupRest = makeLookupFunction(parts.slice(1).join('.'));
   }
+
+  var elideUnnecessaryFields = function (retVal) {
+    if (!retVal.dontIterate)
+      delete retVal.dontIterate;
+    if (retVal.arrayIndex === undefined)
+      delete retVal.arrayIndex;
+    return retVal;
+  };
 
   // Doc will always be a plain object or an array.
   // apply an explicit numeric index, an array.
@@ -764,9 +780,10 @@ makeLookupFunction = function (key) {
     // selectors to iterate over it.  eg, {'a.0': 5} does not match {a: [[5]]}.
     // So in that case, we mark the return value as "don't iterate".
     if (!lookupRest) {
-      return [{value: firstLevel,
-               dontIterate: isArray(doc) && isArray(firstLevel),
-               arrayIndex: firstArrayIndex}];
+      return [elideUnnecessaryFields({
+        value: firstLevel,
+        dontIterate: isArray(doc) && isArray(firstLevel),
+        arrayIndex: firstArrayIndex})];
     }
 
     // We need to dig deeper.  But if we can't, because what we've found is not
@@ -776,8 +793,10 @@ makeLookupFunction = function (key) {
     // return a single `undefined` (which can, for example, match via equality
     // with `null`).
     if (!isIndexable(firstLevel)) {
-      return isArray(doc) ? [] : [{value: undefined,
-                                   arrayIndex: firstArrayIndex}];
+      if (isArray(doc))
+        return [];
+      return [elideUnnecessaryFields({value: undefined,
+                                      arrayIndex: firstArrayIndex})];
     }
 
     var result = [];
