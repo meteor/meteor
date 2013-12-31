@@ -601,8 +601,8 @@ main.registerCommand({
 
   if (options.args.length === 0) {
     // localhost mode
-    var mongo_runner = require(path.join(__dirname, 'mongo_runner.js'));
-    var mongoPort = mongo_runner.findMongoPort(options.appDir);
+    var mongoRunner = require(path.join(__dirname, 'mongo-runner.js'));
+    var mongoPort = mongoRunner.findMongoPort(options.appDir);
     if (! mongoPort) {
       process.stdout.write(
 "mongo: Meteor isn't running.\n" +
@@ -656,8 +656,8 @@ main.registerCommand({
     return 1;
   }
 
-  var mongo_runner = require(path.join(__dirname, 'mongo_runner.js'));
-  var isRunning = !! mongo_runner.findMongoPort(options.appDir);
+  var mongoRunner = require(path.join(__dirname, 'mongo-runner.js'));
+  var isRunning = !! mongoRunner.findMongoPort(options.appDir);
   if (isRunning) {
     process.stderr.write(
 "reset: Meteor is running.\n" +

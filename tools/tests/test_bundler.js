@@ -27,7 +27,7 @@ var lastTmpDir;
 Fiber(function () {
   try {
     // print calls to `npm`
-    require(path.join(__dirname, '..', 'meteor_npm.js'))._printNpmCalls = true;
+    require(path.join(__dirname, '..', 'meteor-npm.js'))._printNpmCalls = true;
 
     /// RUN TESTS
     require(path.join(__dirname, 'test_bundler_assets.js'));

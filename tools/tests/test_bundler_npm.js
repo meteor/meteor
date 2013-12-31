@@ -1,4 +1,4 @@
-var meteorNpm = require(path.join(__dirname, '..', 'meteor_npm.js'));
+var meteorNpm = require(path.join(__dirname, '..', 'meteor-npm.js'));
 
 ///
 /// TEST PACKAGE DIR

@@ -12,8 +12,8 @@ var updater = require('./updater.js');
 var bundler = require('./bundler.js');
 var Builder = require('./builder.js');
 var buildmessage = require('./buildmessage.js');
-var mongo_runner = require('./mongo_runner.js');
-var mongoExitCodes = require('./mongo_exit_codes.js');
+var mongoRunner = require('./mongo-runner.js');
+var mongoExitCodes = require('./mongo-exit-codes.js');
 var unipackage = require('./unipackage.js');
 var release = require('./release.js');
 
@@ -604,7 +604,7 @@ exports.run = function (appDir, options) {
   var mongoStartupPrintTimer;
   var launch = function () {
     Fiber(function () {
-      Status.mongoHandle = mongo_runner.launchMongo({
+      Status.mongoHandle = mongoRunner.launchMongo({
         appDir: appDir,
         port: mongoPort,
         onListen: function () { // On Mongo startup complete
