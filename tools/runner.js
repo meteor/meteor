@@ -50,47 +50,128 @@ runner.getSettings = function (filename, watchSet) {
   }
 };
 
+var getLoggingPackage = _.once(function () {
+  var Log = unipackage.load({
+    library: release.current.library,
+    packages: ['logging']
+  }).logging.Log;
+
+  // Since no other process will be listening to stdout and parsing it,
+  // print directly in the same format as log messages from other apps
+  Log.outputFormat = 'colored-text';
+
+  return Log;
+});
+
+// XXX make this function go away
+var die = function (message) {
+  process.stderr.write(message);
+  process.exit(1);
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Logger
 ///////////////////////////////////////////////////////////////////////////////
 
-var Logger = function () {
+// options: rawLogs
+var Logger = function (options) {
   var self = this;
 
-  // list of log objects from the child process.
-  self.serverLog = [];
+  self.rawLogs = options.rawLogs;
+
+  self.log = []; // list of log objects
+  self.maxLength = 100;
+
+  // If non-null, the last thing logged was "server restarted"
+  // message, and teh value will be the number of consecutive such
+  // messages that have been logged with no other intervening messages
+  self.consecutiveRestartMessages = null;
 };
 
 _.extend(Logger.prototype, {
-  saveLog: function (msg) {
+  _record: function (msg) {
     var self = this;
 
-    self.serverLog.push(msg);
-    if (self.serverLog.length > 100) {
-      self.serverLog.shift();
+    self.log.push(msg);
+    if (self.log.length > self.maxLength) {
+      self.log.shift();
     }
   },
 
-  logToClients: function (type, msg) {
-    var self = this;
-    self.saveLog(msg);
+  logAppOutput: function (line, isStderr) {
+    if (line.trim().length === 0)
+      return;
 
-    if (type === "stdout")
-      process.stdout.write(msg + "\n");
-    else if (type === "stderr")
-      process.stderr.write(msg + "\n");
+    var Log = getLoggingPackage();
+
+    var obj = (isStderr ?
+               Log.objFromText(line, { level: 'warn', stderr: true }) :
+               Log.parse(line) || Log.objFromText(line));
+    self._record(obj);
+
+    if (self.consecutiveRestartMessages) {
+      self.consecutiveRestartMessages = null;
+      process.stdout.write("\n");
+    }
+
+    if (self.rawLogs)
+      process[isStderr ? "stderr" : "stdout"].write(line + "\n");
     else
-      console.log(msg);
+      process.stdout.write(Log.format(obj, { color: true }) + "\n");
+
+    // XXX deal with test server logging differently?!
   },
 
-  clearServerLog: function () {
+  log: function (msg) {
     var self = this;
-    self.serverLog = [];
+
+    var obj = {
+      time: new Date,
+      message: msg
+      // in the future, might want to add something else to
+      // distinguish messages from runner from message from the app,
+      // but for now, nothing would use it, so we'll keep it simple
+    };
+    self._record(obj);
+
+    if (self.consecutiveRestartMessages) {
+      self.consecutiveRestartMessages = null;
+      process.stdout.write("\n");
+    }
+
+    process.stdout.write(msg + "\n");
   },
 
-  getServerLog: function () {
+  logRestart: function () {
     var self = this;
-    return self.serverLog;
+
+    if (self.consecutiveRestartMessages) {
+      // replace old message in place
+      process.stdout.write("\r");
+      self.log.pop();
+      self.consecutiveRestartMessages ++;
+    } else {
+      self.consecutiveRestartMessages = 1;
+    }
+
+    var message = "=> Meteor server restarted";
+    if (self.consecutiveRestartMessages > 1)
+      message += " (x" + self.consecutiveRestartMessages + ")";
+    // no newline, so that we can overwrite it if we get another
+    // restart message right after this one
+    process.stdout.write(message);
+
+    self.log(message);
+  },
+
+  clearLog: function () {
+    var self = this;
+    self.log = [];
+  },
+
+  getLog: function () {
+    var self = this;
+    return self.log;
   }
 });
 
@@ -149,17 +230,15 @@ _.extend(Proxy.prototype, {
     self.server.on('error', function (err) {
       if (err.code == 'EADDRINUSE') {
         var port = self.listenPort;
-        process.stderr.write(
+        die(
 "Can't listen on port " + port + ". Perhaps another Meteor is running?\n" +
 "\n" +
 "Running two copies of Meteor in the same application directory\n" +
 "will not work. If something else is using port " + port + ", you can\n" +
 "specify an alternative port with --port <port>.\n");
       } else {
-        process.stderr.write(err + "\n");
+        die(err + "\n");
       }
-
-      process.exit(1);
     });
 
     // don't crash if the app doesn't respond. instead return an error
@@ -197,8 +276,8 @@ _.extend(Proxy.prototype, {
         c.res.writeHead(200, {'Content-Type': 'text/plain'});
         c.res.write("Your app is crashing. Here's the latest log.\n\n");
 
-        _.each(self.logger.getServerLog(), function (log) {
-          c.res.write(val + "\n");
+        _.each(self.logger.getLog(), function (item) {
+          c.res.write(item.message + "\n");
         });
 
         c.res.end();
@@ -284,7 +363,7 @@ _.extend(Status.prototype, {
 
   exitNow: function () {
     var self = this;
-    self.logger.logToClients('exit', "Your application is exiting.");
+    self.logger.log("Your application is exiting.");
     self.shuttingDown = true;
 
     if (self.mongoHandle) {
@@ -310,8 +389,8 @@ _.extend(Status.prototype, {
       self.exitNow();
       return;
     }
-    self.logger.logToClients('exit', "=> Your application " + complaint +
-                             ". Waiting for file change.");
+    self.logger.log("=> Your application " + complaint +
+                    ". Waiting for file change.");
     self.crashing = true;
   },
 
@@ -351,7 +430,6 @@ _.extend(Status.prototype, {
 // [onListen]
 // [nodeOptions]
 // [settings]
-// [rawLogs]
 
 var Server = function (options) {
   var self = this;
@@ -365,7 +443,6 @@ var Server = function (options) {
   self.nodeOptions = options.nodeOptions;
   self.onListen = options.onListen;
   self.onExit = options.onExit;
-  self.rawLogs = options.rawLogs;
   self.logger = options.logger;
 
   self.proc = null;
@@ -392,51 +469,31 @@ _.extend(Server.prototype, {
   start: function () {
     var self = this;
 
+    // Start the app!
     self.proc = self._spawn();
 
-    // XXX deal with test server logging differently?!
-
-    var Log = unipackage.load({
-      library: release.current.library,
-      packages: ['logging']
-    }).logging.Log;
-
-    // Since no other process will be listening to stdout and parsing it,
-    // print directly in the same format as log messages from other apps
-    Log.outputFormat = 'colored-text';
-
-    var processLogLine = function (isStderr, line) {
-      if (! line)
-        return;
-
-      if (! isStderr && line.match(/^LISTENING\s*$/)) {
+    // Send stdout and stderr to the logger
+    var eachline = require('eachline');
+    eachline(self.proc.stdout, 'utf8', function (line) {
+      if (line.match(/^LISTENING\s*$/)) {
         // This is the child process telling us that it's ready to
         // receive connections.
         self.onListen && self.onListen();
-        return;
-      }
-
-      if (self.rawLogs) {
-        console.log(line);
-        saveLog(line);
       } else {
-        var obj = (isStderr ?
-                   Log.objFromText(line, { level: 'warn', stderr: true }) :
-                   Log.parse(line) || Log.objFromText(line));
-        console.log(Log.format(obj, { color: true }));
-        saveLog(Log.format(obj));
+        self.logger.logAppOutput(line);
       }
-    };
+    });
 
-    var eachline = require('eachline');
-    eachline(self.proc.stdout, 'utf8', _.bind(processLogLine, null, false));
-    eachline(self.proc.stderr, 'utf8', _.bind(processLogLine, null, true));
+    eachline(self.proc.stderr, 'utf8', function (line) {
+      self.logger.logAppOutput(line, true);
+    });
 
+    // Watch for exit
     proc.on('close', function (code, signal) {
       if (signal) {
-        self.logger.logToClients('exit', '=> Exited from signal: ' + signal);
+        self.logger.log('=> Exited from signal: ' + signal);
       } else {
-        self.logger.logToClients('exit', '=> Exited with code: ' + code);
+        self.logger.log('=> Exited with code: ' + code);
       }
 
       self.onExit(code);
@@ -501,10 +558,8 @@ _.extend(Server.prototype, {
         programPath = path.join(options.bundlePath, p.path);
       });
 
-      if (! programPath) {
-        process.stderr.write("Program '" + self.program + "' not found.\n");
-        process.exit(1);
-      }
+      if (! programPath)
+        die("Program '" + self.program + "' not found.\n");
 
       return child_process.spawn(programPath, [], { env: env });
     }
@@ -552,37 +607,11 @@ var Run = function (appDir, options) {
   self.firstRun = true;
   self.server = null;
   self.watcher = null;
-  self.lastThingThatPrintedWasRestartMessage = false;
   self.silentRuns = 0;
 
-  // Hijack process.stdout and process.stderr so that whenever anything is
-  // written to one of them, if the last thing we printed as the "Meteor server
-  // restarted" message with no newline, we (a) print that newline and (b)
-  // remember that *something* was printed (and so we shouldn't try to erase and
-  // rewrite the line on the next restart).
-  //
-  // XXX find a way to do what we want that doesn't involve global
-  // hooks
-  self.realStdoutWrite = process.stdout.write;
-  self.realStderrWrite = process.stderr.write;
-  // Call this function before printing anything to stdout or stderr.
-  var onStdio = function () {
-    if (self.lastThingThatPrintedWasRestartMessage) {
-      realStdoutWrite.call(process.stdout, "\n");
-      self.lastThingThatPrintedWasRestartMessage = false;
-      self.silentRuns = 0;
-    }
-  };
-  process.stdout.write = function () {
-    onStdio();
-    return self.realStdoutWrite.apply(process.stdout, arguments);
-  };
-  process.stderr.write = function () {
-    onStdio();
-    return self.realStderrWrite.apply(process.stderr, arguments);
-  };
-
-  self.logger = new Logger;
+  self.logger = new Logger({
+    rawLogs: options.rawLogs
+  });
   self.status = new Status({
     shouldRestart: ! options.once,
     logger: self.logger
@@ -596,7 +625,6 @@ var Run = function (appDir, options) {
   self.testingPackages = !! options.testPackages;
 
   self.settingsFile = options.settingsFile;
-  self.rawLogs = options.rawLogs;
   self.program = options.program;
   self.banner = options.banner || files.prettyPath(self.appDir);
 
@@ -641,7 +669,7 @@ _.extend(Run.prototype, function () {
     var self = this;
 
     if (process.env.METEOR_DEBUG_WATCHSET)
-      console.log(JSON.stringify(watchSet, null, 2));
+      self.logger.log(JSON.stringify(watchSet, null, 2));
 
     // XXX look at our 'once' option instead?
     if (! self.status.shouldRestart)
@@ -654,7 +682,7 @@ _.extend(Run.prototype, function () {
       watchSet: watchSet,
       onChange: function () {
         if (self.status.crashing)
-          self.logger.logToClients('system', "=> Modified -- restarting.");
+          self.logger.log("=> Modified -- restarting.");
         self.status.reset();
         release.current.library.refresh(true); // pick up changes to packages
         self._restartServer();
@@ -698,16 +726,15 @@ _.extend(Run.prototype, function () {
       process.exit(1);
     }
 
-    self.logger.clearServerLog();
+    self.logger.clearLog();
 
     // Bundle up the app
     var bundleResult = bundler.bundle(self.appDir, self.bundlePath,
                                       self.bundleOpts);
     var watchSet = bundleResult.watchSet;
     if (bundleResult.errors) {
-      self.logger.logToClients('stdout',
-                               "=> Errors prevented startup:\n\n" +
-                               bundleResult.errors.formatMessages());
+      self.logger.log("=> Errors prevented startup:\n\n" +
+                      bundleResult.errors.formatMessages());
 
       // Ensure that if we are running under --once, we exit with a non-0 code.
       self.status.code = 1;
@@ -729,23 +756,10 @@ _.extend(Run.prototype, function () {
     var rootUrl = process.env.ROOT_URL ||
           ('http://localhost:' + self.listenPort + '/');
     if (self.firstRun) {
-      process.stdout.write("=> Meteor server running on: " + rootUrl + "\n");
+      self.logger.log("=> Meteor server running on: " + rootUrl + "\n");
       self.firstRun = false;
-      self.lastThingThatPrintedWasRestartMessage = false;
     } else {
-      if (self.lastThingThatPrintedWasRestartMessage) {
-        // The last run was not the "Running on: " run, and it didn't print
-        // anything. So the last thing that printed was the restart message.
-        // Overwrite it.
-        realStdoutWrite.call(process.stdout, '\r');
-      }
-      realStdoutWrite.call(process.stdout, "=> Meteor server restarted");
-      if (self.lastThingThatPrintedWasRestartMessage) {
-        self.silentRuns ++;
-        realStdoutWrite.call(process.stdout,
-                             " (x" + (self.silentRuns + 1) + ")");
-      }
-      self.lastThingThatPrintedWasRestartMessage = true;
+      self.logger.logRestart();
     }
 
     self.server = new Server({
@@ -772,8 +786,7 @@ _.extend(Run.prototype, function () {
         self.proxy.setMode("proxy");
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
-      settings: settings,
-      rawLogs: self.rawLogs
+      settings: settings
     });
 
     // Start watching for changes for files. There's no hurry to call
@@ -809,7 +822,7 @@ _.extend(Run.prototype, function () {
         // Print only last 20 lines of stderr.
         stderr = stderr.split('\n').slice(-20).join('\n');
 
-        console.log(
+        self.logger.log(
           stderr + "Unexpected mongo exit code " + code + ". Restarting.\n");
 
         // if mongo dies 3 times with less than 5 seconds between
@@ -817,23 +830,25 @@ _.extend(Run.prototype, function () {
         self.mongoErrorCount ++;
         if (self.mongoErrorCount >= 3) {
           var explanation = mongoExitCodes.Codes[code];
-          console.log("Can't start mongod\n");
+          var message = "Can't start mongod\n\n";
+
           if (explanation)
-            console.log(explanation.longText);
+            message += explanation.longText + "\n";
+
           if (explanation === mongoExitCodes.EXIT_NET_ERROR) {
-            console.log(
-              "\nCheck for other processes listening on port " +
-                self.mongoPort +
-                "\nor other meteors running in the same project.");
+            message += "\n" +
+"Check for other processes listening on port " + self.mongoPort + "\n" +
+"or other Meteor instances running in the same project.\n";
           }
+
           if (! explanation && /GLIBC/i.test(stderr)) {
-            console.log(
-              "\nLooks like you are trying to run Meteor on an old Linux " +
-                "distribution. Meteor on Linux requires glibc version 2.9 " +
-                "or above. Try upgrading your distribution to the latest " +
-                "version.");
+            message += "\n" +
+"Looks like you are trying to run Meteor on an old Linux distribution.\n" +
+"Meteor on Linux requires glibc version 2.9 or above. Try upgrading your\n" +
+"distribution to the latest version.\n";
           }
-          process.exit(1);
+
+          die(message);
         }
 
         if (self.mongoErrorTimer)
