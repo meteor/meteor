@@ -21,12 +21,12 @@ Sorter = function (spec) {
     for (var i = 0; i < spec.length; i++) {
       if (typeof spec[i] === "string") {
         sortSpecParts.push({
-          lookup: LocalCollection._makeLookupFunction2(spec[i]),
+          lookup: makeLookupFunction(spec[i]),
           ascending: true
         });
       } else {
         sortSpecParts.push({
-          lookup: LocalCollection._makeLookupFunction2(spec[i][0]),
+          lookup: makeLookupFunction(spec[i][0]),
           ascending: spec[i][1] !== "desc"
         });
       }
@@ -34,7 +34,7 @@ Sorter = function (spec) {
   } else if (typeof spec === "object") {
     for (var key in spec) {
       sortSpecParts.push({
-        lookup: LocalCollection._makeLookupFunction2(key),
+        lookup: makeLookupFunction(key),
         ascending: spec[key] >= 0
       });
     }

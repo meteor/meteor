@@ -723,13 +723,13 @@ numericKey = function (s) {
 //                                 {x: [2]},
 //                                 {y: 3}]})
 //   returns [1, [2], undefined]
-LocalCollection._makeLookupFunction2 = function (key) {
+makeLookupFunction = function (key) {
   var parts = key.split('.');
   var firstPart = parts.length ? parts[0] : '';
   var firstPartIsNumeric = numericKey(firstPart);
   var lookupRest;
   if (parts.length > 1) {
-    lookupRest = LocalCollection._makeLookupFunction2(parts.slice(1).join('.'));
+    lookupRest = makeLookupFunction(parts.slice(1).join('.'));
   }
 
   // Doc will always be a plain object or an array.
@@ -813,13 +813,7 @@ LocalCollection._makeLookupFunction2 = function (key) {
     return result;
   };
 };
-
-LocalCollection._makeLookupFunction = function (key) {
-  var real = LocalCollection._makeLookupFunction2(key);
-  return function (doc) {
-    return _.pluck(real(doc), 'value');
-  };
-};
+MinimongoTest.makeLookupFunction = makeLookupFunction;
 
 expandArraysInBranches = function (branches, skipTheArrays) {
   var branchesOut = [];
@@ -855,7 +849,7 @@ var compileDocumentSelector = function (docSelector, selectorObjIfRoot) {
       // XXX rename perKeySelectors
       perKeySelectors.push(LOGICAL_OPERATORS[key](subSelector));
     } else {
-      var lookUpByIndex = LocalCollection._makeLookupFunction2(key);
+      var lookUpByIndex = makeLookupFunction(key);
       var valueSelectorFunc =
         compileValueSelector(subSelector, selectorObjIfRoot);
       perKeySelectors.push(function (doc) {

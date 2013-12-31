@@ -243,19 +243,24 @@ Tinytest.add("minimongo - misc", function (test) {
 });
 
 Tinytest.add("minimongo - lookup", function (test) {
-  var lookupA = LocalCollection._makeLookupFunction('a');
+  var justValues = function (lookupFunction) {
+    return function (doc) {
+      return _.pluck(lookupFunction(doc), 'value');
+    };
+  };
+  var lookupA = justValues(MinimongoTest.makeLookupFunction('a'));
   test.equal(lookupA({}), [undefined]);
   test.equal(lookupA({a: 1}), [1]);
   test.equal(lookupA({a: [1]}), [[1]]);
 
-  var lookupAX = LocalCollection._makeLookupFunction('a.x');
+  var lookupAX = justValues(MinimongoTest.makeLookupFunction('a.x'));
   test.equal(lookupAX({a: {x: 1}}), [1]);
   test.equal(lookupAX({a: {x: [1]}}), [[1]]);
   test.equal(lookupAX({a: 5}), [undefined]);
   test.equal(lookupAX({a: [{x: 1}, {x: [2]}, {y: 3}]}),
              [1, [2], undefined]);
 
-  var lookupA0X = LocalCollection._makeLookupFunction('a.0.x');
+  var lookupA0X = justValues(MinimongoTest.makeLookupFunction('a.0.x'));
   test.equal(lookupA0X({a: [{x: 1}]}), [1, undefined]);
   test.equal(lookupA0X({a: [{x: [1]}]}), [[1], undefined]);
   test.equal(lookupA0X({a: 5}), [undefined]);
