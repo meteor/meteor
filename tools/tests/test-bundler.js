@@ -1,5 +1,5 @@
 ///
-/// global helpers that are useful for test_bundler_*.js
+/// global helpers that are useful for test-bundler-*.js
 ///
 /*global*/ path = require('path');
 /*global*/ fs = require('fs');
@@ -30,9 +30,9 @@ Fiber(function () {
     require(path.join(__dirname, '..', 'meteor-npm.js'))._printNpmCalls = true;
 
     /// RUN TESTS
-    require(path.join(__dirname, 'test_bundler_assets.js'));
-    require(path.join(__dirname, 'test_bundler_options.js'));
-    require(path.join(__dirname, 'test_bundler_npm.js'));
+    require(path.join(__dirname, 'test-bundler-assets.js'));
+    require(path.join(__dirname, 'test-bundler-options.js'));
+    require(path.join(__dirname, 'test-bundler-npm.js'));
   } catch (err) {
     // print stack track and exit with error code if an assertion fails
     console.log(err.stack);

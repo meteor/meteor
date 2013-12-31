@@ -334,7 +334,7 @@ var createNodeVersion = function (newPackageNpmDir) {
 // XXX this duplicates files.run(). use files.run() in this file and
 // give the test some hook to get the info it needs.
 meteorNpm._execFileSync = function (file, args, opts) {
-  if (meteorNpm._printNpmCalls) // only used by test_bundler.js
+  if (meteorNpm._printNpmCalls) // only used by test-bundler.js
     process.stdout.write('cd ' + opts.cwd + ' && ' + file + ' ' +
                          args.join(' ') + ' ... ');
 
