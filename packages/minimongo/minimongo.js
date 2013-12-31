@@ -91,12 +91,12 @@ LocalCollection.Cursor = function (collection, selector, options) {
   if (LocalCollection._selectorIsId(selector)) {
     // stash for fast path
     self.selector_id = LocalCollection._idStringify(selector);
-    self.selector = new Minimongo.Selector(selector, self);
+    self.matcher = new Minimongo.Matcher(selector, self);
     self.sorter = undefined;
   } else {
     self.selector_id = undefined;
-    self.selector = new Minimongo.Selector(selector, self);
-    self.sorter = (self.selector.isGeoQuery() || options.sort) ?
+    self.matcher = new Minimongo.Matcher(selector, self);
+    self.sorter = (self.matcher.isGeoQuery() || options.sort) ?
       new Sorter(options.sort || []) : null;
   }
   self.skip = options.skip;
@@ -271,10 +271,10 @@ _.extend(LocalCollection.Cursor.prototype, {
       throw new Error("must use ordered observe with skip or limit");
 
     var query = {
-      selector: self.selector, // not fast pathed
+      matcher: self.matcher, // not fast pathed
       sorter: ordered && self.sorter,
       distances: (
-        self.selector.isGeoQuery() && ordered && new LocalCollection._IdMap),
+        self.matcher.isGeoQuery() && ordered && new LocalCollection._IdMap),
       results_snapshot: null,
       ordered: ordered,
       cursor: self,
@@ -404,13 +404,13 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered,
   // in the observeChanges case, distances is actually part of the "query" (ie,
   // live results set) object.  in other cases, distances is only used inside
   // this function.
-  if (self.selector.isGeoQuery() && ordered && !distances)
+  if (self.matcher.isGeoQuery() && ordered && !distances)
     distances = new LocalCollection._IdMap();
 
   for (var idStringified in self.collection.docs) {
     var doc = self.collection.docs[idStringified];
     var id = LocalCollection._idParse(idStringified);  // XXX use more idmaps
-    var matchResult = self.selector.documentMatches(doc);
+    var matchResult = self.matcher.documentMatches(doc);
     if (matchResult.result) {
       if (ordered) {
         results.push(doc);
@@ -490,7 +490,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
   // trigger live queries that match
   for (var qid in self.queries) {
     var query = self.queries[qid];
-    var matchResult = query.selector.documentMatches(doc);
+    var matchResult = query.matcher.documentMatches(doc);
     if (matchResult.result) {
       if (query.distances && matchResult.distance !== undefined)
         query.distances.set(doc._id, matchResult.distance);
@@ -521,23 +521,23 @@ LocalCollection.prototype.remove = function (selector, callback) {
   var remove = [];
 
   var queriesToRecompute = [];
-  var compiledSelector = new Minimongo.Selector(selector, self);
+  var matcher = new Minimongo.Matcher(selector, self);
 
   // Avoid O(n) for "remove a single doc by ID".
   var specificIds = LocalCollection._idsMatchedBySelector(selector);
   if (specificIds) {
     _.each(specificIds, function (id) {
       var strId = LocalCollection._idStringify(id);
-      // We still have to run compiledSelector, in case it's something like
+      // We still have to run matcher, in case it's something like
       //   {_id: "X", a: 42}
       if (_.has(self.docs, strId)
-          && compiledSelector.documentMatches(self.docs[strId]).result)
+          && matcher.documentMatches(self.docs[strId]).result)
         remove.push(strId);
     });
   } else {
     for (var strId in self.docs) {
       var doc = self.docs[strId];
-      if (compiledSelector.documentMatches(doc).result) {
+      if (matcher.documentMatches(doc).result) {
         remove.push(strId);
       }
     }
@@ -548,7 +548,7 @@ LocalCollection.prototype.remove = function (selector, callback) {
     var removeId = remove[i];
     var removeDoc = self.docs[removeId];
     _.each(self.queries, function (query, qid) {
-      if (query.selector.documentMatches(removeDoc).result) {
+      if (query.matcher.documentMatches(removeDoc).result) {
         if (query.cursor.skip || query.cursor.limit)
           queriesToRecompute.push(qid);
         else
@@ -591,7 +591,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   }
   if (!options) options = {};
 
-  var compiledSelector = new Minimongo.Selector(selector, self);
+  var matcher = new Minimongo.Matcher(selector, self);
 
   // Save the original results of any query that we might need to
   // _recomputeResults on, because _modifyAndNotify will mutate the objects in
@@ -609,7 +609,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
 
   for (var id in self.docs) {
     var doc = self.docs[id];
-    var queryResult = compiledSelector.documentMatches(doc);
+    var queryResult = matcher.documentMatches(doc);
     if (queryResult.result) {
       // XXX Should we save the original even if mod ends up being a no-op?
       // XXX queryResult should have arrayIndex on it, useful for '$'
@@ -686,7 +686,7 @@ LocalCollection.prototype._modifyAndNotify = function (
   for (var qid in self.queries) {
     var query = self.queries[qid];
     if (query.ordered) {
-      matched_before[qid] = query.selector.documentMatches(doc).result;
+      matched_before[qid] = query.matcher.documentMatches(doc).result;
     } else {
       // Because we don't support skip or limit (yet) in unordered queries, we
       // can just do a direct lookup.
@@ -702,7 +702,7 @@ LocalCollection.prototype._modifyAndNotify = function (
   for (qid in self.queries) {
     query = self.queries[qid];
     var before = matched_before[qid];
-    var afterMatch = query.selector.documentMatches(doc);
+    var afterMatch = query.matcher.documentMatches(doc);
     var after = afterMatch.result;
     if (after && query.distances && afterMatch.distance !== undefined)
       query.distances.set(doc._id, afterMatch.distance);

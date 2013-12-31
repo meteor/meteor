@@ -77,9 +77,9 @@ LocalCollection._canSelectorBecomeTrueByModifier = function (selector, modifier)
                         function (path) { return selector[path]; },
                         _.identity /*conflict resolution is no resolution*/);
 
-  // XXX we should move this function to being a method on Selector so we aren't
+  // XXX we should move this function to being a method on Matcher so we aren't
   // recompiling over and over
-  var selectorCompiled = new Minimongo.Selector(selector);
+  var matcher = new Minimongo.Matcher(selector);
 
   try {
     LocalCollection._modify(doc, modifier);
@@ -99,7 +99,7 @@ LocalCollection._canSelectorBecomeTrueByModifier = function (selector, modifier)
     throw e;
   }
 
-  return selectorCompiled.documentMatches(doc).result;
+  return matcher.documentMatches(doc).result;
 };
 
 // Returns a list of key paths the given selector is looking for

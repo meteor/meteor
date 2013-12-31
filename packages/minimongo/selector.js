@@ -2,15 +2,17 @@
 
 
 // Main entry point.
-//   var selector = new Minimongo.Selector({a: {$gt: 5}});
-//   if (selector.documentMatches({a: 7})) ...
-Minimongo.Selector = function (selector) {
+//   var matcher = new Minimongo.Matcher({a: {$gt: 5}});
+//   if (matcher.documentMatches({a: 7})) ...
+// (Terminology: a "selector" is the EJSON object representing a selctor; a
+// "matcher" is its compiled form.)
+Minimongo.Matcher = function (selector) {
   var self = this;
   self._isGeoQuery = false;  // can get overwritten by compilation
   self._docSelector = self._compileSelector(selector);
 };
 
-_.extend(Minimongo.Selector.prototype, {
+_.extend(Minimongo.Matcher.prototype, {
   documentMatches: function (doc) {
     return this._docSelector(doc);
   },
@@ -572,7 +574,7 @@ var ELEMENT_OPERATORS = {
 // For unit tests. True if the given document matches the given
 // selector.
 MinimongoTest.matches = function (selector, doc) {
-  return new Minimongo.Selector(selector).documentMatches(doc).result;
+  return new Minimongo.Matcher(selector).documentMatches(doc).result;
 };
 
 
