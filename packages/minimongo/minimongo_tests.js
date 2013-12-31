@@ -280,13 +280,13 @@ Tinytest.add("minimongo - lookup", function (test) {
 });
 
 Tinytest.add("minimongo - selector_compiler", function (test) {
-  var matches = function (should_match, selector, doc) {
-    var does_match = MinimongoTest.matches(selector, doc);
-    if (does_match != should_match) {
+  var matches = function (shouldMatch, selector, doc) {
+    var doesMatch = new Minimongo.Matcher(selector).documentMatches(doc).result;
+    if (doesMatch != shouldMatch) {
       // XXX super janky
       test.fail({type: "minimongo-ordering",
                  message: "minimongo match failure: document " +
-                 (should_match ? "should match, but doesn't" :
+                 (shouldMatch ? "should match, but doesn't" :
                   "shouldn't match, but does"),
                  selector: JSON.stringify(selector),
                  document: JSON.stringify(doc)

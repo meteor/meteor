@@ -1,30 +1,39 @@
 // The minimongo selector compiler!
 
+// Terminology:
+//  - a "selector" is the EJSON object representing a selector
+//  - a "matcher" is its compiled form (whether a full Minimongo.Matcher
+//    object or one of the component lambdas that matches parts of it)
+//  - a "result object" is an object with a "result" field and maybe
+//    distance and arrayIndex.
+//  - a "branched value" is an object with a "value" field and maybe
+//    "dontIterate" and "arrayIndex".
+//  - a "document" is a top-level object that can be stored in a collection.
+//  - a "lookup function" is a function that takes in a document and returns
+//    an array of "branched values".
+//  - a "branched matcher" maps from an array of branched values to a result
+//    object.
+//  - an "element matcher" maps from a single value to a bool.
 
 // Main entry point.
 //   var matcher = new Minimongo.Matcher({a: {$gt: 5}});
 //   if (matcher.documentMatches({a: 7})) ...
-// (Terminology: a "selector" is the EJSON object representing a selctor; a
-// "matcher" is its compiled form.)
 Minimongo.Matcher = function (selector) {
   var self = this;
   self._isGeoQuery = false;  // can get overwritten by compilation
-  self._docSelector = self._compileSelector(selector);
+  self._docMatcher = self._compileSelector(selector);
 };
 
 _.extend(Minimongo.Matcher.prototype, {
   documentMatches: function (doc) {
-    return this._docSelector(doc);
+    return this._docMatcher(doc);
   },
   isGeoQuery: function () {
     return this._isGeoQuery;
   },
 
   // Given a selector, return a function that takes one argument, a
-  // document. It returns an object with fields
-  //    - result: bool, true if the document matches the selector
-  //    - distance: if a $near was evaluated, the distance to the point
-  // XXX add "arrayIndex" for use by update with '$'
+  // document. It returns a result object.
   _compileSelector: function (selector) {
     var self = this;
     // you can pass a literal function instead of a selector
@@ -44,7 +53,7 @@ _.extend(Minimongo.Matcher.prototype, {
     // likely programmer error, and not what you want, particularly for
     // destructive operations.
     if (!selector || (('_id' in selector) && !selector._id))
-      return matchesNothingSelector;
+      return nothingMatcher;
 
     // Top level can't be an array or true or binary.
     if (typeof(selector) === 'boolean' || isArray(selector) ||
@@ -57,47 +66,71 @@ _.extend(Minimongo.Matcher.prototype, {
 
 
 // Takes in a selector that could match a full document (eg, the original
-// selector). Returns a function mapping doc->{result, distance, arrayIndex}.
+// selector). Returns a function mapping document->result object.
 //
 // If this is the root document selector (ie, not wrapped in $and or the like),
-// then selectorObjIfRoot is the Selector object. (This is used by $near.)
-var compileDocumentSelector = function (docSelector, selectorObjIfRoot) {
-  var individualMatchers = [];
+// then matcherIfRoot is the Matcher object. (This is used by $near.)
+var compileDocumentSelector = function (docSelector, matcherIfRoot) {
+  var docMatchers = [];
   _.each(docSelector, function (subSelector, key) {
     if (key.substr(0, 1) === '$') {
       // Outer operators are either logical operators (they recurse back into
       // this function), or $where.
       if (!_.has(LOGICAL_OPERATORS, key))
         throw new Error("Unrecognized logical operator: " + key);
-      individualMatchers.push(LOGICAL_OPERATORS[key](subSelector));
+      docMatchers.push(LOGICAL_OPERATORS[key](subSelector));
     } else {
       var lookUpByIndex = makeLookupFunction(key);
-      var valueSelectorFunc =
-        compileValueSelector(subSelector, selectorObjIfRoot);
-      individualMatchers.push(function (doc) {
+      var valueMatcher =
+        compileValueSelector(subSelector, matcherIfRoot);
+      docMatchers.push(function (doc) {
         var branchValues = lookUpByIndex(doc);
-        return valueSelectorFunc(branchValues);
+        return valueMatcher(branchValues);
       });
     }
   });
 
-  return andDocumentMatchers(individualMatchers);
+  return andDocumentMatchers(docMatchers);
 };
 
-
-var compileValueSelector = function (valueSelector, selectorObjIfRoot) {
+// Takes in a selector that could match a key-indexed value in a document; eg,
+// {$gt: 5, $lt: 9}, or a regular expression, or any non-expression object (to
+// indicate equality).  Returns a branched matcher: a function mapping
+// [branched value]->result object.
+var compileValueSelector = function (valueSelector, matcherIfRoot) {
   if (valueSelector instanceof RegExp)
-    return convertElementSelectorToBranchedSelector(
-      regexpElementSelector(valueSelector));
+    return convertElementMatcherToBranchedMatcher(
+      regexpElementMatcher(valueSelector));
   else if (isOperatorObject(valueSelector))
-    return operatorValueSelector(valueSelector, selectorObjIfRoot);
+    return operatorBranchedMatcher(valueSelector, matcherIfRoot);
   else {
-    return convertElementSelectorToBranchedSelector(
-      equalityElementSelector(valueSelector));
+    return convertElementMatcherToBranchedMatcher(
+      equalityElementMatcher(valueSelector));
   }
 };
 
-var regexpElementSelector = function (regexp) {
+// Given an element matcher (which evaluates a single value), returns a branched
+// value (which evaluates the element matcher on all the branches and returns a
+// more structured return value possibly including arrayIndex).
+var convertElementMatcherToBranchedMatcher = function (
+    elementMatcher, options) {
+  options = options || {};
+  return function (branches) {
+    var expanded = branches;
+    if (!options.dontExpandLeafArrays) {
+      expanded = expandArraysInBranches(
+        branches, options.dontIncludeLeafArrays);
+    }
+    var result = _.any(expanded, function (element) {
+      // XXX arrayIndex!  need to save the winner here
+      return elementMatcher(element.value);
+    });
+    return {result: result};
+  };
+};
+
+// Takes a RegExp object and returns an element matcher.
+var regexpElementMatcher = function (regexp) {
   return function (value) {
     if (value instanceof RegExp) {
       // Comparing two regexps means seeing if the regexps are identical
@@ -111,25 +144,9 @@ var regexpElementSelector = function (regexp) {
   };
 };
 
-
-var convertElementSelectorToBranchedSelector = function (
-    elementSelector, options) {
-  options = options || {};
-  return function (branches) {
-    var expanded = branches;
-    if (!options.dontExpandLeafArrays) {
-      expanded = expandArraysInBranches(
-        branches, options.dontIncludeLeafArrays);
-    }
-    var result = _.any(expanded, function (element) {
-      // XXX arrayIndex!  need to save the winner here
-      return elementSelector(element.value);
-    });
-    return {result: result};
-  };
-};
-
-var equalityElementSelector = function (elementSelector) {
+// Takes something that is not an operator object and returns an element matcher
+// for equality with that thing.
+var equalityElementMatcher = function (elementSelector) {
   if (isOperatorObject(elementSelector))
     throw Error("Can't create equalityValueSelector for operator object");
 
@@ -147,31 +164,32 @@ var equalityElementSelector = function (elementSelector) {
   };
 };
 
-var operatorValueSelector = function (valueSelector, selectorObjIfRoot) {
+// Takes an operator object (an object with $ keys) and returns a branched
+// matcher for it.
+var operatorBranchedMatcher = function (valueSelector, matcherIfRoot) {
   // Each valueSelector works separately on the various branches.  So one
   // operator can match one branch and another can match another branch.  This
   // is OK.
 
-  var operatorFunctions = [];
+  var operatorMatchers = [];
   _.each(valueSelector, function (operand, operator) {
     if (_.has(VALUE_OPERATORS, operator)) {
-      operatorFunctions.push(
-        VALUE_OPERATORS[operator](operand, valueSelector, selectorObjIfRoot));
+      operatorMatchers.push(
+        VALUE_OPERATORS[operator](operand, valueSelector, matcherIfRoot));
     } else if (_.has(ELEMENT_OPERATORS, operator)) {
-      // XXX justify three arguments
       var options = ELEMENT_OPERATORS[operator];
       if (typeof options === 'function')
-        options = {elementSelector: options};
-      operatorFunctions.push(
-        convertElementSelectorToBranchedSelector(
-          options.elementSelector(operand, valueSelector),
+        options = {compileElementSelector: options};
+      operatorMatchers.push(
+        convertElementMatcherToBranchedMatcher(
+          options.compileElementSelector(operand, valueSelector),
           options));
     } else {
       throw new Error("Unrecognized operator: " + operator);
     }
   });
 
-  return andBranchedSelectors(operatorFunctions);
+  return andBranchedMatchers(operatorMatchers);
 };
 
 var compileArrayOfDocumentSelectors = function (selectors) {
@@ -184,18 +202,17 @@ var compileArrayOfDocumentSelectors = function (selectors) {
   });
 };
 
-
-// XXX can factor out common logic below
+// Operators that appear at the top level of a document selector.
 var LOGICAL_OPERATORS = {
   $and: function (subSelector) {
-    var selectors = compileArrayOfDocumentSelectors(subSelector);
-    return andDocumentMatchers(selectors);
+    var matchers = compileArrayOfDocumentSelectors(subSelector);
+    return andDocumentMatchers(matchers);
   },
 
   $or: function (subSelector) {
-    var selectors = compileArrayOfDocumentSelectors(subSelector);
+    var matchers = compileArrayOfDocumentSelectors(subSelector);
     return function (doc) {
-      var result = _.any(selectors, function (f) {
+      var result = _.any(matchers, function (f) {
         return f(doc).result;
       });
       // XXX arrayIndex!
@@ -204,9 +221,9 @@ var LOGICAL_OPERATORS = {
   },
 
   $nor: function (subSelector) {
-    var selectors = compileArrayOfDocumentSelectors(subSelector);
+    var matchers = compileArrayOfDocumentSelectors(subSelector);
     return function (doc) {
-      var result = _.all(selectors, function (f) {
+      var result = _.all(matchers, function (f) {
         return !f(doc).result;
       });
       // Never set arrayIndex, because we only match if nothing in particular
@@ -237,11 +254,12 @@ var LOGICAL_OPERATORS = {
   }
 };
 
-var invertBranchedSelector = function (branchedSelector) {
-  // Note that this implicitly "deMorganizes" the wrapped function.  ie, it
-  // means that ALL branch values need to fail to match innerBranchedSelector.
+// Returns a branched matcher that matches iff the given matcher does not.
+// Note that this implicitly "deMorganizes" the wrapped function.  ie, it
+// means that ALL branch values need to fail to match innerBranchedMatcher.
+var invertBranchedMatcher = function (branchedMatcher) {
   return function (branchValues) {
-    var invertMe = branchedSelector(branchValues);
+    var invertMe = branchedMatcher(branchValues);
     // We explicitly choose to strip arrayIndex here: it doesn't make sense to
     // say "update the array element that does not match something", at least
     // in mongo-land.
@@ -249,61 +267,64 @@ var invertBranchedSelector = function (branchedSelector) {
   };
 };
 
-// XXX doc
+// Operators that (unlike LOGICAL_OPERATORS) pertain to individual paths in a
+// document, but (unlike ELEMENT_OPERATORS) do not have a simple definition as
+// "match each branched value independently and combine with
+// convertElementMatcherToBranchedMatcher".
 var VALUE_OPERATORS = {
-  $not: function (operand, operator) {
-    return invertBranchedSelector(compileValueSelector(operand));
+  $not: function (operand) {
+    return invertBranchedMatcher(compileValueSelector(operand));
   },
   $ne: function (operand) {
-    return invertBranchedSelector(convertElementSelectorToBranchedSelector(
-      equalityElementSelector(operand)));
+    return invertBranchedMatcher(convertElementMatcherToBranchedMatcher(
+      equalityElementMatcher(operand)));
   },
   $nin: function (operand) {
-    return invertBranchedSelector(convertElementSelectorToBranchedSelector(
+    return invertBranchedMatcher(convertElementMatcherToBranchedMatcher(
       ELEMENT_OPERATORS.$in(operand)));
   },
   $exists: function (operand) {
-    var exists = convertElementSelectorToBranchedSelector(function (value) {
+    var exists = convertElementMatcherToBranchedMatcher(function (value) {
       return value !== undefined;
     });
-    return operand ? exists : invertBranchedSelector(exists);
+    return operand ? exists : invertBranchedMatcher(exists);
   },
   // $options just provides options for $regex; its logic is inside $regex
   $options: function (operand, valueSelector) {
     if (!valueSelector.$regex)
       throw Error("$options needs a $regex");
-    return matchesEverythingSelector;
+    return everythingMatcher;
   },
   // $maxDistance is basically an argument to $near
   $maxDistance: function (operand, valueSelector) {
     if (!valueSelector.$near)
       throw Error("$maxDistance needs a $near");
-    return matchesEverythingSelector;
+    return everythingMatcher;
   },
   $all: function (operand) {
     if (!isArray(operand))
       throw Error("$all requires array");
     // Not sure why, but this seems to be what MongoDB does.
     if (_.isEmpty(operand))
-      return matchesNothingSelector;
+      return nothingMatcher;
 
-    var branchedSelectors = [];
+    var branchedMatchers = [];
     _.each(operand, function (criterion) {
       // XXX handle $all/$elemMatch combination
       if (isOperatorObject(criterion))
         throw Error("no $ expressions in $all");
       // This is always a regexp or equality selector.
-      branchedSelectors.push(compileValueSelector(criterion));
+      branchedMatchers.push(compileValueSelector(criterion));
     });
-    // andBranchedSelectors does NOT require all selectors to return true on the
+    // andBranchedMatchers does NOT require all selectors to return true on the
     // SAME branch.
-    return andBranchedSelectors(branchedSelectors);
+    return andBranchedMatchers(branchedMatchers);
   },
 
-  $near: function (operand, valueSelector, selectorObjIfRoot) {
-    if (!selectorObjIfRoot)
+  $near: function (operand, valueSelector, matcherIfRoot) {
+    if (!matcherIfRoot)
       throw Error("$near can't be inside another $ operator");
-    selectorObjIfRoot._isGeoQuery = true;
+    matcherIfRoot._isGeoQuery = true;
 
     // There are two kinds of geodata in MongoDB: coordinate pairs and
     // GeoJSON. They use different distance metrics, too. GeoJSON queries are
@@ -369,6 +390,7 @@ var VALUE_OPERATORS = {
   }
 };
 
+// Helpers for $near.
 var distanceCoordinatePairs = function (a, b) {
   a = pointToArray(a);
   b = pointToArray(b);
@@ -385,6 +407,7 @@ var pointToArray = function (point) {
   return _.map(point, _.identity);
 };
 
+// Helper for $lt/$gt/$lte/$gte.
 var makeInequality = function (cmpValueComparator) {
   return function (operand) {
     // Arrays never compare false with non-arrays for any inequality.
@@ -413,12 +436,16 @@ var makeInequality = function (cmpValueComparator) {
   };
 };
 
-// XXX redoc
-// Each value operator is a function with args:
-//  - operand - Anything
-//  - operators - Object - operators on the same level (neighbours)
-// returns a function with args:
-//  - value - a value the operator is tested against
+// Each element selector is a function with args:
+//  - operand - the "right hand side" of the operator
+//  - valueSelector - the "context" for the operator (so that $regex can find
+//    $options)
+// Or is an object with an compileElementSelector field (the above) and optional
+// flags dontExpandLeafArrays and dontIncludeLeafArrays which control if
+// expandArraysInBranches is called and if it takes an optional argument.
+//
+// An element selector compiler returns a function mapping a single value to
+// bool.
 var ELEMENT_OPERATORS = {
   $lt: makeInequality(function (cmpValue) {
     return cmpValue < 0;
@@ -449,21 +476,21 @@ var ELEMENT_OPERATORS = {
     if (!isArray(operand))
       throw Error("$in needs an array");
 
-    var elementSelectors = [];
+    var elementMatchers = [];
     _.each(operand, function (option) {
       if (option instanceof RegExp)
-        elementSelectors.push(regexpElementSelector(option));
+        elementMatchers.push(regexpElementMatcher(option));
       else if (isOperatorObject(option))
         throw Error("cannot nest $ under $in");
       else
-        elementSelectors.push(equalityElementSelector(option));
+        elementMatchers.push(equalityElementMatcher(option));
     });
 
     return function (value) {
       // Allow {a: {$in: [null]}} to match when 'a' does not exist.
       if (value === undefined)
         value = null;
-      return _.any(elementSelectors, function (e) {
+      return _.any(elementMatchers, function (e) {
         return e(value);
       });
     };
@@ -473,7 +500,7 @@ var ELEMENT_OPERATORS = {
     // don't want to consider the element [5,5] in the leaf array [[5,5]] as a
     // possible value.
     dontExpandLeafArrays: true,
-    elementSelector: function (operand) {
+    compileElementSelector: function (operand) {
       if (typeof operand === 'string') {
         // Don't ask me why, but by experimentation, this seems to be what Mongo
         // does.
@@ -492,7 +519,7 @@ var ELEMENT_OPERATORS = {
     // {$type: 4}}. Thus, when we see a leaf array, we *should* expand it but
     // should *not* include it itself.
     dontIncludeLeafArrays: true,
-    elementSelector: function (operand) {
+    compileElementSelector: function (operand) {
       if (typeof operand !== 'number')
         throw Error("$type needs a number");
       return function (value) {
@@ -524,11 +551,11 @@ var ELEMENT_OPERATORS = {
     } else {
       regexp = new RegExp(operand);
     }
-    return regexpElementSelector(regexp);
+    return regexpElementMatcher(regexp);
   },
   $elemMatch: {
     dontExpandLeafArrays: true,
-    elementSelector: function (operand, valueSelector) {
+    compileElementSelector: function (operand) {
       if (!isPlainObject(operand))
         throw Error("$elemMatch need an object");
 
@@ -571,18 +598,6 @@ var ELEMENT_OPERATORS = {
   }
 };
 
-// For unit tests. True if the given document matches the given
-// selector.
-MinimongoTest.matches = function (selector, doc) {
-  return new Minimongo.Matcher(selector).documentMatches(doc).result;
-};
-
-
-// string can be converted to integer
-numericKey = function (s) {
-  return /^[0-9]+$/.test(s);
-};
-
 // makeLookupFunction(key) returns a lookup function.
 //
 // A lookup function takes in a document and returns an array of matching
@@ -621,7 +636,7 @@ numericKey = function (s) {
 makeLookupFunction = function (key) {
   var parts = key.split('.');
   var firstPart = parts.length ? parts[0] : '';
-  var firstPartIsNumeric = numericKey(firstPart);
+  var firstPartIsNumeric = isNumericKey(firstPart);
   var lookupRest;
   if (parts.length > 1) {
     lookupRest = makeLookupFunction(parts.slice(1).join('.'));
@@ -743,22 +758,22 @@ expandArraysInBranches = function (branches, skipTheArrays) {
   return branchesOut;
 };
 
-var matchesNothingSelector = function (docOrBranchedValues) {
+var nothingMatcher = function (docOrBranchedValues) {
   return {result: false};
 };
 
-var matchesEverythingSelector = function (docOrBranchedValues) {
+var everythingMatcher = function (docOrBranchedValues) {
   return {result: true};
 };
 
 
 // NB: We are cheating and using this function to implement "AND" for both
-// "document selectors" and "branched selectors". They have the same return type
+// "document matchers" and "branched matchers". They both return result objects
 // but the argument is different: for the former it's a whole doc, whereas for
-// the latter it's an array of "branches" that match a given key path.
-var andSomeSelectors = function (branchedSelectors) {
+// the latter it's an array of "branched values".
+var andSomeMatchers = function (branchedSelectors) {
   if (branchedSelectors.length === 0)
-    return matchesEverythingSelector;
+    return everythingMatcher;
   if (branchedSelectors.length === 1)
     return branchedSelectors[0];
 
@@ -768,7 +783,7 @@ var andSomeSelectors = function (branchedSelectors) {
     var distance;
     ret.result = _.all(branchedSelectors, function (f) {
       var subResult = f(branches);
-      // Copy a 'distance' number out of the first sub-selector that has
+      // Copy a 'distance' number out of the first sub-matcher that has
       // one. Yes, this means that if there are multiple $near fields in a
       // query, something arbitrary happens; this appears to be consistent with
       // Mongo.
@@ -784,8 +799,8 @@ var andSomeSelectors = function (branchedSelectors) {
   };
 };
 
-var andDocumentMatchers = andSomeSelectors;
-var andBranchedSelectors = andSomeSelectors;
+var andDocumentMatchers = andSomeMatchers;
+var andBranchedMatchers = andSomeMatchers;
 
 
 // HELPER FUNCTIONS
@@ -822,6 +837,12 @@ var isOperatorObject = function (valueSelector) {
     }
   });
   return !!theseAreOperators;  // {} has no operators
+};
+
+
+// string can be converted to integer
+isNumericKey = function (s) {
+  return /^[0-9]+$/.test(s);
 };
 
 // helpers used by compiled selector code
