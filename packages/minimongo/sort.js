@@ -21,12 +21,12 @@ Sorter = function (spec) {
     for (var i = 0; i < spec.length; i++) {
       if (typeof spec[i] === "string") {
         sortSpecParts.push({
-          lookup: LocalCollection._makeLookupFunction(spec[i]),
+          lookup: LocalCollection._makeLookupFunction2(spec[i]),
           ascending: true
         });
       } else {
         sortSpecParts.push({
-          lookup: LocalCollection._makeLookupFunction(spec[i][0]),
+          lookup: LocalCollection._makeLookupFunction2(spec[i][0]),
           ascending: spec[i][1] !== "desc"
         });
       }
@@ -34,7 +34,7 @@ Sorter = function (spec) {
   } else if (typeof spec === "object") {
     for (var key in spec) {
       sortSpecParts.push({
-        lookup: LocalCollection._makeLookupFunction(key),
+        lookup: LocalCollection._makeLookupFunction2(key),
         ascending: spec[key] >= 0
       });
     }
@@ -54,34 +54,24 @@ Sorter = function (spec) {
   // too. (ie, we do a single level of flattening on branchValues, then find the
   // min/max.)
   var reduceValue = function (branchValues, findMin) {
-    var reduced;
+    // Expand any leaf arrays that we find, and ignore those arrays themselves.
+    branchValues = expandArraysInBranches(branchValues, true);
+    var reduced = undefined;
     var first = true;
     // Iterate over all the values found in all the branches, and if a value is
     // an array itself, iterate over the values in the array separately.
     _.each(branchValues, function (branchValue) {
-      // Value not an array? Pretend it is.
-      if (!isArray(branchValue))
-        branchValue = [branchValue];
-      // Value is an empty array? Pretend it was missing, since that's where it
-      // should be sorted.
-      if (isArray(branchValue) && branchValue.length === 0)
-        branchValue = [undefined];
-      _.each(branchValue, function (value) {
-        // We should get here at least once: lookup functions return non-empty
-        // arrays, so the outer loop runs at least once, and we prevented
-        // branchValue from being an empty array.
-        if (first) {
-          reduced = value;
-          first = false;
-        } else {
-          // Compare the value we found to the value we found so far, saving it
-          // if it's less (for an ascending sort) or more (for a descending
-          // sort).
-          var cmp = LocalCollection._f._cmp(reduced, value);
-          if ((findMin && cmp > 0) || (!findMin && cmp < 0))
-            reduced = value;
-        }
-      });
+      if (first) {
+        reduced = branchValue.value;
+        first = false;
+      } else {
+        // Compare the value we found to the value we found so far, saving it
+        // if it's less (for an ascending sort) or more (for a descending
+        // sort).
+        var cmp = LocalCollection._f._cmp(reduced, branchValue.value);
+        if ((findMin && cmp > 0) || (!findMin && cmp < 0))
+          reduced = branchValue.value;
+      }
     });
     return reduced;
   };

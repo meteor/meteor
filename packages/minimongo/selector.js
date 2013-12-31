@@ -821,7 +821,7 @@ LocalCollection._makeLookupFunction = function (key) {
   };
 };
 
-var expandArraysInBranches = function (branches, skipTheArrays) {
+expandArraysInBranches = function (branches, skipTheArrays) {
   var branchesOut = [];
   _.each(branches, function (branch) {
     var thisIsArray = isArray(branch.value);
