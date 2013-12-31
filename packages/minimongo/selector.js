@@ -33,12 +33,12 @@ var isOperatorObject = function (valueSelector) {
 };
 
 
-var compileValueSelector = function (valueSelector, cursor, inRoot) {
+var compileValueSelector = function (valueSelector, cursor, selectorObjIfRoot) {
   if (valueSelector instanceof RegExp)
     return convertElementSelectorToBranchedSelector(
       regexpElementSelector(valueSelector));
   else if (isOperatorObject(valueSelector))
-    return operatorValueSelector(valueSelector, cursor, inRoot);
+    return operatorValueSelector(valueSelector, cursor, selectorObjIfRoot);
   else {
     return convertElementSelectorToBranchedSelector(
       equalityElementSelector(valueSelector));
@@ -96,7 +96,7 @@ var equalityElementSelector = function (elementSelector) {
 };
 
 // XXX get rid of cursor when possible
-var operatorValueSelector = function (valueSelector, cursor, inRoot) {
+var operatorValueSelector = function (valueSelector, cursor, selectorObjIfRoot) {
   // Each valueSelector works separately on the various branches.  So one
   // operator can match one branch and another can match another branch.  This
   // is OK.
@@ -105,7 +105,7 @@ var operatorValueSelector = function (valueSelector, cursor, inRoot) {
   _.each(valueSelector, function (operand, operator) {
     if (_.has(VALUE_OPERATORS, operator)) {
       operatorFunctions.push(
-        VALUE_OPERATORS[operator](operand, valueSelector, cursor, inRoot));
+        VALUE_OPERATORS[operator](operand, valueSelector, cursor, selectorObjIfRoot));
     } else if (_.has(ELEMENT_OPERATORS, operator)) {
       // XXX justify three arguments
       var options = ELEMENT_OPERATORS[operator];
@@ -265,9 +265,10 @@ var VALUE_OPERATORS = {
     return andBranchedSelectors(branchedSelectors);
   },
 
-  $near: function (operand, valueSelector, cursor, inRoot) {
-    if (!inRoot)
+  $near: function (operand, valueSelector, cursor, selectorObjIfRoot) {
+    if (!selectorObjIfRoot)
       throw Error("$near can't be inside another $ operator");
+    selectorObjIfRoot._isGeoQuery = true;
 
     // There are two kinds of geodata in MongoDB: coordinate pairs and
     // GeoJSON. They use different distance metrics, too. GeoJSON queries are
@@ -710,7 +711,7 @@ LocalCollection._f = {
 // For unit tests. True if the given document matches the given
 // selector.
 MinimongoTest.matches = function (selector, doc) {
-  return (LocalCollection._compileSelector(selector))(doc).result;
+  return new Minimongo.Selector(selector).documentMatches(doc).result;
 };
 
 
@@ -867,7 +868,7 @@ var expandArraysInBranches = function (branches, skipTheArrays) {
 };
 
 // The main compilation function for a given selector.
-var compileDocumentSelector = function (docSelector, cursor, isRoot) {
+var compileDocumentSelector = function (docSelector, cursor, selectorObjIfRoot) {
   var perKeySelectors = [];
   _.each(docSelector, function (subSelector, key) {
     if (key.substr(0, 1) === '$') {
@@ -881,7 +882,7 @@ var compileDocumentSelector = function (docSelector, cursor, isRoot) {
     } else {
       var lookUpByIndex = LocalCollection._makeLookupFunction2(key);
       var valueSelectorFunc =
-        compileValueSelector(subSelector, cursor, isRoot);
+        compileValueSelector(subSelector, cursor, selectorObjIfRoot);
       perKeySelectors.push(function (doc, wholeDoc) {
         var branchValues = lookUpByIndex(doc);
         return valueSelectorFunc(branchValues, wholeDoc);
@@ -892,11 +893,28 @@ var compileDocumentSelector = function (docSelector, cursor, isRoot) {
   return andCompiledDocumentSelectors(perKeySelectors);
 };
 
+// XXX doc and move around
+// XXX remove 'cursor'
+Minimongo.Selector = function (selector, cursor) {
+  var self = this;
+  self._isGeoQuery = false;  // can get overwritten by compilation
+  self._docSelector = compileSelector(selector, self, cursor);
+};
+
+_.extend(Minimongo.Selector.prototype, {
+  documentMatches: function (doc) {
+    return this._docSelector(doc);
+  },
+  isGeoQuery: function () {
+    return this._isGeoQuery;
+  }
+});
+
 // Given a selector, return a function that takes one argument, a
 // document. It returns an object with fields
 //    - result: bool, true if the document matches the selector
 // XXX add "arrayIndex" for use by update with '$'
-LocalCollection._compileSelector = function (selector, cursor) {
+var compileSelector = function (selector, selectorObject, cursor) {
   // you can pass a literal function instead of a selector
   if (selector instanceof Function)
     return function (doc) {
@@ -922,7 +940,7 @@ LocalCollection._compileSelector = function (selector, cursor) {
     throw new Error("Invalid selector: " + selector);
 
   // XXX get rid of second argument once _distance refactored
-  var s = compileDocumentSelector(selector, cursor, true);
+  var s = compileDocumentSelector(selector, cursor, selectorObject);
   return function (doc) {
     return s(doc, doc);
   };
