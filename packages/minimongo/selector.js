@@ -1,35 +1,85 @@
-// Like _.isArray, but doesn't regard polyfilled Uint8Arrays on old browsers as
-// arrays.
-// XXX maybe this should be EJSON.isArray
-isArray = function (x) {
-  return _.isArray(x) && !EJSON.isBinary(x);
+// The minimongo selector compiler!
+
+
+// Main entry point.
+//   var selector = new Minimongo.Selector({a: {$gt: 5}});
+//   if (selector.documentMatches({a: 7})) ...
+Minimongo.Selector = function (selector) {
+  var self = this;
+  self._isGeoQuery = false;  // can get overwritten by compilation
+  self._docSelector = self._compileSelector(selector);
 };
 
-// XXX maybe this should be EJSON.isObject, though EJSON doesn't know about
-// RegExp
-// XXX note that _type(undefined) === 3!!!!
-var isPlainObject = function (x) {
-  return x && LocalCollection._f._type(x) === 3;
-};
+_.extend(Minimongo.Selector.prototype, {
+  documentMatches: function (doc) {
+    return this._docSelector(doc);
+  },
+  isGeoQuery: function () {
+    return this._isGeoQuery;
+  },
 
-var isIndexable = function (x) {
-  return isArray(x) || isPlainObject(x);
-};
+  // Given a selector, return a function that takes one argument, a
+  // document. It returns an object with fields
+  //    - result: bool, true if the document matches the selector
+  //    - distance: if a $near was evaluated, the distance to the point
+  // XXX add "arrayIndex" for use by update with '$'
+  _compileSelector: function (selector) {
+    var self = this;
+    // you can pass a literal function instead of a selector
+    if (selector instanceof Function)
+      return function (doc) {
+        return {result: !!selector.call(doc)};
+      };
 
-var isOperatorObject = function (valueSelector) {
-  if (!isPlainObject(valueSelector))
-    return false;
+    // shorthand -- scalars match _id
+    if (LocalCollection._selectorIsId(selector)) {
+      return function (doc) {
+        return {result: EJSON.equals(doc._id, selector)};
+      };
+    }
 
-  var theseAreOperators = undefined;
-  _.each(valueSelector, function (value, selKey) {
-    var thisIsOperator = selKey.substr(0, 1) === '$';
-    if (theseAreOperators === undefined) {
-      theseAreOperators = thisIsOperator;
-    } else if (theseAreOperators !== thisIsOperator) {
-      throw new Error("Inconsistent selector: " + valueSelector);
+    // protect against dangerous selectors.  falsey and {_id: falsey} are both
+    // likely programmer error, and not what you want, particularly for
+    // destructive operations.
+    if (!selector || (('_id' in selector) && !selector._id))
+      return matchesNothingSelector;
+
+    // Top level can't be an array or true or binary.
+    if (typeof(selector) === 'boolean' || isArray(selector) ||
+        EJSON.isBinary(selector))
+      throw new Error("Invalid selector: " + selector);
+
+    return compileDocumentSelector(selector, self);
+  }
+});
+
+
+// Takes in a selector that could match a full document (eg, the original
+// selector). Returns a function mapping doc->{result, distance, arrayIndex}.
+//
+// If this is the root document selector (ie, not wrapped in $and or the like),
+// then selectorObjIfRoot is the Selector object. (This is used by $near.)
+var compileDocumentSelector = function (docSelector, selectorObjIfRoot) {
+  var individualMatchers = [];
+  _.each(docSelector, function (subSelector, key) {
+    if (key.substr(0, 1) === '$') {
+      // Outer operators are either logical operators (they recurse back into
+      // this function), or $where.
+      if (!_.has(LOGICAL_OPERATORS, key))
+        throw new Error("Unrecognized logical operator: " + key);
+      individualMatchers.push(LOGICAL_OPERATORS[key](subSelector));
+    } else {
+      var lookUpByIndex = makeLookupFunction(key);
+      var valueSelectorFunc =
+        compileValueSelector(subSelector, selectorObjIfRoot);
+      individualMatchers.push(function (doc) {
+        var branchValues = lookUpByIndex(doc);
+        return valueSelectorFunc(branchValues);
+      });
     }
   });
-  return !!theseAreOperators;  // {} has no operators
+
+  return andDocumentMatchers(individualMatchers);
 };
 
 
@@ -137,7 +187,7 @@ var compileArrayOfDocumentSelectors = function (selectors) {
 var LOGICAL_OPERATORS = {
   $and: function (subSelector) {
     var selectors = compileArrayOfDocumentSelectors(subSelector);
-    return andCompiledDocumentSelectors(selectors);
+    return andDocumentMatchers(selectors);
   },
 
   $or: function (subSelector) {
@@ -519,171 +569,6 @@ var ELEMENT_OPERATORS = {
   }
 };
 
-// helpers used by compiled selector code
-LocalCollection._f = {
-  // XXX for _all and _in, consider building 'inquery' at compile time..
-
-  _type: function (v) {
-    if (typeof v === "number")
-      return 1;
-    if (typeof v === "string")
-      return 2;
-    if (typeof v === "boolean")
-      return 8;
-    if (isArray(v))
-      return 4;
-    if (v === null)
-      return 10;
-    if (v instanceof RegExp)
-      // note that typeof(/x/) === "object"
-      return 11;
-    if (typeof v === "function")
-      return 13;
-    if (v instanceof Date)
-      return 9;
-    if (EJSON.isBinary(v))
-      return 5;
-    if (v instanceof LocalCollection._ObjectID)
-      return 7;
-    return 3; // object
-
-    // XXX support some/all of these:
-    // 14, symbol
-    // 15, javascript code with scope
-    // 16, 18: 32-bit/64-bit integer
-    // 17, timestamp
-    // 255, minkey
-    // 127, maxkey
-  },
-
-  // deep equality test: use for literal document and array matches
-  _equal: function (a, b) {
-    return EJSON.equals(a, b, {keyOrderSensitive: true});
-  },
-
-  // maps a type code to a value that can be used to sort values of
-  // different types
-  _typeorder: function (t) {
-    // http://www.mongodb.org/display/DOCS/What+is+the+Compare+Order+for+BSON+Types
-    // XXX what is the correct sort position for Javascript code?
-    // ('100' in the matrix below)
-    // XXX minkey/maxkey
-    return [-1,  // (not a type)
-            1,   // number
-            2,   // string
-            3,   // object
-            4,   // array
-            5,   // binary
-            -1,  // deprecated
-            6,   // ObjectID
-            7,   // bool
-            8,   // Date
-            0,   // null
-            9,   // RegExp
-            -1,  // deprecated
-            100, // JS code
-            2,   // deprecated (symbol)
-            100, // JS code
-            1,   // 32-bit int
-            8,   // Mongo timestamp
-            1    // 64-bit int
-           ][t];
-  },
-
-  // compare two values of unknown type according to BSON ordering
-  // semantics. (as an extension, consider 'undefined' to be less than
-  // any other value.) return negative if a is less, positive if b is
-  // less, or 0 if equal
-  _cmp: function (a, b) {
-    if (a === undefined)
-      return b === undefined ? 0 : -1;
-    if (b === undefined)
-      return 1;
-    var ta = LocalCollection._f._type(a);
-    var tb = LocalCollection._f._type(b);
-    var oa = LocalCollection._f._typeorder(ta);
-    var ob = LocalCollection._f._typeorder(tb);
-    if (oa !== ob)
-      return oa < ob ? -1 : 1;
-    if (ta !== tb)
-      // XXX need to implement this if we implement Symbol or integers, or
-      // Timestamp
-      throw Error("Missing type coercion logic in _cmp");
-    if (ta === 7) { // ObjectID
-      // Convert to string.
-      ta = tb = 2;
-      a = a.toHexString();
-      b = b.toHexString();
-    }
-    if (ta === 9) { // Date
-      // Convert to millis.
-      ta = tb = 1;
-      a = a.getTime();
-      b = b.getTime();
-    }
-
-    if (ta === 1) // double
-      return a - b;
-    if (tb === 2) // string
-      return a < b ? -1 : (a === b ? 0 : 1);
-    if (ta === 3) { // Object
-      // this could be much more efficient in the expected case ...
-      var to_array = function (obj) {
-        var ret = [];
-        for (var key in obj) {
-          ret.push(key);
-          ret.push(obj[key]);
-        }
-        return ret;
-      };
-      return LocalCollection._f._cmp(to_array(a), to_array(b));
-    }
-    if (ta === 4) { // Array
-      for (var i = 0; ; i++) {
-        if (i === a.length)
-          return (i === b.length) ? 0 : -1;
-        if (i === b.length)
-          return 1;
-        var s = LocalCollection._f._cmp(a[i], b[i]);
-        if (s !== 0)
-          return s;
-      }
-    }
-    if (ta === 5) { // binary
-      // Surprisingly, a small binary blob is always less than a large one in
-      // Mongo.
-      if (a.length !== b.length)
-        return a.length - b.length;
-      for (i = 0; i < a.length; i++) {
-        if (a[i] < b[i])
-          return -1;
-        if (a[i] > b[i])
-          return 1;
-      }
-      return 0;
-    }
-    if (ta === 8) { // boolean
-      if (a) return b ? 0 : 1;
-      return b ? -1 : 0;
-    }
-    if (ta === 10) // null
-      return 0;
-    if (ta === 11) // regexp
-      throw Error("Sorting not supported on regular expression"); // XXX
-    // 13: javascript code
-    // 14: symbol
-    // 15: javascript code with scope
-    // 16: 32-bit integer
-    // 17: timestamp
-    // 18: 64-bit integer
-    // 255: minkey
-    // 127: maxkey
-    if (ta === 13) // javascript code
-      throw Error("Sorting not supported on Javascript code"); // XXX
-    throw Error("Unknown type to sort");
-  }
-};
-
 // For unit tests. True if the given document matches the given
 // selector.
 MinimongoTest.matches = function (selector, doc) {
@@ -856,79 +741,6 @@ expandArraysInBranches = function (branches, skipTheArrays) {
   return branchesOut;
 };
 
-// The main compilation function for a given selector.
-var compileDocumentSelector = function (docSelector, selectorObjIfRoot) {
-  var perKeySelectors = [];
-  _.each(docSelector, function (subSelector, key) {
-    if (key.substr(0, 1) === '$') {
-      // Outer operators are either logical operators (they recurse back into
-      // this function), or $where.
-      if (!_.has(LOGICAL_OPERATORS, key))
-        throw new Error("Unrecognized logical operator: " + key);
-      // XXX rename perKeySelectors
-      perKeySelectors.push(LOGICAL_OPERATORS[key](subSelector));
-    } else {
-      var lookUpByIndex = makeLookupFunction(key);
-      var valueSelectorFunc =
-        compileValueSelector(subSelector, selectorObjIfRoot);
-      perKeySelectors.push(function (doc) {
-        var branchValues = lookUpByIndex(doc);
-        return valueSelectorFunc(branchValues);
-      });
-    }
-  });
-
-  return andCompiledDocumentSelectors(perKeySelectors);
-};
-
-// XXX doc and move around
-Minimongo.Selector = function (selector) {
-  var self = this;
-  self._isGeoQuery = false;  // can get overwritten by compilation
-  self._docSelector = compileSelector(selector, self);
-};
-
-_.extend(Minimongo.Selector.prototype, {
-  documentMatches: function (doc) {
-    return this._docSelector(doc);
-  },
-  isGeoQuery: function () {
-    return this._isGeoQuery;
-  }
-});
-
-// Given a selector, return a function that takes one argument, a
-// document. It returns an object with fields
-//    - result: bool, true if the document matches the selector
-// XXX add "arrayIndex" for use by update with '$'
-var compileSelector = function (selector, selectorObject) {
-  // you can pass a literal function instead of a selector
-  if (selector instanceof Function)
-    return function (doc) {
-      return {result: !!selector.call(doc)};
-    };
-
-  // shorthand -- scalars match _id
-  if (LocalCollection._selectorIsId(selector)) {
-    return function (doc) {
-      return {result: EJSON.equals(doc._id, selector)};
-    };
-  }
-
-  // protect against dangerous selectors.  falsey and {_id: falsey} are both
-  // likely programmer error, and not what you want, particularly for
-  // destructive operations.
-  if (!selector || (('_id' in selector) && !selector._id))
-    return matchesNothingSelector;
-
-  // Top level can't be an array or true or binary.
-  if (typeof(selector) === 'boolean' || isArray(selector) ||
-      EJSON.isBinary(selector))
-    throw new Error("Invalid selector: " + selector);
-
-  return compileDocumentSelector(selector, selectorObject);
-};
-
 var matchesNothingSelector = function (docOrBranchedValues) {
   return {result: false};
 };
@@ -943,12 +755,17 @@ var matchesEverythingSelector = function (docOrBranchedValues) {
 // but the argument is different: for the former it's a whole doc, whereas for
 // the latter it's an array of "branches" that match a given key path.
 var andSomeSelectors = function (branchedSelectors) {
-  return function (branches, doc) {
+  if (branchedSelectors.length === 0)
+    return matchesEverythingSelector;
+  if (branchedSelectors.length === 1)
+    return branchedSelectors[0];
+
+  return function (branches) {
     // XXX arrayIndex!
     var ret = {};
     var distance;
     ret.result = _.all(branchedSelectors, function (f) {
-      var subResult = f(branches, doc);
+      var subResult = f(branches);
       // Copy a 'distance' number out of the first sub-selector that has
       // one. Yes, this means that if there are multiple $near fields in a
       // query, something arbitrary happens; this appears to be consistent with
@@ -965,5 +782,207 @@ var andSomeSelectors = function (branchedSelectors) {
   };
 };
 
-var andCompiledDocumentSelectors = andSomeSelectors;
+var andDocumentMatchers = andSomeSelectors;
 var andBranchedSelectors = andSomeSelectors;
+
+
+// HELPER FUNCTIONS
+
+// Like _.isArray, but doesn't regard polyfilled Uint8Arrays on old browsers as
+// arrays.
+// XXX maybe this should be EJSON.isArray
+isArray = function (x) {
+  return _.isArray(x) && !EJSON.isBinary(x);
+};
+
+// XXX maybe this should be EJSON.isObject, though EJSON doesn't know about
+// RegExp
+// XXX note that _type(undefined) === 3!!!!
+var isPlainObject = function (x) {
+  return x && LocalCollection._f._type(x) === 3;
+};
+
+var isIndexable = function (x) {
+  return isArray(x) || isPlainObject(x);
+};
+
+var isOperatorObject = function (valueSelector) {
+  if (!isPlainObject(valueSelector))
+    return false;
+
+  var theseAreOperators = undefined;
+  _.each(valueSelector, function (value, selKey) {
+    var thisIsOperator = selKey.substr(0, 1) === '$';
+    if (theseAreOperators === undefined) {
+      theseAreOperators = thisIsOperator;
+    } else if (theseAreOperators !== thisIsOperator) {
+      throw new Error("Inconsistent selector: " + valueSelector);
+    }
+  });
+  return !!theseAreOperators;  // {} has no operators
+};
+
+// helpers used by compiled selector code
+LocalCollection._f = {
+  // XXX for _all and _in, consider building 'inquery' at compile time..
+
+  _type: function (v) {
+    if (typeof v === "number")
+      return 1;
+    if (typeof v === "string")
+      return 2;
+    if (typeof v === "boolean")
+      return 8;
+    if (isArray(v))
+      return 4;
+    if (v === null)
+      return 10;
+    if (v instanceof RegExp)
+      // note that typeof(/x/) === "object"
+      return 11;
+    if (typeof v === "function")
+      return 13;
+    if (v instanceof Date)
+      return 9;
+    if (EJSON.isBinary(v))
+      return 5;
+    if (v instanceof LocalCollection._ObjectID)
+      return 7;
+    return 3; // object
+
+    // XXX support some/all of these:
+    // 14, symbol
+    // 15, javascript code with scope
+    // 16, 18: 32-bit/64-bit integer
+    // 17, timestamp
+    // 255, minkey
+    // 127, maxkey
+  },
+
+  // deep equality test: use for literal document and array matches
+  _equal: function (a, b) {
+    return EJSON.equals(a, b, {keyOrderSensitive: true});
+  },
+
+  // maps a type code to a value that can be used to sort values of
+  // different types
+  _typeorder: function (t) {
+    // http://www.mongodb.org/display/DOCS/What+is+the+Compare+Order+for+BSON+Types
+    // XXX what is the correct sort position for Javascript code?
+    // ('100' in the matrix below)
+    // XXX minkey/maxkey
+    return [-1,  // (not a type)
+            1,   // number
+            2,   // string
+            3,   // object
+            4,   // array
+            5,   // binary
+            -1,  // deprecated
+            6,   // ObjectID
+            7,   // bool
+            8,   // Date
+            0,   // null
+            9,   // RegExp
+            -1,  // deprecated
+            100, // JS code
+            2,   // deprecated (symbol)
+            100, // JS code
+            1,   // 32-bit int
+            8,   // Mongo timestamp
+            1    // 64-bit int
+           ][t];
+  },
+
+  // compare two values of unknown type according to BSON ordering
+  // semantics. (as an extension, consider 'undefined' to be less than
+  // any other value.) return negative if a is less, positive if b is
+  // less, or 0 if equal
+  _cmp: function (a, b) {
+    if (a === undefined)
+      return b === undefined ? 0 : -1;
+    if (b === undefined)
+      return 1;
+    var ta = LocalCollection._f._type(a);
+    var tb = LocalCollection._f._type(b);
+    var oa = LocalCollection._f._typeorder(ta);
+    var ob = LocalCollection._f._typeorder(tb);
+    if (oa !== ob)
+      return oa < ob ? -1 : 1;
+    if (ta !== tb)
+      // XXX need to implement this if we implement Symbol or integers, or
+      // Timestamp
+      throw Error("Missing type coercion logic in _cmp");
+    if (ta === 7) { // ObjectID
+      // Convert to string.
+      ta = tb = 2;
+      a = a.toHexString();
+      b = b.toHexString();
+    }
+    if (ta === 9) { // Date
+      // Convert to millis.
+      ta = tb = 1;
+      a = a.getTime();
+      b = b.getTime();
+    }
+
+    if (ta === 1) // double
+      return a - b;
+    if (tb === 2) // string
+      return a < b ? -1 : (a === b ? 0 : 1);
+    if (ta === 3) { // Object
+      // this could be much more efficient in the expected case ...
+      var to_array = function (obj) {
+        var ret = [];
+        for (var key in obj) {
+          ret.push(key);
+          ret.push(obj[key]);
+        }
+        return ret;
+      };
+      return LocalCollection._f._cmp(to_array(a), to_array(b));
+    }
+    if (ta === 4) { // Array
+      for (var i = 0; ; i++) {
+        if (i === a.length)
+          return (i === b.length) ? 0 : -1;
+        if (i === b.length)
+          return 1;
+        var s = LocalCollection._f._cmp(a[i], b[i]);
+        if (s !== 0)
+          return s;
+      }
+    }
+    if (ta === 5) { // binary
+      // Surprisingly, a small binary blob is always less than a large one in
+      // Mongo.
+      if (a.length !== b.length)
+        return a.length - b.length;
+      for (i = 0; i < a.length; i++) {
+        if (a[i] < b[i])
+          return -1;
+        if (a[i] > b[i])
+          return 1;
+      }
+      return 0;
+    }
+    if (ta === 8) { // boolean
+      if (a) return b ? 0 : 1;
+      return b ? -1 : 0;
+    }
+    if (ta === 10) // null
+      return 0;
+    if (ta === 11) // regexp
+      throw Error("Sorting not supported on regular expression"); // XXX
+    // 13: javascript code
+    // 14: symbol
+    // 15: javascript code with scope
+    // 16: 32-bit integer
+    // 17: timestamp
+    // 18: 64-bit integer
+    // 255: minkey
+    // 127: maxkey
+    if (ta === 13) // javascript code
+      throw Error("Sorting not supported on Javascript code"); // XXX
+    throw Error("Unknown type to sort");
+  }
+};
