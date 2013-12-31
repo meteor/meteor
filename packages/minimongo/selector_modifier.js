@@ -19,17 +19,17 @@ LocalCollection._isSelectorAffectedByModifier = function (selector, modifier) {
       var i = 0, j = 0;
 
       while (i < sel.length && j < mod.length) {
-        if (numericKey(sel[i]) && numericKey(mod[j])) {
+        if (isNumericKey(sel[i]) && isNumericKey(mod[j])) {
           // foo.4.bar selector affected by foo.4 modifier
           // foo.3.bar selector unaffected by foo.4 modifier
           if (sel[i] === mod[j])
             i++, j++;
           else
             return false;
-        } else if (numericKey(sel[i])) {
+        } else if (isNumericKey(sel[i])) {
           // foo.4.bar selector unaffected by foo.bar modifier
           return false;
-        } else if (numericKey(mod[j])) {
+        } else if (isNumericKey(mod[j])) {
           j++;
         } else if (sel[i] === mod[j])
           i++, j++;
@@ -45,7 +45,7 @@ LocalCollection._isSelectorAffectedByModifier = function (selector, modifier) {
 
 getPathsWithoutNumericKeys = function (sel) {
   return _.map(getPaths(sel), function (path) {
-    return _.reject(path.split('.'), numericKey).join('.');
+    return _.reject(path.split('.'), isNumericKey).join('.');
   });
 };
 
@@ -77,7 +77,9 @@ LocalCollection._canSelectorBecomeTrueByModifier = function (selector, modifier)
                         function (path) { return selector[path]; },
                         _.identity /*conflict resolution is no resolution*/);
 
-  var selectorFn = LocalCollection._compileSelector(selector);
+  // XXX we should move this function to being a method on Matcher so we aren't
+  // recompiling over and over
+  var matcher = new Minimongo.Matcher(selector);
 
   try {
     LocalCollection._modify(doc, modifier);
@@ -97,7 +99,7 @@ LocalCollection._canSelectorBecomeTrueByModifier = function (selector, modifier)
     throw e;
   }
 
-  return selectorFn(doc);
+  return matcher.documentMatches(doc).result;
 };
 
 // Returns a list of key paths the given selector is looking for
@@ -115,12 +117,7 @@ var getPaths = MinimongoTest.getSelectorPaths = function (sel) {
 };
 
 function pathHasNumericKeys (path) {
-  return _.any(path.split('.'), numericKey);
-}
-
-// string can be converted to integer
-function numericKey (s) {
-  return /^[0-9]+$/.test(s);
+  return _.any(path.split('.'), isNumericKey);
 }
 
 function isLiteralSelector (selector) {

@@ -32,7 +32,7 @@ OplogObserveDriver = function (options) {
 
   self._published = new LocalCollection._IdMap;
   var selector = self._cursorDescription.selector;
-  self._selectorFn = LocalCollection._compileSelector(
+  self._matcher = new Minimongo.Matcher(
     self._cursorDescription.selector);
   var projection = self._cursorDescription.options.fields || {};
   self._projectionFn = LocalCollection._compileProjection(projection);
@@ -131,7 +131,7 @@ _.extend(OplogObserveDriver.prototype, {
     var self = this;
     newDoc = _.clone(newDoc);
 
-    var matchesNow = newDoc && self._selectorFn(newDoc);
+    var matchesNow = newDoc && self._matcher.documentMatches(newDoc).result;
     if (mustMatchNow && !matchesNow) {
       throw Error("expected " + EJSON.stringify(newDoc) + " to match "
                   + EJSON.stringify(self._cursorDescription));
@@ -238,7 +238,7 @@ _.extend(OplogObserveDriver.prototype, {
 
       // XXX what if selector yields?  for now it can't but later it could have
       // $where
-      if (self._selectorFn(op.o))
+      if (self._matcher.documentMatches(op.o).result)
         self._add(op.o);
     } else if (op.op === 'u') {
       // Is this a modifier ($set/$unset, which may require us to poll the

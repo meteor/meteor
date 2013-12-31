@@ -218,7 +218,8 @@ LocalCollection._modifiers = {
       // XXX this allows us to use a $sort whose value is an array, but that's
       // actually an extension of the Node driver, so it won't work
       // server-side. Could be confusing!
-      sortFunction = LocalCollection._compileSort(arg.$sort);
+      // XXX is it correct that we don't do geo-stuff here?
+      sortFunction = new Sorter(arg.$sort).getComparator();
       for (var i = 0; i < toPush.length; i++) {
         if (LocalCollection._f._type(toPush[i]) !== 3) {
           throw MinimongoError("$push like modifiers using $sort " +
@@ -311,14 +312,14 @@ LocalCollection._modifiers = {
         // modifying that many documents, so we'll let it slide for
         // now
 
-        // XXX _compileSelector isn't up for the job, because we need
+        // XXX Minimongo.Matcher isn't up for the job, because we need
         // to permit stuff like {$pull: {a: {$gt: 4}}}.. something
         // like {$gt: 4} is not normally a complete selector.
         // same issue as $elemMatch possibly?
-        var match = LocalCollection._compileSelector(arg);
+        var matcher = new Minimongo.Matcher(arg);
         for (var i = 0; i < x.length; i++)
-          if (!match(x[i]))
-            out.push(x[i])
+          if (!matcher.documentMatches(x[i]).result)
+            out.push(x[i]);
       } else {
         for (var i = 0; i < x.length; i++)
           if (!LocalCollection._f._equal(x[i], arg))
