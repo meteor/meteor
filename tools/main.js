@@ -14,6 +14,14 @@ var fs = require('fs');
 
 var main = exports;
 
+// node (v8) defaults to only recording 10 lines of stack trace. This
+// in especially insufficient when using fibers, because you get
+// proper call stacks instead of only seeing the stack up to the most
+// recent callback invocation. Increase the limit.
+//
+// http://code.google.com/p/v8/wiki/JavaScriptStackTraceApi
+Error.stackTraceLimit = Infinity;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Command registration
 ///////////////////////////////////////////////////////////////////////////////

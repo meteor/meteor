@@ -12,6 +12,30 @@ var mongoRunner = require('./mongo-runner.js');
 var mongoExitCodes = require('./mongo-exit-codes.js');
 var unipackage = require('./unipackage.js');
 var release = require('./release.js');
+var inFiber = require('./fiber-helpers.js').inFiber;
+
+// XXX XXX just suck it up and replace setTimeout and clearTimeout,
+// globally, with fiberized versions? will this mess up npm modules?
+
+
+// XXX XXX NEXT (if you want to do more):
+
+// - fold app bundle/restart logic into AppServer, so that ultimately
+//   the top-level runner object can just be a thing that manages a
+//   flock of processes without knowing too much about them.
+// - possibly fold the mongo restart logic into the mongo-runner.js
+// - make updater into an object with start and stop methods
+// - break each thing out into a separate file.. run-proxy, run-app,
+//   run-updater, run-mongo..
+//   - be careful about overabstracting things, though, to the point
+//     that it becomes hard to create the holistic UX you want, or to
+//     the point that you spend a bunch of time on how many loggers
+//     can dance on the head of a pin
+// - if really feeling ambitious, get rid of process.exit everywhere
+//   (and/or make everything use the logger instead of stdout/stderr?)
+// - turn the whole thing into a local galaxy emulator! the prize here
+//   is when you manage to run the app dashboard locally (in an in-app
+//   overlay a la Django Dashboard).
 
 var runner = exports;
 
@@ -508,12 +532,166 @@ _.extend(AppServer.prototype, {
 // Mongo
 ///////////////////////////////////////////////////////////////////////////////
 
-var MongoServer = function () {
+// This runs a Mongo process and restarts it whenever it fails. If it
+// restarts too often, though, it just kills the whole program!
+
+// options: appDir, port, logger
+var MongoServer = function (options) {
   var self = this;
+
+  self.appDir = options.appDir;
+  self.port = options.port;
+  self.logger = options.logger;
+
+  self.handle = null;
+  self.shuttingDown = false;
+  self.startupFuture = null;
+
+  self.errorCount = 0;
+  self.errorTimer = null;
+  self.lastRestartTime = null
+  self.startupPrintTimer = undefined;
 };
 
 _.extend(MongoServer.prototype, {
+  // Blocks (yields) until the server has started for the first time
+  // and is accepting connections. (It might subsequently die and be
+  // restarted; we won't tell you about that.)
+  //
+  // If the server fails to start for the first time (after a few
+  // restarts), we will print a message and kill the program!
+  //
+  // XXX XXX this is a change in behavior -- before, whenever mongo
+  // crashed we would restart the app. now they are independent. will
+  // apps tolerate that, or will they die immediately on startup if
+  // they can't make an initial database connection? we should look
+  // into that ... but really, if you think about it, that's not the
+  // right way for apps to behave in a HA environment, because there
+  // is always a race where they fail to start (I suppose you could
+  // take the position that they should be restarted if they fail,
+  // after a short time delay.. but still, that approach will tend to
+  // amplify failures)
+  start: function () {
+    var self = this;
 
+    if (self.handle)
+      throw new Error("already running?");
+
+    self.startupPrintTimer = setTimeout(function () {
+      process.stdout.write(
+"Initializing mongo database... this may take a moment.\n");
+    }, 5000);
+
+    self.startupFuture = new Future;
+    self._startOrRestart();
+    self.startupFuture.wait();
+  },
+
+  _startOrRestart: function () {
+    var self = this;
+
+    if (self.handle)
+      throw new Error("already running?");
+
+    self.lastRestartTime = new Date;
+    self.handle = mongoRunner.launchMongo({
+      appDir: self.appDir,
+      port: self.mongoPort,
+      onExit: _.bind(self._exited, self);
+      onListen: function () {
+        // cancel 'mongo startup is slow' message if not already printed
+        if (self.startupPrintTimer) {
+          clearTimeout(self.startupPrintTimer);
+          self.startupPrintTimer = null;
+        }
+
+        if (self.startupFuture) {
+          // It's come up successfully for the first time. Make
+          // start() return.
+          self.startupFuture['return']();
+          self.startupFuture = null;
+        }
+      }
+    });
+  },
+
+  _exited: function (code, signal, stderr) {
+    var self = this;
+    self.handle = null;
+
+    // If Mongo exited because (or rather, anytime after) we told it
+    // to exit, great, nothing to do. Otherwise, we'll print an error
+    // and try to restart.
+    if (self.shuttingDown)
+      return;
+
+    // Print the last 20 lines of stderr.
+    self.logger.log(
+      stderr.split('\n').slice(-20).join('\n') +
+      "Unexpected mongo exit code " + code + ". Restarting.\n");
+
+    // We'll restart it up to 3 times in a row. The counter is reset
+    // when 5 seconds goes without a restart. (Note that by using a
+    // timer instead of looking at the current date, we avoid getting
+    // confused by time changes.)
+    self.errorCount ++;
+    if (self.errorTimer)
+      clearTimeout(self.errorTimer);
+    setTimeout(function () {
+      self.errorCount = 0;
+    }, 5000);
+
+    if (self.errorCount < 3) {
+      // Wait a second, then restart.
+      setTimeout(inFiber(function () {
+        self._startOrRestart();
+      }), 1000);
+      return;
+    }
+
+    // Too many restarts, too quicky. It's dead. Print friendly
+    // diagnostics and kill the program (!)
+    var explanation = mongoExitCodes.Codes[code];
+    var message = "Can't start mongod\n\n";
+
+    if (explanation)
+      message += explanation.longText + "\n";
+
+    if (explanation === mongoExitCodes.EXIT_NET_ERROR) {
+      message += "\n" +
+"Check for other processes listening on port " + self.mongoPort + "\n" +
+"or other Meteor instances running in the same project.\n";
+    }
+
+    if (! explanation && /GLIBC/i.test(stderr)) {
+      message += "\n" +
+"Looks like you are trying to run Meteor on an old Linux distribution.\n" +
+"Meteor on Linux requires glibc version 2.9 or above. Try upgrading your\n" +
+"distribution to the latest version.\n";
+    }
+
+    die(message);
+  },
+
+  stop: function () {
+    var self = this;
+
+    if (! self.handle)
+      // If not running, silently do nothing.. maybe the other objects
+      // should work the same way?
+      return;
+
+    var fut = new Future;
+    // XXX fiberize upstream
+    self.shuttingDown = true;
+    self.handle.stop(function (err) {
+      if (err)
+        process.stdout.write(err.reason + "\n");
+      fut['return']();
+    });
+
+    fut.wait();
+  }
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -536,6 +714,8 @@ var Run = function (appDir, options) {
   self.listenPort = options.port;
   self.appPort = self.listenPort + 1;
   self.mongoPort = self.listenPort + 2;
+
+  // XXX XXX set these in cooperation with MongoServer
 
   // Allow override and use of external mongo. Matches code in launch_mongo.
   // XXX make this value be an option, set by command.js from the environment
@@ -573,7 +753,11 @@ var Run = function (appDir, options) {
     proxyToPort: self.appPort,
     logger: self.logger
   });
-  self.mongoHandle = null;
+  self.mongoServer = new MongoServer({
+    appDir: self.appDir,
+    port: self.mongoPort,
+    logger: self.logger
+  });
 
   self.testingPackages = !! options.testPackages;
 
@@ -581,6 +765,8 @@ var Run = function (appDir, options) {
   self.program = options.program;
   self.banner = options.banner || files.prettyPath(self.appDir);
   self.once = options.once;
+
+  // XXX have the caller pass this in?
 
   // XXX have 'release' be passed in? or determined from appDir, for
   // that matter? anyway, be consistent with bundler and other things
@@ -591,12 +777,6 @@ var Run = function (appDir, options) {
     testPackages: options.testPackages,
     release: release.current
   };
-
-  self.shuttingDown = false;
-
-  self.mongoErrorCount = 0;
-  self.mongoErrorTimer = undefined;
-  self.mongoStartupPrintTimer = undefined;
 };
 
 _.extend(Run.prototype, function () {
@@ -605,20 +785,18 @@ _.extend(Run.prototype, function () {
   // watcher.stop() as appropriate.
   //
   // XXX leave a pidfile and check if we are already running
+  //
+  // XXX or, more like, it returns almost immediately?
   run: function () {
     var self = this;
     self.proxy.start();
 
     process.stdout.write("[[[[[ " + self.appDir + " ]]]]]\n\n");
 
-    self.mongoStartupPrintTimer = setTimeout(function () {
-      process.stdout.write(
-"Initializing mongo database... this may take a moment.\n");
-    }, 5000);
-
     // XXX XXX really should not be doing this globally like this
     updater.startUpdateChecks();
-    self._launch();
+    self.mongoServer.start();
+    self._bundleAndRestart();
   },
 
   _startWatching: function (watchSet) {
@@ -641,14 +819,14 @@ _.extend(Run.prototype, function () {
         self.crashing = false;
         self.counter = 0;
         release.current.library.refresh(true); // pick up changes to packages
-        self._restartServer();
+        self._bundleAndRestart();
       }
     });
   },
 
   // XXX XXX used to return immediately, and run in a fiber..
   // XXX XXX evaluate if that's significant
-  _restartServer: function () {
+  _bundleAndRestart: function () {
     var self = this;
 
     self.running = false;
@@ -753,7 +931,7 @@ _.extend(Run.prototype, function () {
 
         self.proxy.setMode(self.crashing ? "errorpage" : "hold");
         if (! self.crashing)
-          self._restartServer();
+          self._bundleAndRestart();
       },
       program: self.program,
       onListen: function () {
@@ -773,88 +951,13 @@ _.extend(Run.prototype, function () {
     self._startWatching(watchSet);
   },
 
-  // XXX XXX used to return immediately, and run in a fiber..
-  // XXX XXX evaluate if that's significant
-  _launch: function () {
-    var self = this;
-    self.mongoHandle = mongoRunner.launchMongo({
-      appDir: self.appDir,
-      port: self.mongoPort,
-
-      onListen: function () { // On Mongo startup complete
-        // don't print mongo startup is slow warning.
-        if (self.mongoStartupPrintTimer) {
-          clearTimeout(self.mongoStartupPrintTimer);
-          self.mongoStartupPrintTimer = null;
-        }
-
-        self._restartServer();
-      },
-
-      onExit: function (code, signal, stderr) { // On Mongo dead
-        if (self.shuttingDown) {
-          return;
-        }
-
-        // Print only last 20 lines of stderr.
-        stderr = stderr.split('\n').slice(-20).join('\n');
-
-        self.logger.log(
-          stderr + "Unexpected mongo exit code " + code + ". Restarting.\n");
-
-        // if mongo dies 3 times with less than 5 seconds between
-        // each, declare it failed and die.
-        self.mongoErrorCount ++;
-        if (self.mongoErrorCount >= 3) {
-          var explanation = mongoExitCodes.Codes[code];
-          var message = "Can't start mongod\n\n";
-
-          if (explanation)
-            message += explanation.longText + "\n";
-
-          if (explanation === mongoExitCodes.EXIT_NET_ERROR) {
-            message += "\n" +
-"Check for other processes listening on port " + self.mongoPort + "\n" +
-"or other Meteor instances running in the same project.\n";
-          }
-
-          if (! explanation && /GLIBC/i.test(stderr)) {
-            message += "\n" +
-"Looks like you are trying to run Meteor on an old Linux distribution.\n" +
-"Meteor on Linux requires glibc version 2.9 or above. Try upgrading your\n" +
-"distribution to the latest version.\n";
-          }
-
-          die(message);
-        }
-
-        if (self.mongoErrorTimer)
-          clearTimeout(mongoErrorTimer);
-
-        self.mongoErrorTimer = setTimeout(function () {
-          self.mongoErrorCount = 0;
-          self.mongoErrorTimer = null;
-        }, 5000);
-
-        // Wait a sec to restart.
-        setTimeout(_.bind(self.launch, self), 1000);
-      }
-    });
-  },
-
   // XXX make this go away
   _exit: function (code) {
     var self = this;
 
     self.logger.log("Your application is exiting.");
-    self.shuttingDown = true;
 
-    if (self.mongoHandle) {
-      self.mongoHandle.stop(function (err) {
-        if (err)
-          process.stdout.write(err.reason + "\n");
-        process.exit(code);
-      });
-    }
+    self.mongoServer.stop();
+    process.exit(code);
   }
 });
