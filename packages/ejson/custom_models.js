@@ -47,10 +47,6 @@ Person.prototype = {
     return EJSON.stringify(this) == EJSON.stringify(other);
   },
 
-  typeName: function () {
-    return "Person";
-  },
-
   toEJSONValue: function () {
     return {
       name: this.name,
@@ -63,10 +59,11 @@ Person.prototype = {
 _.extend(Person, {
   fromEJSONValue: function(value) {
     return new Person(value.name, value.dob, value.address);
-  }
+  },
+  typeName: 'Person'
 });
 
-EJSON.addType("Person", Person);
+EJSON.addType(Person);
 
 _.extend(EJSONTest, {
   Address: Address,

@@ -13,6 +13,10 @@ var customTypes = {};
 // It is okay if these methods are monkey-patched on.
 //
 EJSON.addType = function (name, factory) {
+  if (name.typeName && !factory) {
+    factory = name;
+    name = factory.typeName;
+  }
   if (_.has(customTypes, name))
     throw new Error("Type " + name + " already present");
   customTypes[name] = factory;
@@ -107,7 +111,7 @@ var builtinConverters = [
       return EJSON._isCustomType(obj);
     },
     toJSONValue: function (obj) {
-      var type = obj.typeName();
+      var type = obj.constructor.typeName || obj.typeName();
       if (obj.toEJSONValue) {
         return {$type: type, $value: EJSON.toJSONValue(obj.toEJSONValue())};
       }
@@ -135,10 +139,13 @@ var builtinConverters = [
 ];
 
 EJSON._isCustomType = function (obj) {
-  return obj &&
-    (typeof obj.toEJSONValue === 'function' ||
-     typeof obj.toJSONValue === 'function') &&
-    typeof obj.typeName === 'function' &&
+  if (!obj ||
+      (typeof obj.toEJSONValue !== 'function' &&
+       typeof obj.toJSONValue !== 'function'))
+    return false;
+  if (obj.constructor.typeName !== undefined)
+    return _.has(customTypes, obj.constructor.typeName);
+  return typeof obj.typeName === 'function' &&
     _.has(customTypes, obj.typeName());
 };
 
