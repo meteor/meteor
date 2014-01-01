@@ -309,7 +309,9 @@ var logInToGalaxy = function (galaxyName) {
       method: 'GET',
       strictSSL: true,
       headers: {
-        cookie: 'GALAXY_OAUTH_SESSION=' + session
+        cookie: 'GALAXY_OAUTH_SESSION=' + session +
+          '; GALAXY_USER_AGENT_TOOL=' +
+          encodeURIComponent(JSON.stringify(utils.getAgentInfo()))
       }
     });
     var body = JSON.parse(galaxyResult.body);
