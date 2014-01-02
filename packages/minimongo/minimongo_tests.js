@@ -2631,6 +2631,7 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
   coll = new LocalCollection();
   coll.insert({
     _id: "x",
+    k: 9,
     a: [
       {b: [
         [100, 100],
@@ -2638,6 +2639,7 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
       {b: [150,  150]}]});
   coll.insert({
     _id: "y",
+    k: 9,
     a: {b: [5, 5]}});
   var testNear = function (near, md, expected) {
     test.equal(
@@ -2652,14 +2654,23 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
   // 'y'.
   testNear([2, 2], 1000, ['x', 'y']);
 
+  // Ensure that distance is used as a tie-breaker for sort.
+  test.equal(
+    _.pluck(coll.find({'a.b': {$near: [1, 1]}}, {sort: {k: 1}}).fetch(), '_id'),
+    ['x', 'y']);
+  test.equal(
+    _.pluck(coll.find({'a.b': {$near: [5, 5]}}, {sort: {k: 1}}).fetch(), '_id'),
+    ['y', 'x']);
+
   var operations = [];
   var cbs = log_callbacks(operations);
   var handle = coll.find({'a.b': {$near: [7,7]}}).observe(cbs);
 
   test.length(operations, 2);
-  test.equal(operations.shift(), ['added', {a:{b:[5,5]}}, 0, null]);
+  test.equal(operations.shift(), ['added', {k:9, a:{b:[5,5]}}, 0, null]);
   test.equal(operations.shift(),
-             ['added', {a:[{b:[[100,100],[1,1]]},{b:[150,150]}]}, 1, null]);
+             ['added', {k: 9, a:[{b:[[100,100],[1,1]]},{b:[150,150]}]},
+              1, null]);
   // This needs to be inserted in the MIDDLE of the two existing ones.
   coll.insert({a: {b: [3,3]}});
   test.length(operations, 1);

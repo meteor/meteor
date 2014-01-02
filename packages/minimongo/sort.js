@@ -13,7 +13,6 @@
 
 Sorter = function (spec) {
   var self = this;
-  self._sortFunction = null;
 
   var sortSpecParts = [];
 
@@ -41,12 +40,6 @@ Sorter = function (spec) {
   } else {
     throw Error("Bad sort specification: ", JSON.stringify(spec));
   }
-
-  // If there are no sorting rules specified, leave _sortFunction as null.  This
-  // will allow us to have a special case where we sort on distances if query
-  // involved the $near operator.
-  if (sortSpecParts.length === 0)
-    return;
 
   // reduceValue takes in all the possible values for the sort key along various
   // branches, and returns the min or max value (according to the bool
@@ -83,37 +76,47 @@ Sorter = function (spec) {
     return reduced;
   };
 
-  self._sortFunction = function (a, b) {
-    for (var i = 0; i < sortSpecParts.length; ++i) {
-      var specPart = sortSpecParts[i];
+  var comparators = _.map(sortSpecParts, function (specPart) {
+    return function (a, b) {
       var aValue = reduceValue(specPart.lookup(a), specPart.ascending);
       var bValue = reduceValue(specPart.lookup(b), specPart.ascending);
       var compare = LocalCollection._f._cmp(aValue, bValue);
-      if (compare !== 0)
-        return specPart.ascending ? compare : -compare;
+      return specPart.ascending ? compare : -compare;
     };
-    return 0;
-  };
+  });
+
+  self._baseComparator = composeComparators(comparators);
 };
 
 Sorter.prototype.getComparator = function (options) {
   var self = this;
-  // If there was a sort specification, use it.
-  // XXX do we not use distance as a secondary sort key?
-  if (self._sortFunction)
-    return self._sortFunction;
 
-  // If there was no sort specification and we have no distances, everything is
-  // equal.
+  // If we have no distances, just use the comparator from the source
+  // specification (which defaults to "everything is equal".
   if (!options || !options.distances) {
-    return function (a, b) {
-      return 0;
-    };
+    return self._baseComparator;
   }
 
-  return function (a, b) {
+  // Return a comparator which first tries the sort specification, and if that
+  // says "it's equal", breaks ties using $near distances.
+  return composeComparators([self._baseComparator, function (a, b) {
     return options.distances.get(a._id) - options.distances.get(b._id);
-  };
+  }]);
 };
 
 MinimongoTest.Sorter = Sorter;
+
+// Given an array of comparators
+// (functions (a,b)->(negative or positive or zero)), returns a single
+// comparator which uses each comparator in order and returns the first
+// non-zero value.
+var composeComparators = function (comparatorArray) {
+  return function (a, b) {
+    for (var i = 0; i < comparatorArray.length; ++i) {
+      var compare = comparatorArray[i](a, b);
+      if (compare !== 0)
+        return compare;
+    }
+    return 0;
+  };
+};
