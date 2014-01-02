@@ -20,13 +20,11 @@ var inFiber = require('./fiber-helpers.js').inFiber;
 // XXX XXX NEXT (if you want to do more):
 
 // - make bundler.bundle() not take a release (get it from the app!)
+//   - but don't do this until you merge andrew's stuff
+// - move mongo shell function from deploy.js into mongo-runner.js
 // - possibly fold the mongo restart logic into the mongo-runner.js
 // - break each thing out into a separate file.. run-proxy, run-app,
 //   run-updater, run-mongo..
-//   - be careful about overabstracting things, though, to the point
-//     that it becomes hard to create the holistic UX you want, or to
-//     the point that you spend a bunch of time on how many loggers
-//     can dance on the head of a pin
 // - if really feeling ambitious, get rid of process.exit everywhere
 //   (and/or make everything use the logger instead of stdout/stderr?)
 // - turn the whole thing into a local galaxy emulator! the prize here
@@ -199,12 +197,13 @@ _.extend(Logger.prototype, {
 // Proxy
 ///////////////////////////////////////////////////////////////////////////////
 
-// options: listenPort, proxyToPort, logger
+// options: listenPort, proxyToPort, onFailure, logger
 var Proxy = function (options) {
   var self = this;
 
   self.listenPort = options.listenPort;
   self.proxyToPort = options.proxyToPort;
+  self.onFailure = options.onFailure || function () {};
   self.logger = options.logger;
 
   self.mode = "hold";
@@ -251,15 +250,16 @@ _.extend(Proxy.prototype, {
     self.server.on('error', function (err) {
       if (err.code == 'EADDRINUSE') {
         var port = self.listenPort;
-        die(
+        self.logger.log(
 "Can't listen on port " + port + ". Perhaps another Meteor is running?\n" +
 "\n" +
 "Running two copies of Meteor in the same application directory\n" +
 "will not work. If something else is using port " + port + ", you can\n" +
-"specify an alternative port with --port <port>.\n");
+"specify an alternative port with --port <port>.");
       } else {
-        die(err + "\n");
+        self.logger.log('' + err);
       }
+      self.onFailure();
     });
 
     // don't crash if the app doesn't respond. instead return an error
@@ -368,6 +368,21 @@ _.extend(Proxy.prototype, {
 // AppProcess
 ///////////////////////////////////////////////////////////////////////////////
 
+// Given a bundle, run a program in the bundle. Report when it dies.
+//
+// Call start() to start the process. You will then eventually receive
+// a call to onExit(code, signal): code is the numeric exit code of a
+// normal exit, signal is the string signal name if killed, and if
+// both are undefined it means something went wrong in invoking the
+// program and it was logged.
+//
+// If the app successfully starts up, you will also receive onListen()
+// once the app says it's ready to receive connections.
+//
+// Call stop() at any time after start() returns to terminate the
+// process if it is running. You will get an onExit callback if this
+// resulted in the process dying. stop() is idempotent.
+//
 // Required options: bundlePath, port, rootUrl, mongoUrl, oplogUrl, logger
 // Optional options: onExit, onListen, program, nodeOptions, settings
 
@@ -379,18 +394,20 @@ var AppProcess = function (options) {
   self.rootUrl = options.rootUrl;
   self.oplogUrl = option.oplogUrl;
   self.logger = options.logger;
-  self.onExit = options.onExit;
 
-  self.program = options.program || null;
+  self.onExit = options.onExit;
   self.onListen = options.onListen;
+  self.program = options.program || null;
   self.nodeOptions = options.nodeOptions || [];
   self.settings = options.settings;
 
   self.proc = null;
   self.keepaliveTimer = null;
+  self.madeExitCallback = false;
 };
 
 _.extend(AppProcess.prototype, {
+  // Call to start the process.
   start: function () {
     var self = this;
 
@@ -399,6 +416,14 @@ _.extend(AppProcess.prototype, {
 
     // Start the app!
     self.proc = self._spawn();
+
+    if (self.proc === null) {
+      self.logger.log("Program '" + self.program + "' not found.");
+
+      if (! self.madeExitCallback)
+        self.onExit && self.onExit();
+      self.madeExitCallback = true;
+    }
 
     // Send stdout and stderr to the logger
     var eachline = require('eachline');
@@ -424,8 +449,21 @@ _.extend(AppProcess.prototype, {
         self.logger.log('=> Exited with code: ' + code);
       }
 
-      self.onExit && self.onExit(code, signal);
+      if (! self.madeExitCallback)
+        self.onExit && self.onExit(code, signal);
+      self.madeExitCallback = true;
     });
+
+    proc.on('error', function (err) {
+      self.logger.log("=> Couldn't spawn process: " + err.message);
+
+      // node docs say that it might make both an 'error' and a
+      // 'close' callback, so we use a guard to make sure we only call
+      // onExit once.
+      if (! self.madeExitCallback)
+        self.onExit && self.onExit();
+      self.madeExitCallback = true;
+    };
 
     // This happens sometimes when we write a keepalive after the app
     // is dead. If we don't register a handler, we get a top level
@@ -445,19 +483,18 @@ _.extend(AppProcess.prototype, {
     }, 2000);
   },
 
+  // Idempotent
   stop: function () {
     var self = this;
 
-    if (! self.proc)
-      throw new Error("not running?");
-
-    if (self.proc.pid) {
+    if (self.proc && self.proc.pid) {
       self.proc.removeAllListeners('close');
       self.proc.kill();
     }
     self.proc = null;
 
-    clearInterval(self.keepaliveTimer);
+    if (self.keepaliveTimer)
+      clearInterval(self.keepaliveTimer);
     self.keepaliveTimer = null;
   },
 
@@ -482,7 +519,8 @@ _.extend(AppProcess.prototype, {
   },
 
   // Spawn the server process and return the handle from
-  // child_process.spawn.
+  // child_process.spawn, or return null if the requested program
+  // wasn't found in the bundle.
   _spawn: function () {
     var self = this;
 
@@ -515,7 +553,7 @@ _.extend(AppProcess.prototype, {
       });
 
       if (! programPath)
-        die("Program '" + self.program + "' not found.\n");
+        return null;
 
       return child_process.spawn(programPath, [], {
         env: self._computeEnvironment()
@@ -614,10 +652,14 @@ _.extend(AppRunner.prototype, {
   //   match the currently running version of Meteor (eg, the user
   //   typed 'meteor update' in another window).
   //
-  // Additionally, for all but 'wrong-release', 'bundleResult' will
-  // will have the return value from bundler.bundle(), which contains
-  // build errors (in the case of 'bundle-fail') and the files to
-  // monitor for changes that should trigger a rebuild.
+  // - 'stopped': stop() was called (you will not see this if you call
+  //   runOnce directly, since stop() works only with start())
+  //
+  // Additionally, for 'terminated', 'bundle-fail', and 'changed',
+  // 'bundleResult' will will have the return value from
+  // bundler.bundle(), which contains build errors (in the case of
+  // 'bundle-fail') and the files to monitor for changes that should
+  // trigger a rebuild.
   runOnce: function (exitOnChange, onListen) {
     var self = this;
 
@@ -824,15 +866,17 @@ _.extend(AppRunner.prototype, {
 ///////////////////////////////////////////////////////////////////////////////
 
 // This runs a Mongo process and restarts it whenever it fails. If it
-// restarts too often, though, it just kills the whole program!
-
-// options: appDir, port, logger
+// restarts too often, we give up on restarting it, diagnostics are
+// logged, and onFailure is called.
+//
+// options: appDir, port, logger, onFailure
 var MongoRunner = function (options) {
   var self = this;
 
   self.appDir = options.appDir;
   self.port = options.port;
   self.logger = options.logger;
+  self.onFailure = options.onFailure;
 
   self.handle = null;
   self.shuttingDown = false;
@@ -941,45 +985,42 @@ _.extend(MongoRunner.prototype, {
     // Too many restarts, too quicky. It's dead. Print friendly
     // diagnostics and kill the program (!)
     var explanation = mongoExitCodes.Codes[code];
-    var message = "Can't start mongod\n\n";
+    var message = "Can't start mongod\n";
 
     if (explanation)
-      message += explanation.longText + "\n";
+      message += "\n" + explanation.longText;
 
     if (explanation === mongoExitCodes.EXIT_NET_ERROR) {
-      message += "\n" +
+      message += "\n\n" +
 "Check for other processes listening on port " + self.mongoPort + "\n" +
-"or other Meteor instances running in the same project.\n";
+"or other Meteor instances running in the same project.";
     }
 
     if (! explanation && /GLIBC/i.test(stderr)) {
-      message += "\n" +
+      message += "\n\n" +
 "Looks like you are trying to run Meteor on an old Linux distribution.\n" +
 "Meteor on Linux requires glibc version 2.9 or above. Try upgrading your\n" +
-"distribution to the latest version.\n";
+"distribution to the latest version.";
     }
 
-    die(message);
+    self.logger.log(message);
+    self.onFailure && self.onFailure();
   },
 
+  // Idempotent
   stop: function () {
     var self = this;
 
-    if (! self.handle)
-      // If not running, silently do nothing.. maybe the other objects
-      // should work the same way?
-      return;
-
     var fut = new Future;
-    // XXX fiberize upstream
     self.shuttingDown = true;
-    self.handle.stop(function (err) {
+    self.handle.stop(function (err) { // XXX fiberize upstream?
       if (err)
         process.stdout.write(err.reason + "\n");
       fut['return']();
     });
 
     fut.wait();
+    self.handle = null;
   }
 });
 
@@ -1079,13 +1120,15 @@ var Runner = function (appDir, options) {
   self.proxy = new Proxy({
     listenPort: self.listenPort,
     proxyToPort: self.appPort,
-    logger: self.logger
+    logger: self.logger,
+    onFailure: _.bind(self._failure, self)
   });
 
   self.mongoRunner = new MongoRunner({
     appDir: self.appDir,
     port: self.mongoPort,
-    logger: self.logger
+    logger: self.logger,
+    onFailure: _.bind(self._failure, self)
   });
 
   self.updater = new Updater;
@@ -1105,8 +1148,9 @@ var Runner = function (appDir, options) {
 
 _.extend(Runner.prototype, function () {
   // XXX leave a pidfile and check if we are already running
-  start: function () {
+  start: function (onFailure) {
     var self = this;
+    self.onFailure = onFailure;
     self.proxy.start();
 
     // print the banner only once we've successfully bound the port
@@ -1136,10 +1180,23 @@ _.extend(Runner.prototype, function () {
     self.proxy.start();
     self.mongoRunner.start();
     var result = self.appRunner.runOnce();
+XXX XXX handle failures
     self.proxy.stop();
     self.mongoRunner.stop();
 
     return result;
+  },
+
+  _failure: function () {
+    var self = this;
+    if (self.onFailure) {
+      // Running via start()
+XXX edit call sites to honor
+      self.onFailure();
+    } else {
+      // Running via runOnce()
+      XXX XXX
+    }
   }
 });
 

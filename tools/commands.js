@@ -139,10 +139,15 @@ var runOnceAndExit = function (appDir, options) {
     if (result.signal) {
       process.stderr.write("Killed (" + result.signal + ")\n");
       process.exit(255);
-    } else {
+    } else if (typeof result.code === "number") {
       // We used to print 'Your application is exiting' here, but that
       // seems unnecessarily chatty? runOnce is otherwise silent
       process.exit(result.code);
+    } else {
+      // if there is neither a code nor a signal, it means that we
+      // failed to start the process. we logged the reason. probably a
+      // bad program name.
+      process.exit(254);
     }
   }
 };
