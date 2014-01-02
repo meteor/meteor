@@ -139,7 +139,12 @@ console.log("app that uses gcd - clean run");
 assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0'});
   var tmpOutputDir = tmpDir();
-  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', release: rel});
+  var result = bundler.bundle({
+    appDir: appWithPackageDir,
+    outputPath: tmpOutputDir,
+    nodeModulesMode: 'skip',
+    buildOptions: { release: release.load(null) }
+  });
   assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
   _assertCorrectPackageNpmDir({gcd: '0.0.0'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0'});
@@ -148,7 +153,12 @@ assert.doesNotThrow(function () {
 console.log("app that uses gcd - no changes, running again");
 assert.doesNotThrow(function () {
   var tmpOutputDir = tmpDir();
-  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', release: rel});
+  var result = bundler.bundle({
+    appDir: appWithPackageDir,
+    outputPath: tmpOutputDir,
+    nodeModulesMode: 'skip',
+    buildOptions: { release: release.load(null) }
+  });
   assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
   _assertCorrectPackageNpmDir({gcd: '0.0.0'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0'});
@@ -180,7 +190,12 @@ assert.doesNotThrow(function () {
       assert.fail("shouldn't be installing specific npm packages: " + args[1]);
     return bareExecFileSync(file, args, opts);
   };
-  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', release: rel});
+  var result = bundler.bundle({
+    appDir: appWithPackageDir,
+    outputPath: tmpOutputDir,
+    nodeModulesMode: 'skip',
+    buildOptions: { release: release.load(null) }
+  });
   meteorNpm._execFileSync = bareExecFileSync;
 
   assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
@@ -193,7 +208,12 @@ console.log("app that uses gcd - add mime and semver");
 assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
   var tmpOutputDir = tmpDir();
-  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', release: rel});
+  var result = bundler.bundle({
+    appDir: appWithPackageDir,
+    outputPath: tmpOutputDir,
+    nodeModulesMode: 'skip',
+    buildOptions: { release: release.load(null) }
+  });
   assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
   _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
@@ -214,7 +234,12 @@ assert.doesNotThrow(function () {
   assert(!fs.existsSync(path.join(nodeModulesMimeDir)));
 
   lib.refresh();
-  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', release: rel});
+  var result = bundler.bundle({
+    appDir: appWithPackageDir,
+    outputPath: tmpOutputDir,
+    nodeModulesMode: 'skip',
+    buildOptions: { release: release.load(null) }
+  });
   assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
   _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
@@ -224,7 +249,12 @@ console.log("app that uses gcd - upgrade mime, remove semver");
 assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0', mime: '1.2.8'});
   var tmpOutputDir = tmpDir();
-  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', release: rel});
+  var result = bundler.bundle({
+    appDir: appWithPackageDir,
+    outputPath: tmpOutputDir,
+    nodeModulesMode: 'skip',
+    buildOptions: { release: release.load(null) }
+  });
   assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
   _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.8'});
   _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0', mime: '1.2.8'});
@@ -234,7 +264,12 @@ console.log("app that uses gcd - try downgrading mime to non-existant version");
 assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0', mime: '0.1.2'});
   var tmpOutputDir = tmpDir();
-  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', release: rel});
+  var result = bundler.bundle({
+    appDir: appWithPackageDir,
+    outputPath: tmpOutputDir,
+    nodeModulesMode: 'skip',
+    buildOptions: { release: release.load(null) }
+  });
   assert(result.errors);
   var job = _.find(result.errors.jobs, function (job) {
     return job.title === "building package `test-package`";
@@ -248,7 +283,12 @@ console.log("app that uses gcd - downgrade mime to an existant version");
 assert.doesNotThrow(function () {
   updateTestPackage({gcd: '0.0.0', mime: '1.2.7'});
   var tmpOutputDir = tmpDir();
-  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', release: rel});
+  var result = bundler.bundle({
+    appDir: appWithPackageDir,
+    outputPath: tmpOutputDir,
+    nodeModulesMode: 'skip',
+    buildOptions: { release: release.load(null) }
+  });
   assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
 
   _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7'});
@@ -261,7 +301,12 @@ assert.doesNotThrow(function () {
   var deps = {gzippo: 'https://github.com/meteor/gzippo/tarball/1e4b955439abc643879ae264b28a761521818f3b'};
   updateTestPackage(deps);
   var tmpOutputDir = tmpDir();
-  var result = bundler.bundle(appWithPackageDir, tmpOutputDir, {nodeModulesMode: 'skip', release: rel});
+  var result = bundler.bundle({
+    appDir: appWithPackageDir,
+    outputPath: tmpOutputDir,
+    nodeModulesMode: 'skip',
+    buildOptions: { release: release.load(null) }
+  });
   assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
   _assertCorrectPackageNpmDir(deps);
   _assertCorrectBundleNpmContents(tmpOutputDir, deps);

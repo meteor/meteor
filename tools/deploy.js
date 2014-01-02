@@ -252,7 +252,7 @@ var canonicalizeSite = function (site) {
 // - site: site to deploy as
 // - settings: deploy settings to use, if any (omit to leave unchanged
 //   from previous deploy of the app, if any)
-// - bundleOptions: additional options to pass to the bundler
+// - buildOptions: the 'buildOptions' argument to the bundler
 var bundleAndDeploy = function (options) {
   var site = canonicalizeSite(options.site);
   if (! site)
@@ -267,13 +267,17 @@ var bundleAndDeploy = function (options) {
     process.exit(1);
   }
 
-  var build_dir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
-  var bundle_path = path.join(build_dir, 'bundle');
+  var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
+  var bundlePath = path.join(buildDir, 'bundle');
 
   process.stdout.write('Deploying to ' + site + '.  Bundling...\n');
   var bundler = require('./bundler.js');
-  var bundleResult = bundler.bundle(options.appDir, bundle_path,
-                                    options.bundleOptions);
+  var bundleResult = bundler.bundle({
+    appDir: options.appDir,
+    outputPath: bundlePath,
+    nodeModulesMode: "skip",
+    buildOptions: options.buildOptions
+  });
   if (bundleResult.errors) {
     process.stdout.write("\n\nErrors prevented deploying:\n");
     process.stdout.write(bundleResult.errors.formatMessages());
@@ -287,7 +291,7 @@ var bundleAndDeploy = function (options) {
     operation: 'deploy',
     site: site,
     qs: options.settings ? { settings: options.settings} : {},
-    bodyStream: files.createTarGzStream(path.join(build_dir, 'bundle')),
+    bodyStream: files.createTarGzStream(path.join(buildDir, 'bundle')),
     expectPayload: ['url'],
     preflightPassword: preflight.preflightPassword
   });
@@ -302,7 +306,7 @@ var bundleAndDeploy = function (options) {
   var hostname = deployedAt.hostname;
 
   process.stdout.write('Now serving at ' + hostname + '\n');
-  files.rm_recursive(build_dir);
+  files.rm_recursive(buildDir);
 
   if (! hostname.match(/meteor\.com$/)) {
     var dns = require('dns');
@@ -514,21 +518,21 @@ site + ": " + "successfully transferred to your account.\n" +
 };
 
 
-
+// XXX move into a different file
 var runMongoShell = function (url) {
-  var mongo_path = path.join(files.getDevBundle(), 'mongodb', 'bin', 'mongo');
-  var mongo_url = require('url').parse(url);
-  var auth = mongo_url.auth && mongo_url.auth.split(':');
-  var ssl = require('querystring').parse(mongo_url.query).ssl === "true";
+  var mongoPath = path.join(files.getDevBundle(), 'mongodb', 'bin', 'mongo');
+  var mongoUrl = require('url').parse(url);
+  var auth = mongoUrl.auth && mongoUrl.auth.split(':');
+  var ssl = require('querystring').parse(mongoUrl.query).ssl === "true";
 
   var args = [];
   if (ssl) args.push('--ssl');
   if (auth) args.push('-u', auth[0]);
   if (auth) args.push('-p', auth[1]);
-  args.push(mongo_url.hostname + ':' + mongo_url.port + mongo_url.pathname);
+  args.push(mongoUrl.hostname + ':' + mongoUrl.port + mongoUrl.pathname);
 
   var child_process = require('child_process');
-  var proc = child_process.spawn(mongo_path,
+  var proc = child_process.spawn(mongoPath,
                                  args,
                                  { stdio: 'inherit' });
 };

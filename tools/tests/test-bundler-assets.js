@@ -6,12 +6,13 @@ var appWithPrivate = path.join(__dirname, 'app-with-private');
 
 console.log("Bundle app with public/ directory");
 assert.doesNotThrow(function () {
-  var rel = release.load(null);
   var tmpOutputDir = tmpDir();
-  var result = bundler.bundle(appWithPublic, tmpOutputDir, {
+  var result = bundler.bundle({
+    appDir: appWithPrivate,
+    outputPath: tmpOutputDir,
     nodeModulesMode: 'skip',
-    release: rel
-  });
+    buildOptions: { release: release.load(null) }
+  })
   var clientManifest = JSON.parse(
     fs.readFileSync(
       path.join(tmpOutputDir, "programs", "client", "program.json")
@@ -43,10 +44,12 @@ assert.doesNotThrow(function () {
   });
 
   var tmpOutputDir = tmpDir();
-  var result = bundler.bundle(appWithPrivate, tmpOutputDir, {
+  var result = bundler.bundle({
+    appDir: appWithPrivate,
+    outputPath: tmpOutputDir,
     nodeModulesMode: 'skip',
-    release: rel
-  });
+    buildOptions: { release: release.load(null) }
+  })
   var serverManifest = JSON.parse(
     fs.readFileSync(
       path.join(tmpOutputDir, "programs", "server",

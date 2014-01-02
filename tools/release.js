@@ -118,6 +118,9 @@ release.usingRightReleaseForApp = function (appDir) {
     return true;
 
   var appRelease = project.getMeteorReleaseVersion(appDir);
+  if (appRelease === null)
+    // Really old app that has no release specified.
+    appRelease = warehouse.latestRelease();
   return release.current.appRelease === appRelease;
 };
 
@@ -149,6 +152,15 @@ release.latestDownloaded = function () {
 //   - forApp: cosmetic effect only. If set, change the messages to
 //     reflect that we're downloading the release because an app needs
 //     it.
+//
+// XXX packageDirs really should not be part of Release, and
+// override() really should not be a method on a global singleton
+// Library. Instead, there should be a thing like a "package resolver"
+// that can be created off of a release and then configured with
+// package name overrides and additional search paths. But this isn't
+// pressing so we'll do it later. (My actual hope is that by time we
+// get around to doing it we'll have found a less hacky way than
+// override() to load a package from a directory.)
 release.load = function (name, options) {
   options = options || {};
 

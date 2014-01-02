@@ -1,6 +1,8 @@
 // During automated QA of the updater, modify this file to set testingUpdater to
 // true. This will make it act as if it is at version 0.1.0 and use test URLs
 // for update checks.
+// XXX is this still used?
+// XXX replace with environment variable, or command-line flag?
 var testingUpdater = false;
 
 var inFiber = require('./fiber-helpers.js').inFiber;
@@ -25,11 +27,24 @@ exports.getManifest = function () {
 };
 
 /**
- * Call inside a fiber. Check for updates once, blocking as necessary,
- * and then return. If an update is found, download and install it.
+ * Check to see if an update is available. If so, download and install
+ * it before returning.
+ *
  * If 'silent' is true, suppress chatter.
  */
-exports.performOneUpdateCheck = function (silent) {
+var checkInProgress = false;
+exports.tryToDownloadUpdate = function (silent) {
+  // Don't run more than one check simultaneously. It should be
+  // harmless but having two downloads happening simultaneously (and
+  // two sets of messages being printed) would be confusing.
+  if (checkInProgress)
+    return;
+  checkInProgress = true;
+  check(silent);
+  checkInProgress = false;
+};
+
+var check = function (silent) {
   var manifest = null;
   try {
     manifest = exports.getManifest();
@@ -95,12 +110,4 @@ exports.performOneUpdateCheck = function (silent) {
       "=> Meteor %s is available. Update this project with 'meteor update'.",
       localLatestRelease);
   }
-};
-
-exports.startUpdateChecks = function () {
-  var updateCheck = inFiber(function () {
-    exports.performOneUpdateCheck(false);
-  });
-  setInterval(updateCheck, 12*60*60*1000); // twice a day
-  updateCheck(); // and now.
 };

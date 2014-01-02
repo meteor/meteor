@@ -192,7 +192,7 @@ exports.deleteApp = function (app) {
 // - app
 // - appDir
 // - settings
-// - bundleOptions
+// - buildOptions
 // - starball
 // XXX refactor this to separate the "maybe bundle" part from "actually deploy"
 //     so we can be careful to not rely on any of the app dir context when
@@ -205,15 +205,19 @@ exports.deploy = function (options) {
   var bundler = require('./bundler.js');
   var starball;
 
-  // Don't try to connect to galaxy before the bundle is done. Because bundling
-  // doesn't yield, this will cause the connection to timeout. Eventually we'd
-  // like to have bundle yield, so that we can connect (and make sure auth
-  // works) before bundling.
+  // Don't try to connect to galaxy before the bundle is done. Because
+  // bundling doesn't yield, this will cause the connection to time
+  // out. Eventually we'd like to have bundle yield, so that we can
+  // connect (and make sure auth works) before bundling.
 
   if (!options.starball) {
     process.stdout.write('Deploying ' + options.app + '. Bundling...\n');
-    var bundleResult = bundler.bundle(options.appDir, bundlePath,
-                                      options.bundleOptions);
+    var bundleResult = bundler.bundle({
+      appDir: options.appDir,
+      outputPath: bundlePath,
+      nodeModulesMode: 'skip',
+      buildOptions: options.buildOptions
+    });
     if (bundleResult.errors) {
       process.stdout.write("\n\nErrors prevented deploying:\n");
       process.stdout.write(bundleResult.errors.formatMessages());

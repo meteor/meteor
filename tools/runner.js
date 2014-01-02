@@ -6,7 +6,6 @@ var Fiber = require('fibers');
 var files = require('./files.js');
 var watch = require('./watch.js');
 var project = require('./project.js');
-var updater = require('./updater.js');
 var bundler = require('./bundler.js');
 var mongoRunner = require('./mongo-runner.js');
 var mongoExitCodes = require('./mongo-exit-codes.js');
@@ -20,11 +19,8 @@ var inFiber = require('./fiber-helpers.js').inFiber;
 
 // XXX XXX NEXT (if you want to do more):
 
-// - fold app bundle/restart logic into AppServer, so that ultimately
-//   the top-level runner object can just be a thing that manages a
-//   flock of processes without knowing too much about them.
+// - make bundler.bundle() not take a release (get it from the app!)
 // - possibly fold the mongo restart logic into the mongo-runner.js
-// - make updater into an object with start and stop methods
 // - break each thing out into a separate file.. run-proxy, run-app,
 //   run-updater, run-mongo..
 //   - be careful about overabstracting things, though, to the point
@@ -369,13 +365,13 @@ _.extend(Proxy.prototype, {
 });
 
 ///////////////////////////////////////////////////////////////////////////////
-// AppServer
+// AppProcess
 ///////////////////////////////////////////////////////////////////////////////
 
 // Required options: bundlePath, port, rootUrl, mongoUrl, oplogUrl, logger
 // Optional options: onExit, onListen, program, nodeOptions, settings
 
-var AppServer = function (options) {
+var AppProcess = function (options) {
   var self = this;
 
   self.bundlePath = options.bundlePath;
@@ -394,7 +390,7 @@ var AppServer = function (options) {
   self.keepaliveTimer = null;
 };
 
-_.extend(AppServer.prototype, {
+_.extend(AppProcess.prototype, {
   start: function () {
     var self = this;
 
@@ -428,7 +424,7 @@ _.extend(AppServer.prototype, {
         self.logger.log('=> Exited with code: ' + code);
       }
 
-      self.onExit && self.onExit(code);
+      self.onExit && self.onExit(code, signal);
     });
 
     // This happens sometimes when we write a keepalive after the app
@@ -499,7 +495,7 @@ _.extend(AppServer.prototype, {
       opts.push('--keepalive');
 
       return child_process.spawn(process.execPath, opts, {
-        env: self._computeEnvironment();
+        env: self._computeEnvironment()
       });
     } else {
       // Star. Read the metadata to find the path to the program to run.
@@ -529,6 +525,301 @@ _.extend(AppServer.prototype, {
 });
 
 ///////////////////////////////////////////////////////////////////////////////
+// AppRunner
+///////////////////////////////////////////////////////////////////////////////
+
+// Given an app, bundle and run the app. Communicates with a Proxy to
+// tell it when the app is up.
+//
+// Can run in two modes. In the first, you call start() and AppRunner
+// works interactively in the background, restarting the process when
+// it dies, and waits for a file change if it crashes repeatedly or
+// fails to bundle. It prints status and error messages as it
+// goes. Call stop() to shut it down.
+//
+// In the other mode, you call runOnce() and the app is bundled and
+// run exactly once, and runOnce() returns the app's exit code.
+//
+// options: appDir, appDirForVersionCheck (defaults to appDir), port,
+// buildOptions, rootUrl, settingsFile, program, proxy, logger
+var AppRunner = function (options) {
+  var self = this;
+
+  self.appDir = options.appDir;
+  self.appDirForVersionCheck = options.appDirForVersionCheck || self.appDir;
+  self.port = options.port;
+  self.buildOptions = options.buildOptions;
+  self.rootUrl = options.rootUrl;
+  self.settingsFile = options.settingsFile;
+  self.program = options.program;
+  self.proxy = options.proxy;
+  self.logger = options.logger;
+
+  self.started = false;
+  self.runFuture = null;
+  self.exitFuture = null;
+};
+
+_.extend(AppRunner.prototype, {
+  // Start the app running, and restart it as necessary. Returns
+  // immediately.
+  start: function () {
+    var self = this;
+
+    if (self.started)
+      throw new Error("already started?");
+    self.started = true;
+
+    new Fiber(function () {
+      self._fiber();
+    }).run();
+  },
+
+  // Shut down the app. stop() will block until the app is shut
+  // down. This may involve waiting for bundling to finish.
+  stop: function () {
+    var self = this;
+
+    if (! self.started)
+      throw new Error("not started?");
+
+    self.exitFuture = new Future;
+    if (self.runFuture)
+      self.runFuture['return']({ outcome: 'stopped' });
+
+    self.exitFuture.wait();
+    self.exitFuture = null;
+    self.started = false;
+  },
+
+  // Run the program once, wait for it to exit, and then return. If
+  // exitOnChange is true (the default is false), then watch the
+  // program's source files for changes, and if any of them change
+  // then kill the program and return. If onListen is provided, it is
+  // called when the app has started and is listening for connections.
+  //
+  // Doesn't print anything.
+  //
+  // Returns an object with a key 'outcome' which will have one of the
+  // following values:
+  //
+  // - 'terminated': the process exited. Either the 'code' or 'signal'
+  //   attribute will also be set.
+  //
+  // - 'bundle-fail': bundling failed. The 'bundleResult' attribute
+  //
+  // - 'changed': exitOnChange was set and a source file changed.
+  //
+  // - 'wrong-release': the release that this app targets does not
+  //   match the currently running version of Meteor (eg, the user
+  //   typed 'meteor update' in another window).
+  //
+  // Additionally, for all but 'wrong-release', 'bundleResult' will
+  // will have the return value from bundler.bundle(), which contains
+  // build errors (in the case of 'bundle-fail') and the files to
+  // monitor for changes that should trigger a rebuild.
+  runOnce: function (exitOnChange, onListen) {
+    var self = this;
+
+    self.logger.clearLog();
+
+    // Check to make sure we're running the right version of Meteor.
+    //
+    // We let you override appDir and use a different directory for
+    // this check for the benefit of 'meteor test-packages', which
+    // generates a test harness app on the fly (and sets it release to
+    // release.current), but we still want to detect the mismatch if
+    // you are testing packages from an app and you 'meteor update'
+    // that app.
+    if (self.appDirForVersionCheck &&
+        ! release.usingRightReleaseForApp(self.appDirForVersionCheck)) {
+      return { outcome: 'wrong-release' };
+    }
+
+    // Bundle up the app
+    if (! self.firstRun)
+      release.current.library.refresh(true); // pick up changes to packages
+
+    self.proxy.setMode("hold");
+    var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
+
+    var bundleResult = bundler.bundle({
+      appDir: self.appDir,
+      outputPath: bundlePath,
+      nodeModulesMode: "symlink",
+      buildOptions: self.buildOptions
+    });
+
+    if (bundleResult.errors)
+      return {
+        outcome: 'bundle-fail',
+        bundleResult: bundleResult
+      };
+    var watchSet = bundleResult.watchSet;
+
+    // Read the settings file, if any
+    var settings = null;
+    if (self.settingsFile)
+      settings = runner.getSettings(self.settingsFile, watchSet);
+
+    // Atomically (1) see if we've been stop()'d, (2) if not, create a
+    // future that can be used to stop() us once we start running.
+    if (self.exitFuture)
+      return { outcome: 'stopped' };
+    if (self.runFuture)
+      throw new Error("already have future?");
+    self.runFuture = new Future;
+
+    // Run the program
+    var appProcess = new AppProcess({
+      bundlePath: bundlePath,
+      port: self.appPort,
+      rootUrl: self.rootUrl,
+      mongoUrl: self.mongoUrl,
+      oplogUrl: self.oplogUrl,
+      logger: self.logger,
+      onExit: function (code, signal) {
+        self.runFuture['return']({
+          outcome: 'terminated',
+          code: code,
+          signal: signal,
+          bundleResult: bundleResult
+        });
+      },
+      program: self.program,
+      onListen: function () {
+        self.proxy.setMode("proxy");
+        if (onListen)
+          onListen();
+      },
+      nodeOptions: getNodeOptionsFromEnvironment(),
+      settings: settings
+    });
+    appProcess.start();
+
+    // Start watching for changes for files if requested. There's no
+    // hurry to do this, since watchSet contains a snapshot of the
+    // state of the world at the time of bundling, in the form of
+    // hashes and lists of matching files in each directory.
+    var watcher;
+    if (exitOnChange) {
+      watcher = new watch.Watcher({
+        watchSet: watchSet,
+        onChange: function () {
+          self.runFuture['return']({
+            outcome: 'changed',
+            bundleResult: bundleResult
+          });
+        }
+      });
+    }
+
+    // Wait for either the process to exit, or (if exitOnChange) a
+    // source file to change. Or, for stop() to be called.
+    var ret = self.runFuture.wait();
+    self.runFuture = null;
+
+    self.proxy.setMode("hold");
+    appProcess.stop();
+    if (watcher)
+      watcher.stop();
+
+    return ret;
+  },
+
+  _fiber: function () {
+    var self = this;
+
+    var waitForChanges = function (watchSet) {
+      var fut = new Future;
+      var watcher = new watch.Watcher({
+        watchSet: watchSet,
+        onChange: function () { fut['return'](); }
+      });
+      fut.wait();
+    };
+
+    var crashCount = 0;
+    var crashTimer = null;
+    var firstRun = true;
+
+    while (true) {
+      if (self.exitFuture) {
+        // Asked to exit by stop()
+        self.exitFuture['return']();
+        break;
+      }
+
+      var runResult = self.runOnce(true, function () {
+        if (firstRun) {
+          self.logger.log("=> Meteor server running on: " + self.rootUrl +"\n");
+          firstRun = false;
+        } else {
+          self.logger.logRestart();
+        }
+      });
+
+       if (crashTimer) {
+        clearTimeout(crashTimer);
+        crashTimer = null;
+      }
+       if (runResult.outcome !== "terminated")
+        crashCount = 0;
+
+      // If the user did not specify a --release on the command line,
+      // and simultaneously runs `meteor update` during this run, just
+      // exit and let them restart the run. (We can do something fancy
+      // like allowing this to work if the tools version didn't
+      // change, or even springboarding if the tools version does
+      // change, but this (which prevents weird errors) is a start.)
+       if (runResult.outcome === "wrong-release") {
+        var to = project.getMeteorReleaseVersion(self.appDirForVersionCheck);
+        var from = release.current.name;
+        die(
+"Your app has been updated to Meteor " + to + " from " + "Meteor " + from +
+".\n" +
+"Restart meteor to use the new release.\n");
+      }
+
+      if (runResult.outcome === "bundle-fail") {
+        self.logger.log("=> Errors prevented startup:\n\n" +
+                        runResult.bundleResult.errors.formatMessages());
+        self.logger.log("=> Your application has errors. " +
+                        "Waiting for file change.");
+        self.proxy.setMode("errorpage");
+        waitForChanges(runResult.bundleResult.watchSet);
+        self.logger.log("=> Modified -- restarting.");
+        continue;
+      }
+
+      if (runResult.outcome === "changed" ||
+          runResult.outcome === "stopped")
+        continue;
+      }
+
+      if (runResult.outcome === "terminated") {
+        crashCount ++;
+        crashTimer = setTimeout(function () {
+          crashCount = 0;
+        }, 2000);
+
+        if (crashCount > 2) {
+          self.proxy.setMode("errorpage");
+          self.logger.log("=> Your application is crashing. " +
+                          "Waiting for file change.");
+          waitForChanges(runResult.bundleResult.watchSet);
+          self.logger.log("=> Modified -- restarting.");
+        }
+
+        continue;
+      }
+
+      throw new Error("unknown run outcome?");
+    }
+  }
+});
+
+///////////////////////////////////////////////////////////////////////////////
 // Mongo
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -536,7 +827,7 @@ _.extend(AppServer.prototype, {
 // restarts too often, though, it just kills the whole program!
 
 // options: appDir, port, logger
-var MongoServer = function (options) {
+var MongoRunner = function (options) {
   var self = this;
 
   self.appDir = options.appDir;
@@ -549,11 +840,10 @@ var MongoServer = function (options) {
 
   self.errorCount = 0;
   self.errorTimer = null;
-  self.lastRestartTime = null
   self.startupPrintTimer = undefined;
 };
 
-_.extend(MongoServer.prototype, {
+_.extend(MongoRunner.prototype, {
   // Blocks (yields) until the server has started for the first time
   // and is accepting connections. (It might subsequently die and be
   // restarted; we won't tell you about that.)
@@ -593,7 +883,6 @@ _.extend(MongoServer.prototype, {
     if (self.handle)
       throw new Error("already running?");
 
-    self.lastRestartTime = new Date;
     self.handle = mongoRunner.launchMongo({
       appDir: self.appDir,
       port: self.mongoPort,
@@ -637,7 +926,7 @@ _.extend(MongoServer.prototype, {
     self.errorCount ++;
     if (self.errorTimer)
       clearTimeout(self.errorTimer);
-    setTimeout(function () {
+    self.errorTimer = setTimeout(function () {
       self.errorCount = 0;
     }, 5000);
 
@@ -695,16 +984,60 @@ _.extend(MongoServer.prototype, {
 });
 
 ///////////////////////////////////////////////////////////////////////////////
-// Run
+// Updater
 ///////////////////////////////////////////////////////////////////////////////
 
-// options include: port, minify, once, settingsFile, testPackages,
-// banner, program, disableOplog, rawLogs
+var Updater = function () {
+  var self = this;
+  self.timer = null;
+};
+
+// XXX make it take a logger?
+// XXX need to deal with updater writing messages (bypassing old
+// stdout interception.. maybe it should be global after all..)
+_.extend(Updater.prototype, {
+  start: function () {
+    var self = this;
+    var updater = require('./updater.js');
+
+    if (self.timer)
+      throw new Error("already running?");
+
+    // Check twice a day.
+    self.timer = setInterval(inFiber(function () {
+      updater.tryToDownloadUpdate(/* silent */ false);
+    }), 12*60*60*1000);
+
+    // Also start a check now, but don't block on it.
+    new Fiber(function () {
+      updater.tryToDownloadUpdate(/* silent */ false);
+    }).run();
+  },
+
+  // Returns immediately. However if an update check is currently
+  // running it will complete.
+  stop: function () {
+    var self = this;
+
+    if (self.timer)
+      throw new Error("not running?");
+    clearInterval(self.timer);
+    self.timer = null;
+  }
+});
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Runner
+///////////////////////////////////////////////////////////////////////////////
+
+// options include: port, buildOptions, settingsFile, banner, program,
+// disableOplog, rawLogs
 //
 // banner can be used to replace the application path that is normally
 // printed on startup (appDir) with an arbitrary string, for
 // example if you autogenerated an app in a temp file to run tests
-var Run = function (appDir, options) {
+var Runner = function (appDir, options) {
   var self = this;
   self.appDir = appDir;
 
@@ -715,7 +1048,7 @@ var Run = function (appDir, options) {
   self.appPort = self.listenPort + 1;
   self.mongoPort = self.listenPort + 2;
 
-  // XXX XXX set these in cooperation with MongoServer
+  // XXX XXX set these in cooperation with MongoRunner
 
   // Allow override and use of external mongo. Matches code in launch_mongo.
   // XXX make this value be an option, set by command.js from the environment
@@ -732,232 +1065,84 @@ var Run = function (appDir, options) {
        : "mongodb://127.0.0.1:" + self.mongoPort + "/local");
   }
 
-  self.firstRun = true;
-  self.appServer = null;
-  self.watcher = null;
+  // XXX XXX have this be passed in, not slurped from the environment
+  self.rootUrl =
+    var rootUrl = process.env.ROOT_URL ||
+    ('http://localhost:' + self.listenPort + '/');
 
-  // is server running now?
-  self.running = false;
-  // does server crash whenever we start it?
-  self.crashing = false;
-  // do we expect the server to be listening now.
-  self.listening = false;
-  // how many crashes in rapid succession
-  self.counter = 0;
+  self.banner = options.banner || files.prettyPath(self.appDir);
 
   self.logger = new Logger({
     rawLogs: options.rawLogs
   });
+
   self.proxy = new Proxy({
     listenPort: self.listenPort,
     proxyToPort: self.appPort,
     logger: self.logger
   });
-  self.mongoServer = new MongoServer({
+
+  self.mongoRunner = new MongoRunner({
     appDir: self.appDir,
     port: self.mongoPort,
     logger: self.logger
   });
 
-  self.testingPackages = !! options.testPackages;
+  self.updater = new Updater;
 
-  self.settingsFile = options.settingsFile;
-  self.program = options.program;
-  self.banner = options.banner || files.prettyPath(self.appDir);
-  self.once = options.once;
-
-  // XXX have the caller pass this in?
-
-  // XXX have 'release' be passed in? or determined from appDir, for
-  // that matter? anyway, be consistent with bundler and other things
-  // that pass it
-  var bundleOpts = {
-    nodeModulesMode: 'symlink',
-    minify: options.minify,
-    testPackages: options.testPackages,
-    release: release.current
-  };
+  self.appRunner = new AppRunner({
+    appDir: self.appDir,
+    appDirForVersionCheck: options.appDirForVersionCheck,
+    port: self.appPort,
+    buildOptions: options.buildOptions,
+    rootUrl: self.rootUrl,
+    settingsFile: options.settingsFile,
+    program: options.program,
+    proxy: self.proxy,
+    logger: self.logger
+  });
 };
 
-_.extend(Run.prototype, function () {
-  // This function never returns and will call process.exit() if it
-  // can't continue. If you change this, remember to call
-  // watcher.stop() as appropriate.
-  //
+_.extend(Runner.prototype, function () {
   // XXX leave a pidfile and check if we are already running
-  //
-  // XXX or, more like, it returns almost immediately?
-  run: function () {
+  start: function () {
     var self = this;
     self.proxy.start();
 
-    process.stdout.write("[[[[[ " + self.appDir + " ]]]]]\n\n");
+    // print the banner only once we've successfully bound the port
+    process.stdout.write("[[[[[ " + self.banner + " ]]]]]\n\n");
 
-    // XXX XXX really should not be doing this globally like this
-    updater.startUpdateChecks();
-    self.mongoServer.start();
-    self._bundleAndRestart();
+    self.updater.start();
+    self.mongoRunner.start();
+    self.appRunner.start();
   },
 
-  _startWatching: function (watchSet) {
+  stop: function () {
     var self = this;
-
-    if (process.env.METEOR_DEBUG_WATCHSET)
-      self.logger.log(JSON.stringify(watchSet, null, 2));
-
-    if (self.once)
-      return;
-
-    if (self.watcher)
-      self.watcher.stop();
-
-    self.watcher = new watch.Watcher({
-      watchSet: watchSet,
-      onChange: function () {
-        if (self.crashing)
-          self.logger.log("=> Modified -- restarting.");
-        self.crashing = false;
-        self.counter = 0;
-        release.current.library.refresh(true); // pick up changes to packages
-        self._bundleAndRestart();
-      }
-    });
+    self.proxy.stop();
+    self.updater.stop();
+    self.mongoRunner.stop();
+    self.appRunner.stop();
   },
 
-  // XXX XXX used to return immediately, and run in a fiber..
-  // XXX XXX evaluate if that's significant
-  _bundleAndRestart: function () {
+  // Just run the application (and all of its supporting processes)
+  // until the app process exits for the first time. See
+  // AppRunner.runOnce for return value.
+  //
+  // This is silent.
+  runOnce: function () {
     var self = this;
 
-    self.running = false;
-    self.listening = false;
-    self.proxy.setMode("hold");
+    self.proxy.start();
+    self.mongoRunner.start();
+    var result = self.appRunner.runOnce();
+    self.proxy.stop();
+    self.mongoRunner.stop();
 
-    if (self.watcher) {
-      self.watcher.stop();
-      self.watcher = null;
-    }
-
-    if (self.appServer) {
-      self.appServer.stop();
-      self.appServer = null;
-    }
-
-    // If the user did not specify a --release on the command line,
-    // and simultaneously runs `meteor update` during this run, just
-    // exit and let them restart the run. (We can do something fancy
-    // like allowing this to work if the tools version didn't change,
-    // or even springboarding if the tools version does change, but
-    // this (which prevents weird errors) is a start.) (Make sure
-    // that we don't hit this test for "meteor test-packages", though;
-    // there's not a real app to update there!)
-    if (! self.testingPackages &&
-        ! release.usingRightReleaseForApp(self.appDir)) {
-      var to = project.getMeteorReleaseVersion(self.appDir);
-      var from = release.current.name;
-      die(
-"Your app has been updated to Meteor " + to + " from " + "Meteor " + from +
-".\n" +
-"Restart meteor to use the new release.\n");
-    }
-
-    self.logger.clearLog();
-
-    // Bundle up the app
-
-    var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
-    var bundleResult = bundler.bundle(self.appDir, bundlePath,
-                                      self.bundleOpts);
-    var watchSet = bundleResult.watchSet;
-    if (bundleResult.errors) {
-      self.logger.log("=> Errors prevented startup:\n\n" +
-                      bundleResult.errors.formatMessages());
-
-      if (self.once)
-        self._exit(1);
-
-      self.logger.log("=> Your application has errors. " +
-                      "Waiting for file change.");
-      self.crashing = true;
-      self.proxy.setMode("errorpage");
-      self._startWatching(watchSet);
-      return;
-    }
-
-    // Read the settings file, if any
-    var settings = null;
-    if (self.settingsFile)
-      settings = runner.getSettings(self.settingsFile, watchSet);
-
-    // Start the server
-    self.running = true;
-
-    // XXX XXX have this be passed in, not slurped from the environment
-    var rootUrl = process.env.ROOT_URL ||
-          ('http://localhost:' + self.listenPort + '/');
-    if (self.firstRun) {
-      self.logger.log("=> Meteor server running on: " + rootUrl + "\n");
-      self.firstRun = false;
-    } else {
-      self.logger.logRestart();
-    }
-
-    self.appServer = new AppServer({
-      bundlePath: bundlePath,
-      port: self.appPort,
-      rootUrl: rootUrl,
-      mongoUrl: self.mongoUrl,
-      oplogUrl: self.oplogUrl,
-      logger: self.logger,
-      onExit: function (code) {
-        // on server exit
-        self.running = false;
-        self.listening = false;
-        if (self.once)
-          self._exit(code);
-
-        if (self.counter === 0) {
-          setTimeout(function () {
-            self.counter = 0;
-          }, 2000);
-          // XXX cancel timeout at appropriate time..
-        }
-        self.counter ++;
-        if (self.counter > 2) {
-          self.logger.log("=> Your application is crashing. " +
-                          "Waiting for file change.");
-          self.crashing = true;
-        }
-
-        self.proxy.setMode(self.crashing ? "errorpage" : "hold");
-        if (! self.crashing)
-          self._bundleAndRestart();
-      },
-      program: self.program,
-      onListen: function () {
-        // on listen
-        self.listening = true;
-        self.proxy.setMode("proxy");
-      },
-      nodeOptions: getNodeOptionsFromEnvironment(),
-      settings: settings
-    });
-    self.appServer.start();
-
-    // Start watching for changes for files. There's no hurry to call
-    // this, since watchSet contains a snapshot of the state of
-    // the world at the time of bundling, in the form of hashes and
-    // lists of matching files in each directory.
-    self._startWatching(watchSet);
-  },
-
-  // XXX make this go away
-  _exit: function (code) {
-    var self = this;
-
-    self.logger.log("Your application is exiting.");
-
-    self.mongoServer.stop();
-    process.exit(code);
+    return result;
   }
 });
+
+
+
+// XXX replace runner.run with (new Run).start

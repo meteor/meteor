@@ -103,7 +103,7 @@ main.registerCommand({
 }, function (options) {
   if (files.usesWarehouse()) {
     var updater = require('./updater.js');
-    updater.performOneUpdateCheck(true /* silent */);
+    updater.tryToDownloadUpdate(true /* silent */);
   } else {
     // dev bundle is downloaded by the wrapper script. We just need
     // to install NPM dependencies.
@@ -119,6 +119,33 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 // run
 ///////////////////////////////////////////////////////////////////////////////
+
+var runOnceAndExit = function (appDir, options) {
+  XXX XXX names
+  var run = new Run(appDir, options);
+  var result = run.runOnce();
+
+  if (result.outcome === "wrong-release") {
+    // We lost a race where the user ran 'meteor update' and 'meteor
+    // run --once' simultaneously.
+    throw new Error("wrong release?");
+  }
+
+  if (result.outcome === "bundle-fail") {
+    process.stderr.write("=> Build failed:\n\n" +
+                         result.bundleResult.errors.formatMessages() + "\n");
+    process.exit(254);
+  } else if (result.outcome === "terminated") {
+    if (result.signal) {
+      process.stderr.write("Killed (" + result.signal + ")\n");
+      process.exit(255);
+    } else {
+      // We used to print 'Your application is exiting' here, but that
+      // seems unnecessarily chatty? runOnce is otherwise silent
+      process.exit(result.code);
+    }
+  }
+};
 
 main.registerCommand({
   name: 'run',
@@ -147,16 +174,23 @@ main.registerCommand({
 
   auth.tryRevokeOldTokens({timeout: 1000});
 
-  runner.run(options.appDir, {
+  var runOptions = {
     port: options.port,
     rawLogs: options['raw-logs'],
-    minify: options.production,
-    once: options.once,
     settingsFile: options.settings,
-    program: options.program || undefined
-  });
+    program: options.program || undefined,
+    buildOptions: {
+      minify: options.minify
+    }
+  };
 
-  throw new main.WaitForExit;
+  if (options.once)
+    runOnceAndExit(appDir, options);
+  else {
+    XXX XXX
+    runner.run(options.appDir, options)
+    throw new main.WaitForExit;
+  };
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -559,14 +593,17 @@ main.registerCommand({
   // machines, but worth it for humans)
 
   var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
-  var bundle_path = path.join(buildDir, 'bundle');
-  var output_path = path.resolve(options.args[0]); // get absolute path
+  var bundlePath = path.join(buildDir, 'bundle');
+  var outputPath = path.resolve(options.args[0]); // get absolute path
 
   var bundler = require(path.join(__dirname, 'bundler.js'));
-  var bundleResult = bundler.bundle(options.appDir, bundle_path, {
+  var bundleResult = bundler.bundle({
+    appDir: options.appDir,
+    outputPath: bundlePath,
     nodeModulesMode: options['for-deploy'] ? 'skip' : 'copy',
-    minify: ! options.debug,
-    release: release.current
+    buildOptions: {
+      minify: ! options.debug
+    }
   });
   if (bundleResult.errors) {
     process.stdout.write("Errors prevented bundling:\n");
@@ -575,7 +612,7 @@ main.registerCommand({
   }
 
   try {
-    files.createTarball(path.join(buildDir, 'bundle'), output_path);
+    files.createTarball(path.join(buildDir, 'bundle'), outputPath);
   } catch (err) {
     console.log(JSON.stringify(err));
     process.stderr.write("Couldn't create tarball\n");
@@ -747,10 +784,8 @@ main.registerCommand({
       return 1;
   }
 
-  var bundleOptions = {
-    nodeModulesMode: 'skip',
-    minify: ! options.debug,
-    release: release.current
+  var buildOptions = {
+    minify: ! options.debug
   };
 
   if (useGalaxy) {
@@ -760,7 +795,7 @@ main.registerCommand({
       appDir: options.appDir,
       settings: settings,
       starball: starball,
-      bundleOptions: bundleOptions,
+      buildOptions: buildOptions,
       admin: options.admin
     });
   } else {
@@ -768,7 +803,7 @@ main.registerCommand({
       appDir: options.appDir,
       site: site,
       settings: settings,
-      bundleOptions: bundleOptions
+      buildOptions: buildOptions
     });
   }
 });
@@ -934,38 +969,49 @@ main.registerCommand({
   // run multiple "test-packages" commands in parallel without them stomping
   // on each other.
   //
-  // Note: testRunnerAppDir DOES NOT MATCH the app package search path
-  // baked into release.current.library: we are bundling the test
-  // runner app, but finding app packages from the current app (if
-  // any).
+  // Note: testRunnerAppDir deliberately DOES NOT MATCH the app
+  // package search path baked into release.current.library: we are
+  // bundling the test runner app, but finding app packages from the
+  // current app (if any).
   var testRunnerAppDir = files.mkdtemp('meteor-test-run');
   files.cp_r(path.join(__dirname, 'test-runner-app'), testRunnerAppDir);
+  project.writeMeteorReleaseVersion(testRunnerAppDir,
+                                    release.current.name || 'none');
   project.addPackage(testRunnerAppDir,
                      options['driver-package'] || 'test-in-browser');
+
+  var buildOptions = {
+    testPackages: testPackages,
+    minify: options.production
+  };
 
   if (options.deploy) {
     deploy.bundleAndDeploy({
       appDir: testRunnerAppDir,
       site: options.deploy,
       settings: options.settings && runner.getSettings(options.settings),
-      bundleOptions: {
-        nodeModulesMode: 'skip',
-        testPackages: testPackages,
-        minify: options.production,
-        release: release.current
-      }
+      buildOptions: buildOptions
     });
   } else {
-    runner.run(testRunnerAppDir, {
+    var runOptions =  {
+      // if we're testing packages from an app, we still want to make
+      // sure the user doesn't 'meteor update' in the app, requiring
+      // a switch to a different release
+      appDirForVersionCheck: options.appDir,
       port: options.port,
-      minify: options.production,
-      once: options.once,
       disableOplog: options['disable-oplog'],
-      testPackages: testPackages,
       settingsFile: options.settings,
-      banner: "Tests"
-    });
-    throw new main.WaitForExit;
+      banner: "Tests",
+      buildOptions: buildOptions
+    };
+
+    if (options.once)
+      runOnceAndExit(testRunnerAppDir, runOptions);
+    else {
+      XXX XXX
+      runner.run(testRunnerAppDir, runOptions);
+      throw new main.WaitForExit;
+    }
   }
 });
 

@@ -171,6 +171,7 @@ var project = require(path.join(__dirname, 'project.js'));
 var builder = require(path.join(__dirname, 'builder.js'));
 var unipackage = require(path.join(__dirname, 'unipackage.js'));
 var watch = require('./watch.js');
+var release = require('./release.js');
 var Fiber = require('fibers');
 var Future = require(path.join('fibers', 'future'));
 var sourcemap = require('source-map');
@@ -1518,11 +1519,45 @@ var writeSiteArchive = function (targets, outputPath, options) {
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
- * Take the Meteor app in appDir, and compile it into a bundle at
- * outputPath. outputPath will be created if it doesn't exist (it
- * will be a directory), and removed if it does exist. The release
- * version is *not* read from the app's .meteor/release file. Instead,
- * it must be passed in as an option.
+ * Builds a Meteor app.
+ *
+ * options are:
+ *
+ * - appDir: Required. The top-level directory of the Meteor app to
+ *   build
+ *
+ * - outputPath: Required. Path to the directory where the output (a
+ *   untarred bundle) should go. This directory will be created if it
+ *   doesn't exist, and removed first if it does exist.
+ *
+ * - nodeModulesMode: what to do about the core npm modules needed by
+ *   the server bootstrap. one of:
+ *   - 'copy': copy from a prebuilt local installation. used by
+ *     'meteor bundle'. the default.
+ *   - 'symlink': symlink from a prebuild local installation. used
+ *     by 'meteor run'
+ *   - 'skip': just leave them out. used by `meteor deploy`. the
+ *     server running the app will need to supply appropriate builds
+ *     of the modules.
+ *
+ *   Note that this does not affect the handling of npm modules used
+ *   by *packages*, which could be the majority of the npm modules in
+ *   your app -- EXCEPT that "symlink" has the added bonus that it
+ *   will cause files (not just npm modules) to symlinked rather than
+ *   copied whenever possible in the building process. Yeah, this
+ *   could stand some refactoring.
+ *
+ * - buildOptions: may include
+ *   - minify: minify the CSS and JS assets (boolean, default false)
+ *   - testPackages: array of package objects or package names whose
+ *     tests should be additionally included in this bundle
+ *   - release: The release to use (a Release object, such as
+ *     release.current, which is the default). This is used both to
+ *     resolve package dependencies and to set the value of
+ *     Meteor.release that the app will see. You can pass a release
+ *     other than release.current so long as it uses the currently
+ *     running tools version (you might do this from a test, for
+ *     example, if release.current weren't set).
  *
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
@@ -1533,49 +1568,30 @@ var writeSiteArchive = function (targets, outputPath, options) {
  * On failure ('errors' is truthy), no bundle will be output (in fact,
  * outputPath will have been removed if it existed).
  *
- * options include:
- * - minify: minify the CSS and JS assets
- *
- * - nodeModulesMode: decide on how to create the bundle's
- *   node_modules directory. one of:
- *   - 'skip': don't create node_modules. used by `meteor deploy`, since
- *             our production servers already have all of the node modules
- *   - 'copy': copy from a prebuilt local installation. used by
- *             `meteor bundle`
- *   - 'symlink': symlink from a prebuild local installation. used
- *                by `meteor run`
- *
- * - testPackages: array of package objects or package names whose
- *   tests should be included in this bundle
- *
- * - release: The release to use (a Release object, such as
- *   release.current). This is used both to resolve package
- *   dependencies and to set the value of Meteor.release that the app
- *   will see.
- *
  * Note that when you run "meteor test-packages", appDir points to the
  * test harness, while the local package search paths in 'release'
  * will point somewhere else -- into the app (if any) whose packages
  * you are testing!
  */
-exports.bundle = function (appDir, outputPath, options) {
-  if (! options)
-    throw new Error("Must pass options");
-  if (! options.nodeModulesMode)
-    throw new Error("Must pass options.nodeModulesMode");
-  if (! options.release)
-    throw new Error("Must pass options.release");
+exports.bundle = function (options) {
+  var appDir = options.appDir;
+  var outputPath = options.outputPath;
+  var nodeModulesMode = options.nodeModulesMode || 'copy';
+  var buildOptions = options.buildOptions || {};
+
+  var release = _.has(buildOptions, 'release') ? buildOptions.release : release.current;
+  if (! release.compatibleWithRunningVersion())
+    throw new Error("running wrong version of tools for release?");
 
   // sanity check
-  if (! options.release.compatibleWithRunningVersion())
+  if (! release.compatibleWithRunningVersion())
     throw new Error("running wrong tools version for release?");
 
-  var library = options.release.library;
+  var library = release.library;
   var releaseName =
-    options.release.isCheckout() ? "none" : options.release.name;
+    release.isCheckout() ? "none" : release.name;
 
-  var builtBy = "Meteor" + (options.release.name ?
-                            " " + options.release.name : "");
+  var builtBy = "Meteor" + (release.name ? " " + release.name : "");
 
   var success = false;
   var watchSet = new watch.WatchSet();
@@ -1594,8 +1610,8 @@ exports.bundle = function (appDir, outputPath, options) {
 
       client.make({
         packages: [app],
-        test: options.testPackages || [],
-        minify: options.minify,
+        test: buildOptions.testPackages || [],
+        minify: buildOptions.minify,
         addCacheBusters: true
       });
 
@@ -1607,9 +1623,8 @@ exports.bundle = function (appDir, outputPath, options) {
         library: library,
         arch: "browser"
       });
-
       client.make({
-        minify: options.minify,
+        minify: buildOptions.minify,
         addCacheBusters: true
       });
 
@@ -1629,7 +1644,7 @@ exports.bundle = function (appDir, outputPath, options) {
 
       server.make({
         packages: [app],
-        test: options.testPackages || [],
+        test: buildOptions.testPackages || [],
         minify: false
       });
 
@@ -1812,7 +1827,7 @@ exports.bundle = function (appDir, outputPath, options) {
 
     // Write to disk
     starResult = writeSiteArchive(targets, outputPath, {
-      nodeModulesMode: options.nodeModulesMode,
+      nodeModulesMode: nodeModulesMode,
       builtBy: builtBy,
       controlProgram: controlProgram,
       releaseName: releaseName
