@@ -284,8 +284,7 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
     var doesMatch = new Minimongo.Matcher(selector).documentMatches(doc).result;
     if (doesMatch != shouldMatch) {
       // XXX super janky
-      test.fail({type: "minimongo-ordering",
-                 message: "minimongo match failure: document " +
+      test.fail({message: "minimongo match failure: document " +
                  (shouldMatch ? "should match, but doesn't" :
                   "shouldn't match, but does"),
                  selector: JSON.stringify(selector),
