@@ -1710,10 +1710,10 @@ Tinytest.add("minimongo - modify", function (test) {
       // XXX super janky
       test.fail({type: "minimongo-modifier",
                  message: "modifier test failure",
-                 input_doc: JSON.stringify(doc),
-                 modifier: JSON.stringify(mod),
-                 expected: JSON.stringify(result),
-                 actual: JSON.stringify(copy)
+                 input_doc: EJSON.stringify(doc),
+                 modifier: EJSON.stringify(mod),
+                 expected: EJSON.stringify(result),
+                 actual: EJSON.stringify(copy)
                 });
     } else {
       test.ok();
