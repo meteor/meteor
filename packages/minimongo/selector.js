@@ -162,11 +162,18 @@ var convertElementMatcherToBranchedMatcher = function (
       expanded = expandArraysInBranches(
         branches, options.dontIncludeLeafArrays);
     }
-    var result = _.any(expanded, function (element) {
-      // XXX arrayIndex!  need to save the winner here
-      return elementMatcher(element.value);
+    var ret = {};
+    ret.result = _.any(expanded, function (element) {
+      var matched = elementMatcher(element.value);
+
+      // If some element matched, and it's tagged with an array index, include
+      // that index in our result object.
+      if (matched && element.arrayIndex !== undefined)
+        ret.arrayIndex = element.arrayIndex;
+
+      return matched;
     });
-    return {result: result};
+    return ret;
   };
 };
 
@@ -261,11 +268,18 @@ var LOGICAL_OPERATORS = {
   $or: function (subSelector, matcher, inElemMatch) {
     var matchers = compileArrayOfDocumentSelectors(
       subSelector, matcher, inElemMatch);
+
+    // Special case: if there is only one matcher, use it directly, *preserving*
+    // any arrayIndex it returns.
+    if (matchers.length === 1)
+      return matchers[0];
+
     return function (doc) {
       var result = _.any(matchers, function (f) {
         return f(doc).result;
       });
-      // XXX arrayIndex!
+      // $or does NOT set arrayIndex when it has multiple
+      // sub-expressions. (Tested against MongoDB.)
       return {result: result};
     };
   },
@@ -278,7 +292,7 @@ var LOGICAL_OPERATORS = {
         return !f(doc).result;
       });
       // Never set arrayIndex, because we only match if nothing in particular
-      // "matched".
+      // "matched" (and because this is consistent with MongoDB).
       return {result: result};
     };
   },
@@ -804,6 +818,9 @@ expandArraysInBranches = function (branches, skipTheArrays) {
       _.each(branch.value, function (leaf, i) {
         branchesOut.push({
           value: leaf,
+          // arrayIndex always defaults to the outermost array, but if we didn't
+          // need to use an array to get to this branch, we mark the index we
+          // just used as the arrayIndex.
           arrayIndex: branch.arrayIndex === undefined ? i : branch.arrayIndex
         });
       });
@@ -834,7 +851,6 @@ var andSomeMatchers = function (branchedSelectors) {
   return function (branches) {
     // XXX arrayIndex!
     var ret = {};
-    var distance;
     ret.result = _.all(branchedSelectors, function (f) {
       var subResult = f(branches);
       // Copy a 'distance' number out of the first sub-matcher that has
@@ -842,13 +858,23 @@ var andSomeMatchers = function (branchedSelectors) {
       // query, something arbitrary happens; this appears to be consistent with
       // Mongo.
       if (subResult.result && subResult.distance !== undefined
-          && distance === undefined) {
-        distance = subResult.distance;
+          && ret.distance === undefined) {
+        ret.distance = subResult.distance;
+      }
+      // Similarly, propagate arrayIndex from sub-matchers... but to match
+      // MongoDB behavior, this time the *last* sub-matcher with an arrayIndex
+      // wins.
+      if (subResult.result && subResult.arrayIndex !== undefined) {
+        ret.arrayIndex = subResult.arrayIndex;
       }
       return subResult.result;
     });
-    if (ret.result && distance !== undefined)
-      ret.distance = distance;
+
+    // If we didn't actually match, forget any extra metadata we came up with.
+    if (!ret.result) {
+      delete ret.distance;
+      delete ret.arrayIndex;
+    }
     return ret;
   };
 };
