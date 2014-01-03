@@ -1805,6 +1805,13 @@ Tinytest.add("minimongo - modify", function (test) {
                   {'a.x': 1, 'a.y': 3},
                   {$set: {'a.$.z': 5}},
                   {a: [{x: 1}, {y: 3, z: 5}]});
+  // with $near, make sure it finds the closest one
+  modifyWithQuery({a: [{b: [1,1]},
+                       {b: [ [3,3], [4,4] ]},
+                       {b: [9,9]}]},
+                  {'a.b': {$near: [5, 5]}},
+                  {$set: {'a.$.b': 'k'}},
+                  {a: [{b: [1,1]}, {b: 'k'}, {b: [9,9]}]});
 
   // $inc
   modify({a: 1, b: 2}, {$inc: {a: 10}}, {a: 11, b: 2});

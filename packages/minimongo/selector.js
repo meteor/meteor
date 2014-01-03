@@ -437,22 +437,23 @@ var VALUE_OPERATORS = {
       // actually show up *multiple times* in the result set, with one entry for
       // each within-$maxDistance branching point.
       branchedValues = expandArraysInBranches(branchedValues);
-      var minDistance = null;
+      var result = {result: false};
       _.each(branchedValues, function (branch) {
         var curDistance = distance(branch.value);
         // Skip branches that aren't real points or are too far away.
         if (curDistance === null || curDistance > maxDistance)
           return;
         // Skip anything that's a tie.
-        if (minDistance !== null && minDistance <= curDistance)
+        if (result.distance !== undefined && result.distance <= curDistance)
           return;
-        minDistance = curDistance;
+        result.result = true;
+        result.distance = curDistance;
+        if (branch.arrayIndex === undefined)
+          delete result.arrayIndex;
+        else
+          result.arrayIndex = branch.arrayIndex;
       });
-      if (minDistance !== null) {
-        // XXX arrayIndex!
-        return {result: true, distance: minDistance};
-      }
-      return {result: false};
+      return result;
     };
   }
 };
