@@ -166,6 +166,14 @@ var convertElementMatcherToBranchedMatcher = function (
     ret.result = _.any(expanded, function (element) {
       var matched = elementMatcher(element.value);
 
+      // Special case for $elemMatch: it means "true, and use this arrayIndex if
+      // I didn't already have one".
+      if (typeof matched === 'number') {
+        if (element.arrayIndex === undefined)
+          element.arrayIndex = matched;
+        matched = true;
+      }
+
       // If some element matched, and it's tagged with an array index, include
       // that index in our result object.
       if (matched && element.arrayIndex !== undefined)
@@ -387,7 +395,6 @@ var VALUE_OPERATORS = {
     // SAME branch.
     return andBranchedMatchers(branchedMatchers);
   },
-
   $near: function (operand, valueSelector, matcher, isRoot) {
     if (!isRoot)
       throw Error("$near can't be inside another $ operator");
@@ -627,26 +634,25 @@ var ELEMENT_OPERATORS = {
       if (!isPlainObject(operand))
         throw Error("$elemMatch need an object");
 
-      var matcher, isDocMatcher;
+      var subMatcher, isDocMatcher;
       if (isOperatorObject(operand)) {
-        matcher = compileValueSelector(operand, matcher);
+        subMatcher = compileValueSelector(operand, matcher);
         isDocMatcher = false;
       } else {
         // This is NOT the same as compileValueSelector(operand), and not just
         // because of the slightly different calling convention.
         // {$elemMatch: {x: 3}} means "an element has a field x:3", not
         // "consists only of a field x:3". Also, regexps and sub-$ are allowed.
-        matcher = compileDocumentSelector(operand, matcher,
-                                          {inElemMatch: true});
+        subMatcher = compileDocumentSelector(operand, matcher,
+                                             {inElemMatch: true});
         isDocMatcher = true;
       }
 
       return function (value) {
         if (!isArray(value))
           return false;
-        return _.any(value, function (arrayElement) {
-          // XXX arrayIndex!
-          // XXX nesting geo stuff in here!
+        for (var i = 0; i < value.length; ++i) {
+          var arrayElement = value[i];
           var arg;
           if (isDocMatcher) {
             // We can only match {$elemMatch: {b: 3}} against objects.
@@ -660,8 +666,11 @@ var ELEMENT_OPERATORS = {
             // {a: [8]} but not {a: [[8]]}
             arg = [{value: arrayElement, dontIterate: true}];
           }
-          return matcher(arg).result;
-        });
+          // XXX support $near in $elemMatch by propagating $distance?
+          if (subMatcher(arg).result)
+            return i;   // specially understood to mean "use my arrayIndex"
+        }
+        return false;
       };
     }
   }

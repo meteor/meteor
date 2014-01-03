@@ -1772,6 +1772,8 @@ Tinytest.add("minimongo - modify", function (test) {
                   {a: [{x: 2}, {x: 4, z: 9}]});
   exception({a: [{x: 2}, {x: 4}]}, {$set: {'a.$.z': 9}});
   exceptionWithQuery({a: [{x: 2}, {x: 4}], b: 5}, {b: 5}, {$set: {'a.$.z': 9}});
+  // can't have two $
+  exceptionWithQuery({a: [{x: [2]}]}, {'a.x': 2}, {$set: {'a.$.x.$': 9}});
   modifyWithQuery({a: [5, 6, 7]}, {a: 6}, {$set: {'a.$': 9}}, {a: [5, 9, 7]});
   modifyWithQuery({a: [{b: [{c: 9}, {c: 10}]}, {b: {c: 11}}]}, {'a.b.c': 10},
                   {$unset: {'a.$.b': 1}}, {a: [{}, {b: {c: 11}}]});
@@ -1812,6 +1814,14 @@ Tinytest.add("minimongo - modify", function (test) {
                   {'a.b': {$near: [5, 5]}},
                   {$set: {'a.$.b': 'k'}},
                   {a: [{b: [1,1]}, {b: 'k'}, {b: [9,9]}]});
+  modifyWithQuery({a: [{x: 1}, {y: 1}, {x: 1, y: 1}]},
+                  {a: {$elemMatch: {x: 1, y: 1}}},
+                  {$set: {'a.$.x': 2}},
+                  {a: [{x: 1}, {y: 1}, {x: 2, y: 1}]});
+  modifyWithQuery({a: [{b: [{x: 1}, {y: 1}, {x: 1, y: 1}]}]},
+                  {'a.b': {$elemMatch: {x: 1, y: 1}}},
+                  {$set: {'a.$.b': 3}},
+                  {a: [{b: 3}]});
 
   // $inc
   modify({a: 1, b: 2}, {$inc: {a: 10}}, {a: 11, b: 2});
