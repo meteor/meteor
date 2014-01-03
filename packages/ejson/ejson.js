@@ -6,11 +6,13 @@ var customTypes = {};
 // from a basic JSON-able representation.  The factory argument
 // is a function of JSON-able --> your object
 // The type you add must have:
-// - A clone() method, so that Meteor can deep-copy it when necessary.
 // - A equals() method, so that Meteor can compare it
 // - A toJSONValue() method, so that Meteor can serialize it
 // - a typeName() method, to show how to look it up in our type table.
 // It is okay if these methods are monkey-patched on.
+// EJSON.clone will use toJSONValue and the given factory to produce
+// a clone, but you may specify a method clone() that will be
+// used instead.
 //
 EJSON.addType = function (name, factory) {
   if (_.has(customTypes, name))
@@ -367,6 +369,10 @@ EJSON.clone = function (v) {
   // handle general user-defined typed Objects if they have a clone method
   if (typeof v.clone === 'function') {
     return v.clone();
+  }
+  // handle other custom types
+  if (EJSON._isCustomType(v)) {
+    return EJSON.fromJSONValue(EJSON.clone(EJSON.toJSONValue(v)), true);
   }
   // handle other objects
   ret = {};
