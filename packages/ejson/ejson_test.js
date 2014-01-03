@@ -224,4 +224,9 @@ Tinytest.add("ejson - custom types", function (test) {
   var d = new Date;
   var obj = new EJSONTest.Person("John Doe", d, a);
   testCustomObject( obj );
+
+  // Test clone is deep:
+  var clone = EJSON.clone(obj);
+  clone.address.city = 'Sherbrooke';
+  test.notEqual( obj, clone );
 });

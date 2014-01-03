@@ -2896,8 +2896,6 @@ When you add a type to EJSON, Meteor will be able to use that type in:
 
 Instances of your type should implement the following interface:
 
-{{> api_box ejsonTypeClone}}
-
 {{> api_box ejsonTypeEquals}}
 
 The `equals` method should define an [equivalence
@@ -2917,6 +2915,10 @@ For example, the `toJSONValue` method for
     function () {
       return this.toHexString();
     };
+
+`EJSON.clone` will use `toJSONValue` by default, but you may instead implement the following interface:
+
+{{> api_box ejsonTypeClone}}
 
 <h2 id="http"><span>HTTP</span></h2>
 
