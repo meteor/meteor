@@ -284,8 +284,7 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
     var doesMatch = new Minimongo.Matcher(selector).documentMatches(doc).result;
     if (doesMatch != shouldMatch) {
       // XXX super janky
-      test.fail({type: "minimongo-ordering",
-                 message: "minimongo match failure: document " +
+      test.fail({message: "minimongo match failure: document " +
                  (shouldMatch ? "should match, but doesn't" :
                   "shouldn't match, but does"),
                  selector: JSON.stringify(selector),
@@ -1704,26 +1703,27 @@ Tinytest.add("minimongo - binary search", function (test) {
 });
 
 Tinytest.add("minimongo - modify", function (test) {
-  var modify = function (doc, mod, result) {
-    var copy = EJSON.clone(doc);
-    LocalCollection._modify(copy, mod);
-    if (!LocalCollection._f._equal(copy, result)) {
-      // XXX super janky
-      test.fail({type: "minimongo-modifier",
-                 message: "modifier test failure",
-                 input_doc: JSON.stringify(doc),
-                 modifier: JSON.stringify(mod),
-                 expected: JSON.stringify(result),
-                 actual: JSON.stringify(copy)
-                });
-    } else {
-      test.ok();
-    }
+  var modifyWithQuery = function (doc, query, mod, expected) {
+    var coll = new LocalCollection;
+    coll.insert(doc);
+    // The query is relevant for 'a.$.b'.
+    coll.update(query, mod);
+    var actual = coll.findOne();
+    delete actual._id;  // added by insert
+    test.equal(actual, expected, EJSON.stringify({input: doc, mod: mod}));
+  };
+  var modify = function (doc, mod, expected) {
+    modifyWithQuery(doc, {}, mod, expected);
+  };
+  var exceptionWithQuery = function (doc, query, mod) {
+    var coll = new LocalCollection;
+    coll.insert(doc);
+    test.throws(function () {
+      coll.update(query, mod);
+    });
   };
   var exception = function (doc, mod) {
-    test.throws(function () {
-      LocalCollection._modify(EJSON.clone(doc), mod);
-    });
+    exceptionWithQuery(doc, {}, mod);
   };
 
   // document replacement
@@ -1749,18 +1749,13 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: [null, null, null]}, {$set: {'a.3.b': 12}}, {
     a: [null, null, null, {b: 12}]});
   exception({a: []}, {$set: {'a.b': 12}});
-  test.expect_fail();
   exception({a: 12}, {$set: {'a.b': 99}}); // tested on mongo
-  test.expect_fail();
   exception({a: 'x'}, {$set: {'a.b': 99}});
-  test.expect_fail();
   exception({a: true}, {$set: {'a.b': 99}});
-  test.expect_fail();
   exception({a: null}, {$set: {'a.b': 99}});
   modify({a: {}}, {$set: {'a.3': 12}}, {a: {'3': 12}});
   modify({a: []}, {$set: {'a.3': 12}}, {a: [null, null, null, 12]});
   modify({}, {$set: {'': 12}}, {'': 12}); // tested on mongo
-  test.expect_fail();
   exception({}, {$set: {'.': 12}}); // tested on mongo
   modify({}, {$set: {'. ': 12}}, {'': {' ': 12}}); // tested on mongo
   modify({}, {$inc: {'... ': 12}}, {'': {'': {'': {' ': 12}}}}); // tested
@@ -1771,6 +1766,62 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({x: []}, {$set: {'x.2..a': 99}}, {x: [null, null, {'': {a: 99}}]});
   modify({x: [null, null]}, {$set: {'x.2.a': 1}}, {x: [null, null, {a: 1}]});
   exception({x: [null, null]}, {$set: {'x.1.a': 1}});
+
+  // a.$.b
+  modifyWithQuery({a: [{x: 2}, {x: 4}]}, {'a.x': 4}, {$set: {'a.$.z': 9}},
+                  {a: [{x: 2}, {x: 4, z: 9}]});
+  exception({a: [{x: 2}, {x: 4}]}, {$set: {'a.$.z': 9}});
+  exceptionWithQuery({a: [{x: 2}, {x: 4}], b: 5}, {b: 5}, {$set: {'a.$.z': 9}});
+  // can't have two $
+  exceptionWithQuery({a: [{x: [2]}]}, {'a.x': 2}, {$set: {'a.$.x.$': 9}});
+  modifyWithQuery({a: [5, 6, 7]}, {a: 6}, {$set: {'a.$': 9}}, {a: [5, 9, 7]});
+  modifyWithQuery({a: [{b: [{c: 9}, {c: 10}]}, {b: {c: 11}}]}, {'a.b.c': 10},
+                  {$unset: {'a.$.b': 1}}, {a: [{}, {b: {c: 11}}]});
+  modifyWithQuery({a: [{b: [{c: 9}, {c: 10}]}, {b: {c: 11}}]}, {'a.b.c': 11},
+                  {$unset: {'a.$.b': 1}},
+                  {a: [{b: [{c: 9}, {c: 10}]}, {}]});
+  modifyWithQuery({a: [1]}, {'a.0': 1}, {$set: {'a.$': 5}}, {a: [5]});
+  modifyWithQuery({a: [9]}, {a: {$mod: [2, 1]}}, {$set: {'a.$': 5}}, {a: [5]});
+  // Negatives don't set '$'.
+  exceptionWithQuery({a: [1]}, {$not: {a: 2}}, {$set: {'a.$': 5}});
+  exceptionWithQuery({a: [1]}, {'a.0': {$ne: 2}}, {$set: {'a.$': 5}});
+  // One $or clause works.
+  modifyWithQuery({a: [{x: 2}, {x: 4}]},
+                  {$or: [{'a.x': 4}]}, {$set: {'a.$.z': 9}},
+                  {a: [{x: 2}, {x: 4, z: 9}]});
+  // More $or clauses throw.
+  exceptionWithQuery({a: [{x: 2}, {x: 4}]},
+                     {$or: [{'a.x': 4}, {'a.x': 4}]},
+                     {$set: {'a.$.z': 9}});
+  // $and uses the last one.
+  modifyWithQuery({a: [{x: 1}, {x: 3}]},
+                  {$and: [{'a.x': 1}, {'a.x': 3}]},
+                  {$set: {'a.$.x': 5}},
+                  {a: [{x: 1}, {x: 5}]});
+  modifyWithQuery({a: [{x: 1}, {x: 3}]},
+                  {$and: [{'a.x': 3}, {'a.x': 1}]},
+                  {$set: {'a.$.x': 5}},
+                  {a: [{x: 5}, {x: 3}]});
+  // Same goes for the implicit AND of a document selector.
+  modifyWithQuery({a: [{x: 1}, {y: 3}]},
+                  {'a.x': 1, 'a.y': 3},
+                  {$set: {'a.$.z': 5}},
+                  {a: [{x: 1}, {y: 3, z: 5}]});
+  // with $near, make sure it finds the closest one
+  modifyWithQuery({a: [{b: [1,1]},
+                       {b: [ [3,3], [4,4] ]},
+                       {b: [9,9]}]},
+                  {'a.b': {$near: [5, 5]}},
+                  {$set: {'a.$.b': 'k'}},
+                  {a: [{b: [1,1]}, {b: 'k'}, {b: [9,9]}]});
+  modifyWithQuery({a: [{x: 1}, {y: 1}, {x: 1, y: 1}]},
+                  {a: {$elemMatch: {x: 1, y: 1}}},
+                  {$set: {'a.$.x': 2}},
+                  {a: [{x: 1}, {y: 1}, {x: 2, y: 1}]});
+  modifyWithQuery({a: [{b: [{x: 1}, {y: 1}, {x: 1, y: 1}]}]},
+                  {'a.b': {$elemMatch: {x: 1, y: 1}}},
+                  {$set: {'a.$.b': 3}},
+                  {a: [{b: 3}]});
 
   // $inc
   modify({a: 1, b: 2}, {$inc: {a: 10}}, {a: 11, b: 2});
@@ -1952,10 +2003,11 @@ Tinytest.add("minimongo - modify", function (test) {
          {a: {}, q: {2: {r: 12}}});
   exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2'}}); // tested
   exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2.r'}}); // tested
-  test.expect_fail();
-  exception({a: {b: 12}, q: []}, {$rename: {'q.1': 'x'}}); // tested
-  test.expect_fail();
-  exception({a: {b: 12}, q: []}, {$rename: {'q.1.j': 'x'}}); // tested
+  // These strange MongoDB behaviors throw.
+  // modify({a: {b: 12}, q: []}, {$rename: {'q.1': 'x'}},
+  //        {a: {b: 12}, x: []}); // tested
+  // modify({a: {b: 12}, q: []}, {$rename: {'q.1.j': 'x'}},
+  //        {a: {b: 12}, x: []}); // tested
   exception({}, {$rename: {'a': 'a'}});
   exception({}, {$rename: {'a.b': 'a.b'}});
   modify({a: 12, b: 13}, {$rename: {a: 'b'}}, {b: 12});
@@ -2631,6 +2683,7 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
   coll = new LocalCollection();
   coll.insert({
     _id: "x",
+    k: 9,
     a: [
       {b: [
         [100, 100],
@@ -2638,6 +2691,7 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
       {b: [150,  150]}]});
   coll.insert({
     _id: "y",
+    k: 9,
     a: {b: [5, 5]}});
   var testNear = function (near, md, expected) {
     test.equal(
@@ -2652,14 +2706,23 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
   // 'y'.
   testNear([2, 2], 1000, ['x', 'y']);
 
+  // Ensure that distance is used as a tie-breaker for sort.
+  test.equal(
+    _.pluck(coll.find({'a.b': {$near: [1, 1]}}, {sort: {k: 1}}).fetch(), '_id'),
+    ['x', 'y']);
+  test.equal(
+    _.pluck(coll.find({'a.b': {$near: [5, 5]}}, {sort: {k: 1}}).fetch(), '_id'),
+    ['y', 'x']);
+
   var operations = [];
   var cbs = log_callbacks(operations);
   var handle = coll.find({'a.b': {$near: [7,7]}}).observe(cbs);
 
   test.length(operations, 2);
-  test.equal(operations.shift(), ['added', {a:{b:[5,5]}}, 0, null]);
+  test.equal(operations.shift(), ['added', {k:9, a:{b:[5,5]}}, 0, null]);
   test.equal(operations.shift(),
-             ['added', {a:[{b:[[100,100],[1,1]]},{b:[150,150]}]}, 1, null]);
+             ['added', {k: 9, a:[{b:[[100,100],[1,1]]},{b:[150,150]}]},
+              1, null]);
   // This needs to be inserted in the MIDDLE of the two existing ones.
   coll.insert({a: {b: [3,3]}});
   test.length(operations, 1);

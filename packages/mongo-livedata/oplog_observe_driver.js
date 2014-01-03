@@ -38,8 +38,7 @@ OplogObserveDriver = function (options) {
   self._projectionFn = LocalCollection._compileProjection(projection);
   // Projection function, result of combining important fields for selector and
   // existing fields projection
-  self._sharedProjection = LocalCollection._combineSelectorAndProjection(
-    selector, projection);
+  self._sharedProjection = self._matcher.combineIntoProjection(projection);
   self._sharedProjectionFn = LocalCollection._compileProjection(
     self._sharedProjection);
 
@@ -263,8 +262,7 @@ _.extend(OplogObserveDriver.prototype, {
         LocalCollection._modify(newDoc, op.o);
         self._handleDoc(id, self._sharedProjectionFn(newDoc));
       } else if (!canDirectlyModifyDoc ||
-                 LocalCollection._canSelectorBecomeTrueByModifier(
-                   self._cursorDescription.selector, op.o)) {
+                 self._matcher.canBecomeTrueByModifier(op.o)) {
         self._needToFetch.set(id, op.ts.toString());
         if (self._phase === PHASE.STEADY)
           self._fetchModifiedDocuments();

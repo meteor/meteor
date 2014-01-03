@@ -491,7 +491,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
     // the behavior of modifiers is concerned, whether `_modify`
     // is run on EJSON or on mongo-converted EJSON.
     var selectorDoc = LocalCollection._removeDollarOperators(selector);
-    LocalCollection._modify(selectorDoc, mod, true);
+    LocalCollection._modify(selectorDoc, mod, {isInsert: true});
     newDoc = selectorDoc;
   } else {
     newDoc = mod;
