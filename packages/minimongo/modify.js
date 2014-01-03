@@ -6,10 +6,12 @@
 // XXX atomicity: if one modification fails, do we roll back the whole
 // change?
 //
-// isInsert is set when _modify is being called to compute the document to
-// insert as part of an upsert operation. We use this primarily to figure out
-// when to set the fields in $setOnInsert, if present.
-LocalCollection._modify = function (doc, mod, isInsert) {
+// options:
+//   - isInsert is set when _modify is being called to compute the document to
+//     insert as part of an upsert operation. We use this primarily to figure
+//     out when to set the fields in $setOnInsert, if present.
+LocalCollection._modify = function (doc, mod, options) {
+  options = options || {};
   var is_modifier = false;
   for (var k in mod) {
     // IE7 doesn't support indexing into strings (eg, k[0]), so use substr.
@@ -42,7 +44,7 @@ LocalCollection._modify = function (doc, mod, isInsert) {
     for (var op in mod) {
       var mod_func = LocalCollection._modifiers[op];
       // Treat $setOnInsert as $set if this is an insert.
-      if (isInsert && op === '$setOnInsert')
+      if (options.isInsert && op === '$setOnInsert')
         mod_func = LocalCollection._modifiers['$set'];
       if (!mod_func)
         throw MinimongoError("Invalid modifier specified " + op);
@@ -74,7 +76,7 @@ LocalCollection._modify = function (doc, mod, isInsert) {
     // isInsert: if we're constructing a document to insert (via upsert)
     // and we're in replacement mode, not modify mode, DON'T take the
     // _id from the query.  This matches mongo's behavior.
-    if (k !== '_id' || isInsert)
+    if (k !== '_id' || options.isInsert)
       delete doc[k];
   });
   for (var k in new_doc) {

@@ -646,7 +646,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   var insertedId;
   if (updateCount === 0 && options.upsert) {
     var newDoc = LocalCollection._removeDollarOperators(selector);
-    LocalCollection._modify(newDoc, mod, true);
+    LocalCollection._modify(newDoc, mod, {isInsert: true});
     if (! newDoc._id && options.insertedId)
       newDoc._id = options.insertedId;
     insertedId = self.insert(newDoc);
