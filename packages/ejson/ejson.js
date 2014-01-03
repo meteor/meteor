@@ -150,36 +150,28 @@ EJSON._isCustomType = function (obj) {
 };
 
 
-// for both arrays and objects, in-place modification.
-var adjustTypesToJSONValue =
-EJSON._adjustTypesToJSONValue = function (obj) {
-  // Is it an atom that we need to adjust?
-  if (obj === null)
-    return null;
+// for both arrays and objects.
+// returns undefined if obj doesn't need adjusting
+var adjustTypesToJSONValue = function (obj) {
+  // Is it an object with a converter?
   var maybeChanged = toJSONValueHelper(obj);
   if (maybeChanged !== undefined)
     return maybeChanged;
 
   // Other atoms are unchanged.
   if (typeof obj !== 'object')
-    return obj;
+    return undefined;
 
   // Iterate over array or object structure.
   _.each(obj, function (value, key) {
-    if (typeof value !== 'object' && value !== undefined &&
-        !isInfOrNan(value))
-      return; // continue
-
-    var changed = toJSONValueHelper(value);
-    if (changed) {
-      obj[key] = changed;
-      return; // on to the next key
+    var changed = adjustTypesToJSONValue(value);
+    if (changed !== undefined) {
+      if (maybeChanged === undefined)
+        maybeChanged = _.clone(obj);
+      maybeChanged[key] = changed;
     }
-    // if we get here, value is an object but not adjustable
-    // at this level.  recurse.
-    adjustTypesToJSONValue(value);
   });
-  return obj;
+  return maybeChanged;
 };
 
 // Either return the JSON-compatible version of the argument, or undefined (if
@@ -195,49 +187,34 @@ var toJSONValueHelper = function (item) {
 };
 
 EJSON.toJSONValue = function (item) {
-  var changed = toJSONValueHelper(item);
-  if (changed !== undefined)
-    return changed;
-  if (typeof item === 'object') {
-    item = EJSON.clone(item);
-    adjustTypesToJSONValue(item);
-  }
-  return item;
+  return adjustTypesToJSONValue(item) || item;
 };
 
-// for both arrays and objects. Tries its best to just
-// use the object you hand it, but may return something
-// different if the object you hand it itself needs changing.
+// for both arrays and objects.
+// returns undefined if obj doesn't need adjusting.
 //
-var adjustTypesFromJSONValue =
-EJSON._adjustTypesFromJSONValue = function (obj) {
-  if (obj === null)
-    return null;
+var adjustTypesFromJSONValue = function (obj, allowMutation) {
   var maybeChanged = fromJSONValueHelper(obj);
-  if (maybeChanged !== obj)
+  if (maybeChanged !== undefined)
     return maybeChanged;
 
   // Other atoms are unchanged.
   if (typeof obj !== 'object')
-    return obj;
+    return undefined;
 
   _.each(obj, function (value, key) {
-    if (typeof value === 'object') {
-      var changed = fromJSONValueHelper(value);
-      if (value !== changed) {
-        obj[key] = changed;
-        return;
-      }
-      // if we get here, value is an object but not adjustable
-      // at this level.  recurse.
-      adjustTypesFromJSONValue(value);
+    var changed = adjustTypesFromJSONValue(value, allowMutation);
+    if (changed !== undefined) {
+      if (maybeChanged === undefined)
+        maybeChanged = allowMutation ? obj : _.clone(obj);
+      maybeChanged[key] = changed;
     }
   });
-  return obj;
+  return maybeChanged;
 };
 
 // Either return the argument changed to have the non-json
-// rep of itself (the Object version) or the argument itself.
+// rep of itself (the Object version) or undefined.
 
 // DOES NOT RECURSE.  For actually getting the fully-changed value, use
 // EJSON.fromJSONValue
@@ -255,18 +232,11 @@ var fromJSONValueHelper = function (value) {
       }
     }
   }
-  return value;
+  return undefined;
 };
 
-EJSON.fromJSONValue = function (item) {
-  var changed = fromJSONValueHelper(item);
-  if (changed === item && typeof item === 'object') {
-    item = EJSON.clone(item);
-    adjustTypesFromJSONValue(item);
-    return item;
-  } else {
-    return changed;
-  }
+EJSON.fromJSONValue = function (item, allowMutation) {
+  return adjustTypesFromJSONValue(item, allowMutation) || item;
 };
 
 EJSON.stringify = function (item, options) {
@@ -281,7 +251,7 @@ EJSON.stringify = function (item, options) {
 EJSON.parse = function (item) {
   if (typeof item !== 'string')
     throw new Error("EJSON.parse argument should be a string");
-  return EJSON.fromJSONValue(JSON.parse(item));
+  return EJSON.fromJSONValue(JSON.parse(item), true);
 };
 
 EJSON.isBinary = function (obj) {
