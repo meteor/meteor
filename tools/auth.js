@@ -329,7 +329,7 @@ var logInToGalaxy = function (galaxyName) {
     });
     var body = JSON.parse(galaxyResult.body);
   } catch (e) {
-    return { error: 'no-galaxy' };
+    return { error: (body && body.error) || 'no-galaxy' };
   }
   response = galaxyResult.response;
 
@@ -339,7 +339,7 @@ var logInToGalaxy = function (galaxyName) {
   if (response.statusCode !== 200 ||
       ! body ||
       ! _.has(galaxyResult.setCookie, 'GALAXY_AUTH'))
-    return { error: 'access-denied' };
+    return { error: (body && body.error) || 'access-denied' };
 
   return {
     token: galaxyResult.setCookie.GALAXY_AUTH,
@@ -438,8 +438,19 @@ exports.loginCommand = function (argv, showUsage) {
     var galaxyLoginResult = logInToGalaxy(galaxy);
     if (galaxyLoginResult.error) {
       // XXX add human readable error messages
-      process.stdout.write('\nLogin to ' + galaxy + ' failed: ' +
-                           galaxyLoginResult.error + '\n');
+      process.stdout.write('\nLogin to ' + galaxy + ' failed. ');
+
+      if (galaxyLoginResult.error === 'unauthorized') {
+        process.stdout.write('You are not authorized for this galaxy.\n');
+      } else if (galaxyLoginResult.error === 'no_oauth_server') {
+        process.stdout.write('The galaxy could not ' +
+                             'contact Meteor Accounts.\n');
+      } else if (galaxyLoginResult.error === 'no_identity') {
+        process.stdout.write('Your login information could not be found.\n');
+      } else {
+        process.stdout.write('Error: ' + galaxyLoginResult.error + '\n');
+      }
+
       process.exit(1);
     }
     data = readSessionData(); // be careful to reread data file after RPC
