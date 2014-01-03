@@ -6,10 +6,6 @@ function Address (city, state) {
 Address.prototype = {
   constructor: Address,
 
-  clone: function () {
-    return new Address(this.city, this.state);
-  },
-
   equals: function (other) {
     return EJSON.stringify(this) == EJSON.stringify(other);
   },
@@ -38,10 +34,6 @@ function Person (name, dob, address) {
 
 Person.prototype = {
   constructor: Person,
-
-  clone: function () {
-    return new Person(this.name, this.dob, this.address);
-  },
 
   equals: function (other) {
     return EJSON.stringify(this) == EJSON.stringify(other);

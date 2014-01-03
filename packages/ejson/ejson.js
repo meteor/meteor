@@ -376,6 +376,10 @@ EJSON.clone = function (v) {
   if (typeof v.clone === 'function') {
     return v.clone();
   }
+  // handle other custom types
+  if (EJSON._isCustomType(v)) {
+    return EJSON.fromJSONValue(EJSON.clone(EJSON.toJSONValue(v)), true);
+  }
   // handle other objects
   ret = {};
   _.each(v, function (value, key) {

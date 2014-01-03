@@ -208,11 +208,17 @@ Tinytest.add("ejson - custom types", function (test) {
     var roundTrip = EJSON.parse(str);
     testReallyEqual(obj, roundTrip);
   }
+  var testCustomObject = function (obj) {
+    testRoundTrip(obj);
+    testReallyEqual(obj, EJSON.clone(obj));
+  }
 
   var a = new EJSONTest.Address('Montreal', 'Quebec');
-  testRoundTrip( {address: a} );
+  testCustomObject( {address: a} );
 
   var d = new Date;
   var obj = new EJSONTest.Person("John Doe", d, a);
-  testRoundTrip( obj );
+  var clone = EJSON.clone(obj);
+  clone.address.city = 'Sherbrooke';
+  test.notEqual( obj, clone );
 });
