@@ -97,10 +97,16 @@ Sorter.prototype.getComparator = function (options) {
     return self._baseComparator;
   }
 
+  var distances = options.distances;
+
   // Return a comparator which first tries the sort specification, and if that
   // says "it's equal", breaks ties using $near distances.
   return composeComparators([self._baseComparator, function (a, b) {
-    return options.distances.get(a._id) - options.distances.get(b._id);
+    if (!distances.has(a._id))
+      throw Error("Missing distance for " + a._id);
+    if (!distances.has(b._id))
+      throw Error("Missing distance for " + b._id);
+    return distances.get(a._id) - distances.get(b._id);
   }]);
 };
 
