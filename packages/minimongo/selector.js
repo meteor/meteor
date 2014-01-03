@@ -842,17 +842,17 @@ var everythingMatcher = function (docOrBranchedValues) {
 // "document matchers" and "branched matchers". They both return result objects
 // but the argument is different: for the former it's a whole doc, whereas for
 // the latter it's an array of "branched values".
-var andSomeMatchers = function (branchedSelectors) {
-  if (branchedSelectors.length === 0)
+var andSomeMatchers = function (subMatchers) {
+  if (subMatchers.length === 0)
     return everythingMatcher;
-  if (branchedSelectors.length === 1)
-    return branchedSelectors[0];
+  if (subMatchers.length === 1)
+    return subMatchers[0];
 
-  return function (branches) {
+  return function (docOrBranches) {
     // XXX arrayIndex!
     var ret = {};
-    ret.result = _.all(branchedSelectors, function (f) {
-      var subResult = f(branches);
+    ret.result = _.all(subMatchers, function (f) {
+      var subResult = f(docOrBranches);
       // Copy a 'distance' number out of the first sub-matcher that has
       // one. Yes, this means that if there are multiple $near fields in a
       // query, something arbitrary happens; this appears to be consistent with
