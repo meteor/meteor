@@ -5,9 +5,6 @@ In update, $pull can't take a selector like {$gt: 3} (but it can take
 can be used, but selectors that are intended to match non-document
 values won't work.)
 
-In update, we don't support '$' to indicate the matched array object
-as in {$set: {'a.$.x': 12}}.
-
 Sort does not correctly implement the Mongo behavior where only array entries
 that match the query's selector are used as sort keys. Specifically, when
 sorting a document with sort specifier {a:1}, the document {a: [5, 10]} will

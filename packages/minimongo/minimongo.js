@@ -623,9 +623,8 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
     var queryResult = matcher.documentMatches(doc);
     if (queryResult.result) {
       // XXX Should we save the original even if mod ends up being a no-op?
-      // XXX queryResult should have arrayIndex on it, useful for '$'
       self._saveOriginal(id, doc);
-      self._modifyAndNotify(doc, mod, recomputeQids);
+      self._modifyAndNotify(doc, mod, recomputeQids, queryResult.arrayIndex);
       ++updateCount;
       if (!options.multi)
         break;
@@ -690,7 +689,7 @@ LocalCollection.prototype.upsert = function (selector, mod, options, callback) {
 };
 
 LocalCollection.prototype._modifyAndNotify = function (
-    doc, mod, recomputeQids) {
+    doc, mod, recomputeQids, arrayIndex) {
   var self = this;
 
   var matched_before = {};
@@ -708,7 +707,7 @@ LocalCollection.prototype._modifyAndNotify = function (
 
   var old_doc = EJSON.clone(doc);
 
-  LocalCollection._modify(doc, mod);
+  LocalCollection._modify(doc, mod, {arrayIndex: arrayIndex});
 
   for (qid in self.queries) {
     query = self.queries[qid];

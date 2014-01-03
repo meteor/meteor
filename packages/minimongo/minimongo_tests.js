@@ -1710,17 +1710,20 @@ Tinytest.add("minimongo - modify", function (test) {
     coll.update(query, mod);
     var actual = coll.findOne();
     delete actual._id;  // added by insert
-    test.equal(actual, expected, {input: doc, mod: mod});
+    test.equal(actual, expected, EJSON.stringify({input: doc, mod: mod}));
   };
   var modify = function (doc, mod, expected) {
     modifyWithQuery(doc, {}, mod, expected);
   };
-  var exception = function (doc, mod) {
+  var exceptionWithQuery = function (doc, query, mod) {
     var coll = new LocalCollection;
     coll.insert(doc);
     test.throws(function () {
-      coll.update({}, mod);
+      coll.update(query, mod);
     });
+  };
+  var exception = function (doc, mod) {
+    exceptionWithQuery(doc, {}, mod);
   };
 
   // document replacement
@@ -1763,6 +1766,45 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({x: []}, {$set: {'x.2..a': 99}}, {x: [null, null, {'': {a: 99}}]});
   modify({x: [null, null]}, {$set: {'x.2.a': 1}}, {x: [null, null, {a: 1}]});
   exception({x: [null, null]}, {$set: {'x.1.a': 1}});
+
+  // a.$.b
+  modifyWithQuery({a: [{x: 2}, {x: 4}]}, {'a.x': 4}, {$set: {'a.$.z': 9}},
+                  {a: [{x: 2}, {x: 4, z: 9}]});
+  exception({a: [{x: 2}, {x: 4}]}, {$set: {'a.$.z': 9}});
+  exceptionWithQuery({a: [{x: 2}, {x: 4}], b: 5}, {b: 5}, {$set: {'a.$.z': 9}});
+  modifyWithQuery({a: [5, 6, 7]}, {a: 6}, {$set: {'a.$': 9}}, {a: [5, 9, 7]});
+  modifyWithQuery({a: [{b: [{c: 9}, {c: 10}]}, {b: {c: 11}}]}, {'a.b.c': 10},
+                  {$unset: {'a.$.b': 1}}, {a: [{}, {b: {c: 11}}]});
+  modifyWithQuery({a: [{b: [{c: 9}, {c: 10}]}, {b: {c: 11}}]}, {'a.b.c': 11},
+                  {$unset: {'a.$.b': 1}},
+                  {a: [{b: [{c: 9}, {c: 10}]}, {}]});
+  modifyWithQuery({a: [1]}, {'a.0': 1}, {$set: {'a.$': 5}}, {a: [5]});
+  modifyWithQuery({a: [9]}, {a: {$mod: [2, 1]}}, {$set: {'a.$': 5}}, {a: [5]});
+  // Negatives don't set '$'.
+  exceptionWithQuery({a: [1]}, {$not: {a: 2}}, {$set: {'a.$': 5}});
+  exceptionWithQuery({a: [1]}, {'a.0': {$ne: 2}}, {$set: {'a.$': 5}});
+  // One $or clause works.
+  modifyWithQuery({a: [{x: 2}, {x: 4}]},
+                  {$or: [{'a.x': 4}]}, {$set: {'a.$.z': 9}},
+                  {a: [{x: 2}, {x: 4, z: 9}]});
+  // More $or clauses throw.
+  exceptionWithQuery({a: [{x: 2}, {x: 4}]},
+                     {$or: [{'a.x': 4}, {'a.x': 4}]},
+                     {$set: {'a.$.z': 9}});
+  // $and uses the last one.
+  modifyWithQuery({a: [{x: 1}, {x: 3}]},
+                  {$and: [{'a.x': 1}, {'a.x': 3}]},
+                  {$set: {'a.$.x': 5}},
+                  {a: [{x: 1}, {x: 5}]});
+  modifyWithQuery({a: [{x: 1}, {x: 3}]},
+                  {$and: [{'a.x': 3}, {'a.x': 1}]},
+                  {$set: {'a.$.x': 5}},
+                  {a: [{x: 5}, {x: 3}]});
+  // Same goes for the implicit AND of a document selector.
+  modifyWithQuery({a: [{x: 1}, {y: 3}]},
+                  {'a.x': 1, 'a.y': 3},
+                  {$set: {'a.$.z': 5}},
+                  {a: [{x: 1}, {y: 3, z: 5}]});
 
   // $inc
   modify({a: 1, b: 2}, {$inc: {a: 10}}, {a: 11, b: 2});
@@ -1944,12 +1986,11 @@ Tinytest.add("minimongo - modify", function (test) {
          {a: {}, q: {2: {r: 12}}});
   exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2'}}); // tested
   exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2.r'}}); // tested
-  test.expect_fail();
-  modify({a: {b: 12}, q: []}, {$rename: {'q.1': 'x'}},
-         {a: {b: 12}, x: []}); // tested
-  test.expect_fail();
-  modify({a: {b: 12}, q: []}, {$rename: {'q.1.j': 'x'}},
-         {a: {b: 12}, x: []}); // tested
+  // These strange MongoDB behaviors throw.
+  // modify({a: {b: 12}, q: []}, {$rename: {'q.1': 'x'}},
+  //        {a: {b: 12}, x: []}); // tested
+  // modify({a: {b: 12}, q: []}, {$rename: {'q.1.j': 'x'}},
+  //        {a: {b: 12}, x: []}); // tested
   exception({}, {$rename: {'a': 'a'}});
   exception({}, {$rename: {'a.b': 'a.b'}});
   modify({a: 12, b: 13}, {$rename: {a: 'b'}}, {b: 12});

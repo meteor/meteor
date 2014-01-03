@@ -52,7 +52,8 @@ LocalCollection._modify = function (doc, mod, options) {
         var forbidArray = (op === "$rename");
         var target = findModTarget(newDoc, keyparts, {
           noCreate: NO_CREATE_MODIFIERS[op],
-          forbidArray: (op === "$rename")
+          forbidArray: (op === "$rename"),
+          arrayIndex: options.arrayIndex
         });
         var field = keyparts.pop();
         modFunc(target, field, arg, keypath, newDoc);
@@ -91,15 +92,18 @@ LocalCollection._modify = function (doc, mod, options) {
 // ['a', '01'] -> ['a', 1]).
 //
 // if forbidArray is true, return null if the keypath goes through an array.
+//
+// if options.arrayIndex is defined, use this for the (first) '$' in the path.
 var findModTarget = function (doc, keyparts, options) {
   options = options || {};
+  var usedArrayIndex = false;
   for (var i = 0; i < keyparts.length; i++) {
     var last = (i === keyparts.length - 1);
     var keypart = keyparts[i];
     var indexable = isIndexable(doc);
-    if (options.noCreate && !(indexable && keypart in doc))
-      return undefined;
     if (!indexable) {
+      if (options.noCreate)
+        return undefined;
       var e = MinimongoError(
         "cannot use the part '" + keypart + "' to traverse " + doc);
       e.setPropertyError = true;
@@ -108,9 +112,20 @@ var findModTarget = function (doc, keyparts, options) {
     if (doc instanceof Array) {
       if (options.forbidArray)
         return null;
-      if (isNumericKey(keypart)) {
+      if (keypart === '$') {
+        if (usedArrayIndex)
+          throw MinimongoError("Too many positional (i.e. '$') elements");
+        if (options.arrayIndex === undefined) {
+          throw MinimongoError("The positional operator did not find the " +
+                               "match needed from the query");
+        }
+        keypart = options.arrayIndex;
+        usedArrayIndex = true;
+      } else if (isNumericKey(keypart)) {
         keypart = parseInt(keypart);
       } else {
+        if (options.noCreate)
+          return undefined;
         throw MinimongoError(
           "can't append to array using string field name ["
                     + keypart + "]");
@@ -118,6 +133,8 @@ var findModTarget = function (doc, keyparts, options) {
       if (last)
         // handle 'a.01'
         keyparts[i] = keypart;
+      if (options.noCreate && keypart >= doc.length)
+        return undefined;
       while (doc.length < keypart)
         doc.push(null);
       if (!last) {
@@ -130,8 +147,12 @@ var findModTarget = function (doc, keyparts, options) {
     } else {
       if (keypart.length && keypart.substr(0, 1) === '$')
         throw MinimongoError("can't set field named " + keypart);
-      if (!last && !(keypart in doc))
-        doc[keypart] = {};
+      if (!(keypart in doc)) {
+        if (options.noCreate)
+          return undefined;
+        if (!last)
+          doc[keypart] = {};
+      }
     }
 
     if (last)
