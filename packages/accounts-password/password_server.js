@@ -95,7 +95,7 @@ Accounts.registerLoginHandler(function (options) {
     throw new Meteor.Error(403, "User not found");
   var stampedLoginToken = Accounts._generateStampedLoginToken();
   Meteor.users.update(
-    userId, {$push: {'services.resume.loginTokens': stampedLoginToken}});
+    userId, {$push: {'services.resume.loginTokens': Accounts._hashStampedToken(stampedLoginToken)}});
 
   return {
     token: stampedLoginToken.token,
@@ -139,7 +139,7 @@ Accounts.registerLoginHandler(function (options) {
 
   var stampedLoginToken = Accounts._generateStampedLoginToken();
   Meteor.users.update(
-    user._id, {$push: {'services.resume.loginTokens': stampedLoginToken}});
+    user._id, {$push: {'services.resume.loginTokens': Accounts._hashStampedToken(stampedLoginToken)}});
 
   return {
     token: stampedLoginToken.token,
@@ -314,13 +314,14 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
     throw new Meteor.Error(403, "Token has invalid email address");
 
   var stampedLoginToken = Accounts._generateStampedLoginToken();
+  var newHashedToken = Accounts._hashStampedToken(stampedLoginToken);
 
   // NOTE: We're about to invalidate tokens on the user, who we might be
   // logged in as. Make sure to avoid logging ourselves out if this
   // happens. But also make sure not to leave the connection in a state
   // of having a bad token set if things fail.
   var oldToken = Accounts._getLoginToken(this.connection.id);
-  Accounts._setLoginToken(this.connection.id, null);
+  Accounts._setLoginToken(user._id, this.connection, null);
 
   try {
     // Update the user record by:
@@ -331,17 +332,17 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
     // - Verifying their email, since they got the password reset via email.
     Meteor.users.update({_id: user._id, 'emails.address': email}, {
       $set: {'services.password.srp': newVerifier,
-             'services.resume.loginTokens': [stampedLoginToken],
+             'services.resume.loginTokens': [newHashedToken],
              'emails.$.verified': true},
       $unset: {'services.password.reset': 1}
     });
   } catch (err) {
     // update failed somehow. reset to old token.
-    Accounts._setLoginToken(this.connection.id, oldToken);
+    Accounts._setLoginToken(user._id, this.connection, oldToken);
     throw err;
   }
 
-  Accounts._setLoginToken(this.connection.id, stampedLoginToken.token);
+  Accounts._setLoginToken(user._id, this.connection, newHashedToken.hashedToken);
   this.setUserId(user._id);
 
   return {
@@ -421,6 +422,7 @@ Meteor.methods({verifyEmail: function (token) {
 
   // Log the user in with a new login token.
   var stampedLoginToken = Accounts._generateStampedLoginToken();
+  var hashedToken = Accounts._hashStampedToken(stampedLoginToken);
 
   // By including the address in the query, we can use 'emails.$' in the
   // modifier to get a reference to the specific object in the emails
@@ -432,10 +434,10 @@ Meteor.methods({verifyEmail: function (token) {
      'emails.address': tokenRecord.address},
     {$set: {'emails.$.verified': true},
      $pull: {'services.email.verificationTokens': {token: token}},
-     $push: {'services.resume.loginTokens': stampedLoginToken}});
+     $push: {'services.resume.loginTokens': hashedToken}});
 
   this.setUserId(user._id);
-  Accounts._setLoginToken(this.connection.id, stampedLoginToken.token);
+  Accounts._setLoginToken(user._id, this.connection, hashedToken.hashedToken);
   return {
     token: stampedLoginToken.token,
     tokenExpires: Accounts._tokenExpiration(stampedLoginToken.when),
@@ -514,7 +516,11 @@ Meteor.methods({createUser: function (options) {
 
   // client gets logged in as the new user afterwards.
   this.setUserId(result.id);
-  Accounts._setLoginToken(this.connection.id, result.token);
+  Accounts._setLoginToken(
+    result.id,
+    this.connection,
+    Accounts._hashLoginToken(result.token)
+  );
   return result;
 }});
 
