@@ -776,14 +776,30 @@ _.extend(ClientTarget.prototype, {
         return { type: "stylesheet", stylesheet: { rules: [] } };
       }
 
-      function isImportRule (node) {
-        return node.type === 'import';
+      function rulePredicate (rule) {
+        return function (node) {
+          return node.type === rule;
+        }
       }
 
-      var imports = _.filter(ast.stylesheet.rules, isImportRule);
+      // Get rid of comments
+      ast.stylesheet.rules = _.reject(ast.stylesheet.rules,
+                                      rulePredicate("comment"));
+
+      // Pick only the imports from the begginning of file ignoring @charset
+      // rules as Meteor assumes every file is in utf-8.
+      ast.stylesheet.rules = _.reject(ast.stylesheet.rules,
+                                      rulePredicate("charset"));
+      var importsNumber = 0;
+      for (var i = 0; i < ast.stylesheet.rules.length; i++)
+        if (!rulePredicate("import")(ast.stylesheet.rules[i])) {
+          importsNumber = i;
+          break;
+        }
+
+      var imports = ast.stylesheet.rules.splice(0, importsNumber);
       importsAst.stylesheet.rules = importsAst.stylesheet.rules.concat(imports);
 
-      ast.stylesheet.rules = _.reject(ast.stylesheet.rules, isImportRule);
       return ast;
     });
 
