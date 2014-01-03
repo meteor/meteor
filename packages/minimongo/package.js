@@ -13,6 +13,7 @@ Package.on_use(function (api) {
   api.use('geojson-utils');
   api.add_files([
     'minimongo.js',
+    'helpers.js',
     'selector.js',
     'sort.js',
     'projection.js',

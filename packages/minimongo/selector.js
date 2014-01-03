@@ -883,48 +883,6 @@ var andDocumentMatchers = andSomeMatchers;
 var andBranchedMatchers = andSomeMatchers;
 
 
-// HELPER FUNCTIONS
-
-// Like _.isArray, but doesn't regard polyfilled Uint8Arrays on old browsers as
-// arrays.
-// XXX maybe this should be EJSON.isArray
-isArray = function (x) {
-  return _.isArray(x) && !EJSON.isBinary(x);
-};
-
-// XXX maybe this should be EJSON.isObject, though EJSON doesn't know about
-// RegExp
-// XXX note that _type(undefined) === 3!!!!
-var isPlainObject = function (x) {
-  return x && LocalCollection._f._type(x) === 3;
-};
-
-var isIndexable = function (x) {
-  return isArray(x) || isPlainObject(x);
-};
-
-var isOperatorObject = function (valueSelector) {
-  if (!isPlainObject(valueSelector))
-    return false;
-
-  var theseAreOperators = undefined;
-  _.each(valueSelector, function (value, selKey) {
-    var thisIsOperator = selKey.substr(0, 1) === '$';
-    if (theseAreOperators === undefined) {
-      theseAreOperators = thisIsOperator;
-    } else if (theseAreOperators !== thisIsOperator) {
-      throw new Error("Inconsistent selector: " + valueSelector);
-    }
-  });
-  return !!theseAreOperators;  // {} has no operators
-};
-
-
-// string can be converted to integer
-isNumericKey = function (s) {
-  return /^[0-9]+$/.test(s);
-};
-
 // helpers used by compiled selector code
 LocalCollection._f = {
   // XXX for _all and _in, consider building 'inquery' at compile time..
@@ -1088,4 +1046,13 @@ LocalCollection._f = {
       throw Error("Sorting not supported on Javascript code"); // XXX
     throw Error("Unknown type to sort");
   }
+};
+
+// Oddball function used by upsert.
+LocalCollection._removeDollarOperators = function (selector) {
+  var selectorDoc = {};
+  for (var k in selector)
+    if (k.substr(0, 1) !== '$')
+      selectorDoc[k] = selector[k];
+  return selectorDoc;
 };
