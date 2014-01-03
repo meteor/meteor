@@ -15,6 +15,16 @@ usually have sort key 5 (the minimum is used for ascending sorts and the maximum
 for descending sorts). But if the query's selector is {a: {$gt: 7}}, then Mongo
 will actually use 10 as the sort key because 5 does not match.
 
+Unsupported selectors:
+ - $elemMatch inside $all
+ - geoqueries other than $near ($nearSphere, $geoIntersects, $geoWithin)
+
+In MongoDB, a query with $near that matches a document which has multiple points
+matching the key (eg, `c.find({$near: 'a'})` with the document
+`{a: [[1,1], [2, 2]]}` can return the document multiple times (perhaps not
+even consecutively). In minimongo, queries never return a document multiple
+times.
+
 ## ON TYPES ##
 
 We don't implement these Mongo types completely: timestamp (but date works),
@@ -51,10 +61,6 @@ hand, the underlying selector and mutator code is quite well tested.)
 ## OTHER STUFF ##
 
 We ignore the 'x' and 's' flags on regular expressions.
-
-We don't do as much type checking as we could, especially in
-selectors. If pass in something that's weirdly formed, you'll probably
-just get a random exception or error.
 
 "Natural order" isn't very well defined.
 
