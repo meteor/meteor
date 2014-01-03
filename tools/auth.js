@@ -196,15 +196,28 @@ var tryRevokeOldTokens = function (options) {
     }
     var response = result.response;
 
-    if (response.statusCode === 200) {
-      // Server confirms that the tokens have been revoked
-      // (Be careful to reread session data in case httpHelpers changed it)
-      data = readSessionData();
-      var session = getSession(data, domain);
-      session.pendingRevoke = _.difference(session.pendingRevoke, tokenIds);
-      if (! session.pendingRevoke.length)
-        delete session.pendingRevoke;
-      writeSessionData(data);
+    if (response.statusCode === 200 &&
+        response.body) {
+      try {
+        var body = JSON.parse(response.body);
+        if (body.tokenRevoked) {
+          // Server confirms that the tokens have been revoked. Checking for a
+          // `tokenRevoked` key in the response confirms that we hit an actual
+          // accounts server that understands that we were trying to revoke some
+          // tokens, not just a random URL that happened to return a 200
+          // response.
+
+          // (Be careful to reread session data in case httpHelpers changed it)
+          data = readSessionData();
+          var session = getSession(data, domain);
+          session.pendingRevoke = _.difference(session.pendingRevoke, tokenIds);
+          if (! session.pendingRevoke.length)
+            delete session.pendingRevoke;
+          writeSessionData(data);
+        }
+      } catch (e) {
+        logoutFailWarning(domain);
+      }
     } else {
       logoutFailWarning(domain);
     }
