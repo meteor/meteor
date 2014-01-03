@@ -41,8 +41,22 @@ var builtinConverters = [
       return new Date(obj.$date);
     }
   },
-  { // NaN, Inf, -Inf. (These are the only objects with typeof !== 'object'
-    // which we match.)
+  { // undefined
+    matchJSONValue: function (obj) {
+      return _.has(obj, '$Undefined') && _.size(obj) === 1;
+    },
+    matchObject: function (obj) {
+      return obj === undefined;
+    },
+    toJSONValue: function (obj) {
+      return {$Undefined: true};
+    },
+    fromJSONValue: function (obj) {
+      return undefined;
+    }
+  },
+  { // NaN, Inf, -Inf. (These, along with undefined, are the only objects
+    // with typeof !== 'object' which we match.)
     matchJSONValue: function (obj) {
       return _.has(obj, '$InfNaN') && _.size(obj) === 1;
     },
@@ -151,22 +165,22 @@ EJSON._isCustomType = function (obj) {
 
 
 // for both arrays and objects.
-// returns undefined if obj doesn't need adjusting
+// returns null if obj doesn't need adjusting
 var adjustTypesToJSONValue = function (obj) {
   // Is it an object with a converter?
   var maybeChanged = toJSONValueHelper(obj);
-  if (maybeChanged !== undefined)
+  if (maybeChanged !== null)
     return maybeChanged;
 
   // Other atoms are unchanged.
   if (typeof obj !== 'object')
-    return undefined;
+    return null;
 
   // Iterate over array or object structure.
   _.each(obj, function (value, key) {
     var changed = adjustTypesToJSONValue(value);
-    if (changed !== undefined) {
-      if (maybeChanged === undefined)
+    if (changed !== null) {
+      if (maybeChanged === null)
         maybeChanged = _.clone(obj);
       maybeChanged[key] = changed;
     }
@@ -174,7 +188,7 @@ var adjustTypesToJSONValue = function (obj) {
   return maybeChanged;
 };
 
-// Either return the JSON-compatible version of the argument, or undefined (if
+// Either return the JSON-compatible version of the argument, or null (if
 // the item isn't itself replaceable, but maybe some fields in it are)
 var toJSONValueHelper = function (item) {
   for (var i = 0; i < builtinConverters.length; i++) {
@@ -183,7 +197,7 @@ var toJSONValueHelper = function (item) {
       return converter.toJSONValue(item);
     }
   }
-  return undefined;
+  return null;
 };
 
 EJSON.toJSONValue = function (item) {
@@ -191,21 +205,21 @@ EJSON.toJSONValue = function (item) {
 };
 
 // for both arrays and objects.
-// returns undefined if obj doesn't need adjusting.
+// returns null if obj doesn't need adjusting.
 //
 var adjustTypesFromJSONValue = function (obj, allowMutation) {
   var maybeChanged = fromJSONValueHelper(obj);
-  if (maybeChanged !== undefined)
+  if (maybeChanged !== null)
     return maybeChanged;
 
   // Other atoms are unchanged.
   if (typeof obj !== 'object')
-    return undefined;
+    return null;
 
   _.each(obj, function (value, key) {
     var changed = adjustTypesFromJSONValue(value, allowMutation);
-    if (changed !== undefined) {
-      if (maybeChanged === undefined)
+    if (changed !== null) {
+      if (maybeChanged === null)
         maybeChanged = allowMutation ? obj : _.clone(obj);
       maybeChanged[key] = changed;
     }
@@ -214,7 +228,7 @@ var adjustTypesFromJSONValue = function (obj, allowMutation) {
 };
 
 // Either return the argument changed to have the non-json
-// rep of itself (the Object version) or undefined.
+// rep of itself (the Object version) or null.
 
 // DOES NOT RECURSE.  For actually getting the fully-changed value, use
 // EJSON.fromJSONValue
@@ -232,11 +246,12 @@ var fromJSONValueHelper = function (value) {
       }
     }
   }
-  return undefined;
+  return null;
 };
 
 EJSON.fromJSONValue = function (item, allowMutation) {
-  return adjustTypesFromJSONValue(item, allowMutation) || item;
+  var adjusted = adjustTypesFromJSONValue(item, allowMutation);
+  return adjusted !== null ? adjusted : item;
 };
 
 EJSON.stringify = function (item, options) {

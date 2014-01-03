@@ -77,6 +77,11 @@ Tinytest.add("ejson - NaN and Inf", function (test) {
   ));
 });
 
+Tinytest.add("ejson - undefined", function (test) {
+  test.equal(EJSON.parse("{\"$Undefined\": true}"), undefined);
+  test.equal(undefined, EJSON.parse("{\"$Undefined\": true}"));
+});
+
 Tinytest.add("ejson - clone", function (test) {
   var cloneTest = function (x, identical) {
     var y = EJSON.clone(x);
