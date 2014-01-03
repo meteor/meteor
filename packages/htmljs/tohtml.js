@@ -16,6 +16,7 @@ HTML.toHTML = function (node, parentComponent) {
     // component
     var instance = node.instantiate(parentComponent || null);
     var content = instance.render('STATIC');
+    // recurse with a new value for parentComponent
     return HTML.toHTML(content, instance);
   } else if (typeof node === 'function') {
     return HTML.toHTML(node(), parentComponent);

@@ -10,6 +10,10 @@ Tinytest.add("htmljs - getTag", function (test) {
   test.equal(x.children, []);
   test.equal(x.attrs, null);
 
+  test.isTrue((new FOO) instanceof HTML.FOO);
+  test.isTrue((new FOO) instanceof HTML.Tag);
+  test.isFalse((new HTML.P) instanceof HTML.FOO);
+
   var result = HTML.ensureTag('Bar');
   test.equal(typeof result, 'undefined');
   var BAR = HTML.BAR;
@@ -55,6 +59,11 @@ Tinytest.add("htmljs - construction", function (test) {
   var f = function () {};
   test.equal(A(new f).children.length, 1);
   test.equal(A(new Date).children.length, 1);
+
+  test.equal(HTML.toHTML(HTML.CharRef({html: '&amp;', str: '&'})), '&amp;');
+  test.throws(function () {
+    HTML.CharRef({html: '&amp;'}); // no 'str'
+  });
 });
 
 Tinytest.add("htmljs - utils", function (test) {
@@ -78,4 +87,12 @@ Tinytest.add("htmljs - utils", function (test) {
   test.isFalse(HTML.isKnownElement("asdf"));
   test.isFalse(HTML.isKnownElement("ASDF"));
 
+});
+
+Tinytest.add("htmljs - attributes", function (test) {
+  var SPAN = HTML.SPAN;
+  var amp = HTML.CharRef({html: '&amp;', str: '&'});
+
+  test.equal(HTML.toHTML(SPAN({title: ['M', amp, 'Ms']}, 'M', amp, 'M candies')),
+             '<span title="M&amp;Ms">M&amp;M candies</span>');
 });
