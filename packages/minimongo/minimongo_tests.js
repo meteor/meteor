@@ -1703,25 +1703,23 @@ Tinytest.add("minimongo - binary search", function (test) {
 });
 
 Tinytest.add("minimongo - modify", function (test) {
-  var modify = function (doc, mod, result) {
-    var copy = EJSON.clone(doc);
-    LocalCollection._modify(copy, mod);
-    if (!LocalCollection._f._equal(copy, result)) {
-      // XXX super janky
-      test.fail({type: "minimongo-modifier",
-                 message: "modifier test failure",
-                 input_doc: EJSON.stringify(doc),
-                 modifier: EJSON.stringify(mod),
-                 expected: EJSON.stringify(result),
-                 actual: EJSON.stringify(copy)
-                });
-    } else {
-      test.ok();
-    }
+  var modifyWithQuery = function (doc, query, mod, expected) {
+    var coll = new LocalCollection;
+    coll.insert(doc);
+    // The query is relevant for 'a.$.b'.
+    coll.update(query, mod);
+    var actual = coll.findOne();
+    delete actual._id;  // added by insert
+    test.equal(actual, expected, {input: doc, mod: mod});
+  };
+  var modify = function (doc, mod, expected) {
+    modifyWithQuery(doc, {}, mod, expected);
   };
   var exception = function (doc, mod) {
+    var coll = new LocalCollection;
+    coll.insert(doc);
     test.throws(function () {
-      LocalCollection._modify(EJSON.clone(doc), mod);
+      coll.update({}, mod);
     });
   };
 
@@ -1748,18 +1746,13 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: [null, null, null]}, {$set: {'a.3.b': 12}}, {
     a: [null, null, null, {b: 12}]});
   exception({a: []}, {$set: {'a.b': 12}});
-  test.expect_fail();
   exception({a: 12}, {$set: {'a.b': 99}}); // tested on mongo
-  test.expect_fail();
   exception({a: 'x'}, {$set: {'a.b': 99}});
-  test.expect_fail();
   exception({a: true}, {$set: {'a.b': 99}});
-  test.expect_fail();
   exception({a: null}, {$set: {'a.b': 99}});
   modify({a: {}}, {$set: {'a.3': 12}}, {a: {'3': 12}});
   modify({a: []}, {$set: {'a.3': 12}}, {a: [null, null, null, 12]});
   modify({}, {$set: {'': 12}}, {'': 12}); // tested on mongo
-  test.expect_fail();
   exception({}, {$set: {'.': 12}}); // tested on mongo
   modify({}, {$set: {'. ': 12}}, {'': {' ': 12}}); // tested on mongo
   modify({}, {$inc: {'... ': 12}}, {'': {'': {'': {' ': 12}}}}); // tested
@@ -1952,9 +1945,11 @@ Tinytest.add("minimongo - modify", function (test) {
   exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2'}}); // tested
   exception({a: {b: 12}, q: []}, {$rename: {'a.b': 'q.2.r'}}); // tested
   test.expect_fail();
-  exception({a: {b: 12}, q: []}, {$rename: {'q.1': 'x'}}); // tested
+  modify({a: {b: 12}, q: []}, {$rename: {'q.1': 'x'}},
+         {a: {b: 12}, x: []}); // tested
   test.expect_fail();
-  exception({a: {b: 12}, q: []}, {$rename: {'q.1.j': 'x'}}); // tested
+  modify({a: {b: 12}, q: []}, {$rename: {'q.1.j': 'x'}},
+         {a: {b: 12}, x: []}); // tested
   exception({}, {$rename: {'a': 'a'}});
   exception({}, {$rename: {'a.b': 'a.b'}});
   modify({a: 12, b: 13}, {$rename: {a: 'b'}}, {b: 12});

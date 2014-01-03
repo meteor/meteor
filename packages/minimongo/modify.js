@@ -50,7 +50,10 @@ LocalCollection._modify = function (doc, mod, options) {
         var keyparts = keypath.split('.');
         var noCreate = _.has(NO_CREATE_MODIFIERS, op);
         var forbidArray = (op === "$rename");
-        var target = findModTarget(newDoc, keyparts, noCreate, forbidArray);
+        var target = findModTarget(newDoc, keyparts, {
+          noCreate: NO_CREATE_MODIFIERS[op],
+          forbidArray: (op === "$rename")
+        });
         var field = keyparts.pop();
         modFunc(target, field, arg, keypath, newDoc);
       });
@@ -76,29 +79,42 @@ LocalCollection._modify = function (doc, mod, options) {
 
 // for a.b.c.2.d.e, keyparts should be ['a', 'b', 'c', '2', 'd', 'e'],
 // and then you would operate on the 'e' property of the returned
-// object. if noCreate is falsey, creates intermediate levels of
+// object.
+//
+// if options.noCreate is falsey, creates intermediate levels of
 // structure as necessary, like mkdir -p (and raises an exception if
 // that would mean giving a non-numeric property to an array.) if
-// noCreate is true, return undefined instead. may modify the last
-// element of keyparts to signal to the caller that it needs to use a
-// different value to index into the returned object (for example,
-// ['a', '01'] -> ['a', 1]). if forbidArray is true, return null if
-// the keypath goes through an array.
-var findModTarget = function (doc, keyparts, noCreate, forbidArray) {
+// options.noCreate is true, return undefined instead.
+//
+// may modify the last element of keyparts to signal to the caller that it needs
+// to use a different value to index into the returned object (for example,
+// ['a', '01'] -> ['a', 1]).
+//
+// if forbidArray is true, return null if the keypath goes through an array.
+var findModTarget = function (doc, keyparts, options) {
+  options = options || {};
   for (var i = 0; i < keyparts.length; i++) {
     var last = (i === keyparts.length - 1);
     var keypart = keyparts[i];
-    var numeric = /^[0-9]+$/.test(keypart);
-    if (noCreate && (!(typeof doc === "object") || !(keypart in doc)))
+    var indexable = isIndexable(doc);
+    if (options.noCreate && !(indexable && keypart in doc))
       return undefined;
+    if (!indexable) {
+      var e = MinimongoError(
+        "cannot use the part '" + keypart + "' to traverse " + doc);
+      e.setPropertyError = true;
+      throw e;
+    }
     if (doc instanceof Array) {
-      if (forbidArray)
+      if (options.forbidArray)
         return null;
-      if (!numeric)
+      if (isNumericKey(keypart)) {
+        keypart = parseInt(keypart);
+      } else {
         throw MinimongoError(
           "can't append to array using string field name ["
                     + keypart + "]");
-      keypart = parseInt(keypart);
+      }
       if (last)
         // handle 'a.01'
         keyparts[i] = keypart;
@@ -112,7 +128,8 @@ var findModTarget = function (doc, keyparts, noCreate, forbidArray) {
                       "' of list value " + JSON.stringify(doc[keypart]));
       }
     } else {
-      // XXX check valid fieldname (no $ at start, no .)
+      if (keypart.length && keypart.substr(0, 1) === '$')
+        throw MinimongoError("can't set field named " + keypart);
       if (!last && !(keypart in doc))
         doc[keypart] = {};
     }
@@ -359,7 +376,7 @@ var MODIFIERS = {
     delete target[field];
 
     var keyparts = arg.split('.');
-    var target2 = findModTarget(doc, keyparts, false, true);
+    var target2 = findModTarget(doc, keyparts, {forbidArray: true});
     if (target2 === null)
       throw MinimongoError("$rename target field invalid");
     var field2 = keyparts.pop();
