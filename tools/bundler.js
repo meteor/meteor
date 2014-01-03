@@ -760,8 +760,9 @@ _.extend(ClientTarget.prototype, {
   minifyCss: function (minifiers) {
     var self = this;
 
-    // after concatenation some @import's might be left in the middle of CSS
-    // file but they required to be in the beginning.
+    // The straight-forward concatenation of CSS files would break @import rules
+    // located in the beginning of a file. Before concatenation, pull them to a
+    // separate syntax tree that will always precede other rules.
     var importsAst = {
       type: 'stylesheet',
       stylesheet: { rules: [] }
@@ -786,7 +787,7 @@ _.extend(ClientTarget.prototype, {
       ast.stylesheet.rules = _.reject(ast.stylesheet.rules,
                                       rulePredicate("comment"));
 
-      // Pick only the imports from the begginning of file ignoring @charset
+      // Pick only the imports from the beginning of file ignoring @charset
       // rules as Meteor assumes every file is in utf-8.
       ast.stylesheet.rules = _.reject(ast.stylesheet.rules,
                                       rulePredicate("charset"));
