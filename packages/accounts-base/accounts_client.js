@@ -115,8 +115,28 @@ Accounts.callLoginMethod = function (options) {
             // need to show a logging-in animation.
             _suppressLoggingIn: true,
             userCallback: function (error) {
+              var storedTokenNow = storedLoginToken();
               if (error) {
-                makeClientLoggedOut();
+                // If we had a login error AND the current stored token is the
+                // one that we tried to log in with, then declare ourselves
+                // logged out. If there's a token in storage but it's not the
+                // token that we tried to log in with, we don't know anything
+                // about whether that token is valid or not, so do nothing. The
+                // periodic localStorage poll will decide if we are logged in or
+                // out with this token, if it hasn't already. Of course, even
+                // with this check, another tab could insert a new valid token
+                // immediately before we clear localStorage here, which would
+                // lead to both tabs being logged out, but by checking the token
+                // in storage right now we hope to make that unlikely to happen.
+                //
+                // If there is no token in storage right now, we don't have to
+                // do anything; whatever code removed the token from storage was
+                // responsible for calling `makeClientLoggedOut()`, or the
+                // periodic localStorage poll will call `makeClientLoggedOut`
+                // eventually if another tab wiped the token from storage.
+                if (storedTokenNow && storedTokenNow === result.token) {
+                  makeClientLoggedOut();
+                }
               }
               // Possibly a weird callback to call, but better than nothing if
               // there is a reconnect between "login result received" and "data
@@ -194,23 +214,40 @@ Meteor.logout = function (callback) {
 };
 
 Meteor.logoutOtherClients = function (callback) {
-  // Call the `logoutOtherClients` method and store the login token that we get
-  // back. The server is not supposed to close connections on the old token for
-  // 10 seconds, so we should have time to store our new token before being
-  // disconnected. If we get disconnected, then we'll immediately reconnect with
-  // the new token. If for some reason we get disconnected before storing the
-  // new token, then the worst that will happen is that we'll have a flicker
-  // from trying to log in with the old token before storing and logging in with
-  // the new one.
+  // Call the `logoutOtherClients` method. Store the login token that we get
+  // back and use it to log in again. The server is not supposed to close
+  // connections on the old token for 10 seconds, so we should have time to
+  // store our new token before being disconnected. If we get disconnected, then
+  // we'll immediately reconnect with the new token. If for some reason we get
+  // disconnected before storing the new token, then the worst that will happen
+  // is that we'll have a flicker from trying to log in with the old token
+  // before storing and logging in with the new one.
   Meteor.apply('logoutOtherClients', [], { wait: true },
                function (error, result) {
-                 if (! error) {
+                 if (error) {
+                   callback && callback(error);
+                 } else {
                    var userId = Meteor.userId();
                    storeLoginToken(userId, result.token, result.tokenExpires);
+                   // This login method call is usually redundant; if the server
+                   // hasn't disconnected us yet by deleting our old token, then
+                   // it will eventually disconnect us and we will send the
+                   // login on reconnect. But if the server has disconnected us
+                   // already, then we would have already tried and failed to
+                   // login with the old token on reconnect, and we have to make
+                   // sure a login method gets sent here.
+                   Meteor.loginWithToken(result.token, function (err) {
+                     if (err &&
+                         storedLoginToken() &&
+                         storedLoginToken().token === result.token) {
+                       makeClientLoggedOut();
+                     }
+                     callback && callback(err);
+                   });
                  }
-                 callback && callback(error);
                });
 };
+
 
 ///
 /// LOGIN SERVICES

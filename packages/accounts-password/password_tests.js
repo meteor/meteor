@@ -486,19 +486,29 @@ if (Meteor.isClient) (function () {
     },
     logoutStep,
     function (test, expect) {
-      var self = this;
-      // Use a second connection to get a login token to use in the next test.
-      var conn = DDP.connect(self.ddpUrl);
-      conn.call("login", {
-        user: { username: self.username },
-        password: self.password
-      }, expect(function (err, result) {
-        test.isFalse(err);
-        test.isTrue(result.token);
-        self.tokenForLoginAndLogoutOthers = result.token;
-      }));
-    },
-    function (test, expect) {
+      // Suppose we have two tabs open and logged in with token xyz. Suppose one
+      // of the tabs gets disconnected, and then reconnects and calls login with
+      // xyz. Before the login method runs on the server (but after it has been
+      // sent by the client), suppose the other tab logs out and then logs in
+      // again, thereby deleting token xyz on the server and creating a new
+      // token 123 that gets stored in localStorage. When the login callback
+      // from the first tab runs, it will see an error because xyz is no longer
+      // a valid token, but it should not give up hope and wipe localStorage
+      // (overwriting token 123 and completely logging out both tabs); instead,
+      // it should eventually notice token 123 in localStorage and try to log in
+      // with that.
+      //
+      // This test tries to replicate that situation and ensure that we
+      // eventually end up logged in, even if we have a login method outstanding
+      // while a token gets deleted and replaced with a new one. The test calls
+      // `logoutOtherClients`, which causes the server to delete our current
+      // token and almost immediately disconnect us. We immediately reconnect
+      // and try to log in with the old invalid token. In the meantime, we run
+      // our `logoutOtherClients` callback, which stores a new valid token. When
+      // our outstanding login method returns, it should NOT declare itself
+      // logged out (despite the fact that it received an error from the
+      // server), and the periodic localStorage poll should notice the new valid
+      // token in localStorage and log us in.
       var self = this;
 
       var expectServerLoggedIn = expect(function (err, result) {
@@ -507,24 +517,28 @@ if (Meteor.isClient) (function () {
         test.equal(result, Meteor.userId());
       });
 
-      Meteor.loginWithToken(
-        self.tokenForLoginAndLogoutOthers,
+      Meteor.loginWithPassword(
+        this.username,
+        this.password,
         expect(function (err) {
           test.isFalse(err);
           test.isTrue(Meteor.userId());
+
+          // The test is only useful if things interleave in the following order:
+          // - logoutOtherClients runs on the server
+          // - onReconnect fires and sends a login method with the old token
+          // - logoutOtherClients callback runs and stores the new token and
+          //   logs in with it
+          // - login method callback runs, receiving an error.
+          // In practice they seem to interleave this way, but I'm not sure how
+          // to make sure that they do.
+
+          Meteor.logoutOtherClients(function (err) {
+            test.isFalse(err);
+            Meteor.call("getUserId", expectServerLoggedIn);
+          });
         })
       );
-      Meteor.logoutOtherClients(expect(function (err) {
-        test.isFalse(err);
-        // Because the server is set to close connections with no delay, by now
-        // we've probably been disconnected and then set a reconnect with a
-        // login on the old token. Wait until we find our new token in
-        // localStorage, and then make sure that no only do we think we're
-        // logged in but that the server agrees.
-        Meteor.setTimeout(function () {
-          Meteor.call("getUserId", expectServerLoggedIn);
-        }, 4 * 1000);
-      }));
     },
     logoutStep,
     function (test, expect) {
