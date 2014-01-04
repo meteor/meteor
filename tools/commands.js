@@ -4,7 +4,6 @@ var _ = require('underscore');
 var fs = require("fs");
 var files = require('./files.js');
 var deploy = require('./deploy.js');
-var runner = require('./runner.js');
 var library = require('./library.js');
 var buildmessage = require('./buildmessage.js');
 var unipackage = require('./unipackage.js');
@@ -121,9 +120,8 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 
 var runOnceAndExit = function (appDir, options) {
-  XXX XXX names
-  var run = new Run(appDir, options);
-  var result = run.runOnce();
+  var runner = require('./runner.js');
+  var result = runner.runOnce(appDir, options);
 
   if (result.outcome === "wrong-release") {
     // We lost a race where the user ran 'meteor update' and 'meteor
@@ -135,7 +133,9 @@ var runOnceAndExit = function (appDir, options) {
     process.stderr.write("=> Build failed:\n\n" +
                          result.bundleResult.errors.formatMessages() + "\n");
     process.exit(254);
-  } else if (result.outcome === "terminated") {
+  }
+
+  if (result.outcome === "terminated") {
     if (result.signal) {
       process.stderr.write("Killed (" + result.signal + ")\n");
       process.exit(255);
@@ -150,6 +150,8 @@ var runOnceAndExit = function (appDir, options) {
       process.exit(254);
     }
   }
+
+  throw new Error("unexpect run outcome " + result.outcome);
 };
 
 main.registerCommand({
@@ -192,9 +194,8 @@ main.registerCommand({
   if (options.once)
     runOnceAndExit(appDir, options);
   else {
-    XXX XXX
+    var runner = require('./runner.js');
     runner.run(options.appDir, options)
-    throw new main.WaitForExit;
   };
 });
 
@@ -1013,9 +1014,8 @@ main.registerCommand({
     if (options.once)
       runOnceAndExit(testRunnerAppDir, runOptions);
     else {
-      XXX XXX
-      runner.run(testRunnerAppDir, runOptions);
-      throw new main.WaitForExit;
+      var runner = require('./runner.js');
+      runner.run(testRunnerAppDir, runOptions)
     }
   }
 });

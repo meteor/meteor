@@ -1,7 +1,6 @@
 // During automated QA of the updater, modify this file to set testingUpdater to
 // true. This will make it act as if it is at version 0.1.0 and use test URLs
-// for update checks.
-// XXX is this still used?
+// for update checks. (Specifically this is for qa/engine-qa.sh in mother)
 // XXX replace with environment variable, or command-line flag?
 var testingUpdater = false;
 

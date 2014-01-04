@@ -13,8 +13,6 @@ var unipackage = require('./unipackage.js');
 var release = require('./release.js');
 var inFiber = require('./fiber-helpers.js').inFiber;
 
-// XXX XXX just suck it up and replace setTimeout and clearTimeout,
-// globally, with fiberized versions? will this mess up npm modules?
 
 
 // XXX XXX NEXT (if you want to do more):
@@ -25,11 +23,7 @@ var inFiber = require('./fiber-helpers.js').inFiber;
 // - possibly fold the mongo restart logic into the mongo-runner.js
 // - break each thing out into a separate file.. run-proxy, run-app,
 //   run-updater, run-mongo..
-// - if really feeling ambitious, get rid of process.exit everywhere
-//   (and/or make everything use the logger instead of stdout/stderr?)
-// - turn the whole thing into a local galaxy emulator! the prize here
-//   is when you manage to run the app dashboard locally (in an in-app
-//   overlay a la Django Dashboard).
+// - add warnings to buildmessage, per slava
 
 var runner = exports;
 
@@ -80,12 +74,6 @@ var getLoggingPackage = _.once(function () {
 
   return Log;
 });
-
-// XXX make this function go away
-var die = function (message) {
-  process.stderr.write(message);
-  process.exit(1);
-};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Logger
@@ -601,7 +589,11 @@ var AppRunner = function (options) {
 _.extend(AppRunner.prototype, {
   // Start the app running, and restart it as necessary. Returns
   // immediately.
-  start: function () {
+  //
+  // onFailure (optional) is a callback to call if there is a
+  // permanent failure of some sort, of the kind that can't be fixed
+  // by the source files changing.
+  start: function (onFailure) {
     var self = this;
 
     if (self.started)
@@ -609,17 +601,22 @@ _.extend(AppRunner.prototype, {
     self.started = true;
 
     new Fiber(function () {
-      self._fiber();
+      self._fiber(onFailure);
     }).run();
   },
 
   // Shut down the app. stop() will block until the app is shut
-  // down. This may involve waiting for bundling to finish.
+  // down. This may involve waiting for bundling to
+  // finish. Idempotent, however only one thread may be in stop() at a
+  // time.
   stop: function () {
     var self = this;
 
     if (! self.started)
-      throw new Error("not started?");
+      return; // nothing to do
+
+    if (self.exitFuture)
+      throw new Error("another fiber already stopping?");
 
     self.exitFuture = new Future;
     if (self.runFuture)
@@ -769,7 +766,7 @@ _.extend(AppRunner.prototype, {
     return ret;
   },
 
-  _fiber: function () {
+  _fiber: function (onFailure) {
     var self = this;
 
     var waitForChanges = function (watchSet) {
@@ -801,11 +798,11 @@ _.extend(AppRunner.prototype, {
         }
       });
 
-       if (crashTimer) {
+      if (crashTimer) {
         clearTimeout(crashTimer);
         crashTimer = null;
       }
-       if (runResult.outcome !== "terminated")
+      if (runResult.outcome !== "terminated")
         crashCount = 0;
 
       // If the user did not specify a --release on the command line,
@@ -814,13 +811,19 @@ _.extend(AppRunner.prototype, {
       // like allowing this to work if the tools version didn't
       // change, or even springboarding if the tools version does
       // change, but this (which prevents weird errors) is a start.)
-       if (runResult.outcome === "wrong-release") {
+      if (runResult.outcome === "wrong-release") {
         var to = project.getMeteorReleaseVersion(self.appDirForVersionCheck);
         var from = release.current.name;
-        die(
+        self.logger.log(
 "Your app has been updated to Meteor " + to + " from " + "Meteor " + from +
 ".\n" +
-"Restart meteor to use the new release.\n");
+"Restart meteor to use the new release.");
+        onFailure && onFailure();
+        if (self.exitFuture)
+          self.exitFuture['return']();
+        else
+          self.started = false;
+        break;
       }
 
       if (runResult.outcome === "bundle-fail") {
@@ -890,10 +893,11 @@ var MongoRunner = function (options) {
 _.extend(MongoRunner.prototype, {
   // Blocks (yields) until the server has started for the first time
   // and is accepting connections. (It might subsequently die and be
-  // restarted; we won't tell you about that.)
+  // restarted; we won't tell you about that.) Returns true if we were
+  // able to get it to start at least once.
   //
   // If the server fails to start for the first time (after a few
-  // restarts), we will print a message and kill the program!
+  // restarts), we'll print a message and give up, returning false.
   //
   // XXX XXX this is a change in behavior -- before, whenever mongo
   // crashed we would restart the app. now they are independent. will
@@ -918,7 +922,7 @@ _.extend(MongoRunner.prototype, {
 
     self.startupFuture = new Future;
     self._startOrRestart();
-    self.startupFuture.wait();
+    return self.startupFuture.wait();
   },
 
   _startOrRestart: function () {
@@ -941,7 +945,7 @@ _.extend(MongoRunner.prototype, {
         if (self.startupFuture) {
           // It's come up successfully for the first time. Make
           // start() return.
-          self.startupFuture['return']();
+          self.startupFuture['return'](true);
           self.startupFuture = null;
         }
       }
@@ -983,7 +987,7 @@ _.extend(MongoRunner.prototype, {
     }
 
     // Too many restarts, too quicky. It's dead. Print friendly
-    // diagnostics and kill the program (!)
+    // diagnostics and give up.
     var explanation = mongoExitCodes.Codes[code];
     var message = "Can't start mongod\n";
 
@@ -1005,6 +1009,12 @@ _.extend(MongoRunner.prototype, {
 
     self.logger.log(message);
     self.onFailure && self.onFailure();
+
+    if (self.startupFuture) {
+      // start() is still blocking.. make it return
+      self.startupFuture['return'](false);
+      self.startupFuture = null;
+    }
   },
 
   // Idempotent
@@ -1158,7 +1168,7 @@ _.extend(Runner.prototype, function () {
 
     self.updater.start();
     self.mongoRunner.start();
-    self.appRunner.start();
+    self.appRunner.start(_.bind(self._failure), self);
   },
 
   stop: function () {
@@ -1200,6 +1210,24 @@ XXX edit call sites to honor
   }
 });
 
+// Run the app and all of its associated processes, restarting them if
+// they exit, and watching for changes on the source files. Runs (and
+// does not return until) an unrecoverable failure happens. Logs to
+// stdout.
+//
+// For argument descriptions, see the Runner constructor.
+runner.run = function (appDir, options) {
+  var runner = new Runner(appDir, options);
+  var fut = new Future;
+  runner.start(function () {
+    fut['return']();
+  });
+  fut.wait();
+  runner.stop();
+};
 
-
-// XXX replace runner.run with (new Run).start
+// As runner.run(), but only runs the app once and does not watch for
+// file changes. For return value, see AppRunner.runOnce().
+exports.runOnce = function (appDir, options) {
+  return (new Runner(appDir, options)).runOnce();
+};

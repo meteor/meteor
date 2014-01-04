@@ -13,6 +13,9 @@ var Future = require("fibers/future");
 //
 // NOTE: It's probably better to not use callbacks. Instead you can
 // use Futures to generate synchronous equivalents.
+//
+// XXX just suck it up and replace setTimeout and clearTimeout,
+// globally, with fiberized versions? will this mess up npm dependencies?
 exports.inFiber = function (func) {
   return function (/*arguments*/) {
     var self = this;
