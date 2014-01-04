@@ -6,10 +6,6 @@ function Address (city, state) {
 Address.prototype = {
   constructor: Address,
 
-  equals: function (other) {
-    return EJSON.stringify(this) == EJSON.stringify(other);
-  },
-
   typeName: function () {
     return "Address";
   },
@@ -34,10 +30,6 @@ function Person (name, dob, address) {
 
 Person.prototype = {
   constructor: Person,
-
-  equals: function (other) {
-    return EJSON.stringify(this) == EJSON.stringify(other);
-  },
 
   toEJSONValue: function () {
     return {

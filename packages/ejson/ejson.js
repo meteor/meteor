@@ -310,6 +310,10 @@ EJSON.equals = function (a, b, options) {
     }
     return true;
   }
+  switch (EJSON._isCustomType(a) + EJSON._isCustomType(b)) {
+    case 1: return false;
+    case 2: return EJSON.equals(EJSON.toJSONValue(a), EJSON.toJSONValue(b));
+  }
   // fall back to structural equality of objects
   var ret;
   if (keyOrderSensitive) {
