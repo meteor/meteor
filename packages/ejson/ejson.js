@@ -299,6 +299,8 @@ EJSON.equals = function (a, b, options) {
   }
   if (typeof (a.equals) === 'function')
     return a.equals(b, options);
+  if (typeof (b.equals) === 'function')
+    return b.equals(a, options);
   if (a instanceof Array) {
     if (!(b instanceof Array))
       return false;

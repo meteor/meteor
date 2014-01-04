@@ -215,6 +215,9 @@ Tinytest.add("ejson - custom types", function (test) {
 
   var a = new EJSONTest.Address('Montreal', 'Quebec');
   testCustomObject( {address: a} );
+  var nakedA = {city: 'Montreal', state: 'Quebec'};
+  test.notEqual(nakedA, a);
+  test.notEqual(a, nakedA);
 
   var d = new Date;
   var obj = new EJSONTest.Person("John Doe", d, a);
