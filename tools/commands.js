@@ -119,41 +119,6 @@ main.registerCommand({
 // run
 ///////////////////////////////////////////////////////////////////////////////
 
-var runOnceAndExit = function (appDir, options) {
-  var runner = require('./runner.js');
-  var result = runner.runOnce(appDir, options);
-
-  if (result.outcome === "wrong-release") {
-    // We lost a race where the user ran 'meteor update' and 'meteor
-    // run --once' simultaneously.
-    throw new Error("wrong release?");
-  }
-
-  if (result.outcome === "bundle-fail") {
-    process.stderr.write("=> Build failed:\n\n" +
-                         result.bundleResult.errors.formatMessages() + "\n");
-    process.exit(254);
-  }
-
-  if (result.outcome === "terminated") {
-    if (result.signal) {
-      process.stderr.write("Killed (" + result.signal + ")\n");
-      process.exit(255);
-    } else if (typeof result.code === "number") {
-      // We used to print 'Your application is exiting' here, but that
-      // seems unnecessarily chatty? runOnce is otherwise silent
-      process.exit(result.code);
-    } else {
-      // if there is neither a code nor a signal, it means that we
-      // failed to start the process. we logged the reason. probably a
-      // bad program name.
-      process.exit(254);
-    }
-  }
-
-  throw new Error("unexpect run outcome " + result.outcome);
-};
-
 main.registerCommand({
   name: 'run',
   requiresApp: true,
@@ -181,22 +146,17 @@ main.registerCommand({
 
   auth.tryRevokeOldTokens({timeout: 1000});
 
-  var runOptions = {
+  var runner = require('./runner.js');
+  return runner.run(options.appDir, {
     port: options.port,
     rawLogs: options['raw-logs'],
     settingsFile: options.settings,
     program: options.program || undefined,
     buildOptions: {
       minify: options.minify
-    }
-  };
-
-  if (options.once)
-    runOnceAndExit(appDir, options);
-  else {
-    var runner = require('./runner.js');
-    runner.run(options.appDir, options)
-  };
+    },
+    once: options.once
+  });
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1001,7 +961,8 @@ main.registerCommand({
       buildOptions: buildOptions
     });
   } else {
-    var runOptions =  {
+    var runner = require('./runner.js');
+    return runner.run(testRunnerAppDir, {
       // if we're testing packages from an app, we still want to make
       // sure the user doesn't 'meteor update' in the app, requiring
       // a switch to a different release
@@ -1010,15 +971,9 @@ main.registerCommand({
       disableOplog: options['disable-oplog'],
       settingsFile: options.settings,
       banner: "Tests",
-      buildOptions: buildOptions
-    };
-
-    if (options.once)
-      runOnceAndExit(testRunnerAppDir, runOptions);
-    else {
-      var runner = require('./runner.js');
-      runner.run(testRunnerAppDir, runOptions)
-    }
+      buildOptions: buildOptions,
+      once: options.once
+    });
   }
 });
 

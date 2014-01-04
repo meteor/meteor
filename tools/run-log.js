@@ -105,6 +105,15 @@ _.extend(RunLog.prototype, {
     self.log(message);
   },
 
+  finish: function () {
+    var self = this;
+
+    if (self.consecutiveRestartMessages) {
+      self.consecutiveRestartMessages = null;
+      process.stdout.write("\n");
+    }
+  },
+
   clearLog: function () {
     var self = this;
     self.log = [];
