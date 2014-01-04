@@ -644,7 +644,8 @@ main.registerCommand({
 
   if (options.args.length === 0) {
     // localhost mode
-    var mongoRunner = require(path.join(__dirname, 'mongo-runner.js'));
+    var findMongoPort =
+      require(path.join(__dirname, 'run-mongo.js')).findMongoPort;
     var mongoPort = mongoRunner.findMongoPort(options.appDir);
     if (! mongoPort) {
       process.stdout.write(
@@ -699,7 +700,8 @@ main.registerCommand({
     return 1;
   }
 
-  var mongoRunner = require(path.join(__dirname, 'mongo-runner.js'));
+  var findMongoPort =
+    require(path.join(__dirname, 'run-mongo.js')).findMongoPort;
   var isRunning = !! mongoRunner.findMongoPort(options.appDir);
   if (isRunning) {
     process.stderr.write(
@@ -778,7 +780,7 @@ main.registerCommand({
 
   var settings = undefined;
   if (options.settings)
-    settings = runner.getSettings(options.settings);
+    settings = files.getSettings(options.settings);
 
   if (! auth.isLoggedIn()) {
     process.stderr.write(
@@ -995,7 +997,7 @@ main.registerCommand({
     deploy.bundleAndDeploy({
       appDir: testRunnerAppDir,
       site: options.deploy,
-      settings: options.settings && runner.getSettings(options.settings),
+      settings: options.settings && files.getSettings(options.settings),
       buildOptions: buildOptions
     });
   } else {

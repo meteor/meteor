@@ -155,6 +155,29 @@ files.getCurrentToolsDir = function () {
   return path.join(__dirname, '..');
 };
 
+// Read a settings file and sanity-check it.
+// XXX make this return structured errors instead of throwing
+// (or eliminate somehow) (maybe use buildmessage)
+files.getSettings = function (filename, watchSet) {
+  var absPath = path.resolve(filename);
+  var buffer = watch.readAndWatchFile(watchSet, absPath);
+  if (!buffer)
+    throw new Error("Could not find settings file " + filename);
+  if (buffer.length > 0x10000)
+    throw new Error("Settings file must be less than 64 KB long");
+
+  var str = buffer.toString('utf8');
+
+  // Ensure that the string is parseable in JSON, but there's no reason to use
+  // the object value of it yet.
+  if (str.match(/\S/)) {
+    JSON.parse(str);
+    return str;
+  } else {
+    return "";
+  }
+};
+
 // Try to find the prettiest way to present a path to the
 // user. Presently, the main thing it does is replace $HOME with ~.
 files.prettyPath = function (path) {
