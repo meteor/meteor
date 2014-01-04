@@ -72,7 +72,32 @@ _.extend(Person, {
 
 EJSON.addType("Person", Person.fromJSONValue);
 
+function Holder (content) {
+  this.content = content;
+}
+
+Holder.prototype = {
+  constructor: Holder,
+
+  typeName: function () {
+    return "Holder";
+  },
+
+  toJSONValue: function () {
+    return this.content;
+  }
+}
+
+_.extend(Holder, {
+  fromJSONValue: function(value) {
+    return new Holder(value);
+  }
+});
+
+EJSON.addType("Holder", Holder.fromJSONValue);
+
 _.extend(EJSONTest, {
   Address: Address,
-  Person: Person
+  Person: Person,
+  Holder: Holder
 });

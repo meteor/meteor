@@ -210,6 +210,16 @@ Tinytest.add("ejson - custom types", function (test) {
 
   var a = new EJSONTest.Address('Montreal', 'Quebec');
   testCustomObject( {address: a} );
+  // Test that difference is detected even if they
+  // have similar toJSONValue results:
+  var nakedA = {city: 'Montreal', state: 'Quebec'};
+  test.notEqual(nakedA, a);
+  test.notEqual(a, nakedA);
+  var holder = new EJSONTest.Holder(nakedA);
+  test.equal(holder.toJSONValue(), a.toJSONValue()); // sanity check
+  test.notEqual(holder, a);
+  test.notEqual(a, holder);
+
 
   var d = new Date;
   var obj = new EJSONTest.Person("John Doe", d, a);
