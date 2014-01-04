@@ -22,6 +22,42 @@ EJSON.addType = function (name, factory) {
   customTypes[name] = factory;
 };
 
+// objectConstructor('this', ['a', 'b']) => '{a: this.a, b: this.b}'
+var objectConstructor = function(context, attributeNames) {
+  return '{' + _.map(attributeNames,
+      function (attr) { return attr + ': ' + context + '.' + attr }
+    ).join(', ') + '}';
+}
+
+EJSON.defineType = function (creator, typeName, attributeNames) {
+  if (!_.isArray(attributeNames))
+    throw new Error('Attribute names required (got ' + attributeNames + ')');
+  creator.typeName = typeName;
+
+  // Define prototype.toEJSONValue (if required)
+  var proto = creator.prototype;
+  if (!proto.toEJSONValue && !proto.toJSONValue)
+    if (attributeNames.length === 1)
+      proto.toEJSONValue = Function('return this.' + attributeNames[0]);
+    else
+      proto.toEJSONValue = Function('return ' + objectConstructor('this', attributeNames));
+
+  // Define fromEJSONValue (if required)
+  if (!creator.fromEJSONValue)
+    if (attributeNames.length === 1)
+      creator.fromEJSONValue = Function('arg', 'return new this(arg)');
+    else {
+      var nbUngrouped = creator.length >= attributeNames.length ? attributeNames.length : creator.length - 1;
+      var args = _.map(attributeNames.slice(0, nbUngrouped),
+          function(attr){ return 'obj.' + attr });
+      if (nbUngrouped < attributeNames.length)
+        args.push( objectConstructor('obj', attributeNames.slice(nbUngrouped)) );
+      creator.fromEJSONValue = Function('obj', 'return new this(' + args.join(', ') + ')');
+    }
+
+  EJSON.addType(creator);
+};
+
 var isInfOrNan = function (obj) {
   return _.isNaN(obj) || obj === Infinity || obj === -Infinity;
 };
