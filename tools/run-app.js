@@ -121,7 +121,7 @@ _.extend(AppProcess.prototype, {
       if (! self.madeExitCallback)
         self.onExit && self.onExit();
       self.madeExitCallback = true;
-    };
+    });
 
     // This happens sometimes when we write a keepalive after the app
     // is dead. If we don't register a handler, we get a top level
