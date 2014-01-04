@@ -772,8 +772,8 @@ _.extend(ClientTarget.prototype, {
       try {
         var ast = minifiers.CssParse(file.contents('utf8'));
       } catch (e) {
-        var file = file.url[0] === '/' ? file.url.slice(1) : file.url;
-        buildmessage.error(e.message, { file: file });
+        var fileName = file.url[0] === '/' ? file.url.slice(1) : file.url;
+        buildmessage.error(e.message, { file: fileName });
         return { type: "stylesheet", stylesheet: { rules: [] } };
       }
 
@@ -800,6 +800,14 @@ _.extend(ClientTarget.prototype, {
 
       var imports = ast.stylesheet.rules.splice(0, importsNumber);
       importsAst.stylesheet.rules = importsAst.stylesheet.rules.concat(imports);
+
+      // if there are imports left in the middle of file, warn user as it might
+      // be a potential bug (imports are valid only in the beginning of file).
+      if (_.any(ast.stylesheet.rules, rulePredicate("import"))) {
+        var fileName = file.url[0] === '/' ? file.url.slice(1) : file.url;
+        // XXX make this a buildmessage.warning call rather than a random log
+        console.log("%s: warn: there are some @import rules those are not taking effect as they are required to be in the beginning of the file.", fileName);
+      }
 
       return ast;
     });
