@@ -52,10 +52,22 @@ var extendAttrs = function (tgt, src, parentComponent) {
   }
 };
 
+// Process the `attrs.$dynamic` directive, if present, returning the final
+// attributes dictionary.  The value of `attrs.$dynamic` must be an array
+// of attributes dictionaries or functions returning attribute dictionaries.
+// These attributes are used to extend `attrs` as long as they are non-nully.
+// All attributes are "evaluated," calling functions and instantiating
+// components.
 HTML.evaluateDynamicAttributes = function (attrs, parentComponent) {
-  if (attrs && (attrs.$dynamic instanceof Array)) {
-    var result = {};
-    extendAttrs(result, attrs, parentComponent);
+  if (! attrs)
+    return attrs;
+
+  var result = {};
+  extendAttrs(result, attrs, parentComponent);
+
+  if ('$dynamic' in attrs) {
+    if (! (attrs.$dynamic instanceof Array))
+      throw new Error("$dynamic must be an array");
     // iterate over attrs.$dynamic, calling each element if it
     // is a function and then using it to extend `result`.
     var dynamics = attrs.$dynamic;
@@ -65,10 +77,9 @@ HTML.evaluateDynamicAttributes = function (attrs, parentComponent) {
         moreAttrs = moreAttrs();
       extendAttrs(result, moreAttrs, parentComponent);
     }
-    return result;
-  } else {
-    return attrs;
   }
+
+  return result;
 };
 
 HTML.Tag.prototype.evaluateDynamicAttributes = function (parentComponent) {

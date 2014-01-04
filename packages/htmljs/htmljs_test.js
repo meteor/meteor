@@ -95,4 +95,14 @@ Tinytest.add("htmljs - attributes", function (test) {
 
   test.equal(HTML.toHTML(SPAN({title: ['M', amp, 'Ms']}, 'M', amp, 'M candies')),
              '<span title="M&amp;Ms">M&amp;M candies</span>');
+
+  // test that evaluateDynamicAttributes calls functions in both normal and dynamic attributes
+  test.equal(HTML.evaluateDynamicAttributes({x: function () { return 'abc'; }}),
+             { x: 'abc' });
+  test.equal(HTML.evaluateDynamicAttributes({x: function () { return 'abc'; },
+                                             $dynamic: []}),
+             { x: 'abc' });
+  test.equal(HTML.evaluateDynamicAttributes({x: function () { return 'abc'; },
+                                             $dynamic: [{ x: function () { return 'def'; }}]}),
+             { x: 'def' });
 });

@@ -3,9 +3,11 @@ HTML = {};
 
 HTML.isNully = function (node) {
   if (node == null)
+    // null or undefined
     return true;
 
   if (node instanceof Array) {
+    // is it an empty array or an array of all nully items?
     for (var i = 0; i < node.length; i++)
       if (! HTML.isNully(node[i]))
         return false;

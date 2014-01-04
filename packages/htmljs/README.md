@@ -124,6 +124,9 @@ HTML.toHTML = function (node, parentComponent) {
 };
 ```
 
+The argument `parentComponent` is used to set a pointer that points
+from each component to its parent, used for name lookups.
+
 ## "Known" and Custom Tags
 
 All the usual HTML and HTML5 tags are available as `HTML.A`,
@@ -180,6 +183,22 @@ HTML.CharRef objects have `html` and `str` properties, specified by
 the object passed to the constructor.
 
 HTML.Comment and HTML.Raw objects have a `value` property.
+
+### Attributes
+
+Attribute values can contain most kinds of HTMLjs content, but not Tag, Comment, or Raw.  They may contain functions and components, even though these functions won't ever establish reactivity boundaries at a finer level than an entire attribute value.
+
+The attributes dictionary of a tag can have a special entry `$dynamic`, which holds additional attributes dictionaries to combine with the main dictionary.  These additional dictionaries may be computed by functions, lending generality to the calculation of the attributes dictionary that would not otherwise be present.
+
+Specifically, the value of `$dynamic` must be an array, each element of which is either an attributes dictionary or a function returning an attributes dictionary.  (These dictionaries may not themselves have a `$dynamic` key.)  When calculating the final attributes dictionary for a tag, each dictionary obtained from the `$dynamic` array is used to modify the existing dictionary by copying the new attribute entries over it, except for entries with a "nully" value.  A "nully" value is one that is either `null`, `undefined`, `[]`, or an array of nully values.  Before checking if the dynamic attribute value is nully, all functions and components are evaluated (i.e. the functions are called and the components are instantiated, such that no functions or components remain).
+
+`HTML.evaluateDynamicAttributes(attrs, parentComponent)` - Returns the final attributes dictionary for a tag after interpreting the `$dynamic` property, if present.  Takes a tag's `attrs` property and a `parentComponent` (used to instantiate any components in the attributes).  `attrs` may be null.
+
+`tag.evaluateDynamicAttributes(parentComponent)` - Shorthand for `HTML.evaluateDynamicAttributes(tag.attrs, parentComponent)`.
+
+`HTML.isNully(value)` - Returns true if `value` is a nully value, i.e. one of `null`, `undefined`, `[]`, or an array of nully values.
+
+`HTML.evaluate(node, parentComponent)` - Calls all functions and instantiates all components in an HTMLjs tree.
 
 ## Name Utilities
 
