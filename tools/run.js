@@ -2,6 +2,7 @@
 
 var fs = require("fs");
 var path = require("path");
+var os = require("os");
 
 
 var files = require('./files.js');
@@ -554,6 +555,20 @@ exports.run = function (context, options) {
           ('http://localhost:' + outerPort + '/');
     if (firstRun) {
       process.stdout.write("=> Meteor server running on: " + rootUrl + "\n");
+      var firstInterface = true;
+      var ifaces=os.networkInterfaces();
+      for (var dev in ifaces) {
+        var alias=0;
+        ifaces[dev].forEach(function(details){
+          if (details.family=='IPv4'&&details.address!='127.0.0.1') {
+            if (firstInterface) { 
+              console.log("   Also avaliable on:"); firstInterface=false;
+            }
+            console.log("      ",dev+(alias?':'+alias:''),"http://"+details.address+":"+outerPort+"/");
+            ++alias;
+          }
+        });
+      }
       firstRun = false;
       lastThingThatPrintedWasRestartMessage = false;
     } else {
