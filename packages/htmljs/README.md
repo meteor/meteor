@@ -192,6 +192,8 @@ The attributes dictionary of a tag can have a special entry `$dynamic`, which ho
 
 Specifically, the value of `$dynamic` must be an array, each element of which is either an attributes dictionary or a function returning an attributes dictionary.  (These dictionaries may not themselves have a `$dynamic` key.)  When calculating the final attributes dictionary for a tag, each dictionary obtained from the `$dynamic` array is used to modify the existing dictionary by copying the new attribute entries over it, except for entries with a "nully" value.  A "nully" value is one that is either `null`, `undefined`, `[]`, or an array of nully values.  Before checking if the dynamic attribute value is nully, all functions and components are evaluated (i.e. the functions are called and the components are instantiated, such that no functions or components remain).
 
+The `$dynamic` feature is designed to support writing `<div class="myClass" {{moreAttrs1}} {{moreAttrs2}}>` in templates.
+
 `HTML.evaluateDynamicAttributes(attrs, parentComponent)` - Returns the final attributes dictionary for a tag after interpreting the `$dynamic` property, if present.  Takes a tag's `attrs` property and a `parentComponent` (used to instantiate any components in the attributes).  `attrs` may be null.
 
 `tag.evaluateDynamicAttributes(parentComponent)` - Shorthand for `HTML.evaluateDynamicAttributes(tag.attrs, parentComponent)`.
@@ -199,6 +201,10 @@ Specifically, the value of `$dynamic` must be an array, each element of which is
 `HTML.isNully(value)` - Returns true if `value` is a nully value, i.e. one of `null`, `undefined`, `[]`, or an array of nully values.
 
 `HTML.evaluate(node, parentComponent)` - Calls all functions and instantiates all components in an HTMLjs tree.
+
+## toHTML and toText
+
+XXX TODO
 
 ## Name Utilities
 
@@ -216,5 +222,5 @@ All of these functions take case-insensitive input.
 
 `HTML.isVoidElement(tagName)` - Returns true if `tagName` is a known void element such as `BR`, `HR`, or `INPUT`.  Void elements are output as `<br>` instead of `<br></br>`.  Note that neither HTML4 nor HTML5 has true self-closing tags (except when parsing SVG).  `<br/>` is the same as `<br>` and `<div/>` is the same as `<div>`.  It was only the now-abandoned XHTML standard that said otherwise, which was a backwards-incompatible change.  Modern browsers refer to the list of void elements instead.
 
-`HTML.asciiLowerCase(str)` - "ASCII-lowercases" `str`, converting `A-Z` to `a-z`.  The case-insensitive parts of HTML use this operation for case folding.
+`HTML.asciiLowerCase(str)` - "ASCII-lowercases" `str`, converting `A-Z` to `a-z`.  The case-insensitive parts of the HTML spec use this operation for case folding.
 
