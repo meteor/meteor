@@ -204,7 +204,17 @@ The `$dynamic` feature is designed to support writing `<div class="myClass" {{mo
 
 ## toHTML and toText
 
-XXX TODO
+`HTML.toHTML(node, parentComponent)` - Converts the HTMLjs content `node` to an HTML string, using `parentComponent` as the parent scope pointer when instantiating components.
+
+`HTML.toText(node, textMode, parentComponent)` - Converts the HTMLjs content `node` into text, suitable for being included as part of an attribute value or textarea, for example.  `node` must not contain Tags or Comments, but may contain CharRefs, functions, and components.  The required argument `textMode` specifies what sort of text to generate, which affects how charater references are handled and which characters are escaped.
+
+* `HTML.TEXTMODE.STRING` - JavaScript string suitable for `document.createTextNode` or `element.setAttribute`.  Character references are replaced by the characters they represent.  No escaping is performed.
+
+* `HTML.TEXTMODE.ATTRIBUTE` - HTML string suitable for a quoted attribute.  Character references are included in raw HTML form (i.e. `&foo;`).  `&` and `"` are escaped when found in strings in the HTMLjs tree.
+
+* `HTML.TEXTMODE.RCDATA` - HTML string suitable for the content of a TEXTAREA element, for example.  (RCDATA stands for "replaced character data" as in the HTML syntax spec.)  Character references are included in raw HTML form.  `&` and `<` are escaped when found in strings in the HTMLjs tree.
+
+> The reason to perform the escaping as part of `HTML.toText` rather than as a post-processing step is in order to support `HTML.CharRef`, allowing the HTML author's choice of character reference encoding to be passed through.  If we only had `STRING` mode, we would lose the original form of the character references.  If we only had `RCDATA` mode, say, we would have to interpret the character references at runtime to use the DOM API.  On a related note, we don't allow `HTML.Raw` because character references are the only "raw" thing there is in text mode (and, again, we don't want to interpret them at runtime).  `HTML.CharRef` is sort of like a one-character version of `Raw`.
 
 ## Name Utilities
 
