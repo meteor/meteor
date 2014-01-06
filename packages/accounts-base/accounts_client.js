@@ -217,11 +217,11 @@ Meteor.logoutOtherClients = function (callback) {
   // Call the `logoutOtherClients` method. Store the login token that we get
   // back and use it to log in again. The server is not supposed to close
   // connections on the old token for 10 seconds, so we should have time to
-  // store our new token before being disconnected. If we get disconnected, then
-  // we'll immediately reconnect with the new token. If for some reason we get
-  // disconnected before storing the new token, then the worst that will happen
-  // is that we'll have a flicker from trying to log in with the old token
-  // before storing and logging in with the new one.
+  // store our new token and log in with it before being disconnected. If we get
+  // disconnected, then we'll immediately reconnect with the new token. If for
+  // some reason we get disconnected before storing the new token, then the
+  // worst that will happen is that we'll have a flicker from trying to log in
+  // with the old token before storing and logging in with the new one.
   Meteor.apply('logoutOtherClients', [], { wait: true },
                function (error, result) {
                  if (error) {
@@ -229,13 +229,13 @@ Meteor.logoutOtherClients = function (callback) {
                  } else {
                    var userId = Meteor.userId();
                    storeLoginToken(userId, result.token, result.tokenExpires);
-                   // This login method call is usually redundant; if the server
-                   // hasn't disconnected us yet by deleting our old token, then
-                   // it will eventually disconnect us and we will send the
-                   // login on reconnect. But if the server has disconnected us
-                   // already, then we would have already tried and failed to
-                   // login with the old token on reconnect, and we have to make
-                   // sure a login method gets sent here.
+                   // If the server hasn't disconnected us yet by deleting our
+                   // old token, then logging in now with the new valid token
+                   // will prevent us from getting disconnected. If the server
+                   // has already disconnected us due to our old invalid token,
+                   // then we would have already tried and failed to login with
+                   // the old token on reconnect, and we have to make sure a
+                   // login method gets sent here with the new token.
                    Meteor.loginWithToken(result.token, function (err) {
                      if (err &&
                          storedLoginToken() &&
