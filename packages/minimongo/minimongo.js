@@ -375,6 +375,13 @@ _.extend(LocalCollection.Cursor.prototype, {
 //
 // If ordered is not set, returns an object mapping from ID to doc (sorter, skip
 // and limit should not be set).
+//
+// If ordered is set and this cursor is a $near geoquery, then this function
+// will use an _IdMap to track each distance from the $near argument point in
+// order to use it as a sort key. If an _IdMap is passed in the 'distances'
+// argument, this function will clear it and use it for this purpose (otherwise
+// it will just create its own _IdMap). The observeChanges implementation uses
+// this to remember the distances after this function returns.
 LocalCollection.Cursor.prototype._getRawObjects = function (ordered,
                                                             distances) {
   var self = this;
@@ -404,8 +411,12 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered,
   // in the observeChanges case, distances is actually part of the "query" (ie,
   // live results set) object.  in other cases, distances is only used inside
   // this function.
-  if (self.matcher.isGeoQuery() && ordered && !distances)
-    distances = new LocalCollection._IdMap();
+  if (self.matcher.isGeoQuery() && ordered) {
+    if (distances)
+      distances.clear();
+    else
+      distances = new LocalCollection._IdMap();
+  }
 
   for (var idStringified in self.collection.docs) {
     var doc = self.collection.docs[idStringified];
@@ -612,9 +623,8 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
     var queryResult = matcher.documentMatches(doc);
     if (queryResult.result) {
       // XXX Should we save the original even if mod ends up being a no-op?
-      // XXX queryResult should have arrayIndex on it, useful for '$'
       self._saveOriginal(id, doc);
-      self._modifyAndNotify(doc, mod, recomputeQids);
+      self._modifyAndNotify(doc, mod, recomputeQids, queryResult.arrayIndex);
       ++updateCount;
       if (!options.multi)
         break;
@@ -635,7 +645,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   var insertedId;
   if (updateCount === 0 && options.upsert) {
     var newDoc = LocalCollection._removeDollarOperators(selector);
-    LocalCollection._modify(newDoc, mod, true);
+    LocalCollection._modify(newDoc, mod, {isInsert: true});
     if (! newDoc._id && options.insertedId)
       newDoc._id = options.insertedId;
     insertedId = self.insert(newDoc);
@@ -679,7 +689,7 @@ LocalCollection.prototype.upsert = function (selector, mod, options, callback) {
 };
 
 LocalCollection.prototype._modifyAndNotify = function (
-    doc, mod, recomputeQids) {
+    doc, mod, recomputeQids, arrayIndex) {
   var self = this;
 
   var matched_before = {};
@@ -697,7 +707,7 @@ LocalCollection.prototype._modifyAndNotify = function (
 
   var old_doc = EJSON.clone(doc);
 
-  LocalCollection._modify(doc, mod);
+  LocalCollection._modify(doc, mod, {arrayIndex: arrayIndex});
 
   for (qid in self.queries) {
     query = self.queries[qid];

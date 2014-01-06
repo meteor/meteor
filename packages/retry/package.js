@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use('underscore', ['client', 'server']);
+  api.use(['underscore', 'random'], ['client', 'server']);
   api.export('Retry');
   api.add_files('retry.js', ['client', 'server']);
 });
