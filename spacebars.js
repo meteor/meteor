@@ -303,6 +303,12 @@ Spacebars.parse = function (input) {
       scanner.pos = lastPos;
       scanner.fatal("Unexpected closing stache tag");
     }
+    if (position === HTML.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
+      var goodPos = scanner.pos;
+      scanner.pos = lastPos;
+      checkAttributeStacheTag(scanner, stache);
+      scanner.pos = goodPos;
+    }
 
     if (stache.type === 'COMMENT') {
       return null; // consume the tag from the input but emit no Special
@@ -371,6 +377,20 @@ Spacebars.parse = function (input) {
   var tree = HTML.parseFragment(input, { getSpecialTag: getSpecialTag });
 
   return tree;
+};
+
+// XXX think about these restrictions
+var checkAttributeStacheTag = function (scanner, tag) {
+  if (tag.type === 'DOUBLE') {
+    return;
+  } else if (tag.type === 'BLOCKOPEN') {
+    var path = tag.path;
+    if (! (path.length === 1 && builtInComponents.hasOwnProperty(path[0]) &&
+           path[0] !== 'content' && path[0] !== 'elseContent'))
+      scanner.fatal("Custom block helpers are not allowed in an HTML attribute, only built-in ones like #each and #if");
+  } else {
+    scanner.fatal(tag.type + " template tag is not allowed in an HTML attribute");
+  }
 };
 
 var optimize = function (tree) {
@@ -670,23 +690,9 @@ Spacebars._handleSpecialAttributes = function (oldAttrs) {
   var convertSpecialToEmitCode = function (v) {
     if (v instanceof HTML.Special) {
       foundSpecials = true;
-      var tag = v.value;
-      // Note: We end up just deferring back to replaceSpecials after passing
-      // through a whitelist of tag types.  There's probably a better way to
-      // factor this.
-      if (tag.type === 'DOUBLE') {
-        return replaceSpecials(v);
-      } else if (tag.type === 'BLOCKOPEN') {
-        var path = tag.path;
-        if (! (path.length === 1 && builtInComponents.hasOwnProperty(path[0]) &&
-               path[0] !== 'content' && path[0] !== 'elseContent'))
-          throw new Error("Can only use built-in block helpers in an attribute, like #each and #if");
-        return replaceSpecials(v);
-      } else {
-        // XXXX wow, great error message and way to throw it.  This should
-        // go through proper channels.
-        throw new Error("Can't have this template tag in an attribute: " + tag.type);
-      }
+      // The tag (`v.value`) has already been validated as appropriate
+      // by checkAttributeStacheTag.
+      return replaceSpecials(v);
     } else if (v instanceof Array) {
       return _.map(v, convertSpecialToEmitCode);
     } else {
