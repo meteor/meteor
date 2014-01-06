@@ -465,5 +465,28 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
     F({ 'a.b.c': 1 }, { $set: { 'a.b': 222 } }, "a simple scalar selector and simple set a wrong type");
   });
 
+  Tinytest.add("minimongo - can selector become true by modifier - simple selectors and simple tests", function (t) {
+    test = t;
+    T({ 'a.b.c': { $lt: 5 } }, { $set: { 'a.b': { c: 4 } } }, "nested $lt");
+    F({ 'a.b.c': { $lt: 5 } }, { $set: { 'a.b': { c: 5 } } }, "nested $lt");
+    F({ 'a.b.c': { $lt: 5 } }, { $set: { 'a.b': { c: 6 } } }, "nested $lt");
+    T({ 'a.b.c': { $lt: 5 } }, { $set: { 'a.b': { d: 7 } } }, "nested $lt, the change doesn't matter");
+    T({ 'a.b.c': { $lt: 5 } }, { $set: { 'a.b': { d: 7, c: -1 } } }, "nested $lt");
+    F({ a: { $lt: 10, $gt: 3 } }, { $unset: { 'a': 1 } }, "unset $lt");
+    T({ a: { $lt: 10, $gt: 3 } }, { $set: { 'a': 4 } }, "set between x and y");
+    F({ a: { $lt: 10, $gt: 3 } }, { $set: { 'a': 3 } }, "set between x and y");
+    F({ a: { $lt: 10, $gt: 3 } }, { $set: { 'a': 10 } }, "set between x and y");
+    F({ a: { $gt: 10, $lt: 3 } }, { $set: { 'a': 9 } }, "impossible statement");
+    T({ a: { $lte: 10, $gte: 3 } }, { $set: { 'a': 3 } }, "set between x and y");
+    T({ a: { $lte: 10, $gte: 3 } }, { $set: { 'a': 10 } }, "set between x and y");
+    F({ a: { $lte: 10, $gte: 3 } }, { $set: { 'a': -10 } }, "set between x and y");
+    T({ a: { $ne: 5 } }, { $unset: { a: 1 } }, "unset of $ne");
+    T({ a: { $ne: 5 } }, { $set: { a: 1 } }, "set of $ne");
+    T({ a: { $ne: 5 } }, { $set: { a: -10 } }, "set of $ne");
+    T({ a: { $ne: { x: 5 } } }, { $set: { 'a.x': 3 } }, "set of $ne");
+    F({ a: { $ne: { x: 5 } } }, { $set: { 'a.x': 5 } }, "set of $ne");
+    T({ a: { $in: [1, 3, 5, 7] } }, { $set: { a: 5 } }, "$in checks");
+    F({ a: { $in: [1, 3, 5, 7] } }, { $set: { a: -5 } }, "$in checks");
+  });
 })();
 
