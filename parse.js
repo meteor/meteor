@@ -49,8 +49,20 @@ parseFragment = function (input, options) {
   } else {
     result = getContent(scanner, shouldStop);
   }
-  if ((! shouldStop) && (! scanner.isEOF()))
-    scanner.fatal("Expected EOF");
+  if (! scanner.isEOF()) {
+    // XXX we make some assumptions about shouldStop here, like that it
+    // won't tell us to stop at an HTML end tag.  Should refactor
+    // `shouldStop` into something more suitable.
+    if (scanner.rest().slice(0, 2) === '</') {
+      var closeTag = scanner.rest().slice(2).match(/^[a-z]*/i)[0];
+      var isVoidElement = HTML.isVoidElement(closeTag);
+      scanner.fatal("Unexpected HTML close tag" +
+                    (isVoidElement ?
+                     '.  <' + closeTag + '> should have no close tag.' : ''));
+    }
+    if (! shouldStop)
+      scanner.fatal("Expected EOF");
+  }
 
   return result;
 };
