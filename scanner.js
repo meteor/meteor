@@ -40,7 +40,7 @@ Scanner.prototype.fatal = function (msg) {
   upcomingInput = upcomingInput.slice(0, CONTEXT_AMOUNT) + '...';
 
   var positionDisplay = ((pastInput + upcomingInput).replace(/\n/g, ' ') + '\n' +
-                         (new Array(pastInput.length + 1).join('-')) + "^");
+                         (new Array(pastInput.length + 1).join(' ')) + "^");
 
   var e = new Error(msg + "\n" + positionDisplay);
 

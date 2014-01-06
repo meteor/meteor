@@ -7,6 +7,8 @@ HTML.Special = function (value) {
   this.value = value;
 };
 HTML.Special.prototype.toJS = function (options) {
+  // XXX this is weird because toJS is defined in spacebars-compiler.
+  // Think about where HTML.Special and toJS should go.
   return HTML.Tag.prototype.toJS.call({tagName: 'Special',
                                        attrs: this.value,
                                        children: []},
