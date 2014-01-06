@@ -36,8 +36,8 @@ Scanner.prototype.fatal = function (msg) {
     pastInput = '...' + pastInput.substring(-CONTEXT_AMOUNT);
 
   var upcomingInput = input.substring(pos, pos + CONTEXT_AMOUNT + 1);
-  if (upcomingInput.length > CONTEXT_AMOUNT);
-  upcomingInput = upcomingInput.substring(0, CONTEXT_AMOUNT) + '...';
+  if (upcomingInput.length > CONTEXT_AMOUNT)
+    upcomingInput = upcomingInput.substring(0, CONTEXT_AMOUNT) + '...';
 
   var positionDisplay = ((pastInput + upcomingInput).replace(/\n/g, ' ') + '\n' +
                          (new Array(pastInput.length + 1).join(' ')) + "^");
