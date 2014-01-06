@@ -248,7 +248,7 @@ Spacebars.parseStacheTag = function (scannerOrString, options) {
         if (args[i].length === 2)
           numPosArgs++;
       if (numPosArgs > 1)
-        error("Only one positional argument is allowed here");
+        error("Only one positional argument is allowed in {{> ... }}");
     }
   };
 
