@@ -15,10 +15,6 @@ Tinytest.add("spacebars - stache tags", function (test) {
       test.equal(msg.slice(0, expected.length), expected);
     } else {
       var result = Spacebars.parseStacheTag(input);
-      test.equal(result.charPos, 0);
-      test.equal(result.charLength, input.length);
-      delete result.charPos;
-      delete result.charLength;
       test.equal(result, expected);
     }
   };

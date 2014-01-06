@@ -13,7 +13,7 @@ Package.on_use(function (api) {
   api.imply('html-tools');
 
   api.use('underscore');
-  api.use('jsparse');
+  api.use('jsparse'); // for JSLexer
   api.use('ui');
   api.use('minifiers', ['server']);
   api.add_files(['tojs.js', 'spacebars.js']);
