@@ -31,13 +31,13 @@ Scanner.prototype.fatal = function (msg) {
 
   var input = this.input;
   var pos = this.pos;
-  var pastInput = input.slice(pos - CONTEXT_AMOUNT - 1, pos);
+  var pastInput = input.substring(pos - CONTEXT_AMOUNT - 1, pos);
   if (pastInput.length > CONTEXT_AMOUNT)
-    pastInput = '...' + pastInput.slice(-CONTEXT_AMOUNT);
+    pastInput = '...' + pastInput.substring(-CONTEXT_AMOUNT);
 
-  var upcomingInput = input.slice(pos, pos + CONTEXT_AMOUNT + 1);
+  var upcomingInput = input.substring(pos, pos + CONTEXT_AMOUNT + 1);
   if (upcomingInput.length > CONTEXT_AMOUNT);
-  upcomingInput = upcomingInput.slice(0, CONTEXT_AMOUNT) + '...';
+  upcomingInput = upcomingInput.substring(0, CONTEXT_AMOUNT) + '...';
 
   var positionDisplay = ((pastInput + upcomingInput).replace(/\n/g, ' ') + '\n' +
                          (new Array(pastInput.length + 1).join(' ')) + "^");
@@ -45,7 +45,7 @@ Scanner.prototype.fatal = function (msg) {
   var e = new Error(msg + "\n" + positionDisplay);
 
   e.offset = pos;
-  var allPastInput = input.slice(0, pos);
+  var allPastInput = input.substring(0, pos);
   e.line = (1 + (allPastInput.match(/\n/g) || []).length);
   e.col = (1 + pos - allPastInput.lastIndexOf('\n'));
   e.scanner = this;
