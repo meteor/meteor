@@ -254,3 +254,24 @@ Tinytest.add("spacebars - compiler output", function (test) {
       });
 
 });
+
+Tinytest.add("spacebars - compiler errors", function (test) {
+
+  var getError = function (input) {
+    try {
+      Spacebars.compile(input);
+    } catch (e) {
+      return e.message;
+    }
+    test.fail("Didn't throw an error: " + input);
+  };
+
+  var assertStartsWith = function (a, b) {
+    test.equal(a.substring(0, b.length), b);
+  };
+
+  assertStartsWith(getError("<input></input>"),
+                   "Unexpected HTML close tag.  <input> should have no close tag.");
+  assertStartsWith(getError("{{#each foo}}<input></input>{{/foo}}"),
+                   "Unexpected HTML close tag.  <input> should have no close tag.");
+});
