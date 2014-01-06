@@ -4,14 +4,6 @@ var makeStacheTagStartRegex = function (r) {
                     r.ignoreCase ? 'i' : '');
 };
 
-var prettyOffset = function (code, pos) {
-  var codeUpToPos = code.substring(0, pos);
-  var startOfLine = codeUpToPos.lastIndexOf('\n') + 1;
-  var indexInLine = pos - startOfLine; // 0-based
-  var lineNum = codeUpToPos.replace(/[^\n]+/g, '').length + 1; // 1-based
-  return "line " + lineNum + ", offset " + indexInLine;
-};
-
 var starts = {
   ELSE: makeStacheTagStartRegex(/^\{\{\s*else(?=[\s}])/i),
   DOUBLE: makeStacheTagStartRegex(/^\{\{\s*(?!\s)/),
@@ -28,36 +20,37 @@ var ends = {
 };
 
 // Parse a tag at `pos` in `inputString`.  Succeeds or errors.
-Spacebars.parseStacheTag = function (inputString, pos, options) {
-  pos = pos || 0;
-  var startPos = pos;
-  var str = inputString.slice(pos);
+Spacebars.parseStacheTag = function (scannerOrString, options) {
+  var scanner = scannerOrString;
+  if (typeof scanner === 'string')
+    scanner = new HTML.Scanner(scannerOrString);
 
-  var lexer = new JSLexer(inputString);
-
-  var advance = function (amount) {
-    str = str.slice(amount);
-    pos += amount;
-  };
+  // create a lexer for scanning JS tokens.  We'll set its `pos`
+  // to our `pos` whenever we need to use it.
+  var lexer = new JSLexer(scanner.input);
 
   var run = function (regex) {
     // regex is assumed to start with `^`
-    var result = regex.exec(str);
+    var result = regex.exec(scanner.rest());
     if (! result)
       return null;
     var ret = result[0];
-    advance(ret.length);
+    scanner.pos += ret.length;
     return ret;
   };
 
-  var scanToken = function () {
+  var advance = function (amount) {
+    scanner.pos += amount;
+  };
+
+  var peekToken = function () {
     lexer.divisionPermitted = false;
-    lexer.pos = pos;
+    lexer.pos = scanner.pos;
     return lexer.next();
   };
 
   var scanIdentifier = function (isFirstInPath) {
-    var tok = scanToken();
+    var tok = peekToken();
     // We don't care about overlap with JS keywords,
     // but accept "true", "false", and "null" as identifiers
     // only if not isFirstInPath.
@@ -71,13 +64,6 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
     advance(text.length);
     return text;
   };
-
-  //var scanDottedIdentifier = function () {
-  //  var name = scanIdentifier();
-  //  while (run(/^\./))
-  //    name += '.' + scanIdentifier();
-  //  return name;
-  //};
 
   var scanPath = function () {
     var segments = [];
@@ -142,17 +128,18 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
   // scan an argument; succeeds or errors
   var scanArg = function (notKeyword) {
     // all args have `type` and possibly `key`
-    var tok = scanToken();
+    var tok = peekToken();
     var tokType = tok.type();
     var text = tok.text();
+    var rest = scanner.rest();
 
-    if (/^[\.\[]/.test(str) && tokType !== 'NUMBER')
+    if (/^[\.\[]/.test(rest) && tokType !== 'NUMBER')
       return ['PATH', scanPath()];
 
     if (tokType === 'PUNCTUATION' && text === '-') {
       // unary minus
       advance(text.length);
-      var numberTok = scanToken();
+      var numberTok = peekToken();
       if (numberTok.type() !== 'NUMBER')
         expected('identifier, number, string, boolean, or null');
       advance(numberTok.text().length);
@@ -178,7 +165,7 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
       return ['STRING', JSON.parse(text)];
     } else if (tokType === 'IDENTIFIER' || tokType === 'KEYWORD') {
       if ((! notKeyword) &&
-          /^\s*=/.test(str.slice(text.length))) {
+          /^\s*=/.test(rest.slice(text.length))) {
         // it's a keyword argument!
         advance(text.length);
         run(/^\s*=\s*/);
@@ -196,13 +183,11 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
   var type;
 
   var error = function (msg) {
-    msg = msg + " at " + prettyOffset(inputString, pos);
-    if (options && options.sourceName)
-      msg += " in " + options.sourceName;
-    throw new Error(msg);
+    scanner.fatal(msg);
   };
+
   var expected = function (what) {
-    error('Expected ' + what + ', found "' + str.slice(0,5) + '"');
+    error('Expected ' + what);
   };
 
   // must do ELSE first; order of others doesn't matter
@@ -215,7 +200,7 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
   else if (run(starts.BLOCKOPEN)) type = 'BLOCKOPEN';
   else if (run(starts.BLOCKCLOSE)) type = 'BLOCKCLOSE';
   else
-    error('Unknown stache tag starting with "' + str.slice(0,5) + '"');
+    error('Unknown stache tag');
 
   var tag = { type: type };
 
@@ -240,12 +225,12 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
       if (type === 'TRIPLE') {
         if (run(ends.TRIPLE))
           break;
-        else if (str.charAt(0) === '}')
+        else if (scanner.peek() === '}')
           expected('`}}}`');
       } else {
         if (run(ends.DOUBLE))
           break;
-        else if (str.charAt(0) === '}')
+        else if (scanner.peek() === '}')
           expected('`}}`');
       }
       tag.args.push(scanArg());
@@ -269,9 +254,14 @@ Spacebars.parseStacheTag = function (inputString, pos, options) {
 
   checkTag(tag);
 
-  tag.charPos = startPos;
-  tag.charLength = pos - startPos;
   return tag;
+};
+
+Spacebars.peekStacheTag = function (scanner, options) {
+  var startPos = scanner.pos;
+  var result = Spacebars.parseStacheTag(scanner, options);
+  scanner.pos = startPos;
+  return result;
 };
 
 var makeObjectLiteral = function (obj) {
@@ -299,23 +289,20 @@ Spacebars.parse = function (input) {
       return null;
 
     // `parseStacheTag` will succeed or die trying.
-    //
-    // TODO: make `parseStacheTag` use the same `scanner`, and `scanner.fatal`
-    // for errors, which should be made to still have nice line numbers.
-    var stache = Spacebars.parseStacheTag(scanner.input, scanner.pos);
+    var lastPos = scanner.pos;
+    var stache = Spacebars.parseStacheTag(scanner);
     // kill any `args: []` cluttering up the object
     if (stache.args && ! stache.args.length)
       delete stache.args;
 
-    if (stache.type === 'ELSE')
-      scanner.fatal("Found unexpected {{else}}}");
-    else if (stache.type === 'BLOCKCLOSE')
-      scanner.fatal("Found unexpected closing stache tag");
-
-    scanner.pos += stache.charLength;
-    // TODO: Change `parseStacheTag` to not generate these
-    delete stache.charLength;
-    delete stache.charPos;
+    if (stache.type === 'ELSE') {
+      scanner.pos = lastPos;
+      scanner.fatal("Unexpected {{else}}");
+    }
+    if (stache.type === 'BLOCKCLOSE') {
+      scanner.pos = lastPos;
+      scanner.fatal("Unexpected closing stache tag");
+    }
 
     if (stache.type === 'COMMENT') {
       return null; // consume the tag from the input but emit no Special
@@ -340,25 +327,28 @@ Spacebars.parse = function (input) {
       if (scanner.rest().slice(0, 2) !== '{{')
         scanner.fatal("Expected {{else}} or block close for " + blockName);
 
-      var stache2 = Spacebars.parseStacheTag(scanner.input, scanner.pos);
+      var lastPos = scanner.pos;
+      var stache2 = Spacebars.parseStacheTag(scanner);
 
       if (stache2.type === 'ELSE') {
-        scanner.pos += stache2.charLength;
         stache.elseContent = HTML.parseFragment(scanner, parserOptions);
 
         if (scanner.rest().slice(0, 2) !== '{{')
           scanner.fatal("Expected block close for " + blockName);
 
-        stache2 = Spacebars.parseStacheTag(scanner.input, scanner.pos);
+        lastPos = scanner.pos;
+        stache2 = Spacebars.parseStacheTag(scanner);
       }
 
       if (stache2.type === 'BLOCKCLOSE') {
         var blockName2 = stache2.path.join(',');
-        if (blockName !== blockName2)
+        if (blockName !== blockName2) {
+          scanner.pos = lastPos;
           scanner.fatal('Expected tag to close ' + blockName + ', found ' +
-                        + blockName2);
-        scanner.pos += stache2.charLength;
+                        blockName2);
+        }
       } else {
+        scanner.pos = lastPos;
         scanner.fatal('Expected tag to close ' + blockName + ', found ' +
                       stache2.type);
       }
@@ -374,8 +364,7 @@ Spacebars.parse = function (input) {
     return (scanner.peek() === '{' &&
             (rest = scanner.rest()).slice(0, 2) === '{{' &&
             /^\{\{\s*(\/|else\b)/.test(rest) &&
-            (type = Spacebars.parseStacheTag(scanner.input,
-                                             scanner.pos).type) &&
+            (type = Spacebars.peekStacheTag(scanner).type) &&
             (type === 'BLOCKCLOSE' || type === 'ELSE'));
   };
 

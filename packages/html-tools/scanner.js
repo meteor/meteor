@@ -1,3 +1,13 @@
+// This is a Scanner class suitable for any parser/lexer/tokenizer.
+//
+// A Scanner has an immutable source document (string) `input` and a current
+// position `pos`, an index into the string, which can be set at will.
+//
+// * `new Scanner(input)` - constructs a Scanner with source string `input`
+// * `scanner.rest()` - returns the rest of the input after `pos`
+// * `scanner.peek()` - returns the character at `pos`
+// * `scanner.isEOF()` - true if `pos` is at or beyond the end of `input`
+// * `scanner.fatal(msg)` - throw an error indicating a problem at `pos`
 
 Scanner = function (input) {
   this.input = input; // public, read-only
@@ -5,6 +15,7 @@ Scanner = function (input) {
 };
 
 Scanner.prototype.rest = function () {
+  // Slicing a string is O(1) in modern JavaScript VMs (including old IE).
   return this.input.slice(this.pos);
 };
 
@@ -16,20 +27,37 @@ Scanner.prototype.fatal = function (msg) {
   // despite this default, you should always provide a message!
   msg = (msg || "Parse error");
 
-  // XXX show line/col information, etc.
-  // XXX attach information to the error object.
-  throw new Error("Around: \"" +
-                  this.input.substring(this.pos - 10, this.pos) +
-                  "(HERE>>>)" + this.input.substring(this.pos, this.pos + 10) +
-                  "\": " + msg);
+  var CONTEXT_AMOUNT = 20;
+
+  var input = this.input;
+  var pos = this.pos;
+  var pastInput = input.slice(pos - CONTEXT_AMOUNT - 1, pos);
+  if (pastInput.length > CONTEXT_AMOUNT)
+    pastInput = '...' + pastInput.slice(-CONTEXT_AMOUNT);
+
+  var upcomingInput = input.slice(pos, pos + CONTEXT_AMOUNT + 1);
+  if (upcomingInput.length > CONTEXT_AMOUNT);
+  upcomingInput = upcomingInput.slice(0, CONTEXT_AMOUNT) + '...';
+
+  var positionDisplay = ((pastInput + upcomingInput).replace(/\n/g, ' ') + '\n' +
+                         (new Array(pastInput.length + 1).join('-')) + "^");
+
+  var e = new Error(msg + "\n" + positionDisplay);
+
+  e.offset = pos;
+  var allPastInput = input.slice(0, pos);
+  e.line = (1 + (allPastInput.match(/\n/g) || []).length);
+  e.col = (1 + pos - allPastInput.lastIndexOf('\n'));
+  e.scanner = this;
+
+  throw e;
 };
 
 // Peek at the next character.
 //
-// It's safe to peek at the next character at EOF; you just get an
-// empty string.
+// If `isEOF`, returns an empty string.
 Scanner.prototype.peek = function () {
-  return this.rest().charAt(0);
+  return this.input.charAt(this.pos);
 };
 
 // Constructs a `getFoo` function where `foo` is specified with a regex.
