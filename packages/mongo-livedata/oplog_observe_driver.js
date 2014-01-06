@@ -32,14 +32,13 @@ OplogObserveDriver = function (options) {
 
   self._published = new LocalCollection._IdMap;
   var selector = self._cursorDescription.selector;
-  self._selectorFn = LocalCollection._compileSelector(
+  self._matcher = new Minimongo.Matcher(
     self._cursorDescription.selector);
   var projection = self._cursorDescription.options.fields || {};
   self._projectionFn = LocalCollection._compileProjection(projection);
   // Projection function, result of combining important fields for selector and
   // existing fields projection
-  self._sharedProjection = LocalCollection._combineSelectorAndProjection(
-    selector, projection);
+  self._sharedProjection = self._matcher.combineIntoProjection(projection);
   self._sharedProjectionFn = LocalCollection._compileProjection(
     self._sharedProjection);
 
@@ -131,7 +130,7 @@ _.extend(OplogObserveDriver.prototype, {
     var self = this;
     newDoc = _.clone(newDoc);
 
-    var matchesNow = newDoc && self._selectorFn(newDoc);
+    var matchesNow = newDoc && self._matcher.documentMatches(newDoc).result;
     if (mustMatchNow && !matchesNow) {
       throw Error("expected " + EJSON.stringify(newDoc) + " to match "
                   + EJSON.stringify(self._cursorDescription));
@@ -238,7 +237,7 @@ _.extend(OplogObserveDriver.prototype, {
 
       // XXX what if selector yields?  for now it can't but later it could have
       // $where
-      if (self._selectorFn(op.o))
+      if (self._matcher.documentMatches(op.o).result)
         self._add(op.o);
     } else if (op.op === 'u') {
       // Is this a modifier ($set/$unset, which may require us to poll the
@@ -263,8 +262,7 @@ _.extend(OplogObserveDriver.prototype, {
         LocalCollection._modify(newDoc, op.o);
         self._handleDoc(id, self._sharedProjectionFn(newDoc));
       } else if (!canDirectlyModifyDoc ||
-                 LocalCollection._canSelectorBecomeTrueByModifier(
-                   self._cursorDescription.selector, op.o)) {
+                 self._matcher.canBecomeTrueByModifier(op.o)) {
         self._needToFetch.set(id, op.ts.toString());
         if (self._phase === PHASE.STEADY)
           self._fetchModifiedDocuments();

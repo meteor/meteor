@@ -1,6 +1,7 @@
 Tinytest.add("minimongo - modifier affects selector", function (test) {
   function testSelectorPaths (sel, paths, desc) {
-    test.isTrue(_.isEqual(MinimongoTest.getSelectorPaths(sel), paths), desc);
+    var matcher = new Minimongo.Matcher(sel);
+    test.equal(matcher._getPaths(), paths, desc);
   }
 
   testSelectorPaths({
@@ -49,18 +50,24 @@ Tinytest.add("minimongo - modifier affects selector", function (test) {
     }
   }, ['a', 'b.c'], "literal object");
 
+  // Note that a and b do NOT end up in the path list, but x and y both do.
+  testSelectorPaths({
+    $or: [
+      {x: {$elemMatch: {a: 5}}},
+      {y: {$elemMatch: {b: 7}}}
+    ]
+  }, ['x', 'y'], "$or and elemMatch");
+
   function testSelectorAffectedByModifier (sel, mod, yes, desc) {
-    if (yes)
-      test.isTrue(LocalCollection._isSelectorAffectedByModifier(sel, mod, desc));
-    else
-      test.isFalse(LocalCollection._isSelectorAffectedByModifier(sel, mod, desc));
+    var matcher = new Minimongo.Matcher(sel);
+    test.equal(matcher.affectedByModifier(mod), yes, desc);
   }
 
   function affected(sel, mod, desc) {
-    testSelectorAffectedByModifier(sel, mod, 1, desc);
+    testSelectorAffectedByModifier(sel, mod, true, desc);
   }
   function notAffected(sel, mod, desc) {
-    testSelectorAffectedByModifier(sel, mod, 0, desc);
+    testSelectorAffectedByModifier(sel, mod, false, desc);
   }
 
   notAffected({ foo: 0 }, { $set: { bar: 1 } }, "simplest");
@@ -89,7 +96,8 @@ Tinytest.add("minimongo - modifier affects selector", function (test) {
 
 Tinytest.add("minimongo - selector and projection combination", function (test) {
   function testSelProjectionComb (sel, proj, expected, desc) {
-    test.equal(LocalCollection._combineSelectorAndProjection(sel, proj), expected, desc);
+    var matcher = new Minimongo.Matcher(sel);
+    test.equal(matcher.combineIntoProjection(proj), expected, desc);
   }
 
   // Test with inclusive projection
@@ -339,11 +347,15 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
   var test = null; // set this global in the beginning of every test
   // T - should return true
   // F - should return false
+  var oneTest = function (sel, mod, expected, desc) {
+    var matcher = new Minimongo.Matcher(sel);
+    test.equal(matcher.canBecomeTrueByModifier(mod), expected, desc);
+  };
   function T (sel, mod, desc) {
-    test.isTrue(LocalCollection._canSelectorBecomeTrueByModifier(sel, mod), desc);
+    oneTest(sel, mod, true, desc);
   }
   function F (sel, mod, desc) {
-    test.isFalse(LocalCollection._canSelectorBecomeTrueByModifier(sel, mod), desc);
+    oneTest(sel, mod, false, desc);
   }
 
   Tinytest.add("minimongo - can selector become true by modifier - literals (structured tests)", function (t) {

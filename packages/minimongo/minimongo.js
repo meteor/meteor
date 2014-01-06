@@ -20,7 +20,7 @@ LocalCollection = function (name) {
   //  results: array (ordered) or object (unordered) of current results
   //  results_snapshot: snapshot of results. null if not paused.
   //  cursor: Cursor object for the query.
-  //  selector_f, sort_f, (callbacks): functions
+  //  selector, sorter, (callbacks): functions
   this.queries = {};
 
   // null if not saving originals; a map from id to original document value if
@@ -30,6 +30,8 @@ LocalCollection = function (name) {
   // True when observers are paused and we should not send callbacks.
   this.paused = false;
 };
+
+Minimongo = {};
 
 // Object exported only for unit testing.
 // Use it to export private functions to test in Tinytest.
@@ -89,18 +91,13 @@ LocalCollection.Cursor = function (collection, selector, options) {
   if (LocalCollection._selectorIsId(selector)) {
     // stash for fast path
     self.selector_id = LocalCollection._idStringify(selector);
-    self.selector_f = LocalCollection._compileSelector(selector, self);
-    self.sort_f = undefined;
+    self.matcher = new Minimongo.Matcher(selector, self);
+    self.sorter = undefined;
   } else {
-    // MongoDB throws different errors on different branching operators
-    // containing $near
-    if (isGeoQuerySpecial(selector))
-      throw new Error("$near can't be inside $or/$and/$nor/$not");
-
     self.selector_id = undefined;
-    self.selector_f = LocalCollection._compileSelector(selector, self);
-    self.sort_f = (isGeoQuery(selector) || options.sort) ?
-      LocalCollection._compileSort(options.sort || [], self) : null;
+    self.matcher = new Minimongo.Matcher(selector, self);
+    self.sorter = (self.matcher.isGeoQuery() || options.sort) ?
+      new Sorter(options.sort || []) : null;
   }
   self.skip = options.skip;
   self.limit = options.limit;
@@ -273,10 +270,11 @@ _.extend(LocalCollection.Cursor.prototype, {
     if (!options._allow_unordered && !ordered && (self.skip || self.limit))
       throw new Error("must use ordered observe with skip or limit");
 
-    // XXX merge this object w/ "this" Cursor.  they're the same.
     var query = {
-      selector_f: self.selector_f, // not fast pathed
-      sort_f: ordered && self.sort_f,
+      matcher: self.matcher, // not fast pathed
+      sorter: ordered && self.sorter,
+      distances: (
+        self.matcher.isGeoQuery() && ordered && new LocalCollection._IdMap),
       results_snapshot: null,
       ordered: ordered,
       cursor: self,
@@ -292,7 +290,7 @@ _.extend(LocalCollection.Cursor.prototype, {
       qid = self.collection.next_qid++;
       self.collection.queries[qid] = query;
     }
-    query.results = self._getRawObjects(ordered);
+    query.results = self._getRawObjects(ordered, query.distances);
     if (self.collection.paused)
       query.results_snapshot = (ordered ? [] : {});
 
@@ -371,13 +369,21 @@ _.extend(LocalCollection.Cursor.prototype, {
 
 // Returns a collection of matching objects, but doesn't deep copy them.
 //
-// If ordered is set, returns a sorted array, respecting sort_f, skip, and limit
-// properties of the query.  if sort_f is falsey, no sort -- you get the natural
+// If ordered is set, returns a sorted array, respecting sorter, skip, and limit
+// properties of the query.  if sorter is falsey, no sort -- you get the natural
 // order.
 //
-// If ordered is not set, returns an object mapping from ID to doc (sort_f, skip
+// If ordered is not set, returns an object mapping from ID to doc (sorter, skip
 // and limit should not be set).
-LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
+//
+// If ordered is set and this cursor is a $near geoquery, then this function
+// will use an _IdMap to track each distance from the $near argument point in
+// order to use it as a sort key. If an _IdMap is passed in the 'distances'
+// argument, this function will clear it and use it for this purpose (otherwise
+// it will just create its own _IdMap). The observeChanges implementation uses
+// this to remember the distances after this function returns.
+LocalCollection.Cursor.prototype._getRawObjects = function (ordered,
+                                                            distances) {
   var self = this;
 
   var results = ordered ? [] : {};
@@ -401,16 +407,32 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
   }
 
   // slow path for arbitrary selector, sort, skip, limit
-  for (var id in self.collection.docs) {
-    var doc = self.collection.docs[id];
-    if (self.selector_f(doc)) {
-      if (ordered)
+
+  // in the observeChanges case, distances is actually part of the "query" (ie,
+  // live results set) object.  in other cases, distances is only used inside
+  // this function.
+  if (self.matcher.isGeoQuery() && ordered) {
+    if (distances)
+      distances.clear();
+    else
+      distances = new LocalCollection._IdMap();
+  }
+
+  for (var idStringified in self.collection.docs) {
+    var doc = self.collection.docs[idStringified];
+    var id = LocalCollection._idParse(idStringified);  // XXX use more idmaps
+    var matchResult = self.matcher.documentMatches(doc);
+    if (matchResult.result) {
+      if (ordered) {
         results.push(doc);
-      else
-        results[id] = doc;
+        if (distances && matchResult.distance !== undefined)
+          distances.set(id, matchResult.distance);
+      } else {
+        results[idStringified] = doc;
+      }
     }
     // Fast path for limited unsorted queries.
-    if (self.limit && !self.skip && !self.sort_f &&
+    if (self.limit && !self.skip && !self.sorter &&
         results.length === self.limit)
       return results;
   }
@@ -418,8 +440,10 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered) {
   if (!ordered)
     return results;
 
-  if (self.sort_f)
-    results.sort(self.sort_f);
+  if (self.sorter) {
+    var comparator = self.sorter.getComparator({distances: distances});
+    results.sort(comparator);
+  }
 
   var idx_start = self.skip || 0;
   var idx_end = self.limit ? (self.limit + idx_start) : results.length;
@@ -477,7 +501,10 @@ LocalCollection.prototype.insert = function (doc, callback) {
   // trigger live queries that match
   for (var qid in self.queries) {
     var query = self.queries[qid];
-    if (query.selector_f(doc)) {
+    var matchResult = query.matcher.documentMatches(doc);
+    if (matchResult.result) {
+      if (query.distances && matchResult.distance !== undefined)
+        query.distances.set(doc._id, matchResult.distance);
       if (query.cursor.skip || query.cursor.limit)
         queriesToRecompute.push(qid);
       else
@@ -505,23 +532,24 @@ LocalCollection.prototype.remove = function (selector, callback) {
   var remove = [];
 
   var queriesToRecompute = [];
-  var selector_f = LocalCollection._compileSelector(selector, self);
+  var matcher = new Minimongo.Matcher(selector, self);
 
   // Avoid O(n) for "remove a single doc by ID".
   var specificIds = LocalCollection._idsMatchedBySelector(selector);
   if (specificIds) {
     _.each(specificIds, function (id) {
       var strId = LocalCollection._idStringify(id);
-      // We still have to run selector_f, in case it's something like
+      // We still have to run matcher, in case it's something like
       //   {_id: "X", a: 42}
-      if (_.has(self.docs, strId) && selector_f(self.docs[strId]))
+      if (_.has(self.docs, strId)
+          && matcher.documentMatches(self.docs[strId]).result)
         remove.push(strId);
     });
   } else {
-    for (var id in self.docs) {
-      var doc = self.docs[id];
-      if (selector_f(doc)) {
-        remove.push(id);
+    for (var strId in self.docs) {
+      var doc = self.docs[strId];
+      if (matcher.documentMatches(doc).result) {
+        remove.push(strId);
       }
     }
   }
@@ -531,7 +559,7 @@ LocalCollection.prototype.remove = function (selector, callback) {
     var removeId = remove[i];
     var removeDoc = self.docs[removeId];
     _.each(self.queries, function (query, qid) {
-      if (query.selector_f(removeDoc)) {
+      if (query.matcher.documentMatches(removeDoc).result) {
         if (query.cursor.skip || query.cursor.limit)
           queriesToRecompute.push(qid);
         else
@@ -545,8 +573,10 @@ LocalCollection.prototype.remove = function (selector, callback) {
   // run live query callbacks _after_ we've removed the documents.
   _.each(queryRemove, function (remove) {
     var query = self.queries[remove.qid];
-    if (query)
+    if (query) {
+      query.distances && query.distances.remove(remove.doc._id);
       LocalCollection._removeFromResults(query, remove.doc);
+    }
   });
   _.each(queriesToRecompute, function (qid) {
     var query = self.queries[qid];
@@ -572,7 +602,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   }
   if (!options) options = {};
 
-  var selector_f = LocalCollection._compileSelector(selector, self);
+  var matcher = new Minimongo.Matcher(selector, self);
 
   // Save the original results of any query that we might need to
   // _recomputeResults on, because _modifyAndNotify will mutate the objects in
@@ -590,10 +620,11 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
 
   for (var id in self.docs) {
     var doc = self.docs[id];
-    if (selector_f(doc)) {
+    var queryResult = matcher.documentMatches(doc);
+    if (queryResult.result) {
       // XXX Should we save the original even if mod ends up being a no-op?
       self._saveOriginal(id, doc);
-      self._modifyAndNotify(doc, mod, recomputeQids);
+      self._modifyAndNotify(doc, mod, recomputeQids, queryResult.arrayIndex);
       ++updateCount;
       if (!options.multi)
         break;
@@ -614,7 +645,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   var insertedId;
   if (updateCount === 0 && options.upsert) {
     var newDoc = LocalCollection._removeDollarOperators(selector);
-    LocalCollection._modify(newDoc, mod, true);
+    LocalCollection._modify(newDoc, mod, {isInsert: true});
     if (! newDoc._id && options.insertedId)
       newDoc._id = options.insertedId;
     insertedId = self.insert(newDoc);
@@ -658,14 +689,14 @@ LocalCollection.prototype.upsert = function (selector, mod, options, callback) {
 };
 
 LocalCollection.prototype._modifyAndNotify = function (
-    doc, mod, recomputeQids) {
+    doc, mod, recomputeQids, arrayIndex) {
   var self = this;
 
   var matched_before = {};
   for (var qid in self.queries) {
     var query = self.queries[qid];
     if (query.ordered) {
-      matched_before[qid] = query.selector_f(doc);
+      matched_before[qid] = query.matcher.documentMatches(doc).result;
     } else {
       // Because we don't support skip or limit (yet) in unordered queries, we
       // can just do a direct lookup.
@@ -676,12 +707,15 @@ LocalCollection.prototype._modifyAndNotify = function (
 
   var old_doc = EJSON.clone(doc);
 
-  LocalCollection._modify(doc, mod);
+  LocalCollection._modify(doc, mod, {arrayIndex: arrayIndex});
 
   for (qid in self.queries) {
     query = self.queries[qid];
     var before = matched_before[qid];
-    var after = query.selector_f(doc);
+    var afterMatch = query.matcher.documentMatches(doc);
+    var after = afterMatch.result;
+    if (after && query.distances && afterMatch.distance !== undefined)
+      query.distances.set(doc._id, afterMatch.distance);
 
     if (query.cursor.skip || query.cursor.limit) {
       // We need to recompute any query where the doc may have been in the
@@ -713,12 +747,13 @@ LocalCollection._insertInResults = function (query, doc) {
   var fields = EJSON.clone(doc);
   delete fields._id;
   if (query.ordered) {
-    if (!query.sort_f) {
+    if (!query.sorter) {
       query.addedBefore(doc._id, fields, null);
       query.results.push(doc);
     } else {
       var i = LocalCollection._insertInSortedList(
-        query.sort_f, query.results, doc);
+        query.sorter.getComparator({distances: query.distances}),
+        query.results, doc);
       var next = query.results[i+1];
       if (next)
         next = next._id;
@@ -761,14 +796,15 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
 
   if (!_.isEmpty(changedFields))
     query.changed(doc._id, changedFields);
-  if (!query.sort_f)
+  if (!query.sorter)
     return;
 
   // just take it out and put it back in again, and see if the index
   // changes
   query.results.splice(orig_idx, 1);
   var new_idx = LocalCollection._insertInSortedList(
-    query.sort_f, query.results, doc);
+    query.sorter.getComparator({distances: query.distances}),
+    query.results, doc);
   if (orig_idx !== new_idx) {
     var next = query.results[new_idx+1];
     if (next)
@@ -790,7 +826,9 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
 LocalCollection._recomputeResults = function (query, oldResults) {
   if (!oldResults)
     oldResults = query.results;
-  query.results = query.cursor._getRawObjects(query.ordered);
+  if (query.distances)
+    query.distances.clear();
+  query.results = query.cursor._getRawObjects(query.ordered, query.distances);
 
   if (!query.paused) {
     LocalCollection._diffQueryChanges(
@@ -974,23 +1012,3 @@ LocalCollection._makeChangedFields = function (newDoc, oldDoc) {
   });
   return fields;
 };
-
-// Searches $near operator in the selector recursively
-// (including all $or/$and/$nor/$not branches)
-var isGeoQuery = function (selector) {
-  return _.any(selector, function (val, key) {
-    // Note: _.isObject matches objects and arrays
-    return key === "$near" || (_.isObject(val) && isGeoQuery(val));
-  });
-};
-
-// Checks if $near appears under some $or/$and/$nor/$not branch
-var isGeoQuerySpecial = function (selector) {
-  return _.any(selector, function (val, key) {
-    if (_.contains(['$or', '$and', '$nor', '$not'], key))
-      return isGeoQuery(val);
-    // Note: _.isObject matches objects and arrays
-    return _.isObject(val) && isGeoQuerySpecial(val);
-  });
-};
-
