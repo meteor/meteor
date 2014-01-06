@@ -26,7 +26,9 @@ toObjectLiteralKey = function (k) {
 
 // This method is generic, i.e. it can be transplanted to non-Tags
 // and it will still work by accessing `this.tagName`, `this.attrs`,
-// and `this.children`.
+// and `this.children`.  It's ok if `this.attrs` has content that
+// isn't allowed in an attribute (this feature is used by
+// HTML.Special.prototype.toJS).
 HTML.Tag.prototype.toJS = function (options) {
   var argStrs = [];
   if (this.attrs) {
