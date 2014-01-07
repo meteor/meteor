@@ -1319,21 +1319,32 @@ it's up to you to be sure.
 Queries can specify a particular set of fields to include or exclude from the
 result object.
 
-To exclude certain fields from the result objects, the field specifier
-is a dictionary whose keys are field names and whose values are `0`.
+To exclude specific fields from the result objects, the field specifier is a
+dictionary whose keys are field names and whose values are `0`. All unspecified
+fields are included.
 
     // Users.find({}, {fields: {password: 0, hash: 0}})
 
-To return an object that only includes the specified field, use `1` as
+To include only specific fields in the result documents, use `1` as
 the value. The `_id` field is still included in the result.
 
     // Users.find({}, {fields: {firstname: 1, lastname: 1}})
 
-It is not possible to mix inclusion and exclusion styles (except for the cases
-when `_id` is included by default or explicitly excluded). Field operators such
-as `$` and `$elemMatch` are not available on the client side yet.
+With one exception, it is not possible to mix inclusion and exclusion styles:
+the keys must either be all 1 or all 0.  The exception is that you may specify
+`_id: 0` in an inclusion specifier, which will leave `_id` out of the result
+object as well.  However, such field specifiers can not be used with
+[`observeChanges`](#observe_changes), [`observe`](#observe), cursors returned
+from a [publish function](#meteor_publish), or cursors used in
+`{{dstache}}#each}}` in a template. They may be used with [`fetch`](#fetch),
+[`findOne`](#findone), [`forEach`](#foreach), and [`map`](#map).
 
-More advanced example:
+
+<a href="http://docs.mongodb.org/manual/reference/operator/projection/">Field
+operators</a> such as `$` and `$elemMatch` are not available on the client side
+yet.
+
+A more advanced example:
 
     Users.insert({ alterEgos: [{ name: "Kira", alliance: "murderer" },
                                { name: "L", alliance: "police" }],
@@ -2552,9 +2563,10 @@ computation.
 
 {{> api_box deps_nonreactive }}
 
-Calls `func()` with `Deps.currentComputation` temporarily set to
-`null`.  If `func` accesses reactive data sources, these data sources
-will never cause a rerun of the enclosing computation.
+Calls `func` with `Deps.currentComputation` temporarily set to `null`
+and returns `func`'s own return value.  If `func` accesses reactive data
+sources, these data sources will never cause a rerun of the enclosing
+computation.
 
 {{> api_box deps_active }}
 
