@@ -73,50 +73,56 @@ UI.Each = Component.extend({
       }
     };
 
-    this.observeHandle = ObserveSequence.observe(function () {
-      return self.get('sequence');
-    }, {
-      addedAt: function (id, item, i, beforeId) {
-        addToCount(1);
-        id = LocalCollection._idStringify(id);
+    try {
+      this.observeHandle = ObserveSequence.observe(function () {
+        return self.get('sequence');
+      }, {
+        addedAt: function (id, item, i, beforeId) {
+          addToCount(1);
+          id = LocalCollection._idStringify(id);
 
-        var data = item;
-        var dep = new Deps.Dependency;
+          var data = item;
+          var dep = new Deps.Dependency;
 
-        // function to become `comp.data`
-        var dataFunc = function () {
-          dep.depend();
-          return data;
-        };
-        // Storing `$set` on `comp.data` lets us
-        // access it from `changed`.
-        dataFunc.$set = function (v) {
-          data = v;
-          dep.changed();
-        };
+          // function to become `comp.data`
+          var dataFunc = function () {
+            dep.depend();
+            return data;
+          };
+          // Storing `$set` on `comp.data` lets us
+          // access it from `changed`.
+          dataFunc.$set = function (v) {
+            data = v;
+            dep.changed();
+          };
 
-        if (beforeId)
-          beforeId = LocalCollection._idStringify(beforeId);
+          if (beforeId)
+            beforeId = LocalCollection._idStringify(beforeId);
 
-        var renderedItem = UI.render(content.withData(dataFunc), self);
-        range.add(id, renderedItem, beforeId);
-      },
-      removed: function (id, item) {
-        addToCount(-1);
-        range.remove(LocalCollection._idStringify(id));
-      },
-      movedTo: function (id, item, i, j, beforeId) {
-        range.moveBefore(
-          LocalCollection._idStringify(id),
-          beforeId && LocalCollection._idStringify(beforeId));
-      },
-      changed: function (id, newItem) {
-        range.get(LocalCollection._idStringify(id)).data.$set(newItem);
-      }
-    });
+          var renderedItem = UI.render(content.withData(dataFunc), self);
+          range.add(id, renderedItem, beforeId);
+        },
+        removed: function (id, item) {
+          addToCount(-1);
+          range.remove(LocalCollection._idStringify(id));
+        },
+        movedTo: function (id, item, i, j, beforeId) {
+          range.moveBefore(
+            LocalCollection._idStringify(id),
+            beforeId && LocalCollection._idStringify(beforeId));
+        },
+        changed: function (id, newItem) {
+          range.get(LocalCollection._idStringify(id)).data.$set(newItem);
+        }
+      });
 
-    // on initial render, display the else clause if no items
-    addToCount(0);
+      // on initial render, display the else clause if no items
+      addToCount(0);
+    } catch (e) {
+      // XXX is there a way to print at which file and line number
+      // this {{#each}} is defined?
+      throw new Error("{{#each}} failed: " + e.message);
+    }
   },
   destroyed: function () {
     if (this.observeHandle)
