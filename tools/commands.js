@@ -146,8 +146,8 @@ main.registerCommand({
 
   auth.tryRevokeOldTokens({timeout: 1000});
 
-  var runner = require('./runner.js');
-  return runner.run(options.appDir, {
+  var runAll = require('./run-all.js');
+  return runAll.run(options.appDir, {
     port: options.port,
     rawLogs: options['raw-logs'],
     settingsFile: options.settings,
@@ -971,8 +971,8 @@ main.registerCommand({
       buildOptions: buildOptions
     });
   } else {
-    var runner = require('./runner.js');
-    return runner.run(testRunnerAppDir, {
+    var runAll = require('./run-all.js');
+    return runAll.run(testRunnerAppDir, {
       // if we're testing packages from an app, we still want to make
       // sure the user doesn't 'meteor update' in the app, requiring
       // a switch to a different release
