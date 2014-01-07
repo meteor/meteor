@@ -2,6 +2,10 @@
 
 * Hash login tokens before storing them in the database.
 
+* Cursors with a field specifier containing `{_id: 0}` can no longer be used
+  with `observeChanges` or `observe`. This includes the implicit calls to these
+  functions that are done when returning a cursor from a publish function or
+  using `{{#each}}`.
 
 ## v0.7.0.1
 

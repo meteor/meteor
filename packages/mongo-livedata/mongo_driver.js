@@ -957,6 +957,14 @@ MongoConnection.prototype._observeChanges = function (
     return self._observeChangesTailable(cursorDescription, ordered, callbacks);
   }
 
+  // You may not filter out _id when observing changes, because the id is a core
+  // part of the observeChanges API.
+  if (cursorDescription.options.fields &&
+      (cursorDescription.options.fields._id === 0 ||
+       cursorDescription.options.fields._id === false)) {
+    throw Error("You may not observe a cursor with {fields: {_id: 0}}");
+  }
+
   var observeKey = JSON.stringify(
     _.extend({ordered: ordered}, cursorDescription));
 

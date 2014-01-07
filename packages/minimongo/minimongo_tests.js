@@ -1432,6 +1432,14 @@ Tinytest.add("minimongo - observe ordered with projection", function (test) {
   c.insert({_id: idA2, a:2});
   test.equal(operations.shift(), undefined);
 
+  var cursor = c.find({}, {fields: {a: 1, _id: 0}});
+  test.throws(function () {
+    cursor.observeChanges({added: function () {}});
+  });
+  test.throws(function () {
+    cursor.observe({added: function () {}});
+  });
+
   // test initial inserts (and backwards sort)
   handle = c.find({}, {sort: {a: -1}, fields: { a: 1 } }).observe(cbs);
   test.equal(operations.shift(), ['added', {a:2}, 0, null]);

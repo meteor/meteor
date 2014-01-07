@@ -25,6 +25,7 @@ _.each ([{added:'added', forceOrdered: true},
                        function (logger) {
     var barid = c.insert({thing: "stuff"});
     var fooid = c.insert({noodles: "good", bacon: "bad", apples: "ok"});
+
     var handle = c.find(fooid).observeChanges(logger);
     if (added === 'added')
       logger.expectResult(added, [fooid, {noodles: "good", bacon: "bad",apples: "ok"}]);
@@ -43,6 +44,12 @@ _.each ([{added:'added', forceOrdered: true},
     c.insert({noodles: "good", bacon: "bad", apples: "ok"});
     logger.expectNoResult();
     handle.stop();
+
+    var badCursor = c.find({}, {fields: {noodles: 1, _id: false}});
+    test.throws(function () {
+      badCursor.observeChanges(logger);
+    });
+
     onComplete();
     });
   });
