@@ -19,13 +19,15 @@ var Updater = require('./updater.js').Updater;
 // - add warnings to buildmessage, per slava
 // - make files.getSettings return errors instead of throwing (or eliminate)
 // - mv main.js to meteor.js
-// - search for XXX here and there
+// - deal with XXX's in updater about it needing to go though runlog since
+//   no more stdout redirection
+// - kill process.exit everywhere
 //
 ///////////////////////////////////////////////////////////////////////////////
 
 // options: port, buildOptions, settingsFile, banner, program,
-// onRunEnd, onFailure, watchForChanges, noListenBanner, disableOplog,
-// rawLogs, appDirForVersionCheck
+// onRunEnd, onFailure, watchForChanges, noListenBanner, rootUrl,
+// mongoUrl, oplogUrl, disableOplog, rawLogs, appDirForVersionCheck
 var Runner = function (appDir, options) {
   var self = this;
   self.appDir = appDir;
@@ -36,11 +38,6 @@ var Runner = function (appDir, options) {
   self.listenPort = options.port;
   self.appPort = self.listenPort + 1;
   self.mongoPort = self.listenPort + 2;
-
-  // XXX XXX have this be passed in, not slurped from the environment
-  self.rootUrl =
-    var rootUrl = process.env.ROOT_URL ||
-    ('http://localhost:' + self.listenPort + '/');
 
   self.banner = options.banner || files.prettyPath(self.appDir);
 
@@ -81,7 +78,7 @@ var Runner = function (appDir, options) {
     mongoUrl: mongoUrl,
     oplogUrl: oplogUrl,
     buildOptions: options.buildOptions,
-    rootUrl: self.rootUrl,
+    rootUrl: options.rootUrl || ('http://localhost:' + self.listenPort + '/'),
     settingsFile: options.settingsFile,
     program: options.program,
     proxy: self.proxy,
@@ -148,6 +145,8 @@ _.extend(Runner.prototype, function () {
 // - banner: replace the application path that is normally printed on
 //   startup with an arbitrary string (eg, 'Tests')
 // - rawLogs: don't colorize/beautify log messages that are printed
+// - rootUrl: tell the app that traffic at this URL will be routed to
+//   it at '/' (used by the app to construct absolute URLs)
 // - disableOplog: don't use oplog tailing
 // - mongoUrl: don't start a mongo process; instead use the mongo at
 //   this mongo URL

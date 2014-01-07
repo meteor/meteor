@@ -292,17 +292,6 @@ _.extend(MongoRunner.prototype, {
   //
   // If the server fails to start for the first time (after a few
   // restarts), we'll print a message and give up, returning false.
-  //
-  // XXX XXX this is a change in behavior -- before, whenever mongo
-  // crashed we would restart the app. now they are independent. will
-  // apps tolerate that, or will they die immediately on startup if
-  // they can't make an initial database connection? we should look
-  // into that ... but really, if you think about it, that's not the
-  // right way for apps to behave in a HA environment, because there
-  // is always a race where they fail to start (I suppose you could
-  // take the position that they should be restarted if they fail,
-  // after a short time delay.. but still, that approach will tend to
-  // amplify failures)
   start: function () {
     var self = this;
 

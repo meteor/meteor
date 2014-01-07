@@ -155,6 +155,7 @@ main.registerCommand({
     buildOptions: {
       minify: options.minify
     },
+    rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
     oplogUrl: process.env.MONGO_OPLOG_URL,
     once: options.once
@@ -981,6 +982,7 @@ main.registerCommand({
       settingsFile: options.settings,
       banner: "Tests",
       buildOptions: buildOptions,
+      rootUrl: process.env.ROOT_URL,
       mongoUrl: process.env.MONGO_URL,
       oplogUrl: process.env.MONGO_OPLOG_URL,
       once: options.once
