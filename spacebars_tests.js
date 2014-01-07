@@ -112,6 +112,10 @@ Tinytest.add("spacebars - stache tags", function (test) {
 
   run('{{foo -1 -2}}', {type: 'DOUBLE', path: ['foo'],
                         args: [['NUMBER', -1], ['NUMBER', -2]]});
+
+  run('{{x "\'"}}', {type: 'DOUBLE', path: ['x'], args: [['STRING', "'"]]});
+  run('{{x \'"\'}}', {type: 'DOUBLE', path: ['x'], args: [['STRING', '"']]});
+
 });
 
 

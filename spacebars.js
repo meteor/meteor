@@ -25,10 +25,6 @@ Spacebars.parseStacheTag = function (scannerOrString, options) {
   if (typeof scanner === 'string')
     scanner = new HTML.Scanner(scannerOrString);
 
-  // create a lexer for scanning JS tokens.  We'll set its `pos`
-  // to our `pos` whenever we need to use it.
-  var lexer = new JSLexer(scanner.input);
-
   var run = function (regex) {
     // regex is assumed to start with `^`
     var result = regex.exec(scanner.rest());
@@ -43,26 +39,15 @@ Spacebars.parseStacheTag = function (scannerOrString, options) {
     scanner.pos += amount;
   };
 
-  var peekToken = function () {
-    lexer.divisionPermitted = false;
-    lexer.pos = scanner.pos;
-    return lexer.next();
-  };
-
   var scanIdentifier = function (isFirstInPath) {
-    var tok = peekToken();
-    // We don't care about overlap with JS keywords,
-    // but accept "true", "false", and "null" as identifiers
-    // only if not isFirstInPath.
-    if (! (tok.type() === 'IDENTIFIER' ||
-           tok.type() === 'KEYWORD' ||
-           ((! isFirstInPath) && (tok.type() === 'BOOLEAN' ||
-                                  tok.type() === 'NULL')))) {
+    var id = parseIdentifierName(scanner);
+    if (! id)
       expected('IDENTIFIER');
-    }
-    var text = tok.text();
-    advance(text.length);
-    return text;
+    if (isFirstInPath &&
+        (id === 'null' || id === 'true' || id === 'false'))
+      scanner.fatal("Can't use null, true, or false, as an identifier at start of path");
+
+    return id;
   };
 
   var scanPath = function () {
@@ -127,54 +112,34 @@ Spacebars.parseStacheTag = function (scannerOrString, options) {
 
   // scan an argument; succeeds or errors
   var scanArg = function (notKeyword) {
-    // all args have `type` and possibly `key`
-    var tok = peekToken();
-    var tokType = tok.type();
-    var text = tok.text();
-    var rest = scanner.rest();
-
-    if (/^[\.\[]/.test(rest) && tokType !== 'NUMBER')
+    var startPos = scanner.pos;
+    var result;
+    if ((result = parseNumber(scanner))) {
+      return ['NUMBER', result.value];
+    } else if ((result = parseStringLiteral(scanner))) {
+      return ['STRING', result.value];
+    } else if (/^[\.\[]/.test(scanner.peek())) {
       return ['PATH', scanPath()];
-
-    if (tokType === 'PUNCTUATION' && text === '-') {
-      // unary minus
-      advance(text.length);
-      var numberTok = peekToken();
-      if (numberTok.type() !== 'NUMBER')
-        expected('identifier, number, string, boolean, or null');
-      advance(numberTok.text().length);
-      return ['NUMBER', -Number(numberTok.text())];
-    }
-
-    if (tokType === 'BOOLEAN') {
-      advance(text.length);
-      return ['BOOLEAN', tok.text() === 'true'];
-    } else if (tokType === 'NULL') {
-      advance(text.length);
-      return ['NULL', null];
-    } else if (tokType === 'NUMBER') {
-      advance(text.length);
-      return ['NUMBER', Number(tok.text())];
-    } else if (tokType === 'STRING') {
-      advance(text.length);
-      // single quote to double quote
-      if (text.slice(0, 1) === "'")
-        text = '"' + text.slice(1, -1) + '"';
-      // replace line continuations with `\n`
-      text = text.replace(/[\r\n\u000A\u000D\u2028\u2029]/g, 'n');
-      return ['STRING', JSON.parse(text)];
-    } else if (tokType === 'IDENTIFIER' || tokType === 'KEYWORD') {
-      if ((! notKeyword) &&
-          /^\s*=/.test(rest.slice(text.length))) {
-        // it's a keyword argument!
-        advance(text.length);
-        run(/^\s*=\s*/);
-        // recurse to scan value, disallowing a second `=`.
-        var arg = scanArg(true);
-        arg.push(text); // add third element for key
-        return arg;
+    } else if ((result = parseIdentifierName(scanner))) {
+      var id = result;
+      if (id === 'null') {
+        return ['NULL', null];
+      } else if (id === 'true' || id === 'false') {
+        return ['BOOLEAN', id === 'true'];
+      } else {
+        if ((! notKeyword) &&
+            /^\s*=/.test(scanner.rest())) {
+          // it's a keyword argument!
+          run(/^\s*=\s*/);
+          // recurse to scan value, disallowing a second `=`.
+          var arg = scanArg(true);
+          arg.push(id); // add third element for key
+          return arg;
+        } else {
+          scanner.pos = startPos; // unconsume `id`
+          return ['PATH', scanPath()];
+        }
       }
-      return ['PATH', scanPath()];
     } else {
       expected('identifier, number, string, boolean, or null');
     }
