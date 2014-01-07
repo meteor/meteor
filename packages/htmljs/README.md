@@ -24,12 +24,6 @@ DOM (`ui`), be parsed from HTML (`html-tools`), or serve as the
 backbone of the intermediate representation for a template compiler
 (`spacebars-compiler`).
 
-Source files:
-
-* `utils.js`
-* `html.js`
-* `tohtml.js`
-
 ## Syntax
 
 Tag constructors take an optional first argument `attrs` followed by
