@@ -18,13 +18,11 @@ The options are as follows:
 
 #### getSpecialTag
 
-`getSpecialTag: function (scanner, templateTagPosition) { ... }` - A function for the parser to invoke to possibly parse a template tag, like `{{foo}}`, say.  If the function returns a non-null value, that value is wrapped in an `HTML.Special` node which is inserted into the HTMLjs tree at the appropriate location.  The function is expected to advance the scanner if it succeeds at parsing a template tag.
+This option extends the HTML parser to parse template tags such as `{{foo}}`.
 
-The `getSpecialTag` function may invoke a nested `HTML.parseFragment`.  In this case, the same `getSpecialTag` function must be passed to the nested invocation of `parseFragment`.
+`getSpecialTag: function (scanner, templateTagPosition) { ... }` - A function for the parser to call after every HTML token and at various positions within tags.  If the function returns a non-null value, that value is wrapped in an `HTML.Special` node which is inserted into the HTMLjs tree at the appropriate location.  The function is expected to advance the scanner if it succeeds at parsing a template tag (see the section on `HTML.Scanner`).
 
-At the moment, template tags must begin with `{`.  The parser does not try calling `getSpecialTag` for every character of an HTML document, only at token boundaries, and it knows to always end a token at `{`.
-
-It's expected that there are four possible outcomes when `getSpecialTag` is called:
+There are four possible outcomes when `getSpecialTag` is called:
 
 * Not a template tag - Leave the scanner as is, and return `null`.  A quick peek at the next character should bail to this case if the start of a template tag is not seen.
 * Bad template tag - Call `scanner.fatal`, which aborts parsing completely.  Once the beginning of a template tag is seen, `getSpecialTag` will generally want to commit, and either succeed or fail trying).
@@ -38,6 +36,10 @@ The `templateTagPosition` argument to `getSpecialTag` is one of:
 * `HTML.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE` - Inside the value of an HTML attribute, as in `<div class={{foo}}>`.
 * `HTML.TEMPLATE_TAG_POSITION.IN_RCDATA` - Inside a TEXTAREA or a block helper inside an attribute, where character references are allowed ("replaced character data") but not tags.
 * `HTML.TEMPLATE_TAG_POSITION.IN_RAWTEXT` - In a context where character references are not parsed, such as a script tag, style tag, or markdown helper.
+
+It's completely normal for `getSpecialTag` to invoke `HTML.parseFragment` recursively on the same scanner (see `shouldStop`).  If it does so, the same value of `getSpecialTag` must be passed to the second invocation.
+
+At the moment, template tags must begin with `{`.  The parser does not try calling `getSpecialTag` for every character of an HTML document, only at token boundaries, and it knows to always end a token at `{`.
 
 **XXX Better error message for `<div {{k}}={{v}}>`.**
 
