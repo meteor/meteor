@@ -249,7 +249,8 @@ _.extend(AppProcess.prototype, {
 //   connections.
 //
 // - Other options: appDirForVersionCheck (defaults to appDir), port,
-//   buildOptions, rootUrl, settingsFile, program, proxy, runLog
+//   mongoUrl, oplogUrl, buildOptions, rootUrl, settingsFile, program,
+//   proxy, runLog
 //
 // To use, construct an instance of AppRunner, and then call start()
 // to start it running. Call stop() at any time to shut it down and
@@ -291,6 +292,8 @@ var AppRunner = function (appDir, options) {
   self.appDir = appDir;
   self.appDirForVersionCheck = options.appDirForVersionCheck || self.appDir;
   self.port = options.port;
+  self.mongoUrl = options.mongoUrl;
+  self.oplogUrl = options.oplogUrl;
   self.buildOptions = options.buildOptions;
   self.rootUrl = options.rootUrl;
   self.settingsFile = options.settingsFile;
@@ -401,7 +404,7 @@ _.extend(AppRunner.prototype, {
     // Run the program
     var appProcess = new AppProcess({
       bundlePath: bundlePath,
-      port: self.appPort,
+      port: self.port,
       rootUrl: self.rootUrl,
       mongoUrl: self.mongoUrl,
       oplogUrl: self.oplogUrl,

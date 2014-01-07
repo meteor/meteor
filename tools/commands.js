@@ -155,6 +155,8 @@ main.registerCommand({
     buildOptions: {
       minify: options.minify
     },
+    mongoUrl: process.env.MONGO_URL,
+    oplogUrl: process.env.MONGO_OPLOG_URL,
     once: options.once
   });
 });
@@ -607,6 +609,10 @@ main.registerCommand({
     var findMongoPort =
       require(path.join(__dirname, 'run-mongo.js')).findMongoPort;
     var mongoPort = mongoRunner.findMongoPort(options.appDir);
+
+    // XXX detect the case where Meteor is running, but MONGO_URL was
+    // specified?
+
     if (! mongoPort) {
       process.stdout.write(
 "mongo: Meteor isn't running.\n" +
@@ -659,6 +665,9 @@ main.registerCommand({
 "  meteor deploy appname\n");
     return 1;
   }
+
+  // XXX detect the case where Meteor is running the app, but
+  // MONGO_URL was set, so we don't see a Mongo process
 
   var findMongoPort =
     require(path.join(__dirname, 'run-mongo.js')).findMongoPort;
@@ -972,6 +981,8 @@ main.registerCommand({
       settingsFile: options.settings,
       banner: "Tests",
       buildOptions: buildOptions,
+      mongoUrl: process.env.MONGO_URL,
+      oplogUrl: process.env.MONGO_OPLOG_URL,
       once: options.once
     });
   }

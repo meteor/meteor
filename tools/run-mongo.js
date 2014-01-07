@@ -125,17 +125,6 @@ var launchMongo = function (options) {
   var onListen = options.onListen || function () {};
   var onExit = options.onExit || function () {};
 
-  // If we are passed an external mongo, assume it is launched and never
-  // exits. Matches code in runner.js:exports.run.
-  if (process.env.MONGO_URL) {
-    onListen();
-    return {
-      // Since it is externally managed, asking it to actually stop
-      // would be impolite, so do nothing
-      stop: function (callback) { callback(); }
-    };
-  }
-
   var mongod_path = path.join(
     files.getDevBundle(), 'mongodb', 'bin', 'mongod');
 
