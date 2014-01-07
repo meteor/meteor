@@ -1,6 +1,7 @@
 # HTMLjs
 
-A small (500-line) library for expressing HTML trees in a concise syntax.
+A small (500-line) library for expressing HTML trees in a concise
+syntax.  This library is used at compile time and run time by Meteor UI.
 
 ```
 var UL = HTML.UL, LI = HTML.LI, B = HTML.B;
@@ -18,11 +19,11 @@ HTML.toHTML(
 </ul>
 ```
 
-Tag constructors (like `UL`) return an object representation which can
-be used to generate HTML, or, via other packages, be used to generate
-DOM (`ui`), be parsed from HTML (`html-tools`), or serve as the
-backbone of the intermediate representation for a template compiler
-(`spacebars-compiler`).
+The functions `UL`, `LI`, and so on are "tag constructors" which
+return an object representation that can be used to generate HTML, or,
+via other packages, be used to generate DOM (`ui`), be parsed from
+HTML (`html-tools`), or serve as the backbone of the intermediate
+representation for a template compiler (`spacebars-compiler`).
 
 ## Syntax
 
