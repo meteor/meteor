@@ -101,7 +101,8 @@ ObserveSequence = {
           seqArray = _.map(seq, function (item, index) {
             if (typeof item === 'string' ||
                 typeof item === 'number' ||
-                typeof item === 'boolean')
+                typeof item === 'boolean' ||
+                item === undefined)
               id = item;
             else if (typeof item === 'object')
               id = (item && item._id) || index;
