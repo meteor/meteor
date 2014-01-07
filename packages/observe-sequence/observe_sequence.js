@@ -243,7 +243,7 @@ var diffArray = function (lastSeqArray, seqArray, callbacks) {
       var oldItem = lastSeqArray[posOld[id]].item;
 
       if (typeof newItem === 'object' || newItem !== oldItem)
-        callbacks.changed(id, seqArray[pos].item, lastSeqArray[posOld[id]].item);
+        callbacks.changed(id, newItem, oldItem);
     }
   });
 };
