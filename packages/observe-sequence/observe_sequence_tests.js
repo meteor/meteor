@@ -1,33 +1,30 @@
 // Run a function named `run` which modifies a sequence. While it
 // executes, observe changes to the sequence and accumulate them in an
 // array, canonicalizing as necessary. Then make sure the results are
-// the same as passed in `expectedCallbacks`.
+// the same as passed in `expectedCallbacks`. In items in
+// `expectedCallbacks`, allow for special values of the form {NOT:
+// "foo"}, which match anything other than "foo".
 //
 // @param test {Object} as passed to Tinytest.add
-// @param stripIds {Boolean} If true, strip the id arguments. For test
-//     cases with items that aren't objects with an '_id' field.
 // @param sequenceFunc {Function(): sequence type}
 // @param run {Function()} modify the sequence or cause sequenceFunc
 //     to be recomupted
-// @param expectedCallbacks {Array} elements look like {addedAt: arguments}
-runOneObserveSequenceTestCase = function (test, stripIds, sequenceFunc,
-                                          run, expectedCallbacks) {
+// @param expectedCallbacks {Array}
+//     elements are objects eg {addedAt: [array of arguments]}
+// @param numExpectedWarnings {Number}
+runOneObserveSequenceTestCase = function (test, sequenceFunc,
+                                          run, expectedCallbacks,
+                                          numExpectedWarnings) {
+  if (numExpectedWarnings)
+    ObserveSequence._suppressWarnings += numExpectedWarnings;
+
   var firedCallbacks = [];
   var handle = ObserveSequence.observe(sequenceFunc, {
     addedAt: function () {
-      if (stripIds)
-        // [item, atIndex, before]
-        firedCallbacks.push({addedAt: [arguments[1], arguments[2], arguments[3]]});
-      else
-        firedCallbacks.push({addedAt: _.toArray(arguments)});
+      firedCallbacks.push({addedAt: _.toArray(arguments)});
     },
     changed: function () {
-      var obj;
-      if (stripIds)
-        // [newItem, oldItem]
-        obj = {changed: [arguments[1], arguments[2]]};
-      else
-        obj = {changed: _.toArray(arguments)};
+      var obj = {changed: _.toArray(arguments)};
 
       // Browsers are inconsistent about the order in which 'changed'
       // callbacks fire. To ensure consistent behavior of these tests,
@@ -49,18 +46,10 @@ runOneObserveSequenceTestCase = function (test, stripIds, sequenceFunc,
       firedCallbacks.splice(i, 0, obj);
     },
     removed: function () {
-      if (stripIds)
-        // [oldItem]
-        firedCallbacks.push({removed: [arguments[1]]});
-      else
-        firedCallbacks.push({removed: _.toArray(arguments)});
+      firedCallbacks.push({removed: _.toArray(arguments)});
     },
     movedTo: function () {
-      if (stripIds)
-        // [item, fromIndex, toIndex, before]
-        firedCallbacks.push({movedTo: [arguments[1], arguments[2], arguments[3], arguments[4]]});
-      else
-        firedCallbacks.push({movedTo: _.toArray(arguments)});
+      firedCallbacks.push({movedTo: _.toArray(arguments)});
     }
   });
 
@@ -68,34 +57,61 @@ runOneObserveSequenceTestCase = function (test, stripIds, sequenceFunc,
   Deps.flush();
   handle.stop();
 
+  test.equal(ObserveSequence._suppressWarnings, 0);
+  test.equal(ObserveSequence._loggedWarnings, 0);
+  ObserveSequence._loggedWarnings = 0;
+
+  // any expected argument this is `{NOT: "foo"}`, should match any
+  // corresponding value in the fired callbacks other than "foo". so,
+  // assert non-equality and then replace the appropriate entries in
+  // the 'firedCallbacks' array with `{NOT: "foo"}` before calling
+  // `test.equal` below.
+  var commonLength = Math.min(firedCallbacks.length, expectedCallbacks.length);
+  for (var i = 0; i < commonLength; i++) {
+    var callback = expectedCallbacks[i];
+    if (_.keys(callback).length !== 1)
+      throw new Error("Callbacks should be objects with one key, eg `addedAt`");
+    var callbackName = _.keys(callback)[0];
+    var args = _.values(callback)[0];
+    _.each(args, function (arg, argIndex) {
+      if (arg && typeof arg === 'object' &&
+          'NOT' in arg &&
+          firedCallbacks[i][callbackName]) {
+        test.notEqual(firedCallbacks[i][callbackName][argIndex],
+                      arg.NOT, "Should be NOT " + arg.NOT);
+        firedCallbacks[i][callbackName][argIndex] = arg;
+      }
+    });
+  }
+
   test.equal(EJSON.stringify(firedCallbacks, {canonical: true}),
              EJSON.stringify(expectedCallbacks, {canonical: true}));
 };
 
 Tinytest.add('observe sequence - initial data for all sequence types', function (test) {
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ true, function () {
+  runOneObserveSequenceTestCase(test, function () {
     return null;
   }, function () {}, []);
 
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ true, function () {
+  runOneObserveSequenceTestCase(test, function () {
     return [];
   }, function () {}, []);
 
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ true, function () {
+  runOneObserveSequenceTestCase(test, function () {
     return [{foo: 1}, {bar: 2}];
   }, function () {}, [
-    {addedAt: [{foo: 1}, 0, null]},
-    {addedAt: [{bar: 2}, 1, null]}
+    {addedAt: [0, {foo: 1}, 0, null]},
+    {addedAt: [1, {bar: 2}, 1, null]}
   ]);
 
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+  runOneObserveSequenceTestCase(test, function () {
     return [{_id: "13", foo: 1}, {_id: "37", bar: 2}];
   }, function () {}, [
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]}
   ]);
 
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+  runOneObserveSequenceTestCase(test, function () {
     var coll = new Meteor.Collection(null);
     coll.insert({_id: "13", foo: 1});
     coll.insert({_id: "37", bar: 2});
@@ -105,13 +121,25 @@ Tinytest.add('observe sequence - initial data for all sequence types', function 
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]}
   ]);
+
+  // shouldn't break on array with duplicate _id's, and the ids sent
+  // in the callbacks should be distinct
+  runOneObserveSequenceTestCase(test, function () {
+    return [
+      {_id: "13", foo: 1},
+      {_id: "13", foo: 2}
+    ];
+  }, function () {}, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: [{NOT: "13"}, {_id: "13", foo: 2}, 1, null]}
+  ], /*numExpectedWarnings = */1);
 });
 
 Tinytest.add('observe sequence - array to other array', function (test) {
   var dep = new Deps.Dependency;
   var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}];
 
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+  runOneObserveSequenceTestCase(test, function () {
     dep.depend();
     return seq;
   }, function () {
@@ -130,7 +158,7 @@ Tinytest.add('observe sequence - array to other array, changes', function (test)
   var dep = new Deps.Dependency;
   var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}, {_id: "42", baz: 42}];
 
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+  runOneObserveSequenceTestCase(test, function () {
     dep.depend();
     return seq;
   }, function () {
@@ -153,7 +181,7 @@ Tinytest.add('observe sequence - array to other array, movedTo', function (test)
   var dep = new Deps.Dependency;
   var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}, {_id: "42", baz: 42}];
 
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+  runOneObserveSequenceTestCase(test, function () {
     dep.depend();
     return seq;
   }, function () {
@@ -175,7 +203,7 @@ Tinytest.add('observe sequence - array to null', function (test) {
   var dep = new Deps.Dependency;
   var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}];
 
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+  runOneObserveSequenceTestCase(test, function () {
     dep.depend();
     return seq;
   }, function () {
@@ -193,7 +221,7 @@ Tinytest.add('observe sequence - array to cursor', function (test) {
   var dep = new Deps.Dependency;
   var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}];
 
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+  runOneObserveSequenceTestCase(test, function () {
     dep.depend();
     return seq;
   }, function () {
@@ -221,7 +249,7 @@ Tinytest.add('observe sequence - cursor to null', function (test) {
   var cursor = coll.find({}, {sort: {_id: 1}});
   var seq = cursor;
 
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+  runOneObserveSequenceTestCase(test, function () {
     dep.depend();
     return seq;
   }, function () {
@@ -242,7 +270,7 @@ Tinytest.add('observe sequence - cursor to array', function (test) {
   var cursor = coll.find({}, {sort: {_id: 1}});
   var seq = cursor;
 
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+  runOneObserveSequenceTestCase(test, function () {
     dep.depend();
     return seq;
   }, function () {
@@ -264,7 +292,7 @@ Tinytest.add('observe sequence - cursor', function (test) {
   var cursor = coll.find({}, {sort: {rank: 1}});
   var seq = cursor;
 
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+  runOneObserveSequenceTestCase(test, function () {
     return seq;
   }, function () {
     coll.insert({_id: "37", rank: 2});
@@ -295,7 +323,7 @@ Tinytest.add('observe sequence - cursor to other cursor', function (test) {
   var cursor = coll.find({}, {sort: {_id: 1}});
   var seq = cursor;
 
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+  runOneObserveSequenceTestCase(test, function () {
     dep.depend();
     return seq;
   }, function () {
@@ -327,7 +355,7 @@ Tinytest.add('observe sequence - cursor to other cursor with transform', functio
   var cursor = coll.find({}, {sort: {_id: 1}});
   var seq = cursor;
 
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+  runOneObserveSequenceTestCase(test, function () {
     dep.depend();
     return seq;
   }, function () {
@@ -355,7 +383,7 @@ Tinytest.add('observe sequence - cursor to same cursor', function (test) {
   var seq = cursor;
   var dep = new Deps.Dependency;
 
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+  runOneObserveSequenceTestCase(test, function () {
     dep.depend();
     return seq;
   }, function () {
@@ -379,20 +407,38 @@ Tinytest.add('observe sequence - string arrays', function (test) {
   var seq = ['A', 'B'];
   var dep = new Deps.Dependency;
 
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ true, function () {
+  runOneObserveSequenceTestCase(test, function () {
     dep.depend();
     return seq;
   }, function () {
     seq = ['B', 'C'];
     dep.changed();
   }, [
-    {addedAt: ['A', 0, null]},
-    {addedAt: ['B', 1, null]},
-    {removed: ['A']},
-    {removed: ['B']},           // XXX we don't need these lines
-    {addedAt: ['B', 0, null]},  // when ids from strings are implemented
-    {addedAt: ['C', 1, null]}
+    {addedAt: ['A', 'A', 0, null]},
+    {addedAt: ['B', 'B', 1, null]},
+    {removed: ['A', 'A']},
+    {addedAt: ['C', 'C', 1, null]}
   ]);
+});
+
+Tinytest.add('observe sequence - number arrays', function (test) {
+  var seq = [1, 1, 2];
+  var dep = new Deps.Dependency;
+
+  runOneObserveSequenceTestCase(test, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = [1, 3, 2, 3];
+    dep.changed();
+  }, [
+    {addedAt: [1, 1, 0, null]},
+    {addedAt: [{NOT: 1}, 1, 1, null]},
+    {addedAt: [2, 2, 2, null]},
+    {removed: [{NOT: 1}, 1]},
+    {addedAt: [3, 3, 1, 2]},
+    {addedAt: [{NOT: 3}, 3, 3, null]}
+  ], /*numExpectedWarnings = */2);
 });
 
 Tinytest.add('observe sequence - cursor to other cursor, same collection', function (test) {
@@ -403,7 +449,7 @@ Tinytest.add('observe sequence - cursor to other cursor, same collection', funct
   var cursor = coll.find({foo: 1});
   var seq = cursor;
 
-  runOneObserveSequenceTestCase(test, /*stripIds=*/ false, function () {
+  runOneObserveSequenceTestCase(test, function () {
     dep.depend();
     return seq;
   }, function () {

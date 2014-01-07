@@ -5,8 +5,9 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('deps');
+  api.use('minimongo');  // for idStringify
   api.export('ObserveSequence');
-  // XXX this does also run on the server but as logs as deps is not
+  // XXX this does also run on the server but as long as deps is not
   // documented to run there let's not try
   api.add_files(['observe_sequence.js'], 'client');
 });
