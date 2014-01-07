@@ -78,27 +78,20 @@ ObserveSequence = {
           diffArray(lastSeqArray, seqArray, callbacks);
         } else if (isMinimongoCursor(seq)) {
           var cursor = seq;
+          seqArray = [];
 
-          // Fetch the contents of the new cursor so that we can diff from the
-          // old sequence.
-          cursor.rewind(); // so that we can fetch
-          seqArray = _.map(cursor.fetch(), function (doc) {
-            return {_id: (doc && doc._id), item: doc};
-          });
-          cursor.rewind(); // so that the user can still fetch
-
-          // diff the old sequnce with initial data in the new cursor. this will
-          // fire `addedAt` callbacks on the initial data.
-          diffArray(lastSeqArray, seqArray, callbacks);
-
-          // make sure to not fire duplicate `addedAt` callbacks for initial
-          // data
-          var initial = true;
-
+          var initial = true; // are we observing initial data from cursor?
           activeObserveHandle = cursor.observe({
             addedAt: function (document, atIndex, before) {
-              if (!initial)
+              if (initial) {
+                // keep track of initial data so that we can diff once
+                // we exit `observe`.
+                if (before !== null)
+                  throw new Error("Initial data from cursor.observe didn't arrive in order");
+                seqArray.push({ _id: document._id, item: document });
+              } else {
                 callbacks.addedAt(document._id, document, atIndex, before);
+              }
             },
             changed: function (newDocument, oldDocument) {
               callbacks.changed(newDocument._id, newDocument, oldDocument);
@@ -112,6 +105,11 @@ ObserveSequence = {
             }
           });
           initial = false;
+
+          // diff the old sequnce with initial data in the new cursor. this will
+          // fire `addedAt` callbacks on the initial data.
+          diffArray(lastSeqArray, seqArray, callbacks);
+
         } else {
           throw new Error("Not a recognized sequence type. Currently only " +
                           "arrays, cursors or falsey values accepted.");
