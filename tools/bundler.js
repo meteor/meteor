@@ -454,9 +454,11 @@ _.extend(Target.prototype, {
 
 
     // Minify, if requested
-    self._minify(options);
+    if (options.minify)
+      self._minify();
 
-    self._addCacheBusters(options);
+    if (options.addCacheBusters)
+      self._addCacheBusters();
   },
 
   // Determine the packages to load, create Slices for
@@ -676,27 +678,23 @@ _.extend(Target.prototype, {
     });
   },
 
-  _minify: function (options) {
+  _minify: function () {
     var self = this;
-    if (options.minify) {
-      var minifiers = unipackage.load({
-        library: self.library,
-        packages: ['minifiers']
-      }).minifiers;
-      self.minifyJs(minifiers);
-      if (self.minifyCss) // XXX a bit of a hack
-        self.minifyCss(minifiers);
-    }
+    var minifiers = unipackage.load({
+      library: self.library,
+      packages: ['minifiers']
+    }).minifiers;
+    self.minifyJs(minifiers);
+    if (self.minifyCss) // XXX a bit of a hack
+      self.minifyCss(minifiers);
   },
 
-  _addCacheBusters: function (options) {
+  // Make client-side CSS and JS assets cacheable forever, by
+  // adding a query string with a cache-busting hash.
+  _addCacheBusters: function () {
     var self = this;
-    if (options.addCacheBusters) {
-      // Make client-side CSS and JS assets cacheable forever, by
-      // adding a query string with a cache-busting hash.
-      self._addCacheBusters("js");
-      self._addCacheBusters("css");
-    }
+    self._addCacheBusters("js");
+    self._addCacheBusters("css");
   },
 
   // Minify the JS in this target
@@ -858,7 +856,8 @@ _.extend(ClientTarget.prototype, {
         url: file.url
       };
 
-      self._addAntiXSSIHeader(builder, file, manifestItem);
+      if (file.sourceMap)
+        self._attachSourceMap(builder, file, manifestItem);
 
       // Set this now, in case we mutated the file's contents.
       manifestItem.size = file.size();
@@ -888,35 +887,33 @@ _.extend(ClientTarget.prototype, {
     return "program.json";
   },
 
-  // Add anti-XSSI header to this file which will be served over
-  // HTTP. Note that the Mozilla and WebKit implementations differ as to
-  // what they strip: Mozilla looks for the four punctuation characters
-  // but doesn't care about the newline; WebKit only looks for the first
-  // three characters (not the single quote) and then strips everything up
-  // to a newline.
-  // https://groups.google.com/forum/#!topic/mozilla.dev.js-sourcemap/3QBr4FBng5g
-  _addAntiXSSIHeader: function (builder, file, manifestItem) {
-    if (file.sourceMap) {
-      var mapData = new Buffer(")]}'\n" + file.sourceMap, 'utf8');
-      manifestItem.sourceMap = builder.writeToGeneratedFilename(
-        file.targetPath + '.map', {data: mapData});
+  _attachSourceMap: function (builder, file, manifestItem) {
+    // Add anti-XSSI header to this file which will be served over
+    // HTTP. Note that the Mozilla and WebKit implementations differ as to
+    // what they strip: Mozilla looks for the four punctuation characters
+    // but doesn't care about the newline; WebKit only looks for the first
+    // three characters (not the single quote) and then strips everything up
+    // to a newline.
+    // https://groups.google.com/forum/#!topic/mozilla.dev.js-sourcemap/3QBr4FBng5g
+    var mapData = new Buffer(")]}'\n" + file.sourceMap, 'utf8');
+    manifestItem.sourceMap = builder.writeToGeneratedFilename(
+      file.targetPath + '.map', {data: mapData});
 
-      // Use a SHA to make this cacheable.
-      var sourceMapBaseName = file.hash() + ".map";
-      // XXX When we can, drop all of this and just use the SourceMap
-      //     header. FF doesn't support that yet, though:
-      //         https://bugzilla.mozilla.org/show_bug.cgi?id=765993
-      // Note: if we use the older '//@' comment, FF 24 will print a lot
-      // of warnings to the console. So we use the newer '//#' comment...
-      // which Chrome (28) doesn't support. So we also set X-SourceMap
-      // in webapp_server.
-      file.setContents(Buffer.concat([
-        file.contents(),
-        new Buffer("\n//# sourceMappingURL=" + sourceMapBaseName + "\n")
-      ]));
-      manifestItem.sourceMapUrl = require('url').resolve(
-        file.url, sourceMapBaseName);
-    }
+    // Use a SHA to make this cacheable.
+    var sourceMapBaseName = file.hash() + ".map";
+    // XXX When we can, drop all of this and just use the SourceMap
+    //     header. FF doesn't support that yet, though:
+    //         https://bugzilla.mozilla.org/show_bug.cgi?id=765993
+    // Note: if we use the older '//@' comment, FF 24 will print a lot
+    // of warnings to the console. So we use the newer '//#' comment...
+    // which Chrome (28) doesn't support. So we also set X-SourceMap
+    // in webapp_server.
+    file.setContents(Buffer.concat([
+      file.contents(),
+      new Buffer("\n//# sourceMappingURL=" + sourceMapBaseName + "\n")
+    ]));
+    manifestItem.sourceMapUrl = require('url').resolve(
+      file.url, sourceMapBaseName);
   }
 });
 
