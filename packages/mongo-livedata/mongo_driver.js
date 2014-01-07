@@ -987,15 +987,27 @@ MongoConnection.prototype._observeChanges = function (
 
   if (firstHandle) {
     var driverClass = PollingObserveDriver;
-    if (self._oplogHandle && !ordered && !callbacks._testOnlyPollCallback
-        && OplogObserveDriver.cursorSupported(cursorDescription)) {
-      driverClass = OplogObserveDriver;
+    var matcher;
+    if (self._oplogHandle && !ordered && !callbacks._testOnlyPollCallback) {
+      try {
+        matcher = new Minimongo.Matcher(cursorDescription.selector);
+      } catch (e) {
+        // Ignore and avoid oplog driver. eg, maybe we're trying to compile some
+        // newfangled $selector that minimongo doesn't support yet.
+        // XXX make all compilation errors MinimongoError or something
+        //     so that this doesn't ignore unrelated exceptions
+      }
+      if (matcher
+          && OplogObserveDriver.cursorSupported(cursorDescription, matcher)) {
+        driverClass = OplogObserveDriver;
+      }
     }
     observeDriver = new driverClass({
       cursorDescription: cursorDescription,
       mongoHandle: self,
       multiplexer: multiplexer,
       ordered: ordered,
+      matcher: matcher,  // ignored by polling
       _testOnlyPollCallback: callbacks._testOnlyPollCallback
     });
 
