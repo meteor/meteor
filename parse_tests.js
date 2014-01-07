@@ -188,6 +188,15 @@ Tinytest.add("html - parseFragment", function (test) {
     test.equal(pp[1].children[0], 'y');
   })();
 
+  var scanner = new Scanner('asdf');
+  scanner.pos = 1;
+  test.equal(HTML.parseFragment(scanner), 'sdf');
+
+  test.throws(function () {
+    var scanner = new Scanner('asdf</p>');
+    scanner.pos = 1;
+    HTML.parseFragment(scanner);
+  });
 });
 
 Tinytest.add("html - getSpecialTag", function (test) {
