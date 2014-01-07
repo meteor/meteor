@@ -391,13 +391,9 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
     }
   });
 
-  // XXX What if there are multiple observe handles on the ObserveMultiplexer?
-  //     There shouldn't be because the collection has a name unique to this
-  //     run.
   if (Meteor.isServer) {
-    // For now, has to be polling (not oplog).
-    test.isTrue(obs._observeDriver);
-    test.isTrue(obs._observeDriver._suspendPolling);
+    // For now, has to be polling (not oplog) because it is ordered observe.
+    test.isTrue(obs._multiplexer._observeDriver._suspendPolling);
   }
 
   var step = 0;
@@ -432,7 +428,7 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
 
     finishObserve(function () {
       if (Meteor.isServer)
-        obs._observeDriver._suspendPolling();
+        obs._multiplexer._observeDriver._suspendPolling();
 
       // Do a batch of 1-10 operations
       var batch_count = rnd(10) + 1;
@@ -465,7 +461,7 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
         }
       }
       if (Meteor.isServer)
-        obs._observeDriver._resumePolling();
+        obs._multiplexer._observeDriver._resumePolling();
 
     });
 
@@ -1970,14 +1966,12 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - _disableOplog", functi
   if (MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle) {
     var observeWithOplog = coll.find({x: 5})
           .observeChanges({added: function () {}});
-    test.isTrue(observeWithOplog._observeDriver);
-    test.isTrue(observeWithOplog._observeDriver._usesOplog);
+    test.isTrue(observeWithOplog._multiplexer._observeDriver._usesOplog);
     observeWithOplog.stop();
   }
   var observeWithoutOplog = coll.find({x: 6}, {_disableOplog: true})
         .observeChanges({added: function () {}});
-  test.isTrue(observeWithoutOplog._observeDriver);
-  test.isFalse(observeWithoutOplog._observeDriver._usesOplog);
+  test.isFalse(observeWithoutOplog._multiplexer._observeDriver._usesOplog);
   observeWithoutOplog.stop();
 });
 

@@ -1,3 +1,22 @@
+## v.NEXT
+
+* Hash login tokens before storing them in the database.
+
+* Cursors with a field specifier containing `{_id: 0}` can no longer be used
+  with `observeChanges` or `observe`. This includes the implicit calls to these
+  functions that are done when returning a cursor from a publish function or
+  using `{{#each}}`.
+
+## v0.7.0.1
+
+* Two fixes to `meteor run` Mongo startup bugs that could lead to hangs with the
+  message "Initializing mongo database... this may take a moment.".  #1696
+
+* Apply the Node patch to 0.10.24 as well (see the 0.7.0 section for details).
+
+* Fix gratuitous IE7 incompatibility.  #1690
+
+
 ## v0.7.0
 
 This version of Meteor contains a patch for a bug in Node 0.10 which
@@ -91,6 +110,8 @@ apply the patch and will instead disable websockets.
 
 * Increase the maximum size spiderable will return for a page from 200kB
   to 5MB.
+
+* New 'facts' package publishes internal statistics about Meteor.
 
 * Upgraded dependencies:
   * SockJS server from 0.3.7 to 0.3.8, including new faye-websocket module.

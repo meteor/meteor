@@ -279,8 +279,7 @@ Meteor.Collection._rewriteSelector = function (selector) {
       ret[key] = _.map(value, function (v) {
         return Meteor.Collection._rewriteSelector(v);
       });
-    }
-    else {
+    } else {
       ret[key] = value;
     }
   });

@@ -6,11 +6,12 @@
 //    - 'foo.bar': 42
 //  - $unset
 //    - 'abc.d': 1
-LocalCollection._isSelectorAffectedByModifier = function (selector, modifier) {
+Minimongo.Matcher.prototype.affectedByModifier = function (modifier) {
+  var self = this;
   // safe check for $set/$unset being objects
   modifier = _.extend({ $set: {}, $unset: {} }, modifier);
   var modifiedPaths = _.keys(modifier.$set).concat(_.keys(modifier.$unset));
-  var meaningfulPaths = getPaths(selector);
+  var meaningfulPaths = self._getPaths();
 
   return _.any(modifiedPaths, function (path) {
     var mod = path.split('.');
@@ -19,17 +20,17 @@ LocalCollection._isSelectorAffectedByModifier = function (selector, modifier) {
       var i = 0, j = 0;
 
       while (i < sel.length && j < mod.length) {
-        if (numericKey(sel[i]) && numericKey(mod[j])) {
+        if (isNumericKey(sel[i]) && isNumericKey(mod[j])) {
           // foo.4.bar selector affected by foo.4 modifier
           // foo.3.bar selector unaffected by foo.4 modifier
           if (sel[i] === mod[j])
             i++, j++;
           else
             return false;
-        } else if (numericKey(sel[i])) {
+        } else if (isNumericKey(sel[i])) {
           // foo.4.bar selector unaffected by foo.bar modifier
           return false;
-        } else if (numericKey(mod[j])) {
+        } else if (isNumericKey(mod[j])) {
           j++;
         } else if (sel[i] === mod[j])
           i++, j++;
@@ -43,41 +44,32 @@ LocalCollection._isSelectorAffectedByModifier = function (selector, modifier) {
   });
 };
 
-getPathsWithoutNumericKeys = function (sel) {
-  return _.map(getPaths(sel), function (path) {
-    return _.reject(path.split('.'), numericKey).join('.');
-  });
-};
-
-// @param selector - Object: MongoDB selector. Currently doesn't support
-//                           $-operators and arrays well.
 // @param modifier - Object: MongoDB-styled modifier with `$set`s and `$unsets`
 //                           only. (assumed to come from oplog)
 // @returns - Boolean: if after applying the modifier, selector can start
 //                     accepting the modified value.
-LocalCollection._canSelectorBecomeTrueByModifier = function (selector, modifier)
-{
-  if (!LocalCollection._isSelectorAffectedByModifier(selector, modifier))
+// Currently doesn't support $-operators and numeric indices precisely.
+Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
+  var self = this;
+  if (!this.affectedByModifier(modifier))
     return false;
 
   modifier = _.extend({$set:{}, $unset:{}}, modifier);
 
-  if (_.any(_.keys(selector), pathHasNumericKeys) ||
-      _.any(_.keys(modifier.$unset), pathHasNumericKeys) ||
-      _.any(_.keys(modifier.$set), pathHasNumericKeys))
+  if (!self.isEquality())
     return true;
 
-  if (!isLiteralSelector(selector))
+  if (_.any(self._getPaths(), pathHasNumericKeys) ||
+      _.any(_.keys(modifier.$unset), pathHasNumericKeys) ||
+      _.any(_.keys(modifier.$set), pathHasNumericKeys))
     return true;
 
   // convert a selector into an object matching the selector
   // { 'a.b': { ans: 42 }, 'foo.bar': null, 'foo.baz': "something" }
   // => { a: { b: { ans: 42 } }, foo: { bar: null, baz: "something" } }
-  var doc = pathsToTree(_.keys(selector),
-                        function (path) { return selector[path]; },
+  var doc = pathsToTree(self._getPaths(),
+                        function (path) { return self._selector[path]; },
                         _.identity /*conflict resolution is no resolution*/);
-
-  var selectorFn = LocalCollection._compileSelector(selector);
 
   try {
     LocalCollection._modify(doc, modifier);
@@ -97,11 +89,11 @@ LocalCollection._canSelectorBecomeTrueByModifier = function (selector, modifier)
     throw e;
   }
 
-  return selectorFn(doc);
+  return self.documentMatches(doc).result;
 };
 
-// Returns a list of key paths the given selector is looking for
-var getPaths = MinimongoTest.getSelectorPaths = function (sel) {
+var getPaths = function (sel) {
+  return _.keys(new Minimongo.Matcher(sel)._paths);
   return _.chain(sel).map(function (v, k) {
     // we don't know how to handle $where because it can be anything
     if (k === "$where")
@@ -115,23 +107,6 @@ var getPaths = MinimongoTest.getSelectorPaths = function (sel) {
 };
 
 function pathHasNumericKeys (path) {
-  return _.any(path.split('.'), numericKey);
-}
-
-// string can be converted to integer
-function numericKey (s) {
-  return /^[0-9]+$/.test(s);
-}
-
-function isLiteralSelector (selector) {
-  return _.all(selector, function (subSelector, keyPath) {
-    if (keyPath.substr(0, 1) === "$" || _.isRegExp(subSelector))
-      return false;
-    if (!_.isObject(subSelector) || _.isArray(subSelector))
-      return true;
-    return _.all(subSelector, function (value, key) {
-      return key.substr(0, 1) !== "$";
-    });
-  });
+  return _.any(path.split('.'), isNumericKey);
 }
 

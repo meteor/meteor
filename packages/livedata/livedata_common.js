@@ -115,8 +115,3 @@ stringifyDDP = function (msg) {
 // state in the DDP session. Meteor.setTimeout and friends clear
 // it. We can probably find a better way to factor this.
 DDP._CurrentInvocation = new Meteor.EnvironmentVariable;
-
-
-// This is private and a hack. It is used by autoupdate_client. We
-// should refactor. Maybe a separate 'exponential-backoff' package?
-DDP._Retry = Retry;
