@@ -14,8 +14,6 @@ var Updater = require('./run-updater.js').Updater;
 ///////////////////////////////////////////////////////////////////////////////
 // XXX XXX NEXT (if you want to do more):
 //
-// - make bundler.bundle() not take a release (get it from the app!)
-// - move mongo shell function from deploy.js into mongo-runner.js
 // - add warnings to buildmessage, per slava
 // - make files.getSettings return errors instead of throwing (or eliminate)
 // - deal with XXX's in updater about it needing to go though runlog since

@@ -55,18 +55,21 @@ var meteorReleaseFilePath = function (appDir) {
   return path.join(appDir, '.meteor', 'release');
 };
 
+// This will return "none" if the project is not pinned to a release
+// (it was created by a checkout), or null for a legacy app with no
+// .meteor/release file.
 project.getMeteorReleaseVersion = function (appDir) {
   var releasePath = meteorReleaseFilePath(appDir);
   try {
     var lines = getLines(releasePath);
   } catch (e) {
-    // This is a legacy app with no '.meteor/release'
-    // file.
     return null;
   }
   return trimLine(lines[0]);
 };
 
+// Pass "none" if you don't want the project to be pinned to a Meteor
+// release (typically used when the app was created by a checkout).
 project.writeMeteorReleaseVersion = function (appDir, release) {
   var releasePath = meteorReleaseFilePath(appDir);
   fs.writeFileSync(releasePath, release + '\n');

@@ -1551,13 +1551,6 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *   - minify: minify the CSS and JS assets (boolean, default false)
  *   - testPackages: array of package objects or package names whose
  *     tests should be additionally included in this bundle
- *   - release: The release to use (a Release object, such as
- *     release.current, which is the default). This is used both to
- *     resolve package dependencies and to set the value of
- *     Meteor.release that the app will see. You can pass a release
- *     other than release.current so long as it uses the currently
- *     running tools version (you might do this from a test, for
- *     example, if release.current weren't set).
  *
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
@@ -1567,6 +1560,11 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *
  * On failure ('errors' is truthy), no bundle will be output (in fact,
  * outputPath will have been removed if it existed).
+ *
+ * The currently running version of Meteor (release.current) must
+ * match the version called for by the app (unless release.forced is
+ * true, meaning that the user explicitly forced us to use this
+ * release).
  *
  * Note that when you run "meteor test-packages", appDir points to the
  * test harness, while the local package search paths in 'release'
@@ -1579,20 +1577,14 @@ exports.bundle = function (options) {
   var nodeModulesMode = options.nodeModulesMode || 'copy';
   var buildOptions = options.buildOptions || {};
 
-  var targetRelease = _.has(buildOptions, 'release') ?
-    buildOptions.release : release.current;
-  if (! targetRelease.compatibleWithRunningVersion())
-    throw new Error("running wrong version of tools for release?");
+  if (! release.usingRightReleaseForApp(appDir))
+    throw new Error("running wrong release for app?");
 
-  // sanity check
-  if (! targetRelease.compatibleWithRunningVersion())
-    throw new Error("running wrong tools version for release?");
-
-  var library = targetRelease.library;
+  var library = release.current.library;
   var releaseName =
-    targetRelease.isCheckout() ? "none" : targetRelease.name;
-
-  var builtBy = "Meteor" + (targetRelease.name ? " " + targetRelease.name : "");
+    release.current.isCheckout() ? "none" : release.current.name;
+  var builtBy = "Meteor" + (release.current.name ?
+                            " " + release.current.name : "");
 
   var success = false;
   var watchSet = new watch.WatchSet();

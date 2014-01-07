@@ -1,14 +1,14 @@
 var _ = require('underscore');
 var Future = require('fibers/future');
 
-// options: listenPort, proxyToPort, onFailure, logger
+// options: listenPort, proxyToPort, onFailure, runLog
 var Proxy = function (options) {
   var self = this;
 
   self.listenPort = options.listenPort;
   self.proxyToPort = options.proxyToPort;
   self.onFailure = options.onFailure || function () {};
-  self.logger = options.logger;
+  self.runLog = options.runLog;
 
   self.mode = "hold";
   self.httpQueue = []; // keys: req, res
@@ -54,14 +54,14 @@ _.extend(Proxy.prototype, {
     self.server.on('error', function (err) {
       if (err.code == 'EADDRINUSE') {
         var port = self.listenPort;
-        self.logger.log(
+        self.runLog.log(
 "Can't listen on port " + port + ". Perhaps another Meteor is running?\n" +
 "\n" +
 "Running two copies of Meteor in the same application directory\n" +
 "will not work. If something else is using port " + port + ", you can\n" +
 "specify an alternative port with --port <port>.");
       } else {
-        self.logger.log('' + err);
+        self.runLog.log('' + err);
       }
       self.onFailure();
     });
@@ -132,7 +132,7 @@ _.extend(Proxy.prototype, {
         c.res.writeHead(200, {'Content-Type': 'text/plain'});
         c.res.write("Your app is crashing. Here's the latest log.\n\n");
 
-        _.each(self.logger.getLog(), function (item) {
+        _.each(self.runLog.getLog(), function (item) {
           c.res.write(item.message + "\n");
         });
 
