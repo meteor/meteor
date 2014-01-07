@@ -50,7 +50,7 @@ var AppProcess = function (options) {
   self.bundlePath = options.bundlePath;
   self.port = options.port;
   self.rootUrl = options.rootUrl;
-  self.oplogUrl = option.oplogUrl;
+  self.oplogUrl = options.oplogUrl;
   self.runLog = options.runLog;
 
   self.onExit = options.onExit;
@@ -100,13 +100,13 @@ _.extend(AppProcess.prototype, {
     });
 
     // Watch for exit
-    proc.on('close', function (code, signal) {
+    self.proc.on('close', function (code, signal) {
       if (! self.madeExitCallback)
         self.onExit && self.onExit(code, signal);
       self.madeExitCallback = true;
     });
 
-    proc.on('error', function (err) {
+    self.proc.on('error', function (err) {
       self.runLog.log("=> Couldn't spawn process: " + err.message);
 
       // node docs say that it might make both an 'error' and a
@@ -121,7 +121,7 @@ _.extend(AppProcess.prototype, {
     // is dead. If we don't register a handler, we get a top level
     // exception and the whole app dies.
     // http://stackoverflow.com/questions/2893458/uncatchable-errors-in-node-js
-    proc.stdin.on('error', function () {});
+    self.proc.stdin.on('error', function () {});
 
     // Keepalive so child process can detect when we die
     self.keepaliveTimer = setInterval(function () {
@@ -301,9 +301,9 @@ var AppRunner = function (appDir, options) {
   self.proxy = options.proxy;
   self.runLog = options.runLog;
   self.watchForChanges =
-    _.has(options, 'watchForChanges') ? options.watchForChanges || true;
+    options.watchForChanges === undefined ? true : options.watchForChanges;
   self.onRunEnd = options.onRunEnd;
-  self.noListenBanner = optinos.noListenBanner;
+  self.noListenBanner = options.noListenBanner;
 
   self.fiber = null;
   self.runFuture = null;
@@ -473,8 +473,7 @@ _.extend(AppRunner.prototype, {
         /* onListen */
         if (! self.noListenBanner) {
           if (firstListen)
-              self.runLog.log("=> Meteor server running on: " +
-                              self.rootUrl +"\n");
+            self.runLog.log("=> Meteor server running on: " + self.rootUrl);
           else
             self.runLog.logRestart();
         }
@@ -486,8 +485,8 @@ _.extend(AppRunner.prototype, {
       if (runResult.outcome !== "terminated")
         crashCount = 0;
 
-      var wantExit = self.onRunEnd ? self.onRunEnd(runResult) !== false : true;
-      if (wantExit || self.exitFuture || result.outcome === "stopped")
+      var wantExit = self.onRunEnd ? self.onRunEnd(runResult) === false : false;
+      if (wantExit || self.exitFuture || runResult.outcome === "stopped")
         break;
 
       if (runResult.outcome === "wrong-release") {

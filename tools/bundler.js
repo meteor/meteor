@@ -1579,19 +1579,20 @@ exports.bundle = function (options) {
   var nodeModulesMode = options.nodeModulesMode || 'copy';
   var buildOptions = options.buildOptions || {};
 
-  var release = _.has(buildOptions, 'release') ? buildOptions.release : release.current;
-  if (! release.compatibleWithRunningVersion())
+  var targetRelease = _.has(buildOptions, 'release') ?
+    buildOptions.release : release.current;
+  if (! targetRelease.compatibleWithRunningVersion())
     throw new Error("running wrong version of tools for release?");
 
   // sanity check
-  if (! release.compatibleWithRunningVersion())
+  if (! targetRelease.compatibleWithRunningVersion())
     throw new Error("running wrong tools version for release?");
 
-  var library = release.library;
+  var library = targetRelease.library;
   var releaseName =
-    release.isCheckout() ? "none" : release.name;
+    targetRelease.isCheckout() ? "none" : targetRelease.name;
 
-  var builtBy = "Meteor" + (release.name ? " " + release.name : "");
+  var builtBy = "Meteor" + (targetRelease.name ? " " + targetRelease.name : "");
 
   var success = false;
   var watchSet = new watch.WatchSet();

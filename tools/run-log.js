@@ -20,7 +20,7 @@ var RunLog = function (options) {
 
   self.rawLogs = options.rawLogs;
 
-  self.log = []; // list of log objects
+  self.messages = []; // list of log objects
   self.maxLength = 100;
 
   // If non-null, the last thing logged was "server restarted"
@@ -33,9 +33,9 @@ _.extend(RunLog.prototype, {
   _record: function (msg) {
     var self = this;
 
-    self.log.push(msg);
-    if (self.log.length > self.maxLength) {
-      self.log.shift();
+    self.messages.push(msg);
+    if (self.messages.length > self.maxLength) {
+      self.messages.shift();
     }
   },
 
@@ -89,7 +89,7 @@ _.extend(RunLog.prototype, {
     if (self.consecutiveRestartMessages) {
       // replace old message in place
       process.stdout.write("\r");
-      self.log.pop();
+      self.messages.pop();
       self.consecutiveRestartMessages ++;
     } else {
       self.consecutiveRestartMessages = 1;
@@ -102,7 +102,10 @@ _.extend(RunLog.prototype, {
     // restart message right after this one
     process.stdout.write(message);
 
-    self.log(message);
+    self._record({
+      time: new Date,
+      message: message
+    });
   },
 
   finish: function () {
@@ -116,12 +119,12 @@ _.extend(RunLog.prototype, {
 
   clearLog: function () {
     var self = this;
-    self.log = [];
+    self.messages = [];
   },
 
   getLog: function () {
     var self = this;
-    return self.log;
+    return self.messages;
   }
 });
 

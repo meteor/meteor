@@ -12,6 +12,27 @@ var unipackage = require('./unipackage.js');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
 
+// Given a Mongo URL, open an interative Mongo shell on this terminal
+// on that database.
+var runMongoShell = function (url) {
+  var mongoPath = path.join(files.getDevBundle(), 'mongodb', 'bin', 'mongo');
+  var mongoUrl = require('url').parse(url);
+  var auth = mongoUrl.auth && mongoUrl.auth.split(':');
+  var ssl = require('querystring').parse(mongoUrl.query).ssl === "true";
+
+  var args = [];
+  if (ssl) args.push('--ssl');
+  if (auth) args.push('-u', auth[0]);
+  if (auth) args.push('-p', auth[1]);
+  args.push(mongoUrl.hostname + ':' + mongoUrl.port + mongoUrl.pathname);
+
+  var child_process = require('child_process');
+  var proc = child_process.spawn(mongoPath,
+                                 args,
+                                 { stdio: 'inherit' });
+};
+
+
 // Find all running Mongo processes that were started by this program
 // (even by other simultaneous runs of this program). If passed,
 // appDir and port act as filters on the list of running mongos.
@@ -269,7 +290,6 @@ var launchMongo = function (options) {
 // options: appDir, port, runLog, onFailure
 var MongoRunner = function (options) {
   var self = this;
-
   self.appDir = options.appDir;
   self.port = options.port;
   self.runLog = options.runLog;
@@ -316,8 +336,8 @@ _.extend(MongoRunner.prototype, {
 
     self.handle = launchMongo({
       appDir: self.appDir,
-      port: self.mongoPort,
-      onExit: _.bind(self._exited, self);
+      port: self.port,
+      onExit: _.bind(self._exited, self),
       onListen: function () {
         // cancel 'mongo startup is slow' message if not already printed
         if (self.startupPrintTimer) {
@@ -348,7 +368,7 @@ _.extend(MongoRunner.prototype, {
     // Print the last 20 lines of stderr.
     self.runLog.log(
       stderr.split('\n').slice(-20).join('\n') +
-      "Unexpected mongo exit code " + code + ". Restarting.\n");
+      "Unexpected mongo exit code " + code + ". Restarting.");
 
     // We'll restart it up to 3 times in a row. The counter is reset
     // when 5 seconds goes without a restart. (Note that by using a
@@ -372,14 +392,14 @@ _.extend(MongoRunner.prototype, {
     // Too many restarts, too quicky. It's dead. Print friendly
     // diagnostics and give up.
     var explanation = mongoExitCodes.Codes[code];
-    var message = "Can't start mongod\n";
+    var message = "Can't start Mongo server.";
 
     if (explanation)
       message += "\n" + explanation.longText;
 
     if (explanation === mongoExitCodes.EXIT_NET_ERROR) {
       message += "\n\n" +
-"Check for other processes listening on port " + self.mongoPort + "\n" +
+"Check for other processes listening on port " + self.port + "\n" +
 "or other Meteor instances running in the same project.";
     }
 
@@ -404,6 +424,9 @@ _.extend(MongoRunner.prototype, {
   stop: function () {
     var self = this;
 
+    if (! self.handle)
+      return;
+
     var fut = new Future;
     self.shuttingDown = true;
     self.handle.stop(function (err) { // XXX fiberize upstream?
@@ -418,5 +441,6 @@ _.extend(MongoRunner.prototype, {
 });
 
 
+exports.runMongoShell = runMongoShell;
 exports.findMongoPort = findMongoPort;
 exports.MongoRunner = MongoRunner;

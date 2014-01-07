@@ -1,3 +1,4 @@
+var _ = require('underscore');
 var Fiber = require('fibers');
 var inFiber = require('./fiber-helpers.js').inFiber;
 
@@ -29,12 +30,12 @@ _.extend(Updater.prototype, {
   },
 
   // Returns immediately. However if an update check is currently
-  // running it will complete.
+  // running it will complete in the background. Idempotent.
   stop: function () {
     var self = this;
 
     if (self.timer)
-      throw new Error("not running?");
+      return;
     clearInterval(self.timer);
     self.timer = null;
   }

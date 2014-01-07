@@ -518,26 +518,6 @@ site + ": " + "successfully transferred to your account.\n" +
 };
 
 
-// XXX move into a different file
-var runMongoShell = function (url) {
-  var mongoPath = path.join(files.getDevBundle(), 'mongodb', 'bin', 'mongo');
-  var mongoUrl = require('url').parse(url);
-  var auth = mongoUrl.auth && mongoUrl.auth.split(':');
-  var ssl = require('querystring').parse(mongoUrl.query).ssl === "true";
-
-  var args = [];
-  if (ssl) args.push('--ssl');
-  if (auth) args.push('-u', auth[0]);
-  if (auth) args.push('-p', auth[1]);
-  args.push(mongoUrl.hostname + ':' + mongoUrl.port + mongoUrl.pathname);
-
-  var child_process = require('child_process');
-  var proc = child_process.spawn(mongoPath,
-                                 args,
-                                 { stdio: 'inherit' });
-};
-
-
 exports.bundleAndDeploy = bundleAndDeploy;
 exports.deleteApp = deleteApp;
 exports.temporaryMongoUrl = temporaryMongoUrl;
@@ -545,5 +525,3 @@ exports.logs = logs;
 exports.listAuthorized = listAuthorized;
 exports.changeAuthorized = changeAuthorized;
 exports.claim = claim;
-
-exports.runMongoShell = runMongoShell;

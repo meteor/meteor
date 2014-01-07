@@ -609,7 +609,7 @@ main.registerCommand({
     // localhost mode
     var findMongoPort =
       require(path.join(__dirname, 'run-mongo.js')).findMongoPort;
-    var mongoPort = mongoRunner.findMongoPort(options.appDir);
+    var mongoPort = findMongoPort(options.appDir);
 
     // XXX detect the case where Meteor is running, but MONGO_URL was
     // specified?
@@ -640,7 +640,8 @@ main.registerCommand({
     console.log(mongoUrl);
   } else {
     process.stdin.pause();
-    deploy.runMongoShell(mongoUrl);
+    var runMongo = require('./run-mongo.js');
+    runMongo.runMongoShell(mongoUrl);
     throw new main.WaitForExit;
   }
 });
@@ -672,7 +673,7 @@ main.registerCommand({
 
   var findMongoPort =
     require(path.join(__dirname, 'run-mongo.js')).findMongoPort;
-  var isRunning = !! mongoRunner.findMongoPort(options.appDir);
+  var isRunning = !! findMongoPort(options.appDir);
   if (isRunning) {
     process.stderr.write(
 "reset: Meteor is running.\n" +

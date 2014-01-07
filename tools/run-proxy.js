@@ -69,29 +69,30 @@ _.extend(Proxy.prototype, {
     // don't crash if the app doesn't respond. instead return an error
     // immediately. This shouldn't happen much since we try to not
     // send requests if the app is down.
-    proxy.ee.on('http-proxy:outgoing:web:error', function (err, req, res) {
+    self.proxy.ee.on('http-proxy:outgoing:web:error', function (err, req, res) {
       res.writeHead(503, {
         'Content-Type': 'text/plain'
       });
       res.end('Unexpected error.');
     });
-    proxy.ee.on('http-proxy:outgoing:ws:error', function (err, req, socket) {
+    self.proxy.ee.on('http-proxy:outgoing:ws:error', function (err, req,socket){
       socket.end();
     });
 
     var fut = new Future;
-    server.listen(listenPort, function () {
+    self.server.listen(self.listenPort, function () {
       fut['return']();
     });
 
     fut.wait();
   },
 
+  // Idempotent.
   stop: function () {
     var self = this;
 
     if (! self.server)
-      throw new Error("not running?");
+      return;
 
     // This stops listening but allows existing connections to
     // complete gracefully.
