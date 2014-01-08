@@ -455,4 +455,3 @@ _.extend(Builder.prototype, {
 Builder.sha1 = sha1;
 
 module.exports = Builder;
-

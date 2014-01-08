@@ -229,7 +229,9 @@ _.extend(Slice.prototype, {
     });
   }),
 
-  addAsset: function (contents, relPath) {
+  // Add this file as an asset.  `hash` is optional: it is the sha1
+  // hash of the contents, if known.
+  addAsset: function (contents, relPath, hash) {
     var self = this;
 
     // XXX hack
@@ -240,7 +242,8 @@ _.extend(Slice.prototype, {
       type: "asset",
       data: contents,
       path: relPath,
-      servePath: path.join(self.pkg.serveRoot, relPath)
+      servePath: path.join(self.pkg.serveRoot, relPath),
+      hash: hash
     });
   },
 
@@ -440,7 +443,8 @@ _.extend(Slice.prototype, {
     var absPath = path.resolve(self.pkg.sourceRoot, relPath);
     var filename = path.basename(relPath);
     var handler = !fileOptions.isAsset && self._getSourceHandler(filename);
-    var contents = watch.readAndWatchFile(self.watchSet, absPath);
+    var file = watch.readAndWatchFileWithHash(self.watchSet, absPath);
+    var contents = file.contents;
 
     if (contents === null) {
       buildmessage.error("File not found: " + source.relPath);
@@ -454,7 +458,7 @@ _.extend(Slice.prototype, {
       //
       // XXX This is pretty confusing, especially if you've
       // accidentally forgotten a plugin -- revisit?
-      self.addAsset(contents, relPath);
+      self.addAsset(contents, relPath, file.hash);
       return;
     }
 

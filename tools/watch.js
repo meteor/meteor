@@ -493,16 +493,28 @@ var readAndWatchDirectory = function (watchSet, options) {
   return contents;
 };
 
-var readAndWatchFile = function (watchSet, absPath) {
+// Calculating the sha hash can be expensive for large files.  By
+// returning the calculated hash along with the file contents, the
+// hash doesn't need to be calculated again for static files.
+//
+// We only calculate the hash if needed here, so callers must not
+// *rely* on the hash being returned; merely that if the hash is
+// present, it is the correct hash of the contents.
+var readAndWatchFileWithHash = function (watchSet, absPath) {
   var contents = readFile(absPath);
+  var hash = null;
   // Allow null watchSet, if we want to use readFile-style error handling in a
   // context where we might not always have a WatchSet (eg, reading
   // settings.json where we watch for "meteor run" but not for "meteor deploy").
   if (watchSet) {
-    var hash = contents === null ? null : sha1(contents);
+    hash = contents === null ? null : sha1(contents);
     watchSet.addFile(absPath, hash);
   }
-  return contents;
+  return {contents: contents, hash: hash};
+};
+
+var readAndWatchFile = function (watchSet, absPath) {
+  return readAndWatchFileWithHash(watchSet, absPath).contents;
 };
 
 var readFile = function (absPath) {
@@ -549,5 +561,6 @@ _.extend(exports, {
   readDirectory: readDirectory,
   isUpToDate: isUpToDate,
   readAndWatchDirectory: readAndWatchDirectory,
-  readAndWatchFile: readAndWatchFile
+  readAndWatchFile: readAndWatchFile,
+  readAndWatchFileWithHash: readAndWatchFileWithHash
 });
