@@ -245,7 +245,8 @@ var canonicalizeSite = function (site) {
   return parsed.hostname;
 };
 
-// Run the bundler and deploy the result.
+// Run the bundler and deploy the result. Print progress
+// messages. Return a command exit code.
 //
 // Options:
 // - appDir: root directory of app to bundle up
@@ -256,7 +257,7 @@ var canonicalizeSite = function (site) {
 var bundleAndDeploy = function (options) {
   var site = canonicalizeSite(options.site);
   if (! site)
-    process.exit(1);
+    return 1;
 
   // Check auth up front, rather than after the (potentially lengthy)
   // bundling process.
@@ -264,7 +265,7 @@ var bundleAndDeploy = function (options) {
   if (preflight.errorMessage) {
     process.stderr.write("\nError deploying application: " +
                          preflight.errorMessage + "\n");
-    process.exit(1);
+    return 1;
   }
 
   var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
@@ -281,7 +282,7 @@ var bundleAndDeploy = function (options) {
   if (bundleResult.errors) {
     process.stdout.write("\n\nErrors prevented deploying:\n");
     process.stdout.write(bundleResult.errors.formatMessages());
-    process.exit(1);
+    return 1;
   }
 
   process.stdout.write('Uploading...\n');
@@ -299,7 +300,7 @@ var bundleAndDeploy = function (options) {
   if (result.errorMessage) {
     process.stderr.write("\nError deploying application: " +
                          result.errorMessage + "\n");
-    process.exit(1);
+    return 1;
   }
 
   var deployedAt = require('url').parse(result.payload.url);
@@ -324,12 +325,14 @@ var bundleAndDeploy = function (options) {
         }
     });
   }
+
+  return 0;
 };
 
 var deleteApp = function (site) {
   site = canonicalizeSite(site);
   if (! site)
-    process.exit(1);
+    return 1;
 
   var result = authedRpc({
     method: 'DELETE',
@@ -340,10 +343,11 @@ var deleteApp = function (site) {
   if (result.errorMessage) {
     process.stderr.write("Couldn't delete application: " +
                          result.errorMessage + "\n");
-    process.exit(1);
+    return 1;
   }
 
   process.stdout.write("Deleted.\n");
+  return 0;
 };
 
 // On failure, prints a message to stderr and returns null. Otherwise,
@@ -352,7 +356,8 @@ var deleteApp = function (site) {
 var temporaryMongoUrl = function (site) {
   site = canonicalizeSite(site);
   if (! site)
-    process.exit(1);
+    // canonicalizeSite printed an error
+    return null;
 
   var result = authedRpc({
     operation: 'mongo',
@@ -372,7 +377,7 @@ var temporaryMongoUrl = function (site) {
 var logs = function (site) {
   site = canonicalizeSite(site);
   if (! site)
-    process.exit(1);
+    return 1;
 
   var result = authedRpc({
     operation: 'logs',
@@ -383,16 +388,17 @@ var logs = function (site) {
   if (result.errorMessage) {
     process.stderr.write("Couldn't get logs: " +
                          result.errorMessage + "\n");
-    process.exit(1);
+    return 1;
   }
 
   process.stdout.write(result.message);
+  return 0;
 };
 
 var listAuthorized = function (site) {
   site = canonicalizeSite(site);
   if (! site)
-    process.exit(1);
+    return 1;
 
   var result = deployRpc({
     operation: 'info',
@@ -402,25 +408,25 @@ var listAuthorized = function (site) {
   if (result.errorMessage) {
     process.stderr.write("Couldn't get authorized users list: " +
                          result.errorMessage + "\n");
-    process.exit(1);
+    return 1;
   }
   var info = result.payload;
 
   if (! _.has(info, 'protection')) {
     process.stdout.write("<anyone>\n");
-    process.exit(0);
+    return 0;
   }
 
   if (info.protection === "password") {
     process.stdout.write("<password>\n");
-    process.exit(0);
+    return 0;
   }
 
   if (info.protection === "account") {
     if (! _.has(info, 'authorized')) {
       process.stderr.write("Couldn't get authorized users list: " +
                            "You are not authorized\n");
-      process.exit(1);
+      return 1;
     }
 
     process.stdout.write((auth.loggedInUsername() || "<you>") + "\n");
@@ -430,7 +436,7 @@ var listAuthorized = function (site) {
       else
         process.stdout.write(username + "\n");
     });
-    process.exit(0);
+    return 0;
   }
 };
 
@@ -438,7 +444,8 @@ var listAuthorized = function (site) {
 var changeAuthorized = function (site, action, username) {
   site = canonicalizeSite(site);
   if (! site)
-    process.exit(1);
+    // canonicalizeSite will have already printed an error
+    return 1;
 
   var result = authedRpc({
     method: 'POST',
@@ -450,19 +457,20 @@ var changeAuthorized = function (site, action, username) {
   if (result.errorMessage) {
     process.stderr.write("Couldn't change authorized users: " +
                          result.errorMessage + "\n");
-    process.exit(1);
+    return 1;
   }
 
   process.stdout.write(site + ": " +
                        (action === "add" ? "added " : "removed ")
                        + username + "\n");
-  process.exit(0);
+  return 0;
 };
 
 var claim = function (site) {
   site = canonicalizeSite(site);
   if (! site)
-    process.exit(1);
+    // canonicalizeSite will have already printed an error
+    return 1;
 
   // Check to see if it's even a claimable site, so that we can print
   // a more appropriate message than we'd get if we called authedRpc
@@ -476,7 +484,7 @@ var claim = function (site) {
     process.stderr.write(
 "There isn't a site deployed at that address. Use 'meteor deploy' if\n" +
 "you'd like to deploy your app here.\n");
-    process.exit(1);
+    return 1;
   }
 
   if (infoResult.payload && infoResult.payload.protection === "account") {
@@ -484,7 +492,7 @@ var claim = function (site) {
       process.stderr.write("That site already belongs to you.\n");
     else
       process.stderr.write("Sorry, that site belongs to someone else.\n");
-    process.exit(1);
+    return 1;
   }
 
   if (infoResult && infoResult.payload.protection === "password") {
@@ -502,7 +510,7 @@ var claim = function (site) {
   if (result.errorMessage) {
     process.stderr.write("Couldn't claim site: " +
                          result.errorMessage + "\n");
-    process.exit(1);
+    return 1;
   }
 
   process.stdout.write(
@@ -517,7 +525,7 @@ site + ": " + "successfully transferred to your account.\n" +
 "Remove authorized users with:\n" +
 "  meteor authorized " + site + " --remove <user>\n" +
 "\n");
-  process.exit(0);
+  return 0;
 };
 
 

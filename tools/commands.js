@@ -725,11 +725,10 @@ main.registerCommand({
   if (options.delete) {
     if (useGalaxy) {
       var deployGalaxy = require('./deploy-galaxy.js');
-      deployGalaxy.deleteApp(site);
+      return deployGalaxy.deleteApp(site);
     } else {
-      deploy.deleteApp(site);
+      return deploy.deleteApp(site);
     }
-    return;
   }
 
   if (options.password) {
@@ -782,7 +781,7 @@ main.registerCommand({
       admin: options.admin
     });
   } else {
-    deploy.bundleAndDeploy({
+    return deploy.bundleAndDeploy({
       appDir: options.appDir,
       site: site,
       settings: settings,
@@ -808,14 +807,15 @@ main.registerCommand({
 
   if (hostedWithGalaxy(site)) {
     var deployGalaxy = require('./deploy-galaxy.js');
-    deployGalaxy.logs({
+    var ret = deployGalaxy.logs({
       app: site,
       streaming: options.stream
     });
-    if (options.stream)
+    if (options.stream && ret === null)
       throw new main.WaitForExit;
+    return ret;
   } else {
-    deploy.logs(site);
+    return deploy.logs(site);
   }
 });
 
@@ -864,11 +864,11 @@ main.registerCommand({
   }
 
   if (options.add)
-    deploy.changeAuthorized(site, "add", options.add);
+    return deploy.changeAuthorized(site, "add", options.add);
   else if (options.remove)
-    deploy.changeAuthorized(site, "remove", options.remove);
+    return deploy.changeAuthorized(site, "remove", options.remove);
   else
-    deploy.listAuthorized(site);
+    return deploy.listAuthorized(site);
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -895,7 +895,7 @@ main.registerCommand({
     return 1;
   }
 
-  deploy.claim(site);
+  return deploy.claim(site);
 });
 
 
@@ -969,7 +969,7 @@ main.registerCommand({
   };
 
   if (options.deploy) {
-    deploy.bundleAndDeploy({
+    return deploy.bundleAndDeploy({
       appDir: testRunnerAppDir,
       site: options.deploy,
       settings: options.settings && files.getSettings(options.settings),

@@ -413,6 +413,10 @@ exports.deploy = function (options) {
 // options:
 // - app
 // - streaming (BOOL)
+//
+// The log messages are printed. Returns a command exit code, or if
+// streaming is true and streaming was successfully started, returns
+// null.
 exports.logs = function (options) {
   var galaxy = exports.discoverGalaxy(options.app);
   var logReader = new ServiceConnection(galaxy, "log-reader");
@@ -463,6 +467,8 @@ exports.logs = function (options) {
         "no-such-app": "No such app: " + options.app
       });
     }
+
+    return options.streaming ? null : 0;
   } finally {
     // If not streaming, close the connection to log-reader so that
     // Node can exit cleanly. If streaming, leave the connection open
