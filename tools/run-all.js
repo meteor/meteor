@@ -14,11 +14,11 @@ var Updater = require('./run-updater.js').Updater;
 ///////////////////////////////////////////////////////////////////////////////
 // XXX XXX NEXT (if you want to do more):
 //
-// - add warnings to buildmessage, per slava
 // - make files.getSettings return errors instead of throwing (or eliminate)
 // - deal with XXX's in updater about it needing to go though runlog since
 //   no more stdout redirection
-// - kill process.exit everywhere
+// - kill process.exit everywhere: library.js, unipackage.js, and finally
+//   deploy-galaxy.js
 // - deal with options last on command line without args being tolerated
 //
 ///////////////////////////////////////////////////////////////////////////////

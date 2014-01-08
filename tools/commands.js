@@ -40,6 +40,21 @@ var hostedWithGalaxy = function (site) {
   return !! require('./deploy-galaxy.js').discoverGalaxy(site);
 };
 
+// Get all packages available. Returns a map from the package name to
+// a Package object.
+//
+// If problems happen while generating the list, print appropriate
+// messages to stderr and return null.
+var getPackages = function () {
+  var result = release.current.library.list();
+  if (result.packages)
+    return result.packages;
+
+  process.stderr.write("=> Errors while scanning packages:\n\n");
+  process.stderr.write(result.messages.formatMessages());
+  return null;
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // options that act like commands
 ///////////////////////////////////////////////////////////////////////////////
@@ -109,7 +124,12 @@ main.registerCommand({
     if (! release.current)
       // This is a weird case. Fail silently.
       return 0;
-    _.each(release.current.library.list(), function (p) {
+
+    var packages = getPackages();
+    if (! packages)
+      return 1; // build failed
+
+    _.each(packages, function (p) {
       p.preheat();
     });
   }
@@ -486,7 +506,10 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true
 }, function (options) {
-  var all = release.current.library.list();
+  var all = getPackages();
+  if (! all)
+    return 1;
+
   var using = {};
   _.each(project.getPackages(options.appDir), function (name) {
     using[name] = true;
@@ -536,7 +559,9 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'list',
-  requiresApp: true,
+  requiresApp: function (options) {
+    return options.using;
+  },
   options: {
     using: { type: Boolean }
   }
@@ -559,7 +584,9 @@ main.registerCommand({
     return;
   }
 
-  var list = release.current.library.list();
+  var list = getPackages();
+  if (! list)
+    return 1;
   var names = _.keys(list);
   names.sort();
   var pkgs = [];
@@ -956,15 +983,16 @@ main.registerCommand({
     'driver-package': { type: String }
   }
 }, function (options) {
-  var library = release.current.library;
-
   var testPackages;
   if (options.args.length === 0) {
-    // XXX The call to list() here is unfortunate, because list()
-    // can fail (eg, a package has a parse error) and if it does
-    // we currently just exit! Which sucks because we don't get
-    // reloading.
-    testPackages = _.keys(library.list());
+    var packageList = getPackages();
+    if (! packageList) {
+      // Couldn't load the package list, probably because some package
+      // has a parse error. Bail out -- this kind of sucks; we would
+      // like to find a way to get reloading.
+      return 1;
+    }
+    testPackages = _.keys(packageList);
   } else {
     testPackages = _.map(options.args, function (p) {
       // If it's a package name, just pass it through.
@@ -976,7 +1004,7 @@ main.registerCommand({
       // have a trailing slash.
       var packageDir = path.resolve(p);
       var packageName = path.basename(packageDir);
-      library.override(packageName, packageDir);
+      release.current.library.override(packageName, packageDir);
       return packageName;
     });
   }

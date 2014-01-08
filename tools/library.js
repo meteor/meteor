@@ -322,18 +322,19 @@ _.extend(Library.prototype, {
     });
   },
 
-  // Get all packages available. Returns a map from the package name
-  // to a Package object.
+  // Get all packages available and their metadata. This can fail
+  // since it currently involves building packages.
   //
-  // XXX Hack: If errors occur while generating the list (which could
-  // easily happen, since it currently involves building packages)
-  // print them to the console and exit(1)! Certainly not ideal but is
-  // expedient since, eg, test-packages calls list() before it does
-  // anything else.
+  // On success, returns an object with keys:
+  // - packages: map from the package name to a Package object for all
+  //   available packages
+  //
+  // On failure, returns an object with keys:
+  // - messages: a buildmessage.MessageSet with the errors
   list: function () {
     var self = this;
     var names = [];
-    var ret = {};
+    var packages = {};
 
     var messages = buildmessage.capture(function () {
       names = _.keys(self.overrides);
@@ -349,17 +350,14 @@ _.extend(Library.prototype, {
       _.each(names, function (name) {
         var pkg = self.get(name, false);
         if (pkg)
-          ret[name] = pkg;
+          packages[name] = pkg;
       });
     });
 
-    if (messages.hasMessages()) {
-      process.stdout.write("=> Errors while scanning packages:\n\n");
-      process.stdout.write(messages.formatMessages());
-      process.exit(1);
-    }
-
-    return ret;
+    if (messages.hasMessages())
+      return { messages: messages };
+    else
+      return { packages: packages };
   },
 
   // Rebuild all source packages in our search paths -- even including
