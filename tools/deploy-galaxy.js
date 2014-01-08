@@ -73,18 +73,11 @@ var ServiceConnection = function (galaxy, service) {
   var parsedEndpoint = url.parse(endpointUrl);
   var authToken = auth.getSessionToken(parsedEndpoint.hostname);
 
-  // XXX get the galaxy name from the hostname of endpointUrl,
-  // and run the login command for that galaxy.
-  //
-  // XXX of course, that should not be done here (and we should
-  // definitely not call process.exit!) -- it should be done much
-  // further up the stack.
-  if (! authToken) {
-    process.stderr.write("You must be logged in before you can use " +
-                         "this galaxy. Try logging in with " +
-                         "'meteor login'.\n");
-    process.exit(1);
-  }
+  // XXX XXX higher up on the stack, we need to get the galaxy name
+  // from the hostname of endpointUrl, and run the login command for
+  // that galaxy.
+  if (! authToken)
+    throw new Error("not logged in to galaxy?")
 
   self.connection = Package.livedata.DDP.connect(endpointUrl, {
     headers: {

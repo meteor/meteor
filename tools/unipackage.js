@@ -87,9 +87,13 @@ var load = function (options) {
   });
 
   if (messages.hasMessages()) {
+    // XXX This error handling is not the best, but this should never
+    // happen in normal operation. In the future, the command line
+    // tool will be a normal Meteor app and will be built ahead of
+    // time like any other app and this case will disappear.
     process.stdout.write("Errors prevented unipackage load:\n");
     process.stdout.write(messages.formatMessages());
-    process.exit(1);
+    throw new Error("unipackage load failed?");
   }
 
   // Save to cache
