@@ -1684,6 +1684,162 @@ _.extend(Package.prototype, {
     self.testSlices = { browser: ['tests'], 'os': ['tests'] };
   },
 
+  // Wrapper around watch.readAndWatchDirectory which takes in and returns
+  // sourceRoot-relative app directories.
+  readAndWatchAppDirectory: function (slice, relDir, filters) {
+    var self = this;
+    filters = filters || {};
+    var absPath = path.join(self.sourceRoot, relDir);
+    var contents = watch.readAndWatchDirectory(slice.watchSet, {
+      absPath: absPath,
+      include: filters.include,
+      exclude: filters.exclude
+    });
+    return _.map(contents, function (x) {
+      return path.join(relDir, x);
+    });
+  },
+
+  // Determine app source files.  Returns a "getSourcesFunc", which
+  // when called, returns the source files in the application
+  // directory.
+  appSourcesGetter: function (ignoreFiles, sliceName) {
+    var self = this;
+    return function (slice) {
+      var sourceInclude = _.map(slice.registeredExtensions(), function (ext) {
+        return new RegExp('\\.' + quotemeta(ext) + '$');
+      });
+      var sourceExclude = [/^\./].concat(ignoreFiles);
+
+      // Read top-level source files.
+      var sources = self.readAndWatchAppDirectory(slice, '', {
+        include: sourceInclude,
+        exclude: sourceExclude
+      });
+
+      var otherSliceRegExp =
+            (sliceName === "server" ? /^client\/$/ : /^server\/$/);
+
+      // The paths that we've called checkForInfiniteRecursion on.
+      var seenPaths = {};
+      // Used internally by fs.realpathSync as an optimization.
+      var realpathCache = {};
+      var checkForInfiniteRecursion = function (relDir) {
+        var absPath = path.join(self.sourceRoot, relDir);
+        try {
+          var realpath = fs.realpathSync(absPath, realpathCache);
+        } catch (e) {
+          if (!e || e.code !== 'ELOOP')
+            throw e;
+          // else leave realpath undefined
+        }
+        if (realpath === undefined || _.has(seenPaths, realpath)) {
+          buildmessage.error("Symlink cycle detected at " + relDir);
+          // recover by returning no files
+          return true;
+        }
+        seenPaths[realpath] = true;
+        return false;
+      };
+
+      // Read top-level subdirectories. Ignore subdirectories that have
+      // special handling.
+      var sourceDirectories = self.readAndWatchAppDirectory(slice, '', {
+        include: [/\/$/],
+        exclude: [/^packages\/$/, /^programs\/$/, /^tests\/$/,
+                  /^public\/$/, /^private\/$/,
+                  otherSliceRegExp].concat(sourceExclude)
+      });
+      checkForInfiniteRecursion('');
+
+      while (!_.isEmpty(sourceDirectories)) {
+        var dir = sourceDirectories.shift();
+
+        // remove trailing slash
+        dir = dir.substr(0, dir.length - 1);
+
+        if (checkForInfiniteRecursion(dir))
+          return [];  // pretend we found no files
+
+        // Find source files in this directory.
+        Array.prototype.push.apply(sources, self.readAndWatchAppDirectory(slice, dir, {
+          include: sourceInclude,
+          exclude: sourceExclude
+        }));
+
+        // Find sub-sourceDirectories. Note that we DON'T need to ignore the
+        // directory names that are only special at the top level.
+        Array.prototype.push.apply(sourceDirectories, self.readAndWatchAppDirectory(slice, dir, {
+          include: [/\/$/],
+          exclude: [/^tests\/$/, otherSliceRegExp].concat(sourceExclude)
+        }));
+      }
+
+      // We've found all the source files. Sort them!
+      sources.sort(files.sort);
+
+      // Convert into relPath/fileOptions objects.
+      sources = _.map(sources, function (relPath) {
+        var sourceObj = {relPath: relPath};
+
+        // Special case: on the client, JavaScript files in a
+        // `client/compatibility` directory don't get wrapped in a closure.
+        if (sliceName === "client" && relPath.match(/\.js$/)) {
+          var clientCompatSubstr =
+                path.sep + 'client' + path.sep + 'compatibility' + path.sep;
+          if ((path.sep + relPath).indexOf(clientCompatSubstr) !== -1)
+            sourceObj.fileOptions = {bare: true};
+        }
+        return sourceObj;
+      });
+
+      // Now look for assets for this slice.
+      var assetDir = sliceName === "client" ? "public" : "private";
+      var assetDirs = self.readAndWatchAppDirectory(slice, '', {
+        include: [new RegExp('^' + assetDir + '/$')]
+      });
+
+      if (!_.isEmpty(assetDirs)) {
+        if (!_.isEqual(assetDirs, [assetDir + '/']))
+          throw new Error("Surprising assetDirs: " + JSON.stringify(assetDirs));
+
+        while (!_.isEmpty(assetDirs)) {
+          dir = assetDirs.shift();
+          // remove trailing slash
+          dir = dir.substr(0, dir.length - 1);
+
+          if (checkForInfiniteRecursion(dir))
+            return [];  // pretend we found no files
+
+          // Find asset files in this directory.
+          var assetsAndSubdirs = self.readAndWatchAppDirectory(slice, dir, {
+            include: [/.?/],
+            // we DO look under dot directories here
+            exclude: ignoreFiles
+          });
+
+          _.each(assetsAndSubdirs, function (item) {
+            if (item[item.length - 1] === '/') {
+              // Recurse on this directory.
+              assetDirs.push(item);
+            } else {
+              // This file is an asset.
+              sources.push({
+                relPath: item,
+                fileOptions: {
+                  isAsset: true
+                }
+              });
+            }
+          });
+        }
+      }
+
+      return sources;
+    };
+  },
+
+
   // Initialize a package from a legacy-style application directory
   // (has .meteor/packages.)  This function does not retrieve the
   // package's dependencies from the library, and on return, the
@@ -1700,161 +1856,12 @@ _.extend(Package.prototype, {
       var names = project.get_packages(appDir);
       var arch = sliceName === "server" ? "os" : "browser";
 
-      // Determine source files
-      var getSourcesFunc = function (slice) {
-        var sourceInclude = _.map(slice.registeredExtensions(), function (ext) {
-          return new RegExp('\\.' + quotemeta(ext) + '$');
-        });
-        var sourceExclude = [/^\./].concat(ignoreFiles);
-
-        // Wrapper around watch.readAndWatchDirectory which takes in and returns
-        // sourceRoot-relative directories.
-        var readAndWatchDirectory = function (relDir, filters) {
-          filters = filters || {};
-          var absPath = path.join(self.sourceRoot, relDir);
-          var contents = watch.readAndWatchDirectory(slice.watchSet, {
-            absPath: absPath,
-            include: filters.include,
-            exclude: filters.exclude
-          });
-          return _.map(contents, function (x) {
-            return path.join(relDir, x);
-          });
-        };
-
-        // Read top-level source files.
-        var sources = readAndWatchDirectory('', {
-          include: sourceInclude,
-          exclude: sourceExclude
-        });
-
-        var otherSliceRegExp =
-              (sliceName === "server" ? /^client\/$/ : /^server\/$/);
-
-        // The paths that we've called checkForInfiniteRecursion on.
-        var seenPaths = {};
-        // Used internally by fs.realpathSync as an optimization.
-        var realpathCache = {};
-        var checkForInfiniteRecursion = function (relDir) {
-          var absPath = path.join(self.sourceRoot, relDir);
-          try {
-            var realpath = fs.realpathSync(absPath, realpathCache);
-          } catch (e) {
-            if (!e || e.code !== 'ELOOP')
-              throw e;
-            // else leave realpath undefined
-          }
-          if (realpath === undefined || _.has(seenPaths, realpath)) {
-            buildmessage.error("Symlink cycle detected at " + relDir);
-            // recover by returning no files
-            return true;
-          }
-          seenPaths[realpath] = true;
-          return false;
-        };
-
-        // Read top-level subdirectories. Ignore subdirectories that have
-        // special handling.
-        var sourceDirectories = readAndWatchDirectory('', {
-          include: [/\/$/],
-          exclude: [/^packages\/$/, /^programs\/$/, /^tests\/$/,
-                    /^public\/$/, /^private\/$/,
-                    otherSliceRegExp].concat(sourceExclude)
-        });
-        checkForInfiniteRecursion('');
-
-        while (!_.isEmpty(sourceDirectories)) {
-          var dir = sourceDirectories.shift();
-
-          // remove trailing slash
-          dir = dir.substr(0, dir.length - 1);
-
-          if (checkForInfiniteRecursion(dir))
-            return [];  // pretend we found no files
-
-          // Find source files in this directory.
-          Array.prototype.push.apply(sources, readAndWatchDirectory(dir, {
-            include: sourceInclude,
-            exclude: sourceExclude
-          }));
-
-          // Find sub-sourceDirectories. Note that we DON'T need to ignore the
-          // directory names that are only special at the top level.
-          Array.prototype.push.apply(sourceDirectories, readAndWatchDirectory(dir, {
-            include: [/\/$/],
-            exclude: [/^tests\/$/, otherSliceRegExp].concat(sourceExclude)
-          }));
-        }
-
-        // We've found all the source files. Sort them!
-        sources.sort(files.sort);
-
-        // Convert into relPath/fileOptions objects.
-        sources = _.map(sources, function (relPath) {
-          var sourceObj = {relPath: relPath};
-
-          // Special case: on the client, JavaScript files in a
-          // `client/compatibility` directory don't get wrapped in a closure.
-          if (sliceName === "client" && relPath.match(/\.js$/)) {
-            var clientCompatSubstr =
-                  path.sep + 'client' + path.sep + 'compatibility' + path.sep;
-            if ((path.sep + relPath).indexOf(clientCompatSubstr) !== -1)
-              sourceObj.fileOptions = {bare: true};
-          }
-          return sourceObj;
-        });
-
-        // Now look for assets for this slice.
-        var assetDir = sliceName === "client" ? "public" : "private";
-        var assetDirs = readAndWatchDirectory('', {
-          include: [new RegExp('^' + assetDir + '/$')]
-        });
-
-        if (!_.isEmpty(assetDirs)) {
-          if (!_.isEqual(assetDirs, [assetDir + '/']))
-            throw new Error("Surprising assetDirs: " + JSON.stringify(assetDirs));
-
-          while (!_.isEmpty(assetDirs)) {
-            dir = assetDirs.shift();
-            // remove trailing slash
-            dir = dir.substr(0, dir.length - 1);
-
-            if (checkForInfiniteRecursion(dir))
-              return [];  // pretend we found no files
-
-            // Find asset files in this directory.
-            var assetsAndSubdirs = readAndWatchDirectory(dir, {
-              include: [/.?/],
-              // we DO look under dot directories here
-              exclude: ignoreFiles
-            });
-
-            _.each(assetsAndSubdirs, function (item) {
-              if (item[item.length - 1] === '/') {
-                // Recurse on this directory.
-                assetDirs.push(item);
-              } else {
-                // This file is an asset.
-                sources.push({
-                  relPath: item,
-                  fileOptions: {
-                    isAsset: true
-                  }
-                });
-              }
-            });
-          }
-        }
-
-        return sources;
-      };
-
       // Create slice
       var slice = new Slice(self, {
         name: sliceName,
         arch: arch,
         uses: _.map(names, parseSpec),
-        getSourcesFunc: getSourcesFunc
+        getSourcesFunc: self.appSourcesGetter(ignoreFiles, sliceName)
       });
       self.slices.push(slice);
 
