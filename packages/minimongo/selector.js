@@ -824,7 +824,11 @@ expandArraysInBranches = function (branches, skipTheArrays) {
   var branchesOut = [];
   _.each(branches, function (branch) {
     var thisIsArray = isArray(branch.value);
-    if (!skipTheArrays || !thisIsArray) {
+    // We include the branch itself, *UNLESS* we it's an array that we're going
+    // to iterate and we're told to skip arrays.  (That's right, we include some
+    // arrays even skipTheArrays is true: these are arrays that were found via
+    // explicit numerical indices.)
+    if (!(skipTheArrays && thisIsArray && !branch.dontIterate)) {
       branchesOut.push({
         value: branch.value,
         arrayIndex: branch.arrayIndex
