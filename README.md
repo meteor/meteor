@@ -4,6 +4,12 @@ A lightweight HTML tokenizer and parser which outputs to the HTMLjs
 object representation.  Special hooks allow the syntax to be extended
 to parse an HTML-like template language like Spacebars.
 
+```
+HTML.parseFragment("<div class=greeting>Hello<br>World</div>")
+
+=> HTML.DIV({'class':'greeting'}, "Hello", HTML.BR(), "World"))
+```
+
 This package is used by the Spacebars compiler, which normally only
 runs at bundle time but can also be used at runtime on the client or
 server.
