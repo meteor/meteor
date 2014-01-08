@@ -7,6 +7,10 @@
   functions that are done when returning a cursor from a publish function or
   using `{{#each}}`.
 
+* Patch Underscore to not treat plain objects (`x.constructor === Object`)
+  with numeric `length` fields as arrays.  Among other things, this allows you
+  to use documents with numeric `length` fields with Mongo.  #594 #1737
+
 ## v0.7.0.1
 
 * Two fixes to `meteor run` Mongo startup bugs that could lead to hangs with the
