@@ -635,6 +635,10 @@ main.registerCommand({
     } else {
       mongoUrl = deploy.temporaryMongoUrl(site);
     }
+
+    if (! mongoUrl)
+      // temporaryMongoUrl() will have printed an error message
+      return 1;
   }
   if (options.url) {
     console.log(mongoUrl);
@@ -769,7 +773,7 @@ main.registerCommand({
 
   if (useGalaxy) {
     var deployGalaxy = require('./deploy-galaxy.js');
-    deployGalaxy.deploy({
+    return deployGalaxy.deploy({
       app: site,
       appDir: options.appDir,
       settings: settings,

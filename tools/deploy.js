@@ -346,6 +346,9 @@ var deleteApp = function (site) {
   process.stdout.write("Deleted.\n");
 };
 
+// On failure, prints a message to stderr and returns null. Otherwise,
+// returns a temporary authenticated Mongo URL allowing access to this
+// site's database.
 var temporaryMongoUrl = function (site) {
   site = canonicalizeSite(site);
   if (! site)
@@ -360,7 +363,7 @@ var temporaryMongoUrl = function (site) {
   if (result.errorMessage) {
     process.stderr.write("Couldn't open Mongo connection: " +
                          result.errorMessage + "\n");
-    process.exit(1);
+    return null;
   }
 
   return result.message;
