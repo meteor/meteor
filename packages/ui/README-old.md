@@ -1,5 +1,7 @@
 # Meteor UI
 
+XXX This README just talks about DomRange, and the information is out of date or may change before release.
+
 ## DomRange
 
 - - -
