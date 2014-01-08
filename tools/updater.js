@@ -14,8 +14,9 @@ if (testingUpdater)
   config.setTestingUpdater(true);
 
 /**
- * Downloads the current manifest file and returns it via a callback (or
- * null on error)
+ * Downloads the current manifest file and returns it. Throws
+ * files.OfflineError if we are offline, or throws some other
+ * exception if the server turned down our request.
  */
 exports.getManifest = function () {
   return httpHelpers.getUrl({

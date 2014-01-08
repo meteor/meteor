@@ -184,12 +184,10 @@ main.registerCommand({
   // (In particular, it's not sufficient to create the new app with
   // this version of the tools, and then stamp on the correct release
   // at the end.)
-  if (! release.current.isCheckout()) {
-    var desiredRelease = release.forced ? release.current.name :
-      release.latestDownloaded();
-    if (release.current.name !== desiredRelease)
-      throw new main.SpringboardToRelease(desiredRelease); // does not return
-  }
+  if (! release.current.isCheckout() &&
+      release.current.name !== release.latestDownloaded() &&
+      ! release.forced)
+    throw new main.SpringboardToLatestRelease;
 
   var appPath;
   if (options.args.length === 1)
@@ -315,7 +313,7 @@ main.registerCommand({
       // The user asked for the latest release (well, they "asked for
       // it" by not passing --release). We just downloaded a new
       // release, so springboard to it. (Or, we were run in app with
-      // no release, so springboard to the lastest release we know
+      // no release, so springboard to the latest release we know
       // about, whether we just download it or not.)
       // #UpdateSpringboard
       //
@@ -323,7 +321,7 @@ main.registerCommand({
       // changed between the old and new releases. Now we do it
       // unconditionally, because it's not a big deal to do it and it
       // eliminates the complexity of the current release changing.)
-      throw new main.SpringboardToRelease(release.latestDownloaded());
+      throw new main.SpringboardToLatestRelease;
     }
   }
 
@@ -387,9 +385,6 @@ main.registerCommand({
     return;
   }
 
-  // Write the release to .meteor/release.
-  project.writeMeteorReleaseVersion(options.appDir, release.current.name);
-
   // Find upgraders (in order) necessary to upgrade the app for the new
   // release (new metadata file formats, etc, or maybe even updating renamed
   // APIs).
@@ -398,21 +393,60 @@ main.registerCommand({
   //   all upgraders.
   // * If the app didn't have a release because it was created by a
   //   checkout, don't run any upgraders.
-  if (appRelease !== "none") {
-    // NB! This call to release.load() may have to fetch the release
-    // from the server. If so, it will print progress messages and
-    // even kill the program if it doesn't get what it wants!
-    var oldUpgraders =
-      appRelease === null ? [] : release.load(appRelease).getUpgraders();
-    var upgraders = _.difference(release.current.getUpgraders(),
-                                 oldUpgraders);
-    _.each(upgraders, function (upgrader) {
-      require("./upgraders.js").runUpgrader(upgrader, options.appDir);
-    });
+  //
+  // We're going to need the list of upgraders from the old release
+  // (the release the app was using previously) to decide what
+  // upgraders to run. It's possible that we don't have it downloaded
+  // yet (if they checked out the project and immediately ran 'meteor
+  // update --release foo'), so it's important to do this before we
+  // actually update the project.
+  var upgradersToRun;
+  if (appRelease === "none") {
+    upgradersToRun = [];
+  } else {
+    var oldUpgraders;
+
+    if (appRelease === null) {
+      oldUpgraders = [];
+    } else {
+      try {
+        var oldRelease = release.load(appRelease);
+      } catch (e) {
+        if (e instanceof files.OfflineError) {
+          process.stderr.write(
+"You need to be online to do this. Please check your internet connection.\n");
+          return 1;
+        }
+        if (e instanceof warehouse.NoSuchReleaseError) {
+          // In this situation it's tempting to just print a warning and
+          // skip the updaters, but I can't figure out how to explain
+          // what's happening to the user, so let's just do this.
+          process.stderr.write(
+"This project says that it uses version " + name + " of Meteor, but you\n" +
+"don't have that version of Meteor installed and the Meteor update servers\n" +
+"don't have it either. Please edit the .meteor/release file in the project\n" +
+"project and change it to a valid Meteor release.\n");
+          return 1;
+        }
+        throw e;
+      }
+      oldUpgraders = oldRelease.getUpgraders();
+    }
+
+    upgradersToRun = _.difference(release.current.getUpgraders(), oldUpgraders);
   }
+
+  // Write the release to .meteor/release.
+  project.writeMeteorReleaseVersion(options.appDir, release.current.name);
+
+  // Now run the upgraders.
+  _.each(upgradersToRun, function (upgrader) {
+    require("./upgraders.js").runUpgrader(upgrader, options.appDir);
+  });
 
   // This is the right spot to do any other changes we need to the app in
   // order to update it for the new release.
+
   console.log("%s: updated to Meteor %s.",
               path.basename(options.appDir), release.current.name);
 

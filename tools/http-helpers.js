@@ -171,7 +171,7 @@ _.extend(exports, {
   //
   // (This has gone through a few refactors and it might be possible
   // to fully roll it into httpHelpers.request() at this point.)
-  getUrl: function (urlOrOptions, callback) {
+  getUrl: function (urlOrOptions) {
     try {
       var result = httpHelpers.request(urlOrOptions);
     } catch (e) {

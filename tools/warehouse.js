@@ -43,6 +43,11 @@ var symlinkOverSync = function (linkText, file) {
 
 var warehouse = exports;
 _.extend(warehouse, {
+  // An exception meaning that you asked for a release that doesn't
+  // exist.
+  NoSuchReleaseError: function () {
+  },
+
   // Return our loaded collection of tools, releases and
   // packages. If we're running an installed version, found at
   // $HOME/.meteor.
@@ -70,14 +75,22 @@ _.extend(warehouse, {
 
   // Ensure the passed release version is stored in the local
   // warehouse and return its parsed manifest.
-  ensureReleaseExistsAndReturnManifest: function (release) {
+  //
+  // If 'quiet' is true, don't print anything as we do it.
+  //
+  // Throws:
+  // - files.OfflineError if the release isn't cached locally and we
+  //   are offline.
+  // - warehouse.NoSuchReleaseError if we talked to the server and it
+  //   told us that no release named 'release' exists.
+  ensureReleaseExistsAndReturnManifest: function (release, quiet) {
     if (!files.usesWarehouse())
       throw new Error("Not in a warehouse but requesting a manifest!");
 
     var manifestPath = path.join(
       warehouse.getWarehouseDir(), 'releases', release + '.release.json');
 
-    return warehouse._populateWarehouseForRelease(release);
+    return warehouse._populateWarehouseForRelease(release, quiet);
   },
 
   _latestReleaseSymlinkPath: function () {
@@ -119,12 +132,8 @@ _.extend(warehouse, {
     // XXX in the future support release channels other than stable
     var releaseName = manifest && manifest.releases &&
           manifest.releases.stable && manifest.releases.stable.version;
-    if (!releaseName) {
-      if (background)
-        return false;  // it's in the background, who cares.
-      process.stderr.write("No stable release found.\n");
-      process.exit(1);
-    }
+    if (! releaseName)
+      throw new Error("no stable release found?");
 
     var latestReleaseManifest =
           warehouse._populateWarehouseForRelease(releaseName, background);
@@ -232,18 +241,18 @@ _.extend(warehouse, {
     // after we're done writing packages
     if (!releaseAlreadyExists) {
       try {
-        releaseManifestText = httpHelpers.getUrl(
+        var result = httpHelpers.request(
           WAREHOUSE_URLBASE + "/releases/" + releaseVersion + ".release.json");
       } catch (e) {
-        // just throw, if we're in the background anyway, or if this is the
-        // OfflineError which should be handled by the caller
-        if (background || e instanceof files.OfflineError)
-          throw e;
+        throw new files.OfflineError(e);
+      }
+
+      if (result.response.statusCode !== 200)
         // We actually got some response, so we're probably online and we
         // just can't find the release.
-        process.stderr.write(releaseVersion + ": unknown release.\n");
-        process.exit(1);
-      }
+        throw new warehouse.NoSuchReleaseError;
+
+      releaseManifestText = result.body;
     }
 
     var releaseManifest = JSON.parse(releaseManifestText);

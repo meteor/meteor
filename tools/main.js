@@ -76,12 +76,8 @@ main.ShowUsage = function () {};
 main.WaitForExit = function () {};
 
 // Exception to throw from a command to exit, restart, and reinvoke
-// the command with a different Meteor release.
-main.SpringboardToRelease = function (releaseName) {
-  if (! releaseName)
-    throw new Error("didn't specify a release?");
-  this.releaseName = releaseName;
-};
+// the command with the latest available (downloaded) Meteor release.
+main.SpringboardToLatestRelease = function () {};
 
 // Register a command-line command.
 //
@@ -130,7 +126,11 @@ main.SpringboardToRelease = function (releaseName) {
 //   create an app with a checkout (so that it has no release), and
 //   then run that app with released Meteor. Normally this just prints
 //   an error saying that you have to pick a release, but you can
-//   disable that by setting this flag to false.
+//   disable that by setting this flag to false. Even if you set this
+//   flag, we will still *attempt* to run the correct Meteor release
+//   just like we always do; it's just that in that one case, instead
+//   of bailing out with an error we will run your command with
+//   release.current === null.
 // - raw: if true, option parsing is completely skipped (including
 //   --release and --help). To be activated the command will need to be
 //   literally the first argument, and it will need to do its own option
@@ -158,12 +158,12 @@ main.SpringboardToRelease = function (releaseName) {
 //   main.ShowUsage'. This will print usage info for the command and
 //   exit with status 1.
 // - If you have started (for example) a subprocess or worker fiber
-//   and want to wait until it's finished to exit, throw
-//   main.WaitForExit. This will skip the call to process.exit and the
+//   and want to wait until it's finished to exit, 'throw new
+//   main.WaitForExit'. This will skip the call to process.exit and the
 //   program will keep running until node thinks that everything is
 //   done.
-// - To quit, restart, and rerun the command with a different Meteor
-//   release, 'throw new mainSpringboardToRelease(releaseName)'.
+// - To quit, restart, and rerun the command with a latest available
+//   (downloaded) Meteor release, 'throw new main.SpringboardToLatestRelease'.
 //
 // Commands should never call process.exit()! They should instead
 // return an appropriate value. Not all commands obey that yet, but
@@ -537,10 +537,44 @@ Fiber(function () {
   }
 
   if (releaseName !== undefined) {
-    release.setCurrent(release.load(releaseName, {
-      packageDirs: packageDirs,
-      forApp: !! appDir
-    }), /* forced */ !! releaseOverride);
+    try {
+      var rel = release.load(releaseName, {
+        packageDirs: packageDirs
+      });
+    } catch (e) {
+      var name = releaseName;
+      if (e instanceof files.OfflineError) {
+        if (appDir) {
+          process.stderr.write(
+"Sorry, this project uses Meteor " + name + ", which is not installed and\n"+
+"could not be downloaded. Please check to make sure that you are online.\n");
+        } else {
+          process.stderr.write(
+"Sorry, Meteor " + name + " is not installed and could not be downloaded.\n"+
+"Please check to make sure that you are online.\n");
+        }
+        process.exit(1);
+      }
+
+      if (e instanceof warehouse.NoSuchReleaseError) {
+        if (releaseOverride) {
+          process.stderr.write(releaseVersion + ": unknown release.\n");
+        } else if (appDir) {
+          process.stderr.write(
+"Problem! This project says that it uses version " + name + " of Meteor,\n" +
+"but you don't have that version of Meteor installed and the Meteor update\n" +
+"servers don't have it either. Please edit the .meteor/release file in the\n" +
+"project and change it to a valid Meteor release.\n");
+        } else {
+          throw new Error("can't load latest release?");
+        }
+        process.exit(1);
+      }
+
+      throw e;
+    }
+
+    release.setCurrent(rel, /* forced */ !! releaseOverride);
   }
 
   // If we're not running the correct version of the tools for this
@@ -814,25 +848,19 @@ commandName + ": You're not in a Meteor project directory.\n" +
     var ret = command.func(options);
   } catch (e) {
     if (e === main.ShowUsage || e === main.WaitForExit ||
-        e === main.SpringboardToRelease)
+        e === main.SpringboardToLatestRelease)
       throw new Error(
         "you meant 'throw new main.Foo', not 'throw main.Foo'");
     if (e instanceof main.ShowUsage) {
       process.stderr.write(longHelp(commandName) + "\n");
       process.exit(1);
     }
-    if (e instanceof main.SpringboardToRelease) {
-      // First we need to load the other release's metadata so that we
-      // can figure out the tools version that it uses. This could
-      // load the release from the network (in which case it will
-      // print progress messages and possibly even kill the program if
-      // something goes wrong!) But it won't do that if you only
-      // specify releases that are already downloaded in the
-      // warehouse, which is what you'll most likely be doing.
-      var otherRelease = release.load(e.releaseName);
-
-      // Good to go! Now a function call that doesn't return:
-      springboard(otherRelease.getToolsVersion(), otherRelease.name);
+    if (e instanceof main.SpringboardToLatestRelease) {
+      // Load the latest release's metadata so that we can figure out
+      // the tools version that it uses.
+      var latestRelease = release.load(release.latestDownloaded());
+      springboard(latestRelease.getToolsVersion(), latestRelease.name);
+      // (does not return)
     }
     if (e instanceof main.WaitForExit)
       return;

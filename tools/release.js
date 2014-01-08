@@ -140,8 +140,7 @@ release.latestDownloaded = function () {
 // may be called as many times as you like.
 //
 // This will fetch the release from the server if it isn't cached
-// locally. If that happens it will print progress messages. (And if
-// that fails, it will kill the process! XXX return gracefully)
+// locally. If that happens it will print progress messages.
 //
 // Arguments:
 // - name: release name to use. Or pass 'null' to use a checkout
@@ -149,9 +148,14 @@ release.latestDownloaded = function () {
 //   - packageDirs: array of extra paths to search when searching for
 //     packages. They are searched in order and take precedence over
 //     anything in the release.
-//   - forApp: cosmetic effect only. If set, change the messages to
-//     reflect that we're downloading the release because an app needs
-//     it.
+//   - quiet: if the release has to be downloaded, don't print
+//     progress messages.
+//
+// Throws:
+// - files.OfflineError if it was not possible to load the
+//   release because it's not locally cached and we're not online.
+// - warehouse.NoSuchReleaseError if no release called 'name' exists
+//   in the world (confirmed with server).
 //
 // XXX packageDirs really should not be part of Release, and
 // override() really should not be a method on a global singleton
@@ -172,26 +176,9 @@ release.load = function (name, options) {
   }
 
   // Go download the release if necessary.
-  var manifest;
-  try {
-    // XXX may print an error and kill the process if it doesn't get
-    // what it wants
-    manifest =
-      warehouse.ensureReleaseExistsAndReturnManifest(name);
-  } catch (e) {
-    if (! (e instanceof files.OfflineError))
-      throw e;
-    if (options.forApp) {
-      process.stderr.write(
-"Sorry, this project uses Meteor " + version + ", which is not installed and\n"+
-"could not be downloaded. Please check to make sure that you are online.\n");
-    } else {
-      process.stderr.write(
-"Sorry, Meteor " + version + " is not installed and could not be downloaded.\n"+
-"Please check to make sure that you are online.\n");
-    }
-    process.exit(1);
-  }
+  // (can throw files.OfflineError or warehouse.NoSuchReleaseError)
+  var manifest =
+    warehouse.ensureReleaseExistsAndReturnManifest(name, options.quiet);
 
   return new Release({
     name: name,
