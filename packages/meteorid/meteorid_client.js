@@ -26,6 +26,9 @@ MeteorId.requestCredential = function (credentialRequestCompleteCallback) {
   Oauth.showPopup(
     loginUrl,
     _.bind(credentialRequestCompleteCallback, null, credentialToken),
-    { height: 406 }
+    {
+      width: 430,
+      height: 406
+    }
   );
 };
