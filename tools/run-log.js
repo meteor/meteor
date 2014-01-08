@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var unipackage = require('./unipackage.js');
+var release = require('./release.js');
 
 var getLoggingPackage = _.once(function () {
   var Log = unipackage.load({
@@ -27,6 +28,11 @@ var RunLog = function (options) {
   // message, and teh value will be the number of consecutive such
   // messages that have been logged with no other intervening messages
   self.consecutiveRestartMessages = null;
+
+  // If non-null, the last thing that was logged was a temporary
+  // message (with a carriage return but no newline), and this is its
+  // length.
+  self.temporaryMessageLength = null;
 };
 
 _.extend(RunLog.prototype, {
@@ -39,7 +45,24 @@ _.extend(RunLog.prototype, {
     }
   },
 
+  _clearSpecial: function () {
+    var self = this;
+
+    if (self.consecutiveRestartMessages) {
+      self.consecutiveRestartMessages = null;
+      process.stdout.write("\n");
+    }
+
+    if (self.temporaryMessageLength) {
+      var spaces = new Array(self.temporaryMessageLength + 1).join(' ');
+      process.stdout.write(spaces + '\r');
+      self.temporaryMessageLength = null;
+    }
+  },
+
   logAppOutput: function (line, isStderr) {
+    var self = this;
+
     if (line.trim().length === 0)
       return;
 
@@ -50,11 +73,7 @@ _.extend(RunLog.prototype, {
                Log.parse(line) || Log.objFromText(line));
     self._record(obj);
 
-    if (self.consecutiveRestartMessages) {
-      self.consecutiveRestartMessages = null;
-      process.stdout.write("\n");
-    }
-
+    self._clearSpecial();
     if (self.rawLogs)
       process[isStderr ? "stderr" : "stdout"].write(line + "\n");
     else
@@ -75,12 +94,19 @@ _.extend(RunLog.prototype, {
     };
     self._record(obj);
 
-    if (self.consecutiveRestartMessages) {
-      self.consecutiveRestartMessages = null;
-      process.stdout.write("\n");
-    }
-
+    self._clearSpecial();
     process.stdout.write(msg + "\n");
+  },
+
+  // Write a message to the terminal that will get overwritten by the
+  // next message logged. (Don't put it in the log that getLog
+  // returns.)
+  logTemporary: function (msg) {
+    var self = this;
+
+    self._clearSpecial();
+    process.stderr.write(msg + "\r");
+    self.temporaryMessageLength = msg.length;
   },
 
   logRestart: function () {
@@ -92,6 +118,7 @@ _.extend(RunLog.prototype, {
       self.messages.pop();
       self.consecutiveRestartMessages ++;
     } else {
+      self._clearSpecial();
       self.consecutiveRestartMessages = 1;
     }
 
@@ -111,10 +138,7 @@ _.extend(RunLog.prototype, {
   finish: function () {
     var self = this;
 
-    if (self.consecutiveRestartMessages) {
-      self.consecutiveRestartMessages = null;
-      process.stdout.write("\n");
-    }
+    self._clearSpecial();
   },
 
   clearLog: function () {

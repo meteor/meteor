@@ -19,12 +19,13 @@ var Updater = require('./run-updater.js').Updater;
 // - deal with XXX's in updater about it needing to go though runlog since
 //   no more stdout redirection
 // - kill process.exit everywhere
+// - deal with options last on command line without args being tolerated
 //
 ///////////////////////////////////////////////////////////////////////////////
 
 // options: port, buildOptions, settingsFile, banner, program,
-// onRunEnd, onFailure, watchForChanges, noListenBanner, rootUrl,
-// mongoUrl, oplogUrl, disableOplog, rawLogs, appDirForVersionCheck
+// onRunEnd, onFailure, watchForChanges, quiet, rootUrl, mongoUrl,
+// oplogUrl, disableOplog, rawLogs, appDirForVersionCheck
 var Runner = function (appDir, options) {
   var self = this;
   self.appDir = appDir;
@@ -37,7 +38,9 @@ var Runner = function (appDir, options) {
   var mongoPort = listenPort + 2;
 
   self.stopped = false;
+  self.quiet = options.quiet;
   self.banner = options.banner || files.prettyPath(self.appDir);
+  self.rootUrl = options.rootUrl || ('http://localhost:' + listenPort + '/');
 
   self.runLog = new RunLog({
     rawLogs: options.rawLogs
@@ -76,14 +79,14 @@ var Runner = function (appDir, options) {
     mongoUrl: mongoUrl,
     oplogUrl: oplogUrl,
     buildOptions: options.buildOptions,
-    rootUrl: options.rootUrl || ('http://localhost:' + listenPort + '/'),
+    rootUrl: self.rootUrl,
     settingsFile: options.settingsFile,
     program: options.program,
     proxy: self.proxy,
     runLog: self.runLog,
     onRunEnd: options.onRunEnd,
     watchForChanges: options.watchForChanges,
-    noListenBanner: options.noListenBanner
+    noRestartBanner: self.quiet
   });
 };
 
@@ -95,16 +98,69 @@ _.extend(Runner.prototype, {
     self.proxy.start();
 
     // print the banner only once we've successfully bound the port
-    process.stdout.write("[[[[[ " + self.banner + " ]]]]]\n\n");
+    if (! self.quiet) {
+      process.stdout.write("[[[[[ " + self.banner + " ]]]]]\n\n");
+      process.stderr.write("=> Started proxy.\n");
+    }
 
-    if (! self.stopped)
+    if (! self.stopped) {
       self.updater.start();
-    if (! self.stopped && self.mongoRunner)
+    }
+
+    if (! self.stopped && self.mongoRunner) {
+      var spinner = ['-', '\\', '|', '/'];
+      // I looked at some Unicode indeterminate progress indicators, such as:
+      //
+      // spinner = "▁▃▄▅▆▇▆▅▄▃".split('');
+      // spinner = "▉▊▋▌▍▎▏▎▍▌▋▊▉".split('');
+      // spinner = "▏▎▍▌▋▊▉▊▋▌▍▎▏▁▃▄▅▆▇▆▅▄▃".split('');
+      // spinner = "▉▊▋▌▍▎▏▎▍▌▋▊▉▇▆▅▄▃▁▃▄▅▆▇".split('');
+      // spinner = "⠉⠒⠤⣀⠤⠒".split('');
+      //
+      // but none of them really seemed like an improvement. I think
+      // the case for using unicode would be stronger in a determinate
+      // progress indicator.
+      //
+      // There are also some four-frame options such as ◐◓◑◒ at
+      //   http://stackoverflow.com/a/2685827/157965
+      // but all of the ones I tried look terrible in the terminal.
+      if (! self.quiet) {
+        var animationFrame = 0;
+        var printUpdate = function () {
+          self.runLog.logTemporary("=> Starting MongoDB... " +
+                                   spinner[animationFrame]);
+          animationFrame = (animationFrame + 1) % spinner.length;
+        };
+        printUpdate();
+        var mongoProgressTimer = setInterval(printUpdate, 200);
+      }
+
       self.mongoRunner.start();
-    if (! self.stopped)
+
+      if (! self.quiet) {
+        clearInterval(mongoProgressTimer);
+        self.runLog.log("=> Started MongoDB.");
+      }
+    }
+
+    if (! self.stopped) {
+      if (! self.quiet)
+        self.runLog.logTemporary("=> Starting your app...\r");
       self.appRunner.start();
+      if (! self.quiet && ! self.stopped)
+        self.runLog.log("=> Started your app.");
+    }
+
+    if (! self.stopped && ! self.quiet)
+      self.runLog.log("\n=> App running at: " + self.rootUrl);
+
+    // XXX It'd be nice to (cosmetically) handle failure better. Right
+    // now we overwrite the "starting foo..." message with the
+    // error. It'd be better to overwrite it with "failed to start
+    // foo" and then print the error.
   },
 
+  // Idempotent
   stop: function () {
     var self = this;
     self.stopped = true;
@@ -172,13 +228,17 @@ exports.run = function (appDir, options) {
       fut['return']({ outcome: 'failure' });
     },
     onRunEnd: function (result) {
-      if (once || result.outcome === "wrong-release") {
+      if (once ||
+          result.outcome === "wrong-release" ||
+          (result.outcome === "terminated" &&
+           result.signal === undefined && result.code === undefined)) {
+        runner.stop();
         fut['return'](result);
         return false;
       }
     },
     watchForChanges: ! once,
-    noListenBanner: once
+    quiet: once
   });
 
   var runner = new Runner(appDir, runOptions);
@@ -207,7 +267,9 @@ exports.run = function (appDir, options) {
     return 254;
   }
 
-  if (result.outcome === "failure") {
+  if (result.outcome === "failure" ||
+      (result.outcome === "terminated" &&
+       result.signal === undefined && result.code === undefined)) {
     // Fatal problem with something other than the app process. An
     // explanation should already have been logged.
     return 254;

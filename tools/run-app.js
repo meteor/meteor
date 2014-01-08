@@ -81,6 +81,7 @@ _.extend(AppProcess.prototype, {
       if (! self.madeExitCallback)
         self.onExit && self.onExit();
       self.madeExitCallback = true;
+      return;
     }
 
     // Send stdout and stderr to the runLog
@@ -244,9 +245,9 @@ _.extend(AppProcess.prototype, {
 //   the source files change. If false, then we don't do (a) and if
 //   (b) happens we just give up permanently.
 //
-// - noListenBanner: Set to true to skip the banner that is normally
-//   printed on each run when the app is ready to listen for
-//   connections.
+// - noRestartBanner: Set to true to skip the banner that is normally
+//   printed after each restart of the app once it is ready to listen
+//   for connections.
 //
 // - Other options: appDirForVersionCheck (defaults to appDir), port,
 //   mongoUrl, oplogUrl, buildOptions, rootUrl, settingsFile, program,
@@ -268,7 +269,8 @@ _.extend(AppProcess.prototype, {
 //     signal, or neither will be set if the process could not be
 //     spawned (spawn call failed, or no such program in bundle) -- in
 //     this last case an explanation will have been written to the run
-//     log.
+//     log, and you may assume that it will take more than source code
+//     changes to fix the problem.
 //
 //   - 'bundle-fail': bundling failed.
 //
@@ -303,9 +305,10 @@ var AppRunner = function (appDir, options) {
   self.watchForChanges =
     options.watchForChanges === undefined ? true : options.watchForChanges;
   self.onRunEnd = options.onRunEnd;
-  self.noListenBanner = options.noListenBanner;
+  self.noRestartBanner = options.noRestartBanner;
 
   self.fiber = null;
+  self.startFuture = null;
   self.runFuture = null;
   self.exitFuture = null;
 };
@@ -319,9 +322,12 @@ _.extend(AppRunner.prototype, {
     if (self.fiber)
       throw new Error("already started?");
 
+    self.startFuture = new Future;
     self.fiber = new Fiber(function () {
       self._fiber();
     }).run();
+    self.startFuture.wait();
+    self.startFuture = null;
   },
 
   // Shut down the app. stop() will block until the app is shut
@@ -421,6 +427,8 @@ _.extend(AppRunner.prototype, {
       onListen: function () {
         self.proxy.setMode("proxy");
         onListen && onListen();
+        if (self.startFuture)
+          self.startFuture['return']();
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
       settings: settings
@@ -467,16 +475,12 @@ _.extend(AppRunner.prototype, {
     while (true) {
       var crashTimer = setTimeout(function () {
         crashCount = 0;
-      });
+      }, 2000);
 
       var runResult = self._runOnce(function () {
         /* onListen */
-        if (! self.noListenBanner) {
-          if (firstListen)
-            self.runLog.log("=> Meteor server running on: " + self.rootUrl);
-          else
-            self.runLog.logRestart();
-        }
+        if (! self.noRestartBanner && ! firstListen)
+          self.runLog.logRestart();
 
         firstListen = false;
       });
@@ -511,8 +515,10 @@ _.extend(AppRunner.prototype, {
       else if (runResult.outcome === "terminated") {
         if (runResult.signal) {
           self.runLog.log('=> Exited from signal: ' + runResult.signal);
-        } else {
+        } else if (runResult.code !== undefined) {
           self.runLog.log('=> Exited with code: ' + runResult.code);
+        } else {
+          // explanation should already have been logged
         }
 
         crashCount ++;
@@ -546,6 +552,9 @@ _.extend(AppRunner.prototype, {
     // Giving up for good.
     if (self.exitFuture)
       self.exitFuture['return']();
+    if (self.startFuture)
+      self.startFuture['return']();
+
     self.fiber = null;
   }
 });

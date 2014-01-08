@@ -98,8 +98,8 @@ var findMongoPort = function (appDir) {
 };
 
 
-// Kill any other mongos running on our port. Yields, and returns once
-// they are all dead. Throws an exception on failure.
+// Kill any mongos running on 'port'. Yields, and returns once they
+// are all dead. Throws an exception on failure.
 //
 // This is a big hammer for dealing with still running mongos, but
 // smaller hammers have failed before and it is getting tiresome.
@@ -155,12 +155,18 @@ var launchMongo = function (options) {
   // add .gitignore if needed.
   files.addToGitignore(path.join(options.appDir, '.meteor'), 'local');
 
-  // There is a race here -- we want to return a handle immediately,
-  // but we're not actually ready to service calls to handle.stop()
-  // until Mongo has actually started up. For now, resolve that by
-  // ignoring the call to stop.
+  var proc = null;
+  var cancelStartup = false;
+
   var handle = {
-    stop: function (callback) { callback(); }
+    stop: function () {
+      if (! proc)
+        cancelStartup = true;
+      else {
+        proc.removeListener('exit', callOnExit);
+        proc.kill('SIGINT');
+      }
+    }
   };
 
   Fiber(function () {
@@ -202,9 +208,12 @@ var launchMongo = function (options) {
       })['mongo-livedata'].MongoInternals.NpmModule;
     }
 
-    // Start mongod with a dummy replSet and wait for it to listen.
+    // Start mongod with a dummy replSet and wait for it to
+    // listen.
     var child_process = require('child_process');
     var replSetName = 'meteor';
+    if (cancelStartup)
+      return;
     var proc = child_process.spawn(mongod_path, [
       // nb: cli-test.sh and findMongoPids make strong assumptions about the
       // order of the arguments! Check them before changing any arguments.
@@ -229,12 +238,6 @@ var launchMongo = function (options) {
       onExit(code, signal, stderrOutput);
     };
     proc.on('exit', callOnExit);
-
-    handle.stop = function (callback) {
-      proc.removeListener('exit', callOnExit);
-      proc.kill('SIGINT');
-      callback && callback(err);
-    };
 
     proc.stdout.setEncoding('utf8');
     var listening = false;
@@ -301,7 +304,6 @@ var MongoRunner = function (options) {
 
   self.errorCount = 0;
   self.errorTimer = null;
-  self.startupPrintTimer = undefined;
 };
 
 _.extend(MongoRunner.prototype, {
@@ -317,11 +319,6 @@ _.extend(MongoRunner.prototype, {
 
     if (self.handle)
       throw new Error("already running?");
-
-    self.startupPrintTimer = setTimeout(function () {
-      process.stdout.write(
-"Initializing mongo database... this may take a moment.\n");
-    }, 5000);
 
     self.startupFuture = new Future;
     self._startOrRestart();
@@ -339,12 +336,6 @@ _.extend(MongoRunner.prototype, {
       port: self.port,
       onExit: _.bind(self._exited, self),
       onListen: function () {
-        // cancel 'mongo startup is slow' message if not already printed
-        if (self.startupPrintTimer) {
-          clearTimeout(self.startupPrintTimer);
-          self.startupPrintTimer = null;
-        }
-
         if (self.startupFuture) {
           // It's come up successfully for the first time. Make
           // start() return.
@@ -427,15 +418,8 @@ _.extend(MongoRunner.prototype, {
     if (! self.handle)
       return;
 
-    var fut = new Future;
     self.shuttingDown = true;
-    self.handle.stop(function (err) { // XXX fiberize upstream?
-      if (err)
-        process.stdout.write(err.reason + "\n");
-      fut['return']();
-    });
-
-    fut.wait();
+    self.handle.stop();
     self.handle = null;
   }
 });

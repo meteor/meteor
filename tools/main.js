@@ -350,6 +350,7 @@ Fiber(function () {
   var command = null;
   var isRawCommand = false;
   var showHelp = false;
+  var optimistOptions = {};
 
   // Check to see if it is a "raw" command that handles its own
   // argument parsing.
@@ -383,6 +384,8 @@ Fiber(function () {
   opt.alias("h", "help")
     .boolean("h")
     .boolean("help");
+  optimistOptions['help'] = true;
+  optimistOptions['h'] = true;
 
   var isBoolean = { help: true, h: true };
   var walkCommands = function (node) {
@@ -409,6 +412,8 @@ Fiber(function () {
                 // manually parse it into the correct type later
                 opt.string(name);
 
+              optimistOptions[name] = true;
+
               // side note: it's a little unfortunate that optimist
               // puts all options in the same namespace and can't
               // distinguish between '-a foo' and '--a foo'. one day
@@ -433,6 +438,7 @@ Fiber(function () {
     if (_.has(isBoolean, key))
       throw new Error("--" + key + " is both an option and a command?")
     opt.boolean(key);
+    optimistOptions[key] = true;
   });
 
   // The following line actually parses the arguments (argv is a
@@ -443,7 +449,14 @@ Fiber(function () {
     // even if it didn't appear on the command line. Delete the
     // options that didn't actually appear, which will have the value
     // 'false'.
-    if (parsed[key] === false)
+    //
+    // Only do this for options that we actually told optimist about,
+    // so that if the user specifies '--unknownoption' at the end of a
+    // command, we'll still print an error.
+    //
+    // XXX this strategy still doesn't help us catch a user "meteor
+    // run --foo" if foo is an option that takes a string. rethink
+    if (parsed[key] === false && _.has(optimistOptions, key))
       delete parsed[key];
   });
   delete parsed['$0'];
@@ -726,7 +739,7 @@ longHelp(commandName) + "\n");
     var originalName = (k.length > 1 ? "--" : "-") + k;
 
     process.stderr.write(
-originalName + ": unrecognized option.\n" +
+originalName + ": unknown option.\n" +
 longHelp(commandName) + "\n");
     process.exit(1);
   }
