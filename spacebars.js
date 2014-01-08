@@ -711,7 +711,8 @@ Spacebars.codeGen = function (parseTree, options) {
 
   var tree = parseTree;
 
-  if (isTemplate) {
+  // The flags `isTemplate` and `isBody` are kind of a hack.
+  if (isTemplate || (options && options.isBody)) {
     // optimizing fragments would require being smarter about whether we are
     // in a TEXTAREA, say.
     tree = optimize(tree);
