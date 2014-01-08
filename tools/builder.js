@@ -3,13 +3,14 @@ var files = require(path.join(__dirname, 'files.js'));
 var watch = require('./watch.js');
 var fs = require('fs');
 var _ = require('underscore');
+var profile = require('./profile.js');
 
-var sha1 = function (contents) {
+var sha1 = profile("sha", function (contents) {
   var crypto = require('crypto');
   var hash = crypto.createHash('sha1');
   hash.update(contents);
   return hash.digest('hex');
-};
+});
 
 // Builder encapsulates much of the file-handling logic need to create
 // "bundles" (directory trees such as site archives, programs, or

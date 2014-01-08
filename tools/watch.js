@@ -3,6 +3,7 @@ var path = require("path");
 var _ = require('underscore');
 var Future = require('fibers/future');
 var fiberHelpers = require('./fiber-helpers.js');
+var Profile = require('./profile.js');
 
 // Watch for changes to a set of files, and the first time that any of
 // the files change, call a user-provided callback. (If you want a
@@ -516,12 +517,12 @@ var readFile = function (absPath) {
   }
 };
 
-var sha1 = function (contents) {
+var sha1 = Profile("sha", function (contents) {
   var crypto = require('crypto');
   var hash = crypto.createHash('sha1');
   hash.update(contents);
   return hash.digest('hex');
-};
+});
 
 // XXX We should eventually rewrite the whole meteor tools to use yielding fs
 // calls instead of sync (so that meteor is responsive to C-c during bundling,

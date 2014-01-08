@@ -174,6 +174,7 @@ var watch = require('./watch.js');
 var Fiber = require('fibers');
 var Future = require(path.join('fibers', 'future'));
 var sourcemap = require('source-map');
+var Profile = require('./profile.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 var ignoreFiles = [
@@ -472,7 +473,7 @@ _.extend(Target.prototype, {
   //   to include a particular named slice from a particular package.
   // - test: an array of packages (as Package objects or as name
   //   strings) whose test slices should be included
-  _determineLoadOrder: function (options) {
+  _determineLoadOrder: Profile("determine load order", function (options) {
     var self = this;
     var library = self.library;
 
@@ -563,11 +564,11 @@ _.extend(Target.prototype, {
       // Now add it, after its ordered dependencies.
       add(needed[first]);
     }
-  },
+  }),
 
   // Process all of the sorted slices (which includes running the JavaScript
   // linker).
-  _emitResources: function () {
+  _emitResources: Profile("emit resources", function () {
     var self = this;
 
     var isBrowser = archinfo.matches(self.arch, "browser");
@@ -676,9 +677,9 @@ _.extend(Target.prototype, {
       _.extend(self.pluginProviderPackageDirs,
                slice.pkg.pluginProviderPackageDirs)
     });
-  },
+  }),
 
-  _minify: function () {
+  _minify: Profile("minify", function () {
     var self = this;
     var minifiers = unipackage.load({
       library: self.library,
@@ -687,15 +688,15 @@ _.extend(Target.prototype, {
     self.minifyJs(minifiers);
     if (self.minifyCss) // XXX a bit of a hack
       self.minifyCss(minifiers);
-  },
+  }),
 
   // Make client-side CSS and JS assets cacheable forever, by
   // adding a query string with a cache-busting hash.
-  _addCacheBusters: function () {
+  _addCacheBusters: Profile("add cache busters", function () {
     var self = this;
     self._addCacheBusters("js");
     self._addCacheBusters("css");
-  },
+  }),
 
   // Minify the JS in this target
   minifyJs: function (minifiers) {
@@ -822,7 +823,7 @@ _.extend(ClientTarget.prototype, {
   //
   // Returns the path (relative to 'builder') of the control file for
   // the target
-  write: function (builder) {
+  write: Profile("write client target", function (builder) {
     var self = this;
 
     builder.reserve("program.json");
@@ -885,9 +886,9 @@ _.extend(ClientTarget.prototype, {
       manifest: manifest
     });
     return "program.json";
-  },
+  }),
 
-  _attachSourceMap: function (builder, file, manifestItem) {
+  _attachSourceMap: Profile("attach source map", function (builder, file, manifestItem) {
     // Add anti-XSSI header to this file which will be served over
     // HTTP. Note that the Mozilla and WebKit implementations differ as to
     // what they strip: Mozilla looks for the four punctuation characters
@@ -914,7 +915,7 @@ _.extend(ClientTarget.prototype, {
     ]));
     manifestItem.sourceMapUrl = require('url').resolve(
       file.url, sourceMapBaseName);
-  }
+  })
 });
 
 
@@ -1066,7 +1067,7 @@ _.extend(JsImage.prototype, {
   //
   // Returns the path (relative to 'builder') of the control file for
   // the image
-  write: function (builder) {
+  write: Profile("write JS image", function (builder) {
     var self = this;
 
     builder.reserve("program.json");
@@ -1161,7 +1162,7 @@ _.extend(JsImage.prototype, {
       load: load
     });
     return "program.json";
-  }
+  })
 });
 
 // Create a JsImage by loading a bundle of format
@@ -1288,7 +1289,7 @@ _.extend(ServerTarget.prototype, {
   //
   // Returns the path (relative to 'builder') of the control file for
   // the plugin
-  write: function (builder, options) {
+  write: Profile("write server target", function (builder, options) {
     var self = this;
 
     // Pick a start script name
@@ -1370,10 +1371,10 @@ _.extend(ServerTarget.prototype, {
     }
 
     return scriptName;
-  }
+  })
 });
 
-var writeFile = function (file, builder) {
+var writeFile = Profile("write files", function (file, builder) {
   if (! file.targetPath)
     throw new Error("No targetPath?");
   var contents = file.contents();
@@ -1384,7 +1385,7 @@ var writeFile = function (file, builder) {
   // (rather than just serving all of the files in a certain
   // directories)
   builder.write(file.targetPath, { data: file.contents() });
-};
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // writeSiteArchive
@@ -1428,7 +1429,7 @@ var relativePathFinder = function (targets, paths) {
 };
 
 // Write out each target
-var writeTargets = function (targets, options, builder, paths) {
+var writeTargets = Profile("write targets", function (targets, options, builder, paths) {
   var getRelativeTargetPath = relativePathFinder(targets, paths);
   var programs = [];
   _.each(targets, function (target, name) {
@@ -1443,7 +1444,7 @@ var writeTargets = function (targets, options, builder, paths) {
     });
   });
   return programs;
-};
+});
 
 // targets is a set of Targets to include in the bundle, as a map from
 // target name (to use in the bundle) to a Target. outputPath is the
@@ -1578,7 +1579,7 @@ var BundleBuild = function (appDir, outputPath, options) {
 
 
 _.extend(BundleBuild.prototype, {
-  makeClientTarget: function (name, app) {
+  makeClientTarget: Profile(function (name) { return name + " target" }, function (name, app) {
     var self = this;
     var client = new ClientTarget({
       name: name,
@@ -1594,7 +1595,7 @@ _.extend(BundleBuild.prototype, {
     });
 
     return client;
-  },
+  }),
 
   makeBlankClientTarget: function (serverName) {
     var self = this;
@@ -1612,7 +1613,7 @@ _.extend(BundleBuild.prototype, {
     return client;
   },
 
-  makeServerTarget: function (name, app, clientTarget) {
+  makeServerTarget: Profile(function (name) { return name + " target" }, function (name, app, clientTarget) {
     var self = this;
     var targetOptions = {
       name: name,
@@ -1632,13 +1633,13 @@ _.extend(BundleBuild.prototype, {
     });
 
     return server;
-  },
+  }),
 
   // Include default targets, unless there's a no-default-targets file in the
   // top level of the app. (This is a very hacky interface which will
   // change. Note, eg, that .meteor/packages is confusingly ignored in this
   // case.)
-  includeDefaultTargets: function () {
+  includeDefaultTargets: Profile("default targets", function () {
     var self = this;
 
     var includeDefaultTargets = watch.readAndWatchFile(
@@ -1656,7 +1657,7 @@ _.extend(BundleBuild.prototype, {
       var server = self.makeServerTarget("server", app, client);
       self.targets.server = server;
     }
-  },
+  }),
 
   // Pick up any additional targets in /programs
   includePrograms: function () {
@@ -1805,7 +1806,7 @@ _.extend(BundleBuild.prototype, {
     });
   },
 
-  writeToDisk: function () {
+  writeToDisk: Profile("write to disk", function () {
     var self = this;
     self.starResult = writeSiteArchive(self.targets, self.outputPath, {
       nodeModulesMode: self.nodeModulesMode,
@@ -1814,7 +1815,7 @@ _.extend(BundleBuild.prototype, {
       releaseStamp: self.releaseStamp
     });
     self.watchSet.merge(self.starResult.watchSet);
-  },
+  }),
 
   build: function () {
     var self = this;
@@ -1906,7 +1907,10 @@ _.extend(BundleBuild.prototype, {
  *   but library.appDir is the app the user is in.
  */
 exports.bundle = function (appDir, outputPath, options) {
-  return new BundleBuild(appDir, outputPath, options).createBundle();
+  Profile.initialize(options.library);
+  return Profile.run("bundle", function () {
+    return new BundleBuild(appDir, outputPath, options).createBundle();
+  });
 };
 
 // Make a JsImage object (a complete, linked, ready-to-go JavaScript

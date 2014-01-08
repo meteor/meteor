@@ -13,6 +13,7 @@ var linker = require(path.join(__dirname, 'linker.js'));
 var unipackage = require('./unipackage.js');
 var fs = require('fs');
 var sourcemap = require('source-map');
+var Profile = require('./profile.js');
 
 // Whenever you change anything about the code that generates unipackages, bump
 // this version number. The idea is that the "format" field of the unipackage
@@ -212,7 +213,7 @@ _.extend(Slice.prototype, {
   // way we get one error about it instead of a new error at each
   // stage in the build process in which we try to retrieve the
   // package.
-  checkReferencedPackagesExist: function () {
+  checkReferencedPackagesExist: Profile("check referenced packages exist", function () {
     var self = this;
     _.each(['uses', 'implies'], function (field) {
       var scrubbed = [];
@@ -226,7 +227,7 @@ _.extend(Slice.prototype, {
       });
       self[field] = scrubbed;
     });
-  },
+  }),
 
   addAsset: function (contents, relPath) {
     var self = this;
@@ -347,7 +348,7 @@ _.extend(Slice.prototype, {
   // way to return errors (that could go in an overall list of
   // errors experienced across all files)
   //
-  constructCompileStep: function (contents, relPath, absPath, fileOptions) {
+  constructCompileStep: Profile("construct compile step", function (contents, relPath, absPath, fileOptions) {
     var self = this;
     var readOffset = 0;
     return {
@@ -430,7 +431,7 @@ _.extend(Slice.prototype, {
         });
       }
     };
-  },
+  }),
 
   handleSourceFile: function (source) {
     var self = this;
@@ -470,14 +471,17 @@ _.extend(Slice.prototype, {
     }
   },
 
-  handleSourceFiles: function () {
+  handleSourceFiles: Profile("handle source files", function () {
     var self = this;
-    _.each(self.getSourcesFunc(self), function (source) {
+    var sources = Profile.time("get sources", function () {
+      return self.getSourcesFunc(self);
+    });
+    _.each(sources, function (source) {
       self.handleSourceFile(source);
     });
-  },
+  }),
 
-  prelink: function () {
+  prelink: Profile("prelink", function () {
     var self = this;
     // Load jsAnalyze from the js-analyze package... unless we are the
     // js-analyze package, in which case never mind. (The js-analyze package's
@@ -501,7 +505,7 @@ _.extend(Slice.prototype, {
       jsAnalyze: jsAnalyze
     });
 
-  },
+  }),
 
   populatePackageVariables: function (results) {
     var self = this;
@@ -713,7 +717,7 @@ _.extend(Slice.prototype, {
 
   // We provide a hardcoded handler for *.js files.. since plugins
   // are written in JavaScript we have to start somewhere.
-  jsHandler: function (compileStep) {
+  jsHandler: Profile("js handler", function (compileStep) {
     compileStep.addJavaScript({
       data: compileStep.read().toString('utf8'),
       path: compileStep.inputPath,
@@ -722,7 +726,7 @@ _.extend(Slice.prototype, {
       // XXX COMPAT WITH 0.6.4
       bare: compileStep.fileOptions.bare || compileStep.fileOptions.raw
     });
-  },
+  }),
 
   // Get all extensions handlers registered in this slice, as a map
   // from extension (no leading dot) to handler function. Throws an
@@ -743,7 +747,7 @@ _.extend(Slice.prototype, {
               "are both trying to handle ." + ext);
           // Recover by just going with the first handler we saw
         } else {
-          ret[ext] = handler;
+          ret[ext] = Profile(ext + " handler", handler);
         }
       });
     });
@@ -754,10 +758,10 @@ _.extend(Slice.prototype, {
   // Return a list of all of the extension that indicate source files
   // for this slice, not including leading dots. Computed based on
   // this.uses, so should only be called once that has been set.
-  registeredExtensions: function () {
+  registeredExtensions: Profile("list registered extensions", function () {
     var self = this;
     return _.keys(self._allHandlers());
-  },
+  }),
 
   // Find the function that should be used to handle a source file for
   // this slice, or return null if there isn't one. We'll use handlers
@@ -1098,7 +1102,7 @@ _.extend(Package.prototype, {
   // build() may retrieve the package's dependencies from the library,
   // so it is illegal to call build() from library.get() (until the
   // package has actually been put in the loaded package list.)
-  build: function () {
+  build: Profile(function () { return "build " + (this.name || '-app-')}, function () {
     var self = this;
 
     if (self.pluginsBuilt || self.slicesBuilt)
@@ -1112,7 +1116,7 @@ _.extend(Package.prototype, {
       slice.build();
     });
     self.slicesBuilt = true;
-  },
+  }),
 
   // Programmatically initialized a package from scratch. For now,
   // cannot create browser packages. This function does not retrieve
@@ -1686,7 +1690,7 @@ _.extend(Package.prototype, {
 
   // Wrapper around watch.readAndWatchDirectory which takes in and returns
   // sourceRoot-relative app directories.
-  readAndWatchAppDirectory: function (slice, relDir, filters) {
+  readAndWatchAppDirectory: Profile("read and watch app directories", function (slice, relDir, filters) {
     var self = this;
     filters = filters || {};
     var absPath = path.join(self.sourceRoot, relDir);
@@ -1698,7 +1702,7 @@ _.extend(Package.prototype, {
     return _.map(contents, function (x) {
       return path.join(relDir, x);
     });
-  },
+  }),
 
   // Determine app source files.  Returns a "getSourcesFunc", which
   // when called, returns the source files in the application
