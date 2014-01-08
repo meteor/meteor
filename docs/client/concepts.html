@@ -559,7 +559,8 @@ machinery to efficiently add and move DOM nodes as new results enter
 the query.
 
 Helpers can take arguments, and they receive the current template context data
-in `this`. Note that some block helpers change context (notably `each`):
+in `this`. Note that some block helpers change the current context (notably
+`each` and `with`):
 
     // in a JavaScript file
     Template.players.leagueIs = function (league) {
