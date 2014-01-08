@@ -166,7 +166,10 @@ html_scanner = {
           throwParseError("Attributes on <body> not supported");
 
         var renderFuncCode = Spacebars.compile(
-          contents, { sourceName: "<body>" });
+          contents, {
+            isBody: true,
+            sourceName: "<body>"
+          });
 
         // We may be one of many `<body>` tags.
         results.js += "\nUI.body.contentParts.push(UI.Component.extend({render: " + renderFuncCode + "}));\nMeteor.startup(function () { if (! UI.body.INSTANTIATED) { UI.body.INSTANTIATED = true; UI.materialize(UI.body, document.body); } });\n";
