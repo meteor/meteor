@@ -385,10 +385,14 @@ _.extend(File.prototype, {
 // options:
 // - library: package library to use for resolving package dependenices
 // - arch: the architecture to build
+// - name: optional name for this Target.  Not currently used in the
+//         code, but helpful for debugging.
 //
 // see subclasses for additional options
 var Target = function (options) {
   var self = this;
+
+  self.name = options.name;
 
   // Package library to use for resolving package dependenices.
   self.library = options.library;
@@ -448,23 +452,13 @@ _.extend(Target.prototype, {
     // Link JavaScript and set up self.js, etc.
     self._emitResources();
 
-    // Minify, if requested
-    if (options.minify) {
-      var minifiers = unipackage.load({
-        library: self.library,
-        packages: ['minifiers']
-      }).minifiers;
-      self.minifyJs(minifiers);
-      if (self.minifyCss) // XXX a bit of a hack
-        self.minifyCss(minifiers);
-    }
 
-    if (options.addCacheBusters) {
-      // Make client-side CSS and JS assets cacheable forever, by
-      // adding a query string with a cache-busting hash.
-      self._addCacheBusters("js");
-      self._addCacheBusters("css");
-    }
+    // Minify, if requested
+    if (options.minify)
+      self._minify();
+
+    if (options.addCacheBusters)
+      self._addCacheBusters();
   },
 
   // Determine the packages to load, create Slices for
@@ -684,6 +678,25 @@ _.extend(Target.prototype, {
     });
   },
 
+  _minify: function () {
+    var self = this;
+    var minifiers = unipackage.load({
+      library: self.library,
+      packages: ['minifiers']
+    }).minifiers;
+    self.minifyJs(minifiers);
+    if (self.minifyCss) // XXX a bit of a hack
+      self.minifyCss(minifiers);
+  },
+
+  // Make client-side CSS and JS assets cacheable forever, by
+  // adding a query string with a cache-busting hash.
+  _addCacheBusters: function () {
+    var self = this;
+    self._addCacheBusters("js");
+    self._addCacheBusters("css");
+  },
+
   // Minify the JS in this target
   minifyJs: function (minifiers) {
     var self = this;
@@ -843,34 +856,8 @@ _.extend(ClientTarget.prototype, {
         url: file.url
       };
 
-      if (file.sourceMap) {
-        // Add anti-XSSI header to this file which will be served over
-        // HTTP. Note that the Mozilla and WebKit implementations differ as to
-        // what they strip: Mozilla looks for the four punctuation characters
-        // but doesn't care about the newline; WebKit only looks for the first
-        // three characters (not the single quote) and then strips everything up
-        // to a newline.
-        // https://groups.google.com/forum/#!topic/mozilla.dev.js-sourcemap/3QBr4FBng5g
-        var mapData = new Buffer(")]}'\n" + file.sourceMap, 'utf8');
-        manifestItem.sourceMap = builder.writeToGeneratedFilename(
-          file.targetPath + '.map', {data: mapData});
-
-        // Use a SHA to make this cacheable.
-        var sourceMapBaseName = file.hash() + ".map";
-        // XXX When we can, drop all of this and just use the SourceMap
-        //     header. FF doesn't support that yet, though:
-        //         https://bugzilla.mozilla.org/show_bug.cgi?id=765993
-        // Note: if we use the older '//@' comment, FF 24 will print a lot
-        // of warnings to the console. So we use the newer '//#' comment...
-        // which Chrome (28) doesn't support. So we also set X-SourceMap
-        // in webapp_server.
-        file.setContents(Buffer.concat([
-          file.contents(),
-          new Buffer("\n//# sourceMappingURL=" + sourceMapBaseName + "\n")
-        ]));
-        manifestItem.sourceMapUrl = require('url').resolve(
-          file.url, sourceMapBaseName);
-      }
+      if (file.sourceMap)
+        self._attachSourceMap(builder, file, manifestItem);
 
       // Set this now, in case we mutated the file's contents.
       manifestItem.size = file.size();
@@ -898,6 +885,35 @@ _.extend(ClientTarget.prototype, {
       manifest: manifest
     });
     return "program.json";
+  },
+
+  _attachSourceMap: function (builder, file, manifestItem) {
+    // Add anti-XSSI header to this file which will be served over
+    // HTTP. Note that the Mozilla and WebKit implementations differ as to
+    // what they strip: Mozilla looks for the four punctuation characters
+    // but doesn't care about the newline; WebKit only looks for the first
+    // three characters (not the single quote) and then strips everything up
+    // to a newline.
+    // https://groups.google.com/forum/#!topic/mozilla.dev.js-sourcemap/3QBr4FBng5g
+    var mapData = new Buffer(")]}'\n" + file.sourceMap, 'utf8');
+    manifestItem.sourceMap = builder.writeToGeneratedFilename(
+      file.targetPath + '.map', {data: mapData});
+
+    // Use a SHA to make this cacheable.
+    var sourceMapBaseName = file.hash() + ".map";
+    // XXX When we can, drop all of this and just use the SourceMap
+    //     header. FF doesn't support that yet, though:
+    //         https://bugzilla.mozilla.org/show_bug.cgi?id=765993
+    // Note: if we use the older '//@' comment, FF 24 will print a lot
+    // of warnings to the console. So we use the newer '//#' comment...
+    // which Chrome (28) doesn't support. So we also set X-SourceMap
+    // in webapp_server.
+    file.setContents(Buffer.concat([
+      file.contents(),
+      new Buffer("\n//# sourceMappingURL=" + sourceMapBaseName + "\n")
+    ]));
+    manifestItem.sourceMapUrl = require('url').resolve(
+      file.url, sourceMapBaseName);
   }
 });
 
@@ -1374,6 +1390,61 @@ var writeFile = function (file, builder) {
 // writeSiteArchive
 ///////////////////////////////////////////////////////////////////////////////
 
+
+// Pick a path in the bundle for each target
+var pickTargetPaths = function (targets, builder) {
+  var paths = {};
+  _.each(targets, function (target, name) {
+    var p = path.join('programs', name);
+    builder.reserve(p, { directory: true });
+    paths[name] = p;
+  });
+  return paths;
+};
+
+// Hack to let servers find relative paths to clients. Should find
+// another solution eventually (probably some kind of mount
+// directive that mounts the client bundle in the server at runtime)
+var relativePathFinder = function (targets, paths) {
+  return function (options) {
+    var pathForTarget = function (target) {
+      var name;
+      _.each(targets, function (t, n) {
+        if (t === target)
+          name = n;
+      });
+      if (! name)
+        throw new Error("missing target?");
+
+      if (! (name in paths))
+        throw new Error("missing target path?");
+
+      return paths[name];
+    };
+
+    return path.relative(pathForTarget(options.relativeTo),
+                         pathForTarget(options.forTarget));
+  };
+};
+
+// Write out each target
+var writeTargets = function (targets, options, builder, paths) {
+  var getRelativeTargetPath = relativePathFinder(targets, paths);
+  var programs = [];
+  _.each(targets, function (target, name) {
+    var relControlFilePath =
+      target.write(builder.enter(paths[name]),
+                   { omitDependencyKit: options.nodeModulesMode === "skip",
+                     getRelativeTargetPath: getRelativeTargetPath });
+    programs.push({
+      name: name,
+      arch: target.mostCompatibleArch(),
+      path: path.join(paths[name], relControlFilePath)
+    });
+  });
+  return programs;
+};
+
 // targets is a set of Targets to include in the bundle, as a map from
 // target name (to use in the bundle) to a Target. outputPath is the
 // path of a directory that should be created to contain the generated
@@ -1411,49 +1482,10 @@ var writeSiteArchive = function (targets, outputPath, options) {
       meteorRelease: options.releaseStamp
     };
 
-    // Pick a path in the bundle for each target
-    var paths = {};
-    _.each(targets, function (target, name) {
-      var p = path.join('programs', name);
-      builder.reserve(p, { directory: true });
-      paths[name] = p;
-    });
+    var paths = pickTargetPaths(targets, builder);
 
-    // Hack to let servers find relative paths to clients. Should find
-    // another solution eventually (probably some kind of mount
-    // directive that mounts the client bundle in the server at runtime)
-    var getRelativeTargetPath = function (options) {
-      var pathForTarget = function (target) {
-        var name;
-        _.each(targets, function (t, n) {
-          if (t === target)
-            name = n;
-        });
-        if (! name)
-          throw new Error("missing target?");
-
-        if (! (name in paths))
-          throw new Error("missing target path?");
-
-        return paths[name];
-      };
-
-      return path.relative(pathForTarget(options.relativeTo),
-                           pathForTarget(options.forTarget));
-    };
-
-    // Write out each target
-    _.each(targets, function (target, name) {
-      var relControlFilePath =
-        target.write(builder.enter(paths[name]),
-                     { omitDependencyKit: options.nodeModulesMode === "skip",
-                       getRelativeTargetPath: getRelativeTargetPath });
-      json.programs.push({
-        name: name,
-        arch: target.mostCompatibleArch(),
-        path: path.join(paths[name], relControlFilePath)
-      });
-    });
+    json.programs = json.programs.concat(
+      writeTargets(targets, options, builder, paths));
 
     // Tell Galaxy what version of the dependency kit we're using, so
     // it can load the right modules. (Include this even if we copied
@@ -1515,6 +1547,319 @@ var writeSiteArchive = function (targets, outputPath, options) {
   }
 };
 
+
+var BundleBuild = function (appDir, outputPath, options) {
+  var self = this;
+
+  self.appDir = appDir;
+  self.outputPath = outputPath;
+
+  if (!options)
+    throw new Error("Must pass options");
+  if (!options.nodeModulesMode)
+    throw new Error("Must pass options.nodeModulesMode");
+  if (!options.library)
+    throw new Error("Must pass options.library");
+  if (!options.releaseStamp)
+    throw new Error("Must pass options.releaseStamp or 'none'");
+
+  self.library = options.library;
+  self.testPackages = options.testPackages || [];
+  self.minify = options.minify;
+  self.releaseStamp = options.releaseStamp;
+  self.nodeModulesMode = options.nodeModulesMode;
+  self.releaseStamp = options.releaseStamp;
+
+  self.watchSet = new watch.WatchSet();
+  self.targets = {};
+  self.controlProgram = null;
+  self.programs = [];
+};
+
+
+_.extend(BundleBuild.prototype, {
+  makeClientTarget: function (name, app) {
+    var self = this;
+    var client = new ClientTarget({
+      name: name,
+      library: self.library,
+      arch: "browser"
+    });
+
+    client.make({
+      packages: [app],
+      test: self.testPackages,
+      minify: self.minify,
+      addCacheBusters: true
+    });
+
+    return client;
+  },
+
+  makeBlankClientTarget: function (serverName) {
+    var self = this;
+    var client = new ClientTarget({
+      name: "blankclient:" + serverName,
+      library: self.library,
+      arch: "browser"
+    });
+
+    client.make({
+      minify: self.minify,
+      addCacheBusters: true
+    });
+
+    return client;
+  },
+
+  makeServerTarget: function (name, app, clientTarget) {
+    var self = this;
+    var targetOptions = {
+      name: name,
+      library: self.library,
+      arch: archinfo.host(),
+      releaseStamp: self.releaseStamp
+    };
+    if (clientTarget)
+      targetOptions.clientTarget = clientTarget;
+
+    var server = new ServerTarget(targetOptions);
+
+    server.make({
+      packages: [app],
+      test: self.testPackages,
+      minify: false
+    });
+
+    return server;
+  },
+
+  // Include default targets, unless there's a no-default-targets file in the
+  // top level of the app. (This is a very hacky interface which will
+  // change. Note, eg, that .meteor/packages is confusingly ignored in this
+  // case.)
+  includeDefaultTargets: function () {
+    var self = this;
+
+    var includeDefaultTargets = watch.readAndWatchFile(
+      self.watchSet, path.join(self.appDir, 'no-default-targets')) === null;
+
+    if (includeDefaultTargets) {
+      // Create a Package object that represents the app
+      var app = self.library.getForApp(self.appDir, ignoreFiles);
+
+      // Client
+      var client = self.makeClientTarget("client", app);
+      self.targets.client = client;
+
+      // Server
+      var server = self.makeServerTarget("server", app, client);
+      self.targets.server = server;
+    }
+  },
+
+  // Pick up any additional targets in /programs
+  includePrograms: function () {
+    var self = this;
+
+    // Step 1: scan for targets and make a list. We will reload if you create a
+    // new subdir in 'programs', or create 'programs' itself.
+    var programsDir = path.join(self.appDir, 'programs');
+    var programsSubdirs = watch.readAndWatchDirectory(self.watchSet, {
+      absPath: programsDir,
+      include: [/\/$/],
+      exclude: [/^\./]
+    });
+
+    _.each(programsSubdirs, function (item) {
+      // Remove trailing slash.
+      item = item.substr(0, item.length - 1);
+
+      if (_.has(self.targets, item)) {
+        buildmessage.error("duplicate programs named '" + item + "'");
+        // Recover by ignoring this program
+        return;
+      }
+      // Programs must (for now) contain a `package.js` file. If not, then
+      // perhaps the directory we are seeing is left over from another git
+      // branch or something and we should ignore it.  We don't actually parse
+      // the package.js file here, though (but we do restart if it is later
+      // added or changed).
+      if (watch.readAndWatchFile(
+        self.watchSet, path.join(programsDir, item, 'package.js')) === null) {
+        return;
+      }
+
+      self.targets[item] = true;  // will be overwritten with actual target later
+
+      // Read attributes.json, if it exists
+      var attrsJsonAbsPath = path.join(programsDir, item, 'attributes.json');
+      var attrsJsonRelPath = path.join('programs', item, 'attributes.json');
+      var attrsJsonContents = watch.readAndWatchFile(
+        self.watchSet, attrsJsonAbsPath);
+
+      var attrsJson = {};
+      if (attrsJsonContents !== null) {
+        try {
+          attrsJson = JSON.parse(attrsJsonContents);
+        } catch (e) {
+          if (! (e instanceof SyntaxError))
+            throw e;
+          buildmessage.error(e.message, { file: attrsJsonRelPath });
+          // recover by ignoring attributes.json
+        }
+      }
+
+      var isControlProgram = !! attrsJson.isControlProgram;
+      if (isControlProgram) {
+        if (self.controlProgram !== null) {
+          buildmessage.error(
+              "there can be only one control program ('" + self.controlProgram +
+              "' is also marked as the control program)",
+            { file: attrsJsonRelPath });
+          // recover by ignoring that it wants to be the control
+          // program
+        } else {
+          self.controlProgram = item;
+        }
+      }
+
+      // Add to list
+      self.programs.push({
+        type: attrsJson.type || "server",
+        name: item,
+        path: path.join(programsDir, item),
+        client: attrsJson.client,
+        attrsJsonRelPath: attrsJsonRelPath
+      });
+    });
+
+    if (! self.controlProgram) {
+      if (_.has(self.targets, 'ctl')) {
+        buildmessage.error(
+          "A program named ctl exists but no program has isControlProgram set");
+        // recover by not making a control program
+      }  else {
+        var target = self.makeServerTarget("ctl", "ctl");
+        self.targets["ctl"] = target;
+        self.controlProgram = "ctl";
+      }
+    }
+
+    // Step 2: sort the list so that client programs are built first (because
+    // when we build the servers we need to be able to reference the clients)
+    self.programs.sort(function (a, b) {
+      a = (a.type === "client") ? 0 : 1;
+      b = (b.type === "client") ? 0 : 1;
+      return a > b;
+    });
+
+    // Step 3: build the programs
+    var blankClientTarget = null;
+    _.each(self.programs, function (p) {
+      // Read this directory as a package and create a target from
+      // it
+      self.library.override(p.name, p.path);
+      var target;
+      switch (p.type) {
+      case "server":
+        target = self.makeServerTarget(p.name, p.name);
+        break;
+      case "traditional":
+        var clientTarget;
+
+        if (! p.client) {
+          if (! blankClientTarget) {
+            clientTarget = blankClientTarget = self.targets._blank =
+              builder.makeBlankClientTarget(p.name);
+          } else {
+            clientTarget = blankClientTarget;
+          }
+        } else {
+          clientTarget = self.targets[p.client];
+          if (! clientTarget) {
+            buildmessage.error("no such program '" + p.client + "'",
+                               { file: p.attrsJsonRelPath });
+            // recover by ignoring target
+            return;
+          }
+        }
+
+        // We don't check whether targets[p.client] is actually a
+        // ClientTarget. If you want to be clever, go ahead.
+
+        target = self.makeServerTarget(p.name, clientTarget);
+        break;
+      case "client":
+        target = self.makeClientTarget(p.name, p.name);
+        break;
+      default:
+        buildmessage.error(
+          "type must be 'server', 'traditional', or 'client'",
+          { file: p.attrsJsonRelPath });
+        // recover by ignoring target
+        return;
+      };
+      self.library.removeOverride(p.name);
+      self.targets[p.name] = target;
+    });
+  },
+
+  writeToDisk: function () {
+    var self = this;
+    self.starResult = writeSiteArchive(self.targets, self.outputPath, {
+      nodeModulesMode: self.nodeModulesMode,
+      builtBy: self.builtBy,
+      controlProgram: self.controlProgram,
+      releaseStamp: self.releaseStamp
+    });
+    self.watchSet.merge(self.starResult.watchSet);
+  },
+
+  build: function () {
+    var self = this;
+
+    self.includeDefaultTargets();
+    self.includePrograms();
+
+    // If we omitted a target due to an error, we might not have a
+    // controlProgram anymore.
+    if (! (self.controlProgram in self.targets))
+      self.controlProgram = undefined;
+
+    // Make sure notice when somebody adds a package to the app packages dir
+    // that may override a warehouse package.
+    self.library.watchLocalPackageDirs(self.watchSet);
+
+    self.writeToDisk();
+  },
+
+  createBundle: function () {
+    var self = this;
+
+    self.builtBy = "Meteor" + (self.releaseStamp &&
+                               self.releaseStamp !== "none" ?
+                               " " + self.releaseStamp : "");
+
+    var finished = false;
+    var messages = buildmessage.capture({
+      title: "building the application"
+    }, function () {
+      self.build();
+      finished = true;
+    });
+
+    var success = finished && ! messages.hasMessages();
+
+    return {
+      errors: success ? false : messages,
+      watchSet: self.watchSet,
+      starManifest: self.starResult && self.starResult.starManifest
+    };
+  }
+});
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // Main
 ///////////////////////////////////////////////////////////////////////////////
@@ -1561,274 +1906,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *   but library.appDir is the app the user is in.
  */
 exports.bundle = function (appDir, outputPath, options) {
-  if (!options)
-    throw new Error("Must pass options");
-  if (!options.nodeModulesMode)
-    throw new Error("Must pass options.nodeModulesMode");
-  if (!options.library)
-    throw new Error("Must pass options.library");
-  if (!options.releaseStamp)
-    throw new Error("Must pass options.releaseStamp or 'none'");
-
-  var library = options.library;
-
-  var builtBy = "Meteor" + (options.releaseStamp &&
-                            options.releaseStamp !== "none" ?
-                            " " + options.releaseStamp : "");
-
-  var success = false;
-  var watchSet = new watch.WatchSet();
-  var starResult = null;
-  var messages = buildmessage.capture({
-    title: "building the application"
-  }, function () {
-    var targets = {};
-    var controlProgram = null;
-
-    var makeClientTarget = function (app) {
-      var client = new ClientTarget({
-        library: library,
-        arch: "browser"
-      });
-
-      client.make({
-        packages: [app],
-        test: options.testPackages || [],
-        minify: options.minify,
-        addCacheBusters: true
-      });
-
-      return client;
-    };
-
-    var makeBlankClientTarget = function () {
-      var client = new ClientTarget({
-        library: library,
-        arch: "browser"
-      });
-
-      client.make({
-        minify: options.minify,
-        addCacheBusters: true
-      });
-
-      return client;
-    };
-
-    var makeServerTarget = function (app, clientTarget) {
-      var targetOptions = {
-        library: library,
-        arch: archinfo.host(),
-        releaseStamp: options.releaseStamp
-      };
-      if (clientTarget)
-        targetOptions.clientTarget = clientTarget;
-
-      var server = new ServerTarget(targetOptions);
-
-      server.make({
-        packages: [app],
-        test: options.testPackages || [],
-        minify: false
-      });
-
-      return server;
-    };
-
-    // Include default targets, unless there's a no-default-targets file in the
-    // top level of the app. (This is a very hacky interface which will
-    // change. Note, eg, that .meteor/packages is confusingly ignored in this
-    // case.)
-
-    var includeDefaultTargets = watch.readAndWatchFile(
-      watchSet, path.join(appDir, 'no-default-targets')) === null;
-
-    if (includeDefaultTargets) {
-      // Create a Package object that represents the app
-      var app = library.getForApp(appDir, ignoreFiles);
-
-      // Client
-      var client = makeClientTarget(app);
-      targets.client = client;
-
-      // Server
-      var server = makeServerTarget(app, client);
-      targets.server = server;
-    }
-
-    // Pick up any additional targets in /programs
-    // Step 1: scan for targets and make a list. We will reload if you create a
-    // new subdir in 'programs', or create 'programs' itself.
-    var programsDir = path.join(appDir, 'programs');
-    var programs = [];
-    var programsSubdirs = watch.readAndWatchDirectory(watchSet, {
-      absPath: programsDir,
-      include: [/\/$/],
-      exclude: [/^\./]
-    });
-
-    _.each(programsSubdirs, function (item) {
-      // Remove trailing slash.
-      item = item.substr(0, item.length - 1);
-
-      if (_.has(targets, item)) {
-        buildmessage.error("duplicate programs named '" + item + "'");
-        // Recover by ignoring this program
-        return;
-      }
-      // Programs must (for now) contain a `package.js` file. If not, then
-      // perhaps the directory we are seeing is left over from another git
-      // branch or something and we should ignore it.  We don't actually parse
-      // the package.js file here, though (but we do restart if it is later
-      // added or changed).
-      if (watch.readAndWatchFile(
-        watchSet, path.join(programsDir, item, 'package.js')) === null) {
-        return;
-      }
-
-      targets[item] = true;  // will be overwritten with actual target later
-
-      // Read attributes.json, if it exists
-      var attrsJsonAbsPath = path.join(programsDir, item, 'attributes.json');
-      var attrsJsonRelPath = path.join('programs', item, 'attributes.json');
-      var attrsJsonContents = watch.readAndWatchFile(
-        watchSet, attrsJsonAbsPath);
-
-      var attrsJson = {};
-      if (attrsJsonContents !== null) {
-        try {
-          attrsJson = JSON.parse(attrsJsonContents);
-        } catch (e) {
-          if (! (e instanceof SyntaxError))
-            throw e;
-          buildmessage.error(e.message, { file: attrsJsonRelPath });
-          // recover by ignoring attributes.json
-        }
-      }
-
-      var isControlProgram = !! attrsJson.isControlProgram;
-      if (isControlProgram) {
-        if (controlProgram !== null) {
-          buildmessage.error(
-              "there can be only one control program ('" + controlProgram +
-              "' is also marked as the control program)",
-            { file: attrsJsonRelPath });
-          // recover by ignoring that it wants to be the control
-          // program
-        } else {
-          controlProgram = item;
-        }
-      }
-
-      // Add to list
-      programs.push({
-        type: attrsJson.type || "server",
-        name: item,
-        path: path.join(programsDir, item),
-        client: attrsJson.client,
-        attrsJsonRelPath: attrsJsonRelPath
-      });
-    });
-
-    if (! controlProgram) {
-      if (_.has(targets, 'ctl')) {
-        buildmessage.error(
-          "A program named ctl exists but no program has isControlProgram set");
-        // recover by not making a control program
-      }  else {
-        var target = makeServerTarget("ctl");
-        targets["ctl"] = target;
-        controlProgram = "ctl";
-      }
-    }
-
-    // Step 2: sort the list so that client programs are built first (because
-    // when we build the servers we need to be able to reference the clients)
-    programs.sort(function (a, b) {
-      a = (a.type === "client") ? 0 : 1;
-      b = (b.type === "client") ? 0 : 1;
-      return a > b;
-    });
-
-    // Step 3: build the programs
-    var blankClientTarget = null;
-    _.each(programs, function (p) {
-      // Read this directory as a package and create a target from
-      // it
-      library.override(p.name, p.path);
-      var target;
-      switch (p.type) {
-      case "server":
-        target = makeServerTarget(p.name);
-        break;
-      case "traditional":
-        var clientTarget;
-
-        if (! p.client) {
-          if (! blankClientTarget) {
-            clientTarget = blankClientTarget = targets._blank =
-              makeBlankClientTarget();
-          } else {
-            clientTarget = blankClientTarget;
-          }
-        } else {
-          clientTarget = targets[p.client];
-          if (! clientTarget) {
-            buildmessage.error("no such program '" + p.client + "'",
-                               { file: p.attrsJsonRelPath });
-            // recover by ignoring target
-            return;
-          }
-        }
-
-        // We don't check whether targets[p.client] is actually a
-        // ClientTarget. If you want to be clever, go ahead.
-
-        target = makeServerTarget(p.name, clientTarget);
-        break;
-      case "client":
-        target = makeClientTarget(p.name);
-        break;
-      default:
-        buildmessage.error(
-          "type must be 'server', 'traditional', or 'client'",
-          { file: p.attrsJsonRelPath });
-        // recover by ignoring target
-        return;
-      };
-      library.removeOverride(p.name);
-      targets[p.name] = target;
-    });
-
-    // If we omitted a target due to an error, we might not have a
-    // controlProgram anymore.
-    if (! (controlProgram in targets))
-      controlProgram = undefined;
-
-    // Make sure notice when somebody adds a package to the app packages dir
-    // that may override a warehouse package.
-    library.watchLocalPackageDirs(watchSet);
-
-    // Write to disk
-    starResult = writeSiteArchive(targets, outputPath, {
-      nodeModulesMode: options.nodeModulesMode,
-      builtBy: builtBy,
-      controlProgram: controlProgram,
-      releaseStamp: options.releaseStamp
-    });
-    watchSet.merge(starResult.watchSet);
-
-    success = true;
-  });
-
-  if (success && messages.hasMessages())
-    success = false; // there were errors
-
-  return {
-    errors: success ? false : messages,
-    watchSet: watchSet,
-    starManifest: starResult && starResult.starManifest
-  };
+  return new BundleBuild(appDir, outputPath, options).createBundle();
 };
 
 // Make a JsImage object (a complete, linked, ready-to-go JavaScript
@@ -1885,6 +1963,7 @@ exports.buildJsImage = function (options) {
   pkg.build();
 
   var target = new JsImageTarget({
+    name: options.name,
     library: options.library,
     arch: archinfo.host()
   });

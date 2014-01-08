@@ -70,6 +70,8 @@ var Slice = function (pkg, options) {
   options = options || {};
   self.pkg = pkg;
 
+  self.isApp = ! pkg.name;
+
   // Name for this slice. For example, the "client" in "ddp.client"
   // (which, NB, we might load on server arches.)
   self.sliceName = options.name;
@@ -175,37 +177,43 @@ var Slice = function (pkg, options) {
   //
   // sourceMap: Allowed only for "js". If present, a string.
   //
-  // Set only when isBuilt is true.
-  self.resources = null;
+  self.resources = [];
 
   // Absolute path to the node_modules directory to use at runtime to
   // resolve Npm.require() calls in this slice. null if this slice
   // does not have a node_modules.
   self.nodeModulesPath = options.nodeModulesPath;
+
+  self.js = [];
 };
 
 _.extend(Slice.prototype, {
-  // Move the slice to the 'built' state. Process all source files
-  // through the appropriate handlers and run the prelink phase on any
-  // resulting JavaScript. Also add all provided source files to the
-  // package dependencies. Sets fields such as dependencies, exports,
-  // prelinkFiles, packageVariables, and resources.
-  build: function () {
+  // Add dependencies on the source code to any plugins that we could have
+  // used. We need to depend even on plugins that we didn't use, because if
+  // they were changed they might become relevant to us. This means that we
+  // end up depending on every source file contributing to all plugins in the
+  // packages we use (including source files from other packages that the
+  // plugin program itself uses), as well as the package.js file from every
+  // package we directly use (since changing the package.js may add or remove
+  // a plugin).
+  _addPluginDependencies: function () {
     var self = this;
-    var isApp = ! self.pkg.name;
+    _.each(self._activePluginPackages(), function (otherPkg) {
+      self.watchSet.merge(otherPkg.pluginWatchSet);
+      // XXX this assumes this is not overwriting something different
+      self.pkg.pluginProviderPackageDirs[otherPkg.name] =
+        otherPkg.packageDirectoryForBuildInfo;
+    });
+  },
 
-    if (self.isBuilt)
-      throw new Error("slice built twice?");
-
-    var resources = [];
-    var js = [];
-
-    // Preemptively check to make sure that each of the packages we
-    // reference actually exist. If we find a package that doesn't
-    // exist, emit an error and remove it from the package list. That
-    // way we get one error about it instead of a new error at each
-    // stage in the build process in which we try to retrieve the
-    // package.
+  // Preemptively check to make sure that each of the packages we
+  // reference actually exist. If we find a package that doesn't
+  // exist, emit an error and remove it from the package list. That
+  // way we get one error about it instead of a new error at each
+  // stage in the build process in which we try to retrieve the
+  // package.
+  checkReferencedPackagesExist: function () {
+    var self = this;
     _.each(['uses', 'implies'], function (field) {
       var scrubbed = [];
       _.each(self[field], function (u) {
@@ -218,257 +226,274 @@ _.extend(Slice.prototype, {
       });
       self[field] = scrubbed;
     });
+  },
 
-    var addAsset = function (contents, relPath) {
-      // XXX hack
-      if (!self.pkg.name)
-        relPath = relPath.replace(/^(private|public)\//, '');
+  addAsset: function (contents, relPath) {
+    var self = this;
 
-      resources.push({
-        type: "asset",
-        data: contents,
-        path: relPath,
-        servePath: path.join(self.pkg.serveRoot, relPath)
-      });
-    };
+    // XXX hack
+    if (self.isApp)
+      relPath = relPath.replace(/^(private|public)\//, '');
 
-    _.each(self.getSourcesFunc(), function (source) {
-      var relPath = source.relPath;
-      var fileOptions = _.clone(source.fileOptions) || {};
-      var absPath = path.resolve(self.pkg.sourceRoot, relPath);
-      var filename = path.basename(relPath);
-      var handler = !fileOptions.isAsset && self._getSourceHandler(filename);
-      var contents = watch.readAndWatchFile(self.watchSet, absPath);
-
-      if (contents === null) {
-        buildmessage.error("File not found: " + source.relPath);
-        // recover by ignoring
-        return;
-      }
-
-      if (! handler) {
-        // If we don't have an extension handler, serve this file as a
-        // static resource on the client, or ignore it on the server.
-        //
-        // XXX This is pretty confusing, especially if you've
-        // accidentally forgotten a plugin -- revisit?
-        addAsset(contents, relPath);
-        return;
-      }
-
-      // This object is called a #CompileStep and it's the interface
-      // to plugins that define new source file handlers (eg,
-      // Coffeescript.)
-      //
-      // Fields on CompileStep:
-      //
-      // - arch: the architecture for which we are building
-      // - inputSize: total number of bytes in the input file
-      // - inputPath: the filename and (relative) path of the input
-      //   file, eg, "foo.js". We don't provide a way to get the full
-      //   path because you're not supposed to read the file directly
-      //   off of disk. Instead you should call read(). That way we
-      //   can ensure that the version of the file that you use is
-      //   exactly the one that is recorded in the dependency
-      //   information.
-      // - pathForSourceMap: If this file is to be included in a source map,
-      //   this is the name you should use for it in the map.
-      // - rootOutputPath: on browser targets, for resources such as
-      //   stylesheet and static assets, this is the root URL that
-      //   will get prepended to the paths you pick for your output
-      //   files so that you get your own namespace, for example
-      //   '/packages/foo'. null on non-browser targets
-      // - fileOptions: any options passed to "api.add_files"; for
-      //   use by the plugin. The built-in "js" plugin uses the "bare"
-      //   option for files that shouldn't be wrapped in a closure.
-      // - declaredExports: An array of symbols exported by this slice, or null
-      //   if it may not export any symbols (eg, test slices). This is used by
-      //   CoffeeScript to ensure that it doesn't close over those symbols, eg.
-      // - read(n): read from the input file. If n is given it should
-      //   be an integer, and you will receive the next n bytes of the
-      //   file as a Buffer. If n is omitted you get the rest of the
-      //   file.
-      // - appendDocument({ section: "head", data: "my markup" })
-      //   Browser targets only. Add markup to the "head" or "body"
-      //   section of the document.
-      // - addStylesheet({ path: "my/stylesheet.css", data: "my css" })
-      //   Browser targets only. Add a stylesheet to the
-      //   document. 'path' is a requested URL for the stylesheet that
-      //   may or may not ultimately be honored. (Meteor will add
-      //   appropriate tags to cause the stylesheet to be loaded. It
-      //   will be subject to any stylesheet processing stages in
-      //   effect, such as minification.)
-      // - addJavaScript({ path: "my/program.js", data: "my code",
-      //                   sourcePath: "src/my/program.js",
-      //                   bare: true })
-      //   Add JavaScript code, which will be namespaced into this
-      //   package's environment (eg, it will see only the exports of
-      //   this package's imports), and which will be subject to
-      //   minification and so forth. Again, 'path' is merely a hint
-      //   that may or may not be honored. 'sourcePath' is the path
-      //   that will be used in any error messages generated (eg,
-      //   "foo.js:4:1: syntax error"). It must be present and should
-      //   be relative to the project root. Typically 'inputPath' will
-      //   do handsomely. "bare" means to not wrap the file in
-      //   a closure, so that its vars are shared with other files
-      //   in the module.
-      // - addAsset({ path: "my/image.png", data: Buffer })
-      //   Add a file to serve as-is over HTTP (browser targets) or
-      //   to include as-is in the bundle (os targets).
-      //   This time `data` is a Buffer rather than a string. For
-      //   browser targets, it will be served at the exact path you
-      //   request (concatenated with rootOutputPath). For server
-      //   targets, the file can be retrieved by passing path to
-      //   Assets.getText or Assets.getBinary.
-      // - error({ message: "There's a problem in your source file",
-      //           sourcePath: "src/my/program.ext", line: 12,
-      //           column: 20, func: "doStuff" })
-      //   Flag an error -- at a particular location in a source
-      //   file, if you like (you can even indicate a function name
-      //   to show in the error, like in stack traces.) sourcePath,
-      //   line, column, and func are all optional.
-      //
-      // XXX for now, these handlers must only generate portable code
-      // (code that isn't dependent on the arch, other than 'browser'
-      // vs 'os') -- they can look at the arch that is provided
-      // but they can't rely on the running on that particular arch
-      // (in the end, an arch-specific slice will be emitted only if
-      // there are native node modules.) Obviously this should
-      // change. A first step would be a setOutputArch() function
-      // analogous to what we do with native node modules, but maybe
-      // what we want is the ability to ask the plugin ahead of time
-      // how specific it would like to force builds to be.
-      //
-      // XXX we handle encodings in a rather cavalier way and I
-      // suspect we effectively end up assuming utf8. We can do better
-      // than that!
-      //
-      // XXX addAsset probably wants to be able to set MIME type and
-      // also control any manifest field we deem relevant (if any)
-      //
-      // XXX Some handlers process languages that have the concept of
-      // include files. These are problematic because we need to
-      // somehow instrument them to get the names and hashs of all of
-      // the files that they read for dependency tracking purposes. We
-      // don't have an API for that yet, so for now we provide a
-      // workaround, which is that _fullInputPath contains the full
-      // absolute path to the input files, which allows such a plugin
-      // to set up its include search path. It's then on its own for
-      // registering dependencies (for now..)
-      //
-      // XXX in the future we should give plugins an easy and clean
-      // way to return errors (that could go in an overall list of
-      // errors experienced across all files)
-      var readOffset = 0;
-      var compileStep = {
-        inputSize: contents.length,
-        inputPath: relPath,
-        _fullInputPath: absPath, // avoid, see above..
-        // XXX duplicates _pathForSourceMap() in linker
-        pathForSourceMap: (
-          self.pkg.name
-            ? self.pkg.name + "/" + relPath
-            : path.basename(relPath)),
-        // null if this is an app. intended to be used for the sources
-        // dictionary for source maps.
-        packageName: self.pkg.name,
-        rootOutputPath: self.pkg.serveRoot,
-        arch: self.arch,
-        archMatches: function (pattern) {
-          return archinfo.matches(self.arch, pattern);
-        },
-        fileOptions: fileOptions,
-        declaredExports: _.pluck(self.declaredExports, 'name'),
-        read: function (n) {
-          if (n === undefined || readOffset + n > contents.length)
-            n = contents.length - readOffset;
-          var ret = contents.slice(readOffset, readOffset + n);
-          readOffset += n;
-          return ret;
-        },
-        appendDocument: function (options) {
-          if (! archinfo.matches(self.arch, "browser"))
-            throw new Error("Document sections can only be emitted to " +
-                            "browser targets");
-          if (options.section !== "head" && options.section !== "body")
-            throw new Error("'section' must be 'head' or 'body'");
-          if (typeof options.data !== "string")
-            throw new Error("'data' option to appendDocument must be a string");
-          resources.push({
-            type: options.section,
-            data: new Buffer(options.data, 'utf8')
-          });
-        },
-        addStylesheet: function (options) {
-          if (! archinfo.matches(self.arch, "browser"))
-            throw new Error("Stylesheets can only be emitted to " +
-                            "browser targets");
-          if (typeof options.data !== "string")
-            throw new Error("'data' option to addStylesheet must be a string");
-          resources.push({
-            type: "css",
-            data: new Buffer(options.data, 'utf8'),
-            servePath: path.join(self.pkg.serveRoot, options.path)
-          });
-        },
-        addJavaScript: function (options) {
-          if (typeof options.data !== "string")
-            throw new Error("'data' option to addJavaScript must be a string");
-          if (typeof options.sourcePath !== "string")
-            throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
-          if (options.bare && ! archinfo.matches(self.arch, "browser"))
-            throw new Error("'bare' option may only be used for browser targets");
-          js.push({
-            source: options.data,
-            sourcePath: options.sourcePath,
-            servePath: path.join(self.pkg.serveRoot, options.path),
-            bare: !!options.bare,
-            sourceMap: options.sourceMap
-          });
-        },
-        addAsset: function (options) {
-          if (! (options.data instanceof Buffer))
-            throw new Error("'data' option to addAsset must be a Buffer");
-          addAsset(options.data, options.path);
-        },
-        error: function (options) {
-          buildmessage.error(options.message || ("error building " + relPath), {
-            file: options.sourcePath,
-            line: options.line ? options.line : undefined,
-            column: options.column ? options.column : undefined,
-            func: options.func ? options.func : undefined
-          });
-        }
-      };
-
-      try {
-        (buildmessage.markBoundary(handler))(compileStep);
-      } catch (e) {
-        e.message = e.message + " (compiling " + relPath + ")";
-        buildmessage.exception(e);
-
-        // Recover by ignoring this source file (as best we can -- the
-        // handler might already have emitted resources)
-      }
+    self.resources.push({
+      type: "asset",
+      data: contents,
+      path: relPath,
+      servePath: path.join(self.pkg.serveRoot, relPath)
     });
+  },
 
-    // Phase 1 link
+  // This object is called a #CompileStep and it's the interface
+  // to plugins that define new source file handlers (eg,
+  // Coffeescript.)
+  //
+  // Fields on CompileStep:
+  //
+  // - arch: the architecture for which we are building
+  // - inputSize: total number of bytes in the input file
+  // - inputPath: the filename and (relative) path of the input
+  //   file, eg, "foo.js". We don't provide a way to get the full
+  //   path because you're not supposed to read the file directly
+  //   off of disk. Instead you should call read(). That way we
+  //   can ensure that the version of the file that you use is
+  //   exactly the one that is recorded in the dependency
+  //   information.
+  // - pathForSourceMap: If this file is to be included in a source map,
+  //   this is the name you should use for it in the map.
+  // - rootOutputPath: on browser targets, for resources such as
+  //   stylesheet and static assets, this is the root URL that
+  //   will get prepended to the paths you pick for your output
+  //   files so that you get your own namespace, for example
+  //   '/packages/foo'. null on non-browser targets
+  // - fileOptions: any options passed to "api.add_files"; for
+  //   use by the plugin. The built-in "js" plugin uses the "bare"
+  //   option for files that shouldn't be wrapped in a closure.
+  // - declaredExports: An array of symbols exported by this slice, or null
+  //   if it may not export any symbols (eg, test slices). This is used by
+  //   CoffeeScript to ensure that it doesn't close over those symbols, eg.
+  // - read(n): read from the input file. If n is given it should
+  //   be an integer, and you will receive the next n bytes of the
+  //   file as a Buffer. If n is omitted you get the rest of the
+  //   file.
+  // - appendDocument({ section: "head", data: "my markup" })
+  //   Browser targets only. Add markup to the "head" or "body"
+  //   section of the document.
+  // - addStylesheet({ path: "my/stylesheet.css", data: "my css" })
+  //   Browser targets only. Add a stylesheet to the
+  //   document. 'path' is a requested URL for the stylesheet that
+  //   may or may not ultimately be honored. (Meteor will add
+  //   appropriate tags to cause the stylesheet to be loaded. It
+  //   will be subject to any stylesheet processing stages in
+  //   effect, such as minification.)
+  // - addJavaScript({ path: "my/program.js", data: "my code",
+  //                   sourcePath: "src/my/program.js",
+  //                   bare: true })
+  //   Add JavaScript code, which will be namespaced into this
+  //   package's environment (eg, it will see only the exports of
+  //   this package's imports), and which will be subject to
+  //   minification and so forth. Again, 'path' is merely a hint
+  //   that may or may not be honored. 'sourcePath' is the path
+  //   that will be used in any error messages generated (eg,
+  //   "foo.js:4:1: syntax error"). It must be present and should
+  //   be relative to the project root. Typically 'inputPath' will
+  //   do handsomely. "bare" means to not wrap the file in
+  //   a closure, so that its vars are shared with other files
+  //   in the module.
+  // - addAsset({ path: "my/image.png", data: Buffer })
+  //   Add a file to serve as-is over HTTP (browser targets) or
+  //   to include as-is in the bundle (os targets).
+  //   This time `data` is a Buffer rather than a string. For
+  //   browser targets, it will be served at the exact path you
+  //   request (concatenated with rootOutputPath). For server
+  //   targets, the file can be retrieved by passing path to
+  //   Assets.getText or Assets.getBinary.
+  // - error({ message: "There's a problem in your source file",
+  //           sourcePath: "src/my/program.ext", line: 12,
+  //           column: 20, func: "doStuff" })
+  //   Flag an error -- at a particular location in a source
+  //   file, if you like (you can even indicate a function name
+  //   to show in the error, like in stack traces.) sourcePath,
+  //   line, column, and func are all optional.
+  //
+  // XXX for now, these handlers must only generate portable code
+  // (code that isn't dependent on the arch, other than 'browser'
+  // vs 'os') -- they can look at the arch that is provided
+  // but they can't rely on the running on that particular arch
+  // (in the end, an arch-specific slice will be emitted only if
+  // there are native node modules.) Obviously this should
+  // change. A first step would be a setOutputArch() function
+  // analogous to what we do with native node modules, but maybe
+  // what we want is the ability to ask the plugin ahead of time
+  // how specific it would like to force builds to be.
+  //
+  // XXX we handle encodings in a rather cavalier way and I
+  // suspect we effectively end up assuming utf8. We can do better
+  // than that!
+  //
+  // XXX addAsset probably wants to be able to set MIME type and
+  // also control any manifest field we deem relevant (if any)
+  //
+  // XXX Some handlers process languages that have the concept of
+  // include files. These are problematic because we need to
+  // somehow instrument them to get the names and hashs of all of
+  // the files that they read for dependency tracking purposes. We
+  // don't have an API for that yet, so for now we provide a
+  // workaround, which is that _fullInputPath contains the full
+  // absolute path to the input files, which allows such a plugin
+  // to set up its include search path. It's then on its own for
+  // registering dependencies (for now..)
+  //
+  // XXX in the future we should give plugins an easy and clean
+  // way to return errors (that could go in an overall list of
+  // errors experienced across all files)
+  //
+  constructCompileStep: function (contents, relPath, absPath, fileOptions) {
+    var self = this;
+    var readOffset = 0;
+    return {
+      inputSize: contents.length,
+      inputPath: relPath,
+      _fullInputPath: absPath, // avoid, see above..
+      // XXX duplicates _pathForSourceMap() in linker
+      pathForSourceMap: (
+        self.pkg.name
+          ? self.pkg.name + "/" + relPath
+          : path.basename(relPath)),
+      // null if this is an app. intended to be used for the sources
+      // dictionary for source maps.
+      packageName: self.pkg.name,
+      rootOutputPath: self.pkg.serveRoot,
+      arch: self.arch,
+      archMatches: function (pattern) {
+        return archinfo.matches(self.arch, pattern);
+      },
+      fileOptions: fileOptions,
+      declaredExports: _.pluck(self.declaredExports, 'name'),
+      read: function (n) {
+        if (n === undefined || readOffset + n > contents.length)
+          n = contents.length - readOffset;
+        var ret = contents.slice(readOffset, readOffset + n);
+        readOffset += n;
+        return ret;
+      },
+      appendDocument: function (options) {
+        if (! archinfo.matches(self.arch, "browser"))
+          throw new Error("Document sections can only be emitted to " +
+                          "browser targets");
+        if (options.section !== "head" && options.section !== "body")
+          throw new Error("'section' must be 'head' or 'body'");
+        if (typeof options.data !== "string")
+          throw new Error("'data' option to appendDocument must be a string");
+        self.resources.push({
+          type: options.section,
+          data: new Buffer(options.data, 'utf8')
+        });
+      },
+      addStylesheet: function (options) {
+        if (! archinfo.matches(self.arch, "browser"))
+          throw new Error("Stylesheets can only be emitted to " +
+                          "browser targets");
+        if (typeof options.data !== "string")
+          throw new Error("'data' option to addStylesheet must be a string");
+        self.resources.push({
+          type: "css",
+          data: new Buffer(options.data, 'utf8'),
+          servePath: path.join(self.pkg.serveRoot, options.path)
+        });
+      },
+      addJavaScript: function (options) {
+        if (typeof options.data !== "string")
+          throw new Error("'data' option to addJavaScript must be a string");
+        if (typeof options.sourcePath !== "string")
+          throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
+        if (options.bare && ! archinfo.matches(self.arch, "browser"))
+          throw new Error("'bare' option may only be used for browser targets");
+        self.js.push({
+          source: options.data,
+          sourcePath: options.sourcePath,
+          servePath: path.join(self.pkg.serveRoot, options.path),
+          bare: !!options.bare,
+          sourceMap: options.sourceMap
+        });
+      },
+      addAsset: function (options) {
+        if (! (options.data instanceof Buffer))
+          throw new Error("'data' option to addAsset must be a Buffer");
+        self.addAsset(options.data, options.path);
+      },
+      error: function (options) {
+        buildmessage.error(options.message || ("error building " + relPath), {
+          file: options.sourcePath,
+          line: options.line ? options.line : undefined,
+          column: options.column ? options.column : undefined,
+          func: options.func ? options.func : undefined
+        });
+      }
+    };
+  },
 
+  handleSourceFile: function (source) {
+    var self = this;
+    var relPath = source.relPath;
+    var fileOptions = _.clone(source.fileOptions) || {};
+    var absPath = path.resolve(self.pkg.sourceRoot, relPath);
+    var filename = path.basename(relPath);
+    var handler = !fileOptions.isAsset && self._getSourceHandler(filename);
+    var contents = watch.readAndWatchFile(self.watchSet, absPath);
+
+    if (contents === null) {
+      buildmessage.error("File not found: " + source.relPath);
+      // recover by ignoring
+      return;
+    }
+
+    if (! handler) {
+      // If we don't have an extension handler, serve this file as a
+      // static resource on the client, or ignore it on the server.
+      //
+      // XXX This is pretty confusing, especially if you've
+      // accidentally forgotten a plugin -- revisit?
+      self.addAsset(contents, relPath);
+      return;
+    }
+
+    var compileStep = self.constructCompileStep(contents, relPath, absPath, fileOptions);
+
+    try {
+      (buildmessage.markBoundary(handler))(compileStep);
+    } catch (e) {
+      e.message = e.message + " (compiling " + relPath + ")";
+      buildmessage.exception(e);
+
+      // Recover by ignoring this source file (as best we can -- the
+      // handler might already have emitted resources)
+    }
+  },
+
+  handleSourceFiles: function () {
+    var self = this;
+    _.each(self.getSourcesFunc(self), function (source) {
+      self.handleSourceFile(source);
+    });
+  },
+
+  prelink: function () {
+    var self = this;
     // Load jsAnalyze from the js-analyze package... unless we are the
     // js-analyze package, in which case never mind. (The js-analyze package's
     // default slice is not allowed to depend on anything!)
     var jsAnalyze = null;
-    if (! _.isEmpty(js) && self.pkg.name !== "js-analyze") {
+    if (! _.isEmpty(self.js) && self.pkg.name !== "js-analyze") {
       jsAnalyze = unipackage.load({
         library: self.pkg.library,
         packages: ["js-analyze"]
       })["js-analyze"].JSAnalyze;
     }
 
-    var results = linker.prelink({
-      inputFiles: js,
-      useGlobalNamespace: isApp,
-      combinedServePath: isApp ? null :
+    return linker.prelink({
+      inputFiles: self.js,
+      useGlobalNamespace: self.isApp,
+      combinedServePath: self.isApp ? null :
         "/packages/" + self.pkg.name +
         (self.sliceName === "main" ? "" : (":" + self.sliceName)) + ".js",
       name: self.pkg.name || null,
@@ -476,23 +501,10 @@ _.extend(Slice.prototype, {
       jsAnalyze: jsAnalyze
     });
 
-    // Add dependencies on the source code to any plugins that we could have
-    // used. We need to depend even on plugins that we didn't use, because if
-    // they were changed they might become relevant to us. This means that we
-    // end up depending on every source file contributing to all plugins in the
-    // packages we use (including source files from other packages that the
-    // plugin program itself uses), as well as the package.js file from every
-    // package we directly use (since changing the package.js may add or remove
-    // a plugin).
-    _.each(self._activePluginPackages(), function (otherPkg) {
-      self.watchSet.merge(otherPkg.pluginWatchSet);
-      // XXX this assumes this is not overwriting something different
-      self.pkg.pluginProviderPackageDirs[otherPkg.name] =
-        otherPkg.packageDirectoryForBuildInfo;
-    });
+  },
 
-    self.prelinkFiles = results.files;
-
+  populatePackageVariables: function (results) {
+    var self = this;
     self.packageVariables = [];
     var packageVariableNames = {};
     _.each(self.declaredExports, function (symbol) {
@@ -515,9 +527,68 @@ _.extend(Slice.prototype, {
     // Forget about the *declared* exports; what matters is packageVariables
     // now.
     self.declaredExports = null;
+  },
 
-    self.resources = resources;
+  // Move the slice to the 'built' state. Process all source files
+  // through the appropriate handlers and run the prelink phase on any
+  // resulting JavaScript. Also add all provided source files to the
+  // package dependencies. Sets fields such as dependencies, exports,
+  // prelinkFiles, packageVariables, and resources.
+  build: function () {
+    var self = this;
+
+    if (self.isBuilt)
+      throw new Error("slice built twice?");
+
+    self.checkReferencedPackagesExist();
+    self.handleSourceFiles();
+    var results = self.prelink();
+    self._addPluginDependencies();
+    self.prelinkFiles = results.files;
+    self.populatePackageVariables(results);
     self.isBuilt = true;
+  },
+
+  // Compute imports by merging the exports of all of the packages
+  // we use. Note that in the case of conflicting symbols, later
+  // packages get precedence.
+  //
+  // We don't get imports from unordered dependencies (since they may not be
+  // defined yet) or from weak dependencies (because the meaning of a name
+  // shouldn't be affected by the non-local decision of whether or not an
+  // unrelated package in the target depends on something).
+  //
+  // Returns map from symbol to supplying package name.
+  computeImports: function (bundleArch) {
+    var self = this;
+    var imports = {};
+    self.eachUsedSlice(
+      bundleArch, {skipWeak: true, skipUnordered: true}, function (otherSlice) {
+        if (! otherSlice.isBuilt)
+          throw new Error("dependency wasn't built?");
+        _.each(otherSlice.packageVariables, function (symbol) {
+          // Slightly hacky implementation of test-only exports.
+          if (symbol.export === true ||
+              (symbol.export === "tests" && self.sliceName === "tests"))
+            imports[symbol.name] = otherSlice.pkg.name;
+        });
+      });
+    return imports;
+  },
+
+  link: function (imports) {
+    var self = this;
+    return linker.link({
+      imports: imports,
+      useGlobalNamespace: self.isApp,
+      // XXX report an error if there is a package called global-imports
+      importStubServePath: self.isApp && '/packages/global-imports.js',
+      prelinkFiles: self.prelinkFiles,
+      noExports: self.noExports,
+      packageVariables: self.packageVariables,
+      includeSourceMapInstructions: archinfo.matches(self.arch, "browser"),
+      name: self.pkg.name || null
+    });
   },
 
   // Get the resources that this function contributes to a bundle, in
@@ -544,40 +615,8 @@ _.extend(Slice.prototype, {
       throw new Error("slice of arch '" + self.arch + "' does not support '" +
                       bundleArch + "'?");
 
-    // Compute imports by merging the exports of all of the packages
-    // we use. Note that in the case of conflicting symbols, later
-    // packages get precedence.
-    //
-    // We don't get imports from unordered dependencies (since they may not be
-    // defined yet) or from weak dependencies (because the meaning of a name
-    // shouldn't be affected by the non-local decision of whether or not an
-    // unrelated package in the target depends on something).
-    var imports = {}; // map from symbol to supplying package name
-    self.eachUsedSlice(
-      bundleArch, {skipWeak: true, skipUnordered: true}, function (otherSlice) {
-        if (! otherSlice.isBuilt)
-          throw new Error("dependency wasn't built?");
-        _.each(otherSlice.packageVariables, function (symbol) {
-          // Slightly hacky implementation of test-only exports.
-          if (symbol.export === true ||
-              (symbol.export === "tests" && self.sliceName === "tests"))
-            imports[symbol.name] = otherSlice.pkg.name;
-        });
-      });
-
-    // Phase 2 link
-    var isApp = ! self.pkg.name;
-    var files = linker.link({
-      imports: imports,
-      useGlobalNamespace: isApp,
-      // XXX report an error if there is a package called global-imports
-      importStubServePath: isApp && '/packages/global-imports.js',
-      prelinkFiles: self.prelinkFiles,
-      noExports: self.noExports,
-      packageVariables: self.packageVariables,
-      includeSourceMapInstructions: archinfo.matches(self.arch, "browser"),
-      name: self.pkg.name || null
-    });
+    var imports = self.computeImports(bundleArch);
+    var files = self.link(imports);
 
     // Add each output as a resource
     var jsResources = _.map(files, function (file) {
@@ -672,27 +711,26 @@ _.extend(Slice.prototype, {
     return ret;
   },
 
+  // We provide a hardcoded handler for *.js files.. since plugins
+  // are written in JavaScript we have to start somewhere.
+  jsHandler: function (compileStep) {
+    compileStep.addJavaScript({
+      data: compileStep.read().toString('utf8'),
+      path: compileStep.inputPath,
+      sourcePath: compileStep.inputPath,
+      // XXX eventually get rid of backward-compatibility "raw" name
+      // XXX COMPAT WITH 0.6.4
+      bare: compileStep.fileOptions.bare || compileStep.fileOptions.raw
+    });
+  },
+
   // Get all extensions handlers registered in this slice, as a map
   // from extension (no leading dot) to handler function. Throws an
   // exception if two packages are registered for the same extension.
   _allHandlers: function () {
     var self = this;
-    var ret = {};
 
-    // We provide a hardcoded handler for *.js files.. since plugins
-    // are written in JavaScript we have to start somewhere.
-    _.extend(ret, {
-      js: function (compileStep) {
-        compileStep.addJavaScript({
-          data: compileStep.read().toString('utf8'),
-          path: compileStep.inputPath,
-          sourcePath: compileStep.inputPath,
-          // XXX eventually get rid of backward-compatibility "raw" name
-          // XXX COMPAT WITH 0.6.4
-          bare: compileStep.fileOptions.bare || compileStep.fileOptions.raw
-        });
-      }
-    });
+    var ret = {js: self.jsHandler};
 
     _.each(self._activePluginPackages(), function (otherPkg) {
       _.each(otherPkg.sourceHandlers, function (handler, ext) {
@@ -740,6 +778,35 @@ _.extend(Slice.prototype, {
 ///////////////////////////////////////////////////////////////////////////////
 // Packages
 ///////////////////////////////////////////////////////////////////////////////
+
+var toArray = function (x) {
+  if (x instanceof Array)
+    return x;
+  return x ? [x] : [];
+};
+
+var allWheres = ['client', 'server'];
+
+var toWhereArray = function (where) {
+  if (!(where instanceof Array)) {
+    where = where ? [where] : allWheres;
+  }
+  where = _.uniq(where);
+  var realWhere = _.intersection(where, allWheres);
+  if (realWhere.length !== where.length) {
+    var badWheres = _.difference(where, allWheres);
+    // avoid using _.each so as to not add more frames to skip
+    for (var i = 0; i < badWheres.length; ++i) {
+      buildmessage.error(
+        "Invalid 'where' argument: '" + badWheres[i] + "'",
+        // skip toWhereArray in addition to the actual API function
+        {useMyCaller: 1});
+    };
+    // recover by using the real ones only
+  }
+  return realWhere;
+};
+
 
 // XXX This object conflates two things that now seem to be almost
 // totally separate: source code for a package, and an actual built
@@ -951,7 +1018,7 @@ _.extend(Package.prototype, {
       return;
 
     var Plugin = {
-      // 'extension' is a file extension without the separation dot 
+      // 'extension' is a file extension without the separation dot
       // (eg 'js', 'coffee', 'coffee.md')
       //
       // 'handler' is a function that takes a single argument, a
@@ -986,21 +1053,8 @@ _.extend(Package.prototype, {
     self._pluginsInitialized = true;
   },
 
-  // Move a package to the built state (by running its source files
-  // through the appropriate compiler plugins.) Once build has
-  // completed, any errors detected in the package will have been
-  // emitted to buildmessage.
-  //
-  // build() may retrieve the package's dependencies from the library,
-  // so it is illegal to call build() from library.get() (until the
-  // package has actually been put in the loaded package list.)
-  build: function () {
+  buildPlugins: function () {
     var self = this;
-
-    if (self.pluginsBuilt || self.slicesBuilt)
-      throw new Error("package already built?");
-
-    // Build plugins
     _.each(self.pluginInfo, function (info) {
       buildmessage.enterJob({
         title: "building plugin `" + info.name +
@@ -1034,6 +1088,23 @@ _.extend(Package.prototype, {
       });
     });
     self.pluginsBuilt = true;
+  },
+
+  // Move a package to the built state (by running its source files
+  // through the appropriate compiler plugins.) Once build has
+  // completed, any errors detected in the package will have been
+  // emitted to buildmessage.
+  //
+  // build() may retrieve the package's dependencies from the library,
+  // so it is illegal to call build() from library.get() (until the
+  // package has actually been put in the loaded package list.)
+  build: function () {
+    var self = this;
+
+    if (self.pluginsBuilt || self.slicesBuilt)
+      throw new Error("package already built?");
+
+    self.buildPlugins();
 
     // Build slices. Might use our plugins, so needs to happen
     // second.
@@ -1110,36 +1181,175 @@ _.extend(Package.prototype, {
     self.defaultSlices = {'os': [options.sliceName]};
   },
 
-  // Initialize a package from a legacy-style (package.js) package
-  // directory. This function does not retrieve the package's
-  // dependencies from the library, and on return, the package will be
-  // in an unbuilt state.
-  initFromPackageDir: function (name, dir, options) {
+  packageAPI: function (uses, implies, sources, exports, role) {
+    return {
+      // Called when this package wants to make another package be
+      // used. Can also take literal package objects, if you have
+      // anonymous packages you want to use (eg, app packages)
+      //
+      // options can include:
+      //
+      // - role: defaults to "use", but you could pass something
+      //   like "test" if for some reason you wanted to include a
+      //   package's tests
+      //
+      // - unordered: if true, don't require this package to load
+      //   before us -- just require it to be loaded anytime. Also
+      //   don't bring this package's imports into our
+      //   namespace. If false, override a true value specified in
+      //   a previous call to use for this package name. (A
+      //   limitation of the current implementation is that this
+      //   flag is not tracked per-environment or per-role.)  This
+      //   option can be used to resolve circular dependencies in
+      //   exceptional circumstances, eg, the 'meteor' package
+      //   depends on 'handlebars', but all packages (including
+      //   'handlebars') have an implicit dependency on
+      //   'meteor'. Internal use only -- future support of this
+      //   is not guaranteed. #UnorderedPackageReferences
+      //
+      // - weak: if true, don't require this package to load at all, but if
+      //   it's going to load, load it before us.  Don't bring this
+      //   package's imports into our namespace and don't allow us to use
+      //   its plugins. (Has the same limitation as "unordered" that this
+      //   flag is not tracked per-environment or per-role; this may
+      //   change.)
+      use: function (names, where, options) {
+        // Support `api.use(package, {weak: true})` without where.
+        if (_.isObject(where) && !_.isArray(where) && !options) {
+          options = where;
+          where = null;
+        }
+        options = options || {};
+
+        names = toArray(names);
+        where = toWhereArray(where);
+
+        // A normal dependency creates an ordering constraint and a "if I'm
+        // used, use that" constraint. Unordered dependencies lack the
+        // former; weak dependencies lack the latter. There's no point to a
+        // dependency that lacks both!
+        if (options.unordered && options.weak) {
+          buildmessage.error(
+            "A dependency may not be both unordered and weak.",
+            { useMyCaller: true });
+          // recover by ignoring
+          return;
+        }
+
+        _.each(names, function (name) {
+          _.each(where, function (w) {
+            if (options.role && options.role !== "use")
+              throw new Error("Role override is no longer supported");
+            uses[role][w].push(_.extend(parseSpec(name), {
+              unordered: options.unordered || false,
+              weak: options.weak || false
+            }));
+          });
+        });
+      },
+      // Called when this package wants packages using it to also use
+      // another package.  eg, for umbrella packages which want packages
+      // using them to also get symbols or plugins from their components.
+      imply: function (names, where) {
+        if (role === "test") {
+          buildmessage.error(
+            "api.imply() is only allowed in on_use, not on_test.",
+            { useMyCaller: true });
+          // recover by ignoring
+          return;
+        }
+
+        names = toArray(names);
+        where = toWhereArray(where);
+
+        _.each(names, function (name) {
+          _.each(where, function (w) {
+            // We don't allow weak or unordered implies, since the main
+            // purpose of imply is to provide imports and plugins.
+            implies[w].push(parseSpec(name));
+          });
+        });
+      },
+
+      // Top-level call to add a source file to a package. It will
+      // be processed according to its extension (eg, *.coffee
+      // files will be compiled to JavaScript.)
+      add_files: function (paths, where, fileOptions) {
+        paths = toArray(paths);
+        where = toWhereArray(where);
+
+        _.each(paths, function (path) {
+          _.each(where, function (w) {
+            var source = {relPath: path};
+            if (fileOptions)
+              source.fileOptions = fileOptions;
+            sources[role][w].push(source);
+          });
+        });
+      },
+
+      // Export symbols from this package.
+      //
+      // @param symbols String (eg "Foo") or array of String
+      // @param where 'client', 'server', or an array of those
+      // @param options 'testOnly', boolean.
+      export: function (symbols, where, options) {
+        if (role === "test") {
+          buildmessage.error("You cannot export symbols from a test.",
+                             { useMyCaller: true });
+          // recover by ignoring
+          return;
+        }
+        // Support `api.export("FooTest", {testOnly: true})` without
+        // where.
+        if (_.isObject(where) && !_.isArray(where) && !options) {
+          options = where;
+          where = null;
+        }
+        options = options || {};
+
+        symbols = toArray(symbols);
+        where = toWhereArray(where);
+
+        _.each(symbols, function (symbol) {
+          // XXX be unicode-friendlier
+          if (!symbol.match(/^([_$a-zA-Z][_$a-zA-Z0-9]*)$/)) {
+            buildmessage.error("Bad exported symbol: " + symbol,
+                               { useMyCaller: true });
+            // recover by ignoring
+            return;
+          }
+          _.each(where, function (w) {
+            exports[w].push({name: symbol, testOnly: !!options.testOnly});
+          });
+        });
+      },
+
+      // XXX COMPAT WITH 0.6.4
+      error: function () {
+        // I would try to support this but I don't even know what
+        // its signature was supposed to be anymore
+        buildmessage.error(
+          "api.error(), ironically, is no longer supported",
+          { useMyCaller: true });
+        // recover by ignoring
+      },
+
+      // XXX COMPAT WITH 0.6.4
+      registered_extensions: function () {
+        buildmessage.error(
+          "api.registered_extensions() is no longer supported",
+          { useMyCaller: true });
+        // recover by returning dummy value
+        return [];
+      }
+    }
+  },
+
+  // == 'Package' object visible in package.js ==
+  constructPackage: function (roleHandlers) {
     var self = this;
-    var isPortable = true;
-    options = options || {};
-    self.name = name;
-    self.sourceRoot = dir;
-    self.serveRoot = path.join(path.sep, 'packages', name);
-
-    if (! fs.existsSync(self.sourceRoot))
-      throw new Error("putative package directory " + dir + " doesn't exist?");
-
-    var roleHandlers = {use: null, test: null};
-    var npmDependencies = null;
-
-    var packageJsPath = path.join(self.sourceRoot, 'package.js');
-    var code = fs.readFileSync(packageJsPath);
-    var packageJsHash = Builder.sha1(code);
-
-    // Any package that depends on us needs to be rebuilt if our package.js file
-    // changes, because a change to package.js might add or remove a plugin,
-    // which could change a file from being handled by extension vs treated as
-    // an asset.
-    self.pluginWatchSet.addFile(packageJsPath, packageJsHash);
-
-    // == 'Package' object visible in package.js ==
-    var Package = {
+    return {
       // Set package metadata. Options:
       // - summary: for 'meteor list'
       // - internal: if true, hide in list
@@ -1226,14 +1436,17 @@ _.extend(Package.prototype, {
         self.pluginInfo[options.name] = options;
       }
     };
+  },
 
-    // == 'Npm' object visible in package.js ==
-    var Npm = {
+  // == 'Npm' object visible in package.js ==
+  constructNpm: function () {
+    var self = this;
+    return {
       depends: function (_npmDependencies) {
         // XXX make npmDependencies be per slice, so that production
         // doesn't have to ship all of the npm modules used by test
         // code
-        if (npmDependencies) {
+        if (self.npmDependencies) {
           buildmessage.error("Npm.depends may only be called once per package",
                              { useMyCaller: true });
           // recover by ignoring the Npm.depends line
@@ -1260,7 +1473,7 @@ _.extend(Package.prototype, {
           return;
         }
 
-        npmDependencies = _npmDependencies;
+        self.npmDependencies = _npmDependencies;
       },
 
       require: function (name) {
@@ -1282,6 +1495,38 @@ _.extend(Package.prototype, {
         }
       }
     };
+  },
+
+  // Initialize a package from a legacy-style (package.js) package
+  // directory. This function does not retrieve the package's
+  // dependencies from the library, and on return, the package will be
+  // in an unbuilt state.
+  initFromPackageDir: function (name, dir, options) {
+    var self = this;
+    var isPortable = true;
+    options = options || {};
+    self.name = name;
+    self.sourceRoot = dir;
+    self.serveRoot = path.join(path.sep, 'packages', name);
+
+    if (! fs.existsSync(self.sourceRoot))
+      throw new Error("putative package directory " + dir + " doesn't exist?");
+
+    var roleHandlers = {use: null, test: null};
+    self.npmDependencies = null;
+
+    var packageJsPath = path.join(self.sourceRoot, 'package.js');
+    var code = fs.readFileSync(packageJsPath);
+    var packageJsHash = Builder.sha1(code);
+
+    // Any package that depends on us needs to be rebuilt if our package.js file
+    // changes, because a change to package.js might add or remove a plugin,
+    // which could change a file from being handled by extension vs treated as
+    // an asset.
+    self.pluginWatchSet.addFile(packageJsPath, packageJsHash);
+
+    var Package = self.constructPackage(roleHandlers);
+    var Npm = self.constructNpm();
 
     try {
       files.runJavaScript(code.toString('utf8'), {
@@ -1299,7 +1544,7 @@ _.extend(Package.prototype, {
       // it, though.
       roleHandlers = {use: null, test: null};
       self.pluginInfo = {};
-      npmDependencies = null;
+      self.npmDependencies = null;
     }
 
     // source files used
@@ -1334,194 +1579,7 @@ _.extend(Package.prototype, {
     // one. #OldStylePackageSupport
     _.each(["use", "test"], function (role) {
       if (roleHandlers[role]) {
-        var toArray = function (x) {
-          if (x instanceof Array)
-            return x;
-          return x ? [x] : [];
-        };
-
-        var allWheres = ['client', 'server'];
-        var toWhereArray = function (where) {
-          if (!(where instanceof Array)) {
-            where = where ? [where] : allWheres;
-          }
-          where = _.uniq(where);
-          var realWhere = _.intersection(where, allWheres);
-          if (realWhere.length !== where.length) {
-            var badWheres = _.difference(where, allWheres);
-            // avoid using _.each so as to not add more frames to skip
-            for (var i = 0; i < badWheres.length; ++i) {
-              buildmessage.error(
-                "Invalid 'where' argument: '" + badWheres[i] + "'",
-                // skip toWhereArray in addition to the actual API function
-                {useMyCaller: 1});
-            };
-            // recover by using the real ones only
-          }
-          return realWhere;
-        };
-
-        var api = {
-          // Called when this package wants to make another package be
-          // used. Can also take literal package objects, if you have
-          // anonymous packages you want to use (eg, app packages)
-          //
-          // options can include:
-          //
-          // - role: defaults to "use", but you could pass something
-          //   like "test" if for some reason you wanted to include a
-          //   package's tests
-          //
-          // - unordered: if true, don't require this package to load
-          //   before us -- just require it to be loaded anytime. Also
-          //   don't bring this package's imports into our
-          //   namespace. If false, override a true value specified in
-          //   a previous call to use for this package name. (A
-          //   limitation of the current implementation is that this
-          //   flag is not tracked per-environment or per-role.)  This
-          //   option can be used to resolve circular dependencies in
-          //   exceptional circumstances, eg, the 'meteor' package
-          //   depends on 'handlebars', but all packages (including
-          //   'handlebars') have an implicit dependency on
-          //   'meteor'. Internal use only -- future support of this
-          //   is not guaranteed. #UnorderedPackageReferences
-          //
-          // - weak: if true, don't require this package to load at all, but if
-          //   it's going to load, load it before us.  Don't bring this
-          //   package's imports into our namespace and don't allow us to use
-          //   its plugins. (Has the same limitation as "unordered" that this
-          //   flag is not tracked per-environment or per-role; this may
-          //   change.)
-          use: function (names, where, options) {
-            // Support `api.use(package, {weak: true})` without where.
-            if (_.isObject(where) && !_.isArray(where) && !options) {
-              options = where;
-              where = null;
-            }
-            options = options || {};
-
-            names = toArray(names);
-            where = toWhereArray(where);
-
-            // A normal dependency creates an ordering constraint and a "if I'm
-            // used, use that" constraint. Unordered dependencies lack the
-            // former; weak dependencies lack the latter. There's no point to a
-            // dependency that lacks both!
-            if (options.unordered && options.weak) {
-              buildmessage.error(
-                "A dependency may not be both unordered and weak.",
-                { useMyCaller: true });
-              // recover by ignoring
-              return;
-            }
-
-            _.each(names, function (name) {
-              _.each(where, function (w) {
-                if (options.role && options.role !== "use")
-                  throw new Error("Role override is no longer supported");
-                uses[role][w].push(_.extend(parseSpec(name), {
-                  unordered: options.unordered || false,
-                  weak: options.weak || false
-                }));
-              });
-            });
-          },
-
-          // Called when this package wants packages using it to also use
-          // another package.  eg, for umbrella packages which want packages
-          // using them to also get symbols or plugins from their components.
-          imply: function (names, where) {
-            if (role === "test") {
-              buildmessage.error(
-                "api.imply() is only allowed in on_use, not on_test.",
-                { useMyCaller: true });
-              // recover by ignoring
-              return;
-            }
-
-            names = toArray(names);
-            where = toWhereArray(where);
-
-            _.each(names, function (name) {
-              _.each(where, function (w) {
-                // We don't allow weak or unordered implies, since the main
-                // purpose of imply is to provide imports and plugins.
-                implies[w].push(parseSpec(name));
-              });
-            });
-          },
-
-          // Top-level call to add a source file to a package. It will
-          // be processed according to its extension (eg, *.coffee
-          // files will be compiled to JavaScript.)
-          add_files: function (paths, where, fileOptions) {
-            paths = toArray(paths);
-            where = toWhereArray(where);
-
-            _.each(paths, function (path) {
-              _.each(where, function (w) {
-                var source = {relPath: path};
-                if (fileOptions)
-                  source.fileOptions = fileOptions;
-                sources[role][w].push(source);
-              });
-            });
-          },
-
-          // Export symbols from this package.
-          //
-          // @param symbols String (eg "Foo") or array of String
-          // @param where 'client', 'server', or an array of those
-          // @param options 'testOnly', boolean.
-          export: function (symbols, where, options) {
-            if (role === "test") {
-              buildmessage.error("You cannot export symbols from a test.",
-                                 { useMyCaller: true });
-              // recover by ignoring
-              return;
-            }
-            // Support `api.export("FooTest", {testOnly: true})` without
-            // where.
-            if (_.isObject(where) && !_.isArray(where) && !options) {
-              options = where;
-              where = null;
-            }
-            options = options || {};
-
-            symbols = toArray(symbols);
-            where = toWhereArray(where);
-
-            _.each(symbols, function (symbol) {
-              // XXX be unicode-friendlier
-              if (!symbol.match(/^([_$a-zA-Z][_$a-zA-Z0-9]*)$/)) {
-                buildmessage.error("Bad exported symbol: " + symbol,
-                                   { useMyCaller: true });
-                // recover by ignoring
-                return;
-              }
-              _.each(where, function (w) {
-                exports[w].push({name: symbol, testOnly: !!options.testOnly});
-              });
-            });
-          },
-          // XXX COMPAT WITH 0.6.4
-          error: function () {
-            // I would try to support this but I don't even know what
-            // its signature was supposed to be anymore
-            buildmessage.error(
-              "api.error(), ironically, is no longer supported",
-              { useMyCaller: true });
-            // recover by ignoring
-          },
-          // XXX COMPAT WITH 0.6.4
-          registered_extensions: function () {
-            buildmessage.error(
-              "api.registered_extensions() is no longer supported",
-              { useMyCaller: true });
-            // recover by returning dummy value
-            return [];
-          }
-        };
+        var api = self.packageAPI(uses, implies, sources, exports, role);
 
         try {
           roleHandlers[role](api);
@@ -1535,7 +1593,7 @@ _.extend(Package.prototype, {
                      test: {client: [], server: []}};
           roleHandlers = {use: null, test: null};
           self.pluginInfo = {};
-          npmDependencies = null;
+          self.npmDependencies = null;
         }
       }
     });
@@ -1569,7 +1627,7 @@ _.extend(Package.prototype, {
     // We run this even if we have no dependencies, because we might
     // need to delete dependencies we used to have.
     var nodeModulesPath = null;
-    if (meteorNpm.updateDependencies(name, packageNpmDir, npmDependencies)) {
+    if (meteorNpm.updateDependencies(name, packageNpmDir, self.npmDependencies)) {
       nodeModulesPath = path.join(packageNpmDir, 'node_modules');
       if (! meteorNpm.dependenciesArePortable(packageNpmDir))
         isPortable = false;
@@ -1642,23 +1700,8 @@ _.extend(Package.prototype, {
       var names = project.get_packages(appDir);
       var arch = sliceName === "server" ? "os" : "browser";
 
-      // Create slice
-      var slice = new Slice(self, {
-        name: sliceName,
-        arch: arch,
-        uses: _.map(names, parseSpec)
-      });
-      self.slices.push(slice);
-
-      // Watch control files for changes
-      // XXX this read has a race with the actual reads that are used
-      _.each([path.join(appDir, '.meteor', 'packages'),
-              path.join(appDir, '.meteor', 'release')], function (p) {
-                watch.readAndWatchFile(slice.watchSet, p);
-              });
-
       // Determine source files
-      slice.getSourcesFunc = function () {
+      var getSourcesFunc = function (slice) {
         var sourceInclude = _.map(slice.registeredExtensions(), function (ext) {
           return new RegExp('\\.' + quotemeta(ext) + '$');
         });
@@ -1805,6 +1848,22 @@ _.extend(Package.prototype, {
 
         return sources;
       };
+
+      // Create slice
+      var slice = new Slice(self, {
+        name: sliceName,
+        arch: arch,
+        uses: _.map(names, parseSpec),
+        getSourcesFunc: getSourcesFunc
+      });
+      self.slices.push(slice);
+
+      // Watch control files for changes
+      // XXX this read has a race with the actual reads that are used
+      _.each([path.join(appDir, '.meteor', 'packages'),
+              path.join(appDir, '.meteor', 'release')], function (p) {
+                watch.readAndWatchFile(slice.watchSet, p);
+              });
     });
 
     self.defaultSlices = { browser: ['client'], 'os': ['server'] };
@@ -1952,7 +2011,6 @@ _.extend(Package.prototype, {
       slice.noExports = !!sliceJson.noExports;
       slice.packageVariables = sliceJson.packageVariables || [];
       slice.prelinkFiles = [];
-      slice.resources = [];
 
       _.each(sliceJson.resources, function (resource) {
         rejectBadPath(resource.file);
