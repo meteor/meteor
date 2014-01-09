@@ -11,6 +11,10 @@
   with numeric `length` fields as arrays.  Among other things, this allows you
   to use documents with numeric `length` fields with Mongo.  #594 #1737
 
+* Fix races when calling login and/or logoutOtherClients from multiple
+  tabs. #1616
+
+
 ## v0.7.0.1
 
 * Two fixes to `meteor run` Mongo startup bugs that could lead to hangs with the
