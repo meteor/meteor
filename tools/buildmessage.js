@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var files = require('./files.js');
+var parseStack = require('./parse-stack.js');
 
 var debugBuild = !!process.env.METEOR_DEBUG_BUILD;
 
@@ -23,7 +24,7 @@ var Job = function (options) {
 
 _.extend(Job.prototype, {
   // options may include type ("error"), message, func, file, line,
-  // column, stack (in the format returned by parseStack)
+  // column, stack (in the format returned by parseStack.parse())
   addMessage: function (options) {
     var self = this;
     self.messages.push(options);
@@ -254,64 +255,6 @@ var jobHasMessages = function () {
   return currentJob ? search(currentJob) : false;
 };
 
-// Given an Error (eg, 'new Error'), return the stack associated with
-// that error as an array. More recently called functions appear first
-// and each element is an object with keys:
-// - file: filename as it appears in the stack
-// - line: 1-indexed line number in file, as a Number
-// - column: 1-indexed column in line, as a Number
-// - func: name of the function in the frame (maybe null)
-//
-// Accomplishes this by parsing the text representation of the stack
-// with regular expressions. Unlikely to work anywhere but v8.
-//
-// If a function on the stack has been marked with markBoundary, don't
-// return anything past that function. We call this the "user portion"
-// of the stack.
-var parseStack = function (err) {
-  var frames = err.stack.split('\n');
-
-  frames.shift(); // at least the first line is the exception
-  var stop = false;
-  var ret = [];
-
-  _.each(frames, function (frame) {
-    if (stop)
-      return;
-    var m;
-    if (m =
-        frame.match(/^\s*at\s*((new )?[^\s]+)\s*\(([^:]*)(:(\d+))?(:(\d+))?\)\s*$/)) {
-      // "    at My.Function (/path/to/myfile.js:532:39)"
-      // "    at Array.forEach (native)"
-      // "    at new My.Class (file.js:1:2)"
-      if (m[1] === "__mark__") {
-        stop = true;
-        return;
-      }
-      ret.push({
-        func: m[1],
-        file: m[3],
-        line: m[5] ? +m[5] : undefined,
-        column: m[7] ? +m[7] : undefined
-      });
-    } else if (m = frame.match(/^\s*at\s+([^:]+)(:(\d+))?(:(\d+))?\s*$/)) {
-      // "    at /path/to/myfile.js:532:39"
-      ret.push({
-        file: m[1],
-        line: m[3] ? +m[3] : undefined,
-        column: m[5] ? +m[5] : undefined
-      });
-    } else if (_.isEmpty(ret)) {
-      // We haven't found any stack frames, so probably we have newlines in the
-      // error message. Just skip this line.
-    } else {
-      throw new Error("Couldn't parse stack frame: '" + frame + "'");
-    }
-  });
-
-  return ret;
-};
-
 // Given a function f, return a "marked" version of f. The mark
 // indicates that stack traces should stop just above f. So if you
 // mark a user-supplied callback function before calling it, you'll be
@@ -319,9 +262,7 @@ var parseStack = function (err) {
 // (the part inside their own code, and not all of the innards of the
 // code that called it).
 var markBoundary = function (f) {
-  return function __mark__ () {
-    return f.apply(this, arguments);
-  };
+  return parseStack.markBottom(f);
 };
 
 // Record a build error. If inside a job, add the error to the current
@@ -365,7 +306,7 @@ var error = function (message, options) {
 
   if ('useMyCaller' in info) {
     if (info.useMyCaller) {
-      info.stack = parseStack(new Error()).slice(2);
+      info.stack = parseStack.parse(new Error()).slice(2);
       var howManyToSkip = (
         typeof info.useMyCaller === "number" ? info.useMyCaller : 0);
       var caller = info.stack[howManyToSkip];
@@ -411,7 +352,7 @@ var exception = function (error) {
       column: error.column
     });
   } else {
-    var stack = parseStack(error);
+    var stack = parseStack.parse(error);
     var locus = stack[0];
     currentJob.addMessage({
       message: message,

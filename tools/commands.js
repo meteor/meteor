@@ -1193,3 +1193,16 @@ main.registerCommand({
 }, function (options) {
   return auth.whoAmICommand(options);
 });
+
+
+///////////////////////////////////////////////////////////////////////////////
+// self-test
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand({
+  name: 'self-test',
+  hidden: true
+}, function (options) {
+  var selftest = require('./selftest.js');
+  return selftest.runTests();
+});

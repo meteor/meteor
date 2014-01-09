@@ -301,3 +301,10 @@ Prints the username of the currently logged-in Meteor developer.
 
 See 'meteor login' to log into or 'meteor logout' to log out of of your
 Meteor account.
+
+
+>>> self-test
+Run tests of the 'meteor' tool.
+Usage: meteor self-test
+
+Runs internal tests. Exits with status 0 on success.
