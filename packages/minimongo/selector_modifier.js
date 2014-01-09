@@ -48,6 +48,9 @@ Minimongo.Matcher.prototype.affectedByModifier = function (modifier) {
 //                           only. (assumed to come from oplog)
 // @returns - Boolean: if after applying the modifier, selector can start
 //                     accepting the modified value.
+// NOTE: assumes that document affected by modifier didn't match this Matcher
+// before, so if modifier can't convince selector in a positive change it would
+// stay 'false'.
 // Currently doesn't support $-operators and numeric indices precisely.
 Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
   var self = this;
@@ -56,7 +59,7 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
 
   modifier = _.extend({$set:{}, $unset:{}}, modifier);
 
-  if (!self.isEquality())
+  if (!self.isSimple())
     return true;
 
   if (_.any(self._getPaths(), pathHasNumericKeys) ||
@@ -64,12 +67,52 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
       _.any(_.keys(modifier.$set), pathHasNumericKeys))
     return true;
 
+  // A helper to ensure object has only certain keys
+  var onlyContainsKeys = function (obj, keys) {
+    return _.every(_.keys(obj), _.bind(_.contains, null, keys));
+  };
+
   // convert a selector into an object matching the selector
   // { 'a.b': { ans: 42 }, 'foo.bar': null, 'foo.baz': "something" }
   // => { a: { b: { ans: 42 } }, foo: { bar: null, baz: "something" } }
+  var failed = false;
   var doc = pathsToTree(self._getPaths(),
-                        function (path) { return self._selector[path]; },
-                        _.identity /*conflict resolution is no resolution*/);
+    function (path) {
+      var valueSelector = self._selector[path];
+      if (isOperatorObject(valueSelector)) {
+        // XXX check if there is a $set or $unset that indicates something is an
+        // object rather than a scalar in the actual object
+
+        // if there is a strict equality, there is a good
+        // chance we can use one of those as "matching"
+        // dummy value
+        if (valueSelector.$in) {
+          var matches = _.bind(self.documentMatches, self);
+          return _.find(valueSelector.$in, matches);
+        } else if (onlyContainsKeys(valueSelector, ['$gt', '$gte', '$lt', '$lte'])) {
+          var lowerBound = -Infinity, upperBound = Infinity;
+          _.each(['$lte', '$lt'], function (op) {
+            if (_.has(valueSelector, op) && valueSelector[op] < upperBound)
+              upperBound = valueSelector[op];
+          });
+          _.each(['$gte', '$gt'], function (op) {
+            if (_.has(valueSelector, op) && valueSelector[op] > lowerBound)
+              lowerBound = valueSelector[op];
+          });
+
+          return (lowerBound + upperBound) / 2;
+        } else if (onlyContainsKeys(valueSelector, ['$nin',' $ne'])) {
+          return {};
+        } else {
+          failed = true;
+        }
+      }
+      return self._selector[path];
+    },
+    _.identity /*conflict resolution is no resolution*/);
+
+  if (failed)
+    return true;
 
   try {
     LocalCollection._modify(doc, modifier);
