@@ -586,23 +586,30 @@ access the same collection using the same API.
 
 Specifically, when you pass a `name`, here's what happens:
 
-* On the server, a collection with that name is created on a backend
-Mongo server. When you call methods on that collection on the server,
-they translate directly into normal Mongo operations (after checking that
-they match your [access control rules](#allow)).
+* On the server (if you do not specify a `connection`), a collection with that
+name is created on a backend Mongo server. When you call methods on that
+collection on the server, they translate directly into normal Mongo operations
+(after checking that they match your [access control rules](#allow)).
 
-* On the client, a Minimongo instance is
-created. Minimongo is essentially an in-memory, non-persistent
-implementation of Mongo in pure JavaScript. It serves as a local cache
-that stores just the subset of the database that this client is working
-with. Queries on the client ([`find`](#find)) are served directly out of
-this cache, without talking to the server.
+* On the client (and on the server if you specify a `connection`), a Minimongo
+instance is created. Minimongo is essentially an in-memory, non-persistent
+implementation of Mongo in pure JavaScript. It serves as a local cache that
+stores just the subset of the database that this client is working with. Queries
+([`find`](#find)) on these collections are served directly out of this cache,
+without talking to the server.
 
 * When you write to the database on the client ([`insert`](#insert),
-[`update`](#update), [`remove`](#remove)), the command is executed
-immediately on the client, and, simultaneously, it's shipped up to the
-server and executed there too.  The `livedata` package is
-responsible for this.
+[`update`](#update), [`remove`](#remove)), the command is executed locally
+immediately, and, simultaneously, it's sent to the server and executed
+there too. This happens via [stubs](#meteor_methods), because writes are
+implemented as methods.
+
+{{#note}}
+When, on the server, you write to a collection which has a specified
+`connection` to another server, it sends the corresponding method to the other
+server and receives the changed values back from it over DDP. Unlike on the
+client, it does not execute the write locally first.
+{{/note}}
 
 If you pass `null` as the `name`, then you're creating a local
 collection. It's not synchronized anywhere; it's just a local scratchpad
@@ -678,8 +685,6 @@ In this release, Minimongo has some limitations:
 
 * `$pull` in modifiers can only accept certain kinds
 of selectors.
-* `$` to denote the matched array position is not
-supported in modifier.
 * `findAndModify`, aggregate functions, and
 map/reduce aren't supported.
 
@@ -1319,21 +1324,32 @@ it's up to you to be sure.
 Queries can specify a particular set of fields to include or exclude from the
 result object.
 
-To exclude certain fields from the result objects, the field specifier
-is a dictionary whose keys are field names and whose values are `0`.
+To exclude specific fields from the result objects, the field specifier is a
+dictionary whose keys are field names and whose values are `0`. All unspecified
+fields are included.
 
     // Users.find({}, {fields: {password: 0, hash: 0}})
 
-To return an object that only includes the specified field, use `1` as
+To include only specific fields in the result documents, use `1` as
 the value. The `_id` field is still included in the result.
 
     // Users.find({}, {fields: {firstname: 1, lastname: 1}})
 
-It is not possible to mix inclusion and exclusion styles (except for the cases
-when `_id` is included by default or explicitly excluded). Field operators such
-as `$` and `$elemMatch` are not available on the client side yet.
+With one exception, it is not possible to mix inclusion and exclusion styles:
+the keys must either be all 1 or all 0.  The exception is that you may specify
+`_id: 0` in an inclusion specifier, which will leave `_id` out of the result
+object as well.  However, such field specifiers can not be used with
+[`observeChanges`](#observe_changes), [`observe`](#observe), cursors returned
+from a [publish function](#meteor_publish), or cursors used in
+`{{dstache}}#each}}` in a template. They may be used with [`fetch`](#fetch),
+[`findOne`](#findone), [`forEach`](#foreach), and [`map`](#map).
 
-More advanced example:
+
+<a href="http://docs.mongodb.org/manual/reference/operator/projection/">Field
+operators</a> such as `$` and `$elemMatch` are not available on the client side
+yet.
+
+A more advanced example:
 
     Users.insert({ alterEgos: [{ name: "Kira", alliance: "murderer" },
                                { name: "L", alliance: "police" }],
