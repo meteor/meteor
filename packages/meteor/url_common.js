@@ -20,7 +20,7 @@ Meteor.absoluteUrl = function (path, options) {
   if (path)
     url += path;
 
-  // turn http to http if secure option is set, and we're not talking
+  // turn http to https if secure option is set, and we're not talking
   // to localhost.
   if (options.secure &&
       /^http:/.test(url) && // url starts with 'http:'
