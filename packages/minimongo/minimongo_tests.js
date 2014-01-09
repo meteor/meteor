@@ -624,6 +624,9 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$type: 11}}, {a: 'x'});
   nomatch({a: {$type: 11}}, {});
 
+  // The normal rule for {$type:4} (4 means array) is that it NOT good enough to
+  // just have an array that's the leaf that matches the path.  (An array inside
+  // that array is good, though.)
   nomatch({a: {$type: 4}}, {a: []});
   nomatch({a: {$type: 4}}, {a: [1]}); // tested against mongodb
   match({a: {$type: 1}}, {a: [1]});
@@ -635,6 +638,10 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$type: 1}}, {a: ["1", []]});
   match({a: {$type: 2}}, {a: ["1", []]});
   match({a: {$type: 4}}, {a: ["1", []]}); // tested against mongodb
+  // An exception to the normal rule is that an array found via numeric index is
+  // examined itself, and its elements are not.
+  match({'a.0': {$type: 4}}, {a: [[0]]});
+  nomatch({'a.0': {$type: 1}}, {a: [[0]]});
 
   // regular expressions
   match({a: /a/}, {a: 'cat'});
@@ -1432,6 +1439,14 @@ Tinytest.add("minimongo - observe ordered with projection", function (test) {
   c.insert({_id: idA2, a:2});
   test.equal(operations.shift(), undefined);
 
+  var cursor = c.find({}, {fields: {a: 1, _id: 0}});
+  test.throws(function () {
+    cursor.observeChanges({added: function () {}});
+  });
+  test.throws(function () {
+    cursor.observe({added: function () {}});
+  });
+
   // test initial inserts (and backwards sort)
   handle = c.find({}, {sort: {a: -1}, fields: { a: 1 } }).observe(cbs);
   test.equal(operations.shift(), ['added', {a:2}, 0, null]);
@@ -1518,7 +1533,7 @@ Tinytest.add("minimongo - ordering", function (test) {
 
   // document ordering under a sort specification
   var verify = function (sorts, docs) {
-    _.each(sorts, function (sort) {
+    _.each(_.isArray(sorts) ? sorts : [sorts], function (sort) {
       var sorter = new MinimongoTest.Sorter(sort);
       assert_ordering(test, sorter.getComparator(), docs);
     });
@@ -1554,7 +1569,87 @@ Tinytest.add("minimongo - ordering", function (test) {
     new MinimongoTest.Sorter(123);
   });
 
+  // No sort spec implies everything equal.
   test.equal(new MinimongoTest.Sorter({}).getComparator()({a:1}, {a:2}), 0);
+
+  // All sorts of array edge cases!
+  // Increasing sort sorts by the smallest element it finds; 1 < 2.
+  verify({a: 1}, [
+    {a: [1, 10, 20]},
+    {a: [5, 2, 99]}
+  ]);
+  // Decreasing sorts by largest it finds; 99 > 20.
+  verify({a: -1}, [
+    {a: [5, 2, 99]},
+    {a: [1, 10, 20]}
+  ]);
+  // Can also sort by specific array indices.
+  verify({'a.1': 1}, [
+    {a: [5, 2, 99]},
+    {a: [1, 10, 20]}
+  ]);
+  // We do NOT expand sub-arrays, so the minimum in the second doc is 5, not
+  // -20. (Numbers always sort before arrays.)
+  verify({a: 1}, [
+    {a: [1, [10, 15], 20]},
+    {a: [5, [-5, -20], 18]}
+  ]);
+  // The maximum in each of these is the array, since arrays are "greater" than
+  // numbers. And [10, 15] is greater than [-5, -20].
+  verify({a: -1}, [
+    {a: [1, [10, 15], 20]},
+    {a: [5, [-5, -20], 18]}
+  ]);
+  // 'a.0' here ONLY means "first element of a", not "first element of something
+  // found in a", so it CANNOT find the 10 or -5.
+  verify({'a.0': 1}, [
+    {a: [1, [10, 15], 20]},
+    {a: [5, [-5, -20], 18]}
+  ]);
+  verify({'a.0': -1}, [
+    {a: [5, [-5, -20], 18]},
+    {a: [1, [10, 15], 20]}
+  ]);
+  // Similarly, this is just comparing [-5,-20] to [10, 15].
+  verify({'a.1': 1}, [
+    {a: [5, [-5, -20], 18]},
+    {a: [1, [10, 15], 20]}
+  ]);
+  verify({'a.1': -1}, [
+    {a: [1, [10, 15], 20]},
+    {a: [5, [-5, -20], 18]}
+  ]);
+  // Here we are just comparing [10,15] directly to [19,3] (and NOT also
+  // iterating over the numbers; this is implemented by setting dontIterate in
+  // makeLookupFunction).  So [10,15]<[19,3] even though 3 is the smallest
+  // number you can find there.
+  verify({'a.1': 1}, [
+    {a: [1, [10, 15], 20]},
+    {a: [5, [19, 3], 18]}
+  ]);
+  verify({'a.1': -1}, [
+    {a: [5, [19, 3], 18]},
+    {a: [1, [10, 15], 20]}
+  ]);
+  // Minimal elements are 1 and 5.
+  verify({a: 1}, [
+    {a: [1, [10, 15], 20]},
+    {a: [5, [19, 3], 18]}
+  ]);
+  // Maximal elements are [19,3] and [10,15] (because arrays sort higher than
+  // numbers), even though there's a 20 floating around.
+  verify({a: -1}, [
+    {a: [5, [19, 3], 18]},
+    {a: [1, [10, 15], 20]}
+  ]);
+  // Maximal elements are [10,15] and [3,19].  [10,15] is bigger even though 19
+  // is the biggest number in them, because array comparison is lexicographic.
+  verify({a: -1}, [
+    {a: [1, [10, 15], 20]},
+    {a: [5, [3, 19], 18]}
+  ]);
+
+
 });
 
 Tinytest.add("minimongo - sort", function (test) {

@@ -957,6 +957,14 @@ MongoConnection.prototype._observeChanges = function (
     return self._observeChangesTailable(cursorDescription, ordered, callbacks);
   }
 
+  // You may not filter out _id when observing changes, because the id is a core
+  // part of the observeChanges API.
+  if (cursorDescription.options.fields &&
+      (cursorDescription.options.fields._id === 0 ||
+       cursorDescription.options.fields._id === false)) {
+    throw Error("You may not observe a cursor with {fields: {_id: 0}}");
+  }
+
   var observeKey = JSON.stringify(
     _.extend({ordered: ordered}, cursorDescription));
 
@@ -987,15 +995,27 @@ MongoConnection.prototype._observeChanges = function (
 
   if (firstHandle) {
     var driverClass = PollingObserveDriver;
-    if (self._oplogHandle && !ordered && !callbacks._testOnlyPollCallback
-        && OplogObserveDriver.cursorSupported(cursorDescription)) {
-      driverClass = OplogObserveDriver;
+    var matcher;
+    if (self._oplogHandle && !ordered && !callbacks._testOnlyPollCallback) {
+      try {
+        matcher = new Minimongo.Matcher(cursorDescription.selector);
+      } catch (e) {
+        // Ignore and avoid oplog driver. eg, maybe we're trying to compile some
+        // newfangled $selector that minimongo doesn't support yet.
+        // XXX make all compilation errors MinimongoError or something
+        //     so that this doesn't ignore unrelated exceptions
+      }
+      if (matcher
+          && OplogObserveDriver.cursorSupported(cursorDescription, matcher)) {
+        driverClass = OplogObserveDriver;
+      }
     }
     observeDriver = new driverClass({
       cursorDescription: cursorDescription,
       mongoHandle: self,
       multiplexer: multiplexer,
       ordered: ordered,
+      matcher: matcher,  // ignored by polling
       _testOnlyPollCallback: callbacks._testOnlyPollCallback
     });
 

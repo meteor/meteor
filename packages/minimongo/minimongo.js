@@ -96,7 +96,7 @@ LocalCollection.Cursor = function (collection, selector, options) {
   } else {
     self.selector_id = undefined;
     self.matcher = new Minimongo.Matcher(selector, self);
-    self.sorter = (self.matcher.isGeoQuery() || options.sort) ?
+    self.sorter = (self.matcher.hasGeoQuery() || options.sort) ?
       new Sorter(options.sort || []) : null;
   }
   self.skip = options.skip;
@@ -270,11 +270,14 @@ _.extend(LocalCollection.Cursor.prototype, {
     if (!options._allow_unordered && !ordered && (self.skip || self.limit))
       throw new Error("must use ordered observe with skip or limit");
 
+    if (self.fields && (self.fields._id === 0 || self.fields._id === false))
+      throw Error("You may not observe a cursor with {fields: {_id: 0}}");
+
     var query = {
       matcher: self.matcher, // not fast pathed
       sorter: ordered && self.sorter,
       distances: (
-        self.matcher.isGeoQuery() && ordered && new LocalCollection._IdMap),
+        self.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap),
       results_snapshot: null,
       ordered: ordered,
       cursor: self,
@@ -411,7 +414,7 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered,
   // in the observeChanges case, distances is actually part of the "query" (ie,
   // live results set) object.  in other cases, distances is only used inside
   // this function.
-  if (self.matcher.isGeoQuery() && ordered) {
+  if (self.matcher.hasGeoQuery() && ordered) {
     if (distances)
       distances.clear();
     else

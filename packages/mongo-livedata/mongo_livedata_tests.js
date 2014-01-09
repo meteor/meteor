@@ -757,14 +757,42 @@ testAsyncMulti('mongo-livedata - empty documents, ' + idGeneration, [
     }
 
     var coll = new Meteor.Collection(collectionName, collectionOptions);
-    var docId;
 
     coll.insert({}, expect(function (err, id) {
       test.isFalse(err);
       test.isTrue(id);
-      docId = id;
       var cursor = coll.find();
       test.equal(cursor.count(), 1);
+    }));
+  }
+]);
+
+// See https://github.com/meteor/meteor/issues/594.
+testAsyncMulti('mongo-livedata - document with length, ' + idGeneration, [
+  function (test, expect) {
+    var self = this;
+    var collectionName = Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName);
+      Meteor.subscribe('c-' + collectionName);
+    }
+
+    self.coll = new Meteor.Collection(collectionName, collectionOptions);
+
+    self.coll.insert({foo: 'x', length: 0}, expect(function (err, id) {
+      test.isFalse(err);
+      test.isTrue(id);
+      self.docId = id;
+      test.equal(self.coll.findOne(self.docId),
+                 {_id: self.docId, foo: 'x', length: 0});
+    }));
+  },
+  function (test, expect) {
+    var self = this;
+    self.coll.update(self.docId, {$set: {length: 5}}, expect(function (err) {
+      test.isFalse(err);
+      test.equal(self.coll.findOne(self.docId),
+                 {_id: self.docId, foo: 'x', length: 5});
     }));
   }
 ]);

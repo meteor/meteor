@@ -25,7 +25,9 @@ Minimongo.Matcher = function (selector) {
   // path (eg, $where).
   self._paths = {};
   // Set to true if compilation finds a $near.
-  self._isGeoQuery = false;
+  self._hasGeoQuery = false;
+  // Set to true if compilation finds a $where.
+  self._hasWhere = false;
   // Set to false if compilation finds anything other than a simple equality on
   // some fields.
   self._isEquality = true;
@@ -38,8 +40,11 @@ _.extend(Minimongo.Matcher.prototype, {
   documentMatches: function (doc) {
     return this._docMatcher(doc);
   },
-  isGeoQuery: function () {
-    return this._isGeoQuery;
+  hasGeoQuery: function () {
+    return this._hasGeoQuery;
+  },
+  hasWhere: function () {
+    return this._hasWhere;
   },
   isEquality: function () {
     return this._isEquality;
@@ -308,6 +313,7 @@ var LOGICAL_OPERATORS = {
   $where: function (selectorValue, matcher) {
     // Record that *any* path may be used.
     matcher._recordPathUsed('');
+    matcher._hasWhere = true;
     if (!(selectorValue instanceof Function)) {
       // XXX MongoDB seems to have more complex logic to decide where or or not
       // to add "return"; not sure exactly what it is.
@@ -398,7 +404,7 @@ var VALUE_OPERATORS = {
   $near: function (operand, valueSelector, matcher, isRoot) {
     if (!isRoot)
       throw Error("$near can't be inside another $ operator");
-    matcher._isGeoQuery = true;
+    matcher._hasGeoQuery = true;
 
     // There are two kinds of geodata in MongoDB: coordinate pairs and
     // GeoJSON. They use different distance metrics, too. GeoJSON queries are
@@ -818,7 +824,11 @@ expandArraysInBranches = function (branches, skipTheArrays) {
   var branchesOut = [];
   _.each(branches, function (branch) {
     var thisIsArray = isArray(branch.value);
-    if (!skipTheArrays || !thisIsArray) {
+    // We include the branch itself, *UNLESS* we it's an array that we're going
+    // to iterate and we're told to skip arrays.  (That's right, we include some
+    // arrays even skipTheArrays is true: these are arrays that were found via
+    // explicit numerical indices.)
+    if (!(skipTheArrays && thisIsArray && !branch.dontIterate)) {
       branchesOut.push({
         value: branch.value,
         arrayIndex: branch.arrayIndex
