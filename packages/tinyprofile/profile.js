@@ -163,6 +163,9 @@
 
 
 var enabled = !! process.env['METEOR_PROFILE'];
+// XXX XXX NOMERGE
+// XXX always turn on. building this as a release people can use without having to set the env variable
+enabled = true;
 
 var bucketTimes = {};
 
