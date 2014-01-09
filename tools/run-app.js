@@ -8,6 +8,7 @@ var watch = require('./watch.js');
 var project = require('./project.js');
 var bundler = require('./bundler.js');
 var release = require('./release.js');
+var buildmessage = require('./buildmessage.js');
 var inFiber = require('./fiber-helpers.js').inFiber;
 
 // Parse out s as if it were a bash command line.
@@ -357,6 +358,7 @@ _.extend(AppRunner.prototype, {
     var self = this;
 
     self.runLog.clearLog();
+    self.proxy.setMode("hold");
 
     // Check to make sure we're running the right version of Meteor.
     //
@@ -377,27 +379,44 @@ _.extend(AppRunner.prototype, {
     if (! self.firstRun)
       release.current.library.refresh(true); // pick up changes to packages
 
-    self.proxy.setMode("hold");
     var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
-
     var bundleResult = bundler.bundle({
       appDir: self.appDir,
       outputPath: bundlePath,
       nodeModulesMode: "symlink",
       buildOptions: self.buildOptions
     });
-
-    if (bundleResult.errors)
-      return {
-        outcome: 'bundle-fail',
-        bundleResult: bundleResult
-      };
     var watchSet = bundleResult.watchSet;
 
     // Read the settings file, if any
     var settings = null;
-    if (self.settingsFile)
-      settings = files.getSettings(self.settingsFile, watchSet);
+    var settingsWatchSet = new watch.WatchSet;
+    var settingsMessages = buildmessage.capture({
+      title: "preparing to run",
+      rootPath: process.cwd()
+    }, function () {
+      if (self.settingsFile)
+        settings = files.getSettings(self.settingsFile, settingsWatchSet);
+    });
+
+    // HACK: merge the watchset and messages from reading the settings
+    // file into those from the build. This works fine but it sort of
+    // messy. Maybe clean it up sometime.
+    watchSet.merge(settingsWatchSet);
+    if (settingsMessages.hasMessages()) {
+      if (! bundleResult.errors)
+        bundleResult.errors = settingsMessages;
+      else
+        bundleResult.errors.merge(settingsMessages);
+    }
+
+    // Were there errors?
+    if (bundleResult.errors) {
+      return {
+        outcome: 'bundle-fail',
+        bundleResult: bundleResult
+      };
+    }
 
     // Atomically (1) see if we've been stop()'d, (2) if not, create a
     // future that can be used to stop() us once we start running.

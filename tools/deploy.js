@@ -251,8 +251,8 @@ var canonicalizeSite = function (site) {
 // Options:
 // - appDir: root directory of app to bundle up
 // - site: site to deploy as
-// - settings: deploy settings to use, if any (omit to leave unchanged
-//   from previous deploy of the app, if any)
+// - settingsFile: file from which to read deploy settings (undefined
+//   to leave unchanged from previous deploy of the app, if any)
 // - buildOptions: the 'buildOptions' argument to the bundler
 var bundleAndDeploy = function (options) {
   var site = canonicalizeSite(options.site);
@@ -272,16 +272,32 @@ var bundleAndDeploy = function (options) {
   var bundlePath = path.join(buildDir, 'bundle');
 
   process.stdout.write('Deploying to ' + site + '.  Bundling...\n');
-  var bundler = require('./bundler.js');
-  var bundleResult = bundler.bundle({
-    appDir: options.appDir,
-    outputPath: bundlePath,
-    nodeModulesMode: "skip",
-    buildOptions: options.buildOptions
+
+  var settings = null;
+  var messages = buildmessage.capture({
+    title: "preparing to deploy",
+    rootPath: process.cwd()
+  }, function () {
+    if (options.settingsFile)
+      settings = files.getSettings(options.settingsFile);
   });
-  if (bundleResult.errors) {
-    process.stdout.write("\n\nErrors prevented deploying:\n");
-    process.stdout.write(bundleResult.errors.formatMessages());
+
+  if (! messages.hasMessages()) {
+    var bundler = require('./bundler.js');
+    var bundleResult = bundler.bundle({
+      appDir: options.appDir,
+      outputPath: bundlePath,
+      nodeModulesMode: "skip",
+      buildOptions: options.buildOptions
+    });
+
+    if (bundleResult.errors)
+      messages.merge(bundleResult.errors);
+  }
+
+  if (messages.hasMessages()) {
+    process.stdout.write("\nErrors prevented deploying:\n");
+    process.stdout.write(messages.formatMessages());
     return 1;
   }
 
@@ -291,7 +307,7 @@ var bundleAndDeploy = function (options) {
     method: 'POST',
     operation: 'deploy',
     site: site,
-    qs: options.settings ? { settings: options.settings} : {},
+    qs: settings !== null ? { settings: settings } : {},
     bodyStream: files.createTarGzStream(path.join(buildDir, 'bundle')),
     expectPayload: ['url'],
     preflightPassword: preflight.preflightPassword

@@ -813,10 +813,6 @@ main.registerCommand({
     return 1;
   }
 
-  var settings = undefined;
-  if (options.settings)
-    settings = files.getSettings(options.settings);
-
   if (! auth.isLoggedIn()) {
     process.stderr.write(
 "To instantly deploy your app on a free testing server, just enter your\n" +
@@ -836,7 +832,7 @@ main.registerCommand({
     return deployGalaxy.deploy({
       app: site,
       appDir: options.appDir,
-      settings: settings,
+      settingsFile: options.settings,
       starball: starball,
       buildOptions: buildOptions,
       admin: options.admin
@@ -845,7 +841,7 @@ main.registerCommand({
     return deploy.bundleAndDeploy({
       appDir: options.appDir,
       site: site,
-      settings: settings,
+      settingsFile: options.settings,
       buildOptions: buildOptions
     });
   }
@@ -1034,7 +1030,7 @@ main.registerCommand({
     return deploy.bundleAndDeploy({
       appDir: testRunnerAppDir,
       site: options.deploy,
-      settings: options.settings && files.getSettings(options.settings),
+      settingsFile: options.settings,
       buildOptions: buildOptions
     });
   } else {

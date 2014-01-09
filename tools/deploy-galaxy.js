@@ -258,7 +258,7 @@ exports.deleteApp = function (app) {
 // options:
 // - app
 // - appDir
-// - settings
+// - settingsFile
 // - buildOptions
 // - starball
 // XXX refactor this to separate the "maybe bundle" part from "actually deploy"
@@ -275,13 +275,22 @@ exports.deploy = function (options) {
     var bundler = require('./bundler.js');
     var starball;
 
+    var settings = null;
+    var messages = buildmessage.capture({
+      title: "preparing to deploy",
+      rootPath: process.cwd()
+    }, function () {
+      if (options.settingsFile)
+        settings = files.getSettings(options.settingsFile);
+    });
+
     // Don't try to connect to galaxy before the bundle is
     // done. Because bundling doesn't yield, this will cause the
     // connection to time out. Eventually we'd like to have bundle
     // yield, so that we can connect (and make sure auth works)
     // concurrent with bundling.
 
-    if (! options.starball) {
+    if (! options.starball && ! messages.hasMessages()) {
       process.stdout.write('Deploying ' + options.app + '. Bundling...\n');
       var bundleResult = bundler.bundle({
         appDir: options.appDir,
@@ -289,29 +298,35 @@ exports.deploy = function (options) {
         nodeModulesMode: 'skip',
         buildOptions: options.buildOptions
       });
-      if (bundleResult.errors) {
-        process.stdout.write("\n\nErrors prevented deploying:\n");
-        process.stdout.write(bundleResult.errors.formatMessages());
-        return 1;
-      }
 
-      // S3 (which is what's likely on the other end our upload)
-      // requires a content-length header for HTTP PUT uploads. That
-      // means that we have to actually tgz up the bundle before we
-      // can start the upload rather than streaming it. S3 has an
-      // alternate API for doing chunked uploads, but (a) it has a
-      // minimum chunk size of 5 MB, so it doesn't help us much
-      // (many/most stars will be smaller than that), and (b) it's
-      // nonstandard, so we'd have to bake in S3's specific
-      // scheme. Doesn't seem worthwhile for now, so just tar to a
-      // temporary directory. If stars get radically bigger then it
-      // might be worthwhile to tar to memory and spill to S3 every
-      // 5MB.
-      starball = path.join(tmpdir, topLevelDirName + ".tar.gz");
-      files.createTarball(bundlePath, starball);
+      if (bundleResult.errors) {
+        messages.merge(bundleResult.errors);
+      } else {
+        // S3 (which is what's likely on the other end our upload)
+        // requires a content-length header for HTTP PUT uploads. That
+        // means that we have to actually tgz up the bundle before we
+        // can start the upload rather than streaming it. S3 has an
+        // alternate API for doing chunked uploads, but (a) it has a
+        // minimum chunk size of 5 MB, so it doesn't help us much
+        // (many/most stars will be smaller than that), and (b) it's
+        // nonstandard, so we'd have to bake in S3's specific
+        // scheme. Doesn't seem worthwhile for now, so just tar to a
+        // temporary directory. If stars get radically bigger then it
+        // might be worthwhile to tar to memory and spill to S3 every
+        // 5MB.
+        starball = path.join(tmpdir, topLevelDirName + ".tar.gz");
+        files.createTarball(bundlePath, starball);
+      }
     } else {
       starball = options.starball;
     }
+
+    if (messages.hasMessages()) {
+      process.stdout.write("\nErrors prevented deploying:\n");
+      process.stdout.write(messages.formatMessages());
+      return 1;
+    }
+
     process.stdout.write('Uploading...\n');
 
     var galaxy = exports.discoverGalaxy(options.app);
@@ -319,9 +334,9 @@ exports.deploy = function (options) {
     var Package = getPackage();
 
     var created = true;
-    var appConfig = {
-      settings: options.settings
-    };
+    var appConfig = {};
+    if (settings !== null)
+      appConfig.settings = settings;
 
     if (options.admin)
       appConfig.admin = true;
@@ -335,7 +350,7 @@ exports.deploy = function (options) {
         // if they were passed. We explicitly check for undefined
         // because we want to allow you to unset settings by passing
         // an empty file.
-        if (options.settings !== undefined) {
+        if (appConfig.settings !== undefined) {
           conn.call('updateAppConfiguration', options.app, appConfig);
         }
         created = false;

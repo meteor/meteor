@@ -134,6 +134,21 @@ _.extend(MessageSet.prototype, {
     return !! _.find(self.jobs, function (job) {
       return job.hasMessages();
     });
+  },
+
+  // Copy all of the messages in another MessageSet into this
+  // MessageSet. If the other MessageSet is subsequently mutated,
+  // results are undefined.
+  //
+  // XXX ratehr than this, the user should be able to create a
+  // MessageSet and pass it into capture(), and functions such as
+  // bundle() should take and mutate, rather than return, a
+  // MessageSet.
+  merge: function (messageSet) {
+    var self = this;
+    _.each(messageSet.jobs, function (j) {
+      self.jobs.push(j);
+    });
   }
 });
 

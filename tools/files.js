@@ -15,6 +15,7 @@ var sourcemap_support = require('source-map-support');
 
 var cleanup = require('./cleanup.js');
 var buildmessage = require('./buildmessage.js');
+var watch = require('./watch.js');
 
 var files = exports;
 
@@ -155,27 +156,38 @@ files.getCurrentToolsDir = function () {
   return path.join(__dirname, '..');
 };
 
-// Read a settings file and sanity-check it.
-// XXX make this return structured errors instead of throwing
-// (or eliminate somehow) (maybe use buildmessage)
+// Read a settings file and sanity-check it. Returns a string on
+// success or null on failure (in which case buildmessages will be
+// emitted).
 files.getSettings = function (filename, watchSet) {
   var absPath = path.resolve(filename);
   var buffer = watch.readAndWatchFile(watchSet, absPath);
-  if (!buffer)
-    throw new Error("Could not find settings file " + filename);
-  if (buffer.length > 0x10000)
-    throw new Error("Settings file must be less than 64 KB long");
+  if (buffer === null) {
+    buildmessage.error("file not found (settings file)",
+                       { file: filename });
+    return null;
+  }
+
+  if (buffer.length > 0x10000) {
+    buildmessage.error("settings file is too large (must be less than 64k)",
+                       { file: filename });
+    return null;
+  }
 
   var str = buffer.toString('utf8');
 
   // Ensure that the string is parseable in JSON, but there's no reason to use
   // the object value of it yet.
   if (str.match(/\S/)) {
-    JSON.parse(str);
-    return str;
-  } else {
-    return "";
+    try {
+      JSON.parse(str);
+    } catch (e) {
+      buildmessage.error("parse error reading settings file",
+                         { file: filename });
+    }
   }
+
+  return str;
 };
 
 // Try to find the prettiest way to present a path to the
