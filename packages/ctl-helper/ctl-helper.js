@@ -45,6 +45,7 @@ _.extend(Ctl, {
       Ctl.findGalaxy(), 'getAppConfiguration', [Ctl.myAppName()]);
     if (typeof admin == 'undefined')
       admin = appConfig.admin;
+    admin = !!admin;
 
     var jobId = null;
     var rootUrl = Ctl.rootUrl;
@@ -65,13 +66,15 @@ _.extend(Ctl, {
     });
 
     // XXX args? env?
+    var env = {
+      ROOT_URL: rootUrl,
+      METEOR_SETTINGS: appConfig.settings || appConfig.METEOR_SETTINGS
+    };
+    if (admin)
+      env.ADMIN_APP = 'true';
     jobId = Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), program, {
       exitPolicy: 'restart',
-      env: {
-        ROOT_URL: rootUrl,
-        METEOR_SETTINGS: appConfig.settings || appConfig.METEOR_SETTINGS,
-        ADMIN_APP: admin
-      },
+      env: env,
       ports: {
         "main": {
           bindEnv: "PORT",
