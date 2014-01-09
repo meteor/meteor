@@ -473,19 +473,35 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
     F({ 'a.b.c': { $lt: 5 } }, { $set: { 'a.b.d': 7 } }, "nested $lt, the change doesn't matter");
     F({ 'a.b.c': { $lt: 5 } }, { $set: { 'a.b': { d: 7 } } }, "nested $lt, the key disappears");
     T({ 'a.b.c': { $lt: 5 } }, { $set: { 'a.b': { d: 7, c: -1 } } }, "nested $lt");
-    F({ a: { $lt: 10, $gt: 3 } }, { $unset: { 'a': 1 } }, "unset $lt");
-    T({ a: { $lt: 10, $gt: 3 } }, { $set: { 'a': 4 } }, "set between x and y");
-    F({ a: { $lt: 10, $gt: 3 } }, { $set: { 'a': 3 } }, "set between x and y");
-    F({ a: { $lt: 10, $gt: 3 } }, { $set: { 'a': 10 } }, "set between x and y");
-    F({ a: { $gt: 10, $lt: 3 } }, { $set: { 'a': 9 } }, "impossible statement");
-    T({ a: { $lte: 10, $gte: 3 } }, { $set: { 'a': 3 } }, "set between x and y");
-    T({ a: { $lte: 10, $gte: 3 } }, { $set: { 'a': 10 } }, "set between x and y");
-    F({ a: { $lte: 10, $gte: 3 } }, { $set: { 'a': -10 } }, "set between x and y");
+    F({ a: { $lt: 10, $gt: 3 } }, { $unset: { a: 1 } }, "unset $lt");
+    T({ a: { $lt: 10, $gt: 3 } }, { $set: { a: 4 } }, "set between x and y");
+    F({ a: { $lt: 10, $gt: 3 } }, { $set: { a: 3 } }, "set between x and y");
+    F({ a: { $lt: 10, $gt: 3 } }, { $set: { a: 10 } }, "set between x and y");
+    F({ a: { $gt: 10, $lt: 3 } }, { $set: { a: 9 } }, "impossible statement");
+    T({ a: { $lte: 10, $gte: 3 } }, { $set: { a: 3 } }, "set between x and y");
+    T({ a: { $lte: 10, $gte: 3 } }, { $set: { a: 10 } }, "set between x and y");
+    F({ a: { $lte: 10, $gte: 3 } }, { $set: { a: -10 } }, "set between x and y");
+    T({ a: { $lte: 10, $gte: 3, $gt: 3, $lt: 10 } }, { $set: { a: 4 } }, "set between x and y");
+    F({ a: { $lte: 10, $gte: 3, $gt: 3, $lt: 10 } }, { $set: { a: 3 } }, "set between x and y");
+    F({ a: { $lte: 10, $gte: 3, $gt: 3, $lt: 10 } }, { $set: { a: 10 } }, "set between x and y");
+    F({ a: { $lte: 10, $gte: 3, $gt: 3, $lt: 10 } }, { $set: { a: Infinity } }, "set between x and y");
+    T({ a: { $lte: 10, $gte: 3, $gt: 3, $lt: 10 }, x: 1 }, { $set: { x: 1 } }, "set between x and y - dummy");
+    F({ a: { $lte: 10, $gte: 13, $gt: 3, $lt: 9 }, x: 1 }, { $set: { x: 1 } }, "set between x and y - dummy - impossible");
+    F({ a: { $lte: 10 } }, { $set: { a: Infinity } }, "Infinity <= 10?");
+    T({ a: { $lte: 10 } }, { $set: { a: -Infinity } }, "-Infinity <= 10?");
+    // XXX is this sufficient?
+    T({ a: { $gt: 9.99999999999999, $lt: 10 }, x: 1 }, { $set: { x: 1 } }, "very close $gt and $lt");
     T({ a: { $ne: 5 } }, { $unset: { a: 1 } }, "unset of $ne");
     T({ a: { $ne: 5 } }, { $set: { a: 1 } }, "set of $ne");
+    T({ a: { $ne: "some string" }, x: 1 }, { $set: { x: 1 } }, "$ne dummy");
+    T({ a: { $ne: true }, x: 1 }, { $set: { x: 1 } }, "$ne dummy");
+    T({ a: { $ne: false }, x: 1 }, { $set: { x: 1 } }, "$ne dummy");
+    T({ a: { $ne: null }, x: 1 }, { $set: { x: 1 } }, "$ne dummy");
+    T({ a: { $ne: Infinity }, x: 1 }, { $set: { x: 1 } }, "$ne dummy");
     T({ a: { $ne: 5 } }, { $set: { a: -10 } }, "set of $ne");
     T({ a: { $in: [1, 3, 5, 7] } }, { $set: { a: 5 } }, "$in checks");
     F({ a: { $in: [1, 3, 5, 7] } }, { $set: { a: -5 } }, "$in checks");
+    T({ a: { $in: [1, 3, 5, 7], $gt: 6 }, x: 1 }, { $set: { x: 1 } }, "$in combination with $gt");
   });
 
   Tinytest.add("minimongo - can selector become true by modifier - $-nonscalar selectors and simple tests", function (t) {
@@ -496,6 +512,9 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
     T({ a: { $in: [{ b: 1 }, { b: 3 }] } }, { $set: { a: { b: 3 } } }, "$in checks");
     // XXX this test should be F, but it is not implemented yet
     T({ a: { $in: [{ b: 1 }, { b: 3 }] } }, { $set: { a: { v: 3 } } }, "$in checks");
+    T({ a: { $ne: { a: 2 } }, x: 1 }, { $set: { x: 1 } }, "$ne dummy");
+    // XXX this test should be F, but it is not implemented yet
+    T({ a: { $ne: { a: 2 } } }, { $set: { a: { a: 2 } } }, "$ne object");
   });
 })();
 
