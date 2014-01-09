@@ -184,3 +184,34 @@ Tinytest.add("ejson - parse", function (test) {
     /argument should be a string/
   );
 });
+
+Tinytest.add("ejson - custom types", function (test) {
+  var testSameConstructors = function (obj, compareWith) {
+    test.equal(obj.constructor, compareWith.constructor);
+    if (typeof obj === 'object') {
+      _.each(obj, function(value, key) {
+        testSameConstructors(value, compareWith[key]);
+      });
+    }
+  }
+  var testReallyEqual = function (obj, compareWith) {
+    test.equal(obj, compareWith);
+    testSameConstructors(obj, compareWith);
+  }
+  var testRoundTrip = function (obj) {
+    var str = EJSON.stringify(obj);
+    var roundTrip = EJSON.parse(str);
+    testReallyEqual(obj, roundTrip);
+  }
+  var testCustomObject = function (obj) {
+    testRoundTrip(obj);
+    testReallyEqual(obj, EJSON.clone(obj));
+  }
+
+  var a = new EJSONTest.Address('Montreal', 'Quebec');
+  testCustomObject( {address: a} );
+
+  var d = new Date;
+  var obj = new EJSONTest.Person("John Doe", d, a);
+  testCustomObject( obj );
+});
