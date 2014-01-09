@@ -87,8 +87,10 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
         // chance we can use one of those as "matching"
         // dummy value
         if (valueSelector.$in) {
-          var matches = _.bind(self.documentMatches, self);
-          return _.find(valueSelector.$in, matches);
+          var matcher = new Minimongo.Matcher({ placeholder: valueSelector });
+          return _.find(valueSelector.$in, function (x) {
+            return matcher.documentMatches({ placeholder: x }).result;
+          });
         } else if (onlyContainsKeys(valueSelector, ['$gt', '$gte', '$lt', '$lte'])) {
           var lowerBound = -Infinity, upperBound = Infinity;
           _.each(['$lte', '$lt'], function (op) {
