@@ -14,17 +14,8 @@ var Updater = require('./run-updater.js').Updater;
 ///////////////////////////////////////////////////////////////////////////////
 // XXX XXX NEXT (if you want to do more):
 //
-// - make files.getSettings return errors instead of throwing (or eliminate)
 // - deal with XXX's in updater about it needing to go though runlog since
 //   no more stdout redirection
-// - auth stuff: log into galaxies automatically, reprompt for expired
-//   credentials..
-// - deal with options last on command line without args being tolerated
-// - clean up argument parsing? require that only --release appear to
-//   the left of the command, and do parsing in two phases.. but how
-//   does this solve --release appearing after the command? well,
-//   anyway, at least write a comment about what we'd like to do and
-//   when we want to do it.
 //
 ///////////////////////////////////////////////////////////////////////////////
 

@@ -350,7 +350,6 @@ Fiber(function () {
   var command = null;
   var isRawCommand = false;
   var showHelp = false;
-  var optimistOptions = {};
 
   // Check to see if it is a "raw" command that handles its own
   // argument parsing.
@@ -371,21 +370,42 @@ Fiber(function () {
   // 'flag', or in the command 'thing' with an option 'flag' that is
   // set to 'stuff'? To resolve this we require that 'flag' be
   // consistently declared as a boolean (or not a boolean) across all
-  // commands. We could just require the user to put the command
-  // before any flag, but this being Meteor, we go to lengths to be
-  // both correct and accommodating.
+  // commands.
   //
-  // (We used to do this in two passes, where the first pass just
-  // pulled out the command and the release, and the second pass
-  // parsed the arguments with knowledge of the command, but now that
-  // we're determining upfront which options are boolean there's no
-  // real benefit to two passes.)
-  var opt = require('optimist')(process.argv.slice(2));
+  // XXX The problem with the above is that which commands are boolean
+  // may change across releases, and when we springboard, we actually
+  // have to parse the options with the *target* version's
+  // semantics. All in all, I think we might be better served to
+  // require options to come after the command, other than special
+  // options (--release, --help, and options that act as
+  // commands). Then we don't have to require consistency of boolean
+  // status between commands; we instead have to require consistency
+  // of boolean status of a particular option, for a command, across
+  // releases. Since we always start out by running the latest version
+  // of Meteor, which can have knowledge of all past versions
+  // (including the boolean status of formerly present but removed
+  // options, including options to removed commands), this should let
+  // us be 100% correct. (Of course, we could still do this if we
+  // required options to be consistent across commands as well, but I
+  // think this is a better tradeoff.) In this model, we'd do option
+  // parsing in two passes, where the first pass just pulls out the
+  // command, and the second parses the arguments with knowledge of
+  // the command. I would make this change right now but we're on a
+  // tight timetable for 1.0 and there is no advantage to doing it now
+  // rather than later. #ImprovingCrossVersionOptionParsing
+  //
+  // If --foo is an argument that takes a String, and we've told
+  // optimist to treat it as a string and not try to parse it as an
+  // integer (which would irretrievably lose leading zeros), then
+  // optimist provides no way to distinguish between 'meteor --foo'
+  // (--foo with no value supplied) and 'meteor'. So, append a random
+  // sentinel value to the end of the arguments to distinguish the two
+  // cases.
+  var sentinel = '$' + Math.random(); // '$' suppresses number conversion
+  var opt = require('optimist')(process.argv.slice(2).concat([sentinel]));
   opt.alias("h", "help")
     .boolean("h")
     .boolean("help");
-  optimistOptions['help'] = true;
-  optimistOptions['h'] = true;
 
   var isBoolean = { help: true, h: true };
   var walkCommands = function (node) {
@@ -412,8 +432,6 @@ Fiber(function () {
                 // manually parse it into the correct type later
                 opt.string(name);
 
-              optimistOptions[name] = true;
-
               // side note: it's a little unfortunate that optimist
               // puts all options in the same namespace and can't
               // distinguish between '-a foo' and '--a foo'. one day
@@ -438,7 +456,6 @@ Fiber(function () {
     if (_.has(isBoolean, key))
       throw new Error("--" + key + " is both an option and a command?")
     opt.boolean(key);
-    optimistOptions[key] = true;
   });
 
   // The following line actually parses the arguments (argv is a
@@ -449,17 +466,22 @@ Fiber(function () {
     // even if it didn't appear on the command line. Delete the
     // options that didn't actually appear, which will have the value
     // 'false'.
-    //
-    // Only do this for options that we actually told optimist about,
-    // so that if the user specifies '--unknownoption' at the end of a
-    // command, we'll still print an error.
-    //
-    // XXX this strategy still doesn't help us catch a user "meteor
-    // run --foo" if foo is an option that takes a string. rethink
-    if (parsed[key] === false && _.has(optimistOptions, key))
+    if (parsed[key] === false)
       delete parsed[key];
   });
   delete parsed['$0'];
+
+  // Pull off the sentinel and make sure there were no options that
+  // expected a value but didn't get one.
+  var missingSentinel = false;
+  if (parsed._.length && parsed._[parsed._.length - 1] === sentinel) {
+    // All good
+    parsed._.pop();
+  } else {
+    // Enable a sanity check further down that makes sure we actually
+    // found the option that wasn't given a value.
+    missingSentinel = true;
+  }
 
   // Figure out if we're running in a directory that is part of a
   // Meteor application. Determine any additional directories to
@@ -489,7 +511,8 @@ Fiber(function () {
   // decide whether to exec the other version of meteor that would
   // interpret the flags. That's not ideal, but it should do fine in
   // practice, and it's better than assuming that all options are or
-  // aren't boolean when interpreting --release.
+  // aren't boolean when interpreting --release. See
+  // #ImprovingCrossVersionOptionParsing.
 
   var releaseOverride = null;
   if (_.has(parsed, 'release')) {
@@ -697,8 +720,8 @@ commandName + ": can't pass both -" + optionInfo.short + " and --" +
 "Try 'meteor help " + commandName + "' for help.\n");
       process.exit(1);
     }
-    var actualOptionName = presentShort ? "-" + optionInfo.short :
-      "--" + optionName;
+    var helpfulOptionName = "--" + optionName +
+      (presentShort ? " (-" + optionInfo.short + ")" : "");
 
     // If you pass an option twice, optimist gives us an
     // array. OK. Concatenate all of the values we've got into one big
@@ -716,19 +739,24 @@ commandName + ": can't pass both -" + optionInfo.short + " and --" +
       // in the future, we could support multiple values, but we don't
       // for now since no command needs it
       process.stderr.write(
-commandName + ": can only take one " + actualOptionName + " option.\n" +
+commandName + ": can only take one " + helpfulOptionName + " option.\n" +
 "Try 'meteor help " + commandName + "' for help.\n");
       process.exit(1);
     } else if (values.length === 1) {
       // OK, they provided exactly one value. Check its type and add
       // to the output.
       var value = values[0];
-      if (optionInfo.type === Number) {
+      if (value === sentinel) {
+        // This option requires a value and they didn't give it one
+        // (it was the last word on the command line).
+        process.stderr.write(
+commandName + ": the " + helpfulOptionName + " option needs a value.\n" +
+"Try 'meteor help " + commandName + "' for help.\n");
+        process.exit(1);
+      } else if (optionInfo.type === Number) {
         if (! value.match(/^[1-9][0-9]*$/)) {
           process.stderr.write(
-"--" + optionName + " " +
-  (presentShort ? "(-" + optionInfo.short + ") " : "") +
-  "must be a number.\n" +
+commandName + ": " + helpfulOptionName + " must be a number.\n" +
 "Try 'meteor help " + commandName + "' for help.\n");
           process.exit(1);
         }
@@ -777,6 +805,10 @@ originalName + ": unknown option.\n" +
 longHelp(commandName) + "\n");
     process.exit(1);
   }
+
+  if (missingSentinel)
+    // sanity check
+    throw new Error("couldn't find the option that didn't have a value?");
 
   // Check argument count.
   if (options.args.length < command.minArgs) {
