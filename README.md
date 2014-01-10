@@ -34,19 +34,19 @@ Migrations.migrateTo('latest');
 A more complete set of migrations might look like:
 
 ``` javascript
-  Migrations.add({
-    version: 1,
-    name: 'Adds pants to some people in the db.',
-    up: function() {//code to migrate up to version 1}
-    down: function() {//code to migrate down to version 0}
-  });
+Migrations.add({
+  version: 1,
+  name: 'Adds pants to some people in the db.',
+  up: function() {//code to migrate up to version 1}
+  down: function() {//code to migrate down to version 0}
+});
 
-  Migrations.add({
-    version: 2,
-    name: 'Adds a hat to all people in the db who are wearing pants.',
-    up: function() {//code to migrate up to version 2}
-    down: function() {//code to migrate down to version 1}
-  });
+Migrations.add({
+  version: 2,
+  name: 'Adds a hat to all people in the db who are wearing pants.',
+  up: function() {//code to migrate up to version 2}
+  down: function() {//code to migrate down to version 1}
+});
 ```
 
 As in 'Basics', you can migrate to the latest by running:
@@ -69,7 +69,7 @@ If you wanted to undo all of your migrations, you could migrate back down to ver
 Migrations.migrateTo(0);
 ```
 
-**NOTE**: You cannot specify your own version 0. This version is reserved by migrations for a 'vanilla' system, that is, one without any migrations applied.
+**NOTE**: You create your own migration at version 0. This version is reserved by migrations for a 'vanilla' system, that is, one without any migrations applied.
 
 ### Command line use
 
@@ -77,18 +77,18 @@ You can also run migrations from the command line using the included shell scrip
 
 1. Launch your Meteor app
 2. Call `Migrations.migrateTo(version)`
-3. Exit
+3. Exit your app
 
 For instance, from your project's root, run:
 
 ``` sh
-./packages/percolatestudio-migrations/migrate.sh latest
+$ ./packages/percolatestudio-migrations/migrate.sh latest
 ```
 
 You can also specify additional arguments to be passed into meteor, like:
 
 ``` sh
-./packages/percolatestudio-migrations/migrate.sh latest --settings ./setting.json
+$ ./packages/percolatestudio-migrations/migrate.sh latest --settings ./setting.json
 ```
 
 ## Contributing
