@@ -730,7 +730,15 @@ DomRange.insert = function (range, parentNode, nextNode) {
 DomRange.getContainingComponent = function (element) {
   while (element && ! element.$ui)
     element = element.parentNode;
-  return (element && element.$ui) || null;
+
+  var range = (element && element.$ui);
+
+  while (range) {
+    if (range.component)
+      return range.component;
+    range = range.owner;
+  }
+  return null;
 };
 
 ///// TBODY FIX for compatibility with jQuery.
