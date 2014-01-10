@@ -12,6 +12,9 @@ if (typeof console !== 'undefined' && console.warn) {
   warn = function () {};
 }
 
+var idStringify = LocalCollection._idStringify;
+var idParse = LocalCollection._idParse;
+
 ObserveSequence = {
   _suppressWarnings: 0,
   _loggedWarnings: 0,
@@ -109,7 +112,7 @@ ObserveSequence = {
             else
               throw new Error("unsupported type in {{#each}}: " + typeof item);
 
-            var idString = LocalCollection._idStringify(id);
+            var idString = idStringify(id);
             if (idsUsed[idString]) {
               warn("duplicate id " + id + " in", seq);
               id = Random.id();
@@ -119,6 +122,7 @@ ObserveSequence = {
 
             return { _id: id, item: item };
           });
+
           diffArray(lastSeqArray, seqArray, callbacks);
         } else if (isMinimongoCursor(seq)) {
           var cursor = seq;
@@ -202,16 +206,16 @@ var diffArray = function (lastSeqArray, seqArray, callbacks) {
   var diffFn = Package.minimongo.LocalCollection._diffQueryOrderedChanges;
   var oldIdObjects = [];
   var newIdObjects = [];
-  var posOld = {};
-  var posNew = {};
+  var posOld = {}; // maps from idStringify'd ids
+  var posNew = {}; // ditto
 
   _.each(seqArray, function (doc, i) {
     newIdObjects.push(_.pick(doc, '_id'));
-    posNew[doc._id] = i;
+    posNew[idStringify(doc._id)] = i;
   });
   _.each(lastSeqArray, function (doc, i) {
     oldIdObjects.push(_.pick(doc, '_id'));
-    posOld[doc._id] = i;
+    posOld[idStringify(doc._id)] = i;
   });
 
   // Arrays can contain arbitrary objects. We don't diff the
@@ -220,18 +224,30 @@ var diffArray = function (lastSeqArray, seqArray, callbacks) {
   // it appropriately.
   diffFn(oldIdObjects, newIdObjects, {
     addedBefore: function (id, doc, before) {
-      callbacks.addedAt(id, seqArray[posNew[id]].item, posNew[id], before);
+      callbacks.addedAt(
+        id,
+        seqArray[posNew[idStringify(id)]].item,
+        posNew[idStringify(id)],
+        before);
     },
     movedBefore: function (id, before) {
-      callbacks.movedTo(id, seqArray[posNew[id]].item, posOld[id], posNew[id], before);
+      callbacks.movedTo(
+        id,
+        seqArray[posNew[idStringify(id)]].item,
+        posOld[idStringify(id)],
+        posNew[idStringify(id)],
+        before);
     },
     removed: function (id) {
-      callbacks.removed(id, lastSeqArray[posOld[id]].item);
+      callbacks.removed(
+        id,
+        lastSeqArray[posOld[idStringify(id)]].item);
     }
   });
 
-  _.each(posNew, function (pos, id) {
-    if (_.has(posOld, id)) {
+  _.each(posNew, function (pos, idString) {
+    var id = idParse(idString);
+    if (_.has(posOld, idString)) {
       // specifically for primitive types, compare equality before
       // firing the changed callback. otherwise, always fire it
       // because doing a deep EJSON comparison is not guaranteed to
@@ -240,7 +256,7 @@ var diffArray = function (lastSeqArray, seqArray, callbacks) {
       // necessarily the most efficient (if only a specific subfield
       // of the object is later accessed).
       var newItem = seqArray[pos].item;
-      var oldItem = lastSeqArray[posOld[id]].item;
+      var oldItem = lastSeqArray[posOld[idString]].item;
 
       if (typeof newItem === 'object' || newItem !== oldItem)
         callbacks.changed(id, newItem, oldItem);

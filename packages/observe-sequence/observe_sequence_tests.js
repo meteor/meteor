@@ -154,6 +154,24 @@ Tinytest.add('observe sequence - array to other array', function (test) {
   ]);
 });
 
+Tinytest.add('observe sequence - array to other array without ids', function (test) {
+  var dep = new Deps.Dependency;
+  var seq = [{foo: 1}, {bar: 2}];
+
+  runOneObserveSequenceTestCase(test, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = [{foo: 2}];
+    dep.changed();
+  }, [
+    {addedAt: [0, {foo: 1}, 0, null]},
+    {addedAt: [1, {bar: 2}, 1, null]},
+    {removed: [1, {bar: 2}]},
+    {changed: [0, {foo: 2}, {foo: 1}]}
+  ]);
+});
+
 Tinytest.add('observe sequence - array to other array, changes', function (test) {
   var dep = new Deps.Dependency;
   var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}, {_id: "42", baz: 42}];
