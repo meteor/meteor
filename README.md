@@ -17,10 +17,10 @@ $ mrt add percolatestudio-migrations
 To write a simple migration, somewhere in the server section of your project define:
 
 ``` javascript
-  Migrations.add({
-    version: 1,
-    up: function() {//code to migrate up to version 1}
-  });
+Migrations.add({
+  version: 1,
+  up: function() {//code to migrate up to version 1}
+});
 ```
 
 To run this migration from within your app call:
