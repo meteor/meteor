@@ -343,6 +343,12 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
   // (are absent)
   // - tests with $-operators in the selector (are incomplete and test "not
   // ideal" implementation)
+  //  * gives up on $-operators with non-scalar values ({$ne: {x: 1}})
+  //  * analyses $in
+  //  * analyses $nin/$ne
+  //  * analyses $gt, $gte, $lt, $lte
+  //  * gives up on a combination of $gt/$gte/$lt/$lte and $ne/$nin
+  //  * doesn't support $eq properly
 
   var test = null; // set this global in the beginning of every test
   // T - should return true
