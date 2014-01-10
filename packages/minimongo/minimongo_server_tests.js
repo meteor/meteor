@@ -502,6 +502,10 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
     T({ a: { $in: [1, 3, 5, 7] } }, { $set: { a: 5 } }, "$in checks");
     F({ a: { $in: [1, 3, 5, 7] } }, { $set: { a: -5 } }, "$in checks");
     T({ a: { $in: [1, 3, 5, 7], $gt: 6 }, x: 1 }, { $set: { x: 1 } }, "$in combination with $gt");
+    F({ a: { $lte: 10, $gte: 3 } }, { $set: { 'a.b': -10 } }, "sel between x and y, set its subfield");
+    F({ b: { $in: [1, 3, 5, 7] } }, { $set: { 'b.c': 2 } }, "sel $in, set subfield");
+    T({ b: { $in: [1, 3, 5, 7] } }, { $set: { 'bd.c': 2, b: 3 } }, "sel $in, set similar subfield");
+    F({ 'b.c': { $in: [1, 3, 5, 7] } }, { $set: { b: 2 } }, "sel subfield of set scalar");
   });
 
   Tinytest.add("minimongo - can selector become true by modifier - $-nonscalar selectors and simple tests", function (t) {

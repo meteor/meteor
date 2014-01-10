@@ -58,14 +58,24 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
     return false;
 
   modifier = _.extend({$set:{}, $unset:{}}, modifier);
+  var modifierPaths = _.keys(modifier.$set).concat(_.keys(modifier.$unset));
 
   if (!self.isSimple())
     return true;
 
   if (_.any(self._getPaths(), pathHasNumericKeys) ||
-      _.any(_.keys(modifier.$unset), pathHasNumericKeys) ||
-      _.any(_.keys(modifier.$set), pathHasNumericKeys))
+      _.any(modifierPaths, pathHasNumericKeys))
     return true;
+
+  // check if there is a $set or $unset that indicates something is an
+  // object rather than a scalar in the actual object where we saw $-operator
+  // NOTE: it is correct since we allow only scalars in $-operators
+  if (_.any(_.filter(self._getPaths(), isOperatorObject), function (sel, path) {
+    return _.any(modifierPaths, function (modifierPath) {
+      return !modifierPath.indexOf(path) && modifierPath[path.length] === '.';
+    });
+  })) return false;
+
 
   // A helper to ensure object has only certain keys
   var onlyContainsKeys = function (obj, keys) {
@@ -80,9 +90,6 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
     function (path) {
       var valueSelector = self._selector[path];
       if (isOperatorObject(valueSelector)) {
-        // XXX check if there is a $set or $unset that indicates something is an
-        // object rather than a scalar in the actual object
-
         // if there is a strict equality, there is a good
         // chance we can use one of those as "matching"
         // dummy value
