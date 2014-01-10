@@ -159,13 +159,11 @@ UI.emboxValue = function (funcOrValue, equals) {
 
 ////////////////////////////////////////
 
-UI.insert = UI.DomRange && UI.DomRange.insert;
-
 // Insert a DOM node or DomRange into a DOM element or DomRange.
 //
 // One of three things happens depending on what needs to be inserted into what:
 // - `range.add` (anything into DomRange)
-// - `UI.insert` (DomRange into element)
+// - `UI.DomRange.insert` (DomRange into element)
 // - `elem.insertBefore` (node into element)
 //
 // The optional `before` argument is an existing node or id to insert before in
@@ -174,12 +172,11 @@ var insert = function (nodeOrRange, parent, before) {
   if (! parent)
     throw new Error("Materialization parent required");
 
-  if (parent.component && parent.component.dom) {
-    // parent is DomRange; add node or range
-    parent.add(nodeOrRange.component || nodeOrRange, before);
-  } else if (nodeOrRange.component && nodeOrRange.component.dom) {
+  if (parent instanceof UI.DomRange) {
+    parent.add(nodeOrRange, before);
+  } else if (nodeOrRange instanceof UI.DomRange) {
     // parent is an element; inserting a range
-    UI.insert(nodeOrRange.component, parent, before);
+    UI.DomRange.insert(nodeOrRange, parent, before);
   } else {
     // parent is an element; inserting an element
     parent.insertBefore(nodeOrRange, before || null); // `null` for IE
@@ -243,10 +240,13 @@ UI.render = function (kind, parentComponent) {
 
   var content = content = (inst.render && inst.render());
 
-  var range = new UI.DomRange(inst);
+  var range = new UI.DomRange;
+  inst.dom = range;
+  range.component = inst;
+
   materialize(content, range, null, inst);
 
-  inst.removed = function () {
+  range.removed = function () {
     inst.isDestroyed = true;
     if (inst.destroyed) {
       updateTemplateInstance(inst);

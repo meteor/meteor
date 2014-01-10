@@ -355,18 +355,5 @@ UI.Component.notifyParented = function () {
   }
 };
 
-// XXX we don't really want this to be a user-visible callback,
-// it's just a particular signal we need from DomRange.
-UI.Component.removed = function () {
-  var self = this;
-  self.isDestroyed = true;
-  if (self.destroyed) {
-    Deps.nonreactive(function () {
-      updateTemplateInstance(self);
-      self.destroyed.call(self.templateInstance);
-    });
-  }
-};
-
 // past compat
 UI.Component.preserve = function () {};

@@ -172,7 +172,7 @@ html_scanner = {
           });
 
         // We may be one of many `<body>` tags.
-        results.js += "\nUI.body.contentParts.push(UI.Component.extend({render: " + renderFuncCode + "}));\nMeteor.startup(function () { if (! UI.body.INSTANTIATED) { UI.body.INSTANTIATED = true; UI.materialize(UI.body, document.body); } });\n";
+        results.js += "\nUI.body.contentParts.push(UI.Component.extend({render: " + renderFuncCode + "}));\nMeteor.startup(function () { if (! UI.body.INSTANTIATED) { UI.body.INSTANTIATED = true; UI.DomRange.insert(UI.render(UI.body).dom, document.body); } });\n";
       }
     } catch (e) {
       if (e.scanner) {

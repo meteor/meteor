@@ -100,7 +100,7 @@ UI.Each = Component.extend({
             beforeId = LocalCollection._idStringify(beforeId);
 
           var renderedItem = UI.render(content.withData(dataFunc), self);
-          range.add(id, renderedItem, beforeId);
+          range.add(id, renderedItem.dom, beforeId);
         },
         removed: function (id, item) {
           addToCount(-1);
@@ -112,7 +112,7 @@ UI.Each = Component.extend({
             beforeId && LocalCollection._idStringify(beforeId));
         },
         changed: function (id, newItem) {
-          range.get(LocalCollection._idStringify(id)).data.$set(newItem);
+          range.get(LocalCollection._idStringify(id)).component.data.$set(newItem);
         }
       });
 

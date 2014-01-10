@@ -5,23 +5,23 @@ var parseHTML = UI.DomBackend.parseHTML;
 // fake component; DomRange host
 var Comp = function (which) {
   this.which = which;
-
-  new DomRange(this);
+  this.dom = new DomRange;
+  this.dom.component = this;
 };
 
 var isStartMarker = function (n) {
-  return (n.$ui && n === n.$ui.dom.start);
+  return (n.$ui && n === n.$ui.start);
 };
 
 var isEndMarker = function (n) {
-  return (n.$ui && n === n.$ui.dom.end);
+  return (n.$ui && n === n.$ui.end);
 };
 
 var inDocument = function (range, func) {
   var onscreen = document.createElement("DIV");
   onscreen.style.display = 'none';
   document.body.appendChild(onscreen);
-  DomRange.insert(range.component, onscreen);
+  DomRange.insert(range, onscreen);
   try {
     func(range);
   } finally {
@@ -72,7 +72,6 @@ Tinytest.add("ui - DomRange - basic", function (test) {
   test.equal(div.previousSibling, rStart);
   test.equal(div.nextSibling, rEnd);
   test.equal(div.$ui, r);
-  test.equal(div.$ui.dom, r);
 
   // add a subrange
   var s = new DomRange;
@@ -143,8 +142,8 @@ Tinytest.add("ui - DomRange - shuffling", function (test) {
         else
           str += '-';
       } else {
-        if (n.$ui.which)
-          str += n.$ui.which;
+        if (n.$ui.component && n.$ui.component.which)
+          str += n.$ui.component.which;
         else
           str += (n.nodeName || '?');
       }
@@ -170,12 +169,12 @@ Tinytest.add("ui - DomRange - shuffling", function (test) {
   var X = new Comp('X');
   var Y = new Comp('Y');
   var Z = new Comp('Z');
-  r.add('X', X, 'I');
+  r.add('X', X.dom, 'I');
   X.dom.add(document.createElement("SPAN"));
   Y.dom.add(document.createElement("SPAN"));
   Z.dom.add(document.createElement("SPAN"));
-  r.add('Y', Y, 'U');
-  r.add('Z', Z);
+  r.add('Y', Y.dom, 'U');
+  r.add('Z', Z.dom);
 
   test.equal(spellDom(), '(B(X)I(Y)U(Z))');
 
@@ -190,21 +189,22 @@ Tinytest.add("ui - DomRange - shuffling", function (test) {
   r.moveBefore('U', 'Y');
   test.equal(spellDom(), '((X)BAAIU(Y)(Z))');
 
+
   r.moveBefore('Z', 'X');
   r.moveBefore('Y', 'X');
   test.equal(spellDom(), '((Z)(Y)(X)BAAIU)');
 
-  test.equal(r.get('X'), X);
-  test.equal(r.get('Y'), Y);
-  test.equal(r.get('Z'), Z);
-  test.equal(r.get('B'), B);
-  test.equal(r.get('I'), I);
-  test.equal(r.get('U'), U);
+  test.isTrue(r.get('X') === X.dom);
+  test.isTrue(r.get('Y') === Y.dom);
+  test.isTrue(r.get('Z') === Z.dom);
+  test.isTrue(r.get('B') === B);
+  test.isTrue(r.get('I') === I);
+  test.isTrue(r.get('U') === U);
 
   test.isFalse(r.owner);
-  test.equal(X.dom.owner, r);
-  test.equal(Y.dom.owner, r);
-  test.equal(Z.dom.owner, r);
+  test.isTrue(X.dom.owner === r);
+  test.isTrue(Y.dom.owner === r);
+  test.isTrue(Z.dom.owner === r);
 
   r.remove('Y');
   test.equal(spellDom(), '((Z)(X)BAAIU)');
@@ -226,9 +226,9 @@ Tinytest.add("ui - DomRange - nested", function (test) {
     _.each(frag.childNodes, function (n) {
       var ui = n.$ui;
       if (isStartMarker(n))
-        str += (ui.which ? ui.which : '(');
+        str += (ui.component ? ui.component.which : '(');
       else if (isEndMarker(n))
-        str += (ui.which ? ui.which.toLowerCase() : ')');
+        str += (ui.component ? ui.component.which.toLowerCase() : ')');
       else
         str += '?';
     });
@@ -240,16 +240,16 @@ Tinytest.add("ui - DomRange - nested", function (test) {
   var A,B,C,D,E,F;
 
   test.equal(spellDom(), '()');
-  r.add(A = new Comp('A'));
+  r.add((A = new Comp('A')).dom);
   test.equal(spellDom(), '(Aa)');
-  r.add('B', B = new Comp('B'));
-  r.add('C', C = new Comp('C'), 'B');
+  r.add('B', (B = new Comp('B')).dom);
+  r.add('C', (C = new Comp('C')).dom, 'B');
   test.equal(spellDom(), '(AaCcBb)');
 
-  r.get('B').dom.add('D', D = new Comp('D'));
-  D.dom.add('E', new Comp('E'));
+  r.get('B').add('D', (D = new Comp('D')).dom);
+  D.dom.add('E', (E = new Comp('E')).dom);
   test.equal(spellDom(), '(AaCcBDEedb)');
-  B.dom.add('F', F = new Comp('F'));
+  B.dom.add('F', (F = new Comp('F')).dom);
   test.equal(spellDom(), '(AaCcBDEedFfb)');
 
   r.moveBefore('B', 'C');
@@ -305,7 +305,7 @@ Tinytest.add("ui - DomRange - external moves", function (test) {
   de.dom.add('Z', Z);
   de.dom.add(wsp());
   cf.dom.add(wsp());
-  cf.dom.add('de', de);
+  cf.dom.add('de', de.dom);
   cf.dom.add(wsp());
   var gl = new Comp('gl');
   var hk = new Comp('hk');
@@ -316,12 +316,12 @@ Tinytest.add("ui - DomRange - external moves", function (test) {
   // i-W-j
   test.equal(ij.dom.getNodes().length, 5);
   gl.dom.add(wsp());
-  gl.dom.add('hk', hk);
+  gl.dom.add('hk', hk.dom);
   gl.dom.add(wsp());
   // g-hk-l
   test.equal(gl.dom.getNodes().length, 6);
   hk.dom.add(wsp());
-  hk.dom.add('ij', ij);
+  hk.dom.add('ij', ij.dom);
   hk.dom.add(wsp());
   // h-i-W-j-k
   test.equal(hk.dom.getNodes().length, 9);
@@ -329,12 +329,12 @@ Tinytest.add("ui - DomRange - external moves", function (test) {
   test.equal(gl.dom.getNodes().length, 13);
 
   var r = new DomRange;
-  r.dom.add('ab', ab);
-  r.dom.add(wsp());
-  r.dom.add('cf', cf);
-  r.dom.add(wsp());
-  r.dom.add('gl', gl);
-  r.dom.add('V', V);
+  r.add('ab', ab.dom);
+  r.add(wsp());
+  r.add('cf', cf.dom);
+  r.add(wsp());
+  r.add('gl', gl.dom);
+  r.add('V', V);
 
   var spellDom = function () {
     var frag = r.parentNode();
@@ -342,9 +342,9 @@ Tinytest.add("ui - DomRange - external moves", function (test) {
     _.each(frag.childNodes, function (n) {
       var ui = n.$ui;
       if (isStartMarker(n))
-        str += (ui.which ? ui.which.charAt(0) : '(');
+        str += (ui.component ? ui.component.which.charAt(0) : '(');
       else if (isEndMarker(n))
-        str += (ui.which ? ui.which.charAt(1) : ')');
+        str += (ui.component ? ui.component.which.charAt(1) : ')');
       else if (n.nodeType === 3)
         str += '-';
       else
@@ -359,12 +359,12 @@ Tinytest.add("ui - DomRange - external moves", function (test) {
   test.equal(spellDom(),
              strip('(a-X-b - c-d-Y-Z-e-f - g-h-i-W-j-k-l V)'));
 
-  test.equal(ab.dom.owner, r);
-  test.equal(cf.dom.owner, r);
-  test.equal(de.dom.owner, cf);
-  test.equal(gl.dom.owner, r);
-  test.equal(hk.dom.owner, gl);
-  test.equal(ij.dom.owner, hk);
+  test.isTrue(ab.dom.owner === r);
+  test.isTrue(cf.dom.owner === r);
+  test.isTrue(de.dom.owner === cf.dom);
+  test.isTrue(gl.dom.owner === r);
+  test.isTrue(hk.dom.owner === gl.dom);
+  test.isTrue(ij.dom.owner === hk.dom);
 
   // all right, now let's mess around with these elements!
 
@@ -491,11 +491,13 @@ Tinytest.add("ui - DomRange - external moves", function (test) {
 
 Tinytest.add("ui - DomRange - tables", function (test) {
   var range = function (x) {
-    new DomRange(x);
+    // create a range x.dom containing an element x.el,
+    // inside that element, the range x.content.dom
+    x.dom = new DomRange;
     if (x.el) {
       x.dom.add(x.el);
       if (x.content)
-        DomRange.insert(x.content, x.el);
+        DomRange.insert(x.content.dom, x.el);
     }
     return x;
   };
@@ -525,7 +527,7 @@ Tinytest.add("ui - DomRange - tables", function (test) {
   test.equal(table.el.childNodes.length, 0);
 
   table.content = range({});
-  DomRange.insert(table.content, table.el);
+  DomRange.insert(table.content.dom, table.el);
   // table has two children (start/end markers), no elements
   test.equal(table.el.childNodes.length, 2);
   test.notEqual(table.el.firstChild.nodeType, 1);
@@ -545,11 +547,11 @@ Tinytest.add("ui - DomRange - tables", function (test) {
   test.equal(table.el.childNodes.length, 0);
 
   table.content = range({});
-  DomRange.insert(table.content, table.el);
+  DomRange.insert(table.content.dom, table.el);
   var a1 = range({});
   var a2 = range({});
-  a1.dom.add(a2);
-  table.content.dom.add(a1);
+  a1.dom.add(a2.dom);
+  table.content.dom.add(a1.dom);
   // 6 marker nodes in table, no elements
   test.equal(table.el.childNodes.length, 6);
   test.equal($(table.el).find("*").length, 0);
@@ -567,17 +569,17 @@ Tinytest.add("ui - DomRange - tables", function (test) {
   test.equal(table.el.childNodes.length, 0);
 
   table.content = range({});
-  DomRange.insert(table.content, table.el);
+  DomRange.insert(table.content.dom, table.el);
   var b1 = range({});
   var b2 = range({});
-  table.content.dom.add(b1);
+  table.content.dom.add(b1.dom);
   b2.dom.add(document.createElement('tr'));
   // 4 marker nodes in table, no elements
   test.equal(table.el.childNodes.length, 4);
   test.equal($(table.el).find("*").length, 0);
   // shazam, adding b2, which contains a TR,
   // should move all the ranges into a TBODY.
-  b1.dom.add(b2);
+  b1.dom.add(b2.dom);
   test.equal(table.el.childNodes.length, 1);
   test.equal(table.el.firstChild.nodeName, 'TBODY');
   test.equal(table.el.firstChild.childNodes.length, 7);
@@ -594,8 +596,8 @@ Tinytest.add("ui - DomRange - tables", function (test) {
 
   var c1 = range({});
   var c2 = range({});
-  DomRange.insert(c1, table.el);
-  DomRange.insert(c2, table.el);
+  DomRange.insert(c1.dom, table.el);
+  DomRange.insert(c2.dom, table.el);
   test.equal(table.el.childNodes.length, 4);
   test.equal($(table.el).find("*").length, 0);
   c2.dom.add(document.createElement('tr'));
@@ -745,22 +747,15 @@ Tinytest.add("ui - DomRange - contains", function (test) {
 
 Tinytest.add("ui - DomRange - constructor", function (test) {
   var r = new DomRange;
-  test.isTrue(r.dom === r);
-  test.isTrue(r.component === r);
 
-  var x = {};
-  var s = new DomRange(x);
-  test.isTrue(x.dom === s);
-  test.isTrue(s.component === x);
+  test.isTrue(r.parentNode());
 
-  test.isTrue(s.parentNode());
-
-  test.isTrue(s.start.$ui === x);
-  test.isTrue(s.end.$ui === x);
+  test.isTrue(r.start.$ui === r);
+  test.isTrue(r.end.$ui === r);
 
   var div = document.createElement('div');
-  s.add(div);
-  test.isTrue(div.$ui === x);
+  r.add(div);
+  test.isTrue(div.$ui === r);
 });
 
 Tinytest.add("ui - DomRange - get", function (test) {
@@ -803,16 +798,6 @@ Tinytest.add("ui - DomRange - get", function (test) {
 
   test.isTrue(r.get('c') === c);
   test.isTrue(r.get('toString') === d);
-
-  var x = {};
-  var s = new DomRange(x);
-
-  test.throws(function () {
-    r.add('s', s);
-  });
-
-  r.add('x', x);
-  test.isTrue(r.get('x') === x);
 });
 
 // This test targets IE 9 and 10, which allow properties
