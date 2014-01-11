@@ -85,7 +85,7 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
   // convert a selector into an object matching the selector
   // { 'a.b': { ans: 42 }, 'foo.bar': null, 'foo.baz': "something" }
   // => { a: { b: { ans: 42 } }, foo: { bar: null, baz: "something" } }
-  var failed = false;
+  var fallback = false;
   var doc = pathsToTree(self._getPaths(),
     function (path) {
       var valueSelector = self._selector[path];
@@ -109,18 +109,26 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
               lowerBound = valueSelector[op];
           });
 
-          return (lowerBound + upperBound) / 2;
+          var middle = (lowerBound + upperBound) / 2;
+          var matcher = new Minimongo.Matcher({ placeholder: valueSelector });
+          if (!matcher.documentMatches({ placeholder: middle }).result &&
+              (middle === lowerBound || middle === upperBound))
+            fallback = true;
+
+          return middle;
         } else if (onlyContainsKeys(valueSelector, ['$nin',' $ne'])) {
           return {};
         } else {
-          failed = true;
+          fallback = true;
         }
       }
       return self._selector[path];
     },
     _.identity /*conflict resolution is no resolution*/);
 
-  if (failed)
+  // If the analysis of this selector is too hard for our implementation
+  // fallback to "YES"
+  if (fallback)
     return true;
 
   try {

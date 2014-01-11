@@ -497,6 +497,9 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
     T({ a: { $lte: 10 } }, { $set: { a: -Infinity } }, "-Infinity <= 10?");
     // XXX is this sufficient?
     T({ a: { $gt: 9.99999999999999, $lt: 10 }, x: 1 }, { $set: { x: 1 } }, "very close $gt and $lt");
+    // XXX this test should be F, but since it is so hard to be precise in
+    // floating point math, the current implementation falls back to T
+    T({ a: { $gt: 9.999999999999999, $lt: 10 }, x: 1 }, { $set: { x: 1 } }, "very close $gt and $lt");
     T({ a: { $ne: 5 } }, { $unset: { a: 1 } }, "unset of $ne");
     T({ a: { $ne: 5 } }, { $set: { a: 1 } }, "set of $ne");
     T({ a: { $ne: "some string" }, x: 1 }, { $set: { x: 1 } }, "$ne dummy");
