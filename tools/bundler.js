@@ -772,12 +772,12 @@ _.extend(ClientTarget.prototype, {
       try {
         var ast = minifiers.CssParse(file.contents('utf8'));
       } catch (e) {
-        var fileName = file.url[0] === '/' ? file.url.slice(1) : file.url;
+        var fileName = file.url.replace(/^\//, '');
         buildmessage.error(e.message, { file: fileName });
         return { type: "stylesheet", stylesheet: { rules: [] } };
       }
 
-      function rulePredicate (rule) {
+      var rulePredicate = function (rule) {
         return function (node) {
           return node.type === rule;
         }
@@ -791,20 +791,20 @@ _.extend(ClientTarget.prototype, {
       // rules as Meteor assumes every file is in utf-8.
       ast.stylesheet.rules = _.reject(ast.stylesheet.rules,
                                       rulePredicate("charset"));
-      var importsNumber = 0;
+      var importCount = 0;
       for (var i = 0; i < ast.stylesheet.rules.length; i++)
         if (!rulePredicate("import")(ast.stylesheet.rules[i])) {
-          importsNumber = i;
+          importCount = i;
           break;
         }
 
-      var imports = ast.stylesheet.rules.splice(0, importsNumber);
+      var imports = ast.stylesheet.rules.splice(0, importCount);
       importsAst.stylesheet.rules = importsAst.stylesheet.rules.concat(imports);
 
       // if there are imports left in the middle of file, warn user as it might
       // be a potential bug (imports are valid only in the beginning of file).
       if (_.any(ast.stylesheet.rules, rulePredicate("import"))) {
-        var fileName = file.url[0] === '/' ? file.url.slice(1) : file.url;
+        var fileName = file.url.replace(/^\//, '');
         // XXX make this a buildmessage.warning call rather than a random log
         console.log("%s: warn: there are some @import rules those are not taking effect as they are required to be in the beginning of the file.", fileName);
       }
