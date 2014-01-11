@@ -62,7 +62,7 @@ loginHandlers = [];
 //   { user: { username: <username> }, password: <password> }, or
 //   { user: { email: <email> }, password: <password> }.
 Accounts.createToken = function (options) {
-  // Try all of the registered login handlers until one of them doesn' return
+  // Try all of the registered login handlers until one of them doesn't return
   // `undefined`, meaning it handled this call to `login`. Return that return
   // value, which ought to be a {id/token} pair.
   for (var i = 0; i < loginHandlers.length; ++i) {
