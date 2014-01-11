@@ -4,9 +4,9 @@ Package.describe({
 });
 
 Npm.depends({
-  "clean-css": "2.0.2",
+  "clean-css": "2.0.6",
   "uglify-js": "2.4.7",
-  "css-parse": "1.6.0",
+  "css-parse": "1.7.0",
   "css-stringify": "1.4.1"
 });
 
