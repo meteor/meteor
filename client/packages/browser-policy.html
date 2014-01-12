@@ -119,8 +119,11 @@ Allows this type of content to be loaded from the given origin. `origin` is a
 string and can include an optional scheme (such as `http` or `https`), an
 optional wildcard at the beginning, and an optional port which can be a
 wildcard. Examples include `example.com`, `https://*.example.com`, and
-`example.com:*`. You can call these functions multiple times with different
-origins to specify a whitelist of allowed origins.
+`example.com:*`. You can call these functions multiple times with
+different origins to specify a whitelist of allowed origins. Origins
+that don't specify a protocol will allow content over both HTTP and
+HTTPS: passing `example.com` will allow content from both
+`http://example.com` and `https://example.com`.
 {{/dtdd}}
 
 {{#dtdd "BrowserPolicy.content.allow&lt;ContentType&gt;DataUrl()"}}
