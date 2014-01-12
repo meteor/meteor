@@ -98,3 +98,7 @@ Write some code. Write some tests. To run the tests, do:
 ``` sh
 $ mrt test-packages percolatestudio-migrations
 ```
+
+## License 
+
+MIT. (c) Percolate Studio
