@@ -129,12 +129,12 @@ Tinytest.add("browser-policy - csp", function (test) {
 
   // Check that trailing slashes are trimmed from origins.
   BrowserPolicy.content.disallowAll();
-  BrowserPolicy.content.allowScriptOrigin("https://foo.com/");
+  BrowserPolicy.content.allowFrameOrigin("https://foo.com/");
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
-                        "default-src 'none'; script-src https://foo.com;"));
+                        "default-src 'none'; frame-src https://foo.com;"));
   BrowserPolicy.content.allowObjectOrigin("foo.com//");
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
-                        "default-src 'none'; script-src https://foo.com; " +
+                        "default-src 'none'; frame-src https://foo.com; " +
                         "object-src http://foo.com https://foo.com;"));
 });
 

@@ -227,7 +227,7 @@ _.extend(BrowserPolicy.content, {
 // allow<Resource>Origin, allow<Resource>Data, allow<Resource>self, and
 // disallow<Resource> methods for each type of resource.
 _.each(["script", "object", "img", "media",
-        "font", "connect", "style"],
+        "font", "connect", "style", "frame"],
        function (resource) {
          var directive = resource + "-src";
          var methodResource;
