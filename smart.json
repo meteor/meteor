@@ -1,0 +1,10 @@
+{
+  "name": "percolatestudio-migrations",
+  "description": "A simple migration system supporting up/downwards migrations and command line usage.",
+  "git": "https://github.com/percolatestudio/meteor-migrations.git",
+  "homepage": "https://github.com/percolatestudio/meteor-migrations.git",
+  "author": "Zoltan Olah (http://percolatestudio.com)",
+  "version": "0.5.0",
+  "packages": {
+  }
+}
