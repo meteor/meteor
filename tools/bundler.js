@@ -789,6 +789,12 @@ _.extend(ClientTarget.prototype, {
 
       // Pick only the imports from the beginning of file ignoring @charset
       // rules as Meteor assumes every file is in utf-8.
+      if (_.any(ast.stylesheet.rules, rulePredicate("charset"))) {
+        var fileName = file.url.replace(/^\//, '');
+        // XXX make this a buildmessage.warning call rather than a random log
+        console.log("%s: warn: @charset rules in this file will be ignored as Meteor supports only utf-8 at the moment.", fileName);
+      }
+
       ast.stylesheet.rules = _.reject(ast.stylesheet.rules,
                                       rulePredicate("charset"));
       var importCount = 0;
