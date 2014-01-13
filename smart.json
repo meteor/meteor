@@ -4,7 +4,7 @@
   "git": "https://github.com/percolatestudio/meteor-migrations.git",
   "homepage": "https://github.com/percolatestudio/meteor-migrations.git",
   "author": "Zoltan Olah (http://percolatestudio.com)",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "packages": {
   }
 }

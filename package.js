@@ -11,6 +11,6 @@ Package.on_use(function (api) {
 });
 
 Package.on_test(function (api) {
-  api.use('migrations');
+  api.use('percolatestudio-migrations');
   api.add_files('migrations_tests.js', ['server']);
 });
