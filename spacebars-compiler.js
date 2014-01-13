@@ -239,6 +239,7 @@ var makeObjectLiteral = function (obj) {
 
 
 
+
 //////////////////////////////////////////////////
 
 Spacebars.parse = function (input) {
@@ -270,9 +271,16 @@ Spacebars.parse = function (input) {
     }
     if (position === HTML.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
       var goodPos = scanner.pos;
-      scanner.pos = lastPos;
+      scanner.pos = lastPos; // rewind for benefit of error line/column
       checkAttributeStacheTag(scanner, stache);
       scanner.pos = goodPos;
+    } else if (position === HTML.TEMPLATE_TAG_POSITION.IN_START_TAG) {
+      if (! (stache.type === 'COMMENT' || stache.type === 'DOUBLE')) {
+        scanner.fatal("Reactive HTML attributes must either have a constant name or consist of a single {{helper}} providing a dictionary of names and values.  A template tag of type " + stache.type + " is not allowed here.");
+      }
+      if (scanner.peek() === '=') {
+        scanner.fatal("Template tags are not allowed in attribute names, only in attribute values or in the form of a single {{helper}} that evaluates to a dictionary of name=value pairs.");
+      }
     }
 
     if (stache.type === 'COMMENT') {
@@ -346,7 +354,7 @@ Spacebars.parse = function (input) {
 
 // XXX think about these restrictions
 var checkAttributeStacheTag = function (scanner, tag) {
-  if (tag.type === 'DOUBLE') {
+  if (tag.type === 'DOUBLE' || tag.type === 'COMMENT') {
     return;
   } else if (tag.type === 'BLOCKOPEN') {
     var path = tag.path;

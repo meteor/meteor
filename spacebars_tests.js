@@ -197,4 +197,26 @@ Tinytest.add("spacebars - parse", function (test) {
   test.equal(HTML.toJS(Spacebars.parse('<div>hello</div> {{#foo}}<div>{{#bar}}world{{/bar}}</div>{{/foo}}')),
              '[HTML.DIV("hello"), " ", HTML.Special({type: "BLOCKOPEN", path: ["foo"], content: HTML.DIV(HTML.Special({type: "BLOCKOPEN", path: ["bar"], content: "world"}))})]');
 
+
+  test.throws(function () {
+    Spacebars.parse('<a {{{x}}}></a>');
+  });
+  test.throws(function () {
+    Spacebars.parse('<a {{#if x}}{{/if}}></a>');
+  });
+  test.throws(function () {
+    Spacebars.parse('<a {{k}}={[v}}></a>');
+  });
+  test.throws(function () {
+    Spacebars.parse('<a x{{y}}></a>');
+  });
+  test.throws(function () {
+    Spacebars.parse('<a x{{y}}=z></a>');
+  });
+  test.throws(function () {
+    Spacebars.parse('<a {{> x}}></a>');
+  });
+
+  test.equal(HTML.toJS(Spacebars.parse('<a {{! x}} b=c{{! x}} {{! x}}></a>')),
+             'HTML.A({b: "c"})');
 });
