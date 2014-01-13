@@ -214,6 +214,9 @@ _.extend(Slice.prototype, {
   // stage in the build process in which we try to retrieve the
   // package.
   checkReferencedPackagesExist: Profile("check referenced packages exist", function () {
+    // XXX TESTING
+    return;
+
     var self = this;
     _.each(['uses', 'implies'], function (field) {
       var scrubbed = [];
