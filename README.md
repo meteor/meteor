@@ -102,3 +102,5 @@ $ mrt test-packages percolatestudio-migrations
 ## License 
 
 MIT. (c) Percolate Studio
+
+Meteor Migrations was developed as part of the [Verso](http://versoapp.com) project.
