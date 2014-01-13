@@ -295,6 +295,7 @@ var getQuotedAttributeValue = function (scanner, quote) {
   while (true) {
     var ch = scanner.peek();
     var special;
+    var curPos = scanner.pos;
     if (ch === quote) {
       scanner.pos++;
       return tokens;
@@ -306,10 +307,16 @@ var getQuotedAttributeValue = function (scanner, quote) {
       tokens.push(charRef);
       charsTokenToExtend = null;
     } else if (scanner.getSpecialTag &&
-               (special = scanner.getSpecialTag(scanner,
-                                                TEMPLATE_TAG_POSITION.IN_ATTRIBUTE))) {
-      tokens.push({t: 'Special', v: special});
-      charsTokenToExtend = null;
+               ((special = scanner.getSpecialTag(scanner,
+                                                 TEMPLATE_TAG_POSITION.IN_ATTRIBUTE)) ||
+                scanner.pos > curPos /* `{{! comment}}` */)) {
+      // note: this code is messy because it turns out to be annoying for getSpecialTag
+      // to return `null` when it scans a comment.  Also, this code should be de-duped
+      // with getUnquotedAttributeValue
+      if (special) {
+        tokens.push({t: 'Special', v: special});
+        charsTokenToExtend = null;
+      }
     } else {
       if (! charsTokenToExtend) {
         charsTokenToExtend = { t: 'Chars', v: '' };
@@ -329,6 +336,7 @@ var getUnquotedAttributeValue = function (scanner) {
   while (true) {
     var ch = scanner.peek();
     var special;
+    var curPos = scanner.pos;
     if (HTML_SPACE.test(ch) || ch === '>') {
       return tokens;
     } else if (! ch) {
@@ -339,10 +347,13 @@ var getUnquotedAttributeValue = function (scanner) {
       tokens.push(charRef);
       charsTokenToExtend = null;
     } else if (scanner.getSpecialTag &&
-               (special = scanner.getSpecialTag(scanner,
-                                                TEMPLATE_TAG_POSITION.IN_ATTRIBUTE))) {
-      tokens.push({t: 'Special', v: special});
-      charsTokenToExtend = null;
+               ((special = scanner.getSpecialTag(scanner,
+                                                 TEMPLATE_TAG_POSITION.IN_ATTRIBUTE)) ||
+                scanner.pos > curPos /* `{{! comment}}` */)) {
+      if (special) {
+        tokens.push({t: 'Special', v: special});
+        charsTokenToExtend = null;
+      }
     } else {
       if (! charsTokenToExtend) {
         charsTokenToExtend = { t: 'Chars', v: '' };
@@ -405,12 +416,15 @@ getTagToken = function (scanner) {
     var spacesRequiredAfter = false;
 
     // first, try for a special tag.
-    var special;
-    if (scanner.getSpecialTag &&
-        (special = scanner.getSpecialTag(scanner,
-                                         TEMPLATE_TAG_POSITION.IN_START_TAG))) {
-      tag.attrs.$specials = (tag.attrs.$specials || []);
-      tag.attrs.$specials.push({ t: 'Special', v: special });
+    var curPos = scanner.pos;
+    var special = (scanner.getSpecialTag &&
+                   scanner.getSpecialTag(scanner,
+                                         TEMPLATE_TAG_POSITION.IN_START_TAG));
+    if (special || (scanner.pos > curPos)) {
+      if (special) {
+        tag.attrs.$specials = (tag.attrs.$specials || []);
+        tag.attrs.$specials.push({ t: 'Special', v: special });
+      } // else, must have scanned a `{{! comment}}`
 
       spacesRequiredAfter = true;
     } else {
@@ -418,6 +432,12 @@ getTagToken = function (scanner) {
       var attributeName = getAttributeName(scanner);
       if (! attributeName)
         scanner.fatal("Expected attribute name in tag");
+      // Throw error on `{` in attribute name.  This provides *some* error message
+      // if someone writes `<a x{{y}}>` or `<a x{{y}}=z>`.  The HTML tokenization
+      // spec doesn't say that `{` is invalid, but the DOM API (setAttribute) won't
+      // allow it, so who cares.
+      if (attributeName.indexOf('{') >= 0)
+        scanner.fatal("Unexpected `{` in attribute name.");
       attributeName = HTML.asciiLowerCase(attributeName);
 
       if (tag.attrs.hasOwnProperty(attributeName))
