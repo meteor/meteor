@@ -165,7 +165,7 @@ MongoConnection = function (url, options) {
     self._withDb(function (db) {
       dbNameFuture.return(db.databaseName);
     });
-    self._oplogHandle = new OplogHandle(options.oplogUrl, dbNameFuture);
+    self._oplogHandle = new OplogHandle(options.oplogUrl, dbNameFuture.wait());
   }
 };
 
