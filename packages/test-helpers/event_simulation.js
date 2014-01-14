@@ -1,9 +1,14 @@
-simulateEvent = function (node, event, args) {
+// possible options:
+// bubbles: A boolean indicating whether the event should bubble up through
+//  the event chain or not. (default is true)
+simulateEvent = function (node, event, args, options) {
   node = (node instanceof $ ? node[0] : node);
+
+  var bubbles = (options && "bubbles" in options) ? options.bubbles : true;
 
   if (document.createEvent) {
     var e = document.createEvent("Event");
-    e.initEvent(event, true, true);
+    e.initEvent(event, bubbles, true);
     _.extend(e, args);
     node.dispatchEvent(e);
   } else {

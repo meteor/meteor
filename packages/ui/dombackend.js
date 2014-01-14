@@ -98,18 +98,24 @@ if (Meteor.isClient) {
     $jq(elem).off(type, handler);
   };
 
-  DomBackend.bindEventCapturer = function (elem, type, handler) {
+  DomBackend.bindEventCapturer = function (elem, type, selector, handler) {
+    var $elem = $jq(elem);
+
     var wrapper = function (event) {
       event = $jq.event.fix(event);
       event.currentTarget = event.target;
+
       // Note: It might improve jQuery interop if we called into jQuery
       // here somehow.  Since we don't use jQuery to dispatch the event,
       // we don't fire any of jQuery's event hooks or anything.  However,
       // since jQuery can't bind capturing handlers, it's not clear
       // where we would hook in.  Internal jQuery functions like `dispatch`
       // are too high-level.
-      handler.call(elem, event);
+      var $target = $jq(event.currentTarget);
+      if ($target.is($elem.find(selector)))
+        handler.call(elem, event);
     };
+
     handler._meteorui_wrapper = wrapper;
 
     type = this.parseEventType(type);

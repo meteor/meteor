@@ -121,6 +121,55 @@ Tinytest.add("templating - event handler this", function(test) {
   Deps.flush();
 });
 
+
+// This is related to issue at https://gist.github.com/mquandalle/8157017
+// Tests two situations related to events that can only be captured, not bubbled:
+// 1. Event should only fire the handler that matches the selector given
+// 2. Event should work on every element in the selector and not just the first element
+// This test isn't written against mouseenter because it is synthesized by jQuery,
+// the bug also happened with the play event
+Tinytest.add("templating - capturing events", function (test) {
+  var video1Played = 0,
+    video2Played = 0;
+
+  Template.test_capture_events.events({
+    'play .video1': function () {
+      video1Played++;
+    },
+    'play .video2': function () {
+      video2Played++;
+    }
+  });
+
+  // add to body or else events don't actually fire
+  var containerDiv = renderToDiv(Template.test_capture_events);
+  var cleanupDiv = addToBody(containerDiv);
+
+  var checkAndResetEvents = function(video1, video2) {
+    test.equal(video1Played, video1);
+    test.equal(video2Played, video2);
+
+    video1Played = 0;
+    video2Played = 0;
+  };
+
+  simulateEvent($(containerDiv).find(".video1").get(0),
+    "play", {}, {bubbles: false});
+  checkAndResetEvents(1, 0);
+
+  simulateEvent($(containerDiv).find(".video2").get(0),
+    "play", {}, {bubbles: false});
+  checkAndResetEvents(0, 1);
+
+  simulateEvent($(containerDiv).find(".video2").get(1),
+    "play", {}, {bubbles: false});
+  checkAndResetEvents(0, 1);
+
+  // clean up DOM
+  cleanupDiv();
+  Deps.flush();
+});
+
 Tinytest.add("templating - safestring", function(test) {
 
   Template.test_safestring_a.foo = function() {

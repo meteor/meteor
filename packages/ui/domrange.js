@@ -1000,7 +1000,7 @@ HandlerRec.prototype.bind = function () {
   // correct mode and turning off one or the other handlers.
   if (this.mode !== EVENT_MODE_BUBBLING) {
     DomBackend.bindEventCapturer(
-      this.elem, this.type,
+      this.elem, this.type, this.selector || '*',
       this.capturingHandler);
   }
 
