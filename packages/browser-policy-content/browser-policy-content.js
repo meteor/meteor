@@ -90,7 +90,8 @@ var prepareForCspDirective = function (directive) {
 //   cross-browser behavior; some browsers interpret an origin without a
 //   protocol as http://<src> and some interpret it as both http://<src>
 //   and https://<src>
-// - Trim trailing slashes from `src`.
+// - Trim trailing slashes from `src`, since some browsers interpret
+//   "foo.com/" as "foo.com" and some don't.
 var addSourceForDirective = function (directive, src) {
   if (_.contains(_.values(keywords), src)) {
     cspSrcs[directive].push(src);
@@ -98,9 +99,7 @@ var addSourceForDirective = function (directive, src) {
     src = src.toLowerCase();
 
     // Trim trailing slashes.
-    while (src.charAt(src.length - 1) === "/") {
-      src = src.substring(0, src.length - 1);
-    }
+    src = src.replace(/\/+$/, '');
 
     var toAdd = [];
     // If there is no protocol, add both http:// and https://.
