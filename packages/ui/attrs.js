@@ -114,6 +114,12 @@ var ValueHandler = AttributeHandler.extend({
   }
 });
 
+var PropertyHandler = AttributeHandler.extend({
+  update: function (element, oldValue, value) {
+    element[this.name] = value;
+  }
+});
+
 // cross-browser version of `instanceof SVGElement`
 var isSVGElement = function (elem) {
   return 'ownerSVGElement' in elem;
@@ -133,6 +139,8 @@ makeAttributeHandler = function (elem, name, value) {
     return new BooleanHandler(name, value);
   } else if (elem.tagName === 'TEXTAREA' && name === 'value') {
     return new ValueHandler(name, value);
+  } else if (name in elem) {
+    return new PropertyHandler(name, value);
   } else {
     return new AttributeHandler(name, value);
   }
