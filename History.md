@@ -17,6 +17,10 @@
 * Upgrade `jquery-waypoints` package from 1.1.7 to 2.0.3. (Contains
   backward-incompatible changes).
 
+* Add `frame-src` to `browser-policy-content` and account for
+  cross-browser CSP disparities.
+
+
 ## v0.7.0.1
 
 * Two fixes to `meteor run` Mongo startup bugs that could lead to hangs with the
