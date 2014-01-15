@@ -102,12 +102,12 @@ if (Meteor.isClient) {
     var wrapper = function (event) {
       event = jQuery.event.fix(event);
       event.currentTarget = event.target;
-      // XXX maybe could fire more jQuery-specific stuff
-      // here, like special event hooks?  At the end of the
-      // day, though, jQuery just can't bind capturing
-      // handlers, and if we're not putting the handler
-      // in jQuery's queue, we can't call high-level
-      // internal funcs like `dispatch`.
+      // Note: It might improve jQuery interop if we called into jQuery
+      // here somehow.  Since we don't use jQuery to dispatch the event,
+      // we don't fire any of jQuery's event hooks or anything.  However,
+      // since jQuery can't bind capturing handlers, it's not clear
+      // where we would hook in.  Internal jQuery functions like `dispatch`
+      // are too high-level.
       handler.call(elem, event);
     };
     handler._meteorui_wrapper = wrapper;
