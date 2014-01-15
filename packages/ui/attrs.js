@@ -121,19 +121,25 @@ var isSVGElement = function (elem) {
 
 // XXX make it possible for users to register attribute handlers!
 makeAttributeHandler = function (elem, name, value) {
-  // XXX will need one for 'style' on IE, though modern browsers
-  // seem to handle setAttribute ok.
+  // generally, use setAttribute but certain attributes need to be set
+  // by directly setting a JavaScript property on the DOM element.
   if (name === 'class') {
     if (isSVGElement(elem)) {
       return new SVGClassHandler(name, value);
     } else {
       return new ClassHandler(name, value);
     }
-  } else if (name === 'selected') {
+  } else if (name === 'selected' || name === 'checked') {
     return new BooleanHandler(name, value);
-  } else if (elem.tagName === 'TEXTAREA' && name === 'value') {
+  } else if ((elem.tagName === 'TEXTAREA' || elem.tagName === 'INPUT')
+             && name === 'value') {
+    // internally, TEXTAREAs tracks their value in the 'value'
+    // attribute just like INPUTs.
     return new ValueHandler(name, value);
   } else {
     return new AttributeHandler(name, value);
   }
+
+  // XXX will need one for 'style' on IE, though modern browsers
+  // seem to handle setAttribute ok.
 };

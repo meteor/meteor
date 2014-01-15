@@ -13,6 +13,7 @@ var LI = HTML.LI;
 var SPAN = HTML.SPAN;
 var HR = HTML.HR;
 var TEXTAREA = HTML.TEXTAREA;
+var INPUT = HTML.INPUT;
 
 Tinytest.add("ui - render - basic", function (test) {
   var run = function (input, expectedInnerHTML, expectedHTML, expectedCode) {
@@ -72,6 +73,39 @@ Tinytest.add("ui - render - basic", function (test) {
       '<div class="foo"><ul><li><p><a href="#one">One</a></p></li><li><p>Two<br>Three</p></li></ul></div>',
       'HTML.DIV({"class": "foo"}, HTML.UL(HTML.LI(HTML.P(HTML.A({href: "#one"}, "One"))), HTML.LI(HTML.P("Two", HTML.BR(), "Three"))))');
 
+});
+
+// test that we correctly update the 'value' property on input fields
+// rather than the 'value' attribute. the 'value' attribute only sets
+// the initial value.
+Tinytest.add("ui - render - input - value", function (test) {
+  var R = ReactiveVar("hello");
+  var div = document.createElement("DIV");
+  materialize(INPUT({value: function () { return R.get(); }}), div);
+  var inputEl = div.querySelector('input');
+  test.equal(inputEl.value, "hello");
+  inputEl.value = "goodbye";
+  R.set("hola");
+  Deps.flush();
+  test.equal(inputEl.value, "hola");
+});
+
+// test that we correctly update the 'checked' property rather than
+// the 'checked' attribute on input fields of type 'checkbox'. the
+// 'checked' attribute only sets the initial value.
+Tinytest.add("ui - render - input - checked", function (test) {
+  var R = ReactiveVar(null);
+  var div = document.createElement("DIV");
+  materialize(INPUT({type: "checkbox", checked: function () { return R.get(); }}), div);
+  var inputEl = div.querySelector('input');
+  test.equal(inputEl.checked, false);
+  inputEl.checked = true;
+
+  R.set("checked");
+  Deps.flush();
+  R.set(null);
+  Deps.flush();
+  test.equal(inputEl.checked, false);
 });
 
 Tinytest.add("ui - render - textarea", function (test) {
