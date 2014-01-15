@@ -2,7 +2,21 @@
 
 // Define Minimongo collections to match server/publish.js.
 Lists = new Meteor.Collection("lists");
-Todos = new Meteor.Collection("todos");
+// "todos" is the publish/subscribe string see the publish.js file
+// this is a variable to show connection between Collection declaration and Meteor.publish/subscribe
+var todos_topic = 'todos';
+Todos = new Meteor.Collection(todos_topic, {
+    // transform allows behavior to be attached to the objects returned via the pub/sub communication.
+    transform : function(todo) {
+        todo.update = function(change) {
+            Meteor.call('Todos_update', this._id, change);
+        },
+        todo.remove = function() {
+            Meteor.call('Todos_remove', this._id);
+        }
+        return todo;
+    }
+});
 
 // ID of currently selected list
 Session.setDefault('list_id', null);
@@ -34,7 +48,7 @@ var todosHandle = null;
 Deps.autorun(function () {
   var list_id = Session.get('list_id');
   if (list_id)
-    todosHandle = Meteor.subscribe('todos', list_id);
+    todosHandle = Meteor.subscribe(todos_topic, list_id);
   else
     todosHandle = null;
 });
@@ -150,7 +164,7 @@ Template.todos.events(okCancelEvents(
   {
     ok: function (text, evt) {
       var tag = Session.get('tag_filter');
-      Todos.insert({
+      Meteor.call('Todos_insert', {
         text: text,
         list_id: Session.get('list_id'),
         done: false,
@@ -202,11 +216,11 @@ Template.todo_item.adding_tag = function () {
 
 Template.todo_item.events({
   'click .check': function () {
-    Todos.update(this._id, {$set: {done: !this.done}});
+    this.update({$set: {done: !this.done}});
   },
 
   'click .destroy': function () {
-    Todos.remove(this._id);
+    this.remove();
   },
 
   'click .addtag': function (evt, tmpl) {
@@ -228,7 +242,8 @@ Template.todo_item.events({
     evt.target.parentNode.style.opacity = 0;
     // wait for CSS animation to finish
     Meteor.setTimeout(function () {
-      Todos.update({_id: id}, {$pull: {tags: tag}});
+      var todo = Todos.findOne({_id: id});
+      todo.update({$pull: {tags: tag}});
     }, 300);
   }
 });
@@ -237,7 +252,7 @@ Template.todo_item.events(okCancelEvents(
   '#todo-input',
   {
     ok: function (value) {
-      Todos.update(this._id, {$set: {text: value}});
+      this.update({$set: {text: value}});
       Session.set('editing_itemname', null);
     },
     cancel: function () {
@@ -249,7 +264,7 @@ Template.todo_item.events(okCancelEvents(
   '#edittag-input',
   {
     ok: function (value) {
-      Todos.update(this._id, {$addToSet: {tags: value}});
+      this.update({$addToSet: {tags: value}});
       Session.set('editing_addtag', null);
     },
     cancel: function () {
