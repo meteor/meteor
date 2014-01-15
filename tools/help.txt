@@ -34,7 +34,7 @@ the .meteor directory in the root of the project.
 Options:
   --port, -p    Port to listen on (instead of the default 3000). Also
                 uses port N+1 and N+2.
-  --production  Run in production mode. Minify and bundle CSS and JS files.
+  --production  Simulate production mode. Minify and bundle CSS and JS files.
   --raw-logs    Run without parsing logs from stdout and stderr.
   --settings    Set optional data for Meteor.settings on the server
   --release     Specify the release of Meteor to use
