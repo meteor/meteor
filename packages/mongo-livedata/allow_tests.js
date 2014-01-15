@@ -421,6 +421,7 @@ if (Meteor.isClient) {
             {$set: {updated: true}},
             expect(function (err, res) {
               test.isFalse(err);
+              test.equal(res, 1);
               test.equal(collection.find({updated: true}).count(), 1);
             }));
         },
@@ -431,6 +432,7 @@ if (Meteor.isClient) {
             {$set: {updated: true}},
             expect(function (err, res) {
               test.isFalse(err);
+              test.equal(res, 1);
               test.equal(collection.find({updated: true}).count(), 2);
             }));
         },
@@ -603,6 +605,7 @@ if (Meteor.isClient) {
               canUpdateId, {$set: {"dotted.field": 1}},
               expect(function (err, res) {
                 test.isFalse(err);
+                test.equal(res, 1);
                 test.equal(collection.findOne(canUpdateId).dotted.field, 1);
               }));
           },
@@ -622,6 +625,7 @@ if (Meteor.isClient) {
               {$set: {updated: true}},
               expect(function (err, res) {
                 test.isFalse(err);
+                test.equal(res, 0);
                 // nothing has changed
                 test.equal(collection.find().count(), 3);
                 test.equal(collection.find({updated: true}).count(), 0);
@@ -670,6 +674,7 @@ if (Meteor.isClient) {
               {$set: {updated: true}},
               expect(function (err, res) {
                 test.isFalse(err);
+                test.equal(res, 1);
                 test.equal(collection.find({updated: true}).count(), 1);
               }));
           },
@@ -701,6 +706,7 @@ if (Meteor.isClient) {
               {$set: {cantRemove: false, canUpdate2: true}},
               expect(function (err, res) {
                 test.isFalse(err);
+                test.equal(res, 1);
                 test.equal(collection.find({cantRemove: true}).count(), 0);
               }));
           },
@@ -710,7 +716,19 @@ if (Meteor.isClient) {
             collection.remove(canRemoveId,
                               expect(function (err, res) {
               test.isFalse(err);
+              test.equal(res, 1);
               // successfully removed
+              test.equal(collection.find().count(), 2);
+            }));
+          },
+
+          // try to remove a doc that doesn't exist. see we remove no docs.
+          function (test, expect) {
+            collection.remove('some-random-id-that-never-matches',
+                              expect(function (err, res) {
+              test.isFalse(err);
+              test.equal(res, 0);
+              // nothing removed
               test.equal(collection.find().count(), 2);
             }));
           },
