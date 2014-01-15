@@ -152,7 +152,9 @@ _.extend(LivedataTest.ClientStream.prototype, {
     // connection limits.
     self.socket = new SockJS(
       toSockjsUrl(self.rawUrl), undefined, {
-        debug: false, protocols_whitelist: self._sockjsProtocolsWhitelist()
+        debug: false,
+        protocols_whitelist: self._sockjsProtocolsWhitelist(),
+        server: self.options.serverIdentifier
       });
     self.socket.onopen = function (data) {
       self._connected();

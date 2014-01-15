@@ -127,6 +127,10 @@ _.extend(LivedataTest.ClientStream.prototype, {
       self._changeUrl(options.url);
     }
 
+    if (options.serverIdentifier) {
+      self.options.serverIdentifier = options.serverIdentifier;
+    }
+
     if (self.currentStatus.connected) {
       if (options._force || options.url) {
         // force reconnect.
