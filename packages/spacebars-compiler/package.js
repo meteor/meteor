@@ -15,7 +15,8 @@ Package.on_use(function (api) {
   api.use('underscore');
   api.use('ui');
   api.use('minifiers', ['server']);
-  api.add_files(['tokens.js', 'tojs.js', 'spacebars-compiler.js']);
+  api.add_files(['tokens.js', 'tojs.js', 'templatetag.js',
+                 'spacebars-compiler.js']);
 });
 
 Package.on_test(function (api) {

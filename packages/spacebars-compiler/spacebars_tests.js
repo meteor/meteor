@@ -6,7 +6,7 @@ Tinytest.add("spacebars - stache tags", function (test) {
       var msg = '';
       test.throws(function () {
         try {
-          Spacebars.parseStacheTag(input);
+          Spacebars.TemplateTag.parse(input);
         } catch (e) {
           msg = e.message;
           throw e;
@@ -14,7 +14,7 @@ Tinytest.add("spacebars - stache tags", function (test) {
       });
       test.equal(msg.slice(0, expected.length), expected);
     } else {
-      var result = Spacebars.parseStacheTag(input);
+      var result = Spacebars.TemplateTag.parse(input);
       test.equal(result, expected);
     }
   };
