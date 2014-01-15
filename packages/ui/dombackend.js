@@ -7,7 +7,7 @@ if (Meteor.isClient) {
   if (! Package.jquery)
     throw new Error("Meteor UI jQuery adapter: jQuery not found.");
 
-  var jQuery = Package.jquery.jQuery;
+  var $jq = Package.jquery.jQuery;
 
   var DomBackend = {};
   UI.DomBackend = DomBackend;
@@ -34,7 +34,7 @@ if (Meteor.isClient) {
   // This method is modeled after the behavior of jQuery's `$(elem).remove()`,
   // which causes teardown on the subtree being removed.
   DomBackend.removeElement = function (elem) {
-    jQuery(elem).remove();
+    $jq(elem).remove();
   };
 
   // Registers a callback function to be called when the given element or
@@ -46,13 +46,13 @@ if (Meteor.isClient) {
       elem[REMOVAL_CALLBACKS_PROPERTY_NAME] = [];
 
       // Set up the event, only the first time.
-      jQuery(elem).on(JQUERY_REMOVAL_WATCHER_EVENT_NAME, NOOP);
+      $jq(elem).on(JQUERY_REMOVAL_WATCHER_EVENT_NAME, NOOP);
     }
 
     elem[REMOVAL_CALLBACKS_PROPERTY_NAME].push(func);
   };
 
-  jQuery.event.special[JQUERY_REMOVAL_WATCHER_EVENT_NAME] = {
+  $jq.event.special[JQUERY_REMOVAL_WATCHER_EVENT_NAME] = {
     teardown: function() {
       var elem = this;
       var callbacks = elem[REMOVAL_CALLBACKS_PROPERTY_NAME];
@@ -70,37 +70,37 @@ if (Meteor.isClient) {
     // jQuery does fancy stuff like creating an appropriate
     // container element and setting innerHTML on it, as well
     // as working around various IE quirks.
-    return jQuery.parseHTML(html) || [];
+    return $jq.parseHTML(html) || [];
   };
 
   // Must use jQuery semantics for `context`, not
   // querySelectorAll's.  In other words, all the parts
   // of `selector` must be found under `context`.
   DomBackend.findBySelector = function (selector, context) {
-    return jQuery.find(selector, context);
+    return $jq.find(selector, context);
   };
 
   DomBackend.newFragment = function (nodeArray) {
     // jQuery fragments are built specially in
     // IE<9 so that they can safely hold HTML5
     // elements.
-    return jQuery.buildFragment(nodeArray, document);
+    return $jq.buildFragment(nodeArray, document);
   };
 
   // `selector` is non-null.  `type` is one type (but
   // may be in backend-specific form, e.g. have namespaces).
   // Order fired must be order bound.
   DomBackend.delegateEvents = function (elem, type, selector, handler) {
-    $(elem).on(type, selector, handler);
+    $jq(elem).on(type, selector, handler);
   };
 
   DomBackend.undelegateEvents = function (elem, type, handler) {
-    $(elem).off(type, handler);
+    $jq(elem).off(type, handler);
   };
 
   DomBackend.bindEventCapturer = function (elem, type, handler) {
     var wrapper = function (event) {
-      event = jQuery.event.fix(event);
+      event = $jq.event.fix(event);
       event.currentTarget = event.target;
       // Note: It might improve jQuery interop if we called into jQuery
       // here somehow.  Since we don't use jQuery to dispatch the event,
