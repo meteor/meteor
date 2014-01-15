@@ -780,6 +780,18 @@ testAsyncMulti('spacebars - template - defer in rendered callbacks', [function (
   coll.insert({});
 }]);
 
+testAsyncMulti('spacebars - template - rendered template is DOM in rendered callbacks', [
+  function (test, expect) {
+    var tmpl = Template.spacebars_template_test_aaa;
+    tmpl.rendered = expect(function () {
+      console.log('in rendered');
+      test.equal(trim(stripComments(div.innerHTML)), "aaa");
+    });
+    var div = renderToDiv(tmpl);
+    Deps.flush();
+  }
+]);
+
 // Test that in:
 //
 // ```
