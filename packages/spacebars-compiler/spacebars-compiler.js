@@ -261,32 +261,41 @@ Spacebars.parse = function (input) {
     if (stache.args && ! stache.args.length)
       delete stache.args;
 
-    if (stache.type === 'ELSE') {
-      scanner.pos = lastPos;
-      scanner.fatal("Unexpected {{else}}");
-    }
-    if (stache.type === 'BLOCKCLOSE') {
-      scanner.pos = lastPos;
-      scanner.fatal("Unexpected closing stache tag");
-    }
-    if (position === HTML.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
-      var goodPos = scanner.pos;
-      scanner.pos = lastPos; // rewind for benefit of error line/column
-      checkAttributeStacheTag(scanner, stache);
-      scanner.pos = goodPos;
-    } else if (position === HTML.TEMPLATE_TAG_POSITION.IN_START_TAG) {
-      if (! (stache.type === 'COMMENT' || stache.type === 'DOUBLE')) {
-        scanner.fatal("Reactive HTML attributes must either have a constant name or consist of a single {{helper}} providing a dictionary of names and values.  A template tag of type " + stache.type + " is not allowed here.");
-      }
-      if (scanner.peek() === '=') {
-        scanner.fatal("Template tags are not allowed in attribute names, only in attribute values or in the form of a single {{helper}} that evaluates to a dictionary of name=value pairs.");
-      }
-    }
+    if (stache.type === 'COMMENT')
+      // consume the tag from the input but emit no Special
+      return null;
 
-    if (stache.type === 'COMMENT') {
-      return null; // consume the tag from the input but emit no Special
-    } else if (stache.type === 'BLOCKOPEN') {
-      var blockName = stache.path.join(','); // for comparisons, errors
+    var checkTag = function () {
+      var goodPos = scanner.pos;
+      // rewind for benefit of error line/column; if we don't error out,
+      // we must set `scanner.pos = goodPos`.
+      scanner.pos = lastPos;
+
+      if (stache.type === 'ELSE')
+        scanner.fatal("Unexpected {{else}}");
+
+      if (stache.type === 'BLOCKCLOSE')
+        scanner.fatal("Unexpected closing stache tag");
+
+      if (position === HTML.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
+        checkAttributeStacheTag(scanner, stache);
+      } else if (position === HTML.TEMPLATE_TAG_POSITION.IN_START_TAG) {
+        if (! (stache.type === 'DOUBLE')) {
+          scanner.fatal("Reactive HTML attributes must either have a constant name or consist of a single {{helper}} providing a dictionary of names and values.  A template tag of type " + stache.type + " is not allowed here.");
+        }
+        if (scanner.peek() === '=') {
+          scanner.fatal("Template tags are not allowed in attribute names, only in attribute values or in the form of a single {{helper}} that evaluates to a dictionary of name=value pairs.");
+        }
+      }
+
+      scanner.pos = goodPos;
+    };
+    checkTag();
+
+    if (stache.type === 'BLOCKOPEN') {
+      // parse block contents
+
+      var blockName = stache.path.join(','); // form of name for comparisons, errors
 
       var textMode = null;
       if (blockName === 'markdown' ||
@@ -306,7 +315,7 @@ Spacebars.parse = function (input) {
       if (scanner.rest().slice(0, 2) !== '{{')
         scanner.fatal("Expected {{else}} or block close for " + blockName);
 
-      var lastPos = scanner.pos;
+      lastPos = scanner.pos;
       var stache2 = Spacebars.parseStacheTag(scanner);
 
       if (stache2.type === 'ELSE') {
@@ -354,7 +363,7 @@ Spacebars.parse = function (input) {
 
 // XXX think about these restrictions
 var checkAttributeStacheTag = function (scanner, tag) {
-  if (tag.type === 'DOUBLE' || tag.type === 'COMMENT') {
+  if (tag.type === 'DOUBLE') {
     return;
   } else if (tag.type === 'BLOCKOPEN') {
     var path = tag.path;
