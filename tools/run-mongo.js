@@ -242,6 +242,8 @@ var launchMongo = function (options) {
     proc.stdout.setEncoding('utf8');
     var listening = false;
     var replSetReady = false;
+    var replSetReadyToBeInitiated = false;
+    var alreadyInitiatedReplSet = false;
     var maybeCallOnListen = function () {
       if (listening && replSetReady) {
         if (createReplSet)
@@ -249,29 +251,54 @@ var launchMongo = function (options) {
         onListen();
       }
     };
-    proc.stdout.on('data', function (data) {
-      if (/ \[initandlisten\] waiting for connections on port/.test(data)) {
-        if (createReplSet) {
-          // Connect to it and start a replset.
-          var db = new mongoNpmModule.Db(
-            'meteor', new mongoNpmModule.Server('127.0.0.1', options.port),
-            {safe: true});
-          db.open(function (err, db) {
-            if (err)
+
+    var maybeInitiateReplset = function () {
+      // We need to want to create a replset, be confident that the server is
+      // listening, be confident that the server's replset implementation is
+      // ready to be initiated, and have not already done it.
+      if (!(createReplSet && listening && replSetReadyToBeInitiated
+            && !alreadyInitiatedReplSet)) {
+        return;
+      }
+
+      alreadyInitiatedReplSet = true;
+
+      // Connect to it and start a replset.
+      var db = new mongoNpmModule.Db(
+        'meteor', new mongoNpmModule.Server('127.0.0.1', options.port),
+        {safe: true});
+      db.open(function(err, db) {
+        if (err)
+          throw err;
+        db.admin().command({
+          replSetInitiate: {
+            _id: replSetName,
+            members: [{_id : 0, host: '127.0.0.1:' + options.port}]
+          }
+        }, function (err, result) {
+          if (err)
               throw err;
-            db.admin().command({
-              replSetInitiate: {
-                _id: replSetName,
-                members: [{_id : 0, host: '127.0.0.1:' + options.port}]
-              }
-            }, function (err, result) {
-              if (err)
-                throw err;
-              db.close(true);
-            });
-          });
-        }
+          // why this isn't in the error is unclear.
+          if (result && result.documents && result.documents[0]
+              && result.documents[0].errmsg) {
+            throw result.document[0].errmsg;
+          }
+          db.close(true);
+        });
+      });
+    };
+
+    proc.stdout.on('data', function (data) {
+      // note: don't use "else ifs" in this, because 'data' can have multiple
+      // lines
+      if (/config from self or any seed \(EMPTYCONFIG\)/.test(data)) {
+        replSetReadyToBeInitiated = true;
+        maybeInitiateReplset();
+      }
+
+      if (/ \[initandlisten\] waiting for connections on port/.test(data)) {
         listening = true;
+        maybeInitiateReplset();
         maybeCallOnListen();
       }
 
