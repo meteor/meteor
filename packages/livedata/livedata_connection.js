@@ -545,6 +545,7 @@ _.extend(Connection.prototype, {
     var self = this;
     var f = new Future();
     var ready = false;
+    var handle;
     args = args || [];
     args.push({
       onReady: function () {
@@ -559,8 +560,9 @@ _.extend(Connection.prototype, {
       }
     });
 
-    self.subscribe.apply(self, [name].concat(args));
+    handle = self.subscribe.apply(self, [name].concat(args));
     f.wait();
+    return handle;
   },
 
   methods: function (methods) {

@@ -162,7 +162,10 @@ var ensureConfigured = function(serviceName) {
 Oauth._renderOauthResults = function(res, query) {
   // We support ?close and ?redirect=URL. Any other query should
   // just serve a blank page
-  if ('close' in query) { // check with 'in' because we don't set a value
+  if (query.error) {
+    Log.warn("Error in Oauth Server: " + query.error);
+    closePopup(res);
+  } else if ('close' in query) { // check with 'in' because we don't set a value
     closePopup(res);
   } else if (query.redirect) {
     // Only redirect to URLs on the same domain as this app.

@@ -1,20 +1,37 @@
-// This is not an ideal name, but we can change it later.
+// Meteor._localStorage is not an ideal name, but we can change it later.
 
 if (window.localStorage) {
-  Meteor._localStorage = {
-    getItem: function (key) {
-      return window.localStorage.getItem(key);
-    },
-    setItem: function (key, value) {
-      window.localStorage.setItem(key, value);
-    },
-    removeItem: function (key) {
-      window.localStorage.removeItem(key);
-    }
-  };
+  // Let's test to make sure that localStorage actually works. For example, in
+  // Safari with private browsing on, window.localStorage exists but actually
+  // trying to use it throws.
+
+  var key = '_localstorage_test_' + Random.id();
+  var retrieved;
+  try {
+    window.localStorage.setItem(key, key);
+    retrieved = window.localStorage.getItem(key);
+    window.localStorage.removeItem(key);
+  } catch (e) {
+    // ... ignore
+  }
+  if (key === retrieved) {
+    Meteor._localStorage = {
+      getItem: function (key) {
+        return window.localStorage.getItem(key);
+      },
+      setItem: function (key, value) {
+        window.localStorage.setItem(key, value);
+      },
+      removeItem: function (key) {
+        window.localStorage.removeItem(key);
+      }
+    };
+  }
 }
+
 // XXX eliminate dependency on jQuery, detect browsers ourselves
-else if ($.browser.msie) { // If we are on IE, which support userData
+// Else, if we are on IE, which support userData
+if (!Meteor._localStorage && $.browser.msie) {
   var userdata = document.createElement('span'); // could be anything
   userdata.style.behavior = 'url("#default#userData")';
   userdata.id = 'localstorage-helper';
@@ -40,7 +57,9 @@ else if ($.browser.msie) { // If we are on IE, which support userData
       return userdata.getAttribute(key);
     }
   };
-} else {
+}
+
+if (!Meteor._localStorage) {
   Meteor._debug(
     "You are running a browser with no localStorage or userData "
       + "support. Logging in from one tab will not cause another "

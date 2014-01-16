@@ -196,15 +196,28 @@ var tryRevokeOldTokens = function (options) {
     }
     var response = result.response;
 
-    if (response.statusCode === 200) {
-      // Server confirms that the tokens have been revoked
-      // (Be careful to reread session data in case httpHelpers changed it)
-      data = readSessionData();
-      var session = getSession(data, domain);
-      session.pendingRevoke = _.difference(session.pendingRevoke, tokenIds);
-      if (! session.pendingRevoke.length)
-        delete session.pendingRevoke;
-      writeSessionData(data);
+    if (response.statusCode === 200 &&
+        response.body) {
+      try {
+        var body = JSON.parse(response.body);
+        if (body.tokenRevoked) {
+          // Server confirms that the tokens have been revoked. Checking for a
+          // `tokenRevoked` key in the response confirms that we hit an actual
+          // accounts server that understands that we were trying to revoke some
+          // tokens, not just a random URL that happened to return a 200
+          // response.
+
+          // (Be careful to reread session data in case httpHelpers changed it)
+          data = readSessionData();
+          var session = getSession(data, domain);
+          session.pendingRevoke = _.difference(session.pendingRevoke, tokenIds);
+          if (! session.pendingRevoke.length)
+            delete session.pendingRevoke;
+          writeSessionData(data);
+        }
+      } catch (e) {
+        logoutFailWarning(domain);
+      }
     } else {
       logoutFailWarning(domain);
     }
@@ -309,12 +322,14 @@ var logInToGalaxy = function (galaxyName) {
       method: 'GET',
       strictSSL: true,
       headers: {
-        cookie: 'GALAXY_OAUTH_SESSION=' + session
+        cookie: 'GALAXY_OAUTH_SESSION=' + session +
+          '; GALAXY_USER_AGENT_TOOL=' +
+          encodeURIComponent(JSON.stringify(utils.getAgentInfo()))
       }
     });
     var body = JSON.parse(galaxyResult.body);
   } catch (e) {
-    return { error: 'no-galaxy' };
+    return { error: (body && body.error) || 'no-galaxy' };
   }
   response = galaxyResult.response;
 
@@ -324,7 +339,7 @@ var logInToGalaxy = function (galaxyName) {
   if (response.statusCode !== 200 ||
       ! body ||
       ! _.has(galaxyResult.setCookie, 'GALAXY_AUTH'))
-    return { error: 'access-denied' };
+    return { error: (body && body.error) || 'access-denied' };
 
   return {
     token: galaxyResult.setCookie.GALAXY_AUTH,
@@ -418,9 +433,20 @@ exports.loginCommand = function (options) {
     var galaxyLoginResult = logInToGalaxy(galaxy);
     if (galaxyLoginResult.error) {
       // XXX add human readable error messages
-      process.stdout.write('\nLogin to ' + galaxy + ' failed: ' +
-                           galaxyLoginResult.error + '\n');
-      return 1
+      process.stdout.write('\nLogin to ' + galaxy + ' failed. ');
+
+      if (galaxyLoginResult.error === 'unauthorized') {
+        process.stdout.write('You are not authorized for this galaxy.\n');
+      } else if (galaxyLoginResult.error === 'no_oauth_server') {
+        process.stdout.write('The galaxy could not ' +
+                             'contact Meteor Accounts.\n');
+      } else if (galaxyLoginResult.error === 'no_identity') {
+        process.stdout.write('Your login information could not be found.\n');
+      } else {
+        process.stdout.write('Error: ' + galaxyLoginResult.error + '\n');
+      }
+
+      return 1;
     }
     data = readSessionData(); // be careful to reread data file after RPC
     var session = getSession(data, galaxy);
@@ -437,6 +463,7 @@ exports.loginCommand = function (options) {
                        (currentUsername(data) ?
                         " as " + currentUsername(data) : "") + ".\n" +
                        "Thanks for being a Meteor developer!\n");
+  return 0;
 };
 
 exports.logoutCommand = function (options) {

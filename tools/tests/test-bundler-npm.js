@@ -57,7 +57,7 @@ var _assertCorrectPackageNpmDir = function (deps) {
     // known to the test author. We set keys on val always in this
     // order so that comparison works well.
     var val = {};
-    _.each(['version', 'from', 'resolved', 'dependencies'], function (key) {
+    _.each(['version', 'dependencies'], function (key) {
       if (expected[key])
         val[key] = expected[key];
       else if (actualMeteorNpmShrinkwrapDependencies[name] && actualMeteorNpmShrinkwrapDependencies[name][key])

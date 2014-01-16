@@ -34,6 +34,6 @@ Facebook.requestCredential = function (options, credentialRequestCompleteCallbac
 
   Oauth.showPopup(
     loginUrl,
-    _.bind(credentialRequestCompleteCallack, null, credentialToken)
+    _.bind(credentialRequestCompleteCallback, null, credentialToken)
   );
 };

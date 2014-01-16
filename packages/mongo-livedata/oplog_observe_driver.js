@@ -32,14 +32,12 @@ OplogObserveDriver = function (options) {
 
   self._published = new LocalCollection._IdMap;
   var selector = self._cursorDescription.selector;
-  self._selectorFn = LocalCollection._compileSelector(
-    self._cursorDescription.selector);
+  self._matcher = options.matcher;
   var projection = self._cursorDescription.options.fields || {};
   self._projectionFn = LocalCollection._compileProjection(projection);
   // Projection function, result of combining important fields for selector and
   // existing fields projection
-  self._sharedProjection = LocalCollection._combineSelectorAndProjection(
-    selector, projection);
+  self._sharedProjection = self._matcher.combineIntoProjection(projection);
   self._sharedProjectionFn = LocalCollection._compileProjection(
     self._sharedProjection);
 
@@ -131,7 +129,7 @@ _.extend(OplogObserveDriver.prototype, {
     var self = this;
     newDoc = _.clone(newDoc);
 
-    var matchesNow = newDoc && self._selectorFn(newDoc);
+    var matchesNow = newDoc && self._matcher.documentMatches(newDoc).result;
     if (mustMatchNow && !matchesNow) {
       throw Error("expected " + EJSON.stringify(newDoc) + " to match "
                   + EJSON.stringify(self._cursorDescription));
@@ -238,7 +236,7 @@ _.extend(OplogObserveDriver.prototype, {
 
       // XXX what if selector yields?  for now it can't but later it could have
       // $where
-      if (self._selectorFn(op.o))
+      if (self._matcher.documentMatches(op.o).result)
         self._add(op.o);
     } else if (op.op === 'u') {
       // Is this a modifier ($set/$unset, which may require us to poll the
@@ -263,8 +261,7 @@ _.extend(OplogObserveDriver.prototype, {
         LocalCollection._modify(newDoc, op.o);
         self._handleDoc(id, self._sharedProjectionFn(newDoc));
       } else if (!canDirectlyModifyDoc ||
-                 LocalCollection._canSelectorBecomeTrueByModifier(
-                   self._cursorDescription.selector, op.o)) {
+                 self._matcher.canBecomeTrueByModifier(op.o)) {
         self._needToFetch.set(id, op.ts.toString());
         if (self._phase === PHASE.STEADY)
           self._fetchModifiedDocuments();
@@ -462,7 +459,7 @@ _.extend(OplogObserveDriver.prototype, {
 // Does our oplog tailing code support this cursor? For now, we are being very
 // conservative and allowing only simple queries with simple options.
 // (This is a "static method".)
-OplogObserveDriver.cursorSupported = function (cursorDescription) {
+OplogObserveDriver.cursorSupported = function (cursorDescription, matcher) {
   // First, check the options.
   var options = cursorDescription.options;
 
@@ -488,23 +485,13 @@ OplogObserveDriver.cursorSupported = function (cursorDescription) {
     }
   }
 
-  // For now, we're just dealing with equality queries: no $operators, regexps,
-  // or $and/$or/$where/etc clauses. We can expand the scope of what we're
-  // comfortable processing later. ($where will get pretty scary since it will
-  // allow selector processing to yield!)
-  return _.all(cursorDescription.selector, function (value, field) {
-    // No logical operators like $and.
-    if (field.substr(0, 1) === '$')
-      return false;
-    // We only allow scalars, not sub-documents or $operators or RegExp.
-    // XXX Date would be easy too, though I doubt anyone is doing equality
-    // lookups on dates
-    return typeof value === "string" ||
-      typeof value === "number" ||
-      typeof value === "boolean" ||
-      value === null ||
-      value instanceof Meteor.Collection.ObjectID;
-  });
+  // We don't allow the following selectors:
+  //   - $where (not confident that we provide the same JS environment
+  //             as Mongo, and can yield!)
+  //   - $near (has "interesting" properties in MongoDB, like the possibility
+  //            of returning an ID multiple times, though even polling maybe
+  //            have a bug there
+  return !matcher.hasWhere() && !matcher.hasGeoQuery();
 };
 
 var modifierCanBeDirectlyApplied = function (modifier) {

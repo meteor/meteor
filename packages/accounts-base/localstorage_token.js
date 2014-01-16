@@ -115,10 +115,14 @@ var pollStoredLoginToken = function() {
 
   // != instead of !== just to make sure undefined and null are treated the same
   if (lastLoginTokenWhenPolled != currentLoginToken) {
-    if (currentLoginToken)
-      Meteor.loginWithToken(currentLoginToken); // XXX should we pass a callback here?
-    else
+    if (currentLoginToken) {
+      Meteor.loginWithToken(currentLoginToken, function (err) {
+        if (err)
+          makeClientLoggedOut();
+      });
+    } else {
       Meteor.logout();
+    }
   }
   lastLoginTokenWhenPolled = currentLoginToken;
 };
