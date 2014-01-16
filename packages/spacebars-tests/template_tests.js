@@ -946,16 +946,76 @@ Tinytest.add('spacebars - templates - constant #each argument', function (test) 
 // @returns {String} simplified html content
 var divContentForMarkdown = function (div) {
   return trim(stripComments(div.innerHTML))
-        .replace(/\<br\>/g, '\n');
+        .replace(/\<br\>/g, '\n')
+        .replace(/<(\/?\S+)>/g, function (s) { return s.toLowerCase(); }); // for IE
+};
+
+// extract a multi-line string from a comment within a function.
+// @param f {Function} eg function () { /* [[[...content...]]] */ }
+// @returns {String} eg "content"
+var textFromFunction = function(f) {
+  return f.toString().match(/\[\[\[([\S\s]*)\]\]\]/m)[1]
+    .replace(/[ ]*\/\/ \d+$/gm, ''); // remove line number comments
 };
 
 Tinytest.add('spacebars - templates - #markdown - basic', function (test) {
   var tmpl = Template.spacebars_template_test_markdown_basic;
+  tmpl.obj = {snippet: "<i>hi</i>"};
   tmpl.hi = function () {
-    return "<i>hi</i>";
+    return this.snippet;
   };
   var div = renderToDiv(tmpl);
-  test.equal(divContentForMarkdown(div), "FIXME");
+  test.equal(divContentForMarkdown(div), textFromFunction(function () { /*
+[[[<p><i>hi</i>
+/each}}</p>
+
+<p><b><i>hi</i></b>
+<b>/each}}</b></p>
+
+<ul>
+<li><i>hi</i></li>
+<li><p>/each}}</p></li>
+<li><p><b><i>hi</i></b></p></li>
+<li><b>/each}}</b></li>
+</ul>
+
+<p>some paragraph to fix showdown's four space parsing below.</p>
+
+<pre><code>&lt;i&gt;hi&lt;/i&gt;
+/each}}
+
+&lt;b&gt;&lt;i&gt;hi&lt;/i&gt;&lt;/b&gt;
+&lt;b&gt;/each}}&lt;/b&gt;
+</code></pre>
+
+<p>&amp;gt</p>
+
+<ul>
+<li>&amp;gt</li>
+</ul>
+
+<p><code>&amp;gt</code></p>
+
+<pre><code>&amp;gt
+</code></pre>
+
+<p>&gt;</p>
+
+<ul>
+<li>&gt;</li>
+</ul>
+
+<p><code>&amp;gt;</code></p>
+
+<pre><code>&amp;gt;
+</code></pre>
+
+<p><code>&lt;i&gt;hi&lt;/i&gt;</code>
+<code>/each}}</code></p>
+
+<p><code>&lt;b&gt;&lt;i&gt;hi&lt;/i&gt;&lt;/b&gt;</code>
+<code>&lt;b&gt;/each}}</code></p>]]] */
+  }));
 });
 
 Tinytest.add('spacebars - templates - #markdown - if', function (test) {
@@ -964,10 +1024,50 @@ Tinytest.add('spacebars - templates - #markdown - if', function (test) {
   tmpl.cond = function () { return R.get(); };
 
   var div = renderToDiv(tmpl);
-  test.equal(divContentForMarkdown(div), "FIXME(false)");
+  test.equal(divContentForMarkdown(div), textFromFunction(function () { /*
+[[[<p>false</p>
+
+<p><b>false</b></p>
+
+<ul>
+<li><p>false</p></li>
+<li><p><b>false</b></p></li>
+</ul>
+
+<p>some paragraph to fix showdown's four space parsing below.</p>
+
+<pre><code>false
+
+&lt;b&gt;false&lt;/b&gt;
+</code></pre>
+
+<p><code>false</code></p>
+
+<p><code>&lt;b&gt;false&lt;/b&gt;</code></p>]]] */
+  }));
   R.set(true);
   Deps.flush();
-  test.equal(divContentForMarkdown(div), "FIXME(true)");
+  test.equal(divContentForMarkdown(div), textFromFunction(function () { /*
+[[[<p>true</p>
+
+<p><b>true</b></p>
+
+<ul>
+<li><p>true</p></li>
+<li><p><b>true</b></p></li>
+</ul>
+
+<p>some paragraph to fix showdown's four space parsing below.</p>
+
+<pre><code>true
+
+&lt;b&gt;true&lt;/b&gt;
+</code></pre>
+
+<p><code>true</code></p>
+
+<p><code>&lt;b&gt;true&lt;/b&gt;</code></p>]]] */
+  }));
 });
 
 Tinytest.add('spacebars - templates - #markdown - each', function (test) {
@@ -976,10 +1076,47 @@ Tinytest.add('spacebars - templates - #markdown - each', function (test) {
   tmpl.seq = function () { return R.get(); };
 
   var div = renderToDiv(tmpl);
-  test.equal(divContentForMarkdown(div), "FIXME([])");
+  test.equal(divContentForMarkdown(div), textFromFunction(function () { /*
+[[[<p><b></b></p>
+
+<ul>
+<li></li>
+<li><b></b></li>
+</ul>
+
+<p>some paragraph to fix showdown's four space parsing below.</p>
+
+<pre><code>&lt;b&gt;&lt;/b&gt;
+</code></pre>
+
+<p>``</p>
+
+<p><code>&lt;b&gt;&lt;/b&gt;</code></p>]]] */
+    }));
+
   R.set(["item"]);
   Deps.flush();
-  test.equal(divContentForMarkdown(div), "FIXME([\"item\"])");
+  test.equal(divContentForMarkdown(div), textFromFunction(function () { /*
+[[[<p>item</p>
+
+<p><b>item</b></p>
+
+<ul>
+<li><p>item</p></li>
+<li><p><b>item</b></p></li>
+</ul>
+
+<p>some paragraph to fix showdown's four space parsing below.</p>
+
+<pre><code>item
+
+&lt;b&gt;item&lt;/b&gt;
+</code></pre>
+
+<p><code>item</code></p>
+
+<p><code>&lt;b&gt;item&lt;/b&gt;</code></p>]]] */
+    }));
 });
 
 Tinytest.add('spacebars - templates - #markdown - inclusion', function (test) {

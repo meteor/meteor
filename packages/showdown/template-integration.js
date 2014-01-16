@@ -4,7 +4,7 @@ if (Package.ui) {
   Package.ui.Handlebars.registerHelper('markdown', UI.block(function () {
     var self = this;
     return function () {
-      var text = UI.toRawText(self.__content);
+      var text = UI.toRawText(self.__content, self /*parentComponent*/);
       var converter = new Showdown.converter();
       return HTML.Raw(converter.makeHtml(text));
     };

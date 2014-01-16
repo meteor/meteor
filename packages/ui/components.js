@@ -12,7 +12,7 @@ UI.If = Component.extend({
     // of a Component during init (but presumably not before
     // or after)?
   },
-  render: function (buf) {
+  render: function () {
     var self = this;
     return function () {
       var condition = getCondition(self);
@@ -54,7 +54,7 @@ UI.Unless = Component.extend({
     this.condition = this.data;
     this.data = undefined;
   },
-  render: function (buf) {
+  render: function () {
     var self = this;
     return function () {
       var condition = getCondition(self);
@@ -68,7 +68,7 @@ UI.With = Component.extend({
   init: function () {
     this.condition = this.data;
   },
-  render: function (buf) {
+  render: function () {
     var self = this;
     return function () {
       var condition = getCondition(self);
