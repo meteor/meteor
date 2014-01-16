@@ -127,8 +127,8 @@ _.extend(LivedataTest.ClientStream.prototype, {
       self._changeUrl(options.url);
     }
 
-    if (options.serverIdentifier) {
-      self.options.serverIdentifier = options.serverIdentifier;
+    if (options._sockjsOptions) {
+      self.options._sockjsOptions = options._sockjsOptions;
     }
 
     if (self.currentStatus.connected) {
