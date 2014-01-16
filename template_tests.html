@@ -288,7 +288,8 @@
 </template>
 
 <template name="spacebars_template_test_markdown_basic">
-  {{#markdown}}
+  {{#with obj}}
+    {{#markdown}}
 {{hi}}
 /each}}
 
@@ -301,20 +302,28 @@
 * <b>{{hi}}</b>
 * <b>/each}}</b>
 
+some paragraph to fix showdown's four space parsing below.
+
     {{hi}}
     /each}}
 
     <b>{{hi}}</b>
-    <b>/each</b>
+    <b>/each}}</b>
 
 &gt
+
 * &gt
+
 `&gt`
+
     &gt
 
 &gt;
+
 * &gt;
+
 `&gt;`
+
     &gt;
 
 `{{hi}}`
@@ -323,19 +332,29 @@
 `<b>{{hi}}</b>`
 `<b>/each}}`
 
-  {{/markdown}}
+    {{/markdown}}
+  {{/with}}
 </template>
 
 <template name="spacebars_template_test_markdown_if">
   {{#markdown}}
 
 {{#if cond}}true{{else}}false{{/if}}
+
 <b>{{#if cond}}true{{else}}false{{/if}}</b>
+
 * {{#if cond}}true{{else}}false{{/if}}
+
 * <b>{{#if cond}}true{{else}}false{{/if}}</b>
+
+some paragraph to fix showdown's four space parsing below.
+
     {{#if cond}}true{{else}}false{{/if}}
+
     <b>{{#if cond}}true{{else}}false{{/if}}</b>
+
 `{{#if cond}}true{{else}}false{{/if}}`
+
 `<b>{{#if cond}}true{{else}}false{{/if}}</b>`
 
   {{/markdown}}
@@ -345,12 +364,21 @@
   {{#markdown}}
 
 {{#each seq}}{{.}}{{/each}}
+
 <b>{{#each seq}}{{.}}{{/each}}</b>
+
 * {{#each seq}}{{.}}{{/each}}
+
 * <b>{{#each seq}}{{.}}{{/each}}</b>
+
+some paragraph to fix showdown's four space parsing below.
+
     {{#each seq}}{{.}}{{/each}}
+
     <b>{{#each seq}}{{.}}{{/each}}</b>
+
 `{{#each seq}}{{.}}{{/each}}`
+
 `<b>{{#each seq}}{{.}}{{/each}}</b>`
 
   {{/markdown}}
