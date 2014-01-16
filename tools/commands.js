@@ -293,7 +293,9 @@ main.registerCommand({
 main.registerCommand({
   name: 'update',
   options: {
-    // Undocumented flag (used, eg, by upgrade-to-engine.js).
+    // Undocumented flag used by upgrade-to-engine.sh for updating
+    // from prehistoric versions of Meteor. Ignoring it should be
+    // harmless. We should remove it eventually.
     'dont-fetch-latest': { type: Boolean }
   },
   // We have to be able to work without a release, since 'meteor
@@ -313,36 +315,33 @@ main.registerCommand({
   // for a particular release, or that we _just did_ this and
   // springboarded), go get the latest release and switch to it.
   if (! release.forced) {
-    if (! options["dont-fetch-latest"]) {
-      try {
-        warehouse.fetchLatestRelease();
-      } catch (e) {
-        if (! (e instanceof files.OfflineError)) {
-          console.error("Failed to update Meteor.");
-          throw e;
-        }
-        // If the problem appears to be that we're offline, just log and
-        // continue.
-        console.log("Can't contact the update server. Are you online?");
-        couldNotContactServer = true;
+    try {
+      warehouse.fetchLatestRelease();
+    } catch (e) {
+      if (! (e instanceof files.OfflineError)) {
+        console.error("Failed to update Meteor.");
+        throw e;
       }
+      // If the problem appears to be that we're offline, just log and
+      // continue.
+      console.log("Can't contact the update server. Are you online?");
+      couldNotContactServer = true;
     }
+  }
 
-    if (! release.current ||
-        release.current.name !== release.latestDownloaded()) {
-      // The user asked for the latest release (well, they "asked for
-      // it" by not passing --release). We just downloaded a new
-      // release, so springboard to it. (Or, we were run in app with
-      // no release, so springboard to the latest release we know
-      // about, whether we just download it or not.)
-      // #UpdateSpringboard
-      //
-      // (We used to springboard only if the tools version actually
-      // changed between the old and new releases. Now we do it
-      // unconditionally, because it's not a big deal to do it and it
-      // eliminates the complexity of the current release changing.)
-      throw new main.SpringboardToLatestRelease;
-    }
+  if (! release.current ||
+      release.current.name !== release.latestDownloaded()) {
+    // The user asked for the latest release (well, they "asked for
+    // it" by not passing --release). We just downloaded a new
+    // release, so springboard to it. (Or, we were run in app with no
+    // release, so springboard to the latest release we know about,
+    // whether we just download it or not.)  #UpdateSpringboard
+    //
+    // (We used to springboard only if the tools version actually
+    // changed between the old and new releases. Now we do it
+    // unconditionally, because it's not a big deal to do it and it
+    // eliminates the complexity of the current release changing.)
+    throw new main.SpringboardToLatestRelease;
   }
 
   // At this point we should have a release. (If we didn't to start
@@ -354,8 +353,6 @@ main.registerCommand({
   // If we're not in an app, then we're done (other than maybe printing some
   // stuff).
   if (! options.appDir) {
-    if (options["dont-fetch-latest"])
-      return;
     if (release.forced) {
       // We get here if:
       // 1) the user ran 'meteor update' and we found a new version

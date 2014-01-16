@@ -17,6 +17,7 @@ var Updater = require('./run-updater.js').Updater;
 // - deal with XXX's in updater about it needing to go though runlog since
 //   no more stdout redirection
 // - audit future yielding, keeping in mind that return yields
+// - audit for return consistency ('return 0' vs implicit return)
 //
 ///////////////////////////////////////////////////////////////////////////////
 
