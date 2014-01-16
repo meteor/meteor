@@ -173,9 +173,11 @@ var launchMongo = function (options) {
     find_mongo_and_kill_it_dead(options.port);
 
     var portFile = path.join(dbPath, 'METEOR-PORT');
+    var portFileExists = false;
     var createReplSet = true;
     try {
       createReplSet = +(fs.readFileSync(portFile)) !== options.port;
+      portFileExists = true;
     } catch (e) {
       if (!e || e.code !== 'ENOENT')
         throw e;
@@ -189,6 +191,11 @@ var launchMongo = function (options) {
     // also a little slow to initiate a new replSet, thus the attempt
     // to not do it unless the port changes.)
     if (createReplSet) {
+      // Delete the port file, so we don't mistakenly believe that the DB is
+      // still configured.
+      if (portFileExists)
+        fs.unlinkSync(portFile);
+
       try {
         var dbFiles = fs.readdirSync(dbPath);
       } catch (e) {
