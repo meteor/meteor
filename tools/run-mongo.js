@@ -251,10 +251,12 @@ var launchMongo = function (options) {
     var replSetReady = false;
     var replSetReadyToBeInitiated = false;
     var alreadyInitiatedReplSet = false;
+    var alreadyCalledOnListen = false;
     var maybeCallOnListen = function () {
-      if (listening && replSetReady) {
+      if (listening && replSetReady && !alreadyCalledOnListen) {
         if (createReplSet)
           fs.writeFileSync(portFile, options.port);
+        alreadyCalledOnListen = true;
         onListen();
       }
     };
