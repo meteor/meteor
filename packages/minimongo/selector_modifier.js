@@ -70,21 +70,31 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
   // check if there is a $set or $unset that indicates something is an
   // object rather than a scalar in the actual object where we saw $-operator
   // NOTE: it is correct since we allow only scalars in $-operators
-  if (_.any(_.filter(self._getPaths(), isOperatorObject), function (sel, path) {
+  var expectedScalarIsObject = _.any(self._selector, function (sel, path) {
+    if (! isOperatorObject(sel))
+      return false;
     return _.any(modifierPaths, function (modifierPath) {
       return !modifierPath.indexOf(path) && modifierPath[path.length] === '.';
     });
-  })) return false;
+  });
+
+  if (expectedScalarIsObject)
+    return false;
 
 
   // A helper to ensure object has only certain keys
   var onlyContainsKeys = function (obj, keys) {
-    return _.every(_.keys(obj), _.bind(_.contains, null, keys));
+    return _.all(obj, function (v, k) {
+      return _.contains(keys, k);
+    });
   };
 
   // convert a selector into an object matching the selector
   // { 'a.b': { ans: 42 }, 'foo.bar': null, 'foo.baz': "something" }
   // => { a: { b: { ans: 42 } }, foo: { bar: null, baz: "something" } }
+
+  // If the analysis of this selector is too hard for our implementation
+  // fallback to "YES"
   var fallback = false;
   var doc = pathsToTree(self._getPaths(),
     function (path) {
@@ -95,6 +105,10 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
         // dummy value
         if (valueSelector.$in) {
           var matcher = new Minimongo.Matcher({ placeholder: valueSelector });
+
+          // Return anything from $in that matches the whole selector for this
+          // path. If nothing matches, returns `undefined` as nothing can make
+          // this selector into `true`.
           return _.find(valueSelector.$in, function (x) {
             return matcher.documentMatches({ placeholder: x }).result;
           });
@@ -117,6 +131,9 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
 
           return middle;
         } else if (onlyContainsKeys(valueSelector, ['$nin',' $ne'])) {
+          // Since self._isSimple makes sure $nin and $ne are not combined with
+          // objects or arrays, we can confidently return an empty object as it
+          // never matches any scalar.
           return {};
         } else {
           fallback = true;
@@ -126,8 +143,6 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
     },
     _.identity /*conflict resolution is no resolution*/);
 
-  // If the analysis of this selector is too hard for our implementation
-  // fallback to "YES"
   if (fallback)
     return true;
 

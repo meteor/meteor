@@ -28,8 +28,9 @@ Minimongo.Matcher = function (selector) {
   self._hasGeoQuery = false;
   // Set to true if compilation finds a $where.
   self._hasWhere = false;
-  // Set to false if compilation finds anything other than a simple equality on
-  // some fields.
+  // Set to false if compilation finds anything other than a simple equality or
+  // one or more of '$gt', '$gte', '$lt', '$lte', '$ne', '$in', '$nin' used with
+  // scalars as operands.
   self._isSimple = true;
   // A clone of the original selector. Used by canBecomeTrueByModifier.
   self._selector = null;
@@ -77,7 +78,7 @@ _.extend(Minimongo.Matcher.prototype, {
     // likely programmer error, and not what you want, particularly for
     // destructive operations.
     if (!selector || (('_id' in selector) && !selector._id)) {
-      self._isSimple = null;
+      self._isSimple = false;
       return nothingMatcher;
     }
 
@@ -235,11 +236,16 @@ var operatorBranchedMatcher = function (valueSelector, matcher, isRoot) {
   var operatorMatchers = [];
   _.each(valueSelector, function (operand, operator) {
     // XXX we should actually implement $eq, which is new in 2.6
-    if (operator !== '$eq' &&
-        !_.contains(['$lt', '$lte', '$gt', '$gte'], operator) &&
-        (operator !== '$ne' || _.isObject(operand)) &&
-        (!_.contains(['$in', '$nin'], operator) || !_.isArray(operand) || _.any(operand, _.isObject)))
+    var supportedRange = _.contains(['$lt', '$lte', '$gt', '$gte'], operator) &&
+      _.isNumber(operand);
+    var supportedInequality = operator === '$ne' && !_.isObject(operand);
+    var supportedInclusion = _.contains(['$in', '$nin'], operator) &&
+      _.isArray(operand) && !_.any(operand, _.isObject);
+
+    if (! (operator === '$eq' || supportedRange ||
+           supportedInclusion || supportedInequality)) {
       matcher._isSimple = false;
+    }
 
     if (_.has(VALUE_OPERATORS, operator)) {
       operatorMatchers.push(

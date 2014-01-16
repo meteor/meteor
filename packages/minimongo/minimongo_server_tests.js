@@ -515,6 +515,9 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
     F({ b: { $in: [1, 3, 5, 7] } }, { $set: { 'b.c': 2 } }, "sel $in, set subfield");
     T({ b: { $in: [1, 3, 5, 7] } }, { $set: { 'bd.c': 2, b: 3 } }, "sel $in, set similar subfield");
     F({ 'b.c': { $in: [1, 3, 5, 7] } }, { $set: { b: 2 } }, "sel subfield of set scalar");
+    // If modifier tries to set a sub-field of a path expected to be a scalar.
+    F({ 'a.b': { $gt: 5, $lt: 7}, x: 1 }, { $set: { 'a.b.c': 3, x: 1 } }, "set sub-field of $gt,$lt operator (scalar expected)");
+    F({ 'a.b': { $gt: 5, $lt: 7}, x: 1 }, { $set: { x: 1 }, $unset: { 'a.b.c': 1 } }, "unset sub-field of $gt,$lt operator (scalar expected)");
   });
 
   Tinytest.add("minimongo - can selector become true by modifier - $-nonscalar selectors and simple tests", function (t) {
