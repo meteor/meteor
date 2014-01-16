@@ -265,7 +265,7 @@ _.extend(Run.prototype, {
   }),
 
   // Extend the timeout for the next operation by 'secs' seconds.
-  wait: function (secs) {
+  waitSecs: function (secs) {
     var self = this;
     self.extraTime += secs;
   },
@@ -368,7 +368,7 @@ defineTest("login", function () {
   run.write("test\n");
   run.match("Password:");
   run.write("testtest\n");
-  run.wait(5);
+  run.waitSecs(5);
   run.match("Logged in as test.");
   run.expectExit(0);
 
