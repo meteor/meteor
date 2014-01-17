@@ -2451,15 +2451,15 @@ Tinytest.add("minimongo - saveOriginals", function (test) {
   // Verify the originals.
   var originals = c.retrieveOriginals();
   var affected = ['bar', 'baz', 'quux', 'whoa', 'hooray'];
-  test.equal(_.size(originals), _.size(affected));
+  test.equal(originals.size(), _.size(affected));
   _.each(affected, function (id) {
-    test.isTrue(_.has(originals, id));
+    test.isTrue(originals.has(id));
   });
-  test.equal(originals.bar, {_id: 'bar', x: 'updateme'});
-  test.equal(originals.baz, {_id: 'baz', x: 'updateme'});
-  test.equal(originals.quux, {_id: 'quux', y: 'removeme'});
-  test.equal(originals.whoa, {_id: 'whoa', y: 'removeme'});
-  test.equal(originals.hooray, undefined);
+  test.equal(originals.get('bar'), {_id: 'bar', x: 'updateme'});
+  test.equal(originals.get('baz'), {_id: 'baz', x: 'updateme'});
+  test.equal(originals.get('quux'), {_id: 'quux', y: 'removeme'});
+  test.equal(originals.get('whoa'), {_id: 'whoa', y: 'removeme'});
+  test.equal(originals.get('hooray'), undefined);
 
   // Verify that changes actually occured.
   test.equal(c.find().count(), 4);
@@ -2472,16 +2472,16 @@ Tinytest.add("minimongo - saveOriginals", function (test) {
   c.saveOriginals();
   originals = c.retrieveOriginals();
   test.isTrue(originals);
-  test.isTrue(_.isEmpty(originals));
+  test.isTrue(originals.empty());
 
   // Insert and remove a document during the period.
   c.saveOriginals();
   c.insert({_id: 'temp', q: 8});
   c.remove('temp');
   originals = c.retrieveOriginals();
-  test.equal(_.size(originals), 1);
-  test.isTrue(_.has(originals, 'temp'));
-  test.equal(originals.temp, undefined);
+  test.equal(originals.size(), 1);
+  test.isTrue(originals.has('temp'));
+  test.equal(originals.get('temp'), undefined);
 });
 
 Tinytest.add("minimongo - saveOriginals errors", function (test) {

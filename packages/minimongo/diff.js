@@ -2,7 +2,7 @@
 // ordered: bool.
 // old_results and new_results: collections of documents.
 //    if ordered, they are arrays.
-//    if unordered, they are maps {_id: doc}.
+//    if unordered, they are IdMaps
 LocalCollection._diffQueryChanges = function (ordered, oldResults, newResults,
                                        observer) {
   if (ordered)
@@ -14,28 +14,31 @@ LocalCollection._diffQueryChanges = function (ordered, oldResults, newResults,
 };
 
 LocalCollection._diffQueryUnorderedChanges = function (oldResults, newResults,
-                                                observer) {
+                                                       observer) {
   if (observer.movedBefore) {
     throw new Error("_diffQueryUnordered called with a movedBefore observer!");
   }
 
-  _.each(newResults, function (newDoc) {
-    if (_.has(oldResults, newDoc._id)) {
-      var oldDoc = oldResults[newDoc._id];
-      if (observer.changed && !EJSON.equals(oldDoc, newDoc)) {
-        observer.changed(newDoc._id, LocalCollection._makeChangedFields(newDoc, oldDoc));
+  newResults.forEach(function (newDoc, id) {
+    if (oldResults.has(id)) {
+      if (observer.changed) {
+        var oldDoc = oldResults.get(id);
+        if (!EJSON.equals(oldDoc, newDoc)) {
+          observer.changed(
+            id, LocalCollection._makeChangedFields(newDoc, oldDoc));
+        }
       }
-    } else {
+    } else if (observer.added) {
       var fields = EJSON.clone(newDoc);
       delete fields._id;
-      observer.added && observer.added(newDoc._id, fields);
+      observer.added(newDoc._id, fields);
     }
   });
 
   if (observer.removed) {
-    _.each(oldResults, function (oldDoc) {
-      if (!_.has(newResults, oldDoc._id))
-        observer.removed(oldDoc._id);
+    oldResults.forEach(function (oldDoc, id) {
+      if (!newResults.has(id))
+        observer.removed(id);
     });
   }
 };

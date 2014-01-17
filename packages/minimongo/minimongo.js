@@ -8,27 +8,30 @@
 // ObserveHandle: the return value of a live query.
 
 LocalCollection = function (name) {
-  this.name = name;
-  this.docs = {}; // _id -> document (also containing id)
+  var self = this;
+  self.name = name;
+  // _id -> document (also containing id)
+  self._docs = new LocalCollection._IdMap;
 
-  this._observeQueue = new Meteor._SynchronousQueue();
+  self._observeQueue = new Meteor._SynchronousQueue();
 
-  this.next_qid = 1; // live query id generator
+  self.next_qid = 1; // live query id generator
 
   // qid -> live query object. keys:
   //  ordered: bool. ordered queries have addedBefore/movedBefore callbacks.
   //  results: array (ordered) or object (unordered) of current results
+  //    (aliased with self._docs!)
   //  results_snapshot: snapshot of results. null if not paused.
   //  cursor: Cursor object for the query.
   //  selector, sorter, (callbacks): functions
-  this.queries = {};
+  self.queries = {};
 
-  // null if not saving originals; a map from id to original document value if
+  // null if not saving originals; an IdMap from id to original document value if
   // saving originals. See comments before saveOriginals().
-  this._savedOriginals = null;
+  self._savedOriginals = null;
 
   // True when observers are paused and we should not send callbacks.
-  this.paused = false;
+  self.paused = false;
 };
 
 Minimongo = {};
@@ -90,11 +93,11 @@ LocalCollection.Cursor = function (collection, selector, options) {
 
   if (LocalCollection._selectorIsId(selector)) {
     // stash for fast path
-    self.selector_id = LocalCollection._idStringify(selector);
+    self._selectorId = selector;
     self.matcher = new Minimongo.Matcher(selector, self);
     self.sorter = undefined;
   } else {
-    self.selector_id = undefined;
+    self._selectorId = undefined;
     self.matcher = new Minimongo.Matcher(selector, self);
     self.sorter = (self.matcher.hasGeoQuery() || options.sort) ?
       new Sorter(options.sort || []) : null;
@@ -111,8 +114,8 @@ LocalCollection.Cursor = function (collection, selector, options) {
   else
     self._transform = options.transform;
 
-  // db_objects is a list of the objects that match the cursor. (It's always a
-  // list, never an object: LocalCollection.Cursor is always ordered.)
+  // db_objects is an array of the objects that match the cursor. (It's always
+  // an array, never an IdMap: LocalCollection.Cursor is always ordered.)
   self.db_objects = null;
   self.cursor_pos = 0;
 
@@ -267,6 +270,10 @@ _.extend(LocalCollection.Cursor.prototype, {
 
     var ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
 
+    // there are several places that assume you aren't combining skip/limit with
+    // unordered observe.  eg, update's EJSON.clone, and the "there are several"
+    // comment in _modifyAndNotify
+    // XXX allow skip/limit with unordered observe
     if (!options._allow_unordered && !ordered && (self.skip || self.limit))
       throw new Error("must use ordered observe with skip or limit");
 
@@ -295,7 +302,7 @@ _.extend(LocalCollection.Cursor.prototype, {
     }
     query.results = self._getRawObjects(ordered, query.distances);
     if (self.collection.paused)
-      query.results_snapshot = (ordered ? [] : {});
+      query.results_snapshot = (ordered ? [] : new LocalCollection._IdMap);
 
     // wrap callbacks we were passed. callbacks only fire when not paused and
     // are never undefined
@@ -333,7 +340,11 @@ _.extend(LocalCollection.Cursor.prototype, {
     }
 
     if (!options._suppress_initial && !self.collection.paused) {
-      _.each(query.results, function (doc, i) {
+      // XXX unify ordered and unordered interface
+      var each = ordered
+            ? _.bind(_.each, null, query.results)
+            : _.bind(query.results.forEach, query.results);
+      each(function (doc) {
         var fields = EJSON.clone(doc);
 
         delete fields._id;
@@ -389,22 +400,24 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered,
                                                             distances) {
   var self = this;
 
-  var results = ordered ? [] : {};
+  // XXX use OrderedDict instead of array, and make IdMap and OrderedDict
+  // compatible
+  var results = ordered ? [] : new LocalCollection._IdMap;
 
   // fast path for single ID value
-  if (self.selector_id) {
+  if (self._selectorId !== undefined) {
     // If you have non-zero skip and ask for a single id, you get
     // nothing. This is so it matches the behavior of the '{_id: foo}'
     // path.
     if (self.skip)
       return results;
 
-    if (_.has(self.collection.docs, self.selector_id)) {
-      var selectedDoc = self.collection.docs[self.selector_id];
+    if (self.collection._docs.has(self._selectorId)) {
+      var selectedDoc = self.collection._docs.get(self._selectorId);
       if (ordered)
         results.push(selectedDoc);
       else
-        results[self.selector_id] = selectedDoc;
+        results.set(self._selectorId, selectedDoc);
     }
     return results;
   }
@@ -421,9 +434,7 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered,
       distances = new LocalCollection._IdMap();
   }
 
-  for (var idStringified in self.collection.docs) {
-    var doc = self.collection.docs[idStringified];
-    var id = LocalCollection._idParse(idStringified);  // XXX use more idmaps
+  self.collection._docs.forEach(function (doc, id) {
     var matchResult = self.matcher.documentMatches(doc);
     if (matchResult.result) {
       if (ordered) {
@@ -431,14 +442,16 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered,
         if (distances && matchResult.distance !== undefined)
           distances.set(id, matchResult.distance);
       } else {
-        results[idStringified] = doc;
+        results.set(id, doc);
       }
     }
     // Fast path for limited unsorted queries.
+    // XXX 'length' check here seems wrong for ordered
     if (self.limit && !self.skip && !self.sorter &&
         results.length === self.limit)
-      return results;
-  }
+      return false;  // break
+    return true;  // continue
+  });
 
   if (!ordered)
     return results;
@@ -492,13 +505,13 @@ LocalCollection.prototype.insert = function (doc, callback) {
     doc._id = LocalCollection._useOID ? new LocalCollection._ObjectID()
                                       : Random.id();
   }
-  var id = LocalCollection._idStringify(doc._id);
+  var id = doc._id;
 
-  if (_.has(self.docs, id))
-    throw MinimongoError("Duplicate _id '" + doc._id + "'");
+  if (self._docs.has(id))
+    throw MinimongoError("Duplicate _id '" + id + "'");
 
   self._saveOriginal(id, undefined);
-  self.docs[id] = doc;
+  self._docs.set(id, doc);
 
   var queriesToRecompute = [];
   // trigger live queries that match
@@ -507,7 +520,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
     var matchResult = query.matcher.documentMatches(doc);
     if (matchResult.result) {
       if (query.distances && matchResult.distance !== undefined)
-        query.distances.set(doc._id, matchResult.distance);
+        query.distances.set(id, matchResult.distance);
       if (query.cursor.skip || query.cursor.limit)
         queriesToRecompute.push(qid);
       else
@@ -525,9 +538,9 @@ LocalCollection.prototype.insert = function (doc, callback) {
   // immediately.
   if (callback)
     Meteor.defer(function () {
-      callback(null, doc._id);
+      callback(null, id);
     });
-  return doc._id;
+  return id;
 };
 
 LocalCollection.prototype.remove = function (selector, callback) {
@@ -541,26 +554,24 @@ LocalCollection.prototype.remove = function (selector, callback) {
   var specificIds = LocalCollection._idsMatchedBySelector(selector);
   if (specificIds) {
     _.each(specificIds, function (id) {
-      var strId = LocalCollection._idStringify(id);
       // We still have to run matcher, in case it's something like
       //   {_id: "X", a: 42}
-      if (_.has(self.docs, strId)
-          && matcher.documentMatches(self.docs[strId]).result)
-        remove.push(strId);
+      if (self._docs.has(id)
+          && matcher.documentMatches(self._docs.get(id)).result)
+        remove.push(id);
     });
   } else {
-    for (var strId in self.docs) {
-      var doc = self.docs[strId];
+    self._docs.forEach(function (doc, id) {
       if (matcher.documentMatches(doc).result) {
-        remove.push(strId);
+        remove.push(id);
       }
-    }
+    });
   }
 
   var queryRemove = [];
   for (var i = 0; i < remove.length; i++) {
     var removeId = remove[i];
-    var removeDoc = self.docs[removeId];
+    var removeDoc = self._docs.get(removeId);
     _.each(self.queries, function (query, qid) {
       if (query.matcher.documentMatches(removeDoc).result) {
         if (query.cursor.skip || query.cursor.limit)
@@ -570,7 +581,7 @@ LocalCollection.prototype.remove = function (selector, callback) {
       }
     });
     self._saveOriginal(removeId, removeDoc);
-    delete self.docs[removeId];
+    self._docs.remove(removeId);
   }
 
   // run live query callbacks _after_ we've removed the documents.
@@ -614,6 +625,8 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   // _recomputeResults.)
   var qidToOriginalResults = {};
   _.each(self.queries, function (query, qid) {
+    // XXX for now, skip/limit implies ordered observe, so query.results is
+    // always an array
     if ((query.cursor.skip || query.cursor.limit) && !query.paused)
       qidToOriginalResults[qid] = EJSON.clone(query.results);
   });
@@ -621,8 +634,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
 
   var updateCount = 0;
 
-  for (var id in self.docs) {
-    var doc = self.docs[id];
+  self._docs.forEach(function (doc, id) {
     var queryResult = matcher.documentMatches(doc);
     if (queryResult.result) {
       // XXX Should we save the original even if mod ends up being a no-op?
@@ -630,9 +642,10 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
       self._modifyAndNotify(doc, mod, recomputeQids, queryResult.arrayIndex);
       ++updateCount;
       if (!options.multi)
-        break;
+        return false;  // break
     }
-  }
+    return true;
+  });
 
   _.each(recomputeQids, function (dummy, qid) {
     var query = self.queries[qid];
@@ -703,8 +716,7 @@ LocalCollection.prototype._modifyAndNotify = function (
     } else {
       // Because we don't support skip or limit (yet) in unordered queries, we
       // can just do a direct lookup.
-      matched_before[qid] = _.has(query.results,
-                                  LocalCollection._idStringify(doc._id));
+      matched_before[qid] = query.results.has(doc._id);
     }
   }
 
@@ -767,7 +779,7 @@ LocalCollection._insertInResults = function (query, doc) {
     query.added(doc._id, fields);
   } else {
     query.added(doc._id, fields);
-    query.results[LocalCollection._idStringify(doc._id)] = doc;
+    query.results.set(doc._id, doc);
   }
 };
 
@@ -777,9 +789,9 @@ LocalCollection._removeFromResults = function (query, doc) {
     query.removed(doc._id);
     query.results.splice(i, 1);
   } else {
-    var id = LocalCollection._idStringify(doc._id);  // in case callback mutates doc
+    var id = doc._id;  // in case callback mutates doc
     query.removed(doc._id);
-    delete query.results[id];
+    query.results.remove(id);
   }
 };
 
@@ -790,7 +802,7 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
   if (!query.ordered) {
     if (!_.isEmpty(changedFields)) {
       query.changed(doc._id, changedFields);
-      query.results[LocalCollection._idStringify(doc._id)] = doc;
+      query.results.set(doc._id, doc);
     }
     return;
   }
@@ -888,7 +900,7 @@ LocalCollection.prototype.saveOriginals = function () {
   var self = this;
   if (self._savedOriginals)
     throw new Error("Called saveOriginals twice without retrieveOriginals");
-  self._savedOriginals = {};
+  self._savedOriginals = new LocalCollection._IdMap;
 };
 LocalCollection.prototype.retrieveOriginals = function () {
   var self = this;
@@ -908,9 +920,9 @@ LocalCollection.prototype._saveOriginal = function (id, doc) {
   // Have we previously mutated the original (and so 'doc' is not actually
   // original)?  (Note the 'has' check rather than truth: we store undefined
   // here for inserted docs!)
-  if (_.has(self._savedOriginals, id))
+  if (self._savedOriginals.has(id))
     return;
-  self._savedOriginals[id] = EJSON.clone(doc);
+  self._savedOriginals.set(id, EJSON.clone(doc));
 };
 
 // Pause the observers. No callbacks from observers will fire until

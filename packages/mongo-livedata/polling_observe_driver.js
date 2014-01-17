@@ -129,8 +129,8 @@ _.extend(PollingObserveDriver.prototype, {
     var first = false;
     if (!self._results) {
       first = true;
-      // XXX maybe use _IdMap/OrderedDict instead?
-      self._results = self._ordered ? [] : {};
+      // XXX maybe use OrderedDict instead?
+      self._results = self._ordered ? [] : new LocalCollection._IdMap;
     }
 
     self._testOnlyPollCallback && self._testOnlyPollCallback();

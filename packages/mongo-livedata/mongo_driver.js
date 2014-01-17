@@ -792,7 +792,7 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options) {
   self._synchronousNextObject = Future.wrap(
     dbCursor.nextObject.bind(dbCursor), 0);
   self._synchronousCount = Future.wrap(dbCursor.count.bind(dbCursor));
-  self._visitedIds = {};
+  self._visitedIds = new LocalCollection._IdMap;
 };
 
 _.extend(SynchronousCursor.prototype, {
@@ -812,9 +812,8 @@ _.extend(SynchronousCursor.prototype, {
         // because we want to maintain O(1) memory usage. And if there isn't _id
         // for some reason (maybe it's the oplog), then we don't do this either.
         // (Be careful to do this for falsey but existing _id, though.)
-        var strId = LocalCollection._idStringify(doc._id);
-        if (self._visitedIds[strId]) continue;
-        self._visitedIds[strId] = true;
+        if (self._visitedIds.has(doc._id)) continue;
+        self._visitedIds.set(doc._id, true);
       }
 
       if (self._transform)
@@ -854,7 +853,7 @@ _.extend(SynchronousCursor.prototype, {
     // known to be synchronous
     self._dbCursor.rewind();
 
-    self._visitedIds = {};
+    self._visitedIds = new LocalCollection._IdMap;
   },
 
   // Mostly usable for tailable cursors.
@@ -880,9 +879,9 @@ _.extend(SynchronousCursor.prototype, {
     if (ordered) {
       return self.fetch();
     } else {
-      var results = {};
+      var results = new LocalCollection._IdMap;
       self.forEach(function (doc) {
-        results[doc._id] = doc;
+        results.set(doc._id, doc);
       });
       return results;
     }
