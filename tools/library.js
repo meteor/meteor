@@ -242,6 +242,17 @@ _.extend(Library.prototype, {
           title: "building package `" + name + "`",
           rootPath: packageDir
         }, function () {
+          // The package directory must have a '/node_modules' subdirectory,
+          // or NPM will assume we are not at the package root and will
+          // search the directory's parents for one. It will then set
+          // the root to any ancestor that does have a '/node_modules' subdir.
+          // This can cause the build to fail for downloaded user packages and
+          // also Meteor itself if run from checkout.
+          // See https://github.com/meteor/meteor/issues/1761
+          var packageModulesDirectory = path.join(packageDir, 'node_modules');
+          if (! fs.existsSync(packageModulesDirectory))
+            fs.mkdirSync(packageModulesDirectory);
+
           // This has to be done in the right sequence: initialize
           // (which loads the dependency list but does not get() those
           // packages), then put the package into the package list,
