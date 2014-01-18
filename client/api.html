@@ -1,5 +1,5 @@
 <template name="api">
-{{#better_markdown}}
+{{#markdown}}
 
 <h1 id="api">The Meteor API</h1>
 
@@ -1097,31 +1097,31 @@ applicable. If you only need to receive the fields that changed, see
 <dt><span class="name">added(document)</span> <span class="or">or</span></dt>
 <dt><span class="name">addedAt(document, atIndex, before)</span></dt>
 <dd>
-{{#better_markdown}}
+{{#markdown}}
 A new document `document` entered the result set. The new document
 appears at position `atIndex`. It is immediately before the document
 whose `_id` is `before`. `before` will be `null` if the new document
 is at the end of the results.
-{{/better_markdown}}
+{{/markdown}}
 </dd>
 
 <dt><span class="name">changed(newDocument, oldDocument)
     <span class="or">or</span></span></dt>
 <dt><span class="name">changedAt(newDocument, oldDocument, atIndex)</span></dt>
 <dd>
-{{#better_markdown}}
+{{#markdown}}
 The contents of a document were previously `oldDocument` and are now
 `newDocument`. The position of the changed document is `atIndex`.
-{{/better_markdown}}
+{{/markdown}}
 </dd>
 
 <dt><span class="name">removed(oldDocument)</span>
   <span class="or">or</span></dt>
 <dt><span class="name">removedAt(oldDocument, atIndex)</span></dt>
 <dd>
-{{#better_markdown}}
+{{#markdown}}
 The document `oldDocument` is no longer in the result set. It used to be at position `atIndex`.
-{{/better_markdown}}
+{{/markdown}}
 </dd>
 
 {{#dtdd "movedTo(document, fromIndex, toIndex, before)"}}
@@ -1162,12 +1162,12 @@ result set, not the entire contents of the document that changed.
   <span class="or">or</span></dt>
 <dt><span class="name">addedBefore(id, fields, before)</span></dt>
 <dd>
-{{#better_markdown}}
+{{#markdown}}
 A new document entered the result set. It has the `id` and `fields`
 specified. `fields` contains all fields of the document excluding the
 `_id` field. The new document is before the document identified by
 `before`, or at the end if `before` is `null`.
-{{/better_markdown}}
+{{/markdown}}
 </dd>
 
 {{#dtdd "changed(id, fields)"}}
@@ -3003,11 +3003,11 @@ by spammers.)
                 'Hello from Meteor!',
                 'This is a test of Email.send.');
 
-{{/better_markdown}}
+{{/markdown}}
 
 <h2 id="assets"><span>Assets</span></h2>
 
-{{#better_markdown}}
+{{#markdown}}
 `Assets` allows server code in a Meteor application to access static server
 assets, which are located in the `private` subdirectory of an application's
 tree.
@@ -3021,7 +3021,7 @@ directory called `nested` with a file called `data.txt` inside it, then server
 code can read `data.txt` by running:
 
     var data = Assets.getText('nested/data.txt');
-{{/better_markdown}}
+{{/markdown}}
 
 </template>
 
@@ -3040,7 +3040,7 @@ code can read `data.txt` by running:
 </h3>
 
 <div class="desc">
-{{#each descr}}{{#better_markdown}}{{{this}}}{{/better_markdown}}{{/each}}
+{{#each descr}}{{#markdown}}{{{this}}}{{/markdown}}{{/each}}
 </div>
 
 {{#if args}}
@@ -3054,7 +3054,7 @@ code can read `data.txt` by running:
 {{/if}}
 
 {{#if content}}
-{{#better_markdown}}{{> content}}{{/better_markdown}}
+{{#markdown}}{{> content}}{{/markdown}}
 {{/if}}
 
 </div>
@@ -3074,7 +3074,7 @@ code can read `data.txt` by running:
       {{{type}}}
     {{/if}}
   </span></dt>
-<dd>{{#better_markdown}}{{{descr}}}{{/better_markdown}}</dd>
+<dd>{{#markdown}}{{{descr}}}{{/markdown}}</dd>
 {{/each}}
 </dl>
 </template>

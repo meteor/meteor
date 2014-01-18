@@ -21,7 +21,7 @@ when writing those apps.
 
 <template name="whatismeteor">
 
-{{#better_markdown}}
+{{#markdown}}
 
 <h2 id="whatismeteor">What is Meteor?</h2>
 
@@ -69,11 +69,11 @@ In Meteor 1.0, the `meteor` build tool will have full support for
 Atmosphere.
 {{/note}}
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
 
 <template name="structure">
-{{#better_markdown}}
+{{#markdown}}
 
 <h2 id="structuringyourapp">Structuring your application</h2>
 
@@ -170,11 +170,11 @@ These rules stack, so that within `lib`, for example, files are still
 loaded in alphabetical order; and if there are multiple files named
 `main.js`, the ones in subdirectories are loaded earlier.
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
 
 <template name="data">
-{{#better_markdown}}
+{{#markdown}}
 
 <h2 id="dataandsecurity">Data and security</h2>
 
@@ -350,11 +350,11 @@ and publish functions validate all of their arguments. Just run
 method or publish function which skips `check`ing any of its arguments will fail
 with an exception.
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
 
 <template name="reactivity">
-{{#better_markdown}}
+{{#markdown}}
 
 <h2 id="reactivity">Reactivity</h2>
 
@@ -417,11 +417,11 @@ Meteor's
 is a package called [`Deps`](#deps) that is fairly short and straightforward.
 You can use it yourself to implement new reactive data sources.
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
 
 <template name="livehtml">
-{{#better_markdown}}
+{{#markdown}}
 
 <h2 id="livehtml">Live HTML</h2>
 
@@ -488,11 +488,11 @@ preserve these elements even when their enclosing template is
 rerendered, but will still update their children and copy over any
 attribute changes.
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
 
 <template name="templates">
-{{#better_markdown}}
+{{#markdown}}
 
 <h2 id="templates">Templates</h2>
 
@@ -640,11 +640,11 @@ discussion.
     > Session.set("weather", "cool and dry");
     In DOM:  <div>It'll be cool and dry tonight</div>
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
 
 <template name="packages_concept">
-{{#better_markdown}}
+{{#markdown}}
 
   <h2 id="usingpackages">Using packages</h2>
 
@@ -681,12 +681,12 @@ are willing to brave the fact that the Meteor package format is not
 documented yet and will change significantly before Meteor 1.0. See
 [Writing Packages](#writingpackages).
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
 
 
 <template name="namespacing">
-{{#better_markdown}}
+{{#markdown}}
 
   <h2 id="namespacing">Namespacing</h2>
 
@@ -775,12 +775,12 @@ certainly shouldn't depend on this quirk, and in the future Meteor may
 check for it and throw an error if you do.
 {{/note}}
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
 
 
 <template name="deploying">
-{{#better_markdown}}
+{{#markdown}}
 
 <h2 id="deploying">Deploying</h2>
 
@@ -846,12 +846,12 @@ have `npm` available, and run the following:
     $ npm install fibers@1.0.1
 {{/warning}}
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
 
 
 <template name="packages_writing">
-{{#better_markdown}}
+{{#markdown}}
 
   <h2 id="writingpackages">Writing packages</h2>
 
@@ -950,5 +950,5 @@ quick tips:
   machine architecture, but if not your built Meteor package will be
   portable.
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
