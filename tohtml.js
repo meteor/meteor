@@ -139,7 +139,8 @@ HTML.Raw.prototype.toText = function () {
 // used when including templates within {{#markdown}}
 HTML.Tag.prototype.toText = function (textMode, parentComponent) {
   if (textMode === HTML.TEXTMODE.STRING)
-    return this.toHTML();
+    // stringify the tag as HTML, then convert to text
+    return HTML.toText(this.toHTML(parentComponent), textMode);
   else
     throw new Error("Can't insert tags in attributes or TEXTAREA elements");
 };
