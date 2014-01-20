@@ -22,10 +22,6 @@
   </div>
 </body>
 
-<template name="better_markdown">
-  {{> content}}
-</template>
-
 <template name="nav">
   <div id="nav-inner">
     {{#each sections}}
@@ -74,20 +70,20 @@
   <dt><span class="name">{{{name}}}</span>
     {{#if type}}<span class="type">{{type}}</span>{{/if}}
   </dt>
-  <dd>{{#better_markdown}}{{> content}}{{/better_markdown}}</dd>
+  <dd>{{#markdown}}{{> content}}{{/markdown}}</dd>
 </template>
 
 
 
 <template name="warning">
   <div class="warning">
-    {{#better_markdown}}{{> content}}{{/better_markdown}}
+    {{#markdown}}{{> content}}{{/markdown}}
   </div>
 </template>
 
 <template name="note">
   <div class="note">
-    {{#better_markdown}}{{> content}}{{/better_markdown}}
+    {{> content}}
   </div>
 </template>
 
