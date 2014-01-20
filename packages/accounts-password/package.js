@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Password support for accounts."
+  summary: "Password support for accounts"
 });
 
 Package.on_use(function(api) {

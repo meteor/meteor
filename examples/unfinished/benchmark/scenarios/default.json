@@ -1,8 +1,6 @@
-{
+ {
   "params": {
     "numCollections": 1,
-    "numBuckets": 3,
-    "initialDocuments": 1,
     "maxAgeSeconds": 60,
     "insertsPerSecond": 1,
     "updatesPerSecond": 1,

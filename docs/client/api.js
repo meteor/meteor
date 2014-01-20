@@ -58,12 +58,12 @@ Template.api.settings = {
   id: "meteor_settings",
   name: "Meteor.settings",
   locus: "Anywhere",
-  descr: ["`Meteor.settings` contains any deployment-specific options that were " +
-          "provided using the `--settings` option for `meteor run` or `meteor deploy`. " +
-          "If you provide the `--settings` option, `Meteor.settings` will be the " +
-          "JSON object in the file you specify.  Otherwise, `Meteor.settings` will " +
-          "be an empty object. If the object contains a key named `public`, then " +
-          "`Meteor.settings.public` will also be available on the client."]
+  descr: ["`Meteor.settings` contains deployment-specific configuration options. " +
+          "You can initialize settings by passing the `--settings` option (which takes a file containing JSON data) to " +
+          "`meteor run` or `meteor deploy`, " +
+          "or by setting your server process's `METEOR_SETTINGS` environment variable to a JSON string. " +
+          "If you don't provide any settings, `Meteor.settings` will be an empty object.  If the settings object contains a key named `public`, then " +
+          "`Meteor.settings.public` will be available on the client as well as the server.  All other properties of `Meteor.settings` are only defined on the server."]
 };
 
 Template.api.release = {
@@ -1166,8 +1166,8 @@ Template.api.accounts_config = {
     },
     {
       name: "restrictCreationByEmailDomain",
-      type: "String Or Function",
-      descr: "If set, only allow new users with an email in the specified domain or if the predicate function returns true. Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })`."
+      type: "String or Function",
+      descr: "If set to a string, only allows new users if the domain part of their email address matches the string. If set to a function, only allows new users if the function returns true.  The function is passed the full email address of the proposed new user.  Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })`."
     },
     {
       name: "loginExpirationInDays",

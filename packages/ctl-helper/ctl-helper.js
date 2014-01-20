@@ -3,6 +3,9 @@ var Future = Npm.require('fibers/future');
 
 Ctl = {};
 
+var connection;
+var checkConnection;
+
 _.extend(Ctl, {
   Commands: [],
 
@@ -22,7 +25,61 @@ _.extend(Ctl, {
       cmdName = argv._.splice(0,1)[0];
 
     Ctl.findCommand(cmdName).func(argv);
+    Ctl.disconnect();
     return 0;
+  },
+
+  startServerlikeProgramIfNotPresent: function (program, tags, admin) {
+    var numServers = Ctl.getJobsByApp(
+      Ctl.myAppName(), {program: program, done: false}).count();
+    if (numServers === 0) {
+      Ctl.startServerlikeProgram(program, tags, admin);
+    } else {
+      console.log(program, "already running.");
+    }
+  },
+
+  startServerlikeProgram: function (program, tags, admin) {
+    var appConfig = Ctl.prettyCall(
+      Ctl.findGalaxy(), 'getAppConfiguration', [Ctl.myAppName()]);
+    if (typeof admin == 'undefined')
+      admin = appConfig.admin;
+
+    var proxyConfig;
+    var bindPathPrefix = "";
+    if (admin) {
+      bindPathPrefix = "/" + encodeURIComponent(Ctl.myAppName()).replace(/\./g, '_');
+    }
+
+    // Allow appConfig settings to be objects or strings. We need to stringify
+    // them to pass them to the app in the env var.
+    // Backwards compat with old app config format.
+    _.each(["settings", "METEOR_SETTINGS"], function (settingsKey) {
+      if (appConfig[settingsKey] && typeof appConfig[settingsKey] === "object")
+        appConfig[settingsKey] = JSON.stringify(appConfig[settingsKey]);
+    });
+
+    // XXX args? env?
+    Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), program, {
+      exitPolicy: 'restart',
+      env: {
+        ROOT_URL: "https://" + appConfig.sitename + bindPathPrefix,
+        METEOR_SETTINGS: appConfig.settings || appConfig.METEOR_SETTINGS,
+        ADMIN_APP: admin
+      },
+      ports: {
+        "main": {
+          bindEnv: "PORT",
+          routeEnv: "ROUTE"//,
+          //bindIpEnv: "BIND_IP" // Later, we can teach Satellite to do
+          //something like recommend the process bind to a particular IP here.
+          //For now, we don't have a way of setting this, so Satellite binds
+          //to 0.0.0.0
+        }
+      },
+      tags: tags
+    }]);
+    console.log("Started", program);
   },
 
   findCommand: function (name) {
@@ -35,6 +92,16 @@ _.extend(Ctl, {
     return cmd;
   },
 
+  hasProgram: function (name) {
+    Ctl.subscribeToAppJobs(Ctl.myAppName());
+    var myJob = Ctl.jobsCollection().findOne(Ctl.myJobId());
+    var manifest = Ctl.prettyCall(Ctl.findGalaxy(), 'getStarManifest', [myJob.star]);
+    if (!manifest)
+      return false;
+    var found = false;
+    return _.find(manifest.programs, function (prog) { return prog.name === name; });
+  },
+
   findGalaxy: _.once(function () {
     if (!('GALAXY' in process.env)) {
       console.log(
@@ -42,8 +109,26 @@ _.extend(Ctl, {
       process.exit(1);
     }
 
-    return DDP.connect(process.env['GALAXY']);
+    connection = Follower.connect(process.env['ULTRAWORLD_DDP_ENDPOINT']);
+    checkConnection = Meteor.setInterval(function () {
+      if (Ctl.findGalaxy().status().status !== "connected" &&
+          Ctl.findGalaxy().status().retryCount > 2) {
+        console.log("Cannot connect to galaxy; exiting");
+        process.exit(3);
+      }
+    }, 2*1000);
+    return connection;
   }),
+
+  disconnect: function () {
+    if (connection) {
+      connection.disconnect();
+    }
+    if (checkConnection) {
+      Meteor.clearInterval(checkConnection);
+      checkConnection = null;
+    }
+  },
 
   jobsCollection: _.once(function () {
     return new Meteor.Collection("jobs", {manager: Ctl.findGalaxy()});

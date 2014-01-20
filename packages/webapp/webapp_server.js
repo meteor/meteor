@@ -15,6 +15,10 @@ var send = Npm.require('send');
 WebApp = {};
 WebAppInternals = {};
 
+
+var makeAppNamePathPrefix = function (appName) {
+  return encodeURIComponent(appName).replace(/\./g, '_');
+};
 // Keepalives so that when the outer server dies unceremoniously and
 // doesn't kill us, we quit ourselves. A little gross, but better than
 // pidfiles.
@@ -147,7 +151,53 @@ var appUrl = function (url) {
   return true;
 };
 
+
+// Calculate a hash of all the client resources downloaded by the
+// browser, including the application HTML, runtime config, code, and
+// static files.
+//
+// This hash *must* change if any resources seen by the browser
+// change, and ideally *doesn't* change for any server-only changes
+// (but the second is a performance enhancement, not a hard
+// requirement).
+
+var calculateClientHash = function () {
+  var hash = crypto.createHash('sha1');
+  hash.update(JSON.stringify(__meteor_runtime_config__), 'utf8');
+  _.each(WebApp.clientProgram.manifest, function (resource) {
+    if (resource.where === 'client' || resource.where === 'internal') {
+      hash.update(resource.path);
+      hash.update(resource.hash);
+    }
+  });
+  return hash.digest('hex');
+};
+
+
+// We need to calculate the client hash after all packages have loaded
+// to give them a chance to populate __meteor_runtime_config__.
+//
+// Calculating the hash during startup means that packages can only
+// populate __meteor_runtime_config__ during load, not during startup.
+//
+// Calculating instead it at the beginning of main after all startup
+// hooks had run would allow packages to also populate
+// __meteor_runtime_config__ during startup, but that's too late for
+// autoupdate because it needs to have the client hash at startup to
+// insert the auto update version itself into
+// __meteor_runtime_config__ to get it to the client.
+//
+// An alternative would be to give autoupdate a "post-start,
+// pre-listen" hook to allow it to insert the auto update version at
+// the right moment.
+
+Meteor.startup(function () {
+  WebApp.clientHash = calculateClientHash();
+});
+
+
 var runWebAppServer = function () {
+  var shuttingDown = false;
   // read the control for the client we'll be serving up
   var clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
                                  __meteor_bootstrap__.configJson.client);
@@ -231,11 +281,8 @@ var runWebAppServer = function () {
       return;
     }
 
-    var browserPolicyPackage = Package["browser-policy-common"];
     if (pathname === "/meteor_runtime_config.js" &&
-        browserPolicyPackage &&
-        browserPolicyPackage.BrowserPolicy.content &&
-        ! browserPolicyPackage.BrowserPolicy.content.inlineScriptsAllowed()) {
+        ! WebAppInternals.inlineScriptsAllowed()) {
       res.writeHead(200, { 'Content-type': 'application/javascript' });
       res.write("__meteor_runtime_config__ = " +
                 JSON.stringify(__meteor_runtime_config__) + ";");
@@ -343,9 +390,16 @@ var runWebAppServer = function () {
     if (!boilerplateHtml)
       throw new Error("boilerplateHtml should be set before listening!");
 
+
+    var headers = {
+      'Content-Type':  'text/html; charset=utf-8'
+    };
+    if (shuttingDown)
+      headers['Connection'] = 'Close';
+
     var request = WebApp.categorizeRequest(req);
 
-    res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+    res.writeHead(200, headers);
 
     var requestSpecificHtml = htmlAttributes(boilerplateHtml, request);
     res.write(requestSpecificHtml);
@@ -362,6 +416,57 @@ var runWebAppServer = function () {
 
   var httpServer = http.createServer(app);
   var onListeningCallbacks = [];
+
+  var longPollingSockets = {};
+
+  // After 5 seconds of a socket being open, assume it is a long-polling
+  // connection that we have to keep track of to shut down when we're shutting
+  // down the server overall.
+  httpServer.setTimeout(5000, Meteor.bindEnvironment(function (socket) {
+    if (shuttingDown) {
+      socket.end();
+    } else {
+      socket._meteorLongPollingId = Random.id();
+      longPollingSockets[socket._meteorLongPollingId] = socket;
+      // give the socket another minute to live.
+      var destroy = Meteor.setTimeout(function () {
+        delete longPollingSockets[socket._meteorLongPollingId];
+        socket.removeListener('close', onClose);
+        socket.destroy();
+      }, 60*1000);
+
+      var onClose =  function () {
+        delete longPollingSockets[socket._meteorLongPollingId];
+        Meteor.clearTimeout(destroy);
+      };
+      socket.on('close', onClose);
+    }
+  }, function (err) {
+    console.log(err);
+  }));
+
+
+  // For now, handle SIGHUP here.  Later, this should be in some centralized
+  // Meteor shutdown code.
+  process.on('SIGHUP', Meteor.bindEnvironment(function () {
+    shuttingDown = true;
+    _.each(longPollingSockets, function (socket, id) {
+      socket.end();
+    });
+    // tell others with websockets open that we plan to close this.
+    httpServer.emit('closing');
+    httpServer.close( function () {
+      process.exit(0);
+    });
+    // Ideally we will close before this hits.
+    Meteor.setTimeout(function () {
+      Log.warn("Closed by SIGHUP but one or more HTTP requests may not have finished.");
+      process.exit(1);
+    }, 5000);
+  }, function (err) {
+    console.log(err);
+    process.exit(1);
+  }));
 
   // start up app
   _.extend(WebApp, {
@@ -403,10 +508,7 @@ var runWebAppServer = function () {
 
     // Include __meteor_runtime_config__ in the app html, as an inline script if
     // it's not forbidden by CSP.
-    var browserPolicyPackage = Package["browser-policy-common"];
-    if (! browserPolicyPackage ||
-        ! browserPolicyPackage.BrowserPolicy.content ||
-        browserPolicyPackage.BrowserPolicy.content.inlineScriptsAllowed()) {
+    if (WebAppInternals.inlineScriptsAllowed()) {
       boilerplateHtml = boilerplateHtml.replace(
           /##RUNTIME_CONFIG##/,
         "<script type='text/javascript'>__meteor_runtime_config__ = " +
@@ -428,14 +530,18 @@ var runWebAppServer = function () {
     httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
       if (argv.keepalive || true)
         console.log("LISTENING"); // must match run.js
-      var port = httpServer.address().port;
       var proxyBinding;
 
       AppConfig.configurePackage('webapp', function (configuration) {
         if (proxyBinding)
           proxyBinding.stop();
         if (configuration && configuration.proxy) {
-          proxyBinding = AppConfig.configureService(configuration.proxyServiceName || "proxy", function (proxyService) {
+          var proxyServiceName = process.env.ADMIN_APP ? "adminProxy" : "proxy";
+
+          // TODO: We got rid of the place where this checks the app's
+          // configuration, because this wants to be configured for some things
+          // on a per-job basis.  Discuss w/ teammates.
+          proxyBinding = AppConfig.configureService(proxyServiceName, function (proxyService) {
             if (proxyService.providers.proxy) {
               var proxyConf;
               if (process.env.ADMIN_APP) {
@@ -443,16 +549,16 @@ var runWebAppServer = function () {
                   securePort: 44333,
                   insecurePort: 9414,
                   bindHost: "localhost",
-                  bindPathPrefix: "/" + process.env.GALAXY_APP
+                  bindPathPrefix: "/" + makeAppNamePathPrefix(process.env.GALAXY_APP)
                 };
               } else {
                 proxyConf = configuration.proxy;
-
               }
               Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
+              console.log(proxyConf);
               WebAppInternals.bindToProxy(_.extend({
                 proxyEndpoint: proxyService.providers.proxy
-              }, proxyConf));
+              }, proxyConf), proxyServiceName);
             }
           });
         }
@@ -473,7 +579,9 @@ var runWebAppServer = function () {
   };
 };
 
-WebAppInternals.bindToProxy = function (proxyConfig) {
+
+var proxy;
+WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
   var securePort = proxyConfig.securePort || 4433;
   var insecurePort = proxyConfig.insecurePort || 8080;
   var bindPathPrefix = proxyConfig.bindPathPrefix || "";
@@ -492,7 +600,7 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
   // XXX rename pid argument to bindTo.
   var pid = {
     job: process.env.GALAXY_JOB,
-    lastStarted: process.env.LAST_START,
+    lastStarted: +(process.env.LAST_START),
     app: process.env.GALAXY_APP
   };
   var myHost = os.hostname();
@@ -503,8 +611,19 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
   };
 
   // This is run after packages are loaded (in main) so we can use
-  // DDP.connect.
-  var proxy = DDP.connect(proxyConfig.proxyEndpoint);
+  // Follower.connect.
+  if (proxy) {
+    proxy.reconnect({
+      url: proxyConfig.proxyEndpoint
+    });
+  } else {
+    proxy = Package["follower-livedata"].Follower.connect(
+      proxyConfig.proxyEndpoint, {
+        group: proxyServiceName
+      }
+    );
+  }
+
   var route = process.env.ROUTE;
   var host = route.split(":")[0];
   var port = +route.split(":")[1];
@@ -572,3 +691,14 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
 };
 
 runWebAppServer();
+
+
+var inlineScriptsAllowed = true;
+
+WebAppInternals.inlineScriptsAllowed = function () {
+  return inlineScriptsAllowed;
+};
+
+WebAppInternals.setInlineScriptsAllowed = function (value) {
+  inlineScriptsAllowed = value;
+};

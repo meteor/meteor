@@ -9,25 +9,28 @@
     <li>
       If necessary, "Create Project"
     <li>
-      Open the "API Access" tab on the left
+      Click "APIs &amp; auth" and "Registered apps" on the left
     </li>
     <li>
-      Create another Client ID
+      Click the "Register App" button
     </li>
     <li>
       Choose "Web application" as the type
     </li>
     <li>
-      Click "More options&hellip;" after "Your site or hostname"
+      Click "Register"
     </li>
     <li>
-      Set Authorized Redirect URIs to: <span class="url">{{siteUrl}}_oauth/google?close</span>
+      Expand the "OAuth 2.0 Client ID section"
     </li>
     <li>
-      Set Authorized JavaScript Origins to: <span class="url">{{siteUrl}}</span>
+      Set Web Origin to: <span class="url">{{siteUrl}}</span>
     </li>
     <li>
-      Create client ID
+      Set Redirect URI to: <span class="url">{{siteUrl}}_oauth/google?close</span>
+    </li>
+    <li>
+      Click "Generate"
     </li>
   </ol>
 </template>

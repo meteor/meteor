@@ -37,11 +37,11 @@ depending on message type.
 
 ### Procedure:
 
-The server may send an initial message which is a JSON object lacking a `msg`
-key. If so, the client should ignore it. The client does not have to wait for
-this message. (This message is used to help implement hot code reload over our
-SockJS transport. It is currently sent over websockets as well, but probably
-should not be.)
+The server may send an initial message which is a JSON object lacking
+a `msg` key. If so, the client should ignore it. The client does not
+have to wait for this message. (The message was once used to help
+implement Meteor's hot code reload feature; it is now only included to
+force old clients to update).
 
  * The client sends a `connect` message.
  * If the server is willing to speak the `version` of the protocol specified in
@@ -83,7 +83,7 @@ the server having been upgraded.
    - `id`: string (the id passed to 'sub')
  * `nosub` (server -> client):
    - `id`: string (the id passed to 'sub')
- * `error`: optional Error (an error raised by the subscription as it
+   - `error`: optional Error (an error raised by the subscription as it
     concludes, or sub-not-found)
  * `added` (server -> client):
    - `collection`: string (collection name)

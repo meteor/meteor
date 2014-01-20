@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['underscore', 'livedata', 'ejson']);
+  api.use(['logging', 'underscore', 'livedata', 'ejson', 'follower-livedata']);
   api.use(['mongo-livedata'], {
     unordered: true
   });

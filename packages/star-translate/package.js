@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "A package for translating old bundles into stars"
+  summary: "A package for translating old bundles into stars",
+  internal: true
 });
 
 Package.on_use(function (api) {

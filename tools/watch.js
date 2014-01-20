@@ -1,6 +1,8 @@
 var fs = require("fs");
 var path = require("path");
 var _ = require('underscore');
+var Future = require('fibers/future');
+var fiberHelpers = require('./fiber-helpers.js');
 
 // Watch for changes to a set of files, and the first time that any of
 // the files change, call a user-provided callback. (If you want a
@@ -20,7 +22,7 @@ var _ = require('underscore');
 //
 // In a directory watch, you provide an absolute path to a directory,
 // two lists of regular expressions specifying the entries to
-// include and exclude, and an array of which entries to expect
+// include and exclude, and an array of which entries to expect.
 //
 // For directory watches, the regular expressions work as follows. You provide
 // two arrays of regular expressions, an include list and an exclude list. An
@@ -52,8 +54,6 @@ var _ = require('underscore');
 // they point to (ie, as a directory if they point to a directory, as
 // nonexistent if they point to something nonexist, etc). Not sure if this is
 // correct.
-
-
 
 var WatchSet = function () {
   var self = this;
@@ -209,9 +209,10 @@ WatchSet.fromJSON = function (json) {
 };
 
 var readDirectory = function (options) {
+  var yielding = !!options._yielding;
   // Read the directory.
   try {
-    var contents = fs.readdirSync(options.absPath);
+    var contents = readdirSyncOrYield(options.absPath, yielding);
   } catch (e) {
     // If the path is not a directory, return null; let other errors through.
     if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR'))
@@ -226,7 +227,7 @@ var readDirectory = function (options) {
       // We do stat instead of lstat here, so that we treat symlinks to
       // directories just like directories themselves.
       // XXX Does the treatment of symlinks make sense?
-      var stats = fs.statSync(path.join(options.absPath, entry));
+      var stats = statSyncOrYield(path.join(options.absPath, entry), yielding);
     } catch (e) {
       if (e && (e.code === 'ENOENT')) {
         // Disappeared after the readdirSync (or a dangling symlink)? Eh,
@@ -274,7 +275,6 @@ var Watcher = function (options) {
   self.justCheckOnce = !!options._justCheckOnce;
 
   self.fileWatches = []; // array of paths
-  self.directoryWatches = []; // array of watch object
 
   // We track all of the currently active timers so that we can cancel
   // them at stop() time. This stops the process from hanging at
@@ -291,7 +291,7 @@ var Watcher = function (options) {
   }
 
   self._startFileWatches();
-  self._startDirectoryWatches();
+  self._checkDirectories();
 };
 
 _.extend(Watcher.prototype, {
@@ -334,7 +334,7 @@ _.extend(Watcher.prototype, {
     return true;
   },
 
-  _fireIfDirectoryChanged: function (info, isDoubleCheck) {
+  _fireIfDirectoryChanged: function (info, yielding) {
     var self = this;
 
     if (self.stopped)
@@ -343,27 +343,14 @@ _.extend(Watcher.prototype, {
     var newContents = exports.readDirectory({
       absPath: info.absPath,
       include: info.include,
-      exclude: info.exclude
+      exclude: info.exclude,
+      _yielding: yielding
     });
 
     // If the directory has changed (including being deleted or created).
     if (!_.isEqual(info.contents, newContents)) {
       self._fire();
       return true;
-    }
-
-    if (!isDoubleCheck && !self.justCheckOnce) {
-      // Whenever a directory changes, scan it soon as we notice,
-      // but then scan it again one secord later just to make sure
-      // that we haven't missed any changes. See commentary at
-      // #WorkAroundLowPrecisionMtimes
-      // XXX not sure why this uses a different strategy than files
-      var timerId = self.nextTimerId++;
-      self.timers[timerId] = setTimeout(function () {
-        delete self.timers[timerId];
-        if (! self.stopped)
-          self._fireIfDirectoryChanged(info, true);
-      }, 1000);
     }
 
     return false;
@@ -415,41 +402,42 @@ _.extend(Watcher.prototype, {
     }, 1000);
   },
 
-  _startDirectoryWatches: function () {
+  _checkDirectories: function (yielding) {
     var self = this;
 
-    // Set up a watch for each directory
+    // fs.watchFile doesn't work for directories (as tested on ubuntu)
+    // and fs.watch has serious issues on MacOS (at least in node 0.10)
+    // https://github.com/meteor/meteor/issues/1483
+    // https://groups.google.com/forum/#!topic/meteor-talk/Zy1XxEcxe8o
+    // https://github.com/joyent/node/issues/5463
+    // https://github.com/joyent/libuv/commit/38df93cf
+    //
+    // Instead, just check periodically with setTimeout.  (We use setTimeout to
+    // ensure that there is a 500 ms pause between the *end* of one poll cycle
+    // and the *beginning* of another instead of using setInterval which still
+    // can lead to permanent 100% CPU usage.) When node has a stable directory
+    // watching API that is more efficient than just polling, look at the
+    // history for this file around release 0.6.5 for a version that uses
+    // fs.watch.
+
+    if (self.stopped)
+      return;
+
     _.each(self.watchSet.directories, function (info) {
       if (self.stopped)
         return;
 
       // Check for the case where by the time we created the watch, the
       // directory has already changed.
-      if (self._fireIfDirectoryChanged(info))
+      if (self._fireIfDirectoryChanged(info, yielding))
         return;
-
-      if (self.stopped || self.justCheckOnce)
-        return;
-
-      // fs.watchFile doesn't work for directories (as tested on ubuntu)
-      // Notice that we poll very frequently (500 ms)
-      try {
-        self.directoryWatches.push(
-          fs.watch(info.absPath, {interval: 500}, function () {
-            self._fireIfDirectoryChanged(info);
-          })
-        );
-      } catch (e) {
-        // Can happen if the directory doesn't exist, in which case we should
-        // fire if it should be there.
-        if (e && e.code === "ENOENT") {
-          if (info.contents !== null)
-            self._fire();
-          return;
-        }
-        throw e;
-      }
     });
+
+    if (!self.stopped && !self.justCheckOnce) {
+      setTimeout(fiberHelpers.inFiber(function () {
+        self._checkDirectories(true);
+      }), 500);
+    }
   },
 
   _fire: function () {
@@ -477,12 +465,6 @@ _.extend(Watcher.prototype, {
       fs.unwatchFile(absPath);
     });
     self.fileWatches = [];
-
-    // Clean up directory watches
-    _.each(self.directoryWatches, function (watch) {
-      watch.close();
-    });
-    self.directoryWatches = [];
   }
 });
 
@@ -512,8 +494,13 @@ var readAndWatchDirectory = function (watchSet, options) {
 
 var readAndWatchFile = function (watchSet, absPath) {
   var contents = readFile(absPath);
-  var hash = contents === null ? null : sha1(contents);
-  watchSet.addFile(absPath, hash);
+  // Allow null watchSet, if we want to use readFile-style error handling in a
+  // context where we might not always have a WatchSet (eg, reading
+  // settings.json where we watch for "meteor run" but not for "meteor deploy").
+  if (watchSet) {
+    var hash = contents === null ? null : sha1(contents);
+    watchSet.addFile(absPath, hash);
+  }
   return contents;
 };
 
@@ -534,6 +521,25 @@ var sha1 = function (contents) {
   var hash = crypto.createHash('sha1');
   hash.update(contents);
   return hash.digest('hex');
+};
+
+// XXX We should eventually rewrite the whole meteor tools to use yielding fs
+// calls instead of sync (so that meteor is responsive to C-c during bundling,
+// so that the proxy accepts connections, etc) but we don't want to do this in
+// the point release in which we are adding these functions.
+var readdirSyncOrYield = function (path, yielding) {
+  if (yielding) {
+    return Future.wrap(fs.readdir)(path).wait();
+  } else {
+    return fs.readdirSync(path);
+  }
+};
+var statSyncOrYield = function (path, yielding) {
+  if (yielding) {
+    return Future.wrap(fs.stat)(path).wait();
+  } else {
+    return fs.statSync(path);
+  }
 };
 
 _.extend(exports, {

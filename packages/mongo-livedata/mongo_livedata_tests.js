@@ -265,15 +265,6 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
   test.equal(coll.findOne({run: run}, {sort: {x: -1}, skip: 0}).x, 4);
   test.equal(coll.findOne({run: run}, {sort: {x: -1}, skip: 1}).x, 1);
 
-  // sleep function from fibers docs.
-  var sleep = function(ms) {
-    var Fiber = Npm.require('fibers');
-    var fiber = Fiber.current;
-    setTimeout(function() {
-      fiber.run();
-    }, ms);
-    Fiber.yield();
-  };
 
   var cur = coll.find({run: run}, {sort: ["x"]});
   var total = 0;
@@ -291,7 +282,7 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
       // callback's sleep sleep and the *= 10 will occur before the += 1, then
       // total (at test.equal time) will be 5. If forEach does not wait for the
       // callbacks to complete, then total (at test.equal time) will be 0.
-      sleep(5);
+      Meteor._sleepForMs(5);
     }
     total += doc.x;
     // verify the meteor environment is set up here
@@ -1815,3 +1806,69 @@ Tinytest.addAsync("mongo-livedata - local collection with null connection, w/o c
   test.equal(coll1.findOne(doc)._id, docId);
   onComplete();
 });
+
+testAsyncMulti("mongo-livedata - update handles $push with $each correctly", [
+  function (test, expect) {
+    var self = this;
+    var collectionName = Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName);
+      Meteor.subscribe('c-' + collectionName);
+    }
+
+    self.collection = new Meteor.Collection(collectionName);
+
+    self.id = self.collection.insert(
+      {name: 'jens', elements: ['X', 'Y']}, expect(function (err, res) {
+        test.isFalse(err);
+        test.equal(self.id, res);
+        }));
+  },
+  function (test, expect) {
+    var self = this;
+    self.collection.update(self.id, {
+      $push: {
+        elements: {
+          $each: ['A', 'B', 'C'],
+          $slice: -4
+        }}}, expect(function (err, res) {
+          test.isFalse(err);
+          test.equal(
+            self.collection.findOne(self.id),
+            {_id: self.id, name: 'jens', elements: ['Y', 'A', 'B', 'C']});
+        }));
+  }
+]);
+
+if (Meteor.isServer) {
+  Tinytest.add("mongo-livedata - upsert handles $push with $each correctly", function (test) {
+    var collection = new Meteor.Collection(Random.id());
+
+    var result = collection.upsert(
+      {name: 'jens'},
+      {$push: {
+        elements: {
+          $each: ['A', 'B', 'C'],
+          $slice: -4
+        }}});
+
+    test.equal(collection.findOne(result.insertedId),
+               {_id: result.insertedId,
+                name: 'jens',
+                elements: ['A', 'B', 'C']});
+
+    var id = collection.insert({name: "david", elements: ['X', 'Y']});
+    result = collection.upsert(
+      {name: 'david'},
+      {$push: {
+        elements: {
+          $each: ['A', 'B', 'C'],
+          $slice: -4
+        }}});
+
+    test.equal(collection.findOne(id),
+               {_id: id,
+                name: 'david',
+                elements: ['Y', 'A', 'B', 'C']});
+  });
+}

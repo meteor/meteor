@@ -216,7 +216,17 @@ testAsyncMulti("livedata - basic method invocation", [
     if (Meteor.isServer) {
       var threw = false;
       try {
-        Meteor.call("exception", "both", true);
+        Meteor.call("exception", "both", {intended: true});
+      } catch (e) {
+        threw = true;
+        test.equal(e.error, 999);
+        test.equal(e.reason, "Client-visible test exception");
+      }
+      test.isTrue(threw);
+      threw = false;
+      try {
+        Meteor.call("exception", "both", {intended: true,
+                                          throwThroughFuture: true});
       } catch (e) {
         threw = true;
         test.equal(e.error, 999);
@@ -227,12 +237,18 @@ testAsyncMulti("livedata - basic method invocation", [
 
     if (Meteor.isClient) {
       test.equal(
-        Meteor.call("exception", "both", true,
+        Meteor.call("exception", "both", {intended: true},
                     expect(failure(test, 999,
                                    "Client-visible test exception"))),
         undefined);
       test.equal(
-        Meteor.call("exception", "server", true,
+        Meteor.call("exception", "server", {intended: true},
+                    expect(failure(test, 999,
+                                   "Client-visible test exception"))),
+        undefined);
+      test.equal(
+        Meteor.call("exception", "server", {intended: true,
+                                            throwThroughFuture: true},
                     expect(failure(test, 999,
                                    "Client-visible test exception"))),
         undefined);
