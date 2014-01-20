@@ -2,139 +2,15 @@
 
 
 Spacebars.parse = function (input) {
-  // This implementation of `getSpecialTag` looks for "{{" and if it
-  // finds it, it will parse a stache tag or fail fatally trying.
-  // The object it returns is opaque to the tokenizer/parser and can
-  // be anything we want.
-  //
-  // Parsing a block tag parses its contents and end tag too!
-  var getSpecialTag = function (scanner, position) {
-    if (! (scanner.peek() === '{' && // one-char peek is just an optimization
-           scanner.rest().slice(0, 2) === '{{'))
-      return null;
 
-    // `TemplateTag.parse` will succeed or die trying.
-    var lastPos = scanner.pos;
-    var stache = TemplateTag.parse(scanner);
-    // kill any `args: []` cluttering up the object
-    if (stache.args && ! stache.args.length)
-      delete stache.args;
-
-    if (stache.type === 'COMMENT')
-      // consume the tag from the input but emit no Special
-      return null;
-
-    var checkTag = function () {
-      var goodPos = scanner.pos;
-      // rewind for benefit of error line/column; if we don't error out,
-      // we must set `scanner.pos = goodPos`.
-      scanner.pos = lastPos;
-
-      if (stache.type === 'ELSE')
-        scanner.fatal("Unexpected {{else}}");
-
-      if (stache.type === 'BLOCKCLOSE')
-        scanner.fatal("Unexpected closing stache tag");
-
-      if (position === HTML.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
-        checkAttributeStacheTag(scanner, stache);
-      } else if (position === HTML.TEMPLATE_TAG_POSITION.IN_START_TAG) {
-        if (! (stache.type === 'DOUBLE')) {
-          scanner.fatal("Reactive HTML attributes must either have a constant name or consist of a single {{helper}} providing a dictionary of names and values.  A template tag of type " + stache.type + " is not allowed here.");
-        }
-        if (scanner.peek() === '=') {
-          scanner.fatal("Template tags are not allowed in attribute names, only in attribute values or in the form of a single {{helper}} that evaluates to a dictionary of name=value pairs.");
-        }
-      }
-
-      scanner.pos = goodPos;
-    };
-    checkTag();
-
-    if (stache.type === 'BLOCKOPEN') {
-      // parse block contents
-
-      var blockName = stache.path.join(','); // form of name for comparisons, errors
-
-      var textMode = null;
-      if (blockName === 'markdown' ||
-          position === HTML.TEMPLATE_TAG_POSITION.IN_RAWTEXT) {
-        textMode = HTML.TEXTMODE.STRING;
-      } else if (position === HTML.TEMPLATE_TAG_POSITION.IN_RCDATA ||
-                 position === HTML.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
-        textMode = HTML.TEXTMODE.RCDATA;
-      }
-      var parserOptions = {
-        getSpecialTag: getSpecialTag,
-        shouldStop: isAtBlockCloseOrElse,
-        textMode: textMode
-      };
-      stache.content = HTML.parseFragment(scanner, parserOptions);
-
-      if (scanner.rest().slice(0, 2) !== '{{')
-        scanner.fatal("Expected {{else}} or block close for " + blockName);
-
-      lastPos = scanner.pos;
-      var stache2 = TemplateTag.parse(scanner);
-
-      if (stache2.type === 'ELSE') {
-        stache.elseContent = HTML.parseFragment(scanner, parserOptions);
-
-        if (scanner.rest().slice(0, 2) !== '{{')
-          scanner.fatal("Expected block close for " + blockName);
-
-        lastPos = scanner.pos;
-        stache2 = TemplateTag.parse(scanner);
-      }
-
-      if (stache2.type === 'BLOCKCLOSE') {
-        var blockName2 = stache2.path.join(',');
-        if (blockName !== blockName2) {
-          scanner.pos = lastPos;
-          scanner.fatal('Expected tag to close ' + blockName + ', found ' +
-                        blockName2);
-        }
-      } else {
-        scanner.pos = lastPos;
-        scanner.fatal('Expected tag to close ' + blockName + ', found ' +
-                      stache2.type);
-      }
-    }
-
-    return stache;
-  };
-
-  var isAtBlockCloseOrElse = function (scanner) {
-    // Because this function may be called for every token in the input
-    // stream, we try to make it reasonably efficient in the false case.
-    // We also have to screen for `{{` before calling TemplateTag.peek
-    // to avoid throwing an error.
-    var rest, type;
-    return (scanner.peek() === '{' &&
-            (rest = scanner.rest()).slice(0, 2) === '{{' &&
-            /^\{\{\s*(\/|else\b)/.test(rest) &&
-            (type = TemplateTag.peek(scanner).type) &&
-            (type === 'BLOCKCLOSE' || type === 'ELSE'));
-  };
-
-  var tree = HTML.parseFragment(input, { getSpecialTag: getSpecialTag });
+  var tree = HTML.parseFragment(
+    input,
+    { getSpecialTag: TemplateTag.parseCompleteTag });
 
   return tree;
 };
 
-// XXX think about these restrictions
-var checkAttributeStacheTag = function (scanner, tag) {
-  if (tag.type === 'DOUBLE') {
-    return;
-  } else if (tag.type === 'BLOCKOPEN') {
-    var path = tag.path;
-    if (! (path.length === 1 && builtInComponents.hasOwnProperty(path[0]) &&
-           path[0] !== 'content' && path[0] !== 'elseContent'))
-      scanner.fatal("Custom block helpers are not allowed in an HTML attribute, only built-in ones like #each and #if");
-  } else {
-    scanner.fatal(tag.type + " template tag is not allowed in an HTML attribute");
-  }
-};
+// ============================================================
 
 var optimize = function (tree) {
 
@@ -261,6 +137,8 @@ var optimize = function (tree) {
 
   return optTree;
 };
+
+// ============================================================
 
 var builtInComponents = {
   'content': '__content',

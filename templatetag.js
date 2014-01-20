@@ -1,3 +1,40 @@
+// A TemplateTag is the result of parsing a single `{{...}}` tag.
+//
+// The `.type` of a TemplateTag is one of:
+//
+// - `"DOUBLE"` - `{{foo}}`
+// - `"TRIPLE"` - `{{{foo}}}`
+// - `"COMMENT"` - `{{! foo}}`
+// - `"INCLUSION"` - `{{> foo}}`
+// - `"BLOCKOPEN"` - `{{#foo}}`
+// - `"BLOCKCLOSE"` - `{{/foo}}`
+// - `"ELSE"` - `{{else}}`
+//
+// Besides `type`, the mandatory properties of a TemplateTag are:
+//
+// - `path` - An array of one or more strings.  The path of `{{foo.bar}}`
+//   is `["foo", "bar"]`.  Applies to DOUBLE, TRIPLE, INCLUSION, BLOCKOPEN,
+//   and BLOCKCLOSE.
+//
+// - `args` - An array of zero or more argument specs.  An argument spec
+//   is a two or three element array, consisting of a type, value, and
+//   optional keyword name.  For example, the `args` of `{{foo "bar" x=3}}`
+//   are `[["STRING", "bar"], ["NUMBER", 3, "x"]]`.  Applies to DOUBLE,
+//   TRIPLE, INCLUSION, and BLOCKOPEN.
+//
+// - `value` - For COMMENT tags, a string of the comment's text.
+//
+// These additional are typically set during parsing:
+//
+// - `position` - The HTML.TEMPLATE_TAG_POSITION specifying at what sort
+//   of site the TemplateTag was encountered (e.g. at element level or as
+//   part of an attribute value). Its absence implies
+//   HTML.TEMPLATE_TAG_POSITION.ELEMENT.
+//
+// - `content` and `elseContent` - When a BLOCKOPEN tag's contents are
+//   parsed, they are put here.  `elseContent` will only be present if
+//   an `{{else}}` was found.
+
 
 TemplateTag = Spacebars.TemplateTag = function () {};
 
@@ -21,13 +58,18 @@ var ends = {
   TRIPLE: /^\s*\}\}\}/
 };
 
-// Parse a tag from the provided scanner or string.  Either succeeds
+// Parse a tag from the provided scanner or string.  If the input
+// doesn't start with `{{`, returns null.  Otherwise, either succeeds
 // and returns a Spacebars.TemplateTag, or throws an error (using
 // `scanner.fatal` if a scanner is provided).
 TemplateTag.parse = function (scannerOrString) {
   var scanner = scannerOrString;
   if (typeof scanner === 'string')
     scanner = new HTML.Scanner(scannerOrString);
+
+  if (! (scanner.peek() === '{' &&
+         (scanner.rest()).slice(0, 2) === '{{'))
+    return null;
 
   var run = function (regex) {
     // regex is assumed to start with `^`
@@ -209,21 +251,6 @@ TemplateTag.parse = function (scannerOrString) {
     }
   }
 
-  var checkTag = function (tag) {
-    if (tag.type === 'INCLUSION') {
-      // throw error on >1 positional arguments
-      var numPosArgs = 0;
-      var args = tag.args;
-      for (var i = 0; i < args.length; i++)
-        if (args[i].length === 2)
-          numPosArgs++;
-      if (numPosArgs > 1)
-        error("Only one positional argument is allowed in {{> ... }}");
-    }
-  };
-
-  checkTag(tag);
-
   return tag;
 };
 
@@ -237,4 +264,163 @@ TemplateTag.peek = function (scanner) {
   var result = TemplateTag.parse(scanner);
   scanner.pos = startPos;
   return result;
+};
+
+// Like `TemplateTag.parse`, but in the case of blocks, parse the complete
+// `{{#foo}}...{{/foo}}` with `content` and possible `elseContent`, rather
+// than just the BLOCKOPEN tag.
+//
+// In addition:
+//
+// - Throws an error if `{{else}}` or `{{/foo}}` tag is encountered.
+//
+// - Returns `null` for a COMMENT.  (This case is distinguishable from
+//   parsing no tag by the fact that the scanner is advanced.)
+//
+// - Takes an HTML.TEMPLATE_TAG_POSITION `position` and sets it as the
+//   TemplateTag's `.position` property.
+//
+// - Validates the tag's well-formedness and legality at in its position.
+TemplateTag.parseCompleteTag = function (scannerOrString, position) {
+  var scanner = scannerOrString;
+  if (typeof scanner === 'string')
+    scanner = new HTML.Scanner(scannerOrString);
+
+  var startPos = scanner.pos; // for error messages
+  var result = TemplateTag.parse(scannerOrString);
+  if (! result)
+    return result;
+
+  if (result.type === 'COMMENT')
+    return null;
+
+  if (result.type === 'ELSE')
+    scanner.fatal("Unexpected {{else}}");
+
+  if (result.type === 'BLOCKCLOSE')
+    scanner.fatal("Unexpected closing template tag");
+
+  position = (position || HTML.TEMPLATE_TAG_POSITION.ELEMENT);
+  if (position !== HTML.TEMPLATE_TAG_POSITION.ELEMENT)
+    result.position = position;
+
+  if (result.type === 'BLOCKOPEN') {
+    // parse block contents
+
+    // Construct a string version of `.path` for comparing start and
+    // end tags.  For example, `foo/[0]` was parsed into `["foo", "0"]`
+    // and now becomes `foo,0`.  This form may also show up in error
+    // messages.
+    var blockName = result.path.join(',');
+
+    var textMode = null;
+      if (blockName === 'markdown' ||
+          position === HTML.TEMPLATE_TAG_POSITION.IN_RAWTEXT) {
+        textMode = HTML.TEXTMODE.STRING;
+      } else if (position === HTML.TEMPLATE_TAG_POSITION.IN_RCDATA ||
+                 position === HTML.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
+        textMode = HTML.TEXTMODE.RCDATA;
+      }
+      var parserOptions = {
+        getSpecialTag: TemplateTag.parseCompleteTag,
+        shouldStop: isAtBlockCloseOrElse,
+        textMode: textMode
+      };
+    result.content = HTML.parseFragment(scanner, parserOptions);
+
+    if (scanner.rest().slice(0, 2) !== '{{')
+      scanner.fatal("Expected {{else}} or block close for " + blockName);
+
+    var lastPos = scanner.pos; // save for error messages
+    var tmplTag = TemplateTag.parse(scanner); // {{else}} or {{/foo}}
+
+    if (tmplTag.type === 'ELSE') {
+      // parse {{else}} and content up to close tag
+      result.elseContent = HTML.parseFragment(scanner, parserOptions);
+
+      if (scanner.rest().slice(0, 2) !== '{{')
+        scanner.fatal("Expected block close for " + blockName);
+
+      lastPos = scanner.pos;
+      tmplTag = TemplateTag.parse(scanner);
+    }
+
+    if (tmplTag.type === 'BLOCKCLOSE') {
+      var blockName2 = tmplTag.path.join(',');
+      if (blockName !== blockName2) {
+        scanner.pos = lastPos;
+        scanner.fatal('Expected tag to close ' + blockName + ', found ' +
+                      blockName2);
+      }
+    } else {
+      scanner.pos = lastPos;
+      scanner.fatal('Expected tag to close ' + blockName + ', found ' +
+                    tmplTag.type);
+    }
+  }
+
+  var finalPos = scanner.pos;
+  scanner.pos = startPos;
+  validateTag(result, scanner);
+  scanner.pos = finalPos;
+
+  return result;
+};
+
+var isAtBlockCloseOrElse = function (scanner) {
+  // Detect `{{else}}` or `{{/foo}}`.
+  //
+  // We do as much work ourselves before deferring to `TemplateTag.peek`,
+  // for efficiency (we're called for every input token) and to be
+  // less obtrusive, because `TemplateTag.peek` will throw an error if it
+  // sees `{{` followed by a malformed tag.
+  var rest, type;
+  return (scanner.peek() === '{' &&
+          (rest = scanner.rest()).slice(0, 2) === '{{' &&
+          /^\{\{\s*(\/|else\b)/.test(rest) &&
+          (type = TemplateTag.peek(scanner).type) &&
+          (type === 'BLOCKCLOSE' || type === 'ELSE'));
+};
+
+// Validate that `templateTag` is correctly formed and legal for its
+// HTML position.  Use `scanner` to report errors. On success, does
+// nothing.
+var validateTag = function (ttag, scanner) {
+
+  if (ttag.type === 'INCLUSION') {
+    // throw error on >1 positional arguments
+    var numPosArgs = 0;
+    var args = ttag.args;
+    for (var i = 0; i < args.length; i++)
+      if (args[i].length === 2)
+        numPosArgs++;
+    if (numPosArgs > 1)
+      scanner.fatal("Only one positional argument is allowed in {{> ... }}");
+  }
+
+  var position = ttag.position || HTML.TEMPLATE_TAG_POSITION.ELEMENT;
+  if (position === HTML.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
+    if (ttag.type === 'DOUBLE') {
+      return;
+    } else if (ttag.type === 'BLOCKOPEN') {
+      var path = ttag.path;
+      var path0 = path[0];
+      if (! (path.length === 1 && (path0 === 'if' ||
+                                   path0 === 'unless' ||
+                                   path0 === 'with' ||
+                                   path0 === 'each'))) {
+        scanner.fatal("Custom block helpers are not allowed in an HTML attribute, only built-in ones like #each and #if");
+      }
+    } else {
+      scanner.fatal(ttag.type + " template tag is not allowed in an HTML attribute");
+    }
+  } else if (position === HTML.TEMPLATE_TAG_POSITION.IN_START_TAG) {
+    if (! (ttag.type === 'DOUBLE')) {
+      scanner.fatal("Reactive HTML attributes must either have a constant name or consist of a single {{helper}} providing a dictionary of names and values.  A template tag of type " + ttag.type + " is not allowed here.");
+    }
+    if (scanner.peek() === '=') {
+      scanner.fatal("Template tags are not allowed in attribute names, only in attribute values or in the form of a single {{helper}} that evaluates to a dictionary of name=value pairs.");
+    }
+  }
+
 };
