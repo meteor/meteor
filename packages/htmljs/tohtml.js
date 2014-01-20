@@ -124,7 +124,7 @@ HTML.toText = function (node, textMode, parentComponent) {
     return HTML.toText(content, textMode, instance);
   } else if (node.toText) {
     // Something else
-    return node.toText(textMode, textMode, parentComponent);
+    return node.toText(textMode, parentComponent);
   } else {
     throw new Error("Expected tag, string, array, component, null, undefined, or " +
                     "object with a toText method; found: " + node);
@@ -137,7 +137,7 @@ HTML.Raw.prototype.toText = function () {
 };
 
 // used when including templates within {{#markdown}}
-HTML.Tag.prototype.toText = function (textMode) {
+HTML.Tag.prototype.toText = function (textMode, parentComponent) {
   if (textMode === HTML.TEXTMODE.STRING)
     return this.toHTML();
   else
