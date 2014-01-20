@@ -391,7 +391,7 @@ some paragraph to fix showdown's four space parsing below.
 </template>
 
 <template name="spacebars_template_test_markdown_inclusion_subtmpl">
-  <span>Nothing in particular</span>
+  <span>{{#if foo}}Foo is {{foo}}.{{/if}}</span>
 </template>
 
 <template name="spacebars_template_test_markdown_block_helpers">
