@@ -1121,8 +1121,10 @@ Tinytest.add('spacebars - templates - #markdown - each', function (test) {
 
 Tinytest.add('spacebars - templates - #markdown - inclusion', function (test) {
   var tmpl = Template.spacebars_template_test_markdown_inclusion;
+  var subtmpl = Template.spacebars_template_test_markdown_inclusion_subtmpl;
+  subtmpl.foo = "bar";
   var div = renderToDiv(tmpl);
-  test.equal(divContentForMarkdown(div), "<p><span>Nothing in particular</span></p>");
+  test.equal(divContentForMarkdown(div), "<p><span>Foo is bar.</span></p>");
 });
 
 Tinytest.add('spacebars - templates - #markdown - block helpers', function (test) {
