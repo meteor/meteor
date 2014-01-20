@@ -132,6 +132,18 @@ HTML.toText = function (node, textMode, parentComponent) {
 
 };
 
+HTML.Raw.prototype.toText = function () {
+  return this.value;
+};
+
+// used when including templates within {{#markdown}}
+HTML.Tag.prototype.toText = function (textMode) {
+  if (textMode === HTML.TEXTMODE.STRING)
+    return this.toHTML();
+  else
+    throw new Error("Can't insert tags in attributes or TEXTAREA elements");
+};
+
 HTML.CharRef.prototype.toText = function (textMode) {
   if (textMode === HTML.TEXTMODE.STRING)
     return this.str;
