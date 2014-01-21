@@ -403,22 +403,6 @@ Template.nav_section.depthIs = function (n) {
   return this.depth === n;
 };
 
-// "name" argument may be provided as part of options instead.
-Handlebars.registerHelper('dtdd', function(name, options) {
-  if (options) {
-    // {{#dtdd name}}
-    options.name = name;
-  } else {
-    // {{#dtdd name="foo" type="bar"}}
-    options = name;
-  }
-
-  return Template.dtdd_helper.withData({
-    name: options.name,
-    type: options.type
-  });
-});
-
 Handlebars.registerHelper('dstache', function() {
   return '{{';
 });

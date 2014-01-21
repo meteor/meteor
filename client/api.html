@@ -1861,8 +1861,8 @@ Example:
 
 <h2 id="templates_api"><span>Templates</span></h2>
 
-A template that you declare as `{{lt}}template name="foo">
-... {{lt}}/template>` can be accessed as the function `Template.foo`,
+A template that you declare as `<{{! }}template name="foo"> ... <{{!
+}}/template>` can be accessed as the function `Template.foo`,
 which returns a string of HTML when called.
 
 The same template may occur many times on the page, and these
@@ -3032,6 +3032,7 @@ code can read `data.txt` by running:
 
 <template name="api_box">
 <div class="api {{bare}}">
+
 <h3 id="{{id}}">
   <a class="name selflink" href="#{{id}}">{{{name}}}</a>
 {{#if locus}}

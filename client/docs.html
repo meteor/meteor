@@ -66,24 +66,35 @@
 </template>
 
 
-<template name="dtdd_helper">
-  <dt><span class="name">{{{name}}}</span>
-    {{#if type}}<span class="type">{{type}}</span>{{/if}}
-  </dt>
+<template name="dtdd">
+  {{! can be used with either one argument (which ends up in the data
+      context, or with both name and type }}
+
+  {{#if name}}
+    <dt><span class="name">{{{name}}}</span>
+      {{#if type}}<span class="type">{{type}}</span>{{/if}}
+    </dt>
+  {{else}}
+    <dt><span class="name">{{{.}}}</span></dt>
+  {{/if}}
   <dd>{{#markdown}}{{> content}}{{/markdown}}</dd>
 </template>
 
 
 
+<!-- this is used within {{#markdown}}. <div> must be unindented.
+     http://daringfireball.net/projects/markdown/syntax#html -->
 <template name="warning">
-  <div class="warning">
-    {{#markdown}}{{> content}}{{/markdown}}
-  </div>
+<div class="warning">
+  {{#markdown}}{{> content}}{{/markdown}}
+</div>
 </template>
 
+<!-- this is used within {{#markdown}}. <div> must be unindented.
+     http://daringfireball.net/projects/markdown/syntax#html -->
 <template name="note">
-  <div class="note">
-    {{> content}}
-  </div>
+<div class="note">
+  {{#markdown}}{{> content}}{{/markdown}}
+</div>
 </template>
 
