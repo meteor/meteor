@@ -154,7 +154,28 @@ var replaceSpecials = function (node) {
     // potential optimization: don't always create a new tag
     var newChildren = _.map(node.children, replaceSpecials);
     var newTag = HTML.getTag(node.tagName).apply(null, newChildren);
-    newTag.attrs = Spacebars._handleSpecialAttributes(node.attrs);
+    var oldAttrs = node.attrs;
+    var newAttrs = null;
+
+    if (oldAttrs) {
+      _.each(oldAttrs, function (value, name) {
+        if (name.charAt(0) !== '$') {
+          newAttrs = (newAttrs || {});
+          newAttrs[name] = replaceSpecials(value);
+        }
+      });
+
+      if (oldAttrs.$specials && oldAttrs.$specials.length) {
+        newAttrs = (newAttrs || {});
+        newAttrs.$dynamic = _.map(oldAttrs.$specials, function (special) {
+          var ttag = special.value;
+          return HTML.EmitCode('function () { return ' +
+                               codeGenMustache(ttag, 'attrMustache') + '; }');
+        });
+      }
+    }
+
+    newTag.attrs = newAttrs;
     return newTag;
   } else if (node instanceof Array) {
     return _.map(node, replaceSpecials);
@@ -286,72 +307,6 @@ var codeGenInclusionArgs = function (tag) {
     return [makeObjectLiteral(args)];
 
   return [];
-};
-
-// Input: Attribute dictionary, or null.  Attribute values may have `Special`
-// nodes representing template tags.  In addition, the synthetic attribute
-// `$specials` may be present and contain an array of `Special` nodes
-// representing template tags in the attribute name position (i.e. "dynamic
-// attributes" like `<div {{attrs}}>`).
-//
-// Output: If there are no Specials in the attribute values and no $specials,
-// returns the input.  Otherwise, converts any `Special` nodes to functions
-// and converts `$specials` to `$dynamic`.
-//
-// (exposed for testing)
-Spacebars._handleSpecialAttributes = function (oldAttrs) {
-  if (! oldAttrs)
-    return oldAttrs;
-
-  // array of Special nodes wrapping template tags
-  var dynamics = null;
-  if (oldAttrs.$specials && oldAttrs.$specials.length)
-    dynamics = oldAttrs.$specials;
-
-  var foundSpecials = false;
-
-  // Runs on an attribute value, or part of an attribute value.
-  // If Specials are found, converts them to EmitCode with
-  // the appropriate generated code.  Otherwise, returns the
-  // input.
-  //
-  // If specials are found, sets `foundSpecials` to true.
-  var convertSpecialToEmitCode = function (v) {
-    if (v instanceof HTML.Special) {
-      foundSpecials = true;
-      // The tag (`v.value`) has already been validated as appropriate
-      // by checkAttributeStacheTag.
-      return replaceSpecials(v);
-    } else if (v instanceof Array) {
-      return _.map(v, convertSpecialToEmitCode);
-    } else {
-      return v;
-    }
-  };
-
-  var newAttrs = null;
-  _.each(oldAttrs, function (value, name) {
-    if (name.charAt(0) !== '$') {
-      if (! newAttrs)
-        newAttrs = {};
-      newAttrs[name] = convertSpecialToEmitCode(value);
-    }
-  });
-
-  if ((! dynamics) && (! foundSpecials))
-    return oldAttrs;
-
-  if (dynamics) {
-    if (! newAttrs)
-      newAttrs = {};
-    newAttrs.$dynamic = _.map(dynamics, function (special) {
-      var tag = special.value;
-      return HTML.EmitCode('function () { return ' +
-                           codeGenMustache(tag, 'attrMustache') + '; }');
-    });
-  }
-
-  return newAttrs;
 };
 
 var codeGenMustache = function (tag, mustacheType) {
