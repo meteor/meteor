@@ -48,6 +48,9 @@ Minimongo.Matcher.prototype.affectedByModifier = function (modifier) {
 //                           only. (assumed to come from oplog)
 // @returns - Boolean: if after applying the modifier, selector can start
 //                     accepting the modified value.
+// NOTE: assumes that document affected by modifier didn't match this Matcher
+// before, so if modifier can't convince selector in a positive change it would
+// stay 'false'.
 // Currently doesn't support $-operators and numeric indices precisely.
 Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
   var self = this;
@@ -55,21 +58,93 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
     return false;
 
   modifier = _.extend({$set:{}, $unset:{}}, modifier);
+  var modifierPaths = _.keys(modifier.$set).concat(_.keys(modifier.$unset));
 
-  if (!self.isEquality())
+  if (!self.isSimple())
     return true;
 
   if (_.any(self._getPaths(), pathHasNumericKeys) ||
-      _.any(_.keys(modifier.$unset), pathHasNumericKeys) ||
-      _.any(_.keys(modifier.$set), pathHasNumericKeys))
+      _.any(modifierPaths, pathHasNumericKeys))
     return true;
+
+  // check if there is a $set or $unset that indicates something is an
+  // object rather than a scalar in the actual object where we saw $-operator
+  // NOTE: it is correct since we allow only scalars in $-operators
+  var expectedScalarIsObject = _.any(self._selector, function (sel, path) {
+    if (! isOperatorObject(sel))
+      return false;
+    return _.any(modifierPaths, function (modifierPath) {
+      return !modifierPath.indexOf(path) && modifierPath[path.length] === '.';
+    });
+  });
+
+  if (expectedScalarIsObject)
+    return false;
+
+
+  // A helper to ensure object has only certain keys
+  var onlyContainsKeys = function (obj, keys) {
+    return _.all(obj, function (v, k) {
+      return _.contains(keys, k);
+    });
+  };
 
   // convert a selector into an object matching the selector
   // { 'a.b': { ans: 42 }, 'foo.bar': null, 'foo.baz': "something" }
   // => { a: { b: { ans: 42 } }, foo: { bar: null, baz: "something" } }
+
+  // If the analysis of this selector is too hard for our implementation
+  // fallback to "YES"
+  var fallback = false;
   var doc = pathsToTree(self._getPaths(),
-                        function (path) { return self._selector[path]; },
-                        _.identity /*conflict resolution is no resolution*/);
+    function (path) {
+      var valueSelector = self._selector[path];
+      if (isOperatorObject(valueSelector)) {
+        // if there is a strict equality, there is a good
+        // chance we can use one of those as "matching"
+        // dummy value
+        if (valueSelector.$in) {
+          var matcher = new Minimongo.Matcher({ placeholder: valueSelector });
+
+          // Return anything from $in that matches the whole selector for this
+          // path. If nothing matches, returns `undefined` as nothing can make
+          // this selector into `true`.
+          return _.find(valueSelector.$in, function (x) {
+            return matcher.documentMatches({ placeholder: x }).result;
+          });
+        } else if (onlyContainsKeys(valueSelector, ['$gt', '$gte', '$lt', '$lte'])) {
+          var lowerBound = -Infinity, upperBound = Infinity;
+          _.each(['$lte', '$lt'], function (op) {
+            if (_.has(valueSelector, op) && valueSelector[op] < upperBound)
+              upperBound = valueSelector[op];
+          });
+          _.each(['$gte', '$gt'], function (op) {
+            if (_.has(valueSelector, op) && valueSelector[op] > lowerBound)
+              lowerBound = valueSelector[op];
+          });
+
+          var middle = (lowerBound + upperBound) / 2;
+          var matcher = new Minimongo.Matcher({ placeholder: valueSelector });
+          if (!matcher.documentMatches({ placeholder: middle }).result &&
+              (middle === lowerBound || middle === upperBound))
+            fallback = true;
+
+          return middle;
+        } else if (onlyContainsKeys(valueSelector, ['$nin',' $ne'])) {
+          // Since self._isSimple makes sure $nin and $ne are not combined with
+          // objects or arrays, we can confidently return an empty object as it
+          // never matches any scalar.
+          return {};
+        } else {
+          fallback = true;
+        }
+      }
+      return self._selector[path];
+    },
+    _.identity /*conflict resolution is no resolution*/);
+
+  if (fallback)
+    return true;
 
   try {
     LocalCollection._modify(doc, modifier);

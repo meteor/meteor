@@ -28,9 +28,10 @@ Minimongo.Matcher = function (selector) {
   self._hasGeoQuery = false;
   // Set to true if compilation finds a $where.
   self._hasWhere = false;
-  // Set to false if compilation finds anything other than a simple equality on
-  // some fields.
-  self._isEquality = true;
+  // Set to false if compilation finds anything other than a simple equality or
+  // one or more of '$gt', '$gte', '$lt', '$lte', '$ne', '$in', '$nin' used with
+  // scalars as operands.
+  self._isSimple = true;
   // A clone of the original selector. Used by canBecomeTrueByModifier.
   self._selector = null;
   self._docMatcher = self._compileSelector(selector);
@@ -46,8 +47,8 @@ _.extend(Minimongo.Matcher.prototype, {
   hasWhere: function () {
     return this._hasWhere;
   },
-  isEquality: function () {
-    return this._isEquality;
+  isSimple: function () {
+    return this._isSimple;
   },
 
   // Given a selector, return a function that takes one argument, a
@@ -56,7 +57,7 @@ _.extend(Minimongo.Matcher.prototype, {
     var self = this;
     // you can pass a literal function instead of a selector
     if (selector instanceof Function) {
-      self._isEquality = false;
+      self._isSimple = false;
       self._selector = selector;
       self._recordPathUsed('');
       return function (doc) {
@@ -77,7 +78,7 @@ _.extend(Minimongo.Matcher.prototype, {
     // likely programmer error, and not what you want, particularly for
     // destructive operations.
     if (!selector || (('_id' in selector) && !selector._id)) {
-      self._isEquality = null;
+      self._isSimple = false;
       return nothingMatcher;
     }
 
@@ -116,7 +117,7 @@ var compileDocumentSelector = function (docSelector, matcher, options) {
       // this function), or $where.
       if (!_.has(LOGICAL_OPERATORS, key))
         throw new Error("Unrecognized logical operator: " + key);
-      matcher._isEquality = false;
+      matcher._isSimple = false;
       docMatchers.push(LOGICAL_OPERATORS[key](subSelector, matcher,
                                               options.inElemMatch));
     } else {
@@ -144,7 +145,7 @@ var compileDocumentSelector = function (docSelector, matcher, options) {
 // [branched value]->result object.
 var compileValueSelector = function (valueSelector, matcher, isRoot) {
   if (valueSelector instanceof RegExp) {
-    matcher._isEquality = false;
+    matcher._isSimple = false;
     return convertElementMatcherToBranchedMatcher(
       regexpElementMatcher(valueSelector));
   } else if (isOperatorObject(valueSelector)) {
@@ -235,8 +236,16 @@ var operatorBranchedMatcher = function (valueSelector, matcher, isRoot) {
   var operatorMatchers = [];
   _.each(valueSelector, function (operand, operator) {
     // XXX we should actually implement $eq, which is new in 2.6
-    if (operator !== '$eq')
-      matcher._isEquality = false;
+    var supportedRange = _.contains(['$lt', '$lte', '$gt', '$gte'], operator) &&
+      _.isNumber(operand);
+    var supportedInequality = operator === '$ne' && !_.isObject(operand);
+    var supportedInclusion = _.contains(['$in', '$nin'], operator) &&
+      _.isArray(operand) && !_.any(operand, _.isObject);
+
+    if (! (operator === '$eq' || supportedRange ||
+           supportedInclusion || supportedInequality)) {
+      matcher._isSimple = false;
+    }
 
     if (_.has(VALUE_OPERATORS, operator)) {
       operatorMatchers.push(
