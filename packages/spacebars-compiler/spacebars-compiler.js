@@ -11,6 +11,8 @@ Spacebars.parse = function (input) {
 };
 
 // ============================================================
+// Optimizer for optimizing HTMLjs into raw HTML string when
+// it doesn't contain template tags.
 
 var optimize = function (tree) {
 
@@ -139,6 +141,7 @@ var optimize = function (tree) {
 };
 
 // ============================================================
+// Code-generation of template tags
 
 var builtInComponents = {
   'content': '__content',
@@ -149,38 +152,12 @@ var builtInComponents = {
   'each': 'UI.Each'
 };
 
-var replaceSpecials = function (node) {
-  if (node instanceof HTML.Tag) {
-    // potential optimization: don't always create a new tag
-    var newChildren = _.map(node.children, replaceSpecials);
-    var newTag = HTML.getTag(node.tagName).apply(null, newChildren);
-    var oldAttrs = node.attrs;
-    var newAttrs = null;
-
-    if (oldAttrs) {
-      _.each(oldAttrs, function (value, name) {
-        if (name.charAt(0) !== '$') {
-          newAttrs = (newAttrs || {});
-          newAttrs[name] = replaceSpecials(value);
-        }
-      });
-
-      if (oldAttrs.$specials && oldAttrs.$specials.length) {
-        newAttrs = (newAttrs || {});
-        newAttrs.$dynamic = _.map(oldAttrs.$specials, function (special) {
-          var ttag = special.value;
-          return HTML.EmitCode('function () { return ' +
-                               codeGenMustache(ttag, 'attrMustache') + '; }');
-        });
-      }
-    }
-
-    newTag.attrs = newAttrs;
-    return newTag;
-  } else if (node instanceof Array) {
-    return _.map(node, replaceSpecials);
-  } else if (node instanceof HTML.Special) {
-    var tag = node.value;
+var codeGenTemplateTag = function (tag) {
+  if (tag.position === HTML.TEMPLATE_TAG_POSITION.IN_START_TAG) {
+    // only `tag.type === 'DOUBLE'` allowed (by earlier validation)
+    return HTML.EmitCode('function () { return ' +
+                         codeGenMustache(tag, 'attrMustache') + '; }');
+  } else {
     if (tag.type === 'DOUBLE') {
       return HTML.EmitCode('function () { return ' +
                            codeGenMustache(tag) + '; }');
@@ -213,10 +190,10 @@ var replaceSpecials = function (node) {
           (includeArgs.length ? ', ' + includeArgs.join(', ') : '') +
           '); }');
     } else {
+      // Can't get here; TemplateTag validation should catch any
+      // inappropriate tag types that might come out of the parser.
       throw new Error("Unexpected template tag type: " + tag.type);
     }
-  } else {
-    return node;
   }
 };
 
@@ -318,67 +295,6 @@ var codeGenMustache = function (tag, mustacheType) {
     (argCode ? ', ' + argCode.join(', ') : '') + ')';
 };
 
-Spacebars.compile = function (input, options) {
-  var tree = Spacebars.parse(input);
-  return Spacebars.codeGen(tree, options);
-};
-
-Spacebars.codeGen = function (parseTree, options) {
-  // is this a template, rather than a block passed to
-  // a block helper, say
-  var isTemplate = (options && options.isTemplate);
-
-  var tree = parseTree;
-
-  // The flags `isTemplate` and `isBody` are kind of a hack.
-  if (isTemplate || (options && options.isBody)) {
-    // optimizing fragments would require being smarter about whether we are
-    // in a TEXTAREA, say.
-    tree = optimize(tree);
-  }
-
-  tree = replaceSpecials(tree);
-
-  var code = '(function () { var self = this; ';
-  if (isTemplate) {
-    // support `{{> content}}` and `{{> elseContent}}` with
-    // lexical scope by creating a local variable in the
-    // template's render function.
-    code += 'var __content = self.__content, ' +
-      '__elseContent = self.__elseContent; ';
-  }
-  code += 'return ';
-  code += HTML.toJS(tree);
-  code += '; })';
-
-  code = beautify(code);
-
-  return code;
-};
-
-var beautify = function (code) {
-  if (Package.minifiers && Package.minifiers.UglifyJSMinify) {
-    var result = UglifyJSMinify(code,
-                                { fromString: true,
-                                  mangle: false,
-                                  compress: false,
-                                  output: { beautify: true,
-                                            indent_level: 2,
-                                            width: 80 } });
-    var output = result.code;
-    // Uglify interprets our expression as a statement and may add a semicolon.
-    // Strip trailing semicolon.
-    output = output.replace(/;$/, '');
-    return output;
-  } else {
-    // don't actually beautify; no UglifyJS
-    return code;
-  }
-};
-
-// expose for compiler output tests
-Spacebars._beautify = beautify;
-
 // `path` is an array of at least one string.
 //
 // If `path.length > 1`, the generated code may be reactive
@@ -441,3 +357,102 @@ var codeGenArgs = function (tagArgs) {
 
   return args;
 };
+
+// ============================================================
+// Main compiler
+
+var replaceSpecials = function (node) {
+  if (node instanceof HTML.Tag) {
+    // potential optimization: don't always create a new tag
+    var newChildren = _.map(node.children, replaceSpecials);
+    var newTag = HTML.getTag(node.tagName).apply(null, newChildren);
+    var oldAttrs = node.attrs;
+    var newAttrs = null;
+
+    if (oldAttrs) {
+      _.each(oldAttrs, function (value, name) {
+        if (name.charAt(0) !== '$') {
+          newAttrs = (newAttrs || {});
+          newAttrs[name] = replaceSpecials(value);
+        }
+      });
+
+      if (oldAttrs.$specials && oldAttrs.$specials.length) {
+        newAttrs = (newAttrs || {});
+        newAttrs.$dynamic = _.map(oldAttrs.$specials, function (special) {
+          return codeGenTemplateTag(special.value);
+        });
+      }
+    }
+
+    newTag.attrs = newAttrs;
+    return newTag;
+  } else if (node instanceof Array) {
+    return _.map(node, replaceSpecials);
+  } else if (node instanceof HTML.Special) {
+    return codeGenTemplateTag(node.value);
+  } else {
+    return node;
+  }
+};
+
+Spacebars.compile = function (input, options) {
+  var tree = Spacebars.parse(input);
+  return Spacebars.codeGen(tree, options);
+};
+
+Spacebars.codeGen = function (parseTree, options) {
+  // is this a template, rather than a block passed to
+  // a block helper, say
+  var isTemplate = (options && options.isTemplate);
+
+  var tree = parseTree;
+
+  // The flags `isTemplate` and `isBody` are kind of a hack.
+  if (isTemplate || (options && options.isBody)) {
+    // optimizing fragments would require being smarter about whether we are
+    // in a TEXTAREA, say.
+    tree = optimize(tree);
+  }
+
+  tree = replaceSpecials(tree);
+
+  var code = '(function () { var self = this; ';
+  if (isTemplate) {
+    // support `{{> content}}` and `{{> elseContent}}` with
+    // lexical scope by creating a local variable in the
+    // template's render function.
+    code += 'var __content = self.__content, ' +
+      '__elseContent = self.__elseContent; ';
+  }
+  code += 'return ';
+  code += HTML.toJS(tree);
+  code += '; })';
+
+  code = beautify(code);
+
+  return code;
+};
+
+var beautify = function (code) {
+  if (Package.minifiers && Package.minifiers.UglifyJSMinify) {
+    var result = UglifyJSMinify(code,
+                                { fromString: true,
+                                  mangle: false,
+                                  compress: false,
+                                  output: { beautify: true,
+                                            indent_level: 2,
+                                            width: 80 } });
+    var output = result.code;
+    // Uglify interprets our expression as a statement and may add a semicolon.
+    // Strip trailing semicolon.
+    output = output.replace(/;$/, '');
+    return output;
+  } else {
+    // don't actually beautify; no UglifyJS
+    return code;
+  }
+};
+
+// expose for compiler output tests
+Spacebars._beautify = beautify;
