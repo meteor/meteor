@@ -1,13 +1,5 @@
 {
   "dependencies": {
-    "clean-css": {
-      "version": "2.0.6",
-      "dependencies": {
-        "commander": {
-          "version": "2.0.0"
-        }
-      }
-    },
     "uglify-js": {
       "version": "2.4.7",
       "dependencies": {

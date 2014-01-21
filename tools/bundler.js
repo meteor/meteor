@@ -770,7 +770,7 @@ _.extend(ClientTarget.prototype, {
 
     var cssAsts = _.map(self.css, function (file) {
       try {
-        var ast = minifiers.CssParse(file.contents('utf8'));
+        var ast = minifiers.CssTools.parseCss(file.contents('utf8'));
       } catch (e) {
         var fileName = file.url.replace(/^\//, '');
         buildmessage.error(e.message, { file: fileName });
@@ -818,10 +818,10 @@ _.extend(ClientTarget.prototype, {
       return ast;
     });
 
-    var allCss =
-      _.map([importsAst].concat(cssAsts), minifiers.CssStringify).join('\n');
+    var allCss = _.map([importsAst].concat(cssAsts),
+                       minifiers.CssTools.stringifyCss).join('\n');
 
-    var minifiedCss = minifiers.CleanCSSProcess(allCss);
+    var minifiedCss = minifiers.CssTools.minifyCss(allCss);
 
     self.css = [new File({ data: new Buffer(minifiedCss, 'utf8') })];
     self.css[0].setUrlToHash(".css");
