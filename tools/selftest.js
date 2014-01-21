@@ -26,6 +26,7 @@ var Matcher = function () {
   self.ended = false;
   self.matchPattern = null;
   self.matchFuture = null;
+  self.matchStrict = null;
 };
 
 _.extend(Matcher.prototype, {
@@ -35,11 +36,12 @@ _.extend(Matcher.prototype, {
     self._tryMatch();
   },
 
-  match: function (pattern, timeout) {
+  match: function (pattern, timeout, strict) {
     var self = this;
     if (self.matchFuture)
       throw new Error("already have a match pending?");
     self.matchPattern = pattern;
+    self.matchStrict = strict;
     var f = self.matchFuture = new Future;
     self._tryMatch(); // could clear self.matchFuture
 
@@ -47,6 +49,7 @@ _.extend(Matcher.prototype, {
     if (timeout) {
       timer = setTimeout(function () {
         self.matchPattern = null;
+        self.matchStrict = null;
         self.matchFuture = null;
         f['throw'](new TestFailure('match-timeout'));
       }, timeout * 1000);
@@ -66,6 +69,13 @@ _.extend(Matcher.prototype, {
     self._tryMatch();
   },
 
+  matchEmpty: function () {
+    var self = this;
+
+    if (self.buf.length > 0)
+      throw new TestFailure('junk-at-end');
+  },
+
   _tryMatch: function () {
     var self = this;
 
@@ -78,12 +88,16 @@ _.extend(Matcher.prototype, {
     if (self.matchPattern instanceof RegExp) {
       var m = self.buf.match(self.matchPattern);
       if (m) {
+        if (self.matchStrict && m.index !== 0)
+          f['throw'](new TestFailure('junk-before'));
         ret = m;
         self.buf = self.buf.slice(m.index + m[0].length);
       }
     } else {
       var i = self.buf.indexOf(self.matchPattern);
       if (i !== -1) {
+        if (self.matchStrict && i !== 0)
+          f['throw'](new TestFailure('junk-before'));
         ret = self.matchPattern;
         self.buf = self.buf.slice(i + self.matchPattern.length);
       }
@@ -91,6 +105,7 @@ _.extend(Matcher.prototype, {
 
     if (ret !== null) {
       self.matchFuture = null;
+      self.matchStrict = null;
       self.matchPattern = null;
       f['return'](ret);
       return;
@@ -98,6 +113,7 @@ _.extend(Matcher.prototype, {
 
     if (self.ended) {
       self.matchFuture = null;
+      self.matchStrict = null;
       self.matchPattern = null;
       f['throw'](new TestFailure('no-match'));
       return;
@@ -211,23 +227,48 @@ _.extend(Run.prototype, {
   // may be a regular expression or a string. Consume stdout up to
   // that point. If this pattern does not appear after a timeout (or
   // the program exits before emitting the pattern), fail.
-  match: markStack(function (pattern) {
+  match: markStack(function (pattern, _strict) {
     var self = this;
     self._ensureStarted();
 
     var timeout = self.baseTimeout + self.extraTime;
     self.extraTime = 0;
-    return self.stdoutMatcher.match(pattern, timeout);
+    return self.stdoutMatcher.match(pattern, timeout, _strict);
   }),
 
   // As expect(), but for stderr instead of stdout.
-  matchErr: markStack(function (pattern) {
+  matchErr: markStack(function (pattern, _strict) {
     var self = this;
     self._ensureStarted();
 
     var timeout = self.baseTimeout + self.extraTime;
     self.extraTime = 0;
-    return self.stderrMatcher.match(pattern, timeout);
+    return self.stderrMatcher.match(pattern, timeout, _strict);
+  }),
+
+  // Like match(), but won't skip ahead looking for a match. It must
+  // follow immediately after the last thing we matched or read.
+  read: markStack(function (pattern) {
+    return this.match(pattern, true);
+  }),
+
+  // As read(), but for stderr instead of stdout.
+  readErr: markStack(function (pattern) {
+    return this.matchErr(pattern, true);
+  }),
+
+  // Expect the program to exit without anything further being
+  // printed on either stdout or stderr.
+  expectEnd: markStack(function () {
+    var self = this;
+    self._ensureStarted();
+
+    var timeout = self.baseTimeout + self.extraTime;
+    self.extraTime = 0;
+    self.expectExit();
+
+    self.stdoutMatcher.matchEmpty();
+    self.stderrMatcher.matchEmpty();
   }),
 
   // Expect the program to exit with the given (numeric) exit
@@ -256,7 +297,7 @@ _.extend(Run.prototype, {
 
     if (! self.exitStatus)
       throw new TestFailure('spawn-failure');
-    if (self.exitStatus.code !== code) {
+    if (code !== undefined && self.exitStatus.code !== code) {
       throw new TestFailure('wrong-exit-code', {
         expected: { code: code },
         actual: self.exitStatus
@@ -355,10 +396,19 @@ defineTest("help", function () {
   run.match("Commands:");
   run.match(/create\s*Create a new project/);
   run.expectExit(0);
+
+  // XXX test --help, help for particular commands
+});
+
+defineTest("argument parsing", function () {
+  // XXX test that main.js catches all the weird error cases
 });
 
 defineTest("login", function () {
-  // XXX need to create a new credentials file for this run!
+  // XXX need to create a new credentials file for this run! (and a
+  // user account)
+  // XXX how to clean up test user accounts at end of test run? or,
+  // only ever do it against a testing universe, and don't bother?
   var run = new Run("whoami");
   run.matchErr("Not logged in");
   run.expectExit(1);
@@ -372,11 +422,20 @@ defineTest("login", function () {
   run.match("Logged in as test.");
   run.expectExit(0);
 
+  // XXX test login failure
+  // XXX test login by email
+
   var run = new Run("whoami");
-  run.match("test");
+  // XXX want something like 'matchAll' that you call after expectExit
+  // and must match all remaining input. basically, it's like match
+  // except that it requires the match offset to be zero. if you call
+  // that after exit it will do what we want.
+  run.read("test\n");
+  run.expectEnd();
   run.expectExit(0);
 
   var run = new Run("logout");
+  run.wait(5);
   run.matchErr("Logged out");
   run.expectExit(0);
 
@@ -392,6 +451,21 @@ defineTest("login", function () {
 
 // XXX tests are slow, so we're going to need a good mechanism for
 // running particular tests, or previously failing tests, or changed
-// tests (!) or something..
+// tests (!) or something.. OR, have a fast mode (the default unless
+// you pass --paranoid) that just reruns main() in-process, rather
+// than spawning?? stdio becomes a bit of a mess..
+
+// XXX way of marking tests that need network, so that we can skip
+// them when testing on an airplane (well, universe..)
+
+// XXX have the self-test command take a --universe option (to set the
+// universe used in the spawned copy of meteor). if you don't set one
+// you don't get the tests that talk to servers.
+
+// XXX have a way to fake being offline
+
+// XXX how are we going to test updating and springboarding? it would
+// be great if you could do this from a checkout without having to cut
+// a release
 
 exports.runTests = runTests;
