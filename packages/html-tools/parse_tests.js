@@ -130,6 +130,23 @@ Tinytest.add("html - parser getContent", function (test) {
   succeed('<textarea></textarea  \n<</textarea  \n>asdf',
           [TEXTAREA("</textarea  \n<"), "asdf"]);
 
+  // CR/LF behavior
+  succeed('<br\r\n x>', BR({x:''}));
+  succeed('<br\r x>', BR({x:''}));
+  succeed('<br x="y"\r\n>', BR({x:'y'}));
+  succeed('<br x="y"\r>', BR({x:'y'}));
+  succeed('<br x="y"\r>', BR({x:'y'}));
+  succeed('<br x=\r\n"y">', BR({x:'y'}));
+  succeed('<br x=\r"y">', BR({x:'y'}));
+  succeed('<br x\r=\r"y">', BR({x:'y'}));
+  succeed('<!--\r\n-->', Comment('\n'));
+  succeed('<!--\r-->', Comment('\n'));
+  succeed('<textarea>a\r\nb\r\nc</textarea>', TEXTAREA('a\nb\nc'));
+  succeed('<textarea>a\rb\rc</textarea>', TEXTAREA('a\nb\nc'));
+  succeed('<br x="\r\n\r\n">', BR({x:'\n\n'}));
+  succeed('<br x="\r\r">', BR({x:'\n\n'}));
+  succeed('<br x=y\r>', BR({x:'y'}));
+  fatal('<br x=\r>');
 });
 
 Tinytest.add("html - parseFragment", function (test) {
