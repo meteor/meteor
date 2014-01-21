@@ -41,7 +41,17 @@
 //   v: { ... anything ... }
 // }
 
-var HTML_SPACE = /^[\f\n\t ]/;
+// The HTML tokenization spec says to preprocess the input stream to replace
+// CR(LF)? with LF.  However, preprocessing `scanner` would complicate things
+// by making indexes not match the input (e.g. for error messages), so we just
+// keep in mind as we go along that an LF might be represented by CRLF or CR.
+// In most cases, it doesn't actually matter what combination of whitespace
+// characters are present (e.g. inside tags).
+var HTML_SPACE = /^[\f\n\r\t ]/;
+
+var convertCRLF = function (str) {
+  return str.replace(/\r\n?/g, '\n');
+};
 
 getComment = function (scanner) {
   if (scanner.rest().slice(0, 4) !== '<!--')
@@ -70,7 +80,7 @@ getComment = function (scanner) {
   scanner.pos += closePos + 3;
 
   return { t: 'Comment',
-           v: commentContents };
+           v: convertCRLF(commentContents) };
 };
 
 var skipSpaces = function (scanner) {
@@ -221,7 +231,7 @@ getHTMLToken = function (scanner, dataMode) {
   var chars = getChars(scanner);
   if (chars)
     return { t: 'Chars',
-             v: chars };
+             v: convertCRLF(chars) };
 
   var ch = scanner.peek();
   if (! ch)
@@ -261,10 +271,10 @@ getHTMLToken = function (scanner, dataMode) {
   scanner.fatal("Unexpected `<!` directive.");
 };
 
-var getTagName = makeRegexMatcher(/^[a-zA-Z][^\f\n\t />{]*/);
+var getTagName = makeRegexMatcher(/^[a-zA-Z][^\f\n\r\t />{]*/);
 var getClangle = makeRegexMatcher(/^>/);
 var getSlash = makeRegexMatcher(/^\//);
-var getAttributeName = makeRegexMatcher(/^[^>/\u0000"'<=\f\n\t ][^\f\n\t /=>"'<\u0000]*/);
+var getAttributeName = makeRegexMatcher(/^[^>/\u0000"'<=\f\n\r\t ][^\f\n\r\t /=>"'<\u0000]*/);
 
 // Try to parse `>` or `/>`, mutating `tag` to be self-closing in the latter
 // case (and failing fatally if `/` isn't followed by `>`).
@@ -322,8 +332,10 @@ var getQuotedAttributeValue = function (scanner, quote) {
         charsTokenToExtend = { t: 'Chars', v: '' };
         tokens.push(charsTokenToExtend);
       }
-      charsTokenToExtend.v += ch;
+      charsTokenToExtend.v += (ch === '\r' ? '\n' : ch);
       scanner.pos++;
+      if (ch === '\r' && scanner.peek() === '\n')
+        scanner.pos++;
     }
   }
 };
