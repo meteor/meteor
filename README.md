@@ -69,7 +69,7 @@ If you wanted to undo all of your migrations, you could migrate back down to ver
 Migrations.migrateTo(0);
 ```
 
-**NOTE**: You create your own migration at version 0. This version is reserved by migrations for a 'vanilla' system, that is, one without any migrations applied.
+**NOTE**: You cannot create your own migration at version 0. This version is reserved by migrations for a 'vanilla' system, that is, one without any migrations applied.
 
 ### Command line use
 
