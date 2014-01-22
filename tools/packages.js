@@ -1346,6 +1346,8 @@ _.extend(Package.prototype, {
             where = where ? [where] : allWheres;
           }
           where = _.uniq(where);
+          if (where.length === 1 && where[0] === 'both')
+            where = allWheres;
           var realWhere = _.intersection(where, allWheres);
           if (realWhere.length !== where.length) {
             var badWheres = _.difference(where, allWheres);
@@ -1367,7 +1369,8 @@ _.extend(Package.prototype, {
           // anonymous packages you want to use (eg, app packages)
           //
           // @param where 'client', 'server', or an array of those.
-          // The default is ['client', 'server'].
+          // The shortcut 'both' can be used instead of ['client', 'server'].
+          // The default is 'both'.
           //
           // @param options 'testOnly', boolean.
           //
@@ -1477,7 +1480,8 @@ _.extend(Package.prototype, {
           //
           // @param symbols String (eg "Foo") or array of String
           // @param where 'client', 'server', or an array of those.
-          // The default is ['client', 'server'].
+          // The shortcut 'both' can be used instead of ['client', 'server'].
+          // The default is 'both'.
           // @param options 'testOnly', boolean.
           export: function (symbols, where, options) {
             if (role === "test") {
