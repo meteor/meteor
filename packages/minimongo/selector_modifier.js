@@ -70,11 +70,13 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
   // check if there is a $set or $unset that indicates something is an
   // object rather than a scalar in the actual object where we saw $-operator
   // NOTE: it is correct since we allow only scalars in $-operators
+  // Example: for selector {'a.b': {$gt: 5}} the modifier {'a.b.c':7} would
+  // definitely set the result to false as 'a.b' appears to be an object.
   var expectedScalarIsObject = _.any(self._selector, function (sel, path) {
     if (! isOperatorObject(sel))
       return false;
     return _.any(modifierPaths, function (modifierPath) {
-      return !modifierPath.indexOf(path) && modifierPath[path.length] === '.';
+      return startsWith(modifierPath, path + '.');
     });
   });
 
@@ -202,4 +204,10 @@ var onlyContainsKeys = function (obj, keys) {
 var pathHasNumericKeys = function (path) {
   return _.any(path.split('.'), isNumericKey);
 }
+
+// XXX from Underscore.String (http://epeli.github.com/underscore.string/)
+var startsWith = function(str, starts) {
+  return str.length >= starts.length &&
+    str.substring(0, starts.length) === starts;
+};
 

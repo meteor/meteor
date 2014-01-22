@@ -239,14 +239,14 @@ var operatorBranchedMatcher = function (valueSelector, matcher, isRoot) {
   var operatorMatchers = [];
   _.each(valueSelector, function (operand, operator) {
     // XXX we should actually implement $eq, which is new in 2.6
-    var supportedRange = _.contains(['$lt', '$lte', '$gt', '$gte'], operator) &&
+    var simpleRange = _.contains(['$lt', '$lte', '$gt', '$gte'], operator) &&
       _.isNumber(operand);
-    var supportedInequality = operator === '$ne' && !_.isObject(operand);
-    var supportedInclusion = _.contains(['$in', '$nin'], operator) &&
+    var simpleInequality = operator === '$ne' && !_.isObject(operand);
+    var simpleInclusion = _.contains(['$in', '$nin'], operator) &&
       _.isArray(operand) && !_.any(operand, _.isObject);
 
-    if (! (operator === '$eq' || supportedRange ||
-           supportedInclusion || supportedInequality)) {
+    if (! (operator === '$eq' || simpleRange ||
+           simpleInclusion || simpleInequality)) {
       matcher._isSimple = false;
     }
 
