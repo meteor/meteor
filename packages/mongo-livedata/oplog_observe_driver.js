@@ -29,6 +29,7 @@ OplogObserveDriver = function (options) {
     "mongo-livedata", "observe-drivers-oplog", 1);
 
   self._phase = PHASE.QUERYING;
+  self._registerPhaseChange("querying");
 
   self._published = new LocalCollection._IdMap;
   var selector = self._cursorDescription.selector;
@@ -156,6 +157,7 @@ _.extend(OplogObserveDriver.prototype, {
   _fetchModifiedDocuments: function () {
     var self = this;
     self._phase = PHASE.FETCHING;
+    self._registerPhaseChange("fetching");
     while (!self._stopped && !self._needToFetch.empty()) {
       if (self._phase !== PHASE.FETCHING)
         throw new Error("phase in fetchModifiedDocuments: " + self._phase);
@@ -204,6 +206,7 @@ _.extend(OplogObserveDriver.prototype, {
   _beSteady: function () {
     var self = this;
     self._phase = PHASE.STEADY;
+    self._registerPhaseChange("steady");
     var writes = self._writesToCommitWhenWeReachSteady;
     self._writesToCommitWhenWeReachSteady = [];
     self._multiplexer.onFlush(function () {
@@ -313,6 +316,7 @@ _.extend(OplogObserveDriver.prototype, {
     self._currentlyFetching = null;
     ++self._fetchGeneration;  // ignore any in-flight fetches
     self._phase = PHASE.QUERYING;
+    self._registerPhaseChange("querying");
 
     // Defer so that we don't block.
     Meteor.defer(function () {
@@ -453,6 +457,20 @@ _.extend(OplogObserveDriver.prototype, {
 
     Package.facts && Package.facts.Facts.incrementServerFact(
       "mongo-livedata", "observe-drivers-oplog", -1);
+  },
+
+  _registerPhaseChange: function (phase) {
+    var self = this;
+    var now = new Date;
+
+    if (self._lastPhase) {
+      var timeDiff = now - self._lastPhaseStartTime;
+      Package.facts && Package.facts.Facts.incrementServerFact(
+        "mongo-livedata", "time-spent-in-" + self._lastPhase + "-phase", timeDiff);
+    }
+
+    self._lastPhase = phase;
+    self._lastPhaseStartTime = now;
   }
 });
 
