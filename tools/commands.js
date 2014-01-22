@@ -1198,8 +1198,11 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'self-test',
+  options: {
+    changed: { type: Boolean }
+  },
   hidden: true
 }, function (options) {
   var selftest = require('./selftest.js');
-  return selftest.runTests();
+  return selftest.runTests({ onlyChanged: options.changed });
 });

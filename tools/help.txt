@@ -305,6 +305,11 @@ Meteor account.
 
 >>> self-test
 Run tests of the 'meteor' tool.
-Usage: meteor self-test
+Usage: meteor self-test [--changed]
 
 Runs internal tests. Exits with status 0 on success.
+
+Pass --changed to run only tests that have changed since they last
+passed. This uses a really rough heuristic: A test has changed iff
+there has been any change to the file in the 'selftests' subdirectory
+that defines it. State for this is tracked in ~/.meteortest.

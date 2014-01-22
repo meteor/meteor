@@ -354,11 +354,13 @@ var Test = function (options) {
   var self = this;
   self.name = options.name;
   self.file = options.file;
+  self.fileHash = options.fileHash;
   self.f = options.func;
 };
 
 var allTests = null;
 var fileBeingLoaded = null;
+var fileBeingLoadedHash = null;
 var getAllTests = function () {
   if (allTests)
     return allTests;
@@ -369,15 +371,22 @@ var getAllTests = function () {
   var testdir = path.join(__dirname, 'selftests');
   var filenames = fs.readdirSync(testdir);
   _.each(filenames, function (n) {
-    if (! n.match(/\.js$/))
+    if (! n.match(/^[^.].*\.js$/)) // ends in '.js', doesn't start with '.'
       return;
     try {
       if (fileBeingLoaded)
         throw new Error("called recursively?");
       fileBeingLoaded = path.basename(n, '.js');
+
+      var fullPath = path.join(testdir, n);
+      var contents = fs.readFileSync(fullPath, 'utf8');
+      fileBeingLoadedHash =
+        require('crypto').createHash('sha1').update(contents).digest('hex');
+
       require(path.join(testdir, n));
     } finally {
       fileBeingLoaded = null;
+      fileBeingLoadedHash = null;
     }
   });
 
@@ -388,23 +397,48 @@ var define = function (name, f) {
   allTests.push(new Test({
     name: name,
     file: fileBeingLoaded,
+    fileHash: fileBeingLoadedHash,
     func: f
   }));
 };
 
-// XXX idea is that options will eventually include server to test
-// against, user account(s) to use for deploys.. maybe read out of a
-// config file
-//
-// XXX idea is that test suites will live in a tests subdirectory and
-// be included from here, and require us back to get the machinery
-var runTests = function () {
+// options: onlyChanged
+var runTests = function (options) {
   var failureCount = 0;
 
   var tests = getAllTests();
 
+  if (! tests.length) {
+    process.stderr.write("No tests defined.\n");
+    return 0;
+  }
+
+  var testStateFile = path.join(process.env.HOME, '.meteortest');
+  var testState;
+  if (fs.existsSync(testStateFile))
+    testState = JSON.parse(fs.readFileSync(testStateFile, 'utf8'));
+  if (! testState || testState.version !== 1)
+    testState = { version: 1, lastPassedHashes: {} };
+
+  if (options.onlyChanged) {
+    // Filter out tests that haven't changed since they last passed.
+    tests = _.filter(tests, function (test) {
+      return test.fileHash !== testState.lastPassedHashes[test.file];
+    });
+  }
+
+  if (! tests.length) {
+    process.stderr.write("No tests changed.\n");
+    return 0;
+  }
+
+  var failuresInFile = {};
   _.each(tests, function (test) {
     process.stderr.write(test.name + "... ");
+
+    // We will clear this later if it turns out that all of the tests
+    // in the file didn't pass
+    testState.lastPassedHashes[test.file] = test.fileHash;
 
     var failure = null;
     try {
@@ -426,10 +460,17 @@ var runTests = function () {
                                   frames[0].file);
       process.stderr.write("  => " + failure.reason + " at " +
                            relpath + ":" + frames[0].line + "\n");
+      failuresInFile[test.file] = true;
     } else {
       process.stderr.write("ok\n");
     }
   });
+
+  _.each(_.keys(failuresInFile), function (f) {
+    delete testState.lastPassedHashes[f];
+  });
+
+  fs.writeFileSync(testStateFile, JSON.stringify(testState), 'utf8');
 
   if (failureCount === 0) {
     process.stderr.write("\nAll tests passed.\n");
@@ -440,8 +481,6 @@ var runTests = function () {
     return 1;
   }
 };
-
-
 
 
 // XXX tests are slow, so we're going to need a good mechanism for
