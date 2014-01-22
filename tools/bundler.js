@@ -317,9 +317,10 @@ _.extend(File.prototype, {
   // typically be used to pick a reasonable extension. Also set
   // cacheable to true, since the file's name is now derived from its
   // contents.
-  setUrlToHash: function (suffix) {
+  setUrlToHash: function (suffix, urlSuffix) {
     var self = this;
-    self.url = "/" + self.hash() + suffix;
+    urlSuffix = urlSuffix || "";
+    self.url = "/" + self.hash() + suffix + urlSuffix;
     self.cacheable = true;
     self.targetPath = self.hash() + suffix;
   },
@@ -766,7 +767,7 @@ _.extend(ClientTarget.prototype, {
     allCss = minifiers.CleanCSSProcess(allCss);
 
     self.css = [new File({ data: new Buffer(allCss, 'utf8') })];
-    self.css[0].setUrlToHash(".css");
+    self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
   },
 
   // XXX Instead of packaging the boilerplate in the client program, the
