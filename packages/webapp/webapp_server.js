@@ -482,14 +482,26 @@ var runWebAppServer = function () {
     // XXX: Eventually, this should be done with a standard meteor shut-down
     // logic path.
     httpServer.emit('meteor-closing');
-    httpServer.close( function () {
+
+    httpServer.close(Meteor.bindEnvironment(function () {
+      if (proxy) {
+        try {
+          proxy.call('removeBindingsForJob', process.env.GALAXY_JOB);
+        } catch (e) {
+          Log.error("Error removing bindings: " + e.message);
+          process.exit(1);
+        }
+      }
       process.exit(0);
-    });
+
+    }, "On http server close failed"));
+
     // Ideally we will close before this hits.
     Meteor.setTimeout(function () {
       Log.warn("Closed by SIGHUP but one or more HTTP requests may not have finished.");
       process.exit(1);
     }, 5000);
+
   }, function (err) {
     console.log(err);
     process.exit(1);
