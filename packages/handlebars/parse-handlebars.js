@@ -64,7 +64,11 @@ Handlebars.to_json_ast = function (code) {
 
     throw e;
   }
+  return Handlebars.ast_to_json_ast(ast);
+}
 
+// Converts a handlebars AST to Meteor's
+Handlebars.ast_to_json_ast = function (ast) {
   // Recreate Handlebars.Exception to properly report error messages
   // and stack traces. (https://github.com/wycats/handlebars.js/issues/226)
   makeHandlebarsExceptionsVisible();
