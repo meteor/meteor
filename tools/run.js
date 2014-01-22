@@ -154,6 +154,41 @@ var startProxy = function (outerPort, innerPort, callback) {
   // requests
   server.on('upgrade', function(req, socket, head) {
     var proxyIt = function () {
+      socket.on('error', function (e) {
+        // The http-proxy:outgoing:ws:error handler below only manages to detect
+        // errors between the proxy and the server. We apparently need to put in
+        // our own error handler to react to errors on the client/proxy
+        // socket. What we want to do in this error handler is destroy the
+        // proxy/server socket, but http-proxy doesn't actually ever hand that
+        // socket (which it calls `proxySocket`) to us!
+        //
+        // The good news is, `socket` is currently piped into
+        // `proxySocket`. (The reverse used to be true, but as soon as this
+        // error event fired, the pipe logic undid the reverse pipe.) So all we
+        // need to do to end `proxySocket` is to make `socket` emit an 'end'
+        // event.
+        //
+        // You might think that the right way to do that would be to call
+        // `socket.end()`. But `end()` is a method on writable sockets, and that
+        // call just means "close the half of the TCP socket leading from the
+        // proxy to the client", which certainly should not be echoed to the
+        // proxy/server connection!
+        //
+        // You might also think that `socket.destroy()` would cause the read
+        // half (client->proxy) of `socket` to be closed (which would then be
+        // piped to `proxySocket`, which is what we want), but for some reason
+        // it doesn't actually seem to!
+        //
+        // The best way we could find to make `socket` emit 'end' is
+        // `unshift(null)`. This doesn't seem great, since `unshift` is
+        // documented (well, commented in the source) as something you should
+        // only call with data you just pulled from `read()`. But it does fix
+        // the issue for now.
+        //
+        // XXX file an issue with http-proxy and add a link here
+        socket.unshift(null);
+        socket.destroy();
+      });
       proxy.ws(req, socket, head, { target: 'http://127.0.0.1:' + innerPort});
     };
     if (Status.listening) {
