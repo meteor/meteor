@@ -32,6 +32,9 @@ Minimongo.Matcher = function (selector) {
   // one or more of '$gt', '$gte', '$lt', '$lte', '$ne', '$in', '$nin' used with
   // scalars as operands.
   self._isSimple = true;
+  // Set to a dummy document which always matches this Matcher. Or set to null
+  // if such document is too hard to find.
+  self._matchingDocument = undefined;
   // A clone of the original selector. Used by canBecomeTrueByModifier.
   self._selector = null;
   self._docMatcher = self._compileSelector(selector);
