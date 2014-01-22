@@ -711,6 +711,7 @@ Fiber(function () {
     help: "Pack this project up into a tarball",
     argumentParser: function (opt) {
       opt.boolean('for-deploy')
+        .boolean('for-local')
         .boolean('debug')
         .describe('debug', "bundle in debug mode (don't minify, etc)")
         .usage("Usage: meteor bundle <output_file.tar.gz>\n" +
@@ -739,8 +740,16 @@ Fiber(function () {
       var output_path = path.resolve(argv._[0]); // get absolute path
 
       var bundler = require(path.join(__dirname, 'bundler.js'));
+      var nodeModulesMode;
+      if (argv['for-deploy']) {
+        nodeModulesMode = 'skip';
+      } else if (argv['for-local']) {
+        nodeModulesMode = 'symlink';
+      } else {
+        nodeModulesMode = 'copy';
+      }
       var bundleResult = bundler.bundle(context.appDir, bundle_path, {
-        nodeModulesMode: argv['for-deploy'] ? 'skip' : 'copy',
+        nodeModulesMode: nodeModulesMode,
         minify: !argv.debug,
         releaseStamp: context.releaseVersion,
         library: context.library
@@ -752,12 +761,17 @@ Fiber(function () {
       }
 
       try {
-        files.createTarball(path.join(buildDir, 'bundle'), output_path);
+        var bundleDir = path.join(buildDir, 'bundle');
+        if (! argv['for-local']) {
+          files.createTarball(bundleDir, output_path);
+          files.rm_recursive(buildDir);
+        } else {
+          fs.symlinkSync(buildDir, output_path);
+        }
       } catch (err) {
-        console.log(JSON.stringify(err));
+        console.log(err);
         process.stderr.write("Couldn't create tarball\n");
       }
-      files.rm_recursive(buildDir);
     }
   });
 
