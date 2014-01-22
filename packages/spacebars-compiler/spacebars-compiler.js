@@ -302,6 +302,14 @@ var codeGenMustache = function (tag, mustacheType) {
 //
 // No code is generated to call the result if it's a function.
 var codeGenPath = function (path) {
+  // Let {{#if content}} check whether this template was invoked via
+  // inclusion or as a block helper.
+  if (builtInComponents.hasOwnProperty(path[0])) {
+    if (path.length > 1)
+      throw new Error("Unexpected dotted path beginning with " + path[0]);
+    return builtInComponents[path[0]];
+  }
+
   var code = 'self.lookup(' + toJSLiteral(path[0]) + ')';
 
   if (path.length > 1) {
