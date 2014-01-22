@@ -121,11 +121,35 @@ _.extend(Matcher.prototype, {
   }
 });
 
-// Represents a test run of the tool.
-//
-// Argument passed to the Run constructor will be passed to args().
-var Run = function () {
+// Represents an install of the tool.
+
+var Sandbox = function () {
   var self = this;
+  self.root = files.mkdtemp();
+};
+
+_.extend(Sandbox.prototype, {
+  run: function (/* arguments */) {
+    var self = this;
+    return new Run({
+      sandbox: self,
+      args: _.toArray(arguments)
+    });
+  }
+});
+
+
+// Represents a test run of the tool. Typically created through the
+// run() method on Sandbox.
+//
+// Options: args, sandbox
+var Run = function (options) {
+  var self = this;
+
+  if (! _.has(options, 'sandbox'))
+    throw new Error("don't construct this object directly");
+  self.sandbox = options.sandbox;
+
   self._args = [];
   self.proc = null;
   self.baseTimeout = 1;
@@ -137,7 +161,7 @@ var Run = function () {
   self.exitStatus = undefined; // 'null' means failed rather than exited
   self.exitFutures = [];
 
-  self.args.apply(self, arguments);
+  self.args.apply(self, options.args || []);
 };
 
 // XXX idea is to also add options to create a project directory to
@@ -198,9 +222,15 @@ _.extend(Run.prototype, {
     else
       execPath = path.join(files.getCurrentToolsDir(), 'bin', 'meteor');
 
+    var env = _.clone(process.env);
+    _.extend(env, {
+      METEOR_SESSION_FILE: path.join(self.sandbox.root, '.meteorsession')
+    });
+
     var child_process = require('child_process');
-    // XXX should probably clean out environment?
-    self.proc = child_process.spawn(execPath, self._args);
+    self.proc = child_process.spawn(execPath, self._args, {
+      env: env
+    });
 
     self.proc.on('close', function (code, signal) {
       if (self.exitStatus === undefined)
@@ -391,7 +421,9 @@ defineTest("is the cutest most adorable kitten", function () {
 */
 
 defineTest("help", function () {
-  var run = new Run("help");
+  var s = new Sandbox;
+
+  var run = s.run("help");
   run.match("Usage: meteor");
   run.match("Commands:");
   run.match(/create\s*Create a new project/);
@@ -405,15 +437,17 @@ defineTest("argument parsing", function () {
 });
 
 defineTest("login", function () {
+  var s = new Sandbox;
+
   // XXX need to create a new credentials file for this run! (and a
   // user account)
   // XXX how to clean up test user accounts at end of test run? or,
   // only ever do it against a testing universe, and don't bother?
-  var run = new Run("whoami");
+  var run = s.run("whoami");
   run.matchErr("Not logged in");
   run.expectExit(1);
 
-  var run = new Run("login");
+  run = s.run("login");
   run.match("Username:");
   run.write("test\n");
   run.match("Password:");
@@ -425,7 +459,7 @@ defineTest("login", function () {
   // XXX test login failure
   // XXX test login by email
 
-  var run = new Run("whoami");
+  run = s.run("whoami");
   // XXX want something like 'matchAll' that you call after expectExit
   // and must match all remaining input. basically, it's like match
   // except that it requires the match offset to be zero. if you call
@@ -434,16 +468,16 @@ defineTest("login", function () {
   run.expectEnd();
   run.expectExit(0);
 
-  var run = new Run("logout");
-  run.wait(5);
+  run = s.run("logout");
+  run.waitSecs(5);
   run.matchErr("Logged out");
   run.expectExit(0);
 
-  var run = new Run("logout");
+  run = s.run("logout");
   run.matchErr("Not logged in");
   run.expectExit(0);
 
-  var run = new Run("whoami");
+  run = s.run("whoami");
   run.matchErr("Not logged in");
   run.expectExit(1);
 });

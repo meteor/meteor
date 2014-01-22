@@ -323,7 +323,7 @@ files.cp_r = function (from, to, options) {
 // Make a temporary directory. Returns the path to the newly created
 // directory. Only the current user is allowed to read or write the
 // files in the directory (or add files to it). The directory will
-// be cleaned up an exit.
+// be cleaned up on exit.
 var tempDirs = [];
 files.mkdtemp = function (prefix) {
   var make = function () {

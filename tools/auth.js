@@ -6,25 +6,21 @@ var files = require('./files.js');
 var config = require('./config.js');
 var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
+var config = require('./config.js');
 var querystring = require('querystring');
 var url = require('url');
 
 var auth = exports;
 
-var getSessionFilePath = function () {
-  return process.env.SESSION_FILE_PATH ||
-    path.join(process.env.HOME, '.meteorsession');
-};
-
 var readSessionData = function () {
-  var sessionPath = getSessionFilePath();
+  var sessionPath = config.getSessionFilePath();
   if (! fs.existsSync(sessionPath))
     return {};
   return JSON.parse(fs.readFileSync(sessionPath, { encoding: 'utf8' }));
 };
 
 var writeSessionData = function (data) {
-  var sessionPath = getSessionFilePath();
+  var sessionPath = config.getSessionFilePath();
 
   var tries = 0;
   while (true) {

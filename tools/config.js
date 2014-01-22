@@ -170,6 +170,15 @@ _.extend(exports, {
     return addScheme(host) + "/manifest.json";
   },
 
+  // Path to file that contains our credentials for any services that
+  // we're logged in to. Typically .meteorsession in the user's home
+  // directory.
+  getSessionFilePath: function () {
+    // METEOR_SESSION_FILE is for automated testing purposes only.
+    return process.env.METEOR_SESSION_FILE ||
+      path.join(process.env.HOME, '.meteorsession');
+  },
+
   // update.js calls this to set up automated tests
   setTestingUpdater: function (value) {
     testingUpdater = value;
