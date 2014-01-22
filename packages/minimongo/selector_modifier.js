@@ -70,33 +70,64 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
   // check if there is a $set or $unset that indicates something is an
   // object rather than a scalar in the actual object where we saw $-operator
   // NOTE: it is correct since we allow only scalars in $-operators
+  // Example: for selector {'a.b': {$gt: 5}} the modifier {'a.b.c':7} would
+  // definitely set the result to false as 'a.b' appears to be an object.
   var expectedScalarIsObject = _.any(self._selector, function (sel, path) {
     if (! isOperatorObject(sel))
       return false;
     return _.any(modifierPaths, function (modifierPath) {
-      return !modifierPath.indexOf(path) && modifierPath[path.length] === '.';
+      return startsWith(modifierPath, path + '.');
     });
   });
 
   if (expectedScalarIsObject)
     return false;
 
+  // See if we can apply the modifier on the ideally matching object. If it
+  // still matches the selector, then the modifier could have turned the real
+  // object in the database into something matching.
+  var matchingDocument = EJSON.clone(self.matchingDocument());
 
-  // A helper to ensure object has only certain keys
-  var onlyContainsKeys = function (obj, keys) {
-    return _.all(obj, function (v, k) {
-      return _.contains(keys, k);
-    });
-  };
+  // The selector is too complex, anything can happen.
+  if (matchingDocument === null)
+    return true;
 
-  // convert a selector into an object matching the selector
-  // { 'a.b': { ans: 42 }, 'foo.bar': null, 'foo.baz': "something" }
-  // => { a: { b: { ans: 42 } }, foo: { bar: null, baz: "something" } }
+  try {
+    LocalCollection._modify(matchingDocument, modifier);
+  } catch (e) {
+    // Couldn't set a property on a field which is a scalar or null in the
+    // selector.
+    // Example:
+    // real document: { 'a.b': 3 }
+    // selector: { 'a': 12 }
+    // converted selector (ideal document): { 'a': 12 }
+    // modifier: { $set: { 'a.b': 4 } }
+    // We don't know what real document was like but from the error raised by
+    // $set on a scalar field we can reason that the structure of real document
+    // is completely different.
+    if (e.name === "MinimongoError" && e.setPropertyError)
+      return false;
+    throw e;
+  }
+
+  return self.documentMatches(matchingDocument).result;
+};
+
+// Returns an object that would match the selector if possible or null if the
+// selector is too complex for us to analyze
+// { 'a.b': { ans: 42 }, 'foo.bar': null, 'foo.baz': "something" }
+// => { a: { b: { ans: 42 } }, foo: { bar: null, baz: "something" } }
+Minimongo.Matcher.prototype.matchingDocument = function () {
+  var self = this;
+
+  // check if it was computed before
+  if (self._matchingDocument !== undefined)
+    return self._matchingDocument;
 
   // If the analysis of this selector is too hard for our implementation
   // fallback to "YES"
   var fallback = false;
-  var doc = pathsToTree(self._getPaths(),
+  self._matchingDocument = pathsToTree(self._getPaths(),
     function (path) {
       var valueSelector = self._selector[path];
       if (isOperatorObject(valueSelector)) {
@@ -144,27 +175,9 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
     _.identity /*conflict resolution is no resolution*/);
 
   if (fallback)
-    return true;
+    self._matchingDocument = null;
 
-  try {
-    LocalCollection._modify(doc, modifier);
-  } catch (e) {
-    // Couldn't set a property on a field which is a scalar or null in the
-    // selector.
-    // Example:
-    // real document: { 'a.b': 3 }
-    // selector: { 'a': 12 }
-    // converted selector (ideal document): { 'a': 12 }
-    // modifier: { $set: { 'a.b': 4 } }
-    // We don't know what real document was like but from the error raised by
-    // $set on a scalar field we can reason that the structure of real document
-    // is completely different.
-    if (e.name === "MinimongoError" && e.setPropertyError)
-      return false;
-    throw e;
-  }
-
-  return self.documentMatches(doc).result;
+  return self._matchingDocument;
 };
 
 var getPaths = function (sel) {
@@ -181,7 +194,20 @@ var getPaths = function (sel) {
   }).flatten().uniq().value();
 };
 
-function pathHasNumericKeys (path) {
+// A helper to ensure object has only certain keys
+var onlyContainsKeys = function (obj, keys) {
+  return _.all(obj, function (v, k) {
+    return _.contains(keys, k);
+  });
+};
+
+var pathHasNumericKeys = function (path) {
   return _.any(path.split('.'), isNumericKey);
 }
+
+// XXX from Underscore.String (http://epeli.github.com/underscore.string/)
+var startsWith = function(str, starts) {
+  return str.length >= starts.length &&
+    str.substring(0, starts.length) === starts;
+};
 

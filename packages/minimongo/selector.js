@@ -32,6 +32,9 @@ Minimongo.Matcher = function (selector) {
   // one or more of '$gt', '$gte', '$lt', '$lte', '$ne', '$in', '$nin' used with
   // scalars as operands.
   self._isSimple = true;
+  // Set to a dummy document which always matches this Matcher. Or set to null
+  // if such document is too hard to find.
+  self._matchingDocument = undefined;
   // A clone of the original selector. Used by canBecomeTrueByModifier.
   self._selector = null;
   self._docMatcher = self._compileSelector(selector);
@@ -236,14 +239,14 @@ var operatorBranchedMatcher = function (valueSelector, matcher, isRoot) {
   var operatorMatchers = [];
   _.each(valueSelector, function (operand, operator) {
     // XXX we should actually implement $eq, which is new in 2.6
-    var supportedRange = _.contains(['$lt', '$lte', '$gt', '$gte'], operator) &&
+    var simpleRange = _.contains(['$lt', '$lte', '$gt', '$gte'], operator) &&
       _.isNumber(operand);
-    var supportedInequality = operator === '$ne' && !_.isObject(operand);
-    var supportedInclusion = _.contains(['$in', '$nin'], operator) &&
+    var simpleInequality = operator === '$ne' && !_.isObject(operand);
+    var simpleInclusion = _.contains(['$in', '$nin'], operator) &&
       _.isArray(operand) && !_.any(operand, _.isObject);
 
-    if (! (operator === '$eq' || supportedRange ||
-           supportedInclusion || supportedInequality)) {
+    if (! (operator === '$eq' || simpleRange ||
+           simpleInclusion || simpleInequality)) {
       matcher._isSimple = false;
     }
 
