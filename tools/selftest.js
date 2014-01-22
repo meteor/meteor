@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var path = require('path');
+var fs = require('fs');
 var files = require('./files.js');
 var parseStack = require('./parse-stack.js');
 var release = require('./release.js');
@@ -349,15 +350,46 @@ _.extend(Run.prototype, {
   }
 });
 
-var Test = function (name, f) {
+var Test = function (options) {
   var self = this;
-  self.name = name;
-  self.f = f;
+  self.name = options.name;
+  self.file = options.file;
+  self.f = options.func;
 };
 
-var allTests = [];
-var defineTest = function (name, f) {
-  allTests.push(new Test(name, f));
+var allTests = null;
+var fileBeingLoaded = null;
+var getAllTests = function () {
+  if (allTests)
+    return allTests;
+  allTests = [];
+
+  // Load all files in the 'selftests' directory that end in .js. They
+  // are supposed to then call define() to register their tests.
+  var testdir = path.join(__dirname, 'selftests');
+  var filenames = fs.readdirSync(testdir);
+  _.each(filenames, function (n) {
+    if (! n.match(/\.js$/))
+      return;
+    try {
+      if (fileBeingLoaded)
+        throw new Error("called recursively?");
+      fileBeingLoaded = path.basename(n, '.js');
+      require(path.join(testdir, n));
+    } finally {
+      fileBeingLoaded = null;
+    }
+  });
+
+  return allTests;
+};
+
+var define = function (name, f) {
+  allTests.push(new Test({
+    name: name,
+    file: fileBeingLoaded,
+    func: f
+  }));
 };
 
 // XXX idea is that options will eventually include server to test
@@ -369,7 +401,9 @@ var defineTest = function (name, f) {
 var runTests = function () {
   var failureCount = 0;
 
-  _.each(allTests, function (test) {
+  var tests = getAllTests();
+
+  _.each(tests, function (test) {
     process.stderr.write(test.name + "... ");
 
     var failure = null;
@@ -408,79 +442,6 @@ var runTests = function () {
 };
 
 
-/*
-defineTest("is fluffy", function () {
-});
-
-defineTest("can fly a plane", function () {
-  throw new TestFailure;
-});
-
-defineTest("is the cutest most adorable kitten", function () {
-});
-*/
-
-defineTest("help", function () {
-  var s = new Sandbox;
-
-  var run = s.run("help");
-  run.match("Usage: meteor");
-  run.match("Commands:");
-  run.match(/create\s*Create a new project/);
-  run.expectExit(0);
-
-  // XXX test --help, help for particular commands
-});
-
-defineTest("argument parsing", function () {
-  // XXX test that main.js catches all the weird error cases
-});
-
-defineTest("login", function () {
-  var s = new Sandbox;
-
-  // XXX need to create a new credentials file for this run! (and a
-  // user account)
-  // XXX how to clean up test user accounts at end of test run? or,
-  // only ever do it against a testing universe, and don't bother?
-  var run = s.run("whoami");
-  run.matchErr("Not logged in");
-  run.expectExit(1);
-
-  run = s.run("login");
-  run.match("Username:");
-  run.write("test\n");
-  run.match("Password:");
-  run.write("testtest\n");
-  run.waitSecs(5);
-  run.match("Logged in as test.");
-  run.expectExit(0);
-
-  // XXX test login failure
-  // XXX test login by email
-
-  run = s.run("whoami");
-  // XXX want something like 'matchAll' that you call after expectExit
-  // and must match all remaining input. basically, it's like match
-  // except that it requires the match offset to be zero. if you call
-  // that after exit it will do what we want.
-  run.read("test\n");
-  run.expectEnd();
-  run.expectExit(0);
-
-  run = s.run("logout");
-  run.waitSecs(5);
-  run.matchErr("Logged out");
-  run.expectExit(0);
-
-  run = s.run("logout");
-  run.matchErr("Not logged in");
-  run.expectExit(0);
-
-  run = s.run("whoami");
-  run.matchErr("Not logged in");
-  run.expectExit(1);
-});
 
 
 // XXX tests are slow, so we're going to need a good mechanism for
@@ -502,4 +463,8 @@ defineTest("login", function () {
 // be great if you could do this from a checkout without having to cut
 // a release
 
-exports.runTests = runTests;
+_.extend(exports, {
+  runTests: runTests,
+  define: define,
+  Sandbox: Sandbox
+});
