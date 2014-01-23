@@ -110,7 +110,11 @@ npm install eachline@2.4.0
 npm install source-map@0.1.31
 npm install source-map-support@0.2.5
 npm install bcrypt@0.7.7
-npm install http-proxy@1.0.1
+
+# Based on 1.0.1; includes our PRs
+# https://github.com/nodejitsu/node-http-proxy/pull/561 and
+# https://github.com/nodejitsu/node-http-proxy/pull/560
+npm install https://github.com/meteor/node-http-proxy/tarball/d8ea687936d6bed0f3e99849695cab2dcdccd6f4
 
 # Using the unreleased 1.1 branch. We can probably switch to a built NPM version
 # when it gets released.
