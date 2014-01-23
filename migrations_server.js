@@ -182,5 +182,5 @@ Migrations._findIndexByVersion = function(version) {
 //reset (mainly intended for tests)
 Migrations._reset = function() {
   this._list = [{version: 0, up: function(){}}];
-  this._collection.remove({}, false);
+  this._collection.remove({});
 }
