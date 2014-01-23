@@ -32,7 +32,7 @@ _.extend(exports, {
   _tmpDirs: [],
 
   _isGitHubTarball: function (x) {
-    return /^https:\/\/github.com\/.*\/tarball\/[0-9a-f]{40}/.test(x);
+    return /^https:\/\/github(\..*)?.com\/.*\/tarball\/[0-9a-f]{40}/.test(x);
   },
 
   // If there is a version that isn't exact, throws an Error with a
