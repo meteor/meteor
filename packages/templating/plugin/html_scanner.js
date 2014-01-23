@@ -152,6 +152,10 @@ html_scanner = {
         if (! name)
           throwParseError("Template has no 'name' attribute");
 
+        // XXX ideally this would read from spacebars-compiler:builtInComponents
+        if (name === "content")
+          throwParseError("Template can't be named \"" + name + "\"");
+
         var renderFuncCode = Spacebars.compile(
           contents, {
             isTemplate: true,
