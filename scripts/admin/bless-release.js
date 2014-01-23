@@ -78,9 +78,7 @@ var checkReleaseDoesNotExistYet = function (release) {
 
 // Writes out a JSON file, pretty-printed and read-only.
 var writeJSONFile = function (path, jsonObject) {
-  fs.writeFileSync(path, JSON.stringify(jsonObject, null, 2));
-  // In 0.10 we can pass a mode to writeFileSync, but not yet...
-  fs.chmodSync(path, 0444);
+  fs.writeFileSync(path, JSON.stringify(jsonObject, null, 2), {mode: 0444});
 };
 var readJSONFile = function (path) {
   return JSON.parse(fs.readFileSync(path));

@@ -15,9 +15,6 @@ Package.on_use(function (api) {
 
   api.export('Meteor');
 
-  // Workaround for https://github.com/joyent/node/issues/6506
-  api.add_files('node-issue-6506-workaround.js', 'server');
-
   api.add_files('client_environment.js', 'client');
   api.add_files('server_environment.js', 'server');
   api.add_files('helpers.js', ['client', 'server']);
