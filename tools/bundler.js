@@ -313,16 +313,18 @@ _.extend(File.prototype, {
     return self.contents().length;
   },
 
-  // Set the URL of this file to "/<hash><suffix>". suffix will
-  // typically be used to pick a reasonable extension. Also set
-  // cacheable to true, since the file's name is now derived from its
-  // contents.
-  setUrlToHash: function (suffix, urlSuffix) {
+  // Set the URL (and target path) of this file to "/<hash><suffix>". suffix
+  // will typically be used to pick a reasonable extension. Also set cacheable
+  // to true, since the file's name is now derived from its contents.
+
+  // Also allow a special second suffix that will *only* be postpended to the
+  // url, useful for query parameters.
+  setUrlToHash: function (fileAndUrlSuffix, urlSuffix) {
     var self = this;
     urlSuffix = urlSuffix || "";
-    self.url = "/" + self.hash() + suffix + urlSuffix;
+    self.url = "/" + self.hash() + fileAndUrlSuffix + urlSuffix;
     self.cacheable = true;
-    self.targetPath = self.hash() + suffix;
+    self.targetPath = self.hash() + fileAndUrlSuffix;
   },
 
   // Append "?<hash>" to the URL and mark the file as cacheable.
