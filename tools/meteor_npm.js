@@ -45,9 +45,10 @@ _.extend(exports, {
       // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
       // don't want anything too vague. For now, we support semvers and github
       // tarballs pointing at an exact commit.
-      console.log(version);
-      console.log(semver.valid(version));
-      console.log(self._isGitHubTarball(version));
+      console.log("!! version: ", version);
+      console.log("!! name: ", name);
+      console.log("!! semver.valid(version): ", semver.valid(version));
+      console.log("!! _isGitHubTarball(version): ", self._isGitHubTarball(version));
       if (!semver.valid(version) && !self._isGitHubTarball(version))
         throw new Error(
           "Must declare exact version of npm package dependency: " + name + '@' + version);
