@@ -11,6 +11,7 @@ selftest.define("help", function () {
     run.match(/create\s*Create a new project/);
     run.expectExit(0);
     // XXX make sure that 'admin' does not appear
+    // XXX make sure that hidden commands don't appear
   };
 
   checkTopLevelHelp(s.run("help"));

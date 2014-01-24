@@ -1,3 +1,4 @@
+
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var archinfo = require('../archinfo.js');
@@ -22,24 +23,101 @@ selftest.define("argument parsing", function () {
   run.matchErr("for available commands");
   run.expectExit(1);
 
-  // bad option
-  run = s.run("self-test", "--foo");
-  run.matchErr("--foo: unknown option");
-  run.expectExit(1);
-
   // conflicting command-like options
   run = s.run("--arch", "--version");
   run.matchErr("Can't pass both");
   run.expectExit(1);
 
+  // required option missing
+  run = s.run("dummy");
+  run.matchErr("option is required");
+  run.matchErr("Usage: meteor dummy");
+  run.expectExit(1);
+
+  // successful command invocation, correct parsing of arguments
+  run = s.run("dummy", "--email", "x");
+  run.read('"x" 3000 none []\n');
+  run.expectEnd();
+  run.expectExit(0);
+
+  run = s.run("dummy", "--email", "x", "--port", "1234", "--changed");
+  run.read('"x" 1234 true []\n');
+  run.expectEnd();
+  run.expectExit(0);
+
+  run = s.run("dummy", "--email", "x", "--port", "0", "true");
+  run.read('"x" 0 none ["true"]\n');
+  run.expectEnd();
+  run.expectExit(0);
+
+  run = s.run("dummy", "--email", "x", "--port", "01234", "12", "0013");
+  run.read('"x" 1234 none ["12", "0013"]\n');
+  run.expectEnd();
+  run.expectExit(0);
+
+  // bad option
+  run = s.run("dummy", "--email", "x", "--foo");
+  run.matchErr("--foo: unknown option");
+  run.expectExit(1);
+
+  run = s.run("dummy", "--email", "x", "-z");
+  run.matchErr("-z: unknown option");
+  run.expectExit(1);
+
   // passing short and long options
-  run = s.run("-p", "2000", "--port", "2000");
+  run = sApp.run("dummy", "--email", "x", "-p", "2000", "--port", "2000");
   run.matchErr("can't pass both -p and --port");
   run.expectExit(1);
 
-  // XXX at main.js:720
+  // multiple values for an option
+  run = sApp.run("dummy", "--email", "x", "--port", "2000", "--port", "3000");
+  run.matchErr("can only take one --port option");
+  run.expectExit(1);
 
-  // command that requires an app
+  run = sApp.run("dummy", "--email", "x", "-p", "2000", "-p", "2000");
+  run.matchErr("can only take one --port (-p) option");
+  run.expectExit(1);
+
+  // #OptimistDoesntLetUsDetermineIfABooleanOptionWasPassedTwice
+  // run = sApp.run("dummy", "--email", "x", "--changed", "--changed");
+  // run.matchErr("can only take one --changed option");
+  // run.expectExit(1);
+
+  // missing option value
+  run = sApp.run("dummy", "--email", "x", "--port");
+  run.matchErr("the --port option needs a value");
+  run.expectExit(1);
+
+  run = sApp.run("dummy", "--email", "x", "--changed", "-p");
+  run.matchErr("the --port (-p) option needs a value");
+  run.expectExit(1);
+
+  // non-numeric value for numeric option
+  run = sApp.run("dummy", "--email", "x", "--port", "kitten");
+  run.matchErr("--port must be a number");
+  run.expectExit(1);
+
+  run = sApp.run("dummy", "--email", "x", "-p", "1234k");
+  run.matchErr("--port (-p) must be a number");
+  run.expectExit(1);
+
+  // incorrect number of arguments
+  run = sApp.run("dummy", "--email", "x", "y");
+  run.matchErr("too many arguments");
+  run.matchErr("Usage: meteor dummy");
+  run.expectExit(1);
+
+  run = sApp.run("bundle");
+  run.matchErr("not enough arguments");
+  run.matchErr("Usage: meteor bundle");
+  run.expectExit(1);
+
+  run = sApp.run("bundle", "a", "b");
+  run.matchErr("too many arguments");
+  run.matchErr("Usage: meteor bundle");
+  run.expectExit(1);
+
+  // requiring an app dir
   run = s.run("list", "--using");
   run.matchErr("not in a Meteor project");
   run.matchErr("meteor create"); // new user help
@@ -47,6 +125,12 @@ selftest.define("argument parsing", function () {
 
   run = sApp.run("list", "--using");
   run.expectExit(0);
+
+
+
+  // XXX at main.js:720
+
+  // XXX try leading zeros on a numeric option
 
   // XXX test that main.js catches all the weird error cases
 });
@@ -84,5 +168,14 @@ selftest.define("command-like options", function () {
 "but you don't have that version of Meteor installed and the Meteor update\n" +
 "servers don't have it either. Please edit the .meteor/release file in the\n" +
 "project and change it to a valid Meteor release.\n");
+
+"You must specify a Meteor version with --release when you work with this\n" +
+"project. It was created from an unreleased Meteor checkout and doesn't\n" +
+"have a version associated with it.\n" +
+"\n" +
+"You can permanently set a release for this project with 'meteor update'.\n");
+
+"=> Running Meteor from a checkout -- overrides project version (%s)\n",
+
 
 */

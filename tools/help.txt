@@ -328,6 +328,18 @@ Commands:
 See 'meteor help admin <command>' for details on an admin command.
 
 
+>>> dummy
+Dummy command used for automated testing
+Usage: meteor dummy [options]
+
+Dummy command used for automated testing.
+
+Options:
+  --email     A required string option.
+  --port, -p  A numeric option with a short alias.
+  --changed   A boolean option.
+
+
 >>> admin grant
 Grant a permission on an official service
 Usage: meteor admin grant [XXX]

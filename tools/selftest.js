@@ -98,16 +98,26 @@ _.extend(Matcher.prototype, {
     if (self.matchPattern instanceof RegExp) {
       var m = self.buf.match(self.matchPattern);
       if (m) {
-        if (self.matchStrict && m.index !== 0)
+        if (self.matchStrict && m.index !== 0) {
+          self.matchFuture = null;
+          self.matchStrict = null;
+          self.matchPattern = null;
           f['throw'](new TestFailure('junk-before', { run: self.run }));
+          return;
+        }
         ret = m;
         self.buf = self.buf.slice(m.index + m[0].length);
       }
     } else {
       var i = self.buf.indexOf(self.matchPattern);
       if (i !== -1) {
-        if (self.matchStrict && i !== 0)
+        if (self.matchStrict && i !== 0) {
+          self.matchFuture = null;
+          self.matchStrict = null;
+          self.matchPattern = null;
           f['throw'](new TestFailure('junk-before', { run: self.run }));
+          return;
+        }
         ret = self.matchPattern;
         self.buf = self.buf.slice(i + self.matchPattern.length);
       }

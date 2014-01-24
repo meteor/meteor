@@ -1217,3 +1217,31 @@ main.registerCommand({
   var selftest = require('./selftest.js');
   return selftest.runTests({ onlyChanged: options.changed });
 });
+
+
+///////////////////////////////////////////////////////////////////////////////
+// dummy
+///////////////////////////////////////////////////////////////////////////////
+
+// Dummy test command. Used for automated testing of the command line
+// option parser.
+
+main.registerCommand({
+  name: 'dummy',
+  options: {
+    email: { type: String, required: true },
+    port: { type: Number, short: "p", default: 3000 },
+    changed: { type: Boolean }
+  },
+  maxArgs: 2,
+  hidden: true
+}, function (options) {
+  var p = function (key) {
+    if (_.has(options, key))
+      return JSON.stringify(options[key]);
+    return 'none';
+  };
+
+  process.stdout.write(p('email') + " " + p('port') + " " + p('changed') +
+                       " " + p('args') + "\n");
+});

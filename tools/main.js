@@ -740,6 +740,11 @@ commandName + ": can't pass both -" + optionInfo.short + " and --" +
     if (values.length > 1) {
       // in the future, we could support multiple values, but we don't
       // for now since no command needs it
+      //
+      // XXX note that optimist doesn't let us detect the case where a
+      // boolean option was passed multiple times. it does the same
+      // thing as if it had only been passed
+      // once. #OptimistDoesntLetUsDetermineIfABooleanOptionWasPassedTwice
       process.stderr.write(
 commandName + ": can only take one " + helpfulOptionName + " option.\n" +
 "Try 'meteor help " + commandName + "' for help.\n");
@@ -756,7 +761,7 @@ commandName + ": the " + helpfulOptionName + " option needs a value.\n" +
 "Try 'meteor help " + commandName + "' for help.\n");
         process.exit(1);
       } else if (optionInfo.type === Number) {
-        if (! value.match(/^[1-9][0-9]*$/)) {
+        if (! value.match(/^[0-9]+$/)) {
           process.stderr.write(
 commandName + ": " + helpfulOptionName + " must be a number.\n" +
 "Try 'meteor help " + commandName + "' for help.\n");
