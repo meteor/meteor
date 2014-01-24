@@ -882,8 +882,8 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1,
   options: {
-    add: { type: String, short: 'a' },
-    remove: { type: String, short: 'r' },
+    add: { type: String },
+    remove: { type: String },
     list: { type: Boolean }
   }
 }, function (options) {
@@ -1231,6 +1231,8 @@ main.registerCommand({
   options: {
     email: { type: String, required: true },
     port: { type: Number, short: "p", default: 3000 },
+    url: { type: Boolean, short: "U" },
+    'delete': { type: Boolean, short: "D" },
     changed: { type: Boolean }
   },
   maxArgs: 2,
@@ -1244,4 +1246,8 @@ main.registerCommand({
 
   process.stdout.write(p('email') + " " + p('port') + " " + p('changed') +
                        " " + p('args') + "\n");
+  if (options.url)
+    process.stdout.write('url\n');
+  if (options['delete'])
+    process.stdout.write('delete\n');
 });

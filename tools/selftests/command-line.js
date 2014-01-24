@@ -28,6 +28,19 @@ selftest.define("argument parsing", function () {
   run.matchErr("Can't pass both");
   run.expectExit(1);
 
+  run = s.run("--arch", "--arch");
+  run.matchErr("more than once");
+  run.expectExit(1);
+
+  // --release takes exactly one value
+  run = s.run("--release");
+  run.matchErr("needs a value");
+  run.expectExit(1);
+
+  run = s.run("--release", "abc", "--release", "def");
+  run.matchErr("should only be passed once");
+  run.expectExit(1);
+
   // required option missing
   run = s.run("dummy");
   run.matchErr("option is required");
@@ -51,7 +64,7 @@ selftest.define("argument parsing", function () {
   run.expectExit(0);
 
   run = s.run("dummy", "--email", "x", "--port", "01234", "12", "0013");
-  run.read('"x" 1234 none ["12", "0013"]\n');
+  run.read('"x" 1234 none ["12","0013"]\n');
   run.expectEnd();
   run.expectExit(0);
 
@@ -78,10 +91,9 @@ selftest.define("argument parsing", function () {
   run.matchErr("can only take one --port (-p) option");
   run.expectExit(1);
 
-  // #OptimistDoesntLetUsDetermineIfABooleanOptionWasPassedTwice
-  // run = sApp.run("dummy", "--email", "x", "--changed", "--changed");
-  // run.matchErr("can only take one --changed option");
-  // run.expectExit(1);
+  run = sApp.run("dummy", "--email", "x", "--changed", "--changed");
+  run.matchErr("can only take one --changed option");
+  run.expectExit(1);
 
   // missing option value
   run = sApp.run("dummy", "--email", "x", "--port");
@@ -102,7 +114,7 @@ selftest.define("argument parsing", function () {
   run.expectExit(1);
 
   // incorrect number of arguments
-  run = sApp.run("dummy", "--email", "x", "y");
+  run = sApp.run("dummy", "--email", "x", "1", "2", "3");
   run.matchErr("too many arguments");
   run.matchErr("Usage: meteor dummy");
   run.expectExit(1);
@@ -117,6 +129,64 @@ selftest.define("argument parsing", function () {
   run.matchErr("Usage: meteor bundle");
   run.expectExit(1);
 
+  // '--' to end parsing
+  run = s.run("dummy", "--email", "x", "--", "-p", "4000");
+  run.read('"x" 3000 none ["-p","4000"]\n');
+  run.expectEnd();
+  run.expectExit(0);
+
+  run = s.run("dummy", "--email", "x", "--", "--changed", "--changed");
+  run.read('"x" 3000 none ["--changed","--changed"]\n');
+  run.expectEnd();
+  run.expectExit(0);
+
+  run = s.run("dummy", "--email", "x", "--");
+  run.read('"x" 3000 none []\n');
+  run.expectEnd();
+  run.expectExit(0);
+
+  // compact short options
+  run = s.run("dummy", "--email", "x", "-p4000", "--changed");
+  run.read('"x" 4000 true []\n');
+  run.expectEnd();
+  run.expectExit(0);
+
+  run = s.run("dummy", "--email", "x", "-UD", "--changed");
+  run.read('"x" 3000 true []\nurl\n\delete\n');
+  run.expectEnd();
+  run.expectExit(0);
+
+  run = s.run("dummy", "--email", "x", "-UDp4000", "--changed");
+  run.read('"x" 4000 true []\nurl\ndelete\n');
+  run.expectEnd();
+  run.expectExit(0);
+
+  run = s.run("dummy", "--email", "x", "-UDp4000", "--changed");
+  run.read('"x" 4000 true []\nurl\ndelete\n');
+  run.expectEnd();
+  run.expectExit(0);
+
+  run = s.run("dummy", "--email", "x", "-UDp4000");
+  run.read('"x" 4000 none []\nurl\ndelete\n');
+  run.expectEnd();
+  run.expectExit(0);
+
+  run = s.run("dummy", "--email", "x", "-UDkp4000", "--changed");
+  run.matchErr("-k: unknown option");
+  run.expectExit(1);
+
+  run = s.run("dummy", "--email", "x", "-UDp4000k", "--changed");
+  run.matchErr("--port (-p) option needs a value");
+  run.expectExit(1);
+
+  run = s.run("dummy", "--email", "x", "-UD4000k", "--changed");
+  run.matchErr("-4: unknown option");
+  run.expectExit(1);
+
+  run = s.run("dummy", "--email", "x", "-UDDp4000", "--changed");
+  run.matchErr("one --delete (-D) option");
+  run.expectExit(1);
+
   // requiring an app dir
   run = s.run("list", "--using");
   run.matchErr("not in a Meteor project");
@@ -125,14 +195,6 @@ selftest.define("argument parsing", function () {
 
   run = sApp.run("list", "--using");
   run.expectExit(0);
-
-
-
-  // XXX at main.js:720
-
-  // XXX try leading zeros on a numeric option
-
-  // XXX test that main.js catches all the weird error cases
 });
 
 

@@ -9,7 +9,6 @@ var path = require('path');
 var warehouse = require('./warehouse.js');
 var library = require('./library.js');
 var release = require('./release.js');
-var optimist = require('optimist');
 var fs = require('fs');
 
 var main = exports;
@@ -301,6 +300,10 @@ var springboard = function (toolsVersion, releaseOverride) {
   newArgv.unshift(
     path.join(warehouse.getToolsDir(toolsVersion), 'bin', 'meteor'));
 
+  // XXX When a version of kexec later than 0.0.1 is released, use its
+  // new capability of execing directly rather than going through /bin/sh.
+  newArgv.unshift('exec');
+
   if (releaseOverride !== undefined)
     // We used to just append --release=<releaseOverride> to the
     // arguments, and though that's probably safe in practice, there's
@@ -393,28 +396,15 @@ Fiber(function () {
   // the command. I would make this change right now but we're on a
   // tight timetable for 1.0 and there is no advantage to doing it now
   // rather than later. #ImprovingCrossVersionOptionParsing
-  //
-  // If --foo is an argument that takes a String, and we've told
-  // optimist to treat it as a string and not try to parse it as an
-  // integer (which would irretrievably lose leading zeros), then
-  // optimist provides no way to distinguish between 'meteor --foo'
-  // (--foo with no value supplied) and 'meteor'. So, append a random
-  // sentinel value to the end of the arguments to distinguish the two
-  // cases.
-  var sentinel = '$' + Math.random(); // '$' suppresses number conversion
-  var opt = require('optimist')(process.argv.slice(2).concat([sentinel]));
-  opt.alias("h", "help")
-    .boolean("h")
-    .boolean("help");
 
-  var isBoolean = { help: true, h: true };
+  var isBoolean = { "--help": true };
   var walkCommands = function (node) {
     _.each(node, function (value, key) {
       if (value instanceof Command) {
         _.each(value.options || {}, function (optionInfo, optionName) {
-          var names = [optionName];
+          var names = ["--" + optionName];
           if (_.has(optionInfo, 'short'))
-            names.push(optionInfo.short);
+            names.push("-" + optionInfo.short);
           _.each(names, function (name) {
             var optionIsBoolean = (optionInfo.type === Boolean);
             if (_.has(isBoolean, name)) {
@@ -424,20 +414,6 @@ Fiber(function () {
               }
             } else {
               isBoolean[name] = optionIsBoolean;
-              if (optionIsBoolean)
-                // tell optimist that it doesn't take an argument
-                opt.boolean(name);
-              else
-                // turn off optimist's heuristic parsing. we'll
-                // manually parse it into the correct type later
-                opt.string(name);
-
-              // side note: it's a little unfortunate that optimist
-              // puts all options in the same namespace and can't
-              // distinguish between '-a foo' and '--a foo'. one day
-              // we should probably just write our own argument
-              // parsing logic as we're not really using very much of
-              // optimist at this point.
             }
           });
         });
@@ -450,37 +426,83 @@ Fiber(function () {
 
   // This is for things like '--arch' and '--version' which look like
   // options, but actually function pretty much like commands. That's
-  // a little weird but it feels right and it follows a grand Unix
+  // a little weird but it feels good and it follows a grand Unix
   // tradition.
   _.each(commands['--'] || {}, function (value, key) {
-    if (_.has(isBoolean, key))
+    if (_.has(isBoolean, "--" + key))
       throw new Error("--" + key + " is both an option and a command?")
-    opt.boolean(key);
+    isBoolean["--" + key] = true;
   });
 
-  // The following line actually parses the arguments (argv is a
-  // getter -- note that mutating opt.argv directly would not work).
-  var parsed = isRawCommand ? { _: [] } : opt.argv;
-  _.each(_.keys(parsed), function (key) {
-    // optimists gives us a value for every option we told it about,
-    // even if it didn't appear on the command line. Delete the
-    // options that didn't actually appear, which will have the value
-    // 'false'.
-    if (parsed[key] === false)
-      delete parsed[key];
-  });
-  delete parsed['$0'];
+  // Now parse!
+  var argv = process.argv.slice(2);
+  var rawOptions = {}; // map from '--foo' or '-f' to array of values
+  var rawArgs = [];
+  for (var i = 0; i < argv.length; i++) {
+    var term = argv[i];
 
-  // Pull off the sentinel and make sure there were no options that
-  // expected a value but didn't get one.
-  var missingSentinel = false;
-  if (parsed._.length && parsed._[parsed._.length - 1] === sentinel) {
-    // All good
-    parsed._.pop();
-  } else {
-    // Enable a sanity check further down that makes sure we actually
-    // found the option that wasn't given a value.
-    missingSentinel = true;
+    // --: stop-parsing marker
+    if (term === "--") {
+      // Remainder is unparsed
+      rawArgs = rawArgs.concat(argv.slice(i + 1));
+      break;
+    }
+
+    // A single option, like --foo or -f
+    if (term.match(/^--/) || term.match(/^-.$/)) {
+      if (! _.has(rawOptions, term))
+        rawOptions[term] = [];
+
+      // Save off the value of the option. true for (known) booleans,
+      // null if value is missing, else a string. Don't try to
+      // validate or interpret it yet.
+      if (isBoolean[term]) {
+        rawOptions[term].push(true);
+      } else if (i === argv.length - 1) {
+        rawOptions[term].push(null);
+      } else {
+        rawOptions[term].push(argv[i + 1]);
+        i ++;
+      }
+      continue;
+    }
+
+    // Compound short option ('-abc', '-p45', '-abcp45')? Rewrite it
+    // in place into '-a -b -c', '-p 45', '-a -b -c -p 45'. Not that
+    // anyone really talks this way anymore.
+    if (term.match(/^-/)) {
+      var replacements = [];
+      for (var j = 1; j < term.length; j++) {
+        var subterm = "-" + term.charAt(j);
+        replacements.push(subterm);
+        if (isBoolean[subterm] === false) {
+          // If we recognize this short option, and we're sure that it
+          // takes a value, and there are remaining charaters in the
+          // short option, then either those remaining characters are
+          // the value, or the value was omitted.
+          var remainder = term.substr(j + 1);
+          if (remainder.length) {
+            if (remainder.match(/^[0-9]+$/)) {
+              // If it's a number, we decide that it's the value.
+              replacements.push(remainder);
+              break;
+            } else {
+              // Otherwise, we decide that the value is missing, and
+              // continue interpreting the characters as short options.
+              replacements.push(null);
+            }
+          }
+        }
+      }
+
+      argv.splice(i, 1, replacements);
+      argv = _.flatten(argv);
+      i --;
+      continue;
+    }
+
+    // It is a plain old argument!
+    rawArgs.push(term);
   }
 
   // Figure out if we're running in a directory that is part of a
@@ -515,10 +537,21 @@ Fiber(function () {
   // #ImprovingCrossVersionOptionParsing.
 
   var releaseOverride = null;
-  if (_.has(parsed, 'release')) {
-    // coerce to string (optimist has "do what I mean" parsing)
-    releaseOverride = '' + parsed.release;
-    delete parsed.release;
+  if (_.has(rawOptions, '--release')) {
+    if (rawOptions['--release'].length > 1) {
+      process.stderr.write(
+"--release should only be passed once.\n" +
+"Try 'meteor help' for help.\n");
+      process.exit(1);
+    }
+    releaseOverride = rawOptions['--release'][0];
+    if (! releaseOverride) {
+      process.stderr.write(
+"The --release option needs a value.\n" +
+"Try 'meteor help' for help.\n");
+      process.exit(1);
+    }
+    delete rawOptions['--release'];
   }
   if (_.has(process.env, 'METEOR_SPRINGBOARD_RELEASE')) {
     // See #SpringboardEnvironmentVar
@@ -617,16 +650,23 @@ Fiber(function () {
   }
 
   // Check for the '--help' option.
-  if (_.has(parsed, 'help')) {
+  if (_.has(rawOptions, '--help')) {
     showHelp = true;
-    delete parsed.help;
+    delete rawOptions['--help'];
   }
 
   // Check for a command like '--arch' or '--version'. Make sure
   // there's only one. (And this is ignored if you've passed --help.)
   if (! command) {
     _.each(commands['--'] || {}, function (value, key) {
-      if (parsed[key] && ! showHelp) {
+      var fullName = "--" + key;
+
+      if (rawOptions[fullName] && ! showHelp) {
+        if (rawOptions[fullName].length > 1) {
+          process.stderr.write("It doesn't make sense to pass " +
+                               fullName + " more than once.\n");
+          process.exit(1);
+        }
         if (command) {
           process.stderr.write("Can't pass both " + command.name + " and " +
                                value.name + ".\n");
@@ -634,7 +674,7 @@ Fiber(function () {
         }
         command = value;
         commandName = command.name;
-        delete parsed[key];
+        delete rawOptions['--' + key];
       }
     });
   }
@@ -643,7 +683,7 @@ Fiber(function () {
   // name the command.
   var walk = commands;
   if (! command) {
-    if (parsed._.length === 0) {
+    if (rawArgs.length === 0) {
       // No arguments means 'run'. Unless it's 'meteor --help'.
       if (! showHelp) {
         command = commands.run
@@ -653,8 +693,8 @@ Fiber(function () {
       }
     } else {
       // Find the command they specified.
-      for (var i = 0; i < parsed._.length; i++) {
-        var word = parsed._[i];
+      for (var i = 0; i < rawArgs.length; i++) {
+        var word = rawArgs[i];
 
         if (word === "help" && i === 0) {
           // "meteor help some command" (note that we can't support
@@ -674,25 +714,26 @@ Fiber(function () {
 
         if (walk[word] instanceof Command) {
           command = walk[word];
-          parsed._ = parsed._.slice(i + 1); // consume arguments used
+          rawArgs = rawArgs.slice(i + 1); // consume arguments used
           break;
         }
 
         walk = walk[word];
       }
-
-      if (! command && ! showHelp) {
-        // They typed something like 'meteor admin' (when they were
-        // supposed to type 'meteor admin grant' or something).
-        process.stderr.write(
-"Try 'meteor " + commandName + " help' for available commands.\n");
-        process.exit(1);
-      }
     }
   }
 
+  if (! command && ! showHelp) {
+    // They typed something like 'meteor admin' (when they were
+    // supposed to type 'meteor admin grant' or something).
+    process.stderr.write(
+"Try 'meteor " + commandName + " help' for available commands.\n");
+    process.exit(1);
+  }
+
   // At this point we have a command[*]. Did they ask for help, or do
-  // they actually want to run the command?
+  // they actually want to run the command? If the former, print the
+  // help and don't criticize anything else they may have given us.
   //
   // [*] the one exception being 'meteor --help' or 'meteor help', in
   // which case showHelp will be true and command will be null
@@ -705,14 +746,12 @@ Fiber(function () {
   // They want to run the command. Interpret the options and make sure
   // that they're valid.
 
-  var options = { };
-  options.args = parsed._;
-  delete parsed._;
+  var options = { args: rawArgs };
 
   _.each(command.options, function (optionInfo, optionName) {
-    var presentLong = _.has(parsed, optionName);
+    var presentLong = _.has(rawOptions, "--" + optionName);
     var presentShort = _.has(optionInfo, 'short') &&
-      _.has(parsed, optionInfo.short);
+      _.has(rawOptions, "-" + optionInfo.short);
 
     if (presentShort && presentLong) {
       // this would get caught below, but give a clearer error message
@@ -725,26 +764,18 @@ commandName + ": can't pass both -" + optionInfo.short + " and --" +
     var helpfulOptionName = "--" + optionName +
       (presentShort ? " (-" + optionInfo.short + ")" : "");
 
-    // If you pass an option twice, optimist gives us an
-    // array. OK. Concatenate all of the values we've got into one big
-    // array.
-    var toArray = function (v) {
-      return _.isArray(v) ? v : [v];
-    };
+    // Collect all values we've received for this option, across the
+    // long and short versions, and across possibly multiple
+    // occurrences of the option on the command line
     var values = [];
     if (presentLong)
-      values = values.concat(toArray(parsed[optionName]));
+      values = values.concat(rawOptions["--" + optionName]);
     if (presentShort)
-      values = values.concat(toArray(parsed[optionInfo.short]));
+      values = values.concat(rawOptions["-" + optionInfo.short]);
 
     if (values.length > 1) {
       // in the future, we could support multiple values, but we don't
       // for now since no command needs it
-      //
-      // XXX note that optimist doesn't let us detect the case where a
-      // boolean option was passed multiple times. it does the same
-      // thing as if it had only been passed
-      // once. #OptimistDoesntLetUsDetermineIfABooleanOptionWasPassedTwice
       process.stderr.write(
 commandName + ": can only take one " + helpfulOptionName + " option.\n" +
 "Try 'meteor help " + commandName + "' for help.\n");
@@ -753,7 +784,7 @@ commandName + ": can only take one " + helpfulOptionName + " option.\n" +
       // OK, they provided exactly one value. Check its type and add
       // to the output.
       var value = values[0];
-      if (value === sentinel) {
+      if (value === null) {
         // This option requires a value and they didn't give it one
         // (it was the last word on the command line).
         process.stderr.write(
@@ -771,10 +802,7 @@ commandName + ": " + helpfulOptionName + " must be a number.\n" +
       } else if (optionInfo.type === Boolean) {
         value = true;
       } else if (optionInfo.type === String) {
-        // make sure optimist gave us the raw string, as we asked it
-        // to (not sure if there's ever a case it'll do otherwise --
-        // '-x123' perhaps?)
-        value = '' + value;
+        // nothing to do, 'value' needs no parsing or validation
       } else {
         throw new Error("unknown option type?");
       }
@@ -783,9 +811,9 @@ commandName + ": " + helpfulOptionName + " must be a number.\n" +
       // Remove from the list of input arguments so that later we can
       // detect unrecognized arguments.
       if (presentLong)
-        delete parsed[optionName];
+        delete rawOptions["--" + optionName];
       if (presentShort)
-        delete parsed[optionInfo.short];
+        delete rawOptions["-" + optionInfo.short];
     } else {
       // Option not supplied. Throw an error if it was required,
       // supply a default value if one is defined, or just leave it
@@ -802,20 +830,12 @@ longHelp(commandName) + "\n");
   });
 
   // Check for unrecognized options.
-  if (_.keys(parsed).length > 0) {
-    var k = _.keys(parsed)[0];
-    // optimist doesn't tell us whether it was -f or --f. guess
-    var originalName = (k.length > 1 ? "--" : "-") + k;
-
+  if (_.keys(rawOptions).length > 0) {
     process.stderr.write(
-originalName + ": unknown option.\n" +
+_.keys(rawOptions)[0] + ": unknown option.\n" +
 longHelp(commandName) + "\n");
     process.exit(1);
   }
-
-  if (missingSentinel)
-    // sanity check
-    throw new Error("couldn't find the option that didn't have a value?");
 
   // Check argument count.
   if (options.args.length < command.minArgs) {
@@ -872,8 +892,8 @@ commandName + ": You're not in a Meteor project directory.\n" +
       appRelease !== "none") {
     // For commands that work with apps, if we have overridden the
     // app's usual release by using a checkout, print a reminder banner.
-    console.log(
-"=> Running Meteor from a checkout -- overrides project version (%s)\n",
+    process.stderr.write(
+"=> Running Meteor from a checkout -- overrides project version (%s)\n\n",
       appRelease);
   }
 
