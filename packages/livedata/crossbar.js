@@ -52,16 +52,20 @@ _.extend(DDPServer._Crossbar.prototype, {
   // The listeners may be invoked in parallel, rather than serially.
   fire: function (notification) {
     var self = this;
-    var callbacks = [];
+    // Listener callbacks can yield, so we need to first find all the ones that
+    // match in a single iteration over self.listeners (which can't be mutated
+    // during this iteration), and then invoke the matching callbacks, checking
+    // before each call to ensure they are still in self.listeners.
+    var matchingCallbacks = {};
     // XXX consider refactoring to "index" on "collection"
-    _.each(self.listeners, function (l) {
+    _.each(self.listeners, function (l, id) {
       if (self._matches(notification, l.trigger))
-        callbacks.push(l.callback);
+        matchingCallbacks[id] = l.callback;
     });
 
-    _.each(callbacks, function (c) {
-      // XXX don't call c if it's been stopped already
-      c(notification);
+    _.each(matchingCallbacks, function (c, id) {
+      if (_.has(self.listeners, id))
+        c(notification);
     });
   },
 
