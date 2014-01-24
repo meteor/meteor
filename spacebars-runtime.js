@@ -110,6 +110,12 @@ Spacebars.mustacheImpl = function (value/*, args*/) {
 
   return Deps.isolateValue(function () {
     return Spacebars.call.apply(null, args);
+  }, /* equals= */ function (x, y) {
+    if (x instanceof Handlebars.SafeString) {
+      return (y instanceof Handlebars.SafeString) && (x.string === y.string);
+    } else {
+      return safeEquals(x, y);
+    }
   });
 };
 
