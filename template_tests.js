@@ -1137,24 +1137,36 @@ Tinytest.add('spacebars - templates - #markdown - block helpers', function (test
 // but the return value is the same, the DOM text node is not
 // re-rendered.
 Tinytest.add('spacebars - templates - simple helpers are isolated', function (test) {
-  var tmpl = Template.spacebars_template_test_simple_helpers_are_isolated;
-  var dep = new Deps.Dependency;
-  tmpl.foo = function () {
-    dep.depend();
-    return "foo";
-  };
-  var div = renderToDiv(tmpl);
-  var fooTextNode = _.find(div.childNodes, function (node) {
-    return node.nodeValue === "foo";
-  });
+  var runs = [{
+    helper: function () { return "foo"; },
+    nodeValue: "foo"
+  }, {
+    helper: function () { return new Handlebars.SafeString("bar"); },
+    nodeValue: "bar"
+  }];
 
-  dep.changed();
-  Deps.flush();
-  var newFooTextNode = _.find(div.childNodes, function (node) {
-    return node.nodeValue === "foo";
-  });
+  _.each(runs, function (run) {
+    var tmpl = Template.spacebars_template_test_simple_helpers_are_isolated;
+    var dep = new Deps.Dependency;
+    tmpl.foo = function () {
+      dep.depend();
+      return run.helper();
+    };
+    var div = renderToDiv(tmpl);
+    var fooTextNode = _.find(div.childNodes, function (node) {
+      return node.nodeValue === run.nodeValue;
+    });
 
-  test.equal(fooTextNode, newFooTextNode);
+    test.isTrue(fooTextNode);
+
+    dep.changed();
+    Deps.flush();
+    var newFooTextNode = _.find(div.childNodes, function (node) {
+      return node.nodeValue === run.nodeValue;
+    });
+
+    test.equal(fooTextNode, newFooTextNode);
+  });
 });
 
 // Test that when a helper in an element attribute re-runs due to a
