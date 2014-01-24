@@ -2,43 +2,24 @@ var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var archinfo = require('../archinfo.js');
 
-selftest.define("help", function () {
-  var s = new Sandbox;
-
-  var run = s.run("help");
-  run.match("Usage: meteor");
-  run.match("Commands:");
-  run.match(/create\s*Create a new project/);
-  run.expectExit(0);
-
-  var run = s.run("--help");
-  run.match("Usage: meteor");
-  run.match("Commands:");
-  run.match(/create\s*Create a new project/);
-  run.expectExit(0);
-
-  var run = s.run("help", "create");
-  run.match("Usage: meteor create");
-  run.match("create a new Meteor project");
-  run.match("Options:");
-  run.match(/--list\s*Show list/);
-  run.expectExit(0);
-
-  var run = s.run("create", "--help");
-  run.match("Usage: meteor create");
-  run.match("create a new Meteor project");
-  run.match("Options:");
-  run.match(/--list\s*Show list/);
-  run.expectExit(0);
-});
-
 selftest.define("argument parsing", function () {
   var s = new Sandbox;
+  var sApp = new Sandbox({ app: 'empty' });
   var run;
 
   // bad command
   run = s.run("aoeuasdf");
   run.matchErr("not a Meteor command");
+  run.expectExit(1);
+
+  // bad subcommand
+  run = s.run("admin", "aoeuasdf");
+  run.matchErr("not a Meteor command");
+  run.expectExit(1);
+
+  // missing subcommand
+  run = s.run("admin");
+  run.matchErr("for available commands");
   run.expectExit(1);
 
   // bad option
@@ -51,7 +32,21 @@ selftest.define("argument parsing", function () {
   run.matchErr("Can't pass both");
   run.expectExit(1);
 
+  // passing short and long options
+  run = s.run("-p", "2000", "--port", "2000");
+  run.matchErr("can't pass both -p and --port");
+  run.expectExit(1);
 
+  // XXX at main.js:720
+
+  // command that requires an app
+  run = s.run("list", "--using");
+  run.matchErr("not in a Meteor project");
+  run.matchErr("meteor create"); // new user help
+  run.expectExit(1);
+
+  run = sApp.run("list", "--using");
+  run.expectExit(0);
 
   // XXX test that main.js catches all the weird error cases
 });

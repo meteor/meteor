@@ -21,21 +21,28 @@ var markStack = function (f) {
   return parseStack.markTop(f);
 };
 
-var Matcher = function () {
+
+///////////////////////////////////////////////////////////////////////////////
+// Matcher
+///////////////////////////////////////////////////////////////////////////////
+
+// Handles the job of waiting until text is seen that matches a
+// regular expression.
+
+var Matcher = function (run) {
   var self = this;
   self.buf = "";
-  self.output = "";
   self.ended = false;
   self.matchPattern = null;
   self.matchFuture = null;
   self.matchStrict = null;
+  self.run = run; // used only to set a field on exceptions
 };
 
 _.extend(Matcher.prototype, {
   write: function (data) {
     var self = this;
     self.buf += data;
-    self.output += data;
     self._tryMatch();
   },
 
@@ -54,7 +61,7 @@ _.extend(Matcher.prototype, {
         self.matchPattern = null;
         self.matchStrict = null;
         self.matchFuture = null;
-        f['throw'](new TestFailure('match-timeout'));
+        f['throw'](new TestFailure('match-timeout', { run: self.run }));
       }, timeout * 1000);
     }
 
@@ -76,7 +83,7 @@ _.extend(Matcher.prototype, {
     var self = this;
 
     if (self.buf.length > 0)
-      throw new TestFailure('junk-at-end');
+      throw new TestFailure('junk-at-end', { run: self.run });
   },
 
   _tryMatch: function () {
@@ -92,7 +99,7 @@ _.extend(Matcher.prototype, {
       var m = self.buf.match(self.matchPattern);
       if (m) {
         if (self.matchStrict && m.index !== 0)
-          f['throw'](new TestFailure('junk-before'));
+          f['throw'](new TestFailure('junk-before', { run: self.run }));
         ret = m;
         self.buf = self.buf.slice(m.index + m[0].length);
       }
@@ -100,7 +107,7 @@ _.extend(Matcher.prototype, {
       var i = self.buf.indexOf(self.matchPattern);
       if (i !== -1) {
         if (self.matchStrict && i !== 0)
-          f['throw'](new TestFailure('junk-before'));
+          f['throw'](new TestFailure('junk-before', { run: self.run }));
         ret = self.matchPattern;
         self.buf = self.buf.slice(i + self.matchPattern.length);
       }
@@ -118,17 +125,99 @@ _.extend(Matcher.prototype, {
       self.matchFuture = null;
       self.matchStrict = null;
       self.matchPattern = null;
-      f['throw'](new TestFailure('no-match', { output: self.output }));
+      f['throw'](new TestFailure('no-match', { run: self.run }));
       return;
     }
   }
 });
 
-// Represents an install of the tool.
 
-var Sandbox = function () {
+///////////////////////////////////////////////////////////////////////////////
+// OutputLog
+///////////////////////////////////////////////////////////////////////////////
+
+// Maintains a line-by-line merged log of multiple output channels
+// (eg, stdout and stderr).
+
+var OutputLog = function () {
   var self = this;
+
+  // each entry is an object with keys 'channel', 'text', and if it is
+  // the last entry and there was no newline terminator, 'bare'
+  self.lines = [];
+
+  // map from a channel number name to a string (partially read line
+  // of text on that channel)
+  self.buffers = {};
+};
+
+_.extend(OutputLog.prototype, {
+  write: function (channel, text) {
+    var self = this;
+
+    if (! _.has(self.buffers, 'channel'))
+      self.buffers[channel] = '';
+
+    self.buffers[channel] += text;
+    while (true) {
+      var i = self.buffers[channel].indexOf('\n');
+      if (i === -1)
+        break;
+      self.lines.push({ channel: channel,
+                        text: self.buffers[channel].substr(0, i) });
+      self.buffers[channel] = self.buffers[channel].substr(i + 1);
+    }
+  },
+
+  end: function () {
+    var self = this;
+    _.each(_.keys(self.buffers), function (channel) {
+      if (self.buffers[channel].length) {
+        self.lines.push({ channel: channel,
+                          text: self.buffers[channel],
+                          bare: true });
+        self.buffers[channel] = '';
+      }
+    });
+  },
+
+  get: function () {
+    var self = this;
+    return self.lines;
+  }
+});
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Sandbox
+///////////////////////////////////////////////////////////////////////////////
+
+// Represents an install of the tool. Creating this creates a private
+// sandbox with its own state, separate from the state of the current
+// meteor install or checkout, from the user's homedir, and from the
+// state of any other sandbox.
+//
+// XXX let you pick whether you want it to look like a checkout or a
+// release
+//
+// options:
+// - app: if omitted, runs created in this sandbox aren't inside an
+//   app directory. if present, a test app is created by copying the
+//   named template from tools/selftests/apps, and runs created inside
+//   the sandbox are inside that test app. XXX implement
+
+var Sandbox = function (options) {
+  var self = this;
+  options = options || {};
   self.root = files.mkdtemp();
+  self.cwd = path.join(self.root, 'cwd');
+
+  if (_.has(options, 'app')) {
+    files.cp_r(path.join(__dirname, 'selftests', 'apps', options.app),
+               self.cwd);
+  } else {
+    fs.mkdirSync(self.cwd, 0755);
+  }
 };
 
 _.extend(Sandbox.prototype, {
@@ -141,6 +230,10 @@ _.extend(Sandbox.prototype, {
   }
 });
 
+
+///////////////////////////////////////////////////////////////////////////////
+// Run
+///////////////////////////////////////////////////////////////////////////////
 
 // Represents a test run of the tool. Typically created through the
 // run() method on Sandbox.
@@ -158,8 +251,9 @@ var Run = function (options) {
   self.baseTimeout = 1;
   self.extraTime = 0;
 
-  self.stdoutMatcher = new Matcher;
-  self.stderrMatcher = new Matcher;
+  self.stdoutMatcher = new Matcher(self);
+  self.stderrMatcher = new Matcher(self);
+  self.outputLog = new OutputLog;
 
   self.exitStatus = undefined; // 'null' means failed rather than exited
   self.exitFutures = [];
@@ -209,6 +303,7 @@ _.extend(Run.prototype, {
       f['return']();
     });
 
+    self.outputLog.end();
     self.stdoutMatcher.end();
     self.stderrMatcher.end();
   },
@@ -232,6 +327,7 @@ _.extend(Run.prototype, {
 
     var child_process = require('child_process');
     self.proc = child_process.spawn(execPath, self._args, {
+      cwd: self.sandbox.cwd,
       env: env
     });
 
@@ -247,11 +343,13 @@ _.extend(Run.prototype, {
 
     self.proc.stdout.setEncoding('utf8');
     self.proc.stdout.on('data', function (data) {
+      self.outputLog.write('stdout', data);
       self.stdoutMatcher.write(data);
     });
 
     self.proc.stderr.setEncoding('utf8');
     self.proc.stderr.on('data', function (data) {
+      self.outputLog.write('stderr', data);
       self.stderrMatcher.write(data);
     });
   },
@@ -318,7 +416,7 @@ _.extend(Run.prototype, {
       var fut = new Future;
       self.exitFutures.push(fut);
       var timer = setTimeout(function () {
-        fut['throw'](new TestFailure('exit-timeout'));
+        fut['throw'](new TestFailure('exit-timeout', { run: self }));
       }, timeout * 1000);
 
       try {
@@ -329,11 +427,12 @@ _.extend(Run.prototype, {
     }
 
     if (! self.exitStatus)
-      throw new TestFailure('spawn-failure');
+      throw new TestFailure('spawn-failure', { run: self });
     if (code !== undefined && self.exitStatus.code !== code) {
       throw new TestFailure('wrong-exit-code', {
         expected: { code: code },
-        actual: self.exitStatus
+        actual: self.exitStatus,
+        run: self
       });
     }
   }),
@@ -351,6 +450,11 @@ _.extend(Run.prototype, {
     self.proc.stdin.write(string);
   }
 });
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Defining tests
+///////////////////////////////////////////////////////////////////////////////
 
 var Test = function (options) {
   var self = this;
@@ -403,6 +507,11 @@ var define = function (name, f) {
     func: f
   }));
 };
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Running tests
+///////////////////////////////////////////////////////////////////////////////
 
 // options: onlyChanged
 var runTests = function (options) {
@@ -463,12 +572,26 @@ var runTests = function (options) {
       process.stderr.write("  => " + failure.reason + " at " +
                            relpath + ":" + frames[0].line + "\n");
       if (failure.reason === 'no-match') {
-        var lines = failure.details.output.split('\n');
-        if (lines[lines.length - 1] === '')
-          lines.pop(); // we expect it to end in a newline
-        process.stderr.write("  => Last five lines:\n");
-        _.each(lines.slice(-5), function (line) {
-          process.stderr.write("  |" + line + "\n");
+      }
+      if (failure.reason === "wrong-exit-code") {
+        var s = function (status) {
+          return status.signal || ('' + status.code) || "???";
+        };
+
+        process.stderr.write("  => Expected: " + s(failure.details.expected) +
+                             "; actual: " + s(failure.details.actual) + "\n");
+      }
+
+      var lines = failure.details.run.outputLog.get();
+      if (! lines.length) {
+        process.stderr.write("  => No output\n");
+      } else {
+        process.stderr.write("  => Last ten lines:\n");
+        _.each(lines.slice(-10), function (line) {
+          process.stderr.write("  " +
+                               (line.channel === "stderr" ? "2| " : "1| ") +
+                               line.text +
+                               (line.bare ? "%" : "") + "\n");
         });
       }
       failuresInFile[test.file] = true;
@@ -493,12 +616,6 @@ var runTests = function (options) {
   }
 };
 
-
-// XXX tests are slow, so we're going to need a good mechanism for
-// running particular tests, or previously failing tests, or changed
-// tests (!) or something.. OR, have a fast mode (the default unless
-// you pass --paranoid) that just reruns main() in-process, rather
-// than spawning?? stdio becomes a bit of a mess..
 
 // XXX way of marking tests that need network, so that we can skip
 // them when testing on an airplane (well, universe..)
