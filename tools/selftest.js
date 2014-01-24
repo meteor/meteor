@@ -77,6 +77,7 @@ _.extend(Matcher.prototype, {
     var self = this;
     self.ended = true;
     self._tryMatch();
+    self.buf = '';
   },
 
   matchEmpty: function () {
@@ -149,7 +150,7 @@ _.extend(Matcher.prototype, {
 // Maintains a line-by-line merged log of multiple output channels
 // (eg, stdout and stderr).
 
-var OutputLog = function () {
+var OutputLog = function (run) {
   var self = this;
 
   // each entry is an object with keys 'channel', 'text', and if it is
@@ -159,6 +160,9 @@ var OutputLog = function () {
   // map from a channel number name to a string (partially read line
   // of text on that channel)
   self.buffers = {};
+
+  // a Run, exclusively for inclusion in exceptions
+  self.run = run;
 };
 
 _.extend(OutputLog.prototype, {
@@ -188,6 +192,19 @@ _.extend(OutputLog.prototype, {
                           bare: true });
         self.buffers[channel] = '';
       }
+    });
+  },
+
+  forbid: function (pattern, channel) {
+    var self = this;
+    _.each(self.lines, function (line) {
+      if (channel && channel !== line.channel)
+        return;
+
+      var match = (pattern instanceof RegExp) ?
+        (line.text.match(pattern)) : (line.text.indexOf(pattern) !== -1);
+      if (match)
+        throw new TestFailure('forbidden-string-present', { run: self.run });
     });
   },
 
@@ -263,7 +280,7 @@ var Run = function (options) {
 
   self.stdoutMatcher = new Matcher(self);
   self.stderrMatcher = new Matcher(self);
-  self.outputLog = new OutputLog;
+  self.outputLog = new OutputLog(self);
 
   self.exitStatus = undefined; // 'null' means failed rather than exited
   self.exitFutures = [];
@@ -396,6 +413,29 @@ _.extend(Run.prototype, {
   // As read(), but for stderr instead of stdout.
   readErr: markStack(function (pattern) {
     return this.matchErr(pattern, true);
+  }),
+
+  // Assert that 'pattern' (again, a regexp or string) has not
+  // occurred on stdout at any point so far in this run. Currently
+  // this works on complete lines, so unlike match() and read(),
+  // 'pattern' cannot span multiple lines, and furthermore if it is
+  // called before the end of the program, it may not see text on a
+  // partially read line. We could lift these restrictions easily, but
+  // there may not be any benefit since the usual way to use this is
+  // to call it after expectExit or expectEnd.
+  forbid: markStack(function (pattern) {
+    this.outputLog.forbid(pattern, 'stdout');
+  }),
+
+  // As forbid(), but for stderr instead of stdout.
+  forbidErr: markStack(function (pattern) {
+    this.outputLog.forbid(pattern, 'stderr');
+  }),
+
+  // Combination of forbid() and forbidErr(). Forbids the pattern on
+  // both stdout and stderr.
+  forbidAll: markStack(function (pattern) {
+    this.outputLog.forbid(pattern);
   }),
 
   // Expect the program to exit without anything further being
