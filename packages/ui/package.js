@@ -23,7 +23,7 @@ Package.on_use(function (api) {
 
   api.add_files(['attrs.js',
                  'render.js',
-                 'components.js',
+                 'builtins.js',
                  'each.js',
                  'fields.js'
                 ]);

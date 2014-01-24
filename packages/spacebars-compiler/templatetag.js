@@ -399,15 +399,14 @@ var isAtBlockCloseOrElse = function (scanner) {
 // nothing.
 var validateTag = function (ttag, scanner) {
 
-  if (ttag.type === 'INCLUSION') {
-    // throw error on >1 positional arguments
-    var numPosArgs = 0;
+  if (ttag.type === 'INCLUSION' || ttag.type === 'BLOCKOPEN') {
     var args = ttag.args;
-    for (var i = 0; i < args.length; i++)
-      if (args[i].length === 2)
-        numPosArgs++;
-    if (numPosArgs > 1)
-      scanner.fatal("Only one positional argument is allowed in {{> ... }}");
+    if (args.length > 1 && args[0].length === 2 && args[0][0] !== 'PATH') {
+      // we have a positional argument that is not a PATH followed by
+      // other arguments
+      scanner.fatal("Can't have a " + args[0][0] + " argument here followed " +
+                    "by other arguments");
+    }
   }
 
   var position = ttag.position || HTML.TEMPLATE_TAG_POSITION.ELEMENT;

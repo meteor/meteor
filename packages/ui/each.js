@@ -1,11 +1,5 @@
-UI.Each = Component.extend({
+UI.EachImpl = Component.extend({
   typeName: 'Each',
-  init: function () {
-    // don't keep `this.data` around so that `{{..}}` skips over this
-    // component
-    this.sequence = this.data;
-    this.data = undefined;
-  },
   render: function (modeHint) {
     var self = this;
     var content = self.__content;
@@ -27,7 +21,7 @@ UI.Each = Component.extend({
       // a method like component.populate(domRange) and one
       // like renderStatic() or even renderHTML / renderText.
       var parts = _.map(
-        ObserveSequence.fetch(self.get('sequence')),
+        ObserveSequence.fetch(self.__sequence()),
         function (item) {
           return content.withData(function () {
             return item;
@@ -75,7 +69,7 @@ UI.Each = Component.extend({
 
     try {
       this.observeHandle = ObserveSequence.observe(function () {
-        return self.get('sequence');
+        return self.__sequence();
       }, {
         addedAt: function (id, item, i, beforeId) {
           addToCount(1);
