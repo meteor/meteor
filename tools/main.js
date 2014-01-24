@@ -644,11 +644,13 @@ Fiber(function () {
   var walk = commands;
   if (! command) {
     if (parsed._.length === 0) {
-      // No arguments means 'run'.
-      command = commands.run;
-      commandName = "run";
-      if (! command)
-        throw new Error("no 'run' command?");
+      // No arguments means 'run'. Unless it's 'meteor --help'.
+      if (! showHelp) {
+        command = commands.run
+        commandName = "run";
+        if (! command)
+          throw new Error("no 'run' command?");
+      }
     } else {
       // Find the command they specified.
       for (var i = 0; i < parsed._.length; i++) {

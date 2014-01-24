@@ -4,10 +4,6 @@ var Sandbox = selftest.Sandbox;
 selftest.define("login", function () {
   var s = new Sandbox;
 
-  // XXX need to create a new credentials file for this run! (and a
-  // user account)
-  // XXX how to clean up test user accounts at end of test run? or,
-  // only ever do it against a testing universe, and don't bother?
   var run = s.run("whoami");
   run.matchErr("Not logged in");
   run.expectExit(1);
@@ -25,10 +21,6 @@ selftest.define("login", function () {
   // XXX test login by email
 
   run = s.run("whoami");
-  // XXX want something like 'matchAll' that you call after expectExit
-  // and must match all remaining input. basically, it's like match
-  // except that it requires the match offset to be zero. if you call
-  // that after exit it will do what we want.
   run.read("test\n");
   run.expectEnd();
   run.expectExit(0);

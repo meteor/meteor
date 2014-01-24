@@ -24,6 +24,7 @@ var markStack = function (f) {
 var Matcher = function () {
   var self = this;
   self.buf = "";
+  self.output = "";
   self.ended = false;
   self.matchPattern = null;
   self.matchFuture = null;
@@ -34,6 +35,7 @@ _.extend(Matcher.prototype, {
   write: function (data) {
     var self = this;
     self.buf += data;
+    self.output += data;
     self._tryMatch();
   },
 
@@ -116,7 +118,7 @@ _.extend(Matcher.prototype, {
       self.matchFuture = null;
       self.matchStrict = null;
       self.matchPattern = null;
-      f['throw'](new TestFailure('no-match'));
+      f['throw'](new TestFailure('no-match', { output: self.output }));
       return;
     }
   }
@@ -460,6 +462,15 @@ var runTests = function (options) {
                                   frames[0].file);
       process.stderr.write("  => " + failure.reason + " at " +
                            relpath + ":" + frames[0].line + "\n");
+      if (failure.reason === 'no-match') {
+        var lines = failure.details.output.split('\n');
+        if (lines[lines.length - 1] === '')
+          lines.pop(); // we expect it to end in a newline
+        process.stderr.write("  => Last five lines:\n");
+        _.each(lines.slice(-5), function (line) {
+          process.stderr.write("  |" + line + "\n");
+        });
+      }
       failuresInFile[test.file] = true;
     } else {
       process.stderr.write("ok\n");
