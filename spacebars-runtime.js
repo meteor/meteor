@@ -12,63 +12,41 @@ var safeEquals = function (a, b) {
             (typeof a === 'string'));
 };
 
-Spacebars.include = function (kindOrFunc, args) {
-  args = args || {};
-  if (typeof kindOrFunc === 'function') {
-    // function block helper
-    var func = kindOrFunc;
+// * `templateOrFunction` - template (component) or function returning one
+// * `dataFunc` - (optional) function returning data context
+// * `extraArgs` - (optional) dictionary that may have `content`/`elseContent`
+Spacebars.include = function (templateOrFunction, dataFunc, extraArgs) {
+  var result = templateOrFunction;
 
-    var hash = {};
-    // Call arguments if they are functions.  This may cause
-    // reactive dependencies!
-    for (var k in args) {
-      if (k !== 'data') {
-        var v = args[k];
-        hash[k] = (typeof v === 'function' ? v() : v);
-      }
-    }
+  if (extraArgs) {
+    var underscoredArgs = {};
+    for (var k in extraArgs)
+      underscoredArgs['__'+k] = extraArgs[k];
 
-    var result;
-    if ('data' in args) {
-      var data = args.data;
-      data = (typeof data === 'function' ? data() : data);
-      result = func(data, { hash: hash });
+    // extend `result` with `underscoredArgs`, whether or not it's a function
+    if (typeof result === 'function') {
+      result = function () {
+        // todo: isolate the calculation of `templateOrFunction`
+        var result = templateOrFunction();
+        result = result.extend(underscoredArgs);
+        return result;
+      };
     } else {
-      result = func({ hash: hash });
+      result = result.extend(underscoredArgs);
     }
-    // In `{{#foo}}...{{/foo}}`, if `foo` is a function that
-    // returns a component, attach __content and __elseContent
-    // to it.
-    if (UI.isComponent(result) &&
-        (('__content' in args) || ('__elseContent' in args))) {
-      var extra = {};
-      if ('__content' in args)
-        extra.__content = args.__content;
-      if ('__elseContent' in args)
-        extra.__elseContent = args.__elseContent;
-      result = result.extend(extra);
+  }
+
+  if (dataFunc) {
+    if (typeof dataFunc !== 'function')
+      throw new Error("Second argument to Spacebars.include must be a function");
+
+    if (typeof result === 'function') {
+      var func = result;
+      result = UI.block(function () { return func; });
     }
-    return result;
+    return UI.With(UI.emboxValue(dataFunc, safeEquals), result);
   } else {
-    // Component
-    var kind = kindOrFunc;
-    if (! UI.isComponent(kind))
-      throw new Error("Expected template, found: " + kind);
-
-    // Note that there are no reactive dependencies established here.
-    if (args) {
-      var emboxedArgs = {};
-      for (var k in args) {
-        if (k === '__content' || k === '__elseContent')
-          emboxedArgs[k] = args[k];
-        else
-          emboxedArgs[k] = UI.emboxValue(args[k], safeEquals);
-      }
-
-      return kind.extend(emboxedArgs);
-    } else {
-      return kind;
-    }
+    return result;
   }
 };
 
@@ -131,6 +109,12 @@ Spacebars.attrMustache = function (value/*, args*/) {
   } else {
     throw new Error("Expected valid attribute name, '', null, or object");
   }
+};
+
+Spacebars.dataMustache = function (value/*, args*/) {
+  var result = Spacebars.mustacheImpl.apply(null, arguments);
+
+  return result;
 };
 
 // Idempotently wrap in `HTML.Raw`.
@@ -220,4 +204,10 @@ Spacebars.dot = function (value, id1/*, id2, ...*/) {
   return function (/*arguments*/) {
     return result.apply(value, arguments);
   };
+};
+
+// Implement Spacebars's #with, which renders its else case (or nothing)
+// if the argument is falsy.
+Spacebars.With = function (argFunc, contentBlock, elseContentBlock) {
+  return UI.If(argFunc, UI.With(argFunc, contentBlock), elseContentBlock);
 };
