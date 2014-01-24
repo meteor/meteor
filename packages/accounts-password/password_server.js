@@ -264,11 +264,19 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
   }});
 
   var resetPasswordUrl = Accounts.urls.resetPassword(token);
-  Email.send({
+
+  var options = {
     to: email,
     from: Accounts.emailTemplates.from,
     subject: Accounts.emailTemplates.resetPassword.subject(user),
-    text: Accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl)});
+    text: Accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl)
+  };
+
+  if (typeof Accounts.emailTemplates.resetPassword.html === 'function')
+    options.html =
+      Accounts.emailTemplates.resetPassword.html(user, resetPasswordUrl);
+
+  Email.send(options);
 };
 
 // send the user an email informing them that their account was created, with
@@ -305,12 +313,19 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
   }});
 
   var enrollAccountUrl = Accounts.urls.enrollAccount(token);
-  Email.send({
+  
+  var options = {
     to: email,
     from: Accounts.emailTemplates.from,
     subject: Accounts.emailTemplates.enrollAccount.subject(user),
     text: Accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl)
-  });
+  };
+  
+  if (typeof Accounts.emailTemplates.enrollAccount.html === 'function')
+    options.html =
+      Accounts.emailTemplates.enrollAccount.html(user, enrollAccountUrl);
+
+  Email.send(options);
 };
 
 
@@ -418,12 +433,19 @@ Accounts.sendVerificationEmail = function (userId, address) {
     {$push: {'services.email.verificationTokens': tokenRecord}});
 
   var verifyEmailUrl = Accounts.urls.verifyEmail(tokenRecord.token);
-  Email.send({
+  
+  var options = {
     to: address,
     from: Accounts.emailTemplates.from,
     subject: Accounts.emailTemplates.verifyEmail.subject(user),
     text: Accounts.emailTemplates.verifyEmail.text(user, verifyEmailUrl)
-  });
+  };
+  
+  if (typeof Accounts.emailTemplates.verifyEmail.html === 'function')
+    options.html =
+      Accounts.emailTemplates.verifyEmail.html(user, verifyEmailUrl);
+
+  Email.send(options);
 };
 
 // Take token from sendVerificationEmail, mark the email as verified,
