@@ -313,15 +313,18 @@ _.extend(File.prototype, {
     return self.contents().length;
   },
 
-  // Set the URL of this file to "/<hash><suffix>". suffix will
-  // typically be used to pick a reasonable extension. Also set
-  // cacheable to true, since the file's name is now derived from its
-  // contents.
-  setUrlToHash: function (suffix) {
+  // Set the URL (and target path) of this file to "/<hash><suffix>". suffix
+  // will typically be used to pick a reasonable extension. Also set cacheable
+  // to true, since the file's name is now derived from its contents.
+
+  // Also allow a special second suffix that will *only* be postpended to the
+  // url, useful for query parameters.
+  setUrlToHash: function (fileAndUrlSuffix, urlSuffix) {
     var self = this;
-    self.url = "/" + self.hash() + suffix;
+    urlSuffix = urlSuffix || "";
+    self.url = "/" + self.hash() + fileAndUrlSuffix + urlSuffix;
     self.cacheable = true;
-    self.targetPath = self.hash() + suffix;
+    self.targetPath = self.hash() + fileAndUrlSuffix;
   },
 
   // Append "?<hash>" to the URL and mark the file as cacheable.
@@ -766,7 +769,7 @@ _.extend(ClientTarget.prototype, {
     allCss = minifiers.CleanCSSProcess(allCss);
 
     self.css = [new File({ data: new Buffer(allCss, 'utf8') })];
-    self.css[0].setUrlToHash(".css");
+    self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
   },
 
   // XXX Instead of packaging the boilerplate in the client program, the
