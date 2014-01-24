@@ -152,6 +152,10 @@ var builtInComponents = {
   'each': 'UI.Each'
 };
 
+Spacebars.isReservedName = function (name) {
+  return builtInComponents.hasOwnProperty(name);
+};
+
 var codeGenTemplateTag = function (tag) {
   if (tag.position === HTML.TEMPLATE_TAG_POSITION.IN_START_TAG) {
     // only `tag.type === 'DOUBLE'` allowed (by earlier validation)
