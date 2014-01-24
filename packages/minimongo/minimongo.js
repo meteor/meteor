@@ -412,8 +412,8 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered,
     if (self.skip)
       return results;
 
-    if (self.collection._docs.has(self._selectorId)) {
-      var selectedDoc = self.collection._docs.get(self._selectorId);
+    var selectedDoc = self.collection._docs.get(self._selectorId);
+    if (selectedDoc) {
       if (ordered)
         results.push(selectedDoc);
       else
@@ -556,8 +556,8 @@ LocalCollection.prototype.remove = function (selector, callback) {
     _.each(specificIds, function (id) {
       // We still have to run matcher, in case it's something like
       //   {_id: "X", a: 42}
-      if (self._docs.has(id)
-          && matcher.documentMatches(self._docs.get(id)).result)
+      var doc = self._docs.get(id);
+      if (doc && matcher.documentMatches(doc).result)
         remove.push(id);
     });
   } else {
