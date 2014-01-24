@@ -72,13 +72,11 @@ OplogObserveDriver = function (options) {
 
   // XXX ordering w.r.t. everything else?
   self._stopHandles.push(listenAll(
-    self._cursorDescription, function (notification, complete) {
+    self._cursorDescription, function (notification) {
       // If we're not in a write fence, we don't have to do anything.
       var fence = DDPServer._CurrentWriteFence.get();
-      if (!fence) {
-        complete();
+      if (!fence)
         return;
-      }
       var write = fence.beginWrite();
       // This write cannot complete until we've caught up to "this point" in the
       // oplog, and then made it back to the steady state.
@@ -98,7 +96,6 @@ OplogObserveDriver = function (options) {
           self._writesToCommitWhenWeReachSteady.push(write);
         }
       });
-      complete();
     }
   ));
 

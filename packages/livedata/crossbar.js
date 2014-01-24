@@ -1,6 +1,4 @@
 // A "crossbar" is a class that provides structured notification registration.
-// The "invalidation crossbar" is a specific instance used by the DDP server to
-// implement write fence notifications.
 
 DDPServer._Crossbar = function (options) {
   var self = this;
@@ -17,10 +15,8 @@ DDPServer._Crossbar = function (options) {
 _.extend(DDPServer._Crossbar.prototype, {
   // Listen for notification that match 'trigger'. A notification
   // matches if it has the key-value pairs in trigger as a
-  // subset. When a notification matches, call 'callback', passing two
-  // arguments, the actual notification and an acknowledgement
-  // function. The callback should call the acknowledgement function
-  // when it is finished processing the notification.
+  // subset. When a notification matches, call 'callback', passing
+  // the actual notification.
   //
   // Returns a listen handle, which is an object with a method
   // stop(). Call stop() to stop listening.
@@ -48,14 +44,13 @@ _.extend(DDPServer._Crossbar.prototype, {
 
   // Fire the provided 'notification' (an object whose attribute
   // values are all JSON-compatibile) -- inform all matching listeners
-  // (registered with listen()), and once they have all acknowledged
-  // the notification, call onComplete with no arguments.
+  // (registered with listen()).
   //
   // If fire() is called inside a write fence, then each of the
   // listener callbacks will be called inside the write fence as well.
   //
   // The listeners may be invoked in parallel, rather than serially.
-  fire: function (notification, onComplete) {
+  fire: function (notification) {
     var self = this;
     var callbacks = [];
     // XXX consider refactoring to "index" on "collection"
@@ -64,22 +59,10 @@ _.extend(DDPServer._Crossbar.prototype, {
         callbacks.push(l.callback);
     });
 
-    if (onComplete)
-      onComplete = Meteor.bindEnvironment(
-        onComplete,
-        "Crossbar fire complete callback");
-
-    var outstanding = callbacks.length;
-    if (!outstanding)
-      onComplete && onComplete();
-    else {
-      _.each(callbacks, function (c) {
-        c(notification, function () {
-          if (--outstanding === 0)
-            onComplete && onComplete();
-        });
-      });
-    }
+    _.each(callbacks, function (c) {
+      // XXX don't call c if it's been stopped already
+      c(notification);
+    });
   },
 
   // A notification matches a trigger if all keys that exist in both are equal.
@@ -107,6 +90,11 @@ _.extend(DDPServer._Crossbar.prototype, {
   }
 });
 
+// The "invalidation crossbar" is a specific instance used by the DDP server to
+// implement write fence notifications. Listener callbacks on this crossbar
+// should call beginWrite on the current write fence before they return, if they
+// want to delay the write fence from firing (ie, the DDP method-data-updated
+// message from being sent).
 DDPServer._InvalidationCrossbar = new DDPServer._Crossbar({
   factName: "invalidation-crossbar-listeners"
 });
