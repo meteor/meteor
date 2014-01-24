@@ -51,9 +51,8 @@ var inFlush;
 // logging them.
 var throwError;
 
-// Reset Deps to its initial state, clearing all queued operations.
-// Used when Deps.flush is in throwError mode and throws an error, in
-// order to recover.
+// Reset Deps to its initial state.  Used when Deps.flush is in
+// throwError mode and throws an error, in order to recover.
 var reset = function () {
   willFlush = false;
   inFlush = false;
@@ -293,7 +292,7 @@ _.extend(Deps, {
         }
       }
     } catch (e) {
-      reset();
+      reset(); // needed before calling `Deps.flush()` again
       Deps.flush(); // finish flushing; this time only log errors errors
       throw e;
     } finally {
