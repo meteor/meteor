@@ -23,8 +23,7 @@ var _debugFunc = function () {
 };
 
 var _throwOrLog = function (from, e) {
-  if (throwErrors) {
-    reset();
+  if (throwError) {
     throw e;
   } else {
     _debugFunc()("Exception from Deps " + from + " function:",
@@ -35,28 +34,30 @@ var _throwOrLog = function (from, e) {
 var nextId = 1;
 
 // computations whose callbacks we should call at flush time
-var pendingComputations;
-// `true` if a Deps.flush is scheduled, or if we are in Deps.flush now
-var willFlush;
-// `true` if we are in Deps.flush now
-var inFlush;
-// `true` if the `_throwErrors` option was passed in to the call to Deps.flush
-// that we are in. When set, always throw errors instead of logging them.
-var throwErrors;
+var pendingComputations = [];
 // `true` if we are computing a computation now, either first time
 // or recompute.  This matches Deps.active unless we are inside
 // Deps.nonreactive, which nullfies currentComputation even though
 // an enclosing computation may still be running.
-var inCompute;
-var afterFlushCallbacks;
+var inCompute = false;
+var afterFlushCallbacks = [];
 
+// `true` if a Deps.flush is scheduled, or if we are in Deps.flush now
+var willFlush;
+// `true` if we are in Deps.flush now
+var inFlush;
+// `true` if the `_throwError` option was passed in to the call to
+// Deps.flush that we are in. When set, always throw errors instead of
+// logging them.
+var throwError;
+
+// Reset Deps to its initial state, clearing all queued operations.
+// Used when Deps.flush is in throwError mode and throws an error, in
+// order to recover.
 var reset = function () {
-  pendingComputations = [];
   willFlush = false;
   inFlush = false;
-  throwErrors = undefined;
-  inCompute = false;
-  afterFlushCallbacks = [];
+  throwError = undefined;
 };
 reset();
 
@@ -180,20 +181,23 @@ _.extend(Deps.Computation.prototype, {
     var self = this;
 
     self._recomputing = true;
-    while (self.invalidated && ! self.stopped) {
-      try {
-        self._compute();
-      } catch (e) {
-        _throwOrLog("recompute", e);
+    try {
+      while (self.invalidated && ! self.stopped) {
+        try {
+          self._compute();
+        } catch (e) {
+          _throwOrLog("recompute", e);
+        }
+        // If _compute() invalidated us, we run again immediately.
+        // A computation that invalidates itself indefinitely is an
+        // infinite loop, of course.
+        //
+        // We could put an iteration counter here and catch run-away
+        // loops.
       }
-      // If _compute() invalidated us, we run again immediately.
-      // A computation that invalidates itself indefinitely is an
-      // infinite loop, of course.
-      //
-      // We could put an iteration counter here and catch run-away
-      // loops.
+    } finally {
+      self._recomputing = false;
     }
-    self._recomputing = false;
   }
 });
 
@@ -265,33 +269,36 @@ _.extend(Deps, {
 
     inFlush = true;
     willFlush = true;
-    throwErrors = !! (opts && opts._throwErrors);
+    throwError = !! (opts && opts._throwError);
 
-    while (pendingComputations.length ||
-           afterFlushCallbacks.length) {
+    try {
+      while (pendingComputations.length ||
+             afterFlushCallbacks.length) {
 
-      // recompute all pending computations
-      var comps = pendingComputations;
-      pendingComputations = [];
+        // recompute all pending computations
+        while (pendingComputations.length) {
+          var comp = pendingComputations.shift();
+          comp._recompute();
+        }
 
-      for (var i = 0, comp; comp = comps[i]; i++)
-        comp._recompute();
-
-      if (afterFlushCallbacks.length) {
-        // call one afterFlush callback, which may
-        // invalidate more computations
-        var func = afterFlushCallbacks.shift();
-        try {
-          func();
-        } catch (e) {
-          _throwOrLog("afterFlush function", e);
+        if (afterFlushCallbacks.length) {
+          // call one afterFlush callback, which may
+          // invalidate more computations
+          var func = afterFlushCallbacks.shift();
+          try {
+            func();
+          } catch (e) {
+            _throwOrLog("afterFlush function", e);
+          }
         }
       }
+    } catch (e) {
+      reset();
+      Deps.flush(); // finish flushing; this time only log errors errors
+      throw e;
+    } finally {
+      reset();
     }
-
-    inFlush = false;
-    willFlush = false;
-    throwErrors = undefined;
   },
 
   // http://docs.meteor.com/#deps_autorun
