@@ -58,14 +58,14 @@ Tinytest.add("spacebars - stache tags", function (test) {
                          args: [['NUMBER', 3]]});
   run('{{{foo 3}}}', {type: 'TRIPLE', path: ['foo'], args: [['NUMBER', 3]]});
 
-  run('{{foo bar baz=qux x3=. ./foo foo/bar a.b.c}}',
+  run('{{foo bar ./foo foo/bar a.b.c baz=qux x3=.}}',
       {type: 'DOUBLE', path: ['foo'],
        args: [['PATH', ['bar']],
-              ['PATH', ['qux'], 'baz'],
-              ['PATH', ['.'], 'x3'],
               ['PATH', ['.', 'foo']],
               ['PATH', ['foo', 'bar']],
-              ['PATH', ['a', 'b', 'c']]]});
+              ['PATH', ['a', 'b', 'c']],
+              ['PATH', ['qux'], 'baz'],
+              ['PATH', ['.'], 'x3']]});
 
   run('{{{x 0.3 [0].[3] .4 ./[4]}}}',
       {type: 'TRIPLE', path: ['x'],
@@ -115,6 +115,12 @@ Tinytest.add("spacebars - stache tags", function (test) {
   run('{{x "\'"}}', {type: 'DOUBLE', path: ['x'], args: [['STRING', "'"]]});
   run('{{x \'"\'}}', {type: 'DOUBLE', path: ['x'], args: [['STRING', '"']]});
 
+  run('{{> foo x=1 y=2}}',
+      {type: 'INCLUSION', path: ['foo'],
+       args: [['NUMBER', 1, 'x'],
+              ['NUMBER', 2, 'y']]});
+  run('{{> foo x=1 y=2 z}}',
+      "Can't have a non-keyword argument");
 });
 
 

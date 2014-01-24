@@ -156,7 +156,10 @@ TemplateTag.parse = function (scannerOrString) {
     return segments;
   };
 
-  // scan an argument; succeeds or errors
+  // scan an argument; succeeds or errors.
+  // Result is an array of two or three items:
+  // type , value, and (indicating a keyword argument)
+  // keyword name.
   var scanArg = function (notKeyword) {
     var startPos = scanner.pos;
     var result;
@@ -232,6 +235,7 @@ TemplateTag.parse = function (scannerOrString) {
     // DOUBLE, TRIPLE, BLOCKOPEN, INCLUSION
     tag.path = scanPath();
     tag.args = [];
+    var foundKwArg = false;
     while (true) {
       run(/^\s*/);
       if (type === 'TRIPLE') {
@@ -245,7 +249,15 @@ TemplateTag.parse = function (scannerOrString) {
         else if (scanner.peek() === '}')
           expected('`}}`');
       }
-      tag.args.push(scanArg());
+      var newArg = scanArg();
+      if (newArg.length === 3) {
+        foundKwArg = true;
+      } else {
+        if (foundKwArg)
+          error("Can't have a non-keyword argument after a keyword argument");
+      }
+      tag.args.push(newArg);
+
       if (run(/^(?=[\s}])/) !== '')
         expected('space');
     }
