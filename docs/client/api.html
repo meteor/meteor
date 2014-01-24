@@ -1811,7 +1811,7 @@ To customize the contents of the email, see
 
 {{> api_box accounts_emailTemplates}}
 
-This is an `Object` with several fields that are used to generate text
+This is an `Object` with several fields that are used to generate text/html
 for the emails sent by `sendResetPasswordEmail`, `sendEnrollmentEmail`,
 and `sendVerificationEmail`.
 
@@ -1828,6 +1828,8 @@ Override fields of the object by assigning to them:
    a `String` for the subject line of a reset password email.
  - `resetPassword.text`: A `Function` that takes a user object and a url, and
    returns the body text for a reset password email.
+ - `resetPassword.html`: An optional `Function` that takes a user object and a 
+   url, and returns the body html for a reset password email.
 - `enrollAccount`: Same as `resetPassword`, but for initial password setup for
    new accounts.
 - `verifyEmail`: Same as `resetPassword`, but for verifying the users email
