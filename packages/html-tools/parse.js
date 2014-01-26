@@ -146,6 +146,10 @@ getContent = function (scanner, shouldStopFunc) {
       if (isVoid || token.isSelfClosing) {
         items.push(attrs ? tagFunc(attrs) : tagFunc());
       } else {
+        // parse HTMl tag contents.
+
+        // HTML treats a final `/` in a tag as part of an attribute, as in `<a href=/foo/>`, but the template author who writes `<circle r={{r}}/>`, say, may not be thinking about that, so generate a good error message in the "looks like self-close" case.
+        var looksLikeSelfClose = (scanner.input.substr(scanner.pos - 2, 2) === '/>');
 
         var content;
         if (token.n === 'textarea') {
@@ -156,8 +160,9 @@ getContent = function (scanner, shouldStopFunc) {
           content = getContent(scanner, shouldStopFunc);
         }
 
-        if (scanner.rest().slice(0, 2) !== '</')
-          scanner.fatal('Expected "' + tagName + '" end tag');
+        if (scanner.rest().slice(0, 2) !== '</') {
+          scanner.fatal('Expected "' + tagName + '" end tag' + (looksLikeSelfClose ? ' -- if the "<' + token.n + ' />" tag was supposed to self-close, try adding a space before the "/"' : ''));
+        }
 
         var endTag = getTagToken(scanner);
 
@@ -167,8 +172,9 @@ getContent = function (scanner, shouldStopFunc) {
           scanner.fatal("Assertion failed: expected end tag");
 
         // XXX support implied end tags in cases allowed by the spec
-        if (endTag.n !== tagName)
-          scanner.fatal('Expected "' + tagName + '" end tag, found "' + endTag.n + '"');
+        if (endTag.n !== tagName) {
+          scanner.fatal('Expected "' + tagName + '" end tag, found "' + endTag.n + '"' + (looksLikeSelfClose ? ' -- if the "<' + token.n + ' />" tag was supposed to self-close, try adding a space before the "/"' : ''));
+        }
 
         // make `content` into an array suitable for applying tag constructor
         // as in `FOO.apply(null, content)`.
