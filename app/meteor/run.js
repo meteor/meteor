@@ -756,13 +756,13 @@ exports.run = function (app_dir, bundle_opts, port, once, settingsFile) {
   };
 
   start_proxy(outer_port, inner_port, function () {
-    process.stdout.write("[[[[[ " + files.pretty_path(app_dir) + " ]]]]]\n\n");
+    process.stdout.write((new Date()).toLocaleTimeString() + "=> [[[[[ " + files.pretty_path(app_dir) + " ]]]]]\n\n");
 
     mongo_startup_print_timer = setTimeout(function () {
-      process.stdout.write("Initializing mongo database... this may take a moment.\n");
+      process.stdout.write((new Date()).toLocaleTimeString() +"=> Initializing mongo database... this may take a moment.\n");
     }, 3000);
     process_startup_printer = function () {
-      process.stdout.write("Running on: http://localhost:" + outer_port + "/\n");
+      process.stdout.write((new Date()).toLocaleTimeString() +"=> Running on: http://localhost:" + outer_port + "/\n");
     };
 
     start_update_checks();
