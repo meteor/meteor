@@ -560,7 +560,7 @@ exports.run = function (context, options) {
     var rootUrl = process.env.ROOT_URL ||
           ('http://localhost:' + outerPort + '/');
     if (firstRun) {
-      process.stdout.write("=> Meteor server running on: " + rootUrl + "\n");
+      process.stdout.write((new Date()).toLocaleTimeString() +"=> Meteor server running on: " + rootUrl + "\n");
       firstRun = false;
       lastThingThatPrintedWasRestartMessage = false;
     } else {
@@ -570,7 +570,7 @@ exports.run = function (context, options) {
         // Overwrite it.
         realStdoutWrite.call(process.stdout, '\r');
       }
-      realStdoutWrite.call(process.stdout, "=> Meteor server restarted");
+      realStdoutWrite.call(process.stdout,(new Date()).toLocaleTimeString() + "=> Meteor server restarted");
       if (lastThingThatPrintedWasRestartMessage) {
         ++silentRuns;
         realStdoutWrite.call(process.stdout, " (x" + (silentRuns+1) + ")");
