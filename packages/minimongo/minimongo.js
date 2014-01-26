@@ -124,6 +124,11 @@ LocalCollection.Cursor = function (collection, selector, options) {
     self.reactive = (options.reactive === undefined) ? true : options.reactive;
 };
 
+LocalCollection.Cursor.prototype.isEmpty = function() {
+  var self = this;
+  return self.count() == 0;
+}
+
 LocalCollection.Cursor.prototype.rewind = function () {
   var self = this;
   self.db_objects = null;
