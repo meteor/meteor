@@ -404,8 +404,7 @@ var validateTag = function (ttag, scanner) {
     if (args.length > 1 && args[0].length === 2 && args[0][0] !== 'PATH') {
       // we have a positional argument that is not a PATH followed by
       // other arguments
-      scanner.fatal("Can't have a " + args[0][0] + " argument here followed " +
-                    "by other arguments");
+      scanner.fatal("First argument must be a function, to be called on the rest of the arguments; found " + args[0][0]);
     }
   }
 

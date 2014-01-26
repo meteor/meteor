@@ -272,8 +272,28 @@ Tinytest.add("spacebars - compiler errors", function (test) {
     test.equal(a.substring(0, b.length), b);
   };
 
-  assertStartsWith(getError("<input></input>"),
-                   "Unexpected HTML close tag.  <input> should have no close tag.");
-  assertStartsWith(getError("{{#each foo}}<input></input>{{/foo}}"),
-                   "Unexpected HTML close tag.  <input> should have no close tag.");
+  var isError = function (input, errorStart) {
+    assertStartsWith(getError(input), errorStart);
+  };
+
+  isError("<input></input>",
+          "Unexpected HTML close tag.  <input> should have no close tag.");
+  isError("{{#each foo}}<input></input>{{/foo}}",
+          "Unexpected HTML close tag.  <input> should have no close tag.");
+
+  isError("{{#if}}{{/if}}", "#if requires an argument");
+  isError("{{#with}}{{/with}}", "#with requires an argument");
+  isError("{{#each}}{{/each}}", "#each requires an argument");
+  isError("{{#unless}}{{/unless}}", "#unless requires an argument");
+
+  isError("{{0 0}}", "Expected IDENTIFIER");
+
+  isError("{{> foo 0 0}}",
+          "First argument must be a function");
+  isError("{{> foo 0 x=0}}",
+          "First argument must be a function");
+  isError("{{#foo 0 0}}{{/foo}}",
+          "First argument must be a function");
+  isError("{{#foo 0 x=0}}{{/foo}}",
+          "First argument must be a function");
 });
