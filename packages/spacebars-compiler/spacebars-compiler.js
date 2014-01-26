@@ -380,6 +380,9 @@ var codeGenInclusionArgs = function (tag) {
     // tag validation has confirmed, in this case, that there is only
     // one argument (`args.length === 1`)
     dataFuncCode = codeGenArgValue(args[0]);
+  } else if (args.length === 1) {
+    // one argument, must be a PATH
+    dataFuncCode = 'Spacebars.call(' + codeGenPath(args[0][1]) + ')';
   } else {
     dataFuncCode = codeGenMustache(args[0][1], args.slice(1),
                                    'dataMustache');
