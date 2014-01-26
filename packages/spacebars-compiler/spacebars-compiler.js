@@ -368,12 +368,12 @@ var codeGenInclusionArgs = function (tag) {
     return { extraArgs: extraArgs };
   } else if (args[0].length === 3) {
     // keyword arguments only, e.g. `{{> point x=1 y=2}}`
-    var args = {};
+    var dataProps = {};
     _.each(args, function (arg) {
       var argKey = arg[2];
-      args[argKey] = 'Spacebars.call(' + codeGenArgValue(arg) + ')';
+      dataProps[argKey] = 'Spacebars.call(' + codeGenArgValue(arg) + ')';
     });
-    dataFuncCode = makeObjectLiteral(args);
+    dataFuncCode = makeObjectLiteral(dataProps);
   } else if (args[0][0] !== 'PATH') {
     // literal first argument, e.g. `{{> foo "blah"}}`
     //
