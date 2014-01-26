@@ -19,7 +19,7 @@ var tokenize = function (input) {
 };
 
 
-Tinytest.add("html - comments", function (test) {
+Tinytest.add("html-tools - comments", function (test) {
   var succeed = function (input, content) {
     var scanner = new Scanner(input);
     var result = getComment(scanner);
@@ -80,7 +80,7 @@ Tinytest.add("html - comments", function (test) {
   succeed('<!-- hello - - world -->', ' hello - - world ');
 });
 
-Tinytest.add("html - doctype", function (test) {
+Tinytest.add("html-tools - doctype", function (test) {
   var succeed = function (input, expectedProps) {
     var scanner = new Scanner(input);
     var result = getDoctype(scanner);
@@ -199,7 +199,7 @@ Tinytest.add("html - doctype", function (test) {
   fatal('<!DOCTYPE html public "-//W3C//DTD HTML 4.0//EN""http://www.w3.org/TR/REC-html40/strict.dtd">');
 });
 
-Tinytest.add("html - tokenize", function (test) {
+Tinytest.add("html-tools - tokenize", function (test) {
 
   var fatal = function (input, messageContains) {
     var error;
