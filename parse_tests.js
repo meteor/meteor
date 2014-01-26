@@ -135,7 +135,6 @@ Tinytest.add("html - parser getContent", function (test) {
   succeed('<br\r x>', BR({x:''}));
   succeed('<br x="y"\r\n>', BR({x:'y'}));
   succeed('<br x="y"\r>', BR({x:'y'}));
-  succeed('<br x="y"\r>', BR({x:'y'}));
   succeed('<br x=\r\n"y">', BR({x:'y'}));
   succeed('<br x=\r"y">', BR({x:'y'}));
   succeed('<br x\r=\r"y">', BR({x:'y'}));
