@@ -1,6 +1,8 @@
 var selftest = require('../selftest.js');
+var Sandbox = selftest.Sandbox;
 var Run = selftest.Run;
 var path = require('path');
+var files = require('../files.js');
 
 // This runs an old-style unit test. These are just .js files that
 // require() whatever bits of the tool they want to test and have at
@@ -30,5 +32,42 @@ selftest.define("bundler-options", function () {
 
 selftest.define("bundler-npm", ["slow"], function () {
   runOldTest('test-bundler-npm.js');
+});
+
+// This last one's is a shell script!
+// XXX pardon the hacky glue to make it work with a sandbox
+
+// If we're running from a checkout, run it both in checkout mode and
+// in release mode. If we're not running from a checkout, just run it
+// against the installed copy.
+
+selftest.define("old cli tests", ["slow"], function () {
+  var s = new Sandbox;
+  var run = new Run(path.join(__dirname, 'old', 'cli-test.sh'), {
+    env: {
+      METEOR_TOOL_PATH: s.execPath
+    }
+  });
+  run.waitSecs(1000);
+  run.match("PASSED\n");
+  run.expectExit(0);
+});
+
+selftest.define("old cli tests (warehouse)", ["slow", "checkout"], function () {
+  var s = new Sandbox({
+    warehouse: {
+      v1: { tools: 'tools1', latest: true }
+    }
+  });
+
+  var run = new Run(path.join(__dirname, 'old', 'cli-test.sh'), {
+    env: {
+      METEOR_TOOL_PATH: s.execPath,
+      METEOR_WAREHOUSE_DIR: s.warehouse
+    }
+  });
+  run.waitSecs(1000);
+  run.match("PASSED\n");
+  run.expectExit(0);
 });
 

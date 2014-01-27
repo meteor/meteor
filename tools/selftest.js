@@ -338,20 +338,20 @@ var Sandbox = function (options) {
     fs.symlinkSync("tools/latest/bin/meteor",
                    path.join(self.warehouse, 'meteor'));
   }
+
+  // Figure out the 'meteor' to run
+  if (self.warehouse)
+    self.execPath = path.join(self.warehouse, 'meteor');
+  else if (release.current.isCheckout())
+    self.execPath = path.join(files.getCurrentToolsDir(), 'meteor');
+  else
+    self.execPath = path.join(files.getCurrentToolsDir(), 'bin', 'meteor');
 };
 
 _.extend(Sandbox.prototype, {
   // Create a new test run of the tool in this sandbox.
   run: function (/* arguments */) {
     var self = this;
-
-    var execPath;
-    if (self.warehouse)
-      execPath = path.join(self.warehouse, 'meteor');
-    else if (release.current.isCheckout())
-      execPath = path.join(files.getCurrentToolsDir(), 'meteor');
-    else
-      execPath = path.join(files.getCurrentToolsDir(), 'bin', 'meteor');
 
     var env = _.clone(self.env);
     env.METEOR_SESSION_FILE = path.join(self.root, '.meteorsession');

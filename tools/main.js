@@ -636,10 +636,7 @@ Fiber(function () {
   }
 
   // If we're not running the correct version of the tools for this
-  // release, fetch it and re-run. But suppress this if
-  // process.env.METEOR_TEST_NO_SPRINGBOARD is set; this hook allows
-  // unit tests to test the current tools's ability to run other
-  // releases.
+  // release, fetch it and re-run.
   //
   // This will never happen when we're springboarding as part of an
   // update, because the correct tools version will have been chosen
