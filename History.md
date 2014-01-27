@@ -20,6 +20,10 @@
 * Add `frame-src` to `browser-policy-content` and account for
   cross-browser CSP disparities.
 
+* Upgrade jQuery from 1.8.2 to 1.10.2.
+  XXX see http://jquery.com/upgrade-guide/1.9/ for incompatibilities
+  XXX consider taking 1.11 instead, which was released this week
+
 
 ## v0.7.0.1
 
