@@ -129,9 +129,8 @@ main.registerCommand({
     if (! packages)
       return 1; // build failed
 
-    _.each(packages, function (p) {
-      p.preheat();
-    });
+    // XXX we rely on the fact that library.list() forces all of the
+    // packages to be built. #ListingPackagesImpliesBuildingThem
   }
 });
 

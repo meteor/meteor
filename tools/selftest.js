@@ -224,26 +224,125 @@ _.extend(OutputLog.prototype, {
 // meteor install or checkout, from the user's homedir, and from the
 // state of any other sandbox.
 //
-// XXX let you pick whether you want it to look like a checkout or a
-// release
+// This will throw TestFailure if it has to build packages to set up
+// the sandbox and the build fails. So, only call it from inside
+// tests.
 //
 // options:
 // - app: if omitted, runs created in this sandbox aren't inside an
 //   app directory. if present, a test app is created by copying the
 //   named template from tools/selftests/apps, and runs created inside
 //   the sandbox are inside that test app. XXX implement
-
+// - warehouse: set to sandbox the warehouse too. If you don't do
+//   this, the tests are run in the same context (checkout or
+//   warehouse) as the actual copy of meteor you're running (the
+//   meteor in 'meteor self-test'. This may only be set when you're
+//   running 'meteor self-test' from a checkout. If it is set, it
+//   should look something like this:
+//   {
+//     version1: { tools: 'tools1', notices: (...) },
+//     version2: { tools: 'tools2', upgraders: ["a"],
+//     notices: (...), latest: true }
+//   }
+//   This would set up a simulated warehouse with two releases in it,
+//   one called 'version1' and having a tools version of 'tools1', and
+//   similarly with 'version2'/'tools2', with the latter being marked
+//   as the latest release, and the latter also having a single
+//   upgrader named "a". The releases are made by building the
+//   checkout into a release, and are identical except for their
+//   version names. If you pass 'notices' (which is optional), set it
+//   to the verbatim contents of the notices.json file for the
+//   release, as an object.
 var Sandbox = function (options) {
   var self = this;
   options = options || {};
   self.root = files.mkdtemp();
   self.cwd = path.join(self.root, 'cwd');
+  self.warehouse = null;
 
   if (_.has(options, 'app')) {
     files.cp_r(path.join(__dirname, 'selftests', 'apps', options.app),
                self.cwd);
   } else {
     fs.mkdirSync(self.cwd, 0755);
+  }
+
+  if (_.has(options, 'warehouse')) {
+    // Make a directory to hold our new warehouse
+    self.warehouse = path.join(self.root, 'warehouse');
+    console.log(self.warehouse);
+    fs.mkdirSync(self.warehouse, 0755);
+    fs.mkdirSync(path.join(self.warehouse, 'releases'), 0755);
+    fs.mkdirSync(path.join(self.warehouse, 'tools'), 0755);
+    fs.mkdirSync(path.join(self.warehouse, 'packages'), 0755);
+
+    // Build all packages and symlink them into the warehouse. Make up
+    // random version names for each one.
+    var listResult = release.current.library.list();
+    var pkgVersions = {};
+    if (! listResult.packages)
+      throw new TestFailure('build-failure', { messages: listResult.messages });
+    var packages = listResult.packages;
+    _.each(packages, function (pkg, name) {
+      // XXX we rely on the fact that library.list() forces all of the
+      // packages to be built. #ListingPackagesImpliesBuildingThem
+      var version = 'v' + ('' + Math.random()).substr(2, 4); // eg, "v5324"
+      pkgVersions[name] = version;
+      fs.mkdirSync(path.join(self.warehouse, 'packages', name), 0755);
+      fs.symlinkSync(
+        path.resolve(files.getCurrentToolsDir(), 'packages', name, '.build'),
+        path.join(self.warehouse, 'packages', name, version)
+      );
+    });
+
+    // Now create each requested release.
+    var seenLatest = false;
+    _.each(options.warehouse, function (config, releaseName) {
+      var toolsVersion = config.tools || releaseName;
+
+      // Release info
+      var manifest = {
+        tools: toolsVersion,
+        packages: pkgVersions,
+        upgraders: config.upgraders
+      };
+      fs.writeFileSync(path.join(self.warehouse, 'releases',
+                                 releaseName + ".release.json"),
+                       JSON.stringify(manifest), 'utf8');
+      if (config.notices) {
+        fs.writeFileSync(path.join(self.warehouse, 'releases',
+                                   releaseName + ".notices.json"),
+                         JSON.stringify(config.notices), 'utf8');
+      }
+
+      // A copy of our built tools tree with the appropriate version
+      files.cp_r(buildTools(),
+                 path.join(self.warehouse, 'tools', toolsVersion));
+      fs.writeFileSync(path.join(self.warehouse, 'tools', toolsVersion,
+                                 ".tools_version.txt"),
+                       toolsVersion, 'utf8');
+
+      // Latest?
+      if (config.latest) {
+        if (seenLatest)
+          throw new Error("multiple releases marked as latest?");
+        fs.symlinkSync(
+          releaseName + ".release.json",
+          path.join(self.warehouse, 'releases', 'latest')
+        );
+        fs.symlinkSync(toolsVersion,
+                       path.join(self.warehouse, 'tools', 'latest'));
+        seenLatest = true;
+      }
+    });
+
+    if (! seenLatest)
+      throw new Error("no release marked as latest?");
+
+    // And a cherry on top
+    fs.symlinkSync("tools/latest/bin/meteor",
+                   path.join(self.warehouse, 'meteor'));
+    fs.chmodSync(path.join(self.warehouse, 'meteor'), 0755);
   }
 };
 
@@ -257,6 +356,52 @@ _.extend(Sandbox.prototype, {
   }
 });
 
+
+// Build a tools release into a temporary directory. Returns that
+// directory. This is intended to be a reusable template, copied into
+// each sandbox that needs it, so don't modify it.
+//
+// When you copy the tree, you'll probably want to change
+// .tools_version.txt at the root of the tree to a version name of
+// your choosing.
+var buildTools = _.once(function () {
+  var outputDir = path.join(files.mkdtemp(), 'tools-build');
+
+  var child_process = require("child_process");
+  var fut = new Future;
+
+  if (! files.inCheckout())
+    throw new Error("not in checkout?");
+
+  var execPath = path.join(files.getCurrentToolsDir(),
+                           'scripts', 'admin', 'build-tools-tree.sh');
+  var env = _.clone(process.env);
+  env['TARGET_DIR'] = outputDir;
+
+  var proc = child_process.spawn(execPath, [], {
+    env: env,
+    stdio: 'ignore'
+  });
+
+  proc.on('exit', function (code, signal) {
+    if (fut) {
+      fut['return'](code === 0);
+    }
+  });
+
+  proc.on('error', function (err) {
+    if (fut) {
+      fut['return'](false);
+    }
+  });
+
+  var success = fut.wait();
+  fut = null;
+  if (! success)
+    throw new Error("failed to run scripts/admin/build-tools.sh?");
+
+  return outputDir;
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // Run
@@ -358,12 +503,12 @@ _.extend(Run.prototype, {
       env: env
     });
 
-    self.proc.on('close', function (code, signal) {
+    self.proc.on('exit', function (code, signal) {
       if (self.exitStatus === undefined)
         self._exited({ code: code, signal: signal });
     });
 
-    self.proc.on('close', function (code, signal) {
+    self.proc.on('error', function (err) {
       if (self.exitStatus === undefined)
         self._exited(null);
     });
@@ -632,18 +777,26 @@ var runTests = function (options) {
                              "; actual: " + s(failure.details.actual) + "\n");
       }
 
-      var lines = failure.details.run.outputLog.get();
-      if (! lines.length) {
-        process.stderr.write("  => No output\n");
-      } else {
-        process.stderr.write("  => Last ten lines:\n");
-        _.each(lines.slice(-10), function (line) {
-          process.stderr.write("  " +
-                               (line.channel === "stderr" ? "2| " : "1| ") +
-                               line.text +
-                               (line.bare ? "%" : "") + "\n");
-        });
+      if (failure.details.run) {
+        var lines = failure.details.run.outputLog.get();
+        if (! lines.length) {
+          process.stderr.write("  => No output\n");
+        } else {
+          process.stderr.write("  => Last ten lines:\n");
+          _.each(lines.slice(-10), function (line) {
+            process.stderr.write("  " +
+                                 (line.channel === "stderr" ? "2| " : "1| ") +
+                                 line.text +
+                                 (line.bare ? "%" : "") + "\n");
+          });
+        }
       }
+
+      if (failure.details.messages) {
+        process.stderr.write("  => Errors while building:\n");
+        process.stderr.write(failure.details.messages.formatMessages());
+      }
+
       failuresInFile[test.file] = true;
     } else {
       process.stderr.write("ok\n");

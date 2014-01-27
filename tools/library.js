@@ -331,6 +331,12 @@ _.extend(Library.prototype, {
   //
   // On failure, returns an object with keys:
   // - messages: a buildmessage.MessageSet with the errors
+  //
+  // XXX various callers currently rely on the fact that calling
+  // list() forces all of the packages in the library to be built!
+  // They shouldn't do that; they should instead call build()
+  // themselves if they want the packages
+  // built. #ListingPackagesImpliesBuildingThem
   list: function () {
     var self = this;
     var names = [];
