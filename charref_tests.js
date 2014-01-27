@@ -1,7 +1,7 @@
 var Scanner = HTML._$.Scanner;
 var getCharacterReference = HTML._$.getCharacterReference;
 
-Tinytest.add("html - entities", function (test) {
+Tinytest.add("html-tools - entities", function (test) {
   var succeed = function (input, match, codepoints) {
     if (typeof input === 'string')
       input = {input: input};

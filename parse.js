@@ -294,12 +294,17 @@ var convertCharRef = function (token) {
 };
 
 // Input is always a dictionary (even if zero attributes) and each
-// value in the dictionary is an array of `Chars` and `CharRef`
-// tokens.  An empty array means the attribute has a value of "".
+// value in the dictionary is an array of `Chars`, `CharRef`,
+// and maybe `Special` tokens.
 //
 // Output is null if there are zero attributes, and otherwise a
-// dictionary.  Each value in the dictionary is a string (possibly
-// empty) or an array of non-empty strings and CharRef tags.
+// dictionary.  Each value in the dictionary is HTMLjs (e.g. a
+// string or an array of `Chars`, `CharRef`, and `Special`
+// nodes).
+//
+// An attribute value with no input tokens is represented as "",
+// not an empty array, in order to prop open empty attributes
+// with no template tags.
 var parseAttrs = function (attrs) {
   var result = null;
 
@@ -316,13 +321,7 @@ var parseAttrs = function (attrs) {
       } else if (token.t === 'Special') {
         outParts.push(HTML.Special(token.v));
       } else if (token.t === 'Chars') {
-        var str = token.v;
-        var N = outParts.length;
-
-        if (N && (typeof outParts[N - 1] === 'string'))
-          outParts[N - 1] += str;
-        else
-          outParts.push(str);
+        pushOrAppendString(outParts, token.v);
       }
     }
 
@@ -331,9 +330,8 @@ var parseAttrs = function (attrs) {
       // array, even if there is only one Special.
       result[k] = outParts;
     } else {
-      var outValue = (outParts.length === 0 ? '' :
-                      (outParts.length === 1 ? outParts[0] :
-                       outParts));
+      var outValue = (inValue.length === 0 ? '' :
+                      (outParts.length === 1 ? outParts[0] : outParts));
       var properKey = HTML.properCaseAttributeName(k);
       result[properKey] = outValue;
     }
