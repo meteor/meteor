@@ -23,11 +23,12 @@ Plugin.registerSourceHandler("less", function (compileStep) {
     paths: [path.dirname(compileStep._fullInputPath)] // for @import
   };
 
+  var parser = new(less.Parser)(options);
   var f = new Future;
-  var css;
+  var ast, css;
   try {
-    less.render(source, options, f.resolver());
-    css = f.wait();
+    parser.parse(source, f.resolver());
+    ast = f.wait();
   } catch (e) {
     // less.render() is supposed to report any errors via its
     // callback. But sometimes, it throws them instead. This is
@@ -41,9 +42,23 @@ Plugin.registerSourceHandler("less", function (compileStep) {
     return;
   }
 
+  f2 = new Future;
+  css = ast.toCSS({
+    sourceMap: Boolean(true),
+    writeSourceMap: function (sourceMap) {
+      f2.return(sourceMap);
+    }
+  });
+
+  sourceMap = JSON.parse(f2.wait());
+
+  sourceMap.sources = [compileStep.inputPath];
+  sourceMap.sourcesContent = [source];
+
   compileStep.addStylesheet({
     path: compileStep.inputPath + ".css",
-    data: css
+    data: css,
+    sourceMap: JSON.stringify(sourceMap)
   });
 });;
 

@@ -658,7 +658,8 @@ _.extend(Target.prototype, {
             }
           }
 
-          if (resource.type === "js" && resource.sourceMap) {
+          // Both CSS and JS files can have sourcemaps
+          if (resource.sourceMap) {
             f.setSourceMap(resource.sourceMap, path.dirname(relPath));
           }
 
