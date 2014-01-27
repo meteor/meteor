@@ -5,7 +5,6 @@ var archinfo = require('../archinfo.js');
 
 selftest.define("argument parsing", function () {
   var s = new Sandbox;
-  var sApp = new Sandbox({ app: 'empty' });
   var run;
 
   // bad command
@@ -83,53 +82,53 @@ selftest.define("argument parsing", function () {
   run.expectExit(1);
 
   // passing short and long options
-  run = sApp.run("dummy", "--email", "x", "-p", "2000", "--port", "2000");
+  run = s.run("dummy", "--email", "x", "-p", "2000", "--port", "2000");
   run.matchErr("can't pass both -p and --port");
   run.expectExit(1);
 
   // multiple values for an option
-  run = sApp.run("dummy", "--email", "x", "--port", "2000", "--port", "3000");
+  run = s.run("dummy", "--email", "x", "--port", "2000", "--port", "3000");
   run.matchErr("can only take one --port option");
   run.expectExit(1);
 
-  run = sApp.run("dummy", "--email", "x", "-p", "2000", "-p", "2000");
+  run = s.run("dummy", "--email", "x", "-p", "2000", "-p", "2000");
   run.matchErr("can only take one --port (-p) option");
   run.expectExit(1);
 
-  run = sApp.run("dummy", "--email", "x", "--changed", "--changed");
+  run = s.run("dummy", "--email", "x", "--changed", "--changed");
   run.matchErr("can only take one --changed option");
   run.expectExit(1);
 
   // missing option value
-  run = sApp.run("dummy", "--email", "x", "--port");
+  run = s.run("dummy", "--email", "x", "--port");
   run.matchErr("the --port option needs a value");
   run.expectExit(1);
 
-  run = sApp.run("dummy", "--email", "x", "--changed", "-p");
+  run = s.run("dummy", "--email", "x", "--changed", "-p");
   run.matchErr("the --port (-p) option needs a value");
   run.expectExit(1);
 
   // non-numeric value for numeric option
-  run = sApp.run("dummy", "--email", "x", "--port", "kitten");
+  run = s.run("dummy", "--email", "x", "--port", "kitten");
   run.matchErr("--port must be a number");
   run.expectExit(1);
 
-  run = sApp.run("dummy", "--email", "x", "-p", "1234k");
+  run = s.run("dummy", "--email", "x", "-p", "1234k");
   run.matchErr("--port (-p) must be a number");
   run.expectExit(1);
 
   // incorrect number of arguments
-  run = sApp.run("dummy", "--email", "x", "1", "2", "3");
+  run = s.run("dummy", "--email", "x", "1", "2", "3");
   run.matchErr("too many arguments");
   run.matchErr("Usage: meteor dummy");
   run.expectExit(1);
 
-  run = sApp.run("bundle");
+  run = s.run("bundle");
   run.matchErr("not enough arguments");
   run.matchErr("Usage: meteor bundle");
   run.expectExit(1);
 
-  run = sApp.run("bundle", "a", "b");
+  run = s.run("bundle", "a", "b");
   run.matchErr("too many arguments");
   run.matchErr("Usage: meteor bundle");
   run.expectExit(1);
@@ -198,7 +197,9 @@ selftest.define("argument parsing", function () {
   run.matchErr("meteor create"); // new user help
   run.expectExit(1);
 
-  run = sApp.run("list", "--using");
+  s.addApp('myapp', 'empty');
+  s.cd('myapp');
+  run = s.run("list", "--using");
   run.expectExit(0);
 });
 

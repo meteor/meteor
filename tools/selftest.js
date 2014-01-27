@@ -222,17 +222,15 @@ _.extend(OutputLog.prototype, {
 // Represents an install of the tool. Creating this creates a private
 // sandbox with its own state, separate from the state of the current
 // meteor install or checkout, from the user's homedir, and from the
-// state of any other sandbox.
+// state of any other sandbox. It also creates an empty directory
+// which will be, by default, the cwd for runs created inside the
+// sandbox (you can change this with the cd() method).
 //
 // This will throw TestFailure if it has to build packages to set up
 // the sandbox and the build fails. So, only call it from inside
 // tests.
 //
 // options:
-// - app: if omitted, runs created in this sandbox aren't inside an
-//   app directory. if present, a test app is created by copying the
-//   named template from tools/selftests/apps, and runs created inside
-//   the sandbox are inside that test app. XXX implement
 // - warehouse: set to sandbox the warehouse too. If you don't do
 //   this, the tests are run in the same context (checkout or
 //   warehouse) as the actual copy of meteor you're running (the
@@ -257,15 +255,11 @@ var Sandbox = function (options) {
   var self = this;
   options = options || {};
   self.root = files.mkdtemp();
-  self.cwd = path.join(self.root, 'cwd');
   self.warehouse = null;
 
-  if (_.has(options, 'app')) {
-    files.cp_r(path.join(__dirname, 'selftests', 'apps', options.app),
-               self.cwd);
-  } else {
-    fs.mkdirSync(self.cwd, 0755);
-  }
+  self.home = path.join(self.root, 'home');
+  fs.mkdirSync(self.home, 0755);
+  self.cwd = self.home;
 
   if (_.has(options, 'warehouse')) {
     // Make a directory to hold our new warehouse
@@ -342,12 +336,36 @@ var Sandbox = function (options) {
 };
 
 _.extend(Sandbox.prototype, {
+  // Create a new test run of the tool in this sandbox.
   run: function (/* arguments */) {
     var self = this;
     return new Run({
       sandbox: self,
-      args: _.toArray(arguments)
+      args: _.toArray(arguments),
+      cwd: self.cwd
     });
+  },
+
+  // Copy an app from a template into the current directory in the
+  // sandbox. 'to' is the subdirectory to put the app in, and
+  // 'template' is a subdirectory of tools/selftests/apps to copy.
+  //
+  // For example:
+  //   s.addApp('myapp', 'empty');
+  //   s.cd('myapp');
+  addApp: function (to, template) {
+    var self = this;
+    files.cp_r(path.join(__dirname, 'selftests', 'apps', template),
+               path.join(self.cwd, to));
+  },
+
+  // Change the cwd to be used for subsequent runs. For example:
+  //   s.run('create', 'myapp').expectExit(0);
+  //   s.cd('myapp');
+  //   s.run('add', 'somepackage') ...
+  cd: function (relativePath) {
+    var self = this;
+    self.cwd = path.resolve(self.cwd, relativePath);
   }
 });
 
@@ -426,7 +444,7 @@ var buildTools = function (version) {
 // Represents a test run of the tool. Typically created through the
 // run() method on Sandbox.
 //
-// Options: args, sandbox
+// Options: args, sandbox, cwd
 var Run = function (options) {
   var self = this;
 
@@ -434,6 +452,7 @@ var Run = function (options) {
     throw new Error("don't construct this object directly");
   self.sandbox = options.sandbox;
 
+  self.cwd = options.cwd;
   self._args = [];
   self.proc = null;
   self.baseTimeout = 1;
@@ -517,7 +536,7 @@ _.extend(Run.prototype, {
 
     var child_process = require('child_process');
     self.proc = child_process.spawn(execPath, self._args, {
-      cwd: self.sandbox.cwd,
+      cwd: self.cwd,
       env: env
     });
 
