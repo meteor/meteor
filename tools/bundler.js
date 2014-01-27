@@ -844,7 +844,8 @@ _.extend(ClientTarget.prototype, {
 
     // Now we can put the rest of CSS rules into new AST
     _.each(cssAsts, function (ast) {
-      newAst.stylesheet.rules = newAst.stylesheet.rules.concat(ast.stylesheet.rules);
+      newAst.stylesheet.rules =
+        newAst.stylesheet.rules.concat(ast.stylesheet.rules);
     });
 
     // Other build phases might need this AST later
@@ -862,10 +863,14 @@ _.extend(ClientTarget.prototype, {
 
     // Apply all previous sourcemaps if those existed
     // Ex.: less -> css sourcemap sould be applied to css -> css sourcemap
-    var newMap = sourcemap.SourceMapGenerator.fromSourceMap(new sourcemap.SourceMapConsumer(stringifiedCss.map));
+    var newMap = sourcemap.SourceMapGenerator.fromSourceMap(
+      new sourcemap.SourceMapConsumer(stringifiedCss.map));
+
     _.each(originals, function (file, name) {
-      if (file.sourceMap)
-        newMap.applySourceMap(new sourcemap.SourceMapConsumer(file.sourceMap), name);
+      if (! file.sourceMap)
+        return;
+      newMap.applySourceMap(
+        new sourcemap.SourceMapConsumer(file.sourceMap), name);
     });
 
     self.css[0].setSourceMap(JSON.stringify(newMap));
