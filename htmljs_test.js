@@ -106,3 +106,7 @@ Tinytest.add("htmljs - attributes", function (test) {
                                              $dynamic: [{ x: function () { return 'def'; }}]}),
              { x: 'def' });
 });
+
+Tinytest.add("htmljs - details", function (test) {
+  test.equal(HTML.toHTML(false), "false");
+});
