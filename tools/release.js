@@ -19,7 +19,7 @@ var Release = function (options) {
   // release.
   self.library = null;
 
-  var packageDirs = _.clone(options.packageDirs);
+  var packageDirs = _.clone(options.packageDirs || []);
   if (self.name === null) {
     // Running from checkout.
     packageDirs.push(path.join(files.getCurrentToolsDir(), 'packages'));
@@ -165,6 +165,7 @@ release.latestDownloaded = function () {
 // pressing so we'll do it later. (My actual hope is that by time we
 // get around to doing it we'll have found a less hacky way than
 // override() to load a package from a directory.)
+// #HandlePackageDirsDifferently
 release.load = function (name, options) {
   options = options || {};
 
@@ -199,4 +200,18 @@ release.setCurrent = function (releaseObject, forced) {
 
   release.current = releaseObject;
   release.forced = !! forced;
+};
+
+// XXX XXX HACK: Change the packageDirs attribet on
+// release.current. This is terrible form, but we have a legacy test
+// (the bundler test) that needs it. The right way to fix this is to
+// #HandlePackageDirsDifferently
+release._resetPackageDirs = function (packageDirs) {
+  if (! release.current)
+    throw new Error("no release?");
+  release.current = new Release({
+    name: release.current.name,
+    packageDirs: packageDirs,
+    manifest: release.current._manifest
+  });
 };

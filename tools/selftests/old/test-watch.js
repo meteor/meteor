@@ -5,8 +5,8 @@ var assert = require('assert');
 var crypto = require('crypto');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
-var watch = require(path.join(__dirname, '..', 'watch.js'));
-var files = require(path.join(__dirname, '..', 'files.js'));
+var watch = require(path.join(__dirname, '..', '..', 'watch.js'));
+var files = require(path.join(__dirname, '..', '..', 'files.js'));
 
 var tmp = files.mkdtemp('test_watch');
 var serial = 0;

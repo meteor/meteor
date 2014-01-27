@@ -1,5 +1,6 @@
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
+var files = require('../files.js');
 
 selftest.define("springboard", ['checkout'], function () {
   var s = new Sandbox({
@@ -112,4 +113,23 @@ selftest.define("checkout", ['checkout'], function () {
   run.readErr("=> Running Meteor from a checkout");
   run.matchErr("project version (something)\n\n");
   run.expectExit(0);
+});
+
+
+selftest.define("download release", ['net'], function () {
+  var s, run;
+
+  if (files.inCheckout())
+    s = new Sandbox({ warehouse: { v1: { tools: 'tools1', latest: true } } });
+  else
+    s = new Sandbox;
+
+  // End-to-end, online test of downloading and springboarding. This
+  // release was built from the
+  // 'release/release-used-to-test-springboarding' tag in GitHub. All
+  // it does is print this string and exit.
+  run = s.run("--release", "release-used-to-test-springboarding");
+  run.waitSecs(60);
+  run.match("THIS IS A FAKE RELEASE ONLY USED TO TEST ENGINE SPRINGBOARDING");
+  run.expectExit();
 });

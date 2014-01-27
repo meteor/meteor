@@ -344,7 +344,21 @@ _.extend(Sandbox.prototype, {
   // Create a new test run of the tool in this sandbox.
   run: function (/* arguments */) {
     var self = this;
-    return new Run({
+
+    var execPath;
+    if (self.warehouse)
+      execPath = path.join(self.warehouse, 'meteor');
+    else if (release.current.isCheckout())
+      execPath = path.join(files.getCurrentToolsDir(), 'meteor');
+    else
+      execPath = path.join(files.getCurrentToolsDir(), 'bin', 'meteor');
+
+    var env = _.clone(self.env);
+    env.METEOR_SESSION_FILE = path.join(self.root, '.meteorsession');
+    if (self.warehouse)
+      env.METEOR_WAREHOUSE_DIR = self.warehouse;
+
+    return new Run(execPath, {
       sandbox: self,
       args: _.toArray(arguments),
       cwd: self.cwd,
@@ -477,18 +491,17 @@ var buildTools = function (version) {
 ///////////////////////////////////////////////////////////////////////////////
 
 // Represents a test run of the tool. Typically created through the
-// run() method on Sandbox.
+// run() method on Sandbox, but can also be created directly (if you
+// want to do something other than invoke the 'meteor' command in a
+// nice sandbox).
 //
-// Options: args, sandbox, cwd, env
-var Run = function (options) {
+// Options: args, cwd, env
+var Run = function (execPath, options) {
   var self = this;
 
-  if (! _.has(options, 'sandbox'))
-    throw new Error("don't construct this object directly");
-  self.sandbox = options.sandbox;
-
-  self.cwd = options.cwd;
-  self.env = options.env;
+  self.execPath = execPath;
+  self.cwd = options.cwd || process.cwd();
+  self.env = options.env || {};
   self._args = [];
   self.proc = null;
   self.baseTimeout = 1;
@@ -504,9 +517,6 @@ var Run = function (options) {
   self.args.apply(self, options.args || []);
 };
 
-// XXX idea is to also add options to create a project directory to
-// run it inside, set up credential files that are either freshly
-// created or shared..
 _.extend(Run.prototype, {
   // Set command-line arguments. This may be called multiple times as
   // long as the run has not yet started (the run starts after the
@@ -557,22 +567,11 @@ _.extend(Run.prototype, {
     if (self.proc)
       return;
 
-    var execPath = null;
-    if (self.sandbox.warehouse)
-      execPath = path.join(self.sandbox.warehouse, 'meteor');
-    else if (release.current.isCheckout())
-      execPath = path.join(files.getCurrentToolsDir(), 'meteor');
-    else
-      execPath = path.join(files.getCurrentToolsDir(), 'bin', 'meteor');
-
     var env = _.clone(process.env);
-    env.METEOR_SESSION_FILE = path.join(self.sandbox.root, '.meteorsession');
-    if (self.sandbox.warehouse)
-      env.METEOR_WAREHOUSE_DIR = self.sandbox.warehouse;
     _.extend(env, self.env);
 
     var child_process = require('child_process');
-    self.proc = child_process.spawn(execPath, self._args, {
+    self.proc = child_process.spawn(self.execPath, self._args, {
       cwd: self.cwd,
       env: env
     });
@@ -721,13 +720,13 @@ _.extend(Run.prototype, {
   },
 
   // Kill the program and then wait for it to actually exit.
-  stop: function () {
+  stop: markStack(function () {
     var self = this;
     if (self.exitStatus === undefined) {
       self.proc.kill();
       self.expectExit();
     }
-  }
+  })
 });
 
 
@@ -996,13 +995,6 @@ var runTests = function (options) {
 _.extend(exports, {
   runTests: runTests,
   define: define,
-  Sandbox: Sandbox
+  Sandbox: Sandbox,
+  Run: Run
 });
-
-
-
-// XXX have the self-test command take a --universe option (to set the
-// universe used in the spawned copy of meteor). if you don't set one
-// you don't get the tests that talk to servers.
-
-// XXX have a way to fake being offline
