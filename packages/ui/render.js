@@ -314,7 +314,7 @@ var materialize = function (node, parent, before, parentComponent) {
           c.handlers = {};
 
         try {
-          var attrs = HTML.evaluateDynamicAttributes(rawAttrs, parentComponent);
+          var attrs = HTML.evaluateAttributes(rawAttrs, parentComponent);
           var stringAttrs = {};
           if (attrs) {
             for (var k in attrs) {

@@ -590,19 +590,19 @@ Tinytest.add("ui - render - reactive attributes 2", function (test) {
   R2.set([[]]);
   Deps.flush();
   // We combine `['foo']` with what evaluates to `[[[]]]`, which is nully.
-  test.equal(spanCode.evaluateDynamicAttributes().blah, ["foo"]);
+  test.equal(spanCode.evaluateAttributes().blah, ["foo"]);
   check('<span blah="foo"></span>');
 
   R2.set([['']]);
   Deps.flush();
   // We combine `['foo']` with what evaluates to `[[['']]]`, which is non-nully.
-  test.equal(spanCode.evaluateDynamicAttributes().blah, [[['']]]);
+  test.equal(spanCode.evaluateAttributes().blah, [[['']]]);
   check('<span blah=""></span>');
 
   R2.set(null);
   Deps.flush();
   // We combine `['foo']` with `[null]`, which is nully.
-  test.equal(spanCode.evaluateDynamicAttributes().blah, ['foo']);
+  test.equal(spanCode.evaluateAttributes().blah, ['foo']);
   check('<span blah="foo"></span>');
 
   R1.set([[], []]);

@@ -58,7 +58,7 @@ var extendAttrs = function (tgt, src, parentComponent) {
 // These attributes are used to extend `attrs` as long as they are non-nully.
 // All attributes are "evaluated," calling functions and instantiating
 // components.
-HTML.evaluateDynamicAttributes = function (attrs, parentComponent) {
+HTML.evaluateAttributes = function (attrs, parentComponent) {
   if (! attrs)
     return attrs;
 
@@ -82,8 +82,8 @@ HTML.evaluateDynamicAttributes = function (attrs, parentComponent) {
   return result;
 };
 
-HTML.Tag.prototype.evaluateDynamicAttributes = function (parentComponent) {
-  return HTML.evaluateDynamicAttributes(this.attrs, parentComponent);
+HTML.Tag.prototype.evaluateAttributes = function (parentComponent) {
+  return HTML.evaluateAttributes(this.attrs, parentComponent);
 };
 
 // Given "P" create the function `HTML.P`.
