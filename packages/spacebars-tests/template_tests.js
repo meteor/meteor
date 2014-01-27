@@ -140,6 +140,13 @@ Tinytest.add("spacebars - templates - triple", function (test) {
   span = elems[0];
   test.equal(span.className, 'hi');
   test.equal(stripComments(span.innerHTML), 'blah');
+
+  var tmpl = Template.spacebars_template_test_triple2;
+  tmpl.html = function () {};
+  tmpl.html2 = function () { return null; };
+  // no tmpl.html3
+  div = renderToDiv(tmpl);
+  test.equal(stripComments(div.innerHTML), 'xy');
 });
 
 Tinytest.add("spacebars - templates - inclusion args", function (test) {
@@ -784,7 +791,6 @@ testAsyncMulti('spacebars - template - rendered template is DOM in rendered call
   function (test, expect) {
     var tmpl = Template.spacebars_template_test_aaa;
     tmpl.rendered = expect(function () {
-      console.log('in rendered');
       test.equal(trim(stripComments(div.innerHTML)), "aaa");
     });
     var div = renderToDiv(tmpl);
@@ -1250,4 +1256,87 @@ Tinytest.add('spacebars - templates - inclusion helpers are isolated', function 
   test.throws(function () {
     Deps.flush({_throwErrors: true});
   }, /Expected null or template/);
+});
+
+Tinytest.add('spacebars - templates - nully attributes', function (test) {
+  var tmpls = {
+    0: Template.spacebars_template_test_nully_attributes0,
+    1: Template.spacebars_template_test_nully_attributes1,
+    2: Template.spacebars_template_test_nully_attributes2,
+    3: Template.spacebars_template_test_nully_attributes3,
+    4: Template.spacebars_template_test_nully_attributes4,
+    5: Template.spacebars_template_test_nully_attributes5,
+    6: Template.spacebars_template_test_nully_attributes6
+  };
+
+  var run = function (whichTemplate, data, expectTrue) {
+    //var withData = UI.With(function () { return data; },
+    //tmpls[whichTemplate]);
+    var templateWithData = tmpls[whichTemplate].withData(function () {
+      return data; });
+    var div = renderToDiv(templateWithData);
+    var input = div.querySelector('input');
+    var descr = JSON.stringify([whichTemplate, data, expectTrue]);
+    if (expectTrue) {
+      test.isTrue(input.checked, descr);
+      test.equal(typeof input.getAttribute('stuff'), 'string', descr);
+    } else {
+      test.isFalse(input.checked);
+      test.equal(JSON.stringify(input.getAttribute('stuff')), 'null', descr);
+    }
+
+    var html = HTML.toHTML(templateWithData);
+    test.equal(/ checked="[^"]*"/.test(html), !! expectTrue);
+    test.equal(/ stuff="[^"]*"/.test(html), !! expectTrue);
+  };
+
+  run(0, {}, true);
+
+  var truthies = [true, ''];
+  var falsies = [false, null, undefined];
+
+  _.each(truthies, function (x) {
+    run(1, {foo: x}, true);
+  });
+  _.each(falsies, function (x) {
+    run(1, {foo: x}, false);
+  });
+
+  _.each(truthies, function (x) {
+    _.each(truthies, function (y) {
+      run(2, {foo: x, bar: y}, true);
+    });
+    _.each(falsies, function (y) {
+      run(2, {foo: x, bar: y}, true);
+    });
+  });
+  _.each(falsies, function (x) {
+    _.each(truthies, function (y) {
+      run(2, {foo: x, bar: y}, true);
+    });
+    _.each(falsies, function (y) {
+      run(2, {foo: x, bar: y}, false);
+    });
+  });
+
+  run(3, {foo: true}, false);
+  run(3, {foo: false}, false);
+});
+
+Tinytest.add("spacebars - templates - double", function (test) {
+  var tmpl = Template.spacebars_template_test_double;
+
+  var run = function (foo, expectedResult) {
+    tmpl.foo = foo;
+    var div = renderToDiv(tmpl);
+    test.equal(stripComments(div.innerHTML), expectedResult);
+  };
+
+  run('asdf', 'asdf');
+  run(1.23, '1.23');
+  run(0, '0');
+  run(true, 'true');
+  run(false, '');
+  run(null, '');
+  run(undefined, '');
 });

@@ -583,10 +583,10 @@ Tinytest.add('templating - helper typecast Issue #617', function (test) {
 });
 
 Tinytest.add('templating - each falsy Issue #801', function (test) {
-  //Minor test for issue #801
+  //Minor test for issue #801 (#each over array containing nulls)
   Template.test_template_issue801.values = function() { return [0,1,2,null,undefined,false]; };
   var div = renderToDiv(Template.test_template_issue801);
-  test.equal(canonicalizeHtml(div.innerHTML), "012false");
+  test.equal(canonicalizeHtml(div.innerHTML), "012");
 });
 
 Tinytest.add('templating - duplicate template error', function (test) {

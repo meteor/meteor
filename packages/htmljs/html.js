@@ -15,7 +15,7 @@ HTML.evaluate = function (node, parentComponent) {
   if (node == null) {
     return node;
   } else if (typeof node === 'function') {
-    return node();
+    return HTML.evaluate(node(), parentComponent);
   } else if (node instanceof Array) {
     var result = [];
     for (var i = 0; i < node.length; i++)
@@ -24,7 +24,7 @@ HTML.evaluate = function (node, parentComponent) {
   } else if (typeof node.instantiate === 'function') {
     // component
     var instance = node.instantiate(parentComponent || null);
-    var content = instance.render();
+    var content = instance.render('STATIC');
     return HTML.evaluate(content, instance);
   }  else if (node instanceof HTML.Tag) {
     var newChildren = [];

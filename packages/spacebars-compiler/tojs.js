@@ -38,7 +38,8 @@ HTML.Tag.prototype.toJS = function (options) {
         kvStrs.push(toObjectLiteralKey(k) + ': ' +
                     HTML.toJS(this.attrs[k], options));
     }
-    argStrs.push('{' + kvStrs.join(', ') + '}');
+    if (kvStrs.length)
+      argStrs.push('{' + kvStrs.join(', ') + '}');
   }
 
   for (var i = 0; i < this.children.length; i++) {

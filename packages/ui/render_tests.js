@@ -21,7 +21,8 @@ Tinytest.add("ui - render - basic", function (test) {
     materialize(input, div);
     test.equal(canonicalizeHtml(div.innerHTML), expectedInnerHTML);
     test.equal(toHTML(input), expectedHTML);
-    test.equal(toCode(input), expectedCode);
+    if (typeof expectedCode !== 'undefined')
+      test.equal(toCode(input), expectedCode);
   };
 
   run(P('Hello'),
@@ -73,6 +74,20 @@ Tinytest.add("ui - render - basic", function (test) {
       '<div class="foo"><ul><li><p><a href="#one">One</a></p></li><li><p>Two<br>Three</p></li></ul></div>',
       'HTML.DIV({"class": "foo"}, HTML.UL(HTML.LI(HTML.P(HTML.A({href: "#one"}, "One"))), HTML.LI(HTML.P("Two", HTML.BR(), "Three"))))');
 
+
+  // Test nully attributes
+  run(BR({x: null,
+          y: [[], []],
+          a: [['']]}),
+      '<br a="">',
+      '<br a="">',
+      'HTML.BR({a: [[""]]})');
+
+    run(BR({
+      x: function () { return function () { return []; }; },
+      a: function () { return function () { return ''; }; }}),
+        '<br a="">',
+        '<br a="">');
 });
 
 // test that we correctly update the 'value' property on input fields
@@ -640,4 +655,3 @@ Tinytest.add("ui - render - SVG", function (test) {
   test.equal(circle.namespaceURI, "http://www.w3.org/2000/svg");
   test.equal(circle.parentNode.namespaceURI, "http://www.w3.org/2000/svg");
 });
-
