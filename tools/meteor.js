@@ -1371,10 +1371,8 @@ Fiber(function () {
     if (extraArgs)
       newArgv.push.apply(newArgv, extraArgs);
 
-    // Now shell quote this (because kexec wants to use /bin/sh -c) and execvp.
-    // XXX fork kexec and make it take an array instead of using shell
-    var quotedArgv = require('shell-quote').quote(newArgv);
-    require('kexec')(quotedArgv);
+    // Now exec; we're not coming back.
+    require('kexec')(newArgv[0], newArgv);
   };
 
   // Implements --version. Note that we only print to stdout and exit 0 if
