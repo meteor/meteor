@@ -305,7 +305,7 @@ Meteor account.
 
 >>> self-test
 Run tests of the 'meteor' tool.
-Usage: meteor self-test [--changed] [--offline]
+Usage: meteor self-test [--changed] [--offline] [--history n]
 
 Runs internal tests. Exits with status 0 on success.
 
@@ -316,6 +316,9 @@ that defines it. State for this is tracked in ~/.meteortest.
 
 Pass --offline to skip tests that are flagged as requiring an internet
 connection.
+
+Use --history to change the number of lines of program output that are
+shown on test failure. The default is 10.
 
 
 >>> admin

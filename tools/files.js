@@ -13,6 +13,7 @@ var Future = require('fibers/future');
 var sourcemap = require('source-map');
 var sourcemap_support = require('source-map-support');
 
+var utils = require('./utils.js');
 var cleanup = require('./cleanup.js');
 var buildmessage = require('./buildmessage.js');
 var watch = require('./watch.js');
@@ -36,10 +37,6 @@ sourcemap_support.install({
   // locate the source files.
   handleUncaughtExceptions: false
 });
-
-var randomToken = function () {
-  return (Math.random() * 0x100000000 + 1).toString(36);
-};
 
 // given a predicate function and a starting path, traverse upwards
 // from the path until we find a path that satisfies the predicate.
@@ -373,7 +370,7 @@ cleanup.onExit(function (sig) {
 // readonly.
 files.extractTarGz = function (buffer, destPath) {
   var parentDir = path.dirname(destPath);
-  var tempDir = path.join(parentDir, '.tmp' + randomToken());
+  var tempDir = path.join(parentDir, '.tmp' + utils.randomToken());
   files.mkdir_p(tempDir);
 
   var future = new Future;
@@ -446,7 +443,7 @@ files.createTarball = function (dirPath, tarball) {
 // sitting around", but not "there's any time where toDir exists but
 // is in a state other than initial or final".)
 files.renameDirAlmostAtomically = function (fromDir, toDir) {
-  var garbageDir = toDir + '-garbage-' + randomToken();
+  var garbageDir = toDir + '-garbage-' + utils.randomToken();
 
   // Get old dir out of the way, if it exists.
   var movedOldDir = true;

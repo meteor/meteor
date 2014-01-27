@@ -4,9 +4,8 @@ var Sandbox = selftest.Sandbox;
 selftest.define("springboard", ['checkout'], function () {
   var s = new Sandbox({
     warehouse: {
-      v1: { tools: 'tools1', notices: ["kitten"] },
-      v2: { tools: 'tools2', notices: ["puppies"], upgraders: ["cats"],
-            latest: true }}
+      v1: { tools: 'tools1' },
+      v2: { tools: 'tools2', latest: true } }
   });
   var run;
 
@@ -106,7 +105,7 @@ selftest.define("checkout", ['checkout'], function () {
 
   // You get a warning banner when the checkout overrides the release
   // that an app is pinned to
-  s.copyApp('myapp', 'empty');
+  s.createApp('myapp', 'empty');
   s.cd('myapp');
   s.write(".meteor/release", "something");
   run = s.run("list", "--using");
@@ -114,12 +113,3 @@ selftest.define("checkout", ['checkout'], function () {
   run.matchErr("project version (something)\n\n");
   run.expectExit(0);
 });
-
-// XXX NEXT
-// add METEOR_TEST_FAIL_RELEASE_DOWNLOAD=(offline|not-found)
-// add METEOR_TEST_UPDATE_MANIFEST=(replacement manifest, for updater.getManifest) or offline
-//
-// => should be enough to test everything, since the updater only
-// checks to see if the mentioned release is not our 'latest' release
-// (not whether we have it!), and the actual downloading code in the
-// update process is a noop if we already have the release.

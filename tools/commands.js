@@ -1225,14 +1225,16 @@ main.registerCommand({
   name: 'self-test',
   options: {
     changed: { type: Boolean },
-    offline: { type: Boolean }
+    offline: { type: Boolean },
+    history: { type: Number }
   },
   hidden: true
 }, function (options) {
   var selftest = require('./selftest.js');
   return selftest.runTests({
     onlyChanged: options.changed,
-    offline: options.offline
+    offline: options.offline,
+    historyLines: options.history
   });
 });
 

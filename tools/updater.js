@@ -9,6 +9,7 @@ var files = require('./files.js');
 var warehouse = require('./warehouse.js');
 var httpHelpers = require('./http-helpers.js');
 var config = require('./config.js');
+var release = require('./release.js');
 
 if (testingUpdater)
   config.setTestingUpdater(true);

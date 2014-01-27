@@ -124,6 +124,12 @@ exports.sleep = function (ms) {
   fut.wait();
 };
 
+// Return a short, high entropy string without too many funny
+// characters in it.
+exports.randomToken = function () {
+  return (Math.random() * 0x100000000 + 1).toString(36);
+};
+
 // True if this looks like a valid email address. We deliberately
 // don't support
 // - quoted usernames (eg, "foo"@bar.com, " "@bar.com, "@"@bar.com)
@@ -132,3 +138,4 @@ exports.sleep = function (ms) {
 exports.validEmail = function (address) {
   return /^[^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*@([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}$/.test(address);
 }
+

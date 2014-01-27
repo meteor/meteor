@@ -121,7 +121,7 @@ release.usingRightReleaseForApp = function (appDir) {
   if (appRelease === null)
     // Really old app that has no release specified.
     appRelease = warehouse.latestRelease();
-  return release.current.appRelease === appRelease;
+  return release.current.name === appRelease;
 };
 
 // Return the name of the latest release that is downloaded and ready

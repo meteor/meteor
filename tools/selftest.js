@@ -291,6 +291,7 @@ var Sandbox = function (options) {
 
     // Now create each requested release.
     var seenLatest = false;
+    var createdTools = {};
     _.each(options.warehouse, function (config, releaseName) {
       var toolsVersion = config.tools || releaseName;
 
@@ -310,8 +311,11 @@ var Sandbox = function (options) {
       }
 
       // Tools
-      fs.symlinkSync(buildTools(toolsVersion),
-                     path.join(self.warehouse, 'tools', toolsVersion));
+      if (! createdTools[toolsVersion]) {
+        fs.symlinkSync(buildTools(toolsVersion),
+                       path.join(self.warehouse, 'tools', toolsVersion));
+        createdTools[toolsVersion] = true;
+      }
 
       // Latest?
       if (config.latest) {
@@ -358,7 +362,7 @@ _.extend(Sandbox.prototype, {
   // For example:
   //   s.copyApp('myapp', 'empty');
   //   s.cd('myapp');
-  copyApp: function (to, template) {
+  createApp: function (to, template) {
     var self = this;
     files.cp_r(path.join(__dirname, 'selftests', 'apps', template),
                path.join(self.cwd, to));
@@ -669,7 +673,8 @@ _.extend(Run.prototype, {
 
   // Expect the program to exit with the given (numeric) exit
   // status. Fail if the process exits with a different code, or if
-  // the process does not exit after a timeout.
+  // the process does not exit after a timeout. You can also omit the
+  // argument to simply wait for the program to exit.
   expectExit: markStack(function (code) {
     var self = this;
     self._ensureStarted();
@@ -713,6 +718,15 @@ _.extend(Run.prototype, {
     var self = this;
     self._ensureStarted();
     self.proc.stdin.write(string);
+  },
+
+  // Kill the program and then wait for it to actually exit.
+  stop: function () {
+    var self = this;
+    if (self.exitStatus === undefined) {
+      self.proc.kill();
+      self.expectExit();
+    }
   }
 });
 
@@ -796,7 +810,7 @@ var tagDescriptions = {
   net: 'requires an internet connection'
 };
 
-// options: onlyChanged, offline
+// options: onlyChanged, offline, historyLines
 var runTests = function (options) {
   var failureCount = 0;
 
@@ -892,8 +906,10 @@ var runTests = function (options) {
         if (! lines.length) {
           process.stderr.write("  => No output\n");
         } else {
-          process.stderr.write("  => Last ten lines:\n");
-          _.each(lines.slice(-10), function (line) {
+          var historyLines = options.historyLines || 10;
+
+          process.stderr.write("  => Last " + historyLines + " lines:\n");
+          _.each(lines.slice(-historyLines), function (line) {
             process.stderr.write("  " +
                                  (line.channel === "stderr" ? "2| " : "1| ") +
                                  line.text +

@@ -3,23 +3,13 @@ var Future = require('fibers/future');
 var Fiber = require('fibers');
 var files = require('./files.js');
 var inFiber = require('./fiber-helpers.js').inFiber;
+var release = require('./release.js');
 
 var RunLog = require('./run-log.js').RunLog;
 var Proxy = require('./run-proxy.js').Proxy;
 var AppRunner = require('./run-app.js').AppRunner;
 var MongoRunner = require('./run-mongo.js').MongoRunner;
 var Updater = require('./run-updater.js').Updater;
-
-
-///////////////////////////////////////////////////////////////////////////////
-// XXX XXX NEXT (if you want to do more):
-//
-// - deal with XXX's in updater about it needing to go though runlog since
-//   no more stdout redirection
-// - audit future yielding, keeping in mind that return yields
-// - audit for return consistency ('return 0' vs implicit return)
-//
-///////////////////////////////////////////////////////////////////////////////
 
 // options: port, buildOptions, settingsFile, banner, program,
 // onRunEnd, onFailure, watchForChanges, quiet, rootUrl, mongoUrl,
@@ -97,8 +87,8 @@ _.extend(Runner.prototype, {
 
     // print the banner only once we've successfully bound the port
     if (! self.quiet) {
-      process.stdout.write("[[[[[ " + self.banner + " ]]]]]\n\n");
-      process.stderr.write("=> Started proxy.\n");
+      self.runLog.log("[[[[[ " + self.banner + " ]]]]]\n\n");
+      self.runLog.log("=> Started proxy.\n");
     }
 
     if (! self.stopped) {

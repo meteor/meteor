@@ -27,6 +27,7 @@ var Future = require("fibers/future");
 var _ = require("underscore");
 
 var files = require('./files.js');
+var utils = require('./utils.js');
 var updater = require('./updater.js');
 var httpHelpers = require('./http-helpers.js');
 var fiberHelpers = require('./fiber-helpers.js');
@@ -36,7 +37,7 @@ var WAREHOUSE_URLBASE = 'https://warehouse.meteor.com';
 // Like fs.symlinkSync, but creates a temporay link and renames it over the
 // file; this means it works even if the file already exists.
 var symlinkOverSync = function (linkText, file) {
-  var tmpSymlink = file + ".tmp" + files._randomToken();
+  var tmpSymlink = file + ".tmp" + utils.randomToken();
   fs.symlinkSync(linkText, tmpSymlink);
   fs.renameSync(tmpSymlink, file);
 };
