@@ -155,6 +155,11 @@ var builtInLexicals = {
   'elseContent': 'template.__elseContent'
 };
 
+Spacebars.isReservedName = function (name) {
+  return builtInBlockHelpers.hasOwnProperty(name) ||
+    builtInLexicals.hasOwnProperty(name);
+};
+
 var codeGenTemplateTag = function (tag) {
   if (tag.position === HTML.TEMPLATE_TAG_POSITION.IN_START_TAG) {
     // only `tag.type === 'DOUBLE'` allowed (by earlier validation)
