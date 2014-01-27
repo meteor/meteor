@@ -38,10 +38,11 @@ Meteor.Collection = function (name, options) {
     break;
   }
 
-  if (options.transform)
-    self._transform = Deps._makeNonreactive(options.transform);
-  else
+  if (options.transform) {
+    self._transform = Deps._makeNonreactive(Package.minimongo.LocalCollection.wrapTransform(options.transform));
+  } else {
     self._transform = null;
+  }
 
   if (!name && (name !== null)) {
     Meteor._debug("Warning: creating anonymous collection. It will not be " +
@@ -558,6 +559,9 @@ Meteor.Collection.ObjectID = LocalCollection._ObjectID;
           options[name].transform = self._transform;
         if (options.transform)
           options[name].transform = Deps._makeNonreactive(options.transform);
+        if (options[name].transform)
+          options[name].transform = Package.minimongo.LocalCollection.wrapTransform(options[name].transform);
+
         self._validators[name][allowOrDeny].push(options[name]);
       }
     });
