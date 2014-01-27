@@ -786,8 +786,12 @@ _.extend(ClientTarget.prototype, {
       stylesheet: { rules: [] }
     };
 
+    // Filenames passed to AST manipulator mapped to their original files
+    var originals = {};
+
     var cssAsts = _.map(self.css, function (file) {
       var fileName = file.url.replace(/^\//, '');
+      originals[fileName] = file;
       try {
         var parseOptions = { source: fileName, position: true };
         var ast = CssTools.parseCss(file.contents('utf8'), parseOptions);
@@ -846,8 +850,15 @@ _.extend(ClientTarget.prototype, {
     self._cssAst = newAst;
 
     // Overwrite the CSS files list to the new concatenated file
-    var stringifiedCss = CssTools.stringifyCss(newAst, {sourcemap: true}).code;
-    self.css = [new File({ data: new Buffer(stringifiedCss, 'utf8') })];
+    var stringifiedCss = CssTools.stringifyCss(newAst, {sourcemap: true});
+    self.css = [new File({ data: new Buffer(stringifiedCss.code, 'utf8')})];
+
+    // Set the contents of sourcemapped files
+    stringifiedCss.map.sourcesContent =
+      _.map(stringifiedCss.map.sources, function (filename) {
+        return originals[filename].contents('utf8');
+      });
+    self.css[0].setSourceMap(JSON.stringify(stringifiedCss.map));
     self.css[0].setUrlToHash(".css");
   },
   // Minify the CSS in this target
