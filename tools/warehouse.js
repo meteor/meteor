@@ -240,6 +240,14 @@ _.extend(warehouse, {
     // Now get release manifest if we don't already have it, but only write it
     // after we're done writing packages
     if (!releaseAlreadyExists) {
+
+      // For automated self-test. If METEOR_TEST_FAIL_RELEASE_DOWNLOAD
+      // is 'offline' or 'not-found', make release downloads fail.
+      if (process.env.METEOR_TEST_FAIL_RELEASE_DOWNLOAD === "offline")
+        throw new files.OfflineError(new Error("scripted failure for tests"));
+      if (process.env.METEOR_TEST_FAIL_RELEASE_DOWNLOAD === "not-found")
+        throw new warehouse.NoSuchReleaseError;
+
       try {
         var result = httpHelpers.request(
           WAREHOUSE_URLBASE + "/releases/" + releaseVersion + ".release.json");

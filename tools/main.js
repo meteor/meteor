@@ -560,6 +560,11 @@ Fiber(function () {
   }
 
   var releaseName, appRelease;
+  if (appDir) {
+    // appRelease will be null if a super old project with no
+    // .meteor/release or 'none' if created by a checkout
+    appRelease = project.getMeteorReleaseVersion(appDir);
+  }
   if (! files.usesWarehouse()) {
     // Running from a checkout
     if (releaseOverride) {
@@ -575,10 +580,6 @@ Fiber(function () {
       releaseName = releaseOverride;
     } else if (appDir) {
       // Running from an app directory. Use release specified by app.
-      //
-      // appRelease will be null if a super old project with no
-      // .meteor/release or 'none' if created by a checkout
-      appRelease = project.getMeteorReleaseVersion(appDir);
       if (appRelease === 'none') {
         // Looks like we don't have a release. Leave release.current === null.
       } else {
@@ -615,7 +616,7 @@ Fiber(function () {
 
       if (e instanceof warehouse.NoSuchReleaseError) {
         if (releaseOverride) {
-          process.stderr.write(releaseVersion + ": unknown release.\n");
+          process.stderr.write(name + ": unknown release.\n");
         } else if (appDir) {
           process.stderr.write(
 "Problem! This project says that it uses version " + name + " of Meteor,\n" +
@@ -879,7 +880,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
     process.exit(1);
   }
 
-  if (options.requiresRelease && ! release.current) {
+  if (command.requiresRelease && ! release.current) {
     process.stderr.write(
 "You must specify a Meteor version with --release when you work with this\n" +
 "project. It was created from an unreleased Meteor checkout and doesn't\n" +
@@ -889,13 +890,13 @@ commandName + ": You're not in a Meteor project directory.\n" +
     process.exit(1);
   }
 
-  if (options.requiresApp && release.current.isCheckout() &&
+  if (command.requiresApp && release.current.isCheckout() &&
       appRelease !== "none") {
     // For commands that work with apps, if we have overridden the
     // app's usual release by using a checkout, print a reminder banner.
     process.stderr.write(
-"=> Running Meteor from a checkout -- overrides project version (%s)\n\n",
-      appRelease);
+"=> Running Meteor from a checkout -- overrides project version (" +
+        appRelease + ")\n\n");
   }
 
   // Now that we're ready to start executing the command, if we are in

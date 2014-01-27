@@ -197,7 +197,7 @@ selftest.define("argument parsing", function () {
   run.matchErr("meteor create"); // new user help
   run.expectExit(1);
 
-  s.addApp('myapp', 'empty');
+  s.copyApp('myapp', 'empty');
   s.cd('myapp');
   run = s.run("list", "--using");
   run.expectExit(0);

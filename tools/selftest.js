@@ -260,6 +260,7 @@ var Sandbox = function (options) {
   self.home = path.join(self.root, 'home');
   fs.mkdirSync(self.home, 0755);
   self.cwd = self.home;
+  self.env = {};
 
   if (_.has(options, 'warehouse')) {
     // Make a directory to hold our new warehouse
@@ -342,7 +343,8 @@ _.extend(Sandbox.prototype, {
     return new Run({
       sandbox: self,
       args: _.toArray(arguments),
-      cwd: self.cwd
+      cwd: self.cwd,
+      env: _.clone(self.env)
     });
   },
 
@@ -350,10 +352,13 @@ _.extend(Sandbox.prototype, {
   // sandbox. 'to' is the subdirectory to put the app in, and
   // 'template' is a subdirectory of tools/selftests/apps to copy.
   //
+  // Note that the arguments are the opposite order from 'cp'. That
+  // seems more intuitive to me -- if you disagree, my apologies.
+  //
   // For example:
-  //   s.addApp('myapp', 'empty');
+  //   s.copyApp('myapp', 'empty');
   //   s.cd('myapp');
-  addApp: function (to, template) {
+  copyApp: function (to, template) {
     var self = this;
     files.cp_r(path.join(__dirname, 'selftests', 'apps', template),
                path.join(self.cwd, to));
@@ -366,6 +371,32 @@ _.extend(Sandbox.prototype, {
   cd: function (relativePath) {
     var self = this;
     self.cwd = path.resolve(self.cwd, relativePath);
+  },
+
+  // Set an environment variable for subsequent runs.
+  set: function (name, value) {
+    var self = this;
+    self.env[name] = value;
+  },
+
+  // Undo set().
+  unset: function (name) {
+    var self = this;
+    delete self.env[name];
+  },
+
+  // Write to a file in the sandbox, overwriting its current contents
+  // if any. 'filename' is a path intepreted relative to the Sandbox's
+  // cwd. 'contents' is a string (utf8 is assumed).
+  write: function (filename, contents) {
+    var self = this;
+    fs.writeFileSync(path.join(self.cwd, filename), contents, 'utf8');
+  },
+
+  // Delete a file in the sandbox. 'filename' is as in write().
+  unlink: function (filename) {
+    var self = this;
+    fs.unlinkSync(path.join(self.cwd, filename));
   }
 });
 
@@ -444,7 +475,7 @@ var buildTools = function (version) {
 // Represents a test run of the tool. Typically created through the
 // run() method on Sandbox.
 //
-// Options: args, sandbox, cwd
+// Options: args, sandbox, cwd, env
 var Run = function (options) {
   var self = this;
 
@@ -453,6 +484,7 @@ var Run = function (options) {
   self.sandbox = options.sandbox;
 
   self.cwd = options.cwd;
+  self.env = options.env;
   self._args = [];
   self.proc = null;
   self.baseTimeout = 1;
@@ -533,6 +565,7 @@ _.extend(Run.prototype, {
     env.METEOR_SESSION_FILE = path.join(self.sandbox.root, '.meteorsession');
     if (self.sandbox.warehouse)
       env.METEOR_WAREHOUSE_DIR = self.sandbox.warehouse;
+    _.extend(env, self.env);
 
     var child_process = require('child_process');
     self.proc = child_process.spawn(execPath, self._args, {

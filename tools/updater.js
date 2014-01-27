@@ -19,6 +19,14 @@ if (testingUpdater)
  * exception if the server turned down our request.
  */
 exports.getManifest = function () {
+  // Automated self-test support. You can set an environment variable
+  // to stub out the manifest fetch with a particular value, or to
+  // throw OfflineError.
+  if (process.env.METEOR_TEST_UPDATE_MANIFEST === "offline")
+    throw new files.OfflineError(new Error("scripted failure for tests"));
+  if (process.env.METEOR_TEST_UPDATE_MANIFEST)
+    return JSON.parse(process.env.METEOR_TEST_UPDATE_MANIFEST);
+
   return httpHelpers.getUrl({
     url: config.getUpdateManifestUrl(),
     json: true,

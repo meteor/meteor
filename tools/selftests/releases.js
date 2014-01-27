@@ -36,6 +36,62 @@ selftest.define("springboard", ['checkout'], function () {
   run = s.run("--long-version");
   run.read('v1\ntools1\n');
   run.expectExit(0);
+
+  // Suppose you ask for a release that doesn't exist.
+  s.cd('..');
+  s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'not-found');
+  run = s.run("--release", "weird");
+  run.readErr("weird: unknown release.\n");
+  run.expectEnd();
+  run.expectExit(1);
+
+  // Suppose you're offline and you ask for a release you don't have
+  // cached.
+  s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'offline');
+  run = s.run("--release", "weird");
+  run.matchErr("Meteor weird");
+  run.matchErr("online");
+  run.expectExit(1);
+
+  // Project asking for nonexistent release.
+  s.cd('myapp2');
+  s.write(".meteor/release", "strange");
+  s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'not-found');
+  run = s.run();
+  run.matchErr("version strange of Meteor");
+  run.matchErr("valid Meteor release");
+  run.expectExit(1);
+
+  // You're offline and project asks for non-cached release.
+  s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'offline');
+  run = s.run();
+  run.matchErr("Meteor strange");
+  run.matchErr("not installed");
+  run.matchErr("online");
+  run.expectExit(1);
+
+  // You create an app from a checkout, and then try to use it from an
+  // install without setting a release on it.
+  s.unset('METEOR_TEST_FAIL_RELEASE_DOWNLOAD');
+  s.write(".meteor/release", "none");
+  run = s.run("list", "--using");
+  run.matchErr("must specify");
+  run.matchErr("permanently set");
+  run.expectExit(1);
+
+  // As previous, but you pass --release to manually pick a release.
+  run = s.run("list", "--using", "--release", "v1");
+  run.expectExit(0);
+  run.forbidAll("must specify");
+  run.forbidAll("permanently set");
+
+  // You use modern Meteor with a super old release from the dark ages
+  // before the .meteor/release file. You get the latest version.
+  s.unlink('.meteor/release');
+  run = s.run("--long-version");
+  run.read('v2\ntools2\n');
+  run.expectEnd();
+  run.expectExit(0);
 });
 
 
@@ -48,44 +104,22 @@ selftest.define("checkout", ['checkout'], function () {
   run.matchErr("Can't specify");
   run.expectExit(1);
 
-
-
+  // You get a warning banner when the checkout overrides the release
+  // that an app is pinned to
+  s.copyApp('myapp', 'empty');
+  s.cd('myapp');
+  s.write(".meteor/release", "something");
+  run = s.run("list", "--using");
+  run.readErr("=> Running Meteor from a checkout");
+  run.matchErr("project version (something)\n\n");
+  run.expectExit(0);
 });
-
-
 
 // XXX NEXT
 // add METEOR_TEST_FAIL_RELEASE_DOWNLOAD=(offline|not-found)
-// add METEOR_TEST_UPDATE_MANIFEST=(replacement manifest, for updater.getManifest)
+// add METEOR_TEST_UPDATE_MANIFEST=(replacement manifest, for updater.getManifest) or offline
 //
 // => should be enough to test everything, since the updater only
 // checks to see if the mentioned release is not our 'latest' release
 // (not whether we have it!), and the actual downloading code in the
 // update process is a noop if we already have the release.
-
-
-
-
-/*
-"Sorry, this project uses Meteor " + name + ", which is not installed and\n"+
-"could not be downloaded. Please check to make sure that you are online.\n");
-
-
-"Sorry, Meteor " + name + " is not installed and could not be downloaded.\n"+
-"Please check to make sure that you are online.\n");
-
-"Problem! This project says that it uses version " + name + " of Meteor,\n" +
-"but you don't have that version of Meteor installed and the Meteor update\n" +
-"servers don't have it either. Please edit the .meteor/release file in the\n" +
-"project and change it to a valid Meteor release.\n");
-
-"You must specify a Meteor version with --release when you work with this\n" +
-"project. It was created from an unreleased Meteor checkout and doesn't\n" +
-"have a version associated with it.\n" +
-"\n" +
-"You can permanently set a release for this project with 'meteor update'.\n");
-
-"=> Running Meteor from a checkout -- overrides project version (%s)\n",
-
-
-*/
