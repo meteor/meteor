@@ -229,7 +229,7 @@ var compareElementIndex = function (a, b) {
 
 findComponentWithProp = function (id, comp) {
   while (comp) {
-    if (comp[id])
+    if (typeof comp[id] !== 'undefined')
       return comp;
     comp = comp.parent;
   }
