@@ -139,7 +139,7 @@ _.extend(Ctl, {
     }
   },
 
-  updateProxyActiveTags: function (tags) {
+  updateProxyActiveTags: function (tags, options) {
     var proxy;
     var proxyTagSwitchFuture = new Future;
     AppConfig.configureService('proxy', 'pre0', function (proxyService) {
@@ -148,7 +148,27 @@ _.extend(Ctl, {
           proxy = Follower.connect(proxyService, {
             group: "proxy"
           });
-          proxy.call('updateTags', Ctl.myAppName(), tags);
+          var tries = 0;
+          while (tries < 100) {
+            try {
+              proxy.call('updateTags', Ctl.myAppName(), tags, options);
+              break;
+            } catch (e) {
+              if (e.error === 'not-enough-bindings') {
+                tries++;
+                // try again in a sec.
+                Meteor._sleepForMs(1000);
+              } else if (e.error === 400) {
+                // match failed:
+                // BACKCOMPAT: can remove this eventually.
+                Log.warn("Match failed on updateTags; calling alternate backcompat form.");
+                proxy.call('updateTags', Ctl.myAppName(), tags);
+                break;
+              } else {
+                throw e;
+              }
+            }
+          }
           proxy.disconnect();
           if (!proxyTagSwitchFuture.isResolved())
             proxyTagSwitchFuture['return']();
@@ -166,7 +186,7 @@ _.extend(Ctl, {
                     "or trying to change tags on it. Status: " +
                     (proxy ? proxy.status().status : "no connection"))
         );
-    }, 10*1000);
+    }, 50*1000);
     proxyTagSwitchFuture.wait();
     Meteor.clearTimeout(proxyTimeout);
   },

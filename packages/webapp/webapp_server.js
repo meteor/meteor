@@ -760,10 +760,10 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
       }
     }
     var version = "";
-    if (!process.env.ADMIN_APP) {
-      var AppConfig = Package["application-configuration"].AppConfig;
-      version = AppConfig.getStarForThisJob() || "";
-    }
+
+    var AppConfig = Package["application-configuration"].AppConfig;
+    version = AppConfig.getStarForThisJob() || "";
+
 
     var parsedDdpUrl = _.clone(parsedUrl);
     parsedDdpUrl.protocol = "ddp";

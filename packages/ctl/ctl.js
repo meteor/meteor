@@ -155,7 +155,13 @@ Ctl.Commands.push({
     });
     // Wait for them all to come up and bind to the proxy.
     Meteor._sleepForMs(10000); // XXX: Eventually make sure they're proxy-bound.
-    Ctl.updateProxyActiveTags(['', thisJob.star]);
+    var updateProxyActiveTagsOptions = {
+      requireRegisteredBindingCount: {}
+    };
+    // at least half the new servers should be up.
+    updateProxyActiveTagsOptions.requireRegisteredBindingCount[thisJob.star] =
+      Math.ceil(oldServers.length * 0.5);
+    Ctl.updateProxyActiveTags(['', thisJob.star], updateProxyActiveTagsOptions);
 
     // (eventually) tell the proxy to switch over to using the new star
     // One by one, kill all the old star's server jobs.
