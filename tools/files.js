@@ -284,6 +284,9 @@ files.mkdir_p = function (dir, mode) {
 // file whose basename matches one of the regexps, before
 // transformation, will be skipped.
 //
+// If options.preserveMode is preset, an attempt will be made to
+// preserve the file's mode (Unix permissions).
+//
 // Returns the list of relative file paths copied to the destination,
 // as filtered by ignore and transformed by transformFilename.
 files.cp_r = function (from, to, options) {
@@ -315,6 +318,10 @@ files.cp_r = function (from, to, options) {
         fs.writeFileSync(fullTo, contents);
       }
       copied.push(f);
+    }
+
+    if (options.preserveMode) {
+      fs.chmodSync(fullTo, fs.statSync(fullFrom).mode);
     }
   });
   return copied;

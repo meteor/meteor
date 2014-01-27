@@ -270,7 +270,6 @@ var Sandbox = function (options) {
   if (_.has(options, 'warehouse')) {
     // Make a directory to hold our new warehouse
     self.warehouse = path.join(self.root, 'warehouse');
-    console.log(self.warehouse);
     fs.mkdirSync(self.warehouse, 0755);
     fs.mkdirSync(path.join(self.warehouse, 'releases'), 0755);
     fs.mkdirSync(path.join(self.warehouse, 'tools'), 0755);
@@ -315,12 +314,9 @@ var Sandbox = function (options) {
                          JSON.stringify(config.notices), 'utf8');
       }
 
-      // A copy of our built tools tree with the appropriate version
-      files.cp_r(buildTools(),
-                 path.join(self.warehouse, 'tools', toolsVersion));
-      fs.writeFileSync(path.join(self.warehouse, 'tools', toolsVersion,
-                                 ".tools_version.txt"),
-                       toolsVersion, 'utf8');
+      // Tools
+      fs.symlinkSync(buildTools(toolsVersion),
+                     path.join(self.warehouse, 'tools', toolsVersion));
 
       // Latest?
       if (config.latest) {
@@ -342,7 +338,6 @@ var Sandbox = function (options) {
     // And a cherry on top
     fs.symlinkSync("tools/latest/bin/meteor",
                    path.join(self.warehouse, 'meteor'));
-    fs.chmodSync(path.join(self.warehouse, 'meteor'), 0755);
   }
 };
 
@@ -357,15 +352,25 @@ _.extend(Sandbox.prototype, {
 });
 
 
-// Build a tools release into a temporary directory. Returns that
-// directory. This is intended to be a reusable template, copied into
-// each sandbox that needs it, so don't modify it.
+// Build a tools release into a temporary directory (based on the
+// current checkout), and gives it a version name of
+// 'version'. Returns the directory.
 //
-// When you copy the tree, you'll probably want to change
-// .tools_version.txt at the root of the tree to a version name of
-// your choosing.
-var buildTools = _.once(function () {
-  var outputDir = path.join(files.mkdtemp(), 'tools-build');
+// This is memorized for speed (multiple calls with the same version
+// name may return the same directory), and furthermore I'm not going
+// to promise that it doesn't contain symlinks to your dev_bundle and
+// so forth. So don't modify anything in the returned directory.
+//
+// This function is not reentrant.
+var toolBuildRoot = null;
+var toolBuildCache = {};
+var buildTools = function (version) {
+  if (_.has(toolBuildCache, version))
+    return toolBuildCache[version];
+
+  if (! toolBuildRoot)
+    toolBuildRoot = files.mkdtemp();
+  var outputDir = path.join(toolBuildRoot, version);
 
   var child_process = require("child_process");
   var fut = new Future;
@@ -378,6 +383,12 @@ var buildTools = _.once(function () {
   var env = _.clone(process.env);
   env['TARGET_DIR'] = outputDir;
 
+  // XXX in the future, for speed, might want to duplicate the logic
+  // rather than shelling out to build-tools-tree.sh, so that we can
+  // symlink the dev_bundle (as best we're able) and avoid copying the
+  // node and mongo each time we do this. or, better yet, move all of
+  // the release building scripts into javascript (make them tool
+  // commands?).
   var proc = child_process.spawn(execPath, [], {
     env: env,
     stdio: 'ignore'
@@ -400,8 +411,13 @@ var buildTools = _.once(function () {
   if (! success)
     throw new Error("failed to run scripts/admin/build-tools.sh?");
 
+  fs.writeFileSync(path.join(outputDir, ".tools_version.txt"),
+                   version, 'utf8');
+
+  toolBuildCache[version] = outputDir;
   return outputDir;
-});
+};
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Run
@@ -487,15 +503,17 @@ _.extend(Run.prototype, {
       return;
 
     var execPath = null;
-    if (release.current.isCheckout())
+    if (self.sandbox.warehouse)
+      execPath = path.join(self.sandbox.warehouse, 'meteor');
+    else if (release.current.isCheckout())
       execPath = path.join(files.getCurrentToolsDir(), 'meteor');
     else
       execPath = path.join(files.getCurrentToolsDir(), 'bin', 'meteor');
 
     var env = _.clone(process.env);
-    _.extend(env, {
-      METEOR_SESSION_FILE: path.join(self.sandbox.root, '.meteorsession')
-    });
+    env.METEOR_SESSION_FILE = path.join(self.sandbox.root, '.meteorsession');
+    if (self.sandbox.warehouse)
+      env.METEOR_WAREHOUSE_DIR = self.sandbox.warehouse;
 
     var child_process = require('child_process');
     self.proc = child_process.spawn(execPath, self._args, {
