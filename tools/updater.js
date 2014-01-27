@@ -1,18 +1,9 @@
-// During automated QA of the updater, modify this file to set testingUpdater to
-// true. This will make it act as if it is at version 0.1.0 and use test URLs
-// for update checks. (Specifically this is for qa/engine-qa.sh in mother)
-// XXX replace with environment variable, or command-line flag?
-var testingUpdater = false;
-
 var inFiber = require('./fiber-helpers.js').inFiber;
 var files = require('./files.js');
 var warehouse = require('./warehouse.js');
 var httpHelpers = require('./http-helpers.js');
 var config = require('./config.js');
 var release = require('./release.js');
-
-if (testingUpdater)
-  config.setTestingUpdater(true);
 
 /**
  * Downloads the current manifest file and returns it. Throws

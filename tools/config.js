@@ -75,8 +75,6 @@ var addScheme = function (host) {
     return "https://" + host;
 };
 
-var testingUpdater = false;
-
 var config = exports;
 _.extend(exports, {
   // True if this the production universe (www.meteor.com)
@@ -161,8 +159,6 @@ _.extend(exports, {
   // URL from which the update manifest may be fetched, eg
   // 'https://update.meteor.com/manifest.json'
   getUpdateManifestUrl: function () {
-    if (testingUpdater)
-      return 'https://s3.amazonaws.com/com.meteor.static/test/update/manifest.json';
     if (isLocalUniverse())
       u = "www.meteor.com"; // localhost can't run the manifest server
     var host = getUniverse().replace(/^www\./, 'update.');
@@ -177,11 +173,6 @@ _.extend(exports, {
     // METEOR_SESSION_FILE is for automated testing purposes only.
     return process.env.METEOR_SESSION_FILE ||
       path.join(process.env.HOME, '.meteorsession');
-  },
-
-  // update.js calls this to set up automated tests
-  setTestingUpdater: function (value) {
-    testingUpdater = value;
   },
 
   // Port to use when querying URLs for the deploy server that backs
