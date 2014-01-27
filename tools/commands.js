@@ -1226,6 +1226,7 @@ main.registerCommand({
   options: {
     changed: { type: Boolean },
     offline: { type: Boolean },
+    slow: { type: Boolean },
     history: { type: Number }
   },
   hidden: true
@@ -1234,6 +1235,7 @@ main.registerCommand({
   return selftest.runTests({
     onlyChanged: options.changed,
     offline: options.offline,
+    includeSlowTests: options.slow,
     historyLines: options.history
   });
 });

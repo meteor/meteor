@@ -2,17 +2,22 @@ var _ = require('underscore');
 var path = require('path');
 var fs = require('fs');
 var assert = require('assert');
-var bundler = require('../../../bundler.js');
-var release = require('../../../release.js');
-var bundlerTest = require('./test-bundler.js');
+var bundler = require('../../bundler.js');
+var release = require('../../release.js');
+var files = require('../../files.js');
 
 // an empty app. notably this app has no .meteor/release file.
 var emptyAppDir = path.join(__dirname, 'empty-app');
 
-exports.runOptionsTest = function () {
+var lastTmpDir = null;
+var tmpDir = function () {
+  return (lastTmpDir = files.mkdtemp());
+};
+
+var runTest = function () {
   console.log("nodeModules: 'skip'");
   assert.doesNotThrow(function () {
-    var tmpOutputDir = bundlerTest.prettyTmpDir();
+    var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
       appDir: emptyAppDir,
       outputPath: tmpOutputDir,
@@ -23,7 +28,7 @@ exports.runOptionsTest = function () {
 
     // sanity check -- main.js has expected contents.
     assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
-                       bundlerTest.mainJSContents);
+                       bundler._mainJsContents);
     // no top level node_modules directory
     assert(!fs.existsSync(path.join(tmpOutputDir,
                                     "programs", "server", "node_modules")));
@@ -41,7 +46,7 @@ exports.runOptionsTest = function () {
 
   console.log("nodeModules: 'skip', no minify");
   assert.doesNotThrow(function () {
-    var tmpOutputDir = bundlerTest.prettyTmpDir();
+    var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
       appDir: emptyAppDir,
       outputPath: tmpOutputDir,
@@ -52,7 +57,7 @@ exports.runOptionsTest = function () {
 
     // sanity check -- main.js has expected contents.
     assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
-                       bundlerTest.mainJSContents);
+                       bundler._mainJsContents);
     // verify that contents are not minified
     var appHtml = fs.readFileSync(path.join(tmpOutputDir, "programs",
                                             "client", "app.html"), 'utf8');
@@ -65,7 +70,7 @@ exports.runOptionsTest = function () {
 
   console.log("nodeModules: 'skip', no minify, testPackages: ['meteor']");
   assert.doesNotThrow(function () {
-    var tmpOutputDir = bundlerTest.prettyTmpDir();
+    var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
       appDir: emptyAppDir,
       outputPath: tmpOutputDir,
@@ -76,7 +81,7 @@ exports.runOptionsTest = function () {
 
     // sanity check -- main.js has expected contents.
     assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
-                       bundlerTest.mainJSContents);
+                       bundler._mainJsContents);
     // verify that tests for the meteor package are included
     var appHtml = fs.readFileSync(path.join(tmpOutputDir, "programs",
                                             "client", "app.html"));
@@ -85,7 +90,7 @@ exports.runOptionsTest = function () {
 
   console.log("nodeModules: 'copy'");
   assert.doesNotThrow(function () {
-    var tmpOutputDir = bundlerTest.prettyTmpDir();
+    var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
       appDir: emptyAppDir,
       outputPath: tmpOutputDir,
@@ -95,7 +100,7 @@ exports.runOptionsTest = function () {
 
     // sanity check -- main.js has expected contents.
     assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
-                       bundlerTest.mainJSContents);
+                       bundler._mainJsContents);
     // node_modules directory exists and is not a symlink
     assert(!fs.lstatSync(path.join(tmpOutputDir, "programs", "server", "node_modules")).isSymbolicLink());
     // node_modules contains fibers
@@ -104,7 +109,7 @@ exports.runOptionsTest = function () {
 
   console.log("nodeModules: 'symlink'");
   assert.doesNotThrow(function () {
-    var tmpOutputDir = bundlerTest.prettyTmpDir();
+    var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
       appDir: emptyAppDir,
       outputPath: tmpOutputDir,
@@ -114,7 +119,7 @@ exports.runOptionsTest = function () {
 
     // sanity check -- main.js has expected contents.
     assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
-                       bundlerTest.mainJSContents);
+                       bundler._mainJsContents);
     // node_modules directory exists and is a symlink
     assert(fs.lstatSync(path.join(tmpOutputDir, "programs", "server", "node_modules")).isSymbolicLink());
     // node_modules contains fibers
@@ -126,3 +131,17 @@ exports.runOptionsTest = function () {
            .isSymbolicLink());
   });
 };
+
+
+var Fiber = require('fibers');
+Fiber(function () {
+  release.setCurrent(release.load(null));
+
+  try {
+    runTest();
+  } catch (err) {
+    console.log(err.stack);
+    console.log('\nBundle can be found at ' + lastTmpDir);
+    process.exit(1);
+  }
+}).run();

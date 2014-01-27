@@ -362,7 +362,7 @@ _.extend(Sandbox.prototype, {
       sandbox: self,
       args: _.toArray(arguments),
       cwd: self.cwd,
-      env: _.clone(self.env)
+      env: env
     });
   },
 
@@ -806,10 +806,11 @@ var define = function (name, tagsList, f) {
 
 var tagDescriptions = {
   checkout: 'can only run from checkouts',
-  net: 'requires an internet connection'
+  net: 'requires an internet connection',
+  slow: 'take quite a long time'
 };
 
-// options: onlyChanged, offline, historyLines
+// options: onlyChanged, offline, includeSlowTests, historyLines
 var runTests = function (options) {
   var failureCount = 0;
 
@@ -847,6 +848,9 @@ var runTests = function (options) {
 
   if (options.offline)
     skipCounts['net'] = 0;
+
+  if (! options.includeSlowTests)
+    skipCounts['slow'] = 0;
 
   var failuresInFile = {};
   var skipsInFile = {};
@@ -979,10 +983,13 @@ var runTests = function (options) {
 //   });
 //
 // The tags are used to group tests. Currently used tags:
-//   'checkout': should only be run when we're running from a checkout
-//   as opposed to a released copy.
-//   'net': test requires an internet connection. Not going to work if
-//   you're on a plane and should be skipped by 'self-test --offline'.
+//   - 'checkout': should only be run when we're running from a
+//     checkout as opposed to a released copy.
+//   - 'net': test requires an internet connection. Not going to work
+//     if you're on a plane and should be skipped by 'self-test
+//     --offline'.
+//   - 'slow': test is slow enough that you don't want to run it
+//     except on purpose. Won't run unless you say 'self-test --slow'.
 //
 // If you don't want to set any tags, you can omit that parameter
 // entirely.

@@ -16,10 +16,19 @@ var runOldTest = function (filename) {
   run.expectExit(0);
 };
 
-selftest.define("watch", function () {
-//  runOldTest('test-watch.js');
+selftest.define("watch", ["slow"], function () {
+  runOldTest('test-watch.js');
 });
 
-selftest.define("bundler", function () {
-  runOldTest('bundler/test-bundler.js');
+selftest.define("bundler-assets", function () {
+  runOldTest('test-bundler-assets.js');
 });
+
+selftest.define("bundler-options", function () {
+  runOldTest('test-bundler-options.js');
+});
+
+selftest.define("bundler-npm", ["slow"], function () {
+  runOldTest('test-bundler-npm.js');
+});
+

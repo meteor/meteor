@@ -116,7 +116,7 @@ selftest.define("checkout", ['checkout'], function () {
 });
 
 
-selftest.define("download release", ['net'], function () {
+selftest.define("download release", ['net', 'slow'], function () {
   var s, run;
 
   if (files.inCheckout())
@@ -129,7 +129,7 @@ selftest.define("download release", ['net'], function () {
   // 'release/release-used-to-test-springboarding' tag in GitHub. All
   // it does is print this string and exit.
   run = s.run("--release", "release-used-to-test-springboarding");
-  run.waitSecs(60);
+  run.waitSecs(1000);
   run.match("THIS IS A FAKE RELEASE ONLY USED TO TEST ENGINE SPRINGBOARDING");
   run.expectExit();
 });

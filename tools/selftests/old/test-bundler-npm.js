@@ -4,16 +4,20 @@ var fs = require('fs');
 var assert = require('assert');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
-var files = require('../../../files.js');
-var bundler = require('../../../bundler.js');
-var release = require('../../../release.js');
-var meteorNpm = require('../../../meteor-npm.js');
-var bundlerTest = require('./test-bundler.js');
+var files = require('../../files.js');
+var bundler = require('../../bundler.js');
+var release = require('../../release.js');
+var meteorNpm = require('../../meteor-npm.js');
+
+var lastTmpDir = null;
+var tmpDir = function () {
+  return (lastTmpDir = files.mkdtemp());
+};
 
 ///
 /// TEST PACKAGE DIR
 ///
-var tmpPackageDirContainer = bundlerTest.prettyTmpDir();
+var tmpPackageDirContainer = tmpDir();
 var testPackageDir = path.join(tmpPackageDirContainer, 'test-package');
 
 var reloadPackages = function () {
@@ -76,10 +80,6 @@ var _assertCorrectPackageNpmDir = function (deps) {
     return [name, val];
   }));
 
-  console.log("ACTUAL", fs.readFileSync(path.join(testPackageDir, ".npm", "package", "npm-shrinkwrap.json"), 'utf8'));
-  console.log("EXPECTED", JSON.stringify({
-    dependencies: expectedMeteorNpmShrinkwrapDependencies}, null, /*indentation, the way npm does it*/2) + '\n');
-
   assert.equal(
     fs.readFileSync(path.join(testPackageDir, ".npm", "package", "npm-shrinkwrap.json"), 'utf8'),
     JSON.stringify({
@@ -119,7 +119,7 @@ var _assertCorrectPackageNpmDir = function (deps) {
 var _assertCorrectBundleNpmContents = function (bundleDir, deps) {
   // sanity check -- main.js has expected contents.
   assert.strictEqual(fs.readFileSync(path.join(bundleDir, "main.js"), "utf8"),
-                     bundlerTest.mainJSContents);
+                     bundler._mainJsContents);
 
   var bundledPackageNodeModulesDir = path.join(
     bundleDir, 'programs', 'server', 'npm', 'test-package', 'main', 'node_modules');
@@ -148,7 +148,7 @@ var looksInstalled = function (nodeModulesDir, name) {
 /// TESTS
 ///
 
-exports.runNpmTest = function () {
+var runTest = function () {
   // XXX this is a huge nasty hack. see release.js,
   // #HandlePackageDirsDifferently
   release._resetPackageDirs([ tmpPackageDirContainer ]);
@@ -156,7 +156,7 @@ exports.runNpmTest = function () {
   console.log("app that uses gcd - clean run");
   assert.doesNotThrow(function () {
     updateTestPackage({gcd: '0.0.0'});
-    var tmpOutputDir = bundlerTest.prettyTmpDir();
+    var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
       appDir: appWithPackageDir,
       outputPath: tmpOutputDir,
@@ -169,7 +169,7 @@ exports.runNpmTest = function () {
 
   console.log("app that uses gcd - no changes, running again");
   assert.doesNotThrow(function () {
-    var tmpOutputDir = bundlerTest.prettyTmpDir();
+    var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
       appDir: appWithPackageDir,
       outputPath: tmpOutputDir,
@@ -182,7 +182,7 @@ exports.runNpmTest = function () {
 
   console.log("app that uses gcd - as would be in a 3rd party repository (no .npm/package/node_modules)");
   assert.doesNotThrow(function () {
-    var tmpOutputDir = bundlerTest.prettyTmpDir();
+    var tmpOutputDir = tmpDir();
 
     // rm -rf .npm/package/node_modules
     var nodeModulesDir = path.join(testPackageDir, ".npm", "package", "node_modules");
@@ -222,7 +222,7 @@ exports.runNpmTest = function () {
   console.log("app that uses gcd - add mime and semver");
   assert.doesNotThrow(function () {
     updateTestPackage({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
-    var tmpOutputDir = bundlerTest.prettyTmpDir();
+    var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
       appDir: appWithPackageDir,
       outputPath: tmpOutputDir,
@@ -235,7 +235,7 @@ exports.runNpmTest = function () {
 
   console.log("app that uses gcd - add mime, as it would happen if you pulled in this change (updated npm-shrinkwrap.json but not node_modules)");
   assert.doesNotThrow(function () {
-    var tmpOutputDir = bundlerTest.prettyTmpDir();
+    var tmpOutputDir = tmpDir();
 
     // rm -rf .npm/package/node_modules/mime
     var nodeModulesMimeDir = path.join(testPackageDir, ".npm", "package", "node_modules", "mime");
@@ -261,7 +261,7 @@ exports.runNpmTest = function () {
   console.log("app that uses gcd - upgrade mime, remove semver");
   assert.doesNotThrow(function () {
     updateTestPackage({gcd: '0.0.0', mime: '1.2.8'});
-    var tmpOutputDir = bundlerTest.prettyTmpDir();
+    var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
       appDir: appWithPackageDir,
       outputPath: tmpOutputDir,
@@ -275,7 +275,7 @@ exports.runNpmTest = function () {
   console.log("app that uses gcd - try downgrading mime to non-existant version");
   assert.doesNotThrow(function () {
     updateTestPackage({gcd: '0.0.0', mime: '0.1.2'});
-    var tmpOutputDir = bundlerTest.prettyTmpDir();
+    var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
       appDir: appWithPackageDir,
       outputPath: tmpOutputDir,
@@ -293,7 +293,7 @@ exports.runNpmTest = function () {
   console.log("app that uses gcd - downgrade mime to an existant version");
   assert.doesNotThrow(function () {
     updateTestPackage({gcd: '0.0.0', mime: '1.2.7'});
-    var tmpOutputDir = bundlerTest.prettyTmpDir();
+    var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
       appDir: appWithPackageDir,
       outputPath: tmpOutputDir,
@@ -310,7 +310,7 @@ exports.runNpmTest = function () {
   assert.doesNotThrow(function () {
     var deps = {gzippo: 'https://github.com/meteor/gzippo/tarball/1e4b955439abc643879ae264b28a761521818f3b'};
     updateTestPackage(deps);
-    var tmpOutputDir = bundlerTest.prettyTmpDir();
+    var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
       appDir: appWithPackageDir,
       outputPath: tmpOutputDir,
@@ -343,10 +343,10 @@ exports.runNpmTest = function () {
     var futures = _.map(_.range(0, 10), function () {
       var future = new Future;
       Fiber(function () {
-        var tmpAppDir = bundlerTest.prettyTmpDir();
+        var tmpAppDir = tmpDir();
         files.cp_r(appWithPackageDir, tmpAppDir);
 
-        var tmpDirToPutBundleTarball = bundlerTest.prettyTmpDir();
+        var tmpDirToPutBundleTarball = tmpDir();
 
         // bundle in a separate process, since we have various bits of
         // shared state, such as cached compiled packages
@@ -377,3 +377,18 @@ exports.runNpmTest = function () {
 
   release._resetPackageDirs();
 };
+
+
+var Fiber = require('fibers');
+Fiber(function () {
+  release.setCurrent(release.load(null));
+  meteorNpm._printNpmCalls = true;
+
+  try {
+    runTest();
+  } catch (err) {
+    console.log(err.stack);
+    console.log('\nBundle can be found at ' + lastTmpDir);
+    process.exit(1);
+  }
+}).run();

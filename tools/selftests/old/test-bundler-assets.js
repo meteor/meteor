@@ -3,22 +3,26 @@ var path = require('path');
 var fs = require('fs');
 var assert = require('assert');
 var Future = require('fibers/future');
-var files = require('../../../files.js');
-var bundler = require('../../../bundler.js');
-var unipackage = require('../../../unipackage.js');
-var release = require('../../../release.js');
-var bundlerTest = require('./test-bundler.js');
+var files = require('../../files.js');
+var bundler = require('../../bundler.js');
+var unipackage = require('../../unipackage.js');
+var release = require('../../release.js');
 
 var appWithPublic = path.join(__dirname, 'app-with-public');
 var appWithPrivate = path.join(__dirname, 'app-with-private');
 
+var lastTmpDir = null;
+var tmpDir = function () {
+  return (lastTmpDir = files.mkdtemp());
+};
+
 // These tests make some assumptions about the structure of stars: that there
 // are client and server programs inside programs/.
 
-exports.runAssetsTest = function () {
+var runTest = function () {
   console.log("Bundle app with public/ directory");
   assert.doesNotThrow(function () {
-    var tmpOutputDir = bundlerTest.prettyTmpDir();
+    var tmpOutputDir = tmpDir();
 
     // XXX This (and other calls to this function in the file) is
     // pretty terrible. see release.js, #HandlePackageDirsDifferently
@@ -55,7 +59,7 @@ exports.runAssetsTest = function () {
     files.rm_recursive(
       path.join(appWithPrivate, "packages", "test-package", ".build"));
 
-    var tmpOutputDir = bundlerTest.prettyTmpDir();
+    var tmpOutputDir = tmpDir();
     release._resetPackageDirs([ path.join(appWithPrivate, "packages") ]);
     var result = bundler.bundle({
       appDir: appWithPrivate,
@@ -100,7 +104,7 @@ exports.runAssetsTest = function () {
 
     // Run the app to check that Assets.getText/Binary do the right things.
     var cp = require('child_process');
-    var meteor = path.join(__dirname, "..", "..", "..", "..", "meteor"); // XXX is this allowed?
+    var meteor = path.join(__dirname, "..", "..", "..", "meteor"); // XXX is this allowed?
     var fut = new Future();
     // use a non-default port so we don't fail if someone is running an app now
     var proc = cp.spawn(meteor, ["--once", "--port", "4123"], {
@@ -126,3 +130,16 @@ exports.runAssetsTest = function () {
   // Be sure to clean up!
   release._resetPackageDirs();
 };
+
+var Fiber = require('fibers');
+Fiber(function () {
+  release.setCurrent(release.load(null));
+
+  try {
+    runTest();
+  } catch (err) {
+    console.log(err.stack);
+    console.log('\nBundle can be found at ' + lastTmpDir);
+    process.exit(1);
+  }
+}).run();
