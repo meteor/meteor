@@ -34,6 +34,7 @@ Fiber(function () {
   var auth = require('./auth.js');
   var url = require('url');
   var config = require('./config.js');
+  var watch = require('./watch.js');
 
   var Future = require('fibers/future');
 
@@ -1399,6 +1400,62 @@ Fiber(function () {
     },
 
     func: auth.whoAmICommand
+  });
+
+  Commands.push({
+    name: "watch",
+    argumentParser: function (opt) {
+      opt.describe('release', 'Specify the release of Meteor to use')
+        .usage(
+          "Usage: meteor watch\n\n" +
+            "Prints a line to stdout every time the application's source" +
+            " files change.\n");
+    },
+
+    func: function (argv) {
+      requireDirInApp("watch");
+      maybePrintUserOverrideMessage();
+
+      var inFiber = require('./fiber-helpers.js').inFiber;
+
+      var watcher;
+      var startWatching = function (watchSet) {
+        if (watcher)
+          watcher.stop();
+        watcher = new watch.Watcher({
+          watchSet: watchSet,
+          onChange: function () {
+            process.stdout.write('Watcher fired\n');
+            context.library.refresh(true);
+            inFiber(bundleAndWatch)();
+          }
+        });
+      };
+
+      var bundleAndWatch = function () {
+        var bundler = require(path.join(__dirname, 'bundler.js'));
+        var bundlePath = path.join(context.appDir, '.meteor', 'local', 'watch-build');
+        var bundleOpts = {
+          nodeModulesMode: 'symlink',
+          minify: false,
+          releaseStamp: context.releaseVersion,
+          library: context.library
+        };
+
+        if (watcher)
+          watcher.stop();
+
+        var bundleResult = bundler.bundle(
+          context.appDir,
+          bundlePath,
+          bundleOpts
+        );
+        var watchSet = bundleResult.watchSet;
+        startWatching(watchSet);
+      };
+
+      inFiber(bundleAndWatch)();
+    }
   });
 
   // Prints a message if $METEOR_TOOLS_DEBUG is set.
