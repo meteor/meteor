@@ -790,13 +790,13 @@ _.extend(ClientTarget.prototype, {
     var originals = {};
 
     var cssAsts = _.map(self.css, function (file) {
-      var fileName = file.url.replace(/^\//, '');
-      originals[fileName] = file;
+      var filename = file.url.replace(/^\//, '');
+      originals[filename] = file;
       try {
-        var parseOptions = { source: fileName, position: true };
+        var parseOptions = { source: filename, position: true };
         var ast = CssTools.parseCss(file.contents('utf8'), parseOptions);
       } catch (e) {
-        buildmessage.error(e.message, { file: fileName });
+        buildmessage.error(e.message, { file: filename });
         return { type: "stylesheet", stylesheet: { rules: [] } };
       }
 
@@ -813,9 +813,9 @@ _.extend(ClientTarget.prototype, {
       // Pick only the imports from the beginning of file ignoring @charset
       // rules as Meteor assumes every file is in utf-8.
       if (_.any(ast.stylesheet.rules, rulePredicate("charset"))) {
-        var fileName = file.url.replace(/^\//, '');
+        var filename = file.url.replace(/^\//, '');
         // XXX make this a buildmessage.warning call rather than a random log
-        console.log("%s: warn: @charset rules in this file will be ignored as Meteor supports only utf-8 at the moment.", fileName);
+        console.log("%s: warn: @charset rules in this file will be ignored as Meteor supports only utf-8 at the moment.", filename);
       }
 
       ast.stylesheet.rules = _.reject(ast.stylesheet.rules,
@@ -833,9 +833,9 @@ _.extend(ClientTarget.prototype, {
       // if there are imports left in the middle of file, warn user as it might
       // be a potential bug (imports are valid only in the beginning of file).
       if (_.any(ast.stylesheet.rules, rulePredicate("import"))) {
-        var fileName = file.url.replace(/^\//, '');
+        var filename = file.url.replace(/^\//, '');
         // XXX make this a buildmessage.warning call rather than a random log
-        console.log("%s: warn: there are some @import rules those are not taking effect as they are required to be in the beginning of the file.", fileName);
+        console.log("%s: warn: there are some @import rules those are not taking effect as they are required to be in the beginning of the file.", filename);
       }
 
       return ast;
