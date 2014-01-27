@@ -226,7 +226,8 @@ _.extend(OplogObserveDriver.prototype, {
     // If we're already fetching this one, or about to, we can't optimize; make
     // sure that we fetch it again if necessary.
     if (self._phase === PHASE.FETCHING &&
-        (self._currentlyFetching.has(id) || self._needToFetch.has(id))) {
+        ((self._currentlyFetching && self._currentlyFetching.has(id)) ||
+         self._needToFetch.has(id))) {
       self._needToFetch.set(id, op.ts.toString());
       return;
     }
