@@ -238,7 +238,7 @@ UI.render = function (kind, parentComponent) {
     throw new Error("Can't render component instance, only component kind");
   var inst = kind.instantiate(parentComponent);
 
-  var content = content = (inst.render && inst.render());
+  var content = (inst.render && inst.render());
 
   var range = new UI.DomRange;
   inst.dom = range;
