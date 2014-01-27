@@ -1,7 +1,10 @@
 if (Meteor.isServer) {
   Meteor.publish("clientInfo", function () {
     var self = this;
-    self.added("clientInfo", "info", self.connection.client);
+    self.added("clientInfo", "info", {
+      clientAddress: self.connection.clientAddress,
+      httpHeaders: self.connection.httpHeaders
+    });
     self.ready();
   });
 }

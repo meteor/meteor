@@ -279,7 +279,8 @@ var Session = function (server, version, socket) {
         Meteor.defer(cb);
       }
     },
-    client: self._clientInfo()
+    clientAddress: self._clientAddress(),
+    httpHeaders: self.socket.headers
   };
 
   socket.send(stringifyDDP({msg: 'connected',
@@ -734,21 +735,6 @@ _.extend(Session.prototype, {
     self._universalSubs = [];
   },
 
-  _clientUserAgent: function () {
-    var self = this;
-
-    // XXX user agent detection should be moved into its own package
-    // so that we can use it without relying on webapp.
-    if (! Package.webapp)
-      return null;
-
-    var userAgent = self.socket.headers["user-agent"];
-    if (! userAgent)
-      return null;
-
-    return Package.webapp.WebAppInternals.identifyBrowser(userAgent);
-  },
-
   // Determine the remote client's IP address, based on the
   // HTTP_FORWARDED_COUNT environment variable representing how many
   // proxies the server is behind.
@@ -776,19 +762,7 @@ _.extend(Session.prototype, {
       return null;
 
     return forwardedFor[forwardedFor.length - httpForwardedCount];
-  },
-
-  // Retrieve information about the client from the socket.
-  _clientInfo: function () {
-    var self = this;
-    return {
-      address: self._clientAddress(),
-      serverHost: self.socket.headers.host,
-      userAgent: self._clientUserAgent(),
-      _headers: self.socket.headers
-    };
   }
-
 });
 
 /******************************************************************************/
