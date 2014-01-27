@@ -49,6 +49,9 @@ Plugin.registerSourceHandler("less", function (compileStep) {
 
 // Register lessimport files with the dependency watcher, without actually
 // processing them.
-Plugin.registerSourceHandler("lessimport", function () {
+Plugin.registerSourceHandler("import.less", function () {
   // Do nothing
 });
+
+// Backward compatibility
+Plugin.registerSourceHandler("lessimport", function () {});
