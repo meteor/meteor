@@ -8,7 +8,7 @@ Package._transitional_registerBuildPlugin({
   sources: [
     'plugin/compile-less.js'
   ],
-  npmDependencies: {"less": "1.3.3"}
+  npmDependencies: {"less": "1.5.0"}
 });
 
 Package.on_test(function (api) {
