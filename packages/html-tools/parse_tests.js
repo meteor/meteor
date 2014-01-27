@@ -13,7 +13,7 @@ var DIV = HTML.DIV;
 var P = HTML.P;
 var TEXTAREA = HTML.TEXTAREA;
 
-Tinytest.add("html - parser getContent", function (test) {
+Tinytest.add("html-tools - parser getContent", function (test) {
 
   var succeed = function (input, expected) {
     var endPos = input.indexOf('^^^');
@@ -148,7 +148,7 @@ Tinytest.add("html - parser getContent", function (test) {
   fatal('<br x=\r>');
 });
 
-Tinytest.add("html - parseFragment", function (test) {
+Tinytest.add("html-tools - parseFragment", function (test) {
   test.equal(HTML.toJS(HTML.parseFragment("<div><p id=foo>Hello</p></div>")),
              HTML.toJS(DIV(P({id:'foo'}, 'Hello'))));
 
@@ -215,7 +215,7 @@ Tinytest.add("html - parseFragment", function (test) {
   });
 });
 
-Tinytest.add("html - getSpecialTag", function (test) {
+Tinytest.add("html-tools - getSpecialTag", function (test) {
 
   // match a simple tag consisting of `{{`, an optional `!`, one
   // or more ASCII letters or spaces, and a closing `}}`.

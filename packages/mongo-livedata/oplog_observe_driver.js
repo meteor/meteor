@@ -2,9 +2,9 @@ var Fiber = Npm.require('fibers');
 var Future = Npm.require('fibers/future');
 
 var PHASE = {
-  QUERYING: 1,
-  FETCHING: 2,
-  STEADY: 3
+  QUERYING: "QUERYING",
+  FETCHING: "FETCHING",
+  STEADY: "STEADY"
 };
 
 // OplogObserveDriver is an alternative to PollingObserveDriver which follows
@@ -28,7 +28,7 @@ OplogObserveDriver = function (options) {
   Package.facts && Package.facts.Facts.incrementServerFact(
     "mongo-livedata", "observe-drivers-oplog", 1);
 
-  self._phase = PHASE.QUERYING;
+  self._registerPhaseChange(PHASE.QUERYING);
 
   self._published = new LocalCollection._IdMap;
   var selector = self._cursorDescription.selector;
@@ -51,32 +51,32 @@ OplogObserveDriver = function (options) {
   forEachTrigger(self._cursorDescription, function (trigger) {
     self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntry(
       trigger, function (notification) {
-        var op = notification.op;
-        if (notification.dropCollection) {
-          // Note: this call is not allowed to block on anything (especially on
-          // waiting for oplog entries to catch up) because that will block
-          // onOplogEntry!
-          self._needToPollQuery();
-        } else {
-          // All other operators should be handled depending on phase
-          if (self._phase === PHASE.QUERYING)
-            self._handleOplogEntryQuerying(op);
-          else
-            self._handleOplogEntrySteadyOrFetching(op);
-        }
+        Meteor._noYieldsAllowed(function () {
+          var op = notification.op;
+          if (notification.dropCollection) {
+            // Note: this call is not allowed to block on anything (especially
+            // on waiting for oplog entries to catch up) because that will block
+            // onOplogEntry!
+            self._needToPollQuery();
+          } else {
+            // All other operators should be handled depending on phase
+            if (self._phase === PHASE.QUERYING)
+              self._handleOplogEntryQuerying(op);
+            else
+              self._handleOplogEntrySteadyOrFetching(op);
+          }
+        });
       }
     ));
   });
 
   // XXX ordering w.r.t. everything else?
   self._stopHandles.push(listenAll(
-    self._cursorDescription, function (notification, complete) {
+    self._cursorDescription, function (notification) {
       // If we're not in a write fence, we don't have to do anything.
       var fence = DDPServer._CurrentWriteFence.get();
-      if (!fence) {
-        complete();
+      if (!fence)
         return;
-      }
       var write = fence.beginWrite();
       // This write cannot complete until we've caught up to "this point" in the
       // oplog, and then made it back to the steady state.
@@ -96,7 +96,6 @@ OplogObserveDriver = function (options) {
           self._writesToCommitWhenWeReachSteady.push(write);
         }
       });
-      complete();
     }
   ));
 
@@ -155,55 +154,60 @@ _.extend(OplogObserveDriver.prototype, {
   },
   _fetchModifiedDocuments: function () {
     var self = this;
-    self._phase = PHASE.FETCHING;
-    while (!self._stopped && !self._needToFetch.empty()) {
-      if (self._phase !== PHASE.FETCHING)
-        throw new Error("phase in fetchModifiedDocuments: " + self._phase);
+    self._registerPhaseChange(PHASE.FETCHING);
+    // Defer, because nothing called from the oplog entry handler may yield, but
+    // fetch() yields.
+    Meteor.defer(function () {
+      while (!self._stopped && !self._needToFetch.empty()) {
+        if (self._phase !== PHASE.FETCHING)
+          throw new Error("phase in fetchModifiedDocuments: " + self._phase);
 
-      self._currentlyFetching = self._needToFetch;
-      var thisGeneration = ++self._fetchGeneration;
-      self._needToFetch = new LocalCollection._IdMap;
-      var waiting = 0;
-      var anyError = null;
-      var fut = new Future;
-      // This loop is safe, because _currentlyFetching will not be updated
-      // during this loop (in fact, it is never mutated).
-      self._currentlyFetching.forEach(function (cacheKey, id) {
-        waiting++;
-        self._mongoHandle._docFetcher.fetch(
-          self._cursorDescription.collectionName, id, cacheKey,
-          function (err, doc) {
-            if (err) {
-              if (!anyError)
-                anyError = err;
-            } else if (!self._stopped && self._phase === PHASE.FETCHING
-                       && self._fetchGeneration === thisGeneration) {
-              // We re-check the generation in case we've had an explicit
-              // _pollQuery call which should effectively cancel this round of
-              // fetches.  (_pollQuery increments the generation.)
-              self._handleDoc(id, doc);
-            }
-            waiting--;
-            // Because fetch() never calls its callback synchronously, this is
-            // safe (ie, we won't call fut.return() before the forEach is done).
-            if (waiting === 0)
-              fut.return();
-          });
-      });
-      fut.wait();
-      // XXX do this even if we've switched to PHASE.QUERYING?
-      if (anyError)
-        throw anyError;
-      // Exit now if we've had a _pollQuery call.
-      if (self._phase === PHASE.QUERYING)
-        return;
-      self._currentlyFetching = null;
-    }
-    self._beSteady();
+        self._currentlyFetching = self._needToFetch;
+        var thisGeneration = ++self._fetchGeneration;
+        self._needToFetch = new LocalCollection._IdMap;
+        var waiting = 0;
+        var anyError = null;
+        var fut = new Future;
+        // This loop is safe, because _currentlyFetching will not be updated
+        // during this loop (in fact, it is never mutated).
+        self._currentlyFetching.forEach(function (cacheKey, id) {
+          waiting++;
+          self._mongoHandle._docFetcher.fetch(
+            self._cursorDescription.collectionName, id, cacheKey,
+            function (err, doc) {
+              if (err) {
+                if (!anyError)
+                  anyError = err;
+              } else if (!self._stopped && self._phase === PHASE.FETCHING
+                         && self._fetchGeneration === thisGeneration) {
+                // We re-check the generation in case we've had an explicit
+                // _pollQuery call which should effectively cancel this round of
+                // fetches.  (_pollQuery increments the generation.)
+                self._handleDoc(id, doc);
+              }
+              waiting--;
+              // Because fetch() never calls its callback synchronously, this is
+              // safe (ie, we won't call fut.return() before the forEach is
+              // done).
+              if (waiting === 0)
+                fut.return();
+            });
+        });
+        fut.wait();
+        // XXX do this even if we've switched to PHASE.QUERYING?
+        if (anyError)
+          throw anyError;
+        // Exit now if we've had a _pollQuery call.
+        if (self._phase === PHASE.QUERYING)
+          return;
+        self._currentlyFetching = null;
+      }
+      self._beSteady();
+    });
   },
   _beSteady: function () {
     var self = this;
-    self._phase = PHASE.STEADY;
+    self._registerPhaseChange(PHASE.STEADY);
     var writes = self._writesToCommitWhenWeReachSteady;
     self._writesToCommitWhenWeReachSteady = [];
     self._multiplexer.onFlush(function () {
@@ -312,7 +316,7 @@ _.extend(OplogObserveDriver.prototype, {
     self._needToFetch = new LocalCollection._IdMap;
     self._currentlyFetching = null;
     ++self._fetchGeneration;  // ignore any in-flight fetches
-    self._phase = PHASE.QUERYING;
+    self._registerPhaseChange(PHASE.QUERYING);
 
     // Defer so that we don't block.
     Meteor.defer(function () {
@@ -453,6 +457,20 @@ _.extend(OplogObserveDriver.prototype, {
 
     Package.facts && Package.facts.Facts.incrementServerFact(
       "mongo-livedata", "observe-drivers-oplog", -1);
+  },
+
+  _registerPhaseChange: function (phase) {
+    var self = this;
+    var now = new Date;
+
+    if (self._phase) {
+      var timeDiff = now - self._phaseStartTime;
+      Package.facts && Package.facts.Facts.incrementServerFact(
+        "mongo-livedata", "time-spent-in-" + self._phase + "-phase", timeDiff);
+    }
+
+    self._phase = phase;
+    self._phaseStartTime = now;
   }
 });
 

@@ -224,4 +224,13 @@ Tinytest.add("spacebars - parse", function (test) {
 
   test.equal(HTML.toJS(Spacebars.parse('<a {{! x}} b=c{{! x}} {{! x}}></a>')),
              'HTML.A({b: "c"})');
+
+  // currently, if there are only comments, the attribute is truthy.  This is
+  // because comments are stripped during tokenization.  If we include
+  // comments in the token stream, these cases will become falsy for selected.
+  test.equal(HTML.toJS(Spacebars.parse('<input selected={{!foo}}>')),
+             'HTML.INPUT({selected: ""})');
+  test.equal(HTML.toJS(Spacebars.parse('<input selected={{!foo}}{{!bar}}>')),
+             'HTML.INPUT({selected: ""})');
+
 });

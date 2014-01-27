@@ -43,7 +43,7 @@ HTML.Raw.prototype.toHTML = function () {
 
 HTML.Tag.prototype.toHTML = function (parentComponent) {
   var attrStrs = [];
-  var attrs = this.evaluateDynamicAttributes(parentComponent);
+  var attrs = this.evaluateAttributes(parentComponent);
   if (attrs) {
     for (var k in attrs) {
       k = HTML.properCaseAttributeName(k);

@@ -224,7 +224,7 @@ var updateAttributes = function(elem, newAttrs, handlers) {
       handler = handlers[k];
       oldValue = handler.value;
     }
-    if (handler) {
+    if (handler && oldValue !== value) {
       handler.value = value;
       handler.update(elem, oldValue, value);
       if (value === null)
@@ -238,7 +238,7 @@ UI.render = function (kind, parentComponent) {
     throw new Error("Can't render component instance, only component kind");
   var inst = kind.instantiate(parentComponent);
 
-  var content = content = (inst.render && inst.render());
+  var content = (inst.render && inst.render());
 
   var range = new UI.DomRange;
   inst.dom = range;
@@ -314,7 +314,7 @@ var materialize = function (node, parent, before, parentComponent) {
           c.handlers = {};
 
         try {
-          var attrs = HTML.evaluateDynamicAttributes(rawAttrs, parentComponent);
+          var attrs = HTML.evaluateAttributes(rawAttrs, parentComponent);
           var stringAttrs = {};
           if (attrs) {
             for (var k in attrs) {

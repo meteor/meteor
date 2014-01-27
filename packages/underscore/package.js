@@ -20,5 +20,10 @@ Package.on_use(function (api) {
 
   api.export('_');
 
+  // NOTE: we patch _.each and various other functions that polymorphically take
+  // objects, arrays, and array-like objects (such as the querySelectorAll
+  // return value, document.images, and 'arguments') such that objects with a
+  // numeric length field whose constructor === Object are still treated as
+  // objects, not as arrays.  Search for looksLikeArray.
   api.add_files(['pre.js', 'underscore.js', 'post.js']);
 });

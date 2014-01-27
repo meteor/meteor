@@ -26,8 +26,11 @@ Spacebars.include = function (templateOrFunction, dataFunc, extraArgs) {
     // extend `result` with `underscoredArgs`, whether or not it's a function
     if (typeof result === 'function') {
       result = function () {
-        // todo: isolate the calculation of `templateOrFunction`
-        var result = templateOrFunction();
+        var result = Deps.isolateValue(function () {
+          var ret = templateOrFunction();
+          if (ret != null && ! UI.isComponent(ret))
+            throw new Error("Expected null or template in return value from helper, found: " + ret);
+        });
         result = result.extend(underscoredArgs);
         return result;
       };
@@ -81,7 +84,15 @@ Spacebars.mustacheImpl = function (value/*, args*/) {
     }
   }
 
-  return Spacebars.call.apply(null, args);
+  return Deps.isolateValue(function () {
+    return Spacebars.call.apply(null, args);
+  }, /* equals= */ function (x, y) {
+    if (x instanceof Handlebars.SafeString) {
+      return (y instanceof Handlebars.SafeString) && (x.string === y.string);
+    } else {
+      return safeEquals(x, y);
+    }
+  });
 };
 
 Spacebars.mustache = function (value/*, args*/) {
@@ -90,9 +101,10 @@ Spacebars.mustache = function (value/*, args*/) {
   if (result instanceof Handlebars.SafeString)
     return HTML.Raw(result.toString());
   else
-    // map `null` and `undefined` to "", stringify anything else
-    // (e.g. strings, booleans, numbers including 0).
-    return String(result == null ? '' : result);
+    // map `null`, `undefined`, and `false` to null, which is important
+    // so that attributes with nully values are considered absent.
+    // stringify anything else (e.g. strings, booleans, numbers including 0).
+    return (result == null || result === false) ? null : String(result);
 };
 
 Spacebars.attrMustache = function (value/*, args*/) {
@@ -122,7 +134,9 @@ Spacebars.dataMustache = function (value/*, args*/) {
 // Called on the return value from `Spacebars.mustache` in case the
 // template uses triple-stache (`{{{foo bar baz}}}`).
 Spacebars.makeRaw = function (value) {
-  if (value instanceof HTML.Raw)
+  if (value == null) // null or undefined
+    return null;
+  else if (value instanceof HTML.Raw)
     return value;
   else
     return HTML.Raw(value);

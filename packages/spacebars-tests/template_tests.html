@@ -52,6 +52,10 @@
   {{{html}}}
 </template>
 
+<template name="spacebars_template_test_triple2">
+  x{{{html}}}{{{html2}}}{{{html3}}}y
+</template>
+
 <template name="spacebars_template_test_inclusion_args">
   {{> foo bar}}
 </template>
@@ -404,4 +408,43 @@ Hi there!
 
 <template name="spacebars_template_test_just_content">
   {{> content}}
+</template>
+
+<template name="spacebars_template_test_simple_helpers_are_isolated">
+  {{foo}}
+</template>
+
+<template name="spacebars_template_test_attr_helpers_are_isolated">
+  <p attr={{foo}}></p>
+</template>
+
+<template name="spacebars_template_test_attr_object_helpers_are_isolated">
+  <p {{attrs}}></p>
+</template>
+
+<template name="spacebars_template_test_inclusion_helpers_are_isolated">
+  {{> foo}}
+</template>
+
+<template name="spacebars_template_test_inclusion_helpers_are_isolated_subtemplate">
+</template>
+
+<template name="spacebars_template_test_nully_attributes0">
+  <input type="checkbox" checked="" stuff="">
+</template>
+
+<template name="spacebars_template_test_nully_attributes1">
+  <input type="checkbox" checked={{foo}} stuff={{foo}}>
+</template>
+
+<template name="spacebars_template_test_nully_attributes2">
+  <input type="checkbox" checked={{foo}}{{bar}} stuff={{foo}}{{bar}}>
+</template>
+
+<template name="spacebars_template_test_nully_attributes3">
+  <input type="checkbox" checked={{#if foo}}{{/if}} stuff={{#if foo}}{{/if}}>
+</template>
+
+<template name="spacebars_template_test_double">
+  {{foo}}
 </template>

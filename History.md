@@ -7,6 +7,20 @@
   functions that are done when returning a cursor from a publish function or
   using `{{#each}}`.
 
+* Patch Underscore to not treat plain objects (`x.constructor === Object`)
+  with numeric `length` fields as arrays.  Among other things, this allows you
+  to use documents with numeric `length` fields with Mongo.  #594 #1737
+
+* Fix races when calling login and/or logoutOtherClients from multiple
+  tabs. #1616
+
+* Upgrade `jquery-waypoints` package from 1.1.7 to 2.0.3. (Contains
+  backward-incompatible changes).
+
+* Add `frame-src` to `browser-policy-content` and account for
+  cross-browser CSP disparities.
+
+
 ## v0.7.0.1
 
 * Two fixes to `meteor run` Mongo startup bugs that could lead to hangs with the

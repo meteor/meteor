@@ -140,6 +140,13 @@ Tinytest.add("spacebars - templates - triple", function (test) {
   span = elems[0];
   test.equal(span.className, 'hi');
   test.equal(stripComments(span.innerHTML), 'blah');
+
+  var tmpl = Template.spacebars_template_test_triple2;
+  tmpl.html = function () {};
+  tmpl.html2 = function () { return null; };
+  // no tmpl.html3
+  div = renderToDiv(tmpl);
+  test.equal(stripComments(div.innerHTML), 'xy');
 });
 
 Tinytest.add("spacebars - templates - inclusion args", function (test) {
@@ -784,7 +791,6 @@ testAsyncMulti('spacebars - template - rendered template is DOM in rendered call
   function (test, expect) {
     var tmpl = Template.spacebars_template_test_aaa;
     tmpl.rendered = expect(function () {
-      console.log('in rendered');
       test.equal(trim(stripComments(div.innerHTML)), "aaa");
     });
     var div = renderToDiv(tmpl);
@@ -1133,3 +1139,204 @@ Tinytest.add('spacebars - templates - #markdown - block helpers', function (test
   test.equal(divContentForMarkdown(div), "<p>Hi there!</p>");
 });
 
+// Test that when a simple helper re-runs due to a dependency changing
+// but the return value is the same, the DOM text node is not
+// re-rendered.
+Tinytest.add('spacebars - templates - simple helpers are isolated', function (test) {
+  var runs = [{
+    helper: function () { return "foo"; },
+    nodeValue: "foo"
+  }, {
+    helper: function () { return new Handlebars.SafeString("bar"); },
+    nodeValue: "bar"
+  }];
+
+  _.each(runs, function (run) {
+    var tmpl = Template.spacebars_template_test_simple_helpers_are_isolated;
+    var dep = new Deps.Dependency;
+    tmpl.foo = function () {
+      dep.depend();
+      return run.helper();
+    };
+    var div = renderToDiv(tmpl);
+    var fooTextNode = _.find(div.childNodes, function (node) {
+      return node.nodeValue === run.nodeValue;
+    });
+
+    test.isTrue(fooTextNode);
+
+    dep.changed();
+    Deps.flush();
+    var newFooTextNode = _.find(div.childNodes, function (node) {
+      return node.nodeValue === run.nodeValue;
+    });
+
+    test.equal(fooTextNode, newFooTextNode);
+  });
+});
+
+// Test that when a helper in an element attribute re-runs due to a
+// dependency changing but the return value is the same, the attribute
+// value is not set.
+Tinytest.add('spacebars - templates - attribute helpers are isolated', function (test) {
+  var tmpl = Template.spacebars_template_test_attr_helpers_are_isolated;
+  var dep = new Deps.Dependency;
+  tmpl.foo = function () {
+    dep.depend();
+    return "foo";
+  };
+  var div = renderToDiv(tmpl);
+  var pElement = div.querySelector('p');
+
+  test.equal(pElement.getAttribute('attr'), 'foo');
+
+  // set the attribute to something else, afterwards check that it
+  // hasn't been updated back to the correct value.
+  pElement.setAttribute('attr', 'not-foo');
+  dep.changed();
+  Deps.flush();
+  test.equal(pElement.getAttribute('attr'), 'not-foo');
+});
+
+// A helper can return an object with a set of element attributes via
+// `<p {{attrs}}>`. When it re-runs due to a dependency changing the
+// value for a given attribute might stay the same. Test that the
+// attribute is not set on the DOM element.
+Tinytest.add('spacebars - templates - attribute object helpers are isolated', function (test) {
+  var tmpl = Template.spacebars_template_test_attr_object_helpers_are_isolated;
+  var dep = new Deps.Dependency;
+  tmpl.attrs = function () {
+    dep.depend();
+    return {foo: "bar"};
+  };
+  var div = renderToDiv(tmpl);
+  var pElement = div.querySelector('p');
+
+  test.equal(pElement.getAttribute('foo'), 'bar');
+
+  // set the attribute to something else, afterwards check that it
+  // hasn't been updated back to the correct value.
+  pElement.setAttribute('foo', 'not-bar');
+  dep.changed();
+  Deps.flush();
+  test.equal(pElement.getAttribute('foo'), 'not-bar');
+});
+
+// Test that when a helper in an inclusion directive (`{{> foo }}`)
+// re-runs due to a dependency changing but the return value is the
+// same, the template is not re-rendered.
+//
+// Also, verify that an error is thrown if the return value from such
+// a helper is not a component.
+Tinytest.add('spacebars - templates - inclusion helpers are isolated', function (test) {
+  var tmpl = Template.spacebars_template_test_inclusion_helpers_are_isolated;
+  var dep = new Deps.Dependency;
+  var subtmpl = Template.
+        spacebars_template_test_inclusion_helpers_are_isolated_subtemplate
+        .extend({}); // fresh instance
+  var R = new ReactiveVar(subtmpl);
+  tmpl.foo = function () {
+    dep.depend();
+    return R.get();
+  };
+
+  var div = renderToDiv(tmpl);
+  subtmpl.rendered = function () {
+    test.fail("shouldn't re-render when same value returned from helper");
+  };
+
+  dep.changed();
+  Deps.flush({_throwErrors: true}); // `subtmpl.rendered` not called
+
+  R.set(null);
+  Deps.flush({_throwErrors: true}); // no error thrown
+
+  R.set("neither a component nor null");
+
+  test.throws(function () {
+    Deps.flush({_throwErrors: true});
+  }, /Expected null or template/);
+});
+
+Tinytest.add('spacebars - templates - nully attributes', function (test) {
+  var tmpls = {
+    0: Template.spacebars_template_test_nully_attributes0,
+    1: Template.spacebars_template_test_nully_attributes1,
+    2: Template.spacebars_template_test_nully_attributes2,
+    3: Template.spacebars_template_test_nully_attributes3,
+    4: Template.spacebars_template_test_nully_attributes4,
+    5: Template.spacebars_template_test_nully_attributes5,
+    6: Template.spacebars_template_test_nully_attributes6
+  };
+
+  var run = function (whichTemplate, data, expectTrue) {
+    //var withData = UI.With(function () { return data; },
+    //tmpls[whichTemplate]);
+    var templateWithData = tmpls[whichTemplate].withData(function () {
+      return data; });
+    var div = renderToDiv(templateWithData);
+    var input = div.querySelector('input');
+    var descr = JSON.stringify([whichTemplate, data, expectTrue]);
+    if (expectTrue) {
+      test.isTrue(input.checked, descr);
+      test.equal(typeof input.getAttribute('stuff'), 'string', descr);
+    } else {
+      test.isFalse(input.checked);
+      test.equal(JSON.stringify(input.getAttribute('stuff')), 'null', descr);
+    }
+
+    var html = HTML.toHTML(templateWithData);
+    test.equal(/ checked="[^"]*"/.test(html), !! expectTrue);
+    test.equal(/ stuff="[^"]*"/.test(html), !! expectTrue);
+  };
+
+  run(0, {}, true);
+
+  var truthies = [true, ''];
+  var falsies = [false, null, undefined];
+
+  _.each(truthies, function (x) {
+    run(1, {foo: x}, true);
+  });
+  _.each(falsies, function (x) {
+    run(1, {foo: x}, false);
+  });
+
+  _.each(truthies, function (x) {
+    _.each(truthies, function (y) {
+      run(2, {foo: x, bar: y}, true);
+    });
+    _.each(falsies, function (y) {
+      run(2, {foo: x, bar: y}, true);
+    });
+  });
+  _.each(falsies, function (x) {
+    _.each(truthies, function (y) {
+      run(2, {foo: x, bar: y}, true);
+    });
+    _.each(falsies, function (y) {
+      run(2, {foo: x, bar: y}, false);
+    });
+  });
+
+  run(3, {foo: true}, false);
+  run(3, {foo: false}, false);
+});
+
+Tinytest.add("spacebars - templates - double", function (test) {
+  var tmpl = Template.spacebars_template_test_double;
+
+  var run = function (foo, expectedResult) {
+    tmpl.foo = foo;
+    var div = renderToDiv(tmpl);
+    test.equal(stripComments(div.innerHTML), expectedResult);
+  };
+
+  run('asdf', 'asdf');
+  run(1.23, '1.23');
+  run(0, '0');
+  run(true, 'true');
+  run(false, '');
+  run(null, '');
+  run(undefined, '');
+});
