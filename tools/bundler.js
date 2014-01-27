@@ -449,6 +449,9 @@ _.extend(Target.prototype, {
     // Link JavaScript and set up self.js, etc.
     self._emitResources();
 
+    // Run the preprocessing and concatenation of CSS files.
+    self.preprocessCss();
+
     // Minify, if requested
     if (options.minify) {
       var minifiers = unipackage.load({
@@ -456,8 +459,7 @@ _.extend(Target.prototype, {
         packages: ['minifiers']
       }).minifiers;
       self.minifyJs(minifiers);
-      if (self.minifyCss) // XXX a bit of a hack
-        self.minifyCss(minifiers);
+      self.minifyCss(minifiers);
     }
 
     if (options.addCacheBusters) {
@@ -685,6 +687,16 @@ _.extend(Target.prototype, {
     });
   },
 
+  // Preprocess CSS in this target
+  preprocessCss: function () {
+    // Don't do anything by default
+  },
+
+  // Minify the CSS in this target
+  minifyCss: function (minifiers) {
+    // Don't do anything by default
+  },
+
   // Minify the JS in this target
   minifyJs: function (minifiers) {
     var self = this;
@@ -741,9 +753,11 @@ var ClientTarget = function (options) {
   var self = this;
   Target.apply(this, arguments);
 
-  // CSS files. List of File. They will be loaded at page load in the
-  // order given.
+  // CSS files. List of File. They will be preprocessed, concatenated into
+  // single file and loaded at page load.
   self.css = [];
+  // Intermediate representation of preprocessed CSS tree.
+  self._cssAst = null;
 
   // List of segments of additional HTML for <head>/<body>.
   self.head = [];
@@ -756,14 +770,18 @@ var ClientTarget = function (options) {
 inherits(ClientTarget, Target);
 
 _.extend(ClientTarget.prototype, {
-  // Minify the CSS in this target
-  minifyCss: function (minifiers) {
+  // Preprocess the CSS in the target
+  preprocessCss: function () {
     var self = this;
+    var minifiers = unipackage.load({
+      library: self.library,
+      packages: ['minifiers']
+    }).minifiers;
 
     // The straight-forward concatenation of CSS files would break @import rules
-    // located in the beginning of a file. Before concatenation, pull them to a
-    // separate syntax tree that will always precede other rules.
-    var importsAst = {
+    // located in the beginning of a file. Before concatenation, pull them to
+    // the beginning of a new syntax tree so they always precede other rules.
+    var newAst = {
       type: 'stylesheet',
       stylesheet: { rules: [] }
     };
@@ -805,7 +823,7 @@ _.extend(ClientTarget.prototype, {
         }
 
       var imports = ast.stylesheet.rules.splice(0, importCount);
-      importsAst.stylesheet.rules = importsAst.stylesheet.rules.concat(imports);
+      newAst.stylesheet.rules = newAst.stylesheet.rules.concat(imports);
 
       // if there are imports left in the middle of file, warn user as it might
       // be a potential bug (imports are valid only in the beginning of file).
@@ -818,10 +836,35 @@ _.extend(ClientTarget.prototype, {
       return ast;
     });
 
-    var allCss = _.map([importsAst].concat(cssAsts),
-                       minifiers.CssTools.stringifyCss).join('\n');
+    // Now we can put the rest of CSS rules into new AST
+    _.each(cssAsts, function (ast) {
+      newAst.stylesheet.rules = newAst.stylesheet.rules.concat(ast.stylesheet.rules);
+    });
 
-    var minifiedCss = minifiers.CssTools.minifyCss(allCss);
+    // Other build phases might need this AST later
+    self._cssAst = newAst;
+
+    // Overwrite the CSS files list to the new concatenated file
+    var stringifiedCss = minifiers.CssTools.stringifyCss(newAst);
+    self.css = [new File({ data: new Buffer(stringifiedCss, 'utf8') })];
+    self.css[0].setUrlToHash(".css");
+  },
+  // Minify the CSS in this target
+  minifyCss: function (minifiers) {
+    var self = this;
+    var minifiedCss = '';
+
+    // If there is an AST already calculated, don't waste time on parsing it
+    // again.
+    if (self._cssAst) {
+      minifiedCss = minifiers.CssTools.minifyCssAst(self._cssAst);
+    } else if (self.css) {
+      var allCss = _.map(self.css, function (file) {
+        return file.contents('utf8');
+      }).join('\n');
+
+      minifiedCss = minifiers.CssTools.minifyCss(allCss);
+    }
 
     self.css = [new File({ data: new Buffer(minifiedCss, 'utf8') })];
     self.css[0].setUrlToHash(".css");
