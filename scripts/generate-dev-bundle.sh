@@ -104,8 +104,7 @@ npm install keypress@0.2.1
 npm install underscore@1.5.2
 npm install fstream@0.1.25
 npm install tar@0.1.19
-npm install kexec@0.1.1
-npm install shell-quote@0.0.1   # now at 1.3.3, which adds plenty of options to parse but doesn't change quote
+npm install kexec@0.2.0
 npm install eachline@2.4.0
 npm install source-map@0.1.31
 npm install source-map-support@0.2.5
