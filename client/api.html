@@ -493,9 +493,28 @@ Register a callback to be called when the connection is closed. If the
 connection is already closed, the callback will be called immediately.
 {{/dtdd}}
 
-{{#dtdd name="client" type="Object"}}
-Information about the client connecting to the server.  See Client
-Info below.
+{{#dtdd name="clientAddress" type="String"}}
+  The IP address of the client in dotted form (such as `"127.0.0.1"`).
+
+  If you're running your Meteor server behind a proxy (so that clients
+  are connecting to the proxy instead of to your server directly),
+  you'll need to set the `HTTP_FORWARDED_COUNT` environment variable
+  for the correct IP address to be reported by `clientAddress`.
+
+  Set `HTTP_FORWARDED_COUNT` to an integer representing the number of
+  proxies in front of your server.  For example, you'd set it to `"1"`
+  when your server was behind one proxy.
+{{/dtdd}}
+
+{{#dtdd name="httpHeaders" type="Object"}}
+  When the connection came in over an HTTP transport (such as with
+  Meteor's default SockJS implementation), this field contains
+  whitelisted HTTP headers.
+
+  Cookies are deliberately excluded from the headers as they are a
+  security risk for this transport.  For details and alternatives, see
+  the [SockJS
+  documentation](https://github.com/sockjs/sockjs-node#authorisation).
 {{/dtdd}}
 </dl>
 
@@ -511,60 +530,6 @@ the server: the `onConnection` callback won't be called for that
 connection again, and the connection will still have the same
 connection `id`.
 {{/note}}
-
-### Client Info
-
-The `connection.client` field is a plain object containing the
-following information about the client connecting to the server:
-
-<dl class="objdesc">
-
-{{#dtdd "address" type="String"}}
-  The IP address of the client in dotted form (such as `"127.0.0.1"`).
-
-  Note that if you are running your Meteor server behind a proxy, you
-  need to set `HTTP_CONNECTION_COUNT` for the correct IP address to be
-  reported, see below.
-{{/dtdd}}
-
-{{#dtdd "serverHost" type="String"}}
-
-  The DNS host name (and optionally, the port) that the client
-  connected to.  For example, `"myapp.meteor.com"` or
-  `"127.0.0.1:3000"`.
-
-  When the client is a browser, this will be the host name and
-  optional port as it appears in the URL in the browser's address bar.
-
-  If the server host name wasn't reported by the client, this field
-  will be `null`.
-{{/dtdd}}
-
-{{#dtdd "userAgent" type="Object"}}
-  The user agent reported by the client.
-
-  When available, this field will be a plain object containing a `name`
-  field (such as "android", "chrome", "firebox", etc.), and three
-  integer fields `major`, `minor`, and `patch` containing the
-  browser's version.
-
-  This field will be `null` if the user agent wasn't provided by the
-  client.
-{{/dtdd}}
-
-</dl>
-
-
-### HTTP\_CONNECTION\_COUNT
-
-When you are running your Meteor server behind a proxy (so that
-clients are connecting to the proxy instead of to your server
-directly), for the reported client IP address to be correct you need
-to set the `HTTP_CONNECTION_COUNT` environment variable to an integer
-representing the number of proxies in front of your server.
-
-For example, you'd set this to "1" when your server was behind one
-proxy.
 
 
 {{> api_box connect}}
