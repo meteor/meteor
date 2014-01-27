@@ -1,5 +1,11 @@
 ## v.NEXT
 
+* XXX upgraded `less` from 1.3.3 to 1.6.1
+* XXX sourcemaps support for stylesheets, including less sourcemaps
+* XXX css linting (breaks on errors)
+* XXX css preprocessing to concatenate files correctly (pulls @imports to the
+  beginning)
+
 * Hash login tokens before storing them in the database.
 
 * Cursors with a field specifier containing `{_id: 0}` can no longer be used
