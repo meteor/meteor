@@ -859,7 +859,16 @@ _.extend(ClientTarget.prototype, {
       _.map(stringifiedCss.map.sources, function (filename) {
         return originals[filename].contents('utf8');
       });
-    self.css[0].setSourceMap(JSON.stringify(stringifiedCss.map));
+
+    // Apply all previous sourcemaps if those existed
+    // Ex.: less -> css sourcemap sould be applied to css -> css sourcemap
+    var newMap = sourcemap.SourceMapGenerator.fromSourceMap(new sourcemap.SourceMapConsumer(stringifiedCss.map));
+    _.each(originals, function (file, name) {
+      if (file.sourceMap)
+        newMap.applySourceMap(new sourcemap.SourceMapConsumer(file.sourceMap), name);
+    });
+
+    self.css[0].setSourceMap(JSON.stringify(newMap));
     self.css[0].setUrlToHash(".css");
   },
   // Minify the CSS in this target
