@@ -11,35 +11,33 @@ selftest.define("springboard", ['checkout'], function () {
   var run;
 
   // If run not in an app dir, runs the latest version ...
-  run = s.run("--version");
-  run.read('Release v2\n');
+  run = s.run("--long-version");
+  run.read('v2\ntools2\n');
   run.expectEnd();
   run.expectExit(0);
 
   // ... unless you asked for a different one.
-  run = s.run("--version", "--release", "v1");
-  run.read('Release v1\n');
+  run = s.run("--long-version", "--release", "v1");
+  run.read('v1\ntools1\n');
   run.expectEnd();
   run.expectExit(0);
 
   // Apps are created with the latest release ...
   run = s.run("create", "myapp").expectExit(0);
   s.cd('myapp');
-  run = s.run("--version");
-  run.read('Release v2\n');
+  run = s.run("--long-version");
+  run.read('v2\ntools2\n');
   run.expectExit(0);
 
   // ... unless you asked for a different one.
   s.cd('..');
   run = s.run("create", "myapp2", "--release", "v1").expectExit(0);
   s.cd('myapp2');
-  run = s.run("--version");
-  run.read('Release v1\n');
+  run = s.run("--long-version");
+  run.read('v1\ntools1\n');
   run.expectExit(0);
 });
 
-
-// XXX add a tools-version command to confirm we're springboarding
 
 selftest.define("checkout", ['checkout'], function () {
   var s = new Sandbox;
@@ -50,11 +48,20 @@ selftest.define("checkout", ['checkout'], function () {
   run.matchErr("Can't specify");
   run.expectExit(1);
 
+
+
 });
 
 
 
-
+// XXX NEXT
+// add METEOR_TEST_FAIL_RELEASE_DOWNLOAD=(offline|not-found)
+// add METEOR_TEST_UPDATE_MANIFEST=(replacement manifest, for updater.getManifest)
+//
+// => should be enough to test everything, since the updater only
+// checks to see if the mentioned release is not our 'latest' release
+// (not whether we have it!), and the actual downloading code in the
+// update process is a noop if we already have the release.
 
 
 

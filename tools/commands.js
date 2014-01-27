@@ -103,6 +103,21 @@ main.registerCommand({
   console.log(packages.BUILT_BY);
 });
 
+// Internal use only. For automated testing.
+main.registerCommand({
+  name: '--long-version',
+  requiresRelease: false
+}, function (options) {
+  if (files.inCheckout()) {
+    process.stderr.write("checkout\n");
+    return 1;
+  } else {
+    process.stdout.write(release.current.name + "\n");
+    process.stdout.write(files.getToolsVersion() + "\n");
+    return 0;
+  }
+});
+
 // Internal use only. Makes sure that your Meteor install is totally
 // good to go (is "airplane safe" and won't do any lengthy building on
 // first run).

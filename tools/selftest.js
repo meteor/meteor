@@ -952,9 +952,6 @@ _.extend(exports, {
 
 
 
-// XXX way of marking tests that need network, so that we can skip
-// them when testing on an airplane (well, universe..)
-
 // XXX have the self-test command take a --universe option (to set the
 // universe used in the spawned copy of meteor). if you don't set one
 // you don't get the tests that talk to servers.
