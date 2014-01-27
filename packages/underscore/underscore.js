@@ -70,6 +70,16 @@
   // Collection Functions
   // --------------------
 
+  // METEOR CHANGE: _.each({length: 5}) should be treated like an object, not an
+  // array. This looksLikeArray function is introduced by Meteor, and replaces
+  // all instances of `obj.length === +obj.length`.
+  // https://github.com/meteor/meteor/issues/594
+  // https://github.com/jashkenas/underscore/issues/770
+  var looksLikeArray = function (obj) {
+    return (obj.length === +obj.length
+            && (_.isArguments(obj) || obj.constructor !== Object));
+  };
+
   // The cornerstone, an `each` implementation, aka `forEach`.
   // Handles objects with the built-in `forEach`, arrays, and raw objects.
   // Delegates to **ECMAScript 5**'s native `forEach` if available.
@@ -77,7 +87,7 @@
     if (obj == null) return;
     if (nativeForEach && obj.forEach === nativeForEach) {
       obj.forEach(iterator, context);
-    } else if (obj.length === +obj.length) {
+    } else if (looksLikeArray(obj)) {
       for (var i = 0, length = obj.length; i < length; i++) {
         if (iterator.call(context, obj[i], i, obj) === breaker) return;
       }
@@ -134,7 +144,7 @@
       return initial ? obj.reduceRight(iterator, memo) : obj.reduceRight(iterator);
     }
     var length = obj.length;
-    if (length !== +length) {
+    if (!looksLikeArray(obj)) {
       var keys = _.keys(obj);
       length = keys.length;
     }
@@ -381,14 +391,14 @@
   _.toArray = function(obj) {
     if (!obj) return [];
     if (_.isArray(obj)) return slice.call(obj);
-    if (obj.length === +obj.length) return _.map(obj, _.identity);
+    if (looksLikeArray(obj)) return _.map(obj, _.identity);
     return _.values(obj);
   };
 
   // Return the number of elements in an object.
   _.size = function(obj) {
     if (obj == null) return 0;
-    return (obj.length === +obj.length) ? obj.length : _.keys(obj).length;
+    return (looksLikeArray(obj)) ? obj.length : _.keys(obj).length;
   };
 
   // Array Functions

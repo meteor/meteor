@@ -37,10 +37,12 @@ var cspSrcs;
 var cachedCsp; // Avoid constructing the header out of cspSrcs when possible.
 
 // CSP keywords have to be single-quoted.
-var unsafeInline = "'unsafe-inline'";
-var unsafeEval = "'unsafe-eval'";
-var selfKeyword = "'self'";
-var noneKeyword = "'none'";
+var keywords = {
+  unsafeInline: "'unsafe-inline'",
+  unsafeEval: "'unsafe-eval'",
+  self: "'self'",
+  none: "'none'"
+};
 
 BrowserPolicy.content = {};
 
@@ -52,7 +54,7 @@ var parseCsp = function (csp) {
       policy = policy.substring(0, policy.length - 1);
     var srcs = policy.split(" ");
     var directive = srcs[0];
-    if (_.indexOf(srcs, noneKeyword) !== -1)
+    if (_.indexOf(srcs, keywords.none) !== -1)
       cspSrcs[directive] = null;
     else
       cspSrcs[directive] = srcs.slice(1);
@@ -79,6 +81,38 @@ var prepareForCspDirective = function (directive) {
   cachedCsp = null;
   if (! _.has(cspSrcs, directive))
     cspSrcs[directive] = _.clone(cspSrcs["default-src"]);
+};
+
+// Add `src` to the list of allowed sources for `directive`, with the
+// following modifications if `src` is an origin:
+// - If `src` does not have a protocol specified, then add both
+//   http://<src> and https://<src>. This is to mask differing
+//   cross-browser behavior; some browsers interpret an origin without a
+//   protocol as http://<src> and some interpret it as both http://<src>
+//   and https://<src>
+// - Trim trailing slashes from `src`, since some browsers interpret
+//   "foo.com/" as "foo.com" and some don't.
+var addSourceForDirective = function (directive, src) {
+  if (_.contains(_.values(keywords), src)) {
+    cspSrcs[directive].push(src);
+  } else {
+    src = src.toLowerCase();
+
+    // Trim trailing slashes.
+    src = src.replace(/\/+$/, '');
+
+    var toAdd = [];
+    // If there is no protocol, add both http:// and https://.
+    if (! /^([a-z0-9.+-]+:)/.test(src)) {
+      toAdd.push("http://" + src);
+      toAdd.push("https://" + src);
+    } else {
+      toAdd.push(src);
+    }
+    _.each(toAdd, function (s) {
+      cspSrcs[directive].push(s);
+    });
+  }
 };
 
 var setDefaultPolicy = function () {
@@ -111,7 +145,7 @@ _.extend(BrowserPolicy.content, {
     var header = _.map(cspSrcs, function (srcs, directive) {
       srcs = srcs || [];
       if (_.isEmpty(srcs))
-        srcs = [noneKeyword];
+        srcs = [keywords.none];
       var directiveCsp = _.uniq(srcs).join(" ");
       return directive + " " + directiveCsp + ";";
     });
@@ -129,7 +163,7 @@ _.extend(BrowserPolicy.content, {
     cachedCsp = null;
     parseCsp(csp);
     setWebAppInlineScripts(
-      BrowserPolicy.content._keywordAllowed("script-src", unsafeInline)
+      BrowserPolicy.content._keywordAllowed("script-src", keywords.unsafeInline)
     );
   },
 
@@ -142,34 +176,34 @@ _.extend(BrowserPolicy.content, {
 
   allowInlineScripts: function () {
     prepareForCspDirective("script-src");
-    cspSrcs["script-src"].push(unsafeInline);
+    cspSrcs["script-src"].push(keywords.unsafeInline);
     setWebAppInlineScripts(true);
   },
   disallowInlineScripts: function () {
     prepareForCspDirective("script-src");
-    removeCspSrc("script-src", unsafeInline);
+    removeCspSrc("script-src", keywords.unsafeInline);
     setWebAppInlineScripts(false);
   },
   allowEval: function () {
     prepareForCspDirective("script-src");
-    cspSrcs["script-src"].push(unsafeEval);
+    cspSrcs["script-src"].push(keywords.unsafeEval);
   },
   disallowEval: function () {
     prepareForCspDirective("script-src");
-    removeCspSrc("script-src", unsafeEval);
+    removeCspSrc("script-src", keywords.unsafeEval);
   },
   allowInlineStyles: function () {
     prepareForCspDirective("style-src");
-    cspSrcs["style-src"].push(unsafeInline);
+    cspSrcs["style-src"].push(keywords.unsafeInline);
   },
   disallowInlineStyles: function () {
     prepareForCspDirective("style-src");
-    removeCspSrc("style-src", unsafeInline);
+    removeCspSrc("style-src", keywords.unsafeInline);
   },
 
   // Functions for setting defaults
   allowSameOriginForAll: function () {
-    BrowserPolicy.content.allowOriginForAll(selfKeyword);
+    BrowserPolicy.content.allowOriginForAll(keywords.self);
   },
   allowDataUrlForAll: function () {
     BrowserPolicy.content.allowOriginForAll("data:");
@@ -177,7 +211,7 @@ _.extend(BrowserPolicy.content, {
   allowOriginForAll: function (origin) {
     prepareForCspDirective("default-src");
     _.each(_.keys(cspSrcs), function (directive) {
-      cspSrcs[directive].push(origin);
+      addSourceForDirective(directive, origin);
     });
   },
   disallowAll: function () {
@@ -192,7 +226,7 @@ _.extend(BrowserPolicy.content, {
 // allow<Resource>Origin, allow<Resource>Data, allow<Resource>self, and
 // disallow<Resource> methods for each type of resource.
 _.each(["script", "object", "img", "media",
-        "font", "connect", "style"],
+        "font", "connect", "style", "frame"],
        function (resource) {
          var directive = resource + "-src";
          var methodResource;
@@ -214,7 +248,7 @@ _.each(["script", "object", "img", "media",
 
          BrowserPolicy.content[allowMethodName] = function (src) {
            prepareForCspDirective(directive);
-           cspSrcs[directive].push(src);
+           addSourceForDirective(directive, src);
          };
          if (resource === "script") {
            BrowserPolicy.content[disallowMethodName] = function () {
@@ -230,7 +264,7 @@ _.each(["script", "object", "img", "media",
          };
          BrowserPolicy.content[allowSelfMethodName] = function () {
            prepareForCspDirective(directive);
-           cspSrcs[directive].push(selfKeyword);
+           cspSrcs[directive].push(keywords.self);
          };
        });
 
