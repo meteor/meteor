@@ -776,6 +776,7 @@ _.extend(ClientTarget.prototype, {
       library: self.library,
       packages: ['minifiers']
     }).minifiers;
+    var CssTools = minifiers.CssTools;
 
     // The straight-forward concatenation of CSS files would break @import rules
     // located in the beginning of a file. Before concatenation, pull them to
@@ -786,10 +787,11 @@ _.extend(ClientTarget.prototype, {
     };
 
     var cssAsts = _.map(self.css, function (file) {
+      var fileName = file.url.replace(/^\//, '');
       try {
-        var ast = minifiers.CssTools.parseCss(file.contents('utf8'));
+        var parseOptions = { source: fileName, position: true };
+        var ast = CssTools.parseCss(file.contents('utf8'), parseOptions);
       } catch (e) {
-        var fileName = file.url.replace(/^\//, '');
         buildmessage.error(e.message, { file: fileName });
         return { type: "stylesheet", stylesheet: { rules: [] } };
       }
@@ -844,7 +846,7 @@ _.extend(ClientTarget.prototype, {
     self._cssAst = newAst;
 
     // Overwrite the CSS files list to the new concatenated file
-    var stringifiedCss = minifiers.CssTools.stringifyCss(newAst);
+    var stringifiedCss = CssTools.stringifyCss(newAst, {sourcemap: true}).code;
     self.css = [new File({ data: new Buffer(stringifiedCss, 'utf8') })];
     self.css[0].setUrlToHash(".css");
   },
