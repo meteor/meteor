@@ -68,6 +68,11 @@ selftest.define("argument parsing", function () {
   run.expectEnd();
   run.expectExit(0);
 
+  run = s.run("dummy", "--email", "--port", "1234", "--changed");
+  run.read('"--port" 3000 true ["1234"]\n');
+  run.expectEnd();
+  run.expectExit(0);
+
   // bad option
   run = s.run("dummy", "--email", "x", "--foo");
   run.matchErr("--foo: unknown option");
