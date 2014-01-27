@@ -951,7 +951,7 @@ _.extend(Package.prototype, {
       return;
 
     var Plugin = {
-      // 'extension' is a file extension without the separation dot 
+      // 'extension' is a file extension without the separation dot
       // (eg 'js', 'coffee', 'coffee.md')
       //
       // 'handler' is a function that takes a single argument, a
