@@ -122,8 +122,7 @@ var identifyBrowser = function (userAgentString) {
   };
 };
 
-// XXX Used by livedata to identify the user agent of an incoming
-// connection; refactor as part of implementing real routing.
+// XXX Refactor as part of implementing real routing.
 WebAppInternals.identifyBrowser = identifyBrowser;
 
 WebApp.categorizeRequest = function (req) {
