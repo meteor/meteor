@@ -1,7 +1,7 @@
-
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var archinfo = require('../archinfo.js');
+var release = require('../release.js');
 
 selftest.define("argument parsing", function () {
   var s = new Sandbox;
@@ -209,41 +209,17 @@ selftest.define("command-like options", function () {
   var run;
 
   run = s.run("--version");
-  run.matchErr("Unreleased"); // XXX XXX
-  run.expectExit(1);
+  if (release.current.isCheckout()) {
+    run.matchErr("Unreleased");
+    run.expectExit(1);
+  } else {
+    run.read("Release " + release.current.name + "\n");
+    run.expectEnd();
+    run.expectExit(0);
+  }
 
   run = s.run("--arch");
   run.read(archinfo.host() + "\n");
   run.expectEnd();
   run.expectExit(0);
 });
-
-
-
-
-/*
-
-        "Can't specify a release when running Meteor from a checkout.\n");
-
-"Sorry, this project uses Meteor " + name + ", which is not installed and\n"+
-"could not be downloaded. Please check to make sure that you are online.\n");
-
-
-"Sorry, Meteor " + name + " is not installed and could not be downloaded.\n"+
-"Please check to make sure that you are online.\n");
-
-"Problem! This project says that it uses version " + name + " of Meteor,\n" +
-"but you don't have that version of Meteor installed and the Meteor update\n" +
-"servers don't have it either. Please edit the .meteor/release file in the\n" +
-"project and change it to a valid Meteor release.\n");
-
-"You must specify a Meteor version with --release when you work with this\n" +
-"project. It was created from an unreleased Meteor checkout and doesn't\n" +
-"have a version associated with it.\n" +
-"\n" +
-"You can permanently set a release for this project with 'meteor update'.\n");
-
-"=> Running Meteor from a checkout -- overrides project version (%s)\n",
-
-
-*/

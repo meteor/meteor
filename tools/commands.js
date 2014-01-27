@@ -208,14 +208,6 @@ main.registerCommand({
       ! release.forced)
     throw new main.SpringboardToLatestRelease;
 
-  var appPath;
-  if (options.args.length === 1)
-    appPath = options.args[0];
-  else if (options.example)
-    appPath = options.example;
-  else
-    throw new main.ShowUsage;
-
   var exampleDir = path.join(__dirname, '..', 'examples');
   var examples = _.reject(fs.readdirSync(exampleDir), function (e) {
     return (e === 'unfinished' || e === 'other'  || e[0] === '.');
@@ -228,8 +220,16 @@ main.registerCommand({
     });
     process.stdout.write("\n" +
 "Create a project from an example with 'meteor create --example <name>'.\n");
-    return 1;
+    return 0;
   };
+
+  var appPath;
+  if (options.args.length === 1)
+    appPath = options.args[0];
+  else if (options.example)
+    appPath = options.example;
+  else
+    throw new main.ShowUsage;
 
   if (fs.existsSync(appPath)) {
     process.stderr.write(appPath + ": Already exists\n");
@@ -1209,12 +1209,16 @@ main.registerCommand({
 main.registerCommand({
   name: 'self-test',
   options: {
-    changed: { type: Boolean }
+    changed: { type: Boolean },
+    offline: { type: Boolean }
   },
   hidden: true
 }, function (options) {
   var selftest = require('./selftest.js');
-  return selftest.runTests({ onlyChanged: options.changed });
+  return selftest.runTests({
+    onlyChanged: options.changed,
+    offline: options.offline
+  });
 });
 
 

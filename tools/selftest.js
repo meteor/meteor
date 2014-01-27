@@ -693,6 +693,7 @@ var Test = function (options) {
   self.name = options.name;
   self.file = options.file;
   self.fileHash = options.fileHash;
+  self.tags = options.tags || {};
   self.f = options.func;
 };
 
@@ -731,9 +732,21 @@ var getAllTests = function () {
   return allTests;
 };
 
-var define = function (name, f) {
+var define = function (name, tagsList, f) {
+  if (typeof tagsList === "function") {
+    // tagsList is optional
+    f = tagsList;
+    tagsList = [];
+  }
+
+  var tags = {};
+  _.each(tagsList, function (tag) {
+    tags[tag] = true;
+  });
+
   allTests.push(new Test({
     name: name,
+    tags: tags,
     file: fileBeingLoaded,
     fileHash: fileBeingLoadedHash,
     func: f
@@ -745,7 +758,12 @@ var define = function (name, f) {
 // Running tests
 ///////////////////////////////////////////////////////////////////////////////
 
-// options: onlyChanged
+var tagDescriptions = {
+  checkout: 'can only run from checkouts',
+  net: 'requires an internet connection'
+};
+
+// options: onlyChanged, offline
 var runTests = function (options) {
   var failureCount = 0;
 
@@ -762,6 +780,7 @@ var runTests = function (options) {
     testState = JSON.parse(fs.readFileSync(testStateFile, 'utf8'));
   if (! testState || testState.version !== 1)
     testState = { version: 1, lastPassedHashes: {} };
+  var currentHashes = {};
 
   if (options.onlyChanged) {
     // Filter out tests that haven't changed since they last passed.
@@ -775,13 +794,34 @@ var runTests = function (options) {
     return 0;
   }
 
-  var failuresInFile = {};
-  _.each(tests, function (test) {
-    process.stderr.write(test.name + "... ");
+  // _.keys(skipCounts) is the set of tags to skip
+  var skipCounts = {};
+  if (! files.inCheckout)
+    skipCounts['checkout'] = 0;
 
-    // We will clear this later if it turns out that all of the tests
-    // in the file didn't pass
-    testState.lastPassedHashes[test.file] = test.fileHash;
+  if (options.offline)
+    skipCounts['net'] = 0;
+
+  var failuresInFile = {};
+  var skipsInFile = {};
+  var totalRun = 0;
+  _.each(tests, function (test) {
+    currentHashes[test.file] = test.fileHash;
+    // Is this a test we're supposed to skip?
+    var shouldSkip = false;
+    _.each(_.keys(test.tags), function (tag) {
+      if (_.has(skipCounts, tag)) {
+        shouldSkip = true;
+        skipCounts[tag] ++;
+      }
+    });
+    if (shouldSkip) {
+      skipsInFile[test.file] = true;
+      return;
+    }
+
+    totalRun++;
+    process.stderr.write(test.name + "... ");
 
     var failure = null;
     try {
@@ -840,21 +880,76 @@ var runTests = function (options) {
     }
   });
 
-  _.each(_.keys(failuresInFile), function (f) {
-    delete testState.lastPassedHashes[f];
+  _.each(_.keys(currentHashes), function (f) {
+    if (! failuresInFile[f] && ! skipsInFile[f]) {
+      testState.lastPassedHashes[f] = currentHashes[f];
+    }
   });
 
   fs.writeFileSync(testStateFile, JSON.stringify(testState), 'utf8');
 
+  if (totalRun > 0)
+    process.stderr.write("\n");
+
+  var totalSkipCount = 0;
+  _.each(skipCounts, function (count, tag) {
+    totalSkipCount += count;
+    if (count) {
+      process.stderr.write("Skipped " + count + " '" + tag + "' test" +
+                           (count > 1 ? "s" : "") + " (" +
+                           tagDescriptions[tag] + ")\n");
+    }
+  });
+
   if (failureCount === 0) {
-    process.stderr.write("\nAll tests passed.\n");
+    var disclaimers = '';
+    if (totalSkipCount > 0)
+      disclaimers += " other";
+    if (options.onlyChanged)
+      disclaimers += " changed";
+    process.stderr.write("All" + disclaimers + " tests passed.\n");
     return 0;
   } else {
-    process.stderr.write("\n" + failureCount + " failure" +
+    process.stderr.write(failureCount + " failure" +
                          (failureCount > 1 ? "s" : "") + ".\n");
     return 1;
   }
 };
+
+// To create self-tests:
+//
+// Create a new .js file in the selftests directory. It will be picked
+// up automatically.
+//
+// Start your file with something like:
+//   var selftest = require('../selftest.js');
+//   var Sandbox = selftest.Sandbox;
+//
+// Define tests with:
+//   selftest.define("test-name", ['tag1', 'tag2'], function () {
+//     ...
+//   });
+//
+// The tags are used to group tests. Currently used tags:
+//   'checkout': should only be run when we're running from a checkout
+//   as opposed to a released copy.
+//   'net': test requires an internet connection. Not going to work if
+//   you're on a plane and should be skipped by 'self-test --offline'.
+//
+// If you don't want to set any tags, you can omit that parameter
+// entirely.
+//
+// Inside your test function, first create a Sandbox object, then call
+// the run() method on the sandbox to set up a new run of meteor with
+// arguments of your choice, and then use functions like match(),
+// write(), and expectExit() to script that run.
+
+_.extend(exports, {
+  runTests: runTests,
+  define: define,
+  Sandbox: Sandbox
+});
+
 
 
 // XXX way of marking tests that need network, so that we can skip
@@ -865,13 +960,3 @@ var runTests = function (options) {
 // you don't get the tests that talk to servers.
 
 // XXX have a way to fake being offline
-
-// XXX how are we going to test updating and springboarding? it would
-// be great if you could do this from a checkout without having to cut
-// a release
-
-_.extend(exports, {
-  runTests: runTests,
-  define: define,
-  Sandbox: Sandbox
-});

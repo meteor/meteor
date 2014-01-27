@@ -1,7 +1,7 @@
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 
-selftest.define("login", function () {
+selftest.define("login", ['net'], function () {
   var s = new Sandbox;
 
   var run = s.run("whoami");
