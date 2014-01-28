@@ -42,7 +42,7 @@ LocalCollection = function (options) {
   //  ordered: bool. ordered queries have addedBefore/movedBefore callbacks.
   //  results: array (ordered) or object (unordered) of current results
   //    (aliased with self._docs!)
-  //  results_snapshot: snapshot of results. null if not paused.
+  //  resultsSnapshot: snapshot of results. null if not paused.
   //  cursor: Cursor object for the query.
   //  selector, sorter, (callbacks): functions
   self.queries = {};
@@ -128,7 +128,7 @@ LocalCollection.Cursor = function (collection, selector, options) {
   self.fields = options.fields;
 
   if (self.fields)
-    self.projection_f = LocalCollection._compileProjection(self.fields);
+    self.projectionFn = LocalCollection._compileProjection(self.fields);
 
   self._transform = LocalCollection.wrapTransform(options.transform);
 
@@ -181,8 +181,8 @@ LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
 
   while (self.cursor_pos < self.db_objects.length) {
     var elt = EJSON.clone(self.db_objects[self.cursor_pos]);
-    if (self.projection_f)
-      elt = self.projection_f(elt);
+    if (self.projectionFn)
+      elt = self.projectionFn(elt);
     if (self._transform)
       elt = self._transform(elt);
     callback.call(thisArg, elt, self.cursor_pos, self);
@@ -302,12 +302,10 @@ _.extend(LocalCollection.Cursor.prototype, {
       sorter: ordered && self.sorter,
       distances: (
         self.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap),
-      results_snapshot: null,
+      resultsSnapshot: null,
       ordered: ordered,
       cursor: self,
-      observeChanges: options.observeChanges,
-      fields: self.fields,
-      projection_f: self.projection_f
+      projectionFn: self.projectionFn
     };
     var qid;
 
@@ -319,7 +317,7 @@ _.extend(LocalCollection.Cursor.prototype, {
     }
     query.results = self._getRawObjects(ordered, query.distances);
     if (self.collection.paused)
-      query.results_snapshot = (ordered ? [] : new LocalCollection._IdMap);
+      query.resultsSnapshot = (ordered ? [] : new LocalCollection._IdMap);
 
     // wrap callbacks we were passed. callbacks only fire when not paused and
     // are never undefined
@@ -338,8 +336,8 @@ _.extend(LocalCollection.Cursor.prototype, {
         if (self.collection.paused)
           return;
 
-        if (fieldsIndex !== undefined && self.projection_f) {
-          args[fieldsIndex] = self.projection_f(args[fieldsIndex]);
+        if (fieldsIndex !== undefined && self.projectionFn) {
+          args[fieldsIndex] = self.projectionFn(args[fieldsIndex]);
           if (ignoreEmptyFields && _.isEmpty(args[fieldsIndex]))
             return;
         }
@@ -660,7 +658,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   // Save the original results of any query that we might need to
   // _recomputeResults on, because _modifyAndNotify will mutate the objects in
   // it. (We don't need to save the original results of paused queries because
-  // they already have a results_snapshot and we won't be diffing in
+  // they already have a resultsSnapshot and we won't be diffing in
   // _recomputeResults.)
   var qidToOriginalResults = {};
   _.each(self.queries, function (query, qid) {
@@ -978,7 +976,7 @@ LocalCollection.prototype.pauseObservers = function () {
   for (var qid in this.queries) {
     var query = this.queries[qid];
 
-    query.results_snapshot = EJSON.clone(query.results);
+    query.resultsSnapshot = EJSON.clone(query.results);
   }
 };
 
@@ -1001,8 +999,8 @@ LocalCollection.prototype.resumeObservers = function () {
     // Diff the current results against the snapshot and send to observers.
     // pass the query object for its observer callbacks.
     LocalCollection._diffQueryChanges(
-      query.ordered, query.results_snapshot, query.results, query);
-    query.results_snapshot = null;
+      query.ordered, query.resultsSnapshot, query.results, query);
+    query.resultsSnapshot = null;
   }
   self._observeQueue.drain();
 };
