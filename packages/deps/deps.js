@@ -293,7 +293,7 @@ _.extend(Deps, {
       }
     } catch (e) {
       reset(); // needed before calling `Deps.flush()` again
-      Deps.flush(); // finish flushing; this time only log errors errors
+      Deps.flush(); // finish flushing; this time only log errors
       throw e;
     } finally {
       reset();

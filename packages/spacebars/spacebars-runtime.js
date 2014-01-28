@@ -65,7 +65,15 @@ Spacebars.mustacheImpl = function (value/*, args*/) {
     }
   }
 
-  return Spacebars.call.apply(null, args);
+  return Deps.isolateValue(function () {
+    return Spacebars.call.apply(null, args);
+  }, /* equals= */ function (x, y) {
+    if (x instanceof Handlebars.SafeString) {
+      return (y instanceof Handlebars.SafeString) && (x.toString() === y.toString());
+    } else {
+      return safeEquals(x, y);
+    }
+  });
 };
 
 Spacebars.mustache = function (value/*, args*/) {
