@@ -2565,6 +2565,14 @@ Tinytest.add("minimongo - pause", function (test) {
   test.equal(operations.shift(), ['changed', {a:3}, 0, {a:1}]);
   test.length(operations, 0);
 
+  // test special case for remove({})
+  c.pauseObservers();
+  test.equal(c.remove({}), 1);
+  test.length(operations, 0);
+  c.resumeObservers();
+  test.equal(operations.shift(), ['removed', 1, 0, {a:3}]);
+  test.length(operations, 0);
+
   h.stop();
 });
 

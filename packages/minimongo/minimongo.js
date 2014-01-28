@@ -563,10 +563,31 @@ LocalCollection.prototype.insert = function (doc, callback) {
 
 LocalCollection.prototype.remove = function (selector, callback) {
   var self = this;
-  var remove = [];
 
-  var queriesToRecompute = [];
+  // Easy special case: if we're not calling observeChanges callbacks and we're
+  // not saving originals and we got asked to remove everything, then just empty
+  // everything directly.
+  if (self.paused && !self._savedOriginals && EJSON.equals(selector, {})) {
+    var result = self._docs.size();
+    self._docs.clear();
+    _.each(self.queries, function (query) {
+      if (query.ordered) {
+        query.results = [];
+      } else {
+        query.results.clear();
+      }
+    });
+    if (callback) {
+      Meteor.defer(function () {
+        callback(null, result);
+      });
+    }
+    return result;
+  }
+
   var matcher = new Minimongo.Matcher(selector, self);
+  var queriesToRecompute = [];
+  var remove = [];
 
   // Avoid O(n) for "remove a single doc by ID".
   var specificIds = LocalCollection._idsMatchedBySelector(selector);
@@ -616,7 +637,7 @@ LocalCollection.prototype.remove = function (selector, callback) {
       LocalCollection._recomputeResults(query);
   });
   self._observeQueue.drain();
-  var result = remove.length;
+  result = remove.length;
   if (callback)
     Meteor.defer(function () {
       callback(null, result);
