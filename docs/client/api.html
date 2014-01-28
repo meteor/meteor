@@ -2633,7 +2633,7 @@ exactly the same work as `Deps.flush`.  The flushing process consists
 of rerunning any invalidated computations.  If additional
 invalidations happen while flushing, they are processed as part of the
 same flush until there is no more work to be done.  Callbacks
-registered with [`Meteor.afterFlush`](#deps_afterflush) are called
+registered with [`Deps.afterFlush`](#deps_afterflush) are called
 after processing outstanding invalidations.
 
 Any auto-updating DOM elements that are found to not be in the
