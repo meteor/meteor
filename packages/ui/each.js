@@ -68,7 +68,7 @@ UI.EachImpl = Component.extend({
     };
 
     this.observeHandle = ObserveSequence.observe(function () {
-      return self.__sequence();
+      return self.get('sequence');
     }, {
       addedAt: function (id, item, i, beforeId) {
         addToCount(1);
@@ -109,8 +109,8 @@ UI.EachImpl = Component.extend({
       }
     });
 
-      // on initial render, display the else clause if no items
-      addToCount(0);
+    // on initial render, display the else clause if no items
+    addToCount(0);
   },
   destroyed: function () {
     if (this.observeHandle)
