@@ -39,7 +39,7 @@ Migrations._collection = new Meteor.Collection('migrations');
 
 Meteor.startup(function () {
   if (process.env.MIGRATE)
-    Migrations.attempt(process.env.MIGRATE);
+    Migrations.migrateTo(process.env.MIGRATE);
 });
 
 // Add a new migration:
