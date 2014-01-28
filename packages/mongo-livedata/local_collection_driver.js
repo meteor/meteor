@@ -5,7 +5,7 @@ LocalCollectionDriver = function () {
 
 var ensureCollection = function (name, collections) {
   if (!(name in collections))
-    collections[name] = new LocalCollection(name);
+    collections[name] = new LocalCollection({name: name});
   return collections[name];
 };
 

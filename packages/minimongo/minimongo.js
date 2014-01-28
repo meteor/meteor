@@ -7,11 +7,11 @@
 
 // ObserveHandle: the return value of a live query.
 
-LocalCollection = function (name, options) {
+LocalCollection = function (options) {
   var self = this;
   options = options || {};
 
-  self.name = name;
+  self.name = options.name;
   // _id -> document (also containing id)
   self._docs = new LocalCollection._IdMap;
 
