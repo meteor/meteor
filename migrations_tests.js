@@ -6,12 +6,12 @@ Tinytest.add('Migrates up once and only once.', function(test) {
   Migrations.add({up: function () {run.push('u1');}, version: 1});
 
   // migrates once
-  Migrations.attempt('latest');
+  Migrations.migrateTo('latest');
   test.equal(run, ['u1']);
   test.equal(Migrations.getVersion(), 1);
 
   // shouldn't do anything
-  Migrations.attempt('latest');
+  Migrations.migrateTo('latest');
   test.equal(run, ['u1']);
   test.equal(Migrations.getVersion(), 1);
 });
@@ -27,12 +27,12 @@ Tinytest.add('Migrates up once and back down.', function(test) {
     version: 1
   });
 
-  Migrations.attempt('latest');
+  Migrations.migrateTo('latest');
   test.equal(run, ['u1']);
   test.equal(Migrations.getVersion(), 1);
 
   // shouldn't do anything
-  Migrations.attempt('0');
+  Migrations.migrateTo('0');
   test.equal(run, ['u1', 'd1']);
   test.equal(Migrations.getVersion(), 0);
 });
@@ -45,7 +45,7 @@ Tinytest.add('Migrates up several times.', function(test) {
   Migrations.add({up: function () {run.push('u1');}, version: 1});
 
   // migrates once
-  Migrations.attempt('latest');
+  Migrations.migrateTo('latest');
   test.equal(run, ['u1']);
   test.equal(Migrations.getVersion(), 1);
 
@@ -54,7 +54,7 @@ Tinytest.add('Migrates up several times.', function(test) {
   Migrations.add({up: function () {run.push('u3');}, version: 3});
 
   // should run the next two nicely in order
-  Migrations.attempt('latest');
+  Migrations.migrateTo('latest');
   test.equal(run, ['u1', 'u3', 'u4']);
   test.equal(Migrations.getVersion(), 4);
 });
@@ -74,18 +74,18 @@ Tinytest.add('Tests migrating down', function(test) {
   });
 
   // migrates up
-  Migrations.attempt('latest');
+  Migrations.migrateTo('latest');
   test.equal(run, ['u1', 'u2', 'u3']);
   test.equal(Migrations.getVersion(), 3);
 
   // migrates down
-  Migrations.attempt('2');
+  Migrations.migrateTo('2');
   test.equal(run, ['u1', 'u2', 'u3', 'd3']);
   test.equal(Migrations.getVersion(), 2);
 
   // should throw as migration u2 has no down method and remain at the save ver
   test.throws(function() {
-    Migrations.attempt('1');
+    Migrations.migrateTo('1');
   }, /Cannot migrate/);
   test.equal(run, ['u1', 'u2', 'u3', 'd3']);
   test.equal(Migrations.getVersion(), 2);
@@ -101,11 +101,11 @@ Tinytest.add('Checks that locking works correctly', function(test) {
 
     // attempts a migration from within the migration, this should have no
     // effect due to locking
-    Migrations.attempt('latest');
+    Migrations.migrateTo('latest');
   }});
 
   // migrates up, should only migrate once
-  Migrations.attempt('latest');
+  Migrations.migrateTo('latest');
   test.equal(run, ['u1']);
   test.equal(Migrations.getVersion(), 1);
 });
@@ -114,6 +114,6 @@ Tinytest.add('Does nothing for no migrations.', function(test) {
   Migrations._reset();
 
   // shouldnt do anything
-  Migrations.attempt('latest');
+  Migrations.migrateTo('latest');
   test.equal(Migrations.getVersion(), 0);
 });

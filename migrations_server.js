@@ -42,25 +42,6 @@ Meteor.startup(function () {
     Migrations.attempt(process.env.MIGRATE);
 });
 
-// gets the current control record, optionally creating it if non-existant
-Migrations._getControl = function() {  
-  var control = this._collection.findOne({_id: 'control'});
-
-  return control || this._setControl({version: 0, locked: false});
-}
-
-// sets the control record
-Migrations._setControl = function(control) {
-  // be quite strict
-  check(control.version, Number);
-  check(control.locked, Boolean);
-
-  this._collection.update({_id: 'control'}, 
-    {$set: {version: control.version, locked: control.locked}}, {upsert: true});
-
-  return control;
-}
-
 // Add a new migration:
 // {up: function *required
 //  version: Number *required
@@ -83,7 +64,7 @@ Migrations.add = function(migration) {
 
 // Attempts to run the migrations using command in the form of:
 // e.g 'latest', 'latest,exit', 2
-Migrations.attempt = function(command) {
+Migrations.migrateTo = function(command) {
   if (! command || command == '' || this._list.length === 0)
     return;
 
@@ -91,9 +72,9 @@ Migrations.attempt = function(command) {
   var exit = command.split(',')[1];
 
   if (version === 'latest') {
-    this.migrateTo(_.last(this._list).version);
+    this._migrateTo(_.last(this._list).version);
   } else {
-    this.migrateTo(parseInt(version));
+    this._migrateTo(parseInt(version));
   }
 
   // remember to run meteor with --once otherwise it will restart
@@ -101,8 +82,13 @@ Migrations.attempt = function(command) {
     process.exit(0); 
 }
 
-// migrates to the version passed in
-Migrations.migrateTo = function(version) {
+// just returns the current version
+Migrations.getVersion = function() {
+  return this._getControl().version;
+}
+
+// migrates to the specific version passed in
+Migrations._migrateTo = function(version) {
   var self = this;
   var control = this._getControl();
   var currentVersion = control.version;
@@ -164,9 +150,23 @@ Migrations.migrateTo = function(version) {
   setLocked(false);
 }
 
-// just returns the current version
-Migrations.getVersion = function() {
-  return this._getControl().version;
+// gets the current control record, optionally creating it if non-existant
+Migrations._getControl = function() {  
+  var control = this._collection.findOne({_id: 'control'});
+
+  return control || this._setControl({version: 0, locked: false});
+}
+
+// sets the control record
+Migrations._setControl = function(control) {
+  // be quite strict
+  check(control.version, Number);
+  check(control.locked, Boolean);
+
+  this._collection.update({_id: 'control'}, 
+    {$set: {version: control.version, locked: control.locked}}, {upsert: true});
+
+  return control;
 }
 
 // returns the migration index in _list or throws if not found
