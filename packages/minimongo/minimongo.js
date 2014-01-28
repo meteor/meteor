@@ -335,17 +335,18 @@ _.extend(LocalCollection.Cursor.prototype, {
         var context = this;
         var args = arguments;
 
+        if (self.collection.paused)
+          return;
+
         if (fieldsIndex !== undefined && self.projection_f) {
           args[fieldsIndex] = self.projection_f(args[fieldsIndex]);
           if (ignoreEmptyFields && _.isEmpty(args[fieldsIndex]))
             return;
         }
 
-        if (!self.collection.paused) {
-          self.collection._observeQueue.queueTask(function () {
-            f.apply(context, args);
-          });
-        }
+        self.collection._observeQueue.queueTask(function () {
+          f.apply(context, args);
+        });
       };
     };
     query.added = wrapCallback(options.added, 1);
