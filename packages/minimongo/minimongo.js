@@ -109,10 +109,7 @@ LocalCollection.Cursor = function (collection, selector, options) {
   if (self.fields)
     self.projection_f = LocalCollection._compileProjection(self.fields);
 
-  if (options.transform && typeof Deps !== "undefined")
-    self._transform = Deps._makeNonreactive(options.transform);
-  else
-    self._transform = options.transform;
+  self._transform = LocalCollection.wrapTransform(options.transform);
 
   // db_objects is an array of the objects that match the cursor. (It's always
   // an array, never an IdMap: LocalCollection.Cursor is always ordered.)
@@ -173,8 +170,7 @@ LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
 };
 
 LocalCollection.Cursor.prototype.getTransform = function () {
-  var self = this;
-  return self._transform;
+  return this._transform;
 };
 
 LocalCollection.Cursor.prototype.map = function (callback, thisArg) {

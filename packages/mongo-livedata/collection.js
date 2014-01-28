@@ -38,10 +38,7 @@ Meteor.Collection = function (name, options) {
     break;
   }
 
-  if (options.transform)
-    self._transform = Deps._makeNonreactive(options.transform);
-  else
-    self._transform = null;
+  self._transform = LocalCollection.wrapTransform(options.transform);
 
   if (!name && (name !== null)) {
     Meteor._debug("Warning: creating anonymous collection. It will not be " +
@@ -554,10 +551,17 @@ Meteor.Collection.ObjectID = LocalCollection._ObjectID;
         if (!(options[name] instanceof Function)) {
           throw new Error(allowOrDeny + ": Value for `" + name + "` must be a function");
         }
-        if (self._transform && options.transform !== null)
-          options[name].transform = self._transform;
-        if (options.transform)
-          options[name].transform = Deps._makeNonreactive(options.transform);
+
+        // If the transform is specified at all (including as 'null') in this
+        // call, then take that; otherwise, take the transform from the
+        // collection.
+        if (options.transform === undefined) {
+          options[name].transform = self._transform;  // already wrapped
+        } else {
+          options[name].transform = LocalCollection.wrapTransform(
+            options.transform);
+        }
+
         self._validators[name][allowOrDeny].push(options[name]);
       }
     });
