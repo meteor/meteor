@@ -144,7 +144,7 @@ _.extend(OplogObserveDriver.prototype, {
                   + EJSON.stringify(self._cursorDescription));
     }
 
-    var inCollection = !!self._collection.findOne(id);
+    var inCollection = !!self._collection.find(id).count();
 
     if (matchesNow && !inCollection) {
       // It matches the selector and it isn't in our collection, so add it.
@@ -250,7 +250,7 @@ _.extend(OplogObserveDriver.prototype, {
     if (op.op === 'd') {
       self._remove(id);
     } else if (op.op === 'i') {
-      if (self._collection.findOne(id))
+      if (self._collection.find(id).count())
         throw new Error("insert found for already-existing ID");
 
       // XXX what if selector yields?  for now it can't but later it could have
@@ -279,7 +279,9 @@ _.extend(OplogObserveDriver.prototype, {
           // this directly.
           // XXX just send the modifier to _collection.update? but then
           // we don't necessarily get to GC
-          newDoc = EJSON.clone(newDoc);
+
+          // We can avoid another deep clone here since the findOne above would
+          // return a copy anyways
           LocalCollection._modify(newDoc, op.o);
           self._handleDoc(id, newDoc);
         } else if (!canDirectlyModifyDoc ||
