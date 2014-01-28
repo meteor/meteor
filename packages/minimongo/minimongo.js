@@ -109,10 +109,7 @@ LocalCollection.Cursor = function (collection, selector, options) {
   if (self.fields)
     self.projection_f = LocalCollection._compileProjection(self.fields);
 
-  if (options.transform && typeof Deps !== "undefined")
-    self._transform = Deps._makeNonreactive(LocalCollection.wrapTransform(options.transform));
-  else
-    self._transform = LocalCollection.wrapTransform(options.transform);
+  self._transform = LocalCollection.wrapTransform(options.transform);
 
   // db_objects is an array of the objects that match the cursor. (It's always
   // an array, never an IdMap: LocalCollection.Cursor is always ordered.)

@@ -197,7 +197,7 @@ LocalCollection._observeFromObserveChanges = function (cursor, observeCallbacks)
     handle._fetch = function () {
       var docsArray = [];
       changeObserver.docs.forEach(function (doc) {
-        docsArray.push(transform(doc));
+        docsArray.push(transform(EJSON.clone(doc)));
       });
       return docsArray;
     };
