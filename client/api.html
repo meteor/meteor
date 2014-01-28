@@ -654,7 +654,8 @@ methods, documents are passed through the `transform` function before being
 returned or passed to callbacks.  This allows you to add methods or otherwise
 modify the contents of your collection from their database representation.  You
 can also specify `transform` on a particular `find`, `findOne`, `allow`, or
-`deny` call.
+`deny` call.  Transform functions must return an object and it may not change
+the value of the document's `_id` field (though it's OK to leave it out).
 
     // An Animal class that takes a document in its constructor
     Animal = function (doc) {
