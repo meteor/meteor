@@ -7,25 +7,29 @@
 // - If the return value has an _id field, verify that it matches the
 //   original _id field
 // - If the return value doesn't have an _id field, add it back.
-LocalCollection.wrapTransform = function(transform) {
+LocalCollection.wrapTransform = function (transform) {
   if (!transform)
-    return undefined;
+    return null;
 
   return function (doc) {
-    var id = doc._id;
-    var transformed = transform(doc);
+    if (!_.has(doc, '_id')) {
+      // XXX do we ever have a transform on the oplog's collection? because that
+      // collection has no _id.
+      throw new Error("can only transform documents with _id");
+    }
 
-    if (typeof transformed !== 'object' ||
-        transformed instanceof Array ||
-        // Even though fine technically, don't let Mongo ObjectIDs
-        // through. It would suck to think your app works until
-        // you insert the first document using Meteor.
-        transformed instanceof Meteor.Collection.ObjectID) {
+    var id = doc._id;
+    // XXX consider making deps a weak dependency and checking Package.deps here
+    var transformed = Deps.nonreactive(function () {
+      return transform(doc);
+    });
+
+    if (!isPlainObject(transformed)) {
       throw new Error("transform must return object");
     }
 
-    if (transformed._id) {
-      if (transformed._id !== id) {
+    if (_.has(transformed, '_id')) {
+      if (!EJSON.equals(transformed._id, id)) {
         throw new Error("transformed document can't have different _id");
       }
     } else {

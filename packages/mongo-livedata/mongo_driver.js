@@ -778,9 +778,8 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options) {
   // inside a user-visible Cursor, we want to provide the outer cursor!
   self._selfForIteration = options.selfForIteration || self;
   if (options.useTransform && cursorDescription.options.transform) {
-    self._transform = Deps._makeNonreactive(
-      Package.minimongo.LocalCollection.wrapTransform(
-        cursorDescription.options.transform));
+    self._transform = LocalCollection.wrapTransform(
+      cursorDescription.options.transform);
   } else {
     self._transform = null;
   }
