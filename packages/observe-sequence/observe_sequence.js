@@ -110,7 +110,8 @@ ObserveSequence = {
             else if (typeof item === 'object')
               id = (item && item._id) || index;
             else
-              throw new Error("unsupported type in {{#each}}: " + typeof item);
+              throw new Error("{{#each}} doesn't support arrays with " +
+                              "elements of type " + typeof item);
 
             var idString = idStringify(id);
             if (idsUsed[idString]) {
@@ -159,8 +160,7 @@ ObserveSequence = {
           diffArray(lastSeqArray, seqArray, callbacks);
 
         } else {
-          throw new Error("Not a recognized sequence type. Currently only " +
-                          "arrays, cursors or falsey values accepted.");
+          throw badSequenceError();
         }
 
         lastSeq = seq;
@@ -188,10 +188,14 @@ ObserveSequence = {
     } else if (isMinimongoCursor(seq)) {
       return seq.fetch();
     } else {
-      throw new Error("Not a recognized sequence type. Currently only " +
-                      "arrays, cursors or falsey values accepted.");
+      throw badSequenceError();
     }
   }
+};
+
+var badSequenceError = function () {
+  return new Error("{{#each}} currently only accepts " +
+                   "arrays, cursors or falsey values.");
 };
 
 var isMinimongoCursor = function (seq) {
