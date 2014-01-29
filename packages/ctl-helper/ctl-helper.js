@@ -159,12 +159,6 @@ _.extend(Ctl, {
                 tries++;
                 // try again in a sec.
                 Meteor._sleepForMs(1000);
-              } else if (e.error === 400) {
-                // match failed:
-                // BACKCOMPAT: can remove this eventually.
-                Log.warn("Match failed on updateTags; calling alternate backcompat form.");
-                proxy.call('updateTags', Ctl.myAppName(), tags);
-                break;
               } else {
                 throw e;
               }
