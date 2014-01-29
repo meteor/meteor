@@ -1,52 +1,30 @@
 #!/bin/bash
 
-# NOTE: by default this tests the working copy, not the installed
-# meteor.  To test the installed meteor, pass in --global. To test a
-# version of meteor installed in a specific directory, set the
-# METEOR_TOOLS_TREE_DIR and METEOR_WAREHOUSE_DIR environment variable.
+# This used to be run standalone, but now it's intended to always be
+# invoked by 'meteor self-test' (and eventually we should port the
+# whole thing to JavaScript, or at least the parts that don't
+# duplicate our existing JS-based test coverage).
+#
+# To run it, set METEOR_TOOL_PATH to the 'meteor' script to use, plus,
+# as usual, METEOR_WAREHOUSE_DIR if you want to stub out the
+# warehouse.
 
 set -e -x
 
-cd `dirname $0`/..
+cd `dirname $0`/../../..
 
-# METEOR_TOOLS_TREE_DIR is set in run-tools-tests.sh in order to test
-# running an installed version of Meteor (though notably without
-# testing springboarding, which is separately tested by
-# tools-springboard-test.sh)
-if [ -z "$METEOR_TOOLS_TREE_DIR" ]; then
+# METEOR_TOOL_PATH is the path to the 'meteor' that we will use for
+# our tests. There is a vestigal capability to default to running the
+# 'meteor' that sets next to this script in a checkout, but we should
+# probably just take that out.
+if [ -z "$METEOR_TOOL_PATH" ]; then
     METEOR="`pwd`/meteor"
 else
-    METEOR="$METEOR_TOOLS_TREE_DIR/bin/meteor"
+    METEOR="$METEOR_TOOL_PATH"
 fi
 
 if [ -z "$NODE" ]; then
     NODE="$(pwd)/scripts/node.sh"
-fi
-
-#If this ever takes more options, use getopt
-if [ "$1" == "--global" ]; then
-    if [ -z "$TEST_RELEASE" ]; then
-        METEOR=/usr/local/bin/meteor
-    else
-        METEOR="/usr/local/bin/meteor --release=$TEST_RELEASE"
-    fi
-    INSTALLED_METEOR=t
-elif [ "$METEOR_WAREHOUSE_DIR" ]; then
-    # The point of this testing script is to test the tools, so we make sure (in
-    # lib/meteor.js) to not springboard if METEOR_TEST_NO_SPRINGBOARD is
-    # set. Then we specify a random release that we pass to --release on all
-    # commands. This could break if this specified release is incompatible with
-    # the current tools, in which case you can build and publish a new release
-    # and set it here.
-    INSTALLED_METEOR=t
-    export METEOR_TEST_NO_SPRINGBOARD=t
-    if [ -z "$TEST_RELEASE" ]; then
-        # We need a release whose mongo-livedata exports
-        # MongoInternals.NpmModule.
-        TEST_RELEASE="oplog-alpha1"
-    fi
-
-    METEOR="$METEOR --release=$TEST_RELEASE" # some random non-official release
 fi
 
 TEST_TMPDIR=`mktemp -d -t meteor-cli-test-XXXXXXXX`
@@ -57,16 +35,6 @@ cd "$TEST_TMPDIR"
 
 
 ## Begin actual tests
-
-if [ -n "$INSTALLED_METEOR" ]; then
-    if [ -n "$TEST_RELEASE" ]; then
-        $METEOR --version | grep $TEST_RELEASE >> $OUTPUT
-    else
-        $METEOR --version >> $OUTPUT
-    fi
-else
-    $METEOR --version 2>&1 | grep checkout >> $OUTPUT
-fi
 
 echo "... --help"
 $METEOR --help | grep "List available" >> $OUTPUT
@@ -90,7 +58,7 @@ $METEOR 2>&1 | grep "run: You're not in" >> $OUTPUT
 $METEOR run 2>&1 | grep "run: You're not in" >> $OUTPUT
 $METEOR add foo 2>&1 | grep "add: You're not in" >> $OUTPUT
 $METEOR remove foo 2>&1 | grep "remove: You're not in" >> $OUTPUT
-$METEOR list --using 2>&1 | grep "list --using: You're not in" >> $OUTPUT
+$METEOR list --using 2>&1 | grep "list: You're not in" >> $OUTPUT
 $METEOR bundle foo.tar.gz 2>&1 | grep "bundle: You're not in" >> $OUTPUT
 $METEOR mongo 2>&1 | grep "mongo: You're not in" >> $OUTPUT
 $METEOR deploy automated-test 2>&1 | grep "deploy: You're not in" >> $OUTPUT
@@ -245,7 +213,7 @@ if (Meteor.isServer) {
 }
 EOF
 
-$METEOR -p $PORT --settings='settings.json' --once >> $OUTPUT
+$METEOR -p $PORT --settings 'settings.json' --once >> $OUTPUT
 rm settings.js
 
 

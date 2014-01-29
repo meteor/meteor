@@ -358,7 +358,7 @@ _.extend(Sandbox.prototype, {
     if (self.warehouse)
       env.METEOR_WAREHOUSE_DIR = self.warehouse;
 
-    return new Run(execPath, {
+    return new Run(self.execPath, {
       sandbox: self,
       args: _.toArray(arguments),
       cwd: self.cwd,
@@ -368,7 +368,7 @@ _.extend(Sandbox.prototype, {
 
   // Copy an app from a template into the current directory in the
   // sandbox. 'to' is the subdirectory to put the app in, and
-  // 'template' is a subdirectory of tools/selftests/apps to copy.
+  // 'template' is a subdirectory of tools/tests/apps to copy.
   //
   // Note that the arguments are the opposite order from 'cp'. That
   // seems more intuitive to me -- if you disagree, my apologies.
@@ -378,7 +378,7 @@ _.extend(Sandbox.prototype, {
   //   s.cd('myapp');
   createApp: function (to, template) {
     var self = this;
-    files.cp_r(path.join(__dirname, 'selftests', 'apps', template),
+    files.cp_r(path.join(__dirname, 'tests', 'apps', template),
                path.join(self.cwd, to));
   },
 
@@ -423,7 +423,7 @@ _.extend(Sandbox.prototype, {
 // current checkout), and gives it a version name of
 // 'version'. Returns the directory.
 //
-// This is memorized for speed (multiple calls with the same version
+// This is memoized for speed (multiple calls with the same version
 // name may return the same directory), and furthermore I'm not going
 // to promise that it doesn't contain symlinks to your dev_bundle and
 // so forth. So don't modify anything in the returned directory.
@@ -491,9 +491,9 @@ var buildTools = function (version) {
 ///////////////////////////////////////////////////////////////////////////////
 
 // Represents a test run of the tool. Typically created through the
-// run() method on Sandbox, but can also be created directly (if you
-// want to do something other than invoke the 'meteor' command in a
-// nice sandbox).
+// run() method on Sandbox, but can also be created directly, say if
+// you want to do something other than invoke the 'meteor' command in
+// a nice sandbox.
 //
 // Options: args, cwd, env
 var Run = function (execPath, options) {
@@ -751,9 +751,9 @@ var getAllTests = function () {
     return allTests;
   allTests = [];
 
-  // Load all files in the 'selftests' directory that end in .js. They
+  // Load all files in the 'tests' directory that end in .js. They
   // are supposed to then call define() to register their tests.
-  var testdir = path.join(__dirname, 'selftests');
+  var testdir = path.join(__dirname, 'tests');
   var filenames = fs.readdirSync(testdir);
   _.each(filenames, function (n) {
     if (! n.match(/^[^.].*\.js$/)) // ends in '.js', doesn't start with '.'
@@ -970,7 +970,7 @@ var runTests = function (options) {
 
 // To create self-tests:
 //
-// Create a new .js file in the selftests directory. It will be picked
+// Create a new .js file in the tests directory. It will be picked
 // up automatically.
 //
 // Start your file with something like:
