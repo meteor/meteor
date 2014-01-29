@@ -951,7 +951,7 @@ _.extend(Package.prototype, {
       return;
 
     var Plugin = {
-      // 'extension' is a file extension without the separation dot 
+      // 'extension' is a file extension without the separation dot
       // (eg 'js', 'coffee', 'coffee.md')
       //
       // 'handler' is a function that takes a single argument, a
@@ -1346,6 +1346,8 @@ _.extend(Package.prototype, {
             where = where ? [where] : allWheres;
           }
           where = _.uniq(where);
+          if (where.length === 1 && where[0] === 'both')
+            where = allWheres;
           var realWhere = _.intersection(where, allWheres);
           if (realWhere.length !== where.length) {
             var badWheres = _.difference(where, allWheres);
@@ -1365,6 +1367,12 @@ _.extend(Package.prototype, {
           // Called when this package wants to make another package be
           // used. Can also take literal package objects, if you have
           // anonymous packages you want to use (eg, app packages)
+          //
+          // @param where 'client', 'server', or an array of those.
+          // The shortcut 'both' can be used instead of ['client', 'server'].
+          // The default is 'both'.
+          //
+          // @param options 'testOnly', boolean.
           //
           // options can include:
           //
@@ -1471,7 +1479,9 @@ _.extend(Package.prototype, {
           // Export symbols from this package.
           //
           // @param symbols String (eg "Foo") or array of String
-          // @param where 'client', 'server', or an array of those
+          // @param where 'client', 'server', or an array of those.
+          // The shortcut 'both' can be used instead of ['client', 'server'].
+          // The default is 'both'.
           // @param options 'testOnly', boolean.
           export: function (symbols, where, options) {
             if (role === "test") {
