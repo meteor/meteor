@@ -154,7 +154,6 @@ Ctl.Commands.push({
                                  oldServer.env.ADMIN_APP);
     });
     // Wait for them all to come up and bind to the proxy.
-    Meteor._sleepForMs(10000); // XXX: Eventually make sure they're proxy-bound.
     var updateProxyActiveTagsOptions = {
       requireRegisteredBindingCount: {}
     };
