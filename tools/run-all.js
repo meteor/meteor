@@ -22,8 +22,8 @@ var Runner = function (appDir, options) {
     throw new Error("no port?");
 
   var listenPort = options.port;
-  var appPort = listenPort + 1;
-  var mongoPort = listenPort + 2;
+  var mongoPort = listenPort + 1;
+  var appPort = 20000 + Math.floor(Math.random() * 10000);
 
   self.stopped = false;
   self.quiet = options.quiet;

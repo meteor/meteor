@@ -552,7 +552,6 @@ var Run = function (execPath, options) {
     self.fakeMongoPort = 20000 + Math.floor(Math.random() * 10000);
     self.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT = self.fakeMongoPort;
   }
-
 };
 
 _.extend(Run.prototype, {
@@ -594,7 +593,6 @@ _.extend(Run.prototype, {
       f['return']();
     });
 
-    self.outputLog.end();
     self.stdoutMatcher.end();
     self.stderrMatcher.end();
   },
@@ -782,8 +780,10 @@ _.extend(Run.prototype, {
     if (! self.fakeMongoPort)
       throw new Error("fakeMongo option on sandbox must be set");
 
+    self._ensureStarted();
+
     // If it's the first time we've called tellMongo on this sandbox,
-    // open a connection to fake-mongod. Wait up to 5 seconds for it
+    // open a connection to fake-mongod. Wait up to 2 seconds for it
     // to accept the connection, retrying every 100ms.
     //
     // XXX we never clean up this connection. Hopefully once
@@ -795,7 +795,7 @@ _.extend(Run.prototype, {
       var net = require('net');
 
       var lastStartTime = 0;
-      for (var attempts = 0; ! self.fakeMongoConnection && attempts < 50;
+      for (var attempts = 0; ! self.fakeMongoConnection && attempts < 20;
            attempts ++) {
         // Throttle attempts to one every 100ms
         utils.sleep((lastStartTime + 100) - (+ new Date));
@@ -827,7 +827,7 @@ _.extend(Run.prototype, {
       }
 
       if (! self.fakeMongoConnection)
-        throw new TestFailure("mongo-not-running");
+        throw new TestFailure("mongo-not-running", { run: self });
     }
 
     self.fakeMongoConnection.write(JSON.stringify(command) + "\n");
@@ -1010,6 +1010,7 @@ var runTests = function (options) {
       }
 
       if (failure.details.run) {
+        failure.details.run.outputLog.end();
         var lines = failure.details.run.outputLog.get();
         if (! lines.length) {
           process.stderr.write("  => No output\n");

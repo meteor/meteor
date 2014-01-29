@@ -51,6 +51,7 @@ var AppProcess = function (options) {
   self.bundlePath = options.bundlePath;
   self.port = options.port;
   self.rootUrl = options.rootUrl;
+  self.mongoUrl = options.mongoUrl;
   self.oplogUrl = options.oplogUrl;
   self.runLog = options.runLog;
 
@@ -102,7 +103,8 @@ _.extend(AppProcess.prototype, {
     });
 
     // Watch for exit
-    self.proc.on('close', function (code, signal) {
+    var thisPid = self.proc.pid;
+    self.proc.on('exit', function (code, signal) {
       if (! self.madeExitCallback)
         self.onExit && self.onExit(code, signal);
       self.madeExitCallback = true;
@@ -137,7 +139,8 @@ _.extend(AppProcess.prototype, {
     }, 2000);
   },
 
-  // Idempotent
+  // Idempotent. Once stop() returns it is guaranteed that you will
+  // receive no more callbacks from this AppProcess.
   stop: function () {
     var self = this;
 
@@ -150,6 +153,9 @@ _.extend(AppProcess.prototype, {
     if (self.keepaliveTimer)
       clearInterval(self.keepaliveTimer);
     self.keepaliveTimer = null;
+
+    self.onListen = null;
+    self.onExit = null;
   },
 
   _computeEnvironment: function () {
@@ -203,14 +209,17 @@ _.extend(AppProcess.prototype, {
           return;
         if (! archinfo.matches(archinfo.host(), p.arch))
           return; // can't run here
-        programPath = path.join(options.bundlePath, p.path);
+        programPath = path.join(self.bundlePath, p.path);
       });
 
       if (! programPath)
         return null;
 
+      console.log(programPath);
       return child_process.spawn(programPath, [], {
-        env: self._computeEnvironment()
+        env: _.extend(self._computeEnvironment(), {
+          DATA_DIR: files.mkdtemp()
+        })
       });
     }
   }
@@ -435,12 +444,14 @@ _.extend(AppRunner.prototype, {
       oplogUrl: self.oplogUrl,
       runLog: self.runLog,
       onExit: function (code, signal) {
-        self.runFuture['return']({
-          outcome: 'terminated',
-          code: code,
-          signal: signal,
-          bundleResult: bundleResult
-        });
+        if (self.runFuture) {
+          self.runFuture['return']({
+            outcome: 'terminated',
+            code: code,
+            signal: signal,
+            bundleResult: bundleResult
+          });
+        }
       },
       program: self.program,
       onListen: function () {
@@ -463,10 +474,12 @@ _.extend(AppRunner.prototype, {
       watcher = new watch.Watcher({
         watchSet: watchSet,
         onChange: function () {
-          self.runFuture['return']({
-            outcome: 'changed',
-            bundleResult: bundleResult
-          });
+          if (self.runFuture) {
+            self.runFuture['return']({
+              outcome: 'changed',
+              bundleResult: bundleResult
+            });
+          }
         }
       });
     }
@@ -489,7 +502,7 @@ _.extend(AppRunner.prototype, {
 
     var crashCount = 0;
     var crashTimer = null;
-    var firstListen = true;
+    var firstRun = true;
 
     while (true) {
       var crashTimer = setTimeout(function () {
@@ -498,11 +511,10 @@ _.extend(AppRunner.prototype, {
 
       var runResult = self._runOnce(function () {
         /* onListen */
-        if (! self.noRestartBanner && ! firstListen)
+        if (! self.noRestartBanner && ! firstRun)
           self.runLog.logRestart();
-
-        firstListen = false;
       });
+      firstRun = false;
 
       clearTimeout(crashTimer);
       if (runResult.outcome !== "terminated")

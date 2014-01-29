@@ -111,7 +111,7 @@ selftest.define("checkout", ['checkout'], function () {
   s.write(".meteor/release", "something");
   run = s.run("list", "--using");
   run.readErr("=> Running Meteor from a checkout");
-  run.matchErr("project version (something)\n\n");
+  run.matchErr("project version (something)\n");
   run.expectExit(0);
 });
 

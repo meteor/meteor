@@ -189,15 +189,17 @@ var launchMongo = function (options) {
 
     var portFile = path.join(dbPath, 'METEOR-PORT');
     var portFileExists = false;
-    var createReplSet;
+    var createReplSet = true;
     try {
-      createReplSet = +(fs.readFileSync(portFile)) !== options.port &&
-        ! noOplog;
+      createReplSet = +(fs.readFileSync(portFile)) !== options.port;
       portFileExists = true;
     } catch (e) {
       if (!e || e.code !== 'ENOENT')
         throw e;
     }
+
+    if (noOplog)
+      createReplSet = false;
 
     // If this is the first time we're using this DB, or we changed
     // port since the last time, then we want to destroying any
