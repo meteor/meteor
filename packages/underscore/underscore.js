@@ -81,7 +81,7 @@
   // there isn't any inspectable "Arguments" type.
   if (!_isArguments(arguments)) {
     _isArguments = function (obj) {
-      return !!(obj && hasOwnProperty.call(obj, 'callee'));
+      return !!(obj && hasOwnProperty.call(obj, 'callee') && typeof obj.callee === 'function');
     };
   }
 
