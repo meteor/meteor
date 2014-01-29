@@ -170,21 +170,12 @@ var codeGenTemplateTag = function (tag) {
                            codeGenMustache(tag) + '); }');
     } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
       var path = tag.path;
-      var compCode = codeGenPath(path);
+      var compCode;
 
-      if (path.length === 1) {
-        var compName = path[0];
-        if (builtInComponents.hasOwnProperty(compName)) {
-          compCode = builtInComponents[compName];
-        } else {
-          // toObjectLiteralKey returns `"foo"` or `foo` depending on
-          // whether `foo` is a safe JavaScript identifier.
-          var member = toObjectLiteralKey(path[0]);
-          var templateDotFoo = (member.charAt(0) === '"' ?
-                                'Template[' + member + ']' :
-                                'Template.' + member);
-          compCode = ('(' + templateDotFoo + ' || ' + compCode + ')');
-        }
+      if (path.length === 1 && builtInComponents.hasOwnProperty(path[0])) {
+        compCode = builtInComponents[path[0]];
+      } else {
+        compCode = codeGenPath(path, {lookupTemplate: true});
       }
 
       var includeArgs = codeGenInclusionArgs(tag);
@@ -305,7 +296,14 @@ var codeGenMustache = function (tag, mustacheType) {
 // (i.e. it may invalidate the current computation).
 //
 // No code is generated to call the result if it's a function.
-var codeGenPath = function (path) {
+//
+// Options:
+//
+// - lookupTemplate {Boolean} If true, generated code also looks in
+//   the list of templates. (After helpers, before data context).
+//   Used when generating code for `{{> foo}}` or `{{#foo}}`. Only
+//   used for non-dotted paths.
+var codeGenPath = function (path, opts) {
   // Let {{#if content}} check whether this template was invoked via
   // inclusion or as a block helper.
   if (builtInComponents.hasOwnProperty(path[0])) {
@@ -314,7 +312,10 @@ var codeGenPath = function (path) {
     return builtInComponents[path[0]];
   }
 
-  var code = 'self.lookup(' + toJSLiteral(path[0]) + ')';
+  var args = [toJSLiteral(path[0])];
+  if (opts && opts.lookupTemplate && path.length === 1)
+    args.push('{template: true}');
+  var code = 'self.lookup(' + args.join(', ') + ')';
 
   if (path.length > 1) {
     code = 'Spacebars.dot(' + code + ', ' +
