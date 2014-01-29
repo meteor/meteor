@@ -158,9 +158,25 @@ Ctl.Commands.push({
     var updateProxyActiveTagsOptions = {
       requireRegisteredBindingCount: {}
     };
-    // at least half the new servers should be up.
+    // How many new servers should be up when we update the tags, given how many
+    // servers we're aiming at:
+    var target;
+    switch (oldServers.length) {
+    case 0:
+      target = 0;
+      break;
+    case 1:
+      target = 1;
+      break;
+    case 2:
+      target = 1;
+      break;
+    default:
+      target =  Math.min(c - 1, Math.ceil(c*.8));
+      break;
+    }
     updateProxyActiveTagsOptions.requireRegisteredBindingCount[thisJob.star] =
-      Math.ceil(oldServers.length * 0.5);
+      target;
     Ctl.updateProxyActiveTags(['', thisJob.star], updateProxyActiveTagsOptions);
 
     // (eventually) tell the proxy to switch over to using the new star
