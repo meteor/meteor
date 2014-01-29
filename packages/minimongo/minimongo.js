@@ -559,6 +559,28 @@ LocalCollection.prototype.insert = function (doc, callback) {
   return id;
 };
 
+// Iterates over a subset of documents that could match selector; calls
+// f(doc, id) on each of them.  Specifically, if selector specifies
+// specific _id's, it only looks at those.  doc is *not* cloned: it is the
+// same object that is in _docs.
+LocalCollection.prototype._eachPossiblyMatchingDoc = function (selector, f) {
+  var self = this;
+  var specificIds = LocalCollection._idsMatchedBySelector(selector);
+  if (specificIds) {
+    for (var i = 0; i < specificIds.length; ++i) {
+      var id = specificIds[i];
+      var doc = self._docs.get(id);
+      if (doc) {
+        var breakIfFalse = f(doc, id);
+        if (breakIfFalse === false)
+          break;
+      }
+    }
+  } else {
+    self._docs.forEach(f);
+  }
+};
+
 LocalCollection.prototype.remove = function (selector, callback) {
   var self = this;
 
@@ -584,27 +606,13 @@ LocalCollection.prototype.remove = function (selector, callback) {
   }
 
   var matcher = new Minimongo.Matcher(selector, self);
-  var queriesToRecompute = [];
   var remove = [];
+  self._eachPossiblyMatchingDoc(selector, function (doc, id) {
+    if (matcher.documentMatches(doc).result)
+      remove.push(id);
+  });
 
-  // Avoid O(n) for "remove a single doc by ID".
-  var specificIds = LocalCollection._idsMatchedBySelector(selector);
-  if (specificIds) {
-    _.each(specificIds, function (id) {
-      // We still have to run matcher, in case it's something like
-      //   {_id: "X", a: 42}
-      var doc = self._docs.get(id);
-      if (doc && matcher.documentMatches(doc).result)
-        remove.push(id);
-    });
-  } else {
-    self._docs.forEach(function (doc, id) {
-      if (matcher.documentMatches(doc).result) {
-        remove.push(id);
-      }
-    });
-  }
-
+  var queriesToRecompute = [];
   var queryRemove = [];
   for (var i = 0; i < remove.length; i++) {
     var removeId = remove[i];
@@ -671,7 +679,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
 
   var updateCount = 0;
 
-  self._docs.forEach(function (doc, id) {
+  self._eachPossiblyMatchingDoc(selector, function (doc, id) {
     var queryResult = matcher.documentMatches(doc);
     if (queryResult.result) {
       // XXX Should we save the original even if mod ends up being a no-op?
