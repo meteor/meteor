@@ -170,7 +170,7 @@ LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
   var self = this;
 
   if (self.db_objects === null)
-    self.db_objects = self._getRawObjects(true);
+    self.db_objects = self._getRawObjects({ordered: true});
 
   if (self.reactive)
     self._depend({
@@ -220,7 +220,7 @@ LocalCollection.Cursor.prototype.count = function () {
                  true /* allow the observe to be unordered */);
 
   if (self.db_objects === null)
-    self.db_objects = self._getRawObjects(true);
+    self.db_objects = self._getRawObjects({ordered: true});
 
   return self.db_objects.length;
 };
@@ -315,7 +315,8 @@ _.extend(LocalCollection.Cursor.prototype, {
       qid = self.collection.next_qid++;
       self.collection.queries[qid] = query;
     }
-    query.results = self._getRawObjects(ordered, query.distances);
+    query.results = self._getRawObjects({
+      ordered: ordered, distances: query.distances});
     if (self.collection.paused)
       query.resultsSnapshot = (ordered ? [] : new LocalCollection._IdMap);
 
@@ -412,13 +413,13 @@ _.extend(LocalCollection.Cursor.prototype, {
 // argument, this function will clear it and use it for this purpose (otherwise
 // it will just create its own _IdMap). The observeChanges implementation uses
 // this to remember the distances after this function returns.
-LocalCollection.Cursor.prototype._getRawObjects = function (ordered,
-                                                            distances) {
+LocalCollection.Cursor.prototype._getRawObjects = function (options) {
   var self = this;
+  options = options || {};
 
   // XXX use OrderedDict instead of array, and make IdMap and OrderedDict
   // compatible
-  var results = ordered ? [] : new LocalCollection._IdMap;
+  var results = options.ordered ? [] : new LocalCollection._IdMap;
 
   // fast path for single ID value
   if (self._selectorId !== undefined) {
@@ -430,7 +431,7 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered,
 
     var selectedDoc = self.collection._docs.get(self._selectorId);
     if (selectedDoc) {
-      if (ordered)
+      if (options.ordered)
         results.push(selectedDoc);
       else
         results.set(self._selectorId, selectedDoc);
@@ -443,17 +444,20 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered,
   // in the observeChanges case, distances is actually part of the "query" (ie,
   // live results set) object.  in other cases, distances is only used inside
   // this function.
-  if (self.matcher.hasGeoQuery() && ordered) {
-    if (distances)
+  var distances;
+  if (self.matcher.hasGeoQuery() && options.ordered) {
+    if (options.distances) {
+      distances = options.distances;
       distances.clear();
-    else
+    } else {
       distances = new LocalCollection._IdMap();
+    }
   }
 
   self.collection._docs.forEach(function (doc, id) {
     var matchResult = self.matcher.documentMatches(doc);
     if (matchResult.result) {
-      if (ordered) {
+      if (options.ordered) {
         results.push(doc);
         if (distances && matchResult.distance !== undefined)
           distances.set(id, matchResult.distance);
@@ -469,7 +473,7 @@ LocalCollection.Cursor.prototype._getRawObjects = function (ordered,
     return true;  // continue
   });
 
-  if (!ordered)
+  if (!options.ordered)
     return results;
 
   if (self.sorter) {
@@ -888,7 +892,8 @@ LocalCollection._recomputeResults = function (query, oldResults) {
     oldResults = query.results;
   if (query.distances)
     query.distances.clear();
-  query.results = query.cursor._getRawObjects(query.ordered, query.distances);
+  query.results = query.cursor._getRawObjects({
+    ordered: query.ordered, distances: query.distances});
 
   if (!query.paused) {
     LocalCollection._diffQueryChanges(
