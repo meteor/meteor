@@ -1754,11 +1754,11 @@ On the client, this function logs in as the newly created user on
 successful completion. On the server, it returns the newly created user
 id.
 
-On the client, you must pass `password` and one of `username` or `email`
-&mdash; enough information for the user to be able to log in again
-later. On the server, you can pass any subset of these options, but the
-user will not be able to log in until it has an identifier and a
-password.
+On the client, you must pass `password` and at least one of `username` or
+`email` &mdash; enough information for the user to be able to log in again
+later. On the server, you do not need to specify `password`, but the user will
+not be able to log in until it has a password (eg, set with
+[`Accounts.setPassword`](#accounts_setpassword)).
 
 To create an account without a password on the server and still let the
 user pick their own password, call `createUser` with the `email` option
