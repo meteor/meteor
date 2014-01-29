@@ -2,6 +2,7 @@ var _ = require('underscore');
 var path = require('path');
 var fs = require('fs');
 var files = require('./files.js');
+var utils = require('./utils.js');
 var parseStack = require('./parse-stack.js');
 var release = require('./release.js');
 var Future = require('fibers/future');
@@ -157,8 +158,10 @@ var OutputLog = function (run) {
   // the last entry and there was no newline terminator, 'bare'
   self.lines = [];
 
-  // map from a channel number name to a string (partially read line
-  // of text on that channel)
+  // map from a channel name to an object representing a partially
+  // read line of text on that channel. That object has keys 'text'
+  // (text read), 'offset' (cursor position, equal to text.length
+  // unless a '\r' has been read).
   self.buffers = {};
 
   // a Run, exclusively for inclusion in exceptions
@@ -170,27 +173,47 @@ _.extend(OutputLog.prototype, {
     var self = this;
 
     if (! _.has(self.buffers, 'channel'))
-      self.buffers[channel] = '';
+      self.buffers[channel] = { text: '', offset: 0};
+    var b = self.buffers[channel];
 
-    self.buffers[channel] += text;
-    while (true) {
-      var i = self.buffers[channel].indexOf('\n');
-      if (i === -1)
-        break;
-      self.lines.push({ channel: channel,
-                        text: self.buffers[channel].substr(0, i) });
-      self.buffers[channel] = self.buffers[channel].substr(i + 1);
+    while (text.length) {
+      var m = text.match(/^[^\n\r]+/);
+      if (m) {
+        // A run of non-control characters.
+        b.text = b.text.substr(0, b.offset) +
+          m[0] + b.text.substr(b.offset + m[0].length);
+        b.offset += m[0].length;
+        text = text.substr(m[0].length);
+        continue;
+      }
+
+      if (text[0] === '\r') {
+        b.offset = 0;
+        text = text.substr(1);
+        continue;
+      }
+
+      if (text[0] === '\n') {
+        self.lines.push({ channel: channel, text: b.text });
+        b.text = '';
+        b.offset = 0;
+        text = text.substr(1);
+        continue;
+      }
+
+      throw new Error("conditions should have been exhaustive?");
     }
   },
 
   end: function () {
     var self = this;
+
     _.each(_.keys(self.buffers), function (channel) {
-      if (self.buffers[channel].length) {
+      if (self.buffers[channel].text.length) {
         self.lines.push({ channel: channel,
-                          text: self.buffers[channel],
+                          text: self.buffers[channel].text,
                           bare: true });
-        self.buffers[channel] = '';
+        self.buffers[channel] = { text: '', offset: 0};
       }
     });
   },
@@ -251,6 +274,11 @@ _.extend(OutputLog.prototype, {
 //   version names. If you pass 'notices' (which is optional), set it
 //   to the verbatim contents of the notices.json file for the
 //   release, as an object.
+// - fakeMongo: if set, set an environment variable that causes our
+//   'fake-mongod' stub process to be started instead of 'mongod'. The
+//   tellMongo method then becomes available on Runs for controlling
+//   the stub.
+
 var Sandbox = function (options) {
   var self = this;
   options = options || {};
@@ -261,6 +289,7 @@ var Sandbox = function (options) {
   fs.mkdirSync(self.home, 0755);
   self.cwd = self.home;
   self.env = {};
+  self.fakeMongo = options.fakeMongo
 
   if (_.has(options, 'warehouse')) {
     // Make a directory to hold our new warehouse
@@ -362,7 +391,8 @@ _.extend(Sandbox.prototype, {
       sandbox: self,
       args: _.toArray(arguments),
       cwd: self.cwd,
-      env: env
+      env: env,
+      fakeMongo: self.fakeMongo
     });
   },
 
@@ -515,6 +545,14 @@ var Run = function (execPath, options) {
   self.exitFutures = [];
 
   self.args.apply(self, options.args || []);
+
+  self.fakeMongoPort = null;
+  self.fakeMongoConnection = null;
+  if (options.fakeMongo) {
+    self.fakeMongoPort = 20000 + Math.floor(Math.random() * 10000);
+    self.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT = self.fakeMongoPort;
+  }
+
 };
 
 _.extend(Run.prototype, {
@@ -685,6 +723,7 @@ _.extend(Run.prototype, {
       var fut = new Future;
       self.exitFutures.push(fut);
       var timer = setTimeout(function () {
+        self.exitFutures = _.without(self.exitFutures, fut);
         fut['throw'](new TestFailure('exit-timeout', { run: self }));
       }, timeout * 1000);
 
@@ -726,6 +765,72 @@ _.extend(Run.prototype, {
       self.proc.kill();
       self.expectExit();
     }
+  }),
+
+  // If the fakeMongo option was set, sent a command to the stub
+  // mongod. Available commands currently are:
+  //
+  // - { stdout: "xyz" } to make fake-mongod write "xyz" to stdout
+  // - { stderr: "xyz" } likewise for stderr
+  // - { exit: 123 } to make fake-mongod exit with code 123
+  //
+  // Blocks until a connection to fake-mongod can be
+  // established. Throws a TestFailure if it cannot be established.
+  tellMongo: markStack(function (command) {
+    var self = this;
+
+    if (! self.fakeMongoPort)
+      throw new Error("fakeMongo option on sandbox must be set");
+
+    // If it's the first time we've called tellMongo on this sandbox,
+    // open a connection to fake-mongod. Wait up to 5 seconds for it
+    // to accept the connection, retrying every 100ms.
+    //
+    // XXX we never clean up this connection. Hopefully once
+    // fake-mongod has dropped its end of the connection, and we hold
+    // no reference to our end, it will get gc'd. If not, that's not
+    // great, but it probably doesn't actually create any practical
+    // problems since this is only for testing.
+    if (! self.fakeMongoConnection) {
+      var net = require('net');
+
+      var lastStartTime = 0;
+      for (var attempts = 0; ! self.fakeMongoConnection && attempts < 50;
+           attempts ++) {
+        // Throttle attempts to one every 100ms
+        utils.sleep((lastStartTime + 100) - (+ new Date));
+        lastStartTime = +(new Date);
+
+        // Use an anonymous function so that each iteration of the
+        // loop gets its own values of 'fut' and 'conn'.
+        (function () {
+          var fut = new Future;
+          var conn = net.connect(self.fakeMongoPort, function () {
+            fut['return'](true);
+          });
+          conn.setNoDelay();
+          conn.on('error', function () {
+            if (fut)
+              fut['return'](false);
+          });
+          setTimeout(function () {
+            if (fut)
+              fut['return'](false); // 100ms connection timeout
+          }, 100);
+
+          // This is all arranged so that if a previous attempt
+          // belatedly succeeds, somehow, we ignore it.
+          if (fut.wait())
+            self.fakeMongoConnection = conn;
+          fut = null;
+        })();
+      }
+
+      if (! self.fakeMongoConnection)
+        throw new TestFailure("mongo-not-running");
+    }
+
+    self.fakeMongoConnection.write(JSON.stringify(command) + "\n");
   })
 });
 

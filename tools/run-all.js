@@ -87,8 +87,8 @@ _.extend(Runner.prototype, {
 
     // print the banner only once we've successfully bound the port
     if (! self.quiet) {
-      self.runLog.log("[[[[[ " + self.banner + " ]]]]]\n\n");
-      self.runLog.log("=> Started proxy.\n");
+      self.runLog.log("[[[[[ " + self.banner + " ]]]]]\n");
+      self.runLog.log("=> Started proxy.");
     }
 
     if (! self.stopped) {
@@ -133,7 +133,7 @@ _.extend(Runner.prototype, {
 
     if (! self.stopped) {
       if (! self.quiet)
-        self.runLog.logTemporary("=> Starting your app...\r");
+        self.runLog.logTemporary("=> Starting your app...");
       self.appRunner.start();
       if (! self.quiet && ! self.stopped)
         self.runLog.log("=> Started your app.");

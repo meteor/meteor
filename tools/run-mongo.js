@@ -53,7 +53,9 @@ var findMongoPids = function (appDir, port) {
 
       var ret = [];
       _.each(stdout.split('\n'), function (line) {
-        // matches mongos we start.
+        // Matches mongos we start. Note that this matches
+        // 'fake-mongod' (our mongod stub for automated tests) as well
+        // as 'mongod'.
         var m = line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db(?: |$)/);
         if (m && m.length === 4) {
           var foundPid =  parseInt(m[1]);
@@ -146,8 +148,21 @@ var launchMongo = function (options) {
   var onListen = options.onListen || function () {};
   var onExit = options.onExit || function () {};
 
+  var noOplog = false;
   var mongod_path = path.join(
     files.getDevBundle(), 'mongodb', 'bin', 'mongod');
+
+  // Automated testing: If this is set, instead of starting mongod, we
+  // start our stub (fake-mongod) which can then be remote-controlled
+  // by the test.
+  if (process.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT) {
+    mongod_path = path.join(files.getCurrentToolsDir(),
+                            'tools', 'tests', 'fake-mongod', 'fake-mongod');
+
+    // oplog support requires sending admin commands to mongod, so
+    // it'd be hard to make fake-mongod support it.
+    noOplog = true;
+  }
 
   // store data in appDir
   var dbPath = path.join(options.appDir, '.meteor', 'local', 'db');
@@ -174,9 +189,10 @@ var launchMongo = function (options) {
 
     var portFile = path.join(dbPath, 'METEOR-PORT');
     var portFileExists = false;
-    var createReplSet = true;
+    var createReplSet;
     try {
-      createReplSet = +(fs.readFileSync(portFile)) !== options.port;
+      createReplSet = +(fs.readFileSync(portFile)) !== options.port &&
+        ! noOplog;
       portFileExists = true;
     } catch (e) {
       if (!e || e.code !== 'ENOENT')
@@ -253,7 +269,7 @@ var launchMongo = function (options) {
     var alreadyInitiatedReplSet = false;
     var alreadyCalledOnListen = false;
     var maybeCallOnListen = function () {
-      if (listening && replSetReady && !alreadyCalledOnListen) {
+      if (listening && (replSetReady || noOplog) && !alreadyCalledOnListen) {
         if (createReplSet)
           fs.writeFileSync(portFile, options.port);
         alreadyCalledOnListen = true;

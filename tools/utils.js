@@ -119,6 +119,9 @@ exports.getAgentInfo = function () {
 // called within a fiber, and blocks only the calling fiber, not the
 // whole program.)
 exports.sleep = function (ms) {
+  if (ms <= 0)
+    return;
+
   var fut = new Future;
   setTimeout(function () { fut['return']() }, ms);
   fut.wait();

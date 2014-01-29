@@ -893,7 +893,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
     // app's usual release by using a checkout, print a reminder banner.
     process.stderr.write(
 "=> Running Meteor from a checkout -- overrides project version (" +
-        appRelease + ")\n\n");
+        appRelease + ")\n");
   }
 
   // Now that we're ready to start executing the command, if we are in

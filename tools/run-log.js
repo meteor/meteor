@@ -105,7 +105,7 @@ _.extend(RunLog.prototype, {
     var self = this;
 
     self._clearSpecial();
-    process.stderr.write(msg + "\r");
+    process.stdout.write(msg + "\r");
     self.temporaryMessageLength = msg.length;
   },
 
