@@ -2170,7 +2170,8 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   handle.stop();
 
   // test _suppress_initial
-  handle = c.find({}, {sort: {a: -1}}).observe(_.extend(cbs, {_suppress_initial: true}));
+  handle = c.find({}, {sort: {a: -1}}).observe(_.extend({
+    _suppress_initial: true}, cbs));
   test.equal(operations.shift(), undefined);
   c.insert({a:100});
   test.equal(operations.shift(), ['added', {a:100}, 0, idA2]);
@@ -2195,6 +2196,21 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   test.equal(operations.shift(), ['added', {a:4}, 1, null]);
   c.update({a:3}, {a:3.5});
   test.equal(operations.shift(), ['changed', {a:3.5}, 0, {a:3}]);
+  handle.stop();
+
+  // test observe limit with pre-existing docs
+  c.remove({});
+  c.insert({a: 1});
+  c.insert({_id: 'two', a: 2});
+  c.insert({a: 3});
+  handle = c.find({}, {sort: {a: 1}, limit: 2}).observe(cbs);
+  test.equal(operations.shift(), ['added', {a:1}, 0, null]);
+  test.equal(operations.shift(), ['added', {a:2}, 1, null]);
+  test.equal(operations.shift(), undefined);
+  c.remove({a: 2});
+  test.equal(operations.shift(), ['removed', 'two', 1, {a:2}]);
+  test.equal(operations.shift(), ['added', {a:3}, 1, null]);
+  test.equal(operations.shift(), undefined);
   handle.stop();
 
   // test _no_indices
@@ -2563,6 +2579,14 @@ Tinytest.add("minimongo - pause", function (test) {
 
   c.resumeObservers();
   test.equal(operations.shift(), ['changed', {a:3}, 0, {a:1}]);
+  test.length(operations, 0);
+
+  // test special case for remove({})
+  c.pauseObservers();
+  test.equal(c.remove({}), 1);
+  test.length(operations, 0);
+  c.resumeObservers();
+  test.equal(operations.shift(), ['removed', 1, 0, {a:3}]);
   test.length(operations, 0);
 
   h.stop();
