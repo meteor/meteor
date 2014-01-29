@@ -1039,9 +1039,10 @@ var runTests = function (options) {
   });
 
   _.each(_.keys(currentHashes), function (f) {
-    if (! failuresInFile[f] && ! skipsInFile[f]) {
+    if (failuresInFile[f])
+      delete testState.lastPassedHashes[f];
+    else if (! skipsInFile[f])
       testState.lastPassedHashes[f] = currentHashes[f];
-    }
   });
 
   fs.writeFileSync(testStateFile, JSON.stringify(testState), 'utf8');

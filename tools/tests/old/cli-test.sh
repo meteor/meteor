@@ -94,7 +94,7 @@ tar tvzf foo.tar.gz >>$OUTPUT
 cd .. # we're now back to $DIR
 echo "... run"
 
-MONGOMARK='--bind_ip 127.0.0.1 --smallfiles --nohttpinterface --port 9102'
+MONGOMARK='--bind_ip 127.0.0.1 --smallfiles --nohttpinterface --port 9101'
 # kill any old test meteor
 # there is probably a better way to do this, but it is at least portable across macos and linux
 # (the || true is needed on linux, whose xargs will invoke kill even with no args)
@@ -184,7 +184,7 @@ echo "... mongo message"
 
 # Run a server on the same port as mongod, so that mongod fails to start up. Rig
 # it so that a single connection will cause it to exit.
-$NODE -e 'require("net").createServer(function(){process.exit(0)}).listen('$PORT'+2, "127.0.0.1")' &
+$NODE -e 'require("net").createServer(function(){process.exit(0)}).listen('$PORT'+1, "127.0.0.1")' &
 
 sleep 1
 
@@ -193,7 +193,7 @@ $METEOR -p $PORT > error.txt || true
 grep 'port was closed' error.txt >> $OUTPUT
 
 # Kill the server by connecting to it.
-$NODE -e 'require("net").connect({host:"127.0.0.1",port:'$PORT'+2},function(){process.exit(0);})'
+$NODE -e 'require("net").connect({host:"127.0.0.1",port:'$PORT'+1},function(){process.exit(0);})'
 
 echo "... settings"
 
