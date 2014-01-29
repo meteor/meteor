@@ -1,6 +1,6 @@
-MeteorId = {};
+MeteorDeveloperAccounts = {};
 
-Oauth.registerService("meteorId", 2, null, function (query) {
+Oauth.registerService("meteor-developer", 2, null, function (query) {
   var response = getTokens(query);
   var accessToken = response.accessToken;
   var identity = getIdentity(accessToken);
@@ -31,34 +31,42 @@ Oauth.registerService("meteorId", 2, null, function (query) {
 // - refreshToken, if this is the first authorization request and we got a
 //   refresh token from the server
 var getTokens = function (query) {
-  var config = ServiceConfiguration.configurations.findOne({service: 'meteorId'});
+  var config = ServiceConfiguration.configurations.findOne({
+    service: 'meteor-developer'
+  });
   if (!config)
     throw new ServiceConfiguration.ConfigError("Service not configured");
 
   var response;
   try {
     response = HTTP.post(
-      METEORID_URL + "/oauth2/token", {
+      METEOR_DEVELOPER_URL + "/oauth2/token", {
         params: {
           grant_type: "authorization_code",
           code: query.code,
           client_id: config.clientId,
           client_secret: config.secret,
-          redirect_uri: Meteor.absoluteUrl("_oauth/meteorId?close")
+          redirect_uri: Meteor.absoluteUrl("_oauth/meteor-developer?close")
         }
       }
     );
   } catch (err) {
-    throw _.extend(new Error("Failed to complete OAuth handshake with MeteorId. "
-                             + err.message),
-                   {response: err.response});
+    throw _.extend(
+      new Error(
+        "Failed to complete OAuth handshake with Meteor Developer Accounts. "
+          + err.message
+      ),
+      {response: err.response}
+    );
   }
 
   if (! response.data || response.data.error) {
     // if the http response was a json object with an error attribute
-    throw new Error("Failed to complete OAuth handshake with MeteorId. " +
-                    (response.data ? response.data.error :
-                    "No response data"));
+    throw new Error(
+      "Failed to complete OAuth handshake with Meteor Developer Accounts. " +
+        (response.data ? response.data.error :
+         "No response data")
+    );
   } else {
     return {
       accessToken: response.data.access_token,
@@ -71,14 +79,17 @@ var getTokens = function (query) {
 var getIdentity = function (accessToken) {
   try {
     return HTTP.get(
-      METEORID_URL + "/api/v1/identity",
+      METEOR_DEVELOPER_URL + "/api/v1/identity",
       {params: {access_token: accessToken}}).data;
   } catch (err) {
-    throw _.extend(new Error("Failed to fetch identity from MeteorId. " + err.message),
-                   {response: err.response});
+    throw _.extend(
+      new Error("Failed to fetch identity from Meteor Developer Accounts. " +
+                err.message),
+      {response: err.response}
+    );
   }
 };
 
-MeteorId.retrieveCredential = function(credentialToken) {
+MeteorDeveloperAccounts.retrieveCredential = function (credentialToken) {
   return Oauth.retrieveCredential(credentialToken);
 };

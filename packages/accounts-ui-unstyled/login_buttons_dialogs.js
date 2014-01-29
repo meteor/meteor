@@ -208,7 +208,12 @@ var updateSaveDisabled = function () {
 // template should be defined in the service's package
 var configureLoginServiceDialogTemplateForService = function () {
   var serviceName = loginButtonsSession.get('configureLoginServiceDialogServiceName');
-  return Template['configureLoginServiceDialogFor' + capitalize(serviceName)];
+  // XXX Service providers should be able to specify their configuration
+  // template name.
+  return Template['configureLoginServiceDialogFor' +
+                  (serviceName === 'meteor-developer' ?
+                   'MeteorDeveloper' :
+                   capitalize(serviceName))];
 };
 
 var configurationFields = function () {
