@@ -315,8 +315,23 @@ _.extend(LocalCollection.Cursor.prototype, {
       qid = self.collection.next_qid++;
       self.collection.queries[qid] = query;
     }
+
+    // For limited queries (that are ordered and have no skip) we start out
+    // storing in 'results' twice as many documents as we actually include in
+    // the query. This makes it faster to remove matching documents.
+    if (ordered && self.limit && !self.skip) {
+      query.limitWithBuffer = 2 * self.limit;
+    }
+
+    // The results field contains the results of the query... but for (ordered
+    // non-skip) limited results, we actually keep an extra buffer of matching
+    // documents on the end, so that when matching documents get removed, we
+    // don't have to completely recompute from scratch.
     query.results = self._getRawObjects({
-      ordered: ordered, distances: query.distances});
+      ordered: ordered,
+      distances: query.distances,
+      limitOverride: query.limitWithBuffer
+    });
     if (self.collection.paused)
       query.resultsSnapshot = (ordered ? [] : new LocalCollection._IdMap);
 
@@ -361,7 +376,13 @@ _.extend(LocalCollection.Cursor.prototype, {
       var each = ordered
             ? _.bind(_.each, null, query.results)
             : _.bind(query.results.forEach, query.results);
+      var i = 0;
       each(function (doc) {
+        // 'results' may have more than 'limit' in it because we read an extra
+        // buffer.
+        if (self.limit && i++ >= self.limit)
+          return;
+
         var fields = EJSON.clone(doc);
 
         delete fields._id;
@@ -454,6 +475,8 @@ LocalCollection.Cursor.prototype._getRawObjects = function (options) {
     }
   }
 
+  var limit = options.limitOverride || self.limit;
+
   self.collection._docs.forEach(function (doc, id) {
     var matchResult = self.matcher.documentMatches(doc);
     if (matchResult.result) {
@@ -467,8 +490,8 @@ LocalCollection.Cursor.prototype._getRawObjects = function (options) {
     }
     // Fast path for limited unsorted queries.
     // XXX 'length' check here seems wrong for ordered
-    if (self.limit && !self.skip && !self.sorter &&
-        results.length === self.limit)
+    if (limit && !self.skip && !self.sorter &&
+        results.length === limit)
       return false;  // break
     return true;  // continue
   });
@@ -481,9 +504,9 @@ LocalCollection.Cursor.prototype._getRawObjects = function (options) {
     results.sort(comparator);
   }
 
-  var idx_start = self.skip || 0;
-  var idx_end = self.limit ? (self.limit + idx_start) : results.length;
-  return results.slice(idx_start, idx_end);
+  var idxStart = self.skip || 0;
+  var idxEnd = limit ? (limit + idxStart) : results.length;
+  return results.slice(idxStart, idxEnd);
 };
 
 // XXX Maybe we need a version of observe that just calls a callback if
@@ -541,7 +564,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
     if (matchResult.result) {
       if (query.distances && matchResult.distance !== undefined)
         query.distances.set(id, matchResult.distance);
-      if (query.cursor.skip || query.cursor.limit)
+      if ((query.cursor.skip || query.cursor.limit) && !query.limitWithBuffer)
         queriesToRecompute.push(qid);
       else
         LocalCollection._insertInResults(query, doc);
@@ -812,20 +835,45 @@ LocalCollection._insertInResults = function (query, doc) {
   delete fields._id;
   if (query.ordered) {
     if (!query.sorter) {
-      query.addedBefore(doc._id, fields, null);
+      // If we're keeping a buffer of extra matching-but-limited documents, but
+      // it's full, do nothing.
+      if (query.limitWithBuffer &&
+          query.results.length === query.limitWithBuffer)
+        return;
+      // If there's no limit, or this document will fit within the limit, then
+      // call the callback.
+      if (!query.cursor.limit ||
+          query.results.length + 1 < query.cursor.limit) {
+        query.addedBefore(doc._id, fields, null);
+        query.added(doc._id, fields);
+      }
+
       query.results.push(doc);
     } else {
       var i = LocalCollection._insertInSortedList(
         query.sorter.getComparator({distances: query.distances}),
         query.results, doc);
-      var next = query.results[i+1];
-      if (next)
-        next = next._id;
-      else
-        next = null;
-      query.addedBefore(doc._id, fields, next);
+
+      // Don't let our buffer grow larger than limitWithBuffer.
+      if (query.limitWithBuffer &&
+          query.results.length > query.limitWithBuffer) {
+        if (query.results.length !== query.limitWithBuffer + 1)
+          throw Error("list got too long");
+        query.results.pop();
+      }
+
+      if (!query.cursor.limit || i < query.cursor.limit) {
+        var next;
+        if ((query.cursor.limit && i === query.cursor.limit - 1) ||
+            i === query.results.length - 1) {
+          next = null;
+        } else {
+          next = query.results[i+1]._id;
+        }
+        query.addedBefore(doc._id, fields, next);
+        query.added(doc._id, fields);
+      }
     }
-    query.added(doc._id, fields);
   } else {
     query.added(doc._id, fields);
     query.results.set(doc._id, doc);
