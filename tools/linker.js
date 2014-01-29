@@ -2,6 +2,7 @@ var fs = require('fs');
 var _ = require('underscore');
 var sourcemap = require('source-map');
 var buildmessage = require('./buildmessage');
+var Profile = require('./profile.js');
 
 var packageDot = function (name) {
   if (/^[a-zA-Z0-9]*$/.exec(name))
@@ -61,7 +62,7 @@ _.extend(Module.prototype, {
 
   // Figure out which vars need to be specifically put in the module
   // scope.
-  computeAssignedVariables: function () {
+  computeAssignedVariables: Profile("compute assigned variables", function () {
     var self = this;
 
     if (!self.jsAnalyze) {
@@ -80,11 +81,11 @@ _.extend(Module.prototype, {
     assignedVariables = _.uniq(assignedVariables);
 
     return _.isEmpty(assignedVariables) ? undefined : assignedVariables;
-  },
+  }),
 
   // Output is a list of objects with keys 'source', 'servePath', 'sourceMap',
   // 'sourcePath'
-  getPrelinkedFiles: function () {
+  getPrelinkedFiles: Profile("get prelinked files", function () {
     var self = this;
 
     // If there are no files *and* we are a no-exports-at-all slice (eg a test
@@ -147,7 +148,7 @@ _.extend(Module.prototype, {
       servePath: self.combinedServePath,
       sourceMap: results.map.toString()
     }];
-  }
+  })
 });
 
 // Given 'symbolMap' like {Foo: 's1', 'Bar.Baz': 's2', 'Bar.Quux.A': 's3', 'Bar.Quux.B': 's4'}
@@ -487,7 +488,7 @@ var bannerPadding = function (bannerWidth) {
 //     sourceMap (a string) (XXX)
 // - assignedPackageVariables: an array of variables assigned to without
 //   being declared
-var prelink = function (options) {
+var prelink = Profile("linker prelink", function (options) {
   var module = new Module({
     name: options.name,
     declaredExports: options.declaredExports,
@@ -511,7 +512,7 @@ var prelink = function (options) {
     files: files,
     assignedVariables: assignedVariables
   };
-};
+});
 
 var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
   "This is a generated file. You can view the original",

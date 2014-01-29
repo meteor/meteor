@@ -7,6 +7,7 @@ var warehouse = require('./warehouse.js');
 var bundler = require('./bundler.js');
 var buildmessage = require('./buildmessage.js');
 var fs = require('fs');
+var Profile = require('./profile.js');
 
 // Under the hood, packages in the library (/packages/foo), and user
 // applications, are both Packages -- they are just represented
@@ -278,13 +279,13 @@ _.extend(Library.prototype, {
   // Get a package that represents an app. (ignoreFiles is optional
   // and if given, it should be an array of regexps for filenames to
   // ignore when scanning for source files.)
-  getForApp: function (appDir, ignoreFiles) {
+  getForApp: Profile("getForApp", function (appDir, ignoreFiles) {
     var self = this;
     var pkg = new packages.Package(self);
     pkg.initFromAppDir(appDir, ignoreFiles || []);
     pkg.build();
     return pkg;
-  },
+  }),
 
   // Given a slice set spec -- either a package name like "ddp", or a particular
   // slice within the package like "ddp:client", or a parsed object like
