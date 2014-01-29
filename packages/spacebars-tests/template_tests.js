@@ -1347,6 +1347,10 @@ Tinytest.add("spacebars - templates - inclusion lookup order", function (test) {
   var tmpl = Template.spacebars_template_test_inclusion_lookup;
   tmpl.data = function () {
     return {
+      // shouldn't have an effect since we define a helper with the
+      // same name.
+      spacebars_template_test_inclusion_lookup_subtmpl: Template.
+        spacebars_template_test_inclusion_lookup_subtmpl3,
       dataContextSubtmpl: Template.
         spacebars_template_test_inclusion_lookup_subtmpl3};
   };
