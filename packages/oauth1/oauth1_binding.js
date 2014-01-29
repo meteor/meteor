@@ -85,7 +85,7 @@ OAuth1Binding.prototype._buildHeader = function(headers) {
   var self = this;
   return _.extend({
     oauth_consumer_key: self._config.consumerKey,
-    oauth_nonce: Random.id().replace(/\W/g, ''),
+    oauth_nonce: Random.secret().replace(/\W/g, ''),
     oauth_signature_method: 'HMAC-SHA1',
     oauth_timestamp: (new Date().valueOf()/1000).toFixed().toString(),
     oauth_version: '1.0'

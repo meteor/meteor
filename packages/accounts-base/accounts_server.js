@@ -760,7 +760,7 @@ Accounts.registerLoginHandler("resume", function(options) {
 // (Also used by Meteor Accounts server and tests).
 //
 Accounts._generateStampedLoginToken = function () {
-  return {token: Random.id(), when: (new Date)};
+  return {token: Random.secret(), when: (new Date)};
 };
 
 ///
