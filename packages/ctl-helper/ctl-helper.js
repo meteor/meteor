@@ -142,6 +142,7 @@ _.extend(Ctl, {
   updateProxyActiveTags: function (tags, options) {
     var proxy;
     var proxyTagSwitchFuture = new Future;
+    options = options || {};
     AppConfig.configureService('proxy', 'pre0', function (proxyService) {
       if (proxyService && ! _.isEmpty(proxyService)) {
         try {
