@@ -1369,8 +1369,6 @@ _.extend(Package.prototype, {
           // @param where 'client', 'server', or an array of those.
           // The default is ['client', 'server'].
           //
-          // @param options 'testOnly', boolean.
-          //
           // options can include:
           //
           // - role: defaults to "use", but you could pass something
