@@ -111,7 +111,7 @@ Disallows inline CSS.
 
 Finally, you can configure a whitelist of allowed requests that various types of
 content can make. The following functions are defined for the content types
-script, object, image, media, font, and connect.
+script, object, image, media, font, frame, and connect.
 
 <dl class="callbacks">
 {{#dtdd "BrowserPolicy.content.allow&lt;ContentType&gt;Origin(origin)"}}
@@ -119,8 +119,11 @@ Allows this type of content to be loaded from the given origin. `origin` is a
 string and can include an optional scheme (such as `http` or `https`), an
 optional wildcard at the beginning, and an optional port which can be a
 wildcard. Examples include `example.com`, `https://*.example.com`, and
-`example.com:*`. You can call these functions multiple times with different
-origins to specify a whitelist of allowed origins.
+`example.com:*`. You can call these functions multiple times with
+different origins to specify a whitelist of allowed origins. Origins
+that don't specify a protocol will allow content over both HTTP and
+HTTPS: passing `example.com` will allow content from both
+`http://example.com` and `https://example.com`.
 {{/dtdd}}
 
 {{#dtdd "BrowserPolicy.content.allow&lt;ContentType&gt;DataUrl()"}}
@@ -159,6 +162,12 @@ allows images to have their `src` attributes point to images served from
 `https://example.com`.
 * `BrowserPolicy.content.allowConnectOrigin("https://example.com")` allows XMLHttpRequest
 and WebSocket connections to `https://example.com`.
+* `BrowserPolicy.content.allowFrameOrigin("https://example.com")` allows
+your site to load the origin `https://example.com` in a frame or
+iframe. The `BrowserPolicy.framing` API allows you to control which
+sites can frame your site, while
+`BrowserPolicy.content.allowFrameOrigin` allows you to control which
+sites can be loaded inside frames on your site.
 
 
 {{/better_markdown}}
