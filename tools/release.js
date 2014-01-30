@@ -2,7 +2,6 @@ var _ = require('underscore');
 var files = require('./files.js');
 var project = require('./project.js');
 var warehouse = require('./warehouse.js');
-var release = require('./release.js');
 var path = require('path');
 var library = require('./library.js');
 
