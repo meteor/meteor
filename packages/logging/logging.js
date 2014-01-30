@@ -113,10 +113,21 @@ Log._getCallerDetails = function () {
   // in case the matched block here is line:column
   details.line = match[2].split(':')[0];
 
+  var getPath = function (href) {
+    if (Meteor.isClient) {
+      var location = document.createElement('a');
+      location.href = href;
+      return location.pathname;
+    }
+    else {
+      // on the server is already a relative file path
+      return href;
+    }
+  };
+
   // Possible format: https://foo.bar.com/scripts/file.js?random=foobar
-  // XXX: if you can write the following in better way, please do it
   // XXX: what about evals?
-  details.file = match[1].split('/').slice(-1)[0].split('?')[0];
+  details.file = getPath(match[1]);
 
   return details;
 };
