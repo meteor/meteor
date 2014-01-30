@@ -29,8 +29,13 @@ var builtInComponents = {
 };
 
 _extend(UI.Component, {
-  lookup: function (id) {
+  // Options:
+  //
+  // - template {Boolean} If true, look at the list of templates after
+  //   helpers and before data context.
+  lookup: function (id, opts) {
     var self = this;
+    var template = opts && opts.template;
     var result;
     var comp;
 
@@ -58,6 +63,7 @@ _extend(UI.Component, {
 
     } else if (_.has(builtInComponents, id)) {
       return builtInComponents[id];
+
     // Code to search the global namespace for capitalized names
     // like component classes, `Template`, `StringUtils.foo`,
     // etc.
@@ -79,6 +85,10 @@ _extend(UI.Component, {
       // for this? We should definitely not put it on the Handlebars
       // namespace.
       result = Handlebars._globalHelpers[id];
+
+    } else if (template && _.has(Template, id)) {
+      return Template[id];
+
     } else {
       // Resolve id `foo` as `data.foo` (with a "soft dot").
       return function (/*arguments*/) {

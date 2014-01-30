@@ -38,5 +38,6 @@ Package.on_test(function (api) {
   api.use(['tinytest', 'underscore', 'ejson', 'ordered-dict',
            'random', 'deps']);
   api.add_files('minimongo_tests.js', 'client');
+  api.add_files('wrap_transform_tests.js');
   api.add_files('minimongo_server_tests.js', 'server');
 });

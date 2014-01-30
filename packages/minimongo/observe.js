@@ -193,11 +193,11 @@ LocalCollection._observeFromObserveChanges = function (cursor, observeCallbacks)
     //
     // NOTE: If called from an observe callback for a certain change, the result
     // is *not* guaranteed to be a snapshot of the cursor up to that
-    // change. This is because callbacks are deferred.
+    // change. This is because the callbacks are invoked before updating docs.
     handle._fetch = function () {
       var docsArray = [];
       changeObserver.docs.forEach(function (doc) {
-        docsArray.push(transform(doc));
+        docsArray.push(transform(EJSON.clone(doc)));
       });
       return docsArray;
     };

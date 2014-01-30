@@ -203,17 +203,9 @@ var codeGenTemplateTag = function (tag) {
           builtInBlockHelpers[path[0]] + '(' + callArgs.join(', ') + ')');
 
       } else {
-        var compCode = codeGenPath(path);
+        var compCode = codeGenPath(path, {lookupTemplate: true});
 
-        if (path.length === 1) {
-          // toObjectLiteralKey returns `"foo"` or `foo` depending on
-          // whether `foo` is a safe JavaScript identifier.
-          var member = toObjectLiteralKey(path[0]);
-          var templateDotFoo = (member.charAt(0) === '"' ?
-                                'Template[' + member + ']' :
-                                'Template.' + member);
-          compCode = ('(' + templateDotFoo + ' || ' + compCode + ')');
-        } else {
+        if (path.length !== 1) {
           // path code may be reactive; wrap it
           compCode = 'function () { return ' + compCode + '; }';
         }
@@ -252,7 +244,14 @@ var makeObjectLiteral = function (obj) {
 // (i.e. it may invalidate the current computation).
 //
 // No code is generated to call the result if it's a function.
-var codeGenPath = function (path) {
+//
+// Options:
+//
+// - lookupTemplate {Boolean} If true, generated code also looks in
+//   the list of templates. (After helpers, before data context).
+//   Used when generating code for `{{> foo}}` or `{{#foo}}`. Only
+//   used for non-dotted paths.
+var codeGenPath = function (path, opts) {
   if (builtInBlockHelpers.hasOwnProperty(path[0]))
     throw new Error("Can't use the built-in '" + path[0] + "' here");
   // Let `{{#if content}}` check whether this template was invoked via
@@ -264,7 +263,10 @@ var codeGenPath = function (path) {
     return builtInLexicals[path[0]];
   }
 
-  var code = 'self.lookup(' + toJSLiteral(path[0]) + ')';
+  var args = [toJSLiteral(path[0])];
+  if (opts && opts.lookupTemplate && path.length === 1)
+    args.push('{template: true}');
+  var code = 'self.lookup(' + args.join(', ') + ')';
 
   if (path.length > 1) {
     code = 'Spacebars.dot(' + code + ', ' +
