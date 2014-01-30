@@ -298,8 +298,7 @@ var springboard = function (toolsVersion, releaseOverride) {
   // Strip off the "node" and "meteor.js" from argv and replace it with the
   // appropriate tools's meteor shell script.
   var newArgv = process.argv.slice(2);
-  newArgv.unshift(
-    path.join(warehouse.getToolsDir(toolsVersion), 'bin', 'meteor'));
+  var cmd = path.join(warehouse.getToolsDir(toolsVersion), 'bin', 'meteor');
 
   if (releaseOverride !== undefined)
     // We used to just append --release=<releaseOverride> to the
@@ -310,7 +309,7 @@ var springboard = function (toolsVersion, releaseOverride) {
     process.env['METEOR_SPRINGBOARD_RELEASE'] = releaseOverride;
 
   // Now exec; we're not coming back.
-  require('kexec')(newArgv[0], newArgv);
+  require('kexec')(cmd, newArgv);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
