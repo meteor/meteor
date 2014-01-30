@@ -1365,14 +1365,13 @@ Fiber(function () {
     // Strip off the "node" and "meteor.js" from argv and replace it with the
     // appropriate tools's meteor shell script.
     var newArgv = process.argv.slice(2);
-    newArgv.unshift(
-      path.join(warehouse.getToolsDir(context.releaseManifest.tools),
-                'bin', 'meteor'));
+    var cmd = path.join(warehouse.getToolsDir(context.releaseManifest.tools),
+                        'bin', 'meteor');
     if (extraArgs)
       newArgv.push.apply(newArgv, extraArgs);
 
     // Now exec; we're not coming back.
-    require('kexec')(newArgv[0], newArgv);
+    require('kexec')(cmd, newArgv);
   };
 
   // Implements --version. Note that we only print to stdout and exit 0 if
