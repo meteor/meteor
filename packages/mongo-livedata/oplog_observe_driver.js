@@ -2,9 +2,9 @@ var Fiber = Npm.require('fibers');
 var Future = Npm.require('fibers/future');
 
 var PHASE = {
-  QUERYING: 1,
-  FETCHING: 2,
-  STEADY: 3
+  QUERYING: "QUERYING",
+  FETCHING: "FETCHING",
+  STEADY: "STEADY"
 };
 
 // OplogObserveDriver is an alternative to PollingObserveDriver which follows
@@ -28,15 +28,26 @@ OplogObserveDriver = function (options) {
   Package.facts && Package.facts.Facts.incrementServerFact(
     "mongo-livedata", "observe-drivers-oplog", 1);
 
-  self._phase = PHASE.QUERYING;
+  self._registerPhaseChange(PHASE.QUERYING);
 
-  self._published = new LocalCollection._IdMap;
+  // A minimongo LocalCollection containing the docs that match the selector,
+  // and maybe more. It is guaranteed to contain all the fields needed for the
+  // selector and the projection, and may have other fields too. (In the future
+  // we may try to make this collection be shared between multiple
+  // OplogObserveDrivers, but not currently.)
+  self._collection =
+    new LocalCollection({_observeCallbacksWillNeverYield: true});
+  // XXX think about what all the options are
+  var minimongoCursor = self._collection.find(
+    self._cursorDescription.selector, self._cursorDescription.options);
+  self._stopHandles.push(minimongoCursor.observeChanges(self._multiplexer));
+
   var selector = self._cursorDescription.selector;
   self._matcher = options.matcher;
-  var projection = self._cursorDescription.options.fields || {};
-  self._projectionFn = LocalCollection._compileProjection(projection);
+
   // Projection function, result of combining important fields for selector and
   // existing fields projection
+  var projection = self._cursorDescription.options.fields || {};
   self._sharedProjection = self._matcher.combineIntoProjection(projection);
   self._sharedProjectionFn = LocalCollection._compileProjection(
     self._sharedProjection);
@@ -51,32 +62,32 @@ OplogObserveDriver = function (options) {
   forEachTrigger(self._cursorDescription, function (trigger) {
     self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntry(
       trigger, function (notification) {
-        var op = notification.op;
-        if (notification.dropCollection) {
-          // Note: this call is not allowed to block on anything (especially on
-          // waiting for oplog entries to catch up) because that will block
-          // onOplogEntry!
-          self._needToPollQuery();
-        } else {
-          // All other operators should be handled depending on phase
-          if (self._phase === PHASE.QUERYING)
-            self._handleOplogEntryQuerying(op);
-          else
-            self._handleOplogEntrySteadyOrFetching(op);
-        }
+        Meteor._noYieldsAllowed(function () {
+          var op = notification.op;
+          if (notification.dropCollection) {
+            // Note: this call is not allowed to block on anything (especially
+            // on waiting for oplog entries to catch up) because that will block
+            // onOplogEntry!
+            self._needToPollQuery();
+          } else {
+            // All other operators should be handled depending on phase
+            if (self._phase === PHASE.QUERYING)
+              self._handleOplogEntryQuerying(op);
+            else
+              self._handleOplogEntrySteadyOrFetching(op);
+          }
+        });
       }
     ));
   });
 
   // XXX ordering w.r.t. everything else?
   self._stopHandles.push(listenAll(
-    self._cursorDescription, function (notification, complete) {
+    self._cursorDescription, function (notification) {
       // If we're not in a write fence, we don't have to do anything.
       var fence = DDPServer._CurrentWriteFence.get();
-      if (!fence) {
-        complete();
+      if (!fence)
         return;
-      }
       var write = fence.beginWrite();
       // This write cannot complete until we've caught up to "this point" in the
       // oplog, and then made it back to the steady state.
@@ -96,7 +107,6 @@ OplogObserveDriver = function (options) {
           self._writesToCommitWhenWeReachSteady.push(write);
         }
       });
-      complete();
     }
   ));
 
@@ -110,100 +120,109 @@ OplogObserveDriver = function (options) {
 _.extend(OplogObserveDriver.prototype, {
   _add: function (doc) {
     var self = this;
-    var id = doc._id;
-    var fields = _.clone(doc);
-    delete fields._id;
-    if (self._published.has(id))
-      throw Error("tried to add something already published " + id);
-    self._published.set(id, self._sharedProjectionFn(fields));
-    self._multiplexer.added(id, self._projectionFn(fields));
+    doc = self._sharedProjectionFn(doc);
+    // XXX does _sharedProjection always preserve id?
+    if (!_.has(doc, '_id'))
+      throw Error("Can't add doc without _id");
+    self._collection.insert(doc);
   },
-  _remove: function (id) {
+  _remove: function (id, options) {
     var self = this;
-    if (!self._published.has(id))
+    options = options || {};
+    var removed = self._collection.remove({_id: id});
+    if (options.mustExist && removed !== 1)
       throw Error("tried to remove something unpublished " + id);
-    self._published.remove(id);
-    self._multiplexer.removed(id);
   },
   _handleDoc: function (id, newDoc, mustMatchNow) {
     var self = this;
-    newDoc = _.clone(newDoc);
+    newDoc = _.clone(newDoc);  // *shallow* clone
 
+    // XXX this is just about "matching selector", not about skip/limit
     var matchesNow = newDoc && self._matcher.documentMatches(newDoc).result;
     if (mustMatchNow && !matchesNow) {
       throw Error("expected " + EJSON.stringify(newDoc) + " to match "
                   + EJSON.stringify(self._cursorDescription));
     }
 
-    var matchedBefore = self._published.has(id);
+    var inCollection = !!self._collection.find(id).count();
 
-    if (matchesNow && !matchedBefore) {
+    if (matchesNow && !inCollection) {
+      // It matches the selector and it isn't in our collection, so add it.
+      // XXX once we add skip/limit, this may not always send an added, and
+      // we may need to do some GC
       self._add(newDoc);
-    } else if (matchedBefore && !matchesNow) {
-      self._remove(id);
+    } else if (inCollection && !matchesNow) {
+      // We remove this from the collection to achieve two goals: (a) causing
+      // the observeChanges to fire removed() and (b) saving memory.  That said,
+      // it would be legitimate (if !!newDoc) to update the collection instead
+      // of removing, if we thought we might need this doc again soon.
+      self._remove(id, {mustExist: true});
     } else if (matchesNow) {
-      var oldDoc = self._published.get(id);
-      if (!oldDoc)
-        throw Error("thought that " + id + " was there!");
-      delete newDoc._id;
-      self._published.set(id, self._sharedProjectionFn(newDoc));
-      var changed = LocalCollection._makeChangedFields(_.clone(newDoc), oldDoc);
-      changed = self._projectionFn(changed);
-      if (!_.isEmpty(changed))
-        self._multiplexer.changed(id, changed);
+      // Replace the doc inside our collection, which may trigger a changed
+      // callback.
+      newDoc = self._sharedProjectionFn(newDoc);
+      // XXX does _sharedProjection always preserve id?
+      if (!_.has(newDoc, '_id'))
+        throw Error("Can't add newDoc without _id");
+      self._collection.update(id, newDoc);
     }
   },
   _fetchModifiedDocuments: function () {
     var self = this;
-    self._phase = PHASE.FETCHING;
-    while (!self._stopped && !self._needToFetch.empty()) {
-      if (self._phase !== PHASE.FETCHING)
-        throw new Error("phase in fetchModifiedDocuments: " + self._phase);
+    self._registerPhaseChange(PHASE.FETCHING);
+    // Defer, because nothing called from the oplog entry handler may yield, but
+    // fetch() yields.
+    Meteor.defer(function () {
+      while (!self._stopped && !self._needToFetch.empty()) {
+        if (self._phase !== PHASE.FETCHING)
+          throw new Error("phase in fetchModifiedDocuments: " + self._phase);
 
-      self._currentlyFetching = self._needToFetch;
-      var thisGeneration = ++self._fetchGeneration;
-      self._needToFetch = new LocalCollection._IdMap;
-      var waiting = 0;
-      var anyError = null;
-      var fut = new Future;
-      // This loop is safe, because _currentlyFetching will not be updated
-      // during this loop (in fact, it is never mutated).
-      self._currentlyFetching.forEach(function (cacheKey, id) {
-        waiting++;
-        self._mongoHandle._docFetcher.fetch(
-          self._cursorDescription.collectionName, id, cacheKey,
-          function (err, doc) {
-            if (err) {
-              if (!anyError)
-                anyError = err;
-            } else if (!self._stopped && self._phase === PHASE.FETCHING
-                       && self._fetchGeneration === thisGeneration) {
-              // We re-check the generation in case we've had an explicit
-              // _pollQuery call which should effectively cancel this round of
-              // fetches.  (_pollQuery increments the generation.)
-              self._handleDoc(id, doc);
-            }
-            waiting--;
-            // Because fetch() never calls its callback synchronously, this is
-            // safe (ie, we won't call fut.return() before the forEach is done).
-            if (waiting === 0)
-              fut.return();
-          });
-      });
-      fut.wait();
-      // XXX do this even if we've switched to PHASE.QUERYING?
-      if (anyError)
-        throw anyError;
-      // Exit now if we've had a _pollQuery call.
-      if (self._phase === PHASE.QUERYING)
-        return;
-      self._currentlyFetching = null;
-    }
-    self._beSteady();
+        self._currentlyFetching = self._needToFetch;
+        var thisGeneration = ++self._fetchGeneration;
+        self._needToFetch = new LocalCollection._IdMap;
+        var waiting = 0;
+        var anyError = null;
+        var fut = new Future;
+        // This loop is safe, because _currentlyFetching will not be updated
+        // during this loop (in fact, it is never mutated).
+        self._currentlyFetching.forEach(function (cacheKey, id) {
+          waiting++;
+          self._mongoHandle._docFetcher.fetch(
+            self._cursorDescription.collectionName, id, cacheKey,
+            function (err, doc) {
+              if (err) {
+                if (!anyError)
+                  anyError = err;
+              } else if (!self._stopped && self._phase === PHASE.FETCHING
+                         && self._fetchGeneration === thisGeneration) {
+                // We re-check the generation in case we've had an explicit
+                // _pollQuery call which should effectively cancel this round of
+                // fetches.  (_pollQuery increments the generation.)
+                self._handleDoc(id, doc);
+              }
+              waiting--;
+              // Because fetch() never calls its callback synchronously, this is
+              // safe (ie, we won't call fut.return() before the forEach is
+              // done).
+              if (waiting === 0)
+                fut.return();
+            });
+        });
+        fut.wait();
+        // XXX do this even if we've switched to PHASE.QUERYING?
+        if (anyError)
+          throw anyError;
+        // Exit now if we've had a _pollQuery call.
+        if (self._phase === PHASE.QUERYING)
+          return;
+        self._currentlyFetching = null;
+      }
+      self._beSteady();
+    });
   },
   _beSteady: function () {
     var self = this;
-    self._phase = PHASE.STEADY;
+    self._registerPhaseChange(PHASE.STEADY);
     var writes = self._writesToCommitWhenWeReachSteady;
     self._writesToCommitWhenWeReachSteady = [];
     self._multiplexer.onFlush(function () {
@@ -222,16 +241,16 @@ _.extend(OplogObserveDriver.prototype, {
     // If we're already fetching this one, or about to, we can't optimize; make
     // sure that we fetch it again if necessary.
     if (self._phase === PHASE.FETCHING &&
-        (self._currentlyFetching.has(id) || self._needToFetch.has(id))) {
+        ((self._currentlyFetching && self._currentlyFetching.has(id)) ||
+         self._needToFetch.has(id))) {
       self._needToFetch.set(id, op.ts.toString());
       return;
     }
 
     if (op.op === 'd') {
-      if (self._published.has(id))
-        self._remove(id);
+      self._remove(id);
     } else if (op.op === 'i') {
-      if (self._published.has(id))
+      if (self._collection.find(id).count())
         throw new Error("insert found for already-existing ID");
 
       // XXX what if selector yields?  for now it can't but later it could have
@@ -253,18 +272,24 @@ _.extend(OplogObserveDriver.prototype, {
 
       if (isReplace) {
         self._handleDoc(id, _.extend({_id: id}, op.o));
-      } else if (self._published.has(id) && canDirectlyModifyDoc) {
-        // Oh great, we actually know what the document is, so we can apply
-        // this directly.
-        var newDoc = EJSON.clone(self._published.get(id));
-        newDoc._id = id;
-        LocalCollection._modify(newDoc, op.o);
-        self._handleDoc(id, self._sharedProjectionFn(newDoc));
-      } else if (!canDirectlyModifyDoc ||
-                 self._matcher.canBecomeTrueByModifier(op.o)) {
-        self._needToFetch.set(id, op.ts.toString());
-        if (self._phase === PHASE.STEADY)
-          self._fetchModifiedDocuments();
+      } else {
+        var newDoc = self._collection.findOne(id);
+        if (newDoc && canDirectlyModifyDoc) {
+          // Oh great, we actually know what the document is, so we can apply
+          // this directly.
+          // XXX just send the modifier to _collection.update? but then
+          // we don't necessarily get to GC
+
+          // We can avoid another deep clone here since the findOne above would
+          // return a copy anyways
+          LocalCollection._modify(newDoc, op.o);
+          self._handleDoc(id, newDoc);
+        } else if (!canDirectlyModifyDoc ||
+                   self._matcher.canBecomeTrueByModifier(op.o)) {
+          self._needToFetch.set(id, op.ts.toString());
+          if (self._phase === PHASE.STEADY)
+            self._fetchModifiedDocuments();
+        }
       }
     } else {
       throw Error("XXX SURPRISING OPERATION: " + op);
@@ -312,19 +337,20 @@ _.extend(OplogObserveDriver.prototype, {
     self._needToFetch = new LocalCollection._IdMap;
     self._currentlyFetching = null;
     ++self._fetchGeneration;  // ignore any in-flight fetches
-    self._phase = PHASE.QUERYING;
+    self._registerPhaseChange(PHASE.QUERYING);
+    self._collection.pauseObservers();
+    // XXX this won't be quite correct for skip/limit
+    self._collection.remove({});
 
     // Defer so that we don't block.
     Meteor.defer(function () {
-      // subtle note: _published does not contain _id fields, but newResults
-      // does
-      var newResults = new LocalCollection._IdMap;
-      var cursor = self._cursorForQuery();
-      cursor.forEach(function (doc) {
-        newResults.set(doc._id, doc);
+      // Insert all the documents currently found by the query.
+      self._cursorForQuery().forEach(function (doc) {
+        self._collection.insert(doc);
       });
 
-      self._publishNewResults(newResults);
+      // Allow observe callbacks (ie multiplexer invocations) to fire.
+      self._collection.resumeObservers();
 
       self._doneQuerying();
     });
@@ -394,34 +420,6 @@ _.extend(OplogObserveDriver.prototype, {
   },
 
 
-  // Replace self._published with newResults (both are IdMaps), invoking observe
-  // callbacks on the multiplexer.
-  //
-  // XXX This is very similar to LocalCollection._diffQueryUnorderedChanges. We
-  // should really: (a) Unify IdMap and OrderedDict into Unordered/OrderedDict (b)
-  // Rewrite diff.js to use these classes instead of arrays and objects.
-  _publishNewResults: function (newResults) {
-    var self = this;
-
-    // First remove anything that's gone. Be careful not to modify
-    // self._published while iterating over it.
-    var idsToRemove = [];
-    self._published.forEach(function (doc, id) {
-      if (!newResults.has(id))
-        idsToRemove.push(id);
-    });
-    _.each(idsToRemove, function (id) {
-      self._remove(id);
-    });
-
-    // Now do adds and changes.
-    newResults.forEach(function (doc, id) {
-      // "true" here means to throw if we think this doc doesn't match the
-      // selector.
-      self._handleDoc(id, doc, true);
-    });
-  },
-
   // This stop function is invoked from the onStop of the ObserveMultiplexer, so
   // it shouldn't actually be possible to call it until the multiplexer is
   // ready.
@@ -445,7 +443,6 @@ _.extend(OplogObserveDriver.prototype, {
     self._writesToCommitWhenWeReachSteady = null;
 
     // Proactively drop references to potentially big things.
-    self._published = null;
     self._needToFetch = null;
     self._currentlyFetching = null;
     self._oplogEntryHandle = null;
@@ -453,6 +450,23 @@ _.extend(OplogObserveDriver.prototype, {
 
     Package.facts && Package.facts.Facts.incrementServerFact(
       "mongo-livedata", "observe-drivers-oplog", -1);
+  },
+
+  _registerPhaseChange: function (phase) {
+    var self = this;
+    var now = new Date;
+
+    if (phase === self._phase)
+      return;
+
+    if (self._phase) {
+      var timeDiff = now - self._phaseStartTime;
+      Package.facts && Package.facts.Facts.incrementServerFact(
+        "mongo-livedata", "time-spent-in-" + self._phase + "-phase", timeDiff);
+    }
+
+    self._phase = phase;
+    self._phaseStartTime = now;
   }
 });
 

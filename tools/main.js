@@ -301,10 +301,6 @@ var springboard = function (toolsVersion, releaseOverride) {
   newArgv.unshift(
     path.join(warehouse.getToolsDir(toolsVersion), 'bin', 'meteor'));
 
-  // XXX When a version of kexec later than 0.0.1 is released, use its
-  // new capability of execing directly rather than going through /bin/sh.
-  newArgv.unshift('exec');
-
   if (releaseOverride !== undefined)
     // We used to just append --release=<releaseOverride> to the
     // arguments, and though that's probably safe in practice, there's
@@ -313,10 +309,8 @@ var springboard = function (toolsVersion, releaseOverride) {
     // use environment variable. #SpringboardEnvironmentVar
     process.env['METEOR_SPRINGBOARD_RELEASE'] = releaseOverride;
 
-  // Now shell quote this (because kexec wants to use /bin/sh -c) and execvp.
-  // XXX fork kexec and make it take an array instead of using shell
-  var quotedArgv = require('shell-quote').quote(newArgv);
-  require('kexec')(quotedArgv);
+  // Now exec; we're not coming back.
+  require('kexec')(newArgv[0], newArgv);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -343,7 +337,7 @@ Fiber(function () {
 
   // Check required Node version.
   // This code is duplicated in tools/server/boot.js.
-  var MIN_NODE_VERSION = 'v0.10.22';
+  var MIN_NODE_VERSION = 'v0.10.25';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
     process.stderr.write(
       'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');

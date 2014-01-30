@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Login service for MeteorId accounts",
+  summary: "Login service for Meteor Developer Accounts",
   internal: true // XXX for now
 });
 
@@ -9,8 +9,8 @@ Package.on_use(function (api) {
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);
   api.use('accounts-oauth', ['client', 'server']);
-  api.use('meteorid', ['client', 'server']);
+  api.use('meteor-developer', ['client', 'server']);
 
-  api.add_files("meteorid.js");
-  api.add_files("meteorid_login_button.css", "client");
+  api.add_files("meteor-developer.js");
+  api.add_files("meteor-developer-login-button.css", "client");
 });

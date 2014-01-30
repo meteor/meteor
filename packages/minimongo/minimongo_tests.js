@@ -216,6 +216,21 @@ Tinytest.add("minimongo - cursors", function (test) {
   test.equal(c.findOne(id).i, 2);
 });
 
+Tinytest.add("minimongo - transform", function (test) {
+  var c = new LocalCollection;
+  c.insert({});
+  // transform functions must return objects
+  var invalidTransform = function (doc) { return doc._id; };
+  test.throws(function () {
+    c.findOne({}, {transform: invalidTransform});
+  });
+
+  // transformed documents get _id field transplanted if not present
+  var transformWithoutId = function (doc) { return _.omit(doc, '_id'); };
+  test.equal(c.findOne({}, {transform: transformWithoutId})._id,
+             c.findOne()._id);
+});
+
 Tinytest.add("minimongo - misc", function (test) {
   // deepcopy
   var a = {a: [1, 2, 3], b: "x", c: true, d: {x: 12, y: [12]},
@@ -2155,7 +2170,8 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   handle.stop();
 
   // test _suppress_initial
-  handle = c.find({}, {sort: {a: -1}}).observe(_.extend(cbs, {_suppress_initial: true}));
+  handle = c.find({}, {sort: {a: -1}}).observe(_.extend({
+    _suppress_initial: true}, cbs));
   test.equal(operations.shift(), undefined);
   c.insert({a:100});
   test.equal(operations.shift(), ['added', {a:100}, 0, idA2]);
@@ -2180,6 +2196,21 @@ Tinytest.add("minimongo - observe ordered", function (test) {
   test.equal(operations.shift(), ['added', {a:4}, 1, null]);
   c.update({a:3}, {a:3.5});
   test.equal(operations.shift(), ['changed', {a:3.5}, 0, {a:3}]);
+  handle.stop();
+
+  // test observe limit with pre-existing docs
+  c.remove({});
+  c.insert({a: 1});
+  c.insert({_id: 'two', a: 2});
+  c.insert({a: 3});
+  handle = c.find({}, {sort: {a: 1}, limit: 2}).observe(cbs);
+  test.equal(operations.shift(), ['added', {a:1}, 0, null]);
+  test.equal(operations.shift(), ['added', {a:2}, 1, null]);
+  test.equal(operations.shift(), undefined);
+  c.remove({a: 2});
+  test.equal(operations.shift(), ['removed', 'two', 1, {a:2}]);
+  test.equal(operations.shift(), ['added', {a:3}, 1, null]);
+  test.equal(operations.shift(), undefined);
   handle.stop();
 
   // test _no_indices
@@ -2451,15 +2482,15 @@ Tinytest.add("minimongo - saveOriginals", function (test) {
   // Verify the originals.
   var originals = c.retrieveOriginals();
   var affected = ['bar', 'baz', 'quux', 'whoa', 'hooray'];
-  test.equal(_.size(originals), _.size(affected));
+  test.equal(originals.size(), _.size(affected));
   _.each(affected, function (id) {
-    test.isTrue(_.has(originals, id));
+    test.isTrue(originals.has(id));
   });
-  test.equal(originals.bar, {_id: 'bar', x: 'updateme'});
-  test.equal(originals.baz, {_id: 'baz', x: 'updateme'});
-  test.equal(originals.quux, {_id: 'quux', y: 'removeme'});
-  test.equal(originals.whoa, {_id: 'whoa', y: 'removeme'});
-  test.equal(originals.hooray, undefined);
+  test.equal(originals.get('bar'), {_id: 'bar', x: 'updateme'});
+  test.equal(originals.get('baz'), {_id: 'baz', x: 'updateme'});
+  test.equal(originals.get('quux'), {_id: 'quux', y: 'removeme'});
+  test.equal(originals.get('whoa'), {_id: 'whoa', y: 'removeme'});
+  test.equal(originals.get('hooray'), undefined);
 
   // Verify that changes actually occured.
   test.equal(c.find().count(), 4);
@@ -2472,16 +2503,16 @@ Tinytest.add("minimongo - saveOriginals", function (test) {
   c.saveOriginals();
   originals = c.retrieveOriginals();
   test.isTrue(originals);
-  test.isTrue(_.isEmpty(originals));
+  test.isTrue(originals.empty());
 
   // Insert and remove a document during the period.
   c.saveOriginals();
   c.insert({_id: 'temp', q: 8});
   c.remove('temp');
   originals = c.retrieveOriginals();
-  test.equal(_.size(originals), 1);
-  test.isTrue(_.has(originals, 'temp'));
-  test.equal(originals.temp, undefined);
+  test.equal(originals.size(), 1);
+  test.isTrue(originals.has('temp'));
+  test.equal(originals.get('temp'), undefined);
 });
 
 Tinytest.add("minimongo - saveOriginals errors", function (test) {
@@ -2548,6 +2579,14 @@ Tinytest.add("minimongo - pause", function (test) {
 
   c.resumeObservers();
   test.equal(operations.shift(), ['changed', {a:3}, 0, {a:1}]);
+  test.length(operations, 0);
+
+  // test special case for remove({})
+  c.pauseObservers();
+  test.equal(c.remove({}), 1);
+  test.length(operations, 0);
+  c.resumeObservers();
+  test.equal(operations.shift(), ['removed', 1, 0, {a:3}]);
   test.length(operations, 0);
 
   h.stop();

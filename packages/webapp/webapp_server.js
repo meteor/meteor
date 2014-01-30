@@ -397,7 +397,6 @@ var runWebAppServer = function () {
     // in `about:config` (it is on by default in FF 24).
     if (info.sourceMapUrl)
       res.setHeader('X-SourceMap', info.sourceMapUrl);
-
     send(req, path.join(clientDir, info.path))
       .maxage(maxAge)
       .hidden(true)  // if we specified a dotfile in the manifest, serve it
@@ -445,8 +444,17 @@ var runWebAppServer = function () {
 
     var request = WebApp.categorizeRequest(req);
 
+    if (request.url.query && request.url.query['meteor_css_resource']) {
+      // In this case, we're requesting a CSS resource in the meteor-specific
+      // way, but we don't have it.  Serve a static css file that indicates that
+      // we didn't have it, so we can detect that and refresh.
+      headers['Content-Type'] = 'text/css; charset=utf-8';
+      res.writeHead(200, headers);
+      res.write(".meteor-css-not-found-error { width: 0px;}");
+      res.end();
+      return undefined;
+    }
     res.writeHead(200, headers);
-
     var requestSpecificHtml = htmlAttributes(boilerplateHtml, request);
     res.write(requestSpecificHtml);
     res.end();
@@ -482,14 +490,26 @@ var runWebAppServer = function () {
     // XXX: Eventually, this should be done with a standard meteor shut-down
     // logic path.
     httpServer.emit('meteor-closing');
-    httpServer.close( function () {
+
+    httpServer.close(Meteor.bindEnvironment(function () {
+      if (proxy) {
+        try {
+          proxy.call('removeBindingsForJob', process.env.GALAXY_JOB);
+        } catch (e) {
+          Log.error("Error removing bindings: " + e.message);
+          process.exit(1);
+        }
+      }
       process.exit(0);
-    });
+
+    }, "On http server close failed"));
+
     // Ideally we will close before this hits.
     Meteor.setTimeout(function () {
       Log.warn("Closed by SIGHUP but one or more HTTP requests may not have finished.");
       process.exit(1);
     }, 5000);
+
   }, function (err) {
     console.log(err);
     process.exit(1);
@@ -740,10 +760,10 @@ WebAppInternals.bindToProxy = function (proxyConfig) {
       }
     }
     var version = "";
-    if (!process.env.ADMIN_APP) {
-      var AppConfig = Package["application-configuration"].AppConfig;
-      version = AppConfig.getStarForThisJob() || "";
-    }
+
+    var AppConfig = Package["application-configuration"].AppConfig;
+    version = AppConfig.getStarForThisJob() || "";
+
 
     var parsedDdpUrl = _.clone(parsedUrl);
     parsedDdpUrl.protocol = "ddp";

@@ -74,13 +74,9 @@ _.extend(OplogHandle.prototype, {
     self._readyFuture.wait();
 
     var originalCallback = callback;
-    callback = Meteor.bindEnvironment(function (notification, onComplete) {
+    callback = Meteor.bindEnvironment(function (notification) {
       // XXX can we avoid this clone by making oplog.js careful?
-      try {
-        originalCallback(EJSON.clone(notification));
-      } finally {
-        onComplete();
-      }
+      originalCallback(EJSON.clone(notification));
     }, function (err) {
       Meteor._debug("Error in oplog callback", err.stack);
     });
@@ -208,9 +204,7 @@ _.extend(OplogHandle.prototype, {
           trigger.id = idForOp(doc);
         }
 
-        var f = new Future;
-        self._crossbar.fire(trigger, f.resolver());
-        f.wait();
+        self._crossbar.fire(trigger);
 
         // Now that we've processed this operation, process pending sequencers.
         if (!doc.ts)

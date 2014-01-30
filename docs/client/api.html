@@ -654,7 +654,8 @@ methods, documents are passed through the `transform` function before being
 returned or passed to callbacks.  This allows you to add methods or otherwise
 modify the contents of your collection from their database representation.  You
 can also specify `transform` on a particular `find`, `findOne`, `allow`, or
-`deny` call.
+`deny` call.  Transform functions must return an object and they may not change
+the value of the document's `_id` field (though it's OK to leave it out).
 
     // An Animal class that takes a document in its constructor
     Animal = function (doc) {
@@ -1753,11 +1754,11 @@ On the client, this function logs in as the newly created user on
 successful completion. On the server, it returns the newly created user
 id.
 
-On the client, you must pass `password` and one of `username` or `email`
-&mdash; enough information for the user to be able to log in again
-later. On the server, you can pass any subset of these options, but the
-user will not be able to log in until it has an identifier and a
-password.
+On the client, you must pass `password` and at least one of `username` or
+`email` &mdash; enough information for the user to be able to log in again
+later. On the server, you do not need to specify `password`, but the user will
+not be able to log in until it has a password (eg, set with
+[`Accounts.setPassword`](#accounts_setpassword)).
 
 To create an account without a password on the server and still let the
 user pick their own password, call `createUser` with the `email` option
@@ -1937,7 +1938,7 @@ effects of `created`.  It fires once and is the last callback to fire.
 
 {{> api_box template_events}}
 
-Declare event handers for instances of this template. Multiple calls add
+Declare event handlers for instances of this template. Multiple calls add
 new event handlers in addition to the existing ones.
 
 See [Event Maps](#eventmaps) for a detailed description of the event

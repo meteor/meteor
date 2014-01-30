@@ -318,15 +318,18 @@ _.extend(File.prototype, {
     return self.contents().length;
   },
 
-  // Set the URL of this file to "/<hash><suffix>". suffix will
-  // typically be used to pick a reasonable extension. Also set
-  // cacheable to true, since the file's name is now derived from its
-  // contents.
-  setUrlToHash: function (suffix) {
+  // Set the URL (and target path) of this file to "/<hash><suffix>". suffix
+  // will typically be used to pick a reasonable extension. Also set cacheable
+  // to true, since the file's name is now derived from its contents.
+
+  // Also allow a special second suffix that will *only* be postpended to the
+  // url, useful for query parameters.
+  setUrlToHash: function (fileAndUrlSuffix, urlSuffix) {
     var self = this;
-    self.url = "/" + self.hash() + suffix;
+    urlSuffix = urlSuffix || "";
+    self.url = "/" + self.hash() + fileAndUrlSuffix + urlSuffix;
     self.cacheable = true;
-    self.targetPath = self.hash() + suffix;
+    self.targetPath = self.hash() + fileAndUrlSuffix;
   },
 
   // Append "?<hash>" to the URL and mark the file as cacheable.
@@ -771,7 +774,7 @@ _.extend(ClientTarget.prototype, {
     allCss = minifiers.CleanCSSProcess(allCss);
 
     self.css = [new File({ data: new Buffer(allCss, 'utf8') })];
-    self.css[0].setUrlToHash(".css");
+    self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
   },
 
   // XXX Instead of packaging the boilerplate in the client program, the
@@ -1477,9 +1480,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
 
       builder.write('README', { data: new Buffer(
 "This is a Meteor application bundle. It has only one dependency:\n" +
-"Node.js 0.10 (with the 'fibers' package). The current release of Meteor\n" +
-"has been tested with Node 0.10.22 and works best with 0.10.22 through\n" +
-"0.10.24. To run the application:\n" +
+"Node.js 0.10.25 or newer, plus the 'fibers' module. To run the application:\n" +
 "\n" +
 "  $ rm -r programs/server/node_modules/fibers\n" +
 "  $ npm install fibers@1.0.1\n" +
