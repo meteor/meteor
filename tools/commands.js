@@ -1212,7 +1212,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'admin grant'
 }, function (options) {
-  process.stderr.write("'admin grant' command not implemented yet");
+  process.stderr.write("'admin grant' command not implemented yet\n");
   return 0;
 });
 

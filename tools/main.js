@@ -424,7 +424,7 @@ Fiber(function () {
   // tradition.
   _.each(commands['--'] || {}, function (value, key) {
     if (_.has(isBoolean, "--" + key))
-      throw new Error("--" + key + " is both an option and a command?")
+      throw new Error("--" + key + " is both an option and a command?");
     isBoolean["--" + key] = true;
   });
 
