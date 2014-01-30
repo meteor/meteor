@@ -23,8 +23,16 @@ selftest.define("argument parsing", function () {
   run.expectExit(1);
 
   // conflicting command-like options
+  run = s.run("aoeuasdf", "--version");
+  run.matchErr("pass anything else along with --version");
+  run.expectExit(1);
+
   run = s.run("--arch", "--version");
-  run.matchErr("Can't pass both");
+  run.matchErr("pass anything else");
+  run.expectExit(1);
+
+  run = s.run("run", "--version");
+  run.matchErr("pass anything else");
   run.expectExit(1);
 
   run = s.run("--arch", "--arch");

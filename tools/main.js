@@ -648,7 +648,7 @@ Fiber(function () {
   }
 
   // Check for a command like '--arch' or '--version'. Make sure
-  // there's only one. (And this is ignored if you've passed --help.)
+  // it stands alone. (And this is ignored if you've passed --help.)
   if (! command) {
     _.each(commands['--'] || {}, function (value, key) {
       var fullName = "--" + key;
@@ -659,8 +659,8 @@ Fiber(function () {
                                fullName + " more than once.\n");
           process.exit(1);
         }
-        if (command) {
-          process.stderr.write("Can't pass both " + command.name + " and " +
+        if (_.size(rawOptions) > 1 || rawArgs.length !== 0 || command) {
+          process.stderr.write("Can't pass anything else along with " +
                                value.name + ".\n");
           process.exit(1);
         }
