@@ -72,7 +72,7 @@ var logInBrowser = function (obj) {
 };
 
 // @returns {Object: { line: Number, file: String }}
-Log._getCallerDetails = function () {
+Log._getCallerDetails = function (ignoreRegex) {
   var getStack = function () {
     // We do NOT use Error.prepareStackTrace here (a V8 extension that gets us a
     // pre-parsed stack) since it's impossible to compose it with the use of
@@ -98,8 +98,13 @@ Log._getCallerDetails = function () {
     }
 
     // XXX probably wants to be / or .js in case no source maps
-    if (!line.match(/packages\/logging(?:\/|(?::tests)?\.js)/))
-      break;
+    if (line.match(/packages\/logging(?:\/|(?::tests)?\.js)/))
+      continue;
+
+    if (ignoreRegex && line.match(ignoreRegex))
+      continue;
+
+    break;
   }
 
   var details = {};
