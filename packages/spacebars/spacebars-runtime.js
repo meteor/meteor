@@ -26,16 +26,19 @@ Spacebars.include = function (templateOrFunction, dataFunc, extraArgs) {
     // extend `result` with `underscoredArgs`, whether or not it's a function
     if (typeof result === 'function') {
       result = function () {
-        var result = Deps.isolateValue(function () {
+        var resultTmpl = Deps.isolateValue(function () {
           var ret = templateOrFunction();
           if (ret != null && ! UI.isComponent(ret))
             throw new Error("Expected null or template in return value from helper, found: " + ret);
+          return ret;
         });
-        result = result.extend(underscoredArgs);
-        return result;
+        resultTmpl = resultTmpl ? resultTmpl.extend(underscoredArgs) : resultTmpl;
+        return resultTmpl;
       };
     } else {
-      result = result.extend(underscoredArgs);
+      if (result != null && ! UI.isComponent(result))
+        throw new Error("Expected null or template in return value from helper, found: " + result);
+      result = result ? result.extend(underscoredArgs) : result;
     }
   }
 
