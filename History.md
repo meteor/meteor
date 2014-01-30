@@ -17,6 +17,19 @@
 * Upgrade `jquery-waypoints` package from 1.1.7 to 2.0.3. (Contains
   backward-incompatible changes).
 
+* Add `frame-src` to `browser-policy-content` and account for
+  cross-browser CSP disparities.
+
+* Transform functions must return objects and may not change the `_id` field
+  (though they may leave it out)
+
+* Upgrade jQuery from 1.8.2 to 1.10.2.
+  XXX see http://jquery.com/upgrade-guide/1.9/ for incompatibilities
+  XXX consider taking 1.11 instead, which was released this week
+
+* `force-ssl`: don't require SSL during `meteor run` in IPv6 environments.
+
+
 ## v0.7.0.1
 
 * Two fixes to `meteor run` Mongo startup bugs that could lead to hangs with the

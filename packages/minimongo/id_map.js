@@ -37,14 +37,22 @@ _.extend(LocalCollection._IdMap.prototype, {
     var self = this;
     self._map = {};
   },
+  // Iterates over the items in the map. Return `false` to break the loop.
   forEach: function (iterator) {
     var self = this;
-    _.each(self._map, function (value, key, obj) {
-      var context = this;
-      iterator.call(context, value, LocalCollection._idParse(key), obj);
-    });
+    // don't use _.each, because we can't break out of it.
+    var keys = _.keys(self._map);
+    for (var i = 0; i < keys.length; i++) {
+      var breakIfFalse = iterator.call(null, self._map[keys[i]],
+                                       LocalCollection._idParse(keys[i]));
+      if (breakIfFalse === false)
+        return;
+    }
   },
-  // XXX used?
+  size: function () {
+    var self = this;
+    return _.size(self._map);
+  },
   setDefault: function (id, def) {
     var self = this;
     var key = LocalCollection._idStringify(id);
@@ -52,5 +60,15 @@ _.extend(LocalCollection._IdMap.prototype, {
       return self._map[key];
     self._map[key] = def;
     return def;
+  },
+  // Assumes that values are EJSON-cloneable, and that we don't need to clone
+  // IDs (ie, that nobody is going to mutate an ObjectId).
+  clone: function () {
+    var self = this;
+    var clone = new LocalCollection._IdMap;
+    self.forEach(function (value, id) {
+      clone.set(id, EJSON.clone(value));
+      });
+    return clone;
   }
 });

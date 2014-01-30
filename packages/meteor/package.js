@@ -15,9 +15,6 @@ Package.on_use(function (api) {
 
   api.export('Meteor');
 
-  // Workaround for https://github.com/joyent/node/issues/6506
-  api.add_files('node-issue-6506-workaround.js', 'server');
-
   api.add_files('client_environment.js', 'client');
   api.add_files('server_environment.js', 'server');
   api.add_files('helpers.js', ['client', 'server']);
@@ -26,6 +23,7 @@ Package.on_use(function (api) {
   api.add_files('errors.js', ['client', 'server']);
   api.add_files('fiber_helpers.js', 'server');
   api.add_files('fiber_stubs_client.js', 'client');
+  api.add_files('unyielding_queue.js');
   api.add_files('startup_client.js', ['client']);
   api.add_files('startup_server.js', ['server']);
   api.add_files('debug.js', ['client', 'server']);

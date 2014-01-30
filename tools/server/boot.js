@@ -6,7 +6,7 @@ var _ = require('underscore');
 var sourcemap_support = require('source-map-support');
 
 // This code is duplicated in tools/meteor.js.
-var MIN_NODE_VERSION = 'v0.10.22';
+var MIN_NODE_VERSION = 'v0.10.25';
 
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
