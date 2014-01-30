@@ -175,60 +175,38 @@ Tinytest.add("spacebars - templates - inclusion args", function (test) {
   test.equal(stripComments(div.innerHTML), '[david]');
 
   ////// Now `foo` is a template that takes an arg; bar is a function.
-  tmpl.foo = Template.spacebars_template_test_bracketed_this;
+  tmpl.foo = Template.spacebars_template_test_span_this;
   R = ReactiveVar('david');
   tmpl.bar = function () { return R.get(); };
   div = renderToDiv(tmpl);
-  test.equal(stripComments(div.innerHTML), '[david]');
+  test.equal(canonicalizeHtml(div.innerHTML), '<span>david</span>');
+  var span1 = div.querySelector('span');
   R.set('avi');
   Deps.flush();
-  test.equal(stripComments(div.innerHTML), '[avi]');
+  test.equal(canonicalizeHtml(div.innerHTML), '<span>avi</span>');
+  var span2 = div.querySelector('span');
+  test.isTrue(span1 === span2);
 });
 
 Tinytest.add("spacebars - templates - inclusion args 2", function (test) {
   // `{{> foo bar q=baz}}`
   var tmpl = Template.spacebars_template_test_inclusion_args2;
 
-  tmpl.foo = function (a, options) {
-    return UI.Component.extend({
-      render: function () {
-        return String(a + options.hash.q);
-      }
-    });
+  tmpl.foo = Template.spacebars_template_test_span_this;
+  tmpl.bar = function (options) {
+    return options.hash.q;
   };
-  var R1 = ReactiveVar(3);
-  var R2 = ReactiveVar(4);
-  tmpl.bar = function () { return R1.get(); };
-  tmpl.baz = function () { return R2.get(); };
+
+  var R = ReactiveVar('david!');
+  tmpl.baz = function () { return R.get().slice(0,5); };
   var div = renderToDiv(tmpl);
-  test.equal(stripComments(div.innerHTML), '7');
-  R1.set(11);
-  R2.set(13);
+  test.equal(canonicalizeHtml(div.innerHTML), '<span>david</span>');
+  var span1 = div.querySelector('span');
+  R.set('brillo');
   Deps.flush();
-  test.equal(stripComments(div.innerHTML), '24');
-
-  tmpl.foo = UI.Component.extend({
-    render: function () {
-      var self = this;
-      return function () {
-        return String(self.data() + self.q());
-      };
-    }
-  });
-  R1 = ReactiveVar(20);
-  R2 = ReactiveVar(23);
-  div = renderToDiv(tmpl);
-  test.equal(stripComments(div.innerHTML), '43');
-  R1.set(10);
-  R2.set(17);
-  Deps.flush();
-  test.equal(stripComments(div.innerHTML), '27');
-
-  // helpers can be scalars. still get put on to the component as methods.
-  tmpl.bar = 3;
-  tmpl.baz = 8;
-  div = renderToDiv(tmpl);
-  test.equal(stripComments(div.innerHTML), '11');
+  test.equal(canonicalizeHtml(div.innerHTML), '<span>brill</span>');
+  var span2 = div.querySelector('span');
+  test.isTrue(span1 === span2);
 });
 
 Tinytest.add("spacebars - templates - inclusion dotted args", function (test) {
@@ -277,6 +255,9 @@ Tinytest.add("spacebars - templates - inclusion slashed args", function (test) {
 });
 
 Tinytest.add("spacebars - templates - block helper", function (test) {
+  // test the case where `foo` is a calculated template that changes
+  // reactively.
+  // `{{#foo}}bar{{else}}baz{{/foo}}`
   var tmpl = Template.spacebars_template_test_block_helper;
   var R = ReactiveVar(Template.spacebars_template_test_content);
   tmpl.foo = function () {
@@ -291,9 +272,11 @@ Tinytest.add("spacebars - templates - block helper", function (test) {
 });
 
 Tinytest.add("spacebars - templates - block helper function with one string arg", function (test) {
+  // `{{#foo "bar"}}content{{/foo}}`
   var tmpl = Template.spacebars_template_test_block_helper_function_one_string_arg;
-  tmpl.foo = function (x) {
-    if (x === "bar")
+  tmpl.foo = function () {
+    console.log(String(this));
+    if (String(this) === "bar")
       return Template.spacebars_template_test_content;
     else
       return null;
