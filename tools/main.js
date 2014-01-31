@@ -670,7 +670,6 @@ Fiber(function () {
 
   // OK, if not one of those, the first (non-'--') argument(s) should
   // name the command.
-  var walk = commands;
   if (! command) {
     if (rawArgs.length === 0) {
       // No arguments means 'run'. Unless it's 'meteor --help'.
@@ -682,6 +681,7 @@ Fiber(function () {
       }
     } else {
       // Find the command they specified.
+      var walk = commands;
       for (var i = 0; i < rawArgs.length; i++) {
         var word = rawArgs[i];
 
