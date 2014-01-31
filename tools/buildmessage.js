@@ -141,7 +141,7 @@ _.extend(MessageSet.prototype, {
   // MessageSet. If the other MessageSet is subsequently mutated,
   // results are undefined.
   //
-  // XXX ratehr than this, the user should be able to create a
+  // XXX rather than this, the user should be able to create a
   // MessageSet and pass it into capture(), and functions such as
   // bundle() should take and mutate, rather than return, a
   // MessageSet.
