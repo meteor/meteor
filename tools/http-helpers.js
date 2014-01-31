@@ -6,7 +6,6 @@ var os = require('os');
 var util = require('util');
 
 var _ = require('underscore');
-var request = require('request');
 var Future = require('fibers/future');
 
 var files = require('./files.js');
@@ -155,6 +154,9 @@ _.extend(exports, {
       options.proxy = proxy;
     }
 
+    // request is the most heavy-weight of the tool's npm dependencies; don't
+    // require it until we definitely need it.
+    var request = require('request');
     var req = request(options, callback);
 
     if (bodyStream)
