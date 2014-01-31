@@ -72,7 +72,6 @@ var messages = {};
 main.ShowUsage = function () {};
 
 // Exception to throw to skip the process.exit call.
-// usage information.
 main.WaitForExit = function () {};
 
 // Exception to throw from a command to exit, restart, and reinvoke
@@ -86,12 +85,12 @@ main.SpringboardToLatestRelease = function () {};
 //   - can be a basic command, like "deploy"
 //   - can be a subcommand, like "admin grant"
 //     (distinguished by presence of ' ')
-//   - can be a an option that functions as a command, ilke "--arch"
-//     (distinguisged by starting with '--')
+//   - can be an option that functions as a command, ilke "--arch"
+//     (distinguished by starting with '--')
 // - minArgs: minimum non-option arguments that can be present (default 0)
 // - maxArgs: maximum non-option arguments that can be present (defaults to
 //   whatever value you passed for minArgs; use Infinity for unlimited)
-// - options: map from long option name to..
+// - options: map from long option name to:
 //   - type: String, Number, or Boolean. default is String. a future
 //     version could support [String] and [Number] to allow the option to
 //     be passed more than once, but we don't do that yet.
@@ -116,7 +115,7 @@ main.SpringboardToLatestRelease = function () {};
 //     the release and always use the latest available version.)
 //   - function: some apps determine whether they use an app based on
 //     their arguments (eg, 'deploy' versus 'deploy --delete'). for
-//     these, set usesApp to a function that takes 'options' (same as
+//     these, set requiresApp to a function that takes 'options' (same as
 //     would be received by the actual command function) and returns
 //     true or false.
 // - requiresRelease: defaults to true. Set to false if this command
@@ -150,9 +149,9 @@ main.SpringboardToLatestRelease = function () {};
 //   app's top-level directory
 //
 // func should do one of the following:
-// - On success, return undefined. This indicates successful
+// - On success, return undefined (or 0). This indicates successful
 //   completion, and the program will exit with status 0.
-// - On failure, return a number. The program will exit with that
+// - On failure, return a positive number. The program will exit with that
 //   status.
 // - If the command-line arguments aren't valid, 'throw new
 //   main.ShowUsage'. This will print usage info for the command and
@@ -166,8 +165,7 @@ main.SpringboardToLatestRelease = function () {};
 //   (downloaded) Meteor release, 'throw new main.SpringboardToLatestRelease'.
 //
 // Commands should never call process.exit()! They should instead
-// return an appropriate value. Not all commands obey that yet, but
-// please write new commands in that style if possible.
+// return an appropriate value.
 
 main.registerCommand = function (options, func) {
   options = _.clone(options);
