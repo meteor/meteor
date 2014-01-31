@@ -97,7 +97,8 @@ main.SpringboardToLatestRelease = function () {};
 //   - short: single character short alias (eg, 'p' for 'port', to do -p 3000)
 //   - default: value to use if none supplied
 //   - required: true if required (incompatible with 'default')
-// - requiresApp: does this command work with an app? possible values:
+// - requiresApp: does this command work with an app? possible values
+//   (defaults to false):
 //   - true if an app is required, and command must be run inside an
 //     app. The command will be run using the app's Meteor release
 //     (unless overridden by --release or a checkout). An 'appDir'
