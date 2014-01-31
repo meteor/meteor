@@ -1653,7 +1653,7 @@ exports.bundle = function (options) {
     // Include default targets, unless there's a no-default-targets file in the
     // top level of the app. (This is a very hacky interface which will
     // change. Note, eg, that .meteor/packages is confusingly ignored in this
-    // case).
+    // case.)
 
     var includeDefaultTargets = watch.readAndWatchFile(
       watchSet, path.join(appDir, 'no-default-targets')) === null;
