@@ -171,6 +171,7 @@ Ctl.Commands.push({
       target = 1;
       break;
     default:
+      var c = oldServers.length;
       target =  Math.min(c - 1, Math.ceil(c*.8));
       break;
     }
