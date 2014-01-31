@@ -685,10 +685,12 @@ Fiber(function () {
       for (var i = 0; i < rawArgs.length; i++) {
         var word = rawArgs[i];
 
-        if (word === "help" && i === 0) {
-          // "meteor help some command" (note that we can't support
-          // "meteor some command help", since "meteor deploy help"
-          // needs to actually deploy a site called 'help')
+        // Support "meteor help", "meteor help deploy", "meteor help admin",
+        // "meteor admin help", "meteor admin help grant", etc.  (But not
+        // "meteor deploy help" or "meteor admin grant help": once we find an
+        // actual command, we assume "help" is an argument, eg a site called
+        // 'help'!)
+        if (word === "help") {
           showHelp = true;
           continue;
         }

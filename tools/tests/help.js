@@ -38,6 +38,7 @@ selftest.define("help", function () {
     run.expectExit(0);
   };
   checkSubcommandList(s.run("help", "admin"));
+  checkSubcommandList(s.run("admin", "help"));
   checkSubcommandList(s.run("admin", "--help"));
   checkSubcommandList(s.run("--help", "admin"));
 
@@ -48,6 +49,7 @@ selftest.define("help", function () {
   };
 
   checkSubcommandHelp(s.run("help", "admin", "grant"));
+  checkSubcommandHelp(s.run("admin", "help", "grant"));
   checkSubcommandHelp(s.run("admin", "grant", "--help"));
   checkSubcommandHelp(s.run("--help", "admin", "grant"));
 });
