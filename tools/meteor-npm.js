@@ -12,6 +12,7 @@ var cleanup = require(path.join(__dirname, 'cleanup.js'));
 var files = require(path.join(__dirname, 'files.js'));
 var httpHelpers = require('./http-helpers.js');
 var buildmessage = require('./buildmessage.js');
+var utils = require('./utils.js');
 var _ = require('underscore');
 
 var meteorNpm = exports;
@@ -29,10 +30,6 @@ cleanup.onExit(function () {
 // Exception used internally to gracefully bail out of a npm run if
 // something goes wrong
 var NpmFailure = function () {};
-
-var randomToken = function () {
-  return (Math.random() * 0x100000000 + 1).toString(36);
-};
 
 var isGitHubTarball = function (x) {
   return /^https:\/\/github.com\/.*\/tarball\/[0-9a-f]{40}/.test(x);
@@ -70,7 +67,7 @@ meteorNpm.updateDependencies = function (packageName,
   // we can then atomically rename it. we also make sure to
   // randomize the name, in case we're bundling this package
   // multiple times in parallel.
-  var newPackageNpmDir = packageNpmDir + '-new-' + randomToken();
+  var newPackageNpmDir = packageNpmDir + '-new-' + utils.randomToken();
 
   if (! npmDependencies || _.isEmpty(npmDependencies)) {
     // No NPM dependencies? Delete the .npm directory if it exists (because,
