@@ -11,6 +11,9 @@ var url = require('url');
 
 var auth = exports;
 
+// XXX Wrap functions in useAuthConn(). Opens a connection, runs the
+// function, closes the connection.
+
 // Opens and returns a DDP connection to the accounts server. Remember
 // to close it when you're done with it!
 var authConn = _.once(function (context) {
@@ -28,22 +31,24 @@ var authConn = _.once(function (context) {
 });
 
 // The accounts server has some wrapped methods that take and return
-// session identifiers. To call these methods, we pass the actual method
-// arguments in an array as the first argument, and send our current
-// session identifier (if any) in the second argument. The accounts
-// server returns an object with keys 'result' (the actual method
-// result) and 'session' (the new session identifier we should use, if
-// it created a new session for us).
-var callSessionMethod = function (methodName, methodArgs) {
-  var result = authConn().call(
-    methodName,
-    methodArgs,
-    auth.getSessionId(config.getAccountsDomain())
-  );
-  if (result && result.session) {
-    auth.setSessionId(config.getAccountsDomain(), result.session);
-  }
-  return result && result.result;
+// session identifiers. To call these methods, we add our current
+// session identifier (or null, if we don't have one) as the last
+// argument to the method. The accounts server returns an object with
+// keys 'result' (the actual method result) and 'session' (the new
+// session identifier we should use, if it created a new session for
+// us).
+var sessionMethodCaller = function (methodName, context) {
+  return function (/* arguments */) {
+    var args = _.toArray(arguments);
+    args.push({
+      session: auth.getSessionId(config.getAccountsDomain()) || null
+    });
+    var result = authConn(context).apply(methodName, args);
+    if (result && result.session) {
+      auth.setSessionId(config.getAccountsDomain(), result.session);
+    }
+    return result && result.result;
+  };
 };
 
 var getSessionFilePath = function () {
@@ -255,7 +260,7 @@ var tryRevokeOldTokens = function (context, options) {
 
     if (session.type === "meteor-account") {
       try {
-        callSessionMethod('revoke', [tokenIds]);
+        sessionMethodCaller('revoke', context)(tokenIds);
       } catch (err) {
         logoutFailWarning(domain);
       }
@@ -270,6 +275,7 @@ var tryRevokeOldTokens = function (context, options) {
       return;
     }
   });
+  authConn().close();
 };
 
 // Sends a request to https://<galaxyName>:<DISCOVERY_PORT> to find out the
@@ -593,10 +599,9 @@ exports.registerOrLogIn = function (context) {
   // Try to register
   var conn = authConn(context);
   try {
-    var result = callSessionMethod(
-      'tryRegister',
-      [email, utils.getAgentInfo()],
-      auth.getSessionId(config.getAccountsDomain())
+    var result = sessionMethodCaller('tryRegister', context)(
+      email,
+      utils.getAgentInfo()
     );
   } catch (err) {
     process.stderr.write("\nCouldn't connect to server. " +
