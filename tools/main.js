@@ -634,8 +634,7 @@ Fiber(function () {
   // the first time around. It will also never happen if the current
   // release is a checkout, because that doesn't make any sense.
   if (release.current && release.current.isProperRelease() &&
-      release.current.getToolsVersion() !== files.getToolsVersion() &&
-      ! process.env.METEOR_TEST_NO_SPRINGBOARD) {
+      release.current.getToolsVersion() !== files.getToolsVersion()) {
     springboard(release.current.getToolsVersion()); // does not return!
   }
 
