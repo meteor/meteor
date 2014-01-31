@@ -11,6 +11,20 @@ var url = require('url');
 
 var auth = exports;
 
+var Package = _.once(function (context) {
+  var unipackage = require('./unipackage.js');
+  var Package = unipackage.load({
+    library: context.library,
+    packages: [ 'meteor', 'livedata' ],
+    release: context.releaseVersion
+  });
+  return Package;
+});
+
+var DDP = _.once(function (context) {
+  return Package(context).livedata.DDP;
+});
+
 var getSessionFilePath = function () {
   return process.env.SESSION_FILE_PATH ||
     path.join(process.env.HOME, '.meteorsession');
@@ -121,6 +135,58 @@ var currentUsername = function (data) {
   return getSession(data, config.getAccountsDomain()).username || null;
 };
 
+var tryRevokeGalaxyTokens = function (domain, tokenIds, options) {
+  var oauthInfo = fetchGalaxyOAuthInfo(domain, options.timeout);
+  if (oauthInfo) {
+    url = oauthInfo.revokeUri;
+  } else {
+    return false;
+  }
+
+  try {
+    var result = httpHelpers.request({
+      url: url,
+      method: "POST",
+      form: {
+        tokenId: tokenIds.join(',')
+      },
+      useSessionHeader: true,
+      timeout: options.timeout
+    });
+  } catch (e) {
+    // most likely we don't have a net connection
+    return false;
+  }
+  var response = result.response;
+
+  if (response.statusCode === 200 &&
+      response.body) {
+    try {
+      var body = JSON.parse(response.body);
+      if (body.tokenRevoked) {
+        // Server confirms that the tokens have been revoked. Checking for a
+        // `tokenRevoked` key in the response confirms that we hit an actual
+        // galaxy auth server that understands that we were trying to revoke some
+        // tokens, not just a random URL that happened to return a 200
+        // response.
+
+        // (Be careful to reread session data in case httpHelpers changed it)
+        var data = readSessionData();
+        var session = getSession(data, domain);
+        session.pendingRevoke = _.difference(session.pendingRevoke, tokenIds);
+        if (! session.pendingRevoke.length)
+          delete session.pendingRevoke;
+        writeSessionData(data);
+      }
+    } catch (e) {
+      return false;
+    }
+    return true;
+  } else {
+    return false;
+  }
+};
+
 // If there are any logged out (pendingRevoke) tokens that haven't
 // been sent to the server for revocation yet, try to send
 // them. Reads the session file and then writes it back out to
@@ -131,7 +197,7 @@ var currentUsername = function (data) {
 //  - timeout: request timeout in milliseconds
 //  - firstTry: cosmetic. set to true if we recently logged out a
 //    session. just changes the error message.
-var tryRevokeOldTokens = function (options) {
+var tryRevokeOldTokens = function (context, options) {
   options = _.extend({
     timeout: 5000
   }, options || {});
@@ -164,15 +230,27 @@ var tryRevokeOldTokens = function (options) {
       return;
 
     var url;
+
+
     if (session.type === "meteor-account") {
-      url = config.getAccountsApiUrl() + "/revoke";
-    } else if (session.type === "galaxy") {
-      var oauthInfo = fetchGalaxyOAuthInfo(domain, options.timeout);
-      if (oauthInfo) {
-        url = oauthInfo.revokeUri;
-      } else {
+      var conn = DDP(context).connect(config.getAuthDDPUrl());
+      try {
+        var result = conn.call(
+          'revoke',
+          [tokenIds],
+          auth.getSessionId(config.getAccountsDomain())
+        );
+      } catch (err) {
         logoutFailWarning(domain);
-        return;
+      }
+      if (result && result.session) {
+        auth.setSessionId(config.getAccountsDomain(), result.session);
+      }
+      conn.close();
+      return;
+    } else if (session.type === "galaxy") {
+      if (! tryRevokeGalaxyTokens(domain, tokenIds, options)) {
+        logoutFailWarning(domain);
       }
     } else {
       // don't know how to revoke tokens of this type
@@ -180,47 +258,8 @@ var tryRevokeOldTokens = function (options) {
       return;
     }
 
-    try {
-      var result = httpHelpers.request({
-        url: url,
-        method: "POST",
-        form: {
-          tokenId: tokenIds.join(',')
-        },
-        useSessionHeader: true,
-        timeout: options.timeout
-      });
-    } catch (e) {
-      // most likely we don't have a net connection
-      return;
-    }
-    var response = result.response;
 
-    if (response.statusCode === 200 &&
-        response.body) {
-      try {
-        var body = JSON.parse(response.body);
-        if (body.tokenRevoked) {
-          // Server confirms that the tokens have been revoked. Checking for a
-          // `tokenRevoked` key in the response confirms that we hit an actual
-          // accounts server that understands that we were trying to revoke some
-          // tokens, not just a random URL that happened to return a 200
-          // response.
 
-          // (Be careful to reread session data in case httpHelpers changed it)
-          data = readSessionData();
-          var session = getSession(data, domain);
-          session.pendingRevoke = _.difference(session.pendingRevoke, tokenIds);
-          if (! session.pendingRevoke.length)
-            delete session.pendingRevoke;
-          writeSessionData(data);
-        }
-      } catch (e) {
-        logoutFailWarning(domain);
-      }
-    } else {
-      logoutFailWarning(domain);
-    }
   });
 };
 
@@ -354,8 +393,8 @@ var logInToGalaxy = function (galaxyName) {
 // include:
 // - retry: if true, then if the user gets the password wrong,
 //   reprompt.
-var doInteractivePasswordLogin = function (options) {
-  var loginData = utils.getAgentInfo();
+var doInteractivePasswordLogin = function (context, options) {
+  var loginData = {};
 
   if (_.has(options, 'username'))
     loginData.username = options.username;
@@ -364,53 +403,57 @@ var doInteractivePasswordLogin = function (options) {
   else
     throw new Error("Need username or email");
 
+  var loginFailed = function () {
+    process.stderr.write("Login failed.\n");
+  };
+
+  var conn = DDP(context).connect(config.getAuthDDPUrl());
   while (true) {
     loginData.password = utils.readLine({
       echo: false,
       prompt: "Password: "
     });
 
-    var result;
     try {
-      result = httpHelpers.request({
-        url: config.getAccountsApiUrl() + "/login",
-        method: "POST",
-        form: loginData,
-        useSessionHeader: true
+      var result = conn.call('login', {
+        session: auth.getSessionId(config.getAccountsDomain()),
+        meteorAccountsLoginInfo: loginData,
+        clientInfo: utils.getAgentInfo()
       });
-      var body = JSON.parse(result.body);
-    } catch (e) {
-      process.stderr.write("\nCouldn't connect to server. " +
-                           "Check your internet connection.\n");
-      return false;
+    } catch (err) {
     }
-
-    if (result.response.statusCode === 200 &&
-        _.has(result.response.headers, 'x-meteor-auth'))
+    if (result && result.token) {
       break;
-
-    process.stderr.write("Login failed.\n");
-    if (options.retry) {
-      process.stderr.write("\n");
-      continue;
+    } else {
+      loginFailed();
+      if (options.retry) {
+        process.stderr.write("\n");
+        continue;
+      } else {
+        conn.close();
+        return false;
+      }
     }
-    else
-      return false;
+  }
+  conn.close();
+
+  if (result.session) {
+    auth.setSessionId(config.getAccountsDomain(), result.session);
   }
 
   var data = readSessionData();
   logOutAllSessions(data);
   var session = getSession(data, config.getAccountsDomain());
   ensureSessionType(session, "meteor-account");
-  session.username = body.username;
-  session.userId = body.userId;
-  session.token = result.response.headers['x-meteor-auth'];
-  session.tokenId = body.tokenId;
+  session.username = result.username;
+  session.userId = result.id;
+  session.token = result.token;
+  session.tokenId = result.tokenId;
   writeSessionData(data);
   return true;
 };
 
-exports.loginCommand = function (argv, showUsage) {
+exports.loginCommand = function (context, argv, showUsage) {
   if (argv._.length !== 0)
     showUsage();
 
@@ -430,7 +473,7 @@ exports.loginCommand = function (argv, showUsage) {
       loginOptions.username = utils.readLine({ prompt: "Username: " });
     }
 
-    if (! doInteractivePasswordLogin(loginOptions))
+    if (! doInteractivePasswordLogin(context, loginOptions))
       process.exit(1);
   }
 
@@ -461,7 +504,7 @@ exports.loginCommand = function (argv, showUsage) {
     writeSessionData(data);
   }
 
-  tryRevokeOldTokens({ firstTry: true });
+  tryRevokeOldTokens(context, { firstTry: true });
 
   data = readSessionData();
   process.stdout.write("\nLogged in" + (galaxy ? " to " + galaxy : "") +
@@ -470,7 +513,7 @@ exports.loginCommand = function (argv, showUsage) {
                        "Thanks for being a Meteor developer!\n");
 };
 
-exports.logoutCommand = function (argv, showUsage) {
+exports.logoutCommand = function (context, argv, showUsage) {
   if (argv._.length !== 0)
     showUsage();
 
@@ -481,7 +524,7 @@ exports.logoutCommand = function (argv, showUsage) {
   logOutAllSessions(data);
   writeSessionData(data);
 
-  tryRevokeOldTokens({ firstTry: true });
+  tryRevokeOldTokens(context, { firstTry: true });
 
   if (wasLoggedIn)
     process.stderr.write("Logged out.\n");
@@ -539,92 +582,78 @@ exports.registerOrLogIn = function (context) {
   }
 
   // Try to register
-  var result;
+  var conn = DDP(context).connect(config.getAuthDDPUrl());
   try {
-    result = httpHelpers.request({
-      url: config.getAccountsApiUrl() + "/register",
-      method: "POST",
-      form: _.extend(utils.getAgentInfo(), {
-        email: email
-      }),
-      useSessionHeader: true
-    });
-    var body = JSON.parse(result.body);
-  } catch (e) {
+    var result = conn.call('tryRegister', [email, utils.getAgentInfo()],
+                           auth.getSessionId(config.getAccountsDomain()));
+  } catch (err) {
+    console.log(JSON.stringify(err));
     process.stderr.write("\nCouldn't connect to server. " +
                          "Check your internet connection.\n");
+    conn.close();
     return false;
   }
 
-  if (result.response.statusCode === 200) {
-    if (! _.has(result.response.headers, 'x-meteor-auth')) {
-      process.stdout.write("\nSorry, the server is having a problem.\n" +
-                          "Please try again later.\n");
-      return false;
-    }
+  conn.close();
 
+  var sessionId = result.session;
+  if (sessionId) {
+    auth.setSessionId(config.getAccountsDomain(), sessionId);
+  }
+  result = result.result;
+  console.log(result);
+
+  if (! result.alreadyExisted) {
     var data = readSessionData();
     logOutAllSessions(data);
     var session = getSession(data, config.getAccountsDomain());
     ensureSessionType(session, "meteor-account");
-    session.token = result.response.headers['x-meteor-auth'];
-    session.tokenId = body.tokenId;
-    session.userId = body.userId;
-    session.registrationUrl = body.registrationUrl;
+    session.token = result.token;
+    session.tokenId = result.tokenId;
+    session.userId = result.userId;
+    session.registrationUrl = result.registrationUrl;
     writeSessionData(data);
+    conn.close();
     return true;
-  }
-
-  if (body.error === "already_registered" &&
-      body.sentRegistrationEmail) {
+  } else if (result.alreadyExisted && result.sentRegistrationEmail) {
     process.stderr.write(
-"\n" +
-"That email address is already in use. We need to confirm that it belongs\n" +
-"to you. Luckily this will only take a moment.\n" +
-"\n" +
-"Check your mail! We've sent you a link. Click it, pick a password,\n" +
-"and then come back here to deploy your app.\n");
-
-    var unipackage = require('./unipackage.js');
-    var Package = unipackage.load({
-      library: context.library,
-      packages: [ 'meteor', 'livedata' ],
-      release: context.releaseVersion
-    })
-    var DDP = Package.livedata.DDP;
-    var authService = DDP.connect(config.getAuthDDPUrl());
+      "\n" +
+        "That email address is already in use. We need to confirm that it belongs\n" +
+        "to you. Luckily this will only take a moment.\n" +
+        "\n" +
+        "Check your mail! We've sent you a link. Click it, pick a password,\n" +
+        "and then come back here to deploy your app.\n");
     try {
-      var result = authService.call("waitForRegistration", email);
+      var waitForRegistrationResult = conn.call('waitForRegistration', email);
     } catch (e) {
-      if (! (e instanceof Package.meteor.Meteor.Error))
+      if (! (e instanceof Package(context).meteor.Meteor.Error))
         throw e;
       process.stderr.write(
-"\nWhen you've picked your password, run 'meteor login' and then you'll\n" +
-"be good to go.\n");
+        "\nWhen you've picked your password, run 'meteor login' and then you'll\n" +
+          "be good to go.\n");
+      conn.close();
       return false;
     }
 
     process.stderr.write("\nGreat! Nice to meet you, " + result.username +
                          "! Now log in with your new password.\n");
-    return doInteractivePasswordLogin({
+    return doInteractivePasswordLogin(context, {
       username: result.username,
       retry: true
     });
-  }
+  } else if (result.alreadyExisted && result.username) {
+    process.stderr.write("\nLogging in as " + result.username + ".\n");
 
-  if (body.error === "already_registered" && body.username) {
-    process.stderr.write("\nLogging in as " + body.username + ".\n");
-
-    return doInteractivePasswordLogin({
-      username: body.username,
+    return doInteractivePasswordLogin(context, {
+      username: result.username,
       retry: true
     });
+  } else {
+    // Hmm, got an email we don't understand.
+    process.stderr.write(
+      "\nThere was a problem. Please log in with 'meteor login'.\n");
+    return false;
   }
-
-  // Hmm, got an email we don't understand.
-  process.stderr.write(
-"\nThere was a problem. Please log in with 'meteor login'.\n");
-  return false;
 };
 
 exports.tryRevokeOldTokens = tryRevokeOldTokens;

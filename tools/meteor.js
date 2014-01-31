@@ -331,7 +331,7 @@ Fiber(function () {
       requireDirInApp("run");
       maybePrintUserOverrideMessage();
 
-      auth.tryRevokeOldTokens({timeout: 1000});
+      auth.tryRevokeOldTokens(context, {timeout: 1000});
 
       runner.run(context, {
         port: argv.port,
@@ -1355,7 +1355,9 @@ Fiber(function () {
 "username. Pass --galaxy to specify a galaxy to log in to.");
     },
 
-    func: auth.loginCommand
+    func: function (argv, showUsage) {
+      return auth.loginCommand(context, argv, showUsage);
+    }
   });
 
   Commands.push({
@@ -1368,7 +1370,9 @@ Fiber(function () {
 "Log out of your Meteor account.\n");
     },
 
-    func: auth.logoutCommand
+    func: function (argv, showUsage) {
+      return auth.logoutCommand(context, argv, showUsage);
+    }
   });
 
   Commands.push({
