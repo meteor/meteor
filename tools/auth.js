@@ -11,19 +11,40 @@ var url = require('url');
 
 var auth = exports;
 
-var Package = _.once(function (context) {
+// Opens and returns a DDP connection to the accounts server. Remember
+// to close it when you're done with it!
+var authConn = _.once(function (context) {
   var unipackage = require('./unipackage.js');
   var Package = unipackage.load({
     library: context.library,
     packages: [ 'meteor', 'livedata' ],
     release: context.releaseVersion
   });
-  return Package;
+  var DDP = Package.livedata.DDP;
+  return DDP.connect(config.getAuthDDPUrl(), {
+    // XXX Pass meteorReleaseContext
+    headers: { 'User-Agent': getUserAgent() }
+  });
 });
 
-var DDP = _.once(function (context) {
-  return Package(context).livedata.DDP;
-});
+// The accounts server has some wrapped methods that take and return
+// session identifiers. To call these methods, we pass the actual method
+// arguments in an array as the first argument, and send our current
+// session identifier (if any) in the second argument. The accounts
+// server returns an object with keys 'result' (the actual method
+// result) and 'session' (the new session identifier we should use, if
+// it created a new session for us).
+var callSessionMethod = function (methodName, methodArgs) {
+  var result = authConn().call(
+    methodName,
+    methodArgs,
+    auth.getSessionId(config.getAccountsDomain())
+  );
+  if (result && result.session) {
+    auth.setSessionId(config.getAccountsDomain(), result.session);
+  }
+  return result && result.result;
+};
 
 var getSessionFilePath = function () {
   return process.env.SESSION_FILE_PATH ||
@@ -233,20 +254,11 @@ var tryRevokeOldTokens = function (context, options) {
 
 
     if (session.type === "meteor-account") {
-      var conn = DDP(context).connect(config.getAuthDDPUrl());
       try {
-        var result = conn.call(
-          'revoke',
-          [tokenIds],
-          auth.getSessionId(config.getAccountsDomain())
-        );
+        callSessionMethod('revoke', [tokenIds]);
       } catch (err) {
         logoutFailWarning(domain);
       }
-      if (result && result.session) {
-        auth.setSessionId(config.getAccountsDomain(), result.session);
-      }
-      conn.close();
       return;
     } else if (session.type === "galaxy") {
       if (! tryRevokeGalaxyTokens(domain, tokenIds, options)) {
@@ -257,9 +269,6 @@ var tryRevokeOldTokens = function (context, options) {
       logoutFailWarning(domain);
       return;
     }
-
-
-
   });
 };
 
@@ -407,7 +416,7 @@ var doInteractivePasswordLogin = function (context, options) {
     process.stderr.write("Login failed.\n");
   };
 
-  var conn = DDP(context).connect(config.getAuthDDPUrl());
+  var conn = authConn(context);
   while (true) {
     loginData.password = utils.readLine({
       echo: false,
@@ -582,26 +591,19 @@ exports.registerOrLogIn = function (context) {
   }
 
   // Try to register
-  var conn = DDP(context).connect(config.getAuthDDPUrl());
+  var conn = authConn(context);
   try {
-    var result = conn.call('tryRegister', [email, utils.getAgentInfo()],
-                           auth.getSessionId(config.getAccountsDomain()));
+    var result = callSessionMethod(
+      'tryRegister',
+      [email, utils.getAgentInfo()],
+      auth.getSessionId(config.getAccountsDomain())
+    );
   } catch (err) {
-    console.log(JSON.stringify(err));
     process.stderr.write("\nCouldn't connect to server. " +
                          "Check your internet connection.\n");
     conn.close();
     return false;
   }
-
-  conn.close();
-
-  var sessionId = result.session;
-  if (sessionId) {
-    auth.setSessionId(config.getAccountsDomain(), sessionId);
-  }
-  result = result.result;
-  console.log(result);
 
   if (! result.alreadyExisted) {
     var data = readSessionData();
@@ -652,6 +654,7 @@ exports.registerOrLogIn = function (context) {
     // Hmm, got an email we don't understand.
     process.stderr.write(
       "\nThere was a problem. Please log in with 'meteor login'.\n");
+    conn.close();
     return false;
   }
 };
