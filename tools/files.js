@@ -280,7 +280,7 @@ _.extend(exports, {
 
   // Roughly like cp -R. 'from' should be a directory. 'to' can either
   // be a directory, or it can not exist (in which case it will be
-  // created with mkdir_p.) Doesn't think about file mode at all.
+  // created with mkdir_p). Doesn't think about file mode at all.
   //
   // If options.transformer_{filename, contents} is present, it should
   // be a function, and the contents (as a buffer) or filename will be
@@ -575,7 +575,7 @@ _.extend(exports, {
       // break 'instanceof Array'. for now, steer clear
       //
       // Pass 'true' as third argument if we want the parse error on
-      // stderr (which we don't.)
+      // stderr (which we don't).
       var script = require('vm').createScript(wrapped, stackFilename);
     } catch (nodeParseError) {
       if (!(nodeParseError instanceof SyntaxError))

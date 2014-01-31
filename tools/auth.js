@@ -75,7 +75,7 @@ var ensureSessionType = function (session, type) {
     // Blow away whatever was there. We lose pendingRevokes but that's
     // OK since this should never happen in normal operation. (It
     // would happen if the Meteor Accounts server mode somewhere else
-    // and a Galaxy was deployed at its old address, for example.)
+    // and a Galaxy was deployed at its old address, for example).
     _.each(_.keys(session), function (key) {
       delete session[key];
     });

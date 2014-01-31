@@ -1,4 +1,4 @@
-/// A simple interface to register function to be called when the process
+/// A simple interface to register functions to be called when the process
 /// exits.
 
 var _ = require('underscore');

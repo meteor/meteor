@@ -5,18 +5,18 @@ var buildmessage = require('./buildmessage.js');
 
 // Load unipackages into the currently running node.js process. Use
 // this to use unipackages (such as the DDP client) from command-line
-// tools (such as 'meteor'.) The requested packages will be loaded
+// tools (such as 'meteor'). The requested packages will be loaded
 // together will all of their dependencies, and each time you call
 // this function you load another, distinct copy of all of the
-// packages (except see note about caching below.) The return value is
+// packages (except see note about caching below). The return value is
 // an object that maps package name to package exports (that is, it is
 // the Package object from inside the sandbox created for the newly
-// loaded packages.)
+// loaded packages).
 //
 // Caching: There is a simple cache. If you call this function with
 // exactly the same library, release, and packages, we will attempt to
 // return the memoized return value from the previous load (rather
-// than creating a whole new copy of the packages in memory.) The
+// than creating a whole new copy of the packages in memory). The
 // caching logic is not particularly sophisticated. For example,
 // whenever you call load() with a different library the cache is
 // flushed.
@@ -62,7 +62,7 @@ var load = function (options) {
   }
 
   // Set up a minimal server-like environment (omitting the parts that
-  // are specific to the HTTP server.) Kind of a hack. I suspect this
+  // are specific to the HTTP server). Kind of a hack. I suspect this
   // will get refactored before too long. Note that
   // __meteor_bootstrap__.require is no longer provided.
   var env = {

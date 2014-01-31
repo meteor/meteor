@@ -38,7 +38,7 @@ var Library = function (options) {
 
 _.extend(Library.prototype, {
   // Temporarily add a package to the library (or override a package
-  // that actually exists in the library.) `packageName` is the name
+  // that actually exists in the library). `packageName` is the name
   // to use for the package and `packageDir` is the directory that
   // contains its source. For now, it is an error to try to install
   // two overrides for the same packageName.
@@ -373,7 +373,7 @@ _.extend(Library.prototype, {
   // shadowed. However, for now, it's undefined whether shadowed
   // packages are rebuilt (eg, if you have two packages named 'foo' in
   // your search path, both of them will have their builds deleted but
-  // only the visible one might get rebuilt immediately.)
+  // only the visible one might get rebuilt immediately).
   //
   // Returns a count of packages rebuilt.
   rebuildAll: function () {
@@ -441,7 +441,7 @@ _.extend(exports, {
 
   // returns a pretty list suitable for showing to the user. input is
   // a list of package objects, each of which must have a name (not be
-  // an application package.)
+  // an application package).
   formatList: function (pkgs) {
     var longest = '';
     _.each(pkgs, function (pkg) {
@@ -452,7 +452,7 @@ _.extend(exports, {
     var pad = longest.replace(/./g, ' ');
     // it'd be nice to read the actual terminal width, but I tried
     // several methods and none of them work (COLUMNS isn't set in
-    // node's environment; `tput cols` returns a constant 80.) maybe
+    // node's environment; `tput cols` returns a constant 80). maybe
     // node is doing something weird with ptys.
     var width = 80;
 
