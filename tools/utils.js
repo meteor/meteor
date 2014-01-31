@@ -1,4 +1,3 @@
-var Fibers = require('fibers');
 var Future = require('fibers/future');
 var readline = require('readline');
 var _ = require('underscore');
