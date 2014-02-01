@@ -27,6 +27,8 @@
   XXX see http://jquery.com/upgrade-guide/1.9/ for incompatibilities
   XXX consider taking 1.11 instead, which was released this week
 
+* Upgrade CoffeeScript from 1.6.3 to 1.7.1.
+
 * `force-ssl`: don't require SSL during `meteor run` in IPv6 environments.
 
 
