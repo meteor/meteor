@@ -62,11 +62,11 @@ Plugin.registerSourceHandler("less", function (compileStep) {
   });
 });;
 
-// Register lessimport files with the dependency watcher, without actually
-// processing them.
+// Register import.less files with the dependency watcher, without actually
+// processing them. There is a similar rule in the stylus package.
 Plugin.registerSourceHandler("import.less", function () {
   // Do nothing
 });
 
-// Backward compatibility
+// Backward compatibility with Meteor 0.7
 Plugin.registerSourceHandler("lessimport", function () {});
