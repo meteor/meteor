@@ -288,8 +288,8 @@ Tinytest.add("spacebars - templates - block helper function with one helper arg"
   var tmpl = Template.spacebars_template_test_block_helper_function_one_helper_arg;
   var R = ReactiveVar("bar");
   tmpl.bar = function () { return R.get(); };
-  tmpl.foo = function (x) {
-    if (x === "bar")
+  tmpl.foo = function () {
+    if (String(this) === "bar")
       return Template.spacebars_template_test_content;
     else
       return null;
