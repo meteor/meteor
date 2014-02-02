@@ -1235,6 +1235,7 @@ Tinytest.add('spacebars - templates - inclusion helpers are isolated', function 
 
   R.set("neither a component nor null");
 
+  test.fail("XXX need _throwErrors to work");
   test.throws(function () {
     Deps.flush({_throwErrors: true});
   }, /Expected null or template/);
