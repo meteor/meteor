@@ -6,8 +6,10 @@ var files = require('./files.js');
 var config = require('./config.js');
 var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
+var inFiber = require('./fiber-helpers.js').inFiber;
 var querystring = require('querystring');
 var url = require('url');
+var Future = require('fibers/future');
 
 var auth = exports;
 
@@ -37,13 +39,27 @@ var authConn = _.once(function (context) {
 // keys 'result' (the actual method result) and 'session' (the new
 // session identifier we should use, if it created a new session for
 // us).
-var sessionMethodCaller = function (methodName, context) {
+// options can include:
+//  - timeout: a timeout after which an exception will be thrown if the
+//    method hasn't returned yet
+var sessionMethodCaller = function (methodName, context, options) {
+  options = options || {};
   return function (/* arguments */) {
     var args = _.toArray(arguments);
     args.push({
       session: auth.getSessionId(config.getAccountsDomain()) || null
     });
-    var result = authConn(context).apply(methodName, args);
+    var fut = new Future();
+    authConn(context).apply(methodName, args, fut.resolver());
+    if (options.timeout !== undefined) {
+      var timer = setTimeout(inFiber(function () {
+        fut.throw(new Error('Method call timed out'));
+      }), options.timeout);
+    }
+    var result = fut.wait();
+    if (timer) {
+      clearTimeout(timer);
+    }
     if (result && result.session) {
       auth.setSessionId(config.getAccountsDomain(), result.session);
     }
@@ -161,6 +177,15 @@ var currentUsername = function (data) {
   return getSession(data, config.getAccountsDomain()).username || null;
 };
 
+var removePendingRevoke = function (domain, tokenIds) {
+  var data = readSessionData();
+  var session = getSession(data, domain);
+  session.pendingRevoke = _.difference(session.pendingRevoke, tokenIds);
+  if (! session.pendingRevoke.length)
+    delete session.pendingRevoke;
+  writeSessionData(data);
+};
+
 var tryRevokeGalaxyTokens = function (domain, tokenIds, options) {
   var oauthInfo = fetchGalaxyOAuthInfo(domain, options.timeout);
   if (oauthInfo) {
@@ -197,12 +222,7 @@ var tryRevokeGalaxyTokens = function (domain, tokenIds, options) {
         // response.
 
         // (Be careful to reread session data in case httpHelpers changed it)
-        var data = readSessionData();
-        var session = getSession(data, domain);
-        session.pendingRevoke = _.difference(session.pendingRevoke, tokenIds);
-        if (! session.pendingRevoke.length)
-          delete session.pendingRevoke;
-        writeSessionData(data);
+        removePendingRevoke(domain, tokenIds);
       }
     } catch (e) {
       return false;
@@ -260,7 +280,10 @@ var tryRevokeOldTokens = function (context, options) {
 
     if (session.type === "meteor-account") {
       try {
-        sessionMethodCaller('revoke', context)(tokenIds);
+        sessionMethodCaller('revoke', context, {
+          timeout: options.timeout
+        })(tokenIds);
+        removePendingRevoke(domain, tokenIds);
       } catch (err) {
         logoutFailWarning(domain);
       }
@@ -275,7 +298,7 @@ var tryRevokeOldTokens = function (context, options) {
       return;
     }
   });
-  authConn().close();
+  authConn(context).close();
 };
 
 // Sends a request to https://<galaxyName>:<DISCOVERY_PORT> to find out the
