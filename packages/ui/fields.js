@@ -114,6 +114,9 @@ _extend(UI.Component, {
       return result;
     };
   },
+  lookupTemplate: function (id) {
+    return this.lookup(id, {template: true});
+  },
   get: function (id) {
     // support `this.get()` to get the data context.
     if (id === undefined)

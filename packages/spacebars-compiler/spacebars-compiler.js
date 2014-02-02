@@ -190,10 +190,10 @@ var codeGenTemplateTag = function (tag) {
         if (! tag.args.length)
           throw new Error("#" + path[0] + " requires an argument");
 
-        var info = codeGenInclusionArgs(tag);
-        var dataFunc = info.dataFuncCode; // must exist (tag.args.length > 0)
-        var contentBlock = info.extraArgs.content; // must exist
-        var elseContentBlock = info.extraArgs.elseContent; // may not exist
+        var codeParts = codeGenInclusionParts(tag);
+        var dataFunc = codeParts.dataFunc; // must exist (tag.args.length > 0)
+        var contentBlock = codeParts.content; // must exist
+        var elseContentBlock = codeParts.elseContent; // may not exist
 
         var callArgs = [dataFunc, contentBlock];
         if (elseContentBlock)
@@ -210,18 +210,28 @@ var codeGenTemplateTag = function (tag) {
           compCode = 'function () { return ' + compCode + '; }';
         }
 
-        var argGen = codeGenInclusionArgs(tag);
-        var dataFuncCode = argGen.dataFuncCode;
-        var extraArgs = argGen.extraArgs;
+        var codeParts = codeGenInclusionParts(tag);
+        var dataFunc = codeParts.dataFunc;
+        var content = codeParts.content;
+        var elseContent = codeParts.elseContent;
 
         var includeArgs = [compCode];
-        if (dataFuncCode || extraArgs)
-          includeArgs.push(dataFuncCode || 'null');
-        if (extraArgs)
-          includeArgs.push(makeObjectLiteral(extraArgs));
+        if (content) {
+          includeArgs.push(content);
+          if (elseContent)
+            includeArgs.push(elseContent);
+        }
 
-        return HTML.EmitCode(
+        var includeCode = HTML.EmitCode(
           'Spacebars.include(' + includeArgs.join(', ') + ')');
+
+        if (dataFunc) {
+          includeCode = HTML.EmitCode(
+            'UI.With(' + dataFunc + ', UI.block(' +
+              Spacebars.codeGen(includeCode) + '))');
+        }
+
+        return includeCode;
       }
     } else {
       // Can't get here; TemplateTag validation should catch any
@@ -264,9 +274,10 @@ var codeGenPath = function (path, opts) {
   }
 
   var args = [toJSLiteral(path[0])];
+  var lookupMethod = 'lookup';
   if (opts && opts.lookupTemplate && path.length === 1)
-    args.push('{template: true}');
-  var code = 'self.lookup(' + args.join(', ') + ')';
+    lookupMethod = 'lookupTemplate';
+  var code = 'self.' + lookupMethod + '(' + args.join(', ') + ')';
 
   if (path.length > 1) {
     code = 'Spacebars.dot(' + code + ', ' +
@@ -346,33 +357,32 @@ var codeGenMustacheArgs = function (tagArgs) {
   return args;
 };
 
-// Returns an object containing two properties, both optional
-// (in which case they may be absent or `null`).
-// These properties are for code generation of the second and
-// third arguments to `Spacebars.include`.
+// Takes an inclusion tag and returns an object containing these properties,
+// all optional, whose values are JS source code:
 //
-// - `dataFuncCode` - source code of a data function literal
-// - `extraArgs` - map of key (e.g. "content") to source code
-var codeGenInclusionArgs = function (tag) {
-  var extraArgs = null; // [source]
+// - `dataFunc` - source code of a data function literal
+// - `content` - source code of a content block
+// - `elseContent` - source code of an elseContent block
+//
+// Implements the calling convention for inclusions.
+var codeGenInclusionParts = function (tag) {
+  var ret = {};
 
   if ('content' in tag) {
-    extraArgs = (extraArgs || {});
-    extraArgs.content = (
+    ret.content = (
       'UI.block(' + Spacebars.codeGen(tag.content) + ')');
   }
   if ('elseContent' in tag) {
-    extraArgs = (extraArgs || {});
-    extraArgs.elseContent = (
+    ret.elseContent = (
       'UI.block(' + Spacebars.codeGen(tag.elseContent) + ')');
   }
 
-  var dataFuncCode = null; // source (exclusive of `function () { ...`)
+  var dataFuncCode = null;
 
   var args = tag.args;
   if (! args.length) {
     // e.g. `{{#foo}}`
-    return { extraArgs: extraArgs };
+    return ret;
   } else if (args[0].length === 3) {
     // keyword arguments only, e.g. `{{> point x=1 y=2}}`
     var dataProps = {};
@@ -395,10 +405,9 @@ var codeGenInclusionArgs = function (tag) {
                                    'dataMustache');
   }
 
-  dataFuncCode = 'function () { return ' + dataFuncCode + '; }';
+  ret.dataFunc = 'function () { return ' + dataFuncCode + '; }';
 
-  return { dataFuncCode: dataFuncCode,
-           extraArgs: extraArgs };
+  return ret;
 };
 
 
