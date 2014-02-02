@@ -275,7 +275,6 @@ Tinytest.add("spacebars - templates - block helper function with one string arg"
   // `{{#foo "bar"}}content{{/foo}}`
   var tmpl = Template.spacebars_template_test_block_helper_function_one_string_arg;
   tmpl.foo = function () {
-    console.log(String(this));
     if (String(this) === "bar")
       return Template.spacebars_template_test_content;
     else
