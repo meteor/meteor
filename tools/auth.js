@@ -479,7 +479,7 @@ exports.loginCommand = function (context, argv, showUsage) {
 
   var data = readSessionData();
 
-  if (! galaxy || ! getSession(data, config.getAccountsDomain()).token) {
+  if (! galaxy && ! getSession(data, config.getAccountsDomain()).token) {
     var loginOptions = {};
 
     if (byEmail) {
