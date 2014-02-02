@@ -105,13 +105,10 @@ Tinytest.add("spacebars - compiler output", function (test) {
   run("{{#foo}}abc{{/foo}}",
       function() {
         var self = this;
-        return Spacebars.include(
-          self.lookup("foo", {template: true}), null, {
-            content: UI.block(function() {
-              var self = this;
-              return "abc";
-            })
-          });
+        return Spacebars.include(self.lookupTemplate("foo"), UI.block(function() {
+          var self = this;
+          return "abc";
+        }));
       });
 
   run("{{#if cond}}aaa{{else}}bbb{{/if}}",
@@ -131,89 +128,88 @@ Tinytest.add("spacebars - compiler output", function (test) {
   run("{{> foo bar}}",
       function() {
         var self = this;
-        return Spacebars.include(
-          self.lookup("foo", {template: true}),
-          function () {
-            return Spacebars.call(self.lookup("bar"));
-          });
+        return UI.With(function() {
+          return Spacebars.call(self.lookup("bar"));
+        }, UI.block(function() {
+          var self = this;
+          return Spacebars.include(self.lookupTemplate("foo"));
+        }));
       });
 
   run("{{> foo x=bar}}",
       function() {
         var self = this;
-        return Spacebars.include(
-          self.lookup("foo", {template: true}),
-          function () {
-            return { x: Spacebars.call(self.lookup("bar")) };
-          });
+        return UI.With(function() {
+          return {
+            x: Spacebars.call(self.lookup("bar"))
+          };
+        }, UI.block(function() {
+          var self = this;
+          return Spacebars.include(self.lookupTemplate("foo"));
+        }));
       });
 
   run("{{> foo bar.baz}}",
       function() {
         var self = this;
-        return Spacebars.include(
-          self.lookup("foo", {template: true}),
-          function () {
-            return Spacebars.call(Spacebars.dot(self.lookup("bar"), "baz"));
-          });
+        return UI.With(function() {
+          return Spacebars.call(Spacebars.dot(self.lookup("bar"), "baz"));
+        }, UI.block(function() {
+          var self = this;
+          return Spacebars.include(self.lookupTemplate("foo"));
+        }));
       });
 
   run("{{> foo x=bar.baz}}",
       function() {
         var self = this;
-        return Spacebars.include(
-          self.lookup("foo", {template: true}),
-          function () {
-            return {
-              x: Spacebars.call(Spacebars.dot(self.lookup("bar"), "baz"))
-            };
-          });
+        return UI.With(function() {
+          return {
+            x: Spacebars.call(Spacebars.dot(self.lookup("bar"), "baz"))
+          };
+        }, UI.block(function() {
+          var self = this;
+          return Spacebars.include(self.lookupTemplate("foo"));
+        }));
       });
 
   run("{{> foo bar baz}}",
       function() {
         var self = this;
-        return Spacebars.include(
-          self.lookup("foo", {template: true}),
-          function () {
-            return Spacebars.dataMustache(self.lookup("bar"),
-                                          self.lookup("baz"));
-          });
+        return UI.With(function() {
+          return Spacebars.dataMustache(self.lookup("bar"), self.lookup("baz"));
+        }, UI.block(function() {
+          var self = this;
+          return Spacebars.include(self.lookupTemplate("foo"));
+        }));
       });
 
   run("{{#foo bar baz}}aaa{{/foo}}",
       function() {
         var self = this;
-        return Spacebars.include(
-          self.lookup("foo", {template: true}),
-          function () {
-            return Spacebars.dataMustache(self.lookup("bar"),
-                                          self.lookup("baz"));
-          },
-          {
-            content: UI.block(function () {
-              var self = this;
-              return "aaa";
-            })
-          });
+        return UI.With(function() {
+          return Spacebars.dataMustache(self.lookup("bar"), self.lookup("baz"));
+        }, UI.block(function() {
+          var self = this;
+          return Spacebars.include(self.lookupTemplate("foo"), UI.block(function() {
+            var self = this;
+            return "aaa";
+          }));
+        }));
       });
 
   run("{{#foo p.q r.s}}aaa{{/foo}}",
       function() {
         var self = this;
-        return Spacebars.include(
-          self.lookup("foo", {template: true}),
-          function () {
-            return Spacebars.dataMustache(
-              Spacebars.dot(self.lookup("p"), "q"),
-              Spacebars.dot(self.lookup("r"), "s"));
-          },
-          {
-            content: UI.block(function () {
-              var self = this;
-              return "aaa";
-            })
-          });
+        return UI.With(function() {
+          return Spacebars.dataMustache(Spacebars.dot(self.lookup("p"), "q"), Spacebars.dot(self.lookup("r"), "s"));
+        }, UI.block(function() {
+          var self = this;
+          return Spacebars.include(self.lookupTemplate("foo"), UI.block(function() {
+            var self = this;
+            return "aaa";
+          }));
+        }));
       });
 
   run("<a {{b}}></a>",
