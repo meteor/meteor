@@ -22,6 +22,18 @@ UI.Unless = function (argFunc, contentBlock, elseContentBlock) {
   };
 };
 
+// Returns true if `a` and `b` are `===`, unless they are of a mutable type.
+// (Because then, they may be equal references to an object that was mutated,
+// and we'll never know.  We save only a reference to the old object; we don't
+// do any deep-copying or diffing.)
+var safeEquals = function (a, b) {
+  if (a !== b)
+    return false;
+  else
+    return ((!a) || (typeof a === 'number') || (typeof a === 'boolean') ||
+            (typeof a === 'string'));
+};
+
 // Unlike Spacebars.With, there's no else case and no conditional logic.
 //
 // We don't do any reactive emboxing of `argFunc` here; it should be done
@@ -33,7 +45,7 @@ UI.With = function (argFunc, contentBlock) {
   var block = UI.block(function () {
     return contentBlock;
   });
-  block.data = argFunc;
+  block.data = UI.emboxValue(argFunc, safeEquals);
 
   return block;
 };

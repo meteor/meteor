@@ -257,6 +257,18 @@ UI.render = function (kind, parentComponent) {
   return inst;
 };
 
+var contentEquals = function (a, b) {
+  if (a instanceof HTML.Raw) {
+    return (b instanceof HTML.Raw) && (a.value === b.value);
+  } else if (a == null) {
+    return (b == null);
+  } else {
+    return (a === b) &&
+      ((typeof a === 'number') || (typeof a === 'boolean') ||
+       (typeof a === 'string'));
+  }
+};
+
 // Convert the pseudoDOM `node` into reactive DOM nodes and insert them
 // into the element or DomRange `parent`, before the node or id `before`.
 var materialize = function (node, parent, before, parentComponent) {
@@ -276,15 +288,26 @@ var materialize = function (node, parent, before, parentComponent) {
   } else if (typeof node === 'function') {
 
     var range = new UI.DomRange;
+    var lastContent = null;
     var rangeUpdater = Deps.autorun(function (c) {
-      if (! c.firstRun)
-        range.removeAll();
-
       var content = node();
+      // normalize content a little, for easier comparison
+      if (HTML.isNully(content))
+        content = null;
+      else if ((content instanceof Array) && content.length === 1)
+        content = content[0];
 
-      Deps.nonreactive(function () {
-        materialize(content, range, null, parentComponent);
-      });
+      // update if content is different from last time
+      if (! contentEquals(content, lastContent)) {
+        lastContent = content;
+
+        if (! c.firstRun)
+          range.removeAll();
+
+        Deps.nonreactive(function () {
+          materialize(content, range, null, parentComponent);
+        });
+      }
     });
     range.removed = function () {
       rangeUpdater.stop();

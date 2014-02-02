@@ -1,45 +1,39 @@
 Spacebars = {};
 
-// Returns true if `a` and `b` are `===`, unless they are of a mutable type.
-// (Because then, they may be equal references to an object that was mutated,
-// and we'll never know.  We save only a reference to the old object; we don't
-// do any deep-copying or diffing.)
-var safeEquals = function (a, b) {
-  if (a !== b)
-    return false;
-  else
-    return ((!a) || (typeof a === 'number') || (typeof a === 'boolean') ||
-            (typeof a === 'string'));
-};
-
 // * `templateOrFunction` - template (component) or function returning one
 // * `dataFunc` - (optional) function returning data context
 // * `extraArgs` - (optional) dictionary that may have `content`/`elseContent`
 Spacebars.include = function (templateOrFunction, dataFunc, extraArgs) {
   var result = templateOrFunction;
 
+  var underscoredArgs;
   if (extraArgs) {
-    var underscoredArgs = {};
+    underscoredArgs = {};
     for (var k in extraArgs)
       underscoredArgs['__'+k] = extraArgs[k];
+  }
 
-    // extend `result` with `underscoredArgs`, whether or not it's a function
-    if (typeof result === 'function') {
-      result = function () {
-        var resultTmpl = Deps.isolateValue(function () {
-          var ret = templateOrFunction();
-          if (ret != null && ! UI.isComponent(ret))
-            throw new Error("Expected null or template in return value from helper, found: " + ret);
-          return ret;
-        });
-        resultTmpl = resultTmpl ? resultTmpl.extend(underscoredArgs) : resultTmpl;
-        return resultTmpl;
-      };
-    } else {
-      if (result != null && ! UI.isComponent(result))
-        throw new Error("Expected null or template in return value from helper, found: " + result);
+  // extend `result` with `underscoredArgs`, whether or not it's a function.
+  // if it's a function, validate and isolate the result.
+  if (typeof result === 'function') {
+    result = function () {
+      var resultTmpl = Deps.isolateValue(function () {
+        var ret = templateOrFunction();
+        if (ret != null && ! UI.isComponent(ret))
+          throw new Error("Expected null or template in return value from helper, found: " + ret);
+        return ret;
+      });
+      if (extraArgs) {
+        resultTmpl = (resultTmpl ? resultTmpl.extend(underscoredArgs) :
+                      resultTmpl);
+      }
+      return resultTmpl;
+    };
+  } else {
+    if (result != null && ! UI.isComponent(result))
+      throw new Error("Expected null or template in return value from helper, found: " + result);
+    if (extraArgs)
       result = result ? result.extend(underscoredArgs) : result;
-    }
   }
 
   if (dataFunc) {
@@ -50,7 +44,7 @@ Spacebars.include = function (templateOrFunction, dataFunc, extraArgs) {
       var func = result;
       result = UI.block(function () { return func; });
     }
-    return UI.With(UI.emboxValue(dataFunc, safeEquals), result);
+    return UI.With(dataFunc, result);
   } else {
     return result;
   }
@@ -87,15 +81,7 @@ Spacebars.mustacheImpl = function (value/*, args*/) {
     }
   }
 
-  return Deps.isolateValue(function () {
-    return Spacebars.call.apply(null, args);
-  }, /* equals= */ function (x, y) {
-    if (x instanceof Handlebars.SafeString) {
-      return (y instanceof Handlebars.SafeString) && (x.string === y.string);
-    } else {
-      return safeEquals(x, y);
-    }
-  });
+  return Spacebars.call.apply(null, args);
 };
 
 Spacebars.mustache = function (value/*, args*/) {
@@ -226,5 +212,8 @@ Spacebars.dot = function (value, id1/*, id2, ...*/) {
 // Implement Spacebars's #with, which renders its else case (or nothing)
 // if the argument is falsy.
 Spacebars.With = function (argFunc, contentBlock, elseContentBlock) {
-  return UI.If(argFunc, UI.With(argFunc, contentBlock), elseContentBlock);
+  // UI.With emboxes argFunc, and then we want to be sure to only call
+  // argFunc that way so we don't call it any extra times.
+  var w = UI.With(argFunc, contentBlock);
+  return UI.If(w.data, w, elseContentBlock);
 };
