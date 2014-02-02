@@ -1,55 +1,39 @@
 Spacebars = {};
 
-// * `templateOrFunction` - template (component) or function returning one
-// * `dataFunc` - (optional) function returning data context
-// * `extraArgs` - (optional) dictionary that may have `content`/`elseContent`
-Spacebars.include = function (templateOrFunction, dataFunc, extraArgs) {
-  var result = templateOrFunction;
+// * `templateOrFunction` - template (component) or function returning a template
+// or null
+Spacebars.include = function (templateOrFunction, contentBlock, elseContentBlock) {
+  if (contentBlock && ! UI.isComponent(contentBlock))
+    throw new Error('Second argument to Spacebars.include must be a template or UI.block if present');
+  if (elseContentBlock && ! UI.isComponent(elseContentBlock))
+    throw new Error('Third argument to Spacebars.include must be a template or UI.block if present');
 
-  var underscoredArgs;
-  if (extraArgs) {
-    underscoredArgs = {};
-    for (var k in extraArgs)
-      underscoredArgs['__'+k] = extraArgs[k];
+  var props = null;
+  if (contentBlock) {
+    props = (props || {});
+    props.__content = contentBlock;
+  }
+  if (elseContentBlock) {
+    props = (props || {});
+    props.__elseContent = elseContentBlock;
   }
 
-  // extend `result` with `underscoredArgs`, whether or not it's a function.
-  // if it's a function, validate and isolate the result.
-  if (typeof result === 'function') {
-    result = function () {
-      var resultTmpl = Deps.isolateValue(function () {
-        var ret = templateOrFunction();
-        if (ret != null && ! UI.isComponent(ret))
-          throw new Error("Expected null or template in return value from helper, found: " + ret);
-        return ret;
-      });
-      if (extraArgs) {
-        resultTmpl = (resultTmpl ? resultTmpl.extend(underscoredArgs) :
-                      resultTmpl);
-      }
-      return resultTmpl;
-    };
-  } else {
-    if (result != null && ! UI.isComponent(result))
-      throw new Error("Expected null or template in return value from helper, found: " + result);
-    if (extraArgs)
-      result = result ? result.extend(underscoredArgs) : result;
-  }
+  if (UI.isComponent(templateOrFunction))
+    return templateOrFunction.extend(props);
 
-  if (dataFunc) {
-    if (typeof dataFunc !== 'function')
-      throw new Error("Second argument to Spacebars.include must be a function");
+  var func = templateOrFunction;
 
-    if (typeof result === 'function') {
-      var func = result;
-      result = UI.block(function () { return func; });
-    }
-    return UI.With(dataFunc, result);
-  } else {
-    return result;
-  }
+  return function () {
+    var tmpl = Deps.isolateValue(func);
+
+    if (tmpl === null)
+      return null;
+    if (! UI.isComponent(tmpl))
+      throw new Error("Expected null or template in return value from inclusion function, found: " + tmpl);
+
+    return tmpl.extend(props);
+  };
 };
-
 
 // Executes `{{foo bar baz}}` when called on `(foo, bar, baz)`.
 // If `bar` and `baz` are functions, they are called before
