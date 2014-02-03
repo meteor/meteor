@@ -1062,9 +1062,7 @@ _.extend(Connection.prototype, {
     if (!_.has(self._serverDocuments, collection))
       return null;
     var serverDocsForCollection = self._serverDocuments[collection];
-    if (!serverDocsForCollection.has(id))
-      return null;
-    return serverDocsForCollection.get(id);
+    return serverDocsForCollection.get(id) || null;
   },
 
   _process_added: function (msg, updates) {

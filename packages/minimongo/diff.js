@@ -20,13 +20,11 @@ LocalCollection._diffQueryUnorderedChanges = function (oldResults, newResults,
   }
 
   newResults.forEach(function (newDoc, id) {
-    if (oldResults.has(id)) {
-      if (observer.changed) {
-        var oldDoc = oldResults.get(id);
-        if (!EJSON.equals(oldDoc, newDoc)) {
-          observer.changed(
-            id, LocalCollection._makeChangedFields(newDoc, oldDoc));
-        }
+    var oldDoc = oldResults.get(id);
+    if (oldDoc) {
+      if (observer.changed && !EJSON.equals(oldDoc, newDoc)) {
+        observer.changed(
+          id, LocalCollection._makeChangedFields(newDoc, oldDoc));
       }
     } else if (observer.added) {
       var fields = EJSON.clone(newDoc);
